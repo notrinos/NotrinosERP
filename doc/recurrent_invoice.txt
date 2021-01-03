@@ -1,0 +1,50 @@
+Recurrent Invoices
+------------------
+
+There are two ways of using recurrent invoices. You can either select a group or
+single customer/branches.
+
+If you are going to use groups, start by creating the groups you want to later 
+put on the branches, Fi. Large, Medium and Small
+
+Go into the branches. If you want any of a custumers branch to belong to a group, 
+mark it and update the branch.
+
+Definition.
+-----------
+You are now ready to make some recurrent invoice definitions, by clicking the 
+'Recurrent Invoices' in the Sales tab, Maintenance section.
+
+The recurrent invoices uses the Template Orders, that are shown under Template 
+Delivery/Template Invoice.
+
+First enter a Discription of the item. Select the appropriate template. If this 
+should be adressed to a single customer/branch, select a customer and a branch.
+If it should be based on a group, set the customer to an empty value and select 
+the group you want to send the recurrent invoices to.
+
+Now it is time to consider the interval of the recurrency. If you select days and 
+set the monthly value to 0, it will be due after every days interval.
+If you select a monthly value, it will be sent on a monthly base and if you select 
+a days value it will be due on that day in the month. A value of -1 would be the 
+last day in the previous month. A monthly value of 3 indicated a due every quarter 
+of a year and 12 every year and so on.
+
+The begin date is the date to start the recurrency and end date is the close date 
+of the recurrency.
+
+Create and print the recurrent invoices.
+---------------------------------------
+Before creating recurring invoices, check that the price factor in company setup 
+is set. If you have foreign customers the price is automatically calculated.
+Go to 'Create and Print Recurring Invoices'. The due items are marked and a link 
+'Create invoices' are there. 
+Pressing this link creates all the invoices belonging to this group or single 
+customer/branch.
+An info line tells you how many and invoice-numbers that are created.
+There is also a link to Print the Invoices.
+
+That's it. Happy Recurrent Invoicing.
+
+PS. If you need more groups on a customer, create new branches with this different 
+group. Maybe call the branch something similar as the group to easily find it.

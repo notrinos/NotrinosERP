@@ -1,0 +1,60 @@
+News in FrontAccounting 2.1 Beta
+--------------------------------
+
+Common
+------
+- Better support for upgrading database changes from early release
+- Accelerator keys in menues
+- Grouping listboxes where appropriate
+- Sortable database paging in inquiries with many records
+- Better layout in long forms (now double sided).
+- Preparing for install of menu extensions (not modules)
+- Document files in doc subdirectory
+- An inactive field in most 'catalog' tables to prepare for making records inactive.
+- Option for graphic links instead of text links in tables.
+- Changed license type to GNU GPL v.3. Stamped in all source files.
+
+Sales
+-----
+- Sales documents. Line descriptions can be edited and printing of documents handles 
+  multiple line of descriptions. 
+- Point of Sales definitions for better handling of cash sales
+- Sales Groups for grouping customers.
+- Recurrent Invoices
+- Dimensions can be selected on sales delivery and invoices. 
+- Accumulating of shipping costs and legal text on invoices
+- New printed document layout
+
+Purchasing
+----------
+- New fields in suppliers: phone, fax, tax id, contact and credit limit
+- Supplier credit notes show only invoices for a period
+- 'Credit this' link in supplier inquiry
+- Attachment of scanned documents
+
+Items and Inventory
+-------------------
+- Item Kit Sets for order/sales speed up
+- Foreign Codes registration for barcode scanner entry.
+
+Banking and General Ledger
+--------------------------
+- Bank accounts reconciliation
+- Dimension view now shows balances instead of transactions
+- Quick Entries (preset GL transactions) in Bank Deposit/Payment, Journal Entry
+  and Supplier invoice/credit
+- Rewritten tax report and tax inquiry.
+
+Bugs fixed in this release
+--------------------------
+All bugs up to release 2.0.7 are fixed in this release too.
+
+# [0000097] Can't void freehand customer credit note.
+# [0000098] Unable issue of credit note for invoice with removed item lines.
+# [0000099] New line added to inventory transfer/adjustment sometimes overwrites old one.
+# [0000100] Keep getting left allocated weird results (rounding problems).
+# [0000102] Credit note was stored without entered shippment cost and comment.
+# [0000104] minor language updates in a few sales files 
+# Numeric check on class id added.
+# Bug [0000111] Accounts on Credit Hold can still process delivery notes on sales order and invoicing.
+# Bug [0000112] It shows invoices as overdue still (in red), even though its been payed and allocated. 

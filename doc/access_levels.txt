@@ -1,0 +1,126 @@
+			FrontAccounting access control system
+			=====================================
+
+Since version 2.2 FrontAccounting has new, flexible access level control system.
+In contrast to previous system based on arrays stored in global config.php file, 
+the new system uses per company security_roles tables. This approach makes 
+FrontAccounting finally suitable for multicompany installation involving 
+various types of companies.
+
+1. Security schema
+------------------
+
+New access control system uses following concepts:
+
+. Security area - elementary fragment of application functionality which 
+	is placed under control of access system;
+
+. Security role - set of security areas which is accessable for user with 
+	some role in company;
+
+. Security section - a couple of security areas of similar application grouped 
+	together to make roles defining easier.
+
+Security areas stored in global $security_areas array have two properties: 
+identifier (in numeric and string form) and description. Description is used 
+only to identify area in security roles editor, while string identifiers are 
+used in various places of source code to be checked against current user 
+permissions.
+
+Every security area belongs to one security section, which can be considered 
+as upper level of access control. All defined security sections are stored 
+in global $security_sections array together with descriptions used in roles 
+editor.
+
+2. Access Setup
+---------------
+
+FrontAccounting since version 2.2 has role based access system. It means that 
+every user defined in a system has assigned role related to his position in 
+company. For any user only security areas which belong to user's role are 
+accesible. 
+
+To grant access to any security area for any role administrator first have to
+make accessible also related area's security section. Switching security section 
+off disables access to all related security areas.
+
+Security roles predefined in FrontAccounting initial database can be customized
+or completely rewritten by administrator according to company internal security 
+policy. 
+
+Some security areas crucial for overall site security are accesible only for
+administrators of the first installed company, who can be considered as 
+superadmins. All those important areas are grouped in section 0 
+(System administration), and as of FA 2.2 involve:
+	. Installing/update of companies
+	. Installing/update language message files
+	. Installing/activation system extensions
+	. System upgrades
+
+3. How all it works
+-------------------
+
+Every user defined in a system has one security role assigned. List of 
+all accesible security areas/sections codes is retrieved from security_roles 
+table on user login, and cached in user session variable for fast checking.
+Every page in a system has at least one related security area, which is 
+assigned to $page_security global variable at the beginning of the page script.
+
+Page access control is performed by check_page_security() call in 
+page() function (used for every displayed page) or by can_access_page()
+call in FrontReport constructor for all reports. When user has granted access 
+rights to checked security area, selected page is displayed or report generated. 
+Otherwise information message is displayed and page/report generation is aborted.
+
+4. Security extensions
+----------------------
+
+FrontAccounting application accepts two forms of functionality additions: 
+extension modules and extension plugins. Both types of extensions can use 
+standard security areas/sections to control access to introduced functionality,
+or define its own security areas and/or sections. 
+
+To extend access control system with additional sections/areas, extension
+need to contain a file were all new extensions are defined. The access control 
+file relative path should be entered during extension install process on 
+Install/Activate Extensions page, or as 'access' property during direct entry 
+in installed_extensions.php file.
+
+Every php script using security extensions have to call function 
+add_security_extensions() to make defined extensions active. The call should 
+be placed between session.inc inclusion and page() or FrontReport() call.
+
+5. Example access control configuration file
+--------------------------------------------
+
+This is content of sample access control file for CRM extension module:
+
+<?php
+/*
+	Define security section codes
+*/
+define('SS_CRM_C',	101<<8);
+define('SS_CRM',	102<<8);
+define('SS_CRM_A',	103<<8);
+
+/*
+	Additional security sections for CRM module
+*/
+$security_sections[SS_CRM_C] = _("CRM configuration");
+$security_sections[SS_CRM] = _("CRM transactions");
+$security_sections[SS_CRM_A] = _("CRM analytics");
+/*
+	Additional security areas for CRM module
+*/
+$security_areas['SA_CRMSETUP'] = array(SS_CRM_C|1, _("CRM module setup"));
+$security_areas['SA_CRMCONTACTENTRY'] = array(SS_CRM|1, _("Customer contact entry"));
+$security_areas['SA_CRMANALYITCS'] = array(SS_CRM|1, _("Pre-sale contact analytics"));
+
+?>
+
+The exact values used for security section codes are not very important, 
+as they are rewritten by access control system during integration of
+access extensions. Therefore numeric values of security sections/areas should 
+never be used directly in the extensions source. Use string representations
+instead when needed, or values retrieved from $security_areas array.
+

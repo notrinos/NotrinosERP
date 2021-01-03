@@ -1,0 +1,118 @@
+Changes in framework API introduced in FrontAccounting 2.4
+----------------------------------------------------------
+The list does not contain changes made in user interface files or local functions.
+
+Changed functions:
+ company_db_inc: 
+	update_company_prefs($params)
+	get_company_pref($prefs = null)
+	get_company_prefs()
+ maintenance_db.inc:
+	db_backup($conn, $ext='no', $comm='', $path='')
+	db_export($conn, $filename, $zip='no', $comment='', $no_default=false)
+	save_to_file($path, $zip, $fileData)
+ tax_types_db.inc:
+	get_tax_type_default_rate($type_id) => get_tax_type_rate($type_id)
+ inventory_db.inc:
+	get_stock_moves($type, $type_no)
+	add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $person_id=0, $price=0)
+ sales_db.inc:
+	add_stock_move_customer() removed
+ items_transfer_db.inc:
+ 	add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_)
+ items_adjust_db.inc:
+	add_stock_adjustment($items, $location, $date_, $reference, $memo_)
+
+Before 2.4:
+	get_tax_type_default_rate($type_id)
+Now:
+	get_tax_type_rate($type_id)
+Description:
+	Misleading function name changed.
+
+Before 2.4:
+	update_company_prefs( $params, $pref = TB_PREF )
+Now:
+	update_company_prefs($params)
+Description:
+	$pref parameter has been removed. All calls should be done after switch to selected company database with 
+	set_global_connection($company).
+
+Before 2.4:
+	get_company_pref($prefs = null, $tbpref = null)
+Now:
+	get_company_pref($prefs = null)
+Description:
+	$tbpref parameter has been removed. All calls should be done after switch to selected company database with 
+	set_global_connection($company).
+
+Before 2.4:
+	get_company_prefs($tbpref = TB_PREF)
+Now:
+	get_company_prefs()
+Description:
+	$tbpref parameter has been removed. All calls should be done after switch to selected company database with 
+	set_global_connection($company).
+
+Before 2.4:
+	db_backup($conn, $ext='no', $comm='', $tbpref = TB_PREF)
+Now:
+	db_backup($conn, $ext='no', $comm='', $path='')
+Description: 
+	$tbpref parameter has been removed. Calls should be done after switch to selected company database with 
+	set_global_connection($company).
+	$path parameter has been added: path to storage directory for generated backup file. If not set defaults to BACKUP_PATH.
+
+Before 2.4:
+	db_export($conn, $filename, $zip='no', $comment='', $tbpref = TB_PREF, $no_default=false)
+Now:
+	db_export($conn, $filename, $zip='no', $comment='')
+Description:
+	$tbpref parameter has been removed. Calls should be done after switch to selected company database with 
+	set_global_connection($company). Also removed obsolete $no_default parameter.
+	$filename now have to contain full path to target directory.
+
+Before 2.4:
+	save_to_file($backupfile, $zip, $fileData)
+Now:
+	save_to_file($path, $zip, $fileData)
+Description:
+	$path parameter have to contain full path to file, no assumptions to target folder is done inside function.
+
+Before 2.4:
+	add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, 
+		$person_id=0, $show_or_hide=1, $price=0, $discount_percent=0, $error_msg="")
+Now:
+	add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, 
+		$person_id=0, $price=0)
+Description:
+	Removed parameters $show_or_hide, $discount_percent and $error_msg as obsolete after removal of related stock_moves fields.
+
+Before 2.4:
+	get_stock_moves($type, $type_no, $visible=false)
+Now:
+	get_stock_moves($type, $type_no)
+Description:
+	Removed parameter $visible (obsolete after `visible` field removal).
+
+Before 2.4
+	add_stock_move_customer($type, $stock_id, $trans_id, $location, $date_, $reference,
+		$quantity, $std_cost, $price=0, $discount_percent=0)
+Now:
+	None
+Description:
+	Obsolete and removed.
+
+Before 2.4:
+	add_stock_transfer($Items, $location_from, $location_to, $date_, $type, $reference, $memo_)
+Now:
+	add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_)
+Description:
+	Removed obsolete $type argument.
+
+Before 2.4:
+	add_stock_adjustment($items, $location, $date_, $type, $increase, $reference, $memo_)
+Now:
+	add_stock_adjustment($items, $location, $date_, $reference, $memo_)
+Description:
+	Removed obsolete $type and $increase arguments.

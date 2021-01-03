@@ -1,0 +1,507 @@
+# Frontaccounting ERP Installer
+# Copyright (C) FrontAccounting LLC
+# This file is distributed under the same license as the FrontAccounting package.
+msgid ""
+msgstr ""
+"Project-Id-Version: FrontAccounting Install Wizard\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-12-11 13:17+0100\n"
+"PO-Revision-Date: 2011-03-31 22:40+0100\n"
+"Last-Translator: Translation Team <info@frontaccounting.net>\n"
+"Language-Team: Italian <LL@li.org>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: /install/index.php:20 /install/index.php:41
+msgid "FrontAccouting ERP Installation Wizard"
+msgstr "Installazione guidata FontAccounting ERP"
+
+#: /install/index.php:42
+#, php-format
+msgid "Step %d: %s"
+msgstr "Passo %d: %s"
+
+#: /install/index.php:49
+msgid "Chart of accounts"
+msgstr "Piano dei conti"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Encoding"
+msgstr "Codifica"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Description"
+msgstr "Descrizione"
+
+#: /install/index.php:49 /install/index.php:76 /install/index.php:395
+msgid "Install"
+msgstr "Installa"
+
+#: /install/index.php:66 /install/index.php:94
+msgid "Installed"
+msgstr "Installato"
+
+#: /install/index.php:76
+msgid "Language"
+msgstr "Lingua"
+
+#: /install/index.php:124
+msgid "Cannot connect to database. User or password is invalid or you have no permittions to create database."
+msgstr ""
+
+#: /install/index.php:164
+msgid "Cannot save system configuration file 'config.php'."
+msgstr "Impossibile salvare il file di configurazine di sistema 'config.php'."
+
+#: /install/index.php:171
+msgid "Cannot open 'config_db.php' configuration file."
+msgstr "Impossibile aprire il file di configurazione 'config_db.php'."
+
+#: /install/index.php:174
+msgid "Cannot write to the 'config_db.php' configuration file."
+msgstr "Impossibile scrivere il file di configurazione 'config_db.php'."
+
+#: /install/index.php:177
+msgid "Configuration file 'config_db.php' is not writable. Change its permissions so it is, then re-run installation step."
+msgstr "Il file di configurazione 'config_db.php' non è scrivibile. Cambia i permessi e ripercorri lo step di installazione."
+
+#: /install/index.php:216
+msgid "Host name cannot be empty."
+msgstr "Host non può essere vuoto."
+
+#: /install/index.php:220
+msgid "Database user name cannot be empty."
+msgstr "Il nome dell'utente database non può essere vuoto."
+
+#: /install/index.php:224
+msgid "Database name cannot be empty."
+msgstr "Il nome del database non può essere vuoto."
+
+#: /install/index.php:278
+msgid "Company name cannot be empty."
+msgstr "Il nome dell'azienda non può essere vuoto."
+
+#: /install/index.php:282
+msgid "Company admin name cannot be empty."
+msgstr "Il nome dell'amministartore dell'azienda non può essere vuoto."
+
+#: /install/index.php:286
+msgid "Company admin password cannot be empty."
+msgstr "La password dell'amministartore dell'azienda non può essere vuoto."
+
+#: /install/index.php:290
+msgid "Company admin passwords differ."
+msgstr "Le password di amministrazione dell'azienda non coincidono."
+
+#: /install/index.php:320
+msgid "System Diagnostics"
+msgstr "Diagnostica di sistema"
+
+#: /install/index.php:322
+msgid "Select install wizard language:"
+msgstr "Seleziona la lingua dell'installazione guidata:"
+
+#: /install/index.php:328
+msgid "All application preliminary requirements seems to be correct. Please press Continue button below."
+msgstr "Tutti i requisiti preliminari dell'applicazione sembrano essere corretti. Premi il pulsante Continua sotto."
+
+#: /install/index.php:329 /install/index.php:357 /install/index.php:364
+#: /install/index.php:371
+msgid "Continue >>"
+msgstr "Continua >>"
+
+#: /install/index.php:331
+msgid "Application cannot be installed. Please fix problems listed below in red, and press Refresh button."
+msgstr "L'applicazione non può essere installata. Risolvi i problemi visualizzati sotto in rosso, e premi il pulsante Aggiorna."
+
+#: /install/index.php:332
+msgid "Refresh"
+msgstr "Aggiorna"
+
+#: /install/index.php:342
+msgid "Database Server Settings"
+msgstr "Impostazioni Database"
+
+#: /install/index.php:344
+msgid "Server Host:"
+msgstr "Server Host:"
+
+#: /install/index.php:345
+msgid "Database Name:"
+msgstr "Nome Database:"
+
+#: /install/index.php:346
+msgid "Database User:"
+msgstr "Utente Database:"
+
+#: /install/index.php:347
+msgid "Database Password:"
+msgstr "Password Database:"
+
+#: /install/index.php:348
+msgid "Database Collation:"
+msgstr "Confronto Database:"
+
+#: /install/index.php:349
+msgid "Use '0_' Table Prefix:"
+msgstr "Usa '0_' Prefisso Tabelle:"
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "Yes"
+msgstr "Si"
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "No"
+msgstr "No"
+
+#: /install/index.php:350
+msgid "Install Additional Language Packs from FA Repository:"
+msgstr "Installa Pacchetti di Lingua Aggiuntivi dal Repository FA:"
+
+#: /install/index.php:351
+msgid "Install Additional COAs from FA Repository:"
+msgstr "Installa COA Addizionali dal Repository FA:"
+
+#: /install/index.php:353
+msgid "Select collation you want to use. If you are unsure or you will use various languages, select unicode collation."
+msgstr ""
+
+#: /install/index.php:354
+msgid "Use table prefix if you share selected database for more than one FA company using the same collation."
+msgstr ""
+
+#: /install/index.php:355
+msgid "Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later."
+msgstr "Non selezionare ora lingue o COA addizionali se non hai una connessione internet funzionante. Potrai installarli successivamente."
+
+#: /install/index.php:356 /install/index.php:363 /install/index.php:370
+#: /install/index.php:394
+msgid "<< Back"
+msgstr "<< Indietro"
+
+#: /install/index.php:361
+msgid "User Interface Languages Selection"
+msgstr "Selezione Lingue Interfaccia Utente"
+
+#: /install/index.php:368
+msgid "Charts of Accounts Selection"
+msgstr "Selezione Piano dei Conti"
+
+#: /install/index.php:385
+msgid "Company Settings"
+msgstr "Impostazioni dell'azienda"
+
+#: /install/index.php:387
+msgid "Company Name:"
+msgstr "Nome Azienda:"
+
+#: /install/index.php:388
+msgid "Admin Login:"
+msgstr "Login amministratore:"
+
+#: /install/index.php:389
+msgid "Admin Password:"
+msgstr "Password Amministratore:"
+
+#: /install/index.php:390
+msgid "Reenter Password:"
+msgstr "Reinserisci la Password:"
+
+#: /install/index.php:391
+msgid "Select Chart of Accounts:"
+msgstr "Seleziona un piano dei conti:"
+
+#: /install/index.php:392
+msgid "Select Default Language:"
+msgstr "Seleziona la Lingua di default:"
+
+#: /install/index.php:395
+msgid "Start installation process"
+msgstr ""
+
+#: /install/index.php:399
+msgid "FrontAccounting ERP has been installed successsfully."
+msgstr "FrontAccounting ERP è stato installato con successo."
+
+#: /install/index.php:400
+msgid "Please do not forget to remove install wizard folder."
+msgstr "Perfavore non dimenticare di rimuovere la cartella di installazione guidata."
+
+#: /install/index.php:403
+msgid "Click here to start."
+msgstr "Clicca qui per iniziare."
+
+#: /includes/system_tests.inc:15
+msgid "Info"
+msgstr "Info"
+
+#: /includes/system_tests.inc:16
+msgid "Optional"
+msgstr "Opzionale"
+
+#: /includes/system_tests.inc:17
+msgid "Recommended"
+msgstr "Raccomandato"
+
+#: /includes/system_tests.inc:18
+msgid "Required "
+msgstr "Richiesto"
+
+#: /includes/system_tests.inc:24
+msgid "MySQL version"
+msgstr "Versione MySQL"
+
+#: /includes/system_tests.inc:28
+msgid "Upgrade MySQL server to version at least 4.1"
+msgstr "Aggiorna il server MySQL almeno alla versione 4.1"
+
+#: /includes/system_tests.inc:35
+msgid "PHP MySQL extension"
+msgstr "Estensione PHP MySQL"
+
+#: /includes/system_tests.inc:40
+msgid "Your PHP has to have MySQL extension enabled."
+msgstr "PHP deve avere l'estensione MySQL abilitata."
+
+#: /includes/system_tests.inc:46
+msgid "PHP version"
+msgstr "Versione PHP"
+
+#: /includes/system_tests.inc:50
+msgid "Upgrade PHP to version at least 5.0.0"
+msgstr "Aggiorna PHP almeno alla versione 5.0.0"
+
+#: /includes/system_tests.inc:57
+msgid "Server system"
+msgstr "Sistema Server"
+
+#: /includes/system_tests.inc:67
+msgid "Session save path"
+msgstr "Path salvataggio Sessione"
+
+#: /includes/system_tests.inc:79
+msgid "Removed install wizard folder"
+msgstr "La cartella di installazione guidata è stata rimossa"
+
+#: /includes/system_tests.inc:82
+msgid "Not removed"
+msgstr "Non rimosso"
+
+#: /includes/system_tests.inc:83
+msgid "Remove or rename install wizard folder for security reasons."
+msgstr "Rimuovi o rinomina la cartella di installazione guidata per motivi di sicurezza."
+
+#: /includes/system_tests.inc:90
+msgid "Browser type"
+msgstr "Tipo browser"
+
+#: /includes/system_tests.inc:94
+msgid "Any browser is supported"
+msgstr "Tutti i browser sono supportati"
+
+#: /includes/system_tests.inc:101
+msgid "Http server type"
+msgstr "Tipo server Http"
+
+#: /includes/system_tests.inc:105
+msgid "Any server is supported"
+msgstr "Tutti i server sono supportati"
+
+#: /includes/system_tests.inc:112
+msgid "Native gettext"
+msgstr "Gettext nativo"
+
+#: /includes/system_tests.inc:116
+msgid "In case of no gettext support, php emulation is used"
+msgstr "In caso di mancanza di gettext, verrà usata un'emulazione php"
+
+#: /includes/system_tests.inc:124
+msgid "Debugging mode"
+msgstr "Modalità di debug"
+
+#: /includes/system_tests.inc:128
+msgid "To switch debugging on set $go_debug>0 in config.php file"
+msgstr "Per abilitare il debugging imposta $go_debug>0 nel file config.php"
+
+#: /includes/system_tests.inc:138
+msgid "Error logging"
+msgstr "Loggin Errori"
+
+#: /includes/system_tests.inc:146
+msgid "Disabled"
+msgstr "Disabilitato"
+
+#: /includes/system_tests.inc:149
+msgid "To switch error logging set $error_logging in config.php file"
+msgstr "Per abilitare il logging degli errori imposta $error_logging nel file config.php"
+
+#: /includes/system_tests.inc:152
+msgid "Log file is not writeable"
+msgstr "Il file di log non è scrivibile"
+
+#: /includes/system_tests.inc:162
+msgid "Current database version"
+msgstr "Versione corrente del database"
+
+#: /includes/system_tests.inc:166
+msgid "Database structure seems to be not upgraded to current version"
+msgstr "La struttura del database sembra non essere aggiornata alla versione corrente"
+
+#: /includes/system_tests.inc:181
+msgid "Company subdirectories consistency"
+msgstr "Consistenza sottodirectory azienda"
+
+#: /includes/system_tests.inc:194 /includes/system_tests.inc:201
+#: /includes/system_tests.inc:209 /includes/system_tests.inc:226
+#: /includes/system_tests.inc:341 /includes/system_tests.inc:350
+#: /includes/system_tests.inc:359 /includes/system_tests.inc:367
+#, php-format
+msgid "'%s' is not writeable"
+msgstr "'%s' non è scrivibile"
+
+#: /includes/system_tests.inc:222
+msgid "Temporary directory"
+msgstr "Directory temporanea"
+
+#: /includes/system_tests.inc:234
+msgid "Language configuration consistency"
+msgstr "Consistenza configurazione lingua"
+
+#: /includes/system_tests.inc:243
+msgid "Languages folder should be writeable."
+msgstr "La cartella delle lingue dovrebbe essere scrivibile."
+
+#: /includes/system_tests.inc:252
+msgid "Languages configuration file should be writeable."
+msgstr "Il file di configurazione di lingua dovrebbe essere scrivibile."
+
+#: /includes/system_tests.inc:271
+#, php-format
+msgid "Missing %s translation file."
+msgstr "Manca il file di traduzione %s ."
+
+#: /includes/system_tests.inc:276
+#, php-format
+msgid "Missing system locale: %s"
+msgstr "Locale di sistema mancante: %s"
+
+#: /includes/system_tests.inc:289
+msgid "Main config file"
+msgstr "File principale di config"
+
+#: /includes/system_tests.inc:296 /includes/system_tests.inc:318
+#, php-format
+msgid "Can't write '%s' file. Check FA directory write permissions."
+msgstr "Non posso scrivere il file '%s'. Controlla i permessi di scrittura della directory di FA."
+
+#: /includes/system_tests.inc:297 /includes/system_tests.inc:319
+#, php-format
+msgid "'%s' file exists."
+msgstr "Il file '%s' esiste."
+
+#: /includes/system_tests.inc:301
+#, php-format
+msgid "'%s' file should be read-only"
+msgstr "Il file '%s' dovrebbe essere di sola lettura"
+
+#: /includes/system_tests.inc:310
+msgid "Database auth file"
+msgstr "File di autenticazione del Database"
+
+#: /includes/system_tests.inc:323
+#, php-format
+msgid "'%s' file should be read-only if you do not plan to add or change companies"
+msgstr "Il file '%s' dovrebbe essere di sola lettura se non si prevede di aggiungere o modificare aziende"
+
+#: /includes/system_tests.inc:334
+msgid "Extensions system"
+msgstr "Estensioni del sistema"
+
+#: /includes/system_tests.inc:372
+msgid "Extensions configuration files and directories should be writeable"
+msgstr "I file e le directory di configurazione delle estensioni dovrebbero essere scrivibili"
+
+#: /includes/system_tests.inc:385
+#, php-format
+msgid "Non-standard theme directory '%s' is not writable"
+msgstr "Directory dei temi non-standard '%s' non è scrivibile"
+
+#: /includes/system_tests.inc:395
+msgid "OpenSSL PHP extension have to be enabled to use extension repository system."
+msgstr "L'estensione PHP OpenSSL deve essere abilitata per usare il sistema del repository delle estensioni."
+
+#: /includes/system_tests.inc:398
+msgid "OpenSSL have to be available on your server to use extension repository system."
+msgstr "OpenSSL deve essere disponibile sul tuo server per usare il sistema del repository delle estensioni."
+
+#: /includes/system_tests.inc:421
+msgid "Test"
+msgstr "Test"
+
+#: /includes/system_tests.inc:421
+msgid "Test type"
+msgstr "Tipo test"
+
+#: /includes/system_tests.inc:421
+msgid "Value"
+msgstr "Valore"
+
+#: /includes/system_tests.inc:421
+msgid "Comments"
+msgstr "Commenti"
+
+#: /includes/system_tests.inc:445
+msgid "Ok"
+msgstr "Ok"
+
+#: /includes/packages.inc:189
+#, php-format
+msgid "No key field '%s' in file '%s'"
+msgstr ""
+
+#: /includes/packages.inc:294
+msgid "Cannot download repo index file."
+msgstr ""
+
+#: /includes/packages.inc:306 /includes/packages.inc:343
+#, php-format
+msgid "Cannot delete outdated '%s' file."
+msgstr ""
+
+#: /includes/packages.inc:310
+msgid "Release file in repository is invalid, or public key is outdated."
+msgstr ""
+
+#: /includes/packages.inc:327
+msgid "Repository version does not match application version."
+msgstr ""
+
+#: /includes/packages.inc:335 /includes/packages.inc:377
+#, php-format
+msgid "Cannot download '%s' file."
+msgstr ""
+
+#: /includes/packages.inc:347
+#, php-format
+msgid "Security alert: broken index file in repository '%s'. Please inform repository administrator about this issue."
+msgstr ""
+
+#: /includes/packages.inc:383
+#, php-format
+msgid "Security alert: broken package '%s' in repository. Please inform repository administrator about this issue."
+msgstr ""
+
+#: /includes/packages.inc:641 /includes/packages.inc:696
+#, php-format
+msgid "Package '%s' not found."
+msgstr ""
+
+#: install/index.php:361
+msgid ""
+"Use database user/password with permissions to create new database, or use "
+"proper credentials for previously created empty database."
+msgstr ""

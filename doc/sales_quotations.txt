@@ -1,0 +1,21 @@
+Sales Quotations as a separate menu option
+------------------------------------------
+
+You can now create Sales Quotations in a separate form. You enter the 'Valid until' 
+date. These Sales Quotations can later be used for creating a Sales Order.
+
+There is a new menu choice under Inquiries, Sales Quotation Inquiry. If the 
+'Valid until' has been passed, the Sales Quotation is not shown. But you can 
+select 'Show All' and all the Sales Quotation inside the period will be shown.
+
+In this Inquiry you have the option to look at the entire Quotation, edit the 
+Quotation, print the Quotation and make a Sales Order from the Quotation.
+
+The Sales Quotations will not be deleted, so it is possible to use it agan and 
+maybe edit it for use again.
+
+The Sales Quotations can however be deleted when editing. And when deleting a 
+fiscal year, the Quotations will be deleted.
+
+The Sales Order print out can still be selected to be printed as a Quote should 
+you prefer that.

@@ -1,0 +1,64 @@
+News in FrontAccounting 2.2 Beta
+--------------------------------
+
+Common
+------
+- Quick Entries uses Tax Types instead of Item Tax Types
+- Support for default buttons with Ctrl-Enter/Escape hotkeys
+- Arrow navigations in menus
+- Option to use last document date on subsequent new documents.
+- Full support for inactive records
+- Time Zone on Reports
+- Audit Trail for all operations with Report
+- Bank Charge field in Customer/Supplier Payment.
+- New default fields in Company table for Bank Charge, Retained Earnings and 
+  Profit/Loss Year. 
+- Direct Allocation of Invoices in Customer/Supplier Payments
+- New Access Levels/Security Roles system enables fine tunning person access rights.
+- Item Tax Types moved to Setup module
+- Default Start-up Tab set by user.
+- Authorization timeout parameter set in Company preferences
+
+Sales
+-----
+- Customer/Supplier Balance Reports now with Open Balance from selected date
+- Added Sales Quotations, Inquiry and Report
+
+Purchasing
+----------
+- Better support for conversion factor in Purchasing Prices.
+- Purchasing price can have up to 6 decimals allowing fractions of hundredths in 
+  prices.
+
+Items and Inventory
+-------------------
+- Item Categories contains default parameters for new items.
+- Excluded from Sale. Non Sales Items from Categories.
+- GRN Valuation Report
+- Automatic price-calculation of Items from Std. Cost (if no prices set on items)
+- Rounding of prices to nearest XX Cent after calculations.
+
+Manufacturing
+-------------
+- Printing/Emailing of Work Orders
+
+Dimensions
+----------
+- Re-opening of Closed dimensions
+
+Banking and General Ledger
+--------------------------
+- Closing a fiscal year also closes the balances and brings forward retained earnings
+- Deleting a fiscal year removes all transactions and convert into relevant Open 
+  Balances.
+- Journal Enquiry
+- Edition/view of Journal Entries.
+- Group Sorting by Id in Account Selectors
+- Default per currency bank accounts (used in reports). The Bank Account selection on 
+  documents has been replaced by this.
+
+Bugs fixed in this release
+--------------------------
+- Fixed php 5 warnings flood in error log.
+- All bugs up to release 2.1.6 are fixed in this release too.
+

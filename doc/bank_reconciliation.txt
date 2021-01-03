@@ -1,0 +1,28 @@
+Bank Reconciliation
+-------------------
+1. Select the account you want to reconcile.
+2. Get your bank statement (from the bank)
+3. The first time you reconcile you will need to enter a reconcile date and 
+	a start balance... Or 0 for the start balance if it is actually a new 
+	account.
+4. Enter the end balance from the statement
+5. Check entries that match the entries from your bank statement
+6. If all entries match, 'Difference' should be 0. If it is, you are done 
+	and you have reconciled your account for the period.
+	If you have some transactions unchecked, they will wait for next bank 
+	statement to be reconciled. If you have some transactions on bank statement
+	but absent in system, go to the Bank Payments/Deposits and enter missing 
+	transactions, then repeat step 5.
+7. All checked items are recorded as reconciled in the bank_trans table and 
+	the last ending balance and reconciled date is recorded for that account 
+	in the bank_accounts table.
+8. The next time you reconcile against a bank statement, the ending balance 
+	from the last reconciliation is automatically used as the starting balance 
+	for this reconciliation..
+	You enter the ending balance for this reconciliation and repeat steps 5-7
+9. If you want for some reason to find transactions reconciled with bank 
+	statement on given date select the document date with the selector.
+	If you have a lot of bank statements entered you can skip the bank 
+	statement selector and enter date of bank statement in Reconcile Date 
+	directly. If there is no bank statement reconciled on given date the 
+	selector will display 'New'.

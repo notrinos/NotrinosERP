@@ -1,0 +1,510 @@
+# Frontaccounting ERP Installer
+# Copyright (C) FrontAccounting LLC
+# This file is distributed under the same license as the FrontAccounting package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FrontAccounting Install Wizard\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-12-11 13:17+0100\n"
+"PO-Revision-Date: 2011-03-31 22:46+0100\n"
+"Last-Translator: Translation Team <info@frontaccounting.net>\n"
+"Language-Team: Language <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: CHINA\n"
+
+#: /install/index.php:20 /install/index.php:41
+msgid "FrontAccouting ERP Installation Wizard"
+msgstr "FrontAccouting ERP 安装向导"
+
+#: /install/index.php:42
+#, php-format
+msgid "Step %d: %s"
+msgstr "第 %d: %s 步"
+
+#: /install/index.php:49
+msgid "Chart of accounts"
+msgstr "账户图"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Encoding"
+msgstr "编码"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Description"
+msgstr "描述"
+
+#: /install/index.php:49 /install/index.php:76 /install/index.php:395
+msgid "Install"
+msgstr "安装"
+
+#: /install/index.php:66 /install/index.php:94
+msgid "Installed"
+msgstr "已安装"
+
+#: /install/index.php:76
+msgid "Language"
+msgstr "语言"
+
+#: /install/index.php:124
+msgid "Cannot connect to database. User or password is invalid or you have no permittions to create database."
+msgstr ""
+
+#: /install/index.php:164
+msgid "Cannot save system configuration file 'config.php'."
+msgstr "不能保存系统配置文件 'config.php'。"
+
+#: /install/index.php:171
+msgid "Cannot open 'config_db.php' configuration file."
+msgstr "不能打开'config_db.php' 配置文件。"
+
+#: /install/index.php:174
+msgid "Cannot write to the 'config_db.php' configuration file."
+msgstr "不能写入'config_db.php' 配置文件。"
+
+#: /install/index.php:177
+msgid "Configuration file 'config_db.php' is not writable. Change its permissions so it is, then re-run installation step."
+msgstr "配置文件 'config_db.php'不可写。改变文件权限，然后重新运行安装步骤。"
+
+#: /install/index.php:216
+msgid "Host name cannot be empty."
+msgstr "数据库主机名不能为空。"
+
+#: /install/index.php:220
+msgid "Database user name cannot be empty."
+msgstr "数据库用户名不能为空。"
+
+#: /install/index.php:224
+msgid "Database name cannot be empty."
+msgstr "数据库名不能为空。"
+
+#: /install/index.php:278
+msgid "Company name cannot be empty."
+msgstr "公司名不能为空"
+
+#: /install/index.php:282
+msgid "Company admin name cannot be empty."
+msgstr "公司管理员名不能为空。"
+
+#: /install/index.php:286
+msgid "Company admin password cannot be empty."
+msgstr "公司管理员密码不能为空。"
+
+#: /install/index.php:290
+msgid "Company admin passwords differ."
+msgstr "公司管理员密码不同。"
+
+#: /install/index.php:320
+msgid "System Diagnostics"
+msgstr "系统诊断"
+
+#: /install/index.php:322
+msgid "Select install wizard language:"
+msgstr "选择安装向导语言："
+
+#: /install/index.php:328
+msgid "All application preliminary requirements seems to be correct. Please press Continue button below."
+msgstr "全部软件的初步要求看来正确。请按下面的\"继续\"按钮"
+
+#: /install/index.php:329 /install/index.php:357 /install/index.php:364
+#: /install/index.php:371
+msgid "Continue >>"
+msgstr "继续 >>"
+
+#: /install/index.php:331
+msgid "Application cannot be installed. Please fix problems listed below in red, and press Refresh button."
+msgstr "不能安装软件。请修正红字所列的问题然后按刷新按钮。"
+
+#: /install/index.php:332
+msgid "Refresh"
+msgstr "刷新"
+
+#: /install/index.php:342
+msgid "Database Server Settings"
+msgstr "数据库服务器设置"
+
+#: /install/index.php:344
+msgid "Server Host:"
+msgstr "数据库主机："
+
+#: /install/index.php:345
+msgid "Database Name:"
+msgstr "数据库名："
+
+#: /install/index.php:346
+msgid "Database User:"
+msgstr "数据库用户名："
+
+#: /install/index.php:347
+msgid "Database Password:"
+msgstr "数据库密码："
+
+#: /install/index.php:348
+msgid "Database Collation:"
+msgstr ""
+
+#: /install/index.php:349
+msgid "Use '0_' Table Prefix:"
+msgstr "使用 '0_' 表前缀："
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "Yes"
+msgstr "是"
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "No"
+msgstr "不"
+
+#: /install/index.php:350
+msgid "Install Additional Language Packs from FA Repository:"
+msgstr "从FA库安装附加的语言包："
+
+#: /install/index.php:351
+msgid "Install Additional COAs from FA Repository:"
+msgstr "从FA库安装附加账户图表："
+
+#: /install/index.php:353
+msgid "Select collation you want to use. If you are unsure or you will use various languages, select unicode collation."
+msgstr ""
+
+#: /install/index.php:354
+msgid "Use table prefix if you share selected database for more than one FA company using the same collation."
+msgstr ""
+
+#: /install/index.php:355
+msgid "Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later."
+msgstr "如果您没有正确的连上internet，不要选择附加语言或者帐户表。您可以以后安装它们。"
+
+#: /install/index.php:356 /install/index.php:363 /install/index.php:370
+#: /install/index.php:394
+msgid "<< Back"
+msgstr "<< 返回"
+
+#: /install/index.php:361
+msgid "User Interface Languages Selection"
+msgstr "用户界面语言选择"
+
+#: /install/index.php:368
+msgid "Charts of Accounts Selection"
+msgstr "账户表选择"
+
+#: /install/index.php:385
+msgid "Company Settings"
+msgstr "公司设置"
+
+#: /install/index.php:387
+msgid "Company Name:"
+msgstr "公司名称："
+
+#: /install/index.php:388
+msgid "Admin Login:"
+msgstr "管理员登录："
+
+#: /install/index.php:389
+msgid "Admin Password:"
+msgstr "Admin管理员密码："
+
+#: /install/index.php:390
+msgid "Reenter Password:"
+msgstr "重新输入密码："
+
+#: /install/index.php:391
+msgid "Select Chart of Accounts:"
+msgstr "选择账户表："
+
+#: /install/index.php:392
+msgid "Select Default Language:"
+msgstr "选择默认语言："
+
+#: /install/index.php:395
+msgid "Start installation process"
+msgstr ""
+
+#: /install/index.php:399
+msgid "FrontAccounting ERP has been installed successsfully."
+msgstr "FrontAccounting ERP 安装成功。"
+
+#: /install/index.php:400
+msgid "Please do not forget to remove install wizard folder."
+msgstr "请不要忘记删除安装向导文件夹。"
+
+#: /install/index.php:403
+msgid "Click here to start."
+msgstr "点击这里开始"
+
+#: /includes/system_tests.inc:15
+msgid "Info"
+msgstr "信息"
+
+#: /includes/system_tests.inc:16
+msgid "Optional"
+msgstr "可选的"
+
+#: /includes/system_tests.inc:17
+msgid "Recommended"
+msgstr "建议的"
+
+#: /includes/system_tests.inc:18
+msgid "Required "
+msgstr "必须的"
+
+#: /includes/system_tests.inc:24
+msgid "MySQL version"
+msgstr "MySQL 版本"
+
+#: /includes/system_tests.inc:28
+msgid "Upgrade MySQL server to version at least 4.1"
+msgstr "升级 MySQL 服务器到至少 4.1 版本"
+
+#: /includes/system_tests.inc:35
+msgid "PHP MySQL extension"
+msgstr "PHP MySQL 扩展"
+
+#: /includes/system_tests.inc:40
+msgid "Your PHP has to have MySQL extension enabled."
+msgstr "您的 PHP 必须使用MYSQL扩展。"
+
+#: /includes/system_tests.inc:46
+msgid "PHP version"
+msgstr "PHP 版本"
+
+#: /includes/system_tests.inc:50
+msgid "Upgrade PHP to version at least 5.0.0"
+msgstr "升级 PHP 到至少5.0.0版本"
+
+#: /includes/system_tests.inc:57
+msgid "Server system"
+msgstr "服务器系统"
+
+#: /includes/system_tests.inc:67
+msgid "Session save path"
+msgstr "Session 保存路径"
+
+#: /includes/system_tests.inc:79
+msgid "Removed install wizard folder"
+msgstr "删除了安装向导文件夹"
+
+#: /includes/system_tests.inc:82
+msgid "Not removed"
+msgstr "没有删除"
+
+#: /includes/system_tests.inc:83
+msgid "Remove or rename install wizard folder for security reasons."
+msgstr "出于安全原因，要求删除或者重命名安装向导文件夹。"
+
+#: /includes/system_tests.inc:90
+msgid "Browser type"
+msgstr "浏览器类型"
+
+#: /includes/system_tests.inc:94
+msgid "Any browser is supported"
+msgstr "支持任意浏览器"
+
+#: /includes/system_tests.inc:101
+msgid "Http server type"
+msgstr "Http 服务器类型"
+
+#: /includes/system_tests.inc:105
+msgid "Any server is supported"
+msgstr "支持任意服务器"
+
+#: /includes/system_tests.inc:112
+msgid "Native gettext"
+msgstr "本地 gettext"
+
+#: /includes/system_tests.inc:116
+msgid "In case of no gettext support, php emulation is used"
+msgstr "因为没有 gettext 支持，php 仿真被使用"
+
+#: /includes/system_tests.inc:124
+msgid "Debugging mode"
+msgstr "调试模式"
+
+#: /includes/system_tests.inc:128
+msgid "To switch debugging on set $go_debug>0 in config.php file"
+msgstr "在 config.php 文件里设置 $go_debug>0 来切换调试"
+
+#: /includes/system_tests.inc:138
+msgid "Error logging"
+msgstr "错误日志"
+
+#: /includes/system_tests.inc:146
+msgid "Disabled"
+msgstr "停用的"
+
+#: /includes/system_tests.inc:149
+msgid "To switch error logging set $error_logging in config.php file"
+msgstr "在 config.php 文件里面设置 $error_logging 来切换错误记录"
+
+#: /includes/system_tests.inc:152
+msgid "Log file is not writeable"
+msgstr "日志文件不可写"
+
+#: /includes/system_tests.inc:162
+msgid "Current database version"
+msgstr "当前数据库版本"
+
+#: /includes/system_tests.inc:166
+msgid "Database structure seems to be not upgraded to current version"
+msgstr "数据结构看上去没有升级到当前版本"
+
+#: /includes/system_tests.inc:181
+msgid "Company subdirectories consistency"
+msgstr "公司子目录一致性"
+
+#: /includes/system_tests.inc:194 /includes/system_tests.inc:201
+#: /includes/system_tests.inc:209 /includes/system_tests.inc:226
+#: /includes/system_tests.inc:341 /includes/system_tests.inc:350
+#: /includes/system_tests.inc:359 /includes/system_tests.inc:367
+#, php-format
+msgid "'%s' is not writeable"
+msgstr "'%s' 不可写"
+
+#: /includes/system_tests.inc:222
+msgid "Temporary directory"
+msgstr "临时目录"
+
+#: /includes/system_tests.inc:234
+msgid "Language configuration consistency"
+msgstr "语言配置一致性"
+
+#: /includes/system_tests.inc:243
+msgid "Languages folder should be writeable."
+msgstr "语言文件夹必须可写。"
+
+#: /includes/system_tests.inc:252
+msgid "Languages configuration file should be writeable."
+msgstr "语言配置文件必须可写。"
+
+#: /includes/system_tests.inc:271
+#, php-format
+msgid "Missing %s translation file."
+msgstr "缺少 %s 翻译文件。"
+
+#: /includes/system_tests.inc:276
+#, php-format
+msgid "Missing system locale: %s"
+msgstr "缺少的系统位于：%s"
+
+#: /includes/system_tests.inc:289
+msgid "Main config file"
+msgstr "主配置文件"
+
+#: /includes/system_tests.inc:296 /includes/system_tests.inc:318
+#, php-format
+msgid "Can't write '%s' file. Check FA directory write permissions."
+msgstr "不能写 '%s' 文件。 检查 FA 目录的写权限。"
+
+#: /includes/system_tests.inc:297 /includes/system_tests.inc:319
+#, php-format
+msgid "'%s' file exists."
+msgstr "'%s' 文件存在。"
+
+#: /includes/system_tests.inc:301
+#, php-format
+msgid "'%s' file should be read-only"
+msgstr "'%s' 文件必须只读"
+
+#: /includes/system_tests.inc:310
+msgid "Database auth file"
+msgstr "数据库认证文件"
+
+#: /includes/system_tests.inc:323
+#, php-format
+msgid "'%s' file should be read-only if you do not plan to add or change companies"
+msgstr "如果您不计划添加或者改变公司的话，'%s' 文件必须只读。"
+
+#: /includes/system_tests.inc:334
+msgid "Extensions system"
+msgstr "扩展系统"
+
+#: /includes/system_tests.inc:372
+msgid "Extensions configuration files and directories should be writeable"
+msgstr "扩展配置文件和目录必须可写"
+
+#: /includes/system_tests.inc:385
+#, php-format
+msgid "Non-standard theme directory '%s' is not writable"
+msgstr "非标准主题目录 '%s' 不可写"
+
+#: /includes/system_tests.inc:395
+msgid "OpenSSL PHP extension have to be enabled to use extension repository system."
+msgstr "OpenSSL PHP 扩展必须打开用于扩展库系统。"
+
+#: /includes/system_tests.inc:398
+msgid "OpenSSL have to be available on your server to use extension repository system."
+msgstr "在您的服务器上，扩展库OpenSSL 必须可用。"
+
+#: /includes/system_tests.inc:421
+msgid "Test"
+msgstr "测试"
+
+#: /includes/system_tests.inc:421
+msgid "Test type"
+msgstr "测试类型"
+
+#: /includes/system_tests.inc:421
+msgid "Value"
+msgstr "值"
+
+#: /includes/system_tests.inc:421
+msgid "Comments"
+msgstr "评论"
+
+#: /includes/system_tests.inc:445
+msgid "Ok"
+msgstr "Ok"
+
+#: /includes/packages.inc:189
+#, php-format
+msgid "No key field '%s' in file '%s'"
+msgstr ""
+
+#: /includes/packages.inc:294
+msgid "Cannot download repo index file."
+msgstr ""
+
+#: /includes/packages.inc:306 /includes/packages.inc:343
+#, php-format
+msgid "Cannot delete outdated '%s' file."
+msgstr ""
+
+#: /includes/packages.inc:310
+msgid "Release file in repository is invalid, or public key is outdated."
+msgstr ""
+
+#: /includes/packages.inc:327
+msgid "Repository version does not match application version."
+msgstr ""
+
+#: /includes/packages.inc:335 /includes/packages.inc:377
+#, php-format
+msgid "Cannot download '%s' file."
+msgstr ""
+
+#: /includes/packages.inc:347
+#, php-format
+msgid "Security alert: broken index file in repository '%s'. Please inform repository administrator about this issue."
+msgstr ""
+
+#: /includes/packages.inc:383
+#, php-format
+msgid "Security alert: broken package '%s' in repository. Please inform repository administrator about this issue."
+msgstr ""
+
+#: /includes/packages.inc:641 /includes/packages.inc:696
+#, php-format
+msgid "Package '%s' not found."
+msgstr ""
+
+#: install/index.php:361
+msgid ""
+"Use database user/password with permissions to create new database, or use "
+"proper credentials for previously created empty database."
+msgstr ""

@@ -1,0 +1,558 @@
+# Frontaccounting ERP Installer
+# Copyright (C) 2010 FrontAccounting LLC
+# This file is distributed under the same license as the FrontAccounting package.
+# Joe Hunt <joe.hunt.consulting@gmail.com>
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE TEAM\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-12-11 13:17+0100\n"
+"PO-Revision-Date: \n"
+"Last-Translator: Joe Hunt <joe.hunt.consulting@gmail.com>\n"
+"Language-Team: Translation Team <ll@LL.org>\n"
+"Language: da_DK\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: iso-8859-1\n"
+"X-Generator: Poedit 1.5.5\n"
+
+#: /install/index.php:20 /install/index.php:41
+msgid "FrontAccouting ERP Installation Wizard"
+msgstr "FrontAccounting ERP installationswizard"
+
+#: /install/index.php:42
+#, php-format
+msgid "Step %d: %s"
+msgstr "Trin %d: %s"
+
+#: /install/index.php:49
+msgid "Chart of accounts"
+msgstr "Kontoplaner"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Encoding"
+msgstr "Kodning"
+
+#: /install/index.php:49 /install/index.php:76
+msgid "Description"
+msgstr "Beskrivelse"
+
+#: /install/index.php:49 /install/index.php:76 /install/index.php:395
+msgid "Install"
+msgstr "Installer"
+
+#: /install/index.php:66 /install/index.php:94
+msgid "Installed"
+msgstr "Installeret"
+
+#: /install/index.php:76
+msgid "Language"
+msgstr "Sprog"
+
+#: /install/index.php:124
+msgid ""
+"Cannot connect to database. User or password is invalid or you have no "
+"permittions to create database."
+msgstr ""
+"Kan ikke skabe forbindelse til databasen. Enten er brugernavnet eller "
+"adgangskoden forkert eller også har du ikke adgang til at skabe databasen"
+
+#: /install/index.php:164
+msgid "Cannot save system configuration file 'config.php'."
+msgstr "Kan ikke gemme system konfigurationsfilen 'config.php'."
+
+#: /install/index.php:171
+msgid "Cannot open 'config_db.php' configuration file."
+msgstr "Kan ikk åbnet 'config_db.php' konfigurationsfilen."
+
+#: /install/index.php:174
+msgid "Cannot write to the 'config_db.php' configuration file."
+msgstr "Kan ikke skrive til 'config_db.php' konfigurationsfilen."
+
+#: /install/index.php:177
+msgid ""
+"Configuration file 'config_db.php' is not writable. Change its permissions "
+"so it is, then re-run installation step."
+msgstr ""
+"Konfigurationsfilen 'config_db.php' er ikke skrivbar. Ändre tilladelsen til "
+"det og kör installationenstrinet igen."
+
+#: /install/index.php:216
+msgid "Host name cannot be empty."
+msgstr "Host navnet kan ikke være tomt."
+
+#: /install/index.php:220
+msgid "Database user name cannot be empty."
+msgstr "Database bruernavnet kan ikke være tomt."
+
+#: /install/index.php:224
+msgid "Database name cannot be empty."
+msgstr "Database navnet kan ikke være tomt."
+
+#: /install/index.php:278
+msgid "Company name cannot be empty."
+msgstr "Firmanavnet kan ikke være tomt."
+
+#: /install/index.php:282
+msgid "Company admin name cannot be empty."
+msgstr "Firma admin navnet kan ikke være tomt."
+
+#: /install/index.php:286
+msgid "Company admin password cannot be empty."
+msgstr "Firma admin password kan ikke være tomt."
+
+#: /install/index.php:290
+msgid "Company admin passwords differ."
+msgstr "Firma admin password er ikke ens."
+
+#: /install/index.php:320
+msgid "System Diagnostics"
+msgstr "System diagnostik."
+
+#: /install/index.php:322
+msgid "Select install wizard language:"
+msgstr "Vælg installationswizard sprog:"
+
+#: /install/index.php:328
+msgid ""
+"All application preliminary requirements seems to be correct. Please press "
+"Continue button below."
+msgstr ""
+"Alle programmets behov ser ud til at være dækket. Venligst tryk 'Fortsæt' "
+"forneden."
+
+#: /install/index.php:329 /install/index.php:357 /install/index.php:364
+#: /install/index.php:371
+msgid "Continue >>"
+msgstr "Fortsæt >>"
+
+#: /install/index.php:331
+msgid ""
+"Application cannot be installed. Please fix problems listed below in red, "
+"and press Refresh button."
+msgstr ""
+"Programmet kan ikke installeres. Venligst ordne problemerne beskrivet "
+"forneden i rødt, og tryk 'Genlæs' knappen."
+
+#: /install/index.php:332
+msgid "Refresh"
+msgstr "Genlæs"
+
+#: /install/index.php:342
+msgid "Database Server Settings"
+msgstr "Databaseserver instillinger"
+
+#: /install/index.php:344
+msgid "Server Host:"
+msgstr "Server Host:"
+
+#: /install/index.php:345
+msgid "Database Name:"
+msgstr "Database navn:"
+
+#: /install/index.php:346
+msgid "Database User:"
+msgstr "Database bruger:"
+
+#: /install/index.php:347
+msgid "Database Password:"
+msgstr "Database password:"
+
+#: /install/index.php:348
+msgid "Database Collation:"
+msgstr "Database sortering:"
+
+#: /install/index.php:349
+msgid "Use '0_' Table Prefix:"
+msgstr "Brug '0_' tabel prefi:"
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "Yes"
+msgstr "Ja"
+
+#: /install/index.php:349 /includes/system_tests.inc:38
+#: /includes/system_tests.inc:113 /includes/system_tests.inc:126
+msgid "No"
+msgstr "Nej"
+
+#: /install/index.php:350
+msgid "Install Additional Language Packs from FA Repository:"
+msgstr "Installer yderligere sprogpakker fra FA's lager (Repository): "
+
+#: /install/index.php:351
+msgid "Install Additional COAs from FA Repository:"
+msgstr "Installer yderligere kontoplaner fra FA's lager (Repository):"
+
+#: /install/index.php:353
+msgid ""
+"Select collation you want to use. If you are unsure or you will use various "
+"languages, select unicode collation."
+msgstr ""
+"Vælg database sortering du wil bruge. Om du er usikker eller du vil bruge "
+"forskellige sprog, vælg da unicode sortering."
+
+#: /install/index.php:354
+msgid ""
+"Use table prefix if you share selected database for more than one FA company "
+"using the same collation."
+msgstr ""
+"Brug tabel prefix of du deler valgt database med mere end et firma som "
+"bruger samme sortering."
+
+#: /install/index.php:355
+msgid ""
+"Do not select additional langs nor COAs if you have no working internet "
+"connection right now. You can install them later."
+msgstr ""
+"Vælg ikke yderligere sprog eller kontoplaner hvis du ikke har en fungerende "
+"internet forbindelse lige nu. Du kan installere dem senere."
+
+#: /install/index.php:356 /install/index.php:363 /install/index.php:370
+#: /install/index.php:394
+msgid "<< Back"
+msgstr "<< Tilbage"
+
+#: /install/index.php:361
+msgid "User Interface Languages Selection"
+msgstr "Valg af bruger sprog "
+
+#: /install/index.php:368
+msgid "Charts of Accounts Selection"
+msgstr "Valg af kontoplaner"
+
+#: /install/index.php:385
+msgid "Company Settings"
+msgstr "Firma instillinger"
+
+#: /install/index.php:387
+msgid "Company Name:"
+msgstr "Firmanavn:"
+
+#: /install/index.php:388
+msgid "Admin Login:"
+msgstr "Admin login:"
+
+#: /install/index.php:389
+msgid "Admin Password:"
+msgstr "Admin password:"
+
+#: /install/index.php:390
+msgid "Reenter Password:"
+msgstr "Gentag password:"
+
+#: /install/index.php:391
+msgid "Select Chart of Accounts:"
+msgstr "Vælg kontoplan:"
+
+#: /install/index.php:392
+msgid "Select Default Language:"
+msgstr "Vælg standard sprog:"
+
+#: /install/index.php:395
+msgid "Start installation process"
+msgstr "Påbegynd installationen"
+
+#: /install/index.php:399
+msgid "FrontAccounting ERP has been installed successsfully."
+msgstr "FrontAccounting ERP er nu installeret."
+
+#: /install/index.php:400
+msgid "Please do not forget to remove install wizard folder."
+msgstr "Venligst husk at fjerne installationsmappen."
+
+#: /install/index.php:403
+msgid "Click here to start."
+msgstr "Klik her for at starte."
+
+#: /includes/system_tests.inc:15
+msgid "Info"
+msgstr "Info"
+
+#: /includes/system_tests.inc:16
+msgid "Optional"
+msgstr "Frivillig"
+
+#: /includes/system_tests.inc:17
+msgid "Recommended"
+msgstr "Anbefalet"
+
+#: /includes/system_tests.inc:18
+msgid "Required "
+msgstr "Nødvendig"
+
+#: /includes/system_tests.inc:24
+msgid "MySQL version"
+msgstr "MySQL version"
+
+#: /includes/system_tests.inc:28
+msgid "Upgrade MySQL server to version at least 4.1"
+msgstr "Opgrader MySQL server til mindst 4.1"
+
+#: /includes/system_tests.inc:35
+msgid "PHP MySQL extension"
+msgstr "PHP MySQL tillæg"
+
+#: /includes/system_tests.inc:40
+msgid "Your PHP has to have MySQL extension enabled."
+msgstr "Din PHP må have MySQL tillæg aktiveret."
+
+#: /includes/system_tests.inc:46
+msgid "PHP version"
+msgstr "PHP version"
+
+#: /includes/system_tests.inc:50
+msgid "Upgrade PHP to version at least 5.0.0"
+msgstr "Opgrader PHP til mindst version 5.0.0 "
+
+#: /includes/system_tests.inc:57
+msgid "Server system"
+msgstr "Server system"
+
+#: /includes/system_tests.inc:67
+msgid "Session save path"
+msgstr "Session save Path"
+
+#: /includes/system_tests.inc:79
+msgid "Removed install wizard folder"
+msgstr "Fjernet installationswizrd mappen"
+
+#: /includes/system_tests.inc:82
+msgid "Not removed"
+msgstr "Ikke fjernet"
+
+#: /includes/system_tests.inc:83
+msgid "Remove or rename install wizard folder for security reasons."
+msgstr "Fjern eller omdøb installationswizard mappen for en sikkerheds skyld."
+
+#: /includes/system_tests.inc:90
+msgid "Browser type"
+msgstr "Browsertype"
+
+#: /includes/system_tests.inc:94
+msgid "Any browser is supported"
+msgstr "Alle broser understøttes"
+
+#: /includes/system_tests.inc:101
+msgid "Http server type"
+msgstr "Http server type"
+
+#: /includes/system_tests.inc:105
+msgid "Any server is supported"
+msgstr "Alle servers understøttes."
+
+#: /includes/system_tests.inc:112
+msgid "Native gettext"
+msgstr "Modersmål (gettext)"
+
+#: /includes/system_tests.inc:116
+msgid "In case of no gettext support, php emulation is used"
+msgstr "Hvis ingen gettext støtte, bruges php emulering."
+
+#: /includes/system_tests.inc:124
+msgid "Debugging mode"
+msgstr "Debug på"
+
+#: /includes/system_tests.inc:128
+msgid "To switch debugging on set $go_debug>0 in config.php file"
+msgstr "For at sætte debug på, søt $go_debug>0 i config.php filen"
+
+#: /includes/system_tests.inc:138
+msgid "Error logging"
+msgstr "Fejl log"
+
+#: /includes/system_tests.inc:146
+msgid "Disabled"
+msgstr "Afkoblet"
+
+#: /includes/system_tests.inc:149
+msgid "To switch error logging set $error_logging in config.php file"
+msgstr "For at sætte fejl log på, sæt $error_logging i config.php filen."
+
+#: /includes/system_tests.inc:152
+msgid "Log file is not writeable"
+msgstr "Log filen er ikke skrivbar"
+
+#: /includes/system_tests.inc:162
+msgid "Current database version"
+msgstr "Nuværende database version"
+
+#: /includes/system_tests.inc:166
+msgid "Database structure seems to be not upgraded to current version"
+msgstr "Database strukturen synes ikke at være opdateret til nuværende version"
+
+#: /includes/system_tests.inc:181
+msgid "Company subdirectories consistency"
+msgstr "Firma undermappers konsistens "
+
+#: /includes/system_tests.inc:194 /includes/system_tests.inc:201
+#: /includes/system_tests.inc:209 /includes/system_tests.inc:226
+#: /includes/system_tests.inc:341 /includes/system_tests.inc:350
+#: /includes/system_tests.inc:359 /includes/system_tests.inc:367
+#, php-format
+msgid "'%s' is not writeable"
+msgstr "'%s' er ikke skrivbar"
+
+#: /includes/system_tests.inc:222
+msgid "Temporary directory"
+msgstr "Midlertidig mappe (temporary)"
+
+#: /includes/system_tests.inc:234
+msgid "Language configuration consistency"
+msgstr "Sprog konfigurations konsistens "
+
+#: /includes/system_tests.inc:243
+msgid "Languages folder should be writeable."
+msgstr "Sprogmappe må være skrivbar."
+
+#: /includes/system_tests.inc:252
+msgid "Languages configuration file should be writeable."
+msgstr "Sprog konfigurationsfilen må være skrivbar."
+
+#: /includes/system_tests.inc:271
+#, php-format
+msgid "Missing %s translation file."
+msgstr "%s oversættelsesfilen savnes."
+
+#: /includes/system_tests.inc:276
+#, php-format
+msgid "Missing system locale: %s"
+msgstr "System lokal: %s savnes"
+
+#: /includes/system_tests.inc:289
+msgid "Main config file"
+msgstr "Hoved config fil"
+
+#: /includes/system_tests.inc:296 /includes/system_tests.inc:318
+#, php-format
+msgid "Can't write '%s' file. Check FA directory write permissions."
+msgstr "Kan ikke skabe '%s' filen. Undersøg mappens skrivbarhed."
+
+#: /includes/system_tests.inc:297 /includes/system_tests.inc:319
+#, php-format
+msgid "'%s' file exists."
+msgstr "'%s' filen findes allerede."
+
+#: /includes/system_tests.inc:301
+#, php-format
+msgid "'%s' file should be read-only"
+msgstr "'%s' filen må være 'read-only'"
+
+#: /includes/system_tests.inc:310
+msgid "Database auth file"
+msgstr "Database Auth fil"
+
+#: /includes/system_tests.inc:323
+#, php-format
+msgid ""
+"'%s' file should be read-only if you do not plan to add or change companies"
+msgstr ""
+"'%s' filen må være 'read-only' hvis du ikke har planer om at lægge till "
+"eller ændre firmaer."
+
+#: /includes/system_tests.inc:334
+msgid "Extensions system"
+msgstr "Tillægssystem"
+
+#: /includes/system_tests.inc:372
+msgid "Extensions configuration files and directories should be writeable"
+msgstr "Tillægskonfiguration filer og mapper må være skrivbare"
+
+#: /includes/system_tests.inc:385
+#, php-format
+msgid "Non-standard theme directory '%s' is not writable"
+msgstr "Ikke standard theme mappe '%s' er ikk skrivbar"
+
+#: /includes/system_tests.inc:395
+msgid ""
+"OpenSSL PHP extension have to be enabled to use extension repository system."
+msgstr ""
+"OpenSSL PHP tillæg må være aktiv for at bruge tillægslagersystemet (FA "
+"Repository)"
+
+#: /includes/system_tests.inc:398
+msgid ""
+"OpenSSL have to be available on your server to use extension repository "
+"system."
+msgstr ""
+"OpenSSL må findes på din server for at bruge tillægslagersystem (FA "
+"Repository)"
+
+#: /includes/system_tests.inc:421
+msgid "Test"
+msgstr "Test"
+
+#: /includes/system_tests.inc:421
+msgid "Test type"
+msgstr "Testtype"
+
+#: /includes/system_tests.inc:421
+msgid "Value"
+msgstr "Værdi"
+
+#: /includes/system_tests.inc:421
+msgid "Comments"
+msgstr "Kommentarer"
+
+#: /includes/system_tests.inc:445
+msgid "Ok"
+msgstr "Ok"
+
+#: /includes/packages.inc:189
+#, php-format
+msgid "No key field '%s' in file '%s'"
+msgstr "Intet nøglefelt '%s' i filen '%s'"
+
+#: /includes/packages.inc:294
+msgid "Cannot download repo index file."
+msgstr "Kan ikke downloade repo indeks fil."
+
+#: /includes/packages.inc:306 /includes/packages.inc:343
+#, php-format
+msgid "Cannot delete outdated '%s' file."
+msgstr "Kan ikke slette gammel '%s' fil."
+
+#: /includes/packages.inc:310
+msgid "Release file in repository is invalid, or public key is outdated."
+msgstr ""
+"Release felt i repository er ugyldig, eller også er public key for gammel."
+
+#: /includes/packages.inc:327
+msgid "Repository version does not match application version."
+msgstr "Repository versionen matcher ikke program versionen."
+
+#: /includes/packages.inc:335 /includes/packages.inc:377
+#, php-format
+msgid "Cannot download '%s' file."
+msgstr "Kan ikke downloade '%s' fil."
+
+#: /includes/packages.inc:347
+#, php-format
+msgid ""
+"Security alert: broken index file in repository '%s'. Please inform "
+"repository administrator about this issue."
+msgstr ""
+"Sikkerhedsadvarsel: Indeks feltet i repository '%s' er brudt. Informer "
+"venligst repository administratoren om dette."
+
+#: /includes/packages.inc:383
+#, php-format
+msgid ""
+"Security alert: broken package '%s' in repository. Please inform repository "
+"administrator about this issue."
+msgstr ""
+"Sikkerhedsadvarsel: Brudt pakke '%s' i repository. Venligst informer "
+"repository administratoren om dette."
+
+#: /includes/packages.inc:641 /includes/packages.inc:696
+#, php-format
+msgid "Package '%s' not found."
+msgstr "Pakke '%s' findes ikke."
+
+#: install/index.php:361
+msgid ""
+"Use database user/password with permissions to create new database, or use "
+"proper credentials for previously created empty database."
+msgstr ""
