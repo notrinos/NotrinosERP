@@ -1,15 +1,15 @@
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 function focus_amount(i) {
-    save_focus(i);
+	save_focus(i);
 	i.setAttribute('_last', get_amount(i.name));
 }
 
@@ -28,7 +28,7 @@ var balances = {
 	'.amount': function(e) {
 		e.onblur = function() {
 			blur_amount(this);
-		  };
+		};
 		e.onfocus = function() {
 			focus_amount(this);
 		};

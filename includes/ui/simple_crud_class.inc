@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //
 //	Template for simple table editors
@@ -26,8 +26,7 @@ class simple_crud {
 	var $dec;
 	//
 	//
-	function __construct($name, $fields = null)
-	{
+	function __construct($name, $fields = null) {
 		$this->name = $name;
 		$this->pre_handlers = array(
 			'Edit' => '_edit',
@@ -48,14 +47,10 @@ class simple_crud {
 			'RESET' => 'list_view',
 			'CLONE' => 'editor_view'
 			);
-		$this->tool_buttons['Edit'] =
-			array(_('Edit'), _('Edit document line'), ICON_EDIT, '');
-		$this->tool_buttons['Delete'] =
-			array(_('Delete'), _('Remove line from document'), ICON_DELETE, '');
-		$this->tool_buttons['UPDATE'] =
-			array(_('Update'), _('Confirm changes'), ICON_UPDATE, '');
-		$this->tool_buttons['RESET'] =
-			array(_('Cancel'), _('Cancel changes'), ICON_CANCEL, '');
+		$this->tool_buttons['Edit'] = array(_('Edit'), _('Edit document line'), ICON_EDIT, '');
+		$this->tool_buttons['Delete'] = array(_('Delete'), _('Remove line from document'), ICON_DELETE, '');
+		$this->tool_buttons['UPDATE'] = array(_('Update'), _('Confirm changes'), ICON_UPDATE, '');
+		$this->tool_buttons['RESET'] = array(_('Cancel'), _('Cancel changes'), ICON_CANCEL, '');
 
 		$this->fields = $fields;
 		$this->selected_id = $this->_none;
@@ -63,8 +58,7 @@ class simple_crud {
 	/*
 		Input/output formatters - convert values between php/user domains.
 	*/
-	function _format_input($value, $fmt)
-	{
+	function _format_input($value, $fmt) {
 		switch($fmt) {
 			case 'stock':
 				$this->dec = get_qty_dec($value);
@@ -72,9 +66,9 @@ class simple_crud {
 			case 'price':
 			case 'qty':
 			case 'number':
-				    return user_numeric($value);
+				return user_numeric($value);
 			case 'percent':
-					return user_numeric($value)/100;
+				return user_numeric($value)/100;
 			case 'text':
 			case 'date':
 			default:
@@ -82,8 +76,7 @@ class simple_crud {
 		}
 	}
 	
-	function _format_output($value, $fmt)
-	{
+	function _format_output($value, $fmt) {
 		switch($fmt) {
 			case 'price':
 				return price_format($value);
@@ -102,8 +95,7 @@ class simple_crud {
 		}
 	}
 
-	function _check_mode()
-	{
+	function _check_mode() {
 		global $Ajax;
 
 		// list controls lookup
@@ -128,12 +120,11 @@ class simple_crud {
 	//
 	//	Set record for edition
 	//
-	function _edit($mode)
-	{
+	function _edit($mode) {
 		if ($this->Mode != $mode) {
-			if ($this->selected_id != $this->_none) {
+			if ($this->selected_id != $this->_none)
 				$this->data = $this->db_read();
-			}
+			
 			$this->set_posts($this->data);
 		}
 		$this->Mode = $mode;
@@ -141,8 +132,7 @@ class simple_crud {
 	//
 	//	Update record after edition
 	//
-	function _update($mode)
-	{
+	function _update($mode) {
 		$this->get_posts();
 		if ($this->update_check()) {
 			if ($this->db_update()) {
@@ -156,8 +146,7 @@ class simple_crud {
 	//
 	//	Add new record
 	//
-	function _add($mode)
-	{
+	function _add($mode) {
 		$this->get_posts();
 		if ($this->insert_check()) {
 			$this->db_insert();
@@ -169,8 +158,7 @@ class simple_crud {
 	//
 	//	Delete selected  record
 	//
-	function _delete()
-	{
+	function _delete() {
 		if ($this->delete_check())
 			$this->db_delete();
 		$this->_cancel();
@@ -178,8 +166,7 @@ class simple_crud {
 	//
 	//	Return to listing view
 	//
-	function _cancel()
-	{
+	function _cancel() {
 		$this->selected_id = $this->_none;
 		$this->db_cancel();
 		$this->Mode = '';
@@ -187,8 +174,7 @@ class simple_crud {
 	//
 	// Clone record for new edition
 	//
-	function _cloning()
-	{
+	function _cloning() {
 		$this->Mode = '';
 		$this->_edit('Edit');
 		$this->selected_id = $this->_none;
@@ -196,8 +182,7 @@ class simple_crud {
 	/*
 		Generate form controls
 	*/
-	function _bottom_controls()
-	{
+	function _bottom_controls() {
 		$clone = $this->selected_id != $this->_none;
 
 		$title=false;
@@ -207,8 +192,9 @@ class simple_crud {
 		$cancel = $async;
 
 		if ($async === 'both') {
-			$async = 'default'; $cancel = 'cancel';
-		} 
+			$async = 'default';
+			$cancel = 'cancel';
+		}
 		elseif ($async === 'default')
 			$cancel = true;
 		elseif ($async === 'cancel')
@@ -216,15 +202,14 @@ class simple_crud {
 		echo "<center>";
 
 		if ($this->Mode == '' || $this->Mode == 'RESET')
-			submit("{$base}NEW", _("Add new"), true, $title, $async);
+			submit("{$base}NEW", _('Add new'), true, $title, $async);
 		else {
 			if ($this->Mode == 'NEW' || $this->selected_id==$this->_none)
-				
-				submit("{$base}ADD", _("Add"), true, $title, $async);
+				submit("{$base}ADD", _('Add'), true, $title, $async);
 			else {
-				submit("{$base}UPDATE[{$this->selected_id}]", _("Update"), true, _('Submit changes'), $async);
+				submit("{$base}UPDATE[{$this->selected_id}]", _('Update'), true, _('Submit changes'), $async);
 				if ($clone) 
-					submit("{$base}CLONE[{$this->selected_id}]", _("Clone"), true, _('Edit new record with current data'), $async);
+					submit("{$base}CLONE[{$this->selected_id}]", _('Clone'), true, _('Edit new record with current data'), $async);
 			}
 			submit("{$base}RESET", _("Cancel"), true, _('Cancel edition'), $cancel);
 		}
@@ -234,18 +219,13 @@ class simple_crud {
 	// Public functions
 	//
 	
-	function tool_button($name, $selected_id=null, $params='')
-	{
+	function tool_button($name, $selected_id=null, $params='') {
 		$b = $this->tool_buttons[$name];
 
-		return "<td align='center' $params>"
-			.button( "{$this->name}$name"
-				.($selected_id === null || $selected_id === $this->_none ? '': "[$selected_id]"),
-				$b[0], $b[1], $b[2], $b[3])."</td>";
+		return "<td align='center' $params>".button( "{$this->name}$name".($selected_id === null || $selected_id === $this->_none ? '': "[$selected_id]"), $b[0], $b[1], $b[2], $b[3])."</td>";
 	}
 	
-	function set_posts()
-	{
+	function set_posts() {
 		foreach($this->fields as $name => $fmt) {
 			if (is_int($name)) {
 				$name = $fmt;
@@ -254,8 +234,7 @@ class simple_crud {
 			$post = isset($fmt['post']) ? $fmt['post'] : $name;
 			$fld = isset($fmt['fld']) ? $fmt['fld'] : $name;
 
-			$value = $this->selected_id == $this->_none ? @$fmt['dflt'] :
-				(is_array($this->data) ? $this->data[$fld]: $this->data->$fld);
+			$value = $this->selected_id == $this->_none ? @$fmt['dflt'] : (is_array($this->data) ? $this->data[$fld]: $this->data->$fld);
 
 			$_POST[$post] = $this->_format_output($value, @$fmt['fmt']);
 		}
@@ -282,8 +261,7 @@ class simple_crud {
 	}
 	//	Main function - display current CRUD editor content
 	//
-	function show()
-	{
+	function show() {
 		if (!isset($_POST[$this->name.'Mode']))
 			$this->set_posts();
 
@@ -319,8 +297,7 @@ class simple_crud {
 	//
 	//	Update record in db after edition
 	//
-	function db_update()
-	{
+	function db_update() {
 		$this->db_insert();
 	}
 	//
@@ -332,16 +309,14 @@ class simple_crud {
 	//
 	//	Insert record
 	//
-	function db_insert()
-	{
+	function db_insert() {
 		display_notification(__FUNCTION__. ' is not defined...');
 	}
 	//
 	//	Cancel edition
 	//	Optional things like focus set.
 	//
-	function db_cancel()
-	{
+	function db_cancel() {
 	}
 
 
@@ -354,8 +329,7 @@ class simple_crud {
 		return true;
 	}
 
-	function update_check() 
-	{
+	function update_check() {
 		return $this->insert_check(); 
 	}
 
@@ -373,4 +347,3 @@ class simple_crud {
 		display_notification(__FUNCTION__. ' is not defined...');
 	}
 };
-

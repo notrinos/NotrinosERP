@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once($path_to_root. '/includes/ui/simple_crud_class.inc');
 
@@ -38,15 +38,15 @@ class attachments extends simple_crud {
 			$row = db_fetch(db_query($sql), "Cannot retrieve attachment $keys[0]");
 
 			
-			if ($row['unique_name'] != ""){
-				if(in_ajax()) {
+			if ($row['unique_name'] != '') {
+				if(in_ajax())
 					$Ajax->redirect($path_to_root.'/admin/attachments.php?dl='.$keys[0]);
-				} else {					
-		    		Header("Content-type: 'application/octet-stream' ");
-			    	//header('Content-Length: '.$row['filesize']);
-		    		header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
-		    		echo file_get_contents(company_path()."/attachments/".$row['unique_name']);
-			    	exit();
+				else {					
+					Header("Content-type: 'application/octet-stream' ");
+					//header('Content-Length: '.$row['filesize']);
+					header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
+					echo file_get_contents(company_path()."/attachments/".$row['unique_name']);
+					exit();
 				}
 			}
 		}
@@ -55,17 +55,17 @@ class attachments extends simple_crud {
 			$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($keys[0]);
 			$row = db_fetch(db_query($sql), "Cannot retrieve attachment $keys[0]");
 			
-			if ($row['unique_name'] != ""){
+			if ($row['unique_name'] != ''){
 
 				$Ajax->redirect($path_to_root.'/admin/attachments.php?vw='.$keys[0]);	
 				/*if(in_ajax()) {
 					
 				} else {					
-		    		$type_no = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
-		    		header("Content-type: ".$type_no);
-		 			header("Content-Disposition: inline");
-			    	echo file_get_contents(company_path(). "/attachments/".$row['unique_name']);
-		    		exit();
+					$type_no = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
+					header("Content-type: ".$type_no);
+					header("Content-Disposition: inline");
+					echo file_get_contents(company_path(). "/attachments/".$row['unique_name']);
+					exit();
 				}*/
 			}
 		}
@@ -75,13 +75,13 @@ class attachments extends simple_crud {
 			$filters['visible'] = 1;
 
 		$sql = "SELECT * FROM ".TB_PREF."attachments WHERE trans_no=".db_escape($this->entity)." AND type_no = ".db_escape(isset($_GET['type_no']) ? $_GET['type_no'] : ST_CUSTOMER);
-		$result = db_query($sql, "Could not get data from ".TB_PREF."attachments table");
+		$result = db_query($sql, 'Could not get data from '.TB_PREF.'attachments table');
 		$attachments = Array();
 		while($row = db_fetch_assoc($result))
 			$attachments[] = $row;
 
-		start_table(TABLESTYLE, "width=80%");
-		$th = array(_("ID"), _("Docs Title"), _("Filename"), _("Size"), _("Filetype"), _("Date Updated"),  "",  "", "", "");	
+		start_table(TABLESTYLE, 'width=80%');
+		$th = array(_('ID'), _('Docs Title'), _('Filename'), _('Size'), _('Filetype'), _('Date Updated'),  '',  '', '', '');	
 		table_header($th);	
 		if($attachments){	
 			foreach($attachments as $de) {
@@ -91,11 +91,11 @@ class attachments extends simple_crud {
 				label_cell($de['filesize']);
 				label_cell($de['filetype']);
 				label_cell(sql2date($de['tran_date']));
-				edit_button_cell("{$this->name}Edit[{$de['id']}]", _("Edit"));
+				edit_button_cell("{$this->name}Edit[{$de['id']}]", _('Edit'));
 				label_cell('<a target="_blank" class="viewlink" href="'.$path_to_root.'/admin/attachments.php?vw='.$de['id'].'" onclick="javascript:openWindow(this.href,this.target); return false;" accesskey="V"><img src="'.$path_to_root.'/themes/default/images/view.gif" style="vertical-align:middle;width:12px;height:12px;border:0;"></a>', 'style="text-align: center;" ');
-				button_cell("{$this->name}Download[{$de['id']}]", _("Download"), false, ICON_DOWN);
+				button_cell("{$this->name}Download[{$de['id']}]", _('Download'), false, ICON_DOWN);
 				
-				delete_button_cell("{$this->name}Delete[{$de['id']}]", _("Delete"));
+				delete_button_cell("{$this->name}Delete[{$de['id']}]", _('Delete'));
 				end_row();	
 			}
 		}
@@ -109,35 +109,35 @@ class attachments extends simple_crud {
 		start_outer_table(TABLESTYLE);
 	
 		table_section(1);
-		table_section_title(_("Attachment Detail"));
+		table_section_title(_('Attachment Detail'));
 		
-		if($this->selected_id != null && $this->selected_id != "") {
+		if($this->selected_id != null && $this->selected_id != '') {
 			$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 			$row = db_fetch(db_query($sql), "Cannot retrieve attachment $this->selected_id");
 			hidden('unique_name', $row['unique_name']);
 			$_POST['tran_date'] = sql2date($row['tran_date']);
 			$_POST['title'] = $row['description'];
 			$_POST['trans_no'] = $row['trans_no'];
-		} else {
+		}
+		else {
 			$_POST['trans_no'] = $this->entity;
 			$_POST['tran_date'] = Today();
 			hidden('unique_name', '');
 		}
 
 		$type_no= $_GET['type_no'];
-
 		
 		if($type_no==ST_CUSTOMER) // 5
-			$id_word = _("Customer ID");
+			$id_word = _('Customer ID');
 		elseif($type_no==ST_SUPPLIER) // 6
-			$id_word = _("Supplier ID");
+			$id_word = _('Supplier ID');
 
 		label_row(_($id_word), $_POST['trans_no']);	
-		date_row(_("Date"), 'tran_date');
-		text_row_ex(_("Docs Title").':', 'description', 40);
+		date_row(_('Date'), 'tran_date');
+		text_row_ex(_('Docs Title').':', 'description', 40);
 		if ($this->selected_id)
-			label_row(_("File:"), sprintf(_("%s [%s bytes]"), $row['filename'], $row['filesize']));
-		file_row( ($this->selected_id ? _("File change") : _("Select file")) . ":", 'file_attachment_name', 'file_attachment_name');
+			label_row(_('File:'), sprintf(_("%s [%s bytes]"), $row['filename'], $row['filesize']));
+		file_row( ($this->selected_id ? _('File change') : _('Select file')) . ':', 'file_attachment_name', 'file_attachment_name');
 		hidden('type_no', $_GET['type_no']);
 		end_outer_table(1);	
 		div_end();
@@ -151,45 +151,42 @@ class attachments extends simple_crud {
 		$cancel = $async;
 
 		if ($async === 'both') {
-			$async = 'default'; $cancel = 'cancel';
-		} 
+			$async = 'default';
+			$cancel = 'cancel';
+		}
 		else if ($async === 'default')
 			$cancel = true;
 		else if ($async === 'cancel')
 			$async = true;
-		echo "<center>";
+		echo '<center>';
 
 		if ($this->Mode == '' || $this->Mode == 'RESET')
-			submit("{$base}NEW", _("Add new"), true, $title, $async);
+			submit("{$base}NEW", _('Add new'), true, $title, $async);
 		else {
 			if ($this->Mode == 'NEW' || $this->selected_id==$this->_none)
-				
-				submit("{$base}ADD", _("Add"), true, $title, $async);
-			else {
-				submit("{$base}UPDATE[{$this->selected_id}]", _("Update"), true, _("Submit changes"), $async);				
-			}
-			submit("{$base}RESET", _("Cancel"), true, _("Cancel edition"), $cancel);
+				submit("{$base}ADD", _('Add'), true, $title, $async);
+			else
+				submit("{$base}UPDATE[{$this->selected_id}]", _('Update'), true, _('Submit changes'), $async);				
+			submit("{$base}RESET", _('Cancel'), true, _('Cancel edition'), $cancel);
 		}
-		echo "</center>";
+		echo '</center>';
 	}
 	
 	function db_insert() {
 		$dat = $this->data;		
 		if(!isset($max_image_size))
 		$max_image_size = 5000;
-		$upload_file = "";
+		$upload_file = '';
 		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] <> '') {
 			
 			$result = $_FILES['file_attachment_name']['error'];
 			$upload_file = 'Yes'; 
 			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir)){			
+			if (!file_exists($attr_dir))		
 				mkdir($attr_dir);
-			}
 			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir)){
+			if (!file_exists($attach_dir))
 				mkdir($attach_dir);
-			}	
 			
 			if(isset($_POST['unique_name']) && $_POST['unique_name'] <> '')
 				$attachment_file_name = $_POST['unique_name'];			
@@ -199,29 +196,29 @@ class attachments extends simple_crud {
 			$filesize = $_FILES['file_attachment_name']['size'];
 			$filetype = $_FILES['file_attachment_name']['type'];
 
-			$filename = $attach_dir."/".$attachment_file_name; 
+			$filename = $attach_dir.'/'.$attachment_file_name; 
 			
 			if (file_exists($filename)){
 				$result = unlink($filename);
-				if (!$result) 	{
+				if (!$result) {
 					display_error(_('The existing Docs could not be removed'));
-					$upload_file ='No';
+					$upload_file = 'No';
 				}
 			}	
 			if ($upload_file == 'Yes'){
 				$actual_file_nam = $_FILES['file_attachment_name']['name'];
 				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
 				$sql = "INSERT INTO ".TB_PREF."attachments (trans_no, type_no, `description`, `filename`, unique_name, tran_date, `filesize`, `filetype`) VALUES ("
-					   . db_escape($this->entity) . ","
-					   . db_escape($dat['type_no']) . ","
-					   . db_escape($_POST['description']) . ","
-					   . db_escape($actual_file_nam) . ","
-					   . db_escape($attachment_file_name) . ","
-					   . db_escape(date2sql($_POST['tran_date'])) . ","
-					   . db_escape($filesize) . ","
-					   . db_escape($filetype) . ")";
+					. db_escape($this->entity) . ','
+					. db_escape($dat['type_no']) . ','
+					. db_escape($_POST['description']) . ','
+					. db_escape($actual_file_nam) . ','
+					. db_escape($attachment_file_name) . ','
+					. db_escape(date2sql($_POST['tran_date'])) . ','
+					. db_escape($filesize) . ','
+					. db_escape($filetype) . ')';
 				if(db_query($sql, 'Could not add Attachment'))
-					display_notification(_("A New Attachment Added Successfully"));
+					display_notification(_('A New Attachment Added Successfully'));
 			}
 		}
 	}
@@ -230,19 +227,17 @@ class attachments extends simple_crud {
 		$dat = $this->data;
 		if(!isset($max_image_size))
 			$max_image_size = 5000;
-		$upload_file = "";
+		$upload_file = '';
 		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] != '') {
 			
 			$result = $_FILES['file_attachment_name']['error'];
 			$upload_file = 'Yes'; 
 			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir)){
+			if (!file_exists($attr_dir))
 				mkdir($attr_dir);
-			}
 			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir)){
+			if (!file_exists($attach_dir))
 				mkdir($attach_dir);
-			}	
 			
 			if(isset($_POST['unique_name']) && $_POST['unique_name'] == '')
 				$attachment_file_name = uniqid();
@@ -252,12 +247,12 @@ class attachments extends simple_crud {
 			$filesize = $_FILES['file_attachment_name']['size'];
 			$filetype = $_FILES['file_attachment_name']['type'];
 
-			$filename = $attach_dir."/".$attachment_file_name; 
+			$filename = $attach_dir.'/'.$attachment_file_name; 
 			if (file_exists($filename)){
 				$result = unlink($filename);
-				if (!$result) 	{
+				if (!$result) {
 					display_error(_('The existing Docs could not be removed'));
-					$upload_file ='No';
+					$upload_file = 'No';
 				}
 			}
 			if ($upload_file == 'Yes'){
@@ -265,24 +260,24 @@ class attachments extends simple_crud {
 				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
 			}
 		}
-			$sql = "UPDATE ".TB_PREF."attachments SET "
-				      . "trans_no = " . db_escape($this->entity) . ","
-					   . "type_no = " . db_escape($dat['type_no']) . ","
-			     . "`description` = " . db_escape($_POST['description']) . ","
-				     . "tran_date = " . db_escape(date2sql($_POST['tran_date']));
-			if ($upload_file == 'Yes')
-				$sql .=  ", unique_name = " . db_escape($attachment_file_name) . ","
-					. "`filename` = " . db_escape($actual_file_nam) . ","
-					. "`filesize` = " . db_escape($filesize) . ","
-					. "`filetype` = " . db_escape($filetype);
-			$sql .=  " WHERE id = " . db_escape($this->selected_id);
-				if(db_query($sql, "Could not Update Attachment $this->selected_id"))
-					display_notification(_("The Selected Attachment $this->selected_id Updated Successfully"));
+		$sql = "UPDATE ".TB_PREF."attachments SET "
+			. "trans_no = " . db_escape($this->entity) . ","
+			. "type_no = " . db_escape($dat['type_no']) . ","
+			. "`description` = " . db_escape($_POST['description']) . ","
+			. "tran_date = " . db_escape(date2sql($_POST['tran_date']));
+		if ($upload_file == 'Yes')
+			$sql .=  ", unique_name = " . db_escape($attachment_file_name) . ","
+				. "`filename` = " . db_escape($actual_file_nam) . ","
+				. "`filesize` = " . db_escape($filesize) . ","
+				. "`filetype` = " . db_escape($filetype);
+		$sql .=  " WHERE id = " . db_escape($this->selected_id);
+		if(db_query($sql, "Could not Update Attachment $this->selected_id"))
+			display_notification(_("The Selected Attachment $this->selected_id Updated Successfully"));
 	}
 
 	function insert_check() {
 		if (strlen($_POST['description']) == 0) {
-			display_error(_("Description cannot be empty."));
+			display_error(_('Description cannot be empty.'));
 			set_focus('description');
 			return false;
 		}
@@ -306,14 +301,13 @@ class attachments extends simple_crud {
 		$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 		$row = db_fetch(db_query($sql), "Cannot retrieve attachment $this->selected_id");
 
-		$dir =  company_path()."/attachments";
-		if ($row['unique_name'] && file_exists($dir."/".$row['unique_name']))
-			unlink($dir."/".$row['unique_name']);
+		$dir =  company_path().'/attachments';
+		if ($row['unique_name'] && file_exists($dir.'/'.$row['unique_name']))
+			unlink($dir.'/'.$row['unique_name']);
 
 		$sql = "DELETE FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 		if(db_query($sql, "Could not Delete Attachment $this->selected_id"))
-			display_notification(_("The Selected Attachment is Deleted Successfully"));
+			display_notification(_('The Selected Attachment is Deleted Successfully'));
 		return false;
 	}
 }
-

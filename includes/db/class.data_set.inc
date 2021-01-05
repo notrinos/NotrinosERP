@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
 // array contains optional/required params for all supported validator types
@@ -32,13 +32,11 @@ abstract class record_set {
 	var $debug = array();
 	var $subset;		// optional where clause for record subset
 
-	function __wakeup()
-	{
+	function __wakeup() {
 		$this->errors = array();
 	}
 
-	function __construct($name, $fields, $key, $subset=null)
-	{
+	function __construct($name, $fields, $key, $subset=null) {
 		$this->name = $name;
 		$this->fields = $fields;
 		$this->key = $key;
@@ -70,8 +68,7 @@ abstract class record_set {
 	*	@msg - message stored on error
 	**/
 	
-	function set_validator($check, $msg=null)
-	{
+	function set_validator($check, $msg=null) {
 		$params = explode(':', $check);
 		if (count($params)<3)
 			display_error(_('Invalid validator string'));
@@ -80,12 +77,11 @@ abstract class record_set {
 		$mode = array_shift($params);
 		$type = array_shift($params);
 		$options = array();
-		if (count($params))
-		{
+		if (count($params)) {
 			foreach ($params as $par) {
-				if (($n = strpos($par, '=')) !== false) {
+				if (($n = strpos($par, '=')) !== false)
 					$options[substr($par, 0, $n)] = substr($par, $n+1);
-				} else
+				else
 					$options[] = $par;
 			}
 		}
@@ -97,8 +93,7 @@ abstract class record_set {
 	*	@key - record key (u/d)
 	*	@data - data to be validated (i/u)
 	**/
-	function _validate($key=null, $data)
-	{
+	function _validate($key=null, $data) {
 		$mode = isset($data) ? (isset($key) ? 'u' : 'i') : 'd';
 
 		foreach($this->checks as $check) {
@@ -139,7 +134,7 @@ abstract class record_set {
 							(isset($opts['max']) && !($data[$fld] > $opts['max'])) )
 								return $this->error($msg, $check['fld']);
 
-//					case 'match':
+					// case 'match':
 						break;
 
 					// user defined checks
@@ -148,7 +143,8 @@ abstract class record_set {
 						if (method_exists($this, $func)) {
 							if (!$this->$func($data, $check['opts'], $key))
 								return $this->error($msg, $check['fld']);
-						} else if (function_exists($func)) {
+						}
+						else if (function_exists($func)) {
 							if (!$func($data, $key, $check['opts'], $key))
 								return $this->error($msg, $check['fld']);
 						}
@@ -165,8 +161,7 @@ abstract class record_set {
 	*	This looks redundant ('forbidden' update_check could be used)
 	*	but in fact the constraints are related to exact record, so changes with key.
 	**/
-	function edit_status($key)
-	{
+	function edit_status($key) {
 		$editables = array();
 
 		// default: all but key fields editable 
@@ -177,18 +172,15 @@ abstract class record_set {
 	}
 
 
-	function delete_check($key)
-	{
+	function delete_check($key) {
 		return $this->_validate($key, null);
 	}
 
-	function insert_check($data)
-	{
+	function insert_check($data) {
 		return $this->_validate(null, $data);
 	}
 
-	function update_check($key, $data)
-	{
+	function update_check($key, $data) {
 		// Note: this does not allow change of key
 		return $this->_validate( $key, $data);
 	}
@@ -199,12 +191,10 @@ abstract class record_set {
 	//
 	//	Generic read record routine
 	//
-	function get($key=null)
-	{
+	function get($key=null) {
 		$defaults = array();
 		// return all defined default values
-		foreach ($this->fields as $name => $def)
-		{
+		foreach ($this->fields as $name => $def) {
 			if(!is_numeric($name)) {
 				if (is_string($def))
 					$defaults[$name] = $def;
@@ -221,8 +211,7 @@ abstract class record_set {
 	//
 	//	Generic update record routine
 	//
-	function update($key, $data)
-	{
+	function update($key, $data) {
 		if (!$this->update_check($key, $data))
 			return false;
 
@@ -231,8 +220,7 @@ abstract class record_set {
 	//
 	//	Generic delete record routine
 	//
-	function delete($key)
-	{
+	function delete($key) {
 		if (!$this->delete_check($key))
 			return false;
 
@@ -241,8 +229,7 @@ abstract class record_set {
 	//
 	//	Insert record
 	//
-	function insert($data)
-	{
+	function insert($data) {
 		if (!$this->insert_check($data))
 			return false;
 
@@ -253,16 +240,14 @@ abstract class record_set {
 
 class data_set extends record_set {
 
-	function __construct($name, $fields, $key, $subset=null)
-	{
+	function __construct($name, $fields, $key, $subset=null) {
 		parent::__construct($name, $fields, $key, $subset);
 	}
 
 	//
 	//	Generic read record routine
 	//
-	function get($key=null)
-	{
+	function get($key=null) {
 		if ($key===null)
 			return parent::get();
 
@@ -275,9 +260,9 @@ class data_set extends record_set {
 					$where[$fld] = "`$fld`=".db_escape($key[$fld]);
 				else
 					return $this->error(sprintf(_("Invalid key passed reading '%s'"), $this->name));
-		} else {
-			$where = array($this->key => "`".$this->key."`=".db_escape($key));
 		}
+		else
+			$where = array($this->key => "`".$this->key."`=".db_escape($key));
 
 		$sql .= implode(' AND ', $where);
 		$result = db_query($sql);
@@ -289,8 +274,7 @@ class data_set extends record_set {
 	//
 	//	Generic list record routine
 	//
-	function get_all($where=null, $order_by=null)
-	{
+	function get_all($where=null, $order_by=null) {
 		$fields = array();
 		foreach($this->fields as $fld)
 			$fields[] = '`'.$fld.'`';
@@ -313,8 +297,7 @@ class data_set extends record_set {
 	//
 	//	Generic update record routine
 	//
-	function update($key, $data)
-	{
+	function update($key, $data) {
 		if (!parent::update($key, $data))	// validate data
 			return false;
 
@@ -337,9 +320,9 @@ class data_set extends record_set {
 					$where[$fld] = "`$fld`=".db_escape($key[$fld]);
 				else
 					return $this->error(sprintf(_("Invalid key for update '%s'"), $this->name));
-		} else {
-			$where = array("`".$this->key."`=".db_escape($key));
 		}
+		else
+			$where = array("`".$this->key."`=".db_escape($key));
 
 		$sql .= implode(' AND ', $where);
 		$result = db_query($sql);
@@ -352,8 +335,7 @@ class data_set extends record_set {
 	//
 	//	Generic delete record routine
 	//
-	function delete($key)
-	{
+	function delete($key) {
 		if (!parent::delete_check($key))
 			return false;
 
@@ -366,9 +348,9 @@ class data_set extends record_set {
 					$where[$fld] = "`$fld`=".db_escape($key[$fld]);
 				else
 					return $this->error(sprintf(_("Invalid key for update '%s'"), $this->name));
-		} else {
-			$where = array("`".$this->key."`=".db_escape($key));
 		}
+		else
+			$where = array("`".$this->key."`=".db_escape($key));
 
 		$sql .= " WHERE ".implode(' AND ', $where);
 		$result = db_query($sql);
@@ -380,8 +362,7 @@ class data_set extends record_set {
 	//
 	//	Insert record
 	//
-	function insert($data)
-	{
+	function insert($data) {
 		if (!parent::insert_check($data))
 			return false;
 
@@ -402,7 +383,6 @@ class data_set extends record_set {
 
 		return $result;
 	}
-
 }
 
 /**
@@ -417,8 +397,7 @@ class array_set extends record_set {
 
 	var $object_class;	// name of record object class or null for arrays
 
-	function __construct($name, $fields, $key=null, &$arr=array(), $class = null)
-	{
+	function __construct($name, $fields, $key=null, &$arr=array(), $class = null) {
 		$this->array = &$arr;
 		$this->object_class = $class;
 		parent::__construct($name, $fields, $key);
@@ -430,8 +409,7 @@ class array_set extends record_set {
 	//
 	//
 	//
-	function get($key=null)
-	{
+	function get($key=null) {
 		if ($key===null)
 			return parent::get();
 
@@ -440,26 +418,21 @@ class array_set extends record_set {
 	//
 	//	Generic list record routine
 	//
-	function get_all()
-	{
+	function get_all() {
 		return $this->array;
 	}
 
-	function _set_record($data, $record = null)
-	{
+	function _set_record($data, $record = null) {
 		if (!isset($record)) {
-			if ($this->object_class) {
+			if ($this->object_class)
 				$record = new $this->object_class;
-			}
 			else
 				$record = array();
 		}
-		foreach(array_merge($this->fields, (array)$this->key) as $n => $fld)
-		{
+		foreach(array_merge($this->fields, (array)$this->key) as $n => $fld) {
 			if (!is_numeric($n))
 				$fld = $n;
-			if (array_key_exists($fld, $data))
-			{
+			if (array_key_exists($fld, $data)) {
 				if ($this->object_class)
 					$record->$fld = $data[$fld];
 				else
@@ -472,14 +445,13 @@ class array_set extends record_set {
 	//
 	//	Generic update record routine
 	//
-	function update($key, $data)
-	{
+	function update($key, $data) {
 		if (parent::update($key, $data) === false)
 			return false;
 
 		$record = $this->_set_record($data, $this->array[$key]);
 		if (!$record)
-			return $this->error(_("Empty update data for array ").$this->name);
+			return $this->error(_('Empty update data for array ').$this->name);
 
 		$this->array[$key] = $record;
 
@@ -488,8 +460,7 @@ class array_set extends record_set {
 	//
 	//	Delete record
 	//
-	function delete($key)
-	{
+	function delete($key) {
 		if (!parent::delete($key))
 			return false;
 
@@ -500,14 +471,13 @@ class array_set extends record_set {
 	//
 	//	Insert record
 	//
-	function insert($data)
-	{
+	function insert($data) {
 		if (parent::insert($data) === false)
 			return false;
 
 		$record = $this->_set_record($data);
 		if (!$record)
-			return $this->error(_("Empty data for array ").$this->name);
+			return $this->error(_('Empty data for array ').$this->name);
 
 		$this->array[] = $record;
 
@@ -515,4 +485,3 @@ class array_set extends record_set {
 		return end($ret);
 	}
 }
-

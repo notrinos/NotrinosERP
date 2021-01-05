@@ -1,20 +1,16 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no,
-	$website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, 
-	$curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, 
-	$notes, $tax_group_id, $tax_included)
-{
+function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included) {
 	$sql = "INSERT INTO ".TB_PREF."suppliers (supp_name, supp_ref, address, supp_address, gst_no, website,
 		supp_account_no, bank_account, credit_limit, dimension_id, dimension2_id, curr_code,
 		payment_terms, payable_account, purchase_account, payment_discount_account, notes, 
@@ -39,14 +35,10 @@ function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no,
 		.db_escape($tax_group_id). ", "
 		.db_escape($tax_included). ")";
 
-	db_query($sql,"The supplier could not be added");
+	db_query($sql, 'The supplier could not be added');
 }
 
-function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, 
-	$website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, 
-	$curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, 
-	$notes, $tax_group_id, $tax_included)
-{
+function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included) {
 	$sql = "UPDATE ".TB_PREF."suppliers SET supp_name=".db_escape($supp_name) . ",
 		supp_ref=".db_escape($supp_ref) . ",
 		address=".db_escape($address) . ",
@@ -68,20 +60,18 @@ function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_ad
 		tax_included=".db_escape($tax_included)
 		." WHERE supplier_id = ".db_escape($supplier_id);
 
-	db_query($sql,"The supplier could not be updated");
+	db_query($sql, 'The supplier could not be updated');
 }
 
-function delete_supplier($supplier_id)
-{
+function delete_supplier($supplier_id) {
 	$sql="DELETE FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
-	db_query($sql,"check failed");
+	db_query($sql, 'check failed');
 }
 
-function get_supplier_details($supplier_id, $to=null, $all=true)
-{
+function get_supplier_details($supplier_id, $to=null, $all=true) {
 
 	if ($to == null)
-		$todate = date("Y-m-d");
+		$todate = date('Y-m-d');
 	else
 		$todate = date2sql($to);
 	$past1 = get_company_pref('past_due_days');
@@ -89,14 +79,14 @@ function get_supplier_details($supplier_id, $to=null, $all=true)
 	// removed - supp_trans.alloc from all summations
 
 	if ($all)
-    	$value = "(trans.ov_amount + trans.ov_gst + trans.ov_discount)";
-    else	
-    	$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT."
-  	OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0), 1, -1)*
-    		ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc";
+		$value = "(trans.ov_amount + trans.ov_gst + trans.ov_discount)";
+	else	
+		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT."
+	OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0), 1, -1)*
+			ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc";
 
 	$due = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_SUPPCREDIT.",trans.due_date,trans.tran_date)";
-    $sql = "SELECT supp.supp_name, supp.curr_code, ".TB_PREF."payment_terms.terms,
+	$sql = "SELECT supp.supp_name, supp.curr_code, ".TB_PREF."payment_terms.terms,
 
 		Sum(IFNULL($value,0)) AS Balance,
 
@@ -117,47 +107,43 @@ function get_supplier_details($supplier_id, $to=null, $all=true)
 	if (!$all)
 		$sql .= "AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc > ".FLOAT_COMP_DELTA." ";  
 	$sql .= "GROUP BY
-			  supp.supp_name,
-			  ".TB_PREF."payment_terms.terms,
-			  ".TB_PREF."payment_terms.days_before_due,
-			  ".TB_PREF."payment_terms.day_in_following_month";
-    $result = db_query($sql,"The customer details could not be retrieved");
-    $supp = db_fetch($result);
+			supp.supp_name,
+			".TB_PREF."payment_terms.terms,
+			".TB_PREF."payment_terms.days_before_due,
+			".TB_PREF."payment_terms.day_in_following_month";
+	$result = db_query($sql, 'The customer details could not be retrieved');
+	$supp = db_fetch($result);
 
-    return $supp;
+	return $supp;
 }
 
-function get_supplier($supplier_id)
-{
+function get_supplier($supplier_id) {
 	$sql = "SELECT * FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
-	$result = db_query($sql, "could not get supplier");
+	$result = db_query($sql, 'could not get supplier');
 
 	return db_fetch($result);
 }
 
-function get_supplier_name($supplier_id)
-{
+function get_supplier_name($supplier_id) {
 	$sql = "SELECT supp_name AS name FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
-	$result = db_query($sql, "could not get supplier");
+	$result = db_query($sql, 'could not get supplier');
 
 	$row = db_fetch_row($result);
 
 	return $row[0];
 }
 
-function get_supplier_accounts($supplier_id)
-{
+function get_supplier_accounts($supplier_id) {
 	$sql = "SELECT payable_account,purchase_account,payment_discount_account, dimension_id, dimension2_id FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
-	$result = db_query($sql, "could not get supplier");
+	$result = db_query($sql, 'could not get supplier');
 
 	return db_fetch($result);
 }
 
-function get_supplier_contacts($supplier_id, $action=null)
-{
+function get_supplier_contacts($supplier_id, $action=null) {
 	$results = array();
 	$res = get_crm_persons('supplier', $action, $supplier_id);
 	while($contact = db_fetch($res))
@@ -166,23 +152,20 @@ function get_supplier_contacts($supplier_id, $action=null)
 	return $results;
 }
 
-function get_current_supp_credit($supplier_id)
-{
+function get_current_supp_credit($supplier_id) {
 	$suppdet = get_supplier_details($supplier_id);
 	return $suppdet['cur_credit'];
 
 }
 
-function is_new_supplier($id)
-{
+function is_new_supplier($id) {
 	$tables = array('supp_trans', 'grn_batch', 'purch_orders', 'purch_data');
 
 	return !key_in_foreign_table($id, $tables, 'supplier_id');
 }
 
-function get_supplier_currency($supplier_id)
-{
-    $sql = "SELECT curr_code FROM ".TB_PREF."suppliers WHERE supplier_id = ".db_escape($supplier_id);
+function get_supplier_currency($supplier_id) {
+	$sql = "SELECT curr_code FROM ".TB_PREF."suppliers WHERE supplier_id = ".db_escape($supplier_id);
 
 	$result = db_query($sql, "Retreive currency of supplier $supplier_id");
 
@@ -190,8 +173,7 @@ function get_supplier_currency($supplier_id)
 	return $myrow ? $myrow[0] : get_company_currency();
 }
 
-function get_suppliers_search($supplier)
-{
+function get_suppliers_search($supplier) {
 	global $SysPrefs;
 
 	if (isset($SysPrefs->max_rows_in_search))
@@ -207,6 +189,5 @@ function get_suppliers_search($supplier)
 			gst_no LIKE " . db_escape("%" . $supplier. "%") . ")
 		ORDER BY supp_name LIMIT 0,".(int)($limit);
 
-	return db_query($sql, "Failed in retreiving supplier list.");
+	return db_query($sql, 'Failed in retreiving supplier list.');
 }
-

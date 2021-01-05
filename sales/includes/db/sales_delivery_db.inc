@@ -1,19 +1,18 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //-----------------------------------------------------------------------------
 // insert/update sales delivery
 //
-function write_sales_delivery(&$delivery,$bo_policy)
-{
+function write_sales_delivery(&$delivery,$bo_policy) {
 	global $Refs;
 
 	$trans_no = $delivery->trans_no;
@@ -51,9 +50,9 @@ function write_sales_delivery(&$delivery,$bo_policy)
 		$delivery->ship_via, $delivery->due_date, 0, 0, $delivery->dimension_id, 
 		$delivery->dimension2_id, $delivery->payment, $delivery->tax_included, $delivery->prep_amount);
 
-	if ($trans_no == 0) {
+	if ($trans_no == 0)
 		$delivery->trans_no = array($delivery_no=>0);
-	} else {
+	else {
 		move_trans_attachments(ST_CUSTDELIVERY, $trans_no, $delivery_no);
 		void_gl_trans(ST_CUSTDELIVERY, $delivery_no, true);
 		void_stock_move(ST_CUSTDELIVERY, $delivery_no);
@@ -63,8 +62,7 @@ function write_sales_delivery(&$delivery,$bo_policy)
 
 
 	// for prepaid delivery repost income from deffered account
-	if ($delivery->is_prepaid())
-	{
+	if ($delivery->is_prepaid()) {
 		$branch_data = get_branch_accounts($delivery->Branch);
 		$total = 0;
 	}
@@ -104,7 +102,7 @@ function write_sales_delivery(&$delivery,$bo_policy)
 			if (is_fixed_asset($mb_flag)) {
 				$sql = "UPDATE ".TB_PREF."stock_master SET inactive=1, material_cost=0
 					WHERE stock_id=".db_escape($delivery_line->stock_id);
-				db_query($sql,"The cost details for the fixed asset could not be updated");
+				db_query($sql, 'The cost details for the fixed asset could not be updated');
 			}
 
 			$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
@@ -112,57 +110,56 @@ function write_sales_delivery(&$delivery,$bo_policy)
 			// If there is a Customer Dimension, then override with this,
 			// else take the Item Dimension (if any)
 			$dim = ($delivery->dimension_id != $customer['dimension_id'] ? $delivery->dimension_id : 
-				($customer['dimension_id'] != 0 ? $customer["dimension_id"] : $stock_gl_code["dimension_id"]));
+				($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
 			$dim2 = ($delivery->dimension2_id != $customer['dimension2_id'] ? $delivery->dimension2_id : 
-				($customer['dimension2_id'] != 0 ? $customer["dimension2_id"] : $stock_gl_code["dimension2_id"]));
-			if ($delivery->is_prepaid())
-			{
-				$sales_account = ($branch_data['sales_account'] != "" ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
+				($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
+			if ($delivery->is_prepaid()) {
+				$sales_account = ($branch_data['sales_account'] != '' ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
 
 				$total += add_gl_trans_customer(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date, $sales_account, $dim, $dim2,
-					-$line_taxfree_price, $delivery->customer_id, "The sales price GL posting could not be inserted");
+					-$line_taxfree_price, $delivery->customer_id, 'The sales price GL posting could not be inserted');
 			}
 			/* insert gl_trans to credit stock and debit cost of sales at standard cost*/
 			
 			if (is_inventory_item($delivery_line->stock_id)) {
 				// Fixed Assets
 				if ($delivery->fixed_asset) {
-				    $fa_purchase_cost = get_purchase_cost($delivery_line->stock_id);
+					$fa_purchase_cost = get_purchase_cost($delivery_line->stock_id);
 					$fa_depreciation = $fa_purchase_cost - $delivery_line->standard_cost;
 					/*first remove depreciation*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no,
-						$delivery->document_date, $stock_gl_code["adjustment_account"], $dim, $dim2, "",
+						$delivery->document_date, $stock_gl_code['adjustment_account'], $dim, $dim2, '',
 						$fa_depreciation,
 						PT_CUSTOMER, $delivery->customer_id,
-						"The cost of sales GL posting could not be inserted");
+						'The cost of sales GL posting could not be inserted');
 					/*then remove asset*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code["inventory_account"], 0, 0, "",
+						$stock_gl_code['inventory_account'], 0, 0, '',
 						-$fa_purchase_cost,
 						PT_CUSTOMER, $delivery->customer_id,
-						"The stock side of the cost of sales GL posting could not be inserted");
+						'The stock side of the cost of sales GL posting could not be inserted');
 					/*finally adjust sales account with the remaining*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code["cogs_account"], 0, 0, "",
+						$stock_gl_code['cogs_account'], 0, 0, '',
 						($fa_purchase_cost - $fa_depreciation),
 						PT_CUSTOMER, $delivery->customer_id,
-						"The stock side of the cost of sales GL posting could not be inserted");
+						'The stock side of the cost of sales GL posting could not be inserted');
 				}
 				// Invetory Items
 				else if ($delivery_line->standard_cost != 0) {
 					/*first the cost of sales entry*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no,
-						$delivery->document_date, $stock_gl_code["cogs_account"], $dim, $dim2, "",
+						$delivery->document_date, $stock_gl_code['cogs_account'], $dim, $dim2, '',
 						$delivery_line->standard_cost * $delivery_line->qty_dispatched,
 						PT_CUSTOMER, $delivery->customer_id,
-						"The cost of sales GL posting could not be inserted");
+						'The cost of sales GL posting could not be inserted');
 
 					/*now the stock entry*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code["inventory_account"], 0, 0, "",
+						$stock_gl_code['inventory_account'], 0, 0, '',
 						(-$delivery_line->standard_cost * $delivery_line->qty_dispatched),
 						PT_CUSTOMER, $delivery->customer_id,
-						"The stock side of the cost of sales GL posting could not be inserted");
+						'The stock side of the cost of sales GL posting could not be inserted');
 				}				
 
 			} /* end of if GL and stock integrated and standard cost !=0 */
@@ -170,34 +167,31 @@ function write_sales_delivery(&$delivery,$bo_policy)
 		} /*quantity dispatched is more than 0 */
 	} /*end of order_line loop */
 
-	if ($delivery->is_prepaid())
-	{
+	if ($delivery->is_prepaid()) {
 		$deferred_act = get_company_pref('deferred_income_act');
 		add_gl_trans(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date, $deferred_act, 0, 0, 
-			"The deferred income GL posting could not be inserted",
+			'The deferred income GL posting could not be inserted',
 			-$total, null, PT_CUSTOMER, $delivery->customer_id);
 	}
 
-	if ($bo_policy == 0) {
+	if ($bo_policy == 0)
 		// if cancelling any remaining quantities
 		close_sales_order($delivery->order_no);
-	}
 
 	// taxes - this is for printing purposes
 	foreach ($taxes as $taxitem) {
 		if ($taxitem['Net'] != 0) {
-				$ex_rate = get_exchange_rate_from_home_currency(get_customer_currency($delivery->customer_id), $delivery->document_date);
-    		    add_trans_tax_details(ST_CUSTDELIVERY, $delivery_no, $taxitem['tax_type_id'],
-				$taxitem['rate'], $delivery->tax_included, $taxitem['Value'],
-				$taxitem['Net'], $ex_rate, $delivery->document_date, $delivery->reference, null);
+			$ex_rate = get_exchange_rate_from_home_currency(get_customer_currency($delivery->customer_id), $delivery->document_date);
+			add_trans_tax_details(ST_CUSTDELIVERY, $delivery_no, $taxitem['tax_type_id'],
+			$taxitem['rate'], $delivery->tax_included, $taxitem['Value'],
+			$taxitem['Net'], $ex_rate, $delivery->document_date, $delivery->reference, null);
 		}
 	}
 
 	add_comments(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date, $delivery->Comments);
 
-	if ($trans_no == 0) {
-			$Refs->save(ST_CUSTDELIVERY, $delivery_no, $delivery->reference);
-	}
+	if ($trans_no == 0)
+		$Refs->save(ST_CUSTDELIVERY, $delivery_no, $delivery->reference);
 	hook_db_postwrite($delivery, ST_CUSTDELIVERY);
 	commit_transaction();
 
@@ -205,21 +199,20 @@ function write_sales_delivery(&$delivery,$bo_policy)
 }
 
 //--------------------------------------------------------------------------------------------------
-function adjust_shipping_charge(&$delivery, $trans_no)
-{
-  	$sql = "SELECT sum(ov_freight) as freight FROM ".TB_PREF."debtor_trans WHERE order_ = $trans_no AND type = " . ST_CUSTDELIVERY . " AND debtor_no = " . $delivery->customer_id;
-  	$result = db_query($sql, "Can not find delivery notes");
-  	$row = db_fetch_row($result);
-  	if (!$row[0]) $freight = 0;
-  	else $freight = $row[0];
-  	if ($freight < $delivery->freight_cost) $delivery->freight_cost = $delivery->freight_cost - $freight;
-  	else $delivery->freight_cost = 0;
+
+function adjust_shipping_charge(&$delivery, $trans_no) {
+	$sql = "SELECT sum(ov_freight) as freight FROM ".TB_PREF."debtor_trans WHERE order_ = $trans_no AND type = " . ST_CUSTDELIVERY . " AND debtor_no = " . $delivery->customer_id;
+	$result = db_query($sql, 'Can not find delivery notes');
+	$row = db_fetch_row($result);
+	if (!$row[0]) $freight = 0;
+	else $freight = $row[0];
+	if ($freight < $delivery->freight_cost) $delivery->freight_cost = $delivery->freight_cost - $freight;
+	else $delivery->freight_cost = 0;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-function void_sales_delivery($type, $type_no, $transactions=true)
-{
+function void_sales_delivery($type, $type_no, $transactions=true) {
 	if ($transactions)
 		begin_transaction();
 
@@ -233,7 +226,7 @@ function void_sales_delivery($type, $type_no, $transactions=true)
 	$order = get_customer_trans_order($type, $type_no);
 
 	if ($order) {
-		$auto = (get_reference(ST_SALESORDER, $order) == "auto");
+		$auto = (get_reference(ST_SALESORDER, $order) == 'auto');
 		while ($row = db_fetch($items_result)) {
 			update_parent_line(ST_CUSTDELIVERY, $row['src_id'], -$row['quantity'], $auto);
 		}
@@ -253,4 +246,3 @@ function void_sales_delivery($type, $type_no, $transactions=true)
 	if ($transactions)
 		commit_transaction();
 }
-

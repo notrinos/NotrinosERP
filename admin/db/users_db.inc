@@ -1,18 +1,16 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_user($user_id, $real_name, $password, $phone, $email, $role_id, 
-	$language, $profile, $rep_popup, $pos)
-{
+function add_user($user_id, $real_name, $password, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
 	$sql = "INSERT INTO ".TB_PREF."users (user_id, real_name, password"
 		.", phone, email, role_id, language, pos, print_profile, rep_popup)
 		VALUES (".db_escape($user_id).", 
@@ -26,8 +24,7 @@ function add_user($user_id, $real_name, $password, $phone, $email, $role_id,
 
 //-----------------------------------------------------------------------------------------------
 
-function update_user_password($id, $user_id, $password)
-{
+function update_user_password($id, $user_id, $password) {
 	$sql = "UPDATE ".TB_PREF."users SET password=".db_escape($password) . ",
 		user_id = ".db_escape($user_id). " WHERE id=".db_escape($id);
 
@@ -36,9 +33,7 @@ function update_user_password($id, $user_id, $password)
 
 //-----------------------------------------------------------------------------------------------
 
-function update_user($id, $user_id, $real_name, $phone, $email, $role_id, 
-	$language, $profile, $rep_popup, $pos)
-{
+function update_user($id, $user_id, $real_name, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
 	$sql = "UPDATE ".TB_PREF."users SET real_name=".db_escape($real_name).
 	", phone=".db_escape($phone).",
 		email=".db_escape($email).",
@@ -54,8 +49,7 @@ function update_user($id, $user_id, $real_name, $phone, $email, $role_id,
 
 //-----------------------------------------------------------------------------------------------
 
-function update_user_prefs($id, $prefs)
-{
+function update_user_prefs($id, $prefs) {
 	$sql = "UPDATE ".TB_PREF."users SET ";
 	foreach($prefs as $name => $value) {
 		$prefs[$name] = $name.'='. db_escape($value);
@@ -68,8 +62,7 @@ function update_user_prefs($id, $prefs)
 //-----------------------------------------------------------------------------------------------
 
 
-function get_users($all=false)
-{
+function get_users($all=false) {
 	$sql = "SELECT u.*, r.role FROM ".TB_PREF."users u, ".TB_PREF."security_roles r
 		WHERE u.role_id=r.id";
 	if (!$all) $sql .= " AND !u.inactive";
@@ -79,8 +72,7 @@ function get_users($all=false)
 
 //-----------------------------------------------------------------------------------------------
 
-function get_user($id)
-{
+function get_user($id) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
 	$result = db_query($sql, "could not get user $id");
@@ -90,8 +82,7 @@ function get_user($id)
 
 //-----------------------------------------------------------------------------------------------
 
-function get_user_by_login($user_id)
-{
+function get_user_by_login($user_id) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id=".db_escape($user_id);
 
 	$result = db_query($sql, "could not get user $user_id");
@@ -101,8 +92,7 @@ function get_user_by_login($user_id)
 
 //-----------------------------------------------------------------------------------------------
 
-function get_user_by_email($email)
-{
+function get_user_by_email($email) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE email=".db_escape($email);
 
 	$result = db_query($sql, "could not get user for email $email");
@@ -115,8 +105,7 @@ function get_user_by_email($email)
 
 //-----------------------------------------------------------------------------------------------
 
-function delete_user($id)
-{
+function delete_user($id) {
 	$sql="DELETE FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
 	db_query($sql, "could not delete user $id");
@@ -124,8 +113,7 @@ function delete_user($id)
 
 //-----------------------------------------------------------------------------------------------
 
-function get_user_auth($user_id, $password)
-{
+function get_user_auth($user_id, $password) {
 
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id = ".db_escape($user_id)." AND"
 		." password=".db_escape($password);
@@ -135,8 +123,7 @@ function get_user_auth($user_id, $password)
 
 //-----------------------------------------------------------------------------------------------
 
-function update_user_visitdate($user_id)
-{
+function update_user_visitdate($user_id) {
 	$sql = "UPDATE ".TB_PREF."users SET last_visit_date='". date("Y-m-d H:i:s") ."'
 		WHERE user_id=".db_escape($user_id);
 
@@ -144,8 +131,8 @@ function update_user_visitdate($user_id)
 }
 
 //-----------------------------------------------------------------------------------------------
-function check_user_activity($id) 
-{
+
+function check_user_activity($id)  {
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."audit_trail WHERE audit_trail.user="
 		. db_escape($id);
 	$result = db_query($sql,"Cant check user activity");
@@ -155,16 +142,15 @@ function check_user_activity($id)
 }
 
 //-----------------------------------------------------------------------------------------------
-function show_users_online()
-{
+
+function show_users_online() {
 	global $db, $GetText, $SysPrefs;
 
 	if (!isset($SysPrefs->show_users_online) || $SysPrefs->show_users_online == 0 || !defined('TB_PREF') || 
 		!isset($GetText) || !isset($db))
 		return "";
 	$result = db_query("SHOW TABLES LIKE '".TB_PREF."useronline'");	
-	if (db_num_rows($result) == 1)
-	{
+	if (db_num_rows($result) == 1) {
 		$timeoutseconds = 120;
 
 		$timestamp=time();
@@ -174,24 +160,18 @@ function show_users_online()
 		In that case, the script would count them all as 1 user.
 		This function tryes to get real IP address.
 		*/
-		if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+		if (isset($_SERVER['HTTP_CLIENT_IP']))
 			$ip = $_SERVER['HTTP_CLIENT_IP'];
-		}
-		elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+		elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR']))
 			$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-		}
-		elseif (isset($_SERVER['HTTP_X_FORWARDED'])) {
+		elseif (isset($_SERVER['HTTP_X_FORWARDED']))
 			$ip = $_SERVER['HTTP_X_FORWARDED'];
-		}
-		elseif (isset($_SERVER['HTTP_FORWARDED_FOR'])) {
+		elseif (isset($_SERVER['HTTP_FORWARDED_FOR']))
 			$ip = $_SERVER['HTTP_FORWARDED_FOR'];
-		}
-		elseif (isset($_SERVER['HTTP_FORWARDED'])) {
+		elseif (isset($_SERVER['HTTP_FORWARDED']))
 			$ip = $_SERVER['HTTP_FORWARDED'];
-		}
-		else {
+		else
 			$ip = $_SERVER['REMOTE_ADDR'];
-		}
 
 		// Add user to database
 		db_query("INSERT INTO ".TB_PREF."useronline (timestamp, ip, file) VALUES ('". $timestamp ."',". db_escape($ip) .",". db_escape($_SERVER['PHP_SELF']) .")");
@@ -205,5 +185,4 @@ function show_users_online()
 	else
 		$users = 1;
 	return "$users ".($users == 1 ? _("user online") : _("users online"));
-
 }

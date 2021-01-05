@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //
 // FrontAccounting extension modules integration.
@@ -28,8 +28,7 @@ class hooks {
 	// $updates - table of filename => array(table, field, property)
 	// $check_only - don't update database, check table/field/property existence only
 	//
-	function update_databases($comp, $updates, $check_only=false)
-	{
+	function update_databases($comp, $updates, $check_only=false) {
 		global $db_connections, $path_to_root;
 	
 		if ($comp == -1) 
@@ -47,10 +46,9 @@ class hooks {
 
 				$ok = check_table($con['tbpref'], $table, $field, $properties) == 0;
 
-				if (!$check_only && !$ok) {
-					$ok = db_import($path_to_root.'/modules/'.$this->module_name.'/sql/'.$file,
-						$con);
-				}
+				if (!$check_only && !$ok)
+					$ok = db_import($path_to_root.'/modules/'.$this->module_name.'/sql/'.$file, $con);
+				
 				$result &= $ok;
 				if (!$result)
 					break;
@@ -66,44 +64,39 @@ class hooks {
 	//
 	//	Install additional tabs provided by extension
 	//
-	function install_tabs($app)
-	{
-//		$app->add_application(new example_class); // add menu tab defined by example_class
+	function install_tabs($app) {
+		// $app->add_application(new example_class); // add menu tab defined by example_class
 	}
 	//
 	//	Install additonal menu options provided by extension
 	//
-	function install_options($app)
-	{
-//		global $path_to_root;
-//
-//		switch($app->id) {
-//			case 'orders':
-//				$app->add_rapp_function( 0, _("&Example option"), 
-//					$path_to_root.'/modules/example/example.php?', 'SA_OPEN');
-//		}
+	function install_options($app) {
+		// global $path_to_root;
+
+		// switch($app->id) {
+		// 	case 'orders':
+		// 		$app->add_rapp_function( 0, _("&Example option"), 
+		// 			$path_to_root.'/modules/example/example.php?', 'SA_OPEN');
+		// }
 	}
 	
-	function install_access()
-	{
-//		$security_areas['SA_EXAMPLE'] = array(SS_EXAMPLE|100, _("Example security area."));
-//
-//		$security_sections = array(SS_EXAMPLE => _("Example module implementation"));
-//
-//		return array($security_areas, $security_sections);
+	function install_access() {
+		// $security_areas['SA_EXAMPLE'] = array(SS_EXAMPLE|100, _("Example security area."));
+
+		// $security_sections = array(SS_EXAMPLE => _("Example module implementation"));
+
+		// return array($security_areas, $security_sections);
 	}
 
 	//
 	//	Invoked for all modules before page header is displayed
 	//
-	function pre_header($fun_args)
-	{
+	function pre_header($fun_args) {
 	}
 	//
 	//	Invoked for all modules before page footer is displayed
 	//
-	function pre_footer($fun_args)
-	{
+	function pre_footer($fun_args) {
 	}
 
 	//
@@ -113,8 +106,7 @@ class hooks {
 	//
 	//	Returns: amount in words as string.
 
-	function price_in_words($amount, $doc_type)
-	{
+	function price_in_words($amount, $doc_type) {
 	}
 
 	//
@@ -124,17 +116,15 @@ class hooks {
 	// with apprioprate provider set, otherwise implement your own.
 	// Returns: $curr value in home currency units as a real number.
 
-	function retrieve_exrate($curr, $date)
-	{
-//	 	$provider = 'ECB'; // 'ECB', 'YAHOO' or 'GOOGLE'
-//		return get_extern_rate($curr, $provider, $date);
+	function retrieve_exrate($curr, $date) {
+		// $provider = 'ECB'; // 'ECB', 'YAHOO' or 'GOOGLE'
+		// return get_extern_rate($curr, $provider, $date);
 		return null;
 	}
 
 	// External authentication
 	// If used should return true after successfull athentication, false otherwise.
-	function authenticate($login, $password)
-	{
+	function authenticate($login, $password) {
 		return null;
 	}
 	// Generic function called at the end of Tax Report (report 709)
@@ -142,53 +132,45 @@ class hooks {
 	// or to print special tax report footer 
 	//
 	// Returns: nothing
-	function tax_report_done()
-	{
+	function tax_report_done() {
 	}
 	// Following database transaction hooks akcepts array of parameters:
 	// 'cart' => transaction data
 	// 'trans_type' => transaction type
 
-	function db_prewrite(&$cart, $trans_type)
-	{
+	function db_prewrite(&$cart, $trans_type) {
 		return true;
 	}
 
-	function db_postwrite(&$cart, $trans_type)
-	{
+	function db_postwrite(&$cart, $trans_type) {
 		return true;
 	}
 
-	function db_prevoid($trans_type, $trans_no)
-	{
+	function db_prevoid($trans_type, $trans_no) {
 		return true;
 	}
 	/*
 		This method is called after module install.
 	*/
-	function install_extension($check_only=true)
-	{
+	function install_extension($check_only=true) {
 		return true;
 	}
 	/*
 		This method is called after module uninstall.
 	*/
-	function uninstall_extension($check_only=true)
-	{
+	function uninstall_extension($check_only=true) {
 		return true;
 	}
 	/*
 		This method is called on extension activation for company.
 	*/
-	function activate_extension($company, $check_only=true)
-	{
+	function activate_extension($company, $check_only=true) {
 		return true;
 	}
 	/*
 		This method is called when extension is deactivated for company.
 	*/
-	function deactivate_extension($company, $check_only=true)
-	{
+	function deactivate_extension($company, $check_only=true) {
 		return true;
 	}
 
@@ -203,23 +185,20 @@ class hooks {
 	 * more than one in  the cart.
 	 */
 	/* Default behavior check if there is enough quantity on hand and change the css
- 	 * class if needed */
+	 * class if needed */
 	static function  default_get_dispatchable_quantity($line_item, $location, $date, $qoh) {
-    	global $SysPrefs;
+		global $SysPrefs;
 
-		if ($SysPrefs->allow_negative_stock() || ($line_item->qty_dispatched <= $qoh)) {
+		if ($SysPrefs->allow_negative_stock() || ($line_item->qty_dispatched <= $qoh))
 			return true;
-		}
 		return array($qoh, 'stockmankobg');
 	}
-
 }
 
 /*
 	Installs hooks provided by extension modules
 */
-function install_hooks($lang_code=null)
-{
+function install_hooks($lang_code=null) {
 	global $path_to_root, $Hooks, $installed_extensions;
 
 	$Hooks = array();
@@ -228,8 +207,7 @@ function install_hooks($lang_code=null)
 		$lang_code = $_SESSION['language']->code;
 	$lang_code  = clean_file_name($lang_code);
 
-	if (file_exists($path_to_root . "/lang/" . $lang_code . "/locale.inc"))
-	{
+	if (file_exists($path_to_root . "/lang/" . $lang_code . "/locale.inc")) {
 		include_once($path_to_root . "/lang/" . $lang_code . "/locale.inc");
 		$code = $lang_code;
 		$hook_class = 'hooks_'.$code;
@@ -240,9 +218,8 @@ function install_hooks($lang_code=null)
 	if (isset($installed_extensions) && !empty($installed_extensions)) {
 		foreach($installed_extensions as $ext) {
 			$hook_class = 'hooks_'.$ext['package'];
-			if ($ext['active'] && class_exists($hook_class)) {
+			if ($ext['active'] && class_exists($hook_class))
 				$Hooks[$ext['package']] = new $hook_class;
-			}
 		}	
 	}
 }
@@ -250,8 +227,7 @@ function install_hooks($lang_code=null)
 	Non active hooks are not included in $Hooks array, so we can use special function to 
 	activate.
 */
-function activate_hooks($ext, $comp, $on=true)
-{
+function activate_hooks($ext, $comp, $on=true) {
 	global $Hooks;
 
 	$hooks = @$Hooks[$ext];
@@ -272,8 +248,7 @@ function activate_hooks($ext, $comp, $on=true)
 /*
 	Calls hook $method defined in extension $ext (if any)
 */
-function hook_invoke($ext, $method, &$data, $opts=null)
-{
+function hook_invoke($ext, $method, &$data, $opts=null) {
 
 	global $Hooks;
 
@@ -289,23 +264,21 @@ function hook_invoke($ext, $method, &$data, $opts=null)
 /*
 	Calls hook $methods defined in all extensions (if any)
 */
-function hook_invoke_all($method, &$data, $opts=null)
-{
+function hook_invoke_all($method, &$data, $opts=null) {
 
 	global $Hooks;
 	
 	$return = array();
-	if (isset($Hooks))
-	{
+	if (isset($Hooks)) {
 		foreach($Hooks as $ext => $hook)
 			if (method_exists($hook, $method)) {
 				set_ext_domain('modules/'.$ext);
 				$result = $hook->$method($data, $opts);
-				if (isset($result) && is_array($result)) {
+				if (isset($result) && is_array($result))
 					$return = array_merge_recursive($return, $result);
-				} else if (isset($result)) {
+				else if (isset($result))
 					$return[] = $result;
-					}
+				
 				set_ext_domain();
 			}
 	}
@@ -314,8 +287,7 @@ function hook_invoke_all($method, &$data, $opts=null)
 /*
 	Returns first non-null result returned from hook.
 */
-function hook_invoke_first($method, &$data, $opts=null)
-{
+function hook_invoke_first($method, &$data, $opts=null) {
 
 	global $Hooks;
 
@@ -335,8 +307,7 @@ function hook_invoke_first($method, &$data, $opts=null)
 	Returns last non-null result returned from modules method. Helps implement hooks overriding by 
 	extensions installed later.
 */
-function hook_invoke_last($method, &$data, $opts=null)
-{
+function hook_invoke_last($method, &$data, $opts=null) {
 
 	global $Hooks;
 
@@ -379,23 +350,20 @@ function hook_invoke_last($method, &$data, $opts=null)
 /*
 	Invoked before transaction is written to database.
 */
-function hook_db_prewrite(&$cart, $type)
-{
+function hook_db_prewrite(&$cart, $type) {
 	return hook_invoke_all('db_prewrite', $cart, $type);
 }
 
 /*
 	Invoked after transaction has been written to database.
 */
-function hook_db_postwrite(&$cart, $type)
-{
+function hook_db_postwrite(&$cart, $type) {
 	return hook_invoke_all('db_postwrite', $cart, $type);
 }
 /*
 	Invoked before transaction is voided
 */
-function hook_db_prevoid($type, $type_no)
-{
+function hook_db_prevoid($type, $type_no) {
 	return hook_invoke_all('db_prevoid', $type, $type_no);
 }
 
@@ -405,22 +373,19 @@ function hook_db_prevoid($type, $type_no)
 //
 //	Alternative exchange rates feeds.
 //
-function hook_retrieve_exrate($currency, $date)
-{
+function hook_retrieve_exrate($currency, $date) {
 	return hook_invoke_last('retrieve_exrate', $currency, $date);
 }
 //
 // Generic function called at the end of Tax Report (report 709)
 //
-function hook_tax_report_done()
-{
+function hook_tax_report_done() {
 	return hook_invoke_all('tax_report_done', $dummy);
 }
 //
 //	Amount in words displayed on various documents (especially sales invoice)
 //
-function hook_price_in_words($amount, $document)
-{
+function hook_price_in_words($amount, $document) {
 	return hook_invoke_last('price_in_words', $amount, $document);
 }
 //
@@ -428,8 +393,7 @@ function hook_price_in_words($amount, $document)
 //	If fa_session_manager class is defined in any installed extension, this class provides session handling
 //	for application, otherwise standard php session handling is used.
 //
-function hook_session_start($company)
-{
+function hook_session_start($company) {
 	if (class_exists('fa_session_manager')) {
 		global $SessionManager;
 		$SessionManager = new fa_session_manager($company);
@@ -441,8 +405,7 @@ function hook_session_start($company)
 //	Third party authentication modules.
 //	Returns true after successfull authentication, false otherwise, null if no login hook is defined.
 //
-function hook_authenticate($login, $password)
-{
+function hook_authenticate($login, $password) {
 	return hook_invoke_last('authenticate', $login, $password);
 }
 
@@ -458,6 +421,6 @@ function hook_authenticate($login, $password)
 	 * If 'skip' is returned, the line will be skipped and not displayed
 	 */
 function hook_get_dispatchable_quantity($line_item, $location, $date, $qoh) {
-		$result =  hook_invoke_first('get_dispatchable_quantity', $line_item, array($location, $date, $qoh));
-		return $result !== null ? $result : hooks::default_get_dispatchable_quantity($line_item, $location, $date, $qoh);
+	$result =  hook_invoke_first('get_dispatchable_quantity', $line_item, array($location, $date, $qoh));
+	return $result !== null ? $result : hooks::default_get_dispatchable_quantity($line_item, $location, $date, $qoh);
 }

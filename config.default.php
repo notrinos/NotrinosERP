@@ -1,17 +1,17 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-    //--------------------------------------------------
+	//--------------------------------------------------
 
- 	// User configurable variables
+	// User configurable variables
 	//---------------------------------------------------
 
 	/*Show debug messages returned from an error on the page.
@@ -19,7 +19,7 @@
 	if $debug=1 show debugging info, dont show if $debug=0 */
 
 if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_to_root']))
-	die("Restricted access");
+	die('Restricted access');
 
 	// Server time zone. Since php 5.3.0 time zone have to be set either here or in server php ini file
 	if (!ini_get('date.timezone'))
@@ -44,14 +44,14 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	$select_trail 	= 0; // track also SELECT queries
 
 	// Main Title
-	$app_title = "FrontAccounting";
+	$app_title = 'NotrinosERP';
 
 	// Build for development purposes
-	$build_version 	= date("d.m.Y", filemtime("$path_to_root/CHANGELOG.txt"));
+	$build_version 	= date('d.m.Y', filemtime($path_to_root.'/CHANGELOG.txt'));
 
 	// Powered by
-	$power_by 		= "FrontAccounting";
-	$power_url 		= "http://frontaccounting.com";
+	$power_by 		= 'NotrinosERP';
+	$power_url 		= 'http://notrinos.com';
 
 	/* No check on edit conflicts. Maybe needed to be set to 1 in certains Windows Servers */
 	$no_check_edit_conflicts = 0;
@@ -76,9 +76,9 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	/* show users online discretely in the footer */
 	$show_users_online = 0;
 
- 	// Wiki context help configuration
- 	// If your help wiki use translated page titles uncomment next line
- 	// $old_style_help = 1; // this setting is depreciated and subject to removal in next FA versions
+	// Wiki context help configuration
+	// If your help wiki use translated page titles uncomment next line
+	// $old_style_help = 1; // this setting is depreciated and subject to removal in next FA versions
 	$old_style_help = 0;
 	// 	locally installed wiki module
 	// $help_base_url = $path_to_root.'/modules/wiki/index.php?n='._('Help').'.';
@@ -97,17 +97,17 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	/* allow reopening closed transactions */
 	$allow_gl_reopen = 0;
 
-	$dateformats 	= array("MMDDYYYY", "DDMMYYYY", "YYYYMMDD","MmmDDYYYY", "DDMmmYYYY", "YYYYMmmDD");
-	$dateseps 		= array("/", ".", "-", " ");
-	$thoseps 		= array(",", ".", " ");
-	$decseps 		= array(".", ",");
+	$dateformats 	= array('MMDDYYYY', 'DDMMYYYY', 'YYYYMMDD','MmmDDYYYY', 'DDMmmYYYY', 'YYYYMmmDD');
+	$dateseps 		= array('/', '.', '-', ' ');
+	$thoseps 		= array(',', '.', ' ');
+	$decseps 		= array('.', ',');
 
 	/* default dateformats and dateseps indexes used before user login */
 	$dflt_date_fmt = 0;
 	$dflt_date_sep = 0;
 
 	/* default PDF pagesize taken from /reporting/includes/tcpdf.php */
-	$pagesizes 		= array("Letter", "A4");
+	$pagesizes 		= array('Letter', 'A4');
 
 	/* Accounts Payable */
 	/* System check to see if quantity charged on purchase invoices exceeds the quantity received.
@@ -137,8 +137,8 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 
 	$allow_demo_mode = false;
 
-    /* Whether to allow sending new password by e-mail */
-    $allow_password_reset = false;
+	/* Whether to allow sending new password by e-mail */
+	$allow_password_reset = false;
 
 	/* for uploaded item pictures */
 	$pic_width 		= 80;
@@ -150,8 +150,8 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	$graph_skin 	= 1;
 
 	/* UTF-8 font for Business Graphics. Copy it to /reporting/fonts/ folder. */
-	$UTF8_fontfile	= "FreeSans.ttf";
-	//$UTF8_fontfile	= "zarnormal.ttf"; // for Arabic Dashboard
+	$UTF8_fontfile	= 'FreeSans.ttf';
+	//$UTF8_fontfile	= 'zarnormal.ttf'; // for Arabic Dashboard
 
 /* 
 	Display a dropdown select box for choosing Company to login if false.
@@ -161,7 +161,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	$text_company_selection  = false;
 
 /*  Should FA hide menu items (Applications, Modules, and Actions) from the user if they don't have access to them? 
-    0 for no       1 for yes
+	0 for no       1 for yes
 */
 
 	$hide_inaccessible_menu_items = 0;
@@ -178,7 +178,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	Choose Exchange Rate Provider
 	Default is ECB for backwards compatibility
 */
-	$xr_providers = array("ECB", "EXCHANGE-RATES.ORG", "GOOGLE", "YAHOO", "BLOOMBERG");
+	$xr_providers = array('ECB', 'EXCHANGE-RATES.ORG', 'GOOGLE', 'YAHOO', 'BLOOMBERG');
 	$dflt_xr_provider = 0;
 
 /*

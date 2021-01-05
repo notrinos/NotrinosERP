@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /*
 	Retrieve value of POST variable(s).
@@ -16,58 +16,55 @@
 	If some field have user formatted numeric value, pass float default value to
 	convert automatically to POSIX.
 */
-function get_post($name, $dflt='')
-{
+function get_post($name, $dflt='') {
 	if (is_array($name)) {
 		$ret = array();
 		foreach($name as $key => $dflt)
-			if (!is_numeric($key)) {
+			if (!is_numeric($key))
 				$ret[$key] = is_numeric($dflt) ? input_num($key, $dflt) : get_post($key, $dflt);
-			} else {
+			else
 				$ret[$dflt] = get_post($dflt, null);
-			}
 		return $ret;
-	} else
-		return is_float($dflt) ? input_num($name, $dflt) :
-				((!isset($_POST[$name]) /*|| $_POST[$name] === ''*/) ? $dflt : $_POST[$name]);
+	}
+	else
+		return is_float($dflt) ? input_num($name, $dflt) : ((!isset($_POST[$name]) /*|| $_POST[$name] === ''*/) ? $dflt : $_POST[$name]);
 }
+
 //---------------------------------------------------------------------------------
+
 $form_nested = -1;
 
-function start_form($multi=false, $dummy=false, $action="", $name="")
-{
+function start_form($multi=false, $dummy=false, $action='', $name='') {
 	// $dummy - leaved for compatibility with 2.0 API
 	global $form_nested;
 
 	if (++$form_nested) return;
 
-	if ($name != "")
-		$name = "name='$name'";
-	if ($action == "")
+	if ($name != '')
+		$name = "name='".$name."'";
+	if ($action == '')
 		$action = $_SERVER['PHP_SELF'];
 
 	if ($multi)
 		echo "<form enctype='multipart/form-data' method='post' action='$action' $name>\n";
 	else
 		echo "<form method='post' action='$action' $name>\n";
-
 }
 
 /*
 	Flush hidden fields buffer.
 */
-function output_hidden()
-{
+function output_hidden() {
 	global $hidden_fields;
 
 	if (is_array($hidden_fields))
 		echo implode('', $hidden_fields);
 	$hidden_fields = array();
 }
+
 //---------------------------------------------------------------------------------
 
-function end_form($breaks=0)
-{
+function end_form($breaks=0) {
 	global $Ajax, $form_nested, $hidden_fields;
 
 	if ($form_nested-- > 0) return;
@@ -86,10 +83,8 @@ function end_form($breaks=0)
 	$Ajax->activate('_confirmed');
 }
 
-function check_csrf_token()
-{
-	if ($_SESSION['csrf_token'] != @$_POST['_token'])
-	{
+function check_csrf_token() {
+	if ($_SESSION['csrf_token'] != @$_POST['_token']) {
 		display_error(_("Request from outside of this page is forbidden."));
 		error_log(_("CSRF attack detected from: ").@$_SERVER['HTTP_HOST'].' ('.@$_SERVER['HTTP_REFERER'].')');
 		return false;
@@ -97,8 +92,7 @@ function check_csrf_token()
 	return true;
 }
 
-function start_table($class=false, $extra="", $padding='2', $spacing='0')
-{
+function start_table($class=false, $extra="", $padding='2', $spacing='0') {
 	echo "<center><table";
 	if ($class == TABLESTYLE_NOBORDER)
 		echo " class='tablestyle_noborder'";
@@ -111,26 +105,22 @@ function start_table($class=false, $extra="", $padding='2', $spacing='0')
 	echo " cellpadding='$padding' cellspacing='$spacing'>\n";
 }
 
-function end_table($breaks=0)
-{
+function end_table($breaks=0) {
 	echo "</table></center>\n";
 	output_hidden();
 	if ($breaks)
 		br($breaks);
 }
 
-function start_outer_table($class=false, $extra="", $padding='2', $spacing='0', $br=false)
-{
+function start_outer_table($class=false, $extra='', $padding='2', $spacing='0', $br=false) {
 	if ($br)
 		br();
 	start_table($class, $extra, $padding, $spacing);
 	echo "<tr valign=top><td>\n"; // outer table
 }
 
-function table_section($number=1, $width=false)
-{
-	if ($number > 1)
-	{
+function table_section($number=1, $width=false) {
+	if ($number > 1) {
 		echo "</table>\n";
 		output_hidden();
 		$width = ($width ? "width='$width'" : "");
@@ -139,10 +129,8 @@ function table_section($number=1, $width=false)
 	echo "<table class='tablestyle_inner'>\n";
 }	
 
-function end_outer_table($breaks=0, $close_table=true)
-{
-	if ($close_table)
-	{
+function end_outer_table($breaks=0, $close_table=true) {
+	if ($close_table) {
 		echo "</table>\n";
 		output_hidden();
 	}
@@ -152,14 +140,12 @@ function end_outer_table($breaks=0, $close_table=true)
 //
 //  outer table spacer
 //
-function vertical_space($params='')
-{
-	echo "</td></tr><tr><td valign=center $params>";
+function vertical_space($params='') {
+	echo "</td></tr><tr><td valign=center ".$params.">";
 }
 
-function meta_forward($forward_to, $params="", $timeout=0, $return=false)
-{
-    global $Ajax;
+function meta_forward($forward_to, $params="", $timeout=0, $return=false) {
+	global $Ajax;
 	echo "<meta http-equiv='Refresh' content='".$timeout."; url=$forward_to?$params'>\n";
 	echo "<center><br>" . _("You should automatically be forwarded.");
 	echo " " . _("If this does not happen") . " " . "<a href='$forward_to?$params'>" . _("click here") . "</a> " . _("to continue") . ".<br><br></center>\n";
@@ -174,15 +160,12 @@ function meta_forward($forward_to, $params="", $timeout=0, $return=false)
 // (for use in wiki help system), otherwise result is array of label 
 // with underlined hotkey letter and access property string.
 //
-function access_string($label, $clean=false)
-{
+function access_string($label, $clean=false) {
 	$access = '';
 	$slices = array();
 
-	if (preg_match('/(.*)&([a-zA-Z0-9])(.*)/', $label, $slices))	
-	{
-		$label = $clean ? $slices[1].$slices[2].$slices[3] :
-			$slices[1].'<u>'.$slices[2].'</u>'.$slices[3];
+	if (preg_match('/(.*)&([a-zA-Z0-9])(.*)/', $label, $slices)) {
+		$label = $clean ? $slices[1].$slices[2].$slices[3] : $slices[1].'<u>'.$slices[2].'</u>'.$slices[3];
 		$access = " accesskey='".strtoupper($slices[2])."'";
 	}
 	
@@ -191,37 +174,33 @@ function access_string($label, $clean=false)
 	return $clean ? $label : array($label, $access);
 }
 
-function hyperlink_back($center=true, $no_menu=true, $type_no=0, $trans_no=0, $final=false)
-{
+function hyperlink_back($center=true, $no_menu=true, $type_no=0, $trans_no=0, $final=false) {
 	global $path_to_root;
 
 	if ($center)
 		echo "<center>";
 	$id = 0;	
-	if ($no_menu && $trans_no != 0)
-	{
-		include_once($path_to_root."/admin/db/attachments_db.inc");
+	if ($no_menu && $trans_no != 0) {
+		include_once($path_to_root.'/admin/db/attachments_db.inc');
 		$id = has_attachment($type_no, $trans_no);
 		$attach = get_attachment_string($type_no, $trans_no);
-    	echo $attach;
+		echo $attach;
 	}
-	$width = ($id != 0 ? "30%" : "20%");	
-	start_table(false, "width='$width'");
+	$width = ($id != 0 ? '30%' : '20%');	
+	start_table(false, "width='".$width."'");
 	start_row();
 	if ($no_menu)
-	{
 		echo "<td align=center><a href='javascript:window.print();'>"._("Print")."</a></td>\n";
-	}	
+	
 	echo "<td align=center><a href='javascript:goBack(".($final ? '-2' : '').");'>".($no_menu ? _("Close") : _("Back"))."</a></td>\n";
 	end_row();
 	end_table();
 	if ($center)
-		echo "</center>";
-	echo "<br>";
+		echo '</center>';
+	echo '<br>';
 }
 
-function hyperlink_no_params($target, $label, $center=true)
-{
+function hyperlink_no_params($target, $label, $center=true) {
 	$id = default_focus();
 	$pars = access_string($label);
 	if ($target == '')
@@ -233,25 +212,22 @@ function hyperlink_no_params($target, $label, $center=true)
 		echo "</center>";
 }
 
-function hyperlink_no_params_td($target, $label)
-{
-	echo "<td>";
+function hyperlink_no_params_td($target, $label) {
+	echo '<td>';
 	hyperlink_no_params($target, $label);
 	echo "</td>\n";
 }
 
-function viewer_link($label, $url='', $class='', $id='',  $icon=null)
-{
+function viewer_link($label, $url='', $class='', $id='',  $icon=null) {
 	global $path_to_root;
 	
 	if ($class != '')
-		$class = " class='$class'";
+		$class = " class='".$class."'";
 
 	if ($id != '')
-		$class = " id='$id'";
+		$class = " id='".$id."'";
 
-	if ($url != "")
-	{
+	if ($url != '') {
 		$pars = access_string($label);
 		if (user_graphic_links() && $icon)
 			$pars[0] = set_icon($icon, $pars[0]);
@@ -259,11 +235,10 @@ function viewer_link($label, $url='', $class='', $id='',  $icon=null)
 	}
 	else
 		$preview_str = $label;
- return $preview_str;
+	return $preview_str;
 }
 
-function menu_link($url, $label, $id=null)
-{
+function menu_link($url, $label, $id=null) {
 	global $path_to_root;
 
 	$id = default_focus($id);
@@ -276,24 +251,21 @@ function menu_link($url, $label, $id=null)
 	return "<a href='$url' class='menu_option' id='$id' $pars[1]>$pars[0]</a>";
 }
 
-function submenu_option($title, $url, $id=null)
-{
+function submenu_option($title, $url, $id=null) {
 	display_note( menu_link($url, $title, $id), 0, 1);
 }
 
-function submenu_view($title, $type, $number, $id=null)
-{
+function submenu_view($title, $type, $number, $id=null) {
 	display_note(get_trans_view_str($type, $number, $title, false, 'viewlink', $id), 0, 1);
 }
 
-function submenu_print($title, $type, $number, $id=null, $email=0, $extra=0)
-{
+function submenu_print($title, $type, $number, $id=null, $email=0, $extra=0) {
 	display_note(print_document_link($number, $title, true, $type, false, 'printlink', $id, $email, $extra), 0, 1);
 }
+
 //-----------------------------------------------------------------------------------
 
-function hyperlink_params($target, $label, $params, $center=true)
-{
+function hyperlink_params($target, $label, $params, $center=true) {
 	$id = default_focus();
 	
 	$pars = access_string($label);
@@ -306,8 +278,7 @@ function hyperlink_params($target, $label, $params, $center=true)
 		echo "</center>";
 }
 
-function hyperlink_params_td($target, $label, $params)
-{
+function hyperlink_params_td($target, $label, $params) {
 	echo "<td>";
 	hyperlink_params($target, $label, $params, false);
 	echo "</td>\n";
@@ -315,8 +286,7 @@ function hyperlink_params_td($target, $label, $params)
 
 //-----------------------------------------------------------------------------------
 
-function hyperlink_params_separate($target, $label, $params, $center=false)
-{
+function hyperlink_params_separate($target, $label, $params, $center=false) {
 	$id = default_focus();
 
 	$pars = access_string($label);
@@ -327,8 +297,7 @@ function hyperlink_params_separate($target, $label, $params, $center=false)
 		echo "</center>";
 }
 
-function hyperlink_params_separate_td($target, $label, $params)
-{
+function hyperlink_params_separate_td($target, $label, $params) {
 	echo "<td>";
 	hyperlink_params_separate($target, $label, $params);
 	echo "</td>\n";
@@ -336,82 +305,73 @@ function hyperlink_params_separate_td($target, $label, $params)
 
 //--------------------------------------------------------------------------------------------------
 
-function alt_table_row_color(&$k, $extra_class=null)
-{
+function alt_table_row_color(&$k, $extra_class=null) {
 	$classes = $extra_class ? array($extra_class) : array();
-	if ($k == 1)
-	{
+	if ($k == 1) {
 		array_push($classes, 'oddrow');
 		$k = 0;
 	}
-	else
-	{
+	else {
 		array_push($classes, 'evenrow');
 		$k++;
 	}
 	echo "<tr class='".implode(' ', $classes)."'>\n";
 }
 
-function table_section_title($msg, $colspan=2)
-{
-	echo "<tr><td colspan=$colspan class='tableheader'>$msg</td></tr>\n";
+function table_section_title($msg, $colspan=2) {
+	echo "<tr><td colspan=".$colspan." class='tableheader'>".$msg."</td></tr>\n";
 }
 
-function table_header($labels, $params='')
-{
+function table_header($labels, $params='') {
 	start_row();
 	foreach ($labels as $label)
 		labelheader_cell($label, $params);
 	end_row();
 }
+
 //-----------------------------------------------------------------------------------
 
-function start_row($param="")
-{
-	if ($param != "")
-		echo "<tr $param>\n";
+function start_row($param='') {
+	if ($param != '')
+		echo "<tr ".$param.">\n";
 	else
 		echo "<tr>\n";
 }
 
-function end_row()
-{
+function end_row() {
 	echo "</tr>\n";
 }
 
-function br($num=1)
-{
+function br($num=1) {
 	for ($i = 0; $i < $num; $i++)
 		echo "<br>";
 }
 
 $ajax_divs = array();
 
-function div_start($id='', $trigger=null, $non_ajax=false)
-{
-    global $ajax_divs;
+function div_start($id='', $trigger=null, $non_ajax=false) {
+	global $ajax_divs;
 
 	if ($non_ajax) { // div for non-ajax elements
-   		array_push($ajax_divs, array($id, null));
-   		echo "<div style='display:none' class='js_only' ".($id !='' ? "id='$id'" : '').">";
-	} else { // ajax ready div
-   		array_push($ajax_divs, array($id, $trigger===null ? $id : $trigger));
-   		echo "<div ". ($id !='' ? "id='$id'" : '').">";
-   		ob_start();
+		array_push($ajax_divs, array($id, null));
+		echo "<div style='display:none' class='js_only' ".($id !='' ? "id='$id'" : '').">";
+	}
+	else { // ajax ready div
+		array_push($ajax_divs, array($id, $trigger===null ? $id : $trigger));
+		echo "<div ". ($id !='' ? "id='$id'" : '').">";
+		ob_start();
 	}
 }
 
-function div_end()
-{
-    global $ajax_divs, $Ajax;
+function div_end() {
+	global $ajax_divs, $Ajax;
 
 	output_hidden();
-    if (count($ajax_divs))
-    {
+	if (count($ajax_divs)) {
 		$div = array_pop($ajax_divs);
 		if ($div[1] !== null)
 			$Ajax->addUpdate($div[1], $div[0], ob_get_flush());
-    }
+	}
 	echo "</div>";
 }
 
@@ -424,9 +384,9 @@ function div_end()
 // $tabs - array of tabs; string: tab title or array(tab_title, enabled_status)
 
 function tabbed_content_start($name, $tabs, $dft='') {
-    global $Ajax;
+	global $Ajax;
 
-    $selname = '_'.$name.'_sel';
+	$selname = '_'.$name.'_sel';
 	$div = '_'.$name.'_div';
 
 	$sel = find_submit($name.'_', false);
@@ -465,8 +425,7 @@ function tabbed_content_end() {
 	div_end(); // tabs widget
 }
 
-function tab_changed($name)
-{
+function tab_changed($name) {
 	$to = find_submit("{$name}_", false);
 	if (!$to) return null;
 
@@ -476,22 +435,19 @@ function tab_changed($name)
 /*
 	Check whether tab has been just switched on
 */
-function tab_opened($name, $tab)
-{
+function tab_opened($name, $tab) {
 	return (get_post('_'.$name.'_sel') != $tab) && (find_submit($name.'_', false) == $tab);
 }
 /*
 	Check whether tab has been just switched off
 */
-function tab_closed($name, $tab)
-{
+function tab_closed($name, $tab) {
 	return (get_post('_'.$name.'_sel') == $tab) && (find_submit($name.'_', false) != $tab);
 }
 /*
 	Check whether tab is visible on current page
 */
-function tab_visible($name, $tab)
-{
+function tab_visible($name, $tab) {
 	$new = find_submit($name.'_', false);
 	return (get_post('_'.$name.'_sel') == $tab && !$new) || $new==$tab;
 }
@@ -520,8 +476,7 @@ $popup_editors = array(
 	$caller - optional function key code (available values F1-F12: 112-123,
 		true: default)
 */
-function set_editor($type, $input, $caller=true)
-{
+function set_editor($type, $input, $caller=true) {
 	global $path_to_root, $Editors, $popup_editors, $Pagehelp;
 
 	$key = $caller===true ? $popup_editors[$type][1] : $caller;
@@ -542,15 +497,13 @@ function set_editor($type, $input, $caller=true)
 	$ctx - optional. name of SESSION context object or array of names of POST 
 		variables saved on call
 */
-function context_call($call, $ctx='')
-{
-	if (is_array($ctx)) 
-	{
-		foreach($ctx as $postname)
-		{
-		 	$context[$postname] = get_post($postname);
+function context_call($call, $ctx='') {
+	if (is_array($ctx)) {
+		foreach($ctx as $postname) {
+			$context[$postname] = get_post($postname);
 		}
-	} else 
+	}
+	else 
 		$context = isset($_SESSION[$ctx]) ? $_SESSION[$ctx] : null;
 
 	array_unshift($_SESSION['Context'], array('name' => $ctx, 
@@ -563,18 +516,17 @@ function context_call($call, $ctx='')
 	Restores context after external page call and
 	returns array of data passed by external page.
 */
-function context_restore()
-{
+function context_restore() {
 	if ( count($_SESSION['Context'])) {
 		if ($_SERVER['PHP_SELF'] == $_SESSION['Context'][0]['caller']) {
 			$ctx = array_shift($_SESSION['Context']);
 			if ($ctx) {
 				if (is_array($ctx['ctx'])) {
-					foreach($ctx['ctx'] as $name => $val) 
-					{
+					foreach($ctx['ctx'] as $name => $val) {
 						$_POST[$name] = $val;
 					}
-				} else
+				}
+				else
 					if ($ctx['name']!='')
 						$_SESSION[$ctx['name']] = $ctx['ctx'];
 				return $ctx['ret'];
@@ -587,8 +539,7 @@ function context_restore()
 /*
 	Return to caller page if the page was called from external context.
 */
-function context_return($ret)
-{
+function context_return($ret) {
 	if ( count($_SESSION['Context'])) {
 		$ctx = &$_SESSION['Context'][0];
 		$ctx['ret'] = $ret;
@@ -598,15 +549,14 @@ function context_return($ret)
 /*
 	Clearing context stack after page cancel.
 */
-function context_reset()
-{
+function context_reset() {
 	$_SESSION['Context'] = array();
 }
 /*
 	Context stack initialization
 */
 if (!isset($_SESSION['Context'])) {
-		context_reset();
+	context_reset();
 }
 /*
 	Redirector for selector F4 calls.
@@ -641,33 +591,32 @@ function confirm_dialog($submit, $msg) {
 	if (find_post($submit)) {
 		display_warning($msg);
 		br();
-		submit_center_first('DialogConfirm', _("Proceed"), '', true);
-		submit_center_last('DialogCancel', _("Cancel"), '', 'cancel');
+		submit_center_first('DialogConfirm', _('Proceed'), '', true);
+		submit_center_last('DialogCancel', _('Cancel'), '', 'cancel');
 		return 0;
-	} else
+	}
+	else
 		return get_post('DialogConfirm', 0);
 }
 /*
 	Confirm dialog to be used optionally in final form checking routine.
 	Displays warning conditionally unless it was displayed
 */
-function display_confirmation($msg)
-{
+function display_confirmation($msg) {
 	global $Ajax;
 
-	if (!get_post('_confirmed'))
-	{
+	if (!get_post('_confirmed')) {
 		$_POST['_confirmed'] = 1;
 		display_warning($msg);
 		return false;
-	} else
+	}
+	else
 		return true;
 }
 /*
 	Block menu/shortcut links during transaction procesing.
 */
-function page_processing($msg = false)
-{
+function page_processing($msg = false) {
 	global $Ajax;
 
 	if ($msg === true)
@@ -675,14 +624,13 @@ function page_processing($msg = false)
 
 	$js = "_validate._processing=" . (
 		$msg ? '\''.strtr($msg, array("\n"=>'\\n')) . '\';' : 'null;');
-	if (in_ajax()) {
+	if (in_ajax())
 		$Ajax->addScript(true, $js);
-	} else
+	else
 		add_js_source($js);
 }
 
-function page_modified($status = true)
-{
+function page_modified($status = true) {
 	global $Ajax;
 
 	$js = "_validate._modified=" . ($status ? 1:0).';';

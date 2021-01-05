@@ -1,21 +1,20 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function dashboard($sel_app)
-{
+function dashboard($sel_app) {
 	$selected_app = $sel_app;
 
 
-	if (is_object($sel_app) && !$_SESSION["wa_current_user"]->check_application_access($selected_app))
+	if (is_object($sel_app) && !$_SESSION['wa_current_user']->check_application_access($selected_app))
 		return;
 	// first have a look through the directory, 
 	// and remove old temporary pdfs and pngs
@@ -35,50 +34,45 @@ function dashboard($sel_app)
 	}
 
 	//check_for_overdue_recurrent_invoices();
-	if ($selected_app == "orders")
+	if ($selected_app == 'orders')
 		display_customer_topten();
-	elseif ($selected_app == "AP")
+	elseif ($selected_app == 'AP')
 		display_supplier_topten();
-	elseif ($selected_app == "stock")
+	elseif ($selected_app == 'stock')
 		display_stock_topten();
-	elseif ($selected_app == "manuf")
+	elseif ($selected_app == 'manuf')
 		display_stock_topten(1);
-	elseif ($selected_app == "assets")
+	elseif ($selected_app == 'assets')
 		display_stock_topten(2);
-	elseif ($selected_app == "proj")
+	elseif ($selected_app == 'proj')
 		display_dimension_topten();
-	elseif ($selected_app == "GL")
+	elseif ($selected_app == 'GL')
 		display_gl_info();
 	else	
 		display_all();
 }
 
-function display_title($title)
-{
+function display_title($title) {
 	br();
 	display_heading($title);
 	br();
 	//echo "<tr><td colspan=$colspan class='headingtext' style='background-color:#fff;text-align:center;border:0;height:40px;'>$title</td></tr>\n";
 }	
 
-function table_one()
-{
+function table_one() {
 	echo "<table width='100%'>";
 	echo "<tr valign=top><td style='width:50%'>\n"; // outer table
 }
 
-function table_two()
-{
+function table_two() {
 	echo "</td><td style='width:50%'>\n";
 }
 
-function table_end()
-{
+function table_end() {
 	echo "</td></tr></table>\n";
 }
 
-function display_customer_topten()
-{
+function display_customer_topten() {
 	$pg = new graph();
 
 	table_one();
@@ -91,8 +85,7 @@ function display_customer_topten()
 	table_end();
 }
 
-function display_supplier_topten()
-{
+function display_supplier_topten() {
 	$pg = new graph();
 
 	$today = Today();
@@ -100,12 +93,11 @@ function display_supplier_topten()
 	$title = supplier_top($today, 10, 66, $pg);
 	supplier_trans($today);
 	table_two();
-	source_graphic($today, $title, _("Supplier"), $pg, _("Purchase"));
+	source_graphic($today, $title, _('Supplier'), $pg, _('Purchase'));
 	table_end();
 }
 
-function display_stock_topten($type=0)
-{
+function display_stock_topten($type=0) {
 	$pg = new graph();
 
 	table_one();
@@ -113,30 +105,28 @@ function display_stock_topten($type=0)
 	$title = stock_top($today, 10, 66, $type, $pg);
 	table_two();
 	if ($type == 2)
-		$source = _("Fixed Assets");
+		$source = _('Fixed Assets');
 	elseif ($type == 1)
-		$source = _("Manufacturing");
+		$source = _('Manufacturing');
 	else	
-		$source = _("Items");
-	source_graphic($today, $title, $source, $pg, ($type == 0 ? _("Sales") : _("Amount")), 
-		($type == 0 ? _("Costs") : null));
+		$source = _('Items');
+	source_graphic($today, $title, $source, $pg, ($type == 0 ? _('Sales') : _('Amount')), 
+		($type == 0 ? _('Costs') : null));
 	table_end();
 }
 
-function display_dimension_topten()
-{
+function display_dimension_topten() {
 	$pg = new graph();
 
 	table_one();
 	$today = Today();
 	$title = dimension_top($today, 10, 66, $pg);
 	table_two();
-	source_graphic($today, $title, _("Dimension"), $pg, _("Performance"), null, 5);
+	source_graphic($today, $title, _('Dimension'), $pg, _('Performance'), null, 5);
 	table_end();
 }	
 
-function display_gl_info()
-{
+function display_gl_info() {
 	$pg = new graph();
 
 	table_one();
@@ -144,37 +134,35 @@ function display_gl_info()
 	$title = gl_top($today, 66, $pg);
 	bank_balance($today, 66);
 	table_two();
-	source_graphic($today, $title, _("Class"), $pg, _("Amount"), null, 5);
+	source_graphic($today, $title, _('Class'), $pg, _('Amount'), null, 5);
 	gl_performance($today, 66, 5);
 	table_end();
 }	
 
-function display_all()
-{
+function display_all() {
 	$today = Today();
 	$pg = new graph();
 
 	table_one();
 	$title = customer_top($today, 3, 66, $pg);
-	source_graphic($today, $title, _("Customer"), $pg, _("Sales"));
+	source_graphic($today, $title, _('Customer'), $pg, _('Sales'));
 	$pg = new graph();
 	$title = supplier_top($today, 3, 66, $pg);
-	source_graphic($today, $title, _("Supplier"), $pg, _("Purchases"));
+	source_graphic($today, $title, _('Supplier'), $pg, _('Purchases'));
 	$pg = new graph();
 	$title = stock_top($today, 3, 66, 0, $pg);
-	source_graphic($today, $title, _("Items"), $pg, _("Sales"), _("Costs"));
+	source_graphic($today, $title, _('Items'), $pg, _('Sales'), _('Costs'));
 	table_two();
 	dimension_top($today, 3, 66);
 	$pg = new graph();
 	$title = gl_top($today, 66, $pg);
-	source_graphic($today, $title, _("Class"), $pg, _("Amount"), null, 5);
+	source_graphic($today, $title, _('Class'), $pg, _('Amount'), null, 5);
 	stock_top($today, 3, 66, 2);
 	stock_top($today, 3, 66, 1);
 	table_end();
 }
 
-function customer_top($today, $limit=10, $width="33", &$pg=null)
-{
+function customer_top($today, $limit=10, $width='33', &$pg=null) {
 	$begin = begin_fiscalyear();
 	$begin1 = date2sql($begin);
 	$today1 = date2sql($today);
@@ -186,20 +174,18 @@ function customer_top($today, $limit=10, $width="33", &$pg=null)
 	$result = db_query($sql);
 	$title = sprintf(_("Top %s customers in fiscal year"), $limit);
 	display_title($title);
-	$th = array(_("Customer"), _("Amount"));
+	$th = array(_('Customer'), _('Amount'));
 	start_table(TABLESTYLE, "width='$width%'");
 	table_header($th);
 	check_page_security('SA_SALESTRANSVIEW');
 	$k = 0; //row colour counter
 	$i = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
-		$name = $myrow["debtor_no"]." ".htmlspecialchars_decode($myrow["name"]);
+		$name = $myrow['debtor_no'].' '.htmlspecialchars_decode($myrow['name']);
 		label_cell($name);
 		amount_cell($myrow['total']);
-		if ($pg != null)
-		{
+		if ($pg != null) {
 			$pg->x[$i] = $name; 
 			$pg->y[$i] = $myrow['total'];
 		}	
@@ -210,8 +196,7 @@ function customer_top($today, $limit=10, $width="33", &$pg=null)
 	return $title;
 }
 
-function supplier_top($today, $limit=10, $width="33", &$pg=null)
-{
+function supplier_top($today, $limit=10, $width='33', &$pg=null) {
 	$begin = begin_fiscalyear();
 	$begin1 = date2sql($begin);
 	$today1 = date2sql($today);
@@ -229,14 +214,12 @@ function supplier_top($today, $limit=10, $width="33", &$pg=null)
 	check_page_security('SA_SUPPTRANSVIEW');
 	$k = 0; //row colour counter
 	$i = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
 		$name = $myrow["supplier_id"]." ".htmlspecialchars_decode($myrow["supp_name"]);
 		label_cell($name);
 		amount_cell($myrow['total']);
-		if ($pg != null)
-		{
+		if ($pg != null) {
 			$pg->x[$i] = $name; 
 			$pg->y[$i] = $myrow['total'];
 		}	
@@ -247,8 +230,7 @@ function supplier_top($today, $limit=10, $width="33", &$pg=null)
 	return $title;
 }
 
-function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null)
-{
+function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null) {
 	if ($type == 2)
 		$sec = 'SA_ASSETSANALYTIC';
 	elseif ($type == 1)
@@ -258,16 +240,14 @@ function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null)
 	$begin = begin_fiscalyear();
 	$begin1 = date2sql($begin);
 	$today1 = date2sql($today);
-	if ($type == 0)
-	{
+	if ($type == 0) {
 		$sql = "SELECT SUM((trans.unit_price * trans.quantity) * d.rate) AS total, s.stock_id, s.description, 
 			SUM(trans.quantity) AS qty, SUM((s.material_cost + s.overhead_cost + s.labour_cost) * trans.quantity) AS costs FROM
 			".TB_PREF."debtor_trans_details AS trans, ".TB_PREF."stock_master AS s, ".TB_PREF."debtor_trans AS d 
 			WHERE trans.stock_id=s.stock_id AND trans.debtor_trans_type=d.type AND trans.debtor_trans_no=d.trans_no
 			AND (d.type = ".ST_SALESINVOICE." OR d.type = ".ST_CUSTCREDIT.") ";
 	}
-	else
-	{
+	else {
 		$sql = "SELECT SUM(m.qty * (s.material_cost + s.labour_cost + s.overhead_cost)) AS total, s.stock_id, s.description, 
 			SUM(qty) AS qty FROM ".TB_PREF."stock_master AS s, ".TB_PREF."stock_moves AS m 
 			WHERE s.stock_id=m.stock_id ";
@@ -282,23 +262,22 @@ function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null)
 		LIMIT $limit";
 	$result = db_query($sql);
 	if ($type == 1)
-		$title = sprintf(_("Top %s Manufactured Items in fiscal year"), $limit);
+		$title = sprintf(_('Top %s Manufactured Items in fiscal year'), $limit);
 	elseif ($type == 2)
-		$title = sprintf(_("Top %s Fixed Assets"), $limit);
+		$title = sprintf(_('Top %s Fixed Assets'), $limit);
 	else	
-		$title = sprintf(_("Top %s Sold Items in fiscal year"), $limit);
+		$title = sprintf(_('Top %s Sold Items in fiscal year'), $limit);
 	display_title($title);	
 	if ($type == 0)	
-		$th = array(_("Item"), _("Sales"), _("Costs"), _("Quantity"));
+		$th = array(_('Item'), _('Sales'), _('Costs'), _('Quantity'));
 	else	
-		$th = array(_("Item"), _("Amount"), _("Quantity"));
+		$th = array(_('Item'), _('Amount'), _('Quantity'));
 	start_table(TABLESTYLE, "width='$width%'");
 	table_header($th);
 	check_page_security($sec);
 	$k = 0; //row colour counter
 	$i = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
 		$name = $myrow["description"];
 		label_cell($name);
@@ -306,13 +285,12 @@ function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null)
 		if ($type == 0)
 			amount_cell($myrow['costs']);
 		qty_cell($myrow['qty']);
-		if ($pg != NULL)
-		{
+		if ($pg != NULL) {
 			$pg->x[$i] = $name; 
 			$pg->y[$i] = $myrow['total'];
 			if ($type == 0)
 				$pg->z[$i] = $myrow['costs'];
-		}	
+		}
 		$i++;
 		end_row();
 	}
@@ -320,8 +298,7 @@ function stock_top($today, $limit=10, $width="33", $type=0, &$pg=null)
 	return $title;
 }
 
-function dimension_top($today, $limit=10, $width="33", &$pg=null)
-{
+function dimension_top($today, $limit=10, $width="33", &$pg=null) {
 
 	$begin = begin_fiscalyear();
 	$begin1 = date2sql($begin);
@@ -333,16 +310,15 @@ function dimension_top($today, $limit=10, $width="33", &$pg=null)
 	$result = db_query($sql, "Transactions could not be calculated");
 	$title = sprintf(_("Top %s Dimensions in fiscal year"), $limit);
 	display_title($title);
-	$th = array(_("Dimension"), _("Amount"));
+	$th = array(_('Dimension'), _('Amount'));
 	start_table(TABLESTYLE, "width='$width%'");
 	table_header($th);
 	check_page_security('SA_DIMTRANSVIEW');
 	$k = 0; //row colour counter
 	$i = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
-		$name = $myrow['reference']." ".$myrow["name"];
+		$name = $myrow['reference'].' '.$myrow['name'];
 		label_cell($name);
 		amount_cell($myrow['total']);
 		if ($pg != null)
@@ -357,8 +333,7 @@ function dimension_top($today, $limit=10, $width="33", &$pg=null)
 	return $title;
 }
 
-function gl_top($today, $width="33", &$pg=null)
-{
+function gl_top($today, $width='33', &$pg=null) {
 	$begin = begin_fiscalyear();
 	$begin1 = date2sql($begin);
 	$today1 = date2sql($today);
@@ -375,28 +350,23 @@ function gl_top($today, $width="33", &$pg=null)
 	check_page_security('SA_GLANALYTIC');
 	$i = 0;
 	$total = 0;
-	while ($myrow = db_fetch($result))
-	{
-		if ($myrow['ctype'] > 3)
-		{
+	while ($myrow = db_fetch($result)) {
+		if ($myrow['ctype'] > 3) {
 			$total += $myrow['total'];
 			$myrow['total'] = -$myrow['total'];
-			if ($pg != null)
-			{
+			if ($pg != null) {
 				$pg->x[$i] = $myrow['class_name']; 
 				$pg->y[$i] = abs($myrow['total']);
-			}	
+			}
 			$i++;
 		}	
-		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), 
-			"class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
+		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), "class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
 	}
-	$calculated = _("Calculated Return");
-	label_row("&nbsp;", "");
+	$calculated = _('Calculated Return');
+	label_row('&nbsp;', '');
 	label_row($calculated, number_format2(-$total, user_price_dec()), 
 		"class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
-	if ($pg != null)
-	{
+	if ($pg != null) {
 		$pg->x[$i] = $calculated; 
 		$pg->y[$i] = -$total;
 	}
@@ -404,8 +374,7 @@ function gl_top($today, $width="33", &$pg=null)
 	return $title;
 }
 
-function gl_performance($today, $width="33", $weeks=5)
-{
+function gl_performance($today, $width="33", $weeks=5) {
 	global $SysPrefs;
 	$pg = new graph();
 
@@ -423,48 +392,45 @@ function gl_performance($today, $width="33", $weeks=5)
 			AND tran_date >= '$begin1' AND tran_date <= '$today1' 
 			GROUP BY week_name ORDER BY week_name DESC LIMIT 0, $weeks) b 
 		GROUP BY week_name ORDER BY week_name ASC";
-	$result = db_query($sql, "Transactions could not be calculated");
-	$title = _("Last $weeks weeks Performance");
+	$result = db_query($sql, 'Transactions could not be calculated');
+	$title = _('Last $weeks weeks Performance');
 	check_page_security('SA_GLANALYTIC');
 	$i = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		$pg->x[$i] = $myrow['week_name']; 
 		$pg->y[$i] = $myrow['sales'];
 		$pg->z[$i] = $myrow['costs'];
 		$i++;
-	}	
+	}
 	
-	source_graphic($today, $title, _("Week"), $pg, _("Sales"), _("Costs"), 1);
+	source_graphic($today, $title, _('Week'), $pg, _('Sales'), _('Costs'), 1);
 }
 
-function source_graphic($today, $title, $x_axis, $pg, $graphic1, $graphic2=null, $type=2)
-{
+function source_graphic($today, $title, $x_axis, $pg, $graphic1, $graphic2=null, $type=2) {
 	if (count($pg->y) ==0 || (count($pg->y) == 1 && $pg->y[0] == 0))
 		return;
 	display_title("$title ($today)");	
 	//$pg->title     = $title . " - " . $today;
 	$pg->axis_x    = $x_axis;
-	$pg->axis_y    = _("Amount");
+	$pg->axis_y    = _('Amount');
 	$pg->graphic_1 = $graphic1;
 	if ($graphic2 != null)
 		$pg->graphic_2 = $graphic2;
 	$pg->type      = $type;
 	$pg->skin      = 1;
 	$pg->built_in  = false;
-	$filename = company_path(). "/pdf_files/". random_id().".png";
+	$filename = company_path(). '/pdf_files/'. random_id().'.png';
 	$pg->display($filename, true);
 	start_table(TABLESTYLE);
 	start_row();
-	echo "<td>";
+	echo '<td>';
 	echo "<img src='$filename' border='0' alt='$title'>";
-	echo "</td>";
+	echo '</td>';
 	end_row();
 	end_table(1);
 }
 
-function customer_trans($today)
-{
+function customer_trans($today) {
 	$today = date2sql($today);
 
 	$sql = "SELECT trans.trans_no, trans.reference,	trans.tran_date, trans.due_date, debtor.debtor_no, 
@@ -482,14 +448,13 @@ function customer_trans($today)
 			AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
 	$result = db_query($sql);
 	$title = db_num_rows($result) . _(" overdue Sales Invoices");
-  	display_title($title);
+	display_title($title);
 	$th = array("#", _("Ref."), _("Date"), _("Due Date"), _("Customer"), _("Branch"), _("Currency"), 
 		_("Total"), _("Remainder"),	_("Days"));
 	start_table(TABLESTYLE);
 	table_header($th);
-  	$k = 0; //row colour counter
-	while ($myrow = db_fetch($result))
-	{
+	$k = 0; //row colour counter
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
 		label_cell(get_trans_view_str(ST_SALESINVOICE, $myrow["trans_no"]));
 		label_cell($myrow['reference']);
@@ -507,8 +472,7 @@ function customer_trans($today)
 	end_table(2);
 }
 
-function calculate_next_invoice($myrow)
-{
+function calculate_next_invoice($myrow) {
 	if ($myrow["last_sent"] == '0000-00-00')
 		$next = sql2date($myrow["begin"]);
 	else
@@ -518,32 +482,27 @@ function calculate_next_invoice($myrow)
 	return add_days($next,-1);
 }
 
-function customer_recurrent_invoices($today)
-{
+function customer_recurrent_invoices($today) {
 	$result = get_recurrent_invoices($today);
-	$title = _("Overdue Recurrent Invoices");
-  	display_title($title);
-	$th = array(_("Description"), _("Template No"),_("Customer"),_("Branch")."/"._("Group"),_("Next invoice"));
+	$title = _('Overdue Recurrent Invoices');
+	display_title($title);
+	$th = array(_('Description'), _('Template No'),_('Customer'),_('Branch').'/'._('Group'),_('Next invoice'));
 	start_table(TABLESTYLE, "width=70%");
-  	table_header($th);
+	table_header($th);
 	$k = 0;
-	while ($myrow = db_fetch($result)) 
-	{
+	while ($myrow = db_fetch($result)) {
 		if (!$myrow['overdue'])
 			continue;
 		alt_table_row_color($k);
 
-		label_cell($myrow["description"]);
-		label_cell(get_customer_trans_view_str(ST_SALESORDER, $myrow["order_no"]));
-		if ($myrow["debtor_no"] == 0)
-		{
-			label_cell("");
-
-			label_cell(get_sales_group_name($myrow["group_no"]));
+		label_cell($myrow['description']);
+		label_cell(get_customer_trans_view_str(ST_SALESORDER, $myrow['order_no']));
+		if ($myrow['debtor_no'] == 0) {
+			label_cell('');
+			label_cell(get_sales_group_name($myrow['group_no']));
 		}
-		else
-		{
-			label_cell(get_customer_name($myrow["debtor_no"]));
+		else {
+			label_cell(get_customer_name($myrow['debtor_no']));
 			label_cell(get_branch_name($myrow['group_no']));
 		}
 		label_cell(calculate_next_invoice($myrow),  "align='center'");
@@ -552,8 +511,7 @@ function customer_recurrent_invoices($today)
 	end_table(2);
 }
 
-function supplier_trans($today)
-{
+function supplier_trans($today) {
 	$today = date2sql($today);
 	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, 
 		s.supp_name, s.curr_code,
@@ -566,21 +524,20 @@ function supplier_trans($today)
 				trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA."
 			AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
 	$result = db_query($sql);
-	$title = db_num_rows($result) . _(" overdue Purchase Invoices");
+	$title = db_num_rows($result) . _(' overdue Purchase Invoices');
 	display_title($title);
-	$th = array("#", _("Ref."), _("Date"), _("Due Date"), _("Supplier"), _("Currency"), _("Total"), 
-		_("Remainder"),	_("Days"));
+	$th = array('#', _('Ref.'), _('Date'), _('Due Date'), _('Supplier'), _('Currency'), _('Total'), 
+		_('Remainder'),	_('Days'));
 	start_table(TABLESTYLE);
 	table_header($th);
 	$k = 0; //row colour counter
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
-		label_cell(get_trans_view_str(ST_SUPPINVOICE, $myrow["trans_no"]));
+		label_cell(get_trans_view_str(ST_SUPPINVOICE, $myrow['trans_no']));
 		label_cell($myrow['reference']);
 		label_cell(sql2date($myrow['tran_date']));
 		label_cell(sql2date($myrow['due_date']));
-		$name = $myrow["supplier_id"]." ".$myrow["supp_name"];
+		$name = $myrow['supplier_id'].' '.$myrow['supp_name'];
 		label_cell($name);
 		label_cell($myrow['curr_code']);
 		amount_cell($myrow['total']);
@@ -591,15 +548,14 @@ function supplier_trans($today)
 	end_table(2);
 }
 
-function bank_balance($today, $width)
-{
+function bank_balance($today, $width) {
 	$today = date2sql($today);
 	$sql = "SELECT bank_act, bank_account_name, bank_curr_code, SUM(amount) balance FROM ".TB_PREF."bank_trans bt 
-	            INNER JOIN ".TB_PREF."bank_accounts ba ON bt.bank_act = ba.id
-	            WHERE trans_date <= '$today'
-	            AND inactive <> 1
-	            GROUP BY bank_act, bank_account_name
-				ORDER BY bank_account_name";
+		INNER JOIN ".TB_PREF."bank_accounts ba ON bt.bank_act = ba.id
+		WHERE trans_date <= '$today'
+		AND inactive <> 1
+		GROUP BY bank_act, bank_account_name
+		ORDER BY bank_account_name";
 	$result = db_query($sql);
 	$title = _("Bank Account Balances");
 	display_title($title);
@@ -607,11 +563,10 @@ function bank_balance($today, $width)
 	start_table(TABLESTYLE, "width='$width%'");
 	table_header($th);
 	$k = 0; //row colour counter
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
-		label_cell(viewer_link($myrow["bank_account_name"], 'gl/inquiry/bank_inquiry.php?bank_account='.$myrow["bank_act"]));
-		label_cell($myrow["bank_curr_code"]);
+		label_cell(viewer_link($myrow['bank_account_name'], 'gl/inquiry/bank_inquiry.php?bank_account='.$myrow['bank_act']));
+		label_cell($myrow['bank_curr_code']);
 		amount_cell($myrow['balance']);
 		end_row();
 	}

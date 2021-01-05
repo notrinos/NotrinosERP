@@ -1,17 +1,15 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function add_exchange_variation($trans_no, $date_, $acc_id, $account,
-    $currency, $person_type_id=null, $person_id = "", $memo='')
-{
+function add_exchange_variation($trans_no, $date_, $acc_id, $account, $currency, $person_type_id=null, $person_id = "", $memo='') {
 	if (is_company_currency($currency))
 		return false;
 	if ($date_ == null)
@@ -25,8 +23,7 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account,
 		WHERE ba.id = bt.bank_act AND ba.account_code = ".db_escape($account)." AND bt.trans_date<='".date2sql($date_)."'
 		GROUP BY ba.bank_curr_code";	
 	$result = db_query($sql, "Transactions for bank account $acc_id could not be calculated");
-	while ($row = db_fetch($result))
-	{
+	while ($row = db_fetch($result)) {
 		if ($row['for_amount'] == 0)
 			continue;
 		$rate = get_exchange_rate_from_home_currency($row['bank_curr_code'], $date_);
@@ -34,8 +31,7 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account,
 	}	
 	$amount = get_gl_trans_from_to("", $date_, $account);
 	$diff = $amount - $for_amount;
-	if (floatcmp($diff,0))
-	{
+	if (floatcmp($diff,0)) {
 		// generate journal entry // FIXME: use cart?
 		global $Refs;
 
@@ -49,11 +45,8 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account,
 
 		if ($person_type_id == null)
 			$person_type_id = PT_MISC;
-		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _("Exchange Variance"),
-    		-$diff, null, $person_type_id, $person_id);
-
-    	add_gl_trans(ST_JOURNAL, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, 
-    		_("Exchange Variance"), $diff, null, $person_type_id, $person_id);
+		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _("Exchange Variance"), -$diff, null, $person_type_id, $person_id);
+		add_gl_trans(ST_JOURNAL, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _("Exchange Variance"), $diff, null, $person_type_id, $person_id);
 
 		if ($memo)
 			add_comments(ST_JOURNAL, $trans_no, $date_, $memo);
@@ -67,8 +60,7 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account,
 	return false;
 }
 
-function add_cust_supp_revaluation($ledger_act, $ex_act, $date, $amount, $person_type_id, $person_id, $memo)
-{
+function add_cust_supp_revaluation($ledger_act, $ex_act, $date, $amount, $person_type_id, $person_id, $memo) {
 	global $Refs;
 	if ($amount == 0)
 		return;
@@ -81,58 +73,53 @@ function add_cust_supp_revaluation($ledger_act, $ex_act, $date, $amount, $person
 	$Refs->save(ST_JOURNAL, $trans_no, $ref);
 	add_audit_trail(ST_JOURNAL, $trans_no, $date);
 
-	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ledger_act, 0, 0, _("Exchange Variance"),
-		$amount, null, $person_type_id, $person_id);
-	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, 
-		_("Exchange Variance"),	-$amount, null, $person_type_id, $person_id);
+	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ledger_act, 0, 0, _('Exchange Variance'), $amount, null, $person_type_id, $person_id);
+	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, _('Exchange Variance'),	-$amount, null, $person_type_id, $person_id);
 	add_comments(ST_JOURNAL, $trans_no, $date, $memo);
 	commit_transaction();
 }
 
-function get_cust_account_curr_balances($date)
-{
+function get_cust_account_curr_balances($date) {
 	$to = date2sql($date);
 
-    $sql = "SELECT SUM(IF(t.type IN(". implode(',', array(ST_CUSTCREDIT, ST_CUSTPAYMENT, ST_BANKDEPOSIT, ST_JOURNAL))."),
+	$sql = "SELECT SUM(IF(t.type IN(". implode(',', array(ST_CUSTCREDIT, ST_CUSTPAYMENT, ST_BANKDEPOSIT, ST_JOURNAL))."),
 			-(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount), 
-	    	(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount))) AS amount,
-	    	dt.debtor_no, dt.name, dt.curr_code, b.receivables_account
+			(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount))) AS amount,
+			dt.debtor_no, dt.name, dt.curr_code, b.receivables_account
 		FROM ".TB_PREF."debtor_trans t 
 			LEFT JOIN ".TB_PREF."debtors_master dt ON t.debtor_no = dt.debtor_no
 			LEFT JOIN ".TB_PREF."cust_branch b ON t.debtor_no = b.debtor_no
 			LEFT JOIN ".TB_PREF."voided as v ON v.type = t.type and v.id=t.trans_no
-    	WHERE ISNULL(v.date_) AND t.type <> ".ST_CUSTDELIVERY." AND t.tran_date <= '$to' 
-    		AND t.branch_code=b.branch_code AND dt.curr_code<>'".get_company_pref('curr_default')."' 
-    		GROUP BY t.debtor_no, b.receivables_account";
+		WHERE ISNULL(v.date_) AND t.type <> ".ST_CUSTDELIVERY." AND t.tran_date <= '$to' 
+			AND t.branch_code=b.branch_code AND dt.curr_code<>'".get_company_pref('curr_default')."' 
+			GROUP BY t.debtor_no, b.receivables_account";
 
-    $result = db_query($sql,"Open balances in foreign currency for cannot be retrieved");
+	$result = db_query($sql, 'Open balances in foreign currency for cannot be retrieved');
 	return  $result;
 }
 
-function get_supp_account_curr_balances($date)
-{
+function get_supp_account_curr_balances($date) {
 	$to = date2sql($date);
 
-    $sql = "SELECT SUM(-(t.ov_amount + t.ov_gst + t.ov_discount)) AS amount,
-	    	supp.supplier_id, supp.supp_name, supp.curr_code, supp.payable_account
+	$sql = "SELECT SUM(-(t.ov_amount + t.ov_gst + t.ov_discount)) AS amount,
+			supp.supplier_id, supp.supp_name, supp.curr_code, supp.payable_account
 		FROM ".TB_PREF."supp_trans t 
 			LEFT JOIN ".TB_PREF."suppliers supp ON t.supplier_id = supp.supplier_id
 			LEFT JOIN ".TB_PREF."voided as v ON v.type = t.type and v.id=t.trans_no
-    	WHERE ISNULL(v.date_) AND t.tran_date <= '$to' 
-    		AND supp.curr_code<>'".get_company_pref('curr_default')."' 
-    		GROUP BY t.supplier_id";
+		WHERE ISNULL(v.date_) AND t.tran_date <= '$to' 
+			AND supp.curr_code<>'".get_company_pref('curr_default')."' 
+			GROUP BY t.supplier_id";
 
-    $result = db_query($sql,"Open balances in foreign currency for cannot be retrieved");
+	$result = db_query($sql, 'Open balances in foreign currency for cannot be retrieved');
 	return  $result;
 }
 
-function get_account_home_balance($person_id, $person_type, $rec_account, $to_date)
-{
+function get_account_home_balance($person_id, $person_type, $rec_account, $to_date) {
 	$to = date2sql($to_date);
 
-    $sql = "SELECT SUM(amount) FROM ".TB_PREF."gl_trans  
-			WHERE person_id=".db_escape($person_id)." AND account='$rec_account' 
-			AND person_type_id=$person_type AND tran_date <= '$to'";
+	$sql = "SELECT SUM(amount) FROM ".TB_PREF."gl_trans  
+		WHERE person_id=".db_escape($person_id)." AND account='$rec_account' 
+		AND person_type_id=$person_type AND tran_date <= '$to'";
 	$result = db_query($sql, "The AR/AP balance for customer $person_id could not be calculated");
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -143,16 +130,14 @@ function get_account_home_balance($person_id, $person_type, $rec_account, $to_da
 // Note: in 2.4.9 sparse 'ref' argument was removed (generated transactions use
 // next references from default refline).
 //
-function add_exchange_variation_all($date=null, $memo)
-{
+function add_exchange_variation_all($date=null, $memo) {
 	begin_transaction();
 	$exchanged = false;
 	$trans_no = get_next_trans_no(ST_JOURNAL);
 	$sql = "SELECT * FROM ".TB_PREF."bank_accounts";
 	$result = db_query($sql, "could not retreive bank accounts");
 	$b_num = 0;
-	while ($myrow = db_fetch($result))
-	{
+	while ($myrow = db_fetch($result)) {
 		if (add_exchange_variation($trans_no, $date, $myrow['id'], $myrow['account_code'],
 			$myrow['bank_curr_code'], null, '', $memo))
 		$b_num++;
@@ -167,13 +152,11 @@ function add_exchange_variation_all($date=null, $memo)
 	// debtors
 	$res = get_cust_account_curr_balances($date);
 	
-	while($row = db_fetch($res)) 
-	{
+	while($row = db_fetch($res)) {
 		$exrate = get_exchange_rate_from_home_currency($row['curr_code'], $date);
 		$foreign = round2($row['amount']*$exrate, user_price_dec());
 		$home = round2(get_account_home_balance($row['debtor_no'], PT_CUSTOMER, $row['receivables_account'], $date), user_price_dec());
-		if ($foreign != $home) 
-		{
+		if ($foreign != $home) {
 			$amount = $foreign - $home;	
 			add_cust_supp_revaluation($row['receivables_account'], $exchange_act, $date, $amount, PT_CUSTOMER, 
 				$row['debtor_no'], $memo);
@@ -183,13 +166,11 @@ function add_exchange_variation_all($date=null, $memo)
 	// creditors
 	$res = get_supp_account_curr_balances($date);
 	
-	while($row = db_fetch($res)) 
-	{
+	while($row = db_fetch($res)) {
 		$exrate = get_exchange_rate_from_home_currency($row['curr_code'], $date);
 		$foreign = round2($row['amount']*$exrate, user_price_dec());
 		$home = round2(get_account_home_balance($row['supplier_id'], PT_SUPPLIER, $row['payable_account'], $date), user_price_dec());
-		if ($foreign != $home) 
-		{
+		if ($foreign != $home) {
 			$amount = $foreign - $home;	
 			add_cust_supp_revaluation($row['payable_account'], $exchange_act, $date, $amount, PT_SUPPLIER, 
 				$row['supplier_id'], $memo);
@@ -200,6 +181,7 @@ function add_exchange_variation_all($date=null, $memo)
 	commit_transaction();
 	return array($b_num, $je);
 }
+
 //----------------------------------------------------------------------------------
 //	Add bank tranfer to database.
 //
@@ -207,15 +189,12 @@ function add_exchange_variation_all($date=null, $memo)
 //	$to_account   -	target bank account id
 //	
 
-function add_bank_transfer($from_account, $to_account, $date_,
-	$amount, $ref, $memo_, $charge=0, $target_amount=0)
-{
+function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $charge=0, $target_amount=0) {
 	global $Refs, $SysPrefs;
 
 	begin_transaction();
 	$args = func_get_args(); if (count($args) < 8) $args[] = 0;
-	$args = (object)array_combine(array('from_account', 'to_account', 'date_', 'amount',
-		'ref', 'memo_', 'charge', 'target_amount'), $args);
+	$args = (object)array_combine(array('from_account', 'to_account', 'date_', 'amount', 'ref', 'memo_', 'charge', 'target_amount'), $args);
 	$args->trans_no = 0;
 	hook_db_prewrite($args, ST_BANKTRANSFER);
 
@@ -225,30 +204,25 @@ function add_bank_transfer($from_account, $to_account, $date_,
 
 	$trans_no = get_next_trans_no($trans_type);
 	
-    $fromact = get_bank_account($from_account);
-    $toact = get_bank_account($to_account);
-    $person_id = _("From")." ".$fromact['bank_account_name']." "._("To")." ".$toact['bank_account_name'];
+	$fromact = get_bank_account($from_account);
+	$toact = get_bank_account($to_account);
+	$person_id = _('From').' '.$fromact['bank_account_name'].' '._('To').' '.$toact['bank_account_name'];
 
 	$from_gl_account = get_bank_gl_account($from_account);
 	$to_gl_account = get_bank_gl_account($to_account);
 	
 	$total = 0;
 	// do the source account postings
-    $total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, 0, 0, $person_id,
+	$total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, 0, 0, $person_id,
 		-($amount + $charge), $currency);
 
-    add_bank_trans($trans_type, $trans_no, $from_account, $ref,
-		$date_, -($amount + $charge),
-		PT_MISC, $person_id, $currency,
-		"Cannot insert a source bank transaction");
-	if ($SysPrefs->auto_currency_revaluation())
-	{
+	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -($amount + $charge), PT_MISC, $person_id, $currency, 'Cannot insert a source bank transaction');
+	if ($SysPrefs->auto_currency_revaluation()) {
 		$trans_no1 = get_next_trans_no(ST_JOURNAL);
 		add_exchange_variation($trans_no1, $date_, $from_account, $from_gl_account, 
 			$currency, PT_MISC, $person_id);
 	}
-	if ($charge != 0)
-	{
+	if ($charge != 0) {
 		/* Now Debit bank charge account with charges */
 		$charge_act = get_bank_charge_account($from_account);
 		$total += add_gl_trans($trans_type, $trans_no, $date_,
@@ -260,25 +234,19 @@ function add_bank_transfer($from_account, $to_account, $date_,
 	$to_amount = $target_amount ? $target_amount : $amount;
 
 	// do the destination account postings
-	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, 0, 0, $person_id,
-		$to_amount, $to_currency);
+	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, 0, 0, $person_id, $to_amount, $to_currency);
 		
 	/*Post a balance post if $total != 0 */
 	if ($currency == $to_currency)
 		add_gl_balance($trans_type, $trans_no, $date_, -$total);
 	else	// in this case those are exchange variances between bank and home rates
-	   	add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'),
-	   		0, 0, _("Exchange Variance"), -$total);
+		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _("Exchange Variance"), -$total);
 	
-	add_bank_trans($trans_type, $trans_no, $to_account, $ref,
-		$date_, $to_amount, PT_MISC, $person_id,
-		$to_currency, "Cannot insert a destination bank transaction");
+	add_bank_trans($trans_type, $trans_no, $to_account, $ref, $date_, $to_amount, PT_MISC, $person_id, $to_currency, 'Cannot insert a destination bank transaction');
 
-	if ($SysPrefs->auto_currency_revaluation())
-	{
+	if ($SysPrefs->auto_currency_revaluation()) {
 		$currency = get_bank_account_currency($to_account);
-		add_exchange_variation($trans_no1, $date_, $to_account, $to_gl_account,	
-			$currency, PT_MISC, $person_id);
+		add_exchange_variation($trans_no1, $date_, $to_account, $to_gl_account,	$currency, PT_MISC, $person_id);
 	}
 	add_comments($trans_type, $trans_no, $date_, $memo_);
 
@@ -292,9 +260,7 @@ function add_bank_transfer($from_account, $to_account, $date_,
 	return $trans_no;
 }
 
-function check_bank_transfer($trans_no, $from_account, $to_account, $date_,
-    $amount, $target_amount=0)
-{
+function check_bank_transfer($trans_no, $from_account, $to_account, $date_, $amount, $target_amount=0) {
 	$dbResult = get_bank_trans(ST_BANKTRANSFER, $trans_no);
 
 	$old_from = db_fetch($dbResult);
@@ -314,9 +280,8 @@ function check_bank_transfer($trans_no, $from_account, $to_account, $date_,
 		// problem of voiding.
 		if ($to_account == $old_to['bank_act'] && sql_date_comp($problemTransaction['trans_date'], date2sql($date_)) > 0) {
 			$problemTransaction['amount'] += $amount;
-			if ($problemTransaction['amount'] >= 0) {
+			if ($problemTransaction['amount'] >= 0)
 				$problemTransaction = null;
-			}
 		}
 		if ($problemTransaction != null) {
 			$problemTransaction['account'] = $old_to['bank_act'];
@@ -345,18 +310,12 @@ function check_bank_transfer($trans_no, $from_account, $to_account, $date_,
 	return $problemTransaction;
 }
 
-function update_bank_transfer(
-	$trans_no, $from_account, $to_account, $date_,
-	$amount, $ref, $memo_, $charge=0, $target_amount=0)
-{
+function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $amount, $ref, $memo_, $charge=0, $target_amount=0) {
 	begin_transaction();
 	delete_comments(ST_BANKTRANSFER, $trans_no);
 	void_transaction(ST_BANKTRANSFER, $trans_no, Today(), _("Document reentered."));
 	void_gl_trans(ST_BANKTRANSFER, $trans_no, true);
-	$new_trans_no = add_bank_transfer(
-		$from_account, $to_account, $date_, $amount,
-		$ref, $memo_, $charge, $target_amount
-	);
+	$new_trans_no = add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $charge, $target_amount);
 	commit_transaction();
 	return $new_trans_no;
 }
@@ -375,9 +334,7 @@ function update_bank_transfer(
 //
 // FIXME -revise code for update case
 //
-function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $date_,
-	$person_type_id, $person_id, $person_detail_id,	$ref, $memo_, $use_transaction=true, $settled_amount=null)
-{
+function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $date_, $person_type_id, $person_id, $person_detail_id,	$ref, $memo_, $use_transaction=true, $settled_amount=null) {
 	global $Refs, $SysPrefs;
 
 	// we can only handle type 1 (payment)and type 2 (deposit)
@@ -389,8 +346,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 		begin_transaction();
 
 	$args = func_get_args(); if (count($args) < 11) $args[] = true;
-	$args = (object)array_combine(array('trans_type', 'trans_no', 'from_account', 'items', 'date_',
-		'person_type_id', 'person_id', 'person_detail_id', 'ref', 'memo_', 'use_transaction', 'settled_amount'),
+	$args = (object)array_combine(array('trans_type', 'trans_no', 'from_account', 'items', 'date_', 'person_type_id', 'person_id', 'person_detail_id', 'ref', 'memo_', 'use_transaction', 'settled_amount'),
 		$args);
 	hook_db_prewrite($args, $trans_type);
 
@@ -399,7 +355,8 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 		$old_trans = $trans_no;
 		$Refs->restore_last($trans_type, $trans_no);
 		$aid = has_attachment($trans_type, $trans_no);
-	} else
+	}
+	else
 		$old_trans = false;
 
 	$currency = get_bank_account_currency($from_account);
@@ -408,9 +365,8 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	// the gl items are already inversed/negated for type 2 (deposit)
 	$total_amount = $items->gl_items_total();
 
-    if ($person_type_id == PT_CUSTOMER)
-    {
-    	// we need to add a customer transaction record
+	if ($person_type_id == PT_CUSTOMER) {
+		// we need to add a customer transaction record
 		// convert to customer currency
 		if (!isset($settled_amount)) // leaved for backward/ext compatibility 
 			$cust_amount = exchange_from_to(abs($total_amount), $currency, get_customer_currency($person_id), $date_);
@@ -421,13 +377,12 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 			$cust_amount = -$cust_amount;
 
 		$trans_no = write_customer_trans($trans_type, 0, $person_id, $person_detail_id, $date_,
-        	$ref, $cust_amount);
+			$ref, $cust_amount);
 		if ($old_trans)
 			move_trans_attachments($trans_type, $old_trans, $trans_no);
-    }
-    elseif ($person_type_id == PT_SUPPLIER)
-    {
-    	// we need to add a supplier transaction record
+	}
+	elseif ($person_type_id == PT_SUPPLIER) {
+		// we need to add a supplier transaction record
 		// convert to supp currency
 		if (!isset($settled_amount)) // leaved for for backward/ext compatibility 
 			$supp_amount = exchange_from_to(abs($total_amount), $currency, get_supplier_currency($person_id), $date_);
@@ -441,73 +396,54 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 			$ref, "", $supp_amount, 0, 0);
 		if ($old_trans)
 			move_trans_attachments($trans_type, $old_trans, $trans_no);
-    }
-    else
-    {
-   		$trans_no = get_next_trans_no($trans_type);
-    	$do_exchange_variance = $SysPrefs->auto_currency_revaluation();
-    	if ($do_exchange_variance)
-    		$trans_no1 = get_next_trans_no(ST_JOURNAL);
-    }
-	if ($aid != 0)
-	{
+	}
+	else {
+		$trans_no = get_next_trans_no($trans_type);
+		$do_exchange_variance = $SysPrefs->auto_currency_revaluation();
+		if ($do_exchange_variance)
+			$trans_no1 = get_next_trans_no(ST_JOURNAL);
+	}
+	if ($aid != 0) {
 		$row = get_attachment($aid);
 		update_attachment($aid, $row['type_no'], $trans_no, $row['description'],
 			$row['filename'], $row['unique_name'], $row['filesize'], $row['filetype']);
 	}
 	// do the source account postings
 
-    add_bank_trans($trans_type, $trans_no, $from_account, $ref,
-    	$date_, -$total_amount,
-    	$person_type_id, $person_id,
-    	$currency,
-    	"Cannot insert a source bank transaction");
+	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -$total_amount, $person_type_id, $person_id, $currency,
+		'Cannot insert a source bank transaction');
 	$total = 0;
-	foreach ($items->gl_items as $gl_item)
-	{
+	foreach ($items->gl_items as $gl_item) {
 		$is_bank_to = is_bank_account($gl_item->code_id);
 
 		if ($trans_type == ST_BANKPAYMENT AND $is_bank_to)
-		{
 			// we don't allow payments to go to a bank account. use transfer for this !
-			display_db_error("invalid payment entered. Cannot pay to another bank account", "");
+			display_db_error('invalid payment entered. Cannot pay to another bank account', '');
+
+		// do the destination account postings
+		$total += add_gl_trans($trans_type, $trans_no, $date_, $gl_item->code_id, $gl_item->dimension_id, $gl_item->dimension2_id, $gl_item->reference, $gl_item->amount, $currency, $person_type_id, $person_id);
+
+		if ($is_bank_to) {
+			add_bank_trans($trans_type, $trans_no, $is_bank_to, $ref,
+				$date_, $gl_item->amount,
+				$person_type_id, $person_id, $currency,
+				"Cannot insert a destination bank transaction");
+			if ($do_exchange_variance)
+				add_exchange_variation($trans_no1, $date_, $is_bank_to, $gl_item->code_id, $currency, $person_type_id, $person_id);
 		}
-
-    	// do the destination account postings
-    	$total += add_gl_trans($trans_type, $trans_no, $date_, $gl_item->code_id,
-    		$gl_item->dimension_id, $gl_item->dimension2_id, $gl_item->reference,
-    		$gl_item->amount, $currency, $person_type_id, $person_id);
-
-    	if ($is_bank_to)
-    	{
-    		add_bank_trans($trans_type, $trans_no, $is_bank_to, $ref,
-    			$date_, $gl_item->amount,
-    			$person_type_id, $person_id, $currency,
-    			"Cannot insert a destination bank transaction");
-    		if ($do_exchange_variance)
-    		{
-    			add_exchange_variation($trans_no1, $date_, $is_bank_to, $gl_item->code_id, 
-    				$currency, $person_type_id, $person_id);
-    		}
-    	}
 		// store tax details if the gl account is a tax account
 
 		$amount = $gl_item->amount;
 		$ex_rate = get_exchange_rate_from_home_currency($currency, $date_);
 
-		add_gl_tax_details($gl_item->code_id, $trans_type, $trans_no, -$amount,
-			$ex_rate, $date_, $memo_);
+		add_gl_tax_details($gl_item->code_id, $trans_type, $trans_no, -$amount, $ex_rate, $date_, $memo_);
 	}
 
 	// do the source account postings
-    add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $gl_item->dimension_id, $gl_item->dimension2_id, $memo_,
-    	-$total, null, $person_type_id, $person_id);
+	add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $gl_item->dimension_id, $gl_item->dimension2_id, $memo_, -$total, null, $person_type_id, $person_id);
 
-    if ($do_exchange_variance)
-    {
-    	add_exchange_variation($trans_no1, $date_, $from_account, $bank_gl_account, 
-    		$currency, $person_type_id, $person_id);
-	}
+	if ($do_exchange_variance)
+		add_exchange_variation($trans_no1, $date_, $from_account, $bank_gl_account, $currency, $person_type_id, $person_id);
 
 	add_comments($trans_type, $trans_no, $date_, $memo_);
 
@@ -516,16 +452,13 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 
 	// old transaction can be voided only after new transaction is entered,
 	//  otherwise the operation could fail for cash accounts due to temporary negative balance
-	if ($old_trans) 
-	{
-		$msg = void_transaction($trans_type, $old_trans, Today(), _("Document reentered."));
-		if ($msg)
-		{
+	if ($old_trans) {
+		$msg = void_transaction($trans_type, $old_trans, Today(), _('Document reentered.'));
+		if ($msg) {
 			display_error($msg);
 			return false;
 		}
 	}
-
 
 	$args->trans_no = $trans_no;
 	hook_db_postwrite($args, $trans_type);

@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
 include_once $path_to_root.'/includes/db/class.data_set.inc';
@@ -16,9 +16,8 @@ class UI {
 	var $ui_mode;
 
 	// formatters
-	function text($value, $name='', $opts=array())
-	{
-		$text = array('label', 'size'=>"", 'max'=>"", 'title'=>false,	'labparams'=>"", 'post_label'=>"", 'inparams'=>"");
+	function text($value, $name='', $opts=array()) {
+		$text = array('label', 'size'=>'', 'max'=>'', 'title'=>false,	'labparams'=>'', 'post_label'=>'', 'inparams'=>'');
 		$opts = array_merge($text, $opts);
 
 		if (!$name)
@@ -43,13 +42,11 @@ class user_view {
 	var $dec;
 	var $name;
 
-	function __construct($name)
-	{
+	function __construct($name) {
 		$this->name = $name;
 	}
 
-	function error($msg, $context=null)
-	{
+	function error($msg, $context=null) {
 		// save error message
 		if (!isset($context))
 			$context = count($this->errors);
@@ -60,8 +57,7 @@ class user_view {
 	/*
 		Input/output formatters - convert values between php/user domains.
 	*/
-	function _format_input($value, $fmt)
-	{
+	function _format_input($value, $fmt) {
 		switch($fmt) {
 			case 'stock':
 				$this->dec = get_qty_dec($value);
@@ -69,7 +65,7 @@ class user_view {
 			case 'price':
 			case 'qty':
 			case 'number':
-				    return user_numeric($value);
+					return user_numeric($value);
 			case 'percent':
 					return user_numeric($value)/100;
 			case 'check':
@@ -83,8 +79,7 @@ class user_view {
 	//
 	// Returns formatted value
 	//
-	function _format_output($value, $fmt)
-	{
+	function _format_output($value, $fmt) {
 		switch($fmt) {
 			case 'price':
 				return price_format($value);
@@ -108,16 +103,15 @@ class user_view {
 	*	Returns html element for given field
 	*	@mode - true for edit, false for read-only
 	**/
-	function _format_cells($value, $fmt, $mode)
-	{
+	function _format_cells($value, $fmt, $mode) {
 		$value = $this->_format_output($fmt);
 
 		// available formatters with parameters
 		$formatters = array(
 			'email_cell' => array('label', 'params'=>'', 'id'=>null),
 			'amount_cell' => array('label'=>null, 'bold'=>false, 'params'=>'', 'id'=>null),
-			'text_cells' => array('label', 'name', 'value'=>null, 'size'=>"", 'max'=>"", 'title'=>false,
-				'labparams'=>"", 'post_label'=>"", 'inparams'=>"")
+			'text_cells' => array('label', 'name', 'value'=>null, 'size'=>'', 'max'=>'', 'title'=>false,
+				'labparams'=>'', 'post_label'=>'', 'inparams'=>'')
 		);
 		// format functions used in various modes
 		$formats = array(
@@ -138,15 +132,15 @@ class user_view {
 	*	PHP->user format values convertion.
 	*
 	**/
-	function set_output($data=null, &$output=null)
-	{
+	function set_output($data=null, &$output=null) {
 		if (isset($data))
 			$this->data = $data;
 
 		if (!isset($output)) {
 			$output = &$_POST;
 			$prefix = $this->name;
-		} else
+		}
+		else
 			$prefix = '';
 
 		foreach($this->fields as $name => $fmt) {
@@ -154,7 +148,8 @@ class user_view {
 			if (is_int($name)) {
 				$name = $fmt;
 				$fmt = array();
-			} elseif (!is_array($fmt))
+			}
+			elseif (!is_array($fmt))
 				$fmt = array('fmt' => $fmt);
 
 			$post = $prefix.(isset($fmt['post']) ? $fmt['post'] : $name);
@@ -177,28 +172,26 @@ class user_view {
 	*	$input - data in user format
 	*	$all - return also null values for non-existing input field.
 	**/
-	function get_input($input=null, $all=false)
-	{
+	function get_input($input=null, $all=false) {
 		if (!isset($input))
 			$input = $_POST;
 
 		if ($this->name)	// strip view name prefix
-		    foreach($input as $postkey=>$postval )
-    		{
-				if (strpos($postkey, $this->name) === 0)
-				{
+			foreach($input as $postkey=>$postval) {
+				if (strpos($postkey, $this->name) === 0) {
 					$id = substr($postkey, strlen($this->name));
 					$input[$id] = $postval;
 				}
 				unset($input[$postkey]);
-    		}
+			}
 
-    	$data = array();
+		$data = array();
 		foreach ($this->fields as $name => $fmt) {
-			if (is_int($name)) {	// direct string passed: this is name of field
+			if (is_int($name)) { // direct string passed: this is name of field
 				$name = $fmt;
 				$fmt = array(); // default format
-			} elseif (!is_array($fmt))
+			}
+			elseif (!is_array($fmt))
 				$fmt = array('fmt' => $fmt);
 			$post = isset($fmt['post']) ? $fmt['post'] : $name; // input name (default to field name)
 			$fld = isset($fmt['fld']) ? $fmt['fld'] : $name;	// input value (default to field name)
@@ -226,8 +219,7 @@ class user_view {
 	//
 	//	Return data formatted according to field descriptions.
 	//
-	function get_fields_views($input=null, $mode=null)
-	{
+	function get_fields_views($input=null, $mode=null) {
 
 		if (!isset($input))
 			$input = $_POST;
@@ -247,7 +239,6 @@ class user_view {
 		}
 		return $view;
 	}
-
 }
 
 //
@@ -278,8 +269,7 @@ class simple_crud_view extends user_view {
 	var $display_both = false; //when set to true both list and editor are displayed all the time (eventually set in sub classes)
 	//
 	//
-	function __construct($name, $data_set = null, $options=array())
-	{
+	function __construct($name, $data_set = null, $options=array()) {
 		parent::__construct($name);
 
 		$this->options = array_merge($this->options, $options);
@@ -287,56 +277,38 @@ class simple_crud_view extends user_view {
 		$this->views[''] = 'list_view';			// default view
 
 		if ($this->options['update'])
-			$this->_add_action('Edit', '_edit', _('Edit'), _('Edit document line'), ICON_EDIT, '',
-				'editor_view');
-
+			$this->_add_action('Edit', '_edit', _('Edit'), _('Edit document line'), ICON_EDIT, '', 'editor_view');
 		if ($this->options['delete'])
-			$this->_add_action('Delete', '_delete', _('Delete'), _('Remove line from document'), ICON_DELETE, '',
-				'list_view');
-
+			$this->_add_action('Delete', '_delete', _('Delete'), _('Remove line from document'), ICON_DELETE, '', 'list_view');
 		if ($this->options['update'])
-			$this->_add_action('UPDATE', '_update', _('Update'), _('Submit changes'), ICON_UPDATE, 'default',
-				'editor_view');
-
-		$this->_add_action('RESET', '_cancel', _('Cancel'), _('Cancel changes'), ICON_ESCAPE, 'cancel',
-			'list_view');
-
+			$this->_add_action('UPDATE', '_update', _('Update'), _('Submit changes'), ICON_UPDATE, 'default', 'editor_view');
+		$this->_add_action('RESET', '_cancel', _('Cancel'), _('Cancel changes'), ICON_ESCAPE, 'cancel', 'list_view');
 		if ($this->options['insert'])
-			$this->_add_action('ADD', '_add', _('Add'), _('Add new'), ICON_ADD, 'default',
-				'editor_view');
-
+			$this->_add_action('ADD', '_add', _('Add'), _('Add new'), ICON_ADD, 'default', 'editor_view');
 		if ($this->options['insert'])
-			$this->_add_action('NEW', '_add', _('New'), _('Add new'), ICON_ADD, 'default',
-				'editor_view');
-
+			$this->_add_action('NEW', '_add', _('New'), _('Add new'), ICON_ADD, 'default', 'editor_view');
 		if ($this->options['clone'])
-			$this->_add_action('CLONE', '_cloning', _('Clone'), _('Clone'), ICON_ADD, '',
-				'editor_view');
+			$this->_add_action('CLONE', '_cloning', _('Clone'), _('Clone'), ICON_ADD, '', 'editor_view');
 
 		$this->data_set = $data_set;
 		$this->fields = $data_set->fields;
-
 //		$this->_prev_status();
 	}
 
-	function _add_action($name, $handler, $but_value=null, $but_title=false, $but_icon=false, $aspect='', $view=null)
-	{
+	function _add_action($name, $handler, $but_value=null, $but_title=false, $but_icon=false, $aspect='', $view=null) {
 		$this->pre_handlers[$name] = $handler;
 
 		if ($but_value)
 			$this->tool_buttons[$name] = array($but_value, $but_title, $but_icon, $aspect);
-
 		if ($view)
 			$this->_add_mode($name, $view);
 	}
 
-	function _add_mode($name, $view)
-	{
+	function _add_mode($name, $view) {
 		$this->views[$name] = $view;
 	}
 
-	function _prev_status()
-	{
+	function _prev_status() {
 		// Restore previous mode/key (obsolete for views stored in session)
 
 		$mod = get_post($this->name.'Mode', $this->Mode);
@@ -345,7 +317,8 @@ class simple_crud_view extends user_view {
 				$val = key($mod);
 				$this->selected_id = $val!==null ? @quoted_printable_decode($val) : $this->_none;
 				$mod = $mod[$val];
-			} else {
+			}
+			else {
 				$val = $mod;
 				$this->selected_id = $this->_none;
 			}
@@ -353,8 +326,7 @@ class simple_crud_view extends user_view {
 		$this->Mode = $mod;
 	}
 
-	function _check_mode()
-	{
+	function _check_mode() {
 		global $Ajax;
 
 		$mod = '';//$this->Mode;
@@ -377,8 +349,7 @@ class simple_crud_view extends user_view {
 		return $mod;
 	}
 
-	function display_error()
-	{
+	function display_error() {
 		$this->errors = array_merge($this->data_set->errors, $this->errors);
 		$firsterr = reset($this->errors);
 		$field = key($this->errors);
@@ -392,8 +363,7 @@ class simple_crud_view extends user_view {
 	//
 	//	Set record for edition
 	//
-	function _edit($mode)
-	{
+	function _edit($mode) {
 		if ($this->selected_id != $this->prev_id || $mode != $this->Mode) { // get record for edition
 			$this->data = $this->data_set->get($this->selected_id !== $this->_none ? $this->selected_id : null);
 			$this->set_output();
@@ -409,19 +379,18 @@ class simple_crud_view extends user_view {
 	//
 	//	Update record after edition
 	//
-	function _update($mode)
-	{
+	function _update($mode) {
 		if (!$this->options['update'])
 			return;
 
 		$this->data = $this->get_input();
 		if ($this->data_set->update_check($this->selected_id, $this->data) && $this->data_set->update($this->selected_id, $this->data)) {
-				$this->selected_id = $this->_none;
-				$this->Mode = 'RESET';
-				$this->_cancel();
-				if (is_string($this->options['update']))
-					display_notification($this->options['update']);
-				return;
+			$this->selected_id = $this->_none;
+			$this->Mode = 'RESET';
+			$this->_cancel();
+			if (is_string($this->options['update']))
+				display_notification($this->options['update']);
+			return;
 		}
 		else
 			$this->display_error();
@@ -431,8 +400,7 @@ class simple_crud_view extends user_view {
 	//
 	//	Add new record
 	//
-	function _add($mode)
-	{
+	function _add($mode) {
 		if (!$this->options['insert'])
 			return;
 
@@ -447,36 +415,34 @@ class simple_crud_view extends user_view {
 			}
 			else
 				$this->display_error();
-		} else {// mode==NEW
-				$this->data = $this->data_set->get();
 		}
+		else // mode==NEW
+			$this->data = $this->data_set->get();
+		
 		$this->Mode = 'ADD';
 	}
 	//
 	//	Delete selected  record
 	//
-	function _delete()
-	{
+	function _delete() {
 		if (!$this->options['delete'])
 			return;
 
-		if ($this->data_set->delete_check($this->selected_id) && $this->data_set->delete($this->selected_id))
-		{
+		if ($this->data_set->delete_check($this->selected_id) && $this->data_set->delete($this->selected_id)) {
 			if (is_string($this->options['delete']))
 				display_notification($this->options['delete']);
-		} else
+		}
+		else
 			$this->display_error();
 		$this->_cancel();
 	}
 	//
 	//	Return to listing view
 	//
-	function _cancel()
-	{
+	function _cancel() {
 		global $Ajax;
 		$this->selected_id = $this->_none;
-		if ($this->display_both)
-		{
+		if ($this->display_both) {
 			$this->data = $this->data_set->get();
 			$this->set_output();
 		}
@@ -488,8 +454,7 @@ class simple_crud_view extends user_view {
 	//
 	// Clone record for new edition
 	//
-	function _cloning()
-	{
+	function _cloning() {
 		if (!$this->options['clone'])
 			return;
 		$this->Mode = 'ADD';
@@ -500,21 +465,20 @@ class simple_crud_view extends user_view {
 		Generate form controls
 	*/
 
-	function _record_controls($list_view = false)
-	{
+	function _record_controls($list_view = false) {
 		$clone = $this->options['clone'] && $this->selected_id != $this->_none;
 
 		div_start($this->name.'_controls');
-		echo "<center>";
+		echo '<center>';
 
 		if ($list_view)
 			$this->action_button('NEW');
 		else {
-			if ($this->Mode == 'NEW' || $this->selected_id==$this->_none)
-			{
+			if ($this->Mode == 'NEW' || $this->selected_id==$this->_none) {
 				$this->action_button('ADD');
 				$this->action_button('RESET');
-			} else {
+			}
+			else {
 				$this->action_button('UPDATE', $this->selected_id);
 				if ($clone && $this->display_both) 
 					$this->action_button('CLONE', $this->selected_id);
@@ -522,7 +486,7 @@ class simple_crud_view extends user_view {
 			}
 		}
 
-		echo "</center>";
+		echo '</center>';
 		div_end();
 	}
 
@@ -533,8 +497,7 @@ class simple_crud_view extends user_view {
 	//
 	//	Submit buttons for form actions
 	//
-	function action_button($action, $selected_id=null)
-	{
+	function action_button($action, $selected_id=null) {
 		list($value, $title, $icon, $aspect) = $this->tool_buttons[$action];
 		submit($this->name.$action.(isset($selected_id) ? "[$selected_id]" : ''), $value, true, $title, $aspect, $icon);
 	}
@@ -542,20 +505,15 @@ class simple_crud_view extends user_view {
 	//
 	//	Tool button for grid line actions.
 	//
-	function tool_button($name, $selected_id=null, $params='')
-	{
+	function tool_button($name, $selected_id=null, $params='') {
 		$b = $this->tool_buttons[$name];
 
-		return "<td align='center' $params>"
-			.button( "{$this->name}$name"
-				.($selected_id === null || $selected_id === $this->_none ? '': "[$selected_id]"),
-				$b[0], $b[1], $b[2], $b[3])."</td>";
+		return "<td align='center' $params>".button( "{$this->name}$name".($selected_id === null || $selected_id === $this->_none ? '': "[$selected_id]"), $b[0], $b[1], $b[2], $b[3]).'</td>';
 	}
 	//
 	//	Main function - display current CRUD editor content
 	//
-	function show($Mode=null)
-	{
+	function show($Mode=null) {
 		if (!isset($Mode))
 			$Mode = $this->_check_mode(true);
 
@@ -582,8 +540,7 @@ class simple_crud_view extends user_view {
 	//
 	//	Optional things like focus set performed on edition cancel.
 	//
-	function cancel()
-	{
+	function cancel(){
 	}
 
 	//
@@ -605,14 +562,12 @@ class simple_crud_view extends user_view {
 
 class selector_crud_view extends simple_crud_view {
 
-	function __construct($name, $data_set = null, $options=array())
-	{
+	function __construct($name, $data_set = null, $options=array()) {
 		$this->display_both = true;
 		parent::__construct($name, $data_set, $options);
 	}
 
-	function _check_mode()
-	{
+	function _check_mode() {
 		global $Ajax;
 
 		// list controls lookup
@@ -626,24 +581,20 @@ class selector_crud_view extends simple_crud_view {
 			$Ajax->activate($this->name);
 			$Ajax->activate($this->name.'_controls');
 			$mod = $this->selected_id == $this->_none ? 'RESET' : 'Edit';
-		} else {
+		}
+		else
 			$mod = simple_crud_view::_check_mode();
-		}
 
-		if ($mod != $prev_mode) {
+		if ($mod != $prev_mode)
 			$Ajax->activate($this->name.'_controls');
-		}
 		if (get_post('_show_inactive_update'))
-		{
 			$Ajax->activate($this->name.'_id');
-		}
 
 		$_POST[$list] = $this->selected_id;
 		return $mod;
 	}
 
-	function cancel()
-	{
+	function cancel() {
 		global $Ajax;
 
 		$_POST[$this->name.'_id'] = $this->selected_id = $this->_none;
@@ -659,8 +610,7 @@ class table_crud_view extends simple_crud_view {
 
 	var $title;
 
-	function __construct($name, &$data_set = null, $options=array())
-	{
+	function __construct($name, &$data_set = null, $options=array()) {
 		$this->display_both = true;
 		parent::__construct($name, $data_set, $options);
 	}
@@ -669,8 +619,7 @@ class table_crud_view extends simple_crud_view {
 	*	Returns selector string from data or current selected_id
 	*
 	**/
-	function curr_id($data=null)
-	{
+	function curr_id($data=null) {
 		if ($data)
 			return $data ? implode('_', array_intersect_key($data, array_fill_keys($this->key, true))) : null; // php 5.2.0
 		else
@@ -681,8 +630,7 @@ class table_crud_view extends simple_crud_view {
 	*	Show single line from record table
 	*
 	**/
-	function show_record_row($line_no, $record=array())
-	{
+	function show_record_row($line_no, $record=array()) {
 /* TBD
 		$id = $this->curr_id($record); // extract key
 
@@ -723,33 +671,30 @@ class table_crud_view extends simple_crud_view {
 		}
 */
 	}
-	function show_list_headers()
-	{
+	function show_list_headers() {
 	}
 	//
 	//	Main function - display current CRUD table content
 	//
-	function show($Mode=null)
-	{
+	function show($Mode=null) {
 		if (!isset($Mode))
 			$Mode = $this->_check_mode(true);
 		div_start($this->name.'_div');
 
-		if (array_key_exists($Mode, $this->pre_handlers))
-		{
+		if (array_key_exists($Mode, $this->pre_handlers)) {
 			$fun = $this->pre_handlers[$Mode];
-			if (is_array($fun))
-			{
+			if (is_array($fun)) {
 				if (is_object($fun[0]))
 					$fun[0]->$fun[1]($Mode);
-			} else
-			$this->$fun($Mode);
+			}
+			else
+				$this->$fun($Mode);
 		}
 
 		if ($this->title)
 			display_heading($this->title);
 
-		start_table(TABLESTYLE, "width=95%");
+		start_table(TABLESTYLE, 'width=95%');
 		$this->show_list_headers();
 
 		foreach($this->data_set->get_all() as $line_no => $line) {
@@ -761,5 +706,4 @@ class table_crud_view extends simple_crud_view {
 		hidden($this->name.'Mode'.'['.$this->selected_id.']', $this->Mode);
 		div_end();
 	}
-
 };

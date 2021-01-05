@@ -1,21 +1,20 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
 /*
 	Read content of remote url via http.
 	Does not require curl php extension nor allow_url_fopen=1.
 */
-function url_get_contents($url, $timeout=10)
-{
+function url_get_contents($url, $timeout=10) {
 	// get the host name and url path
 	$parsedUrl = parse_url($url);
 
@@ -24,30 +23,28 @@ function url_get_contents($url, $timeout=10)
 
 	$host = $parsedUrl['host'];
 
-	if (isset($parsedUrl['path'])) {
+	if (isset($parsedUrl['path']))
 		$path = $parsedUrl['path'];
-	} else {
+	else
 		// the url is pointing to the host like http://www.mysite.com
 		$path = '/';
-	}
 
-	if (isset($parsedUrl['query'])) {
+	if (isset($parsedUrl['query']))
 		$path .= '?' . $parsedUrl['query'];
-	}
 
-	if (isset($parsedUrl['port'])) {
+	if (isset($parsedUrl['port']))
 		$port = $parsedUrl['port'];
-	} else {
+	else
 		// most sites use port 80
 		$port = '80';
-	}
 
 	$response = '';
 	// connect to the remote server
 	$fp = @fsockopen($host, $port, $errno, $errstr, $timeout );
 	if( !$fp ) {
 		return null;
-	} else {
+	}
+	else {
 		// send the necessary headers to get the file
 		fputs($fp, "GET $path HTTP/1.0\r\n" .
 			"Host: $host\r\n".
@@ -76,8 +73,7 @@ function url_get_contents($url, $timeout=10)
 	return $response;
 }
 
-function url_copy($from, $to, $timeout=10)
-{
+function url_copy($from, $to, $timeout=10) {
 	$f = fopen($to, 'wb');
 	if (!$f || !fwrite($f, url_get_contents($from, $timeout)))
 		return false;

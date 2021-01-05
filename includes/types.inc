@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //----------------------------------------------------------------------------------
 //	FrontAccounting system transaction types
@@ -56,24 +56,22 @@ define ('ST_CHEQUE', 92);
 
 // document inheritance
 $document_child_types = array(
-		ST_SALESQUOTE => ST_SALESORDER,
-		ST_SALESORDER => ST_CUSTDELIVERY,
-		ST_CUSTDELIVERY => ST_SALESINVOICE,
-		ST_SALESINVOICE => ST_CUSTCREDIT,
+	ST_SALESQUOTE => ST_SALESORDER,
+	ST_SALESORDER => ST_CUSTDELIVERY,
+	ST_CUSTDELIVERY => ST_SALESINVOICE,
+	ST_SALESINVOICE => ST_CUSTCREDIT,
 
-		ST_PURCHORDER => ST_SUPPRECEIVE,
-		ST_SUPPRECEIVE => ST_SUPPINVOICE,
-		ST_SUPPINVOICE => ST_SUPPCREDIT,
+	ST_PURCHORDER => ST_SUPPRECEIVE,
+	ST_SUPPRECEIVE => ST_SUPPINVOICE,
+	ST_SUPPINVOICE => ST_SUPPCREDIT,
 );
 
-function get_child_type($type)
-{
+function get_child_type($type) {
 	global $document_child_types;
 	return isset($document_child_types[$type]) ? $document_child_types[$type] : 0;
 }
 
-function get_parent_type($type)
-{
+function get_parent_type($type) {
 	global $document_child_types;
 	$child = array_search($type, $document_child_types);
 	return $child ? $child : 0;
@@ -87,10 +85,10 @@ define('BT_CHEQUE', 1);
 define('BT_CREDIT', 2);
 define('BT_CASH', 3);
 
-include_once($path_to_root . "/manufacturing/includes/manufacturing_db.inc");
-include_once($path_to_root . "/purchasing/includes/purchasing_db.inc");
-include_once($path_to_root . "/sales/includes/sales_db.inc");
-include_once($path_to_root . "/dimensions/includes/dimensions_db.inc");
+include_once($path_to_root . '/manufacturing/includes/manufacturing_db.inc');
+include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root . '/dimensions/includes/dimensions_db.inc');
 //----------------------------------------------------------------------------------
 //	Payment types
 //
@@ -102,8 +100,7 @@ define('PT_QUICKENTRY', 4);
 define('PT_DIMESION', 5);
 
 function payment_person_currency($type, $person_id)  {
-	switch ($type)
-	{
+	switch ($type) {
 		case PT_MISC :
 		case PT_QUICKENTRY :
 		case PT_WORKORDER :
@@ -123,8 +120,7 @@ function payment_person_currency($type, $person_id)  {
 function payment_person_name($type, $person_id, $full=true) {
 	global $payment_person_types;
 
-	switch ($type)
-	{
+	switch ($type) {
 		case PT_MISC :
 			return $person_id;
 		case PT_QUICKENTRY :
@@ -143,8 +139,7 @@ function payment_person_name($type, $person_id, $full=true) {
 }
 
 function payment_person_has_items($type) {
-	switch ($type)
-	{
+	switch ($type) {
 		case PT_MISC :
 			return true;
 		case PT_QUICKENTRY :
@@ -189,8 +184,7 @@ define('CL_INCOME', 4);
 define('CL_COGS', 5);
 define('CL_EXPENSE', 6);
 
-function get_class_type_convert($ctype)
-{
+function get_class_type_convert($ctype) {
 	global $SysPrefs;
 
 	if (isset($SysPrefs->use_oldstyle_convert) && $SysPrefs->use_oldstyle_convert == 1)
@@ -246,7 +240,7 @@ define('BO_COMPANY', 1);
 define('BO_CUSTBRANCH', 2);
 define('BO_SUPPLIER', 3);
 
-include_once($path_to_root . '/includes/sysnames.inc');
+include_once($path_to_root.'/includes/sysnames.inc');
 
 // tax register type
 define('TR_OUTPUT', 0); // sales
@@ -275,4 +269,3 @@ defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'ok.gif');
 defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'escape.png');
 defined('ICON_ALLOC') || define('ICON_ALLOC', 'alloc.png');
 defined('ICON_CLOSED') || define('ICON_CLOSED', 'closed.png');
-

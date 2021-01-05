@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /*
   Write/update customer payment.
@@ -20,9 +20,7 @@
 	$bank_amount - in bank currency (before charge)
 	$charge - in bank currency
 */
-function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_account,
-	$date_, $ref, $amount, $discount, $memo_, $rate=0, $charge=0, $bank_amount=0, $dim1=0, $dim2=0)
-{
+function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_account, $date_, $ref, $amount, $discount, $memo_, $rate=0, $charge=0, $bank_amount=0, $dim1=0, $dim2=0) {
 	global $Refs;
 
 	begin_transaction();
@@ -34,19 +32,17 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 	$company_record = get_company_prefs();
 
 	if ($trans_no != 0) {
-	  	delete_comments(ST_CUSTPAYMENT, $trans_no);
-	  	void_bank_trans(ST_CUSTPAYMENT, $trans_no, true);
-	  	void_gl_trans(ST_CUSTPAYMENT, $trans_no, true);
-	  	void_cust_allocations(ST_CUSTPAYMENT, $trans_no, $date_);
+		delete_comments(ST_CUSTPAYMENT, $trans_no);
+		void_bank_trans(ST_CUSTPAYMENT, $trans_no, true);
+		void_gl_trans(ST_CUSTPAYMENT, $trans_no, true);
+		void_cust_allocations(ST_CUSTPAYMENT, $trans_no, $date_);
 	}
 
 	$bank = get_bank_account($bank_account);
 
-	if (!$bank_amount) 	// backward compatibility workaround
-	{
+	if (!$bank_amount) { // backward compatibility workaround
 		if(!$rate)
-			$rate = get_exchange_rate_from_to(get_customer_currency($customer_id),
-				$bank['bank_curr_code'], $date_ );
+			$rate = get_exchange_rate_from_to(get_customer_currency($customer_id), $bank['bank_curr_code'], $date_ );
 
 		$bank_amount = $amount/$rate;
 	}
@@ -67,25 +63,26 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 
 		$branch_data = get_branch_accounts($branch_id);
 
-		$debtors_account = $branch_data["receivables_account"];
-		$discount_account = $branch_data["payment_discount_account"];
+		$debtors_account = $branch_data['receivables_account'];
+		$discount_account = $branch_data['payment_discount_account'];
 
-	} else {
-		$debtors_account = $company_record["debtors_act"];
-		$discount_account = $company_record["default_prompt_payment_act"];
+	}
+	else {
+		$debtors_account = $company_record['debtors_act'];
+		$discount_account = $company_record['default_prompt_payment_act'];
 	}
 
 	if (($discount + $amount) != 0)	{
 	/* Now Credit Debtors account with receipts + discounts */
 	$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
 		$debtors_account, $dim1, $dim2, -($discount + $amount), $customer_id,
-		"Cannot insert a GL transaction for the debtors account credit");
+		'Cannot insert a GL transaction for the debtors account credit');
 	}
 	if ($discount != 0)	{
 		/* Now Debit discount account with discounts allowed*/
 		$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
 			$discount_account, $dim1, $dim2, $discount, $customer_id,
-			"Cannot insert a GL transaction for the payment discount debit");
+			'Cannot insert a GL transaction for the payment discount debit');
 	}
 
 	if ($charge != 0)	{
@@ -95,18 +92,15 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 			$charge, $bank['bank_curr_code'], PT_CUSTOMER,  $customer_id);
 	}
 
-
 	/*Post a balance post if $total != 0 due to variance in AR and bank posted values*/
-	if ($total != 0)
-	{
+	if ($total != 0) {
 		$variance_act = get_company_pref('exchange_diff_act');
 		add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$variance_act, $dim1, $dim2, '',
 			-$total, null, PT_CUSTOMER,  $customer_id);
 	}
 
 	/*now enter the bank_trans entry */
-	add_bank_trans(ST_CUSTPAYMENT, $payment_no, $bank_account, $ref,
-		$date_, $bank_amount - $charge, PT_CUSTOMER, $customer_id);
+	add_bank_trans(ST_CUSTPAYMENT, $payment_no, $bank_account, $ref, $date_, $bank_amount - $charge, PT_CUSTOMER, $customer_id);
 
 	add_comments(ST_CUSTPAYMENT, $payment_no, $date_, $memo_);
 
@@ -121,8 +115,7 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 
 //-------------------------------------------------------------------------------------------------
 
-function void_customer_payment($type, $type_no)
-{
+function void_customer_payment($type, $type_no) {
 	begin_transaction();
 
 	hook_db_prevoid($type, $type_no);
@@ -139,8 +132,7 @@ function void_customer_payment($type, $type_no)
 	. Bank charge is not stored explicitly in database as of 2.3.xx
 	. Due to roundings the retrieved charge can differ from the original amount when bank_curr!=home_curr && bank_curr!=cust_curr
 */
-function get_cust_bank_charge($type, $trans_no)
-{
+function get_cust_bank_charge($type, $trans_no) {
 
 	// restore charge amount from amounts in bank currency if possible, otherwise calculate from GL posting with exchange rate used for amount posting
 	$sql = "SELECT	IF(act.bank_curr_code=home_curr.value, charge.amount,
@@ -157,7 +149,7 @@ function get_cust_bank_charge($type, $trans_no)
 			WHERE pmt.amount!=0 AND charge.amount!=0 AND trans.amount!=0
 				AND trans.type=".db_escape($type)." AND trans.trans_no=".db_escape($trans_no);
 
-	$result = db_query($sql, "cannot retrieve bank charge");
+	$result = db_query($sql, 'cannot retrieve bank charge');
 
 	if (!db_num_rows($result))
 		return 0;
@@ -165,4 +157,3 @@ function get_cust_bank_charge($type, $trans_no)
 	$myrow = db_fetch($result);
 	return $myrow['0'];
 }
-

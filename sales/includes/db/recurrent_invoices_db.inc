@@ -1,29 +1,25 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_recurrent_invoice($description, $order_no, $debtor_no, $group_no, $days, $monthly,
-	$begin, $end)
-{
+function add_recurrent_invoice($description, $order_no, $debtor_no, $group_no, $days, $monthly, $begin, $end) {
 	$sql = "INSERT INTO ".TB_PREF."recurrent_invoices (description, order_no, debtor_no,
 		group_no, days, monthly, begin, end, last_sent) VALUES (".db_escape($description) . ", "
 		.db_escape($order_no).", ".db_escape($debtor_no).", "
 		.db_escape($group_no).", ".$days.", ".$monthly.", '"
 		.date2sql($begin)."', '".date2sql($end)."', '0000-00-00')";
-   	db_query($sql,"The recurrent invoice could not be added");
+	db_query($sql, 'The recurrent invoice could not be added');
 }
 
-function update_recurrent_invoice($selected_id, $description, $order_no, $debtor_no, $group_no, $days, $monthly,
-	$begin, $end)
-{
+function update_recurrent_invoice($selected_id, $description, $order_no, $debtor_no, $group_no, $days, $monthly, $begin, $end) {
 	$sql = "UPDATE ".TB_PREF."recurrent_invoices SET 
 		description=".db_escape($description).", 
 		order_no=".db_escape($order_no).", 
@@ -34,62 +30,56 @@ function update_recurrent_invoice($selected_id, $description, $order_no, $debtor
 		begin='".date2sql($begin)."', 
 		end='".date2sql($end)."' 
 		WHERE id = ".db_escape($selected_id);
-   	db_query($sql,"The recurrent invoice could not be updated");
+	db_query($sql, 'The recurrent invoice could not be updated');
 }
 
-function update_last_sent_recurrent_invoice($id, $date)
-{
+function update_last_sent_recurrent_invoice($id, $date) {
 	$date = date2sql($date);
 	$sql = "UPDATE ".TB_PREF."recurrent_invoices SET last_sent='$date' WHERE id=".db_escape($id);
 
-   	db_query($sql,"The recurrent invoice could not be updated");
+	db_query($sql, 'The recurrent invoice could not be updated');
 }
 
-function delete_recurrent_invoice($selected_id)
-{
+function delete_recurrent_invoice($selected_id) {
 	$sql="DELETE FROM ".TB_PREF."recurrent_invoices WHERE id=".db_escape($selected_id);
-	db_query($sql,"could not delete recurrent invoice");
+	db_query($sql, 'could not delete recurrent invoice');
 }
 
-function get_recurrent_invoices($date=null)
-{
+function get_recurrent_invoices($date=null) {
 	// last_sent stores end date of last generated invoice _plus_ 1 (or is empty)
-	if ($date)
-	{
+	if ($date) {
 		$date = date2sql($date);
 		// we can issue invoice after or at last day of covered period
 		$sql = "SELECT *, DATE_ADD(DATE_ADD(IF(`last_sent`='0000-00-00', `begin`, `last_sent`), INTERVAL `monthly` MONTH), INTERVAL `days` DAY) <= '$date'
 			AND last_sent < DATE_ADD(`end`, INTERVAL 1 DAY) as overdue";
-	} else
+	}
+	else
 		$sql = "SELECT * ";
 
 	$sql .= " FROM ".TB_PREF."recurrent_invoices ORDER BY description, group_no, debtor_no";
 
-	return db_query($sql,"could not get recurrent invoices");
+	return db_query($sql, 'could not get recurrent invoices');
 }
 
-function get_recurrent_invoice($selected_id)
-{
+function get_recurrent_invoice($selected_id) {
 	$sql = "SELECT * FROM ".TB_PREF."recurrent_invoices WHERE id=".db_escape($selected_id);
 
-	$result = db_query($sql,"could not get recurrent invoice");
+	$result = db_query($sql, 'could not get recurrent invoice');
 	return db_fetch($result);
 }
 
-function check_recurrent_invoice_description($description, $id=null)
-{
+function check_recurrent_invoice_description($description, $id=null) {
 	$sql = "SELECT count(*) FROM ".TB_PREF."recurrent_invoices WHERE description=".db_escape($description);
 
 	if (isset($id))
 		$sql .= " AND id<>".db_escape($id);
 
-	$result = db_query($sql,"could not check recurrent invoice");
+	$result = db_query($sql, 'could not check recurrent invoice');
 	$row = db_fetch($result);
 	return !$row[0];
 }
 
-function recurrent_invoice_ready($selected_id, $date)
-{
+function recurrent_invoice_ready($selected_id, $date) {
 	$date = date2sql($date);
 
 	$sql = "SELECT DATE_ADD(DATE_ADD(IF(`last_sent`='0000-00-00', `begin`, `last_sent`), INTERVAL `monthly` MONTH), INTERVAL `days` DAY) <= '$date' 
@@ -97,7 +87,7 @@ function recurrent_invoice_ready($selected_id, $date)
 		FROM ".TB_PREF."recurrent_invoices WHERE 
 		id=".db_escape($selected_id);
 
-	$result = db_query($sql,"could not get recurrent invoice");
+	$result = db_query($sql, 'could not get recurrent invoice');
 	$ret =  db_fetch($result);
 
 	return $ret['overdue'];
@@ -105,8 +95,7 @@ function recurrent_invoice_ready($selected_id, $date)
 /*
 	Return number of invoices generated by recurrent invoice.
 */
-function recurrent_invoice_count($id)
-{
+function recurrent_invoice_count($id) {
 
 	$sql1 = "SELECT branch.*
 		FROM ".TB_PREF."recurrent_invoices rec
@@ -121,13 +110,12 @@ function recurrent_invoice_count($id)
 		WHERE rec.debtor_no!=0 AND !ISNULL(debtor.debtor_no) AND rec.id=".db_escape($id);
 
 	$sql = "SELECT count(*) FROM ($sql1 UNION $sql2) a";
-	$result = db_fetch(db_query($sql, "cannot count recurrent invoices"));
+	$result = db_fetch(db_query($sql, 'cannot count recurrent invoices'));
 
 	return $result[0];
 }
 
-function check_recurrent_invoice_prices($id)
-{
+function check_recurrent_invoice_prices($id) {
 	$errors = 0;
 	$inv = get_recurrent_invoice($id);
 
@@ -145,16 +133,14 @@ function check_recurrent_invoice_prices($id)
 
 	$sql = "SELECT distinct * FROM ($sql1 UNION $sql2) a";
 
-	$currs = db_query($sql, "cannot count recurrent invoices");
+	$currs = db_query($sql, 'cannot count recurrent invoices');
 
 	$template = get_sales_order_header($inv['order_no'], ST_SALESORDER);
 
-	while ($curr = db_fetch($currs))
-	{
+	while ($curr = db_fetch($currs)) {
 		$details = get_sales_order_details($inv['order_no'], ST_SALESORDER);
 		while($line = db_fetch($details))
-			if ($curr['curr_code'] != $template['curr_code'] && !get_price($line['stk_code'], $curr['curr_code'], $template['sales_type_id']))
-			{
+			if ($curr['curr_code'] != $template['curr_code'] && !get_price($line['stk_code'], $curr['curr_code'], $template['sales_type_id'])) {
 				display_error(sprintf(_("Unknown %s price for '%s' in pricelist '%s'"), $curr['curr_code'], $line['stk_code'], $template['sales_type']));
 				$errors++;
 			}
@@ -165,8 +151,7 @@ function check_recurrent_invoice_prices($id)
 /*
 	Returns true when sales order is suitable to be pattern for recurrent invoice.
 */
-function check_sales_order_type($order_no)
-{
+function check_sales_order_type($order_no) {
 	$myrow = get_sales_order_header($order_no, ST_SALESORDER);
 
 	return !$myrow['prepaid'];

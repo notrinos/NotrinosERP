@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /*
 	This class is an extension to the tcpdf class using a syntax that the original reports were written in
@@ -63,8 +63,7 @@ include_once (dirname(__FILE__).'/fpdi/fpdi.php');
 
 class Cpdf extends FPDI {
 
-	function __construct($pageSize='A4', $lang=null, $pageOrientation='P')
-	{
+	function __construct($pageSize='A4', $lang=null, $pageOrientation='P') {
 		parent::__construct($pageOrientation, 'pt', $pageSize);//, $uni, $enc);
 		$this->SetLang($lang);
 		$this->setPrintHeader(false);
@@ -77,8 +76,7 @@ class Cpdf extends FPDI {
 	/*
 		Set lamguage for next report
 	*/
-	function SetLang($code=null) 
-	{
+	function SetLang($code=null) {
 		global $installed_languages, $dflt_lang, $path_to_root, $local_path_to_root, $GetText;
 
 		if (!$code)
@@ -101,7 +99,7 @@ class Cpdf extends FPDI {
 
 		$l = array('a_meta_charset' => strtoupper($lang['encoding']), 
 			'a_meta_dir' => @$lang['rtl'] ? 'rtl' : 'ltr',
-	 		'a_meta_language' => $code, 'w_page' => 'page');
+			'a_meta_language' => $code, 'w_page' => 'page');
 
 		if (!isset($l['a_meta_charset']))
 			$l = array('a_meta_charset' => 'ISO-8859-1', 'a_meta_dir' => 'ltr', 'a_meta_language' => 'en_GB', 'w_page' => 'page');
@@ -112,10 +110,9 @@ class Cpdf extends FPDI {
 
 		$this->isunicode = $uni;
 		$this->setLanguageArray($l);
-		if ($uni)
-		{
-				global $unicode, $unicode_mirror, $unicode_arlet, $laa_array, $diacritics;
-				include_once(dirname(__FILE__)."/unicode_data2.php");
+		if ($uni) {
+			global $unicode, $unicode_mirror, $unicode_arlet, $laa_array, $diacritics;
+			include_once(dirname(__FILE__)."/unicode_data2.php");
 		}
 		$this->encoding = strtoupper($lang['encoding']);
 
@@ -135,12 +132,11 @@ class Cpdf extends FPDI {
 	//   * or a case-insensitive string where each char represents a style choice
 	// and you can use more than one or none at all.  Possible choices:
 	//      * empty string: regular
-    //      * B: bold
-    //      * I: italic
-    //      * U: underline
-    //      * D: line trough (aka "strike through")
-	function selectFont($fontname, $style = '')
-	{
+	//      * B: bold
+	//      * I: italic
+	//      * U: underline
+	//      * D: line trough (aka "strike through")
+	function selectFont($fontname, $style = '') {
 		// Parse the style - check for special cases, otherwise leave as-is
 		if ($style == 'italic')
 			$style = 'i';
@@ -150,91 +146,73 @@ class Cpdf extends FPDI {
 		// Parse the fontname
 		if ($fontname != '')
 			$fontname = basename($fontname);
-		if ($fontname == '')
-		{
-			if ($this->isunicode)
-			{
-				switch ($this->l['a_meta_language'])
-				{
+		if ($fontname == '') {
+			if ($this->isunicode) {
+				switch ($this->l['a_meta_language']) {
 					case "ar_EG" : 	$fontname = "ae_tholoth"; 	break;
 					case "zh_CN" : 	$fontname = "gbsn00lp"; 	break;
 					case "zh_TW" : 	$fontname = "chinese_traditional_cid0"; 	break;
 					default :      	$fontname = "dejavu"; 		break;
 				}
 			}
-			elseif ($this->encoding === "ISO-8859-2")
-			{
-				switch ($this->l['a_meta_language'])
-				{
+			elseif ($this->encoding === "ISO-8859-2") {
+				switch ($this->l['a_meta_language']) {
 					default :		$fontname = "freesans"; 	break;
 				}
 			}
-			elseif ($this->encoding === "ISO-8859-5")
-			{
-				switch ($this->l['a_meta_language'])
-				{
+			elseif ($this->encoding === "ISO-8859-5") {
+				switch ($this->l['a_meta_language']) {
 					default :		$fontname = "freesans5"; 	break;
 				}
 			}
-			elseif ($this->encoding === "ISO-8859-13")
-            {
-                switch ($this->l['a_meta_language'])
-                {
-                    default :        $fontname = "freesans13";     break;
-                }
-            }
-            // else use built-in adobe fonts helvetica.
+			elseif ($this->encoding === "ISO-8859-13") {
+				switch ($this->l['a_meta_language']) {
+					default :        $fontname = "freesans13";     break;
+				}
+			}
+			// else use built-in adobe fonts helvetica.
 		}
 		$this->SetFont($fontname, $style);
 	}
 
-	function Header1()
-	{
+	function Header1() {
 	}
 
-	function Footer()
-	{
+	function Footer() {
 	}
 
-	function newPage()
-	{
+	function newPage() {
 		parent::AddPage();
 	}
 
-	function line($x1,$y1,$x2,$y2, $style = array())
-	{
+	function line($x1,$y1,$x2,$y2, $style = array()) {
 		parent::Line($x1, $this->h-$y1, $x2, $this->h-$y2, $style);
 	}
 
-	function rectangle($x, $y, $w, $h, $style='', $border_style=array(), $fill_color=array())
-	{
+	function rectangle($x, $y, $w, $h, $style='', $border_style=array(), $fill_color=array()) {
 		parent::Rect($x, $this->h-$y, $w, $h, $style, $border_style, $fill_color);
 	}
 
 
-	function addText($xb,$yb,$size,$txt)//,$angle=0,$wordSpaceAdjust=0)
-	{
+	function addText($xb,$yb,$size,$txt) {//,$angle=0,$wordSpaceAdjust=0)
 		if ($this->isunicode && $this->encoding != "UTF-8")
 			$txt = iconv($this->encoding, "UTF-8", $txt);
 		$this->SetFontSize($size);
 		$this->Text($xb, $this->h-$yb, $txt);
 	}
 
-	function addInfo($label,$value)
-	{
+	function addInfo($label,$value) {
 		if (in_array($label, array( 'Title', 'Subject', 'Author', 'Creator'))) {
 			$seter = "Set{$label}";
 			$this->$seter($value);
 		}
 	}
 
-	function addJpegFromFile($img,$x,$y,$w=0,$h=0)
-	{
+	function addJpegFromFile($img,$x,$y,$w=0,$h=0) {
 		$this->Image($img, $x, $this->h-$y-$h, $w, $h);
 	}
 
-	function addPngFromFile($img,$x,$y,$w=0,$h=0)
-	{
+	function addPngFromFile($img,$x,$y,$w=0,$h=0) {
 		$this->Image($img, $x, $this->h-$y-$h, $w, $h);
 	}
 	/*
@@ -244,8 +222,7 @@ class Cpdf extends FPDI {
 	/**
 	* draw a part of an ellipse
 	*/
-	function partEllipse($x0,$y0,$astart,$afinish,$r1,$r2=0,$angle=0,$nSeg=8)
-	{
+	function partEllipse($x0,$y0,$astart,$afinish,$r1,$r2=0,$angle=0,$nSeg=8) {
 		$this->ellipse($x0,$y0,$r1,$r2,$angle,$nSeg,$astart,$afinish,0);
 	}
 
@@ -259,30 +236,24 @@ class Cpdf extends FPDI {
 	* nSeg is not allowed to be less than 2, as this will simply draw a line (and will even draw a
 	* pretty crappy shape at 2, as we are approximating with bezier curves.
 	*/
-	function ellipse($x0,$y0,$r1,$r2=0,$angle=0,$nSeg=8,$astart=0,$afinish=360,$close=1,$fill=0, $dummy=null)
-	{
+	function ellipse($x0,$y0,$r1,$r2=0,$angle=0,$nSeg=8,$astart=0,$afinish=360,$close=1,$fill=0, $dummy=null) {
 		parent::Ellipse($x0, $y0, $r1, $r2, $angle, $astart. $afinish, ($close?'C':''), "", "", $nSeg);
 	}
 
-	function Stream($fname='')
-	{
+	function Stream($fname='') {
 		parent::Output($fname, 'I');
 	}
 
-	function calcTextWrap($txt, $width, $spacebreak=false)
-	{
+	function calcTextWrap($txt, $width, $spacebreak=false) {
 		$ret = "";
 		$txt2 = $txt;
 		$w = $this->GetStringWidth($txt);
-		if ($w > $width && $w > 0 && $width != 0)
-		{
+		if ($w > $width && $w > 0 && $width != 0) {
 			$n = strlen($txt);
 			$k = intval($n * $width / $w);
-			if ($k > 0 && $k < $n)
-			{
+			if ($k > 0 && $k < $n) {
 				$txt2 = substr($txt, 0, $k);
-				if ($spacebreak && (($pos = strrpos($txt2, " ")) !== false))
-				{
+				if ($spacebreak && (($pos = strrpos($txt2, " ")) !== false)) {
 					$txt2 = substr($txt2, 0, $pos);
 					$ret = substr($txt, $pos+1);
 				}
@@ -293,11 +264,9 @@ class Cpdf extends FPDI {
 		return array($txt2, $ret);
 	}
 
-	function addTextWrap($xb, $yb, $w, $h, $txt, $align='left', $border=0, $fill=0, $link = NULL, $stretch = 1, $spacebreak=false)
-	{
+	function addTextWrap($xb, $yb, $w, $h, $txt, $align='left', $border=0, $fill=0, $link = NULL, $stretch = 1, $spacebreak=false) {
 		$ret = "";
-		if (!$this->rtl)
-		{
+		if (!$this->rtl) {
 			if ($align == 'right')
 				$align = 'R';
 			elseif ($align == 'left')
@@ -307,8 +276,7 @@ class Cpdf extends FPDI {
 			elseif ($align == 'justify')
 				$align = 'J';
 		}
-		else
-		{
+		else {
 			if ($align == 'right')
 				$align = 'R';// This may need to be 'L'
 			elseif ($align == 'left')
@@ -338,10 +306,8 @@ class Cpdf extends FPDI {
 		return $ret;
 	}
 
-	function Text($x, $y, $txt, $stroke=0, $clip=false)
-	{
+	function Text($x, $y, $txt, $stroke=0, $clip=false) {
 		parent::Text($x,$y, parent::unhtmlentities($txt), $stroke, $clip);
 	}
 
 } // end of class
-

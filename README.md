@@ -1,2 +1,2 @@
 # NotrinosERP
-A web base ERP system
+A web based ERP system written in PHP using MySQL

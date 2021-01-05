@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once 'class.data_set.inc';
 
@@ -17,8 +17,7 @@ include_once 'class.data_set.inc';
 **/
 
 class reflines_db extends data_set {
-	function __construct()
-	{
+	function __construct() {
 		$this->set_validator('prefix:ui:_check_prefix', _("This prefix conflicts with another one already defined. Prefix have to be unambigous."));
 		$this->set_validator('prefix:ui:_check_template', _("Invalid template format."));
 		$this->set_validator('trans_type:ui:required', _("Transaction type cannot be empty."));
@@ -31,8 +30,7 @@ class reflines_db extends data_set {
 	/*
 		Prefix cannot be ambigous.
 	*/
-	function _check_prefix($data, $dummy_opt, $key)
-	{
+	function _check_prefix($data, $dummy_opt, $key) {
 		$cond = "`id`<>".db_escape($key)." AND `trans_type`=".db_escape($data['trans_type']);
 		if ($data['prefix'] === '')
 			$cond .= " AND `prefix`='".$data['prefix']."'";
@@ -42,8 +40,7 @@ class reflines_db extends data_set {
 		return db_num_rows($this->get_all($cond)) == 0;
 	}
 
-	function _check_template($data, $dummy_opt, $key)
-	{
+	function _check_template($data, $dummy_opt, $key) {
 		global $refline_options, $refline_placeholders;
 
 		if (strpbrk($data['prefix'], '{}') !== false)
@@ -52,8 +49,8 @@ class reflines_db extends data_set {
 		if (substr_count($data['pattern'], '{') != substr_count($data['pattern'], '}'))
 			return $this->error(_("Curly brackets does not balance."));
 
-		if (preg_match_all('/\{([^\}]*)\}/', $data['pattern'], $match)) // placeholders defind in template
-		{
+		if (preg_match_all('/\{([^\}]*)\}/', $data['pattern'], $match)) { // placeholders defind in template
+
 			$numph = 0;
 			foreach($match[1] as $ph) {
 				if (is_numeric($ph))
@@ -62,7 +59,7 @@ class reflines_db extends data_set {
 					$allowed = array();
 					foreach($refline_placeholders as $id => $dt)
 						 if (in_array($dt, $refline_options[$data['trans_type']]))
-						 	$allowed[] = $id;
+							$allowed[] = $id;
 
 					return $this->error(sprintf(_("Invalid placeholder '%s'. Placeholders allowed for this transaction type are: %s."),
 						$ph, implode(',', $allowed)));
@@ -70,13 +67,12 @@ class reflines_db extends data_set {
 			}
 
 			if ($numph !== 1)
-				return $this->error(_("Missing numeric placeholder. If you want to use template based references, you have to define numeric placeholder too."));
+				return $this->error(_('Missing numeric placeholder. If you want to use template based references, you have to define numeric placeholder too.'));
 		}
 		return true;
 	}
 
-	function is_used($prefix, $trans_type)
-	{
+	function is_used($prefix, $trans_type) {
 
 		$sql = "SELECT *
 			FROM (SELECT r.* FROM ".TB_PREF."refs r 
@@ -87,32 +83,29 @@ class reflines_db extends data_set {
 			LEFT JOIN ".TB_PREF."reflines line ON ref.type=line.trans_type AND substr(ref.reference,1, LENGTH(line.prefix))= line.prefix AND line.prefix<>''
 			WHERE ".($prefix == '' ? "ISNULL(prefix)" : "prefix=".db_escape($prefix));
 
-		$res = db_query($sql, "cannot check reference line");
+		$res = db_query($sql, 'cannot check reference line');
 
 		return db_num_rows($res);
 	}
 
-	function delete_check($ref_id)
-	{
+	function delete_check($ref_id) {
 		$rec = $this->get($ref_id);
 		if ($rec['default'])
-			return $this->error(_("Reference line which is default for any transaction type cannot be deleted."));
+			return $this->error(_('Reference line which is default for any transaction type cannot be deleted.'));
 
 		if ($this->is_used($rec['prefix'], $rec['trans_type']))
-			return $this->error(_("Reference line cannot be deleted because it is already in use."));
+			return $this->error(_('Reference line cannot be deleted because it is already in use.'));
 
 		return true;
 	}
 
-	function _set_as_default($id, $type)
-	{
+	function _set_as_default($id, $type) {
 		$sql  = "UPDATE ".TB_PREF."reflines SET `default`=(`id`=".db_escape($id).")
 			 WHERE `trans_type`=".db_escape($type);
-		return db_query($sql, "cannot update default refline");
+		return db_query($sql, 'cannot update default refline');
 	}
 
-	function insert($data)
-	{
+	function insert($data) {
 		if (!parent::insert($data))
 			return false;
 		if (@$data['default'])
@@ -120,8 +113,7 @@ class reflines_db extends data_set {
 		return true;
 	}
 
-	function update($key, $data)
-	{
+	function update($key, $data) {
 		if (!parent::update($key, $data))
 			return false;
 		if (@$data['default'])
@@ -129,15 +121,13 @@ class reflines_db extends data_set {
 		return true;
 	}
 
-	function get_default($type)
-	{
+	function get_default($type) {
 		$sql = "SELECT * FROM ".TB_PREF."reflines WHERE trans_type=".db_escape($type)." AND `default`";
 		$result = db_query($sql, "cannot retreive default refline for trnasaction type $type");
 		return db_fetch($result);
 	}
 
-	function count($type, $all=false)
-	{
+	function count($type, $all=false) {
 		$sql = "SELECT count(*) FROM ".TB_PREF."reflines WHERE trans_type=".db_escape($type);
 
 		if (!$all)
@@ -150,13 +140,12 @@ class reflines_db extends data_set {
 	/*
 		Recognize refline by reference prefix
 	*/
-	function find_refline_id($reference, $type, $fallback=true)
-	{
+	function find_refline_id($reference, $type, $fallback=true) {
 		$sql = "SELECT * FROM ".TB_PREF."reflines WHERE trans_type=".db_escape($type)
 			." AND CHAR_LENGTH(`prefix`) AND LEFT(".db_escape($reference).", CHAR_LENGTH(`prefix`)) = `prefix`";
 		if ($fallback)	// if not found return refline with empty prefix
 			$sql .= " UNION SELECT * FROM ".TB_PREF."reflines WHERE trans_type=".db_escape($type)." AND `prefix`=''";
-		$ret = db_query($sql, "cannot check reference line id");
+		$ret = db_query($sql, 'cannot check reference line id');
 		$line = db_fetch($ret);
 
 		if (!$fallback && (db_num_rows($fallback) != 1))	// more than one record means ambigous reference line
@@ -165,9 +154,8 @@ class reflines_db extends data_set {
 		return $line ? $line['id'] : null;
 	}
 
-	function save_next($type, $reference, $line=null)
-	{
-	    $sql = "UPDATE ".TB_PREF."reflines SET pattern=SUBSTRING(" . db_escape(trim($reference)) .", LENGTH(`prefix`)+1)"
+	function save_next($type, $reference, $line=null) {
+		$sql = "UPDATE ".TB_PREF."reflines SET pattern=SUBSTRING(" . db_escape(trim($reference)) .", LENGTH(`prefix`)+1)"
 		. " WHERE trans_type = ".db_escape($type)." AND ";
 
 		if (isset($line))

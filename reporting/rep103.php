@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL,
 	as published by the Free Software Foundation, either version 3
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_CUSTBULKREP';
 // ----------------------------------------------------------------
@@ -16,19 +16,18 @@ $page_security = 'SA_CUSTBULKREP';
 // date_:	2005-05-19
 // Title:	Customer Details Listing
 // ----------------------------------------------------------------
-$path_to_root="..";
+$path_to_root='..';
 
-include_once($path_to_root . "/includes/session.inc");
-include_once($path_to_root . "/includes/date_functions.inc");
-include_once($path_to_root . "/includes/data_checks.inc");
-include_once($path_to_root . "/gl/includes/gl_db.inc");
+include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/includes/date_functions.inc');
+include_once($path_to_root . '/includes/data_checks.inc');
+include_once($path_to_root . '/gl/includes/gl_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 print_customer_details_listing();
 
-function get_customer_details_for_report($area=0, $salesid=0)
-{
+function get_customer_details_for_report($area=0, $salesid=0) {
 	$sql = "SELECT debtor.debtor_no,
 			debtor.name,
 			debtor.address,
@@ -51,8 +50,7 @@ function get_customer_details_for_report($area=0, $salesid=0)
 		INNER JOIN ".TB_PREF."areas area ON branch.area = area.area_code
 		INNER JOIN ".TB_PREF."salesman salesman	ON branch.salesman=salesman.salesman_code
 		WHERE debtor.inactive = 0";
-	if ($area != 0)
-	{
+	if ($area != 0) {
 		if ($salesid != 0)
 			$sql .= " AND salesman.salesman_code=".db_escape($salesid)."
 				AND area.area_code=".db_escape($area);
@@ -66,11 +64,10 @@ function get_customer_details_for_report($area=0, $salesid=0)
 			debtor.debtor_no,
 			branch.branch_code";
 
-    return db_query($sql,"No transactions were returned");
+	return db_query($sql, 'No transactions were returned');
 }
 
-function get_contacts_for_branch($branch)
-{
+function get_contacts_for_branch($branch) {
 	$sql = "SELECT p.*, r.action, r.type, CONCAT(r.type,'.',r.action) as ext_type 
 		FROM ".TB_PREF."crm_persons p,"
 			.TB_PREF."crm_contacts r
@@ -83,8 +80,7 @@ function get_contacts_for_branch($branch)
 	return $results;
 }
 
-function getTransactions($debtorno, $branchcode, $date)
-{
+function getTransactions($debtorno, $branchcode, $date) {
 	$date = date2sql($date);
 
 	$sql = "SELECT SUM((ov_amount+ov_freight+ov_discount)*rate) AS Turnover
@@ -94,7 +90,7 @@ function getTransactions($debtorno, $branchcode, $date)
 		AND (type=".ST_SALESINVOICE." OR type=".ST_CUSTCREDIT.")
 		AND tran_date >='$date'";
 
-    $result = db_query($sql,"No transactions were returned");
+	$result = db_query($sql, 'No transactions were returned');
 
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -102,25 +98,24 @@ function getTransactions($debtorno, $branchcode, $date)
 
 //----------------------------------------------------------------------------------------------------
 
-function print_customer_details_listing()
-{
-    global $path_to_root;
+function print_customer_details_listing() {
+	global $path_to_root;
 
-    $from = $_POST['PARAM_0'];
-    $area = $_POST['PARAM_1'];
-    $folk = $_POST['PARAM_2'];
-    $more = $_POST['PARAM_3'];
-    $less = $_POST['PARAM_4'];
-    $comments = $_POST['PARAM_5'];
+	$from = $_POST['PARAM_0'];
+	$area = $_POST['PARAM_1'];
+	$folk = $_POST['PARAM_2'];
+	$more = $_POST['PARAM_3'];
+	$less = $_POST['PARAM_4'];
+	$comments = $_POST['PARAM_5'];
 	$orientation = $_POST['PARAM_6'];
 	$destination = $_POST['PARAM_7'];
 	if ($destination)
-		include_once($path_to_root . "/reporting/includes/excel_report.inc");
+		include_once($path_to_root . '/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . "/reporting/includes/pdf_report.inc");
+		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-    $dec = 0;
+	$dec = 0;
 
 	if ($area == ALL_NUMERIC)
 		$area = 0;
@@ -149,56 +144,50 @@ function print_customer_details_listing()
 
 	$cols = array(0, 150, 300, 425, 550);
 
-	$headers = array(_('Customer Postal Address'), _('Price/Turnover'),	_('Branch Contact Information'),
-		_('Branch Delivery Address'));
+	$headers = array(_('Customer Postal Address'), _('Price/Turnover'),	_('Branch Contact Information'), _('Branch Delivery Address'));
 
 	$aligns = array('left',	'left',	'left',	'left');
 
-    $params =   array( 	0 => $comments,
-    				    1 => array('text' => _('Activity Since'), 	'from' => $from, 		'to' => ''),
-    				    2 => array('text' => _('Sales Areas'), 		'from' => $sarea, 		'to' => ''),
-    				    3 => array('text' => _('Sales Folk'), 		'from' => $salesfolk, 	'to' => ''),
-    				    4 => array('text' => _('Activity'), 		'from' => $morestr, 	'to' => $lessstr . " " . get_company_pref("curr_default")));
+	$params =   array( 	0 => $comments,
+						1 => array('text' => _('Activity Since'), 	'from' => $from, 		'to' => ''),
+						2 => array('text' => _('Sales Areas'), 		'from' => $sarea, 		'to' => ''),
+						3 => array('text' => _('Sales Folk'), 		'from' => $salesfolk, 	'to' => ''),
+						4 => array('text' => _('Activity'), 		'from' => $morestr, 	'to' => $lessstr.' '.get_company_pref('curr_default')));
 
-    $rep = new FrontReport(_('Customer Details Listing'), "CustomerDetailsListing", user_pagesize(), 9, $orientation);
-    if ($orientation == 'L')
-    	recalculate_cols($cols);
+	$rep = new FrontReport(_('Customer Details Listing'), 'CustomerDetailsListing', user_pagesize(), 9, $orientation);
+	if ($orientation == 'L')
+		recalculate_cols($cols);
 
-    $rep->Font();
-    $rep->Info($params, $cols, $headers, $aligns);
-    $rep->NewPage();
+	$rep->Font();
+	$rep->Info($params, $cols, $headers, $aligns);
+	$rep->NewPage();
 
 	$result = get_customer_details_for_report($area, $folk);
 
 	$carea = '';
 	$sman = '';
-	while ($myrow=db_fetch($result))
-	{
+	while ($myrow=db_fetch($result)) {
 		$printcustomer = true;
-		if ($more != '' || $less != '')
-		{
+		if ($more != '' || $less != '') {
 			$turnover = getTransactions($myrow['debtor_no'], $myrow['branch_code'], $from);
 			if ($more != 0.0 && $turnover <= (double)$more)
 				$printcustomer = false;
 			if ($less != 0.0 && $turnover >= (double)$less)
 				$printcustomer = false;
 		}
-		if ($printcustomer)
-		{
+		if ($printcustomer) {
 			$newrow = 0;
-			if ($carea != $myrow['description'])
-			{
+			if ($carea != $myrow['description']) {
 				$rep->fontSize += 2;
 				$rep->NewLine(2, 7);
 				$rep->Font('bold');
-				$rep->TextCol(0, 3,	_('Customers in') . " " . $myrow['description']);
+				$rep->TextCol(0, 3,	_('Customers in') . ' ' . $myrow['description']);
 				$carea = $myrow['description'];
 				$rep->fontSize -= 2;
 				$rep->Font();
 				$rep->NewLine();
 			}
-			if ($sman != $myrow['salesman_name'])
-			{
+			if ($sman != $myrow['salesman_name']) {
 				$rep->fontSize += 2;
 				$rep->NewLine(1, 7);
 				$rep->Font('bold');
@@ -212,7 +201,7 @@ function print_customer_details_listing()
 			// Here starts the new report lines
 			$contacts = get_contacts_for_branch($myrow['branch_code']);
 			$rep->TextCol(0, 1,	$myrow['name']);
-			$rep->TextCol(1, 2,	_('Price List') . ": " . $myrow['sales_type']);
+			$rep->TextCol(1, 2,	_('Price List') . ': ' . $myrow['sales_type']);
 			$rep->TextCol(2, 3,	$myrow['br_name']);
 			$rep->NewLine();
 			$adr = Explode("\n", $myrow['address']);
@@ -226,52 +215,48 @@ function print_customer_details_listing()
 			$count1 = max($count1, 4); 
 			if (isset($adr[0]))
 				$rep->TextCol(0, 1, $adr[0]);
-			$rep->TextCol(1, 2,	_('Currency') . ": " . $myrow['curr_code']);
+			$rep->TextCol(1, 2,	_('Currency') . ': ' . $myrow['curr_code']);
 			if (isset($contacts[0]))
-				$rep->TextCol(2, 3, $contacts[0]['name']. " " .$contacts[0]['name2']);
+				$rep->TextCol(2, 3, $contacts[0]['name']. ' ' .$contacts[0]['name2']);
 			if (isset($adr2[0]))	
 				$rep->TextCol(3, 4, $adr2[0]);
 			$rep->NewLine();
 			if (isset($adr[1]))
 				$rep->TextCol(0, 1, $adr[1]);
-			if ($myrow['dimension_id'] != 0)
-			{
+			if ($myrow['dimension_id'] != 0) {
 				$dim = get_dimension($myrow['dimension_id']);
-				$rep->TextCol(1, 2,	_('Dimension') . ": " . $dim['name']);
+				$rep->TextCol(1, 2,	_('Dimension') . ': ' . $dim['name']);
 			}		
 			if (isset($contacts[0]))
-				$rep->TextCol(2, 3, _('Ph') . ": " . $contacts[0]['phone']);
+				$rep->TextCol(2, 3, _('Ph') . ': ' . $contacts[0]['phone']);
 			if (isset($adr2[1]))
 				$rep->TextCol(3, 4, $adr2[1]);
 			$rep->NewLine();
 			if (isset($adr[2]))
 				$rep->TextCol(0, 1, $adr[2]);
-			if ($myrow['dimension2_id'] != 0)
-			{
+			if ($myrow['dimension2_id'] != 0) {
 				$dim = get_dimension($myrow['dimension2_id']);
-				$rep->TextCol(1, 2,	_('Dimension') . " 2: " . $dim['name']);
+				$rep->TextCol(1, 2,	_('Dimension') . ' 2: ' . $dim['name']);
 			}	
-			if ($myrow['notes'] != '')
-			{
+			if ($myrow['notes'] != '') {
 				$oldrow = $rep->row;
 				$rep->NewLine();
-				$rep->TextColLines(1, 2, _("General Notes:")." ".$myrow['notes'], -2);
+				$rep->TextColLines(1, 2, _('General Notes:').' '.$myrow['notes'], -2);
 				$newrow = $rep->row;
 				$rep->row = $oldrow;
 			}	
 			if (isset($contacts[0]))
-				$rep->TextCol(2, 3, _('Fax') . ": " . $contacts[0]['fax']);
+				$rep->TextCol(2, 3, _('Fax') . ': ' . $contacts[0]['fax']);
 			if (isset($adr2[2]))
 				$rep->TextCol(3, 4, $adr2[2]);
 			if ($more != 0.0 || $less != 0.0)
-				$rep->TextCol(1, 2,	_('Turnover') . ": " . number_format2($turnover, $dec));
-			for ($i = 3; $i < $count1; $i++)
-			{
+				$rep->TextCol(1, 2,	_('Turnover') . ': ' . number_format2($turnover, $dec));
+			for ($i = 3; $i < $count1; $i++) {
 				$rep->NewLine();
 				if (isset($adr[$i]))
 					$rep->TextCol(0, 1, $adr[$i]);
 				if ($i == 3 && isset($contacts[0]) && isset($contacts[0]['email']))	
-					$rep->TextCol(2, 3, _('Email') . ": " . $contacts[0]['email']);
+					$rep->TextCol(2, 3, _('Email') . ': ' . $contacts[0]['email']);
 				if (isset($adr2[$i]))
 					$rep->TextCol(3, 4, $adr2[$i]);
 			}	
@@ -282,6 +267,5 @@ function print_customer_details_listing()
 			$rep->NewLine(0, 3);
 		}
 	}
-    $rep->End();
+	$rep->End();
 }
-

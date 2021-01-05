@@ -1,20 +1,16 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-//----------------------------------------------------------------------------------------
-
-function add_attachment($filterType, $trans_no, $description,
-	$filename, $unique_name, $filesize, $filetype)
-{
+function add_attachment($filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
 	$date = date2sql(Today());
 	$sql = "INSERT INTO ".TB_PREF."attachments (type_no, trans_no, description, filename, unique_name,
 		filesize, filetype, tran_date) VALUES (".db_escape($filterType).","
@@ -23,18 +19,16 @@ function add_attachment($filterType, $trans_no, $description,
 		.", ".db_escape($filetype).", '$date')";
 	db_query($sql, "Attachment could not be inserted");
 }
+
 //----------------------------------------------------------------------------------------
 
-function update_attachment($selected_id, $filterType, $trans_no, $description,
-	$filename, $unique_name, $filesize, $filetype)
-{
+function update_attachment($selected_id, $filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
 	$date = date2sql(Today());
 	$sql = "UPDATE ".TB_PREF."attachments SET
 		type_no=".db_escape($filterType).",
 		trans_no=".db_escape($trans_no).",
 		description=".db_escape($description).", ";
-	if ($filename != "")
-	{
+	if ($filename != "") {
 		$sql .= "filename=".db_escape($filename).",
 		unique_name=".db_escape($unique_name).",
 		filesize=".db_escape($filesize).",
@@ -46,34 +40,30 @@ function update_attachment($selected_id, $filterType, $trans_no, $description,
 
 //----------------------------------------------------------------------------------------
 
-function delete_attachment($id)
-{
+function delete_attachment($id) {
 	$sql = "DELETE FROM ".TB_PREF."attachments WHERE id = ".db_escape($id);
 	db_query($sql, "Could not delete attachment");
 }
 
 //----------------------------------------------------------------------------------------
 
-function get_attachment_string($type, $id)
-{
+function get_attachment_string($type, $id) {
 	global $path_to_root;
-    $str_return = "";    
-    $sql = "SELECT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($id)." ORDER BY trans_no";
-    $return = db_query($sql, "Could not retrieve attachments");
-    while ($attachment = db_fetch($return))
-    {
-        if (strlen($str_return))
-            $str_return = $str_return . " \n";    
-        $str_return .= _("Attached File:")." <a href='$path_to_root/admin/attachments.php?vw=".$attachment["id"]." ' target='blanc_'> ". 
-        	$attachment["id"] . " " . $attachment["description"]. " - ". $attachment["filename"]."</a><br>";
-    }
-    return $str_return . "<br>";
+	$str_return = "";    
+	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($id)." ORDER BY trans_no";
+	$return = db_query($sql, "Could not retrieve attachments");
+	while ($attachment = db_fetch($return)) {
+		if (strlen($str_return))
+			$str_return = $str_return . " \n";    
+		$str_return .= _("Attached File:")." <a href='$path_to_root/admin/attachments.php?vw=".$attachment["id"]." ' target='blanc_'> ". 
+			$attachment["id"] . " " . $attachment["description"]. " - ". $attachment["filename"]."</a><br>";
+	}
+	return $str_return . "<br>";
 }
 
 //----------------------------------------------------------------------------------------
 
-function get_attached_documents($type, $trans_no=false)
-{
+function get_attached_documents($type, $trans_no=false) {
 	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type);
 	if ($trans_no)
 		$sql .= " AND trans_no=".db_escape($trans_no);
@@ -81,15 +71,13 @@ function get_attached_documents($type, $trans_no=false)
 	return db_query($sql, "Could not retrieve attachments");
 }
 
-function get_attachment($id)
-{
+function get_attachment($id) {
 	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id=".db_escape($id);
 	$result = db_query($sql, "Could not retrieve attachments");
 	return db_fetch($result);
 }
 
-function has_attachment($type, $id)
-{
+function has_attachment($type, $id) {
 	$sql = "SELECT DISTINCT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($id);
 	$result = db_query($sql, "Could not retrieve attachments");
 	$myrow = db_fetch($result);
@@ -99,9 +87,8 @@ function has_attachment($type, $id)
 		return $myrow['id'];
 }
 
-function get_sql_for_attached_documents($type, $id_no)
-{
-    // $_POST['trans_no'] will be used to store the customer_id or supplier_id for them
+function get_sql_for_attached_documents($type, $id_no) {
+	// $_POST['trans_no'] will be used to store the customer_id or supplier_id for them
 	$sql = "SELECT trans_no, description, filename, filesize, filetype, tran_date, id, type_no FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type);
 
 	if(($type == ST_CUSTOMER || $type == ST_SUPPLIER) && $id_no != null)
@@ -112,8 +99,7 @@ function get_sql_for_attached_documents($type, $id_no)
 	return $sql;
 }
 
-function move_trans_attachments($type, $trans_from, $trans_to)
-{
+function move_trans_attachments($type, $trans_from, $trans_to) {
 	$sql = "UPDATE ".TB_PREF."attachments SET trans_no=".db_escape($trans_to)
 		." WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($trans_from);
 	db_query($sql, 'cannot move atachments');

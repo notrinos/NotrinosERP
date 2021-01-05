@@ -1,29 +1,25 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_tag($type, $name, $description)
-{
-	$sql = "INSERT INTO ".TB_PREF."tags (type, name, description)
-		VALUES (".db_escape($type).", ".db_escape($name).", ".db_escape($description).")";
+function add_tag($type, $name, $description) {
+	$sql = "INSERT INTO ".TB_PREF."tags (type, name, description) VALUES (".db_escape($type).", ".db_escape($name).", ".db_escape($description).")";
 
 	return db_query($sql);
 }
 
 //--------------------------------------------------------------------------------------
 
-function update_tag($id, $name, $description, $type=null)
-{
-	$sql = "UPDATE ".TB_PREF."tags SET name=".db_escape($name).", 
-                                       description=".db_escape($description);
+function update_tag($id, $name, $description, $type=null) {
+	$sql = "UPDATE ".TB_PREF."tags SET name=".db_escape($name).", description=".db_escape($description);
 	if ($type != null)
 		$sql .= ", type=".db_escape($type);
 
@@ -34,8 +30,7 @@ function update_tag($id, $name, $description, $type=null)
 
 //--------------------------------------------------------------------------------------
 
-function get_tags($type, $all=false)
-{
+function get_tags($type, $all=false) {
 	$sql = "SELECT * FROM ".TB_PREF."tags WHERE type=".db_escape($type);
 	
 	if (!$all) $sql .= " AND !inactive";
@@ -47,8 +42,7 @@ function get_tags($type, $all=false)
 
 //--------------------------------------------------------------------------------------
 
-function get_tag($id)
-{
+function get_tag($id) {
 	$sql = "SELECT * FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
 	$result = db_query($sql, "could not get tag");
@@ -58,8 +52,7 @@ function get_tag($id)
 
 //--------------------------------------------------------------------------------------
 
-function get_tag_type($id)
-{
+function get_tag_type($id) {
 	$sql = "SELECT type FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
 	$result = db_query($sql, "could not get tag type");
@@ -70,8 +63,7 @@ function get_tag_type($id)
 
 //--------------------------------------------------------------------------------------
 
-function get_tag_name($id)
-{
+function get_tag_name($id) {
 	$sql = "SELECT name FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
 	$result = db_query($sql, "could not get tag name");
@@ -81,25 +73,24 @@ function get_tag_name($id)
 }
 
 //----------------------------------------------------------------------------------------------------
-function get_tag_names($tags)
-{
-	$str = "";
+
+function get_tag_names($tags) {
+	$str = '';
 	if ($tags == -1)
 		return $str;
-	foreach($tags as $id)
-	{
+	foreach($tags as $id) {
 		$tag = get_tag_name($id);
-		if ($str == "")
+		if ($str == '')
 			$str .= $tag;
 		else	
-			$str .= ", ".$tag;
+			$str .= ', '.$tag;
 	}
 	return $str;
 }
+
 //--------------------------------------------------------------------------------------
 
-function get_tag_description($id)
-{
+function get_tag_description($id) {
 	$sql = "SELECT description FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
 	$result = db_query($sql, "could not get tag description");
@@ -110,8 +101,7 @@ function get_tag_description($id)
 
 //--------------------------------------------------------------------------------------
 
-function delete_tag($id)
-{
+function delete_tag($id) {
 	$sql = "DELETE FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
 	db_query($sql, "could not delete tag");
@@ -119,21 +109,19 @@ function delete_tag($id)
 
 //--------------------------------------------------------------------------------------
 
-function add_tag_associations($recordid, $tagids)
-{
+function add_tag_associations($recordid, $tagids) {
 	foreach($tagids as $tagid) {
-		if (!$tagid) continue;
-		$sql = "INSERT INTO ".TB_PREF."tag_associations (record_id, tag_id)
-			VALUES (".db_escape($recordid).", ".db_escape($tagid).")";
+		if (!$tagid)
+			continue;
+		$sql = "INSERT INTO ".TB_PREF."tag_associations (record_id, tag_id) VALUES (".db_escape($recordid).", ".db_escape($tagid).")";
 
-		db_query($sql, "could not add tag association");
+		db_query($sql, 'could not add tag association');
 	}
 }
 
 //--------------------------------------------------------------------------------------
 
-function update_tag_associations($type, $recordid, $tagids)
-{
+function update_tag_associations($type, $recordid, $tagids) {
 	// Delete the old associations
 	delete_tag_associations($type, $recordid, false);
 	// Add the new associations
@@ -144,32 +132,27 @@ function update_tag_associations($type, $recordid, $tagids)
 // To delete tag associations, we need to specify the tag type.
 // Otherwise we may inadvertantly delete records for another type of tag
 //
-function delete_tag_associations($type, $recordid, $all=false)
-{
+function delete_tag_associations($type, $recordid, $all=false) {
 /* multiply table DELETE syntax available since MySQL 4.0.0:
 	$sql = "DELETE ta FROM ".TB_PREF."tag_associations ta 
 				INNER JOIN ".TB_PREF."tags tags ON tags.id = ta.tag_id 
 				WHERE tags.type = ".db_escape($type)." AND ta.record_id = ".db_escape($recordid);
 */
 	// To support MySQL 3.xx we have to use multiply queries
-	$sql = "SELECT * FROM ".TB_PREF."tag_associations ta 
-			INNER JOIN ".TB_PREF."tags tags ON tags.id = ta.tag_id 
-			WHERE tags.type = ".db_escape($type)." AND ta.record_id = ".db_escape($recordid);
+	$sql = "SELECT * FROM ".TB_PREF."tag_associations ta INNER JOIN ".TB_PREF."tags tags ON tags.id = ta.tag_id WHERE tags.type = ".db_escape($type)." AND ta.record_id = ".db_escape($recordid);
 	if (!$all)
 		$sql .= " AND tags.inactive = 0";
-	$result = db_query($sql, "could not select tag associations");
+	$result = db_query($sql, 'could not select tag associations');
 
 	while($ta = db_fetch($result)) {
-		$sql2 = "DELETE FROM ".TB_PREF."tag_associations WHERE 
-			record_id = '".$ta['record_id']."' AND tag_id=".$ta['tag_id'];
+		$sql2 = "DELETE FROM ".TB_PREF."tag_associations WHERE record_id = '".$ta['record_id']."' AND tag_id=".$ta['tag_id'];
 		db_query($sql2, "could not delete tag associations");
 	}
 }
 
 //--------------------------------------------------------------------------------------
 
-function get_records_associated_with_tag($id)
-{
+function get_records_associated_with_tag($id) {
 	// Which table we query is based on the tag type
 	$type = get_tag_type($id);
 	
@@ -185,35 +168,25 @@ function get_records_associated_with_tag($id)
 			break;
 	}
 	
-	$sql = "SELECT $table.* FROM $table 
-		INNER JOIN ".TB_PREF."tag_associations AS ta ON ta.record_id = $table.$key
-		INNER JOIN ".TB_PREF."tags AS tags ON ta.tag_id = tags.id
-	        WHERE tags.id = ".db_escape($id);
+	$sql = "SELECT $table.* FROM $table INNER JOIN ".TB_PREF."tag_associations AS ta ON ta.record_id = $table.$key INNER JOIN ".TB_PREF."tags AS tags ON ta.tag_id = tags.id WHERE tags.id = ".db_escape($id);
 
-	return db_query($sql, "could not get tag associations for tag");
+	return db_query($sql, 'could not get tag associations for tag');
 }
 
 //--------------------------------------------------------------------------------------
 
-function get_tags_associated_with_record($type, $recordid)
-{
-	$sql = "SELECT tags.* FROM ".TB_PREF."tag_associations AS ta 
-				INNER JOIN ".TB_PREF."tags AS tags ON tags.id = ta.tag_id 
-				WHERE tags.type = $type	AND ta.record_id = ".db_escape($recordid);
+function get_tags_associated_with_record($type, $recordid) {
+	$sql = "SELECT tags.* FROM ".TB_PREF."tag_associations AS ta INNER JOIN ".TB_PREF."tags AS tags ON tags.id = ta.tag_id WHERE tags.type = $type	AND ta.record_id = ".db_escape($recordid);
 
-	return db_query($sql, "could not get tags associations for record");
+	return db_query($sql, 'could not get tags associations for record');
 }
 
 //--------------------------------------------------------------------------------------
 
-function is_record_in_tags($tags, $type, $recordid)
-{
-	foreach($tags as $id)
-	{
-		$sql = "SELECT ta.record_id FROM ".TB_PREF."tag_associations AS ta 
-				INNER JOIN ".TB_PREF."tags AS tags ON tags.id = ta.tag_id 
-				WHERE tags.type = $type AND tags.id = $id AND ta.record_id = ".db_escape($recordid);
-		$res = db_query($sql, "could not get tags associations for record");
+function is_record_in_tags($tags, $type, $recordid) {
+	foreach($tags as $id) {
+		$sql = "SELECT ta.record_id FROM ".TB_PREF."tag_associations AS ta INNER JOIN ".TB_PREF."tags AS tags ON tags.id = ta.tag_id WHERE tags.type = $type AND tags.id = $id AND ta.record_id = ".db_escape($recordid);
+		$res = db_query($sql, 'could not get tags associations for record');
 		if (db_num_rows($res) == 0)
 			return false;
 	}

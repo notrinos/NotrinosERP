@@ -1,24 +1,23 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //$path_to_root="..";
 define('MAX_DEADLOCK_RETRY', 3);
 
 if (function_exists('mysqli_connect'))
-	include_once("connect_db_mysqli.inc");
+	include_once('connect_db_mysqli.inc');
 else
-	include_once("connect_db_mysql.inc"); // use deprecated mysql_* API as fallback on old servers
+	include_once('connect_db_mysql.inc'); // use deprecated mysql_* API as fallback on old servers
 
-function db_get_version()
-{
+function db_get_version() {
 	$result = db_query("SELECT VERSION()");
 	$row = db_fetch($result);
 	return $row[0];
@@ -27,8 +26,7 @@ function db_get_version()
 /*
 	Converts encoding name to mysql standard.
 */
-function get_mysql_encoding_name($encoding)
-{
+function get_mysql_encoding_name($encoding) {
 	$db_encoding = array(
 		'UTF-8' => 'utf8',
 		'ISO-8859-1' => 'latin1',
@@ -64,8 +62,7 @@ function get_mysql_encoding_name($encoding)
 /*
 	Returns 'best' mysql collation for various FA backend language codes.
 */
-function get_mysql_collation($lang=null)
-{
+function get_mysql_collation($lang=null) {
 	if (!$lang)
 		$lang = 'utf8_'.substr($_SESSION['language']->code, 0, 2);
 
@@ -98,8 +95,7 @@ function get_mysql_collation($lang=null)
 	which is subject to invalid encodings on text columns,
 	so no SET NAMES or equivalent should be used.
 */
-function db_fixed()
-{
+function db_fixed() {
 	$result = db_query("SELECT value FROM ".TB_PREF."sys_prefs WHERE name='version_id'");
 	$data = db_fetch($result);
 	return !db_num_rows($result) // new database is fixed by default 
@@ -109,32 +105,28 @@ function db_fixed()
 /*
 	Check database default charset.
 */
-function db_get_default_charset()
-{
+function db_get_default_charset() {
 	$result = db_query("SELECT @@character_set_database");
 	$var = db_fetch($result);
 	return $var[0];
 }
 
-function db_get_view_schema($view)
-{
-    global $db;
-    $schema = NULL;
-    $qry = "select view_definition from information_schema.views where table_schema=DATABASE() and table_name='$view'";
-    $res = db_query($qry,'Failed to select view schema');
-    if ($res && db_num_rows($res) == 1) {
-        $row = db_fetch_assoc($res);
-        $schema = $row['view_definition'];
-    }
-    return $schema;
+function db_get_view_schema($view) {
+	global $db;
+	$schema = NULL;
+	$qry = "select view_definition from information_schema.views where table_schema=DATABASE() and table_name='$view'";
+	$res = db_query($qry,'Failed to select view schema');
+	if ($res && db_num_rows($res) == 1) {
+		$row = db_fetch_assoc($res);
+		$schema = $row['view_definition'];
+	}
+	return $schema;
 }
 
 /*
 	SQL db profiling stub
 */
-if (!function_exists('db_profile'))
-{
-	function db_profile($sql=false)
-	{
+if (!function_exists('db_profile')) {
+	function db_profile($sql=false){
 	}
 }

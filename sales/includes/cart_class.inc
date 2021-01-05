@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /* Definition of the cart class
 this class can hold all the information for:
@@ -18,11 +18,10 @@ iii) a credit note
 iv)  a delivery note
 */
 
-include_once($path_to_root . "/inventory/includes/inventory_db.inc");
-include_once($path_to_root . "/taxes/tax_calc.inc");
+include_once($path_to_root . '/inventory/includes/inventory_db.inc');
+include_once($path_to_root . '/taxes/tax_calc.inc');
 
-class Cart
-{
+class Cart {
 	var $trans_type; // invoice, order, quotation, delivery note ...
 	var $trans_no = array();// array (num1=>ver1,..) or 0 for new
 	var $so_type = 0;		// for sales order: simple=0 template=1
@@ -93,7 +92,7 @@ class Cart
 	function __construct($type, $trans_no=0, $prepare_child=false) {
 		/*Constructor function initialises a new shopping cart */
 		$this->line_items = array();
-		$this->sales_type = "";
+		$this->sales_type = '';
 		if ($type == ST_SALESQUOTE)
 			$this->trans_type = $type;
 		else	
@@ -108,16 +107,14 @@ class Cart
 	/*
 		Optional sorting items by stock_id.
 	*/
-	function _cmp_lines($a, $b)
-	{
+	function _cmp_lines($a, $b) {
 		return strcmp($a->stock_id, $b->stock_id);
 	}
 
 	/*
 		Returns items array optionally sorted by item code.
 	*/
-	function get_items()
-	{
+	function get_items() {
 		global $SysPrefs;
 
 		$items = $this->line_items;
@@ -129,8 +126,7 @@ class Cart
 	//
 	//	Prepare cart to new child document entry, just after initial parent doc read.
 	//
-	function prepare_child($type)
-	{
+	function prepare_child($type) {
 		global $Refs;
 
 		if ($type === true)
@@ -140,7 +136,7 @@ class Cart
 		$this->reference = $Refs->get_next($this->trans_type, null, array('date' => $this->document_date,
 			'customer' => $this->customer_id, 'branch' => $this->Branch));
 		if ($type == ST_CUSTCREDIT)
-		    $this->src_date = $this->document_date;
+			$this->src_date = $this->document_date;
 
 		$this->document_date = new_doc_date();
 
@@ -159,9 +155,8 @@ class Cart
 			$this->dimension_id = $cust['dimension_id'];
 			$this->dimension2_id = $cust['dimension2_id'];
 		}
-		if ($type == ST_SALESINVOICE) {
+		if ($type == ST_SALESINVOICE)
 			$this->due_date = get_invoice_duedate($this->payment, $this->document_date);
-		}
 
 		$this->src_docs = $this->trans_no;
 		$this->trans_no = 0;
@@ -182,11 +177,11 @@ class Cart
 		while (($line_no < count($this->line_items)) && ($srcline = db_fetch($srcdetails))) {
 			$line = &$this->line_items[$line_no];
 			$src_docs[] = $src_type == ST_SALESORDER ?  $srcline['order_no'] : $srcline['debtor_trans_no'];
-			while($srcline['id'] != $line->src_id) // Logic : This will increment the line_items array till sales_order line is matched.
- 			{	// Fixes Delivery note bug : Parent constraints not working if sales order line deleted after delivery 
-     			$line_no++;
-     			$line = &$this->line_items[$line_no];
- 			}
+			while($srcline['id'] != $line->src_id) {// Logic : This will increment the line_items array till sales_order line is matched.
+													// Fixes Delivery note bug : Parent constraints not working if sales order line deleted after delivery 
+				$line_no++;
+				$line = &$this->line_items[$line_no];
+			}
 			if ($srcline['id'] == $line->src_id) {
 				if ($this->trans_type == ST_SALESINVOICE)
 					$line->src_no = $srcline['debtor_trans_no'];
@@ -197,12 +192,11 @@ class Cart
 			}
 		}
 
-		if ($src_type == ST_SALESORDER || $src_type == 0) {
+		if ($src_type == ST_SALESORDER || $src_type == 0)
 			$this->src_docs = array( $sodata['order_no']=>$sodata['version']);
-		} else {
+		else
 			// get src_data from debtor_trans
 			$this->src_docs = get_customer_trans_version($src_type, array_unique($src_docs));
-		}
 	}
 	//-------------------------------------------------------------------------
 	// Reading document into cart
@@ -216,53 +210,50 @@ class Cart
 		if ($trans_no[0]) { // read old transaction
 			if ($type == ST_SALESORDER || $type == ST_SALESQUOTE) { // sales order || sales quotation
 				read_sales_order($trans_no[0], $this, $type);
-			} else {	// other type of sales transaction
+			}
+			else {	// other type of sales transaction
 				read_sales_trans($type, $trans_no, $this);
 				$this->prepayments = get_payments_for($trans_no[0], $type, $this->customer_id);
 				$this->update_payments();
 				if ($this->order_no) { // free hand credit notes have no order_no
 					$sodata = get_sales_order_header($this->order_no, ST_SALESORDER);
-					$this->cust_ref = $sodata["customer_ref"];
-				// currently currency is hard linked to debtor account
-					$this->delivery_to = $sodata["deliver_to"];
-					$this->delivery_address = $sodata["delivery_address"];
-				// child transaction reedition - update with parent info unless it is freehand
-				if (!$this->is_prepaid() && !$prepare_child) // this is read for view/reedition
-					$this->set_parent_constraints($sodata, $trans_no[0]);
+					$this->cust_ref = $sodata['customer_ref'];
+					// currently currency is hard linked to debtor account
+					$this->delivery_to = $sodata['deliver_to'];
+					$this->delivery_address = $sodata['delivery_address'];
+					// child transaction reedition - update with parent info unless it is freehand
+					if (!$this->is_prepaid() && !$prepare_child) // this is read for view/reedition
+						$this->set_parent_constraints($sodata, $trans_no[0]);
 				}
 			}
 			// convert document into child and prepare qtys for entry
 			if ($prepare_child)
 				$this->prepare_child($prepare_child);
-
-		} else { // new document
+		}
+		else { // new document
 			$this->trans_type = $type;
 			$this->trans_no = 0;
 			$this->customer_currency = get_company_currency();
 			// set new sales document defaults here
 			if (get_global_customer() != ALL_TEXT)
-			  $this->customer_id = get_global_customer();
+				$this->customer_id = get_global_customer();
 			else
-			  $this->customer_id = '';
+				$this->customer_id = '';
 			$this->document_date = new_doc_date();
 			if (!is_date_in_fiscalyear($this->document_date))
 				$this->document_date = end_fiscalyear();
 			$this->reference = $Refs->get_next($this->trans_type, null, array('date' => Today(),
 				'customer' => $this->customer_id));
-			if ($type != ST_SALESORDER && $type != ST_SALESQUOTE) // Added 2.1 Joe Hunt 2008-11-12
-			{
+			if ($type != ST_SALESORDER && $type != ST_SALESQUOTE) { // Added 2.1 Joe Hunt 2008-11-12
 				$dim = get_company_pref('use_dimension');
-				if ($dim > 0)
-				{
+				if ($dim > 0) {
 					if ($this->customer_id == '')
 						$this->dimension_id = 0;
-					else
-					{
+					else {
 						$cust = get_customer($this->customer_id);
 						$this->dimension_id = $cust['dimension_id'];
 					}	
-					if ($dim > 1)
-					{
+					if ($dim > 1) {
 						if ($this->customer_id == '')
 							$this->dimension2_id = 0;
 						else
@@ -273,9 +264,9 @@ class Cart
 			if ($type == ST_SALESINVOICE) {
 				$this->due_date =
 					get_invoice_duedate($this->payment, $this->document_date);
-			} else
-				$this->due_date =
-					add_days($this->document_date, $SysPrefs->default_delivery_required_by());
+			}
+			else
+				$this->due_date = add_days($this->document_date, $SysPrefs->default_delivery_required_by());
 		}
 		$this->credit = get_current_cust_credit($this->customer_id);
 	}
@@ -289,12 +280,10 @@ class Cart
 		global $SysPrefs, $Refs;
 		
 		begin_transaction(); // prevents partial database changes in case of direct delivery/invoice
-		if ($this->reference != 'auto' && $this->trans_no == 0 && !is_new_reference($this->reference, $this->trans_type))
-		{
+		if ($this->reference != 'auto' && $this->trans_no == 0 && !is_new_reference($this->reference, $this->trans_type)) {
 			if (!empty($SysPrefs->prefs['ref_no_auto_increase']))
 				$this->reference = $Refs->get_next($this->trans_type, null, array('date' => Today()));
-			else	
-			{
+			else {
 				commit_transaction();
 				return -1;
 			}
@@ -345,8 +334,7 @@ class Cart
 		return $ret;
 	}
 
-	function set_customer($customer_id, $customer_name, $currency, $discount, $payment, $cdiscount=0)
-	{
+	function set_customer($customer_id, $customer_name, $currency, $discount, $payment, $cdiscount=0) {
 		$this->customer_name = $customer_name;
 		$this->customer_id = $customer_id;
 		$this->default_discount = $discount;
@@ -362,8 +350,7 @@ class Cart
 		$this->credit = get_current_cust_credit($customer_id);
 	}
 
-	function set_branch($branch_id, $tax_group_id, $tax_group_name, $phone='', $email='')
-	{
+	function set_branch($branch_id, $tax_group_id, $tax_group_name, $phone='', $email='') {
 		$this->Branch = $branch_id;
 		$this->phone = $phone;
 		$this->email = $email;
@@ -371,22 +358,19 @@ class Cart
 		$this->tax_group_array = get_tax_group_items_as_array($tax_group_id);
 	}
 
-	function set_sales_type($sales_type, $sales_name, $tax_included=0, $factor=0)
-	{
-	    $this->sales_type = $sales_type;
-	    $this->sales_type_name = $sales_name;
-	    $this->tax_included = $tax_included;
-	    $this->price_factor = $factor;
+	function set_sales_type($sales_type, $sales_name, $tax_included=0, $factor=0) {
+		$this->sales_type = $sales_type;
+		$this->sales_type_name = $sales_name;
+		$this->tax_included = $tax_included;
+		$this->price_factor = $factor;
 	}
 
-	function set_location($id, $name)
-	{
+	function set_location($id, $name) {
 		$this->Location = $id;
 		$this->location_name = $name;
 	}
 
-	function set_delivery($shipper, $destination, $address, $freight_cost=null)
-	{
+	function set_delivery($shipper, $destination, $address, $freight_cost=null) {
 		$this->ship_via = $shipper;
 		$this->deliver_to = $destination;
 		$this->delivery_address = $address;
@@ -394,23 +378,21 @@ class Cart
 			$this->freight_cost = $freight_cost;
 	}
 
-	function add_to_cart($line_no, $stock_id, $qty, $price, $disc, $qty_done=0, $standard_cost=0, $description=null, $id=0, $src_no=0,
-		$src_id=0)
-	{
+	function add_to_cart($line_no, $stock_id, $qty, $price, $disc, $qty_done=0, $standard_cost=0, $description=null, $id=0, $src_no=0, $src_id=0) {
 		$line = new line_details($stock_id, $qty, $price, $disc,
 			$qty_done,  $standard_cost, $description, $id, $src_no, $src_id);
 
 		if ($line->valid) {
 			$this->line_items[$line_no] = $line;
 			return 1;
-		} else
-			display_error(_("You have to enter valid stock code or nonempty description"));
+		}
+		else
+			display_error(_('You have to enter valid stock code or nonempty description'));
 		return 0;
 	}
 
-	function update_cart_item($line_no, $qty, $price, $disc, $description="")
-	{
-		if ($description != "")
+	function update_cart_item($line_no, $qty, $price, $disc, $description='') {
+		if ($description != '')
 			$this->line_items[$line_no]->item_description = $description;
 		$this->line_items[$line_no]->quantity = $qty;
 		$this->line_items[$line_no]->qty_dispatched = $qty;
@@ -418,27 +400,23 @@ class Cart
 		$this->line_items[$line_no]->discount_percent = $disc;
 	}
 
-	function update_add_cart_item_qty($line_no, $qty)
-	{
+	function update_add_cart_item_qty($line_no, $qty) {
 		$this->line_items[$line_no]->quantity += $qty;
 	}
 
-	function remove_from_cart($line_no)
-	{
+	function remove_from_cart($line_no) {
 		array_splice($this->line_items, $line_no, 1);
 	}
 
-	function clear_items()
-	{
+	function clear_items() {
 		unset($this->line_items);
 		$this->line_items = array();
-		$this->sales_type = "";
+		$this->sales_type = '';
 		$this->trans_no = 0;
 		$this->customer_id = $this->order_no = 0;
 	}
 
-	function count_items()
-	{
+	function count_items() {
 		$counter=0;
 		foreach ($this->line_items as $line) {
 			if ($line->quantity!=$line->qty_done) $counter++;
@@ -446,8 +424,7 @@ class Cart
 		return $counter;
 	}
 
-	function get_items_total()
-	{
+	function get_items_total() {
 		$total = 0;
 
 		foreach ($this->line_items as $ln_itm) {
@@ -458,8 +435,7 @@ class Cart
 		return $total;
 	}
 
-	function get_items_total_dispatch()
-	{
+	function get_items_total_dispatch() {
 		$total = 0;
 
 		foreach ($this->line_items as $ln_itm) {
@@ -470,8 +446,7 @@ class Cart
 		return $total;
 	}
 
-	function has_items_dispatch()
-	{
+	function has_items_dispatch() {
 		foreach ($this->line_items as $ln_itm) {
 			if ($ln_itm->qty_dispatched > 0)
 				return true;
@@ -479,22 +454,19 @@ class Cart
 		return false;
 	}
 
-	function any_already_delivered()
-	{
+	function any_already_delivered() {
 		/* Checks if there have been any line item processed */
 
 		foreach ($this->line_items as $stock_item) {
-			if ($stock_item->qty_done !=0) {
+			if ($stock_item->qty_done !=0)
 				return 1;
-			}
 		}
 
 		return 0;
 
 	}
 
-	function some_already_delivered($line_no)
-	{
+	function some_already_delivered($line_no) {
 		/* Checks if there have been deliveries of a specific line item */
 		if (isset($this->line_items[$line_no]) &&
 			$this->line_items[$line_no]->qty_done != 0) {
@@ -503,8 +475,7 @@ class Cart
 		return 0;
 	}
 
-	function get_taxes($shipping_cost=null)
-	{
+	function get_taxes($shipping_cost=null) {
 		$items = array();
 		$prices = array();
 		if($shipping_cost==null)
@@ -518,10 +489,10 @@ class Cart
 		}
 
 		$taxes = get_tax_for_items($items, $prices, $shipping_cost,
-		  	$this->tax_group_id, $this->tax_included,  $this->tax_group_array);
+			$this->tax_group_id, $this->tax_included,  $this->tax_group_array);
 
-    // Adjustment for swiss franken, we always have 5 rappen = 1/20 franken
-    if ($this->customer_currency == 'CHF') {
+	// Adjustment for swiss franken, we always have 5 rappen = 1/20 franken
+	if ($this->customer_currency == 'CHF') {
 			$val = $taxes['1']['Value'];
 			$val1 = (floatval((intval(round(($val*20),0)))/20));
 			$taxes['1']['Value'] = $val1;
@@ -530,8 +501,7 @@ class Cart
 	}
 
 
-	function get_tax_free_shipping()
-	{
+	function get_tax_free_shipping() {
 
 		if ($this->tax_included==0)
 			return $this->freight_cost;
@@ -539,8 +509,7 @@ class Cart
 			return ($this->freight_cost - $this->get_shipping_tax());
 	}
 
-	function get_shipping_tax()
-	{
+	function get_shipping_tax() {
 
 		$tax_items = get_shipping_tax_as_array($this->tax_group_id);
 		$tax_rate = 0;
@@ -577,19 +546,16 @@ class Cart
 		Checks cart quantities on document_date.
 		Returns array of stock_ids which stock quantities would go negative on some day.
 	*/
-	function check_qoh($date=null, $location=null)
-	{
+	function check_qoh($date=null, $location=null) {
 		$low_stock = array();
 		// check only for customer delivery and direct sales invoice 
-	   	if (!($this->trans_type == ST_CUSTDELIVERY || ($this->trans_type == ST_SALESINVOICE && $this->trans_no==0)))
-	   		return $low_stock;
+		if (!($this->trans_type == ST_CUSTDELIVERY || ($this->trans_type == ST_SALESINVOICE && $this->trans_no==0)))
+			return $low_stock;
 
 		// collect quantities by stock_id
 		$qtys = array();
-		foreach ($this->line_items as $line_no => $line_item)
-		{
-			if (has_stock_holding($line_item->mb_flag))
-			{
+		foreach ($this->line_items as $line_no => $line_item) {
+			if (has_stock_holding($line_item->mb_flag)) {
 				if (!$this->trans_no) // new delivery
 					$qtys[$line_item->stock_id]['qty'] = $line_item->qty_dispatched + @$qtys[$line_item->stock_id]['qty'];
 				else	// DN modification: check change in quantity
@@ -598,8 +564,7 @@ class Cart
 			}
 		}
 
-		foreach($qtys as $stock_id => $sum)
-		{
+		foreach($qtys as $stock_id => $sum) {
 			if (check_negative_stock($stock_id, -$sum['qty'], $location ? $location : $this->Location, $date ? $date : $this->document_date))
 				$low_stock[] = $stock_id;
 		}
@@ -610,23 +575,20 @@ class Cart
 	/*
 		Returns true for documents issued in prepayment cycle.
 	*/
-	function is_prepaid()
-	{
+	function is_prepaid() {
 		return $this->prepaid; 
 	}
 	/*
 		Order is ready for delivery in prepament mode.
 	*/
-	function is_released()
-	{
+	function is_released() {
 		return floatcmp($this->sum_paid, $this->prep_amount) >= 0;
 	}
 
 	/*
 		Check whether order has been already invoiced/send or not.
 	*/
-	function is_started()
-	{
+	function is_started() {
 		if ($this->trans_no==0)
 			return false;
 		$order_no = array_keys($this->trans_no);
@@ -638,24 +600,22 @@ class Cart
 		Check payment terms and prepayments selected for this invoice,
 		and updates	partial/final invoice value respectively.
 	*/
-	function update_payments()
-	{
+	function update_payments() {
 		$remainder = prepaid_invoice_remainder($this->order_no);
 
 		// recalculate prepaid part from payments
-		if ($this->payment_terms['days_before_due'] == -1)
-		{	// this is partial invoice for selected prepayments made.
+		if ($this->payment_terms['days_before_due'] == -1) {	// this is partial invoice for selected prepayments made.
 			$paid = 0;
 			foreach($this->prepayments as $payment)
 				$paid += $payment['amt'];
 			$this->prep_amount = $this->trans_no ? $paid : min($remainder, $paid);
-		} else	// this is final invoice
+		}
+		else	// this is final invoice
 			$this->prep_amount = $remainder;
 	}
 } /* end of class defintion */
 
-class line_details
-{
+class line_details {
 	var $id;
 	var $stock_id;
 	var $item_description;
@@ -699,9 +659,7 @@ class line_details
 	var $qty_old = 0;
 
 
-	function __construct($stock_id, $qty, $prc, $disc_percent,
-		$qty_done, $standard_cost, $description, $id=0, $src_no=0, $src_id=0)
-	{
+	function __construct($stock_id, $qty, $prc, $disc_percent, $qty_done, $standard_cost, $description, $id=0, $src_no=0, $src_id=0) {
 	/* Constructor function to add a new LineDetail object with passed params */
 
 		$this->id = $id;
@@ -712,15 +670,15 @@ class line_details
 		if (!$item_row) 
 			return;
 			
-		$this->mb_flag = $item_row["mb_flag"];
-		$this->units = $item_row["units"];
-		$this->descr_editable = $item_row["editable"];
+		$this->mb_flag = $item_row['mb_flag'];
+		$this->units = $item_row['units'];
+		$this->descr_editable = $item_row['editable'];
 		if ($description == null || !$this->descr_editable)
-			$this->item_description = $item_row["description"];
+			$this->item_description = $item_row['description'];
 		else
 			$this->item_description = $description;
-		$this->tax_type = $item_row["tax_type_id"];
-		$this->tax_type_name = $item_row["tax_type_name"];
+		$this->tax_type = $item_row['tax_type_id'];
+		$this->tax_type_name = $item_row['tax_type_name'];
 		$this->stock_id = $stock_id;
 		$this->quantity = $qty;
 		$this->qty_dispatched = $qty;
@@ -732,9 +690,7 @@ class line_details
 	}
 
 	// get unit price as stated on document
-	function line_price()
-	{
+	function line_price() {
 		return $this->price;
 	}
 }
-

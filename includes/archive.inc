@@ -14,14 +14,12 @@
  | FrontAccounting bugfixes/changes added.
  +--------------------------------------------------*/
 
-class archive
-{
-	function __construct($name)
-	{
+class archive {
+	function __construct($name) {
 		$this->options = array (
-			'basedir' => ".",
+			'basedir' => '.',
 			'name' => $name,
-			'prepend' => "",
+			'prepend' => '',
 			'inmemory' => 0,
 			'overwrite' => 0,
 			'recurse' => 1,
@@ -29,9 +27,9 @@ class archive
 			'followlinks' => 0,
 			'level' => 3,
 			'method' => 1,
-			'sfx' => "",
-			'type' => "",
-			'comment' => ""
+			'sfx' => '',
+			'type' => '',
+			'comment' => ''
 		);
 		$this->files = array ();
 		$this->exclude = array ();
@@ -39,23 +37,19 @@ class archive
 		$this->error = array ();
 	}
 
-	function set_options($options)
-	{
+	function set_options($options) {
 		foreach ($options as $key => $value)
 			$this->options[$key] = $value;
-		if (!empty ($this->options['basedir']))
-		{
+		if (!empty ($this->options['basedir'])) {
 			$this->options['basedir'] = str_replace("\\", "/", $this->options['basedir']);
 			$this->options['basedir'] = preg_replace("/\/+/", "/", $this->options['basedir']);
 			$this->options['basedir'] = preg_replace("/\/$/", "", $this->options['basedir']);
 		}
-		if (!empty ($this->options['name']))
-		{
+		if (!empty ($this->options['name'])) {
 			$this->options['name'] = str_replace("\\", "/", $this->options['name']);
-//			$this->options['name'] = preg_replace("/\/+/", "/", $this->options['name']);
+			// $this->options['name'] = preg_replace("/\/+/", "/", $this->options['name']);
 		}
-		if (!empty ($this->options['prepend']))
-		{
+		if (!empty ($this->options['prepend'])) {
 			$this->options['prepend'] = str_replace("\\", "/", $this->options['prepend']);
 			$this->options['prepend'] = preg_replace("/^(\.*\/+)+/", "", $this->options['prepend']);
 			$this->options['prepend'] = preg_replace("/\/+/", "/", $this->options['prepend']);
@@ -63,21 +57,15 @@ class archive
 		}
 	}
 
-	function create_archive()
-	{
+	function create_archive() {
 		$this->make_list();
 
-		if ($this->options['inmemory'] == 0)
-		{
-			if ($this->options['overwrite'] == 0 && 
-				file_exists($this->options['name'] 
-				. ($this->options['type'] == "pkg" || $this->options['type'] == "gzip" ||$this->options['type'] == "bzip" ? ".tmp" : "")))
-			{
+		if ($this->options['inmemory'] == 0) {
+			if ($this->options['overwrite'] == 0 && file_exists($this->options['name'].($this->options['type'] == "pkg" || $this->options['type'] == "gzip" ||$this->options['type'] == "bzip" ? ".tmp" : ""))) {
 				$this->error[] = "File {$this->options['name']} already exists.";
 				return 0;
 			}
-			else if (!($this->archive = @fopen($this->options['name'].".tmp", "wb+")))
-			{
+			else if (!($this->archive = @fopen($this->options['name'].".tmp", "wb+"))) {
 				$this->error[] = "Could not open {$this->options['name']} for writing.".':'.getcwd();
 				return 0;
 			}
@@ -85,34 +73,29 @@ class archive
 		else
 			$this->archive = "";
 
-		if (!$this->create_tar())
-		{
-			$this->error[] = "Could not create package file.";
+		if (!$this->create_tar()) {
+			$this->error[] = 'Could not create package file.';
 			return 0;
 		}
-		if (!$this->create_pkg())
-		{
-			$this->error[] = "Could not compress package file.";
+		if (!$this->create_pkg()) {
+			$this->error[] = 'Could not compress package file.';
 			return 0;
 		}
 
-		if ($this->options['inmemory'] == 0)
-		{
+		if ($this->options['inmemory'] == 0) {
 			fclose($this->archive);
-			unlink($this->options['name'] . ".tmp");
+			unlink($this->options['name'] . '.tmp');
 		}
 	}
 
-	function add_data($data)
-	{
+	function add_data($data) {
 		if ($this->options['inmemory'] == 0)
 			fwrite($this->archive, $data);
 		else
 			$this->archive .= $data;
 	}
 
-	function make_list()
-	{
+	function make_list() {
 		if (!empty ($this->exclude)) {
 			foreach ($this->files as $key => $value)
 				foreach ($this->exclude as $current)
@@ -127,31 +110,26 @@ class archive
 		unset ($this->exclude, $this->storeonly);
 	}
 
-	function add_files($list)
-	{
+	function add_files($list) {
 		$temp = $this->list_files($list);
 		foreach ($temp as $current)
 			$this->files[] = $current;
 	}
 
-	function exclude_files($list)
-	{
+	function exclude_files($list) {
 		$temp = $this->list_files($list);
 		foreach ($temp as $current)
 			$this->exclude[] = $current;
 	}
 
-	function store_files($list)
-	{
+	function store_files($list) {
 		$temp = $this->list_files($list);
 		foreach ($temp as $current)
 			$this->storeonly[] = $current;
 	}
 
-	function list_files($list)
-	{
-		if (!is_array ($list))
-		{
+	function list_files($list) {
+		if (!is_array ($list)) {
 			$temp = $list;
 			$list = array ($temp);
 			unset ($temp);
@@ -162,13 +140,11 @@ class archive
 		$pwd = getcwd();
 		chdir($this->options['basedir']);
 
-		foreach ($list as $current)
-		{
+		foreach ($list as $current) {
 			$current = str_replace("\\", "/", $current);
 			$current = preg_replace("/\/+/", "/", $current);
 			$current = preg_replace("/\/$/", "", $current);
-			if (strstr($current, "*"))
-			{
+			if (strstr($current, "*")) {
 				$regex = preg_replace("/([\\\^\$\.\[\]\|\(\)\?\+\{\}\/])/", "\\\\\\1", $current);
 				$regex = str_replace("*", ".*", $regex);
 				$dir = strstr($current, "/") ? substr($current, 0, strrpos($current, "/")) : ".";
@@ -178,8 +154,7 @@ class archive
 						$files[] = $current2;
 				unset ($regex, $dir, $temp, $current);
 			}
-			else if (@is_dir($current))
-			{
+			else if (@is_dir($current)) {
 				$temp = $this->parse_dir($current);
 				foreach ($temp as $file)
 					$files[] = $file;
@@ -199,8 +174,7 @@ class archive
 		return $files;
 	}
 
-	function parse_dir($dirname)
-	{
+	function parse_dir($dirname) {
 		if ($this->options['storepaths'] == 1 && !preg_match("/^(\.+\/*)+$/", $dirname))
 			$files = array (array ('name' => $dirname, 'name2' => $this->options['prepend'] .
 				preg_replace("/(\.+\/+)+/", "", ($this->options['storepaths'] == 0 && strstr($dirname, "/")) ?
@@ -209,13 +183,11 @@ class archive
 			$files = array ();
 		$dir = @opendir($dirname);
 
-		while ($file = @readdir($dir))
-		{
+		while ($file = @readdir($dir)) {
 			$fullname = $dirname . "/" . $file;
 			if ($file == "." || $file == "..")
 				continue;
-			else if (@is_dir($fullname))
-			{
+			else if (@is_dir($fullname)) {
 				if (empty ($this->options['recurse']))
 					continue;
 				$temp = $this->parse_dir($fullname);
@@ -236,29 +208,23 @@ class archive
 	}
 }
 
-class tar_file extends archive
-{
-	function __construct($name)
-	{
+class tar_file extends archive {
+	function __construct($name) {
 		parent::__construct($name);
 		$this->options['type'] = "tar";
 	}
 
-	function create_tar()
-	{
+	function create_tar() {
 		$pwd = getcwd();
 		chdir($this->options['basedir']);
 		$files = $this->files;
-		foreach ($files as $current)
-		{
+		foreach ($files as $current) {
 			if ($current['name'] == $this->options['name'])
 				continue;
-			if (strlen($current['name2']) > 99)
-			{
+			if (strlen($current['name2']) > 99) {
 				$path = substr($current['name2'], 0, strpos($current['name2'], "/", strlen($current['name2']) - 100) + 1);
 				$current['name2'] = substr($current['name2'], strlen($path));
-				if (strlen($path) > 154 || strlen($current['name2']) > 99)
-				{
+				if (strlen($path) > 154 || strlen($current['name2']) > 99) {
 					$this->error[] = "Could not add {$path}{$current['name2']} to archive because the filename is too long.";
 					continue;
 				}
@@ -276,17 +242,14 @@ class tar_file extends archive
 			$block = substr_replace($block, $checksum, 148, 8);
 
 			if ($current['type'] == 2 || $current['stat'][7] == 0)
-				{ $this->add_data($block); 
-				}
-			else if ($fp = @fopen($current['name'], "rb"))
-			{
+				$this->add_data($block); 
+			else if ($fp = @fopen($current['name'], "rb")) {
 				$this->add_data($block);
 
 				while ($temp = fread($fp, 1048576)) {
 					$this->add_data($temp);
 				}
-				if ($current['stat'][7] % 512 > 0)
-				{
+				if ($current['stat'][7] % 512 > 0) {
 					$temp = "";
 					for ($i = 0; $i < 512 - $current['stat'][7] % 512; $i++)
 						$temp .= "\0";
@@ -309,19 +272,16 @@ class tar_file extends archive
 		When $dry_run!=0 no file is written,
 		but list of existing files to be written is returned.
 	*/
-	function extract_files($dry_run = false)
-	{
+	function extract_files($dry_run = false) {
 	$flist = array();
-		if ($fp = $this->open_archive())
-		{
+		if ($fp = $this->open_archive()) {
 			$pwd = getcwd();
 			// display_error($pwd.':'.$this->options['basedir']);
 			chdir($this->options['basedir']);
 			if ($this->options['inmemory'] == 1)
 				$this->files = array();
 
-			while ($block = fread($fp, 512))
-			{
+			while ($block = fread($fp, 512)) {
 				$temp = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1type/a100symlink/a6magic/a2temp/a32temp/a32temp/a8temp/a8temp/a155prefix/a12temp", $block);
 				$file = array (
 					'name' => rtrim($temp['prefix']) . rtrim($temp['name']),
@@ -338,12 +298,11 @@ class tar_file extends archive
 				);
 				if ($file['checksum'] == 0x00000000)
 					break;
-				else if (substr($file['magic'], 0, 5) != "ustar")
-				{
-					$this->error[] = "This script does not support extracting this type of tar file.";
+				else if (substr($file['magic'], 0, 5) != "ustar") {
+					$this->error[] = 'This script does not support extracting this type of tar file.';
 					break;
 				}
-				$block = substr_replace($block, "        ", 148, 8);
+				$block = substr_replace($block, '        ', 148, 8);
 				$checksum = 0;
 				for ($i = 0; $i < 512; $i++)
 					$checksum += ord(substr($block, $i, 1));
@@ -351,21 +310,22 @@ class tar_file extends archive
 					$this->error[] = "Could not extract from {$this->options['name']}, it is corrupt.";
 					break;
 				}
-				if ($dry_run || $this->options['inmemory'] == 1)
-				{
+				if ($dry_run || $this->options['inmemory'] == 1) {
 					if ($file['type'] == 0) {
 						if($dry_run) {
 							$tst = check_write($file['name']);
 							if (!$tst) {
 								$this->error[] = "Could not open {$this->options['basedir']}/{$file['name']} for writing.";
 								break;
-							} else {
+							}
+							else {
 								$flist[] = $file['name'];
 								if ( $tst < 0 && $this->options['overwrite'] == 0)
 									$this->error[] = "{$file['name']} already exists.";
 							}
 							fseek($fp, ($file['stat'][7] + 511) & ~511, SEEK_CUR); // skip data
-						} else {
+						}
+						else {
 							$dat = fread($fp, $file['stat'][7]);
 							$tail = $file['stat'][7] % 512;
 							if ($tail)
@@ -376,40 +336,34 @@ class tar_file extends archive
 					unset ($file['checksum'], $file['magic']);
 					$this->files[] = $file; 
 				}
-				else if ($file['type'] == 5)
-				{
-					if (!is_dir($file['name'])) {
+				else if ($file['type'] == 5) {
+					if (!is_dir($file['name']))
 						mkdir($file['name'], $file['stat'][2]);
-					}
 				}
-				else if ($this->options['overwrite'] == 0 && file_exists($file['name']))
-				{
+				else if ($this->options['overwrite'] == 0 && file_exists($file['name'])) {
 					$this->error[] = "{$file['name']} already exists.";
 					continue;
 				}
-				else if ($file['type'] == 2)
-				{
+				else if ($file['type'] == 2) {
 					symlink($temp['symlink'], $file['name']);
 					@chmod($file['name'], $file['stat'][2]);
 				}
-				else if ($new = @fopen($file['name'], "wb"))
-				{
+				else if ($new = @fopen($file['name'], "wb")) {
 					fwrite($new, fread($fp, $file['stat'][7]));
 					if ($file['stat'][7] % 512)
 						fread($fp, 512 - $file['stat'][7] % 512);
 					fclose($new);
 					@chmod($file['name'], $file['stat'][2]);
 				}
-				else
-				{
+				else {
 					$this->error[] = "Could not open {$file['name']} for writing.";
 					continue;
 				}
-//				@chown($file['name'], $file['stat'][4]);
-//				@chgrp($file['name'], $file['stat'][5]);
-				if (!$dry_run) {
+				// @chown($file['name'], $file['stat'][4]);
+				// @chgrp($file['name'], $file['stat'][5]);
+				if (!$dry_run)
 					@touch($file['name'], $file['stat'][9]);
-				}
+				
 				unset ($file);
 			}
 			chdir($pwd);
@@ -420,33 +374,26 @@ class tar_file extends archive
 		return $flist;
 	}
 
-	function open_archive()
-	{
+	function open_archive() {
 		return @fopen($this->options['name'], "rb");
 	}
 }
 
-class gzip_file extends tar_file
-{
-	function __construct($name)
-	{
+class gzip_file extends tar_file {
+	function __construct($name) {
 		parent::__construct($name);
 		$this->options['type'] = "gzip";
 	}
 
-	function create_gzip()
-	{
-		if ($this->options['inmemory'] == 0)
-		{
-			if ($fp = gzopen($this->options['name'], "wb{$this->options['level']}"))
-			{
+	function create_gzip() {
+		if ($this->options['inmemory'] == 0) {
+			if ($fp = gzopen($this->options['name'], "wb{$this->options['level']}")) {
 				fseek($this->archive, 0);
 				while ($temp = fread($this->archive, 1048576))
 					gzwrite($fp, $temp);
 				gzclose($fp);
 			}
-			else
-			{
+			else {
 				$this->error[] = "Could not open {$this->options['name']} for writing.";
 				return 0;
 			}
@@ -457,9 +404,7 @@ class gzip_file extends tar_file
 		return 1;
 	}
 
-	function open_archive()
-	{
-		return @gzopen($this->options['name'], "rb");
+	function open_archive() {
+		return @gzopen($this->options['name'], 'rb');
 	}
 }
-

@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
 // Standard report classess
@@ -20,19 +20,16 @@ define('RC_BANKING', 5);
 define('RC_GL', 6);
 define('RC_FIXEDASSETS', 7);
 
-class BoxReports
-{
+class BoxReports {
 	var $ar_classes; // report class names
 	var $ar_reports;
 	var $ctrl_handlers = array();
 
-	function __construct()
-	{
+	function __construct() {
 		$this->ar_classes = array();
 	}
 
-	function addReportClass($class_name, $class_id=null)
-	{
+	function addReportClass($class_name, $class_id=null) {
 		if (!$class_id)
 			$class_id = count_array($this->ar_classes);
 		$this->ar_classes[$class_id] = $class_name;
@@ -40,14 +37,12 @@ class BoxReports
 		return $class_id;
 	}
 
-	function addReport($class, $id, $rep_name, $params=null)
-	{
+	function addReport($class, $id, $rep_name, $params=null) {
 		unset($this->ar_reports[$class][$id]); // unset std report if any
 		$this->ar_reports[$class][$id] = new Report($id, $rep_name, $params);
 	}
 
-	function getDisplay($class=null)
-	{
+	function getDisplay($class=null) {
 		global $path_to_root, $SysPrefs, $Ajax;
 
 		if (find_submit('Rep') != -1) {
@@ -57,17 +52,16 @@ class BoxReports
 
 		$temp = array_values($this->ar_classes);
 		$display_class = $class==null ? $temp[0] : $this->ar_classes[$class];
-		$st_reports = "";
-		$st_params = "";
-		$st_classes = "<b>" . _("Report Classes:") . "</b><br>";
+		$st_reports = '';
+		$st_params = '';
+		$st_classes = '<b>' . _('Report Classes:') . '</b><br>';
 
 		if (isset($_GET['Class']))
 			set_focus('class'.$_GET['Class']);
 
 		$cur_class = $_REQUEST['Class'];
 
-		foreach($this->ar_classes as $class_id => $name)
-		{
+		foreach($this->ar_classes as $class_id => $name) {
 			if (!isset($this->ar_reports[$class_id]))
 				continue; // e.g. no dimensions
 
@@ -79,9 +73,8 @@ class BoxReports
 				."$acc[1]>$acc[0]</a> <br>";
 
 			$style = $class_id==$cur_class ? '' : "style='display:none'";
-			$st_reports .= "<table class='repclass' id='TAB_" . $class_id ."' $style cellpadding='0' cellspacing='0' border='0' width='100%'><tr><td><b>" . _("Reports For Class: ") . "&nbsp;$name</b></td></tr>\n";
-			foreach($this->ar_reports[$class_id] as $rep_id => $report)
-			{
+			$st_reports .= "<table class='repclass' id='TAB_" . $class_id ."' $style cellpadding='0' cellspacing='0' border='0' width='100%'><tr><td><b>" . _('Reports For Class: ') . "&nbsp;$name</b></td></tr>\n";
+			foreach($this->ar_reports[$class_id] as $rep_id => $report) {
 				$acc = access_string($report->name);
 				$st_reports .= "<tr><td><a class='repopts_link'"
 					." href='".$_SERVER['PHP_SELF']."?Class=$class_id&REP_ID=$report->id'"
@@ -89,9 +82,8 @@ class BoxReports
 					." id='".$id = default_focus()."'"
 					."$acc[1]>$acc[0]</a><tr><td>\n";
 
-				if (@$_REQUEST['REP_ID'] == $report->id) {
+				if (@$_REQUEST['REP_ID'] == $report->id)
 					$Ajax->activate($id);
-				}
 
 				if (isset($_REQUEST['REP_ID']) && $_REQUEST['REP_ID']==$report->id) {
 					// parameters form
@@ -108,7 +100,7 @@ class BoxReports
 					$Ajax->addUpdate(true, 'rep_form', $st_params);
 				}
 			}
-			$st_reports .= "</table>";
+			$st_reports .= '</table>';
 		}
 
 		$st_params = "<div id='rep_form'>".
@@ -123,15 +115,13 @@ class BoxReports
 		return $st;
 	}
 
-	function getOptions($controls, $id = 0)
-	{
+	function getOptions($controls, $id = 0) {
 		$st = '';
 		if ($controls == null)
 			return "";
 
 		$cnt = 0;
-		foreach($controls as $title => $type)
-		{
+		foreach($controls as $title => $type) {
 			$ctrl = '';
 			foreach($this->ctrl_handlers as $fun) { // first check for non-standard controls
 				$ctrl = $fun('PARAM_'.$cnt, $type);
@@ -148,10 +138,11 @@ class BoxReports
 			if ($ctrl != '')  {
 				$st .= $title . ':<br>';
 				$st .= $ctrl;
-				$st .= "<br><br>";
-			} else {
-				display_error(_('Unknown report parameter type:').$type);
+				$st .= '<br><br>';
 			}
+			else
+				display_error(_('Unknown report parameter type:').$type);
+			
 			$cnt++;
 		}
 		return $st;
@@ -166,14 +157,12 @@ class BoxReports
 	//
 	//	Returns html code for input control $name of type $type 
 	//
-	function get_ctrl($name, $type)
-	{
+	function get_ctrl($name, $type) {
 		global $path_to_root, $SysPrefs,
 			$type_shortcuts;
 
 		$st = '';
-			switch ($type)
-			{
+			switch ($type) {
 				case 'CURRENCY':
 					$sql = "SELECT curr_abrev, concat(curr_abrev,' - ', currency) AS name FROM ".TB_PREF."currencies";
 					return combo_input($name, '', $sql, 'curr_abrev', 'name',array('spec_option'=>_("No Currency Filter"),'spec_id'=>ALL_TEXT,'order'=>false));
@@ -185,8 +174,7 @@ class BoxReports
 				case 'DATEENDM':
 				case 'DATEBEGINTAX':
 				case 'DATEENDTAX':
-					if (!isset($_POST[$name]))
-					{
+					if (!isset($_POST[$name])) {
 						if ($type == 'DATEBEGIN')
 							$date = begin_fiscalyear();
 						elseif ($type == 'DATEEND')
@@ -197,15 +185,13 @@ class BoxReports
 							$date = begin_month($date);
 						elseif ($type == 'DATEENDM')
 							$date = end_month($date);
-						elseif ($type == 'DATEBEGINTAX' || $type == 'DATEENDTAX')
-						{
+						elseif ($type == 'DATEBEGINTAX' || $type == 'DATEENDTAX') {
 							$row = get_company_prefs();
 							$edate = add_months($date, -$row['tax_last']);
 							$edate = end_month($edate);
 							if ($type == 'DATEENDTAX')
 								$date = $edate;
-							else
-							{
+							else {
 								$bdate = begin_month($edate);
 								$bdate = add_months($bdate, -$row['tax_prd'] + 1);
 								$date = $bdate;
@@ -215,12 +201,11 @@ class BoxReports
 					else // saved parameters
 						$date = $_POST[$name];
 					$st = "<input type='text' name='$name' value='$date'>";
-					if (user_use_date_picker())
-					{
+					if (user_use_date_picker()) {
 						$calc_image = (file_exists("$path_to_root/themes/".user_theme()."/images/cal.gif")) ? 
-							"$path_to_root/themes/".user_theme()."/images/cal.gif" : "$path_to_root/themes/default/images/cal.gif";
+							$path_to_root.'/themes/'.user_theme().'/images/cal.gif' : $path_to_root.'/themes/default/images/cal.gif';
 						$st .= "<a href=\"javascript:date_picker(document.forms[0].$name);\">"
-						. "	<img src='$calc_image' style='vertical-align:middle;padding-bottom:4px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a>\n";
+						. "	<img src='".$calc_image."' style='vertical-align:middle;padding-bottom:4px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a>\n";
 					}	
 					return $st;
 					break;
@@ -232,33 +217,33 @@ class BoxReports
 					return payment_services($name, null);
 
 				case 'DESTINATION':
-					$sel = array(_("PDF/Printer"), "Excel");
+					$sel = array(_('PDF/Printer'), 'Excel');
 					$def = 0;
 					if (user_def_print_destination() == 1)
 						$def = 1;
 					return array_selector($name, $def, $sel);
 
 				case 'ORIENTATION':
-					$sel = array(_("Portrait"), _("Landscape"));
+					$sel = array(_('Portrait'), _('Landscape'));
 					$def = 0;
 					if (user_def_print_orientation() == 1)
 						$def = 1;
 					return array_selector($name, $def, $sel);
 
 				case 'COMPARE':
-					$sel = array(_("Accumulated"), _("Period Y-1"), _("Budget"));
+					$sel = array(_('Accumulated'), _('Period Y-1'), _('Budget'));
 					return array_selector($name, null, $sel);
 
 				case 'GRAPHIC':
-					$sel = array(_("No Graphics"), _("Vertical bars"), _("Horizontal bars"), 
-								_("Dots"), _("Lines"), _("Pie"), _("Donut"));
+					$sel = array(_('No Graphics'), _('Vertical bars'), _('Horizontal bars'), 
+								_('Dots'), _('Lines'), _('Pie'), _('Donut'));
 					return array_selector($name, null, $sel);
 
 				case 'SYS_TYPES':
-					return gl_systypes_list($name, null, _("No Type Filter"));
+					return gl_systypes_list($name, null, _('No Type Filter'));
 
 				case 'SYS_TYPES_ALL':
-					return systypes_list($name, null, _("No Type Filter"));
+					return systypes_list($name, null, _('No Type Filter'));
 
 				case 'TEXT':
 					return "<input type='text' name='$name'>";
@@ -268,7 +253,7 @@ class BoxReports
 					return "<textarea rows=4 cols=30 maxlength=130 name='$name'>$value</textarea>";
 
 				case 'ACCOUNTS': // not used
-					return gl_account_types_list($name, null, _("No Account Group Filter"), true);
+					return gl_account_types_list($name, null, _('No Account Group Filter'), true);
 
 				case 'ACCOUNTS_NO_FILTER': // not used
 					return gl_account_types_list($name);
@@ -279,7 +264,7 @@ class BoxReports
 				case 'BANK_ACCOUNTS_NO_FILTER':
 				case 'BANK_ACCOUNTS':
 					if ($type == 'BANK_ACCOUNTS_NO_FILTER')
-						return bank_accounts_list($name, null, false, _("All"));
+						return bank_accounts_list($name, null, false, _('All'));
 					else
 						return bank_accounts_list($name);
 
@@ -287,37 +272,37 @@ class BoxReports
 					return dimensions_list($name, null, false, ' ', false, true, 0);
 					
 				case 'DIMENSIONS':
-					return dimensions_list($name, null, true, _("No Dimension Filter"), false, true, 0);
+					return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 0);
 
 				case 'DIMENSION1':
 					return dimensions_list($name, null, false, ' ', false, true, 1);
 
 				case 'DIMENSIONS1':
-					return dimensions_list($name, null, true, _("No Dimension Filter"), false, true, 1);
+					return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 1);
 
 				case 'DIMENSION2':
 					return dimensions_list($name, null, false, ' ', false, true, 2);
 
 				case 'DIMENSIONS2':
-					return dimensions_list($name, null, true, _("No Dimension Filter"), false, true, 2);
+					return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 2);
 
 				case 'CUSTOMERS_NO_FILTER':
 				case 'CUSTOMERS':
 					if ($type == 'CUSTOMERS_NO_FILTER')
-						return customer_list($name, null, _("No Customer Filter"));
+						return customer_list($name, null, _('No Customer Filter'));
 					else
 						return customer_list($name);
 
 				case 'SUPPLIERS_NO_FILTER':
 				case 'SUPPLIERS':
 					if ($type == 'SUPPLIERS_NO_FILTER')
-						return supplier_list($name, null, _("No Supplier Filter"));
+						return supplier_list($name, null, _('No Supplier Filter'));
 					else
 						return supplier_list($name);
 
 				case 'INVOICE':
 					$IV = $type_shortcuts[ST_SALESINVOICE];
-					$ref = ($SysPrefs->print_invoice_no() == 1 ? "trans_no" : "reference");
+					$ref = ($SysPrefs->print_invoice_no() == 1 ? 'trans_no' : 'reference');
 					$sql = "SELECT concat(debtor_trans.trans_no, '-', debtor_trans.type) AS TNO,
 								concat('$IV ', debtor_trans.$ref,' ', debtor.name) as IName
 						FROM ".TB_PREF."debtors_master debtor,"
@@ -465,15 +450,13 @@ class BoxReports
 	}
 }
 
-class Report
-{
+class Report {
 	var $id;
 	var $name;
 	var $ar_params;
 	var $controls;
 	
-	function __construct($id, $name, $ar_params = null)
-	{
+	function __construct($id, $name, $ar_params = null) {
 		$this->id = $id;
 		$this->name = $name;
 		if ($ar_params) $this->set_controls($ar_params);
@@ -486,12 +469,10 @@ class Report
 	function get_controls() {
 		return $this->controls;
 	}
-	
 }
 
 //------------------------------------------------------------------------------------------------
-function gl_systypes_list($name, $value=null, $spec_opt=false)
-{
+function gl_systypes_list($name, $value=null, $spec_opt=false) {
 	global $systypes_array;
 	
 	$types = $systypes_array;
@@ -505,23 +486,21 @@ function gl_systypes_list($name, $value=null, $spec_opt=false)
 			'spec_option'=> $spec_opt,
 			'spec_id' => ALL_NUMERIC,
 			'async' => false,
-			)
+		)
 	);
 }
 /*
 	Add extension/custom reports to report manager.
 */
-function add_custom_reports(&$reports)
-{
+function add_custom_reports(&$reports) {
 	global $installed_extensions, $path_to_root;
 	
 	// include reports installed inside extension modules
-	if (count($installed_extensions) > 0)
-	{
+	if (count($installed_extensions) > 0) {
 		$extensions = $installed_extensions;
 		foreach ($extensions as $ext)
 			if (($ext['active'] && $ext['type'] == 'extension')) {
-				$file = $path_to_root.'/'.$ext['path']."/reporting/reports_custom.php";
+				$file = $path_to_root.'/'.$ext['path'].'/reporting/reports_custom.php';
 				if (file_exists($file)) {
 					set_ext_domain($ext['path']);
 					include_once($file);
@@ -529,8 +508,7 @@ function add_custom_reports(&$reports)
 				}
 			}
 	}
-	$file = company_path()."/reporting/reports_custom.php";
+	$file = company_path().'/reporting/reports_custom.php';
 	if (file_exists($file))
 		include_once($file);
 }
-

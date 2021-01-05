@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
 // ----------------------------------------------------------------
@@ -16,22 +16,21 @@ $page_security = 'SA_ITEMSVALREP';
 // date_:	2011-05-24
 // Title:	Stock Movements
 // ----------------------------------------------------------------
-$path_to_root="..";
+$path_to_root='..';
 
-include_once($path_to_root . "/includes/session.inc");
-include_once($path_to_root . "/includes/date_functions.inc");
-include_once($path_to_root . "/includes/ui/ui_input.inc");
-include_once($path_to_root . "/includes/data_checks.inc");
-include_once($path_to_root . "/gl/includes/gl_db.inc");
-include_once($path_to_root . "/sales/includes/db/sales_types_db.inc");
-include_once($path_to_root . "/inventory/includes/inventory_db.inc");
+include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/includes/date_functions.inc');
+include_once($path_to_root . '/includes/ui/ui_input.inc');
+include_once($path_to_root . '/includes/data_checks.inc');
+include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 inventory_movements();
 
-function fetch_items($category=0)
-{
+function fetch_items($category=0) {
 		$sql = "SELECT stock_id, stock.description AS name,
 				stock.category_id,
 				units,
@@ -42,11 +41,10 @@ function fetch_items($category=0)
 			$sql .= " AND cat.category_id = ".db_escape($category);
 		$sql .= " ORDER BY stock.category_id, stock_id";
 
-    return db_query($sql,"No transactions were returned");
+	return db_query($sql, 'No transactions were returned');
 }
 
-function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = true)
-{
+function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = true) {
 	if ($from_date == null)
 		$from_date = Today();
 
@@ -70,31 +68,29 @@ function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = tr
 	else
 		$sql .= " AND qty < 0 ";
 
-	$result = db_query($sql, "QOH calculation failed");
+	$result = db_query($sql, 'QOH calculation failed');
 
 	$myrow = db_fetch_row($result);	
 
 	return $myrow[0];
-
 }
 
 //----------------------------------------------------------------------------------------------------
 
-function inventory_movements()
-{
-    global $path_to_root;
+function inventory_movements() {
+	global $path_to_root;
 
-    $from_date = $_POST['PARAM_0'];
-    $to_date = $_POST['PARAM_1'];
-    $category = $_POST['PARAM_2'];
+	$from_date = $_POST['PARAM_0'];
+	$to_date = $_POST['PARAM_1'];
+	$category = $_POST['PARAM_2'];
 	$location = $_POST['PARAM_3'];
-    $comments = $_POST['PARAM_4'];
+	$comments = $_POST['PARAM_4'];
 	$orientation = $_POST['PARAM_5'];
 	$destination = $_POST['PARAM_6'];
 	if ($destination)
-		include_once($path_to_root . "/reporting/includes/excel_report.inc");
+		include_once($path_to_root . '/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . "/reporting/includes/pdf_report.inc");
+		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($category == ALL_NUMERIC)
@@ -115,30 +111,28 @@ function inventory_movements()
 
 	$aligns = array('left',	'left',	'left', 'right', 'right', 'right','right');
 
-    $params =   array( 	0 => $comments,
+	$params =   array( 	0 => $comments,
 						1 => array('text' => _('Period'), 'from' => $from_date, 'to' => $to_date),
-    				    2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
+						2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
 						3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''));
 
-    $rep = new FrontReport(_('Inventory Movements'), "InventoryMovements", user_pagesize(), 9, $orientation);
-    if ($orientation == 'L')
-    	recalculate_cols($cols);
+	$rep = new FrontReport(_('Inventory Movements'), 'InventoryMovements', user_pagesize(), 9, $orientation);
+	if ($orientation == 'L')
+		recalculate_cols($cols);
 
-    $rep->Font();
-    $rep->Info($params, $cols, $headers, $aligns);
-    $rep->NewPage();
+	$rep->Font();
+	$rep->Info($params, $cols, $headers, $aligns);
+	$rep->NewPage();
 
 	$result = fetch_items($category);
 
 	$catgor = '';
-	while ($myrow=db_fetch($result))
-	{
-		if ($catgor != $myrow['description'])
-		{
+	while ($myrow=db_fetch($result)) {
+		if ($catgor != $myrow['description']) {
 			$rep->Line($rep->row  - $rep->lineHeight);
 			$rep->NewLine(2);
 			$rep->fontSize += 2;
-			$rep->TextCol(0, 3, $myrow['category_id'] . " - " . $myrow['description']);
+			$rep->TextCol(0, 3, $myrow['category_id'] . ' - ' . $myrow['description']);
 			$catgor = $myrow['description'];
 			$rep->fontSize -= 2;
 			$rep->NewLine();
@@ -165,6 +159,5 @@ function inventory_movements()
 	$rep->Line($rep->row  - 4);
 
 	$rep->NewLine();
-    $rep->End();
+	$rep->End();
 }
-

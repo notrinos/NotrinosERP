@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SALESANALYTIC';
 // ----------------------------------------------------------------
@@ -16,21 +16,20 @@ $page_security = 'SA_SALESANALYTIC';
 // date_:	2005-05-19
 // Title:	Inventory Sales Report
 // ----------------------------------------------------------------
-$path_to_root="..";
+$path_to_root='..';
 
-include_once($path_to_root . "/includes/session.inc");
-include_once($path_to_root . "/includes/date_functions.inc");
-include_once($path_to_root . "/includes/data_checks.inc");
-include_once($path_to_root . "/includes/banking.inc");
-include_once($path_to_root . "/gl/includes/gl_db.inc");
-include_once($path_to_root . "/inventory/includes/db/items_category_db.inc");
+include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/includes/date_functions.inc');
+include_once($path_to_root . '/includes/data_checks.inc');
+include_once($path_to_root . '/includes/banking.inc');
+include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 print_inventory_purchase();
 
-function getTransactions($category, $location, $fromsupp, $item, $from, $to)
-{
+function getTransactions($category, $location, $fromsupp, $item, $from, $to) {
 	$from = date2sql($from);
 	$to = date2sql($to);
 	$sql = "SELECT item.category_id,
@@ -65,12 +64,11 @@ function getTransactions($category, $location, $fromsupp, $item, $from, $to)
 			$sql .= " AND item.stock_id = ".db_escape($item);
 		$sql .= " ORDER BY item.category_id,
 			supplier.supp_name, item.stock_id, move.tran_date";
-    return db_query($sql,"No transactions were returned");
+	return db_query($sql, 'No transactions were returned');
 
 }
 
-function get_supp_inv_reference($supplier_id, $stock_id, $date)
-{
+function get_supp_inv_reference($supplier_id, $stock_id, $date) {
 	$sql = "SELECT trans.supp_reference
 		FROM ".TB_PREF."supp_trans trans,
 			".TB_PREF."supp_invoice_items line,
@@ -83,36 +81,35 @@ function get_supp_inv_reference($supplier_id, $stock_id, $date)
 		AND trans.supplier_id=".db_escape($supplier_id)."
 		AND line.stock_id=".db_escape($stock_id)."
 		AND trans.tran_date=".db_escape($date);
-    $result = db_query($sql,"No transactions were returned");
-    $row = db_fetch_row($result);
-    if (isset($row[0]))
-    	return $row[0];
-    else
-    	return '';
+	$result = db_query($sql, 'No transactions were returned');
+	$row = db_fetch_row($result);
+	if (isset($row[0]))
+		return $row[0];
+	else
+		return '';
 }
 
 //----------------------------------------------------------------------------------------------------
 
-function print_inventory_purchase()
-{
-    global $path_to_root;
+function print_inventory_purchase() {
+	global $path_to_root;
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
-    $category = $_POST['PARAM_2'];
-    $location = $_POST['PARAM_3'];
-    $fromsupp = $_POST['PARAM_4'];
-    $item = $_POST['PARAM_5'];
+	$category = $_POST['PARAM_2'];
+	$location = $_POST['PARAM_3'];
+	$fromsupp = $_POST['PARAM_4'];
+	$item = $_POST['PARAM_5'];
 	$comments = $_POST['PARAM_6'];
 	$orientation = $_POST['PARAM_7'];
 	$destination = $_POST['PARAM_8'];
 	if ($destination)
-		include_once($path_to_root . "/reporting/includes/excel_report.inc");
+		include_once($path_to_root . '/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . "/reporting/includes/pdf_report.inc");
+		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-    $dec = user_price_dec();
+	$dec = user_price_dec();
 
 	if ($category == ALL_NUMERIC)
 		$category = 0;
@@ -144,34 +141,30 @@ function print_inventory_purchase()
 
 	$aligns = array('left',	'left',	'left', 'left', 'left', 'left', 'right', 'right');
 
-    $params =   array( 	0 => $comments,
-    				    1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-    				    2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
-    				    3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''),
-    				    4 => array('text' => _('Supplier'), 'from' => $froms, 'to' => ''),
-    				    5 => array('text' => _('Item'), 'from' => $itm, 'to' => ''));
+	$params =   array( 	0 => $comments,
+						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
+						2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
+						3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''),
+						4 => array('text' => _('Supplier'), 'from' => $froms, 'to' => ''),
+						5 => array('text' => _('Item'), 'from' => $itm, 'to' => ''));
 
-    $rep = new FrontReport(_('Inventory Purchasing Report'), "InventoryPurchasingReport", user_pagesize(), 9, $orientation);
-    if ($orientation == 'L')
-    	recalculate_cols($cols);
+	$rep = new FrontReport(_('Inventory Purchasing Report'), 'InventoryPurchasingReport', user_pagesize(), 9, $orientation);
+	if ($orientation == 'L')
+		recalculate_cols($cols);
 
-    $rep->Font();
-    $rep->Info($params, $cols, $headers, $aligns);
-    $rep->NewPage();
+	$rep->Font();
+	$rep->Info($params, $cols, $headers, $aligns);
+	$rep->NewPage();
 
 	$res = getTransactions($category, $location, $fromsupp, $item, $from, $to);
 
 	$total = $total_supp = $grandtotal = 0.0;
 	$total_qty = 0.0;
 	$catt = $stock_description = $stock_id = $supplier_name = '';
-	while ($trans=db_fetch($res))
-	{
-		if ($stock_description != $trans['description'])
-		{
-			if ($stock_description != '')
-			{
-				if ($supplier_name != '')
-				{
+	while ($trans=db_fetch($res)) {
+		if ($stock_description != $trans['description']) {
+			if ($stock_description != '') {
+				if ($supplier_name != '') {
 					$rep->NewLine(2, 3);
 					$rep->TextCol(0, 1, _('Total'));
 					$rep->TextCol(1, 4, $stock_description);
@@ -188,10 +181,8 @@ function print_inventory_purchase()
 			$stock_description = $trans['description'];
 		}
 
-		if ($supplier_name != $trans['supplier_name'])
-		{
-			if ($supplier_name != '')
-			{
+		if ($supplier_name != $trans['supplier_name']) {
+			if ($supplier_name != '') {
 				$rep->NewLine(2, 3);
 				$rep->TextCol(0, 1, _('Total'));
 				$rep->TextCol(1, 4, $stock_description);
@@ -204,10 +195,8 @@ function print_inventory_purchase()
 			}
 			$supplier_name = $trans['supplier_name'];
 		}
-		if ($catt != $trans['cat_description'])
-		{
-			if ($catt != '')
-			{
+		if ($catt != $trans['cat_description']) {
+			if ($catt != '') {
 				$rep->NewLine(2, 3);
 				$rep->TextCol(0, 1, _('Total'));
 				$rep->TextCol(1, 7, $catt);
@@ -229,16 +218,14 @@ function print_inventory_purchase()
 		$trans['supp_reference'] = get_supp_inv_reference($trans['supplier_id'], $trans['stock_id'], $trans['tran_date']);
 		$rep->fontSize -= 2;
 		$rep->TextCol(0, 1, $trans['stock_id']);
-		if ($fromsupp == ALL_TEXT)
-		{
-			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? " ("._("Inactive").")" : ""), -1);
+		if ($fromsupp == ALL_TEXT) {
+			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, sql2date($trans['tran_date']));
 			$rep->TextCol(3, 4, $trans['supp_reference']);
 			$rep->TextCol(4, 5, $trans['supplier_name']);
 		}
-		else
-		{
-			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? " ("._("Inactive").")" : ""), -1);
+		else {
+			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, sql2date($trans['tran_date']));
 			$rep->TextCol(3, 4, $trans['supp_reference']);
 		}	
@@ -252,10 +239,8 @@ function print_inventory_purchase()
 		$grandtotal += $amt;
 		$total_qty += $trans['qty'];
 	}
-	if ($stock_description != '')
-	{
-		if ($supplier_name != '')
-		{
+	if ($stock_description != '') {
+		if ($supplier_name != '') {
 			$rep->NewLine(2, 3);
 			$rep->TextCol(0, 1, _('Total'));
 			$rep->TextCol(1, 4, $stock_description);
@@ -269,8 +254,7 @@ function print_inventory_purchase()
 			$supplier_name = $trans['supplier_name'];
 		}	
 	}
-	if ($supplier_name != '')
-	{
+	if ($supplier_name != '') {
 		$rep->NewLine(2, 3);
 		$rep->TextCol(0, 1, _('Total'));
 		$rep->TextCol(1, 4, $stock_description);
@@ -294,6 +278,5 @@ function print_inventory_purchase()
 
 	$rep->Line($rep->row  - 4);
 	$rep->NewLine();
-    $rep->End();
+	$rep->End();
 }
-

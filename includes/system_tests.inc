@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
 // Type of requirement for positive test result
@@ -19,8 +19,7 @@ $test_level = array(
 );
 
 // test mysql server version
-function tst_mysql() 
-{
+function tst_mysql() {
 	$test['descr'] = _('MySQL version'). ' >=4.1';
 	$test['type'] = 3;
 	$test['test'] = db_get_version();
@@ -33,8 +32,7 @@ function tst_mysql()
 	return $test;
 }
 // test php mysql extension
-function tst_phpmysql() 
-{
+function tst_phpmysql() {
 	$test['descr'] = _('PHP MySQL extension');
 	$test['type'] = 3;
 	$test['result'] = db_extension_exists();
@@ -44,8 +42,7 @@ function tst_phpmysql()
 	return $test;
 }
 
-function tst_php() 
-{
+function tst_php() {
 	$test['descr'] = _('PHP version').' >=5.0.0';
 	$test['type'] = 3;
 	$test['test'] = phpversion();
@@ -55,8 +52,7 @@ function tst_php()
 	return $test;
 }
 
-function tst_system() 
-{
+function tst_system() {
 	$test['descr'] = _('Server system');
 	$test['type'] = 0;
 	$test['test'] = PHP_OS;
@@ -65,8 +61,7 @@ function tst_system()
 	return $test;
 }
 
-function tst_sessionpath() 
-{
+function tst_sessionpath() {
 	$test['descr'] = _('Session save path');
 	$test['type'] = 0;
 	$test['test'] = session_save_path();
@@ -75,8 +70,7 @@ function tst_sessionpath()
 	return $test;
 }
 
-function tst_install() 
-{
+function tst_install() {
 	global $path_to_root;
 
 	$test['descr'] = _('Removed install wizard folder');
@@ -88,8 +82,7 @@ function tst_install()
 	return $test;
 }
 
-function tst_browser() 
-{
+function tst_browser() {
 	$test['descr'] = _('Browser type');
 	$test['type'] = 0;
 	$test['test'] = $_SERVER['HTTP_USER_AGENT'];
@@ -99,8 +92,7 @@ function tst_browser()
 	return $test;
 }
 
-function tst_server() 
-{
+function tst_server() {
 	$test['descr'] = _('Http server type');
 	$test['test'] = $_SERVER['SERVER_SOFTWARE'];
 	$test['type'] = 0;
@@ -110,8 +102,7 @@ function tst_server()
 	return $test;
 }
 
-function tst_gettext() 
-{
+function tst_gettext() {
 	$test['descr'] = _('Native gettext');
 	$test['test'] = function_exists('gettext') ? _('Yes'): _('No');
 	$test['type'] = 1;
@@ -121,20 +112,18 @@ function tst_gettext()
 	return $test;
 }
 
-function tst_debug() 
-{
+function tst_debug() {
 	global $SysPrefs;
 	$test['descr'] = _('Debugging mode');
 	$test['type'] = 0;
 	$test['test'] = $SysPrefs->go_debug ? _("Yes") : _("No");
 	$test['result'] = $SysPrefs->go_debug != 0;
-	$test['comments'] = _('To switch debugging on set $go_debug>0 in config.php file');
+	$test['comments'] = _('To switch debugging on set $go_debug > 0 in config.php file');
 
 	return $test;
 }
 
-function tst_logging() 
-{
+function tst_logging() {
 	global $SysPrefs;
 	
 	$error_logfile = $SysPrefs->error_logfile;
@@ -142,9 +131,7 @@ function tst_logging()
 	$test['type'] = 2;
 	// if error lgging is on, but log file does not exists try write
 	if ($error_logfile && !is_file($error_logfile)) 
-	{
 		@fclose(@fopen($error_logfile, 'w'));
-	}
 	$test['result'] = @$error_logfile != '' && is_writable($error_logfile);
 	$test['test'] = @$error_logfile == '' ? _("Disabled") : $error_logfile;
 	
@@ -159,22 +146,19 @@ function tst_logging()
 //
 //	Installed FA database structure version
 //
-function tst_dbversion()
-{
+function tst_dbversion() {
 	global $db_version;
 	$test['descr'] = _('Current database version');
 	$test['type'] = 3;
 	$test['test'] = get_company_pref('version_id');
 	$test['result'] = $test['test'] == $db_version;
-	$test['comments'] = _('Database structure seems to be not upgraded to current version')
-		." ($db_version)";
+	$test['comments'] = _('Database structure seems to be not upgraded to current version')." ($db_version)";
 
 	return $test;
 }
 
 
-function tst_subdirs($install=false)
-{
+function tst_subdirs($install=false) {
 	global $db_connections;
 
 	$comps = $install ? array('0') : array_keys($db_connections);
@@ -202,7 +186,8 @@ function tst_subdirs($install=false)
 			if (!is_dir($spath) || !is_writable($spath) ) {
 				$test['result'] = false;
 				$test['comments'][] = sprintf(_("'%s' is not writeable"), $spath);
-			} else {
+			}
+			else {
 				$dir = opendir($spath);
 				while (false !== ($fname = readdir($dir))) {
 					// check only *.js files. Manually installed package can contain other
@@ -218,8 +203,7 @@ function tst_subdirs($install=false)
 	return $test;
 }
 
-function tst_tmpdir()
-{
+function tst_tmpdir() {
 	global $path_to_root;
 	
 	$test['descr'] = _('Temporary directory');
@@ -230,8 +214,7 @@ function tst_tmpdir()
 	return $test;
 }
 
-function tst_langs($install)
-{
+function tst_langs($install) {
 	global $installed_languages, $path_to_root, $GetText;
 
 	$test['descr'] = _('Language configuration consistency');
@@ -273,8 +256,7 @@ function tst_langs($install)
 			$test['result'] = false;
 			$test['comments'][] = sprintf( _('Missing %s translation file.'), $file);
 		}
-		if (!$GetText->check_support($lang['code'], $lang['encoding']))
-		{
+		if (!$GetText->check_support($lang['code'], $lang['encoding'])) {
 			$test['result'] = false;
 			$test['comments'][] = sprintf(_('Missing system locale: %s'), $lang['code'].".".$lang['encoding']);
 		};
@@ -285,8 +267,7 @@ function tst_langs($install)
 	return $test;
 }
 
-function tst_config($install)
-{
+function tst_config($install) {
 	global $path_to_root;
 
 	$test['descr'] = _('Main config file');
@@ -298,7 +279,8 @@ function tst_config($install)
 		$test['comments'][] = $writable == 0 ?
 			sprintf(_("Can't write '%s' file. Check FA directory write permissions."), $test['test'])
 			: sprintf(_("'%s' file exists."), $test['test']);
-	} else {
+	}
+	else {
 		$test['type'] = 2;
 		$test['result'] = is_file($test['test']) && !is_writable($test['test']);
 		$test['comments'][] = sprintf(_("'%s' file should be read-only"), $test['test']);
@@ -306,8 +288,7 @@ function tst_config($install)
 	return $test;
 }
 
-function tst_dbconfig($install)
-{
+function tst_dbconfig($install) {
 	global $path_to_root;
 
 	$test['descr'] = _('Database auth file');
@@ -320,7 +301,8 @@ function tst_dbconfig($install)
 		$test['comments'][] = $writable == 0 ?
 			sprintf(_("Can't write '%s' file. Check FA directory write permissions."), $test['test'])
 			: sprintf(_("'%s' file exists."), $test['test']);
-	} else {
+	}
+	else {
 		$test['type'] = 2;
 		$test['result'] = is_file($test['test']) && !is_writable($test['test']);
 		$test['comments'][] = sprintf(_("'%s' file should be read-only if you do not plan to add or change companies"), $test['test']);
@@ -328,8 +310,7 @@ function tst_dbconfig($install)
 	return $test;
 }
 
-function tst_extconfig($install)
-{
+function tst_extconfig($install) {
 	global $path_to_root, $db_connections;
 
 	$comps = $install ? array('0') : array_keys($db_connections);
@@ -362,7 +343,6 @@ function tst_extconfig($install)
 			$test['comments'][] = sprintf(_("'%s' is not writeable"), $fname);
 		$test['result'] &= $t;
 	}
-
 	foreach(array('Release', 'Themes', 'Languages', 'Extensions', 'Charts') as $file) {
 		$fname = $path_to_root."/modules/_cache/".$file.".gz";
 		$t = !file_exists($fname) || is_writable($fname);
@@ -370,22 +350,17 @@ function tst_extconfig($install)
 			$test['comments'][] = sprintf(_("'%s' is not writeable"), $fname);
 		$test['result'] &= $t;
 	}
-
 	if(!$test['result'])
-		$test['comments'][] = _("Extensions configuration files and directories should be writeable");
+		$test['comments'][] = _('Extensions configuration files and directories should be writeable');
 
 	$fname = $path_to_root."/themes";
 	$themedir = opendir($fname);
-	while (false !== ($fname = readdir($themedir)))
-	{
-		if ($fname!='.' && $fname!='..' && is_dir($path_to_root.'/themes/'.$fname)
-			&& !in_array($fname, array('canvas', 'default', 'dropdown')))
-		{
+	while (false !== ($fname = readdir($themedir))) {
+		if ($fname!='.' && $fname!='..' && is_dir($path_to_root.'/themes/'.$fname) && !in_array($fname, array('canvas', 'default', 'dropdown'))) {
 			$test['test'][] = $fname;
 			$test['result'] = is_writable($path_to_root.'/themes/'.$fname);
 			if (!$test['result']) {
-				$test['comments'][] = 
-					sprintf(_("Non-standard theme directory '%s' is not writable"), $fname);
+				$test['comments'][] = sprintf(_("Non-standard theme directory '%s' is not writable"), $fname);
 				break;
 			}
 		}
@@ -395,16 +370,16 @@ function tst_extconfig($install)
 	$test['test'][] = 'OpenSSL PHP extension';
 	if (!extension_loaded('openssl')) {
 		$test['result'] = false;
-		$test['comments'][] = _("OpenSSL PHP extension have to be enabled to use extension repository system.");
-	} elseif (!function_exists('openssl_verify')) {
+		$test['comments'][] = _('OpenSSL PHP extension have to be enabled to use extension repository system.');
+	}
+	elseif (!function_exists('openssl_verify')) {
 		$test['result'] = false;
-		$test['comments'][] = _("OpenSSL have to be available on your server to use extension repository system.");
+		$test['comments'][] = _('OpenSSL have to be available on your server to use extension repository system.');
 	}
 	return $test;
 }
 
-function display_system_tests($install = false)
-{
+function display_system_tests($install = false) {
 	global $test_level;
 
 	if ($install)
@@ -421,13 +396,12 @@ function display_system_tests($install = false)
 
 
 	start_table(TABLESTYLE, "width='80%'");
-	$th = array(_("Test"), _('Test type'), _("Value"), _("Comments"));
+	$th = array(_('Test'), _('Test type'), _('Value'), _('Comments'));
 	table_header($th);
 
 	$ret = true;
 	$k = 0; //row colour counter
-	foreach ($system_tests as $test) 
-	{
+	foreach ($system_tests as $test) {
 		alt_table_row_color($k);
 		$result = $test($install);
 		if (!$result) continue;
@@ -435,17 +409,12 @@ function display_system_tests($install = false)
 		label_cell($result['descr']);
 		label_cell($test_level[$result['type']]);
 
-		$res = is_array(@$result['test']) ? implode('<br>', $result['test']) 
-			: $result['test'];
+		$res = is_array(@$result['test']) ? implode('<br>', $result['test']) : $result['test'];
 		label_cell($res);
 
-		$comm = is_array(@$result['comments']) ? implode('<br>', $result['comments']) 
-			: @$result['comments'];
-		$color = ($result['result'] ? 'green': 
-			($result['type']==3 ? 'red' :
-			 ($result['type']==2 ? 'orange' : 'green')));
-		label_cell("<span style='color:$color'>".
-			($result['result'] ? _('Ok') : '<b>'.$comm.'</b>').'</span>');
+		$comm = is_array(@$result['comments']) ? implode('<br>', $result['comments']) : @$result['comments'];
+		$color = ($result['result'] ? 'green': ($result['type']==3 ? 'red' : ($result['type']==2 ? 'orange' : 'green')));
+		label_cell("<span style='color:$color'>".($result['result'] ? _('Ok') : '<b>'.$comm.'</b>').'</span>');
 		end_row();
 		$ret = $ret && (($result['result']!=0) || ($result['type'] < 3));
 	}

@@ -5,8 +5,8 @@
 //
 
 // Versions used by source/database version compatibility checks. Do not change.
-$db_version = "2.4.1";
-$src_version = "2.4.9";
+$db_version = '2.4.1';
+$src_version = '0.0';
 
 // application version - can be overriden in config.php
 $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
@@ -18,8 +18,8 @@ $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
 
 $repo_auth = isset($SysPrefs->repo_auth) ? $SysPrefs->repo_auth :
 array(
-	 'login' => 'anonymous',
-	 'pass' => 'password',
-	 'host' => 'repo.frontaccounting.eu', // repo server address
-	 'branch' => '2.4'	// Repository branch for current sources version
+	'login' => 'anonymous',
+	'pass' => 'password',
+	'host' => 'repo.frontaccounting.eu', // repo server address
+	'branch' => '2.4'	// Repository branch for current sources version
 );

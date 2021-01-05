@@ -1,18 +1,17 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //-------------------------------------------------------------------------------------------------------------
 
-function add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_)
-{
+function add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_) {
 	global $SysPrefs, $path_to_root, $Refs;
 
 	begin_transaction();
@@ -24,20 +23,17 @@ function add_stock_transfer($Items, $location_from, $location_to, $date_, $refer
 
 	$transfer_id = get_next_trans_no(ST_LOCTRANSFER);
 
-	if ($SysPrefs->loc_notification() == 1)
-	{
-		include_once($path_to_root . "/inventory/includes/inventory_db.inc");
+	if ($SysPrefs->loc_notification() == 1) {
+		include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 		$st_ids = array();
 		$st_names = array();
 		$st_num = array();
 		$st_reorder = array();
 	}
-	foreach ($Items as $line_item)
-	{
+	foreach ($Items as $line_item) {
 		if ($SysPrefs->loc_notification() == 1)
 			$loc = calculate_reorder_level($location_from, $line_item, $st_ids, $st_names, $st_num, $st_reorder); 
-		add_stock_transfer_item($transfer_id, $line_item->stock_id, $location_from,
-			$location_to, $date_, $reference, $line_item->quantity);
+		add_stock_transfer_item($transfer_id, $line_item->stock_id, $location_from, $location_to, $date_, $reference, $line_item->quantity);
 	}
 
 	add_comments(ST_LOCTRANSFER, $transfer_id, $date_, $memo_);
@@ -63,23 +59,16 @@ function add_stock_transfer($Items, $location_from, $location_to, $date_, $refer
 // std_cost is in HOME currency
 // it seems the standard_cost field is not used at all
 
-function add_stock_transfer_item($transfer_id, $stock_id, $location_from, $location_to,
-	$date_, $reference, $quantity)
-{
-	add_stock_move(ST_LOCTRANSFER, $stock_id, $transfer_id, $location_from,
-       	$date_, $reference, -$quantity, 0);
-
-	add_stock_move(ST_LOCTRANSFER, $stock_id, $transfer_id, $location_to,
-	   	$date_, $reference, $quantity, 0);
-
+function add_stock_transfer_item($transfer_id, $stock_id, $location_from, $location_to, $date_, $reference, $quantity) {
+	add_stock_move(ST_LOCTRANSFER, $stock_id, $transfer_id, $location_from, $date_, $reference, -$quantity, 0);
+	add_stock_move(ST_LOCTRANSFER, $stock_id, $transfer_id, $location_to, $date_, $reference, $quantity, 0);
 }
 
 //-------------------------------------------------------------------------------------------------------------
 //
 //	Get inventory transfer common data (currently this is still stored in stock_moves table).
 //
-function get_stock_transfer($trans_no)
-{
+function get_stock_transfer($trans_no) {
 	// retrieve common data from any two from/to move records
 	$sql = "SELECT loc_from.*, loc_to.*
 		FROM
@@ -102,23 +91,18 @@ function get_stock_transfer($trans_no)
 
 //-------------------------------------------------------------------------------------------------------------
 
-function get_stock_transfer_items($trans_no)
-{
+function get_stock_transfer_items($trans_no) {
 	$result = get_stock_moves(ST_LOCTRANSFER, $trans_no);
 
 	if (db_num_rows($result) == 0)
-	{
 		return null;
-	}
 
 	return $result;
 }
 
 //-------------------------------------------------------------------------------------------------------------
 
-function void_stock_transfer($type_no)
-{
+function void_stock_transfer($type_no) {
 	hook_db_prevoid(ST_LOCTRANSFER, $type_no);
 	void_stock_move(ST_LOCTRANSFER, $type_no);
 }
-

@@ -10,8 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_audit_trail($trans_type, $trans_no, $trans_date, $descr='')
-{
+function add_audit_trail($trans_type, $trans_no, $trans_date, $descr='') {
 	$descr = substr($descr, 0, 60);
 	begin_transaction();
 
@@ -22,7 +21,7 @@ function add_audit_trail($trans_type, $trans_no, $trans_date, $descr='')
 			. $_SESSION["wa_current_user"]->user . ","
 			. "'$date',". db_escape($descr). ", CURRENT_TIMESTAMP)";
 
-	db_query($sql, "Cannot add audit info");
+	db_query($sql, 'Cannot add audit info');
 	// all audit records beside just inserted one should have gl_seq set to NULL
 	// to avoid need for subqueries (not existing in MySQL 3) all over the code
 	$sql = "UPDATE ".TB_PREF."audit_trail audit LEFT JOIN ".TB_PREF."fiscal_year year ON year.begin<='$date' AND year.end>='$date'
@@ -31,26 +30,24 @@ function add_audit_trail($trans_type, $trans_no, $trans_date, $descr='')
 		. " WHERE type=".db_escape($trans_type)." AND trans_no="
 		. db_escape($trans_no);
 
-	db_query($sql, "Cannot update audit gl_seq");
+	db_query($sql, 'Cannot update audit gl_seq');
 	commit_transaction();
 }
 
-function get_audit_trail_all($trans_type, $trans_no)
-{
+function get_audit_trail_all($trans_type, $trans_no) {
 	$sql = "SELECT * FROM ".TB_PREF."audit_trail"
 		." WHERE type=".db_escape($trans_type)." AND trans_no="
 		.db_escape($trans_no);
 
-	return db_query($sql, "Cannot get all audit info for transaction");
+	return db_query($sql, 'Cannot get all audit info for transaction');
 }
 
-function get_audit_trail_last($trans_type, $trans_no)
-{
+function get_audit_trail_last($trans_type, $trans_no) {
 	$sql = "SELECT * FROM ".TB_PREF."audit_trail"
 		." WHERE type=".db_escape($trans_type).
 			" AND trans_no=".db_escape($trans_no)." AND NOT ISNULL(gl_seq)";
 
-	$res = db_query($sql, "Cannot get last audit info for transaction");
+	$res = db_query($sql, 'Cannot get last audit info for transaction');
 	if ($res)
 		$row = db_fetch($res);
 
@@ -75,7 +72,7 @@ function close_transactions($todate) {
 		. " WHERE NOT ISNULL(a.gl_seq) AND gl.amount!=0"	// skip old audit records and voided transactions
 		. " GROUP BY  a.id, gl.tran_date, a.fiscal_year, a.gl_seq ORDER BY a.fiscal_year, gl.tran_date, a.id";
 
-	$result = db_query($sql, "Cannot select transactions for closing");
+	$result = db_query($sql, 'Cannot select transactions for closing');
 
 	if (db_num_rows($result)) {
 		$last_year = 0;
@@ -94,13 +91,13 @@ function close_transactions($todate) {
 				$sql2 = "UPDATE ".TB_PREF."audit_trail SET"
 					. " gl_seq=$seq"
 					. " WHERE id=".$row['id'];
-				db_query($sql2, "Cannot reindex journal");
+				db_query($sql2, 'Cannot reindex journal');
 			}
 		}
 	}
 
 	if ($errors) 
-		display_warning(_("Some transactions journal GL postings were not indexed due to lack of audit trail record."));
+		display_warning(_('Some transactions journal GL postings were not indexed due to lack of audit trail record.'));
 	else
 		update_company_prefs(array('gl_closing_date'=> date2sql($todate)));
 	commit_transaction();
@@ -114,20 +111,19 @@ function get_journal_number($type, $trans_no) {
 	if (!$cdate)
 		return false;
 
-// FIXME: gl_date can be badly entered for some transactions due to bug in previous FA versions 
+	// FIXME: gl_date can be badly entered for some transactions due to bug in previous FA versions 
 	$sql = "SELECT	MAX(gl_seq) as gl_seq  FROM ".TB_PREF."audit_trail"
 		. " WHERE type=".db_escape($type)
 		." AND trans_no=".db_escape($trans_no)
 		." AND gl_date<='$cdate'"; // date is stored in sql format
-//		." AND (gl_date<='$cdate'" // some transaction can be not sequenced due to 0 amount, however after edition this could change
-//		." OR gl_seq>0)";
-	$res = db_query($sql, "Cannot check transaction");
-	if (db_num_rows($res))
-	{
+		// ." AND (gl_date<='$cdate'" // some transaction can be not sequenced due to 0 amount, however after edition this could change
+		// ." OR gl_seq>0)";
+	$res = db_query($sql, 'Cannot check transaction');
+	if (db_num_rows($res)) {
 		$myrow =db_fetch($res);
 		return $myrow['gl_seq'] ? $myrow['gl_seq'] : _('None');
 	}
-	return "-";
+	return '-';
 }
 
 /*
@@ -137,4 +133,3 @@ function is_closed_trans($type, $trans_no) {
 
 	return get_journal_number($type, $trans_no) > 0;
 }
-

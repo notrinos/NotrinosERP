@@ -1,33 +1,34 @@
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+	Copyright (C) FrontAccounting, LLC.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 function focus_alloc(i) {
-    save_focus(i);
+	save_focus(i);
 	i.setAttribute('_last', get_amount(i.name));
 }
 
 function blur_alloc(i) {
-		var change = get_amount(i.name);
+	var change = get_amount(i.name);
 		
-		if (i.name != 'amount' && i.name != 'charge' && i.name != 'discount')
-			change = Math.min(change, get_amount('maxval'+i.name.substr(6), 1))
+	if (i.name != 'amount' && i.name != 'charge' && i.name != 'discount')
+		change = Math.min(change, get_amount('maxval'+i.name.substr(6), 1))
 
-		price_format(i.name, change, user.pdec);
-		if (i.name != 'amount' && i.name != 'charge') {
-			if (change<0) change = 0;
-			change = change-i.getAttribute('_last');
-			if (i.name == 'discount') change = -change;
+	price_format(i.name, change, user.pdec);
+	if (i.name != 'amount' && i.name != 'charge') {
+		if (change<0) change = 0;
+		change = change-i.getAttribute('_last');
+		if (i.name == 'discount')
+			change = -change;
 
-			var total = get_amount('amount')+change;
-			price_format('amount', total, user.pdec, 0);
-		}
+		var total = get_amount('amount')+change;
+		price_format('amount', total, user.pdec, 0);
+	}
 }
 
 function allocate_all(doc) {
@@ -56,13 +57,13 @@ function allocate_none(doc) {
 
 var allocations = {
 	'.amount': function(e) {
- 		if(e.name == 'allocated_amount' || e.name == 'bank_amount')
- 		{
-  		  e.onblur = function() {
-			var dec = this.getAttribute("dec");
-			price_format(this.name, get_amount(this.name), dec);
-		  };
- 		} else {
+		if(e.name == 'allocated_amount' || e.name == 'bank_amount') {
+			e.onblur = function() {
+				var dec = this.getAttribute("dec");
+				price_format(this.name, get_amount(this.name), dec);
+			};
+		}
+		else {
 			e.onblur = function() {
 				blur_alloc(this);
 			};
