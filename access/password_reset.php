@@ -53,7 +53,7 @@ start_form(false, false, @$_SESSION['timeout']['uri'], 'resetform');
 start_table(false, "class='login'");
 start_row();
 echo "<td align='center' colspan=2>";
-echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/".$def_theme."/images/logo_frontaccounting.png' alt='FrontAccounting' height='50' onload='fixPNG(this)' border='0' ></a>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/".$def_theme."/images/notrinos_erp.png' alt='NotrinosERP' height='50' onload='fixPNG(this)' border='0' ></a>";
 echo "</td>\n";
 end_row();
 

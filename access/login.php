@@ -73,7 +73,7 @@ start_table(false, "class='login'");
 start_row();
 echo "<td align='center' colspan=2>";
 if (!$login_timeout) // FA logo
-	echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/".$def_theme."/images/logo_frontaccounting.png' alt='FrontAccounting' height='50' onload='fixPNG(this)' border='0' ></a>";
+	echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/".$def_theme."/images/notrinos_erp.png' alt='NotrinosERP' height='50' onload='fixPNG(this)' border='0' ></a>";
 else
 	echo "<font size=5>"._('Authorization timeout')."</font>";
 echo "</td>\n";
@@ -109,7 +109,7 @@ label_cell($demo_text, "colspan=2 align='center' id='log_msg'");
 end_row();
 end_table(1);
 echo "<input type='hidden' id=ui_mode name='ui_mode' value='".!fallback_mode()."' >\n";
-echo "<center><input type='submit' value='&nbsp;&nbsp;"._("Login -->")."&nbsp;&nbsp;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked_msg) ? " disabled" : '')." ></center>\n";
+echo "<center><input type='submit' value='&nbsp;&nbsp;"._('Login -->')."&nbsp;&nbsp;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked_msg) ? " disabled" : '')." ></center>\n";
 
 foreach($_SESSION['timeout']['post'] as $p => $val) {
 	// add all request variables to be resend together with login data

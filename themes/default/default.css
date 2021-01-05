@@ -18,7 +18,7 @@
 
 body {
 	font-family: Verdana, Arial, Helvetica;
-	background: #285b86;
+	background: #DADADA;
 	font-size: 10px;
 	margin: 5px 0 0 5px;
 	padding: 0;
@@ -60,18 +60,18 @@ input.small {
 }
 
 a {
-	color: #0000bb;
+	color: #0060a0;
 	font-size: 11px;
 	text-decoration: none;
 }
 
 a:link {
-	color: #0000bb;
+	color: #0060a0;
 	text-decoration: none;
 }
 
 a:active {
-	color: #000000;
+	color: #222222;
 	text-decoration: none;
 }
 
@@ -104,7 +104,7 @@ button img, span {
 }
 
 .main_page {
-	background-color: #f9f9f9;
+	background-color: #FEFEFE;
 	border: none;
 	width: 100%;
 	margin: 0;
@@ -112,7 +112,7 @@ button img, span {
 }
 
 .quick_menu {
-	background-color: #285b86;
+	background-color: #DADADA;
 	border: 0;
 	margin: 0;
 	padding: 0;
@@ -132,17 +132,17 @@ button img, span {
 
 .logoutBar {
 	padding-right: 1em;
-	background: #dee7ec;
-	color: black;
-	border-bottom: 1px solid #8cacbb;
+	background: #EAEAEA;
+	color: #222222;
+	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
 
 .bottomBar {
 	padding-right: 1em;
-	background: #dee7ec;
-	color: black;
-	border-bottom: 1px solid #8cacbb;
+	background: #EAEAEA;
+	color: #222222;
+	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
 
@@ -153,10 +153,10 @@ button img, span {
 
 .bottomBar2 {
 	padding-right: 1em;
-	background: #dee7ec;
-	color: black;
-	border-top: 1px solid #8cacbb;
-	border-bottom: 1px solid #8cacbb;
+	background: #EAEAEA;
+	color: #222222;
+	border-top: 1px solid #BFBFBF;
+	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
 
@@ -166,9 +166,9 @@ button img, span {
 
 div.logoutBar {
 	padding-right: 1em;
-	background: #dee7ec;
-	color: black;
-	border-bottom: 1px solid #8cacbb;
+	background: #EAEAEA;
+	color: #222222;
+	border-bottom: 1px solid #BFBFBF;
 	text-align: right;
 }
 div.logoutBar a {
@@ -186,11 +186,11 @@ div.tabs {
 	background: none transparent scroll repeat 0% 0%;
 	white-space: nowrap;
 	border-collapse: collapse;
-	border-bottom: 1px solid #8cacbb;
+	border-bottom: 1px solid #BFBFBF;
 
 }
 div.tabs a {
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 	padding: 3px 10px;
 	font-weight: normal;
 	background: white scroll repeat 0% 0%;
@@ -199,33 +199,33 @@ div.tabs a {
 	height: 10px;
 }
 div.tabs a.selected {
-	border-top: 1px solid #8cacbb;
-	border-right: 1px solid #8cacbb;
-	border-bottom:  1px solid #dee7ec;
-	border-left: 1px solid #8cacbb;
+	border-top: 1px solid #BFBFBF;
+	border-right: 1px solid #BFBFBF;
+	border-bottom:  1px solid #EAEAEA;
+	border-left: 1px solid #BFBFBF;
 	font-weight: normal;
-	background: #dee7ec;
+	background: #EAEAEA;
 	color: #436976;
 }
 div.tabs a:hover {
-	background: #dee7ec;
+	background: #EAEAEA;
 	color: #436976;
 }
 
 .menu_group {
 	font-size: 13px;
 	padding: 0px;
-	color: #000000;
-	background-color: #dee7ec;
+	color: #222222;
+	background-color: #EAEAEA;
 	padding-left: 3px;
 	font-weight: bold;
 }
 
 .menu_group_items {
-	background-color: #f9f9f9;
+	background-color: #FEFEFE;
 	font-weight: normal;
 	padding: 9px;
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 }
 
 #hotkeyshelp {
@@ -254,41 +254,42 @@ div.tabs a:hover {
 
 .tableheader {
 	font-weight: bold;
-	background-color: #dee7ec;
-	color: black;
+	background-color: #C9C9C9;
+	color: #222222;
 	text-align: center;
 }
 
 .tableheader2 {
 	font-weight: bold;
-	background-color: #dee7ec;
-	color: black;
+	background-color: #C9C9C9;
+	color: #222222;
 	text-align: left;
 }
 
 .titletext {
 	font-weight: bold;
 	font-size: 13px;
-	border-bottom: 1px solid #8cacbb;
+	border-bottom: 1px solid #BFBFBF;
 	padding: 5px;
 	width: 100%;
+	color: #222222;
 }
 
 .headingtext {
 	font-weight: bold;
 	font-size: 13px;
-	color: black;
+	color: #222222;
 }
 
 .headingtext2 {
 	font-size: 13px;
-	color: black;
+	color: #222222;
 }
 
 .headingtext3 {
 	font-weight: bold;
 	font-size: 10px;
-	color: black;
+	color: #222222;
 }
 
 .errortext {
@@ -310,19 +311,19 @@ div.tabs a:hover {
 }
 
 .oddrow {
-	background-color: #eeeeee;
+	background-color: #FAFAFA;
 }
 
 .evenrow {
-	background-color: #dddddd;
+	background-color: #F0F0F0;
 }
 
 .overduebg {
-	background-color: #dd7777;
+	background-color: #F0A0A0;
 }
 
 .overduefg {
-	color: #dd7777;
+	color: #FFA5A8;
 }
 
 .currentfg {
@@ -335,11 +336,11 @@ div.tabs a:hover {
 }
 
 .settledbg {
-	background-color: #00bb00;
+	background-color: #5fcf7f;
 }
 
 .settledfg {
-	color: #00bb00;
+	color: #0faf0f;
 }
 
 .inquirybg {
@@ -360,11 +361,11 @@ div.tabs a:hover {
 
 table.tablestyle {
 	border-collapse: collapse;
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 }
 table.tablestyle td {
 	border-collapse: collapse;
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 }
 table.tablestyle2 {
 	border-collapse: collapse;
@@ -376,11 +377,11 @@ table.tablestyle2 td {
 }
 table.tablestyle_inner {
 	border-collapse: collapse;
-	border: 1px solid #f9f9f9;
+	border: 1px solid #FEFEFE;
 }
 table.tablestyle_inner td {
 	border-collapse: collapse;
-	border: 1px solid #f9f9f9;
+	border: 1px solid #FEFEFE;
 }
 .tablestyle_noborder {
 	padding: 3px;
@@ -388,7 +389,7 @@ table.tablestyle_inner td {
 
 .label {
 	background-color: #efefef;
-	color: black;
+	color: #222222;
 }
 
 #loginscreen {
@@ -398,8 +399,8 @@ table.tablestyle_inner td {
 .login {
 	width: 350px;
 	border:1px solid #ccc;
-	border-left: 12px solid #367cb5;
-	background-color: #eeeeee;
+	border-left: 12px solid #C0C0C0;
+	background-color: #FAFAFA;
 }
 
 .login td.tableheader {
@@ -472,7 +473,7 @@ button.navibutton {
 	padding: 0 3px;
 	color: #000;
 	border-collapse: collapse;
-	background-color: #dee7ec;
+	background-color: #C9C9C9;
 }
 
 .navibar tr td {
@@ -497,47 +498,47 @@ ul.ajaxtabs li{
 }
 
 ul.ajaxtabs li button{
-	background-color: #dee7ec;
+	background-color: #E5E5E5;
 /*	background-repeat: repeat-x;
 	background-position: top; */
 	padding: 3px 8px;
 	margin: 0px;
-	border-top: 1px solid #8cacbb;
-	border-right: 1px solid #8cacbb;
+	border-top: 1px solid #BFBFBF;
+	border-right: 1px solid #BFBFBF;
 	border-bottom: none;
 	border-left: none;
 	font-weight: bold;
 }
 
 ul.ajaxtabs li button:hover{
-	border-top: 1px solid #8cacbb;
+	border-top: 1px solid #BFBFBF;
 	color:#FFFFFF;
 }
 div.spaceBox{
-	background-color: #8cacbb;
+	background-color: #C9C9C9;
 	height:8px;
-	border-bottom: 1px solid #8cacbb;
-	border-left: 1px solid #8cacbb;
-	border-right:1px solid #8cacbb;
+	border-bottom: 1px solid #C9C9C9;
+	border-left: 1px solid #BFBFBF;
+	border-right:1px solid #BFBFBF;
 	margin: 0 3px 0px 3px
 }
 
 div.contentBox{
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 	margin: 0 3px 3px 3px
 }
 
 ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
-	border-left: 1px solid #8cacbb;
-	background-color: #8cacbb;
+	border-left: 1px solid #BFBFBF;
+	background-color: #C9C9C9;
 	color:#FFFFFF;
 }
 #hints {
 	font-size: 13px;
 	padding: 5px;
-	border-bottom: 1px solid #8cacbb;
+	border-bottom: 1px solid #BFBFBF;
 	margin: -4px -2px -2px;
-	border: 1px solid #8cacbb;
+	border: 1px solid #BFBFBF;
 	background-color: #FFFFE0;
 	white-space: nowrap;
 }
@@ -580,7 +581,7 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	text-align: center;
 }
 #CC .header {
-	background-color: #285b86;
+	background-color: #D0D0D0;
 }
 #CC .weekday {
 	background-color: #eee;
@@ -596,7 +597,7 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 }
 #CC .current {
 	border: 1px solid #339;
-	background-color: #285b86;
+	background-color: #DADADA;
 	color: #FFF;
 }
 #CC .weekday, #CC .weekend, #CC .current {
@@ -607,7 +608,7 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 }
 #CC .weekday:hover, #CC .weekend:hover, #CC .current:hover {
 	color: #FFF;
-	background-color: #285b86;
+	background-color: #DADADA;
 	border: 1px solid #999;
 }
 #CC .previous {

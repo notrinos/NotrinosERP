@@ -31,7 +31,7 @@ if (file_exists($path_to_root . '/installed_extensions.php'))
 function subpage_title($txt) {
 	global $path_to_root;
 	
-	echo '<center><img src="'.$path_to_root.'/themes/default/images/notrinos_erp.png" width="250" height="50" alt="Logo" >
+	echo '<center><img src="'.$path_to_root.'/themes/default/images/notrinos_erp.png" width="250" alt="Logo" >
 		</center>';
 
 	$page = @$_POST['Page'] ? $_POST['Page'] : 1;

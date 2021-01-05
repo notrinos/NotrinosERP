@@ -135,7 +135,7 @@ function update_user_visitdate($user_id) {
 function check_user_activity($id)  {
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."audit_trail WHERE audit_trail.user="
 		. db_escape($id);
-	$result = db_query($sql,"Cant check user activity");
+	$result = db_query($sql, 'Cannot check user activity');
 	$ret = db_fetch($result);
 
 	return $ret[0];
@@ -148,7 +148,7 @@ function show_users_online() {
 
 	if (!isset($SysPrefs->show_users_online) || $SysPrefs->show_users_online == 0 || !defined('TB_PREF') || 
 		!isset($GetText) || !isset($db))
-		return "";
+		return '';
 	$result = db_query("SHOW TABLES LIKE '".TB_PREF."useronline'");	
 	if (db_num_rows($result) == 1) {
 		$timeoutseconds = 120;
@@ -184,5 +184,5 @@ function show_users_online() {
 	}
 	else
 		$users = 1;
-	return "$users ".($users == 1 ? _("user online") : _("users online"));
+	return ' - '."$users ".($users == 1 ? _('user online') : _('users online'));
 }
