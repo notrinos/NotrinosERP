@@ -49,7 +49,7 @@ if (isset($_POST['go']) || isset($_POST['show'])) {
 	}
 	elseif (input_num('amount', 0) == 0.0) {
 		display_error(_('The amount can not be 0.'));
-		set_focus('periods');
+		set_focus('amount');
 		$input_error = 1;
 	}
 	elseif (input_num('periods', 0) < 1) {
