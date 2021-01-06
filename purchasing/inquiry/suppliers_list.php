@@ -49,7 +49,7 @@ div_start('supplier_tbl');
 
 start_table(TABLESTYLE);
 
-$th = array('', _('Supplier'), _('Short Name'), _('Address'), _('Tax ID'));
+$th = array('', _('Supplier'), _('Short Name'), _('Address'), _('Tax ID'), _('Phone'), _('Phone 2'));
 
 table_header($th);
 
@@ -70,6 +70,8 @@ while ($myrow = db_fetch_assoc($result)) {
 	label_cell($myrow['supp_ref']);
 	label_cell($myrow['address']);
 	label_cell($myrow['gst_no']);
+	label_cell($myrow['phone']);
+	label_cell($myrow['phone2']);
 	end_row();
 }
 

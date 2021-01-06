@@ -189,12 +189,17 @@ function get_customers_search($customer) {
 	else
 		$limit = 10;
 
-	$sql = "SELECT debtor_no, name, debtor_ref, address, tax_id FROM ".TB_PREF."debtors_master 
-	WHERE (  name LIKE " . db_escape("%" . $customer. "%") . " OR 
-		debtor_ref LIKE " . db_escape("%" . $customer. "%") . " OR 
-		address LIKE " . db_escape("%" . $customer. "%") . " OR 
-		tax_id LIKE " . db_escape("%" . $customer. "%").")
-	ORDER BY name LIMIT 0,".(int)($limit);
+	$sql = "SELECT c.debtor_no, c.name, c.debtor_ref, c.address, c.tax_id, p.phone, p.phone2 
+		FROM ".TB_PREF."debtors_master c 
+		LEFT JOIN ".TB_PREF."crm_contacts ct ON ct.type = 'customer' AND ct.action = 'general' AND ct.entity_id = c.debtor_no 
+		LEFT JOIN ".TB_PREF."crm_persons p ON ct.person_id = p.id 
+		WHERE ( c.name LIKE " . db_escape("%" . $customer. "%") . " OR 
+			c.debtor_ref LIKE " . db_escape("%" . $customer. "%") . " OR 
+			c.address LIKE " . db_escape("%" . $customer. "%") . " OR 
+			c.tax_id LIKE " . db_escape("%" . $customer. "%"). " OR 
+			p.phone LIKE " . db_escape("%" . $customer. "%") . " OR 
+			p.phone2 LIKE " . db_escape("%" . $customer. "%").") 
+		GROUP BY c.debtor_no ORDER BY c.name LIMIT 0,".(int)($limit);
 
 	return db_query($sql, 'Failed in retreiving customer list.');
 }

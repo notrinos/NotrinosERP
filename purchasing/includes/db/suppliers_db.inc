@@ -181,13 +181,17 @@ function get_suppliers_search($supplier) {
 	else
 		$limit = 10;
 
-	$sql = "SELECT supplier_id, supp_name, supp_ref, address, gst_no
-		FROM ".TB_PREF."suppliers
-		WHERE (supp_name LIKE " . db_escape("%" . $supplier. "%") . " OR 
-			supp_ref LIKE " . db_escape("%" . $supplier. "%") . " OR 
-			address LIKE " . db_escape("%" . $supplier. "%") . " OR 
-			gst_no LIKE " . db_escape("%" . $supplier. "%") . ")
-		ORDER BY supp_name LIMIT 0,".(int)($limit);
+	$sql = "SELECT s.supplier_id, s.supp_name, s.supp_ref, s.address, s.gst_no, p.phone, p.phone2
+		FROM ".TB_PREF."suppliers s 
+		LEFT JOIN ".TB_PREF."crm_contacts ct ON ct.type = 'supplier' AND ct.action = 'general' AND ct.entity_id = s.supplier_id 
+		LEFT JOIN ".TB_PREF."crm_persons p ON ct.person_id = p.id 
+		WHERE (s.supp_name LIKE " . db_escape("%" . $supplier. "%") . " OR 
+			s.supp_ref LIKE " . db_escape("%" . $supplier. "%") . " OR 
+			s.address LIKE " . db_escape("%" . $supplier. "%") . " OR 
+			gst_no LIKE " . db_escape("%" . $supplier. "%") . " OR
+			p.phone LIKE " . db_escape("%" . $supplier. "%") . " OR 
+			p.phone2 LIKE " . db_escape("%" . $supplier. "%") . ")
+		GROUP BY s.supplier_id ORDER BY supp_name LIMIT 0,".(int)($limit);
 
 	return db_query($sql, 'Failed in retreiving supplier list.');
 }

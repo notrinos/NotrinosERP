@@ -50,7 +50,7 @@ div_start('customer_tbl');
 
 start_table(TABLESTYLE);
 
-$th = array('', _('Customer'), _('Short Name'), _('Address'), _('Tax ID'));
+$th = array('', _('Customer'), _('Short Name'), _('Address'), _('Tax ID'), _('Phone'), _('Phone 2'));
 
 table_header($th);
 
@@ -71,6 +71,8 @@ while ($myrow = db_fetch_assoc($result)) {
 	label_cell($myrow['debtor_ref']);
 	label_cell($myrow['address']);
 	label_cell($myrow['tax_id']);
+	label_cell($myrow['phone']);
+	label_cell($myrow['phone2']);
 	end_row();
 }
 
