@@ -140,12 +140,17 @@ function can_process() {
 		display_error(_('There is no customer selected.'));
 		set_focus('customer_id');
 		return false;
-	} 
+	}
 	if (!get_post('BranchID')) {
 		display_error(_('This customer has no branch defined.'));
 		set_focus('BranchID');
 		return false;
-	} 
+	}
+	if(!branch_in_foreign_table(get_post('customer_id'), get_post('BranchID'), 'cust_branch')) {
+        display_error(_('The selected branch is not a branch of the selected customer.'));
+        set_focus('BranchID');
+        return false;
+    }
 	if (!isset($_POST['DateBanked']) || !is_date($_POST['DateBanked'])) {
 		display_error(_('The entered date is invalid. Please enter a valid date for the payment.'));
 		set_focus('DateBanked');
@@ -176,7 +181,7 @@ function can_process() {
 			display_error(_('The Bank Charge Account has not been set in System and General GL Setup.'));
 			set_focus('charge');
 			return false;
-		}	
+		}
 	}
 	if (@$_POST['discount'] == '') 
 		$_POST['discount'] = 0;

@@ -207,8 +207,7 @@ elseif (isset($_GET['AddedDN'])) {
 
 	display_note(get_gl_view_str(ST_CUSTDELIVERY, $delivery, _('View the GL Journal Entries for this Dispatch')),0, 1);
 
-	submenu_option(_('Make &Invoice Against This Delivery'),
-		'/sales/customer_invoice.php?DeliveryNumber='.$delivery);
+	submenu_option(_('Make &Invoice Against This Delivery'), '/sales/customer_invoice.php?DeliveryNumber='.$delivery);
 
 	if ((isset($_GET['Type']) && $_GET['Type'] == 1))
 		submenu_option(_('Enter a New Template &Delivery'), '/sales/inquiry/sales_orders_view.php?DeliveryTemplates=Yes');
@@ -362,7 +361,12 @@ function can_process() {
 		display_error(_('This customer has no branch defined.'));
 		set_focus('branch_id');
 		return false;
-	} 
+	}
+	if(!branch_in_foreign_table(get_post('customer_id'), get_post('branch_id'), 'cust_branch')) {
+        display_error(_('The selected branch is not a branch of the selected customer.'));
+        set_focus('branch_id');
+        return false;
+    }
 	if (!is_date($_POST['OrderDate'])) {
 		display_error(_('The entered date is invalid.'));
 		set_focus('OrderDate');
@@ -383,8 +387,7 @@ function can_process() {
 		return false;
 	}
 	if ($_SESSION['Items']->payment_terms['cash_sale'] == 0) {
-		if (!$_SESSION['Items']->is_started() && ($_SESSION['Items']->payment_terms['days_before_due'] == -1) && ((input_num('prep_amount')<=0) ||
-			input_num('prep_amount')>$_SESSION['Items']->get_trans_total())) {
+		if (!$_SESSION['Items']->is_started() && ($_SESSION['Items']->payment_terms['days_before_due'] == -1) && ((input_num('prep_amount')<=0) || input_num('prep_amount')>$_SESSION['Items']->get_trans_total())) {
 			display_error(_('Pre-payment required have to be positive and less than total amount.'));
 			set_focus('prep_amount');
 			return false;
