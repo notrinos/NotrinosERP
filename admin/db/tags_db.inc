@@ -13,7 +13,7 @@
 function add_tag($type, $name, $description) {
 	$sql = "INSERT INTO ".TB_PREF."tags (type, name, description) VALUES (".db_escape($type).", ".db_escape($name).", ".db_escape($description).")";
 
-	return db_query($sql);
+	return db_query($sql, 'could not insert tag record');
 }
 
 //--------------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ function update_tag($id, $name, $description, $type=null) {
 
 	$sql .= " WHERE id = ".db_escape($id);
 
-	return db_query($sql);
+	return db_query($sql, 'could not update tag record');
 }
 
 //--------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ function get_tags($type, $all=false) {
 	
 	$sql .= " ORDER BY name";
 
-	return db_query($sql, "could not get tags");
+	return db_query($sql, 'could not get tags');
 }
 
 //--------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ function get_tags($type, $all=false) {
 function get_tag($id) {
 	$sql = "SELECT * FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
-	$result = db_query($sql, "could not get tag");
+	$result = db_query($sql, 'could not get tag');
 
 	return db_fetch($result);
 }
@@ -55,7 +55,7 @@ function get_tag($id) {
 function get_tag_type($id) {
 	$sql = "SELECT type FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
-	$result = db_query($sql, "could not get tag type");
+	$result = db_query($sql, 'could not get tag type');
 
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -66,7 +66,7 @@ function get_tag_type($id) {
 function get_tag_name($id) {
 	$sql = "SELECT name FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
-	$result = db_query($sql, "could not get tag name");
+	$result = db_query($sql, 'could not get tag name');
 
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -93,7 +93,7 @@ function get_tag_names($tags) {
 function get_tag_description($id) {
 	$sql = "SELECT description FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
-	$result = db_query($sql, "could not get tag description");
+	$result = db_query($sql, 'could not get tag description');
 
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -104,7 +104,7 @@ function get_tag_description($id) {
 function delete_tag($id) {
 	$sql = "DELETE FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
-	db_query($sql, "could not delete tag");
+	db_query($sql, 'could not delete tag');
 }
 
 //--------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ function delete_tag_associations($type, $recordid, $all=false) {
 
 	while($ta = db_fetch($result)) {
 		$sql2 = "DELETE FROM ".TB_PREF."tag_associations WHERE record_id = '".$ta['record_id']."' AND tag_id=".$ta['tag_id'];
-		db_query($sql2, "could not delete tag associations");
+		db_query($sql2, 'could not delete tag associations');
 	}
 }
 
@@ -192,4 +192,3 @@ function is_record_in_tags($tags, $type, $recordid) {
 	}
 	return true;
 }
-

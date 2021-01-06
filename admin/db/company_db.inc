@@ -15,7 +15,7 @@
 function update_company_prefs($params) {
 	$sql = "UPDATE ".TB_PREF."sys_prefs SET value = ";
 	foreach($params as $name => $value) {
-		if (!db_query($sql. db_escape($value). " WHERE name=".db_escape($name), "The company prefferences could not be updated "))
+		if (!db_query($sql. db_escape($value). " WHERE name=".db_escape($name), 'The company prefferences could not be updated '))
 			return false;
 		// update cached value
 		$_SESSION['SysPrefs']->prefs[$name] = $value;
@@ -52,7 +52,7 @@ function get_company_prefs() {
 function set_company_pref($pref, $category, $type, $length, $value) {
 	$sql = "REPLACE `".TB_PREF."sys_prefs` SET `name`=".db_escape($pref).", `category`=".db_escape($category)
 		.", `type`=".db_escape($type).", `length`=".db_escape($length).", `value`=".db_escape($value);
-	return db_query($sql, "cannot set company pref");
+	return db_query($sql, 'cannot set company pref');
 }
 
 function get_base_sales_type() {
@@ -83,7 +83,7 @@ function add_payment_terms($daysOrFoll, $terms, $dayNumber) {
 			VALUES (" . db_escape($terms) . ",
 			0, " . db_escape($dayNumber) . ")";
 	}
-	db_query($sql,"The payment term could not be added");
+	db_query($sql, 'The payment term could not be added');
 }
 
 function update_payment_terms($selected_id, $daysOrFoll, $terms, $dayNumber) {
@@ -99,19 +99,19 @@ function update_payment_terms($selected_id, $daysOrFoll, $terms, $dayNumber) {
 			days_before_due=0
 			WHERE terms_indicator = " .db_escape($selected_id);
 	}
-	db_query($sql,"The payment term could not be updated");
+	db_query($sql, 'The payment term could not be updated');
 }
 
 function delete_payment_terms($selected_id) {
 	$sql="DELETE FROM ".TB_PREF."payment_terms WHERE terms_indicator=".db_escape($selected_id);
-	db_query($sql,"could not delete a payment terms");
+	db_query($sql, 'could not delete a payment terms');
 }
 
 function get_payment_terms($selected_id) {
 	$sql = "SELECT *, (t.days_before_due=0) AND (t.day_in_following_month=0) as cash_sale
 	 FROM ".TB_PREF."payment_terms t WHERE terms_indicator=".db_escape($selected_id);
 
-	$result = db_query($sql,"could not get payment term");
+	$result = db_query($sql, 'could not get payment term');
 
 	return db_fetch($result);
 }
@@ -119,7 +119,7 @@ function get_payment_terms($selected_id) {
 function get_payment_terms_all($show_inactive) {
 	$sql = "SELECT * FROM ".TB_PREF."payment_terms";
 	if (!$show_inactive) $sql .= " WHERE !inactive";
-	return db_query($sql,"could not get payment terms");
+	return db_query($sql, 'could not get payment terms');
 }
 /*
 	Return number of records in tables, where some foreign key $id is used.
@@ -144,7 +144,7 @@ function key_in_foreign_table($id, $tables, $stdkey) {
 
 	$sql = "SELECT sum(cnt) FROM (". implode(' UNION ', $sqls).") as counts";
 
-	$result = db_query($sql, "check relations for ".implode(',',$tables)." failed");
+	$result = db_query($sql, 'check relations for '.implode(',',$tables).' failed');
 	$count =  db_fetch($result);
 
 	return $count[0];
@@ -161,12 +161,12 @@ function clean_user_themes($theme) {
 
 	$connections = $db_connections;	// do not use db_connections directly here, or script will hang due to db_connections usage inside the loop
 	foreach ($connections as $n => $conn) {
-		$db = $_SESSION["wa_current_user"]->set_db_connection($n);
+		$db = $_SESSION['wa_current_user']->set_db_connection($n);
 		$sql = "UPDATE {$conn['tbpref']}users SET theme='default' WHERE theme='$theme'";
 		if (!db_query($sql, 'Cannot update user theme settings'))
 			return false;
 	}
-	$db = $_SESSION["wa_current_user"]->set_db_connection($comp);
+	$db = $_SESSION['wa_current_user']->set_db_connection($comp);
 	$_SESSION['wa_current_user']->prefs->theme = 'default';
 	return true;
 }

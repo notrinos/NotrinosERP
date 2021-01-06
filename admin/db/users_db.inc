@@ -19,7 +19,7 @@ function add_user($user_id, $real_name, $password, $phone, $email, $role_id, $la
 		.", ".db_escape($pos).",".db_escape($profile).",".db_escape($rep_popup)
 		." )";
 
-	return db_query($sql, "could not add user for $user_id");
+	return db_query($sql, 'could not add user for '.$user_id);
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ function update_user_password($id, $user_id, $password) {
 	$sql = "UPDATE ".TB_PREF."users SET password=".db_escape($password) . ",
 		user_id = ".db_escape($user_id). " WHERE id=".db_escape($id);
 
-	return db_query($sql, "could not update user password for $user_id");
+	return db_query($sql, 'could not update user password for '.$user_id);
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ function update_user($id, $user_id, $real_name, $phone, $email, $role_id, $langu
 		pos=".db_escape($pos).",
 		user_id = " . db_escape($user_id)
 		. " WHERE id=" . db_escape($id);
-	return db_query($sql, "could not update user for $user_id");
+	return db_query($sql, 'could not update user for '.$user_id);
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -56,7 +56,7 @@ function update_user_prefs($id, $prefs) {
 	}
 	$sql .= implode(',', $prefs) . " WHERE id=".db_escape($id);
 
-	return db_query($sql, "could not update user display prefs for $id");
+	return db_query($sql, 'could not update user display prefs for '.$id);
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ function get_users($all=false) {
 		WHERE u.role_id=r.id";
 	if (!$all) $sql .= " AND !u.inactive";
 	
-	return db_query($sql, "could not get users");
+	return db_query($sql, 'could not get users');
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ function get_users($all=false) {
 function get_user($id) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
-	$result = db_query($sql, "could not get user $id");
+	$result = db_query($sql, 'could not get user '.$id);
 
 	return db_fetch($result);
 }
@@ -85,7 +85,7 @@ function get_user($id) {
 function get_user_by_login($user_id) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id=".db_escape($user_id);
 
-	$result = db_query($sql, "could not get user $user_id");
+	$result = db_query($sql, 'could not get user '.$user_id);
 
 	return db_fetch($result);
 }
@@ -95,7 +95,7 @@ function get_user_by_login($user_id) {
 function get_user_by_email($email) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE email=".db_escape($email);
 
-	$result = db_query($sql, "could not get user for email $email");
+	$result = db_query($sql, 'could not get user for email '.$email);
 
 	if (db_num_rows($result) != 1)
 		return false;
@@ -108,7 +108,7 @@ function get_user_by_email($email) {
 function delete_user($id) {
 	$sql="DELETE FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
-	db_query($sql, "could not delete user $id");
+	db_query($sql, 'could not delete user '.$id);
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ function get_user_auth($user_id, $password) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id = ".db_escape($user_id)." AND"
 		." password=".db_escape($password);
 
-	return db_num_rows(db_query($sql, "could not get validate user login for $user_id")) != 0;
+	return db_num_rows(db_query($sql, 'could not get validate user login for '.$user_id)) != 0;
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ function update_user_visitdate($user_id) {
 	$sql = "UPDATE ".TB_PREF."users SET last_visit_date='". date("Y-m-d H:i:s") ."'
 		WHERE user_id=".db_escape($user_id);
 
-	db_query($sql, "could not update last visit date for user $user_id");
+	db_query($sql, 'could not update last visit date for user '.$user_id);
 }
 
 //-----------------------------------------------------------------------------------------------

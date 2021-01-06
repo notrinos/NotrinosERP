@@ -157,7 +157,7 @@ function get_next_trans_no ($trans_type) {
 	$sql2 = "SELECT MAX(`id`) as last_no FROM ".TB_PREF."voided WHERE `type`=".db_escape($trans_type);
 
 	$sql = "SELECT max(last_no) last_no FROM ($sql1 UNION $sql2) a";
-	$result = db_query($sql,"The next transaction number for $trans_type could not be retrieved");
+	$result = db_query($sql, "The next transaction number for $trans_type could not be retrieved");
 	$myrow = db_fetch_row($result);
 
 	return $myrow[0] + 1;

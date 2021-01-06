@@ -20,7 +20,7 @@ function add_shipper($shipper_name, $contact, $phone, $phone2, $address) {
 		db_escape($phone2). ", " .
 		db_escape($address) . ")";
 
-	db_query($sql,"The Shipping Company could not be added");
+	db_query($sql, 'The Shipping Company could not be added');
 }
 
 //--------------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ function update_shipper($selected_id, $shipper_name, $contact, $phone, $phone2, 
 		address =" . db_escape($address). "
 		WHERE shipper_id = ".db_escape($selected_id);
 
-	db_query($sql,"The shipping company could not be updated");
+	db_query($sql, 'The shipping company could not be updated');
 }
 
 //--------------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ function update_shipper($selected_id, $shipper_name, $contact, $phone, $phone2, 
 function delete_shipper($selected_id) {
 	$sql="DELETE FROM ".TB_PREF."shippers WHERE shipper_id=".db_escape($selected_id);
 	
-	db_query($sql,"could not delete shipper");
+	db_query($sql, 'could not delete shipper');
 }
 
 //--------------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ function get_shippers($show_inactive) {
 	if (!$show_inactive) $sql .= " WHERE !inactive";
 	$sql .= " ORDER BY shipper_id";
 	
-	return db_query($sql,"could not get shippers");
+	return db_query($sql, 'could not get shippers');
 }
 
 //--------------------------------------------------------------------------------------
@@ -59,7 +59,6 @@ function get_shippers($show_inactive) {
 function get_shipper($selected_id) {
 	$sql = "SELECT * FROM ".TB_PREF."shippers WHERE shipper_id=".db_escape($selected_id);
 
-	$result = db_query($sql, "could not get shipper");
+	$result = db_query($sql, 'could not get shipper');
 	return db_fetch($result);
 }
-

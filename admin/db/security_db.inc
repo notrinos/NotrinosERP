@@ -13,7 +13,7 @@
 
 function get_security_role($id) {
 	$sql = "SELECT * FROM ".TB_PREF."security_roles WHERE id=".(int)$id;
-	$ret = db_query($sql, "could not retrieve security roles");
+	$ret = db_query($sql, 'could not retrieve security roles');
 	$row = db_fetch($ret);
 	if ($row != false) {
 		$row['areas'] = explode(';', $row['areas']);
@@ -32,14 +32,14 @@ function add_security_role($name, $description, $sections, $areas) {
 	.db_escape(implode(';', $sections)).","
 	.db_escape(implode(';', $areas)).")";
 
-	db_query($sql, "could not add new security role");
+	db_query($sql, 'could not add new security role');
 }
 
 //--------------------------------------------------------------------------------------------------
 
 function update_security_role($id, $name, $description, $sections, $areas) {
 	$sql = "UPDATE ".TB_PREF."security_roles SET role=".db_escape($name).",description=".db_escape($description).",sections=".db_escape(implode(';', $sections)).",areas=".db_escape(implode(';', $areas))." WHERE id=".(int)$id;
-	db_query($sql, "could not update role");
+	db_query($sql, 'could not update role');
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ function update_security_role($id, $name, $description, $sections, $areas) {
 function delete_security_role($id) {
 	$sql = "DELETE FROM ".TB_PREF."security_roles WHERE id=".(int)$id;
 
-	db_query($sql, "could not delete role");
+	db_query($sql, 'could not delete role');
 }
 
 //--------------------------------------------------------------------------------------------------

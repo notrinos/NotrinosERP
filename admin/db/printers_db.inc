@@ -22,25 +22,25 @@ function write_printer_def($id, $name, $descr, $queue, $host, $port, $timeout) {
 			."VALUES (".db_escape($name).",".db_escape($descr).","
 			.db_escape($queue).",".db_escape($host).",".db_escape($port).",".db_escape($timeout).")";
 
-	return db_query($sql,"could not write printer definition");
+	return db_query($sql, 'could not write printer definition');
 }
 
 function get_all_printers() {
 	$sql = "SELECT * FROM ".TB_PREF."printers";
-	return db_query($sql,"could not get printer definitions");
+	return db_query($sql, 'could not get printer definitions');
 }
 
 function get_printer($id) {
 		$sql = "SELECT * FROM ".TB_PREF."printers
 			WHERE id=".db_escape($id);
 
-		$result = db_query($sql,"could not get printer definition");
+		$result = db_query($sql, 'could not get printer definition');
 		return  db_fetch($result);
 }
 
 function delete_printer($id) {
 	$sql="DELETE FROM ".TB_PREF."printers WHERE id=".db_escape($id);
-	db_query($sql,"could not delete printer definition");
+	db_query($sql, 'could not delete printer definition');
 }
 //============================================================================
 // printer profiles functions
@@ -59,7 +59,7 @@ function update_printer_profile($name, $dest) {
 				."report=" . db_escape($rep)
 				." AND profile=".db_escape($name).")";
 		}
-		$result = db_query($sql,"could not update printing profile");
+		$result = db_query($sql, 'could not update printing profile');
 		if(!$result) {
 			return false;
 		}
@@ -88,13 +88,12 @@ function get_report_printer($profile, $report) {
 
 function delete_printer_profile($name) {
 	$sql="DELETE FROM ".TB_PREF."print_profiles WHERE profile=".db_escape($name);
-	return db_query($sql,"could not delete printing profile");
+	return db_query($sql, 'could not delete printing profile');
 }
 //
 // Get all report destinations for given profile.
 //
 function get_print_profile($name) {
 	$sql = "SELECT	* FROM ".TB_PREF."print_profiles WHERE profile=".db_escape($name);
-	return db_query($sql,"could not get printing profile");
+	return db_query($sql, 'could not get printing profile');
 }
-

@@ -28,7 +28,7 @@ if ($SysPrefs->allow_demo_mode == true)
 else {
 	$demo_text = _('Please login here');
 	if (@$SysPrefs->allow_password_reset)
-		$demo_text .= " "._("or")." <a href='".$path_to_root."/index.php?reset=1'>"._('request new password')."</a>";
+		$demo_text .= ' '._('or')." <a href='".$path_to_root."/index.php?reset=1'>"._('request new password')."</a>";
 }
 
 if (check_faillog()) {
@@ -45,7 +45,7 @@ if (!isset($def_coy))
 
 $def_theme = 'default';
 $login_timeout = $_SESSION['wa_current_user']->last_act;
-$title = $login_timeout ? _('Authorization timeout') : $SysPrefs->app_title." ".$version.' - '._('Login');
+$title = $login_timeout ? _('Authorization timeout') : $SysPrefs->app_title.' '.$version.' - '._('Login');
 $encoding = isset($_SESSION['language']->encoding) ? $_SESSION['language']->encoding : 'iso-8859-1';
 $rtl = isset($_SESSION['language']->dir) ? $_SESSION['language']->dir : 'ltr';
 $onload = !$login_timeout ? "onload='defaultCompany()'" : '';
@@ -82,7 +82,7 @@ if (!$login_timeout)
 	table_section_title(_('Version').' '.$version."   Build ".$SysPrefs->build_version.' - '._('Login'));
 $value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser':'');
 
-text_row(_('User name'), 'user_name_entry_field', $value, 20, 30);
+text_row(_('User name').':', 'user_name_entry_field', $value, 20, 30);
 
 $password = $SysPrefs->allow_demo_mode ? 'password':'';
 
@@ -95,14 +95,14 @@ else {
 	if (!isset($coy))
 		$coy = $def_coy;
 	if (!@$SysPrefs->text_company_selection) {
-		echo "<tr><td>"._("Company")."</td><td><select name='company_login_name'>\n";
+		echo "<tr><td class='label'>"._('Company').':'."</td><td><select name='company_login_name'>\n";
 		for ($i = 0; $i < count($db_connections); $i++)
 			echo "<option value=".$i.' '.($i==$coy ? 'selected':'') .'>' . $db_connections[$i]['name'].'</option>';
 		echo "</select>\n";
 		echo "</td></tr>";
 	}
 	else
-		text_row(_('Company'), 'company_login_nickname', '', 20, 50);
+		text_row(_('Company').':', 'company_login_nickname', '', 20, 50);
 }; 
 start_row();
 label_cell($demo_text, "colspan=2 align='center' id='log_msg'");

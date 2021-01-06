@@ -17,7 +17,7 @@ function add_attachment($filterType, $trans_no, $description, $filename, $unique
 		.db_escape($trans_no).",".db_escape($description).", "
 		.db_escape($filename).", ".db_escape($unique_name).", ".db_escape($filesize)
 		.", ".db_escape($filetype).", '$date')";
-	db_query($sql, "Attachment could not be inserted");
+	db_query($sql, 'Attachment could not be inserted');
 }
 
 //----------------------------------------------------------------------------------------
@@ -35,28 +35,28 @@ function update_attachment($selected_id, $filterType, $trans_no, $description, $
 		filetype=".db_escape($filetype).",";
 	}	
 	$sql .= "tran_date='$date' WHERE id=".db_escape($selected_id);
-	db_query($sql, "Attachment could not be updated");
+	db_query($sql, 'Attachment could not be updated');
 }
 
 //----------------------------------------------------------------------------------------
 
 function delete_attachment($id) {
 	$sql = "DELETE FROM ".TB_PREF."attachments WHERE id = ".db_escape($id);
-	db_query($sql, "Could not delete attachment");
+	db_query($sql, 'Could not delete attachment');
 }
 
 //----------------------------------------------------------------------------------------
 
 function get_attachment_string($type, $id) {
 	global $path_to_root;
-	$str_return = "";    
+	$str_return = '';    
 	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($id)." ORDER BY trans_no";
-	$return = db_query($sql, "Could not retrieve attachments");
+	$return = db_query($sql, 'Could not retrieve attachments');
 	while ($attachment = db_fetch($return)) {
 		if (strlen($str_return))
 			$str_return = $str_return . " \n";    
-		$str_return .= _("Attached File:")." <a href='$path_to_root/admin/attachments.php?vw=".$attachment["id"]." ' target='blanc_'> ". 
-			$attachment["id"] . " " . $attachment["description"]. " - ". $attachment["filename"]."</a><br>";
+		$str_return .= _('Attached File:')." <a href='$path_to_root/admin/attachments.php?vw=".$attachment['id']." ' target='blanc_'> ". 
+			$attachment['id'] . ' ' . $attachment['description']. ' - '. $attachment['filename']."</a><br>";
 	}
 	return $str_return . "<br>";
 }
@@ -68,18 +68,18 @@ function get_attached_documents($type, $trans_no=false) {
 	if ($trans_no)
 		$sql .= " AND trans_no=".db_escape($trans_no);
 	$sql .= " ORDER BY trans_no";
-	return db_query($sql, "Could not retrieve attachments");
+	return db_query($sql, 'Could not retrieve attachments');
 }
 
 function get_attachment($id) {
 	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id=".db_escape($id);
-	$result = db_query($sql, "Could not retrieve attachments");
+	$result = db_query($sql, 'Could not retrieve attachments');
 	return db_fetch($result);
 }
 
 function has_attachment($type, $id) {
 	$sql = "SELECT DISTINCT * FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($id);
-	$result = db_query($sql, "Could not retrieve attachments");
+	$result = db_query($sql, 'Could not retrieve attachments');
 	$myrow = db_fetch($result);
 	if ($myrow === false)
 		return 0;
@@ -104,5 +104,3 @@ function move_trans_attachments($type, $trans_from, $trans_to) {
 		." WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($trans_from);
 	db_query($sql, 'cannot move atachments');
 }
-
-
