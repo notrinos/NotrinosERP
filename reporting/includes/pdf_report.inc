@@ -24,6 +24,7 @@ include_once($path_to_root . '/reporting/includes/reporting.inc');
 include_once($path_to_root . '/admin/db/company_db.inc');
 include_once($path_to_root . '/admin/db/fiscalyears_db.inc');
 include_once($path_to_root . '/admin/db/printers_db.inc');
+include_once($path_to_root . '/includes/ui/ui_globals.inc');
 include_once($path_to_root . '/config.php');
 
 class FrontReport extends Cpdf {
