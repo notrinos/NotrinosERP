@@ -128,7 +128,7 @@ function payment_person_name($type, $person_id, $full=true) {
 			return ($full ? $payment_person_types[$type] . " ":"") . $qe["description"];
 		case PT_WORKORDER :
 			global $wo_cost_types;
-			return get_trans_view_str(ST_WORKORDER, $person_id, _('Work Order').' '.$person_id);
+			return (!$full ? _('Work Order').' '.$person_id : get_trans_view_str(ST_WORKORDER, $person_id, _('Work Order').' '.$person_id));
 		case PT_CUSTOMER :
 			return ($full ?$payment_person_types[$type] . " ":"") . sprintf("[%05s] %s", $person_id, get_customer_name($person_id));
 		case PT_SUPPLIER :
