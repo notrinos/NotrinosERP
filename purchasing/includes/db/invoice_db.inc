@@ -137,7 +137,7 @@ function add_supp_invoice(&$supp_trans) {
 	$taxes = $supp_trans->get_taxes($supp_trans->tax_group_id);
 	if ($trans_no) {
 		$allocs = get_payments_for($trans_no, $trans_type, $supp_trans->supplier_id); // save allocations
-		void_transaction($trans_type, $trans_no, Today(), _('Document reentered.'));
+		void_transaction($trans_type, $trans_no, $supp_trans->tran_date, _('Document reentered.'));
 		$Refs->restore_last($trans_type, $trans_no);
 	}
 	else
