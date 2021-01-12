@@ -1,0 +1,15 @@
+table.tablestyle2 td:not(.label) {
+	border: 0;
+}
+table.tablestyle2 span {
+	margin: 0;
+	padding: 0;
+}
+table.tablestyle2 input, table.tablestyle2 span {
+	display: inline-block;
+	width: 100%;
+}
+table.tablestyle2 select {
+	width: 100%;
+	margin: 0;
+}

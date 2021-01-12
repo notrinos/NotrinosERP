@@ -72,13 +72,13 @@ class module {
 		$this->rappfunctions = array();
 	}
 	
-	function add_lapp_function($label,$link="",$access='SA_OPEN',$category='') {
+	function add_lapp_function($label,$link='',$access='SA_OPEN',$category='') {
 		$appfunction = new app_function($label,$link,$access,$category);
 		$this->lappfunctions[] = $appfunction;
 		return $appfunction;
 	}
 
-	function add_rapp_function($label,$link="",$access='SA_OPEN',$category='') {
+	function add_rapp_function($label,$link='',$access='SA_OPEN',$category='') {
 		$appfunction = new app_function($label,$link,$access,$category);
 		$this->rappfunctions[] = $appfunction;
 		return $appfunction;
@@ -105,11 +105,11 @@ class application {
 		return $module;
 	}
 	
-	function add_lapp_function($level, $label,$link="",$access='SA_OPEN',$category='') {
+	function add_lapp_function($level, $label,$link='',$access='SA_OPEN',$category='') {
 		$this->modules[$level]->lappfunctions[] = new app_function($label, $link, $access, $category);
 	}
 	
-	function add_rapp_function($level, $label,$link="",$access='SA_OPEN',$category='') {
+	function add_rapp_function($level, $label,$link='',$access='SA_OPEN',$category='') {
 		$this->modules[$level]->rappfunctions[] = new app_function($label, $link, $access, $category);
 	}
 	
@@ -120,6 +120,6 @@ class application {
 	// Helper returning link to report class added by extension module.
 	//
 	function report_class_url($class) {
-		return "reporting/reports_main.php?Class=".$class;
+		return 'reporting/reports_main.php?Class='.$class;
 	}
 }

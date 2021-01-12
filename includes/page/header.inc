@@ -47,10 +47,10 @@ function send_css($css = '') {
 	css_files_ensure_init();
 
 	foreach ($css_files as $css_file) {
-		echo "<link href='$css_file' rel='stylesheet' type='text/css'> \n";
+		echo "<link href='".$css_file."' rel='stylesheet' type='text/css'> \n";
 	}
 	if ($css)
-		echo "<link href='$css' rel='stylesheet' type='text/css'> \n";
+		echo "<link href='".$css."' rel='stylesheet' type='text/css'> \n";
 }
 
 function send_scripts() {
@@ -120,11 +120,19 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 	
 	echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n";
 	echo "<html dir='" . $_SESSION['language']->dir . "' >\n";
-	echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>$title</title>";
+	echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>";
 	if (strpos($_SERVER['HTTP_USER_AGENT'], 'Trident/7.0; rv:11.0') != -1) // IE 11 doesn't work with input file type in form.
 		echo "<meta http-equiv='X-UA-Compatible' content='IE=10'>\n";
-	echo "<meta http-equiv='Content-type' content='text/html; charset=$encoding'>";
-	echo "<link href='$path_to_root/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
+	echo "<meta http-equiv='Content-type' content='text/html; charset=".$encoding."'>";
+	echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
+	echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
+
+	$theme_path = $path_to_root.'/themes/'.user_theme();
+	$local_css = basename($_SERVER['REQUEST_URI'], '.php?' . $_SERVER['QUERY_STRING']);
+	$css_file = $theme_path.'/local_style/'.$local_css.'.css';
+
+	if(file_exists($css_file))
+		add_css_file($css_file);
 
 	send_css($css);
 

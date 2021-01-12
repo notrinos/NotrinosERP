@@ -16,6 +16,9 @@
 |                                                   |
 \--------------------------------------------------*/
 
+* {
+	box-sizing: border-box;
+}
 body {
 	font-family: Verdana, Arial, Helvetica;
 	background: #DADADA;
@@ -43,7 +46,7 @@ input, select {
 }
 
 select {
-	max-width: 230px;
+	/*max-width: 230px;*/
 }
 
 option.inactive {
@@ -93,6 +96,7 @@ button {
 button img, span {
 	padding: 0px 2px ;
 	vertical-align: middle;
+	box-sizing: content-box;
 }
 
 .callout_main {
@@ -225,7 +229,23 @@ div.tabs a:hover {
 	background-color: #FEFEFE;
 	font-weight: normal;
 	padding: 9px;
+	margin: 9px;
 	border: 1px solid #BFBFBF;
+}
+
+.menu_group_items a.menu_option, .menu_group_items span.inactive {
+	display: inline-block;
+	padding: 3px 5px;
+	font-size: 1.1em;
+}
+
+a.menu_option:hover {
+	text-decoration: none;
+	background-color: #E0E0E0;
+}
+
+a.menu_option:focus {
+	text-decoration: none;
 }
 
 #hotkeyshelp {
@@ -420,14 +440,14 @@ table.tablestyle_inner td {
 }
 
 .login input[type=button], input[type=submit] {
-  	background-color: #367cb5;
-  	border: none;
-  	border-radius: 4px;
-  	color: white;
-  	padding: 8px 16px;
-  	text-decoration: none;
-  	margin: 4px 2px;
-  	cursor: pointer;
+	background-color: #367cb5;
+	border: none;
+	border-radius: 4px;
+	color: white;
+	padding: 8px 16px;
+	text-decoration: none;
+	margin: 4px 2px;
+	cursor: pointer;
 }
 
 .amount {
@@ -441,28 +461,28 @@ input.amount {
 }
 
 .editbutton {
-   	color:#0000FF;
-   	background-color:transparent;
-   	border-style:none;
-   	text-decoration:underline;
-   	cursor: pointer;
+	color:#0000FF;
+	background-color:transparent;
+	border-style:none;
+	text-decoration:underline;
+	cursor: pointer;
 }
 
 .navibutton[disabled], .navibutton[disabled] span {
-  	color:#808080;
-  	text-decoration: none;
-  	cursor: auto;
+	color:#808080;
+	text-decoration: none;
+	cursor: auto;
 }
 
 button.navibutton {
 	font-family: Verdana, Arial, Helvetica;
 	font-size: 11px;
 	font-weight: bold;
-   	color:#000;
-   	padding: 0 3px;
-   	background-color:transparent;
-   	border-style:none;
-   	cursor: pointer;
+	color:#000;
+	padding: 0 3px;
+	background-color:transparent;
+	border-style:none;
+	cursor: pointer;
 }
 
 .navibutton span {
@@ -666,4 +686,41 @@ div.note_msg {
 #title {
 	margin-bottom: 10px;
 	width: 100%;
+}
+
+div.widgets_container {
+	display: inline-block;
+	width: 100%;
+}
+
+div.widget_title {
+	font-weight: bold;
+	color: #555;
+	font-size: 1.3em;
+	width: 100%;
+	border-bottom: 1px solid #DDD;
+	padding: 5px 0;
+	margin-bottom: 5px;
+}
+
+div.widget {
+	border: 1px solid #DDD;
+	background: #FFF;
+	padding: 0 10px;
+	margin: 10px 0;
+	box-sizing: border-box;
+	display: inline-block;
+	float: left;
+	height: 23em;
+	overflow: auto;
+}
+
+div.widget_full {
+	width: calc(100% - 40px);
+	margin-left: 20px;
+}
+
+div.widget_half {
+	width: calc(50% - 30px);
+	margin-left: 20px ;
 }

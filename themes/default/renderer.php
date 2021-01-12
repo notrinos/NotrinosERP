@@ -15,14 +15,14 @@ class renderer {
 		global  $path_to_root, $SysPrefs;
 
 		if ($SysPrefs->show_menu_category_icons)
-			$img = $category == '' ? 'right.gif' : $category.'.png';
+			$img = $category == '' ? 'right.gif' : $category.'.svg';
 		else	
 			$img = 'right.gif';
-		return "<img src='$path_to_root/themes/".user_theme()."/images/$img' style='vertical-align:middle;' border='0'>&nbsp;&nbsp;";
+		return "<img width=16 src='".$path_to_root.'/themes/'.user_theme().'/images/'.$img."' style='vertical-align:middle;' border='0'>&nbsp;&nbsp;";
 	}
 
 	function wa_header() {
-		page(_($help_context = "Main Menu"), false, true);
+		page(_($help_context = 'Main Menu'), false, true);
 	}
 
 	function wa_footer() {
@@ -31,6 +31,7 @@ class renderer {
 
 	function menu_header($title, $no_menu, $is_index) {
 		global $path_to_root, $SysPrefs, $db_connections;
+
 		echo "<table class='callout_main' border='0' cellpadding='0' cellspacing='0'>\n";
 		echo "<tr>\n";
 		echo "<td colspan='2' rowspan='2'>\n";
@@ -58,17 +59,17 @@ class renderer {
 			echo "</div>";
 			echo "</td></tr></table>";
 			// top status bar
-			$rimg = "<img src='".$path_to_root."/themes/".user_theme()."/images/report.png' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Dashboard')."'>&nbsp;&nbsp;";
-			$pimg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/preferences.gif' style='width:14px;height:14px; border:0;vertical-align:middle;' alt='"._('Preferences')."'>&nbsp;&nbsp;";
-			$limg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/lock.gif' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Change Password')."'>&nbsp;&nbsp;";
-			$img = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/login.gif' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Logout')."'>&nbsp;&nbsp;";
-			$himg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/help.gif' style='width:14px;height:14px;border:0;vertical-align:middle;'' alt='"._('Help')."'>&nbsp;&nbsp;";
+			$rimg = "<img src='".$path_to_root."/themes/".user_theme()."/images/dashboard.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Dashboard')."'>&nbsp;&nbsp;";
+			$pimg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/preferences.svg' style='width:14px;height:14px; border:0;vertical-align:middle;' alt='"._('Preferences')."'>&nbsp;&nbsp;";
+			$limg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/key.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Change Password')."'>&nbsp;&nbsp;";
+			$img = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/logout.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Logout')."'>&nbsp;&nbsp;";
+			$himg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/help.svg' style='width:14px;height:14px;border:0;vertical-align:middle;'' alt='"._('Help')."'>&nbsp;&nbsp;";
 			echo "<table class='logoutBar'>";
 			echo "<tr><td class='headingtext3'>" . $db_connections[user_company()]['name'] . " | " . $_SERVER['SERVER_NAME'] . " | " . $_SESSION['wa_current_user']->name . "</td>";
-			echo "<td class='logoutBarRight'><img id='ajaxmark' src='$indicator' align='center' style='visibility:hidden;' alt='ajaxmark'></td>";
-			echo "<td class='logoutBarRight'><a href='$path_to_root/admin/dashboard.php?sel_app=$sel_app'>.".$rimg . _('Dashboard') . "</a>&nbsp;&nbsp;&nbsp;\n";
+			echo "<td class='logoutBarRight'><img id='ajaxmark' src='".$indicator."' align='center' style='visibility:hidden;' alt='ajaxmark'></td>";
+			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg . _('Dashboard') . "</a>&nbsp;&nbsp;&nbsp;\n";
 				
-			echo "<a class='shortcut' href='$path_to_root/admin/display_prefs.php?'>".$pimg . _('Preferences') . "</a>&nbsp;&nbsp;&nbsp;\n";
+			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg . _('Preferences') . "</a>&nbsp;&nbsp;&nbsp;\n";
 			echo "  <a class='shortcut' href='".$path_to_root."/admin/change_current_user_password.php?selected_id=" . $_SESSION['wa_current_user']->username . "'>".$limg . _('Change password') . "</a>&nbsp;&nbsp;&nbsp;\n";
 
 			if ($SysPrefs->help_base_url != null)
@@ -111,7 +112,7 @@ class renderer {
 			echo "<table align='center' id='footer'>\n";
 			echo "<tr>\n";
 			echo "<td align='center' class='footer'><a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'><font color='#555555'>".$SysPrefs->app_title
-				." $version - " . _("Theme:") . " " . user_theme().show_users_online()."</font></a></td>\n";
+				.' '.$version.' - ' . _('Theme:') . ' ' . user_theme().show_users_online()."</font></a></td>\n";
 			echo "</tr>\n";
 			echo "<tr>\n";
 			echo "<td align='center' class='footer'><a target='_blank' href='".$SysPrefs->power_url
@@ -157,9 +158,9 @@ class renderer {
 				if ($appfunction->label == '')
 					echo "&nbsp;<br>";
 				elseif ($_SESSION['wa_current_user']->can_access_page($appfunction->access)) 
-					echo $img.menu_link($appfunction->link, $appfunction->label)."<br>\n";
+					echo menu_link($appfunction->link, $img.$appfunction->label)."<br>\n";
 				elseif (!$_SESSION['wa_current_user']->hide_inaccessible_menu_items())
-					echo $img.'<span class="inactive">'.access_string($appfunction->label, true)."</span><br>\n";
+					echo '<span class="inactive">'.access_string($img.$appfunction->label, true)."</span><br>\n";
 			}
 			echo '</td>';
 			if (sizeof($module->rappfunctions) > 0) {
@@ -169,9 +170,9 @@ class renderer {
 					if ($appfunction->label == '')
 						echo "&nbsp;<br>";
 					elseif ($_SESSION['wa_current_user']->can_access_page($appfunction->access)) 
-						echo $img.menu_link($appfunction->link, $appfunction->label)."<br>\n";
+						echo menu_link($appfunction->link, $img.$appfunction->label)."<br>\n";
 					elseif (!$_SESSION['wa_current_user']->hide_inaccessible_menu_items())
-						echo $img.'<span class="inactive">'.access_string($appfunction->label, true)."</span><br>\n";
+						echo '<span class="inactive">'.access_string($img.$appfunction->label, true)."</span><br>\n";
 				}
 				echo "</td>";
 			}

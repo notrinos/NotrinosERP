@@ -248,24 +248,24 @@ define('TR_INPUT', 1);	// purchase
 //---------------------------------------------------------------------------------
 // Constants optionally redefined locally
 //
-defined('ICON_EDIT') || define('ICON_EDIT', 'edit.gif');
-defined('ICON_DELETE') || define('ICON_DELETE', 'delete.gif');
-defined('ICON_ADD')	|| define('ICON_ADD', 'ok.gif');
-defined('ICON_UPDATE') || define('ICON_UPDATE', 'ok.gif');
-defined('ICON_OK') || define('ICON_OK', 'ok.gif');
+defined('ICON_EDIT') || define('ICON_EDIT', 'edit.svg');
+defined('ICON_DELETE') || define('ICON_DELETE', 'delete.svg');
+defined('ICON_ADD')	|| define('ICON_ADD', 'ok.svg');
+defined('ICON_UPDATE') || define('ICON_UPDATE', 'ok.svg');
+defined('ICON_OK') || define('ICON_OK', 'ok.svg');
 defined('ICON_CANCEL') || define('ICON_CANCEL', 'cancel.png');
-defined('ICON_GL') || define('ICON_GL', 'gl.png');
+defined('ICON_GL') || define('ICON_GL', 'gl.svg');
 defined('ICON_PRINT') || define('ICON_PRINT', 'print.png');
 defined('ICON_PDF') || define('ICON_PDF', 'pdf.gif');
 defined('ICON_DOC') || define('ICON_DOC', 'invoice.gif');
 defined('ICON_CREDIT') || define('ICON_CREDIT', 'credit.gif');
 defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'receive.gif');
-defined('ICON_DOWN') || define('ICON_DOWN', 'download.gif');
+defined('ICON_DOWN') || define('ICON_DOWN', 'download.svg');
 defined('ICON_MONEY') || define('ICON_MONEY', 'money.png');
 defined('ICON_REMOVE') || define('ICON_REMOVE', 'remove.png');
 defined('ICON_REPORT') || define('ICON_REPORT', 'report.png');
-defined('ICON_VIEW') || define('ICON_VIEW', 'view.gif');
-defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'ok.gif');
+defined('ICON_VIEW') || define('ICON_VIEW', 'view.svg');
+defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'ok.svg');
 defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'escape.png');
 defined('ICON_ALLOC') || define('ICON_ALLOC', 'alloc.png');
 defined('ICON_CLOSED') || define('ICON_CLOSED', 'closed.png');

@@ -746,3 +746,40 @@ div.note_msg {
 	margin-bottom: 10px;
 	width: 100%;
 }
+
+div.widgets_container {
+	display: inline-block;
+	width: 100%;
+}
+
+div.widget_title {
+	font-weight: bold;
+	color: #555;
+	font-size: 1.3em;
+	width: 100%;
+	border-bottom: 1px solid #DDD;
+	padding: 5px 0;
+	margin-bottom: 5px;
+}
+
+div.widget {
+	border: 1px solid #DDD;
+	background: #FFF;
+	padding: 0 10px;
+	margin: 10px 0;
+	box-sizing: border-box;
+	display: inline-block;
+	float: left;
+	height: 23em;
+	overflow: auto;
+}
+
+div.widget_full {
+	width: calc(100% - 40px);
+	margin-left: 20px;
+}
+
+div.widget_half {
+	width: calc(50% - 30px);
+	margin-left: 20px ;
+}

@@ -1,0 +1,7 @@
+table.tablestyle2 td:not(.label) {
+	border: 0;
+}
+
+table.tablestyle2 input:not(.date) {
+	width: 100%;
+}

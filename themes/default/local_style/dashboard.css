@@ -1,0 +1,14 @@
+table.main_page {
+	background-color: #EEEEEE;
+}
+
+div.widget_content table, div.widget_content td {
+	border-left: 0;
+	border-right: 0;
+	border-top: 0;
+	background-color: #FFFFFF;
+}
+
+div.widget_content tr.evenrow td {
+	background-color: #F0F0F0;
+}
