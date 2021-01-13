@@ -23,4 +23,4 @@ NotrinosERP is an open source, web-based enterprise management system that writt
 
 ## Troubleshooting
 
-If you encountered any problems with FrontAccounting configuration or usage, please consult your case with other users on [NotrinosERP forum](https://github.com/notrinos/NotrinosERP/discussions).
+If you encountered any problems with NotrinosERP configuration or usage, please consult your case with other users on [NotrinosERP forum](https://github.com/notrinos/NotrinosERP/discussions).
