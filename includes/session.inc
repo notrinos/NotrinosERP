@@ -207,7 +207,7 @@ function write_login_filelog($login, $result) {
 	$msg .= "*/\n";
 	$msg .= "\$login_faillog = " .var_export($login_faillog, true). ";\n";
 
-	$filename = VARLIB_PATH."/faillog.php";
+	$filename = VARLIB_PATH.'/faillog.php';
 
 	if ((!file_exists($filename) && is_writable(VARLIB_PATH)) || is_writable($filename)) {
 		file_put_contents($filename, $msg);
@@ -222,11 +222,11 @@ function check_page_security($page_security) {
 	
 	$msg = '';
 	
-	if (!$_SESSION["wa_current_user"]->check_user_access()) {
+	if (!$_SESSION['wa_current_user']->check_user_access()) {
 		// notification after upgrade from pre-2.2 version
-		$msg = $_SESSION["wa_current_user"]->old_db ? _("Security settings have not been defined for your user account.")."<br>"._("Please contact your system administrator.")	: _("Please remove \$security_groups and \$security_headings arrays from config.php file!");
+		$msg = $_SESSION['wa_current_user']->old_db ? _('Security settings have not been defined for your user account.').'<br>'._('Please contact your system administrator.')	: _("Please remove \$security_groups and \$security_headings arrays from config.php file!");
 	}
-	elseif (!$SysPrefs->db_ok && !$_SESSION["wa_current_user"]->can_access('SA_SOFTWAREUPGRADE')) 
+	elseif (!$SysPrefs->db_ok && !$_SESSION['wa_current_user']->can_access('SA_SOFTWAREUPGRADE')) 
 		$msg = _('Access to application has been blocked until database upgrade is completed by system administrator.');
 	
 	if ($msg){
@@ -337,7 +337,7 @@ set_error_handler('error_handler' /*, errtypes */);
 set_exception_handler('exception_handler');
 
 include_once($path_to_root.'/includes/current_user.inc');
-include_once($path_to_root.'/frontaccounting.php');
+include_once($path_to_root.'/NotrinosERP.php');
 include_once($path_to_root.'/admin/db/security_db.inc');
 include_once($path_to_root.'/includes/lang/language.inc');
 include_once($path_to_root.'/config_db.php');
@@ -530,7 +530,7 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		$SysPrefs->refresh();
 	}
 	if (!isset($_SESSION['App'])) {
-		$_SESSION['App'] = new front_accounting();
+		$_SESSION['App'] = new notrinos_erp();
 		$_SESSION['App']->init();
 	}
 }

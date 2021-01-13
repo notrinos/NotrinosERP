@@ -22,7 +22,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	include_once($path_to_root . '/applications/setup.php');
 	include_once($path_to_root . '/installed_extensions.php');
 
-	class front_accounting {
+	class notrinos_erp {
 		var $user;
 		var $settings;
 		var $applications;
