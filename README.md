@@ -22,5 +22,5 @@ NotrinosERP is an open source, web-based enterprise management system that writt
 6. After successful installation please remove `install` folder for safety reasons. You won't need it any more.
 
 ## Troubleshooting
-
+[Read the wiki](http://support.notrinos.com/ERP/index.php?n=Help.Help)  
 If you encountered any problems with NotrinosERP configuration or usage, please consult your case with other users on [NotrinosERP forum](https://github.com/notrinos/NotrinosERP/discussions).

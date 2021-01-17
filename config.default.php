@@ -83,7 +83,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	// 	locally installed wiki module
 	// $help_base_url = $path_to_root.'/modules/wiki/index.php?n='._('Help').'.';
 	// 	context help feed from frontaccounting.com
-	$help_base_url = 'http://frontaccounting.com/fawiki/index.php?n=Help.';
+	$help_base_url = 'http://support.notrinos.com/ERP/index.php?n=Help.';
 	// 	set to null if not used:
 	//	$help_base_url = null;
 
