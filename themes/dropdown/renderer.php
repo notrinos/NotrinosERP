@@ -62,6 +62,7 @@ class renderer {
 	function menu_header($title, $no_menu, $is_index) {
 		global $path_to_root, $SysPrefs, $version;
 
+		add_access_extensions(); // Avoid error "Undifined index" when 3rd modules are installed - Phuong
 		$sel_app = $_SESSION['sel_app'];
 		echo "<div class='fa-main'>\n";
 		if (!$no_menu) {
