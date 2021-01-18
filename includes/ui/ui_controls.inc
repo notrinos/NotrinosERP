@@ -85,14 +85,14 @@ function end_form($breaks=0) {
 
 function check_csrf_token() {
 	if ($_SESSION['csrf_token'] != @$_POST['_token']) {
-		display_error(_("Request from outside of this page is forbidden."));
-		error_log(_("CSRF attack detected from: ").@$_SERVER['HTTP_HOST'].' ('.@$_SERVER['HTTP_REFERER'].')');
+		display_error(_('Request from outside of this page is forbidden.'));
+		error_log(_('CSRF attack detected from: ').@$_SERVER['HTTP_HOST'].' ('.@$_SERVER['HTTP_REFERER'].')');
 		return false;
 	}
 	return true;
 }
 
-function start_table($class=false, $extra="", $padding='2', $spacing='0') {
+function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 	echo "<center><table";
 	if ($class == TABLESTYLE_NOBORDER)
 		echo " class='tablestyle_noborder'";
@@ -100,9 +100,9 @@ function start_table($class=false, $extra="", $padding='2', $spacing='0') {
 		echo " class='tablestyle2'";
 	elseif ($class == TABLESTYLE)
 		echo " class='tablestyle'";
-	if ($extra != "")
-		echo " $extra";
-	echo " cellpadding='$padding' cellspacing='$spacing'>\n";
+	if ($extra != '')
+		echo ' '.$extra;
+	echo " cellpadding='".$padding."' cellspacing='".$spacing."'>\n";
 }
 
 function end_table($breaks=0) {
@@ -123,7 +123,7 @@ function table_section($number=1, $width=false) {
 	if ($number > 1) {
 		echo "</table>\n";
 		output_hidden();
-		$width = ($width ? "width='$width'" : "");
+		$width = ($width ? "width='$width'" : '');
 		echo "</td><td style='border-left:1px solid #cccccc;' $width>\n"; // outer table
 	}
 	echo "<table class='tablestyle_inner'>\n";
@@ -144,14 +144,16 @@ function vertical_space($params='') {
 	echo "</td></tr><tr><td valign=center ".$params.">";
 }
 
-function meta_forward($forward_to, $params="", $timeout=0, $return=false) {
+function meta_forward($forward_to, $params='', $timeout=0, $return=false) {
 	global $Ajax;
 	echo "<meta http-equiv='Refresh' content='".$timeout."; url=$forward_to?$params'>\n";
-	echo "<center><br>" . _("You should automatically be forwarded.");
-	echo " " . _("If this does not happen") . " " . "<a href='$forward_to?$params'>" . _("click here") . "</a> " . _("to continue") . ".<br><br></center>\n";
-	if ($params !='') $params = '?'.$params;
+	echo "<center><br>" . _('You should automatically be forwarded.');
+	echo " " . _('If this does not happen') . ' ' . "<a href='".$forward_to.'?'.$params."'>" . _('click here') . "</a> " . _('to continue') . ".<br><br></center>\n";
+	if ($params != '')
+		$params = '?'.$params;
 	$Ajax->redirect($forward_to.$params);
-	if (!$return) exit;
+	if (!$return)
+		exit;
 }
 
 //-----------------------------------------------------------------------------------
@@ -190,9 +192,9 @@ function hyperlink_back($center=true, $no_menu=true, $type_no=0, $trans_no=0, $f
 	start_table(false, "width='".$width."'");
 	start_row();
 	if ($no_menu)
-		echo "<td align=center><a href='javascript:window.print();'>"._("Print")."</a></td>\n";
+		echo "<td align=center><a href='javascript:window.print();'>"._('Print')."</a></td>\n";
 	
-	echo "<td align=center><a href='javascript:goBack(".($final ? '-2' : '').");'>".($no_menu ? _("Close") : _("Back"))."</a></td>\n";
+	echo "<td align=center><a href='javascript:goBack(".($final ? '-2' : '').");'>".($no_menu ? _('Close') : _('Back'))."</a></td>\n";
 	end_row();
 	end_table();
 	if ($center)
@@ -218,7 +220,7 @@ function hyperlink_no_params_td($target, $label) {
 	echo "</td>\n";
 }
 
-function viewer_link($label, $url='', $class='', $id='',  $icon=null) {
+function viewer_link($label, $url='', $class='', $id='', $icon=null) {
 	global $path_to_root;
 	
 	if ($class != '')
@@ -459,15 +461,30 @@ function tab_visible($name, $tab) {
 */
 $popup_editors = array(
 	'customer' => array('/sales/manage/customers.php?debtor_no=', 
-		113,	_("Customers"), 900, 550),
+		113,	_('Customers'), 900, 550),
 	'branch' => array('/sales/manage/customer_branches.php?SelectedBranch=', 
-		114, _("Branches"), 900, 650),
+		114, _('Branches'), 900, 650),
 	'supplier' => array('/purchasing/manage/suppliers.php?supplier_id=', 
-		113, _("Suppliers"), 1150, 550),
+		113, _('Suppliers'), 1150, 550),
 	'item' => array('/inventory/manage/items.php?stock_id=', 
-		115, _("Items"), 1000, 500),
+		115, _('Items'), 1000, 500),
 	'fa_item' => array('/inventory/manage/items.php?FixedAsset=1&stock_id=', 
-		115, _("Items"), 1000, 500)
+		115, _('Items'), 1000, 500)
+);
+
+$search_types = array(
+	'stock' => array('/inventory/inquiry/stock_list.php?popup=1&type=all&client_id=', _('Search items')),
+	'stock_manufactured' => array('/inventory/inquiry/stock_list.php?popup=1&type=manufactured&client_id=', _('Search items')),
+	'stock_purchased' => array('/inventory/inquiry/stock_list.php?popup=1&type=purchasable&client_id=', _('Search items')),
+	'stock_sales' => array('/inventory/inquiry/stock_list.php?popup=1&type=sales&client_id=', _('Search items')),
+	'stock_costable' => array('/inventory/inquiry/stock_list.php?popup=1&type=costable&client_id=', _('Search items')),
+	'component' => array('/inventory/inquiry/stock_list.php?popup=1&type=component&parent=', '&client_id=', _('Search items')),
+	'kits' => array('/inventory/inquiry/stock_list.php?popup=1&type=kits&client_id=', _('Search items')),
+	'customer' => array('/sales/inquiry/customers_list.php?popup=1&client_id=', _('Search customers')),
+	'branch' => array('/sales/inquiry/customer_branches_list.php?popup=1&client_id=', _('Search branches')),
+	'supplier' => array('/purchasing/inquiry/suppliers_list.php?popup=1&client_id=', _('Search suppliers')),
+	'account' => array('/gl/inquiry/accounts_list.php?popup=1&skip=false&client_id=', _('Search GL accounts')),
+	'account2' => array('/gl/inquiry/accounts_list.php?popup=1&skip=true&client_id=', _('Search GL accounts'))
 );
 /*
 	Bind editors for various selectors.
@@ -616,7 +633,7 @@ function display_confirmation($msg) {
 /*
 	Block menu/shortcut links during transaction procesing.
 */
-function page_processing($msg = false) {
+function page_processing($msg=false) {
 	global $Ajax;
 
 	if ($msg === true)
@@ -630,7 +647,7 @@ function page_processing($msg = false) {
 		add_js_source($js);
 }
 
-function page_modified($status = true) {
+function page_modified($status=true) {
 	global $Ajax;
 
 	$js = "_validate._modified=" . ($status ? 1:0).';';
