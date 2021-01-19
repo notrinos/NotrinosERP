@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //----------------------------------------------------------------------------------
-//	FrontAccounting global system names. They have to be stored separate from
+//	NotrinosERP global system names. They have to be stored separate from
 //	sys types defines to enable inclusion after every language change
 //	(which happens for multilanguage bulk reports)
 //
