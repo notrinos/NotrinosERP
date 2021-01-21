@@ -31,6 +31,7 @@ class current_user {
 	var $old_db;
 	var $logged;
 	var $ui_mode = 0;
+	var $login_attempt=0;
 	
 	var $prefs;
 	var $cur_con; // current db connection (can be different from $company for superuser)
@@ -126,6 +127,7 @@ class current_user {
 				$this->email = @$myrow['email'];
 				update_user_visitdate($this->username);
 				$this->logged = true;
+				$this->login_attempt = 0;
 				$this->last_act = time();
 				$this->timeout = session_timeout();
 				flush_dir(user_js_cache()); // refresh cache on login
