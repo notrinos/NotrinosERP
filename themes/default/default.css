@@ -233,10 +233,15 @@ div.tabs a:hover {
 	border: 1px solid #BFBFBF;
 }
 
+.menu_group_items img {
+	margin-right: .7em;
+	margin-top: -2px;
+}
+
 .menu_group_items a.menu_option, .menu_group_items span.inactive {
 	display: inline-block;
 	padding: 3px 5px;
-	font-size: 1.1em;
+	font-size: 1.2em;
 }
 
 a.menu_option:hover {
