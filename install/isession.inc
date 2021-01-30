@@ -97,7 +97,7 @@ $_SESSION['SysPrefs'] = new sys_prefs();
 $SysPrefs = &$_SESSION['SysPrefs'];
 
 $inst_langs = array(
-	'C' => array ( 'name' => 'English',	'code' => 'C',		'encoding' => 'iso-8859-1'),
+	'C' => array ( 'name' => 'English',	'code' => 'C',		'encoding' => 'utf-8'),
 	'ar_EG' => array ( 'name' => 'Arabic',	'code' => 'ar_EG',	'encoding' => 'utf-8', 'rtl' => true),
 	'da_DK' => array ( 'name' => 'Dansk',	'code' => 'da_DK',	'encoding' => 'iso-8859-1'),
 	'de_DE' => array ( 'name' => 'Deutsch',	'code' => 'de_DE',	'encoding' => 'iso-8859-1'),

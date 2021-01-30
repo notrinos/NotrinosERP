@@ -8,7 +8,7 @@
 -- Compatibility: 2.4.1
 
 
-SET NAMES latin1;
+SET NAMES utf8;
 
 
 -- Structure of table `0_areas` --
