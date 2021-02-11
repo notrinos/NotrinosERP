@@ -313,7 +313,7 @@ function check_bank_transfer($trans_no, $from_account, $to_account, $date_, $amo
 function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $amount, $ref, $memo_, $charge=0, $target_amount=0) {
 	begin_transaction();
 	delete_comments(ST_BANKTRANSFER, $trans_no);
-	void_transaction(ST_BANKTRANSFER, $trans_no, Today(), _("Document reentered."));
+	void_transaction(ST_BANKTRANSFER, $trans_no, $date_, _("Document reentered."));
 	void_gl_trans(ST_BANKTRANSFER, $trans_no, true);
 	$new_trans_no = add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $charge, $target_amount);
 	commit_transaction();
@@ -453,7 +453,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	// old transaction can be voided only after new transaction is entered,
 	//  otherwise the operation could fail for cash accounts due to temporary negative balance
 	if ($old_trans) {
-		$msg = void_transaction($trans_type, $old_trans, Today(), _('Document reentered.'));
+		$msg = void_transaction($trans_type, $old_trans, $date_, _('Document reentered.'));
 		if ($msg) {
 			display_error($msg);
 			return false;
