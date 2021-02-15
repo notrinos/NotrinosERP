@@ -526,9 +526,9 @@ function void_supp_invoice($type, $type_no) {
 						$stock_gl_code = get_stock_gl_code($stock_id);
 						$memo = 'Reversing Supplier invoice adjustment for zero inventory of '.$stock_id.' Invoice: '.$trans['reference'];
 						//Reverse the inventory effect if $qoh <=0
-						add_gl_trans_std_cost(ST_JOURNAL, $id, $old_date, $stock_gl_code['inventory_account'], $dim, $dim2, $memo, $details_row['quantity'] * $diff);
+						add_gl_trans_std_cost(ST_JOURNAL, $id, $old_date, $stock_gl_code['inventory_account'], $details_row['dimension_id'], $details_row['dimension2_id'], $memo, $details_row["quantity"] * $diff);
 						//GL Posting to inventory adjustment account
-						add_gl_trans_std_cost(ST_JOURNAL, $id, $old_date, $stock_gl_code['adjustment_account'], $dim, $dim2, $memo, -$details_row['quantity'] * $diff);
+						add_gl_trans_std_cost(ST_JOURNAL, $id, $old_date, $stock_gl_code['adjustment_account'], $details_row['dimension_id'], $details_row['dimension2_id'], $memo, -$details_row["quantity"] * $diff);
 						
 						add_audit_trail(ST_JOURNAL, $id, $old_date);
 						add_comments(ST_JOURNAL, $id, $old_date, $memo);
