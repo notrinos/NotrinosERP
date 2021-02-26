@@ -474,9 +474,7 @@ input.amount {
 }
 
 .navibutton[disabled], .navibutton[disabled] span {
-	color:#808080;
-	text-decoration: none;
-	cursor: auto;
+	display: none;
 }
 
 button.navibutton {
@@ -492,7 +490,11 @@ button.navibutton {
 
 .navibutton span {
 	text-decoration: underline;
-}	
+}
+
+tr.navibar .navibutton span {
+	text-decoration: none;
+}
 
 .navibar {
 	padding: 0 3px;

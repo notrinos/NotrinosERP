@@ -225,6 +225,7 @@ class db_pager {
 		$max = $this->max_page;
 		if ($page > $max) 
 			$page = $max;
+		$_POST['pager_list'] = $page;
 		$this->curr_page = $page;
 		$this->next_page = ($page < $max) ? $page+1 : null;
 		$this->prev_page = ($page > 1) ? ($page-1) : null;
@@ -364,11 +365,14 @@ class db_pager {
 		
 		$page = find_submit($this->name.'_page_', false);
 		$sort = find_submit($this->name.'_sort_', true);
+		if(list_updated('pager_list'))
+			$page = $_POST['pager_list'];
+		
 		if ($page) {
 			$this->change_page($page);
-			if ($page == 'next' && !$this->next_page || $page == 'last' && !$this->last_page)
+			if (!$this->next_page || !$this->last_page)
 				set_focus($this->name.'_page_prev');
-			if ($page == 'prev' && !$this->prev_page || $page == 'first' && !$this->first_page)
+			if (!$this->prev_page || !$this->first_page)
 				set_focus($this->name.'_page_next');
 		}
 		elseif ($sort != -1)
