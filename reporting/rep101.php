@@ -112,7 +112,7 @@ function print_customer_balances() {
 		$cust = _('All');
 	else
 		$cust = get_customer_name($fromcust);
-		$dec = user_price_dec();
+	$dec = user_price_dec();
 
 	if ($show_balance) $sb = _('Yes');
 	else $sb = _('No');
@@ -149,7 +149,7 @@ function print_customer_balances() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$grandtotal = array(0,0,0,0);
+	$grandtotal = array(0, 0, 0, 0);
 
 	$sql = "SELECT debtor_no, name, curr_code FROM ".TB_PREF."debtors_master ";
 	if ($fromcust != ALL_TEXT)
@@ -163,7 +163,11 @@ function print_customer_balances() {
 		$accumulate = 0;
 		$rate = $convert ? get_exchange_rate_from_home_currency($myrow['curr_code'], Today()) : 1;
 		$bal = get_open_balance($myrow['debtor_no'], $from);
-		$init[0] = $init[1] = 0.0;
+		$init = array();
+		$bal['charges'] = isset($bal['charges']) ? $bal['charges'] : 0;
+		$bal['credits'] = isset($bal['credits']) ? $bal['credits'] : 0;
+		$bal['Allocated'] = isset($bal['Allocated']) ? $bal['Allocated'] : 0;
+		$bal['OutStanding'] = isset($bal['OutStanding']) ? $bal['OutStanding'] : 0;
 		$init[0] = round2(abs($bal['charges']*$rate), $dec);
 		$init[1] = round2(Abs($bal['credits']*$rate), $dec);
 		$init[2] = round2($bal['Allocated']*$rate, $dec);

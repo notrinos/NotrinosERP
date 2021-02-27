@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 //----------------------------------------------------------------------------------
-//	FrontAccounting system transaction types
+//	NotrinosERP system transaction types
 //
 define('ST_JOURNAL', 0);
 

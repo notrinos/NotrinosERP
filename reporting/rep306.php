@@ -251,7 +251,7 @@ function print_inventory_purchase() {
 			$rep->NewLine();
 			$rep->NewLine();
 			$total_supp = $total_qty = 0.0;
-			$supplier_name = $trans['supplier_name'];
+			$supplier_name = isset($trans['supplier_name']) ? $trans['supplier_name'] : '';
 		}	
 	}
 	if ($supplier_name != '') {

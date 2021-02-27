@@ -78,7 +78,7 @@ function print_audit_trail() {
 	$aligns = array('left', 'left', 'left', 'left', 'left', 'left', 'left', 'right');
 
 	$usr = get_user($user);
-	$user_id = $usr['user_id'];
+	$user_id = isset($usr['user_id']) ? $usr['user_id'] : '';
 	$params =   array( 	0 => $comments,
 						1 => array('text' => _('Period'), 'from' => $from,'to' => $to),
 						2 => array('text' => _('Type'), 'from' => ($systype != -1 ? $systypes_array[$systype] : _('All')), 'to' => ''),

@@ -44,7 +44,7 @@ function display_gl_heading($myrow) {
 	
 	table_header($th);	
 	start_row();	
-	label_cell('$trans_name #' . $_GET['trans_no']);
+	label_cell($trans_name.' #' . $_GET['trans_no']);
 	label_cell($myrow['reference'], "align='center'");
 	if($myrow['supp_reference'])
 		label_cell($myrow['supp_reference'], "align='center'");

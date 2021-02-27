@@ -20,6 +20,6 @@ $repo_auth = isset($SysPrefs->repo_auth) ? $SysPrefs->repo_auth :
 array(
 	'login' => 'anonymous',
 	'pass' => 'password',
-	'host' => 'repo.frontaccounting.eu', // repo server address
+	'host' => 'repo.notrinos.com', // repo server address
 	'branch' => '2.4'	// Repository branch for current sources version
 );

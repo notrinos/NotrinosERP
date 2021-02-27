@@ -16,7 +16,7 @@ include_once($path_to_root. '/includes/hooks.inc');
 define('PKG_CACHE_PATH', $path_to_root.'/modules/_cache');
 define('PUBKEY_PATH', $path_to_root);
 //
-// FrontAccounting package class
+// NotrinosERP package class
 //
 class package extends gzip_file {
 
@@ -290,7 +290,7 @@ function get_pkg_or_list($type = null, $pkgname = null, $filter=array(), $outkey
 		}
 		$sig = url_get_contents($repo.'/Release.sig');
 		$data = file_get_contents($loclist);
-		$cert = file_get_contents(PUBKEY_PATH.'/FA.pem');
+		$cert = file_get_contents(PUBKEY_PATH.'/Notrinos.pem');
 		if (!function_exists('openssl_verify')) {
 			display_error(_('OpenSSL have to be available on your server to use extension repository system.'));
 			return null;

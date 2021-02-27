@@ -43,6 +43,7 @@ function getTaxTransactions($from, $to) {
 			ON taxrec.tax_type_id=tt.id
 		LEFT JOIN ".TB_PREF."gl_trans gl 
 			ON taxrec.trans_type=gl.type AND taxrec.trans_no=gl.type_no AND gl.amount<>0 AND
+			gl.amount=taxrec.amount AND
 			(tt.purchasing_gl_code=gl.account OR tt.sales_gl_code=gl.account)
 		LEFT JOIN ".TB_PREF."supp_trans strans
 			ON taxrec.trans_no=strans.trans_no AND taxrec.trans_type=strans.type

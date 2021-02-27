@@ -240,7 +240,7 @@ elseif (isset($_POST['db_test'])) {
 	}
 	if (!file_exists($path_to_root . '/lang/installed_languages.inc')) {
 		$installed_languages = array (
-			0 => array ('code' => 'C', 'name' => 'English', 'encoding' => 'iso-8859-1'));
+			0 => array ('code' => 'C', 'name' => 'English', 'encoding' => 'utf-8'));
 			$dflt_lang = 'C';
 			write_lang();
 	}

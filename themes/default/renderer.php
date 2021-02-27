@@ -18,7 +18,7 @@ class renderer {
 			$img = $category == '' ? 'right.gif' : $category.'.svg';
 		else	
 			$img = 'right.gif';
-		return "<img width=16 src='".$path_to_root.'/themes/'.user_theme().'/images/'.$img."' style='vertical-align:middle;' border='0'>&nbsp;&nbsp;";
+		return "<img width=16 src='".$path_to_root.'/themes/'.user_theme().'/images/'.$img."' style='vertical-align:middle;' border='0'>";
 	}
 
 	function wa_header() {

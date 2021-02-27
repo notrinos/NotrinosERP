@@ -91,8 +91,8 @@ function display_db_pager(&$pager) {
 		else	
 			alt_table_row_color($cc);
 		foreach ($pager->columns as $k=>$col) {
-		   $coltype = $col['type'];
-		   $cell = isset($col['name']) ? $row[$col['name']] : '';
+			$coltype = $col['type'];
+			$cell = isset($col['name']) ? $row[$col['name']] : '';
 
 			if (isset($col['fun'])) { // use data input function if defined
 				$fun = $col['fun']; 
@@ -171,10 +171,11 @@ function display_db_pager(&$pager) {
 		start_row();
 		if (@$pager->inactive_ctrl) 
 				submit('Update', _('Update'), true, '', null); // inactive update
-		echo navi_button_cell($but_pref.'first', _('First'), $pager->first_page, 'right');
-		echo navi_button_cell($but_pref.'prev', _('Prev'), $pager->prev_page,'right');
-		echo navi_button_cell($but_pref.'next', _('Next'), $pager->next_page,'right');
-		echo navi_button_cell($but_pref.'last', _('Last'), $pager->last_page, 'right');
+		echo navi_button_cell($but_pref.'first', _('<<'), $pager->first_page, 'right');
+		echo navi_button_cell($but_pref.'prev', _('<'), $pager->prev_page,'right');
+		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true);
+		echo navi_button_cell($but_pref.'next', _('>'), $pager->next_page,'right');
+		echo navi_button_cell($but_pref.'last', _('>>'), $pager->last_page, 'right');
 		end_row(); 
 		end_table();
 		echo "</div>";

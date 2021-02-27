@@ -56,7 +56,7 @@ function edit_allocations_for_transaction($type, $trans_no) {
 	display_heading2(_('Total:'). ' <b>' . price_format($cart->bank_amount).' '.$cart->currency.'</b>');
 
 	if (floatcmp($cart->bank_amount, $cart->amount)) {
-		$total = _('Amount ot be settled:') . ' <b>' . price_format($cart->amount).' '.$cart->person_curr.'</b>';
+		$total = _('Amount to be settled:') . ' <b>' . price_format($cart->amount).' '.$cart->person_curr.'</b>';
 		if ($cart->currency != $cart->person_curr)
 			$total .= sprintf(' (%s %s/%s)',  exrate_format($cart->bank_amount/$cart->amount), $cart->currency, $cart->person_curr);
 		display_heading2($total);
@@ -70,7 +70,7 @@ function edit_allocations_for_transaction($type, $trans_no) {
 		show_allocatable(true);
 		submit_center_first('UpdateDisplay', _('Refresh'), _('Start again allocation of selected amount'), true);
 		submit('Process', _('Process'), true, _('Process allocations'), 'default');
-		submit_center_last('Cancel', _('Back to Allocations'),_('Abandon allocations and return to selection of allocatable amounts'), 'cancel');
+		submit_center_last('Cancel', _('Back to Allocations'), _('Abandon allocations and return to selection of allocatable amounts'), 'cancel');
 	}
 	else {
 		display_note(_('There are no unsettled transactions to allocate.'), 0, 1);

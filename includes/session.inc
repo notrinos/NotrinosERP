@@ -162,6 +162,7 @@ function check_faillog() {
 
 	$user = $_SESSION['wa_current_user']->user;
 
+	$_SESSION['wa_current_user']->login_attempt++;
 	if (@$SysPrefs->login_delay && (@$login_faillog[$user][$_SERVER['REMOTE_ADDR']] >= @$SysPrefs->login_max_attempts) && (time() < $login_faillog[$user]['last'] + $SysPrefs->login_delay))
 		return true;
 
@@ -481,7 +482,6 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		if (!isset($_POST['user_name_entry_field']) or $_POST['user_name_entry_field'] == '') {
 			// strip ajax marker from uri, to force synchronous page reload
 			$_SESSION['timeout'] = array( 'uri'=>preg_replace('/JsHttpRequest=(?:(\d+)-)?([^&]+)/s', '', html_specials_encode($_SERVER['REQUEST_URI'])), 'post' => $_POST);
-
 		if (in_ajax())
 			$Ajax->popup($path_to_root.'/access/timeout.php');
 		else

@@ -156,6 +156,7 @@ if ($Mode == 'RESET')
 	reset_form();
 
 function reset_form() {
+	global $selected_id;
 	unset($_POST['trans_no']);
 	unset($_POST['description']);
 	$selected_id = -1;

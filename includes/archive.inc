@@ -282,7 +282,11 @@ class tar_file extends archive {
 				$this->files = array();
 
 			while ($block = fread($fp, 512)) {
-				$temp = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1type/a100symlink/a6magic/a2temp/a32temp/a32temp/a8temp/a8temp/a155prefix/a12temp", $block);
+				if (version_compare(PHP_VERSION, '5.5.0') >= 0)
+					$temp = unpack("Z100name/Z8mode/Z8uid/Z8gid/Z12size/Z12mtime/Z8checksum/Z1type/Z100symlink/Z6magic/Z2temp/Z32temp/Z32temp/Z8temp/Z8temp/Z155prefix/Z12temp", $block);
+				else
+					$temp = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1type/a100symlink/a6magic/a2temp/a32temp/a32temp/a8temp/a8temp/a155prefix/a12temp", $block);
+				
 				$file = array (
 					'name' => rtrim($temp['prefix']) . rtrim($temp['name']),
 					'stat' => array (
