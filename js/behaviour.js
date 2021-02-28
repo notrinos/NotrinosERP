@@ -113,9 +113,9 @@ function getAllChildren(e) {
 
 document.getElementsBySelector = function(selector) {
 	// Attempt to fail gracefully in lesser browsers
-	if (!document.getElementsByTagName) {
+	if (!document.getElementsByTagName)
 		return new Array();
-	}
+	
 	// Split selector in to tokens
 	var tokens = selector.split(' ');
 	var currentContext = new Array(document);
@@ -140,9 +140,9 @@ document.getElementsBySelector = function(selector) {
 			var bits = token.split('.');
 			var tagName = bits[0];
 			var className = bits[1];
-			if (!tagName) {
+			if (!tagName)
 				tagName = '*';
-			}
+			
 			// Get elements matching tag, filter them for class selector
 			var found = new Array;
 			var foundCount = 0;
@@ -159,7 +159,7 @@ document.getElementsBySelector = function(selector) {
 			currentContext = new Array;
 			var currentContextIndex = 0;
 			for (var k = 0; k < found.length; k++) {
-				if (found[k].className && found[k].className.match(new RegExp('\\b'+className+'\\b')))
+				if (found[k].classif (found[k].className && found[k].className.match(new RegExp('\\b'+className+'\\b')))
 					currentContext[currentContextIndex++] = found[k];
 			}
 			continue; // Skip to next token
