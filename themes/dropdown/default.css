@@ -1,19 +1,11 @@
 /*--------------------------------------------------\
-| Dynamic       |               | default.css       |
+|                  Theme: dropdown                  |
 |---------------------------------------------------|
-| For use with:                                     |
-| FrontAccounting   								|
-| http://FrontAccounting.com/  	            		|
-| by Joe Hunt Consulting                            |
+| For use with: NotrinosERP                         |
+| http://notrinos.com/  	            	    	|
+| by Phuong <trananhphuong83@gmail.com>             |
 |---------------------------------------------------|
-| Developer:                                        |
-| Joe Hunt                                          |
-|                                                   |
-|---------------------------------------------------|
-| Note:                                             |
-| Changes can be made to this CSS that will be      |
-| reflected throughout FrontAccounting.             |
-|                                                   |
+| Developer:    Tran Anh Phuong                     |
 \--------------------------------------------------*/
 
 body {
@@ -498,9 +490,12 @@ img { border: 0; }
 }
 #CC table { 
 	font-family: arial, verdana, helvetica, sans-serif;
-	font-size: 8pt;
-	border-left: 1px solid #336;
-	border-right: 1px solid #336;
+	font-size: 1em;
+	border: 1px solid #C0C0C0;
+	padding-bottom: 1px;
+	-webkit-box-shadow: 0px 6px 12px #bbb;
+  	-moz-box-shadow:    0px 6px 12px #bbb;
+  	box-shadow:         0px 6px 12px #bbb;
 }
 #CC th {
 	font-weight: normal;
@@ -516,7 +511,7 @@ img { border: 0; }
 	text-align: center;
 }
 #CC .header {
-	background-color: #22303b;
+	background-color: #464F5C;
 }
 #CC .weekday {
 	background-color: #eee;
@@ -529,10 +524,11 @@ img { border: 0; }
 #CC .weekno {
 	background-color: #cde;
 	color: #555;
+	width: 2em;
 }
 #CC .current {
 	border: 1px solid #339;
-	background-color: #22303b;
+	background-color: #464F5C;
 	color: #FFF;
 }
 #CC .weekday, #CC .weekend, #CC .current {
@@ -546,20 +542,20 @@ img { border: 0; }
 	background-color: #22303b;
 	border: 1px solid #999;
 }
-#CC .previous {
-	text-align: left;
-}
-#CC .next {
-	text-align: right;
-}
+
 #CC .previous, #CC .next {
-	padding: 1px 3px 1px 3px;
+	text-align: center;
 	font-size: 1.4em;
 }
 #CC .previous a, #CC .next a {
+	display: inline-block;
 	color: #FFF;
 	text-decoration: none;
 	font-weight: bold;
+	width: 100%;
+}
+#CC .previous a:hover, #CC .next a:hover {
+	background-color: #667485;
 }
 #CC .title {
 	text-align: center;
