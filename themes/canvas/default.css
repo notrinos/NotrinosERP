@@ -2,26 +2,23 @@
 |                   Theme: canvas                   |
 |---------------------------------------------------|
 | For use with:  NotrinosERP                        |
-| http://notrinos.com/  	            	    	|
-| by Phuong <trananhphuong83@gmail.com              |
+| http://notrinos.com/                              |
+| by Phuong <trananhphuong83@gmail.com>             |
 |---------------------------------------------------|
 | Developer:     Tran Anh Phuong                    |
 \--------------------------------------------------*/
 
 body {
 	background-color: #eee;
-
 	background: -moz-linear-gradient(bottom, #e3eaea 0%, #e3eaea 50%, #e3eaea 51%, #d7dddd 78%, #d7dddd 100%);
 	background: -webkit-linear-gradient(bottom, #e3eaea 0%, #e3eaea 50%, #e3eaea 51%, #d7dddd 78%, #d7dddd 100%);
 	background: -o-linear-gradient(bottom, #e3eaea 0%, #e3eaea 50%, #e3eaea 51%, #d7dddd 78%, #d7dddd 100%);
 	background: -ms-linear-gradient(bottom, #e3eaea 0%, #e3eaea 50%, #e3eaea 51%, #d7dddd 78%, #d7dddd 100%);
 	background: linear-gradient(to top, #e3eaea 0%, #e3eaea 50%, #e3eaea 51%, #d7dddd 78%, #d7dddd 100%);
-
 	margin: 0;
 	padding: 0;
 	text-align: center;
 }
-
 body,td,th {
 	font-family:Arial, Helvetica, sans-serif;
 	font-size: 11px;
@@ -34,7 +31,6 @@ body,td,th {
 	margin: 0 auto;
 	text-align: left;
 }
-
 tr, td, th {
 	line-height: 17px;
 	color: #000;
@@ -42,29 +38,39 @@ tr, td, th {
 table {
 	text-align: left;
 }
-
 textarea {
 	font-size: 12px;
 }
-
-input, select
-{
+input, select {
 	font-size: 11px;
-	padding: 1px;
+	padding: 3px 1px;
 }
-
-//select {
-//    max-width: 200px;
-//}
-
+select {
+	margin-left: -2px;
+}
+select[name='pager_list'] {
+	padding: 0;
+	font-size: 10px;
+}
+input.date {
+	width: 135px;
+}
+div.date_box {
+	white-space: nowrap;
+}
+div.date_box a {
+	position: relative;
+	left: -22px;
+}
+div.date_box a:focus {
+	outline: none;
+}
 input.big {
 	width: 100px;
 }
-
 input.small {
 	width: 50px;
 }
-
 a, a:active {
 	color: #045c97;
 	text-decoration: none;
@@ -92,7 +98,6 @@ a:visited {
 .flright {
 	float: right;
 }
-
 .fa-menu,
 .fa-menu ul,
 .fa-menu ul li,
@@ -195,7 +200,6 @@ a:visited {
 	margin: 0;
 	padding: 3px 0 0 0;
 }
-
 #fa-submenu{
 	padding: 0;
 	margin-top: 0px;
@@ -203,19 +207,16 @@ a:visited {
 	height: 24px;
 	background-color: #1275ae;
 }
-
 #fa-submenu ul{
 	margin:0;
 	padding: 0;
 	list-style: none;
 }
-
 #fa-submenu li{
 	display: inline;
 	margin: 0 2px 0 0;
 	padding: 0;
 }
-
 #fa-submenu a{
 	float: left;
 	display: block;
@@ -227,12 +228,10 @@ a:visited {
 	padding: 5px 10px;
 	background-color: #1275ae;
 }
-
 #fa-submenu a:hover{
 	background-color: black; /*Brown color theme*/ 
 	color: white;
 }
-
 
 /* Content */
 .fa-content {
@@ -255,8 +254,6 @@ a:visited {
 	font-size: 10px;
 	color: #036;
 }
-
-
 h1 {
 	font-size: 14px;
 	margin-right: 20px;
@@ -277,10 +274,25 @@ h3 {
 	padding-top: 1ex;
 	padding-bottom: 1ex;
 }
-#header { margin: 0; }
-#header ul {clear: right; float: right; font-size: 11px; margin: 8px 10px 0 0; }
-#header li{ list-style: none; display: inline; margin: 0; }
-#header li a{ color: #045c97; text-decoration: none; padding: 0 0 0 16px; }
+#header {
+	margin: 0;
+}
+#header ul {
+	clear: right;
+	float: right;
+	font-size: 11px;
+	margin: 8px 10px 0 0;
+}
+#header li {
+	list-style: none;
+	display: inline;
+	margin: 0;
+}
+#header li a {
+	color: #045c97;
+	text-decoration: none;
+	padding: 0 0 0 16px;
+}
 #header h1 {
 	padding: 4px 0 4px 10px;
 	margin: 0;
@@ -288,7 +300,6 @@ h3 {
 #header h2 {
 	font-style: italic;
 }
-
 .fa-footer .power a {
 	font-size: 10px;
 	padding: 0 12px 0 12px;
@@ -302,14 +313,12 @@ h3 {
 	text-align: center;
 	color: #045c97;
 }
-
 hr {
 	background: #ccc;
 	border: 0;
 	color: #ccc;
 	height: 1px;
 }
-
 .menu_group {
 	font-size: 12px;
 	padding: 0;
@@ -318,7 +327,6 @@ hr {
 	padding-left: 3px;
 	font-weight: bold;
 }
-
 .menu_group_items {
 	font-size: 12px;
 	background-color: #f9f9f9;
@@ -327,52 +335,43 @@ hr {
 	padding: 9px;
 	border: 1px solid #8899aa;
 }
-
 .menu_group_items a {
 	text-decoration: none;
 }
-
 .tableheader {
 	font-weight: bold;
 	background-color: #1275ae;
 	color: #fff;
 	text-align: center;
 }
-
 .tableheader2 {
 	font-weight: bold;
 	background-color: #1275ae;
 	color: #fff;
 	text-align: left;
 }
-
 .tableseparator {
 	border-left: 1px solid #ccc;
 }
-
 .headingtext {
 	font-weight: bold;
 	font-size: 12px;
 	color: #555;
 }
-
 .headingtext2 {
 	font-size: 12px;
 	color: black;
 }
-
 .headingtext3 {
 	font-weight: bold;
 	font-size: 10px;
 	color: black;
 }
-
 .errortext {
 	font-size: 12px;
 	color: #f00;
 	font-weight: bold;
 }
-
 .inputsubmit {
 	font-size: 11px;
 	border: 1px #ccc solid;
@@ -380,7 +379,6 @@ hr {
 	background-repeat: repeat-x;
 	padding: 1px 4px;
 }
-
 .ajaxsubmit {
 	font-size: 11px;
 	border: 1px #ccc solid;
@@ -388,56 +386,43 @@ hr {
 	background-repeat: repeat-x;
 	padding: 1px 4px;
 }
-
 .oddrow {
 	background-color: #fafafa;
 }
-
 .evenrow {
 	background-color: #f3f3f3;
 }
-
 .overduebg {
 	background-color: pink;
 }
-
 .overduefg {
 	color: pink;
 }
-
 .currentfg {
 	color: #f66;
 }
-
 .redfg, a.redfg {
 	color: red;
 	font-weight: bold;
 }
-
 .settledbg {
 	background-color: #0b0;
 }
-
 .settledfg {
 	color: #0b0;
 }
-
 .inquirybg {
 	background-color: #fdfeef;
 }
-
 .currencybg {
 	background-color: #e88;
 }
-
 .stockmankobg {
 	background-color: pink;
 }
-
 .stockmankofg {
 	color: red;
 }
-
 table.tablestyle {
 	border-collapse: collapse;
 	border: 1px solid #8899aa;
@@ -465,16 +450,13 @@ table.tablestyle_inner td {
 .tablestyle_noborder {
 	padding: 3px;
 }
-
 .label {
 	background-color: #d7dbdd;
 	color: black;
 }
-
 #loginscreen {
 	background: #f5f5f5;
 }
-
 .login {
 	width: 350px;
 	border-left: 12px solid #367cb5;
@@ -485,17 +467,14 @@ table.tablestyle_inner td {
 	border-collapse: collapse;
 	border: 1px solid #cccccc;
 }
-
 .amount {
 	font-family: Verdana, Arial, Helvetica;
 	font-size: 11px;
 	text-align: right;
 }
-
 input.amount {
 	padding-right: 0px;
 }
-
 .editbutton {
 	color:#00f;
 	background-color:transparent;
@@ -505,11 +484,9 @@ input.amount {
 	margin: 0;
 	cursor: pointer;
 }
-
 .navibutton[disabled] {
 	display: none;
 }
-
 button.navibutton {
 	font-family:Arial, Helvetica, sans-serif;
 	font-size: 11px;
@@ -520,15 +497,12 @@ button.navibutton {
 	border-style:none;
 	cursor: pointer;
 }
-
 .navibutton span {
 	text-decoration:underline;
 }
-
 tr.navibar .navibutton span {
 	text-decoration: none;
 }
-
 .navibar {
 	padding: 0 3px;
 	color: #fff;
@@ -536,39 +510,32 @@ tr.navibar .navibutton span {
 	border-collapse: collapse;
 	background-color: #1275ae;
 }
-
 .listsubmit {
 	display: none;
 }
-
 .inactive {
 	color: gray;
 }
-
 button {
 	font-size: 11px;
 	border: 1px #0066cc solid;
 	padding: 1px 0px;
 }
-
 button img, span {
 	padding: 0px 2px ;
 	vertical-align: middle;
 }
-
 ul.ajaxtabs{
 	padding: 3px 0 0 0;
 	margin: 3px 3px 0 3px;
 	font: 12px Tahoma,Verdana;
 	font-weight: bold;
 }
-
 ul.ajaxtabs li{
 	list-style: none;
 	margin: 0;
 	display: inline;
 }
-
 ul.ajaxtabs li button{
 	background-color: #dee7ec;
 	padding: 3px 8px;
@@ -579,7 +546,6 @@ ul.ajaxtabs li button{
 	border-left: none;
 	font-weight: bold;
 }
-
 ul.ajaxtabs li button:hover{
 	border-top: 1px solid #8899aa;
 	color:#fff;
@@ -592,12 +558,10 @@ div.spaceBox{
 	border-right:1px solid #8899aa;
 	margin: 0 3px 0px 3px
 }
-
 div.contentBox{
 	border: 1px solid #8899aa;
 	margin: 0 3px 3px 3px
 }
-
 ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	border-left: 1px solid #8899aa;
 	background-color: #8899aa;
@@ -612,12 +576,12 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	background-color: #ffffea;
 	white-space: nowrap;
 }
+img {
+	border: 0;
+}
 
-img { border: 0; }
+/****** Calendar style ******/
 
-/*
-	Calendar style
-*/
 #CCIframe {
 	display: none;
 	left: 0px;
@@ -688,7 +652,6 @@ img { border: 0; }
 	background-color: #22303b;
 	border: 1px solid #999;
 }
-
 #CC .previous, #CC .next {
 	text-align: center;
 	font-size: 1.4em;
@@ -712,7 +675,6 @@ img { border: 0; }
 	background-color: #ddd;
 	border: 1px solid #FFF;
 }
-
 div.err_msg {
 	margin: 10px;
 	padding: 3px;
@@ -721,7 +683,6 @@ div.err_msg {
 	color: #dd2200;
 	text-align: center;
 }
-
 div.warn_msg {
 	margin: 10px;
 	padding: 3px;
@@ -730,7 +691,6 @@ div.warn_msg {
 	color: #ff5500;
 	text-align: center;
 }
-
 div.note_msg {
 	margin: 10px;
 	padding: 3px;
@@ -739,17 +699,14 @@ div.note_msg {
 	color: #007700;
 	text-align: center;
 }
-
 #title {
 	margin-bottom: 10px;
 	width: 100%;
 }
-
 div.widgets_container {
 	display: inline-block;
 	width: 100%;
 }
-
 div.widget_title {
 	font-weight: bold;
 	color: #555;
@@ -759,7 +716,6 @@ div.widget_title {
 	padding: 5px 0;
 	margin-bottom: 5px;
 }
-
 div.widget {
 	border: 1px solid #DDD;
 	background: #FFF;
@@ -771,12 +727,10 @@ div.widget {
 	height: 23em;
 	overflow: auto;
 }
-
 div.widget_full {
 	width: calc(100% - 40px);
 	margin-left: 20px;
 }
-
 div.widget_half {
 	width: calc(50% - 30px);
 	margin-left: 20px ;

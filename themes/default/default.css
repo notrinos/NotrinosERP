@@ -1,9 +1,9 @@
 /*--------------------------------------------------\
-|                   Theme: default                  |
+|                  Theme:  default                  |
 |---------------------------------------------------|
 | For use with:  NotrinosERP                        |
-| http://notrinos.com/  	            	    	|
-| by Phuong <trananhphuong83@gmail.com              |
+| http://notrinos.com/                              |
+| by Phuong <trananhphuong83@gmail.com>             |
 |---------------------------------------------------|
 | Developer:     Tran Anh Phuong                    |
 \--------------------------------------------------*/
@@ -18,79 +18,80 @@ body {
 	margin: 5px 0 0 5px;
 	padding: 0;
 }
-
 tr, td, th {
 	font-size: 11px;
 	line-height: 19px;
 }
-
 table {
 	text-align: left;
 }
-
 textarea {
 	font-size: 12px;
 }
-
 input, select {
 	font-size: 11px;
-	padding: 1px;
+	padding: 3px 1px;
 }
-
 select {
-	/*max-width: 230px;*/
+	margin-left: -2px;
 }
-
+select[name='pager_list'] {
+	padding: 0;
+	font-size: 10px;
+}
+input.date {
+	width: 135px;
+}
+div.date_box {
+	white-space: nowrap;
+}
+div.date_box a {
+	position: relative;
+	left: -22px;
+}
+div.date_box a:focus {
+	outline: none;
+}
 option.inactive {
 	text-decoration: line-through;
 	color: gray;
 }
-
 input.big {
 	width: 100px;
 }
-
 input.small {
 	width: 50px;
 }
-
 a {
 	color: #0060a0;
 	font-size: 11px;
 	text-decoration: none;
 }
-
 a:link {
 	color: #0060a0;
 	text-decoration: none;
 }
-
 a:active {
 	color: #222222;
 	text-decoration: none;
 }
-
 a:hover, a:focus {
 	color: #2d8628;
 	text-decoration: underline;
 }
-
 .inactive {
 	color: gray;
 }
-
 button {
 	font-size: 11px;
 	border: 1px #0066cc solid;
 	padding: 1px 0px;
 }
-
 button img, span {
 	padding: 0px 2px ;
 	vertical-align: middle;
 	box-sizing: content-box;
 }
-
 .callout_main {
 	font-family: Verdana, Arial, Helvetica;
 	border: none;
@@ -98,7 +99,6 @@ button img, span {
 	margin: 0;
 	padding: 0;
 }
-
 .main_page {
 	background-color: #FEFEFE;
 	border: none;
@@ -106,15 +106,12 @@ button img, span {
 	margin: 0;
 	padding: 0;
 }
-
 .quick_menu {
 	background-color: #DADADA;
 	border: 0;
 	margin: 0;
 	padding: 0;
-	/*text-align: right;*/
 }
-
 .quick_menu_selected {
 	font-family: Verdana, Arial, Helvetica;
 	font-size: 13px;
@@ -125,7 +122,6 @@ button img, span {
 	color: #00cc00;
 	font-weight: bolder;
 }
-
 .logoutBar {
 	padding-right: 1em;
 	background: #EAEAEA;
@@ -133,7 +129,6 @@ button img, span {
 	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
-
 .bottomBar {
 	padding-right: 1em;
 	background: #EAEAEA;
@@ -141,12 +136,10 @@ button img, span {
 	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
-
 .bottomBarCell {
 	font-size: 10px;
 	line-height: 12px;
 }
-
 .bottomBar2 {
 	padding-right: 1em;
 	background: #EAEAEA;
@@ -155,11 +148,9 @@ button img, span {
 	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
-
 .logoutBarRight {
 	text-align: right;
 }
-
 div.logoutBar {
 	padding-right: 1em;
 	background: #EAEAEA;
@@ -176,7 +167,6 @@ div.logoutBar a {
 div.logoutBar img {
 	vertical-align: top;
 }
-
 div.tabs {
 	padding: 3px 0 0 0;
 	background: none transparent scroll repeat 0% 0%;
@@ -207,7 +197,6 @@ div.tabs a:hover {
 	background: #EAEAEA;
 	color: #436976;
 }
-
 .menu_group {
 	font-size: 13px;
 	padding: 0px;
@@ -216,7 +205,6 @@ div.tabs a:hover {
 	padding-left: 3px;
 	font-weight: bold;
 }
-
 .menu_group_items {
 	background-color: #FEFEFE;
 	font-weight: normal;
@@ -224,42 +212,34 @@ div.tabs a:hover {
 	margin: 9px;
 	border: 1px solid #BFBFBF;
 }
-
 .menu_group_items img {
 	margin-right: .7em;
 	margin-top: -2px;
 }
-
 .menu_group_items a.menu_option, .menu_group_items span.inactive {
 	display: inline-block;
 	padding: 3px 5px;
 	font-size: 1.2em;
 }
-
 a.menu_option:hover {
 	text-decoration: none;
 	background-color: #E0E0E0;
 }
-
 a.menu_option:focus {
 	text-decoration: none;
 }
-
 #hotkeyshelp {
 	text-align: right;
 	font-weight: bolder;
 }
-
 #footer {
 	position: relative;
 	bottom: -3px;
 }
-
 .footer td a {
 	color: #666666;
 	font-size: 9px;
 }
-
 .footer {
 	font-family: Verdana, Arial, Helvetica;
 	color: #cccccc;
@@ -268,21 +248,18 @@ a.menu_option:focus {
 	text-align: center;
 	width: 100%;
 }
-
 .tableheader {
 	font-weight: bold;
 	background-color: #C9C9C9;
 	color: #222222;
 	text-align: center;
 }
-
 .tableheader2 {
 	font-weight: bold;
 	background-color: #C9C9C9;
 	color: #222222;
 	text-align: left;
 }
-
 .titletext {
 	font-weight: bold;
 	font-size: 13px;
@@ -291,91 +268,72 @@ a.menu_option:focus {
 	width: 100%;
 	color: #222222;
 }
-
 .headingtext {
 	font-weight: bold;
 	font-size: 13px;
 	color: #222222;
 }
-
 .headingtext2 {
 	font-size: 13px;
 	color: #222222;
 }
-
 .headingtext3 {
 	font-weight: bold;
 	font-size: 10px;
 	color: #222222;
 }
-
 .errortext {
 	font-size: 13px;
 	color: #ff0000;
 	font-weight: bold;
 }
-
 .inputsubmit {
 	font-size: 11px;
 	border: 1px #0066cc solid;
 	padding: 1px 4px;
 }
-
 .ajaxsubmit {
 	font-size: 11px;
 	border: 1px #0066cc solid;
 	padding: 1px 4px;
 }
-
 .oddrow {
 	background-color: #FAFAFA;
 }
-
 .evenrow {
 	background-color: #F0F0F0;
 }
-
 .overduebg {
 	background-color: #F0A0A0;
 }
-
 .overduefg {
 	color: #FFA5A8;
 }
-
 .currentfg {
 	color: #ff6666;
 }
-
 .redfg, a.redfg {
 	color: red;
 	font-weight: bold;
 }
-
 .settledbg {
 	background-color: #5fcf7f;
 }
-
 .settledfg {
 	color: #0faf0f;
 }
-
 .inquirybg {
 	background-color: #fdfeef;
 }
-
 .currencybg {
 	background-color: #ee8888;
 }
-
 .stockmankobg {
 	background-color: pink;
 }
-
 .stockmankofg {
 	color: red;
 }
-
 table.tablestyle {
 	border-collapse: collapse;
 	border: 1px solid #BFBFBF;
@@ -403,28 +361,23 @@ table.tablestyle_inner td {
 .tablestyle_noborder {
 	padding: 3px;
 }
-
 .label {
 	background-color: #efefef;
 	color: #222222;
 }
-
 #loginscreen {
 	background: #f5f5f5;
 }
-
 .login {
 	width: 350px;
 	border:1px solid #ccc;
 	border-left: 12px solid #C0C0C0;
 	background-color: #FAFAFA;
 }
-
 .login td.tableheader {
 	line-height: 40px;
 	border:1px solid #ccc;
 }
-
 .login select, .login input[type=text], input[type=password] {
 	height:25px;
 	width: 225px;
@@ -435,7 +388,6 @@ table.tablestyle_inner td {
 	background-color: #fff;
 	outline: none;
 }
-
 .login input[type=button], input[type=submit] {
 	background-color: #367cb5;
 	border: none;
@@ -446,17 +398,14 @@ table.tablestyle_inner td {
 	margin: 4px 2px;
 	cursor: pointer;
 }
-
 .amount {
 	font-family: Verdana, Arial, Helvetica;
 	font-size: 11px;
 	text-align: right;
 }
-
 input.amount {
 	padding-right: 0px;
 }
-
 .editbutton {
 	color:#0000FF;
 	background-color:transparent;
@@ -464,11 +413,9 @@ input.amount {
 	text-decoration:underline;
 	cursor: pointer;
 }
-
 .navibutton[disabled], .navibutton[disabled] span {
 	display: none;
 }
-
 button.navibutton {
 	font-family: Verdana, Arial, Helvetica;
 	font-size: 11px;
@@ -479,43 +426,35 @@ button.navibutton {
 	border-style:none;
 	cursor: pointer;
 }
-
 .navibutton span {
 	text-decoration: underline;
 }
-
 tr.navibar .navibutton span {
 	text-decoration: none;
 }
-
 .navibar {
 	padding: 0 3px;
 	color: #000;
 	border-collapse: collapse;
 	background-color: #C9C9C9;
 }
-
 .navibar tr td {
 	border: none;
 }
-
 .listsubmit {
 	display: none;
 }
-
 ul.ajaxtabs{
 	padding: 3px 0 0 0;
 	margin: 3px 3px 0 3px;
 	font: 12px Tahoma,Verdana;
 	font-weight: bold;
 }
-
 ul.ajaxtabs li{
 	list-style: none;
 	margin: 0;
 	display: inline;
 }
-
 ul.ajaxtabs li button{
 	background-color: #E5E5E5;
 	padding: 3px 8px;
@@ -526,7 +465,6 @@ ul.ajaxtabs li button{
 	border-left: none;
 	font-weight: bold;
 }
-
 ul.ajaxtabs li button:hover{
 	border-top: 1px solid #BFBFBF;
 	color:#FFFFFF;
@@ -539,12 +477,10 @@ div.spaceBox{
 	border-right:1px solid #BFBFBF;
 	margin: 0 3px 0px 3px
 }
-
 div.contentBox{
 	border: 1px solid #BFBFBF;
 	margin: 0 3px 3px 3px
 }
-
 ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	border-left: 1px solid #BFBFBF;
 	background-color: #C9C9C9;
@@ -631,7 +567,6 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	background-color: #DADADA;
 	border: 1px solid #999;
 }
-
 #CC .previous, #CC .next {
 	font-size: 1.4em;
 	text-align: center;
@@ -655,12 +590,10 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	background-color: #eee;
 	border: 1px solid #FFF;
 }
-
 #CC .cc_months_list {
 	border: 1px solid #D0D0D0;
 	color: #333;
 }
-
 div.err_msg {
 	margin: 10px;
 	padding: 3px;
@@ -669,7 +602,6 @@ div.err_msg {
 	color: #dd2200;
 	text-align: center;
 }
-
 div.warn_msg {
 	margin: 10px;
 	padding: 3px;
@@ -678,7 +610,6 @@ div.warn_msg {
 	color: #ff5500;
 	text-align: center;
 }
-
 div.note_msg {
 	margin: 10px; 
 	padding: 3px;
@@ -687,17 +618,14 @@ div.note_msg {
 	color: #007700;
 	text-align: center;
 }
-
 #title {
 	margin-bottom: 10px;
 	width: 100%;
 }
-
 div.widgets_container {
 	display: inline-block;
 	width: 100%;
 }
-
 div.widget_title {
 	font-weight: bold;
 	color: #555;
@@ -707,7 +635,6 @@ div.widget_title {
 	padding: 5px 0;
 	margin-bottom: 5px;
 }
-
 div.widget {
 	border: 1px solid #DDD;
 	background: #FFF;
@@ -719,12 +646,10 @@ div.widget {
 	height: 23em;
 	overflow: auto;
 }
-
 div.widget_full {
 	width: calc(100% - 40px);
 	margin-left: 20px;
 }
-
 div.widget_half {
 	width: calc(50% - 30px);
 	margin-left: 20px ;
