@@ -200,13 +200,13 @@ class BoxReports {
 					}
 					else // saved parameters
 						$date = $_POST[$name];
-					$st = "<input type='text' name='$name' value='$date'>";
+					$st = "<div class='date_box'><input type='text' name='$name' value='$date'>";
 					if (user_use_date_picker()) {
-						$calc_image = (file_exists("$path_to_root/themes/".user_theme()."/images/cal.gif")) ? 
-							$path_to_root.'/themes/'.user_theme().'/images/cal.gif' : $path_to_root.'/themes/default/images/cal.gif';
+						$calc_image = (file_exists($path_to_root.'/themes/'.user_theme().'/images/cal.svg')) ? 
+							$path_to_root.'/themes/'.user_theme().'/images/cal.svg' : $path_to_root.'/themes/default/images/cal.svg';
 						$st .= "<a href=\"javascript:date_picker(document.forms[0].$name);\">"
-						. "	<img src='".$calc_image."' style='vertical-align:middle;padding-bottom:4px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a>\n";
-					}	
+						. "	<img src='".$calc_image."' style='vertical-align:middle;margin-top:-3px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a></div>\n";
+					}
 					return $st;
 					break;
 

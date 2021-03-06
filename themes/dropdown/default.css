@@ -60,6 +60,9 @@ div.date_box a {
 div.date_box a:focus {
 	outline: none;
 }
+div.date_box a:hover {
+	text-decoration: none;
+}
 input.big {
 	width: 100px;
 }
