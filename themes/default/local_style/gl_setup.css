@@ -2,11 +2,11 @@ table.tablestyle_inner span {
 	margin: 0;
 	padding: 0;
 }
-table.tablestyle_inner input:not([type=checkbox]):not([name=default_workorder_required]):not([name=default_receival_required]):not([name=default_quote_valid_days]):not([name=default_delivery_required]):not([name=default_dim_required]),
+table.tablestyle_inner input:not([type=checkbox]),
 table.tablestyle_inner textarea, table.tablestyle_inner span {
-	width: calc(100% - 1.5em);
+	width: calc(100% - 3em);
 }
 table.tablestyle_inner select {
-	width: calc(100% - 1.5em);
+	width: calc(100% - 3em);
 	margin: 0;
 }
