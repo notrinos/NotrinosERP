@@ -1,3 +1,233 @@
+2021-03-10 20:31 +0700 Tran Anh Phuong
+Function get_magic_quotes_gpc() is deprecated php7.4. /install/isession.inc. Fixed.
+M	install/isession.inc
+
+2021-03-10 14:46 +0700 Tran Anh Phuong
+Update installation requirements
+M	README.md
+
+2021-03-07 07:48 +0700 Tran Anh Phuong
+theme improvement
+M	themes/default/local_style/gl_setup.css
+
+2021-03-06 09:48 +0700 Tran Anh Phuong
+Continue of redesigning date input
+M	reporting/includes/reports_classes.inc
+M	themes/canvas/default.css
+M	themes/default/default.css
+M	themes/dropdown/default.css
+
+2021-03-05 08:48 +0700 Tran Anh Phuong
+Syntax error from last commit, fixed
+M	js/behaviour.js
+
+2021-03-01 07:48 +0700 Tran Anh Phuong
+Wrong Permission for Inventory Purchasing Report (rep306.php). Fixed.
+M	reporting/rep306.php
+
+2021-02-28 22:04 +0700 Tran Anh Phuong
+Fixed javascript error appearing on themes using SVGElements
+M	js/behaviour.js
+
+2021-02-28 16:32 +0700 Tran Anh Phuong
+Date input redesigned
+M	includes/ui/ui_input.inc
+M	themes/canvas/default.css
+M	themes/default/default.css
+M	themes/dropdown/default.css
+
+2021-02-28 07:54 +0700 Tran Anh Phuong
+Datepicker ui improvement
+M	themes/canvas/default.css
+M	themes/default/default.css
+M	themes/dropdown/default.css
+
+2021-02-27 22:57 +0700 Tran Anh Phuong
+Added months selector to datepicker
+M	includes/ui/ui_view.inc
+
+2021-02-27 11:11 +0700 Tran Anh Phuong
+inconsistent sales kit name and item names
+M	sql/en_US-demo.sql
+
+2021-02-26 22:37 +0700 Tran Anh Phuong
+db_pager improvement: added page selector
+M	includes/db_pager.inc
+M	includes/ui/db_pager_view.inc
+M	themes/canvas/default.css
+M	themes/default/default.css
+M	themes/dropdown/default.css
+
+2021-02-26 19:44 +0700 Tran Anh Phuong
+ui_lists.inc improvement
+M	includes/ui/ui_lists.inc
+
+2021-02-24 21:57 +0700 Tran Anh Phuong
+Moved dates one year forward for 2021
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+2021-02-24 15:25 +0700 Tran Anh Phuong
+Updated extensions repository
+D	FA.pem
+A	Notrinos.pem
+M	includes/packages.inc
+
+2021-02-24 10:05 +0700 Tran Anh Phuong
+Error displaying languages list during installation. Fixed
+M	install/isession.inc
+
+2021-02-20 15:48 +0700 Tran Anh Phuong
+Wrong enclosure in gl_trans_view.php. fixed
+M	gl/view/gl_trans_view.php
+
+2021-02-19 19:37 +0700 Tran Anh Phuong
+Bug 5360: Spelling mistake in ../sales/allocations/customer_allocate.php. Fixed
+M	sales/allocations/customer_allocate.php
+
+2021-02-17 07:39 +0700 Tran Anh Phuong
+PHP 7.4 Bugs in some reports.
+M	reporting/rep101.php
+M	reporting/rep115.php
+M	reporting/rep201.php
+M	reporting/rep206.php
+M	reporting/rep306.php
+M	reporting/rep710.php
+
+2021-02-16 07:59 +0700 Tran Anh Phuong
+Bug 5352: missing global declaration in reset_form()in attachments.php. Fixed.
+M	admin/attachments.php
+M	purchasing/includes/db/invoice_db.inc
+
+2021-02-15 15:33 +0700 Tran Anh Phuong
+Bug 5351: dim dim2 not defined of purchasing/includes/db/invoice_db.inc. Fixed.
+M	purchasing/includes/db/invoice_db.inc
+
+2021-02-12 17:50 +0700 Tran Anh Phuong
+Bug 5332: Rep709, Tax Report, Multiple entries for a sinle tax line. Fixed.
+M	reporting/rep709.php
+
+2021-02-12 12:52 +0700 Tran Anh Phuong
+Bug 5310: DB error when on bank payment/transfer edit if current fiscal year is missing. Fixed.
+M	gl/includes/db/gl_db_banking.inc
+
+2021-01-31 22:32 +0700 Tran Anh Phuong
+Bug in Customer/Supplier Payments Recording. Fixed.
+M	includes/ui/allocation_cart.inc
+
+2021-01-31 22:32 +0700 Tran Anh Phuong
+Bug 5326 needs reversion for PHP < 5.5. Fixed
+M	includes/archive.inc
+
+2021-01-30 09:50 +0700 Tran Anh Phuong
+Changed default language encoding to utf-8
+A	company/0/images/101.jpg
+D	company/0/images/102.jpg
+D	company/0/images/103.jpg
+D	company/0/images/104.jpg
+D	company/0/images/logo_frontaccounting.jpg
+A	company/0/images/notrinos_erp.jpg
+M	install/index.php
+M	install/isession.inc
+A	reporting/fonts/FreeSans.ttf
+A	reporting/fonts/dejavu.ctg.z
+A	reporting/fonts/dejavu.php
+A	reporting/fonts/dejavu.z
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+2021-01-23 20:03 +0700 Tran Anh Phuong
+error displaying menu links in default theme, fixed.
+M	themes/default/default.css
+M	themes/default/renderer.php
+
+2021-01-21 21:43 +0700 Tran Anh Phuong
+PHP 7.4 bug in /admin/db/tags_db, function get_tag_name. Fixed.
+M	admin/db/tags_db.inc
+
+2021-01-21 08:17 +0700 Tran Anh Phuong
+Install Languages/Extensions/Themes/CoA: fixed warnings during module installation.
+M	includes/archive.inc
+
+2021-01-21 08:11 +0700 Tran Anh Phuong
+Login/Timeout: Added message on failed login attempt. rerun
+M	includes/session.inc
+
+2021-01-21 08:07 +0700 Tran Anh Phuong
+Login/Timeout: Added message on failed login attempt.
+M	access/login.php
+M	includes/current_user.inc
+M	includes/session.inc
+
+2021-01-19 15:52 +0700 Tran Anh Phuong
+Update extensions repository
+M	access/login.php
+M	config.default.php
+M	includes/hooks.inc
+M	includes/packages.inc
+M	includes/sysnames.inc
+M	includes/types.inc
+M	version.php
+
+2021-01-19 09:29 +0700 Tran Anh Phuong
+rerun of demo link
+M	README.md
+
+2021-01-19 09:27 +0700 Tran Anh Phuong
+Add demo link
+M	README.md
+
+2021-01-18 21:28 +0700 Tran Anh Phuong
+Custom ui functions to make modules have ability to inherit search popup
+M	includes/ui/ui_controls.inc
+M	includes/ui/ui_lists.inc
+A	themes/canvas/images/index.php
+A	themes/default/images/index.php
+A	themes/default/local_style/index.php
+A	themes/dropdown/images/index.php
+
+2021-01-18 16:26 +0700 Tran Anh Phuong
+Create LICENSE
+A	LICENSE
+
+2021-01-17 09:43 +0700 Tran Anh Phuong
+Added missing icons on canvas and dropdown theme
+M	README.md
+A	themes/canvas/images/delete.svg
+A	themes/canvas/images/download.svg
+A	themes/canvas/images/edit.svg
+A	themes/canvas/images/gl.svg
+A	themes/canvas/images/ok.svg
+A	themes/canvas/images/view.svg
+A	themes/dropdown/images/delete.svg
+A	themes/dropdown/images/download.svg
+A	themes/dropdown/images/edit.svg
+A	themes/dropdown/images/gl.svg
+A	themes/dropdown/images/ok.svg
+A	themes/dropdown/images/view.svg
+M	themes/dropdown/renderer.php
+
+2021-01-16 19:27 +0700 Tran Anh Phuong
+Added wiki system
+M	config.default.php
+
+2021-01-15 09:16 +0700 Tran Anh Phuong
+Wrong security area passed in generalledger.php. Fixed.
+M	applications/generalledger.php
+
+2021-01-13 15:30 +0700 Tran Anh Phuong
+Continue to update project information.
+M	README.md
+
+2021-01-13 15:26 +0700 Tran Anh Phuong
+Update project information
+A	NotrinosERP.php
+D	frontaccounting.php
+M	README.md
+M	includes/session.inc
+D	themes/default/images/logo_frontaccounting.jpg
+A	themes/default/images/notrinos_erp.jpg
+
 2021-01-12 16:05 +0700 Tran Anh Phuong
 UI/Dashboard iprovement
 M	admin/dashboard.php
