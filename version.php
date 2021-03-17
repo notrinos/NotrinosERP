@@ -6,7 +6,7 @@
 
 // Versions used by source/database version compatibility checks. Do not change.
 $db_version = '2.4.1';
-$src_version = '0.1';
+$src_version = '0.2';
 
 // application version - can be overriden in config.php
 $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
