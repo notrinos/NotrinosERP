@@ -30,8 +30,7 @@ if($widget->checkSecurity('SA_GLANALYTIC')) {
 			$total += $myrow['total'];
 			$myrow['total'] = -$myrow['total'];
 		}	
-		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), 
-			"class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
+		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), "class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
 	}
 	$calculated = _('Calculated Return');
 	label_row('&nbsp;', '');

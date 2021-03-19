@@ -28,7 +28,7 @@ if($widget->checkSecurity('SA_SUPPTRANSVIEW')) {
 	$k = 0;
 	while ($myrow = db_fetch($result)) {
 		alt_table_row_color($k);
-		label_cell(get_trans_view_str(ST_SUPPINVOICE, $myrow["trans_no"]));
+		label_cell(get_trans_view_str(ST_SUPPINVOICE, $myrow['trans_no']));
 		label_cell($myrow['reference']);
 		label_cell(sql2date($myrow['tran_date']));
 		label_cell(sql2date($myrow['due_date']));

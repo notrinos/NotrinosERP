@@ -255,9 +255,9 @@ function customer_trans($today) {
 
 function calculate_next_invoice($myrow) {
 	if ($myrow["last_sent"] == '0000-00-00')
-		$next = sql2date($myrow["begin"]);
+		$next = sql2date($myrow['begin']);
 	else
-		$next = sql2date($myrow["last_sent"]);
+		$next = sql2date($myrow['last_sent']);
 	$next = add_months($next, $myrow['monthly']);
 	$next = add_days($next, $myrow['days']);
 	return add_days($next,-1);

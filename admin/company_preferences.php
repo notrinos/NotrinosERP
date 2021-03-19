@@ -171,6 +171,7 @@ $_POST['no_supplier_list']  = $myrow['no_supplier_list'];
 $_POST['curr_default']  = $myrow['curr_default'];
 $_POST['f_year']  = $myrow['f_year'];
 $_POST['time_zone']  = $myrow['time_zone'];
+
 if (!isset($myrow['company_logo_report'])) {
 	set_company_pref('company_logo_report', 'setup.company', 'tinyint', 1, '0');
 	$myrow['company_logo_report'] = get_company_pref('company_logo_report');

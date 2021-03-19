@@ -36,7 +36,7 @@ if ($view_id != -1) {
 			header('Content-type: '.$type);
 			header('Content-Length: '.$row['filesize']);
 			header('Content-Disposition: inline');
-			echo file_get_contents(company_path(). '/attachments/'.$row['unique_name']);
+			echo file_get_contents(company_path().'/attachments/'.$row['unique_name']);
 			exit();
 		}
 	}	
@@ -97,7 +97,6 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		display_error(_('File name exceeds maximum of 60 chars. Please change filename and try again.'));
 	}
 	else {
-		//$content = base64_encode(file_get_contents($_FILES['filename']['tmp_name']));
 		$tmpname = $_FILES['filename']['tmp_name'];
 
 		$dir =  company_path().'/attachments';

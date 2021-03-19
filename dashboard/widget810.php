@@ -23,7 +23,7 @@ $widget->setTitle($title);
 $widget->Start();
 
 if($widget->checkSecurity('SA_ASSETSANALYTIC')) {
-	$th = array(_("Item"), _('Amount'), _('Quantity'));
+	$th = array(_('Item'), _('Amount'), _('Quantity'));
 	start_table(TABLESTYLE, "width='$width%'");
 	table_header($th);
 	$k = 0;

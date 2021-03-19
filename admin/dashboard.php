@@ -31,7 +31,7 @@ if (isset($_GET['sel_app'])) {
 	if (!$_SESSION['wa_current_user']->check_application_access($selected_app))
 		return;
 
-	$dir = company_path(). '/pdf_files';
+	$dir = company_path().'/pdf_files';
 
 	if ($d = @opendir($dir)) {
 		while (($file = readdir($d)) !== false) {

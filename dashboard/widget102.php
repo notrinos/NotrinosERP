@@ -19,7 +19,7 @@ $widget = new Widget();
 $widget->setTitle($title);
 $widget->Start();
 
-$th = array('#', _('Ref.'), _('Date'), _('Due Date'), _('Customer'), _('Branch'), _('Currency'), _('Total'), _('Remainder'),	_('Days'));
+$th = array('#', _('Ref.'), _('Date'), _('Due Date'), _('Customer'), _('Branch'), _('Currency'), _('Total'), _('Remainder'), _('Days'));
 
 if($widget->checkSecurity('SA_SALESTRANSVIEW')) {
 

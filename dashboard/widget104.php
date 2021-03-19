@@ -18,7 +18,7 @@ $widget = new Widget();
 $widget->setTitle($title);
 $widget->Start();
 
-$th = array(_('Description'), _('Template No'),_('Customer'),_('Branch').'/'._('Group'),_('Next invoice'));
+$th = array(_('Description'), _('Template No'), _('Customer'), _('Branch').'/'._('Group'), _('Next invoice'));
 start_table(TABLESTYLE, "width='100%'");
 table_header($th);
 

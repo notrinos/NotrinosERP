@@ -57,7 +57,7 @@ function check_paths() {
   global $SysPrefs;
 
 	if (!file_exists($SysPrefs->backup_dir())) {
-		display_error (_('Backup paths have not been set correctly.')._('Please contact System Administrator.').'<br>'. _('cannot find backup directory').' - '.$SysPrefs->backup_dir() . '<br>');
+		display_error (_('Backup paths have not been set correctly.')._('Please contact System Administrator.').'<br>'. _('cannot find backup directory').' - '.$SysPrefs->backup_dir().'<br>');
 		end_page();
 		exit;
 	}
@@ -74,7 +74,6 @@ function generate_backup($conn, $ext='no', $comm='') {
 
 	return $filename;
 }
-
 
 function get_backup_file_combo() {
 	global $path_to_root, $Ajax, $SysPrefs;

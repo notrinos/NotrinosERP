@@ -54,9 +54,8 @@ function can_process() {
 if (isset($_POST['UPDATE_ITEM']) && check_csrf_token()) {
 
 	if (can_process()) {
-		if ($SysPrefs->allow_demo_mode) {
+		if ($SysPrefs->allow_demo_mode)
 			display_warning(_('Password cannot be changed in demo mode.'));
-		}
 		else {
 			update_user_password($_SESSION['wa_current_user']->user, $_SESSION['wa_current_user']->username, md5($_POST['password']));
 			display_notification(_('Your password has been updated.'));
