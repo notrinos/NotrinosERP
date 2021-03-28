@@ -1,4 +1,4 @@
-![NotrinosERP](./themes/default/images/notrinos_erp.jpg  "NotrinosERP")
+[<img src="https://github.com/notrinos/NotrinosERP/raw/master/themes/default/images/notrinos_erp.jpg" width="350" />](http://notrinos.com)
 ====================
 
 NotrinosERP is an open source, web-based enterprise management system that written in PHP and MySql. NotrinosERP contains all the required modules for running any small to medium size businesses. It supports multi users, multi currencies, multi languages
