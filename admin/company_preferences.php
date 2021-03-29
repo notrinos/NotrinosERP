@@ -50,6 +50,11 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		set_focus('round_to');
 		$input_error = 1;
 	}
+	if (!check_num('max_days_in_docs', 1)) {
+		display_error(_('Max day range in Documents must be a positive number.'));
+		set_focus('max_days_in_docs');
+		$input_error = 1;
+	}
 	if ($_POST['add_pct'] != '' && !is_numeric($_POST['add_pct'])) {
 		display_error(_('Add Price from Std Cost field must be number.'));
 		set_focus('add_pct');
@@ -72,12 +77,12 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		$filename .= '/'.clean_file_name($_FILES['pic']['name']);
 
 		 //But check for the worst
-		if (!in_array( substr($filename,-4), array('.jpg','.JPG','.png','.PNG'))) {
+		if (!in_array( substr($filename,-4), array('.jpg', '.JPG', '.png', '.PNG'))) {
 			display_error(_('Only jpg and png files are supported - a file extension of .jpg or .png is expected'));
 			$input_error = 1;
 		}
 		elseif ( $_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) { //File Size Check
-			display_error(_('The file size is over the maximum allowed. The maximum size allowed in KB is') . ' ' . $SysPrefs->max_image_size);
+			display_error(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
 			$input_error = 1;
 		}
 		elseif ( $_FILES['pic']['type'] == 'text/plain' ) {  //File type Check
@@ -126,14 +131,9 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		$_POST['round_to'] = 1;
 	if ($input_error != 1) {
 		update_company_prefs(
-			get_post( array('coy_name','coy_no','gst_no','tax_prd','tax_last',
-				'postal_address','phone', 'fax', 'email', 'coy_logo', 'domicile',
-				'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list',
-				'no_item_list' => 0, 'no_customer_list' => 0, 'no_supplier_list' => 0, 
-				'base_sales', 'ref_no_auto_increase' => 0, 'dim_on_recurrent_invoice' => 0, 'long_description_invoice' => 0,
-				'time_zone' => 0, 'company_logo_report' => 0, 'barcodes_on_stock' => 0, 'print_dialog_direct' => 0, 
-				'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 
-				'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets'))
+			get_post(
+				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_item_list'=>0, 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets')
+			)
 		);
 
 		$_SESSION['wa_current_user']->timeout = $_POST['login_tout'];
@@ -160,10 +160,12 @@ $_POST['coy_logo']  = $myrow['coy_logo'];
 $_POST['domicile']  = $myrow['domicile'];
 $_POST['use_dimension']  = $myrow['use_dimension'];
 $_POST['base_sales']  = $myrow['base_sales'];
+
 if (!isset($myrow['shortname_name_in_list'])) {
 	set_company_pref('shortname_name_in_list', 'setup.company', 'tinyint', 1, '0');
 	$myrow['shortname_name_in_list'] = get_company_pref('shortname_name_in_list');
 }
+
 $_POST['shortname_name_in_list']  = $myrow['shortname_name_in_list'];
 $_POST['no_item_list']  = $myrow['no_item_list'];
 $_POST['no_customer_list']  = $myrow['no_customer_list'];
@@ -172,6 +174,11 @@ $_POST['curr_default']  = $myrow['curr_default'];
 $_POST['f_year']  = $myrow['f_year'];
 $_POST['time_zone']  = $myrow['time_zone'];
 
+if (!isset($myrow['max_days_in_docs'])) {
+	set_company_pref('max_days_in_docs', 'setup.company', 'smallint', 5, '180');
+	$myrow['max_days_in_docs'] = get_company_pref('max_days_in_docs');
+}
+$_POST['max_days_in_docs']  = $myrow['max_days_in_docs'];
 if (!isset($myrow['company_logo_report'])) {
 	set_company_pref('company_logo_report', 'setup.company', 'tinyint', 1, '0');
 	$myrow['company_logo_report'] = get_company_pref('company_logo_report');
@@ -239,13 +246,13 @@ label_row(_('Company Logo:'), $_POST['coy_logo']);
 file_row(_('New Company Logo (.jpg)') . ':', 'pic', 'pic');
 check_row(_('Delete Company Logo:'), 'del_coy_logo', $_POST['del_coy_logo']);
 
-check_row(_('Time Zone on Reports'), 'time_zone', $_POST['time_zone']);
-check_row(_('Company Logo on Reports'), 'company_logo_report', $_POST['company_logo_report']);
-check_row(_('Use Barcodes on Stocks'), 'barcodes_on_stock', $_POST['barcodes_on_stock']);
-check_row(_('Auto Increase of Document References'), 'ref_no_auto_increase', $_POST['ref_no_auto_increase']);
-check_row(_('Use Dimensions on Recurrent Invoices'), 'dim_on_recurrent_invoice', $_POST['dim_on_recurrent_invoice']);
-check_row(_('Use Long Descriptions on Invoices'), 'long_description_invoice', $_POST['long_description_invoice']);
-label_row(_('Database Scheme Version'), $_POST['version_id']);
+check_row(_('Time Zone on Reports:'), 'time_zone', $_POST['time_zone']);
+check_row(_('Company Logo on Reports:'), 'company_logo_report', $_POST['company_logo_report']);
+check_row(_('Use Barcodes on Stocks:'), 'barcodes_on_stock', $_POST['barcodes_on_stock']);
+check_row(_('Auto Increase of Document References:'), 'ref_no_auto_increase', $_POST['ref_no_auto_increase']);
+check_row(_('Use Dimensions on Recurrent Invoices:'), 'dim_on_recurrent_invoice', $_POST['dim_on_recurrent_invoice']);
+check_row(_('Use Long Descriptions on Invoices:'), 'long_description_invoice', $_POST['long_description_invoice']);
+label_row(_('Database Scheme Version:'), $_POST['version_id']);
 
 table_section(2);
 
@@ -253,9 +260,9 @@ table_section_title(_('General Ledger Settings'));
 fiscalyears_list_row(_('Fiscal Year:'), 'f_year', $_POST['f_year']);
 text_row_ex(_('Tax Periods:'), 'tax_prd', 10, 10, '', null, null, _('Months.'));
 text_row_ex(_('Tax Last Period:'), 'tax_last', 10, 10, '', null, null, _('Months back.'));
-check_row(_('Put alternative Tax Include on Docs'), 'alternative_tax_include_on_docs', null);
-check_row(_('Suppress Tax Rates on Docs'), 'suppress_tax_rates', null);
-check_row(_('Automatic Revaluation Currency Accounts'), 'auto_curr_reval', $_POST['auto_curr_reval']);
+check_row(_('Put alternative Tax Include on Docs:'), 'alternative_tax_include_on_docs', null);
+check_row(_('Suppress Tax Rates on Docs:'), 'suppress_tax_rates', null);
+check_row(_('Automatic Revaluation Currency Accounts:'), 'auto_curr_reval', $_POST['auto_curr_reval']);
 
 table_section_title(_('Sales Pricing'));
 sales_types_list_row(_('Base for auto price calculations:'), 'base_sales', $_POST['base_sales'], false, _('No base price list') );
@@ -267,18 +274,19 @@ label_row('', '&nbsp;');
 
 
 table_section_title(_('Optional Modules'));
-check_row(_('Manufacturing'), 'use_manufacturing', null);
+check_row(_('Manufacturing:'), 'use_manufacturing', null);
 check_row(_('Fixed Assets'), 'use_fixed_assets', null);
 number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
 
 table_section_title(_('User Interface Options'));
 
-check_row(_('Short Name and Name in List'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
-check_row(_('Open Print Dialog Direct on Reports'), 'print_dialog_direct', null);
-check_row(_('Search Item List'), 'no_item_list', null);
-check_row(_('Search Customer List'), 'no_customer_list', null);
-check_row(_('Search Supplier List'), 'no_supplier_list', null);
+check_row(_('Short Name and Name in List:'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
+check_row(_('Open Print Dialog Direct on Reports:'), 'print_dialog_direct', null);
+check_row(_('Search Item List:'), 'no_item_list', null);
+check_row(_('Search Customer List:'), 'no_customer_list', null);
+check_row(_('Search Supplier List:'), 'no_supplier_list', null);
 text_row_ex(_('Login Timeout:'), 'login_tout', 10, 10, '', null, null, _('seconds'));
+text_row_ex(_('Max day range in documents:'), 'max_days_in_docs', 10, 10, '', null, null, _('days.'));
 
 end_outer_table(1);
 

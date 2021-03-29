@@ -1,7 +1,6 @@
 
 SET NAMES utf8;
 
-
 -- Structure of table `0_areas` --
 
 DROP TABLE IF EXISTS `0_areas`;
@@ -1603,6 +1602,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('use_manufacturing','setup.company', 'tinyint', 1, '1'),
 ('dim_on_recurrent_invoice','setup.company', 'tinyint', 1, '0'),
 ('long_description_invoice','setup.company', 'tinyint', 1, '0'),
+('max_days_in_docs','setup.company', 'smallint', 5, '180'),
 ('use_fixed_assets','setup.company', 'tinyint', 1, '1');
 
 -- Structure of table `0_tag_associations` --
