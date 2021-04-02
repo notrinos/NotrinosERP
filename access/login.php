@@ -14,7 +14,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/page/header.inc');
 
-$js = "<script language='JavaScript' type='text/javascript'>
+$js = "<script language='JavaScript'>
 function defaultCompany() {
 	document.forms[0].company_login_name.options[".user_company()."].selected = true;
 }
@@ -126,7 +126,7 @@ foreach($_SESSION['timeout']['post'] as $p => $val) {
 end_form(1);
 $Ajax->addScript(true, "if (document.forms.length) document.forms[0].password.focus();");
 
-echo "<script language='JavaScript' type='text/javascript'>
+echo "<script language='JavaScript'>
 	//<![CDATA[
 		<!--
 		document.forms[0].user_name_entry_field.select();

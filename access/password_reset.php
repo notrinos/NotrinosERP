@@ -14,7 +14,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/page/header.inc');
 
-$js = "<script language='JavaScript' type='text/javascript'>
+$js = "<script language='JavaScript'>
 function defaultCompany() {
 	document.forms[0].company_login_name.options[".user_company()."].selected = true;
 }
@@ -84,7 +84,7 @@ echo "<center><input type='submit' value='&nbsp;&nbsp;"._('Send password -->')."
 end_form(1);
 $Ajax->addScript(true, "document.forms[0].password.focus();");
 
-echo "<script language='JavaScript' type='text/javascript'>
+echo "<script language='JavaScript'>
 //<![CDATA[
 	<!--
 	document.forms[0].email_entry_field.select();
