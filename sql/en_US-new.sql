@@ -290,18 +290,18 @@ CREATE TABLE `0_chart_types` (
 -- Data of table `0_chart_types` --
 
 INSERT INTO `0_chart_types` VALUES
-('1', 'Current Assets', '1', '', '0'),
-('2', 'Inventory Assets', '1', '', '0'),
-('3', 'Capital Assets', '1', '', '0'),
-('4', 'Current Liabilities', '2', '', '0'),
-('5', 'Long Term Liabilities', '2', '', '0'),
-('6', 'Share Capital', '2', '', '0'),
-('7', 'Retained Earnings', '2', '', '0'),
-('8', 'Sales Revenue', '3', '', '0'),
-('9', 'Other Revenue', '3', '', '0'),
-('10', 'Cost of Goods Sold', '4', '', '0'),
-('11', 'Payroll Expenses', '4', '', '0'),
-('12', 'General &amp; Administrative expenses', '4', '', '0');
+('1', 'Current Assets', '1', '-1', '0'),
+('2', 'Inventory Assets', '1', '-1', '0'),
+('3', 'Capital Assets', '1', '-1', '0'),
+('4', 'Current Liabilities', '2', '-1', '0'),
+('5', 'Long Term Liabilities', '2', '-1', '0'),
+('6', 'Share Capital', '2', '-1', '0'),
+('7', 'Retained Earnings', '2', '-1', '0'),
+('8', 'Sales Revenue', '3', '-1', '0'),
+('9', 'Other Revenue', '3', '-1', '0'),
+('10', 'Cost of Goods Sold', '4', '-1', '0'),
+('11', 'Payroll Expenses', '4', '-1', '0'),
+('12', 'General &amp; Administrative expenses', '4', '-1', '0');
 
 -- Structure of table `0_comments` --
 
