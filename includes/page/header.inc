@@ -64,10 +64,10 @@ function send_scripts() {
 		if (!file_exists($fpath) || $SysPrefs->go_debug)
 			cache_js_file($fpath, file_get_contents($js_path.$jsfile));
 
-		$js .= '<script language="javascript" src="'.$fpath.'"></script>';
+		$js .= '<script src="'.$fpath.'"></script>';
 	}
 	foreach($js_userlib as $jsfile) {
-		$js .= '<script language="javascript" src="'.$jsfile.'"></script>';
+		$js .= '<script src="'.$jsfile.'"></script>';
 	}
 
 	echo $js;
@@ -127,7 +127,9 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 	echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 
 	$theme_path = $path_to_root.'/themes/'.user_theme();
-	$local_css = basename($_SERVER['REQUEST_URI'], '.php?' . $_SERVER['QUERY_STRING']);
+	//The $_SERVER['REQUEST_URI'] is different depending on the server configuration (Apache, Nginx)
+	$file_ext = strpos($_SERVER['REQUEST_URI'], '?') ? '.php?' : '.php';
+	$local_css = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
 	$css_file = $theme_path.'/local_style/'.$local_css.'.css';
 
 	if(file_exists($css_file))
