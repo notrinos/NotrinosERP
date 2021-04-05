@@ -10,5 +10,5 @@ table.tablestyle2 span {
 
 table.tablestyle2 input:not(.date):not(#_stock_id_edit), table.tablestyle2 textarea, table.tablestyle2 select:not(#stock_id) {
 	width: calc(100% - 1.5em);
-	
+	margin: 0;
 }

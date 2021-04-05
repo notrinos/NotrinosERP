@@ -38,31 +38,21 @@ else
 
 if (isset($_GET['AddedID'])) {
 	$id = $_GET['AddedID'];
-
 	display_notification_centered(_('The dimension has been entered.'));
-
 	safe_exit();
 }
 
-//---------------------------------------------------------------------------------------
-
 if (isset($_GET['UpdatedID'])) {
 	$id = $_GET['UpdatedID'];
-
 	display_notification_centered(_('The dimension has been updated.'));
 	safe_exit();
 }
 
-//---------------------------------------------------------------------------------------
-
 if (isset($_GET['DeletedID'])) {
 	$id = $_GET['DeletedID'];
-
 	display_notification_centered(_('The dimension has been deleted.'));
 	safe_exit();
 }
-
-//---------------------------------------------------------------------------------------
 
 if (isset($_GET['ClosedID'])) {
 	$id = $_GET['ClosedID'];
@@ -70,8 +60,6 @@ if (isset($_GET['ClosedID'])) {
 	display_notification_centered(_('The dimension has been closed. There can be no more changes to it.').' #'.$id);
 	safe_exit();
 }
-
-//---------------------------------------------------------------------------------------
 
 if (isset($_GET['ReopenedID'])) {
 	$id = $_GET['ReopenedID'];
@@ -86,13 +74,11 @@ function safe_exit() {
 	global $path_to_root, $id;
 
 	hyperlink_no_params('', _('Enter a &new dimension'));
-	hyperlink_no_params($path_to_root . '/dimensions/inquiry/search_dimensions.php', _('&Select an existing dimension'));
-	hyperlink_no_params($path_to_root . '/admin/attachments.php?filterType=40&trans_no=$id', _('&Add Attachment'));
+	hyperlink_no_params($path_to_root.'/dimensions/inquiry/search_dimensions.php', _('&Select an existing dimension'));
+	hyperlink_no_params($path_to_root.'/admin/attachments.php?filterType=40&trans_no=$id', _('&Add Attachment'));
 
 	display_footer_exit();
 }
-
-//-------------------------------------------------------------------------------------
 
 function can_process() {
 	global $selected_id, $Refs;
@@ -136,10 +122,8 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id);
 		} 
 		else {
-
 			update_dimension($selected_id, $_POST['name'], $_POST['type_'], $_POST['date_'], $_POST['due_date'], $_POST['memo_']);
 			update_tag_associations(TAG_DIMENSION, $selected_id, $_POST['dimension_tags']);
-
 			meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
 		}
 	}
@@ -158,8 +142,6 @@ if (isset($_POST['delete'])) {
 		$cancel_delete = true;
 	}
 	if ($cancel_delete == false) { //ie not cancelled the delete as a result of above tests
-
-		// delete
 		delete_dimension($selected_id);
 		delete_tag_associations(TAG_DIMENSION,$selected_id, true);
 		meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
@@ -169,14 +151,12 @@ if (isset($_POST['delete'])) {
 //-------------------------------------------------------------------------------------
 
 if (isset($_POST['close'])) {
-
 	// update the closed flag
 	close_dimension($selected_id);
 	meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
 }
 
 if (isset($_POST['reopen'])) {
-
 	// update the closed flag
 	reopen_dimension($selected_id);
 	meta_forward($_SERVER['PHP_SELF'], 'ReopenedID='.$selected_id);
@@ -196,13 +176,6 @@ if ($selected_id != -1) {
 		display_footer_exit();
 	}
 
-	// if it's a closed dimension can't edit it
-	//if ($myrow['closed'] == 1) 
-	//{
-	//	display_error(_('This dimension is closed and cannot be edited.'));
-	//	display_footer_exit();
-	//}
-
 	$_POST['ref'] = $myrow['reference'];
 	$_POST['closed'] = $myrow['closed'];
 	$_POST['name'] = $myrow['name'];
@@ -213,14 +186,15 @@ if ($selected_id != -1) {
 	
 	$tags_result = get_tags_associated_with_record(TAG_DIMENSION, $selected_id);
 	$tagids = array();
-	while ($tag = db_fetch($tags_result)) 
+
+	while ($tag = db_fetch($tags_result)) {
 		$tagids[] = $tag['id'];
+	}
+
 	$_POST['dimension_tags'] = $tagids;	
 
 	hidden('ref', $_POST['ref']);
-
 	label_row(_('Dimension Reference:'), $_POST['ref']);
-
 	hidden('selected_id', $selected_id);
 } 
 else {
@@ -228,11 +202,11 @@ else {
 	ref_row(_('Dimension Reference:'), 'ref', '', $Refs->get_next(ST_DIMENSION), false, ST_DIMENSION);
 }
 
-text_row_ex(_('Name') . ':', 'name', 50, 75);
+text_row_ex(_('Name').':', 'name', 50, 75);
 $dim = get_company_pref('use_dimension');
-number_list_row(_('Type'), 'type_', null, 1, $dim);
-date_row(_('Start Date') . ':', 'date_');
-date_row(_('Date Required By') . ':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
+number_list_row(_('Type').':', 'type_', null, 1, $dim);
+date_row(_('Start Date').':', 'date_');
+date_row(_('Date Required By').':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
 tag_list_row(_('Tags:'), 'dimension_tags', 5, TAG_DIMENSION, true);
 textarea_row(_('Memo:'), 'memo_', null, 40, 5);
 
@@ -256,4 +230,3 @@ else
 end_form();
 
 end_page();
-

@@ -53,8 +53,7 @@ $should_update = false;
 if (isset($_POST['UpdateData'])) {
 	$old_cost = get_unit_cost($_POST['stock_id']);
 
-	$new_cost = input_num('material_cost') + input_num('labour_cost')
-		 + input_num('overhead_cost');
+	$new_cost = input_num('material_cost') + input_num('labour_cost') + input_num('overhead_cost');
 
 	$should_update = true;
 
@@ -96,7 +95,7 @@ if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center>' . _('Item:'). '&nbsp;';
+	echo '<center>'._('Item:').'&nbsp;';
 	if (get_post('fixed_asset') == 1)
 		echo stock_disposable_fa_list('stock_id', $_POST['stock_id'], false, true);
 	else
@@ -123,9 +122,9 @@ if ($myrow) {
 	$_POST['overhead_cost'] = price_decimal_format($myrow['overhead_cost'], $dec3);
 }
 
-amount_row(_('Unit cost'), 'material_cost', null, "class='tableheader2'", null, $dec1);
+amount_row(_('Unit cost:'), 'material_cost', null, "class='tableheader2'", null, $dec1);
 
-if ($myrow && $myrow['mb_flag']=='M') {
+if ($myrow && $myrow['mb_flag'] == 'M') {
 	amount_row(_('Standard Labour Cost Per Unit'), 'labour_cost', null, "class='tableheader2'", null, $dec2);
 	amount_row(_('Standard Overhead Cost Per Unit'), 'overhead_cost', null, "class='tableheader2'", null, $dec3);
 }
@@ -134,7 +133,7 @@ else {
 	hidden('overhead_cost', 0);
 }
 refline_list_row(_('Reference line:'), 'refline', ST_COSTUPDATE, null, false, get_post('fixed_asset'));
-textarea_row(_('Memo'), 'memo_', null, 40, 4);
+textarea_row(_('Memo:'), 'memo_', null, 40, 4);
 
 end_table(1);
 div_end();
