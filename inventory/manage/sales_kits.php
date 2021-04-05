@@ -11,7 +11,7 @@
 ***********************************************************************/
 $page_security = 'SA_SALESKIT';
 $path_to_root = '../..';
-include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root.'/includes/session.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
@@ -43,14 +43,12 @@ function display_kit_items($selected_kit) {
 
 		label_cell($myrow['stock_id']);
 		label_cell($myrow['comp_name']);
-		qty_cell($myrow['quantity'], false, 
-			$myrow['units'] == '' ? 0 : get_qty_dec($myrow['comp_name']));
+		qty_cell($myrow['quantity'], false, $myrow['units'] == '' ? 0 : get_qty_dec($myrow['comp_name']));
 		label_cell($myrow['units'] == '' ? _('kit') : $myrow['units']);
 		edit_button_cell('Edit'.$myrow['id'], _('Edit'));
 		delete_button_cell('Delete'.$myrow['id'], _('Delete'));
 		end_row();
-
-	} //END WHILE LIST LOOP
+	}
 	end_table();
 	div_end();
 }
@@ -73,7 +71,7 @@ function update_kit($selected_kit, $component_id) {
 	elseif ($component_id == -1) { // adding new component to alias/kit with optional kit creation
 		if ($selected_kit == '') { // New kit/alias definition
 			if (get_post('kit_code') == '') {
-				display_error( _('Kit/alias code cannot be empty.'));
+				display_error(_('Kit/alias code cannot be empty.'));
 				set_focus('kit_code');
 				return 0;
 			}
@@ -92,8 +90,7 @@ function update_kit($selected_kit, $component_id) {
 		set_focus('component');
 		return 0;
 	}
-
-		/*Now check to see that the component is not already in the kit */
+	//Now check to see that the component is not already in the kit
 	if (check_item_in_kit($component_id, $selected_kit, get_post('component'))) {
 		display_error(_("The selected component is already in this kit. You can modify it's quantity but it cannot appear more than once in the same kit."));
 		set_focus('component');
@@ -130,7 +127,7 @@ if (get_post('update_name')) {
 	$Ajax->activate('_page_body');
 }
 
-if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
+if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	if ($selected_kit = update_kit(get_post('item_code'), $selected_id))
 		$_POST['item_code'] = $selected_kit;
 }
@@ -138,7 +135,6 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	// Before removing last component from selected kit check 
 	// if selected kit is not included in any other kit. 
-	// 
 	$other_kits = get_where_used($_POST['item_code']);
 	$num_kits = db_num_rows($other_kits);
 
@@ -150,7 +146,8 @@ if ($Mode == 'Delete') {
 		while($num_kits--) {
 			$kit = db_fetch($other_kits);
 			$msg .= "'".$kit[0]."'";
-			if ($num_kits) $msg .= ',';
+			if ($num_kits)
+				$msg .= ',';
 		}
 		display_error($msg);
 	}
@@ -171,7 +168,7 @@ if ($Mode == 'RESET') {
 
 start_form();
 
-echo '<center>' . _('Select a sale kit:') . '&nbsp;';
+echo '<center>'._('Select a sale kit:').'&nbsp;';
 echo sales_kits_list('item_code', null, _('New kit'), true);
 echo '</center><br>';
 $props = get_kit_props($_POST['item_code']);
@@ -186,13 +183,11 @@ $selected_kit = $_POST['item_code'];
 
 //----------------------------------------------------------------------------------
 
-if (get_post('item_code') == '') {
-// New sales kit entry
+if (get_post('item_code') == '') { // New sales kit entry
 	start_table(TABLESTYLE2);
 	text_row(_('Alias/kit code:'), 'kit_code', null, 20, 20);
 }
-else {
-	 // Kit selected so display bom or edit component
+else { // Kit selected so display bom or edit component
 	$_POST['description'] = $props['description'];
 	$_POST['category'] = $props['category_id'];
 	start_table(TABLESTYLE2);
@@ -216,9 +211,9 @@ hidden('selected_id', $selected_id);
 sales_local_items_list_row(_('Component:'),'component', null, false, true);
 
 if (get_post('item_code') == '') { // new kit/alias
-	if ($Mode!='ADD_ITEM' && $Mode!='UPDATE_ITEM') {
-		$_POST['description'] = $props['description'];
-		$_POST['category'] = $props['category_id'];
+	if ($Mode != 'ADD_ITEM' && $Mode != 'UPDATE_ITEM') {
+		$_POST['description'] = isset($props['description']) ? $props['description'] : '';
+		$_POST['category'] = isset($props['category_id']) ? $props['category_id'] : '';
 	}
 	text_row(_('Description:'), 'description', null, 50, 200);
 	stock_categories_list_row(_('Category:'), 'category', null);
