@@ -481,7 +481,7 @@ $search_types = array(
 	'component' => array('/inventory/inquiry/stock_list.php?popup=1&type=component&parent=', '&client_id=', _('Search items')),
 	'kits' => array('/inventory/inquiry/stock_list.php?popup=1&type=kits&client_id=', _('Search items')),
 	'customer' => array('/sales/inquiry/customers_list.php?popup=1&client_id=', _('Search customers')),
-	'branch' => array('/sales/inquiry/customer_branches_list.php?popup=1&client_id=', _('Search branches')),
+	'branch' => array('/sales/inquiry/customer_branches_list.php?popup=1&client_id=', '#customer_id', _('Search branches')),
 	'supplier' => array('/purchasing/inquiry/suppliers_list.php?popup=1&client_id=', _('Search suppliers')),
 	'account' => array('/gl/inquiry/accounts_list.php?popup=1&skip=false&client_id=', _('Search GL accounts')),
 	'account2' => array('/gl/inquiry/accounts_list.php?popup=1&skip=true&client_id=', _('Search GL accounts'))

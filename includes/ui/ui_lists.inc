@@ -303,6 +303,10 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				$link = $path_to_root.$search_types[$type][0].$parent.$search_types[$type][1].$id;
 				$img_title = $search_types[$type][2];
 			}
+			elseif($type === 'branch') {
+				$link = $path_to_root.$search_types[$type][0].$id.$search_types[$type][1];
+				$img_title = $search_types[$type][2];
+			}
 			else {
 				$link = $path_to_root.$search_types[$type][0].$id;
 				$img_title = $search_types[$type][1];
