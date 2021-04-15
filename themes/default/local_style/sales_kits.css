@@ -5,6 +5,9 @@ table.tablestyle2 span {
 	margin: 0;
 	padding: 0;
 }
+table.tablestyle2 select {
+	margin: 0;
+}
 table.tablestyle2 input:not(#_component_edit), table.tablestyle2 select:not(#component) {
 	width: 90%;
 }
