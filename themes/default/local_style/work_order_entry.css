@@ -4,11 +4,17 @@ table.tablestyle2 td:not(.label) {
 
 table.tablestyle2 span {
 	width: 100%;
-	margin: 0;
-	padding: 0;
 }
-
 table.tablestyle2 input:not(.date):not(#_stock_id_edit), table.tablestyle2 textarea, table.tablestyle2 select:not(#stock_id) {
 	width: calc(100% - 1.5em);
 	margin: 0;
+}
+.select2 {
+	margin-top: -1px !important;
+}
+#_stock_id_edit {
+	width: calc(100% - 210px);
+}
+#stock_id {
+	width: 189px;
 }

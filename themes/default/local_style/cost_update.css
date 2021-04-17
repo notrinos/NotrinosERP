@@ -1,7 +1,9 @@
 table.tablestyle2 td:not(.label):not(.tableheader2) {
 	border: 0;
 }
-
 table.tablestyle2 input, table.tablestyle2 select, table.tablestyle2 textarea {
 	width: 100%;
+}
+.select2 {
+	margin-top: -1px !important;
 }

@@ -4,6 +4,4 @@ table.tablestyle2 td:not(.label) {
 
 table.tablestyle2 input:not([type=checkbox]), table.tablestyle2 select, table.tablestyle2 span {
 	width: 100%;
-	margin: 0;
-	padding: 0;
 }
