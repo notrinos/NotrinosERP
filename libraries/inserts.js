@@ -97,12 +97,14 @@ function _set_combo_input(e) {
 				if (string_contains(this.className, 'combo3')) {
 					if(txt.toUpperCase().indexOf(ac) == 0) {
 						select.options[i].selected = true;
+						$(select).select2().val(select.options[i].value);
 						break;
 					}
 				}
 				else {
 					if(txt.toUpperCase().indexOf(ac) >= 0) {
 						select.options[i].selected = true;
+						$(select).select2().val(select.options[i].value);
 						break;
 					}
 				}

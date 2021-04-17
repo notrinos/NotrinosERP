@@ -5,8 +5,7 @@ table.tablestyle2 span {
 	margin: 0;
 	padding: 0;
 }
-table.tablestyle2 input, table.tablestyle2 span {
-	display: inline-block;
+table.tablestyle2 input, table.tablestyle2 td > span {
 	width: 100%;
 }
 table.tablestyle2 select {

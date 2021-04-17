@@ -24,9 +24,9 @@ include_once($path_to_root.'/includes/ui/ui_controls.inc');
 
 $page_nested = -1;
 // static js files path
-$js_path = $path_to_root.'/js/';
+$js_path = $path_to_root.'/libraries/';
 // standard external js scripts included in all files
-$js_static = array('JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js');
+$js_static = array('JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js', 'jquery.min.js', 'select2.min.js', 'select.js');
 // additional js source included in header
 $js_lib = $js_userlib = array();
 
@@ -71,9 +71,19 @@ function css_files_ensure_init() {
 	global $css_files, $path_to_root;
 
 	if (!isset($css_files)) {
-		$theme = user_theme();
 		$css_files = array();
+		$css_files[] = $path_to_root.'/libraries/select2.min.css';
+		$theme = user_theme();
 		$css_files[] = $path_to_root.'/themes/'.$theme.'/default.css';
+
+		$theme_path = $path_to_root.'/themes/'.user_theme();
+		//The $_SERVER['REQUEST_URI'] is different depending on the server configuration (Apache, Nginx)
+		$file_ext = strpos($_SERVER['REQUEST_URI'], '?') ? '.php?' : '.php';
+		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
+		$local_css = $theme_path.'/local_style/'.$basename.'.css';
+
+		if(file_exists($local_css))
+			$css_files[] = $local_css;
 	}
 }
 

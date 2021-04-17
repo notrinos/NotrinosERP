@@ -384,9 +384,10 @@ button {
 	border: 1px #0066cc solid;
 	padding: 1px 0px;
 }
-button img, span {
-	padding: 0px 2px ;
+button img {
 	vertical-align: middle;
+	padding: 0px 2px ;
+	box-sizing: content-box;
 }
 ul.ajaxtabs{
 	padding: 3px 0 0 0;
@@ -466,9 +467,9 @@ img {
 	font-size: 1em;
 	border: 1px solid #C0C0C0;
 	padding-bottom: 1px;
-	-webkit-box-shadow: 0px 6px 12px #bbb;
-	-moz-box-shadow:    0px 6px 12px #bbb;
-	box-shadow:         0px 6px 12px #bbb;
+	-webkit-box-shadow: 0px 6px 12px #999;
+	-moz-box-shadow:    0px 6px 12px #999;
+	box-shadow:         0px 6px 12px #999;
 }
 #CC th {
 	font-weight: normal;
@@ -873,4 +874,27 @@ div.widget_full {
 div.widget_half {
 	width: calc(50% - 30px);
 	margin-left: 20px ;
+}
+
+.select2-selection__rendered {
+	line-height: 18px !important;
+	margin-top: 1px !important;
+}
+.select2-container .select2-selection--single {
+	height: 22px !important;
+	margin-top: -1px !important;
+	border: 1px solid #777;
+	border-radius: 2px !important;
+}
+.select2-selection__arrow {
+	height: 21px !important;
+	top: 0px !important;
+}
+.select2-dropdown {
+	border: 1px solid #E5E5E5 !important;
+	border-radius: 2px !important;
+	text-align: left;
+	-webkit-box-shadow: 0px 6px 12px #999;
+	-moz-box-shadow:    0px 6px 12px #999;
+	box-shadow:         0px 6px 12px #999;
 }
