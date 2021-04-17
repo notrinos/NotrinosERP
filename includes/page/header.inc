@@ -58,11 +58,16 @@ function send_scripts() {
 
 	$js ='';
 	foreach($js_static as $jsfile) {
-		$cached_name = basename($jsfile);
-		$fpath = user_js_cache().'/'.$cached_name;
+		$basename = basename($jsfile);
+		$fpath = user_js_cache().'/'.$basename;
 		// compress also static files
-		if (!file_exists($fpath) || $SysPrefs->go_debug)
-			cache_js_file($fpath, file_get_contents($js_path.$jsfile));
+		if (!file_exists($fpath) || $SysPrefs->go_debug) {
+			// don't need to compress minified files
+			if(strpos($basename, '.min.js' ) !== false)
+				copy($js_path.$jsfile, $fpath);
+			else
+				cache_js_file($fpath, file_get_contents($js_path.$jsfile));
+		}
 
 		$js .= '<script src="'.$fpath.'"></script>';
 	}
