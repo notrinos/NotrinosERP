@@ -59,7 +59,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		'category' => false, // category column name or false
 		'show_inactive' => false, // show inactive records. 
 		'editable' => false, // false, or length of editable entry field
-		'editlink' => false	// link to entity entry/edit page (optional)
+		'editlink' => false // link to entity entry/edit page (optional)
 	);
 	// ------ merge options with defaults ----------
 	if($options != null)
@@ -291,7 +291,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	}
 	default_focus(($search_box && $by_id) ? $search_box : $name);
 
-	$img = '';
+	$search_btn = '';
 	if ($SysPrefs->use_popup_search && (!isset($opts['fixed_asset']) || !$opts['fixed_asset'])) {
 		$img_title = '';
 		$link = '';
@@ -315,18 +315,18 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 
 		if ($link !=='') {
 			$theme = user_theme();
-			$img = '<img src="'.$path_to_root.'/themes/'.$theme.'/images/'.ICON_VIEW.
-				'" style="vertical-align:middle;width:12px;height:12px;border:0;" onclick="javascript:lookupWindow(&quot;'.
-				$link.'&quot;, &quot;&quot;);" title="' . $img_title . '" style="cursor:pointer;" />';
+			$search_btn = '<div hidden class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.
+				$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search').'</span>'.'<img src="'.$path_to_root.'/themes/'.$theme.'/images/'.ICON_VIEW.
+				'" style="vertical-align:middle;width:12px;height:12px;border:0;" title="' . $img_title . '" style="cursor:pointer;" />'."</div>";
 		}
 	}
 
 	if ($opts['editlink'])
 		$selector .= ' '.$opts['editlink'];
 	if ($search_box && $opts['cells'])
-		$str = ($edit_entry!='' ? "<td>$edit_entry</td>" : '')."<td nowrap>$selector$img</td>";
+		$str = ($edit_entry != '' ? '<td>'.$edit_entry.'</td>' : '')."<td nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
 	else
-		$str = $edit_entry.$selector.$img;
+		$str = $edit_entry."<div class='list_container'>".$selector.$search_btn."</div>";
 
 	return $str;
 }

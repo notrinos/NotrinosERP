@@ -12,7 +12,7 @@
 var loadSelect2 = {
 	'select': function(e) {
 
-		if(e.hasAttribute('multiple') === false) {
+		if((e.hasAttribute('multiple') === false) || e.hasClass('not_select2')) {
 			$(e).select2({
 				dropdownAutoWidth : true,
 				// break a select option item into multi lines
@@ -29,6 +29,22 @@ var loadSelect2 = {
 			});
 			$(e).on('select2:close', function() {
 				$(this).focus();
+			});
+			$(e).on('select2:open', function(e2){
+
+				$('.dynamic_serach_btn').remove();
+
+				var target_id = $(e2.target).attr('id');
+				var search_btn = $('#_'+target_id+'_search').clone();
+				$(search_btn).addClass('dynamic_serach_btn');
+				$(search_btn).removeAttr('id hidden');
+
+				$('.select2-dropdown').append(search_btn);
+
+				$(search_btn).click(function(){
+					$('select').select2('close');
+				});
+				
 			});
 		}
 	}
