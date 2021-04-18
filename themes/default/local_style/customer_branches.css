@@ -2,11 +2,7 @@ table.tablestyle_inner span {
 	margin: 0;
 	padding: 0;
 }
-table.tablestyle_inner input, table.tablestyle_inner textarea, table.tablestyle_inner td > span {
-	display: inline-block;
-	width: calc(100% - 1.5em);
-}
-table.tablestyle_inner select {
+table.tablestyle_inner input, table.tablestyle_inner textarea,
+table.tablestyle_inner td > span, table.tablestyle_inner div.list_container {
 	width: 100%;
-	margin: 0;
 }

@@ -1,10 +1,7 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input, table.tablestyle2 td > span {
-	width: 100%;
-}
-table.tablestyle2 select {
+table.tablestyle2 input, table.tablestyle2 div.list_container, select {
 	width: 100%;
 	margin: 0;
 }

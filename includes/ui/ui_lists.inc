@@ -293,7 +293,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 
 	$search_btn = '';
 	if ($SysPrefs->use_popup_search && (!isset($opts['fixed_asset']) || !$opts['fixed_asset'])) {
-		$img_title = '';
+		$btn_title = '';
 		$link = '';
 		$id = $name;
 		if ($SysPrefs->use_popup_windows && !empty($type)) {
@@ -301,24 +301,20 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			if($type === 'component') {
 				$parent = $opts['parent'];
 				$link = $path_to_root.$search_types[$type][0].$parent.$search_types[$type][1].$id;
-				$img_title = $search_types[$type][2];
+				$btn_title = $search_types[$type][2];
 			}
 			elseif($type === 'branch') {
 				$link = $path_to_root.$search_types[$type][0].$id.$search_types[$type][1];
-				$img_title = $search_types[$type][2];
+				$btn_title = $search_types[$type][2];
 			}
 			else {
 				$link = $path_to_root.$search_types[$type][0].$id;
-				$img_title = $search_types[$type][1];
+				$btn_title = $search_types[$type][1];
 			}
 		}
 
-		if ($link !=='') {
-			$theme = user_theme();
-			$search_btn = '<div hidden class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.
-				$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search').'</span>'.'<img src="'.$path_to_root.'/themes/'.$theme.'/images/'.ICON_VIEW.
-				'" style="vertical-align:middle;width:12px;height:12px;border:0;" title="' . $img_title . '" style="cursor:pointer;" />'."</div>";
-		}
+		if ($link !== '')
+			$search_btn = '<div hidden title="'.$btn_title.'" class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search').'</span><img src="'.$path_to_root.'/themes/'.user_theme().'/images/'.ICON_VIEW.'" />'."</div>";
 	}
 
 	if ($opts['editlink'])
@@ -429,7 +425,7 @@ function array_selector($name, $selected_id, $items, $options=null) {
 	}
 	default_focus($name);
 
-	return $selector;
+	return "<div class='list_container'>".$selector."</div>";
 }
 
 //----------------------------------------------------------------------------------------------

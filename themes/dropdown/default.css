@@ -42,6 +42,7 @@ input, select {
 select {
 	max-width: 200px;
 	margin-left: -2px;
+	width: 100%;
 }
 div.list_container {
 	display: inline-block;
@@ -59,6 +60,7 @@ div.dynamic_serach_btn img {
 	margin-top: 3px;
 	margin-right: 3px;
 	color: #0060a0;
+	height: 1em;
 }
 div.dynamic_serach_btn:hover {
 	cursor: pointer;

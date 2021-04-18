@@ -1,7 +1,7 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-
-table.tablestyle2 input:not(.date), table.tablestyle2 td > span, table.tablestyle2 select, table.tablestyle2 textarea {
+table.tablestyle2 input:not(.date), table.tablestyle2 td > span,
+table.tablestyle2 div.list_container, table.tablestyle2 textarea {
 	width: calc(100% - 1.5em);
 }

@@ -1,15 +1,18 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input:not(#_component_edit), table.tablestyle2 select:not(#component) {
-	width: 90%;
+table.tablestyle2 input:not(#_component_edit) {
+	width: 300px;
 }
 .select2 {
 	margin-top: -1px !important;
 }
 #_component_edit {
-	width: calc(100% - 249px);
+	width: 90px;
 }
 #component {
-	width: 211px;
+	width: 206px;
+}
+#category {
+	width: 300px;
 }

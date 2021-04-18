@@ -1,9 +1,9 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input:not([type=checkbox]), table.tablestyle2 td > span,
-table.tablestyle2 select {
-	width: 90%;
+table.tablestyle2 input:not([type=checkbox]),
+table.tablestyle2 div.list_container {
+	width: calc(100% - 3.5em);
 }
 .select2 {
 	margin-top: -1px !important;

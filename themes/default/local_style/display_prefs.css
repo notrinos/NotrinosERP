@@ -1,8 +1,6 @@
 
-table.tablestyle_inner input:not([type=checkbox]), table.tablestyle_inner td > span {
-	width: 100%;
-}
-table.tablestyle_inner select {
+table.tablestyle_inner input:not([type=checkbox]), table.tablestyle_inner td > span,
+table.tablestyle_inner div.list_container {
 	width: 100%;
 	margin: 0;
 }

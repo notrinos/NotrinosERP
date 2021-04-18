@@ -1,6 +1,6 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input:not(.date), table.tablestyle2 select {
-	width: calc(100% - 1.5em);
+table.tablestyle2 input:not(.date), table.tablestyle2 div.list_container {
+	width: 100%;
 }

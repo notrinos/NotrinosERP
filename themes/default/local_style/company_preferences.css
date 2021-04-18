@@ -1,4 +1,4 @@
 table.tablestyle_inner input:not([type=checkbox]):not([name=tax_last]):not([name=tax_prd]):not([name=round_to]):not([name=login_tout]):not([name=max_days_in_docs]),
-table.tablestyle_inner textarea, table.tablestyle_inner td > span, table.tablestyle_inner select {
+table.tablestyle_inner textarea, table.tablestyle_inner td > span, table.tablestyle_inner div.list_container {
 	width: calc(100% - 1.5em);
 }
