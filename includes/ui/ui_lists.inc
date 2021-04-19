@@ -353,7 +353,8 @@ function array_selector($name, $selected_id, $items, $options=null) {
 		// search box parameters
 		'height' => false,	// number of lines in select box
 		'sel_hint' => null,
-		'disabled' => false
+		'disabled' => false,
+		'class' => array()
 	);
 	// ------ merge options with defaults ----------
 	if($options != null)
@@ -410,9 +411,11 @@ function array_selector($name, $selected_id, $items, $options=null) {
 	
 	$_POST[$name] = $multi ? $selected_id : $selected_id[0];
 
+	$classes = "class='combo ".implode(' ', $opts['class'])."'";
+
 	$selector = "<select autocomplete='off' ".($multi  ? "multiple" : '')
 		. ($opts['height']!==false ? ' size="'.$opts['height'].'"' : '')
-		. "$disabled name='$name".($multi ? '[]' : '')."' class='combo' title='"
+		. "$disabled name='$name".($multi ? '[]' : '')."' ".$classes." title='"
 		. $opts['sel_hint']."'>".$selector."</select>\n";
 
 	$Ajax->addUpdate($name, "_{$name}_sel", $selector);
@@ -1663,6 +1666,7 @@ function yesno_list($name, $selected_id=null, $name_yes='', $name_no='', $submit
 	return array_selector($name, $selected_id, $items, 
 		array( 
 			'select_submit'=> $submit_on_change,
+			'class' => array('nosearch'),
 			'async' => false ) ); // FIX?
 }
 
@@ -1971,28 +1975,33 @@ function credit_type_list_row($label, $name, $selected=null, $submit_on_change=f
 	echo "</tr>\n";
 }
 
-function number_list($name, $selected, $from, $to, $no_option=false, $submit_on_change=false) {
+function number_list($name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
 	$items = array();
 	for ($i = $from; $i <= $to; $i++)
 		$items[$i] = $i;
 
+	if(!is_array($adclass))
+		$adclass = array($adclass);
+
 	return array_selector($name, $selected, $items,
-			array(	'spec_option' => $no_option,
-					'select_submit' => $submit_on_change,
-					'spec_id' => ALL_NUMERIC) );
+		array(	'spec_option' => $no_option,
+				'select_submit' => $submit_on_change,
+				'spec_id' => ALL_NUMERIC,
+				'class' => $adclass)
+		);
 }
 
-function number_list_cells($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false) {
+function number_list_cells($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
 	if ($label != null)
 		label_cell($label);
 	echo "<td>\n";
-	echo number_list($name, $selected, $from, $to, $no_option, $submit_on_change);
+	echo number_list($name, $selected, $from, $to, $no_option, $submit_on_change, $adclass);
 	echo "</td>\n";
 }
 
-function number_list_row($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false) {
+function number_list_row($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
 	echo "<tr><td class='label'>".$label."</td>";
-	echo number_list_cells(null, $name, $selected, $from, $to, $no_option, $submit_on_change);
+	echo number_list_cells(null, $name, $selected, $from, $to, $no_option, $submit_on_change, $adclass);
 	echo "</tr>\n";
 }
 

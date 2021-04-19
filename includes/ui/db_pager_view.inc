@@ -173,7 +173,7 @@ function display_db_pager(&$pager) {
 				submit('Update', _('Update'), true, '', null); // inactive update
 		echo navi_button_cell($but_pref.'first', _('<<'), $pager->first_page, 'right');
 		echo navi_button_cell($but_pref.'prev', _('<'), $pager->prev_page,'right');
-		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true);
+		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true, 'nosearch');
 		echo navi_button_cell($but_pref.'next', _('>'), $pager->next_page,'right');
 		echo navi_button_cell($but_pref.'last', _('>>'), $pager->last_page, 'right');
 		end_row(); 

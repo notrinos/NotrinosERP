@@ -12,7 +12,7 @@
 var loadSelect2 = {
 	'select': function(e) {
 
-		if((e.hasAttribute('multiple') === false) || e.hasClass('not_select2')) {
+		if((e.hasAttribute('multiple') === false) && $(e).hasClass('nosearch') === false) {
 			$(e).select2({
 				dropdownAutoWidth : true,
 				// break a select option item into multi lines
