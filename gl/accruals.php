@@ -9,11 +9,6 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-/**********************************************
-Author: Joe Hunt
-Name: Revenue / Cost Accruals v2.2
-Free software under GNU GPL
-***********************************************/
 $page_security = 'SA_ACCRUALS';
 $path_to_root = '..';
 
@@ -24,10 +19,10 @@ $js = get_js_open_window(800, 500);
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
-// Begin the UI
 include_once($path_to_root.'/includes/ui.inc');
 
 $_SESSION['page_title'] = _($help_context = 'Revenue / Cost Accruals');
+
 page($_SESSION['page_title'], false, false,'', $js);
 
 //--------------------------------------------------------------------------------------------------
@@ -95,7 +90,7 @@ if (isset($_POST['go']) || isset($_POST['show'])) {
 
 				$first_cols = array(_('Date'), _('Account'));
 				if ($dim == 2)
-					$dim_cols = array(_('Dimension'). ' 1', _('Dimension'). ' 2');
+					$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
 				elseif ($dim == 1)
 					$dim_cols = array(_('Dimension'));
 				else
@@ -149,7 +144,7 @@ if (isset($_POST['go']) || isset($_POST['show'])) {
 					label_cell($memo);
 					alt_table_row_color($k);
 					label_cell($date);
-					label_cell($_POST['res_act'] . ' ' . get_gl_account_name($_POST['res_act']));
+					label_cell($_POST['res_act'].' '.get_gl_account_name($_POST['res_act']));
 					if ($dim > 0)
 						label_cell(get_dimension_string($_POST['dimension_id'], true));
 					if ($dim > 1)
@@ -191,29 +186,29 @@ $dim = get_company_pref('use_dimension');
 start_form(false, false, '', 'accrual');
 start_table(TABLESTYLE2);
 
-date_row(_('Date'), 'date_', _('First date of Accruals'), true, 0, 0, 0, null, true);
+date_row(_('Date').':', 'date_', _('First date of Accruals'), true, 0, 0, 0, null, true);
 start_row();
-label_cell(_('Accrued Balance Account'), "class='label'");
+label_cell(_('Accrued Balance Account').':', "class='label'");
 gl_all_accounts_list_cells(null, 'acc_act', null, true, false, false, true);
 end_row();
-gl_all_accounts_list_row(_('Revenue / Cost Account'), 'res_act', null, true);
+gl_all_accounts_list_row(_('Revenue / Cost Account').':', 'res_act', null, true);
 
 if ($dim >= 1)
-	dimensions_list_row(_('Dimension'), 'dimension_id', null, true, ' ', false, 1);
+	dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1);
 if ($dim > 1)
-	dimensions_list_row(_('Dimension').' 2', 'dimension2_id', null, true, ' ', false, 2);
+	dimensions_list_row(_('Dimension').' 2'.':', 'dimension2_id', null, true, ' ', false, 2);
 
 $url = 'gl/view/accrual_trans.php?act='.get_post('acc_act').'&date='.get_post('date_');
-amount_row(_('Amount'), 'amount', null, null, viewer_link(_('Search Amount'), $url, '', '', ICON_VIEW));
+amount_row(_('Amount').':', 'amount', null, null, viewer_link(_('Search Amount'), $url, '', '', ICON_VIEW));
 
-frequency_list_row(_('Frequency'), 'freq', null);
+frequency_list_row(_('Frequency').':', 'freq', null);
 
-text_row(_('Periods'), 'periods', null, 3, 3);
-textarea_row(_('Memo'), 'memo_', null, 35, 3);
+text_row(_('Periods').':', 'periods', null, 3, 3);
+textarea_row(_('Memo').':', 'memo_', null, 35, 3);
 
 end_table(1);
-submit_center_first('show', _('Show GL Rows'));//,true,false,'process',ICON_SUBMIT);
-submit_center_last('go', _('Process Accruals'));//,true,false,'process',ICON_SUBMIT);
+submit_center_first('show', _('Show GL Rows'));
+submit_center_last('go', _('Process Accruals'));
 submit_js_confirm('go', _('Are you sure you want to post accruals?'));
 
 end_form();

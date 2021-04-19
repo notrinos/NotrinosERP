@@ -275,7 +275,7 @@ label_row('', '&nbsp;');
 
 table_section_title(_('Optional Modules'));
 check_row(_('Manufacturing:'), 'use_manufacturing', null);
-check_row(_('Fixed Assets'), 'use_fixed_assets', null);
+check_row(_('Fixed Assets').':', 'use_fixed_assets', null);
 number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
 
 table_section_title(_('User Interface Options'));

@@ -1,0 +1,15 @@
+table.tablestyle2 td:not(.label) {
+	border: 0;
+}
+table.tablestyle2 select, table.tablestyle2 input {
+	width: 300px;
+}
+.select2 {
+	margin-top: -1px !important;
+}
+#_component_edit {
+	width: 90px;
+}
+#component {
+	width: 206px;
+}

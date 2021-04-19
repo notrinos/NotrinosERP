@@ -1,0 +1,6 @@
+table.tablestyle2 td:not(.label) {
+	border: 0;
+}
+table.tablestyle2 input, table.tablestyle2 div.list_container {
+	width: 135px;
+}

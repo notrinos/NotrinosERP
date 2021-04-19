@@ -1,0 +1,6 @@
+table.tablestyle2 td:not(.label) {
+	border: 0;
+}
+table.tablestyle2 input, table.tablestyle2 textarea {
+	width: calc(100% - 1.5em);
+}
