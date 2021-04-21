@@ -17,20 +17,19 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
 
 if (get_post('view')) {
-	if (!get_post('backups')) {
+	if (!get_post('backups'))
 		display_error(_('Select backup file first.'));
-	}
 	else {
-		$filename = $SysPrefs->backup_dir() . clean_file_name(get_post('backups'));
+		$filename = $SysPrefs->backup_dir().clean_file_name(get_post('backups'));
 		if (in_ajax()) 
 			$Ajax->popup( $filename );
 		else {
 			header('Content-type: text/plain');
 			header('Content-Length: '.filesize($filename));
 			header('Content-Disposition: inline; filename='.basename($filename));
+
 			if (substr($filename, -3, 3) == '.gz')
 				header('Content-Encoding: gzip');
-
 			if (substr($filename, -4, 4) == '.zip')
 				echo db_unzip('', $filename);
 			else
@@ -38,7 +37,7 @@ if (get_post('view')) {
 			exit();
 		}
 	}
-};
+}
 
 if (get_post('download')) {
 	if (get_post('backups')) {
@@ -54,7 +53,7 @@ page(_($help_context = 'Backup and Restore Database'), false, false, '', '');
 check_paths();
 
 function check_paths() {
-  global $SysPrefs;
+	global $SysPrefs;
 
 	if (!file_exists($SysPrefs->backup_dir())) {
 		display_error (_('Backup paths have not been set correctly.')._('Please contact System Administrator.').'<br>'. _('cannot find backup directory').' - '.$SysPrefs->backup_dir().'<br>');
@@ -91,7 +90,7 @@ function get_backup_file_combo() {
 		if (preg_match("/.sql(.zip|.gz)?$/", $file))
 			$opt_files .= "<option value='".$file."'>".$file."</option>";
 
-	$selector = "<select name='backups' size=2 style='height:160px;min-width:230px'>".$opt_files."</select>";
+	$selector = "<select class='nosearch' name='backups' size=2 style='height:160px;min-width:235px'>".$opt_files."</select>";
 
 	$Ajax->addUpdate('backups', '_backups_sel', $selector);
 	$selector = "<span id='_backups_sel'>".$selector."</span>\n";
@@ -187,9 +186,9 @@ start_form(true, true);
 start_outer_table(TABLESTYLE2);
 table_section(1);
 table_section_title(_('Create backup'));
-textarea_row(_('Comments:'), 'comments', null, 30, 8);
+textarea_row(_('Comments:'), 'comments', null, 30, 9);
 compress_list_row(_('Compression:'),'comp');
-vertical_space("height='20px'");
+vertical_space("height='30px'");
 submit_row('creat',_('Create Backup'), false, "colspan=2 align='center'", '', 'process');
 table_section(2);
 table_section_title(_('Backup scripts maintenance'));

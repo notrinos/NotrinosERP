@@ -1,0 +1,11 @@
+
+table.tablestyle_inner textarea,
+table.tablestyle_inner div.list_container {
+	width: 100%;
+}
+
+button {
+	width: 100%;
+	line-height: 25px;
+	text-align: center;
+}
