@@ -39,13 +39,13 @@ select {
 div.list_container {
 	display: inline-block;
 }
-div.dynamic_serach_btn {
+div.dynamic_combo_btn {
 	width: 100%;
 	padding: 5px 0px 5px 10px;
 	color: #0060a0;
 	font-size: 1.2em;
 }
-div.dynamic_serach_btn img {
+div.dynamic_combo_btn img {
 	display: inline-block;
 	float: right;
 	margin-top: 3px;
@@ -53,7 +53,7 @@ div.dynamic_serach_btn img {
 	color: #0060a0;
 	height: 1em;
 }
-div.dynamic_serach_btn:hover {
+div.dynamic_combo_btn:hover {
 	cursor: pointer;
 	background-color: #DDDDDD;
 }

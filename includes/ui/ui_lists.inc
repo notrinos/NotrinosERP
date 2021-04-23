@@ -453,19 +453,19 @@ function _format_add_curr($row, $pname=false) {
 		return $row[1]."&nbsp;-&nbsp;".$row[2] . ($row[3] == $company_currency ? '' : ("&nbsp;-&nbsp;".$row[3]));
 }
 
-function add_edit_combo($type) {
+function add_edit_combo($type, $name=false) {
 	global $path_to_root, $popup_editors, $SysPrefs;
 
-	if (!isset($SysPrefs->use_icon_for_editkey) || $SysPrefs->use_icon_for_editkey == 0)
-		return '';
 	// Derive theme path
 	$theme_path = $path_to_root.'/themes/'.user_theme();
-
 	$key = $popup_editors[$type][1];
 	$onclick = "onclick=\"javascript:callEditor($key); return false;\"";
-	$img = "<img width='12' height='12' border='0' alt='Add/Edit' title='Add/Edit' src='".$theme_path."/images/".ICON_EDIT."'>";
+	$img = "<img alt='Add/Edit' title='Add/Edit' src='".$theme_path."/images/".ICON_EDIT."'>";
 
-	return "<a target = '_blank' href='#' ".$onclick." tabindex='-1'>".$img."</a>"; 
+	if (!isset($SysPrefs->use_icon_for_editkey) || $SysPrefs->use_icon_for_editkey == 0)
+		return '<div hidden title="'._('Add/Edit').'" class="search_btn_container" id="_'.$name.'_add" '.$onclick.'><span class="search_btn_txt">'._('Add or edit').'</span>'.$img.'</div>';
+
+	return "<a target = '_blank' href='#' ".$onclick." tabindex='-1'>".$img."</a>";
 }
 
 function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $all=false, $editkey=false) {
@@ -494,7 +494,7 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'async' => false,
 		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment') : _('Select supplier'),
 		'show_inactive'=>$all,
-		'editlink' => $editkey ? add_edit_combo('supplier') : false
+		'editlink' => $editkey ? add_edit_combo('supplier', $name) : false
 		), 'supplier');
 
 	return $ret;
@@ -543,7 +543,7 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'async' => false,
 		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment; F2 - entry new customer') : _('Select customer'),
 		'show_inactive' => $show_inactive,
-		'editlink' => $editkey ? add_edit_combo('customer') : false
+		'editlink' => $editkey ? add_edit_combo('customer', $name) : false
 	), 'customer' );
 
 	return $ret;
@@ -582,7 +582,7 @@ function customer_branches_list($customer_id, $name, $selected_id=null, $spec_op
 		'spec_id' => ALL_TEXT,
 		'select_submit'=> $submit_on_change,
 		'sel_hint' => _('Select customer branch'),
-		'editlink' => $editkey ? add_edit_combo('branch') : false
+		'editlink' => $editkey ? add_edit_combo('branch', $name) : false
 	), 'branch');
 
 	return $ret;
@@ -760,7 +760,7 @@ function stock_items_list($name, $selected_id=null, $all_option=false, $submit_o
 			'select_submit'=> $submit_on_change,
 			'category' => 2,
 			'order' => array('c.description','stock_id'),
-			'editlink' => $editkey ? add_edit_combo('item') : false,
+			'editlink' => $editkey ? add_edit_combo('item', $name) : false,
 			'editable' => false,
 			'max' => 255
 		  ), $opts), $type );
@@ -790,7 +790,7 @@ function stock_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 //
 // Select item via foreign code.
 //
-function sales_items_list($name, $selected_id=null, $all_option=false, $submit_on_change=false, $type='', $opts=array()) {
+function sales_items_list($name, $selected_id=null, $all_option=false, $submit_on_change=false, $type='', $opts=array(), $editkey=false) {
 	// all sales codes
 	$sql = "SELECT i.item_code, i.description, c.description, count(*)>1 as kit,
 			 i.inactive, if(count(*)>1, '0', s.editable) as editable
@@ -825,6 +825,7 @@ function sales_items_list($name, $selected_id=null, $all_option=false, $submit_o
 			'select_submit'=> $submit_on_change,
 			'category' => 2,
 			'order' => array('c.description','i.item_code'),
+			'editlink' => $editkey ? add_edit_combo('item', $name) : false,
 			'editable' => 30,
 			'max' => 255
 		  ), $opts), $type == 'kits' ? $type : "stock_sales" );
@@ -837,7 +838,7 @@ function sales_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 	if ($label != null)
 		echo "<td>".$label."</td>\n";
 	echo sales_items_list($name, $selected_id, $all_option, $submit_on_change,
-		'', array('cells'=>true, 'max'=>50)); // maximum is set to 50 and not default 255.
+		'', array('cells'=>true, 'max'=>50), $editkey); // maximum is set to 50 and not default 255.
 }
 
 function sales_kits_list($name, $selected_id=null, $all_option=false, $submit_on_change=false) {

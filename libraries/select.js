@@ -32,16 +32,20 @@ var loadSelect2 = {
 			});
 			$(e).on('select2:open', function(e2){
 
-				$('.dynamic_serach_btn').remove();
+				$('.dynamic_combo_btn').remove();
 
 				var target_id = $(e2.target).attr('id');
 				var search_btn = $('#_'+target_id+'_search').clone();
-				$(search_btn).addClass('dynamic_serach_btn');
+				var add_btn = $('#_'+target_id+'_add').clone();
+				$(search_btn).addClass('dynamic_combo_btn');
+				$(add_btn).addClass('dynamic_combo_btn');
 				$(search_btn).removeAttr('id hidden');
+				$(add_btn).removeAttr('id hidden');
 
 				$('.select2-dropdown').append(search_btn);
-
-				$(search_btn).click(function(){
+				if($(add_btn) !== 'undefined')
+					$('.select2-dropdown').append(add_btn);
+				$(search_btn).add(add_btn).click(function(){
 					$('select').select2('close');
 				});
 				
