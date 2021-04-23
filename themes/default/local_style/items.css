@@ -1,8 +1,14 @@
-table.tablestyle_inner span {
-	margin: 0;
-	padding: 0;
+
+table.tablestyle2 div.list_container, table.tablestyle2 input:not([type=checkbox]) {
+	width: calc(100% - 3em);
 }
 table.tablestyle_inner input:not([type=checkbox]), table.tablestyle_inner textarea,
 table.tablestyle_inner div.list_container {
+	width: 100%;
+}
+div#price_details div.list_container, div#price_details input {
+	width: 135px;
+}
+div#cost_table div.list_container, div#cost_table input {
 	width: 100%;
 }

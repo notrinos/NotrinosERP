@@ -1,6 +1,5 @@
-table.tablestyle_inner span {
+table.tablestyle_inner select {
 	margin: 0;
-	padding: 0;
 }
 table.tablestyle_inner input:not([type=checkbox]), table.tablestyle_inner textarea,
 table.tablestyle_inner div.list_container {
