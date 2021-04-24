@@ -44,7 +44,7 @@ function help_url($context=null) {
 function send_css($css = '') {
 	global $css_files;
 
-	css_files_ensure_init();
+	init_css();
 
 	foreach ($css_files as $css_file) {
 		echo "<link href='".$css_file."' rel='stylesheet' type='text/css'> \n";

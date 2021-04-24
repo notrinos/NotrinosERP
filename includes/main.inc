@@ -67,20 +67,20 @@ function end_page($no_menu=false, $is_index=false, $final_screen=false, $type_no
 	page_footer($no_menu, $is_index);
 }
 
-function css_files_ensure_init() {
+function init_css() {
 	global $css_files, $path_to_root;
 
 	if (!isset($css_files)) {
-		$css_files = array();
-		$css_files[] = $path_to_root.'/libraries/select2.min.css';
-		$theme = user_theme();
-		$css_files[] = $path_to_root.'/themes/'.$theme.'/default.css';
+		$css_files = array(
+			$path_to_root.'/libraries/select2.min.css',
+			$path_to_root.'/libraries/fontawesome/css/all.min.css',
+			$path_to_root.'/themes/'.user_theme().'/default.css'
+		);
 
-		$theme_path = $path_to_root.'/themes/'.user_theme();
 		//The $_SERVER['REQUEST_URI'] is different depending on the server configuration (Apache, Nginx)
-		$file_ext = strpos($_SERVER['REQUEST_URI'], '?') ? '.php?' : '.php';
+		$file_ext = strpos($_SERVER['REQUEST_URI'], 'php?') ? '.php?' : '.php';
 		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
-		$local_css = $theme_path.'/local_style/'.$basename.'.css';
+		$local_css = $path_to_root.'/themes/'.user_theme().'/local_style/'.$basename.'.css';
 
 		if(file_exists($local_css))
 			$css_files[] = $local_css;
@@ -89,7 +89,7 @@ function css_files_ensure_init() {
 
 function add_css_file($filename) {
 	global $css_files;
-	css_files_ensure_init();
+	init_css();
 	$css_files[] = $filename;
 }
 
