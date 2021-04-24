@@ -45,7 +45,7 @@ div.dynamic_combo_btn {
 	color: #0060a0;
 	font-size: 1.2em;
 }
-div.dynamic_combo_btn img {
+div.dynamic_combo_btn i {
 	display: inline-block;
 	float: right;
 	margin-top: 3px;
@@ -76,6 +76,10 @@ div.date_box a:focus {
 }
 div.date_box a:hover {
 	text-decoration: none;
+}
+div.date_box i {
+	font-size: 1.5em;
+	vertical-align: middle;
 }
 option.inactive {
 	text-decoration: line-through;
@@ -112,10 +116,22 @@ button {
 	border: 1px #0066cc solid;
 	padding: 1px 0px;
 }
-button img {
+button i {
+	margin-right: 3px;
+	font-size: 1.1em;
 	vertical-align: middle;
-	padding: 0px 2px ;
-	box-sizing: content-box;
+}
+i.btn_ok {
+	color: #82C91E;
+}
+i.btn_danger {
+	color: #EE3625;
+}
+i.btn_warning {
+	color: #E37400;
+}
+i.btn_grey {
+	color: #777;
 }
 .callout_main {
 	font-family: Verdana, Arial, Helvetica;
@@ -173,9 +189,6 @@ button img {
 	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
 }
-.logoutBarRight {
-	text-align: right;
-}
 div.logoutBar {
 	padding-right: 1em;
 	background: #EAEAEA;
@@ -183,11 +196,16 @@ div.logoutBar {
 	border-bottom: 1px solid #BFBFBF;
 	text-align: right;
 }
-div.logoutBar a {
-	font-weight: normal;
-	margin-left: 1em;
-	color: #436976;
-	background-color: transparent;
+.logoutBarRight {
+	text-align: right;
+}
+.logoutBarRight a {
+	margin-right: 1em;
+	color: #555;
+}
+.logoutBarRight a:hover {
+	text-decoration: none;
+	color: #000;
 }
 div.logoutBar img {
 	vertical-align: top;
@@ -237,14 +255,18 @@ div.tabs a:hover {
 	margin: 9px;
 	border: 1px solid #BFBFBF;
 }
-.menu_group_items img {
-	margin-right: .7em;
-	margin-top: -2px;
-}
 .menu_group_items a.menu_option, .menu_group_items span.inactive {
 	display: inline-block;
 	padding: 3px 5px;
 	font-size: 1.2em;
+}
+a.menu_option i {
+	position: relative;
+	margin-right: .5em;
+	bottom: -1px;
+	padding: 1px;
+	color: #555;
+	font-size: 1.05em;
 }
 a.menu_option:hover {
 	text-decoration: none;

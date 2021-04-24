@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -11,14 +11,32 @@
 ***********************************************************************/
 
 class renderer {
-	function get_icon($category) {
-		global  $path_to_root, $SysPrefs;
+	function menu_icon($menu) {
+		global $SysPrefs;
 
-		if ($SysPrefs->show_menu_category_icons)
-			$img = $category == '' ? 'right.gif' : $category.'.svg';
+		if ($SysPrefs->show_menu_category_icons) {
+			if($menu == MENU_TRANSACTION)
+				$ic = 'fas fa-exchange-alt';
+			elseif($menu == MENU_SYSTEM)
+				$ic = 'fas fa-database';
+			elseif($menu == MENU_UPDATE)
+				$ic = 'fas fa-sync-alt';
+			elseif($menu == MENU_INQUIRY)
+				$ic = 'fas fa-search';
+			elseif($menu == MENU_ENTRY)
+				$ic = 'fas fa-folder-plus';
+			elseif($menu == MENU_REPORT)
+				$ic = 'far fa-file-pdf';
+			elseif($menu == MENU_MAINTENANCE)
+				$ic = 'fas fa-edit';
+			elseif($menu == MENU_SETTINGS)
+				$ic = 'far fa-list-alt';
+			else
+				$ic = 'fas fa-caret-square-right';
+		}
 		else	
-			$img = 'right.gif';
-		return "<img width=16 src='".$path_to_root.'/themes/'.user_theme().'/images/'.$img."' style='vertical-align:middle;' border='0'>";
+			$ic = 'fas fa-caret-square-right';
+		return "<i class='".$ic."'></i>";
 	}
 
 	function wa_header() {
@@ -46,36 +64,35 @@ class renderer {
 		$indicator = $path_to_root."/themes/".user_theme(). "/images/ajax-loader.gif";
 		if (!$no_menu) {
 			$applications = $_SESSION['App']->applications;
-			$local_path_to_root = $path_to_root;
 			$sel_app = $_SESSION['sel_app'];
 			echo "<table cellpadding='0' cellspacing='0' width='100%'><tr><td>";
 			echo "<div class='tabs'>";
 			foreach($applications as $app) {
 				if ($_SESSION['wa_current_user']->check_application_access($app)) {
 					$acc = access_string($app->name);
-					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$local_path_to_root."/index.php?application=".$app->id."'".$acc[1].">" .$acc[0] . "</a>";
+					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$path_to_root."/index.php?application=".$app->id."'".$acc[1].">" .$acc[0] . "</a>";
 				}
 			}
 			echo "</div>";
 			echo "</td></tr></table>";
 			// top status bar
-			$rimg = "<img src='".$path_to_root."/themes/".user_theme()."/images/dashboard.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Dashboard')."'>&nbsp;&nbsp;";
-			$pimg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/preferences.svg' style='width:14px;height:14px; border:0;vertical-align:middle;' alt='"._('Preferences')."'>&nbsp;&nbsp;";
-			$limg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/key.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Change Password')."'>&nbsp;&nbsp;";
-			$img = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/logout.svg' style='width:14px;height:14px;border:0;vertical-align:middle;' alt='"._('Logout')."'>&nbsp;&nbsp;";
-			$himg = "<img src='".$local_path_to_root."/themes/".user_theme()."/images/help.svg' style='width:14px;height:14px;border:0;vertical-align:middle;'' alt='"._('Help')."'>&nbsp;&nbsp;";
+			$rimg = "<i class='fas fa-tachometer-alt'></i>&nbsp;";
+			$pimg = "<i class='fas fa-cogs'></i>&nbsp;";
+			$limg = "<i class='fas fa-key'></i>&nbsp;";
+			$himg = "<i class='fas fa-question-circle'></i>&nbsp;";
+			$img = "<i class='fas fa-sign-out-alt'></i>&nbsp;";
+
 			echo "<table class='logoutBar'>";
-			echo "<tr><td class='headingtext3'>" . $db_connections[user_company()]['name'] . " | " . $_SERVER['SERVER_NAME'] . " | " . $_SESSION['wa_current_user']->name . "</td>";
+			echo "<tr><td class='headingtext3'>" . $db_connections[user_company()]['name']." | ".$_SERVER['SERVER_NAME']." | ".$_SESSION['wa_current_user']->name."</td>";
 			echo "<td class='logoutBarRight'><img id='ajaxmark' src='".$indicator."' align='center' style='visibility:hidden;' alt='ajaxmark'></td>";
-			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg . _('Dashboard') . "</a>&nbsp;&nbsp;&nbsp;\n";
-				
-			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg . _('Preferences') . "</a>&nbsp;&nbsp;&nbsp;\n";
-			echo "  <a class='shortcut' href='".$path_to_root."/admin/change_current_user_password.php?selected_id=" . $_SESSION['wa_current_user']->username . "'>".$limg . _('Change password') . "</a>&nbsp;&nbsp;&nbsp;\n";
+			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg._('Dashboard')."</a>\n";
+			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg._('Preferences')."</a>\n";
+			echo " <a class='shortcut' href='".$path_to_root."/admin/change_current_user_password.php?selected_id=".$_SESSION['wa_current_user']->username."'>".$limg._('Change password')."</a>\n";
 
 			if ($SysPrefs->help_base_url != null)
-				echo "<a target = '_blank' onclick=" .'"'."javascript:openWindow(this.href,this.target); return false;".'" '. "href='". help_url()."'>".$himg . _('Help') . "</a>&nbsp;&nbsp;&nbsp;";
+				echo "<a target = '_blank' onclick=".'"'."javascript:openWindow(this.href,this.target); return false;".'" '."href='".help_url()."'>".$himg._('Help')."</a>";
 				
-			echo "<a class='shortcut' href='".$local_path_to_root."/access/logout.php?'>".$img . _('Logout') . "</a>&nbsp;&nbsp;&nbsp;";
+			echo "<a class='shortcut' href='".$path_to_root."/access/logout.php?'>".$img._('Logout')."</a>";
 			echo "</td></tr><tr><td colspan=3>";
 			echo "</td></tr></table>";
 		}
@@ -154,7 +171,7 @@ class renderer {
 			echo "<td class='menu_group_items'>";
 
 			foreach ($module->lappfunctions as $appfunction) {
-				$img = $this->get_icon($appfunction->category);
+				$img = $this->menu_icon($appfunction->category);
 				if ($appfunction->label == '')
 					echo "&nbsp;<br>";
 				elseif ($_SESSION['wa_current_user']->can_access_page($appfunction->access)) 
@@ -166,7 +183,7 @@ class renderer {
 			if (sizeof($module->rappfunctions) > 0) {
 				echo "<td width='50%' class='menu_group_items'>";
 				foreach ($module->rappfunctions as $appfunction) {
-					$img = $this->get_icon($appfunction->category);
+					$img = $this->menu_icon($appfunction->category);
 					if ($appfunction->label == '')
 						echo "&nbsp;<br>";
 					elseif ($_SESSION['wa_current_user']->can_access_page($appfunction->access)) 
