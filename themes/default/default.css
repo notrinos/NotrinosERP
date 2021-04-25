@@ -15,7 +15,7 @@ body {
 	font-family: Verdana, Arial, Helvetica;
 	background: #DADADA;
 	font-size: 10px;
-	margin: 5px 0 0 5px;
+	margin: 0;
 	padding: 0;
 }
 tr, td, th {
@@ -80,6 +80,7 @@ div.date_box a:hover {
 div.date_box i {
 	font-size: 1.5em;
 	vertical-align: middle;
+	margin-top: -1px;
 }
 option.inactive {
 	text-decoration: line-through;
@@ -133,19 +134,25 @@ i.btn_warning {
 i.btn_grey {
 	color: #777;
 }
+i.btn_green {
+	color: #009077;
+}
 .callout_main {
 	font-family: Verdana, Arial, Helvetica;
-	border: none;
-	width: 99%;
-	margin: 0;
-	padding: 0;
-}
-.main_page {
-	background-color: #FEFEFE;
 	border: none;
 	width: 100%;
 	margin: 0;
 	padding: 0;
+}
+.main_page {
+	background-color: #FFF;
+	border: none;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+#_page_body {
+	width: 100%;
 }
 .quick_menu {
 	background-color: #DADADA;
@@ -165,7 +172,7 @@ i.btn_grey {
 }
 .logoutBar {
 	padding-right: 1em;
-	background: #EAEAEA;
+	background: #DADADA;
 	color: #222222;
 	border-bottom: 1px solid #BFBFBF;
 	width: 100%;
@@ -211,34 +218,56 @@ div.logoutBar img {
 	vertical-align: top;
 }
 div.tabs {
-	padding: 3px 0 0 0;
-	background: none transparent scroll repeat 0% 0%;
-	white-space: nowrap;
-	border-collapse: collapse;
-	border-bottom: 1px solid #BFBFBF;
-
+	display: inline-block;
+	padding: 0;
+	height: 42px;
+	background-color: #fff;
+	border-bottom: 1px solid #CFCFCF;
+	box-sizing: border-box;
+}
+div.tabs center {
+	height: 100%;
 }
 div.tabs a {
-	border: 1px solid #BFBFBF;
-	padding: 3px 10px;
-	font-weight: normal;
-	background: white scroll repeat 0% 0%;
+	display: inline-block;
+	width: 100px;
+	height: 100%;
+	padding: 4px 0 5px 0;
 	color: #436976;
-	margin-right: 0;
-	height: 10px;
+	margin: 0;
+	box-sizing: border-box;
+}
+div.tabs a i {
+	display: block;
+	color: #333;
+	font-size: 1.2em;
+	width: calc(1.2em + 8px);
+	padding: 3px;
+	border: 1px solid #AAA;
+	border-radius: 2px;
+}
+div.tabs a span {
+	display: block;
+	width: 100%;
+	color: #666;
+	text-align: center;
+	text-transform: uppercase;
+	font-size: 0.8em;
+	padding: 0;
+	margin-top: -3px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 div.tabs a.selected {
-	border-top: 1px solid #BFBFBF;
-	border-right: 1px solid #BFBFBF;
-	border-bottom:  1px solid #EAEAEA;
-	border-left: 1px solid #BFBFBF;
-	font-weight: normal;
-	background: #EAEAEA;
-	color: #436976;
+	border-bottom: 3px solid #DD4B39;
+}
+div.tabs a.selected i, div.tabs a.selected span {
+	color: #000;
 }
 div.tabs a:hover {
-	background: #EAEAEA;
-	color: #436976;
+	text-decoration: none;
+	background-color: #F1F1F1;
 }
 .menu_group {
 	font-size: 13px;
@@ -351,7 +380,7 @@ a.menu_option:focus {
 	background-color: #F0F0F0;
 }
 .overduebg {
-	background-color: #F0A0A0;
+	background-color: #F7C6C5;
 }
 .overduefg {
 	color: #FFA5A8;
@@ -364,7 +393,7 @@ a.menu_option:focus {
 	font-weight: bold;
 }
 .settledbg {
-	background-color: #5fcf7f;
+	background-color: #C9F6CD;
 }
 .settledfg {
 	color: #0faf0f;

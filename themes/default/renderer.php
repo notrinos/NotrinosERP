@@ -50,6 +50,11 @@ class renderer {
 	function menu_header($title, $no_menu, $is_index) {
 		global $path_to_root, $SysPrefs, $db_connections;
 
+		add_js_file('dynamic-menu.js');
+		add_css_file($path_to_root.'/libraries/dynamic-menu.css');
+		send_scripts();
+		send_css();
+
 		echo "<table class='callout_main' border='0' cellpadding='0' cellspacing='0'>\n";
 		echo "<tr>\n";
 		echo "<td colspan='2' rowspan='2'>\n";
@@ -63,16 +68,21 @@ class renderer {
 
 		$indicator = $path_to_root."/themes/".user_theme(). "/images/ajax-loader.gif";
 		if (!$no_menu) {
+
+			$app_icons = array('orders'=>'fas fa-tags','AP'=>'fas fa-shopping-cart','stock'=>'fas fa-warehouse','manuf'=>'fas fa-industry','assets'=>'fas fa-building','proj'=>'fas fa-map-marked-alt','GL'=>'fas fa-book','FrontHrm'=>'fas fa-users','extendedhrm'=>'fas fa-users','school'=>'fas fa-graduation-cap', 'kanban' => 'fas fa-tasks', 'pos'=>'fas fa-shopping-basket', 'grm'=>'fas fa-commenting-o', 'trade_finance'=>'fas fa-money', 'weigh_bridge'=>'fas fa-balance-scale', 'additional_fields'=>'fas fa-plus-square', 'booking'=>'fas fa-check-square-o', 'hospital'=>'fas fa-hospital-o', 'Projects'=>'fas fa-check-square-o', 'system'=>'fas fa-cog');
 			$applications = $_SESSION['App']->applications;
 			$sel_app = $_SESSION['sel_app'];
 			echo "<table cellpadding='0' cellspacing='0' width='100%'><tr><td>";
-			echo "<div class='tabs'>";
+			echo "<div class='tabs collapsible-nav'><center class='collapsible-menu'>";
 			foreach($applications as $app) {
 				if ($_SESSION['wa_current_user']->check_application_access($app)) {
 					$acc = access_string($app->name);
-					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$path_to_root."/index.php?application=".$app->id."'".$acc[1].">" .$acc[0] . "</a>";
+					$ap_title = str_replace(array('<u>','</u>'), '', $acc[0]);
+					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$path_to_root."/index.php?application=".$app->id."' title='".$ap_title."' $acc[1]><i class='".@$app_icons[$app->id]." nav-icon'></i><span class='nav-text'>".$acc[0]."</span></a>";
 				}
 			}
+			echo "</center>";
+			echo "<button hidden>"._('MORE').'&#9662;'."</button><div class='hidden-menu-links hidden'></div>";
 			echo "</div>";
 			echo "</td></tr></table>";
 			// top status bar

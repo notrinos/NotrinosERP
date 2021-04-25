@@ -248,24 +248,24 @@ define('TR_INPUT', 1);	// purchase
 //---------------------------------------------------------------------------------
 // Constants optionally redefined locally
 //
-defined('ICON_EDIT') || define('ICON_EDIT', 'edit.svg');
-defined('ICON_DELETE') || define('ICON_DELETE', 'delete.svg');
-defined('ICON_ADD')	|| define('ICON_ADD', 'ok.svg');
-defined('ICON_UPDATE') || define('ICON_UPDATE', 'ok.svg');
-defined('ICON_OK') || define('ICON_OK', 'ok.svg');
-defined('ICON_CANCEL') || define('ICON_CANCEL', 'cancel.png');
-defined('ICON_GL') || define('ICON_GL', 'gl.svg');
-defined('ICON_PRINT') || define('ICON_PRINT', 'print.png');
-defined('ICON_PDF') || define('ICON_PDF', 'pdf.gif');
-defined('ICON_DOC') || define('ICON_DOC', 'invoice.gif');
-defined('ICON_CREDIT') || define('ICON_CREDIT', 'credit.gif');
-defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'receive.gif');
-defined('ICON_DOWN') || define('ICON_DOWN', 'download.svg');
-defined('ICON_MONEY') || define('ICON_MONEY', 'money.png');
-defined('ICON_REMOVE') || define('ICON_REMOVE', 'remove.png');
-defined('ICON_REPORT') || define('ICON_REPORT', 'report.png');
-defined('ICON_VIEW') || define('ICON_VIEW', 'view.svg');
-defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'ok.svg');
-defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'escape.png');
-defined('ICON_ALLOC') || define('ICON_ALLOC', 'alloc.png');
-defined('ICON_CLOSED') || define('ICON_CLOSED', 'closed.png');
+defined('ICON_EDIT') || define('ICON_EDIT', 'btn_warning fas fa-pen');
+defined('ICON_DELETE') || define('ICON_DELETE', 'btn_danger fas fa-trash-alt');
+defined('ICON_ADD')	|| define('ICON_ADD', 'btn_ok fas fa-check-circle');
+defined('ICON_UPDATE') || define('ICON_UPDATE', 'btn_ok fas fa-check-circle');
+defined('ICON_OK') || define('ICON_OK', 'btn_ok fas fa-check-circle');
+defined('ICON_CANCEL') || define('ICON_CANCEL', 'btn_danger fas fa-times-circle');
+defined('ICON_GL') || define('ICON_GL', 'fas fa-book');
+defined('ICON_PRINT') || define('ICON_PRINT', 'btn_grey fas fa-print');
+defined('ICON_PDF') || define('ICON_PDF', 'fas fa-file-pdf');
+defined('ICON_DOC') || define('ICON_DOC', 'btn_ok fas fa-file-export');
+defined('ICON_CREDIT') || define('ICON_CREDIT', 'btn_green fas fa-file-import');
+defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'btn_ok fas fa-file-import');
+defined('ICON_DOWN') || define('ICON_DOWN', 'btn_ok fas fa-cloud-download-alt');
+defined('ICON_MONEY') || define('ICON_MONEY', 'btn_green far fa-money-bill-alt');
+defined('ICON_REMOVE') || define('ICON_REMOVE', 'btn_danger fas fa-trash-alt');
+defined('ICON_REPORT') || define('ICON_REPORT', 'fas fa-file-pdf');
+defined('ICON_VIEW') || define('ICON_VIEW', 'fas fa-search');
+defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'btn_ok fas fa-check-circle');
+defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'btn_danger fas fa-times-circle');
+defined('ICON_ALLOC') || define('ICON_ALLOC', 'fas fa-exchange-alt');
+defined('ICON_CLOSED') || define('ICON_CLOSED', 'btn_danger fas fa-times-circle');

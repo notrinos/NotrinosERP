@@ -1,0 +1,90 @@
+
+div.collapsible-nav {
+	display: flex;
+	align-items: center;
+}
+div.collapsible-nav button {
+	align-self: stretch;
+	border: 0;
+	padding: 0 5px;
+	border-left: 1px solid #CCC;
+	font-weight: bold;
+	background: inherit;
+	color: #404040;
+}
+div.collapsible-nav button::after {
+	content: attr(count);
+	display: inline-flex;
+	width: 20px;
+	height: 20px;
+	align-items: center;
+	justify-content: center;
+	background: #9f9f9f;
+	color: #FFFFFF;
+	box-shadow: 0 0 1px 0 rgba(0,0,0,0.8);
+	border-radius: 50%;
+	font-size: 14px;
+	line-height: 14px;
+}
+div.collapsible-nav button:hover {
+	cursor: pointer;
+}
+center.collapsible-menu {
+	display: flex;
+	justify-content: center;
+	flex: 1;
+	overflow: hidden;
+}
+center.collapsible-menu a {
+	/*flex: none;*/
+}
+div.hidden-menu-links {
+	position: absolute;
+	background-color: #ffffff;
+	border: 1px solid #E5E5E5;
+	-webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+	min-width: 160px;
+	right: 15px;
+	top: 100px;
+	padding: 5px 0;
+	text-align: left;
+	z-index: 10;
+}
+div.hidden-menu-links a {
+	display: block;
+	width: 250px;
+	height: 2.5em;
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+}
+div.hidden-menu-links a i, div.hidden-menu-links a span {
+	display: inline-block;
+	float: left;
+	width: auto;
+}
+div.hidden-menu-links a i {
+	border: 0;
+	padding: 0;
+	width: 2em;
+	margin: .6em 0 0 10px;
+}
+div.hidden-menu-links a span {
+	margin: 0.5em 0 0 0;
+}
+.hidden-menu-links a:hover {
+	background-color: #F1F1F1;
+	/*text-decoration: none;*/
+}
+div.hidden-menu-links.hidden {
+	display: none;
+}
+
+/*additional css to fix resize problem (need to be optimized)*/
+/*@media all and (max-width: 768px) {
+	center.fa-collapsible-menu {
+		display: table;
+		height: calc(100vh - 81px - 2em);
+	}
+}*/

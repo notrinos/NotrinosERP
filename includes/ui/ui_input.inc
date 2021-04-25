@@ -155,7 +155,7 @@ function submit($name, $value, $echo=true, $title=false, $atype=false, $icon=fal
 		." name=\"$name\"  id=\"$name\" value=\"$value\""
 		.($title ? " title='$title'" : '')
 		.">"
-		.($icon ? "<img src='$path_to_root/themes/".user_theme()."/images/$icon' height='12' alt=''>" : '')
+		.($icon ? "<i class='".$icon."'></i>" : '')
 		."<span>$value</span>"
 		."</button>\n";
 	if ($echo)
@@ -263,10 +263,7 @@ function submit_js_confirm($name, $msg, $set = true) {
 //-----------------------------------------------------------------------------------
 
 function set_icon($icon, $title=false) {
-	global $path_to_root;
-	if (basename($icon) === $icon) // standard icons does not contain path separator
-		$icon = "$path_to_root/themes/".user_theme()."/images/$icon";
-	return "<img src='".$icon."' style='vertical-align:middle;width:12px;height:12px;border:0;'".($title ? " title='".$title."'" : "")." >\n";	
+	return "<i class='".$icon."'".($title ? " title='".$title."'" : '')."></i>";
 }
 
 function button($name, $value, $title=false, $icon=false,  $aspect='') {
@@ -589,7 +586,7 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 		$calc_image = (file_exists($path_to_root.'/themes/'.user_theme().'/images/cal.svg')) ? 
 			$path_to_root.'/themes/'.user_theme().'/images/cal.svg' : $path_to_root.'/themes/default/images/cal.svg';
 		$post_label = "<a tabindex='-1' href=\"javascript:date_picker(document.getElementsByName('$name')[0]);\">"
-		. "	<img src='$calc_image' style='vertical-align:middle;margin-top:-3px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a>\n";
+		. "	<i class='btn_grey far fa-calendar-alt'></i></a>\n";
 	}	
 	else
 		$post_label = '';

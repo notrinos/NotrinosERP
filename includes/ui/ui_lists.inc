@@ -314,7 +314,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		}
 
 		if ($link !== '')
-			$search_btn = '<div hidden title="'.$btn_title.'" class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search').'</span><img src="'.$path_to_root.'/themes/'.user_theme().'/images/'.ICON_VIEW.'" />'."</div>";
+			$search_btn = '<div hidden title="'.$btn_title.'" class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search')."</span><i class='fas fa-search'></i></div>";
 	}
 
 	if ($opts['editlink'])
@@ -460,7 +460,7 @@ function add_edit_combo($type, $name=false) {
 	$theme_path = $path_to_root.'/themes/'.user_theme();
 	$key = $popup_editors[$type][1];
 	$onclick = "onclick=\"javascript:callEditor($key); return false;\"";
-	$img = "<img alt='Add/Edit' title='Add/Edit' src='".$theme_path."/images/".ICON_EDIT."'>";
+	$img = "<i class='fas fa-edit'></i>";
 
 	if (!isset($SysPrefs->use_icon_for_editkey) || $SysPrefs->use_icon_for_editkey == 0)
 		return '<div hidden title="'._('Add/Edit').'" class="search_btn_container" id="_'.$name.'_add" '.$onclick.'><span class="search_btn_txt">'._('Add or edit').'</span>'.$img.'</div>';
