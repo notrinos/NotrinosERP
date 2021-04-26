@@ -16,7 +16,7 @@ body {
 	background: #DADADA;
 	font-size: 10px;
 	margin: 0;
-	padding: 0;
+	padding: 0 5px;
 }
 tr, td, th {
 	font-size: 11px;
@@ -146,13 +146,16 @@ i.btn_green {
 }
 .main_page {
 	background-color: #FFF;
-	border: none;
+	border: 0;
 	width: 100%;
 	margin: 0;
 	padding: 0;
 }
 #_page_body {
 	width: 100%;
+	border-left: 1px solid #BFBFBF;
+	border-right: 1px solid #BFBFBF;
+	padding-top: 1em;
 }
 .quick_menu {
 	background-color: #DADADA;
@@ -178,10 +181,11 @@ i.btn_green {
 	width: 100%;
 }
 .bottomBar {
-	padding-right: 1em;
+	padding: 0 1em;
 	background: #EAEAEA;
 	color: #222222;
-	border-bottom: 1px solid #BFBFBF;
+	border: 1px solid #BFBFBF;
+	border-top: 0;
 	width: 100%;
 }
 .bottomBarCell {
@@ -192,8 +196,7 @@ i.btn_green {
 	padding-right: 1em;
 	background: #EAEAEA;
 	color: #222222;
-	border-top: 1px solid #BFBFBF;
-	border-bottom: 1px solid #BFBFBF;
+	border: 1px solid #BFBFBF;
 	width: 100%;
 }
 div.logoutBar {
@@ -219,6 +222,8 @@ div.logoutBar img {
 }
 div.tabs {
 	display: inline-block;
+	width: calc(100% + 10px);
+	margin-left: -5px;
 	padding: 0;
 	height: 42px;
 	background-color: #fff;
@@ -260,7 +265,7 @@ div.tabs a span {
 	text-overflow: ellipsis;
 }
 div.tabs a.selected {
-	border-bottom: 3px solid #DD4B39;
+	border-bottom: 2px solid #DD4B39;
 }
 div.tabs a.selected i, div.tabs a.selected span {
 	color: #000;
@@ -269,12 +274,14 @@ div.tabs a:hover {
 	text-decoration: none;
 	background-color: #F1F1F1;
 }
+.menu_table {
+	margin-top: -1em;
+}
 .menu_group {
 	font-size: 13px;
-	padding: 0px;
 	color: #222222;
 	background-color: #EAEAEA;
-	padding-left: 3px;
+	padding: 0 1em;
 	font-weight: bold;
 }
 .menu_group_items {
@@ -598,7 +605,6 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 	-webkit-box-shadow: 0px 6px 12px #999;
 	-moz-box-shadow:    0px 6px 12px #999;
 	box-shadow:         0px 6px 12px #999;
-
 }
 #CC th {
 	font-weight: normal;
@@ -695,8 +701,10 @@ div.note_msg {
 	text-align: center;
 }
 #title {
-	margin-bottom: 10px;
+	/*margin-bottom: 10px;*/
 	width: 100%;
+	border-left: 1px solid #BFBFBF;
+	border-right: 1px solid #BFBFBF;
 }
 div.widgets_container {
 	display: inline-block;

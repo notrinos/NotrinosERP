@@ -166,7 +166,7 @@ class renderer {
 			return;
 		}
 
-		echo "<table width='100%' cellpadding='0' cellspacing='0'>";
+		echo "<table class='menu_table' width='100%' cellpadding='0' cellspacing='0'>";
 		foreach ($selected_app->modules as $module) {
 			if (!$_SESSION['wa_current_user']->check_module_access($module))
 				continue;

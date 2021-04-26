@@ -4,3 +4,6 @@ table.tablestyle_inner div.list_container {
 	width: 100%;
 	margin: 0;
 }
+table.tablestyle_inner select {
+	margin: 0;
+}
