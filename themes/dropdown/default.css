@@ -54,7 +54,7 @@ div.dynamic_combo_btn {
 	font-size: 1.2em;
 	box-sizing: border-box;
 }
-div.dynamic_combo_btn img {
+div.dynamic_combo_btn i {
 	display: inline-block;
 	float: right;
 	margin-top: 3px;
@@ -407,10 +407,25 @@ button {
 	border: 1px #0066cc solid;
 	padding: 1px 0px;
 }
-button img {
+button i {
+	margin-right: 3px;
+	font-size: 1.1em;
 	vertical-align: middle;
-	padding: 0px 2px ;
-	box-sizing: content-box;
+}
+i.btn_ok {
+	color: #82C91E;
+}
+i.btn_danger {
+	color: #EE3625;
+}
+i.btn_warning {
+	color: #E37400;
+}
+i.btn_grey {
+	color: #777;
+}
+i.btn_green {
+	color: #009077;
 }
 ul.ajaxtabs{
 	padding: 3px 0 0 0;
