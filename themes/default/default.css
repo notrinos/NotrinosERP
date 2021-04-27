@@ -110,7 +110,7 @@ a:hover, a:focus {
 	text-decoration: underline;
 }
 .inactive {
-	color: gray;
+	color: #CCCCCC;
 }
 button {
 	font-size: 11px;
@@ -296,13 +296,16 @@ div.tabs a:hover {
 	padding: 3px 5px;
 	font-size: 1.2em;
 }
-a.menu_option i {
+a.menu_option i, span.inactive i {
 	position: relative;
 	margin-right: .5em;
 	bottom: -1px;
 	padding: 1px;
 	color: #555;
 	font-size: 1.05em;
+}
+span.inactive i {
+	color: #CCCCCC;
 }
 a.menu_option:hover {
 	text-decoration: none;
