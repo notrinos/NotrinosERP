@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -14,10 +14,10 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/page/header.inc');
 
-$js = "<script language='JavaScript'>
-function defaultCompany() {
-	document.forms[0].company_login_name.options[".user_company()."].selected = true;
-}
+$js = "<script>
+	function defaultCompany() {
+		document.forms[0].company_login_name.options[".user_company()."].selected = true;
+	}
 </script>";
 
 add_js_file('login.js');
@@ -59,6 +59,7 @@ echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
 echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet' type='text/css'> \n";
 echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet' type='text/css'> \n";
+echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
 
@@ -81,16 +82,21 @@ else
 	echo "<font size=5>"._('Authorization timeout')."</font>";
 echo "</td>\n";
 end_row();
+
 if (!$login_timeout)
 	table_section_title(_('Version').' '.$version.'   Build '.$SysPrefs->build_version.' - '._('Login'));
 
-$value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : '');
+echo "<tr><td colspan='2'></td></tr>";
 
-text_row(_('User name').':', 'user_name_entry_field', $value, 20, 30);
+$value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : 'admin');
 
-$password = $SysPrefs->allow_demo_mode ? 'password' : '';
+echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-user' title='"._('User')."'></i>";
+echo "<input required class='input' id='user' name='user_name_entry_field' type='text' placeholder='"._('User name:')."' value='$value'></div></td></tr>";
 
-password_row(_('Password:'), 'password', $password);
+$password = $SysPrefs->allow_demo_mode ? 'password' : '1111';
+
+echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-key' title='"._('Password')."'></i>";
+echo "<input required class='input' id='pass' name='password' type='password' placeholder='"._('Password:')."' value='$password'></div></td></tr>";
 
 if ($login_timeout)
 	hidden('company_login_name', user_company());
@@ -98,22 +104,27 @@ else {
 	$coy =  user_company();
 	if (!isset($coy))
 		$coy = $def_coy;
+	echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
 	if (!@$SysPrefs->text_company_selection) {
-		echo "<tr><td class='label'>"._('Company').':'."</td><td><select name='company_login_name'>\n";
+		echo "<select name='company_login_name'>\n";
 		for ($i = 0; $i < count($db_connections); $i++)
 			echo "<option value=".$i.' '.($i==$coy ? 'selected' : '').'>'.$db_connections[$i]['name'].'</option>';
 		echo "</select>\n";
-		echo '</td></tr>';
 	}
 	else
-		text_row(_('Company').':', 'company_login_nickname', '', 20, 50);
+		echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
+	echo '</div></td></tr>';
 }; 
 start_row();
 label_cell($demo_text, "colspan=2 align='center' id='log_msg'");
 end_row();
-end_table(1);
+
+start_row();
 echo "<input type='hidden' id=ui_mode name='ui_mode' value='".!fallback_mode()."' >\n";
-echo "<center><input type='submit' value='&nbsp;&nbsp;"._('Login -->')."&nbsp;&nbsp;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked) ? " disabled" : '')." ></center>\n";
+echo "<td colspan='2'><center><input type='submit' value='&nbsp;&nbsp;"._('Login')."&nbsp;&nbsp;&#8250;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked) ? " disabled" : '')." ></center></td>\n";
+end_row();
+
+end_table(1);
 
 foreach($_SESSION['timeout']['post'] as $p => $val) {
 	// add all request variables to be resend together with login data

@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -39,6 +39,7 @@ echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
 echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet' type='text/css'> \n";
 echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet' type='text/css'> \n";
+echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
 echo $js;
@@ -60,27 +61,32 @@ end_row();
 
 echo "<input type='hidden' id=ui_mode name='ui_mode' value='".fallback_mode()."' >\n";
 table_section_title(_('Version').' '.$version."   Build ".$SysPrefs->build_version.' - '._('Password reset'));
-
-text_row(_('Email'), 'email_entry_field', '', 20, 30);
+echo "<tr><td colspan='2'></td></tr>";
+echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-envelope' title='"._('Email')."'></i>";
+echo "<input required class='input' id='email' name='email_entry_field' type='text' placeholder='"._('Email:')."'></div></td></tr>";
 
 $coy =  user_company();
 if (!isset($coy))
 	$coy = $def_coy;
+echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
 if (!@$SysPrefs->text_company_selection) {
-	echo "<tr><td>"._('Company')."</td><td><select name='company_login_name'>\n";
+	echo "<select name='company_login_name'>\n";
 	for ($i = 0; $i < count($db_connections); $i++)
-		echo "<option value=".$i.' '.($i==$coy ? 'selected':'').'>'.$db_connections[$i]['name'].'</option>';
+		echo "<option value=".$i.' '.($i==$coy ? 'selected' : '').'>'.$db_connections[$i]['name'].'</option>';
 	echo "</select>\n";
-	echo '</td></tr>';
 }
 else
-	text_row(_('Company'), 'company_login_nickname', '', 20, 50);
+	echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
+echo '</div></td></tr>';
 
 start_row();
 label_cell('Please enter your e-mail', "colspan=2 align='center' id='log_msg'");
 end_row();
+
+start_row();
+echo "<td colspan='2'><center><input type='submit' value='&nbsp;&nbsp;"._('Send password')."&nbsp;&nbsp;&#8250;' name='SubmitReset' onclick='set_fullmode();'></center></td>\n";
+end_row();
 end_table(1);
-echo "<center><input type='submit' value='&nbsp;&nbsp;"._('Send password -->')."&nbsp;&nbsp;' name='SubmitReset' onclick='set_fullmode();'></center>\n";
 
 end_form(1);
 $Ajax->addScript(true, "document.forms[0].password.focus();");
