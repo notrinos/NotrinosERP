@@ -9,9 +9,9 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root. '/includes/archive.inc');
-include_once($path_to_root. '/includes/remote_url.inc');
-include_once($path_to_root. '/includes/hooks.inc');
+include_once($path_to_root.'/includes/archive.inc');
+include_once($path_to_root.'/includes/remote_url.inc');
+include_once($path_to_root.'/includes/hooks.inc');
 
 define('PKG_CACHE_PATH', $path_to_root.'/modules/_cache');
 define('PUBKEY_PATH', $path_to_root);
@@ -108,7 +108,6 @@ class package extends gzip_file {
 	function purge() {
 		return true;
 	}
-
 }
 //
 // Changes field value read from control file (single, or multiline) into 
@@ -248,7 +247,7 @@ function pkg_prop($pkg, $property, $lang=false) {
 	else
 		$prop = @$pkg[$property];
 
-	return is_array($prop) ? implode("\n ",$prop): $prop;
+	return is_array($prop) ? implode("\n ", $prop): $prop;
 }
 //
 //	Retrieve list of packages from repository and return as table ($pkgname==null),
@@ -259,11 +258,10 @@ function pkg_prop($pkg, $property, $lang=false) {
 //	 	or (0=>field1, 1=>field2...)
 //  $outkey - field used as a key in package list. If null 'Package' field is used.
 //
-function get_pkg_or_list($type = null, $pkgname = null, $filter=array(), $outkey=null, $download=true) {
-
+function get_pkg_or_list($type=null, $pkgname=null, $filter=array(), $outkey=null, $download=true) {
 	global $path_to_root, $repo_auth;
 
-	$repo =  (isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://')
+	$repo = (isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://')
 			.(isset($repo_auth['login'])  ? $repo_auth['login'].':' : '')
 			.(isset($repo_auth['pass'])   ? $repo_auth['pass'].'@' : '')
 			.(isset($repo_auth['host'])   ? $repo_auth['host'].'/' : '')
@@ -274,7 +272,7 @@ function get_pkg_or_list($type = null, $pkgname = null, $filter=array(), $outkey
 	// and check remote signature with local copy of public key
 	//
 	$loclist = PKG_CACHE_PATH.'/Release.gz';
-	$target_dir = $download==true ? VARLIB_PATH.'/' : $download;
+	$target_dir = $download == true ? VARLIB_PATH.'/' : $download;
 
 	if (isset($type) && !is_array($type))
 		$type = array($type);
@@ -367,9 +365,8 @@ function get_pkg_or_list($type = null, $pkgname = null, $filter=array(), $outkey
 							$p[$key] = @$pkg[$field];
 					}
 				}
-				if ($pkgname == null) {
+				if ($pkgname == null)
 					$Packages[$outkey ? $outkey : $name] = $p;
-				}
 				elseif ($pkgname == $pkg['Package']) {
 					//download package to temp directory
 					if ($download) {
@@ -418,7 +415,8 @@ function installed_package($package) {
 */
 function uninstall_package($name) {
 	$name = installed_package($name);
-	if (!$name) return true; // not installed
+	if (!$name)
+		return true; // not installed
 	$pkg = new package($name.'.pkg');
 	$pkg->uninstall();
 	if($name) {
@@ -500,7 +498,7 @@ function get_extensions_list($type = null) {
 
 	while(false != ($fname = readdir($moddir))) {
 		if(!in_array($fname, array('.','..','CVS','_cache')) && is_dir($path.$fname)) {
-			if (!isset($pkgs[$fname]))
+			if (!isset($pkgs[$fname])) {
 				$pkgs[$fname] = array(
 					'package' => $fname,
 					'name' => $fname,
@@ -510,6 +508,7 @@ function get_extensions_list($type = null) {
 					'path' => 'modules/'.$fname,
 					'active' => false
 				);
+			}
 		}
 	}
 
@@ -558,7 +557,7 @@ function get_themes_list() {
 }
 //---------------------------------------------------------------------------------------
 //
-//	Return merged list of available and installed COAs as a local 
+// Return merged list of available and installed COAs as a local 
 // configuration array supplemented with installed versions information.
 //
 function get_charts_list() {
@@ -574,11 +573,11 @@ function get_charts_list() {
 	));
 
 	// add/update default charts
-	// 
 	$local = get_company_extensions();
 
 	foreach($local as $extno => $ext) {
-		if ($ext['type'] != 'chart') continue;
+		if ($ext['type'] != 'chart')
+			continue;
 		$ext['local_id'] = $extno;
 		if (!isset($pkgs[$ext['package']]) || $ext['package'] == '')
 			$pkgs[] = $ext;
@@ -700,32 +699,36 @@ function check_pkg_upgrade($current, $available) {
 	preg_match_all('/[\d]+/', $current, $cver);
 	if (!count($cver[0]))
 		return true;
-	foreach($aver[0] as $n => $ver)
+	foreach($aver[0] as $n => $ver) {
 		if ($ver>@$cver[0][$n]) 
 			return true;
+	}
 	return false;
 }
 
-//
 //	Returns package info from index file
-//
 function get_package_info($pkg, $type=null, $filter=array(), $outkey=null, $download=true) {
 	return get_pkg_or_list($type, $pkg, $filter, null, false);
 }
 
 /*
-	Check basic extension source compatibility.
+*	Check basic extension source compatibility.
+*	Current policy is keeping compatibility on major version level.
+*	Example: 
+*	version 1.1 => major version lever = 1
+*	version 2.4.1 => major version level = 2.4
 */
 function check_src_ext_version($ext_v) {
 	global $src_version;
 	if ($ext_v != '-') {
-		$compat_levels = 2;    // current policy is keeping compatibility on major version level.
+		$compat_levels = 1;
 		$app = explode('.', substr($src_version, 0, strspn($src_version, '0123456789.')));
 		$pkg = explode('.', substr($ext_v, 0, strspn($ext_v, '0123456789.')));
 
-		for ($i=0; $i < min($compat_levels, count($app)); $i++)
+		for ($i=0; $i < min($compat_levels, count($app)); $i++) {
 			if ($pkg[$i] < $app[$i])
 				return false;
+		}
 	}
 	return true;
 }
