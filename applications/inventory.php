@@ -11,7 +11,7 @@
 ***********************************************************************/
 class inventory_app extends application {
 	function __construct() {
-		parent::__construct('stock', _($this->help_context = '&Items and Inventory'));
+		parent::__construct('stock', _($this->help_context = '&Inventory'));
 
 		$this->add_module(_('Transactions'));
 		$this->add_lapp_function(0, _('Inventory Location &Transfers'), 'inventory/transfers.php?NewTransfer=1', 'SA_LOCATIONTRANSFER', MENU_TRANSACTION);
