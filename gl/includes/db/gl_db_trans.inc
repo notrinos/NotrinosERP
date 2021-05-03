@@ -265,7 +265,7 @@ function get_gl_balance_from_to($from_date, $to_date, $account, $dimension=0, $d
 	$result = db_query($sql, 'The starting balance for account $account could not be calculated');
 
 	$row = db_fetch_row($result);
-	return $row[0];
+	return round2($row[0], user_price_dec());
 }
 
 //--------------------------------------------------------------------------------
@@ -288,7 +288,7 @@ function get_gl_trans_from_to($from_date, $to_date, $account, $dimension=0, $dim
 	$result = db_query($sql, 'Transactions for account $account could not be calculated');
 
 	$row = db_fetch_row($result);
-	return (float)$row[0];
+	return round2($row[0], user_price_dec());
 }
 
 //----------------------------------------------------------------------------------------------------
