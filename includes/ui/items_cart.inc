@@ -261,7 +261,7 @@ class items_cart {
 					// we can have both input and output tax postings in some cases like intra-EU trade.
 					// so just calculate net_amount from the higher in/out tax
 					$tax_info['net_amount'][$tax_id]
-						= $sign*round2(max(abs(@$tax_info['tax_in'][$tax_id]), abs(@$tax_info['tax_out'][$tax_id]))/$tax_type['rate']*100, 2)/$factor;
+						= $sign*round2(max(abs(@$tax_info['tax_in'][$tax_id]), abs(@$tax_info['tax_out'][$tax_id]))/$tax_type['rate']*100, user_price_dec())/$factor;
 				}
 			}
 			else
@@ -464,7 +464,7 @@ class gl_item {
 		}
 		$this->dimension_id = $dimension_id;
 		$this->dimension2_id = $dimension2_id;
-		$this->amount = round($amount, 2);
+		$this->amount = round($amount, user_price_dec());
 		$this->reference = $memo;
 		$this->date = $date;
 	}
