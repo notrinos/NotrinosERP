@@ -464,7 +464,7 @@ class gl_item {
 		}
 		$this->dimension_id = $dimension_id;
 		$this->dimension2_id = $dimension2_id;
-		$this->amount = round($amount, user_price_dec());
+		$this->amount = round2($amount, user_price_dec());
 		$this->reference = $memo;
 		$this->date = $date;
 	}
