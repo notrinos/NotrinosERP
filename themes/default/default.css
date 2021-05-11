@@ -695,7 +695,7 @@ div.widget {
 	box-sizing: border-box;
 	display: inline-block;
 	float: left;
-	height: 23em;
+	height: 23.5em;
 	overflow: auto;
 }
 div.widget_full {
@@ -746,7 +746,6 @@ div.widget_half {
 	#_page_body {
 		width: calc(100vw - 10px);
 		margin: 0;
-		padding: 0;
 	}
 	table.logoutBar .headingtext3 {
 		display: none;
