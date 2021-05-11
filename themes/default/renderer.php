@@ -78,7 +78,9 @@ class renderer {
 				if ($_SESSION['wa_current_user']->check_application_access($app)) {
 					$acc = access_string($app->name);
 					$ap_title = str_replace(array('<u>','</u>'), '', $acc[0]);
-					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$path_to_root."/index.php?application=".$app->id."' title='".$ap_title."' $acc[1]><i class='".@$app_icons[$app->id]." nav-icon'></i><span class='nav-text'>".$acc[0]."</span></a>";
+					if(empty($app_icons[$app->id]))
+						$app_icons[$app->id] = 'fas fa-cube';
+					echo "<a class='".($sel_app == $app->id ? 'selected' : 'menu_tab')."' href='".$path_to_root."/index.php?application=".$app->id."' title='".$ap_title."' $acc[1]><i class='".$app_icons[$app->id]." nav-icon'></i><span class='nav-text'>".$acc[0]."</span></a>";
 				}
 			}
 			echo "</center>";
@@ -93,7 +95,7 @@ class renderer {
 			$img = "<i class='fas fa-sign-out-alt'></i>&nbsp;";
 
 			echo "<table class='logoutBar'>";
-			echo "<tr><td class='headingtext3'>" . $db_connections[user_company()]['name']." | ".$_SERVER['SERVER_NAME']." | ".$_SESSION['wa_current_user']->name."</td>";
+			echo "<tr><td class='headingtext3'>".$db_connections[user_company()]['name']." | ".$_SERVER['SERVER_NAME']." | ".$_SESSION['wa_current_user']->name."</td>";
 			echo "<td class='logoutBarRight'><img id='ajaxmark' src='".$indicator."' align='center' style='visibility:hidden;' alt='ajaxmark'></td>";
 			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg._('Dashboard')."</a>\n";
 			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg._('Preferences')."</a>\n";

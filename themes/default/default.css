@@ -691,7 +691,7 @@ div.widget {
 	border: 1px solid #DDD;
 	background: #FFF;
 	padding: 0 10px;
-	margin: 10px 0;
+	margin: 10px 0 0 20px;
 	box-sizing: border-box;
 	display: inline-block;
 	float: left;
@@ -700,11 +700,9 @@ div.widget {
 }
 div.widget_full {
 	width: calc(100% - 40px);
-	margin-left: 20px;
 }
 div.widget_half {
 	width: calc(50% - 30px);
-	margin-left: 20px ;
 }
 
 .select2-selection__rendered {
@@ -731,6 +729,7 @@ div.widget_half {
 
 ::-webkit-scrollbar {
 	width: 8px;
+	height: 8px;
 }
 ::-webkit-scrollbar-track {
 	background: #F1F1F1;
@@ -740,4 +739,26 @@ div.widget_half {
 }
 ::-webkit-scrollbar-thumb:hover {
 	background: #555;
+}
+
+@media all and (max-width: 768px) {
+
+	#_page_body {
+		width: calc(100vw - 10px);
+		margin: 0;
+		padding: 0;
+	}
+	table.logoutBar .headingtext3 {
+		display: none;
+	}
+	td.menu_group_items {
+		display: block;
+		width: 100%;
+		margin-left: 0;
+	}
+	div.widget {
+		width: calc(100% - 10px);
+		margin-left: 5px;
+		overflow: auto;
+	}
 }
