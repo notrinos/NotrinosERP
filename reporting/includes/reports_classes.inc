@@ -160,7 +160,7 @@ class BoxReports {
 	function get_ctrl($name, $type) {
 		global $path_to_root, $SysPrefs, $type_shortcuts;
 
-		$day_range = (isset($SysPrefs->max_days_in_docs) ? $SysPrefs->max_days_in_docs : 180);
+		$day_range = (isset($SysPrefs->prefs['max_days_in_docs']) ? $SysPrefs->prefs['max_days_in_docs'] : 180);
 		$st = '';
 
 		switch ($type) {
