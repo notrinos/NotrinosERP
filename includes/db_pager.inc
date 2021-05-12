@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -20,16 +20,13 @@ include_once($path_to_root.'/includes/ui/db_pager_view.inc');
 class db_pager {
 	var $sql;
 	var $name;
-	var $columns;		// column definitions (head, type, order)
+	var $columns;		    // column definitions (head, type, order)
 
-	var $marker;		// marker check function
-	var $marker_txt;	
-	var $marker_class;
-	var $notice_class;
-	var $width;			// table width (default '95%')
-	var $header_fun;	// additional row between title and body
+	var $marker = array();	// marker check function
+	var $width;			    // table width (default '95%')
+	var $header_fun;	    // additional row between title and body
 	var $header_class;
-	var $row_fun;       // Function for row preprocessing
+	var $row_fun;           // Function for row preprocessing
 	var $footer_fun;
 	var $footer_class;
 	var $data = array();
@@ -65,9 +62,10 @@ class db_pager {
 	//  	array('select' => 'SUM(quantity)', 'from' => TB_PREF."stock_moves", 'group' => 'location')
 	//
 	//	$name is base name for pager controls
-	function __construct($sql, $name, $table = null, $page_len=0) {
+	function __construct($sql, $name, $table=null, $page_len=0) {
 		$this->width = '95%';
-		if ($page_len == 0) $page_len = user_query_size();
+		if ($page_len == 0)
+			$page_len = user_query_size();
 		$this->name = $name;
 		$this->page_len = $page_len;
 		$this->set_sql($sql);
@@ -230,7 +228,7 @@ class db_pager {
 		$this->next_page = ($page < $max) ? $page+1 : null;
 		$this->prev_page = ($page > 1) ? ($page-1) : null;
 		$this->last_page = ($page < $max) ? $max : null;
-		$this->first_page = ($page != 1) ? 1: null;
+		$this->first_page = ($page != 1) ? 1 : null;
 	}
 	//
 	//	Set column definitions
@@ -285,16 +283,17 @@ class db_pager {
 		$group = $this->group;
 		$order = $this->order;
 
-		if(count($this->extra_where)) {
+		if(count($this->extra_where))
 			$where .= ($where=='' ? '' : ' AND ').implode(' AND ', $this->extra_where);
-		}
-		if ($where) $where = " WHERE ($where)";
-
+		if ($where)
+			$where = " WHERE ($where)";
 		if ($count)
 			return "SELECT COUNT(*) FROM ($this->sql) tmp_count";
 
 		$sql = "$select FROM $from $where";
-		if ($group) $sql.= " GROUP BY $group";
+
+		if ($group)
+			$sql.= " GROUP BY $group";
 		$ord = array();
 
 		// sort order column by priority instead of table order.
@@ -341,8 +340,7 @@ class db_pager {
 				return false;
 			$row = db_fetch_row($result);
 			$this->rec_count = $row[0];
-			$this->max_page = $this->page_len ?
-				ceil($this->rec_count/$this->page_len) : 0;
+			$this->max_page = $this->page_len ? ceil($this->rec_count/$this->page_len) : 0;
 		
 			if ($SysPrefs->go_debug) { // FIX - need column name parsing, but for now:
 				// check if field names are set explicite in col def
@@ -384,10 +382,7 @@ class db_pager {
 	//	Set check function to mark some rows.
 	//	
 	function set_marker($func, $notice='', $markercl='overduebg', $msgclass='overduefg' ) {
-		$this->marker = $func;
-		$this->marker_txt = $notice;
-		$this->marker_class = $markercl;
-		$this->notice_class = $msgclass;
+		$this->marker[] = array('func'=>$func, 'txt'=>$notice, 'class'=>$markercl, 'txt_class'=>$msgclass);
 	}
 	//
 	//	Set handler to display additional row between titles and pager body.
@@ -423,20 +418,19 @@ class db_pager {
 			$id = $row[$key];
 			$table = $this->main_tbl;
 			$name = "Inactive". $id;
-			$value = $row['inactive'] ? 1:0;
+			$value = $row['inactive'] ? 1 : 0;
 
 			if (check_value('show_inactive')) {
 				if (isset($_POST['LInact'][$id]) && (get_post('_Inactive'.$id.'_update') || get_post('Update')) && (check_value('Inactive'.$id) != $value)) {
 					update_record_status($id, !$value, $table, $key);
 					$value = !$value;
 				}
-				echo '<td align="center">'.checkbox(null, $name, $value, true, '').hidden("LInact[$id]", $value, false) . '</td>';
+				echo '<td align="center">'.checkbox(null, $name, $value, true, '').hidden("LInact[$id]", $value, false).'</td>';
 			}
 		}
 		else
 			return '';
 	}
-
 };
 //-----------------------------------------------------------------------------
 //	Creates new db_pager $_SESSION object on first page call.
@@ -464,7 +458,7 @@ class db_pager {
 //  during display, but can be used in format handlers for 'spec' and 'insert' 
 //	type columns.
 
-function &new_db_pager($name, $sql, $coldef, $table = null, $key = null, $page_len = 0)  {
+function &new_db_pager($name, $sql, $coldef, $table=null, $key=null, $page_len=0)  {
 
 	if (isset($_SESSION[$name]) && ($_SERVER['REQUEST_METHOD'] == 'GET' || $_SESSION[$name]->sql != $sql)) 
 		unset($_SESSION[$name]); // kill pager if sql has changed

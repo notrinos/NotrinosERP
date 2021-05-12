@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -16,21 +16,18 @@ function pager_link($link_text, $url, $icon=false) {
 	if (user_graphic_links() && $icon)
 		$link_text = set_icon($icon, $link_text);
 
-	$href = $path_to_root . $url;
+	$href = $path_to_root.$url;
 	return "<a href='".$href."'>".$link_text."</a>";
 }
 
-function navi_button($name, $value, $enabled=true, $icon = false) {
+function navi_button($name, $value, $enabled=true, $icon=false) {
 	global $path_to_root;
-	return "<button ". ($enabled ? '':'disabled')
-		." class=\"navibutton\" type=\"submit\""
-		." name=\"$name\"  id=\"$name\" value=\"$value\">"
-		.($icon ? "<img src='$path_to_root/themes/".user_theme()."/images/".$icon."'>":'')
-		."<span>$value</span></button>\n";
+
+	return "<button ".($enabled ? '' : 'disabled')." class='navibutton' type='submit' name='".$name."' id='".$name."' value='".$value."'>".($icon ? "<img src='".$path_to_root.'/themes/'.user_theme().'/images/'.$icon."'>" : '')."<span>".$value."</span></button>\n";
 }
 
 function navi_button_cell($name, $value, $enabled=true, $align='left') {
-	label_cell(navi_button($name, $value, $enabled), "align='$align'");
+	label_cell(navi_button($name, $value, $enabled), "align='".$align."'");
 }
 
 //-----------------------------------------------------------------------------
@@ -56,11 +53,11 @@ function display_db_pager(&$pager) {
 			}
 		}
 	}
-	/* show a table of records returned by the sql */
+	// show a table of records returned by the sql
 	start_table(TABLESTYLE, "width='$pager->width'");
 	table_header($headers);
 
-	if($pager->header_fun) {	// if set header handler
+	if($pager->header_fun) { // if set header handler
 		start_row("class='{$pager->header_class}'");
 		$fun = $pager->header_fun;
 		if (method_exists($pager, $fun))
@@ -68,14 +65,14 @@ function display_db_pager(&$pager) {
 		elseif (function_exists($fun))
 			$h = $fun($pager);
 		
-		foreach($h as $c) {	 // draw header columns
+		foreach($h as $c) {	// draw header columns
 			$pars = isset($c[1]) ? $c[1] : '';
 			label_cell($c[0], $pars);
 		}
 		end_row();
 	}
 
-	$cc = 0; //row colour counter
+	$c = 0; //row colour counter
 	foreach($pager->data as $line_no => $row) {
 
 		if ($pager->row_fun) {
@@ -85,11 +82,17 @@ function display_db_pager(&$pager) {
 			}
 		}
 
-		$marker = $pager->marker;
-		if ($marker && $marker($row)) 
-			start_row("class='$pager->marker_class'");
+		$row_class = false;
+
+		foreach($pager->marker as $marker) {
+			if ($marker['func'] && $marker['func']($row)) 
+				$row_class = $marker['class'];
+		}
+		if ($row_class) 
+			start_row("class='".$row_class."'");
 		else	
-			alt_table_row_color($cc);
+			alt_table_row_color($c);
+
 		foreach ($pager->columns as $k=>$col) {
 			$coltype = $col['type'];
 			$cell = isset($col['name']) ? $row[$col['name']] : '';
@@ -115,36 +118,25 @@ function display_db_pager(&$pager) {
 				case 'percent':
 					percent_cell($cell); break;
 				case 'amount':
-					if ($cell=='')
-						label_cell('');
-					else
-						amount_cell($cell, false); break;
+					($cell == '') ? label_cell('') : amount_cell($cell, false); break;
 				case 'qty':
-					if ($cell=='')
-						label_cell('');
-					else
-						qty_cell($cell, false, isset($col['dec']) ? $col['dec'] : null); break;
+					($cell == '') ? label_cell('') : qty_cell($cell, false, isset($col['dec']) ? $col['dec'] : null); break;
 				case 'email':
-					email_cell($cell,isset( $col['align']) ? "align='" . $col['align'] . "'" : null);
-				break;
+					email_cell($cell, isset($col['align']) ? "align='".$col['align']."'" : null); break;
 				case 'rate':
 					label_cell(number_format2($cell, user_exrate_dec()), "align=center"); break;
 				case 'inactive':
 					if(get_post('show_inactive'))
 						$pager->inactive_control_cell($row); break;
 				default:
-					if (isset( $col['align']))
-						label_cell($cell, "align='" . $col['align'] . "'");
-					else
-						label_cell($cell);
-				case 'skip':	// column not displayed
+					(isset($col['align'])) ? label_cell($cell, "align='".$col['align']."'") : label_cell($cell);
+				case 'skip': // column not displayed
 			}
 		}
 		end_row();
 	}
-	//end of while loop
 
-	if($pager->footer_fun) {	// if set footer handler
+	if($pager->footer_fun) { // if set footer handler
 		start_row("class='{$pager->footer_class}'");
 		$fun = $pager->footer_fun;
 		if (method_exists($pager, $fun))
@@ -161,8 +153,7 @@ function display_db_pager(&$pager) {
 
 	start_row("class='navibar'");
 	$colspan = count($pager->columns);
-		$inact = @$pager->inactive_ctrl==true 
-			? ' '.checkbox(null, 'show_inactive', null, true). _("Show also Inactive") : '';
+		$inact = @$pager->inactive_ctrl == true ? ' '.checkbox(null, 'show_inactive', null, true)._('Show also Inactive') : '';
 	if($pager->rec_count) {
 		echo "<td colspan=$colspan class='navibar' style='border:none;padding:3px;'>";
 		echo "<div style='float:right;'>";
@@ -170,7 +161,7 @@ function display_db_pager(&$pager) {
 		start_table();
 		start_row();
 		if (@$pager->inactive_ctrl) 
-				submit('Update', _('Update'), true, '', null); // inactive update
+			submit('Update', _('Update'), true, '', null); // inactive update
 		echo navi_button_cell($but_pref.'first', _('<<'), $pager->first_page, 'right');
 		echo navi_button_cell($but_pref.'prev', _('<'), $pager->prev_page,'right');
 		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true, 'nosearch');
@@ -179,25 +170,27 @@ function display_db_pager(&$pager) {
 		end_row(); 
 		end_table();
 		echo "</div>";
-		$from = ($pager->curr_page-1)*$pager->page_len+1;
+		$from = ($pager->curr_page-1) * $pager->page_len + 1;
 		$to = $from + $pager->page_len - 1;
 		if ($to > $pager->rec_count)
 		  $to = $pager->rec_count;
 		$all = $pager->rec_count;
-		echo sprintf( _('Records %d-%d of %d'), $from, $to, $all);
+		echo sprintf(_('Records %d-%d of %d'), $from, $to, $all);
 		echo $inact;
 		echo "</td>";
 	}
 	else
-		label_cell( _('No records') . $inact, "colspan=$colspan class='navibar'");
+		label_cell(_('No records').$inact, "colspan=$colspan class='navibar'");
 
 	end_row();
-
 	end_table();
 
-	if (isset($pager->marker_txt))
-		display_note($pager->marker_txt, 0, 1, "class='$pager->notice_class'");
-
+	foreach($pager->marker as $marker) {
+		if (isset($marker['txt']))
+			display_note($marker['txt'], 0, 0, "class='".$marker['txt_class']."'");
+	}
+	br();
 	div_end();
+
 	return true;
 }
