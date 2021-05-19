@@ -37,7 +37,7 @@ $show_currencies = false;
 if ($from_trans['bank_curr_code'] != $from_trans['settle_curr'])
 	$show_currencies = true;
 
-display_heading(_('GL Payment') . ' #$trans_no');
+display_heading(_('GL Payment').' #'.$trans_no);
 
 echo '<br>';
 start_table(TABLESTYLE, "width='80%'");
@@ -114,7 +114,7 @@ else {
 		}
 	}
 
-	label_row(_('Total'), number_format2($total_amount, user_price_dec()),'colspan='.(2+$dim).' align=right', 'align=right');
+	label_row(_('Total'), number_format2($total_amount, user_price_dec()), 'colspan='.(2+$dim).' align=right', 'align=right');
 
 	end_table(1);
 
