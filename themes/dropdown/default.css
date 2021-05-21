@@ -86,6 +86,10 @@ div.date_box a:focus {
 div.date_box a:hover {
 	text-decoration: none;
 }
+div.date_box i {
+	font-size: 1.5em;
+	vertical-align: middle;
+}
 input.big {
 	width: 100px;
 }

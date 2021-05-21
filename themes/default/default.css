@@ -79,7 +79,6 @@ div.date_box a:hover {
 div.date_box i {
 	font-size: 1.5em;
 	vertical-align: middle;
-	margin-top: -1px;
 }
 option.inactive {
 	text-decoration: line-through;
