@@ -685,21 +685,6 @@ div.note_msg {
 	width: 100%;
 	font-family: Helvetica, Arial, sans-serif;
 }
-#cssmenu:before {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAICAIAAAC3eAIWAAAAA3NCSVQICAjb4U/gAAAAI0lEQVQImWPwj0hh+v//PxPD//9M////Z/rP8J/p//9/MD4AGUETB+SFfCsAAAAASUVORK5CYII=);
-	background-color: #606a77;
-	background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #4f5864), color-stop(1, #49515b));
-	background-image: -webkit-linear-gradient(top, #4f5864, #49515b);
-	background-image: -moz-linear-gradient(top, #4f5864, #49515b);
-	background-image: -o-linear-gradient(top, #4f5864, #49515b);
-	background-image: linear-gradient(#4f5864, #49515b);
-	-moz-box-shadow: inset 0 2px 0 #586270, inset 0 1px 0 #6b7888;
-	-webkit-box-shadow: inset 0 2px 0 #586270, inset 0 1px 0 #6b7888;
-	box-shadow: inset 0 2px 0 #586270, inset 0 1px 0 #6b7888;
-	content: '';
-	display: block;
-	height: 8px;
-}
 #cssmenu > ul {
 	border-bottom: 1px solid #252A30;
 	border-top: 1px solid #252A30;
@@ -713,10 +698,10 @@ div.note_msg {
 	background-image: -moz-linear-gradient(top, #6e7d8f, #404854);
 	background-image: -o-linear-gradient(top, #6e7d8f, #404854);
 	background-image: linear-gradient(#6e7d8f, #404854);
-	padding: 2px 15px 5px 5px;
+	padding: 0 15px 5px 5px;
 }
 #cssmenu > ul > li {
-	margin: 0 10px;
+	margin: 5px 10px 0 10px;
 }
 #cssmenu > ul > li.has-sub:hover > a {
 	-moz-border-radius: 3px 3px 0 0;
@@ -952,4 +937,17 @@ div.widget_half {
 }
 ::-webkit-scrollbar-thumb:hover {
 	background: #555;
+}
+
+@media all and (max-width: 768px) {
+	div.widget {
+		width: calc(100% - 10px);
+		margin-left: 5px;
+		overflow: auto;
+	}
+	#header h1 {
+		text-indent: 100%;
+    	white-space: nowrap;
+    	overflow: hidden;
+	}
 }
