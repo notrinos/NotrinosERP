@@ -650,8 +650,8 @@ img {
 	border: 1px solid #C0C0C0;
 	padding-bottom: 1px;
 	-webkit-box-shadow: 0px 6px 12px #999;
-  	-moz-box-shadow:    0px 6px 12px #999;
-  	box-shadow:         0px 6px 12px #999;
+	-moz-box-shadow:    0px 6px 12px #999;
+	box-shadow:         0px 6px 12px #999;
 }
 #CC th {
 	font-weight: normal;
@@ -816,4 +816,17 @@ div.widget_half {
 }
 ::-webkit-scrollbar-thumb:hover {
 	background: #555;
+}
+
+@media all and (max-width: 768px) {
+	div.widget {
+		width: calc(100% - 10px);
+		margin-left: 5px;
+		overflow: auto;
+	}
+	#header h1 {
+		text-indent: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+	}
 }

@@ -947,7 +947,7 @@ div.widget_half {
 	}
 	#header h1 {
 		text-indent: 100%;
-    	white-space: nowrap;
-    	overflow: hidden;
+		white-space: nowrap;
+		overflow: hidden;
 	}
 }
