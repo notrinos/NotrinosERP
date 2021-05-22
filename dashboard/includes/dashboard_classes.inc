@@ -53,6 +53,8 @@ class Dashboard {
 			$cur_app = $_GET['sel_app'];
 		elseif(isset($_GET['application']))
 			$cur_app = $_GET['application'];
+		else
+			$cur_app = user_startup_tab();
 
 		echo "<div class='widgets_container'>";
 		foreach($this->ar_dashboards as $dashboard_id => $name) {
