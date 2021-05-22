@@ -33,7 +33,6 @@ class Dashboard {
 	}
 
 	function addDashboard($dashboard_name, $dashboard_id) {
-
 		if (!$dashboard_id)
 			$dashboard_id = 'orders';
 		$this->ar_dashboards[$dashboard_id] = $dashboard_name;
@@ -41,17 +40,19 @@ class Dashboard {
 		return $dashboard_id;
 	}
 
-	function addWidget($dashboard, $widget_id, $width = WIDGET_FULL) {
+	function addWidget($dashboard, $widget_id, $width=WIDGET_FULL) {
 
 		unset($this->ar_widgets[$dashboard][$widget_id]);
 		$this->ar_widgets[$dashboard][$widget_id] = array('width'=>$width);
 	}
 
-	function display($class = null) {
+	function display($class=null) {
 		global $path_to_root;
 
 		if (isset($_GET['sel_app']))
 			$cur_app = $_GET['sel_app'];
+		elseif(isset($_GET['application']))
+			$cur_app = $_GET['application'];
 
 		echo "<div class='widgets_container'>";
 		foreach($this->ar_dashboards as $dashboard_id => $name) {
@@ -86,7 +87,7 @@ class Widget {
 
 	var $title;
 
-	function __construct($title = '') {
+	function __construct($title='') {
 		$this->title = $title;
 	}
 
@@ -144,10 +145,9 @@ function add_custom_dashboards($dashboard) {
 }
 
 function customer_top($today, $limit=10) {
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
-	$sql = "SELECT SUM((ov_amount + ov_discount) * rate * IF(trans.type = ".ST_CUSTCREDIT.", -1, 1)) AS total,d.debtor_no, d.name FROM ".TB_PREF."debtor_trans AS trans, ".TB_PREF."debtors_master AS d WHERE trans.debtor_no=d.debtor_no AND (trans.type = ".ST_SALESINVOICE." OR trans.type = ".ST_CUSTCREDIT.") AND tran_date >= '$begin1' AND tran_date <= '$today1' GROUP by d.debtor_no ORDER BY total DESC, d.debtor_no LIMIT $limit";
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
+	$sql = "SELECT SUM((ov_amount + ov_discount) * rate * IF(trans.type = ".ST_CUSTCREDIT.", -1, 1)) AS total,d.debtor_no, d.name FROM ".TB_PREF."debtor_trans AS trans, ".TB_PREF."debtors_master AS d WHERE trans.debtor_no=d.debtor_no AND (trans.type = ".ST_SALESINVOICE." OR trans.type = ".ST_CUSTCREDIT.") AND tran_date >= '$begin' AND tran_date <= '$today' GROUP by d.debtor_no ORDER BY total DESC, d.debtor_no LIMIT $limit";
 
 	$result = db_query($sql, 'could not get customer data');
 
@@ -156,10 +156,9 @@ function customer_top($today, $limit=10) {
 
 function supplier_top($today, $limit=10) {
 
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
-	$sql = "SELECT SUM((trans.ov_amount + trans.ov_discount) * rate) AS total, s.supplier_id, s.supp_name FROM ".TB_PREF."supp_trans AS trans, ".TB_PREF."suppliers AS s WHERE trans.supplier_id=s.supplier_id AND (trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND tran_date >= '$begin1' AND tran_date <= '$today1' GROUP by s.supplier_id ORDER BY total DESC, s.supplier_id LIMIT $limit";
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
+	$sql = "SELECT SUM((trans.ov_amount + trans.ov_discount) * rate) AS total, s.supplier_id, s.supp_name FROM ".TB_PREF."supp_trans AS trans, ".TB_PREF."suppliers AS s WHERE trans.supplier_id=s.supplier_id AND (trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND tran_date >= '$begin' AND tran_date <= '$today' GROUP by s.supplier_id ORDER BY total DESC, s.supplier_id LIMIT $limit";
 
 	$result = db_query($sql, 'could not get supplier data');
 	
@@ -168,9 +167,8 @@ function supplier_top($today, $limit=10) {
 
 function stock_top($today, $limit=10, $type=0) {
 
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
 	if ($type == 0) {
 		$sql = "SELECT SUM((trans.unit_price * trans.quantity) * d.rate) AS total, s.stock_id, s.description, SUM(trans.quantity) AS qty, SUM((s.material_cost + s.overhead_cost + s.labour_cost) * trans.quantity) AS costs FROM ".TB_PREF."debtor_trans_details AS trans, ".TB_PREF."stock_master AS s, ".TB_PREF."debtor_trans AS d WHERE trans.stock_id=s.stock_id AND trans.debtor_trans_type=d.type AND trans.debtor_trans_no=d.trans_no AND (d.type = ".ST_SALESINVOICE." OR d.type = ".ST_CUSTCREDIT.") ";
 	}
@@ -182,9 +180,9 @@ function stock_top($today, $limit=10, $type=0) {
 			$sql .= "AND s.mb_flag='F' ";
 	}
 	if ($type != 2)
-		$sql .= "AND tran_date >= '$begin1' ";
+		$sql .= "AND tran_date >= '$begin' ";
 
-	$sql .= "AND tran_date <= '$today1' GROUP by s.stock_id ORDER BY total DESC, s.stock_id LIMIT $limit";
+	$sql .= "AND tran_date <= '$today' GROUP by s.stock_id ORDER BY total DESC, s.stock_id LIMIT $limit";
 
 	$result = db_query($sql, 'could not get stock data');
 
@@ -193,20 +191,18 @@ function stock_top($today, $limit=10, $type=0) {
 
 function dimension_top($today, $limit=10) {
 
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
-	$sql = "SELECT SUM(-t.amount) AS total, d.reference, d.name FROM ".TB_PREF."gl_trans AS t,".TB_PREF."dimensions AS d WHERE (t.dimension_id = d.id OR t.dimension2_id = d.id) AND t.tran_date >= '$begin1' AND t.tran_date <= '$today1' GROUP BY d.id ORDER BY total DESC LIMIT $limit";
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
+	$sql = "SELECT SUM(-t.amount) AS total, d.reference, d.name FROM ".TB_PREF."gl_trans AS t,".TB_PREF."dimensions AS d WHERE (t.dimension_id = d.id OR t.dimension2_id = d.id) AND t.tran_date >= '$begin' AND t.tran_date <= '$today' GROUP BY d.id ORDER BY total DESC LIMIT $limit";
 	$result = db_query($sql, 'Transactions could not be calculated');
 
 	return $result;
 }
 
 function gl_top($today) {
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
-	$sql = "SELECT SUM(amount) AS total, c.class_name, c.ctype FROM ".TB_PREF."gl_trans,".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND IF(c.ctype > 3, tran_date >= '$begin1', tran_date >= '0000-00-00') AND tran_date <= '$today1' GROUP BY c.cid ORDER BY c.cid"; 
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
+	$sql = "SELECT SUM(amount) AS total, c.class_name, c.ctype FROM ".TB_PREF."gl_trans,".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND IF(c.ctype > 3, tran_date >= '$begin', tran_date >= '0000-00-00') AND tran_date <= '$today' GROUP BY c.cid ORDER BY c.cid"; 
 
 	$result = db_query($sql, 'Transactions could not be calculated');
 	
@@ -216,11 +212,10 @@ function gl_top($today) {
 function gl_performance($today, $weeks=5) {
 	global $SysPrefs;
 
-	$begin = begin_fiscalyear();
-	$begin1 = date2sql($begin);
-	$today1 = date2sql($today);
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql($today);
 	$sep = $SysPrefs->dateseps[user_date_sep()];
-	$sql = "SELECT week_name, sales, costs FROM(SELECT DATE_FORMAT(tran_date, '%Y{$sep}%u') AS week_name, SUM(IF(c.ctype = 4, amount * -1, 0)) AS sales, SUM(IF(c.ctype = 6, amount, 0)) AS costs FROM ".TB_PREF."gl_trans, ".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE(c.ctype = 4 OR c.ctype = 6) AND account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND tran_date >= '$begin1' AND tran_date <= '$today1' GROUP BY week_name ORDER BY week_name DESC LIMIT 0, $weeks) b GROUP BY week_name ORDER BY week_name ASC";
+	$sql = "SELECT week_name, sales, costs FROM(SELECT DATE_FORMAT(tran_date, '%Y{$sep}%u') AS week_name, SUM(IF(c.ctype = 4, amount * -1, 0)) AS sales, SUM(IF(c.ctype = 6, amount, 0)) AS costs FROM ".TB_PREF."gl_trans, ".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE(c.ctype = 4 OR c.ctype = 6) AND account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND tran_date >= '$begin' AND tran_date <= '$today' GROUP BY week_name ORDER BY week_name DESC LIMIT 0, $weeks) b GROUP BY week_name ORDER BY week_name ASC";
 
 	$result = db_query($sql, 'Transactions could not be calculated');
 
@@ -237,7 +232,7 @@ function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2=null, $type=2
 	$pg->type      = $type;
 	$pg->skin      = 1;
 	$pg->built_in  = false;
-	$filename = company_path(). '/pdf_files/'. random_id().'.png';
+	$filename = company_path().'/pdf_files/'.random_id().'.png';
 	$pg->display($filename, true);
 
 	echo "<center><img src='$filename' border='0' alt='$title'></center>";
@@ -254,13 +249,13 @@ function customer_trans($today) {
 }
 
 function calculate_next_invoice($myrow) {
-	if ($myrow["last_sent"] == '0000-00-00')
+	if ($myrow['last_sent'] == '0000-00-00')
 		$next = sql2date($myrow['begin']);
 	else
 		$next = sql2date($myrow['last_sent']);
 	$next = add_months($next, $myrow['monthly']);
 	$next = add_days($next, $myrow['days']);
-	return add_days($next,-1);
+	return add_days($next, -1);
 }
 
 function supplier_trans($today) {
