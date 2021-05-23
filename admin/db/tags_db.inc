@@ -33,7 +33,8 @@ function update_tag($id, $name, $description, $type=null) {
 function get_tags($type, $all=false) {
 	$sql = "SELECT * FROM ".TB_PREF."tags WHERE type=".db_escape($type);
 	
-	if (!$all) $sql .= " AND !inactive";
+	if (!$all)
+		$sql .= " AND !inactive";
 	
 	$sql .= " ORDER BY name";
 
