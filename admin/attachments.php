@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-$path_to_root='..';
+$path_to_root = '..';
 $page_security = 'SA_ATTACHDOCUMENT';
 
 include_once($path_to_root.'/includes/db_pager.inc');
@@ -25,14 +25,16 @@ if (isset($_GET['vw']))
 	$view_id = $_GET['vw'];
 else
 	$view_id = find_submit('view');
+
 if ($view_id != -1) {
+
 	$row = get_attachment($view_id);
+
 	if ($row['filename'] != '') {
-		if(in_ajax()) {
+		if(in_ajax())
 			$Ajax->popup($_SERVER['PHP_SELF'].'?vw='.$view_id);
-		}
 		else {
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
+			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
 			header('Content-type: '.$type);
 			header('Content-Length: '.$row['filesize']);
 			header('Content-Disposition: inline');
@@ -49,11 +51,10 @@ else
 if ($download_id != -1) {
 	$row = get_attachment($download_id);
 	if ($row['filename'] != '') {
-		if(in_ajax()) {
+		if(in_ajax())
 			$Ajax->redirect($_SERVER['PHP_SELF'].'?dl='.$download_id);
-		}
 		else {
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
+			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
 			header('Content-type: '.$type);
 			header('Content-Length: '.$row['filesize']);
 			header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
@@ -83,7 +84,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']))
 		display_error(_('Selected transaction does not exists.'));
 	elseif ($Mode == 'ADD_ITEM' && !in_array(strtoupper(substr($filename, strlen($filename) - 3)), array('JPG', 'PNG', 'GIF', 'PDF', 'DOC', 'ODT'))) {
-		display_error(_('Only graphics,pdf,doc and odt files are supported.'));
+		display_error(_('Only graphics, pdf, doc and odt files are supported.'));
 	}
 	elseif ($Mode == 'ADD_ITEM' && !isset($_FILES['filename']))
 		display_error(_('Select attachment file.'));
@@ -93,13 +94,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		else
 			display_error(_('Select attachment file.'));
 	}
-	elseif ( strlen($filename) > 60) {
+	elseif ( strlen($filename) > 60)
 		display_error(_('File name exceeds maximum of 60 chars. Please change filename and try again.'));
-	}
 	else {
-		$tmpname = $_FILES['filename']['tmp_name'];
 
-		$dir =  company_path().'/attachments';
+		$tmpname = $_FILES['filename']['tmp_name'];
+		$dir = company_path().'/attachments';
+
 		if (!file_exists($dir)) {
 			mkdir ($dir,0777);
 			$index_file = "<?php\nheader(\"Location: ../index.php\");\n";
@@ -129,11 +130,11 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 		if ($Mode == 'ADD_ITEM') {
 			add_attachment($_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype);
-			display_notification(_('Attachment has been inserted.')); 
+			display_notification(_('Attachment has been inserted.'));
 		}
 		else {
 			update_attachment($selected_id, $_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype); 
-			display_notification(_('Attachment has been updated.')); 
+			display_notification(_('Attachment has been updated.'));
 		}
 		reset_form();
 	}
@@ -147,7 +148,7 @@ if ($Mode == 'Delete') {
 	if (file_exists($dir.'/'.$row['unique_name']))
 		unlink($dir.'/'.$row['unique_name']);
 	delete_attachment($selected_id);	
-	display_notification(_('Attachment has been deleted.')); 
+	display_notification(_('Attachment has been deleted.'));
 	reset_form();
 }
 
@@ -201,19 +202,24 @@ function delete_link($row) {
 }
 
 function display_rows($type, $trans_no) {
+
 	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : 0);
+
 	$cols = array(
-		_('#') => $type == ST_SUPPLIER || $type == ST_CUSTOMER? 'skip' : array('fun'=>'trans_view', 'ord'=>''),
+		_('#') => array('fun'=>'trans_view', 'ord'=>''),
 		_('Description') => array('name'=>'description'),
 		_('Filename') => array('name'=>'filename'),
 		_('Size') => array('name'=>'filesize'),
 		_('Filetype') => array('name'=>'filetype'),
 		_('Date Uploaded') => array('name'=>'tran_date', 'type'=>'date'),
-			array('insert'=>true, 'fun'=>'edit_link'),
-			array('insert'=>true, 'fun'=>'view_link'),
-			array('insert'=>true, 'fun'=>'download_link'),
-			array('insert'=>true, 'fun'=>'delete_link')
-		);	
+		array('insert'=>true, 'fun'=>'edit_link', 'align'=>'center'),
+		array('insert'=>true, 'fun'=>'view_link', 'align'=>'center'),
+		array('insert'=>true, 'fun'=>'download_link', 'align'=>'center'),
+		array('insert'=>true, 'fun'=>'delete_link', 'align'=>'center')
+	);
+
+	if($type == ST_SUPPLIER || $type == ST_CUSTOMER)
+		$cols[_('#')] = 'skip';
 
 	$table =& new_db_pager('trans_tbl', $sql, $cols);
 
@@ -256,12 +262,11 @@ else {
 		text_row_ex(_('Transaction #').':', 'trans_no', 10);
 }
 text_row_ex(_('Description').':', 'description', 40);
-file_row(_('Attached File') . ':', 'filename', 'filename');
+file_row(_('Attached File').':', 'filename', 'filename');
 
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'process');
 
 end_form();
-
 end_page();
