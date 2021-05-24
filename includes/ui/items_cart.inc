@@ -9,8 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/includes/prefs/sysprefs.inc');
-include_once($path_to_root . '/inventory/includes/inventory_db.inc');
+include_once($path_to_root.'/includes/prefs/sysprefs.inc');
+include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 
 class items_cart {
 	var $trans_type;
@@ -56,8 +56,7 @@ class items_cart {
 			$this->line_items[$line_no] = new line_item($stock_id, $qty, $standard_cost, $description);
 			return true;
 		}
-		else
-			// shouldn't come here under normal circumstances
+		else // shouldn't come here under normal circumstances
 			display_error('unexpected - adding an invalid item or null quantity', '', true);
 
 		return false;
@@ -113,8 +112,7 @@ class items_cart {
 			$this->gl_items[] = new gl_item($code_id, $dimension_id, $dimension2_id, $amount, $memo, $act_descr, $person_id, $date);
 			return true;
 		}
-		else
-			// shouldn't come here under normal circumstances
+		else // shouldn't come here under normal circumstances
 			display_error("unexpected - invalid parameters in add_gl_item($code_id, $dimension_id, $dimension2_id, $amount,...)", '', true);
 
 		return false;
@@ -138,6 +136,7 @@ class items_cart {
 		$this->gl_items[$index]->dimension2_id = $dimension2_id;
 		$this->gl_items[$index]->amount = $amount;
 		$this->gl_items[$index]->reference = $memo;
+
 		if ($act_descr == null)
 			$this->gl_items[$index]->description = get_gl_account_name($code_id);
 		else
@@ -209,13 +208,13 @@ class items_cart {
 	}
 
 	/*
-		Collect tax info from the GL transaction lines and return as array of values:
-			'tax_date'      - tax date
-			'tax_group'     - related counterparty tax group
-			'tax_category'  - tax category (not set for now)
-			'net_amount' - tax amounts array indexed by tax type id
-			'tax_in', 'tax_out' - tax amounts array indexed by tax type id
-			'tax_reg' - tax register used
+	Collect tax info from the GL transaction lines and return as array of values:
+		'tax_date'      - tax date
+		'tax_group'     - related counterparty tax group
+		'tax_category'  - tax category (not set for now)
+		'net_amount' - tax amounts array indexed by tax type id
+		'tax_in', 'tax_out' - tax amounts array indexed by tax type id
+		'tax_reg' - tax register used
 	*/
 	function collect_tax_info() {
 		$tax_info = array();
@@ -226,18 +225,24 @@ class items_cart {
 		$factor = $vat_percent && ($this->vat_category == VC_PARTIAL) ? $vat_percent/100: 1;
 
 		foreach($this->gl_items as $gl) {
+			// Todo:
+			// More future person types will be added here
+			// Function is_subledger_account() needs to be modified also to add person types
 			if ($person_type = is_subledger_account($gl->code_id)) {
 				$tax_info['person_type'] = $person_type < 0 ? PT_SUPPLIER : PT_CUSTOMER;
 				$tax_info['person_id'] = $gl->person_id;
 
-				if ($tax_info['person_type'] == PT_CUSTOMER) {
-					$branch = get_default_branch($gl->person_id);
-					$tax_info['tax_group'] = $branch['tax_group_id'];
+				if(!empty($gl->person_id)) { 
+					if ($tax_info['person_type'] == PT_CUSTOMER) {
+						$branch = get_default_branch($gl->person_id);
+						$tax_info['tax_group'] = $branch['tax_group_id'];
+					}
+					else {
+						$supplier = get_supplier($gl->person_id);
+						$tax_info['tax_group'] = $supplier['tax_group_id'];
+					}
 				}
-				else {
-					$supplier = get_supplier($gl->person_id);
-					$tax_info['tax_group'] = $supplier['tax_group_id'];
-				}
+				
 				$subledger_sum += $gl->amount;
 			}
 			elseif ($tax_id = is_tax_account($gl->code_id)) {
