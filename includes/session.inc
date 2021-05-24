@@ -13,7 +13,7 @@ define('VARLIB_PATH', $path_to_root.'/tmp');
 define('VARLOG_PATH', $path_to_root.'/tmp');
 
 class SessionManager {
-	function sessionStart($name, $limit = 0, $path = '/', $domain = null, $secure = null) {
+	function sessionStart($name, $limit=0, $path='/', $domain=null, $secure=null) {
 		// Set the cookie name
 		session_name($name);
 
@@ -456,7 +456,7 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 	if (!$_SESSION['wa_current_user']->logged_in()) {
 		if (@$SysPrefs->allow_password_reset && !$SysPrefs->allow_demo_mode && (isset($_GET['reset']) || isset($_POST['email_entry_field']))) {
 			if (!isset($_POST['email_entry_field'])) {
-				include($path_to_root . '/access/password_reset.php');
+				include($path_to_root.'/access/password_reset.php');
 				exit();
 			}
 			else {
@@ -482,10 +482,10 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		if (!isset($_POST['user_name_entry_field']) or $_POST['user_name_entry_field'] == '') {
 			// strip ajax marker from uri, to force synchronous page reload
 			$_SESSION['timeout'] = array( 'uri'=>preg_replace('/JsHttpRequest=(?:(\d+)-)?([^&]+)/s', '', html_specials_encode($_SERVER['REQUEST_URI'])), 'post' => $_POST);
-		if (in_ajax())
-			$Ajax->popup($path_to_root.'/access/timeout.php');
-		else
-			include($path_to_root.'/access/login.php');
+			if (in_ajax())
+				$Ajax->popup($path_to_root.'/access/timeout.php');
+			else
+				include($path_to_root.'/access/login.php');
 			exit;
 		}
 		else {
@@ -530,7 +530,7 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		$SysPrefs->refresh();
 	}
 	if (!isset($_SESSION['App'])) {
-		$_SESSION['App'] = new notrinos_erp();
+		$_SESSION['App'] = new NotrinosErp();
 		$_SESSION['App']->init();
 	}
 }

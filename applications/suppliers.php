@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-class suppliers_app extends application {
+class SuppliersApp extends application {
 	function __construct() {
 		parent::__construct('AP', _($this->help_context = '&Purchases'));
 
@@ -38,5 +38,3 @@ class suppliers_app extends application {
 		$this->add_extensions();
 	}
 }
-
-
