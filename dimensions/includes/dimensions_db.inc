@@ -14,7 +14,7 @@ function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 
 	begin_transaction();
 
-	$sql = "INSERT INTO ".TB_PREF."dimensions (reference, name, type_, date_, due_date) VALUES (".db_escape($reference).", ".db_escape($name).", ".db_escape($type_).", '".date2sql($date_)."', '".date2sql($duedate)."')";
+	$sql = "INSERT INTO ".TB_PREF."dimensions (reference, name, type_, date_, due_date) VALUES (".db_escape($reference).", ".db_escape($name).", ".db_escape($type_).", '".date2sql($date_)."', '".date2sql($due_date)."')";
 	db_query($sql, 'could not add dimension');
 	$id = db_insert_id();
 
@@ -30,7 +30,7 @@ function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 function update_dimension($id, $name, $type_, $date_, $due_date, $memo_) {
 	begin_transaction();
 
-	$sql = "UPDATE ".TB_PREF."dimensions SET name=".db_escape($name).", type_ = ".db_escape($type_).", date_='".date2sql($date_)."', due_date='".date2sql($duedate)."' WHERE id = ".db_escape($id);
+	$sql = "UPDATE ".TB_PREF."dimensions SET name=".db_escape($name).", type_ = ".db_escape($type_).", date_='".date2sql($date_)."', due_date='".date2sql($due_date)."' WHERE id = ".db_escape($id);
 
 	db_query($sql, 'could not update dimension');
 
@@ -113,7 +113,7 @@ function get_dimension_balance_all($id, $from, $to) {
 }
 
 function get_dimension_balance($id, $from, $to) {
-	$id = ;
+	
 	$sql = "SELECT SUM(amount) FROM ".TB_PREF."gl_trans WHERE tran_date >= '" .	date2sql($from) . "' AND tran_date <= '".date2sql($to)."' AND (dimension_id = ".db_escape($id)." OR dimension2_id = ".db_escape($id).")";
 	$res = db_query($sql, 'Sum of transactions could not be calculated');
 	$row = db_fetch_row($res);
@@ -138,6 +138,6 @@ function get_sql_for_search_dimensions($dim, $from, $to, $order='', $type = -1, 
 
 		$sql .= " AND date_ >= '".date2sql($from)."' AND date_ <= '".date2sql($to)."'";
 	}
-	
+
 	return $sql;
 }
