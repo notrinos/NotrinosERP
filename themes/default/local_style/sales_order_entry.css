@@ -1,0 +1,7 @@
+table.tablestyle_inner input, table.tablestyle_inner .list_container {
+	width: 135px;
+}
+
+table.tablestyle_inner td.label {
+	white-space: nowrap;
+}
