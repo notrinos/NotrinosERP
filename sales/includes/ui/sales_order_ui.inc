@@ -9,26 +9,20 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/sales/includes/cart_class.inc');
+include_once($path_to_root.'/sales/includes/cart_class.inc');
 
-//--------------------------------------------------------------------------------
 function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $description='') {
 	// calculate item price to sum of kit element prices factor for 
 	// value distribution over all exploded kit items
-	 $std_price = get_kit_price($new_item, $order->customer_currency, 
-		$order->sales_type,	$order->price_factor, get_post('OrderDate'), true);
+	$std_price = get_kit_price($new_item, $order->customer_currency, $order->sales_type,	$order->price_factor, get_post('OrderDate'), true);
 
-	if ($std_price == 0)
-		$price_factor = 0;
-	else
-		$price_factor = $price/$std_price;
+	$price_factor = $std_price == 0 ? 0 : $price/$std_price;
 
 	$kit = get_item_kit($new_item);
 	$item_num = db_num_rows($kit);
 
 	while($item = db_fetch($kit)) {
-		$std_price = get_kit_price($item['stock_id'], $order->customer_currency, 
-			$order->sales_type,	$order->price_factor, get_post('OrderDate'), true);
+		$std_price = get_kit_price($item['stock_id'], $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'), true);
 
 		// rounding differences are included in last price item in kit
 		$item_num--;
@@ -44,8 +38,7 @@ function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $des
 		$item_price = round($item_price, user_price_dec());
 
 		if (!$item['is_foreign'] && $item['item_code'] != $item['stock_id']) {	// this is sales kit - recurse 
-			add_to_order($order, $item['stock_id'], $new_item_qty*$item['quantity'],
-				$item_price, $discount);
+			add_to_order($order, $item['stock_id'], $new_item_qty*$item['quantity'], $item_price, $discount);
 		}
 		else {	// stock item record eventually with foreign code
 
@@ -56,7 +49,7 @@ function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $des
 					break;
 				}
 			}
-			$order->add_to_cart (count($order->line_items),	$item['stock_id'], $new_item_qty*$item['quantity'], $item_price, $discount, 0,0, $description);
+			$order->add_to_cart(count($order->line_items), $item['stock_id'], $new_item_qty*$item['quantity'], $item_price, $discount, 0, 0, $description);
 		}
 	}
 }
@@ -70,15 +63,12 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 
 	$myrow = get_customer_to_order($customer_id);
 
-	$name = $myrow['name'];
-
 	if ($myrow['dissallow_invoices'] == 1)
 		$ret_error = _('The selected customer account is currently on hold. Please contact the credit control personnel to discuss.');
 
 	$deliver = $myrow['address']; // in case no branch address use company address
 
-	$order->set_customer($customer_id, $name, $myrow['curr_code'], 
-		$myrow['discount'], $myrow['payment_terms'], $myrow['pymt_discount']);
+	$order->set_customer($customer_id, $myrow['name'], $myrow['curr_code'], $myrow['discount'], $myrow['payment_terms'], $myrow['pymt_discount']);
 
 	// the sales type determines the price list to be used by default
 	$order->set_sales_type($myrow['salestype'], $myrow['sales_type'], $myrow['tax_included'],
@@ -99,16 +89,12 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 
 	// FIX - implement editable contact selector in sales order 
 	$contact = get_branch_contacts($branch_id, 'order', $customer_id);
-	$order->set_branch($branch_id, $myrow['tax_group_id'],
-	$myrow['tax_group_name'], @$contact['phone'], @$contact['email']);
-
+	$order->set_branch($branch_id, $myrow['tax_group_id'], $myrow['tax_group_name'], @$contact['phone'], @$contact['email']);
 	$address = trim($myrow['br_post_address']) != '' ? $myrow['br_post_address'] : (trim($myrow['br_address']) != '' ? $myrow['br_address']:$deliver);
+	$order->set_delivery($myrow['default_ship_via'], $myrow['br_name'], $address);
 
-	$order->set_delivery($myrow['default_ship_via'], $myrow['br_name'],
-		$address);
 	if ($order->trans_type == ST_SALESINVOICE)
 		$order->due_date = get_invoice_duedate($order->payment, $order->document_date);
-	
 	elseif ($order->trans_type == ST_SALESORDER)
 		$order->due_date = add_days($order->document_date, $SysPrefs->default_delivery_required_by());
 	elseif ($order->trans_type == ST_SALESQUOTE)
@@ -131,15 +117,13 @@ function display_order_summary($title, &$order, $editable_items=false) {
 	div_start('items_table');
 	start_table(TABLESTYLE, "width='90%'");
 
-	$th = array(_('Item Code'), _('Item Description'), _('Quantity'),
-		_('Delivered'),
-		_('Unit'), $order->tax_included ? _('Price after Tax') : _('Price before Tax'), _('Discount %'), _('Total'), '');
+	$th = array(_('Item Code'), _('Item Description'), _('Quantity'), _('Delivered'), _('Unit'), $order->tax_included ? _('Price after Tax') : _('Price before Tax'), _('Discount %'), _('Total'), '');
 
 	if ($order->trans_no == 0)
-		unset( $th[3] );
+		unset($th[3]);
 
 	if (count($order->line_items))
-		 $th[]= '';
+		$th[] = '';
 
 	table_header($th);
 
@@ -151,10 +135,9 @@ function display_order_summary($title, &$order, $editable_items=false) {
 	$low_stock = $order->check_qoh($_POST['OrderDate'], $_POST['Location']);
 	foreach ($order->get_items() as $line_no=>$stock_item) {
 
-		$line_total = round($stock_item->qty_dispatched * $stock_item->price * (1 - $stock_item->discount_percent),
-		   user_price_dec());
-
+		$line_total = round($stock_item->qty_dispatched * $stock_item->price * (1 - $stock_item->discount_percent), user_price_dec());
 		$qoh_msg = '';
+
 		if (!$editable_items || $id != $line_no) {
 			if (in_array($stock_item->stock_id, $low_stock))
 				start_row("class='stockmankobg'");	// notice low stock status
@@ -188,15 +171,15 @@ function display_order_summary($title, &$order, $editable_items=false) {
 		$total += $line_total;
 	}
 
-	if ($id==-1 && $editable_items)
+	if ($id == -1 && $editable_items)
 		sales_order_item_controls($order, $k);
 
 	$colspan = 6;
-	if ($order->trans_no!=0)
+	if ($order->trans_no != 0)
 		++$colspan;
 	start_row();
 	label_cell(_('Shipping Charge'), "colspan=$colspan align=right");
-	small_amount_cells(null, 'freight_cost', price_format(get_post('freight_cost',0)));
+	small_amount_cells(null, 'freight_cost', price_format(get_post('freight_cost', 0)));
 	label_cell('', 'colspan=2');
 	end_row();
 	$display_sub_total = price_format($total + input_num('freight_cost'));
@@ -231,24 +214,22 @@ function display_order_header(&$order, $editable, $date_text) {
 	$change_prices = 0;
 
 	if (isset($order) && !$editable) {
-		label_row(null, $order->customer_name . ' - ' . $order->deliver_to);
+		label_row(null, $order->customer_name.' - '.$order->deliver_to);
 		hidden('customer_id', $order->customer_id);
 		hidden('branch_id', $order->Branch);
 		hidden('sales_type', $order->sales_type);
 		if ($order->trans_type != ST_SALESORDER  && $order->trans_type != ST_SALESQUOTE) {
-			hidden('dimension_id', $order->dimension_id); // 2008-11-12 Joe Hunt
+			hidden('dimension_id', $order->dimension_id);
 			hidden('dimension2_id', $order->dimension2_id);
 		}	
 	}
 	else {
 		customer_list_row(_('Customer:'), 'customer_id', null, false, true, false, true);
 
-		if ($order->customer_id != get_post('customer_id', -1)) {
-			// customer has changed
+		if ($order->customer_id != get_post('customer_id', -1)) // customer has changed
 			$Ajax->activate('branch_id');
-		}
-		customer_branches_list_row(_('Branch:'),
-			$_POST['customer_id'], 'branch_id', null, false, true, true, true);
+
+		customer_branches_list_row(_('Branch:'), $_POST['customer_id'], 'branch_id', null, false, true, true, true);
 
 		if( ($order->customer_id != get_post('customer_id', -1)) || ($order->Branch != get_post('branch_id', -1)) || list_updated('customer_id'))  {
 
@@ -262,7 +243,7 @@ function display_order_header(&$order, $editable, $date_text) {
 				$order->Branch = 0;
 			} 
 			else {
-				$old_order = (PHP_VERSION<5) ? $order : clone $order;
+				$old_order = (PHP_VERSION < 5) ? $order : clone $order;
 
 				$customer_error = get_customer_details_to_order($order, $_POST['customer_id'], $_POST['branch_id']);
 				$_POST['Location'] = $order->Location;
@@ -271,15 +252,12 @@ function display_order_header(&$order, $editable, $date_text) {
 				$_POST['phone'] = $order->phone;
 				$_POST['delivery_date'] = $order->due_date;
 
-				if (!in_array($order->trans_type, array(ST_SALESQUOTE, ST_SALESORDER))
-					&& ($order->pos['cash_sale'] != $order->pos['credit_sale'])
-					&& (($order->payment_terms['cash_sale'] && !$order->pos['cash_sale']) ||
-						(!$order->payment_terms['cash_sale'] && !$order->pos['credit_sale']))) {
-							// force payment terms refresh if terms are editable
-							// and pos have no permitions for terms selected in customer record.
-							// Terms are set to first terms in allowed category below.
-							display_warning(sprintf(_("Customer's payment terms '%s' cannot be selected on this POS"), $order->payment_terms['terms']));
-							$order->payment = '';
+				if (!in_array($order->trans_type, array(ST_SALESQUOTE, ST_SALESORDER)) && ($order->pos['cash_sale'] != $order->pos['credit_sale']) && (($order->payment_terms['cash_sale'] && !$order->pos['cash_sale']) || (!$order->payment_terms['cash_sale'] && !$order->pos['credit_sale']))) {
+					// force payment terms refresh if terms are editable
+					// and pos have no permitions for terms selected in customer record.
+					// Terms are set to first terms in allowed category below.
+					display_warning(sprintf(_("Customer's payment terms '%s' cannot be selected on this POS"), $order->payment_terms['terms']));
+					$order->payment = '';
 				}
 				elseif (get_post('payment') !== $order->payment) {
 					$_POST['payment'] = $order->payment;
@@ -302,7 +280,6 @@ function display_order_header(&$order, $editable, $date_text) {
 					$change_prices = 1;
 				
 				if ($old_order->sales_type != $order->sales_type) {
-				//  || $old_order->default_discount!=$order->default_discount
 					$_POST['sales_type'] = $order->sales_type;
 					$Ajax->activate('sales_type');
 					$change_prices = 1;
@@ -337,7 +314,7 @@ function display_order_header(&$order, $editable, $date_text) {
 
 	customer_credit_row($_POST['customer_id'], $order->credit);
 
-	label_row(_('Customer Discount:'), ($order->default_discount * 100) . '%');
+	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
 
 	table_section(3);
 	start_row();
@@ -354,8 +331,7 @@ function display_order_header(&$order, $editable, $date_text) {
 			$Ajax->activate('items_table');
 			$Ajax->activate('delivery');
 		}
-		$paymcat = !$order->pos['cash_sale'] ? PM_CREDIT : 
-			(!$order->pos['credit_sale'] ? PM_CASH : PM_ANY);
+		$paymcat = !$order->pos['cash_sale'] ? PM_CREDIT : (!$order->pos['credit_sale'] ? PM_CASH : PM_ANY);
 		// all terms are available for SO
 		$is_order = in_array($order->trans_type, array(ST_SALESQUOTE, ST_SALESORDER));
 		sale_payment_list_cells(_('Payment:'), 'payment', $is_order ? PM_ANY : $paymcat, null, true, $is_order);
@@ -366,14 +342,13 @@ function display_order_header(&$order, $editable, $date_text) {
 	end_row();
 
 	if($editable)
-		$str = sales_types_list_row(_('Price List:'), 'sales_type', null, true);
+		sales_types_list_row(_('Price List:'), 'sales_type', null, true);
 	else
 		label_row(_('Price List:'), $order->sales_type_name);
 	
 	if ($order->sales_type != $_POST['sales_type']) {
 		$myrow = get_sales_type($_POST['sales_type']);
-		$order->set_sales_type($myrow['id'], $myrow['sales_type'],
-			$myrow['tax_included'], $myrow['factor']);
+		$order->set_sales_type($myrow['id'], $myrow['sales_type'], $myrow['tax_included'], $myrow['factor']);
 		$Ajax->activate('sales_type');
 		$change_prices = 1;
 	}
@@ -384,30 +359,29 @@ function display_order_header(&$order, $editable, $date_text) {
 		if (!isset($_POST['OrderDate']) || $_POST['OrderDate'] == '')
 			$_POST['OrderDate'] = $order->document_date;
 
-		date_row($date_text, 'OrderDate', _('Date of order receive'),
-			$order->trans_no==0, 0, 0, 0, null, true);
+		date_row($date_text, 'OrderDate', _('Date of order receive'), $order->trans_no==0, 0, 0, 0, null, true);
 		if (isset($_POST['_OrderDate_changed']) || list_updated('payment')) {
-			if (!is_company_currency($order->customer_currency) && (get_base_sales_type()>0))
+			if (!is_company_currency($order->customer_currency) && (get_base_sales_type() > 0))
 				$change_prices = 1;
 			
 			$Ajax->activate('_ex_rate');
 			if ($order->trans_type == ST_SALESINVOICE)
 				$_POST['delivery_date'] = get_invoice_duedate(get_post('payment'), get_post('OrderDate'));
+			elseif($order->trans_type == ST_SALESQUOTE)
+				$_POST['delivery_date'] = add_days(get_post('OrderDate'), $SysPrefs->default_quote_valid_days());
 			else 
 				$_POST['delivery_date'] = add_days(get_post('OrderDate'), $SysPrefs->default_delivery_required_by());
 			$Ajax->activate('items_table');
 			$Ajax->activate('delivery_date');
 		}
-		if ($order->trans_type != ST_SALESORDER && $order->trans_type != ST_SALESQUOTE) {	// 2008-11-12 Joe Hunt added dimensions
+		if ($order->trans_type != ST_SALESORDER && $order->trans_type != ST_SALESQUOTE) {
 			$dim = get_company_pref('use_dimension');
 			if ($dim > 0)
-				dimensions_list_row(_('Dimension').':', 'dimension_id', 
-					null, true, ' ', false, 1, false);
+				dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
 			else
 				hidden('dimension_id', 0);
 			if ($dim > 1)
-				dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', 
-					null, true, ' ', false, 2, false);
+				dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
 			else
 				hidden('dimension2_id', 0);
 		}	
@@ -417,7 +391,7 @@ function display_order_header(&$order, $editable, $date_text) {
 		hidden('OrderDate', $order->document_date);
 	}
 
-	end_outer_table(1); // outer table
+	end_outer_table(1);
 
 	if ($change_prices != 0) {
 		foreach ($order->line_items as $line_no=>$item) {
@@ -473,7 +447,8 @@ function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		}		
 
 		$item_info = get_item_edit_info($_POST['stock_id']);
-		$units = ''; $dec = 2;
+		$units = '';
+		$dec = user_qty_dec();
 		if ($item_info) {
 			$units = $item_info['units'];
 			$dec = $item_info['decimals'];
@@ -496,16 +471,12 @@ function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		qty_cell($line_no==-1 ? 0 :$order->line_items[$line_no]->qty_done, false, $dec);
 
 	label_cell($units, '', 'units');
-
 	amount_cells(null, 'price');
-
 	small_amount_cells(null, 'Disc', percent_format($_POST['Disc']), null, null, user_percent_dec());
-
 	$line_total = input_num('qty') * input_num('price') * (1 - input_num('Disc') / 100);
-
 	amount_cell($line_total, false, '','line_total');
 
-	if ($id!=-1) {
+	if ($id != -1) {
 		button_cell('UpdateItem', _('Update'), _('Confirm changes'), ICON_UPDATE);
 		button_cell('CancelItemChanges', _('Cancel'), _('Cancel changes'), ICON_CANCEL);
 		hidden('LineNo', $line_no);
@@ -569,7 +540,7 @@ function display_delivery_details(&$order) {
 		if (list_updated('Location'))
 			$Ajax->activate('items_table');
 
-		date_row($delname, 'delivery_date', $order->trans_type==ST_SALESORDER ?  _('Enter requested day of delivery') : ($order->trans_type==ST_SALESQUOTE ? _('Enter Valid until Date') : ''));
+		date_row($delname, 'delivery_date', $order->trans_type==ST_SALESORDER ?  _('Enter requested day of delivery') : ($order->trans_type == ST_SALESQUOTE ? _('Enter Valid until Date') : ''));
 		text_row(_('Deliver To:'), 'deliver_to', $order->deliver_to, 50, 60, _('Additional identifier for delivery e.g. name of receiving person'));
 		textarea_row(_('Address:'), 'delivery_address', $order->delivery_address, 35, 5, 255, _('Delivery address. Default is address of customer branch'));
 
