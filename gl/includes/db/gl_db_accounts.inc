@@ -10,19 +10,15 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 function add_gl_account($account_code, $account_name, $account_type, $account_code2) {
-	$sql = "INSERT INTO ".TB_PREF."chart_master (account_code, account_code2, account_name, account_type)
-	VALUES (".db_escape($account_code).", ".db_escape($account_code2).", "
-	.db_escape($account_name).", ".db_escape($account_type).")";
+	$sql = "INSERT INTO ".TB_PREF."chart_master (account_code, account_code2, account_name, account_type) VALUES (".db_escape($account_code).", ".db_escape($account_code2).", ".db_escape($account_name).", ".db_escape($account_type).")";
 
-	return db_query($sql);
+	return db_query($sql, 'could not add gl account');
 }
 
 function update_gl_account($account_code, $account_name, $account_type, $account_code2) {
-	$sql = "UPDATE ".TB_PREF."chart_master SET account_name=".db_escape($account_name)
-	.",account_type=".db_escape($account_type).", account_code2=".db_escape($account_code2)
-	." WHERE account_code = ".db_escape($account_code);
+	$sql = "UPDATE ".TB_PREF."chart_master SET account_name=".db_escape($account_name).",account_type=".db_escape($account_type).", account_code2=".db_escape($account_code2)." WHERE account_code = ".db_escape($account_code);
 
-	return db_query($sql);
+	return db_query($sql, 'could not update gl account');
 }
 
 function delete_gl_account($code) {
@@ -32,11 +28,7 @@ function delete_gl_account($code) {
 }
 
 function get_gl_accounts($from=null, $to=null, $type=null) {
-	$sql = "SELECT coa.*, act_type.name AS AccountTypeName
-	FROM "
-	.TB_PREF."chart_master coa,"
-	.TB_PREF."chart_types act_type
-	WHERE coa.account_type=act_type.id";
+	$sql = "SELECT coa.*, act_type.name AS AccountTypeName FROM ".TB_PREF."chart_master coa,".TB_PREF."chart_types act_type WHERE coa.account_type=act_type.id";
 	if ($from != null)
 		$sql .= " AND coa.account_code >= ".db_escape($from);
 	if ($to != null)
@@ -50,22 +42,14 @@ function get_gl_accounts($from=null, $to=null, $type=null) {
 
 function get_gl_account($code) {
 	$sql = "SELECT * FROM ".TB_PREF."chart_master WHERE account_code=".db_escape($code);
-
 	$result = db_query($sql, 'could not get gl account');
 	return db_fetch($result);
 }
 
 function is_account_balancesheet($code) {
-	$sql = "SELECT act_class.ctype
-	FROM "
-	.TB_PREF."chart_class act_class, "
-	.TB_PREF."chart_types act_type, "
-	.TB_PREF."chart_master coa
-	WHERE coa.account_type=act_type.id
-	AND	act_type.class_id=act_class.cid
-	AND coa.account_code=".db_escape($code);
+	$sql = "SELECT act_class.ctype FROM ".TB_PREF."chart_class act_class, ".TB_PREF."chart_types act_type, ".TB_PREF."chart_master coa WHERE coa.account_type=act_type.id AND act_type.class_id=act_class.cid AND coa.account_code=".db_escape($code);
 
-	$result = db_query($sql,"could not retreive the account class for $code");
+	$result = db_query($sql, "could not retreive the account class for $code");
 	$row = db_fetch_row($result);
 	return $row[0] > 0 && $row[0] < CL_INCOME;
 }
@@ -182,12 +166,8 @@ function gl_account_in_suppliers($acc) {
 }
 
 function gl_account_in_quick_entry_lines($acc) {
-	$acc = db_escape($acc);
 
-	$sql=
-	"SELECT COUNT(*)
-	FROM ".TB_PREF."quick_entry_lines
-	WHERE dest_id=$acc AND UPPER(LEFT(action, 1)) <> 'T'";
+	$sql= "SELECT COUNT(*) FROM ".TB_PREF."quick_entry_lines WHERE dest_id = ".db_escape($acc)." AND UPPER(LEFT(action, 1)) <> 'T'";
 	$result = db_query($sql, "Couldn't test for existing Quick Entry Line GL codes");
 
 	$myrow = db_fetch_row($result);
@@ -198,44 +178,32 @@ function gl_account_in_quick_entry_lines($acc) {
 //  (priority for AR accounts)
 //
 function is_subledger_account($account) {
-	$sql = "SELECT 1 
-		FROM ".TB_PREF."cust_branch
-		WHERE receivables_account=".db_escape($account)
-	." UNION
-		SELECT -1 
-		FROM ".TB_PREF."suppliers 
-		WHERE payable_account=".db_escape($account);
+	$sql = "SELECT 1 FROM ".TB_PREF."cust_branch WHERE receivables_account=".db_escape($account)." 
+	UNION
+	SELECT -1 FROM ".TB_PREF."suppliers WHERE payable_account=".db_escape($account);
 
-	$result = db_query($sql,"Couldn't test AR/AP account");
+	$result = db_query($sql, "Couldn't test AR/AP account");
 	$myrow = db_fetch_row($result);
 	return $myrow == false ? 0 : $myrow[0];
 }
 
 function get_subaccount_data($code_id, $person_id) {
-	$sql = "SELECT debtor_ref as name, branch_code as id 
-		FROM ".TB_PREF."cust_branch branch 
-			LEFT JOIN ".TB_PREF."debtors_master d ON branch.debtor_no = d.debtor_no
-		WHERE branch.receivables_account=".db_escape($code_id)
-			." AND d.debtor_no=".db_escape($person_id)
-		." UNION SELECT supp_ref as name, '' as id 
-			FROM ".TB_PREF."suppliers supp
-			WHERE supplier_id=".db_escape($person_id)." 
-				AND payable_account=".db_escape($code_id);
+	$sql = "SELECT debtor_ref as name, branch_code as id FROM ".TB_PREF."cust_branch branch 
+		LEFT JOIN ".TB_PREF."debtors_master d ON branch.debtor_no = d.debtor_no
+		WHERE branch.receivables_account=".db_escape($code_id)." AND d.debtor_no=".db_escape($person_id)." 
+		UNION SELECT supp_ref as name, '' as id FROM ".TB_PREF."suppliers supp
+		WHERE supplier_id=".db_escape($person_id)." 
+		AND payable_account=".db_escape($code_id);
 	$result = db_query($sql, 'cannot retrieve counterparty name');
 
 	return  db_fetch($result);
 }
 
 function get_subaccount_name($code_id, $person_id) {
-	$sql = "SELECT debtor_ref as ref
-		FROM ".TB_PREF."cust_branch branch
-			LEFT JOIN ".TB_PREF."debtors_master d ON branch.debtor_no = d.debtor_no
-		WHERE branch.receivables_account=".db_escape($code_id)
-			." AND d.debtor_no=".db_escape($person_id)
-		." UNION SELECT supp_ref as ref
-			FROM ".TB_PREF."suppliers supp
-			WHERE payable_account=".db_escape($code_id)." 
-				AND supplier_id=".db_escape($person_id);
+	$sql = "SELECT debtor_ref as ref FROM ".TB_PREF."cust_branch branch
+		LEFT JOIN ".TB_PREF."debtors_master d ON branch.debtor_no = d.debtor_no
+		WHERE branch.receivables_account=".db_escape($code_id)." AND d.debtor_no=".db_escape($person_id)." 
+		UNION SELECT supp_ref as ref FROM ".TB_PREF."suppliers supp WHERE payable_account=".db_escape($code_id)." AND supplier_id=".db_escape($person_id);
 	$result = db_query($sql, 'cannot retrieve counterparty name');
 	$row = db_fetch($result);
 
@@ -243,9 +211,8 @@ function get_subaccount_name($code_id, $person_id) {
 }
 
 function gl_account_in_bank_accounts($acc) {
-	$sql= "SELECT COUNT(*) FROM ".TB_PREF."bank_accounts WHERE 
-		account_code=".db_escape($acc);
-	$result = db_query($sql,"Couldn't test bank account GL codes");
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."bank_accounts WHERE account_code=".db_escape($acc);
+	$result = db_query($sql, "Couldn't test bank account GL codes");
 
 	$myrow = db_fetch_row($result);
 	return ($myrow[0] > 0); 
@@ -260,7 +227,7 @@ function gl_account_in_bank_accounts($acc) {
 //	there is more than one using given gl account.
 //
 function is_bank_account($account_code) {
-	$sql= "SELECT id FROM ".TB_PREF."bank_accounts WHERE account_code=".db_escape($account_code);
+	$sql = "SELECT id FROM ".TB_PREF."bank_accounts WHERE account_code=".db_escape($account_code);
 	$result = db_query($sql, 'checking account is bank account');
 	if (db_num_rows($result) > 0) {
 		$acct = db_fetch($result);
