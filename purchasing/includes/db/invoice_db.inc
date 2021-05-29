@@ -9,10 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/purchasing/includes/db/invoice_items_db.inc');
-include_once($path_to_root . '/admin/db/attachments_db.inc');
-
-//--------------------------------------------------------------------------------------------------
+include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
+include_once($path_to_root.'/admin/db/attachments_db.inc');
 
 function read_supplier_details_to_trans(&$supp_trans, $supplier_id) {
 	$sql = "SELECT supp.supp_name, terms.terms, terms.days_before_due, supp.dimension_id, supp.dimension2_id,
@@ -27,7 +25,7 @@ function read_supplier_details_to_trans(&$supp_trans, $supplier_id) {
 		AND supp.payment_terms=terms.terms_indicator
 		AND supp.supplier_id = ".db_escape($supplier_id)." GROUP BY supp.supp_name";
 
-	$result = db_query($sql, 'The supplier record selected: ' . $supplier_id . ' cannot be retrieved');
+	$result = db_query($sql, 'The supplier record selected: '.$supplier_id.' cannot be retrieved');
 
 	$myrow = db_fetch($result);
 
@@ -43,15 +41,13 @@ function read_supplier_details_to_trans(&$supp_trans, $supplier_id) {
 	$supp_trans->terms = array( 
 		'description' => $myrow['terms'],
 		'days_before_due' => $myrow['days_before_due'], 
-		'day_in_following_month' => $myrow['day_in_following_month'] );
+		'day_in_following_month' => $myrow['day_in_following_month']);
 
 	if ($supp_trans->supplier_id != $supplier_id)
 		get_duedate_from_terms($supp_trans);
 
 	$supp_trans->supplier_id = $supplier_id;
-
 	$supp_trans->credit = $myrow['cur_credit'];
-
 	$supp_trans->tax_description = $myrow['tax_group_name'];
 	$supp_trans->tax_group_id = $myrow['tax_group_id'];
 	$supp_trans->dimension = $myrow['dimension_id'];
@@ -60,10 +56,10 @@ function read_supplier_details_to_trans(&$supp_trans, $supplier_id) {
  
 }
 
-//-------------------------------------------------------------------------------------------------
+//
 //	Updates invoiced quantity in PO and GRN line, and act_price in PO
 //  Returns:
-// if chg_price is set:	 previous act_price, delivery date and unit_price from PO
+//	if chg_price is set: previous act_price, delivery date and unit_price from PO
 //
 function update_supp_received_items_for_invoice($id, $po_detail_item, $qty_invoiced, $chg_price=null) {
 	if ($chg_price != null) {
@@ -73,30 +69,25 @@ function update_supp_received_items_for_invoice($id, $po_detail_item, $qty_invoi
 		$row = db_fetch($result);
 		$ret = $row['act_price'];
 
-		$unit_price = $row['unit_price']; //Added by Rasmus
+		$unit_price = $row['unit_price'];
 
-		$sql = "SELECT delivery_date 
-			FROM ".TB_PREF."grn_batch grn,"
-				.TB_PREF."grn_items line
-			WHERE
-				grn.id = line.grn_batch_id AND line.id=".db_escape($id);
+		$sql = "SELECT delivery_date FROM ".TB_PREF."grn_batch grn,".TB_PREF."grn_items line WHERE grn.id = line.grn_batch_id AND line.id=".db_escape($id);
 		$result = db_query($sql, 'The old delivery date from the received record cout not be retrieved');
 		$row = db_fetch($result);
 		$date = $row['delivery_date'];
 	}
 	else {
 		$ret = 0;
-		$date = "";
-		$unit_price = 0; // Added by Rasmus
+		$date = '';
+		$unit_price = 0;
 	}
-	$sql = "UPDATE ".TB_PREF."purch_order_details
-		SET qty_invoiced = qty_invoiced + ".db_escape($qty_invoiced);
+	$sql = "UPDATE ".TB_PREF."purch_order_details SET qty_invoiced = qty_invoiced + ".db_escape($qty_invoiced);
 
 	if ($chg_price != null)
 		$sql .= " , act_price = ".db_escape($chg_price);
 
 	$sql .= " WHERE po_detail_item = ".db_escape($po_detail_item);
-	db_query($sql, "The quantity invoiced of the purchase order line could not be updated");
+	db_query($sql, 'The quantity invoiced of the purchase order line could not be updated');
 
 	$sql = "UPDATE ".TB_PREF."grn_items
 		SET quantity_inv = quantity_inv + ".db_escape($qty_invoiced)."
@@ -114,7 +105,7 @@ function get_diff_in_home_currency($supplier, $old_date, $date, $amount1, $amoun
 	$ex_rate = get_exchange_rate_to_home_currency($currency, $date);
 	$amount2 = $amount2 / $ex_rate;
 	$diff = $amount2 - $amount1;
-	//return round2($diff, $dec);
+	
 	return $diff;
 }
 //----------------------------------------------------------------------------------------
@@ -122,14 +113,11 @@ function get_diff_in_home_currency($supplier, $old_date, $date, $amount1, $amoun
 function add_supp_invoice(&$supp_trans) {
 	global $Refs;
 
-	//$company_currency = get_company_currency();
 	$trans_no = $supp_trans->trans_no;
 	$trans_type = $supp_trans->trans_type;
 	$supplier = get_supplier($supp_trans->supplier_id);
-	$dim = !empty($supp_trans->dimension) ? $supp_trans->dimension :
-		($supplier['dimension_id'] ? $supplier['dimension_id'] : 0);
-	$dim2 = !empty($supp_trans->dimension2) ? $supp_trans->dimension2 :
-		($supplier['dimension2_id'] ? $supplier['dimension2_id'] : 0);
+	$dim = !empty($supp_trans->dimension) ? $supp_trans->dimension : ($supplier['dimension_id'] ? $supplier['dimension_id'] : 0);
+	$dim2 = !empty($supp_trans->dimension2) ? $supp_trans->dimension2 : ($supplier['dimension2_id'] ? $supplier['dimension2_id'] : 0);
 
 	begin_transaction();
 	hook_db_prewrite($supp_trans, $trans_type);
@@ -350,17 +338,15 @@ function add_supp_invoice(&$supp_trans) {
 	return $invoice_id;
 }
 
-//----------------------------------------------------------------------------------------
-
+//
 // get all the invoices/credits for a given PO - quite long route to get there !
-
+//
 function get_po_invoices_credits($po_number) {
-	$sql = "SELECT DISTINCT trans.trans_no, trans.type,	ov_amount+ov_discount+ov_gst AS Total,
-				trans.tran_date
-			FROM ".TB_PREF."supp_trans trans,"
-				.TB_PREF."supp_invoice_items line,"
-				.TB_PREF."purch_order_details poline,"
-				.TB_PREF."purch_orders po
+	$sql = "SELECT DISTINCT trans.trans_no, trans.type,	ov_amount+ov_discount+ov_gst AS Total, trans.tran_date
+		FROM ".TB_PREF."supp_trans trans,"
+			.TB_PREF."supp_invoice_items line,"
+			.TB_PREF."purch_order_details poline,"
+			.TB_PREF."purch_orders po
 		WHERE line.supp_trans_no = trans.trans_no
 			AND line.supp_trans_type = trans.type
 			AND line.po_detail_item_id = poline.po_detail_item
@@ -371,7 +357,6 @@ function get_po_invoices_credits($po_number) {
 	return db_query($sql, 'The invoices/credits for the po '.$po_number.' could not be retreived');
 }
 
-//----------------------------------------------------------------------------------------
 //
 // Retrieve tax ovverides from tax register.
 //
@@ -390,14 +375,9 @@ function get_tax_overrides($trans_type, $trans_no) {
 	return $tax_overrides;
 }
 
-//----------------------------------------------------------------------------------------
-
 function read_supp_invoice($trans_no, $trans_type, &$supp_trans) {
 	$sql = "SELECT trans.*, supp_name, dimension_id, dimension2_id, curr_code
-		FROM ".TB_PREF."supp_trans trans,"
-			.TB_PREF."suppliers sup
-		WHERE trans_no = ".db_escape($trans_no)." AND type = ".db_escape($trans_type)."
-		AND sup.supplier_id=trans.supplier_id";
+		FROM ".TB_PREF."supp_trans trans,".TB_PREF."suppliers sup WHERE trans_no = ".db_escape($trans_no)." AND type = ".db_escape($trans_type)." AND sup.supplier_id=trans.supplier_id";
 
 	$result = db_query($sql, 'Cannot retreive a supplier transaction');
 
@@ -442,15 +422,10 @@ function read_supp_invoice($trans_no, $trans_type, &$supp_trans) {
 		return display_db_error('Invalid supptrans number : '.$trans_no.' and type : '.$trans_type, $sql, true);
 }
 
-//----------------------------------------------------------------------------------------
-
 function get_matching_invoice_item($stock_id, $po_item_id) {
 	$sql = "SELECT *, tran_date
-		FROM ".TB_PREF."supp_invoice_items,"
-			.TB_PREF."supp_trans
-		WHERE supp_trans_type = ".ST_SUPPINVOICE." AND stock_id = "
-		.db_escape($stock_id)." AND po_detail_item_id = ".db_escape($po_item_id)."
-		AND supp_trans_no = trans_no";
+		FROM ".TB_PREF."supp_invoice_items,".TB_PREF."supp_trans
+		WHERE supp_trans_type = ".ST_SUPPINVOICE." AND stock_id = ".db_escape($stock_id)." AND po_detail_item_id = ".db_escape($po_item_id)." AND supp_trans_no = trans_no";
 	$result = db_query($sql, 'Cannot retreive supplier transaction detail records');
 	return db_fetch($result);  
 }
@@ -480,22 +455,13 @@ function void_supp_invoice($type, $type_no) {
 				$old = update_supp_received_items_for_invoice($details_row['grn_item_id'],
 					$details_row['po_detail_item_id'], -$details_row['quantity'], $details_row['FullUnitPrice']); 
 				
-				//$diff = $details_row['FullUnitPrice'] - $old[2];
 				$old_date = sql2date($old[1]);
 				
 				$batch = get_grn_batch_from_item($details_row['grn_item_id']);	
 				$grn = get_grn_batch($batch);
-				if ($type == ST_SUPPCREDIT) { // credit note 2009-06-14 Joe Hunt Must restore the po and grn
+				if ($type == ST_SUPPCREDIT) { // credit note Must restore the po and grn
 					// We must get the corresponding invoice item to check for price chg.
 					$match = get_matching_invoice_item($details_row['stock_id'], $details_row['po_detail_item_id']);
-					//Chaitanya : Skipped costing block & handle in void_stock_move
-					// We must get the corresponding invoice item to check for price chg.
-					/*if ($match !== false)
-						$mat_cost = update_average_material_cost($grn['supplier_id'], $details_row['stock_id'],  
-							$match['unit_price'], -$details_row['quantity'], sql2date($match['tran_date']), $match['tran_date'] !== $trans['tran_date']);
-					else		
-						$mat_cost = update_average_material_cost($grn['supplier_id'], $details_row['stock_id'],  
-							$details_row['FullUnitPrice'], -$details_row['quantity'], $old_date, $old[1] !== $trans['tran_date']);*/
 
 					$sql = "UPDATE ".TB_PREF."purch_order_details SET quantity_ordered = quantity_ordered + ".-$details_row['quantity'].", ";
 					if ($match !== false)
@@ -503,14 +469,14 @@ function void_supp_invoice($type, $type_no) {
 					$sql .= "quantity_received = quantity_received + ".-$details_row['quantity']." WHERE po_detail_item = ".$details_row['po_detail_item_id'];
 					db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ');
 					$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=qty_recd+".-$details_row['quantity']." WHERE id=".$details_row['grn_item_id'];
-					db_query($sql);
+					db_query($sql, 'a grn item record could not be updated');
 				}
 				else {
 					$diff = get_diff_in_home_currency($grn['supplier_id'], $old_date, sql2date($trans['tran_date']), $old[2], $details_row['FullUnitPrice']);
 					// Only adjust the avg for the diff
 					$mat_cost = update_average_material_cost(null, $details_row['stock_id'], $diff, -$details_row['quantity'], $old_date, true);
 						
-					//Chaitanya : Reverse effect
+					//Reverse effect
 					//If QOH is 0 or negative then update_average_material_cost will be skipped
 					//Thus difference in PO and Supp Invoice should be handled separately
 					
@@ -518,7 +484,7 @@ function void_supp_invoice($type, $type_no) {
 					if ($diff*$details_row['quantity'] !=0 && $qoh <= 0) {
 						global $Refs;
 
-						//Chaitanya : Post a journal entry
+						//Post a journal entry
 						$id = get_next_trans_no(ST_JOURNAL);
 						$ref = $Refs->get_next(ST_JOURNAL, null, $date_);
 						add_journal(ST_JOURNAL, $id, $details_row['quantity'] * $diff, $old_date, get_company_currency(), $ref);
@@ -546,8 +512,6 @@ function void_supp_invoice($type, $type_no) {
 
 	commit_transaction();
 }
-
-//----------------------------------------------------------------------------------------
 
 function get_gl_account_info($acc) {
 	$sql = "SELECT account_code, account_name FROM ".TB_PREF."chart_master WHERE account_code=".db_escape($acc);
@@ -616,7 +580,7 @@ function find_src_invoices($cart) {
 			WHERE items.po_detail_item_id IN (" . implode(',', $po_ids). ")"." AND items.supp_trans_type=20";
 		$result = db_query($sql, 'cannot find source invoice details');
 		while ($rec = db_fetch($result)) {
-			$invoices[$rec['trans_no']] = $rec['supp_reference']; // array($rec['reference'], $rec['supp_reference']);
+			$invoices[$rec['trans_no']] = $rec['supp_reference'];
 		}
 	}
 	return $invoices;
