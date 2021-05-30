@@ -9,11 +9,12 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function display_error($msg, $center=true) {
+
+function display_error($msg) {
 	trigger_error($msg, E_USER_ERROR);
 }
 
-function display_notification($msg, $center=true) {
+function display_notification($msg) {
 	trigger_error($msg, E_USER_NOTICE);
 }
 
@@ -50,11 +51,11 @@ function display_note($msg, $br=0, $br2=0, $extra='') {
 
 function stock_item_heading($stock_id) {
 	if ($stock_id != '') {
-		$result = db_query("SELECT description, units FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($stock_id));
+		$sql = "SELECT description, units FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($stock_id);
+		$result = db_query($sql, 'could not get stock data');
 		$myrow = db_fetch_row($result);
 		
 		display_heading($stock_id.' - '.$myrow[0]);
-		$units = $myrow[1];
-		display_heading2(_('in units of : ') . $units);
+		display_heading2(_('in units of : ').$myrow[1]);
 	}
 }
