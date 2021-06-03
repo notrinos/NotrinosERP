@@ -18,12 +18,12 @@ function display_notification($msg) {
 	trigger_error($msg, E_USER_NOTICE);
 }
 
-function display_warning($msg, $center=true) {
+function display_warning($msg) {
 	trigger_error($msg, E_USER_WARNING);
 }
 
 function display_notification_centered($msg) {
-	display_notification($msg, true);
+	display_notification($msg);
 }
 
 function display_caption($msg) {
