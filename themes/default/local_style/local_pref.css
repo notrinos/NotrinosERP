@@ -1,0 +1,15 @@
+@media all and (max-width: 768px) {
+	table.tablestyle2, table.tablestyle2 > tbody, table.tablestyle2 > tbody > tr {
+		display: block;
+		width: 100%;
+		border: 0;
+	}
+	table.tablestyle2 > tbody > tr > td {
+		display: block;
+		width: 94%;
+		margin-left: 3%;
+	}
+	table.tablestyle_inner {
+		width: 100%;
+	}
+}

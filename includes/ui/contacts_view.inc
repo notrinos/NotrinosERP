@@ -77,7 +77,7 @@ class contacts extends simple_crud {
 	function editor_view() {
 		br();
 
-		start_outer_table(TABLESTYLE);
+		start_outer_table(TABLESTYLE2);
 
 		table_section(1);
 		table_section_title(_('Contact data'));
