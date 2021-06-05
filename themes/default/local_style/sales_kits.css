@@ -1,8 +1,8 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input:not(#_component_edit) {
-	width: 300px;
+table.tablestyle2 input, table.tablestyle2 .list_container {
+	width: 260px;
 }
 .select2 {
 	margin-top: -1px !important;
@@ -10,9 +10,6 @@ table.tablestyle2 input:not(#_component_edit) {
 #_component_edit {
 	width: 90px;
 }
-#component {
-	width: 206px;
-}
-#category {
-	width: 300px;
+table.tablestyle2 tr:nth-child(2) .list_container {
+	width: 166px;
 }
