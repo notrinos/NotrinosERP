@@ -1,7 +1,7 @@
-table.tablestyle2 td:not(.label):not(.tableheader2) {
+table.tablestyle td:not(.label):not(.tableheader2) {
 	border: 0;
 }
-table.tablestyle2 input, table.tablestyle2 div.list_container, table.tablestyle2 textarea {
+table.tablestyle input, table.tablestyle div.list_container, table.tablestyle textarea {
 	width: 100%;
 }
 .select2 {

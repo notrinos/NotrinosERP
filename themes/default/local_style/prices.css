@@ -1,0 +1,15 @@
+div#price_details table.tablestyle td:not(.label) {
+	border: 0;
+}
+div#price_details input,
+div#price_details .list_container {
+	width: 135px;
+}
+.select2 {
+	margin-top: -1px !important;
+}
+@media all and (max-width: 768px) {
+	div#price_table .tablestyle {
+		width: 70%;
+	}
+}

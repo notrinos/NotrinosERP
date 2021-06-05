@@ -65,7 +65,7 @@ div_end();
 set_global_stock_item($_POST['stock_id']);
 
 div_start('reorders');
-start_table(TABLESTYLE, "width='30%'");
+start_table(TABLESTYLE);
 
 $th = array(_('Location'), _('Quantity On Hand'), _('Re-Order Level'));
 table_header($th);

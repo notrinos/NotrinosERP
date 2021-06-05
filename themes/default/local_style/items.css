@@ -3,7 +3,7 @@ table.tablestyle div.list_container, table.tablestyle input:not([type=checkbox])
 	width: calc(100% - 3em);
 }
 table.tablestyle_inner input:not([type=checkbox]), table.tablestyle_inner textarea,
-table.tablestyle_inner div.list_container {
+table.tablestyle_inner div.list_container, div#reorders .amount {
 	width: 100%;
 }
 div#price_details div.list_container, div#price_details input {
@@ -12,6 +12,4 @@ div#price_details div.list_container, div#price_details input {
 div#cost_table div.list_container, div#cost_table input {
 	width: 100%;
 }
-div#reorders table.tablestyle, div#price_table table.tablestyle {
-	width: auto;
-}
+

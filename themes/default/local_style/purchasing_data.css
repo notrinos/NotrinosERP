@@ -1,8 +1,8 @@
-table.tablestyle2 td:not(.label) {
+form > center > table.tablestyle td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 input:not([type=checkbox]),
-table.tablestyle2 div.list_container {
+form > center > table.tablestyle input,
+form > center > table.tablestyle div.list_container {
 	width: calc(100% - 3.5em);
 }
 .select2 {
