@@ -1,0 +1,5 @@
+@media all and (max-width: 768px) {
+	div#_transactions_span table.tablestyle {
+		width: 70%;
+	}
+}

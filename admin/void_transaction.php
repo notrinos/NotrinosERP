@@ -114,21 +114,21 @@ function exist_transaction($type, $type_no) {
 function view_link($trans) {
 	if (!isset($trans['type']))
 		$trans['type'] = $_POST['filterType'];
-	return get_trans_view_str($trans["type"], $trans["trans_no"]);
+	return get_trans_view_str($trans['type'], $trans['trans_no']);
 }
 
 function select_link($row) {
 	if (!isset($row['type']))
 		$row['type'] = $_POST['filterType'];
 	if (!is_date_in_fiscalyear($row['trans_date'], true))
-		return _("N/A");
-	return button('Edit'.$row["trans_no"], _("Select"), _("Select"), ICON_EDIT);
+		return _('N/A');
+	return button('Edit'.$row['trans_no'], _('Select'), _('Select'), ICON_EDIT);
 }
 
 function gl_view($row) {
 	if (!isset($row['type']))
 		$row['type'] = $_POST['filterType'];
-	return get_gl_view_str($row["type"], $row["trans_no"]);
+	return get_gl_view_str($row['type'], $row['trans_no']);
 }
 
 function date_view($row) {
@@ -139,7 +139,7 @@ function ref_view($row) {
 	return $row['ref'];
 }
 
-function is_selected($row) { // Function added by faisal
+function is_selected($row) {
 	global $selected_id;
 	return $row['trans_no'] == $selected_id ? true : false;
 }
@@ -147,7 +147,7 @@ function is_selected($row) { // Function added by faisal
 function voiding_controls() {
 	global $selected_id;
 
-	$not_implemented =  array(ST_PURCHORDER, ST_SALESORDER, ST_SALESQUOTE, ST_COSTUPDATE, ST_CUSTOMER, ST_SUPPLIER);
+	$not_implemented = array(ST_PURCHORDER, ST_SALESORDER, ST_SALESQUOTE, ST_COSTUPDATE, ST_CUSTOMER, ST_SUPPLIER);
 
 	start_form();
 
@@ -179,13 +179,13 @@ function voiding_controls() {
 	$cols = array(
 		_('#') => array('insert'=>true, 'fun'=>'view_link'),
 		_('Reference') => array('fun'=>'ref_view'),
-		_('Date') => array('type'=>'date', 'fun'=>'date_view'),
-		_('GL') => array('insert'=>true, 'fun'=>'gl_view'),
-		_('Select') => array('insert'=>true, 'fun'=>'select_link')
+		_('Date') => array('type'=>'date', 'fun'=>'date_view', 'ord'=>''),
+		_('GL') => array('insert'=>true, 'fun'=>'gl_view', 'align'=>'center'),
+		_('Select') => array('insert'=>true, 'fun'=>'select_link', 'align'=>'center')
 	);
 
 	$table =& new_db_pager('transactions', $sql, $cols);
-	$table->set_marker('is_selected', _('Marked transactions will be voided.')); //Added by Faisal
+	$table->set_marker('is_selected', _('Marked transaction will be voided.'));
 
 	$table->width = '40%';
 	display_db_pager($table);
@@ -212,21 +212,21 @@ function voiding_controls() {
 		submit_center('ProcessVoiding', _('Void Transaction'), true, '', 'default');
 	else {
 		if (!exist_transaction($_POST['filterType'],$_POST['trans_no'])) {
-			display_error(_("The entered transaction does not exist or cannot be voided."));
+			display_error(_('The entered transaction does not exist or cannot be voided.'));
 			unset($_POST['trans_no']);
 			unset($_POST['memo_']);
 			unset($_POST['date_']);
-			submit_center('ProcessVoiding', _("Void Transaction"), true, '', 'default');
+			submit_center('ProcessVoiding', _('Void Transaction'), true, '', 'default');
 		}	
 		else {
-			if ($_POST['filterType'] == ST_SUPPRECEIVE) { 
+			if ($_POST['filterType'] == ST_SUPPRECEIVE) {
 				$result = get_grn_items($_POST['trans_no']);
 				if (db_num_rows($result) > 0) {
 					while ($myrow = db_fetch($result)) {
 						if (is_inventory_item($myrow['item_code'])) {
 							if (check_negative_stock($myrow['item_code'], -$myrow['qty_recd'], null, $_POST['date_'])) {
 								$stock = get_item($myrow['item_code']);
-								display_error(_('The void cannot be processed because there is an insufficient quantity for item:') .' '.$stock['stock_id'].' - '.$stock['description'].' - '._('Quantity On Hand').' = '.number_format2(get_qoh_on_date($stock['stock_id'], null, $_POST['date_']), get_qty_dec($stock['stock_id'])));
+								display_error(_('The void cannot be processed because there is an insufficient quantity for item:').' '.$stock['stock_id'].' - '.$stock['description'].' - '._('Quantity On Hand').' = '.number_format2(get_qoh_on_date($stock['stock_id'], null, $_POST['date_']), get_qty_dec($stock['stock_id'])));
 								return false;
 							}
 						}
@@ -273,7 +273,7 @@ function check_valid_entries() {
 //----------------------------------------------------------------------------------------
 
 function handle_void_transaction() {
-	if (check_valid_entries()==true) {
+	if (check_valid_entries() == true) {
 		$void_entry = get_voided_entry($_POST['filterType'], $_POST['trans_no']);
 		if ($void_entry != null) {
 			display_error(_('The selected transaction has already been voided.'), true);
@@ -287,7 +287,7 @@ function handle_void_transaction() {
 		$msg = void_transaction($_POST['filterType'], $_POST['trans_no'], $_POST['date_'], $_POST['memo_']);
 
 		if (!$msg) {
-			display_notification_centered(_('Selected transaction has been voided.'));
+			display_notification(_('Selected transaction has been voided.'));
 			unset($_POST['trans_no']);
 			unset($_POST['memo_']);
 		}
