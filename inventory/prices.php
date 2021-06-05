@@ -171,7 +171,7 @@ if ($Mode == 'Edit') {
 hidden('selected_id', $selected_id);
 
 div_start('price_details');
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE);
 
 currencies_list_row(_('Currency:'), 'curr_abrev', null, true);
 

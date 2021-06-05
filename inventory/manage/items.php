@@ -11,8 +11,8 @@
 ***********************************************************************/
 $page_security = 'SA_ITEM';
 $path_to_root = '../..';
-include($path_to_root . '/includes/session.inc');
-include($path_to_root . '/reporting/includes/tcpdf.php');
+include($path_to_root.'/includes/session.inc');
+include($path_to_root.'/reporting/includes/tcpdf.php');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -21,17 +21,16 @@ if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
 if (isset($_GET['FixedAsset'])) {
-  $page_security = 'SA_ASSET';
-  $_SESSION['page_title'] = _($help_context = 'Fixed Assets');
-  $_POST['mb_flag'] = 'F';
-  $_POST['fixed_asset']  = 1;
+	$page_security = 'SA_ASSET';
+	$_SESSION['page_title'] = _($help_context = 'Fixed Assets');
+	$_POST['mb_flag'] = 'F';
+	$_POST['fixed_asset']  = 1;
 }
 else {
-  $_SESSION['page_title'] = _($help_context = 'Items');
+	$_SESSION['page_title'] = _($help_context = 'Items');
 	if (!get_post('fixed_asset'))
 		$_POST['fixed_asset']  = 0;
 }
-
 
 page($_SESSION['page_title'], @$_REQUEST['popup'], false, '', $js);
 
@@ -112,7 +111,7 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 		$upload_file ='No';
 	} 
 	elseif ( $_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) { //File Size Check
-		display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is') . ' ' . $SysPrefs->max_image_size);
+		display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
 		$upload_file ='No';
 	} 
 	elseif ( $_FILES['pic']['type'] == 'text/plain' ) {  //File type Check
@@ -211,7 +210,7 @@ if (isset($_POST['addupdate'])) {
 				unlink($filename);
 		}
 		
-		if (!$new_item) { /*so its an existing one */
+		if (!$new_item) {
 			update_item($_POST['NewStockID'], $_POST['description'],
 				$_POST['long_description'], $_POST['category_id'], 
 				$_POST['tax_type_id'], get_post('units'),
@@ -229,7 +228,7 @@ if (isset($_POST['addupdate'])) {
 			$Ajax->activate('stock_id'); // in case of status change
 			display_notification(_('Item has been updated.'));
 		} 
-		else { //it is a NEW part
+		else {
 
 			add_item($_POST['NewStockID'], $_POST['description'],
 				$_POST['long_description'], $_POST['category_id'], $_POST['tax_type_id'],
@@ -266,7 +265,8 @@ function check_usage($stock_id, $dispmsg=true) {
 	$msg = item_in_foreign_codes($stock_id);
 
 	if ($msg != '')	{
-		if($dispmsg) display_error($msg);
+		if($dispmsg)
+			display_error($msg);
 		return false;
 	}
 	return true;
@@ -301,7 +301,6 @@ function item_settings(&$stock_id, $new_item) {
 
 	table_section_title(_('General Settings'));
 
-	//------------------------------------------------------------------------------------
 	if ($new_item) {
 		$tmpCodeID=null;
 		$post_label = null;
@@ -385,7 +384,6 @@ function item_settings(&$stock_id, $new_item) {
 		}
 		elseif ($_POST['depreciation_method'] == 'N')
 			small_amount_row(_('Depreciation Years').':', 'depreciation_rate', null, null, _('years'), 0);
-		
 		elseif ($_POST['depreciation_method'] == 'D')
 			small_amount_row(_('Base Rate').':', 'depreciation_rate', null, null, '%', user_percent_dec());
 		else
@@ -439,7 +437,6 @@ function item_settings(&$stock_id, $new_item) {
 		hidden('adjustment_account', $_POST['adjustment_account']);
 	}
 
-
 	if (is_manufactured(get_post('mb_flag')))
 		gl_all_accounts_list_row(_('WIP Account:'), 'wip_account', $_POST['wip_account']);
 	else
@@ -447,20 +444,18 @@ function item_settings(&$stock_id, $new_item) {
 
 	table_section_title(_('Other'));
 
-	// Add image upload for New Item  - by Joe
 	file_row(_('Image File (.jpg)') . ':', 'pic', 'pic');
-	// Add Image upload for New Item  - by Joe
 	$stock_img_link = '';
 	$check_remove_image = false;
 
 	if (@$_POST['NewStockID'] && file_exists(company_path().'/images/'.item_img_name($_POST['NewStockID']).'.jpg')) {
-	 // 31/08/08 - rand() call is necessary here to avoid caching problems.
+	// rand() call is necessary here to avoid caching problems.
 		$stock_img_link .= "<img id='item_img' alt = '[".$_POST['NewStockID'].'.jpg'.
 			"]' src='".company_path().'/images/'.item_img_name($_POST['NewStockID']).
 			".jpg?nocache=".rand()."'"." height='".$SysPrefs->pic_height."' border='0'>";
 		$check_remove_image = true;
 	} 
-	else 
+	else
 		$stock_img_link .= _('No image');
 
 	label_row('&nbsp;', $stock_img_link);
@@ -482,7 +477,7 @@ function item_settings(&$stock_id, $new_item) {
 
 	div_start('controls');
 	if (@$_REQUEST['popup']) hidden('popup', 1);
-	if (!isset($_POST['NewStockID']) || $new_item) 
+	if (!isset($_POST['NewStockID']) || $new_item)
 		submit_center('addupdate', _('Insert New Item'), true, '', 'default');
 	else {
 		submit_center_first('addupdate', _('Update Item'), '', $page_nested ? true : 'default');
@@ -531,10 +526,8 @@ $tabs = (get_post('fixed_asset'))
 		'sales_pricing' => array(_('S&ales Pricing'), (user_check_access('SA_SALESPRICE') ? $stock_id : null)),
 		'purchase_pricing' => array(_('&Purchasing Pricing'), (user_check_access('SA_PURCHASEPRICING') ? $stock_id : null)),
 		'standard_cost' => array(_('Standard &Costs'), (user_check_access('SA_STANDARDCOST') ? $stock_id : null)),
-		'reorder_level' => array(_('&Reorder Levels'), (is_inventory_item($stock_id) && 
-			user_check_access('SA_REORDER') ? $stock_id : null)),
-		'movement' => array(_('&Transactions'), (user_check_access('SA_ITEMSTRANSVIEW') && is_inventory_item($stock_id) ? 
-			$stock_id : null)),
+		'reorder_level' => array(_('&Reorder Levels'), (is_inventory_item($stock_id) && user_check_access('SA_REORDER') ? $stock_id : null)),
+		'movement' => array(_('&Transactions'), (user_check_access('SA_ITEMSTRANSVIEW') && is_inventory_item($stock_id) ? $stock_id : null)),
 		'status' => array(_('&Status'), (user_check_access('SA_ITEMSSTATVIEW') ? $stock_id : null)),
 	);
 
@@ -543,7 +536,7 @@ tabbed_content_start('tabs', $tabs);
 	switch (get_post('_tabs_sel')) {
 		default:
 		case 'settings':
-			item_settings($stock_id, $new_item); 
+			item_settings($stock_id, $new_item);
 			break;
 		case 'sales_pricing':
 			$_GET['stock_id'] = $stock_id;
@@ -609,24 +602,24 @@ function generateBarcode() {
 		$random_7  = rand(0,9);
 		//$random_8  = rand(0,9);
 
-			// http://stackoverflow.com/questions/1136642/ean-8-how-to-calculate-checksum-digit
-		$sum1 = $random_2 + $random_4 + $random_6; 
+		// http://stackoverflow.com/questions/1136642/ean-8-how-to-calculate-checksum-digit
+		$sum1 = $random_2 + $random_4 + $random_6;
 		$sum2 = 3 * ($random_1  + $random_3  + $random_5  + $random_7 );
 		$checksum_value = $sum1 + $sum2;
 
 		$checksum_digit = 10 - ($checksum_value % 10);
-		if ($checksum_digit == 10) 
+		if ($checksum_digit == 10)
 			$checksum_digit = 0;
 
-		$random_8  = $checksum_digit;
+		$random_8 = $checksum_digit;
 
-		$tmpBarcodeID = $random_1 . $random_2 . $random_3 . $random_4 . $random_5 . $random_6 . $random_7 . $random_8;
+		$tmpBarcodeID = $random_1.$random_2.$random_3.$random_4.$random_5.$random_6.$random_7.$random_8;
 
 		// LETS CHECK TO SEE IF THIS NUMBER HAS EVER BEEN USED
-		$query = "SELECT stock_id FROM ".TB_PREF."stock_master WHERE stock_id='" . $tmpBarcodeID . "'";
-		$arr_stock = db_fetch(db_query($query));
+		$query = "SELECT stock_id FROM ".TB_PREF."stock_master WHERE stock_id = '".$tmpBarcodeID."'";
+		$arr_stock = db_fetch(db_query($query, 'could not get stock_id'));
 		
-		if (  !$arr_stock['stock_id'] )
+		if (!$arr_stock['stock_id'])
 			return $tmpBarcodeID;
 		
 		$tmpBarcodeID = '';	 

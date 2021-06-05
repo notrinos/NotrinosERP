@@ -1,7 +1,7 @@
 table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-table.tablestyle2 select, table.tablestyle2 input {
+table.tablestyle2 .list_container, table.tablestyle2 input {
 	width: 300px;
 }
 .select2 {
@@ -10,6 +10,6 @@ table.tablestyle2 select, table.tablestyle2 input {
 #_component_edit {
 	width: 90px;
 }
-#component {
+table.tablestyle2 tr:first-child .list_container {
 	width: 206px;
 }

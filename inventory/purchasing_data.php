@@ -175,7 +175,7 @@ if ($Mode =='Edit') {
 br();
 hidden('selected_id', $selected_id);
 
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE);
 
 if ($Mode == 'Edit') {
 	hidden('supplier_id');

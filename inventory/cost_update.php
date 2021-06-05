@@ -112,7 +112,7 @@ $myrow = get_item($_POST['stock_id']);
 
 div_start('cost_table');
 
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE);
 $dec1 = 0;
 $dec2 = 0;
 $dec3 = 0;
