@@ -1,0 +1,8 @@
+div#details table.tablestyle2 input, div#details table.tablestyle2 .list_container {
+	width: 100%;
+}
+@media all and (max-width: 768px) {
+	div#details table.tablestyle {
+		width: auto;
+	}
+}
