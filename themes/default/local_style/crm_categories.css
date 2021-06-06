@@ -1,7 +1,14 @@
-table.tablestyle2 td:not(.label) {
+form table.tablestyle2 td:not(.label) {
 	border: 0;
 }
-
 table.tablestyle2 input {
 	width: 100%;
+}
+@media all and (max-width: 768px) {
+	textarea {
+		width: 220px;
+	}
+	form table.tablestyle {
+		width: 98%;
+	}
 }
