@@ -35,7 +35,7 @@ function get_post($name, $dflt='') {
 $form_nested = -1;
 
 function start_form($multi=false, $dummy=false, $action='', $name='') {
-	// $dummy - leaved for compatibility with 2.0 API
+	// $dummy - not used, need to be removed
 	global $form_nested;
 
 	if (++$form_nested) return;
@@ -51,9 +51,7 @@ function start_form($multi=false, $dummy=false, $action='', $name='') {
 		echo "<form method='post' action='$action' $name>\n";
 }
 
-/*
-	Flush hidden fields buffer.
-*/
+// Flush hidden fields buffer.
 function output_hidden() {
 	global $hidden_fields;
 
@@ -115,7 +113,19 @@ function end_table($breaks=0) {
 function start_outer_table($class=false, $extra='', $padding='2', $spacing='0', $br=false) {
 	if ($br)
 		br();
-	start_table($class, $extra, $padding, $spacing);
+	$classes = " class='table_section";
+	if ($class == TABLESTYLE_NOBORDER)
+		$classes .= ' tablestyle_noborder';
+	elseif ($class == TABLESTYLE2)
+		$classes .= ' tablestyle2';
+	elseif ($class == TABLESTYLE)
+		$classes .= ' tablestyle';
+	$classes .= "'";
+
+	echo '<center><table'.$classes;
+	if ($extra != '')
+		echo ' '.$extra;
+	echo " cellpadding='".$padding."' cellspacing='".$spacing."'>\n";
 	echo "<tr valign=top><td>\n"; // outer table
 }
 
@@ -137,9 +147,8 @@ function end_outer_table($breaks=0, $close_table=true) {
 	echo "</td></tr>\n";
 	end_table($breaks);
 }
-//
+
 //  outer table spacer
-//
 function vertical_space($params='') {
 	echo "</td></tr><tr><td valign=center ".$params.">";
 }
@@ -148,7 +157,7 @@ function meta_forward($forward_to, $params='', $timeout=0, $return=false) {
 	global $Ajax;
 	echo "<meta http-equiv='Refresh' content='".$timeout."; url=$forward_to?$params'>\n";
 	echo "<center><br>" . _('You should automatically be forwarded.');
-	echo " " . _('If this does not happen') . ' ' . "<a href='".$forward_to.'?'.$params."'>" . _('click here') . "</a> " . _('to continue') . ".<br><br></center>\n";
+	echo " " . _('If this does not happen').' '."<a href='".$forward_to.'?'.$params."'>"._('click here')."</a> "._('to continue').".<br><br></center>\n";
 	if ($params != '')
 		$params = '?'.$params;
 	$Ajax->redirect($forward_to.$params);
@@ -188,7 +197,7 @@ function hyperlink_back($center=true, $no_menu=true, $type_no=0, $trans_no=0, $f
 		$attach = get_attachment_string($type_no, $trans_no);
 		echo $attach;
 	}
-	$width = ($id != 0 ? '30%' : '20%');	
+	$width = $id != 0 ? '30%' : '20%';	
 	start_table(false, "width='".$width."'");
 	start_row();
 	if ($no_menu)
@@ -393,7 +402,7 @@ function tabbed_content_start($name, $tabs, $dft='') {
 
 	$sel = find_submit($name.'_', false);
 	if($sel==null)
-		$sel = get_post($selname, (string)($dft==='' ? key($tabs) : $dft));
+		$sel = get_post($selname, (string)($dft === '' ? key($tabs) : $dft));
 
 	if ($sel!==@$_POST[$selname])
 		$Ajax->activate($name);
@@ -402,8 +411,8 @@ function tabbed_content_start($name, $tabs, $dft='') {
 
 	div_start($name);
 	$str = "<ul class='ajaxtabs' rel='$div'>\n";
+
 	foreach($tabs as $tab_no => $tab) {
-		
 		$acc = access_string(is_array($tab) ? $tab[0] : $tab);
 		$disabled = (is_array($tab) && !$tab[1])  ? 'disabled ' : '';
 		$str .= ( "<li>"
@@ -429,26 +438,23 @@ function tabbed_content_end() {
 
 function tab_changed($name) {
 	$to = find_submit("{$name}_", false);
-	if (!$to) return null;
+	if (!$to)
+		return null;
 
-	return array('from' => $from = get_post("_{$name}_sel"),
-		'to' => $to);
+	return array('from' => $from = get_post("_{$name}_sel"), 'to' => $to);
 }
-/*
-	Check whether tab has been just switched on
-*/
+
+// Check whether tab has been just switched on
 function tab_opened($name, $tab) {
 	return (get_post('_'.$name.'_sel') != $tab) && (find_submit($name.'_', false) == $tab);
 }
-/*
-	Check whether tab has been just switched off
-*/
+
+// Check whether tab has been just switched off
 function tab_closed($name, $tab) {
 	return (get_post('_'.$name.'_sel') == $tab) && (find_submit($name.'_', false) != $tab);
 }
-/*
-	Check whether tab is visible on current page
-*/
+
+// Check whether tab is visible on current page
 function tab_visible($name, $tab) {
 	$new = find_submit($name.'_', false);
 	return (get_post('_'.$name.'_sel') == $tab && !$new) || $new==$tab;
@@ -496,12 +502,11 @@ $search_types = array(
 function set_editor($type, $input, $caller=true) {
 	global $path_to_root, $Editors, $popup_editors, $Pagehelp;
 
-	$key = $caller===true ? $popup_editors[$type][1] : $caller;
+	$key = $caller === true ? $popup_editors[$type][1] : $caller;
 
-	$Editors[$key] = array( $path_to_root . $popup_editors[$type][0], $input, 
-		$popup_editors[$type][3], $popup_editors[$type][4]);
+	$Editors[$key] = array( $path_to_root.$popup_editors[$type][0], $input, $popup_editors[$type][3], $popup_editors[$type][4]);
 	
-	$help = 'F' . ($key - 111) . ' - ';
+	$help = 'F'.($key - 111).' - ';
 	$help .= $popup_editors[$type][2];
 	$Pagehelp[] = $help;
 }
@@ -650,9 +655,9 @@ function page_processing($msg=false) {
 function page_modified($status=true) {
 	global $Ajax;
 
-	$js = "_validate._modified=" . ($status ? 1:0).';';
-	if (in_ajax()) {
+	$js = "_validate._modified=".($status ? 1 : 0).';';
+	if (in_ajax())
 		$Ajax->addScript(true, $js);
-	} else
+	else
 		add_js_source($js);
 }
