@@ -5,3 +5,49 @@ table.tablestyle_inner input, table.tablestyle_inner .list_container {
 table.tablestyle_inner td.label {
 	white-space: nowrap;
 }
+@media all and (max-width: 768px) {
+	table.tablestyle_inner input, table.tablestyle_inner .list_container {
+		width: 100%;
+	}
+	form > center > table.tablestyle2 {
+		width: 90%;
+	}
+	form > center > table, form > center > table > tbody,
+	form > center > table > tbody > tr, form > center > table > tbody > tr > td,
+	div#items_table, div#delivery,
+	div#delivery table.table_section > tbody > tr > td,
+	form > center > table.tablestyle2 > tbody > tr > td,
+	form > center > table.tablestyle2 table.tablestyle_inner,
+	form > center > table.tablestyle2 table.tablestyle_inner tbody,
+	form > center > table.tablestyle2 table.tablestyle_inner tr {
+		display: block;
+		width: 100%;
+		border: 0 !important;
+	}
+	div#items_table, div#delivery {
+		overflow: auto;
+	}
+	div#delivery > center > table {
+		width: auto;
+	}
+	form > center > table.tablestyle2 table.tablestyle_inner td {
+		display: inline-block;
+		width: 50%;
+		float: left;
+		padding: 0 .5em;
+	}
+	div#delivery table.tablestyle_inner .list_container,
+	div#delivery table.tablestyle_inner input:not(.date),
+	div#delivery table.tablestyle_inner textarea {
+		width: 200px;
+	}
+	div#delivery table.tablestyle_inner td.label {
+		width: 140px;
+	}
+	form > center > table.tablestyle2 table.tablestyle_inner td.label {
+		text-align: right;
+	}
+	div#items_table input, div#items_table .list_container {
+		width: 70px;
+	}
+}
