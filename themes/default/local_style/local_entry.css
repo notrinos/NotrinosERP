@@ -1,0 +1,19 @@
+table.tablestyle_inner input, table.tablestyle_inner .list_container {
+	width: 135px;
+}
+table.tablestyle_inner td.label {
+	white-space: nowrap;
+}
+@media all and (max-width: 768px) {
+
+	table.tablestyle_inner input, textarea,
+	table.tablestyle_inner .list_container {
+		width: 100%;
+	}
+	div#items_table input, div#items_table .list_container {
+		width: 70px;
+	}
+	div#items_table input.date {
+		width: 90px;
+	}
+}

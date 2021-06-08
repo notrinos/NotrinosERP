@@ -1,14 +1,5 @@
-table.tablestyle_inner input, table.tablestyle_inner .list_container {
-	width: 135px;
-}
-
-table.tablestyle_inner td.label {
-	white-space: nowrap;
-}
+@import url(local_entry.css);
 @media all and (max-width: 768px) {
-	table.tablestyle_inner input, table.tablestyle_inner .list_container {
-		width: 100%;
-	}
 	form > center > table.tablestyle2 {
 		width: 90%;
 	}
@@ -46,8 +37,5 @@ table.tablestyle_inner td.label {
 	}
 	form > center > table.tablestyle2 table.tablestyle_inner td.label {
 		text-align: right;
-	}
-	div#items_table input, div#items_table .list_container {
-		width: 70px;
 	}
 }
