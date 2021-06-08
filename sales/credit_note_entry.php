@@ -9,21 +9,21 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-//---------------------------------------------------------------------------
+
 //
 //	Entry/Modify free hand Credit Note
 //
 $page_security = 'SA_SALESCREDIT';
 $path_to_root = '..';
-include_once($path_to_root . '/sales/includes/cart_class.inc');
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/sales/includes/sales_ui.inc');
-include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
-include_once($path_to_root . '/sales/includes/ui/sales_credit_ui.inc');
-include_once($path_to_root . '/sales/includes/ui/sales_order_ui.inc');
-include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root.'/sales/includes/cart_class.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/sales/includes/sales_ui.inc');
+include_once($path_to_root.'/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root.'/sales/includes/ui/sales_credit_ui.inc');
+include_once($path_to_root.'/sales/includes/ui/sales_order_ui.inc');
+include_once($path_to_root.'/reporting/includes/reporting.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -41,7 +41,7 @@ elseif (isset($_GET['ModifyCredit'])) {
 	$help_context = 'Modifying Customer Credit Note';
 }
 
-page($_SESSION['page_title'],false, false, '', $js);
+page($_SESSION['page_title'], false, false, '', $js);
 
 //-----------------------------------------------------------------------------
 
@@ -61,12 +61,12 @@ if (isset($_GET['AddedID'])) {
 	$credit_no = $_GET['AddedID'];
 	$trans_type = ST_CUSTCREDIT;
 
-	display_notification_centered(sprintf(_('Credit Note # %d has been processed'),$credit_no));
+	display_notification_centered(sprintf(_('Credit Note # %d has been processed'), $credit_no));
 
 	display_note(get_customer_trans_view_str($trans_type, $credit_no, _('&View this credit note')), 0, 1);
 
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Invoice'), true, ST_CUSTCREDIT),0, 1);
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Invoice'), true, ST_CUSTCREDIT, false, 'printlink', '', 1),0, 1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Invoice'), true, ST_CUSTCREDIT), 0, 1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Invoice'), true, ST_CUSTCREDIT, false, 'printlink', '', 1), 0, 1);
 
 	display_note(get_gl_view_str($trans_type, $credit_no, _('View the GL &Journal Entries for this Credit Note')));
 
@@ -135,7 +135,7 @@ function can_process() {
 
 	$input_error = 0;
 
-	if ($_SESSION['Items']->count_items() == 0 && (!check_num('ChargeFreightCost',0)))
+	if ($_SESSION['Items']->count_items() == 0 && (!check_num('ChargeFreightCost', 0)))
 		return false;
 	if($_SESSION['Items']->trans_no == 0) {
 		if (!$Refs->is_valid($_POST['ref'], ST_CUSTCREDIT)) {
@@ -161,8 +161,7 @@ function can_process() {
 
 if (isset($_POST['ProcessCredit']) && can_process()) {
 	copy_to_cn();
-	if ($_POST['CreditType'] == 'WriteOff' && (!isset($_POST['WriteOffGLCode']) ||
-		$_POST['WriteOffGLCode'] == '')) {
+	if ($_POST['CreditType'] == 'WriteOff' && (!isset($_POST['WriteOffGLCode']) || $_POST['WriteOffGLCode'] == '')) {
 		display_note(_('For credit notes created to write off the stock, a general ledger account is required to be selected.'), 1, 0);
 		display_note(_('Please select an account to write the cost of the stock off to, then click on Process again.'), 1, 0);
 		exit;
@@ -181,17 +180,17 @@ if (isset($_POST['ProcessCredit']) && can_process()) {
 		processing_end();
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$credit_no);
 	}
-} /*end of process credit note */
+}
 
-  //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 function check_item_data() {
-	if (!check_num('qty',0)) {
+	if (!check_num('qty', 0)) {
 		display_error(_('The quantity must be greater than zero.'));
 		set_focus('qty');
 		return false;
 	}
-	if (!check_num('price',0)) {
+	if (!check_num('price', 0)) {
 		display_error(_('The entered price is negative or invalid.'));
 		set_focus('price');
 		return false;
@@ -234,6 +233,7 @@ function handle_new_item() {
 //-----------------------------------------------------------------------------
 
 $id = find_submit('Delete');
+
 if ($id!=-1)
 	handle_delete_item($id);
 
@@ -264,15 +264,13 @@ if ($customer_error == '') {
 	display_credit_items(_('Credit Note Items'), $_SESSION['Items']);
 	credit_options_controls($_SESSION['Items']);
 	echo '</td></tr>';
-	end_table();
+	end_table(1);
 }
 else
 	display_error($customer_error);
 
-echo '<br><center><table><tr>';
-submit_cells('Update', _('Update'));
-submit_cells('ProcessCredit', _('Process Credit Note'), '', false, 'default');
-echo '</tr></table></center>';
+submit_center_first('Update', _('Update'));
+submit_center_last('ProcessCredit', _('Process Credit Note'), false, 'default');
 
 end_form();
 end_page();
