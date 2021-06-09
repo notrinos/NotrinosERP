@@ -3,10 +3,15 @@
 	div#items_table {
 		overflow: auto;
 	}
-	table.tablestyle2 {
+	form > center > table.tablestyle {
 		display: inline-block;
 		width: 90%;
 	}
+	form > center > table.tablestyle:not(.table_section),
+	form > center > table.tablestyle:not(.table_section) > tbody,
+	form > center > table.tablestyle:not(.table_section) > tbody > tr,
+	form > center > table.tablestyle:not(.table_section) > tbody > tr > td,
+	div#items_table, div#options,
 	table.table_section > tbody,
 	table.table_section > tbody > tr,
 	div#items_table,
@@ -24,7 +29,10 @@
 		float: left;
 		padding: 0 .5em;
 	}
-	table.tablestyle2:not(.table_section) {
+	div#items_table table.tablestyle {
 		border: 0;
+	}
+	div#options > center > table {
+		width: auto;
 	}
 }
