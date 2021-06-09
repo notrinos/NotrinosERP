@@ -1,16 +1,15 @@
 @import url(local_entry.css);
 @media all and (max-width: 768px) {
-	div#alloc_tbl {
+	div#alloc_tbl center {
 		overflow: auto;
-
 	}
 	table.tablestyle2 {
 		display: inline-block;
 		width: 90%;
 	}
+	div#alloc_tbl,
 	table.table_section > tbody,
 	table.table_section > tbody > tr,
-	div#alloc_tbl,
 	table.table_section > tbody > tr > td,
 	table.table_section table.tablestyle_inner,
 	table.table_section table.tablestyle_inner tbody,
@@ -25,11 +24,7 @@
 		float: left;
 		padding: 0 .5em;
 	}
-	table.tablestyle2:not(.table_section) {
-		border: 0;
-	}
 	form > center > table.tablestyle:not(.table_section) {
 		width: auto;
-		margin-top: 1em;
 	}
 }
