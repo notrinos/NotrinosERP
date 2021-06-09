@@ -1,0 +1,31 @@
+@import url(local_entry.css);
+@media all and (max-width: 768px) {
+	table.tablestyle {
+		display: inline-block;
+		width: 80%;
+	}
+	form > center > table.tablestyle:not(.table_section),
+	form > center > table.tablestyle:not(.table_section) > tbody,
+	form > center > table.tablestyle:not(.table_section) > tbody > tr,
+	form > center > table.tablestyle:not(.table_section) > tbody > tr > td,
+	table.table_section > tbody,
+	table.table_section > tbody > tr,
+	table.table_section > tbody > tr > td,
+	table.table_section table.tablestyle_inner,
+	table.table_section table.tablestyle_inner tbody,
+	table.table_section table.tablestyle_inner tr {
+		display: block;
+		width: 100%;
+		border: 0 !important;
+	}
+	table.table_section table.tablestyle_inner td {
+		display: inline-block;
+		width: 50%;
+		float: left;
+		padding: 0 .5em;
+	}
+	div#items_table table.tablestyle {
+		width: auto;
+		border: 0;
+	}
+}
