@@ -36,7 +36,7 @@ if (isset($_GET['ModifyGL'])) {
 else
 	$_SESSION['page_title'] = _($help_context = 'Journal Entry');
 
-page($_SESSION['page_title'], false, false,'', $js);
+page($_SESSION['page_title'], false, false, '', $js);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -119,8 +119,7 @@ function create_cart($type=0, $trans_no=0) {
 			while ($row = db_fetch($result)) {
 				$curr_amount = $cart->rate ? round($row['amount']/$cart->rate, $_SESSION['wa_current_user']->prefs->price_dec()) : $row['amount'];
 				if ($curr_amount)
-					$cart->add_gl_item($row['account'], $row['dimension_id'], $row['dimension2_id'], 
-						$curr_amount, $row['memo_'], '', $row['person_id']);
+					$cart->add_gl_item($row['account'], $row['dimension_id'], $row['dimension2_id'], $curr_amount, $row['memo_'], '', $row['person_id']);
 			}
 		}
 		$cart->memo_ = get_comments_string($type, $trans_no);
@@ -149,7 +148,6 @@ function create_cart($type=0, $trans_no=0) {
 				$tax_info['net_amount_ex'] = $ex_net;
 		}
 		$cart->tax_info = $tax_info;
-
 	}
 	else {
 		$cart->tran_date = $cart->doc_date = $cart->event_date = new_doc_date();
@@ -350,7 +348,7 @@ function check_item_data() {
 	if (!(input_num('AmountDebit')!=0 ^ input_num('AmountCredit')!=0) ) {
 		display_error(_('You must enter either a debit amount or a credit amount.'));
 		set_focus('AmountDebit');
-			return false;
+		return false;
 	}
 	if (strlen($_POST['AmountDebit']) && !check_num('AmountDebit', 0)) {
 		display_error(_('The debit amount entered is not a valid number or is less than zero.'));
@@ -367,8 +365,7 @@ function check_item_data() {
 		set_focus('code_id');
 		return false;
 	}
-	if (!$_SESSION['wa_current_user']->can_access('SA_BANKJOURNAL') && is_bank_account($_POST['code_id'])) 
-	{
+	if (!$_SESSION['wa_current_user']->can_access('SA_BANKJOURNAL') && is_bank_account($_POST['code_id'])) {
 		display_error(_('You cannot make a journal entry for a bank account. Please use one of the banking functions for bank transactions.'));
 		set_focus('code_id');
 		return false;
@@ -381,10 +378,8 @@ function check_item_data() {
 
 function handle_update_item() {
 	if($_POST['UpdateItem'] != '' && check_item_data()) {
-		if (input_num('AmountDebit') > 0)
-			$amount = input_num('AmountDebit');
-		else
-			$amount = -input_num('AmountCredit');
+
+		$amount = input_num('AmountDebit') > 0 ? input_num('AmountDebit') : -input_num('AmountCredit');
 
 		$_SESSION['journal_items']->update_gl_item($_POST['Index'], $_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('person_id'));
 		unset($_SESSION['journal_items']->tax_info);
@@ -406,10 +401,7 @@ function handle_new_item() {
 	if (!check_item_data())
 		return;
 
-	if (input_num('AmountDebit') > 0)
-		$amount = input_num('AmountDebit');
-	else
-		$amount = -input_num('AmountCredit');
+	$amount = input_num('AmountDebit') > 0 ? input_num('AmountDebit') : -input_num('AmountCredit');
 	
 	$_SESSION['journal_items']->add_gl_item($_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('person_id'));
 	unset($_SESSION['journal_items']->tax_info);
@@ -443,7 +435,6 @@ if (tab_opened('tabs', 'gl'))
 	$_POST['memo_'] = $_SESSION['journal_items']->memo_;
 elseif (tab_opened('tabs', 'tax'))
 	set_focus('tax_date');
-
 
 $id = find_submit('Delete');
 if ($id != -1)
@@ -481,7 +472,7 @@ tabbed_content_start('tabs', array(
 switch (get_post('_tabs_sel')) {
 	default:
 	case 'gl':
-		start_table(TABLESTYLE2, "width='90%'", 10);
+		start_table(TABLESTYLE, "width='90%'", 10);
 		start_row();
 		echo '<td>';
 		display_gl_items(_('Rows'), $_SESSION['journal_items']);
@@ -490,13 +481,12 @@ switch (get_post('_tabs_sel')) {
 		end_row();
 		end_table(1);
 		break;
-
 	case 'tax':
 		update_tax_info();
 		br();
 		display_heading(_('Tax register record'));
 		br();
-		start_table(TABLESTYLE2, 'width=40%');
+		start_table(TABLESTYLE2);
 		date_row(_('VAT date:'), 'tax_date', '', "colspan='3'");
 		//tax_groups_list_row(_('Tax group:'), 'tax_group');
 		end_table(1);
