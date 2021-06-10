@@ -2,6 +2,27 @@ table.tablestyle2 td:not(.label) {
 	border: 0;
 }
 
-table.tablestyle2 input, table.tablestyle2 div.list_container {
+table.tablestyle2 input, table.tablestyle2 div.list_container, textarea {
 	width: 100%;
+}
+@media all and (max-width: 768px) {
+	table.table_section > tbody,
+	table.table_section > tbody > tr,
+	table.table_section > tbody > tr > td,
+	table.table_section table.tablestyle_inner,
+	table.table_section table.tablestyle_inner tbody,
+	table.table_section table.tablestyle_inner tr {
+		display: inline-block;
+		width: 100%;
+		border: 0 !important;
+	}
+	table.table_section {
+		width: 90%;
+	}
+	table.table_section table.tablestyle_inner td {
+		display: inline-block;
+		width: 50%;
+		float: left;
+		padding: 2px .5em;
+	}
 }
