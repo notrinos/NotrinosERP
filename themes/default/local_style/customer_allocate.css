@@ -1,0 +1,8 @@
+@media all and (max-width: 768px) {
+	div#alloc_tbl table.tablestyle {
+		display: block;
+		width: auto;
+		overflow: auto;
+		border: 0;
+	}
+}
