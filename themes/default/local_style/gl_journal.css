@@ -1,0 +1,34 @@
+@import url(local_entry.css);
+@media all and (max-width: 768px) {
+	form > center > table.table_section {
+		width: 90%;
+	}
+	div#items_table,
+	div#_tabs_div > center > table.tablestyle, 
+	div#_tabs_div > center > table.tablestyle > tbody,
+	div#_tabs_div > center > table.tablestyle > tbody > tr,
+	div#_tabs_div > center > table.tablestyle > tbody > tr > td,
+	
+	table.table_section > tbody,
+	table.table_section > tbody > tr,
+	table.table_section > tbody > tr > td,
+	table.table_section table.tablestyle_inner,
+	table.table_section table.tablestyle_inner tbody,
+	table.table_section table.tablestyle_inner tr {
+		display: block;
+		width: 100%;
+		border: 0 !important;
+	}
+	div#items_table {
+		overflow: auto;
+	}
+	div#_tabs_div table.tablestyle2 {
+		width: auto;
+	}
+	form > center > table.tablestyle2 table.tablestyle_inner td {
+		display: inline-block;
+		width: 50%;
+		float: left;
+		padding: 0 .5em;
+	}
+}
