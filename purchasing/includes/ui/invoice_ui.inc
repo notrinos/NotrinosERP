@@ -392,7 +392,7 @@ function display_grn_items(&$supp_trans, $mode=0) {
 	if (($mode == 2  || $mode == 3) && count($supp_trans->grn_items) == 0)
 		return 0;
 
-	start_outer_table("style='border:1px solid #cccccc;' width='95%'");
+	start_table(TABLESTYLE_NOBORDER);
 
 	$heading2 = '';
 	if ($mode == 1) {
@@ -429,10 +429,10 @@ function display_grn_items(&$supp_trans, $mode=0) {
 		submit('InvGRNAll', _('Add All Items'), true, false, true);
 	}
 
-	end_outer_table(0, false);
+	end_table();
 
 	div_start('grn_items');
-	start_table(TABLESTYLE, "width='95%'");
+	start_table(TABLESTYLE);
 	if ($mode == 1) {
 		$th = array(_('Delivery'), _('P.O.'), _('Item'), _('Description'), _('Received On'), _('Quantity Received'), _('Quantity Invoiced'), _('Qty Yet To Invoice'), $supp_trans->tax_included ? _('Price after Tax') : _('Price before Tax'), _('Total'), '');
 		if (($supp_trans->trans_type == ST_SUPPINVOICE) && $_SESSION['wa_current_user']->can_access('SA_GRNDELETE'))
