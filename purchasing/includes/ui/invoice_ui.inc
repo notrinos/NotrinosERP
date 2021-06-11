@@ -26,8 +26,6 @@ function copy_from_trans(&$supp_trans) {
 			$_POST['mantax'][$id] = price_format($value);
 }
 
-//--------------------------------------------------------------------------------------------------
-
 function copy_to_trans(&$supp_trans) {
 	$supp_trans->Comments = $_POST['Comments'];
 	$supp_trans->tran_date = $_POST['tran_date'];
@@ -39,7 +37,7 @@ function copy_to_trans(&$supp_trans) {
 
 	$supp_trans->ex_rate = input_num('_ex_rate', null);
 
-	$supp_trans->ov_amount = $supp_trans->ov_discount = 0; /* for starters */
+	$supp_trans->ov_amount = $supp_trans->ov_discount = 0; // for starters
 	if (isset($_POST['mantax'])) {
 		foreach($_POST['mantax'] as $id => $tax) {
 			$supp_trans->tax_overrides[$id] = user_numeric($_POST['mantax'][$id]);
@@ -60,8 +58,6 @@ function copy_to_trans(&$supp_trans) {
 		}
 	}
 }
-
-//--------------------------------------------------------------------------------------------------
 
 function invoice_header(&$supp_trans) {
 	global $Ajax, $Refs;
@@ -103,7 +99,7 @@ function invoice_header(&$supp_trans) {
 	ref_row(_('Reference:'), 'reference', '', $Refs->get_next($supp_trans->trans_type, null, array('supplier' => get_post('supplier_id'), 'date' => get_post('tran_date'))), false, $supp_trans->trans_type);
 
 	if ($supp_trans->trans_type == ST_SUPPCREDIT)
-		label_row(_('Source Invoices:'), implode(',' ,$supp_trans->src_docs), '', '', 'src_docs');
+		label_row(_('Source Invoices:'), $supp_trans->src_docs ? implode(',' ,$supp_trans->src_docs) : '&nbsp;', '', '', 'src_docs');
 	text_row(_("Supplier's Ref.:"), 'supp_reference', $_POST['supp_reference'], 20, 60);
 
 	table_section(2, '33%');
@@ -143,8 +139,6 @@ function invoice_header(&$supp_trans) {
 	end_outer_table(1);
 }
 
-//--------------------------------------------------------------------------------------------------
-
 function invoice_totals(&$supp_trans) {
 	global $Ajax;
 
@@ -173,8 +167,6 @@ function invoice_totals(&$supp_trans) {
 	div_end();
 }
 
-//--------------------------------------------------------------------------------------------------
-
 function display_gl_controls(&$supp_trans, $k) {
 	$accs = get_supplier_accounts($supp_trans->supplier_id);
 	if (!isset($_POST['gl_code']))
@@ -199,10 +191,12 @@ function display_gl_controls(&$supp_trans, $k) {
 	end_row();	
 }
 
-// $mode = 0 none at the moment
-//		 = 1 display on invoice/credit page
-//		 = 2 display on view invoice
-//		 = 3 display on view credit
+/*
+*  $mode = 0 none at the moment
+*		 = 1 display on invoice/credit page
+*		 = 2 display on view invoice
+*		 = 3 display on view credit
+*/
 
 function display_gl_items(&$supp_trans, $mode=0) {
 	global $path_to_root, $Ajax;
@@ -258,8 +252,10 @@ function display_gl_items(&$supp_trans, $mode=0) {
 		$th[] = '';
 	}	
 	table_header($th);
-	$total_gl_value = $total = 0;
-	$i = $k = 0;
+	$total_gl_value = 0;
+	$total = 0;
+	$i = 0;
+	$k = 0;
 
 	if (count($supp_trans->gl_codes) > 0) {
 
@@ -311,8 +307,6 @@ function display_gl_items(&$supp_trans, $mode=0) {
 
 	return $total_gl_value;
 }
-
-//-------------------------------------------------------------------------------------------------------
 
 function display_grn_items_for_selection(&$supp_trans, $k) {
 	if ($supp_trans->trans_type == ST_SUPPINVOICE)	// outstanding grns and eventually for selected invoice
@@ -384,13 +378,12 @@ function display_grn_items_for_selection(&$supp_trans, $k) {
 	return true;
 }
 
-//------------------------------------------------------------------------------------
-
-// $mode = 0 none at the moment
-//		 = 1 display on invoice/credit page
-//		 = 2 display on view invoice
-//		 = 3 display on view credit
-
+/* 
+*  $mode = 0 none at the moment
+*		 = 1 display on invoice/credit page
+*		 = 2 display on view invoice
+*		 = 3 display on view credit
+*/
 function display_grn_items(&$supp_trans, $mode=0) {
 	global $path_to_root;
 
@@ -442,7 +435,7 @@ function display_grn_items(&$supp_trans, $mode=0) {
 	start_table(TABLESTYLE, "width='95%'");
 	if ($mode == 1) {
 		$th = array(_('Delivery'), _('P.O.'), _('Item'), _('Description'), _('Received On'), _('Quantity Received'), _('Quantity Invoiced'), _('Qty Yet To Invoice'), $supp_trans->tax_included ? _('Price after Tax') : _('Price before Tax'), _('Total'), '');
-		if (($supp_trans->trans_type == ST_SUPPINVOICE) && $_SESSION['wa_current_user']->can_access('SA_GRNDELETE')) // Added 2008-10-18 by Joe Hunt. Only admins can remove GRNs
+		if (($supp_trans->trans_type == ST_SUPPINVOICE) && $_SESSION['wa_current_user']->can_access('SA_GRNDELETE'))
 			$th[] = '';
 		if ($supp_trans->trans_type == ST_SUPPCREDIT)
 			$th[7] = _('Qty Yet To Credit');
@@ -463,7 +456,6 @@ function display_grn_items(&$supp_trans, $mode=0) {
 			$grn_batch = get_grn_batch_from_item($entered_grn->id);
 			label_cell(get_trans_view_str(ST_SUPPRECEIVE, $grn_batch), "nowrap align='right'");
 			if ($mode == 1) {
-				// label_cell($entered_grn->id);
 				$row = get_grn_batch($grn_batch);
 				label_cell(get_trans_view_str(ST_PURCHORDER, $row['purch_order_no']), "nowrap align='right'"); // PO
 			}	
@@ -521,8 +513,6 @@ function display_grn_items(&$supp_trans, $mode=0) {
 
 	return $total_grn_value;
 }
-
-//--------------------------------------------------------------------------------------------------
 
 function get_duedate_from_terms(&$trans) {
 	$date = get_class($trans) == 'purch_order' ? $trans->orig_order_date : $trans->tran_date;
