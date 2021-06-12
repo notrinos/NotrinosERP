@@ -36,15 +36,15 @@ if (isset($_GET['stock_id'])) {
 //--------------------------------------------------------------------------------------------------
 
 function display_bom_items($selected_parent) {
-	$result = get_bom($selected_parent);
+	
 	div_start('bom');
 	start_table(TABLESTYLE, "width='60%'");
-	$th = array(_('Code'), _('Description'), _('Location'), _('Work Centre'), _('Quantity'), _('Units'),'','');
+	$th = array(_('Code'), _('Description'), _('Location'), _('Work Centre'), _('Quantity'), _('Units'), '', '');
 	table_header($th);
 
 	$k = 0;
 	$found = false;
-	while ($myrow = db_fetch($result)) {
+	while ($myrow = db_fetch(get_bom($selected_parent))) {
 		$found = true;
 		alt_table_row_color($k);
 
@@ -71,8 +71,8 @@ function display_bom_items($selected_parent) {
 }
 
 function copy_bom_items($stock_id, $new_stock_id) {
-	$result = get_bom($stock_id);
-	while ($myrow = db_fetch($result)) {
+	
+	while ($myrow = db_fetch(get_bom($stock_id))) {
 		$_POST['component'] = $myrow['component'];
 		$_POST['loc_code'] = $myrow['loc_code'];
 		$_POST['workcentre_added'] = $myrow['workcentre_added'];
@@ -100,17 +100,16 @@ function on_submit($selected_parent, $selected_component=-1) {
 		so must be adding a record must be Submitting new entries in the new
 		component form */
 
-		//need to check not recursive bom component of itself!
+		// need to check not recursive bom component of itself!
 		if (!check_for_recursive_bom($selected_parent, $_POST['component'])) {
 
-			/*Now check to see that the component is not already on the bom */
+			// Now check to see that the component is not already on the bom
 			if (!is_component_already_on_bom($_POST['component'], $_POST['workcentre_added'], $_POST['loc_code'], $selected_parent)) {
 				add_bom($selected_parent, $_POST['component'], $_POST['workcentre_added'], $_POST['loc_code'], input_num('quantity'));
 				display_notification(_('A new component part has been added to the bill of material for this item.'));
 				$Mode = 'RESET';
 			}
-			else
-				/*The component must already be on the bom */
+			else // The component must already be on the bom
 				display_error(_("The selected component is already on this bom. You can modify it's quantity but it cannot appear more than once on the same bom."));
 
 		} //end of if its not a recursive bom
@@ -123,11 +122,9 @@ function on_submit($selected_parent, $selected_component=-1) {
 
 if ($Mode == 'Delete') {
 	delete_bom($selected_id);
-
 	display_notification(_('The component item has been deleted from this bom'));
 	$Mode = 'RESET';
 }
-
 if ($Mode == 'RESET') {
 	$selected_id = -1;
 	unset($_POST['quantity']);
@@ -140,12 +137,12 @@ if (list_updated('new_stock_id')) {
 	$item = get_item($_POST['new_stock_id']);
 	$_POST['stock_id'] = $_POST['new_stock_id'];
 	$Ajax->activate('_page_body');
-	display_notification(_('BOM copied to ') . $item['description']);
+	display_notification(_('BOM copied to ').$item['description']);
 }
 
 start_form();
 
-start_form(false, true);
+start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 stock_manufactured_items_list_cells(_('Select a manufacturable item:'), 'stock_id', null, false, true);
@@ -154,8 +151,7 @@ if (list_updated('stock_id')) {
 	$selected_id = -1;
 	$Ajax->activate('_page_body');
 }
-end_table();
-br();
+end_table(1);
 
 end_form();
 
@@ -175,14 +171,13 @@ if (get_post('stock_id') != '') { //Parent Item selected so display bom or edit 
 
 	if ($selected_id != -1) {
 		if ($Mode == 'Edit') {
-			//editing a selected component from the link to the line item
 			$myrow = get_component_from_bom($selected_id);
 
 			$_POST['loc_code'] = $myrow['loc_code'];
-			$_POST['component'] = $myrow['component']; // by Tom Moulton
+			$_POST['component'] = $myrow['component'];
 			$_POST['workcentre_added']  = $myrow['workcentre_added'];
 			$_POST['quantity'] = number_format2($myrow['quantity'], get_qty_dec($myrow['component']));
-			label_row(_('Component:'), $myrow['component'] . ' - ' . $myrow['description']);
+			label_row(_('Component:'), $myrow['component'].' - '.$myrow['description']);
 		}
 		hidden('selected_id', $selected_id);
 	}
@@ -198,7 +193,6 @@ if (get_post('stock_id') != '') { //Parent Item selected so display bom or edit 
 		echo '</td>';
 		end_row();
 	}
-	// hidden('stock_id', $selected_parent);
 
 	locations_list_row(_('Location to Draw From:'), 'loc_code', null);
 	workcenter_list_row(_('Work Centre Added:'), 'workcentre_added', null);

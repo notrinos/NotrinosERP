@@ -28,11 +28,11 @@ if (isset($_GET['stock_id']))
 if (list_updated('stock_id'))
 	$Ajax->activate('_page_body');
 
-start_form(false, true);
+start_form();
 start_table(TABLESTYLE_NOBORDER);
 stock_manufactured_items_list_row(_('Select a manufacturable item:'), 'stock_id', null, false, true);
-end_table();
-br();
+end_table(1);
+
 display_heading(_('All Costs Are In:').' '.get_company_currency());
 display_bom($_POST['stock_id']);
 

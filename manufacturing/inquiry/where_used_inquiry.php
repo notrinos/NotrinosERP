@@ -20,7 +20,7 @@ include($path_to_root.'/includes/ui.inc');
 
 check_db_has_stock_items(_('There are no items defined in the system.'));
 
-start_form(false, true);
+start_form();
 
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
@@ -39,11 +39,11 @@ function select_link($row) {
 
 $sql = get_sql_for_where_used(get_post('stock_id'));
 
-   $cols = array(
-	_('Parent Item') => array('fun'=>'select_link'), 
-	_('Work Centre'), 
-	_('Location'), 
-	_('Quantity Required')
+	$cols = array(
+		_('Parent Item') => array('fun'=>'select_link'), 
+		_('Work Centre'), 
+		_('Location'), 
+		_('Quantity Required')
 	);
 
 $table =& new_db_pager('usage_table', $sql, $cols);
