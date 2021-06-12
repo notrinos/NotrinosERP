@@ -57,8 +57,8 @@ echo "<html dir='".$rtl."' >\n";
 echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
 echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet' type='text/css'> \n";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet' type='text/css'> \n";
+echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
@@ -72,7 +72,7 @@ echo "<table class='titletext'><tr><td>".$title."</td></tr></table>\n";
 	
 div_start('_page_body');
 br(2);
-start_form(false, false, $_SESSION['timeout']['uri'], 'loginform');
+start_form(false, $_SESSION['timeout']['uri'], 'loginform');
 start_table(false, "class='login'");
 start_row();
 echo "<td align='center' colspan=2>";
@@ -88,12 +88,12 @@ if (!$login_timeout)
 
 echo "<tr><td colspan='2'></td></tr>";
 
-$value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : '');
+$value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : 'phuong');
 
 echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-user' title='"._('User')."'></i>";
 echo "<input required class='input' id='user' name='user_name_entry_field' type='text' placeholder='"._('User name:')."' value='$value'></div></td></tr>";
 
-$password = $SysPrefs->allow_demo_mode ? 'password' : '';
+$password = $SysPrefs->allow_demo_mode ? 'password' : '12345';
 
 echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-key' title='"._('Password')."'></i>";
 echo "<input required class='input' id='pass' name='password' type='password' placeholder='"._('Password:')."' value='$password'></div></td></tr>";
@@ -138,7 +138,7 @@ foreach($_SESSION['timeout']['post'] as $p => $val) {
 end_form(1);
 $Ajax->addScript(true, "if (document.forms.length) document.forms[0].password.focus();");
 
-echo "<script language='JavaScript'>
+echo "<script>
 	//<![CDATA[
 		<!--
 		document.forms[0].user_name_entry_field.select();

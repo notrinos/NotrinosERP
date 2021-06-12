@@ -14,7 +14,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/page/header.inc');
 
-$js = "<script language='JavaScript'>
+$js = "<script>
 function defaultCompany() {
 	document.forms[0].company_login_name.options[".user_company()."].selected = true;
 }
@@ -37,8 +37,8 @@ echo "<html dir='".$rtl."' >\n";
 echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
 echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet' type='text/css'> \n";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet' type='text/css'> \n";
+echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
@@ -51,7 +51,7 @@ echo "<table class='titletext'><tr><td>".$title."</td></tr></table>\n";
 	
 div_start('_page_body');
 br(2);
-start_form(false, false, @$_SESSION['timeout']['uri'], 'resetform');
+start_form(false, @$_SESSION['timeout']['uri'], 'resetform');
 start_table(false, "class='login'");
 start_row();
 echo "<td align='center' colspan=2>";
@@ -91,7 +91,7 @@ end_table(1);
 end_form(1);
 $Ajax->addScript(true, "document.forms[0].password.focus();");
 
-echo "<script language='JavaScript'>
+echo "<script>
 //<![CDATA[
 	<!--
 	document.forms[0].email_entry_field.select();

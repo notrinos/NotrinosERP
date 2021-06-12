@@ -11,7 +11,7 @@
 ***********************************************************************/
 $page_security = 'SA_BACKUP';
 
-$path_to_root='..';
+$path_to_root = '..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
@@ -22,7 +22,7 @@ if (get_post('view')) {
 	else {
 		$filename = $SysPrefs->backup_dir().clean_file_name(get_post('backups'));
 		if (in_ajax()) 
-			$Ajax->popup( $filename );
+			$Ajax->popup($filename);
 		else {
 			header('Content-type: text/plain');
 			header('Content-Length: '.filesize($filename));
@@ -48,7 +48,7 @@ if (get_post('download')) {
 		display_error(_('Select backup file first.'));
 }
 
-page(_($help_context = 'Backup and Restore Database'), false, false, '', '');
+page(_($help_context = 'Backup and Restore Database'));
 
 check_paths();
 
@@ -127,7 +127,7 @@ function download_file($filename) {
 
 $conn = $db_connections[user_company()];
 $backup_name = clean_file_name(get_post('backups'));
-$backup_path = $SysPrefs->backup_dir() . $backup_name;
+$backup_path = $SysPrefs->backup_dir().$backup_name;
 
 if (get_post('creat')) {
 	generate_backup($conn, get_post('comp'), get_post('comments'));
@@ -168,7 +168,7 @@ if (get_post('upload')) {
 		elseif ($fname != clean_file_name($fname))
 			display_error(_('Filename contains forbidden chars. Please rename file and try again.'));
 		elseif (is_uploaded_file($tmpname)) {
-			rename($tmpname, $SysPrefs->backup_dir() . $fname);
+			rename($tmpname, $SysPrefs->backup_dir().$fname);
 			display_notification(_('File uploaded to backup directory'));
 			$Ajax->activate('backups');
 		}
@@ -182,7 +182,7 @@ if (get_post('upload')) {
 
 //-------------------------------------------------------------------------------
 
-start_form(true, true);
+start_form(true);
 start_outer_table(TABLESTYLE2);
 table_section(1);
 table_section_title(_('Create backup'));
@@ -199,21 +199,21 @@ echo "<td style='padding-left:20px' valign='top'>";
 start_table();
 submit_row('view',_('View Backup'), false, '', '', false);
 submit_row('download',_('Download Backup'), false, '', '', 'download');
-submit_row('restore',_('Restore Backup'), false, '','', 'process');
-submit_js_confirm('restore',_("You are about to restore database from backup file.\nDo you want to continue?"));
+submit_row('restore',_('Restore Backup'), false, '', '', 'process');
+submit_js_confirm('restore', _("You are about to restore database from backup file.\nDo you want to continue?"));
 
-submit_row('deldump', _('Delete Backup'), false, '','', true);
+submit_row('deldump', _('Delete Backup'), false, '', '', true);
 // don't use 'delete' name or IE js errors appear
 submit_js_confirm('deldump', sprintf(_("You are about to remove selected backup file.\nDo you want to continue ?")));
 end_table();
 echo '</td>';
 end_row();
 start_row();
-echo "<td style='padding-left:20px'  cspan=2>".radio(_('Update security settings'), 'protect', 0).'<br>'.radio(_('Protect security settings'), 'protect', 1, true).'</td>';
+echo "<td style='padding-left:20px' colspan=2>".radio(_('Update security settings'), 'protect', 0).'<br>'.radio(_('Protect security settings'), 'protect', 1, true).'</td>';
 end_row();
 start_row();
 echo "<td style='padding-left:20px' align='left'><input name='uploadfile' type='file'></td>";
-submit_cells('upload',_('Upload file'),"style='padding-left:20px'", '', true);
+submit_cells('upload',_('Upload file'), "style='padding-left:20px'", '', true);
 end_row();
 end_outer_table();
 
