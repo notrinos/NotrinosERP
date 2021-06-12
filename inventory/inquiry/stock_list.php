@@ -9,11 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-/**********************************************************************
-  Page for searching item list and select it to item selection
-  in pages that have the item dropdown lists.
-  Author: bogeyman2007 from Discussion Forum. Modified by Joe Hunt
-***********************************************************************/
+
 $page_security = 'SA_ITEM';
 $path_to_root = '../..';
 include_once($path_to_root.'/includes/session.inc');
@@ -31,17 +27,15 @@ page(_($help_context = 'Items'), true, false, '', $js);
 if(get_post('search'))
 	$Ajax->activate('item_tbl');
 
-start_form(false, false, $_SERVER['PHP_SELF'] . '?' . $_SERVER['QUERY_STRING']);
+start_form(false, $_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']);
 
 start_table(TABLESTYLE_NOBORDER);
-
 start_row();
 
 text_cells(_('Description'), 'description');
 submit_cells('search', _('Search'), '', _('Search items'), 'default');
 
 end_row();
-
 end_table();
 
 end_form();
@@ -53,18 +47,15 @@ $th = array('', _('Item Code'), _('Description'), _('Category'));
 table_header($th);
 
 $k = 0;
-$name = $_GET['client_id'];
 $result = get_items_search(get_post('description'), @$_GET['type']);
 
 while ($myrow = db_fetch_assoc($result)) {
 	alt_table_row_color($k);
-	$value = $myrow['item_code'];
-	if ($mode != 0) {
-		$text = $myrow['description'];
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'setComboItem(window.opener.document, "'.$name.'",  "'.$value.'", "'.$text.'")');
-	}
+
+	if ($mode != 0)
+		ahref_cell(_('Select'), 'javascript:void(0)', '', 'setComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['item_code'].'", "'.$myrow['description'].'")');
 	else
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'selectComboItem(window.opener.document, "'.$name.'", "'.$value.'")');
+		ahref_cell(_('Select'), 'javascript:void(0)', '', 'selectComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['item_code'].'")');
 	
 	label_cell($myrow['item_code']);
 	label_cell($myrow['description']);

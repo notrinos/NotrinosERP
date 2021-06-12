@@ -107,18 +107,16 @@ function handle_search() {
 		$print_out = ($print_type == ST_SALESINVOICE || $print_type == ST_CUSTCREDIT || $print_type == ST_CUSTDELIVERY || $print_type == ST_PURCHORDER || $print_type == ST_SALESORDER || $print_type == ST_SALESQUOTE || $print_type == ST_CUSTPAYMENT || $print_type == ST_SUPPAYMENT || $print_type == ST_WORKORDER);
 
 		$cols = array(
-			_('#') => array('insert'=>true, 'fun'=>'view_link'), 
-			_('Reference') => array('fun'=>'ref_view'), 
+			_('#') => array('insert'=>true, 'fun'=>'view_link'),
+			_('Reference') => array('fun'=>'ref_view'),
 			_('Date') => array('type'=>'date', 'fun'=>'date_view'),
-			_('Print') => array('insert'=>true, 'fun'=>'prt_link'), 
+			_('Print') => array('insert'=>true, 'fun'=>'prt_link'),
 			_('GL') => array('insert'=>true, 'fun'=>'gl_view')
 		);
-		if(!$print_out) {
+		if(!$print_out)
 			array_remove($cols, 3);
-		}
-		if(!$trans_ref) {
+		if(!$trans_ref)
 			array_remove($cols, 1);
-		}
 
 		$table =& new_db_pager('transactions', $sql, $cols);
 		$table->width = '40%';
@@ -136,7 +134,7 @@ if (isset($_POST['ProcessSearch'])) {
 
 //----------------------------------------------------------------------------------------
 
-start_form(false);
+start_form();
 viewing_controls();
 handle_search();
 end_form(2);
