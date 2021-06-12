@@ -11,11 +11,11 @@
 ***********************************************************************/
 $page_security = 'SA_SALESINVOICE';
 $path_to_root = '../..';
-include($path_to_root . '/includes/db_pager.inc');
-include($path_to_root . '/includes/session.inc');
+include($path_to_root.'/includes/db_pager.inc');
+include($path_to_root.'/includes/session.inc');
 
-include($path_to_root . '/sales/includes/sales_ui.inc');
-include_once($path_to_root . '/reporting/includes/reporting.inc');
+include($path_to_root.'/sales/includes/sales_ui.inc');
+include_once($path_to_root.'/reporting/includes/reporting.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -57,14 +57,11 @@ if (isset($_POST['BatchInvoice'])) {
 			}
 		}
 	}
-	if (!$del_count) {
-		display_error(_('For batch invoicing you should
-			select at least one delivery. All items must be dispatched to
-			the same customer branch.'));
-	}
+	if (!$del_count)
+		display_error(_('For batch invoicing you should select at least one delivery. All items must be dispatched to the same customer branch.'));
 	else {
 		$_SESSION['DeliveryBatch'] = $selected;
-		meta_forward($path_to_root . '/sales/customer_invoice.php','BatchInvoice=Yes');
+		meta_forward($path_to_root.'/sales/customer_invoice.php','BatchInvoice=Yes');
 	}
 }
 
@@ -88,11 +85,11 @@ if (get_post('_DeliveryNumber_changed')) {
 
 //-----------------------------------------------------------------------------------
 
-start_form(false, false, $_SERVER['PHP_SELF'] .'?OutstandingOnly='.$_POST['OutstandingOnly']);
+start_form(false, $_SERVER['PHP_SELF'].'?OutstandingOnly='.$_POST['OutstandingOnly']);
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-ref_cells(_('#:'), 'DeliveryNumber', '',null, '', true);
+ref_cells(_('#:'), 'DeliveryNumber', '', null, '', true);
 date_cells(_('from:'), 'DeliveryAfterDate', '', null, -user_transaction_days());
 date_cells(_('to:'), 'DeliveryToDate', '', null, 1);
 
@@ -107,7 +104,7 @@ stock_items_list_cells(_('Item:'), 'SelectStockFromList', null, true);
 
 customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true);
 
-submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
+submit_cells('SearchOrders', _('Search'), '',_('Select documents'), 'default');
 
 hidden('OutstandingOnly', $_POST['OutstandingOnly']);
 
@@ -131,7 +128,7 @@ function batch_checkbox($row) {
 }
 
 function edit_link($row) {
-	return $row['Outstanding']==0 ? '' : trans_editor_link(ST_CUSTDELIVERY, $row['trans_no']);
+	return $row['Outstanding'] == 0 ? '' : trans_editor_link(ST_CUSTDELIVERY, $row['trans_no']);
 }
 
 function prt_link($row) {
@@ -139,7 +136,7 @@ function prt_link($row) {
 }
 
 function invoice_link($row) {
-	return $row['Outstanding']==0 ? '' : pager_link(_('Invoice'), '/sales/customer_invoice.php?DeliveryNumber='.$row['trans_no'], ICON_DOC);
+	return $row['Outstanding'] == 0 ? '' : pager_link(_('Invoice'), '/sales/customer_invoice.php?DeliveryNumber='.$row['trans_no'], ICON_DOC);
 }
 
 function check_overdue($row) {
@@ -151,21 +148,21 @@ function check_overdue($row) {
 $sql = get_sql_for_sales_deliveries_view(get_post('DeliveryAfterDate'), get_post('DeliveryToDate'), get_post('customer_id'), get_post('SelectStockFromList'), get_post('StockLocation'), get_post('DeliveryNumber'), get_post('OutstandingOnly'));
 
 $cols = array(
-		_('Delivery #') => array('fun'=>'trans_view', 'align'=>'right'), 
-		_('Customer'), 
-		'branch_code' => 'skip',
-		_('Branch') => array('ord'=>''), 
-		_('Contact'),
-		_('Reference'), 
-		_('Cust Ref'), 
-		_('Delivery Date') => array('type'=>'date', 'ord'=>''),
-		_('Due By') => 'date', 
-		_('Delivery Total') => array('type'=>'amount', 'ord'=>''),
-		_('Currency') => array('align'=>'center'),
-		submit('BatchInvoice',_('Batch'), false, _('Batch Invoicing')) => array('insert'=>true, 'fun'=>'batch_checkbox', 'align'=>'center'),
-		array('insert'=>true, 'fun'=>'edit_link'),
-		array('insert'=>true, 'fun'=>'invoice_link'),
-		array('insert'=>true, 'fun'=>'prt_link')
+	_('Delivery #') => array('fun'=>'trans_view', 'align'=>'right'), 
+	_('Customer'), 
+	'branch_code' => 'skip',
+	_('Branch') => array('ord'=>''), 
+	_('Contact'),
+	_('Reference'), 
+	_('Cust Ref'), 
+	_('Delivery Date') => array('type'=>'date', 'ord'=>''),
+	_('Due By') => 'date', 
+	_('Delivery Total') => array('type'=>'amount', 'ord'=>''),
+	_('Currency') => array('align'=>'center'),
+	submit('BatchInvoice',_('Batch'), false, _('Batch Invoicing')) => array('insert'=>true, 'fun'=>'batch_checkbox', 'align'=>'center'),
+	array('insert'=>true, 'fun'=>'edit_link'),
+	array('insert'=>true, 'fun'=>'invoice_link'),
+	array('insert'=>true, 'fun'=>'prt_link')
 );
 
 //-----------------------------------------------------------------------------------

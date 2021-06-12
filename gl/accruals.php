@@ -23,7 +23,7 @@ include_once($path_to_root.'/includes/ui.inc');
 
 $_SESSION['page_title'] = _($help_context = 'Revenue / Cost Accruals');
 
-page($_SESSION['page_title'], false, false,'', $js);
+page($_SESSION['page_title'], false, false, '', $js);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -156,7 +156,9 @@ if (isset($_POST['go']) || isset($_POST['show'])) {
 			if (isset($_POST['go'])) {
 				commit_transaction();
 				display_notification_centered(_('Revenue / Cost Accruals have been processed.'));
-				$_POST['date_'] = $_POST['amount'] = $_POST['periods'] = '';
+				$_POST['date_'] = '';
+				$_POST['amount'] = '';
+				$_POST['periods'] = '';
 			}
 			else {
 				end_table(1);
@@ -183,7 +185,7 @@ function frequency_list_row($label, $name, $selected=null) {
 
 $dim = get_company_pref('use_dimension');
 
-start_form(false, false, '', 'accrual');
+start_form(false, '', 'accrual');
 start_table(TABLESTYLE2);
 
 date_row(_('Date').':', 'date_', _('First date of Accruals'), true, 0, 0, 0, null, true);

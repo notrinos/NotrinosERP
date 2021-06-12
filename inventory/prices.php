@@ -11,10 +11,7 @@
 ***********************************************************************/
 $page_security = 'SA_SALESPRICE';
 
-if (@$_GET['page_level'] == 1)
-	$path_to_root = '../..';
-else	
-	$path_to_root = '..';
+$path_to_root = @$_GET['page_level'] == 1 ? '../..' : '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/sales/includes/sales_db.inc');
@@ -54,13 +51,13 @@ if (!isset($_POST['curr_abrev']))
 $action = $_SERVER['PHP_SELF'];
 if ($page_nested)
 	$action .= '?stock_id='.get_post('stock_id');
-start_form(false, false, $action);
+start_form(false, $action);
 
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center>' . _('Item:'). '&nbsp;';
+	echo '<center>'._('Item:').'&nbsp;';
 	echo sales_items_list('stock_id', $_POST['stock_id'], false, true, '', array('editable' => false));
 	echo '<hr></center>';
 }
