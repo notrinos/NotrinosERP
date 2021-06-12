@@ -34,11 +34,11 @@ function get_post($name, $dflt='') {
 
 $form_nested = -1;
 
-function start_form($multi=false, $dummy=false, $action='', $name='') {
-	// $dummy - not used, need to be removed
+function start_form($multi=false, $action='', $name='') {
 	global $form_nested;
 
-	if (++$form_nested) return;
+	if (++$form_nested)
+		return;
 
 	if ($name != '')
 		$name = "name='".$name."'";
