@@ -13,9 +13,7 @@ $page_security = 'SA_SUPPLIERCREDIT';
 $path_to_root = '..';
 
 include_once($path_to_root.'/purchasing/includes/supp_trans_class.inc');
-
 include_once($path_to_root.'/includes/session.inc');
-
 include_once($path_to_root.'/includes/data_checks.inc');
 
 include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
@@ -53,7 +51,6 @@ if (isset($_GET['New'])) {
 		$_SESSION['supp_trans']->supp_reference = '';
 		$help_context = 'Supplier Credit Note';
 		$_SESSION['page_title'] = _('Supplier Credit Note');
-
 	}
 	else {
 		$help_context = 'Supplier Credit Note';
@@ -61,6 +58,7 @@ if (isset($_GET['New'])) {
 		$_SESSION['supp_trans'] = new supp_trans(ST_SUPPCREDIT);
 	}
 }
+
 page($_SESSION['page_title'], false, false, '', $js);
 
 check_db_has_suppliers(_('There are no suppliers defined in the system.'));
@@ -130,13 +128,11 @@ if (isset($_POST['AddGLCodeToTrans'])) {
 			$input_error = true;
 		}
 	}
-
 	if (!is_tax_gl_unique(get_post('gl_code'))) {
 		display_error(_('Cannot post to GL account used by more than one tax type.'));
 		set_focus('gl_code');
 		$input_error = true;
 	}
-
 	if ($input_error == false) {
 		$_SESSION['supp_trans']->add_gl_codes_to_trans($_POST['gl_code'], $gl_act_name, $_POST['dimension_id'], $_POST['dimension2_id'], input_num('amount'), $_POST['memo_']);
 		reset_tax_input();
@@ -179,12 +175,11 @@ function check_data() {
 		set_focus('supp_reference');
 		return false;
 	}
-	if (is_reference_already_there($_SESSION['supp_trans']->supplier_id, $_POST['supp_reference'], $_SESSION['supp_trans']->trans_no)) { //Transaction reference already entered
-		display_error(_('This invoice number has already been entered. It cannot be entered again.') . ' (' . $_POST['supp_reference'] . ')');
+	if (is_reference_already_there($_SESSION['supp_trans']->supplier_id, $_POST['supp_reference'], $_SESSION['supp_trans']->trans_no)) {
+		display_error(_('This invoice number has already been entered. It cannot be entered again.').' ('.$_POST['supp_reference'].')');
 		set_focus('supp_reference');
 		return false;
 	}
-
 	if (!$SysPrefs->allow_negative_stock()) {
 		foreach ($_SESSION['supp_trans']->grn_items as $n => $item) {
 			if (is_inventory_item($item->item_code)) {
@@ -283,7 +278,6 @@ if (isset($_POST['RefreshInquiry'])) {
 	$Ajax->activate('grn_items');
 	reset_tax_input();
 }
-
 if (isset($_POST['go'])) {
 	$Ajax->activate('gl_items');
 	display_quick_entries($_SESSION['supp_trans'], $_POST['qid'], input_num('totamount'), QE_SUPPINV);
@@ -297,7 +291,7 @@ if (isset($_POST['go'])) {
 start_form();
 
 invoice_header($_SESSION['supp_trans']);
-if ($_POST['supplier_id']=='') 
+if ($_POST['supplier_id'] == '') 
 	display_error('No supplier found for entered search text');
 else {
 	display_grn_items($_SESSION['supp_trans'], 1);
