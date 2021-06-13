@@ -10,11 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_STANDARDCOST';
-
-if (@$_GET['page_level'] == 1)
-	$path_to_root = '../..';
-else	
-	$path_to_root = '..';
+$path_to_root = @$_GET['page_level'] == 1 ? '../..' : '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
@@ -87,7 +83,7 @@ if (list_updated('stock_id') || $should_update) {
 $action = $_SERVER['PHP_SELF'];
 if ($page_nested)
 	$action .= '?stock_id='.get_post('stock_id');
-start_form(false, false, $action);
+start_form(false, $action);
 
 hidden('fixed_asset');
 

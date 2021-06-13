@@ -10,11 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_PURCHASEPRICING';
-
-if (@$_GET['page_level'] == 1)
-	$path_to_root = '../..';
-else	
-	$path_to_root = '..';
+$path_to_root = @$_GET['page_level'] == 1 ? '../..' : '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
@@ -84,7 +80,7 @@ if ($Mode == 'Delete') {
 if ($Mode == 'RESET')
 	$selected_id = -1;
 
-if (isset($_POST['_selected_id_update']) ) {
+if (isset($_POST['_selected_id_update'])) {
 	$selected_id = $_POST['selected_id'];
 	$Ajax->activate('_page_body');
 }
@@ -97,7 +93,7 @@ if (list_updated('stock_id'))
 $action = $_SERVER['PHP_SELF'];
 if ($page_nested)
 	$action .= '?stock_id='.get_post('stock_id');
-start_form(false, false, $action);
+start_form(false, $action);
 
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
@@ -132,7 +128,8 @@ else {
 
 		table_header($th);
 
-		$k = $j = 0; //row colour counter
+		$k = 0;
+		$j = 0;
 
 		while ($myrow = db_fetch($result)) {
 			alt_table_row_color($k);
@@ -151,8 +148,8 @@ else {
 			if ($j == 12) {
 				$j = 1;
 				table_header($th);
-			} //end of page full new headings
-		} //end of while loop
+			}
+		}
 
 		end_table();
 	}
@@ -183,9 +180,12 @@ if ($Mode == 'Edit') {
 }
 else {
 	supplier_list_row(_('Supplier:'), 'supplier_id', null, false, true);
-	$_POST['price'] = $_POST['suppliers_uom'] = $_POST['conversion_factor'] = $_POST['supplier_description'] = '';
+	$_POST['price'] = '';
+	$_POST['suppliers_uom'] = '';
+	$_POST['conversion_factor'] = '';
+	$_POST['supplier_description'] = '';
 }
-amount_row(_('Price:'), 'price', null,'', get_supplier_currency($selected_id), $dec2);
+amount_row(_('Price:'), 'price', null, '', get_supplier_currency($selected_id), $dec2);
 text_row(_('Suppliers Unit of Measure:'), 'suppliers_uom', null, 50, 51);
 
 if (!isset($_POST['conversion_factor']) || $_POST['conversion_factor'] == '')
