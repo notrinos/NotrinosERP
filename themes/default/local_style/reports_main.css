@@ -6,6 +6,9 @@ div#rep_form > table button, div.date_box {
 	width: 100%;
 	margin-bottom: -2.5em;
 }
+div#rep_form > table textarea {
+	margin-bottom: -0.5em;
+}
 @media all and (max-width: 768px) {
 	div#rep_form > table {
 		width: auto;
