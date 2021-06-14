@@ -54,7 +54,7 @@ class BoxReports {
 		$display_class = $class==null ? $temp[0] : $this->ar_classes[$class];
 		$st_reports = '';
 		$st_params = '';
-		$st_classes = '<b>'._('Report Classes:').'</b><br>';
+		$st_classes = '';
 
 		if (isset($_GET['Class']))
 			set_focus('class'.$_GET['Class']);
@@ -70,10 +70,10 @@ class BoxReports {
 				.$_SERVER['PHP_SELF']."?Class=$class_id'"
 				." style='font-weight:". ($cur_class == $class_id ? 'bold' : 'normal')."'"
 				." class='repclass_link' id='".'class'.$class_id."'"
-				."$acc[1]>$acc[0]</a> <br>";
+				."$acc[1]>$acc[0]</a> ";
 
 			$style = $class_id == $cur_class ? '' : "style='display:none'";
-			$st_reports .= "<table class='repclass' id='TAB_" . $class_id ."' $style cellpadding='0' cellspacing='0' border='0' width='100%'><tr><td><b>" . _('Reports For Class: ') . "&nbsp;$name</b></td></tr>\n";
+			$st_reports .= "<table class='repclass' id='TAB_".$class_id."' $style cellpadding='0' cellspacing='0' border='0'><tr><td><b>"._('Reports For Class: ')."&nbsp;$name</b></td></tr>\n";
 			foreach($this->ar_reports[$class_id] as $rep_id => $report) {
 				$acc = access_string($report->name);
 				$st_reports .= "<tr><td><a class='repopts_link'"
@@ -105,10 +105,10 @@ class BoxReports {
 
 		$st_params = "<div id='rep_form'>".$st_params."</div>";
 		
-		$st = "<table align='center' width='80%' style='border:1px solid #cccccc;'><tr valign='top'>";
-		$st .= "<td width='30%'>$st_classes</td>";
-		$st .= "<td width='35%' style='border-left:1px solid #cccccc;border-right:1px solid #cccccc;padding-left:3px;'>$st_reports</td>";
-		$st .= "<td width='35%'>$st_params</td>";
+		$st = "<table align='center' class='reports_table_outer'><tr class='report_main_header'>";
+		$st .= "<td colspan=2>$st_classes</td></tr>\n";
+		$st .= "<tr valign='top'><td class='reports_table'>$st_reports</td>";
+		$st .= "<td width='50%' class='report_table_filter'>$st_params</td>";
 		$st .= "</tr></table><br>";
 
 		return $st;

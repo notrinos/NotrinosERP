@@ -1,7 +1,7 @@
-div#rep_form > table .list_container,
-div#rep_form > table > tbody > tr > td > form > input,
-div#rep_form > table textarea,
-div#rep_form > table button, div.date_box {
+td.report_table_filter .list_container,
+td.report_table_filter input,
+td.report_table_filter textarea,
+td.report_table_filter button, div.date_box {
 	display: inline-block;
 	width: 100%;
 	margin-bottom: -2.5em;

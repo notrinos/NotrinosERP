@@ -489,8 +489,7 @@ img {
 	border: 0;
 }
 
-/****** Calendar style ******/
-
+/****** CALENDAR STYLE ******/
 #CCIframe {
 	display: none;
 	left: 0px;
@@ -584,6 +583,44 @@ img {
 	background-color: #ddd;
 	border: 1px solid #FFF;
 }
+
+/********** REPORTS FORM STYLE ************/
+table.reports_table_outer {
+	border: 1px solid #CCC;
+}
+tr.report_main_header td {
+	padding: 0 .5em;
+	border-bottom: 1px solid #CCC;
+}
+td.reports_table {
+	border-right: 1px solid #CCC;
+	padding: 0 .5em;
+}
+tr.report_main_header a {
+	font-size: 1.2em;
+	display: inline-block;
+	padding: 0 .5em;
+	margin-top: -2px;
+	line-height: 42px;
+}
+a.repopts_link {
+	display: inline-block;
+	width: 100%;
+	line-height: 1.7em;
+	padding: .5em;
+}
+a.repopts_link:hover {
+	text-decoration: none;
+	background-color: #F1F1F1;
+}
+tr.report_main_header a:hover {
+	text-decoration: none;
+	background-color: #F1F1F1;
+}
+tr.report_main_header a:link {
+	text-decoration: none;
+}
+
 div.err_msg {
 	margin: 10px;
 	padding: 3px;
