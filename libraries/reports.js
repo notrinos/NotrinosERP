@@ -50,8 +50,12 @@ function showClass(pClass) {
 		cl.style.display = (cl.id==('TAB_'+pClass)) ? "block" : "none";
 	}
 	var classlinks = document.getElementsBySelector('a.repclass_link');
-	for(var i in classlinks)
-		classlinks[i].style.fontWeight = classlinks[i].id == ('class'+pClass) ? 'bold' : 'normal';
+	for(var i in classlinks) {
+		if(classlinks[i].id == ('class'+pClass))
+			classlinks[i].className = 'repclass_link repclass_link_selected';
+		else
+			classlinks[i].className = 'repclass_link';
+	}
 
 	set_options(); // clear optionset links
 	document.getElementById('rep_form').innerHTML = '';

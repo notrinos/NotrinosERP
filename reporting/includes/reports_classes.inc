@@ -68,8 +68,7 @@ class BoxReports {
 			$acc = access_string($name);
 			$st_classes .= "<a href='"
 				.$_SERVER['PHP_SELF']."?Class=$class_id'"
-				." style='font-weight:". ($cur_class == $class_id ? 'bold' : 'normal')."'"
-				." class='repclass_link' id='".'class'.$class_id."'"
+				." class='repclass_link".($cur_class == $class_id ? ' repclass_link_selected' : '')."' id='".'class'.$class_id."'"
 				."$acc[1]>$acc[0]</a> ";
 
 			$style = $class_id == $cur_class ? '' : "style='display:none'";
