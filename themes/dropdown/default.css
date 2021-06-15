@@ -587,10 +587,11 @@ img {
 /********** REPORTS FORM STYLE ************/
 table.reports_table_outer {
 	border: 1px solid #CCC;
+	border-collapse: collapse;
 }
 tr.report_main_header td {
 	padding: 0 .5em;
-	border-bottom: 1px solid #CCC;
+	background-color: #697789;
 }
 td.reports_table {
 	border-right: 1px solid #CCC;
@@ -600,8 +601,20 @@ tr.report_main_header a {
 	font-size: 1.2em;
 	display: inline-block;
 	padding: 0 .5em;
-	margin-top: -2px;
-	line-height: 42px;
+	line-height: 40px;
+	vertical-align: middle;
+	outline: none;
+	color: #FFF;
+}
+tr.report_main_header a:hover {
+	text-decoration: none;
+	background-color: #FFF;
+	color: #333;
+}
+tr.report_main_header a.repclass_link_selected {
+	background-color: #FFF;
+	border-top: 2px solid #697789;
+	color: #333;
 }
 a.repopts_link {
 	display: inline-block;
@@ -610,10 +623,6 @@ a.repopts_link {
 	padding: .5em;
 }
 a.repopts_link:hover {
-	text-decoration: none;
-	background-color: #F1F1F1;
-}
-tr.report_main_header a:hover {
 	text-decoration: none;
 	background-color: #F1F1F1;
 }

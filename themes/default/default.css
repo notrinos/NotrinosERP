@@ -650,10 +650,11 @@ ul.ajaxtabs li button.current, ul.ajaxtabs li button.current:hover{
 /********** REPORTS FORM STYLE ************/
 table.reports_table_outer {
 	border: 1px solid #CCC;
+	border-collapse: collapse;
 }
 tr.report_main_header td {
 	padding: 0 .5em;
-	border-bottom: 1px solid #CCC;
+	background-color: #C9C9C9;
 }
 td.reports_table {
 	border-right: 1px solid #CCC;
@@ -663,8 +664,17 @@ tr.report_main_header a {
 	font-size: 1.2em;
 	display: inline-block;
 	padding: 0 .5em;
-	margin-top: -2px;
-	line-height: 42px;
+	line-height: 3em;
+	vertical-align: middle;
+	outline: none;
+}
+tr.report_main_header a:hover {
+	text-decoration: none;
+	background-color: #FFF;
+}
+tr.report_main_header a.repclass_link_selected {
+	background-color: #FFF;
+	border-top: 2px solid #C9C9C9;
 }
 a.repopts_link {
 	display: inline-block;
@@ -673,10 +683,6 @@ a.repopts_link {
 	padding: .5em;
 }
 a.repopts_link:hover {
-	text-decoration: none;
-	background-color: #F1F1F1;
-}
-tr.report_main_header a:hover {
 	text-decoration: none;
 	background-color: #F1F1F1;
 }
