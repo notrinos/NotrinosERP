@@ -235,7 +235,7 @@ function get_allocatable_from_cust_transactions($customer_id, $trans_no=null, $t
 	if($customer_id)
 		$sql .= " AND trans.debtor_no=".db_escape($customer_id);
 
-	$sql." ORDER BY trans_no"
+	$sql." ORDER BY trans_no";
 
 	return db_query($sql, 'Cannot retreive alloc to transactions');
 }
