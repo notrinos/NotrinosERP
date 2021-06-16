@@ -126,7 +126,7 @@ function get_account_home_balance($person_id, $person_type, $rec_account, $to_da
 //	Note: in 2.4.9 sparse 'ref' argument was removed (generated transactions use
 //	next references from default refline).
 //
-function add_exchange_variation_all($date=null, $memo) {
+function add_exchange_variation_all($date, $memo) {
 	begin_transaction();
 	$exchanged = false;
 	$trans_no = get_next_trans_no(ST_JOURNAL);

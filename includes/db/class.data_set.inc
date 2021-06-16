@@ -93,7 +93,7 @@ abstract class record_set {
 	*	@key - record key (u/d)
 	*	@data - data to be validated (i/u)
 	**/
-	function _validate($key=null, $data) {
+	function _validate($key, $data) {
 		$mode = isset($data) ? (isset($key) ? 'u' : 'i') : 'd';
 
 		foreach($this->checks as $check) {

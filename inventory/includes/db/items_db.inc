@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units='', $mb_flag='', $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null) {
+function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null) {
 	$sql = "UPDATE ".TB_PREF."stock_master SET long_description=".db_escape($long_description).",
 		description=".db_escape($description).",
 		category_id=".db_escape($category_id).",
@@ -140,15 +140,13 @@ function item_in_foreign_codes($stock_id) {
 		$kits = get_where_used($stock_id);
 		$num_kits = db_num_rows($kits);
 		if ($num_kits) {
-			$msg = _('This item cannot be deleted because some code aliases 
-				or foreign codes was entered for it, or there are kits defined 
-				using this item as component')
-				.':<br>';
+			$msg = _('This item cannot be deleted because some code aliases or foreign codes was entered for it, or there are kits defined using this item as component').':<br>';
 
 			while($num_kits--) {
 				$kit = db_fetch($kits);
 				$msg .= "'".$kit[0]."'";
-				if ($num_kits) $msg .= ',';
+				if ($num_kits)
+					$msg .= ',';
 			}
 
 		}

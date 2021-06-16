@@ -243,7 +243,7 @@ function check_ui_refresh($name=null) {
 // When there is no exrate for today, 
 // gets it form ECB and stores in local database.
 //
-function exchange_rate_display($from_currency=null, $to_currency=null, $date_, $force_edit=false) {
+function exchange_rate_display($from_currency, $to_currency, $date_, $force_edit=false) {
 	global $Ajax, $SysPrefs;
 
 	$readonly = false;

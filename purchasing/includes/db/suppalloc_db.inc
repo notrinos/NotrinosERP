@@ -9,29 +9,23 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-//----------------------------------------------------------------------------------------
 
 function add_supp_allocation($amount, $trans_type_from, $trans_no_from, $trans_type_to, $trans_no_to, $person_id, $date_) {
-	$date = date2sql($date_);
 	$sql = "INSERT INTO ".TB_PREF."supp_allocations (
 		amt, date_alloc,
 		trans_type_from, trans_no_from, trans_no_to, trans_type_to, person_id)
-		VALUES (".db_escape($amount).", '$date', "
+		VALUES (".db_escape($amount).", '".date2sql($date_)."', "
 		.db_escape($trans_type_from).", ".db_escape($trans_no_from).", "
 		.db_escape($trans_no_to).", ".db_escape($trans_type_to).", ".db_escape($person_id).")";
 
 	db_query($sql, 'A supplier allocation could not be added to the database');
 }
 
-//----------------------------------------------------------------------------------------
-
 
 function delete_supp_allocation($trans_id) {
 	$sql = "DELETE FROM ".TB_PREF."supp_allocations WHERE id = ".db_escape($trans_id);
 	db_query($sql, 'The existing allocation $trans_id could not be deleted');
 }
-
-//----------------------------------------------------------------------------------------
 
 function get_supp_trans_allocation_balance($trans_type, $trans_no) {
 	$sql = "SELECT (ov_amount+ov_gst-ov_discount-alloc) AS BalToAllocate
@@ -43,9 +37,9 @@ function get_supp_trans_allocation_balance($trans_type, $trans_no) {
 	return $myrow[0];
 }
 
-//----------------------------------------------------------------------------------------
-//	Update supplier trans alloc field according to current status of supp_allocations
-//
+/*
+	Update supplier trans alloc field according to current status of supp_allocations
+*/
 function update_supp_trans_allocation($trans_type, $trans_no, $person_id) {
 	$sql = "UPDATE `".TB_PREF.($trans_type==ST_PURCHORDER ? 'purch_orders' : 'supp_trans')."` trans,
 			(SELECT person_id, sum(amt) amt from ".TB_PREF."supp_allocations
@@ -60,15 +54,11 @@ function update_supp_trans_allocation($trans_type, $trans_no, $person_id) {
 	db_query($sql, 'The supp transaction record could not be modified for the allocation against it');
 }
 
-//-------------------------------------------------------------------------------------------------------------
-
 function void_supp_allocations($type, $type_no, $date='') {
 	return clear_supp_alloctions($type, $type_no, null, $date);
 }
 
-//-------------------------------------------------------------------------------------------------------------
-
-function clear_supp_alloctions($type, $type_no, $person_id=null, $date='') {
+function clear_supp_alloctions($type, $type_no, $person_id=null) {
 	$sql = "UPDATE  ".TB_PREF."supp_allocations ca
 			LEFT JOIN ".TB_PREF."supp_trans paym ON ca.trans_type_from=paym.type AND ca.trans_no_from=paym.trans_no AND ca.person_id=paym.supplier_id
 			LEFT JOIN ".TB_PREF."supp_trans st ON ca.trans_type_to=st.type AND ca.trans_no_to=st.trans_no AND ca.person_id=st.supplier_id
@@ -91,9 +81,8 @@ function clear_supp_alloctions($type, $type_no, $person_id=null, $date='') {
 
 	db_query($sql, 'could not void supp transactions for type='.$type.' and trans_no='.$type_no);
 }
-//-------------------------------------------------------------------------------------------------------------
 
-function get_allocatable_from_supp_sql($supplier_id=null, $settled) {
+function get_allocatable_from_supp_sql($supplier_id, $settled) {
 	$sql = "SELECT
 		trans.type,
 		trans.trans_no,
@@ -122,7 +111,7 @@ function get_allocatable_from_supp_sql($supplier_id=null, $settled) {
 	return $sql;
 }
 
-function get_allocatable_purch_orders($supplier_id = null, $trans_no=null, $type=null) {
+function get_allocatable_purch_orders($supplier_id=null, $trans_no=null, $type=null) {
 	$due_dates = "SELECT order_no, MIN(delivery_date) as date
 		FROM ".TB_PREF."purch_order_details det
 		GROUP BY det.order_no";
@@ -160,8 +149,6 @@ function get_allocatable_purch_orders($supplier_id = null, $trans_no=null, $type
 	return $sql;
 }
 
-//-------------------------------------------------------------------------------------------------------------
-
 function get_allocatable_to_supp_transactions($supplier_id=null, $trans_no=null, $type=null) {
 	$sql = "SELECT
 		trans.type,
@@ -196,8 +183,6 @@ function get_allocatable_to_supp_transactions($supplier_id=null, $trans_no=null,
 
 	return db_query($sql." ORDER BY due_date", 'Cannot retreive alloc to transactions');
 }
-
-//-------------------------------------------------------------------------------------------------------------
 
 function get_allocatable_from_supp_transactions($supplier_id, $trans_no=null, $type=null) {
 	$sql = "SELECT
@@ -245,7 +230,7 @@ function get_sql_for_supplier_allocation_inquiry() {
 		supplier.curr_code, 
 		(trans.ov_amount + trans.ov_gst  + trans.ov_discount) AS TotalAmount, 
 		trans.alloc AS Allocated,
-		((trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND trans.due_date < '" . date2sql(Today()) . "') AS OverDue,
+		((trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND trans.due_date < '".date2sql(Today()) . "') AS OverDue,
 		trans.supplier_id
 		FROM "
 			.TB_PREF."supp_trans as trans
