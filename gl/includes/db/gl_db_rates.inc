@@ -9,41 +9,32 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/includes/remote_url.inc');
-//---------------------------------------------------------------------------------------------
+include_once($path_to_root.'/includes/remote_url.inc');
 
 function get_exchange_rate($rate_id) {
 	$sql = "SELECT * FROM ".TB_PREF."exchange_rates WHERE id=".db_escape($rate_id);
-	$result = db_query($sql, "could not get exchange rate for $rate_id");
+	$result = db_query($sql, 'could not get exchange rate for '.$rate_id);
 
 	return db_fetch($result);
 }
 
 // Retrieves buy exchange rate for given currency/date, zero if no result
 function get_date_exchange_rate($curr_code, $date_) {
-	$date = date2sql($date_);
-	$sql = "SELECT rate_buy
-		FROM ".TB_PREF."exchange_rates
-		WHERE curr_code=".db_escape($curr_code)
-		." AND date_='$date'";
-	$result = db_query($sql, "could not get exchange rate for $curr_code - $date_");
+	$sql = "SELECT rate_buy FROM ".TB_PREF."exchange_rates WHERE curr_code = ".db_escape($curr_code)." AND date_ = '".date2sql($date_)."'";
+	$result = db_query($sql, 'could not get exchange rate for '.$curr_code.' on '.$date_);
 
 	if(db_num_rows($result) == 0) 
 		return 0;
-	$row = db_fetch($result);
-		return $row[0];
+
+	return db_fetch($result)[0];
 }
 
 /*
 	Return last exchange rate of $currency not later than $date.
 */
 function get_last_exchange_rate($curr_code, $date_) {
-	$date = date2sql($date_);
 
-	$sql = "SELECT rate_buy, max(date_) as date_
-		FROM ".TB_PREF."exchange_rates
-		WHERE curr_code = ".db_escape($curr_code)."
-		AND date_ <= '$date' GROUP BY rate_buy ORDER BY date_ Desc LIMIT 1";
+	$sql = "SELECT rate_buy, max(date_) as date_ FROM ".TB_PREF."exchange_rates WHERE curr_code = ".db_escape($curr_code)." AND date_ <= '".date2sql($date_)."' GROUP BY rate_buy ORDER BY date_ Desc LIMIT 1";
 
 	$result = db_query($sql, 'could not query exchange rates');
 
@@ -54,32 +45,22 @@ function get_last_exchange_rate($curr_code, $date_) {
 	return db_fetch_assoc($result);
 }
 
-//---------------------------------------------------------------------------------------------
-
 function update_exchange_rate($curr_code, $date_, $buy_rate, $sell_rate) {
 	if (is_company_currency($curr_code))
 		display_db_error('Exchange rates cannot be set for company currency', '', true);
-			
-	$date = date2sql($date_);
 		
-	$sql = "UPDATE ".TB_PREF."exchange_rates SET rate_buy=$buy_rate, rate_sell=".db_escape($sell_rate)." WHERE curr_code=".db_escape($curr_code)." AND date_='$date'";
+	$sql = "UPDATE ".TB_PREF."exchange_rates SET rate_buy = ".db_escape($buy_rate).", rate_sell = ".db_escape($sell_rate)." WHERE curr_code=".db_escape($curr_code)." AND date_='".date2sql($date_)."'";
 				
-	db_query($sql, "could not add exchange rate for $curr_code");
+	db_query($sql, 'could not add exchange rate for '.$curr_code);
 }
-
-//---------------------------------------------------------------------------------------------
 
 function add_exchange_rate($curr_code, $date_, $buy_rate, $sell_rate) {
 	if (is_company_currency($curr_code))
 		display_db_error('Exchange rates cannot be set for company currency', '', true);
-
-	$date = date2sql($date_);
 		
-	$sql = "INSERT INTO ".TB_PREF."exchange_rates (curr_code, date_, rate_buy, rate_sell) VALUES (".db_escape($curr_code).", '$date', ".db_escape($buy_rate).", ".db_escape($sell_rate).")";
-	db_query($sql, "could not add exchange rate for $curr_code");
+	$sql = "INSERT INTO ".TB_PREF."exchange_rates (curr_code, date_, rate_buy, rate_sell) VALUES (".db_escape($curr_code).", '".date2sql($date_)."', ".db_escape($buy_rate).", ".db_escape($sell_rate).")";
+	db_query($sql, 'could not add exchange rate for '.$curr_code);
 }
-
-//---------------------------------------------------------------------------------------------
 
 function add_new_exchange_rate($curr_code, $date_, $ex_rate) {
 	if (is_company_currency($curr_code) || !$ex_rate)
@@ -88,20 +69,16 @@ function add_new_exchange_rate($curr_code, $date_, $ex_rate) {
 		add_exchange_rate($curr_code, $date_, $ex_rate, $ex_rate);
 }
 
-//---------------------------------------------------------------------------------------------
-
 function delete_exchange_rate($rate_id) {
 	$sql = "DELETE FROM ".TB_PREF."exchange_rates WHERE id=".db_escape($rate_id);
-	db_query($sql, "could not delete exchange rate $rate_id");
+	db_query($sql, 'could not delete exchange rate '.$rate_id);
 }
 
-//-----------------------------------------------------------------------------
-//	Retrieve exchange rate as of date $date from external source (usually inet)
-//
-//	Exchange rate for currency revaluation purposes is defined in FA as home_currency/curr_b ratio i.e.
-//
-//	amount [home] = amount [curr] * ex_rate
-//
+/*
+*	Retrieve exchange rate as of date $date from external source (usually inet)
+*	Exchange rate for currency revaluation purposes is defined in FA as home_currency/curr_b ratio i.e.
+*	amount [home] = amount [curr] * ex_rate
+*/
 function retrieve_exrate($curr_b, $date) {
 	global $SysPrefs;
 
@@ -113,9 +90,7 @@ function retrieve_exrate($curr_b, $date) {
 	return get_extern_rate($curr_b, $xchg_rate_provider, $date);
 }
 
-//-----------------------------------------------------------------------------
-
-function get_extern_rate($curr_b, $provider = 'ECB', $date) {
+function get_extern_rate($curr_b, $provider, $date) {
 	global	$path_to_root;
 
 	if ($date != Today())	// no historical rates available
@@ -132,12 +107,12 @@ function get_extern_rate($curr_b, $provider = 'ECB', $date) {
 		$contents=file_get_contents($proto.$site.$filename);
 	}
 	elseif ($provider == 'YAHOO') {
-		$filename = "/d/quotes.csv?s={$curr_a}{$curr_b}=X&f=sl1d1t1ba&e=.csv"; // new URL's for YAHOO
+		$filename = "/d/quotes.csv?s={$curr_a}{$curr_b}=X&f=sl1d1t1ba&e=.csv";
 		$site = "download.finance.yahoo.com";
 		$site_ip="203.84.220.151";
 	}
 	elseif ($provider == 'GOOGLE') {
-		$filename = "/search?q={$curr_b}+to+{$curr_a}";
+		$filename = "/finance/quote/{$curr_b}-{$curr_a}";
 		$site = "https://www.google.com";
 		$contents = file_get_contents($site.$filename);
 	}
@@ -189,24 +164,17 @@ function get_extern_rate($curr_b, $provider = 'ECB', $date) {
 		preg_match ( $to_mask, $contents, $out );
 		$val_b = isset($out[1]) ? $out[1] : 0;
 		$val_b = str_replace ( ',', '', $val_b );
-		if ($val_b) 
-			$val = $val_a / $val_b;
-		else 
-			$val = 0;
+		
+		$val = $val_b ? $val_a / $val_b : 0;
 	}
 	elseif ($provider == 'YAHOO') {
-		$array = explode(',',$contents); // New operations for YAHOO. Safer.
+		$array = explode(',',$contents);
 		$val = $array[1];
 		if ($val != 0)
 			$val = 1 / $val;
 	}
-	elseif ($provider == 'GOOGLE') {
-		$data = preg_split('/\D\s(.*?)\s=\s/', $contents);
-		$array = explode(" ", $data[1]);
-		$exRate = $array[0];
-
-		$val = str_replace (',', '', $exRate);
-	}
+	elseif ($provider == 'GOOGLE')
+		$val = getInnerStr($contents, 'data-last-price="', '" data');
 	elseif ($provider == 'BLOOMBERG')
 		$val = getInnerStr($contents, ',"price":', ',"');
 	elseif ($provider == 'EXCHANGE-RATES.ORG') {
@@ -214,13 +182,10 @@ function get_extern_rate($curr_b, $provider = 'ECB', $date) {
 		$val = str_replace (',', '', $val);
 	}
 	return $val;
-}  /* end function get_extern_rate */
-
-//-----------------------------------------------------------------------------
+}
 
 function get_sql_for_exchange_rates($curr) {
-	$sql = "SELECT date_, rate_buy, id FROM ".TB_PREF."exchange_rates WHERE curr_code=".db_escape($curr)." ORDER BY date_ DESC";
-	return $sql;	 
+	return "SELECT date_, rate_buy, id FROM ".TB_PREF."exchange_rates WHERE curr_code=".db_escape($curr)." ORDER BY date_ DESC"; 
 }
 
 function getInnerStr($str, $start, $end) {
