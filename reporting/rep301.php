@@ -10,19 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.4 $
-// Creator:		Joe Hunt, boxygen
-// date_:		2014-05-13
-// Title:		Inventory Valuation
-// ----------------------------------------------------------------
 $path_to_root='..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -70,8 +64,11 @@ function getAverageCost($stock_id, $location, $to_date) {
 	
 	if ($result == false)
 		return 0;
-	$qty = $tot_cost = 0;
-	while ($row=db_fetch($result)) {
+
+	$qty = 0;
+	$tot_cost = 0;
+
+	while ($row = db_fetch($result)) {
 		$qty += $row['qty'];	
 		$price = get_domestic_price($row, $stock_id);
 		$tran_cost = $row['qty'] * $price;
@@ -83,7 +80,6 @@ function getAverageCost($stock_id, $location, $to_date) {
 }
 
 function getTransactions($category, $location, $date) {
-	$date = date2sql($date);
 
 	$sql = "SELECT item.category_id,
 			category.description AS cat_description,
@@ -91,30 +87,32 @@ function getTransactions($category, $location, $date) {
 			item.units,
 			item.description, item.inactive,
 			move.loc_code,
+			units.decimals,
 			SUM(move.qty) AS QtyOnHand, 
 			item.material_cost AS UnitCost,
 			SUM(move.qty) * item.material_cost AS ItemTotal 
 			FROM "
 			.TB_PREF."stock_master item,"
 			.TB_PREF."stock_category category,"
-			.TB_PREF."stock_moves move
+			.TB_PREF."stock_moves move,"
+			.TB_PREF."item_units units
 		WHERE item.stock_id=move.stock_id
 		AND item.category_id=category.category_id
 		AND item.mb_flag<>'D' AND mb_flag <> 'F' 
-		AND move.tran_date <= '$date'
+		AND move.tran_date <= '".date2sql($date)."'
+		AND item.units = units.abbr
 		GROUP BY item.category_id,
 			category.description, ";
 		if ($location != 'all')
 			$sql .= "move.loc_code, ";
 		$sql .= "item.stock_id,
 			item.description
-		HAVING SUM(move.qty) != 0";
+		HAVING ROUND(SUM(move.qty), units.decimals) != 0";
 		if ($category != 0)
 			$sql .= " AND item.category_id = ".db_escape($category);
 		if ($location != 'all')
 			$sql .= " AND move.loc_code = ".db_escape($location);
-		$sql .= " ORDER BY item.category_id,
-			item.stock_id";
+		$sql .= " ORDER BY item.category_id, item.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
 }
@@ -132,26 +130,20 @@ function print_inventory_valuation_report() {
 	$orientation = $_POST['PARAM_5'];
 	$destination = $_POST['PARAM_6'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 	$detail = !$detail;
 	$dec = user_price_dec();
 
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($category == ALL_NUMERIC)
 		$category = 0;
-	if ($category == 0)
-		$cat = _('All');
-	else
-		$cat = get_category_name($category);
+	$cat = $category == 0 ? _('All') : get_category_name($category);
 
 	if ($location == ALL_TEXT)
 		$location = 'all';
-	if ($location == 'all')
-		$loc = _('All');
-	else
-		$loc = get_location_name($location);
+	$loc = $location == 'all' ? _('All') : get_location_name($location);
 
 	$cols = array(0, 75, 225, 250, 350, 450,	515);
 
@@ -159,10 +151,10 @@ function print_inventory_valuation_report() {
 
 	$aligns = array('left',	'left',	'left', 'right', 'right', 'right');
 
-	$params =   array( 	0 => $comments,
-						1 => array('text' => _('End Date'), 'from' => $date, 		'to' => ''),
-						2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
-						3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('End Date'), 'from' => $date, 'to' => ''),
+					2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
+					3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''));
 
 	$rep = new FrontReport(_('Inventory Valuation Report'), 'InventoryValReport', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -195,7 +187,7 @@ function print_inventory_valuation_report() {
 			if ($detail)
 				$rep->NewLine();
 		}
-		if (isset($SysPrefs->use_costed_values) && $SysPrefs->use_costed_values==1) {
+		if (isset($SysPrefs->use_costed_values) && $SysPrefs->use_costed_values == 1) {
 			$UnitCost = getAverageCost($trans['stock_id'], $location, $date);
 			$ItemTotal = $trans['QtyOnHand'] * $UnitCost;
 		}	
@@ -207,13 +199,12 @@ function print_inventory_valuation_report() {
 			$rep->NewLine();
 			$rep->fontSize -= 2;
 			$rep->TextCol(0, 1, $trans['stock_id']);
-			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
+			$rep->TextCol(1, 2, $trans['description'].($trans['inactive'] == 1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, $trans['units']);
 			$rep->AmountCol(3, 4, $trans['QtyOnHand'], get_qty_dec($trans['stock_id']));
 			
-			$dec2 = 0;
-			price_decimal_format($UnitCost, $dec2);
-			$rep->AmountCol(4, 5, $UnitCost, $dec2);
+			price_decimal_format($UnitCost, 0);
+			$rep->AmountCol(4, 5, $UnitCost, 0);
 			$rep->AmountCol(5, 6, $ItemTotal, $dec);
 			$rep->fontSize += 2;
 		}
