@@ -14,7 +14,7 @@
 // or display_note(print_document_link($order_no, _('Print this order')));
 // You only need full parameter list for invoices/credit notes
 
-function print_document_link($doc_no, $link_text, $link=true, $type_no, $icon=false, $class='printlink', $id='', $email=0, $extra=0) {
+function print_document_link($doc_no, $link_text, $type_no, $icon=false, $class='printlink', $id='', $email=0, $extra=0) {
 	global $path_to_root;
 	include_once($path_to_root . '/includes/types.inc');
 

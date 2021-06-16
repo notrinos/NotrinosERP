@@ -65,8 +65,8 @@ if (isset($_GET['AddedID'])) {
 
 	display_note(get_customer_trans_view_str($trans_type, $credit_no, _('&View this credit note')), 0, 1);
 
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Invoice'), true, ST_CUSTCREDIT), 0, 1);
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Invoice'), true, ST_CUSTCREDIT, false, 'printlink', '', 1), 0, 1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Invoice'), ST_CUSTCREDIT), 0, 1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Invoice'), ST_CUSTCREDIT, false, 'printlink', '', 1), 0, 1);
 
 	display_note(get_gl_view_str($trans_type, $credit_no, _('View the GL &Journal Entries for this Credit Note')));
 

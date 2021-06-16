@@ -92,7 +92,7 @@ function view_link($row) {
 }
 
 function sum_dimension($row) {
-	return get_dimension_balance($row['id'], $_POST['FromDate'], $_POST['ToDate']);
+	return get_dimension_balance($row['id'], $_POST['FromDate'], $_POST['ToDate']); 
 }
 
 function is_closed($row) {
@@ -108,7 +108,7 @@ function edit_link($row) {
 }
 
 function prt_link($row) {
-	return print_document_link($row['id'], _('Print'), true, ST_DIMENSION, ICON_PRINT);
+	return print_document_link($row['id'], _('Print'), ST_DIMENSION, ICON_PRINT);
 }
 
 

@@ -38,9 +38,9 @@ function prt_link($row) {
 	if (!isset($row['type']))
 		$row['type'] = $_POST['filterType'];
 	if ($row['type'] == ST_PURCHORDER || $row['type'] == ST_SALESORDER || $row['type'] == ST_SALESQUOTE || $row['type'] == ST_WORKORDER)
-		return print_document_link($row['trans_no'], _('Print'), true, $row['type'], ICON_PRINT);
+		return print_document_link($row['trans_no'], _('Print'), $row['type'], ICON_PRINT);
 	else	
-		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print'), true, $row['type'], ICON_PRINT);
+		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print'), $row['type'], ICON_PRINT);
 }
 
 function gl_view($row) {

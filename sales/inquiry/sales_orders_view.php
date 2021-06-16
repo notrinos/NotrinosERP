@@ -90,7 +90,7 @@ function view_link($dummy, $order_no) {
 
 function prt_link($row) {
 	global $trans_type;
-	return print_document_link($row['order_no'], _('Print'), true, $trans_type, ICON_PRINT);
+	return print_document_link($row['order_no'], _('Print'), $trans_type, ICON_PRINT);
 }
 
 function edit_link($row) {

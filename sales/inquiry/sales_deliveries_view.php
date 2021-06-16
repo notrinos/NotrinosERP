@@ -132,7 +132,7 @@ function edit_link($row) {
 }
 
 function prt_link($row) {
-	return print_document_link($row['trans_no'], _('Print'), true, ST_CUSTDELIVERY, ICON_PRINT);
+	return print_document_link($row['trans_no'], _('Print'), ST_CUSTDELIVERY, ICON_PRINT);
 }
 
 function invoice_link($row) {

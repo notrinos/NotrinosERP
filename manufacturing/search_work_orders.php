@@ -126,7 +126,7 @@ function view_gl_link($row) {
 }
 
 function prt_link($row) {
-	return print_document_link($row['id'], _('Print'), true, ST_WORKORDER, ICON_PRINT);
+	return print_document_link($row['id'], _('Print'), ST_WORKORDER, ICON_PRINT);
 }
 
 function dec_amount($row, $amount) {
@@ -138,3 +138,27 @@ $sql = get_sql_for_work_orders($outstanding_only, get_post('SelectedStockItem'),
 $cols = array(
 	_('#') => array('fun'=>'view_link', 'ord'=>''), 
 	_('Reference'), // viewlink 2 ?
+	_('Type') => array('fun'=>'wo_type_name'),
+	_('Location'), 
+	_('Item') => array('fun'=>'view_stock', 'ord'=>''),
+	_('Required') => array('fun'=>'dec_amount', 'align'=>'right'),
+	_('Manufactured') => array('fun'=>'dec_amount', 'align'=>'right'),
+	_('Date') => array('name'=>'date_', 'type'=>'date', 'ord'=>'desc'), 
+	_('Required By') => array('type'=>'date', 'ord'=>''),
+	array('insert'=>true, 'fun'=> 'view_gl_link'),
+	array('insert'=>true, 'fun'=> 'edit_link'),
+	array('insert'=>true, 'fun'=> 'release_link'),
+	array('insert'=>true, 'fun'=> 'costs_link'),
+	array('insert'=>true, 'fun'=> 'produce_link'),
+	array('insert'=>true, 'fun'=> 'prt_link')
+);
+
+$table =& new_db_pager('orders_tbl', $sql, $cols);
+$table->set_marker('check_overdue', _('Marked orders are overdue.'));
+
+$table->width = '90%';
+
+display_db_pager($table);
+
+end_form();
+end_page();

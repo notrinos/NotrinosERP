@@ -81,16 +81,15 @@ function edit_link($row) {
 
 function prt_link($row) {
 	if ($row['type'] == ST_CUSTPAYMENT || $row['type'] == ST_BANKDEPOSIT) 
-		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print Receipt'), true, ST_CUSTPAYMENT, ICON_PRINT);
+		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print Receipt'), ST_CUSTPAYMENT, ICON_PRINT);
 	elseif ($row['type'] == ST_BANKPAYMENT) // bank payment printout not defined yet.
 		return '';
 	else
-		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print'), true, $row['type'], ICON_PRINT);
+		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print'), $row['type'], ICON_PRINT);
 }
 
 function check_overdue($row) {
-	return $row['OverDue'] == 1
-		&& floatcmp($row['TotalAmount'], $row['Allocated']) != 0;
+	return $row['OverDue'] == 1 && floatcmp($row['TotalAmount'], $row['Allocated']) != 0;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -188,8 +187,7 @@ $cols = array(
 		array('insert'=>true, 'fun'=>'edit_link'),
 		array('insert'=>true, 'fun'=>'credit_link'),
 		array('insert'=>true, 'fun'=>'prt_link')
-	);
-
+);
 
 if ($_POST['customer_id'] != ALL_TEXT) {
 	$cols[_('Customer')] = 'skip';

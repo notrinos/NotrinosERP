@@ -52,8 +52,8 @@ if (isset($_GET['AddedID'])) {
 
 	display_note(get_customer_trans_view_str($trans_type, $credit_no, _('&View This Credit Note')), 0, 0);
 
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Note'), true, $trans_type),1);
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Note'), true, $trans_type, false, 'printlink', '', 1),1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Note'), $trans_type),1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Note'), $trans_type, false, 'printlink', '', 1),1);
 
 	display_note(get_gl_view_str($trans_type, $credit_no, _('View the GL &Journal Entries for this Credit Note')),1);
 
@@ -69,8 +69,8 @@ elseif (isset($_GET['UpdatedID'])) {
 
 	display_note(get_customer_trans_view_str($trans_type, $credit_no, _('&View This Credit Note')), 0, 0);
 
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Note'), true, $trans_type),1);
-	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Note'), true, $trans_type, false, 'printlink', '', 1),1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Print This Credit Note'), $trans_type),1);
+	display_note(print_document_link($credit_no.'-'.$trans_type, _('&Email This Credit Note'), $trans_type, false, 'printlink', '', 1),1);
 
 	display_note(get_gl_view_str($trans_type, $credit_no, _('View the GL &Journal Entries for this Credit Note')),1);
 

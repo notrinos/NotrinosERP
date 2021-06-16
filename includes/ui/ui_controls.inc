@@ -271,7 +271,7 @@ function submenu_view($title, $type, $number, $id=null) {
 }
 
 function submenu_print($title, $type, $number, $id=null, $email=0, $extra=0) {
-	display_note(print_document_link($number, $title, true, $type, false, 'printlink', $id, $email, $extra), 0, 1);
+	display_note(print_document_link($number, $title, $type, false, 'printlink', $id, $email, $extra), 0, 1);
 }
 
 //-----------------------------------------------------------------------------------
