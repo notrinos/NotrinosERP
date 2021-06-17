@@ -374,9 +374,11 @@ if ((!isset($SysPrefs->login_max_attempts)) || ($SysPrefs->login_max_attempts < 
 	$SysPrefs->login_max_attempts = 3; 
 
 if ($SysPrefs->go_debug > 0)
-	error_reporting(-1);
+	$cur_error_level = -1;
 else
-	error_reporting(E_USER_WARNING|E_USER_ERROR|E_USER_NOTICE);
+	$cur_error_level = E_USER_WARNING|E_USER_ERROR|E_USER_NOTICE;
+
+error_reporting($cur_error_level);
 ini_set('display_errors', 'On');
 
 if ($SysPrefs->error_logfile != '') {

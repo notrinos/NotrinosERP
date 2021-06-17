@@ -12,17 +12,21 @@
 $messages = array(); // container for system messages
 $before_box = ''; // temporary container for output html data before error box
 
-function get_backtrace($html = false, $skip=0) {
+function get_backtrace($html=false, $skip=0) {
 	$str = '';
-	if ($html) $str .= '<table border=0>';
+	if ($html)
+		$str .= '<table border=0>';
 	$trace = debug_backtrace();
 
 	foreach($trace as $trn => $tr) {
-		if ($trn <= $skip) continue;
-		if ($html) $str .= '<tr><td>';
+		if ($trn <= $skip)
+			continue;
+		if ($html)
+			$str .= '<tr><td>';
 		if (isset($tr['file']) && isset($tr['line']))
 			$str .= $tr['file'].':'.$tr['line'].': ';
-		if ($html) $str .= '</td><td>';
+		if ($html)
+			$str .= '</td><td>';
 		if (isset($tr['type'])) {
 			if($tr['type'] == '::')
 				$str .= $tr['class'].'::';
@@ -41,21 +45,22 @@ function get_backtrace($html = false, $skip=0) {
 				else
 					$args[$n] = "'".$tr['args'][$n]."'";
 			}
-			$str .= implode(',',$args);
+			$str .= implode(',', $args);
 		}
 		$str .= ')</td>';
 	}
 
-	if ($html) $str .= '</tr></table>';
+	if ($html)
+		$str .= '</tr></table>';
+
 	return $str;
 }
 
-//-----------------------------------------------------------------------------
-//    Error handler - collects all php/user messages for
-//    display in message box.
-
+/*
+	Error handler - collects all php/user messages for display in message box.
+*/
 function error_handler($errno, $errstr, $file, $line) {
-	global $messages, $SysPrefs;
+	global $messages, $SysPrefs, $cur_error_level;
 
 	// skip well known warnings we don't care about.
 	// Please use restrainedly to not risk loss of important messages
@@ -72,15 +77,17 @@ function error_handler($errno, $errstr, $file, $line) {
 	$bt = isset($SysPrefs) && $SysPrefs->go_debug>1 ? get_backtrace(true, 1) : array();
 
 	// error_reporting==0 when messages are set off with @ 
-	if ($errno & error_reporting()) {
-		// suppress duplicated errors
-		if (!in_array(array($errno, $errstr, $file, $line, @$bt), $messages))
-			$messages[] = array($errno, $errstr, $file, $line, @$bt);
-	}
-	else if ($errno&~E_NOTICE && $errstr != '') { // log all not displayed messages 
-		$user = @$_SESSION['wa_current_user']->loginname;
-		$context = isset($SysPrefs) && !$SysPrefs->db_ok ? '[before upgrade]' : '';
-		error_log(user_company() . ":$user:". basename($file) .":$line:$context $errstr");
+	if ($cur_error_level == error_reporting()) {
+		if ($errno & $cur_error_level) {
+			// suppress duplicated errors
+			if (!in_array(array($errno, $errstr, $file, $line, @$bt), $messages))
+				$messages[] = array($errno, $errstr, $file, $line, @$bt);
+		}
+		else if ($errno&~E_NOTICE && $errstr != '') { // log all not displayed messages 
+			$user = @$_SESSION["wa_current_user"]->loginname;
+			$context = isset($SysPrefs) && !$SysPrefs->db_ok ? '[before upgrade]' : '';
+			error_log(user_company() . ":$user:". basename($file) .":$line:$context $errstr");
+		}
 	}
 	
 	return true;
@@ -90,10 +97,11 @@ function exception_handler($exception) {
 	error_handler(E_ERROR, sprintf(_("Unhandled exception [%s]: %s."), $exception->getCode(), $exception->getMessage()), $exception->getFile(), $exception->getLine());
 	end_page();
 }
-//------------------------------------------------------------------------------
-//  Formats system messages before insert them into message <div>
-// FIX center is unused now
-function fmt_errors($center=false) {
+
+/*
+	Formats system messages before insert them into message <div>
+*/
+function fmt_errors() {
 	global $messages, $path_to_root, $SysPrefs;
 
 	$msg_class = array(
@@ -106,10 +114,11 @@ function fmt_errors($center=false) {
 
 	if (count($messages)) {
 		foreach($messages as $cnt=>$msg) {
-			if ($SysPrefs->go_debug && $msg[0]>E_USER_NOTICE)
+			if ($SysPrefs->go_debug && $msg[0] > E_USER_NOTICE)
 				$msg[0] = E_ERROR;
 
-			if ($msg[0]>$type) continue;
+			if ($msg[0]>$type)
+				continue;
 
 			if ($msg[0]<$type) { 
 				if ($msg[0] == E_USER_WARNING) {
@@ -127,7 +136,7 @@ function fmt_errors($center=false) {
 			if (!in_array($msg[0], array(E_USER_NOTICE, E_USER_ERROR, E_USER_WARNING)) && $msg[2] != null)
 				$str .= ' '._('in file').': '.$msg[2].' '._('at line ').$msg[3];
 
-			if ($SysPrefs->go_debug>1 && $type!=E_USER_NOTICE && $type!=E_USER_WARNING)
+			if ($SysPrefs->go_debug>1 && $type!=E_USER_NOTICE && $type != E_USER_WARNING)
 				$str .= '<br>'.$msg[4];
 			$content .= ($cnt ? '<hr>' : '').$str;
 		}
@@ -138,9 +147,9 @@ function fmt_errors($center=false) {
 		return '';
 	return $content;
 }
-//-----------------------------------------------------------------------------
-// Error box <div> element.
-//
+/*
+	Error box <div> element.
+*/
 function error_box() {
 	global $before_box;
 	
@@ -160,8 +169,8 @@ function end_flush() {
 	if (isset($Ajax))
 		$Ajax->run();
 
-	 // on some (but not all) php versions zlib extension adds 1 additional level of buffering, 
-	 // so flush the last buffer outside the loop to be on safe side 
+	// on some (but not all) php versions zlib extension adds 1 additional level of buffering, 
+	// so flush the last buffer outside the loop to be on safe side 
 	while(ob_get_level() > 1)
 		ob_end_flush();
 	@ob_end_flush();
@@ -177,18 +186,17 @@ function display_db_error($msg, $sql_statement=null, $exit=true) {
 	$db_error = db_error_no();
 	
 	if($warning)
-		$str = '<b>' . _('Debug mode database warning:') . '</b><br>';
+		$str = '<b>'._('Debug mode database warning:').'</b><br>';
 	else
-		$str = '<b>' . _('DATABASE ERROR :') . "</b> $msg<br>";
+		$str = '<b>'._('DATABASE ERROR :')."</b> $msg<br>";
 	
 	if ($db_error != 0) {
-		$str .= 'error code : ' . $db_error . '<br>';
-		$str .= 'error message : ' . db_error_msg($db) . '<br>';
+		$str .= 'error code : '.$db_error.'<br>';
+		$str .= 'error message : '.db_error_msg($db).'<br>';
 	}
 	
 	if ($SysPrefs->debug == 1) {
 		$cur_prefix = $db_connections[$_SESSION['wa_current_user']->cur_con]['tbpref'];
-
 		$str .= 'sql that failed was : '.str_replace(TB_PREF, $cur_prefix, $sql_statement).'<br>';
 	}
 	
