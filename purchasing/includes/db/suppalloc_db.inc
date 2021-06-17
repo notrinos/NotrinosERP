@@ -215,9 +215,7 @@ function get_allocatable_from_supp_transactions($supplier_id, $trans_no=null, $t
 	return db_query($sql." ORDER BY due_date", 'Cannot retreive alloc to transactions');
 }
 
-function get_sql_for_supplier_allocation_inquiry() {
-	$date_after = date2sql($_POST['TransAfterDate']);
-	$date_to = date2sql($_POST['TransToDate']);
+function get_sql_for_supplier_allocation_inquiry($date_after, $date_to, $filter=ALL_TEXT, $supplier_id=ALL_TEXT, $showSettled=0) {
 
 	$sql = "SELECT 
 		trans.type, 
@@ -230,7 +228,7 @@ function get_sql_for_supplier_allocation_inquiry() {
 		supplier.curr_code, 
 		(trans.ov_amount + trans.ov_gst  + trans.ov_discount) AS TotalAmount, 
 		trans.alloc AS Allocated,
-		((trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND trans.due_date < '".date2sql(Today()) . "') AS OverDue,
+		((trans.type = ".ST_SUPPINVOICE." OR trans.type = ".ST_SUPPCREDIT.") AND trans.due_date < '".date2sql(Today())."') AS OverDue,
 		trans.supplier_id
 		FROM "
 			.TB_PREF."supp_trans as trans
@@ -238,27 +236,26 @@ function get_sql_for_supplier_allocation_inquiry() {
 				ON trans.trans_no=v.id AND trans.type=v.type,"
 			.TB_PREF."suppliers as supplier
 		WHERE supplier.supplier_id = trans.supplier_id
-		AND trans.tran_date >= '$date_after'
-		AND trans.tran_date <= '$date_to'
+		AND trans.tran_date >= '".date2sql($date_after)."'
+		AND trans.tran_date <= '".date2sql($date_to)."'
 		AND ISNULL(v.date_)";
 
-	if ($_POST['supplier_id'] != ALL_TEXT)
-		$sql .= " AND trans.supplier_id = ".db_escape($_POST['supplier_id']);
-	if (isset($_POST['filterType']) && $_POST['filterType'] != ALL_TEXT) {
-		if (($_POST['filterType'] == '1') || ($_POST['filterType'] == '2')) // invoices
+	if ($supplier_id != ALL_TEXT)
+		$sql .= " AND trans.supplier_id = ".db_escape($supplier_id);
+
+	if (isset($filter) && $filter != ALL_TEXT) {
+		if (($filter == '1') || ($filter == '2')) // invoices
 			$sql .= " AND trans.type = ".ST_SUPPINVOICE." ";
-		elseif ($_POST['filterType'] == '3')	// payments
+		elseif ($filter == '3')	// payments
 			$sql .= " AND trans.type = ".ST_SUPPAYMENT." ";
-		elseif (($_POST['filterType'] == '4') || ($_POST['filterType'] == '5')) // credits
+		elseif (($filter == '4') || ($_POST['filterType'] == '5')) // credits
 			$sql .= " AND trans.type = ".ST_SUPPCREDIT." ";
 
-		if (($_POST['filterType'] == '2') || ($_POST['filterType'] == '5')) { // overdude 
-			$today =  date2sql(Today());
-			$sql .= " AND trans.due_date < '$today' ";
-		}
+		if (($filter == '2') || ($filter == '5')) // overdude 
+			$sql .= " AND trans.due_date < '".date2sql(Today())."' ";
 	}
 
-	if (!check_value('showSettled'))
+	if (!$showSettled)
 		$sql .= " AND (round(abs(ov_amount + ov_gst + ov_discount) - alloc,6) != 0) ";
 	
 	return $sql;
