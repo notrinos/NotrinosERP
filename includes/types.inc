@@ -176,7 +176,6 @@ define('WO_MATERIALS', 2);
 //----------------------------------------------------------------------------------
 //	GL account classes
 //
-define('CL_NONE', 0); // for backward compatibility
 define('CL_ASSETS', 1);
 define('CL_LIABILITIES', 2);
 define('CL_EQUITY', 3);

@@ -9,24 +9,21 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+
 /*
-  Write/update customer payment.
-
-  Warning: $rate is leaved here for extensions compatibility reasons, will be removed in 2.4
-	since 2.3.17 is not used: use $bank_amount instead.
-
+	Write/update customer payment.
 	$amount - in customer currency (ex. discount)
 	$discount - in customer currency
 	$bank_amount - in bank currency (before charge)
 	$charge - in bank currency
 */
-function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_account, $date_, $ref, $amount, $discount, $memo_, $rate=0, $charge=0, $bank_amount=0, $dim1=0, $dim2=0) {
+function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_account, $date_, $ref, $amount, $discount, $memo_, $charge=0, $bank_amount=0, $dim1=0, $dim2=0) {
 	global $Refs;
 
 	begin_transaction();
 	$args = func_get_args(); while (count($args) < 14) $args[] = 0;
 	$args = (object)array_combine(array('trans_no', 'customer_id', 'branch_id', 'bank_account', 
-		'date_', 'ref', 'amount', 'discount', 'memo_','rate','charge', 'bank_amount', 'dim1', 'dim2'), $args);
+		'date_', 'ref', 'amount', 'discount', 'memo_', 'rate', 'charge', 'bank_amount', 'dim1', 'dim2'), $args);
 	hook_db_prewrite($args, ST_CUSTPAYMENT);
 
 	$company_record = get_company_prefs();
@@ -40,22 +37,18 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 
 	$bank = get_bank_account($bank_account);
 
-	if (!$bank_amount) { // backward compatibility workaround
-		if(!$rate)
-			$rate = get_exchange_rate_from_to(get_customer_currency($customer_id), $bank['bank_curr_code'], $date_ );
-
+	if (!$bank_amount) {
+		$rate = get_exchange_rate_from_to(get_customer_currency($customer_id), $bank['bank_curr_code'], $date_ );
 		$bank_amount = $amount/$rate;
 	}
 
 	// do not use $rate here: global rate stored in exrate table is always used
-	$payment_no = write_customer_trans(ST_CUSTPAYMENT, $trans_no, $customer_id, $branch_id, 
-		$date_, $ref, $amount, $discount);
-
+	$payment_no = write_customer_trans(ST_CUSTPAYMENT, $trans_no, $customer_id, $branch_id, $date_, $ref, $amount, $discount);
 	$bank_gl_account = get_bank_gl_account($bank_account);
 
 	$total = 0;
 
-	/* Bank account entry first */
+	// Bank account entry first
 	$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,
 		$bank_gl_account, $dim1, $dim2, '', ($bank_amount - $charge),  $bank['bank_curr_code'], PT_CUSTOMER, $customer_id);
 
@@ -73,33 +66,33 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 	}
 
 	if (($discount + $amount) != 0)	{
-	/* Now Credit Debtors account with receipts + discounts */
+	// Now Credit Debtors account with receipts + discounts
 	$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
 		$debtors_account, $dim1, $dim2, -($discount + $amount), $customer_id,
 		'Cannot insert a GL transaction for the debtors account credit');
 	}
 	if ($discount != 0)	{
-		/* Now Debit discount account with discounts allowed*/
+		// Now Debit discount account with discounts allowed
 		$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
 			$discount_account, $dim1, $dim2, $discount, $customer_id,
 			'Cannot insert a GL transaction for the payment discount debit');
 	}
 
 	if ($charge != 0)	{
-		/* Now Debit bank charge account with charges */
+		// Now Debit bank charge account with charges
 		$charge_act = get_bank_charge_account($bank_account);
 		$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$charge_act, $dim1, $dim2, '', 
 			$charge, $bank['bank_curr_code'], PT_CUSTOMER,  $customer_id);
 	}
 
-	/*Post a balance post if $total != 0 due to variance in AR and bank posted values*/
+	// Post a balance post if $total != 0 due to variance in AR and bank posted values
 	if ($total != 0) {
 		$variance_act = get_company_pref('exchange_diff_act');
 		add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$variance_act, $dim1, $dim2, '',
 			-$total, null, PT_CUSTOMER,  $customer_id);
 	}
 
-	/*now enter the bank_trans entry */
+	//now enter the bank_trans entry
 	add_bank_trans(ST_CUSTPAYMENT, $payment_no, $bank_account, $ref, $date_, $bank_amount - $charge, PT_CUSTOMER, $customer_id);
 
 	add_comments(ST_CUSTPAYMENT, $payment_no, $date_, $memo_);
@@ -129,8 +122,8 @@ function void_customer_payment($type, $type_no) {
 
 /*
 	Retrieve bank charge amount from GL postings for customer payment.
-	. Bank charge is not stored explicitly in database as of 2.3.xx
-	. Due to roundings the retrieved charge can differ from the original amount when bank_curr!=home_curr && bank_curr!=cust_curr
+	Bank charge is not stored explicitly in database as of 2.3.xx
+	Due to roundings the retrieved charge can differ from the original amount when bank_curr!=home_curr && bank_curr!=cust_curr
 */
 function get_cust_bank_charge($type, $trans_no) {
 
