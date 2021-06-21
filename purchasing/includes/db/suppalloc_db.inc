@@ -248,7 +248,7 @@ function get_sql_for_supplier_allocation_inquiry($date_after, $date_to, $filter=
 			$sql .= " AND trans.type = ".ST_SUPPINVOICE." ";
 		elseif ($filter == '3')	// payments
 			$sql .= " AND trans.type = ".ST_SUPPAYMENT." ";
-		elseif (($filter == '4') || ($filter'] == '5')) // credits
+		elseif (($filter == '4') || ($filter == '5')) // credits
 			$sql .= " AND trans.type = ".ST_SUPPCREDIT." ";
 
 		if (($filter == '2') || ($filter == '5')) // overdude 
