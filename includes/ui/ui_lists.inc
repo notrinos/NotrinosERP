@@ -71,6 +71,8 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	$search_submit = $opts['search_submit']===true ? '_'.$name.'_button' : $opts['search_submit'];
 	// select set by select content field
 	$search_button = $opts['editable'] ? '_'.$name.'_button' : ($search_box ? $search_submit : false);
+	// datalist id
+	$datalist_id = $opts['search_box'] === true ? $name.'_datalist' : $opts['search_box'];
 
 	$select_submit =  $opts['select_submit'];
 	$spec_id = $opts['spec_id'];
@@ -174,6 +176,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	$sql .= $limit;
 	// ------ make selector ----------
 	$selector = $first_opt = '';
+	$data_options = '';
 	$first_id = false;
 	$found = false;
 	$lastcat = null;
@@ -215,6 +218,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				$lastcat = $cat;
 			}
 			$selector .= "<option ".$sel.' '.$optclass." value='".$value."'>".$descr."</option>\n";
+			$data_options .= "<option value='".$value."'>";
 		}
 		if ($lastcat!==null)
 			$selector .= '</optgroup>';
@@ -258,6 +262,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			set_focus($name); // prevent lost focus
 		if (!$opts['editable'])
 			$txt = $found;
+		$datalist = "<datalist id='$datalist_id'>".$data_options."</datalist>";
 		$Ajax->addUpdate($name, $search_box, $txt ? $txt : '');
 	}
 
@@ -277,7 +282,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	// ------ make combo ----------
 	$edit_entry = '';
 	if ($search_box != false) {
-		$edit_entry = "<input $disabled type='text' name='$search_box' id='$search_box' size='".
+		$edit_entry = "<input $disabled type='text' list='$datalist_id' name='$search_box' id='$search_box' size='".
 			$opts['size']."' maxlength='".$opts['max'].
 			"' value='$txt' class='$class' rel='$name' autocomplete='off' title='"
 			.$opts['box_hint']."'"
@@ -288,6 +293,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				(fallback_mode() ? '' : 'display:none;'),
 				$search_submit ? $search_submit : "_{$name}_button")."\n";
 		}
+		$edit_entry .= $datalist;
 	}
 	default_focus(($search_box && $by_id) ? $search_box : $name);
 
