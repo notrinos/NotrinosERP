@@ -14,7 +14,7 @@ include_once($path_to_root.'/sales/includes/cart_class.inc');
 function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $description='') {
 	// calculate item price to sum of kit element prices factor for 
 	// value distribution over all exploded kit items
-	$std_price = get_kit_price($new_item, $order->customer_currency, $order->sales_type,	$order->price_factor, get_post('OrderDate'), true);
+	$std_price = get_kit_price($new_item, $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'), true);
 
 	$price_factor = $std_price == 0 ? 0 : $price/$std_price;
 
@@ -37,7 +37,7 @@ function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $des
 		}
 		$item_price = round($item_price, user_price_dec());
 
-		if (!$item['is_foreign'] && $item['item_code'] != $item['stock_id']) {	// this is sales kit - recurse 
+		if (!$item['is_foreign'] && $item['item_code'] != $item['stock_id']) {	// this is sales kit - recurse
 			add_to_order($order, $item['stock_id'], $new_item_qty*$item['quantity'], $item_price, $discount);
 		}
 		else {	// stock item record eventually with foreign code
@@ -71,8 +71,7 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 	$order->set_customer($customer_id, $myrow['name'], $myrow['curr_code'], $myrow['discount'], $myrow['payment_terms'], $myrow['pymt_discount']);
 
 	// the sales type determines the price list to be used by default
-	$order->set_sales_type($myrow['salestype'], $myrow['sales_type'], $myrow['tax_included'],
-		$myrow['factor']);
+	$order->set_sales_type($myrow['salestype'], $myrow['sales_type'], $myrow['tax_included'], $myrow['factor']);
 
 	$order->credit = $myrow['cur_credit'];
 
@@ -132,6 +131,14 @@ function display_order_summary($title, &$order, $editable_items=false) {
 
 	$id = find_submit('Edit');
 
+	if ($id == -1 && $editable_items)
+		sales_order_item_controls($order, $k);
+	else {
+		start_row();
+		label_cell('&nbsp;', "colspan=".count($th));
+		end_row();
+	}
+
 	$low_stock = $order->check_qoh($_POST['OrderDate'], $_POST['Location']);
 	foreach ($order->get_items() as $line_no=>$stock_item) {
 
@@ -170,9 +177,6 @@ function display_order_summary($title, &$order, $editable_items=false) {
 
 		$total += $line_total;
 	}
-
-	if ($id == -1 && $editable_items)
-		sales_order_item_controls($order, $k);
 
 	$colspan = 6;
 	if ($order->trans_no != 0)
@@ -231,7 +235,7 @@ function display_order_header(&$order, $editable, $date_text) {
 
 		customer_branches_list_row(_('Branch:'), $_POST['customer_id'], 'branch_id', null, false, true, true, true);
 
-		if( ($order->customer_id != get_post('customer_id', -1)) || ($order->Branch != get_post('branch_id', -1)) || list_updated('customer_id'))  {
+		if( ($order->customer_id != get_post('customer_id', -1)) || ($order->Branch != get_post('branch_id', -1)) || list_updated('customer_id')) {
 
 			if (!isset($_POST['branch_id']) || $_POST['branch_id'] == '') {
 				// ignore errors on customer search box call
@@ -439,7 +443,7 @@ function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 			
 			sales_items_list_cells(null,'stock_id', $_POST['stock_id'], false, true, true);
 		}
-		if (list_updated('stock_id')) {            
+		if (list_updated('stock_id')) {
 			$Ajax->activate('price');
 			$Ajax->activate('units');
 			$Ajax->activate('qty');
