@@ -97,14 +97,14 @@ class renderer {
 			echo "<table class='logoutBar'>";
 			echo "<tr><td class='headingtext3'>".$db_connections[user_company()]['name']." | ".$_SERVER['SERVER_NAME']." | ".$_SESSION['wa_current_user']->name."</td>";
 			echo "<td class='logoutBarRight'><img id='ajaxmark' src='".$indicator."' align='center' style='visibility:hidden;' alt='ajaxmark'></td>";
-			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg._('Dashboard')."</a>\n";
-			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg._('Preferences')."</a>\n";
-			echo " <a class='shortcut' href='".$path_to_root."/admin/change_current_user_password.php?selected_id=".$_SESSION['wa_current_user']->username."'>".$limg._('Change password')."</a>\n";
+			echo "<td class='logoutBarRight'><a href='".$path_to_root."/admin/dashboard.php?sel_app=$sel_app'>".$rimg.'<span>'._('Dashboard')."</span></a>\n";
+			echo "<a class='shortcut' href='".$path_to_root."/admin/display_prefs.php?'>".$pimg.'<span>'._('Preferences')."</span></a>\n";
+			echo " <a class='shortcut' href='".$path_to_root."/admin/change_current_user_password.php?selected_id=".$_SESSION['wa_current_user']->username."'>".$limg.'<span>'._('Change password')."</span></a>\n";
 
 			if ($SysPrefs->help_base_url != null)
-				echo "<a target = '_blank' onclick=".'"'."javascript:openWindow(this.href,this.target); return false;".'" '."href='".help_url()."'>".$himg._('Help')."</a>";
+				echo "<a target = '_blank' onclick=".'"'."javascript:openWindow(this.href,this.target); return false;".'" '."href='".help_url()."'>".$himg.'<span>'._('Help')."</span></a>";
 				
-			echo "<a class='shortcut' href='".$path_to_root."/access/logout.php?'>".$img._('Logout')."</a>";
+			echo "<a class='shortcut' href='".$path_to_root."/access/logout.php?'>".$img.'<span>'._('Logout')."</span></a>";
 			echo "</td></tr><tr><td colspan=3>";
 			echo "</td></tr></table>";
 		}
@@ -149,7 +149,6 @@ class renderer {
 			echo "</tr>\n";
 			if ($SysPrefs->allow_demo_mode) {
 				echo "<tr>\n";
-				//echo "<td><br><div align='center'><a href='http://sourceforge.net'><img src='http://sourceforge.net/sflogo.php?group_id=89967&amp;type=5' alt='SourceForge.net Logo' width='210' height='62' border='0' align='center' /></a></div></td>\n";
 				echo "</tr>\n";
 			}
 			echo "</table><br><br>\n";
