@@ -807,3 +807,8 @@ div.widget_half {
 		overflow: auto;
 	}
 }
+@media all and (max-width: 480px) {
+	td.logoutBarRight a span {
+		display: none;
+	}
+}
