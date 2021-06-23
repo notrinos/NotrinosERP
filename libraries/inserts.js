@@ -109,6 +109,9 @@ function _set_combo_input(e) {
 					}
 				}
 			}
+			// select an option from dropdown datalist
+			if(!ev.keyCode || ev.keyCode === undefined)
+				$(this).blur();
 		}
 	};
 	e.onkeydown = function(ev) {
