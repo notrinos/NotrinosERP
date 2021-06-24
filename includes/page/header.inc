@@ -67,9 +67,9 @@ function send_scripts() {
 				copy($js_path.$jsfile, $fpath);
 			else
 				cache_js_file($fpath, file_get_contents($js_path.$jsfile));
+			
+			$js .= '<script src="'.$fpath.'"></script>';
 		}
-
-		$js .= '<script src="'.$fpath.'"></script>';
 	}
 	foreach($js_userlib as $jsfile) {
 		$js .= '<script src="'.$jsfile.'"></script>';
