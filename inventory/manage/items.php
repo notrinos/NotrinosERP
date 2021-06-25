@@ -41,7 +41,6 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
 
-$user_comp = user_company();
 $new_item = get_post('stock_id')=='' || get_post('cancel') || get_post('clone');
 
 //------------------------------------------------------------------------------------
@@ -305,7 +304,7 @@ function item_settings(&$stock_id, $new_item) {
 		$tmpCodeID=null;
 		$post_label = null;
 		if (!empty($SysPrefs->prefs['barcodes_on_stock'])) {
-			$post_label = '<button class="ajaxsubmit" type="submit" aspect=\'default\'  name="generateBarcode"  id="generateBarcode" value="Generate Barcode EAN8"> '._("Generate EAN-8 Barcode").' </button>';
+			$post_label = '<button class="ajaxsubmit" type="submit" aspect=\'default\'  name="generateBarcode"  id="generateBarcode" value="Generate Barcode EAN8"> '._('Generate EAN-8 Barcode').' </button>';
 			if (isset($_POST['generateBarcode'])) {
 				$tmpCodeID=generateBarcode();
 				$_POST['NewStockID'] = $tmpCodeID;
@@ -350,7 +349,7 @@ function item_settings(&$stock_id, $new_item) {
 		$_POST['no_purchase'] = $category_record['dflt_no_purchase'];
 		$_POST['editable'] = 0;
 	}
-	$fresh_item = !isset($_POST['NewStockID']) || $new_item || check_usage($_POST['stock_id'],false);
+	$fresh_item = !isset($_POST['NewStockID']) || $new_item || check_usage($_POST['stock_id'], false);
 
 	// show inactive item tax type in selector only if already set.
 	item_tax_types_list_row(_('Item Tax Type:'), 'tax_type_id', null, !$new_item && item_type_inactive(get_post('tax_type_id')));
@@ -444,7 +443,7 @@ function item_settings(&$stock_id, $new_item) {
 
 	table_section_title(_('Other'));
 
-	file_row(_('Image File (.jpg)') . ':', 'pic', 'pic');
+	file_row(_('Image File (.jpg)').':', 'pic', 'pic');
 	$stock_img_link = '';
 	$check_remove_image = false;
 
@@ -497,8 +496,8 @@ start_form(true);
 if (db_has_stock_items()) {
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
-	stock_items_list_cells(_('Select an item:'), 'stock_id', null, _('New item'), true, check_value('show_inactive'), false, array('fixed_asset' => get_post('fixed_asset')));
-	$new_item = get_post('stock_id')=='';
+	stock_items_list_cells(_('Select an item:'), 'stock_id', null, _('New item'), true, check_value('show_inactive'), false, array('fixed_asset' => get_post('fixed_asset'), 'editable'=>30));
+	$new_item = get_post('stock_id') == '';
 	check_cells(_('Show inactive:'), 'show_inactive', null, true);
 	end_row();
 	end_table();
