@@ -91,33 +91,22 @@ function _set_combo_input(e) {
 			var len = select.length;
 			var byid = string_contains(this.className, 'combo') || string_contains(this.className, 'combo3');
 			var ac = this.value.toUpperCase();
+			var values = [];
 			select.options[select.selectedIndex].selected = false;
+			
 			for (i = 0; i < len; i++) {
-				var txt = byid ? select.options[i].value : select.options[i].text;
-				if (string_contains(this.className, 'combo3')) {
-					if(txt.toUpperCase().indexOf(ac) == 0) {
-						select.options[i].selected = true;
-						$(select).select2().val(select.options[i].value);
-						break;
-					}
-				}
-				else {
-					if(txt.toUpperCase().indexOf(ac) >= 0) {
-						select.options[i].selected = true;
-						$(select).select2().val(select.options[i].value);
-						break;
-					}
-				}
+				values.push(select.options[i].value.toUpperCase());
 			}
-			// select an option from dropdown datalist
-			if(!ev.keyCode || ev.keyCode === undefined)
-				$(this).blur();
+
+			var matched = stringSimilarity.findBestMatch(ac, values);
+			select.options[matched.bestMatchIndex].selected = true;
+			$(select).select2().val(select.options[matched.bestMatchIndex].value);
 		}
 	};
 	e.onkeydown = function(ev) {
 		ev = ev||window.event;
 		key = ev.keyCode||ev.which;
-		if(key == 13) {
+		if(key == 13 || !key || key === undefined) {
 			this.blur();
 			return false;
 		}

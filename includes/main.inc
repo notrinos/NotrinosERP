@@ -26,9 +26,10 @@ $page_nested = -1;
 // static js files path
 $js_path = $path_to_root.'/libraries/';
 // standard external js scripts included in all files
-$js_static = array('jquery.min.js', 'select2.min.js', 'JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js', 'select.js');
+$js_static = array('jquery.min.js', 'select2.min.js', 'JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js', 'select.js', 'string-similarity.min.js');
 // additional js source included in header
-$js_lib = $js_userlib = array();
+$js_lib = array();
+$js_userlib = array();
 
 function page($title, $no_menu=false, $is_index=false, $onload='', $js='', $script_only=false, $css='') {
 	global $path_to_root, $page_security, $page_nested;
@@ -151,7 +152,7 @@ function add_js_source($text) {
 		$js_lib[] = $text;
 }
 
-/**
+/*
  * Compresses the Javascript code for more efficient delivery.
  * copyright (c) 2005 by Jared White & J. Max Wilson
  * http://www.xajaxproject.org
@@ -160,13 +161,13 @@ function add_js_source($text) {
  */
 function js_compress($sJS) {
 	//remove windows cariage returns
-	$sJS = str_replace("\r","",$sJS);
+	$sJS = str_replace("\r", '', $sJS);
 	
 	//array to store replaced literal strings
 	$literal_strings = array();
 	
 	//explode the string into lines
-	$lines = explode("\n",$sJS);
+	$lines = explode("\n", $sJS);
 	//loop through all the lines, building a new string at the same time as removing literal strings
 	$clean = '';
 	$inComment = false;
@@ -175,7 +176,7 @@ function js_compress($sJS) {
 	$escaped = false;
 	$quoteChar = '';
 	
-	for($i=0;$i<count($lines);$i++) {
+	for($i=0; $i<count($lines); $i++) {
 		$line = $lines[$i];
 		$inNormalComment = false;
 	
@@ -219,7 +220,7 @@ function js_compress($sJS) {
 					$literal .= $c;
 	
 					//subsitute in a marker for the string
-					$clean .= '___' . count($literal_strings) . '___';
+					$clean .= '___'.count($literal_strings).'___';
 	
 					//push the string onto our array
 					array_push($literal_strings,$literal);
@@ -229,7 +230,7 @@ function js_compress($sJS) {
 					$literal .= $d;
 	
 					//subsitute in a marker for the string
-					$clean .= '___' . count($literal_strings) . '___';
+					$clean .= '___'.count($literal_strings).'___';
 	
 					//push the string onto our array
 					array_push($literal_strings, $literal);
@@ -296,8 +297,8 @@ function js_compress($sJS) {
 	if needed. Returns 1 when no confilcts, -1 when file exists and is writable
 */
 function check_write($path) {
-	if ($path == ''//|| $path == '.' || $path == '..'
-	) return 0;
+	if ($path == ''/*|| $path == '.' || $path == '..'*/)
+		return 0;
 
 	return is_writable($path) ? (is_dir($path) ? 1 : -1) : (is_file($path) ? 0 : ($path == '.' || $path == '..' ? 0 : check_write(dirname($path))));
 }
