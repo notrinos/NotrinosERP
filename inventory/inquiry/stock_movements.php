@@ -11,13 +11,13 @@
 ***********************************************************************/
 $page_security = 'SA_ITEMSTRANSVIEW';
 $path_to_root = '../..';
-include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root.'/includes/session.inc');
 
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/banking.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/banking.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
 
-include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root.'/includes/ui.inc');
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(800, 500);
@@ -33,6 +33,7 @@ else
 	$_SESSION['page_title'] = _($help_context = 'Inventory Item Movement');
 
 page($_SESSION['page_title'], isset($_GET['stock_id']), false, '', $js);
+
 //------------------------------------------------------------------------------------------------
 
 if (get_post('fixed_asset') == 1)
@@ -55,10 +56,10 @@ if (!isset($_POST['stock_id']))
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
+
 if (!$page_nested) {
 	if (get_post('fixed_asset') == 1) {
-		stock_items_list_cells(_('Item:'), 'stock_id', $_POST['stock_id'],
-			false, false, check_value('show_inactive'), false, array('fixed_asset' => true));
+		stock_items_list_cells(_('Item:'), 'stock_id', $_POST['stock_id'], false, false, check_value('show_inactive'), false, array('fixed_asset' => true));
 		check_cells(_('Show inactive:'), 'show_inactive', null, true);
 
 		if (get_post('_show_inactive_update')) {
@@ -81,15 +82,13 @@ locations_list_cells(_('From Location:'), 'StockLocation', null, true, false, (g
 date_cells(_('From:'), 'AfterDate', '', null, -user_transaction_days());
 date_cells(_('To:'), 'BeforeDate');
 
-submit_cells('ShowMoves',_('Show Movements'),'',_('Refresh Inquiry'), 'default');
+submit_cells('ShowMoves', _('Show Movements'), '', _('Refresh Inquiry'), 'default');
 end_row();
 end_table();
 end_form();
 
 set_global_stock_item($_POST['stock_id']);
 
-$before_date = date2sql($_POST['BeforeDate']);
-$after_date = date2sql($_POST['AfterDate']);
 $display_location = !$_POST['StockLocation'];
 
 $result = get_stock_movements($_POST['stock_id'], $_POST['StockLocation'], $_POST['BeforeDate'], $_POST['AfterDate']);
@@ -172,7 +171,7 @@ while ($myrow = db_fetch($result)) {
 }
 
 start_row("class='inquirybg'");
-label_cell('<b>'._('Quantity on hand after') . ' ' . $_POST['BeforeDate'].'</b>', 'align=center colspan='.$header_span);
+label_cell('<b>'._('Quantity on hand after').' '.$_POST['BeforeDate'].'</b>', 'align=center colspan='.$header_span);
 qty_cell($total_in, false, $dec);
 qty_cell($total_out, false, $dec);
 qty_cell($after_qty, false, $dec);

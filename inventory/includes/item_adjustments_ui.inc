@@ -16,12 +16,10 @@ include_once($path_to_root . '/includes/ui/items_cart.inc');
 
 function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 	if ($order->find_cart_item($new_item))
-		 display_error(_('For Part :') . $new_item.' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
+		display_error(_('For Part :') . $new_item.' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
 	else
-		 $order->add_to_cart (count($order->line_items), $new_item, $new_item_qty, $standard_cost);
+		$order->add_to_cart (count($order->line_items), $new_item, $new_item_qty, $standard_cost);
 }
-
-//--------------------------------------------------------------------------------
 
 function display_order_header(&$order) {
 	global $Refs;
@@ -34,8 +32,7 @@ function display_order_header(&$order) {
 
 	table_section(2, '50%');
 
-	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))),
-		 false, ST_INVADJUST);
+	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))), false, ST_INVADJUST);
 
 	end_outer_table(1); // outer table
 }
@@ -53,7 +50,8 @@ function display_adjustment_items($title, &$order) {
 		$th = array(_('Item Code'), _('Item Description'), _('Quantity'), _('Unit'), _('Unit Cost'), _('Initial Value'), '');
 	else {
 		$th = array(_('Item Code'), _('Item Description'), _('QOH'), _('Quantity'), _('Unit'), _('Unit Cost'), _('Total'), '');
-		if ( count($order->line_items)) $th[] = '';
+		if ( count($order->line_items))
+			$th[] = '';
 	}
 
 	table_header($th);
@@ -62,8 +60,8 @@ function display_adjustment_items($title, &$order) {
 
 	$low_stock = $order->check_qoh($_POST['StockLocation'], $_POST['AdjDate']);
 	$id = get_post('selected_id', find_submit('Edit'));
-	foreach ($order->line_items as $line_no=>$stock_item) {
 
+	foreach ($order->line_items as $line_no=>$stock_item) {
 		$total += ($stock_item->standard_cost * $stock_item->quantity);
 
 		if ($id != $line_no) {
@@ -125,12 +123,10 @@ function display_adjustment_items($title, &$order) {
 	div_end();
 }
 
-//---------------------------------------------------------------------------------
-
 function adjustment_edit_item_controls(&$order, $line_no=-1) {
 	global $Ajax;
-	start_row();
 
+	start_row();
 	$dec2 = 0;
 
 	if ($line_no != -1) {
@@ -206,8 +202,6 @@ function adjustment_edit_item_controls(&$order, $line_no=-1) {
 
 	end_row();
 }
-
-//---------------------------------------------------------------------------------
 
 function adjustment_options_controls() {
 	echo '<br>';
