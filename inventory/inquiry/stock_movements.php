@@ -47,6 +47,9 @@ if(get_post('ShowMoves'))
 if (isset($_GET['stock_id']))
 	$_POST['stock_id'] = $_GET['stock_id'];
 
+if (list_updated('stock_id'))
+	$Ajax->activate('doc_tbl');
+
 start_form();
 
 hidden('fixed_asset');
