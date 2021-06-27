@@ -293,7 +293,8 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				(fallback_mode() ? '' : 'display:none;'),
 				$search_submit ? $search_submit : "_{$name}_button")."\n";
 		}
-		$edit_entry .= $datalist;
+		if(!empty($datalist))
+			$edit_entry .= $datalist;
 	}
 	default_focus(($search_box && $by_id) ? $search_box : $name);
 
