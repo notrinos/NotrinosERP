@@ -90,7 +90,10 @@ function get_item_edit_info($stock_id) {
 		." AND item.units=unit.abbr";
 	$result = db_query($sql, 'The standard cost cannot be retrieved');
 
-	return db_fetch($result);
+	$row = db_fetch($result);
+	if ($row['decimals'] == -1)
+		$row['decimals'] = user_qty_dec();
+	return $row;
 }
 
 //--------------------------------------------------------------------------------------
