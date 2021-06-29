@@ -69,6 +69,9 @@ input.date {
 div.date_box {
 	white-space: nowrap;
 }
+html[dir="rtl"] div.date_box a {
+	right: -22px;
+}
 div.date_box a {
 	position: relative;
 	left: -22px;
