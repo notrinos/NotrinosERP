@@ -25,6 +25,9 @@ tr, td, th {
 table {
 	text-align: left;
 }
+html[dir="rtl"] table {
+	text-align: right;
+}
 textarea {
 	font-size: 12px;
 }
@@ -69,12 +72,12 @@ input.date {
 div.date_box {
 	white-space: nowrap;
 }
-html[dir="rtl"] div.date_box a {
-	right: -22px;
-}
 div.date_box a {
 	position: relative;
 	left: -22px;
+}
+html[dir="rtl"] div.date_box a {
+	right: -22px;
 }
 div.date_box a:focus {
 	outline: none;
@@ -212,6 +215,9 @@ div.logoutBar {
 }
 .logoutBarRight {
 	text-align: right;
+}
+html[dir="rtl"] .logoutBarRight {
+	text-align: left;
 }
 .logoutBarRight a {
 	margin-right: 1em;
