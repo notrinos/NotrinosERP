@@ -83,6 +83,9 @@ div.date_box a {
 	position: relative;
 	left: -22px;
 }
+html[dir="rtl"] div.date_box a {
+	right: -22px;
+}
 div.date_box a:focus {
 	outline: none;
 }
