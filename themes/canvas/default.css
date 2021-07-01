@@ -575,6 +575,9 @@ button i {
 	font-size: 1.1em;
 	vertical-align: middle;
 }
+html[dir="rtl"] button i {
+	margin-left: 3px;
+}
 i.btn_ok {
 	color: #82C91E;
 }
