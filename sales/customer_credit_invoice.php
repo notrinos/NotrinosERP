@@ -22,6 +22,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
+include_once($path_to_root . '/sales/includes/ui/sales_credit_ui.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
 
 $js = '';
@@ -215,7 +216,7 @@ if (isset($_POST['Location']))
 
 //-----------------------------------------------------------------------------
 
-function display_credit_items() {
+function display_credit_invoice_items() {
 	start_form();
 	hidden('cart_id');
 
@@ -321,36 +322,6 @@ function display_credit_items() {
 
 //-----------------------------------------------------------------------------
 
-function display_credit_options() {
-	global $Ajax;
-	br();
-
-	if (isset($_POST['_CreditType_update']))
-		$Ajax->activate('options');
-
-	div_start('options');
-	start_table(TABLESTYLE2);
-
-	credit_type_list_row(_('Credit Note Type'), 'CreditType', null, true);
-
-	if ($_POST['CreditType'] == 'Return') {
-
-		/*if the credit note is a return of goods then need to know which location to receive them into */
-		if (!isset($_POST['Location']))
-			$_POST['Location'] = $_SESSION['Items']->Location;
-		locations_list_row(_('Items Returned to Location'), 'Location', $_POST['Location']);
-	}
-	else
-		/* the goods are to be written off to somewhere */
-		gl_all_accounts_list_row(_('Write off the cost of the items to'), 'WriteOffGLCode', null);
-
-	textarea_row(_('Memo'), 'CreditText', null, 51, 3);
-	echo '</table>';
-	div_end();
-}
-
-//-----------------------------------------------------------------------------
-
 if (get_post('Update')) {
 	copy_to_cart();
 	$Ajax->activate('credit_items');
@@ -358,8 +329,8 @@ if (get_post('Update')) {
 
 //-----------------------------------------------------------------------------
 
-display_credit_items();
-display_credit_options();
+display_credit_invoice_items();
+credit_options_controls($_SESSION['Items']);
 
 echo '<br><center>';
 submit('Update', _('Update'), true, _('Update credit value for quantities entered'), true);
