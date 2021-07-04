@@ -833,7 +833,7 @@ function get_js_select_combo_item() {
 		} else {			
 			var stock_element = doc.getElementsByName('stock_id');
 			if( stock_element.length > 0) {
-				stock_element.value = value;	
+				stock_element[0].value = value;	
 				var stock_id = doc.getElementById('_stock_id_edit'); 
 				stock_id.value=value;
 				stock_id.onblur();		
