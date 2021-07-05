@@ -33,7 +33,7 @@ function display_kit_items($selected_kit) {
 	$result = get_item_kit($selected_kit);
 	div_start('bom');
 	start_table(TABLESTYLE, "width='60%'");
-	$th = array(_('Stock Item'), _('Description'), _('Quantity'), _('Units'), '','');
+	$th = array(_('Stock Item'), _('Description'), _('Quantity'), _('Units'), '', '');
 	table_header($th);
 
 	$k = 0;
@@ -43,7 +43,7 @@ function display_kit_items($selected_kit) {
 
 		label_cell($myrow['stock_id']);
 		label_cell($myrow['comp_name']);
-		qty_cell($myrow['quantity'], false, $myrow['units'] == '' ? 0 : get_qty_dec($myrow['comp_name']));
+		qty_cell($myrow['quantity'], false, $myrow['units'] == '' ? 0 : get_qty_dec($myrow['stock_id']));
 		label_cell($myrow['units'] == '' ? _('kit') : $myrow['units']);
 		edit_button_cell('Edit'.$myrow['id'], _('Edit'));
 		delete_button_cell('Delete'.$myrow['id'], _('Delete'));
@@ -64,7 +64,7 @@ function update_kit($selected_kit, $component_id) {
 		return 0;
 	}
 	elseif (get_post('description') == '') {
-		display_error( _('Item code description cannot be empty.'));
+		display_error(_('Item code description cannot be empty.'));
 		set_focus('description');
 		return 0;
 	}
