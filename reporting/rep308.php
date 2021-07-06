@@ -10,12 +10,6 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.4 $
-// Creator:		boxygen, Joe Hunt
-// date_:		2017-05-14
-// Title:		Costed Inventory Movements
-// ----------------------------------------------------------------
 $path_to_root='..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -60,7 +54,7 @@ function fetch_items($category=0) {
 	return db_query($sql, 'No transactions were returned');
 }
 
-function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = true) {
+function trans_qty($stock_id, $location, $from_date, $to_date, $inward = true) {
 	if ($from_date == null)
 		$from_date = Today();
 
@@ -91,7 +85,7 @@ function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = tr
 	return $myrow[0];
 }
 
-function avg_unit_cost($stock_id, $location=null, $to_date) {
+function avg_unit_cost($stock_id, $location, $to_date) {
 	if ($to_date == null)
 		$to_date = Today();
 
@@ -131,7 +125,7 @@ function avg_unit_cost($stock_id, $location=null, $to_date) {
 
 //----------------------------------------------------------------------------------------------------
 
-function trans_qty_unit_cost($stock_id, $location=null, $from_date, $to_date, $inward = true) {
+function trans_qty_unit_cost($stock_id, $location, $from_date, $to_date, $inward = true) {
 	if ($from_date == null)
 		$from_date = Today();
 

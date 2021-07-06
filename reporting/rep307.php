@@ -10,12 +10,6 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Jujuk
-// date_:	2011-05-24
-// Title:	Stock Movements
-// ----------------------------------------------------------------
 $path_to_root='..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -44,7 +38,7 @@ function fetch_items($category=0) {
 	return db_query($sql, 'No transactions were returned');
 }
 
-function trans_qty($stock_id, $location=null, $from_date, $to_date, $inward = true) {
+function trans_qty($stock_id, $location, $from_date, $to_date, $inward=true) {
 	if ($from_date == null)
 		$from_date = Today();
 
