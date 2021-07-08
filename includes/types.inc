@@ -187,9 +187,9 @@ function get_class_type_convert($ctype) {
 	global $SysPrefs;
 
 	if (isset($SysPrefs->use_oldstyle_convert) && $SysPrefs->use_oldstyle_convert == 1)
-		return (($ctype >= CL_INCOME || $ctype == CL_NONE) ? -1 : 1);
+		return $ctype >= CL_INCOME ? -1 : 1;
 	else	
-		return ((($ctype >= CL_LIABILITIES && $ctype <= CL_INCOME) || $ctype == CL_NONE) ? -1 : 1);
+		return ($ctype >= CL_LIABILITIES && $ctype <= CL_INCOME) ? -1 : 1;
 }
 //----------------------------------------------------------------------------------
 //	Quick entry types
