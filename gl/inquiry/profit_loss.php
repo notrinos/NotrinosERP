@@ -26,11 +26,7 @@ if (user_use_date_picker())
 
 page(_($help_context = 'Profit & Loss Drilldown'), false, false, '', $js);
 
-$compare_types = array(
-	_('Accumulated'),
-	_('Period Y-1'),
-	_('Budget')
-);
+$compare_types = array(_('Accumulated'), _('Period Y-1'), _('Budget'));
 
 //----------------------------------------------------------------------------------------------------
 // Ajax updates
@@ -52,7 +48,7 @@ if (isset($_GET['AccGrp']))
 
 //----------------------------------------------------------------------------------------------------
 
-function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $convert, $dimension=0, $dimension2=0, $drilldown, $path_to_root) {
+function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root) {
 	global $levelptr, $k;
 		
 	$code_per_balance = 0;
@@ -76,7 +72,7 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 			continue;
 		
 		if ($drilldown && $levelptr == 0) {
-			$url = "<a href='".$path_to_root."/gl/inquiry/gl_account_inquiry.php?TransFromDate=".$from."&TransToDate=".$to."&Dimension=".$dimension."&Dimension2=".$dimension2."&account=".$account['account_code']."'>".$account['account_code']." ". $account['account_name'].'</a>';
+			$url = "<a href='".$path_to_root.'/gl/inquiry/gl_account_inquiry.php?TransFromDate='.$from.'&TransToDate='.$to.'&Dimension='.$dimension.'&Dimension2='.$dimension2.'&account='.$account['account_code']."'>".$account['account_code'].' '. $account['account_name'].'</a>';
 				
 			start_row("class='stockmankobg'");
 			label_cell($url);
@@ -179,12 +175,8 @@ function inquiry_controls() {
 function display_profit_and_loss($compare) {
 	global $path_to_root, $compare_types;
 
-	if (!isset($_POST['Dimension']))
-		$_POST['Dimension'] = 0;
-	if (!isset($_POST['Dimension2']))
-		$_POST['Dimension2'] = 0;
-	$dimension = $_POST['Dimension'];
-	$dimension2 = $_POST['Dimension2'];
+	$dimension = empty($_POST['Dimension']) ? 0 : $_POST['Dimension'];
+	$dimension2 = empty($_POST['Dimension2']) ? 0 : $_POST['Dimension2'];
 
 	$from = $_POST['TransFromDate'];
 	$to = $_POST['TransToDate'];
@@ -210,11 +202,11 @@ function display_profit_and_loss($compare) {
 
 	start_table(TABLESTYLE, "width='50%'");
 
-	$tableheader =  "<tr>
-		<td class='tableheader'>"._("Group/Account Name")."</td>
-		<td class='tableheader'>"._("Period") . "</td>
+	$tableheader = "<tr>
+		<td class='tableheader'>"._('Group/Account Name')."</td>
+		<td class='tableheader'>"._('Period') . "</td>
 		<td class='tableheader'>".$compare_types[$compare]."</td>
-		<td class='tableheader'>"._("Achieved %")."</td>
+		<td class='tableheader'>"._('Achieved %')."</td>
 	</tr>";	
 	
 	if (!$drilldown) {//Root Level
@@ -241,7 +233,7 @@ function display_profit_and_loss($compare) {
 				$class_acc_total += $TypeTotal[1];
 
 				if ($TypeTotal[0] != 0 || $TypeTotal[1] != 0 ) {
-					$url = "<a href='".$path_to_root."/gl/inquiry/profit_loss.php?TransFromDate=".$from."&TransToDate=".$to."&Compare=".$compare."&Dimension=".$dimension."&Dimension2=".$dimension2."&AccGrp=".$accounttype['id']."'>".$accounttype['id']." ".$accounttype['name'].'</a>';
+					$url = "<a href='".$path_to_root.'/gl/inquiry/profit_loss.php?TransFromDate='.$from.'&TransToDate='.$to.'&Compare='.$compare.'&Dimension='.$dimension.'&Dimension2='.$dimension2.'&AccGrp='.$accounttype['id']."'>".$accounttype['id'].' '.$accounttype['name'].'</a>';
 						
 					alt_table_row_color($k);
 					label_cell($url);
@@ -255,7 +247,7 @@ function display_profit_and_loss($compare) {
 			//Print Class Summary
 			
 			start_row("class='inquirybg' style='font-weight:bold'");
-			label_cell(_('Total') . ' ' . $class['class_name']);
+			label_cell(_('Total').' '.$class['class_name']);
 			amount_cell($class_per_total * $convert);
 			amount_cell($class_acc_total * $convert);
 			amount_cell(Achieve($class_per_total, $class_acc_total));
@@ -290,7 +282,7 @@ function display_profit_and_loss($compare) {
 		$classtotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root);
 	}
 	end_table(); // outer table
-	hyperlink_params($_SERVER['PHP_SELF'], _('Back'), 'TransFromDate='. $from . '&TransToDate=' . $to . '&Dimension=' . $dimension . '&Dimension2=' . $dimension2);
+	hyperlink_params($_SERVER['PHP_SELF'], _('Back'), 'TransFromDate='.$from.'&TransToDate='.$to.'&Dimension='.$dimension.'&Dimension2='.$dimension2);
 	div_end();
 }
 
