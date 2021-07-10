@@ -22,8 +22,7 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 
 	begin_transaction();
 	$args = func_get_args(); while (count($args) < 14) $args[] = 0;
-	$args = (object)array_combine(array('trans_no', 'customer_id', 'branch_id', 'bank_account', 
-		'date_', 'ref', 'amount', 'discount', 'memo_', 'rate', 'charge', 'bank_amount', 'dim1', 'dim2'), $args);
+	$args = (object)array_combine(array('trans_no', 'customer_id', 'branch_id', 'bank_account', 'date_', 'ref', 'amount', 'discount', 'memo_', 'rate', 'charge', 'bank_amount', 'dim1', 'dim2'), $args);
 	hook_db_prewrite($args, ST_CUSTPAYMENT);
 
 	$company_record = get_company_prefs();
@@ -49,8 +48,7 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 	$total = 0;
 
 	// Bank account entry first
-	$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,
-		$bank_gl_account, $dim1, $dim2, '', ($bank_amount - $charge),  $bank['bank_curr_code'], PT_CUSTOMER, $customer_id);
+	$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_, $bank_gl_account, $dim1, $dim2, '', ($bank_amount - $charge), $bank['bank_curr_code'], PT_CUSTOMER, $customer_id);
 
 	if ($branch_id != ANY_NUMERIC) {
 
@@ -65,31 +63,22 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 		$discount_account = $company_record['default_prompt_payment_act'];
 	}
 
-	if (($discount + $amount) != 0)	{
-	// Now Credit Debtors account with receipts + discounts
-	$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
-		$debtors_account, $dim1, $dim2, -($discount + $amount), $customer_id,
-		'Cannot insert a GL transaction for the debtors account credit');
-	}
-	if ($discount != 0)	{
-		// Now Debit discount account with discounts allowed
-		$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_,
-			$discount_account, $dim1, $dim2, $discount, $customer_id,
-			'Cannot insert a GL transaction for the payment discount debit');
-	}
+	if (($discount + $amount) != 0)	// Now Credit Debtors account with receipts + discounts
+		$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_, $debtors_account, $dim1, $dim2, -($discount + $amount), $customer_id, 'Cannot insert a GL transaction for the debtors account credit');
+	
+	if ($discount != 0) // Now Debit discount account with discounts allowed
+		$total += add_gl_trans_customer(ST_CUSTPAYMENT, $payment_no, $date_, $discount_account, $dim1, $dim2, $discount, $customer_id, 'Cannot insert a GL transaction for the payment discount debit');
 
 	if ($charge != 0)	{
 		// Now Debit bank charge account with charges
 		$charge_act = get_bank_charge_account($bank_account);
-		$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$charge_act, $dim1, $dim2, '', 
-			$charge, $bank['bank_curr_code'], PT_CUSTOMER,  $customer_id);
+		$total += add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$charge_act, $dim1, $dim2, '',  $charge, $bank['bank_curr_code'], PT_CUSTOMER,  $customer_id);
 	}
 
 	// Post a balance post if $total != 0 due to variance in AR and bank posted values
 	if ($total != 0) {
 		$variance_act = get_company_pref('exchange_diff_act');
-		add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$variance_act, $dim1, $dim2, '',
-			-$total, null, PT_CUSTOMER,  $customer_id);
+		add_gl_trans(ST_CUSTPAYMENT, $payment_no, $date_,	$variance_act, $dim1, $dim2, '', -$total, null, PT_CUSTOMER,  $customer_id);
 	}
 
 	//now enter the bank_trans entry
@@ -128,7 +117,7 @@ function void_customer_payment($type, $type_no) {
 function get_cust_bank_charge($type, $trans_no) {
 
 	// restore charge amount from amounts in bank currency if possible, otherwise calculate from GL posting with exchange rate used for amount posting
-	$sql = "SELECT	IF(act.bank_curr_code=home_curr.value, charge.amount,
+	$sql = "SELECT  IF(act.bank_curr_code=home_curr.value, charge.amount,
 					IF(act.bank_curr_code=debtor.curr_code, -(trans.amount-ar.ov_amount+ar.ov_discount),
 					IFNULL(charge.amount*trans.amount/pmt.amount, 0)))
 			FROM ".TB_PREF."bank_trans trans
