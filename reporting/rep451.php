@@ -10,29 +10,22 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ASSETSANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2015-12-01
-// Title:	Fixed Assets Valuation
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
-include_once($path_to_root . '/fixed_assets/includes/fixed_assets_db.inc');
-include_once($path_to_root . '/fixed_assets/includes/fa_classes_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
+include_once($path_to_root.'/fixed_assets/includes/fa_classes_db.inc');
 
 function find_last_location($stock_id, $end_date) {
-	$end_date = date2sql($end_date);
-	$sql = "SELECT loc_code FROM ".TB_PREF."stock_moves WHERE stock_id = ".db_escape($stock_id)." AND
-		tran_date <= '$end_date' ORDER BY tran_date DESC LIMIT 1";
+	
+	$sql = "SELECT loc_code FROM ".TB_PREF."stock_moves WHERE stock_id = ".db_escape($stock_id)." AND tran_date <= '".date2sql($end_date)."' ORDER BY tran_date DESC LIMIT 1";
 	$res = db_query($sql, 'No stock moves were returned');
 	$row = db_fetch_row($res);
-	return $row[0];
+	return is_array($row) ? $row[0] : false;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -51,31 +44,30 @@ function print_fixed_assets_valuation_report() {
 	$comments = $_POST['PARAM_4'];
 	$orientation = $_POST['PARAM_5'];
 	$destination = $_POST['PARAM_6'];
+
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
+
 	$detail = !$detail;
 	$dec = user_price_dec();
 
-	$orientation = ($orientation ? 'L' : 'P');
+	$orientation = $orientation ? 'L' : 'P';
+
 	if ($class == ALL_NUMERIC)
 		$class = 0;
-	if ($class== 0)
-		$cln = _('All');
-	else
-		$cln = get_fixed_asset_classname($class);
+
+	$cln = $class == 0 ? _('All') : get_fixed_asset_classname($class);
 
 	if ($location == ALL_TEXT)
 		$location = 'all';
-	if ($location == 'all')
-		$loc = _('All');
-	else
-		$loc = get_location_name($location);
+	
+	$loc = $location == 'all' ? _('All') : get_location_name($location);
 
 	$cols = array(0, 75, 225, 250, 350, 450,	515);
 
-	$headers = array(_('Class'), '', _('UOM'),  _('Initial'), _('Depreciations'), _('Current'));
+	$headers = array(_('Class'), '', _('UOM'), _('Initial'), _('Depreciations'), _('Current'));
 
 	$aligns = array('left',	'left',	'left', 'right', 'right', 'right', 'right');
 
@@ -91,9 +83,8 @@ function print_fixed_assets_valuation_report() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	//$res = getTransactions($category, $location, $date);
 	$sql = get_sql_for_fixed_assets(false);
-	$res = db_query($sql,'No transactions were returned');
+	$res = db_query($sql, 'No transactions were returned');
 	
 	$total = $grandtotal = 0.0;
 	$catt = '';
@@ -153,7 +144,7 @@ function print_fixed_assets_valuation_report() {
 	$rep->NewLine(2, 1);
 	$rep->TextCol(0, 4, _('Grand Total'));
 	$rep->AmountCol(5, 6, $grandtotal, $dec);
-	$rep->Line($rep->row  - 4);
+	$rep->Line($rep->row - 4);
 	$rep->NewLine();
 	$rep->End();
 }
