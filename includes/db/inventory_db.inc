@@ -13,23 +13,21 @@ function get_qoh_on_date($stock_id, $location=null, $date_=null) {
 	if ($date_ == null)
 		$date_ = Today();
 
-	 $date = date2sql($date_);
-	 $sql = "SELECT SUM(qty)
-		FROM ".TB_PREF."stock_moves st
+	 $sql = "SELECT SUM(qty) FROM ".TB_PREF."stock_moves st
 		LEFT JOIN ".TB_PREF."voided v ON st.type=v.type AND st.trans_no=v.id
 		WHERE ISNULL(v.id)
 		AND stock_id=".db_escape($stock_id)."
-		AND tran_date <= '$date'"; 
+		AND tran_date <= '".date2sql($date_)."'"; 
 
 	if ($location != null)
 		$sql .= " AND loc_code = ".db_escape($location);
 
-	$result = db_query($sql, "QOH calculation failed");
+	$result = db_query($sql, 'QOH calculation failed');
 
 	$myrow = db_fetch_row($result);
 
-	$qoh =  $myrow[0];
-		return $qoh ? $qoh : 0;
+	$qoh = isset($myrow[0]) ? $myrow[0] : 0;
+	return $qoh;
 }
 
 /**
@@ -46,24 +44,22 @@ function check_negative_stock($stock_id, $delta_qty, $location=null, $date=null)
 	if ($delta_qty >= 0)
 		 return null;	// qty increese is always safe
 
-	if (!isset($date))
+	if (empty($date))
 		$date = Today();
 
-	$date = date2sql($date);
-
 	// check stock status on date
-	$sql = "SELECT SUM(qty) qty, '$date' tran_date FROM ".TB_PREF."stock_moves
+	$sql = "SELECT SUM(qty) qty, '".date2sql($date)."' tran_date FROM ".TB_PREF."stock_moves
 		WHERE stock_id=".db_escape($stock_id)."
-		AND tran_date <= '$date'"; 
+		AND tran_date <= '".date2sql($date)."'"; 
 
 	if ($location)
 		$sql .= " AND loc_code = ".db_escape($location);
 
-	$result = db_query($sql, "QOH calculation failed");
+	$result = db_query($sql, 'QOH calculation failed');
 	$qos = db_fetch_assoc($result);
 
 	// check also all stock changes after the date to avoid negative stock in future
-	$sql = TB_PREF."stock_moves WHERE stock_id=".db_escape($stock_id) . " AND tran_date > '$date'";
+	$sql = TB_PREF."stock_moves WHERE stock_id=".db_escape($stock_id) . " AND tran_date > '".date2sql($date)."'";
 
 	if ($location)
 		$sql .= " AND loc_code=".db_escape($location);
@@ -91,7 +87,7 @@ function get_item_edit_info($stock_id) {
 	$result = db_query($sql, 'The standard cost cannot be retrieved');
 
 	$row = db_fetch($result);
-	if ($row['decimals'] == -1)
+	if (is_array($row) && $row['decimals'] == -1)
 		$row['decimals'] = user_qty_dec();
 	return $row;
 }
@@ -106,20 +102,18 @@ function get_unit_cost($stock_id) {
 
 	$myrow = db_fetch_row($result);
 
-	return $myrow[0];
+	return is_array($myrow) ? $myrow[0] : false;
 }
 
 //--------------------------------------------------------------------------------------
  
 function get_purchase_cost($stock_id) {
-	$sql = "SELECT purchase_cost
-		FROM ".TB_PREF."stock_master
-		WHERE stock_id=".db_escape($stock_id);
+	$sql = "SELECT purchase_cost FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($stock_id);
 	$result = db_query($sql, 'The purchase cost cannot be retrieved');
 
 	$myrow = db_fetch_row($result);
 
-	return $myrow[0];
+	return is_array($myrow) ? $myrow[0] : false;
 }
 
 //--------------------------------------------------------------------------------------
@@ -136,14 +130,14 @@ function is_inventory_item($stock_id) {
 //-------------------------------------------------------------------
 
 function last_negative_stock_begin_date($stock_id, $to) {
-	$to = date2sql($to);
+	
 	$sql ="SET @q = 0";
 	db_query($sql);
 	$sql = "SET @flag = 0";
 	db_query($sql);
 	$sql = "SELECT SUM(qty), @q:= @q + qty, IF(@q < 0 AND @flag=0, @flag:=1,@flag:=0), IF(@q < 0 AND @flag=1, tran_date,'') AS begin_date 
 		FROM ".TB_PREF."stock_moves
-		WHERE stock_id=".db_escape($stock_id)." AND tran_date<='$to' 
+		WHERE stock_id=".db_escape($stock_id)." AND tran_date<='".date2sql($to)."' 
 		AND qty <> 0
 		GROUP BY stock_id ORDER BY tran_date";
 
@@ -162,7 +156,7 @@ function get_already_delivered($stock_id, $location, $trans_no) {
 		AND type=".ST_CUSTDELIVERY." AND trans_no=".db_escape($trans_no);
 	$result = db_query($sql, 'Could not get stock moves');
 	$row = db_fetch_row($result);
-	return $row[0];
+	return is_array($row) ? $row[0] : false;
 }
 /*
 	Returns start move_id in latest negative status period for $stock_id
@@ -191,18 +185,17 @@ function last_negative_stock_trans_id($stock_id, $to) {
 
 	if ($flag == 1)
 		return $negative_trans_id;
-	else 
-		return false;
+
+	return false;
 }
 
 //-------------------------------------------------------------------
 
 function get_deliveries_between($stock_id, $from, $to) {
-	$from = date2sql($from);
-	$to = date2sql($to);
+
 	$sql = "SELECT SUM(-qty), SUM(-qty*standard_cost) FROM ".TB_PREF."stock_moves
 		WHERE type=".ST_CUSTDELIVERY." AND stock_id=".db_escape($stock_id)." AND
-		tran_date>='$from' AND tran_date<='$to' GROUP BY stock_id";
+		tran_date>='".date2sql($from)."' AND tran_date<='".date2sql($to)."' GROUP BY stock_id";
 
 	$result = db_query($sql, 'The deliveries could not be updated');
 	return db_fetch_row($result);
@@ -239,7 +232,7 @@ function get_deliveries_from_trans($stock_id, $move_id) {
 	$qty = $row[0] - $qoh[0]; //QOH prior to -ve stock is subtracted
 	$final_cost = $row[1] - $qoh[0]*$cost[0];
 	
-	return array($qty,$final_cost); 
+	return array($qty, $final_cost); 
 }
 
 /*
@@ -319,7 +312,7 @@ function get_stock_gl_code($stock_id) {
 		adjustment_account, sales_account, wip_account, dimension_id, dimension2_id FROM
 		".TB_PREF."stock_master WHERE stock_id = ".db_escape($stock_id);
 
-	$get = db_query($sql,"retreive stock gl code");
+	$get = db_query($sql, 'retreive stock gl code');
 	return db_fetch($get);
 }
 
@@ -327,9 +320,9 @@ function get_purchase_value($stock_id) {
 	$sql = "SELECT purchase_cost FROM
 		".TB_PREF."stock_master WHERE stock_id = ".db_escape($stock_id);
 
-	$result = db_query($sql,"retreive stock purchase price");
+	$result = db_query($sql, 'retreive stock purchase price');
 	$row = db_fetch_row($result);
-	return $row[0];
+	return is_array($row) ? $row[0] : false;
 }
 
 function update_purchase_value($stock_id, $price) {
@@ -337,7 +330,8 @@ function update_purchase_value($stock_id, $price) {
 	$sql = "UPDATE ".TB_PREF."stock_master SET purchase_cost=".db_escape($price)
 		." WHERE stock_id=".db_escape($stock_id);
 	db_query($sql, 'The stock master purchase_cost cannot be updated');
-}	
+}
+
 //-----------------------------------------------------------------------------------------
 
 function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_) {
@@ -379,12 +373,11 @@ function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_)
 // $price - in transaction currency
 
 function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $price=0) {
-	$date = date2sql($date_);
 
 	$sql = "INSERT INTO ".TB_PREF."stock_moves (stock_id, trans_no, type, loc_code,
 		tran_date, reference, qty, standard_cost, price) VALUES ("
 		.db_escape($stock_id).", ".db_escape($trans_no).", "
-		.db_escape($type).", ".db_escape($location).", '$date', "
+		.db_escape($type).", ".db_escape($location).", '".date2sql($date_)."', "
 		.db_escape($reference).", "
 		.db_escape($quantity).", ".db_escape($std_cost)."," .db_escape($price).")";
 
@@ -465,8 +458,7 @@ function get_location_name($loc_code) {
 }
 
 function get_mb_flag($stock_id) {
-	$sql = "SELECT mb_flag FROM ".TB_PREF."stock_master
-		WHERE stock_id = ".db_escape($stock_id);
+	$sql = "SELECT mb_flag FROM ".TB_PREF."stock_master WHERE stock_id = ".db_escape($stock_id);
 	$result = db_query($sql, 'retreive mb_flag from item');
 	
 	if (db_num_rows($result) == 0)
