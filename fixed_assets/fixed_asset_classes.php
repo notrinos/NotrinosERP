@@ -23,19 +23,27 @@ page(_($help_context = 'Fixed asset classes'));
 simple_page_mode(true);
 
 if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
-	//initialise no input errors assumed initially before we test
+	
 	$input_error = 0;
 
-	/* actions to take once the user has clicked the submit button
-	ie the page has called itself with some user input */
+	if(fa_class_id_exists($_POST['fa_class_id'])) {
+		$input_error = 1;
+		display_error(_('Duplicate Class ID found.'));
+		set_focus('fa_class_id');
+	}
+	if(!is_numeric($_POST['depreciation_rate'])) {
+		$input_error = 1;
+		display_error(_('Depreciation Rate must be a number'));
+		set_focus('depreciation_rate');
+	}
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			update_fixed_asset_class($selected_id, $_POST['parent_id'], $_POST['description'], $_POST['long_description'], $_POST['depreciation_rate']);
+			update_fixed_asset_class($selected_id, $_POST['parent_id'], $_POST['description'], $_POST['long_description'], input_num('depreciation_rate'));
 			display_notification(_('Selected fixed asset class has been updated'));
 		} 
 		else {
-			add_fixed_asset_class($_POST['fa_class_id'], $_POST['parent_id'], $_POST['description'], $_POST['long_description'], $_POST['depreciation_rate']);
+			add_fixed_asset_class($_POST['fa_class_id'], $_POST['parent_id'], $_POST['description'], $_POST['long_description'], input_num('depreciation_rate'));
 			display_notification(_('New fixed asset class has been added'));
 		}
 
@@ -58,7 +66,7 @@ if ($Mode == 'Delete') {
 	if (can_delete($selected_id)) {
 		delete_fixed_asset_class($selected_id);
 		display_notification(_('Selected fixed asset class has been deleted'));
-	} //end if Delete Location
+	}
 	$Mode = 'RESET';
 }
 
@@ -74,7 +82,7 @@ start_table(TABLESTYLE);
 $th = array(_('Fixed asset class'), _('Description'), _('Basic Depreciation Rate'), '', '');
 inactive_control_column($th);
 table_header($th);
-$k = 0; //row colour counter
+$k = 0;
 while ($myrow = db_fetch($result)) {
 	alt_table_row_color($k);
 	
@@ -119,11 +127,10 @@ else {
 text_row(_('Description:'), 'description', null, 42, 200);
 textarea_row(_('Long description:'), 'long_description', null, 42, 3);
 small_amount_row(_('Basic Depreciation Rate').':', 'depreciation_rate', null, null, '%', user_percent_dec());
-//text_row(_('Parent id:'), 'parent_id', null, 3, 3);
 
 end_table(1);
 div_end();
-//if ($selected_id != -1) 
+
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
 end_form();

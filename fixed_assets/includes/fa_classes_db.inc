@@ -13,9 +13,7 @@
 function get_fixed_asset_classes() {
 	$sql="SELECT * FROM ".TB_PREF."stock_fa_class";
 
-	$result = db_query($sql, 'fixed asset classes could not be retrieved');
-
-	return $result;
+	return db_query($sql, 'fixed asset classes could not be retrieved');
 }
 
 function get_fixed_asset_classname($class) {
@@ -25,7 +23,7 @@ function get_fixed_asset_classname($class) {
 
 	$row = db_fetch_row($result);
 	
-	return $row[0];
+	return is_array($row) ? $row[0] : false;
 }
 
 function update_fixed_asset_class($fa_class_id, $parent_id, $description, $long_description, $depreciation_rate) {
@@ -41,10 +39,7 @@ function update_fixed_asset_class($fa_class_id, $parent_id, $description, $long_
 
 function add_fixed_asset_class($fa_class_id, $parent_id, $description, $long_description, $depreciation_rate) {
 	$sql = "INSERT INTO ".TB_PREF."stock_fa_class (fa_class_id, parent_id, description, long_description,
-	depreciation_rate) VALUES ("
-	.db_escape($fa_class_id).", ".db_escape($parent_id).", "
-	.db_escape($description).", ".db_escape($long_description).", "
-	.db_escape($depreciation_rate).")";
+	depreciation_rate) VALUES (".db_escape($fa_class_id).", ".db_escape($parent_id).", ".db_escape($description).", ".db_escape($long_description).", ".db_escape($depreciation_rate).")";
 
 	db_query($sql, 'The fixed asset class could not be added');
 }
@@ -53,4 +48,8 @@ function delete_fixed_asset_class($fa_class_id) {
 	$sql = "DELETE FROM ".TB_PREF."stock_fa_class WHERE fa_class_id=".db_escape($fa_class_id);
 
 	db_query($sql, 'The fixed asset class could not be deleted');
+}
+
+function fa_class_id_exists($id) {
+	return check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."stock_fa_class WHERE fa_class_id = ".db_escape($id));
 }
