@@ -93,7 +93,7 @@ function print_fixed_assets_valuation_report() {
 		if ($location != 'all' && $location != $loc)
 			continue;
 		$purchase = get_fixed_asset_purchase($trans['stock_id']);
-		$d = sql2date($purchase['tran_date']);
+		$d = $purchase ? sql2date($purchase['tran_date']) : false;
 		if (date1_greater_date2($d, $date))
 			continue;
 		if ($class != 0 && $cln != $trans['description'])
