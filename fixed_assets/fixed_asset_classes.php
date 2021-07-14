@@ -26,7 +26,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	
 	$input_error = 0;
 
-	if(fa_class_id_exists($_POST['fa_class_id'])) {
+	if($Mode=='ADD_ITEM' && fa_class_id_exists($_POST['fa_class_id'])) {
 		$input_error = 1;
 		display_error(_('Duplicate Class ID found.'));
 		set_focus('fa_class_id');
