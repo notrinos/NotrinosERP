@@ -26,52 +26,39 @@ include_once($path_to_root . '/purchasing/includes/db/suppalloc_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/supp_payment_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 
-//-------------------------------------------------------------------------------------------------------------
-
 // add a supplier-related gl transaction
 // $date_ is display date (non-sql)
 // $amount is in SUPPLIERS'S currency
-
 function add_gl_trans_supplier($type, $type_no, $date_, $account, $dimension, $dimension2, $amount, $supplier_id, $err_msg='', $rate=0, $memo='') {
 	if ($err_msg == '')
 		$err_msg = 'The supplier GL transaction could not be inserted';	
 		
-	return add_gl_trans($type, $type_no, $date_, $account, $dimension, $dimension2, $memo, 
-		$amount, get_supplier_currency($supplier_id), 
-		PT_SUPPLIER, $supplier_id, $err_msg, $rate);
+	return add_gl_trans($type, $type_no, $date_, $account, $dimension, $dimension2, $memo, $amount, get_supplier_currency($supplier_id), PT_SUPPLIER, $supplier_id, $err_msg, $rate);
 }
 
-//----------------------------------------------------------------------------------------
-
 function get_purchase_price($supplier_id, $stock_id) {
-	$sql = "SELECT price, conversion_factor FROM ".TB_PREF."purch_data 
-		WHERE supplier_id = ".db_escape($supplier_id) . " 
-		AND stock_id = ".db_escape($stock_id);
+	$sql = "SELECT price, conversion_factor FROM ".TB_PREF."purch_data WHERE supplier_id = ".db_escape($supplier_id)." AND stock_id = ".db_escape($stock_id);
 	$result = db_query($sql, 'The supplier pricing details for ' . $stock_id . ' could not be retrieved');    
 
 	if (db_num_rows($result) == 1) {
 		$myrow = db_fetch($result);
 		return $myrow['price'] / $myrow['conversion_factor'];
 	} 
-	else 
-		return 0;
+	
+	return 0;
 }
 
 function get_purchase_conversion_factor($supplier_id, $stock_id) {
-	$sql = "SELECT conversion_factor FROM ".TB_PREF."purch_data 
-		WHERE supplier_id = ".db_escape($supplier_id)." 
-		AND stock_id = ".db_escape($stock_id);
-	$result = db_query($sql, 'The supplier pricing details for ' . $stock_id . ' could not be retrieved');    
+	$sql = "SELECT conversion_factor FROM ".TB_PREF."purch_data WHERE supplier_id = ".db_escape($supplier_id)." AND stock_id = ".db_escape($stock_id);
+	$result = db_query($sql, 'The supplier pricing details for '.$stock_id.' could not be retrieved');    
 
 	if (db_num_rows($result) == 1) {
 		$myrow = db_fetch($result);
 		return $myrow['conversion_factor'];
 	} 
-	else 
-		return 1;
+	
+	return 1;
 }
-
-//----------------------------------------------------------------------------------------
 
 function get_purchase_data($supplier_id, $stock_id) {
 	$sql = "SELECT * FROM ".TB_PREF."purch_data 
@@ -130,7 +117,6 @@ function get_po_prepayments($supp_trans) {
 	return $allocations;
 }
 
-//---------------------------------------------------------------------------------------------------
 //
 //	Add Purchase Order, GRN or Purchase Invoice with parent auto documents (if any)
 //
@@ -200,8 +186,7 @@ function add_direct_supp_trans($cart) {
 	$inv_no = add_supp_invoice($inv);
 
 	if ($cart->cash_account) {
-		$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), 
-			$total, 0, _('Payment for:').$inv->supp_reference .' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')' . ' ' . $cart->Comments, $cart->dimension, $cart->dimension2);
+		$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
 		add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
 		update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);
 		update_supp_trans_allocation(ST_SUPPAYMENT, $pmt_no, $inv->supplier_id);
