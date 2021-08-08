@@ -705,7 +705,7 @@ class FrontReport extends Cpdf {
 		setlocale(LC_MONETARY, $amount_locale);
 		if ($color_red && $txt < 0)
 			$this->SetTextColor(255, 0, 0);
-		$ret = $this->TextCol($c, $n, money_format($amount_format, $txt), $corr, $r, $border, $fill, $link, $stretch);
+		$ret = $this->TextCol($c, $n, price_format($txt), $corr, $r, $border, $fill, $link, $stretch);
 		if ($color_red && $txt < 0)
 			$this->SetTextColor(0, 0, 0);
 		return $ret;	

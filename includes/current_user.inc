@@ -39,8 +39,10 @@ class current_user {
 	function __construct() {
 		global $def_coy;
 		
-		$this->loginname = $this->username = $this->name = '';
-		$this->company = isset($def_coy)? $def_coy : 0;
+		$this->loginname = '';
+		$this->username = '';
+		$this->name = '';
+		$this->company = isset($def_coy) ? $def_coy : 0;
 		$this->logged = false;
 
 		$this->prefs = new user_prefs();
@@ -96,8 +98,7 @@ class current_user {
 						exit;
 					}
 					$this->access = $myrow['full_access'];
-					if (in_array(20, $security_groups[$this->access]))
-						// temporary access for admin users
+					if (in_array(20, $security_groups[$this->access])) // temporary access for admin users
 						$this->role_set[] = $security_areas['SA_SOFTWAREUPGRADE'][0];
 					else {
 						echo "<center><br><br><font size='5' color='red'><b>";
@@ -113,10 +114,11 @@ class current_user {
 					$role = get_security_role($this->access);
 					if (!$role) 
 						return false;
-					foreach( $role['areas'] as $code )
+					foreach( $role['areas'] as $code ) {
 						// filter only area codes for enabled security sections
 						if (in_array($code&~0xff, $role['sections'])) 
 							$this->role_set[] = $code;
+					}
 				}
 				$this->name = $myrow['real_name'];
 				$this->pos = $myrow['pos'];
@@ -168,20 +170,18 @@ class current_user {
 
 	function check_user_access() {
 		global $security_groups;
-		if ($this->old_db) {
-			// notification after upgrade from pre-2.2 version
+
+		if ($this->old_db) // notification after upgrade
 			return isset($security_groups) && is_array(@$security_groups[$this->access]);
-		}
 		else
 			return !isset($security_groups) && is_array($this->role_set);
 	}
 
 	function can_access($sec_area) {
 		global $security_groups, $security_areas;
-		if (isset($security_groups)) {
-			return is_admin_company() &&
-				in_array(20, $security_groups[$this->access]);
-		}
+
+		if (isset($security_groups))
+			return is_admin_company() && in_array(20, $security_groups[$this->access]);
 
 		if ($sec_area === 'SA_OPEN') 
 			return true;
@@ -191,8 +191,7 @@ class current_user {
 		$code = $security_areas[$sec_area][0];
 
 		// only first registered company has site admin privileges
-		return $code && in_array($code, $this->role_set)
-			&& ($this->company == 0 || (($code&~0xff) != SS_SADMIN));
+		return $code && in_array($code, $this->role_set) && ($this->company == 0 || (($code&~0xff) != SS_SADMIN));
 	}
 
 	function can_access_page($page_level) {
@@ -238,8 +237,8 @@ class current_user {
 
 		if (!isset($SysPrefs->hide_inaccessible_menu_items) || $SysPrefs->hide_inaccessible_menu_items == 0)
 			return false;
-		else
-			return true;
+
+		return true;
 	}
 
 	function set_db_connection($id = -1) {
@@ -285,24 +284,23 @@ function number_format2($number, $decimals=0) {
 
 	$num = number_format($number, intval($dec), $dsep, $tsep);
 
-	return $decimals==='max' ? rtrim($num, '0') : $num;
+	return $decimals === 'max' ? rtrim($num, '0') : $num;
 }
 
-/* price/float comparision helper to be used in any suspicious place for zero values? 
-usage:
-if (!floatcmp($value1, $value2)) 
-	compare value is 0
+/* 	price/float comparision helper to be used in any suspicious place for zero values? 
+*	usage:
+*	if (!floatcmp($value1, $value2)) 
+*	compare value is 0
 */
-
 define('FLOAT_COMP_DELTA', 0.004);
 
 function floatcmp($a, $b) {
 	return $a - $b > FLOAT_COMP_DELTA ? 1 : ($b - $a > FLOAT_COMP_DELTA ? -1 : 0);
 }
 
-//
-//	Current ui mode.
-//
+/*
+*	Current ui mode.
+*/
 function fallback_mode() {
 	return $_SESSION['wa_current_user']->ui_mode==0;
 }
@@ -317,16 +315,10 @@ function price_decimal_format($number, &$dec) {
 	$pos = strpos($str, '.');
 	if ($pos !== false) {
 		$len = strlen(substr($str, $pos + 1));
-		if ($len > $dec && $len < ini_get('precision')-3)
+		if ($len > $dec && $len < ini_get('precision') - 3)
 			$dec = $len;
 	}
 	return number_format2($number, $dec);
-}
-// function money_format doesn't exist in OS Win.
-if (!function_exists('money_format')) {
-	function money_format($format, $number) {
-		return price_format($number);
-	} 
 }	
 
 function qty_format($number, $stock_id, &$dec) {
@@ -334,7 +326,7 @@ function qty_format($number, $stock_id, &$dec) {
 	return number_format2($number, $dec);
 }
 
-// and get_qty_dec
+/* and get_qty_dec */
 function get_qty_dec($stock_id=null) {
 	global $path_to_root;
 	include_once($path_to_root.'/inventory/includes/db/items_units_db.inc');
@@ -344,10 +336,10 @@ function get_qty_dec($stock_id=null) {
 		$dec = user_qty_dec();
 	return $dec;
 }
-//-------------------------------------------------------------------
-//
-//	Maximum precision format. Strips trailing unsignificant digits.
-//
+
+/*
+*	Maximum precision format. Strips trailing unsignificant digits.
+*/
 function maxprec_format($number) {
 	return number_format2($number, 'max');
 }
@@ -376,11 +368,13 @@ function user_numeric($input) {
 
 	if (!is_numeric($num))
 		return false;
+
 	$num = (float)$num;
+
 	if ($num == (int)$num)
 		return (int)$num;
-	else
-		return $num;
+	
+	return $num;
 }
 
 function user_company() {
@@ -429,7 +423,7 @@ function user_date_format() {
 }
 
 function user_date_display() {
-	$fmt ='m/d/Y';
+	$fmt = 'm/d/Y';
 	if (isset($_SESSION['wa_current_user']))
 		$fmt = $_SESSION['wa_current_user']->prefs->date_display();
 	else {
@@ -560,17 +554,15 @@ function user_js_cache($id=null) {
 	return $path_to_root.'/company/'.user_company().'/js_cache/'.$id;
 }
 
-//--------------------------------------------------------------------------
-
 function session_timeout() {
 	$tout = @get_company_pref('login_tout'); // mask warning for db ver. 2.2
 	return $tout ? $tout : ini_get('session.gc_maxlifetime');
 }
 
-//-----------------------------------------------------------------------------
-//	Inserts $elements into $array at position $index.
-//	$elements is list of any objects
-//
+/*	
+*	Inserts $elements into $array at position $index.
+*	$elements is list of any objects
+*/
 function array_insert(&$array, $index, $elements) {
 	if (!is_array($elements)) $elements = array($elements);
 
@@ -604,9 +596,8 @@ function array_search_value($needle, $haystack, $valuekey=null) {
 	if (is_array($haystack)) {
 		foreach($haystack as $key => $value) {
 			$val = isset($valuekey) ? @$value[$valuekey] : $value;
-			if ($needle == $val){
+			if ($needle == $val)
 				return $value;
-			}
 		}
 	}
 	return null;
@@ -621,9 +612,8 @@ function array_search_keys($needle, $haystack, $valuekey=null) {
 	if (is_array($haystack)) {
 		foreach($haystack as $key => $value) {
 			$val = isset($valuekey) ? @$value[$valuekey] : $value;
-			if ($needle == $val){
+			if ($needle == $val)
 				$keys[] = $key;
-			}
 		}
 	}	
 	return $keys;
@@ -664,8 +654,8 @@ function flush_dir($path, $wipe = false) {
 }
 
 /*
-	Returns current path to company private folder.
-	(Current path can change after chdir).
+*	Returns current path to company private folder.
+*	(Current path can change after chdir).
 */
 function company_path($comp=null) {
 	global $path_to_root, $SysPrefs;
