@@ -36,9 +36,7 @@ function add_gl_trans_customer($type, $type_no, $date_, $account, $dimension, $d
 	if ($err_msg == '')
 		$err_msg = 'The customer GL transaction could not be inserted';
 
-	return add_gl_trans($type, $type_no, $date_, $account, $dimension, $dimension2, '', $amount,
-		get_customer_currency($customer_id),
-		PT_CUSTOMER, $customer_id, $err_msg, $rate);
+	return add_gl_trans($type, $type_no, $date_, $account, $dimension, $dimension2, '', $amount, get_customer_currency($customer_id), PT_CUSTOMER, $customer_id, $err_msg, $rate);
 }
 
 //----------------------------------------------------------------------------------------
@@ -62,6 +60,7 @@ function round_to_nearest($price, $round_to) {
 		$price = ceil($price) - ($pow - $round_to) / $pow;
 	else	
 		$price = ceil($price * ($pow / $round_to)) / ($pow / $round_to);
+
 	return $price;
 
 }
@@ -86,8 +85,7 @@ function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=nu
 
 	$result = db_query($sql, 'There was a problem retrieving the pricing information for the part $stock_id for customer');
 	$num_rows = db_num_rows($result);
-	$rate = round2(get_exchange_rate_from_home_currency($currency, $date),
-		user_exrate_dec());
+	$rate = round2(get_exchange_rate_from_home_currency($currency, $date), user_exrate_dec());
 	$round_to = get_company_pref('round_to');
 	$prices = array();
 	while($myrow = db_fetch($result)) {
@@ -123,31 +121,29 @@ function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=nu
 //  When $std==true price is calculated as a sum of all included stock items,
 //	otherwise all prices set for kits and items are accepted.
 //
-function get_kit_price($item_code, $currency, $sales_type_id, $factor=null, $date=null, $std = false) {
+function get_kit_price($item_code, $currency, $sales_type_id, $factor=null, $date=null, $std=false) {
 	$kit_price = 0.00;
 	if (!$std) {
-		$kit_price = get_price( $item_code, $currency, $sales_type_id, 
-			$factor, $date);
+		$kit_price = get_price( $item_code, $currency, $sales_type_id, $factor, $date);
 
-		if ($kit_price !== 0) {
+		if ($kit_price !== 0)
 			return $kit_price;
-		}
 	}	
 	// no price for kit found, get total value of all items
 	$kit = get_item_kit($item_code);
 	
 	while($item = db_fetch($kit)) {
-		if ($item['item_code'] != $item['stock_id'])
-			// foreign/kit code
+		if ($item['item_code'] != $item['stock_id']) // foreign/kit code
 			$kit_price += $item['quantity'] * get_kit_price( $item['stock_id'], $currency, $sales_type_id, $factor, $date, $std);
-		else
-			// stock item
+		else // stock item
 			$kit_price += $item['quantity'] * get_price( $item['stock_id'], $currency, $sales_type_id, $factor, $date);
 	}
+
 	return $kit_price;
 }
 
 //--------------------------------------------------------------------------------------------------
+
 function update_parent_line($doc_type, $line_id, $qty_dispatched, $auto=false) {
 	$doc_type = get_parent_type($doc_type);
 
@@ -215,11 +211,9 @@ function read_sales_trans($doc_type, $trans_no, &$cart) {
 
 		$cart->set_sales_type($myrow['tpe'], $myrow['sales_type'], $myrow['tax_included'],0);
 
-		$cart->set_customer($debtor_no, $myrow['DebtorName'],
-			$myrow['curr_code'], $myrow['discount'], $myrow['payment_terms']);
+		$cart->set_customer($debtor_no, $myrow['DebtorName'], $myrow['curr_code'], $myrow['discount'], $myrow['payment_terms']);
 
-		$cart->set_branch($myrow['branch_code'], $myrow['tax_group_id'],
-			$myrow['tax_group_name']);
+		$cart->set_branch($myrow['branch_code'], $myrow['tax_group_id'], $myrow['tax_group_name']);
 
 		$cart->reference = $myrow['reference'];
 		$cart->prepaid = $myrow['prepaid'];
@@ -255,7 +249,7 @@ function read_sales_trans($doc_type, $trans_no, &$cart) {
 					@$myrow['src_id']);
 			}
 		}
-		$cart->prepayments = get_payments_for($trans_no, $doc_type, $debtor_no);
+		$cart->prepayments = get_payments_for($trans_no[0], $doc_type, $debtor_no);
 
 	} // !newdoc
 
@@ -328,7 +322,7 @@ function get_sales_parent_numbers($trans_type, $trans_no) {
 	$trans = array();
 	$res = get_sales_parent_lines($trans_type, $trans_no, false);
 	while ($line = db_fetch($res))
-		$trans[] = $line[$trans_type==ST_CUSTDELIVERY ? 'order_no' : 'debtor_trans_no'];
+		$trans[] = $line[$trans_type == ST_CUSTDELIVERY ? 'order_no' : 'debtor_trans_no'];
 	return $trans;
 }
 
