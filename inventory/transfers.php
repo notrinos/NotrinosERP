@@ -175,6 +175,7 @@ function handle_new_item() {
 	if (!isset($_POST['std_cost']))
 		$_POST['std_cost'] = 0;
 	add_to_order($_SESSION['transfer_items'], $_POST['stock_id'], input_num('qty'), $_POST['std_cost']);
+	unset($_POST['stock_id']);
 	line_start_focus();
 }
 
