@@ -30,7 +30,6 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 
 	$id = db_insert_id();
 
-	// -------------------------------------------------------------------------
 	// insert -ve and update averaged component unit cost for BOM usage (in wo_requirements)
 	work_order_production_gl($woid, $product['stock_id'], $quantity, $date_, $id);
 
@@ -90,8 +89,6 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 	commit_transaction();
 }
 
-//--------------------------------------------------------------------------------------------
-
 function get_work_order_produce($id) {
 	$sql = "SELECT prod.*, wo.stock_id, item.description AS StockDescription, wo.closed
 		FROM ".TB_PREF."wo_manufacture prod,"
@@ -105,15 +102,10 @@ function get_work_order_produce($id) {
 	return db_fetch($result);
 }
 
-//--------------------------------------------------------------------------------------
-
 function get_work_order_productions($woid) {
-	$sql = "SELECT * FROM ".TB_PREF."wo_manufacture WHERE workorder_id="
-		.db_escape($woid)." ORDER BY id";
+	$sql = "SELECT * FROM ".TB_PREF."wo_manufacture WHERE workorder_id=".db_escape($woid)." ORDER BY id";
 	return db_query($sql, 'The work order issues could not be retrieved');
 }
-
-//--------------------------------------------------------------------------------------
 
 function exists_work_order_produce($id) {
 	$sql = "SELECT id FROM ".TB_PREF."wo_manufacture WHERE id=".db_escape($id);
@@ -122,14 +114,10 @@ function exists_work_order_produce($id) {
 	return (db_num_rows($result) > 0);
 }
 
-//--------------------------------------------------------------------------------------
-
 function check_void_wo_production($prod_no) {
 	$prod = get_work_order_produce($prod_no);
 	return $prod['closed'] ? $prod['workorder_id'] : 0;
 }
-
-//--------------------------------------------------------------------------------------------
 
 function void_work_order_produce($type_no) {
 	begin_transaction();
@@ -146,7 +134,7 @@ function void_work_order_produce($type_no) {
 		return;
 
 	// deduct the quantity of this production from the parent work order
-	work_order_update_finished_quantity($prod['workorder_id'], -$prod['quantity'], false);
+	work_order_update_finished_quantity($prod['workorder_id'], -$prod['quantity']);
 
 	// clear the production record
 	$sql = "UPDATE ".TB_PREF."wo_manufacture SET quantity=0 WHERE id=".db_escape($type_no);
