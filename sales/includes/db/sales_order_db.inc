@@ -85,16 +85,16 @@ function delete_sales_order($order_no, $trans_type) {
 	begin_transaction();
 	hook_db_prevoid($trans_type, $order_no);
 
-	$sql = "DELETE FROM ".TB_PREF."sales_orders WHERE order_no=" . db_escape($order_no) 
-		. " AND trans_type=".db_escape($trans_type);
+	$order = get_sales_order_header($order_no, $trans_type);
 
-	db_query($sql, "order Header Delete");
+	$sql = "DELETE FROM ".TB_PREF."sales_orders WHERE order_no=".db_escape($order_no)." AND trans_type=".db_escape($trans_type);
 
-	$sql = "DELETE FROM ".TB_PREF."sales_order_details WHERE order_no =" 
-		.db_escape($order_no) . " AND trans_type=".db_escape($trans_type);
+	db_query($sql, 'order Header Delete');
+
+	$sql = "DELETE FROM ".TB_PREF."sales_order_details WHERE order_no =".db_escape($order_no) . " AND trans_type=".db_escape($trans_type);
 	db_query($sql, 'order Detail Delete');
 
-	add_audit_trail($trans_type, $order_no, Today(), _('Deleted.'));
+	add_audit_trail($trans_type, $order_no, sql2date($order['ord_date']), _('Deleted.'));
 	commit_transaction();
 }
 
