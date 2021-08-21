@@ -1,5 +1,5 @@
 {
-    "name": "notrinos/NotrinosERP",
+    "name": "notrinos/notrinos-erp",
     "type": "project",
     "description": "A web-based erp, accounting system that written in PHP and MySql",
     "keywords": [
