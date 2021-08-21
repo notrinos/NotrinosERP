@@ -241,6 +241,7 @@ function void_sales_invoice($type, $type_no) {
 
 		if ($deliveries !== 0) {
 			if ($type == ST_SALESINVOICE && count($deliveries) == 1 && get_reference(ST_CUSTDELIVERY, $deliveries[0]) == 'auto') {
+				$trans = get_customer_trans($deliveries[0], ST_CUSTDELIVERY);
 				void_sales_delivery(ST_CUSTDELIVERY, $deliveries[0], false);
 				$date_ = sql2date($trans['tran_date']);
 				add_audit_trail(ST_CUSTDELIVERY, $deliveries[0], $date_, _('Voided.'));
