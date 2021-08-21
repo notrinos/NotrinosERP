@@ -14,13 +14,17 @@ NotrinosERP is an open source, web-based enterprise management system that writt
 - A web browser with HTML5 compatibility
 
 ## Installation
-### New installation
+### Manual installation
 1. [Download the latest official NotrinosERP snapshot.](https://gitlab.com/aodieu/NotrinosERP/-/archive/master/NotrinosERP-master.zip)
 2. Unzip the downloaded file.
 3. Everything inside the folder you unzipped needs to be uploaded/copied to your webserver, for example, into your `public_html` or `www` or `html` or `htdocs` folder (the folder will already exist on your webserver).
 4. In your browser, enter the address to your site, such as: www.yourdomain.com (or if you uploaded it into another subdirectory such as NotrinosERP use www.yourdomain.com/NotrinosERP)
 5. Follow the instructions that appear in your browser for installation.
 6. After successful installation please remove `install` folder for safety reasons. You won't need it any more.
+
+### Composer
+Run this command in an empty location that you want NotrinosERP to be installed in:  
+`composer create-project notrinos/NotrinosERP .`
 
 ## Troubleshooting
 [Read the wiki](http://support.notrinos.com/ERP/index.php?n=Help.Help)  

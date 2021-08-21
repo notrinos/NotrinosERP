@@ -1,0 +1,26 @@
+{
+    "name": "notrinos/NotrinosERP",
+    "type": "project",
+    "description": "A web-based erp, accounting system that written in PHP and MySql",
+    "keywords": [
+        "accounting",
+        "erp",
+        "php",
+        "mysql"
+    ],
+    "homepage": "https://notrinos.com",
+    "license": "GNU GPL-3.0",
+    "authors": [
+        {
+             "name": "Tran Anh Phuong",
+             "email": "support@notrinos.com",
+             "homepage": "http://notrinos.com",
+             "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "http://forums.notrinos.com/t/bugs-problems",
+        "source": "https://github.com/notrinos/NotrinosERP",
+        "docs": "http://support.notrinos.com/ERP/"
+    }
+}
