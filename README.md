@@ -24,7 +24,7 @@ NotrinosERP is an open source, web-based enterprise management system that writt
 
 ### Composer
 Run this command in an empty location that you want NotrinosERP to be installed in:  
-`composer create-project notrinos/NotrinosERP .`
+`composer require notrinos/notrinos-erp`
 
 ## Troubleshooting
 [Read the wiki](http://support.notrinos.com/ERP/index.php?n=Help.Help)  

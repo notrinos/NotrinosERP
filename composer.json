@@ -1,5 +1,5 @@
 {
-    "name": "notrinos/notrinoserp",
+    "name": "notrinos/notrinos-erp",
     "type": "project",
     "description": "A web-based erp, accounting system that written in PHP and MySql",
     "keywords": [
@@ -9,7 +9,7 @@
         "mysql"
     ],
     "homepage": "https://notrinos.com",
-    "license": "GNU GPL-3.0",
+    "license": "GPL-3.0-or-later",
     "authors": [
         {
              "name": "Tran Anh Phuong",
