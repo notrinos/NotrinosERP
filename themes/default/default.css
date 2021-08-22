@@ -330,6 +330,9 @@ a.menu_option:focus {
 	text-align: right;
 	font-weight: bolder;
 }
+html[dir="rtl"] #hotkeyshelp {
+	text-align: left;
+}
 #footer {
 	position: relative;
 	bottom: -3px;
