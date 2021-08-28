@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
 
 //--------------------------------------------------------------------------------------------------
 
@@ -81,8 +81,7 @@ function create_new_po($trans_type, $trans_no) {
 		$cart->order_no = $trans_no;
 	}
 	else
-		$cart->reference = $Refs->get_next($trans_type, null,
-			array('supplier_id' => $cart->supplier_id, 'date' => get_post('OrderDate')));
+		$cart->reference = $Refs->get_next($trans_type, null, array('supplier_id' => $cart->supplier_id, 'date' => get_post('OrderDate')));
 	$_SESSION['PO'] = &$cart;
 }
 
@@ -107,7 +106,7 @@ function display_po_header(&$order) {
 		label_row(_('Supplier:'), $order->supplier_name);
 	}
 
-	if ($order->supplier_id != get_post('supplier_id',-1)) {
+	if ($order->supplier_id != get_post('supplier_id', -1)) {
 		$old_supp = $order->supplier_id;
 		get_supplier_details_to_order($order, $_POST['supplier_id']); 
 		get_duedate_from_terms($order);
@@ -117,9 +116,7 @@ function display_po_header(&$order) {
 		foreach ($order->line_items as $line_no=>$item) {
 			$line = &$order->line_items[$line_no];
 			$line->price =  get_purchase_price ($order->supplier_id, $line->stock_id);
-			$line->quantity =
-				$line->quantity/get_purchase_conversion_factor ($old_supp, $line->stock_id)
-					*get_purchase_conversion_factor ($order->supplier_id, $line->stock_id);
+			$line->quantity = $line->quantity/get_purchase_conversion_factor($old_supp, $line->stock_id) * get_purchase_conversion_factor($order->supplier_id, $line->stock_id);
 		}
 		$Ajax->activate('items_table');
 		$Ajax->activate('due_date');
@@ -140,8 +137,7 @@ function display_po_header(&$order) {
 
 	if (!is_company_currency($order->curr_code)) {
 		label_row(_('Supplier Currency:'), $order->curr_code);
-		exchange_rate_display(get_company_currency(), $order->curr_code,
-			$_POST['OrderDate']);
+		exchange_rate_display(get_company_currency(), $order->curr_code, $_POST['OrderDate']);
 	}
 
 	if ($editable)
@@ -167,7 +163,7 @@ function display_po_header(&$order) {
 	table_section(3);
 
 	if (!isset($_POST['StkLocation']) || $_POST['StkLocation'] == '' || isset($_POST['_StkLocation_update']) || !isset($_POST['delivery_address']) || $_POST['delivery_address'] == '') {
-		/*If this is the first time the form loaded set up defaults */
+		// If this is the first time the form loaded set up defaults
 
 		$loc_row = get_item_location(get_post('StkLocation'));
 		if ($loc_row) {
@@ -176,13 +172,13 @@ function display_po_header(&$order) {
 			$_SESSION['PO']->Location = $_POST['StkLocation'];
 			$_SESSION['PO']->delivery_address = $_POST['delivery_address'];
 		}
-		else /*The default location of the user is crook */
+		else //The default location of the user is crook
 			display_error(_('The default stock location set up for this user is not a currently defined stock location. Your system administrator needs to amend your user record.'));
 	}
 
 	textarea_row(_('Deliver to:'), 'delivery_address', $_POST['delivery_address'], 35, 4);
 
-	end_outer_table(); // outer table
+	end_outer_table();
 }
 
 //---------------------------------------------------------------------------------------------------
@@ -202,14 +198,23 @@ function display_po_items(&$order, $editable=true) {
 		array_remove($th, 5);
 	if ($new)
 		array_remove($th, 3);
-
-	if (count($order->line_items)) $th[] = '';
+	if (count($order->line_items))
+		$th[] = '';
 
 	table_header($th);
 
 	$id = find_submit('Edit');
 	$total = 0;
 	$k = 0;
+
+	if ($id == -1 && $editable)
+		po_item_controls($order, $k);
+	else {
+		start_row();
+		label_cell('&nbsp;', "colspan=".count($th));
+		end_row();
+	}
+
 	foreach ($order->line_items as $line_no => $po_line) {
 		$line_total =	round($po_line->quantity * $po_line->price,  user_price_dec());
 		if (!$editable || ($id != $line_no)) {
@@ -240,10 +245,7 @@ function display_po_items(&$order, $editable=true) {
 		$total += $line_total;
 	}
 
-	if ($id==-1 && $editable)
-		po_item_controls($order, $k);
-
-	$colspan = count($th)-2;
+	$colspan = count($th) - 2;
 	if (count($order->line_items))
 		$colspan--;
 
@@ -259,8 +261,7 @@ function display_po_items(&$order, $editable=true) {
 
 	start_row();
 	label_cells(_('Amount Total'), $display_total, "colspan=$colspan align='right'","align='right'");
-	$order->trans_type == ST_SUPPINVOICE ? submit_cells('update', _("Update"), "colspan=2 align='center'", _('Refresh'), true)
-	: label_cell('', 'colspan=2');
+	$order->trans_type == ST_SUPPINVOICE ? submit_cells('update', _("Update"), "colspan=2 align='center'", _('Refresh'), true) : label_cell('', 'colspan=2');
 	end_row();
 
 	end_table(1);
@@ -318,13 +319,14 @@ function display_po_summary(&$po, $is_self=false, $editable=false) {
 //--------------------------------------------------------------------------------
 
 function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
-   global $Ajax, $SysPrefs;
+	global $Ajax, $SysPrefs;
 
 	alt_table_row_color($rowcounter);
 	$new = $order->order_no == 0;
 
 	$dec2 = 0;
 	$id = find_submit('Edit');
+
 	if (($id != -1) && $line_no == $id) {
 
 		$_POST['stock_id'] = $order->line_items[$id]->stock_id;
@@ -366,7 +368,8 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 			$Ajax->activate('line_total');
 		}
 
-		$dec = 0; $_POST['units'] = '';
+		$dec = 0;
+		$_POST['units'] = '';
 		$item_info = get_item_edit_info($_POST['stock_id']);
 		if ($item_info) {
 			$_POST['units'] = $item_info['units'];
