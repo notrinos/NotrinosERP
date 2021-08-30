@@ -12,8 +12,7 @@
 include_once($path_to_root.'/sales/includes/cart_class.inc');
 
 function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $description='') {
-	// calculate item price to sum of kit element prices factor for 
-	// value distribution over all exploded kit items
+	// calculate item price to sum of kit element prices factor for value distribution over all exploded kit items
 	$std_price = get_kit_price($new_item, $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'), true);
 
 	$price_factor = $std_price == 0 ? 0 : $price/$std_price;
@@ -114,7 +113,7 @@ function display_order_summary($title, &$order, $editable_items=false) {
 	display_heading($title);
 
 	div_start('items_table');
-	start_table(TABLESTYLE, "width='90%'");
+	start_table(TABLESTYLE);
 
 	$th = array(_('Item Code'), _('Item Description'), _('Quantity'), _('Delivered'), _('Unit'), $order->tax_included ? _('Price after Tax') : _('Price before Tax'), _('Discount %'), _('Total'), '');
 
@@ -198,7 +197,7 @@ function display_order_summary($title, &$order, $editable_items=false) {
 	submit_cells('update', _('Update'), "colspan=2 align='center'", _('Refresh'), true);
 	end_row();
 
-	end_table();
+	end_table(1);
 	if ($low_stock)
 		display_note(_('Marked items have insufficient quantities in stock as on day of delivery.'), 0, 1, "class='stockmankofg'");
 
@@ -210,7 +209,7 @@ function display_order_summary($title, &$order, $editable_items=false) {
 function display_order_header(&$order, $editable, $date_text) {
 	global $Ajax, $SysPrefs;
 
-	start_outer_table(TABLESTYLE2, "width='80%'");
+	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
 	
@@ -307,7 +306,7 @@ function display_order_header(&$order, $editable, $date_text) {
 		}
 	}
 
-	ref_row(_('Reference').':', 'ref', _('Reference number unique for this document type'), null, '', $order->trans_type, array('date'=> @$_POST['OrderDate']));
+	ref_row(_('Reference').':', 'ref', _('Reference number unique for this document type'), null, '', $order->trans_type, array('date' => @$_POST['OrderDate']));
 
 	table_section(2);
 
@@ -502,7 +501,7 @@ function display_delivery_details(&$order) {
 	if ($order->payment_terms['cash_sale']) {	// Direct payment sale
 		$Ajax->activate('items_table');
 		display_heading(_('Cash payment'));
-		start_table(TABLESTYLE2, "width='60%'");
+		start_table(TABLESTYLE2);
 
 		locations_list_row(_('Deliver from Location:'), 'Location', null, false, true);
 		if (list_updated('Location'))
@@ -530,7 +529,7 @@ function display_delivery_details(&$order) {
 			$delname = _('Required Delivery Date').':';
 		}
 		display_heading($title);
-		start_outer_table(TABLESTYLE2, "width='90%'");
+		start_outer_table(TABLESTYLE2);
 		table_section(1);
 
 		locations_list_row(_('Deliver from Location:'), 'Location', null, false, true, $order->fixed_asset);
@@ -555,7 +554,8 @@ function display_delivery_details(&$order) {
 		textarea_row(_('Comments:'), 'Comments', $order->Comments, 31, 5);
 		shippers_list_row(_('Shipping Company:'), 'ship_via', $order->ship_via);
 
-		end_outer_table(1);
+		end_outer_table();
 	}
 	div_end();
+	br();
 }
