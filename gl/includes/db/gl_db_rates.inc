@@ -177,10 +177,9 @@ function get_extern_rate($curr_b, $provider, $date) {
 		$val = getInnerStr($contents, 'data-last-price="', '" data');
 	elseif ($provider == 'BLOOMBERG')
 		$val = getInnerStr($contents, ',"price":', ',"');
-	elseif ($provider == 'EXCHANGE-RATES.ORG') {
-		$val = getInnerStr($contents, '<span id="ctl00_M_lblToAmount">', '<');
-		$val = str_replace (',', '', $val);
-	}
+	elseif ($provider == 'EXCHANGE-RATES.ORG')
+		$val = getInnerStr($contents, "1 $curr_b = ", $curr_a);
+	
 	return $val;
 }
 
