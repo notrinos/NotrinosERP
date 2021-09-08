@@ -152,7 +152,7 @@ class Cpdf extends FPDI {
 					case "ar_EG" : 	$fontname = "ae_tholoth"; 	break;
 					case "zh_CN" : 	$fontname = "gbsn00lp"; 	break;
 					case "zh_TW" : 	$fontname = "chinese_traditional_cid0"; 	break;
-					default :      	$fontname = "dejavu"; 		break;
+					default :      	$fontname = "dejavusans"; 		break;
 				}
 			}
 			elseif ($this->encoding === "ISO-8859-2") {
@@ -185,7 +185,7 @@ class Cpdf extends FPDI {
 		parent::AddPage();
 	}
 
-	function line($x1,$y1,$x2,$y2, $style = array()) {
+	function line($x1, $y1, $x2, $y2, $style = array()) {
 		parent::Line($x1, $this->h-$y1, $x2, $this->h-$y2, $style);
 	}
 
@@ -194,39 +194,39 @@ class Cpdf extends FPDI {
 	}
 
 
-	function addText($xb,$yb,$size,$txt) {//,$angle=0,$wordSpaceAdjust=0)
-		if ($this->isunicode && $this->encoding != "UTF-8")
-			$txt = iconv($this->encoding, "UTF-8", $txt);
+	function addText($xb, $yb, $size, $txt) {
+		if ($this->isunicode && $this->encoding != 'UTF-8')
+			$txt = iconv($this->encoding, 'UTF-8', $txt);
 		$this->SetFontSize($size);
 		$this->Text($xb, $this->h-$yb, $txt);
 	}
 
-	function addInfo($label,$value) {
+	function addInfo($label, $value) {
 		if (in_array($label, array( 'Title', 'Subject', 'Author', 'Creator'))) {
 			$seter = "Set{$label}";
 			$this->$seter($value);
 		}
 	}
 
-	function addJpegFromFile($img,$x,$y,$w=0,$h=0) {
+	function addJpegFromFile($img, $x, $y, $w=0, $h=0) {
 		$this->Image($img, $x, $this->h-$y-$h, $w, $h);
 	}
 
-	function addPngFromFile($img,$x,$y,$w=0,$h=0) {
+	function addPngFromFile($img, $x, $y, $w=0, $h=0) {
 		$this->Image($img, $x, $this->h-$y-$h, $w, $h);
 	}
 	/*
 	* Next Two functions are adopted from R&OS pdf class
 	*/
 
-	/**
+	/*
 	* draw a part of an ellipse
 	*/
-	function partEllipse($x0,$y0,$astart,$afinish,$r1,$r2=0,$angle=0,$nSeg=8) {
-		$this->ellipse($x0,$y0,$r1,$r2,$angle,$nSeg,$astart,$afinish,0);
+	function partEllipse($x0, $y0, $astart, $afinish, $r1, $r2=0, $angle=0, $nSeg=8) {
+		$this->ellipse($x0, $y0, $r1, $r2, $angle, $nSeg, $astart, $afinish, 0);
 	}
 
-	/**
+	/*
 	* draw an ellipse
 	* note that the part and filled ellipse are just special cases of this function
 	*
@@ -236,8 +236,8 @@ class Cpdf extends FPDI {
 	* nSeg is not allowed to be less than 2, as this will simply draw a line (and will even draw a
 	* pretty crappy shape at 2, as we are approximating with bezier curves.
 	*/
-	function ellipse($x0,$y0,$r1,$r2=0,$angle=0,$nSeg=8,$astart=0,$afinish=360,$close=1,$fill=0, $dummy=null) {
-		parent::Ellipse($x0, $y0, $r1, $r2, $angle, $astart. $afinish, ($close?'C':''), "", "", $nSeg);
+	function ellipse($x0, $y0, $r1, $r2=0, $angle=0, $nSeg=8, $astart=0, $afinish=360, $close=1, $fill=0, $dummy=null) {
+		parent::Ellipse($x0, $y0, $r1, $r2, $angle, $astart.$afinish, ($close ? 'C' : ''), '', '', $nSeg);
 	}
 
 	function Stream($fname='') {
@@ -264,7 +264,7 @@ class Cpdf extends FPDI {
 		return array($txt2, $ret);
 	}
 
-	function addTextWrap($xb, $yb, $w, $h, $txt, $align='left', $border=0, $fill=0, $link = NULL, $stretch = 1, $spacebreak=false) {
+	function addTextWrap($xb, $yb, $w, $h, $txt, $align='left', $border=0, $fill=0, $link=NULL, $stretch=1, $spacebreak=false) {
 		$ret = "";
 		if (!$this->rtl) {
 			if ($align == 'right')
@@ -309,5 +309,4 @@ class Cpdf extends FPDI {
 	function Text($x, $y, $txt, $stroke=0, $clip=false) {
 		parent::Text($x,$y, parent::unhtmlentities($txt), $stroke, $clip);
 	}
-
-} // end of class
+}
