@@ -44,7 +44,7 @@ if (!isset($_POST['bank_account'])) { // first page call
 	$_SESSION['alloc'] = new allocation(ST_CUSTPAYMENT, 0, get_post('customer_id'));
 
 	if (isset($_GET['SInvoice'])) {
-		//  get date and supplier
+		//  get date and customer
 		$inv = get_customer_trans($_GET['SInvoice'], ST_SALESINVOICE);
 		$dflt_act = get_default_bank_account($inv['curr_code']);
 		$_POST['bank_account'] = $dflt_act['id'];
@@ -122,11 +122,11 @@ elseif (isset($_GET['UpdatedID'])) {
 
 	display_note(get_gl_view_str(ST_CUSTPAYMENT, $payment_no, _('&View the GL Journal Entries for this Customer Payment')));
 
-//	hyperlink_params($path_to_root . '/sales/allocations/customer_allocate.php', _('&Allocate this Customer Payment'), 'trans_no='.$payment_no.'&trans_type=12');
+	// hyperlink_params($path_to_root . '/sales/allocations/customer_allocate.php', _('&Allocate this Customer Payment'), 'trans_no='.$payment_no.'&trans_type=12');
 
-	hyperlink_no_params($path_to_root . '/sales/inquiry/customer_inquiry.php?', _('Select Another Customer Payment for &Edition'));
+	hyperlink_no_params($path_to_root.'/sales/inquiry/customer_inquiry.php?', _('Select Another Customer Payment for &Edition'));
 
-	hyperlink_no_params($path_to_root . '/sales/customer_payments.php', _('Enter Another &Customer Payment'));
+	hyperlink_no_params($path_to_root.'/sales/customer_payments.php', _('Enter Another &Customer Payment'));
 
 	display_footer_exit();
 }
@@ -208,8 +208,8 @@ function can_process() {
 
 	if (isset($_POST['TotalNumberOfAllocs']))
 		return check_allocations();
-	else
-		return true;
+	
+	return true;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -226,7 +226,7 @@ if (get_post('AddPaymentItem') && can_process()) {
 	new_doc_date($_POST['DateBanked']);
 
 	$new_pmt = !$_SESSION['alloc']->trans_no;
-	//Chaitanya : 13-OCT-2011 - To support Edit feature
+	// To support Edit feature
 	$payment_no = write_customer_payment($_SESSION['alloc']->trans_no, $_POST['customer_id'], $_POST['BranchID'], $_POST['bank_account'], $_POST['DateBanked'], $_POST['ref'], input_num('amount'), input_num('discount'), $_POST['memo_'], input_num('charge'), input_num('bank_amount', input_num('amount')), $_POST['dimension_id'], $_POST['dimension2_id']);
 
 	$_SESSION['alloc']->trans_no = $payment_no;
@@ -277,7 +277,7 @@ if (isset($_GET['trans_no']) && $_GET['trans_no'] > 0 ) {
 
 	//Prepare allocation cart 
 	if (isset($_POST['trans_no']) && $_POST['trans_no'] > 0 )
-		$_SESSION['alloc'] = new allocation(ST_CUSTPAYMENT,$_POST['trans_no']);
+		$_SESSION['alloc'] = new allocation(ST_CUSTPAYMENT, $_POST['trans_no']);
 	else {
 		$_SESSION['alloc'] = new allocation(ST_CUSTPAYMENT, $_POST['trans_no']);
 		$Ajax->activate('alloc_tbl');
@@ -325,7 +325,7 @@ read_customer_data();
 set_global_customer($_POST['customer_id']);
 if (isset($_POST['HoldAccount']) && $_POST['HoldAccount'] != 0)	
 	display_warning(_('This customer account is on hold.'));
-$display_discount_percent = percent_format($_POST['pymt_discount']*100) . '%';
+$display_discount_percent = percent_format($_POST['pymt_discount']*100).'%';
 
 table_section(2);
 
@@ -374,10 +374,7 @@ textarea_row(_('Memo:'), 'memo_', null, 22, 4);
 
 end_table(1);
 
-if ($new)
-	submit_center('AddPaymentItem', _('Add Payment'), true, '', 'default');
-else
-	submit_center('AddPaymentItem', _('Update Payment'), true, '', 'default');
+submit_center('AddPaymentItem', $new ? _('Add Payment') : _('Update Payment'), true, '', 'default');
 
 br();
 
