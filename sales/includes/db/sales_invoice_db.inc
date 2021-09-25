@@ -250,7 +250,7 @@ function void_sales_invoice($type, $type_no) {
 			else {
 				$srcdetails = get_sales_parent_lines($type, $type_no);
 				while ($row = db_fetch($srcdetails)) {
-					update_parent_line($type, $row['id'], -$row['quantity']);
+					update_parent_line($type, $row['id'], -$row['qty_done']);
 				}
 			}
 		}
