@@ -363,6 +363,7 @@ CREATE TABLE `0_comments` (
 	`id` int(11) NOT NULL DEFAULT '0',
 	`date_` date DEFAULT '0000-00-00',
 	`memo_` tinytext,
+	UNIQUE KEY `type_id_date` (`type`,`id`,`date_`),
 	KEY `type_and_id` (`type`,`id`)
 ) ENGINE=InnoDB ;
 
