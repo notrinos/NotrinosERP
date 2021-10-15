@@ -17,7 +17,7 @@ function display_credit_header(&$order) {
 	start_outer_table(TABLESTYLE, "width='80%'");
 	table_section(1);
 
-	$customer_error = "";
+	$customer_error = '';
 	$change_prices = 0;
 
 	if (!isset($_POST['customer_id']) && (get_global_customer() != ALL_TEXT))
@@ -29,8 +29,7 @@ function display_credit_header(&$order) {
 		// customer has changed
 		$Ajax->activate('branch_id');
 
-	customer_branches_list_row(_('Branch:'), $_POST['customer_id'], 
-		'branch_id', null, false, true, true, true);
+	customer_branches_list_row(_('Branch:'), $_POST['customer_id'], 'branch_id', null, false, true, true, true);
 
 	if (($order->customer_id != $_POST['customer_id']) || ($order->Branch != $_POST['branch_id'])) {
 
@@ -76,10 +75,8 @@ function display_credit_header(&$order) {
 
 	if (!is_company_currency($order->customer_currency)) {
 		table_section(2);
-		
 		label_row(_('Customer Currency:'), $order->customer_currency);
-		exchange_rate_display(get_company_currency(), $order->customer_currency,
-			$_POST['OrderDate']);
+		exchange_rate_display(get_company_currency(), $order->customer_currency, $_POST['OrderDate']);
 	}
 	table_section(3);
 
@@ -97,7 +94,7 @@ function display_credit_header(&$order) {
 
 	shippers_list_row(_('Shipping Company:'), 'ShipperID', $order->ship_via);
 
-	label_row(_('Customer Discount:'), ($order->default_discount * 100) . '%');
+	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
 
 	table_section(4);
 
@@ -114,23 +111,20 @@ function display_credit_header(&$order) {
 	// added dimensions
 	$dim = get_company_pref('use_dimension');
 	if ($dim > 0)
-		dimensions_list_row(_('Dimension').':', 'dimension_id', 
-			null, true, ' ', false, 1, false);
+		dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
 	else
 		hidden('dimension_id', 0);
 	if ($dim > 1)
-		dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', 
-			null, true, ' ', false, 2, false);
+		dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
 	else
 		hidden('dimension2_id', 0);
 
-	end_outer_table(1); // outer table
+	end_outer_table(1);
 
 	if ($change_prices != 0) {
 		foreach ($order->line_items as $line_no=>$item) {
 			$line = &$order->line_items[$line_no];
-			$line->price = get_price($line->stock_id, $order->customer_currency,
-				$order->sales_type, $order->price_factor, get_post('OrderDate'));
+			$line->price = get_price($line->stock_id, $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'));
 		}
 		$Ajax->activate('items_table');
 	}
@@ -153,7 +147,7 @@ function display_credit_items($title, &$order) {
 	table_header($th);
 
 	$subtotal = 0;
-	$k = 0;  //row colour counter
+	$k = 0;
 
 	$id = find_submit('Edit');
 
@@ -173,10 +167,8 @@ function display_credit_items($title, &$order) {
 			percent_cell($line->discount_percent * 100);
 			amount_cell($line_total);
 
-			edit_button_cell('Edit'.$line_no, _('Edit'),
-				_('Edit document line'));
-			delete_button_cell('Delete'.$line_no, _('Delete'),
-				_('Remove line from document'));
+			edit_button_cell('Edit'.$line_no, _('Edit'), _('Edit document line'));
+			delete_button_cell('Delete'.$line_no, _('Delete'), _('Remove line from document'));
 
 			end_row();
 		}
@@ -201,10 +193,8 @@ function display_credit_items($title, &$order) {
 	end_row();
 
 	$taxes = $order->get_taxes($_POST['ChargeFreightCost']);
-
 	$tax_total = display_edit_tax_items($taxes, $colspan, $order->tax_included, 2);
-
-	$display_total = price_format(($subtotal + $_POST['ChargeFreightCost'] + $tax_total));
+	$display_total = price_format(($subtotal + input_num('ChargeFreightCost') + $tax_total));
 
 	label_row(_('Credit Note Total'), $display_total, "colspan=$colspan align=right","class='amount'", 2);
 
@@ -232,7 +222,7 @@ function credit_edit_item_controls(&$order, $rowcounter, $line_no=-1) {
 		$Ajax->activate('items_table');
 	}
 	else {
-		stock_items_list_cells(null,'stock_id', null, false, true);
+		stock_items_list_cells(null, 'stock_id', null, false, true);
 		if (list_updated('stock_id')) {
 			$Ajax->activate('price');
 			$Ajax->activate('qty');
@@ -285,15 +275,13 @@ function credit_options_controls($credit) {
 
 	credit_type_list_row(_('Credit Note Type'), 'CreditType', null, true);
 
+	//if the credit note is a return of goods then need to know which location to receive them into
 	if ($_POST['CreditType'] == 'Return') {
-
-		/*if the credit note is a return of goods then need to know which location to receive them into */
 		if (!isset($_POST['Location']))
 			$_POST['Location'] = $credit->Location;
 		locations_list_row(_('Items Returned to Location'), 'Location', $_POST['Location']);
 	}
-	else
-		/* the goods are to be written off to somewhere */
+	else // the goods are to be written off to somewhere
 		gl_all_accounts_list_row(_('Write off the cost of the items to'), 'WriteOffGLCode', null);
 
 	textarea_row(_('Memo'), 'CreditText', null, 51, 3);
