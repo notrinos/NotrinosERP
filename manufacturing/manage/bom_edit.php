@@ -37,6 +37,7 @@ if (isset($_GET['stock_id'])) {
 
 function display_bom_items($selected_parent) {
 	
+	$result = get_bom($selected_parent);
 	div_start('bom');
 	start_table(TABLESTYLE, "width='60%'");
 	$th = array(_('Code'), _('Description'), _('Location'), _('Work Centre'), _('Quantity'), _('Units'), '', '');
@@ -44,7 +45,7 @@ function display_bom_items($selected_parent) {
 
 	$k = 0;
 	$found = false;
-	while ($myrow = db_fetch(get_bom($selected_parent))) {
+	while ($myrow = db_fetch($result)) {
 		$found = true;
 		alt_table_row_color($k);
 
@@ -57,7 +58,6 @@ function display_bom_items($selected_parent) {
 		edit_button_cell('Edit'.$myrow['id'], _('Edit'));
 		delete_button_cell('Delete'.$myrow['id'], _('Delete'));
 		end_row();
-
 	}
 	end_table();
 	
