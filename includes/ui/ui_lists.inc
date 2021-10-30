@@ -218,7 +218,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				$lastcat = $cat;
 			}
 			$selector .= "<option ".$sel.' '.$optclass." value='".$value."'>".$descr."</option>\n";
-			$data_options .= "<option value='".$value."'>";
+			$data_options .= "<option value='".$value."'>".$descr."</option>\n";
 		}
 		if ($lastcat!==null)
 			$selector .= '</optgroup>';
