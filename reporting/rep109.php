@@ -10,19 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = $_POST['PARAM_0'] == $_POST['PARAM_1'] ? 'SA_SALESTRANSVIEW' : 'SA_SALESBULKREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Print Sales Orders
-// ----------------------------------------------------------------
 $path_to_root='..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/taxes/tax_calc.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/taxes/tax_calc.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -31,7 +25,7 @@ print_sales_orders();
 function print_sales_orders() {
 	global $path_to_root, $SysPrefs;
 
-	include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+	include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
@@ -41,16 +35,15 @@ function print_sales_orders() {
 	$comments = $_POST['PARAM_5'];
 	$orientation = $_POST['PARAM_6'];
 
-	if (!$from || !$to) return;
+	if (!$from || !$to)
+		return;
 
-	$orientation = ($orientation ? 'L' : 'P');
+	$orientation = $orientation ? 'L' : 'P';
 	$dec = user_price_dec();
-
 	$cols = array(4, 60, 225, 300, 325, 385, 450, 515);
 
 	// $headers in doctext.inc
 	$aligns = array('left',	'left',	'right', 'left', 'right', 'right', 'right');
-
 	$params = array('comments' => $comments, 'print_quote' => $print_as_quote);
 
 	$cur = get_company_Pref('curr_default');
@@ -68,14 +61,14 @@ function print_sales_orders() {
 		$branch = get_branch($myrow['branch_code']);
 
 		if ($i == $from || $email == 1)
-			$rep = new FrontReport('', '', user_pagesize(), 9, $orientation);
+			$rep = new FrontReport(_('SALES ORDER'), 'SalesOrderBulk', user_pagesize(), 9, $orientation);
 		if ($print_as_quote == 1) {
 			$rep->title = _('QUOTE');
-			$rep->filename = 'Quote' . $i . '.pdf';
+			$rep->filename = 'Quote'.$i.'.pdf';
 		}
 		else {
 			$rep->title = _('SALES ORDER');
-			$rep->filename = 'SalesOrder' . $i . '.pdf';
+			$rep->filename = 'SalesOrder'.$i.'.pdf';
 		}		
 		$rep->SetHeaderType('Header2');
 		$rep->currency = $cur;
@@ -98,10 +91,10 @@ function print_sales_orders() {
 			$DisplayPrice = number_format2($myrow2['unit_price'],$dec);
 			$DisplayQty = number_format2($myrow2['quantity'],get_qty_dec($myrow2['stk_code']));
 			$DisplayNet = number_format2($Net,$dec);
-			if ($myrow2['discount_percent']==0)
-				$DisplayDiscount ='';
+			if ($myrow2['discount_percent'] == 0)
+				$DisplayDiscount = '';
 			else
-				$DisplayDiscount = number_format2($myrow2['discount_percent']*100,user_percent_dec()) . '%';
+				$DisplayDiscount = number_format2($myrow2['discount_percent']*100, user_percent_dec()).'%';
 			$rep->TextCol(0, 1,	$myrow2['stk_code'], -2);
 			$oldrow = $rep->row;
 			$rep->TextColLines(1, 2, $myrow2['description'], -2);
@@ -122,7 +115,7 @@ function print_sales_orders() {
 			$rep->NewLine();
 			$rep->TextColLines(1, 3, $myrow['comments'], -2);
 		}
-		$DisplaySubTot = number_format2($SubTotal,$dec);
+		$DisplaySubTot = number_format2($SubTotal, $dec);
 
 		$rep->row = $rep->bottomMargin + (15 * $rep->lineHeight);
 		$doctype = ST_SALESORDER;
@@ -131,7 +124,7 @@ function print_sales_orders() {
 		$rep->TextCol(6, 7,	$DisplaySubTot, -2);
 		$rep->NewLine();
 		if ($myrow['freight_cost'] != 0.0) {
-			$DisplayFreight = number_format2($myrow['freight_cost'],$dec);
+			$DisplayFreight = number_format2($myrow['freight_cost'], $dec);
 			$rep->TextCol(3, 6, _('Shipping'), -2);
 			$rep->TextCol(6, 7,	$DisplayFreight, -2);
 			$rep->NewLine();
@@ -143,14 +136,12 @@ function print_sales_orders() {
 			$rep->NewLine();
 		}
 
-		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'],
-		  $myrow['tax_group_id'], $myrow['tax_included'],  null);
+		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'], $myrow['tax_group_id'], $myrow['tax_included'],  null);
 		$first = true;
 		foreach($tax_items as $tax_item) {
 			if ($tax_item['Value'] == 0)
 				continue;
 			$DisplayTax = number_format2($tax_item['Value'], $dec);
-
 			$tax_type_name = $tax_item['tax_type_name'];
 
 			if ($myrow['tax_included']) {
@@ -165,7 +156,7 @@ function print_sales_orders() {
 					$first = false;
 				}
 				else
-					$rep->TextCol(3, 7, _('Included') . ' ' . $tax_type_name . ' ' . _('Amount'). ': ' . $DisplayTax, -2);
+					$rep->TextCol(3, 7, _('Included').' '.$tax_type_name.' '._('Amount').': '.$DisplayTax, -2);
 			}
 			else {
 				$SubTotal += $tax_item['Value'];
@@ -184,7 +175,7 @@ function print_sales_orders() {
 		$words = price_in_words($myrow['freight_cost'] + $SubTotal, ST_SALESORDER);
 		if ($words != '') {
 			$rep->NewLine(1);
-			$rep->TextCol(1, 7, $myrow['curr_code'] . ': ' . $words, - 2);
+			$rep->TextCol(1, 7, $myrow['curr_code'].': '.$words, -2);
 		}	
 		$rep->Font();
 		if ($i == $to || $email == 1)
