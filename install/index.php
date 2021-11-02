@@ -10,36 +10,35 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_OPEN';
-$path_to_root='..';
+$path_to_root = '..';
 
 if (file_exists($path_to_root.'/config_db.php'))
 	header("Location: $path_to_root/index.php");
 
-include($path_to_root . '/install/isession.inc');
+include($path_to_root.'/install/isession.inc');
 
 page(_('NotrinosERP Installation Wizard'), true, false, '', '', false, 'stylesheet.css');
 
-include($path_to_root . '/includes/ui.inc');
-include($path_to_root . '/includes/system_tests.inc');
-include($path_to_root . '/admin/db/maintenance_db.inc');
-include($path_to_root . '/includes/packages.inc');
-if (file_exists($path_to_root . '/installed_extensions.php'))
-	include($path_to_root . '/installed_extensions.php');
+include($path_to_root.'/includes/ui.inc');
+include($path_to_root.'/includes/system_tests.inc');
+include($path_to_root.'/admin/db/maintenance_db.inc');
+include($path_to_root.'/includes/packages.inc');
+if (file_exists($path_to_root.'/installed_extensions.php'))
+	include($path_to_root.'/installed_extensions.php');
 
 //-------------------------------------------------------------------------------------------------
 
 function subpage_title($txt) {
 	global $path_to_root;
 	
-	echo '<center><img src="'.$path_to_root.'/themes/default/images/notrinos_erp.png" width="250" alt="Logo" >
-		</center>';
+	echo '<center><img src="'.$path_to_root.'/themes/default/images/notrinos_erp.png" width="250" alt="Logo"></center>';
 
 	$page = @$_POST['Page'] ? $_POST['Page'] : 1;
 
 	display_heading(
 		$page == 6 ? $txt :
 			_('NotrinosERP Installation Wizard').'<br>'
-			. sprintf(_('Step %d: %s'),  $page , $txt));
+			.sprintf(_('Step %d: %s'),  $page , $txt));
 	br();
 }
 
@@ -59,7 +58,7 @@ function display_coas() {
 		alt_table_row_color($k);
 		label_cell($coa['name']);
 		label_cell($coa['encoding']);
-		label_cell(is_array($coa['Descr']) ? implode('<br>', $coa['Descr']) :  $coa['Descr']);
+		label_cell(is_array($coa['Descr']) ? implode('<br>', $coa['Descr']) : $coa['Descr']);
 		label_cell($installed ? _('Installed') : checkbox(null, 'coas['.$coa['package'].']'), "align='center'");
 
 		end_row();
@@ -152,7 +151,7 @@ function do_install() {
 			'password' => md5($con['pass']),
 			'user_id' => $con['admin']));
 
-		if (!copy($path_to_root. '/config.default.php', $path_to_root. '/config.php')) {
+		if (!copy($path_to_root.'/config.default.php', $path_to_root.'/config.php')) {
 			display_error(_("Cannot save system configuration file 'config.php'."));
 			return false;
 		}
@@ -172,8 +171,8 @@ function do_install() {
 			return false;
 		}
 		// update default language
-		if (file_exists($path_to_root . '/lang/installed_languages.inc'))
-			include_once($path_to_root . '/lang/installed_languages.inc');
+		if (file_exists($path_to_root.'/lang/installed_languages.inc'))
+			include_once($path_to_root.'/lang/installed_languages.inc');
 		$dflt_lang = $_POST['lang'];
 		write_lang();
 		return true;
@@ -203,9 +202,8 @@ if (isset($_POST['back']) && (@$_POST['Page']>1)) {
 	else
 		$_POST['Page']--;
 }
-elseif (isset($_POST['continue'])) {
+elseif (isset($_POST['continue']))
 	$_POST['Page'] = 2;
-}
 elseif (isset($_POST['db_test'])) {
 	if (get_post('host')=='') {
 		display_error(_('Host name cannot be empty.'));
@@ -228,7 +226,7 @@ elseif (isset($_POST['db_test'])) {
 			'host' => $_POST['host'],
 			'port' => $_POST['port'],
 			'dbuser' => $_POST['dbuser'],
-			'dbpassword' => $_POST['dbpassword'],
+			'dbpassword' => @html_entity_decode($_POST['dbpassword'], ENT_QUOTES, $_SESSION['language']->encoding == 'iso-8859-2' ? 'ISO-8859-1' : $_SESSION['language']->encoding),
 			'dbname' => $_POST['dbname'],
 			'tbpref' => $_POST['tbpref'] ? '0_' : '',
 			'sel_langs' => check_value('sel_langs'),
@@ -274,15 +272,15 @@ elseif (isset($_POST['set_admin'])) {
 		display_error(_('Company name cannot be empty.'));
 		set_focus('name');
 	}
-	elseif (get_post('admin')=='') {
+	elseif (get_post('admin') == '') {
 		display_error(_('Company admin name cannot be empty.'));
 		set_focus('admin');
 	}
-	elseif (get_post('pass')=='') {
+	elseif (get_post('pass') == '') {
 		display_error(_('Company admin password cannot be empty.'));
 		set_focus('pass');
 	}
-	elseif (get_post('pass')!=get_post('repass')) {
+	elseif (get_post('pass') != get_post('repass')) {
 		display_error(_('Company admin passwords differ.'));
 		unset($_POST['pass'],$_POST['repass']);
 		set_focus('pass');
@@ -308,103 +306,96 @@ if (list_updated('inst_lang')) {
 }
 
 start_form();
-	switch(@$_POST['Page']) {
-		default:
-		case '1':
-			div_start('welcome');
-			subpage_title(_('System Diagnostics'));
-			start_table();
-			instlang_list_row(_('Select install wizard language:'), 'inst_lang', $_SESSION['inst_set']['inst_lang']);
-			end_table(1);
-			$_POST['Tests'] = display_system_tests(true);
-			br();
-			if (@$_POST['Tests']) {
-				display_notification(_('All application preliminary requirements seems to be correct. Please press Continue button below.'));
-				submit_center('continue', _('Continue >>'));
-			}
-			else {
-				display_error(_('Application cannot be installed. Please fix problems listed below in red, and press Refresh button.'));
-				submit_center('refresh', _('Refresh'));
-			}
-			div_end();
-			break;
+switch(@$_POST['Page']) {
+	default:
+	case '1':
+		div_start('welcome');
+		subpage_title(_('System Diagnostics'));
+		start_table();
+		instlang_list_row(_('Select install wizard language:'), 'inst_lang', $_SESSION['inst_set']['inst_lang']);
+		end_table(1);
+		$_POST['Tests'] = display_system_tests(true);
+		br();
+		if (@$_POST['Tests']) {
+			display_notification(_('All application preliminary requirements seems to be correct. Please press Continue button below.'));
+			submit_center('continue', _('Continue >>'));
+		}
+		else {
+			display_error(_('Application cannot be installed. Please fix problems listed below in red, and press Refresh button.'));
+			submit_center('refresh', _('Refresh'));
+		}
+		div_end();
+		break;
+	case '2':
+		if (!isset($_POST['host'])) {
+			foreach($_SESSION['inst_set'] as $name => $val)
+				$_POST[$name] = $val;
+		}
+		subpage_title(_('Database Server Settings'));
+		start_table(TABLESTYLE);
+		text_row_ex(_('Server Host:'), 'host', 30, 60);
+		text_row_ex(_('Server Port:'), 'port', 30, 60);
+		text_row_ex(_('Database Name:'), 'dbname', 30);
+		text_row_ex(_('Database User:'), 'dbuser', 30);
+		password_row(_('Database Password:'), 'dbpassword', '');
+		collations_list_row(_('Database Collation:'), 'collation');
+		yesno_list_row(_("Use '0_' Table Prefix:"), 'tbpref', 1, _('Yes'), _('No'), false);
+		check_row(_('Install Additional Language Packs from NotrinosERP Repository:'), 'sel_langs');
+		check_row(_('Install Additional COAs from NotrinosERP Repository:'), 'sel_coas');
+		end_table(1);
+		display_note(_('Use database user/password with permissions to create new database, or use proper credentials for previously created empty database.'));
+		display_note(_('Select collation you want to use. If you are unsure or you will use various languages, select unicode collation.'));
+		display_note(_('Use table prefix if you share selected database for more than one company using the same collation.'));
+		display_note(_('Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later.'));
+		display_note(_('Set Only Port value if you cannot use the default port 3306.'));
+		submit_center_first('back', _('<< Back'));
+		submit_center_last('db_test', _('Continue >>'));
+		break;
+	case '3': // select langauges
+		subpage_title(_('User Interface Languages Selection'));
+		display_langs();
+		submit_center_first('back', _('<< Back'));
+		submit_center_last('install_langs', _('Continue >>'));
+		break;
+	case '4': // select COA
+		subpage_title(_('Charts of Accounts Selection'));
+		display_coas();
+		submit_center_first('back', _('<< Back'));
+		submit_center_last('install_coas', _('Continue >>'));
+		break;
+	case '5':
+		if (!isset($_POST['name'])) {
+			foreach($_SESSION['inst_set'] as $name => $val)
+				$_POST[$name] = $val;
+			set_focus('name');
+		}
+		if (!isset($installed_extensions)) {
+			$installed_extensions = array();
+			update_extensions($installed_extensions);
+		}
+		subpage_title(_('Company Settings'));
+		start_table(TABLESTYLE);
+		text_row_ex(_('Company Name:'), 'name', 30);
+		text_row_ex(_('Admin Login:'), 'admin', 30);
+		password_row(_('Admin Password:'), 'pass', @$_POST['pass']);
+		password_row(_('Reenter Password:'), 'repass', @$_POST['repass']);
+		coa_list_row(_('Select Chart of Accounts:'), 'coa');
+		languages_list_row(_('Select Default Language:'), 'lang');
+		end_table(1);
+		submit_center_first('back', _('<< Back'));
+		submit_center_last('set_admin', _('Install'), _('Start installation process'), 'default nonajax');
+		break;
+	case '6': // final screen
+		subpage_title(_('NotrinosERP has been installed successsfully.'));
+		display_note(_('Please do not forget to remove install wizard folder.'));
+		session_unset();
+		session_destroy();
+		hyperlink_no_params($path_to_root.'/index.php', _('Click here to start.'));
+		break;
+}
 
-		case '2':
-			if (!isset($_POST['host'])) {
-				foreach($_SESSION['inst_set'] as $name => $val)
-					$_POST[$name] = $val;
-			}
-			subpage_title(_('Database Server Settings'));
-			start_table(TABLESTYLE);
-			text_row_ex(_('Server Host:'), 'host', 30, 60);
-			text_row_ex(_('Server Port:'), 'port', 30, 60);
-			text_row_ex(_('Database Name:'), 'dbname', 30);
-			text_row_ex(_('Database User:'), 'dbuser', 30);
-			password_row(_('Database Password:'), 'dbpassword', '');
-			collations_list_row(_('Database Collation:'), 'collation');
-			yesno_list_row(_("Use '0_' Table Prefix:"), 'tbpref', 1, _('Yes'), _('No'), false);
-			check_row(_('Install Additional Language Packs from NotrinosERP Repository:'), 'sel_langs');
-			check_row(_('Install Additional COAs from NotrinosERP Repository:'), 'sel_coas');
-			end_table(1);
-			display_note(_('Use database user/password with permissions to create new database, or use proper credentials for previously created empty database.'));
-			display_note(_('Select collation you want to use. If you are unsure or you will use various languages, select unicode collation.'));
-			display_note(_('Use table prefix if you share selected database for more than one company using the same collation.'));
-			display_note(_('Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later.'));
-			display_note(_('Set Only Port value if you cannot use the default port 3306.'));
-			submit_center_first('back', _('<< Back'));
-			submit_center_last('db_test', _('Continue >>'));
-			break;
-
-		case '3': // select langauges
-			subpage_title(_('User Interface Languages Selection'));
-			display_langs();
-			submit_center_first('back', _('<< Back'));
-			submit_center_last('install_langs', _('Continue >>'));
-			break;
-
-		case '4': // select COA
-			subpage_title(_('Charts of Accounts Selection'));
-			display_coas();
-			submit_center_first('back', _('<< Back'));
-			submit_center_last('install_coas', _('Continue >>'));
-			break;
-
-		case '5':
-			if (!isset($_POST['name'])) {
-				foreach($_SESSION['inst_set'] as $name => $val)
-					$_POST[$name] = $val;
-				set_focus('name');
-			}
-			if (!isset($installed_extensions)) {
-				$installed_extensions = array();
-				update_extensions($installed_extensions);
-			}
-
-			subpage_title(_('Company Settings'));
-			start_table(TABLESTYLE);
-			text_row_ex(_('Company Name:'), 'name', 30);
-			text_row_ex(_('Admin Login:'), 'admin', 30);
-			password_row(_('Admin Password:'), 'pass', @$_POST['pass']);
-			password_row(_('Reenter Password:'), 'repass', @$_POST['repass']);
-			coa_list_row(_('Select Chart of Accounts:'), 'coa');
-			languages_list_row(_('Select Default Language:'), 'lang');
-			end_table(1);
-			submit_center_first('back', _('<< Back'));
-			submit_center_last('set_admin', _('Install'), _('Start installation process'), 'default nonajax');
-			break;
-
-		case '6': // final screen
-			subpage_title(_('NotrinosERP has been installed successsfully.'));
-			display_note(_('Please do not forget to remove install wizard folder.'));
-			session_unset();
-			session_destroy();
-			hyperlink_no_params($path_to_root.'/index.php', _('Click here to start.'));
-			break;
-
-	}
-
-	hidden('Tests');
-	hidden('Page');
+hidden('Tests');
+hidden('Page');
 end_form(1);
 
 end_page(false, false, true);
