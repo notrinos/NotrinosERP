@@ -620,7 +620,7 @@ function date_row($label, $name, $title=null, $check=null, $inc_days=0, $inc_mon
 
 function password_row($label, $name, $value) {
 	echo "<tr><td class='label'>".$label."</td>";
-	label_cell("<input type='password' name='".$name."' size=20 maxlength=20 value='".$value."' >");
+	label_cell("<input type='password' name='".$name."' size=32 maxlength=32 value='".$value."' >");
 	echo "</tr>\n";
 }	
 

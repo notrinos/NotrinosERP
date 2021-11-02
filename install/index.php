@@ -348,7 +348,7 @@ start_form();
 			end_table(1);
 			display_note(_('Use database user/password with permissions to create new database, or use proper credentials for previously created empty database.'));
 			display_note(_('Select collation you want to use. If you are unsure or you will use various languages, select unicode collation.'));
-			display_note(_('Use table prefix if you share selected database for more than one FA company using the same collation.'));
+			display_note(_('Use table prefix if you share selected database for more than one company using the same collation.'));
 			display_note(_('Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later.'));
 			display_note(_('Set Only Port value if you cannot use the default port 3306.'));
 			submit_center_first('back', _('<< Back'));

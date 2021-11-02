@@ -25,9 +25,9 @@ function output_html($text) {
 	return  in_ajax() ? fmt_errors() : ($before_box.fmt_errors().$text);
 }
 
-//-----------------------------------------------------------------------------
-//	Removing magic quotes from nested arrays/variables
-//
+/*
+*	Removing magic quotes from nested arrays/variables
+*/
 function strip_quotes($data) {
 	if(version_compare(phpversion(), '5.4', '<') && get_magic_quotes_gpc()) {
 		if(is_array($data)) {
@@ -59,7 +59,7 @@ function check_page_security($page_security) {
 }
 
 /*
- Ensure file is re-read on next request if php caching is active
+*	Ensure file is re-read on next request if php caching is active
 */
 function cache_invalidate($filename) {
 	if (function_exists('opcache_invalidate')) // OpCode extension
@@ -79,11 +79,11 @@ include_once($path_to_root . '/includes/errors.inc');
 // collect all error msgs
 set_error_handler('error_handler' /*, errtypes */);
 
-include_once($path_to_root . '/includes/current_user.inc');
-include_once($path_to_root . '/includes/lang/language.inc');
-include_once($path_to_root . '/includes/ajax.inc');
-include_once($path_to_root . '/includes/ui/ui_msgs.inc');
-include_once($path_to_root . '/includes/prefs/sysprefs.inc');
+include_once($path_to_root.'/includes/current_user.inc');
+include_once($path_to_root.'/includes/lang/language.inc');
+include_once($path_to_root.'/includes/ajax.inc');
+include_once($path_to_root.'/includes/ui/ui_msgs.inc');
+include_once($path_to_root.'/includes/prefs/sysprefs.inc');
 
 session_name('FAinstall');
 session_start();
@@ -91,13 +91,13 @@ session_start();
 // this is to fix the "back-do-you-want-to-refresh" issue - thanx PHPFreaks
 header('Cache-control: private');
 
-include_once($path_to_root . '/config.default.php');
+include_once($path_to_root.'/config.default.php');
 
 $_SESSION['SysPrefs'] = new sys_prefs();
 $SysPrefs = &$_SESSION['SysPrefs'];
 
 $inst_langs = array(
-	'C' => array (	   'name' => 'English',             	'code' => 'C',		'encoding' => 'utf-8'),
+	'C' =>	   array (	   'name' => 'English',             'code' => 'C',		'encoding' => 'utf-8'),
 	'ar_EG' => array ( 'name' => 'Arabic',          	    'code' => 'ar_EG',	'encoding' => 'utf-8', 'rtl' => true),
 	'da_DK' => array ( 'name' => 'Dansk',               	'code' => 'da_DK',	'encoding' => 'iso-8859-1'),
 	'de_DE' => array ( 'name' => 'Deutsch',             	'code' => 'de_DE',	'encoding' => 'iso-8859-1'),
@@ -120,6 +120,11 @@ $inst_langs = array(
 	'zh_CN' => array ( 'name' => 'Chinese Simplifed',   	'code' => 'zh_CN',	'encoding' => 'utf-8'),
 );
 
+$cur_error_level = $SysPrefs->go_debug > 0 ? -1 : E_USER_WARNING|E_USER_ERROR|E_USER_NOTICE;
+
+error_reporting($cur_error_level);
+ini_set('display_errors', 'On');
+
 $Ajax = new Ajax();
 
 get_text_init();
@@ -130,9 +135,7 @@ $i_lang = isset($_POST['inst_lang']) ? $_POST['inst_lang'] :
 // Page Initialisation
 if (!isset($_SESSION['language']) || !method_exists($_SESSION['language'], 'set_language') || $_SESSION['language']->code != $i_lang) {
 	$l = array_search_value($i_lang, $inst_langs,  'code');
-	$_SESSION['language'] = new language($l['name'], $l['code'], $l['encoding'],
-	 @isset($l['rtl']) ? 'rtl' : 'ltr');
-
+	$_SESSION['language'] = new language($l['name'], $l['code'], $l['encoding'], @isset($l['rtl']) ? 'rtl' : 'ltr');
 }
 if (!isset($installed_languages))
 	$installed_languages = array();
