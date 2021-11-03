@@ -55,6 +55,38 @@ function set_edit($stock_id) {
 	$_POST['del_image'] = 0;
 }
 
+function del_image($stock_id)
+{
+	foreach (array('jpg', 'png', 'gif') as $ext) {
+		$filename = company_path().'/images/'.item_img_name($stock_id).".".$ext;
+		if (file_exists($filename) && !unlink($filename))
+			return false;
+	}
+	return true;
+}
+
+function show_image($stock_id) {
+	global $SysPrefs;
+
+	$check_remove_image = false;
+	$stock_img_link = _('No image');
+
+	if (@$stock_id) {
+		foreach (array('jpg', 'png', 'gif') as $ext) {
+			$file = company_path().'/images/'.item_img_name($stock_id).'.'.$ext;
+			if (file_exists($file)) {
+				// rand() call is necessary here to avoid caching problems.
+				$check_remove_image = true; // fixme
+				$stock_img_link = "<img id='item_img' alt = '[".$stock_id.".$ext"."]' src='".$file."?nocache=".rand()."'"." height='".$SysPrefs->pic_height."' border='0'>";
+				break;
+			}
+		}
+	}
+	label_row("&nbsp;", $stock_img_link);
+	if ($check_remove_image)
+		check_row(_('Delete Image:'), 'del_image');
+}
+
 if (isset($_GET['stock_id']))
 	$_POST['stock_id'] = $_GET['stock_id'];
 
@@ -65,9 +97,10 @@ if (list_updated('stock_id')) {
 	$Ajax->activate('details');
 	$Ajax->activate('controls');
 }
-
 if (get_post('cancel')) {
-	$_POST['NewStockID'] = $stock_id = $_POST['stock_id'] = '';
+	$_POST['NewStockID'] = '';
+	$stock_id = '';
+	$_POST['stock_id'] = '';
 	clear_data();
 	set_focus('stock_id');
 	$Ajax->activate('_page_body');
@@ -88,11 +121,11 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 
 	if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
 		display_error(_('The file size is over the maximum allowed.'));
-		$upload_file ='No';
+		$upload_file = 'No';
 	}
 	elseif ($_FILES['pic']['error'] > 0) {
 		display_error(_('Error uploading file.'));
-		$upload_file ='No';
+		$upload_file = 'No';
 	}
 	
 	//But check for the worst 
@@ -101,40 +134,36 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 	else
 		$imagetype = false;
 
-	if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {	//File type Check
+	if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {
 		display_warning( _('Only graphics files can be uploaded'));
-		$upload_file ='No';
+		$upload_file = 'No';
 	}
 	elseif (!in_array(strtoupper(substr(trim($_FILES['pic']['name']), strlen($_FILES['pic']['name']) - 3)), array('JPG','PNG','GIF'))) {
 		display_warning(_('Only graphics files are supported - a file extension of .jpg, .png or .gif is expected'));
-		$upload_file ='No';
+		$upload_file = 'No';
 	} 
 	elseif ( $_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) { //File Size Check
 		display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
-		$upload_file ='No';
+		$upload_file = 'No';
 	} 
 	elseif ( $_FILES['pic']['type'] == 'text/plain' ) {  //File type Check
 		display_warning( _('Only graphics files can be uploaded'));
-		$upload_file ='No';
+		$upload_file = 'No';
 	} 
-	elseif (file_exists($filename)) {
-		$result = unlink($filename);
-		if (!$result) {
-			display_error(_('The existing image could not be removed'));
-			$upload_file ='No';
-		}
+	elseif (!del_image($stock_id)) {
+		display_error(_('The existing image could not be removed'));
+		$upload_file = 'No';
 	}
-	
+
 	if ($upload_file == 'Yes') {
 		$result  =  move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
 		if ($msg = check_image_file($filename)) {
 			display_error($msg);
 			unlink($filename);
-			$upload_file ='No';
+			$upload_file = 'No';
 		}
 	}
 	$Ajax->activate('details');
- /* EOF Add Image upload for New Item  - by Ori */
 }
 
 if (get_post('fixed_asset')) {
@@ -203,11 +232,8 @@ if (isset($_POST['addupdate'])) {
 	}
 	
 	if ($input_error != 1) {
-		if (check_value('del_image')) {
-			$filename = company_path().'/images/'.item_img_name($_POST['NewStockID']).'.jpg';
-			if (file_exists($filename))
-				unlink($filename);
-		}
+		if (check_value('del_image'))
+			del_image($_POST['NewStockID']);
 		
 		if (!$new_item) {
 			update_item($_POST['NewStockID'], $_POST['description'],
@@ -279,9 +305,7 @@ if (isset($_POST['delete']) && strlen($_POST['delete']) > 1) {
 
 		$stock_id = $_POST['NewStockID'];
 		delete_item($stock_id);
-		$filename = company_path().'/images/'.item_img_name($stock_id).'.jpg';
-		if (file_exists($filename))
-			unlink($filename);
+		delete_image($stock_id);
 		display_notification(_('Selected item has been deleted.'));
 		$_POST['stock_id'] = '';
 		clear_data();
@@ -443,23 +467,9 @@ function item_settings(&$stock_id, $new_item) {
 
 	table_section_title(_('Other'));
 
-	file_row(_('Image File (.jpg)').':', 'pic', 'pic');
-	$stock_img_link = '';
-	$check_remove_image = false;
+	file_row(_('Image File (.jpg)').':', 'pic', 'pic'); // fixme: png/gif
 
-	if (@$_POST['NewStockID'] && file_exists(company_path().'/images/'.item_img_name($_POST['NewStockID']).'.jpg')) {
-	// rand() call is necessary here to avoid caching problems.
-		$stock_img_link .= "<img id='item_img' alt = '[".$_POST['NewStockID'].'.jpg'.
-			"]' src='".company_path().'/images/'.item_img_name($_POST['NewStockID']).
-			".jpg?nocache=".rand()."'"." height='".$SysPrefs->pic_height."' border='0'>";
-		$check_remove_image = true;
-	} 
-	else
-		$stock_img_link .= _('No image');
-
-	label_row('&nbsp;', $stock_img_link);
-	if ($check_remove_image)
-		check_row(_('Delete Image:'), 'del_image');
+	show_image(@$_POST['NewStockID']);
 
 	record_status_list_row(_('Item status:'), 'inactive');
 	if (get_post('fixed_asset')) {
@@ -475,7 +485,8 @@ function item_settings(&$stock_id, $new_item) {
 	end_outer_table(1);
 
 	div_start('controls');
-	if (@$_REQUEST['popup']) hidden('popup', 1);
+	if (@$_REQUEST['popup'])
+		hidden('popup', 1);
 	if (!isset($_POST['NewStockID']) || $new_item)
 		submit_center('addupdate', _('Insert New Item'), true, '', 'default');
 	else {
@@ -532,44 +543,44 @@ $tabs = (get_post('fixed_asset'))
 
 tabbed_content_start('tabs', $tabs);
 
-	switch (get_post('_tabs_sel')) {
-		default:
-		case 'settings':
-			item_settings($stock_id, $new_item);
+switch (get_post('_tabs_sel')) {
+	default:
+	case 'settings':
+		item_settings($stock_id, $new_item);
+		break;
+	case 'sales_pricing':
+		$_GET['stock_id'] = $stock_id;
+		$_GET['page_level'] = 1;
+		include_once($path_to_root.'/inventory/prices.php');
+		break;
+	case 'purchase_pricing':
+		$_GET['stock_id'] = $stock_id;
+		$_GET['page_level'] = 1;
+		include_once($path_to_root.'/inventory/purchasing_data.php');
+		break;
+	case 'standard_cost':
+		$_GET['stock_id'] = $stock_id;
+		$_GET['page_level'] = 1;
+		include_once($path_to_root.'/inventory/cost_update.php');
+		break;
+	case 'reorder_level':
+		if (!is_inventory_item($stock_id))
 			break;
-		case 'sales_pricing':
-			$_GET['stock_id'] = $stock_id;
-			$_GET['page_level'] = 1;
-			include_once($path_to_root.'/inventory/prices.php');
+		$_GET['page_level'] = 1;
+		$_GET['stock_id'] = $stock_id;
+		include_once($path_to_root.'/inventory/reorder_level.php');
+		break;
+	case 'movement':
+		if (!is_inventory_item($stock_id))
 			break;
-		case 'purchase_pricing':
-			$_GET['stock_id'] = $stock_id;
-			$_GET['page_level'] = 1;
-			include_once($path_to_root.'/inventory/purchasing_data.php');
-			break;
-		case 'standard_cost':
-			$_GET['stock_id'] = $stock_id;
-			$_GET['page_level'] = 1;
-			include_once($path_to_root.'/inventory/cost_update.php');
-			break;
-		case 'reorder_level':
-			if (!is_inventory_item($stock_id))
-				break;
-			$_GET['page_level'] = 1;
-			$_GET['stock_id'] = $stock_id;
-			include_once($path_to_root.'/inventory/reorder_level.php');
-			break;
-		case 'movement':
-			if (!is_inventory_item($stock_id))
-				break;
-			$_GET['stock_id'] = $stock_id;
-			include_once($path_to_root.'/inventory/inquiry/stock_movements.php');
-			break;
-		case 'status':
-			$_GET['stock_id'] = $stock_id;
-			include_once($path_to_root.'/inventory/inquiry/stock_status.php');
-			break;
-	};
+		$_GET['stock_id'] = $stock_id;
+		include_once($path_to_root.'/inventory/inquiry/stock_movements.php');
+		break;
+	case 'status':
+		$_GET['stock_id'] = $stock_id;
+		include_once($path_to_root.'/inventory/inquiry/stock_status.php');
+		break;
+};
 
 br();
 tabbed_content_end();
@@ -582,8 +593,6 @@ if (get_post('fixed_asset'))
 	hidden('mb_flag', 'F');
 
 end_form();
-
-//------------------------------------------------------------------------------------
 
 end_page(@$_REQUEST['popup']);
 
