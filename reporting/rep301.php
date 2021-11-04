@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
-$path_to_root='..';
+$path_to_root = '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
@@ -202,9 +202,9 @@ function print_inventory_valuation_report() {
 			$rep->TextCol(1, 2, $trans['description'].($trans['inactive'] == 1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, $trans['units']);
 			$rep->AmountCol(3, 4, $trans['QtyOnHand'], get_qty_dec($trans['stock_id']));
-			
-			price_decimal_format($UnitCost, 0);
-			$rep->AmountCol(4, 5, $UnitCost, 0);
+			$dec2 = 0;
+			price_decimal_format($UnitCost, $dec2);
+			$rep->AmountCol(4, 5, $UnitCost, $dec2);
 			$rep->AmountCol(5, 6, $ItemTotal, $dec);
 			$rep->fontSize += 2;
 		}
