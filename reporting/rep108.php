@@ -10,19 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_CUSTSTATREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Print Statements
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/includes/db/crm_contacts_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/includes/db/crm_contacts_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -37,17 +31,17 @@ function getTransactions($debtorno, $date, $show_also_allocated) {
 		trans.reference,
 		trans.tran_date,
 		trans.due_date,
-		(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) AS TotalAmount, alloc AS Allocated,
+		(ABS(ov_amount) + ov_gst + ov_freight + ov_freight_tax + ov_discount) AS TotalAmount, alloc AS Allocated,
 		((trans.type = ".ST_SALESINVOICE.") AND due_date < '$date') AS OverDue
 		FROM ".TB_PREF."debtor_trans trans
 		LEFT JOIN ".TB_PREF."voided as v
 			ON trans.trans_no=v.id AND trans.type=v.type
 		WHERE tran_date <= '$date' AND debtor_no = ".db_escape($debtorno)."
 			AND trans.type <> ".ST_CUSTDELIVERY." AND ISNULL(v.date_)
-			AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) > ". FLOAT_COMP_DELTA;
+			AND ABS(ABS(ov_amount) + ov_gst + ov_freight + ov_freight_tax + ov_discount) > ". FLOAT_COMP_DELTA;
 	
 	if (!$show_also_allocated)
-		$sql .= " AND ABS(ABS(ov_amount + ov_gst + ov_freight +	ov_freight_tax + ov_discount) - alloc) > ". FLOAT_COMP_DELTA;
+		$sql .= " AND ABS(ABS(ov_amount) + ov_gst + ov_freight +	ov_freight_tax + ov_discount - alloc) > ". FLOAT_COMP_DELTA;
 	$sql .= " ORDER BY tran_date";
 
 	return db_query($sql, 'No transactions were returned');
@@ -58,7 +52,7 @@ function getTransactions($debtorno, $date, $show_also_allocated) {
 function print_statements() {
 	global $path_to_root, $systypes_array;
 
-	include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+	include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$customer = $_POST['PARAM_0'];
 	$currency = $_POST['PARAM_1'];
@@ -110,7 +104,7 @@ function print_statements() {
 		if ($email == 1) {
 			$rep = new FrontReport('', '', user_pagesize(), 9, $orientation);
 			$rep->title = _('STATEMENT');
-			$rep->filename = 'Statement' . $myrow['debtor_no'] . '.pdf';
+			$rep->filename = 'Statement'.$myrow['debtor_no'].'.pdf';
 			$rep->Info($params, $cols, null, $aligns);
 		}
 
@@ -118,8 +112,6 @@ function print_statements() {
 		$rep->currency = $cur;
 		$rep->Font();
 		$rep->Info($params, $cols, null, $aligns);
-
-		//= get_branch_contacts($branch['branch_code'], 'invoice', $branch['debtor_no']);
 		$rep->SetCommonData($myrow, null, null, $baccount, ST_STATEMENT, $contacts);
 		$rep->SetHeaderType('Header2');
 		$rep->NewPage();
@@ -130,17 +122,16 @@ function print_statements() {
 		$rep->fontSize -= 2;
 		$rep->NewLine(2);
 		while ($myrow2=db_fetch($TransResult)) {
-			$DisplayTotal = number_format2(Abs($myrow2['TotalAmount']),$dec);
-			$DisplayAlloc = number_format2($myrow2['Allocated'],$dec);
-			$DisplayNet = number_format2($myrow2['TotalAmount'] - $myrow2['Allocated'],$dec);
+			$DisplayTotal = number_format2(Abs($myrow2['TotalAmount']), $dec);
+			$DisplayAlloc = number_format2($myrow2['Allocated'], $dec);
+			$DisplayNet = number_format2($myrow2['TotalAmount'] - $myrow2['Allocated'], $dec);
 
 			$rep->TextCol(0, 1, $systypes_array[$myrow2['type']], -2);
 			$rep->TextCol(1, 2,	$myrow2['reference'], -2);
 			$rep->TextCol(2, 3,	sql2date($myrow2['tran_date']), -2);
 			if ($myrow2['type'] == ST_SALESINVOICE)
 				$rep->TextCol(3, 4,	sql2date($myrow2['due_date']), -2);
-			if ($myrow2['type'] == ST_SALESINVOICE || $myrow2['type'] == ST_BANKPAYMENT || 
-				($myrow2['type'] == ST_JOURNAL && $myrow2['TotalAmount'] > 0.0))
+			if ($myrow2['type'] == ST_SALESINVOICE || $myrow2['type'] == ST_BANKPAYMENT)
 				$rep->TextCol(4, 5,	$DisplayTotal, -2);
 			else
 				$rep->TextCol(5, 6,	$DisplayTotal, -2);
@@ -150,18 +141,17 @@ function print_statements() {
 			if ($rep->row < $rep->bottomMargin + (10 * $rep->lineHeight))
 				$rep->NewPage();
 		}
-		$nowdue = '1-' . $PastDueDays1 . ' ' . _('Days');
-		$pastdue1 = $PastDueDays1 + 1 . '-' . $PastDueDays2 . ' ' . _('Days');
-		$pastdue2 = _('Over') . ' ' . $PastDueDays2 . ' ' . _('Days');
+		$nowdue = '1-'.$PastDueDays1.' '._('Days');
+		$pastdue1 = $PastDueDays1 + 1.'-'.$PastDueDays2.' '._('Days');
+		$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 		$CustomerRecord = get_customer_details($myrow['debtor_no'], null, $show_also_allocated);
 		$str = array(_('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
 		$str2 = array(number_format2(($CustomerRecord['Balance'] - $CustomerRecord['Due']),$dec),
 			number_format2(($CustomerRecord['Due']-$CustomerRecord['Overdue1']),$dec),
-			number_format2(($CustomerRecord['Overdue1']-$CustomerRecord['Overdue2']) ,$dec),
-			number_format2($CustomerRecord['Overdue2'],$dec),
-			number_format2($CustomerRecord['Balance'],$dec));
-		$col = array($rep->cols[0], $rep->cols[0] + 110, $rep->cols[0] + 210, $rep->cols[0] + 310,
-			$rep->cols[0] + 410, $rep->cols[0] + 510);
+			number_format2(($CustomerRecord['Overdue1']-$CustomerRecord['Overdue2']), $dec),
+			number_format2($CustomerRecord['Overdue2'], $dec),
+			number_format2($CustomerRecord['Balance'], $dec));
+		$col = array($rep->cols[0], $rep->cols[0] + 110, $rep->cols[0] + 210, $rep->cols[0] + 310, $rep->cols[0] + 410, $rep->cols[0] + 510);
 		$rep->row = $rep->bottomMargin + (10 * $rep->lineHeight - 6);
 		for ($i = 0; $i < 5; $i++)
 			$rep->TextWrap($col[$i], $rep->row, $col[$i + 1] - $col[$i], $str[$i], 'right');
@@ -169,7 +159,7 @@ function print_statements() {
 		for ($i = 0; $i < 5; $i++)
 			$rep->TextWrap($col[$i], $rep->row, $col[$i + 1] - $col[$i], $str2[$i], 'right');
 		if ($email == 1)
-			$rep->End($email, _('Statement') . ' ' . _('as of') . ' ' . sql2date($date));
+			$rep->End($email, _('Statement').' '._('as of').' '.sql2date($date));
 	}
 
 	if (!isset($rep))
