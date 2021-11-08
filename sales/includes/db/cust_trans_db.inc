@@ -106,7 +106,7 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 	db_query($sql, 'The debtor transaction record could not be inserted');
 
 	if ($trans_type != ST_JOURNAL) // skip for journal entries
-		add_audit_trail($trans_type, $trans_no, $date_, $new ? '': _('Updated.'));
+		add_audit_trail($trans_type, $trans_no, $date_, $new ? '' : _('Updated.'));
 
 	return $trans_no;
 }
@@ -300,7 +300,7 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 		debtor.name, 
 		branch.br_name,
 		debtor.curr_code,
-		IF(prep_amount, prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight 
+		IF(prep_amount, prep_amount, abs(trans.ov_amount) + trans.ov_gst + trans.ov_freight 
 			+ trans.ov_freight_tax + trans.ov_discount)	AS TotalAmount,"
 		. "IF(trans.type IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT))."), -1, 1)
 				*(IF(prep_amount, prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight 

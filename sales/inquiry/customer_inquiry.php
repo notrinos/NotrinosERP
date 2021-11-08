@@ -11,12 +11,12 @@
 ***********************************************************************/
 $page_security = 'SA_SALESTRANSVIEW';
 $path_to_root = '../..';
-include_once($path_to_root . '/includes/db_pager.inc');
-include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root.'/includes/db_pager.inc');
+include_once($path_to_root.'/includes/session.inc');
 
-include_once($path_to_root . '/sales/includes/sales_ui.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root.'/sales/includes/sales_ui.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/reporting/includes/reporting.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -51,7 +51,7 @@ function gl_view($row) {
 }
 
 function fmt_amount($row) {
-	$value = $row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT ? -$row['TotalAmount'] : $row['TotalAmount'];
+	$value = $row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT || $row['type']==ST_JOURNAL ? -$row['TotalAmount'] : $row['TotalAmount'];
 	return price_format($value);
 }
 
@@ -64,14 +64,13 @@ function credit_link($row) {
 		if ($row['type'] == ST_CUSTDELIVERY)
 			return pager_link(_('Invoice'), '/sales/customer_invoice.php?DeliveryNumber='.$row['trans_no'], ICON_DOC);
 		else if ($row['type'] == ST_SALESINVOICE)
-			return pager_link(_('Credit This'), '/sales/customer_credit_invoice.php?InvoiceNumber='. $row['trans_no'], ICON_CREDIT);
+			return pager_link(_('Credit This'), '/sales/customer_credit_invoice.php?InvoiceNumber='.$row['trans_no'], ICON_CREDIT);
 	}	
 }
 
 function edit_link($row) {
 	global $page_nested;
 
-	$str = '';
 	if ($page_nested)
 		return '';
 
@@ -101,11 +100,11 @@ function display_customer_summary($customer_record) {
 		echo '<center><font color=red size=4><b>'._('CUSTOMER ACCOUNT IS ON HOLD').'</font></b></center>';
 
 	$nowdue = '1-'.$past1.' '._('Days');
-	$pastdue1 = $past1 + 1 . '-' . $past2 . ' '. _('Days');
+	$pastdue1 = $past1 + 1.'-'.$past2.' '._('Days');
 	$pastdue2 = _('Over').' '.$past2.' '._('Days');
 
-	start_table(TABLESTYLE, "width='80%'");
 	$th = array(_('Currency'), _('Terms'), _('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
+	start_table(TABLESTYLE, "width='80%'");
 	table_header($th);
 
 	start_row();
@@ -145,7 +144,7 @@ if ($_POST['filterType'] != '2') {
 }
 check_cells(_('Zero values'), 'show_voided');
 
-submit_cells('RefreshInquiry', _('Search'),'',_('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Search'), '', _('Refresh Inquiry'), 'default');
 end_row();
 end_table();
 
@@ -169,7 +168,6 @@ if (get_post('RefreshInquiry') || list_updated('filterType'))
 $sql = get_sql_for_customer_inquiry(get_post('TransAfterDate'), get_post('TransToDate'), get_post('customer_id'), get_post('filterType'), check_value('show_voided'));
 
 //------------------------------------------------------------------------------------------------
-//db_query('set @bal:=0');
 
 $cols = array(
 	_('Type') => array('fun'=>'systype_name', 'ord'=>''),
