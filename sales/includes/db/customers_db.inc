@@ -89,7 +89,7 @@ function get_customer_details($customer_id, $to=null, $all=true) {
 		$sql .= " AND debtor.debtor_no = ".db_escape($customer_id);
 
 	if (!$all)
-		$sql .= " AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) > ".FLOAT_COMP_DELTA;
+		$sql .= " AND ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc > ".FLOAT_COMP_DELTA;
 	$sql .= " GROUP BY
 				debtor.name,
 				terms.terms,
@@ -175,7 +175,7 @@ function get_customer_currency($customer_id=null, $branch_id=null) {
 			LEFT JOIN ".TB_PREF."cust_branch branch ON branch.debtor_no=cust.debtor_no
 		WHERE " .(isset($branch_id) ? "branch_code = ".db_escape($branch_id) : "cust.debtor_no = ".db_escape($customer_id));
 
-	$result = db_query($sql, 'Retreive currency of customer $customer_id');
+	$result = db_query($sql, "Retreive currency of customer $customer_id");
 
 	$myrow=db_fetch_row($result);
 	return $myrow ? $myrow[0] : get_company_currency();
