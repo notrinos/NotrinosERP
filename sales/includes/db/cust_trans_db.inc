@@ -315,7 +315,7 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 			$sql .= " AND ISNULL(v.date_) AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) != 0";
 
 	if ($filter == '2')
-		$sql .= " AND ABS(IF(prep_amount, prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)-trans.alloc)>".FLOAT_COMP_DELTA;
+		$sql .= " AND ABS(IF(prep_amount, prep_amount, ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)-trans.alloc)>".FLOAT_COMP_DELTA;
 	else
 		$sql .= " AND trans.tran_date >= '$date_after' AND trans.tran_date <= '$date_to'";
 

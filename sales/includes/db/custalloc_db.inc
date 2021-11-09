@@ -100,7 +100,7 @@ function get_allocatable_from_cust_sql($customer_id, $settled) {
 		 OR (type=".ST_JOURNAL. " AND (trans.ov_amount < 0)))";
 
 	if (!$settled)
-		$sql .= " AND round(abs(ov_amount+ov_gst+ov_freight+ov_freight_tax+ov_discount)-alloc, 6) > 0";
+		$sql .= " AND round(abs(ov_amount+ov_gst)+ov_freight+ov_freight_tax+ov_discount-alloc, 6) > 0";
 
 	if ($customer_id != null)
 		$sql .= " AND trans.debtor_no = ".db_escape($customer_id);
@@ -279,18 +279,18 @@ function get_sql_for_customer_allocation_inquiry($from, $to, $customer, $filterT
 		if ($filterType == '2') {
 			$today =  date2sql(Today());
 			$sql .= " AND trans.due_date < '$today'
-				AND (round(abs(trans.ov_amount + "
+				AND (round(abs(trans.ov_amount) + "
 				."trans.ov_gst + trans.ov_freight + "
-				."trans.ov_freight_tax + trans.ov_discount) - trans.alloc,6) > 0) ";
+				."trans.ov_freight_tax + trans.ov_discount - trans.alloc, 6) > 0) ";
 		}
 	}
 	else
 		$sql .= " AND trans.type <> ".ST_CUSTDELIVERY." ";
 
 	if (!$settled)
-		$sql .= " AND (round(IF(trans.prep_amount,trans.prep_amount, abs(trans.ov_amount + trans.ov_gst + "
+		$sql .= " AND (ROUND(IF(trans.prep_amount,trans.prep_amount, ABS(trans.ov_amount) + trans.ov_gst + "
 		."trans.ov_freight + trans.ov_freight_tax + "
-		."trans.ov_discount)) - trans.alloc,6) != 0) ";
+		."trans.ov_discount) - trans.alloc, 6) != 0) ";
 
 	return $sql;
 }

@@ -10,20 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_CUSTPAYMREP';
+$path_to_root = '..';
 
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Customer Balances
-// ----------------------------------------------------------------
-$path_to_root='..';
-
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/sales/includes/db/customers_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/sales/includes/db/customers_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -37,7 +30,6 @@ function get_open_balance($debtorno, $to) {
 
 	$sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0),
 			 abs(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount) * -1, 0)) AS credits,";		
-
 	$sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.")), t.alloc * -1, t.alloc)) AS Allocated,";
 
 	$sql .=	"SUM(IF(t.type = ".ST_SALESINVOICE." OR (t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0), 1, -1) *
@@ -54,8 +46,6 @@ function get_open_balance($debtorno, $to) {
 }
 
 function get_transactions($debtorno, $from, $to) {
-	$from = date2sql($from);
-	$to = date2sql($to);
 
 	$allocated_from = 
 			"(SELECT trans_type_from as trans_type, trans_no_from as trans_no, date_alloc, sum(amt) amount
@@ -79,8 +69,8 @@ function get_transactions($debtorno, $from, $to) {
 			LEFT JOIN $allocated_from ON alloc_from.trans_type = trans.type AND alloc_from.trans_no = trans.trans_no
 			LEFT JOIN $allocated_to ON alloc_to.trans_type = trans.type AND alloc_to.trans_no = trans.trans_no
 
-		WHERE trans.tran_date >= '$from'
-			AND trans.tran_date <= '$to'
+		WHERE trans.tran_date >= '".date2sql($from)."'
+			AND trans.tran_date <= '".date2sql($to)."'
 			AND trans.debtor_no = ".db_escape($debtorno)."
 			AND trans.type <> ".ST_CUSTDELIVERY."
 			AND ISNULL(voided.id)
@@ -103,19 +93,15 @@ function print_customer_balances() {
 	$orientation = $_POST['PARAM_7'];
 	$destination = $_POST['PARAM_8'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	if ($fromcust == ALL_TEXT)
-		$cust = _('All');
-	else
-		$cust = get_customer_name($fromcust);
+	$cust = $fromcust == ALL_TEXT ? _('All') : get_customer_name($fromcust);
 	$dec = user_price_dec();
 
-	if ($show_balance) $sb = _('Yes');
-	else $sb = _('No');
+	$sb = $show_balance ? _('Yes') : _('No');
 
 	if ($currency == ALL_TEXT) {
 		$convert = true;
@@ -124,8 +110,7 @@ function print_customer_balances() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
 
 	$cols = array(0, 95, 140, 200,	250, 320, 385, 450,	515);
 
@@ -135,12 +120,12 @@ function print_customer_balances() {
 		$headers[7] = _('Balance');
 	$aligns = array('left',	'left',	'left',	'left',	'right', 'right', 'right', 'right');
 
-	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from, 		'to' => $to),
-						2 => array('text' => _('Customer'), 'from' => $cust,   	'to' => ''),
-						3 => array('text' => _('Show Balance'), 'from' => $sb,   	'to' => ''),
-						4 => array('text' => _('Currency'), 'from' => $currency, 'to' => ''),
-						5 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'), 'from' => $from, 		 'to' => $to),
+					2 => array('text' => _('Customer'), 'from' => $cust,   	 'to' => ''),
+					3 => array('text' => _('Show Balance'), 'from' => $sb,   'to' => ''),
+					4 => array('text' => _('Currency'), 'from' => $currency, 'to' => ''),
+					5 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
 
 	$rep = new FrontReport(_('Customer Balances'), 'CustomerBalances', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -158,7 +143,8 @@ function print_customer_balances() {
 	$result = db_query($sql, 'The customers could not be retrieved');
 
 	while ($myrow = db_fetch($result)) {
-		if (!$convert && $currency != $myrow['curr_code']) continue;
+		if (!$convert && $currency != $myrow['curr_code'])
+			continue;
 		
 		$accumulate = 0;
 		$rate = $convert ? get_exchange_rate_from_home_currency($myrow['curr_code'], Today()) : 1;
@@ -179,7 +165,8 @@ function print_customer_balances() {
 			$init[3] = round2($bal['OutStanding']*$rate, $dec);
 
 		$res = get_transactions($myrow['debtor_no'], $from, $to);
-		if ($no_zeros && db_num_rows($res) == 0) continue;
+		if ($no_zeros && db_num_rows($res) == 0)
+			continue;
 
 		$rep->fontSize += 2;
 		$rep->TextCol(0, 2, $myrow['name']);
@@ -209,7 +196,7 @@ function print_customer_balances() {
 						continue;
 				}
 				else {
-					if (floatcmp($trans['TotalAmount'], $trans['Allocated']) == 0)
+					if (floatcmp(abs($trans['TotalAmount']), $trans['Allocated']) == 0)
 						continue;
 				}
 			}
@@ -223,7 +210,7 @@ function print_customer_balances() {
 			if ($trans['type'] == ST_CUSTCREDIT || $trans['type'] == ST_CUSTPAYMENT || $trans['type'] == ST_BANKDEPOSIT)
 				$trans['TotalAmount'] *= -1;
 			if ($trans['TotalAmount'] > 0.0) {
-				$item[0] = round2(abs($trans['TotalAmount']) * $rate, $dec);
+				$item[0] = round2($trans['TotalAmount'] * $rate, $dec);
 				$rep->AmountCol(4, 5, $item[0], $dec);
 				$accumulate += $item[0];
 				$item[2] = round2($trans['Allocated'] * $rate, $dec);
