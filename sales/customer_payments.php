@@ -46,7 +46,8 @@ if (!isset($_POST['bank_account'])) { // first page call
 	if (isset($_GET['SInvoice'])) {
 		//  get date and customer
 		$type = !isset($_GET['Type']) ? ST_SALESINVOICE : $_GET['Type'];
-		$inv = get_customer_trans($_GET['SInvoice'], $type);
+		$cust = !isset($_GET['customer_id']) ? null : $_GET['customer_id'];
+		$inv = get_customer_trans($_GET['SInvoice'], $type,  $cust);
 		$dflt_act = get_default_bank_account($inv['curr_code']);
 		$_POST['bank_account'] = $dflt_act['id'];
 		if ($inv) {
@@ -79,7 +80,6 @@ if (list_updated('BranchID')) {
 	$_SESSION['alloc']->person_id = $br['debtor_no'];
 	$Ajax->activate('customer_id');
 }
-
 if (!isset($_POST['customer_id'])) {
 	$_POST['customer_id'] = get_global_customer(false);
 	$_SESSION['alloc']->set_person($_POST['customer_id'], PT_CUSTOMER);
@@ -92,7 +92,6 @@ if (!isset($_POST['DateBanked'])) {
 	if (!is_date_in_fiscalyear($_POST['DateBanked']))
 		$_POST['DateBanked'] = end_fiscalyear();
 }
-
 
 if (isset($_GET['AddedID'])) {
 	$payment_no = $_GET['AddedID'];

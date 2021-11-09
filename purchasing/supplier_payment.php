@@ -50,7 +50,7 @@ if (!isset($_POST['DatePaid'])) {
 }
 
 if (isset($_POST['_DatePaid_changed']))
-  $Ajax->activate('_ex_rate');
+	$Ajax->activate('_ex_rate');
 
 //----------------------------------------------------------------------------------------
 
@@ -58,8 +58,9 @@ if (!isset($_POST['bank_account'])) { // first page call
 	$_SESSION['alloc'] = new allocation(ST_SUPPAYMENT, 0, get_post('supplier_id'));
 
 	if (isset($_GET['PInvoice'])) {
+		$supp = isset($_POST['supplier_id']) ? $_POST['supplier_id'] : null;
 		//  get date and supplier
-		$inv = get_supp_trans($_GET['PInvoice'], $_GET['trans_type']);
+		$inv = get_supp_trans($_GET['PInvoice'], $_GET['trans_type'], $supp);
 		if ($inv) {
 			$_SESSION['alloc']->person_id = $_POST['supplier_id'] = $inv['supplier_id'];
 			$_SESSION['alloc']->read();
@@ -119,22 +120,18 @@ function check_inputs() {
 		set_focus('supplier_id');
 		return false;
 	} 
-	
 	if (@$_POST['amount'] == '') 
 		$_POST['amount'] = price_format(0);
-
 	if (!check_num('amount', 0)) {
 		display_error(_('The entered amount is invalid or less than zero.'));
 		set_focus('amount');
 		return false;
 	}
-
 	if (isset($_POST['charge']) && !check_num('charge', 0)) {
 		display_error(_('The entered amount is invalid or less than zero.'));
 		set_focus('charge');
 		return false;
 	}
-
 	if (isset($_POST['charge']) && input_num('charge') > 0) {
 		$charge_acct = get_bank_charge_account($_POST['bank_account']);
 		if (get_gl_account($charge_acct) == false) {
@@ -143,29 +140,23 @@ function check_inputs() {
 			return false;
 		}	
 	}
-
 	if (@$_POST['discount'] == '') 
 		$_POST['discount'] = 0;
-
 	if (!check_num('discount', 0)) {
 		display_error(_('The entered discount is invalid or less than zero.'));
 		set_focus('amount');
 		return false;
 	}
-
-	//if (input_num('amount') - input_num('discount') <= 0) 
 	if (input_num('amount') <= 0) {
 		display_error(_('The total of the amount and the discount is zero or negative. Please enter positive values.'));
 		set_focus('amount');
 		return false;
 	}
-
 	if (isset($_POST['bank_amount']) && input_num('bank_amount')<=0) {
 		display_error(_('The entered bank amount is zero or negative.'));
 		set_focus('bank_amount');
 		return false;
 	}
-
 	if (!is_date($_POST['DatePaid'])) {
 		display_error(_('The entered date is invalid.'));
 		set_focus('DatePaid');
@@ -184,21 +175,16 @@ function check_inputs() {
 		set_focus('amount');
 		return false;
 	}
-
 	if (!check_reference($_POST['ref'], ST_SUPPAYMENT)) {
 		set_focus('ref');
 		return false;
 	}
-
 	if (!db_has_currency_rates(get_supplier_currency($_POST['supplier_id']), $_POST['DatePaid'], true))
 		return false;
 
 	$_SESSION['alloc']->amount = -input_num('amount');
 
-	if (isset($_POST['TotalNumberOfAllocs']))
-		return check_allocations();
-	else
-		return true;
+	return isset($_POST['TotalNumberOfAllocs']) ? check_allocations() : true;
 }
 
 //----------------------------------------------------------------------------------------
@@ -225,7 +211,7 @@ function handle_add_payment() {
 //----------------------------------------------------------------------------------------
 
 if (isset($_POST['ProcessSuppPayment'])) {
-	 /*First off  check for valid inputs */
+	// First off  check for valid inputs
 	if (check_inputs() == true) {
 		handle_add_payment();
 		end_page();
@@ -265,13 +251,11 @@ else
 	$_POST['amount'] = price_format(0);
 
 bank_accounts_list_row(_('From Bank Account:'), 'bank_account', null, true);
-
 bank_balance_row($_POST['bank_account']);
 
 table_section(2);
 
-date_row(_('Date Paid') . ':', 'DatePaid', '', true, 0, 0, 0, null, true);
-
+date_row(_('Date Paid').':', 'DatePaid', '', true, 0, 0, 0, null, true);
 ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_SUPPAYMENT, null, array('supplier'=>get_post('supplier_id'), 'date'=>get_post('DatePaid'))), false, ST_SUPPAYMENT);
 
 table_section(3);
