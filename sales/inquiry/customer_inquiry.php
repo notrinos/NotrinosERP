@@ -51,7 +51,7 @@ function gl_view($row) {
 }
 
 function fmt_amount($row) {
-	$value = $row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT || $row['type']==ST_JOURNAL ? -$row['TotalAmount'] : $row['TotalAmount'];
+	$value = $row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT ? -$row['TotalAmount'] : $row['TotalAmount'];
 	return price_format($value);
 }
 
@@ -88,7 +88,7 @@ function prt_link($row) {
 }
 
 function check_overdue($row) {
-	return $row['OverDue'] == 1 && floatcmp($row['TotalAmount'], $row['Allocated']) != 0;
+	return $row['OverDue'] == 1 && floatcmp(ABS($row['TotalAmount']), $row['Allocated']) != 0;
 }
 
 //------------------------------------------------------------------------------------------------

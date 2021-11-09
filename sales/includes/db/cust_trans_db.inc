@@ -9,31 +9,31 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-//----------------------------------------------------------------------------------------
-// Mark changes in debtor_trans_details
-//
+/*
+*	Mark changes in debtor_trans_details
+*/
 function update_customer_trans_version($type, $versions) {
 
-	$sql= 'UPDATE '.TB_PREF. 'debtor_trans SET version=version+1 WHERE type='.db_escape($type).' AND (';
+	$sql= 'UPDATE '.TB_PREF.'debtor_trans SET version=version+1 WHERE type='.db_escape($type).' AND (';
 
-	foreach ($versions as $trans_no=>$version)
-		$where[] = 	'(trans_no='.db_escape($trans_no).' AND version='.$version.')';
+	foreach ($versions as $trans_no => $version)
+		$where[] = '(trans_no='.db_escape($trans_no).' AND version='.$version.')';
 
-		$sql .= implode(' OR ', $where) .')';
+		$sql .= implode(' OR ', $where).')';
 
 	return  db_query($sql, 'Concurrent editing conflict');
 }
 
-//----------------------------------------------------------------------------------------
-// Gets document header versions for transaction set of type $type
-// $trans_no = array(num1, num2,...);
-// returns array(num1=>ver1, num2=>ver2...)
-//
+/*
+*	Gets document header versions for transaction set of type $type
+*	$trans_no = array(num1, num2,...);
+*	returns array(num1=>ver1, num2=>ver2...)
+*/
 function get_customer_trans_version($type, $trans_no) {
 	if (!is_array($trans_no))
 		$trans_no = array( $trans_no );
 
-	$sql= 'SELECT trans_no, version FROM '.TB_PREF. 'debtor_trans WHERE type='.db_escape($type).' AND (';
+	$sql= 'SELECT trans_no, version FROM '.TB_PREF.'debtor_trans WHERE type='.db_escape($type).' AND (';
 
 	foreach ($trans_no as $key=>$trans)
 		$trans_no[$key] = 'trans_no='.db_escape($trans_no[$key]);
@@ -48,20 +48,20 @@ function get_customer_trans_version($type, $trans_no) {
 	}
 	return $vers;
 }
-//----------------------------------------------------------------------------------------
-// $Total, $Tax, $Freight, $discount all in customer's currency
-// date_ is display date (non-sql)
+
+/*
+*	$Total, $Tax, $Freight, $discount all in customer's currency
+*	date_ is display date (non-sql)
+*/
 function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $date_, $reference, $Total, $discount=0, $Tax=0, $Freight=0, $FreightTax=0, $sales_type=0, $order_no=0, $ship_via=0, $due_date='', $AllocAmt=0, $rate=0, $dimension_id=0, $dimension2_id=0, $payment_terms=null, $tax_included=0, $prep_amount=0) {
-	$new = $trans_no == 0;
+	$new = 0;
+	$trans_no == 0;
 	$curr = get_customer_currency($debtor_no);
 	if ($rate == 0)
 		$rate = get_exchange_rate_from_home_currency($curr, $date_);
 
 	$SQLDate = date2sql($date_);
-	if ($due_date == '')
-		$SQLDueDate = '0000-00-00';
-	else
-		$SQLDueDate = date2sql($due_date);
+	$SQLDueDate = $due_date == '' ? '0000-00-00' : date2sql($due_date);
 	
 	if ($trans_type == ST_BANKPAYMENT)
 		$Total = -$Total;
@@ -111,19 +111,17 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 	return $trans_no;
 }
 
-//----------------------------------------------------------------------------------------
-
 function get_customer_trans($trans_id, $trans_type, $customer_id=null) {
 	global $SysPrefs;
 
-	$sql = "SELECT trans.*,"
-		."ov_amount+ov_gst+ov_freight+ov_freight_tax+ov_discount AS Total,"
-		."cust.name AS DebtorName, cust.address, "
-		."cust.debtor_ref, "
-		."cust.curr_code, "
-		."cust.tax_id,
-		trans.prep_amount>0 as prepaid,"
-		."com.memo_";
+	$sql = "SELECT trans.*, 
+		ov_amount+ov_gst+ov_freight+ov_freight_tax+ov_discount AS Total,
+		cust.name AS DebtorName, cust.address,
+		cust.debtor_ref,
+		cust.curr_code,
+		cust.tax_id,
+		trans.prep_amount>0 as prepaid,
+		com.memo_";
 
 	if ($trans_type == ST_CUSTPAYMENT || $trans_type == ST_BANKDEPOSIT) {
 		// it's a payment so also get the bank account
@@ -210,8 +208,6 @@ function get_customer_trans($trans_id, $trans_type, $customer_id=null) {
 	return $row;
 }
 
-//----------------------------------------------------------------------------------------
-
 function exists_customer_trans($type, $type_no) {
 	$sql = "SELECT trans_no FROM ".TB_PREF."debtor_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
@@ -220,10 +216,9 @@ function exists_customer_trans($type, $type_no) {
 	return (db_num_rows($result) > 0);
 }
 
-//----------------------------------------------------------------------------------------
-
-// retreives the related sales order for a given trans
-
+/*
+*	retreives the related sales order for a given trans
+*/
 function get_customer_trans_order($type, $type_no) {
 	$sql = "SELECT order_ FROM ".TB_PREF."debtor_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
@@ -233,8 +228,6 @@ function get_customer_trans_order($type, $type_no) {
 
 	return $row[0];
 }
-
-//----------------------------------------------------------------------------------------
 
 function get_customer_details_from_trans($type, $type_no) {
 	$sql = "SELECT debtor.name, debtor.curr_code, branch.br_name
@@ -250,8 +243,6 @@ function get_customer_details_from_trans($type, $type_no) {
 	return db_fetch($result);
 }
 
-//----------------------------------------------------------------------------------------
-
 function void_customer_trans($type, $type_no) {
 	// clear all values and mark as void
 	$sql = "UPDATE ".TB_PREF."debtor_trans SET ov_amount=0, ov_discount=0, ov_gst=0, ov_freight=0,
@@ -260,15 +251,12 @@ function void_customer_trans($type, $type_no) {
 	db_query($sql, "could not void debtor transactions for type=$type and trans_no=$type_no");
 }
 
-//----------------------------------------------------------------------------------------
-
 function clear_customer_trans($type, $type_no) {
 	// Delete
 	$sql = "DELETE FROM ".TB_PREF."debtor_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
 	db_query($sql, "could not clear debtor transactions for type=$type and trans_no=$type_no");
 }
-//----------------------------------------------------------------------------------------
 
 function post_void_customer_trans($type, $type_no) {
 	switch ($type) {
@@ -285,7 +273,6 @@ function post_void_customer_trans($type, $type_no) {
 	}
 }
 
-//----------------------------------------------------------------------------------------
 function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter = ALL_TEXT, $show_voided = 0) {
 	$date_after = date2sql($from);
 	$date_to = date2sql($to);
@@ -300,7 +287,7 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 		debtor.name, 
 		branch.br_name,
 		debtor.curr_code,
-		IF(prep_amount, prep_amount, abs(trans.ov_amount) + trans.ov_gst + trans.ov_freight 
+		IF(prep_amount, prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight 
 			+ trans.ov_freight_tax + trans.ov_discount)	AS TotalAmount,"
 		. "IF(trans.type IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT))."), -1, 1)
 				*(IF(prep_amount, prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight 
@@ -350,7 +337,7 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 
 		if ($filter == '2') {
 			$today =  date2sql(Today());
-			$sql .= " AND trans.due_date < '$today' AND (trans.ov_amount + trans.ov_gst + trans.ov_freight_tax + trans.ov_freight + trans.ov_discount - trans.alloc > 0) ";
+			$sql .= " AND trans.due_date < '$today' AND (ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight_tax + trans.ov_freight + trans.ov_discount - trans.alloc > 0) ";
 		}
 	}
 

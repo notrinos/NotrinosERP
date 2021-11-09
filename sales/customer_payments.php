@@ -11,14 +11,14 @@
 ***********************************************************************/
 $page_security = 'SA_SALESPAYMNT';
 $path_to_root = '..';
-include_once($path_to_root . '/includes/ui/allocation_cart.inc');
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/includes/banking.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root.'/includes/ui/allocation_cart.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/includes/banking.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/reporting/includes/reporting.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -45,7 +45,8 @@ if (!isset($_POST['bank_account'])) { // first page call
 
 	if (isset($_GET['SInvoice'])) {
 		//  get date and customer
-		$inv = get_customer_trans($_GET['SInvoice'], ST_SALESINVOICE);
+		$type = !isset($_GET['Type']) ? ST_SALESINVOICE : $_GET['Type'];
+		$inv = get_customer_trans($_GET['SInvoice'], $type);
 		$dflt_act = get_default_bank_account($inv['curr_code']);
 		$_POST['bank_account'] = $dflt_act['id'];
 		if ($inv) {
@@ -55,7 +56,7 @@ if (!isset($_POST['bank_account'])) { // first page call
 			$_POST['BranchID'] = $inv['branch_code'];
 			$_POST['DateBanked'] = sql2date($inv['tran_date']);
 			foreach($_SESSION['alloc']->allocs as $line => $trans) {
-				if ($trans->type == ST_SALESINVOICE && $trans->type_no == $_GET['SInvoice']) {
+				if ($trans->type == $type && $trans->type_no == $_GET['SInvoice']) {
 					$un_allocated = $trans->amount - $trans->amount_allocated;
 					if ($un_allocated){
 						$_SESSION['alloc']->allocs[$line]->current_allocated = $un_allocated;
@@ -214,10 +215,8 @@ function can_process() {
 
 //----------------------------------------------------------------------------------------------
 
-if (isset($_POST['_customer_id_button'])) {
-	// unset($_POST['branch_id']);
+if (isset($_POST['_customer_id_button']))
 	$Ajax->activate('BranchID');
-}
 
 //----------------------------------------------------------------------------------------------
 
@@ -331,7 +330,7 @@ table_section(2);
 
 date_row(_('Date of Deposit:'), 'DateBanked', '', true, 0, 0, 0, null, true);
 
-ref_row(_('Reference:'), 'ref','' , null, '', ST_CUSTPAYMENT);
+ref_row(_('Reference:'), 'ref', '' , null, '', ST_CUSTPAYMENT);
 
 table_section(3);
 

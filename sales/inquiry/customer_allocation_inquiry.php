@@ -11,11 +11,11 @@
 ***********************************************************************/
 $page_security = 'SA_SALESALLOC';
 $path_to_root = '../..';
-include($path_to_root . '/includes/db_pager.inc');
-include_once($path_to_root . '/includes/session.inc');
+include($path_to_root.'/includes/db_pager.inc');
+include_once($path_to_root.'/includes/session.inc');
 
-include_once($path_to_root . '/sales/includes/sales_ui.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root.'/sales/includes/sales_ui.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -44,9 +44,9 @@ date_cells(_('to:'), 'TransToDate', '', null, 1);
 
 cust_allocations_list_cells(_('Type:'), 'filterType', null);
 
-check_cells(' ' . _('show settled:'), 'showSettled', null);
+check_cells(' '._('show settled:'), 'showSettled', null);
 
-submit_cells('RefreshInquiry', _('Search'),'',_('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Search'), '', _('Refresh Inquiry'), 'default');
 
 set_global_customer($_POST['customer_id']);
 
@@ -86,28 +86,29 @@ function alloc_link($row) {
 	pager_link(_('Allocation'), '/sales/allocations/customer_allocate.php?trans_no='.$row['trans_no'].'&trans_type='.$row['type'].'&debtor_no='.$row['debtor_no'], ICON_ALLOC);
 
 	if ($row['type'] == ST_CUSTCREDIT && $row['TotalAmount'] > 0)
-		/*its a credit note which could have an allocation */
+		//its a credit note which could have an allocation
 		return $link;
 	else if ($row['type'] == ST_JOURNAL && $row['TotalAmount'] < 0)
 		return $link;
 	else if (($row['type'] == ST_CUSTPAYMENT || $row['type'] == ST_BANKDEPOSIT) && (floatcmp($row['TotalAmount'], $row['Allocated']) >= 0))
-		/*its a receipt  which could have an allocation*/
+		//its a receipt  which could have an allocation
 		return $link;
 	elseif ($row['type'] == ST_CUSTPAYMENT && $row['TotalAmount'] <= 0)
-		/*its a negative receipt */
+		//its a negative receipt
 		return '';
-	elseif (($row['type'] == ST_SALESINVOICE && ($row['TotalAmount'] - $row['Allocated']) > 0) || $row['type'] == ST_BANKPAYMENT)
-		return pager_link(_('Payment'), '/sales/customer_payments.php?customer_id='.$row['debtor_no'].'&SInvoice=' . $row['trans_no'], ICON_MONEY);
+	elseif (($row['type'] == ST_SALESINVOICE && ($row['TotalAmount'] - $row['Allocated']) > 0) || 
+		($row['type'] == ST_JOURNAL && (ABS($row['TotalAmount']) - $row['Allocated']) > 0) || $row['type'] == ST_BANKPAYMENT)
+		return pager_link(_('Payment'), '/sales/customer_payments.php?customer_id='.$row['debtor_no'].'&SInvoice='.$row['trans_no'].'&Type='.$row['type'], ICON_MONEY);
 }
 
 function fmt_debit($row) {
 	$value = $row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT ? -$row['TotalAmount'] : $row['TotalAmount'];
-	return $value>=0 ? price_format($value) : '';
+	return $value >= 0 ? price_format($value) : '';
 }
 
 function fmt_credit($row) {
 	$value = !($row['type']==ST_CUSTCREDIT || $row['type']==ST_CUSTPAYMENT || $row['type']==ST_BANKDEPOSIT) ? -$row['TotalAmount'] : $row['TotalAmount'];
-	return $value>0 ? price_format($value) : '';
+	return $value > 0 ? price_format($value) : '';
 }
 
 //------------------------------------------------------------------------------------------------
