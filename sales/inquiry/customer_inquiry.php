@@ -100,7 +100,7 @@ function display_customer_summary($customer_record) {
 		echo '<center><font color=red size=4><b>'._('CUSTOMER ACCOUNT IS ON HOLD').'</font></b></center>';
 
 	$nowdue = '1-'.$past1.' '._('Days');
-	$pastdue1 = $past1 + 1.'-'.$past2.' '._('Days');
+	$pastdue1 = ($past1 + 1).'-'.$past2.' '._('Days');
 	$pastdue2 = _('Over').' '.$past2.' '._('Days');
 
 	$th = array(_('Currency'), _('Terms'), _('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
