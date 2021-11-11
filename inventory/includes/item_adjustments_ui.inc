@@ -9,22 +9,22 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/includes/ui/items_cart.inc');
+include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/includes/ui/items_cart.inc');
 
 //--------------------------------------------------------------------------------
 
 function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 	if ($order->find_cart_item($new_item))
-		display_error(_('For Part :') . $new_item.' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
+		display_error(_('For Part :').$new_item.' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
 	else
-		$order->add_to_cart (count($order->line_items), $new_item, $new_item_qty, $standard_cost);
+		$order->add_to_cart(count($order->line_items), $new_item, $new_item_qty, $standard_cost);
 }
 
 function display_order_header(&$order) {
 	global $Refs;
 
-	start_outer_table(TABLESTYLE2, "width='70%'"); // outer table
+	start_outer_table(TABLESTYLE2, "width='70%'");
 	table_section(1);
 
 	locations_list_row(_('Location:'), 'StockLocation', null, false, false, $order->fixed_asset);
@@ -34,7 +34,7 @@ function display_order_header(&$order) {
 
 	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))), false, ST_INVADJUST);
 
-	end_outer_table(1); // outer table
+	end_outer_table(1);
 }
 
 //---------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ function display_adjustment_items($title, &$order) {
 
 			if (!$order->fixed_asset) {
 				if ($id == -1)
-					edit_button_cell('Edit'.$line_no, _('Edit'),	_('Edit document line'));
+					edit_button_cell('Edit'.$line_no, _('Edit'), _('Edit document line'));
 				else
 					label_cell('');
 			}
@@ -133,7 +133,6 @@ function adjustment_edit_item_controls(&$order, $line_no=-1) {
 		if (find_submit('Edit') != -1) {
 			$_POST['stock_id'] = $order->line_items[$line_no]->stock_id;
 			$_POST['qty'] = qty_format($order->line_items[$line_no]->quantity, $order->line_items[$line_no]->stock_id, $dec);
-			// $_POST['std_cost'] = price_format($order->line_items[$line_no]->standard_cost);
 			$_POST['std_cost'] = price_decimal_format($order->line_items[$line_no]->standard_cost, $dec2);
 		}
 		$_POST['units'] = $order->line_items[$line_no]->units;
@@ -195,7 +194,8 @@ function adjustment_edit_item_controls(&$order, $line_no=-1) {
 		button_cell('UpdateItem', _('Update'), _('Confirm changes'), ICON_UPDATE);
 		button_cell('CancelItemChanges', _('Cancel'), _('Cancel changes'), ICON_CANCEL);
 		hidden('LineNo', $line_no);
-		set_focus('qty');
+		if(empty($_POST['_qty_changed']))
+			set_focus('qty');
 	}
 	else
 		submit_cells('AddItem', _('Add Item'), 'colspan=2', _('Add new item to document'), true);
@@ -206,8 +206,6 @@ function adjustment_edit_item_controls(&$order, $line_no=-1) {
 function adjustment_options_controls() {
 	echo '<br>';
 	start_table();
-
 	textarea_row(_('Memo'), 'memo_', null, 50, 3);
-
 	end_table(1);
 }
