@@ -283,7 +283,7 @@ class db_pager {
 		$group = $this->group;
 		$order = $this->order;
 
-		if(count($this->extra_where))
+		if($this->extra_where && count($this->extra_where) > 0)
 			$where .= ($where=='' ? '' : ' AND ').implode(' AND ', $this->extra_where);
 		if ($where)
 			$where = " WHERE ($where)";
