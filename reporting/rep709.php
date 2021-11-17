@@ -184,7 +184,7 @@ function print_tax_report() {
 	foreach( $taxes as $id=>$sum) {
 		if ($id) {
 			$tx = getTaxInfo($id);
-			$rep->TextCol(0, 1, $tx['name'].' '.umber_format2($tx['rate'], $dec) . '%');
+			$rep->TextCol(0, 1, $tx['name'].' '.number_format2($tx['rate'], $dec) . '%');
 		}
 		else
 			$rep->TextCol(0, 1, _('Exempt'));
