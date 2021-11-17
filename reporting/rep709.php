@@ -27,10 +27,9 @@ function getTaxTransactions($from, $to) {
 
 	$sql = "SELECT tt.name as taxname, taxrec.*, taxrec.amount*ex_rate AS amount,
 				taxrec.net_amount*ex_rate AS net_amount,
-				IF(ISNULL(supp.supp_name),
-                    IF(ISNULL(debt.name),
-                        IF(gl.person_type_id<>".PT_MISC.", gl.memo_, gl.person_id), debt.name),
-                        supp.supp_name) as name,
+				IF(taxrec.trans_type=".ST_BANKPAYMENT." OR taxrec.trans_type=".ST_BANKDEPOSIT.", 
+					IF(gl.person_type_id<>".PT_MISC.", gl.memo_, gl.person_id), 
+					IF(ISNULL(supp.supp_name), debt.name, supp.supp_name)) as name,
 				branch.br_name
 		FROM ".TB_PREF."trans_tax_details taxrec
 		LEFT JOIN ".TB_PREF."tax_types tt
@@ -47,10 +46,9 @@ function getTaxTransactions($from, $to) {
 		LEFT JOIN ".TB_PREF."debtors_master as debt ON dtrans.debtor_no=debt.debtor_no
 		LEFT JOIN ".TB_PREF."cust_branch as branch ON dtrans.branch_code=branch.branch_code
 		WHERE (taxrec.amount <> 0 OR taxrec.net_amount <> 0)
+			AND !ISNULL(taxrec.reg_type)
 			AND taxrec.tran_date >= '$fromdate'
 			AND taxrec.tran_date <= '$todate'
-			AND taxrec.trans_type <> ".ST_CUSTDELIVERY."
-        GROUP BY taxrec.id
 		ORDER BY taxrec.trans_type, taxrec.tran_date, taxrec.trans_no, taxrec.ex_rate";
 
 	return db_query($sql, 'No transactions were returned');
@@ -119,11 +117,9 @@ function print_tax_report() {
 	$transactions = getTaxTransactions($from, $to);
 
 	while ($trans=db_fetch($transactions)) {
-		if (in_array($trans['trans_type'], array(ST_CUSTCREDIT,ST_SUPPINVOICE, ST_JOURNAL))) {
-			if ($trans['reg_type'] == TR_INPUT) {
-				$trans['net_amount'] *= -1;
-				$trans['amount'] *= -1;
-			}
+		if (in_array($trans['trans_type'], array(ST_CUSTCREDIT,ST_SUPPINVOICE)) || ($trans['trans_type'] == ST_JOURNAL && $trans['reg_type'] == TR_INPUT)) {
+			$trans['net_amount'] *= -1;
+			$trans['amount'] *= -1;
 		}
 
 		if (!$summaryOnly) {
@@ -161,7 +157,7 @@ function print_tax_report() {
 			$taxes[$tax_type]['taxout'] += $trans['amount'];
 			$taxes[$tax_type]['out'] += $trans['net_amount'];
 		}
-		elseif ($trans['reg_type'] !== NULL || in_array($trans['trans_type'], array(ST_SUPPINVOICE, ST_SUPPCREDIT, ST_BANKPAYMENT))) {
+		elseif ($trans['reg_type'] !== NULL) {
 			$taxes[$tax_type]['taxin'] += $trans['amount'];
 			$taxes[$tax_type]['in'] += $trans['net_amount'];
 		}
