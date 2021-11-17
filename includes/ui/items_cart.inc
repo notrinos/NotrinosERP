@@ -247,7 +247,7 @@ class items_cart {
 			}
 			elseif ($tax_id = is_tax_account($gl->code_id)) {
 				$tax_type = get_tax_type($tax_id);
-				if ($gl->code_id == $tax_type['purchasing_gl_code']) {
+				if ($gl->code_id == $tax_type['purchasing_gl_code'] && $gl->amount > 0) {
 					if (!isset($tax_info['tax_in'][$tax_id]))
 						$tax_info['tax_in'][$tax_id] = 0;
 					$tax_info['tax_in'][$tax_id] += $gl->amount;

@@ -10,21 +10,14 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_TAXREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Tax Report
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //------------------------------------------------------------------
-
 
 print_tax_report();
 
@@ -34,9 +27,10 @@ function getTaxTransactions($from, $to) {
 
 	$sql = "SELECT tt.name as taxname, taxrec.*, taxrec.amount*ex_rate AS amount,
 				taxrec.net_amount*ex_rate AS net_amount,
-				IF(taxrec.trans_type=".ST_BANKPAYMENT." OR taxrec.trans_type=".ST_BANKDEPOSIT.", 
-					IF(gl.person_type_id<>".PT_MISC.", gl.memo_, gl.person_id), 
-					IF(ISNULL(supp.supp_name), debt.name, supp.supp_name)) as name,
+				IF(ISNULL(supp.supp_name),
+                    IF(ISNULL(debt.name),
+                        IF(gl.person_type_id<>".PT_MISC.", gl.memo_, gl.person_id), debt.name),
+                        supp.supp_name) as name,
 				branch.br_name
 		FROM ".TB_PREF."trans_tax_details taxrec
 		LEFT JOIN ".TB_PREF."tax_types tt
@@ -53,9 +47,10 @@ function getTaxTransactions($from, $to) {
 		LEFT JOIN ".TB_PREF."debtors_master as debt ON dtrans.debtor_no=debt.debtor_no
 		LEFT JOIN ".TB_PREF."cust_branch as branch ON dtrans.branch_code=branch.branch_code
 		WHERE (taxrec.amount <> 0 OR taxrec.net_amount <> 0)
-			AND !ISNULL(taxrec.reg_type)
 			AND taxrec.tran_date >= '$fromdate'
 			AND taxrec.tran_date <= '$todate'
+			AND taxrec.trans_type <> ".ST_CUSTDELIVERY."
+        GROUP BY taxrec.id
 		ORDER BY taxrec.trans_type, taxrec.tran_date, taxrec.trans_no, taxrec.ex_rate";
 
 	return db_query($sql, 'No transactions were returned');
@@ -93,20 +88,18 @@ function print_tax_report() {
 	$dec = user_price_dec();
 
 	$rep = new FrontReport(_('Tax Report'), 'TaxReport', user_pagesize(), 9, $orientation);
-	if ($summaryOnly == 1)
-		$summary = _('Summary Only');
-	else
-		$summary = _('Detailed Report');
+
+	$summary = $summaryOnly == 1 ? _('Summary Only') : _('Detailed Report');
 
 	$res = getTaxTypes();
-
 	$taxes[0] = array('in'=>0, 'out'=>0, 'taxin'=>0, 'taxout'=>0);
+
 	while ($tax=db_fetch($res))
 		$taxes[$tax['id']] = array('in'=>0, 'out'=>0, 'taxin'=>0, 'taxout'=>0);
 
-	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
-						2 => array('text' => _('Type'), 'from' => $summary, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
+					2 => array('text' => _('Type'), 'from' => $summary, 'to' => ''));
 
 	$cols = array(0, 80, 130, 180, 270, 350, 400, 430, 480, 485, 520);
 
@@ -126,9 +119,11 @@ function print_tax_report() {
 	$transactions = getTaxTransactions($from, $to);
 
 	while ($trans=db_fetch($transactions)) {
-		if (in_array($trans['trans_type'], array(ST_CUSTCREDIT,ST_SUPPINVOICE,ST_JOURNAL))) {
-			$trans['net_amount'] *= -1;
-			$trans['amount'] *= -1;
+		if (in_array($trans['trans_type'], array(ST_CUSTCREDIT,ST_SUPPINVOICE, ST_JOURNAL))) {
+			if ($trans['reg_type'] == TR_INPUT) {
+				$trans['net_amount'] *= -1;
+				$trans['amount'] *= -1;
+			}
 		}
 
 		if (!$summaryOnly) {
@@ -166,7 +161,7 @@ function print_tax_report() {
 			$taxes[$tax_type]['taxout'] += $trans['amount'];
 			$taxes[$tax_type]['out'] += $trans['net_amount'];
 		}
-		elseif ($trans['reg_type'] !== NULL) {
+		elseif ($trans['reg_type'] !== NULL || in_array($trans['trans_type'], array(ST_SUPPINVOICE, ST_SUPPCREDIT, ST_BANKPAYMENT))) {
 			$taxes[$tax_type]['taxin'] += $trans['amount'];
 			$taxes[$tax_type]['in'] += $trans['net_amount'];
 		}
@@ -193,7 +188,7 @@ function print_tax_report() {
 	foreach( $taxes as $id=>$sum) {
 		if ($id) {
 			$tx = getTaxInfo($id);
-			$rep->TextCol(0, 1, $tx['name'] . ' ' . number_format2($tx['rate'], $dec) . '%');
+			$rep->TextCol(0, 1, $tx['name'].' '.umber_format2($tx['rate'], $dec) . '%');
 		}
 		else
 			$rep->TextCol(0, 1, _('Exempt'));
