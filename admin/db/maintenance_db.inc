@@ -84,7 +84,7 @@ function write_config_db($new = false) {
 	$msg .= "\$db_connections = " .var_export($db_connections, true);
 	$msg .= ";\n";
 
-	$filename = $path_to_root . '/config_db.php';
+	$filename = $path_to_root.'/config_db.php';
 	// Check if the file exists and is writable first.
 	if ((!file_exists($filename) && is_writable($path_to_root)) || is_writable($filename)) {
 		if (!$zp = fopen($filename, 'w'))
@@ -191,17 +191,17 @@ function write_lang() {
 	$msg .= ";\n";
 	$msg .= "\n\$dflt_lang = '$dflt_lang';\n";
 
-	$path = $path_to_root . "/lang";
+	$path = $path_to_root."/lang";
 	$filename = $path.'/installed_languages.inc';
 	// Check if directory exists and is writable first.
 	if (file_exists($path) && is_writable($path)) {
 		if (!$zp = fopen($filename, 'w')) {
-			display_error(_('Cannot open the languages file - ') . $filename);
+			display_error(_('Cannot open the languages file - ').$filename);
 			return false;
 		}
 		else {
 			if (!fwrite($zp, $msg)) {
-				display_error(_('Cannot write to the language file - ') . $filename);
+				display_error(_('Cannot write to the language file - ').$filename);
 				fclose($zp);
 				return false;
 			}
@@ -211,7 +211,7 @@ function write_lang() {
 		}
 	}
 	else {
-		display_error(_('The language files folder ') . $path . _(' is not writable. Change its permissions so it is, then re-run the operation.'));
+		display_error(_('The language files folder ').$path._(' is not writable. Change its permissions so it is, then re-run the operation.'));
 		return false;
 	}
 	return true;
@@ -232,19 +232,19 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	$SysPrefs->sql_trail = false;
 
 	$allowed_commands = array(
-		"create"  => 'table_queries', 
-		"delimiter" => 'table_queries',
-		"alter table" => 'table_queries', 
-		"insert" => 'data_queries', 
-		"update" => 'data_queries', 
-		"set names" => 'set_names',
-		"drop table if exists" => 'drop_queries',
-		"drop function if exists" => 'drop_queries',
-		"drop trigger if exists" => 'drop_queries',
-		"select" => 'data_queries', 
-		"delete" => 'data_queries',
-		"drop view if exists" => 'drop_queries',
-		"create view as" => 'data_queries'		//we should be able to create views after all tables have been created 
+		'create'  => 'table_queries', 
+		'delimiter' => 'table_queries',
+		'alter table' => 'table_queries', 
+		'insert' => 'data_queries', 
+		'update' => 'data_queries', 
+		'set names' => 'set_names',
+		'drop table if exists' => 'drop_queries',
+		'drop function if exists' => 'drop_queries',
+		'drop trigger if exists' => 'drop_queries',
+		'select' => 'data_queries', 
+		'delete' => 'data_queries',
+		'drop view if exists' => 'drop_queries',
+		'create view as' => 'data_queries'		//we should be able to create views after all tables have been created 
 		);
 
 	$protected = array(
@@ -269,8 +269,8 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 
 	$old_encoding = db_get_charset($db);
 
-	ini_set("max_execution_time", max("180", ini_get("max_execution_time")));
-	db_query("SET foreign_key_checks=0");
+	ini_set('max_execution_time', max('180', ini_get('max_execution_time')));
+	db_query('SET foreign_key_checks=0');
 	db_query("SET sql_mode=''");
 
 	if (isset($connection['collation']))
@@ -310,8 +310,10 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 					$skip = false;
 					if ($protect) {
 						foreach($protected as $protbl)
-							if (strpos($line, $connection['tbpref'].$protbl) !== false)
-								$skip = true; break;
+							if (strpos($line, $connection['tbpref'].$protbl) !== false) {
+								$skip = true;
+								break;
+							}
 					}
 					if (!$skip)
 						${$query_table}[] = array('', $line_no+1);
@@ -434,7 +436,7 @@ function db_ungzip($mode, $path) {
 	$file_data = gzfile($path);
 	// returns one string or an array of lines
 	if ($mode != 'lines')
-		return implode('',$file_data);
+		return implode('', $file_data);
 	else
 		return $file_data;
 }
@@ -479,11 +481,11 @@ function db_unzip($mode, $path) {
 
 function db_backup($conn, $ext='no', $comm='', $path='') {
 	if ($conn['tbpref'] != '')
-		$filename = $conn['dbname'] . '_' . $conn['tbpref'] . date('Ymd_Hi') . '.sql';
+		$filename = $conn['dbname'].'_'.$conn['tbpref'].date('Ymd_Hi').'.sql';
 	else
-		$filename = $conn['dbname'] . '_' . date('Ymd_Hi') . '.sql';
+		$filename = $conn['dbname'].'_'.date('Ymd_Hi').'.sql';
 
-	return db_export($conn, $path . clean_file_name($filename), $ext, $comm);
+	return db_export($conn, $path.clean_file_name($filename), $ext, $comm);
 }
 // Generates a dump of $db database
 //
@@ -499,9 +501,9 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 		$max_size = 1048576 * (int)ini_get('memory_limit');
 	// set backupfile name
 	if ($zip == 'gzip')
-		$backupfile = $filename . '.gz';
+		$backupfile = $filename.'.gz';
 	elseif ($zip == 'zip')
-		$backupfile = $filename . '.zip';
+		$backupfile = $filename.'.zip';
 	else
 		$backupfile = $filename;
 	$company = $conn['name']; // get_company_pref('coy_name');
