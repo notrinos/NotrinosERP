@@ -34,7 +34,7 @@ function set_global_connection($company=-1) {
 	mysqli_select_db($db, $connection['dbname']);
 	///// From mysqli release 5.6.6 the sql_mode is no longer empty as it was prior to
 	///// this release. Just for safety we make it empty for all 5.6 release and higher.
-	///// This non empty sql_mode values can interphere with FA, so all is set empty during
+	///// This non empty sql_mode values can interphere with NotrinosERP, so all is set empty during
 	///// our sessions.
 	///// We are, however, investigating the existing code to be compatible in the future.
 	db_query("SET sql_mode = '".SQL_MODE."'");

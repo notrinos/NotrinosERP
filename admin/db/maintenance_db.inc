@@ -331,34 +331,16 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 				${$table}[count(${$table}) - 1][0] .= $line . "\n";
 		}
 	}
-
-	//
-	// 'set names' or equivalents should be used only on post 2.3 FA versions
-	// otherwise text encoding can be broken during import
-	//
+	
 	$encoding = null; // UI encoding for default site language is the default
-	$new_db = $init || db_fixed();
 	$new_file = count($set_names);
-	if ($new_db) {
-		if ($new_file) {
-			if (count($set_names)) {// standard db restore
-				if (preg_match('/set\s*names\s*[\']?(\w*)[\']?/i', $set_names[0][0], $match))
-					$encoding = $match[1];
-			}
-			// otherwise use default site ui encoding
+	
+	if ($new_file) {
+		if (count($set_names)) {// standard db restore
+			if (preg_match('/set\s*names\s*[\']?(\w*)[\']?/i', $set_names[0][0], $match))
+				$encoding = $match[1];
 		}
-	}
-	else {
-		if ($new_file) {// import on old db is forbidden: this would destroy db content unless latin1 was used before in UI
-			$msg = _('This is new format backup file which cannot be restored on database not migrated to utf8.');
-			if ($return_errors)
-				return $msg;
-			else
-				display_error($msg);
-			return false;
-		}
-		else	// backup restore during upgrade failure
-			$encoding = 'latin1'; // standard encoding on mysql client
+		// otherwise use default site ui encoding
 	}
 
 	db_set_charset($db, $encoding);
@@ -530,11 +512,10 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 		$out.="\n";
 	}
 
-	if (db_fixed()) {
-		db_set_encoding();
-		if ($mysql_enc = get_mysql_encoding_name($_SESSION['language']->encoding))
-			$out .= "\nSET NAMES $mysql_enc;\n";
-	}
+	db_set_encoding();
+	if ($mysql_enc = get_mysql_encoding_name($_SESSION['language']->encoding))
+		$out .= "\nSET NAMES $mysql_enc;\n";
+	
 	// get auto_increment values and names of all tables
 	$res = db_query('show table status');
 	$all_tables = array();

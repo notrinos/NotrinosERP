@@ -192,8 +192,7 @@ class fa_patch {
 		set_global_connection();
 		ini_set('error_log', $this->save_log);
 
-		if (db_fixed())
-			db_set_encoding();
+		db_set_encoding();
 
 		return $result;
 	}

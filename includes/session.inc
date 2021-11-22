@@ -526,8 +526,7 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 	else {
 		set_global_connection();
 
-		if (db_fixed())
-			db_set_encoding($_SESSION['language']->encoding);
+		db_set_encoding($_SESSION['language']->encoding);
 
 		$SysPrefs->refresh();
 	}
