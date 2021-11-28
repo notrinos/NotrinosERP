@@ -49,21 +49,21 @@ function update_material_cost($stock_id, $qty, $unit_cost, $date) {
 	$qoh = get_qoh_on_date($stock_id, null, $date);
 
 	// unit_cost*qty is already posted on inventory GL
-/* 
-	if ($qoh > 0)
-	{
-		 if ($qty<0)
-			$qty_done = max(-$qoh, $qty);
-		 else
-			$qty_done = $qty;
-	} else {
-		if ($qty>0)
-			$qty_done = max($qoh+$qty, 0);
-		else
-			$qty_done = 0;
-	}
-	$qty_delayed = $qty-$qty_done;
-*/
+ 
+	// if ($qoh > 0)
+	// {
+	// 	 if ($qty<0)
+	// 		$qty_done = max(-$qoh, $qty);
+	// 	 else
+	// 		$qty_done = $qty;
+	// } else {
+	// 	if ($qty>0)
+	// 		$qty_done = max($qoh+$qty, 0);
+	// 	else
+	// 		$qty_done = 0;
+	// }
+	// $qty_delayed = $qty-$qty_done;
+
 	if ($qoh < 0)
 		$qty_delayed = min(-$qoh, $qty);
 	else
@@ -107,9 +107,8 @@ function update_material_cost($stock_id, $qty, $unit_cost, $date) {
 /*
 	Create journal entry for WO related costs.
 */
-function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1=0, $dim2=0, $memo = null, $ref= null) {
+function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1=0, $dim2=0, $memo=null, $ref=null) {
 //-------- this should be done by single call to write_journal_entries() using items_cart()
-//
 	global $Refs, $wo_cost_types;
 
 	begin_transaction();
@@ -179,7 +178,7 @@ function work_order_production_gl($woid, $stock_id, $quantity, $date_, $rcv_no) 
 		else
 			$ivaccount = $bom_item['cogs_account'];
 
-		$memo = $date_.': '.$bom_item['units_req'] .' * '.$bom_item['description'];
+		$memo = $date_.': '.$bom_item['units_req'].' * '.$bom_item['description'];
 
 		$total_cost += add_gl_trans_std_cost(ST_MANURECEIVE, $rcv_no, $date_, $ivaccount, 0, 0, $memo, -$bom_item['ComponentCost'] * $bom_item['units_req'] * $quantity);
 	}
