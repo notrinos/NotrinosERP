@@ -54,8 +54,7 @@ function get_customer_trans_version($type, $trans_no) {
 *	date_ is display date (non-sql)
 */
 function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $date_, $reference, $Total, $discount=0, $Tax=0, $Freight=0, $FreightTax=0, $sales_type=0, $order_no=0, $ship_via=0, $due_date='', $AllocAmt=0, $rate=0, $dimension_id=0, $dimension2_id=0, $payment_terms=null, $tax_included=0, $prep_amount=0) {
-	$new = 0;
-	$trans_no == 0;
+	$new = $trans_no == 0;
 	$curr = get_customer_currency($debtor_no);
 	if ($rate == 0)
 		$rate = get_exchange_rate_from_home_currency($curr, $date_);
