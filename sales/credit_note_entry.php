@@ -45,6 +45,9 @@ page($_SESSION['page_title'], false, false, '', $js);
 
 //-----------------------------------------------------------------------------
 
+if (isset($_GET['ModifyCredit']) && is_voided_display(ST_CUSTCREDIT, $_GET['ModifyCredit'], _('This credit note has been voided.')))
+	display_footer_exit();
+
 check_db_has_stock_items(_('There are no items defined in the system.'));
 check_db_has_customer_branches(_('There are no customers, or there are no customers with branches. Please define customers and customer branches.'));
 

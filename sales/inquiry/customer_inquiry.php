@@ -74,8 +74,8 @@ function edit_link($row) {
 	if ($page_nested)
 		return '';
 
-	return $row['type'] == ST_CUSTCREDIT && $row['order_'] ? '' : 	// allow  only free hand credit notes edition
-			trans_editor_link($row['type'], $row['trans_no']);
+	// allow only free hand credit notes and not voided edition
+	return ($row['type'] == ST_CUSTCREDIT && $row['order_']) || $row['voided'] == 1 ? '' : trans_editor_link($row['type'], $row['trans_no']);
 }
 
 function prt_link($row) {

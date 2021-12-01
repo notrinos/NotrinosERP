@@ -272,9 +272,7 @@ function post_void_customer_trans($type, $type_no) {
 	}
 }
 
-function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter = ALL_TEXT, $show_voided = 0) {
-	$date_after = date2sql($from);
-	$date_to = date2sql($to);
+function get_sql_for_customer_inquiry($from, $to, $cust_id=ALL_TEXT, $filter=ALL_TEXT, $show_voided=0) {
 
 	$sql = "SELECT 
 		trans.type, 
@@ -298,7 +296,8 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 			AND trans.due_date < '" . date2sql(Today()) . "') AS OverDue ,
 		Sum(line.quantity-line.qty_done) AS Outstanding,
 		Sum(line.qty_done) AS HasChild,
-		prep_amount
+		prep_amount,
+		(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) = 0 AND !ISNULL(v.date_) AS voided
 		FROM "
 			.TB_PREF."debtor_trans as trans
 			LEFT JOIN ".TB_PREF."debtor_trans_details as line
@@ -316,7 +315,7 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 	if ($filter == '2')
 		$sql .= " AND ABS(IF(prep_amount, prep_amount, ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)-trans.alloc)>".FLOAT_COMP_DELTA;
 	else
-		$sql .= " AND trans.tran_date >= '$date_after' AND trans.tran_date <= '$date_to'";
+		$sql .= " AND trans.tran_date >= '".date2sql($from)."' AND trans.tran_date <= '".date2sql($to)."'";
 
 	if ($cust_id != ALL_TEXT)
 		$sql .= " AND trans.debtor_no = ".db_escape($cust_id);
@@ -334,10 +333,8 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id = ALL_TEXT, $filter =
 		elseif ($filter == '5')
 			$sql .= " AND trans.type = ".ST_CUSTDELIVERY." ";
 
-		if ($filter == '2') {
-			$today =  date2sql(Today());
-			$sql .= " AND trans.due_date < '$today' AND (ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight_tax + trans.ov_freight + trans.ov_discount - trans.alloc > 0) ";
-		}
+		if ($filter == '2')
+			$sql .= " AND trans.due_date < '".date2sql(Today())."' AND (ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight_tax + trans.ov_freight + trans.ov_discount - trans.alloc > 0) ";
 	}
 
 	$sql .= " GROUP BY trans.trans_no, trans.type, trans.debtor_no";
