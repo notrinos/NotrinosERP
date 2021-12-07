@@ -41,7 +41,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
 
-$new_item = get_post('stock_id')=='' || get_post('cancel') || get_post('clone');
+$new_item = get_post('stock_id') == '' || get_post('cancel') || get_post('clone');
 
 //------------------------------------------------------------------------------------
 
@@ -55,8 +55,7 @@ function set_edit($stock_id) {
 	$_POST['del_image'] = 0;
 }
 
-function del_image($stock_id)
-{
+function del_image($stock_id) {
 	foreach (array('jpg', 'png', 'gif') as $ext) {
 		$filename = company_path().'/images/'.item_img_name($stock_id).".".$ext;
 		if (file_exists($filename) && !unlink($filename))
@@ -92,7 +91,8 @@ if (isset($_GET['stock_id']))
 
 $stock_id = get_post('stock_id');
 if (list_updated('stock_id')) {
-	$_POST['NewStockID'] = $stock_id = get_post('stock_id');
+	$_POST['NewStockID'] = get_post('stock_id');
+	$stock_id = get_post('stock_id');
 	clear_data();
 	$Ajax->activate('details');
 	$Ajax->activate('controls');
@@ -266,9 +266,13 @@ if (isset($_POST['addupdate'])) {
 				get_post('fa_class_id'));
 
 			display_notification(_('A new item has been added.'));
-			$_POST['stock_id'] = $_POST['NewStockID'] = 
-			$_POST['description'] = $_POST['long_description'] = '';
-			$_POST['no_sale'] = $_POST['editable'] = $_POST['no_purchase'] =0;
+			$_POST['stock_id'] = '';
+			$_POST['NewStockID'] = '';
+			$_POST['description'] = '';
+			$_POST['long_description'] = '';
+			$_POST['no_sale'] = 0;
+			$_POST['editable'] = 0;
+			$_POST['no_purchase'] = 0;
 			set_focus('NewStockID');
 		}
 		$Ajax->activate('_page_body');
@@ -305,7 +309,7 @@ if (isset($_POST['delete']) && strlen($_POST['delete']) > 1) {
 
 		$stock_id = $_POST['NewStockID'];
 		delete_item($stock_id);
-		delete_image($stock_id);
+		del_image($stock_id);
 		display_notification(_('Selected item has been deleted.'));
 		$_POST['stock_id'] = '';
 		clear_data();
