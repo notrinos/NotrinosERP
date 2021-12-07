@@ -101,7 +101,7 @@ class simple_crud {
 			if (isset($_POST[$this->name.$m])) {
 				unset($_POST['_focus']); // focus on first form entry
 				$Ajax->activate($this->name.'_div');
-				$val = @key($_POST[$this->name.$m]);
+				$val = is_array($_POST[$this->name.$m]) ? key($_POST[$this->name.$m]) : null;
 				$this->selected_id = $val!==null ? @quoted_printable_decode($val) : $this->_none;
 				return $m;
 			}
