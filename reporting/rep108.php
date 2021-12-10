@@ -141,7 +141,7 @@ function print_statements() {
 				$rep->NewPage();
 		}
 		$nowdue = '1-'.$PastDueDays1.' '._('Days');
-		$pastdue1 = $PastDueDays1 + 1.'-'.$PastDueDays2.' '._('Days');
+		$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
 		$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 		$CustomerRecord = get_customer_details($myrow['debtor_no'], null, $show_also_allocated);
 		$str = array(_('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
