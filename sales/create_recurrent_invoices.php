@@ -45,6 +45,8 @@ function create_recurrent_invoices($customer_id, $branch_id, $order_no, $tmpl_no
 
 	$doc->reference = $Refs->get_next($doc->trans_type, null, array('customer' => $customer_id, 'branch' => $branch_id,
 		'date' => $date));
+	if (!empty($doc->Comments))
+		$memo .= "\n".$doc->Comments;
 	$doc->Comments = $memo;
 
 	foreach ($doc->line_items as $line_no=>$item) {
