@@ -1659,9 +1659,9 @@ function gl_all_accounts_list_cells($label, $name, $selected_id=null, $skip_bank
 	echo "</td>\n";
 }
 
-function gl_all_accounts_list_row($label, $name, $selected_id=null, $skip_bank_accounts=false, $cells=false, $all_option=false, $type_id=false) {
+function gl_all_accounts_list_row($label, $name, $selected_id=null, $skip_bank_accounts=false, $cells=false, $all_option=false, $submit_on_change=false, $all=false, $type_id=false) {
 	echo "<tr><td class='label'>".$label."</td>";
-	gl_all_accounts_list_cells(null, $name, $selected_id, $skip_bank_accounts, $cells, $all_option, $type_id);
+	gl_all_accounts_list_cells(null, $name, $selected_id, $skip_bank_accounts, $cells, $all_option, $submit_on_change, $all, $type_id);
 	echo "</tr>\n";
 }
 
