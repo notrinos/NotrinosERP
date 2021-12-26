@@ -10,21 +10,14 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_TAXREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Sales Summary Report
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //------------------------------------------------------------------
-
 
 print_sales_summary_report();
 
@@ -50,10 +43,11 @@ function getTaxes($type, $trans_no) {
 		FROM ".TB_PREF."trans_tax_details WHERE trans_type=$type AND trans_no=$trans_no GROUP BY included_in_price";
 
 	$result = db_query($sql, 'No transactions were returned');
+
 	if ($result !== false)
 		return db_fetch($result);
-	else
-		return null;
+	
+	return null;
 }    	
 
 //----------------------------------------------------------------------------------------------------
@@ -67,17 +61,14 @@ function print_sales_summary_report() {
 	$comments = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
-	if ($tax_id == 0)
-		$tid = _('No');
-	else
-		$tid = _('Yes');
 
+	$tid = $tax_id == 0 ? _('No') : _('Yes');
 
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
-	$orientation = ($orientation ? 'L' : 'P');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
+	$orientation = $orientation ? 'L' : 'P';
 
 	$dec = user_price_dec();
 
@@ -87,7 +78,7 @@ function print_sales_summary_report() {
 						1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
 						2 => array(  'text' => _('Tax Id Only'),'from' => $tid,'to' => ''));
 
-	$cols = array(0, 130, 180, 270, 350, 500);
+	$cols = array(0, 300, 360, 440, 515);
 
 	$headers = array(_('Customer'), _('Tax Id'), _('Total ex. Tax'), _('Tax'));
 	$aligns = array('left', 'left', 'right', 'right');
@@ -107,7 +98,8 @@ function print_sales_summary_report() {
 	
 	$custno = 0;
 	$tax = $total = 0;
-	$custname = $tax_id = '';
+	$custname = '';
+	$tax_id = '';
 	while ($trans=db_fetch($transactions)) {
 		if ($custno != $trans['debtor_no']) {
 			if ($custno != 0) {
