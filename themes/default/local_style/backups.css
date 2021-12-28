@@ -10,6 +10,12 @@ button {
 	background-color: #367CB5;
 	border-radius: 4px;
 }
+button#deldump {
+	background-color: #D53343;
+}
+button#restore {
+	background-color: #E5AE38;
+}
 button:hover {
 	cursor: pointer;
 }
