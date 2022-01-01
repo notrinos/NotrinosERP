@@ -1,7 +1,0 @@
-Attaching documents
--------------------
-
-In the Setup tab, Maintenance you can attach scanned documents to transactions. 
-You can do that here, but you can also do it after you have entered a supplier 
-invoice or supplier credit note. There will be a direct link so you don't have 
-to remember the transaction number.
