@@ -18,13 +18,13 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 
 if (isset($_GET['FixedAsset'])) {
-	$help_context = 'Fixed Assets Locations';
+	$help_context = _('Fixed Assets Locations');
 	$_POST['fixed_asset'] = 1;
 }
 else
-	$help_context = 'Inventory Locations';
+	$help_context = _('Inventory Locations');
 
-page(_($help_context));
+page($help_context);
 
 simple_page_mode(true);
 
@@ -33,8 +33,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	//initialise no input errors assumed initially before we test
 	$input_error = 0;
 
-	/* actions to take once the user has clicked the submit button
-	ie the page has called itself with some user input */
+	// actions to take once the user has clicked the submit button
+	// ie the page has called itself with some user input
 
 	//first off validate inputs sensible
 	$_POST['loc_code'] = strtoupper($_POST['loc_code']);
@@ -58,7 +58,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		} 
 		else {
 	
-		/*selected_id is null cos no item selected on first time round so must be adding a	record must be submitting new entries in the new Location form */
+		// selected_id is null cos no item selected on first time round so must be adding a	record must be submitting new entries in the new Location form
 		
 			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'));
 			display_notification(_('New location has been added'));
@@ -111,7 +111,7 @@ if ($Mode == 'Delete') {
 	if (can_delete($selected_id)) {
 		delete_item_location($selected_id);
 		display_notification(_('Selected location has been deleted'));
-	} //end if Delete Location
+	}
 	$Mode = 'RESET';
 }
 
@@ -176,7 +176,6 @@ if ($selected_id != -1) {
 	label_row(_('Location Code:'), $_POST['loc_code']);
 } 
 else 
-//end of if $selected_id only do the else when a new record is being entered
 	text_row(_('Location Code:'), 'loc_code', null, 5, 5);
 
 text_row_ex(_('Location Name:'), 'location_name', 50, 50);
