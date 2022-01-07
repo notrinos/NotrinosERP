@@ -112,12 +112,13 @@ function print_customer_balances() {
 
 	$nozeros = $no_zeros ? _('Yes') : _('No');
 
-	$cols = array(0, 95, 140, 200,	250, 320, 385, 450,	515);
+	$cols = array(0, 95, 140, 200, 250, 320, 385, 450, 515);
 
-	$headers = array(_('Trans Type'), _('#'), _('Date'), _('Due Date'), _('Charges'), _('Credits'), _('Allocated'), 	_('Outstanding'));
+	$headers = array(_('Trans Type'), _('#'), _('Date'), _('Due Date'), _('Charges'), _('Credits'), _('Allocated'), _('Outstanding'));
 
 	if ($show_balance)
 		$headers[7] = _('Balance');
+	
 	$aligns = array('left',	'left',	'left',	'left',	'right', 'right', 'right', 'right');
 
 	$params = array(0 => $comments,
@@ -168,11 +169,11 @@ function print_customer_balances() {
 		if ($no_zeros && db_num_rows($res) == 0)
 			continue;
 
-		$rep->fontSize += 2;
+		$rep->Font('bold');
 		$rep->TextCol(0, 2, $myrow['name']);
+		$rep->Font();
 		if ($convert)
 			$rep->TextCol(2, 3,	$myrow['curr_code']);
-		$rep->fontSize -= 2;
 		$rep->TextCol(3, 4,	_('Open Balance'));
 		$rep->AmountCol(4, 5, $init[0], $dec);
 		$rep->AmountCol(5, 6, $init[1], $dec);
@@ -239,9 +240,11 @@ function print_customer_balances() {
 		}
 		$rep->Line($rep->row - 8);
 		$rep->NewLine(2);
-		$rep->TextCol(0, 3, _('Total'));
+		$rep->SetTextColor(205, 0, 30);
+		$rep->TextCol(0, 3, _('Total').'&nbsp;('.$myrow['name'].')');
 		for ($i = 0; $i < 4; $i++)
 			$rep->AmountCol($i + 4, $i + 5, $total[$i], $dec);
+		$rep->SetTextColor(0, 0, 0);
 		$rep->Line($rep->row  - 4);
 		$rep->NewLine(2);
 	}
