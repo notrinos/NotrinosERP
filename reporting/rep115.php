@@ -10,20 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_CUSTPAYMREP';
+$path_to_root = '..';
 
-// ----------------------------------------------------------------
-// $ Revision:    2.0 $
-// Creator:    @boxygen
-// date_:    2018-12-20
-// Title:    Customer Trial Balances
-// ----------------------------------------------------------------
-$path_to_root='..';
-
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/sales/includes/db/customers_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/sales/includes/db/customers_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -107,39 +100,31 @@ function print_customer_balances() {
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
 	$fromcust = $_POST['PARAM_2'];
-	$area = $_POST['PARAM_3']; //added by Faisal to filter by area
-	$folk = $_POST['PARAM_4'];  // added by Faisal to filter by sales person
+	$area = $_POST['PARAM_3'];
+	$folk = $_POST['PARAM_4'];
 	$currency = $_POST['PARAM_5'];
 	$no_zeros = $_POST['PARAM_6'];
 	$comments = $_POST['PARAM_7'];
 	$orientation = $_POST['PARAM_8'];
 	$destination = $_POST['PARAM_9'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	if ($fromcust == ALL_TEXT)
-		$cust = _('All');
-	else
-		$cust = get_customer_name($fromcust);
+	$cust = $fromcust == ALL_TEXT ? _('All') : get_customer_name($fromcust);
 	$dec = user_price_dec();
 
 	if ($area == ALL_NUMERIC)
 		$area = 0;
 
-	if ($area == 0)
-		$sarea = _('All Areas');
-	else
-		$sarea = get_area_name($area);
+	$sarea = $area == 0 ? _('All Areas') : get_area_name($area);
 
 	if ($folk == ALL_NUMERIC)
 		$folk = 0;
-	if ($folk == 0)
-		$salesfolk = _('All Sales Man');
-	 else
-		$salesfolk = get_salesman_name($folk);
+
+	$salesfolk = $folk == 0 ? _('All Sales Man') : get_salesman_name($folk);
 
 	if ($currency == ALL_TEXT) {
 		$convert = true;
@@ -148,23 +133,21 @@ function print_customer_balances() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
 
-	$cols = array(0, 100, 130, 190, 250, 320, 385, 450, 515);
-	//$cols = array(0, 70, 140, 180, 230, 270, 350, 445, 495, 555);
+	$cols = array(0, 180, 260, 340, 420, 515);
 
-	$headers = array(_('Name'), '', '', _('Open Balance'), _('Debit'), _('Credit'), '', _('Balance'));
+	$headers = array(_('Name'), _('Open Balance'), _('Debit'), _('Credit'), _('Balance'));
 
-	$aligns = array('left', 'left', 'left', 'right', 'right', 'right', 'right', 'right');
+	$aligns = array('left', 'right', 'right', 'right', 'right');
 
-	$params =   array(  0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from,   'to' => $to),
-						2 => array('text' => _('Customer'), 'from' => $cust, 'to' => ''),
-						3 => array('text' => _('Sales Areas'), 'from' => $sarea, 		'to' => ''),
-						4 => array('text' => _('Sales Folk'), 'from' => $salesfolk, 	'to' => ''),
-						5 => array('text' => _('Currency'), 'from' => $currency, 'to' => ''),
-						6 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'), 'from' => $from,   'to' => $to),
+					2 => array('text' => _('Customer'), 'from' => $cust, 'to' => ''),
+					3 => array('text' => _('Sales Areas'), 'from' => $sarea, 		'to' => ''),
+					4 => array('text' => _('Sales Folk'), 'from' => $salesfolk, 	'to' => ''),
+					5 => array('text' => _('Currency'), 'from' => $currency, 'to' => ''),
+					6 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
 
 	$rep = new FrontReport(_('Customer Trial Balance'), 'CustomerTB', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -173,7 +156,7 @@ function print_customer_balances() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$grandtotal = array(0,0,0,0);
+	$grandtotal = array(0, 0, 0, 0);
 
 	$sql = "SELECT ".TB_PREF."debtors_master.debtor_no, name, curr_code FROM ".TB_PREF."debtors_master
 		INNER JOIN ".TB_PREF."cust_branch
@@ -183,7 +166,6 @@ function print_customer_balances() {
 		INNER JOIN ".TB_PREF."salesman
 		ON ".TB_PREF."cust_branch.salesman=".TB_PREF."salesman.salesman_code";
 	if ($fromcust != ALL_TEXT )
-		// if ($area != 0 || $folk != 0) continue;
 		$sql .= " WHERE ".TB_PREF."debtors_master.debtor_no=".db_escape($fromcust);
 	elseif ($area != 0) {
 		if ($folk != 0)
@@ -199,9 +181,11 @@ function print_customer_balances() {
 
 	$result = db_query($sql, 'The customers could not be retrieved');
 
-	$tot_cur_cr = $tot_cur_db = 0;
+	$tot_cur_cr = 0;
+	$tot_cur_db = 0;
 	while ($myrow = db_fetch($result)) {
-		if (!$convert && $currency != $myrow['curr_code']) continue;
+		if (!$convert && $currency != $myrow['curr_code'])
+			continue;
 
 		$accumulate = 0;
 		$rate = $convert ? get_exchange_rate_from_home_currency($myrow['curr_code'], Today()) : 1;
@@ -219,24 +203,23 @@ function print_customer_balances() {
 
 		$res = get_transactions($myrow['debtor_no'], $from, $to, false);
 
-		$total = array(0,0,0,0);
+		$total = array(0, 0, 0, 0);
 		for ($i = 0; $i < 4; $i++) {
 			$total[$i] += $init[$i];
 			$grandtotal[$i] += $init[$i];
 		}
 
 		if (db_num_rows($res) == 0 && !$no_zeros) {
-			$rep->TextCol(0, 2, $myrow['name']);
-			$rep->AmountCol(3, 4, $init[3], $dec);
-			$rep->AmountCol(7, 8, $init[3], $dec);
-			//$rep->Line($rep->row  - 2);
+			$rep->TextCol(0, 1, $myrow['name']);
+			$rep->AmountCol(1, 2, $init[3], $dec);
+			$rep->AmountCol(4, 5, $init[3], $dec);
 			$rep->NewLine(1);
 			continue;
 		}
-		$curr_cr = $curr_db = 0;
-		while ($trans = db_fetch($res)) { //Detail starts here
+		$curr_cr = 0;
+		$curr_db = 0;
+		while ($trans = db_fetch($res)) {
 			$item[0] = $item[1] = 0.0;
-			//modified below by faisal
 			if ($trans['type'] == ST_CUSTCREDIT || $trans['type'] == ST_CUSTPAYMENT || $trans['type'] == ST_BANKDEPOSIT)
 				$trans['TotalAmount'] *= -1;
 			if ($trans['TotalAmount'] > 0.0) {
@@ -265,26 +248,28 @@ function print_customer_balances() {
 			}
 			$total[3] = $total[0] - $total[1];
 		}
-		if ($no_zeros && $total[3] == 0.0 && $curr_db == 0.0 && $curr_cr == 0.0) continue;
-		$rep->TextCol(0, 2, $myrow['name']);
-		$rep->AmountCol(3, 4, $total[3] + $curr_cr - $curr_db, $dec);
-		$rep->AmountCol(4, 5, $curr_db, $dec);
-		$rep->AmountCol(5, 6, $curr_cr, $dec);
-		$rep->AmountCol(7, 8, $total[3], $dec);
-		//$rep->Line($rep->row  - 2);
+
+		if ($no_zeros && $total[3] == 0.0 && $curr_db == 0.0 && $curr_cr == 0.0)
+			continue;
+
+		$rep->TextCol(0, 1, $myrow['name']);
+		$rep->AmountCol(1, 2, $total[3] + $curr_cr - $curr_db, $dec);
+		$rep->AmountCol(2, 3, $curr_db, $dec);
+		$rep->AmountCol(3, 4, $curr_cr, $dec);
+		$rep->AmountCol(4, 5, $total[3], $dec);
 		$rep->NewLine(1);
 	}
 	$rep->Line($rep->row + 4);
 	$rep->NewLine();
 	$rep->fontSize += 2;
-	$rep->TextCol(0, 3, _('Grand Total'));
+	$rep->TextCol(0, 1, _('Grand Total'));
 	$rep->fontSize -= 2;
 	$grandtotal[3] = $grandtotal[0] - $grandtotal[1];
 
-	$rep->AmountCol(3, 4, $grandtotal[3] - $tot_cur_db + $tot_cur_cr, $dec);
-	$rep->AmountCol(4, 5, $tot_cur_db, $dec);
-	$rep->AmountCol(5, 6, $tot_cur_cr, $dec);
-	$rep->AmountCol(7, 8, $grandtotal[3], $dec);
+	$rep->AmountCol(1, 2, $grandtotal[3] - $tot_cur_db + $tot_cur_cr, $dec);
+	$rep->AmountCol(2, 3, $tot_cur_db, $dec);
+	$rep->AmountCol(3, 4, $tot_cur_cr, $dec);
+	$rep->AmountCol(4, 5, $grandtotal[3], $dec);
 	$rep->Line($rep->row - 6, 1);
 	$rep->NewLine();
 	$rep->End();
