@@ -10,18 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_CUSTPAYMREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Aged Customer Balances
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -51,10 +45,10 @@ function get_invoices($customer_id, $to, $all=true) {
 		WHERE type <> ".ST_CUSTDELIVERY."
 			AND debtor_no = $customer_id 
 			AND tran_date <= '$todate'
-			AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) > " . FLOAT_COMP_DELTA;
+			AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) > ".FLOAT_COMP_DELTA;
 
 	if (!$all)
-		$sql .= "AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount - alloc) > " . FLOAT_COMP_DELTA;
+		$sql .= "AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount - alloc) > ".FLOAT_COMP_DELTA;
 	$sql .= "ORDER BY tran_date";
 
 	return db_query($sql, 'The customer transactions could not be retrieved');
@@ -76,25 +70,20 @@ function print_aged_customer_analysis() {
 	$orientation = $_POST['PARAM_8'];
 	$destination = $_POST['PARAM_9'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($graphics) {
-		include_once($path_to_root . '/reporting/includes/class.graphic.inc');
+		include_once($path_to_root.'/reporting/includes/class.graphic.inc');
 		$pg = new graph();
 	}
 
-	if ($fromcust == ALL_TEXT)
-		$from = _('All');
-	else
-		$from = get_customer_name($fromcust);
-		$dec = user_price_dec();
+	$from = $fromcust == ALL_TEXT ? _('All') : get_customer_name($fromcust);
+	$dec = user_price_dec();
 
-	if ($summaryOnly == 1)
-		$summary = _('Summary Only');
-	else
-		$summary = _('Detailed Report');
+	$summary = $summaryOnly == 1 ? _('Summary Only') : _('Detailed Report');
+
 	if ($currency == ALL_TEXT) {
 		$convert = true;
 		$currency = _('Balances in Home Currency');
@@ -102,24 +91,21 @@ function print_aged_customer_analysis() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
-	if ($show_all) $show = _('Yes');
-	else $show = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
+	$show = $show_all ? _('Yes') : _('No');
 
 	$PastDueDays1 = get_company_pref('past_due_days');
 	$PastDueDays2 = 2 * $PastDueDays1;
-	$nowdue = '1-' . $PastDueDays1 . ' ' . _('Days');
-	$pastdue1 = $PastDueDays1 + 1 . '-' . $PastDueDays2 . ' ' . _('Days');
-	$pastdue2 = _('Over') . ' ' . $PastDueDays2 . ' ' . _('Days');
+	$nowdue = '1-'.$PastDueDays1.' '._('Days');
+	$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
+	$pastdue2 = '>'.' '.$PastDueDays2.' '._('Days');
 
-	$cols = array(0, 100, 130, 190,	250, 320, 385, 450,	515);
-	$headers = array(_('Customer'),	'',	'',	_('Current'), $nowdue, $pastdue1, $pastdue2,
-		_('Total Balance'));
+	$cols = array(0, 100, 150, 200,	260, 320, 380, 440,	515);
+	$headers = array(_('Customer'),	'',	'',	_('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
 
 	$aligns = array('left',	'left',	'left',	'right', 'right', 'right', 'right',	'right');
 
-		$params =   array( 	0 => $comments,
+	$params = array(0 => $comments,
 					1 => array('text' => _('End Date'), 'from' => $to, 'to' => ''),
 					2 => array('text' => _('Customer'),	'from' => $from, 'to' => ''),
 					3 => array('text' => _('Currency'), 'from' => $currency, 'to' => ''),
@@ -137,7 +123,7 @@ function print_aged_customer_analysis() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$total = array(0,0,0,0, 0);
+	$total = array(0, 0, 0, 0, 0);
 
 	$sql = "SELECT debtor_no, name, curr_code FROM ".TB_PREF."debtors_master";
 	if ($fromcust != ALL_TEXT)
@@ -149,8 +135,11 @@ function print_aged_customer_analysis() {
 		if (!$convert && $currency != $myrow['curr_code'])
 			continue;
 
-		if ($convert) $rate = get_exchange_rate_from_home_currency($myrow['curr_code'], $to);
-		else $rate = 1.0;
+		if ($convert)
+			$rate = get_exchange_rate_from_home_currency($myrow['curr_code'], $to);
+		else
+			$rate = 1.0;
+
 		$custrec = get_customer_details($myrow['debtor_no'], $to, $show_all);
 		if (!$custrec)
 			continue;
@@ -163,12 +152,15 @@ function print_aged_customer_analysis() {
 			$custrec['Overdue1']-$custrec['Overdue2'],
 			$custrec['Overdue2'],
 			$custrec['Balance']);
-		if ($no_zeros && floatcmp(array_sum($str), 0) == 0) continue;
+		if ($no_zeros && floatcmp(array_sum($str), 0) == 0)
+			continue;
 
-		$rep->fontSize += 2;
+		$rep->Font('bold');
 		$rep->TextCol(0, 2, $myrow['name']);
-		if ($convert) $rep->TextCol(2, 3,	$myrow['curr_code']);
-		$rep->fontSize -= 2;
+		$rep->Font();
+		if ($convert)
+			$rep->TextCol(2, 3,	$myrow['curr_code']);
+		
 		$total[0] += ($custrec['Balance'] - $custrec['Due']);
 		$total[1] += ($custrec['Due']-$custrec['Overdue1']);
 		$total[2] += ($custrec['Overdue1']-$custrec['Overdue2']);
