@@ -107,8 +107,11 @@ function _set_combo_input(e) {
 		ev = ev||window.event;
 		key = ev.keyCode||ev.which;
 		if(key == 13 || !key || key === undefined) {
-			this.blur();
-			return false;
+			setTimeout(function(){
+				e.blur();
+				return false;
+			}, 0);
+			
 		}
 	}
 }
