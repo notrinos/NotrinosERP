@@ -9,9 +9,9 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/includes/banking.inc');
-include_once($path_to_root . '/includes/types.inc');
-include_once($path_to_root . '/includes/current_user.inc');
+include_once($path_to_root.'/includes/banking.inc');
+include_once($path_to_root.'/includes/types.inc');
+include_once($path_to_root.'/includes/current_user.inc');
 
 define('SEARCH_BUTTON', "<input %s type='submit' class='combo_submit' style='border:0;background:url($path_to_root/themes/"
 	."%s/images/locate.png) no-repeat;%s' aspect='fallback' name='%s' value=' ' title='"._('Set filter')."'> ");
@@ -74,7 +74,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	// datalist id
 	$datalist_id = $opts['search_box'] === true ? $name.'_datalist' : $opts['search_box'];
 
-	$select_submit =  $opts['select_submit'];
+	$select_submit = $opts['select_submit'];
 	$spec_id = $opts['spec_id'];
 	$spec_option = $opts['spec_option'];
 	if ($opts['type'] == 0) {
@@ -97,7 +97,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		$opts['search'] = array($by_id ? $valfield : $namefield);
 	
 	if ($opts['sel_hint'] === null) 
-		$opts['sel_hint'] = $by_id || $search_box==false ? '' : _('Press Space tab for search pattern entry');
+		$opts['sel_hint'] = $by_id || $search_box == false ? '' : _('Press Space tab for search pattern entry');
 
 	if ($opts['box_hint'] === null)
 		$opts['box_hint'] = $search_box && $search_submit != false ? ($by_id ? _('Enter code fragment to search or * for all') : _('Enter description fragment to search or * for all')) :'';
@@ -111,9 +111,10 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	$txt = get_post($search_box);
 	$rel = '';
 	$limit = '';
-	if (isset($_POST['_'.$name.'_update'])) { // select list or search box change
-		if ($by_id) $txt = $_POST[$name];
 
+	if (isset($_POST['_'.$name.'_update'])) { // select list or search box change
+		if ($by_id)
+			$txt = $_POST[$name];
 		if (!$opts['async'])
 			$Ajax->activate('_page_body');
 		else
@@ -136,21 +137,6 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 					$Ajax->activate('_page_body');
 				else
 					$Ajax->activate($name);
-			}
-			if ($txt == '') {
-				if ($spec_option === false && $selected_id == array())
-					$limit = ' LIMIT 1';
-				else
-					$opts['where'][] = $valfield . "=". db_escape(get_post($name, $spec_id));
-			}
-			else {
-				if ($txt != '*') {
-
-					foreach($opts['search'] as $i=> $s)
-						$opts['search'][$i] = $s . " LIKE "
-							.db_escape(($class=='combo3' ? '' : '%').$txt.'%');
-					$opts['where'][] = '('. implode(' OR ', $opts['search']) . ')';
-				}
 			}
 		}
 	}
@@ -175,7 +161,8 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 
 	$sql .= $limit;
 	// ------ make selector ----------
-	$selector = $first_opt = '';
+	$selector = '';
+	$first_opt = '';
 	$data_options = '';
 	$first_id = false;
 	$found = false;

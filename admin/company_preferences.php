@@ -141,7 +141,7 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		set_focus('coy_name');
 		$Ajax->activate('_page_body');
 	}
-} /* end of if submit */
+}
 
 start_form(true);
 
@@ -167,7 +167,7 @@ if (!isset($myrow['shortname_name_in_list'])) {
 }
 
 $_POST['shortname_name_in_list']  = $myrow['shortname_name_in_list'];
-$_POST['no_item_list']  = $myrow['no_item_list'];
+$_POST['no_item_list']  = 0; // Will be removed from 0.7
 $_POST['no_customer_list']  = $myrow['no_customer_list'];
 $_POST['no_supplier_list']  = $myrow['no_supplier_list'];
 $_POST['curr_default']  = $myrow['curr_default'];
@@ -282,7 +282,7 @@ table_section_title(_('User Interface Options'));
 
 check_row(_('Short Name and Name in List:'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
 check_row(_('Open Print Dialog Direct on Reports:'), 'print_dialog_direct', null);
-check_row(_('Search Item List:'), 'no_item_list', null);
+check_row('<pre>'._('Search Item List:')."&nbsp;<span class='overduefg'>(This option will be deprecated\nfrom version 0.7. It should be unchecked)</span>".'</pre>', 'no_item_list', null);
 check_row(_('Search Customer List:'), 'no_customer_list', null);
 check_row(_('Search Supplier List:'), 'no_supplier_list', null);
 text_row_ex(_('Login Timeout:'), 'login_tout', 10, 10, '', null, null, _('seconds'));
