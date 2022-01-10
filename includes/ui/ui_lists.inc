@@ -183,28 +183,31 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			if (in_array((string)$value, $selected_id, true)) {
 				$sel = 'selected';
 				$found = $value;
-				$edit = $opts['editable'] && $contact_row['editable'] && (@$_POST[$search_box] == $value) ? $contact_row[1] : false; // get non-formatted description
-				if ($edit)
-					break;	// selected field is editable - abandon list construction
+				// get non-formatted description
+				$edit = $opts['editable'] && $contact_row['editable'] && (@$_POST[$search_box] == $value) ? $contact_row[1] : false;
 			}
-			// show selected option even if inactive 
-			if (!$opts['show_inactive'] && @$contact_row['inactive'] && $sel==='')
-				continue;
-			else 
-				$optclass = @$contact_row['inactive'] ? "class='inactive'" : '';
 
-			if ($first_id === false) {
-				$first_id = $value;
-				$first_opt = $descr;
+			if(!$edit) { // abandon list construction if selected field is editable.
+				// show selected option even if inactive 
+				if (!$opts['show_inactive'] && @$contact_row['inactive'] && $sel==='')
+					continue;
+				else 
+					$optclass = @$contact_row['inactive'] ? "class='inactive'" : '';
+
+				if ($first_id === false) {
+					$first_id = $value;
+					$first_opt = $descr;
+				}
+				$cat = $contact_row[$opts['category']];
+				if ($opts['category'] !== false && $cat != $lastcat) {
+					if ($lastcat!==null)
+						$selector .= '</optgroup>';
+					$selector .= "<optgroup label='".$cat."'>\n";
+					$lastcat = $cat;
+				}
+				$selector .= "<option ".$sel.' '.$optclass." value='".$value."'>".$descr."</option>\n";
 			}
-			$cat = $contact_row[$opts['category']];
-			if ($opts['category'] !== false && $cat != $lastcat) {
-				if ($lastcat!==null)
-					$selector .= '</optgroup>';
-				$selector .= "<optgroup label='".$cat."'>\n";
-				$lastcat = $cat;
-			}
-			$selector .= "<option ".$sel.' '.$optclass." value='".$value."'>".$descr."</option>\n";
+
 			$data_options .= "<option value='".$value."'>".$descr."</option>\n";
 		}
 		if ($lastcat!==null)
