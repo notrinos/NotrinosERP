@@ -10,18 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SUPPLIERANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2018-12-21
-// Title:	Supplier Trial Balances
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -53,21 +47,18 @@ function get_open_balance($supplier_id, $to) {
 }
 
 function getTransactions($supplier_id, $from, $to) {
-	$from = date2sql($from);
-	$to = date2sql($to);
-
 	$sql = "SELECT *,
 				(ov_amount + ov_gst + ov_discount) AS TotalAmount,
 				alloc AS Allocated,
 				((type = ".ST_SUPPINVOICE.") AND due_date < '$to') AS OverDue
 			FROM ".TB_PREF."supp_trans
-			WHERE tran_date >= '$from' AND tran_date <= '$to' 
-				AND supplier_id = '$supplier_id' AND ov_amount!=0
-					ORDER BY tran_date";
+			WHERE tran_date >= '".date2sql($from)."' AND tran_date <= '".date2sql($to)."' 
+				AND supplier_id = '$supplier_id' AND ov_amount != 0
+				ORDER BY tran_date";
 
-	$TransResult = db_query($sql, 'No transactions were returned');
+	$result = db_query($sql, 'No transactions were returned');
 
-	return $TransResult;
+	return $result;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -85,16 +76,13 @@ function print_supplier_balances() {
 	$orientation = $_POST['PARAM_7'];
 	$destination = $_POST['PARAM_8'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	if ($fromsupp == ALL_TEXT)
-		$supp = _('All');
-	else
-		$supp = get_supplier_name($fromsupp);
-		$dec = user_price_dec();
+	$supp = $fromsupp == ALL_TEXT ? _('All') : get_supplier_name($fromsupp);
+	$dec = user_price_dec();
 
 	if ($currency == ALL_TEXT) {
 		$convert = true;
@@ -103,8 +91,7 @@ function print_supplier_balances() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
 
 	$cols = array(0, 95, 140, 200,	250, 320, 385, 450,	515);
 
@@ -114,11 +101,11 @@ function print_supplier_balances() {
 		$headers[7] = _('Balance');
 	$aligns = array('left',	'left',	'left',	'left',	'right', 'right', 'right', 'right');
 
-	$params =   array( 	0 => $comments,
-				1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
-				2 => array('text' => _('Supplier'), 'from' => $supp, 'to' => ''),
-				3 => array(  'text' => _('Currency'),'from' => $currency, 'to' => ''),
-				4 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
+					2 => array('text' => _('Supplier'), 'from' => $supp, 'to' => ''),
+					3 => array(  'text' => _('Currency'),'from' => $currency, 'to' => ''),
+					4 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
 
 	$rep = new FrontReport(_('Supplier Balances'), 'SupplierBalances', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -129,7 +116,7 @@ function print_supplier_balances() {
 	$rep->NewPage();
 
 	$total = array();
-	$grandtotal = array(0,0,0,0);
+	$grandtotal = array(0, 0, 0, 0);
 
 	$sql = "SELECT supplier_id, supp_name AS name, curr_code FROM ".TB_PREF."suppliers";
 	if ($fromsupp != ALL_TEXT)
@@ -158,12 +145,14 @@ function print_supplier_balances() {
 		else	
 			$init[3] = round2($bal['OutStanding']*$rate, $dec);
 		$res = getTransactions($myrow['supplier_id'], $from, $to);
-		if ($no_zeros && db_num_rows($res) == 0) continue;
+		if ($no_zeros && db_num_rows($res) == 0)
+			continue;
 
-		$rep->fontSize += 2;
+		$rep->Font('bold');
 		$rep->TextCol(0, 2, $myrow['name']);
-		if ($convert) $rep->TextCol(2, 3,	$myrow['curr_code']);
-		$rep->fontSize -= 2;
+		if ($convert)
+			$rep->TextCol(2, 3,	$myrow['curr_code']);
+		$rep->Font();
 		$rep->TextCol(3, 4,	_('Open Balance'));
 		$rep->AmountCol(4, 5, $init[0], $dec);
 		$rep->AmountCol(5, 6, $init[1], $dec);
@@ -175,13 +164,15 @@ function print_supplier_balances() {
 			$grandtotal[$i] += $init[$i];
 		}
 		$rep->NewLine(1, 2);
-		$rep->Line($rep->row + 4);
+		
 		if (db_num_rows($res)==0) {
+			$rep->Line($rep->row + 4);
 			$rep->NewLine(1, 2);
 			continue;
 		}	
 		while ($trans=db_fetch($res)) {
-			if ($no_zeros && floatcmp(abs($trans['TotalAmount']), $trans['Allocated']) == 0) continue;
+			if ($no_zeros && floatcmp(abs($trans['TotalAmount']), $trans['Allocated']) == 0)
+				continue;
 			$rep->NewLine(1, 2);
 			$rep->TextCol(0, 1, $systypes_array[$trans['type']]);
 			$rep->TextCol(1, 2,	$trans['reference']);
@@ -217,13 +208,15 @@ function print_supplier_balances() {
 			if ($show_balance)
 				$total[3] = $total[0] - $total[1];
 		}
-		$rep->Line($rep->row - 8);
+		
 		$rep->NewLine(2);
-		$rep->TextCol(0, 3,	_('Total'));
+		$rep->SetTextColor(205, 0, 30);
+		$rep->TextCol(0, 3,	_('Total').' ('.$myrow['name'].')');
 		for ($i = 0; $i < 4; $i++) {
 			$rep->AmountCol($i + 4, $i + 5, $total[$i], $dec);
 			$total[$i] = 0.0;
 		}
+		$rep->SetTextColor(0, 0, 0);
 		$rep->Line($rep->row  - 4);
 		$rep->NewLine(2);
 	}
