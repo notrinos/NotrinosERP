@@ -10,18 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SUPPLIERANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Ages Supplier Analysis
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -81,25 +75,19 @@ function print_aged_supplier_analysis() {
 	$destination = $_POST['PARAM_9'];
 
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($graphics) {
-		include_once($path_to_root . '/reporting/includes/class.graphic.inc');
+		include_once($path_to_root.'/reporting/includes/class.graphic.inc');
 		$pg = new graph();
 	}
 
-	if ($fromsupp == ALL_TEXT)
-		$from = _('All');
-	else
-		$from = get_supplier_name($fromsupp);
-		$dec = user_price_dec();
+	$from = $fromsupp == ALL_TEXT ? _('All') : get_supplier_name($fromsupp);
+	$dec = user_price_dec();
+	$summary = $summaryOnly == 1 ? _('Summary Only') : _('Detailed Report');
 
-	if ($summaryOnly == 1)
-		$summary = _('Summary Only');
-	else
-		$summary = _('Detailed Report');
 	if ($currency == ALL_TEXT) {
 		$convert = true;
 		$currency = _('Balances in Home Currency');
@@ -107,25 +95,22 @@ function print_aged_supplier_analysis() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
-	if ($show_all) $show = _('Yes');
-	else $show = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
+	$show = $show_all ? _('Yes') : _('No');
 
 	$PastDueDays1 = get_company_pref('past_due_days');
 	$PastDueDays2 = 2 * $PastDueDays1;
-	$nowdue = '1-' . $PastDueDays1 . ' ' . _('Days');
-	$pastdue1 = $PastDueDays1 + 1 . '-' . $PastDueDays2 . ' ' . _('Days');
-	$pastdue2 = _('Over') . ' ' . $PastDueDays2 . ' ' . _('Days');
+	$nowdue = '1-'.$PastDueDays1.' '._('Days');
+	$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
+	$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 
 	$cols = array(0, 100, 130, 190,	250, 320, 385, 450,	515);
 
-	$headers = array(_('Supplier'),	'',	'',	_('Current'), $nowdue, $pastdue1,$pastdue2,
-		_('Total Balance'));
+	$headers = array(_('Supplier'),	'',	'',	_('Current'), $nowdue, $pastdue1,$pastdue2, _('Total Balance'));
 
 	$aligns = array('left',	'left',	'left',	'right', 'right', 'right', 'right',	'right');
 
-		$params =   array( 	0 => $comments,
+	$params = array(0 => $comments,
 					1 => array('text' => _('End Date'), 'from' => $to, 'to' => ''),
 					2 => array('text' => _('Supplier'), 'from' => $from, 'to' => ''),
 					3 => array('text' => _('Currency'),'from' => $currency,'to' => ''),
@@ -148,9 +133,9 @@ function print_aged_supplier_analysis() {
 	$PastDueDays1 = get_company_pref('past_due_days');
 	$PastDueDays2 = 2 * $PastDueDays1;
 
-	$nowdue = '1-' . $PastDueDays1 . ' ' . _('Days');
-	$pastdue1 = $PastDueDays1 + 1 . '-' . $PastDueDays2 . ' ' . _('Days');
-	$pastdue2 = _('Over') . ' ' . $PastDueDays2 . ' ' . _('Days');
+	$nowdue = '1-'.$PastDueDays1.' '._('Days');
+	$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
+	$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 
 	$sql = "SELECT supplier_id, supp_name AS name, curr_code FROM ".TB_PREF."suppliers";
 	if ($fromsupp != ALL_TEXT)
@@ -159,10 +144,13 @@ function print_aged_supplier_analysis() {
 	$result = db_query($sql, 'The suppliers could not be retrieved');
 
 	while ($myrow=db_fetch($result)) {
-		if (!$convert && $currency != $myrow['curr_code']) continue;
+		if (!$convert && $currency != $myrow['curr_code'])
+			continue;
 
-		if ($convert) $rate = get_exchange_rate_from_home_currency($myrow['curr_code'], $to);
-		else $rate = 1.0;
+		if ($convert)
+			$rate = get_exchange_rate_from_home_currency($myrow['curr_code'], $to);
+		else
+			$rate = 1.0;
 
 		$supprec = get_supplier_details($myrow['supplier_id'], $to, $show_all);
 		if (!$supprec)
@@ -178,12 +166,13 @@ function print_aged_supplier_analysis() {
 			$supprec['Overdue2'],
 			$supprec['Balance']);
 
-		if ($no_zeros && floatcmp(array_sum($str), 0) == 0) continue;
+		if ($no_zeros && floatcmp(array_sum($str), 0) == 0)
+			continue;
 
-		$rep->fontSize += 2;
+		$rep->Font('bold');
 		$rep->TextCol(0, 2,	$myrow['name']);
 		if ($convert) $rep->TextCol(2, 3,	$myrow['curr_code']);
-		$rep->fontSize -= 2;
+		$rep->Font();
 		$total[0] += ($supprec['Balance'] - $supprec['Due']);
 		$total[1] += ($supprec['Due']-$supprec['Overdue1']);
 		$total[2] += ($supprec['Overdue1']-$supprec['Overdue2']);
@@ -194,9 +183,12 @@ function print_aged_supplier_analysis() {
 		$rep->NewLine(1, 2);
 		if (!$summaryOnly) {
 			$res = get_invoices($myrow['supplier_id'], $to, $show_all);
-			if (db_num_rows($res)==0)
+			if (db_num_rows($res)==0) {
+				$rep->Line($rep->row + 4);
+				$rep->NewLine(1, 2);
 				continue;
-			$rep->Line($rep->row + 4);
+			}
+			
 			while ($trans=db_fetch($res)) {
 				$rep->NewLine(1, 2);
 				$rep->TextCol(0, 1, $systypes_array[$trans['type']], -2);
@@ -240,7 +232,7 @@ function print_aged_supplier_analysis() {
 		$pg->skin      = $SysPrefs->graph_skin;
 		$pg->built_in  = false;
 		$pg->latin_notation = ($SysPrefs->decseps[user_dec_sep()] != '.');
-		$filename = company_path(). '/pdf_files/'. random_id().'.png';
+		$filename = company_path().'/pdf_files/'. random_id().'.png';
 		$pg->display($filename, true);
 		$w = $pg->width / 1.5;
 		$h = $pg->height / 1.5;
