@@ -10,18 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SUPPPAYMREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Payment Report
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -58,17 +52,13 @@ function print_payment_report() {
 	$orientation = $_POST['PARAM_5'];
 	$destination = $_POST['PARAM_6'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	if ($fromsupp == ALL_TEXT)
-		$from = _('All');
-	else
-		$from = get_supplier_name($fromsupp);
-
-		$dec = user_price_dec();
+	$from = $fromsupp == ALL_TEXT ? _('All') : get_supplier_name($fromsupp);
+	$dec = user_price_dec();
 
 	if ($currency == ALL_TEXT) {
 		$convert = true;
@@ -77,20 +67,19 @@ function print_payment_report() {
 	else
 		$convert = false;
 
-	if ($no_zeros) $nozeros = _('Yes');
-	else $nozeros = _('No');
+	$nozeros = $no_zeros ? _('Yes') : _('No');
 
-	$cols = array(0, 100, 160, 210,	250, 320, 385, 450,	515);
+	$cols = array(0, 100, 160, 210,	250, 320, 360, 435,	515);
 
 	$headers = array(_('Trans Type'), _('#'), _('Due Date'), '', '', '', _('Total'), _('Balance'));
 
 	$aligns = array('left',	'left',	'left',	'left',	'right', 'right', 'right', 'right');
 
-	$params =   array( 	0 => $comments,
-				1 => array('text' => _('End Date'), 'from' => $to, 'to' => ''),
-				2 => array('text' => _('Supplier'), 'from' => $from, 'to' => ''),
-				3 => array(  'text' => _('Currency'),'from' => $currency, 'to' => ''),
-				4 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('End Date'), 'from' => $to, 'to' => ''),
+					2 => array('text' => _('Supplier'), 'from' => $from, 'to' => ''),
+					3 => array(  'text' => _('Currency'),'from' => $currency, 'to' => ''),
+					4 => array('text' => _('Suppress Zeros'), 'from' => $nozeros, 'to' => ''));
 
 	$rep = new FrontReport(_('Payment Report'), 'PaymentReport', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -101,7 +90,7 @@ function print_payment_report() {
 	$rep->NewPage();
 
 	$total = array();
-	$grandtotal = array(0,0);
+	$grandtotal = array(0, 0);
 
 	$sql = "SELECT supplier_id, supp_name AS name, curr_code, ".TB_PREF."payment_terms.terms FROM ".TB_PREF."suppliers, ".TB_PREF."payment_terms
 		WHERE ";
@@ -112,26 +101,35 @@ function print_payment_report() {
 	$result = db_query($sql, 'The customers could not be retrieved');
 
 	while ($myrow=db_fetch($result)) {
-		if (!$convert && $currency != $myrow['curr_code']) continue;
+		if (!$convert && $currency != $myrow['curr_code'])
+			continue;
 
 		$res = getTransactions($myrow['supplier_id'], $to);
-		if ($no_zeros && db_num_rows($res)==0) continue;
-
-		$rep->fontSize += 2;
-		$rep->TextCol(0, 6, $myrow['name'] . ' - ' . $myrow['terms']);
-		if ($convert)
-			$rep->TextCol(6, 7,	$myrow['curr_code']);
-		$rep->fontSize -= 2;
-		$rep->NewLine(1, 2);
-		if (db_num_rows($res)==0)
+		if ($no_zeros && db_num_rows($res) == 0)
 			continue;
-		$rep->Line($rep->row + 4);
-		$total[0] = $total[1] = 0.0;
-		while ($trans=db_fetch($res)) {
-			if ($no_zeros && $trans['TranTotal'] == 0 && $trans['Balance'] == 0) continue;
 
-			if ($convert) $rate = $trans['rate'];
-			else $rate = 1.0;
+		$rep->Font('bold');
+		$rep->TextCol(0, 5, $myrow['name'].' - '.$myrow['terms']);
+		if ($convert) {
+			$rep->aligns[6] = 'left';
+			$rep->TextCol(5, 6,	$myrow['curr_code']);
+			$rep->aligns[6] = 'right';
+		}
+		$rep->Font();
+		$rep->NewLine(1, 2);
+		if (db_num_rows($res)==0) {
+			$rep->Line($rep->row + 4);
+			$rep->NewLine(1, 2);
+			continue;
+		}
+		
+		$total[0] = 0.0;
+		$total[1] = 0.0;
+		while ($trans = db_fetch($res)) {
+			if ($no_zeros && $trans['TranTotal'] == 0 && $trans['Balance'] == 0)
+				continue;
+
+			$rate = $convert ? $trans['rate'] : 1.0;
 
 			$rep->NewLine(1, 2);
 			$rep->TextCol(0, 1, $systypes_array[$trans['type']]);
@@ -153,13 +151,15 @@ function print_payment_report() {
 				$grandtotal[$i] += $item[$i];
 			}
 		}
-		$rep->Line($rep->row - 8);
+		
 		$rep->NewLine(2);
-		$rep->TextCol(0, 3,	_('Total'));
+		$rep->SetTextColor(205, 0, 30);
+		$rep->TextCol(0, 3,	_('Total').' ('.$myrow['name'].')');
 		for ($i = 0; $i < 2; $i++) {
 			$rep->AmountCol($i + 6, $i + 7, $total[$i], $dec);
 			$total[$i] = 0.0;
 		}
+		$rep->SetTextColor(0, 0, 0);
 		$rep->Line($rep->row  - 4);
 		$rep->NewLine(2);
 	}
@@ -167,7 +167,7 @@ function print_payment_report() {
 	$rep->TextCol(0, 3,	_('Grand Total'));
 	$rep->fontSize -= 2;
 	for ($i = 0; $i < 2; $i++)
-		$rep->AmountCol($i + 6, $i + 7,$grandtotal[$i], $dec);
+		$rep->AmountCol($i + 6, $i + 7, $grandtotal[$i], $dec);
 	$rep->Line($rep->row  - 4);
 	$rep->NewLine();
 	$rep->End();
