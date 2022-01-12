@@ -10,20 +10,14 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SUPPLIERANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Stefan Sotirov, modified slightly by Joe Hunt.
-// date_:	01-12-2017
-// Title:	Inventory Purchasing - Transaction Based
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/includes/banking.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/includes/banking.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -84,10 +78,8 @@ function get_supp_inv_reference($supplier_id, $stock_id, $date) {
 		AND trans.tran_date=".db_escape($date);
 	$result = db_query($sql, 'No transactions were returned');
 	$row = db_fetch_row($result);
-	if (isset($row[0]))
-		return $row[0];
-	else
-		return '';
+
+	return isset($row[0]) ? $row[0] : '';
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -105,36 +97,21 @@ function print_inventory_purchase() {
 	$orientation = $_POST['PARAM_7'];
 	$destination = $_POST['PARAM_8'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
 	$dec = user_price_dec();
 
 	if ($category == ALL_NUMERIC)
 		$category = 0;
-	if ($category == 0)
-		$cat = _('All');
-	else
-		$cat = get_category_name($category);
+	$cat = $category == 0 ? _('All') : get_category_name($category);
+	$loc = $location == '' ? _('All') : get_location_name($location);
+	$froms = $fromsupp == '' ? _('All') : get_supplier_name($fromsupp);
+	$itm = $item == '' ? _('All') : $item;
 
-	if ($location == '')
-		$loc = _('All');
-	else
-		$loc = get_location_name($location);
-
-	if ($fromsupp == '')
-		$froms = _('All');
-	else
-		$froms = get_supplier_name($fromsupp);
-
-	if ($item == '')
-		$itm = _('All');
-	else
-		$itm = $item;
-
-	$cols = array(0, 60, 180, 230, 275, 400, 420, 465,	520);
+	$cols = array(0, 50, 180, 230, 275, 400, 420, 465,	520);
 
 	$headers = array(_('Item'), _('Description'), _('Date'), _('#'), _('Supplier'), _('Qty'), _('Unit Price'), _('Location'));
 	if ($fromsupp != '')
@@ -142,13 +119,13 @@ function print_inventory_purchase() {
 
 	$aligns = array('left',	'left',	'left', 'left', 'left', 'left', 'right', 'right');
 
-	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-						2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
-						3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''),
-						4 => array('text' => _('Supplier'), 'from' => $froms, 'to' => ''),
-						5 => array('text' => _('Item'), 'from' => $itm, 'to' => ''),
-						6 => array('text' => _('Note'), 'from' => _('The lines separate the transactions.'), 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
+					2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
+					3 => array('text' => _('Location'), 'from' => $loc, 'to' => ''),
+					4 => array('text' => _('Supplier'), 'from' => $froms, 'to' => ''),
+					5 => array('text' => _('Item'), 'from' => $itm, 'to' => ''),
+					6 => array('text' => _('Note'), 'from' => _('The lines separate the transactions.'), 'to' => ''));
 
 	$rep = new FrontReport(_('Inventory Purchasing - Transaction Based'), 'InventoryPurchasingTransactionsReport', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -159,10 +136,12 @@ function print_inventory_purchase() {
 	$rep->NewPage();
 
 	$res = getTransactions($category, $location, $fromsupp, $item, $from, $to);
+	$catt = '';
+	$stock_description = '';
+	$stock_id = '';
+	$supplier_name = '';
+	$event = '';
 
-	//($total = $total_supp = $grandtotal = 0.0); //left if someone needs them for own needs
-	//($total_qty = 0.0);
-	$catt = $stock_description = $stock_id = $supplier_name = $event = '';
 	while ($trans=db_fetch($res)) {
 		if ($event != $trans['trans_no']) {
 			if ($event != '')
@@ -179,14 +158,14 @@ function print_inventory_purchase() {
 
 		if ($fromsupp == ALL_TEXT) {
 			$rep->TextCol(0, 1, $trans['stock_id']);
-			$rep->TextCol(1, 2, $trans['description']. ($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
+			$rep->TextCol(1, 2, $trans['description']. ($trans['inactive'] == 1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, sql2date($trans['tran_date']));
 			$rep->TextCol(3, 4, $trans['supp_reference']);
 			$rep->TextCol(4, 5, $trans['supplier_name']);
 		}
 		else {
 			$rep->TextCol(0, 1, $trans['stock_id']);
-			$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
+			$rep->TextCol(1, 2, $trans['description'].($trans['inactive'] == 1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, sql2date($trans['tran_date']));
 			$rep->TextCol(3, 4, $trans['supp_reference']);
 		}	

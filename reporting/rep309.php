@@ -10,28 +10,20 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SALESANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Chaitanya
-// date_:	2005-05-19
-// Title:	Sales Summary Report
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/includes/banking.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/includes/banking.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 print_inventory_sales();
 
 function getTransactions($category, $from, $to) {
-	$from = date2sql($from);
-	$to = date2sql($to);
 	$sql = "SELECT item.category_id,
 			category.description AS cat_description,
 			item.stock_id,
@@ -46,8 +38,8 @@ function getTransactions($category, $from, $to) {
 		AND item.category_id=category.category_id
 		AND line.debtor_trans_type=trans.type
 		AND line.debtor_trans_no=trans.trans_no
-		AND trans.tran_date>='$from'
-		AND trans.tran_date<='$to'
+		AND trans.tran_date>='".date2sql($from)."'
+		AND trans.tran_date<='".date2sql($to)."'
 		AND line.quantity<>0
 		AND item.mb_flag <>'F'
 		AND (line.debtor_trans_type = ".ST_SALESINVOICE." OR line.debtor_trans_type = ".ST_CUSTCREDIT.")";
@@ -59,8 +51,6 @@ function getTransactions($category, $from, $to) {
 			item.description,
 			line.unit_price
 		ORDER BY item.category_id, item.stock_id, line.unit_price";
-			
-	//display_notification($sql);
 	
 	return db_query($sql, 'No transactions were returned');
 }
@@ -77,29 +67,27 @@ function print_inventory_sales() {
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
 	$dec = user_price_dec();
 
 	if ($category == ALL_NUMERIC)
 		$category = 0;
-	if ($category == 0)
-		$cat = _('All');
-	else
-		$cat = get_category_name($category);
+	
+	$cat = $category == 0 ? _('All') : get_category_name($category);
 
-	$cols = array(0, 100, 260, 300, 350, 425, 430, 515);
+	$cols = array(0, 100, 260, 310, 370, 440, 470, 515);
 
 	$headers = array(_('Item/Category'), _('Description'), _('Qty'), _('Unit Price'), _('Sales'), '', _('Remark'));	
 
 	$aligns = array('left',	'left',	'right', 'right', 'right', 'right', 'left');
 
-	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-						2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''));
+	$params = array(0 => $comments,
+					1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
+					2 => array('text' => _('Category'), 'from' => $cat, 'to' => ''));
 
 	$rep = new FrontReport(_('Item Sales Summary Report'), 'ItemSalesSummaryReport', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -110,7 +98,8 @@ function print_inventory_sales() {
 	$rep->NewPage();
 
 	$res = getTransactions($category, $from, $to);
-	$total = $grandtotal = 0.0;
+	$total = 0.0;
+	$grandtotal = 0.0;
 	$catt = '';
 	while ($trans=db_fetch($res)) {
 		if ($catt != $trans['cat_description']) {
