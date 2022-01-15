@@ -50,7 +50,7 @@ function db_query($sql, $err_msg=null) {
 
 	// set current db prefix
 	$comp = isset($_SESSION['wa_current_user']->cur_con) ? $_SESSION['wa_current_user']->cur_con : 0;
-	$cur_prefix = @$db_connections[$comp]['tbpref'];
+	$cur_prefix = isset($db_connections[$comp]['tbpref']) ? $db_connections[$comp]['tbpref'] : '';
 	$sql = str_replace(TB_PREF, $cur_prefix, $sql);
 
 	if ($SysPrefs->show_sql) {
