@@ -332,7 +332,7 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		}
 	}
 	
-	$encoding = null; // UI encoding for default site language is the default
+	$encoding = $old_encoding; // UI encoding for default site language is the default
 	$new_file = count($set_names);
 	
 	if ($new_file) {
