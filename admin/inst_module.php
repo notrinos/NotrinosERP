@@ -116,7 +116,7 @@ function display_extensions($mods) {
 
 	foreach($mods as $pkg_name => $ext) {
 		$available = @$ext['available'];
-		$installed = @$ext['version'];
+		$installed = isset($ext['version']) ? $ext['version'] : '';
 		$id = @$ext['local_id'];
 
 		$entries = fmt_titles(@$ext['entries']);
