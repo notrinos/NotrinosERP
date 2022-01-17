@@ -5,8 +5,8 @@
 //
 
 // Versions used by source/database version compatibility checks. Do not change.
-$db_version = '0.1';
-$src_version = '0.6';
+$db_version = '1.0';
+$src_version = '1.0.0';
 
 // application version - can be overriden in config.php
 $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
@@ -21,5 +21,5 @@ array(
 	'login' => 'anonymous',
 	'pass' => 'password',
 	'host' => 'repo.notrinos.com', // repo server address
-	'branch' => '0.1'	// Repository branch for current sources version
+	'branch' => '1.0'	// Repository branch for current sources version
 );
