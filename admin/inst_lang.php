@@ -61,8 +61,8 @@ function display_languages() {
 		$lang_name = $lng['name'];
 		$charset = $lng['encoding'];
 		$rtl = @$lng['rtl'] == 'yes' || @$lng['rtl'] === true;
-		$available = @$lng['available'];
-		$installed = @$lng['version'];
+		$available = isset($lng['available']) ? $lng['available'] : '';
+		$installed = isset($lng['version']) ? $lng['version'] : '';
 		$id = @$lng['local_id'];
 		
 		if ($lang == $currlang)
@@ -79,7 +79,7 @@ function display_languages() {
 		label_cell($charset);
 		label_cell($rtl ? _('Yes') : _('No'));
 		label_cell($id === null ? _('None') : ($available && $installed ? $installed : _('Unknown')));
-		label_cell($available ? $available : _("None"));
+		label_cell($available ? $available : _('None'));
 		label_cell($id === null ? '' : radio(null, 'CurDflt', $id, $dflt_lang == $lang, true), "align='center'");
 		
 		if (function_exists('gettext') && check_value('DisplayAll'))
@@ -175,10 +175,7 @@ function handle_submit($id){
 function display_language_edit($selected_id) {
 	global $installed_languages, $dflt_lang;
 
-	if ($selected_id == -1)
-		$n = count($installed_languages);
-	else
-		$n = $selected_id;
+	$n = $selected_id == -1 ? count($installed_languages) : $selected_id;
 	
 	start_form(true);
 
@@ -189,10 +186,7 @@ function display_language_edit($selected_id) {
 		$_POST['code'] = $lang['code'];
 		$_POST['name']  = $lang['name'];
 		$_POST['encoding']  = $lang['encoding'];
-		if (isset($lang['rtl']) && $lang['rtl'] === true)
-			$_POST['rtl']  = $lang['rtl'];
-		else
-			$_POST['rtl'] = false;
+		$_POST['rtl'] = (isset($lang['rtl']) && $lang['rtl'] === true) ? $lang['rtl'] : false;
 		$_POST['dflt'] = $dflt_lang == $lang['code'];
 		hidden('selected_id', $selected_id);
 	}
@@ -222,8 +216,7 @@ function handle_delete($id) {
 		if (!uninstall_package($installed_languages[$id]['package']))
 			return;
 			
-	if ($lang == $dflt_lang )
-		// on delete set default to current.
+	if ($lang == $dflt_lang ) // on delete set default to current.
 		$dflt_lang = $_SESSION['language']->code;
 	
 	unset($installed_languages[$id]);

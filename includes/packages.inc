@@ -157,9 +157,12 @@ function get_control_file($file, $index = false) {
 	if (!$list)
 		return null;
 
-	$repo = $pkg = array();
-	$key = false; $value = '';
+	$repo = array();
+	$pkg = array();
+	$key = false;
+	$value = '';
 	$line = '';
+
 	do {
 		$line = rtrim($line);
 		if ($line && ctype_space($line[0])) { // continuation of multiline property
@@ -187,7 +190,8 @@ function get_control_file($file, $index = false) {
 					$repo[] = $pkg;
 			}
 			$pkg = array(); 
-			$key = null; $value = '';
+			$key = null;
+			$value = '';
 			continue;
 		}
 		elseif (preg_match('/([^:]*):\s*(.*)/', $line, $m)) {
@@ -706,7 +710,9 @@ function check_pkg_upgrade($current, $available) {
 	return false;
 }
 
-//	Returns package info from index file
+/*
+	Returns package info from index file
+*/
 function get_package_info($pkg, $type=null, $filter=array(), $outkey=null, $download=true) {
 	return get_pkg_or_list($type, $pkg, $filter, null, false);
 }
