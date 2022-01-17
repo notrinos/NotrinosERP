@@ -116,9 +116,9 @@ function get_extern_rate($curr_b, $provider, $date) {
 		$site = "https://www.google.com";
 		$contents = file_get_contents($site.$filename);
 	}
-	elseif ($provider == 'BLOOMBERG') {
-		$filename = "/quote/{$curr_b}{$curr_a}:CUR";
-		$site = "www.bloomberg.com";
+	elseif ($provider == 'XE.COM') {
+		$filename = "/currencyconverter/convert/?Amount=1&From={$curr_a}&To={$curr_b}";
+		$site = "www.xe.com";
 		$proto = 'https://';
 		$contents=file_get_contents($proto.$site.$filename);
 	}
@@ -175,8 +175,8 @@ function get_extern_rate($curr_b, $provider, $date) {
 	}
 	elseif ($provider == 'GOOGLE')
 		$val = getInnerStr($contents, 'data-last-price="', '" data');
-	elseif ($provider == 'BLOOMBERG')
-		$val = getInnerStr($contents, ',"price":', ',"');
+	elseif ($provider == 'XE.COM')
+		$val = getInnerStr($contents, "<p>1 $curr_b = ", $curr_a);
 	elseif ($provider == 'EXCHANGE-RATES.ORG')
 		$val = getInnerStr($contents, "1 $curr_b = ", $curr_a);
 	

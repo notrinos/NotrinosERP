@@ -198,7 +198,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
     Choose Exchange Rate Provider
     Default is ECB for backwards compatibility
 */
-    $xr_providers = array('ECB', 'EXCHANGE-RATES.ORG', 'GOOGLE', 'YAHOO', 'BLOOMBERG');
+    $xr_providers = array('ECB', 'EXCHANGE-RATES.ORG', 'GOOGLE', 'YAHOO', 'XE.COM');
     $dflt_xr_provider = 0;
 
 /*
