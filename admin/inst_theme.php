@@ -62,8 +62,8 @@ else {
 	table_header($th);
 
 	foreach($mods as $pkg_name => $ext) {
-		$available = @$ext['available'];
-		$installed = @$ext['version'];
+		$available = isset($ext['available']) ? $ext['available'] : '';
+		$installed = isset($ext['version']) ? $ext['version'] : '';
 		$id = @$ext['local_id'];
 
 		alt_table_row_color($k);
