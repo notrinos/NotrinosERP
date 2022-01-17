@@ -63,8 +63,8 @@ else {
 	start_table(TABLESTYLE);
 	table_header($th);
 	foreach($mods as $pkg_name => $ext) {
-		$available = @$ext['available'];
-		$installed = @$ext['version'];
+		$available = isset($ext['available']) ? $ext['available'] : '';
+		$installed = isset($ext['version']) ? $ext['version'] : '';
 		$id = @$ext['local_id'];
 		$encoding = @$ext['encoding'];
 
@@ -76,7 +76,7 @@ else {
 		label_cell($available ? $available : _('None'));
 		label_cell($encoding ? $encoding : _('Unknown'));
 
-		if ($available && check_pkg_upgrade($installed, $available)) // outdated or not installed theme in repo
+		if ($available && check_pkg_upgrade($installed, $available)) // outdated or not installed coa in repo
 			button_cell('Update'.$pkg_name, $installed ? _('Update') : _('Install'), _('Upload and install latest extension package'), ICON_DOWN);
 		else
 			label_cell('');
