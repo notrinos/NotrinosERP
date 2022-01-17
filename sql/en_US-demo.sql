@@ -1208,7 +1208,7 @@ CREATE TABLE `0_purch_orders` (
 	`comments` tinytext,
 	`ord_date` date NOT NULL DEFAULT '0000-00-00',
 	`reference` tinytext NOT NULL,
-	`requisition_no` tinytext,
+	`supp_reference` tinytext,
 	`into_stock_location` varchar(5) NOT NULL DEFAULT '',
 	`delivery_address` tinytext NOT NULL,
 	`total` double NOT NULL DEFAULT '0',
