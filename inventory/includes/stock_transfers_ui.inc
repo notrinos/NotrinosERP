@@ -18,7 +18,7 @@ function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 	$kit = get_item_kit($new_item);
 	foreach($kit as $item) {
 		if ($order->find_cart_item($item['stock_id']))
-			display_error(_('For Part :') . $item['stock_id'] . ' ' . 'This item is already on this document. You can change the quantity on the existing line if necessary.');
+			display_error(_('For Part :').$item['stock_id'].' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
 		else
 			$order->add_to_cart (count($order->line_items), $item['stock_id'], $new_item_qty * $item['quantity'], $standard_cost);
 	}
@@ -34,7 +34,7 @@ function display_order_header(&$order) {
 	table_section(1);
 	
 	locations_list_row(_('From Location:'), 'FromStockLocation', null, false, false, $order->fixed_asset);
-	locations_list_row(_('To Location:'), 'ToStockLocation', null,false, false, $order->fixed_asset);
+	locations_list_row(_('To Location:'), 'ToStockLocation', null, false, false, $order->fixed_asset);
 
 	table_section(2, '50%');
 
@@ -42,7 +42,7 @@ function display_order_header(&$order) {
 
 	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_LOCTRANSFER, null, array('date'=>get_post('AdjDate'), 'location'=> get_post('FromStockLocation'))), false, ST_LOCTRANSFER);
 
-	end_outer_table(1); // outer table
+	end_outer_table(1);
 }
 
 //---------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ function display_transfer_items($title, &$order) {
 			label_cell($stock_item->units);
 
 			if (!$order->fixed_asset)
-				edit_button_cell('Edit'.$line_no, _('Edit'),	_('Edit document line'));
+				edit_button_cell('Edit'.$line_no, _('Edit'), _('Edit document line'));
 			delete_button_cell('Delete'.$line_no, _('Delete'), _('Remove line from document'));
 			end_row();
 		}
@@ -124,9 +124,9 @@ function transfer_edit_item_controls(&$order, $line_no=-1) {
 
 		$item_info = get_item_edit_info($_POST['stock_id']);
 
-		$dec = $item_info['decimals'];
+		$dec = isset($item_info['decimals']) ? $item_info['decimals'] : user_qty_dec();
 		$_POST['qty'] = number_format2(0, $dec);
-		$_POST['units'] = $item_info['units'];
+		$_POST['units'] = isset($item_info['units']) ? $item_info['units'] : '';
 	}
 
 	if ($order->fixed_asset) {
