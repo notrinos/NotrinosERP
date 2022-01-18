@@ -12,15 +12,15 @@
 $page_security = 'SA_RECONCILE';
 $path_to_root = '..';
 
-include($path_to_root . '/includes/db_pager.inc');
-include_once($path_to_root . '/includes/session.inc');
+include($path_to_root.'/includes/db_pager.inc');
+include_once($path_to_root.'/includes/session.inc');
 
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
 
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/includes/banking.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/includes/banking.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -42,18 +42,17 @@ function check_date() {
 	}
 	return true;
 }
-//
-//	This function can be used directly in table pager 
-//	if we would like to change page layout.
-//
+/*
+*	This function can be used directly in table pager 
+*	if we would like to change page layout.
+*/
 function rec_checkbox($row) {
 	$name = 'rec_' .$row['id'];
 	$hidden = 'last['.$row['id'].']';
 	$value = $row['reconciled'] != '';
 
 	// save also in hidden field for testing during 'Reconcile'
-	return is_closed_trans($row['type'], $row['trans_no']) ? '--' : checkbox(null, $name, $value, true, _('Reconcile this transaction'))
-		. hidden($hidden, $value, false);
+	return is_closed_trans($row['type'], $row['trans_no']) ? '--' : checkbox(null, $name, $value, true, _('Reconcile this transaction')).hidden($hidden, $value, false);
 }
 
 function systype_name($dummy, $type) {
@@ -71,13 +70,11 @@ function gl_view($row) {
 }
 
 function fmt_debit($row) {
-	$value = $row['amount'];
-	return $value>=0 ? price_format($value) : '';
+	return $row['amount'] >= 0 ? price_format($row['amount']) : '';
 }
 
 function fmt_credit($row) {
-	$value = -$row['amount'];
-	return $value>0 ? price_format($value) : '';
+	return -$row['amount'] > 0 ? price_format(-$row['amount']) : '';
 }
 
 function fmt_person($trans) {
@@ -85,8 +82,7 @@ function fmt_person($trans) {
 }
 
 function fmt_memo($row) {
-	$value = $row['memo_'];
-	return $value;
+	return $row['memo_'];
 }
 
 function update_data() {
@@ -130,7 +126,7 @@ function set_tpl_flag($reconcile_id) {
 		$Ajax->activate('bank_date');
 
 	$_POST['bank_date'] = date2sql(get_post('reconcile_date'));
-	$reconcile_value =  ("'".$_POST['bank_date'] ."'");
+	$reconcile_value =  ("'".$_POST['bank_date']."'");
 	
 	update_reconciled_values($reconcile_id, $reconcile_value, $_POST['reconcile_date'], input_num('end_balance'), $_POST['bank_account']);
 		
@@ -188,7 +184,7 @@ bank_accounts_list_cells(_('Account:'), 'bank_account', null, true);
 
 bank_reconciliation_list_cells(_('Bank Statement:'), get_post('bank_account'), 'bank_date', null, true, _('New'));
 end_row();
-end_table();
+end_table(1);
 
 $result = get_max_reconciled(get_post('reconcile_date'), $_POST['bank_account']);
 
@@ -196,7 +192,7 @@ if ($row = db_fetch($result)) {
 	$_POST['reconciled'] = price_format($row['end_balance']-$row['beg_balance']);
 	$total = $row['total'];
 	if (!isset($_POST['beg_balance'])) { // new selected account/statement
-		$_POST['last_date'] = sql2date($row['last_date']);
+		$_POST['last_date'] = sql2date($row['last_date'] ? $row['last_date'] : '');
 		$_POST['beg_balance'] = price_format($row['beg_balance']);
 		$_POST['end_balance'] = price_format($row['end_balance']);
 		if (get_post('bank_date')) {
@@ -207,8 +203,6 @@ if ($row = db_fetch($result)) {
 		}
 	} 
 }
-
-echo '<hr>';
 
 div_start('summary');
 
@@ -229,9 +223,8 @@ amount_cell($reconciled, false, '', 'reconciled');
 amount_cell($difference, false, '', 'difference');
 
 end_row();
-end_table();
+end_table(1);
 div_end();
-echo '<hr>';
 
 //------------------------------------------------------------------------------------------------
 
