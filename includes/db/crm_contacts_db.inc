@@ -105,8 +105,8 @@ function get_crm_persons($type=null, $action=null, $entity=null, $person=null, $
 	// fallback to general contacts
 	if (!db_num_rows($result) && $action && $action != 'general')
 		return get_crm_persons($type, 'general', $entity, $person, $unique);
-	else
-		return $result;
+	
+	return $result;
 }
 
 function get_crm_person($id) {
@@ -162,9 +162,10 @@ function update_person_contacts($id, $cat_ids, $entity_id=null, $type=null) {
 }
 
 function delete_entity_contacts($class, $entity) {
-	delete_crm_contacts(null, $class, $entity);
+	
 	// cleanup
 	$res = get_crm_persons($class, null, $entity, null, true);
+	delete_crm_contacts(null, $class, $entity);
 	while($person = db_fetch($res)) {
 		$rels = get_person_contacts($person['id']);
 		if (count($rels) == 0) {
@@ -182,7 +183,7 @@ function add_crm_category($type, $action, $name, $description) {
 		.db_escape($name) . ", "
 		.db_escape($description)
 		.")";
-	db_query($sql,'The insert of the crm category failed');
+	db_query($sql, 'The insert of the crm category failed');
 }
 
 function update_crm_category($selected_id, $type, $action, $name, $description) {
@@ -194,26 +195,26 @@ function update_crm_category($selected_id, $type, $action, $name, $description) 
 	$sql .= "name=".db_escape($name) . ","
 			."description=".db_escape($description)
 			." WHERE id = ".db_escape($selected_id);
-	db_query($sql,'The update of the crm category failed');
+	db_query($sql, 'The update of the crm category failed');
 }
 
 function delete_crm_category($selected_id) {
 	// preserve system categories
 	$sql="DELETE FROM ".TB_PREF."crm_categories WHERE system=0 AND id=".db_escape($selected_id);
-	db_query($sql,'could not delete crm category');
+	db_query($sql, 'could not delete crm category');
 }
 
 function get_crm_categories($show_inactive) {
 	$sql = "SELECT * FROM ".TB_PREF."crm_categories";
 	if (!$show_inactive) $sql .= " WHERE !inactive";
 	$sql .= " ORDER BY type, action";
-	return db_query($sql,'could not get areas');
+	return db_query($sql, 'could not get areas');
 }
 
 function get_crm_category($selected_id) {
 	$sql = "SELECT * FROM ".TB_PREF."crm_categories WHERE id=".db_escape($selected_id);
 
-	$result = db_query($sql,'could not get crm category');
+	$result = db_query($sql, 'could not get crm category');
 	return db_fetch($result);
 }
 
@@ -283,7 +284,7 @@ function get_crm_contact($id) {
 function is_crm_category_used($id) {
 	$row = get_crm_category($id);
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."crm_contacts WHERE type='".$row['type']."' AND action='".$row['action']."'";
-	$result = db_query($sql, "check relations for crm_contacts failed");
+	$result = db_query($sql, 'check relations for crm_contacts failed');
 	$contacts = db_fetch($result);
 	return $contacts[0];
 }
