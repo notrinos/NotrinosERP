@@ -64,8 +64,12 @@ function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_ad
 }
 
 function delete_supplier($supplier_id) {
+	begin_transaction();
+	delete_entity_contacts('supplier', $supplier_id);
 	$sql="DELETE FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
-	db_query($sql, 'check failed');
+
+	db_query($sql, 'failed deletting supplier');
+	commit_transaction();
 }
 
 function get_supplier_details($supplier_id, $to=null, $all=true) {
@@ -128,7 +132,7 @@ function get_supplier($supplier_id) {
 function get_supplier_name($supplier_id) {
 	$sql = "SELECT supp_name AS name FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
-	$result = db_query($sql, 'could not get supplier');
+	$result = db_query($sql, 'could not get supplier name');
 
 	$row = db_fetch_row($result);
 
@@ -138,7 +142,7 @@ function get_supplier_name($supplier_id) {
 function get_supplier_accounts($supplier_id) {
 	$sql = "SELECT payable_account,purchase_account,payment_discount_account, dimension_id, dimension2_id FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
-	$result = db_query($sql, 'could not get supplier');
+	$result = db_query($sql, 'could not get supplier accounts');
 
 	return db_fetch($result);
 }
@@ -155,7 +159,6 @@ function get_supplier_contacts($supplier_id, $action=null) {
 function get_current_supp_credit($supplier_id) {
 	$suppdet = get_supplier_details($supplier_id);
 	return $suppdet['cur_credit'];
-
 }
 
 function is_new_supplier($id) {
