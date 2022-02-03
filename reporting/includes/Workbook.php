@@ -4234,7 +4234,7 @@ class Spreadsheet_Excel_Writer_Worksheet extends Spreadsheet_Excel_Writer_BIFFwr
 
         $this->_merged_ranges     = array();
         
-		$this->_rtl				  = 0; 	// Added by Joe Hunt 2009-03-05 for arabic languages
+		$this->_rtl				  = 0;
         $this->_input_encoding    = '';
 
         $this->_dv                = array();
@@ -5296,7 +5296,7 @@ class Spreadsheet_Excel_Writer_Worksheet extends Spreadsheet_Excel_Writer_BIFFwr
          $this->_input_encoding = $encoding;
     }
 
-    /** added 2009-03-05 by Joe Hunt, FA for arabic languages */
+    /* for arabic languages */
     function setRTL()
     {
     	$this->_rtl = 1;
@@ -8157,7 +8157,7 @@ class Spreadsheet_Excel_Writer_Workbook extends Spreadsheet_Excel_Writer_BIFFwri
         $record    = 0x0085;                    // Record identifier
 /*        
         if ($this->_BIFF_version == 0x0600) 	// Tried to fix the correct handling here, with the
-        {										// corrected specification from M$ - Joe Hunt 2009-03-08
+        {										// corrected specification from M$
         	$encoding_string = $this->_input_encoding;
         	if ($encoding_string == 'UTF-16LE')
         	{

@@ -451,7 +451,7 @@ function void_supp_invoice($type, $type_no) {
 		$date_ = Today();
 		while ($details_row = db_fetch($result)) {
 			if ((int)$details_row['grn_item_id'] > 0) {// it can be empty for GL items
-				// Changed 2008-10-17 by Joe Hunt to get the avg. material cost updated
+				
 				$old = update_supp_received_items_for_invoice($details_row['grn_item_id'],
 					$details_row['po_detail_item_id'], -$details_row['quantity'], $details_row['FullUnitPrice']); 
 				

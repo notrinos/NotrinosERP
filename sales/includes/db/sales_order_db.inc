@@ -340,7 +340,7 @@ function sales_order_has_deliveries($order_no) {
 	$row = db_fetch_row($result);
 
 	if ($row[0] > 0)
-		return true;  // 2010-04-21 added check for eventually voided deliveries, Joe Hunt
+		return true;  // added check for eventually voided deliveries
 	$sql = "SELECT order_ FROM ".TB_PREF."debtor_trans WHERE type=".ST_CUSTDELIVERY." AND order_=".db_escape($order_no);
 	$result = db_query($sql, 'The related delivery notes could not be retreived');
 	return (db_num_rows($result) > 0);	

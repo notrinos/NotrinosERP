@@ -50,8 +50,8 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 		case ST_CUSTDELIVERY : // it's a customer dispatch
 			if (!exists_customer_trans($type, $type_no))
 				return _('Selected transaction does not exists.');
-			if ($type == ST_CUSTDELIVERY) { // added 04 Oct 2008 by Joe Hunt. If delivery note has a not voided invoice, then NO.
-				$childs = get_sales_child_lines($type, $type_no, false); // 2011-03-17 This had been changed. Joe
+			if ($type == ST_CUSTDELIVERY) {
+				$childs = get_sales_child_lines($type, $type_no, false);
 				if ($childs && db_num_rows($childs))
 					return _('This delivery cannot be voided because it was already invoiced.');
 			}

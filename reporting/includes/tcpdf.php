@@ -126,8 +126,8 @@
 /**
  * main configuration file
  */
-/** -------------------------------FrontAccounting 2.0  ---------------------------
-  * following changes are done for FrontAccounting 2.0 - Joe Hunt 06.08.2008
+/** -------------------------------NotrinosERP---------------------------
+  * following changes are done for NotrinosERP
   * 1. /config/tcpdf_config.php is not included, commented out
   * 2. Following 3 defines instead:
   *    if (!defined("K_PATH_FONTS"))
