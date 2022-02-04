@@ -224,13 +224,12 @@ function gl_performance($today, $weeks=5) {
 	return $result;
 }
 
-function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2=null, $type=2) {
+function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2) {
 
 	$pg->axis_x    = $x_axis;
 	$pg->axis_y    = _('Amount');
-	$pg->graphic_1 = $graphic1;
-	if ($graphic2 != null)
-		$pg->graphic_2 = $graphic2;
+	$pg->graphic_1 = empty($graphic1) ? '' : $graphic1;
+	$pg->graphic_2 = empty($graphic2) ? '' : $graphic2;
 	$pg->type      = $type;
 	$pg->skin      = 1;
 	$pg->built_in  = false;
