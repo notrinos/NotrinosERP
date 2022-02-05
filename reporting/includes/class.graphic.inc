@@ -162,7 +162,7 @@ class graph
 			$path.$SysPrefs->UTF8_fontfile : $path.'FreeSans.ttf') : $path.'LiberationSans-Regular.ttf';
         
         $this->x = $this->y = $this->z = array();
-        $this->biggest_x        = NULL;
+        $this->biggest_x        = '';
         $this->biggest_y        = NULL;
         $this->alternate_x      = false;
         $this->graphic_2_exists = false;
