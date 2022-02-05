@@ -717,7 +717,7 @@ class graph {
 	function calculate_higher_value() {
 		$digits   = strlen(round($this->biggest_y));
 		$interval = pow(10, ($digits-1));
-		$this->higher_value     = round(($this->biggest_y - ($this->biggest_y % $interval) + $interval), 1);
+		$this->higher_value     = round(($this->biggest_y - (ceil($this->biggest_y) % $interval) + $interval), 1);
 		$this->higher_value_str = $this->number_formated($this->higher_value, $this->dec1);
 	}
 
