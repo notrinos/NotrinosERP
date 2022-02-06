@@ -72,7 +72,7 @@ class Dashboard {
 
 					echo "<div class = 'widget $class'>";
 
-					if(file_exists($widget_file))
+					if($widget_file !== null)
 						require($widget_file);
 					else
 						echo "<br/><br/><div class = 'err_msg'>"._('Cannot find widget file').'&nbsp;'."'$widg'"."</div>";
