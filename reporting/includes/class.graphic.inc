@@ -158,7 +158,7 @@ class graph {
 		
 		$this->x = $this->y = $this->z = array();
 		$this->biggest_x        = '';
-		$this->biggest_y        = NULL;
+		$this->biggest_y        = 0;
 		$this->alternate_x      = false;
 		$this->graphic_2_exists = false;
 		$this->total_parameters = 0;
