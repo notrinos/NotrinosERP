@@ -251,7 +251,7 @@ class graph {
 				$x2 = $this->graphic_area_x2;
 				$y2 = $this->graphic_area_y2 - $dec_y;
 
-				imageline($this->img, $x1, $y1, $x2, $y2, $this->color['bg_lines']);
+				imageline($this->img, ceil($x1), ceil($y1), ceil($x2), ceil($y2), $this->color['bg_lines']);
 				if ($i % 2 == 0)  {
 					$value = $this->number_formated($this->higher_value * $i / 10, $this->dec1);
 					$len1 = strlen($this->higher_value_str);
