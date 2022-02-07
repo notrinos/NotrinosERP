@@ -1425,6 +1425,7 @@ CREATE TABLE `0_sales_orders` (
 	`type` tinyint(1) NOT NULL DEFAULT '0',
 	`debtor_no` int(11) NOT NULL DEFAULT '0',
 	`branch_code` int(11) NOT NULL DEFAULT '0',
+	`salesman_code` int(11) NOT NULL DEFAULT '0',
 	`reference` varchar(100) NOT NULL DEFAULT '',
 	`customer_ref` tinytext NOT NULL,
 	`comments` tinytext,
@@ -1448,14 +1449,14 @@ CREATE TABLE `0_sales_orders` (
 -- Data of table `0_sales_orders` --
 
 INSERT INTO `0_sales_orders` VALUES
-('1', '30', '1', '0', '1', '1', 'auto', '', NULL, '2021-05-10', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-05', '4', '6240', '0', '0'),
-('2', '30', '1', '0', '1', '1', 'auto', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-07', '4', '300', '0', '0'),
-('3', '30', '0', '0', '1', '1', '001/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-08', '4', '300', '0', '0'),
-('4', '30', '0', '0', '2', '2', '002/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2021-05-08', '1', '267.14', '0', '0'),
-('5', '30', '1', '0', '2', '2', 'auto', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2021-06-17', '1', '267.14', '0', '0'),
-('6', '30', '0', '1', '1', '1', '003/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-08', '4', '450', '0', '0'),
-('7', '30', '1', '0', '1', '1', 'auto', '', 'Recurrent Invoice covers period 04/01/2021 - 04/07/2021.', '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-07', '4', '0', '0', '0'),
-('8', '30', '1', '0', '1', '1', 'auto', '', NULL, '2022-01-21', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2022-01-21', '4', '1250', '0', '0');
+('1', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2021-05-10', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-05', '4', '6240', '0', '0'),
+('2', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-07', '4', '300', '0', '0'),
+('3', '30', '0', '0', '1', '1', '1', '001/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-08', '4', '300', '0', '0'),
+('4', '30', '0', '0', '2', '2', '1', '002/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2021-05-08', '1', '267.14', '0', '0'),
+('5', '30', '1', '0', '2', '2', '1', 'auto', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2021-06-17', '1', '267.14', '0', '0'),
+('6', '30', '0', '1', '1', '1', '1', '003/2021', '', NULL, '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-08', '4', '450', '0', '0'),
+('7', '30', '1', '0', '1', '1', '1', 'auto', '', 'Recurrent Invoice covers period 04/01/2021 - 04/07/2021.', '2021-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2021-05-07', '4', '0', '0', '0'),
+('8', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2022-01-21', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2022-01-21', '4', '1250', '0', '0');
 
 -- Structure of table `0_sales_pos` --
 

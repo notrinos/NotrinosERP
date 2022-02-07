@@ -1148,6 +1148,7 @@ CREATE TABLE `0_sales_orders` (
 	`type` tinyint(1) NOT NULL DEFAULT '0',
 	`debtor_no` int(11) NOT NULL DEFAULT '0',
 	`branch_code` int(11) NOT NULL DEFAULT '0',
+	`salesman_code` int(11) NOT NULL DEFAULT '0',
 	`reference` varchar(100) NOT NULL DEFAULT '',
 	`customer_ref` tinytext NOT NULL,
 	`comments` tinytext,
