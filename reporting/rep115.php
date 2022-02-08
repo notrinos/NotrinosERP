@@ -83,7 +83,7 @@ function get_transactions($debtorno, $from, $to, $only_rec) {
 
 function get_customer_reference ($order_number) {
 
-	$sql = "SELECT customer_ref FROM ".TB_PREF."sales_orders WHERE order_no ='$order_number' AND trans_type=".ST_SALESORDER."";
+	$sql = "SELECT customer_ref FROM ".TB_PREF."sales_orders WHERE order_no = ".db_escape($order_number)." AND trans_type=".ST_SALESORDER;
 
 	$result = db_query($sql, 'No Transcation were returned');
 
