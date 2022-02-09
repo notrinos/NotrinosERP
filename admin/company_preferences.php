@@ -132,7 +132,7 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	if ($input_error != 1) {
 		update_company_prefs(
 			get_post(
-				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_item_list'=>0, 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets')
+				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_item_list'=>0, 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets', 'use_hrm')
 			)
 		);
 
@@ -160,12 +160,6 @@ $_POST['coy_logo']  = $myrow['coy_logo'];
 $_POST['domicile']  = $myrow['domicile'];
 $_POST['use_dimension']  = $myrow['use_dimension'];
 $_POST['base_sales']  = $myrow['base_sales'];
-
-if (!isset($myrow['shortname_name_in_list'])) {
-	set_company_pref('shortname_name_in_list', 'setup.company', 'tinyint', 1, '0');
-	$myrow['shortname_name_in_list'] = get_company_pref('shortname_name_in_list');
-}
-
 $_POST['shortname_name_in_list']  = $myrow['shortname_name_in_list'];
 $_POST['no_item_list']  = 0; // Will be removed from 0.7
 $_POST['no_customer_list']  = $myrow['no_customer_list'];
@@ -173,41 +167,12 @@ $_POST['no_supplier_list']  = $myrow['no_supplier_list'];
 $_POST['curr_default']  = $myrow['curr_default'];
 $_POST['f_year']  = $myrow['f_year'];
 $_POST['time_zone']  = $myrow['time_zone'];
-
-if (!isset($myrow['max_days_in_docs'])) {
-	set_company_pref('max_days_in_docs', 'setup.company', 'smallint', 5, '180');
-	$myrow['max_days_in_docs'] = get_company_pref('max_days_in_docs');
-}
 $_POST['max_days_in_docs']  = $myrow['max_days_in_docs'];
-if (!isset($myrow['company_logo_report'])) {
-	set_company_pref('company_logo_report', 'setup.company', 'tinyint', 1, '0');
-	$myrow['company_logo_report'] = get_company_pref('company_logo_report');
-}
 $_POST['company_logo_report']  = $myrow['company_logo_report'];
-if (!isset($myrow['ref_no_auto_increase'])) {
-	set_company_pref('ref_no_auto_increase', 'setup.company', 'tinyint', 1, '0');
-	$myrow['ref_no_auto_increase'] = get_company_pref('ref_no_auto_increase');
-}
 $_POST['ref_no_auto_increase']  = $myrow['ref_no_auto_increase'];
-if (!isset($myrow['barcodes_on_stock'])) {
-	set_company_pref('barcodes_on_stock', 'setup.company', 'tinyint', 1, '0');
-	$myrow['barcodes_on_stock'] = get_company_pref('barcodes_on_stock');
-}
 $_POST['barcodes_on_stock']  = $myrow['barcodes_on_stock'];
-if (!isset($myrow['print_dialog_direct'])) {
-	set_company_pref('print_dialog_direct', 'setup.company', 'tinyint', 1, '0');
-	$myrow['print_dialog_direct'] = get_company_pref('print_dialog_direct');
-}
 $_POST['print_dialog_direct']  = $myrow['print_dialog_direct'];
-if (!isset($myrow['dim_on_recurrent_invoice'])) {
-	set_company_pref('dim_on_recurrent_invoice', 'setup.company', 'tinyint', 1, '0');
-	$myrow['dim_on_recurrent_invoice'] = get_company_pref('dim_on_recurrent_invoice');
-}
 $_POST['dim_on_recurrent_invoice']  = $myrow['dim_on_recurrent_invoice'];
-if (!isset($myrow['long_description_invoice'])) {
-	set_company_pref('long_description_invoice', 'setup.company', 'tinyint', 1, '0');
-	$myrow['long_description_invoice'] = get_company_pref('long_description_invoice');
-}
 $_POST['long_description_invoice']  = $myrow['long_description_invoice'];
 $_POST['version_id']  = $myrow['version_id'];
 $_POST['add_pct'] = $myrow['add_pct'];
@@ -222,6 +187,7 @@ $_POST['alternative_tax_include_on_docs']  = $myrow['alternative_tax_include_on_
 $_POST['suppress_tax_rates']  = $myrow['suppress_tax_rates'];
 $_POST['use_manufacturing']  = $myrow['use_manufacturing'];
 $_POST['use_fixed_assets']  = $myrow['use_fixed_assets'];
+$_POST['use_hrm']  = $myrow['use_hrm'];
 
 start_outer_table(TABLESTYLE2);
 
@@ -277,6 +243,7 @@ table_section_title(_('Optional Modules'));
 check_row(_('Manufacturing:'), 'use_manufacturing', null);
 check_row(_('Fixed Assets').':', 'use_fixed_assets', null);
 number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
+check_row(_('Human Resources Management:'), 'use_hrm', null);
 
 table_section_title(_('User Interface Options'));
 
