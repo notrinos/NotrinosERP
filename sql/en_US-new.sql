@@ -1736,7 +1736,7 @@ DROP TABLE IF EXISTS `0_users`;
 
 CREATE TABLE `0_users` (
 	`id` smallint(6) NOT NULL AUTO_INCREMENT,
-	`user_id` varchar(60) NOT NULL DEFAULT '',
+	`login_id` varchar(60) NOT NULL DEFAULT '',
 	`password` varchar(100) NOT NULL DEFAULT '',
 	`real_name` varchar(100) NOT NULL DEFAULT '',
 	`role_id` int(11) NOT NULL DEFAULT '1',
@@ -1771,7 +1771,7 @@ CREATE TABLE `0_users` (
 	`def_print_orientation` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
-	UNIQUE KEY `user_id` (`user_id`)
+	UNIQUE KEY `login_id` (`login_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
 
 -- Data of table `0_users` --

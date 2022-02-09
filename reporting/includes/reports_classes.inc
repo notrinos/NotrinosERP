@@ -165,7 +165,7 @@ class BoxReports {
 		switch ($type) {
 			case 'CURRENCY':
 				$sql = "SELECT curr_abrev, concat(curr_abrev,' - ', currency) AS name FROM ".TB_PREF."currencies";
-				return combo_input($name, '', $sql, 'curr_abrev', 'name',array('spec_option'=>_("No Currency Filter"),'spec_id'=>ALL_TEXT,'order'=>false));
+				return combo_input($name, '', $sql, 'curr_abrev', 'name',array('spec_option'=>_('No Currency Filter'),'spec_id'=>ALL_TEXT,'order'=>false));
 
 			case 'DATE':
 			case 'DATEBEGIN':
@@ -418,31 +418,31 @@ class BoxReports {
 				return combo_input($name, '', $sql, 'id', 'IName',array('order'=>false));
 
 			case 'LOCATIONS':
-				return  locations_list($name, null, _("No Location Filter"));
+				return  locations_list($name, null, _('No Location Filter'));
 			case 'FLOCATIONS':
-				return  locations_list($name, null, _("No Location Filter"), false, true);
+				return  locations_list($name, null, _('No Location Filter'), false, true);
 
 			case 'CATEGORIES':
-				return stock_categories_list($name, null, _("No Category Filter"));
+				return stock_categories_list($name, null, _('No Category Filter'));
 			case 'FCATEGORIES':
-				return stock_categories_list($name, null, _("No Category Filter"), false, true);
+				return stock_categories_list($name, null, _('No Category Filter'), false, true);
 			case 'FCLASS':
-				return fixed_asset_classes_list($name, null, _("No Class Filter"), false);
+				return fixed_asset_classes_list($name, null, _('No Class Filter'), false);
 			case 'SALESTYPES':
 				return sales_types_list($name);
 
 			case 'AREAS':
-				return sales_areas_list($name, null, _("No Areas Filter"));
+				return sales_areas_list($name, null, _('No Areas Filter'));
 
 			case 'SALESMEN':
-				return sales_persons_list($name, null, _("No Sales Folk Filter"));
+				return sales_persons_list($name, null, _('No Sales Folk Filter'));
 					
 			case 'TRANS_YEARS':
 				return fiscalyears_list($name);
 
 			case 'USERS':
-				$sql = "SELECT id, user_id FROM ".TB_PREF."users";
-				return combo_input($name, '', $sql, 'id', 'user_id',array('spec_option'=>_("No Users Filter"),'spec_id'=>ALL_NUMERIC));
+				$sql = "SELECT id, login_id FROM ".TB_PREF."users";
+				return combo_input($name, '', $sql, 'id', 'login_id',array('spec_option'=>_('No Users Filter'),'spec_id'=>ALL_NUMERIC));
 
 			case 'ACCOUNTTAGS':
 			case 'DIMENSIONTAGS':

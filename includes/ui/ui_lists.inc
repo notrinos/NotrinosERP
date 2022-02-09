@@ -2405,13 +2405,13 @@ function accounts_type_list_row($label, $name, $selected_id=null) {
 
 function users_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
 	$where = false;
-	$sql = " SELECT user_id, IF(real_name = '', user_id, real_name) FROM ".TB_PREF."users";
+	$sql = " SELECT login_id, IF(real_name = '', login_id, real_name) FROM ".TB_PREF."users";
 
 	if ($label != null)
 		echo "<td>".$label."</td>\n";
 	echo "<td>";
 
-	echo combo_input($name, $selected_id, $sql, 'user_id', 'real_name',
+	echo combo_input($name, $selected_id, $sql, 'login_id', 'real_name',
 		array(
 			'spec_option' => $spec_opt===true ?_('All users') : $spec_opt,
 			'spec_id' => '',

@@ -10,29 +10,25 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_user($user_id, $real_name, $password, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
-	$sql = "INSERT INTO ".TB_PREF."users (user_id, real_name, password"
+function add_user($login_id, $real_name, $password, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
+	$sql = "INSERT INTO ".TB_PREF."users (login_id, real_name, password"
 		.", phone, email, role_id, language, pos, print_profile, rep_popup)
-		VALUES (".db_escape($user_id).", 
+		VALUES (".db_escape($login_id).", 
 		".db_escape($real_name).", ".db_escape($password).",".db_escape($phone)
 		.",".db_escape($email).", ".db_escape($role_id).", ".db_escape($language)
 		.", ".db_escape($pos).",".db_escape($profile).",".db_escape($rep_popup)
 		." )";
 
-	return db_query($sql, 'could not add user for '.$user_id);
+	return db_query($sql, 'could not add user for '.$login_id);
 }
 
-//-----------------------------------------------------------------------------------------------
+function update_user_password($id, $login_id, $password) {
+	$sql = "UPDATE ".TB_PREF."users SET password=".db_escape($password).",login_id = ".db_escape($login_id)." WHERE id=".db_escape($id);
 
-function update_user_password($id, $user_id, $password) {
-	$sql = "UPDATE ".TB_PREF."users SET password=".db_escape($password).",user_id = ".db_escape($user_id)." WHERE id=".db_escape($id);
-
-	return db_query($sql, 'could not update user password for '.$user_id);
+	return db_query($sql, 'could not update user password for '.$login_id);
 }
 
-//-----------------------------------------------------------------------------------------------
-
-function update_user($id, $user_id, $real_name, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
+function update_user($id, $login_id, $real_name, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
 	$sql = "UPDATE ".TB_PREF."users SET real_name=".db_escape($real_name).
 	", phone=".db_escape($phone).",
 		email=".db_escape($email).",
@@ -41,12 +37,10 @@ function update_user($id, $user_id, $real_name, $phone, $email, $role_id, $langu
 		print_profile=".db_escape($profile).",
 		rep_popup=".db_escape($rep_popup).",
 		pos=".db_escape($pos).",
-		user_id = " . db_escape($user_id)
+		login_id = " . db_escape($login_id)
 		. " WHERE id=" . db_escape($id);
-	return db_query($sql, 'could not update user for '.$user_id);
+	return db_query($sql, 'could not update user for '.$login_id);
 }
-
-//-----------------------------------------------------------------------------------------------
 
 function update_user_prefs($id, $prefs) {
 	$sql = "UPDATE ".TB_PREF."users SET ";
@@ -58,9 +52,6 @@ function update_user_prefs($id, $prefs) {
 	return db_query($sql, 'could not update user display prefs for '.$id);
 }
 
-//-----------------------------------------------------------------------------------------------
-
-
 function get_users($all=false) {
 	$sql = "SELECT u.*, r.role FROM ".TB_PREF."users u, ".TB_PREF."security_roles r
 		WHERE u.role_id=r.id";
@@ -68,8 +59,6 @@ function get_users($all=false) {
 	
 	return db_query($sql, 'could not get users');
 }
-
-//-----------------------------------------------------------------------------------------------
 
 function get_user($id) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE id=".db_escape($id);
@@ -79,17 +68,13 @@ function get_user($id) {
 	return db_fetch($result);
 }
 
-//-----------------------------------------------------------------------------------------------
+function get_user_by_login($login_id) {
+	$sql = "SELECT * FROM ".TB_PREF."users WHERE login_id=".db_escape($login_id);
 
-function get_user_by_login($user_id) {
-	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id=".db_escape($user_id);
-
-	$result = db_query($sql, 'could not get user '.$user_id);
+	$result = db_query($sql, 'could not get user '.$login_id);
 
 	return db_fetch($result);
 }
-
-//-----------------------------------------------------------------------------------------------
 
 function get_user_by_email($email) {
 	$sql = "SELECT * FROM ".TB_PREF."users WHERE email=".db_escape($email);
@@ -102,34 +87,26 @@ function get_user_by_email($email) {
 	return db_fetch($result);
 }
 
-//-----------------------------------------------------------------------------------------------
-
 function delete_user($id) {
 	$sql = "DELETE FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
 	db_query($sql, 'could not delete user '.$id);
 }
 
-//-----------------------------------------------------------------------------------------------
+function get_user_auth($login_id, $password) {
 
-function get_user_auth($user_id, $password) {
-
-	$sql = "SELECT * FROM ".TB_PREF."users WHERE user_id = ".db_escape($user_id)." AND"
+	$sql = "SELECT * FROM ".TB_PREF."users WHERE login_id = ".db_escape($login_id)." AND"
 		." password=".db_escape($password);
 
-	return db_num_rows(db_query($sql, 'could not get validate user login for '.$user_id)) != 0;
+	return db_num_rows(db_query($sql, 'could not get validate user login for '.$login_id)) != 0;
 }
 
-//-----------------------------------------------------------------------------------------------
-
-function update_user_visitdate($user_id) {
+function update_user_visitdate($login_id) {
 	$sql = "UPDATE ".TB_PREF."users SET last_visit_date='". date("Y-m-d H:i:s") ."'
-		WHERE user_id=".db_escape($user_id);
+		WHERE login_id=".db_escape($login_id);
 
-	db_query($sql, 'could not update last visit date for user '.$user_id);
+	db_query($sql, 'could not update last visit date for user '.$login_id);
 }
-
-//-----------------------------------------------------------------------------------------------
 
 function check_user_activity($id)  {
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."audit_trail WHERE audit_trail.user="
@@ -139,8 +116,6 @@ function check_user_activity($id)  {
 
 	return $ret[0];
 }
-
-//-----------------------------------------------------------------------------------------------
 
 function show_users_online() {
 	global $db, $GetText, $SysPrefs;
