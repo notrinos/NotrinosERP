@@ -4,7 +4,7 @@
 /company/*/pdf_files/*.pdf
 /company/*/js_cache/*/*.js
 /company/*/reporting
-/company/*/images
+
 /tmp
 /lang
 /modules
