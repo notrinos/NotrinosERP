@@ -694,6 +694,20 @@ INSERT INTO `0_debtors_master` VALUES
 ('1', 'Donald Easter LLC', 'Donald Easter', 'N/A', '123456789', 'USD', '1', '0', '0', '1', '4', '0', '0', '1000', '', '0'),
 ('2', 'MoneyMaker Ltd.', 'MoneyMaker', 'N/A', '54354333', 'EUR', '1', '1', '0', '1', '1', '0', '0', '1000', '', '0');
 
+-- Structure of table `0_departments` --
+
+DROP TABLE IF EXISTS `0_departments`;
+
+CREATE TABLE IF NOT EXISTS `0_departments` (
+	`department_id` int(11) NOT NULL AUTO_INCREMENT,
+	`department_name` tinytext NOT NULL,
+	`payroll_expense_account` varchar(15) NULL,
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`department_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_departments` --
+
 -- Structure of table `0_dimensions` --
 
 DROP TABLE IF EXISTS `0_dimensions`;
@@ -717,6 +731,43 @@ CREATE TABLE `0_dimensions` (
 
 INSERT INTO `0_dimensions` VALUES
 ('1', '001/2021', 'Cost Centre', '1', '0', '2021-05-05', '2021-05-25');
+
+-- Structure of table `0_employees` --
+
+DROP TABLE IF EXISTS `0_employees`;
+
+CREATE TABLE IF NOT EXISTS `0_employees` (
+	`employee_number` int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id` varchar(20) NOT NULL,
+	`first_name` varchar(100) DEFAULT NULL,
+	`last_name` varchar(100) DEFAULT NULL,
+	`gender` tinyint(1) NOT NULL DEFAULT '0',
+	`address` tinytext,
+	`mobile` varchar(30) DEFAULT NULL,
+	`email` varchar(100) DEFAULT NULL,
+	`birth_date` date NOT NULL,
+	`national_id` varchar(100) DEFAULT NULL,
+	`passport` varchar(100) DEFAULT NULL,
+	`bank_account` varchar(100) DEFAULT NULL,
+	`tax_number` varchar(100) DEFAULT NULL,
+	`marital_status` tinyint(1) NOT NULL DEFAULT '0',
+	`dependents_no` int(10) NOT NULL DEFAULT '0',
+	`notes` tinytext NOT NULL,
+	`hire_date` date DEFAULT NULL,
+	`department_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
+	`position_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
+	`grade_id` tinyint(2) UNSIGNED NOT NULL DEFAULT '0',
+	`personal_salary` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
+	`released_date` date DEFAULT NULL,
+	`user_id` smallint(6) UNSIGNED NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
+	PRIMARY KEY (`employee_number`),
+	KEY `position_id` (`position_id`),
+	KEY `department_id` (`department_id`),
+	UNIQUE KEY `employee_id` (`employee_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employees` --
 
 -- Structure of table `0_exchange_rates` --
 
@@ -1010,6 +1061,21 @@ CREATE TABLE `0_journal` (
 INSERT INTO `0_journal` VALUES
 ('0', '1', '2021-12-31', '001/2012', '', '2021-12-31', '2021-12-31', 'USD', '2163.57', '1');
 
+-- Structure of table `0_leave_types` --
+
+DROP TABLE IF EXISTS `0_leave_types`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_types` (
+	`leave_id` int(11) NOT NULL AUTO_INCREMENT,
+	`leave_name` varchar(100) NOT NULL,
+	`leave_code` varchar(3) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`leave_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_types` --
+
 -- Structure of table `0_loc_stock` --
 
 DROP TABLE IF EXISTS `0_loc_stock`;
@@ -1055,6 +1121,20 @@ CREATE TABLE `0_locations` (
 INSERT INTO `0_locations` VALUES
 ('DEF', 'Default', 'N/A', '', '', '', '', '', '0', '0');
 
+-- Structure of table `0_overtime` --
+
+DROP TABLE IF EXISTS `0_overtime`;
+
+CREATE TABLE IF NOT EXISTS `0_overtime` (
+	`overtime_id` int(11) NOT NULL AUTO_INCREMENT,
+	`overtime_name` varchar(100) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '1',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`overtime_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_overtime` --
+
 -- Structure of table `0_payment_terms` --
 
 DROP TABLE IF EXISTS `0_payment_terms`;
@@ -1077,6 +1157,21 @@ INSERT INTO `0_payment_terms` VALUES
 ('3', 'Payment due within 10 days', '10', '0', '0'),
 ('4', 'Cash Only', '0', '0', '0'),
 ('5', 'Prepaid', '-1', '0', '0');
+
+-- Structure of table `0_positions` --
+
+DROP TABLE IF EXISTS `0_positions`;
+
+CREATE TABLE IF NOT EXISTS `0_positions` (
+	`position_id` int(11) NOT NULL AUTO_INCREMENT,
+	`position_name` text NOT NULL,
+	`basic_amount` double NOT NULL DEFAULT '0',
+	`pay_basis` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=monthly, 1=daily',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`position_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_positions` --
 
 -- Structure of table `0_prices` --
 
@@ -1933,6 +2028,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('dim_on_recurrent_invoice','setup.company', 'tinyint', 1, '0'),
 ('long_description_invoice','setup.company', 'tinyint', 1, '0'),
 ('max_days_in_docs','setup.company', 'smallint', 5, '180'),
+('payroll_max_grade','setup.company', 'smallint', 2, '20'),
 ('use_fixed_assets','setup.company', 'tinyint', 1, '1');
 
 -- Structure of table `0_tag_associations` --
