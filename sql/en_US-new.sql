@@ -1542,7 +1542,6 @@ INSERT INTO `0_sys_prefs` VALUES
 ('use_dimension', 'setup.company', 'tinyint', 1, '1'),
 ('f_year', 'setup.company', 'int', 11, '1'),
 ('shortname_name_in_list','setup.company', 'tinyint', 1, '0'),
-('no_item_list', 'setup.company', 'tinyint', 1, '0'),
 ('no_customer_list', 'setup.company', 'tinyint', 1, '0'),
 ('no_supplier_list', 'setup.company', 'tinyint', 1, '0'),
 ('base_sales', 'setup.company', 'int', 11, '1'),
