@@ -271,9 +271,10 @@ $security_areas =array(
 	'SA_POSITION' => array(SS_HRM_C|4, _('Manage positions')),
 	'SA_PAYGRADE' => array(SS_HRM_C|5, _('Manage grades')),
 	'SA_OVERTIME' => array(SS_HRM_C|6, _('Overtime')),
-	'SA_PAYELEMENT' => array(SS_HRM_C|7, _('Pay elements')),
-	'SA_PAYELEMENTALLOC' => array(SS_HRM_C|8, _('Pay elements allocation')),
-	'SA_SALARYSTRUCTURE' => array(SS_HRM_C|9, _('Salary structure')),
+	'SA_JOBCLASS' => array(SS_HRM_C|7, _('Job Classification')),
+	'SA_PAYELEMENT' => array(SS_HRM_C|8, _('Pay elements')),
+	'SA_PAYELEMENTALLOC' => array(SS_HRM_C|9, _('Pay elements allocation')),
+	'SA_SALARYSTRUCTURE' => array(SS_HRM_C|10, _('Salary structure')),
 
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM|1, _('Employee transactions view')),
 

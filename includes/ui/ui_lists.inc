@@ -2543,6 +2543,25 @@ function grades_list_row($label, $name, $selected, $from, $to, $no_option=false,
 	echo "</td></tr>\n";
 }
 
+function job_classes_list_row($label, $name, $selected_id=null, $spec_opt=false, $submit_on_change=false) {
+	$sql = "SELECT job_class_id, class_name FROM ".TB_PREF."job_classes";
+
+	echo "<tr>";
+
+	if(!empty($label))
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo combo_input($name, $selected_id, $sql, 'job_class_id', 'class_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All classes') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'class_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+	echo "</td>";
+}
+
 function users_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
 	$sql = " SELECT login_id, IF(real_name = '', login_id, real_name) FROM ".TB_PREF."users";
 

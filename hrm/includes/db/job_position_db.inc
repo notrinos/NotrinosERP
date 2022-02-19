@@ -10,13 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function update_job_position($position_id, $position_name, $amount, $pay_basis) {
-	$sql = "UPDATE ".TB_PREF."positions SET position_name = ".db_escape($position_name).", basic_amount = ".db_escape($amount).", pay_basis = ".db_escape($pay_basis)." WHERE position_id = ".db_escape($position_id);
+function update_job_position($position_id, $position_name, $amount, $class) {
+	$sql = "UPDATE ".TB_PREF."positions SET position_name = ".db_escape($position_name).", basic_amount = ".db_escape($amount).", job_class_id = ".db_escape($class)." WHERE position_id = ".db_escape($position_id);
 	db_query($sql, 'could not update job position record');
 }
 
-function add_job_position($position_name, $basic_amount, $pay_basis) {
-	$sql = "INSERT INTO ".TB_PREF."positions (position_name, basic_amount, pay_basis) VALUES (".db_escape($position_name).",".db_escape($basic_amount).",".db_escape($pay_basis).")";
+function add_job_position($position_name, $basic_amount, $class) {
+	$sql = "INSERT INTO ".TB_PREF."positions (position_name, basic_amount, job_class_id) VALUES (".db_escape($position_name).",".db_escape($basic_amount).",".db_escape($class).")";
 	db_query($sql, 'could not add job position data');
 }
 
@@ -39,4 +39,8 @@ function get_job_positions($all=false) {
 function delete_job_position($position_id) {
 	$sql = "DELETE FROM ".TB_PREF."positions WHERE position_id = ".db_escape($position_id);
 	db_query($sql, 'Could not delete job position');
+}
+
+function db_has_job_position() {
+	return check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."positions");
 }

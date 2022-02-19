@@ -10,3 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root.'/hrm/includes/db/department_db.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/leave_db.inc');
+include_once($path_to_root.'/hrm/includes/db/overtime_db.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
+include_once($path_to_root.'/hrm/includes/db/salary_structure_db.inc');

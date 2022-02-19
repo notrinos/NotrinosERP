@@ -1037,6 +1037,20 @@ INSERT INTO `0_item_units` VALUES
 ('each', 'Each', '0', '0'),
 ('hr', 'Hours', '0', '0');
 
+-- Structure of table `0_job_classes` --
+
+DROP TABLE IF EXISTS `0_job_classes`;
+
+CREATE TABLE IF NOT EXISTS `0_job_classes` (
+	`job_class_id` int(11) NOT NULL AUTO_INCREMENT,
+	`class_name` varchar(100) NOT NULL,
+	`pay_basis` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=monthly, 1=daily',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`job_class_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_job_classes` --
+
 -- Structure of table `0_journal` --
 
 DROP TABLE IF EXISTS `0_journal`;
@@ -1135,6 +1149,37 @@ CREATE TABLE IF NOT EXISTS `0_overtime` (
 
 -- Data of table `0_overtime` --
 
+-- Structure of table `0_pay_elements` --
+
+DROP TABLE IF EXISTS `0_pay_elements`;
+
+CREATE TABLE IF NOT EXISTS `0_pay_elements` (
+	`element_id` int(11) NOT NULL AUTO_INCREMENT,
+	`element_name` varchar(100) NOT NULL,
+	`account_code` varchar(15) NOT NULL,
+	`is_deduction` tinyint(1) NOT NULL DEFAULT '0',
+	`amount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0 = fixed amount, 1 = percentage of base pay',
+	PRIMARY KEY (`element_id`),
+	UNIQUE (`account_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_pay_elements` --
+
+-- Structure of table `0_pay_grades` --
+
+DROP TABLE IF EXISTS `0_pay_grades`;
+
+CREATE TABLE IF NOT EXISTS `0_pay_grades` (
+	`grade_id` tinyint(5) NOT NULL AUTO_INCREMENT,
+	`grade_name` varchar(30) NOT NULL DEFAULT '',
+	`position_id` int(11) NOT NULL,
+	`pay_amount` double NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`grade_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_pay_grades` --
+
 -- Structure of table `0_payment_terms` --
 
 DROP TABLE IF EXISTS `0_payment_terms`;
@@ -1164,9 +1209,9 @@ DROP TABLE IF EXISTS `0_positions`;
 
 CREATE TABLE IF NOT EXISTS `0_positions` (
 	`position_id` int(11) NOT NULL AUTO_INCREMENT,
+	`job_class_id` int(11) NOT NULL;
 	`position_name` text NOT NULL,
 	`basic_amount` double NOT NULL DEFAULT '0',
-	`pay_basis` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=monthly, 1=daily',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`position_id`)
 ) ENGINE=InnoDB;
@@ -1474,6 +1519,20 @@ INSERT INTO `0_refs` VALUES
 ('4', '30', '002/2021'),
 ('6', '30', '003/2021'),
 ('1', '40', '001/2021');
+
+-- Structure of table `0_salary_structure` --
+
+DROP TABLE IF EXISTS `0_salary_structure`;
+
+CREATE TABLE IF NOT EXISTS `0_salary_structure` (
+	`position_id` int(11) NOT NULL,
+	`grade_id` tinyint(2) NOT NULL DEFAULT '0',
+	`element_id` int(11) NOT NULL,
+	`pay_amount` double NOT NULL DEFAULT '0',
+	PRIMARY KEY (`position_id`, `grade_id`, `element_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_salary_structure` --
 
 -- Structure of table `0_sales_order_details` --
 

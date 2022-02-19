@@ -17,10 +17,16 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
 
 //--------------------------------------------------------------------------
 
 page(_($help_context = 'Manage Job Positions'));
+
+if(!db_has_job_classes()) {
+	display_error(_('No Job Class found in the system, please define Job Classes first.'));
+	display_footer_exit();
+}
 
 simple_page_mode(false);
 
@@ -37,11 +43,11 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			update_job_position($selected_id, $_POST['position_name'], input_num('basic_amount'), $_POST['pay_basis']);
+			update_job_position($selected_id, $_POST['position_name'], input_num('basic_amount'), $_POST['job_class_id']);
 			display_notification(_('Selected job position has been updated'));
 		}
 		else {
-			add_job_position($_POST['position_name'], input_num('basic_amount'), $_POST['pay_basis']);
+			add_job_position($_POST['position_name'], input_num('basic_amount'), $_POST['job_class_id']);
 			display_notification(_('New job position has been added'));
 		}
 		
@@ -73,7 +79,7 @@ start_form();
 
 start_table(TABLESTYLE, "width='40%'");
 
-$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Pay Basis'), '', '');
+$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), '', '');
 
 inactive_control_column($th);
 table_header($th);
@@ -82,12 +88,12 @@ $result = get_job_positions(check_value('show_inactive'));
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
+	$class_name = get_job_class($myrow['job_class_id'])['class_name'];
 	alt_table_row_color($k);
-
 	label_cell($myrow['position_id']);
 	label_cell($myrow['position_name']);
 	amount_cell($myrow['basic_amount']);
-	label_cell($myrow['pay_basis'] === '0' ? _('Monthly') : _('Daily'));
+	label_cell($class_name);
 	inactive_control_cell($myrow['position_id'], $myrow['inactive'], 'positions', 'position_id');
 	edit_button_cell('Edit'.$myrow['position_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['position_id'], _('Delete'));
@@ -104,7 +110,6 @@ if($selected_id != '') {
 		
 		$myrow = get_job_position($selected_id);
 		$_POST['position_name']  = $myrow['position_name'];
-		$_POST['pay_basis']  = $myrow['pay_basis'];
 		$_POST['basic_amount'] = price_format($myrow['basic_amount']);
 	}
 	hidden('selected_id', $selected_id);
@@ -112,7 +117,7 @@ if($selected_id != '') {
 
 text_row_ex(_('Position Name:'), 'position_name', 50, 60);
 amount_row(_('Salary Basic Amount:'), 'basic_amount', null, null, null, null, true);
-label_row(_('Pay Basis:'), radio(_('Monthly salary'), 'pay_basis', 0, 1).'&nbsp;&nbsp;'.radio(_('Daily wage'), 'pay_basis', 1));
+job_classes_list_row(_('Job Class:'), 'job_class_id');
 
 end_table(1);
 
