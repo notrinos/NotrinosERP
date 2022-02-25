@@ -16,11 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/inventory/includes/db/items_db.inc');
 
-$mode = get_company_pref('no_item_list');
-if ($mode != 0)
-	$js = get_js_set_combo_item();
-else
-	$js = get_js_select_combo_item();
+$js = get_js_select_combo_item();
 
 page(_($help_context = 'Items'), true, false, '', $js);
 
@@ -52,10 +48,7 @@ $result = get_items_search(get_post('description'), @$_GET['type']);
 while ($myrow = db_fetch_assoc($result)) {
 	alt_table_row_color($k);
 
-	if ($mode != 0)
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'setComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['item_code'].'", "'.$myrow['description'].'")');
-	else
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'selectComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['item_code'].'")');
+	ahref_cell(_('Select'), 'javascript:void(0)', '', 'selectComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['item_code'].'")');
 	
 	label_cell($myrow['item_code']);
 	label_cell($myrow['description']);

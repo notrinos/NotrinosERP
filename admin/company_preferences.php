@@ -132,7 +132,7 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	if ($input_error != 1) {
 		update_company_prefs(
 			get_post(
-				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_item_list'=>0, 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets', 'use_hrm')
+				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets', 'use_hrm')
 			)
 		);
 
@@ -161,7 +161,6 @@ $_POST['domicile']  = $myrow['domicile'];
 $_POST['use_dimension']  = $myrow['use_dimension'];
 $_POST['base_sales']  = $myrow['base_sales'];
 $_POST['shortname_name_in_list']  = $myrow['shortname_name_in_list'];
-$_POST['no_item_list']  = 0; // Will be removed from 0.7
 $_POST['no_customer_list']  = $myrow['no_customer_list'];
 $_POST['no_supplier_list']  = $myrow['no_supplier_list'];
 $_POST['curr_default']  = $myrow['curr_default'];
@@ -249,7 +248,6 @@ table_section_title(_('User Interface Options'));
 
 check_row(_('Short Name and Name in List:'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
 check_row(_('Open Print Dialog Direct on Reports:'), 'print_dialog_direct', null);
-check_row('<pre>'._('Search Item List:')."&nbsp;<span class='overduefg'>(This option will be deprecated\nfrom version 0.7. It should be unchecked)</span>".'</pre>', 'no_item_list', null);
 check_row(_('Search Customer List:'), 'no_customer_list', null);
 check_row(_('Search Supplier List:'), 'no_supplier_list', null);
 text_row_ex(_('Login Timeout:'), 'login_tout', 10, 10, '', null, null, _('seconds'));
