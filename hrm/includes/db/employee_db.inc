@@ -73,6 +73,17 @@ function get_employee_by_code($employee_id) {
 	return db_fetch_assoc($result);
 }
 
+function get_employees($department_id=false, $all=false) {
+	$sql = "SELECT * FROM ".TB_PREF."employees WHERE !inactive";
+
+	if(!empty($department_id))
+		$sql .= " AND department_id = ".db_escape($department_id);
+	if(!empty($all))
+		$sql .= " AND inactive = 1";
+
+	return db_query($sql, 'could not get employees data');
+}
+
 function delete_employee($employee_number) {
 	$sql = "DELETE FROM ".TB_PREF."employee WHERE employee_number = ".db_escape($employee_number);
 	db_query($sql, 'Could not delete employee data.');

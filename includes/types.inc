@@ -36,6 +36,9 @@ define('ST_WORKORDER', 26);
 define('ST_MANUISSUE', 28);
 define('ST_MANURECEIVE', 29);
 
+define('ST_PAYSLIP', 80);
+define('ST_EMPPAYMENT', 81);
+
 //
 //	Depreciation period types
 //
@@ -105,6 +108,7 @@ function payment_person_currency($type, $person_id)  {
 		case PT_MISC :
 		case PT_QUICKENTRY :
 		case PT_WORKORDER :
+		case PT_EMPLOYEE:
 			return get_company_currency();
 
 		case PT_CUSTOMER :

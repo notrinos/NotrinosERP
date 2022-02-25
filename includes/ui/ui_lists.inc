@@ -2465,7 +2465,7 @@ function employees_list($name, $selected_id=null, $all_option=false, $submit_on_
 			'spec_id' => '',
 			'search_box' => true,
 			'search' => array("employee_id", "d.department_name", "name"),
-			'search_submit' => get_company_pref('no_item_list') != 0,
+			'search_submit' => false,
 			'size'=>10,
 			'select_submit'=> $submit_on_change,
 			'category' => 2,
@@ -2483,10 +2483,21 @@ function _format_employee_list($row) {
 function employees_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
 	if ($label != null)
 		echo "<td>".$label."</td>\n";
-	// echo "<td>";
+	
 	echo employees_list($name, $selected_id, $all_option, $submit_on_change,
 		array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
-	// echo "</td>";
+}
+
+function employees_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
+
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	
+	echo "<td>";
+	echo employees_list($name, $selected_id, $all_option, $submit_on_change,
+		array_merge(array('cells'=>false, 'search_box'=>false, 'show_inactive'=>$all), $opts), $editkey);
+	echo "</td></tr>\n";
 }
 
 function positions_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
@@ -2520,26 +2531,44 @@ function positions_list_row($label, $name, $selected_id=null, $submit_on_change=
 	echo "</td></tr>\n";
 }
 
-function grades_list_row($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
+function leave_types_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	$sql = "SELECT leave_id, leave_name FROM ".TB_PREF."leave_types";
 
-	$items = array();
-	for ($i = $from; $i <= $to; $i++)
-		$items[$i] = $i;
+	return combo_input($name, $selected_id, $sql, 'leave_id', 'leave_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All leave types') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'leave_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+}
 
-	if(!is_array($adclass))
-		$adclass = array($adclass);
+function leave_types_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	
+	if ($label != null)
+		echo "<td>".$label."</td>\n";
+	echo "<td>";
+	echo leave_types_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td>";
+}
+
+function grades_list_row($label, $name, $selected_id=null, $spec_option=false, $submit_on_change=false) {
+
+	$sql = "SELECT * FROM ".TB_PREF."pay_grades";
 
 	echo "<tr>";
-
-	if($label != null)
+	if(!empty($label))
 		echo "<td class='label'>".$label."</td>\n";
 	echo "<td>";
-	echo array_selector($name, $selected, $items,
-		array(	'spec_option' => $no_option,
-				'select_submit' => $submit_on_change,
-				'spec_id' => 0,
-				'class' => $adclass)
-		);
+	echo combo_input($name, $selected_id, $sql, 'grade_id', 'grade_name',
+		array(
+			'spec_option' => $spec_option === true ? _('Select grade') : $spec_option,
+			'spec_id' => 0,
+			'order' => 'grade_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
 	echo "</td></tr>\n";
 }
 
@@ -2559,7 +2588,28 @@ function job_classes_list_row($label, $name, $selected_id=null, $spec_opt=false,
 			'select_submit'=> $submit_on_change,
 			'async' => false
 		) );
-	echo "</td>";
+	echo "</td></tr>\n";
+}
+
+function weekdays_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
+	$days = array(
+		1=>_('Monday'),
+		2=>_('Tuesday'),
+		3=>_('Wednesday'),
+		4=>_('Thursday'),
+		5=>_('Friday'),
+		6=>_('Saturday'),
+		7=>_('Sunday')
+	);
+
+	echo "<tr><td class='label'>".$label."</td><td>";
+	echo array_selector($name, $selected_id, $days, 
+		array( 
+			'select_submit'=> $submit_on_change,
+			'class' => array('nosearch'),
+			'async' => false )
+		);
+	echo "<td></tr>\n";
 }
 
 function users_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {

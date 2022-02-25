@@ -38,6 +38,21 @@ CREATE TABLE `0_attachments` (
 
 -- Data of table `0_attachments` --
 
+-- Structure of table `0_attendance` --
+
+DROP TABLE IF EXISTS `0_attendance`;
+
+CREATE TABLE IF NOT EXISTS `0_attendance` (
+	`employee_id` varchar(20) NOT NULL,
+	`time_id` int(11) NOT NULL DEFAULT '0',
+	`hours_no` float(5) UNSIGNED NOT NULL,
+	`rate` float(5) NOT NULL DEFAULT '1',
+	`date` date NOT NULL,
+	PRIMARY KEY (`employee_id`,`time_id`,`date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_attendance` --
+
 -- Structure of table `0_audit_trail` --
 
 DROP TABLE IF EXISTS `0_audit_trail`;
@@ -867,6 +882,20 @@ CREATE TABLE `0_journal` (
 
 -- Data of table `0_journal` --
 
+-- Structure of table `0_leave_details` --
+
+DROP TABLE IF EXISTS `0_leave_details`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_details` (
+	`employee_id` int(11) NOT NULL,
+	`leave_id` int(11) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '1',
+	`date` date NOT NULL,
+	PRIMARY KEY (`employee_id`,`leave_id`,`date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_details` --
+
 -- Structure of table `0_leave_types` --
 
 DROP TABLE IF EXISTS `0_leave_types`;
@@ -986,6 +1015,23 @@ INSERT INTO `0_payment_terms` VALUES
 ('3', 'Payment due within 10 days', '10', '0', '0'),
 ('4', 'Cash Only', '0', '0', '0'),
 ('5', 'Prepaid', '-1', '0', '0');
+
+DROP TABLE IF EXISTS `0_payslips`;
+
+CREATE TABLE IF NOT EXISTS `0_payslips` (
+	`payslip_no` int(11) NOT NULL AUTO_INCREMENT,
+	`trans_no` int(11) NOT NULL DEFAULT '0',
+	`reference`  varchar(60) NOT NULL DEFAULT '',
+	`employee_id` int(11) NOT NULL,
+	`tran_date` date NOT NULL,
+	`from_date` date NOT NULL,
+	`to_date` date NOT NULL,
+	`leaves` int(11) NOT NULL,
+	`deductable_leaves` int(11) NOT NULL,
+	`payable_amount` double NOT NULL DEFAULT '0',
+	`salary_amount` double NOT NULL DEFAULT '0',
+	PRIMARY KEY (`payslip_no`)
+) ENGINE=InnoDB;
 
 -- Structure of table `0_positions` --
 
@@ -1240,7 +1286,8 @@ INSERT INTO `0_reflines` VALUES
 ('19', '30', '', '{001}/{YYYY}', '', '1', '0'),
 ('20', '32', '', '{001}/{YYYY}', '', '1', '0'),
 ('21', '35', '', '{001}/{YYYY}', '', '1', '0'),
-('22', '40', '', '{001}/{YYYY}', '', '1', '0');
+('22', '40', '', '{001}/{YYYY}', '', '1', '0'),
+('23', '80', '', '{001}/{YYYY}', '', '1', '0');
 
 -- Structure of table `0_refs` --
 
@@ -1698,7 +1745,6 @@ INSERT INTO `0_sys_prefs` VALUES
 ('use_dimension', 'setup.company', 'tinyint', 1, '1'),
 ('f_year', 'setup.company', 'int', 11, '1'),
 ('shortname_name_in_list','setup.company', 'tinyint', 1, '0'),
-('no_item_list', 'setup.company', 'tinyint', 1, '0'),
 ('no_customer_list', 'setup.company', 'tinyint', 1, '0'),
 ('no_supplier_list', 'setup.company', 'tinyint', 1, '0'),
 ('base_sales', 'setup.company', 'int', 11, '1'),
@@ -1760,8 +1806,13 @@ INSERT INTO `0_sys_prefs` VALUES
 ('dim_on_recurrent_invoice','setup.company', 'tinyint', 1, '0'),
 ('long_description_invoice','setup.company', 'tinyint', 1, '0'),
 ('max_days_in_docs','setup.company', 'smallint', 5, '180'),
-('payroll_max_grade','setup.company', 'smallint', 2, '20'),
-('use_fixed_assets','setup.company', 'tinyint', 1, '1');
+('use_fixed_assets','setup.company', 'tinyint', 1, '1'),
+('default_work_hours', 'setup.company', 'float', 5, '8'),
+('weekend_day', 'setup.company', 'titnyint', 1, '7'),
+('payroll_month_work_days', 'setup.company', 'float', '2', 26),
+('payroll_payable_act', 'glsetup.hrm', 'varchar', 15, 2100),
+('payroll_deductleave_act', 'glsetup.hrm', 'varchar', 15, ''),
+('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420);
 
 -- Structure of table `0_tag_associations` --
 

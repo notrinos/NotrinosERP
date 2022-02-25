@@ -231,7 +231,7 @@ function employee_settings($employee_id, $new_employee) {
 	users_list_row(_('Related user:'), 'user_id', null, false, _('Select user'));
 	departments_list_row(_('Department:'), 'department_id', null, false, _('Select department'));
 	positions_list_row(_('Job Posittion:'), 'position_id', null, false, _('Select job position'));
-	grades_list_row(_('Salary Grade:'), 'grade_id', null, 1, $SysPrefs->prefs['payroll_max_grade'], _('Basic'));
+	grades_list_row(_('Salary Grade:'), 'grade_id', null, _('Basic'));
 	yesno_list_row(_('Use Personal Salary Structure:'), 'personal_salary');
 	date_row(_('Release Date:'), 'released_date', null, null, 0, 0, 1001);
 	record_status_list_row(_('Employee status:'), 'inactive');

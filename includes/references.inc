@@ -52,6 +52,8 @@ $refline_options = array(
 	ST_MANUISSUE => array('date', 'location', 'user'),
 	ST_MANURECEIVE => array('date', 'user'),
 	ST_DIMENSION => array('date','user'),
+
+	ST_PAYSLIP => array('date','user'),
 );
 
 $refline_placeholders = array(

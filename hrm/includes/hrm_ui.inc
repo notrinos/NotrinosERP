@@ -10,3 +10,4 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root.'/hrm/includes/db/payslip_ui.inc');

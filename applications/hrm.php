@@ -14,6 +14,10 @@ class HrmApp extends application {
 		parent::__construct('hrm', _($this->help_context = '&Human Resources'));
 
 		$this->add_module(_('Transactions'));
+		$this->add_lapp_function(0, _('Attenda&nce'), 'hrm/attendance.php?', 'SA_ATTENDANCE', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Pay&slip Entry'), 'hrm/payslip.php?NewPayslip=Yes', 'SA_PAYSLIP', MENU_TRANSACTION);
+
+		$this->add_rapp_function(0, _('&Payment Advice'), 'hrm/employee_bank_entry.php?NewPayment=Yes', 'SA_EMPLOYEEPAYMENT', MENU_TRANSACTION);
 
 		$this->add_module(_('Inquiries and Reports'));
 
@@ -27,7 +31,6 @@ class HrmApp extends application {
 		$this->add_rapp_function(2, _('Job &Positions'), '/hrm/manage/job_positions.php?', 'SA_POSITION', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Manage &Grades'), '/hrm/manage/grades.php?', 'SA_PAYGRADE', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Pay Ele&ments'), '/hrm/manage/pay_elements.php?', 'SA_PAYELEMENT', MENU_SETTINGS);
-		$this->add_rapp_function(2, _('Pay Elements Allo&cation'), '/hrm/manage/overtime.php?', 'SA_PAYELEMENTALLOC', MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Sa&lary Structure'), '/hrm/manage/salary_structure.php?', 'SA_SALARYSTRUCTURE', MENU_SETTINGS);
 
 		$this->add_extensions();

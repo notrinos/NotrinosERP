@@ -41,6 +41,7 @@ $systypes_array = array (
 	ST_DIMENSION => _('Dimension'),
 	ST_CUSTOMER => _('Customer'),
 	ST_SUPPLIER => _('Supplier'),
+	ST_PAYSLIP => _('Employee Payslip')
 );
 
 $fa_systypes_array = array (
@@ -99,7 +100,8 @@ $payment_person_types = array (
 	_('Work Order'),
 	_('Customer'),
 	_('Supplier'),
-	_('Quick Entry')
+	_('Quick Entry'),
+	_('Employee')
 );
 
 //----------------------------------------------------------------------------------

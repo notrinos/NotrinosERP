@@ -63,9 +63,19 @@ function can_process() {
 		set_focus('po_over_charge');
 		return false;
 	}
-	if (!check_num('past_due_days', 0, 100)){
+	if (!check_num('past_due_days', 0, 100)) {
 		display_error(_('The past due days interval allowance must be between 0 and 100.'));
 		set_focus('past_due_days');
+		return false;
+	}
+	if (!check_num('default_work_hours', 0, 24)) {
+		display_error(_('Default work hours must be a number between 0 and 24.'));
+		set_focus('default_work_hours');
+		return false;
+	}
+	if (!check_num('payroll_month_work_days', 0, 31)) {
+		display_error(_('Work days per month must be a number between 0 and 31.'));
+		set_focus('payroll_month_work_days');
 		return false;
 	}
 
@@ -89,11 +99,10 @@ function can_process() {
 //-------------------------------------------------------------------------------------------------
 
 if (isset($_POST['submit']) && can_process()) {
-	update_company_prefs(get_post( array('retained_earnings_act', 'profit_loss_year_act', 'debtors_act', 'pyt_discount_act', 'creditors_act', 'freight_act', 'deferred_income_act', 'exchange_diff_act', 'bank_charge_act', 'default_sales_act', 'default_sales_discount_act', 'default_prompt_payment_act', 'default_inventory_act', 'default_cogs_act', 'depreciation_period', 'default_loss_on_asset_disposal_act', 'default_adj_act', 'default_inv_sales_act', 'default_wip_act', 'legal_text', 'past_due_days', 'default_workorder_required', 'default_dim_required', 'default_receival_required', 'default_delivery_required', 'default_quote_valid_days', 'grn_clearing_act', 'tax_algorithm', 'no_zero_lines_amount', 'show_po_item_codes', 'accounts_alpha', 'loc_notification', 'print_invoice_no', 'allow_negative_prices', 'print_item_images_on_quote', 'allow_negative_stock'=> 0, 'accumulate_shipping'=> 0, 'po_over_receive' => 0.0, 'po_over_charge' => 0.0, 'default_credit_limit'=>0.0)));
+	update_company_prefs(get_post( array('retained_earnings_act', 'profit_loss_year_act', 'debtors_act', 'pyt_discount_act', 'creditors_act', 'freight_act', 'deferred_income_act', 'exchange_diff_act', 'bank_charge_act', 'default_sales_act', 'default_sales_discount_act', 'default_prompt_payment_act', 'default_inventory_act', 'default_cogs_act', 'depreciation_period', 'default_loss_on_asset_disposal_act', 'default_adj_act', 'default_inv_sales_act', 'default_wip_act', 'legal_text', 'past_due_days', 'default_workorder_required', 'default_dim_required', 'default_receival_required', 'default_delivery_required', 'default_quote_valid_days', 'grn_clearing_act', 'tax_algorithm', 'no_zero_lines_amount', 'show_po_item_codes', 'accounts_alpha', 'loc_notification', 'print_invoice_no', 'allow_negative_prices', 'print_item_images_on_quote', 'allow_negative_stock'=> 0, 'accumulate_shipping'=> 0, 'po_over_receive' => 0.0, 'po_over_charge' => 0.0, 'default_credit_limit'=>0.0, 'default_work_hours'=>8, 'weekend_day'=>7, 'payroll_month_work_days'=>26, 'payroll_payable_act', 'payroll_deductleave_act', 'payroll_overtime_act')));
 
 	display_notification(_('The general GL setup has been updated.'));
-
-} /* end of if submit */
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -153,6 +162,13 @@ $_POST['print_item_images_on_quote'] = $myrow['print_item_images_on_quote'];
 $_POST['default_loss_on_asset_disposal_act'] = $myrow['default_loss_on_asset_disposal_act'];
 $_POST['depreciation_period'] = $myrow['depreciation_period'];
 
+$_POST['default_work_hours'] = $myrow['default_work_hours'];
+$_POST['weekend_day'] = $myrow['weekend_day'];
+$_POST['payroll_month_work_days'] = $myrow['payroll_month_work_days'];
+$_POST['payroll_payable_act'] = $myrow['payroll_payable_act'];
+$_POST['payroll_deductleave_act'] = $myrow['payroll_deductleave_act'];
+$_POST['payroll_overtime_act'] = $myrow['payroll_overtime_act'];
+
 
 table_section_title(_('General GL'));
 
@@ -188,13 +204,15 @@ gl_all_accounts_list_row(_('Prompt Payment Discount Account:'), 'default_prompt_
 text_row(_('Quote Valid Days:'), 'default_quote_valid_days', $_POST['default_quote_valid_days'], 6, 6, '', '', _('days'));
 text_row(_('Delivery Required By:'), 'default_delivery_required', $_POST['default_delivery_required'], 6, 6, '', '', _('days'));
 
-table_section(2);
-
 table_section_title(_('Suppliers and Purchasing'));
 
 percent_row(_('Delivery Over-Receive Allowance:'), 'po_over_receive');
 percent_row(_('Invoice Over-Charge Allowance:'), 'po_over_charge');
+
+table_section(2);
+
 table_section_title(_('Suppliers and Purchasing Defaults'));
+
 gl_all_accounts_list_row(_('Payable Account:'), 'creditors_act', $_POST['creditors_act']);
 gl_all_accounts_list_row(_('Purchase Discount Account:'), 'pyt_discount_act', $_POST['pyt_discount_act']);
 gl_all_accounts_list_row(_('GRN Clearing Account:'), 'grn_clearing_act', get_post('grn_clearing_act'), true, false, _('No postings on GRN'));
@@ -225,6 +243,14 @@ array_selector_row (_('Depreciation Period:'), 'depreciation_period', $_POST['de
 table_section_title(_('Manufacturing Defaults'));
 
 text_row(_('Work Order Required By After:'), 'default_workorder_required', $_POST['default_workorder_required'], 6, 6, '', '', _('days'));
+
+table_section_title(_('Payroll & Human Resources'));
+text_row(_('Default Work Hours:'), 'default_work_hours', $_POST['default_work_hours'], 6, 6, '', '', _('hrs'));
+weekdays_list_row(_('Weekend:'), 'weekend_day', $_POST['weekend_day']);
+text_row(_('Work days per month:'), 'payroll_month_work_days', $_POST['payroll_month_work_days'], 6, 6, '', '', _('days'));
+gl_all_accounts_list_row(_('Payroll Payable Account:'), 'payroll_payable_act', $_POST['payroll_payable_act'], true);
+gl_all_accounts_list_row(_('Deductible Account:'), 'payroll_deductleave_act', $_POST['payroll_deductleave_act'], true, false, _('Use Salary Basic Account'));
+gl_all_accounts_list_row(_('Overtime account:'), 'payroll_overtime_act', $_POST['payroll_overtime_act'], true, false, _('Use Salary Basic Account'));
 
 end_outer_table(1);
 

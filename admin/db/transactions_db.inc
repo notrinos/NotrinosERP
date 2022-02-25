@@ -192,6 +192,7 @@ function get_systype_db_info($type) {
 
 		case    ST_CUSTOMER    : return array(TB_PREF."debtors_master", null, "debtor_no", "debtor_ref", null);
 		case    ST_SUPPLIER    : return array(TB_PREF."suppliers", null, "supplier_id", "supp_ref", null);
+		case    ST_PAYSLIP    : return array(TB_PREF."payslips", null, "trans_no", "reference", "tran_date");
 	}
 
 	display_db_error("invalid type ($type) sent to get_systype_db_info", '', true);
