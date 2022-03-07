@@ -11,6 +11,7 @@
 ***********************************************************************/
 define('VARLIB_PATH', $path_to_root.'/tmp');
 define('VARLOG_PATH', $path_to_root.'/tmp');
+define('SECURE_ONLY', null);
 
 class SessionManager {
 	function sessionStart($name, $limit=0, $path='/', $domain=null, $secure=null) {
@@ -358,7 +359,7 @@ foreach ($installed_extensions as $ext) {
 ini_set('session.gc_maxlifetime', 36000); // moved from below.
 
 $Session_manager = new SessionManager();
-$Session_manager->sessionStart('Notrinos'.md5(dirname(__FILE__)));
+$Session_manager->sessionStart('Notrinos'.md5(dirname(__FILE__)), 0, '/', null, SECURE_ONLY);
 
 $_SESSION['SysPrefs'] = new sys_prefs();
 
