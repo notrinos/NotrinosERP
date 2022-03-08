@@ -4,8 +4,8 @@
 NotrinosERP is an open source, web-based enterprise management system that written in PHP and MySql. NotrinosERP contains all the required modules for running any small to medium size businesses. It supports multi users, multi currencies, multi languages
 ## [DEMO](http://demo.notrinos.com/erp)
 
-![ScreenShot](https://a.fsdn.com/con/app/proj/notrinos-erp/screenshots/Untitled.png)
-![ScreenShot](https://a.fsdn.com/con/app/proj/notrinos-erp/screenshots/gl_dashboard.png)
+![ScreenShot](https://notrinos.com/misc/notrinoserp_customer.png)
+![ScreenShot](https://notrinos.com/misc/notrinoserp_dashboard.png)
 
 ## Requirements
 - HTTP web server - Ex. Apache, Nginx, IIS
