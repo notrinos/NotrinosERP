@@ -18,7 +18,6 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/sales/includes/sales_db.inc');
-//include_once($path_to_root . '/purchasing/includes/ui/supp_alloc_ui.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -35,10 +34,7 @@ function clear_allocations() {
 		unset($_SESSION['alloc']->allocs);
 		unset($_SESSION['alloc']);
 	}
-	//session_register('alloc');
 }
-
-//--------------------------------------------------------------------------------
 
 function edit_allocations_for_transaction($type, $trans_no) {
 	global $systypes_array;
@@ -51,12 +47,12 @@ function edit_allocations_for_transaction($type, $trans_no) {
 
 	display_heading($cart->person_name);
 
-	display_heading2(_('Date:') . ' <b>' . $cart->date_ . '</b>');
+	display_heading2(_('Date:').' <b>'.$cart->date_.'</b>');
 
-	display_heading2(_('Total:'). ' <b>' . price_format(-$cart->bank_amount).' '.$cart->currency.'</b>');
+	display_heading2(_('Total:').' <b>'.price_format(-$cart->bank_amount).' '.$cart->currency.'</b>');
 
 	if (floatcmp($cart->bank_amount, $cart->amount)) {
-		$total = _('Amount ot be settled:').' <b>'.price_format(-$cart->amount).' '.$cart->person_curr.'</b>';
+		$total = _('Amount to be settled:').' <b>'.price_format(-$cart->amount).' '.$cart->person_curr.'</b>';
 		if ($cart->currency != $cart->person_curr)
 			$total .= sprintf(' (%s %s/%s)',  exrate_format($cart->bank_amount/$cart->amount), $cart->currency, $cart->person_curr);
 		display_heading2($total);
@@ -90,14 +86,10 @@ if (isset($_POST['Process'])) {
 	}
 }
 
-//--------------------------------------------------------------------------------
-
 if (isset($_POST['Cancel'])) {
 	clear_allocations();
 	meta_forward($path_to_root.'/purchasing/allocations/supplier_allocation_main.php');
 }
-
-//--------------------------------------------------------------------------------
 
 if (isset($_GET['trans_no']) && isset($_GET['trans_type']))
 	$_SESSION['alloc'] = new allocation($_GET['trans_type'], $_GET['trans_no'], @$_GET['supplier_id'], PT_SUPPLIER);
