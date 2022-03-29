@@ -29,7 +29,7 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account, $currency,
 		$rate = get_exchange_rate_from_home_currency($row['bank_curr_code'], $date_);
 		$for_amount += round2($row['for_amount'] * $rate, user_price_dec());
 	}	
-	$amount = get_gl_trans_from_to("", $date_, $account);
+	$amount = get_gl_trans_from_to('', $date_, $account);
 	$diff = $amount - $for_amount;
 	if (floatcmp($diff,0)) {
 		// generate journal entry // FIXME: use cart?
@@ -45,7 +45,7 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account, $currency,
 
 		if ($person_type_id == null)
 			$person_type_id = PT_MISC;
-		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _("Exchange Variance"), -$diff, null, $person_type_id, $person_id);
+		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _('Exchange Variance'), -$diff, null, $person_type_id, $person_id);
 		add_gl_trans(ST_JOURNAL, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _('Exchange Variance'), $diff, null, $person_type_id, $person_id);
 
 		if ($memo)
@@ -74,7 +74,7 @@ function add_cust_supp_revaluation($ledger_act, $ex_act, $date, $amount, $person
 	add_audit_trail(ST_JOURNAL, $trans_no, $date);
 
 	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ledger_act, 0, 0, _('Exchange Variance'), $amount, null, $person_type_id, $person_id);
-	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, _('Exchange Variance'),	-$amount, null, $person_type_id, $person_id);
+	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, _('Exchange Variance'), -$amount, null, $person_type_id, $person_id);
 	add_comments(ST_JOURNAL, $trans_no, $date, $memo);
 	commit_transaction();
 }
@@ -121,11 +121,9 @@ function get_account_home_balance($person_id, $person_type, $rec_account, $to_da
 	return $row[0];
 }
 
-//
-//	Calculate and post currency accounts revaluation including foreign AP/AR
-//	Note: in 2.4.9 sparse 'ref' argument was removed (generated transactions use
-//	next references from default refline).
-//
+/*
+*	Calculate and post currency accounts revaluation including foreign AP/AR
+*/
 function add_exchange_variation_all($date, $memo) {
 	begin_transaction();
 	$exchanged = false;
@@ -176,12 +174,12 @@ function add_exchange_variation_all($date, $memo) {
 	return array($b_num, $je);
 }
 
-function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $charge=0, $target_amount=0) {
+function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $dim1, $dim2, $charge=0, $target_amount=0) {
 	global $Refs, $SysPrefs;
 
 	begin_transaction();
 	$args = func_get_args(); if (count($args) < 8) $args[] = 0;
-	$args = (object)array_combine(array('from_account', 'to_account', 'date_', 'amount', 'ref', 'memo_', 'charge', 'target_amount'), $args);
+	$args = (object)array_combine(array('from_account', 'to_account', 'date_', 'amount', 'ref', 'memo_', 'dimension_id', 'dimension2_id', 'charge', 'target_amount'), $args);
 	$args->trans_no = 0;
 	hook_db_prewrite($args, ST_BANKTRANSFER);
 
@@ -200,7 +198,7 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	
 	$total = 0;
 	// do the source account postings
-	$total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, 0, 0, $person_id,
+	$total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, $dim1, $dim2, $person_id,
 		-($amount + $charge), $currency);
 
 	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -($amount + $charge), PT_MISC, $person_id, $currency, 'Cannot insert a source bank transaction');
@@ -211,7 +209,7 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	if ($charge != 0) {
 		/* Now Debit bank charge account with charges */
 		$charge_act = get_bank_charge_account($from_account);
-		$total += add_gl_trans($trans_type, $trans_no, $date_, $charge_act, 0, 0, $person_id, $charge, $currency);
+		$total += add_gl_trans($trans_type, $trans_no, $date_, $charge_act, $dim1, $dim2, $person_id, $charge, $currency);
 	}
 
 	// provide backward compatibility for extension modules (target amount can be not passed)
@@ -219,13 +217,13 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	$to_amount = $target_amount ? $target_amount : $amount;
 
 	// do the destination account postings
-	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, 0, 0, $person_id, $to_amount, $to_currency);
+	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, $dim1, $dim2, $person_id, $to_amount, $to_currency);
 		
 	// Post a balance post if $total != 0
 	if ($currency == $to_currency)
 		add_gl_balance($trans_type, $trans_no, $date_, -$total);
 	else	// in this case those are exchange variances between bank and home rates
-		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _("Exchange Variance"), -$total);
+		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), $dim1, $dim2, _('Exchange Variance'), -$total);
 	
 	add_bank_trans($trans_type, $trans_no, $to_account, $ref, $date_, $to_amount, PT_MISC, $person_id, $to_currency, 'Cannot insert a destination bank transaction');
 
@@ -261,8 +259,8 @@ function check_bank_transfer($trans_no, $from_account, $to_account, $date_, $amo
 	//    negative balance in the account at some time and therefore needs to be checked.
 	$problemTransaction = check_bank_account_history(-$old_to['amount'], $old_to['bank_act'], sql2date($old_from['trans_date']));
 	if ($problemTransaction) {
-		// If the destination account is the same as that being edited, it may be that this edit will resolve the
-		// problem of voiding.
+		// If the destination account is the same as that being edited, 
+		// it may be that this edit will resolve the problem of voiding.
 		if ($to_account == $old_to['bank_act'] && sql_date_comp($problemTransaction['trans_date'], date2sql($date_)) > 0) {
 			$problemTransaction['amount'] += $amount;
 			if ($problemTransaction['amount'] >= 0)
@@ -295,27 +293,27 @@ function check_bank_transfer($trans_no, $from_account, $to_account, $date_, $amo
 	return $problemTransaction;
 }
 
-function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $amount, $ref, $memo_, $charge=0, $target_amount=0) {
+function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $amount, $ref, $memo_, $dim1, $dim2, $charge=0, $target_amount=0) {
 	begin_transaction();
 	delete_comments(ST_BANKTRANSFER, $trans_no);
 	void_transaction(ST_BANKTRANSFER, $trans_no, $date_, _("Document reentered."));
 	void_gl_trans(ST_BANKTRANSFER, $trans_no, true);
-	$new_trans_no = add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $charge, $target_amount);
+	$new_trans_no = add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $dim1, $dim2, $charge, $target_amount);
 	commit_transaction();
 	return $new_trans_no;
 }
 
-//
-//	Add bank payment or deposit to database.
-//	$from_account - bank account id
-//  $items - transaction cart (line amounts in bank account's currency); negative for deposit
-//  $person_type_id - defines type of $person_id identifiers
-//  $person_id	- supplier/customer/other id
-//  $person_detail_id - customer branch id or not used
-//  $settled_amount - settled amount in AR/AP (if applicable) in customer/supplier currency (always non-negative number)
-//	returns an array of (inserted trans type, trans no)
-//	FIXME -revise code for update case
-//
+/*
+*	Add bank payment or deposit to database.
+*	$from_account - bank account id
+*  	$items - transaction cart (line amounts in bank account's currency); negative for deposit
+*  	$person_type_id - defines type of $person_id identifiers
+*  	$person_id	- supplier/customer/other id
+*  	$person_detail_id - customer branch id or not used
+*  	$settled_amount - settled amount in AR/AP (if applicable) in customer/supplier currency (always non-negative number)
+*	returns an array of (inserted trans type, trans no)
+*	FIXME -revise code for update case
+*/
 function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $date_, $person_type_id, $person_id, $person_detail_id,	$ref, $memo_, $use_transaction=true, $settled_amount=null) {
 	global $Refs, $SysPrefs;
 
@@ -358,8 +356,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 		if ($trans_type == ST_BANKPAYMENT)
 			$cust_amount = -$cust_amount;
 
-		$trans_no = write_customer_trans($trans_type, 0, $person_id, $person_detail_id, $date_,
-			$ref, $cust_amount);
+		$trans_no = write_customer_trans($trans_type, 0, $person_id, $person_detail_id, $date_, $ref, $cust_amount);
 		if ($old_trans)
 			move_trans_attachments($trans_type, $old_trans, $trans_no);
 	}
@@ -375,7 +372,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 			$supp_amount = -$supp_amount;
 
 		$trans_no = write_supp_trans($trans_type, 0, $person_id, $date_, '',
-			$ref, "", $supp_amount, 0, 0);
+			$ref, '', $supp_amount, 0, 0);
 		if ($old_trans)
 			move_trans_attachments($trans_type, $old_trans, $trans_no);
 	}
