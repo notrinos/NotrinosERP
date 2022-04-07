@@ -83,7 +83,7 @@ function gl_payment_controls($trans_no) {
 			$_POST['dimension2_id'] = $to_trans['dimension2_id'];
 		}
 		else {
-			$_POST['ref'] = $Refs->get_next(ST_BANKTRANSFER, null, get_post('DatePaid'));
+			// $_POST['ref'] = $Refs->get_next(ST_BANKTRANSFER, null, get_post('DatePaid'));
 			$_POST['memo_'] = '';
 			$_POST['FromBankAccount'] = 0;
 			$_POST['ToBankAccount'] = 0;
@@ -135,7 +135,7 @@ function gl_payment_controls($trans_no) {
 	else
 		hidden('dimension2_id', 0);
 
-	textarea_row(_('Memo:'), 'memo_', null, 40,4);
+	textarea_row(_('Memo:'), 'memo_', null, 35, 5);
 
 	end_outer_table(1); // outer table
 
@@ -177,8 +177,8 @@ function check_valid_entries($trans_no) {
 
 	$limit = get_bank_account_limit($_POST['FromBankAccount'], $_POST['DatePaid']);
 	$amnt_tr = input_num('charge') + input_num('amount');
-
 	$problemTransaction = null;
+
 	if ($trans_no)
 		$problemTransaction = check_bank_transfer( $trans_no, $_POST['FromBankAccount'], $_POST['ToBankAccount'], $_POST['DatePaid'], $amnt_tr, input_num('target_amount', $amnt_tr));
 
@@ -256,6 +256,7 @@ function bank_transfer_handle_submit() {
 //----------------------------------------------------------------------------------------
 
 $trans_no = '';
+
 if (!$trans_no && isset($_POST['_trans_no']))
 	$trans_no = $_POST['_trans_no'];
 if (!$trans_no && isset($_GET['trans_no']))
