@@ -10,13 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_SALESBULKREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Order Status List
-// ----------------------------------------------------------------
-$path_to_root='..';
+$path_to_root = '..';
 
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
