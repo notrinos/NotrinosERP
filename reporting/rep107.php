@@ -12,12 +12,13 @@
 $page_security = $_POST['PARAM_0'] == $_POST['PARAM_1'] ? 'SA_SALESTRANSVIEW' : 'SA_SALESBULKREP';
 $path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
 
 //----------------------------------------------------------------------------------------------------
+
 function get_invoice_range($from, $to, $currency=false) {
 	global $SysPrefs;
 
@@ -289,7 +290,7 @@ function print_invoices() {
 		}
 		$rep->Font();
 		if ($email == 1)
-			$rep->End($email, sprintf(_("Invoice %d from %s"), $myrow['reference'], get_company_pref('coy_name')));
+			$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], get_company_pref('coy_name')));
 	}
 	if ($email == 0)
 		$rep->End();
