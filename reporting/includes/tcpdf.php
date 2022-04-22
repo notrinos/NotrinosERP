@@ -1124,7 +1124,7 @@ if (!class_exists('TCPDF')) {
 		 * @param String $encoding charset encoding; default is UTF-8
 		 */
 		function __construct($orientation='P', $unit='mm', $format='A4', $uni=true, $encoding="UTF-8") {
-			if ($uni) // Fix for FrontAccounting
+			if ($uni) // Fix for NotrinosERP
 			{
 				global $unicode, $unicode_mirror, $unicode_arlet, $laa_array, $diacritics;
 				include_once(dirname(__FILE__)."/unicode_data2.php");
@@ -6206,7 +6206,7 @@ if (!class_exists('TCPDF')) {
 			//Set line width
 			$this->LineWidth = $width;
 			//$this->linestyleWidth = sprintf('%.2f w', ($width * $this->k));
-			// FrontAccounting fix
+			// NotrinosERP fix
 			// My PHP 5.2.6 environment gave an "Unsupported operand types"
 			// error for the multiplication on the next line some of the
 			// time when this method is called - I debugged and sometimes
