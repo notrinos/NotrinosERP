@@ -33,11 +33,23 @@ function display_payslip_header($Order) {
 	start_outer_table(TABLESTYLE2);
 	table_section(1);
 
-	employees_list_row(_('Employee:'), 'employee_id', null, false, true, false, true);
+	if($new) {
+		if (!isset($_POST['employee_id']) && (get_global_employee() != ALL_TEXT))
+			$_POST['employee_id'] = get_global_employee();
+		employees_list_row(_('Employee:'), 'employee_id', null, false, true, false, true);
+	}
+	else {
+		hidden('employee_id', $order->employee_id);
+		label_row(_('Employee:'), $order->employee_name);
+	}
+	
 	label_row(_('Gross Salary:'), '');
 
-	if($Order->employee_id != get_post('employee_id', -1) || list_updated('employee_id'))
+	if($Order->employee_id != get_post('employee_id', -1) || list_updated('employee_id')) {
 		$emp_error = get_employee_details_to_payslip($Order, get_post('employee_id'));
+		$Ajax->activate('_page_body');
+	}
+	set_global_employee(get_post('employee_id'));
 
 	table_section(2);
 

@@ -300,6 +300,6 @@ start_table();
 textarea_row(_('Comments:'), 'Comments', null, 50, 5);
 end_table();
 
-var_dump($_SESSION['hrm_items']);
+// var_dump($_SESSION['hrm_items']);
 end_form();
 end_page();

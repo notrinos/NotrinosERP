@@ -15,7 +15,7 @@ class hrm_cart {
 	public $line_items;
 	public $Comments;
 	public $employee_id;
-	public $empployee_name;
+	public $employee_name;
 	public $tran_date;
 	public $trans_no;
 	public $cash_account;
@@ -26,7 +26,7 @@ class hrm_cart {
 		$this->line_items = array();
 		$this->trans_type = $type;
 		$this->trans_no = $trans_no;
-		$this->employee_id = 0;
+		// $this->employee_id = 0;
 	}
 
 	function add_gl_item($code_id, $dimension_id, $dimension2_id, $amount, $memo='', $act_descr=null, $person_id=null, $date=null) {
