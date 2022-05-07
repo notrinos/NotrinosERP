@@ -31,9 +31,9 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error(_('Duplicate Class ID found.'));
 		set_focus('fa_class_id');
 	}
-	if(!is_numeric($_POST['depreciation_rate'])) {
+	if(!is_numeric($_POST['depreciation_rate']) || input_num('depreciation_rate') > 100) {
 		$input_error = 1;
-		display_error(_('Depreciation Rate must be a number'));
+		display_error(_('The depreciation rate must be a number and cannot be greater than 100%'));
 		set_focus('depreciation_rate');
 	}
 
@@ -111,7 +111,7 @@ if ($selected_id != -1) {
 		$_POST['parent_id'] = $myrow['parent_id'];
 		$_POST['description']  = $myrow['description'];
 		$_POST['long_description']  = $myrow['long_description'];
-		$_POST['depreciation_rate'] = $myrow['depreciation_rate'];
+		$_POST['depreciation_rate'] = percent_format($myrow['depreciation_rate']);
 	}
 	hidden('selected_id', $selected_id);
 	hidden('fa_class_id');
