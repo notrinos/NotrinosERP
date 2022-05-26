@@ -50,7 +50,7 @@ function add_sales_order(&$order) {
 	$order->trans_no = array($order_no=>0);
 
 	if ($SysPrefs->loc_notification() == 1) {
-		include_once($path_to_root . '/inventory/includes/inventory_db.inc');
+		include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 		$st_ids = array();
 		$st_names = array();
 		$st_num = array();
@@ -113,13 +113,9 @@ function update_sales_order_version($order) {
 	}
 }
 
-//----------------------------------------------------------------------------------------
-
 function update_sales_order($order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
-	$del_date = date2sql($order->due_date);
-	$ord_date = date2sql($order->document_date);
 	$order_no =  key($order->trans_no);
 	$version= current($order->trans_no);
 	$total = $order->get_trans_total();
@@ -138,7 +134,7 @@ function update_sales_order($order) {
 		customer_ref = ". db_escape($order->cust_ref) .",
 		reference = ". db_escape($order->reference) .",
 		comments = ". db_escape($order->Comments) .",
-		ord_date = " . db_escape($ord_date) . ",
+		ord_date = '" . date2sql($order->document_date) . "',
 		order_type = " .db_escape($order->sales_type) . ",
 		ship_via = " . db_escape($order->ship_via) .",
 		deliver_to = " . db_escape($order->deliver_to) . ",
@@ -146,7 +142,7 @@ function update_sales_order($order) {
 		contact_phone = " .db_escape($order->phone) . ",
 		freight_cost = " .db_escape($order->freight_cost) .",
 		from_stk_loc = " .db_escape($order->Location) .",
-		delivery_date = " .db_escape($del_date). ",
+		delivery_date = '" .date2sql($order->due_date). "',
 		version = ".($version+1).",
 		payment_terms = " .db_escape($order->payment). ",
 		total = ". db_escape($total). ",
@@ -206,7 +202,7 @@ function update_sales_order($order) {
 	}
 
 	if ($order->trans_type == ST_SALESORDER)
-		reallocate_payments($order_no, ST_SALESORDER, $ord_date, $total, $allocs, $order->customer_id);
+		reallocate_payments($order_no, ST_SALESORDER, $order->document_date, $total, $allocs, $order->customer_id);
 	add_audit_trail($order->trans_type, $order_no, $order->document_date, _('Updated.'));
 	$Refs->save($order->trans_type, $order_no, $order->reference, null, $order->fixed_asset);
 
@@ -272,6 +268,7 @@ function get_sales_order_details($order_no, $trans_type) {
 				line.quantity,
 				discount_percent,
 				qty_sent as qty_done,
+				item.long_description,
 				item.units,
 				item.mb_flag,
 				item.material_cost
@@ -357,8 +354,6 @@ function close_sales_order($order_no) {
 	db_query($sql, 'The sales order detail record could not be updated');
 }
 
-//---------------------------------------------------------------------------------------------------------------
-
 function get_invoice_duedate($terms, $invdate) {
 	if (!is_date($invdate))
 		return new_doc_date();
@@ -430,12 +425,12 @@ function get_branch_to_order($customer_id, $branch_id) {
 }
 
 /*
-	Supported filters:
-
-	InvoiceTemplates
-	DeliveryTemplates
-	OutstandingOnly
-	PrepaidOrders
+*	Supported filters:
+*
+*	InvoiceTemplates
+*	DeliveryTemplates
+*	OutstandingOnly
+*	PrepaidOrders
 */
 function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT) {
 	if ($filter=='OutstandingOnly')
@@ -603,5 +598,6 @@ function last_sales_order_detail($order, $field) {
 
 	$last_query=db_query($sql, 'Could not retrieve last order detail');
 	$row = db_fetch_row($last_query);
+
 	return $row == false ? false : $row[0];
 }

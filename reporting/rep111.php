@@ -10,13 +10,13 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = $_POST['PARAM_0'] == $_POST['PARAM_1'] ? 'SA_SALESTRANSVIEW' : 'SA_SALESBULKREP';
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/taxes/tax_calc.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/taxes/tax_calc.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ print_sales_quotations();
 function print_sales_quotations() {
 	global $path_to_root, $SysPrefs;
 
-	include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+	include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
@@ -34,7 +34,8 @@ function print_sales_quotations() {
 	$comments = $_POST['PARAM_4'];
 	$orientation = $_POST['PARAM_5'];
 
-	if (!$from || !$to) return;
+	if (!$from || !$to)
+		return;
 
 	$orientation = ($orientation ? 'L' : 'P');
 	$dec = user_price_dec();
@@ -68,9 +69,9 @@ function print_sales_quotations() {
 		if ($email == 1) {
 			$rep = new FrontReport('', '', user_pagesize(), 9, $orientation);
 			if ($SysPrefs->print_invoice_no() == 1)
-				$rep->filename = 'SalesQuotation' . $i . '.pdf';
+				$rep->filename = 'SalesQuotation'.$i.'.pdf';
 			else	
-				$rep->filename = 'SalesQuotation' . $myrow['reference'] . '.pdf';
+				$rep->filename = 'SalesQuotation'.$myrow['reference'].'.pdf';
 		}
 		$rep->currency = $cur;
 		$rep->Font();
@@ -85,8 +86,7 @@ function print_sales_quotations() {
 		$SubTotal = 0;
 		$items = $prices = array();
 		while ($myrow2=db_fetch($result)) {
-			$Net = round2(((1 - $myrow2['discount_percent']) * $myrow2['unit_price'] * $myrow2['quantity']),
-			   user_price_dec());
+			$Net = round2(((1 - $myrow2['discount_percent']) * $myrow2['unit_price'] * $myrow2['quantity']), user_price_dec());
 			$prices[] = $Net;
 			$items[] = $myrow2['stk_code'];
 			$SubTotal += $Net;
@@ -96,10 +96,12 @@ function print_sales_quotations() {
 			if ($myrow2['discount_percent']==0)
 				$DisplayDiscount ='';
 			else
-				$DisplayDiscount = number_format2($myrow2['discount_percent']*100,user_percent_dec()) . '%';
+				$DisplayDiscount = number_format2($myrow2['discount_percent']*100,user_percent_dec()).'%';
 			$rep->TextCol(0, 1,	$myrow2['stk_code'], -2);
 			$oldrow = $rep->row;
 			$rep->TextColLines(1, 2, $myrow2['description'], -2);
+			if (!empty($SysPrefs->prefs['long_description_invoice']) && !empty($myrow2['long_description']))
+				$rep->TextColLines(1, 2, $myrow2['long_description'], -2);
 			$newrow = $rep->row;
 			$rep->row = $oldrow;
 			if ($Net != 0.0 || !is_service($myrow2['mb_flag']) || !$SysPrefs->no_zero_lines_amount()) {
@@ -112,7 +114,7 @@ function print_sales_quotations() {
 			$rep->row = $newrow;
 			
 			if ($pictures) {
-				$image = company_path(). '/images/' . item_img_name($myrow2['stk_code']) . '.jpg';
+				$image = company_path().'/images/'.item_img_name($myrow2['stk_code']).'.jpg';
 				if (file_exists($image)) {
 					if ($rep->row - $SysPrefs->pic_height < $rep->bottomMargin)
 						$rep->NewPage();
@@ -149,8 +151,7 @@ function print_sales_quotations() {
 			$rep->NewLine();
 		}
 
-		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'],
-		  $myrow['tax_group_id'], $myrow['tax_included'],  null);
+		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'], $myrow['tax_group_id'], $myrow['tax_included'],  null);
 		$first = true;
 		foreach($tax_items as $tax_item) {
 			if ($tax_item['Value'] == 0)
@@ -171,7 +172,7 @@ function print_sales_quotations() {
 					$first = false;
 				}
 				else
-					$rep->TextCol(3, 7, _('Included') . ' ' . $tax_type_name . ' ' . _('Amount') . ': ' . $DisplayTax, -2);
+					$rep->TextCol(3, 7, _('Included').' '.$tax_type_name.' '._('Amount').': '.$DisplayTax, -2);
 			}
 			else {
 				$SubTotal += $tax_item['Value'];
@@ -190,7 +191,7 @@ function print_sales_quotations() {
 		$words = price_in_words($myrow['freight_cost'] + $SubTotal, ST_SALESQUOTE);
 		if ($words != '') {
 			$rep->NewLine(1);
-			$rep->TextCol(1, 7, $myrow['curr_code'] . ': ' . $words, - 2);
+			$rep->TextCol(1, 7, $myrow['curr_code'].': '.$words, - 2);
 		}	
 		$rep->Font();
 		if ($email == 1) {
