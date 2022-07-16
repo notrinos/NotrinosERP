@@ -10,14 +10,14 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSANALYTIC';
-$path_to_root='..';
+$path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
-include_once($path_to_root . '/includes/db/manufacturing_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/includes/db/manufacturing_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -83,9 +83,9 @@ function print_inventory_planning() {
 	$orientation = $_POST['PARAM_3'];
 	$destination = $_POST['PARAM_4'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($category == ALL_NUMERIC)
@@ -104,17 +104,15 @@ function print_inventory_planning() {
 
 	$cols = array(0, 50, 150, 180, 210, 240, 270, 300, 330, 390, 435, 480, 525);
 
-	$per0 = strftime('%b',mktime(0,0,0,date('m'),1,date('Y')));
-	$per1 = strftime('%b',mktime(0,0,0,date('m')-1,1,date('Y')));
-	$per2 = strftime('%b',mktime(0,0,0,date('m')-2,1,date('Y')));
-	$per3 = strftime('%b',mktime(0,0,0,date('m')-3,1,date('Y')));
-	$per4 = strftime('%b',mktime(0,0,0,date('m')-4,1,date('Y')));
+	$per0 = date('M',mktime(0,0,0,date('m'),1,date('Y')));
+	$per1 = date('M',mktime(0,0,0,date('m')-1,1,date('Y')));
+	$per2 = date('M',mktime(0,0,0,date('m')-2,1,date('Y')));
+	$per3 = date('M',mktime(0,0,0,date('m')-3,1,date('Y')));
+	$per4 = date('M',mktime(0,0,0,date('m')-4,1,date('Y')));
 
-	$headers = array(_('Category'), '', $per4, $per3, $per2, $per1, $per0, '3*M',
-		_('QOH'), _('Cust Ord'), _('Supp Ord'), _('Sugg Ord'));
+	$headers = array(_('Category'), '', $per4, $per3, $per2, $per1, $per0, '3*M', _('QOH'), _('Cust Ord'), _('Supp Ord'), _('Sugg Ord'));
 
-	$aligns = array('left',	'left',	'right', 'right', 'right', 'right', 'right', 'right',
-		'right', 'right', 'right', 'right');
+	$aligns = array('left',	'left',	'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right');
 
 	$params =   array( 	0 => $comments,
 						1 => array('text' => _('Category'), 'from' => $cat, 'to' => ''),
