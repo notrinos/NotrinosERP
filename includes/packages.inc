@@ -697,9 +697,13 @@ function install_extension($pkg_name) {
 	Returns true if newer package version is available
 */
 function check_pkg_upgrade($current, $available) {
+	if ($available == NULL)
+		return false;
 	preg_match_all('/[\d]+/', $available, $aver);
 	if (!count($aver[0]))
 		return false;
+	if ($current == NULL)
+		return true;
 	preg_match_all('/[\d]+/', $current, $cver);
 	if (!count($cver[0]))
 		return true;
