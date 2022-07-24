@@ -333,7 +333,7 @@ function sales_order_has_deliveries($order_no) {
 	$sql = "SELECT order_ FROM ".TB_PREF."debtor_trans WHERE type=".ST_CUSTDELIVERY." AND order_=".db_escape($order_no);
 	$result = db_query($sql, 'The related delivery notes could not be retreived');
 
-	return (db_num_rows($result) > 0);	
+	return (db_num_rows($result) > 0);
 }
 
 function close_sales_order($order_no) {
@@ -450,7 +450,8 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 			allocs.ord_payments,
 			inv.inv_payments,
 			sorder.total,
-			sorder.trans_type
+			sorder.trans_type,
+			sorder.debtor_no
 		FROM ".TB_PREF."sales_orders as sorder
 		LEFT JOIN (SELECT trans_no_to, sum(amt) ord_payments FROM ".TB_PREF."cust_allocations WHERE trans_type_to=".ST_SALESORDER." GROUP BY trans_no_to)
 			 allocs ON sorder.trans_type=".ST_SALESORDER." AND allocs.trans_no_to=sorder.order_no
@@ -509,7 +510,7 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 
 	//Chaiatanya : New Filter
 	if ($customer_id != ALL_TEXT)
-		$sql .= " AND sorder.debtor_no = ".db_escape($customer_id);		
+		$sql .= " AND sorder.debtor_no = ".db_escape($customer_id);
 
 	$sql .= " GROUP BY sorder.order_no,
 		sorder.debtor_no,
@@ -590,7 +591,7 @@ function last_sales_order_detail($order, $field) {
 		(SELECT order_no FROM ".TB_PREF."sales_orders o
 		WHERE debtor_no=" . db_escape($order->customer_id) . "
 		ORDER BY order_no DESC LIMIT 1)
-		ORDER BY d.id DESC LIMIT 1";        
+		ORDER BY d.id DESC LIMIT 1";
 
 	$last_query = db_query($sql, 'Could not retrieve last order detail');
 	$row = db_fetch_row($last_query);
