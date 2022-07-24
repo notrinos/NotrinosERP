@@ -11,10 +11,10 @@
 ***********************************************************************/
 $path_to_root = '../..';
 
-include_once($path_to_root . '/includes/db_pager.inc');
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/sales/includes/sales_ui.inc');
-include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root.'/includes/db_pager.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/sales/includes/sales_ui.inc');
+include_once($path_to_root.'/reporting/includes/reporting.inc');
 
 $page_security = 'SA_SALESTRANSVIEW';
 
@@ -64,15 +64,16 @@ else {
 }
 
 $js = '';
+
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 600);
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
+
 page($_SESSION['page_title'], false, false, '', $js);
 
 //---------------------------------------------------------------------------------------------
-//	Query format functions
-//
+
 function check_overdue($row) {
 	global $trans_type;
 	if ($trans_type == ST_SALESQUOTE)
@@ -145,9 +146,23 @@ function tmpl_checkbox($row) {
 	$name = 'chgtpl' .$row['order_no'];
 	$value = $row['type'] ? 1:0;
 
-// save also in hidden field for testing during 'Update'
+	// save also in hidden field for testing during 'Update'
 
 	return checkbox(null, $name, $value, true, _('Set this order as a template for direct deliveries/invoices')).hidden('last['.$row['order_no'].']', $value, false);
+}
+
+function unallocated_prepayments($row) {
+
+	if ($row['ord_payments'] > 0) {
+		$pmts = get_payments_for($row['order_no'], $row['trans_type'], $row['debtor_no']);
+
+		foreach($pmts as $pmt) {
+			$list[] = get_trans_view_str($pmt['trans_type_from'], $pmt['trans_no_from'], get_reference($pmt['trans_type_from'], $pmt['trans_no_from']));
+		}
+		return implode(',', $list);
+	}
+	else
+		return '';
 }
 
 function invoice_prep_link($row) {
@@ -273,8 +288,9 @@ else if ($_POST['order_view_mode'] == 'DeliveryTemplates') {
 }
 else if ($_POST['order_view_mode'] == 'PrepaidOrders') {
 	array_append($cols, array(
-			array('insert'=>true, 'fun'=>'invoice_prep_link'))
-	);
+		_('New Payments') => array('insert'=>true, 'fun'=>'unallocated_prepayments'),
+		array('insert'=>true, 'fun'=>'invoice_prep_link')
+	));
 
 }
 elseif ($trans_type == ST_SALESQUOTE) {
