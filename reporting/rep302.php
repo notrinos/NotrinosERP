@@ -75,7 +75,7 @@ function getPeriods($stockid, $location) {
 //----------------------------------------------------------------------------------------------------
 
 function print_inventory_planning() {
-	global $path_to_root;
+	global $path_to_root, $tmonths;
 
 	$category = $_POST['PARAM_0'];
 	$location = $_POST['PARAM_1'];
@@ -104,11 +104,11 @@ function print_inventory_planning() {
 
 	$cols = array(0, 50, 150, 180, 210, 240, 270, 300, 330, 390, 435, 480, 525);
 
-	$per0 = date('M',mktime(0,0,0,date('m'),1,date('Y')));
-	$per1 = date('M',mktime(0,0,0,date('m')-1,1,date('Y')));
-	$per2 = date('M',mktime(0,0,0,date('m')-2,1,date('Y')));
-	$per3 = date('M',mktime(0,0,0,date('m')-3,1,date('Y')));
-	$per4 = date('M',mktime(0,0,0,date('m')-4,1,date('Y')));
+	$per0 = $tmonths[date('n',mktime(0,0,0,date('m'),1,date('Y')))];
+	$per1 = $tmonths[date('n',mktime(0,0,0,date('m')-1,1,date('Y')))];
+	$per2 = $tmonths[date('n',mktime(0,0,0,date('m')-2,1,date('Y')))];
+	$per3 = $tmonths[date('n',mktime(0,0,0,date('m')-3,1,date('Y')))];
+	$per4 = $tmonths[date('n',mktime(0,0,0,date('m')-4,1,date('Y')))];
 
 	$headers = array(_('Category'), '', $per4, $per3, $per2, $per1, $per0, '3*M', _('QOH'), _('Cust Ord'), _('Supp Ord'), _('Sugg Ord'));
 

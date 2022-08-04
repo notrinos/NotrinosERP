@@ -141,7 +141,7 @@ function display_type ($type, $typename, $yr, $mo, $convert, &$dec, &$rep, $dime
 //----------------------------------------------------------------------------------------------------
 
 function print_annual_expense_breakdown() {
-	global $path_to_root, $SysPrefs;
+	global $path_to_root, $SysPrefs, $tmonths;
 
 	$dim = get_company_pref('use_dimension');
 	$dimension = $dimension2 = 0;
@@ -210,18 +210,18 @@ function print_annual_expense_breakdown() {
 	elseif ($SysPrefs->date_system == 2)
 		list($yr, $mo, $da) = islamic_to_gregorian($yr, $mo, $da);
 	
-	$per12 = date('M',mktime(0,0,0,$mo,$da,$yr));
-	$per11 = date('M',mktime(0,0,0,$mo-1,$da,$yr));
-	$per10 = date('M',mktime(0,0,0,$mo-2,$da,$yr));
-	$per09 = date('M',mktime(0,0,0,$mo-3,$da,$yr));
-	$per08 = date('M',mktime(0,0,0,$mo-4,$da,$yr));
-	$per07 = date('M',mktime(0,0,0,$mo-5,$da,$yr));
-	$per06 = date('M',mktime(0,0,0,$mo-6,$da,$yr));
-	$per05 = date('M',mktime(0,0,0,$mo-7,$da,$yr));
-	$per04 = date('M',mktime(0,0,0,$mo-8,$da,$yr));
-	$per03 = date('M',mktime(0,0,0,$mo-9,$da,$yr));
-	$per02 = date('M',mktime(0,0,0,$mo-10,$da,$yr));
-	$per01 = date('M',mktime(0,0,0,$mo-11,$da,$yr));
+	$per12 = $tmonths[date('n',mktime(0,0,0,$mo,$da,$yr))];
+	$per11 = $tmonths[date('n',mktime(0,0,0,$mo-1,$da,$yr))];
+	$per10 = $tmonths[date('n',mktime(0,0,0,$mo-2,$da,$yr))];
+	$per09 = $tmonths[date('n',mktime(0,0,0,$mo-3,$da,$yr))];
+	$per08 = $tmonths[date('n',mktime(0,0,0,$mo-4,$da,$yr))];
+	$per07 = $tmonths[date('n',mktime(0,0,0,$mo-5,$da,$yr))];
+	$per06 = $tmonths[date('n',mktime(0,0,0,$mo-6,$da,$yr))];
+	$per05 = $tmonths[date('n',mktime(0,0,0,$mo-7,$da,$yr))];
+	$per04 = $tmonths[date('n',mktime(0,0,0,$mo-8,$da,$yr))];
+	$per03 = $tmonths[date('n',mktime(0,0,0,$mo-9,$da,$yr))];
+	$per02 = $tmonths[date('n',mktime(0,0,0,$mo-10,$da,$yr))];
+	$per01 = $tmonths[date('n',mktime(0,0,0,$mo-11,$da,$yr))];
 
 	$headers = array(_('Account'), _('Account Name'), $per01, $per02, $per03, $per04, $per05, $per06, $per07, $per08, $per09, $per10, $per11, $per12, _('Total'));
 
