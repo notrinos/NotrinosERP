@@ -631,7 +631,7 @@ function generateBarcode() {
 		$query = "SELECT stock_id FROM ".TB_PREF."stock_master WHERE stock_id = '".$tmpBarcodeID."'";
 		$arr_stock = db_fetch(db_query($query, 'could not get stock_id'));
 		
-		if (!$arr_stock['stock_id'])
+		if (!$arr_stock || !$arr_stock['stock_id'])
 			return $tmpBarcodeID;
 		
 		$tmpBarcodeID = '';	 
