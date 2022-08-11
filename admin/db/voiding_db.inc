@@ -9,10 +9,10 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
-include_once($path_to_root . '/inventory/includes/inventory_db.inc');
-include_once($path_to_root . '/manufacturing/includes/manufacturing_db.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
+include_once($path_to_root.'/inventory/includes/inventory_db.inc');
+include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 
 function void_transaction($type, $type_no, $date_, $memo_) {
 	global $Refs;
@@ -51,9 +51,12 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 			if (!exists_customer_trans($type, $type_no))
 				return _('Selected transaction does not exists.');
 			if ($type == ST_CUSTDELIVERY) {
-				$childs = get_sales_child_lines($type, $type_no, false);
-				if ($childs && db_num_rows($childs))
-					return _('This delivery cannot be voided because it was already invoiced.');
+				$vers = get_customer_trans_version($type, $type_no);
+				if ($vers[$type_no] == 1) {
+					$childs = get_sales_child_lines($type, $type_no, false);
+					if ($childs && db_num_rows($childs))
+						return _('This delivery cannot be voided because it was already invoiced.');
+				}
 			}
 			post_void_customer_trans($type, $type_no);
 			break;
