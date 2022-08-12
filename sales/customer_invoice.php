@@ -199,10 +199,8 @@ function check_quantities() {
 				$max = $itm->quantity;
 			}
 			else {
-				global $path_to_root;
 				$min = 0;
 				// Fixing floating point problem in PHP.
-				include_once($path_to_root . "/inventory/includes/db/items_units_db.inc"); 
 				$max = round2($itm->quantity - $itm->qty_done, get_unit_dec($itm->stock_id));
 			}
 			if (check_num('Line'.$line_no, $min, $max))
