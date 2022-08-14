@@ -32,17 +32,17 @@ function get_invoices($customer_id, $to, $all=true) {
 	$due = "IF (type=".ST_SALESINVOICE.", due_date, tran_date)";
 
 	$sql = "SELECT type, reference, tran_date,
-		$sign*$value as Balance,
-		IF ((TO_DAYS('$todate') - TO_DAYS($due)) > 0,$sign*$value,0) AS Due,
-		IF ((TO_DAYS('$todate') - TO_DAYS($due)) > $PastDueDays1,$sign*$value,0) AS Overdue1,
-		IF ((TO_DAYS('$todate') - TO_DAYS($due)) > $PastDueDays2,$sign*$value,0) AS Overdue2
+		$value as Balance,
+		IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= 0,$value,0) AS Due,
+		IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= $PastDueDays1,$value,0) AS Overdue1,
+		IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= $PastDueDays2,$value,0) AS Overdue2
 
 		FROM ".TB_PREF."debtor_trans trans
 
 		WHERE type <> ".ST_CUSTDELIVERY."
 			AND debtor_no = $customer_id 
 			AND tran_date <= '$todate'
-			AND ABS(IF(trans.prep_amount, trans.prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) ".($all ? '' : '-trans.alloc').") > " . FLOAT_COMP_DELTA;
+			AND ABS($value) > " . FLOAT_COMP_DELTA;
 
 	$sql .= "ORDER BY tran_date";
 

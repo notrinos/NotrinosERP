@@ -53,10 +53,8 @@ print_invoices();
 
 function print_invoices() {
 	global $path_to_root, $SysPrefs;
-	
-	$show_this_payment = true; // include payments invoiced here in summary
 
-	include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+	include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
@@ -132,6 +130,8 @@ function print_invoices() {
 		$rep->NewPage();
 		// calculate summary start row for later use
 		$summary_start_row = $rep->bottomMargin + (15 * $rep->lineHeight);
+
+		$show_this_payment = $rep->formData['prepaid'] == 'partial'; // include payments invoiced here in summary
 
 		if ($rep->formData['prepaid']) {
 			$result = get_sales_order_invoices($myrow['order_']);
