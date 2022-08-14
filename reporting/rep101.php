@@ -26,7 +26,7 @@ function get_open_balance($debtorno, $to) {
 	if($to)
 		$to = date2sql($to);
 	$sql = "SELECT SUM(IF(t.type = ".ST_SALESINVOICE." OR (t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0),
-			-abs(IF(t.prep_amount, t.prep_amount, t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount)), 0)) AS charges,";
+			 -abs(IF(t.prep_amount, t.prep_amount, t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount)), 0)) AS charges,";
 
 	$sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0),
 			 abs(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount) * -1, 0)) AS credits,";		
@@ -152,12 +152,9 @@ function print_customer_balances() {
 		$rate = $convert ? get_exchange_rate_from_home_currency($myrow['curr_code'], Today()) : 1;
 		$bal = get_open_balance($myrow['debtor_no'], $from);
 		$init = array();
-		$bal['charges'] = isset($bal['charges']) ? $bal['charges'] : 0;
-		$bal['credits'] = isset($bal['credits']) ? $bal['credits'] : 0;
-		$bal['Allocated'] = isset($bal['Allocated']) ? $bal['Allocated'] : 0;
-		$bal['OutStanding'] = isset($bal['OutStanding']) ? $bal['OutStanding'] : 0;
+		
 		$init[0] = round2(abs($bal['charges']*$rate), $dec);
-		$init[1] = round2(Abs($bal['credits']*$rate), $dec);
+		$init[1] = round2(abs($bal['credits']*$rate), $dec);
 		$init[2] = round2($bal['Allocated']*$rate, $dec);
 		if ($show_balance) {
 			$init[3] = $init[0] - $init[1];
@@ -218,7 +215,7 @@ function print_customer_balances() {
 				$item[2] = round2($trans['Allocated'] * $rate, $dec);
 			}
 			else {
-				$item[1] = round2(Abs($trans['TotalAmount']) * $rate, $dec);
+				$item[1] = round2(abs($trans['TotalAmount']) * $rate, $dec);
 				$rep->AmountCol(5, 6, $item[1], $dec);
 				$accumulate -= $item[1];
 				$item[2] = round2($trans['Allocated'] * $rate, $dec) * -1;

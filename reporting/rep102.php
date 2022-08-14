@@ -26,12 +26,9 @@ function get_invoices($customer_id, $to, $all=true) {
 	$PastDueDays1 = get_company_pref('past_due_days');
 	$PastDueDays2 = 2 * $PastDueDays1;
 
-	// Revomed allocated from sql
-	if ($all)
-		$value = "IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount)";
-	else
-		$value = "(IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount)-alloc)";
-	$sign = "IF(`type` IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT,ST_JOURNAL))."), -1, 1)";
+	$sign = "IF(`type` IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT))."), -1, 1)";
+	$value = "$sign*(IF(trans.prep_amount, trans.prep_amount,
+		ABS(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)) ".($all ? '' : "- trans.alloc").")";
 	$due = "IF (type=".ST_SALESINVOICE.", due_date, tran_date)";
 
 	$sql = "SELECT type, reference, tran_date,
@@ -45,10 +42,8 @@ function get_invoices($customer_id, $to, $all=true) {
 		WHERE type <> ".ST_CUSTDELIVERY."
 			AND debtor_no = $customer_id 
 			AND tran_date <= '$todate'
-			AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) > ".FLOAT_COMP_DELTA;
+			AND ABS(IF(trans.prep_amount, trans.prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) ".($all ? '' : '-trans.alloc').") > " . FLOAT_COMP_DELTA;
 
-	if (!$all)
-		$sql .= "AND ABS(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount - alloc) > ".FLOAT_COMP_DELTA;
 	$sql .= "ORDER BY tran_date";
 
 	return db_query($sql, 'The customer transactions could not be retrieved');
@@ -179,13 +174,6 @@ function print_aged_customer_analysis() {
 				$rep->TextCol(0, 1, $systypes_array[$trans['type']], -2);
 				$rep->TextCol(1, 2,	$trans['reference'], -2);
 				$rep->DateCol(2, 3, $trans['tran_date'], true, -2);
-
-				if ($trans['type'] == ST_CUSTCREDIT || $trans['type'] == ST_CUSTPAYMENT || $trans['type'] == ST_BANKDEPOSIT) {
-					$trans['Balance'] *= -1;
-					$trans['Due'] *= -1;
-					$trans['Overdue1'] *= -1;
-					$trans['Overdue2'] *= -1;
-				}
 
 				foreach ($trans as $i => $value)
 					$trans[$i] = (float)$trans[$i] * $rate;
