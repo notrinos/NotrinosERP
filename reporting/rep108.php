@@ -31,7 +31,8 @@ function getTransactions($debtorno, $date, $show_also_allocated) {
 		trans.reference,
 		trans.tran_date,
 		trans.due_date,
-		(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) AS TotalAmount, alloc AS Allocated,
+		IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) AS TotalAmount,
+        alloc AS Allocated,
 		((trans.type = ".ST_SALESINVOICE.") AND due_date < '$date') AS OverDue
 		FROM ".TB_PREF."debtor_trans trans
 		LEFT JOIN ".TB_PREF."voided as v
@@ -41,7 +42,7 @@ function getTransactions($debtorno, $date, $show_also_allocated) {
 			AND ABS(ABS(ov_amount) + ov_gst + ov_freight + ov_freight_tax + ov_discount) > ". FLOAT_COMP_DELTA;
 	
 	if (!$show_also_allocated)
-		$sql .= " AND ABS(ABS(ov_amount) + ov_gst + ov_freight + ov_freight_tax + ov_discount - alloc) > ". FLOAT_COMP_DELTA;
+		$sql .= " AND ABS(IF(prep_amount, prep_amount, ABS(ov_amount) + ov_gst + ov_freight + ov_freight_tax + ov_discount) - alloc) > ". FLOAT_COMP_DELTA;
 	$sql .= " ORDER BY tran_date";
 
 	return db_query($sql, 'No transactions were returned');
