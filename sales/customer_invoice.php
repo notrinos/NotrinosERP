@@ -618,7 +618,8 @@ if ($prepaid) {
 	}
 	label_row(_('Payments received:'), implode(',', $list));
 	label_row(_('Invoiced here:'), price_format($_SESSION['Items']->prep_amount), 'class=label');
-	label_row(_('Left to be invoiced:'), price_format($_SESSION['Items']->get_trans_total()-max($_SESSION['Items']->prep_amount, $allocs)), 'class=label');
+	label_row($_SESSION['Items']->payment_terms['days_before_due'] == -1 ? _('Left to be invoiced:') : _('Invoiced so far:'),
+		price_format($_SESSION['Items']->get_trans_total()-max($_SESSION['Items']->prep_amount, $allocs)), 'class=label');
 }
 
 textarea_row(_('Memo:'), 'Comments', null, 50, 4);
