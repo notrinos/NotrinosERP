@@ -28,9 +28,9 @@ function get_invoices($customer_id, $to, $all=true) {
 
 	// Revomed allocated from sql
 	if ($all)
-		$value = "(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount)";
+		$value = "IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount)";
 	else
-		$value = "(ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount - alloc)";
+		$value = "(IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount)-alloc)";
 	$sign = "IF(`type` IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT,ST_JOURNAL))."), -1, 1)";
 	$due = "IF (type=".ST_SALESINVOICE.", due_date, tran_date)";
 
