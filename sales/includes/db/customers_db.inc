@@ -64,32 +64,32 @@ function get_customer_details($customer_id, $to=null, $all=true) {
 		$todate = date2sql($to);
 	$past1 = get_company_pref('past_due_days');
 	$past2 = 2 * $past1;
-	// removed - debtor_trans.alloc from all summations
-	$sign = "IF(`type` IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT))."), -1, 1)";
-	if ($all)
-		$value = "IFNULL($sign*(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount),0)";
-	else		
-		$value = "IFNULL($sign*(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - 
-			trans.alloc),0)";
+
+	$sign = "IF(trans.type IN(".implode(',',  array(ST_CUSTCREDIT,ST_CUSTPAYMENT,ST_BANKDEPOSIT))."), -1, 1)";
+	$value = "$sign*(IF(trans.prep_amount, trans.prep_amount,
+		ABS(trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)) ".($all ? '' : "- trans.alloc").")";
+
 	$due = "IF (trans.type=".ST_SALESINVOICE.", trans.due_date, trans.tran_date)";
-	$sql = "SELECT debtor.name, debtor.curr_code, terms.terms, debtor.credit_limit,
-				credit_status.dissallow_invoices, credit_status.reason_description,
-				Sum($value) AS Balance,
-				Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) > 0,$value,0)) AS Due,
-				Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) > $past1,$value,0)) AS Overdue1,
-				Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) > $past2,$value,0)) AS Overdue2
-			FROM ".TB_PREF."debtors_master debtor
-				 LEFT JOIN ".TB_PREF."debtor_trans trans ON trans.tran_date <= '$todate' AND debtor.debtor_no = trans.debtor_no AND trans.type <> ".ST_CUSTDELIVERY.","
-				 .TB_PREF."payment_terms terms,"
-				 .TB_PREF."credit_status credit_status
-			WHERE
-					debtor.payment_terms = terms.terms_indicator
-				AND debtor.credit_status = credit_status.id";
-	 if ($customer_id)
+	$sql = "SELECT debtor.name, debtor.curr_code, terms.terms,
+		debtor.credit_limit, credit_status.dissallow_invoices, credit_status.reason_description,
+		Sum(IFNULL($value,0)) AS Balance,
+		Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= 0,$value,0)) AS Due,
+		Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= $past1,$value,0)) AS Overdue1,
+		Sum(IF ((TO_DAYS('$todate') - TO_DAYS($due)) >= $past2,$value,0)) AS Overdue2
+		FROM ".TB_PREF."debtors_master debtor
+			LEFT JOIN ".TB_PREF."debtor_trans trans ON trans.tran_date <= '$todate' AND debtor.debtor_no = trans.debtor_no AND trans.type <> ". ST_CUSTDELIVERY.",
+			".TB_PREF."payment_terms terms,
+			".TB_PREF."credit_status credit_status
+		WHERE
+			 debtor.payment_terms = terms.terms_indicator
+			 AND debtor.credit_status = credit_status.id";
+
+	if ($customer_id)
 		$sql .= " AND debtor.debtor_no = ".db_escape($customer_id);
 
 	if (!$all)
-		$sql .= " AND ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc > ".FLOAT_COMP_DELTA;
+		$sql .= " AND ABS(IF(trans.prep_amount, trans.prep_amount, ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA;
+
 	$sql .= " GROUP BY
 				debtor.name,
 				terms.terms,
@@ -98,13 +98,13 @@ function get_customer_details($customer_id, $to=null, $all=true) {
 				debtor.credit_limit,
 				credit_status.dissallow_invoices,
 				credit_status.reason_description";
+
 	$result = db_query($sql, 'The customer details could not be retrieved');
 
 	$customer_record = db_fetch($result);
 
 	return $customer_record;
 }
-
 
 function get_customer($customer_id) {
 	$sql = "SELECT * FROM ".TB_PREF."debtors_master WHERE debtor_no=".db_escape($customer_id);
