@@ -81,7 +81,7 @@ if (isset($_GET['trans_no']))
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	
 	$filename = basename($_FILES['filename']['name']);
-	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']))
+	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !is_int($_POST['trans_no']))
 		display_error(_('Selected transaction does not exists.'));
 	elseif ($Mode == 'ADD_ITEM' && !in_array(strtoupper(substr($filename, strlen($filename) - 3)), array('JPG', 'PNG', 'GIF', 'PDF', 'DOC', 'ODT'))) {
 		display_error(_('Only graphics, pdf, doc and odt files are supported.'));
