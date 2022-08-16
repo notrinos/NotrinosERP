@@ -2,8 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Please share privately the details of your security vulnerability by email to:
-[Contact Info](support@notrinos.com)  
+Please share privately the details of your security vulnerability by email to: support@notrinos.com  
 Or open an issue at [our forum](https://forums.notrinos.com/t/bugs-problems)
 
 Make sure to include as much information as possible, with the detailed steps to reproduce the problem,

@@ -15,9 +15,10 @@ var loadSelect2 = {
 		if((e.hasAttribute('multiple') === false) && $(e).hasClass('nosearch') === false) {
 			$(e).select2({
 				dropdownAutoWidth : true,
-				// break a select option item into multi lines
 				templateResult: function(item) {
-					var selectionText = item.text.split('\n');
+					// replace(/</g, '&lt;') : prevent the code in the option’s value from being executed by the browser.
+					// split('\n') : break a select option item into multi lines
+					var selectionText = item.text.replace(/</g, '&lt;').split('\n');
 					var returnString = $('<span></span>');
 					$.each(selectionText, function(index, value){
 						line = value === undefined ? '' : value;
