@@ -267,3 +267,10 @@ function supplier_trans($today) {
 	
 	return $result;
 }
+
+function supplier_unpaid_invoices($today) {
+	$today = date2sql($today);
+	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF(trans.due_date, '$today') AS days FROM ".TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) <= 0 ORDER BY days ASC";
+
+	return db_query($sql, 'could not get supplier transactions');
+}

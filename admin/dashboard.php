@@ -13,10 +13,10 @@
 $page_security = 'SA_SETUPDISPLAY';
 $path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/reporting/includes/class.graphic.inc');
-include_once($path_to_root . '/dashboard/includes/dashboard_classes.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/reporting/includes/class.graphic.inc');
+include_once($path_to_root.'/dashboard/includes/dashboard_classes.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -35,7 +35,8 @@ if (isset($_GET['sel_app'])) {
 
 	if ($d = @opendir($dir)) {
 		while (($file = readdir($d)) !== false) {
-			if (!is_file($dir.'/'.$file) || $file == 'index.php') continue;
+			if (!is_file($dir.'/'.$file) || $file == 'index.php')
+				continue;
 			$ftime = filemtime($dir.'/'.$file);
 
 			if (time()-$ftime > 180)
@@ -56,6 +57,7 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidget(DA_SUPPLIER, 201, WIDGET_HALF);
 	$dashboard->addWidget(DA_SUPPLIER, 202, WIDGET_HALF);
 	$dashboard->addWidget(DA_SUPPLIER, 203, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 204, WIDGET_HALF);
 
 	$dashboard->addDashboard(_('Inventory'), DA_INVENTORY);
 	$dashboard->addWidget(DA_INVENTORY, 301, WIDGET_HALF);
@@ -97,8 +99,7 @@ if (isset($_GET['sel_app'])) {
 
 	echo $dashboard->display();
 }
-else {
+else
 	display_error(_('Mising context data'));
-}
 
 end_page();
