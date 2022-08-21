@@ -93,12 +93,29 @@ function delete_user($id) {
 	db_query($sql, 'could not delete user '.$id);
 }
 
-function get_user_auth($login_id, $password) {
+function authenticate_user($login_id, $password) {
 
-	$sql = "SELECT * FROM ".TB_PREF."users WHERE login_id = ".db_escape($login_id)." AND"
-		." password=".db_escape($password);
+	$sql1 = "SELECT password FROM ".TB_PREF."users WHERE login_id = ".db_escape($login_id);
 
-	return db_num_rows(db_query($sql, 'could not get validate user login for '.$login_id)) != 0;
+	$result = db_query($sql1, 'could not get user login for '.$login_id);
+
+	if(db_num_rows($result) == 0)
+		return false;
+
+	$hash = db_fetch($result)[0];
+
+	// The user's password hash may have been created long ago by md5 password algorithm on the old NotrinosERP versions
+	if(password_verify($password, $hash) || $hash == md5($password)) {
+		if(password_needs_rehash($hash, PASSWORD_DEFAULT) === true) {
+			$new_hash = password_hash($password, PASSWORD_DEFAULT);
+			$sql2 = "UPDATE ".TB_PREF."users SET password = ".db_escape($new_hash)." WHERE login_id = ".db_escape($login_id);
+			db_query($sql2, 'could not update password hash for '.$login_id);
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 function update_user_visitdate($login_id) {
