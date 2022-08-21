@@ -114,7 +114,11 @@ while ($myrow = db_fetch($result)) {
 	alt_table_row_color($k);
 
 	$time_format = (user_date_format() == 0 ? 'h:i a' : 'H:i');
-	$last_visit_date = sql2date($myrow['last_visit_date']).' '.date($time_format, strtotime($myrow['last_visit_date']));
+	
+	if(empty($myrow['last_visit_date']))
+		$last_visit_date = '';
+	else
+		$last_visit_date = sql2date($myrow['last_visit_date']).' '.date($time_format, strtotime($myrow['last_visit_date']));
 
 	/*The security_headings array is defined in config.php */
 	$not_me = strcasecmp($myrow['login_id'], $_SESSION['wa_current_user']->username);
