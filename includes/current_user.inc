@@ -151,7 +151,7 @@ class current_user {
 		if ($user != false) {
 
 			$password = generate_password();
-			$hash = password_hash($password);
+			$hash = password_hash($password, PASSWORD_DEFAULT);
 
 			update_user_password($user['id'], $user['user_id'], $hash);
 			
