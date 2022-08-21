@@ -56,12 +56,12 @@ if (($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') && check_csrf_token()) {
 			update_user_prefs($selected_id, get_post(array('user_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
 
 			if ($_POST['password'] != '')
-				update_user_password($selected_id, $_POST['user_id'], md5($_POST['password']));
+				update_user_password($selected_id, $_POST['user_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
 
 			display_notification_centered(_('The selected user has been updated.'));
 		} 
 		else {
-			add_user($_POST['user_id'], $_POST['real_name'], md5($_POST['password']), $_POST['phone'], $_POST['email'], $_POST['role_id'], $_POST['language'], $_POST['print_profile'], check_value('rep_popup'), $_POST['pos']);
+			add_user($_POST['user_id'], $_POST['real_name'], password_hash($_POST['password'], PASSWORD_DEFAULT), $_POST['phone'], $_POST['email'], $_POST['role_id'], $_POST['language'], $_POST['print_profile'], check_value('rep_popup'), $_POST['pos']);
 			$id = db_insert_id();
 			// use current user display preferences as start point for new user
 			$prefs = $_SESSION['wa_current_user']->prefs->get_all();

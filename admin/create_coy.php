@@ -20,7 +20,7 @@ include_once($path_to_root.'/includes/ui.inc');
 
 page(_($help_context = 'Create/Update Company'));
 
-$comp_subdirs = array('images', 'pdf_files', 'backup','js_cache', 'reporting', 'attachments');
+$comp_subdirs = array('images', 'pdf_files', 'backup', 'js_cache', 'reporting', 'attachments');
 
 simple_page_mode(true);
 /*
@@ -107,7 +107,7 @@ function handle_submit($selected_id) {
 
 		$conn = $db_connections[$selected_id];
 		if (($db = db_create_db($conn)) === false) {
-			display_error(_('Error creating Database: ') . $conn['dbname'] . _(', Please create it manually'));
+			display_error(_('Error creating Database: ').$conn['dbname']._(', Please create it manually'));
 			$error = true;
 		}
 		else {
@@ -120,7 +120,7 @@ function handle_submit($selected_id) {
 			else {
 				if (!isset($_POST['admpassword']) || $_POST['admpassword'] == '')
 					$_POST['admpassword'] = 'password';
-				update_admin_password($conn, md5($_POST['admpassword']));
+				update_admin_password($conn, password_hash($_POST['admpassword']), PASSWORD_DEFAULT);
 			}
 		}
 		if ($error) {

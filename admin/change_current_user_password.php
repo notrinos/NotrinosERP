@@ -25,7 +25,7 @@ function can_process() {
 	$Auth_Result = hook_authenticate($_SESSION['wa_current_user']->username, $_POST['cur_password']);
 
 	if (!isset($Auth_Result))	// if not used external login: standard method
-		$Auth_Result = get_user_auth($_SESSION['wa_current_user']->username, md5($_POST['cur_password']));
+		$Auth_Result = authenticate_user($_SESSION['wa_current_user']->username, $_POST['cur_password']);
 
 	if (!$Auth_Result) {
 		display_error( _('Invalid password entered.'));
@@ -57,7 +57,7 @@ if (isset($_POST['UPDATE_ITEM']) && check_csrf_token()) {
 		if ($SysPrefs->allow_demo_mode)
 			display_warning(_('Password cannot be changed in demo mode.'));
 		else {
-			update_user_password($_SESSION['wa_current_user']->user, $_SESSION['wa_current_user']->username, md5($_POST['password']));
+			update_user_password($_SESSION['wa_current_user']->user, $_SESSION['wa_current_user']->username, password_hash($_POST['password'], PASSWORD_DEFAULT));
 			display_notification(_('Your password has been updated.'));
 		}
 		$Ajax->activate('_page_body');
