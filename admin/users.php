@@ -31,7 +31,7 @@ function can_process($new) {
 		set_focus('login_id');
 		return false;
 	}
-	if (!$new && ($_POST['password'] != '')) {
+	if ($new || (!$new && ($_POST['password'] != ''))) {
 		if (strlen($_POST['password']) < 4) {
 			display_error( _('The password entered must be at least 4 characters long.'));
 			set_focus('password');
