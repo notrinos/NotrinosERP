@@ -119,8 +119,10 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 
 	$encoding = $_SESSION['language']->encoding;
 
-	if (!headers_sent())
+	if (!headers_sent()) {
 		header("Content-type: text/html; charset=$encoding");
+		header("X-Frame-Options: SAMEORIGIN");
+	}
 	
 	echo "<!DOCTYPE html>\n";
 	echo "<html dir='" . $_SESSION['language']->dir . "' >\n";
