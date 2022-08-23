@@ -41,7 +41,7 @@ function help_url($context=null) {
 		.'&ctxhelp=1&lang='.$country);
 }
 
-function send_css($css = '') {
+function send_css($css='') {
 	global $css_files;
 
 	init_css();
@@ -119,8 +119,10 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 
 	$encoding = $_SESSION['language']->encoding;
 
-	if (!headers_sent())
+	if (!headers_sent()) {
 		header("Content-type: text/html; charset=$encoding");
+		header("X-Frame-Options: SAMEORIGIN");
+	}
 	
 	echo "<!DOCTYPE html>\n";
 	echo "<html dir='" . $_SESSION['language']->dir . "' >\n";

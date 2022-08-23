@@ -32,6 +32,9 @@ $encoding = isset($_SESSION['language']->encoding) ? $_SESSION['language']->enco
 $rtl = isset($_SESSION['language']->dir) ? $_SESSION['language']->dir : 'ltr';
 $onload = !$login_timeout ? "onload='defaultCompany()'" : '';
 
+if (!headers_sent())
+	header("X-Frame-Options: SAMEORIGIN");
+
 echo "<!DOCTYPE html>\n";
 echo "<html dir='".$rtl."' >\n";
 echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
