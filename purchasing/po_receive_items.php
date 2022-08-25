@@ -280,7 +280,7 @@ display_po_receive_items();
 
 echo '<br>';
 submit_center_first('Update', _('Update'), '', true);
-submit_center_last('ProcessGoodsReceived', _('Process Receive Items'), _('Clear all GL entry fields'), 'default');
+submit_center_last('ProcessGoodsReceived', _('Process Receive Items'), _('Process Receive Items'), 'default');
 
 end_form();
 
