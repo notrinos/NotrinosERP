@@ -1182,7 +1182,7 @@ function sales_areas_list_row($label, $name, $selected_id=null, $special_option=
 //------------------------------------------------------------------------------------
 
 function sales_groups_list($name, $selected_id=null, $special_option=false) {
-	$sql = "SELECT id, description, inactive FROM ".TB_PREF."groups";
+	$sql = "SELECT id, description, inactive FROM `".TB_PREF."groups`";
 	return combo_input($name, $selected_id, $sql, 'id', 'description', array(
 		'spec_option' => $special_option===true ? ' ' : $special_option,
 		'order' => 'description', 'spec_id' => 0,

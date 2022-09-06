@@ -11,73 +11,73 @@
 ***********************************************************************/
 
 function add_sales_group($description) {
-	$sql = "INSERT INTO ".TB_PREF."groups (description) VALUES (".db_escape($description) . ")";
-	db_query($sql,"The sales group could not be added");
+	$sql = "INSERT INTO `".TB_PREF."groups` (description) VALUES (".db_escape($description) . ")";
+	db_query($sql, 'The sales group could not be added');
 }
 
 function update_sales_group($selected_id, $description) {
-	$sql = "UPDATE ".TB_PREF."groups SET description=".db_escape($description)." WHERE id = ".db_escape($selected_id);
-	db_query($sql,"The sales group could not be updated");
+	$sql = "UPDATE `".TB_PREF."groups` SET description=".db_escape($description)." WHERE id = ".db_escape($selected_id);
+	db_query($sql, 'The sales group could not be updated');
 }
 
 function delete_sales_group($selected_id) {
-	$sql="DELETE FROM ".TB_PREF."groups WHERE id=".db_escape($selected_id);
-	db_query($sql,"could not delete sales group");
+	$sql="DELETE FROM `".TB_PREF."groups` WHERE id=".db_escape($selected_id);
+	db_query($sql, 'could not delete sales group');
 }
 
 function get_sales_groups($show_inactive) {
-	$sql = "SELECT * FROM ".TB_PREF."groups";
+	$sql = "SELECT * FROM `".TB_PREF."groups`";
 	if (!$show_inactive) $sql .= " WHERE !inactive";
 	$sql .= " ORDER BY description";
-	return db_query($sql,"could not get groups");
+	return db_query($sql, 'could not get groups');
 }
 
 function get_sales_group($selected_id) {
-	$sql = "SELECT * FROM ".TB_PREF."groups WHERE id=".db_escape($selected_id);
+	$sql = "SELECT * FROM `".TB_PREF."groups` WHERE id=".db_escape($selected_id);
+	$result = db_query($sql, 'could not get group');
 
-	$result = db_query($sql,"could not get group");
 	return db_fetch($result);
 }
 
 function get_sales_group_name($group_no) {
-	$sql = "SELECT description FROM ".TB_PREF."groups WHERE id = ".db_escape($group_no);
-	$result = db_query($sql, "could not get group");
+	$sql = "SELECT description FROM `".TB_PREF."groups` WHERE id = ".db_escape($group_no);
+	$result = db_query($sql, 'could not get group');
 	$row = db_fetch($result);
 	return $row[0];
 }
 
 function add_sales_area($description) {
 	$sql = "INSERT INTO ".TB_PREF."areas (description) VALUES (".db_escape($description) . ")";
-	db_query($sql,"The sales area could not be added");
+	db_query($sql, 'The sales area could not be added');
 }
 
 function update_sales_area($selected_id, $description) {
 	$sql = "UPDATE ".TB_PREF."areas SET description=".db_escape($description)." WHERE area_code = ".db_escape($selected_id);
-	db_query($sql,"The sales area could not be updated");
+	db_query($sql, 'The sales area could not be updated');
 }
 
 function delete_sales_area($selected_id) {
 	$sql="DELETE FROM ".TB_PREF."areas WHERE area_code=".db_escape($selected_id);
-	db_query($sql,"could not delete sales area");
+	db_query($sql, 'could not delete sales area');
 }
 
 function get_sales_areas($show_inactive) {
 	$sql = "SELECT * FROM ".TB_PREF."areas";
 	if (!$show_inactive) $sql .= " WHERE !inactive";
-	return db_query($sql,"could not get areas");
+	return db_query($sql, 'could not get areas');
 }
 
 function get_sales_area($selected_id) {
 	$sql = "SELECT * FROM ".TB_PREF."areas WHERE area_code=".db_escape($selected_id);
 
-	$result = db_query($sql,"could not get area");
+	$result = db_query($sql, 'could not get area');
 	return db_fetch($result);
 }
 
 function get_area_name($id) {
 	$sql = "SELECT description FROM ".TB_PREF."areas WHERE area_code=".db_escape($id);
 
-	$result = db_query($sql, "could not get sales type");
+	$result = db_query($sql, 'could not get sales type');
 
 	$row = db_fetch_row($result);
 	return $row[0];
@@ -92,7 +92,7 @@ function add_salesman($salesman_name, $salesman_phone, $salesman_fax, $salesman_
 		  .db_escape($salesman_email) . ", ".
 		$provision.", ".$break_pt.", "
 		.$provision2.")";
-	db_query($sql,"The insert of the sales person failed");
+	db_query($sql, 'The insert of the sales person failed');
 }
 
 function update_salesman($selected_id, $salesman_name, $salesman_phone, $salesman_fax, $salesman_email, $provision, $break_pt, $provision2) {
@@ -104,31 +104,31 @@ function update_salesman($selected_id, $salesman_name, $salesman_phone, $salesma
 		break_pt=".$break_pt.",
 		provision2=".$provision2."
 		WHERE salesman_code = ".db_escape($selected_id);
-	db_query($sql,"The update of the sales person failed");
+	db_query($sql, 'The update of the sales person failed');
 }
 
 function delete_salesman($selected_id) {
 	$sql="DELETE FROM ".TB_PREF."salesman WHERE salesman_code=".db_escape($selected_id);
-	db_query($sql,"The sales-person could not be deleted");
+	db_query($sql, 'The sales-person could not be deleted');
 }
 
 function get_salesmen($show_inactive) {
 	$sql = "SELECT * FROM ".TB_PREF."salesman";
 	if (!$show_inactive) $sql .= " WHERE !inactive";
-	return db_query($sql,"could not get sales persons");
+	return db_query($sql, 'could not get sales persons');
 }
 
 function get_salesman($selected_id) {
 	$sql = "SELECT *  FROM ".TB_PREF."salesman WHERE salesman_code=".db_escape($selected_id);
 
-	$result = db_query($sql,"could not get sales person");
+	$result = db_query($sql, 'could not get sales person');
 	return db_fetch($result);
 }
 
 function get_salesman_name($id) {
 	$sql = "SELECT salesman_name FROM ".TB_PREF."salesman WHERE salesman_code=".db_escape($id);
 
-	$result = db_query($sql, "could not get sales type");
+	$result = db_query($sql, 'could not get sales type');
 
 	$row = db_fetch_row($result);
 	return $row[0];
