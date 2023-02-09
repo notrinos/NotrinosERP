@@ -98,9 +98,6 @@ function add_gl_balance($type, $trans_id, $date_, $amount, $person_type_id=null,
 function get_gl_transactions($from_date, $to_date, $trans_no=0, $account=null, $dimension=0, $dimension2=0, $filter_type=null, $amount_min=null, $amount_max=null, $person_type=null, $person_id=null, $memo='') {
 	global $SysPrefs;
 
-	$from = date2sql($from_date);
-	$to = date2sql($to_date);
-
 	$sql = "SELECT gl.*, j.event_date, j.doc_date, a.gl_seq, u.login_id, st.supp_reference, gl.person_id subcode,
 			IFNULL(IFNULL(sup.supp_name, debt.name), bt.person_id) as person_name, 
 			IFNULL(gl.person_id, IFNULL(sup.supplier_id, IFNULL(debt.debtor_no, bt.person_id))) as person_id,
@@ -132,8 +129,8 @@ function get_gl_transactions($from_date, $to_date, $trans_no=0, $account=null, $
 		.TB_PREF."chart_master coa
 		WHERE coa.account_code=gl.account
 		AND ISNULL(v.date_)
-		AND gl.tran_date >= '$from'
-		AND gl.tran_date <= '$to'
+		AND gl.tran_date >= '".date2sql($from_date)."'
+		AND gl.tran_date <= '".date2sql($to_date)."'
 		AND gl.amount <> 0"; 
 
 	if ($trans_no > 0)
