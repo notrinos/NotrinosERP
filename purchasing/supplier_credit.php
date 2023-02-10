@@ -146,6 +146,11 @@ if (isset($_POST['AddGLCodeToTrans'])) {
 function check_data() {
 	global $SysPrefs;
 
+	if (!get_post('supplier_id')) {
+		display_error(_('There is no supplier selected.'));
+		set_focus('supplier_id');
+		return false;
+	}
 	if (!$_SESSION['supp_trans']->is_valid_trans_to_post()) {
 		display_error(_('The credit note cannot be processed because the there are no items or values on the invoice.  Credit notes are expected to have a charge.'));
 		set_focus('');

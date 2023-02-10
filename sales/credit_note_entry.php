@@ -138,8 +138,21 @@ function can_process() {
 
 	$input_error = 0;
 
-	if ($_SESSION['Items']->count_items() == 0 && (!check_num('ChargeFreightCost', 0)))
+	if (!get_post('customer_id')) {
+		display_error(_('There is no customer selected.'));
+		set_focus('customer_id');
 		return false;
+	} 
+	if (!get_post('branch_id')) {
+		display_error(_('This customer has no branch defined.'));
+		set_focus('branch_id');
+		return false;
+	} 
+	if ($_SESSION['Items']->count_items() == 0 && !input_num('ChargeFreightCost', 0)) {
+		display_error(_('You must enter at least one non empty item line.'));
+		set_focus('AddItem');
+		return false;
+	}
 	if($_SESSION['Items']->trans_no == 0) {
 		if (!$Refs->is_valid($_POST['ref'], ST_CUSTCREDIT)) {
 			display_error( _('You must enter a reference.'));
