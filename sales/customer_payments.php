@@ -242,8 +242,8 @@ function read_customer_data() {
 
 	$myrow = get_customer_habit($_POST['customer_id']);
 
-	$_POST['HoldAccount'] = $myrow['dissallow_invoices'];
-	$_POST['pymt_discount'] = $myrow['pymt_discount'];
+	$_POST['HoldAccount'] = isset($myrow['dissallow_invoices']) ? $myrow['dissallow_invoices'] : false;
+	$_POST['pymt_discount'] = isset($myrow['pymt_discount']) ? $myrow['pymt_discount'] : 0;
 	// To support Edit feature
 	// If page is called first time and New entry fetch the nex reference number
 	if (!$_SESSION['alloc']->trans_no && !isset($_POST['charge'])) 
@@ -345,8 +345,8 @@ if ($cust_currency != $bank_currency)
 amount_row(_('Bank Charge:'), 'charge', null, '', $bank_currency);
 
 $row = get_customer($_POST['customer_id']);
-$_POST['dimension_id'] = $row['dimension_id'];
-$_POST['dimension2_id'] = $row['dimension2_id'];
+$_POST['dimension_id'] = isset($row['dimension_id']) ? $row['dimension_id'] : 0;
+$_POST['dimension2_id'] = isset($row['dimension2_id']) ? $row['dimension2_id'] : 0;
 $dim = get_company_pref('use_dimension');
 if ($dim > 0)
 	dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
