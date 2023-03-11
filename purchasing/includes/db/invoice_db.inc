@@ -406,7 +406,7 @@ function read_supp_invoice($trans_no, $trans_type, &$supp_trans) {
 			while ($details_row = db_fetch($result)) {
 
 				if ($details_row['gl_code'] == 0)
-					$supp_trans->add_grn_to_trans($details_row['grn_item_id'], $details_row['po_detail_item_id'], $details_row['stock_id'], $details_row['description'], $details_row['qty_recd'], $details_row['quantity_inv'], $details_row['quantity'], 0, $details_row['FullUnitPrice'], 0, 0);
+					$supp_trans->add_grn_to_trans($details_row['grn_item_id'], $details_row['po_detail_item_id'], $details_row['stock_id'], $details_row['description'], $details_row['qty_recd'], $details_row['quantity_inv'], ($trans_type == ST_SUPPCREDIT ? -1 : 1) * $details_row['quantity'], 0, $details_row['FullUnitPrice'], 0, 0); // SUPPCREDIT quantities are stored negative in database
 				else
 					$supp_trans->add_gl_codes_to_trans($details_row['gl_code'], get_gl_account_name($details_row['gl_code']), $details_row['dimension_id'], $details_row['dimension2_id'], $details_row['FullUnitPrice'], $details_row['memo_']);
 			}

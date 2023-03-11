@@ -34,7 +34,7 @@ function get_supp_trans_allocation_balance($trans_type, $trans_no) {
 	$result = db_query($sql, 'calculate the allocation');
 	$myrow = db_fetch_row($result);
 
-	return $myrow[0];
+	return $myrow ? $myrow[0] : 0;
 }
 
 /*
