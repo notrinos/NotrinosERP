@@ -309,7 +309,7 @@ function add_supp_invoice(&$supp_trans) {
 
 	if (count($supp_trans->src_docs) == 1) {
 		$invoice_no = key($supp_trans->src_docs);
-		$invoice_alloc_balance = get_supp_trans_allocation_balance(ST_SUPPINVOICE, $supp_trans->src_docs);
+		$invoice_alloc_balance = get_supp_trans_allocation_balance(ST_SUPPINVOICE, $invoice_no);
 		if ($invoice_alloc_balance > 0) { //the invoice is not already fully allocated 
 
 			$trans = get_supp_trans($invoice_id, ST_SUPPCREDIT);
@@ -323,7 +323,7 @@ function add_supp_invoice(&$supp_trans) {
 				update_supp_trans_allocation(ST_SUPPINVOICE, $invoice_no, $supp_trans->supplier_id);
 				update_supp_trans_allocation(ST_SUPPCREDIT, $invoice_id, $supp_trans->supplier_id);
 
-				exchange_variation(ST_SUPPCREDIT, $invoice_id, ST_SUPPINVOICE, $supp_trans->src_docs, $date_, $allocate_amount, PT_SUPPLIER);
+				exchange_variation(ST_SUPPCREDIT, $invoice_id, ST_SUPPINVOICE, $invoice_no, $date_, $allocate_amount, PT_SUPPLIER);
 			}
 		}
 	}
