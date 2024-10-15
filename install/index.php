@@ -12,37 +12,40 @@
 $page_security = 'SA_OPEN';
 $path_to_root = '..';
 
-if (file_exists($path_to_root.'/config_db.php'))
+if (file_exists($path_to_root . '/config_db.php'))
 	header("Location: $path_to_root/index.php");
 
-include($path_to_root.'/install/isession.inc');
+include($path_to_root . '/install/isession.inc');
 
 page(_('NotrinosERP Installation Wizard'), true, false, '', '', false, 'stylesheet.css');
 
-include($path_to_root.'/includes/ui.inc');
-include($path_to_root.'/includes/system_tests.inc');
-include($path_to_root.'/admin/db/maintenance_db.inc');
-include($path_to_root.'/includes/packages.inc');
-if (file_exists($path_to_root.'/installed_extensions.php'))
-	include($path_to_root.'/installed_extensions.php');
+include($path_to_root . '/includes/ui.inc');
+include($path_to_root . '/includes/system_tests.inc');
+include($path_to_root . '/admin/db/maintenance_db.inc');
+include($path_to_root . '/includes/packages.inc');
+if (file_exists($path_to_root . '/installed_extensions.php'))
+	include($path_to_root . '/installed_extensions.php');
 
 //-------------------------------------------------------------------------------------------------
 
-function subpage_title($txt) {
+function subpage_title($txt)
+{
 	global $path_to_root;
-	
-	echo '<center><img src="'.$path_to_root.'/themes/default/images/notrinos_erp.png" width="250" alt="Logo"></center>';
+
+	echo '<center><img src="' . $path_to_root . '/themes/default/images/notrinos_erp.png" width="250" alt="Logo"></center>';
 
 	$page = @$_POST['Page'] ? $_POST['Page'] : 1;
 
 	display_heading(
 		$page == 6 ? $txt :
-			_('NotrinosERP Installation Wizard').'<br>'
-			.sprintf(_('Step %d: %s'),  $page , $txt));
+		_('NotrinosERP Installation Wizard') . '<br>'
+		. sprintf(_('Step %d: %s'), $page, $txt)
+	);
 	br();
 }
 
-function display_coas() {
+function display_coas()
+{
 	start_table(TABLESTYLE);
 	$th = array(_('Chart of accounts'), _('Encoding'), _('Description'), _('Install'));
 	table_header($th);
@@ -50,7 +53,7 @@ function display_coas() {
 	$k = 0;
 	$charts = get_charts_list();
 
-	foreach($charts as $pkg_name => $coa) {
+	foreach ($charts as $pkg_name => $coa) {
 		$available = @$coa['available'];
 		$installed = @$coa['version'];
 		$id = @$coa['local_id'];
@@ -59,14 +62,15 @@ function display_coas() {
 		label_cell($coa['name']);
 		label_cell($coa['encoding']);
 		label_cell(is_array($coa['Descr']) ? implode('<br>', $coa['Descr']) : $coa['Descr']);
-		label_cell($installed ? _('Installed') : checkbox(null, 'coas['.$coa['package'].']'), "align='center'");
+		label_cell($installed ? _('Installed') : checkbox(null, 'coas[' . $coa['package'] . ']'), "align='center'");
 
 		end_row();
 	}
 	end_table(1);
 }
 
-function display_langs() {
+function display_langs()
+{
 	start_table(TABLESTYLE);
 	$th = array(_('Language'), _('Encoding'), _('Description'), _('Install'));
 	table_header($th);
@@ -74,38 +78,45 @@ function display_langs() {
 	$k = 0;
 	$langs = get_languages_list();
 
-	foreach($langs as $pkg_name => $lang) {
+	foreach ($langs as $pkg_name => $lang) {
 		$available = @$lang['available'];
 		$installed = @$lang['version'];
 		$id = @$lang['local_id'];
-		if (!$available) continue;
+		if (!$available)
+			continue;
 
 		alt_table_row_color($k);
 		label_cell($lang['name']);
 		label_cell($lang['encoding']);
-		label_cell(is_array($lang['Descr']) ? implode('<br>', $lang['Descr']) :  $lang['Descr']);
-		label_cell($installed ? _('Installed') : checkbox(null, 'langs['.$lang['package'].']'), "align='center'");
+		label_cell(is_array($lang['Descr']) ? implode('<br>', $lang['Descr']) : $lang['Descr']);
+		label_cell($installed ? _('Installed') : checkbox(null, 'langs[' . $lang['package'] . ']'), "align='center'");
 		end_row();
 	}
 	end_table(1);
 }
 
-function instlang_list_row($label, $name, $value=null) {
+function instlang_list_row($label, $name, $value = null)
+{
 	global $inst_langs;
 
 	$langs = array();
 	foreach ($inst_langs as $n => $lang)
 		$langs[$n] = $lang['name'];
 
-	echo "<td>".$label."</td>\n" . "<td>\n" 
-		.array_selector($name, $value, $langs, 
+	echo "<td>" . $label . "</td>\n" . "<td>\n"
+		. array_selector(
+			$name,
+			$value,
+			$langs,
 			array(
 				'select_submit' => true,
 				'async' => true
-			)) . "</td>\n";
+			)
+		) . "</td>\n";
 }
 
-function install_connect_db() {
+function install_connect_db()
+{
 	global $db;
 
 	$conn = $_SESSION['inst_set'];
@@ -114,44 +125,48 @@ function install_connect_db() {
 	if (!$db)
 		display_error(_('Cannot connect to database. User or password is invalid or you have no permittions to create database.'));
 	else {
-		if (strncmp(db_get_version(), "5.6", 3) >= 0) 
+		if (strncmp(db_get_version(), "5.6", 3) >= 0)
 			db_query("SET sql_mode = ''");
 	}
 	return $db;
 }
 
-function do_install() {
+function do_install()
+{
 
 	global $path_to_root, $db_connections, $def_coy, $installed_extensions, $tb_pref_counter, $dflt_lang, $installed_languages;
 
 	$coa = $_SESSION['inst_set']['coa'];
-	if (install_connect_db() && db_import($path_to_root.'/sql/'.$coa, $_SESSION['inst_set'])) {
+	if (install_connect_db() && db_import($path_to_root . '/sql/' . $coa, $_SESSION['inst_set'])) {
 		$con = $_SESSION['inst_set'];
 		$table_prefix = $con['tbpref'];
 
 		$def_coy = 0;
 		$tb_pref_counter = 0;
-		$db_connections = array (0=> array (
-			'name' => $con['name'],
-			'host' => $con['host'],
-			'port' => $con['port'],
-			'dbname' => $con['dbname'],
-			'collation' => $con['collation'],
-			'tbpref' => $table_prefix,
-			'dbuser' => $con['dbuser'],
-			'dbpassword' => $con['dbpassword'],
-		));
+		$db_connections = array(
+			0 => array(
+				'name' => $con['name'],
+				'host' => $con['host'],
+				'port' => $con['port'],
+				'dbname' => $con['dbname'],
+				'collation' => $con['collation'],
+				'tbpref' => $table_prefix,
+				'dbuser' => $con['dbuser'],
+				'dbpassword' => $con['dbpassword'],
+			)
+		);
 
 		$_SESSION['wa_current_user']->cur_con = 0;
-		
-		update_company_prefs(array('coy_name'=>$con['name']));
+
+		update_company_prefs(array('coy_name' => $con['name']));
 		$admin = get_user_by_login('admin');
 		update_user_prefs($admin['id'], array(
-			'language' => $con['lang'], 
+			'language' => $con['lang'],
 			'password' => md5($con['pass']),
-			'user_id' => $con['admin']));
+			'user_id' => $con['admin']
+		));
 
-		if (!copy($path_to_root.'/config.default.php', $path_to_root.'/config.php')) {
+		if (!copy($path_to_root . '/config.default.php', $path_to_root . '/config.php')) {
 			display_error(_("Cannot save system configuration file 'config.php'."));
 			return false;
 		}
@@ -161,28 +176,57 @@ function do_install() {
 		if ($err == -1) {
 			display_error(_("Cannot open 'config_db.php' configuration file."));
 			return false;
-		}
-		else if ($err == -2) {
+		} else if ($err == -2) {
 			display_error(_("Cannot write to the 'config_db.php' configuration file."));
 			return false;
-		}
-		else if ($err == -3) {
+		} else if ($err == -3) {
 			display_error(_("Configuration file 'config_db.php' is not writable. Change its permissions so it is, then re-run installation step."));
 			return false;
 		}
 		// update default language
-		if (file_exists($path_to_root.'/lang/installed_languages.inc'))
-			include_once($path_to_root.'/lang/installed_languages.inc');
+		if (file_exists($path_to_root . '/lang/installed_languages.inc'))
+			include_once($path_to_root . '/lang/installed_languages.inc');
 		$dflt_lang = $_POST['lang'];
 		write_lang();
+		$folderPath = $_SERVER['PHP_SELF'] . '/install';
+		deleteFolder($folderPath);
 		return true;
 	}
 	return false;
 }
 
+// delete folder function
+function deleteFolder($dir)
+{
+	// Check if directory exists
+	if (!file_exists($dir)) {
+		return false;
+	}
+
+	// If directory is a file or a symbolic link, simply delete it
+	if (!is_dir($dir)) {
+		return unlink($dir);
+	}
+
+	// Iterate through each file or folder inside the directory
+	foreach (scandir($dir) as $item) {
+		if ($item === '.' || $item === '..') {
+			continue;
+		}
+
+		// Recursively delete subfolders and files
+		if (!deleteFolder($dir . DIRECTORY_SEPARATOR . $item)) {
+			return false;
+		}
+	}
+
+	// Remove the now-empty directory
+	return rmdir($dir);
+}
+
 if (!isset($_SESSION['inst_set']))  // default settings
 	$_SESSION['inst_set'] = array(
-		'host'=>'localhost', 
+		'host' => 'localhost',
 		'port' => '', // 3306
 		'dbuser' => 'root',
 		'dbpassword' => '',
@@ -196,32 +240,27 @@ if (!isset($_SESSION['inst_set']))  // default settings
 if (!@$_POST['Tests'])
 	$_POST['Page'] = 1; // set to start page
 
-if (isset($_POST['back']) && (@$_POST['Page']>1)) {
+if (isset($_POST['back']) && (@$_POST['Page'] > 1)) {
 	if ($_POST['Page'] == 5)
 		$_POST['Page'] = 2;
 	else
 		$_POST['Page']--;
-}
-elseif (isset($_POST['continue']))
+} elseif (isset($_POST['continue']))
 	$_POST['Page'] = 2;
 elseif (isset($_POST['db_test'])) {
-	if (get_post('host')=='') {
+	if (get_post('host') == '') {
 		display_error(_('Host name cannot be empty.'));
 		set_focus('host');
-	}
-	elseif ($_POST['port'] != '' && !is_numeric($_POST['port'])) {
+	} elseif ($_POST['port'] != '' && !is_numeric($_POST['port'])) {
 		display_error(_('Database port have to be numeric or empty.'));
 		set_focus('port');
-	}
-	elseif ($_POST['dbuser']=='') {
+	} elseif ($_POST['dbuser'] == '') {
 		display_error(_('Database user name cannot be empty.'));
 		set_focus('dbuser');
-	}
-	elseif ($_POST['dbname']=='') {
+	} elseif ($_POST['dbname'] == '') {
 		display_error(_('Database name cannot be empty.'));
 		set_focus('dbname');
-	}
-	else {
+	} else {
 		$_SESSION['inst_set'] = array_merge($_SESSION['inst_set'], array(
 			'host' => $_POST['host'],
 			'port' => $_POST['port'],
@@ -237,55 +276,49 @@ elseif (isset($_POST['db_test'])) {
 			$_POST['Page'] = check_value('sel_langs') ? 3 : (check_value('sel_coas') ? 4 : 5);
 	}
 	if (!file_exists($path_to_root . '/lang/installed_languages.inc')) {
-		$installed_languages = array (
-			0 => array ('code' => 'C', 'name' => 'English', 'encoding' => 'utf-8'));
-			$dflt_lang = 'C';
-			write_lang();
+		$installed_languages = array(
+			0 => array('code' => 'C', 'name' => 'English', 'encoding' => 'utf-8')
+		);
+		$dflt_lang = 'C';
+		write_lang();
 	}
-}
-elseif(get_post('install_langs')) {
+} elseif (get_post('install_langs')) {
 	$ret = true;
 	if (isset($_POST['langs']))
-		foreach($_POST['langs'] as $package => $ok) {
+		foreach ($_POST['langs'] as $package => $ok) {
 			$ret &= install_language($package);
 		}
 	if ($ret)
 		$_POST['Page'] = $_SESSION['inst_set']['sel_coas'] ? 4 : 5;
-}
-elseif(get_post('install_coas')) {
+} elseif (get_post('install_coas')) {
 	$ret = true;
 	$next_extension_id = 0;
-	
+
 	if (isset($_POST['coas']))
-		foreach($_POST['coas'] as $package => $ok) {
+		foreach ($_POST['coas'] as $package => $ok) {
 			$ret &= install_extension($package);
 		}
 	if ($ret) {
 		if (file_exists($path_to_root . '/installed_extensions.php'))
-			include($path_to_root.'/installed_extensions.php');
+			include($path_to_root . '/installed_extensions.php');
 		$_POST['Page'] = 5;
 	}
-}
-elseif (isset($_POST['set_admin'])) {
+} elseif (isset($_POST['set_admin'])) {
 	// check company settings
-	if (get_post('name')=='') {
+	if (get_post('name') == '') {
 		display_error(_('Company name cannot be empty.'));
 		set_focus('name');
-	}
-	elseif (get_post('admin') == '') {
+	} elseif (get_post('admin') == '') {
 		display_error(_('Company admin name cannot be empty.'));
 		set_focus('admin');
-	}
-	elseif (get_post('pass') == '') {
+	} elseif (get_post('pass') == '') {
 		display_error(_('Company admin password cannot be empty.'));
 		set_focus('pass');
-	}
-	elseif (get_post('pass') != get_post('repass')) {
+	} elseif (get_post('pass') != get_post('repass')) {
 		display_error(_('Company admin passwords differ.'));
-		unset($_POST['pass'],$_POST['repass']);
+		unset($_POST['pass'], $_POST['repass']);
 		set_focus('pass');
-	}
-	else {
+	} else {
 
 		$_SESSION['inst_set'] = array_merge($_SESSION['inst_set'], array(
 			'coa' => $_POST['coa'],
@@ -306,7 +339,7 @@ if (list_updated('inst_lang')) {
 }
 
 start_form();
-switch(@$_POST['Page']) {
+switch (@$_POST['Page']) {
 	default:
 	case '1':
 		div_start('welcome');
@@ -319,8 +352,7 @@ switch(@$_POST['Page']) {
 		if (@$_POST['Tests']) {
 			display_notification(_('All application preliminary requirements seems to be correct. Please press Continue button below.'));
 			submit_center('continue', _('Continue >>'));
-		}
-		else {
+		} else {
 			display_error(_('Application cannot be installed. Please fix problems listed below in red, and press Refresh button.'));
 			submit_center('refresh', _('Refresh'));
 		}
@@ -328,7 +360,7 @@ switch(@$_POST['Page']) {
 		break;
 	case '2':
 		if (!isset($_POST['host'])) {
-			foreach($_SESSION['inst_set'] as $name => $val)
+			foreach ($_SESSION['inst_set'] as $name => $val)
 				$_POST[$name] = $val;
 		}
 		subpage_title(_('Database Server Settings'));
@@ -365,7 +397,7 @@ switch(@$_POST['Page']) {
 		break;
 	case '5':
 		if (!isset($_POST['name'])) {
-			foreach($_SESSION['inst_set'] as $name => $val)
+			foreach ($_SESSION['inst_set'] as $name => $val)
 				$_POST[$name] = $val;
 			set_focus('name');
 		}
@@ -384,13 +416,14 @@ switch(@$_POST['Page']) {
 		end_table(1);
 		submit_center_first('back', _('<< Back'));
 		submit_center_last('set_admin', _('Install'), _('Start installation process'), 'default nonajax');
+
 		break;
 	case '6': // final screen
 		subpage_title(_('NotrinosERP has been installed successsfully.'));
 		display_note(_('Please do not forget to remove install wizard folder.'));
 		session_unset();
 		session_destroy();
-		hyperlink_no_params($path_to_root.'/index.php', _('Click here to start.'));
+		hyperlink_no_params($path_to_root . '/index.php', _('Click here to start.'));
 		break;
 }
 
