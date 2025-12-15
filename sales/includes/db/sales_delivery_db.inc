@@ -134,13 +134,13 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 						'The cost of sales GL posting could not be inserted');
 					/*then remove asset*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code['inventory_account'], 0, 0, '',
+						$stock_gl_code["inventory_account"], $dim, $dim2, "",
 						-$fa_purchase_cost,
 						PT_CUSTOMER, $delivery->customer_id,
 						'The stock side of the cost of sales GL posting could not be inserted');
 					/*finally adjust sales account with the remaining*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code['cogs_account'], 0, 0, '',
+						$stock_gl_code["cogs_account"], $dim, $dim2, "",
 						($fa_purchase_cost - $fa_depreciation),
 						PT_CUSTOMER, $delivery->customer_id,
 						'The stock side of the cost of sales GL posting could not be inserted');
@@ -156,7 +156,7 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 
 					/*now the stock entry*/
 					add_gl_trans_std_cost(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date,
-						$stock_gl_code['inventory_account'], 0, 0, '',
+						$stock_gl_code["inventory_account"], $dim, $dim2, "",
 						(-$delivery_line->standard_cost * $delivery_line->qty_dispatched),
 						PT_CUSTOMER, $delivery->customer_id,
 						'The stock side of the cost of sales GL posting could not be inserted');
