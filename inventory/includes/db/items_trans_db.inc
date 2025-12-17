@@ -60,9 +60,8 @@ function stock_cost_update($stock_id, $material_cost, $labour_cost, $overhead_co
 			else
 				$cart->memo_ = $memo_;
 
-			$cart->add_gl_item($stock_gl_code['adjustment_account'],
-				$stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], -$value_of_change);
-			$cart->add_gl_item($stock_gl_code['inventory_account'], 0, 0, $value_of_change);
+			$cart->add_gl_item($stock_gl_code['adjustment_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], -$value_of_change);
+			$cart->add_gl_item($stock_gl_code['inventory_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $value_of_change);
 
 			write_journal_entries($cart);
 		}
