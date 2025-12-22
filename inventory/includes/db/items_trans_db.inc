@@ -56,7 +56,7 @@ function stock_cost_update($stock_id, $material_cost, $labour_cost, $overhead_co
 
 			if (empty($memo_))
 				$cart->memo_ = sprintf(_('Cost was %s changed to %s x quantity on hand of %s'),
-					number_format2($last_cost, 2), number_format2($new_cost), $qoh);
+					number_format2($last_cost, user_price_dec()), number_format2($new_cost, user_price_dec()), $qoh);
 			else
 				$cart->memo_ = $memo_;
 
