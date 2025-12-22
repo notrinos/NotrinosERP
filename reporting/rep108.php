@@ -163,7 +163,7 @@ function print_statements() {
 	}
 
 	if (!isset($rep))
-		display_notification('No customers with outstanding balances found');
+		display_notification(_('No customers with outstanding balances found'));
 	else if ($email == 0)
 		$rep->End();
 }
