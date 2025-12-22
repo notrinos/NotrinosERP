@@ -219,7 +219,7 @@ function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $cre
 			$stock_entry_account = $stock_gl_code['inventory_account'];
 		}
 
-		$total += add_gl_trans_std_cost(ST_CUSTCREDIT, $credit_no, $date_, $stock_entry_account, 0, 0,
+		$total += add_gl_trans_std_cost(ST_CUSTCREDIT, $credit_no, $date_, $stock_entry_account, $dim, $dim2,
 			'', ($unit_cost * $order_line->qty_dispatched),
 			PT_CUSTOMER, $order->customer_id,
 			'The stock side (or write off) of the cost of sales GL posting could not be inserted');
