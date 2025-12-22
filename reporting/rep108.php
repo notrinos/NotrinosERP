@@ -32,7 +32,7 @@ function getTransactions($debtorno, $date, $show_also_allocated) {
 		trans.tran_date,
 		trans.due_date,
 		IF(prep_amount, prep_amount, ov_amount + ov_gst + ov_freight + ov_freight_tax + ov_discount) AS TotalAmount,
-        alloc AS Allocated,
+		alloc AS Allocated,
 		((trans.type = ".ST_SALESINVOICE.") AND due_date < '$date') AS OverDue
 		FROM ".TB_PREF."debtor_trans trans
 		LEFT JOIN ".TB_PREF."voided as v
@@ -158,8 +158,13 @@ function print_statements() {
 		$rep->NewLine();
 		for ($i = 0; $i < 5; $i++)
 			$rep->TextWrap($col[$i], $rep->row, $col[$i + 1] - $col[$i], $str2[$i], 'right');
-		if ($email == 1)
-			$rep->End($email, _('Statement').' '._('as of').' '.sql2date($date));
+		
+		if ($email == 1) {
+			if (($CustomerRecord["Balance"]) != ($CustomerRecord["Balance"] - $CustomerRecord["Due"]))
+				$rep->End($email, _("Statement") . " " . _("as of") . " " . sql2date($date) . " " . _("from") . " " . get_company_pref('coy_name'));
+			else
+				display_notification(sprintf(_("Customer %s has no overdue debits. No e-mail is sent."), $myrow["DebtorName"]));
+		}
 	}
 
 	if (!isset($rep))
