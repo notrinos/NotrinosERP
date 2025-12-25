@@ -332,6 +332,8 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id=ALL_TEXT, $filter=ALL
 			$sql .= " AND trans.type = ".ST_CUSTCREDIT." ";
 		elseif ($filter == '5')
 			$sql .= " AND trans.type = ".ST_CUSTDELIVERY." ";
+		elseif ($filter == '6')
+			$sql .= " AND trans.type = ".ST_JOURNAL." ";
 
 		if ($filter == '2')
 			$sql .= " AND trans.due_date < '".date2sql(Today())."' AND (ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight_tax + trans.ov_freight + trans.ov_discount - trans.alloc > 0) ";

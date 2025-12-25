@@ -275,6 +275,8 @@ function get_sql_for_customer_allocation_inquiry($from, $to, $customer, $filterT
 			$sql .= " AND trans.type = " . ST_CUSTPAYMENT;
 		elseif ($filterType == '4')
 			$sql .= " AND trans.type = ".ST_CUSTCREDIT." ";
+		elseif ($filterType == '6')
+			$sql .= " AND trans.type = ".ST_JOURNAL." ";
 
 		if ($filterType == '2') {
 			$today =  date2sql(Today());

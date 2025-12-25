@@ -250,6 +250,8 @@ function get_sql_for_supplier_allocation_inquiry($date_after, $date_to, $filter=
 			$sql .= " AND trans.type = ".ST_SUPPAYMENT." ";
 		elseif (($filter == '4') || ($filter == '5')) // credits
 			$sql .= " AND trans.type = ".ST_SUPPCREDIT." ";
+		elseif ($_POST['filterType'] == '6')	// Journal
+			$sql .= " AND trans.type = ".ST_JOURNAL." ";
 
 		if (($filter == '2') || ($filter == '5')) // overdude 
 			$sql .= " AND trans.due_date < '".date2sql(Today())."' ";
