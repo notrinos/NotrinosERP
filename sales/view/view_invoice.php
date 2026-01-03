@@ -35,6 +35,9 @@ $paym = get_payment_terms($myrow['payment_terms']);
 $branch = get_branch($myrow['branch_code']);
 $sales_order = get_sales_order_header($myrow['order_'], ST_SALESORDER);
 
+if (!empty($SysPrefs->prefs['company_logo_on_views']))
+	company_logo_on_view();
+
 display_heading(sprintf($myrow['prep_amount'] > 0 ? ($paym['days_before_due']>=0 ? _('FINAL INVOICE #%d') : _('PREPAYMENT INVOICE #%d')) : _('SALES INVOICE #%d'),$trans_id));
 
 echo '<br>';

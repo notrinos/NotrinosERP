@@ -53,6 +53,9 @@ if ($from_trans['bank_curr_code'] != $to_trans['bank_curr_code']) {
 	$show_both_amounts = true;
 }
 
+if (!empty($SysPrefs->prefs['company_logo_on_views']))
+	company_logo_on_view();
+
 display_heading($systypes_array[ST_BANKTRANSFER] . ' #$trans_no');
 
 echo '<br>';

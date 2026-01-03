@@ -1499,3 +1499,19 @@ function trans_editor_link($type, $trans_no) {
 		(is_closed_trans($type, $trans_no) ? set_icon(ICON_CLOSED, _('Closed')) :
 			pager_link(_('Edit'), sprintf($editor_url[$type], $trans_no, $type), ICON_EDIT));
 }
+
+function company_logo_on_view() {
+	global $SysPrefs;
+
+	$logo = company_path().'/images/'.$SysPrefs->prefs['coy_logo'];
+	$nl = 1;
+
+	if (!empty($SysPrefs->prefs['company_logo_report']) && $SysPrefs->prefs['coy_logo'] != '' && file_exists($logo)) {
+		$size = getimagesize($logo);
+		$height = $size[0] > 150 ? $size[1] * 150 / $size[0] : 30; 
+		$text = "<img src='$logo' height=$height>";
+	}
+	else
+		$text = $SysPrefs->prefs['coy_name'];
+	display_note($text, 0, $nl, "style='font-size:16px;font-weight:600'");
+}

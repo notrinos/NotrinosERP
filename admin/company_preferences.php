@@ -132,7 +132,7 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	if ($input_error != 1) {
 		update_company_prefs(
 			get_post(
-				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets')
+				array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'no_customer_list'=>0, 'no_supplier_list'=>0, 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'company_logo_on_views'=>0, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets')
 			)
 		);
 
@@ -208,6 +208,13 @@ if (!isset($myrow['long_description_invoice'])) {
 	$myrow['long_description_invoice'] = get_company_pref('long_description_invoice');
 }
 $_POST['long_description_invoice']  = $myrow['long_description_invoice'];
+
+if (!isset($myrow['company_logo_on_views'])) {
+	set_company_pref('company_logo_on_views', 'setup.company', 'tinyint', 1, '0');
+	$myrow['company_logo_on_views'] = get_company_pref('company_logo_on_views');
+}
+$_POST['company_logo_on_views']  = $myrow["company_logo_on_views"];
+
 $_POST['version_id']  = $myrow['version_id'];
 $_POST['add_pct'] = $myrow['add_pct'];
 $_POST['login_tout'] = $myrow['login_tout'];
@@ -251,6 +258,7 @@ check_row(_('Use Barcodes on Stocks:'), 'barcodes_on_stock', $_POST['barcodes_on
 check_row(_('Auto Increase of Document References:'), 'ref_no_auto_increase', $_POST['ref_no_auto_increase']);
 check_row(_('Use Dimensions on Recurrent Invoices:'), 'dim_on_recurrent_invoice', $_POST['dim_on_recurrent_invoice']);
 check_row(_('Use Long Descriptions on Invoices:'), 'long_description_invoice', $_POST['long_description_invoice']);
+check_row(_('Company Logo on Views'), 'company_logo_on_views', $_POST['company_logo_on_views']);
 label_row(_('Database Scheme Version:'), $_POST['version_id']);
 
 table_section(2);

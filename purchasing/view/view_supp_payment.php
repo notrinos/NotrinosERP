@@ -39,6 +39,9 @@ if ($receipt['bank_curr_code'] != $receipt['curr_code']) {
 	$show_both_amounts = true;
 }
 
+if (!empty($SysPrefs->prefs['company_logo_on_views']))
+	company_logo_on_view();
+
 echo '<center>';
 
 display_heading(_('Payment to Supplier') . " #$trans_no");
