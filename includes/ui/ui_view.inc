@@ -1506,12 +1506,11 @@ function company_logo_on_view() {
 	$logo = company_path().'/images/'.$SysPrefs->prefs['coy_logo'];
 	$nl = 1;
 
-	if (!empty($SysPrefs->prefs['company_logo_report']) && $SysPrefs->prefs['coy_logo'] != '' && file_exists($logo)) {
-		$size = getimagesize($logo);
-		$height = $size[0] > 150 ? $size[1] * 150 / $size[0] : 30; 
-		$text = "<img src='$logo' height=$height>";
-	}
+	if (!empty($SysPrefs->prefs['company_logo_on_views']) && $SysPrefs->prefs['coy_logo'] != '' && file_exists($logo))
+		$text = "<img style='max-width: 250px;margin-left: 35px;' src='$logo'>";
 	else
-		$text = $SysPrefs->prefs['coy_name'];
-	display_note($text, 0, $nl, "style='font-size:16px;font-weight:600'");
+		$text = "<center><h1>".$SysPrefs->prefs['coy_name']."</h1></center>";
+
+	echo "<table width='100%'><tr><td width='50%'>".$text."</td><td><table width='100%'><tr><td><h5>".$SysPrefs->prefs['coy_name']."</h5></td></tr><tr><td>".get_company_pref('postal_address').'</td></tr><tr><td>'.$SysPrefs->prefs['phone'].'</td></tr><tr><td>'.$SysPrefs->prefs['email']."</td></tr></table></td></tr></table>";
+	echo br();
 }
