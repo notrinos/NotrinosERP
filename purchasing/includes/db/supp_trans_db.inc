@@ -38,7 +38,8 @@ function write_supp_trans($type, $trans_no, $supplier_id, $date_, $due_date, $re
 		$err_msg = 'Cannot insert a supplier transaction record';
 
 	db_query($sql, $err_msg);
-	add_audit_trail($type, $trans_no, $date_);
+	if ($type != ST_JOURNAL && $type != ST_BANKDEPOSIT && $type != ST_BANKPAYMENT) 
+		add_audit_trail($type, $trans_no, $date_);
 
 	return $trans_no;
 }
