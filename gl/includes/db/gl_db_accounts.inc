@@ -79,6 +79,7 @@ function gl_account_in_company_defaults($acc) {
 		OR name='retained_earnings_act'
 		OR name='freight_act'
 		OR name='deferred_income_act'
+		OR name='grn_clearing_act'
 		OR name='default_sales_act' 
 		OR name='default_sales_discount_act'
 		OR name='default_prompt_payment_act'
