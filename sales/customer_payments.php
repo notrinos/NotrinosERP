@@ -102,6 +102,7 @@ if (isset($_GET['AddedID'])) {
 	submenu_print(_('&Email This Receipt'), ST_CUSTPAYMENT, $payment_no.'-'.ST_CUSTPAYMENT, null, 1);
 
 	submenu_view(_('&View this Customer Payment'), ST_CUSTPAYMENT, $payment_no);
+	display_note(get_gl_view_str(ST_CUSTPAYMENT, $payment_no, _("&View the GL Journal Entries for this Customer Payment")), 0, 1);
 
 	submenu_option(_('Enter Another &Customer Payment'), '/sales/customer_payments.php');
 	submenu_option(_('Enter Other &Deposit'), '/gl/gl_bank.php?NewDeposit=Yes');
@@ -109,7 +110,7 @@ if (isset($_GET['AddedID'])) {
 	submenu_option(_('Enter Other &Payment'), '/gl/gl_bank.php?NewPayment=Yes');
 	submenu_option(_('Bank Account &Transfer'), '/gl/bank_transfer.php');
 
-	display_note(get_gl_view_str(ST_CUSTPAYMENT, $payment_no, _('&View the GL Journal Entries for this Customer Payment')));
+	submenu_option(_("Add an Attachment"), '/admin/attachments.php?filterType='.ST_CUSTPAYMENT.'&trans_no='.$payment_no);
 
 	display_footer_exit();
 }
