@@ -88,16 +88,6 @@ function handle_delete($id) {
 	
 	return true;
 }
-//
-// Helper for formating menu tabs/entries to be displayed in extension table
-//
-function fmt_titles($defs) {
-	if (!$defs) return '';
-	foreach($defs as $def) {
-		$str[] = access_string($def['title'], true);
-	}
-	return implode('<br>', array_values($str));
-}
 
 //---------------------------------------------------------------------------------------------
 //
@@ -109,7 +99,7 @@ function display_extensions($mods) {
 	div_start('ext_tbl');
 	start_table(TABLESTYLE);
 
-	$th = array(_('Extension'),_('Modules provided'), _('Options provided'), _('Installed'), _('Available'),  '', '');
+	$th = array(_("Extension"), _("Installed"), _("Available"),  "", "");
 	table_header($th);
 
 	$k = 0;
@@ -119,14 +109,9 @@ function display_extensions($mods) {
 		$installed = isset($ext['version']) ? $ext['version'] : '';
 		$id = @$ext['local_id'];
 
-		$entries = fmt_titles(@$ext['entries']);
-		$tabs = fmt_titles(@$ext['tabs']);
-
 		alt_table_row_color($k);
 
 		label_cell($available ? get_package_view_str($pkg_name, $ext['name']) : $ext['name']);
-		label_cell($tabs);
-		label_cell($entries);
 		label_cell($id === null ? _('None') : (($installed && ($installed != '-' || $installed != '')) ? $installed : _('Unknown')));
 		label_cell($available ? $available : _('Unknown'));
 
@@ -167,7 +152,7 @@ function display_extensions($mods) {
 function company_extensions($id) {
 	start_table(TABLESTYLE);
 	
-	$th = array(_('Extension'),_('Modules provided'), _('Options provided'), _('Active'));
+	$th = array(_("Extension"), _("Version"), _("Path"), _("Active"));
 	
 	$mods = get_company_extensions();
 	$exts = get_company_extensions($id);
@@ -182,15 +167,14 @@ function company_extensions($id) {
 	table_header($th);
 	$k = 0;
 	foreach($mods as $i => $mod) {
-		if ($mod['type'] != 'extension') continue;
+		if ($mod['type'] != 'extension')
+			continue;
 		alt_table_row_color($k);
 		label_cell($mod['name']);
-		$entries = fmt_titles(@$mod['entries']);
-		$tabs = fmt_titles(@$mod['tabs']);
-		label_cell($tabs);
-		label_cell($entries);
-
+		label_cell($mod['version']);
+		label_cell($mod['path']);
 		check_cells(null, 'Active'.$i, @$mod['active'] ? 1:0, false, false, "align='center'");
+
 		end_row();
 	}
 
