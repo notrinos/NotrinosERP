@@ -245,7 +245,7 @@ function check_item_data($n) {
 		}
 	}
 
-	if ($SysPrefs->check_qty_charged_vs_del_qty == true && ($_POST['qty_recd'.$n] != $_POST['prev_quantity_inv'.$n])) {
+	if ($SysPrefs->check_qty_charged_vs_del_qty == true && ($_POST['qty_recd'.$n] != $_POST['prev_quantity_inv'.$n]) && !empty($_POST['prev_quantity_inv'.$n])) {
 		if (input_num('this_quantity_inv'.$n) / ($_POST['qty_recd'.$n] - $_POST['prev_quantity_inv'.$n]) > (1+ ($margin / 100))) {
 			display_error( _('The quantity being invoiced is more than the outstanding quantity by more than the allowed over-charge percentage. The system is set up to prohibit this. See the system administrator to modify the set up parameters if necessary.')
 			. _('The over-charge percentage allowance is :') . $margin . '%');
