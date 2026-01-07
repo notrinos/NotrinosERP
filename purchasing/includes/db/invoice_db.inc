@@ -307,7 +307,8 @@ function add_supp_invoice(&$supp_trans) {
 
 	$Refs->save($trans_type, $invoice_id, $supp_trans->reference);
 
-	if (count($supp_trans->src_docs) == 1) {
+	// for credit issued to single invoice autoallocate amount
+	if ($trans_type==ST_SUPPCREDIT && count($supp_trans->src_docs) == 1) {
 		$invoice_no = key($supp_trans->src_docs);
 		$invoice_alloc_balance = get_supp_trans_allocation_balance(ST_SUPPINVOICE, $invoice_no);
 		if ($invoice_alloc_balance > 0) { //the invoice is not already fully allocated 
