@@ -48,7 +48,7 @@ function get_attachment_string($type, $id) {
 	while ($attachment = db_fetch($return)) {
 		if (strlen($str))
 			$str = $str . " \n";    
-		$str .= _('Attached File:')." <a href='$path_to_root/admin/attachments.php?vw=".$attachment['id']." ' target='blanc_'> ".$attachment['id'].' '.$attachment['description'].' - '.$attachment['filename']."</a><br>";
+		    $str .= _("Attached File:")." <a target='_blank' href='$path_to_root/admin/attachments.php?vw=".$attachment["id"]."' onclick='javascript:openWindow(this.href, this.target);return false;'> ".$attachment["id"]." ".$attachment["description"]." - ".$attachment["filename"]."</a><br>";
 	}
 	return $str."<br>";
 }
