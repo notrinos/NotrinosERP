@@ -25,7 +25,7 @@ function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref
 		delete_comments(ST_SUPPAYMENT, $trans_no);
 		void_bank_trans(ST_SUPPAYMENT, $trans_no, true);
 		void_gl_trans(ST_SUPPAYMENT, $trans_no, true);
-		void_cust_allocations(ST_SUPPAYMENT, $trans_no, $date_);
+		void_supp_allocations(ST_SUPPAYMENT, $trans_no, $date_);
 	}
 
 	$bank = get_bank_account($bank_account);
