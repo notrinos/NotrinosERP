@@ -154,7 +154,7 @@ set_global_customer($_POST['customer_id']);
 
 div_start('totals_tbl');
 if ($_POST['customer_id'] != '' && $_POST['customer_id'] != ALL_TEXT) {
-	$customer_record = get_customer_details(get_post('customer_id'), get_post('TransToDate'));
+	$customer_record = get_customer_details(get_post('customer_id'), get_post('TransToDate'), false);
 	display_customer_summary($customer_record);
 	echo '<br>';
 }
