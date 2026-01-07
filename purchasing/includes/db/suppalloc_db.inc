@@ -41,12 +41,13 @@ function get_supp_trans_allocation_balance($trans_type, $trans_no) {
 	Update supplier trans alloc field according to current status of supp_allocations
 */
 function update_supp_trans_allocation($trans_type, $trans_no, $person_id) {
+	$dec = user_price_dec();
 	$sql = "UPDATE `".TB_PREF.($trans_type==ST_PURCHORDER ? 'purch_orders' : 'supp_trans')."` trans,
 			(SELECT person_id, sum(amt) amt from ".TB_PREF."supp_allocations
 				WHERE person_id=".db_escape($person_id)." AND ((trans_type_to=".db_escape($trans_type)." AND trans_no_to=".db_escape($trans_no).")
 				OR (trans_type_from=".db_escape($trans_type)." AND trans_no_from=".db_escape($trans_no)."))) allocated
 		SET
-			trans.alloc=IFNULL(allocated.amt, 0)
+			trans.alloc=IFNULL(ROUND(allocated.amt, $dec), 0)
 		WHERE trans.supplier_id=person_id AND "	. ($trans_type==ST_PURCHORDER ? 
 			  "trans.order_no=".db_escape($trans_no)
 			: "trans.type=".db_escape($trans_type)." AND trans.trans_no=".db_escape($trans_no));
