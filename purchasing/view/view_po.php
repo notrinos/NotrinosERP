@@ -108,6 +108,8 @@ if (db_num_rows($grns_result) > 0) {
 	$th = array(_('#'), _('Reference'), _('Delivered On'));
 	table_header($th);
 	while ($myrow = db_fetch($grns_result)) {
+		if (get_voided_entry(ST_SUPPRECEIVE, $myrow['id']))
+			continue;
 		alt_table_row_color($k);
 
 		label_cell(get_trans_view_str(ST_SUPPRECEIVE,$myrow['id']));
@@ -131,6 +133,8 @@ if (db_num_rows($invoice_result) > 0) {
 	$th = array(_('#'), _('Date'), _('Total'));
 	table_header($th);
 	while ($myrow = db_fetch($invoice_result)) {
+		if (get_voided_entry($myrow['type'],$myrow['trans_no']))
+			continue;
 		alt_table_row_color($k);
 
 		label_cell(get_trans_view_str($myrow['type'],$myrow['trans_no']));

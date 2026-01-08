@@ -73,6 +73,8 @@ function due_date($row) {
 }
 
 function gl_view($row) {
+	if ($row['type'] == ST_SUPPRECEIVE && get_voided_entry(ST_SUPPRECEIVE, $row['trans_no']))
+		return set_icon(ICON_REMOVE, _('Voided.'));
 	return get_gl_view_str($row['type'], $row['trans_no']);
 }
 
