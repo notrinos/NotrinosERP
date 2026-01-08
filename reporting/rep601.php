@@ -45,7 +45,6 @@ function get_bank_transactions($from, $to, $account) {
 		WHERE bank_act = '$account'
 		AND trans_date >= '$from'
 		AND trans_date <= '$to'
-		AND amount <> 0
 		ORDER BY trans_date, id";
 
 	return db_query($sql, "The transactions for '$account' could not be retrieved");
