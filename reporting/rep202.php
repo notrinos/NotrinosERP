@@ -32,9 +32,9 @@ function get_invoices($supplier_id, $to, $all=true) {
 	if ($all)
 		$value = "(trans.ov_amount + trans.ov_gst + trans.ov_discount)";
 	else
-		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT.", 
-		(trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc),
-		(trans.ov_amount + trans.ov_gst + trans.ov_discount + trans.alloc))";
+		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT." OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0),  
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc),
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount + trans.alloc))";
 	$due = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_SUPPCREDIT.",trans.due_date,trans.tran_date)";
 	$sql = "SELECT trans.type,
 		trans.reference,
@@ -52,7 +52,7 @@ function get_invoices($supplier_id, $to, $all=true) {
 			AND trans.tran_date <= '$todate'
 			AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) > ".FLOAT_COMP_DELTA;
 	if (!$all)
-		$sql .= " AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc > ".FLOAT_COMP_DELTA;
+		$sql .= "AND $value <> 0 ";
 	$sql .= " ORDER BY trans.tran_date";
 
 	return db_query($sql, 'The supplier details could not be retrieved');

@@ -85,9 +85,9 @@ function get_supplier_details($supplier_id, $to=null, $all=true) {
 	if ($all)
 		$value = "(trans.ov_amount + trans.ov_gst + trans.ov_discount)";
 	else	
-		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT."
-	OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0), 1, -1)*
-			ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc";
+		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT." OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0), 
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc),
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount + trans.alloc))";
 
 	$due = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_SUPPCREDIT.",trans.due_date,trans.tran_date)";
 	$sql = "SELECT supp.supp_name, supp.curr_code, ".TB_PREF."payment_terms.terms,
@@ -109,7 +109,7 @@ function get_supplier_details($supplier_id, $to=null, $all=true) {
 			 supp.payment_terms = ".TB_PREF."payment_terms.terms_indicator
 			 AND supp.supplier_id = $supplier_id ";
 	if (!$all)
-		$sql .= "AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc > ".FLOAT_COMP_DELTA." ";  
+		$sql .= "AND $value <> 0 "; 
 	$sql .= "GROUP BY
 			supp.supp_name,
 			".TB_PREF."payment_terms.terms,
