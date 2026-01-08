@@ -242,7 +242,9 @@ function check_quantities() {
 			else {
 				$min = 0;
 				// Fixing floating point problem in PHP.
-				$max = round2($itm->quantity - $itm->qty_done, get_unit_dec($itm->stock_id));
+				$dec = get_unit_dec($itm->stock_id);
+				$dec = $dec == -1 ? user_qty_dec() : $dec;
+				$max = round2($itm->quantity - $itm->qty_done, $dec);
 			}
 			if (check_num('Line'.$line, $min, $max))
 				$_SESSION['Items']->line_items[$line]->qty_dispatched = input_num('Line'.$line);
