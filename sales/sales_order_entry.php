@@ -132,6 +132,8 @@ if (isset($_GET['AddedID'])) {
 
 	submenu_option(_('Enter a &New Order'),	'/sales/sales_order_entry.php?NewOrder=0');
 
+	submenu_option(_('Add an Attachment'), "/admin/attachments.php?filterType=".ST_SALESORDER."&trans_no=$order_no");
+
 	display_footer_exit();
 }
 elseif (isset($_GET['UpdatedID'])) {
@@ -164,6 +166,8 @@ elseif (isset($_GET['AddedQU'])) {
 	submenu_option(_('Make &Sales Order Against This Quotation'), '/sales/sales_order_entry.php?NewQuoteToSalesOrder='.$order_no);
 
 	submenu_option(_('Enter a New &Quotation'),	'/sales/sales_order_entry.php?NewQuotation=0');
+
+	submenu_option(_('Add an Attachment'), "/admin/attachments.php?filterType=".ST_SALESQUOTE."&trans_no=$order_no");
 
 	display_footer_exit();
 }
@@ -205,6 +209,8 @@ elseif (isset($_GET['AddedDN'])) {
 		submenu_option(_('Enter a New Template &Delivery'), '/sales/inquiry/sales_orders_view.php?DeliveryTemplates=Yes');
 	else
 		submenu_option(_('Enter a &New Delivery'), '/sales/sales_order_entry.php?NewDelivery=0');
+
+	submenu_option(_('Add an Attachment'), '/admin/attachments.php?filterType='.ST_CUSTDELIVERY."&trans_no=$delivery");
 
 	display_footer_exit();
 }

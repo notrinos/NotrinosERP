@@ -61,6 +61,8 @@ if (isset($_GET['AddedID'])) {
 
 	hyperlink_params($path_to_root.'/sales/inquiry/sales_orders_view.php', _('Select Another Order For Dispatch'), 'OutstandingOnly=1');
 
+	hyperlink_params($path_to_root.'/admin/attachments.php', _("Add an Attachment"), "filterType=".ST_CUSTDELIVERY."&trans_no=$dispatch_no");
+
 	display_footer_exit();
 }
 elseif (isset($_GET['UpdatedID'])) {

@@ -98,6 +98,8 @@ if (isset($_GET['AddedID'])) {
 	hyperlink_params($_SERVER['PHP_SELF'], _('Enter &Another Purchase Order'), 'NewOrder=yes');
 	
 	hyperlink_no_params($path_to_root.'/purchasing/inquiry/po_search.php', _('Select An &Outstanding Purchase Order'));
+
+	hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), "filterType=$trans_type&trans_no=$order_no");
 	
 	display_footer_exit();	
 
@@ -117,9 +119,9 @@ elseif (isset($_GET['AddedGRN'])) {
 
 	hyperlink_params($path_to_root.'/purchasing/supplier_invoice.php', _('Entry purchase &invoice for this receival'), 'New=1');
 
-	hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), 'filterType='.$trans_type.'&trans_no='.$trans_no);
-
 	hyperlink_params($_SERVER['PHP_SELF'], _('Enter &Another GRN'), 'NewGRN=Yes');
+
+	hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), 'filterType='.$trans_type.'&trans_no='.$trans_no);
 	
 	display_footer_exit();	
 
@@ -137,17 +139,17 @@ elseif (isset($_GET['AddedPI'])) {
 
 	hyperlink_params($path_to_root.'/purchasing/supplier_payment.php', _('Entry supplier &payment for this invoice'), 'trans_type='.$trans_type.'&PInvoice='.$trans_no);
 
-	hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), 'filterType='.$trans_type.'&trans_no='.$trans_no);
+	hyperlink_params($_SERVER['PHP_SELF'], _("Enter &Another Direct Invoice"), "NewInvoice=Yes");
 
-	hyperlink_params($_SERVER['PHP_SELF'], _('Enter &Another Direct Invoice'), 'NewInvoice=Yes');
+	hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), 'filterType='.$trans_type.'&trans_no='.$trans_no);
 	
 	display_footer_exit();	
 }
 
 if ($_SESSION['PO']->fixed_asset)
-  check_db_has_purchasable_fixed_assets(_('There are no purchasable fixed assets defined in the system.'));
+	check_db_has_purchasable_fixed_assets(_('There are no purchasable fixed assets defined in the system.'));
 else
-  check_db_has_purchasable_items(_('There are no purchasable inventory items defined in the system.'));
+	check_db_has_purchasable_items(_('There are no purchasable inventory items defined in the system.'));
 
 //--------------------------------------------------------------------------------------------------
 

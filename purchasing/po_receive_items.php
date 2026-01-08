@@ -43,6 +43,8 @@ if (isset($_GET['AddedID'])) {
 
 	hyperlink_no_params($path_to_root.'/purchasing/inquiry/po_search.php', _('Select a different &purchase order for receiving items against'));
 
+	hyperlink_params("$path_to_root/admin/attachments.php", _('Add an Attachment'), "filterType=$trans_type&trans_no=$grn");
+
 	display_footer_exit();
 }
 
