@@ -49,7 +49,7 @@ function update_average_material_cost($supplier, $stock_id, $price, $qty, $date,
 	$qoh = get_qoh_on_date($stock_id);
 
 	if ($adj_only) {
-		if ($qoh > 0)
+		if ($qoh > .0000000001) // avoid very small values
 			$material_cost = ($qoh * $material_cost + $qty * $price_in_home_currency) /	$qoh;
 	}
 	else {
@@ -58,7 +58,7 @@ function update_average_material_cost($supplier, $stock_id, $price, $qty, $date,
 				$cost_adjust = true;
 			$qoh = 0;
 		}
-		if ($qoh + $qty > 0)
+		if ($qoh + $qty > .0000000001) // avoid very small values
 			$material_cost = ($qoh * $material_cost + $qty * $price_in_home_currency) /	($qoh + $qty);
 	}
 
