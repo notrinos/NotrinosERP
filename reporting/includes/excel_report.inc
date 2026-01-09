@@ -55,6 +55,12 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 	var $formatHeaderRight;
 	var $formatFooter;
 	var $formatAmount = array();
+	var $formatRight;
+	var $formatLeft;
+	var $formatTopHeaderLeft;
+	var $formatBottomHeaderLeft;
+	var $formatTopHeaderRight;
+	var $formatBottomHeaderRight;
 	var $headerFunc;
 	
 	var $sheet;
