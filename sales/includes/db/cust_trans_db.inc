@@ -272,7 +272,7 @@ function post_void_customer_trans($type, $type_no) {
 	}
 }
 
-function get_sql_for_customer_inquiry($from, $to, $cust_id=ALL_TEXT, $filter=ALL_TEXT, $show_voided=0) {
+function get_sql_for_customer_inquiry($from, $to, $cust_id=ALL_TEXT, $filter=ALL_TEXT, $show_voided=0, $ref='') {
 
 	$sql = "SELECT 
 		trans.type, 
@@ -311,6 +311,8 @@ function get_sql_for_customer_inquiry($from, $to, $cust_id=ALL_TEXT, $filter=ALL
 		WHERE debtor.debtor_no = trans.debtor_no"; // exclude voided transactions and self-balancing (journal) transactions:
 	if (!$show_voided) 	
 			$sql .= " AND ISNULL(v.date_) AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) != 0";
+	if (!empty($ref))
+    	$sql .= " AND trans.reference LIKE ". db_escape("%$ref%");
 
 	if ($filter == '2')
 		$sql .= " AND ABS(IF(prep_amount, prep_amount, ABS(trans.ov_amount) + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)-trans.alloc)>".FLOAT_COMP_DELTA;

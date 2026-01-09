@@ -422,7 +422,7 @@ function get_branch_to_order($customer_id, $branch_id) {
 *	OutstandingOnly
 *	PrepaidOrders
 */
-function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT) {
+function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT, $show_voided=0) {
 	if ($filter=='OutstandingOnly')
 		$order_value = 'Sum(line.unit_price*(line.quantity-line.qty_sent)*(1-line.discount_percent))+freight_cost';
 	else
@@ -517,8 +517,10 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 		sorder.branch_code,
 		sorder.customer_ref,
 		sorder.ord_date,
-		sorder.deliver_to
-		ORDER BY sorder.order_no DESC";
+		sorder.deliver_to";
+  		if ($show_voided == 0) 	
+    	 	$sql .= " HAVING OrderValue != 0";
+		$sql .= " ORDER BY sorder.order_no DESC";
 
 	return $sql;
 }

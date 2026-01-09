@@ -226,6 +226,8 @@ if (!$page_nested)
 	customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true);
 if ($trans_type == ST_SALESQUOTE)
 	check_cells(_('Show All:'), 'show_all');
+if ($trans_type == ST_SALESORDER)
+	check_cells(_('Zero values'), 'show_voided');
 
 submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
 hidden('order_view_mode', $_POST['order_view_mode']);
@@ -238,7 +240,7 @@ end_table(1);
 //---------------------------------------------------------------------------------------------
 //	Orders inquiry table
 //
-$sql = get_sql_for_sales_orders_view($trans_type, get_post('OrderNumber'), get_post('order_view_mode'), get_post('SelectStockFromList'), get_post('OrdersAfterDate'), get_post('OrdersToDate'), get_post('OrderReference'), get_post('StockLocation'), get_post('customer_id'));
+$sql = get_sql_for_sales_orders_view($trans_type, get_post('OrderNumber'), get_post('order_view_mode'), get_post('SelectStockFromList'), get_post('OrdersAfterDate'), get_post('OrdersToDate'), get_post('OrderReference'), get_post('StockLocation'), get_post('customer_id'), check_value('show_voided'));
 
 if ($trans_type == ST_SALESORDER)
 	$cols = array(
