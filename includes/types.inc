@@ -48,6 +48,7 @@ define('ST_COSTUPDATE', 35);
 define('ST_DIMENSION', 40);
 define('ST_CUSTOMER', 41);
 define('ST_SUPPLIER', 42);
+define('ST_ITEM', 43);
 
 // Don't include these defines in the $systypes_array.
 // They are used for documents only.

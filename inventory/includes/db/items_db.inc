@@ -200,3 +200,15 @@ function get_items_search($description, $type) {
 
 	return db_query($sql, 'Failed in retreiving item list.');
 }
+
+function get_item_code_id($stock_id) {
+	$sql = "SELECT ic.id
+		FROM ".TB_PREF."item_codes ic, ".TB_PREF."stock_master sm
+		WHERE ic.item_code = ".db_escape($stock_id)." AND ic.item_code = ic.stock_id AND
+		ic.stock_id = sm.stock_id";
+
+	$result = db_query($sql, 'could not get item id');
+	$row = db_fetch_row($result);
+
+	return is_array($row) ? $row[0] : false;
+}

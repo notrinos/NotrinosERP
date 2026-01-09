@@ -20,6 +20,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_db.inc');
 
 if (isset($_GET['vw']))
 	$view_id = $_GET['vw'];
@@ -81,6 +82,8 @@ if (isset($_GET['trans_no']))
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	
 	$filename = basename($_FILES['filename']['name']);
+	if ($_POST['filterType'] == ST_ITEM && $Mode == 'ADD_ITEM')
+		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
 		display_error(_('Selected transaction does not exists.'));
 	elseif ($Mode == 'ADD_ITEM' && !in_array(strtoupper(substr($filename, strlen($filename) - 3)), array('JPG', 'PNG', 'GIF', 'PDF', 'DOC', 'ODT'))) {
@@ -176,12 +179,16 @@ function viewing_controls() {
 		customer_list_cells(_('Select a customer: '), 'trans_no', null, false, true, true);
 	elseif(get_post('filterType') == ST_SUPPLIER)
 		supplier_list_cells(_('Select a supplier: '), 'trans_no', null,  false, true,true);
+	elseif(get_post('filterType') == ST_ITEM){
+		stock_items_list_cells(_('Select an Item: '), 'trans_no', null,  false, true,true);
 
 	end_row();
 	end_table(1);
 }
 
 function trans_view($trans) {
+	if ($type == ST_SUPPLIER || $type == ST_CUSTOMER || $type == ST_ITEM)
+		return $trans['id'];
 	return get_trans_view_str($trans['type_no'], $trans['trans_no']);
 }
 
@@ -203,15 +210,15 @@ function delete_link($row) {
 
 function display_rows($type, $trans_no) {
 
-	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : 0);
+	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : ($type==ST_ITEM ? get_item_code_id($trans_no) : 0));
 
 	$cols = array(
-		_('#') => array('fun'=>'trans_view', 'ord'=>''),
-		_('Description') => array('name'=>'description'),
+		_('#') => array('fun'=>'trans_view', 'ord'=>''), 
+		_('Doc Title') => array('name'=>'description'),
 		_('Filename') => array('name'=>'filename'),
 		_('Size') => array('name'=>'filesize'),
 		_('Filetype') => array('name'=>'filetype'),
-		_('Date Uploaded') => array('name'=>'tran_date', 'type'=>'date'),
+		_('Doc Date') => array('name'=>'tran_date', 'type'=>'date', 'ord'=>''),
 		array('insert'=>true, 'fun'=>'edit_link', 'align'=>'center'),
 		array('insert'=>true, 'fun'=>'view_link', 'align'=>'center'),
 		array('insert'=>true, 'fun'=>'download_link', 'align'=>'center'),
@@ -252,16 +259,16 @@ if ($selected_id != -1) {
 		$_POST['description']  = $row['description'];
 		hidden('trans_no', $row['trans_no']);
 		hidden('unique_name', $row['unique_name']);
-		if ($type != ST_SUPPLIER && $type != ST_CUSTOMER)
+		if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM)
 			label_row(_('Transaction #'), $row['trans_no']);
 	}	
 	hidden('selected_id', $selected_id);
 }
 else {
-	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER)
+	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM)
 		text_row_ex(_('Transaction #').':', 'trans_no', 10);
 }
-text_row_ex(_('Description').':', 'description', 40);
+text_row_ex(_('Doc Title').':', 'description', 40);
 file_row(_('Attached File').':', 'filename', 'filename');
 
 end_table(1);
