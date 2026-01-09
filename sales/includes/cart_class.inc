@@ -44,7 +44,7 @@ class Cart {
 	var $Branch;
 	var $email;
 
-	var $deliver_to;
+	var $delivery_to;
 	var $delivery_address;
 	var $phone;
 
@@ -373,7 +373,7 @@ class Cart {
 
 	function set_delivery($shipper, $destination, $address, $freight_cost=null) {
 		$this->ship_via = $shipper;
-		$this->deliver_to = $destination;
+		$this->delivery_to = $destination;
 		$this->delivery_address = $address;
 		if (isset($freight_cost))
 			$this->freight_cost = $freight_cost;
