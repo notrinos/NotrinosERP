@@ -33,7 +33,7 @@ class email
 	var $bcc = array();
 	var $attachment = array();
 	var $boundary = "";
-	var $header = "";
+	var $headers = [];
 	var $subject = "";
 	var $body = "";
 	var $charset = 'ISO-8859-1';
@@ -42,7 +42,7 @@ class email
 	function __construct($name, $mail)
 	{
 		$this->boundary = md5(uniqid(time()));
-		$this->header = "From: $name <$mail>\n";
+		$this->headers['From'] = "$name <$mail>";
 		$bcc = get_company_pref('bcc_email');
 		if ($bcc)
 			$this->bcc[] = $bcc;
@@ -66,7 +66,7 @@ class email
 	function attachment($file, $filename=null)
 	{
 		if (!isset($filename))
-			$filename = basename($file);
+			$filename = $file;
 		$this->attachment[$filename] = $file;
 	}
 
@@ -127,25 +127,24 @@ class email
 	{
 		// Add CC Recipients 
 		if (!empty($this->cc)) 
-			$this->header .= "Cc: " . implode(", ", $this->cc) . "\n" ; 
+			$this->headers['Cc'] = implode(", ", $this->cc); 
 
 		// Add BCC Recipients 
 		if (!empty($this->bcc)) 
-			$this->header .= "Bcc: " . implode(", ", $this->bcc) . "\n" ; 
-		$this->header .= "Content-Type: multipart/mixed;\n boundary=\"$this->boundary\"\n";
+			$this->headers['Bcc'] = implode(", ", $this->bcc); 
+		$this->headers['Content-Type'] = "multipart/mixed;\n boundary=\"$this->boundary\"";
 
 		// Add Attachments
 		if (!empty($this->attachment))
 		{
-			foreach ($this->attachment as $filename => $file)
+			foreach ($this->attachment as $filename => $fname)
 			{
-				$file = fread(fopen($file, "r"), filesize($file));
+				$file = fread(fopen($fname, "r"), filesize($fname));
 				$this->body .= "--".$this->boundary."\n";
-				$this->body .= "Content-Type: " .$this->mime_type($file). "; name=\"".$filename."\"\n";
+				$this->body .= "Content-Type: " .$this->mime_type(basename($filename)). "; name=\"".basename($fname)."\"\n";
 				$this->body .= "Content-Transfer-Encoding: base64\n";
 				$this->body .= "Content-Disposition: attachment; filename=\"".$filename."\"\n\n";
 				$this->body .= chunk_split(base64_encode($file),"72","\n");
-				$file = "";
 			}
 		}
 		$this->body .= "--".$this->boundary."--\n";
@@ -153,7 +152,7 @@ class email
 		$ret = 0;
 		foreach($this->to as $mail)
 		{
-			if (mail($mail, $this->subject, $this->body, $this->header, $this->add_params))
+			if (mail($mail, $this->subject, $this->body, $this->headers, $this->add_params))
 				$ret++;
 		}
 		return $ret;
