@@ -181,9 +181,9 @@ function viewing_controls() {
 		supplier_list_cells(_('Select a supplier: '), 'trans_no', null, false, true, true);
 	elseif(get_post('filterType') == ST_ITEM){
 		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, true);
-	elseif(get_post('filterType') == ST_FIXEDASSET){
+	elseif(get_post('filterType') == ST_FIXEDASSET)
 		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, false, false, array('fixed_asset' => 1));
-	elseif(get_post('filterType') == ST_BANKACCOUNT){
+	elseif(get_post('filterType') == ST_BANKACCOUNT)
 		bank_accounts_list_cells(_('Select a Bank Account: '), 'trans_no', null,  true);
 
 	end_row();
