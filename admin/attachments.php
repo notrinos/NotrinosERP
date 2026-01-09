@@ -187,7 +187,7 @@ function viewing_controls() {
 }
 
 function trans_view($trans) {
-	if ($type == ST_SUPPLIER || $type == ST_CUSTOMER || $type == ST_ITEM)
+	if ($trans['type_no']==ST_SUPPLIER || $trans['type_no']==ST_CUSTOMER || $trans['type_no']==ST_ITEM)
 		return $trans['id'];
 	return get_trans_view_str($trans['type_no'], $trans['trans_no']);
 }
