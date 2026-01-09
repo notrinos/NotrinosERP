@@ -81,7 +81,7 @@ class attachments extends simple_crud {
 			$attachments[] = $row;
 
 		start_table(TABLESTYLE, 'width=80%');
-		$th = array(_('ID'), _('Docs Title'), _('Filename'), _('Size'), _('Filetype'), _('Date Updated'),  '',  '', '', '');	
+		$th = array(_('ID'), _('Doc Title'), _('Filename'), _('Size'), _('Filetype'), _('Doc Date'),  '',  '', '', '');	
 		table_header($th);	
 		if($attachments){	
 			foreach($attachments as $de) {
@@ -134,7 +134,7 @@ class attachments extends simple_crud {
 
 		label_row(_($id_word), $_POST['trans_no']);	
 		date_row(_('Date'), 'tran_date');
-		text_row_ex(_('Docs Title').':', 'description', 40);
+		text_row_ex(_('Doc Title').':', 'description', 40);
 		if ($this->selected_id)
 			label_row(_('File:'), sprintf(_("%s [%s bytes]"), $row['filename'], $row['filesize']));
 		file_row( ($this->selected_id ? _('File change') : _('Select file')) . ':', 'file_attachment_name', 'file_attachment_name');
