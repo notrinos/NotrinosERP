@@ -135,6 +135,8 @@ if (!isset($_POST['customer_id']))
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
+ref_cells(_('Reference:'), 'Ref', '', null, _('Enter reference fragment or leave empty'));
+
 if (!$page_nested)
 	customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true, false, true);
 
@@ -167,7 +169,7 @@ if (get_post('RefreshInquiry') || list_updated('filterType'))
 
 //------------------------------------------------------------------------------------------------
 
-$sql = get_sql_for_customer_inquiry(get_post('TransAfterDate'), get_post('TransToDate'), get_post('customer_id'), get_post('filterType'), check_value('show_voided'));
+$sql = get_sql_for_customer_inquiry(get_post('TransAfterDate'), get_post('TransToDate'), get_post('customer_id'), get_post('filterType'), check_value('show_voided'), get_post('Ref'));
 
 //------------------------------------------------------------------------------------------------
 
