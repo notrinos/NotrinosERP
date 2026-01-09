@@ -118,6 +118,7 @@ if (list_updated('branch_id')) {
 
 if (isset($_GET['AddedID'])) {
 	$order_no = $_GET['AddedID'];
+
 	display_notification_centered(sprintf( _('Order # %d has been entered.'), $order_no));
 
 	submenu_view(_('&View This Order'), ST_SALESORDER, $order_no);
@@ -131,6 +132,14 @@ if (isset($_GET['AddedID'])) {
 	submenu_option(_('Work &Order Entry'), '/manufacturing/work_order_entry.php?');
 
 	submenu_option(_('Enter a &New Order'),	'/sales/sales_order_entry.php?NewOrder=0');
+
+	$order = get_sales_order_header($order_no, ST_SALESORDER);
+	$customer_id = $order['debtor_no'];
+	if ($order['prep_amount'] > 0) {
+		$row = db_fetch(db_query(get_allocatable_sales_orders($customer_id, $order_no, ST_SALESORDER)));
+		if ($row === false)
+			submenu_option(_('Receive Customer Payment'), "/sales/customer_payments.php?customer_id=$customer_id");
+	}
 
 	submenu_option(_('Add an Attachment'), "/admin/attachments.php?filterType=".ST_SALESORDER."&trans_no=$order_no");
 
