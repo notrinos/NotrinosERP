@@ -113,8 +113,10 @@ function write_journal_entries(&$cart) {
 		$aid = 0;
 		$aid = has_attachment($trans_type, $old_no);
 		if ($aid != 0) {
-			$row = get_attachment($aid);
-			update_attachment($aid, $row['type_no'], $trans_id, $row['description'], $row['filename'], $row['unique_name'], $row['filesize'], $row['filetype']);
+			move_trans_attachments($trans_type, $old_no, $trans_id);
+			//$row = get_attachment($aid);
+			//update_attachment($aid, $row['type_no'], $trans_id, $row['description'],
+			//	$row['filename'], $row['unique_name'], $row['filesize'], $row['filetype']);
 		}
 	}
 	$total = $cart->gl_items_total_debit();
