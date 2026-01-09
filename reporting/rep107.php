@@ -281,7 +281,7 @@ function print_invoices() {
 		}
 		$rep->Font();
 		if ($email == 1)
-			$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], get_company_pref('coy_name')));
+			$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], htmlspecialchars_decode(get_company_pref('coy_name'))));
 	}
 	if ($email == 0)
 		$rep->End();
