@@ -94,6 +94,7 @@ function write_journal_entries(&$cart) {
 	$memo_ = $cart->memo_;
 	$trans_type = $cart->trans_type;
 	$new = $cart->order_id == 0;
+	$old_no = $cart->order_id;
 
 	begin_transaction();
 
@@ -108,6 +109,14 @@ function write_journal_entries(&$cart) {
 	}
 
 	$trans_id = $cart->order_id = get_next_trans_no($trans_type);
+	if ($old_no) {
+		$aid = 0;
+		$aid = has_attachment($trans_type, $old_no);
+		if ($aid != 0) {
+			$row = get_attachment($aid);
+			update_attachment($aid, $row['type_no'], $trans_id, $row['description'], $row['filename'], $row['unique_name'], $row['filesize'], $row['filetype']);
+		}
+	}
 	$total = $cart->gl_items_total_debit();
 
 	$cart->write_gl();
