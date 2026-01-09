@@ -14,7 +14,11 @@ $path_to_root = '../..';
 include($path_to_root.'/includes/db_pager.inc');
 include($path_to_root.'/includes/session.inc');
 
-page(_($help_context = 'Bank Accounts'));
+$js = "";
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Bank Accounts'), isset($_GET['bank_id']), false, '', $js);
 
 include($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/ui/attachment.inc');
