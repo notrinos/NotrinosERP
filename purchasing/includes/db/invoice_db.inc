@@ -218,9 +218,13 @@ function add_supp_invoice(&$supp_trans) {
 	$clearing_act = get_company_pref('grn_clearing_act');
 	foreach ($supp_trans->grn_items as $line_no => $entered_grn) {
 
+		// moved this line up to calculate the taxfree price.
+    	$taxfree_line = get_tax_free_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, $supp_trans->tax_group_id, $supp_trans->tax_included) - $net_diff;
+    	$net_diff = 0;
+
 		if ($trans_type == ST_SUPPCREDIT) {
 			$entered_grn->this_quantity_inv = -$entered_grn->this_quantity_inv;
-			set_grn_item_credited($entered_grn, $supp_trans->supplier_id, $invoice_id, $date_);
+			set_grn_item_credited($entered_grn, $supp_trans->supplier_id, $invoice_id, $date_, $taxfree_line);
 		}
 
 		// For tax included pricelist the net price is calculated down from tax_included price.
@@ -229,8 +233,6 @@ function add_supp_invoice(&$supp_trans) {
 		// due to variations in tax calculations on supplier side. More over there is no direct relation between
 		// taxes and sales accounts, so we add net_diff just to first posted net value. This is _ugly_hack_
 		// which save us from rewriting whole routine, and works right only for small tax differences.
-
-		$taxfree_line = get_tax_free_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, $supp_trans->tax_group_id, $supp_trans->tax_included) - $net_diff; $net_diff = 0;
 
 		$line_tax = get_full_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, $supp_trans->tax_group_id, $supp_trans->tax_included) - $taxfree_line;
 
