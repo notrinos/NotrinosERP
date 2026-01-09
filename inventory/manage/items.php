@@ -613,7 +613,7 @@ function generateBarcode() {
 	$tmpBarcodeID = '';
 	$tmpCountTrys = 0;
 	while ($tmpBarcodeID == '')	{
-		srand ((double) microtime( )*1000000);
+		srand ((int) microtime( )*1000000);
 		$random_1  = rand(1,9);
 		$random_2  = rand(0,9);
 		$random_3  = rand(0,9);
