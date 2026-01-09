@@ -69,7 +69,7 @@ function display_credit_header(&$order) {
 	if (!isset($_POST['ref']))
 		$_POST['ref'] = $Refs->get_next(ST_CUSTCREDIT, null, array('customer' => get_post('customer_id'), 'branch' => get_post('branch_id'), 'date' => get_post('OrderDate')));
 	if ($order->trans_no==0)
-		ref_row(_('Reference').':', 'ref');
+		ref_row(_('Reference').':', 'ref', _('Reference number unique for this document type'), null, '', $order->trans_type, array('date'=> @$_POST['OrderDate']));
 	else
 		label_row(_('Reference').':', $order->reference);
 
