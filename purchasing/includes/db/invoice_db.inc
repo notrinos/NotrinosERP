@@ -232,7 +232,7 @@ function add_supp_invoice(&$supp_trans) {
 
 		$taxfree_line = get_tax_free_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, $supp_trans->tax_group_id, $supp_trans->tax_included) - $net_diff; $net_diff = 0;
 
-		$line_tax = get_full_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, 0, $supp_trans->tax_included) - $taxfree_line;
+		$line_tax = get_full_price_for_item($entered_grn->item_code, $entered_grn->this_quantity_inv * $entered_grn->chg_price, $supp_trans->tax_group_id, $supp_trans->tax_included) - $taxfree_line;
 
 		$stock_gl_code = get_stock_gl_code($entered_grn->item_code);
 
