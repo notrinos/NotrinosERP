@@ -213,6 +213,7 @@ function install_hooks($lang_code=null) {
 		$code = $lang_code;
 		$hook_class = 'hooks_'.$code;
 		$Hooks[$code] = new $hook_class;
+		$Hooks[$code]->path = "/lang/".$lang_code."/locale.inc";
 		unset($code, $hook_class);
 	}
 	// install hooks provided by active extensions
