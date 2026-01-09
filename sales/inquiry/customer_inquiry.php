@@ -78,6 +78,17 @@ function edit_link($row) {
 	return ($row['type'] == ST_CUSTCREDIT && $row['order_']) || $row['voided'] == 1 ? '' : trans_editor_link($row['type'], $row['trans_no']);
 }
 
+function copy_link($row) {
+    global $page_nested;
+
+    if ($page_nested)
+        return '';
+    if ($row['type'] == ST_CUSTDELIVERY)
+        return pager_link(_('Copy Delivery'), "/sales/sales_order_entry.php?NewDelivery=".$row['order_'], ICON_DOC);
+    elseif ($row['type'] == ST_SALESINVOICE)
+        return pager_link(_('Copy Invoice'), "/sales/sales_order_entry.php?NewInvoice=".$row['order_'], ICON_DOC);
+}
+
 function prt_link($row) {
 	if ($row['type'] == ST_CUSTPAYMENT || $row['type'] == ST_BANKDEPOSIT) 
 		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print Receipt'), ST_CUSTPAYMENT, ICON_PRINT);
@@ -187,6 +198,7 @@ $cols = array(
 	_('Balance') => array('align'=>'right', 'type'=>'amount'),
 		array('insert'=>true, 'fun'=>'gl_view'),
 		array('insert'=>true, 'fun'=>'edit_link'),
+		array('insert'=>true, 'fun'=>'copy_link'),
 		array('insert'=>true, 'fun'=>'credit_link'),
 		array('insert'=>true, 'fun'=>'prt_link')
 );
