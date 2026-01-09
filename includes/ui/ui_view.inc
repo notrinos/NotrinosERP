@@ -1447,7 +1447,7 @@ function display_backtrace($cond=true, $msg='') {
 if (!isset($payment_services)) {
 	$payment_services = array(
 		'PayPal' => "https://www.paypal.com/xclick?business=<company_email>&item_name=<comment>&amount=<amount>&currency_code=<currency>",
-		'XUMM' => "https://xumm.app/detect/request:{{account}}?amount=<amount>"
+		'XUMM XRP' => "https://xumm.app/detect/request:{{account}}?amount=<amount>"
 	);
 }
 /*
@@ -1465,13 +1465,13 @@ function payment_link($name, $options) {
 	foreach ($options as $id => $option)
 		$patterns['<'.$id.'>'] = urlencode($options[$id]);
 
-	if ($name == 'XUMM') {
+	if (substr($name, 0, 4) == 'XUMM') {
 		// Get the account number for 'XRPL Account' from 'bank_accounts' table
-		$sql = "SELECT bank_account_number FROM ".TB_PREF."bank_accounts WHERE bank_account_name = 'XRPL Account'";
-		$result = db_query($sql, 'could not retrieve XRPL Account bank account number');
+		$sql = "SELECT bank_account_number FROM ".TB_PREF."bank_accounts WHERE bank_name = '$name'";
+        $result = db_query($sql, "could not retrieve $name bank account number");
 		$row = db_fetch($result);
 		if ($row == false) {
-			display_error(_('Could not retrieve XRPL Account bank account number'));
+			display_error(sprintf(_("Could not retrieve %s bank account number"), $name));
 			return false;
 		}
 		$account = $row['bank_account_number'];
@@ -1480,7 +1480,7 @@ function payment_link($name, $options) {
 		$link = str_replace('{{account}}', urlencode($account), $link);
 
 		// Extract XRP exchange rate
-		$curr_code = 'XRP';
+		$curr_code = substr($name, -3);
 		$date = date('Y-m-d'); // Get the current date in 'YYYY-MM-DD' format
 		$sql = "SELECT rate_buy FROM ".TB_PREF."exchange_rates WHERE curr_code = '$curr_code' AND date_ = '$date'";
 		$result = db_query($sql, "could not retrieve exchange rate for $curr_code - $date");
