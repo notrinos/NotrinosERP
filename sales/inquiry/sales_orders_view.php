@@ -207,6 +207,10 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 ref_cells(_('#:'), 'OrderNumber', '',null, '', true);
 ref_cells(_('Ref'), 'OrderReference', '',null, '', true);
+
+if ($show_dates)
+    yesno_list_cells('', 'by_delivery', null, ($trans_type==ST_SALESORDER ? _('Delivery date') : _('Valid until')).':', ($trans_type==ST_SALESORDER ? _('Order date') : _('Quotation date')).':');
+
 if ($show_dates) {
 	date_cells(_('from:'), 'OrdersAfterDate', '', null, -user_transaction_days());
 	date_cells(_('to:'), 'OrdersToDate', '', null, 1);
@@ -228,6 +232,8 @@ if ($trans_type == ST_SALESQUOTE)
 	check_cells(_('Show All:'), 'show_all');
 if ($trans_type == ST_SALESORDER)
 	check_cells(_('Zero values'), 'show_voided');
+if ($show_dates && $trans_type == ST_SALESORDER)
+	check_cells(_('No auto'), 'no_auto');
 
 submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
 hidden('order_view_mode', $_POST['order_view_mode']);
@@ -240,7 +246,7 @@ end_table(1);
 //---------------------------------------------------------------------------------------------
 //	Orders inquiry table
 //
-$sql = get_sql_for_sales_orders_view($trans_type, get_post('OrderNumber'), get_post('order_view_mode'), get_post('SelectStockFromList'), get_post('OrdersAfterDate'), get_post('OrdersToDate'), get_post('OrderReference'), get_post('StockLocation'), get_post('customer_id'), check_value('show_voided'));
+$sql = get_sql_for_sales_orders_view($trans_type, get_post('OrderNumber'), get_post('order_view_mode'), get_post('SelectStockFromList'), get_post('OrdersAfterDate'), get_post('OrdersToDate'), get_post('OrderReference'), get_post('StockLocation'), get_post('customer_id'), check_value('show_voided'), get_post('by_delivery'), get_post('no_auto'));
 
 if ($trans_type == ST_SALESORDER)
 	$cols = array(

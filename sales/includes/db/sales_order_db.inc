@@ -422,7 +422,7 @@ function get_branch_to_order($customer_id, $branch_id) {
 *	OutstandingOnly
 *	PrepaidOrders
 */
-function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT, $show_voided=0) {
+function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT, $show_voided=0, $by_delivery=0, $no_auto=0) {
 	if ($filter=='OutstandingOnly')
 		$order_value = 'Sum(line.unit_price*(line.quantity-line.qty_sent)*(1-line.discount_percent))+freight_cost';
 	else
@@ -483,9 +483,12 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 			$date_after = date2sql($from);
 			$date_before = date2sql($to);
 
-			$sql .=  " AND sorder.ord_date >= '$date_after'"
-					." AND sorder.ord_date <= '$date_before'";
+			$by_date = $by_delivery ? 'delivery_date' : 'ord_date';
+			$sql .=  " AND sorder.$by_date >= '$date_after'"
+					." AND sorder.$by_date <= '$date_before'";
 		}
+		if ($no_auto)
+			$sql .= " AND sorder.reference != 'auto'";
 	}
 	if ($trans_type == ST_SALESQUOTE && !check_value('show_all'))
 		$sql .= " AND sorder.delivery_date >= '".date2sql(Today())."' AND line.qty_sent=0"; // show only outstanding, not realized quotes
@@ -518,8 +521,8 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 		sorder.customer_ref,
 		sorder.ord_date,
 		sorder.deliver_to";
-  		if ($show_voided == 0) 	
-    	 	$sql .= " HAVING OrderValue != 0";
+		if ($show_voided == 0) 	
+			$sql .= " HAVING OrderValue != 0";
 		$sql .= " ORDER BY sorder.order_no DESC";
 
 	return $sql;
