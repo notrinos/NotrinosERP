@@ -26,6 +26,9 @@ function set_global_connection($company=-1) {
 
 	$_SESSION['wa_current_user']->cur_con = $company;
 
+	if (!is_string($db_connections[$company]['tbpref'])) 
+		$db_connections[$company]['tbpref'] = '';
+
 	$connection = $db_connections[$company];
 
 	$db = mysqli_connect($connection['host'], $connection['dbuser'], $connection['dbpassword'], '', 

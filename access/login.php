@@ -107,15 +107,19 @@ else {
 	$coy =  user_company();
 	if (!isset($coy))
 		$coy = $def_coy;
+
 	echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
-	if (!@$SysPrefs->text_company_selection) {
-		echo "<select name='company_login_name'>\n";
-		for ($i = 0; $i < count($db_connections); $i++)
-			echo "<option value=".$i.' '.($i==$coy ? 'selected' : '').'>'.$db_connections[$i]['name'].'</option>';
-		echo "</select>\n";
+
+	if (isset($db_connections)) {
+		if (!@$SysPrefs->text_company_selection) {
+			echo "<select name='company_login_name'>\n";
+			for ($i = 0; $i < count($db_connections); $i++)
+				echo "<option value=".$i.' '.($i==$coy ? 'selected' : '').'>'.$db_connections[$i]['name'].'</option>';
+			echo "</select>\n";
+		}
+		else
+			echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
 	}
-	else
-		echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
 	echo '</div></td></tr>';
 }; 
 start_row();

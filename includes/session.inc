@@ -408,13 +408,17 @@ if ($SysPrefs->login_delay > 0 && file_exists(VARLIB_PATH.'/faillog.php'))
 	include_once(VARLIB_PATH.'/faillog.php');
 
 // Page Initialisation
-if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logged_in() || !isset($_SESSION['language']) || !method_exists($_SESSION['language'], 'set_language')) {
-	$l = array_search_value($dflt_lang, $installed_languages,  'code');
-	$_SESSION['language'] = new language($l['name'], $l['code'], $l['encoding'], (isset($l['rtl']) && $l['rtl'] === true) ? 'rtl' : 'ltr');
+if (isset($dflt_lang) && isset($installed_languages)) {
+	if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logged_in()
+		|| !isset($_SESSION['language']) || !method_exists($_SESSION['language'], 'set_language'))
+	{
+		$l = array_search_value($dflt_lang, $installed_languages, 'code');
+		$_SESSION['language'] = new language($l['name'], $l['code'], $l['encoding'],
+	 	(isset($l['rtl']) && $l['rtl'] === true) ? 'rtl' : 'ltr');
+	}
+
+	$_SESSION['language']->set_language($_SESSION['language']->code);
 }
-
-$_SESSION['language']->set_language($_SESSION['language']->code);
-
 
 include_once($path_to_root.'/includes/access_levels.inc');
 include_once($path_to_root.'/version.php');
