@@ -535,7 +535,8 @@ if (!$stock_id)
 $tabs = (get_post('fixed_asset'))
 	? array(
 		'settings' => array(_('&General settings'), $stock_id),
-		'movement' => array(_('&Transactions'), $stock_id) )
+		'movement' => array(_('&Transactions'), $stock_id),
+		'attachments' => array(_('Attachments'), (user_check_access('SA_ATTACHDOCUMENT') ? get_item_code_id($stock_id) : null)))
 	: array(
 		'settings' => array(_('&General settings'), $stock_id),
 		'sales_pricing' => array(_('S&ales Pricing'), (user_check_access('SA_SALESPRICE') ? $stock_id : null)),
