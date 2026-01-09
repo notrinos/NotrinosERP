@@ -15,7 +15,7 @@
 */
 //-----------------------------------------------------------------------------------
 
-class allocation extends \stdClass {
+class allocation {
 
 	var $trans_no; 
 	var $type;
@@ -25,6 +25,7 @@ class allocation extends \stdClass {
 	var $person_curr;
 	var $date_;
 	var $amount = 0; /*Total amount of the transaction in FX */
+	var $bank_amount = 0;
 	var $currency;
 
 	var $allocs; /*array of transactions allocated to */

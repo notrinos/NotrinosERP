@@ -109,7 +109,7 @@ file for later presentation.
 
 */
 
-class graph extends \stdClass {
+class graph {
 
 	public $x;
 	public $y;

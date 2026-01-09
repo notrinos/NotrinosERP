@@ -21,7 +21,7 @@ iv)  a delivery note
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 include_once($path_to_root . '/taxes/tax_calc.inc');
 
-class Cart extends \stdClass {
+class Cart {
 	var $trans_type; // invoice, order, quotation, delivery note ...
 	var $trans_no = array();// array (num1=>ver1,..) or 0 for new
 	var $so_type = 0;		// for sales order: simple=0 template=1
@@ -81,6 +81,7 @@ class Cart extends \stdClass {
 	var $ex_rate;
 
 	var $fixed_asset = false;
+	var $bo_policy = null;
 
 	//-------------------------------------------------------------------------
 	//

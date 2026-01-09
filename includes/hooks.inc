@@ -18,8 +18,9 @@
 //
 // To find how various hooks are processed look into respective hook_* functions below.
 //
-class hooks extends \stdClass {
+class hooks {
 	var $module_name; // extension module name.
+	var $path = null;
 
 	// 
 	// Helper for updating databases with extension scheme
