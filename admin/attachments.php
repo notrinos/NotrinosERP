@@ -183,13 +183,15 @@ function viewing_controls() {
 		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, true);
 	elseif(get_post('filterType') == ST_FIXEDASSET){
 		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, false, false, array('fixed_asset' => 1));
+	elseif(get_post('filterType') == ST_BANKACCOUNT){
+		bank_accounts_list_cells(_('Select a Bank Account: '), 'trans_no', null,  true);
 
 	end_row();
 	end_table(1);
 }
 
 function trans_view($trans) {
-	if ($trans['type_no']==ST_SUPPLIER || $trans['type_no']==ST_CUSTOMER || $trans['type_no']==ST_ITEM || $trans['type_no']==ST_FIXEDASSET)
+	if ($trans['type_no']==ST_SUPPLIER || $trans['type_no']==ST_CUSTOMER || $trans['type_no']==ST_ITEM || $trans['type_no']==ST_FIXEDASSET || $trans['type_no']==ST_BANKACCOUNT)
 		return $trans['id'];
 	return get_trans_view_str($trans['type_no'], $trans['trans_no']);
 }
@@ -212,7 +214,7 @@ function delete_link($row) {
 
 function display_rows($type, $trans_no) {
 
-	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : ($type==ST_ITEM || $type==ST_FIXEDASSET ? get_item_code_id($trans_no) : 0));
+	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER || $type==ST_BANKACCOUNT ? $trans_no : ($type==ST_ITEM || $type==ST_FIXEDASSET ? get_item_code_id($trans_no) : 0));
 
 	$cols = array(
 		_('#') => array('fun'=>'trans_view', 'ord'=>''), 
@@ -261,13 +263,13 @@ if ($selected_id != -1) {
 		$_POST['description']  = $row['description'];
 		hidden('trans_no', $row['trans_no']);
 		hidden('unique_name', $row['unique_name']);
-		if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM)
+		if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM && $type != ST_BANKACCOUNT)
 			label_row(_('Transaction #'), $row['trans_no']);
 	}	
 	hidden('selected_id', $selected_id);
 }
 else {
-	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM && $type != ST_FIXEDASSET)
+	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM && $type != ST_FIXEDASSET && $type != ST_BANKACCOUNT)
 		text_row_ex(_('Transaction #').':', 'trans_no', 10);
 }
 text_row_ex(_('Doc Title').':', 'description', 40);

@@ -43,6 +43,7 @@ $systypes_array = array (
 	ST_SUPPLIER => _('Supplier'),
 	ST_ITEM => _('Item'),
 	ST_FIXEDASSET => _('Fixed Asset'),
+	ST_BANKACCOUNT => _("Bank Account"),
 );
 
 $fa_systypes_array = array (

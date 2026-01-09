@@ -79,7 +79,7 @@ function get_sql_for_attached_documents($type, $id_no) {
 	// $_POST['trans_no'] will be used to store the customer_id or supplier_id for them
 	$sql = "SELECT trans_no, description, filename, filesize, filetype, tran_date, id, type_no FROM ".TB_PREF."attachments WHERE type_no=".db_escape($type);
 
-	if(($type == ST_CUSTOMER || $type == ST_SUPPLIER || $type == ST_ITEM || $type == ST_FIXEDASSET) && $id_no != null)
+	if(($type == ST_CUSTOMER || $type == ST_SUPPLIER || $type == ST_ITEM || $type == ST_FIXEDASSET || $type == ST_BANKACCOUNT) && $id_no != null)
 		$sql .=" AND trans_no = ".db_escape($id_no);
 
 	$sql .= " ORDER BY trans_no DESC";

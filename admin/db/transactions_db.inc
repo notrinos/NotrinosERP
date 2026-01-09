@@ -194,6 +194,7 @@ function get_systype_db_info($type) {
 		case    ST_SUPPLIER    : return array(TB_PREF."suppliers", null, "supplier_id", "supp_ref", null);
 		case    ST_ITEM        : return array(TB_PREF."item_codes", null, "id", "stock_id", null);
 		case    ST_FIXEDASSET  : return array(TB_PREF."item_codes", null, "id", "stock_id", null);
+		case    ST_BANKACCOUNT  : return array(TB_PREF."bank_accounts", null, "id", "bank_account_number", null);
 	}
 
 	display_db_error("invalid type ($type) sent to get_systype_db_info", '', true);
