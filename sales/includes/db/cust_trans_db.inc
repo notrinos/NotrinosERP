@@ -190,15 +190,11 @@ function get_customer_trans($trans_id, $trans_type, $customer_id=null) {
 
 	if (db_num_rows($result) == 0) {
 		// can't return nothing
-		if ($SysPrefs->go_debug)
-			display_backtrace();
 		display_db_error('no debtor trans found for given params', $sql, true);
 		exit;
 	}
 	if (db_num_rows($result) > 1) {
 		// can't return multiple
-		if($SysPrefs->go_debug)
-			display_backtrace();
 		display_db_error('duplicate debtor transactions found for given params', $sql, true);
 		exit;
 	}

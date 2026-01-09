@@ -11,15 +11,15 @@
 ***********************************************************************/
 
 function display_error($msg) {
-	trigger_error($msg, E_USER_ERROR);
+	fa_trigger_error($msg, E_USER_ERROR);
 }
 
 function display_notification($msg) {
-	trigger_error($msg, E_USER_NOTICE);
+	fa_trigger_error($msg, E_USER_NOTICE);
 }
 
 function display_warning($msg) {
-	trigger_error($msg, E_USER_WARNING);
+	fa_trigger_error($msg, E_USER_WARNING);
 }
 
 function display_notification_centered($msg) {
