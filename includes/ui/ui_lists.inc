@@ -1339,7 +1339,8 @@ function bank_reconciliation_list($account, $name, $selected_id=null, $submit_on
 			'spec_option' => $special_option,
 			'format' => '_format_date',
 			'spec_id' => '',
-			'select_submit'=> $submit_on_change
+			'select_submit'=> $submit_on_change,
+			'order' => 'reconciled DESC'
 		) );
 }
 
