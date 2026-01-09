@@ -57,7 +57,7 @@ class email
             'linebreak-chars'=>'\n',
             'scheme' => 'Q',
         );
-        return substr(iconv_mime_encode(null, $txt, $opts), 2);
+        return substr(iconv_mime_encode('', $txt, $opts), 2);
     }
 
     //
