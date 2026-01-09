@@ -45,6 +45,16 @@ print_invoices();
 
 //----------------------------------------------------------------------------------------------------
 
+// Fetch bank account details by bank name (used for XRPL overrides)
+function get_bank_account_by_name($name) {
+    $sql = "SELECT * FROM ".TB_PREF."bank_accounts WHERE bank_name = ".db_escape($name);
+    $result = db_query($sql, "could not retrieve bank account");
+    $row = db_fetch($result);
+    return $row ? $row : false;
+}
+
+//----------------------------------------------------------------------------------------------------
+
 function print_invoices() {
 	global $path_to_root, $SysPrefs;
 
@@ -97,7 +107,14 @@ function print_invoices() {
 		if ($customer && $myrow['debtor_no'] != $customer)
 			continue;
 			
-		$baccount = get_default_bank_account($myrow['curr_code']);
+		if (substr($pay_service, 0, 4) === 'XRPL') {
+			// Override: use XUMM XRP bank account for display
+   			 $baccount = get_bank_account_by_name('XUMM XRP');
+		}
+		else {
+			// Default logic
+			$baccount = get_default_bank_account($myrow['curr_code']);
+		}
 		$params['bankaccount'] = $baccount['id'];
 
 		$branch = get_branch($myrow['branch_code']);
