@@ -68,6 +68,8 @@ select[name='pager_list'] {
 }
 input.date {
 	width: 135px;
+	font-size: 1.1em;
+	padding: 2px 0 2px 1px;
 }
 div.date_box {
 	white-space: nowrap;
@@ -86,7 +88,7 @@ div.date_box a:hover {
 	text-decoration: none;
 }
 div.date_box i {
-	font-size: 1.5em;
+	font-size: 1.6em;
 	vertical-align: middle;
 }
 option.inactive {
@@ -351,7 +353,7 @@ html[dir="rtl"] #hotkeyshelp {
 }
 .tableheader {
 	font-weight: bold;
-	background-color: #C9C9C9;
+	background-color: #DADADA;
 	color: #222222;
 	text-align: center;
 }
@@ -402,7 +404,7 @@ html[dir="rtl"] #hotkeyshelp {
 	background-color: #FAFAFA;
 }
 .evenrow {
-	background-color: #F0F0F0;
+	background-color: #F3F3F3;
 }
 .overduebg {
 	background-color: #F7C6C5;
@@ -504,7 +506,7 @@ tr.navibar .navibutton span {
 	padding: 0 3px;
 	color: #000;
 	border-collapse: collapse;
-	background-color: #C9C9C9;
+	background-color: #DADADA;
 }
 .navibar tr td {
 	border: none;
