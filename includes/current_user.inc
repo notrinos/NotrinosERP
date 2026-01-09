@@ -276,7 +276,7 @@ function number_format2($number, $decimals=0) {
 	if($decimals==='max')
 		$dec = 15 - floor(log10(abs($number)));
 	else {
-		$delta = ($number < 0.0 ? -.0000000001 : .0000000001);
+		$delta = ($number < 0 ? -.0000000001 : .0000000001);
 		$number += $delta;
 		$dec = $decimals;
 	}
