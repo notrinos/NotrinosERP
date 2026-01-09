@@ -144,7 +144,31 @@ class graph {
 	public $built_in = false;
 	public $fontfile = '';
 	public $encoding;
-	
+
+	public $biggest_x;
+	public $biggest_y;
+	public $graphic_2_exists;
+	public $legend_exists;
+	public $biggest_graphic_name;
+	public $space_between_bars;
+	public $space_between_dots;
+	public $higher_value;
+	public $higher_value_str;
+	public $graphic_area_width;
+	public $graphic_area_height;
+	public $graphic_area_x1;
+	public $graphic_area_y1;
+	public $graphic_area_x2;
+	public $graphic_area_y2;
+	public $legend_box_width;
+	public $legend_box_x1;
+	public $legend_box_x2;
+	public $legend_box_height;
+	public $legend_box_y1;
+	public $legend_box_y2;
+	public $img;
+	public $color;
+
 	function __construct() {
 		global $SysPrefs;
 		$this->encoding = strtoupper($_SESSION['language']->encoding);
