@@ -122,11 +122,11 @@ function print_supplier_balances() {
 	$total = array();
 	$grandtotal = array(0,0,0,0);
 
-	$sql = "SELECT supplier_id, supp_name AS name, curr_code FROM ".TB_PREF."suppliers";
+	$sql = "SELECT supplier_id, supp_name AS name, curr_code, inactive FROM ".TB_PREF."suppliers";
 	if ($fromsupp != ALL_TEXT)
 		$sql .= " WHERE supplier_id=".db_escape($fromsupp);
 	$sql .= " ORDER BY supp_name";
-	$result = db_query($sql, 'The customers could not be retrieved');
+	$result = db_query($sql, 'The suppliers could not be retrieved');
 
 	$tot_cur_cr = $tot_cur_db = 0;
 	while ($myrow=db_fetch($result)) {
@@ -156,7 +156,7 @@ function print_supplier_balances() {
 		}
 
 		if (db_num_rows($res) == 0 && !$no_zeros) {
-			$rep->TextCol(0, 2, $myrow['name']);
+			$rep->TextCol(0, 2, $myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
 			$rep->AmountCol(3, 4, $init[3], $dec);
 			$rep->AmountCol(7, 8, $init[3], $dec);
 			//$rep->Line($rep->row  - 2);
@@ -194,7 +194,7 @@ function print_supplier_balances() {
 			$total[3] = $total[1] - $total[0];
 		}
 		if ($no_zeros && $total[3] == 0.0 && $curr_db == 0.0 && $curr_cr == 0.0) continue;
-		$rep->TextCol(0, 2, $myrow['name']);
+		$rep->TextCol(0, 2, $myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
 		$rep->AmountCol(3, 4, $total[3] + $curr_cr - $curr_db, $dec);
 		$rep->AmountCol(4, 5, $curr_db, $dec);
 		$rep->AmountCol(5, 6, $curr_cr, $dec);

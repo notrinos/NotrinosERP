@@ -162,26 +162,26 @@ function print_customer_balances() {
 
 	$grandtotal = array(0, 0, 0, 0);
 
-	$sql = "SELECT ".TB_PREF."debtors_master.debtor_no, name, curr_code FROM ".TB_PREF."debtors_master
-		INNER JOIN ".TB_PREF."cust_branch
-		ON ".TB_PREF."debtors_master.debtor_no=".TB_PREF."cust_branch.debtor_no
-		INNER JOIN ".TB_PREF."areas
-		ON ".TB_PREF."cust_branch.area = ".TB_PREF."areas.area_code
-		INNER JOIN ".TB_PREF."salesman
-		ON ".TB_PREF."cust_branch.salesman=".TB_PREF."salesman.salesman_code";
+	$sql = "SELECT d.debtor_no, name, curr_code, d.inactive FROM ".TB_PREF."debtors_master d
+		INNER JOIN ".TB_PREF."cust_branch b 
+		ON d.debtor_no=b.debtor_no
+		INNER JOIN ".TB_PREF."areas a 
+		ON b.area = a.area_code
+		INNER JOIN ".TB_PREF."salesman s 
+		ON b.salesman=s.salesman_code";
 	if ($fromcust != ALL_TEXT )
-		$sql .= " WHERE ".TB_PREF."debtors_master.debtor_no=".db_escape($fromcust);
+		$sql .= " WHERE d.debtor_no=".db_escape($fromcust);
 	elseif ($area != 0) {
 		if ($folk != 0)
-			$sql .= " WHERE ".TB_PREF."salesman.salesman_code=".db_escape($folk)."
-				AND ".TB_PREF."areas.area_code=".db_escape($area);
+			$sql .= " WHERE s.salesman_code=".db_escape($folk)."
+				AND a.area_code=".db_escape($area);
 		else
-			$sql .= " WHERE ".TB_PREF."areas.area_code=".db_escape($area);
+			$sql .= " WHERE a.area_code=".db_escape($area);
 	}
 	elseif ($folk != 0 )
-		$sql .= " WHERE ".TB_PREF."salesman.salesman_code=".db_escape($folk);
+		$sql .= " WHERE s.salesman_code=".db_escape($folk);
 
-	$sql .= " GROUP BY ".TB_PREF."debtors_master.debtor_no ORDER BY name";
+	$sql .= " GROUP BY d.debtor_no ORDER BY name";
 
 	$result = db_query($sql, 'The customers could not be retrieved');
 
@@ -205,7 +205,7 @@ function print_customer_balances() {
         $res = get_transactions($myrow['debtor_no'], $from, $to);
 
 		if (db_num_rows($res) == 0 && !$no_zeros) {
-			$rep->TextCol(0, 1, $myrow['name']);
+			$rep->TextCol(0, 1, $myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
             $rep->AmountCol(1, 2, $curr_open, $dec);
             $rep->AmountCol(4, 5, $curr_open, $dec);
 			$rep->NewLine(1);

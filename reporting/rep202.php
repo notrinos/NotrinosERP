@@ -137,7 +137,7 @@ function print_aged_supplier_analysis() {
 	$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
 	$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 
-	$sql = "SELECT supplier_id, supp_name AS name, curr_code FROM ".TB_PREF."suppliers";
+	$sql = "SELECT supplier_id, supp_name AS name, curr_code, inactive FROM ".TB_PREF."suppliers";
 	if ($fromsupp != ALL_TEXT)
 		$sql .= " WHERE supplier_id=".db_escape($fromsupp);
 	$sql .= " ORDER BY supp_name";
@@ -170,8 +170,9 @@ function print_aged_supplier_analysis() {
 			continue;
 
 		$rep->Font('bold');
-		$rep->TextCol(0, 2,	$myrow['name']);
-		if ($convert) $rep->TextCol(2, 3,	$myrow['curr_code']);
+		$rep->TextCol(0, 2,	$myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
+		if ($convert)
+			$rep->TextCol(2, 3,	$myrow['curr_code']);
 		$rep->Font();
 		$total[0] += ($supprec['Balance'] - $supprec['Due']);
 		$total[1] += ($supprec['Due']-$supprec['Overdue1']);
