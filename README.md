@@ -9,7 +9,7 @@ NotrinosERP is an open source, web-based enterprise management system that writt
 
 ## Requirements
 - HTTP web server - Ex. Apache, Nginx, IIS
-- PHP version from 5.6 upto 8.1.1 (version 7.3 is recommended)
+- PHP version from 5.6 upto 8.4
 - MySQL version 4.1 and above with Innodb tables enabled, or any MariaDB version
 - A web browser with HTML5 compatibility
 
