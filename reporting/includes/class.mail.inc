@@ -32,10 +32,10 @@ class email
 	var $cc = array();
 	var $bcc = array();
 	var $attachment = array();
-	var $boundary = "";
-	var $headers = [];
-	var $subject = "";
-	var $body = "";
+	var $boundary = '';
+	var $headers = array();
+	var $subject = '';
+	var $body = '';
 	var $charset = 'ISO-8859-1';
 	var $add_params = '';
 	
