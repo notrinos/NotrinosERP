@@ -44,7 +44,7 @@ class Cart {
 	var $Branch;
 	var $email;
 
-	var $delivery_to;
+	var $deliver_to;
 	var $delivery_address;
 	var $phone;
 
@@ -220,7 +220,7 @@ class Cart {
 					$sodata = get_sales_order_header($this->order_no, ST_SALESORDER);
 					$this->cust_ref = $sodata['customer_ref'];
 					// currently currency is hard linked to debtor account
-					$this->delivery_to = $sodata['deliver_to'];
+					$this->deliver_to = $sodata['deliver_to'];
 					$this->delivery_address = $sodata['delivery_address'];
 					// child transaction reedition - update with parent info unless it is freehand
 					if (!$this->is_prepaid() && !$prepare_child) // this is read for view/reedition
@@ -373,7 +373,7 @@ class Cart {
 
 	function set_delivery($shipper, $destination, $address, $freight_cost=null) {
 		$this->ship_via = $shipper;
-		$this->delivery_to = $destination;
+		$this->deliver_to = $destination;
 		$this->delivery_address = $address;
 		if (isset($freight_cost))
 			$this->freight_cost = $freight_cost;
