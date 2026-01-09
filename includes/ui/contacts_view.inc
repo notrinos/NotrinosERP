@@ -27,14 +27,14 @@ class contacts extends simple_crud {
 
 		parent::__construct($name, $fields);
 		$this->class = $class;
-		$this->subclass = $subclass;
+		$this->sub_class = $subclass;
 		$this->entity = $id;
 	}
 
 	function list_view() {
 		br();
 
-		$contacts = get_crm_persons($this->class, $this->subclass, $this->entity);
+		$contacts = get_crm_persons($this->class, $this->sub_class, $this->entity);
 		start_table(TABLESTYLE, "width='80%'");
 
 		$th = array(_('Assignment'), _('Reference'), _('Full Name'), _('Phone'), _('Sec Phone'), _('Fax'), _('email'), '', '&nbsp;');
@@ -87,7 +87,7 @@ class contacts extends simple_crud {
 		text_row(_('Reference:'), 'ref', @$this->data['ref'], 35, 40);
 
 		crm_category_types_list_row(_('Contact active for:'), 'assgn', @$this->data['contacts'],
-			array('subclass' => @$this->subclass,
+			array('subclass' => @$this->sub_class,
 				'class' => @$this->class, 
 				'multi' =>true)
 			);

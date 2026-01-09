@@ -96,7 +96,7 @@ function check_overdue($row) {
 function display_customer_summary($customer_record) {
 	$past1 = get_company_pref('past_due_days');
 	$past2 = 2 * $past1;
-	if ($customer_record['dissallow_invoices'] != 0)
+	if ($customer_record && $customer_record['dissallow_invoices'] != 0)
 		echo '<center><font color=red size=4><b>'._('CUSTOMER ACCOUNT IS ON HOLD').'</font></b></center>';
 
 	$nowdue = '1-'.$past1.' '._('Days');
@@ -107,15 +107,17 @@ function display_customer_summary($customer_record) {
 	start_table(TABLESTYLE, "width='80%'");
 	table_header($th);
 
-	start_row();
-	label_cell($customer_record['curr_code']);
-	label_cell($customer_record['terms']);
-	amount_cell($customer_record['Balance'] - $customer_record['Due']);
-	amount_cell($customer_record['Due'] - $customer_record['Overdue1']);
-	amount_cell($customer_record['Overdue1'] - $customer_record['Overdue2']);
-	amount_cell($customer_record['Overdue2']);
-	amount_cell($customer_record['Balance']);
-	end_row();
+	if ($customer_record != false) {
+		start_row();
+		label_cell($customer_record['curr_code']);
+		label_cell($customer_record['terms']);
+		amount_cell($customer_record['Balance'] - $customer_record['Due']);
+		amount_cell($customer_record['Due'] - $customer_record['Overdue1']);
+		amount_cell($customer_record['Overdue1'] - $customer_record['Overdue2']);
+		amount_cell($customer_record['Overdue2']);
+		amount_cell($customer_record['Balance']);
+		end_row();
+	}
 
 	end_table();
 }

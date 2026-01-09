@@ -46,15 +46,18 @@ function display_supplier_summary($supplier_record) {
 	$th = array(_('Currency'), _('Terms'), _('Current'), $nowdue, $pastdue1, $pastdue2, _('Total Balance'));
 
 	table_header($th);
-	start_row();
-	label_cell($supplier_record['curr_code']);
-	label_cell($supplier_record['terms']);
-	amount_cell($supplier_record['Balance'] - $supplier_record['Due']);
-	amount_cell($supplier_record['Due'] - $supplier_record['Overdue1']);
-	amount_cell($supplier_record['Overdue1'] - $supplier_record['Overdue2']);
-	amount_cell($supplier_record['Overdue2']);
-	amount_cell($supplier_record['Balance']);
-	end_row();
+
+	if ($supplier_record != false) {
+		start_row();
+		label_cell($supplier_record['curr_code']);
+		label_cell($supplier_record['terms']);
+		amount_cell($supplier_record['Balance'] - $supplier_record['Due']);
+		amount_cell($supplier_record['Due'] - $supplier_record['Overdue1']);
+		amount_cell($supplier_record['Overdue1'] - $supplier_record['Overdue2']);
+		amount_cell($supplier_record['Overdue2']);
+		amount_cell($supplier_record['Balance']);
+		end_row();
+	}
 	end_table(1);
 }
 

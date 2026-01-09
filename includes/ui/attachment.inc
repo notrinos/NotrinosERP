@@ -24,7 +24,7 @@ class attachments extends simple_crud {
 		$fields = array('type_no', 'trans_no','description','filename','tran_date' => 'date');
 		parent::__construct($name, $fields);
 		$this->class = $class;
-		$this->subclass = $subclass;
+		$this->sub_class = $subclass;
 		$this->entity = $id;
 		
 	}

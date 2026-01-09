@@ -79,7 +79,7 @@ function print_deliveries() {
 				$rep->filename = 'Packing_slip' . $myrow['reference'] . '.pdf';
 			}
 		}
-		$rep->currency = $cur;
+		$rep->currency = ($cur == null ? 'USD' : $cur);
 		$rep->Font();
 		$rep->Info($params, $cols, null, $aligns);
 
