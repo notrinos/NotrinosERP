@@ -82,7 +82,7 @@ if (isset($_GET['trans_no']))
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	
 	$filename = basename($_FILES['filename']['name']);
-	if ($_POST['filterType'] == ST_ITEM && $Mode == 'ADD_ITEM')
+	if (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
 		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
 		display_error(_('Selected transaction does not exists.'));
@@ -178,16 +178,18 @@ function viewing_controls() {
 	if(get_post('filterType') == ST_CUSTOMER )
 		customer_list_cells(_('Select a customer: '), 'trans_no', null, false, true, true);
 	elseif(get_post('filterType') == ST_SUPPLIER)
-		supplier_list_cells(_('Select a supplier: '), 'trans_no', null,  false, true,true);
+		supplier_list_cells(_('Select a supplier: '), 'trans_no', null, false, true, true);
 	elseif(get_post('filterType') == ST_ITEM){
-		stock_items_list_cells(_('Select an Item: '), 'trans_no', null,  false, true,true);
+		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, true);
+	elseif(get_post('filterType') == ST_FIXEDASSET){
+		stock_items_list_cells(_('Select an Item: '), 'trans_no', null, false, true, false, false, array('fixed_asset' => 1));
 
 	end_row();
 	end_table(1);
 }
 
 function trans_view($trans) {
-	if ($trans['type_no']==ST_SUPPLIER || $trans['type_no']==ST_CUSTOMER || $trans['type_no']==ST_ITEM)
+	if ($trans['type_no']==ST_SUPPLIER || $trans['type_no']==ST_CUSTOMER || $trans['type_no']==ST_ITEM || $trans['type_no']==ST_FIXEDASSET)
 		return $trans['id'];
 	return get_trans_view_str($trans['type_no'], $trans['trans_no']);
 }
@@ -210,7 +212,7 @@ function delete_link($row) {
 
 function display_rows($type, $trans_no) {
 
-	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : ($type==ST_ITEM ? get_item_code_id($trans_no) : 0));
+	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER ? $trans_no : ($type==ST_ITEM || $type==ST_FIXEDASSET ? get_item_code_id($trans_no) : 0));
 
 	$cols = array(
 		_('#') => array('fun'=>'trans_view', 'ord'=>''), 
@@ -265,7 +267,7 @@ if ($selected_id != -1) {
 	hidden('selected_id', $selected_id);
 }
 else {
-	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM)
+	if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM && $type != ST_FIXEDASSET)
 		text_row_ex(_('Transaction #').':', 'trans_no', 10);
 }
 text_row_ex(_('Doc Title').':', 'description', 40);

@@ -41,7 +41,8 @@ $systypes_array = array (
 	ST_DIMENSION => _('Dimension'),
 	ST_CUSTOMER => _('Customer'),
 	ST_SUPPLIER => _('Supplier'),
-	ST_ITEM => _('Item')
+	ST_ITEM => _('Item'),
+	ST_FIXEDASSET => _('Fixed Asset'),
 );
 
 $fa_systypes_array = array (

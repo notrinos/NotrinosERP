@@ -131,8 +131,10 @@ class attachments extends simple_crud {
 			$id_word = _('Customer ID');
 		elseif($type_no==ST_SUPPLIER) // 6
 			$id_word = _('Supplier ID');
-		elseif($type_no==ST_ITEM) // 7
+		elseif($type_no==ST_ITEM)
 			$id_word = _('Item ID');
+		elseif($type_no==ST_FIXEDASSET) 
+			$id_word = _('Fixed Asset ID');
 
 		label_row(_($id_word), $_POST['trans_no']);	
 		date_row(_('Date'), 'tran_date');

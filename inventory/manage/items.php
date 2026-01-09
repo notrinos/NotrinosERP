@@ -590,7 +590,7 @@ switch (get_post('_tabs_sel')) {
 	case 'attachments':
 		$id = get_item_code_id($stock_id);
 		$_GET['trans_no'] = $id;
-		$_GET['type_no']= ST_ITEM;
+		$_GET['type_no'] = get_post('fixed_asset') ? ST_FIXEDASSET : ST_ITEM;
 		$attachments = new attachments('attachment', $id, 'items');
 		$attachments->show();
 };
