@@ -77,7 +77,9 @@ function show_image($stock_id) {
 			if (file_exists($file)) {
 				// rand() call is necessary here to avoid caching problems.
 				$check_remove_image = true; // fixme
-				$stock_img_link = "<img id='item_img' alt = '[".$stock_id.".$ext"."]' src='".$file."?nocache=".rand()."'"." height='".$SysPrefs->pic_height."' border='0'>";
+				$stock_img_link = "<a target='_blank' href='".$file."?nocache=".rand()."' class='viewlink' onclick = \"javascript:openWindow(this.href,this.target); return false;\">";
+				$stock_img_link .= "<img id='item_img' alt = '[".$stock_id.".$ext"."]' src='".$file."?nocache=".rand()."' height='".$SysPrefs->pic_height."' border='0'>";
+				$stock_img_link .= "</a>";
 				break;
 			}
 		}
