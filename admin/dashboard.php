@@ -62,6 +62,8 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addDashboard(_('Inventory'), DA_INVENTORY);
 	$dashboard->addWidget(DA_INVENTORY, 301, WIDGET_HALF);
 	$dashboard->addWidget(DA_INVENTORY, 302, WIDGET_HALF);
+	$dashboard->addWidget(DA_INVENTORY, 303, WIDGET_HALF);
+	$dashboard->addWidget(DA_INVENTORY, 304, WIDGET_HALF);
 
 	$dashboard->addDashboard(_('Manufaturing'), DA_MANUFACTURE);
 	$dashboard->addWidget(DA_MANUFACTURE, 401, WIDGET_HALF);
