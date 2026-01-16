@@ -15,6 +15,7 @@
 class purch_order {
 
 	var $trans_type; // order/grn/invoice (direct)
+	var $trans_no; // transaction number (GRN, Invoice, etc.)
 	var $line_items;
 	var $curr_code;
 	var $supp_ref;
