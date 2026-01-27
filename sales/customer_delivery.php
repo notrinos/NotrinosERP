@@ -88,7 +88,7 @@ elseif (isset($_GET['UpdatedID'])) {
 
 //-----------------------------------------------------------------------------
 
-if (isset($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
+if (isset($_GET['OrderNumber']) && is_numeric($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
 
 	$ord = new Cart(ST_SALESORDER, $_GET['OrderNumber'], true);
 	if ($ord->is_prepaid())
@@ -111,7 +111,7 @@ if (isset($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
 	$_SESSION['Items'] = $ord;
 	copy_from_cart();
 }
-elseif (isset($_GET['ModifyDelivery']) && $_GET['ModifyDelivery'] > 0) {
+elseif (isset($_GET['ModifyDelivery']) && is_numeric($_GET['ModifyDelivery']) && $_GET['ModifyDelivery'] > 0) {
 
 	check_is_editable(ST_CUSTDELIVERY, $_GET['ModifyDelivery']);
 	$_SESSION['Items'] = new Cart(ST_CUSTDELIVERY,$_GET['ModifyDelivery']);
