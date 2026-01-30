@@ -175,9 +175,9 @@ function print_annual_expense_breakdown() {
 		$destination = $_POST['PARAM_5'];
 	}
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
 	if ($thousands) {
@@ -193,7 +193,7 @@ function print_annual_expense_breakdown() {
 		$fontSize = ($orientation == 'P' ? 7 : 8);
 	}
 
-	$cols = array(0, 34, 130, 162, 194, 226, 258, 290, 322, 354, 386, 418, 450, 482, 514, 546);
+	$cols = array(0, 34, 130, 163, 196, 229, 262, 295, 328, 361, 394, 427, 460, 493, 526, 561);
 	//------------0--1---2----3----4----5----6----7----8----10---11---12---13---14---15---16-
 
 	// from now
@@ -259,10 +259,10 @@ function print_annual_expense_breakdown() {
 										$orientation);
 	if ($orientation == 'L')
 		recalculate_cols($cols);
-	elseif (user_pagesize() == 'A4') {
+	if (user_pagesize() == 'A4') {
 		// Portrait, so adjust columns for A4, 16.7 pts narrower than Letter
 		for ($i = 2; $i < sizeof($cols); $i++)
-			$cols[$i] -= 17;
+			$cols[$i] -= 30;
 	}
 
 	$rep->Font();

@@ -128,8 +128,8 @@ function get_gl_transactions($from_date, $to_date, $trans_no=0, $account=null, $
 		.TB_PREF."chart_master coa
 		WHERE coa.account_code=gl.account
 		AND ISNULL(v.date_)
-		AND gl.tran_date >= '".date2sql($from_date)."'
-		AND gl.tran_date <= '".date2sql($to_date)."'
+		AND gl.tran_date >= '".date2sql($from_date)."' 
+		AND gl.tran_date <= '".date2sql($to_date)."' 
 		AND gl.amount <> 0"; 
 
 	if ($trans_no > 0)

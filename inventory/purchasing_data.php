@@ -185,7 +185,9 @@ else {
 	$_POST['conversion_factor'] = '';
 	$_POST['supplier_description'] = '';
 }
-amount_row(_('Price:'), 'price', null, '', get_supplier_currency($selected_id), $dec2);
+echo "<tr>";
+unit_amount_cells(_("Price"), 'price', null, '', get_supplier_currency($selected_id));
+echo "</tr>\n";
 text_row(_('Suppliers Unit of Measure:'), 'suppliers_uom', null, 50, 51);
 
 if (!isset($_POST['conversion_factor']) || $_POST['conversion_factor'] == '')

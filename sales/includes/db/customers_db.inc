@@ -101,9 +101,7 @@ function get_customer_details($customer_id, $to=null, $all=true) {
 
 	$result = db_query($sql, 'The customer details could not be retrieved');
 
-	$customer_record = db_fetch($result);
-
-	return $customer_record;
+	return db_fetch($result);
 }
 
 function get_customer($customer_id) {

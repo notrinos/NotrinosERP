@@ -37,6 +37,7 @@ page($_SESSION['page_title'], @$_REQUEST['popup'], false, '', $js);
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/includes/ui/attachment.inc');
 
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
@@ -76,7 +77,9 @@ function show_image($stock_id) {
 			if (file_exists($file)) {
 				// rand() call is necessary here to avoid caching problems.
 				$check_remove_image = true; // fixme
-				$stock_img_link = "<img id='item_img' alt = '[".$stock_id.".$ext"."]' src='".$file."?nocache=".rand()."'"." height='".$SysPrefs->pic_height."' border='0'>";
+				$stock_img_link = "<a target='_blank' href='".$file."?nocache=".rand()."' class='viewlink' onclick = \"javascript:openWindow(this.href,this.target); return false;\">";
+				$stock_img_link .= "<img id='item_img' alt = '[".$stock_id.".$ext"."]' src='".$file."?nocache=".rand()."' height='".$SysPrefs->pic_height."' border='0'>";
+				$stock_img_link .= "</a>";
 				break;
 			}
 		}
@@ -429,7 +432,6 @@ function item_settings(&$stock_id, $new_item) {
 		}
 		hidden('depreciation_date');
 	}
-	table_section(2);
 
 	$dim = get_company_pref('use_dimension');
 	if ($dim >= 1) {
@@ -443,6 +445,8 @@ function item_settings(&$stock_id, $new_item) {
 		hidden('dimension_id', 0);
 	if ($dim < 2)
 		hidden('dimension2_id', 0);
+
+	table_section(2);
 
 	table_section_title(_('GL Accounts'));
 
@@ -534,7 +538,8 @@ if (!$stock_id)
 $tabs = (get_post('fixed_asset'))
 	? array(
 		'settings' => array(_('&General settings'), $stock_id),
-		'movement' => array(_('&Transactions'), $stock_id) )
+		'movement' => array(_('&Transactions'), $stock_id),
+		'attachments' => array(_('Attachments'), (user_check_access('SA_ATTACHDOCUMENT') ? get_item_code_id($stock_id) : null)))
 	: array(
 		'settings' => array(_('&General settings'), $stock_id),
 		'sales_pricing' => array(_('S&ales Pricing'), (user_check_access('SA_SALESPRICE') ? $stock_id : null)),
@@ -543,6 +548,7 @@ $tabs = (get_post('fixed_asset'))
 		'reorder_level' => array(_('&Reorder Levels'), (is_inventory_item($stock_id) && user_check_access('SA_REORDER') ? $stock_id : null)),
 		'movement' => array(_('&Transactions'), (user_check_access('SA_ITEMSTRANSVIEW') && is_inventory_item($stock_id) ? $stock_id : null)),
 		'status' => array(_('&Status'), (user_check_access('SA_ITEMSSTATVIEW') ? $stock_id : null)),
+		'attachments' => array(_('Attachments'), (user_check_access('SA_ATTACHDOCUMENT') ? get_item_code_id($stock_id) : null)),
 	);
 
 tabbed_content_start('tabs', $tabs);
@@ -584,6 +590,12 @@ switch (get_post('_tabs_sel')) {
 		$_GET['stock_id'] = $stock_id;
 		include_once($path_to_root.'/inventory/inquiry/stock_status.php');
 		break;
+	case 'attachments':
+		$id = get_item_code_id($stock_id);
+		$_GET['trans_no'] = $id;
+		$_GET['type_no'] = get_post('fixed_asset') ? ST_FIXEDASSET : ST_ITEM;
+		$attachments = new attachments('attachment', $id, 'items');
+		$attachments->show();
 };
 
 br();
@@ -604,7 +616,7 @@ function generateBarcode() {
 	$tmpBarcodeID = '';
 	$tmpCountTrys = 0;
 	while ($tmpBarcodeID == '')	{
-		srand ((double) microtime( )*1000000);
+		srand ((int) microtime( )*1000000);
 		$random_1  = rand(1,9);
 		$random_2  = rand(0,9);
 		$random_3  = rand(0,9);

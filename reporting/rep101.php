@@ -138,7 +138,7 @@ function print_customer_balances() {
 
 	$grandtotal = array(0, 0, 0, 0);
 
-	$sql = "SELECT debtor_no, name, curr_code FROM ".TB_PREF."debtors_master ";
+	$sql = "SELECT debtor_no, name, curr_code, inactive FROM ".TB_PREF."debtors_master ";
 	if ($fromcust != ALL_TEXT)
 		$sql .= "WHERE debtor_no=".db_escape($fromcust);
 	$sql .= " ORDER BY name";
@@ -168,7 +168,7 @@ function print_customer_balances() {
 			continue;
 
 		$rep->Font('bold');
-		$rep->TextCol(0, 2, $myrow['name']);
+		$rep->TextCol(0, 2, $myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
 		$rep->Font();
 		if ($convert)
 			$rep->TextCol(2, 3,	$myrow['curr_code']);

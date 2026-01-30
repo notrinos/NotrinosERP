@@ -35,12 +35,13 @@ function get_cust_allocation($trans_id) {
 	Update debtor trans alloc field according to current status of cust_allocations
 */
 function update_debtor_trans_allocation($trans_type, $trans_no, $person_id) {
+	$dec = user_price_dec();
 	$sql = "UPDATE `".TB_PREF.($trans_type==ST_SALESORDER ? 'sales_orders' : 'debtor_trans')."` trans,
 			(SELECT sum(amt) amt FROM ".TB_PREF."cust_allocations
 			WHERE person_id=".db_escape($person_id)." AND ((trans_type_to=".db_escape($trans_type)." AND trans_no_to=".db_escape($trans_no).")
 				OR (trans_type_from=".db_escape($trans_type)." AND trans_no_from=".db_escape($trans_no)."))) allocated
 		SET 
-			trans.alloc=IFNULL(allocated.amt,0)
+			trans.alloc=IFNULL(ROUND(allocated.amt, $dec),0)
 		WHERE trans.debtor_no=".db_escape($person_id)." AND ".($trans_type==ST_SALESORDER ?
 			   "trans.trans_type=".db_escape($trans_type)." AND order_no=".db_escape($trans_no)
 			:  "trans.type=".db_escape($trans_type)." AND trans_no=".db_escape($trans_no));
@@ -275,6 +276,8 @@ function get_sql_for_customer_allocation_inquiry($from, $to, $customer, $filterT
 			$sql .= " AND trans.type = " . ST_CUSTPAYMENT;
 		elseif ($filterType == '4')
 			$sql .= " AND trans.type = ".ST_CUSTCREDIT." ";
+		elseif ($filterType == '6')
+			$sql .= " AND trans.type = ".ST_JOURNAL." ";
 
 		if ($filterType == '2') {
 			$today =  date2sql(Today());

@@ -209,7 +209,7 @@ function get_sql_for_bank_account_reconcile($bank_account, $date) {
 		LEFT JOIN ".TB_PREF."comments c ON c.type = bt.type AND c.id = bt.trans_no
 		WHERE bank_act = ".db_escape($bank_account) . "
 		AND (reconciled IS NULL OR reconciled='". date2sql($date) ."')
-		AND amount != 0
+		AND amount != 0 AND trans_date <= '". date2sql($date) ."'
 		ORDER BY trans_date, bt.id";
 
 	return $sql;

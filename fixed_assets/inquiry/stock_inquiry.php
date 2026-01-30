@@ -112,7 +112,7 @@ function purchase_link($row) {
 	if ($row['purchase_date'] === NULL)
 		return '';
 
-	return get_supplier_trans_view_str(ST_SUPPRECEIVE, $row['purchase_no'], sql2date($row['purchase_date']));
+	return get_supplier_trans_view_str(ST_SUPPINVOICE, $row['purchase_no'], sql2date($row['purchase_date']));
 }
 
 function disposal_link($row) {

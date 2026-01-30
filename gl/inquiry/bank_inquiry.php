@@ -44,12 +44,13 @@ if (isset($_GET['bank_account']))
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-bank_accounts_list_cells(_('Account:'), 'bank_account', null);
+if (!$page_nested)
+	bank_accounts_list_cells(_('Account:'), 'bank_account', null);
 
 date_cells(_('From:'), 'TransAfterDate', '', null, -user_transaction_days());
 date_cells(_('To:'), 'TransToDate');
 
-submit_cells('Show',_('Show'),'','', 'default');
+submit_cells('Show',_('Show'), '', '', 'default');
 end_row();
 end_table();
 end_form();
@@ -62,8 +63,10 @@ if (!isset($_POST['bank_account']))
 $result = get_bank_trans_for_bank_account($_POST['bank_account'], $_POST['TransAfterDate'], $_POST['TransToDate']);	
 
 div_start('trans_tbl');
-$act = get_bank_account($_POST['bank_account']);
-display_heading($act['bank_account_name'].' - '.$act['bank_curr_code']);
+if (!$page_nested) {
+	$act = get_bank_account($_POST["bank_account"]);
+	display_heading($act['bank_account_name']." - ".$act['bank_curr_code']);
+}
 
 start_table(TABLESTYLE);
 
@@ -105,7 +108,8 @@ while ($myrow = db_fetch($result)) {
 	label_cell(get_comments_string($myrow['type'], $myrow['trans_no']));
 	label_cell(get_gl_view_str($myrow['type'], $myrow['trans_no']));
 
-	label_cell(trans_editor_link($myrow['type'], $myrow['trans_no']));
+	if (!$page_nested)
+		label_cell(trans_editor_link($myrow['type'], $myrow['trans_no']));
 
 	end_row();
 	if ($myrow['amount'] > 0 ) 

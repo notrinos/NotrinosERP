@@ -32,9 +32,9 @@ function get_invoices($supplier_id, $to, $all=true) {
 	if ($all)
 		$value = "(trans.ov_amount + trans.ov_gst + trans.ov_discount)";
 	else
-		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT.", 
-		(trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc),
-		(trans.ov_amount + trans.ov_gst + trans.ov_discount + trans.alloc))";
+		$value = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_BANKDEPOSIT." OR (trans.type=".ST_JOURNAL." AND (trans.ov_amount + trans.ov_gst + trans.ov_discount)>0),  
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc),
+			(trans.ov_amount + trans.ov_gst + trans.ov_discount + trans.alloc))";
 	$due = "IF (trans.type=".ST_SUPPINVOICE." OR trans.type=".ST_SUPPCREDIT.",trans.due_date,trans.tran_date)";
 	$sql = "SELECT trans.type,
 		trans.reference,
@@ -52,7 +52,7 @@ function get_invoices($supplier_id, $to, $all=true) {
 			AND trans.tran_date <= '$todate'
 			AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) > ".FLOAT_COMP_DELTA;
 	if (!$all)
-		$sql .= " AND ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc > ".FLOAT_COMP_DELTA;
+		$sql .= "AND $value <> 0 ";
 	$sql .= " ORDER BY trans.tran_date";
 
 	return db_query($sql, 'The supplier details could not be retrieved');
@@ -137,7 +137,7 @@ function print_aged_supplier_analysis() {
 	$pastdue1 = ($PastDueDays1 + 1).'-'.$PastDueDays2.' '._('Days');
 	$pastdue2 = _('Over').' '.$PastDueDays2.' '._('Days');
 
-	$sql = "SELECT supplier_id, supp_name AS name, curr_code FROM ".TB_PREF."suppliers";
+	$sql = "SELECT supplier_id, supp_name AS name, curr_code, inactive FROM ".TB_PREF."suppliers";
 	if ($fromsupp != ALL_TEXT)
 		$sql .= " WHERE supplier_id=".db_escape($fromsupp);
 	$sql .= " ORDER BY supp_name";
@@ -170,8 +170,9 @@ function print_aged_supplier_analysis() {
 			continue;
 
 		$rep->Font('bold');
-		$rep->TextCol(0, 2,	$myrow['name']);
-		if ($convert) $rep->TextCol(2, 3,	$myrow['curr_code']);
+		$rep->TextCol(0, 2,	$myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
+		if ($convert)
+			$rep->TextCol(2, 3,	$myrow['curr_code']);
 		$rep->Font();
 		$total[0] += ($supprec['Balance'] - $supprec['Due']);
 		$total[1] += ($supprec['Due']-$supprec['Overdue1']);

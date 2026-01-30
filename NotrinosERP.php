@@ -29,6 +29,7 @@ class NotrinosErp {
 	public $settings;
 	public $applications;
 	public $selected_application;
+	public $renderer = null;
 
 	public $menu;
 

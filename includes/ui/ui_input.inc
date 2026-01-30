@@ -287,7 +287,7 @@ function button($name, $value, $title=false, $icon=false,  $aspect='') {
 	}
 	else
 		return "<input type='submit' class='editbutton' name='"
-			.htmlentities(strtr($name, array('.'=>'=2E', '='=>'=3D',// ' '=>'=20','['=>'=5B'
+			.html_specials_encode(strtr($name, array('.'=>'=2E', '='=>'=3D',// ' '=>'=20','['=>'=5B'
 			)))
 			."' value='$value'"
 			.($title ? " title='$title'":'')

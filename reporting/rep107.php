@@ -24,13 +24,7 @@ function get_invoice_range($from, $to, $currency=false) {
 
 	$ref = ($SysPrefs->print_invoice_no() == 1 ? 'trans_no' : 'reference');
 
-	$sql = "SELECT trans.trans_no, trans.reference";
-
-	// if($currency !== false)
-		// $sql .= ", cust.curr_code";
-
-	$sql .= " FROM ".TB_PREF."debtor_trans trans 
-			LEFT JOIN ".TB_PREF."voided voided ON trans.type=voided.type AND trans.trans_no=voided.id";
+	$sql = "SELECT trans.trans_no, trans.reference FROM ".TB_PREF."debtor_trans trans LEFT JOIN ".TB_PREF."voided voided ON trans.type=voided.type AND trans.trans_no=voided.id";
 
 	if ($currency !== false)
 		$sql .= " LEFT JOIN ".TB_PREF."debtors_master cust ON trans.debtor_no=cust.debtor_no";
@@ -44,10 +38,20 @@ function get_invoice_range($from, $to, $currency=false) {
 
 	$sql .= " ORDER BY trans.tran_date, trans.$ref";
 
-	return db_query($sql, 'Cant retrieve invoice range');
+	return db_query($sql, 'Could not retrieve invoice range');
 }
 
 print_invoices();
+
+//----------------------------------------------------------------------------------------------------
+
+// Fetch bank account details by bank name (used for XRPL overrides)
+function get_bank_account_by_name($name) {
+    $sql = "SELECT * FROM ".TB_PREF."bank_accounts WHERE bank_name = ".db_escape($name);
+    $result = db_query($sql, "could not retrieve bank account");
+    $row = db_fetch($result);
+    return $row ? $row : false;
+}
 
 //----------------------------------------------------------------------------------------------------
 
@@ -65,7 +69,8 @@ function print_invoices() {
 	$customer = $_POST['PARAM_6'];
 	$orientation = $_POST['PARAM_7'];
 
-	if (!$from || !$to) return;
+	if (!$from || !$to)
+		return;
 
 	$orientation = ($orientation ? 'L' : 'P');
 	$dec = user_price_dec();
@@ -91,10 +96,7 @@ function print_invoices() {
 		recalculate_cols($cols);
 
 	$range = Array();
-	if ($currency == ALL_TEXT)
-		$range = get_invoice_range($from, $to);
-	else
-		$range = get_invoice_range($from, $to, $currency);
+	$range = $currency == ALL_TEXT ? get_invoice_range($from, $to) : get_invoice_range($from, $to, $currency);;
 
 	while($row = db_fetch($range)) {
 		if (!exists_customer_trans(ST_SALESINVOICE, $row['trans_no']))
@@ -104,12 +106,15 @@ function print_invoices() {
 
 		if ($customer && $myrow['debtor_no'] != $customer)
 			continue;
-		
-		// if ($currency != ALL_TEXT && $myrow['curr_code'] != $currency) {
-		// 	continue;
-		// }
 			
-		$baccount = get_default_bank_account($myrow['curr_code']);
+		if (substr($pay_service, 0, 4) === 'XRPL') {
+			// Override: use XUMM XRP bank account for display
+   			 $baccount = get_bank_account_by_name('XUMM XRP');
+		}
+		else {
+			// Default logic
+			$baccount = get_default_bank_account($myrow['curr_code']);
+		}
 		$params['bankaccount'] = $baccount['id'];
 
 		$branch = get_branch($myrow['branch_code']);
@@ -150,7 +155,9 @@ function print_invoices() {
 
 		$result = get_customer_trans_details(ST_SALESINVOICE, $row['trans_no']);
 		$SubTotal = 0;
+
 		while ($myrow2=db_fetch($result)) {
+
 			if ($myrow2['quantity'] == 0)
 				continue;
 
@@ -159,8 +166,9 @@ function print_invoices() {
 			$DisplayPrice = number_format2($myrow2['unit_price'],$dec);
 			$DisplayQty = number_format2($sign*$myrow2['quantity'],get_qty_dec($myrow2['stock_id']));
 			$DisplayNet = number_format2($Net,$dec);
-			if ($myrow2['discount_percent']==0)
-				$DisplayDiscount ='';
+
+			if ($myrow2['discount_percent'] == 0)
+				$DisplayDiscount = '';
 			else
 				$DisplayDiscount = number_format2($myrow2['discount_percent']*100,user_percent_dec()) . '%';
 			$c=0;
@@ -181,7 +189,7 @@ function print_invoices() {
 				$rep->TextCol($c++, $c,	$DisplayNet, -2);
 			}
 			$rep->row = $newrow;
-			//$rep->NewLine(1);
+			
 			if ($rep->row < $summary_start_row)
 				$rep->NewPage();
 		}
@@ -262,7 +270,7 @@ function print_invoices() {
 					$first = false;
 				}
 				else
-					$rep->TextCol(3, 6, _('Included') . ' ' . $tax_type_name . _('Amount') . ': ' . $DisplayTax, -2);
+					$rep->TextCol(3, 6, _('Included').' '.$tax_type_name._('Amount').': '.$DisplayTax, -2);
 			}
 			else {
 				$rep->TextCol(3, 6, $tax_type_name, -2);
@@ -286,11 +294,11 @@ function print_invoices() {
 		$words = price_in_words($rep->formData['prepaid'] ? $myrow['prep_amount'] : $myrow['Total'], array( 'type' => ST_SALESINVOICE, 'currency' => $myrow['curr_code']));
 		if ($words != '') {
 			$rep->NewLine(1);
-			$rep->TextCol(1, 7, $myrow['curr_code'] . ': ' . $words, - 2);
+			$rep->TextCol(1, 7, $myrow['curr_code'].': '.$words, - 2);
 		}
 		$rep->Font();
 		if ($email == 1)
-			$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], get_company_pref('coy_name')));
+			$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], htmlspecialchars_decode(get_company_pref('coy_name'))));
 	}
 	if ($email == 0)
 		$rep->End();

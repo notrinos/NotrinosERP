@@ -120,7 +120,7 @@ function handle_submit($selected_id) {
 			else {
 				if (!isset($_POST['admpassword']) || $_POST['admpassword'] == '')
 					$_POST['admpassword'] = 'password';
-				update_admin_password($conn, password_hash($_POST['admpassword']), PASSWORD_DEFAULT));
+				update_admin_password($conn, password_hash($_POST['admpassword']), PASSWORD_DEFAULT);
 			}
 		}
 		if ($error) {

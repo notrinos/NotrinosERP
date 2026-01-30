@@ -69,7 +69,7 @@ function display_credit_header(&$order) {
 	if (!isset($_POST['ref']))
 		$_POST['ref'] = $Refs->get_next(ST_CUSTCREDIT, null, array('customer' => get_post('customer_id'), 'branch' => get_post('branch_id'), 'date' => get_post('OrderDate')));
 	if ($order->trans_no==0)
-		ref_row(_('Reference').':', 'ref');
+		ref_row(_('Reference').':', 'ref', _('Reference number unique for this document type'), null, '', $order->trans_type, array('date'=> @$_POST['OrderDate']));
 	else
 		label_row(_('Reference').':', $order->reference);
 
@@ -231,9 +231,9 @@ function credit_edit_item_controls(&$order, $rowcounter, $line_no=-1) {
 		}
 		$item_info = get_item_edit_info($_POST['stock_id']);
 
-		$dec = $item_info['decimals'];
+		$dec = !$item_info ? 0 :  $item_info['decimals'];
 		$_POST['qty'] = number_format2(0, $dec);
-		$units = $item_info['units'];
+		$units = !$item_info ? '' : $item_info["units"];
 		$price = get_price($_POST['stock_id'], $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'));
 		$_POST['price'] = price_format($price);
 		

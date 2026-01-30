@@ -118,6 +118,7 @@ if (list_updated('branch_id')) {
 
 if (isset($_GET['AddedID'])) {
 	$order_no = $_GET['AddedID'];
+
 	display_notification_centered(sprintf( _('Order # %d has been entered.'), $order_no));
 
 	submenu_view(_('&View This Order'), ST_SALESORDER, $order_no);
@@ -131,6 +132,16 @@ if (isset($_GET['AddedID'])) {
 	submenu_option(_('Work &Order Entry'), '/manufacturing/work_order_entry.php?');
 
 	submenu_option(_('Enter a &New Order'),	'/sales/sales_order_entry.php?NewOrder=0');
+
+	$order = get_sales_order_header($order_no, ST_SALESORDER);
+	$customer_id = $order['debtor_no'];
+	if ($order['prep_amount'] > 0) {
+		$row = db_fetch(db_query(get_allocatable_sales_orders($customer_id, $order_no, ST_SALESORDER)));
+		if ($row === false)
+			submenu_option(_('Receive Customer Payment'), "/sales/customer_payments.php?customer_id=$customer_id");
+	}
+
+	submenu_option(_('Add an Attachment'), "/admin/attachments.php?filterType=".ST_SALESORDER."&trans_no=$order_no");
 
 	display_footer_exit();
 }
@@ -164,6 +175,8 @@ elseif (isset($_GET['AddedQU'])) {
 	submenu_option(_('Make &Sales Order Against This Quotation'), '/sales/sales_order_entry.php?NewQuoteToSalesOrder='.$order_no);
 
 	submenu_option(_('Enter a New &Quotation'),	'/sales/sales_order_entry.php?NewQuotation=0');
+
+	submenu_option(_('Add an Attachment'), "/admin/attachments.php?filterType=".ST_SALESQUOTE."&trans_no=$order_no");
 
 	display_footer_exit();
 }
@@ -206,6 +219,8 @@ elseif (isset($_GET['AddedDN'])) {
 	else
 		submenu_option(_('Enter a &New Delivery'), '/sales/sales_order_entry.php?NewDelivery=0');
 
+	submenu_option(_('Add an Attachment'), '/admin/attachments.php?filterType='.ST_CUSTDELIVERY."&trans_no=$delivery");
+
 	display_footer_exit();
 }
 elseif (isset($_GET['AddedDI'])) {
@@ -245,7 +260,7 @@ else
 function copy_to_cart() {
 	$cart = &$_SESSION['Items'];
 
-	$cart->reference = $_POST['ref'];
+	$cart->reference = get_post('ref');
 	$cart->Comments =  $_POST['Comments'];
 	$cart->document_date = $_POST['OrderDate'];
 	$newpayment = false;

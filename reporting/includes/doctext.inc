@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-/**
+/*
 	Set document type dependent elements of common page layout.
 */
 	global $SysPrefs;
@@ -221,7 +221,6 @@
 			$this->headers = array(_('Item Code'), _('Item Description'), _('From Location'), _('Work Centre'), _('Unit Quantity'), _('Total Quantity'), _('Units Issued'));
 			unset($Footer[0]);
 			break;
-
 
 		case ST_STATEMENT:
 			$this->formData['document_name'] = '';

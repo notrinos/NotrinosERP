@@ -1339,7 +1339,8 @@ function bank_reconciliation_list($account, $name, $selected_id=null, $submit_on
 			'spec_option' => $special_option,
 			'format' => '_format_date',
 			'spec_id' => '',
-			'select_submit'=> $submit_on_change
+			'select_submit'=> $submit_on_change,
+			'order' => 'reconciled DESC'
 		) );
 }
 
@@ -1901,7 +1902,8 @@ function cust_allocations_list_cells($label, $name, $selected=null, $submit_on_c
 		'2'=> _('Unsettled transactions'),
 		'3' => _('Payments'),
 		'4' => _('Credit Notes'),
-		'5' => _('Delivery Notes')
+		'5' => _("Delivery Notes"),
+		'6' => _("Journal Entries")
 	);
 	echo array_selector($name, $selected, $allocs, array('select_submit'=> $submit_on_change));
 	echo "</td>\n";
@@ -1916,7 +1918,8 @@ function supp_allocations_list_cell($name, $selected=null) {
 		'2'=> _('Overdue Invoices'),
 		'3' => _('Payments'),
 		'4' => _('Credit Notes'),
-		'5' => _('Overdue Credit Notes')
+		'5' => _("Overdue Credit Notes"),
+		'6' => _("Journal Entries")
 	);
 	echo array_selector($name, $selected, $allocs);
 	echo "</td>\n";
@@ -1927,12 +1930,13 @@ function supp_transactions_list_cell($name, $selected=null, $submit_on_change=fa
 	echo "<td>\n";
 	$allocs = array(
 		ALL_TEXT=>_('All Types'),
-		'1'=> _('Invoices'),
-		'2'=> _('Unsettled transactions'),
+		'1' => _('Invoices'),
+		'2' => _('Unsettled transactions'),
 		'3' => _('Payments'),
 		'4' => _('Credit Notes'),
 		'5' => _('Overdue Credit Notes'),
-		'6'=>_('GRNs')
+		'6' =>_('GRNs'),
+		'7' => _("Journal Entries")
 	);
 
 	echo array_selector($name, $selected, $allocs, array('select_submit'=> $submit_on_change));

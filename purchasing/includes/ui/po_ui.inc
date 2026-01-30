@@ -324,7 +324,7 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 	alt_table_row_color($rowcounter);
 	$new = $order->order_no == 0;
 
-	$dec2 = 0;
+	$dec2 = 6;
 	$id = find_submit('Edit');
 
 	if (($id != -1) && $line_no == $id) {

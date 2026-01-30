@@ -942,6 +942,7 @@ class Spreadsheet_Excel_Writer_BIFFwriter
     * @see _addContinue()
     */
     var $_limit;
+    var $_offset;
 
     /**
     * Constructor
@@ -1461,6 +1462,11 @@ class Spreadsheet_Excel_Writer_Format
     * @var integer
     */
     var $_right_color;
+
+    // Dynamic members must be here (php 8.2)
+    var $_BIFF_version;
+    var $_diag;
+    var $_diag_color;
 
     /**
     * Constructor
@@ -2380,6 +2386,10 @@ class Spreadsheet_Excel_Writer_Parser
     * @var integer
     */
     var $_BIFF_version;
+
+    // The Excel ptg indices. Dynamic members must be here (php 8.2)
+    var $ptg;
+    var $_functions;
 
     /**
     * The class constructor
@@ -4131,6 +4141,24 @@ class Spreadsheet_Excel_Writer_Worksheet extends Spreadsheet_Excel_Writer_BIFFwr
     * @var string
     */
     var $_input_encoding;
+
+    // Dynamic members must be here (php8.2)
+    var $activesheet;
+    var $firstsheet;
+    var $title_colmax;
+    var $_print_gridlines;
+    var $_screen_gridlines;
+    var $_print_headers;
+    var $_hbreaks;
+    var $_vbreaks;
+    var $_protect;
+    var $_password;
+    var $col_sizes;
+    var $_row_sizes;
+    var $_zoom;
+    var $_print_scale;
+    var $_rtl;
+    var $_dv;
 
     /**
     * Constructor
@@ -7406,6 +7434,13 @@ class Spreadsheet_Excel_Writer_Workbook extends Spreadsheet_Excel_Writer_BIFFwri
     */
     var $_string_sizeinfo_size;
 
+    // Dynamic members must be here (php8.2)
+    var $_string_sizeinfo;
+    var $_str_total;
+    var $_str_unique;
+    var $_str_table;
+    //var $_offset;
+
     /**
     * Class constructor
     *
@@ -7765,7 +7800,7 @@ class Spreadsheet_Excel_Writer_Workbook extends Spreadsheet_Excel_Writer_BIFFwri
 
         // Add BOUNDSHEET records
         for ($i = 0; $i < $total_worksheets; $i++) {
-            $this->_storeBoundsheet($this->_worksheets[$i]->name,$this->_worksheets[$i]->offset);
+            $this->_storeBoundsheet($this->_worksheets[$i]->name,$this->_worksheets[$i]->_offset);
         }
 
         if ($this->_country_code != -1) {
@@ -7865,7 +7900,7 @@ class Spreadsheet_Excel_Writer_Workbook extends Spreadsheet_Excel_Writer_BIFFwri
         $offset += $EOF;
 
         for ($i = 0; $i < $total_worksheets; $i++) {
-            $this->_worksheets[$i]->offset = $offset;
+            $this->_worksheets[$i]->_offset = $offset;
             $offset += $this->_worksheets[$i]->_datasize;
         }
         $this->_biffsize = $offset;

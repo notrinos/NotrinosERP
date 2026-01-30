@@ -94,7 +94,7 @@ function delete_user($id) {
 }
 
 function authenticate_user($login_id, $password) {
-
+	
 	$sql1 = "SELECT password FROM ".TB_PREF."users WHERE login_id = ".db_escape($login_id);
 
 	$result = db_query($sql1, 'could not get user login for '.$login_id);

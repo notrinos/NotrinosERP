@@ -114,6 +114,8 @@ class gettext_native_support {
 	 * Add a translation domain.
 	 */
 	function add_domain($domain, $path=false, $version='') {
+		if($domain == 'C')
+			return;
 		if ($path === false) 
 			$path = $this->domain_path;
 		if ($path === false) 

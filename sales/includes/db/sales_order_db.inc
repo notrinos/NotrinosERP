@@ -56,13 +56,13 @@ function add_sales_order(&$order) {
 		$st_num = array();
 		$st_reorder = array();
 	}
-	// insert line items into sales order details
+	// inserted line items into sales order details
 	foreach ($order->line_items as $line) {
 		if ($SysPrefs->loc_notification() == 1 && is_inventory_item($line->stock_id))
 			$loc = calculate_reorder_level($order->Location, $line, $st_ids, $st_names, $st_num, $st_reorder); 
 
 		$sql = "INSERT INTO ".TB_PREF."sales_order_details (order_no, trans_type, stk_code, description, unit_price, quantity, discount_percent) VALUES (";
-		$sql .= $order_no . ",".$order->trans_type .
+		$sql .= $order_no.",".$order->trans_type.
 				",".db_escape($line->stock_id).", "
 				.db_escape($line->item_description).", $line->price,
 				$line->quantity,
@@ -82,6 +82,7 @@ function add_sales_order(&$order) {
 
 	if ($SysPrefs->loc_notification() == 1 && count($st_ids) > 0)
 		send_reorder_email($loc, $st_ids, $st_names, $st_num, $st_reorder);
+
 	return $order_no;
 }
 
@@ -169,6 +170,7 @@ function update_sales_order($order) {
 		$st_num = array();
 		$st_reorder = array();
 	}
+
 	// insert line items into sales order details
 	foreach ($order->line_items as $line) {
 		if ($SysPrefs->loc_notification() == 1 && is_inventory_item($line->stock_id))
@@ -330,9 +332,7 @@ function read_sales_order($order_no, &$order, $trans_type) {
 }
 
 function sales_order_has_deliveries($order_no) {
-	$sql = "SELECT SUM(qty_sent) FROM ".TB_PREF.
-	"sales_order_details WHERE order_no=".db_escape($order_no)
-	." AND trans_type=".ST_SALESORDER;
+	$sql = "SELECT SUM(qty_sent) FROM ".TB_PREF."sales_order_details WHERE order_no=".db_escape($order_no)." AND trans_type=".ST_SALESORDER;
 
 	$result = db_query($sql, 'could not query for sales order usage');
 
@@ -342,14 +342,13 @@ function sales_order_has_deliveries($order_no) {
 		return true;  // added check for eventually voided deliveries
 	$sql = "SELECT order_ FROM ".TB_PREF."debtor_trans WHERE type=".ST_CUSTDELIVERY." AND order_=".db_escape($order_no);
 	$result = db_query($sql, 'The related delivery notes could not be retreived');
-	return (db_num_rows($result) > 0);	
+
+	return (db_num_rows($result) > 0);
 }
 
 function close_sales_order($order_no) {
 	// set the quantity of each item to the already sent quantity. this will mark item as closed.
-	$sql = "UPDATE ".TB_PREF."sales_order_details
-		SET quantity = qty_sent WHERE order_no = ".db_escape($order_no)
-		." AND trans_type=".ST_SALESORDER;
+	$sql = "UPDATE ".TB_PREF."sales_order_details SET quantity = qty_sent WHERE order_no = ".db_escape($order_no)." AND trans_type=".ST_SALESORDER;
 
 	db_query($sql, 'The sales order detail record could not be updated');
 }
@@ -369,12 +368,13 @@ function get_invoice_duedate($terms, $invdate) {
 		$duedate = add_days($invdate, $myrow['days_before_due']);
 	else
 		$duedate = $invdate;
+
 	return $duedate;
 }
 
 function get_customer_to_order($customer_id) {
 
-	// Now check to ensure this account is not on hold */
+	// Now check to ensure this account is not on hold
 	$sql = "SELECT cust.name, 
 		cust.address,
 		credit_status.dissallow_invoices, 
@@ -400,6 +400,7 @@ function get_customer_to_order($customer_id) {
 		." GROUP by cust.debtor_no";
 
 	$result =db_query($sql, 'Customer Record Retreive');
+
 	return 	db_fetch($result);
 }
 
@@ -432,7 +433,7 @@ function get_branch_to_order($customer_id, $branch_id) {
 *	OutstandingOnly
 *	PrepaidOrders
 */
-function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT) {
+function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_item='', $from='', $to='', $ref='', $location=ALL_TEXT, $customer_id=ALL_TEXT, $show_voided=0, $by_delivery=0, $no_auto=0) {
 	if ($filter=='OutstandingOnly')
 		$order_value = 'Sum(line.unit_price*(line.quantity-line.qty_sent)*(1-line.discount_percent))+freight_cost';
 	else
@@ -492,9 +493,12 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 			$date_after = date2sql($from);
 			$date_before = date2sql($to);
 
-			$sql .=  " AND sorder.ord_date >= '$date_after'"
-					." AND sorder.ord_date <= '$date_before'";
+			$by_date = $by_delivery ? 'delivery_date' : 'ord_date';
+			$sql .=  " AND sorder.$by_date >= '$date_after'"
+					." AND sorder.$by_date <= '$date_before'";
 		}
+		if ($no_auto)
+			$sql .= " AND sorder.reference != 'auto'";
 	}
 	if ($trans_type == ST_SALESQUOTE && !check_value('show_all'))
 		$sql .= " AND sorder.delivery_date >= '".date2sql(Today())."' AND line.qty_sent=0"; // show only outstanding, not realized quotes
@@ -525,8 +529,11 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 		sorder.branch_code,
 		sorder.customer_ref,
 		sorder.ord_date,
-		sorder.deliver_to
-		ORDER BY sorder.order_no DESC";
+		sorder.deliver_to";
+		if ($show_voided == 0) 	
+			$sql .= " HAVING OrderValue != 0";
+		$sql .= " ORDER BY sorder.order_no DESC";
+
 	return $sql;
 }
 
@@ -538,8 +545,9 @@ function update_prepaid_so_line($line_id, $qty_invoiced) {
 	db_query($sql, 'The document detail record could not be updated with invoiced qty');
 	return true;
 }
+
 /*
-	Returns array of all issued invoices to sales order $order_no, optinally up to trans_no==$up_to
+*	Returns array of all issued invoices to sales order $order_no, optinally up to trans_no==$up_to
 */
 function get_sales_order_invoices($order_no) {
 	$sql = "SELECT trans_no, dt.type as type, tran_date, reference, prep_amount
@@ -556,6 +564,7 @@ function is_sales_order_started($order_no) {
 		." AND (invoiced!=0 OR qty_sent!=0)";
 
 	$result = db_fetch(db_query($sql, 'cannot retrieve sales invoices for sales order'));
+
 	return $result[0];
 }
 
@@ -591,14 +600,12 @@ function is_prepaid_order_open($order_no) {
 function last_sales_order_detail($order, $field) {
 	$sql = "SELECT $field
 		FROM ".TB_PREF."sales_order_details d
-		WHERE order_no =
-		(SELECT order_no FROM ".TB_PREF."sales_orders o
+		LEFT JOIN " .TB_PREF."sales_orders o on d.order_no=o.order_no
 		WHERE debtor_no=" . db_escape($order->customer_id) . "
-		ORDER BY order_no DESC LIMIT 1)
 		ORDER BY d.id DESC LIMIT 1";
 
-	$last_query=db_query($sql, 'Could not retrieve last order detail');
+	$last_query = db_query($sql, 'Could not retrieve last order detail');
 	$row = db_fetch_row($last_query);
-
+	
 	return $row == false ? false : $row[0];
 }

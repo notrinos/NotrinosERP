@@ -16,7 +16,7 @@ include_once($path_to_root . '/admin/db/company_db.inc');
 	Object is created only with site wide preffernces.
 	After user login refresh method have to be called to re-initialize company specific settings.
 */
-class sys_prefs {
+class sys_prefs extends stdClass {
 	var $prefs;
 	var $db_ok; // check whether database has been upgraded after src update.
 
@@ -31,7 +31,7 @@ class sys_prefs {
 		foreach(get_defined_vars() as $name => $value)
 			$this->$name = $value;
 
-		if (!@$this->time_zone)
+		if (!property_exists($this, 'time_zone') or !$this->time_zone)
 			$this->time_zone = ini_get('date.timezone');
 
 		if (!$this->time_zone)

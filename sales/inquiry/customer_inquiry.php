@@ -78,6 +78,17 @@ function edit_link($row) {
 	return ($row['type'] == ST_CUSTCREDIT && $row['order_']) || $row['voided'] == 1 ? '' : trans_editor_link($row['type'], $row['trans_no']);
 }
 
+function copy_link($row) {
+    global $page_nested;
+
+    if ($page_nested)
+        return '';
+    if ($row['type'] == ST_CUSTDELIVERY)
+        return pager_link(_('Copy Delivery'), "/sales/sales_order_entry.php?NewDelivery=".$row['order_'], ICON_DOC);
+    elseif ($row['type'] == ST_SALESINVOICE)
+        return pager_link(_('Copy Invoice'), "/sales/sales_order_entry.php?NewInvoice=".$row['order_'], ICON_DOC);
+}
+
 function prt_link($row) {
 	if ($row['type'] == ST_CUSTPAYMENT || $row['type'] == ST_BANKDEPOSIT) 
 		return print_document_link($row['trans_no'].'-'.$row['type'], _('Print Receipt'), ST_CUSTPAYMENT, ICON_PRINT);
@@ -96,7 +107,7 @@ function check_overdue($row) {
 function display_customer_summary($customer_record) {
 	$past1 = get_company_pref('past_due_days');
 	$past2 = 2 * $past1;
-	if ($customer_record['dissallow_invoices'] != 0)
+	if ($customer_record && $customer_record['dissallow_invoices'] != 0)
 		echo '<center><font color=red size=4><b>'._('CUSTOMER ACCOUNT IS ON HOLD').'</font></b></center>';
 
 	$nowdue = '1-'.$past1.' '._('Days');
@@ -107,15 +118,17 @@ function display_customer_summary($customer_record) {
 	start_table(TABLESTYLE, "width='80%'");
 	table_header($th);
 
-	start_row();
-	label_cell($customer_record['curr_code']);
-	label_cell($customer_record['terms']);
-	amount_cell($customer_record['Balance'] - $customer_record['Due']);
-	amount_cell($customer_record['Due'] - $customer_record['Overdue1']);
-	amount_cell($customer_record['Overdue1'] - $customer_record['Overdue2']);
-	amount_cell($customer_record['Overdue2']);
-	amount_cell($customer_record['Balance']);
-	end_row();
+	if ($customer_record != false) {
+		start_row();
+		label_cell($customer_record['curr_code']);
+		label_cell($customer_record['terms']);
+		amount_cell($customer_record['Balance'] - $customer_record['Due']);
+		amount_cell($customer_record['Due'] - $customer_record['Overdue1']);
+		amount_cell($customer_record['Overdue1'] - $customer_record['Overdue2']);
+		amount_cell($customer_record['Overdue2']);
+		amount_cell($customer_record['Balance']);
+		end_row();
+	}
 
 	end_table();
 }
@@ -132,6 +145,8 @@ if (!isset($_POST['customer_id']))
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
+
+ref_cells(_('Reference:'), 'Ref', '', null, _('Enter reference fragment or leave empty'));
 
 if (!$page_nested)
 	customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true, false, true);
@@ -154,7 +169,7 @@ set_global_customer($_POST['customer_id']);
 
 div_start('totals_tbl');
 if ($_POST['customer_id'] != '' && $_POST['customer_id'] != ALL_TEXT) {
-	$customer_record = get_customer_details(get_post('customer_id'), get_post('TransToDate'));
+	$customer_record = get_customer_details(get_post('customer_id'), get_post('TransToDate'), false);
 	display_customer_summary($customer_record);
 	echo '<br>';
 }
@@ -165,7 +180,7 @@ if (get_post('RefreshInquiry') || list_updated('filterType'))
 
 //------------------------------------------------------------------------------------------------
 
-$sql = get_sql_for_customer_inquiry(get_post('TransAfterDate'), get_post('TransToDate'), get_post('customer_id'), get_post('filterType'), check_value('show_voided'));
+$sql = get_sql_for_customer_inquiry(get_post('TransAfterDate'), get_post('TransToDate'), get_post('customer_id'), get_post('filterType'), check_value('show_voided'), get_post('Ref'));
 
 //------------------------------------------------------------------------------------------------
 
@@ -183,6 +198,7 @@ $cols = array(
 	_('Balance') => array('align'=>'right', 'type'=>'amount'),
 		array('insert'=>true, 'fun'=>'gl_view'),
 		array('insert'=>true, 'fun'=>'edit_link'),
+		array('insert'=>true, 'fun'=>'copy_link'),
 		array('insert'=>true, 'fun'=>'credit_link'),
 		array('insert'=>true, 'fun'=>'prt_link')
 );

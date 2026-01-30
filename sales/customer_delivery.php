@@ -61,6 +61,8 @@ if (isset($_GET['AddedID'])) {
 
 	hyperlink_params($path_to_root.'/sales/inquiry/sales_orders_view.php', _('Select Another Order For Dispatch'), 'OutstandingOnly=1');
 
+	hyperlink_params($path_to_root.'/admin/attachments.php', _("Add an Attachment"), "filterType=".ST_CUSTDELIVERY."&trans_no=$dispatch_no");
+
 	display_footer_exit();
 }
 elseif (isset($_GET['UpdatedID'])) {
@@ -86,7 +88,7 @@ elseif (isset($_GET['UpdatedID'])) {
 
 //-----------------------------------------------------------------------------
 
-if (isset($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
+if (isset($_GET['OrderNumber']) && is_numeric($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
 
 	$ord = new Cart(ST_SALESORDER, $_GET['OrderNumber'], true);
 	if ($ord->is_prepaid())
@@ -109,7 +111,7 @@ if (isset($_GET['OrderNumber']) && $_GET['OrderNumber'] > 0) {
 	$_SESSION['Items'] = $ord;
 	copy_from_cart();
 }
-elseif (isset($_GET['ModifyDelivery']) && $_GET['ModifyDelivery'] > 0) {
+elseif (isset($_GET['ModifyDelivery']) && is_numeric($_GET['ModifyDelivery']) && $_GET['ModifyDelivery'] > 0) {
 
 	check_is_editable(ST_CUSTDELIVERY, $_GET['ModifyDelivery']);
 	$_SESSION['Items'] = new Cart(ST_CUSTDELIVERY,$_GET['ModifyDelivery']);
@@ -240,7 +242,7 @@ function check_quantities() {
 			else {
 				$min = 0;
 				// Fixing floating point problem in PHP.
-				$max = round2($itm->quantity - $itm->qty_done, get_unit_dec($itm->stock_id));
+				$max = round2($itm->quantity - $itm->qty_done, get_qty_dec($itm->stock_id));
 			}
 			if (check_num('Line'.$line, $min, $max))
 				$_SESSION['Items']->line_items[$line]->qty_dispatched = input_num('Line'.$line);

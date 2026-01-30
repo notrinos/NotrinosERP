@@ -908,14 +908,13 @@ class FrontReport extends Cpdf {
 							continue;
 						$emailtype = true;
 						$this->SetLang($contact['lang']);
+						$coy_name = @html_entity_decode($this->company['coy_name'], ENT_QUOTES, $_SESSION['language']->encoding=='iso-8859-2' ? 'ISO-8859-1' : $_SESSION['language']->encoding);
 
 						require_once($path_to_root . '/reporting/includes/class.mail.inc');
-						$mail = new email(str_replace(',', '', $this->company['coy_name']),
+						$mail = new email(str_replace(",", "", $coy_name),
 							$this->company['email']);
 						$mail->charset = $this->encoding;
-
-						$to = str_replace(',', '', $contact['name'].' '.$contact['name2'])
-							.' <' . $contact['email'] . '>';
+						
 						$msg = _('Dear') . ' ' . $contact['name2'] . ",\n\n" 
 							. _('Attached you will find ') . ' ' . $subject ."\n\n";
 
@@ -933,8 +932,9 @@ class FrontReport extends Cpdf {
 						}
 
 						$msg .= _('Kindest regards') . "\n\n";
-						$sender = $this->user . "\n" . $this->company['coy_name'] . "\n" . $this->company['postal_address'] . "\n" . $this->company['email'] . "\n" . $this->company['phone'];
-						$mail->to($to); $try++;
+						$sender = $this->user . "\n" . $coy_name . "\n" . $this->company['postal_address'] . "\n" . $this->company['email'] . "\n" . $this->company['phone'];
+    					$mail->to(str_replace(",", "", $contact['name'].' '.$contact['name2']), $contact['email']);
+    					$try++;
 						$mail->subject($subject);
 						$mail->text($msg . $sender);
 						$mail->attachment($fname, $this->filename);

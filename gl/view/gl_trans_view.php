@@ -26,7 +26,10 @@ if (!isset($_GET['type_id']) || !isset($_GET['trans_no'])) { /*Script was not pa
 }
 
 function display_gl_heading($myrow) {
-	global $systypes_array;
+	global $systypes_array, $SysPrefs;
+
+	if (!empty($SysPrefs->prefs['company_logo_on_views']))
+		company_logo_on_view();
 
 	$trans_name = $systypes_array[$_GET['type_id']];
 	$journal = $_GET['type_id'] == ST_JOURNAL;

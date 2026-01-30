@@ -41,7 +41,7 @@ function help_url($context=null) {
 		.'&ctxhelp=1&lang='.$country);
 }
 
-function send_css($css = '') {
+function send_css($css='') {
 	global $css_files;
 
 	init_css();

@@ -191,6 +191,49 @@ function stock_top($today, $limit=10, $type=0) {
 	return $result;
 }
 
+function get_reorder_stock($today, $limit=null) {
+	
+	$sql = "SELECT sm.stock_id, sm.description, l.location_name, ls.reorder_level, COALESCE(SUM(sm2.qty), 0) AS QtyOnHand
+		FROM ".TB_PREF."stock_master sm
+		INNER JOIN ".TB_PREF."loc_stock ls ON sm.stock_id = ls.stock_id
+		INNER JOIN ".TB_PREF."locations l ON ls.loc_code = l.loc_code
+		LEFT JOIN ".TB_PREF."stock_moves sm2 ON sm.stock_id = sm2.stock_id
+		WHERE sm.mb_flag IN ('B', 'M')
+		AND ls.reorder_level > 0
+		GROUP BY sm.stock_id, sm.description, l.location_name, ls.reorder_level
+		HAVING COALESCE(SUM(sm2.qty), 0) < ls.reorder_level
+		ORDER BY sm.stock_id, l.location_name";
+
+	if (!empty($limit)) {
+		$limit = (int)$limit;
+		$sql .= " LIMIT $limit";
+	}
+
+	return db_query($sql, _('Could not get Items details'));
+}
+
+function get_low_stock($today, $limit=null) {
+	
+	$sql = "SELECT sm.stock_id, sm.description, l.location_name, ls.reorder_level, COALESCE(SUM(sm2.qty), 0) AS QtyOnHand,
+		(COALESCE(SUM(sm2.qty), 0) / ls.reorder_level) AS stock_ratio
+		FROM ".TB_PREF."stock_master sm
+		INNER JOIN ".TB_PREF."loc_stock ls ON sm.stock_id = ls.stock_id
+		INNER JOIN ".TB_PREF."locations l ON ls.loc_code = l.loc_code
+		LEFT JOIN ".TB_PREF."stock_moves sm2 ON sm.stock_id = sm2.stock_id
+		WHERE sm.mb_flag IN ('B', 'M')
+		AND ls.reorder_level > 0
+		GROUP BY sm.stock_id, sm.description, l.location_name, ls.reorder_level
+		HAVING COALESCE(SUM(sm2.qty), 0) > ls.reorder_level
+		ORDER BY stock_ratio DESC, sm.stock_id, l.location_name";
+
+	if (!empty($limit)) {
+		$limit = (int)$limit;
+		$sql .= " LIMIT $limit";
+	}
+	
+	return db_query($sql, _('Could not get Items details'));
+}
+
 function dimension_top($today, $limit=10) {
 
 	$begin = date2sql(begin_fiscalyear());
@@ -274,4 +317,3 @@ function supplier_unpaid_invoices($today) {
 
 	return db_query($sql, 'could not get supplier transactions');
 }
-

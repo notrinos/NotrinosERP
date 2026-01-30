@@ -118,8 +118,7 @@ function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1
 
 	if (!$ref) $ref = $Refs->get_next(ST_JOURNAL, null, $date);
 
-	add_gl_trans_std_cost(ST_JOURNAL, $journal_id, $date, $cr_acc,
-		0, 0, $wo_cost_types[$cost_type], -$amount);
+	add_gl_trans_std_cost(ST_JOURNAL, $journal_id, $date, $cr_acc, $dim1, $dim2, $wo_cost_types[$cost_type], -$amount);
 
 	$is_bank_to = is_bank_account($cr_acc);
 	if ($is_bank_to) {

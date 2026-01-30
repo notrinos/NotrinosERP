@@ -158,12 +158,17 @@ function print_statements() {
 		$rep->NewLine();
 		for ($i = 0; $i < 5; $i++)
 			$rep->TextWrap($col[$i], $rep->row, $col[$i + 1] - $col[$i], $str2[$i], 'right');
-		if ($email == 1)
-			$rep->End($email, _('Statement').' '._('as of').' '.sql2date($date));
+		
+		if ($email == 1) {
+			if (($CustomerRecord["Balance"]) != ($CustomerRecord["Balance"] - $CustomerRecord["Due"]))
+				$rep->End($email, _("Statement") . " " . _("as of") . " " . sql2date($date) . " " . _("from") . " " . htmlspecialchars_decode(get_company_pref('coy_name')));
+			else
+				display_notification(sprintf(_("Customer %s has no overdue debits. No e-mail is sent."), $myrow["DebtorName"]));
+		}
 	}
 
 	if (!isset($rep))
-		display_notification('No customers with outstanding balances found');
+		display_notification(_('No customers with outstanding balances found'));
 	else if ($email == 0)
 		$rep->End();
 }

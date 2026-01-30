@@ -80,8 +80,9 @@ class Cart {
 	public $alloc; 		// sum of payments allocated to this document
 	public $prepayments = array(); // allocation records for this document
 	public $ex_rate;
-
+	
 	public $fixed_asset = false;
+	public $bo_policy = null;
 
 	//-------------------------------------------------------------------------
 	//
@@ -220,7 +221,7 @@ class Cart {
 					$sodata = get_sales_order_header($this->order_no, ST_SALESORDER);
 					$this->cust_ref = $sodata['customer_ref'];
 					// currently currency is hard linked to debtor account
-					$this->delivery_to = $sodata['deliver_to'];
+					$this->deliver_to = $sodata['deliver_to'];
 					$this->delivery_address = $sodata['delivery_address'];
 					// child transaction reedition - update with parent info unless it is freehand
 					if (!$this->is_prepaid() && !$prepare_child) // this is read for view/reedition

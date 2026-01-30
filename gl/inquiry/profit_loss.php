@@ -48,8 +48,8 @@ if (isset($_GET['AccGrp']))
 
 //----------------------------------------------------------------------------------------------------
 
-function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root) {
-	global $levelptr, $k;
+function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown) {
+	global $path_to_root, $levelptr, $k;
 		
 	$code_per_balance = 0;
 	$code_acc_balance = 0;
@@ -91,7 +91,7 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 	//Get Account groups/types under this group/type
 	$result = get_account_types(false, false, $type);
 	while ($accounttype=db_fetch($result)) {	
-		$totals_arr = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root);
+		$totals_arr = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown);
 		$per_balance_total += $totals_arr[0];
 		$acc_balance_total += $totals_arr[1];
 	}
@@ -228,7 +228,7 @@ function display_profit_and_loss($compare) {
 			$typeresult = get_account_types(false, $class['cid'], -1);
 			$k = 0; // row color
 			while ($accounttype=db_fetch($typeresult)) {
-				$TypeTotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root);
+				$TypeTotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown);
 				$class_per_total += $TypeTotal[0];
 				$class_acc_total += $TypeTotal[1];
 
@@ -279,7 +279,7 @@ function display_profit_and_loss($compare) {
 		table_section_title($_POST['AccGrp'].' '.get_account_type_name($_POST['AccGrp']),4);	
 		echo $tableheader;
 		
-		$classtotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown, $path_to_root);
+		$classtotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dimension, $dimension2, $drilldown);
 	}
 	end_table(); // outer table
 	hyperlink_params($_SERVER['PHP_SELF'], _('Back'), 'TransFromDate='.$from.'&TransToDate='.$to.'&Dimension='.$dimension.'&Dimension2='.$dimension2);

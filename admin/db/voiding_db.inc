@@ -44,13 +44,13 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 			if (!check_void_bank_trans($type, $type_no))
 				return _('This transaction cannot be voided because the operation would decrease account balance below allowed limit in some point of account history.');
 		case ST_SALESINVOICE : // it's a customer invoice
-			if (is_cust_invoice_credited($type_no))
+			if ($type == ST_SALESINVOICE && is_cust_invoice_credited($type_no))
 				return _('This invoice cannot be voided because it was already credited.');
 		case ST_CUSTCREDIT : // it's a customer credit note
 		case ST_CUSTDELIVERY : // it's a customer dispatch
 			if (!exists_customer_trans($type, $type_no))
 				return _('Selected transaction does not exists.');
-			if ($type == ST_CUSTDELIVERY) {
+			if ($type == ST_CUSTDELIVERY) { // added 04 Oct 2008 by Joe Hunt. If delivery note has a not voided invoice, then NO.
 				$vers = get_customer_trans_version($type, $type_no);
 				if ($vers[$type_no] == 1) {
 					$childs = get_sales_child_lines($type, $type_no, false);

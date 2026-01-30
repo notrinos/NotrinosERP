@@ -26,17 +26,17 @@ function get_open_balance($debtorno, $to) {
 	if($to)
 		$to = date2sql($to);
 	$sql = "SELECT SUM(IF(t.type = ".ST_SALESINVOICE." OR (t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0),
-			 -abs(IF(t.prep_amount, t.prep_amount, t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount)), 0)) AS charges,";
+             -abs(IF(t.prep_amount, t.prep_amount, t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount)), 0)) AS charges,";
 
 	$sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0),
-			 abs(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount) * -1, 0)) AS credits,";		
+             abs(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount) * -1, 0)) AS credits,";		
 
-	$sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.")), t.alloc * -1, t.alloc)) AS Allocated,";
+    $sql .= "SUM(IF(t.type != ".ST_SALESINVOICE." AND NOT(t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.")), t.alloc * -1, t.alloc)) AS Allocated,";
 
-	$sql .=	"SUM(IF(t.type = ".ST_SALESINVOICE." OR (t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0), 1, -1) *
+ 	$sql .=	"SUM(IF(t.type = ".ST_SALESINVOICE." OR (t.type IN (".ST_JOURNAL." , ".ST_BANKPAYMENT.") AND t.ov_amount>0), 1, -1) *
 			(IF(t.prep_amount, t.prep_amount, abs(t.ov_amount + t.ov_gst + t.ov_freight + t.ov_freight_tax + t.ov_discount)) - abs(t.alloc))) AS OutStanding
 		FROM ".TB_PREF."debtor_trans t
-		WHERE t.debtor_no = ".db_escape($debtorno)
+    	WHERE t.debtor_no = ".db_escape($debtorno)
 		." AND t.type <> ".ST_CUSTDELIVERY;
 	if ($to)
 		$sql .= " AND t.tran_date < '$to'";
@@ -67,8 +67,8 @@ function get_transactions($debtorno, $from, $to) {
 
 	$sql = "SELECT trans.*, comments.memo_,
 		$sign*IF(trans.prep_amount, trans.prep_amount, trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount)
-			AS TotalAmount,
-		$sign*IFNULL(alloc_from.amount, alloc_to.amount) AS Allocated,
+            AS TotalAmount,
+        $sign*IFNULL(alloc_from.amount, alloc_to.amount) AS Allocated,
 		((trans.type = ".ST_SALESINVOICE.")    AND trans.due_date < '$to') AS OverDue
 		FROM ".TB_PREF."debtor_trans trans
 		LEFT JOIN ".TB_PREF."voided voided ON trans.type=voided.type AND trans.trans_no=voided.id
@@ -162,26 +162,26 @@ function print_customer_balances() {
 
 	$grandtotal = array(0, 0, 0, 0);
 
-	$sql = "SELECT ".TB_PREF."debtors_master.debtor_no, name, curr_code FROM ".TB_PREF."debtors_master
-		INNER JOIN ".TB_PREF."cust_branch
-		ON ".TB_PREF."debtors_master.debtor_no=".TB_PREF."cust_branch.debtor_no
-		INNER JOIN ".TB_PREF."areas
-		ON ".TB_PREF."cust_branch.area = ".TB_PREF."areas.area_code
-		INNER JOIN ".TB_PREF."salesman
-		ON ".TB_PREF."cust_branch.salesman=".TB_PREF."salesman.salesman_code";
+	$sql = "SELECT d.debtor_no, name, curr_code, d.inactive FROM ".TB_PREF."debtors_master d
+		INNER JOIN ".TB_PREF."cust_branch b 
+		ON d.debtor_no=b.debtor_no
+		INNER JOIN ".TB_PREF."areas a 
+		ON b.area = a.area_code
+		INNER JOIN ".TB_PREF."salesman s 
+		ON b.salesman=s.salesman_code";
 	if ($fromcust != ALL_TEXT )
-		$sql .= " WHERE ".TB_PREF."debtors_master.debtor_no=".db_escape($fromcust);
+		$sql .= " WHERE d.debtor_no=".db_escape($fromcust);
 	elseif ($area != 0) {
 		if ($folk != 0)
-			$sql .= " WHERE ".TB_PREF."salesman.salesman_code=".db_escape($folk)."
-				AND ".TB_PREF."areas.area_code=".db_escape($area);
+			$sql .= " WHERE s.salesman_code=".db_escape($folk)."
+				AND a.area_code=".db_escape($area);
 		else
-			$sql .= " WHERE ".TB_PREF."areas.area_code=".db_escape($area);
+			$sql .= " WHERE a.area_code=".db_escape($area);
 	}
 	elseif ($folk != 0 )
-		$sql .= " WHERE ".TB_PREF."salesman.salesman_code=".db_escape($folk);
+		$sql .= " WHERE s.salesman_code=".db_escape($folk);
 
-	$sql .= " GROUP BY ".TB_PREF."debtors_master.debtor_no ORDER BY name";
+	$sql .= " GROUP BY d.debtor_no ORDER BY name";
 
 	$result = db_query($sql, 'The customers could not be retrieved');
 
@@ -241,7 +241,7 @@ function print_customer_balances() {
 	$rep->fontSize -= 2;
 
 	$tot_bal = $tot_open + $tot_cur_db - $tot_cur_cr;
-
+	
 	$rep->AmountCol(1, 2, $tot_open, $dec);
 	$rep->AmountCol(2, 3, $tot_cur_db, $dec);
 	$rep->AmountCol(3, 4, $tot_cur_cr, $dec);

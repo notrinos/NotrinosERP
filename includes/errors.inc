@@ -12,6 +12,16 @@
 $messages = array(); // container for system messages
 $before_box = ''; // temporary container for output html data before error box
 
+#
+#   Wrapper for trigger_error
+#
+function fa_trigger_error($msg, $error_level=E_USER_NOTICE) {
+    if ($error_level==E_USER_ERROR)
+          error_handler(E_USER_ERROR, $msg, __FILE__, __LINE__); //  E_USER_ERROR is deprecated as trigger_error arg since php 8.4
+    else
+        trigger_error($msg, $error_level);
+}
+
 function get_backtrace($html=false, $skip=0) {
 	$str = '';
 	if ($html)
@@ -205,9 +215,9 @@ function display_db_error($msg, $sql_statement=null, $exit=true) {
 		error_log($str);
 	else {
 		if($msg)
-			trigger_error($str, E_USER_ERROR);
+			fa_trigger_error($str, E_USER_ERROR);
 		else    // $msg can be null here only in debug mode, otherwise the error is ignored
-			trigger_error($str, E_USER_WARNING);
+			fa_trigger_error($str, E_USER_WARNING);
 	}
 	if ($exit)
 		exit;

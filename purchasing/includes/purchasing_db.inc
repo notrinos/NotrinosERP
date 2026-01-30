@@ -81,11 +81,11 @@ function add_or_update_purchase_data($supplier_id, $stock_id, $price, $descripti
 		db_query($sql, 'The supplier purchasing details could not be added');
 		return;
 	}	
-	$price = round($price * $data['conversion_factor'], user_price_dec());
+	//$price = round($price * $data['conversion_factor'], user_price_dec());
 	$sql = "UPDATE ".TB_PREF."purch_data SET price=".db_escape($price);
 	if ($uom != "")
 		$sql .= ",suppliers_uom=".db_escape($uom);
-	if ($description != "")	
+	if ($description != '')
 		$sql .= ",supplier_description=".db_escape($description);
 	$sql .= " WHERE stock_id=".db_escape($stock_id)." AND supplier_id=".db_escape($supplier_id);
 	db_query($sql, 'The supplier purchasing details could not be updated');

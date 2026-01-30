@@ -25,6 +25,7 @@ class fa_patch {
 
 	var $errors = array();
 	var	$max_upgrade_time = 300;
+	var $companies = null;
 
 	function __construct() {
 		global $path_to_root;

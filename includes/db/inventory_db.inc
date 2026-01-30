@@ -422,8 +422,8 @@ function void_stock_move($type, $type_no) {
 
 	$result = db_query($sql, 'Could not void stock moves');
 	while ($row = db_fetch($result)) {
-		//Skip cost averaging of service items
-		if (is_inventory_item($row['stock_id'])) {
+		//Skip cost averaging of service items and if it is a location move
+		if (is_inventory_item($row['stock_id']) && $type != ST_LOCTRANSFER) {
 			// The cost has to be adjusted.
 			// Transaction rates are stored either as price or standard_cost depending on types
 			$types = array(ST_SUPPCREDIT, ST_SUPPRECEIVE);

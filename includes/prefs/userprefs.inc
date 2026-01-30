@@ -35,7 +35,7 @@ class user_prefs {
 	var $sticky_date;	// save date on subsequent document entry
 	var $startup_tab;  // default start-up menu tab
 	var $transaction_days; // transaction days in inquiries
-	var $save_report_selection; // save report selections days 0...
+	var $save_report_selections; // save report selections days 0...
 	var $use_date_picker; // use date picker for all date fields
 	var $def_print_destination; // default print destination. 0 = PDF/Printer, 1 = Excel
 	var $def_print_orientation; // default print orientation. 0 = Portrait. 1 = Landscape

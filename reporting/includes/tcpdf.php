@@ -209,6 +209,12 @@ if (!class_exists('TCPDF')) {
 		// protected or Protected properties
 
 		/**
+		* @var cell binary padding
+    * @access protected
+    */
+    var $padding;
+
+    /**
 		* @var current page number
 		* @access protected
 		*/

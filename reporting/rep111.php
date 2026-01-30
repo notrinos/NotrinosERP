@@ -94,9 +94,9 @@ function print_sales_quotations() {
 			$DisplayQty = number_format2($myrow2['quantity'],get_qty_dec($myrow2['stk_code']));
 			$DisplayNet = number_format2($Net,$dec);
 			if ($myrow2['discount_percent']==0)
-				$DisplayDiscount ='';
+				$DisplayDiscount = '';
 			else
-				$DisplayDiscount = number_format2($myrow2['discount_percent']*100,user_percent_dec()).'%';
+				$DisplayDiscount = number_format2($myrow2['discount_percent']*100, user_percent_dec()).'%';
 			$rep->TextCol(0, 1,	$myrow2['stk_code'], -2);
 			$oldrow = $rep->row;
 			$rep->TextColLines(1, 2, $myrow2['description'], -2);

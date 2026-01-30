@@ -32,47 +32,64 @@ class email
 	var $cc = array();
 	var $bcc = array();
 	var $attachment = array();
-	var $boundary = "";
-	var $header = "";
-	var $subject = "";
-	var $body = "";
+	var $boundary = '';
+	var $headers = array();
+	var $subject = '';
+	var $body = '';
 	var $charset = 'ISO-8859-1';
 	var $add_params = '';
 	
 	function __construct($name, $mail)
 	{
 		$this->boundary = md5(uniqid(time()));
-		$this->header = "From: $name <$mail>\n";
+		$this->headers['From'] = $this->encode($name)." <$mail>";
 		$bcc = get_company_pref('bcc_email');
 		if ($bcc)
 			$this->bcc[] = $bcc;
 	}
 
-	function to($mail)
+	function encode($txt)
+    {
+
+        $opts = array('input-charset' => $_SESSION['language']->encoding,
+            'output-charest' => 'utf-8', // utf-8 works always nowadays
+            'line-length'=>  72,
+            'linebreak-chars'=>'\n',
+            'scheme' => 'Q',
+        );
+        return substr(iconv_mime_encode('', $txt, $opts), 2);
+    }
+
+    //
+    // For backward compatibility in extensions address can be passed
+    // in $name in form: '"full name" <adr@host>'.
+    // Don't use this form unless all the mail addresses are encoded in ASCII
+    //
+	function to($name, $mail='')
 	{
-		$this->to[] = $mail;
+		$this->to[] = $mail=='' ? $name : ($this->encode($name)." <$mail>");
 	}
 
-	function cc($mail)
+	function cc($name, $mail='')
 	{
-		$this->cc[] = $mail;
+		$this->cc[] = $mail=='' ? $name : ($this->encode($name)." <$mail>");
 	}
 
-	function bcc($mail)
+	function bcc($name='', $mail='')
 	{
-		$this->bcc[] = $mail;
+		$this->bcc[] = $mail=='' ? $name : ($this->encode($name)." <$mail>");
 	}
 
 	function attachment($file, $filename=null)
 	{
 		if (!isset($filename))
-			$filename = basename($file);
+			$filename = $file;
 		$this->attachment[$filename] = $file;
 	}
 
 	function subject($subject)
 	{
-		$this->subject = $subject;
+		$this->subject = $this->encode($subject);
 	}
 
 	function text($text)
@@ -127,25 +144,24 @@ class email
 	{
 		// Add CC Recipients 
 		if (!empty($this->cc)) 
-			$this->header .= "Cc: " . implode(", ", $this->cc) . "\n" ; 
+			$this->headers['Cc'] = implode(", ", $this->cc);
 
 		// Add BCC Recipients 
 		if (!empty($this->bcc)) 
-			$this->header .= "Bcc: " . implode(", ", $this->bcc) . "\n" ; 
-		$this->header .= "Content-Type: multipart/mixed;\n boundary=\"$this->boundary\"\n";
+			$this->headers['Bcc'] = implode(", ", $this->bcc);
+		$this->headers['Content-Type'] = "multipart/mixed;\n boundary=\"$this->boundary\"";
 
 		// Add Attachments
 		if (!empty($this->attachment))
 		{
-			foreach ($this->attachment as $filename => $file)
+			foreach ($this->attachment as $filename => $fname)
 			{
-				$file = fread(fopen($file, "r"), filesize($file));
+				$file = fread(fopen($fname, "r"), filesize($fname));
 				$this->body .= "--".$this->boundary."\n";
-				$this->body .= "Content-Type: " .$this->mime_type($file). "; name=\"".$filename."\"\n";
+				$this->body .= "Content-Type: " .$this->mime_type(basename($filename)). "; name=\"".basename($fname)."\"\n";
 				$this->body .= "Content-Transfer-Encoding: base64\n";
 				$this->body .= "Content-Disposition: attachment; filename=\"".$filename."\"\n\n";
 				$this->body .= chunk_split(base64_encode($file),"72","\n");
-				$file = "";
 			}
 		}
 		$this->body .= "--".$this->boundary."--\n";
@@ -153,7 +169,7 @@ class email
 		$ret = 0;
 		foreach($this->to as $mail)
 		{
-			if (mail($mail, $this->subject, $this->body, $this->header, $this->add_params))
+			if (mail($mail, $this->subject, $this->body, $this->headers, $this->add_params))
 				$ret++;
 		}
 		return $ret;

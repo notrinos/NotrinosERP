@@ -28,6 +28,9 @@ if (isset($_GET['trans_no']))
 
 $receipt = get_customer_trans($trans_id, ST_CUSTPAYMENT);
 
+if (!empty($SysPrefs->prefs['company_logo_on_views']))
+	company_logo_on_view();
+
 display_heading(sprintf(_('Customer Payment #%d'),$trans_id));
 
 echo '<br>';

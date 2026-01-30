@@ -24,7 +24,7 @@ class attachments extends simple_crud {
 		$fields = array('type_no', 'trans_no','description','filename','tran_date' => 'date');
 		parent::__construct($name, $fields);
 		$this->class = $class;
-		$this->subclass = $subclass;
+		$this->sub_class = $subclass;
 		$this->entity = $id;
 		
 	}
@@ -81,7 +81,7 @@ class attachments extends simple_crud {
 			$attachments[] = $row;
 
 		start_table(TABLESTYLE, 'width=80%');
-		$th = array(_('ID'), _('Docs Title'), _('Filename'), _('Size'), _('Filetype'), _('Date Updated'),  '',  '', '', '');	
+		$th = array(_('ID'), _('Doc Title'), _('Filename'), _('Size'), _('Filetype'), _('Doc Date'),  '',  '', '', '');	
 		table_header($th);	
 		if($attachments){	
 			foreach($attachments as $de) {
@@ -131,10 +131,16 @@ class attachments extends simple_crud {
 			$id_word = _('Customer ID');
 		elseif($type_no==ST_SUPPLIER) // 6
 			$id_word = _('Supplier ID');
+		elseif($type_no==ST_ITEM)
+			$id_word = _('Item ID');
+		elseif($type_no==ST_FIXEDASSET) 
+			$id_word = _('Fixed Asset ID');
+		elseif($type_no==ST_BANKACCOUNT) 
+			$id_word = _('Bank Account ID');
 
 		label_row(_($id_word), $_POST['trans_no']);	
 		date_row(_('Date'), 'tran_date');
-		text_row_ex(_('Docs Title').':', 'description', 40);
+		text_row_ex(_('Doc Title').':', 'description', 40);
 		if ($this->selected_id)
 			label_row(_('File:'), sprintf(_("%s [%s bytes]"), $row['filename'], $row['filesize']));
 		file_row( ($this->selected_id ? _('File change') : _('Select file')) . ':', 'file_attachment_name', 'file_attachment_name');

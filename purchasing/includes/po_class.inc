@@ -15,6 +15,7 @@
 class purch_order {
 
 	var $trans_type; // order/grn/invoice (direct)
+	var $trans_no; // transaction number (GRN, Invoice, etc.)
 	var $line_items;
 	var $curr_code;
 	var $supp_ref;
@@ -203,7 +204,8 @@ class po_line_details {
 			return;
 
 		$this->descr_editable = $item_row["editable"];
-		if ($item_descr == null || !$this->descr_editable)
+		//if ($item_descr == null || !$this->descr_editable) this was overriding the prchase description!!
+		if ($item_descr == null)
 			$this->item_description = $item_row["description"];
 		else
 			$this->item_description = $item_descr;
