@@ -1708,7 +1708,7 @@ CREATE TABLE `0_suppliers` (
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`supplier_id`),
-	KEY `supp_ref` (`supp_ref`)
+	UNIQUE KEY `supp_ref` (`supp_ref`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_suppliers` --

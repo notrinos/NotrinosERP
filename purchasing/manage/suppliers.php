@@ -44,9 +44,13 @@ function can_process() {
 		set_focus('supp_name');
 		return false;
 	}
-
 	if (strlen($_POST['supp_ref']) == 0 || $_POST['supp_ref'] == '') {
 		display_error(_('The supplier short name must be entered.'));
+		set_focus('supp_ref');
+		return false;
+	}
+	if (empty($_POST['supplier_id']) && key_in_foreign_table($_POST['supp_ref'], 'suppliers', 'supp_ref')) {
+		display_error( _('Duplicated supplier short name found.'));
 		set_focus('supp_ref');
 		return false;
 	}
