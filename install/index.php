@@ -149,7 +149,7 @@ function do_install() {
 		update_user_prefs($admin['id'], array(
 			'language' => $con['lang'], 
 			'password' => md5($con['pass']),
-			'login_id' => $con['admin']));
+			'user_id' => $con['admin']));
 
 		if (!copy($path_to_root.'/config.default.php', $path_to_root.'/config.php')) {
 			display_error(_("Cannot save system configuration file 'config.php'."));

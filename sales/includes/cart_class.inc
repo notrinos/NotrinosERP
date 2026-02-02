@@ -18,71 +18,70 @@ iii) a credit note
 iv)  a delivery note
 */
 
-include_once($path_to_root.'/inventory/includes/inventory_db.inc');
-include_once($path_to_root.'/taxes/tax_calc.inc');
+include_once($path_to_root . '/inventory/includes/inventory_db.inc');
+include_once($path_to_root . '/taxes/tax_calc.inc');
 
 class Cart {
-	public $trans_type; // invoice, order, quotation, delivery note ...
-	public $trans_no = array();// array (num1=>ver1,..) or 0 for new
-	public $so_type = 0;		// for sales order: simple=0 template=1
-	public $cart_id;		// used to detect multi-tab edition conflits
-	public $line_items;  //array of objects of class line_details
+	var $trans_type; // invoice, order, quotation, delivery note ...
+	var $trans_no = array();// array (num1=>ver1,..) or 0 for new
+	var $so_type = 0;		// for sales order: simple=0 template=1
+	var $cart_id;		// used to detect multi-tab edition conflits
+	var $line_items;  //array of objects of class line_details
 
-	public $src_docs = array();	// array of arrays(num1=>ver1,...) or 0 for no src
-	public $src_date;			// src document date (for info only)
+	var $src_docs = array();	// array of arrays(num1=>ver1,...) or 0 for no src
+	var $src_date;			// src document date (for info only)
 
-	public $document_date;
-	public $due_date;
-	public $sales_type; // set to the customer's sales type
-	public $sales_type_name; // set to customer's sales type name
-	public $tax_included;
+	var $document_date;
+	var $due_date;
+	var $sales_type; // set to the customer's sales type
+	var $sales_type_name; // set to customer's sales type name
+	var $tax_included;
 
-	public $customer_currency; // set to the customer's currency
-	public $default_discount; // set to the customer's discount %
-	public $customer_name;
-	public $customer_id;
-	public $Branch;
-	public $salesman;
-	public $email;
+	var $customer_currency; // set to the customer's currency
+	var $default_discount; // set to the customer's discount %
+	var $customer_name;
+	var $customer_id;
+	var $Branch;
+	var $email;
 
-	public $deliver_to;
-	public $delivery_address;
-	public $phone;
+	var $deliver_to;
+	var $delivery_address;
+	var $phone;
 
-	public $cust_ref;
-	public $reference;
-	public $Comments;
-	public $Location;
-	public $location_name;
-	public $order_no; 		// the original order number
+	var $cust_ref;
+	var $reference;
+	var $Comments;
+	var $Location;
+	var $location_name;
+	var $order_no; 		// the original order number
 
-	public $ship_via;
-	public $freight_cost = 0;
+	var $ship_via;
+	var $freight_cost = 0;
 
-	public $tax_group_id;
-	public $tax_group_name;
-	public $tax_group_array = null; // saves db queries
-	public $price_factor;	 // ditto for price calculations
+	var $tax_group_id;
+	var $tax_group_name;
+	var $tax_group_array = null; // saves db queries
+	var $price_factor;	 // ditto for price calculations
 
-	public	$pos;			// user assigned POS
-	public $cash_account;
-	public $account_name;
-	public $cash_discount;	// not used as of FA 2.1
-	public $dimension_id;
-	public $dimension2_id;
-	public $payment;
-	public $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
-	public $credit;
+	var	$pos;			// user assigned POS
+	var $cash_account;
+	var $account_name;
+	var $cash_discount;	// not used as of FA 2.1
+	var $dimension_id;
+	var $dimension2_id;
+	var $payment;
+	var $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
+	var $credit;
 	// prepayment mode:
-	public $prepaid=false;	// true for documents issued in prepayment mode
-	public $prep_amount=0;	// prepayment required for SO, invoiced amount for prepaiament invoice
-	public $sum_paid; 		// sum of all allocated prepayments both to order and related invoices
-	public $alloc; 		// sum of payments allocated to this document
-	public $prepayments = array(); // allocation records for this document
-	public $ex_rate;
-	
-	public $fixed_asset = false;
-	public $bo_policy = null;
+	var $prepaid=false;	// true for documents issued in prepayment mode
+	var $prep_amount=0;	// prepayment required for SO, invoiced amount for prepaiament invoice
+	var $sum_paid; 		// sum of all allocated prepayments both to order and related invoices
+	var $alloc; 		// sum of payments allocated to this document
+	var $prepayments = array(); // allocation records for this document
+	var $ex_rate;
+
+	var $fixed_asset = false;
+	var $bo_policy = null;
 
 	//-------------------------------------------------------------------------
 	//
@@ -125,9 +124,9 @@ class Cart {
 
 		return $items;
 	}
-	/*
-		Prepare cart to new child document entry, just after initial parent doc read.
-	*/
+	//
+	//	Prepare cart to new child document entry, just after initial parent doc read.
+	//
 	function prepare_child($type) {
 		global $Refs;
 
@@ -164,9 +163,9 @@ class Cart {
 		$this->trans_no = 0;
 	}
 
-	/*
-		Prepares transaction for reedition updating with parent transaction data 
-	*/
+	//
+	//	Prepares transaction for reedition updating with parent transaction data 
+	//
 	function set_parent_constraints($sodata, $src_no) {
 
 		$srcdetails = get_sales_parent_lines($this->trans_type, $src_no);
@@ -246,7 +245,7 @@ class Cart {
 				$this->document_date = end_fiscalyear();
 			$this->reference = $Refs->get_next($this->trans_type, null, array('date' => Today(),
 				'customer' => $this->customer_id));
-			if ($type != ST_SALESORDER && $type != ST_SALESQUOTE) {
+			if ($type != ST_SALESORDER && $type != ST_SALESQUOTE) { // Added 2.1 Joe Hunt 2008-11-12
 				$dim = get_company_pref('use_dimension');
 				if ($dim > 0) {
 					if ($this->customer_id == '')
@@ -618,22 +617,22 @@ class Cart {
 } /* end of class defintion */
 
 class line_details {
-	public $id;
-	public $stock_id;
-	public $item_description;
-	public $units;
-	public $mb_flag;
-	public $tax_type;
-	public $tax_type_name;
-	public $src_no;	// number of src doc for this line
-	public $src_id;
-	public $price;
-	public $discount_percent;
+	var $id;
+	var $stock_id;
+	var $item_description;
+	var $units;
+	var $mb_flag;
+	var $tax_type;
+	var $tax_type_name;
+	var $src_no;	// number of src doc for this line
+	var $src_id;
+	var $price;
+	var $discount_percent;
 	
-	public $standard_cost;
-	public $descr_editable;
+	var $standard_cost;
+	var $descr_editable;
 
-	public $valid; // validation in constructor
+	var $valid; // validation in constructor
 	/*
 		Line quantity properties in various cart create modes:
 		
@@ -655,10 +654,10 @@ class line_details {
 		$qty_dispatched - quantity currently selected to process
 		$qty_old - 0; not used
 	*/
-	public $quantity;
-	public $qty_done;
-	public $qty_dispatched;
-	public $qty_old = 0;
+	var $quantity;
+	var $qty_done;
+	var $qty_dispatched;
+	var $qty_old = 0;
 
 
 	function __construct($stock_id, $qty, $prc, $disc_percent, $qty_done, $standard_cost, $description, $id=0, $src_no=0, $src_id=0) {

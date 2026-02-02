@@ -87,7 +87,7 @@ function get_transactions($debtorno, $from, $to) {
 
 function get_customer_reference ($order_number) {
 
-	$sql = "SELECT customer_ref FROM ".TB_PREF."sales_orders WHERE order_no = ".db_escape($order_number)." AND trans_type=".ST_SALESORDER;
+	$sql = "SELECT customer_ref FROM ".TB_PREF."sales_orders WHERE order_no ='$order_number' AND trans_type=".ST_SALESORDER."";
 
 	$result = db_query($sql, 'No Transcation were returned');
 
@@ -197,17 +197,17 @@ function print_customer_balances() {
 		$bal = get_open_balance($myrow['debtor_no'], $from);
 		$init = array();
 		$curr_db = $bal ? round2(abs($bal['charges'] * $rate), $dec) : 0; // db
-		$curr_cr = $bal ? round2(abs($bal['credits'] * $rate), $dec) : 0; // cr
+        $curr_cr = $bal ? round2(abs($bal['credits'] * $rate), $dec) : 0; // cr
 		// $curr_alloc = $bal ? round2($bal['Allocated'] * $rate, $dec) : 0;    // allocated
-		$curr_open = $curr_db-$curr_cr;                        // balance
-		$tot_open += $curr_open;
+        $curr_open = $curr_db-$curr_cr;                        // balance
+        $tot_open += $curr_open;
 
-		$res = get_transactions($myrow['debtor_no'], $from, $to);
+        $res = get_transactions($myrow['debtor_no'], $from, $to);
 
 		if (db_num_rows($res) == 0 && !$no_zeros) {
-			$rep->TextCol(0, 1, $myrow['name']);
-			$rep->AmountCol(1, 2, $curr_open, $dec);
-			$rep->AmountCol(4, 5, $curr_open, $dec);
+			$rep->TextCol(0, 1, $myrow['name'].($myrow['inactive']==1 ? ' ('._('Inactive').')' : ''));
+            $rep->AmountCol(1, 2, $curr_open, $dec);
+            $rep->AmountCol(4, 5, $curr_open, $dec);
 			$rep->NewLine(1);
 			continue;
 		}
@@ -222,10 +222,10 @@ function print_customer_balances() {
 		}
 
 		$tot_cur_db += $curr_db;
-		$tot_cur_cr += $curr_cr;
+        $tot_cur_cr += $curr_cr;
 
-		if ($no_zeros && $curr_open == 0.0 && $curr_db == 0.0 && $curr_cr == 0.0)
-			continue;
+        if ($no_zeros && $curr_open == 0.0 && $curr_db == 0.0 && $curr_cr == 0.0)
+        	continue;
 
 		$rep->TextCol(0, 1, $myrow['name']);
 		$rep->AmountCol(1, 2, $curr_open, $dec);
@@ -241,8 +241,8 @@ function print_customer_balances() {
 	$rep->fontSize -= 2;
 
 	$tot_bal = $tot_open + $tot_cur_db - $tot_cur_cr;
-	
-	$rep->AmountCol(1, 2, $tot_open, $dec);
+
+    $rep->AmountCol(1, 2, $tot_open, $dec);
 	$rep->AmountCol(2, 3, $tot_cur_db, $dec);
 	$rep->AmountCol(3, 4, $tot_cur_cr, $dec);
 	$rep->AmountCol(4, 5, $tot_bal, $dec);

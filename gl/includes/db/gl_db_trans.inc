@@ -97,7 +97,7 @@ function add_gl_balance($type, $trans_id, $date_, $amount, $person_type_id=null,
 function get_gl_transactions($from_date, $to_date, $trans_no=0, $account=null, $dimension=0, $dimension2=0, $filter_type=null, $amount_min=null, $amount_max=null, $person_type=null, $person_id=null, $memo='') {
 	global $SysPrefs;
 
-	$sql = "SELECT gl.*, j.event_date, j.doc_date, a.gl_seq, u.login_id, st.supp_reference, gl.person_id subcode,
+	$sql = "SELECT gl.*, j.event_date, j.doc_date, a.gl_seq, u.user_id, st.supp_reference, gl.person_id subcode,
 			IFNULL(IFNULL(sup.supp_name, debt.name), bt.person_id) as person_name, 
 			IFNULL(gl.person_id, IFNULL(sup.supplier_id, IFNULL(debt.debtor_no, bt.person_id))) as person_id,
 			IF(gl.person_id, gl.person_type_id, IF(sup.supplier_id,".  PT_SUPPLIER . "," .  "IF(debt.debtor_no," . PT_CUSTOMER . "," . 
@@ -531,7 +531,7 @@ function clear_gl_trans($type, $trans_id, $nested=false) {
 		commit_transaction();
 }
 
-function get_sql_for_journal_inquiry($filter, $from, $to, $ref='', $memo='', $alsoclosed=false, $login_id=null) {
+function get_sql_for_journal_inquiry($filter, $from, $to, $ref='', $memo='', $alsoclosed=false, $user_id=null) {
 	$sql = "SELECT  IFNULL(a.gl_seq,0) as gl_seq,
 		gl.tran_date,
 		gl.type as trans_type,
@@ -541,7 +541,7 @@ function get_sql_for_journal_inquiry($filter, $from, $to, $ref='', $memo='', $al
 		refs.reference,
 		IF(gl.type=".ST_BANKTRANSFER.",MAX(gl.amount),SUM(IF(gl.amount>0, gl.amount,0))) as amount,
 		com.memo_,
-		IF(ISNULL(u.login_id),'',u.login_id) as login_id,
+		IF(ISNULL(u.user_id),'',u.user_id) as user_id,
 		IF(MAX(gl.person_id), MAX(gl.person_type_id), IF(!ISNULL(st.supplier_id) OR !ISNULL(grn.supplier_id),".  PT_SUPPLIER . "," .  "IF(dt.debtor_no," . PT_CUSTOMER . "," .
 		"IF(bt.person_id != '' AND !ISNULL(bt.person_id), bt.person_type_id, -1)))) as person_type_id
 		FROM ".TB_PREF."gl_trans as gl
@@ -572,8 +572,8 @@ function get_sql_for_journal_inquiry($filter, $from, $to, $ref='', $memo='', $al
 	else
 		$sql .= " AND NOT ISNULL(a.gl_seq)";
 
-	if ($login_id != null)
-		$sql .= " AND login_id = ".db_escape($login_id);
+	if ($user_id != null)
+		$sql .= " AND user_id = ".db_escape($user_id);
 
 	$sql .= " GROUP BY gl.tran_date, a.gl_seq, gl.type, gl.type_no";
 	return $sql;

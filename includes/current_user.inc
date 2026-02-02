@@ -153,7 +153,7 @@ class current_user {
 			$password = generate_password();
 			$hash = password_hash($password, PASSWORD_DEFAULT);
 
-			update_user_password($user['id'], $user['login_id'], $hash);
+			update_user_password($user['id'], $user['user_id'], $hash);
 			
 			$sender = get_company_pref('email');
 			if (empty($sender))

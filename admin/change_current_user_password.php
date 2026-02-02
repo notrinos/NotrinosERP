@@ -70,7 +70,7 @@ start_table(TABLESTYLE);
 
 $myrow = get_user($_SESSION['wa_current_user']->user);
 
-label_row(_('User login:'), $myrow['login_id']);
+label_row(_('User login:'), $myrow['user_id']);
 
 $_POST['cur_password'] = '';
 $_POST['password'] = '';
@@ -85,6 +85,5 @@ table_section_title(_('Enter your new password in the fields.'));
 end_table(1);
 
 submit_center( 'UPDATE_ITEM', _('Change password'), true, '',  'default');
-
 end_form();
 end_page();

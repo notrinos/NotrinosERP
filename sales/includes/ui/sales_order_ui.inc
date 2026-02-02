@@ -85,8 +85,6 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 
 	$myrow = db_fetch($result);
 
-	$order->salesman = $myrow['salesman'];
-
 	// FIX - implement editable contact selector in sales order 
 	$contact = get_branch_contacts($branch_id, 'order', $customer_id);
 	$order->set_branch($branch_id, $myrow['tax_group_id'], $myrow['tax_group_name'], @$contact['phone'], @$contact['email']);
@@ -223,7 +221,6 @@ function display_order_header(&$order, $editable, $date_text) {
 		hidden('customer_id', $order->customer_id);
 		hidden('branch_id', $order->Branch);
 		hidden('sales_type', $order->sales_type);
-		hidden('salesman_code', $order->salesman);
 		if ($order->trans_type != ST_SALESORDER  && $order->trans_type != ST_SALESQUOTE) {
 			hidden('dimension_id', $order->dimension_id);
 			hidden('dimension2_id', $order->dimension2_id);
@@ -289,10 +286,6 @@ function display_order_header(&$order, $editable, $date_text) {
 					$_POST['sales_type'] = $order->sales_type;
 					$Ajax->activate('sales_type');
 					$change_prices = 1;
-				}
-				if($old_order->salesman != $order->salesman) {
-					$_POST['salesman_code'] = $order->salesman;
-					$Ajax->activate('salesman_code');
 				}
 				if ($old_order->dimension_id != $order->dimension_id) {
 					$_POST['dimension_id'] = $order->dimension_id;
@@ -362,8 +355,6 @@ function display_order_header(&$order, $editable, $date_text) {
 		$Ajax->activate('sales_type');
 		$change_prices = 1;
 	}
-
-	sales_persons_list_row(_('Salesman:'), 'salesman_code');
 
 	table_section(4);
 

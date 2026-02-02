@@ -15,6 +15,7 @@
 	was written to allow the same code base to use the more functional tcpdf.class by Nicola Asuni
 
 *	Wrapper for use R&OSpdf API with tcpdf.org class
+*	Joe Hunt <joe.hunt.consulting@gmail.com> and Janusz Dobrowolski <janusz@iron.from.pl>
 */
 
 define("K_RE_PATTERN_RTL", "/(

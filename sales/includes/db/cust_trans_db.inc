@@ -14,7 +14,7 @@
 */
 function update_customer_trans_version($type, $versions) {
 
-	$sql = 'UPDATE '.TB_PREF.'debtor_trans SET version=version+1 WHERE type='.db_escape($type).' AND (';
+	$sql= 'UPDATE '.TB_PREF.'debtor_trans SET version=version+1 WHERE type='.db_escape($type).' AND (';
 
 	foreach ($versions as $trans_no => $version)
 		$where[] = '(trans_no='.db_escape($trans_no).' AND version='.$version.')';
@@ -33,17 +33,17 @@ function get_customer_trans_version($type, $trans_no) {
 	if (!is_array($trans_no))
 		$trans_no = array( $trans_no );
 
-	$sql = 'SELECT trans_no, version FROM '.TB_PREF.'debtor_trans WHERE type='.db_escape($type).' AND (';
+	$sql= 'SELECT trans_no, version FROM '.TB_PREF.'debtor_trans WHERE type='.db_escape($type).' AND (';
 
 	foreach ($trans_no as $key=>$trans)
 		$trans_no[$key] = 'trans_no='.db_escape($trans_no[$key]);
 
 	$sql .= implode(' OR ', $trans_no).')';
 
-	$result = db_query($sql, 'document version retreival');
+	$res = db_query($sql, 'document version retreival');
 
 	$vers = array();
-	while($mysql=db_fetch($result)) {
+	while($mysql=db_fetch($res)) {
 		$vers[$mysql['trans_no']] = $mysql['version'];
 	}
 	return $vers;
@@ -53,7 +53,7 @@ function get_customer_trans_version($type, $trans_no) {
 *	$Total, $Tax, $Freight, $discount all in customer's currency
 *	date_ is display date (non-sql)
 */
-function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $date_, $reference, $Total, $discount=0, $Tax=0, $Freight=0, $FreightTax=0, $sales_type=0, $order_no=0, $ship_via=0, $due_date='', $AllocAmt=0, $rate=0, $dimension_id=0, $dimension2_id=0, $payment_terms=null, $tax_included=0, $prep_amount=0, $pos=0) {
+function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $date_, $reference, $Total, $discount=0, $Tax=0, $Freight=0, $FreightTax=0, $sales_type=0, $order_no=0, $ship_via=0, $due_date='', $AllocAmt=0, $rate=0, $dimension_id=0, $dimension2_id=0, $payment_terms=null, $tax_included=0, $prep_amount=0) {
 	$new = $trans_no == 0;
 	$curr = get_customer_currency($debtor_no);
 	if ($rate == 0)
@@ -64,8 +64,6 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 	
 	if ($trans_type == ST_BANKPAYMENT)
 		$Total = -$Total;
-
-	$pos = $pos == 0 ? user_pos() : $pos;
 
 	if ($new || !exists_customer_trans($trans_type, $trans_no)) {
 		if ($new)
@@ -79,7 +77,7 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 			order_, ov_amount, ov_discount,
 			ov_gst, ov_freight, ov_freight_tax,
 			rate, ship_via, alloc,
-			dimension_id, dimension2_id, payment_terms, tax_included, prep_amount, pos_id
+			dimension_id, dimension2_id, payment_terms, tax_included, prep_amount
 			) VALUES (".db_escape($trans_no).", ".db_escape($trans_type).",
 			".db_escape($debtor_no).", ".db_escape($BranchNo).",
 			'$SQLDate', '$SQLDueDate', ".db_escape($reference).",
@@ -88,7 +86,7 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 			$FreightTax, $rate, ".db_escape($ship_via).", $AllocAmt,
 			".db_escape($dimension_id).", ".db_escape($dimension2_id).", "
 			.db_escape($payment_terms, true).", "
-			.db_escape($tax_included).", ".db_escape($prep_amount).", ".db_escape($pos).")";
+			.db_escape($tax_included).", ".db_escape($prep_amount).")";
 	}
 	else {	// may be optional argument should stay unchanged ?
 		$sql = "UPDATE ".TB_PREF."debtor_trans SET
@@ -249,7 +247,7 @@ function void_customer_trans($type, $type_no) {
 }
 
 function clear_customer_trans($type, $type_no) {
-	
+	// Delete
 	$sql = "DELETE FROM ".TB_PREF."debtor_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
 	db_query($sql, "could not clear debtor transactions for type=$type and trans_no=$type_no");

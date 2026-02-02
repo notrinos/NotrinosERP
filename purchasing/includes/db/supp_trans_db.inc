@@ -205,7 +205,7 @@ function get_sql_for_supplier_inquiry($filter, $after_date, $to_date, $supplier_
 		trans.id as trans_no,
 		trans.reference, 
 		supplier.supp_name, 
-		po.supp_reference AS supp_reference,
+		po.requisition_no AS supp_reference,
 		delivery_date as tran_date, 
 		'' as due_date,
 		supplier.curr_code, 

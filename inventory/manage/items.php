@@ -58,7 +58,7 @@ function set_edit($stock_id) {
 
 function del_image($stock_id) {
 	foreach (array('jpg', 'png', 'gif') as $ext) {
-		$filename = company_path().'/images/stock_items/'.item_img_name($stock_id).".".$ext;
+		$filename = company_path().'/images/'.item_img_name($stock_id).".".$ext;
 		if (file_exists($filename) && !unlink($filename))
 			return false;
 	}
@@ -73,7 +73,7 @@ function show_image($stock_id) {
 
 	if (@$stock_id) {
 		foreach (array('jpg', 'png', 'gif') as $ext) {
-			$file = company_path().'/images/stock_items/'.item_img_name($stock_id).'.'.$ext;
+			$file = company_path().'/images/'.item_img_name($stock_id).'.'.$ext;
 			if (file_exists($file)) {
 				// rand() call is necessary here to avoid caching problems.
 				$check_remove_image = true; // fixme
@@ -116,7 +116,7 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 	$stock_id = $_POST['NewStockID'];
 	$result = $_FILES['pic']['error'];
 	$upload_file = 'Yes'; //Assume all is well to start off with
-	$filename = company_path().'/images/stock_items';
+	$filename = company_path().'/images';
 	if (!file_exists($filename))
 		mkdir($filename);
 	

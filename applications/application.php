@@ -20,8 +20,8 @@ define('MENU_SETTINGS', 'menu_settings');
 define('MENU_SYSTEM', 'menu_system');
 
 class menu_item {
-	public $label;
-	public $link;
+	var $label;
+	var $link;
 	
 	function __construct($label, $link) {
 		$this->label = $label;
@@ -30,8 +30,8 @@ class menu_item {
 }
 
 class menu {
-	public $title;
-	public $items;
+	var $title;
+	var $items;
 	
 	function __construct($title)  {
 		$this->title = $title;
@@ -46,10 +46,10 @@ class menu {
 }
 
 class app_function {
-	public $label;
-	public $link;
-	public $access;
-	public $category;
+	var $label;
+	var $link;
+	var $access;
+	var $category;
 	
 	function __construct($label, $link, $access='SA_OPEN', $category='') {
 		$this->label = $label;
@@ -60,10 +60,10 @@ class app_function {
 }
 
 class module {
-	public $name;
-	public $icon;
-	public $lappfunctions;
-	public $rappfunctions;
+	var $name;
+	var $icon;
+	var $lappfunctions;
+	var $rappfunctions;
 	
 	function __construct($name, $icon=null) {
 		$this->name = $name;
@@ -86,11 +86,11 @@ class module {
 }
 
 class application {
-	public $id;
-	public $name;
-	public $help_context;
-	public $modules;
-	public $enabled;
+	var $id;
+	var $name;
+	var $help_context;
+	var $modules;
+	var $enabled;
 	
 	function __construct($id, $name, $enabled=true) {
 		$this->id = $id;
@@ -116,9 +116,9 @@ class application {
 	function add_extensions() {
 		hook_invoke_all('install_options', $this);
 	}
-	/*
-	*	Helper returning link to report class added by extension module.
-	*/
+	//
+	// Helper returning link to report class added by extension module.
+	//
 	function report_class_url($class) {
 		return 'reporting/reports_main.php?Class='.$class;
 	}

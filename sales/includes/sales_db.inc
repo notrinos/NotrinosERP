@@ -220,7 +220,7 @@ function read_sales_trans($doc_type, $trans_no, &$cart) {
 		$cart->order_no = $myrow['order_'];
 		$cart->due_date = sql2date($myrow['due_date']);
 		$cart->document_date = sql2date($myrow['tran_date']);
-		$cart->dimension_id = $myrow['dimension_id'];
+		$cart->dimension_id = $myrow['dimension_id']; // added 2.1 Joe Hunt 2008-11-12
 		$cart->dimension2_id = $myrow['dimension2_id'];
 		$cart->Comments = '';
 		foreach ( $trans_no as $trans ) {

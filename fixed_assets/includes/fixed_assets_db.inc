@@ -121,7 +121,7 @@ function get_sql_for_fixed_assets($show_inactive = false) {
 //		refs.reference,
 //		SUM(IF(gl.amount>0, gl.amount,0)) as amount,
 //		com.memo_,
-//		IF(ISNULL(u.login_id),'',u.login_id) as login_id";
+//		IF(ISNULL(u.user_id),'',u.user_id) as user_id";
 //
 //	$sql.= " FROM ".TB_PREF."gl_trans as gl
 //		 LEFT JOIN ".TB_PREF."audit_trail as a ON

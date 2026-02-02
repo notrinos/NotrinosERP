@@ -19,33 +19,28 @@ function add_sales_order(&$order) {
 	$del_date = date2sql($order->due_date);
 	$order_type = 0; // this is default on new order
 	$total = $order->get_trans_total();
-
-	$sql = "INSERT INTO ".TB_PREF."sales_orders (order_no, type, debtor_no, trans_type, branch_code, salesman_code, customer_ref, reference, comments, ord_date, order_type, ship_via, deliver_to, delivery_address, contact_phone, freight_cost, from_stk_loc, delivery_date, payment_terms, total, prep_amount)
-		VALUES (".
-			db_escape($order_no).",".
-			db_escape($order_type).",".
-			db_escape($order->customer_id).", ".
-			db_escape($order->trans_type).",".
-			db_escape($order->Branch).", ".
-			db_escape($order->salesman).", ".
-			db_escape($order->cust_ref).",". 
+	$sql = "INSERT INTO ".TB_PREF."sales_orders (order_no, type, debtor_no, trans_type, branch_code, customer_ref, reference, comments, ord_date,
+		order_type, ship_via, deliver_to, delivery_address, contact_phone,
+		freight_cost, from_stk_loc, delivery_date, payment_terms, total, prep_amount)
+		VALUES (" .db_escape($order_no) . "," .db_escape($order_type) . "," . db_escape($order->customer_id) .
+		 ", " .db_escape($order->trans_type) . "," .db_escape($order->Branch) . ", ".
+			db_escape($order->cust_ref) .",". 
 			db_escape($order->reference) .",". 
-			db_escape($order->Comments).",'". 
-			date2sql($order->document_date)."', ".
-			db_escape($order->sales_type).", ".
-			db_escape($order->ship_via).",". 
-			db_escape($order->deliver_to).",".
-			db_escape($order->delivery_address).", ".
-			db_escape($order->phone).", ".
-			db_escape($order->freight_cost).", ".
-			db_escape($order->Location).", ".
-			db_escape($del_date).",".
-			db_escape($order->payment).",".
-			db_escape($total).",".
-			db_escape($order->prep_amount).
-		")";
+			db_escape($order->Comments) .",'" . 
+			date2sql($order->document_date) . "', " .
+			db_escape($order->sales_type) . ", " .
+			db_escape($order->ship_via)."," . 
+			db_escape($order->deliver_to) . "," .
+			db_escape($order->delivery_address) . ", " .
+			db_escape($order->phone) . ", " . 
+			db_escape($order->freight_cost) .", " . 
+			db_escape($order->Location) .", " .
+			db_escape($del_date) . "," .
+			db_escape($order->payment) . "," .
+			db_escape($total) . "," .
+			db_escape($order->prep_amount).")";
 
-	db_query($sql, 'sales order cannot be added');
+	db_query($sql, 'order Cannot be Added');
 
 	$order->trans_no = array($order_no=>0);
 
@@ -127,15 +122,13 @@ function update_sales_order($order) {
 	if ($order->trans_type == ST_SALESORDER)
 		$allocs = get_payments_for($order_no, $order->trans_type, $order->customer_id);
 
-	$sql = "UPDATE ".TB_PREF."sales_orders SET 
-		type =".db_escape($order->so_type)." ,
+	$sql = "UPDATE ".TB_PREF."sales_orders SET type =".db_escape($order->so_type)." ,
 		debtor_no = " . db_escape($order->customer_id) . ",
 		branch_code = " . db_escape($order->Branch) . ",
-		salesman_code = " . db_escape($order->salesman) . ",
 		customer_ref = ". db_escape($order->cust_ref) .",
 		reference = ". db_escape($order->reference) .",
 		comments = ". db_escape($order->Comments) .",
-		ord_date = '" . date2sql($order->document_date) . "',
+		ord_date = '" . date2sql($order->document_date)."',
 		order_type = " .db_escape($order->sales_type) . ",
 		ship_via = " . db_escape($order->ship_via) .",
 		deliver_to = " . db_escape($order->deliver_to) . ",
@@ -164,7 +157,7 @@ function update_sales_order($order) {
 	db_query($sql, 'Old order Cannot be Deleted');
 
 	if ($SysPrefs->loc_notification() == 1) {
-		include_once($path_to_root.'/inventory/includes/inventory_db.inc');
+		include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 		$st_ids = array();
 		$st_names = array();
 		$st_num = array();
@@ -181,14 +174,14 @@ function update_sales_order($order) {
 			 (order_no, trans_type, stk_code,  description, unit_price, quantity,
 			  discount_percent, qty_sent)
 			 VALUES (".$order_no . ",".$order->trans_type.","
-				.db_escape($line->stock_id) . ","
-				.db_escape($line->item_description) . ", "
-				.db_escape($line->price) . ", "
-				.db_escape($line->quantity) . ", "
-				.db_escape($line->discount_percent) . ", "
-				.db_escape($line->qty_done) ." )";
+				  .db_escape($line->stock_id) . ","
+				  .db_escape($line->item_description) . ", "
+				  .db_escape($line->price) . ", "
+				  .db_escape($line->quantity) . ", "
+				  .db_escape($line->discount_percent) . ", "
+				  .db_escape($line->qty_done) ." )";
 		else
-			$sql = "UPDATE ".TB_PREF."sales_order_details
+		$sql = "UPDATE ".TB_PREF."sales_order_details
 			SET id=".db_escape($line->id).",
 				order_no=$order_no,
 				trans_type=".$order->trans_type.",
@@ -277,9 +270,8 @@ function get_sales_order_details($order_no, $trans_type) {
 			FROM ".TB_PREF."sales_order_details line,"
 				.TB_PREF."stock_master item
 			WHERE line.stk_code = item.stock_id
-				AND order_no =".db_escape($order_no)." 
-				AND trans_type = ".db_escape($trans_type)." 
-				ORDER BY id";
+				AND order_no =".db_escape($order_no) 
+				." AND trans_type = ".db_escape($trans_type) . " ORDER BY id";
 
 	return db_query($sql, 'Retreive order Line Items');
 }
@@ -296,14 +288,12 @@ function read_sales_order($order_no, &$order, $trans_type) {
 
 	$order->set_branch($myrow['branch_code'], $myrow['tax_group_id'], $myrow['tax_group_name'], $myrow['contact_phone']);
 
-	// no default price calculations on edit
-	$order->set_sales_type($myrow['sales_type_id'], $myrow['sales_type'], $myrow['tax_included'], $myrow['factor']);
+	$order->set_sales_type($myrow['sales_type_id'], $myrow['sales_type'], $myrow['tax_included'], $myrow['factor']); // no default price calculations on edit
 
 	$order->set_location($myrow['from_stk_loc'], $myrow['location_name']);
 
 	$order->set_delivery($myrow['ship_via'], $myrow['deliver_to'], $myrow['delivery_address'], $myrow['freight_cost']);
 
-	$order->salesman = $myrow['salesman_code'];
 	$order->cust_ref = $myrow['customer_ref'];
 	$order->sales_type =$myrow['order_type'];
 	$order->reference = $myrow['reference'];
@@ -339,7 +329,7 @@ function sales_order_has_deliveries($order_no) {
 	$row = db_fetch_row($result);
 
 	if ($row[0] > 0)
-		return true;  // added check for eventually voided deliveries
+		return true;
 	$sql = "SELECT order_ FROM ".TB_PREF."debtor_trans WHERE type=".ST_CUSTDELIVERY." AND order_=".db_escape($order_no);
 	$result = db_query($sql, 'The related delivery notes could not be retreived');
 
@@ -409,7 +399,6 @@ function get_branch_to_order($customer_id, $branch_id) {
 	// the branch was also selected from the customer selection so default the delivery details from the customer branches table cust_branch. The order process will ask for branch details later anyway
 	$sql = "SELECT branch.br_name,
 		branch.br_address,
-		branch.salesman,
 		branch.br_post_address,
 		default_location, location_name, default_ship_via,
 		tax_group.name AS tax_group_name,
@@ -444,8 +433,9 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 			sorder.reference,
 			debtor.name,
 			branch.br_name,"
-			.($filter=='InvoiceTemplates' || $filter=='DeliveryTemplates' ?
-			"sorder.comments, " : "sorder.customer_ref, ")
+			.($filter=='InvoiceTemplates' 
+				|| $filter=='DeliveryTemplates' ?
+			 "sorder.comments, " : "sorder.customer_ref, ")
 			."sorder.ord_date,
 			sorder.delivery_date,
 			sorder.deliver_to,
@@ -483,9 +473,9 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 		$sql .= " AND sorder.order_no LIKE ".db_escape($number_like);
 				// ." GROUP BY sorder.order_no";
 	}
-	elseif ($ref != '') {
+	elseif ($ref != "") {
 		// search orders with reference like 
-		$sql .= " AND sorder.reference LIKE ".db_escape('%'.$ref.'%');
+		$sql .= " AND sorder.reference LIKE ".db_escape('%' . $ref . '%');
 				// ." GROUP BY sorder.order_no";
 	}
 	else {	// ... or select inquiry constraints
@@ -521,6 +511,7 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 	elseif ($filter=='InvoiceTemplates' || $filter=='DeliveryTemplates')
 		$sql .= " AND sorder.type=1";
 
+	//Chaiatanya : New Filter
 	if ($customer_id != ALL_TEXT)
 		$sql .= " AND sorder.debtor_no = ".db_escape($customer_id);
 
@@ -567,6 +558,7 @@ function is_sales_order_started($order_no) {
 
 	return $result[0];
 }
+
 
 /*
 * Mark/unmark sales order as template.

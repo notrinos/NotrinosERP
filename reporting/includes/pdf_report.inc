@@ -361,7 +361,7 @@ class FrontReport extends Cpdf {
 			'DebtorName', 'supp_account_no', 'wo_ref', 'debtor_ref','type', 'trans_no', 
 			'StockItemName', 'tax_id', 'order_', 'delivery_date', 'units_issued',
 			'due_date', 'required_by', 'payment_terms', 'curr_code',
-			'ov_freight', 'ov_gst', 'ov_amount', 'prepaid', 'supp_reference', 'contact'),
+			'ov_freight', 'ov_gst', 'ov_amount', 'prepaid', 'requisition_no', 'contact'),
 		'branch' => array('br_address', 'br_name', 'salesman', 'disable_branch'),
 		'sales_order' => array('deliver_to', 'delivery_address', 'customer_ref'),
 		'bankaccount' => array('bank_name', 'bank_account_number', 'payment_service')

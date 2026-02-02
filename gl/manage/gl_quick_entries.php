@@ -192,7 +192,7 @@ div_start('qe');
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) {
-	if ($Mode == 'Edit') {
+	if ($Mode == 'Edit') {// changed by Joe 2010-11-09
 		$myrow = get_quick_entry($selected_id);
 
 		$_POST['id']  = $myrow['id'];

@@ -36,9 +36,6 @@ define('ST_WORKORDER', 26);
 define('ST_MANUISSUE', 28);
 define('ST_MANURECEIVE', 29);
 
-define('ST_PAYSLIP', 80);
-define('ST_EMPPAYMENT', 81);
-
 //
 //	Depreciation period types
 //
@@ -84,7 +81,7 @@ function get_parent_type($type) {
 }
 
 //----------------------------------------------------------------------------------
-//	Bank transaction types
+//		Bank transaction types
 //
 define('BT_TRANSFER', 0);
 define('BT_CHEQUE', 1);
@@ -104,14 +101,12 @@ define('PT_CUSTOMER', 2);
 define('PT_SUPPLIER', 3);
 define('PT_QUICKENTRY', 4);
 define('PT_DIMESION', 5);
-define('PT_EMPLOYEE', 6);
 
 function payment_person_currency($type, $person_id)  {
 	switch ($type) {
 		case PT_MISC :
 		case PT_QUICKENTRY :
 		case PT_WORKORDER :
-		case PT_EMPLOYEE:
 			return get_company_currency();
 
 		case PT_CUSTOMER :

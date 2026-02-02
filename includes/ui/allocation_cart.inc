@@ -196,10 +196,11 @@ class allocation {
 					add_cust_allocation($amount, $this->type, $this->trans_no, $alloc_item->type, $alloc_item->type_no, $this->person_id, $this->date_);
 					update_debtor_trans_allocation($alloc_item->type, $alloc_item->type_no, $this->person_id);
 				}
-				
+				// Exchange Variations Joe Hunt 2008-09-20 ////////////////////
 				if ($alloc_item->type != ST_SALESORDER && !@$no_exchange_variations && $alloc_item->type != ST_PURCHORDER && $alloc_item->type != ST_JOURNAL && $this->type != ST_JOURNAL)
 					exchange_variation($this->type, $this->trans_no, $alloc_item->type, $alloc_item->type_no, $this->date_, $amount, $this->person_type);
 
+				//////////////////////////////////////////////////////////////
 				$total_allocated += $alloc_item->current_allocated;
 			}
 		}  /*end of the loop through the array of allocations made */

@@ -82,7 +82,6 @@ if (isset($_GET['trans_no']))
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	
 	$filename = basename($_FILES['filename']['name']);
-	
 	if (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
 		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))

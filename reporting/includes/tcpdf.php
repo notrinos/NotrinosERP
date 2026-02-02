@@ -126,8 +126,8 @@
 /**
  * main configuration file
  */
-/** -------------------------------NotrinosERP---------------------------
-  * following changes are done for NotrinosERP
+/** -------------------------------FrontAccounting 2.0  ---------------------------
+  * following changes are done for FrontAccounting 2.0 - Joe Hunt 06.08.2008
   * 1. /config/tcpdf_config.php is not included, commented out
   * 2. Following 3 defines instead:
   *    if (!defined("K_PATH_FONTS"))
@@ -1130,7 +1130,7 @@ if (!class_exists('TCPDF')) {
 		 * @param String $encoding charset encoding; default is UTF-8
 		 */
 		function __construct($orientation='P', $unit='mm', $format='A4', $uni=true, $encoding="UTF-8") {
-			if ($uni) // Fix for NotrinosERP
+			if ($uni) // Fix for FrontAccounting
 			{
 				global $unicode, $unicode_mirror, $unicode_arlet, $laa_array, $diacritics;
 				include_once(dirname(__FILE__)."/unicode_data2.php");
@@ -6212,7 +6212,7 @@ if (!class_exists('TCPDF')) {
 			//Set line width
 			$this->LineWidth = $width;
 			//$this->linestyleWidth = sprintf('%.2f w', ($width * $this->k));
-			// NotrinosERP fix
+			// FrontAccounting fix
 			// My PHP 5.2.6 environment gave an "Unsupported operand types"
 			// error for the multiplication on the next line some of the
 			// time when this method is called - I debugged and sometimes

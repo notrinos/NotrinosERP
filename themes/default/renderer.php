@@ -66,10 +66,10 @@ class renderer {
 		echo "<tr>\n";
 		echo "<td class='quick_menu'>\n"; // tabs
 
-		$indicator = $path_to_root."/themes/".user_theme().'/images/ajax-loader.gif';
+		$indicator = $path_to_root."/themes/".user_theme(). "/images/ajax-loader.gif";
 		if (!$no_menu) {
 
-			$app_icons = array('orders'=>'fas fa-tags','AP'=>'fas fa-shopping-cart','stock'=>'fas fa-warehouse','manuf'=>'fas fa-industry','assets'=>'fas fa-building','proj'=>'fas fa-map-marked-alt','GL'=>'fas fa-book','FrontHrm'=>'fas fa-users','hrm'=>'fas fa-users','extendedhrm'=>'fas fa-users','school'=>'fas fa-graduation-cap', 'kanban' => 'fas fa-tasks', 'pos'=>'fas fa-shopping-basket', 'grm'=>'fas fa-commenting-o', 'trade_finance'=>'fas fa-money', 'weigh_bridge'=>'fas fa-balance-scale', 'additional_fields'=>'fas fa-plus-square', 'booking'=>'fas fa-check-square-o', 'hospital'=>'fas fa-hospital-o', 'Projects'=>'fas fa-check-square-o', 'system'=>'fas fa-cog');
+			$app_icons = array('orders'=>'fas fa-tags','AP'=>'fas fa-shopping-cart','stock'=>'fas fa-warehouse','manuf'=>'fas fa-industry','assets'=>'fas fa-building','proj'=>'fas fa-map-marked-alt','GL'=>'fas fa-book','FrontHrm'=>'fas fa-users','extendedhrm'=>'fas fa-users','school'=>'fas fa-graduation-cap', 'kanban' => 'fas fa-tasks', 'pos'=>'fas fa-shopping-basket', 'grm'=>'fas fa-commenting-o', 'trade_finance'=>'fas fa-money', 'weigh_bridge'=>'fas fa-balance-scale', 'additional_fields'=>'fas fa-plus-square', 'booking'=>'fas fa-check-square-o', 'hospital'=>'fas fa-hospital-o', 'Projects'=>'fas fa-check-square-o', 'system'=>'fas fa-cog');
 			$applications = $_SESSION['App']->applications;
 			$sel_app = $_SESSION['sel_app'];
 			echo "<table cellpadding='0' cellspacing='0' width='100%'><tr><td>";

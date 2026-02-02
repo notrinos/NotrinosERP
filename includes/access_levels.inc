@@ -13,9 +13,9 @@
 	Security sections groups various areas on both functionality and privilege levels.
 	Often analytic inquires are available only for management, and configuration
 	for administration or management staff. This is why we have those three
-	section type inside near every NotrinosERP module.
+	section type inside near every FA module.
 
-	Section codes 0-99 are reserved for core NotrinosERP functionalities.
+	Section codes 0-99 are reserved for core FA functionalities.
 	Every security section can contain up to 256 different areas.
 	External modules can extend security roles system by adding rows to 
 	$security_sections and $security_areas using section codes >=100.
@@ -56,10 +56,6 @@ define('SS_GL_C',	61<<8);
 define('SS_GL',		62<<8);
 define('SS_GL_A',	63<<8);
 
-define('SS_HRM_C',	71<<8);
-define('SS_HRM',	72<<8);
-define('SS_HRM_A',	73<<8);
-
 $security_sections = array(
 	SS_SADMIN => _('System administration'),
 	SS_SETUP => _('Company setup'),
@@ -83,14 +79,11 @@ $security_sections = array(
 	SS_DIM => _('Dimensions'),
 	SS_GL_C => _('Banking & GL configuration'),
 	SS_GL => _('Banking & GL transactions'),
-	SS_GL_A => _('Banking & GL analytics'),
-	SS_HRM_C => _('Human Resources configuration'),
-	SS_HRM => _('Human Resources transactions'),
-	SS_HRM_A => _('Human Resources analytics'),
+	SS_GL_A => _('Banking & GL analytics')
 );
 
 /*
-	This table stores security areas available in NotrinosERP. 
+	This table stores security areas available in FA. 
 	Key is area identifier used to check user rights, values are
 	codes stored for each role in security_roles table and description used
 	in roles editor.
@@ -101,14 +94,16 @@ $security_sections = array(
 	Special value 'SA_OPEN' is used for publicly available pages like login/logout.
 */
 $security_areas =array(
-
-	//	Site administration
+//
+//	Site administration
+//
 	'SA_CREATECOMPANY' =>array(SS_SADMIN|1, _('Install/update companies')),
 	'SA_CREATELANGUAGE' => array(SS_SADMIN|2, _('Install/update languages')),
 	'SA_CREATEMODULES' => array(SS_SADMIN|3, _('Install/upgrade modules')),
 	'SA_SOFTWAREUPGRADE' => array(SS_SADMIN|4, _('Software upgrades')),
-
-	//	Company setup
+//
+//	Company setup
+//
 	'SA_SETUPCOMPANY' => array(SS_SETUP|1, _('Company parameters')),
 	'SA_SECROLES' => array(SS_SETUP|2, _('Access levels edition')),
 	'SA_USERS' => array(SS_SETUP|3, _('Users setup')),
@@ -123,8 +118,9 @@ $security_areas =array(
 	'SA_WORKCENTRES' => array(SS_SETUP|12, _('Manufacture work centres')),
 	'SA_FORMSETUP' => array(SS_SETUP|13, _('Forms setup')),
 	'SA_CRMCATEGORY' => array(SS_SETUP|14, _('Contact categories')),
-
-	// Special and common functions
+//
+// Special and common functions
+//
 	'SA_VOIDTRANSACTION' => array(SS_SPEC|1, _('Voiding transactions')),
 	'SA_BACKUP' => array(SS_SPEC|2, _('Database backup/restore')),
 	'SA_VIEWPRINTTRANSACTION' => array(SS_SPEC|3, _('Common view/print transactions interface')),
@@ -132,8 +128,9 @@ $security_areas =array(
 	'SA_SETUPDISPLAY' => array(SS_SPEC|5, _('Display preferences')),
 	'SA_CHGPASSWD' => array(SS_SPEC|6, _('Password changes')),
 	'SA_EDITOTHERSTRANS' => array(SS_SPEC|7, _('Edit other users transactions')),
-
-	// Sales related functionality
+//
+// Sales related functionality
+//
 	'SA_SALESTYPES' => array(SS_SALES_C|1, _('Sales types')),
 	'SA_SALESPRICE' => array(SS_SALES_C|2, _('Sales prices edition')),
 	'SA_SALESMAN' => array(SS_SALES_C|3, _('Sales staff maintenance')),
@@ -161,7 +158,9 @@ $security_areas =array(
 	'SA_CUSTSTATREP' => array(SS_SALES_A|6, _('Customer status report')),
 	'SA_CUSTPAYMREP' => array(SS_SALES_A|7, _('Customer payments report')),
 
-	// Purchase related functions
+//
+// Purchase related functions
+//
 	'SA_PURCHASEPRICING' => array(SS_PURCH_C|1, _('Purchase price changes')),
 
 	'SA_SUPPTRANSVIEW' => array(SS_PURCH|1, _('Supplier transactions view')),
@@ -177,8 +176,9 @@ $security_areas =array(
 	'SA_SUPPLIERANALYTIC' => array(SS_PURCH_A|1, _('Supplier analytical reports')),
 	'SA_SUPPBULKREP' => array(SS_PURCH_A|2, _('Supplier document bulk reports')),
 	'SA_SUPPPAYMREP' => array(SS_PURCH_A|3, _('Supplier payments report')),
-
-	// Inventory 
+//
+// Inventory 
+//
 	'SA_ITEM' => array(SS_ITEMS_C|1, _('Stock items add/edit')),
 	'SA_SALESKIT' => array(SS_ITEMS_C|2, _('Sales kits')),
 	'SA_ITEMCATEGORY' => array(SS_ITEMS_C|3, _('Item categories')),
@@ -194,7 +194,9 @@ $security_areas =array(
 	'SA_ITEMSANALYTIC' => array(SS_ITEMS_A|2, _('Items analytical reports and inquiries')),
 	'SA_ITEMSVALREP' => array(SS_ITEMS_A|3, _('Inventory valuation report')),
 
-	// Fixed Assets
+//
+// Fixed Assets
+//
 	'SA_ASSET' => array(SS_ASSETS_C|1, _('Fixed Asset items add/edit')),
 	'SA_ASSETCATEGORY' => array(SS_ASSETS_C|2, _('Fixed Asset categories')),
 	'SA_ASSETCLASS' => array(SS_ASSETS_C|4, _('Fixed Asset classes')),
@@ -206,7 +208,9 @@ $security_areas =array(
 
 	'SA_ASSETSANALYTIC' => array(SS_ASSETS_A|1, _('Fixed Asset analytical reports and inquiries')),
 
-	// Manufacturing module 
+//
+// Manufacturing module 
+//
 	'SA_BOM' => array(SS_MANUF_C|1, _('Bill of Materials')),
 
 	'SA_MANUFTRANSVIEW' => array(SS_MANUF|1, _('Manufacturing operations view')),
@@ -219,8 +223,9 @@ $security_areas =array(
 	'SA_WORKORDERCOST' => array(SS_MANUF_A|2, _('Manufacturing cost inquiry')),
 	'SA_MANUFBULKREP' => array(SS_MANUF_A|3, _('Work order bulk reports')),
 	'SA_BOMREP' => array(SS_MANUF_A|4, _('Bill of materials reports')),
-
-	// Dimensions
+//
+// Dimensions
+//
 	'SA_DIMTAGS' => array(SS_DIM_C|1, _('Dimension tags')),
 
 	'SA_DIMTRANSVIEW' => array(SS_DIM|1, _('Dimension view')),
@@ -228,8 +233,9 @@ $security_areas =array(
 	'SA_DIMENSION' => array(SS_DIM|2, _('Dimension entry')),
 
 	'SA_DIMENSIONREP' => array(SS_DIM|3, _('Dimension reports')),
-
-	// Banking and General Ledger
+//
+// Banking and General Ledger
+//
 	'SA_ITEMTAXTYPE' => array(SS_GL_C|1, _('Item tax type definitions')),
 	'SA_GLACCOUNT' => array(SS_GL_C|2, _('GL accounts edition')),
 	'SA_GLACCOUNTGROUP' => array(SS_GL_C|3, _('GL account groups')),
@@ -263,26 +269,6 @@ $security_areas =array(
 	'SA_TAXREP' => array(SS_GL_A|2, _('Tax reports and inquiries')),
 	'SA_BANKREP' => array(SS_GL_A|3, _('Bank reports and inquiries')),
 	'SA_GLREP' => array(SS_GL_A|4, _('GL reports and inquiries')),
-
-	// Payroll & Human Resources
-	'SA_EMPLOYEE' => array(SS_HRM_C|1, _('Add/Edit Employee information')),
-	'SA_DEPARTMENT' => array(SS_HRM_C|2, _('Manage departments')),
-	'SA_LEAVETYPE' => array(SS_HRM_C|3, _('Leave types')),
-	'SA_POSITION' => array(SS_HRM_C|4, _('Manage positions')),
-	'SA_PAYGRADE' => array(SS_HRM_C|5, _('Manage grades')),
-	'SA_OVERTIME' => array(SS_HRM_C|6, _('Overtime')),
-	'SA_JOBCLASS' => array(SS_HRM_C|7, _('Job classification')),
-	'SA_PAYELEMENT' => array(SS_HRM_C|8, _('Pay elements')),
-	'SA_PAYELEMENTALLOC' => array(SS_HRM_C|9, _('Pay elements allocation')),
-	'SA_SALARYSTRUCTURE' => array(SS_HRM_C|10, _('Salary structure')),
-	'SA_SALARYSTRUCTURE' => array(SS_HRM_C|10, _('Salary structure')),
-
-	'SA_ATTENDANCE' => array(SS_HRM|1, _('Attendance')),
-	'SA_PAYSLIP' => array(SS_HRM|2, _('Payslip entry')),
-	'SA_EMPLOYEEPAYMENT' => array(SS_HRM|3, _('Pay to employee')),
-
-	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1, _('Employee transactions view')),
-	'SA_EMPLOYEEREP' => array(SS_HRM_A|2, _('Employee reports and inquiries')),
 );
 
 if (!@$SysPrefs->allow_gl_reopen)

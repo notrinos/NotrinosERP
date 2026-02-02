@@ -57,7 +57,7 @@ function array_natsort($aryData, $strIndex, $strSortBy, $strSortType=false) {
 
 function update_admin_password($conn, $password) {
 	$sql = "UPDATE ".$conn['tbpref']."users SET password=".db_escape($password) . "
-		WHERE login_id='admin'";
+		WHERE user_id='admin'";
 	db_query($sql, "could not update user password for 'admin'");
 }
 
@@ -140,10 +140,10 @@ function write_extensions($extensions=null, $company = -1) {
 	}
 	return true;
 }
-
-/*
-*	Update per-company list of installed extensions
-*/
+//---------------------------------------------------------------------------------------------
+//
+// Update per-company list of installed extensions
+//
 function update_extensions($extensions) {
 	global $db_connections;
 	
@@ -170,6 +170,7 @@ function update_extensions($extensions) {
 	}
 	return true;
 }
+
 
 function write_lang() {
 	global $path_to_root, $installed_languages, $dflt_lang;
@@ -412,9 +413,7 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		return true;
 }
 
-/*
-*	returns the content of the gziped $path backup file. use of $mode see below
-*/
+// returns the content of the gziped $path backup file. use of $mode see below
 function db_ungzip($mode, $path) {
 	$file_data = gzfile($path);
 	// returns one string or an array of lines
@@ -424,9 +423,7 @@ function db_ungzip($mode, $path) {
 		return $file_data;
 }
 
-/*
-*	returns the content of the ziped $path backup file. use of $mode see below
-*/
+// returns the content of the ziped $path backup file. use of $mode see below
 function db_unzip($mode, $path) {
 	$all = false;
 	$all = implode('', file($path));
@@ -472,10 +469,8 @@ function db_backup($conn, $ext='no', $comm='', $path='') {
 
 	return db_export($conn, $path.clean_file_name($filename), $ext, $comm);
 }
-
-/*
-*	Generates a dump of $db database
-*/
+// Generates a dump of $db database
+//
 function db_export($conn, $filename, $zip='no', $comment='') {
 
 	global $SysPrefs, $version;
@@ -672,10 +667,8 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 	return $backupfile;
 }
 
-/*
-*	orders the tables in $tables according to the constraints in $fks
-*	$fks musst be filled like this: $fks[tablename][0]=needed_table1; $fks[tablename][1]=needed_table2; ...
-*/
+// orders the tables in $tables according to the constraints in $fks
+// $fks musst be filled like this: $fks[tablename][0]=needed_table1; $fks[tablename][1]=needed_table2; ...
 function order_sql_tables($tables, $fks) {
 	// do not order if no contraints exist
 	if (!count($fks))
@@ -716,10 +709,8 @@ function order_sql_tables($tables, $fks) {
 	return $new_tables;
 }
 
-/*
-*	saves the string in $fileData to the file $backupfile as gz file or not ($zip)
-*	returns backup file name if name has changed (zip), else TRUE. If saving failed, return value is FALSE
-*/
+// saves the string in $fileData to the file $backupfile as gz file or not ($zip)
+// returns backup file name if name has changed (zip), else TRUE. If saving failed, return value is FALSE
 function save_to_file($path, $zip, $fileData) {
 
 	$backupfile = basename($path);
@@ -835,13 +826,13 @@ function create_comp_dirs($comp_path, $comp_subdirs) {
 	}
 }
 
-/*
-*	Checks $field existence in $table with given field $properties
-*	$table - table name without prefix
-*	$field -  optional field name
-*	$properties - optional properties of field defined by MySQL:
-*	'Type', 'Null', 'Key', 'Default', 'Extra'
-*/
+//
+//	Checks $field existence in $table with given field $properties
+//	$table - table name without prefix
+//  $field -  optional field name
+//  $properties - optional properties of field defined by MySQL:
+//		'Type', 'Null', 'Key', 'Default', 'Extra'
+//
 function check_table($pref, $table, $field=null, $properties=null) {
 	$tables = @db_query("SHOW TABLES LIKE '".$pref.$table."'");
 	if (!db_num_rows($tables))
