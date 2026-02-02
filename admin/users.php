@@ -26,9 +26,9 @@ simple_page_mode(true);
 
 function can_process($new) {
 
-	if (strlen($_POST['user_id']) < 4) {
+	if (strlen($_POST['login_id']) < 4) {
 		display_error( _('The user login entered must be at least 4 characters long.'));
-		set_focus('user_id');
+		set_focus('login_id');
 		return false;
 	}
 	if ($new || (!$new && ($_POST['password'] != ''))) {
@@ -37,7 +37,7 @@ function can_process($new) {
 			set_focus('password');
 			return false;
 		}
-		if (strstr($_POST['password'], $_POST['user_id']) != false) {
+		if (strstr($_POST['password'], $_POST['login_id']) != false) {
 			display_error( _('The password cannot contain the user login.'));
 			set_focus('password');
 			return false;
@@ -53,15 +53,15 @@ if (($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') && check_csrf_token()) {
 
 	if (can_process($Mode == 'ADD_ITEM')) {
 		if ($selected_id != -1) {
-			update_user_prefs($selected_id, get_post(array('user_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
+			update_user_prefs($selected_id, get_post(array('login_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
 
 			if ($_POST['password'] != '')
-				update_user_password($selected_id, $_POST['user_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
+				update_user_password($selected_id, $_POST['login_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
 
 			display_notification_centered(_('The selected user has been updated.'));
 		} 
 		else {
-			add_user($_POST['user_id'], $_POST['real_name'], password_hash($_POST['password'], PASSWORD_DEFAULT), $_POST['phone'], $_POST['email'], $_POST['role_id'], $_POST['language'], $_POST['print_profile'], check_value('rep_popup'), $_POST['pos']);
+			add_user($_POST['login_id'], $_POST['real_name'], password_hash($_POST['password'], PASSWORD_DEFAULT), $_POST['phone'], $_POST['email'], $_POST['role_id'], $_POST['language'], $_POST['print_profile'], check_value('rep_popup'), $_POST['pos']);
 			$id = db_insert_id();
 			// use current user display preferences as start point for new user
 			$prefs = $_SESSION['wa_current_user']->prefs->get_all();
@@ -121,9 +121,9 @@ while ($myrow = db_fetch($result)) {
 		$last_visit_date = sql2date($myrow['last_visit_date']).' '.date($time_format, strtotime($myrow['last_visit_date']));
 
 	/*The security_headings array is defined in config.php */
-	$not_me = strcasecmp($myrow['user_id'], $_SESSION['wa_current_user']->username);
+	$not_me = strcasecmp($myrow['login_id'], $_SESSION['wa_current_user']->username);
 
-	label_cell($myrow['user_id']);
+	label_cell($myrow['login_id']);
 	label_cell($myrow['real_name']);
 	label_cell($myrow['phone']);
 	email_cell($myrow['email']);
@@ -157,7 +157,7 @@ if ($selected_id != -1) {
 		$myrow = get_user($selected_id);
 
 		$_POST['id'] = $myrow['id'];
-		$_POST['user_id'] = $myrow['user_id'];
+		$_POST['login_id'] = $myrow['login_id'];
 		$_POST['real_name'] = $myrow['real_name'];
 		$_POST['phone'] = $myrow['phone'];
 		$_POST['email'] = $myrow['email'];
@@ -168,13 +168,13 @@ if ($selected_id != -1) {
 		$_POST['pos'] = $myrow['pos'];
 	}
 	hidden('selected_id', $selected_id);
-	hidden('user_id');
+	hidden('login_id');
 
 	start_row();
-	label_row(_('User login:'), $_POST['user_id']);
+	label_row(_('User login:'), $_POST['login_id']);
 } 
 else { //end of if $selected_id only do the else when a new record is being entered
-	text_row(_('User Login:'), 'user_id',  null, 22, 20);
+	text_row(_('User Login:'), 'login_id',  null, 22, 20);
 	$_POST['language'] = user_language();
 	$_POST['print_profile'] = user_print_profile();
 	$_POST['rep_popup'] = user_rep_popup();

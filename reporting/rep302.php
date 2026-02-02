@@ -109,7 +109,7 @@ function print_inventory_planning() {
 	$per2 = $tmonths[date('n',mktime(0,0,0,date('m')-2,1,date('Y')))];
 	$per3 = $tmonths[date('n',mktime(0,0,0,date('m')-3,1,date('Y')))];
 	$per4 = $tmonths[date('n',mktime(0,0,0,date('m')-4,1,date('Y')))];
-
+	
 	$headers = array(_('Category'), '', $per4, $per3, $per2, $per1, $per0, _('3*M'), _('QOH'), _('Cust Ord'), _('Supp Ord'), _('Sugg Ord'));
 
 	$aligns = array('left',	'left',	'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right');

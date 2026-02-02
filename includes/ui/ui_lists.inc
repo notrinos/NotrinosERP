@@ -2407,24 +2407,245 @@ function accounts_type_list_row($label, $name, $selected_id=null) {
 	echo "</td></tr>\n";
 }
 
-function users_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	$where = false;
-	$sql = " SELECT user_id, IF(real_name = '', user_id, real_name) FROM ".TB_PREF."users";
+function martial_status_list_row($label, $name, $selected=null, $submit_on_change=false) {
 
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>\n";
+	$status = array(
+		'0'=>_('Single'),
+		'1'=> _('Married'),
+		'2'=> _('Legal Cohabitant'),
+		'3' => _('Widower'),
+		'4' => _('Divorced')
+	);
+	echo array_selector($name, $selected, $status, array('select_submit'=> $submit_on_change, 'class'=>array('nosearch')));
+	echo "</td></tr>\n";
+}
+
+function departments_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	$sql = "SELECT department_id, department_name FROM ".TB_PREF."departments";
+
+	return combo_input($name, $selected_id, $sql, 'department_id', 'department_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All departments') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'department_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+}
+
+function departments_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	
 	if ($label != null)
 		echo "<td>".$label."</td>\n";
 	echo "<td>";
+	echo departments_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td>";
+}
 
-	echo combo_input($name, $selected_id, $sql, 'user_id', 'real_name',
-		array(
-			'spec_option' => $spec_opt===true ?_('All users') : $spec_opt,
+function departments_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo departments_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td></tr>\n";
+}
+
+function employees_list($name, $selected_id=null, $all_option=false, $submit_on_change=false, $opts=array(), $editkey=false, $type='employee') {
+	$sql = "SELECT employee_id, CONCAT(first_name, ' ', last_name) name, d.department_name, e.inactive FROM ".TB_PREF."employees e LEFT JOIN ".TB_PREF."departments d ON e.department_id = d.department_id";
+
+	if ($editkey)
+		set_editor('employee', $name, $editkey);
+
+	return combo_input($name, $selected_id, $sql, 'employee_id', 'name',
+		array_merge(
+		  array(
+			'format' => '_format_employee_list',
+			'spec_option' => $all_option === true ?  _('All employees') : $all_option,
 			'spec_id' => '',
+			'search_box' => true,
+			'search' => array("employee_id", "d.department_name", "name"),
+			'search_submit' => false,
+			'size'=>10,
+			'select_submit'=> $submit_on_change,
+			'category' => 2,
+			'order' => array('name','employee_id'),
+			'editlink' => $editkey ? add_edit_combo('employee', $name) : false,
+			'editable' => false,
+			'max' => 255
+		  ), $opts), $type );
+}
+
+function _format_employee_list($row) {
+	return (user_show_codes() ? ($row[0] . "&nbsp;-&nbsp;") : '') . $row[1];
+}
+
+function employees_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
+	if ($label != null)
+		echo "<td>".$label."</td>\n";
+	
+	echo employees_list($name, $selected_id, $all_option, $submit_on_change,
+		array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
+}
+
+function employees_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
+
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	
+	echo "<td>";
+	echo employees_list($name, $selected_id, $all_option, $submit_on_change,
+		array_merge(array('cells'=>false, 'search_box'=>false, 'show_inactive'=>$all), $opts), $editkey);
+	echo "</td></tr>\n";
+}
+
+function positions_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	$sql = "SELECT position_id, position_name FROM ".TB_PREF."positions";
+
+	return combo_input($name, $selected_id, $sql, 'position_id', 'position_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All positions') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'position_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+}
+
+function positions_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	
+	if ($label != null)
+		echo "<td>".$label."</td>\n";
+	echo "<td>";
+	echo positions_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td>";
+}
+
+function positions_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo positions_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td></tr>\n";
+}
+
+function leave_types_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	$sql = "SELECT leave_id, leave_name FROM ".TB_PREF."leave_types";
+
+	return combo_input($name, $selected_id, $sql, 'leave_id', 'leave_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All leave types') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'leave_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+}
+
+function leave_types_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	
+	if ($label != null)
+		echo "<td>".$label."</td>\n";
+	echo "<td>";
+	echo leave_types_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td>";
+}
+
+function grades_list_row($label, $name, $selected_id=null, $spec_option=false, $submit_on_change=false) {
+
+	$sql = "SELECT * FROM ".TB_PREF."pay_grades";
+
+	echo "<tr>";
+	if(!empty($label))
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo combo_input($name, $selected_id, $sql, 'grade_id', 'grade_name',
+		array(
+			'spec_option' => $spec_option === true ? _('Select grade') : $spec_option,
+			'spec_id' => 0,
+			'order' => 'grade_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+	echo "</td></tr>\n";
+}
+
+function job_classes_list_row($label, $name, $selected_id=null, $spec_opt=false, $submit_on_change=false) {
+	$sql = "SELECT job_class_id, class_name FROM ".TB_PREF."job_classes";
+
+	echo "<tr>";
+
+	if(!empty($label))
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo combo_input($name, $selected_id, $sql, 'job_class_id', 'class_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All classes') : $spec_opt,
+			'spec_id' => 0,
+			'order' => 'class_name',
+			'select_submit'=> $submit_on_change,
+			'async' => false
+		) );
+	echo "</td></tr>\n";
+}
+
+function weekdays_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
+	$days = array(
+		1=>_('Monday'),
+		2=>_('Tuesday'),
+		3=>_('Wednesday'),
+		4=>_('Thursday'),
+		5=>_('Friday'),
+		6=>_('Saturday'),
+		7=>_('Sunday')
+	);
+
+	echo "<tr><td class='label'>".$label."</td><td>";
+	echo array_selector($name, $selected_id, $days, 
+		array( 
+			'select_submit'=> $submit_on_change,
+			'class' => array('nosearch'),
+			'async' => false )
+		);
+	echo "<td></tr>\n";
+}
+
+function users_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	$sql = " SELECT login_id, IF(real_name = '', login_id, real_name) FROM ".TB_PREF."users";
+
+	return combo_input($name, $selected_id, $sql, 'login_id', 'real_name',
+		array(
+			'spec_option' => $spec_opt===true ? _('All users') : $spec_opt,
+			'spec_id' => 0,
 			'order' => 'real_name',
 			'select_submit'=> $submit_on_change,
 			'async' => false
 		) );
-	echo "</td>";
+}
 
+function users_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	
+	if ($label != null)
+		echo "<td>".$label."</td>\n";
+
+	echo "<td>";
+	echo users_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td>";
+}
+
+function users_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
+	echo "<tr>";
+	if ($label != null)
+		echo "<td class='label'>".$label."</td>\n";
+	echo "<td>";
+	echo users_list($name, $selected_id, $submit_on_change, $spec_opt);
+	echo "</td></tr>\n";
 }
 
 function collations_list_row($label, $name, $selected_id=null) {

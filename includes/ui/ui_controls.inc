@@ -475,7 +475,9 @@ $popup_editors = array(
 	'item' => array('/inventory/manage/items.php?stock_id=', 
 		115, _('Items'), 1000, 500),
 	'fa_item' => array('/inventory/manage/items.php?FixedAsset=1&stock_id=', 
-		115, _('Items'), 1000, 500)
+		115, _('Items'), 1000, 500),
+	'employee' => array('/hrm/manage/employees.php?employee_no=',
+		113, _('Employee'), 900, 600)
 );
 
 $search_types = array(
@@ -490,7 +492,8 @@ $search_types = array(
 	'branch' => array('/sales/inquiry/customer_branches_list.php?popup=1&client_id=', '#customer_id', _('Search branches')),
 	'supplier' => array('/purchasing/inquiry/suppliers_list.php?popup=1&client_id=', _('Search suppliers')),
 	'account' => array('/gl/inquiry/accounts_list.php?popup=1&skip=false&client_id=', _('Search GL accounts')),
-	'account2' => array('/gl/inquiry/accounts_list.php?popup=1&skip=true&client_id=', _('Search GL accounts'))
+	'account2' => array('/gl/inquiry/accounts_list.php?popup=1&skip=true&client_id=', _('Search GL accounts')),
+	'employee' => array('hrm/inquiry/employees_list.php?popup=1&dept=all&client_id=', _('Search employee'))
 );
 /*
 	Bind editors for various selectors.

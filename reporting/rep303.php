@@ -10,12 +10,6 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_ITEMSVALREP';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	Stock Check Sheet
-// ----------------------------------------------------------------
 $path_to_root='..';
 
 include_once($path_to_root . '/includes/session.inc');

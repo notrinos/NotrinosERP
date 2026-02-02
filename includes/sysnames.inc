@@ -44,6 +44,7 @@ $systypes_array = array (
 	ST_ITEM => _('Item'),
 	ST_FIXEDASSET => _('Fixed Asset'),
 	ST_BANKACCOUNT => _("Bank Account"),
+	ST_PAYSLIP => _('Employee Payslip')
 );
 
 $fa_systypes_array = array (
@@ -102,7 +103,8 @@ $payment_person_types = array (
 	_('Work Order'),
 	_('Customer'),
 	_('Supplier'),
-	_('Quick Entry')
+	_('Quick Entry'),
+	_('Employee')
 );
 
 //----------------------------------------------------------------------------------

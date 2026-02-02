@@ -9,7 +9,6 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-//include_once($path_to_root . '/includes/reserved.inc');
 
 function set_global_supplier($supplier_id)  {
 	$_SESSION['wa_global_supplier_id'] = $supplier_id; 
@@ -42,6 +41,17 @@ function get_global_customer($return_all=true) {
 		($return_all == false && $_SESSION['wa_global_customer_id'] == ALL_TEXT))
 		return '';
 	return $_SESSION['wa_global_customer_id'];
+}
+
+function set_global_employee($employee_id) {
+	$_SESSION['wa_global_employee_id'] = $employee_id; 
+}
+
+function get_global_employee($return_all=true) {
+	if (!isset($_SESSION['wa_global_employee_id']) || 
+		($return_all == false && $_SESSION['wa_global_employee_id'] == ALL_TEXT))
+		return '';
+	return $_SESSION['wa_global_employee_id'];
 }
 
 function set_global_curr_code($curr_code) {

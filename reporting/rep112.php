@@ -11,7 +11,6 @@
 ***********************************************************************/
 
 $page_security = $_POST['PARAM_0'] == $_POST['PARAM_1'] ? 'SA_SALESTRANSVIEW' : 'SA_SALESBULKREP';
-
 $path_to_root='..';
 
 include_once($path_to_root . '/includes/session.inc');

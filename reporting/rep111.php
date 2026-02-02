@@ -151,8 +151,7 @@ function print_sales_quotations() {
 			$rep->NewLine();
 		}
 
-		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'],
-		  $myrow['tax_group_id'], $myrow['tax_included'],  null);
+		$tax_items = get_tax_for_items($items, $prices, $myrow['freight_cost'], $myrow['tax_group_id'], $myrow['tax_included'],  null);
 		$first = true;
 		foreach($tax_items as $tax_item) {
 			if ($tax_item['Value'] == 0)

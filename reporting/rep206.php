@@ -205,7 +205,7 @@ function print_supplier_balances() {
 		//$rep->Line($rep->row  - 2);
 		$rep->NewLine();
 	}
-	$rep->Line($rep->row + 4); // added line by Joe
+	$rep->Line($rep->row + 4);
 	$rep->NewLine();
 	$rep->fontSize += 2;
 	$rep->TextCol(0, 3,    _('Grand Total'));

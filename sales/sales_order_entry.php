@@ -296,6 +296,7 @@ function copy_to_cart() {
 	$cart->email = isset($_POST['email']) ? $_POST['email'] : '';
 	$cart->customer_id	= $_POST['customer_id'];
 	$cart->Branch = $_POST['branch_id'];
+	$cart->salesman = $_POST['salesman_code'];
 	$cart->sales_type = $_POST['sales_type'];
 
 	if ($cart->trans_type!=ST_SALESORDER && $cart->trans_type!=ST_SALESQUOTE) {
@@ -326,6 +327,7 @@ function copy_from_cart() {
 	$_POST['customer_id'] = $cart->customer_id;
 
 	$_POST['branch_id'] = $cart->Branch;
+	$_POST['salesman_code'] = $cart->salesman;
 	$_POST['sales_type'] = $cart->sales_type;
 	$_POST['prep_amount'] = price_format($cart->prep_amount);
 	// POS 

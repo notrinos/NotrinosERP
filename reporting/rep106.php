@@ -12,11 +12,11 @@
 $page_security = 'SA_SALESMANREP';
 $path_to_root = '..';
 
-include_once($path_to_root . '/includes/session.inc');
-include_once($path_to_root . '/includes/date_functions.inc');
-include_once($path_to_root . '/includes/data_checks.inc');
-include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/includes/date_functions.inc');
+include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/sales_db.inc');
+include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -24,9 +24,7 @@ print_salesman_list();
 
 //----------------------------------------------------------------------------------------------------
 
-function GetSalesmanTrans($from, $to) {
-	$fromdate = date2sql($from);
-	$todate = date2sql($to);
+function get_salesman_trans($from, $to) {
 
 	$sql = "SELECT DISTINCT trans.*,
 			ov_amount+ov_discount AS InvoiceTotal,
@@ -43,14 +41,14 @@ function GetSalesmanTrans($from, $to) {
 		WHERE sorder.order_no=trans.order_
 			AND sorder.branch_code=branch.branch_code
 			AND sorder.trans_type = ".ST_SALESORDER."
-			AND branch.salesman=salesman.salesman_code
+			AND sorder.salesman_code=salesman.salesman_code
 			AND trans.debtor_no=cust.debtor_no
 			AND (trans.type=".ST_SALESINVOICE." OR trans.type=".ST_CUSTCREDIT.")
-			AND trans.tran_date>='$fromdate'
-			AND trans.tran_date<='$todate'
+			AND trans.tran_date>='".date2sql($from)."'
+			AND trans.tran_date<='".date2sql($to)."'
 		ORDER BY salesman.salesman_code, trans.tran_date";
 
-	return db_query($sql, 'Error getting order details');
+	return db_query($sql, 'Error getting salesman transaction details');
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -65,29 +63,26 @@ function print_salesman_list() {
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
 	if ($destination)
-		include_once($path_to_root . '/reporting/includes/excel_report.inc');
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
-		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 	$orientation = ($orientation ? 'L' : 'P');
 
-	if ($summary == 0)
-		$sum = _('No');
-	else
-		$sum = _('Yes');
+	$sum = $summary == 0 ? _('No') : _('Yes');
 
 	$dec = user_price_dec();
 
 	$cols = array(0, 60, 150, 220, 325,	385, 450, 515);
 
-	$headers = array(_('Invoice'), _('Customer'), _('Branch'), _('Customer Ref'), _('Inv Date'),	_('Total'),	_('Provision'));
+	$headers = array(_('Invoice'), _('Customer'), _('Branch'), _('Customer Ref'), _('Inv Date'), _('Total'), _('Provision'));
 
-	$aligns = array('left',	'left',	'left', 'left', 'left', 'right',	'right');
+	$aligns = array('left',	'left',	'left', 'left', 'left', 'right', 'right');
 
-	$headers2 = array(_('Salesman'), ' ',	_('Phone'), _('Email'),	_('Provision'), _('Break Pt.'), _('Provision').' 2');
+	$headers2 = array(_('Salesman'), ' ', _('Phone'), _('Email'), _('Provision'), _('Break Pt.'), _('Provision').' 2');
 
-	$params =   array( 	0 => $comments,
-						1 => array(  'text' => _('Period'), 'from' => $from, 'to' => $to),
-						2 => array(  'text' => _('Summary Only'),'from' => $sum,'to' => ''));
+	$params = array(0 => $comments,
+					1 => array(  'text' => _('Period'), 'from' => $from, 'to' => $to),
+					2 => array(  'text' => _('Summary Only'),'from' => $sum,'to' => ''));
 
 	$aligns2 = $aligns;
 
@@ -100,9 +95,12 @@ function print_salesman_list() {
 
 	$rep->NewPage();
 	$salesman = 0;
-	$subtotal = $total = $subprov = $provtotal = 0;
+	$subtotal = 0;
+	$total = 0;
+	$subprov = 0;
+	$provtotal = 0;
 
-	$result = GetSalesmanTrans($from, $to);
+	$result = get_salesman_trans($from, $to);
 
 	while ($myrow=db_fetch($result)) {
 		$rep->NewLine(0, 2, false, $salesman);
@@ -116,12 +114,14 @@ function print_salesman_list() {
 				$rep->Line($rep->row  - 4);
 				$rep->NewLine(2);
 			}
-			$rep->TextCol(0, 2,	$myrow['salesman_code'].' '.$myrow['salesman_name']);
+			$rep->Font('bold');
+			$rep->TextCol(0, 2,	$myrow['salesman_code'].' - '.$myrow['salesman_name']);
+			$rep->Font();
 			$rep->TextCol(2, 3,	$myrow['salesman_phone']);
 			$rep->TextCol(3, 4,	$myrow['salesman_email']);
-			$rep->TextCol(4, 5,	number_format2($myrow['provision'], user_percent_dec()) .' %');
+			$rep->TextCol(4, 5,	number_format2($myrow['provision'], user_percent_dec()).' %');
 			$rep->AmountCol(5, 6, $myrow['break_pt'], $dec);
-			$rep->TextCol(6, 7,	number_format2($myrow['provision2'], user_percent_dec()) .' %');
+			$rep->TextCol(6, 7,	number_format2($myrow['provision2'], user_percent_dec()).' %');
 			$rep->NewLine(2);
 			$salesman = $myrow['salesman_code'];
 			$total += $subtotal;

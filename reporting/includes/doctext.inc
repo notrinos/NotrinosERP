@@ -42,7 +42,7 @@
 	switch ($this->formData['doctype']) {
 		case ST_SALESQUOTE:
 			$this->title = _('SALES QUOTATION');
-			$this->formData['document_name'] =_('Quotation No.');
+			$this->formData['document_name'] = _('Quotation No.');
 			$this->formData['document_date'] = $this->formData['ord_date'];
 			$this->formData['document_number'] = $SysPrefs->print_invoice_no() == 0 && isset($this->formData['reference'])
 				? $this->formData['reference'] : $this->formData['order_no'];
@@ -57,7 +57,7 @@
 
 		case ST_SALESORDER:
 			$this->title = ($this->params['print_quote'] ? _('QUOTE') : ($this->formData['prepaid'] ? _('PREPAYMENT ORDER') : _('SALES ORDER')));
-			$this->formData['document_name'] =_('Order No.');
+			$this->formData['document_name'] = _('Order No.');
 			$this->formData['document_date'] = $this->formData['ord_date'];
 			$this->formData['document_number'] = $SysPrefs->print_invoice_no() == 0 && isset($this->formData['reference'])
 				? $this->formData['reference'] : $this->formData['order_no'];
@@ -94,7 +94,7 @@
 
 		case ST_CUSTCREDIT:
 			$this->title = _('CREDIT NOTE');
-			$this->formData['document_name'] =_('Credit No.');
+			$this->formData['document_name'] = _('Credit No.');
 			$Footer[0] = _('Please quote Credit no. when paying. All amounts stated in').' - '.$this->formData['curr_code'];
 
 			$aux_info = array(
@@ -107,8 +107,8 @@
 			break;
 
 		case ST_SALESINVOICE:
-			$this->title = $this->formData['prepaid']=='partial' ? _('PREPAYMENT INVOICE')
-				: ($this->formData['prepaid']=='final' ? _('FINAL INVOICE')  : _('INVOICE'));
+			$this->title = $this->formData['prepaid'] == 'partial' ? _('PREPAYMENT INVOICE')
+				: ($this->formData['prepaid'] == 'final' ? _('FINAL INVOICE') : _('INVOICE'));
 			$this->formData['document_name'] =_('Invoice No.');
 			$this->formData['domicile'] = $this->company['domicile'];
 			$Footer[0] = _('Please quote Invoice no. when paying. All amounts stated in').' - '.$this->formData['curr_code'];
@@ -129,7 +129,7 @@
 				$aux_info[_('Our Order No')]  = $this->formData['order_'];
 			}
 			else {
-				if ($this->formData['prepaid'] =='final')
+				if ($this->formData['prepaid'] == 'final')
 					$aux_info[_('Invoice Date')] = sql2date($this->formData['tran_date']);
 				else
 					$aux_info[_('Date of Sale')] = sql2date(get_oldest_delivery_date($this->formData['trans_no']));
@@ -176,7 +176,7 @@
 				_("Customer's Reference") => $this->formData['supp_account_no'],
 				_('Sales Person') => $this->formData['contact'],
 				_('Your VAT no.') => $this->formData['tax_id'],
-				_("Supplier's Reference") => @$this->formData['requisition_no'],
+				_("Supplier's Reference") => @$this->formData['supp_reference'],
 				_('Order Date') => sql2date($this->formData['document_date']),
 			);
 
@@ -247,7 +247,7 @@
 
 	// footer generic content
 	if (@$this->formData['bank_name'])
-		$Footer[] = _('Bank'). ': '.$this->formData['bank_name'].', '._('Bank Account').': '.$this->formData['bank_account_number'];
+		$Footer[] = _('Bank').': '.$this->formData['bank_name'].', '._('Bank Account').': '.$this->formData['bank_account_number'];
 
 	if (@$this->formData['payment_service']) { //payment link
 		$amt = number_format($this->formData['ov_freight'] + $this->formData['ov_gst'] + $this->formData['ov_amount'], user_price_dec());

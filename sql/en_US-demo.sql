@@ -38,6 +38,21 @@ CREATE TABLE `0_attachments` (
 
 -- Data of table `0_attachments` --
 
+-- Structure of table `0_attendance` --
+
+DROP TABLE IF EXISTS `0_attendance`;
+
+CREATE TABLE IF NOT EXISTS `0_attendance` (
+	`employee_id` varchar(20) NOT NULL,
+	`time_id` int(11) NOT NULL DEFAULT '0',
+	`hours_no` float(5) UNSIGNED NOT NULL,
+	`rate` float(5) NOT NULL DEFAULT '1',
+	`date` date NOT NULL,
+	PRIMARY KEY (`employee_id`,`time_id`,`date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_attendance` --
+
 -- Structure of table `0_audit_trail` --
 
 DROP TABLE IF EXISTS `0_audit_trail`;
@@ -597,6 +612,7 @@ CREATE TABLE `0_debtor_trans` (
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`payment_terms` int(11) DEFAULT NULL,
 	`tax_included` tinyint(1) unsigned NOT NULL DEFAULT '0',
+	`pos_id` smallint(6) unsigned NOT NULL,
 	PRIMARY KEY (`type`,`trans_no`,`debtor_no`),
 	KEY `debtor_no` (`debtor_no`,`branch_code`),
 	KEY `tran_date` (`tran_date`),
@@ -693,6 +709,20 @@ INSERT INTO `0_debtors_master` VALUES
 ('1', 'Donald Easter LLC', 'Donald Easter', 'N/A', '123456789', 'USD', '1', '0', '0', '1', '4', '0', '0', '1000', '', '0'),
 ('2', 'MoneyMaker Ltd.', 'MoneyMaker', 'N/A', '54354333', 'EUR', '1', '1', '0', '1', '1', '0', '0', '1000', '', '0');
 
+-- Structure of table `0_departments` --
+
+DROP TABLE IF EXISTS `0_departments`;
+
+CREATE TABLE IF NOT EXISTS `0_departments` (
+	`department_id` int(11) NOT NULL AUTO_INCREMENT,
+	`department_name` tinytext NOT NULL,
+	`payroll_expense_account` varchar(15) NULL,
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`department_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_departments` --
+
 -- Structure of table `0_dimensions` --
 
 DROP TABLE IF EXISTS `0_dimensions`;
@@ -716,6 +746,43 @@ CREATE TABLE `0_dimensions` (
 
 INSERT INTO `0_dimensions` VALUES
 ('1', '001/2025', 'Cost Centre', '1', '0', '2025-05-05', '2025-05-25');
+
+-- Structure of table `0_employees` --
+
+DROP TABLE IF EXISTS `0_employees`;
+
+CREATE TABLE IF NOT EXISTS `0_employees` (
+	`employee_number` int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id` varchar(20) NOT NULL,
+	`first_name` varchar(100) DEFAULT NULL,
+	`last_name` varchar(100) DEFAULT NULL,
+	`gender` tinyint(1) NOT NULL DEFAULT '0',
+	`address` tinytext,
+	`mobile` varchar(30) DEFAULT NULL,
+	`email` varchar(100) DEFAULT NULL,
+	`birth_date` date NOT NULL,
+	`national_id` varchar(100) DEFAULT NULL,
+	`passport` varchar(100) DEFAULT NULL,
+	`bank_account` varchar(100) DEFAULT NULL,
+	`tax_number` varchar(100) DEFAULT NULL,
+	`marital_status` tinyint(1) NOT NULL DEFAULT '0',
+	`dependents_no` int(10) NOT NULL DEFAULT '0',
+	`notes` tinytext NOT NULL,
+	`hire_date` date DEFAULT NULL,
+	`department_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
+	`position_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
+	`grade_id` tinyint(2) UNSIGNED NOT NULL DEFAULT '0',
+	`personal_salary` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
+	`released_date` date DEFAULT NULL,
+	`user_id` smallint(6) UNSIGNED NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
+	PRIMARY KEY (`employee_number`),
+	KEY `position_id` (`position_id`),
+	KEY `department_id` (`department_id`),
+	UNIQUE KEY `employee_id` (`employee_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employees` --
 
 -- Structure of table `0_exchange_rates` --
 
@@ -985,6 +1052,20 @@ INSERT INTO `0_item_units` VALUES
 ('each', 'Each', '0', '0'),
 ('hr', 'Hours', '0', '0');
 
+-- Structure of table `0_job_classes` --
+
+DROP TABLE IF EXISTS `0_job_classes`;
+
+CREATE TABLE IF NOT EXISTS `0_job_classes` (
+	`job_class_id` int(11) NOT NULL AUTO_INCREMENT,
+	`class_name` varchar(100) NOT NULL,
+	`pay_basis` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=monthly, 1=daily',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`job_class_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_job_classes` --
+
 -- Structure of table `0_journal` --
 
 DROP TABLE IF EXISTS `0_journal`;
@@ -1008,6 +1089,35 @@ CREATE TABLE `0_journal` (
 
 INSERT INTO `0_journal` VALUES
 ('0', '1', '2025-12-31', '001/2012', '', '2025-12-31', '2025-12-31', 'USD', '2163.57', '1');
+
+-- Structure of table `0_leave_details` --
+
+DROP TABLE IF EXISTS `0_leave_details`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_details` (
+	`employee_id` int(11) NOT NULL,
+	`leave_id` int(11) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '1',
+	`date` date NOT NULL,
+	PRIMARY KEY (`employee_id`,`leave_id`,`date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_details` --
+
+-- Structure of table `0_leave_types` --
+
+DROP TABLE IF EXISTS `0_leave_types`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_types` (
+	`leave_id` int(11) NOT NULL AUTO_INCREMENT,
+	`leave_name` varchar(100) NOT NULL,
+	`leave_code` varchar(3) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`leave_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_types` --
 
 -- Structure of table `0_loc_stock` --
 
@@ -1054,6 +1164,51 @@ CREATE TABLE `0_locations` (
 INSERT INTO `0_locations` VALUES
 ('DEF', 'Default', 'N/A', '', '', '', '', '', '0', '0');
 
+-- Structure of table `0_overtime` --
+
+DROP TABLE IF EXISTS `0_overtime`;
+
+CREATE TABLE IF NOT EXISTS `0_overtime` (
+	`overtime_id` int(11) NOT NULL AUTO_INCREMENT,
+	`overtime_name` varchar(100) NOT NULL,
+	`pay_rate` float(5) NOT NULL DEFAULT '1',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`overtime_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_overtime` --
+
+-- Structure of table `0_pay_elements` --
+
+DROP TABLE IF EXISTS `0_pay_elements`;
+
+CREATE TABLE IF NOT EXISTS `0_pay_elements` (
+	`element_id` int(11) NOT NULL AUTO_INCREMENT,
+	`element_name` varchar(100) NOT NULL,
+	`account_code` varchar(15) NOT NULL,
+	`is_deduction` tinyint(1) NOT NULL DEFAULT '0',
+	`amount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0 = fixed amount, 1 = percentage of base pay',
+	PRIMARY KEY (`element_id`),
+	UNIQUE (`account_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_pay_elements` --
+
+-- Structure of table `0_pay_grades` --
+
+DROP TABLE IF EXISTS `0_pay_grades`;
+
+CREATE TABLE IF NOT EXISTS `0_pay_grades` (
+	`grade_id` tinyint(5) NOT NULL AUTO_INCREMENT,
+	`grade_name` varchar(30) NOT NULL DEFAULT '',
+	`position_id` int(11) NOT NULL,
+	`pay_amount` double NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`grade_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_pay_grades` --
+
 -- Structure of table `0_payment_terms` --
 
 DROP TABLE IF EXISTS `0_payment_terms`;
@@ -1076,6 +1231,21 @@ INSERT INTO `0_payment_terms` VALUES
 ('3', 'Payment due within 10 days', '10', '0', '0'),
 ('4', 'Cash Only', '0', '0', '0'),
 ('5', 'Prepaid', '-1', '0', '0');
+
+-- Structure of table `0_positions` --
+
+DROP TABLE IF EXISTS `0_positions`;
+
+CREATE TABLE IF NOT EXISTS `0_positions` (
+	`position_id` int(11) NOT NULL AUTO_INCREMENT,
+	`job_class_id` int(11) NOT NULL;
+	`position_name` text NOT NULL,
+	`basic_amount` double NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`position_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_positions` --
 
 -- Structure of table `0_prices` --
 
@@ -1208,7 +1378,7 @@ CREATE TABLE `0_purch_orders` (
 	`comments` tinytext,
 	`ord_date` date NOT NULL DEFAULT '0000-00-00',
 	`reference` tinytext NOT NULL,
-	`requisition_no` tinytext,
+	`supp_reference` tinytext,
 	`into_stock_location` varchar(5) NOT NULL DEFAULT '',
 	`delivery_address` tinytext NOT NULL,
 	`total` double NOT NULL DEFAULT '0',
@@ -1340,7 +1510,8 @@ INSERT INTO `0_reflines` VALUES
 ('19', '30', '', '{001}/{YYYY}', '', '1', '0'),
 ('20', '32', '', '{001}/{YYYY}', '', '1', '0'),
 ('21', '35', '', '{001}/{YYYY}', '', '1', '0'),
-('22', '40', '', '{001}/{YYYY}', '', '1', '0');
+('22', '40', '', '{001}/{YYYY}', '', '1', '0'),
+('23', '80', '', '{001}/{YYYY}', '', '1', '0');
 
 -- Structure of table `0_refs` --
 
@@ -1378,6 +1549,20 @@ INSERT INTO `0_refs` VALUES
 ('4', '30', '002/2025'),
 ('6', '30', '003/2025'),
 ('1', '40', '001/2025');
+
+-- Structure of table `0_salary_structure` --
+
+DROP TABLE IF EXISTS `0_salary_structure`;
+
+CREATE TABLE IF NOT EXISTS `0_salary_structure` (
+	`position_id` int(11) NOT NULL,
+	`grade_id` tinyint(2) NOT NULL DEFAULT '0',
+	`element_id` int(11) NOT NULL,
+	`pay_amount` double NOT NULL DEFAULT '0',
+	PRIMARY KEY (`position_id`, `grade_id`, `element_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_salary_structure` --
 
 -- Structure of table `0_sales_order_details` --
 
@@ -1425,6 +1610,7 @@ CREATE TABLE `0_sales_orders` (
 	`type` tinyint(1) NOT NULL DEFAULT '0',
 	`debtor_no` int(11) NOT NULL DEFAULT '0',
 	`branch_code` int(11) NOT NULL DEFAULT '0',
+	`salesman_code` int(11) NOT NULL DEFAULT '0',
 	`reference` varchar(100) NOT NULL DEFAULT '',
 	`customer_ref` tinytext NOT NULL,
 	`comments` tinytext,
@@ -1905,7 +2091,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('default_inv_sales_act', 'glsetup.items', 'varchar', 15, '4010'),
 ('default_wip_act', 'glsetup.items', 'varchar', 15, '1530'),
 ('default_workorder_required', 'glsetup.manuf', 'int', 11, '20'),
-('version_id', 'system', 'varchar', 11, '0.1'),
+('version_id', 'system', 'varchar', 11, '1.0'),
 ('auto_curr_reval', 'setup.company', 'smallint', 6, '1'),
 ('grn_clearing_act', 'glsetup.purchase', 'varchar', 15, '1550'),
 ('bcc_email', 'setup.company', 'varchar', 100, ''),
@@ -1930,7 +2116,13 @@ INSERT INTO `0_sys_prefs` VALUES
 ('dim_on_recurrent_invoice','setup.company', 'tinyint', 1, '0'),
 ('long_description_invoice','setup.company', 'tinyint', 1, '0'),
 ('max_days_in_docs','setup.company', 'smallint', 5, '180'),
-('use_fixed_assets','setup.company', 'tinyint', 1, '1');
+('use_fixed_assets','setup.company', 'tinyint', 1, '1'),
+('default_work_hours', 'setup.company', 'float', 5, '8'),
+('weekend_day', 'setup.company', 'titnyint', 1, '7'),
+('payroll_month_work_days', 'setup.company', 'float', '2', 26),
+('payroll_payable_act', 'glsetup.hrm', 'varchar', 15, 2100),
+('payroll_deductleave_act', 'glsetup.hrm', 'varchar', 15, ''),
+('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420);
 
 -- Structure of table `0_tag_associations` --
 
@@ -2072,7 +2264,7 @@ DROP TABLE IF EXISTS `0_users`;
 
 CREATE TABLE `0_users` (
 	`id` smallint(6) NOT NULL AUTO_INCREMENT,
-	`user_id` varchar(60) NOT NULL DEFAULT '',
+	`login_id` varchar(60) NOT NULL DEFAULT '',
 	`password` varchar(100) NOT NULL DEFAULT '',
 	`real_name` varchar(100) NOT NULL DEFAULT '',
 	`role_id` int(11) NOT NULL DEFAULT '1',
@@ -2107,7 +2299,7 @@ CREATE TABLE `0_users` (
 	`def_print_orientation` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
-	UNIQUE KEY `user_id` (`user_id`)
+	UNIQUE KEY `login_id` (`login_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
 
 -- Data of table `0_users` --

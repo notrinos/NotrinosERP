@@ -2,9 +2,9 @@
 /company/*/backup/*.sql
 /company/*/backup/*.sql.gz
 /company/*/pdf_files/*.pdf
-/company/*/js_cache/*.js
+/company/*/js_cache/*/*.js
 /company/*/reporting
-/company/*/images
+
 /tmp
 /lang
 /modules

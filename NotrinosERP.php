@@ -20,17 +20,18 @@ include_once($path_to_root.'/applications/fixed_assets.php');
 include_once($path_to_root.'/applications/manufacturing.php');
 include_once($path_to_root.'/applications/dimensions.php');
 include_once($path_to_root.'/applications/generalledger.php');
+include_once($path_to_root.'/applications/hrm.php');
 include_once($path_to_root.'/applications/setup.php');
 include_once($path_to_root.'/installed_extensions.php');
 
 class NotrinosErp {
-	var $user;
-	var $settings;
-	var $applications;
-	var $selected_application;
-	var $renderer = null;
+	public $user;
+	public $settings;
+	public $applications;
+	public $selected_application;
+	public $renderer = null;
 
-	var $menu;
+	public $menu;
 
 	function add_application($app) {	
 		if ($app->enabled) // skip inactive modules
@@ -78,6 +79,8 @@ class NotrinosErp {
 			$this->add_application(new AssetsApp());
 		$this->add_application(new DimensionsApp());
 		$this->add_application(new GeneralLedgerApp());
+		if ($SysPrefs->prefs['use_hrm'])
+			$this->add_application(new HrmApp());
 
 		hook_invoke_all('install_tabs', $this);
 

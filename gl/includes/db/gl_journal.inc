@@ -55,26 +55,28 @@ function get_journal($type, $trans_no) {
 	return db_fetch($myrow);
 }
 
-//
-// Write headers in debtor_trans for allocation purposes.
-// Amount in customer currency
-//
+/*
+*	Write headers in debtor_trans for allocation purposes.
+*	Amount in customer currency
+*/
 function write_cust_journal($trans_type, $trans_no, $branch_id, $date, $ref, $amount, $rate) {
+
+	$pos = user_pos();
 	// we have to select any branch_id for given AR_act - in fact w
-	$sql = "INSERT INTO ".TB_PREF."debtor_trans (trans_no, type, debtor_no, branch_code, tran_date, reference, ov_amount, rate)
+	$sql = "INSERT INTO ".TB_PREF."debtor_trans (trans_no, type, debtor_no, branch_code, tran_date, reference, ov_amount, rate, pos_id)
 		SELECT "
 		.db_escape($trans_no).", ".db_escape($trans_type).", debtor_no,"
 		.db_escape($branch_id).",'".date2sql($date)."', ".db_escape($ref).","
-		.db_escape($amount).", ".db_escape($rate)."
+		.db_escape($amount).", ".db_escape($rate).", ".db_escape($pos)." 
 		FROM ".TB_PREF."cust_branch WHERE branch_code=".db_escape($branch_id);
 
 	return db_query($sql, 'cannot write cust_journal');
 }
 
-//
-// Write headers in supp_trans for allocation purposes.
-// Amount in supplier currency
-//
+/*
+*	Write headers in supp_trans for allocation purposes.
+*	Amount in supplier currency
+*/
 function write_supp_journal($trans_type, $trans_no, $supp_id, $date, $ref, $amount, $rate, $src_ref) {
 	$sql = "INSERT INTO ".TB_PREF."supp_trans (trans_no, type, supplier_id, tran_date, reference, ov_amount, rate, supp_reference)
 		VALUES (".db_escape($trans_no).", ".db_escape($trans_type).", ".db_escape($supp_id).", '".date2sql($date)."',"
@@ -83,9 +85,9 @@ function write_supp_journal($trans_type, $trans_no, $supp_id, $date, $ref, $amou
 	return db_query($sql, 'cannot write supp_journal');
 }
 
-//--------------------------------------------------------------------------------
-// Write/update journal entries.
-//
+/*
+*	Write/update journal entries.
+*/
 function write_journal_entries(&$cart) {
 	global $Refs;
 
@@ -139,8 +141,6 @@ function write_journal_entries(&$cart) {
 
 	return $trans_id;
 }
-
-//----------------------------------------------------------------------------------------
 
 function void_journal_trans($type, $type_no, $use_transaction=true) {
 	if ($use_transaction)

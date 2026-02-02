@@ -19,7 +19,7 @@ $page_security = 'SA_OPEN';	// this level is later overriden in rep file
 include_once($path_to_root . '/includes/session.inc');
 
 if (user_save_report_selections() > 0 && isset($_POST['REP_ID'])) {	// save parameters from Report Center
-	for($i=0; $i<12; $i++) { // 2013-01-16 Joe Hunt
+	for($i=0; $i<12; $i++) {
 		if (isset($_POST['PARAM_'.$i]) && !is_array($_POST['PARAM_'.$i])) {
 			$rep = $_POST['REP_ID'];
 			setcookie("select[$rep][$i]", $_POST['PARAM_'.$i], time()+60*60*24*user_save_report_selections()); // days from user_save_report_selections()
