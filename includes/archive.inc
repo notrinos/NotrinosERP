@@ -11,17 +11,10 @@
  | the GNU GPL and is free to use and redistribute
  | only if this copyright statement is not removed
  +--------------------------------------------------
- | NotrinosErp bugfixes/changes added.
+ | FrontAccounting bugfixes/changes added.
  +--------------------------------------------------*/
 
 class archive {
-	public $options = array();
-	public $files = array();
-	public $exclude = array();
-	public $storeonly = array();
-	public $error = array();
-	public $archive = null;
-
 	function __construct($name) {
 		$this->options = array (
 			'basedir' => '.',
