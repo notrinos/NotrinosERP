@@ -46,11 +46,6 @@ function can_process() {
 		set_focus('cust_ref');
 		return false;
 	}
-	if (empty($_POST['customer_id']) && key_in_foreign_table($_POST['cust_ref'], 'debtors_master', 'debtor_ref')) {
-		display_error( _('Duplicated customer short name found.'));
-		set_focus('cust_ref');
-		return false;
-	}
 	if (!check_num('credit_limit', 0)) {
 		display_error(_('The credit limit must be numeric and not less than zero.'));
 		set_focus('credit_limit');
