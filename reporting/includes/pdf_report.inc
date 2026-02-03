@@ -679,7 +679,7 @@ class FrontReport extends Cpdf {
 	}
 
 	function TextWrap($xpos, $ypos, $len, $str, $align = 'left', $border = 0, $fill = 0, $link = NULL, $stretch = 1, $spacebreak=false) {
-		$str = strtr($str, array("\r"=>''));
+		$str = strtr($str === null ? '' : $str, array("\r"=>''));
 
 		if ($this->fontSize != $this->oldFontSize) {
 			$this->SetFontSize($this->fontSize);
@@ -727,7 +727,7 @@ class FrontReport extends Cpdf {
 	}
 
 	function TextWrapLines($c, $width, $txt, $align='left', $border=0, $fill=0, $link=NULL, $stretch=0, $spacebreak=true) {
-		$str = explode("\n", $txt);
+		$str = explode("\n", $txt === null ? '' : $txt);
 
 		for ($i = 0; $i < count($str); $i++) {
 			$l = $str[$i];
