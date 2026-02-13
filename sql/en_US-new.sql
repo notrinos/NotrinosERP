@@ -9,6 +9,7 @@ CREATE TABLE `0_areas` (
 	`area_code` int(11) NOT NULL AUTO_INCREMENT,
 	`description` varchar(60) NOT NULL DEFAULT '',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`area_code`),
 	UNIQUE KEY `description` (`description`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
@@ -16,7 +17,7 @@ CREATE TABLE `0_areas` (
 -- Data of table `0_areas` --
 
 INSERT INTO `0_areas` VALUES
-('1', 'Global', '0');
+('1', 'Global', '0', '{}');
 
 -- Structure of table `0_attachments` --
 
@@ -32,6 +33,7 @@ CREATE TABLE `0_attachments` (
 	`filename` varchar(60) NOT NULL DEFAULT '',
 	`filesize` int(11) NOT NULL DEFAULT '0',
 	`filetype` varchar(60) NOT NULL DEFAULT '',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `type_no` (`type_no`,`trans_no`)
 ) ENGINE=InnoDB;
@@ -67,6 +69,7 @@ CREATE TABLE `0_audit_trail` (
 	`fiscal_year` int(11) NOT NULL DEFAULT '0',
 	`gl_date` date NOT NULL DEFAULT '0000-00-00',
 	`gl_seq` int(11) unsigned DEFAULT NULL,
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Seq` (`fiscal_year`,`gl_date`,`gl_seq`),
 	KEY `Type_and_Number` (`type`,`trans_no`)
@@ -92,6 +95,7 @@ CREATE TABLE `0_bank_accounts` (
 	`last_reconciled_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
 	`ending_reconcile_balance` double NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `bank_account_name` (`bank_account_name`),
 	KEY `bank_account_number` (`bank_account_number`),
@@ -101,8 +105,8 @@ CREATE TABLE `0_bank_accounts` (
 -- Data of table `0_bank_accounts` --
 
 INSERT INTO `0_bank_accounts` VALUES
-('1060', '0', 'Current account', 'N/A', 'N/A', NULL, 'USD', '1', '1', '5690', '0000-00-00 00:00:00', '0', '0'),
-('1065', '3', 'Petty Cash account', 'N/A', 'N/A', NULL, 'USD', '0', '2', '5690', '0000-00-00 00:00:00', '0', '0');
+('1060', '0', 'Current account', 'N/A', 'N/A', NULL, 'USD', '1', '1', '5690', '0000-00-00 00:00:00', '0', '0', '{}'),
+('1065', '3', 'Petty Cash account', 'N/A', 'N/A', NULL, 'USD', '0', '2', '5690', '0000-00-00 00:00:00', '0', '0', '{}');
 
 -- Structure of table `0_bank_trans` --
 
@@ -121,6 +125,7 @@ CREATE TABLE `0_bank_trans` (
 	`person_type_id` int(11) NOT NULL DEFAULT '0',
 	`person_id` tinyblob,
 	`reconciled` date DEFAULT NULL,
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `bank_act` (`bank_act`,`ref`),
 	KEY `type` (`type`,`trans_no`),
@@ -141,6 +146,7 @@ CREATE TABLE `0_bom` (
 	`workcentre_added` int(11) NOT NULL DEFAULT '0',
 	`loc_code` char(5) NOT NULL DEFAULT '',
 	`quantity` double NOT NULL DEFAULT '1',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`parent`,`component`,`workcentre_added`,`loc_code`),
 	KEY `component` (`component`),
 	KEY `id` (`id`),
@@ -163,6 +169,7 @@ CREATE TABLE `0_budget_trans` (
 	`amount` double NOT NULL DEFAULT '0',
 	`dimension_id` int(11) DEFAULT '0',
 	`dimension2_id` int(11) DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Account` (`account`,`tran_date`,`dimension_id`,`dimension2_id`)
 ) ENGINE=InnoDB ;
@@ -178,16 +185,17 @@ CREATE TABLE `0_chart_class` (
 	`class_name` varchar(60) NOT NULL DEFAULT '',
 	`ctype` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`cid`)
 ) ENGINE=InnoDB ;
 
 -- Data of table `0_chart_class` --
 
 INSERT INTO `0_chart_class` VALUES
-('1', 'Assets', '1', '0'),
-('2', 'Liabilities', '2', '0'),
-('3', 'Income', '4', '0'),
-('4', 'Costs', '6', '0');
+('1', 'Assets', '1', '0', '{}'),
+('2', 'Liabilities', '2', '0', '{}'),
+('3', 'Income', '4', '0', '{}'),
+('4', 'Costs', '6', '0', '{}');
 
 -- Structure of table `0_chart_master` --
 
@@ -199,6 +207,7 @@ CREATE TABLE `0_chart_master` (
 	`account_name` varchar(60) NOT NULL DEFAULT '',
 	`account_type` varchar(10) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`account_code`),
 	KEY `account_name` (`account_name`),
 	KEY `accounts_by_type` (`account_type`,`account_code`)
@@ -207,85 +216,85 @@ CREATE TABLE `0_chart_master` (
 -- Data of table `0_chart_master` --
 
 INSERT INTO `0_chart_master` VALUES
-('1060', '', 'Checking Account', '1', '0'),
-('1065', '', 'Petty Cash', '1', '0'),
-('1200', '', 'Accounts Receivables', '1', '0'),
-('1205', '', 'Allowance for doubtful accounts', '1', '0'),
-('1510', '', 'Inventory', '2', '0'),
-('1520', '', 'Stocks of Raw Materials', '2', '0'),
-('1530', '', 'Stocks of Work In Progress', '2', '0'),
-('1540', '', 'Stocks of Finished Goods', '2', '0'),
-('1550', '', 'Goods Received Clearing account', '2', '0'),
-('1820', '', 'Office Furniture &amp; Equipment', '3', '0'),
-('1825', '', 'Accum. Amort. -Furn. &amp; Equip.', '3', '0'),
-('1840', '', 'Vehicle', '3', '0'),
-('1845', '', 'Accum. Amort. -Vehicle', '3', '0'),
-('2100', '', 'Accounts Payable', '4', '0'),
-('2105', '', 'Deferred Income', '4', '0'),
-('2110', '', 'Accrued Income Tax - Federal', '4', '0'),
-('2120', '', 'Accrued Income Tax - State', '4', '0'),
-('2130', '', 'Accrued Franchise Tax', '4', '0'),
-('2140', '', 'Accrued Real &amp; Personal Prop Tax', '4', '0'),
-('2150', '', 'Sales Tax', '4', '0'),
-('2160', '', 'Accrued Use Tax Payable', '4', '0'),
-('2210', '', 'Accrued Wages', '4', '0'),
-('2220', '', 'Accrued Comp Time', '4', '0'),
-('2230', '', 'Accrued Holiday Pay', '4', '0'),
-('2240', '', 'Accrued Vacation Pay', '4', '0'),
-('2310', '', 'Accr. Benefits - 401K', '4', '0'),
-('2320', '', 'Accr. Benefits - Stock Purchase', '4', '0'),
-('2330', '', 'Accr. Benefits - Med, Den', '4', '0'),
-('2340', '', 'Accr. Benefits - Payroll Taxes', '4', '0'),
-('2350', '', 'Accr. Benefits - Credit Union', '4', '0'),
-('2360', '', 'Accr. Benefits - Savings Bond', '4', '0'),
-('2370', '', 'Accr. Benefits - Garnish', '4', '0'),
-('2380', '', 'Accr. Benefits - Charity Cont.', '4', '0'),
-('2620', '', 'Bank Loans', '5', '0'),
-('2680', '', 'Loans from Shareholders', '5', '0'),
-('3350', '', 'Common Shares', '6', '0'),
-('3590', '', 'Retained Earnings - prior years', '7', '0'),
-('4010', '', 'Sales', '8', '0'),
-('4430', '', 'Shipping &amp; Handling', '9', '0'),
-('4440', '', 'Interest', '9', '0'),
-('4450', '', 'Foreign Exchange Gain', '9', '0'),
-('4500', '', 'Prompt Payment Discounts', '9', '0'),
-('4510', '', 'Discounts Given', '9', '0'),
-('5010', '', 'Cost of Goods Sold - Retail', '10', '0'),
-('5020', '', 'Material Usage Varaiance', '10', '0'),
-('5030', '', 'Consumable Materials', '10', '0'),
-('5040', '', 'Purchase price Variance', '10', '0'),
-('5050', '', 'Purchases of materials', '10', '0'),
-('5060', '', 'Discounts Received', '10', '0'),
-('5100', '', 'Freight', '10', '0'),
-('5410', '', 'Wages &amp; Salaries', '11', '0'),
-('5420', '', 'Wages - Overtime', '11', '0'),
-('5430', '', 'Benefits - Comp Time', '11', '0'),
-('5440', '', 'Benefits - Payroll Taxes', '11', '0'),
-('5450', '', 'Benefits - Workers Comp', '11', '0'),
-('5460', '', 'Benefits - Pension', '11', '0'),
-('5470', '', 'Benefits - General Benefits', '11', '0'),
-('5510', '', 'Inc Tax Exp - Federal', '11', '0'),
-('5520', '', 'Inc Tax Exp - State', '11', '0'),
-('5530', '', 'Taxes - Real Estate', '11', '0'),
-('5540', '', 'Taxes - Personal Property', '11', '0'),
-('5550', '', 'Taxes - Franchise', '11', '0'),
-('5560', '', 'Taxes - Foreign Withholding', '11', '0'),
-('5610', '', 'Accounting &amp; Legal', '12', '0'),
-('5615', '', 'Advertising &amp; Promotions', '12', '0'),
-('5620', '', 'Bad Debts', '12', '0'),
-('5660', '', 'Amortization Expense', '12', '0'),
-('5685', '', 'Insurance', '12', '0'),
-('5690', '', 'Interest &amp; Bank Charges', '12', '0'),
-('5700', '', 'Office Supplies', '12', '0'),
-('5760', '', 'Rent', '12', '0'),
-('5765', '', 'Repair &amp; Maintenance', '12', '0'),
-('5780', '', 'Telephone', '12', '0'),
-('5785', '', 'Travel &amp; Entertainment', '12', '0'),
-('5790', '', 'Utilities', '12', '0'),
-('5795', '', 'Registrations', '12', '0'),
-('5800', '', 'Licenses', '12', '0'),
-('5810', '', 'Foreign Exchange Loss', '12', '0'),
-('9990', '', 'Year Profit/Loss', '12', '0');
+('1060', '', 'Checking Account', '1', '0', '{}'),
+('1065', '', 'Petty Cash', '1', '0', '{}'),
+('1200', '', 'Accounts Receivables', '1', '0', '{}'),
+('1205', '', 'Allowance for doubtful accounts', '1', '0', '{}'),
+('1510', '', 'Inventory', '2', '0', '{}'),
+('1520', '', 'Stocks of Raw Materials', '2', '0', '{}'),
+('1530', '', 'Stocks of Work In Progress', '2', '0', '{}'),
+('1540', '', 'Stocks of Finished Goods', '2', '0', '{}'),
+('1550', '', 'Goods Received Clearing account', '2', '0', '{}'),
+('1820', '', 'Office Furniture &amp; Equipment', '3', '0', '{}'),
+('1825', '', 'Accum. Amort. -Furn. &amp; Equip.', '3', '0', '{}'),
+('1840', '', 'Vehicle', '3', '0', '{}'),
+('1845', '', 'Accum. Amort. -Vehicle', '3', '0', '{}'),
+('2100', '', 'Accounts Payable', '4', '0', '{}'),
+('2105', '', 'Deferred Income', '4', '0', '{}'),
+('2110', '', 'Accrued Income Tax - Federal', '4', '0', '{}'),
+('2120', '', 'Accrued Income Tax - State', '4', '0', '{}'),
+('2130', '', 'Accrued Franchise Tax', '4', '0', '{}'),
+('2140', '', 'Accrued Real &amp; Personal Prop Tax', '4', '0', '{}'),
+('2150', '', 'Sales Tax', '4', '0', '{}'),
+('2160', '', 'Accrued Use Tax Payable', '4', '0', '{}'),
+('2210', '', 'Accrued Wages', '4', '0', '{}'),
+('2220', '', 'Accrued Comp Time', '4', '0', '{}'),
+('2230', '', 'Accrued Holiday Pay', '4', '0', '{}'),
+('2240', '', 'Accrued Vacation Pay', '4', '0', '{}'),
+('2310', '', 'Accr. Benefits - 401K', '4', '0', '{}'),
+('2320', '', 'Accr. Benefits - Stock Purchase', '4', '0', '{}'),
+('2330', '', 'Accr. Benefits - Med, Den', '4', '0', '{}'),
+('2340', '', 'Accr. Benefits - Payroll Taxes', '4', '0', '{}'),
+('2350', '', 'Accr. Benefits - Credit Union', '4', '0', '{}'),
+('2360', '', 'Accr. Benefits - Savings Bond', '4', '0', '{}'),
+('2370', '', 'Accr. Benefits - Garnish', '4', '0', '{}'),
+('2380', '', 'Accr. Benefits - Charity Cont.', '4', '0', '{}'),
+('2620', '', 'Bank Loans', '5', '0', '{}'),
+('2680', '', 'Loans from Shareholders', '5', '0', '{}'),
+('3350', '', 'Common Shares', '6', '0', '{}'),
+('3590', '', 'Retained Earnings - prior years', '7', '0', '{}'),
+('4010', '', 'Sales', '8', '0', '{}'),
+('4430', '', 'Shipping &amp; Handling', '9', '0', '{}'),
+('4440', '', 'Interest', '9', '0', '{}'),
+('4450', '', 'Foreign Exchange Gain', '9', '0', '{}'),
+('4500', '', 'Prompt Payment Discounts', '9', '0', '{}'),
+('4510', '', 'Discounts Given', '9', '0', '{}'),
+('5010', '', 'Cost of Goods Sold - Retail', '10', '0', '{}'),
+('5020', '', 'Material Usage Varaiance', '10', '0', '{}'),
+('5030', '', 'Consumable Materials', '10', '0', '{}'),
+('5040', '', 'Purchase price Variance', '10', '0', '{}'),
+('5050', '', 'Purchases of materials', '10', '0', '{}'),
+('5060', '', 'Discounts Received', '10', '0', '{}'),
+('5100', '', 'Freight', '10', '0', '{}'),
+('5410', '', 'Wages &amp; Salaries', '11', '0', '{}'),
+('5420', '', 'Wages - Overtime', '11', '0', '{}'),
+('5430', '', 'Benefits - Comp Time', '11', '0', '{}'),
+('5440', '', 'Benefits - Payroll Taxes', '11', '0', '{}'),
+('5450', '', 'Benefits - Workers Comp', '11', '0', '{}'),
+('5460', '', 'Benefits - Pension', '11', '0', '{}'),
+('5470', '', 'Benefits - General Benefits', '11', '0', '{}'),
+('5510', '', 'Inc Tax Exp - Federal', '11', '0', '{}'),
+('5520', '', 'Inc Tax Exp - State', '11', '0', '{}'),
+('5530', '', 'Taxes - Real Estate', '11', '0', '{}'),
+('5540', '', 'Taxes - Personal Property', '11', '0', '{}'),
+('5550', '', 'Taxes - Franchise', '11', '0', '{}'),
+('5560', '', 'Taxes - Foreign Withholding', '11', '0', '{}'),
+('5610', '', 'Accounting &amp; Legal', '12', '0', '{}'),
+('5615', '', 'Advertising &amp; Promotions', '12', '0', '{}'),
+('5620', '', 'Bad Debts', '12', '0', '{}'),
+('5660', '', 'Amortization Expense', '12', '0', '{}'),
+('5685', '', 'Insurance', '12', '0', '{}'),
+('5690', '', 'Interest &amp; Bank Charges', '12', '0', '{}'),
+('5700', '', 'Office Supplies', '12', '0', '{}'),
+('5760', '', 'Rent', '12', '0', '{}'),
+('5765', '', 'Repair &amp; Maintenance', '12', '0', '{}'),
+('5780', '', 'Telephone', '12', '0', '{}'),
+('5785', '', 'Travel &amp; Entertainment', '12', '0', '{}'),
+('5790', '', 'Utilities', '12', '0', '{}'),
+('5795', '', 'Registrations', '12', '0', '{}'),
+('5800', '', 'Licenses', '12', '0', '{}'),
+('5810', '', 'Foreign Exchange Loss', '12', '0', '{}'),
+('9990', '', 'Year Profit/Loss', '12', '0', '{}');
 
 -- Structure of table `0_chart_types` --
 
@@ -297,6 +306,7 @@ CREATE TABLE `0_chart_types` (
 	`class_id` varchar(3) NOT NULL DEFAULT '',
 	`parent` varchar(10) NOT NULL DEFAULT '-1',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `name` (`name`),
 	KEY `class_id` (`class_id`)
@@ -305,18 +315,18 @@ CREATE TABLE `0_chart_types` (
 -- Data of table `0_chart_types` --
 
 INSERT INTO `0_chart_types` VALUES
-('1', 'Current Assets', '1', '-1', '0'),
-('2', 'Inventory Assets', '1', '-1', '0'),
-('3', 'Capital Assets', '1', '-1', '0'),
-('4', 'Current Liabilities', '2', '-1', '0'),
-('5', 'Long Term Liabilities', '2', '-1', '0'),
-('6', 'Share Capital', '2', '-1', '0'),
-('7', 'Retained Earnings', '2', '-1', '0'),
-('8', 'Sales Revenue', '3', '-1', '0'),
-('9', 'Other Revenue', '3', '-1', '0'),
-('10', 'Cost of Goods Sold', '4', '-1', '0'),
-('11', 'Payroll Expenses', '4', '-1', '0'),
-('12', 'General &amp; Administrative expenses', '4', '-1', '0');
+('1', 'Current Assets', '1', '-1', '0', '{}'),
+('2', 'Inventory Assets', '1', '-1', '0', '{}'),
+('3', 'Capital Assets', '1', '-1', '0', '{}'),
+('4', 'Current Liabilities', '2', '-1', '0', '{}'),
+('5', 'Long Term Liabilities', '2', '-1', '0', '{}'),
+('6', 'Share Capital', '2', '-1', '0', '{}'),
+('7', 'Retained Earnings', '2', '-1', '0', '{}'),
+('8', 'Sales Revenue', '3', '-1', '0', '{}'),
+('9', 'Other Revenue', '3', '-1', '0', '{}'),
+('10', 'Cost of Goods Sold', '4', '-1', '0', '{}'),
+('11', 'Payroll Expenses', '4', '-1', '0', '{}'),
+('12', 'General &amp; Administrative expenses', '4', '-1', '0', '{}');
 
 -- Structure of table `0_comments` --
 
@@ -529,6 +539,7 @@ CREATE TABLE `0_debtor_trans` (
 	`payment_terms` int(11) DEFAULT NULL,
 	`tax_included` tinyint(1) unsigned NOT NULL DEFAULT '0',
 	`pos_id` smallint(6) unsigned NOT NULL,
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`type`,`trans_no`,`debtor_no`),
 	KEY `debtor_no` (`debtor_no`,`branch_code`),
 	KEY `tran_date` (`tran_date`),
@@ -554,6 +565,7 @@ CREATE TABLE `0_debtor_trans_details` (
 	`standard_cost` double NOT NULL DEFAULT '0',
 	`qty_done` double NOT NULL DEFAULT '0',
 	`src_id` int(11) NOT NULL,
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Transaction` (`debtor_trans_type`,`debtor_trans_no`),
 	KEY `src_id` (`src_id`)
@@ -582,6 +594,7 @@ CREATE TABLE `0_debtors_master` (
 	`credit_limit` float NOT NULL DEFAULT '1000',
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`debtor_no`),
 	UNIQUE KEY `debtor_ref` (`debtor_ref`),
 	KEY `name` (`name`)
@@ -615,6 +628,7 @@ CREATE TABLE `0_dimensions` (
 	`closed` tinyint(1) NOT NULL DEFAULT '0',
 	`date_` date NOT NULL DEFAULT '0000-00-00',
 	`due_date` date NOT NULL DEFAULT '0000-00-00',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `reference` (`reference`),
 	KEY `date_` (`date_`),
@@ -712,6 +726,7 @@ CREATE TABLE `0_gl_trans` (
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`person_type_id` int(11) DEFAULT NULL,
 	`person_id` tinyblob,
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`counter`),
 	KEY `Type_and_Number` (`type`,`type_no`),
 	KEY `dimension_id` (`dimension_id`),
@@ -734,6 +749,7 @@ CREATE TABLE `0_grn_batch` (
 	`delivery_date` date NOT NULL DEFAULT '0000-00-00',
 	`loc_code` varchar(5) DEFAULT NULL,
 	`rate` double DEFAULT '1',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `delivery_date` (`delivery_date`),
 	KEY `purch_order_no` (`purch_order_no`)
@@ -753,6 +769,7 @@ CREATE TABLE `0_grn_items` (
 	`description` tinytext,
 	`qty_recd` double NOT NULL DEFAULT '0',
 	`quantity_inv` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `grn_batch_id` (`grn_batch_id`)
 ) ENGINE=InnoDB;
@@ -791,6 +808,7 @@ CREATE TABLE `0_item_codes` (
 	`quantity` double NOT NULL DEFAULT '1',
 	`is_foreign` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `stock_id` (`stock_id`,`item_code`),
 	KEY `item_code` (`item_code`)
@@ -940,13 +958,14 @@ CREATE TABLE `0_locations` (
 	`contact` varchar(30) NOT NULL DEFAULT '',
 	`fixed_asset` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`loc_code`)
 ) ENGINE=InnoDB ;
 
 -- Data of table `0_locations` --
 
 INSERT INTO `0_locations` VALUES
-('DEF', 'Default', 'N/A', '', '', '', '', '', '0', '0');
+('DEF', 'Default', 'N/A', '', '', '', '', '', '0', '0', '{}');
 
 -- Structure of table `0_overtime` --
 
@@ -1039,7 +1058,7 @@ DROP TABLE IF EXISTS `0_positions`;
 
 CREATE TABLE IF NOT EXISTS `0_positions` (
 	`position_id` int(11) NOT NULL AUTO_INCREMENT,
-	`job_class_id` int(11) NOT NULL;
+	`job_class_id` int(11) NOT NULL,
 	`position_name` text NOT NULL,
 	`basic_amount` double NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
@@ -1058,6 +1077,7 @@ CREATE TABLE `0_prices` (
 	`sales_type_id` int(11) NOT NULL DEFAULT '0',
 	`curr_abrev` char(3) NOT NULL DEFAULT '',
 	`price` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `price` (`stock_id`,`sales_type_id`,`curr_abrev`)
 ) ENGINE=InnoDB;
@@ -1124,6 +1144,7 @@ CREATE TABLE `0_purch_data` (
 	`suppliers_uom` char(50) NOT NULL DEFAULT '',
 	`conversion_factor` double NOT NULL DEFAULT '1',
 	`supplier_description` char(50) NOT NULL DEFAULT '',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`supplier_id`,`stock_id`)
 ) ENGINE=InnoDB;
 
@@ -1145,6 +1166,7 @@ CREATE TABLE `0_purch_order_details` (
 	`std_cost_unit` double NOT NULL DEFAULT '0',
 	`quantity_ordered` double NOT NULL DEFAULT '0',
 	`quantity_received` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`po_detail_item`),
 	KEY `order` (`order_no`,`po_detail_item`),
 	KEY `itemcode` (`item_code`)
@@ -1169,6 +1191,7 @@ CREATE TABLE `0_purch_orders` (
 	`prep_amount` double NOT NULL DEFAULT '0',
 	`alloc` double NOT NULL DEFAULT '0',
 	`tax_included` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`order_no`),
 	KEY `ord_date` (`ord_date`)
 ) ENGINE=InnoDB;
@@ -1258,6 +1281,7 @@ CREATE TABLE `0_reflines` (
 	`description` varchar(60) NOT NULL DEFAULT '',
 	`default` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `prefix` (`trans_type`,`prefix`)
 ) ENGINE=InnoDB AUTO_INCREMENT=23 ;
@@ -1265,29 +1289,29 @@ CREATE TABLE `0_reflines` (
 -- Data of table `0_reflines` --
 
 INSERT INTO `0_reflines` VALUES
-('1', '0', '', '{001}/{YYYY}', '', '1', '0'),
-('2', '1', '', '{001}/{YYYY}', '', '1', '0'),
-('3', '2', '', '{001}/{YYYY}', '', '1', '0'),
-('4', '4', '', '{001}/{YYYY}', '', '1', '0'),
-('5', '10', '', '{001}/{YYYY}', '', '1', '0'),
-('6', '11', '', '{001}/{YYYY}', '', '1', '0'),
-('7', '12', '', '{001}/{YYYY}', '', '1', '0'),
-('8', '13', '', '{001}/{YYYY}', '', '1', '0'),
-('9', '16', '', '{001}/{YYYY}', '', '1', '0'),
-('10', '17', '', '{001}/{YYYY}', '', '1', '0'),
-('11', '18', '', '{001}/{YYYY}', '', '1', '0'),
-('12', '20', '', '{001}/{YYYY}', '', '1', '0'),
-('13', '21', '', '{001}/{YYYY}', '', '1', '0'),
-('14', '22', '', '{001}/{YYYY}', '', '1', '0'),
-('15', '25', '', '{001}/{YYYY}', '', '1', '0'),
-('16', '26', '', '{001}/{YYYY}', '', '1', '0'),
-('17', '28', '', '{001}/{YYYY}', '', '1', '0'),
-('18', '29', '', '{001}/{YYYY}', '', '1', '0'),
-('19', '30', '', '{001}/{YYYY}', '', '1', '0'),
-('20', '32', '', '{001}/{YYYY}', '', '1', '0'),
-('21', '35', '', '{001}/{YYYY}', '', '1', '0'),
-('22', '40', '', '{001}/{YYYY}', '', '1', '0'),
-('23', '80', '', '{001}/{YYYY}', '', '1', '0');
+('1', '0', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('2', '1', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('3', '2', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('4', '4', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('5', '10', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('6', '11', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('7', '12', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('8', '13', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('9', '16', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('10', '17', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('11', '18', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('12', '20', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('13', '21', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('14', '22', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('15', '25', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('16', '26', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('17', '28', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('18', '29', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('19', '30', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('20', '32', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('21', '35', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('22', '40', '', '{001}/{YYYY}', '', '1', '0', '{}'),
+('23', '80', '', '{001}/{YYYY}', '', '1', '0', '{}');
 
 -- Structure of table `0_refs` --
 
@@ -1332,6 +1356,7 @@ CREATE TABLE `0_sales_order_details` (
 	`quantity` double NOT NULL DEFAULT '0',
 	`invoiced` double NOT NULL DEFAULT '0',
 	`discount_percent` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `sorder` (`trans_type`,`order_no`),
 	KEY `stkcode` (`stk_code`)
@@ -1353,7 +1378,7 @@ CREATE TABLE `0_sales_orders` (
 	`salesman_code` int(11) NOT NULL DEFAULT '0',
 	`reference` varchar(100) NOT NULL DEFAULT '',
 	`customer_ref` tinytext NOT NULL,
-	`comments` tinytext,
+	`comments` text  NOT NULL DEFAULT '',
 	`ord_date` date NOT NULL DEFAULT '0000-00-00',
 	`order_type` int(11) NOT NULL DEFAULT '0',
 	`ship_via` int(11) NOT NULL DEFAULT '0',
@@ -1368,6 +1393,7 @@ CREATE TABLE `0_sales_orders` (
 	`total` double NOT NULL DEFAULT '0',
 	`prep_amount` double NOT NULL DEFAULT '0',
 	`alloc` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`trans_type`,`order_no`)
 ) ENGINE=InnoDB;
 
@@ -1385,6 +1411,7 @@ CREATE TABLE `0_sales_pos` (
 	`pos_location` varchar(5) NOT NULL,
 	`pos_account` smallint(6) unsigned NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `pos_name` (`pos_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
@@ -1392,7 +1419,7 @@ CREATE TABLE `0_sales_pos` (
 -- Data of table `0_sales_pos` --
 
 INSERT INTO `0_sales_pos` VALUES
-('1', 'Default', '1', '1', 'DEF', '2', '0');
+('1', 'Default', '1', '1', 'DEF', '2', '0', '{}');
 
 -- Structure of table `0_sales_types` --
 
@@ -1404,6 +1431,7 @@ CREATE TABLE `0_sales_types` (
 	`tax_included` int(1) NOT NULL DEFAULT '0',
 	`factor` double NOT NULL DEFAULT '1',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `sales_type` (`sales_type`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 ;
@@ -1411,8 +1439,8 @@ CREATE TABLE `0_sales_types` (
 -- Data of table `0_sales_types` --
 
 INSERT INTO `0_sales_types` VALUES
-('1', 'Retail', '1', '1', '0'),
-('2', 'Wholesale', '0', '0.7', '0');
+('1', 'Retail', '1', '1', '0', '{}'),
+('2', 'Wholesale', '0', '0.7', '0', '{}');
 
 -- Structure of table `0_salesman` --
 
@@ -1428,6 +1456,7 @@ CREATE TABLE `0_salesman` (
 	`break_pt` double NOT NULL DEFAULT '0',
 	`provision2` double NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`salesman_code`),
 	UNIQUE KEY `salesman_name` (`salesman_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
@@ -1435,7 +1464,7 @@ CREATE TABLE `0_salesman` (
 -- Data of table `0_salesman` --
 
 INSERT INTO `0_salesman` VALUES
-('1', 'Sales Person', '', '', '', '5', '1000', '4', '0');
+('1', 'Sales Person', '', '', '', '5', '1000', '4', '0', '{}');
 
 -- Structure of table `0_security_roles` --
 
@@ -1521,6 +1550,7 @@ CREATE TABLE `0_stock_category` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`dflt_no_sale` tinyint(1) NOT NULL DEFAULT '0',
 	`dflt_no_purchase` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`category_id`),
 	UNIQUE KEY `description` (`description`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 ;
@@ -1528,10 +1558,10 @@ CREATE TABLE `0_stock_category` (
 -- Data of table `0_stock_category` --
 
 INSERT INTO `0_stock_category` VALUES
-('1', 'Components', '1', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('2', 'Charges', '1', 'each', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('3', 'Systems', '1', 'each', 'M', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('4', 'Services', '1', 'hr', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0');
+('1', 'Components', '1', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '{}'),
+('2', 'Charges', '1', 'each', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '{}'),
+('3', 'Systems', '1', 'each', 'M', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '{}'),
+('4', 'Services', '1', 'hr', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '{}');
 
 -- Structure of table `0_stock_fa_class` --
 
@@ -1582,6 +1612,7 @@ CREATE TABLE `0_stock_master` (
 	`depreciation_start` date NOT NULL DEFAULT '0000-00-00',
 	`depreciation_date` date NOT NULL DEFAULT '0000-00-00',
 	`fa_class_id` varchar(20) NOT NULL DEFAULT '',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`stock_id`)
 ) ENGINE=InnoDB;
 
@@ -1602,6 +1633,7 @@ CREATE TABLE `0_stock_moves` (
 	`reference` char(40) NOT NULL DEFAULT '',
 	`qty` double NOT NULL DEFAULT '1',
 	`standard_cost` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`trans_id`),
 	KEY `type` (`type`,`trans_no`),
 	KEY `Move` (`stock_id`,`loc_code`,`tran_date`)
@@ -1649,6 +1681,7 @@ CREATE TABLE `0_supp_invoice_items` (
 	`memo_` tinytext,
 	`dimension_id` int(11) NOT NULL DEFAULT '0',
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Transaction` (`supp_trans_type`,`supp_trans_no`,`stock_id`)
 ) ENGINE=InnoDB;
@@ -1673,6 +1706,7 @@ CREATE TABLE `0_supp_trans` (
 	`rate` double NOT NULL DEFAULT '1',
 	`alloc` double NOT NULL DEFAULT '0',
 	`tax_included` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`type`,`trans_no`,`supplier_id`),
 	KEY `supplier_id` (`supplier_id`),
 	KEY `tran_date` (`tran_date`)
@@ -1707,6 +1741,7 @@ CREATE TABLE `0_suppliers` (
 	`payment_discount_account` varchar(15) NOT NULL DEFAULT '',
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`supplier_id`),
 	UNIQUE KEY `supp_ref` (`supp_ref`)
 ) ENGINE=InnoDB;
@@ -1836,6 +1871,7 @@ CREATE TABLE `0_tags` (
 	`name` varchar(30) NOT NULL,
 	`description` varchar(60) DEFAULT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `type` (`type`,`name`)
 ) ENGINE=InnoDB ;
@@ -1887,13 +1923,14 @@ CREATE TABLE `0_tax_types` (
 	`purchasing_gl_code` varchar(15) NOT NULL DEFAULT '',
 	`name` varchar(60) NOT NULL DEFAULT '',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
 
 -- Data of table `0_tax_types` --
 
 INSERT INTO `0_tax_types` VALUES
-('1', '5', '2150', '2150', 'Tax', '0');
+('1', '5', '2150', '2150', 'Tax', '0', '{}');
 
 -- Structure of table `0_trans_tax_details` --
 
@@ -2026,6 +2063,7 @@ CREATE TABLE `0_wo_issue_items` (
 	`issue_id` int(11) DEFAULT NULL,
 	`qty_issued` double DEFAULT NULL,
 	`unit_cost` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB ;
 
@@ -2120,6 +2158,7 @@ CREATE TABLE `0_workorders` (
 	`closed` tinyint(1) NOT NULL DEFAULT '0',
 	`released` tinyint(1) NOT NULL DEFAULT '0',
 	`additional_costs` double NOT NULL DEFAULT '0',
+	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `wo_ref` (`wo_ref`)
 ) ENGINE=InnoDB;
