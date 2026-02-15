@@ -656,7 +656,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 	`passport` varchar(100) DEFAULT NULL,
 	`bank_account` varchar(100) DEFAULT NULL,
 	`tax_number` varchar(100) DEFAULT NULL,
-	`martial_status` tinyint(1) NOT NULL DEFAULT '0',
+	`marital_status` tinyint(1) NOT NULL DEFAULT '0',
 	`dependents_no` int(10) NOT NULL DEFAULT '0',
 	`notes` tinytext NOT NULL,
 	`hire_date` date DEFAULT NULL,

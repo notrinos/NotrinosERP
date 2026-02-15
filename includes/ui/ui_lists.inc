@@ -2407,7 +2407,7 @@ function accounts_type_list_row($label, $name, $selected_id=null) {
 	echo "</td></tr>\n";
 }
 
-function martial_status_list_row($label, $name, $selected=null, $submit_on_change=false) {
+function marital_status_list_row($label, $name, $selected=null, $submit_on_change=false) {
 
 	echo "<tr>";
 	if ($label != null)
