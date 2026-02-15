@@ -56,7 +56,7 @@ function show_image($employee_id) {
 	$check_remove_image = false;
 	$img_link = "<img id='emp_img' alt = 'No Image' src='".company_path().'/images/no_image.svg'."?nocache=".rand()."'"." height='100'>";
 
-	if (@$employee_id) {
+	if (!empty($employee_id)) {
 		foreach (array('jpg', 'png', 'gif') as $ext) {
 			$file = company_path().'/images/employees/'.item_img_name($employee_id).'.'.$ext;
 			if (file_exists($file)) {
@@ -88,7 +88,7 @@ if (get_post('cancel')) {
 	$employee_id = '';
 	$_POST['employee_id'] = '';
 	clear_inputs();
-	set_focus('employee_id');
+	set_focus('NewEmpID');
 	$Ajax->activate('_page_body');
 }
 
@@ -179,10 +179,6 @@ function employee_settings($employee_id, $new_employee) {
 
 	table_section_title(_('Work Information'));
 
-	file_row(_('Image File (.jpg)').':', 'pic', 'pic');
-
-	show_image(@$_POST['NewEmpID']);
-
 	if($new_employee) {
 		text_row(_('Employee ID:'), 'NewEmpID', null, 31, 20);
 		$_POST['inactive'] = 0;
@@ -198,6 +194,9 @@ function employee_settings($employee_id, $new_employee) {
 		hidden('NewEmpID', $_POST['NewEmpID']);
 		set_focus('first_name');
 	}
+
+	file_row(_('Image File (.jpg)').':', 'pic', 'pic');
+	show_image(get_post('NewEmpID'));
 
 	table_section_title(_('Personal Information'));
 
@@ -251,6 +250,18 @@ function employee_settings($employee_id, $new_employee) {
 	}
 
 	div_end();
+}
+
+function employee_payroll_settings($employee_id) {
+	global $path_to_root;
+
+	echo "";
+}
+
+function employee_trans($employee_id) {
+	global $path_to_root;
+
+	echo "";
 }
 
 if (isset($_POST['addupdate'])) {
@@ -341,21 +352,23 @@ if (!$employee_id)// force settings tab for new employee
 	unset($_POST['_tabs_sel']);
 
 $tabs = array(
-		'settings' => array(_('Employee &Information'), $employee_id),
-		'payroll_info' => array(_('&Payroll Settings'), (user_check_access('SA_STANDARDCOST') ? $employee_id : null)),
-		'employee_trans' => array(_('&Transactions'), (user_check_access('SA_ITEMSTRANSVIEW') ? $employee_id : null))
-	);
+	'employee_settings' => array(_('Employee &Information'), $employee_id),
+	'payroll_settings' => array(_('&Payroll Settings'), (user_check_access('SA_PAYSLIP') ? $employee_id : null)),
+	'employee_trans' => array(_('&Transactions'), (user_check_access('SA_EMPLOYEEPAYMENT') ? $employee_id : null))
+);
 
 tabbed_content_start('tabs', $tabs);
 
 switch (get_post('_tabs_sel')) {
 	default:
-	case 'settings':
+	case 'employee_settings':
 		employee_settings($employee_id, $new_employee);
 		break;
 	case 'payroll_settings':
+		employee_payroll_settings($employee_id);
 		break;
-	case 'transactions':
+	case 'employee_trans':
+		employee_trans($employee_id);
 		break;
 
 }
