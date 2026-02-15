@@ -2622,7 +2622,7 @@ function users_list($name, $selected_id=null, $submit_on_change=false, $spec_opt
 	return combo_input($name, $selected_id, $sql, 'login_id', 'real_name',
 		array(
 			'spec_option' => $spec_opt===true ? _('All users') : $spec_opt,
-			'spec_id' => 0,
+			'spec_id' => '',
 			'order' => 'real_name',
 			'select_submit'=> $submit_on_change,
 			'async' => false

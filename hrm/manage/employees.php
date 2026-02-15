@@ -167,7 +167,7 @@ function clear_inputs() {
 	unset($_POST['position_id']);
 	unset($_POST['grade_id']);
 	unset($_POST['released_date']);
-	unset($_POST['user_id']);
+	unset($_POST['login_id']);
 }
 
 function employee_settings($employee_id, $new_employee) {
@@ -228,7 +228,7 @@ function employee_settings($employee_id, $new_employee) {
 	text_row(_('Tax ID:'), 'tax_number', get_post('tax_number'), 31, 100);
 	textarea_row(_('Notes:'), 'notes', null, 27, 5);
 	date_row(_('Hire Date:'), 'hire_date', null, null, 0, 0, 1001);
-	users_list_row(_('Related user:'), 'user_id', null, false, _('Select user'));
+	users_list_row(_('Login ID:'), 'login_id', null, false, _('Select user'));
 	departments_list_row(_('Department:'), 'department_id', null, false, _('Select department'));
 	positions_list_row(_('Job Posittion:'), 'position_id', null, false, _('Select job position'));
 	grades_list_row(_('Salary Grade:'), 'grade_id', null, _('Basic'));
@@ -289,7 +289,7 @@ if (isset($_POST['addupdate'])) {
 			del_image($_POST['NewEmpID']);
 		
 		if (!$new_employee) {
-			update_employee($_POST['NewEmpID'], $_POST['first_name'], $_POST['last_name'], $_POST['gender'], $_POST['birth_date'], $_POST['address'], $_POST['mobile'], $_POST['email'], $_POST['national_id'], $_POST['passport'], $_POST['bank_account'], $_POST['tax_number'], $_POST['martial_status'], input_num('dependents_no'), $_POST['notes'], $_POST['hire_date'], $_POST['department_id'], $_POST['position_id'], $_POST['grade_id'], $_POST['personal_salary'], $_POST['released_date'], $_POST['user_id']);
+			update_employee($_POST['NewEmpID'], $_POST['first_name'], $_POST['last_name'], $_POST['gender'], $_POST['birth_date'], $_POST['address'], $_POST['mobile'], $_POST['email'], $_POST['national_id'], $_POST['passport'], $_POST['bank_account'], $_POST['tax_number'], $_POST['martial_status'], input_num('dependents_no'), $_POST['notes'], $_POST['hire_date'], $_POST['department_id'], $_POST['position_id'], $_POST['grade_id'], $_POST['personal_salary'], $_POST['released_date'], $_POST['login_id']);
 
 			update_record_status($_POST['NewEmpID'], $_POST['inactive'], 'employees', 'employee_id');
 			set_focus('employee_id');
@@ -297,7 +297,7 @@ if (isset($_POST['addupdate'])) {
 			display_notification(_('Employee information has been updated.'));
 		} 
 		else {
-			add_employee($_POST['NewEmpID'], $_POST['first_name'], $_POST['last_name'], $_POST['gender'], $_POST['birth_date'], $_POST['address'], $_POST['mobile'], $_POST['email'], $_POST['national_id'], $_POST['passport'], $_POST['bank_account'], $_POST['tax_number'], $_POST['martial_status'], input_num('dependents_no'), $_POST['notes'], $_POST['hire_date'], $_POST['department_id'], $_POST['position_id'], $_POST['grade_id'], $_POST['personal_salary'], $_POST['user_id']);
+			add_employee($_POST['NewEmpID'], $_POST['first_name'], $_POST['last_name'], $_POST['gender'], $_POST['birth_date'], $_POST['address'], $_POST['mobile'], $_POST['email'], $_POST['national_id'], $_POST['passport'], $_POST['bank_account'], $_POST['tax_number'], $_POST['martial_status'], input_num('dependents_no'), $_POST['notes'], $_POST['hire_date'], $_POST['department_id'], $_POST['position_id'], $_POST['grade_id'], $_POST['personal_salary'], $_POST['login_id']);
 
 			display_notification(_('A new employee has been added.'));
 			$_POST['employee_id'] = '';
@@ -308,7 +308,7 @@ if (isset($_POST['addupdate'])) {
 			$_POST['grade_id'] = 0;
 			$_POST['position_id'] = 0;
 			$_POST['department_id'] = 0;
-			$_POST['user_id'] = 0;
+			$_POST['login_id'] = 0;
 			set_focus('NewEmpID');
 		}
 		$Ajax->activate('_page_body');

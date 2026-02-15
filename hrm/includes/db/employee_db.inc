@@ -14,19 +14,19 @@ function db_has_employees() {
 	return check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."employees");
 }
 
-function add_employee($employee_id, $first_name, $last_name, $gender, $birth_date, $address='', $mobile='', $email='', $national_id='', $passport='', $bank_account='', $tax_number='',$marital_status=0, $dependents_no=0, $notes='', $hire_date='', $department_id=0, $position_id=0, $grade_id=0, $personal_salary=0, $user_id=0) {
-	$sql = "INSERT INTO ".TB_PREF."employees (employee_id, first_name, last_name, gender, birth_date, address, mobile, email, national_id, passport, bank_account, tax_number, marital_status, dependents_no, notes,";
+function add_employee($employee_id, $first_name, $last_name, $gender, $birth_date, $address='', $mobile='', $email='', $national_id='', $passport='', $bank_account='', $tax_number='',$martial_status=0, $dependents_no=0, $notes='', $hire_date='', $department_id=0, $position_id=0, $grade_id=0, $personal_salary=0, $login_id='') {
+	$sql = "INSERT INTO ".TB_PREF."employees (employee_id, first_name, last_name, gender, birth_date, address, mobile, email, national_id, passport, bank_account, tax_number, martial_status, dependents_no, notes,";
 	if(!empty($hire_date))
 		$sql .= " hire_date,";
-	$sql .= " department_id, position_id, grade_id, personal_salary, user_id) VALUES (".db_escape($employee_id).",".db_escape($first_name).",".db_escape($last_name).",".db_escape($gender).",'".date2sql($birth_date)."',".db_escape($address).",".db_escape($mobile).",".db_escape($email).",".db_escape($national_id).",".db_escape($passport).",".db_escape($bank_account).",".db_escape($tax_number).",".db_escape($marital_status).",".db_escape($dependents_no).",".db_escape($notes).",";
+	$sql .= " department_id, position_id, grade_id, personal_salary, login_id) VALUES (".db_escape($employee_id).",".db_escape($first_name).",".db_escape($last_name).",".db_escape($gender).",'".date2sql($birth_date)."',".db_escape($address).",".db_escape($mobile).",".db_escape($email).",".db_escape($national_id).",".db_escape($passport).",".db_escape($bank_account).",".db_escape($tax_number).",".db_escape($martial_status).",".db_escape($dependents_no).",".db_escape($notes).",";
 	if(!empty($hire_date))
 		$sql .= "'".date2sql($hire_date)."',";
-	$sql .= db_escape($department_id).",".db_escape($position_id).",".db_escape($grade_id).",".db_escape($personal_salary).",".db_escape($user_id).")";
+	$sql .= db_escape($department_id).",".db_escape($position_id).",".db_escape($grade_id).",".db_escape($personal_salary).",".db_escape($login_id).")";
 
 	db_query($sql, 'could not add employee record');
 }
 
-function update_employee($employee_id, $first_name, $last_name, $gender, $birth_date, $address='', $mobile='', $email='', $national_id='', $passport='', $bank_account='', $tax_number='', $marital_status=0, $dependents_no=0, $notes='', $hire_date='', $department_id=0, $position_id=0, $grade_id=0, $personal_salary=0, $released_date='', $user_id=0) {
+function update_employee($employee_id, $first_name, $last_name, $gender, $birth_date, $address='', $mobile='', $email='', $national_id='', $passport='', $bank_account='', $tax_number='', $martial_status=0, $dependents_no=0, $notes='', $hire_date='', $department_id=0, $position_id=0, $grade_id=0, $personal_salary=0, $released_date='', $login_id='') {
 	$sql = "UPDATE ".TB_PREF."employees SET 
 		first_name = ".db_escape($first_name).", 
 		last_name = ".db_escape($last_name).", 
@@ -39,7 +39,7 @@ function update_employee($employee_id, $first_name, $last_name, $gender, $birth_
 		passport = ".db_escape($passport).", 
 		bank_account = ".db_escape($bank_account).", 
 		tax_number = ".db_escape($tax_number).", 
-		marital_status = ".db_escape($marital_status).", 
+		martial_status = ".db_escape($martial_status).", 
 		dependents_no = ".db_escape($dependents_no).", 
 		notes = ".db_escape($notes).", ";
 
@@ -54,7 +54,7 @@ function update_employee($employee_id, $first_name, $last_name, $gender, $birth_
 		if(!empty($released_date))
 			$sql .= " released_date = '".date2sql($released_date)."', ";
 		
-	$sql .= "user_id = ".db_escape($user_id)." WHERE employee_id = ".db_escape($employee_id);
+	$sql .= "login_id = ".db_escape($login_id)." WHERE employee_id = ".db_escape($employee_id);
 
 	db_query($sql, 'could not update employee');
 }
