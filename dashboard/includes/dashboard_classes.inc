@@ -17,7 +17,7 @@ define('DA_MANUFACTURE', 'manuf');
 define('DA_DIMENSIONS', 'proj');
 define('DA_GL', 'GL');
 define('DA_FIXEDASSETS', 'assets');
-define('DA_HRM', 'FrontHrm');
+define('DA_HRM', 'hrm');
 define('DA_SETUP', 'system');
 
 define('WIDGET_FULL', 'widget_full');
@@ -268,6 +268,7 @@ function gl_performance($today, $weeks=5) {
 }
 
 function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2) {
+	global $SysPrefs;
 
 	$pg->axis_x    = $x_axis;
 	$pg->axis_y    = _('Amount');
@@ -276,10 +277,11 @@ function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2) 
 	$pg->type      = $type;
 	$pg->skin      = 1;
 	$pg->built_in  = false;
-	$filename = company_path().'/pdf_files/'.random_id().'.png';
-	$pg->display($filename, true);
+	$pg->latin_notation = ($SysPrefs->decseps[user_dec_sep()] != '.');
 
-	echo "<center><img src='$filename' border='0' alt='$title'></center>";
+	echo "<center>";
+	$pg->display();
+	echo "</center>";
 }
 
 function customer_trans($today) {

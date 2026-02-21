@@ -26,7 +26,7 @@ $page_nested = -1;
 // static js files path
 $js_path = $path_to_root.'/libraries/';
 // standard external js scripts included in all files
-$js_static = array('jquery.min.js', 'select2.min.js', 'JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js', 'select.js', 'string-similarity.min.js');
+$js_static = array('jquery.min.js', 'select2.min.js', 'JsHttpRequest.js', 'behaviour.js', 'utils.js', 'inserts.js', 'select.js', 'string-similarity.min.js', 'chart.umd.min.js');
 // additional js source included in header
 $js_lib = array();
 $js_userlib = array();
