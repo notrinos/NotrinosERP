@@ -22,6 +22,8 @@ define('DA_SETUP', 'system');
 
 define('WIDGET_FULL', 'widget_full');
 define('WIDGET_HALF', 'widget_half');
+define('WIDGET_THIRD', 'widget_third');
+define('WIDGET_QUARTER', 'widget_quarter');
 
 class Dashboard {
 
@@ -69,6 +71,10 @@ class Dashboard {
 						$class = 'widget_full';
 					elseif($widget['width'] == WIDGET_HALF)
 						$class = 'widget_half';
+					elseif($widget['width'] == WIDGET_THIRD)
+						$class = 'widget_third';
+					elseif($widget['width'] == WIDGET_QUARTER)
+						$class = 'widget_quarter';
 
 					echo "<div class = 'widget $class'>";
 

@@ -372,7 +372,7 @@ class graph {
 		if (defined('JSON_HEX_QUOT')) $flags |= JSON_HEX_QUOT;
 		$configJson = json_encode($config, $flags);
 
-		echo '<div style="position:relative;width:100%;height:20em;">';
+		echo '<div class="chart-box">';
 		echo '<canvas id="' . $chartId . '"></canvas>';
 		echo '</div>';
 		echo '<script>(function(){var c=document.getElementById("' . $chartId . '");if(!c||typeof Chart==="undefined")return;new Chart(c,' . $configJson . ');})();</script>';
