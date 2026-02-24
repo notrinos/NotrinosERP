@@ -147,6 +147,9 @@ class references {
 						case 'UU':
 							$out .= sprintf('%02d', $context['user']);
 						break;
+						default:
+							$out .= sprintf('%s', $context[$refline_placeholders[$ph]]);
+						break;
 					}
 				}
 			}
@@ -334,6 +337,8 @@ class references {
 				$pos,
 				'\d+',
 			), $regex);
+
+		$regex = preg_replace('/\{[^}]+\}/', '.+', $regex);
 
 		$regex = '"^'.$regex.'"i';
 

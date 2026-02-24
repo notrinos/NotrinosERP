@@ -135,6 +135,23 @@ function get_counterparty_name($trans_type, $trans_no, $full=true) {
 
 //-----------------------------------------------------------------------------------------
 
+$systype_db_info_hooks = array();
+
+function register_systype_db_info($type, $db_info) {
+	global $systype_db_info_hooks;
+
+	if (!is_array($db_info) || count($db_info) < 4)
+		return;
+
+	$systype_db_info_hooks[(int)$type] = $db_info;
+}
+
+function unregister_systype_db_info($type) {
+	global $systype_db_info_hooks;
+
+	unset($systype_db_info_hooks[(int)$type]);
+}
+
 //	Returns next transaction number.
 //	Used only for transactions stored in tables without autoincremented key.
 //
@@ -164,6 +181,11 @@ function get_next_trans_no ($trans_type) {
 //-----------------------------------------------------------------------------
 
 function get_systype_db_info($type) {
+	global $systype_db_info_hooks;
+
+	if (isset($systype_db_info_hooks[(int)$type]))
+		return $systype_db_info_hooks[(int)$type];
+
 	switch ($type) {
 		case    ST_JOURNAL      : return array(TB_PREF."journal", "type", "trans_no", "reference", "tran_date");
 		case    ST_BANKPAYMENT  : return array(TB_PREF."bank_trans", "type", "trans_no", "ref", "trans_date");
