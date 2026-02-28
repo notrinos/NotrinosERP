@@ -552,6 +552,162 @@ $reports->addReport(RC_GL, 710, _('Audit Trail'),
 
 add_custom_reports($reports);
 
+// ── Human Resources & Payroll ────────────────────────────────────────────────
+if (isset($SysPrefs->prefs['use_hrm']) && $SysPrefs->prefs['use_hrm'] && user_check_access('SA_HRMREPORTS')) {
+	include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
+
+	$reports->addReportClass(_('Human Resources'), RC_HRM);
+
+	// 880 — Payslip Print
+	$reports->addReport(RC_HRM, 880, _('&Payslip Print'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Month')       => 'MONTH',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 881 — Payroll Summary
+	$reports->addReport(RC_HRM, 881, _('Payroll &Summary'),
+		array(
+			_('Payroll Period') => 'HRM_PAYROLL_PERIOD',
+			_('Department')     => 'HRM_DEPARTMENTS',
+			_('Comments')       => 'TEXTBOX',
+			_('Orientation')    => 'ORIENTATION',
+			_('Destination')    => 'DESTINATION'));
+
+	// 882 — Salary Sheet
+	$reports->addReport(RC_HRM, 882, _('Salary &Sheet'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Month')       => 'MONTH',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 883 — Attendance Report
+	$reports->addReport(RC_HRM, 883, _('&Attendance Report'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Month')       => 'MONTH',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 884 — Leave Balance
+	$reports->addReport(RC_HRM, 884, _('Leave &Balance'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Leave Type')  => 'HRM_LEAVE_TYPES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 885 — Leave Computation
+	$reports->addReport(RC_HRM, 885, _('Leave &Computation'),
+		array(
+			_('From Date')   => 'DATEBEGIN',
+			_('To Date')     => 'DATEENDM',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Leave Type')  => 'HRM_LEAVE_TYPES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 886 — Employee List
+	$reports->addReport(RC_HRM, 886, _('Employee &List'),
+		array(
+			_('Department')     => 'HRM_DEPARTMENTS',
+			_('Position')       => 'HRM_POSITIONS',
+			_('Pay Grade')      => 'HRM_PAY_GRADES',
+			_('Status')         => 'HRM_EMP_STATUS',
+			_('Show Inactive')  => 'YES_NO',
+			_('Comments')       => 'TEXTBOX',
+			_('Orientation')    => 'ORIENTATION',
+			_('Destination')    => 'DESTINATION'));
+
+	// 887 — Employee Profile
+	$reports->addReport(RC_HRM, 887, _('Employee &Profile'),
+		array(
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 888 — Document Expiration
+	$reports->addReport(RC_HRM, 888, _('&Document Expiration'),
+		array(
+			_('From Date')      => 'DATEBEGIN',
+			_('To Date')        => 'DATEENDM',
+			_('Document Type')  => 'HRM_DOC_TYPES',
+			_('Department')     => 'HRM_DEPARTMENTS',
+			_('Comments')       => 'TEXTBOX',
+			_('Orientation')    => 'ORIENTATION',
+			_('Destination')    => 'DESTINATION'));
+
+	// 889 — Overtime Summary
+	$reports->addReport(RC_HRM, 889, _('&Overtime Summary'),
+		array(
+			_('Year')        => 'YEAR',
+			_('From Month')  => 'MONTH',
+			_('To Month')    => 'MONTH',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 890 — Department Cost
+	$reports->addReport(RC_HRM, 890, _('Depart&ment Cost'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Month')       => 'MONTH',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 891 — Loan Outstanding
+	$reports->addReport(RC_HRM, 891, _('Loan &Outstanding'),
+		array(
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Loan Type')   => 'HRM_LOAN_TYPES',
+			_('Status')      => 'HRM_LOAN_STATUS',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+
+	// 892 — Headcount Analysis
+	$reports->addReport(RC_HRM, 892, _('&Headcount Analysis'),
+		array(
+			_('Department')      => 'HRM_DEPARTMENTS',
+			_('Employment Type') => 'HRM_EMP_TYPE',
+			_('As at Date')      => 'DATE',
+			_('Show Inactive')   => 'YES_NO',
+			_('Comments')        => 'TEXTBOX',
+			_('Orientation')     => 'ORIENTATION',
+			_('Destination')     => 'DESTINATION'));
+
+	// 893 — Email Payslip
+	$reports->addReport(RC_HRM, 893, _('&Email Payslip'),
+		array(
+			_('Year')        => 'YEAR',
+			_('Month')       => 'MONTH',
+			_('Department')  => 'HRM_DEPARTMENTS',
+			_('Employee')    => 'HRM_EMPLOYEES',
+			_('Comments')    => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+}
+// ── End Human Resources ──────────────────────────────────────────────────────
+
 echo $reports->getDisplay();
 
 end_page();

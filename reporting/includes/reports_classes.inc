@@ -19,6 +19,7 @@ define('RC_DIMENSIONS', 4);
 define('RC_BANKING', 5);
 define('RC_GL', 6);
 define('RC_FIXEDASSETS', 7);
+define('RC_HRM', 8);		// Human Resources & Payroll
 
 class BoxReports {
 	var $ar_classes; // report class names

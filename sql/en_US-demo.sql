@@ -43,14 +43,28 @@ CREATE TABLE `0_attachments` (
 -- Structure of table `0_attendance` --
 
 DROP TABLE IF EXISTS `0_attendance`;
-
 CREATE TABLE IF NOT EXISTS `0_attendance` (
-	`employee_id` varchar(20) NOT NULL,
-	`time_id` int(11) NOT NULL DEFAULT '0',
-	`hours_no` float(5) UNSIGNED NOT NULL,
-	`rate` float(5) NOT NULL DEFAULT '1',
-	`date` date NOT NULL,
-	PRIMARY KEY (`employee_id`,`time_id`,`date`)
+	`attendance_id`       int(11)         NOT NULL AUTO_INCREMENT,
+	`employee_id`         varchar(20)     NOT NULL DEFAULT '',
+	`attendance_date`     date            NOT NULL,
+	`time_in`             time            DEFAULT NULL,
+	`time_out`            time            DEFAULT NULL,
+	`scheduled_in`        time            DEFAULT NULL,
+	`scheduled_out`       time            DEFAULT NULL,
+	`hours_worked`        decimal(5,2)    NOT NULL DEFAULT '0.00',
+	`overtime_hours`      decimal(5,2)    NOT NULL DEFAULT '0.00',
+	`late_minutes`        int(5)          NOT NULL DEFAULT '0',
+	`early_leave_minutes` int(5)          NOT NULL DEFAULT '0',
+	`attendance_status`   varchar(20)     NOT NULL DEFAULT 'present',
+	`shift_id`            int(11)         DEFAULT NULL,
+	`leave_type_id`       int(11)         DEFAULT NULL,
+	`approval_status`     varchar(10)     NOT NULL DEFAULT 'approved',
+	`approved_by`         varchar(20)     DEFAULT NULL,
+	`notes`               text,
+	`rate`                float(5)        NOT NULL DEFAULT '1',
+	`payroll_processed`   tinyint(1)      NOT NULL DEFAULT '0',
+	PRIMARY KEY (`attendance_id`),
+	UNIQUE KEY `emp_date` (`employee_id`,`attendance_date`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_attendance` --
@@ -725,13 +739,18 @@ INSERT INTO `0_debtors_master` VALUES
 -- Structure of table `0_departments` --
 
 DROP TABLE IF EXISTS `0_departments`;
-
 CREATE TABLE IF NOT EXISTS `0_departments` (
-	`department_id` int(11) NOT NULL AUTO_INCREMENT,
-	`department_name` tinytext NOT NULL,
-	`payroll_expense_account` varchar(15) NULL,
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`department_id`)
+	`department_id`          int(11)      NOT NULL AUTO_INCREMENT,
+	`department_code`        varchar(20)  NOT NULL DEFAULT '',
+	`department_name`        varchar(100) NOT NULL DEFAULT '',
+	`parent_department_id`   int(11)      DEFAULT NULL,
+	`manager_employee_id`    varchar(20)  DEFAULT NULL,
+	`cost_center`            varchar(30)  DEFAULT NULL,
+	`location`               varchar(100) DEFAULT NULL,
+	`description`            text,
+	`is_active`              tinyint(1)   NOT NULL DEFAULT '1',
+	PRIMARY KEY (`department_id`),
+	UNIQUE KEY `dept_code` (`department_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_departments` --
@@ -764,37 +783,56 @@ INSERT INTO `0_dimensions` VALUES
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;
-
 CREATE TABLE IF NOT EXISTS `0_employees` (
-	`employee_number` int(11) NOT NULL AUTO_INCREMENT,
-	`employee_id` varchar(20) NOT NULL,
-	`first_name` varchar(100) DEFAULT NULL,
-	`last_name` varchar(100) DEFAULT NULL,
-	`gender` tinyint(1) NOT NULL DEFAULT '0',
-	`address` tinytext,
-	`mobile` varchar(30) DEFAULT NULL,
-	`email` varchar(100) DEFAULT NULL,
-	`birth_date` date NOT NULL,
-	`national_id` varchar(100) DEFAULT NULL,
-	`passport` varchar(100) DEFAULT NULL,
-	`bank_account` varchar(100) DEFAULT NULL,
-	`tax_number` varchar(100) DEFAULT NULL,
-	`marital_status` tinyint(1) NOT NULL DEFAULT '0',
-	`dependents_no` int(10) NOT NULL DEFAULT '0',
-	`notes` tinytext NOT NULL,
-	`hire_date` date DEFAULT NULL,
-	`department_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
-	`position_id` int(11) UNSIGNED NOT NULL DEFAULT '0',
-	`grade_id` tinyint(2) UNSIGNED NOT NULL DEFAULT '0',
-	`personal_salary` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
-	`released_date` date DEFAULT NULL,
-	`login_id` varchar(60) NOT NULL DEFAULT '',
-	`inactive` tinyint(1) UNSIGNED NOT NULL DEFAULT '0',
-	`custom_data` JSON NOT NULL DEFAULT ('{}'),
-	PRIMARY KEY (`employee_number`),
-	KEY `position_id` (`position_id`),
-	KEY `department_id` (`department_id`),
-	UNIQUE KEY `employee_id` (`employee_id`)
+	`employee_id`             varchar(20)     NOT NULL DEFAULT '',
+	`person_id`               int(11)         DEFAULT NULL,
+	`employee_code`           varchar(20)     NOT NULL DEFAULT '',
+	`first_name`              varchar(50)     NOT NULL DEFAULT '',
+	`middle_name`             varchar(50)     DEFAULT NULL,
+	`last_name`               varchar(50)     NOT NULL DEFAULT '',
+	`title`                   varchar(10)     DEFAULT NULL,
+	`gender`                  char(1)         NOT NULL DEFAULT 'M',
+	`date_of_birth`           date            DEFAULT NULL,
+	`national_id`             varchar(30)     DEFAULT NULL,
+	`passport_no`             varchar(30)     DEFAULT NULL,
+	`nationality`             varchar(50)     DEFAULT NULL,
+	`marital_status`          varchar(15)     NOT NULL DEFAULT 'single',
+	`email`                   varchar(100)    DEFAULT NULL,
+	`phone`                   varchar(30)     DEFAULT NULL,
+	`mobile`                  varchar(30)     DEFAULT NULL,
+	`address`                 varchar(200)    DEFAULT NULL,
+	`city`                    varchar(50)     DEFAULT NULL,
+	`state`                   varchar(50)     DEFAULT NULL,
+	`country`                 varchar(50)     DEFAULT NULL,
+	`postal_code`             varchar(15)     DEFAULT NULL,
+	`hire_date`               date            NOT NULL,
+	`termination_date`        date            DEFAULT NULL,
+	`employment_type`         varchar(20)     NOT NULL DEFAULT 'full_time',
+	`employment_status`       varchar(20)     NOT NULL DEFAULT 'active',
+	`department_id`           int(11)         DEFAULT NULL,
+	`position_id`             int(11)         DEFAULT NULL,
+	`job_class_id`            int(11)         DEFAULT NULL,
+	`pay_grade_id`            int(11)         DEFAULT NULL,
+	`salary_structure_id`     int(11)         DEFAULT NULL,
+	`manager_id`              varchar(20)     DEFAULT NULL,
+	`work_location`           varchar(100)    DEFAULT NULL,
+	`shift_id`                int(11)         DEFAULT NULL,
+	`bank_name`               varchar(100)    DEFAULT NULL,
+	`bank_account_no`         varchar(50)     DEFAULT NULL,
+	`bank_account_name`       varchar(100)    DEFAULT NULL,
+	`bank_branch`             varchar(100)    DEFAULT NULL,
+	`payment_method`          varchar(20)     NOT NULL DEFAULT 'bank_transfer',
+	`emergency_contact_name`  varchar(100)    DEFAULT NULL,
+	`emergency_contact_phone` varchar(30)     DEFAULT NULL,
+	`emergency_contact_rel`   varchar(30)     DEFAULT NULL,
+	`tax_id`                  varchar(30)     DEFAULT NULL,
+	`tax_exemption`           varchar(20)     DEFAULT NULL,
+	`social_insurance_no`     varchar(30)     DEFAULT NULL,
+	`photo`                   varchar(200)    DEFAULT NULL,
+	`notes`                   text,
+	`inactive`                tinyint(1)      NOT NULL DEFAULT '0',
+	PRIMARY KEY (`employee_id`),
+	UNIQUE KEY `emp_code` (`employee_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_employees` --
@@ -1074,13 +1112,15 @@ INSERT INTO `0_item_units` VALUES
 -- Structure of table `0_job_classes` --
 
 DROP TABLE IF EXISTS `0_job_classes`;
-
 CREATE TABLE IF NOT EXISTS `0_job_classes` (
-	`job_class_id` int(11) NOT NULL AUTO_INCREMENT,
-	`class_name` varchar(100) NOT NULL,
-	`pay_basis` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=monthly, 1=daily',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`job_class_id`)
+	`job_class_id`   int(11)      NOT NULL AUTO_INCREMENT,
+	`class_code`     varchar(20)  NOT NULL DEFAULT '',
+	`class_name`     varchar(100) NOT NULL DEFAULT '',
+	`pay_basis`      varchar(20)  NOT NULL DEFAULT 'monthly',
+	`description`    text,
+	`inactive`       tinyint(1)   NOT NULL DEFAULT '0',
+	PRIMARY KEY (`job_class_id`),
+	UNIQUE KEY `class_code` (`class_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_job_classes` --
@@ -1112,13 +1152,18 @@ INSERT INTO `0_journal` VALUES
 -- Structure of table `0_leave_details` --
 
 DROP TABLE IF EXISTS `0_leave_details`;
-
 CREATE TABLE IF NOT EXISTS `0_leave_details` (
-	`employee_id` int(11) NOT NULL,
-	`leave_id` int(11) NOT NULL,
-	`pay_rate` float(5) NOT NULL DEFAULT '1',
-	`date` date NOT NULL,
-	PRIMARY KEY (`employee_id`,`leave_id`,`date`)
+	`id`                int(11)      NOT NULL AUTO_INCREMENT,
+	`employee_id`       varchar(20)  NOT NULL DEFAULT '',
+	`leave_type_id`     int(11)      NOT NULL DEFAULT '0',
+	`from_date`         date         NOT NULL,
+	`to_date`           date         NOT NULL,
+	`days`              decimal(5,1) NOT NULL DEFAULT '0.0',
+	`approval_status`   varchar(10)  NOT NULL DEFAULT 'pending',
+	`approved_by`       varchar(20)  DEFAULT NULL,
+	`approved_date`     date         DEFAULT NULL,
+	`reason`            text,
+	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_leave_details` --
@@ -1126,14 +1171,22 @@ CREATE TABLE IF NOT EXISTS `0_leave_details` (
 -- Structure of table `0_leave_types` --
 
 DROP TABLE IF EXISTS `0_leave_types`;
-
 CREATE TABLE IF NOT EXISTS `0_leave_types` (
-	`leave_id` int(11) NOT NULL AUTO_INCREMENT,
-	`leave_name` varchar(100) NOT NULL,
-	`leave_code` varchar(3) NOT NULL,
-	`pay_rate` float(5) NOT NULL DEFAULT '0',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`leave_id`)
+	`leave_type_id`     int(11)      NOT NULL AUTO_INCREMENT,
+	`leave_code`        varchar(10)  NOT NULL DEFAULT '',
+	`leave_name`        varchar(60)  NOT NULL DEFAULT '',
+	`allotted_days`     decimal(5,1) NOT NULL DEFAULT '0.0',
+	`carry_forward`     tinyint(1)   NOT NULL DEFAULT '0',
+	`max_carry_days`    decimal(5,1) NOT NULL DEFAULT '0.0',
+	`encashable`        tinyint(1)   NOT NULL DEFAULT '0',
+	`gender`            char(1)      NOT NULL DEFAULT 'A',
+	`paid`              tinyint(1)   NOT NULL DEFAULT '1',
+	`require_approval`  tinyint(1)   NOT NULL DEFAULT '1',
+	`min_service_days`  int(11)      NOT NULL DEFAULT '0',
+	`description`       text,
+	`inactive`          tinyint(1)   NOT NULL DEFAULT '0',
+	PRIMARY KEY (`leave_type_id`),
+	UNIQUE KEY `leave_code` (`leave_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_leave_types` --
@@ -1187,12 +1240,20 @@ INSERT INTO `0_locations` VALUES
 -- Structure of table `0_overtime` --
 
 DROP TABLE IF EXISTS `0_overtime`;
-
 CREATE TABLE IF NOT EXISTS `0_overtime` (
-	`overtime_id` int(11) NOT NULL AUTO_INCREMENT,
-	`overtime_name` varchar(100) NOT NULL,
-	`pay_rate` float(5) NOT NULL DEFAULT '1',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`overtime_id`         int(11)      NOT NULL AUTO_INCREMENT,
+	`employee_id`         varchar(20)  NOT NULL DEFAULT '',
+	`overtime_date`       date         NOT NULL,
+	`hours`               decimal(5,2) NOT NULL DEFAULT '0.00',
+	`overtime_type`       varchar(20)  NOT NULL DEFAULT 'regular',
+	`pay_rate_multiplier` decimal(4,2) NOT NULL DEFAULT '1.50',
+	`account_code`        int(11)      DEFAULT NULL,
+	`dimension_id`        int(11)      DEFAULT NULL,
+	`dimension2_id`       int(11)      DEFAULT NULL,
+	`requires_approval`   tinyint(1)   NOT NULL DEFAULT '1',
+	`approval_status`     varchar(10)  NOT NULL DEFAULT 'pending',
+		`approved_by`     varchar(20)  DEFAULT NULL,
+	`notes`               text,
 	PRIMARY KEY (`overtime_id`)
 ) ENGINE=InnoDB;
 
@@ -1201,15 +1262,26 @@ CREATE TABLE IF NOT EXISTS `0_overtime` (
 -- Structure of table `0_pay_elements` --
 
 DROP TABLE IF EXISTS `0_pay_elements`;
-
 CREATE TABLE IF NOT EXISTS `0_pay_elements` (
-	`element_id` int(11) NOT NULL AUTO_INCREMENT,
-	`element_name` varchar(100) NOT NULL,
-	`account_code` varchar(15) NOT NULL,
-	`is_deduction` tinyint(1) NOT NULL DEFAULT '0',
-	`amount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0 = fixed amount, 1 = percentage of base pay',
+	`element_id`       int(11)      NOT NULL AUTO_INCREMENT,
+	`element_code`     varchar(20)  NOT NULL DEFAULT '',
+	`element_name`     varchar(100) NOT NULL DEFAULT '',
+	`element_type`     varchar(20)  NOT NULL DEFAULT 'earning',
+	`calculation_type` varchar(20)  NOT NULL DEFAULT 'fixed',
+	`formula`          text,
+	`default_amount`   decimal(15,2) NOT NULL DEFAULT '0.00',
+	`taxable`          tinyint(1)   NOT NULL DEFAULT '1',
+	`pensionable`      tinyint(1)   NOT NULL DEFAULT '1',
+	`account_code`     int(11)      DEFAULT NULL,
+	`dimension_id`     int(11)      DEFAULT NULL,
+	`dimension2_id`    int(11)      DEFAULT NULL,
+	`recurring`        tinyint(1)   NOT NULL DEFAULT '1',
+	`print_on_payslip` tinyint(1)   NOT NULL DEFAULT '1',
+	`order_num`        int(11)      NOT NULL DEFAULT '0',
+	`description`      text,
+	`inactive`         tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`element_id`),
-	UNIQUE (`account_code`)
+	UNIQUE KEY `element_code` (`element_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_pay_elements` --
@@ -1217,14 +1289,18 @@ CREATE TABLE IF NOT EXISTS `0_pay_elements` (
 -- Structure of table `0_pay_grades` --
 
 DROP TABLE IF EXISTS `0_pay_grades`;
-
 CREATE TABLE IF NOT EXISTS `0_pay_grades` (
-	`grade_id` tinyint(5) NOT NULL AUTO_INCREMENT,
-	`grade_name` varchar(30) NOT NULL DEFAULT '',
-	`position_id` int(11) NOT NULL,
-	`pay_amount` double NOT NULL DEFAULT '0',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`grade_id`)
+	`pay_grade_id`   int(11)       NOT NULL AUTO_INCREMENT,
+	`grade_code`     varchar(20)   NOT NULL DEFAULT '',
+	`grade_name`     varchar(100)  NOT NULL DEFAULT '',
+	`grade_level`    int(5)        NOT NULL DEFAULT '0',
+	`min_salary`     decimal(15,2) NOT NULL DEFAULT '0.00',
+	`mid_salary`     decimal(15,2) NOT NULL DEFAULT '0.00',
+	`max_salary`     decimal(15,2) NOT NULL DEFAULT '0.00',
+	`currency`       char(3)       NOT NULL DEFAULT '',
+	`inactive`       tinyint(1)    NOT NULL DEFAULT '0',
+	PRIMARY KEY (`pay_grade_id`),
+	UNIQUE KEY `grade_code` (`grade_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_pay_grades` --
@@ -1255,17 +1331,57 @@ INSERT INTO `0_payment_terms` VALUES
 -- Structure of table `0_positions` --
 
 DROP TABLE IF EXISTS `0_positions`;
-
 CREATE TABLE IF NOT EXISTS `0_positions` (
-	`position_id` int(11) NOT NULL AUTO_INCREMENT,
-	`job_class_id` int(11) NOT NULL,
-	`position_name` text NOT NULL,
-	`basic_amount` double NOT NULL DEFAULT '0',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	PRIMARY KEY (`position_id`)
+	`position_id`        int(11)      NOT NULL AUTO_INCREMENT,
+	`position_code`      varchar(20)  NOT NULL DEFAULT '',
+	`position_title`     varchar(100) NOT NULL DEFAULT '',
+	`department_id`      int(11)      DEFAULT NULL,
+	`job_class_id`       int(11)      DEFAULT NULL,
+	`pay_grade_id`       int(11)      DEFAULT NULL,
+	`reports_to`         int(11)      DEFAULT NULL,
+	`min_experience`     int(5)       NOT NULL DEFAULT '0',
+	`min_education`      varchar(50)  DEFAULT NULL,
+	`headcount_budget`   int(11)      NOT NULL DEFAULT '0',
+	`headcount_actual`   int(11)      NOT NULL DEFAULT '0',
+	`description`        text,
+	`inactive`           tinyint(1)   NOT NULL DEFAULT '0',
+	PRIMARY KEY (`position_id`),
+	UNIQUE KEY `position_code` (`position_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_positions` --
+
+-- Structure of table `0_payslips` --
+
+DROP TABLE IF EXISTS `0_payslips`;
+CREATE TABLE IF NOT EXISTS `0_payslips` (
+	`payslip_id`         int(11)       NOT NULL AUTO_INCREMENT,
+	`payslip_no`         varchar(30)   NOT NULL DEFAULT '',
+	`employee_id`        varchar(20)   NOT NULL DEFAULT '',
+	`period_id`          int(11)       NOT NULL DEFAULT '0',
+	`period_start`       date          NOT NULL,
+	`period_end`         date          NOT NULL,
+	`payment_date`       date          DEFAULT NULL,
+	`gross_salary`       decimal(15,2) NOT NULL DEFAULT '0.00',
+	`total_earnings`     decimal(15,2) NOT NULL DEFAULT '0.00',
+	`total_deductions`   decimal(15,2) NOT NULL DEFAULT '0.00',
+	`total_tax`          decimal(15,2) NOT NULL DEFAULT '0.00',
+	`net_salary`         decimal(15,2) NOT NULL DEFAULT '0.00',
+	`employer_cost`      decimal(15,2) NOT NULL DEFAULT '0.00',
+	`currency`           char(3)       NOT NULL DEFAULT '',
+	`exchange_rate`      decimal(15,6) NOT NULL DEFAULT '1.000000',
+	`payment_method`     varchar(20)   NOT NULL DEFAULT 'bank_transfer',
+	`bank_account`       varchar(50)   DEFAULT NULL,
+	`status`             varchar(20)   NOT NULL DEFAULT 'draft',
+	`approved_by`        varchar(20)   DEFAULT NULL,
+	`approved_date`      date          DEFAULT NULL,
+	`posted`             tinyint(1)    NOT NULL DEFAULT '0',
+	`journal_id`         int(11)       DEFAULT NULL,
+	`notes`              text,
+	PRIMARY KEY (`payslip_id`),
+	UNIQUE KEY `payslip_no` (`payslip_no`)
+) ENGINE=InnoDB;
+-- Data of table `0_payslips` --
 
 -- Structure of table `0_prices` --
 
@@ -1578,13 +1694,21 @@ INSERT INTO `0_refs` VALUES
 -- Structure of table `0_salary_structure` --
 
 DROP TABLE IF EXISTS `0_salary_structure`;
-
 CREATE TABLE IF NOT EXISTS `0_salary_structure` (
-	`position_id` int(11) NOT NULL,
-	`grade_id` tinyint(2) NOT NULL DEFAULT '0',
-	`element_id` int(11) NOT NULL,
-	`pay_amount` double NOT NULL DEFAULT '0',
-	PRIMARY KEY (`position_id`, `grade_id`, `element_id`)
+	`structure_id`      int(11)       NOT NULL AUTO_INCREMENT,
+	`structure_code`    varchar(20)   NOT NULL DEFAULT '',
+	`structure_name`    varchar(100)  NOT NULL DEFAULT '',
+	`employee_id`       varchar(20)   DEFAULT NULL,
+	`pay_grade_id`      int(11)       DEFAULT NULL,
+	`effective_from`    date          NOT NULL,
+	`effective_to`      date          DEFAULT NULL,
+	`base_salary`       decimal(15,2) NOT NULL DEFAULT '0.00',
+	`currency`          char(3)       NOT NULL DEFAULT '',
+	`formula`           text,
+	`is_default`        tinyint(1)    NOT NULL DEFAULT '0',
+	`inactive`          tinyint(1)    NOT NULL DEFAULT '0',
+	PRIMARY KEY (`structure_id`),
+	UNIQUE KEY `structure_code` (`structure_code`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_salary_structure` --
@@ -2506,3 +2630,642 @@ INSERT INTO `0_workorders` VALUES
 ('1', '001/2025', 'DEF', '2', '201', '2025-05-05', '0', '2025-05-05', '2025-05-05', '2', '1', '1', '0', '{}'),
 ('2', '002/2025', 'DEF', '5', '201', '2025-05-07', '2', '2025-05-27', '2025-05-07', '0', '0', '1', '0', '{}'),
 ('3', '003/2025', 'DEF', '5', '201', '2025-05-07', '2', '2025-05-27', '0000-00-00', '0', '0', '0', '0', '{}');
+
+-- ============================================================
+-- ATTENDANCE DEDUCTION RULES
+-- ============================================================
+
+-- Structure of table `0_attendance_deduction_rules` --
+
+DROP TABLE IF EXISTS `0_attendance_deduction_rules`;
+
+CREATE TABLE IF NOT EXISTS `0_attendance_deduction_rules` (
+	`rule_id`        int(11) NOT NULL AUTO_INCREMENT,
+	`rule_type`      tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=absence_count_based, 1=late_minutes_based',
+	`from_value`     double NOT NULL DEFAULT '0',
+	`to_value`       double NOT NULL DEFAULT '0',
+	`deduction_rate` double NOT NULL DEFAULT '0' COMMENT 'days of salary to deduct',
+	`day_of_week`    tinyint(1) DEFAULT NULL COMMENT 'NULL=all days',
+	`work_hours`     double DEFAULT '8',
+	`inactive`       tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`rule_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_attendance_deduction_rules` --
+
+-- ============================================================
+-- DEDUCTION CODES
+-- ============================================================
+
+-- Structure of table `0_deduction_codes` --
+
+DROP TABLE IF EXISTS `0_deduction_codes`;
+
+CREATE TABLE IF NOT EXISTS `0_deduction_codes` (
+	`deduction_id`   int(11) NOT NULL AUTO_INCREMENT,
+	`deduction_name` varchar(100) NOT NULL,
+	`account_code`   varchar(15) DEFAULT NULL,
+	`inactive`       tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`deduction_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_deduction_codes` --
+
+-- ============================================================
+-- DOCUMENT TYPES
+-- ============================================================
+
+-- Structure of table `0_document_types` --
+
+DROP TABLE IF EXISTS `0_document_types`;
+
+CREATE TABLE IF NOT EXISTS `0_document_types` (
+	`doc_type_id`   int(11) NOT NULL AUTO_INCREMENT,
+	`type_name`     varchar(100) NOT NULL,
+	`notify_before` int(11) DEFAULT '30' COMMENT 'days before expiry to alert',
+	`is_required`   tinyint(1) DEFAULT '0',
+	`inactive`      tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`doc_type_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_document_types` --
+
+INSERT INTO `0_document_types` (`type_name`, `notify_before`, `is_required`) VALUES
+('Passport', 60, 1),
+('National ID', 90, 1),
+('Residence Permit', 60, 0),
+('Work Permit', 60, 0),
+('Driving License', 30, 0),
+('Medical Certificate', 30, 0);
+
+-- ============================================================
+-- EMPLOYEE DEPENDENTS
+-- ============================================================
+
+-- Structure of table `0_employee_dependents` --
+
+DROP TABLE IF EXISTS `0_employee_dependents`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_dependents` (
+	`dependent_id`   int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`    varchar(20) NOT NULL,
+	`name`           varchar(100) NOT NULL,
+	`relationship`   varchar(30) NOT NULL COMMENT 'spouse, child, parent, sibling',
+	`birth_date`     date DEFAULT NULL,
+	`gender`         tinyint(1) DEFAULT '0',
+	`national_id`    varchar(100) DEFAULT NULL,
+	`is_beneficiary` tinyint(1) DEFAULT '0',
+	PRIMARY KEY (`dependent_id`),
+	KEY `employee_id` (`employee_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_dependents` --
+
+-- ============================================================
+-- EMPLOYEE DOCUMENTS
+-- ============================================================
+
+-- Structure of table `0_employee_documents` --
+
+DROP TABLE IF EXISTS `0_employee_documents`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_documents` (
+	`doc_id`        int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`   varchar(20) NOT NULL,
+	`doc_type_id`   int(11) NOT NULL,
+	`doc_name`      varchar(200) NOT NULL,
+	`file_path`     varchar(500) DEFAULT NULL,
+	`issue_date`    date DEFAULT NULL,
+	`expiry_date`   date DEFAULT NULL,
+	`notes`         text,
+	`uploaded_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`uploaded_by`   smallint(6) DEFAULT NULL,
+	PRIMARY KEY (`doc_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `expiry_date` (`expiry_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_documents` --
+
+-- ============================================================
+-- EMPLOYEE HISTORY
+-- ============================================================
+
+-- Structure of table `0_employee_history` --
+
+DROP TABLE IF EXISTS `0_employee_history`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_history` (
+	`history_id`        int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`       varchar(20) NOT NULL,
+	`change_type`       varchar(30) NOT NULL COMMENT 'hire, transfer, promotion, salary_change, grade_change, separation',
+	`effective_date`    date NOT NULL,
+	`old_department_id` int(11) DEFAULT NULL,
+	`new_department_id` int(11) DEFAULT NULL,
+	`old_position_id`   int(11) DEFAULT NULL,
+	`new_position_id`   int(11) DEFAULT NULL,
+	`old_grade_id`      int(11) DEFAULT NULL,
+	`new_grade_id`      int(11) DEFAULT NULL,
+	`old_salary`        double DEFAULT NULL,
+	`new_salary`        double DEFAULT NULL,
+	`reason`            text,
+	`approved_by`       varchar(20) DEFAULT NULL,
+	`created_date`      timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by`        smallint(6) DEFAULT NULL,
+	PRIMARY KEY (`history_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `effective_date` (`effective_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_history` --
+
+-- ============================================================
+-- EMPLOYEE LOANS
+-- ============================================================
+
+-- Structure of table `0_employee_loans` --
+
+DROP TABLE IF EXISTS `0_employee_loans`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_loans` (
+	`loan_id`            int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`        varchar(20) NOT NULL,
+	`loan_type_id`       int(11) NOT NULL,
+	`loan_amount`        double NOT NULL DEFAULT '0',
+	`interest_rate`      double DEFAULT '0',
+	`installments`       int(11) NOT NULL DEFAULT '1',
+	`installment_amount` double NOT NULL DEFAULT '0',
+	`outstanding_amount` double NOT NULL DEFAULT '0',
+	`loan_date`          date NOT NULL,
+	`first_repayment`    date NOT NULL,
+	`status`             tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=pending, 1=active, 2=completed, 3=cancelled',
+	`approved_by`        varchar(20) DEFAULT NULL,
+	`approval_date`      date DEFAULT NULL,
+	`gl_trans_no`        int(11) DEFAULT NULL,
+	`notes`              text,
+	PRIMARY KEY (`loan_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_loans` --
+
+-- ============================================================
+-- EMPLOYEE SALARY (personal overrides)
+-- ============================================================
+
+-- Structure of table `0_employee_salary` --
+
+DROP TABLE IF EXISTS `0_employee_salary`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_salary` (
+	`salary_id`      int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`    varchar(20) NOT NULL,
+	`element_id`     int(11) NOT NULL,
+	`amount`         double NOT NULL DEFAULT '0',
+	`formula`        text DEFAULT NULL,
+	`effective_from` date NOT NULL,
+	`effective_to`   date DEFAULT NULL,
+	`is_active`      tinyint(1) NOT NULL DEFAULT '1',
+	`reference`      varchar(60) DEFAULT NULL,
+	PRIMARY KEY (`salary_id`),
+	UNIQUE KEY `unique_emp_element` (`employee_id`, `element_id`, `effective_from`),
+	KEY `employee_id` (`employee_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_salary` --
+
+-- ============================================================
+-- EOS CALCULATION (End of Service tiers)
+-- ============================================================
+
+-- Structure of table `0_eos_calculation` --
+
+DROP TABLE IF EXISTS `0_eos_calculation`;
+
+CREATE TABLE IF NOT EXISTS `0_eos_calculation` (
+	`eos_id`           int(11) NOT NULL AUTO_INCREMENT,
+	`from_years`       double NOT NULL DEFAULT '0',
+	`to_years`         double DEFAULT NULL,
+	`termination_rate` double NOT NULL DEFAULT '0' COMMENT '% of monthly salary per year',
+	`resignation_rate` double NOT NULL DEFAULT '0',
+	`description`      text,
+	PRIMARY KEY (`eos_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_eos_calculation` --
+
+-- ============================================================
+-- HOLIDAYS
+-- ============================================================
+
+-- Structure of table `0_holidays` --
+
+DROP TABLE IF EXISTS `0_holidays`;
+
+CREATE TABLE IF NOT EXISTS `0_holidays` (
+	`holiday_id`   int(11) NOT NULL AUTO_INCREMENT,
+	`holiday_name` varchar(100) NOT NULL,
+	`holiday_date` date NOT NULL,
+	`to_date`      date DEFAULT NULL COMMENT 'for multi-day holidays',
+	`recurring`    tinyint(1) NOT NULL DEFAULT '0' COMMENT '1=repeats yearly',
+	`is_paid`      tinyint(1) NOT NULL DEFAULT '1',
+	`description`  text,
+	PRIMARY KEY (`holiday_id`),
+	KEY `holiday_date` (`holiday_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_holidays` --
+
+-- ============================================================
+-- HR SETTINGS
+-- ============================================================
+
+-- Structure of table `0_hr_settings` --
+
+DROP TABLE IF EXISTS `0_hr_settings`;
+
+CREATE TABLE IF NOT EXISTS `0_hr_settings` (
+	`setting_id`    int(11) NOT NULL AUTO_INCREMENT,
+	`setting_key`   varchar(60) NOT NULL,
+	`setting_value` text,
+	`description`   varchar(200) DEFAULT NULL,
+	PRIMARY KEY (`setting_id`),
+	UNIQUE KEY `setting_key` (`setting_key`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_hr_settings` --
+
+INSERT INTO `0_hr_settings` (`setting_key`, `setting_value`, `description`) VALUES
+('payroll_cycle',               'monthly',           'Payroll frequency: monthly, biweekly, weekly'),
+('probation_months',            '3',                 'Default probation period in months'),
+('fiscal_year_start_month',     '1',                 'Month number for fiscal year start'),
+('auto_leave_accrual',          '1',                 '1=auto-accrue leave monthly'),
+('leave_year_reset_month',      '1',                 'Month to reset/carryforward leave balances'),
+('overtime_calculation_base',   'basic',             'basic or gross for OT hourly rate'),
+('tax_calculation_method',      'annual_projected',  'annual_projected or month_standalone'),
+('payroll_approval_required',   '1',                 'Require approval before payment'),
+('default_payment_method',      '0',                 '0=bank_transfer, 1=cash, 2=check'),
+('attendance_deduction_type',   '0',                 '0=absence_based, 1=time_based'),
+('employer_expense_account',    '',                  'Default employer contribution expense GL account'),
+('tax_payable_account',         '',                  'Tax payable liability GL account'),
+('loan_receivable_account',     '',                  'Default loan receivable GL account'),
+('eos_calculation_factor',      '1',                 'Salary multiplication factor for EOS calculation'),
+('eos_gratuity_account',        '',                  'Gratuity/EOS expense GL account');
+
+-- ============================================================
+-- LEAVE BALANCES
+-- ============================================================
+
+-- Structure of table `0_leave_balances` --
+
+DROP TABLE IF EXISTS `0_leave_balances`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_balances` (
+	`balance_id`      int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`     varchar(20) NOT NULL,
+	`leave_id`        int(11) NOT NULL,
+	`fiscal_year`     int(4) NOT NULL,
+	`entitled`        double NOT NULL DEFAULT '0',
+	`carried_forward` double NOT NULL DEFAULT '0',
+	`taken`           double NOT NULL DEFAULT '0',
+	`pending`         double NOT NULL DEFAULT '0' COMMENT 'pending approval',
+	`adjusted`        double NOT NULL DEFAULT '0' COMMENT 'manual adjustment',
+	PRIMARY KEY (`balance_id`),
+	UNIQUE KEY `emp_leave_year` (`employee_id`, `leave_id`, `fiscal_year`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_balances` --
+
+-- ============================================================
+-- LEAVE POLICIES
+-- ============================================================
+
+-- Structure of table `0_leave_policies` --
+
+DROP TABLE IF EXISTS `0_leave_policies`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_policies` (
+	`policy_id`            int(11) NOT NULL AUTO_INCREMENT,
+	`policy_name`          varchar(100) NOT NULL,
+	`leave_id`             int(11) NOT NULL,
+	`grade_id`             int(11) DEFAULT NULL COMMENT 'NULL=all grades',
+	`employment_type`      tinyint(1) DEFAULT NULL COMMENT 'NULL=all types',
+	`annual_entitlement`   double NOT NULL DEFAULT '0',
+	`accrual_method`       tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=annual_grant, 1=monthly_accrual, 2=quarterly',
+	`probation_applicable` tinyint(1) NOT NULL DEFAULT '0',
+	`min_service_months`   int(11) NOT NULL DEFAULT '0',
+	`effective_from`       date NOT NULL,
+	`effective_to`         date DEFAULT NULL,
+	`inactive`             tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`policy_id`),
+	KEY `leave_id` (`leave_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_policies` --
+
+-- ============================================================
+-- LEAVE REQUESTS
+-- ============================================================
+
+-- Structure of table `0_leave_requests` --
+
+DROP TABLE IF EXISTS `0_leave_requests`;
+
+CREATE TABLE IF NOT EXISTS `0_leave_requests` (
+	`request_id`       int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`      varchar(20) NOT NULL,
+	`leave_id`         int(11) NOT NULL,
+	`from_date`        date NOT NULL,
+	`to_date`          date NOT NULL,
+	`days`             double NOT NULL DEFAULT '0',
+	`half_day`         tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=full, 1=first_half, 2=second_half',
+	`reason`           text,
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=pending, 1=approved, 2=rejected, 3=cancelled',
+	`approved_by`      varchar(20) DEFAULT NULL,
+	`approval_date`    datetime DEFAULT NULL,
+	`approval_remarks` text,
+	`doc_attachment`   varchar(500) DEFAULT NULL,
+	`request_date`     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`request_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `status` (`status`),
+	KEY `from_date` (`from_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_leave_requests` --
+
+-- ============================================================
+-- LOAN REPAYMENTS
+-- ============================================================
+
+-- Structure of table `0_loan_repayments` --
+
+DROP TABLE IF EXISTS `0_loan_repayments`;
+
+CREATE TABLE IF NOT EXISTS `0_loan_repayments` (
+	`repayment_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`loan_id`          int(11) NOT NULL,
+	`installment_no`   int(11) NOT NULL,
+	`due_date`         date NOT NULL,
+	`principal_amount` double NOT NULL DEFAULT '0',
+	`interest_amount`  double NOT NULL DEFAULT '0',
+	`total_amount`     double NOT NULL DEFAULT '0',
+	`paid_amount`      double NOT NULL DEFAULT '0',
+	`paid_date`        date DEFAULT NULL,
+	`payslip_id`       int(11) DEFAULT NULL COMMENT 'linked payslip if auto-deducted',
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=scheduled, 1=paid, 2=overdue',
+	PRIMARY KEY (`repayment_id`),
+	KEY `loan_id` (`loan_id`),
+	KEY `due_date` (`due_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_loan_repayments` --
+
+-- ============================================================
+-- LOAN TYPES
+-- ============================================================
+
+-- Structure of table `0_loan_types` --
+
+DROP TABLE IF EXISTS `0_loan_types`;
+
+CREATE TABLE IF NOT EXISTS `0_loan_types` (
+	`loan_type_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`loan_type_name`   varchar(100) NOT NULL,
+	`loan_type_code`   varchar(20) NOT NULL,
+	`interest_rate`    double NOT NULL DEFAULT '0',
+	`max_amount`       double DEFAULT NULL,
+	`max_installments` int(11) DEFAULT NULL,
+	`max_active_loans` int(11) NOT NULL DEFAULT '1',
+	`account_code`     varchar(15) NOT NULL DEFAULT '' COMMENT 'loan receivable account',
+	`interest_account` varchar(15) DEFAULT NULL,
+	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`loan_type_id`),
+	UNIQUE KEY `loan_type_code` (`loan_type_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_loan_types` --
+
+-- ============================================================
+-- OVERTIME BUDGET
+-- ============================================================
+
+-- Structure of table `0_overtime_budget` --
+
+DROP TABLE IF EXISTS `0_overtime_budget`;
+
+CREATE TABLE IF NOT EXISTS `0_overtime_budget` (
+	`budget_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`fiscal_year`   int(4) NOT NULL,
+	`month`         tinyint(2) NOT NULL,
+	`budget_hours`  double NOT NULL DEFAULT '0',
+	`budget_amount` double NOT NULL DEFAULT '0',
+	PRIMARY KEY (`budget_id`),
+	UNIQUE KEY `year_month` (`fiscal_year`, `month`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_overtime_budget` --
+
+-- ============================================================
+-- OVERTIME REQUESTS
+-- ============================================================
+
+-- Structure of table `0_overtime_requests` --
+
+DROP TABLE IF EXISTS `0_overtime_requests`;
+
+CREATE TABLE IF NOT EXISTS `0_overtime_requests` (
+	`request_id`    int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`   varchar(20) NOT NULL,
+	`overtime_id`   int(11) NOT NULL,
+	`date`          date NOT NULL,
+	`hours`         double NOT NULL DEFAULT '0',
+	`reason`        text,
+	`status`        tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=pending, 1=approved, 2=rejected',
+	`approved_by`   varchar(20) DEFAULT NULL,
+	`approval_date` datetime DEFAULT NULL,
+	`request_date`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`request_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `date` (`date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_overtime_requests` --
+
+-- ============================================================
+-- PAYROLL PERIODS
+-- ============================================================
+
+-- Structure of table `0_payroll_periods` --
+
+DROP TABLE IF EXISTS `0_payroll_periods`;
+
+CREATE TABLE IF NOT EXISTS `0_payroll_periods` (
+	`period_id`           int(11) NOT NULL AUTO_INCREMENT,
+	`period_name`         varchar(60) NOT NULL,
+	`from_date`           date NOT NULL,
+	`to_date`             date NOT NULL,
+	`pay_date`            date DEFAULT NULL,
+	`department_id`       int(11) DEFAULT NULL COMMENT 'NULL=all departments',
+	`status`              tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=draft, 1=calculated, 2=approved, 3=posted, 4=paid, 5=closed, 6=voided',
+	`total_gross`         double NOT NULL DEFAULT '0',
+	`total_deductions`    double NOT NULL DEFAULT '0',
+	`total_net`           double NOT NULL DEFAULT '0',
+	`total_employer_cost` double NOT NULL DEFAULT '0',
+	`approved_by`         varchar(20) DEFAULT NULL,
+	`approval_date`       datetime DEFAULT NULL,
+	`gl_trans_no`         int(11) DEFAULT NULL,
+	`created_by`          smallint(6) DEFAULT NULL,
+	`created_date`        timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`notes`               text,
+	PRIMARY KEY (`period_id`),
+	KEY `from_date` (`from_date`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_payroll_periods` --
+
+-- ============================================================
+-- PAYSLIP DETAILS (line items per payslip)
+-- ============================================================
+
+-- Structure of table `0_payslip_details` --
+
+DROP TABLE IF EXISTS `0_payslip_details`;
+
+CREATE TABLE IF NOT EXISTS `0_payslip_details` (
+	`detail_id`         int(11) NOT NULL AUTO_INCREMENT,
+	`payslip_id`        int(11) NOT NULL,
+	`element_id`        int(11) NOT NULL,
+	`element_name`      varchar(100) NOT NULL COMMENT 'snapshot at payroll time',
+	`element_category`  tinyint(1) NOT NULL DEFAULT '0',
+	`is_deduction`      tinyint(1) NOT NULL DEFAULT '0',
+	`amount_type`       tinyint(1) NOT NULL DEFAULT '0',
+	`base_amount`       double NOT NULL DEFAULT '0' COMMENT 'calculation base',
+	`rate`              double NOT NULL DEFAULT '0' COMMENT 'percentage rate if applicable',
+	`calculated_amount` double NOT NULL DEFAULT '0',
+	`adjusted_amount`   double DEFAULT NULL COMMENT 'manual override',
+	`final_amount`      double NOT NULL DEFAULT '0',
+	`account_code`      varchar(15) NOT NULL DEFAULT '',
+	`formula_used`      text DEFAULT NULL COMMENT 'audit: formula that produced this',
+	`is_taxable`        tinyint(1) NOT NULL DEFAULT '1',
+	`display_order`     int(11) NOT NULL DEFAULT '0',
+	`memo`              varchar(255) DEFAULT NULL,
+	PRIMARY KEY (`detail_id`),
+	KEY `payslip_id` (`payslip_id`),
+	KEY `element_id` (`element_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_payslip_details` --
+
+-- ============================================================
+-- STATUTORY DEDUCTIONS (social insurance, pension, etc.)
+-- ============================================================
+
+-- Structure of table `0_statutory_deductions` --
+
+DROP TABLE IF EXISTS `0_statutory_deductions`;
+
+CREATE TABLE IF NOT EXISTS `0_statutory_deductions` (
+	`statutory_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`statutory_name`   varchar(100) NOT NULL,
+	`statutory_code`   varchar(20) NOT NULL,
+	`employee_rate`    double NOT NULL DEFAULT '0' COMMENT '% of applicable base',
+	`employer_rate`    double NOT NULL DEFAULT '0',
+	`employee_fixed`   double NOT NULL DEFAULT '0',
+	`employer_fixed`   double NOT NULL DEFAULT '0',
+	`ceiling_amount`   double DEFAULT NULL COMMENT 'max salary subject to this deduction',
+	`floor_amount`     double DEFAULT NULL,
+	`calculation_base` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=basic, 1=gross',
+	`employee_account` varchar(15) DEFAULT NULL,
+	`employer_account` varchar(15) DEFAULT NULL,
+	`effective_from`   date NOT NULL,
+	`effective_to`     date DEFAULT NULL,
+	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`statutory_id`),
+	UNIQUE KEY `statutory_code` (`statutory_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_statutory_deductions` --
+
+-- ============================================================
+-- TAX BRACKETS (configurable income tax slabs)
+-- ============================================================
+
+-- Structure of table `0_tax_brackets` --
+
+DROP TABLE IF EXISTS `0_tax_brackets`;
+
+CREATE TABLE IF NOT EXISTS `0_tax_brackets` (
+	`bracket_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`bracket_name`   varchar(60) NOT NULL,
+	`from_amount`    double NOT NULL DEFAULT '0',
+	`to_amount`      double DEFAULT NULL,
+	`rate`           double NOT NULL DEFAULT '0' COMMENT 'tax percentage',
+	`fixed_amount`   double NOT NULL DEFAULT '0' COMMENT 'fixed tax on lower portion',
+	`effective_from` date NOT NULL,
+	`effective_to`   date DEFAULT NULL,
+	PRIMARY KEY (`bracket_id`),
+	KEY `effective_from` (`effective_from`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_tax_brackets` --
+
+-- ============================================================
+-- WORK SHIFTS
+-- ============================================================
+
+-- Structure of table `0_work_shifts` --
+
+DROP TABLE IF EXISTS `0_work_shifts`;
+
+CREATE TABLE IF NOT EXISTS `0_work_shifts` (
+	`shift_id`        int(11) NOT NULL AUTO_INCREMENT,
+	`shift_name`      varchar(60) NOT NULL,
+	`start_time`      time NOT NULL,
+	`end_time`        time NOT NULL,
+	`break_duration`  int(11) NOT NULL DEFAULT '60' COMMENT 'minutes',
+	`work_hours`      double NOT NULL DEFAULT '8.00',
+	`is_night_shift`  tinyint(1) NOT NULL DEFAULT '0',
+	`inactive`        tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`shift_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_work_shifts` --
+
+INSERT INTO `0_work_shifts` (`shift_name`, `start_time`, `end_time`, `break_duration`, `work_hours`) VALUES
+('Regular Shift', '08:00:00', '17:00:00', 60, 8);
+
+-- ============================================================
+-- WORKING DAYS (weekly configuration)
+-- ============================================================
+
+-- Structure of table `0_working_days` --
+
+DROP TABLE IF EXISTS `0_working_days`;
+
+CREATE TABLE IF NOT EXISTS `0_working_days` (
+	`id`          int(11) NOT NULL AUTO_INCREMENT,
+	`day_of_week` tinyint(1) NOT NULL COMMENT '0=Sunday, 1=Monday ... 6=Saturday',
+	`is_working`  tinyint(1) NOT NULL DEFAULT '1',
+	`work_hours`  double NOT NULL DEFAULT '8',
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `day_of_week` (`day_of_week`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_working_days` -- (Mon-Fri working, Sat-Sun off)
+
+INSERT INTO `0_working_days` (`day_of_week`, `is_working`, `work_hours`) VALUES
+(0, 0, 0),
+(1, 1, 8),
+(2, 1, 8),
+(3, 1, 8),
+(4, 1, 8),
+(5, 1, 8),
+(6, 0, 0);
+
+-- =============================================================
+-- END OF NEW HRM TABLES
+-- =============================================================
+

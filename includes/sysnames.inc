@@ -44,7 +44,8 @@ $systypes_array = array (
 	ST_ITEM => _('Item'),
 	ST_FIXEDASSET => _('Fixed Asset'),
 	ST_BANKACCOUNT => _("Bank Account"),
-	ST_PAYSLIP => _('Employee Payslip')
+	ST_PAYSLIP    => _('Employee Payslip'),
+	ST_EMPPAYMENT => _('Employee Payment')
 );
 
 $fa_systypes_array = array (
@@ -74,7 +75,9 @@ $type_shortcuts = array(
 	ST_SALESORDER => _('SO'),
 	ST_SALESQUOTE => _('SQ'),
 	ST_COSTUPDATE => _('CU'),
-	ST_DIMENSION => _('Dim')
+	ST_DIMENSION  => _('Dim'),
+	ST_PAYSLIP    => _('PS'),
+	ST_EMPPAYMENT => _('EP')
 );
 
 //----------------------------------------------------------------------------------
