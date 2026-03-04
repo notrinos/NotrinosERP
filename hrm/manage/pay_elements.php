@@ -16,6 +16,7 @@ $path_to_root  = '../..';
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 
 //--------------------------------------------------------------------------
@@ -34,14 +35,31 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error(_('Selected account is being used for another element.'));
 		set_focus('account_code');
 	}
+	elseif((int)get_post('amount_type', 0) == HRM_AMTTYPE_FORMULA && empty(trim(get_post('formula')))) {
+		display_error(_('Formula is required when Amount Type is Formula.'));
+		set_focus('formula');
+	}
 	else {
+		$extra = array(
+			'element_code' => get_post('element_code', ''),
+			'element_category' => get_post('element_category', ((int)get_post('is_deduction', 0) ? 2 : 1)),
+			'default_amount' => input_num('default_amount'),
+			'formula' => get_post('formula', ''),
+			'employer_account' => get_post('employer_account', ''),
+			'is_taxable' => get_post('is_taxable', 1),
+			'affects_gross' => get_post('affects_gross', 1),
+			'max_amount' => get_post('max_amount', ''),
+			'min_amount' => get_post('min_amount', ''),
+			'display_order' => get_post('display_order', 0),
+			'description' => get_post('description', '')
+		);
 
 		if($selected_id == '') {
-			add_pay_element($_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type']);
+			add_pay_element($_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
 			display_notification(_('Pay element has been added.'));
 		}
 		else {
-			update_pay_element($selected_id, $_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type']);
+			update_pay_element($selected_id, $_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
 			display_notification(_('The selected pay element has been updated.'));
 		}
 		
@@ -65,16 +83,29 @@ if($Mode == 'Delete') {
 if($Mode == 'RESET') {
 	$selected_id = '';
 	$_POST['account_code'] = '';
+	$_POST['element_code'] = '';
 	$_POST['element_name'] = '';
+	$_POST['element_category'] = 1;
+	$_POST['default_amount'] = '';
+	$_POST['formula'] = '';
+	$_POST['employer_account'] = '';
+	$_POST['is_taxable'] = 1;
+	$_POST['affects_gross'] = 1;
+	$_POST['max_amount'] = '';
+	$_POST['min_amount'] = '';
+	$_POST['display_order'] = 0;
+	$_POST['description'] = '';
 }
 
 //--------------------------------------------------------------------------
 
 $result = get_pay_elements();
+$categories = hrm_get_element_categories();
+$amount_types = hrm_get_amount_types();
 
 start_form();
 start_table(TABLESTYLE2);
-$th = array(_('Element Name'), _('Element Type'), _('Amount Type'), _('Account Code'), _('Account Name'), '', '');
+$th = array(_('Code'), _('Element Name'), _('Category'), _('Element Type'), _('Amount Type'), _('Account Code'), _('Account Name'), '', '');
 
 table_header($th);
 
@@ -83,9 +114,11 @@ while($myrow = db_fetch($result)) {
 
 	alt_table_row_color($k);
 
+	label_cell($myrow['element_code']);
 	label_cell($myrow['element_name']);
+	label_cell(isset($categories[$myrow['element_category']]) ? $categories[$myrow['element_category']] : '-');
 	label_cell($myrow['is_deduction'] == 0 ? _('Earnings') : _('Deduction'));
-	label_cell($myrow['amount_type'] == 0 ? _('Fixed Amount') : _('Percentage of Base Pay'));
+	label_cell(isset($amount_types[$myrow['amount_type']]) ? $amount_types[$myrow['amount_type']] : _('Fixed Amount'));
 	label_cell($myrow['account_code'], "align='center'");
 	label_cell($myrow['account_name']);
 	edit_button_cell('Edit'.$myrow['element_id'], _('Edit'));
@@ -104,18 +137,45 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		$myrow = get_pay_element($selected_id);
+		$_POST['element_code']  = @$myrow['element_code'];
 		$_POST['element_name']  = $myrow['element_name'];
 		$_POST['account_code']  = $myrow['account_code'];
 		$_POST['is_deduction'] = $myrow['is_deduction'];
 		$_POST['amount_type'] = $myrow['amount_type'];
+		$_POST['element_category'] = @$myrow['element_category'];
+		$_POST['default_amount'] = @$myrow['default_amount'];
+		$_POST['formula'] = @$myrow['formula'];
+		$_POST['employer_account'] = @$myrow['employer_account'];
+		$_POST['is_taxable'] = isset($myrow['is_taxable']) ? $myrow['is_taxable'] : 1;
+		$_POST['affects_gross'] = isset($myrow['affects_gross']) ? $myrow['affects_gross'] : 1;
+		$_POST['max_amount'] = @$myrow['max_amount'];
+		$_POST['min_amount'] = @$myrow['min_amount'];
+		$_POST['display_order'] = @$myrow['display_order'];
+		$_POST['description'] = @$myrow['description'];
 	}
 	hidden('selected_id', $selected_id);
 }
 
+text_row_ex(_('Element Code:'), 'element_code', 20, 20);
 text_row_ex(_('Element Name:'), 'element_name', 37, 50);
+label_row(_('Element Category:'), array_selector('element_category', get_post('element_category', 1), $categories));
 gl_all_accounts_list_row(_('Select Account:'), 'account_code', null, true);
+gl_all_accounts_list_row(_('Employer Account:'), 'employer_account', null, true, true, _('Optional'));
 label_row(_('Element Type:'), radio(_('Earnings'), 'is_deduction', 0, 1).'&nbsp;&nbsp;'.radio(_('Deduction'), 'is_deduction', 1));
-label_row(_('Amount Type:'), radio(_('Fixed Amount'), 'amount_type', 0, 1).'&nbsp;&nbsp;'.radio(_('Percentage(%)'), 'amount_type', 1));
+label_row(_('Amount Type:'),
+	radio(_('Fixed Amount'), 'amount_type', 0, 1).'&nbsp;&nbsp;'
+	.radio(_('Percentage of Basic'), 'amount_type', 1).'&nbsp;&nbsp;'
+	.radio(_('Percentage of Gross'), 'amount_type', 2).'&nbsp;&nbsp;'
+	.radio(_('Formula'), 'amount_type', 3).'&nbsp;&nbsp;'
+	.radio(_('Attendance Based'), 'amount_type', 4));
+amount_row(_('Default Amount:'), 'default_amount');
+text_row(_('Formula:'), 'formula', null, 50, 255);
+yesno_list_row(_('Taxable:'), 'is_taxable');
+yesno_list_row(_('Affects Gross:'), 'affects_gross');
+amount_row(_('Minimum Amount:'), 'min_amount');
+amount_row(_('Maximum Amount:'), 'max_amount');
+small_amount_row(_('Display Order:'), 'display_order', get_post('display_order', 0), 0, 9999);
+textarea_row(_('Description:'), 'description', null, 50, 3);
 
 end_table(1);
 

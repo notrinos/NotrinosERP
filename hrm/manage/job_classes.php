@@ -10,12 +10,18 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+/**
+ * Manage Job Classes — per HRM_DEVELOPMENT_PLAN.md Section 6 & 10.2
+ * Supports 3 pay bases: Monthly (0), Daily (1), Hourly (2)
+ */
+
 $page_security = 'SA_JOBCLASS';
 $path_to_root  = '../..';
 
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
 
 //--------------------------------------------------------------------------
@@ -81,7 +87,8 @@ while ($myrow = db_fetch($result)) {
 
 	label_cell($myrow['job_class_id']);
 	label_cell($myrow['class_name']);
-	label_cell($myrow['pay_basis'] === '0' ? _('Monthly') : _('Daily'));
+	$basis_types = hrm_get_pay_basis_types();
+	label_cell(isset($basis_types[$myrow['pay_basis']]) ? $basis_types[$myrow['pay_basis']] : '-');
 	inactive_control_cell($myrow['job_class_id'], $myrow['inactive'], 'job_classes', 'job_class_id');
 	edit_button_cell('Edit'.$myrow['job_class_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['job_class_id'], _('Delete'));
@@ -104,7 +111,11 @@ if($selected_id != '') {
 }
 
 text_row_ex(_('Class Name:'), 'class_name', 50, 60);
-label_row(_('Pay Basis:'), radio(_('Monthly salary'), 'pay_basis', 0, 1).'&nbsp;&nbsp;'.radio(_('Daily wage'), 'pay_basis', 1));
+label_row(_('Pay Basis:'), 
+	radio(_('Monthly salary'), 'pay_basis', HRM_PAY_MONTHLY, 1) . '&nbsp;&nbsp;' .
+	radio(_('Daily wage'), 'pay_basis', HRM_PAY_DAILY) . '&nbsp;&nbsp;' .
+	radio(_('Hourly rate'), 'pay_basis', HRM_PAY_HOURLY)
+);
 
 end_table(1);
 

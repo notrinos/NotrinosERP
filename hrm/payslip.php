@@ -55,7 +55,7 @@ if (isset($_GET['AddedID'])) {
 		display_note(get_gl_view_str($trans_type, $trans_no, _('&View this Transaction')));
 
 		reset_focus();
-		hyperlink_params($path_to_root.'/hrm/employee_bank_entry.php', _('Make Payment &Advice for this Payslip'), 'PayslipNo='.$trans_no);
+		hyperlink_params($path_to_root.'/hrm/transactions/employee_bank_entry.php', _('Make Payment &Advice for this Payslip'), 'PayslipNo='.$trans_no);
 		hyperlink_params($_SERVER['PHP_SELF'], _('Enter &New Payslip'), 'NewPayslip=Yes');
 
 		hyperlink_params($path_to_root.'/admin/attachments.php', _('Add an Attachment'), 'filterType='.$trans_type.'&trans_no='.$trans_no);

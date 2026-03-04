@@ -34,7 +34,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 
 	$position = get_job_position($position_id);
 	$elements = get_pay_elements();
-	$th = array(_('Pay Element'), _('Element Type'), _('Amount Type'), _('Amount'), '');
+	$th = array(_('Pay Element'), _('Element Type'), _('Amount Type'), _('Amount'), _('Effective From'), '');
 
 	start_table(TABLESTYLE2, "width='50%'");
 	table_header($th);
@@ -48,8 +48,9 @@ function display_salary_structure($position_id, $grade_id=0) {
 
 	$k = 0;
 	
+	$as_of_date = get_post('effective_from', Today());
 	foreach($elements as $element) {
-		$amount = get_salary_structure_amount($position_id, $grade_id, $element['element_id']);
+		$amount = get_salary_structure_amount($position_id, $grade_id, $element['element_id'], $as_of_date);
 		alt_table_row_color($k);
 		label_cell($element['element_name']);
 		label_cell($element['is_deduction'] == 0 ? _('Earnings') : _('Deduction'));
@@ -59,6 +60,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 			amount_cell($amount);
 		else
 			label_cell(percent_format($amount).'%', "align='right'");
+		label_cell($as_of_date ? $as_of_date : '-');
 		edit_button_cell('Edit'.$element['element_id'], _('Edit'));
 		end_row();
 	}
@@ -69,7 +71,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 		if($Mode == 'Edit') {
 
 			$myrow = get_pay_element($selected_id);
-			$amount = get_salary_structure_amount(get_post('position_id'), get_post('_tabs_sel'), $selected_id);
+			$amount = get_salary_structure_amount(get_post('position_id'), get_post('_tabs_sel'), $selected_id, get_post('effective_from', Today()));
 			$_POST['amount'] = $myrow['amount_type'] == 0 ? price_format($amount) : percent_format($amount);
 
 			start_table(TABLESTYLE2);
@@ -79,6 +81,9 @@ function display_salary_structure($position_id, $grade_id=0) {
 				amount_row(_('Amount:'), 'amount', null, null, null, null, true);
 			else
 				percent_row(_('Percentage of Base Pay:'), 'amount');
+			date_row(_('Effective From:'), 'effective_from', get_post('effective_from', Today()), null, 0, 0, 1001);
+			date_row(_('Effective To:'), 'effective_to', get_post('effective_to', ''), null, 0, 0, 1001);
+			text_row(_('Formula Override:'), 'formula', get_post('formula', ''), 50, 255);
 
 			end_table(1);
 
@@ -106,12 +111,22 @@ if ($Mode=='UPDATE_ITEM') {
 		set_focus('amount');
 	}
 	else {
+		$effective_from = get_post('effective_from', Today());
+		$effective_to = get_post('effective_to', '');
+		$formula = get_post('formula', '');
 
-		if(!salary_structure_element_exist($_POST['position_id'], get_post('_tabs_sel'), $selected_id)) {
-			add_salary_structure_element($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'));
+		$extra = array(
+			'effective_from' => $effective_from,
+			'effective_to' => $effective_to,
+			'formula' => $formula,
+			'is_active' => 1
+		);
+
+		if(!salary_structure_element_exist($_POST['position_id'], get_post('_tabs_sel'), $selected_id, $effective_from)) {
+			add_salary_structure_element($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra);
 		}
 		else {
-			update_salary_structure($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'));
+			update_salary_structure($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra);
 		}
 
 		display_notification(_('The selected pay element has been updated.'));
@@ -126,6 +141,7 @@ start_form();
 start_table();
 start_row();
 positions_list_cells(_('Job Position:'), 'position_id', null, true, false);
+date_cells(_('As of Date:'), 'effective_from', get_post('effective_from', Today()));
 end_row();
 end_table();
 

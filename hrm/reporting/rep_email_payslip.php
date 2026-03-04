@@ -18,4 +18,6 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
-// TODO: Implement Email Payslip report output
+
+define('HRM_PAYSLIP_EMAIL_REPORT', true);
+require_once($path_to_root.'/hrm/reporting/rep_payslip.php');

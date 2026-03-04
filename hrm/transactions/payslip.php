@@ -9,12 +9,12 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-$page_security = 'SA_PAYSLIP';
-$path_to_root = "../..";
-include($path_to_root . "/includes/session.inc");
-page(_("Payslip Entry"));
 
-// TODO: Implement
-
-end_page();
+/**
+ * Backward-compatible entry point for payslip transaction screen.
+ *
+ * Phase 1.19 migrates payslip processing into `hrm/transactions/`.
+ * The full processing implementation currently resides in `hrm/payslip.php`.
+ */
+include_once(__DIR__.'/../payslip.php');
 

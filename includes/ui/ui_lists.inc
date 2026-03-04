@@ -2535,28 +2535,6 @@ function positions_list_row($label, $name, $selected_id=null, $submit_on_change=
 	echo "</td></tr>\n";
 }
 
-function leave_types_list($name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	$sql = "SELECT leave_id, leave_name FROM ".TB_PREF."leave_types";
-
-	return combo_input($name, $selected_id, $sql, 'leave_id', 'leave_name',
-		array(
-			'spec_option' => $spec_opt===true ? _('All leave types') : $spec_opt,
-			'spec_id' => 0,
-			'order' => 'leave_name',
-			'select_submit'=> $submit_on_change,
-			'async' => false
-		) );
-}
-
-function leave_types_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
-	echo leave_types_list($name, $selected_id, $submit_on_change, $spec_opt);
-	echo "</td>";
-}
-
 function grades_list_row($label, $name, $selected_id=null, $spec_option=false, $submit_on_change=false) {
 
 	$sql = "SELECT * FROM ".TB_PREF."pay_grades";
