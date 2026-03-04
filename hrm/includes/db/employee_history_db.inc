@@ -15,6 +15,56 @@
  * Provides audit trail for all employee changes (transfers, promotions, salary changes).
  */
 
+/**
+ * Add one employee history record.
+ *
+ * @param string $employee_id
+ * @param string $change_type
+ * @param string $effective_date
+ * @param int|null $old_department_id
+ * @param int|null $new_department_id
+ * @param int|null $old_position_id
+ * @param int|null $new_position_id
+ * @param int|null $old_grade_id
+ * @param int|null $new_grade_id
+ * @param float|null $old_salary
+ * @param float|null $new_salary
+ * @param string $reason
+ * @param string $approved_by
+ * @return int
+ */
+function add_employee_history($employee_id, $change_type, $effective_date, $old_department_id=null, $new_department_id=null, $old_position_id=null, $new_position_id=null, $old_grade_id=null, $new_grade_id=null, $old_salary=null, $new_salary=null, $reason='', $approved_by='') {
+	$effective_date_sql = is_date($effective_date) ? date2sql($effective_date) : trim((string)$effective_date);
+	if ($effective_date_sql === '')
+		$effective_date_sql = date2sql(Today());
+
+	$created_by = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0;
+
+	$sql = "INSERT INTO ".TB_PREF."employee_history
+		(employee_id, change_type, effective_date,
+		 old_department_id, new_department_id, old_position_id, new_position_id,
+		 old_grade_id, new_grade_id, old_salary, new_salary, reason, approved_by, created_by)
+		VALUES (
+			".db_escape($employee_id).",
+			".db_escape($change_type).",
+			".db_escape($effective_date_sql).",
+			".($old_department_id ? db_escape((int)$old_department_id) : 'NULL').",
+			".($new_department_id ? db_escape((int)$new_department_id) : 'NULL').",
+			".($old_position_id ? db_escape((int)$old_position_id) : 'NULL').",
+			".($new_position_id ? db_escape((int)$new_position_id) : 'NULL').",
+			".($old_grade_id ? db_escape((int)$old_grade_id) : 'NULL').",
+			".($new_grade_id ? db_escape((int)$new_grade_id) : 'NULL').",
+			".($old_salary !== null && $old_salary !== '' ? db_escape((float)$old_salary) : 'NULL').",
+			".($new_salary !== null && $new_salary !== '' ? db_escape((float)$new_salary) : 'NULL').",
+			".db_escape($reason).",
+			".(trim((string)$approved_by) === '' ? 'NULL' : db_escape($approved_by)).",
+			".db_escape($created_by)."
+		)";
+
+	db_query($sql, 'could not add employee history');
+	return (int)db_insert_id();
+}
+
 function get_employee_history($employee_id, $change_type='') {
 	$sql = "SELECT h.*,
 				d_old.department_name as old_department_name,

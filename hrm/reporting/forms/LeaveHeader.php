@@ -12,9 +12,19 @@
 
 $path_to_root = "../../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/ui.inc');
 page(_("Leave Report Header"));
 
-// TODO: Implement
+start_table(TABLESTYLE2, "width='60%'");
+label_row(_('Header Type:'), _('Leave Report'));
+label_row(_('From Date (PARAM_0):'), get_post('PARAM_0', ''));
+label_row(_('To Date (PARAM_1):'), get_post('PARAM_1', ''));
+label_row(_('Employee (PARAM_2):'), get_post('PARAM_2', ''));
+label_row(_('Leave Type (PARAM_3):'), get_post('PARAM_3', ''));
+label_row(_('Comments (PARAM_4):'), get_post('PARAM_4', ''));
+end_table(1);
+
+display_note(_('This page previews parameter values passed to leave reports.'), 0, 1);
 
 end_page();
 

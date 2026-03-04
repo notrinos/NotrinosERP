@@ -12,9 +12,69 @@
 $page_security = 'SA_EMPLOYEETRANSVIEW';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
+include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+
 page(_("Employee Transactions"));
 
-// TODO: Implement
+if (!isset($_POST['from_date']))
+    $_POST['from_date'] = begin_month(Today());
+if (!isset($_POST['to_date']))
+    $_POST['to_date'] = end_month(Today());
+
+start_form();
+start_table(TABLESTYLE2);
+employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+date_row(_('From Date:'), 'from_date');
+date_row(_('To Date:'), 'to_date');
+end_table(1);
+submit_center('Search', _('Search'));
+
+$employee_id = get_post('employee_id', '');
+if ($employee_id != '' && $employee_id != ALL_TEXT) {
+    display_heading(_('Payslip Transactions'));
+    start_table(TABLESTYLE, "width='95%'");
+    $th = array(_('Payslip'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'));
+    table_header($th);
+    $payslips = get_payslips_for_employee($employee_id, $_POST['from_date'], $_POST['to_date']);
+    $k = 0;
+    if ($payslips) {
+        while ($row = db_fetch($payslips)) {
+            alt_table_row_color($k);
+            label_cell(isset($row['payslip_id']) ? $row['payslip_id'] : (isset($row['payslip_no']) ? $row['payslip_no'] : ''));
+            label_cell(isset($row['from_date']) ? sql2date($row['from_date']) : '');
+            label_cell(isset($row['to_date']) ? sql2date($row['to_date']) : '');
+            amount_cell(isset($row['gross_salary']) ? $row['gross_salary'] : 0);
+            amount_cell(isset($row['total_deductions']) ? $row['total_deductions'] : 0);
+            amount_cell(isset($row['net_salary']) ? $row['net_salary'] : 0);
+            end_row();
+        }
+    }
+    end_table(1);
+
+    display_heading(_('Loan Transactions'));
+    start_table(TABLESTYLE, "width='95%'");
+    $th = array(_('Loan ID'), _('Loan Type'), _('Loan Date'), _('Amount'), _('Outstanding'), _('Status'));
+    table_header($th);
+    $loans = get_employee_loans($employee_id);
+    $k = 0;
+    $status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'), 3 => _('Cancelled'));
+    while ($row = db_fetch($loans)) {
+        alt_table_row_color($k);
+        label_cell($row['loan_id']);
+        label_cell($row['loan_type_name']);
+        label_cell(sql2date($row['loan_date']));
+        amount_cell($row['loan_amount']);
+        amount_cell($row['outstanding_amount']);
+        label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
+        end_row();
+    }
+    end_table(1);
+}
+
+end_form();
 
 end_page();
 

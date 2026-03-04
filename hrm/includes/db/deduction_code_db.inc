@@ -12,3 +12,78 @@
 
 // Deduction reason codes CRUD
 
+/**
+ * Add deduction code.
+ *
+ * @param string $deduction_name
+ * @param string $account_code
+ * @param int $inactive
+ * @return int
+ */
+function add_deduction_code($deduction_name, $account_code='', $inactive=0) {
+    $sql = "INSERT INTO ".TB_PREF."deduction_codes (deduction_name, account_code, inactive)
+        VALUES (".db_escape($deduction_name).", ".db_escape($account_code).", ".db_escape((int)$inactive).")";
+    db_query($sql, 'could not add deduction code');
+
+    return (int)db_insert_id();
+}
+
+/**
+ * Update deduction code.
+ *
+ * @param int $deduction_id
+ * @param string $deduction_name
+ * @param string $account_code
+ * @param int $inactive
+ * @return bool
+ */
+function update_deduction_code($deduction_id, $deduction_name, $account_code='', $inactive=0) {
+    $sql = "UPDATE ".TB_PREF."deduction_codes SET
+        deduction_name = ".db_escape($deduction_name).",
+        account_code = ".db_escape($account_code).",
+        inactive = ".db_escape((int)$inactive)."
+        WHERE deduction_id = ".db_escape((int)$deduction_id);
+
+    return (bool)db_query($sql, 'could not update deduction code');
+}
+
+/**
+ * Get one deduction code.
+ *
+ * @param int $deduction_id
+ * @return array|false
+ */
+function get_deduction_code($deduction_id) {
+    $sql = "SELECT * FROM ".TB_PREF."deduction_codes WHERE deduction_id = ".db_escape((int)$deduction_id);
+    $result = db_query($sql, 'could not get deduction code');
+
+    return db_fetch_assoc($result);
+}
+
+/**
+ * Get deduction codes.
+ *
+ * @param bool $all
+ * @return resource
+ */
+function get_deduction_codes($all=false) {
+    $sql = "SELECT * FROM ".TB_PREF."deduction_codes";
+    if (!$all)
+        $sql .= " WHERE inactive = 0";
+    $sql .= " ORDER BY deduction_name";
+
+    return db_query($sql, 'could not get deduction codes');
+}
+
+/**
+ * Delete deduction code.
+ *
+ * @param int $deduction_id
+ * @return bool
+ */
+function delete_deduction_code($deduction_id) {
+    $sql = "DELETE FROM ".TB_PREF."deduction_codes WHERE deduction_id = ".db_escape((int)$deduction_id);
+
+    return (bool)db_query($sql, 'could not delete deduction code');
+}
+

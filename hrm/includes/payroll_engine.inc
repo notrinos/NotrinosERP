@@ -23,6 +23,7 @@ include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
+include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 
 /**
  * Payroll Formula Engine.
@@ -238,6 +239,19 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
             $doc->employer_contributions += $employer_amt;
     }
 
+    $loan_deduction = 0.0;
+    $loan_account = '';
+    if (function_exists('get_total_due_loan_deduction')) {
+        $loan_deduction = get_total_due_loan_deduction($doc->employee_id, $from_date, $to_date);
+        if (function_exists('get_due_loan_deduction_account'))
+            $loan_account = get_due_loan_deduction_account($doc->employee_id, $from_date, $to_date);
+    }
+
+    if (floatcmp($loan_deduction, 0) != 0) {
+        $doc->add_line(0, _('Loan Repayment'), HRM_ELEM_DEDUCTION, 1, HRM_AMTTYPE_FIXED,
+            $loan_deduction, 0, $loan_deduction, $loan_deduction, $loan_account, null, 0, 9300);
+    }
+
     $doc->recalculate_totals();
 
     if (function_exists('hrm_has_hook') && hrm_has_hook('after_calculate_payslip'))
@@ -300,6 +314,9 @@ function post_payslip_to_gl(&$payslip_doc) {
         if ($payslip_id)
             $payslip_doc->payslip_id = $payslip_id;
     }
+
+	if (function_exists('mark_loan_repayments_paid_by_payslip') && !empty($payslip_doc->payslip_id))
+		mark_loan_repayments_paid_by_payslip($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date, $payslip_doc->payslip_id);
 
 	payroll_sync_leave_balances_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date);
 

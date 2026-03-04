@@ -18,4 +18,43 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
-// TODO: Implement Document Expiration report output
+
+/**
+ * Print document expiry report.
+ *
+ * @return void
+ */
+function print_document_expiry_report() {
+    global $path_to_root;
+
+    $days_ahead = isset($_POST['PARAM_0']) ? (int)$_POST['PARAM_0'] : 30;
+    $comments = isset($_POST['PARAM_1']) ? $_POST['PARAM_1'] : '';
+    $destination = isset($_POST['PARAM_6']) ? (int)$_POST['PARAM_6'] : 0;
+
+    if ($destination)
+        include_once($path_to_root.'/reporting/includes/excel_report.inc');
+    else
+        include_once($path_to_root.'/reporting/includes/pdf_report.inc');
+
+    $rep = new FrontReport(_('Document Expiration Report'), 'DocumentExpiry', user_pagesize(), 9, 'L');
+    $cols = array(0, 90, 260, 380, 500, 620);
+    $headers = array(_('Employee ID'), _('Employee'), _('Document Type'), _('Document Name'), _('Expiry Date'));
+    $aligns = array('left', 'left', 'left', 'left', 'left');
+    recalculate_cols($cols);
+    $rep->Info(array(0 => $comments), $cols, $headers, $aligns);
+    $rep->NewPage();
+
+    $res = get_expiring_documents($days_ahead);
+    while ($row = db_fetch($res)) {
+        $rep->TextCol(0, 1, $row['employee_id']);
+        $rep->TextCol(1, 2, trim($row['first_name'].' '.$row['last_name']));
+        $rep->TextCol(2, 3, $row['type_name']);
+        $rep->TextCol(3, 4, $row['doc_name']);
+        $rep->TextCol(4, 5, empty($row['expiry_date']) ? '' : sql2date($row['expiry_date']));
+        $rep->NewLine();
+    }
+
+    $rep->End();
+}
+
+print_document_expiry_report();

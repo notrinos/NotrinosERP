@@ -12,9 +12,58 @@
 $page_security = 'SA_PAYROLLSUMMARY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+
 page(_("Payroll Summary"));
 
-// TODO: Implement
+if (!isset($_POST['status_filter']))
+    $_POST['status_filter'] = '';
+
+$status_labels = array(
+    '' => _('-- All --'),
+    0 => _('Draft'),
+    1 => _('Calculated'),
+    2 => _('Approved'),
+    3 => _('Posted'),
+    4 => _('Paid'),
+    5 => _('Closed'),
+    6 => _('Voided')
+);
+
+start_form();
+start_table(TABLESTYLE2);
+array_selector_row(_('Status:'), 'status_filter', get_post('status_filter', ''), $status_labels);
+end_table(1);
+submit_center('Search', _('Search'));
+
+$status = get_post('status_filter', '');
+if ($status === '')
+    $result = get_payroll_periods();
+else
+    $result = get_payroll_periods((int)$status);
+
+start_table(TABLESTYLE, "width='95%'");
+$th = array(_('Period ID'), _('Period Name'), _('From'), _('To'), _('Status'), _('Gross'), _('Deductions'), _('Net'), _('Employer Cost'));
+table_header($th);
+
+$k = 0;
+while ($row = db_fetch($result)) {
+    alt_table_row_color($k);
+    label_cell($row['period_id']);
+    label_cell($row['period_name']);
+    label_cell(sql2date($row['from_date']));
+    label_cell(sql2date($row['to_date']));
+    label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
+    amount_cell($row['total_gross']);
+    amount_cell($row['total_deductions']);
+    amount_cell($row['total_net']);
+    amount_cell($row['total_employer_cost']);
+    end_row();
+}
+
+end_table(1);
+end_form();
 
 end_page();
 
