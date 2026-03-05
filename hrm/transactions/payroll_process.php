@@ -112,7 +112,7 @@ date_row(_('To Date:'), 'to_date', get_post('to_date', end_month(Today())));
 departments_list_row(_('Department (Optional):'), 'department_id', null, true, _('All departments'));
 
 $employee_sql = "SELECT employee_id, CONCAT(employee_id, ' - ', first_name, ' ', last_name) as name
-    FROM ".TB_PREF."employees WHERE !inactive ORDER BY first_name, last_name";
+    FROM ".TB_PREF."employees WHERE !inactive";
 label_row(_('Employee (Optional):'), combo_input('employee_id', get_post('employee_id', ''), $employee_sql, 'employee_id', 'name', array(
     'spec_option' => _('-- All Employees --'),
     'spec_id' => ''

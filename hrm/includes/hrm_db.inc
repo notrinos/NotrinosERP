@@ -69,3 +69,9 @@ include_once($path_to_root.'/hrm/includes/db/deduction_code_db.inc');
 // EOS & Settings
 include_once($path_to_root.'/hrm/includes/db/eos_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
+
+// Extended HRM (Phase 3 matrix features)
+include_once($path_to_root.'/hrm/includes/db/recruitment_db.inc');
+include_once($path_to_root.'/hrm/includes/db/training_db.inc');
+include_once($path_to_root.'/hrm/includes/db/appraisal_db.inc');
+include_once($path_to_root.'/hrm/includes/db/asset_allocation_db.inc');

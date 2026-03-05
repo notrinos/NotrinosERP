@@ -142,6 +142,10 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $doc->from_date = $from_date;
     $doc->to_date = $to_date;
     $doc->tran_date = $to_date;
+    $doc->currency_code = isset($employee_full['contract_currency']) ? trim((string)$employee_full['contract_currency']) : '';
+    $doc->exchange_rate = (isset($employee_full['contract_ex_rate']) && (float)$employee_full['contract_ex_rate'] > 0)
+        ? (float)$employee_full['contract_ex_rate']
+        : 1;
 
     $attendance = get_attendance_summary($doc->employee_id, $from_date, $to_date);
     $doc->working_days = $attendance['working_days'];
@@ -253,6 +257,7 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     }
 
     $doc->recalculate_totals();
+    $doc->net_salary_home = $doc->exchange_rate > 0 ? ($doc->net_salary * $doc->exchange_rate) : $doc->net_salary;
 
     if (function_exists('hrm_has_hook') && hrm_has_hook('after_calculate_payslip'))
         hrm_fire_hook('after_calculate_payslip', $doc, $employee_full);

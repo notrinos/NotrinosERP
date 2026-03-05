@@ -167,6 +167,15 @@ class payslip_doc {
 	/** @var float */
 	public $loan_deduction = 0;
 
+	/** @var string */
+	public $currency_code = '';
+
+	/** @var float */
+	public $exchange_rate = 1;
+
+	/** @var float */
+	public $net_salary_home = 0;
+
 	/** @var array */
 	public $lines = array();
 
@@ -259,6 +268,7 @@ class payslip_doc {
 		$this->gross_salary = $this->basic_salary + $this->total_earnings;
 		$this->net_salary = $this->gross_salary - $this->total_deductions;
 		$this->total_cost = $this->net_salary + $this->employer_contributions;
+		$this->net_salary_home = $this->exchange_rate > 0 ? ($this->net_salary * $this->exchange_rate) : $this->net_salary;
 	}
 }
 

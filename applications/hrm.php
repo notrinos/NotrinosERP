@@ -57,6 +57,8 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('&Overtime Types'),           'hrm/manage/overtime_types.php?',                      'SA_OVERTIME',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Lea&ve Types'),              'hrm/manage/leave_types.php?',                         'SA_LEAVETYPE',         MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_LEAVEPOLICY',       MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('&Training'),                 'hrm/manage/training.php?',                            'SA_HRSETTINGS',        MENU_MAINTENANCE);
 
 		$this->add_rapp_function(2, _('&Holiday Calendar'),         'hrm/manage/holidays.php?',                            'SA_HOLIDAY',           MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Wor&k Shifts'),              'hrm/manage/work_shifts.php?',                         'SA_WORKSHIFT',         MENU_MAINTENANCE);
@@ -65,6 +67,8 @@ class HrmApp extends application {
 		$this->add_rapp_function(2, _('&Tax Brackets'),             'hrm/manage/tax_brackets.php?',                        'SA_TAXBRACKET',        MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Statutory &Deductions'),     'hrm/manage/statutory_deductions.php?',                'SA_STATUTORY',         MENU_SETTINGS);
 		$this->add_rapp_function(2, _('L&oan Types'),               'hrm/manage/loan_types.php?',                          'SA_LOANTYPE',          MENU_SETTINGS);
+		$this->add_rapp_function(2, _('Appraisa&ls'),               'hrm/manage/appraisals.php?',                          'SA_EMPLOYEE',          MENU_SETTINGS);
+		$this->add_rapp_function(2, _('Asset Allo&cation'),         'hrm/manage/asset_allocation.php?',                    'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('HR Settin&gs'),              'hrm/manage/hr_settings.php?',                         'SA_HRSETTINGS',        MENU_SETTINGS);
 
 		$this->add_extensions();

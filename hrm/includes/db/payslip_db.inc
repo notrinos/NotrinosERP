@@ -225,6 +225,18 @@ function add_payslip(&$payslip_doc) {
 		$fields[] = 'net_salary';
 		$values[] = db_escape((float)$payslip_doc->net_salary);
 	}
+	if (isset($columns['currency_code'])) {
+		$fields[] = 'currency_code';
+		$values[] = db_escape(isset($payslip_doc->currency_code) ? $payslip_doc->currency_code : '');
+	}
+	if (isset($columns['exchange_rate'])) {
+		$fields[] = 'exchange_rate';
+		$values[] = db_escape(isset($payslip_doc->exchange_rate) ? (float)$payslip_doc->exchange_rate : 1);
+	}
+	if (isset($columns['net_salary_home'])) {
+		$fields[] = 'net_salary_home';
+		$values[] = db_escape(isset($payslip_doc->net_salary_home) ? (float)$payslip_doc->net_salary_home : (float)$payslip_doc->net_salary);
+	}
 	if (isset($columns['payable_amount'])) {
 		$fields[] = 'payable_amount';
 		$values[] = db_escape((float)$payslip_doc->net_salary);

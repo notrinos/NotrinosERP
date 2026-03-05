@@ -141,7 +141,10 @@ ALTER TABLE `0_payslips`
 	ADD COLUMN IF NOT EXISTS `loan_deduction`         double NOT NULL DEFAULT 0     AFTER `absent_days`,
 	ADD COLUMN IF NOT EXISTS `status`                 tinyint(1) NOT NULL DEFAULT 0 AFTER `loan_deduction`,
 	ADD COLUMN IF NOT EXISTS `payment_trans_no`       int(11) DEFAULT NULL          AFTER `status`,
-	ADD COLUMN IF NOT EXISTS `custom_data`            JSON NOT NULL DEFAULT ('{}')  AFTER `payment_trans_no`;
+	ADD COLUMN IF NOT EXISTS `currency_code`          char(3) DEFAULT NULL           AFTER `payment_trans_no`,
+	ADD COLUMN IF NOT EXISTS `exchange_rate`          double NOT NULL DEFAULT 1      AFTER `currency_code`,
+	ADD COLUMN IF NOT EXISTS `net_salary_home`        double NOT NULL DEFAULT 0      AFTER `exchange_rate`,
+	ADD COLUMN IF NOT EXISTS `custom_data`            JSON NOT NULL DEFAULT ('{}')  AFTER `net_salary_home`;
 
 -- ─────────────────────────────────────────────────────────────
 -- 0_employees: add extended fields
@@ -160,6 +163,8 @@ ALTER TABLE `0_employees`
 	ADD COLUMN IF NOT EXISTS `bank_branch`         varchar(100) DEFAULT NULL   AFTER `bank_name`,
 	ADD COLUMN IF NOT EXISTS `bank_routing`        varchar(60) DEFAULT NULL    AFTER `bank_branch`,
 	ADD COLUMN IF NOT EXISTS `payment_method`      tinyint(1) NOT NULL DEFAULT 0 AFTER `bank_routing`,
+	ADD COLUMN IF NOT EXISTS `contract_currency`   char(3) DEFAULT NULL        AFTER `payment_method`,
+	ADD COLUMN IF NOT EXISTS `contract_ex_rate`    double NOT NULL DEFAULT 1   AFTER `contract_currency`,
 	ADD COLUMN IF NOT EXISTS `confirmation_date`   date DEFAULT NULL           AFTER `hire_date`,
 	ADD COLUMN IF NOT EXISTS `probation_end_date`  date DEFAULT NULL           AFTER `confirmation_date`,
 	ADD COLUMN IF NOT EXISTS `separation_reason`   tinyint(1) DEFAULT NULL     AFTER `released_date`,

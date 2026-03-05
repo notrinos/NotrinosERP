@@ -3283,6 +3283,161 @@ INSERT INTO `0_working_days` (`day_of_week`, `is_working`, `work_hours`) VALUES
 (5, 1, 8),
 (6, 0, 0);
 
+-- ============================================================
+-- RECRUITMENT OPENINGS
+-- ============================================================
+
+-- Structure of table `0_recruitment_openings` --
+
+DROP TABLE IF EXISTS `0_recruitment_openings`;
+
+CREATE TABLE IF NOT EXISTS `0_recruitment_openings` (
+	`opening_id`       int(11) NOT NULL AUTO_INCREMENT,
+	`job_title`        varchar(120) NOT NULL,
+	`department_id`    int(11) DEFAULT NULL,
+	`position_id`      int(11) DEFAULT NULL,
+	`headcount`        int(11) NOT NULL DEFAULT '1',
+	`opening_date`     date NOT NULL,
+	`closing_date`     date DEFAULT NULL,
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=open,1=on_hold,2=closed,3=cancelled',
+	`description`      text,
+	`created_by`       smallint(6) DEFAULT NULL,
+	`created_date`     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`opening_id`),
+	KEY `department_id` (`department_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_recruitment_openings` --
+
+-- ============================================================
+-- RECRUITMENT APPLICANTS
+-- ============================================================
+
+-- Structure of table `0_recruitment_applicants` --
+
+DROP TABLE IF EXISTS `0_recruitment_applicants`;
+
+CREATE TABLE IF NOT EXISTS `0_recruitment_applicants` (
+	`applicant_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`opening_id`       int(11) DEFAULT NULL,
+	`full_name`        varchar(140) NOT NULL,
+	`email`            varchar(120) DEFAULT NULL,
+	`mobile`           varchar(40) DEFAULT NULL,
+	`source`           varchar(80) DEFAULT NULL,
+	`applied_date`     date NOT NULL,
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=new,1=screened,2=interviewed,3=offered,4=hired,5=rejected',
+	`expected_salary`  double DEFAULT NULL,
+	`remarks`          text,
+	PRIMARY KEY (`applicant_id`),
+	KEY `opening_id` (`opening_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_recruitment_applicants` --
+
+-- ============================================================
+-- TRAINING COURSES
+-- ============================================================
+
+-- Structure of table `0_training_courses` --
+
+DROP TABLE IF EXISTS `0_training_courses`;
+
+CREATE TABLE IF NOT EXISTS `0_training_courses` (
+	`course_id`        int(11) NOT NULL AUTO_INCREMENT,
+	`course_code`      varchar(30) DEFAULT NULL,
+	`course_name`      varchar(140) NOT NULL,
+	`provider`         varchar(140) DEFAULT NULL,
+	`default_hours`    double NOT NULL DEFAULT '0',
+	`default_cost`     double NOT NULL DEFAULT '0',
+	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`course_id`),
+	KEY `course_code` (`course_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_training_courses` --
+
+-- ============================================================
+-- EMPLOYEE TRAINING RECORDS
+-- ============================================================
+
+-- Structure of table `0_employee_training` --
+
+DROP TABLE IF EXISTS `0_employee_training`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_training` (
+	`training_id`      int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`      varchar(20) NOT NULL,
+	`course_id`        int(11) NOT NULL,
+	`training_date`    date NOT NULL,
+	`completion_date`  date DEFAULT NULL,
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=planned,1=in_progress,2=completed,3=cancelled',
+	`score`            double DEFAULT NULL,
+	`cost_amount`      double NOT NULL DEFAULT '0',
+	`remarks`          text,
+	PRIMARY KEY (`training_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `course_id` (`course_id`),
+	KEY `training_date` (`training_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_training` --
+
+-- ============================================================
+-- EMPLOYEE APPRAISALS
+-- ============================================================
+
+-- Structure of table `0_employee_appraisals` --
+
+DROP TABLE IF EXISTS `0_employee_appraisals`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_appraisals` (
+	`appraisal_id`     int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`      varchar(20) NOT NULL,
+	`reviewer_id`      varchar(20) DEFAULT NULL,
+	`period_from`      date NOT NULL,
+	`period_to`        date NOT NULL,
+	`appraisal_date`   date NOT NULL,
+	`overall_score`    double NOT NULL DEFAULT '0',
+	`rating_scale`     tinyint(1) NOT NULL DEFAULT '5',
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=draft,1=submitted,2=approved',
+	`strengths`        text,
+	`improvements`     text,
+	`recommendation`   text,
+	PRIMARY KEY (`appraisal_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `appraisal_date` (`appraisal_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_appraisals` --
+
+-- ============================================================
+-- EMPLOYEE ASSET ALLOCATION
+-- ============================================================
+
+-- Structure of table `0_employee_asset_allocation` --
+
+DROP TABLE IF EXISTS `0_employee_asset_allocation`;
+
+CREATE TABLE IF NOT EXISTS `0_employee_asset_allocation` (
+	`allocation_id`    int(11) NOT NULL AUTO_INCREMENT,
+	`employee_id`      varchar(20) NOT NULL,
+	`asset_name`       varchar(140) NOT NULL,
+	`asset_code`       varchar(60) DEFAULT NULL,
+	`serial_no`        varchar(80) DEFAULT NULL,
+	`allocation_date`  date NOT NULL,
+	`expected_return`  date DEFAULT NULL,
+	`return_date`      date DEFAULT NULL,
+	`status`           tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=allocated,1=returned,2=lost,3=damaged',
+	`notes`            text,
+	PRIMARY KEY (`allocation_id`),
+	KEY `employee_id` (`employee_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_employee_asset_allocation` --
+
 -- =============================================================
 -- END OF NEW HRM TABLES
 -- =============================================================

@@ -84,7 +84,7 @@ start_form();
 
 start_table(TABLESTYLE2);
 $employee_sql = "SELECT employee_id, CONCAT(employee_id, ' - ', first_name, ' ', last_name) as name
-    FROM ".TB_PREF."employees WHERE !inactive ORDER BY first_name, last_name";
+    FROM ".TB_PREF."employees WHERE !inactive";
 label_row(_('Employee:'), combo_input('employee_id', $selected_employee, $employee_sql, 'employee_id', 'name', array(
     'spec_option' => _('-- All Employees --'),
     'spec_id' => ''
