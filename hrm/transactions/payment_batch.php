@@ -17,15 +17,35 @@ include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 
 page(_("Payment Batch"));
 
-foreach ($_POST as $name => $value) {
-    if (strpos($name, 'MarkPaid') === 0) {
-        $period_id = (int)substr($name, 8);
-        if ($period_id > 0) {
-            update_payroll_period_status($period_id, 4);
-            display_notification(_('Payroll period has been marked as Paid.'));
-        }
+if (($period_id = find_submit('MarkPaid')) != -1) {
+    $period_id = (int)$period_id;
+    $period = get_payroll_period($period_id);
+
+    if (!$period) {
+        display_error(_('The selected payroll period was not found.'));
+    } elseif (!in_array((int)$period['status'], array(2, 3))) {
+        display_error(_('Only approved or posted payroll periods can be marked as paid.'));
+    } elseif (update_payroll_period_status($period_id, 4)) {
+        display_notification(_('Payroll period has been marked as Paid.'));
+    } else {
+        display_error(_('Could not update payroll period status.'));
     }
 }
+
+$per_page = 50;
+$page_no = max((int)get_post('page_no', 0), 0);
+if (get_post('next_page'))
+    $page_no++;
+elseif (get_post('prev_page'))
+    $page_no = max($page_no - 1, 0);
+
+$total_periods = function_exists('count_payroll_periods') ? count_payroll_periods() : 0;
+$page_count = $per_page > 0 ? (int)ceil($total_periods / $per_page) : 1;
+$page_count = max($page_count, 1);
+if ($page_no >= $page_count)
+    $page_no = $page_count - 1;
+
+$offset = $page_no * $per_page;
 
 $status_labels = array(
     0 => _('Draft'),
@@ -38,11 +58,12 @@ $status_labels = array(
 );
 
 start_form();
+hidden('page_no', $page_no);
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Period ID'), _('Name'), _('From'), _('To'), _('Total Net'), _('Status'), '');
 table_header($th);
 
-$result = get_payroll_periods();
+$result = get_payroll_periods(null, $per_page, $offset);
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -61,6 +82,14 @@ while ($row = db_fetch($result)) {
     end_row();
 }
 end_table(1);
+
+start_table(TABLESTYLE_NONE, "width='95%'");
+start_row();
+label_cell(sprintf(_('Showing %s to %s of %s payroll period(s)'), $total_periods ? ($offset + 1) : 0, min($offset + $per_page, $total_periods), $total_periods));
+submit_cells('prev_page', _('Previous'), $page_no > 0, '', '', $page_no <= 0);
+submit_cells('next_page', _('Next'), $page_no < ($page_count - 1), '', '', $page_no >= ($page_count - 1));
+end_row();
+end_table();
 end_form();
 
 end_page();

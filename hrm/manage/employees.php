@@ -46,6 +46,9 @@ function set_edit($employee_id) {
 	$row = get_employee_by_code($employee_id);
 	if (!$row) return;
 
+	// Keep the page state aligned when an employee is opened directly or after tab switches.
+	$row['NewEmpID'] = $employee_id;
+	$row['employee_id'] = $employee_id;
 	$_POST = array_merge($_POST, $row);
 
 	// Convert SQL dates to user format
@@ -346,23 +349,8 @@ function tab_salary($employee_id) {
 	$emp = get_employee_by_code($employee_id);
 	if (!$emp) return;
 
-	// Header info
-	start_table(TABLESTYLE2);
-	label_row(_('Employee:'), $emp['first_name'].' '.$emp['last_name'].' ['.$employee_id.']');
-	label_row(_('Position:'), $emp['position_name'] ?: _('Not assigned'));
-	label_row(_('Grade:'), $emp['grade_name'] ?: _('Not assigned'));
-	label_row(_('Salary Mode:'), $emp['personal_salary'] ? _('Personal (Individual Override)') : _('Position-based (Salary Structure)'));
-	end_table(1);
-
-	// Display salary components
-	$editable = $emp['personal_salary'] ? true : false;
-	display_salary_components($employee_id, $editable);
-
-	// If personal salary, show add form
+	// If personal salary, process actions before rendering the current list.
 	if ($emp['personal_salary']) {
-		br();
-		display_heading(_('Add / Edit Salary Element'));
-
 		if (isset($_GET['edit_salary'])) {
 			$editing_salary = get_employee_salary($_GET['edit_salary']);
 			if ($editing_salary && $editing_salary['employee_id'] == $employee_id) {
@@ -374,6 +362,13 @@ function tab_salary($employee_id) {
 				$_POST['sal_effective_from'] = !empty($editing_salary['effective_from']) ? sql2date($editing_salary['effective_from']) : '';
 				$_POST['sal_effective_to'] = !empty($editing_salary['effective_to']) ? sql2date($editing_salary['effective_to']) : '';
 			}
+		}
+
+		// Handle delete salary element
+		if (isset($_GET['delete_salary'])) {
+			delete_employee_salary($_GET['delete_salary']);
+			display_notification(_('Salary element removed.'));
+			$Ajax->activate('_page_body');
 		}
 
 		// Handle add salary element
@@ -425,13 +420,24 @@ function tab_salary($employee_id) {
 				$Ajax->activate('_page_body');
 			}
 		}
+	}
 
-		// Handle delete salary element
-		if (isset($_GET['delete_salary'])) {
-			delete_employee_salary($_GET['delete_salary']);
-			display_notification(_('Salary element removed.'));
-			$Ajax->activate('_page_body');
-		}
+	// Header info
+	start_table(TABLESTYLE2);
+	label_row(_('Employee:'), $emp['first_name'].' '.$emp['last_name'].' ['.$employee_id.']');
+	label_row(_('Position:'), $emp['position_name'] ?: _('Not assigned'));
+	label_row(_('Grade:'), $emp['grade_name'] ?: _('Not assigned'));
+	label_row(_('Salary Mode:'), $emp['personal_salary'] ? _('Personal (Individual Override)') : _('Position-based (Salary Structure)'));
+	end_table(1);
+
+	// Display salary components after processing actions so the list is current.
+	$editable = $emp['personal_salary'] ? true : false;
+	display_salary_components($employee_id, $editable);
+
+	// If personal salary, show add form
+	if ($emp['personal_salary']) {
+		br();
+		display_heading(_('Add / Edit Salary Element'));
 
 		start_outer_table(TABLESTYLE2);
 		table_section(1);
@@ -480,13 +486,6 @@ function tab_documents($employee_id) {
 		delete_employee_document($_GET['delete_doc']);
 		display_notification(_('Document deleted.'));
 	}
-
-	// Display existing documents
-	display_employee_documents($employee_id);
-
-	// Add/Edit document form
-	br();
-	display_heading(_('Add / Edit Document'));
 
 	$editing_doc = null;
 	if (isset($_GET['edit_doc'])) {
@@ -561,6 +560,13 @@ function tab_documents($employee_id) {
 		}
 	}
 
+	// Display existing documents after processing so the table is current.
+	display_employee_documents($employee_id);
+
+	// Add/Edit document form
+	br();
+	display_heading(_('Add / Edit Document'));
+
 	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
@@ -612,13 +618,6 @@ function tab_dependents($employee_id) {
 		delete_employee_dependent($_GET['delete_dep']);
 		display_notification(_('Dependent deleted.'));
 	}
-
-	// Display existing dependents
-	display_employee_dependents($employee_id);
-
-	// Add/Edit form
-	br();
-	display_heading(_('Add / Edit Dependent'));
 
 	$editing_dep = null;
 	if (isset($_GET['edit_dep'])) {
@@ -676,6 +675,13 @@ function tab_dependents($employee_id) {
 		}
 	}
 
+	// Display existing dependents after processing so the table is current.
+	display_employee_dependents($employee_id);
+
+	// Add/Edit form
+	br();
+	display_heading(_('Add / Edit Dependent'));
+
 	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
@@ -715,6 +721,11 @@ function tab_transactions($employee_id) {
 
 if (isset($_GET['employee_no']))
 	$_POST['employee_id'] = $_GET['employee_no'];
+elseif (isset($_GET['employee_id']))
+	$_POST['employee_id'] = $_GET['employee_id'];
+
+if (isset($_GET['_tabs_sel']))
+	$_POST['_tabs_sel'] = $_GET['_tabs_sel'];
 
 $employee_id = get_post('employee_id');
 
@@ -1134,6 +1145,9 @@ if (in_array($current_tab, array('tab_personal', 'tab_employment', ''))) {
 	}
 	div_end();
 }
+
+if ($new_employee && $current_tab == 'tab_personal' && !get_post('addupdate') && !list_updated('employee_id') && !get_post('_show_inactive_update'))
+	set_focus('NewEmpID');
 
 br();
 tabbed_content_end();

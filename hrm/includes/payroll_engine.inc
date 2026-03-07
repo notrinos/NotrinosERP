@@ -14,6 +14,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/db/comments_db.inc');
 include_once($path_to_root.'/includes/db/audit_trail_db.inc');
+include_once($path_to_root.'/gl/includes/db/gl_db_accounts.inc');
 include_once($path_to_root.'/gl/includes/db/gl_db_trans.inc');
 
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
@@ -118,9 +119,10 @@ class payroll_formula_engine {
  * @param string $from_date User date format
  * @param string $to_date User date format
  * @param int    $period_id Payroll period id
+ * @param array  $context Optional preloaded runtime context.
  * @return payslip_doc|false
  */
-function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=0) {
+function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=0, $context=array()) {
     if (!is_array($employee) || empty($employee['employee_id']))
         return false;
 
@@ -155,7 +157,9 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $doc->overtime_hours = $attendance['overtime_hours'];
 
     $salary_components = array();
-    if (function_exists('get_employee_salary_components'))
+    if (isset($context['salary_components'][$doc->employee_id]) && is_array($context['salary_components'][$doc->employee_id]))
+        $salary_components = $context['salary_components'][$doc->employee_id];
+    elseif (function_exists('get_employee_salary_components'))
         $salary_components = get_employee_salary_components($doc->employee_id, date2sql($to_date));
 
     if (!is_array($salary_components))
@@ -213,7 +217,7 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     if (function_exists('hrm_has_hook') && hrm_has_hook('after_calculate_earnings'))
         hrm_fire_hook('after_calculate_earnings', $doc, $employee_full);
 
-    $attendance_deduction = calculate_attendance_deductions($doc->employee_id, $from_date, $to_date, $daily_rate);
+    $attendance_deduction = calculate_attendance_deductions($doc->employee_id, $from_date, $to_date, $daily_rate, $attendance);
     if (floatcmp($attendance_deduction, 0) != 0) {
         $doc->add_line(0, _('Attendance Deduction'), HRM_ELEM_DEDUCTION, 1, HRM_AMTTYPE_ATTENDANCE,
             $attendance_deduction, 0, $attendance_deduction, $attendance_deduction, '', null, 0, 9000);
@@ -287,8 +291,12 @@ function post_payslip_to_gl(&$payslip_doc) {
     $cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
 
     $total = 0.0;
+    $gl_totals = array();
     foreach ($payslip_doc->lines as $line) {
         if (empty($line->account_code) || floatcmp($line->final_amount, 0) == 0)
+            continue;
+
+        if (!_payroll_is_valid_gl_account($line->account_code))
             continue;
 
         $amount = (float)$line->final_amount;
@@ -298,11 +306,22 @@ function post_payslip_to_gl(&$payslip_doc) {
             $amount = abs($amount);
 
         $total += $amount;
-        $cart->add_gl_item($line->account_code, 0, 0, $amount, _('Payroll Element'), null, $payslip_doc->employee_id, $cart->tran_date);
+        if (!isset($gl_totals[$line->account_code]))
+            $gl_totals[$line->account_code] = 0.0;
+        $gl_totals[$line->account_code] += $amount;
     }
 
     $payable_account = get_company_pref('payroll_payable_act');
     if (empty($payable_account))
+        return false;
+
+    foreach ($gl_totals as $account_code => $amount) {
+        if (floatcmp($amount, 0) == 0)
+            continue;
+        $cart->add_gl_item($account_code, 0, 0, $amount, _('Payroll Element'), null, $payslip_doc->employee_id, $cart->tran_date);
+    }
+
+    if (!_payroll_is_valid_gl_account($payable_account))
         return false;
 
     if (floatcmp($total, 0) != 0)
@@ -350,6 +369,7 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
 
     $to_sql = date2sql($to_date);
     $fiscal_year = (int)date('Y', strtotime($to_sql));
+    list($year_start, $year_end) = _payroll_get_year_bounds($fiscal_year);
 
     $approved = array();
     $pending = array();
@@ -358,7 +378,8 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
         FROM ".TB_PREF."leave_requests
         WHERE employee_id = ".db_escape($employee_id)."
             AND status = 1
-            AND YEAR(from_date) = ".db_escape($fiscal_year)."
+            AND from_date >= ".db_escape($year_start)."
+            AND from_date <= ".db_escape($year_end)."
         GROUP BY leave_id";
     $approved_res = db_query($approved_sql, 'Could not summarize approved leave requests');
     while ($row = db_fetch_assoc($approved_res))
@@ -368,7 +389,8 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
         FROM ".TB_PREF."leave_requests
         WHERE employee_id = ".db_escape($employee_id)."
             AND status = 0
-            AND YEAR(from_date) = ".db_escape($fiscal_year)."
+            AND from_date >= ".db_escape($year_start)."
+            AND from_date <= ".db_escape($year_end)."
         GROUP BY leave_id";
     $pending_res = db_query($pending_sql, 'Could not summarize pending leave requests');
     while ($row = db_fetch_assoc($pending_res))
@@ -402,19 +424,26 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
  * @return float
  */
 function calculate_income_tax($taxable_income, $as_of_date) {
+    static $tax_bracket_cache = array();
+
     $taxable_income = max((float)$taxable_income, 0.0);
     if (floatcmp($taxable_income, 0) == 0)
         return 0.0;
 
     $sql_date = date2sql($as_of_date);
-    $sql = "SELECT * FROM ".TB_PREF."tax_brackets
-        WHERE effective_from <= ".db_escape($sql_date)."
-        AND (effective_to IS NULL OR effective_to >= ".db_escape($sql_date).")
-        ORDER BY from_amount ASC";
-    $result = db_query($sql, 'Could not get tax brackets');
+    if (!isset($tax_bracket_cache[$sql_date])) {
+        $sql = "SELECT * FROM ".TB_PREF."tax_brackets
+            WHERE effective_from <= ".db_escape($sql_date)."
+            AND (effective_to IS NULL OR effective_to >= ".db_escape($sql_date).")
+            ORDER BY from_amount ASC";
+        $result = db_query($sql, 'Could not get tax brackets');
+        $tax_bracket_cache[$sql_date] = array();
+        while ($row = db_fetch_assoc($result))
+            $tax_bracket_cache[$sql_date][] = $row;
+    }
 
     $tax = 0.0;
-    while ($row = db_fetch_assoc($result)) {
+    foreach ($tax_bracket_cache[$sql_date] as $row) {
         $from = (float)$row['from_amount'];
         $to = isset($row['to_amount']) ? (float)$row['to_amount'] : 0.0;
         $rate = (float)$row['rate'];
@@ -441,15 +470,22 @@ function calculate_income_tax($taxable_income, $as_of_date) {
  * @return array
  */
 function calculate_statutory_deductions($base_salary, $gross_salary, $as_of_date) {
+    static $statutory_cache = array();
+
     $sql_date = date2sql($as_of_date);
-    $sql = "SELECT * FROM ".TB_PREF."statutory_deductions
-        WHERE inactive = 0
-        AND effective_from <= ".db_escape($sql_date)."
-        AND (effective_to IS NULL OR effective_to >= ".db_escape($sql_date).")";
-    $result = db_query($sql, 'Could not get statutory deductions');
+    if (!isset($statutory_cache[$sql_date])) {
+        $sql = "SELECT * FROM ".TB_PREF."statutory_deductions
+            WHERE inactive = 0
+            AND effective_from <= ".db_escape($sql_date)."
+            AND (effective_to IS NULL OR effective_to >= ".db_escape($sql_date).")";
+        $result = db_query($sql, 'Could not get statutory deductions');
+        $statutory_cache[$sql_date] = array();
+        while ($row = db_fetch_assoc($result))
+            $statutory_cache[$sql_date][] = $row;
+    }
 
     $rows = array();
-    while ($row = db_fetch_assoc($result)) {
+    foreach ($statutory_cache[$sql_date] as $row) {
         $base = ((int)$row['calculation_base'] === HRM_STAT_BASE_GROSS) ? (float)$gross_salary : (float)$base_salary;
 
         if (!empty($row['ceiling_amount']))
@@ -482,6 +518,12 @@ function calculate_statutory_deductions($base_salary, $gross_salary, $as_of_date
  * @return array
  */
 function get_attendance_summary($employee_id, $from_date, $to_date) {
+    static $attendance_cache = array();
+
+    $cache_key = $employee_id.'|'.$from_date.'|'.$to_date;
+    if (isset($attendance_cache[$cache_key]))
+        return $attendance_cache[$cache_key];
+
     $from_sql = date2sql($from_date);
     $to_sql = date2sql($to_date);
 
@@ -515,7 +557,7 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
     if ($worked_days <= 0 && $absent_days <= 0)
         $worked_days = $working_days;
 
-    return array(
+    $attendance_cache[$cache_key] = array(
         'working_days' => (float)$working_days,
         'worked_days' => (float)$worked_days,
         'leave_days' => (float)$leave_days,
@@ -525,6 +567,8 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
         'paid_leave_days' => (float)$leave_days,
         'unpaid_leave_days' => (float)$absent_days
     );
+
+    return $attendance_cache[$cache_key];
 }
 
 /**
@@ -535,6 +579,12 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
  * @return int
  */
 function get_working_days_in_period($from_date, $to_date) {
+    static $working_day_count_cache = array();
+
+    $cache_key = $from_date.'|'.$to_date;
+    if (isset($working_day_count_cache[$cache_key]))
+        return $working_day_count_cache[$cache_key];
+
     $from = date2sql($from_date);
     $to = date2sql($to_date);
 
@@ -552,7 +602,8 @@ function get_working_days_in_period($from_date, $to_date) {
         $days++;
     }
 
-    return $days;
+    $working_day_count_cache[$cache_key] = $days;
+    return $working_day_count_cache[$cache_key];
 }
 
 /**
@@ -562,23 +613,32 @@ function get_working_days_in_period($from_date, $to_date) {
  * @param string $from_date User date format
  * @param string $to_date User date format
  * @param float $daily_rate
+ * @param array|null $summary Optional preloaded attendance summary.
  * @return float
  */
-function calculate_attendance_deductions($employee_id, $from_date, $to_date, $daily_rate) {
+function calculate_attendance_deductions($employee_id, $from_date, $to_date, $daily_rate, $summary=null) {
+	static $rules_cache = null;
+
     $daily_rate = (float)$daily_rate;
     if (floatcmp($daily_rate, 0) <= 0)
         return 0.0;
 
-    $summary = get_attendance_summary($employee_id, $from_date, $to_date);
+    if (!is_array($summary))
+        $summary = get_attendance_summary($employee_id, $from_date, $to_date);
     $absence_days = (float)$summary['absent_days'];
 
-    $sql = "SELECT * FROM ".TB_PREF."attendance_deduction_rules
-        WHERE inactive = 0
-        ORDER BY rule_type, from_value";
-    $result = db_query($sql, 'Could not get attendance deduction rules');
+    if ($rules_cache === null) {
+        $sql = "SELECT * FROM ".TB_PREF."attendance_deduction_rules
+            WHERE inactive = 0
+            ORDER BY rule_type, from_value";
+        $result = db_query($sql, 'Could not get attendance deduction rules');
+        $rules_cache = array();
+        while ($row = db_fetch_assoc($result))
+            $rules_cache[] = $row;
+    }
 
     $deduction_days = 0.0;
-    while ($row = db_fetch_assoc($result)) {
+    foreach ($rules_cache as $row) {
         if ((int)$row['rule_type'] !== HRM_DEDTYPE_ABSENCE)
             continue;
 
@@ -726,14 +786,23 @@ function _payroll_doc_total_taxable_income($doc) {
  * @return bool
  */
 function _payroll_is_working_day($dow) {
-    $sql = "SELECT is_working FROM ".TB_PREF."working_days WHERE day_of_week = ".db_escape((int)$dow);
+    static $working_day_cache = array();
+
+    $dow = (int)$dow;
+    if (isset($working_day_cache[$dow]))
+        return $working_day_cache[$dow];
+
+    $sql = "SELECT is_working FROM ".TB_PREF."working_days WHERE day_of_week = ".db_escape($dow);
     $result = db_query($sql, 'Could not get working day');
     $row = db_fetch_assoc($result);
 
-    if (!$row)
-        return ($dow >= 1 && $dow <= 5);
+    if (!$row) {
+        $working_day_cache[$dow] = ($dow >= 1 && $dow <= 5);
+        return $working_day_cache[$dow];
+    }
 
-    return !empty($row['is_working']);
+    $working_day_cache[$dow] = !empty($row['is_working']);
+    return $working_day_cache[$dow];
 }
 
 /**
@@ -743,6 +812,11 @@ function _payroll_is_working_day($dow) {
  * @return bool
  */
 function _payroll_is_holiday($sql_date) {
+    static $holiday_cache = array();
+
+    if (isset($holiday_cache[$sql_date]))
+        return $holiday_cache[$sql_date];
+
     $year = substr($sql_date, 0, 4);
     $month_day = substr($sql_date, 5, 5);
 
@@ -755,7 +829,38 @@ function _payroll_is_holiday($sql_date) {
         LIMIT 1";
     $result = db_query($sql, 'Could not check holiday');
 
-    return db_num_rows($result) > 0;
+    $holiday_cache[$sql_date] = db_num_rows($result) > 0;
+    return $holiday_cache[$sql_date];
+}
+
+/**
+ * Get SQL year start/end bounds.
+ *
+ * @param int $year
+ * @return array
+ */
+function _payroll_get_year_bounds($year) {
+    $year = (int)$year;
+    return array($year.'-01-01', $year.'-12-31');
+}
+
+/**
+ * Validate a GL account before payroll posting.
+ *
+ * @param string $account_code
+ * @return bool
+ */
+function _payroll_is_valid_gl_account($account_code) {
+    $account_code = trim((string)$account_code);
+    if ($account_code === '')
+        return false;
+
+    if (function_exists('get_gl_account')) {
+        $account = get_gl_account($account_code);
+        return is_array($account) && !empty($account);
+    }
+
+    return true;
 }
 
 /**

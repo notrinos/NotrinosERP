@@ -14,6 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 
 include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 
 page(_($help_context = 'Payment Advice'));
@@ -65,19 +66,30 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
     return db_query($sql, 'could not get payment advice rows');
 }
 
-if (isset($_GET['mark_paid']) && is_numeric($_GET['mark_paid'])) {
-    $payslip_id = (int)$_GET['mark_paid'];
-    $data = array('status' => 3);
-    if (isset($_GET['payment_no']) && is_numeric($_GET['payment_no']))
-        $data['payment_trans_no'] = (int)$_GET['payment_no'];
+if (($payslip_id = find_submit('MarkPaid')) != -1) {
+    $payslip_id = (int)$payslip_id;
+    $payslip = get_payslip($payslip_id);
 
-    if (update_payslip($payslip_id, $data))
-        display_notification(_('Payslip marked as paid.'));
-    else
-        display_error(_('Could not update payslip payment status.'));
+    if (!$payslip) {
+        display_error(_('The selected payslip could not be found.'));
+    } else {
+        $data = array('status' => 3);
+        if (update_payslip($payslip_id, $data))
+            display_notification(_('Payslip marked as paid.'));
+        else
+            display_error(_('Could not update payslip payment status.'));
+    }
 }
 
 $selected_employee = trim((string)get_post('employee_id', ''));
+$selected_employee_row = false;
+if ($selected_employee !== '') {
+    $selected_employee_row = get_employee_by_code($selected_employee);
+    if (!$selected_employee_row) {
+        display_error(_('The selected employee does not exist.'));
+        $selected_employee = '';
+    }
+}
 $show_paid = check_value('show_paid');
 
 start_form();
@@ -121,7 +133,7 @@ if (!$rows) {
         if ($status >= 3)
             label_cell('-');
         else
-            label_cell("<a href='".$_SERVER['PHP_SELF']."?mark_paid=".$row['payslip_id']."'>"._('Mark Paid')."</a>", "align='center'");
+            submit_cells('MarkPaid'.$row['payslip_id'], _('Mark Paid'), false, '', '', false);
 
         end_row();
     }

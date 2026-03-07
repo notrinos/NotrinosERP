@@ -80,8 +80,14 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
             $failed_count++;
         }
 
+        $runtime_context = array(
+            'salary_components' => function_exists('get_salary_components_for_employees')
+                ? get_salary_components_for_employees($employees, $to_date)
+                : array()
+        );
+
         foreach ($employees as $employee) {
-            $payslip_doc = calculate_employee_payslip($employee, $from_date, $to_date, $period_id);
+            $payslip_doc = calculate_employee_payslip($employee, $from_date, $to_date, $period_id, $runtime_context);
             if (!$payslip_doc) {
                 $failed_count++;
                 continue;

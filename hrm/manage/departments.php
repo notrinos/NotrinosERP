@@ -74,10 +74,10 @@ if ($Mode == 'Delete') {
 
 	if(key_in_foreign_table($selected_id, 'employees', 'department_id'))
 		display_error(_('The Department cannot be deleted.'));
-	else {
-		delete_department($selected_id);
+	else if (!delete_department($selected_id))
+		display_error(_('The Department cannot be deleted.'));
+	else
 		display_notification(_('Selected department has been deleted'));
-	}
 	$Mode = 'RESET';
 }
 

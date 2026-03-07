@@ -39,7 +39,7 @@ function display_salary_components($employee_id, $editable=false) {
 
 	$th = array(_('#'), _('Element Code'), _('Pay Element'), _('Category'), _('Type'), _('Amount'), _('Effective From'));
 	if ($editable)
-		$th[] = '';
+		$th[] = _('Actions');
 	table_header($th);
 
 	$total_earnings = 0;
@@ -65,10 +65,12 @@ function display_salary_components($employee_id, $editable=false) {
 		label_cell(sql2date($comp['effective_from']));
 
 		if ($editable) {
-			$edit_url = '';
-			if (isset($comp['salary_id']))
-				$edit_url = "<a href='".$_SERVER['PHP_SELF']."?employee_id=".urlencode($employee_id)."&_tabs_sel=tab_salary&edit_salary=".$comp['salary_id']."'>"._('Edit')."</a>";
-			label_cell($edit_url, "align='center'");
+			$actions = '';
+			if (isset($comp['salary_id'])) {
+				$actions = "<a href='".$_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_salary&edit_salary=".$comp['salary_id']."'>"._('Edit')."</a>"
+					." | <a href='".$_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_salary&delete_salary=".$comp['salary_id']."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+			}
+			label_cell($actions, "align='center' nowrap");
 		}
 
 		if ($comp['is_deduction'])
@@ -147,8 +149,8 @@ function display_employee_documents($employee_id) {
 		label_cell($doc['notes']);
 
 		// Action buttons
-		$actions = "<a href='".($_SERVER['PHP_SELF']."?edit_doc=".$doc['doc_id']."&employee_id=".$employee_id)."'>"._('Edit')."</a>"
-			." | <a href='".($_SERVER['PHP_SELF']."?delete_doc=".$doc['doc_id']."&employee_id=".$employee_id)."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+		$actions = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&edit_doc=".$doc['doc_id'])."'>"._('Edit')."</a>"
+			." | <a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&delete_doc=".$doc['doc_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
 		if (!empty($doc['file_path']))
 			$actions .= " | <a href='".$doc['file_path']."' target='_blank'>"._('View')."</a>";
 		label_cell($actions, "nowrap");
@@ -192,8 +194,8 @@ function display_employee_dependents($employee_id) {
 		label_cell($dep['national_id']);
 		label_cell($dep['is_beneficiary'] ? _('Yes') : _('No'));
 
-		$actions = "<a href='".($_SERVER['PHP_SELF']."?edit_dep=".$dep['dependent_id']."&employee_id=".$employee_id)."'>"._('Edit')."</a>"
-			." | <a href='".($_SERVER['PHP_SELF']."?delete_dep=".$dep['dependent_id']."&employee_id=".$employee_id)."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+		$actions = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_dependents&edit_dep=".$dep['dependent_id'])."'>"._('Edit')."</a>"
+			." | <a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_dependents&delete_dep=".$dep['dependent_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
 		label_cell($actions, "nowrap");
 
 		end_row();

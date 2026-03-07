@@ -309,6 +309,16 @@ function delete_employee($employee_id) {
 
 	// Delete related records
 	if (employee_table_exists('employee_documents')) {
+		$docs = db_query(
+			"SELECT file_path FROM ".TB_PREF."employee_documents WHERE employee_id = ".db_escape($employee_id),
+			'could not get employee documents for delete'
+		);
+		while ($doc = db_fetch($docs)) {
+			if (!empty($doc['file_path']) && file_exists($doc['file_path'])) {
+				@unlink($doc['file_path']);
+			}
+		}
+
 		$sql = "DELETE FROM ".TB_PREF."employee_documents WHERE employee_id = ".db_escape($employee_id);
 		db_query($sql, 'could not delete employee documents');
 	}
@@ -371,13 +381,22 @@ function get_department_employee_count($department_id) {
  * @return array Array of pay element rows with amounts
  */
 function get_employee_salary_components($employee_id, $as_of_date=null) {
+	static $cache = array();
+
 	if (!$as_of_date)
 		$as_of_date = date('Y-m-d');
 	else
 		$as_of_date = employee_to_sql_date($as_of_date);
 
+	$cache_key = $employee_id.'|'.$as_of_date;
+	if (array_key_exists($cache_key, $cache))
+		return $cache[$cache_key];
+
 	$emp = get_employee_by_code($employee_id);
-	if (!$emp) return array();
+	if (!$emp) {
+		$cache[$cache_key] = array();
+		return $cache[$cache_key];
+	}
 
 	if ($emp['personal_salary']) {
 		// Use personal salary table
@@ -456,7 +475,127 @@ function get_employee_salary_components($employee_id, $as_of_date=null) {
 	while ($row = db_fetch_assoc($result)) {
 		$components[] = $row;
 	}
-	return $components;
+
+	$cache[$cache_key] = $components;
+	return $cache[$cache_key];
+}
+
+/**
+ * Preload salary components for a batch of employees.
+ *
+ * Used by payroll processing to avoid repeating the same salary structure
+ * queries for each employee in large payroll runs.
+ *
+ * @param array $employees Array of employee rows or employee ids.
+ * @param string|null $as_of_date SQL or user date.
+ * @return array employee_id => array of salary components
+ */
+function get_salary_components_for_employees($employees, $as_of_date=null) {
+	$as_of_sql = $as_of_date ? employee_to_sql_date($as_of_date) : date('Y-m-d');
+	$components_by_employee = array();
+	$employees_by_id = array();
+	$personal_ids = array();
+	$structure_groups = array();
+
+	foreach ((array)$employees as $employee) {
+		if (is_array($employee)) {
+			$employee_id = isset($employee['employee_id']) ? trim((string)$employee['employee_id']) : '';
+			$employee_row = $employee;
+		} else {
+			$employee_id = trim((string)$employee);
+			$employee_row = $employee_id === '' ? false : get_employee_by_code($employee_id);
+		}
+
+		if ($employee_id === '' || !is_array($employee_row))
+			continue;
+
+		$employees_by_id[$employee_id] = $employee_row;
+		$components_by_employee[$employee_id] = array();
+
+		if (!empty($employee_row['personal_salary'])) {
+			$personal_ids[] = $employee_id;
+			continue;
+		}
+
+		$position_id = isset($employee_row['position_id']) ? (int)$employee_row['position_id'] : 0;
+		$grade_id = isset($employee_row['grade_id']) ? (int)$employee_row['grade_id'] : 0;
+		if ($position_id <= 0 || $grade_id <= 0)
+			continue;
+
+		$group_key = $position_id.':'.$grade_id;
+		if (!isset($structure_groups[$group_key])) {
+			$structure_groups[$group_key] = array(
+				'position_id' => $position_id,
+				'grade_id' => $grade_id,
+				'employees' => array()
+			);
+		}
+		$structure_groups[$group_key]['employees'][] = $employee_id;
+	}
+
+	if (!empty($personal_ids)) {
+		$id_list = array();
+		foreach (array_unique($personal_ids) as $employee_id)
+			$id_list[] = db_escape($employee_id);
+
+		$sql = "SELECT es.employee_id, es.salary_id, es.element_id, es.amount, es.formula,
+					es.effective_from, es.effective_to, es.reference,
+					pe.element_name, pe.element_code, pe.element_category,
+					pe.is_deduction, pe.amount_type, pe.account_code,
+					pe.is_taxable, pe.affects_gross, pe.display_order
+				FROM ".TB_PREF."employee_salary es
+				JOIN ".TB_PREF."pay_elements pe ON es.element_id = pe.element_id
+				WHERE es.employee_id IN (".implode(', ', $id_list).")
+				AND es.is_active = 1
+				AND es.effective_from <= ".db_escape($as_of_sql)."
+				AND (es.effective_to IS NULL OR es.effective_to >= ".db_escape($as_of_sql).")
+				ORDER BY es.employee_id, pe.display_order, pe.element_name";
+		$result = db_query($sql, 'could not preload employee salary components');
+
+		while ($row = db_fetch_assoc($result))
+			$components_by_employee[$row['employee_id']][] = $row;
+	}
+
+	if (!empty($structure_groups)) {
+		$where = array();
+		foreach ($structure_groups as $group)
+			$where[] = "(ss.position_id = ".db_escape((int)$group['position_id'])." AND ss.grade_id = ".db_escape((int)$group['grade_id']).")";
+
+		$sql = "SELECT ss.position_id, ss.grade_id, ss.structure_id, ss.element_id, ss.pay_amount as amount, ss.formula,
+					ss.effective_from, ss.effective_to,
+					pe.element_name, pe.element_code, pe.element_category,
+					pe.is_deduction, pe.amount_type, pe.account_code,
+					pe.is_taxable, pe.affects_gross, pe.display_order
+				FROM ".TB_PREF."salary_structure ss
+				JOIN ".TB_PREF."pay_elements pe ON ss.element_id = pe.element_id
+				WHERE (".implode(' OR ', $where).")
+				AND ss.is_active = 1
+				AND ss.effective_from <= ".db_escape($as_of_sql)."
+				AND (ss.effective_to IS NULL OR ss.effective_to >= ".db_escape($as_of_sql).")
+				ORDER BY ss.position_id, ss.grade_id, pe.display_order, pe.element_name";
+		$result = db_query($sql, 'could not preload salary structure components');
+		$components_by_group = array();
+
+		while ($row = db_fetch_assoc($result)) {
+			$group_key = (int)$row['position_id'].':'.(int)$row['grade_id'];
+			if (!isset($components_by_group[$group_key]))
+				$components_by_group[$group_key] = array();
+			$components_by_group[$group_key][] = $row;
+		}
+
+		foreach ($structure_groups as $group_key => $group) {
+			$group_components = isset($components_by_group[$group_key]) ? $components_by_group[$group_key] : array();
+			foreach ($group['employees'] as $employee_id)
+				$components_by_employee[$employee_id] = $group_components;
+		}
+	}
+
+	foreach ($components_by_employee as $employee_id => $rows) {
+		if (empty($rows))
+			$components_by_employee[$employee_id] = get_employee_salary_components($employee_id, $as_of_sql);
+	}
+
+	return $components_by_employee;
 }
 
 /**
