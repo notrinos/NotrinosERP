@@ -57,7 +57,7 @@ if (!$mods)
 else {
 	uasort($mods, 'sortByOption');
 
-	$th = array(_('Chart'),  _('Installed'), _('Available'), _('Encoding'), '', '');
+	$th = array(_('Chart'),  _('Installed'), _('Available'), _('Encoding'), _('Price'), _('Downloads'), '', '');
 	$k = 0;
 
 	start_table(TABLESTYLE);
@@ -75,6 +75,8 @@ else {
 		label_cell($id === null ? _('None') : ($available && $installed ? $installed : _('Unknown')));
 		label_cell($available ? $available : _('None'));
 		label_cell($encoding ? $encoding : _('Unknown'));
+		label_cell(get_package_price_label($ext, '-'));
+		label_cell(get_package_download_count_label($ext, '-'));
 
 		if ($available && check_pkg_upgrade($installed, $available)) // outdated or not installed coa in repo
 			button_cell('Update'.$pkg_name, $installed ? _('Update') : _('Install'), _('Upload and install latest extension package'), ICON_DOWN);

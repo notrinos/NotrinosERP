@@ -31,7 +31,7 @@ simple_page_mode(true);
 function display_languages() {
 	global $installed_languages, $dflt_lang, $GetText;
 	
-	$th = array(_('Language'), _('Name'), _('Encoding'), _('Right To Left'), _('Installed'), _('Available'), _('Default'), '', '');
+	$th = array(_('Language'), _('Name'), _('Encoding'), _('Right To Left'), _('Installed'), _('Available'), _('Default'), _('Price'), _('Downloads'), '', '');
 	$currlang = $_SESSION['language']->code;
 
 	div_start('lang_tbl');
@@ -40,7 +40,7 @@ function display_languages() {
 	// select/display system locales support for sites using native gettext
 	if (function_exists('gettext')) {
 		if (check_value('DisplayAll'))
-			 array_insert($th, 7, _('Supported'));
+			 array_insert($th, 9, _('Supported'));
 		start_table();
 		check_row(_('Display also languages not supported by server locales'), 'DisplayAll', null, true);
 		end_table();
@@ -75,12 +75,14 @@ function display_languages() {
 		if (function_exists('gettext') && !$support && !get_post('DisplayAll') && $lang != 'C') continue;
 
 		label_cell($lang);
-		label_cell($available ? get_package_view_str($lang, $lang_name) : $lang_name);
+		label_cell($available ? get_package_view_str($pkg_name, $lang_name) : $lang_name);
 		label_cell($charset);
 		label_cell($rtl ? _('Yes') : _('No'));
 		label_cell($id === null ? _('None') : ($available && $installed ? $installed : _('Unknown')));
 		label_cell($available ? $available : _('None'));
 		label_cell($id === null ? '' : radio(null, 'CurDflt', $id, $dflt_lang == $lang, true), "align='center'");
+		label_cell(get_package_price_label($lng, '-'));
+		label_cell(get_package_download_count_label($lng, '-'));
 		
 		if (function_exists('gettext') && check_value('DisplayAll'))
 			label_cell($support ? _('Yes') : _('No'));

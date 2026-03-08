@@ -99,7 +99,7 @@ function display_extensions($mods) {
 	div_start('ext_tbl');
 	start_table(TABLESTYLE);
 
-	$th = array(_("Extension"), _("Installed"), _("Available"),  "", "");
+	$th = array(_("Extension"), _("Installed"), _("Available"), _("Price"), _("Downloads"),  "", "");
 	table_header($th);
 
 	$k = 0;
@@ -114,6 +114,8 @@ function display_extensions($mods) {
 		label_cell($available ? get_package_view_str($pkg_name, $ext['name']) : $ext['name']);
 		label_cell($id === null ? _('None') : (($installed && ($installed != '-' || $installed != '')) ? $installed : _('Unknown')));
 		label_cell($available ? $available : _('Unknown'));
+		label_cell(get_package_price_label($ext, '-'));
+		label_cell(get_package_download_count_label($ext, '-'));
 
 		if (!$available && $ext['type'] == 'extension')	{// third-party plugin
 			if (!$installed)

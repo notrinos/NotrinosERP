@@ -441,10 +441,13 @@ function get_languages_list() {
 	$pkgs = get_pkg_or_list('language', null, array(
 		'Package' => 'package',
 		'Version' => 'available',
+		'Filename' => 'filename',
 		'Name' => 'name',
 		'Language' => 'code',
 		'Encoding' => 'encoding',
 		'RTLDir' => 'rtl',
+		'Price' => 'price',
+		'IsFree' => 'is_free',
 		'Description' => 'Descr',
 		'InstallPath' => 'path'
 	));
@@ -468,6 +471,7 @@ function get_languages_list() {
 	}
 	if ($pkgs)
 		ksort($pkgs);
+	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
 //---------------------------------------------------------------------------------------
@@ -484,8 +488,11 @@ function get_extensions_list($type = null) {
 	$pkgs = get_pkg_or_list($type, null, array(
 		'Package' => 'package',
 		'Version' => 'available',
+		'Filename' => 'filename',
 		'Name' => 'name',
 		'Description' => 'Descr',
+		'Price' => 'price',
+		'IsFree' => 'is_free',
 		'Type' => 'type',
 		'DefaultStatus' => 'active',
 		// 'MenuTabs' => 'tabs',
@@ -530,6 +537,7 @@ function get_extensions_list($type = null) {
 	}
 	if ($pkgs)
 		ksort($pkgs);
+	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
 //
@@ -540,7 +548,10 @@ function get_themes_list() {
 	$pkgs = get_pkg_or_list('theme', null, array(
 		'Package' => 'package',
 		'Version' => 'available',
+		'Filename' => 'filename',
 		'Name' => 'name',
+		'Price' => 'price',
+		'IsFree' => 'is_free',
 		'Description' => 'Descr'
 	));
 
@@ -557,6 +568,7 @@ function get_themes_list() {
 	// TODO: Add other themes from themes directory
 	if ($pkgs)
 		ksort($pkgs);
+	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
 //---------------------------------------------------------------------------------------
@@ -568,8 +580,11 @@ function get_charts_list() {
 	$pkgs = get_pkg_or_list('chart', null, array(
 		'Package' => 'package',
 		'Version' => 'available',
+		'Filename' => 'filename',
 		'Name' => 'name',
 		'Description' => 'Descr',
+		'Price' => 'price',
+		'IsFree' => 'is_free',
 		'Type' => 'type',
 		'InstallPath' => 'path',
 		'Encoding' => 'encoding',
@@ -590,6 +605,7 @@ function get_charts_list() {
 	}
 	if ($pkgs)
 		ksort($pkgs);
+	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
 //---------------------------------------------------------------------------------------------
@@ -719,6 +735,196 @@ function check_pkg_upgrade($current, $available) {
 */
 function get_package_info($pkg, $type=null, $filter=array(), $outkey=null, $download=true) {
 	return get_pkg_or_list($type, $pkg, $filter, null, false);
+}
+
+/**
+ * Determine whether a package metadata flag should be treated as enabled.
+ *
+ * @param mixed $value
+ * @return bool
+ */
+function package_meta_flag_enabled($value) {
+	if (is_bool($value))
+		return $value;
+
+	$value = strtolower(trim(is_array($value) ? implode(' ', $value) : (string) $value));
+	return in_array($value, array('1', 'true', 'yes', 'y', 'on'), true);
+}
+
+/**
+ * Flatten a package metadata value into a displayable string.
+ *
+ * @param mixed $value
+ * @return string
+ */
+function package_meta_text($value) {
+	if (is_array($value))
+		$value = implode("\n", $value);
+
+	return trim((string) $value);
+}
+
+/**
+ * Build the base URL for the configured repository.
+ *
+ * @return string
+ */
+function get_package_repository_base_url() {
+	global $repo_auth;
+
+	$scheme = isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://';
+	$host = isset($repo_auth['host']) ? trim($repo_auth['host'], '/') : '';
+	$path = isset($repo_auth['path']) ? trim($repo_auth['path'], '/') : '';
+	$branch = isset($repo_auth['branch']) ? trim($repo_auth['branch'], '/') : '';
+
+	if ($host == '' || $branch == '')
+		return '';
+
+	$url = $scheme.$host;
+	if ($path != '')
+		$url .= '/'.$path;
+
+	return $url.'/'.$branch;
+}
+
+/**
+ * Build the repository root URL without the branch suffix.
+ *
+ * @return string
+ */
+function get_package_repository_root_url() {
+	global $repo_auth;
+
+	$scheme = isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://';
+	$host = isset($repo_auth['host']) ? trim($repo_auth['host'], '/') : '';
+	$path = isset($repo_auth['path']) ? trim($repo_auth['path'], '/') : '';
+
+	if ($host == '')
+		return '';
+
+	$url = $scheme.$host;
+	if ($path != '')
+		$url .= '/'.$path;
+
+	return $url;
+}
+
+/**
+ * Resolve repository-hosted package image URLs from package metadata.
+ *
+ * @param array $pkg
+ * @return array
+ */
+function get_package_image_urls($pkg) {
+	$pictures = isset($pkg['Pictures']) ? $pkg['Pictures'] : array();
+	if (!is_array($pictures))
+		$pictures = strlen(trim((string) $pictures)) ? array($pictures) : array();
+
+	$base_url = get_package_repository_base_url();
+	$images = array();
+	foreach ($pictures as $picture) {
+		$picture = trim((string) $picture);
+		if ($picture == '')
+			continue;
+		if (preg_match('/^[a-z]+:\/\//i', $picture))
+			$images[] = $picture;
+		elseif ($base_url != '')
+			$images[] = $base_url.'/'.ltrim($picture, '/');
+	}
+
+	return $images;
+}
+
+/**
+ * Format a package price label using the stored price/free metadata.
+ *
+ * @param array $pkg
+ * @param string $empty_label
+ * @return string
+ */
+function get_package_price_label($pkg, $empty_label='') {
+	if (package_meta_flag_enabled(@$pkg['IsFree']) || package_meta_flag_enabled(@$pkg['is_free']))
+		return _('Free');
+
+	$price = package_meta_text(isset($pkg['Price']) ? $pkg['Price'] : @$pkg['price']);
+	return $price != '' ? $price : $empty_label;
+}
+
+/**
+ * Fetch download counts for a list of repository package files.
+ *
+ * @param array $filenames
+ * @return array
+ */
+function get_package_download_counts($filenames) {
+	global $repo_auth;
+	static $cache = array();
+
+	if (!is_array($filenames) || !count($filenames))
+		return array();
+
+	$filenames = array_values(array_unique(array_filter(array_map('trim', $filenames), 'strlen')));
+	if (!count($filenames))
+		return array();
+
+	sort($filenames);
+	$cache_key = implode('|', $filenames);
+	if (isset($cache[$cache_key]))
+		return $cache[$cache_key];
+
+	$repo_root = get_package_repository_root_url();
+	if ($repo_root == '')
+		return $cache[$cache_key] = array();
+
+	$url = $repo_root.'/repo_api/get_download_counts.php?packages='.rawurlencode(json_encode($filenames));
+	if (!empty($repo_auth['download_counts_key']))
+		$url .= '&key='.rawurlencode($repo_auth['download_counts_key']);
+
+	$response = url_get_contents($url, 10);
+	if ($response === null)
+		return $cache[$cache_key] = array();
+
+	$data = json_decode($response, true);
+	if (!is_array($data) || !isset($data['counts']) || !is_array($data['counts']))
+		return $cache[$cache_key] = array();
+
+	$counts = array();
+	foreach ($filenames as $filename)
+		$counts[$filename] = isset($data['counts'][$filename]) ? (int) $data['counts'][$filename] : 0;
+
+	return $cache[$cache_key] = $counts;
+}
+
+/**
+ * Merge repository download counts into a package list.
+ *
+ * @param array $packages
+ * @return array
+ */
+function fill_package_download_counts($packages) {
+	$filenames = array();
+	foreach ($packages as $package)
+		if (!empty($package['available']) && !empty($package['filename']))
+			$filenames[] = $package['filename'].'.pkg';
+
+	$counts = get_package_download_counts($filenames);
+	foreach ($packages as $key => $package) {
+		$filename = !empty($package['filename']) ? $package['filename'].'.pkg' : '';
+		$packages[$key]['downloads'] = ($filename != '' && isset($counts[$filename])) ? (int) $counts[$filename] : null;
+	}
+
+	return $packages;
+}
+
+/**
+ * Format a package download count for listing tables.
+ *
+ * @param array $pkg
+ * @param string $empty_label
+ * @return string
+ */
+function get_package_download_count_label($pkg, $empty_label='-') {
+	return isset($pkg['downloads']) && $pkg['downloads'] !== null ? (string) $pkg['downloads'] : $empty_label;
 }
 
 /*

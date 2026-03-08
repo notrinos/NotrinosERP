@@ -24,12 +24,15 @@ if (!isset($_GET['id']))  {
 	end_page();
 }
 
-$filter = array(
-	'Version' => _('Available version'), 
-	'Type' => _('Package type'), 
+$field_labels = array(
+	'Package' => _('Package id'),
+	'Version' => _('Available version'),
+	'Type' => _('Package type'),
 	'Name' => _('Package content'),
-	'Description' => _('Description'), 
-	'Author' => _('Author'), 
+	'Description' => _('Description'),
+	'Content' => _('Content information'),
+	'Price' => _('Price'),
+	'Author' => _('Author'),
 	'Homepage' => _('Home page'),
 	'Maintenance' => _('Package maintainer'),
 	'InstallPath' => _('Installation path'),
@@ -37,8 +40,16 @@ $filter = array(
 	'RTLDir' => _('Right to left'),
 	'Encoding' => _('Charset encoding')
 );
+$field_order = array('Package', 'Version', 'Type', 'Name', 'Description', 'Content', 'Price', 'Author', 'Homepage', 'Maintenance', 'InstallPath', 'Depends', 'RTLDir', 'Encoding');
 
-$pkg = get_package_info($_GET['id'], null, $filter);
+$pkg = get_package_info($_GET['id']);
+if (!$pkg) {
+	display_note(_('Package details are not available for the selected package.'));
+	end_page();
+}
+
+$pkg['Price'] = get_package_price_label($pkg, '');
+$package_images = get_package_image_urls($pkg);
 
 display_heading(sprintf(_("Content information for package '%s'"), $_GET['id']));
 br();
@@ -46,14 +57,27 @@ start_table(TABLESTYLE2, "width='80%'");
 $th = array(_('Property'), _('Value'));
 table_header($th);
 
-foreach ($pkg as $field => $value) {
-	if ($value == '')
+foreach ($field_order as $field) {
+	if (!isset($field_labels[$field]))
+		continue;
+	$value = isset($pkg[$field]) ? $pkg[$field] : '';
+	if ($field == 'Homepage' && $value == '')
+		continue;
+	if (package_meta_text($value) == '')
 		continue;
 	start_row();
-	label_cells($field, nl2br(html_specials_encode(is_array($value) ? implode("\n", $value) :$value)),
+	label_cells($field_labels[$field], nl2br(html_specials_encode(is_array($value) ? implode("\n", $value) : $value)),
 		 "class='tableheader2'");
 	end_row();
 }
 end_table(1);
+
+if (count($package_images)) {
+	display_heading2(_('Package pictures'));
+	echo "<div style='display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;'>";
+	foreach ($package_images as $image_url)
+		echo "<div style='border:1px solid #d7d7d7;padding:6px;background:#fff;'><a href='".html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer' title='"._('Open full size picture')."'><img src='".html_specials_encode($image_url)."' alt='"._('Package picture')."' style='display:block;max-width:260px;max-height:180px;cursor:zoom-in;' /></a><div style='margin-top:6px;text-align:center;'><a href='".html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer'>"._('Open full size')."</a></div></div>";
+	echo "</div>";
+}
 
 end_page(true);

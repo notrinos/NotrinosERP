@@ -51,7 +51,7 @@ start_form(true);
 div_start('ext_tbl');
 start_table(TABLESTYLE);
 
-$th = array(_('Theme'),  _('Installed'), _('Available'), '', '');
+$th = array(_('Theme'),  _('Installed'), _('Available'), _('Price'), _('Downloads'), '', '');
 $k = 0;
 
 $mods = get_themes_list();
@@ -71,6 +71,8 @@ else {
 		label_cell($available ? get_package_view_str($pkg_name, $ext['name']) : $ext['name']);
 		label_cell($id === null ? _('None') : ($available && $installed ? $installed : _('Unknown')));
 		label_cell($available ? $available : _('None'));
+		label_cell(get_package_price_label($ext, '-'));
+		label_cell(get_package_download_count_label($ext, '-'));
 
 		if ($available && check_pkg_upgrade($installed, $available)) // outdated or not installed theme in repo
 			button_cell('Update'.$pkg_name, $installed ? _('Update') : _('Install'), _('Upload and install latest extension package'), ICON_DOWN, 'process');
