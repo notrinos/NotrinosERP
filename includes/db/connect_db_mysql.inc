@@ -62,8 +62,10 @@ function db_query($sql, $err_msg=null) {
 	$retry = MAX_DEADLOCK_RETRY;
 	do {
 		$result = mysql_query($db, $sql);
-		if (mysql_errno($db) == 1213) // deadlock detected
-			sleep(1); $retry--;
+		if (mysql_errno($db) == 1213) { // deadlock detected
+			sleep(1);
+			$retry--;
+		}
 		else
 			$retry = 0;
 	}
@@ -262,4 +264,64 @@ function db_get_charset($db) {
 
 function db_set_charset($db, $charset) {
 	return mysql_set_charset($charset, $db);
+}
+
+/**
+ * Execute a SQL statement with placeholder substitution for compatibility with PDO-style helpers.
+ *
+ * @param string $sql SQL statement containing '?' placeholders.
+ * @param array $params Ordered parameter values.
+ * @param string|null $err_msg Optional error context.
+ *
+ * @return mixed Query result from db_query.
+ */
+function db_query_params($sql, $params = array(), $err_msg = null) {
+	if (!empty($params)) {
+		foreach ($params as $param) {
+			$escaped_param = db_escape($param);
+			$sql = preg_replace('/\?/', $escaped_param, $sql, 1);
+		}
+	}
+
+	return db_query($sql, $err_msg);
+}
+
+/**
+ * Execute a parameterized statement intended for non-select operations.
+ *
+ * @param string $sql SQL statement containing '?' placeholders.
+ * @param array $params Ordered parameter values.
+ * @param string|null $err_msg Optional error context.
+ *
+ * @return bool True on success, false on failure.
+ */
+function db_execute($sql, $params = array(), $err_msg = null) {
+	return (bool)db_query_params($sql, $params, $err_msg);
+}
+
+/**
+ * Fetch all rows from a result set.
+ *
+ * @param mixed $result Database result resource.
+ * @param string $mode Fetch mode: assoc, row, or both.
+ *
+ * @return array Result rows.
+ */
+function db_fetch_all($result, $mode = 'assoc') {
+	$rows = array();
+
+	if ($mode == 'row') {
+		while ($row = db_fetch_row($result))
+			$rows[] = $row;
+	}
+	else if ($mode == 'both') {
+		while ($row = db_fetch($result))
+			$rows[] = $row;
+	}
+	else {
+		while ($row = db_fetch_assoc($result))
+			$rows[] = $row;
+	}
+
+	return $rows;
 }
