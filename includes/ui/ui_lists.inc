@@ -316,8 +316,9 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 
 	if ($opts['editlink'])
 		$selector .= ' '.$opts['editlink'];
-	if ($search_box && $opts['cells'])
-		$str = ($edit_entry != '' ? '<td>'.$edit_entry.'</td>' : '')."<td nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
+	if ($search_box && $opts['cells']) {
+		$str = ($edit_entry != '' ? '<td class="combo-search-cell">'.$edit_entry.'</td>' : '')."<td class='combo-select-cell' nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
+	}
 	else
 		$str = $edit_entry."<div class='list_container'>".$selector.$search_btn."</div>";
 

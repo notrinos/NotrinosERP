@@ -21,31 +21,12 @@ include($path_to_root.'/includes/page/header.inc');
 
 page_header(_('Logout'), true, false, '');
 
-echo "<table width='100%' border='0'>
-	<tr>
-		<td align='center'><img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP' width='250' onload='fixPNG(this)' ></td>
-	</tr>
-	<tr>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td><div align='center'><font size=2>";
-echo _('Thank you for using').' ';
-
-echo '<strong>'.$SysPrefs->app_title.' '.$version.'</strong>';
-
-echo "</font></div></td>
-	</tr>
-	<tr>
-		<td>&nbsp;</td>
-	</tr>
-	<tr>
-		<td><div align='center'>";
-
-echo "<a href='".$path_to_root."/index.php'><b>"._('Click here to Login Again.').'</b></a>';
-echo "</div></td>
-	</tr>
-</table><br>\n";
+echo "<div class='modern-logout-card'>";
+echo "<img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP'>";
+echo "<div class='logout-message'>"._('Thank you for using')."</div>";
+echo "<div class='logout-app'>".$SysPrefs->app_title.' '.$version."</div>";
+echo "<a class='logout-login-link' href='".$path_to_root."/index.php'>"._('Click here to Login Again.')."</a>";
+echo "</div>\n";
 
 end_page(false, true);
 session_unset();

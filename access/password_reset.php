@@ -40,8 +40,8 @@ echo "<html dir='".$rtl."' >\n";
 echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
 echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
@@ -50,28 +50,30 @@ echo "</head>\n";
 
 echo "<body id='loginscreen' ".$onload.">\n";
 
-echo "<table class='titletext'><tr><td>".$title."</td></tr></table>\n";
-	
-div_start('_page_body');
-br(2);
+echo "<div class='login-title-bar'>" . htmlspecialchars($title) . "</div>\n";
+
+echo "<div class='login-card'>\n";
 start_form(false, @$_SESSION['timeout']['uri'], 'resetform');
-start_table(false, "class='login'");
-start_row();
-echo "<td align='center' colspan=2>";
-echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root.'/themes/'.$def_theme."/images/notrinos_erp.png' alt='NotrinosERP' height='50' onload='fixPNG(this)' border='0' ></a>";
-echo "</td>\n";
-end_row();
 
-echo "<input type='hidden' id=ui_mode name='ui_mode' value='".fallback_mode()."' >\n";
-table_section_title(_('Version').' '.$version."   Build ".$SysPrefs->build_version.' - '._('Password reset'));
-echo "<tr><td colspan='2'></td></tr>";
-echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-envelope' title='"._('Email')."'></i>";
-echo "<input required class='input' id='email' name='email_entry_field' type='text' placeholder='"._('Email:')."'></div></td></tr>";
+// Logo
+echo "<div class='login-logo'>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP' height='50'></a>";
+echo "</div>\n";
 
-$coy =  user_company();
+// Subtitle
+echo "<div class='login-subtitle'>"._('Version').' '.$version.'   Build '.$SysPrefs->build_version.' - '._('Password reset')."</div>\n";
+
+echo "<input type='hidden' id='ui_mode' name='ui_mode' value='".fallback_mode()."'>\n";
+
+// Email field
+echo "<div class='login-field'><div class='input_container'><i class='fas fa-envelope' title='"._('Email')."'></i>";
+echo "<input required class='input' id='email' name='email_entry_field' type='text' placeholder='"._('Email')."'></div></div>\n";
+
+// Company selector
+$coy = user_company();
 if (!isset($coy))
 	$coy = $def_coy;
-echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
+echo "<div class='login-field'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
 if (!@$SysPrefs->text_company_selection) {
 	echo "<select name='company_login_name'>\n";
 	for ($i = 0; $i < count($db_connections); $i++)
@@ -80,19 +82,18 @@ if (!@$SysPrefs->text_company_selection) {
 }
 else
 	echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
-echo '</div></td></tr>';
+echo "</div></div>\n";
 
-start_row();
-label_cell('Please enter your e-mail', "colspan=2 align='center' id='log_msg'");
-end_row();
+// Status message
+echo "<div class='login-message' id='log_msg'>"._('Please enter your e-mail')."</div>\n";
 
-start_row();
-echo "<td colspan='2'><center><input type='submit' value='&nbsp;&nbsp;"._('Send password')."&nbsp;&nbsp;&#8250;' name='SubmitReset' onclick='set_fullmode();'></center></td>\n";
-end_row();
-end_table(1);
+// Submit
+echo "<div class='login-submit'><input type='submit' value='"._('Send password')." &#8250;' name='SubmitReset' onclick='set_fullmode();'></div>\n";
 
 end_form(1);
-$Ajax->addScript(true, "document.forms[0].password.focus();");
+echo "</div>\n"; // end login-card
+
+$Ajax->addScript(true, "document.forms[0].email_entry_field.focus();");
 
 echo "<script>
 //<![CDATA[
@@ -102,23 +103,15 @@ echo "<script>
 	//-->
 //]]>
 </script>";
-div_end();
-echo "<table class='bottomBar'>\n";
-echo "<tr>";
 
-if (isset($_SESSION['wa_current_user'])) 
+// Footer
+if (isset($_SESSION['wa_current_user']))
 	$date = Today().' | '.Now();
-else	
+else
 	$date = date('m/d/Y').' | '.date("h.i am");
-
-echo "<td class='bottomBarCell'>".$date."</td>\n";
-echo "</tr></table>\n";
-echo "<table class='footer'>\n";
-echo "<tr>\n";
-echo "<td><a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->app_title.' '.$version.' - ' ._('Theme:').' '.$def_theme."</a></td>\n";
-echo "</tr>\n";
-echo "<tr>\n";
-echo "<td><a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->power_by."</a></td>\n";
-echo "</tr>\n";
-echo "</table><br><br>\n";
+echo "<div class='login-footer'>";
+echo htmlspecialchars($date)."<br>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->app_title.' '.$version."</a><br>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->power_by."</a>";
+echo "</div>\n";
 echo "</body></html>\n";

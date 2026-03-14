@@ -77,7 +77,6 @@ function get_customer_trans_view_str($type, $trans_no, $label='', $icon=false, $
 		$viewer .= 'view_sales_order.php';
 	else
 		return null;
-
 	if(!is_array($trans_no)) $trans_no = array($trans_no);
 
 	$lbl = $label;

@@ -51,22 +51,24 @@ else {
 	display_heading2(_('Work Order Requirements'));
 	display_wo_requirements($woid, $myrow['units_reqd']);
 	if ($myrow['type'] == WO_ADVANCED) {
-		echo '<br><table cellspacing=7><tr valign=top><td>';
+		start_view_columns();
+		view_column_start();
 		display_heading2(_('Issues'));
 		display_wo_issues($woid);
-		echo '</td><td>';
+		view_column_next();
 		display_heading2(_('Productions'));
 		display_wo_productions($woid);
-		echo '</td><td>';
+		view_column_next();
 		display_heading2(_('Additional Costs'));
 		display_wo_payments($woid);
-		echo '</td></tr></table>';
+		end_view_columns();
 	}
 	else {
-		echo '<br><table cellspacing=7><tr valign=top><td>';
+		start_view_columns();
+		view_column_start();
 		display_heading2(_('Additional Costs'));
 		display_wo_payments($woid);
-		echo '</td></tr></table>';
+		end_view_columns();
 	}
 }
 

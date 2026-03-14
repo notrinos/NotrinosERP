@@ -76,13 +76,22 @@ class Dashboard {
 					elseif($widget['width'] == WIDGET_QUARTER)
 						$class = 'widget_quarter';
 
-					echo "<div class = 'widget $class'>";
-
-					if($widget_file !== null)
+					$widget_markup = '';
+					$widget_type_class = '';
+					if($widget_file !== null) {
+						ob_start();
 						require($widget_file);
-					else
-						echo "<br/><br/><div class = 'err_msg'>"._('Cannot find widget file').'&nbsp;'."'$widg'"."</div>";
-					
+						$widget_markup = ob_get_clean();
+
+						if (stripos($widget_markup, '<table') !== false || stripos($widget_markup, 'class="form-table"') !== false || stripos($widget_markup, "class='form-table'") !== false)
+							$widget_type_class = ' widget-has-table';
+						elseif (stripos($widget_markup, '<canvas') !== false || stripos($widget_markup, '<svg') !== false || stripos($widget_markup, '<img') !== false)
+							$widget_type_class = ' widget-has-chart';
+					} else
+						$widget_markup = "<br/><br/><div class = 'err_msg'>"._('Cannot find widget file').'&nbsp;' . "'$widg'" . "</div>";
+
+					echo "<div class = 'widget $class$widget_type_class'>";
+					echo $widget_markup;
 					echo '</div>';
 				}
 			}

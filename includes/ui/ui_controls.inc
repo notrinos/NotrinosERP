@@ -34,6 +34,55 @@ function get_post($name, $dflt='') {
 
 $form_nested = -1;
 
+$ui_table_mode_stack = array();
+$ui_outer_section_open = false;
+$ui_row_mode_stack = array();
+
+/**
+ * Check whether modern theme is active.
+ * Always returns true as only the modern theme is supported.
+ *
+ * @return bool
+ */
+function ui_is_modern_theme() {
+	return true;
+}
+
+/**
+ * Push UI table mode to stack.
+ *
+ * @param string $mode
+ * @return void
+ */
+function ui_push_table_mode($mode) {
+	global $ui_table_mode_stack;
+	$ui_table_mode_stack[] = $mode;
+}
+
+/**
+ * Pop UI table mode from stack.
+ *
+ * @return string
+ */
+function ui_pop_table_mode() {
+	global $ui_table_mode_stack;
+	if (!count($ui_table_mode_stack))
+		return 'table';
+	return array_pop($ui_table_mode_stack);
+}
+
+/**
+ * Get current UI table mode from stack.
+ *
+ * @return string
+ */
+function ui_current_table_mode() {
+	global $ui_table_mode_stack;
+	if (!count($ui_table_mode_stack))
+		return 'table';
+	return $ui_table_mode_stack[count($ui_table_mode_stack) - 1];
+}
+
 function start_form($multi=false, $action='', $name='') {
 	global $form_nested;
 
@@ -91,45 +140,70 @@ function check_csrf_token() {
 }
 
 function start_table($class=false, $extra='', $padding='2', $spacing='0') {
+	$mode = ($class != TABLESTYLE) ? 'form' : 'table';
+	ui_push_table_mode($mode);
+
+	if ($mode == 'form') {
+		echo "<div class='form-table'";
+		if ($extra != '')
+			echo ' '.$extra;
+		echo ">\n";
+		return;
+	}
+
+	$table_class = 'tablestyle';
+
+	if ($extra != '' && preg_match('/class\s*=\s*[\"\']([^\"\']+)[\"\']/i', $extra, $class_match)) {
+		$table_class = trim($table_class.' '.$class_match[1]);
+		$extra = trim(preg_replace('/class\s*=\s*[\"\'][^\"\']+[\"\']/i', '', $extra));
+	}
+
 	echo "<center><table";
-	if ($class == TABLESTYLE_NOBORDER)
-		echo " class='tablestyle_noborder'";
-	elseif ($class == TABLESTYLE2)
-		echo " class='tablestyle2'";
-	elseif ($class == TABLESTYLE)
-		echo " class='tablestyle'";
+	if ($table_class != '')
+		echo " class='".$table_class."'";
 	if ($extra != '')
 		echo ' '.$extra;
 	echo " cellpadding='".$padding."' cellspacing='".$spacing."'>\n";
 }
 
 function end_table($breaks=0) {
-	echo "</table></center>\n";
+	$mode = ui_pop_table_mode();
+	if ($mode == 'form')
+		echo "</div>\n";
+	else
+		echo "</table></center>\n";
 	output_hidden();
 	if ($breaks)
 		br($breaks);
 }
 
 function start_outer_table($class=false, $extra='', $padding='2', $spacing='0', $br=false) {
+	global $ui_outer_section_open;
+
 	if ($br)
 		br();
-	$classes = " class='table_section";
-	if ($class == TABLESTYLE_NOBORDER)
-		$classes .= ' tablestyle_noborder';
-	elseif ($class == TABLESTYLE2)
-		$classes .= ' tablestyle2';
-	elseif ($class == TABLESTYLE)
-		$classes .= ' tablestyle';
-	$classes .= "'";
-
-	echo '<center><table'.$classes;
+	$ui_outer_section_open = false;
+	ui_push_table_mode('outer_form');
+	echo "<div class='form-grid'";
 	if ($extra != '')
 		echo ' '.$extra;
-	echo " cellpadding='".$padding."' cellspacing='".$spacing."'>\n";
-	echo "<tr valign=top><td>\n"; // outer table
+	echo ">\n";
 }
 
 function table_section($number=1, $width=false) {
+	global $ui_outer_section_open;
+
+	if (ui_current_table_mode() == 'outer_form') {
+		if ($ui_outer_section_open)
+			echo "</div>\n";
+		$ui_outer_section_open = true;
+		echo "<div class='form-section'";
+		if ($width)
+			echo " style='width:{$width};'";
+		echo ">\n";
+		return;
+	}
+
 	if ($number > 1) {
 		echo "</table>\n";
 		output_hidden();
@@ -140,6 +214,20 @@ function table_section($number=1, $width=false) {
 }	
 
 function end_outer_table($breaks=0, $close_table=true) {
+	global $ui_outer_section_open;
+
+	if (ui_current_table_mode() == 'outer_form') {
+		if ($ui_outer_section_open)
+			echo "</div>\n";
+		echo "</div>\n";
+		$ui_outer_section_open = false;
+		ui_pop_table_mode();
+		output_hidden();
+		if ($breaks)
+			br($breaks);
+		return;
+	}
+
 	if ($close_table) {
 		echo "</table>\n";
 		output_hidden();
@@ -150,6 +238,10 @@ function end_outer_table($breaks=0, $close_table=true) {
 
 //  outer table spacer
 function vertical_space($params='') {
+	if (ui_current_table_mode() == 'outer_form') {
+		echo "<div class='form-space' ".$params."></div>";
+		return;
+	}
 	echo "</td></tr><tr><td valign=center ".$params.">";
 }
 
@@ -188,27 +280,18 @@ function access_string($label, $clean=false) {
 function hyperlink_back($center=true, $no_menu=true, $type_no=0, $trans_no=0, $final=false) {
 	global $path_to_root;
 
-	if ($center)
-		echo "<center>";
-	$id = 0;	
+	$id = 0;
 	if ($no_menu && $trans_no != 0) {
 		include_once($path_to_root.'/admin/db/attachments_db.inc');
 		$id = has_attachment($type_no, $trans_no);
 		$attach = get_attachment_string($type_no, $trans_no);
 		echo $attach;
 	}
-	$width = $id != 0 ? '30%' : '20%';	
-	start_table(false, "width='".$width."'");
-	start_row();
+	echo "<div class='form-actions'>";
 	if ($no_menu)
-		echo "<td align=center><a href='javascript:window.print();'>"._('Print')."</a></td>\n";
-	
-	echo "<td align=center><a href='javascript:goBack(".($final ? '-2' : '').");'>".($no_menu ? _('Close') : _('Back'))."</a></td>\n";
-	end_row();
-	end_table();
-	if ($center)
-		echo '</center>';
-	echo '<br>';
+		echo "<a class='inputsubmit' href='javascript:window.print();'>"._('Print')."</a>";
+	echo "<a class='inputsubmit' href='javascript:goBack(".($final ? '-2' : '').");'>".($no_menu ? _('Close') : _('Back'))."</a>";
+	echo "</div><br>";
 }
 
 function hyperlink_no_params($target, $label, $center=true) {
@@ -326,14 +409,28 @@ function alt_table_row_color(&$k, $extra_class=null) {
 		array_push($classes, 'evenrow');
 		$k++;
 	}
-	echo "<tr class='".implode(' ', $classes)."'>\n";
+	if (ui_current_table_mode() == 'table')
+		echo "<tr class='".implode(' ', $classes)."'>\n";
+	else
+		echo "<div class='form-row ".implode(' ', $classes)."'>\n";
 }
 
 function table_section_title($msg, $colspan=2) {
-	echo "<tr><td colspan=".$colspan." class='tableheader'>".$msg."</td></tr>\n";
+	if (ui_current_table_mode() == 'table')
+		echo "<tr><td colspan=".$colspan." class='tableheader'>".$msg."</td></tr>\n";
+	else
+		echo "<h3 class='section-title'>".$msg."</h3>\n";
 }
 
 function table_header($labels, $params='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='table-header-row'>";
+		foreach ($labels as $label)
+			echo "<span class='table-header-cell' ".$params.">".$label."</span>";
+		echo "</div>\n";
+		return;
+	}
+
 	start_row();
 	foreach ($labels as $label)
 		labelheader_cell($label, $params);
@@ -343,6 +440,18 @@ function table_header($labels, $params='') {
 //-----------------------------------------------------------------------------------
 
 function start_row($param='') {
+	global $ui_row_mode_stack;
+
+	if (ui_current_table_mode() != 'table') {
+		$ui_row_mode_stack[] = 'div';
+		if ($param != '')
+			echo "<div class='form-row' ".$param.">\n";
+		else
+			echo "<div class='form-row'>\n";
+		return;
+	}
+
+	$ui_row_mode_stack[] = 'tr';
 	if ($param != '')
 		echo "<tr ".$param.">\n";
 	else
@@ -350,7 +459,12 @@ function start_row($param='') {
 }
 
 function end_row() {
-	echo "</tr>\n";
+	global $ui_row_mode_stack;
+	$mode = count($ui_row_mode_stack) ? array_pop($ui_row_mode_stack) : 'tr';
+	if ($mode == 'div')
+		echo "</div>\n";
+	else
+		echo "</tr>\n";
 }
 
 function br($num=1) {
@@ -663,4 +777,55 @@ function page_modified($status=true) {
 		$Ajax->addScript(true, $js);
 	else
 		add_js_source($js);
+}
+
+/**
+ * Start a multi-column view layout (used in document view pages).
+ * Modern theme: flexbox container; Default: outer table.
+ *
+ * @param string $extra Optional extra attributes
+ */
+function start_view_columns($extra='') {
+	echo "<div class='view-columns'";
+	if ($extra)
+		echo " " . $extra;
+	echo ">\n";
+}
+
+/**
+ * Output column headers for view layout.
+ * Modern theme: header bar; Default: table row with headings.
+ *
+ * @param array $headers Array of heading strings
+ */
+function view_column_headers($headers) {
+	echo "<div class='view-columns-header'>\n";
+	foreach ($headers as $header) {
+		echo "<div class='view-column-title'>" . $header . "</div>\n";
+	}
+	echo "</div>\n";
+}
+
+/**
+ * Start a single column panel inside view_columns layout.
+ * Modern theme: div panel; Default: table cell.
+ */
+function view_column_start() {
+	echo "<div class='view-column-panel'>\n";
+}
+
+/**
+ * Transition to the next column panel.
+ * Modern theme: close/open div; Default: close/open td.
+ */
+function view_column_next() {
+	echo "</div>\n<div class='view-column-panel'>\n";
+}
+
+/**
+ * End the last column panel and close the view columns layout.
+ * Modern theme: close divs; Default: close td/tr/table.
+ */
+function end_view_columns() {
+	echo "</div>\n</div>\n";
 }

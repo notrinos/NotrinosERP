@@ -37,19 +37,13 @@ if (isset($_SESSION['View']))
 
 $_SESSION['View'] = new Cart($_GET['trans_type'], $_GET['trans_no']);
 
-start_table(TABLESTYLE2, "width='95%'", 5);
+start_view_columns();
 
 if ($_GET['trans_type'] != ST_SALESQUOTE) {
-	echo '<tr valign=top><td>';
-	display_heading2(_('Order Information'));
-	echo '</td><td>';
-	display_heading2(_('Deliveries'));
-	echo '</td><td>';
-	display_heading2(_('Invoices/Credits'));
-	echo '</td></tr>';
+	view_column_headers(array(_('Order Information'), _('Deliveries'), _('Invoices/Credits')));
 }	
 
-echo '<tr valign=top><td>';
+view_column_start();
 
 start_table(TABLESTYLE, "width='95%'");
 label_row(_('Customer Name'), $_SESSION['View']->customer_name, "class='tableheader2'",
@@ -94,7 +88,7 @@ label_row(_('Comments'), !empty($_SESSION['View']->Comments) ? nl2br($_SESSION['
 end_table();
 
 if ($_GET['trans_type'] != ST_SALESQUOTE) {
-	echo "</td><td valign='top'>";
+	view_column_next();
 
 	start_table(TABLESTYLE);
 	display_heading2(_('Delivery Notes'));
@@ -127,7 +121,7 @@ if ($_GET['trans_type'] != ST_SALESQUOTE) {
 	label_row(null, price_format($delivery_total), ' ', "colspan=4 align=right");
 
 	end_table();
-	echo "</td><td valign='top'>";
+	view_column_next();
 
 	start_table(TABLESTYLE);
 	display_heading2(_('Sales Invoices'));
@@ -195,9 +189,7 @@ if ($_GET['trans_type'] != ST_SALESQUOTE) {
 
 	end_table();
 
-	echo '</td></tr>';
-
-	end_table();
+	end_view_columns();
 }
 echo '<center>';
 if ($_SESSION['View']->so_type == 1)

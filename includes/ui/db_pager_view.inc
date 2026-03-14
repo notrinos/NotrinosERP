@@ -23,7 +23,21 @@ function pager_link($link_text, $url, $icon=false) {
 function navi_button($name, $value, $enabled=true, $icon=false) {
 	global $path_to_root;
 
-	return "<button ".($enabled ? '' : 'disabled')." class='navibutton' type='submit' name='".$name."' id='".$name."' value='".$value."'>".($icon ? "<img src='".$path_to_root.'/themes/'.user_theme().'/images/'.$icon."'>" : '')."<span>".$value."</span></button>\n";
+	$icon_markup = '';
+	if ($icon) {
+		if ($icon == 'sort_desc.gif' || $icon == 'sort_asc.gif' || $icon == 'sort_none.gif') {
+			$icon_class = 'fas fa-sort';
+			if ($icon == 'sort_desc.gif')
+				$icon_class = 'fas fa-sort-down';
+			elseif ($icon == 'sort_asc.gif')
+				$icon_class = 'fas fa-sort-up';
+			$icon_markup = "<i class='pager-sort-icon ".$icon_class."'></i>";
+		}
+		else
+			$icon_markup = "<img src='".$path_to_root.'/themes/'.user_theme().'/images/'.$icon."'>";
+	}
+
+	return "<button ".($enabled ? '' : 'disabled')." class='navibutton' type='submit' name='".$name."' id='".$name."' value='".$value."'>".$icon_markup."<span>".$value."</span></button>\n";
 }
 
 function navi_button_cell($name, $value, $enabled=true, $align='left') {
@@ -53,8 +67,11 @@ function display_db_pager(&$pager) {
 			}
 		}
 	}
+	echo "<div class='data-grid-container'>";
+
 	// show a table of records returned by the sql
-	start_table(TABLESTYLE, "width='$pager->width'");
+	$table_extra = "width='$pager->width' class='data-grid'";
+	start_table(TABLESTYLE, $table_extra);
 	table_header($headers);
 
 	if($pager->header_fun) { // if set header handler
@@ -156,27 +173,27 @@ function display_db_pager(&$pager) {
 		$inact = @$pager->inactive_ctrl == true ? ' '.checkbox(null, 'show_inactive', null, true)._('Show also Inactive') : '';
 	if($pager->rec_count) {
 		echo "<td colspan=$colspan class='navibar' style='border:none;padding:3px;'>";
-		echo "<div style='float:right;'>";
 		$but_pref = $pager->name.'_page_';
-		start_table();
-		start_row();
-		if (@$pager->inactive_ctrl) 
-			submit('Update', _('Update'), true, '', null); // inactive update
-		echo navi_button_cell($but_pref.'first', _('<<'), $pager->first_page, 'right');
-		echo navi_button_cell($but_pref.'prev', _('<'), $pager->prev_page,'right');
+
+		echo "<nav class='pager-nav' aria-label='"._('Pagination')."'>";
+		echo "<div class='pager-nav-controls'>";
+		if (@$pager->inactive_ctrl)
+			submit('Update', _('Update'), true, '', null);
+		echo navi_button($but_pref.'first', _('<<'), $pager->first_page);
+		echo navi_button($but_pref.'prev', _('<'), $pager->prev_page);
+		echo "<span class='pager-select-wrap'>";
 		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true, 'nosearch');
-		echo navi_button_cell($but_pref.'next', _('>'), $pager->next_page,'right');
-		echo navi_button_cell($but_pref.'last', _('>>'), $pager->last_page, 'right');
-		end_row(); 
-		end_table();
+		echo "</span>";
+		echo navi_button($but_pref.'next', _('>'), $pager->next_page);
+		echo navi_button($but_pref.'last', _('>>'), $pager->last_page);
 		echo "</div>";
+
 		$from = ($pager->curr_page-1) * $pager->page_len + 1;
 		$to = $from + $pager->page_len - 1;
 		if ($to > $pager->rec_count)
 		  $to = $pager->rec_count;
 		$all = $pager->rec_count;
-		echo sprintf(_('Records %d-%d of %d'), $from, $to, $all);
-		echo $inact;
+		echo "<div class='pager-summary'>".sprintf(_('Records %d-%d of %d'), $from, $to, $all).$inact."</div></nav>";
 		echo "</td>";
 	}
 	else
@@ -184,6 +201,7 @@ function display_db_pager(&$pager) {
 
 	end_row();
 	end_table();
+	echo "</div>";
 
 	foreach($pager->marker as $marker) {
 		if (isset($marker['txt']))

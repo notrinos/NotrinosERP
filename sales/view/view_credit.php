@@ -35,8 +35,8 @@ $branch = get_branch($myrow['branch_code']);
 display_heading('<font color=red>' . sprintf(_('CREDIT NOTE #%d'), $trans_id). '</font>');
 echo '<br>';
 
-start_table(TABLESTYLE2, "width='95%'");
-echo '<tr valign=top><td>'; // outer table
+start_view_columns();
+view_column_start(); // outer table
 
 /*Now the customer charged to details in a sub table*/
 start_table(TABLESTYLE, "width='100%'");
@@ -48,7 +48,7 @@ label_row(null, $myrow['DebtorName'] . '<br>' . nl2br($myrow['address']), 'nowra
 end_table();
 /*end of the small table showing charge to account details */
 
-echo '</td><td>'; // outer table
+view_column_next(); // outer table
 
 start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Branch'));
@@ -57,7 +57,7 @@ table_header($th);
 label_row(null, $branch['br_name'] . '<br>' . nl2br($branch['br_address']), 'nowrap');
 end_table();
 
-echo '</td><td>'; // outer table
+view_column_next(); // outer table
 
 start_table(TABLESTYLE, "width='100%'");
 start_row();
@@ -72,8 +72,7 @@ end_row();
 comments_display_row(ST_CUSTCREDIT, $trans_id);
 end_table();
 
-echo '</td></tr>';
-end_table(1); // outer table
+end_view_columns(); // outer table
 
 $sub_total = 0;
 

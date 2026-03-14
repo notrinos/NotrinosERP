@@ -275,12 +275,11 @@ hidden('cart_id');
 $customer_error = display_credit_header($_SESSION['Items']);
 
 if ($customer_error == '') {
-	start_table(TABLESTYLE, "width='80%'", 10);
-	echo '<tr><td>';
+	start_view_columns();
+	view_column_start();
 	display_credit_items(_('Credit Note Items'), $_SESSION['Items']);
 	credit_options_controls($_SESSION['Items']);
-	echo '</td></tr>';
-	end_table(1);
+	end_view_columns();
 }
 else
 	display_error($customer_error);

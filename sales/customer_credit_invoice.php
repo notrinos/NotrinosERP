@@ -220,8 +220,8 @@ function display_credit_invoice_items() {
 	start_form();
 	hidden('cart_id');
 
-	start_table(TABLESTYLE2, "width='80%'", 5);
-	echo '<tr><td>'; // outer table
+	start_view_columns();
+	view_column_start(); // outer table
 
 	start_table(TABLESTYLE, "width='100%'");
 	start_row();
@@ -251,7 +251,7 @@ function display_credit_invoice_items() {
 	end_row();
 	end_table();
 
-	echo '</td><td>';// outer table
+	view_column_next();// outer table
 
 	start_table(TABLESTYLE, "width='100%'");
 
@@ -261,9 +261,7 @@ function display_credit_invoice_items() {
 
 	end_table();
 
-	echo '</td></tr>';
-
-	end_table(1); // outer table
+	end_view_columns(); // outer table
 
 	div_start('credit_items');
 	start_table(TABLESTYLE, "width='80%'");

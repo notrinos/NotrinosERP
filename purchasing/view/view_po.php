@@ -36,8 +36,8 @@ read_po($_GET['trans_no'], $purchase_order);
 echo '<br>';
 display_po_summary($purchase_order, true);
 
-start_table(TABLESTYLE, "width='90%'", 6);
-echo '<tr><td valign=top>'; // outer table
+start_view_columns();
+view_column_start(); // outer table
 
 display_heading2(_('Line Details'));
 
@@ -101,7 +101,7 @@ $grns_result = get_po_grns($_GET['trans_no']);
 
 if (db_num_rows($grns_result) > 0) {
 
-	echo '</td><td valign=top>'; // outer table
+	view_column_next(); // outer table
 
 	display_heading2(_('Deliveries'));
 	start_table(TABLESTYLE);
@@ -126,7 +126,7 @@ $k = 0;
 
 if (db_num_rows($invoice_result) > 0) {
 
-	echo '</td><td valign=top>'; // outer table
+	view_column_next(); // outer table
 
 	display_heading2(_('Invoices/Credits'));
 	start_table(TABLESTYLE);
@@ -145,9 +145,7 @@ if (db_num_rows($invoice_result) > 0) {
 	end_table();
 }
 
-echo '</td></tr>';
-
-end_table(1); // outer table
+end_view_columns(); // outer table
 
 display_allocations_to(PT_SUPPLIER, $purchase_order->supplier_id, ST_PURCHORDER, $purchase_order->order_no, $total + $tax_total);
 

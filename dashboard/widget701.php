@@ -22,21 +22,22 @@ $widget->setTitle($title);
 $widget->Start();
 
 if($widget->checkSecurity('SA_GLANALYTIC')) {
+	echo "<div class='class-balances-table-wrap'>";
 
-	start_table(TABLESTYLE2, "width='$width%'");
+	start_table(TABLESTYLE2, "width='$width%' style='table-layout:fixed;font-size:13px;line-height:0.9;'");
 	$total = 0;
 	while ($myrow = db_fetch($result)) {
 		if ($myrow['ctype'] > 3) {
 			$total += $myrow['total'];
 			$myrow['total'] = -$myrow['total'];
 		}	
-		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), "class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
+		label_row($myrow['class_name'], number_format2($myrow['total'], user_price_dec()), "class='label'", "align=right");
 	}
 	$calculated = _('Calculated Return');
-	label_row('&nbsp;', '');
-	label_row($calculated, number_format2(-$total, user_price_dec()), "class='label' style='font-weight:bold;'", "style='font-weight:bold;' align=right");
+	label_row($calculated, number_format2(-$total, user_price_dec()), "class='label'", "align=right");
 
 	end_table();
+	echo "</div>";
 }
 
 $widget->End();

@@ -74,17 +74,27 @@ function init_css() {
 	if (!isset($css_files)) {
 		$css_files = array(
 			$path_to_root.'/libraries/select2.min.css',
-			$path_to_root.'/libraries/fontawesome/css/all.min.css',
-			$path_to_root.'/themes/'.user_theme().'/default.css'
+			$path_to_root.'/libraries/fontawesome/css/all.min.css'
 		);
+
+		$modern_css_files = array('variables.css', 'base.css', 'layout.css', 'components.css', 'tables.css', 'forms.css', 'responsive.css');
+		$modern_css_root = dirname(__FILE__).'/../themes/default/css/';
+		foreach ($modern_css_files as $modern_css_file) {
+			$modern_css_path = $modern_css_root.$modern_css_file;
+			$modern_css_version = file_exists($modern_css_path) ? filemtime($modern_css_path) : time();
+			$css_files[] = $path_to_root.'/themes/default/css/'.$modern_css_file.'?v='.$modern_css_version;
+		}
 
 		//The $_SERVER['REQUEST_URI'] is different depending on the server configuration (Apache, Nginx)
 		$file_ext = strpos($_SERVER['REQUEST_URI'], 'php?') ? '.php?' : '.php';
 		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
 		$local_css = $path_to_root.'/themes/'.user_theme().'/local_style/'.$basename.'.css';
 
-		if(file_exists($local_css))
-			$css_files[] = $local_css;
+		if(file_exists($local_css)) {
+			$local_css_file = dirname(__FILE__).'/../themes/'.user_theme().'/local_style/'.$basename.'.css';
+			$local_css_version = file_exists($local_css_file) ? filemtime($local_css_file) : time();
+			$css_files[] = $local_css.'?v='.$local_css_version;
+		}
 	}
 }
 

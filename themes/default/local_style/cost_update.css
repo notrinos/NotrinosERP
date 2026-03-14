@@ -1,9 +1,0 @@
-table.tablestyle td:not(.label):not(.tableheader2) {
-	border: 0;
-}
-table.tablestyle input, table.tablestyle div.list_container, table.tablestyle textarea {
-	width: 100%;
-}
-.select2 {
-	margin-top: -1px !important;
-}

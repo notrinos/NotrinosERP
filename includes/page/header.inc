@@ -86,6 +86,8 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 		return; // just for speed up
 
 	$theme = user_theme();
+	if ($theme == 'default')
+		add_js_ufile($path_to_root.'/themes/default/renderer.js?v=20260314c');
 
 	if ($SysPrefs->help_base_url != null && $SysPrefs->use_popup_windows && $js == '') {
 		if (!function_exists('get_js_open_window'))

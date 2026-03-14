@@ -44,9 +44,11 @@ function set_options(e) {
 }
 
 function showClass(pClass) {
-	var classes = document.getElementsBySelector('.repclass');
+	var classes = document.getElementsBySelector('.repclass, .report-class-list');
 	for(var i in  classes) {
 		cl = classes[i];
+		if (!cl || !cl.id)
+			continue;
 		cl.style.display = (cl.id==('TAB_'+pClass)) ? "block" : "none";
 	}
 	var classlinks = document.getElementsBySelector('a.repclass_link');

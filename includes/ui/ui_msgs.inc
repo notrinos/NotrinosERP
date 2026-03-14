@@ -31,22 +31,49 @@ function display_caption($msg) {
 }
 
 function display_heading($msg) {
-	echo "<center><span class='headingtext'>".$msg."</span></center>\n";
+	echo "<h2 class='page-heading'>".$msg."</h2>\n";
 }
 
 function display_heading2($msg) {
-	echo "<center><span class='headingtext2'>".$msg."</span></center>\n";
+	echo "<h3 class='page-heading' style='font-size:15px;'>".$msg."</h3>\n";
 }
 
 function display_note($msg, $br=0, $br2=0, $extra='') {
 	for ($i = 0; $i < $br; $i++)
 		echo '<br>';
-	if ($extra != '')	
-		echo '<center><span '.$extra.'>'.$msg."</span></center>\n";	
-	else	
-		echo '<center><span>'.$msg."</span></center>\n";
+	echo "<div class='alert alert-info'".($extra != '' ? ' '.$extra : '')."'>".$msg."</div>\n";
 	for ($i = 0; $i < $br2; $i++)
 		echo '<br>';
+}
+
+/**
+ * Emit a semantic success alert block.
+ *
+ * @param string $msg
+ * @return void
+ */
+function display_notification_alert($msg) {
+	echo "<div class='alert alert-success'>".$msg."</div>\n";
+}
+
+/**
+ * Emit a semantic warning alert block.
+ *
+ * @param string $msg
+ * @return void
+ */
+function display_warning_alert($msg) {
+	echo "<div class='alert alert-warning'>".$msg."</div>\n";
+}
+
+/**
+ * Emit a semantic danger alert block.
+ *
+ * @param string $msg
+ * @return void
+ */
+function display_error_alert($msg) {
+	echo "<div class='alert alert-danger'>".$msg."</div>\n";
 }
 
 function stock_item_heading($stock_id) {

@@ -302,8 +302,8 @@ if (isset($_POST['Update']) || isset($_POST['_Location_update']) || isset($_POST
 start_form();
 hidden('cart_id');
 
-start_table(TABLESTYLE2, "width='80%'", 5);
-echo '<tr><td>'; // outer table
+start_view_columns();
+view_column_start(); // outer table
 
 start_table(TABLESTYLE, "width='100%'");
 start_row();
@@ -351,7 +351,7 @@ end_row();
 
 end_table();
 
-echo '</td><td>';// outer table
+view_column_next();// outer table
 
 start_table(TABLESTYLE, "width='90%'");
 
@@ -383,8 +383,7 @@ date_cells(_('Invoice Dead-line'), 'due_date', '', null, 0, 0, 0, "class='tableh
 end_row();
 end_table();
 
-echo '</td></tr>';
-end_table(1); // outer table
+end_view_columns(); // outer table
 
 $row = get_customer_to_order($_SESSION['Items']->customer_id);
 if ($row['dissallow_invoices'] == 1) {

@@ -60,8 +60,8 @@ echo "<html dir='".$rtl."' >\n";
 echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
 echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/default.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root.'/themes/'.$def_theme."/local_style/access.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'> \n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
@@ -71,45 +71,44 @@ if (!$login_timeout)
 
 echo "</head>\n";
 echo "<body id='loginscreen' ".$onload.">\n";
-echo "<table class='titletext'><tr><td>".$title."</td></tr></table>\n";
-	
-div_start('_page_body');
-br(2);
+
+echo "<div class='login-title-bar'>" . htmlspecialchars($title) . "</div>\n";
+
+echo "<div class='login-card'>\n";
 start_form(false, $_SESSION['timeout']['uri'], 'loginform');
-start_table(false, "class='login'");
-start_row();
-echo "<td align='center' colspan=2>";
-if (!$login_timeout) // logo
-	echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/".$def_theme."/images/notrinos_erp.png' alt='NotrinosERP' height='50' onload='fixPNG(this)' border='0' ></a>";
-else
-	echo "<font size=5>"._('Authorization timeout')."</font>";
-echo "</td>\n";
-end_row();
 
+// Logo
+echo "<div class='login-logo'>";
 if (!$login_timeout)
-	table_section_title(_('Version').' '.$version.'   Build '.$SysPrefs->build_version.' - '._('Login'));
+	echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP' height='50'></a>";
+else
+	echo "<h2 style='margin:0;color:#b91c1c'>"._('Authorization timeout')."</h2>";
+echo "</div>\n";
 
-echo "<tr><td colspan='2'></td></tr>";
+// Subtitle
+if (!$login_timeout)
+	echo "<div class='login-subtitle'>"._('Version').' '.$version.'   Build '.$SysPrefs->build_version."</div>\n";
 
 $value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : '');
 
-echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-user' title='"._('User')."'></i>";
-echo "<input required class='input' id='user' name='user_name_entry_field' type='text' placeholder='"._('User name:')."' value='$value'></div></td></tr>";
+// Username field
+echo "<div class='login-field'><div class='input_container'><i class='fas fa-user' title='"._('User')."'></i>";
+echo "<input required class='input' id='user' name='user_name_entry_field' type='text' placeholder='"._('User name')."' value='".htmlspecialchars($value)."'></div></div>\n";
 
+// Password field
 $password = $SysPrefs->allow_demo_mode ? 'password' : '';
+echo "<div class='login-field'><div class='input_container'><i class='fas fa-key' title='"._('Password')."'></i>";
+echo "<input required class='input' id='pass' name='password' type='password' placeholder='"._('Password')."' value='".htmlspecialchars($password)."'></div></div>\n";
 
-echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-key' title='"._('Password')."'></i>";
-echo "<input required class='input' id='pass' name='password' type='password' placeholder='"._('Password:')."' value='$password'></div></td></tr>";
-
+// Company selector
 if ($login_timeout)
 	hidden('company_login_name', user_company());
 else {
-	$coy =  user_company();
+	$coy = user_company();
 	if (!isset($coy))
 		$coy = $def_coy;
 
-	echo "<tr><td class='login_input'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
-
+	echo "<div class='login-field'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
 	if (isset($db_connections)) {
 		if (!@$SysPrefs->text_company_selection) {
 			echo "<select name='company_login_name'>\n";
@@ -120,29 +119,28 @@ else {
 		else
 			echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
 	}
-	echo '</div></td></tr>';
-}; 
-start_row();
-label_cell($demo_text, "colspan=2 align='center' id='log_msg'");
-end_row();
+	echo "</div></div>\n";
+}
 
-start_row();
-echo "<input type='hidden' id=ui_mode name='ui_mode' value='".!fallback_mode()."' >\n";
-echo "<td colspan='2'><center><input type='submit' value='&nbsp;&nbsp;"._('Login')."&nbsp;&nbsp;&#8250;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked) ? " disabled" : '')." ></center></td>\n";
-end_row();
+// Status message
+echo "<div class='login-message' id='log_msg'>".$demo_text."</div>\n";
 
-end_table(1);
+// Submit
+echo "<input type='hidden' id='ui_mode' name='ui_mode' value='".!fallback_mode()."'>\n";
+echo "<div class='login-submit'><input type='submit' value='"._('Login')." &#8250;' name='SubmitUser'"." onclick='".(in_ajax() ? 'retry();': 'set_fullmode();')."'".(isset($blocked) ? " disabled" : '')." ></div>\n";
 
 foreach($_SESSION['timeout']['post'] as $p => $val) {
 	// add all request variables to be resend together with login data
 	if (!in_array($p, array('ui_mode', 'user_name_entry_field', 'password', 'SubmitUser', 'company_login_name')))
 		if (!is_array($val))
-			echo "<input type='hidden' name='".$p."' value='".$val."'>";
+			echo "<input type='hidden' name='".htmlspecialchars($p)."' value='".htmlspecialchars($val)."'>";
 		else
 			foreach($val as $i => $v)
-				echo "<input type='hidden' name='{$p}[$i]' value='$v'>";
+				echo "<input type='hidden' name='".htmlspecialchars($p)."[".htmlspecialchars($i)."]' value='".htmlspecialchars($v)."'>";
 }
 end_form(1);
+echo "</div>\n"; // end login-card
+
 $Ajax->addScript(true, "if (document.forms.length) document.forms[0].password.focus();");
 
 echo "<script>
@@ -153,21 +151,15 @@ echo "<script>
 		//-->
 	//]]>
 </script>";
-div_end();
-echo "<table class='bottomBar'>\n";
-echo '<tr>';
-if (isset($_SESSION['wa_current_user'])) 
+
+// Footer
+if (isset($_SESSION['wa_current_user']))
 	$date = Today().' | '.Now();
-else	
+else
 	$date = date('m/d/Y').' | '.date('h.i am');
-echo "<td class='bottomBarCell'>".$date."</td>\n";
-echo "</tr></table>\n";
-echo "<table class='footer'>\n";
-echo "<tr>\n";
-echo "<td><a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->app_title.' '.$version.' - '._('Theme:').' '.$def_theme."</a></td>\n";
-echo "</tr>\n";
-echo "<tr>\n";
-echo "<td><a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->power_by."</a></td>\n";
-echo "</tr>\n";
-echo "</table><br><br>\n";
+echo "<div class='login-footer'>";
+echo htmlspecialchars($date)."<br>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->app_title.' '.$version."</a><br>";
+echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->power_by."</a>";
+echo "</div>\n";
 echo "</body></html>\n";

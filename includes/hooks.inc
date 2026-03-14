@@ -100,6 +100,17 @@ class hooks {
 	function pre_footer($fun_args) {
 	}
 
+	/**
+	 * Optional startup redirect hook for index page.
+	 * Return a full/relative URL string to redirect, or null to keep default flow.
+	 *
+	 * @param array $context
+	 * @return string|null
+	 */
+	function index_startup_redirect($context) {
+		return null;
+	}
+
 	//
 	// Price in words. $doc_type is set to document type and can be used to suppress 
 	// price in words printing for selected document types.

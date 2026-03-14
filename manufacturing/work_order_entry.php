@@ -370,15 +370,12 @@ textarea_row(_('Memo:'), 'memo_', null, 40, 5);
 end_table(1);
 
 if (isset($selected_id)) {
-	echo '<table align=center><tr>';
-
+	echo "<div class='form-actions'>";
 	submit_cells('UPDATE_ITEM', _('Update'), '', _('Save changes to work order'), 'default');
 	if (get_post('released'))
 		submit_cells('close', _('Close This Work Order'),'','',true);
-	
 	submit_cells('delete', _('Delete This Work Order'),'','',true);
-
-	echo '</tr></table>';
+	echo "</div>";
 }
 else
 	submit_center('ADD_ITEM', _('Add Workorder'), true, '', 'default');

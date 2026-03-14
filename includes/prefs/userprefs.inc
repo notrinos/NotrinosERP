@@ -75,6 +75,8 @@ class user_prefs {
 			$this->tho_sep = $user["tho_sep"];
 			$this->dec_sep = $user["dec_sep"];
 			$this->theme = $user["theme"];
+			if ($this->theme == 'modern')
+				$this->theme = 'default';
 			$this->pagesize = $user["page_size"];
 			$this->show_hints = $user["show_hints"];
 			$this->print_profile = $user["print_profile"];

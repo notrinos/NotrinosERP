@@ -166,22 +166,20 @@ function submit($name, $value, $echo=true, $title=false, $atype=false, $icon=fal
 
 function submit_center($name, $value, $echo=true, $title=false, $async=false, $icon=false) {
 	if ($echo)
-		echo '<center>';
+		echo "<div class='form-actions' style='justify-content:center;'>";
 	submit($name, $value, $echo, $title, $async, $icon);
 	if ($echo)
-		echo '</center>';
+		echo '</div>';
 }
 
 function submit_center_first($name, $value, $title=false, $async=false, $icon=false) {
-	echo '<center>';
+	echo "<div class='form-actions' style='justify-content:center;'>";
 	submit($name, $value, true, $title, $async, $icon);
-	echo "&nbsp;";
 }
 
 function submit_center_last($name, $value, $title=false, $async=false, $icon=false) {
-	echo "&nbsp;";
 	submit($name, $value, true, $title, $async, $icon);
-	echo '</center>';
+	echo '</div>';
 }
 /*
 	For following controls:
@@ -216,12 +214,19 @@ function submit_add_or_update($add=true, $title=false, $async=false, $clone=fals
 }
 
 function submit_add_or_update_center($add=true, $title=false, $async=false, $clone=false) {
-	echo '<center>';
+	echo "<div class='form-actions' style='justify-content:center;'>";
 	submit_add_or_update($add, $title, $async, $clone);
-	echo '</center>';
+	echo '</div>';
 }
 
 function submit_add_or_update_row($add=true, $right=true, $extra="", $title=false, $async=false, $clone = false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-actions' ".$extra.">";
+		submit_add_or_update($add, $title, $async, $clone);
+		echo "</div>\n";
+		return;
+	}
+
 	echo '<tr>';
 	if ($right)
 		echo "<td>&nbsp;</td>\n";
@@ -237,6 +242,13 @@ function submit_cells($name, $value, $extra="", $title=false, $async=false) {
 }
 
 function submit_row($name, $value, $right=true, $extra="", $title=false, $async=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-actions'>";
+		submit($name, $value, true, $title, $async);
+		echo "</div>\n";
+		return;
+	}
+
 	echo '<tr>';
 	if ($right)
 		echo "<td>&nbsp;</td>\n";
@@ -365,6 +377,15 @@ function check_cells($label, $name, $value=null, $submit_on_change=false, $title
 }
 
 function check_row($label, $name, $value=null, $submit_on_change=false, $title=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group inline'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo checkbox(null, $name, $value, $submit_on_change, $title);
+		echo "</div></div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	echo check_cells(NULL, $name, $value, $submit_on_change, $title);
 	echo "</tr>\n";
@@ -387,7 +408,10 @@ function radio($label, $name, $value, $selected=null, $submit_on_change=false) {
 //-----------------------------------------------------------------------------------
 
 function labelheader_cell($label, $params='') {
-	echo "<td class='tableheader' ".$params.">".$label."</td>\n";
+	if (ui_current_table_mode() == 'table')
+		echo "<td class='tableheader' ".$params.">".$label."</td>\n";
+	else
+		echo "<span class='table-header-cell' ".$params.">".$label."</span>\n";
 }
 
 function label_cell($label, $params='', $id=null) {
@@ -397,7 +421,10 @@ function label_cell($label, $params='', $id=null) {
 		$params .= " id='".$id."'";
 		$Ajax->addUpdate($id, $id, $label);
 	}
-	echo "<td ".$params.">".$label."</td>\n";
+	if (ui_current_table_mode() == 'table')
+		echo "<td ".$params.">".$label."</td>\n";
+	else
+		echo "<div class='form-value' ".$params.">".$label."</div>\n";
 
 	return $label;
 }
@@ -444,12 +471,29 @@ function qty_cell($label, $bold=false, $dec=null, $id=null) {
 }
 
 function label_cells($label, $value, $params="", $params2="", $id=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group inline'>";
+		if ($label != null)
+			echo "<label class='form-label' ".$params.">".$label."</label>\n";
+		echo "<div class='form-control-wrap' ".$params2.">".$value."</div>\n";
+		echo "</div>\n";
+		return;
+	}
+
 	if ($label != null)
 		echo "<td ".$params.">".$label."</td>\n";
 	label_cell($value, $params2, $id);
 }
 
 function label_row($label, $value, $params="", $params2="", $leftfill=0, $id=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group readonly'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<span class='form-readonly'>".$value."</span>";
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr>";
 	if ($params == "") {
 		echo "<td class='label'>".$label."</td>";
@@ -472,6 +516,20 @@ function text_input($name, $value=null, $size='', $max='', $title='', $params=''
 
 function text_cells($label, $name, $value=null, $size='', $max='', $title=false, $labparams='', $post_label='', $inparams='') {
 	global $Ajax;
+
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group inline'>";
+		if ($label != null)
+			echo "<label class='form-label' for='".$name."' ".$labparams.">".$label."</label>\n";
+		echo "<div class='form-control-wrap'>";
+		echo text_input($name, $value, $size, $max, $title, trim($inparams." id='".$name."'"));
+		if ($post_label != '')
+			echo ' ' . $post_label;
+		echo "</div>\n";
+		echo "</div>\n";
+		$Ajax->addUpdate($name, $name, $value);
+		return;
+	}
 
 	default_focus($name);
 	if ($label != null)
@@ -515,6 +573,16 @@ function text_cells_ex($label, $name, $size, $max=null, $init=null, $title=null,
 }
 
 function text_row($label, $name, $value, $size, $max, $title=null, $params='', $post_label='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		echo text_input($name, $value, $size, $max, $title, trim($params." id='".$name."'"));
+		if ($post_label != '')
+			echo "<span class='form-post-label'>".$post_label."</span>";
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	text_cells(null, $name, $value, $size, $max, $title, $params, $post_label);
 
@@ -524,6 +592,27 @@ function text_row($label, $name, $value, $size, $max, $title=null, $params='', $
 //-----------------------------------------------------------------------------------
 
 function text_row_ex($label, $name, $size, $max=null, $title=null, $value=null, $params=null, $post_label=null) {
+	if (ui_current_table_mode() != 'table') {
+		global $Ajax;
+		default_focus($name);
+		if (!isset($_POST[$name]) || $_POST[$name] == '') {
+			if ($value)
+				$_POST[$name] = $value;
+			else
+				$_POST[$name] = '';
+		}
+		if (!isset($max))
+			$max = $size;
+		echo "<div class='form-group'>";
+		echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		echo "<input type='text' name='".$name."' id='".$name."' size='".$size."' maxlength='".$max."' value='".$_POST[$name]."'".(  $title ? " title='$title'": '')." >";
+		if ($post_label)
+			echo "<span class='form-post-label'>".$post_label."</span>";
+		echo "</div>\n";
+		$Ajax->addUpdate($name, $name, $_POST[$name]);
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	text_cells_ex(null, $name, $size, $max, $value, $title, $params, $post_label);
 
@@ -569,6 +658,41 @@ function link_row_ex($label, $name, $size, $max=null, $title=null, $value=null, 
 function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_months=0, $inc_years=0, $params=null, $submit_on_change=false) {
 	global $path_to_root, $Ajax;
 
+	if (ui_current_table_mode() != 'table') {
+		if (!isset($_POST[$name]) || $_POST[$name] == '') {
+			if ($inc_years == 1001)
+				$_POST[$name] = null;
+			else {
+				$dd = Today();
+				if ($inc_days != 0)
+					$dd = add_days($dd, $inc_days);
+				if ($inc_months != 0)
+					$dd = add_months($dd, $inc_months);
+				if ($inc_years != 0)
+					$dd = add_years($dd, $inc_years);
+				$_POST[$name] = $dd;
+			}
+		}
+		if (user_use_date_picker()) {
+			$date_icon = "<a tabindex='-1' href=\"javascript:date_picker(document.getElementsByName('$name')[0]);\">"
+				. "	<i class='btn_grey far fa-calendar-alt'></i></a>\n";
+		} else
+			$date_icon = '';
+		if ($label != null)
+			echo "<label class='form-label' for='".$name."'>".$label."</label>\n";
+		echo "<div class='form-control-wrap date'>";
+		$class = $submit_on_change ? 'date active' : 'date';
+		$aspect = $check ? 'aspect="cdate"' : '';
+		if ($check && (get_post($name) != Today()))
+			$aspect .= ' style="color:#FF0000"';
+		default_focus($name);
+		$size = (user_date_format()>3)?11:10;
+		echo "<input type=\"text\" id=\"$name\" name=\"$name\" class=\"$class\" $aspect size=\"$size\" maxlength=\"12\" value=\"".$_POST[$name]."\"".($title ? " title='$title'": '')." > $date_icon";
+		echo "</div>\n";
+		$Ajax->addUpdate($name, $name, $_POST[$name]);
+		return;
+	}
+
 	if (!isset($_POST[$name]) || $_POST[$name] == '') {
 		if ($inc_years == 1001)
 			$_POST[$name] = null;
@@ -611,6 +735,13 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 }
 
 function date_row($label, $name, $title=null, $check=null, $inc_days=0, $inc_months=0, $inc_years=0, $params=null, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group date'>";
+		date_cells($label, $name, $title, $check, $inc_days, $inc_months, $inc_years, $params, $submit_on_change);
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	date_cells(null, $name, $title, $check, $inc_days, $inc_months, 
 		$inc_years, $params, $submit_on_change);
@@ -620,6 +751,14 @@ function date_row($label, $name, $title=null, $check=null, $inc_days=0, $inc_mon
 //-----------------------------------------------------------------------------------
 
 function password_row($label, $name, $value) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		echo "<input type='password' id='".$name."' name='".$name."' size='32' maxlength='32' value='".$value."'>";
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	label_cell("<input type='password' name='".$name."' size=32 maxlength=32 value='".$value."' >");
 	echo "</tr>\n";
@@ -633,6 +772,16 @@ function file_cells($label, $name, $id='') {
 	label_cells($label, "<input type='file' name='".$name."' ".$id." >");
 }		
 function file_row($label, $name, $id = '') {
+	if (ui_current_table_mode() != 'table') {
+		if ($id != '')
+			$id = "id='".$id."'";
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<input type='file' name='".$name."' ".$id." >";
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	file_cells(null, $name, $id);
 	echo "</tr>\n";
@@ -692,6 +841,15 @@ function ref_cells($label, $name, $title=null, $init=null, $params=null, $submit
 //-----------------------------------------------------------------------------------
 
 function ref_row($label, $name, $title=null, $init=null, $submit_on_change=false, $type=null, $context=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		ref_cells(null, $name, $title, $init, null, $submit_on_change, $type, $context);
+		echo "</div></div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	ref_cells(null, $name, $title, $init, null, $submit_on_change, $type, $context);
 	echo "</tr>\n";
@@ -704,11 +862,39 @@ function percent_row($label, $name, $init=null) {
 	if (!isset($_POST[$name]) || $_POST[$name]=='')
 		$_POST[$name] = $init == null ? '' : $init;
 
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group percent'>";
+		echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo "<input class='amount' type='text' id='".$name."' name='".$name."' size='7' maxlength='12' dec='".user_percent_dec()."' value='".$_POST[$name]."'>";
+		echo " <span class='form-post-label'>%</span>";
+		echo "</div></div>\n";
+		return;
+	}
+
 	small_amount_row($label, $name, $_POST[$name], null, '%', user_percent_dec());
 }
 
 function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=null, $post_label=null, $dec=null) {
 	global $Ajax;
+
+	if (ui_current_table_mode() != 'table') {
+		if ($label != null) {
+			if ($params == null)
+				$params = "class='form-label'";
+			echo "<label for='".$name."' ".$params.">".$label."</label>";
+		}
+		echo "<div class='form-control-wrap amount'>";
+		echo "<input class='amount' type=\"text\" id=\"$name\" name=\"$name\" size=\"$size\" maxlength=\"$max\" dec=\"$dec\" value=\"" . $_POST[$name]. "\">";
+		if ($post_label) {
+			echo "<span id='_{$name}_label'> $post_label</span>";
+			$Ajax->addUpdate($name, '_'.$name.'_label', $post_label);
+		}
+		echo "</div>\n";
+		$Ajax->addUpdate($name, $name, $_POST[$name]);
+		$Ajax->addAssign($name, $name, 'dec', $dec);
+		return;
+	}
 
 	if (!isset($dec))
 		$dec = user_price_dec();
@@ -746,6 +932,15 @@ function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=nu
 //-----------------------------------------------------------------------------------
 
 function amount_cells($label, $name, $init=null, $params=null, $post_label=null, $dec=null) {
+	if (ui_current_table_mode() != 'table') {
+		if ($label != null)
+			echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		echo "<div class='form-control-wrap amount'>";
+		amount_cells_ex(null, $name, 15, 15, $init, $params, $post_label, $dec);
+		echo "</div>\n";
+		return;
+	}
+
 	amount_cells_ex($label, $name, 15, 15, $init, $params, $post_label, $dec);
 }
 
@@ -758,12 +953,29 @@ function unit_amount_cells($label, $name, $init=null, $params=null, $post_label=
 }
 
 function amount_row($label, $name, $init=null, $params=null, $post_label=null, $dec=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group amount'>";
+		amount_cells($label, $name, $init, $params, $post_label, $dec);
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr>";
 	amount_cells($label, $name, $init, $params, $post_label, $dec);
 	echo "</tr>\n";
 }
 
 function small_amount_row($label, $name, $init=null, $params=null, $post_label=null, $dec=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group amount'>";
+		if ($label != null)
+			echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap amount'>";
+		small_amount_cells(null, $name, $init, $params, $post_label, $dec);
+		echo "</div></div>\n";
+		return;
+	}
+
 	echo "<tr>";
 	small_amount_cells($label, $name, $init, $params, $post_label, $dec);
 	echo "</tr>\n";
@@ -782,6 +994,13 @@ function qty_row($label, $name, $init=null, $params=null, $post_label=null, $dec
 	if (!isset($dec))
 		$dec = user_qty_dec();
 
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group qty'>";
+		amount_cells($label, $name, $init, $params, $post_label, $dec);
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr>";
 	amount_cells($label, $name, $init, $params, $post_label, $dec);
 	echo "</tr>\n";
@@ -790,6 +1009,16 @@ function qty_row($label, $name, $init=null, $params=null, $post_label=null, $dec
 function small_qty_row($label, $name, $init=null, $params=null, $post_label=null, $dec=null) {
 	if (!isset($dec))
 		$dec = user_qty_dec();
+
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group qty'>";
+		if ($label != null)
+			echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		small_amount_cells(null, $name, $init, $params, $post_label, $dec);
+		echo "</div></div>\n";
+		return;
+	}
 
 	echo "<tr>";
 	small_amount_cells($label, $name, $init, $params, $post_label, $dec);
@@ -828,6 +1057,19 @@ function textarea_cells($label, $name, $value, $cols, $rows, $max=255, $title=nu
 }
 
 function textarea_row($label, $name, $value, $cols, $rows, $max=255, $title=null, $params='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group textarea'>";
+		echo "<label class='form-label' for='".$name."'>".$label."</label>";
+		if ($value == null)
+			$value = (!isset($_POST[$name]) ? "" : $_POST[$name]);
+		echo "<textarea id='".$name."' name='".$name."' cols='".$cols."' rows='".$rows."'"
+			.($title ? " title='".$title."'" : '')
+			.($max ? " maxlength=".$max : '')
+			.">".$value."</textarea>";
+		echo "</div>\n";
+		return;
+	}
+
 	echo "<tr><td class='label'>".$label."</td>";
 	textarea_cells(null, $name, $value, $cols, $rows, $max, $title, $params);
 	echo "</tr>\n";

@@ -1,7 +1,0 @@
-table.tablestyle2 td:not(.label) {
-	border: 0;
-}
-
-table.tablestyle2 input:not([type=checkbox]), table.tablestyle2 div.list_container, table.tablestyle2 span {
-	width: 100%;
-}

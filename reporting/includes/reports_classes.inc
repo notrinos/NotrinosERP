@@ -43,6 +43,12 @@ class BoxReports {
 		$this->ar_reports[$class][$id] = new Report($id, $rep_name, $params);
 	}
 
+	/**
+	 * Render the reports page with class tabs, report list, and parameter form.
+	 *
+	 * @param int|null $class Optional report class to display
+	 * @return string HTML output
+	 */
 	function getDisplay($class=null) {
 		global $path_to_root, $SysPrefs, $Ajax;
 
@@ -73,47 +79,55 @@ class BoxReports {
 				."$acc[1]>$acc[0]</a> ";
 
 			$style = $class_id == $cur_class ? '' : "style='display:none'";
-			$st_reports .= "<table class='repclass' id='TAB_".$class_id."' $style cellpadding='0' cellspacing='0' border='0'><tr><td><b>"._('Reports For Class: ')."&nbsp;$name</b></td></tr>\n";
+			$st_reports .= "<div class='report-class-list repclass' id='TAB_".$class_id."' $style>"
+				."<div class='report-class-title'>"._('Reports For Class: ')."&nbsp;$name</div>\n";
 			foreach($this->ar_reports[$class_id] as $rep_id => $report) {
 				$acc = access_string($report->name);
-				$st_reports .= "<tr><td><a class='repopts_link'"
+				$is_selected = @$_REQUEST['REP_ID'] == $report->id;
+				$st_reports .= "<a class='report-link".($is_selected ? ' is-active' : '')."'"
 					." href='".$_SERVER['PHP_SELF']."?Class=$class_id&REP_ID=$report->id'"
-					." style='font-weight:". (@$_REQUEST['REP_ID'] == $report->id ? 'bold' : 'normal')."'"
 					." id='".$id = default_focus()."'"
-					."$acc[1]>$acc[0]</a><tr><td>\n";
+					."$acc[1]>$acc[0]</a>\n";
 
-				if (@$_REQUEST['REP_ID'] == $report->id)
+				if ($is_selected)
 					$Ajax->activate($id);
 
 				if (isset($_REQUEST['REP_ID']) && $_REQUEST['REP_ID'] == $report->id) {
 					// parameters form
 					$action = $_SERVER['PHP_SELF'];
-					$st_params = "<table><tr><td>\n"
-						. "<form method='POST' action='$action' target='_blank'>\n";
+					$st_params = "<form method='POST' action='$action' target='_blank' class='report-params-form'>\n";
 					$st_params .= submit('Rep'.$report->id,  
 						_('Display: ') . access_string($report->name, true),
-						false, '', $SysPrefs->pdf_debug ? false : 'default popup') . hidden('REP_ID', $report->id, false).'<br><br>';
+						false, '', $SysPrefs->pdf_debug ? false : 'default popup') . hidden('REP_ID', $report->id, false);
 					$st_params .= $this->getOptions($report->get_controls(), $report->id);
-					$st_params .= "\n<input type=hidden name='Class' value=".$cur_class.">"
-						."\n</form></td></tr></table>\n";
+					$st_params .= "\n<input type='hidden' name='Class' value='".htmlspecialchars($cur_class, ENT_QUOTES)."'>"
+						."\n</form>\n";
 					set_focus('Rep'.$report->id);
 					$Ajax->addUpdate(true, 'rep_form', $st_params);
 				}
 			}
-			$st_reports .= '</table>';
+			$st_reports .= '</div>';
 		}
 
 		$st_params = "<div id='rep_form'>".$st_params."</div>";
 		
-		$st = "<table align='center' class='reports_table_outer'><tr class='report_main_header'>";
-		$st .= "<td colspan=2>$st_classes</td></tr>\n";
-		$st .= "<tr valign='top'><td class='reports_table'>$st_reports</td>";
-		$st .= "<td width='50%' class='report_table_filter'>$st_params</td>";
-		$st .= "</tr></table><br>";
+		$st = "<div class='reports-layout'>"
+			."<div class='reports-tabs'>$st_classes</div>\n"
+			."<div class='reports-content'>"
+			."<div class='reports-list'>$st_reports</div>"
+			."<div class='reports-params'>$st_params</div>"
+			."</div></div>";
 
 		return $st;
 	}
 
+	/**
+	 * Render report parameter controls.
+	 *
+	 * @param array|null $controls Parameter definitions
+	 * @param int $id Report ID
+	 * @return string HTML output
+	 */
 	function getOptions($controls, $id = 0) {
 		$st = '';
 		if ($controls == null)
@@ -136,9 +150,9 @@ class BoxReports {
 				$ctrl = $this->get_ctrl('PARAM_'.$cnt, $type);
 			}
 			if ($ctrl != '')  {
-				$st .= $title . ':<br>';
-				$st .= $ctrl;
-				$st .= '<br><br>';
+				$st .= "<div class='report-param-group'>"
+					."<label class='report-param-label'>" . $title . ":</label>"
+					.$ctrl."</div>\n";
 			}
 			else
 				display_error(_('Unknown report parameter type:').$type);

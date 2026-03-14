@@ -39,8 +39,8 @@ $sales_order = get_sales_order_header($myrow['order_'], ST_SALESORDER);
 display_heading(sprintf(_('DISPATCH NOTE #%d'),$trans_id));
 
 echo '<br>';
-start_table(TABLESTYLE2, "width='95%'");
-echo '<tr valign=top><td>'; // outer table
+start_view_columns();
+view_column_start(); // outer table
 
 /*Now the customer charged to details in a sub table*/
 start_table(TABLESTYLE, "width='100%'");
@@ -53,7 +53,7 @@ end_table();
 
 /*end of the small table showing charge to account details */
 
-echo '</td><td>'; // outer table
+view_column_next(); // outer table
 
 /*end of the main table showing the company name and charge to details */
 
@@ -64,7 +64,7 @@ table_header($th);
 label_row(null, $branch['br_name'] . '<br>' . nl2br($branch['br_address']), 'nowrap');
 end_table();
 
-echo '</td><td>'; // outer table
+view_column_next(); // outer table
 
 start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Delivered To'));
@@ -74,7 +74,7 @@ label_row(null, $sales_order['deliver_to'] . '<br>' . nl2br($sales_order['delive
 	'nowrap');
 end_table();
 
-echo '</td><td>'; // outer table
+view_column_next(); // outer table
 
 start_table(TABLESTYLE, "width='100%'");
 start_row();
@@ -94,8 +94,7 @@ end_row();
 comments_display_row(ST_CUSTDELIVERY, $trans_id);
 end_table();
 
-echo '</td></tr>';
-end_table(1); // outer table
+end_view_columns(); // outer table
 
 
 $result = get_customer_trans_details(ST_CUSTDELIVERY, $trans_id);
