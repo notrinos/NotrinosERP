@@ -28,6 +28,39 @@ simple_page_mode(true);
 
 //---------------------------------------------------------------------------------------------
 
+/**
+ * Rebuild active hooks and application switcher model for current session.
+ *
+ * This ensures extension activation/deactivation in company setup is reflected
+ * immediately in the sidebar application switcher without requiring re-login.
+ *
+ * @return void
+ */
+function refresh_current_session_application_switcher() {
+	global $installed_extensions;
+
+	if (!isset($_SESSION['App']))
+		return;
+
+	$selected_application_id = isset($_SESSION['App']->selected_application)
+		? $_SESSION['App']->selected_application
+		: '';
+
+	install_hooks();
+	$_SESSION['App']->init();
+
+	// Update the signature so session.inc does not re-run init() on the
+	// next page load before SysPrefs are available.
+	$_SESSION['installed_extensions_signature'] = md5(serialize($installed_extensions));
+
+	if ($selected_application_id != '' && $_SESSION['App']->get_application($selected_application_id))
+		$_SESSION['App']->selected_application = $selected_application_id;
+	else
+		$_SESSION['App']->selected_application = user_startup_tab();
+}
+
+//---------------------------------------------------------------------------------------------
+
 function local_extension($id) {
 	global $next_extension_id, $Ajax, $path_to_root;
 
@@ -211,8 +244,10 @@ if (get_post('Refresh')) {
 		}
 	}
 	write_extensions($exts, get_post('extset'));
-	if (get_post('extset') == user_company())
+	if (get_post('extset') == user_company()) {
 		$installed_extensions = $exts;
+		refresh_current_session_application_switcher();
+	}
 	
 	if(!$result) {
 		display_error(_('Status change for some extensions failed.'));

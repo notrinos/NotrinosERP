@@ -222,7 +222,7 @@ function credit_edit_item_controls(&$order, $rowcounter, $line_no=-1) {
 		$Ajax->activate('items_table');
 	}
 	else {
-		stock_items_list_cells(null, 'stock_id', null, false, true);
+		echo stock_items_list('stock_id', null, false, true, array('cells' => true));
 		if (list_updated('stock_id')) {
 			$Ajax->activate('price');
 			$Ajax->activate('qty');

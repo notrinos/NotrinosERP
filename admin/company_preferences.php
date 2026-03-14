@@ -23,8 +23,41 @@ include_once($path_to_root.'/reporting/includes/tcpdf.php');
 
 //-------------------------------------------------------------------------------------------------
 
+/**
+ * Rebuild active hooks and application switcher model for current session.
+ *
+ * This makes optional module changes (Manufacturing, Fixed Assets, HRM)
+ * visible immediately in the sidebar application switcher.
+ *
+ * @return void
+ */
+function refresh_current_session_application_switcher() {
+	if (!isset($_SESSION['App']))
+		return;
+
+	$selected_application_id = isset($_SESSION['App']->selected_application)
+		? $_SESSION['App']->selected_application
+		: '';
+
+	install_hooks();
+	$_SESSION['App']->init();
+
+	if ($selected_application_id != '' && $_SESSION['App']->get_application($selected_application_id))
+		$_SESSION['App']->selected_application = $selected_application_id;
+	else
+		$_SESSION['App']->selected_application = user_startup_tab();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 if (isset($_POST['update']) && $_POST['update'] != '') {
 	$input_error = 0;
+	$current_company_preferences = get_company_prefs();
+	$optional_modules_changed =
+		(int)$current_company_preferences['use_manufacturing'] !== (int)check_value('use_manufacturing')
+		|| (int)$current_company_preferences['use_fixed_assets'] !== (int)check_value('use_fixed_assets')
+		|| (int)$current_company_preferences['use_hrm'] !== (int)check_value('use_hrm');
+
 	if (!check_num('login_tout', 10)) {
 		display_error(_('Login timeout must be positive number not less than 10.'));
 		set_focus('login_tout');
@@ -137,10 +170,23 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		);
 
 		$_SESSION['wa_current_user']->timeout = $_POST['login_tout'];
+
+		if ($optional_modules_changed) {
+			$_SESSION['company_setup_updated_notice'] = 1;
+			$SysPrefs->refresh();
+			refresh_current_session_application_switcher();
+			meta_forward($_SERVER['PHP_SELF'], 'sel_app='.(isset($_SESSION['sel_app']) ? $_SESSION['sel_app'] : 'system'));
+		}
+
 		display_notification_centered(_('Company setup has been updated.'));
 		set_focus('coy_name');
 		$Ajax->activate('_page_body');
 	}
+}
+
+if (isset($_SESSION['company_setup_updated_notice']) && $_SESSION['company_setup_updated_notice']) {
+	display_notification_centered(_('Company setup has been updated.'));
+	unset($_SESSION['company_setup_updated_notice']);
 }
 
 start_form(true);

@@ -448,6 +448,11 @@ class graph {
 			'x' => array('title' => array('display' => !empty($this->axis_x), 'text' => $this->axis_x)),
 			'y' => array('title' => array('display' => !empty($this->axis_y), 'text' => $this->axis_y), 'beginAtZero' => true),
 			);
+
+			// Single-series bar charts do not need legend boxes with generic labels.
+			if ((int)$this->type == 1 || (int)$this->type == 2) {
+				$config['options']['plugins']['legend']['display'] = true;
+			}
 		} else {
 			$pieColors = array();
 			for ($i = 0; $i < max(1, count($this->y)); $i++) {
@@ -1189,5 +1194,7 @@ class graph {
 	/** @deprecated No-op; kept for API compatibility. */
 	public function draw_credits() {}
 }
+
+
 
 

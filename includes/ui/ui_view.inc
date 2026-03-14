@@ -905,7 +905,7 @@ function get_js_date_picker() {
 
 	$fpath = user_js_cache().'/'.'date_picker.js';
 
-	if (!file_exists($fpath) || $SysPrefs->go_debug) {
+	if (!file_exists($fpath) || $SysPrefs->go_debug || filemtime($fpath) < filemtime(__FILE__)) {
 
 		$date_system = $SysPrefs->date_system;
 		$dateseps = $SysPrefs->dateseps;
@@ -1261,12 +1261,7 @@ function get_js_date_picker() {
 			this.show = show;
 			function show(field) {
 				can_hide = 0;
-				if (dateField == field) {
-					return;
-				}
-				else {
-					dateField = field;
-				}
+				dateField = field;
 				if(dateField) {
 					try {
 						var dateString = new String(dateField.value);
@@ -1336,10 +1331,18 @@ function get_js_date_picker() {
 				if(document.getElementById){
 					calendar = document.getElementById(calendarId);
 					calendar.innerHTML = calendarDrawTable(currentYear, currentMonth);
-					var fieldPos = new positionInfo(dateField);
 					var calendarPos = new positionInfo(calendarId);
-					var x = fieldPos.getElementLeft();
-					var y = fieldPos.getElementBottom();
+					var x;
+					var y;
+					if (dateField.getBoundingClientRect) {
+						var rect = dateField.getBoundingClientRect();
+						x = rect.left + (window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0);
+						y = rect.bottom + (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
+					} else {
+						var fieldPos = new positionInfo(dateField);
+						x = fieldPos.getElementLeft();
+						y = fieldPos.getElementBottom();
+					}
 					setProperty('left', x + 'px');
 					setProperty('top', y + 'px');
 					setProperty('display', 'block');

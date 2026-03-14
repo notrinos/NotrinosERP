@@ -355,10 +355,21 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 	else {
 
 		// Manufactured item can be purchased
-		if ($order->fixed_asset)
-			stock_purchasable_fa_list_cells(null, 'stock_id', null, false, true, false, true, $order->line_items);
+		if ($order->fixed_asset) {
+			// Render direct table cells to keep line controls aligned with header columns.
+			$where_opts = array();
+			$where_opts[] = "stock_id NOT IN
+				( SELECT stock_id FROM ".TB_PREF."stock_moves WHERE type=".ST_SUPPRECEIVE." AND qty!=0 )";
+			foreach($order->line_items as $item) {
+				$where_opts[] = "stock_id != ".db_escape($item->stock_id);
+			}
+			$where_opts[] = "mb_flag='F'";
+			echo stock_items_list('stock_id', null, false, true,
+				array('fixed_asset' => true, 'cells' => true, 'where' => $where_opts), true);
+		}
 		else
-			stock_items_list_cells(null, 'stock_id', null, false, true, false, true, array('editable' => 30, 'where'=>array('NOT no_purchase')));
+			echo stock_items_list('stock_id', null, false, true,
+				array('cells' => true, 'editable' => 30, 'where'=>array('NOT no_purchase')), true);
 
 		if (list_updated('stock_id')) {
 			$Ajax->activate('price');

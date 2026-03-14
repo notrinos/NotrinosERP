@@ -91,9 +91,12 @@ function issue_edit_item_controls(&$order, $line_no=-1) {
 	}
 	else {
 		$wo_details = get_work_order($_SESSION['issue_items']->order_id);
-
-		stock_component_items_list_cells(null, 'stock_id', 
-			$wo_details['stock_id'], null, false, true);
+		echo stock_items_list('stock_id', null, false, true,
+			array(
+				'where'=>array("stock_id != ".db_escape($wo_details['stock_id'])),
+				'cells'=>true,
+				'parent'=> $wo_details['stock_id']
+			), false, 'component');
 		if (list_updated('stock_id')) {
 			$Ajax->activate('units');
 			$Ajax->activate('qty');

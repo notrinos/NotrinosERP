@@ -448,8 +448,10 @@ function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		else {
 			if (!isset($_POST['stock_id']))   // Check if stock_id dosesn't exist
 				$_POST['stock_id'] = last_sales_order_detail($order, 'stk_code');  //get the llast sales stock id.
-			
-			sales_items_list_cells(null,'stock_id', $_POST['stock_id'], false, true, true);
+
+			// sales_items_list() with cells=true already renders table cells.
+			echo sales_items_list('stock_id', $_POST['stock_id'], false, true,
+				'', array('cells' => true, 'max' => 50), true);
 		}
 		if (list_updated('stock_id')) {
 			$Ajax->activate('price');

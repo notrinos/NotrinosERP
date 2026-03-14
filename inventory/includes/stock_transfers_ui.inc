@@ -115,7 +115,8 @@ function transfer_edit_item_controls(&$order, $line_no=-1) {
 		if ($order->fixed_asset)
 			stock_disposable_fa_list_cells(null, 'stock_id', null, false, true, $order->line_items);
 		else
-			sales_items_list_cells(null,'stock_id', null, false, true, true);
+			echo sales_items_list('stock_id', null, false, true,
+				'', array('cells' => true, 'max' => 50), true);
 
 		if (list_updated('stock_id')) {
 			$Ajax->activate('units');
