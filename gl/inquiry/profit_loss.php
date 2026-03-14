@@ -145,6 +145,7 @@ function inquiry_controls() {
 
 	$dim = get_company_pref('use_dimension');
 	start_table(TABLESTYLE_NOBORDER);
+	start_row();
 	
 	$date = today();
 	if (!isset($_POST['TransToDate']))
@@ -154,10 +155,9 @@ function inquiry_controls() {
 	date_cells(_('From:'), 'TransFromDate');
 	date_cells(_('To:'), 'TransToDate');
 	
-	echo '<td>'._('Compare to').":</td>\n";
-	echo '<td>';
+	filter_cell_open(_('Compare to'));
 	echo array_selector('Compare', null, $compare_types);
-	echo "</td>\n";	
+	filter_cell_close();
 
 	if ($dim >= 1)
 		dimensions_list_cells(_('Dimension').' 1:', 'Dimension', null, true, ' ', false, 1);
@@ -165,6 +165,7 @@ function inquiry_controls() {
 		dimensions_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, ' ', false, 2);
 	
 	submit_cells('Show',_('Show'), '', '', 'default');
+	end_row();
 	end_table();
 
 	hidden('AccGrp');

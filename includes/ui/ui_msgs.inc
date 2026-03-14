@@ -41,7 +41,13 @@ function display_heading2($msg) {
 function display_note($msg, $br=0, $br2=0, $extra='') {
 	for ($i = 0; $i < $br; $i++)
 		echo '<br>';
-	echo "<div class='alert alert-info'".($extra != '' ? ' '.$extra : '')."'>".$msg."</div>\n";
+	$classes = 'alert alert-info';
+	if ($extra != '' && preg_match('/\bclass\s*=\s*(["\'])(.*?)\1/i', $extra, $matches)) {
+		if (trim($matches[2]) != '')
+			$classes .= ' '.trim($matches[2]);
+		$extra = trim(preg_replace('/\s*\bclass\s*=\s*(["\']).*?\1/i', '', $extra));
+	}
+	echo "<div class='".$classes."'".($extra != '' ? ' '.$extra : '').">".$msg."</div>\n";
 	for ($i = 0; $i < $br2; $i++)
 		echo '<br>';
 }

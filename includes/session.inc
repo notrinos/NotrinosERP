@@ -535,6 +535,25 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 
 		$SysPrefs->refresh();
 	}
+
+	// Check for extension changes after SysPrefs are loaded from DB,
+	// so init() has access to use_manufacturing, use_fixed_assets, use_hrm etc.
+	$installed_extensions_signature = md5(serialize($installed_extensions));
+	if (!isset($_SESSION['installed_extensions_signature'])
+		|| $_SESSION['installed_extensions_signature'] !== $installed_extensions_signature) {
+		$_SESSION['installed_extensions_signature'] = $installed_extensions_signature;
+		if (isset($_SESSION['App'])) {
+			$selected_application_id = isset($_SESSION['App']->selected_application)
+				? $_SESSION['App']->selected_application
+				: '';
+			$_SESSION['App']->init();
+			if ($selected_application_id != '' && $_SESSION['App']->get_application($selected_application_id))
+				$_SESSION['App']->selected_application = $selected_application_id;
+			else
+				$_SESSION['App']->selected_application = user_startup_tab();
+		}
+	}
+
 	if (!isset($_SESSION['App'])) {
 		$_SESSION['App'] = new NotrinosErp();
 		$_SESSION['App']->init();

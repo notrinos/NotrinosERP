@@ -53,8 +53,10 @@ if (isset($_GET['employee_id']))
 start_form();
 
 start_table(TABLESTYLE_NOBORDER);
-employees_list_row(_('Employee:'), 'employee_id', get_post('employee_id', ''), false, false, false);
+start_row();
+employees_list_cells(_('Employee:'), 'employee_id', get_post('employee_id', ''), false, false, false);
 submit_cells('Show', _('Show'), '', _('Show employee card'), 'default');
+end_row();
 end_table(1);
 
 $employee_id = trim((string)get_post('employee_id', ''));

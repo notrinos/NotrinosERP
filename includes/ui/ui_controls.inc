@@ -1,12 +1,12 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
-	Released under the terms of the GNU General Public License, GPL, 
-	as published by the Free Software Foundation, either version 3 
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL,
+	as published by the Free Software Foundation, either version 3
 	of the License, or (at your option) any later version.
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /*
@@ -144,7 +144,10 @@ function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 	ui_push_table_mode($mode);
 
 	if ($mode == 'form') {
-		echo "<div class='form-table'";
+		$css_class = 'form-table';
+		if ($class == TABLESTYLE_NOBORDER)
+			$css_class .= ' filter-bar';
+		echo "<div class='".$css_class."'";
 		if ($extra != '')
 			echo ' '.$extra;
 		echo ">\n";
@@ -175,6 +178,39 @@ function end_table($breaks=0) {
 	output_hidden();
 	if ($breaks)
 		br($breaks);
+}
+
+/**
+ * Open a filter cell wrapper.
+ * In table mode: outputs label TD and opening control TD.
+ * In form mode: outputs a filter-field wrapper div with label.
+ *
+ * @param string|null $label The label text or null for no label
+ * @param string $params Extra HTML attributes for the label cell (table mode only)
+ * @return void
+ */
+function filter_cell_open($label = null, $params = '') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='filter-field'>\n";
+		if ($label != null)
+			echo "<label class='filter-label'>".$label."</label>\n";
+		return;
+	}
+	if ($label != null)
+		echo "<td ".$params.">".$label."</td>\n";
+	echo "<td nowrap>\n";
+}
+
+/**
+ * Close a filter cell wrapper.
+ *
+ * @return void
+ */
+function filter_cell_close() {
+	if (ui_current_table_mode() != 'table')
+		echo "</div>\n";
+	else
+		echo "</td>\n";
 }
 
 function start_outer_table($class=false, $extra='', $padding='2', $spacing='0', $br=false) {

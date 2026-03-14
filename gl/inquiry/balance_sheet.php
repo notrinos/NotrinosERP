@@ -107,12 +107,14 @@ function display_type ($type, $typename, $from, $to, $convert, $dimension, $dime
 function inquiry_controls() {
 	$dim = get_company_pref('use_dimension');
 	start_table(TABLESTYLE_NOBORDER);
+	start_row();
 	date_cells(_('As at:'), 'TransToDate');
 	if ($dim >= 1)
 		dimensions_list_cells(_('Dimension').' 1:', 'Dimension', null, true, ' ', false, 1);
 	if ($dim > 1)
 		dimensions_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, ' ', false, 2);
 	submit_cells('Show',_('Show'),'','', 'default');
+	end_row();
 	end_table();
 
 	hidden('TransFromDate');

@@ -182,7 +182,7 @@ function display_db_pager(&$pager) {
 		echo navi_button($but_pref.'first', _('<<'), $pager->first_page);
 		echo navi_button($but_pref.'prev', _('<'), $pager->prev_page);
 		echo "<span class='pager-select-wrap'>";
-		echo number_list_cells(null, 'pager_list', null, 1, $pager->max_page, false, true, 'nosearch');
+		echo number_list('pager_list', null, 1, $pager->max_page, false, true, 'nosearch');
 		echo "</span>";
 		echo navi_button($but_pref.'next', _('>'), $pager->next_page);
 		echo navi_button($but_pref.'last', _('>>'), $pager->last_page);

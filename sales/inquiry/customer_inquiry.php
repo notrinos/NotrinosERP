@@ -151,7 +151,7 @@ ref_cells(_('Reference:'), 'Ref', '', null, _('Enter reference fragment or leave
 if (!$page_nested)
 	customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true, false, true);
 
-cust_allocations_list_cells(null, 'filterType', null, true, true);
+cust_allocations_list_cells(_('Transaction Type:'), 'filterType', null, true, true);
 
 if ($_POST['filterType'] != '2') {
 	date_cells(_('From:'), 'TransAfterDate', '', null, -user_transaction_days());

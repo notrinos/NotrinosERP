@@ -115,9 +115,9 @@ function fmt_errors() {
 	global $messages, $path_to_root, $SysPrefs;
 
 	$msg_class = array(
-		E_USER_ERROR => 'err_msg',
-		E_USER_WARNING =>'warn_msg', 
-		E_USER_NOTICE => 'note_msg');
+		E_USER_ERROR => 'danger',
+		E_USER_WARNING => 'warning', 
+		E_USER_NOTICE => 'notification');
 
 	$type = E_USER_NOTICE;
 	$content = '';
@@ -151,7 +151,7 @@ function fmt_errors() {
 			$content .= ($cnt ? '<hr>' : '').$str;
 		}
 		$class = $msg_class[$type];
-		$content = "<div class='$class'>$content</div>";
+		$content = "<div class='alert $class'>$content</div>";
 	}
 	elseif ($path_to_root=='.')
 		return '';

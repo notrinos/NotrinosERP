@@ -1,12 +1,12 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
-	Released under the terms of the GNU General Public License, GPL, 
-	as published by the Free Software Foundation, either version 3 
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL,
+	as published by the Free Software Foundation, either version 3
 	of the License, or (at your option) any later version.
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once($path_to_root.'/includes/banking.inc');
@@ -317,7 +317,11 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	if ($opts['editlink'])
 		$selector .= ' '.$opts['editlink'];
 	if ($search_box && $opts['cells']) {
-		$str = ($edit_entry != '' ? '<td class="combo-search-cell">'.$edit_entry.'</td>' : '')."<td class='combo-select-cell' nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
+		if (ui_current_table_mode() != 'table') {
+			$str = ($edit_entry != '' ? '<span class="combo-search-cell">'.$edit_entry.'</span>' : '')."<span class='combo-select-cell'><div class='list_container'>".$selector.$search_btn."</div></span>";
+		} else {
+			$str = ($edit_entry != '' ? '<td class="combo-search-cell">'.$edit_entry.'</td>' : '')."<td class='combo-select-cell' nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
+		}
 	}
 	else
 		$str = $edit_entry."<div class='list_container'>".$selector.$search_btn."</div>";
@@ -499,11 +503,9 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 }
 
 function supplier_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";	
+	filter_cell_open($label);
 	echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function supplier_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false) {
@@ -548,11 +550,9 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 }
 
 function customer_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo '<td nowrap>';
+	filter_cell_open($label);
 	echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function customer_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
@@ -589,11 +589,9 @@ function customer_branches_list($customer_id, $name, $selected_id=null, $spec_op
 //------------------------------------------------------------------------------------------------
 
 function customer_branches_list_cells($label, $customer_id, $name, $selected_id=null, $all_option=true, $enabled=true, $submit_on_change=false, $editkey=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo customer_branches_list($customer_id, $name, $selected_id, $all_option, $enabled, $submit_on_change, $editkey);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function customer_branches_list_row($label, $customer_id, $name, $selected_id=null, $all_option=true, $enabled=true, $submit_on_change=false, $editkey=false) {
@@ -617,11 +615,9 @@ function locations_list($name, $selected_id=null, $all_option=false, $submit_on_
 }
 
 function locations_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $fixed_asset=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo locations_list($name, $selected_id, $all_option, $submit_on_change, $fixed_asset);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function locations_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $fixed_asset=false) {
@@ -647,11 +643,9 @@ function currencies_list($name, $selected_id=null, $submit_on_change=false, $exc
 }
 
 function currencies_list_cells($label, $name, $selected_id=null, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo currencies_list($name, $selected_id, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function currencies_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
@@ -683,11 +677,9 @@ function _format_fiscalyears($row) {
 }
 
 function fiscalyears_list_cells($label, $name, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo fiscalyears_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function fiscalyears_list_row($label, $name, $selected_id=null) {
@@ -718,11 +710,9 @@ function dimensions_list($name, $selected_id=null, $no_option=false, $showname='
 }
 
 function dimensions_list_cells($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function dimensions_list_row($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false) {
@@ -776,12 +766,10 @@ function stock_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 	else
 		$editor_item = 'item';
 
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-
+	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
 		array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
-
+	filter_cell_close();
 }
 
 //---------------------------------------------------------------------------------------------------
@@ -833,10 +821,10 @@ function sales_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 	if ($editkey)
 		set_editor('item', $name, $editkey);
 
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	echo sales_items_list($name, $selected_id, $all_option, $submit_on_change,
 		'', array('cells'=>true, 'max'=>50), $editkey); // maximum is set to 50 and not default 255.
+	filter_cell_close();
 }
 
 function sales_kits_list($name, $selected_id=null, $all_option=false, $submit_on_change=false) {
@@ -862,11 +850,9 @@ function stock_manufactured_items_list($name, $selected_id=null, $all_option=fal
 }
 
 function stock_manufactured_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo stock_manufactured_items_list($name, $selected_id, $all_option, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function stock_manufactured_items_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
@@ -885,10 +871,10 @@ function stock_component_items_list($name, $parent_stock_id, $selected_id=null, 
 
 
 function stock_component_items_list_cells($label, $name, $parent_stock_id, $selected_id=null, $all_option=false, $submit_on_change=false, $editkey=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	$parent = db_escape($parent_stock_id);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, array('where'=>array("stock_id != '$parent_stock_id'"), 'cells'=>true, 'parent'=> $parent_stock_id), $editkey, 'component');
+	filter_cell_close();
 }
 
 //------------------------------------------------------------------------------------
@@ -898,9 +884,9 @@ function stock_costable_items_list($name, $selected_id=null, $all_option=false, 
 }
 
 function stock_costable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, array('where'=>array("mb_flag!='D'"), 'cells'=>true, 'search_submit'=>true), false, 'stock_costable');
+	filter_cell_close();
 }
 
 //------------------------------------------------------------------------------------
@@ -913,12 +899,12 @@ function stock_purchasable_items_list($name, $selected_id=null,	$all_option=fals
 //	This helper is used in PO/GRN/PI entry and supports editable descriptions.
 //
 function stock_purchasable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $editkey=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
 		array('where'=>array("NOT no_purchase"), 
 			 'editable' => 30,
 			 'cells'=>true), $editkey);
+	filter_cell_close();
 }
 
 //------------------------------------------------------------------------------------
@@ -998,10 +984,10 @@ function stock_disposable_fa_list_cells($label, $name, $selected_id=null, $all_o
 		$where_opts[] = "stock_id != ".db_escape($item->stock_id);
 	}
 
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, 
 		array('fixed_asset' => true, 'cells'=>true, 'where' => $where_opts));
+	filter_cell_close();
 }
 
 function stock_depreciable_fa_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
@@ -1024,10 +1010,10 @@ function stock_depreciable_fa_list_cells($label, $name, $selected_id=null, $all_
 	$where_opts[] = "material_cost > 0";
 	$where_opts[] = "mb_flag='F'";
 
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
+	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
 		array('fixed_asset' => true, 'where' => $where_opts, 'cells'=>true));
+	filter_cell_close();
 }
 
 //------------------------------------------------------------------------------------
@@ -1045,11 +1031,9 @@ function tax_types_list($name, $selected_id=null, $none_option=false, $submit_on
 }
 
 function tax_types_list_cells($label, $name, $selected_id=null, $none_option=false, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo tax_types_list($name, $selected_id, $none_option, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function tax_types_list_row($label, $name, $selected_id=null, $none_option=false, $submit_on_change=false) {
@@ -1074,11 +1058,9 @@ function tax_groups_list($name, $selected_id=null, $none_option=false, $submit_o
 }
 
 function tax_groups_list_cells($label, $name, $selected_id=null, $none_option=false, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo tax_groups_list($name, $selected_id, $none_option, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function tax_groups_list_row($label, $name, $selected_id=null, $none_option=false, $submit_on_change=false) {
@@ -1098,11 +1080,9 @@ function item_tax_types_list($name, $selected_id=null, $show_inactive=false) {
 }
 
 function item_tax_types_list_cells($label, $name, $selected_id=null, $show_inactive=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo item_tax_types_list($name, $selected_id, $show_inactive);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function item_tax_types_list_row($label, $name, $selected_id=null, $show_inactive=false) {
@@ -1120,11 +1100,9 @@ function shippers_list($name, $selected_id=null) {
 }
 
 function shippers_list_cells($label, $name, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo shippers_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function shippers_list_row($label, $name, $selected_id=null) {
@@ -1144,11 +1122,9 @@ function sales_persons_list($name, $selected_id=null, $spec_opt=false) {
 }
 
 function sales_persons_list_cells($label, $name, $selected_id=null, $spec_opt=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>\n";
+	filter_cell_open($label);
 	echo sales_persons_list($name, $selected_id, $spec_opt);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function sales_persons_list_row($label, $name, $selected_id=null, $spec_opt=false) {
@@ -1167,11 +1143,9 @@ function sales_areas_list($name, $selected_id=null, $special_option=false) {
 }
 
 function sales_areas_list_cells($label, $name, $selected_id=null, $special_option=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo sales_areas_list($name, $selected_id, $special_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function sales_areas_list_row($label, $name, $selected_id=null, $special_option=false) {
@@ -1191,11 +1165,9 @@ function sales_groups_list($name, $selected_id=null, $special_option=false) {
 }
 
 function sales_groups_list_cells($label, $name, $selected_id=null, $special_option=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo sales_groups_list($name, $selected_id, $special_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function sales_groups_list_row($label, $name, $selected_id=null, $special_option=false) {
@@ -1222,11 +1194,9 @@ function templates_list($name, $selected_id=null, $special_option=false) {
 }
 
 function templates_list_cells($label, $name, $selected_id=null, $special_option=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo templates_list($name, $selected_id, $special_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function templates_list_row($label, $name, $selected_id=null, $special_option=false) {
@@ -1243,11 +1213,9 @@ function workorders_list($name, $selected_id=null) {
 }
 
 function workorders_list_cells($label, $name, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo workorders_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function workorders_list_row($label, $name, $selected_id=null) {
@@ -1264,11 +1232,9 @@ function payment_terms_list($name, $selected_id=null) {
 }
 
 function payment_terms_list_cells($label, $name, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo payment_terms_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function payment_terms_list_row($label, $name, $selected_id=null) {
@@ -1285,11 +1251,9 @@ function credit_status_list($name, $selected_id=null) {
 }
 
 function credit_status_list_cells($label, $name, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo credit_status_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function credit_status_list_row($label, $name, $selected_id=null) {
@@ -1312,11 +1276,9 @@ function sales_types_list($name, $selected_id=null, $submit_on_change=false, $sp
 }
 
 function sales_types_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $special_option=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo sales_types_list($name, $selected_id, $submit_on_change, $special_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function sales_types_list_row($label, $name, $selected_id=null, $submit_on_change=false, $special_option=false) {
@@ -1346,11 +1308,9 @@ function bank_reconciliation_list($account, $name, $selected_id=null, $submit_on
 }
 
 function bank_reconciliation_list_cells($label, $account, $name, $selected_id=null, $submit_on_change=false, $special_option=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo bank_reconciliation_list($account, $name, $selected_id, $submit_on_change, $special_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -1368,11 +1328,9 @@ function workcenter_list($name, $selected_id=null, $all_option=false) {
 
 function workcenter_list_cells($label, $name, $selected_id=null, $all_option=false) {
 	default_focus($name);
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo workcenter_list($name, $selected_id, $all_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function workcenter_list_row($label, $name, $selected_id=null, $all_option=false) {
@@ -1398,11 +1356,9 @@ function bank_accounts_list($name, $selected_id=null, $submit_on_change=false, $
 }
 
 function bank_accounts_list_cells($label, $name, $selected_id=null, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo bank_accounts_list($name, $selected_id, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function bank_accounts_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
@@ -1478,13 +1434,9 @@ function sale_payment_list($name, $category, $selected_id=null, $submit_on_chang
 }
 
 function sale_payment_list_cells($label, $name, $category, $selected_id=null, $submit_on_change=true, $prepayments=true) {
-	if ($label != null)
-		echo "<td class='label'>".$label."</td>\n";
-	echo "<td>";
-
+	filter_cell_open($label);
 	echo sale_payment_list($name, $category, $selected_id, $submit_on_change, $prepayments);
-
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -1501,11 +1453,9 @@ function class_list($name, $selected_id=null, $submit_on_change=false) {
 }
 
 function class_list_cells($label, $name, $selected_id=null, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo class_list($name, $selected_id, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function class_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
@@ -1533,11 +1483,9 @@ function stock_categories_list($name, $selected_id=null, $spec_opt=false, $submi
 }
 
 function stock_categories_list_cells($label, $name, $selected_id=null, $spec_opt=false, $submit_on_change=false, $fixed_asset=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo stock_categories_list($name, $selected_id, $spec_opt, $submit_on_change, $fixed_asset);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function stock_categories_list_row($label, $name, $selected_id=null, $spec_opt=false, $submit_on_change=false, $fixed_asset=false) {
@@ -1591,11 +1539,9 @@ function gl_account_types_list($name, $selected_id=null, $all_option=false, $all
 }
 
 function gl_account_types_list_cells($label, $name, $selected_id=null, $all_option=false, $all=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo gl_account_types_list($name, $selected_id, $all_option, $all);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function gl_account_types_list_row($label, $name, $selected_id=null, $all_option=false,	$all=false) {
@@ -1644,11 +1590,9 @@ function _format_account($row) {
 }
 
 function gl_all_accounts_list_cells($label, $name, $selected_id=null, $skip_bank_accounts=false, $cells=false, $all_option=false, $submit_on_change=false, $all=false, $type_id=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo gl_all_accounts_list($name, $selected_id, $skip_bank_accounts, $cells, $all_option, $submit_on_change, $all, $type_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function gl_all_accounts_list_row($label, $name, $selected_id=null, $skip_bank_accounts=false, $cells=false, $all_option=false, $submit_on_change=false, $all=false, $type_id=false) {
@@ -1670,11 +1614,9 @@ function yesno_list($name, $selected_id=null, $name_yes='', $name_no='', $submit
 }
 
 function yesno_list_cells($label, $name, $selected_id=null, $name_yes='', $name_no='', $submit_on_change=false) {
-	if($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo yesno_list($name, $selected_id, $name_yes, $name_no, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function yesno_list_row($label, $name, $selected_id=null, $name_yes='', $name_no='', $submit_on_change=false) {
@@ -1698,11 +1640,9 @@ function languages_list($name, $selected_id=null, $all_option=false) {
 }
 
 function languages_list_cells($label, $name, $selected_id=null, $all_option=false) {
-	if($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo languages_list($name, $selected_id, $all_option);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function languages_list_row($label, $name, $selected_id=null, $all_option=false) {
@@ -1720,11 +1660,9 @@ function bank_account_types_list($name, $selected_id=null) {
 }
 
 function bank_account_types_list_cells($label, $name, $selected_id=null) {
-	if($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo bank_account_types_list($name, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function bank_account_types_list_row($label, $name, $selected_id=null) {
@@ -1748,11 +1686,9 @@ function payment_person_types_list($name, $selected_id=null, $submit_on_change=f
 }
 
 function payment_person_types_list_cells($label, $name, $selected_id=null, $related=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo payment_person_types_list($name, $selected_id, $related);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function payment_person_types_list_row($label, $name, $selected_id=null, $related=null) {
@@ -1855,11 +1791,9 @@ function systypes_list($name, $value=null, $spec_opt=false, $submit_on_change=fa
 }
 
 function systypes_list_cells($label, $name, $value=null, $submit_on_change=false, $exclude=array()) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo systypes_list($name, $value, false, $submit_on_change, $exclude);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function systypes_list_row($label, $name, $value=null, $submit_on_change=false, $exclude=array()) {
@@ -1871,9 +1805,7 @@ function systypes_list_row($label, $name, $value=null, $submit_on_change=false, 
 function journal_types_list_cells($label, $name, $value=null, $submit_on_change=false) {
 	global $systypes_array;
 
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 
 	$items = $systypes_array;
 
@@ -1889,14 +1821,12 @@ function journal_types_list_cells($label, $name, $value=null, $submit_on_change=
 			'async' => false
 			)
 	);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function cust_allocations_list_cells($label, $name, $selected=null, $submit_on_change=false) {
 
-	if ($label != null)
-		label_cell($label);
-	echo "<td>\n";
+	filter_cell_open($label);
 	$allocs = array(
 		ALL_TEXT=>_('All Types'),
 		'1'=> _('Sales Invoices'),
@@ -1907,12 +1837,12 @@ function cust_allocations_list_cells($label, $name, $selected=null, $submit_on_c
 		'6' => _("Journal Entries")
 	);
 	echo array_selector($name, $selected, $allocs, array('select_submit'=> $submit_on_change));
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function supp_allocations_list_cell($name, $selected=null) {
 
-	echo "<td>\n";
+	filter_cell_open(null);
 	$allocs = array(
 		ALL_TEXT=>_('All Types'),
 		'1'=> _('Invoices'),
@@ -1923,12 +1853,12 @@ function supp_allocations_list_cell($name, $selected=null) {
 		'6' => _("Journal Entries")
 	);
 	echo array_selector($name, $selected, $allocs);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function supp_transactions_list_cell($name, $selected=null, $submit_on_change=false) {
 
-	echo "<td>\n";
+	filter_cell_open(null);
 	$allocs = array(
 		ALL_TEXT=>_('All Types'),
 		'1' => _('Invoices'),
@@ -1941,17 +1871,15 @@ function supp_transactions_list_cell($name, $selected=null, $submit_on_change=fa
 	);
 
 	echo array_selector($name, $selected, $allocs, array('select_submit'=> $submit_on_change));
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function policy_list_cells($label, $name, $selected=null) {
-	if ($label != null)
-		label_cell($label);
-	echo "<td>\n";
+	filter_cell_open($label);
 	echo array_selector($name, $selected, 
 				array('' => _('Automatically put balance on back order'),
 					'CAN' => _('Cancel any quantites not delivered')) );
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function policy_list_row($label, $name, $selected=null) {
@@ -1961,14 +1889,12 @@ function policy_list_row($label, $name, $selected=null) {
 }
 
 function credit_type_list_cells($label, $name, $selected=null, $submit_on_change=false) {
-	if ($label != null)
-		label_cell($label);
-	echo "<td>\n";
+	filter_cell_open($label);
 	echo array_selector($name, $selected, 
 			array( 'Return' => _('Items Returned to Inventory Location'),
 				'WriteOff' => _('Items Written Off')),
 			array( 'select_submit'=> $submit_on_change ) );
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function credit_type_list_row($label, $name, $selected=null, $submit_on_change=false) {
@@ -1994,11 +1920,9 @@ function number_list($name, $selected, $from, $to, $no_option=false, $submit_on_
 }
 
 function number_list_cells($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
-	if ($label != null)
-		label_cell($label);
-	echo "<td>\n";
+	filter_cell_open($label);
 	echo number_list($name, $selected, $from, $to, $no_option, $submit_on_change, $adclass);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function number_list_row($label, $name, $selected, $from, $to, $no_option=false, $submit_on_change=false, $adclass=array()) {
@@ -2066,11 +1990,9 @@ function quick_entries_list($name, $selected_id=null, $type=null, $submit_on_cha
 }
 
 function quick_entries_list_cells($label, $name, $selected_id, $type, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";	
+	filter_cell_open($label);
 	echo quick_entries_list($name, $selected_id, $type, $submit_on_change);
-	echo "</td>";
+	filter_cell_close();
 }
 
 function quick_entries_list_row($label, $name, $selected_id, $type, $submit_on_change=false) {
@@ -2130,11 +2052,9 @@ function security_roles_list($name, $selected_id=null, $new_item=false, $submit_
 }
 
 function security_roles_list_cells($label, $name, $selected_id=null, $new_item=false, $submit_on_change=false, $show_inactive=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo security_roles_list($name, $selected_id, $new_item, $submit_on_change, $show_inactive);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function security_roles_list_row($label, $name, $selected_id=null, $new_item=false, $submit_on_change=false, $show_inactive=false) {
@@ -2181,12 +2101,9 @@ function tag_list($name, $height, $type, $multi=false, $all=false, $spec_opt=fal
 }
 
 function tag_list_cells($label, $name, $height, $type, $mult=false, $all=false, $spec_opt=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>\n";
+	filter_cell_open($label);
 	echo tag_list($name, $height, $type, $mult, $all, $spec_opt);
-	echo "</td>\n";
-	
+	filter_cell_close();
 }
 
 function tag_list_row($label, $name, $height, $type, $mult=false, $all=false, $spec_opt=false) {
@@ -2310,11 +2227,9 @@ function tax_algorithm_list($name, $value=null, $submit_on_change=false) {
 }
 
 function tax_algorithm_list_cells($label, $name, $value=null, $submit_on_change=false) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo tax_algorithm_list($name, $value, $submit_on_change);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function tax_algorithm_list_row($label, $name, $value=null, $submit_on_change=false) {
@@ -2385,11 +2300,9 @@ function subledger_list($name, $account, $selected_id=null) {
 }
 
 function subledger_list_cells($label, $name, $account, $selected_id=null) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td nowrap>";
+	filter_cell_open($label);
 	echo subledger_list($name, $account, $selected_id);
-	echo "</td>\n";
+	filter_cell_close();
 }
 
 function subledger_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
@@ -2439,12 +2352,9 @@ function departments_list($name, $selected_id=null, $submit_on_change=false, $sp
 }
 
 function departments_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo departments_list($name, $selected_id, $submit_on_change, $spec_opt);
-	echo "</td>";
+	filter_cell_close();
 }
 
 function departments_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
@@ -2486,11 +2396,10 @@ function _format_employee_list($row) {
 }
 
 function employees_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	
+	filter_cell_open($label);
 	echo employees_list($name, $selected_id, $all_option, $submit_on_change,
 		array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
+	filter_cell_close();
 }
 
 function employees_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
@@ -2519,12 +2428,9 @@ function positions_list($name, $selected_id=null, $submit_on_change=false, $spec
 }
 
 function positions_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-	echo "<td>";
+	filter_cell_open($label);
 	echo positions_list($name, $selected_id, $submit_on_change, $spec_opt);
-	echo "</td>";
+	filter_cell_close();
 }
 
 function positions_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
@@ -2609,13 +2515,9 @@ function users_list($name, $selected_id=null, $submit_on_change=false, $spec_opt
 }
 
 function users_list_cells($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {
-	
-	if ($label != null)
-		echo "<td>".$label."</td>\n";
-
-	echo "<td>";
+	filter_cell_open($label);
 	echo users_list($name, $selected_id, $submit_on_change, $spec_opt);
-	echo "</td>";
+	filter_cell_close();
 }
 
 function users_list_row($label, $name, $selected_id=null, $submit_on_change=false, $spec_opt=true) {

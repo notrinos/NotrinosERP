@@ -1,12 +1,12 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
-	Released under the terms of the GNU General Public License, GPL, 
-	as published by the Free Software Foundation, either version 3 
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL,
+	as published by the Free Software Foundation, either version 3
 	of the License, or (at your option) any later version.
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
@@ -236,6 +236,12 @@ function submit_add_or_update_row($add=true, $right=true, $extra="", $title=fals
 }
 
 function submit_cells($name, $value, $extra="", $title=false, $async=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='filter-submit' ".$extra.">";
+		submit($name, $value, true, $title, $async);
+		echo "</div>\n";
+		return;
+	}
 	echo "<td ".$extra.">";
 	submit($name, $value, true, $title, $async);
 	echo "</td>\n";
@@ -369,6 +375,14 @@ function check($label, $name, $value=null, $submit_on_change=false, $title=false
 }
 
 function check_cells($label, $name, $value=null, $submit_on_change=false, $title=false, $params='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<label class='filter-check' ".$params.">";
+		echo check(null, $name, $value, $submit_on_change, $title);
+		if ($label != null)
+			echo " ".$label;
+		echo "</label>\n";
+		return;
+	}
 	if ($label != null)
 		echo "<td>".$label."</td>\n";
 	echo "<td ".$params.">";
@@ -555,11 +569,25 @@ function text_cells_ex($label, $name, $size, $max=null, $init=null, $title=null,
 		else
 			$_POST[$name] = '';
 	}
-	if ($label != null)
-		label_cell($label, $labparams);
 
 	if (!isset($max))
 		$max = $size;
+
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='filter-field'>\n";
+		if ($label != null)
+			echo "<label class='filter-label'>".$label."</label>\n";
+		$class = $submit_on_change ? 'class="searchbox"' : '';
+		echo "<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".($title ? " title='$title'": '')." >";
+		if ($post_label)
+			echo " " . $post_label;
+		echo "</div>\n";
+		$Ajax->addUpdate($name, $name, $_POST[$name]);
+		return;
+	}
+
+	if ($label != null)
+		label_cell($label, $labparams);
 
 	echo '<td>';
 	$class = $submit_on_change ? 'class="searchbox"' : '';
@@ -678,8 +706,9 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 				. "	<i class='btn_grey far fa-calendar-alt'></i></a>\n";
 		} else
 			$date_icon = '';
+		echo "<div class='filter-field'>\n";
 		if ($label != null)
-			echo "<label class='form-label' for='".$name."'>".$label."</label>\n";
+			echo "<label class='filter-label' for='".$name."'>".$label."</label>\n";
 		echo "<div class='form-control-wrap date'>";
 		$class = $submit_on_change ? 'date active' : 'date';
 		$aspect = $check ? 'aspect="cdate"' : '';
@@ -688,7 +717,7 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 		default_focus($name);
 		$size = (user_date_format()>3)?11:10;
 		echo "<input type=\"text\" id=\"$name\" name=\"$name\" class=\"$class\" $aspect size=\"$size\" maxlength=\"12\" value=\"".$_POST[$name]."\"".($title ? " title='$title'": '')." > $date_icon";
-		echo "</div>\n";
+		echo "</div></div>\n";
 		$Ajax->addUpdate($name, $name, $_POST[$name]);
 		return;
 	}

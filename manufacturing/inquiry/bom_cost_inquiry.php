@@ -30,7 +30,9 @@ if (list_updated('stock_id'))
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
-stock_manufactured_items_list_row(_('Select a manufacturable item:'), 'stock_id', null, false, true);
+start_row();
+stock_manufactured_items_list_cells(_('Select a manufacturable item:'), 'stock_id', null, false, true);
+end_row();
 end_table(1);
 
 display_heading(_('All Costs Are In:').' '.get_company_currency());
