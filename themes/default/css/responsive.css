@@ -1,0 +1,214 @@
+@media (max-width: 1200px) {
+	.modern-topbar-link span {
+		display: none;
+	}
+
+	.modern-shell {
+		grid-template-columns: 280px 1fr;
+	}
+
+	.modern-app-switcher {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 1024px) {
+	.modern-app-shell {
+		height: 100vh;
+		min-height: 100vh;
+		overflow: hidden;
+	}
+
+	.modern-topbar-center {
+		margin-left: 0;
+		max-width: none;
+	}
+
+	.modern-shell {
+		display: block;
+		position: relative;
+		height: calc(100vh - 56px);
+		min-height: 0;
+	}
+
+	.modern-sidebar {
+		position: fixed;
+		top: 56px;
+		left: 0;
+		width: min(88vw, 320px);
+		height: calc(100vh - 56px);
+		transform: translateX(-105%);
+		transition: transform var(--modern-transition);
+		z-index: 80;
+	}
+
+	html[dir='rtl'] .modern-sidebar {
+		left: auto;
+		right: 0;
+		transform: translateX(105%);
+	}
+
+	.modern-sidebar-open .modern-sidebar {
+		transform: translateX(0);
+	}
+
+	.modern-sidebar-overlay {
+		position: fixed;
+		top: 56px;
+		left: 0;
+		width: 100%;
+		height: calc(100vh - 56px);
+		background: rgba(12, 18, 30, 0.35);
+		z-index: 70;
+		display: none;
+	}
+
+	.modern-sidebar-open .modern-sidebar-overlay {
+		display: block;
+	}
+
+	.modern-main-content {
+		height: calc(100vh - 56px);
+		min-height: 0;
+		overflow-x: auto;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
+		padding: var(--modern-space-4);
+	}
+
+	/* Keep wide tables usable on tablets/phones by making each table scroll horizontally. */
+	.modern-main-content table {
+		display: block;
+		width: max-content;
+		min-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Keep filter forms fluid on tablets/phones; do not force them into wide table scrollers. */
+	.modern-main-content table.form-table,
+	.modern-main-content table.form-table.filter-bar,
+	.modern-main-content .filter-group > .form-table.filter-bar {
+		display: table;
+		width: 100%;
+		min-width: 0;
+		overflow: visible;
+	}
+
+	.modern-main-content .filter-group > .form-table.filter-bar {
+		display: contents;
+	}
+
+	.modern-app-shell.modern-sidebar-collapsed .modern-shell {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 768px) {
+	.modern-topbar {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		align-items: center;
+		gap: var(--modern-space-2);
+		padding: 0 var(--modern-space-3);
+		height: 56px;
+	}
+
+	.modern-topbar-center {
+		display: none;
+		width: auto;
+	}
+
+	.modern-app-shell.modern-search-open .modern-topbar-center {
+		display: block;
+		position: fixed;
+		top: 56px;
+		left: 12px;
+		right: 12px;
+		z-index: 85;
+		background: #fff;
+		padding: 8px;
+		border: 1px solid var(--modern-color-border);
+		border-radius: var(--modern-control-radius);
+		box-shadow: var(--modern-shadow-soft);
+	}
+
+	.modern-topbar-left,
+	.modern-topbar-right {
+		width: auto;
+	}
+
+	.modern-topbar-left {
+		justify-self: start;
+	}
+
+	.modern-topbar-right {
+		justify-self: end;
+		gap: var(--modern-space-2);
+	}
+
+	.modern-branding {
+		display: none;
+	}
+
+	.modern-search-toggle {
+		display: inline-flex;
+	}
+
+	.modern-footer {
+		flex-direction: column;
+	}
+
+	.modern-workspace-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.modern-app-switcher {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	body {
+		overflow: hidden;
+	}
+}
+
+/* ── Print ── */
+@media print {
+	.modern-topbar,
+	.modern-sidebar,
+	.modern-sidebar-overlay,
+	.modern-footer,
+	.form-actions,
+	button[type="submit"],
+	input[type="submit"],
+	.pager-nav {
+		display: none !important;
+	}
+	.modern-shell {
+		display: block !important;
+	}
+	.modern-main-content {
+		padding: 0 !important;
+	}
+	body {
+		background: #fff !important;
+		color: #000 !important;
+		font-size: 11pt;
+	}
+	.form-table,
+	.form-section {
+		border-color: #ccc !important;
+		box-shadow: none !important;
+	}
+	table.data-grid {
+		border-color: #999 !important;
+	}
+	table.data-grid th {
+		background: #eee !important;
+		color: #000 !important;
+	}
+	a {
+		color: #000 !important;
+		text-decoration: none !important;
+	}
+}

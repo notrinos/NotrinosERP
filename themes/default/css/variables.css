@@ -1,0 +1,33 @@
+:root {
+	--modern-color-primary: #3b82f6;
+	--modern-color-primary-light: #bedbff;
+	--modern-color-primary-50: #eff6ff;
+	--modern-color-primary-100: #dbeafe;
+	--modern-color-primary-strong: #2563eb;
+	--modern-color-primary-dark: #193cb8;
+	--modern-color-accent: #0070f2;
+	--modern-color-surface: #ffffff;
+	--modern-color-surface-soft: #fafafa;
+	--modern-color-bg: #f4f4f5;
+	--modern-color-text: #18181b;
+	--modern-color-muted: #71717b;
+	--modern-color-border: #e4e4e7;
+	--modern-color-success: #00c951;
+	--modern-color-warning: #fe9a00;
+	--modern-color-danger: #fb2c36;
+	--modern-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+	--modern-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--modern-radius-sm: 8px;
+	--modern-control-radius: 6px;
+	--modern-radius-md: 12px;
+	--modern-radius-lg: 16px;
+	--modern-space-1: 4px;
+	--modern-space-2: 8px;
+	--modern-space-3: 12px;
+	--modern-space-4: 16px;
+	--modern-space-5: 20px;
+	--modern-space-6: 24px;
+	--modern-space-8: 32px;
+	--modern-sidebar-width: 320px;
+	--modern-transition: 180ms ease;
+}

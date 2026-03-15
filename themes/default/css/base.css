@@ -1,0 +1,314 @@
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--modern-color-bg);
+	color: var(--modern-color-text);
+	font-family: "Segoe UI", "Trebuchet MS", Tahoma, sans-serif;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+body {
+	min-height: 100vh;
+	overflow: hidden;
+}
+
+/* Keep scrollbars visible but very subtle for a cleaner UI. */
+.modern-sidebar,
+.modern-main-content,
+div.widget.widget-has-table div.widget_content {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(15, 23, 42, 0.08) transparent;
+}
+
+.modern-sidebar::-webkit-scrollbar,
+.modern-main-content::-webkit-scrollbar,
+div.widget.widget-has-table div.widget_content::-webkit-scrollbar {
+	width: 5px;
+	height: 5px;
+}
+
+.modern-sidebar::-webkit-scrollbar-track,
+.modern-main-content::-webkit-scrollbar-track,
+div.widget.widget-has-table div.widget_content::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.modern-sidebar::-webkit-scrollbar-thumb,
+.modern-main-content::-webkit-scrollbar-thumb,
+div.widget.widget-has-table div.widget_content::-webkit-scrollbar-thumb {
+	background: rgba(15, 23, 42, 0.06);
+	border: 2px solid transparent;
+	background-clip: content-box;
+	border-radius: 999px;
+}
+
+.modern-sidebar::-webkit-scrollbar-thumb:hover,
+.modern-main-content::-webkit-scrollbar-thumb:hover,
+div.widget.widget-has-table div.widget_content::-webkit-scrollbar-thumb:hover {
+	background: rgba(15, 23, 42, 0.11);
+}
+
+a {
+	color: var(--modern-color-primary);
+	text-decoration: none;
+}
+
+a:hover,
+a:focus {
+	color: var(--modern-color-primary-strong);
+	text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	margin: 0;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+input,
+select,
+textarea,
+button {
+	font-family: inherit;
+	font-size: 12px;
+}
+
+input,
+select,
+textarea {
+	padding: 6px 8px;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: #fff;
+	color: var(--modern-color-text);
+}
+
+button,
+input[type='submit'],
+input[type='button'] {
+	padding: 6px 12px;
+	border-radius: var(--modern-control-radius);
+	border: 1px solid var(--modern-color-primary);
+	background: var(--modern-color-primary);
+	color: #fff;
+	cursor: pointer;
+}
+
+button:hover,
+input[type='submit']:hover,
+input[type='button']:hover {
+	background: var(--modern-color-primary-strong);
+}
+
+/* Danger action styling for delete actions across forms and tables */
+.modern-app-shell input[type='submit'][value*='Delete'],
+.modern-app-shell input[type='button'][value*='Delete'],
+.modern-app-shell button[value*='Delete'],
+.modern-app-shell button[name*='Delete'],
+.modern-app-shell input[name*='Delete'],
+.modern-app-shell .delete,
+.modern-app-shell .btn-delete,
+.modern-app-shell .btn-danger,
+.modern-app-shell a.delete,
+.modern-app-shell a.del {
+	border-color: #b91c1c !important;
+	background: #dc2626 !important;
+	color: #fff !important;
+}
+
+.modern-app-shell input[type='submit'][value*='Delete']:hover,
+.modern-app-shell input[type='button'][value*='Delete']:hover,
+.modern-app-shell button[value*='Delete']:hover,
+.modern-app-shell button[name*='Delete']:hover,
+.modern-app-shell input[name*='Delete']:hover,
+.modern-app-shell .delete:hover,
+.modern-app-shell .btn-delete:hover,
+.modern-app-shell .btn-danger:hover,
+.modern-app-shell a.delete:hover,
+.modern-app-shell a.del:hover {
+	border-color: #991b1b !important;
+	background: #b91c1c !important;
+	color: #fff !important;
+	text-decoration: none;
+}
+
+/* Override default.css small button padding */
+.modern-app-shell .ajaxsubmit,
+.modern-app-shell .inputsubmit {
+	padding: 6px 14px;
+	font-size: 12px;
+	border: 1px solid var(--modern-color-primary);
+	border-radius: var(--modern-radius-sm);
+	font-weight: 500;
+}
+
+/* Improve icon + label rhythm on action buttons. */
+.modern-app-shell button.ajaxsubmit,
+.modern-app-shell button.inputsubmit,
+.modern-app-shell button.editbutton,
+.modern-app-shell button.navibutton,
+.modern-app-shell button.default {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	line-height: 1.2;
+	vertical-align: middle;
+}
+
+.modern-app-shell button.ajaxsubmit > i,
+.modern-app-shell button.inputsubmit > i,
+.modern-app-shell button.editbutton > i,
+.modern-app-shell button.navibutton > i,
+.modern-app-shell button.default > i {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.95em;
+	line-height: 1;
+	vertical-align: middle;
+	transform: translateY(1px);
+}
+
+.modern-app-shell button.ajaxsubmit > span,
+.modern-app-shell button.inputsubmit > span,
+.modern-app-shell button.editbutton > span,
+.modern-app-shell button.navibutton > span,
+.modern-app-shell button.default > span {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1.2;
+	vertical-align: middle;
+}
+.modern-app-shell button.default,
+.modern-app-shell input.default {
+	padding: 8px 20px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.inactive {
+	opacity: 0.6;
+}
+
+#_page_body {
+	padding: var(--modern-space-4);
+}
+
+#CCIframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: none;
+	width: 0;
+	height: 0;
+	border: 0;
+	z-index: 110;
+	background: transparent;
+	pointer-events: none;
+}
+
+#CC {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: none;
+	z-index: 111;
+}
+
+#CC {
+	background: #ffffff !important;
+	border: 1px solid var(--modern-color-border) !important;
+	border-radius: 10px !important;
+	box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+	padding: 8px !important;
+}
+
+#CC table {
+	border-collapse: separate;
+	border-spacing: 2px;
+	background: #ffffff;
+}
+
+#CC tr.header td {
+	background: #f8fbff;
+	border-radius: 8px;
+	padding: 4px 6px;
+}
+
+#CC tr.header td.title {
+	font-weight: 600;
+	color: var(--modern-color-text);
+	text-align: center;
+}
+
+#CC .cc_months_list {
+	height: 28px;
+	padding: 2px 6px;
+	border: 1px solid var(--modern-color-border);
+	border-radius: 6px;
+	background: #fff;
+}
+
+#CC th,
+#CC td {
+	text-align: center;
+	min-width: 28px;
+	height: 28px;
+	font-size: 12px;
+	padding: 0;
+}
+
+#CC th {
+	color: var(--modern-color-muted);
+	font-weight: 600;
+}
+
+#CC td.empty {
+	opacity: 0.45;
+}
+
+#CC td.weekno,
+#CC th.weekno {
+	color: var(--modern-color-muted);
+	font-size: 11px;
+}
+
+#CC td a.weekday,
+#CC td a.weekend,
+#CC td a.current {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 7px;
+	color: var(--modern-color-text);
+	text-decoration: none;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+#CC td a.weekend {
+	color: #b45309;
+}
+
+#CC td a.weekday:hover,
+#CC td a.weekend:hover {
+	background: var(--modern-color-primary-50);
+	color: var(--modern-color-primary);
+}
+
+#CC td a.current {
+	background: var(--modern-color-primary);
+	color: #fff;
+	font-weight: 600;
+}

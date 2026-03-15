@@ -1,0 +1,664 @@
+.form-control,
+select,
+input[type='text'],
+input[type='password'],
+input[type='email'],
+textarea {
+	width: 100%;
+	max-width: 100%;
+}
+
+.form-table {
+	display: grid;
+	gap: 14px;
+	margin-bottom: 12px;
+}
+
+/* ==================== Filter Group ==================== */
+/* Unified grid container that wraps one or more filter-bar blocks.
+   All filter-fields flow into a single CSS grid so column widths
+   are uniform regardless of how many tables they span. */
+.filter-group {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 10px 16px;
+	align-items: center;
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	border-radius: 8px;
+	padding: 14px 18px;
+	margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* Filter-bars inside a group become transparent grid pass-throughs */
+.filter-group > .form-table.filter-bar {
+	display: contents;
+}
+
+.filter-group > .filter-bar > .form-row {
+	display: contents !important;
+}
+
+/* Any stray elements inside filter-group should span full width */
+.filter-group > hr {
+	grid-column: 1 / -1;
+}
+
+/* ==================== Filter Bar (standalone fallback) ==================== */
+.form-table.filter-bar {
+	display: block;
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	border-radius: 8px;
+	padding: 14px 18px;
+	margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.filter-bar > .form-row {
+	display: grid !important;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 10px 16px;
+	align-items: center;
+}
+
+.filter-bar > .form-row + .form-row {
+	margin-top: 4px;
+}
+
+.filter-bar .filter-field {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+/* Combo filter-field: search input + dropdown on same row */
+.filter-bar .filter-field:has(.combo-search-cell) {
+	flex-direction: row;
+	align-items: center;
+	gap: 6px;
+}
+
+.filter-bar .filter-field .combo-search-cell {
+	flex: 0 1 40%;
+	min-width: 0;
+}
+
+.filter-bar .filter-field .combo-search-cell input[type='text'] {
+	width: 100%;
+	min-width: 0;
+}
+
+.filter-bar .filter-field .combo-select-cell {
+	flex: 1 1 60%;
+	min-width: 0;
+}
+
+.filter-bar .filter-label {
+	display: none;
+}
+
+.filter-bar .filter-field select,
+.filter-bar .filter-field input[type='text'] {
+	height: 30px;
+	border-radius: var(--modern-control-radius);
+	border: 1px solid var(--modern-color-border);
+	padding: 2px 8px;
+	font-size: 13px;
+	min-width: 100px;
+	background: var(--modern-color-surface);
+	transition: border-color 0.15s;
+}
+
+.filter-bar .filter-field select:focus,
+.filter-bar .filter-field input[type='text']:focus {
+	border-color: var(--modern-color-primary);
+	outline: none;
+	box-shadow: 0 0 0 2px var(--modern-color-primary-50);
+}
+
+.filter-bar .filter-field .select2-container {
+	min-width: 0;
+	width: 100% !important;
+}
+
+.filter-bar .filter-field .select2-container--default .select2-selection--single {
+	height: 30px !important;
+	min-height: 30px !important;
+	border: 1px solid var(--modern-color-border) !important;
+}
+
+.filter-bar .filter-field .select2-container--default .select2-selection--single .select2-selection__rendered {
+	line-height: 28px !important;
+	font-size: 13px;
+}
+
+.filter-bar .filter-field .select2-container--default .select2-selection--single .select2-selection__arrow {
+	height: 28px !important;
+}
+
+.filter-bar .filter-field input.date {
+	flex: 1;
+	width: 100%;
+	max-width: 100%;
+	min-width: 80px;
+	height: 30px;
+}
+
+.filter-bar .filter-field .form-control-wrap.date {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	height: 30px;
+	padding: 0 8px;
+	transition: border-color 0.15s;
+}
+
+.filter-bar .filter-field .form-control-wrap.date:focus-within {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px var(--modern-color-primary-50);
+}
+
+.filter-bar .filter-field .form-control-wrap.date input.date {
+	border: none !important;
+	box-shadow: none !important;
+	outline: none !important;
+	background: transparent;
+	height: 100%;
+	padding: 0;
+	padding-right: 26px;
+}
+
+.filter-bar .filter-field .form-control-wrap.date a {
+	margin-left: -26px;
+}
+
+.filter-bar .filter-submit {
+	display: flex;
+	align-items: flex-end;
+}
+
+.filter-bar .filter-submit input[type='submit'],
+.filter-bar .filter-submit button {
+	background: var(--modern-color-primary);
+	color: #fff;
+	border: none;
+	border-radius: var(--modern-control-radius);
+	padding: 0 20px;
+	height: 30px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background 0.15s;
+}
+
+.filter-bar .filter-submit input[type='submit']:hover,
+.filter-bar .filter-submit button:hover {
+	background: var(--modern-color-accent);
+}
+
+.filter-bar .filter-check {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 10px;
+	white-space: nowrap;
+	font-size: 13px;
+	color: var(--modern-color-text);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	cursor: pointer;
+	transition: border-color 0.15s;
+}
+
+.filter-bar .filter-check:hover {
+	border-color: var(--modern-color-primary);
+}
+
+.filter-bar .filter-check input[type='checkbox'] {
+	-webkit-appearance: auto;
+	-moz-appearance: auto;
+	appearance: auto;
+	accent-color: #1a73e8;
+	width: 18px;
+	height: 18px;
+	border: 1px solid #c3cad6;
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+	position: relative;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	flex-shrink: 0;
+}
+
+.filter-bar .filter-check input[type='checkbox']:checked {
+	accent-color: #1a73e8;
+}
+
+.filter-bar .filter-check input[type='checkbox']:hover {
+	border-color: #8ea2c2;
+}
+
+.filter-bar .filter-check input[type='checkbox']:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.22);
+}
+
+/* Filter bar: placeholder styling for text inputs */
+.filter-bar .filter-field input[type='text']::placeholder {
+	text-transform: uppercase;
+	font-weight: 600;
+	font-size: 11px;
+	letter-spacing: 0.3px;
+	color: var(--modern-color-muted);
+}
+
+/* Filter bar: inline date label (hidden by default, shown in filter-bar) */
+.filter-date-label {
+	display: none;
+}
+
+.filter-bar .filter-date-label {
+	display: inline;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--modern-color-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	padding-right: 6px;
+	line-height: 28px;
+	flex-shrink: 0;
+}
+
+/* Filter bar: combo list fills filter-field width */
+.filter-bar .filter-field .list_container {
+	width: 100%;
+	min-width: 0;
+}
+
+/* Filter bar labels rendered by label_cell in form mode */
+.filter-bar .form-row > .form-value {
+	display: none;
+}
+
+/* Filter bar responsive */
+@media (max-width: 900px) {
+	.filter-group {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px 10px;
+	}
+
+	.filter-bar > .form-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px 10px;
+	}
+
+	.filter-bar .filter-field:has(.combo-search-cell) {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+		align-items: center;
+		gap: 6px;
+	}
+
+	.filter-bar .filter-field select,
+	.filter-bar .filter-field input[type='text'],
+	.filter-bar .filter-field input.date,
+	.filter-bar .filter-field .form-control-wrap.date,
+	.filter-bar .filter-field .form-control-wrap.date input.date,
+	.filter-bar .filter-field .select2-container {
+		min-width: 0;
+		width: 100% !important;
+	}
+
+	.filter-bar .filter-check {
+		height: auto;
+		min-height: 30px;
+		padding: 4px 8px;
+		white-space: normal;
+	}
+}
+
+@media (max-width: 768px) {
+	.filter-group {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.filter-group .filter-submit {
+		grid-column: 1 / -1;
+	}
+	.filter-bar > .form-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.filter-bar .filter-submit {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 560px) {
+	.filter-group,
+	.filter-bar > .form-row,
+	.filter-bar .filter-field:has(.combo-search-cell) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+	align-items: start;
+	margin-bottom: 12px;
+}
+
+.form-section {
+	background: #fff;
+	border: 1px solid #d4dbe6;
+	border-radius: 10px;
+	padding: 12px;
+	display: grid;
+	gap: 10px;
+}
+
+.section-title {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #273548;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #e5eaf2;
+}
+
+.form-row {
+	display: grid;
+	gap: 10px;
+}
+
+.form-group {
+	display: grid;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.form-group.inline {
+	grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+	align-items: center;
+	gap: 12px;
+}
+
+.form-label {
+	font-weight: 600;
+	color: #273548;
+}
+
+.form-control-wrap {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.form-readonly {
+	display: inline-block;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: #f6f8fc;
+	border: 1px solid #dde5f0;
+	color: #334155;
+}
+
+.form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding-top: 6px;
+	border-top: 1px solid #e5eaf2;
+	margin-top: 6px;
+}
+
+.table-header-row {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: #eef2fb;
+	border: 1px solid #d9e2f3;
+}
+
+.table-header-cell {
+	font-weight: 600;
+	font-size: 11px;
+	color: #334155;
+}
+
+.combo-wrapper {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	align-items: center;
+}
+
+.filter-bar .combo-wrapper {
+	grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.combo-search {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+td.combo-search-cell,
+td.combo-select-cell {
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.filter-bar td.combo-search-cell {
+	width: 40%;
+}
+
+.filter-bar td.combo-select-cell {
+	width: 60%;
+}
+
+td.combo-search-cell input[type='text'] {
+	width: 100%;
+	max-width: 100%;
+}
+
+.form-post-label {
+	color: #64748b;
+	font-size: 11px;
+}
+
+div.list_container {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 180px;
+	max-width: 100%;
+}
+
+div.list_container > span[id$='_sel'] {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+div.list_container span.select2 {
+	width: 100% !important;
+}
+
+.search_btn_container {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border: 1px solid var(--modern-color-border);
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-primary);
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.search_btn_container:hover {
+	background: var(--modern-color-primary-50);
+	border-color: #b7c8ea;
+}
+
+.search_btn_container[hidden] {
+	display: none !important;
+}
+
+.search_btn_txt {
+	line-height: 1;
+}
+
+.dynamic_combo_btn {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border-top: 1px solid #e2e8f3;
+	font-size: 12px;
+	font-weight: 600;
+	color: #1f4b88;
+	background: #f8fbff;
+	cursor: pointer;
+}
+
+.dynamic_combo_btn:hover {
+	background: #edf4ff;
+}
+
+.dynamic_combo_btn .search_btn_txt {
+	font-size: 12px;
+}
+
+.modern-app-shell .select2-container--default .select2-selection--single,
+.modern-app-shell .select2-container--default .select2-selection--multiple {
+	border-radius: var(--modern-control-radius) !important;
+}
+
+input.date {
+	width: 140px;
+}
+
+div.date_box {
+	display: inline-flex;
+	align-items: center;
+	white-space: nowrap;
+}
+
+div.date_box a {
+	margin-left: -28px;
+	line-height: 1;
+	color: var(--modern-color-muted);
+	text-decoration: none;
+}
+
+html[dir='rtl'] div.date_box a {
+	margin-left: 0;
+	margin-right: -28px;
+}
+
+div.date_box input.date,
+.form-control-wrap.date input.date {
+	padding-right: 34px;
+}
+
+html[dir='rtl'] div.date_box input.date,
+html[dir='rtl'] .form-control-wrap.date input.date {
+	padding-left: 34px;
+	padding-right: 8px;
+}
+
+.form-control-wrap.date {
+	display: inline-flex;
+	align-items: center;
+}
+
+.form-control-wrap.date a {
+	margin-left: -28px;
+	line-height: 1;
+	color: var(--modern-color-muted);
+	text-decoration: none;
+}
+
+html[dir='rtl'] .form-control-wrap.date a {
+	margin-left: 0;
+	margin-right: -28px;
+}
+
+div.date_box a .fa-calendar-alt,
+.form-control-wrap.date a .fa-calendar-alt {
+	font-size: 17px;
+}
+
+input.big {
+	width: 110px;
+}
+
+input.small {
+	width: 60px;
+}
+
+span.label,
+label {
+	font-weight: 600;
+	color: #273548;
+}
+
+/* Global checkbox styling with visible border */
+input[type='checkbox'] {
+	-webkit-appearance: auto;
+	-moz-appearance: auto;
+	appearance: auto;
+	accent-color: #1a73e8;
+	width: 18px;
+	height: 18px;
+	border: 1px solid #c3cad6;
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+	position: relative;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	vertical-align: middle;
+	flex-shrink: 0;
+}
+
+input[type='checkbox']:checked {
+	accent-color: #1a73e8;
+}
+
+input[type='checkbox']:hover {
+	border-color: #8ea2c2;
+}
+
+input[type='checkbox']:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.22);
+}
+
+@media (max-width: 900px) {
+	.form-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.form-group.inline,
+	.combo-wrapper {
+		grid-template-columns: 1fr;
+	}
+}

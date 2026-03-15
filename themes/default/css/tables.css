@@ -1,0 +1,214 @@
+table {
+	border-collapse: collapse;
+	max-width: 100%;
+}
+
+table td,
+table th {
+	padding: 6px 8px;
+	border-color: #dbe3ef;
+}
+
+table.tablestyle,
+table.tablestyle2,
+table.tablestyle_noborder,
+table.tableheader {
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-sm);
+}
+
+.evenrow {
+	background-color: #f7f9fd;
+}
+
+.oddrow {
+	background-color: #ffffff;
+}
+
+.data-grid-container {
+	overflow-x: auto;
+	margin-bottom: 12px;
+	border-radius: 10px;
+}
+
+table.data-grid {
+	width: 100%;
+	min-width: 760px;
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+table.data-grid tr.tableheader td,
+table.data-grid tr th,
+table.data-grid .tableheader {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: #e8eefb;
+	color: #1e293b;
+	font-weight: 700;
+	border-bottom: 1px solid #c7d3ea;
+}
+
+/* Keep sortable header controls visually identical to plain header labels. */
+table.data-grid tr.tableheader .navibutton,
+table.data-grid .tableheader .navibutton,
+table.data-grid th .navibutton {
+	padding: 0;
+	margin: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	line-height: 1.2;
+	cursor: pointer;
+}
+
+table.data-grid tr.tableheader .navibutton:hover,
+table.data-grid .tableheader .navibutton:hover,
+table.data-grid th .navibutton:hover {
+	background: transparent;
+	color: inherit;
+	text-decoration: underline;
+}
+
+table.data-grid tr.tableheader .navibutton:focus,
+table.data-grid .tableheader .navibutton:focus,
+table.data-grid th .navibutton:focus {
+	outline: 1px dashed #7c8fb3;
+	outline-offset: 2px;
+}
+
+table.data-grid tr.evenrow td {
+	background-color: #f8faff;
+}
+
+table.data-grid tr.oddrow td {
+	background-color: #ffffff;
+}
+
+#items_table table.tablestyle {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--modern-color-border);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+#items_table table.tablestyle > tbody > tr:first-child > td {
+	background: #e8eefb;
+	color: #1e293b;
+	font-weight: 700;
+	border-bottom: 1px solid #c7d3ea;
+	padding-top: 8px;
+	padding-bottom: 8px;
+}
+
+#items_table table.tablestyle > tbody > tr:first-child > td:first-child {
+	border-top-left-radius: 10px;
+}
+
+#items_table table.tablestyle > tbody > tr:first-child > td:last-child {
+	border-top-right-radius: 10px;
+}
+
+table.data-grid tr:hover td {
+	background-color: #eef4ff;
+}
+
+table.data-grid tr.overduebg td {
+	background-color: #fff1f2;
+	color: #9f1239;
+}
+
+.pager-sort-icon {
+	margin-right: 0;
+	color: #475569;
+	font-size: 0.85em;
+	vertical-align: middle;
+}
+
+.pager-nav {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	padding: 6px 2px;
+}
+
+.pager-nav-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.pager-nav .navibutton {
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid #b6c5e3;
+	background: #f4f7ff;
+	color: #1e293b;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.pager-nav .navibutton:hover:not([disabled]) {
+	background: #e6edff;
+}
+
+.pager-nav .navibutton[disabled] {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.pager-select-wrap {
+	display: inline-flex;
+	align-items: center;
+	padding: 0 4px;
+}
+
+.pager-select-wrap .list_container {
+	min-width: 0;
+	width: 5.2em;
+}
+
+.pager-select-wrap select {
+	height: 26px;
+	min-width: 0;
+	width: 100%;
+	padding: 2px 22px 2px 8px;
+	font-size: 11px;
+	line-height: 1.1;
+	border-radius: 6px;
+}
+
+.alert.overduefg {
+	background: #fff1f2;
+	border-color: #fecdd3;
+	color: #9f1239;
+}
+
+.pager-summary {
+	font-size: 11px;
+	color: #334155;
+}
+
+@media (max-width: 768px) {
+	table.data-grid {
+		min-width: 640px;
+	}
+
+	.pager-nav {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+}

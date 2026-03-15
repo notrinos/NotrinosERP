@@ -380,7 +380,7 @@ class renderer {
 			echo "<div class='modern-topbar-center'>";
 			echo "<div class='modern-header-search'>";
 			echo $this->icon_svg('search', 'modern-icon modern-header-search-icon');
-			echo "<input type='text' class='modern-header-search-input' placeholder='"._('Search menu or actions...')."' aria-label='"._('Search')."'>";
+			echo "<input type='text' class='modern-header-search-input' placeholder='"._('Search menu or actions...')."..' aria-label='"._('Search')."' autocomplete='off'>";
 			echo "</div>";
 			echo "</div>";
 			echo "<div class='modern-topbar-right'>";
@@ -390,6 +390,7 @@ class renderer {
 			$this->render_user_dropdown($selected_application_id);
 			echo "</div>";
 			echo "</header>";
+			$this->render_search_index();
 
 			echo "<div class='modern-shell'>";
 			echo "<aside id='modern-sidebar' class='modern-sidebar' aria-label='"._('Main navigation')."'>";
@@ -506,6 +507,66 @@ class renderer {
 
 		echo "</div>";
 		echo "</section>";
+	}
+
+	/**
+	 * Build a flat array of all accessible menu items for the search index.
+	 *
+	 * Each entry contains the label, link, application name, module name,
+	 * and category so the client-side search can filter and display results
+	 * without any server round-trip.
+	 *
+	 * @return array
+	 */
+	function build_search_index() {
+		global $path_to_root;
+
+		$applications = $_SESSION['App']->applications;
+		$current_user = $_SESSION['wa_current_user'];
+		$items = array();
+
+		foreach ($applications as $application) {
+			if (!$current_user->check_application_access($application))
+				continue;
+
+			$application_name = str_replace('&', '', $application->name);
+
+			foreach ($application->modules as $module) {
+				if (!$current_user->check_module_access($module))
+					continue;
+
+				$all_functions = array_merge($module->lappfunctions, $module->rappfunctions);
+				foreach ($all_functions as $app_function) {
+					if ($app_function->label == '' || !$current_user->can_access_page($app_function->access))
+						continue;
+
+					$function_link = $this->app_context_link($app_function->link, $application->id);
+					$absolute_link = $path_to_root.'/'.$function_link;
+					$clean_label = str_replace('&', '', strip_tags($app_function->label));
+					$items[] = array(
+						'l' => $clean_label,
+						'u' => $absolute_link,
+						'a' => $application_name,
+						'i' => $application->id,
+						'm' => $module->name,
+						'c' => $app_function->category
+					);
+				}
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Output the search index as an inline JSON script tag and the results container.
+	 *
+	 * @return void
+	 */
+	function render_search_index() {
+		$search_index = $this->build_search_index();
+		echo "<script>window.__searchIndex=".json_encode($search_index, JSON_HEX_TAG | JSON_HEX_AMP).";</script>";
+		echo "<div id='modern-search-results' class='modern-search-results' style='display:none;'></div>";
 	}
 
 	/**
