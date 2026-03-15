@@ -104,7 +104,7 @@ stock_items_list_cells(_('Item:'), 'SelectStockFromList', null, true);
 
 customer_list_cells(_('Select a customer: '), 'customer_id', null, true, true);
 
-submit_cells('SearchOrders', _('Search'), '',_('Select documents'), 'default');
+submit_cells('SearchOrders', _('Apply Filter'), '',_('Select documents'), 'default');
 
 hidden('OutstandingOnly', $_POST['OutstandingOnly']);
 

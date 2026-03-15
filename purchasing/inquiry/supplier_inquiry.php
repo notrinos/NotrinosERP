@@ -133,7 +133,7 @@ if ($_POST['filterType'] != '2') {
 	date_cells(_('To:'), 'TransToDate');
 }
 
-submit_cells('RefreshInquiry', _('Search'),'',_('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Apply Filter'),'',_('Refresh Inquiry'), 'default');
 
 end_row();
 end_table();

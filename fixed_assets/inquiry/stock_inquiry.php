@@ -36,7 +36,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 //locations_list_cells(_('From Location:'), 'location', null, false, false, true);
 check_cells( _('Show inactive:'), 'show_inactive', null);
-submit_cells('RefreshInquiry', _('Search'),'',_('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Apply Filter'),'',_('Refresh Inquiry'), 'default');
 end_row();
 
 end_table();

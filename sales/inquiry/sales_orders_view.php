@@ -235,7 +235,7 @@ if ($trans_type == ST_SALESORDER)
 if ($show_dates && $trans_type == ST_SALESORDER)
 	check_cells(_('No auto'), 'no_auto');
 
-submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
+submit_cells('SearchOrders', _('Apply Filter'),'',_('Select documents'), 'default');
 hidden('order_view_mode', $_POST['order_view_mode']);
 hidden('type', $trans_type);
 

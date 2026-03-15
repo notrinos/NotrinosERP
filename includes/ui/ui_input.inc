@@ -577,8 +577,9 @@ function text_cells_ex($label, $name, $size, $max=null, $init=null, $title=null,
 		echo "<div class='filter-field'>\n";
 		if ($label != null)
 			echo "<label class='filter-label'>".$label."</label>\n";
+		$placeholder_attr = ($label != null) ? " placeholder=\"" . htmlspecialchars(trim($label), ENT_QUOTES) . "\"" : '';
 		$class = $submit_on_change ? 'class="searchbox"' : '';
-		echo "<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".($title ? " title='$title'": '')." >";
+		echo "<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".$placeholder_attr.($title ? " title='$title'": '')." >";
 		if ($post_label)
 			echo " " . $post_label;
 		echo "</div>\n";
@@ -710,6 +711,8 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 		if ($label != null)
 			echo "<label class='filter-label' for='".$name."'>".$label."</label>\n";
 		echo "<div class='form-control-wrap date'>";
+		if ($label != null)
+			echo "<span class='filter-date-label'>".$label."</span>";
 		$class = $submit_on_change ? 'date active' : 'date';
 		$aspect = $check ? 'aspect="cdate"' : '';
 		if ($check && (get_post($name) != Today()))

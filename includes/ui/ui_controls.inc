@@ -37,6 +37,7 @@ $form_nested = -1;
 $ui_table_mode_stack = array();
 $ui_outer_section_open = false;
 $ui_row_mode_stack = array();
+$filter_group_open = false;
 
 /**
  * Check whether modern theme is active.
@@ -116,6 +117,8 @@ function end_form($breaks=0) {
 
 	if ($form_nested-- > 0) return;
 
+	close_filter_group_if_open();
+
 	$_SESSION['csrf_token'] = random_id();
 	if ($breaks)
 		br($breaks);
@@ -139,7 +142,31 @@ function check_csrf_token() {
 	return true;
 }
 
+/**
+ * Close the filter-group wrapper div if one is currently open.
+ *
+ * @return void
+ */
+function close_filter_group_if_open() {
+	global $filter_group_open;
+	if ($filter_group_open) {
+		echo "</div>\n";
+		$filter_group_open = false;
+	}
+}
+
 function start_table($class=false, $extra='', $padding='2', $spacing='0') {
+	global $filter_group_open;
+
+	if ($class == TABLESTYLE_NOBORDER) {
+		if (!$filter_group_open) {
+			echo "<div class='filter-group'>\n";
+			$filter_group_open = true;
+		}
+	} else {
+		close_filter_group_if_open();
+	}
+
 	$mode = ($class != TABLESTYLE) ? 'form' : 'table';
 	ui_push_table_mode($mode);
 
@@ -176,8 +203,10 @@ function end_table($breaks=0) {
 	else
 		echo "</table></center>\n";
 	output_hidden();
-	if ($breaks)
+	if ($breaks) {
+		close_filter_group_if_open();
 		br($breaks);
+	}
 }
 
 /**
@@ -512,6 +541,8 @@ $ajax_divs = array();
 
 function div_start($id='', $trigger=null, $non_ajax=false) {
 	global $ajax_divs;
+
+	close_filter_group_if_open();
 
 	if ($non_ajax) { // div for non-ajax elements
 		array_push($ajax_divs, array($id, null));

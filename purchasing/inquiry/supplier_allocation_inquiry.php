@@ -50,7 +50,7 @@ supp_allocations_list_cell('filterType', null);
 
 check_cells(_('show settled:'), 'showSettled', null);
 
-submit_cells('RefreshInquiry', _('Search'),'',_('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Apply Filter'),'',_('Refresh Inquiry'), 'default');
 
 set_global_supplier($_POST['supplier_id']);
 

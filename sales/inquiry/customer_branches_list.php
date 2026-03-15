@@ -30,7 +30,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 text_cells(_('Branch'), 'branch');
-submit_cells('search', _('Search'), '', _('Search branches'), 'default');
+submit_cells('search', _('Apply Filter'), '', _('Search branches'), 'default');
 
 end_row();
 

@@ -55,7 +55,7 @@ users_list_cells(_('User:'), 'userid', null, false);
 if (get_company_pref('use_dimension') && isset($_POST['dimension'])) // display dimension only, when started in dimension mode
 	dimensions_list_cells(_('Dimension:'), 'dimension', null, true, null, true);
 check_cells( _('Show closed:'), 'AlsoClosed', null);
-submit_cells('Search', _('Search'), '', '', 'default');
+submit_cells('Search', _('Apply Filter'), '', '', 'default');
 end_row();
 end_table();
 

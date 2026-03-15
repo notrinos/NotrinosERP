@@ -34,7 +34,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 text_cells(_('Supplier'), 'supplier');
-submit_cells('search', _('Search'), '', _('Search suppliers'), 'default');
+submit_cells('search', _('Apply Filter'), '', _('Search suppliers'), 'default');
 
 end_row();
 

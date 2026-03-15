@@ -29,7 +29,7 @@ employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));

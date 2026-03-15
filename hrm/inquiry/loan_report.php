@@ -22,7 +22,7 @@ start_form();
 start_table(TABLESTYLE2);
 employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $employee_id = get_post('employee_id', '');
 

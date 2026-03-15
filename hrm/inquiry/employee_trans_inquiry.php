@@ -30,7 +30,7 @@ employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $employee_id = get_post('employee_id', '');
 if ($employee_id != '' && $employee_id != ALL_TEXT) {

@@ -29,7 +29,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 text_cells(_('Description'), 'description');
-submit_cells('search', _('Search'), '', _('Search items'), 'default');
+submit_cells('search', _('Apply Filter'), '', _('Search items'), 'default');
 
 end_row();
 end_table();

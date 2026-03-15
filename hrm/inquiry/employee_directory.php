@@ -24,7 +24,7 @@ start_table(TABLESTYLE2);
 text_row(_('Search:'), 'search_text', get_post('search_text', ''), 30, 100);
 check_row(_('Show Inactive:'), 'show_inactive');
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $sql = "SELECT e.employee_id,
         TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,''))) employee_name,

@@ -27,7 +27,7 @@ text_row(_('Fiscal Year:'), 'fiscal_year', $_POST['fiscal_year'], 6, 4);
 employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
 leave_types_list_row(_('Leave Type:'), 'leave_id', null, true, false);
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $fiscal_year = (int)get_post('fiscal_year', date('Y'));
 $employee_id = get_post('employee_id', '');

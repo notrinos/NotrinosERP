@@ -28,7 +28,7 @@ date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $sql = "SELECT a.employee_id,
         TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,''))) employee_name,

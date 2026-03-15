@@ -159,7 +159,7 @@ if ($_POST['filterType'] != '2') {
 }
 check_cells(_('Zero values'), 'show_voided');
 
-submit_cells('RefreshInquiry', _('Search'), '', _('Refresh Inquiry'), 'default');
+submit_cells('RefreshInquiry', _('Apply Filter'), '', _('Refresh Inquiry'), 'default');
 end_row();
 end_table();
 

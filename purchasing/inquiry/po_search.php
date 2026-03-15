@@ -71,7 +71,7 @@ stock_items_list_cells(_('Item:'), 'SelectStockFromList', null, true);
 
 supplier_list_cells(_('Select a supplier: '), 'supplier_id', null, true, true);
 
-submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
+submit_cells('SearchOrders', _('Apply Filter'),'',_('Select documents'), 'default');
 end_row();
 end_table(1);
 //---------------------------------------------------------------------------------------------

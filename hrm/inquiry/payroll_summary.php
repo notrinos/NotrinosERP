@@ -35,7 +35,7 @@ start_form();
 start_table(TABLESTYLE2);
 array_selector_row(_('Status:'), 'status_filter', get_post('status_filter', ''), $status_labels);
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $status = get_post('status_filter', '');
 if ($status === '')

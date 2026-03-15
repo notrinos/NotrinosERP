@@ -26,7 +26,7 @@ start_table(TABLESTYLE2);
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 end_table(1);
-submit_center('Search', _('Search'));
+submit_center('Search', _('Apply Filter'));
 
 $table = function_exists('payslip_header_table') ? payslip_header_table() : 'payslips';
 $emp_col = ($table && function_exists('payslip_has_column') && payslip_has_column($table, 'employee_id')) ? 'employee_id' : 'emp_id';

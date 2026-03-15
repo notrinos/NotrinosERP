@@ -101,7 +101,7 @@ if (!$page_nested)
 
 check_cells(_('Also closed:'), 'also_closed', check_value('also_closed'));
 
-submit_cells('SearchOrders', _('Search'),'',_('Select documents'), 'default');
+submit_cells('SearchOrders', _('Apply Filter'),'',_('Select documents'), 'default');
 end_row();
 end_table(1);
 

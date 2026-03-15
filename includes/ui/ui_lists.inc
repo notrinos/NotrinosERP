@@ -470,7 +470,7 @@ function add_edit_combo($type, $name=false) {
 	return "<a target = '_blank' href='#' ".$onclick." tabindex='-1'>".$img."</a>";
 }
 
-function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $all=false, $editkey=false) {
+function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
 	global $SysPrefs;
 
 	if (!empty($SysPrefs->prefs['shortname_name_in_list']))
@@ -484,7 +484,7 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		set_editor('supplier', $name, $editkey);
 
 	$ret = combo_input($name, $selected_id, $sql, 'supplier_id', 'supp_name',
-	array(
+	array_merge(array(
 		'format' => '_format_add_curr',
 		'order' => array('supp_ref'),
 		'search_box' => $mode!=0,
@@ -497,14 +497,14 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment') : _('Select supplier'),
 		'show_inactive'=>$all,
 		'editlink' => $editkey ? add_edit_combo('supplier', $name) : false
-		), 'supplier');
+		), $opts), 'supplier');
 
 	return $ret;
 }
 
 function supplier_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false) {
 	filter_cell_open($label);
-	echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey);
+	echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey, array('cells'=>true));
 	filter_cell_close();
 }
 
@@ -516,7 +516,7 @@ function supplier_list_row($label, $name, $selected_id=null, $all_option=false, 
 
 //----------------------------------------------------------------------------------------------
 
-function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
+function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false, $opts=array()) {
 	global $SysPrefs;
 
 	if (!empty($SysPrefs->prefs['shortname_name_in_list']))
@@ -530,7 +530,7 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		set_editor('customer', $name, $editkey);
 
 	$ret = combo_input($name, $selected_id, $sql, 'debtor_no', 'debtor_ref',
-	array(
+	array_merge(array(
 		'format' => '_format_add_curr',
 		'order' => array('debtor_ref'),
 		'search_box' => $mode!=0,
@@ -544,14 +544,14 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment; F2 - entry new customer') : _('Select customer'),
 		'show_inactive' => $show_inactive,
 		'editlink' => $editkey ? add_edit_combo('customer', $name) : false
-	), 'customer' );
+	), $opts), 'customer' );
 
 	return $ret;
 }
 
 function customer_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
 	filter_cell_open($label);
-	echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey);
+	echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey, array('cells'=>true));
 	filter_cell_close();
 }
 
@@ -851,7 +851,8 @@ function stock_manufactured_items_list($name, $selected_id=null, $all_option=fal
 
 function stock_manufactured_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
 	filter_cell_open($label);
-	echo stock_manufactured_items_list($name, $selected_id, $all_option, $submit_on_change);
+	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
+		array('where'=>array("mb_flag= 'M'"), 'cells'=>true), false, 'stock_manufactured');
 	filter_cell_close();
 }
 
