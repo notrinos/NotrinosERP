@@ -12,8 +12,10 @@
 $page_security = 'SA_OPEN';
 $path_to_root = '..';
 
-if (file_exists($path_to_root.'/config_db.php'))
+if (file_exists($path_to_root.'/config_db.php')) {
 	header("Location: $path_to_root/index.php");
+	exit();
+}
 
 include($path_to_root.'/install/isession.inc');
 
