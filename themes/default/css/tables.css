@@ -98,7 +98,33 @@ table.data-grid tr.oddrow td {
 	border-spacing: 0;
 	border: 1px solid var(--modern-color-border);
 	border-radius: 10px;
-	overflow: hidden;
+	overflow: auto;
+}
+
+#items_table input,
+#items_table select,
+#items_table textarea {
+	min-width: 70px;
+}
+
+@media (max-width: 1024px) {
+	#items_table {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	#items_table table.tablestyle,
+	#items_table table.tablestyle2,
+	#items_table table.tablestyle_noborder,
+	#items_table table.tableheader {
+		display: table;
+		width: max-content;
+		min-width: 100%;
+	}
+
+	#items_table table.tablestyle {
+		overflow: visible;
+	}
 }
 
 #items_table table.tablestyle > tbody > tr:first-child > td {

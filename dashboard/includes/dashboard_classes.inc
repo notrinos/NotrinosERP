@@ -206,6 +206,59 @@ function stock_top($today, $limit=10, $type=0) {
 	return $result;
 }
 
+/**
+ * Get the active employee count grouped by department.
+ *
+ * @param int|null $limit Optional number of departments to return.
+ * @return resource
+ */
+function hrm_employees_by_department($limit=null) {
+	$sql = "SELECT d.department_name, COUNT(e.employee_id) AS total
+		FROM ".TB_PREF."employees e
+		LEFT JOIN ".TB_PREF."departments d ON e.department_id = d.department_id
+		WHERE e.inactive = 0
+		GROUP BY d.department_id, d.department_name
+		ORDER BY total DESC, d.department_name";
+
+	if (!empty($limit)) {
+		$limit = (int) $limit;
+		$sql .= " LIMIT ".$limit;
+	}
+
+	return db_query($sql, _('Could not get employee summary by department'));
+}
+
+/**
+ * Get active employee counts grouped into age buckets.
+ *
+ * @return array
+ */
+function hrm_employee_age_distribution() {
+	$sql = "SELECT
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 20 THEN 1 ELSE 0 END) AS under_20,
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) >= 20 AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 30 THEN 1 ELSE 0 END) AS age_20_29,
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) >= 30 AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 40 THEN 1 ELSE 0 END) AS age_30_39,
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) >= 40 AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 50 THEN 1 ELSE 0 END) AS age_40_49,
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) >= 50 AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 60 THEN 1 ELSE 0 END) AS age_50_59,
+		SUM(CASE WHEN birth_date IS NOT NULL AND birth_date != '0000-00-00' AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) >= 60 THEN 1 ELSE 0 END) AS age_60_plus,
+		SUM(CASE WHEN birth_date IS NULL OR birth_date = '0000-00-00' THEN 1 ELSE 0 END) AS unknown_age
+		FROM ".TB_PREF."employees
+		WHERE inactive = 0";
+
+	$result = db_query($sql, _('Could not get employee age distribution'));
+	$row = db_fetch_assoc($result);
+
+	return array(
+		_('Under 20') => (int) $row['under_20'],
+		_('20-29') => (int) $row['age_20_29'],
+		_('30-39') => (int) $row['age_30_39'],
+		_('40-49') => (int) $row['age_40_49'],
+		_('50-59') => (int) $row['age_50_59'],
+		_('60+') => (int) $row['age_60_plus'],
+		_('Unknown') => (int) $row['unknown_age'],
+	);
+}
+
 function get_reorder_stock($today, $limit=null) {
 	
 	$sql = "SELECT sm.stock_id, sm.description, l.location_name, ls.reorder_level, COALESCE(SUM(sm2.qty), 0) AS QtyOnHand

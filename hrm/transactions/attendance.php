@@ -400,7 +400,7 @@ while ($ot = db_fetch($overtime_result))
 
 $status_options = hrm_attendance_status_options();
 
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE, "width='99%'");
 $th = array(
     _('Select'),
     _('Employee ID'),

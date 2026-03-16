@@ -231,9 +231,11 @@ else {
 display_order_header($_SESSION['adj_items']);
 
 start_outer_table(TABLESTYLE, "width='70%'", 10);
+	echo "<div class='inventory-adjustment-entry'>\n";
 
 display_adjustment_items($items_title, $_SESSION['adj_items']);
 adjustment_options_controls();
+	echo "</div>\n";
 
 end_outer_table(1, false);
 

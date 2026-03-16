@@ -184,8 +184,10 @@
 /* Responsive */
 @media (max-width: 480px) {
 	#loginscreen .login-card {
+		width: 88%;
+		max-width: 340px;
 		padding: 28px 20px 24px;
-		margin: 12px;
+		margin: 12px auto;
 		border-radius: 12px;
 	}
 }

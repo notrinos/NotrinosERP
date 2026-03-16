@@ -766,6 +766,14 @@ function stock_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 	else
 		$editor_item = 'item';
 
+	if (ui_current_table_mode() == 'table') {
+		if ($label != null)
+			echo "<td>".$label."</td>\n";
+		echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
+			array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
+		return;
+	}
+
 	filter_cell_open($label);
 	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
 		array_merge(array('cells'=>true, 'show_inactive'=>$all), $opts), $editkey);
@@ -850,10 +858,8 @@ function stock_manufactured_items_list($name, $selected_id=null, $all_option=fal
 }
 
 function stock_manufactured_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
-	filter_cell_open($label);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
-		array('where'=>array("mb_flag= 'M'"), 'cells'=>true), false, 'stock_manufactured');
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
+		array('where'=>array("mb_flag= 'M'")));
 }
 
 function stock_manufactured_items_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
@@ -872,10 +878,9 @@ function stock_component_items_list($name, $parent_stock_id, $selected_id=null, 
 
 
 function stock_component_items_list_cells($label, $name, $parent_stock_id, $selected_id=null, $all_option=false, $submit_on_change=false, $editkey=false) {
-	filter_cell_open($label);
 	$parent = db_escape($parent_stock_id);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, array('where'=>array("stock_id != '$parent_stock_id'"), 'cells'=>true, 'parent'=> $parent_stock_id), $editkey, 'component');
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, $editkey,
+		array('where'=>array("stock_id != '$parent_stock_id'"), 'parent'=> $parent_stock_id));
 }
 
 //------------------------------------------------------------------------------------
@@ -885,9 +890,8 @@ function stock_costable_items_list($name, $selected_id=null, $all_option=false, 
 }
 
 function stock_costable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
-	filter_cell_open($label);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, array('where'=>array("mb_flag!='D'"), 'cells'=>true, 'search_submit'=>true), false, 'stock_costable');
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
+		array('where'=>array("mb_flag!='D'"), 'search_submit'=>true));
 }
 
 //------------------------------------------------------------------------------------
@@ -900,12 +904,8 @@ function stock_purchasable_items_list($name, $selected_id=null,	$all_option=fals
 //	This helper is used in PO/GRN/PI entry and supports editable descriptions.
 //
 function stock_purchasable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $editkey=false) {
-	filter_cell_open($label);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
-		array('where'=>array("NOT no_purchase"), 
-			 'editable' => 30,
-			 'cells'=>true), $editkey);
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, $editkey,
+		array('where'=>array("NOT no_purchase"), 'editable' => 30));
 }
 
 //------------------------------------------------------------------------------------
@@ -985,10 +985,8 @@ function stock_disposable_fa_list_cells($label, $name, $selected_id=null, $all_o
 		$where_opts[] = "stock_id != ".db_escape($item->stock_id);
 	}
 
-	filter_cell_open($label);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change, 
-		array('fixed_asset' => true, 'cells'=>true, 'where' => $where_opts));
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
+		array('fixed_asset' => true, 'where' => $where_opts));
 }
 
 function stock_depreciable_fa_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
@@ -1011,10 +1009,8 @@ function stock_depreciable_fa_list_cells($label, $name, $selected_id=null, $all_
 	$where_opts[] = "material_cost > 0";
 	$where_opts[] = "mb_flag='F'";
 
-	filter_cell_open($label);
-	echo stock_items_list($name, $selected_id, $all_option, $submit_on_change,
-		array('fixed_asset' => true, 'where' => $where_opts, 'cells'=>true));
-	filter_cell_close();
+	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
+		array('fixed_asset' => true, 'where' => $where_opts));
 }
 
 //------------------------------------------------------------------------------------

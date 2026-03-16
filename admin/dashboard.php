@@ -83,6 +83,12 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidget(DA_GL, 703, WIDGET_HALF);
 	$dashboard->addWidget(DA_GL, 704, WIDGET_HALF);
 
+	$dashboard->addDashboard(_('Human Resources'), DA_HRM);
+	$dashboard->addWidget(DA_HRM, 901, WIDGET_HALF);
+	$dashboard->addWidget(DA_HRM, 902, WIDGET_HALF);
+	$dashboard->addWidget(DA_HRM, 903, WIDGET_HALF);
+	$dashboard->addWidget(DA_HRM, 904, WIDGET_HALF);
+
 	$dashboard->addDashboard(_('Setup'), DA_SETUP);
 	$dashboard->addWidget(DA_SETUP, 801, WIDGET_HALF);
 	$dashboard->addWidget(DA_SETUP, 802, WIDGET_HALF);
