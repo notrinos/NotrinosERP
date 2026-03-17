@@ -315,7 +315,7 @@ function display_order_header(&$order, $editable, $date_text) {
 
 	ref_row(_('Reference').':', 'ref', _('Reference number unique for this document type'), null, '', $order->trans_type, array('date' => @$_POST['OrderDate']));
 
-	table_section(2);
+	// table_section(2);
 
 	if (!is_company_currency($order->customer_currency) && in_array($order->trans_type, array(ST_SALESINVOICE, ST_CUSTDELIVERY))) {
 		label_row(_('Customer Currency:'), $order->customer_currency);
@@ -326,7 +326,8 @@ function display_order_header(&$order, $editable, $date_text) {
 
 	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
 
-	table_section(3);
+	table_section(2);
+	// table_section(3);
 	start_row();
 	if (($order->pos['cash_sale'] || $order->pos['credit_sale']) && !$order->is_started()) {
 		// editable payment type 
@@ -365,7 +366,7 @@ function display_order_header(&$order, $editable, $date_text) {
 
 	sales_persons_list_row(_('Salesman:'), 'salesman_code');
 
-	table_section(4);
+	// table_section(4);
 
 	if ($editable) {
 		if (!isset($_POST['OrderDate']) || $_POST['OrderDate'] == '')

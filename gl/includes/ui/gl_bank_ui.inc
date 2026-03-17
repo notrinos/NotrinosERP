@@ -16,7 +16,7 @@ function display_bank_header(&$order) {
 	$customer_error = false;
 	div_start('pmt_header');
 
-	start_outer_table(TABLESTYLE2, "width='90%'"); // outer table
+	start_outer_table(TABLESTYLE2); // outer table
 
 	table_section(1);
 	
@@ -24,7 +24,24 @@ function display_bank_header(&$order) {
 
 	ref_row(_('Reference:'), 'ref', '', $order->reference, false, $order->trans_type, get_post('date_'));
 
-	table_section(2, '33%');
+	if (!$order->order_id && !get_post('bank_account')) {
+		if (isset($_POST['PayType']) && $_POST['PayType'] == PT_CUSTOMER)
+			$_POST['bank_account'] = get_default_customer_bank_account(get_post('person_id'));
+		elseif (isset($_POST['PayType']) && $_POST['PayType'] == PT_SUPPLIER)	
+			$_POST['bank_account'] = get_default_supplier_bank_account(get_post('person_id'));
+		else
+			if (!get_post('bank_account')) unset($_POST['bank_account']);
+	}		
+	
+	bank_accounts_list_row( $payment ? _('From:') : _('Into:'), 'bank_account', null, true);
+	if ($payment)
+		bank_balance_row($_POST['bank_account']);
+
+	$bank_currency = get_bank_account_currency($_POST['bank_account']);
+
+	exchange_rate_display(get_company_currency(), $bank_currency, $_POST['date_']);
+
+	table_section(2);
 
 	if (!isset($_POST['PayType'])) {
 		if (isset($_GET['PayType']))
@@ -87,25 +104,6 @@ function display_bank_header(&$order) {
 			amount_row($qid['base_desc'].':', 'totamount', price_format($qid['base_amount']), null, '&nbsp;&nbsp;'.submit('go', _('Go'), false, false, true));
 			break;	
 	}
-
-	table_section(3, '33%');
-
-	if (!$order->order_id && !get_post('bank_account')) {
-		if ($_POST['PayType'] == PT_CUSTOMER)
-			$_POST['bank_account'] = get_default_customer_bank_account($_POST['person_id']);
-		elseif ($_POST['PayType'] == PT_SUPPLIER)	
-			$_POST['bank_account'] = get_default_supplier_bank_account($_POST['person_id']);
-		else
-			unset($_POST['bank_account']);
-	}		
-	
-	bank_accounts_list_row( $payment ? _('From:') : _('Into:'), 'bank_account', null, true);
-	if ($payment)
-		bank_balance_row($_POST['bank_account']);
-
-	$bank_currency = get_bank_account_currency($_POST['bank_account']);
-
-	exchange_rate_display(get_company_currency(), $bank_currency, $_POST['date_']);
 
 	end_outer_table(1); // outer table
 

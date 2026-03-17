@@ -29,14 +29,14 @@ function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 function display_order_header(&$order) {
 	global $Refs;
 
-	start_outer_table(TABLESTYLE, "width='70%'");
+	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
 	
 	locations_list_row(_('From Location:'), 'FromStockLocation', null, false, false, $order->fixed_asset);
 	locations_list_row(_('To Location:'), 'ToStockLocation', null, false, false, $order->fixed_asset);
 
-	table_section(2, '50%');
+	table_section(2);
 
 	date_row(_('Date:'), 'AdjDate', '', true);
 

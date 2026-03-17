@@ -43,7 +43,7 @@ function display_grn_summary(&$po) {
 function edit_grn_summary(&$po) {
 	global $Refs;
 	
-	start_outer_table(TABLESTYLE2, "width='80%'");
+	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
 	label_row(_('Supplier'), $po->supplier_name);
@@ -53,6 +53,13 @@ function edit_grn_summary(&$po) {
 
 	label_row(_('For Purchase Order'), get_trans_view_str(ST_PURCHORDER, $po->order_no));
 	label_row(_('Ordered On'), $po->orig_order_date);
+
+	label_row(_("Supplier's Reference"), $po->supp_ref);
+
+	label_row(_('Delivery Address'), $po->delivery_address);
+
+	if ($po->Comments != '')
+		label_row(_('Order Comments'), $po->Comments);
 
 	table_section(2);
 	if (!isset($_POST['ref']))
@@ -68,14 +75,6 @@ function edit_grn_summary(&$po) {
 		$_POST['DefaultReceivedDate'] = new_doc_date();
 
 	date_row(_('Date Items Received'), 'DefaultReceivedDate', '', true, 0, 0, 0, '', true);
-
-	table_section(3);
-	label_row(_("Supplier's Reference"), $po->supp_ref);
-
-	label_row(_('Delivery Address'), $po->delivery_address);
-
-	if ($po->Comments != '')
-		label_row(_('Order Comments'), $po->Comments, "class='tableheader2'", 'colspan=9');
 
 	if (!is_company_currency($po->curr_code))
 		exchange_rate_display(get_company_currency(), $po->curr_code, get_post('DefaultReceivedDate'));

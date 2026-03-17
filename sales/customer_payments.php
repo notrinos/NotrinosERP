@@ -290,14 +290,14 @@ start_form();
 
 hidden('trans_no');
 
-start_outer_table(TABLESTYLE2, "width='60%'", 5);
+start_outer_table(TABLESTYLE2);
 
 table_section(1);
 
 if ($new)
 	customer_list_row(_('From Customer:'), 'customer_id', null, false, true);
 else {
-	label_cells(_('From Customer:'), $_SESSION['alloc']->person_name, "class='label'");
+	label_row(_('From Customer:'), $_SESSION['alloc']->person_name);
 	hidden('customer_id', $_POST['customer_id']);
 }
 
@@ -331,8 +331,6 @@ table_section(2);
 date_row(_('Date of Deposit:'), 'DateBanked', '', true, 0, 0, 0, null, true);
 
 ref_row(_('Reference:'), 'ref', '' , null, '', ST_CUSTPAYMENT);
-
-table_section(3);
 
 $comp_currency = get_company_currency();
 $cust_currency = $_SESSION['alloc']->set_person($_POST['customer_id'], PT_CUSTOMER);

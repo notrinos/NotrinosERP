@@ -397,62 +397,43 @@ $is_edition = $_SESSION['Items']->trans_type == ST_SALESINVOICE && $_SESSION['It
 start_form();
 hidden('cart_id');
 
-start_table(TABLESTYLE2, "width='80%'", 5);
+start_outer_table(TABLESTYLE2);
 
-start_row();
-$colspan = 1;
-$dim = get_company_pref('use_dimension');
+table_section(1);
 
-if ($dim > 0) 
-	$colspan = 3;
-
-label_cells(_('Customer'), $_SESSION['Items']->customer_name, "class='tableheader2'");
-label_cells(_('Branch'), get_branch_name($_SESSION['Items']->Branch), "class='tableheader2'");
-
-if (($_SESSION['Items']->pos['credit_sale'] || $_SESSION['Items']->pos['cash_sale'])) {
-	$paymcat = !$_SESSION['Items']->pos['cash_sale'] ? PM_CREDIT : (!$_SESSION['Items']->pos['credit_sale'] ? PM_CASH : PM_ANY);
-	label_cells(_('Payment terms:'), sale_payment_list('payment', $paymcat), "class='tableheader2'", 'colspan='.$colspan);
-}
-else
-	label_cells(_('Payment:'), $_SESSION['Items']->payment_terms['terms'], "class='tableheader2'", 'colspan='.$colspan);
-
-end_row();
-start_row();
+label_row(_('Customer:'), $_SESSION['Items']->customer_name);
+label_row(_('Branch:'), get_branch_name($_SESSION['Items']->Branch));
 
 if ($_SESSION['Items']->trans_no == 0) {
-	ref_cells(_('Reference'), 'ref', '', null, "class='tableheader2'", false, ST_SALESINVOICE,
+	ref_row(_('Reference:'), 'ref', '', null, '', ST_SALESINVOICE,
 		array('customer' => $_SESSION['Items']->customer_id,
 			'branch' => $_SESSION['Items']->Branch,
 			'date' => get_post('InvoiceDate')));
 }
 else
-	label_cells(_('Reference'), $_SESSION['Items']->reference, "class='tableheader2'");
+	label_row(_('Reference:'), $_SESSION['Items']->reference);
 
-label_cells(_('Sales Type'), $_SESSION['Items']->sales_type_name, "class='tableheader2'");
+label_row(_('Sales Type:'), $_SESSION['Items']->sales_type_name);
+label_row(_('Currency:'), $_SESSION['Items']->customer_currency);
 
-label_cells(_('Currency'), $_SESSION['Items']->customer_currency, "class='tableheader2'");
-
-if ($dim > 0) {
-	label_cell(_('Dimension').':', "class='tableheader2'");
-	$_POST['dimension_id'] = $_SESSION['Items']->dimension_id;
-	dimensions_list_cells(null, 'dimension_id', null, true, ' ', false, 1, false);
-}		
+if (($_SESSION['Items']->pos['credit_sale'] || $_SESSION['Items']->pos['cash_sale'])) {
+	$paymcat = !$_SESSION['Items']->pos['cash_sale'] ? PM_CREDIT : (!$_SESSION['Items']->pos['credit_sale'] ? PM_CASH : PM_ANY);
+	sale_payment_list_row(_('Payment terms:'), 'payment', $paymcat);
+}
 else
-	hidden('dimension_id', 0);
-
-end_row();
-start_row();
+	label_row(_('Payment:'), $_SESSION['Items']->payment_terms['terms']);
 
 if (!isset($_POST['ship_via']))
 	$_POST['ship_via'] = $_SESSION['Items']->ship_via;
 
-label_cell(_('Shipping Company'), "class='tableheader2'");
 if ($prepaid) {
 	$shipper = get_shipper($_SESSION['Items']->ship_via);
-	label_cells(null, $shipper['shipper_name']);
+	label_row(_('Shipping Company:'), $shipper['shipper_name']);
 }
 else
-	shippers_list_cells(null, 'ship_via', $_POST['ship_via']);
+	shippers_list_row(_('Shipping Company:'), 'ship_via', $_POST['ship_via']);
+
+table_section(2);
 
 if (!isset($_POST['InvoiceDate']) || !is_date($_POST['InvoiceDate'])) {
 	$_POST['InvoiceDate'] = new_doc_date();
@@ -460,22 +441,29 @@ if (!isset($_POST['InvoiceDate']) || !is_date($_POST['InvoiceDate'])) {
 		$_POST['InvoiceDate'] = end_fiscalyear();
 }
 
-date_cells(_('Date'), 'InvoiceDate', '', $_SESSION['Items']->trans_no == 0, 0, 0, 0, "class='tableheader2'", true);
+date_row(_('Date:'), 'InvoiceDate', '', $_SESSION['Items']->trans_no == 0, 0, 0, 0, null, true);
 
 if (!isset($_POST['due_date']) || !is_date($_POST['due_date']))
 	$_POST['due_date'] = get_invoice_duedate($_SESSION['Items']->payment, $_POST['InvoiceDate']);
 
-date_cells(_('Due Date'), 'due_date', '', null, 0, 0, 0, "class='tableheader2'");
+date_row(_('Due Date:'), 'due_date', '', null, 0, 0, 0);
+
+$dim = get_company_pref('use_dimension');
+if ($dim > 0) {
+	$_POST['dimension_id'] = $_SESSION['Items']->dimension_id;
+	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false);
+}		
+else
+	hidden('dimension_id', 0);
 
 if ($dim > 1) {
-	label_cell(_('Dimension').' 2:', "class='tableheader2'");
 	$_POST['dimension2_id'] = $_SESSION['Items']->dimension2_id;
-	dimensions_list_cells(null, 'dimension2_id', null, true, ' ', false, 2, false);
+	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false);
 }		
 else
 	hidden('dimension2_id', 0);
-end_row();
-end_table();
+
+end_outer_table(1);
 
 $row = get_customer_to_order($_SESSION['Items']->customer_id);
 if ($row['dissallow_invoices'] == 1) {

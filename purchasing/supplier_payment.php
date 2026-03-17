@@ -227,7 +227,7 @@ if (isset($_POST['ProcessSuppPayment'])) {
 
 start_form();
 
-start_outer_table(TABLESTYLE2, "width='60%'", 5);
+start_outer_table(TABLESTYLE2);
 
 table_section(1);
 
@@ -259,10 +259,8 @@ bank_balance_row($_POST['bank_account']);
 
 table_section(2);
 
-date_row(_('Date Paid').':', 'DatePaid', '', true, 0, 0, 0, null, true);
+date_row(_('Date Paid:'), 'DatePaid', '', true, 0, 0, 0, null, true);
 ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_SUPPAYMENT, null, array('supplier'=>get_post('supplier_id'), 'date'=>get_post('DatePaid'))), false, ST_SUPPAYMENT);
-
-table_section(3);
 
 $comp_currency = get_company_currency();
 $supplier_currency = $_SESSION['alloc']->set_person($_POST['supplier_id'], PT_SUPPLIER);
@@ -281,11 +279,11 @@ $_POST['dimension2_id'] = @$row['dimension2_id'];
 $dim = get_company_pref('use_dimension');
 
 if ($dim > 0)
-	dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
+	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false);
 else
 	hidden('dimension_id', 0);
 if ($dim > 1)
-	dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
+	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false);
 else
 	hidden('dimension2_id', 0);
 

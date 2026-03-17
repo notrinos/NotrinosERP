@@ -14,7 +14,7 @@ include_once($path_to_root.'/includes/ui.inc');
 function display_credit_header(&$order) {
 	global $Ajax, $Refs;
 
-	start_outer_table(TABLESTYLE, "width='80%'");
+	start_outer_table(TABLESTYLE2);
 	table_section(1);
 
 	$customer_error = '';
@@ -74,11 +74,14 @@ function display_credit_header(&$order) {
 		label_row(_('Reference').':', $order->reference);
 
 	if (!is_company_currency($order->customer_currency)) {
-		table_section(2);
 		label_row(_('Customer Currency:'), $order->customer_currency);
 		exchange_rate_display(get_company_currency(), $order->customer_currency, $_POST['OrderDate']);
 	}
-	table_section(3);
+
+	customer_credit_row($_POST['customer_id'], $order->credit);
+	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
+
+	table_section(2);
 
 	if (!isset($_POST['sales_type_id']))
 		$_POST['sales_type_id'] = $order->sales_type;
@@ -93,10 +96,6 @@ function display_credit_header(&$order) {
 	}
 
 	shippers_list_row(_('Shipping Company:'), 'ShipperID', $order->ship_via);
-
-	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
-
-	table_section(4);
 
 	if (!isset($_POST['OrderDate']) || $_POST['OrderDate'] == '')
 		$_POST['OrderDate'] = $order->document_date;

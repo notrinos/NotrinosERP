@@ -220,48 +220,37 @@ function display_credit_invoice_items() {
 	start_form();
 	hidden('cart_id');
 
-	start_view_columns();
-	view_column_start(); // outer table
+	start_outer_table(TABLESTYLE2);
 
-	start_table(TABLESTYLE, "width='100%'");
-	start_row();
-	label_cells(_('Customer'), $_SESSION['Items']->customer_name, "class='tableheader2'");
-	label_cells(_('Branch'), get_branch_name($_SESSION['Items']->Branch), "class='tableheader2'");
-	label_cells(_('Currency'), $_SESSION['Items']->customer_currency, "class='tableheader2'");
-	end_row();
-	start_row();
+	table_section(1);
+
+	label_row(_('Customer:'), $_SESSION['Items']->customer_name);
+	label_row(_('Branch:'), get_branch_name($_SESSION['Items']->Branch));
+	label_row(_('Currency:'), $_SESSION['Items']->customer_currency);
 
 	if ($_SESSION['Items']->trans_no==0) {
-		ref_cells(_('Reference'), 'ref', '', null, "class='tableheader2'", false, ST_CUSTCREDIT,
+		ref_row(_('Reference:'), 'ref', '', null, '', ST_CUSTCREDIT,
 		array('customer' => $_SESSION['Items']->customer_id,
 			'branch' => $_SESSION['Items']->Branch,
 			'date' => get_post('CreditDate')));
 	}
 	else
-		label_cells(_('Reference'), $_SESSION['Items']->reference, "class='tableheader2'");
+		label_row(_('Reference:'), $_SESSION['Items']->reference);
 	
-	label_cells(_('Crediting Invoice'), get_customer_trans_view_str(ST_SALESINVOICE, array_keys($_SESSION['Items']->src_docs)), "class='tableheader2'");
+	label_row(_('Crediting Invoice:'), get_customer_trans_view_str(ST_SALESINVOICE, array_keys($_SESSION['Items']->src_docs)));
 
 	if (!isset($_POST['ShipperID']))
 		$_POST['ShipperID'] = $_SESSION['Items']->ship_via;
 	
-	label_cell(_('Shipping Company'), "class='tableheader2'");
-	shippers_list_cells(null, 'ShipperID', $_POST['ShipperID']);
+	shippers_list_row(_('Shipping Company:'), 'ShipperID', $_POST['ShipperID']);
 
-	end_row();
-	end_table();
+	table_section(2);
 
-	view_column_next();// outer table
+	label_row(_('Invoice Date:'), $_SESSION['Items']->src_date);
 
-	start_table(TABLESTYLE, "width='100%'");
+	date_row(_('Credit Note Date:'), 'CreditDate', '', $_SESSION['Items']->trans_no==0, 0, 0, 0);
 
-	label_row(_('Invoice Date'), $_SESSION['Items']->src_date, "class='tableheader2'");
-
-	date_row(_('Credit Note Date'), 'CreditDate', '', $_SESSION['Items']->trans_no==0, 0, 0, 0, "class='tableheader2'");
-
-	end_table();
-
-	end_view_columns(); // outer table
+	end_outer_table(1);
 
 	div_start('credit_items');
 	start_table(TABLESTYLE, "width='80%'");

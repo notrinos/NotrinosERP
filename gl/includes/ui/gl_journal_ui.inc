@@ -19,7 +19,7 @@ function display_order_header(&$Order) {
 
 	$qes = has_quick_entries(QE_JOURNAL);
 	$new = $Order->order_id==0;
-	start_outer_table(TABLESTYLE2, "width='90%'");
+	start_outer_table(TABLESTYLE2);
 	table_section(1);
 
 	date_row(_('Journal Date:'), 'date_', '', $new, 0, 0, 0, null, true);
@@ -36,20 +36,16 @@ function display_order_header(&$Order) {
 	if (list_updated('currency'))
 		$Order->clear_items();
 
+	ref_row(_('Reference:'), 'ref', null, get_post('ref'), false, ST_JOURNAL, get_post('date_'));
+	hidden('ref_original');
+
 	table_section(2);
 
 	date_row(_('Document Date:'), 'doc_date', '', $new);
 	date_row(_('Event Date:'), 'event_date', '', $new);
 	text_row(_('Source ref:'), 'source_ref', null, 30, 60);
 
-	if ($new)
-		table_section(3);
-
-	ref_row(_('Reference:'), 'ref', null, get_post('ref'), false, ST_JOURNAL, get_post('date_'));
-	hidden('ref_original');
-
 	if ($qes !== false) {
-		table_section(3);
 		quick_entries_list_row(_('Quick Entry').':', 'quick', null, QE_JOURNAL, true);
 
 		start_row();

@@ -302,43 +302,37 @@ if (isset($_POST['Update']) || isset($_POST['_Location_update']) || isset($_POST
 start_form();
 hidden('cart_id');
 
-start_view_columns();
-view_column_start(); // outer table
+start_outer_table(TABLESTYLE2);
 
-start_table(TABLESTYLE, "width='100%'");
-start_row();
-label_cells(_('Customer'), $_SESSION['Items']->customer_name, "class='tableheader2'");
-label_cells(_('Branch'), get_branch_name($_SESSION['Items']->Branch), "class='tableheader2'");
-label_cells(_('Currency'), $_SESSION['Items']->customer_currency, "class='tableheader2'");
-end_row();
-start_row();
+table_section(1);
+
+label_row(_('Customer:'), $_SESSION['Items']->customer_name);
+label_row(_('Branch:'), get_branch_name($_SESSION['Items']->Branch));
+label_row(_('Currency:'), $_SESSION['Items']->customer_currency);
 
 if ($_SESSION['Items']->trans_no==0) {
-	ref_cells(_('Reference'), 'ref', '', null, "class='tableheader2'", false, ST_CUSTDELIVERY,
+	ref_row(_('Reference:'), 'ref', '', null, '', ST_CUSTDELIVERY,
 	array('customer' => $_SESSION['Items']->customer_id,
 			'branch' => $_SESSION['Items']->Branch,
 			'date' => get_post('DispatchDate')));
 }
 else
-	label_cells(_('Reference'), $_SESSION['Items']->reference, "class='tableheader2'");
+	label_row(_('Reference:'), $_SESSION['Items']->reference);
 
-label_cells(_('For Sales Order'), get_customer_trans_view_str(ST_SALESORDER, $_SESSION['Items']->order_no), "class='tableheader2'");
-
-label_cells(_('Sales Type'), $_SESSION['Items']->sales_type_name, "class='tableheader2'");
-end_row();
-start_row();
+label_row(_('For Sales Order:'), get_customer_trans_view_str(ST_SALESORDER, $_SESSION['Items']->order_no));
+label_row(_('Sales Type:'), $_SESSION['Items']->sales_type_name);
 
 if (!isset($_POST['Location']))
 	$_POST['Location'] = $_SESSION['Items']->Location;
 
-label_cell(_('Delivery From'), "class='tableheader2'");
-locations_list_cells(null, 'Location', null, false, true);
+locations_list_row(_('Delivery From:'), 'Location', null, false, true);
 
 if (!isset($_POST['ship_via']))
 	$_POST['ship_via'] = $_SESSION['Items']->ship_via;
 
-label_cell(_('Shipping Company'), "class='tableheader2'");
-shippers_list_cells(null, 'ship_via', $_POST['ship_via']);
+shippers_list_row(_('Shipping Company:'), 'ship_via', $_POST['ship_via']);
+
+table_section(2);
 
 // set this up here cuz it's used to calc qoh
 if (!isset($_POST['DispatchDate']) || !is_date($_POST['DispatchDate'])) {
@@ -346,44 +340,26 @@ if (!isset($_POST['DispatchDate']) || !is_date($_POST['DispatchDate'])) {
 	if (!is_date_in_fiscalyear($_POST['DispatchDate']))
 		$_POST['DispatchDate'] = end_fiscalyear();
 }
-date_cells(_('Date'), 'DispatchDate', '', $_SESSION['Items']->trans_no==0, 0, 0, 0, "class='tableheader2'");
-end_row();
-
-end_table();
-
-view_column_next();// outer table
-
-start_table(TABLESTYLE, "width='90%'");
+date_row(_('Date:'), 'DispatchDate', '', $_SESSION['Items']->trans_no==0, 0, 0, 0, null, true);
 
 if (!isset($_POST['due_date']) || !is_date($_POST['due_date']))
 	$_POST['due_date'] = get_invoice_duedate($_SESSION['Items']->payment, $_POST['DispatchDate']);
 
-customer_credit_row($_SESSION['Items']->customer_id, $_SESSION['Items']->credit, "class='tableheader2'");
+date_row(_('Invoice Dead-line:'), 'due_date', '', null, 0, 0, 0);
+
+customer_credit_row($_SESSION['Items']->customer_id, $_SESSION['Items']->credit);
 
 $dim = get_company_pref('use_dimension');
-if ($dim > 0) {
-	start_row();
-	label_cell(_('Dimension').':', "class='tableheader2'");
-	dimensions_list_cells(null, 'dimension_id', null, true, ' ', false, 1, false);
-	end_row();
-}		
+if ($dim > 0)
+	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false);
 else
 	hidden('dimension_id', 0);
-if ($dim > 1) {
-	start_row();
-	label_cell(_('Dimension').' 2:', "class='tableheader2'");
-	dimensions_list_cells(null, 'dimension2_id', null, true, ' ', false, 2, false);
-	end_row();
-}		
+if ($dim > 1)
+	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false);
 else
 	hidden('dimension2_id', 0);
-//---------
-start_row();
-date_cells(_('Invoice Dead-line'), 'due_date', '', null, 0, 0, 0, "class='tableheader2'");
-end_row();
-end_table();
 
-end_view_columns(); // outer table
+end_outer_table(1);
 
 $row = get_customer_to_order($_SESSION['Items']->customer_id);
 if ($row['dissallow_invoices'] == 1) {

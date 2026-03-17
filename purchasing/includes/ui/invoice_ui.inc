@@ -66,7 +66,7 @@ function invoice_header(&$supp_trans) {
 	if (!isset($_POST['tran_date']))
 		copy_from_trans($supp_trans);
 
-	start_outer_table(TABLESTYLE2, "width='95%'");
+	start_outer_table(TABLESTYLE2);
 
 	table_section(1);
 
@@ -102,7 +102,16 @@ function invoice_header(&$supp_trans) {
 		label_row(_('Source Invoices:'), $supp_trans->src_docs ? implode(',' ,$supp_trans->src_docs) : '&nbsp;', '', '', 'src_docs');
 	text_row(_("Supplier's Ref.:"), 'supp_reference', $_POST['supp_reference'], 20, 60);
 
-	table_section(2, '33%');
+	set_global_supplier($_POST['supplier_id']);
+
+	$company_currency = get_company_currency();
+
+	if ($supp_trans->currency != $company_currency) {
+		label_row(_("Supplier's Currency:"), '<b>'.$supp_trans->currency.'</b>');
+		exchange_rate_display($company_currency, $supp_trans->currency, $_POST['tran_date']);
+	}
+
+	table_section(2);
 
 	if (isset($_POST['_tran_date_changed'])) {
 		$Ajax->activate('_ex_rate');
@@ -121,17 +130,6 @@ function invoice_header(&$supp_trans) {
 
 	if (get_company_pref('use_dimension') == 2)
 		dimensions_list_row(_('Dimension 2').':', 'dimension2', null, true, _('Default'), false, 2);
-
-	table_section(3, '33%');
-
-	set_global_supplier($_POST['supplier_id']);
-
-	$company_currency = get_company_currency();
-
-	if ($supp_trans->currency != $company_currency) {
-		label_row(_("Supplier's Currency:"), '<b>'.$supp_trans->currency.'</b>');
-		exchange_rate_display($company_currency, $supp_trans->currency, $_POST['tran_date']);
-	}
 
 	label_row(_('Tax Group:'), $supp_trans->tax_description);
 	supplier_credit_row($supp_trans->supplier_id, $supp_trans->credit);

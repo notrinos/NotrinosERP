@@ -509,6 +509,14 @@ function supplier_list_cells($label, $name, $selected_id=null, $all_option=false
 }
 
 function supplier_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td><td>";
 	echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey);
 	echo "</td></tr>\n";
@@ -556,7 +564,14 @@ function customer_list_cells($label, $name, $selected_id=null, $all_option=false
 }
 
 function customer_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false) {
-
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td><td nowrap>";
 	echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey);
 	echo "</td>\n</tr>\n";
@@ -595,6 +610,14 @@ function customer_branches_list_cells($label, $customer_id, $name, $selected_id=
 }
 
 function customer_branches_list_row($label, $customer_id, $name, $selected_id=null, $all_option=true, $enabled=true, $submit_on_change=false, $editkey=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo customer_branches_list($customer_id, $name, $selected_id, $all_option, $enabled, $submit_on_change, $editkey);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	customer_branches_list_cells(null, $customer_id, $name, $selected_id, $all_option, $enabled, $submit_on_change, $editkey);
 	echo "</tr>";
@@ -621,6 +644,14 @@ function locations_list_cells($label, $name, $selected_id=null, $all_option=fals
 }
 
 function locations_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $fixed_asset=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo locations_list($name, $selected_id, $all_option, $submit_on_change, $fixed_asset);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	locations_list_cells(null, $name, $selected_id, $all_option, $submit_on_change, $fixed_asset);
 	echo "</tr>\n";
@@ -649,6 +680,14 @@ function currencies_list_cells($label, $name, $selected_id=null, $submit_on_chan
 }
 
 function currencies_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo currencies_list($name, $selected_id, $submit_on_change);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	currencies_list_cells(null, $name, $selected_id, $submit_on_change);
 	echo "</tr>\n";
@@ -716,6 +755,14 @@ function dimensions_list_cells($label, $name, $selected_id=null, $no_option=fals
 }
 
 function dimensions_list_row($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	dimensions_list_cells(null, $name, $selected_id, $no_option, $showname, $showclosed, $showtype, $submit_on_change);
 	echo "</tr>\n";
@@ -1103,6 +1150,14 @@ function shippers_list_cells($label, $name, $selected_id=null) {
 }
 
 function shippers_list_row($label, $name, $selected_id=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo shippers_list($name, $selected_id);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	shippers_list_cells(null, $name, $selected_id);
 	echo "</tr>\n";
@@ -1125,6 +1180,14 @@ function sales_persons_list_cells($label, $name, $selected_id=null, $spec_opt=fa
 }
 
 function sales_persons_list_row($label, $name, $selected_id=null, $spec_opt=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo sales_persons_list($name, $selected_id, $spec_opt);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	sales_persons_list_cells(null, $name, $selected_id, $spec_opt);
 	echo "</tr>\n";
@@ -1279,6 +1342,14 @@ function sales_types_list_cells($label, $name, $selected_id=null, $submit_on_cha
 }
 
 function sales_types_list_row($label, $name, $selected_id=null, $submit_on_change=false, $special_option=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo sales_types_list($name, $selected_id, $submit_on_change, $special_option);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	sales_types_list_cells(null, $name, $selected_id, $submit_on_change, $special_option);
 	echo "</tr>\n";
@@ -1359,6 +1430,14 @@ function bank_accounts_list_cells($label, $name, $selected_id=null, $submit_on_c
 }
 
 function bank_accounts_list_row($label, $name, $selected_id=null, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo bank_accounts_list($name, $selected_id, $submit_on_change);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	bank_accounts_list_cells(null, $name, $selected_id, $submit_on_change);
 	echo "</tr>\n";
@@ -1434,6 +1513,23 @@ function sale_payment_list_cells($label, $name, $category, $selected_id=null, $s
 	filter_cell_open($label);
 	echo sale_payment_list($name, $category, $selected_id, $submit_on_change, $prepayments);
 	filter_cell_close();
+}
+
+/**
+ * Renders a sale payment list as a full row, supporting both table and outer form modes.
+ */
+function sale_payment_list_row($label, $name, $category, $selected_id=null, $submit_on_change=true, $prepayments=true) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>$label</label>";
+		echo "<div class='form-control-wrap'>";
+		echo sale_payment_list($name, $category, $selected_id, $submit_on_change, $prepayments);
+		echo "</div></div>\n";
+		return;
+	}
+	echo "<tr><td class='label'>$label</td><td>";
+	echo sale_payment_list($name, $category, $selected_id, $submit_on_change, $prepayments);
+	echo "</td></tr>\n";
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -1689,6 +1785,14 @@ function payment_person_types_list_cells($label, $name, $selected_id=null, $rela
 }
 
 function payment_person_types_list_row($label, $name, $selected_id=null, $related=null) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo payment_person_types_list($name, $selected_id, $related);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	payment_person_types_list_cells(null, $name, $selected_id, $related);
 	echo "</tr>\n";
@@ -1993,6 +2097,14 @@ function quick_entries_list_cells($label, $name, $selected_id, $type, $submit_on
 }
 
 function quick_entries_list_row($label, $name, $selected_id, $type, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo quick_entries_list($name, $selected_id, $type, $submit_on_change);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr><td class='label'>".$label."</td>";
 	quick_entries_list_cells(null, $name, $selected_id, $type, $submit_on_change);
 	echo "</tr>\n";
@@ -2400,7 +2512,16 @@ function employees_list_cells($label, $name, $selected_id=null, $all_option=fals
 }
 
 function employees_list_row($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
-
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		if ($label != null)
+			echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo employees_list($name, $selected_id, $all_option, $submit_on_change,
+			array_merge(array('cells'=>false, 'search_box'=>false, 'show_inactive'=>$all), $opts), $editkey);
+		echo "</div></div>\n";
+		return;
+	}
 	echo "<tr>";
 	if ($label != null)
 		echo "<td class='label'>".$label."</td>\n";

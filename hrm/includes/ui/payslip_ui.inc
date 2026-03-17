@@ -51,19 +51,15 @@ function display_payslip_header($Order) {
 	}
 	set_global_employee(get_post('employee_id'));
 
+	date_row(_('From Date:'), 'from_date');
+	date_row(_('To Date:'), 'to_date');
+
 	table_section(2);
 
 	date_row(_('Payslip Date:'), 'tran_date', '', $new, 0, 0, 0, null, true);
 	ref_row(_('Reference:'), 'reference', null, get_post('reference'), false, ST_PAYSLIP, get_post('tran_date'));
 
-	table_section(3);
-
 	date_row(_('Payment Due:'), 'due_date', '', $new, 0, 0, 0, null, true);
-
-	table_section(4);
-
-	date_row(_('From Date:'), 'from_date');
-	date_row(_('To Date:'), 'to_date');
 
 	end_outer_table(1);
 

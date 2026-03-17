@@ -24,13 +24,13 @@ function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 function display_order_header(&$order) {
 	global $Refs;
 
-	start_outer_table(TABLESTYLE2, "width='70%'");
+	start_outer_table(TABLESTYLE2);
 	table_section(1);
 
 	locations_list_row(_('Location:'), 'StockLocation', null, false, false, $order->fixed_asset);
 	date_row(_('Date:'), 'AdjDate', '', true);
 
-	table_section(2, '50%');
+	table_section(2);
 
 	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))), false, ST_INVADJUST);
 
