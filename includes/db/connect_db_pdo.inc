@@ -148,6 +148,9 @@ function db_pdo_create_connection($connection, $include_database = true) {
 		PDO::ATTR_EMULATE_PREPARES => false,
 	);
 
+	if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY'))
+		$db_pdo_options[PDO::MYSQL_ATTR_USE_BUFFERED_QUERY] = true;
+
 	try {
 		$dbase = new PDO(
 			db_pdo_build_dsn($connection, $include_database),
@@ -176,6 +179,45 @@ function db_pdo_is_deadlock($driver_error_no) {
 }
 
 /**
+ * Determine whether the driver error represents an active unbuffered result.
+ *
+ * @param int $driver_error_no Driver-specific error code.
+ *
+ * @return bool True when MySQL reports active unbuffered queries.
+ */
+function db_pdo_has_active_result_error($driver_error_no) {
+	return ((int)$driver_error_no === 2014);
+}
+
+/**
+ * Execute transaction control statements using PDO native methods.
+ *
+ * @param PDO $db_connection Active PDO connection.
+ * @param string $sql SQL statement.
+ *
+ * @return bool True on success, false on failure.
+ */
+function db_pdo_execute_transaction_sql($db_connection, $sql) {
+	$normalized_sql = strtoupper(trim($sql));
+
+	try {
+		switch ($normalized_sql) {
+			case 'BEGIN':
+				return $db_connection->beginTransaction();
+			case 'COMMIT':
+				return $db_connection->commit();
+			case 'ROLLBACK':
+				return $db_connection->rollBack();
+		}
+	} catch (PDOException $exception) {
+		$error_state = db_pdo_extract_error_state($exception);
+		db_pdo_store_error_state($error_state[0], $error_state[1], $error_state[2]);
+	}
+
+	return false;
+}
+
+/**
  * Buffer a row-returning PDO statement into a mysqli-like result wrapper.
  *
  * @param PDOStatement $statement Statement to buffer.
@@ -197,7 +239,10 @@ function db_pdo_buffer_result($statement) {
 		$column_index++;
 	}
 
-	return new notrinos_pdo_buffered_result($statement->fetchAll(PDO::FETCH_NUM), $column_meta);
+	$rows = $statement->fetchAll(PDO::FETCH_NUM);
+	$statement->closeCursor();
+
+	return new notrinos_pdo_buffered_result($rows, $column_meta);
 }
 
 /**
@@ -423,13 +468,24 @@ function db_query($sql, $err_msg = null) {
 		$sql_queries .= "<pre>$sql</pre>\n<hr>";
 	}
 
+	$normalized_sql = strtoupper(trim($sql));
+
 	db_profile(); // mysql profiling
 	db_pdo_reset_error_state();
 	$db_last_affected_rows = 0;
 	$result = false;
 	$retry = MAX_DEADLOCK_RETRY;
+	if ($normalized_sql === 'BEGIN' || $normalized_sql === 'COMMIT' || $normalized_sql === 'ROLLBACK') {
+		$result = db_pdo_execute_transaction_sql($db, $normalized_sql);
 
-	do {
+		if (!$result && $normalized_sql === 'BEGIN' && db_pdo_has_active_result_error($db_last_error_no)) {
+			$reconnected = set_global_connection($comp);
+			if ($reconnected instanceof PDO)
+				$result = db_pdo_execute_transaction_sql($reconnected, $normalized_sql);
+		}
+		$retry = 0;
+	} else do {
+
 		try {
 			$statement = $db->query($sql);
 			if ($statement instanceof PDOStatement && $statement->columnCount() > 0) {
@@ -438,7 +494,10 @@ function db_query($sql, $err_msg = null) {
 			} else {
 				$result = true;
 				$db_last_affected_rows = ($statement instanceof PDOStatement) ? $statement->rowCount() : 0;
+				if ($statement instanceof PDOStatement)
+					$statement->closeCursor();
 			}
+			$statement = null;
 			$retry = 0;
 		} catch (PDOException $exception) {
 			$error_state = db_pdo_extract_error_state($exception);
@@ -831,6 +890,7 @@ function db_get_charset($dbase) {
 	try {
 		$statement = $db_connection->query('SELECT @@character_set_connection');
 		$charset = $statement->fetchColumn();
+		$statement->closeCursor();
 		return $charset ? $charset : '';
 	} catch (PDOException $exception) {
 		$error_state = db_pdo_extract_error_state($exception);
@@ -909,7 +969,9 @@ function db_query_params($sql, $params = array(), $err_msg = null) {
 			} else {
 				$result = true;
 				$db_last_affected_rows = $statement->rowCount();
+				$statement->closeCursor();
 			}
+			$statement = null;
 			$retry = 0;
 		} catch (PDOException $exception) {
 			$error_state = db_pdo_extract_error_state($exception);
