@@ -211,7 +211,7 @@ function display_order_summary($title, &$order, $editable_items=false) {
 function display_order_header(&$order, $editable, $date_text) {
 	global $Ajax, $SysPrefs;
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 	table_section(1);
 	
@@ -541,7 +541,7 @@ function display_delivery_details(&$order) {
 			$delname = _('Required Delivery Date').':';
 		}
 		display_heading($title);
-		start_outer_table(TABLESTYLE2);
+		start_outer_table(TABLESTYLE2, "data-order-header='1'");
 		table_section(1);
 
 		locations_list_row(_('Deliver from Location:'), 'Location', null, false, true, $order->fixed_asset);

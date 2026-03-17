@@ -92,7 +92,7 @@ function display_po_header(&$order) {
 
 	$editable = ($order->order_no == 0);
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 	table_section(1);
 	if ($editable) {
@@ -140,14 +140,14 @@ function display_po_header(&$order) {
 		exchange_rate_display(get_company_currency(), $order->curr_code, $_POST['OrderDate']);
 	}
 
+	table_section(2);
+
 	if ($editable)
 		ref_row(_('Reference:'), 'ref', '', null, false, $order->trans_type, array('date'=> @$_POST['OrderDate']));
 	else {
 		hidden('ref', $order->reference);
 		label_row(_('Reference:'), $order->reference);
 	}
-
-	table_section(2);
 
 	if ($order->trans_type==ST_SUPPINVOICE)
 		date_row(_('Due Date:'), 'due_date', '', false, 0, 0, 0, null, true);

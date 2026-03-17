@@ -181,7 +181,7 @@ elseif (!isset($_POST['process_invoice']) && (!$_SESSION['Items']->is_prepaid() 
 	display_error(_('Selected quantity cannot be less than quantity credited nor more than quantity not invoiced yet.'));
 
 if (isset($_POST['Update']))
-	$Ajax->activate('Items');
+	$Ajax->activate('items_table');
 
 if (isset($_POST['_InvoiceDate_changed'])) {
 	$_POST['due_date'] = get_invoice_duedate($_SESSION['Items']->payment, $_POST['InvoiceDate']);
@@ -397,7 +397,7 @@ $is_edition = $_SESSION['Items']->trans_type == ST_SALESINVOICE && $_SESSION['It
 start_form();
 hidden('cart_id');
 
-start_outer_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 table_section(1);
 
@@ -416,24 +416,24 @@ else
 label_row(_('Sales Type:'), $_SESSION['Items']->sales_type_name);
 label_row(_('Currency:'), $_SESSION['Items']->customer_currency);
 
-if (($_SESSION['Items']->pos['credit_sale'] || $_SESSION['Items']->pos['cash_sale'])) {
-	$paymcat = !$_SESSION['Items']->pos['cash_sale'] ? PM_CREDIT : (!$_SESSION['Items']->pos['credit_sale'] ? PM_CASH : PM_ANY);
-	sale_payment_list_row(_('Payment terms:'), 'payment', $paymcat);
-}
-else
-	label_row(_('Payment:'), $_SESSION['Items']->payment_terms['terms']);
-
-if (!isset($_POST['ship_via']))
-	$_POST['ship_via'] = $_SESSION['Items']->ship_via;
-
-if ($prepaid) {
-	$shipper = get_shipper($_SESSION['Items']->ship_via);
-	label_row(_('Shipping Company:'), $shipper['shipper_name']);
-}
-else
-	shippers_list_row(_('Shipping Company:'), 'ship_via', $_POST['ship_via']);
-
 table_section(2);
+
+	if (($_SESSION['Items']->pos['credit_sale'] || $_SESSION['Items']->pos['cash_sale'])) {
+		$paymcat = !$_SESSION['Items']->pos['cash_sale'] ? PM_CREDIT : (!$_SESSION['Items']->pos['credit_sale'] ? PM_CASH : PM_ANY);
+		sale_payment_list_row(_('Payment terms:'), 'payment', $paymcat);
+	}
+	else
+		label_row(_('Payment:'), $_SESSION['Items']->payment_terms['terms']);
+
+	if (!isset($_POST['ship_via']))
+		$_POST['ship_via'] = $_SESSION['Items']->ship_via;
+
+	if ($prepaid) {
+		$shipper = get_shipper($_SESSION['Items']->ship_via);
+		label_row(_('Shipping Company:'), $shipper['shipper_name']);
+	}
+	else
+		shippers_list_row(_('Shipping Company:'), 'ship_via', $_POST['ship_via']);
 
 if (!isset($_POST['InvoiceDate']) || !is_date($_POST['InvoiceDate'])) {
 	$_POST['InvoiceDate'] = new_doc_date();
@@ -475,7 +475,7 @@ if ($row['dissallow_invoices'] == 1) {
 
 display_heading($prepaid ? _('Sales Order Items') : _('Invoice Items'));
 
-div_start('Items');
+div_start('items_table');
 
 start_table(TABLESTYLE, "width='80%'");
 if ($prepaid)

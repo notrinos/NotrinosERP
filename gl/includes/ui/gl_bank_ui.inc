@@ -16,7 +16,7 @@ function display_bank_header(&$order) {
 	$customer_error = false;
 	div_start('pmt_header');
 
-	start_outer_table(TABLESTYLE2); // outer table
+	start_outer_table(TABLESTYLE2, "data-order-header='1'"); // outer table
 
 	table_section(1);
 	

@@ -220,7 +220,7 @@ function display_credit_invoice_items() {
 	start_form();
 	hidden('cart_id');
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 	table_section(1);
 
@@ -236,15 +236,15 @@ function display_credit_invoice_items() {
 	}
 	else
 		label_row(_('Reference:'), $_SESSION['Items']->reference);
-	
-	label_row(_('Crediting Invoice:'), get_customer_trans_view_str(ST_SALESINVOICE, array_keys($_SESSION['Items']->src_docs)));
 
 	if (!isset($_POST['ShipperID']))
 		$_POST['ShipperID'] = $_SESSION['Items']->ship_via;
-	
-	shippers_list_row(_('Shipping Company:'), 'ShipperID', $_POST['ShipperID']);
 
 	table_section(2);
+
+	label_row(_('Crediting Invoice:'), get_customer_trans_view_str(ST_SALESINVOICE, array_keys($_SESSION['Items']->src_docs)));
+
+	shippers_list_row(_('Shipping Company:'), 'ShipperID', $_POST['ShipperID']);
 
 	label_row(_('Invoice Date:'), $_SESSION['Items']->src_date);
 
@@ -252,7 +252,7 @@ function display_credit_invoice_items() {
 
 	end_outer_table(1);
 
-	div_start('credit_items');
+	div_start('items_table');
 	start_table(TABLESTYLE, "width='80%'");
 	$th = array(_('Item Code'), _('Item Description'), _('Invoiced Quantity'), _('Units'), _('Credit Quantity'), _('Price'), _('Discount %'), _('Total'));
 	table_header($th);
@@ -311,7 +311,7 @@ function display_credit_invoice_items() {
 
 if (get_post('Update')) {
 	copy_to_cart();
-	$Ajax->activate('credit_items');
+	$Ajax->activate('items_table');
 }
 
 //-----------------------------------------------------------------------------

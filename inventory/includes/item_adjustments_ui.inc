@@ -24,7 +24,7 @@ function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 function display_order_header(&$order) {
 	global $Refs;
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 	table_section(1);
 
 	locations_list_row(_('Location:'), 'StockLocation', null, false, false, $order->fixed_asset);

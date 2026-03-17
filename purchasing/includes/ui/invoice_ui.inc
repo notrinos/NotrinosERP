@@ -66,7 +66,7 @@ function invoice_header(&$supp_trans) {
 	if (!isset($_POST['tran_date']))
 		copy_from_trans($supp_trans);
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 	table_section(1);
 

@@ -290,7 +290,7 @@ start_form();
 
 hidden('trans_no');
 
-start_outer_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 table_section(1);
 

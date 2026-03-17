@@ -295,14 +295,14 @@ if (isset($_POST['process_delivery']) && check_data()) {
 }
 
 if (isset($_POST['Update']) || isset($_POST['_Location_update']) || isset($_POST['qty']) || isset($_POST['process_delivery']))
-	$Ajax->activate('Items');
+	$Ajax->activate('items_table');
 
 //------------------------------------------------------------------------------
 
 start_form();
 hidden('cart_id');
 
-start_outer_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 table_section(1);
 
@@ -322,6 +322,8 @@ else
 label_row(_('For Sales Order:'), get_customer_trans_view_str(ST_SALESORDER, $_SESSION['Items']->order_no));
 label_row(_('Sales Type:'), $_SESSION['Items']->sales_type_name);
 
+table_section(2);
+
 if (!isset($_POST['Location']))
 	$_POST['Location'] = $_SESSION['Items']->Location;
 
@@ -331,8 +333,6 @@ if (!isset($_POST['ship_via']))
 	$_POST['ship_via'] = $_SESSION['Items']->ship_via;
 
 shippers_list_row(_('Shipping Company:'), 'ship_via', $_POST['ship_via']);
-
-table_section(2);
 
 // set this up here cuz it's used to calc qoh
 if (!isset($_POST['DispatchDate']) || !is_date($_POST['DispatchDate'])) {
@@ -369,7 +369,7 @@ if ($row['dissallow_invoices'] == 1) {
 	exit();
 }	
 display_heading(_('Delivery Items'));
-div_start('Items');
+div_start('items_table');
 start_table(TABLESTYLE, "width='80%'");
 
 $new = $_SESSION['Items']->trans_no==0;

@@ -30,7 +30,7 @@ function display_payslip_header($Order) {
 	$new = $Order->trans_no == 0;
 	$emp_error = '';
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 	table_section(1);
 
 	if($new) {

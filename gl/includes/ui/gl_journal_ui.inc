@@ -19,7 +19,7 @@ function display_order_header(&$Order) {
 
 	$qes = has_quick_entries(QE_JOURNAL);
 	$new = $Order->order_id==0;
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 	table_section(1);
 
 	date_row(_('Journal Date:'), 'date_', '', $new, 0, 0, 0, null, true);

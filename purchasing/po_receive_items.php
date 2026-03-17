@@ -56,7 +56,7 @@ if ((!isset($_GET['PONumber']) || $_GET['PONumber'] == 0) && !isset($_SESSION['P
 //--------------------------------------------------------------------------------------------------
 
 function display_po_receive_items() {
-	div_start('grn_items');
+	div_start('items_table');
 	start_table(TABLESTYLE, "colspan=7 width='90%'");
 	$th = array(_('Item Code'), _('Description'), _('Ordered'), _('Units'), _('Received'), _('Outstanding'), _('This Delivery'), _('Price'), _('Total'));
 	table_header($th);
@@ -264,7 +264,7 @@ if (isset($_POST['Update']) || isset($_POST['ProcessGoodsReceived'])) {
 				$_SESSION['PO']->line_items[$line->line_no]->item_description = $_POST[$line->stock_id.'Desc'];
 		}
 	}
-	$Ajax->activate('grn_items');
+	$Ajax->activate('items_table');
 }
 
 //--------------------------------------------------------------------------------------------------

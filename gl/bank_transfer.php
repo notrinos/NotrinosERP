@@ -95,7 +95,7 @@ function gl_payment_controls($trans_no) {
 
 	start_form();
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 	table_section(1);
 

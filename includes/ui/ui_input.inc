@@ -874,7 +874,7 @@ function ref_cells($label, $name, $title=null, $init=null, $params=null, $submit
 
 function ref_row($label, $name, $title=null, $init=null, $submit_on_change=false, $type=null, $context=null) {
 	if (ui_current_table_mode() != 'table') {
-		echo "<div class='form-group'>";
+		echo "<div class='form-group reference-row'>";
 		echo "<label class='form-label'>".$label."</label>";
 		echo "<div class='form-control-wrap'>";
 		ref_cells(null, $name, $title, $init, null, $submit_on_change, $type, $context);

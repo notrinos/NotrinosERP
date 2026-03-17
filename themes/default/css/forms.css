@@ -388,6 +388,19 @@ textarea {
 	width: 100%;
 }
 
+[data-order-header='1'] .reference-row .form-value,
+[data-order-header='1'] .reference-row .filter-field,
+[data-order-header='1'] .reference-row .form-value input {
+	width: 100%;
+}
+
+[data-order-header='1'] .reference-row .form-value input,
+[data-order-header='1'] .reference-row .filter-field input {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+}
+
 .form-section div.list_container {
 	width: 100%;
 	min-width: 0;

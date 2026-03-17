@@ -14,7 +14,7 @@ include_once($path_to_root.'/includes/ui.inc');
 function display_credit_header(&$order) {
 	global $Ajax, $Refs;
 
-	start_outer_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 	table_section(1);
 
 	$customer_error = '';
@@ -79,9 +79,10 @@ function display_credit_header(&$order) {
 	}
 
 	customer_credit_row($_POST['customer_id'], $order->credit);
-	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
 
 	table_section(2);
+
+	label_row(_('Customer Discount:'), ($order->default_discount * 100).'%');
 
 	if (!isset($_POST['sales_type_id']))
 		$_POST['sales_type_id'] = $order->sales_type;
