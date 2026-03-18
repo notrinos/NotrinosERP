@@ -418,9 +418,14 @@ html[dir='rtl'] .modern-app-icon {
 }
 
 .alert-info {
-	background: #eef6ff;
-	border-color: #bfdbfe;
-	color: #1e3a8a;
+	background: linear-gradient(135deg, #f8fafc 0%, #ecfeff 100%);
+	border-color: #99f6e4;
+	color: #134e4a;
+}
+
+.alert-info a {
+	color: #0f766e;
+	font-weight: 600;
 }
 
 .alert-success {

@@ -148,7 +148,11 @@ table.data-grid tr:hover td {
 	background-color: #eef4ff;
 }
 
-table.data-grid tr.overduebg td {
+table.data-grid tr.overduebg td,
+table.data-grid tr.stockmankobg td,
+table.tablestyle tr.stockmankobg td,
+table.tablestyle td.stockmankofg,
+table.tablestyle tr.stockmankofg td {
 	background-color: #fff1f2;
 	color: #9f1239;
 }
@@ -217,10 +221,17 @@ table.data-grid tr.overduebg td {
 	border-radius: 6px;
 }
 
-.alert.overduefg {
+.alert.overduefg,
+.alert.stockmankofg {
 	background: #fff1f2;
 	border-color: #fecdd3;
 	color: #9f1239;
+}
+
+.alert.overduefg a,
+.alert.stockmankofg a {
+	color: #9f1239;
+	font-weight: 600;
 }
 
 .pager-summary {

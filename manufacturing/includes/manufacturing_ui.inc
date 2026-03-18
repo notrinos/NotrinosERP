@@ -132,7 +132,7 @@ function display_wo_requirements($woid, $quantity, $show_qoh=false, $date=null) 
 		end_table();
 
 		if ($has_marked)
-			display_note(_('Marked items have insufficient quantities in stock.'), 0, 0, "class='red'");
+			display_note(_('Marked items have insufficient quantities in stock.'), 0, 0, "class='stockmankofg'");
 	}
 }
 
