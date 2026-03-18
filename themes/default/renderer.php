@@ -184,6 +184,55 @@ class renderer {
 	}
 
 	/**
+	 * Resolve branding assets for the active company.
+	 *
+	 * @return array
+	 */
+	function get_company_branding_details() {
+		global $path_to_root, $db_connections;
+
+		$company_id = user_company();
+		$company_name = $db_connections[$company_id]['name'];
+		$project_root = dirname(dirname(dirname(__FILE__)));
+		$company_images_path = $project_root.'/company/'.$company_id.'/images';
+		$logo_extensions = array('png', 'svg', 'jpg', 'jpeg', 'gif', 'webp');
+		$logo_url = '';
+
+		foreach ($logo_extensions as $logo_extension) {
+			$logo_file_name = 'logo.'.$logo_extension;
+			$logo_file_path = $company_images_path.'/'.$logo_file_name;
+			if (!file_exists($logo_file_path))
+				continue;
+
+			$logo_url = $path_to_root.'/company/'.$company_id.'/images/'.$logo_file_name;
+			$logo_url .= '?v='.filemtime($logo_file_path);
+			break;
+		}
+
+		return array(
+			'company_name' => $company_name,
+			'logo_url' => $logo_url
+		);
+	}
+
+	/**
+	 * Render company branding beside the sidebar toggle.
+	 *
+	 * @param array $branding_details
+	 * @return void
+	 */
+	function render_topbar_branding($branding_details) {
+		$company_name = htmlspecialchars($branding_details['company_name'], ENT_QUOTES, 'UTF-8');
+
+		echo "<div class='modern-branding".($branding_details['logo_url'] ? " modern-branding-has-logo" : " modern-branding-text-only")."'>";
+		if ($branding_details['logo_url'])
+			echo "<img class='modern-brand-logo' src='".$branding_details['logo_url']."' alt='".$company_name."'>";
+		else
+			echo "<span class='modern-brand-title'>".$company_name."</span>";
+		echo "</div>";
+	}
+
+	/**
 	 * Render the vertical application switcher in sidebar.
 	 *
 	 * @param array $applications
@@ -360,6 +409,8 @@ class renderer {
 		else
 			$selected_application = $_SESSION['App']->get_selected_application();
 		$page_title = $title;
+		$branding_details = $this->get_company_branding_details();
+		$search_placeholder = htmlspecialchars(_('Type / to search menu or actions...'), ENT_QUOTES, 'UTF-8');
 		if ($this->is_dashboard_page() && is_object($selected_application) && $selected_application->name != '') {
 			$selected_application_title = str_replace('&', '', $selected_application->name);
 			$page_title = $title.' / '.$selected_application_title;
@@ -375,12 +426,13 @@ class renderer {
 			echo "<header class='modern-topbar'>";
 			echo "<div class='modern-topbar-left'>";
 			echo "<button id='modern-sidebar-toggle' class='modern-sidebar-toggle' type='button' aria-label='"._('Toggle navigation')."'>".$this->icon_svg('menu', 'modern-icon modern-toggle-icon')."</button>";
-			echo "<div class='modern-branding'><h1 class='modern-brand-title'>".$db_connections[user_company()]['name']."</h1><p class='modern-brand-meta'>".$_SERVER['SERVER_NAME']."</p></div>";
+			$this->render_topbar_branding($branding_details);
 			echo "</div>";
 			echo "<div class='modern-topbar-center'>";
-			echo "<div class='modern-header-search'>";
+			echo "<div class='modern-header-search' role='search'>";
 			echo $this->icon_svg('search', 'modern-icon modern-header-search-icon');
-			echo "<input type='text' class='modern-header-search-input' placeholder='"._('Search menu or actions...')."..' aria-label='"._('Search')."' autocomplete='off'>";
+			echo "<input type='text' class='modern-header-search-input' placeholder='".$search_placeholder."' data-placeholder-base='".$search_placeholder."' aria-label='"._('Search')."' autocomplete='off' spellcheck='false'>";
+			echo "<span class='modern-header-search-shortcut' aria-hidden='true'>/</span>";
 			echo "</div>";
 			echo "</div>";
 			echo "<div class='modern-topbar-right'>";
@@ -412,9 +464,11 @@ class renderer {
 
 		if ($page_title && !$is_index) {
 			echo "<section class='modern-page-title'>";
+			echo "<div class='modern-page-title-main'>";
 			echo "<h2>".$page_title."</h2>";
 			if (user_hints())
-				echo "<span id='hints'></span>";
+				echo "<span id='hints' class='modern-page-hint'></span>";
+			echo "</div>";
 			// render help button to the right of the page title
 			$this->render_help_button($selected_application_id);
 			echo "</section>";

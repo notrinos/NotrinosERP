@@ -377,9 +377,49 @@ textarea {
 	gap: 4px;
 }
 
+.form-section .form-group:has(input[type='checkbox']),
+.form-section .form-group.inline:has(input[type='checkbox']) {
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	min-height: 30px;
+	padding: 2px 12px;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.form-section .form-group:has(input[type='checkbox']):hover,
+.form-section .form-group.inline:has(input[type='checkbox']):hover {
+	border-color: var(--modern-color-primary);
+	background: var(--modern-color-primary-50);
+}
+
+.form-section .form-group:has(input[type='checkbox']):focus-within,
+.form-section .form-group.inline:has(input[type='checkbox']):focus-within {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px var(--modern-color-primary-50);
+	background: var(--modern-color-surface);
+}
+
 /* Inside form-section: inputs and controls fill full width */
 .form-section .form-control-wrap {
 	width: 100%;
+}
+
+.form-section .form-group:has(input[type='checkbox']) .form-control-wrap,
+.form-section .form-group.inline:has(input[type='checkbox']) .form-control-wrap {
+	width: auto;
+	min-height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex: 0 0 auto;
+	gap: 0;
 }
 
 .form-section .form-control-wrap input[type='text'],
@@ -434,7 +474,7 @@ textarea {
 
 .form-section .filter-field .filter-label {
 	display: block;
-	font-weight: 700;
+	font-weight: 400;
 	font-size: 12px;
 	color: #273548;
 }
@@ -479,7 +519,7 @@ textarea {
 }
 
 .form-label {
-	font-weight: 700;
+	font-weight: 400;
 	color: #273548;
 	font-size: 12px;
 }
@@ -489,6 +529,53 @@ textarea {
 	gap: 8px;
 	align-items: center;
 	flex-wrap: wrap;
+}
+
+.form-input-affix {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.form-group .form-input-affix,
+.form-control-wrap .form-input-affix,
+.filter-field .form-input-affix {
+	width: 100%;
+}
+
+.form-input-affix > input[type='text'],
+.form-input-affix > input.amount {
+	padding-right: 48px;
+	min-width: 0;
+}
+
+.form-input-affix > .form-post-label-inside {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	margin: 0;
+	color: #64748b;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+	background: transparent;
+	z-index: 1;
+}
+
+html[dir='rtl'] .form-input-affix > input[type='text'],
+html[dir='rtl'] .form-input-affix > input.amount {
+	padding-left: 48px;
+	padding-right: 8px;
+}
+
+html[dir='rtl'] .form-input-affix > .form-post-label-inside {
+	left: 12px;
+	right: auto;
 }
 
 .form-readonly {
@@ -741,6 +828,11 @@ input[type='checkbox']:focus-visible {
 @media (max-width: 900px) {
 	.form-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.form-section .form-group:has(input[type='checkbox']),
+	.form-section .form-group.inline:has(input[type='checkbox']) {
+		grid-template-columns: minmax(0, 1fr) auto;
 	}
 
 	.form-group.inline,

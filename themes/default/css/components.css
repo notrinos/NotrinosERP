@@ -380,6 +380,7 @@ html[dir='rtl'] .modern-app-icon {
 	gap: var(--modern-space-2);
 	align-items: center;
 	margin-left: auto;
+	flex-shrink: 0;
 }
 
 .modern-module-card {

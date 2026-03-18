@@ -526,6 +526,41 @@ function text_input($name, $value=null, $size='', $max='', $title='', $params=''
 	return "<input ".$params." type='text' name='".$name."' size='".$size."' maxlength='".$max."' value='".$value."'".($title ? " title='".$title."'" : '').">";
 }
 
+/**
+ * Determine whether a post label is plain text and can be rendered inside an input affix.
+ *
+ * @param string $post_label
+ * @return bool
+ */
+function post_label_is_inline_text($post_label) {
+	if ($post_label === null || $post_label === '')
+		return false;
+
+	return strpos($post_label, '<') === false;
+}
+
+/**
+ * Wrap input HTML with an inline suffix when the post label is plain text.
+ *
+ * @param string $input_html
+ * @param string $post_label
+ * @param string $label_id
+ * @return string
+ */
+function input_with_post_label($input_html, $post_label = '', $label_id = '') {
+	if ($post_label === null || $post_label === '')
+		return $input_html;
+
+	if (!post_label_is_inline_text($post_label))
+		return $input_html.' '.$post_label;
+
+	$id_attribute = $label_id ? " id='".$label_id."'" : '';
+	return "<span class='form-input-affix'>"
+		.$input_html
+		."<span class='form-post-label form-post-label-inside'".$id_attribute.">".$post_label."</span>"
+		."</span>";
+}
+
 //-----------------------------------------------------------------------------------
 
 function text_cells($label, $name, $value=null, $size='', $max='', $title=false, $labparams='', $post_label='', $inparams='') {
@@ -536,9 +571,7 @@ function text_cells($label, $name, $value=null, $size='', $max='', $title=false,
 		if ($label != null)
 			echo "<label class='form-label' for='".$name."' ".$labparams.">".$label."</label>\n";
 		echo "<div class='form-control-wrap'>";
-		echo text_input($name, $value, $size, $max, $title, trim($inparams." id='".$name."'"));
-		if ($post_label != '')
-			echo ' ' . $post_label;
+		echo input_with_post_label(text_input($name, $value, $size, $max, $title, trim($inparams." id='".$name."'")), $post_label);
 		echo "</div>\n";
 		echo "</div>\n";
 		$Ajax->addUpdate($name, $name, $value);
@@ -550,10 +583,7 @@ function text_cells($label, $name, $value=null, $size='', $max='', $title=false,
 		label_cell($label, $labparams);
 	echo '<td>';
 
-	echo text_input($name, $value, $size, $max, $title, $inparams);
-
-	if ($post_label != '')
-		echo ' ' . $post_label;
+	echo input_with_post_label(text_input($name, $value, $size, $max, $title, $inparams), $post_label);
 
 	echo "</td>\n";
 	$Ajax->addUpdate($name, $name, $value);
@@ -579,9 +609,7 @@ function text_cells_ex($label, $name, $size, $max=null, $init=null, $title=null,
 			echo "<label class='filter-label'>".$label."</label>\n";
 		$placeholder_attr = ($label != null) ? " placeholder=\"" . htmlspecialchars(trim($label), ENT_QUOTES) . "\"" : '';
 		$class = $submit_on_change ? 'class="searchbox"' : '';
-		echo "<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".$placeholder_attr.($title ? " title='$title'": '')." >";
-		if ($post_label)
-			echo " " . $post_label;
+		echo input_with_post_label("<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".$placeholder_attr.($title ? " title='$title'": '')." >", $post_label);
 		echo "</div>\n";
 		$Ajax->addUpdate($name, $name, $_POST[$name]);
 		return;
@@ -592,10 +620,7 @@ function text_cells_ex($label, $name, $size, $max=null, $init=null, $title=null,
 
 	echo '<td>';
 	$class = $submit_on_change ? 'class="searchbox"' : '';
-	echo "<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".($title ? " title='$title'": '')." >";
-
-	if ($post_label)
-		echo " " . $post_label;
+	echo input_with_post_label("<input $class type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" value=\"" . $_POST[$name]. "\"".($title ? " title='$title'": '')." >", $post_label);
 
 	echo "</td>\n";
 	$Ajax->addUpdate($name, $name, $_POST[$name]);
@@ -605,9 +630,7 @@ function text_row($label, $name, $value, $size, $max, $title=null, $params='', $
 	if (ui_current_table_mode() != 'table') {
 		echo "<div class='form-group'>";
 		echo "<label class='form-label' for='".$name."'>".$label."</label>";
-		echo text_input($name, $value, $size, $max, $title, trim($params." id='".$name."'"));
-		if ($post_label != '')
-			echo "<span class='form-post-label'>".$post_label."</span>";
+		echo input_with_post_label(text_input($name, $value, $size, $max, $title, trim($params." id='".$name."'")), $post_label);
 		echo "</div>\n";
 		return;
 	}
@@ -634,9 +657,7 @@ function text_row_ex($label, $name, $size, $max=null, $title=null, $value=null, 
 			$max = $size;
 		echo "<div class='form-group'>";
 		echo "<label class='form-label' for='".$name."'>".$label."</label>";
-		echo "<input type='text' name='".$name."' id='".$name."' size='".$size."' maxlength='".$max."' value='".$_POST[$name]."'".(  $title ? " title='$title'": '')." >";
-		if ($post_label)
-			echo "<span class='form-post-label'>".$post_label."</span>";
+		echo input_with_post_label("<input type='text' name='".$name."' id='".$name."' size='".$size."' maxlength='".$max."' value='".$_POST[$name]."'".(  $title ? " title='$title'": '')." >", $post_label);
 		echo "</div>\n";
 		$Ajax->addUpdate($name, $name, $_POST[$name]);
 		return;
@@ -898,8 +919,7 @@ function percent_row($label, $name, $init=null) {
 		echo "<div class='form-group percent'>";
 		echo "<label class='form-label' for='".$name."'>".$label."</label>";
 		echo "<div class='form-control-wrap'>";
-		echo "<input class='amount' type='text' id='".$name."' name='".$name."' size='7' maxlength='12' dec='".user_percent_dec()."' value='".$_POST[$name]."'>";
-		echo " <span class='form-post-label'>%</span>";
+		echo input_with_post_label("<input class='amount' type='text' id='".$name."' name='".$name."' size='7' maxlength='12' dec='".user_percent_dec()."' value='".$_POST[$name]."'>", '%');
 		echo "</div></div>\n";
 		return;
 	}
@@ -917,11 +937,9 @@ function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=nu
 			echo "<label for='".$name."' ".$params.">".$label."</label>";
 		}
 		echo "<div class='form-control-wrap amount'>";
-		echo "<input class='amount' type=\"text\" id=\"$name\" name=\"$name\" size=\"$size\" maxlength=\"$max\" dec=\"$dec\" value=\"" . $_POST[$name]. "\">";
-		if ($post_label) {
-			echo "<span id='_{$name}_label'> $post_label</span>";
+		echo input_with_post_label("<input class='amount' type=\"text\" id=\"$name\" name=\"$name\" size=\"$size\" maxlength=\"$max\" dec=\"$dec\" value=\"" . $_POST[$name]. "\">", $post_label, '_'.$name.'_label');
+		if ($post_label && post_label_is_inline_text($post_label))
 			$Ajax->addUpdate($name, '_'.$name.'_label', $post_label);
-		}
 		echo "</div>\n";
 		$Ajax->addUpdate($name, $name, $_POST[$name]);
 		$Ajax->addAssign($name, $name, 'dec', $dec);
@@ -949,12 +967,10 @@ function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=nu
 	else
 		echo "<td align='right'>";
 
-	echo "<input class='amount' type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" dec=\"$dec\" value=\"" . $_POST[$name]. "\">";
+	echo input_with_post_label("<input class='amount' type=\"text\" name=\"$name\" size=\"$size\" maxlength=\"$max\" dec=\"$dec\" value=\"" . $_POST[$name]. "\">", $post_label, '_'.$name.'_label');
 
-	if ($post_label) {
-		echo "<span id='_{$name}_label'> $post_label</span>";
+	if ($post_label && post_label_is_inline_text($post_label))
 		$Ajax->addUpdate($name, '_'.$name.'_label', $post_label);
-	}
 	echo "</td>\n";
 	$Ajax->addUpdate($name, $name, $_POST[$name]);
 	$Ajax->addAssign($name, $name, 'dec', $dec);

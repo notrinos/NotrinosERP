@@ -3,6 +3,10 @@
 		display: none;
 	}
 
+	.modern-brand-logo {
+		max-width: 150px;
+	}
+
 	.modern-shell {
 		grid-template-columns: 280px 1fr;
 	}
@@ -13,6 +17,10 @@
 }
 
 @media (max-width: 1024px) {
+	.modern-topbar {
+		grid-template-columns: minmax(0, 1fr) minmax(260px, 1.15fr) auto;
+	}
+
 	.modern-app-shell {
 		height: 100vh;
 		min-height: 100vh;
@@ -22,6 +30,11 @@
 	.modern-topbar-center {
 		margin-left: 0;
 		max-width: none;
+	}
+
+	.modern-brand-logo {
+		max-width: 140px;
+		max-height: 28px;
 	}
 
 	.modern-shell {
@@ -133,6 +146,10 @@
 		box-shadow: var(--modern-shadow-soft);
 	}
 
+	.modern-header-search {
+		height: 42px;
+	}
+
 	.modern-topbar-left,
 	.modern-topbar-right {
 		width: auto;
@@ -140,6 +157,8 @@
 
 	.modern-topbar-left {
 		justify-self: start;
+		gap: var(--modern-space-2);
+		max-width: calc(100vw - 112px);
 	}
 
 	.modern-topbar-right {
@@ -148,11 +167,39 @@
 	}
 
 	.modern-branding {
-		display: none;
+		display: flex;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.modern-brand-logo {
+		max-width: 120px;
+		max-height: 26px;
+	}
+
+	.modern-brand-title {
+		font-size: 13px;
 	}
 
 	.modern-search-toggle {
 		display: inline-flex;
+	}
+
+	.modern-page-title {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.modern-page-title-main {
+		align-items: flex-start;
+	}
+
+	.modern-page-title h2 {
+		font-size: 19px;
+	}
+
+	.modern-page-title-actions {
+		margin-left: 0;
 	}
 
 	.modern-footer {
@@ -169,6 +216,16 @@
 
 	body {
 		overflow: hidden;
+	}
+}
+
+@media (max-width: 600px) {
+	.modern-branding {
+		display: none;
+	}
+
+	.modern-topbar-left {
+		max-width: none;
 	}
 }
 

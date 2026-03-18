@@ -191,6 +191,52 @@
 		});
 	}
 
+	function bindClickableCheckboxRows() {
+		var checkboxRows = document.querySelectorAll('.form-section .form-group');
+		for (var i = 0; i < checkboxRows.length; i++) {
+			(function (row) {
+				var checkbox = row.querySelector("input[type='checkbox']");
+				if (!checkbox || row.getAttribute('data-checkbox-row-bound') === '1') {
+					return;
+				}
+
+				row.setAttribute('data-checkbox-row-bound', '1');
+
+				row.addEventListener('click', function (e) {
+					var interactiveTarget = e.target.closest("a, button, select, textarea, input:not([type='checkbox']), .select2-container, .search_btn_container");
+					if (interactiveTarget) {
+						return;
+					}
+
+					if (e.target === checkbox) {
+						return;
+					}
+
+					checkbox.checked = !checkbox.checked;
+					checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+					checkbox.dispatchEvent(new Event('input', { bubbles: true }));
+				});
+
+				row.addEventListener('keydown', function (e) {
+					if (e.target !== row) {
+						return;
+					}
+
+					if (e.key === ' ' || e.key === 'Enter') {
+						e.preventDefault();
+						checkbox.checked = !checkbox.checked;
+						checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+						checkbox.dispatchEvent(new Event('input', { bubbles: true }));
+					}
+				});
+
+				if (!row.hasAttribute('tabindex')) {
+					row.setAttribute('tabindex', '0');
+				}
+			})(checkboxRows[i]);
+		}
+	}
+
 	function bindSearchToggle() {
 		var appShell = getAppShell();
 		var searchToggle = document.getElementById('modern-search-toggle');
@@ -237,6 +283,7 @@
 		var searchInput = document.querySelector('.modern-header-search-input');
 		var resultsContainer = document.getElementById('modern-search-results');
 		var searchIndex = window.__searchIndex;
+		var searchShortcut = document.querySelector('.modern-header-search-shortcut');
 		if (!searchInput || !resultsContainer || !searchIndex) {
 			return;
 		}
@@ -389,9 +436,31 @@
 			}
 		}
 
+		function openSearchInput() {
+			var appShell = getAppShell();
+			if (appShell && window.matchMedia('(max-width: 768px)').matches) {
+				appShell.classList.add('modern-search-open');
+			}
+
+			searchInput.focus();
+			searchInput.select();
+		}
+
+		function isEditableTarget(target) {
+			if (!target || !target.tagName) {
+				return false;
+			}
+
+			var tagName = target.tagName.toLowerCase();
+			return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable;
+		}
+
 		// Debounced search on input
 		searchInput.addEventListener('input', function () {
 			var query = this.value.trim();
+			if (searchShortcut) {
+				searchShortcut.style.visibility = query ? 'hidden' : 'visible';
+			}
 			if (debounceTimer) clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(function () {
 				performSearch(query);
@@ -419,6 +488,9 @@
 				e.preventDefault();
 				hideResults();
 				searchInput.value = '';
+				if (searchShortcut) {
+					searchShortcut.style.visibility = 'visible';
+				}
 				searchInput.blur();
 			}
 		});
@@ -442,17 +514,21 @@
 
 		// Ctrl+K / Cmd+K shortcut to focus search
 		document.addEventListener('keydown', function (e) {
+			if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)) {
+				e.preventDefault();
+				openSearchInput();
+				return;
+			}
+
 			if ((e.ctrlKey || e.metaKey) && e.keyCode === 75) {
 				e.preventDefault();
-				searchInput.focus();
-				searchInput.select();
+				openSearchInput();
 			}
 		});
 
-		// Show shortcut hint in placeholder
-		var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-		var shortcutHint = isMac ? '\u2318K' : 'Ctrl+K';
-		searchInput.setAttribute('placeholder', searchInput.getAttribute('placeholder') + ' (' + shortcutHint + ')');
+		if (searchShortcut) {
+			searchShortcut.setAttribute('title', 'Press / or Ctrl/Cmd+K to focus search');
+		}
 	}
 
 	function bindCollapsedSidebarTooltips() {
@@ -521,6 +597,7 @@
 			bindModuleGroups();
 			bindSidebarModuleActiveLinks();
 			bindUserDropdown();
+			bindClickableCheckboxRows();
 			bindCollapsedSidebarTooltips();
 			bindSearchToggle();
 			bindMenuSearch();
@@ -530,6 +607,7 @@
 		bindModuleGroups();
 		bindSidebarModuleActiveLinks();
 		bindUserDropdown();
+			bindClickableCheckboxRows();
 		bindCollapsedSidebarTooltips();
 		bindSearchToggle();
 		bindMenuSearch();
