@@ -1,0 +1,37 @@
+#backup-maintenance-grid .editbutton,
+#backup-maintenance-grid .inputsubmit,
+#backup-maintenance-grid .ajaxsubmit,
+#backup-maintenance-grid .button {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#backup-maintenance-grid .backup-protect-options {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	max-width: none;
+}
+
+#backup-maintenance-grid .backup-protect-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1px solid #cfd6dd;
+	border-radius: 6px;
+	cursor: pointer;
+	line-height: 1.3;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#backup-maintenance-grid .backup-protect-option:hover {
+	background-color: #f7f9fb;
+}
+
+#backup-maintenance-grid .backup-protect-option input[type='radio'] {
+	margin: 0;
+	flex: 0 0 auto;
+}

@@ -104,7 +104,7 @@ $categories = hrm_get_element_categories();
 $amount_types = hrm_get_amount_types();
 
 start_form();
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE);
 $th = array(_('Code'), _('Element Name'), _('Category'), _('Element Type'), _('Amount Type'), _('Account Code'), _('Account Name'), '', '');
 
 table_header($th);

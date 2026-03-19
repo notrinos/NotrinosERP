@@ -76,7 +76,7 @@ if (db_has_gl_accounts()) {
 	submit_row('submit', _('Get'), true, '', '', true);
 	end_table(1);
 	div_start('budget_tbl');
-	start_table(TABLESTYLE2);
+	start_table(TABLESTYLE);
 	$showdims = (($dim == 1 && $_POST['dim1'] == 0) ||
 		($dim == 2 && $_POST['dim1'] == 0 && $_POST['dim2'] == 0));
 	if ($showdims)

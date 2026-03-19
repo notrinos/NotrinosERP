@@ -10,8 +10,13 @@ textarea {
 
 .form-table {
 	display: grid;
-	gap: 14px;
+	gap: 10px;
 	margin-bottom: 12px;
+	background: #fff;
+	border: 1px solid #d4dbe6;
+	border-radius: 10px;
+	padding: 16px;
+	align-content: start;
 }
 
 /* ==================== Filter Group ==================== */
@@ -585,6 +590,18 @@ html[dir='rtl'] .form-input-affix > .form-post-label-inside {
 	background: #f6f8fc;
 	border: 1px solid #dde5f0;
 	color: #334155;
+}
+
+.form-action-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+	padding: 0;
+}
+
+.form-action-cell .editbutton {
+	margin: 0 auto;
 }
 
 .form-actions {

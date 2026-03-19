@@ -315,6 +315,13 @@ function button($name, $value, $title=false, $icon=false,  $aspect='') {
 }
 
 function button_cell($name, $value, $title=false, $icon=false, $aspect='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-value form-action-cell'>";
+		echo button($name, $value, $title, $icon, $aspect);
+		echo "</div>";
+		return;
+	}
+
 	echo "<td align='center'>";
 	echo button($name, $value, $title, $icon, $aspect);
 	echo "</td>";
@@ -930,6 +937,15 @@ function percent_row($label, $name, $init=null) {
 function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=null, $post_label=null, $dec=null) {
 	global $Ajax;
 
+	if (!isset($dec))
+		$dec = user_price_dec();
+	if (!isset($_POST[$name]) || $_POST[$name] == '') {
+		if ($init !== null)
+			$_POST[$name] = $init;
+		else
+			$_POST[$name] = '';
+	}
+
 	if (ui_current_table_mode() != 'table') {
 		if ($label != null) {
 			if ($params == null)
@@ -946,14 +962,6 @@ function amount_cells_ex($label, $name, $size, $max=null, $init=null, $params=nu
 		return;
 	}
 
-	if (!isset($dec))
-		$dec = user_price_dec();
-	if (!isset($_POST[$name]) || $_POST[$name] == '') {
-		if ($init !== null)
-			$_POST[$name] = $init;
-		else
-			$_POST[$name] = '';
-	}
 	if ($label != null) {
 		if ($params == null)
 			$params = "class='label'";

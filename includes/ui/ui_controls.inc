@@ -465,6 +465,8 @@ function hyperlink_params_separate_td($target, $label, $params) {
 //--------------------------------------------------------------------------------------------------
 
 function alt_table_row_color(&$k, $extra_class=null) {
+	global $ui_row_mode_stack;
+
 	$classes = $extra_class ? array($extra_class) : array();
 	if ($k == 1) {
 		array_push($classes, 'oddrow');
@@ -474,10 +476,14 @@ function alt_table_row_color(&$k, $extra_class=null) {
 		array_push($classes, 'evenrow');
 		$k++;
 	}
-	if (ui_current_table_mode() == 'table')
+	if (ui_current_table_mode() == 'table') {
+		$ui_row_mode_stack[] = 'tr';
 		echo "<tr class='".implode(' ', $classes)."'>\n";
-	else
+	}
+	else {
+		$ui_row_mode_stack[] = 'div';
 		echo "<div class='form-row ".implode(' ', $classes)."'>\n";
+	}
 }
 
 function table_section_title($msg, $colspan=2) {

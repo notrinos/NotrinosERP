@@ -89,9 +89,9 @@ function init_css() {
 		$file_ext = strpos($_SERVER['REQUEST_URI'], 'php?') ? '.php?' : '.php';
 		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
 		$local_css = $path_to_root.'/themes/'.user_theme().'/local_style/'.$basename.'.css';
+		$local_css_file = dirname(__FILE__).'/../themes/'.user_theme().'/local_style/'.$basename.'.css';
 
-		if(file_exists($local_css)) {
-			$local_css_file = dirname(__FILE__).'/../themes/'.user_theme().'/local_style/'.$basename.'.css';
+		if(file_exists($local_css_file)) {
 			$local_css_version = file_exists($local_css_file) ? filemtime($local_css_file) : time();
 			$css_files[] = $local_css.'?v='.$local_css_version;
 		}

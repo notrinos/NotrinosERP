@@ -183,7 +183,7 @@ if (get_post('upload')) {
 //-------------------------------------------------------------------------------
 
 start_form(true);
-start_outer_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2, "id='backup-maintenance-grid'");
 table_section(1);
 table_section_title(_('Create backup'));
 textarea_row(_('Comments:'), 'comments', null, 30, 9);
@@ -209,11 +209,17 @@ end_table();
 echo '</td>';
 end_row();
 start_row();
-echo "<td style='padding-left:20px' colspan=2>".radio(_('Update security settings'), 'protect', 0).'<br>'.radio(_('Protect security settings'), 'protect', 1, true).'</td>';
+$protect_option = get_post('protect', 1);
+echo "<td style='padding-left:20px' colspan=2>"
+	."<div class='backup-protect-options'>"
+	."<label class='backup-protect-option'><input type='radio' name='protect' value='0' ".((string)$protect_option === '0' ? 'checked' : '').">"._('Update security settings')."</label>"
+	."<label class='backup-protect-option'><input type='radio' name='protect' value='1' ".((string)$protect_option !== '0' ? 'checked' : '').">"._('Protect security settings')."</label>"
+	."</div>"
+	.'</td>';
 end_row();
 start_row();
 echo "<td style='padding-left:20px' align='left'><input name='uploadfile' type='file'></td>";
-submit_cells('upload',_('Upload file'), "style='padding-left:20px'", '', true);
+submit_cells('upload',_('Upload file'), '', '', true);
 end_row();
 end_outer_table();
 
