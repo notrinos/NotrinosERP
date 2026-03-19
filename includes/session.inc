@@ -534,6 +534,15 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		db_set_encoding($_SESSION['language']->encoding);
 
 		$SysPrefs->refresh();
+
+		if ($_SERVER['REQUEST_METHOD'] == 'POST' && !check_csrf_token()) {
+			$post_keys = array_keys($_POST);
+			$_POST = array();
+			$_FILES = array();
+			foreach ($post_keys as $post_key)
+				unset($_REQUEST[$post_key]);
+			$Ajax->activate('_page_body');
+		}
 	}
 	if (!isset($_SESSION['App'])) {
 		$_SESSION['App'] = new NotrinosErp();
