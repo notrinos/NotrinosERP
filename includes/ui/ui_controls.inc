@@ -119,13 +119,12 @@ function end_form($breaks=0) {
 
 	close_filter_group_if_open();
 
-	$_SESSION['csrf_token'] = random_id();
 	if ($breaks)
 		br($breaks);
 	hidden('_focus');
 	hidden('_modified', get_post('_modified', 0));
 	hidden('_confirmed'); // helper for final form confirmation
-	hidden('_token', $_SESSION['csrf_token']);
+	hidden('_token', ensure_csrf_token());
 
 	output_hidden();
 	echo "</form>\n";
@@ -133,8 +132,31 @@ function end_form($breaks=0) {
 	$Ajax->activate('_confirmed');
 }
 
+/**
+ * Ensure the current session has a CSRF token.
+ *
+ * @return string
+ */
+function ensure_csrf_token() {
+	if (!isset($_SESSION['csrf_token']) || $_SESSION['csrf_token'] == '')
+		$_SESSION['csrf_token'] = random_id();
+
+	return $_SESSION['csrf_token'];
+}
+
+/**
+ * Validate the submitted CSRF token against the current session token.
+ *
+ * @return bool
+ */
 function check_csrf_token() {
-	if ($_SESSION['csrf_token'] != @$_POST['_token']) {
+	$session_token = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+	$submitted_token = isset($_POST['_token']) ? $_POST['_token'] : '';
+	$valid_token = function_exists('hash_equals')
+		? ($session_token !== '' && $submitted_token !== '' && hash_equals($session_token, $submitted_token))
+		: ($session_token !== '' && $session_token == $submitted_token);
+
+	if (!$valid_token) {
 		display_error(_('Request from outside of this page is forbidden.'));
 		error_log(_('CSRF attack detected from: ').@$_SERVER['HTTP_HOST'].' ('.@$_SERVER['HTTP_REFERER'].')');
 		return false;
