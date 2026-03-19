@@ -24,9 +24,17 @@ function help_url($context=null) {
 	elseif (isset($help_context))
 		$help_page_url = $help_context;
 	else {// main menu
-		$app = $_SESSION['sel_app'];
-		$help_page_url = $_SESSION['App']->applications[$app]->help_context;
-		$clean = 1;
+		if (isset($_SESSION['sel_app'])
+			&& isset($_SESSION['App'])
+			&& is_object($_SESSION['App'])
+			&& isset($_SESSION['App']->applications[$_SESSION['sel_app']])
+			&& isset($_SESSION['App']->applications[$_SESSION['sel_app']]->help_context)) {
+			$app = $_SESSION['sel_app'];
+			$help_page_url = $_SESSION['App']->applications[$app]->help_context;
+			$clean = 1;
+		} else {
+			$help_page_url = 'Help';
+		}
 	}
 
 	if (@$SysPrefs->old_style_help)

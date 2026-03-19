@@ -21,6 +21,9 @@ $js = "<script>
 </script>";
 
 add_js_file('login.js');
+$show_invalid_login_message = isset($_POST['SubmitUser'])
+	&& isset($_POST['user_name_entry_field'])
+	&& $_POST['user_name_entry_field'] != '';
 // Display demo user name and password within login form if allow_demo_mode option is true
 if ($SysPrefs->allow_demo_mode == true)
 	$demo_text = _('Login as user: demouser and password: password');
@@ -38,7 +41,7 @@ if (check_faillog()) {
 		document.getElementById('log_msg').innerHTML='$demo_text'}, 1000*".$SysPrefs->login_delay.");</script>";
 	$demo_text = '<span class="redfg">'._('Too many failed login attempts.<br>Please wait a while or try later.').'</span>';
 }
-elseif ($_SESSION['wa_current_user']->login_attempt > 1)
+elseif ($show_invalid_login_message && $_SESSION['wa_current_user']->login_attempt > 1)
 	$demo_text = '<span class="redfg">'._('Invalid password or username. Please, try again.').'</span>';
 
 flush_dir(user_js_cache());

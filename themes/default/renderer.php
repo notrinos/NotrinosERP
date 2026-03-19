@@ -402,12 +402,17 @@ class renderer {
 			$selected_application_id = 'orders';
 
 		$_SESSION['sel_app'] = $selected_application_id;
-		$applications = $_SESSION['App']->applications;
 		$selected_application = null;
-		if (isset($_SESSION['App']->applications[$selected_application_id]))
-			$selected_application = $_SESSION['App']->applications[$selected_application_id];
-		else
-			$selected_application = $_SESSION['App']->get_selected_application();
+		$applications = array();
+		if (isset($_SESSION['App']) && is_object($_SESSION['App'])) {
+			$applications = $_SESSION['App']->applications;
+			if (isset($_SESSION['App']->applications[$selected_application_id]))
+				$selected_application = $_SESSION['App']->applications[$selected_application_id];
+			else
+				$selected_application = $_SESSION['App']->get_selected_application();
+		} else {
+			$no_menu = true;
+		}
 		$page_title = $title;
 		$branding_details = $this->get_company_branding_details();
 		$search_placeholder = htmlspecialchars(_('Type / to search menu or actions...'), ENT_QUOTES, 'UTF-8');
