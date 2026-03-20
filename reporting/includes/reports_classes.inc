@@ -96,6 +96,7 @@ class BoxReports {
 					// parameters form
 					$action = $_SERVER['PHP_SELF'];
 					$st_params = "<form method='POST' action='$action' target='_blank' class='report-params-form'>\n";
+					$st_params .= "<input type='hidden' name='_token' value='".ensure_csrf_token()."'>\n";
 					$st_params .= submit('Rep'.$report->id,  
 						_('Display: ') . access_string($report->name, true),
 						false, '', $SysPrefs->pdf_debug ? false : 'default popup') . hidden('REP_ID', $report->id, false);

@@ -48,6 +48,9 @@ JsHttpRequest._request = function(trigger, form, tout, retry) {
 		var url = trigger.href;
 		if (trigger.id)
 			content[trigger.id] = 1;
+		// Include CSRF token for POST requests made from anchor links
+		var _csrfTokenEl = document.querySelector('input[name="_token"]');
+		if (_csrfTokenEl) content['_token'] = _csrfTokenEl.value;
 	}
 	else {
 		var submitObj = typeof(trigger) == "string" ?
