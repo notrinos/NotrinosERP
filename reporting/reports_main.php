@@ -552,6 +552,9 @@ $reports->addReport(RC_GL, 710, _('Audit Trail'),
 
 add_custom_reports($reports);
 
+// Output a standalone CSRF token so JsHttpRequest AJAX POSTs (e.g. repopts_link)
+// always carry _token even before a report parameters form is rendered.
+echo "<input type='hidden' name='_token' value='" . ensure_csrf_token() . "'>\n";
 echo $reports->getDisplay();
 
 end_page();
