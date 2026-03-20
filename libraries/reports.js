@@ -44,7 +44,7 @@ function set_options(e) {
 }
 
 function showClass(pClass) {
-	var classes = document.getElementsBySelector('.repclass, .report-class-list');
+	var classes = document.getElementsBySelector('.repclass');
 	for(var i in  classes) {
 		cl = classes[i];
 		if (!cl || !cl.id)
