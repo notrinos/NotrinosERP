@@ -26,26 +26,33 @@ class SetupApp extends application {
 		$this->add_rapp_function(0, _('&Fiscal Years'), 'admin/fiscalyears.php?', 'SA_FISCALYEARS', MENU_MAINTENANCE);
 		$this->add_rapp_function(0, _('&Print Profiles'), 'admin/print_profiles.php?', 'SA_PRINTPROFILE', MENU_MAINTENANCE);
 
+		$this->add_module(_('Approval Workflow'));
+		$this->add_lapp_function(1, _('Approval &Dashboard'), 'admin/approval_dashboard.php?', 'SA_APPROVALDASHBOARD', MENU_TRANSACTION);
+		$this->add_lapp_function(1, _('Approval &Inquiry'), 'admin/approval_inquiry.php?', 'SA_APPROVALINQUIRY', MENU_INQUIRY);
+		$this->add_rapp_function(1, _('Approval &Rules'), 'admin/approval_rules.php?', 'SA_APPROVALRULES', MENU_SETTINGS);
+		$this->add_rapp_function(1, _('Approval De&legations'), 'admin/approval_delegations.php?', 'SA_APPROVALRULES', MENU_SETTINGS);
+		$this->add_rapp_function(1, _('&Escalation Processing'), 'admin/approval_cron.php?', 'SA_APPROVALRULES', MENU_MAINTENANCE);
+
 		$this->add_module(_('Miscellaneous'));
-		$this->add_lapp_function(1, _('Pa&yment Terms'), 'admin/payment_terms.php?', 'SA_PAYTERMS', MENU_MAINTENANCE);
-		$this->add_lapp_function(1, _('Shi&pping Company'), 'admin/shipping_companies.php?', 'SA_SHIPPING', MENU_MAINTENANCE);
-		$this->add_rapp_function(1, _('&Points of Sale'), 'sales/manage/sales_points.php?', 'SA_POSSETUP', MENU_MAINTENANCE);
-		$this->add_rapp_function(1, _('&Printers'), 'admin/printers.php?', 'SA_PRINTERS', MENU_MAINTENANCE);
-		$this->add_rapp_function(1, _('Contact &Categories'), 'admin/crm_categories.php?', 'SA_CRMCATEGORY', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Pa&yment Terms'), 'admin/payment_terms.php?', 'SA_PAYTERMS', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Shi&pping Company'), 'admin/shipping_companies.php?', 'SA_SHIPPING', MENU_MAINTENANCE);
+		$this->add_rapp_function(2, _('&Points of Sale'), 'sales/manage/sales_points.php?', 'SA_POSSETUP', MENU_MAINTENANCE);
+		$this->add_rapp_function(2, _('&Printers'), 'admin/printers.php?', 'SA_PRINTERS', MENU_MAINTENANCE);
+		$this->add_rapp_function(2, _('Contact &Categories'), 'admin/crm_categories.php?', 'SA_CRMCATEGORY', MENU_MAINTENANCE);
 
 		$this->add_module(_('Maintenance'));
-		$this->add_lapp_function(2, _('&Void a Transaction'), 'admin/void_transaction.php?', 'SA_VOIDTRANSACTION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('View or &Print Transactions'), 'admin/view_print_transaction.php?', 'SA_VIEWPRINTTRANSACTION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('&Attach Documents'), 'admin/attachments.php?filterType=20', 'SA_ATTACHDOCUMENT', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('System &Diagnostics'), 'admin/system_diagnostics.php?', 'SA_SOFTWAREUPGRADE', MENU_SYSTEM);
+		$this->add_lapp_function(3, _('&Void a Transaction'), 'admin/void_transaction.php?', 'SA_VOIDTRANSACTION', MENU_MAINTENANCE);
+		$this->add_lapp_function(3, _('View or &Print Transactions'), 'admin/view_print_transaction.php?', 'SA_VIEWPRINTTRANSACTION', MENU_MAINTENANCE);
+		$this->add_lapp_function(3, _('&Attach Documents'), 'admin/attachments.php?filterType=20', 'SA_ATTACHDOCUMENT', MENU_MAINTENANCE);
+		$this->add_lapp_function(3, _('System &Diagnostics'), 'admin/system_diagnostics.php?', 'SA_SOFTWAREUPGRADE', MENU_SYSTEM);
 
-		$this->add_rapp_function(2, _('&Backup and Restore'), 'admin/backups.php?', 'SA_BACKUP', MENU_SYSTEM);
-		$this->add_rapp_function(2, _('Create/Update &Companies'), 'admin/create_coy.php?', 'SA_CREATECOMPANY', MENU_UPDATE);
-		$this->add_rapp_function(2, _('Install/Update &Languages'), 'admin/inst_lang.php?', 'SA_CREATELANGUAGE', MENU_UPDATE);
-		$this->add_rapp_function(2, _('Install/Activate &Extensions'), 'admin/inst_module.php?', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_rapp_function(2, _('Install/Activate &Themes'), 'admin/inst_theme.php?', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_rapp_function(2, _('Install/Activate &Chart of Accounts'), 'admin/inst_chart.php?', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_rapp_function(2, _('Software &Upgrade'), 'admin/inst_upgrade.php?', 'SA_SOFTWAREUPGRADE', MENU_UPDATE);
+		$this->add_rapp_function(3, _('&Backup and Restore'), 'admin/backups.php?', 'SA_BACKUP', MENU_SYSTEM);
+		$this->add_rapp_function(3, _('Create/Update &Companies'), 'admin/create_coy.php?', 'SA_CREATECOMPANY', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Install/Update &Languages'), 'admin/inst_lang.php?', 'SA_CREATELANGUAGE', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Install/Activate &Extensions'), 'admin/inst_module.php?', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Install/Activate &Themes'), 'admin/inst_theme.php?', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Install/Activate &Chart of Accounts'), 'admin/inst_chart.php?', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Software &Upgrade'), 'admin/inst_upgrade.php?', 'SA_SOFTWAREUPGRADE', MENU_UPDATE);
 
 		$this->add_extensions();
 	}

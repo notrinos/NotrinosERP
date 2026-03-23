@@ -67,7 +67,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             );
             display_notification(_('Leave request has been updated.'));
         } else {
-            add_leave_request(
+            $request_id = add_leave_request(
                 $_POST['employee_id'],
                 (int)$_POST['leave_id'],
                 $_POST['from_date'],
@@ -76,7 +76,42 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 (int)$_POST['half_day'],
                 $_POST['reason']
             );
-            display_notification(_('Leave request has been created.'));
+
+            // Check if approval workflow is required for leave requests
+            $leave_draft_data = array(
+                'request_id'  => $request_id,
+                'employee_id' => $_POST['employee_id'],
+                'leave_id'    => (int)$_POST['leave_id'],
+                'from_date'   => $_POST['from_date'],
+                'to_date'     => $_POST['to_date'],
+                'days'        => $days,
+                'half_day'    => (int)$_POST['half_day'],
+                'reason'      => $_POST['reason'],
+            );
+
+            // Fetch names for display
+            $leave_request_row = get_leave_request($request_id);
+            if ($leave_request_row) {
+                $leave_draft_data['employee_name'] = $leave_request_row['employee_name'];
+                $leave_draft_data['leave_name']    = $leave_request_row['leave_name'];
+            }
+
+            $approval_result = approval_check_before_save(
+                ST_LEAVE_REQUEST,
+                $leave_draft_data,
+                $days,
+                array('summary' => sprintf(_('Leave: %s, %s days'), $_POST['from_date'], $days))
+            );
+
+            if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                display_notification(_('Leave request has been created and automatically approved.'));
+                $Mode = 'RESET';
+            } elseif ($approval_result !== false) {
+                // Pending approval — page already stopped by display_footer_exit()
+                return;
+            } else {
+                display_notification(_('Leave request has been created.'));
+            }
         }
         $Mode = 'RESET';
     }

@@ -258,10 +258,37 @@ function check_trans() {
 }
 
 if (isset($_POST['Process']) && !check_trans()) {
-	begin_transaction();
 
 	$_SESSION['pay_items'] = &$_SESSION['pay_items'];
 	$new = $_SESSION['pay_items']->order_id == 0;
+	$trans_type = $_SESSION['pay_items']->trans_type;
+
+	// --- Approval workflow check (new entries only) ---
+	if ($new) {
+		$draft_data = collect_items_cart_data($_SESSION['pay_items']);
+		$draft_data['bank_account']     = $_POST['bank_account'];
+		$draft_data['pay_type']         = $_POST['PayType'];
+		$draft_data['person_id']        = $_POST['person_id'];
+		$draft_data['person_detail_id'] = get_post('PersonDetailID');
+		$draft_data['settled_amount']   = input_num('settled_amount', null);
+		$amount = abs(get_items_cart_total($_SESSION['pay_items']));
+		$approval_result = approval_check_before_save($trans_type, $draft_data, $amount, array(
+			'summary'  => sprintf(_('%s: %s'), ($trans_type == ST_BANKPAYMENT ? _('Bank Payment') : _('Bank Deposit')), $_POST['ref']),
+			'currency' => get_bank_account_currency(get_post('bank_account')),
+		));
+		if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+			$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+			$_SESSION['pay_items']->clear_items();
+			unset($_SESSION['pay_items']);
+			new_doc_date($_POST['date_']);
+			meta_forward($_SERVER['PHP_SELF'], $trans_type==ST_BANKPAYMENT ? 'AddedID='.$trans_no : 'AddedDep='.$trans_no);
+		}
+		if ($approval_result !== false)
+			return; // pending approval
+	}
+	// --- End approval check ---
+
+	begin_transaction();
 
 	add_new_exchange_rate(get_bank_account_currency(get_post('bank_account')), get_post('date_'), input_num('_ex_rate'));
 

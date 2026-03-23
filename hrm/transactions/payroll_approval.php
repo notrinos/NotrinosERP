@@ -14,16 +14,61 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 
 page(_("Payroll Approval"));
+
+$approval_service = get_approval_workflow_service();
 
 foreach ($_POST as $name => $value) {
     if (strpos($name, 'Approve') === 0) {
         $period_id = (int)substr($name, 7);
         if ($period_id > 0) {
-            update_payroll_period_status($period_id, 2);
-            update_payroll_period_totals($period_id);
-            display_notification(_('Payroll period has been approved.'));
+            $period = get_payroll_period($period_id);
+            if (!$period) {
+                display_error(_('Payroll period not found.'));
+                continue;
+            }
+
+            $payroll_amount = (float)$period['total_net'];
+
+            // Check if core approval workflow is required
+            if ($approval_service->isApprovalRequired(ST_PAYROLL_PERIOD, $payroll_amount)) {
+                $payroll_draft_data = array(
+                    'period_id'        => $period_id,
+                    'period_name'      => $period['period_name'],
+                    'from_date'        => $period['from_date'],
+                    'to_date'          => $period['to_date'],
+                    'total_gross'      => (float)$period['total_gross'],
+                    'total_deductions' => (float)$period['total_deductions'],
+                    'total_net'        => $payroll_amount,
+                    'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
+                );
+
+                $approval_result = approval_check_before_save(
+                    ST_PAYROLL_PERIOD,
+                    $payroll_draft_data,
+                    $payroll_amount,
+                    array('summary' => sprintf(_('Payroll: %s, Net: %s'), $period['period_name'], number_format($payroll_amount, 2)))
+                );
+
+                if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                    display_notification(_('Payroll period has been approved (auto-approved).'));
+                } elseif ($approval_result !== false) {
+                    // Pending approval — page already stopped by display_footer_exit()
+                    return;
+                } else {
+                    // No workflow — fallback to direct approval
+                    update_payroll_period_status($period_id, 2);
+                    update_payroll_period_totals($period_id);
+                    display_notification(_('Payroll period has been approved.'));
+                }
+            } else {
+                // No approval required — direct approve
+                update_payroll_period_status($period_id, 2);
+                update_payroll_period_totals($period_id);
+                display_notification(_('Payroll period has been approved.'));
+            }
         }
     }
     if (strpos($name, 'Reopen') === 0) {

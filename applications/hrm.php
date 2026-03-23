@@ -79,6 +79,7 @@ class HrmApp extends application {
 		$this->add_rapp_function(2, _('L&oan Types'),               'hrm/manage/loan_types.php?',                          'SA_LOANTYPE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Import/Export &Employees'),  'hrm/manage/import_employees.php?',                    'SA_IMPORTEMP',         MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Import/Export Atte&ndance'), 'hrm/manage/import_attendance.php?',                   'SA_IMPORTATT',         MENU_SETTINGS);
+		$this->add_rapp_function(2, _('Migration &Validation'),     'hrm/manage/migration_validation.php?',                'SA_HRSETTINGS',        MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Appraisa&ls'),               'hrm/manage/appraisals.php?',                          'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Asset Allo&cation'),         'hrm/manage/asset_allocation.php?',                    'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('HR Settin&gs'),              'hrm/manage/hr_settings.php?',                         'SA_HRSETTINGS',        MENU_SETTINGS);

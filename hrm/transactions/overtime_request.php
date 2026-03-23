@@ -38,8 +38,41 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             update_overtime_request($selected_id, (int)$_POST['overtime_id'], $_POST['date'], input_num('hours'), $_POST['reason']);
             display_notification(_('Overtime request has been updated.'));
         } else {
-            add_overtime_request($_POST['employee_id'], (int)$_POST['overtime_id'], $_POST['date'], input_num('hours'), $_POST['reason']);
-            display_notification(_('Overtime request has been created.'));
+            $request_id = add_overtime_request($_POST['employee_id'], (int)$_POST['overtime_id'], $_POST['date'], input_num('hours'), $_POST['reason']);
+
+            // Check if approval workflow is required for overtime requests
+            $overtime_draft_data = array(
+                'request_id'  => $request_id,
+                'employee_id' => $_POST['employee_id'],
+                'overtime_id' => (int)$_POST['overtime_id'],
+                'date'        => $_POST['date'],
+                'hours'       => input_num('hours'),
+                'reason'      => $_POST['reason'],
+            );
+
+            // Fetch names for display
+            $overtime_request_row = get_overtime_request($request_id);
+            if ($overtime_request_row) {
+                $overtime_draft_data['employee_name'] = $overtime_request_row['employee_name'];
+                $overtime_draft_data['overtime_name'] = $overtime_request_row['overtime_name'];
+            }
+
+            $approval_result = approval_check_before_save(
+                ST_OVERTIME_REQUEST,
+                $overtime_draft_data,
+                input_num('hours'),
+                array('summary' => sprintf(_('Overtime: %s, %.1f hours'), $_POST['date'], input_num('hours')))
+            );
+
+            if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                display_notification(_('Overtime request has been created and automatically approved.'));
+                $Mode = 'RESET';
+            } elseif ($approval_result !== false) {
+                // Pending approval — page already stopped by display_footer_exit()
+                return;
+            } else {
+                display_notification(_('Overtime request has been created.'));
+            }
         }
         $Mode = 'RESET';
     }

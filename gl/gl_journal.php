@@ -299,6 +299,27 @@ if (isset($_POST['Process'])) {
 	}
 	else
 		$cart->tax_info = false;
+
+	// --- Approval workflow check (new entries only) ---
+	if ($new) {
+		$draft_data = collect_items_cart_data($cart);
+		$amount = abs($cart->gl_items_total_debit());
+		$approval_result = approval_check_before_save(ST_JOURNAL, $draft_data, $amount, array(
+			'summary'  => sprintf(_('Journal Entry: %s'), $cart->reference),
+			'currency' => $cart->currency,
+		));
+		if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+			$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+			$cart->clear_items();
+			new_doc_date($_POST['date_']);
+			unset($_SESSION['journal_items']);
+			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+		}
+		if ($approval_result !== false)
+			return; // pending approval — page already exited via display_footer_exit()
+	}
+	// --- End approval check ---
+
 	$trans_no = write_journal_entries($cart);
 
 	// retain the reconciled status if desired by user

@@ -424,6 +424,18 @@ include_once($path_to_root.'/includes/access_levels.inc');
 include_once($path_to_root.'/version.php');
 include_once($path_to_root.'/includes/main.inc');
 include_once($path_to_root.'/includes/app_entries.inc');
+include_once($path_to_root.'/includes/approval/approval_workflow.inc');
+
+// Register all core module transaction types for approval workflow
+include_once($path_to_root.'/includes/approval/registrations/gl_approval.inc');
+include_once($path_to_root.'/includes/approval/registrations/inventory_approval.inc');
+include_once($path_to_root.'/includes/approval/registrations/manufacturing_approval.inc');
+include_once($path_to_root.'/includes/approval/registrations/sales_approval.inc');
+include_once($path_to_root.'/includes/approval/registrations/purchasing_approval.inc');
+include_once($path_to_root.'/includes/approval/registrations/hrm_approval.inc');
+include_once($path_to_root.'/includes/approval/approval_delegation.inc');
+include_once($path_to_root.'/includes/approval/approval_escalation.inc');
+include_once($path_to_root.'/includes/approval/approval_conditions.inc');
 
 // Ajax communication object
 $Ajax = new Ajax();
@@ -436,6 +448,25 @@ $Editors = array();
 $Pagehelp = array();
 
 $Refs = new references();
+
+/**
+ * Get the singleton ApprovalWorkflow service instance.
+ *
+ * Creates an ApprovalWorkflow bound to the current session user's role and ID.
+ * The instance is cached per-request to avoid repeated construction.
+ *
+ * @return ApprovalWorkflow
+ */
+function get_approval_workflow_service()
+{
+	static $instance = null;
+	if ($instance === null) {
+		$role_id = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->access : 0;
+		$user_id = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0;
+		$instance = new ApprovalWorkflow($role_id, $user_id);
+	}
+	return $instance;
+}
 
 // intercept all output to destroy it in case of ajax call
 register_shutdown_function('end_flush');

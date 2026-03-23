@@ -708,6 +708,22 @@ if (isset($SysPrefs->prefs['use_hrm']) && $SysPrefs->prefs['use_hrm'] && user_ch
 }
 // ── End Human Resources ──────────────────────────────────────────────────────
 
+// ── Approval Workflow ────────────────────────────────────────────────────────
+if (!defined('RC_APPROVAL'))
+	define('RC_APPROVAL', 9);
+
+$reports->addReportClass(_('Approval Workflow'), RC_APPROVAL);
+$reports->addReport(RC_APPROVAL, 950, _('Approval &Summary Report'),
+	array(	_('Start Date') => 'DATEBEGINM',
+			_('End Date') => 'DATEENDM',
+			_('Transaction Type') => 'SYS_TYPES_ALL',
+			_('Status (0=Pending,1=Approved,2=Rejected,-1=All)') => 'TEXT',
+			_('Show Detail') => 'YES_NO',
+			_('Comments') => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
+// ── End Approval Workflow ────────────────────────────────────────────────────
+
 echo $reports->getDisplay();
 
 end_page();

@@ -242,10 +242,23 @@ class renderer {
 	function render_sidebar_applications($applications, $selected_application_id) {
 		global $path_to_root;
 
-		echo "<ul class='modern-app-switcher'>";
+		$visible_applications = array();
 		foreach ($applications as $application) {
 			if (!$_SESSION['wa_current_user']->check_application_access($application))
 				continue;
+
+			$visible_applications[] = $application;
+		}
+
+		$app_switcher_classes = 'modern-app-switcher-region';
+		$is_collapsible = count($visible_applications) > 9;
+		if ($is_collapsible)
+			$app_switcher_classes .= ' is-collapsible';
+
+		echo "<div class='".$app_switcher_classes."'>";
+		echo "<div class='modern-app-switcher-panel'>";
+		echo "<ul class='modern-app-switcher'>";
+		foreach ($visible_applications as $application) {
 			$access = access_string($application->name);
 			$tooltip_text = str_replace('&', '', strip_tags($access[0]));
 			$is_active = $selected_application_id == $application->id;
@@ -257,6 +270,8 @@ class renderer {
 			echo '</li>';
 		}
 		echo '</ul>';
+		echo '</div>';
+		echo '</div>';
 	}
 
 	/**

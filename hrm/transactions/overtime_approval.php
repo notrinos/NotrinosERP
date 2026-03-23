@@ -14,6 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
+include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 page(_("Overtime Approval"));
 
 simple_page_mode(false);
@@ -30,12 +31,38 @@ if (isset($_POST['approve']) || isset($_POST['reject'])) {
         display_error(_('Only pending requests can be processed.'));
     } else {
         $user = $_SESSION['wa_current_user']->loginname;
-        if (isset($_POST['approve'])) {
-            approve_overtime_request($request_id, $user);
-            display_notification(_('Overtime request has been approved.'));
+        $remarks = get_post('approval_remarks', '');
+
+        // Check for core approval draft linked to this request
+        $approval_service = get_approval_workflow_service();
+        $core_draft = find_approval_draft_for_hrm_request(ST_OVERTIME_REQUEST, $request_id);
+
+        if ($core_draft && (int)$core_draft['status'] === APPROVAL_STATUS_PENDING) {
+            // Use core approval workflow
+            if (isset($_POST['approve'])) {
+                $result = $approval_service->approve($core_draft['draft_id'], $remarks);
+                if ($result['status'] === 'error') {
+                    display_error($result['message']);
+                } else {
+                    display_notification($result['message']);
+                }
+            } else {
+                $result = $approval_service->reject($core_draft['draft_id'], $remarks);
+                if ($result['status'] === 'error') {
+                    display_error($result['message']);
+                } else {
+                    display_notification($result['message']);
+                }
+            }
         } else {
-            reject_overtime_request($request_id, $user);
-            display_notification(_('Overtime request has been rejected.'));
+            // Fallback: use legacy direct approval
+            if (isset($_POST['approve'])) {
+                approve_overtime_request($request_id, $user);
+                display_notification(_('Overtime request has been approved.'));
+            } else {
+                reject_overtime_request($request_id, $user);
+                display_notification(_('Overtime request has been rejected.'));
+            }
         }
     }
 }
@@ -90,6 +117,7 @@ if ($selected_request && (int)$selected_request['status'] == 0) {
     label_row(_('Overtime Type:'), $selected_request['overtime_name']);
     label_row(_('Date:'), sql2date($selected_request['date']));
     label_row(_('Hours:'), qty_format($selected_request['hours']));
+    textarea_row(_('Approval Remarks:'), 'approval_remarks', null, 50, 3);
     hidden('request_id', $selected_request['request_id']);
     end_table(1);
     submit_center_first('approve', _('Approve'));

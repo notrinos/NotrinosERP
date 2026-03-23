@@ -206,6 +206,38 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 		$_POST['cr_acc'] = '';
 	if (!isset($_POST['cr_lab_acc']))
 		$_POST['cr_lab_acc'] = '';
+
+	// --- Approval workflow check ---
+	$draft_data = array(
+		'wo_ref'      => $_POST['wo_ref'],
+		'location'    => $_POST['StockLocation'],
+		'quantity'    => input_num('quantity'),
+		'stock_id'    => $_POST['stock_id'],
+		'wo_type'     => $_POST['type'],
+		'date'        => $_POST['date_'],
+		'required_by' => $_POST['RequDate'],
+		'memo_'       => $_POST['memo_'],
+		'costs'       => input_num('Costs'),
+		'cr_acc'      => $_POST['cr_acc'],
+		'labour'      => input_num('Labour'),
+		'cr_lab_acc'  => $_POST['cr_lab_acc'],
+		'reference'   => $_POST['wo_ref'],
+	);
+	$wo_amount = input_num('Costs') + input_num('Labour');
+	$approval_result = approval_check_before_save(ST_WORKORDER, $draft_data, $wo_amount, array(
+		'summary'  => sprintf(_('Work Order: %s - %s'), $_POST['wo_ref'], $_POST['stock_id']),
+		'loc_code' => $_POST['StockLocation'],
+	));
+	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+		$id = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+		new_doc_date($_POST['date_']);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id.'&type='.$_POST['type'].'&date='.$_POST['date_']);
+	}
+	if ($approval_result !== false) {
+		return; // pending approval
+	}
+	// --- End approval check ---
+
 	$id = add_work_order($_POST['wo_ref'], $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['type'], $_POST['date_'], $_POST['RequDate'], $_POST['memo_'], input_num('Costs'), $_POST['cr_acc'], input_num('Labour'), $_POST['cr_lab_acc']);
 
 	new_doc_date($_POST['date_']);

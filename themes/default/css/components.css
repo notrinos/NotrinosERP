@@ -208,10 +208,57 @@
 	color: var(--modern-app-accent, var(--modern-color-primary));
 }
 
+.modern-app-switcher-region {
+	position: relative;
+	margin: 0 0 var(--modern-space-4);
+	z-index: 2;
+}
+
+.modern-app-switcher-panel {
+	position: relative;
+	box-sizing: border-box;
+	padding: 5px;
+	border: 1px solid transparent;
+	border-radius: calc(var(--modern-radius-sm) + 2px);
+}
+
+.modern-app-switcher-region.is-collapsible {
+	--modern-app-switcher-row-height: 72px;
+	--modern-app-switcher-visible-rows: 3;
+	--modern-app-switcher-gap: 10px;
+	--modern-app-switcher-panel-padding: 5px;
+	height: calc((var(--modern-app-switcher-row-height) * var(--modern-app-switcher-visible-rows)) + (var(--modern-app-switcher-gap) * (var(--modern-app-switcher-visible-rows) - 1)) + (var(--modern-app-switcher-panel-padding) * 2));
+}
+
+.modern-app-switcher-region.is-collapsible .modern-app-switcher-panel {
+	height: 100%;
+	overflow: hidden;
+	background: #fff;
+	/* scrollbar-gutter: stable; */
+}
+
+.modern-app-switcher-region.is-collapsible:hover,
+.modern-app-switcher-region.is-collapsible:focus-within {
+	z-index: 20;
+}
+
+.modern-app-switcher-region.is-collapsible:hover .modern-app-switcher-panel,
+.modern-app-switcher-region.is-collapsible:focus-within .modern-app-switcher-panel {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: auto;
+	max-height: min(420px, calc(100vh - 180px));
+	overflow-y: auto;
+	box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16), 0 6px 12px rgba(15, 23, 42, 0.08);
+	border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
 .modern-app-switcher {
 	list-style: none;
 	padding: 0;
-	margin: 0 0 var(--modern-space-4);
+	margin: 0;
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 10px;

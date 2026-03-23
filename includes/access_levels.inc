@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
-	Released under the terms of the GNU General Public License, GPL, 
-	as published by the Free Software Foundation, either version 3 
-	of the License, or (at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+    Copyright (C) NotrinosERP.
+    Released under the terms of the GNU General Public License, GPL,
+    as published by the Free Software Foundation, either version 3
+    of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /*
 	Security sections groups various areas on both functionality and privilege levels.
@@ -123,6 +123,7 @@ $security_areas =array(
 	'SA_WORKCENTRES' => array(SS_SETUP|12, _('Manufacture work centres')),
 	'SA_FORMSETUP' => array(SS_SETUP|13, _('Forms setup')),
 	'SA_CRMCATEGORY' => array(SS_SETUP|14, _('Contact categories')),
+	'SA_APPROVALRULES' => array(SS_SETUP|15, _('Approval workflow configuration')),
 
 	// Special and common functions
 	'SA_VOIDTRANSACTION' => array(SS_SPEC|1, _('Voiding transactions')),
@@ -132,6 +133,10 @@ $security_areas =array(
 	'SA_SETUPDISPLAY' => array(SS_SPEC|5, _('Display preferences')),
 	'SA_CHGPASSWD' => array(SS_SPEC|6, _('Password changes')),
 	'SA_EDITOTHERSTRANS' => array(SS_SPEC|7, _('Edit other users transactions')),
+	'SA_APPROVALBATCH' => array(SS_SPEC|8, _('Batch approval processing')),
+	'SA_APPROVALDIRECT' => array(SS_SPEC|9, _('Direct posting (bypass approval)')),
+	'SA_APPROVALDASHBOARD' => array(SS_SPEC|10, _('Approval dashboard')),
+	'SA_APPROVALINQUIRY' => array(SS_SPEC|11, _('Approval history inquiry')),
 
 	// Sales related functionality
 	'SA_SALESTYPES' => array(SS_SALES_C|1, _('Sales types')),

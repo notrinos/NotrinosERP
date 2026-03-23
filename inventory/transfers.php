@@ -133,6 +133,30 @@ if (isset($_POST['Process'])) {
 
 if (isset($_POST['Process'])) {
 
+	// --- Approval workflow check ---
+	$draft_data = collect_items_cart_data($_SESSION['transfer_items']);
+	$draft_data['from_location'] = $_POST['FromStockLocation'];
+	$draft_data['to_location']   = $_POST['ToStockLocation'];
+	$draft_data['date']          = $_POST['AdjDate'];
+	$draft_data['reference']     = $_POST['ref'];
+	$draft_data['memo_']         = $_POST['memo_'];
+	$amount = get_items_cart_total($_SESSION['transfer_items']);
+	$approval_result = approval_check_before_save(ST_LOCTRANSFER, $draft_data, $amount, array(
+		'summary'  => sprintf(_('Inventory Transfer: %s'), $_POST['ref']),
+		'loc_code' => $_POST['FromStockLocation'],
+	));
+	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+		$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+		$_SESSION['transfer_items']->clear_items();
+		unset($_SESSION['transfer_items']);
+		new_doc_date($_POST['AdjDate']);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+	}
+	if ($approval_result !== false) {
+		return; // pending approval
+	}
+	// --- End approval check ---
+
 	$trans_no = add_stock_transfer($_SESSION['transfer_items']->line_items, $_POST['FromStockLocation'], $_POST['ToStockLocation'], $_POST['AdjDate'], $_POST['ref'], $_POST['memo_']);
 	new_doc_date($_POST['AdjDate']);
 	$_SESSION['transfer_items']->clear_items();

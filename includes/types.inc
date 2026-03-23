@@ -38,6 +38,9 @@ define('ST_MANURECEIVE', 29);
 
 define('ST_PAYSLIP', 80);
 define('ST_EMPPAYMENT', 81);
+define('ST_LEAVE_REQUEST', 82);
+define('ST_OVERTIME_REQUEST', 83);
+define('ST_PAYROLL_PERIOD', 84);
 
 //
 //	Depreciation period types

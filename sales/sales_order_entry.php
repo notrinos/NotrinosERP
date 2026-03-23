@@ -467,6 +467,34 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 
 	$modified = ($_SESSION['Items']->trans_no != 0);
 	$so_type = $_SESSION['Items']->so_type;
+	$trans_type = $_SESSION['Items']->trans_type;
+
+	// --- Approval workflow check (new orders/deliveries only) ---
+	if (!$modified && ($trans_type == ST_SALESORDER || $trans_type == ST_CUSTDELIVERY)) {
+		$draft_data = collect_sales_cart_data($_SESSION['Items']);
+		$draft_data['so_type'] = $so_type;
+		$amount = $_SESSION['Items']->get_items_total();
+		$approval_result = approval_check_before_save($trans_type, $draft_data, $amount, array(
+			'summary'     => sprintf(_('%s to %s'), ($trans_type == ST_SALESORDER ? _('Sales Order') : _('Delivery')), $_SESSION['Items']->customer_name),
+			'date'        => $_SESSION['Items']->document_date,
+			'currency'    => $_SESSION['Items']->customer_currency,
+			'person_type' => PT_CUSTOMER,
+			'person_id'   => $_SESSION['Items']->customer_id,
+		));
+		if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+			$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+			new_doc_date($_SESSION['Items']->document_date);
+			processing_end();
+			if ($trans_type == ST_SALESORDER)
+				meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+			else
+				meta_forward($_SERVER['PHP_SELF'], 'AddedDN='.$trans_no.'&Type='.$so_type);
+		}
+		if ($approval_result !== false) {
+			return; // pending approval
+		}
+	}
+	// --- End approval check ---
 
 	$ret = $_SESSION['Items']->write(1);
 	if ($ret == -1) {

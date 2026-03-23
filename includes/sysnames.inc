@@ -45,7 +45,10 @@ $systypes_array = array (
 	ST_FIXEDASSET => _('Fixed Asset'),
 	ST_BANKACCOUNT => _("Bank Account"),
 	ST_PAYSLIP    => _('Employee Payslip'),
-	ST_EMPPAYMENT => _('Employee Payment')
+	ST_EMPPAYMENT => _('Employee Payment'),
+	ST_LEAVE_REQUEST => _('Leave Request'),
+	ST_OVERTIME_REQUEST => _('Overtime Request'),
+	ST_PAYROLL_PERIOD => _('Payroll Period')
 );
 
 $fa_systypes_array = array (
@@ -77,7 +80,10 @@ $type_shortcuts = array(
 	ST_COSTUPDATE => _('CU'),
 	ST_DIMENSION  => _('Dim'),
 	ST_PAYSLIP    => _('PS'),
-	ST_EMPPAYMENT => _('EP')
+	ST_EMPPAYMENT => _('EP'),
+	ST_LEAVE_REQUEST => _('LR'),
+	ST_OVERTIME_REQUEST => _('OT'),
+	ST_PAYROLL_PERIOD => _('PP')
 );
 
 //----------------------------------------------------------------------------------

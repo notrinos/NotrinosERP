@@ -337,6 +337,27 @@ if (isset($_POST['process_invoice']) && check_data()) {
 	if ($newinvoice) 
 		new_doc_date($_SESSION['Items']->document_date);
 
+	// --- Approval workflow check (new invoices only) ---
+	if ($newinvoice) {
+		$draft_data = collect_sales_cart_data($_SESSION['Items']);
+		$amount = $_SESSION['Items']->get_items_total();
+		$approval_result = approval_check_before_save(ST_SALESINVOICE, $draft_data, $amount, array(
+			'summary'     => sprintf(_('Sales Invoice to %s'), $_SESSION['Items']->customer_name),
+			'currency'    => $_SESSION['Items']->customer_currency,
+			'person_type' => PT_CUSTOMER,
+			'person_id'   => $_SESSION['Items']->customer_id,
+		));
+		if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+			$invoice_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+			processing_end();
+			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$invoice_no);
+		}
+		if ($approval_result !== false) {
+			return; // pending approval
+		}
+	}
+	// --- End approval check ---
+
 	$invoice_no = $_SESSION['Items']->write();
 	if ($invoice_no == -1) {
 		display_error(_('The entered reference is already in use.'));

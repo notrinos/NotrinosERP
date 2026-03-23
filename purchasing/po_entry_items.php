@@ -383,6 +383,32 @@ function handle_commit_order() {
 		copy_to_cart();
 		new_doc_date($cart->orig_order_date);
 		if ($cart->order_no == 0) { // new po/grn/invoice
+
+			// --- Approval workflow check (new orders only) ---
+			$trans_type = $cart->trans_type;
+			if ($trans_type == ST_PURCHORDER || $trans_type == ST_SUPPINVOICE) {
+				$draft_data = collect_purchase_order_data($cart);
+				$amount = $cart->get_trans_total();
+				$approval_result = approval_check_before_save($trans_type, $draft_data, $amount, array(
+					'summary'     => sprintf(_('%s from %s'), ($trans_type == ST_PURCHORDER ? _('Purchase Order') : _('Supplier Invoice')), $cart->supplier_name),
+					'currency'    => $cart->curr_code,
+					'person_type' => PT_SUPPLIER,
+					'person_id'   => $cart->supplier_id,
+				));
+				if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+					$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+					unset($_SESSION['PO']);
+					if ($trans_type == ST_PURCHORDER)
+						meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+					else
+						meta_forward($_SERVER['PHP_SELF'], 'AddedPI='.$trans_no);
+				}
+				if ($approval_result !== false) {
+					return; // pending approval
+				}
+			}
+			// --- End approval check ---
+
 			$trans_no = add_direct_supp_trans($cart);
 			if ($trans_no) {
 				unset($_SESSION['PO']);

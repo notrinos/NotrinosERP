@@ -134,6 +134,32 @@ if (isset($_POST['Process']) && can_process()){
 
 	$fixed_asset = $_SESSION['adj_items']->fixed_asset; 
 
+	// --- Approval workflow check ---
+	$draft_data = collect_items_cart_data($_SESSION['adj_items']);
+	$draft_data['location']  = $_POST['StockLocation'];
+	$draft_data['date']      = $_POST['AdjDate'];
+	$draft_data['reference'] = $_POST['ref'];
+	$draft_data['memo_']     = $_POST['memo_'];
+	$amount = get_items_cart_total($_SESSION['adj_items']);
+	$approval_result = approval_check_before_save(ST_INVADJUST, $draft_data, $amount, array(
+		'summary'  => sprintf(_('Inventory Adjustment: %s'), $_POST['ref']),
+		'loc_code' => $_POST['StockLocation'],
+	));
+	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+		$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
+		$_SESSION['adj_items']->clear_items();
+		unset($_SESSION['adj_items']);
+		new_doc_date($_POST['AdjDate']);
+		if ($fixed_asset)
+			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no.'&FixedAsset=1');
+		else
+			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+	}
+	if ($approval_result !== false) {
+		return; // pending approval
+	}
+	// --- End approval check ---
+
 	$trans_no = add_stock_adjustment($_SESSION['adj_items']->line_items, $_POST['StockLocation'], $_POST['AdjDate'],	$_POST['ref'], $_POST['memo_']);
 	new_doc_date($_POST['AdjDate']);
 	$_SESSION['adj_items']->clear_items();
