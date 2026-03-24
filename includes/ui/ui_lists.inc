@@ -830,6 +830,9 @@ function stock_items_list_cells($label, $name, $selected_id=null, $all_option=fa
 // Select item via foreign code.
 //
 function sales_items_list($name, $selected_id=null, $all_option=false, $submit_on_change=false, $type='', $opts=array(), $editkey=false) {
+	if ($editkey)
+		set_editor('item', $name, $editkey);
+
 	// all sales codes
 	$sql = "SELECT i.item_code, i.description, c.description, count(*)>1 as kit,
 			 i.inactive, if(count(*)>1, '0', s.editable) as editable
@@ -871,9 +874,6 @@ function sales_items_list($name, $selected_id=null, $all_option=false, $submit_o
 }
 
 function sales_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $editkey=false) {
-	if ($editkey)
-		set_editor('item', $name, $editkey);
-
 	filter_cell_open($label);
 	echo sales_items_list($name, $selected_id, $all_option, $submit_on_change,
 		'', array('cells'=>true, 'max'=>50), $editkey); // maximum is set to 50 and not default 255.
