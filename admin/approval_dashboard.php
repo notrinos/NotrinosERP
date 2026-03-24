@@ -197,7 +197,7 @@ function dashboard_view_link($row)
 {
 	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "' target='_blank' "
 		. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
-		. "<i class='fas fa-search' style='margin-right:4px;'></i>"
+		. default_theme_icon('search')
 		. _('View') . "</a>";
 }
 
@@ -437,7 +437,7 @@ foreach ($approvable_types as $type_id => $type_label) {
 	$type_options[$type_id] = $type_label;
 }
 
-echo "<td>" . _('Transaction Type') . ":</td><td>";
+echo "<td>";
 echo array_selector('filter_trans_type', get_post('filter_trans_type'), $type_options,
 	array('select_submit' => true));
 echo "</td>";

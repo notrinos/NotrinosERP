@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 /**
- * Employee dependents/family CRUD — per HRM_DEVELOPMENT_PLAN.md
+ * Employee dependents/family CRUD - per HRM_DEVELOPMENT_PLAN.md
  */
 
 function add_employee_dependent($employee_id, $name, $relationship, $birth_date='', $gender=0, $national_id='', $is_beneficiary=0) {

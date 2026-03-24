@@ -6,8 +6,6 @@
 	Provides a searchable, filterable view of all approval drafts
 	across the system. Supports filtering by status, transaction type,
 	date range, submitter, and reference number.
-
-	Phase 3 of the Approval System Development Plan.
 ***********************************************************************/
 $page_security = 'SA_APPROVALINQUIRY';
 $path_to_root = '..';
@@ -84,7 +82,7 @@ function inquiry_view_link($row)
 {
 	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "' target='_blank' "
 		. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
-		. "<i class='fas fa-search' style='margin-right:4px;'></i>"
+		. default_theme_icon('search')
 		. _('View') . "</a>";
 }
 
@@ -152,7 +150,7 @@ $type_options = array('' => _('All Types'));
 foreach ($approvable_types as $type_id => $type_label) {
 	$type_options[$type_id] = $type_label;
 }
-echo "<td>" . _('Type') . ":</td><td>";
+echo "<td>";
 echo array_selector('filter_trans_type', get_post('filter_trans_type'), $type_options,
 	array('select_submit' => true));
 echo "</td>";
@@ -166,7 +164,7 @@ $status_options = array(
 	APPROVAL_STATUS_CANCELLED => _('Cancelled'),
 	APPROVAL_STATUS_EXPIRED   => _('Expired'),
 );
-echo "<td>" . _('Status') . ":</td><td>";
+echo "<td>";
 echo array_selector('filter_status', get_post('filter_status', '-1'), $status_options,
 	array('select_submit' => true));
 echo "</td>";
@@ -182,11 +180,11 @@ date_cells(_('To:'), 'filter_to_date', '', null, 0, 0, 0,
 
 // Submitter filter
 $users = get_users_for_delegation();
-$user_options = array('' => _('All Users'));
+$user_options = array('' => _('All Submitters'));
 foreach ($users as $uid => $uname) {
 	$user_options[$uid] = $uname;
 }
-echo "<td>" . _('Submitted By') . ":</td><td>";
+echo "<td>";
 echo array_selector('filter_submitter', get_post('filter_submitter'), $user_options,
 	array('select_submit' => true));
 echo "</td>";
@@ -195,9 +193,9 @@ end_row();
 start_row();
 
 // Reference search
-text_cells(_('Reference:'), 'filter_reference', get_post('filter_reference'), 20, 30);
+ref_cells(_('Reference:'), 'filter_reference', '', null, _('Enter reference fragment or leave empty'));
 
-submit_cells('SearchInquiry', _('Search'), '', _('Apply filters and search'), 'default');
+submit_cells('SearchInquiry', _('Apply Filter'), '', _('Apply filters and search'), 'default');
 
 end_row();
 end_table();

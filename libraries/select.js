@@ -29,7 +29,25 @@ var loadSelect2 = {
 				}
 			});
 			$(e).on('select2:close', function() {
-				$(this).focus();
+				var mainContent = document.getElementById('modern-main-content');
+				var selectElementRect = this.getBoundingClientRect();
+				var isInsideViewport = true;
+
+				if (mainContent) {
+					var mainContentRect = mainContent.getBoundingClientRect();
+					isInsideViewport = selectElementRect.top >= mainContentRect.top
+						&& selectElementRect.bottom <= mainContentRect.bottom;
+				}
+
+				// Prevent off-screen refocus from forcing the main content scroll position.
+				if (isInsideViewport) {
+					$(this).focus();
+				}
+
+				if (window.jQuery) {
+					$('.modern-main-content, .modern-sidebar').off('scroll.select2');
+					$(window).off('scroll.select2 resize.select2 orientationchange.select2');
+				}
 			});
 			$(e).on('select2:open', function(e2){
 

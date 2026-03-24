@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -73,8 +73,7 @@ function init_css() {
 
 	if (!isset($css_files)) {
 		$css_files = array(
-			$path_to_root.'/libraries/select2.min.css',
-			$path_to_root.'/libraries/fontawesome/css/all.min.css'
+			$path_to_root.'/libraries/select2.min.css'
 		);
 
 		$modern_css_files = array('variables.css', 'base.css', 'layout.css', 'components.css', 'tables.css', 'forms.css', 'responsive.css');

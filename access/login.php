@@ -65,7 +65,6 @@ echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
 echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
 
@@ -95,12 +94,12 @@ if (!$login_timeout)
 $value = $login_timeout ? $_SESSION['wa_current_user']->loginname : ($SysPrefs->allow_demo_mode ? 'demouser' : '');
 
 // Username field
-echo "<div class='login-field'><div class='input_container'><i class='fas fa-user' title='"._('User')."'></i>";
+echo "<div class='login-field'><div class='input_container'>".default_theme_icon('user', '', _('User'));
 echo "<input required class='input' id='user' name='user_name_entry_field' type='text' placeholder='"._('User name')."' value='".htmlspecialchars($value)."'></div></div>\n";
 
 // Password field
 $password = $SysPrefs->allow_demo_mode ? 'password' : '';
-echo "<div class='login-field'><div class='input_container'><i class='fas fa-key' title='"._('Password')."'></i>";
+echo "<div class='login-field'><div class='input_container'>".default_theme_icon('key', '', _('Password'));
 echo "<input required class='input' id='pass' name='password' type='password' placeholder='"._('Password')."' value='".htmlspecialchars($password)."'></div></div>\n";
 
 // Company selector
@@ -111,7 +110,7 @@ else {
 	if (!isset($coy))
 		$coy = $def_coy;
 
-	echo "<div class='login-field'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
+	echo "<div class='login-field'><div class='input_container'>".default_theme_icon('building', '', _('Company'));
 	if (isset($db_connections)) {
 		if (!@$SysPrefs->text_company_selection) {
 			echo "<select name='company_login_name'>\n";

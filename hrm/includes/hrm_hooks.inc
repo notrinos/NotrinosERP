@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 /**
- * HRM Hook System — per HRM_DEVELOPMENT_PLAN.md Section 8.3
+ * HRM Hook System
  * Allows extensions to inject behavior at key points.
  *
  * Usage:
@@ -78,9 +78,9 @@ function hrm_remove_hook($event, $callback=null) {
 	}
 }
 
-// ══════════════════════════════════════════
+// ------------------------------------------
 // AVAILABLE HOOK POINTS:
-// ══════════════════════════════════════════
+// ------------------------------------------
 //
 // PAYROLL:
 //   before_calculate_payslip(&$employee, $from_date, $to_date)

@@ -155,7 +155,7 @@ function submit($name, $value, $echo=true, $title=false, $atype=false, $icon=fal
 		." name=\"$name\"  id=\"$name\" value=\"$value\""
 		.($title ? " title='$title'" : '')
 		.">"
-		.($icon ? "<i class='".$icon."'></i>" : '')
+		.($icon ? set_icon($icon) : '')
 		."<span>$value</span>"
 		."</button>\n";
 	if ($echo)
@@ -281,7 +281,37 @@ function submit_js_confirm($name, $msg, $set = true) {
 //-----------------------------------------------------------------------------------
 
 function set_icon($icon, $title=false) {
-	return "<i class='".$icon."'".($title ? " title='".$title."'" : '')."></i>";
+	$icon = trim((string)$icon);
+	if ($icon === '')
+		return '';
+
+	$icon_name = '';
+	$decorative_classes = array();
+	$tokens = preg_split('/\s+/', $icon);
+	foreach ($tokens as $token) {
+		if ($token === '')
+			continue;
+		if (strpos($token, 'btn_') === 0 || strpos($token, 'nerp-') === 0) {
+			$decorative_classes[] = $token;
+			continue;
+		}
+		if ($icon_name === '') {
+			$icon_name = $token;
+			continue;
+		}
+		$decorative_classes[] = $token;
+	}
+
+	if ($icon_name === '')
+		$icon_name = 'chevron-right';
+
+	if (function_exists('theme_icon'))
+		return theme_icon($icon_name, implode(' ', $decorative_classes), $title ? $title : '');
+
+	if (function_exists('default_theme_icon'))
+		return default_theme_icon($icon_name, implode(' ', $decorative_classes), $title ? $title : '');
+
+	return "<span class='".htmlspecialchars($icon_name, ENT_QUOTES, 'UTF-8')."'".($title ? " title='".htmlspecialchars($title, ENT_QUOTES, 'UTF-8')."'" : '')."></span>";
 }
 
 function button($name, $value, $title=false, $icon=false,  $aspect='') {
@@ -732,7 +762,7 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 		}
 		if (user_use_date_picker()) {
 			$date_icon = "<a tabindex='-1' href=\"javascript:date_picker(document.getElementsByName('$name')[0]);\">"
-				. "	<i class='btn_grey far fa-calendar-alt'></i></a>\n";
+				. default_theme_icon('calendar')."</a>\n";
 		} else
 			$date_icon = '';
 		echo "<div class='filter-field'>\n";
@@ -768,10 +798,8 @@ function date_cells($label, $name, $title=null, $check=null, $inc_days=0, $inc_m
 		}
 	}
 	if (user_use_date_picker()) {
-		$calc_image = (file_exists($path_to_root.'/themes/'.user_theme().'/images/cal.svg')) ? 
-			$path_to_root.'/themes/'.user_theme().'/images/cal.svg' : $path_to_root.'/themes/default/images/cal.svg';
 		$post_label = "<a tabindex='-1' href=\"javascript:date_picker(document.getElementsByName('$name')[0]);\">"
-		. "	<i class='btn_grey far fa-calendar-alt'></i></a>\n";
+		. default_theme_icon('calendar')."</a>\n";
 	}	
 	else
 		$post_label = '';

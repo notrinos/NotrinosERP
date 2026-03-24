@@ -82,6 +82,28 @@ button {
 	font-size: 12px;
 }
 
+.nerp-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.05em;
+	height: 1.05em;
+	margin-right: 6px;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+html[dir='rtl'] .nerp-icon {
+	margin-right: 0;
+	margin-left: 6px;
+}
+
+.nerp-icon svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
 input,
 select,
 textarea {
@@ -169,7 +191,12 @@ input[type='button']:hover {
 .modern-app-shell button.inputsubmit > i,
 .modern-app-shell button.editbutton > i,
 .modern-app-shell button.navibutton > i,
-.modern-app-shell button.default > i {
+.modern-app-shell button.default > i,
+.modern-app-shell button.ajaxsubmit > .nerp-icon,
+.modern-app-shell button.inputsubmit > .nerp-icon,
+.modern-app-shell button.editbutton > .nerp-icon,
+.modern-app-shell button.navibutton > .nerp-icon,
+.modern-app-shell button.default > .nerp-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

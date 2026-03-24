@@ -138,21 +138,21 @@ function display_approval_progress_bar($draft, $max_level)
 function format_approval_action_badge($action_type)
 {
 	$badges = array(
-		'submit'    => array('bg' => '#007bff', 'icon' => 'fas fa-paper-plane', 'label' => _('Submitted')),
-		'approve'   => array('bg' => '#28a745', 'icon' => 'fas fa-check',       'label' => _('Approved')),
-		'reject'    => array('bg' => '#dc3545', 'icon' => 'fas fa-times',       'label' => _('Rejected')),
-		'cancel'    => array('bg' => '#6c757d', 'icon' => 'fas fa-ban',         'label' => _('Cancelled')),
-		'delegate'  => array('bg' => '#17a2b8', 'icon' => 'fas fa-share',       'label' => _('Delegated')),
-		'escalate'  => array('bg' => '#fd7e14', 'icon' => 'fas fa-arrow-up',    'label' => _('Escalated')),
-		'edit'      => array('bg' => '#ffc107', 'icon' => 'fas fa-pen',         'label' => _('Edited')),
-		'resubmit'  => array('bg' => '#6610f2', 'icon' => 'fas fa-redo',        'label' => _('Resubmitted')),
+		'submit'    => array('bg' => '#007bff', 'icon' => 'send',       'label' => _('Submitted')),
+		'approve'   => array('bg' => '#28a745', 'icon' => 'check',      'label' => _('Approved')),
+		'reject'    => array('bg' => '#dc3545', 'icon' => 'x',          'label' => _('Rejected')),
+		'cancel'    => array('bg' => '#6c757d', 'icon' => 'x-circle',   'label' => _('Cancelled')),
+		'delegate'  => array('bg' => '#17a2b8', 'icon' => 'share',      'label' => _('Delegated')),
+		'escalate'  => array('bg' => '#fd7e14', 'icon' => 'arrow-up',   'label' => _('Escalated')),
+		'edit'      => array('bg' => '#ffc107', 'icon' => 'edit',       'label' => _('Edited')),
+		'resubmit'  => array('bg' => '#6610f2', 'icon' => 'undo',       'label' => _('Resubmitted')),
 	);
 
 	if (isset($badges[$action_type])) {
 		$badge = $badges[$action_type];
 		return "<span style='display:inline-block;padding:2px 8px;border-radius:3px;"
 			. "background:{$badge['bg']};color:#fff;font-size:11px;white-space:nowrap;'>"
-			. "<i class='{$badge['icon']}' style='margin-right:4px;'></i>"
+			. default_theme_icon($badge['icon'])
 			. $badge['label'] . "</span>";
 	}
 

@@ -2290,6 +2290,10 @@ CREATE TABLE `0_workorders` (
 -- Data of table `0_workorders` --
 
 -- =============================================================
+-- NEW HRM TABLES
+-- =============================================================
+
+-- =============================================================
 -- ATTENDANCE DEDUCTION RULES
 -- =============================================================
 
@@ -3082,3 +3086,151 @@ CREATE TABLE IF NOT EXISTS `0_employee_asset_allocation` (
 -- END OF NEW HRM TABLES
 -- =============================================================
 
+-- =====================================================
+-- Table: approval_workflows
+-- Defines which transaction types have approval enabled
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_workflows`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_workflows` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`trans_type`      INT(11)      NOT NULL,
+	`name`            VARCHAR(100) NOT NULL DEFAULT '',
+	`description`     VARCHAR(255) NOT NULL DEFAULT '',
+	`is_active`       TINYINT(1)   NOT NULL DEFAULT 1,
+	`require_comments_on_reject` TINYINT(1) NOT NULL DEFAULT 1,
+	`require_comments_on_approve` TINYINT(1) NOT NULL DEFAULT 0,
+	`allow_edit_on_approve` TINYINT(1) NOT NULL DEFAULT 0,
+	`allow_self_approve` TINYINT(1) NOT NULL DEFAULT 0,
+	`created_by`      SMALLINT(6)  NOT NULL,
+	`created_date`    DATETIME     NOT NULL,
+	`modified_by`     SMALLINT(6)  DEFAULT NULL,
+	`modified_date`   DATETIME     DEFAULT NULL,
+	`version`         INT(11)      NOT NULL DEFAULT 1,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `trans_type` (`trans_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- =====================================================
+-- Table: approval_levels
+-- Multi-level approval configuration per workflow
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_levels`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_levels` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`workflow_id`     INT(11)      NOT NULL,
+	`level`           SMALLINT(6)  NOT NULL,
+	`role_id`         INT(11)      NOT NULL,
+	`min_approvers`   SMALLINT(6)  NOT NULL DEFAULT 1,
+	`amount_threshold` DOUBLE      NOT NULL DEFAULT 0 COMMENT 'Auto-approve if trans amount <= this value',
+	`amount_upper`    DOUBLE       NOT NULL DEFAULT 0 COMMENT 'This level required only if amount > threshold of previous level',
+	`escalation_days` SMALLINT(6)  NOT NULL DEFAULT 0 COMMENT '0 = no escalation',
+	`escalation_to_level` SMALLINT(6) DEFAULT NULL COMMENT 'Level to escalate to after timeout',
+	`loc_code`        VARCHAR(20)  DEFAULT NULL COMMENT 'Location restriction (NULL = all locations)',
+	`conditions` 	  TEXT         DEFAULT NULL COMMENT 'JSON conditions for level applicability',
+	`is_active`       TINYINT(1)   NOT NULL DEFAULT 1,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `workflow_role_level` (`workflow_id`, `level`, `role_id`),
+	KEY `workflow_level` (`workflow_id`, `level`),
+	KEY `role_id` (`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- =====================================================
+-- Table: approval_drafts
+-- Stores pending/processed draft transactions
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_drafts`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_drafts` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`workflow_id`     INT(11)      NOT NULL,
+	`trans_type`      INT(11)      NOT NULL,
+	`reserved_trans_no` INT(11)    NOT NULL COMMENT 'Reserved number from transaction sequence',
+	`draft_data`      MEDIUMTEXT   NOT NULL COMMENT 'JSON-encoded transaction data',
+	`amount`          DOUBLE       NOT NULL DEFAULT 0,
+	`currency`        VARCHAR(3)   DEFAULT NULL,
+	`person_type_id`  INT(11)      DEFAULT NULL,
+	`person_id`       VARCHAR(60)  DEFAULT NULL,
+	`current_level`   SMALLINT(6)  NOT NULL DEFAULT 0,
+	`status`          TINYINT(2)   NOT NULL DEFAULT 0 COMMENT '0=pending,1=approved,2=rejected,3=cancelled,4=expired,5=delegated',
+	`submitted_by`    SMALLINT(6)  NOT NULL,
+	`submitted_date`  DATETIME     NOT NULL,
+	`approved_trans_no` INT(11)    DEFAULT NULL COMMENT 'Actual trans_no after approval execution',
+	`completed_date`  DATETIME     DEFAULT NULL,
+	`workflow_version` INT(11)     NOT NULL DEFAULT 1 COMMENT 'Snapshot of workflow version at submission',
+	`reference`       VARCHAR(100) DEFAULT NULL COMMENT 'Generated reference string',
+	`summary`         VARCHAR(255) DEFAULT NULL COMMENT 'Human-readable summary of draft',
+	`loc_code`        VARCHAR(20)  DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_status` (`status`),
+	KEY `idx_trans_type` (`trans_type`),
+	KEY `idx_submitted_by` (`submitted_by`),
+	KEY `idx_reserved_no` (`trans_type`, `reserved_trans_no`),
+	KEY `idx_workflow` (`workflow_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- =====================================================
+-- Table: approval_actions
+-- Complete audit trail of all approval workflow actions
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_actions`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_actions` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`draft_id`        INT(11)      NOT NULL,
+	`action_type`     VARCHAR(20)  NOT NULL COMMENT 'submit,approve,reject,delegate,escalate,cancel,edit,resubmit',
+	`user_id`         SMALLINT(6)  NOT NULL,
+	`level`           SMALLINT(6)  NOT NULL DEFAULT 0,
+	`comments`        TEXT         DEFAULT NULL,
+	`draft_data_snapshot` MEDIUMTEXT DEFAULT NULL COMMENT 'JSON snapshot if edited',
+	`action_date`     DATETIME     NOT NULL,
+	`ip_address`      VARCHAR(45)  DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_draft` (`draft_id`),
+	KEY `idx_user` (`user_id`),
+	KEY `idx_date` (`action_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- =====================================================
+-- Table: approval_delegations
+-- Active delegation assignments
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_delegations`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_delegations` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`from_user_id`    SMALLINT(6)  NOT NULL,
+	`to_user_id`      SMALLINT(6)  NOT NULL,
+	`trans_type`      INT(11)      DEFAULT NULL COMMENT 'NULL = all types',
+	`from_date`       DATE         NOT NULL,
+	`to_date`         DATE         DEFAULT NULL,
+	`reason`          VARCHAR(255) DEFAULT NULL,
+	`is_active`       TINYINT(1)   NOT NULL DEFAULT 1,
+	`created_date`    DATETIME     NOT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_active` (`is_active`, `from_date`, `to_date`),
+	KEY `idx_from_user` (`from_user_id`),
+	KEY `idx_to_user` (`to_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- =====================================================
+-- Table: approval_notifications
+-- Notification queue for approval events
+-- =====================================================
+DROP TABLE IF EXISTS `0_approval_notifications`;
+
+CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`draft_id`        INT(11)      NOT NULL,
+	`user_id`         SMALLINT(6)  NOT NULL,
+	`notification_type` VARCHAR(30) NOT NULL COMMENT 'pending,approved,rejected,escalated,delegated',
+	`is_read`         TINYINT(1)   NOT NULL DEFAULT 0,
+	`is_sent`         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Email sent flag',
+	`created_date`    DATETIME     NOT NULL,
+	`read_date`       DATETIME     DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_user_unread` (`user_id`, `is_read`),
+	KEY `idx_unsent` (`is_sent`),
+	KEY `idx_draft` (`draft_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

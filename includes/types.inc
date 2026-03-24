@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -251,6 +251,7 @@ define('BO_CUSTBRANCH', 2);
 define('BO_SUPPLIER', 3);
 
 include_once($path_to_root.'/includes/sysnames.inc');
+include_once($path_to_root.'/themes/default/icon_registry.inc.php');
 
 // tax register type
 define('TR_OUTPUT', 0); // sales
@@ -258,24 +259,24 @@ define('TR_INPUT', 1);	// purchase
 //---------------------------------------------------------------------------------
 // Constants optionally redefined locally
 //
-defined('ICON_EDIT') || define('ICON_EDIT', 'btn_warning fas fa-pen');
-defined('ICON_DELETE') || define('ICON_DELETE', 'btn_danger fas fa-trash-alt');
-defined('ICON_ADD')	|| define('ICON_ADD', 'btn_ok fas fa-check-circle');
-defined('ICON_UPDATE') || define('ICON_UPDATE', 'btn_ok fas fa-check-circle');
-defined('ICON_OK') || define('ICON_OK', 'btn_ok fas fa-check-circle');
-defined('ICON_CANCEL') || define('ICON_CANCEL', 'btn_danger fas fa-times-circle');
-defined('ICON_GL') || define('ICON_GL', 'fas fa-book');
-defined('ICON_PRINT') || define('ICON_PRINT', 'btn_grey fas fa-print');
-defined('ICON_PDF') || define('ICON_PDF', 'fas fa-file-pdf');
-defined('ICON_DOC') || define('ICON_DOC', 'btn_ok fas fa-file-export');
-defined('ICON_CREDIT') || define('ICON_CREDIT', 'btn_green fas fa-file-import');
-defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'btn_ok fas fa-file-import');
-defined('ICON_DOWN') || define('ICON_DOWN', 'btn_ok fas fa-cloud-download-alt');
-defined('ICON_MONEY') || define('ICON_MONEY', 'btn_green far fa-money-bill-alt');
-defined('ICON_REMOVE') || define('ICON_REMOVE', 'btn_danger fas fa-trash-alt');
-defined('ICON_REPORT') || define('ICON_REPORT', 'fas fa-file-pdf');
-defined('ICON_VIEW') || define('ICON_VIEW', 'fas fa-search');
-defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'btn_ok fas fa-check-circle');
-defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'btn_danger fas fa-times-circle');
-defined('ICON_ALLOC') || define('ICON_ALLOC', 'fas fa-exchange-alt');
-defined('ICON_CLOSED') || define('ICON_CLOSED', 'btn_danger fas fa-times-circle');
+defined('ICON_EDIT') || define('ICON_EDIT', 'btn_warning edit');
+defined('ICON_DELETE') || define('ICON_DELETE', 'btn_danger x-circle');
+defined('ICON_ADD')	|| define('ICON_ADD', 'btn_ok check-circle');
+defined('ICON_UPDATE') || define('ICON_UPDATE', 'btn_ok check-circle');
+defined('ICON_OK') || define('ICON_OK', 'btn_ok check-circle');
+defined('ICON_CANCEL') || define('ICON_CANCEL', 'btn_danger x-circle');
+defined('ICON_GL') || define('ICON_GL', 'book');
+defined('ICON_PRINT') || define('ICON_PRINT', 'btn_grey print');
+defined('ICON_PDF') || define('ICON_PDF', 'file');
+defined('ICON_DOC') || define('ICON_DOC', 'btn_ok file');
+defined('ICON_CREDIT') || define('ICON_CREDIT', 'btn_green file');
+defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'btn_ok file');
+defined('ICON_DOWN') || define('ICON_DOWN', 'btn_ok download-cloud');
+defined('ICON_MONEY') || define('ICON_MONEY', 'btn_green dollar');
+defined('ICON_REMOVE') || define('ICON_REMOVE', 'btn_danger x-circle');
+defined('ICON_REPORT') || define('ICON_REPORT', 'file');
+defined('ICON_VIEW') || define('ICON_VIEW', 'search');
+defined('ICON_SUBMIT') || define('ICON_SUBMIT', 'btn_ok check-circle');
+defined('ICON_ESCAPE') || define('ICON_ESCAPE', 'btn_danger x-circle');
+defined('ICON_ALLOC') || define('ICON_ALLOC', 'arrow-right-left');
+defined('ICON_CLOSED') || define('ICON_CLOSED', 'btn_danger x-circle');

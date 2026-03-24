@@ -1,2 +1,2 @@
-﻿/* HRM Attendance JS */
+/* HRM Attendance JS */
 

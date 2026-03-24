@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -13,24 +13,24 @@
 // HRM module constants and enums
 // ============================================================
 
-// ─── Gender ─────────────────────────────────────────────────
+// --- Gender -------------------------------------------------
 define('HRM_GENDER_MALE',   0);
 define('HRM_GENDER_FEMALE', 1);
 
-// ─── Marital Status ─────────────────────────────────────────
+// --- Marital Status -----------------------------------------
 define('HRM_MARITAL_SINGLE',   0);
 define('HRM_MARITAL_MARRIED',  1);
 define('HRM_MARITAL_DIVORCED', 2);
 define('HRM_MARITAL_WIDOWED',  3);
 
-// ─── Employment Type ────────────────────────────────────────
+// --- Employment Type ----------------------------------------
 define('HRM_EMP_PERMANENT',  0);
 define('HRM_EMP_CONTRACT',   1);
 define('HRM_EMP_PROBATION',  2);
 define('HRM_EMP_INTERN',     3);
 define('HRM_EMP_PARTTIME',   4);
 
-// ─── Employment Status ──────────────────────────────────────
+// --- Employment Status --------------------------------------
 define('HRM_STATUS_ACTIVE',      'active');
 define('HRM_STATUS_INACTIVE',    'inactive');
 define('HRM_STATUS_TERMINATED',  'terminated');
@@ -38,24 +38,24 @@ define('HRM_STATUS_RESIGNED',    'resigned');
 define('HRM_STATUS_RETIRED',     'retired');
 define('HRM_STATUS_SUSPENDED',   'suspended');
 
-// ─── Separation Reason ──────────────────────────────────────
+// --- Separation Reason --------------------------------------
 define('HRM_SEP_RESIGN',        0);
 define('HRM_SEP_TERMINATE',     1);
 define('HRM_SEP_RETIRE',        2);
 define('HRM_SEP_CONTRACT_END',  3);
 define('HRM_SEP_DEATH',         4);
 
-// ─── Payment Method ─────────────────────────────────────────
+// --- Payment Method -----------------------------------------
 define('HRM_PAY_BANK_TRANSFER', 0);
 define('HRM_PAY_CASH',          1);
 define('HRM_PAY_CHEQUE',        2);
 
-// ─── Pay Basis (Job Class) ──────────────────────────────────
+// --- Pay Basis (Job Class) ----------------------------------
 define('HRM_PAY_MONTHLY', 0);
 define('HRM_PAY_DAILY',   1);
 define('HRM_PAY_HOURLY',  2);
 
-// ─── Pay Element Category ───────────────────────────────────
+// --- Pay Element Category -----------------------------------
 define('HRM_ELEM_BASIC',               0);
 define('HRM_ELEM_ALLOWANCE',           1);
 define('HRM_ELEM_DEDUCTION',           2);
@@ -64,24 +64,24 @@ define('HRM_ELEM_STATUTORY_DEDUCTION', 4);
 define('HRM_ELEM_BONUS',               5);
 define('HRM_ELEM_REIMBURSEMENT',       6);
 
-// ─── Pay Element Amount Type ────────────────────────────────
+// --- Pay Element Amount Type --------------------------------
 define('HRM_AMTTYPE_FIXED',          0);
 define('HRM_AMTTYPE_PCT_BASIC',      1);
 define('HRM_AMTTYPE_PCT_GROSS',      2);
 define('HRM_AMTTYPE_FORMULA',        3);
 define('HRM_AMTTYPE_ATTENDANCE',     4);
 
-// ─── Approval / Workflow Status ─────────────────────────────
+// --- Approval / Workflow Status -----------------------------
 define('HRM_STATUS_PENDING',   'pending');
 define('HRM_STATUS_APPROVED',  'approved');
 define('HRM_STATUS_REJECTED',  'rejected');
 define('HRM_STATUS_CANCELLED', 'cancelled');
 
-// ─── Leave Types ────────────────────────────────────────────
+// --- Leave Types --------------------------------------------
 define('HRM_LEAVE_PAID',   1);
 define('HRM_LEAVE_UNPAID', 0);
 
-// ─── Attendance Status ──────────────────────────────────────
+// --- Attendance Status --------------------------------------
 define('HRM_ATT_PRESENT',    'present');
 define('HRM_ATT_ABSENT',     'absent');
 define('HRM_ATT_HALF_DAY',   'half_day');
@@ -90,39 +90,39 @@ define('HRM_ATT_HOLIDAY',    'holiday');
 define('HRM_ATT_WEEKEND',    'weekend');
 define('HRM_ATT_REMOTE',     'remote');
 
-// ─── Overtime Type ──────────────────────────────────────────
+// --- Overtime Type ------------------------------------------
 define('HRM_OT_REGULAR',  'regular');
 define('HRM_OT_HOLIDAY',  'holiday');
 define('HRM_OT_REST_DAY', 'rest_day');
 
-// ─── Payslip Status ─────────────────────────────────────────
+// --- Payslip Status -----------------------------------------
 define('HRM_SLIP_DRAFT',    'draft');
 define('HRM_SLIP_APPROVED', 'approved');
 define('HRM_SLIP_POSTED',   'posted');
 define('HRM_SLIP_VOIDED',   'voided');
 define('HRM_SLIP_PAID',     'paid');
 
-// ─── Payroll Period Status ──────────────────────────────────
+// --- Payroll Period Status ----------------------------------
 define('HRM_PERIOD_DRAFT',    'draft');
 define('HRM_PERIOD_OPEN',     'open');
 define('HRM_PERIOD_LOCKED',   'locked');
 define('HRM_PERIOD_POSTED',   'posted');
 define('HRM_PERIOD_CLOSED',   'closed');
 
-// ─── Payroll Period Type ────────────────────────────────────
+// --- Payroll Period Type ------------------------------------
 define('HRM_PERIOD_MONTHLY',     0);
 define('HRM_PERIOD_BIWEEKLY',    1);
 define('HRM_PERIOD_WEEKLY',      2);
 define('HRM_PERIOD_SEMIMONTHLY', 3);
 
-// ─── Loan Status ────────────────────────────────────────────
+// --- Loan Status --------------------------------------------
 define('HRM_LOAN_PENDING',   'pending');
 define('HRM_LOAN_APPROVED',  'approved');
 define('HRM_LOAN_ACTIVE',    'active');
 define('HRM_LOAN_SETTLED',   'settled');
 define('HRM_LOAN_CANCELLED', 'cancelled');
 
-// ─── Employee History Change Types ──────────────────────────
+// --- Employee History Change Types --------------------------
 define('HRM_HIST_HIRE',         'hire');
 define('HRM_HIST_TRANSFER',     'transfer');
 define('HRM_HIST_PROMOTION',    'promotion');
@@ -132,12 +132,12 @@ define('HRM_HIST_SEPARATION',   'separation');
 define('HRM_HIST_SUSPENSION',   'suspension');
 define('HRM_HIST_REINSTATE',    'reinstatement');
 
-// ─── Attendance Deduction Rule Types ────────────────────────
+// --- Attendance Deduction Rule Types ------------------------
 define('HRM_DEDTYPE_ABSENCE',   0);  // deduct per absence day
 define('HRM_DEDTYPE_LATENESS',  1);  // deduct per late minute
 define('HRM_DEDTYPE_EARLY_EXIT',2);  // deduct per early-exit minute
 
-// ─── Working Days (0=Sun … 6=Sat, PHP convention) ───────────
+// --- Working Days (0=Sun ... 6=Sat, PHP convention) -----------
 define('HRM_DAY_SUNDAY',    0);
 define('HRM_DAY_MONDAY',    1);
 define('HRM_DAY_TUESDAY',   2);
@@ -146,15 +146,15 @@ define('HRM_DAY_THURSDAY',  4);
 define('HRM_DAY_FRIDAY',    5);
 define('HRM_DAY_SATURDAY',  6);
 
-// ─── EOS (End of Service) Calculation Bases ─────────────────
+// --- EOS (End of Service) Calculation Bases -----------------
 define('HRM_EOS_BASIC',   0);   // EOS based on basic salary
 define('HRM_EOS_GROSS',   1);   // EOS based on gross
 
-// ─── Statutory Deduction Calculation Base ───────────────────
+// --- Statutory Deduction Calculation Base -------------------
 define('HRM_STAT_BASE_BASIC', 0);
 define('HRM_STAT_BASE_GROSS', 1);
 
-// ─── Report IDs (Class 8: Human Resource) ───────────────────
+// --- Report IDs (Class 8: Human Resource) -------------------
 define('HRM_REP_PAYSLIP',           880);
 define('HRM_REP_PAYROLL_SUMMARY',   881);
 define('HRM_REP_SALARY_SHEET',      882);
@@ -170,7 +170,7 @@ define('HRM_REP_LOAN_OUTSTANDING',  891);
 define('HRM_REP_HEADCOUNT',         892);
 define('HRM_REP_EMAIL_PAYSLIP',     893);
 
-// ─── Lookup arrays for display ──────────────────────────────
+// --- Lookup arrays for display ------------------------------
 function hrm_get_employment_types() {
     return array(
         HRM_EMP_PERMANENT => _('Permanent'),
@@ -297,7 +297,7 @@ function hrm_get_weekday_names() {
     );
 }
 
-// ─── Security area check helpers ────────────────────────────
+// --- Security area check helpers ----------------------------
 function hrm_check_access($area) {
     return user_check_access($area);
 }

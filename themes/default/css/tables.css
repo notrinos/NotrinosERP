@@ -51,6 +51,12 @@ table.data-grid .tableheader {
 	border-bottom: 1px solid #c7d3ea;
 }
 
+td.tableheader, td.tableheader2 {
+	font-weight: 700;
+	color: var(--modern-color-text);
+	background: #e8eefb;
+}
+
 /* Keep sortable header controls visually identical to plain header labels. */
 table.data-grid tr.tableheader .navibutton,
 table.data-grid .tableheader .navibutton,

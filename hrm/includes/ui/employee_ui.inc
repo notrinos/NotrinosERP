@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -12,7 +12,6 @@
 
 /**
  * Employee form widgets, display helpers, and tab content functions.
- * Per HRM_DEVELOPMENT_PLAN.md Section 10.1 — Manage Employees page.
  */
 
 //------------------------------------------------------------------
@@ -234,16 +233,16 @@ function display_employee_history($employee_id) {
 		// Build details string
 		$details = array();
 		if ($rec['old_department_name'] || $rec['new_department_name']) {
-			$details[] = _('Dept:').' '.($rec['old_department_name'] ?: '-').' → '.($rec['new_department_name'] ?: '-');
+			$details[] = _('Dept:').' '.($rec['old_department_name'] ?: '-').' ? '.($rec['new_department_name'] ?: '-');
 		}
 		if ($rec['old_position_name'] || $rec['new_position_name']) {
-			$details[] = _('Position:').' '.($rec['old_position_name'] ?: '-').' → '.($rec['new_position_name'] ?: '-');
+			$details[] = _('Position:').' '.($rec['old_position_name'] ?: '-').' ? '.($rec['new_position_name'] ?: '-');
 		}
 		if ($rec['old_grade_name'] || $rec['new_grade_name']) {
-			$details[] = _('Grade:').' '.($rec['old_grade_name'] ?: '-').' → '.($rec['new_grade_name'] ?: '-');
+			$details[] = _('Grade:').' '.($rec['old_grade_name'] ?: '-').' ? '.($rec['new_grade_name'] ?: '-');
 		}
 		if ($rec['old_salary'] || $rec['new_salary']) {
-			$details[] = _('Salary:').' '.price_format($rec['old_salary']).' → '.price_format($rec['new_salary']);
+			$details[] = _('Salary:').' '.price_format($rec['old_salary']).' ? '.price_format($rec['new_salary']);
 		}
 		label_cell(implode('<br>', $details));
 

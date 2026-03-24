@@ -42,7 +42,6 @@ echo "<meta charset='".$encoding."' >\n";
 echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
 echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root."/libraries/fontawesome/css/all.min.css' rel='stylesheet'> \n";
 echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
 send_scripts();
 echo $js;
@@ -66,14 +65,14 @@ echo "<div class='login-subtitle'>"._('Version').' '.$version.'   Build '.$SysPr
 echo "<input type='hidden' id='ui_mode' name='ui_mode' value='".fallback_mode()."'>\n";
 
 // Email field
-echo "<div class='login-field'><div class='input_container'><i class='fas fa-envelope' title='"._('Email')."'></i>";
+echo "<div class='login-field'><div class='input_container'>".default_theme_icon('mail', '', _('Email'));
 echo "<input required class='input' id='email' name='email_entry_field' type='text' placeholder='"._('Email')."'></div></div>\n";
 
 // Company selector
 $coy = user_company();
 if (!isset($coy))
 	$coy = $def_coy;
-echo "<div class='login-field'><div class='input_container'><i class='fas fa-building' title='"._('Company')."'></i>";
+echo "<div class='login-field'><div class='input_container'>".default_theme_icon('building', '', _('Company'));
 if (!@$SysPrefs->text_company_selection) {
 	echo "<select name='company_login_name'>\n";
 	for ($i = 0; $i < count($db_connections); $i++)

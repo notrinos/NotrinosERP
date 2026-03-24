@@ -72,28 +72,28 @@ function display_approval_summary_cards($counts)
 			'count'   => isset($counts['my_pending']) ? (int)$counts['my_pending'] : 0,
 			'bg'      => '#ffc107',
 			'color'   => '#212529',
-			'icon'    => 'fas fa-clock',
+			'icon'    => 'clock',
 		),
 		array(
 			'label'   => _('Total Pending'),
 			'count'   => isset($counts['pending']) ? (int)$counts['pending'] : 0,
 			'bg'      => '#17a2b8',
 			'color'   => '#fff',
-			'icon'    => 'fas fa-hourglass-half',
+			'icon'    => 'hourglass',
 		),
 		array(
 			'label'   => _('Approved'),
 			'count'   => isset($counts['approved']) ? (int)$counts['approved'] : 0,
 			'bg'      => '#28a745',
 			'color'   => '#fff',
-			'icon'    => 'fas fa-check-circle',
+			'icon'    => 'check-circle',
 		),
 		array(
 			'label'   => _('Rejected'),
 			'count'   => isset($counts['rejected']) ? (int)$counts['rejected'] : 0,
 			'bg'      => '#dc3545',
 			'color'   => '#fff',
-			'icon'    => 'fas fa-times-circle',
+			'icon'    => 'x-circle',
 		),
 	);
 
@@ -104,7 +104,7 @@ function display_approval_summary_cards($counts)
 			. "background:{$card['bg']};color:{$card['color']};"
 			. "box-shadow:0 2px 4px rgba(0,0,0,0.1);'>\n";
 		echo "<div style='font-size:24px;font-weight:bold;'>"
-			. "<i class='{$card['icon']}' style='margin-right:8px;'></i>"
+				. default_theme_icon($card['icon'])
 			. $card['count'] . "</div>\n";
 		echo "<div style='font-size:12px;margin-top:4px;opacity:0.9;'>"
 			. $card['label'] . "</div>\n";
@@ -160,10 +160,10 @@ function approval_urgency_indicator($submitted_date)
 
 	if ($days > 7) {
 		return "<span style='color:#dc3545;' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
-			. "<i class='fas fa-exclamation-triangle'></i></span>";
+			. default_theme_icon('alert-triangle') . "</span>";
 	} elseif ($days > 3) {
 		return "<span style='color:#ffc107;' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
-			. "<i class='fas fa-exclamation-circle'></i></span>";
+			. default_theme_icon('info-circle') . "</span>";
 	}
 
 	return '';

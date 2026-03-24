@@ -25,16 +25,7 @@ function navi_button($name, $value, $enabled=true, $icon=false) {
 
 	$icon_markup = '';
 	if ($icon) {
-		if ($icon == 'sort_desc.gif' || $icon == 'sort_asc.gif' || $icon == 'sort_none.gif') {
-			$icon_class = 'fas fa-sort';
-			if ($icon == 'sort_desc.gif')
-				$icon_class = 'fas fa-sort-down';
-			elseif ($icon == 'sort_asc.gif')
-				$icon_class = 'fas fa-sort-up';
-			$icon_markup = "<i class='pager-sort-icon ".$icon_class."'></i>";
-		}
-		else
-			$icon_markup = "<img src='".$path_to_root.'/themes/'.user_theme().'/images/'.$icon."'>";
+		$icon_markup = "<img src='".$path_to_root.'/themes/'.user_theme().'/images/'.$icon."'>";
 	}
 
 	return "<button ".($enabled ? '' : 'disabled')." class='navibutton' type='submit' name='".$name."' id='".$name."' value='".$value."'>".$icon_markup."<span>".$value."</span></button>\n";
@@ -62,7 +53,7 @@ function display_db_pager(&$pager) {
 			if (!isset($col['ord']))
 				$headers[] = $col['head'];
 			else {
-				$icon = (($col['ord'] == 'desc') ? 'sort_desc.gif' : ($col['ord'] == 'asc' ? 'sort_asc.gif' : 'sort_none.gif'));
+				$icon = (($col['ord'] == 'desc') ? 'sort_desc.svg' : ($col['ord'] == 'asc' ? 'sort_asc.svg' : 'sort_none.svg'));
 				$headers[] = navi_button($pager->name.'_sort_'.$num_col, $col['head'], true, $icon);
 			}
 		}

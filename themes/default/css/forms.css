@@ -792,9 +792,22 @@ html[dir='rtl'] .form-control-wrap.date a {
 	margin-right: -28px;
 }
 
-div.date_box a .fa-calendar-alt,
-.form-control-wrap.date a .fa-calendar-alt {
+div.date_box a .nerp-icon,
+.form-control-wrap.date a .nerp-icon {
 	font-size: 17px;
+	margin: 0;
+	width: 16px;
+	height: 16px;
+}
+
+div.date_box a,
+.form-control-wrap.date a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	overflow: hidden;
 }
 
 input.big {

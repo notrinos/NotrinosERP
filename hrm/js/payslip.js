@@ -1,2 +1,2 @@
-﻿/* HRM Payslip JS */
+/* HRM Payslip JS */
 

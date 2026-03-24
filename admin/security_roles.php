@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -169,7 +169,6 @@ $new_role = get_post('role') == '';
 check_cells(_('Show inactive:'), 'show_inactive', null, true);
 end_row();
 end_table();
-echo "<hr>";
 
 if (get_post('_show_inactive_update')) {
 	$Ajax->activate('role');
@@ -187,7 +186,7 @@ text_row(_('Role description:'), 'description', null, 50, 52);
 record_status_list_row(_('Current status:'), 'inactive');
 end_table(1);
 
-start_table(TABLESTYLE, "width='40%'");
+start_table(TABLESTYLE, "width='50%'");
 
 $k = $j = 0; //row colour counter
 $ext = $sec = $m = -1;
@@ -203,7 +202,7 @@ foreach(sort_areas($security_areas) as $area =>$parms ) {
 		$ext = $newext; 
 		$sec = $newsec;
 		$m = $parms[0] & ~0xff;
-		label_row($security_sections[$m].':', checkbox( null, 'Section'.$m, null, true, _('On/off set of features')), "class='tableheader2'", "class='tableheader'");
+		label_row($security_sections[$m].':', checkbox( null, 'Section'.$m, null, true, _('On/off set of features')), "class='tableheader2'", "class='tableheader' align='right'");
 	}
 	if (check_value('Section'.$m)) {
 		alt_table_row_color($k);

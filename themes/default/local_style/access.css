@@ -19,6 +19,11 @@
 	color: var(--modern-color-text, #1f2937);
 }
 
+#loginscreen .nerp-icon {
+	height: 1.2em;
+	width: 1.2em;
+}
+
 @keyframes loginBgShift {
 	0% {
 		background-position: 0% 50%;

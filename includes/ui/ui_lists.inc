@@ -183,8 +183,6 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			if (in_array((string)$value, $selected_id, true)) {
 				$sel = 'selected';
 				$found = $value;
-				// get non-formatted description
-				$edit = $opts['editable'] && $contact_row['editable'] && (@$_POST[$search_box] == $value) ? $contact_row[1] : false;
 			}
 
 			if(!$edit) { // abandon list construction if selected field is editable.
@@ -311,7 +309,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		}
 
 		if ($link !== '')
-			$search_btn = '<div hidden title="'.$btn_title.'" class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search')."</span><i class='fas fa-search'></i></div>";
+			$search_btn = '<div hidden title="'.$btn_title.'" class="search_btn_container" id="_'.$name.'_search" onclick="javascript:lookupWindow(&quot;'.$link.'&quot;, &quot;&quot;);"><span class="search_btn_txt">'._('Advanced search')."</span>".default_theme_icon('search')."</div>";
 	}
 
 	if ($opts['editlink'])
@@ -462,7 +460,7 @@ function add_edit_combo($type, $name=false) {
 	$theme_path = $path_to_root.'/themes/'.user_theme();
 	$key = $popup_editors[$type][1];
 	$onclick = "onclick=\"javascript:callEditor($key); return false;\"";
-	$img = "<i class='fas fa-edit'></i>";
+	$img = default_theme_icon('edit');
 
 	if (!isset($SysPrefs->use_icon_for_editkey) || $SysPrefs->use_icon_for_editkey == 0)
 		return '<div hidden title="'._('Add/Edit').'" class="search_btn_container" id="_'.$name.'_add" '.$onclick.'><span class="search_btn_txt">'._('Add or edit').'</span>'.$img.'</div>';

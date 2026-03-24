@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License,
 	GPL, as published by the Free Software Foundation, either version 
 	3 of the License, or (at your option) any later version.
@@ -453,7 +453,7 @@ function db_unzip($mode, $path) {
 		$comp = substr($comp, 0, (strlen($comp) - 80 - strlen($filename)-13));
 
 		// fix the crc bugfix (see function save_to_file)
-		$comp = "xœ" . $comp . $suffix;
+		$comp = "xï¿½" . $comp . $suffix;
 		$file_data = gzuncompress($comp);
 	}
 

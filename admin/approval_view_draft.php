@@ -122,7 +122,7 @@ hidden('draft_id', $draft_id);
 
 // --- Section 1: Draft Summary ---
 echo "<h3 style='margin:12px 0 8px 0;'>"
-	. "<i class='fas fa-file-alt' style='margin-right:8px;'></i>"
+	. default_theme_icon('file-text')
 	. _('Draft Information') . "</h3>\n";
 
 display_approval_summary_box($draft);
@@ -131,7 +131,7 @@ display_approval_summary_box($draft);
 $max_level = get_max_approval_level($draft['workflow_id']);
 if ($max_level > 0) {
 	echo "<h3 style='margin:16px 0 8px 0;'>"
-		. "<i class='fas fa-tasks' style='margin-right:8px;'></i>"
+		. default_theme_icon('list-check')
 		. _('Approval Progress') . "</h3>\n";
 
 	display_approval_progress_bar($draft, $max_level);
@@ -142,28 +142,28 @@ if ((int)$draft['status'] === APPROVAL_STATUS_PENDING) {
 	$escalation_status = get_draft_escalation_status($draft_id);
 	if ($escalation_status) {
 		echo "<h3 style='margin:16px 0 8px 0;'>"
-			. "<i class='fas fa-exclamation-triangle' style='margin-right:8px;'></i>"
+			. default_theme_icon('alert-triangle')
 			. _('Escalation Status') . "</h3>\n";
 
 		$esc_color = '#28a745';
-		$esc_icon = 'fa-check-circle';
+		$esc_icon = 'check-circle';
 		$esc_label = _('OK — No Escalation Risk');
 		if ($escalation_status['status'] === 'warning') {
 			$esc_color = '#ffc107';
-			$esc_icon = 'fa-exclamation-triangle';
+			$esc_icon = 'alert-triangle';
 			$esc_label = sprintf(_('Warning — Escalation in %d day(s)'), $escalation_status['days_remaining']);
 		} elseif ($escalation_status['status'] === 'overdue') {
 			$esc_color = '#dc3545';
-			$esc_icon = 'fa-times-circle';
+			$esc_icon = 'x-circle';
 			$esc_label = sprintf(_('Overdue — Past escalation deadline by %d day(s)'), abs($escalation_status['days_remaining']));
 		} elseif ($escalation_status['status'] === 'no_escalation') {
 			$esc_color = '#6c757d';
-			$esc_icon = 'fa-minus-circle';
+			$esc_icon = 'minus-circle';
 			$esc_label = _('No escalation configured for this level');
 		}
 
 		echo "<div style='border-left:4px solid {$esc_color};padding:8px 16px;margin:8px 0;background:#f8f9fa;border-radius:0 6px 6px 0;'>\n";
-		echo "<i class='fas {$esc_icon}' style='color:{$esc_color};margin-right:8px;'></i>";
+		echo default_theme_icon($esc_icon);
 		echo "<strong style='color:{$esc_color};'>" . $esc_label . "</strong>";
 		if (isset($escalation_status['escalation_days']) && $escalation_status['escalation_days'] > 0) {
 			echo " <span style='color:#6c757d;margin-left:12px;'>(" . sprintf(_('Escalation after %d days'), $escalation_status['escalation_days']) . ")</span>";
@@ -176,7 +176,7 @@ if ((int)$draft['status'] === APPROVAL_STATUS_PENDING) {
 $delegation_history = get_draft_delegation_history($draft_id);
 if (!empty($delegation_history)) {
 	echo "<h3 style='margin:16px 0 8px 0;'>"
-		. "<i class='fas fa-share' style='margin-right:8px;'></i>"
+		. default_theme_icon('share')
 		. _('Delegation History') . "</h3>\n";
 
 	echo "<table class='tablestyle' style='width:100%;'>\n";
@@ -204,7 +204,7 @@ if (!empty($delegation_history)) {
 
 // --- Section 3: Approval Levels Configuration ---
 echo "<h3 style='margin:16px 0 8px 0;'>"
-	. "<i class='fas fa-layer-group' style='margin-right:8px;'></i>"
+	. default_theme_icon('layers')
 	. _('Workflow Levels') . "</h3>\n";
 
 $levels = get_approval_levels_with_roles($draft['workflow_id']);
@@ -227,17 +227,17 @@ if ($levels && db_num_rows($levels) > 0) {
 
 		// Determine this level's status
 		if ($draft_status == APPROVAL_STATUS_APPROVED) {
-			$level_status = "<span style='color:#28a745;'><i class='fas fa-check-circle'></i> " . _('Completed') . "</span>";
+			$level_status = "<span style='color:#28a745;'>".default_theme_icon('check-circle')." " . _('Completed') . "</span>";
 		} elseif ($draft_status == APPROVAL_STATUS_REJECTED && $level_num == $current_level) {
-			$level_status = "<span style='color:#dc3545;'><i class='fas fa-times-circle'></i> " . _('Rejected') . "</span>";
+			$level_status = "<span style='color:#dc3545;'>".default_theme_icon('x-circle')." " . _('Rejected') . "</span>";
 		} elseif ($draft_status == APPROVAL_STATUS_CANCELLED) {
-			$level_status = "<span style='color:#6c757d;'><i class='fas fa-ban'></i> " . _('Cancelled') . "</span>";
+			$level_status = "<span style='color:#6c757d;'>".default_theme_icon('x-circle')." " . _('Cancelled') . "</span>";
 		} elseif ($level_num < $current_level) {
-			$level_status = "<span style='color:#28a745;'><i class='fas fa-check-circle'></i> " . _('Completed') . "</span>";
+			$level_status = "<span style='color:#28a745;'>".default_theme_icon('check-circle')." " . _('Completed') . "</span>";
 		} elseif ($level_num == $current_level && $draft_status == APPROVAL_STATUS_PENDING) {
-			$level_status = "<span style='color:#ffc107;'><i class='fas fa-clock'></i> <strong>" . _('Current') . "</strong></span>";
+			$level_status = "<span style='color:#ffc107;'>".default_theme_icon('clock')." <strong>" . _('Current') . "</strong></span>";
 		} else {
-			$level_status = "<span style='color:#6c757d;'><i class='fas fa-hourglass-start'></i> " . _('Waiting') . "</span>";
+			$level_status = "<span style='color:#6c757d;'>".default_theme_icon('hourglass')." " . _('Waiting') . "</span>";
 		}
 
 		$role_name = $level['role_name']
@@ -265,14 +265,14 @@ if ($levels && db_num_rows($levels) > 0) {
 
 // --- Section 4: Approval Timeline ---
 echo "<h3 style='margin:16px 0 8px 0;'>"
-	. "<i class='fas fa-history' style='margin-right:8px;'></i>"
+	. default_theme_icon('history')
 	. _('Approval History') . "</h3>\n";
 
 display_approval_timeline($draft_id, true);
 
 // --- Section 5: Draft Data Preview ---
 echo "<h3 style='margin:16px 0 8px 0;'>"
-	. "<i class='fas fa-database' style='margin-right:8px;'></i>"
+	. default_theme_icon('database')
 	. _('Draft Data') . "</h3>\n";
 
 $draft_data = json_decode($draft['draft_data'], true);
@@ -310,7 +310,7 @@ $is_pending = ((int)$draft['status'] === APPROVAL_STATUS_PENDING);
 
 if ($is_pending) {
 	echo "<h3 style='margin:16px 0 8px 0;'>"
-		. "<i class='fas fa-gavel' style='margin-right:8px;'></i>"
+		. default_theme_icon('scale')
 		. _('Actions') . "</h3>\n";
 
 	$approval_service = get_approval_workflow_service();
@@ -341,7 +341,7 @@ if ($is_pending) {
 		echo "<div style='border:1px solid #dee2e6;border-radius:6px;padding:16px;margin:8px 0;"
 			. "background:#fff3cd;'>\n";
 		echo "<p style='margin:0 0 8px 0;'>"
-			. "<i class='fas fa-info-circle' style='margin-right:4px;'></i>"
+			. default_theme_icon('info-circle')
 			. _('As the submitter, you can cancel this draft.') . "</p>\n";
 
 		start_table(TABLESTYLE2);
