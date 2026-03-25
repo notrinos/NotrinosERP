@@ -403,7 +403,7 @@ class renderer {
 			$selected_application_title = str_replace('&', '', $selected_application->name);
 			$page_title = $title.' / '.$selected_application_title;
 		}
-		$indicator = $path_to_root.'/themes/'.user_theme().'/images/ajax-loader.gif';
+		$indicator = $path_to_root.'/themes/'.user_theme().'/images/ajax-loader.svg';
 
 		$app_theme_colors = $this->application_theme_colors($selected_application_id);
 		$app_shell_style = "--modern-app-accent: ".$app_theme_colors['accent']."; --modern-app-accent-soft: ".$app_theme_colors['soft'].";";

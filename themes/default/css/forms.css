@@ -160,7 +160,7 @@ textarea {
 	border-radius: var(--modern-control-radius);
 	background: var(--modern-color-surface);
 	height: 30px;
-	padding: 0 8px;
+	padding: 0 4px 0 8px;
 	transition: border-color 0.15s;
 }
 
@@ -176,7 +176,7 @@ textarea {
 	background: transparent;
 	height: 100%;
 	padding: 0;
-	padding-right: 26px;
+	padding-right: 18px;
 }
 
 .filter-bar .filter-field .form-control-wrap.date a {
@@ -781,7 +781,7 @@ html[dir='rtl'] .form-control-wrap.date input.date {
 }
 
 .form-control-wrap.date a {
-	margin-left: -28px;
+	margin-left: -32px;
 	line-height: 1;
 	color: var(--modern-color-muted);
 	text-decoration: none;
@@ -794,10 +794,10 @@ html[dir='rtl'] .form-control-wrap.date a {
 
 div.date_box a .nerp-icon,
 .form-control-wrap.date a .nerp-icon {
-	font-size: 17px;
+	font-size: 20px;
 	margin: 0;
-	width: 16px;
-	height: 16px;
+	width: 18px;
+	height: 18px;
 }
 
 div.date_box a,

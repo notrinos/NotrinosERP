@@ -42,10 +42,23 @@ class Dashboard {
 		return $dashboard_id;
 	}
 
-	function addWidget($dashboard, $widget_id, $width=WIDGET_FULL) {
+	function addWidget($dashboard, $widget_id, $width=WIDGET_FULL, $extra_class='') {
 
 		unset($this->ar_widgets[$dashboard][$widget_id]);
-		$this->ar_widgets[$dashboard][$widget_id] = array('width'=>$width);
+		$this->ar_widgets[$dashboard][$widget_id] = array('width'=>$width, 'class'=>$extra_class);
+	}
+
+	/**
+	 * Add widget with an extra CSS class for presentation variants.
+	 *
+	 * @param string $dashboard Dashboard id
+	 * @param int|string $widget_id Widget id
+	 * @param string $width Width constant
+	 * @param string $extra_class Additional CSS class
+	 * @return void
+	 */
+	function addWidgetWithClass($dashboard, $widget_id, $width=WIDGET_FULL, $extra_class='') {
+		$this->addWidget($dashboard, $widget_id, $width, $extra_class);
 	}
 
 	function display($class=null) {
@@ -63,17 +76,17 @@ class Dashboard {
 
 			if($cur_app == $dashboard_id) {
 
-				foreach($this->ar_widgets[$dashboard_id] as $widget_id => $widget) {
+				foreach($this->ar_widgets[$dashboard_id] as $widget_id => $widget_settings) {
 					$widg = preg_replace('/[^a-z_0-9]/i', '', $widget_id);
 					$widget_file = find_custom_file("/dashboard/widget$widg.php");
 
-					if($widget['width'] == WIDGET_FULL)
+					if($widget_settings['width'] == WIDGET_FULL)
 						$class = 'widget_full';
-					elseif($widget['width'] == WIDGET_HALF)
+					elseif($widget_settings['width'] == WIDGET_HALF)
 						$class = 'widget_half';
-					elseif($widget['width'] == WIDGET_THIRD)
+					elseif($widget_settings['width'] == WIDGET_THIRD)
 						$class = 'widget_third';
-					elseif($widget['width'] == WIDGET_QUARTER)
+					elseif($widget_settings['width'] == WIDGET_QUARTER)
 						$class = 'widget_quarter';
 
 					$widget_markup = '';
@@ -90,7 +103,11 @@ class Dashboard {
 					} else
 						$widget_markup = "<br/><br/><div class = 'err_msg'>"._('Cannot find widget file').'&nbsp;' . "'$widg'" . "</div>";
 
-					echo "<div class = 'widget $class$widget_type_class'>";
+					$extra_class = '';
+					if (isset($widget_settings['class']) && $widget_settings['class'] != '')
+						$extra_class = ' '.preg_replace('/[^a-z_0-9\-\s]/i', '', $widget_settings['class']);
+
+					echo "<div class = 'widget $class$widget_type_class$extra_class'>";
 					echo $widget_markup;
 					echo '</div>';
 				}
@@ -159,6 +176,546 @@ function add_custom_dashboards($dashboard) {
 	$file = company_path().'/dashboard/custom_dashboards.php';
 	if (file_exists($file))
 		include_once($file);
+}
+
+/**
+ * Execute scalar SQL and return first column as numeric value.
+ *
+ * @param string $sql SQL query returning one row and one value.
+ * @param string $error_message Query error message.
+ * @return float
+ */
+function get_dashboard_scalar_value($sql, $error_message) {
+	$result = db_query($sql, $error_message);
+	$row = db_fetch_row($result);
+	if (!$row)
+		return 0;
+
+	return (float)$row[0];
+}
+
+/**
+ * Check whether table exists for the current company database prefix.
+ *
+ * @param string $table_name Table name including TB_PREF prefix.
+ * @return bool
+ */
+function dashboard_table_exists($table_name) {
+	$table_name = db_escape($table_name);
+	$sql = "SHOW TABLES LIKE ".$table_name;
+	$result = db_query($sql, _('Could not check table existence'));
+	return db_num_rows($result) > 0;
+}
+
+/**
+ * Render a compact dashboard stat card used by small widgets.
+ *
+ * @param string $label Metric label.
+ * @param mixed $value Numeric or text value.
+ * @param string $icon_name Theme icon name.
+ * @param string $tone Visual tone class.
+ * @return void
+ */
+function render_dashboard_small_stat_card($label, $value, $icon_name='database', $tone='default') {
+	$label = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+	$value_text = is_numeric($value) ? number_format((float)$value, 0) : htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+	$tone = preg_replace('/[^a-z_\-0-9]/i', '', $tone);
+
+	echo "<div class='dashboard-small-stat dashboard-small-stat-".$tone."'>";
+	echo "<div class='dashboard-small-stat-icon'>".default_theme_icon($icon_name)."</div>";
+	echo "<div class='dashboard-small-stat-value'>".$value_text."</div>";
+	echo "<div class='dashboard-small-stat-label'>".$label."</div>";
+	echo "</div>";
+}
+
+/**
+ * Count active customers.
+ *
+ * @return int
+ */
+function dashboard_count_customers() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."debtors_master WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count customers'));
+}
+
+/**
+ * Count active customer branches.
+ *
+ * @return int
+ */
+function dashboard_count_customer_branches() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."cust_branch WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count branches'));
+}
+
+/**
+ * Count active salesmen.
+ *
+ * @return int
+ */
+function dashboard_count_salesmen() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."salesman WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count salesmen'));
+}
+
+/**
+ * Count overdue customer invoices with outstanding balances.
+ *
+ * @return int
+ */
+function dashboard_count_overdue_sales_invoices() {
+	$today = date2sql(Today());
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."debtor_trans trans
+		LEFT JOIN ".TB_PREF."voided v ON v.type=trans.type AND v.id=trans.trans_no
+		WHERE trans.type=".ST_SALESINVOICE."
+			AND v.id IS NULL
+			AND trans.due_date < '".$today."'
+			AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) > ".FLOAT_COMP_DELTA;
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count overdue sales invoices'));
+}
+
+/**
+ * Count active suppliers.
+ *
+ * @return int
+ */
+function dashboard_count_suppliers() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."suppliers WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count suppliers'));
+}
+
+/**
+ * Count open purchase orders that still have unreceived quantities.
+ *
+ * @return int
+ */
+function dashboard_count_open_purchase_orders() {
+	$sql = "SELECT COUNT(DISTINCT d.order_no)
+		FROM ".TB_PREF."purch_order_details d
+		INNER JOIN ".TB_PREF."purch_orders p ON p.order_no=d.order_no
+		WHERE d.quantity_received < d.quantity_ordered";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count open purchase orders'));
+}
+
+/**
+ * Count purchase invoices.
+ *
+ * @return int
+ */
+function dashboard_count_purchase_invoices() {
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."supp_trans trans
+		LEFT JOIN ".TB_PREF."voided v ON v.type=trans.type AND v.id=trans.trans_no
+		WHERE trans.type=".ST_SUPPINVOICE." AND v.id IS NULL";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count purchase invoices'));
+}
+
+/**
+ * Count overdue supplier invoices with outstanding balances.
+ *
+ * @return int
+ */
+function dashboard_count_overdue_purchase_invoices() {
+	$today = date2sql(Today());
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."supp_trans trans
+		LEFT JOIN ".TB_PREF."voided v ON v.type=trans.type AND v.id=trans.trans_no
+		WHERE trans.type=".ST_SUPPINVOICE."
+			AND v.id IS NULL
+			AND trans.due_date < '".$today."'
+			AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA;
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count overdue purchase invoices'));
+}
+
+/**
+ * Count active inventory items (excluding fixed assets).
+ *
+ * @return int
+ */
+function dashboard_count_inventory_items() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_master WHERE inactive=0 AND mb_flag <> 'F'";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count inventory items'));
+}
+
+/**
+ * Count active inventory locations.
+ *
+ * @return int
+ */
+function dashboard_count_inventory_locations() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."locations WHERE inactive=0 AND fixed_asset=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count inventory locations'));
+}
+
+/**
+ * Count item kits (BOM parent records).
+ *
+ * @return int
+ */
+function dashboard_count_item_kits() {
+	$sql = "SELECT COUNT(DISTINCT b.parent)
+		FROM ".TB_PREF."bom b
+		INNER JOIN ".TB_PREF."stock_master s ON s.stock_id=b.parent
+		WHERE s.inactive=0";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count kits'));
+}
+
+/**
+ * Count stock/location rows below reorder level.
+ *
+ * @return int
+ */
+function dashboard_count_below_reorder_level_items() {
+	$sql = "SELECT COUNT(*)
+		FROM (
+			SELECT sm.stock_id, ls.loc_code
+			FROM ".TB_PREF."stock_master sm
+			INNER JOIN ".TB_PREF."loc_stock ls ON sm.stock_id=ls.stock_id
+			LEFT JOIN ".TB_PREF."stock_moves mv ON mv.stock_id=sm.stock_id AND mv.loc_code=ls.loc_code
+			WHERE sm.mb_flag IN ('B','M')
+				AND ls.reorder_level > 0
+			GROUP BY sm.stock_id, ls.loc_code, ls.reorder_level
+			HAVING COALESCE(SUM(mv.qty), 0) < ls.reorder_level
+		) a";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count below reorder level items'));
+}
+
+/**
+ * Count assembled stock items.
+ *
+ * @return int
+ */
+function dashboard_count_assembled_items() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_master WHERE inactive=0 AND mb_flag='A'";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count assembled items'));
+}
+
+/**
+ * Count manufactured stock items.
+ *
+ * @return int
+ */
+function dashboard_count_manufactured_items() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_master WHERE inactive=0 AND mb_flag='M'";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count manufactured items'));
+}
+
+/**
+ * Count active work centres.
+ *
+ * @return int
+ */
+function dashboard_count_work_centres() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."workcentres WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count work centres'));
+}
+
+/**
+ * Count open workorders.
+ *
+ * @return int
+ */
+function dashboard_count_open_workorders() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."workorders WHERE closed=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count open workorders'));
+}
+
+/**
+ * Count active fixed assets.
+ *
+ * @return int
+ */
+function dashboard_count_fixed_assets() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_master WHERE inactive=0 AND mb_flag='F'";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count fixed assets'));
+}
+
+/**
+ * Count active fixed asset locations.
+ *
+ * @return int
+ */
+function dashboard_count_fixed_asset_locations() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."locations WHERE inactive=0 AND fixed_asset=1";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count fixed asset locations'));
+}
+
+/**
+ * Count fixed asset categories.
+ *
+ * @return int
+ */
+function dashboard_count_fixed_asset_categories() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_category WHERE inactive=0 AND dflt_mb_flag='F'";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count fixed asset categories'));
+}
+
+/**
+ * Count active fixed asset classes.
+ *
+ * @return int
+ */
+function dashboard_count_fixed_asset_classes() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."stock_fa_class WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count fixed asset classes'));
+}
+
+/**
+ * Count dimensions of type 1.
+ *
+ * @return int
+ */
+function dashboard_count_dimensions_type1() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."dimensions WHERE type_=1";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count dimensions'));
+}
+
+/**
+ * Count dimensions of type 2.
+ *
+ * @return int
+ */
+function dashboard_count_dimensions_type2() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."dimensions WHERE type_=2";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count type 2 dimensions'));
+}
+
+/**
+ * Sum dimension-related balance-sheet amounts for current fiscal year.
+ *
+ * @return string
+ */
+function dashboard_dimensions_total_balance_text() {
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql(Today());
+	$sql = "SELECT COALESCE(SUM(t.amount), 0)
+		FROM ".TB_PREF."gl_trans t
+		INNER JOIN ".TB_PREF."chart_master a ON a.account_code=t.account
+		INNER JOIN ".TB_PREF."chart_types ct ON ct.id=a.account_type
+		INNER JOIN ".TB_PREF."chart_class cc ON cc.cid=ct.class_id
+		WHERE (t.dimension_id <> 0 OR t.dimension2_id <> 0)
+			AND cc.ctype <= 3
+			AND t.tran_date >= '".$begin."'
+			AND t.tran_date <= '".$today."'";
+
+	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate dimensions total balance')), user_price_dec());
+}
+
+/**
+ * Sum dimension-related P/L amounts for current fiscal year.
+ *
+ * @return string
+ */
+function dashboard_dimensions_total_result_text() {
+	$begin = date2sql(begin_fiscalyear());
+	$today = date2sql(Today());
+	$sql = "SELECT COALESCE(SUM(t.amount), 0)
+		FROM ".TB_PREF."gl_trans t
+		INNER JOIN ".TB_PREF."chart_master a ON a.account_code=t.account
+		INNER JOIN ".TB_PREF."chart_types ct ON ct.id=a.account_type
+		INNER JOIN ".TB_PREF."chart_class cc ON cc.cid=ct.class_id
+		WHERE (t.dimension_id <> 0 OR t.dimension2_id <> 0)
+			AND cc.ctype > 3
+			AND t.tran_date >= '".$begin."'
+			AND t.tran_date <= '".$today."'";
+
+	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate dimensions total result')), user_price_dec());
+}
+
+/**
+ * Count open customer invoices (receivables).
+ *
+ * @return int
+ */
+function dashboard_count_receivables() {
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."debtor_trans trans
+		LEFT JOIN ".TB_PREF."voided v ON v.type=trans.type AND v.id=trans.trans_no
+		WHERE trans.type=".ST_SALESINVOICE."
+			AND v.id IS NULL
+			AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) > ".FLOAT_COMP_DELTA;
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count receivables'));
+}
+
+/**
+ * Count open supplier invoices (payables).
+ *
+ * @return int
+ */
+function dashboard_count_payables() {
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."supp_trans trans
+		LEFT JOIN ".TB_PREF."voided v ON v.type=trans.type AND v.id=trans.trans_no
+		WHERE trans.type=".ST_SUPPINVOICE."
+			AND v.id IS NULL
+			AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA;
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count payables'));
+}
+
+/**
+ * Count today's bank deposits.
+ *
+ * @return int
+ */
+function dashboard_count_todays_deposits() {
+	$today = date2sql(Today());
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."bank_trans bt
+		LEFT JOIN ".TB_PREF."voided v ON v.type=bt.type AND v.id=bt.trans_no
+		WHERE bt.type=".ST_BANKDEPOSIT." AND bt.trans_date='".$today."' AND v.id IS NULL";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count today deposits'));
+}
+
+/**
+ * Count today's bank payments.
+ *
+ * @return int
+ */
+function dashboard_count_todays_payments() {
+	$today = date2sql(Today());
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."bank_trans bt
+		LEFT JOIN ".TB_PREF."voided v ON v.type=bt.type AND v.id=bt.trans_no
+		WHERE bt.type=".ST_BANKPAYMENT." AND bt.trans_date='".$today."' AND v.id IS NULL";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count today payments'));
+}
+
+/**
+ * Count active employees.
+ *
+ * @return int
+ */
+function dashboard_count_employees() {
+	if (!dashboard_table_exists(TB_PREF.'employees'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."employees WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count employees'));
+}
+
+/**
+ * Count documents expiring within 30 days.
+ *
+ * @return int
+ */
+function dashboard_count_doc_expiry_soon() {
+	if (!dashboard_table_exists(TB_PREF.'employee_documents'))
+		return 0;
+
+	$today = date2sql(Today());
+	$sql = "SELECT COUNT(*)
+		FROM ".TB_PREF."employee_documents
+		WHERE expiry_date IS NOT NULL
+			AND expiry_date <> '0000-00-00'
+			AND expiry_date >= '".$today."'
+			AND expiry_date <= DATE_ADD('".$today."', INTERVAL 30 DAY)";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count expiring documents'));
+}
+
+/**
+ * Count active departments.
+ *
+ * @return int
+ */
+function dashboard_count_departments() {
+	if (!dashboard_table_exists(TB_PREF.'departments'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."departments WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count departments'));
+}
+
+/**
+ * Count payroll periods approved/posted but not paid.
+ *
+ * @return int
+ */
+function dashboard_count_unpaid_salaries_periods() {
+	if (!dashboard_table_exists(TB_PREF.'payroll_periods'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."payroll_periods WHERE status IN (2,3)";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count unpaid salary periods'));
+}
+
+/**
+ * Count active users.
+ *
+ * @return int
+ */
+function dashboard_count_users() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."users WHERE inactive=0";
+	return (int)get_dashboard_scalar_value($sql, _('Could not count users'));
+}
+
+/**
+ * Count active extensions from installed list.
+ *
+ * @return int
+ */
+function dashboard_count_active_extensions() {
+	global $installed_extensions;
+
+	if (!isset($installed_extensions) || !is_array($installed_extensions))
+		return 0;
+
+	$count = 0;
+	foreach ($installed_extensions as $extension) {
+		if (!empty($extension['active']))
+			$count++;
+	}
+
+	return $count;
+}
+
+/**
+ * Count installed language packs.
+ *
+ * @return int
+ */
+function dashboard_count_installed_languages() {
+	global $installed_languages;
+
+	if (!isset($installed_languages) || !is_array($installed_languages))
+		return 0;
+
+	return count($installed_languages);
+}
+
+/**
+ * Get formatted current database size.
+ *
+ * @return string
+ */
+function dashboard_get_database_size_text() {
+	$sql = "SELECT COALESCE(SUM(data_length + index_length), 0)
+		FROM information_schema.tables
+		WHERE table_schema = DATABASE()";
+
+	$size_bytes = get_dashboard_scalar_value($sql, _('Could not calculate database size'));
+	if ($size_bytes <= 0)
+		return '0 B';
+
+	$units = array('B', 'KB', 'MB', 'GB', 'TB');
+	$unit_index = 0;
+	while ($size_bytes >= 1024 && $unit_index < count($units) - 1) {
+		$size_bytes = $size_bytes / 1024;
+		$unit_index++;
+	}
+
+	return number_format($size_bytes, $unit_index == 0 ? 0 : 2).' '.$units[$unit_index];
 }
 
 function customer_top($today, $limit=10) {

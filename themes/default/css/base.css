@@ -86,8 +86,8 @@ button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.05em;
-	height: 1.05em;
+	width: 1.2em;
+	height: 1.2em;
 	margin-right: 6px;
 	vertical-align: middle;
 	line-height: 1;
@@ -200,10 +200,9 @@ input[type='button']:hover {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 0.95em;
+	font-size: 1.2em;
 	line-height: 1;
 	vertical-align: middle;
-	transform: translateY(1px);
 }
 
 .modern-app-shell button.ajaxsubmit > span,

@@ -1,5 +1,16 @@
 <?php
 /**********************************************************************
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL, 
+	as published by the Free Software Foundation, either version 3 
+	of the License, or (at your option) any later version.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+***********************************************************************/
+
+/**********************************************************************
 	NotrinosERP-1.0 Approval Workflow System
 	Approval Status Badges UI Widget
 
@@ -24,10 +35,7 @@ function approval_count_badge($count)
 	if ($count <= 0)
 		return '';
 
-	return "<span style='display:inline-block;min-width:18px;padding:2px 6px;"
-		. "border-radius:10px;background:#dc3545;color:#fff;font-size:10px;"
-		. "font-weight:bold;text-align:center;line-height:14px;margin-left:4px;'>"
-		. $count . "</span>";
+	return "<span class='approval-count-badge'>".$count."</span>";
 }
 
 /**
@@ -45,10 +53,7 @@ function notification_count_badge($count)
 	if ($count <= 0)
 		return '';
 
-	return "<span style='display:inline-block;min-width:18px;padding:2px 6px;"
-		. "border-radius:10px;background:#007bff;color:#fff;font-size:10px;"
-		. "font-weight:bold;text-align:center;line-height:14px;margin-left:4px;'>"
-		. $count . "</span>";
+	return "<span class='approval-notification-badge'>".$count."</span>";
 }
 
 /**
@@ -66,51 +71,34 @@ function notification_count_badge($count)
  */
 function display_approval_summary_cards($counts)
 {
-	$cards = array(
-		array(
-			'label'   => _('My Pending Actions'),
-			'count'   => isset($counts['my_pending']) ? (int)$counts['my_pending'] : 0,
-			'bg'      => '#ffc107',
-			'color'   => '#212529',
-			'icon'    => 'clock',
-		),
-		array(
-			'label'   => _('Total Pending'),
-			'count'   => isset($counts['pending']) ? (int)$counts['pending'] : 0,
-			'bg'      => '#17a2b8',
-			'color'   => '#fff',
-			'icon'    => 'hourglass',
-		),
-		array(
-			'label'   => _('Approved'),
-			'count'   => isset($counts['approved']) ? (int)$counts['approved'] : 0,
-			'bg'      => '#28a745',
-			'color'   => '#fff',
-			'icon'    => 'check-circle',
-		),
-		array(
-			'label'   => _('Rejected'),
-			'count'   => isset($counts['rejected']) ? (int)$counts['rejected'] : 0,
-			'bg'      => '#dc3545',
-			'color'   => '#fff',
-			'icon'    => 'x-circle',
-		),
+	global $path_to_root;
+	include_once($path_to_root . '/dashboard/includes/dashboard_classes.inc');
+
+	echo "<div class='approval-summary-cards'>\n";
+	render_dashboard_small_stat_card(
+		_('My Pending Actions'),
+		isset($counts['my_pending']) ? (int)$counts['my_pending'] : 0,
+		'clock',
+		'success'
 	);
-
-	echo "<div style='display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;'>\n";
-
-	foreach ($cards as $card) {
-		echo "<div style='flex:1;min-width:160px;padding:16px;border-radius:6px;"
-			. "background:{$card['bg']};color:{$card['color']};"
-			. "box-shadow:0 2px 4px rgba(0,0,0,0.1);'>\n";
-		echo "<div style='font-size:24px;font-weight:bold;'>"
-				. default_theme_icon($card['icon'])
-			. $card['count'] . "</div>\n";
-		echo "<div style='font-size:12px;margin-top:4px;opacity:0.9;'>"
-			. $card['label'] . "</div>\n";
-		echo "</div>\n";
-	}
-
+	render_dashboard_small_stat_card(
+		_('Total Pending'),
+		isset($counts['pending']) ? (int)$counts['pending'] : 0,
+		'hourglass',
+		'info'
+	);
+	render_dashboard_small_stat_card(
+		_('Approved'),
+		isset($counts['approved']) ? (int)$counts['approved'] : 0,
+		'check-circle',
+		'primary'
+	);
+	render_dashboard_small_stat_card(
+		_('Rejected'),
+		isset($counts['rejected']) ? (int)$counts['rejected'] : 0,
+		'x-circle',
+		'danger'
+	);
 	echo "</div>\n";
 }
 
@@ -141,9 +129,21 @@ function approval_status_cell($status)
 
 	$m = $map[$status];
 
-	return "<span style='display:inline-block;padding:1px 8px;border-radius:3px;"
-		. "background:{$m[0]};color:{$m[1]};font-size:11px;white-space:nowrap;'>"
-		. $m[2] . "</span>";
+	$class_name = 'approval-status-badge';
+	if ($status == APPROVAL_STATUS_PENDING)
+		$class_name .= ' is-pending';
+	elseif ($status == APPROVAL_STATUS_APPROVED)
+		$class_name .= ' is-approved';
+	elseif ($status == APPROVAL_STATUS_REJECTED)
+		$class_name .= ' is-rejected';
+	elseif ($status == APPROVAL_STATUS_CANCELLED)
+		$class_name .= ' is-cancelled';
+	elseif ($status == APPROVAL_STATUS_EXPIRED)
+		$class_name .= ' is-expired';
+	elseif ($status == APPROVAL_STATUS_DELEGATED)
+		$class_name .= ' is-delegated';
+
+	return "<span class='".$class_name."'>".$m[2]."</span>";
 }
 
 /**
@@ -159,10 +159,10 @@ function approval_urgency_indicator($submitted_date)
 	$days = ($now - $submitted) / 86400;
 
 	if ($days > 7) {
-		return "<span style='color:#dc3545;' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
+		return "<span class='approval-urgency is-overdue' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
 			. default_theme_icon('alert-triangle') . "</span>";
 	} elseif ($days > 3) {
-		return "<span style='color:#ffc107;' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
+		return "<span class='approval-urgency is-warning' title='" . sprintf(_('%d days pending'), (int)$days) . "'>"
 			. default_theme_icon('info-circle') . "</span>";
 	}
 

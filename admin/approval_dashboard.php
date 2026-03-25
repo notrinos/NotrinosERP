@@ -1,13 +1,22 @@
 <?php
 /**********************************************************************
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL, 
+	as published by the Free Software Foundation, either version 3 
+	of the License, or (at your option) any later version.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+***********************************************************************/
+
+/**********************************************************************
 	NotrinosERP-1.0 Approval Workflow System
 	Admin: Unified Approval Dashboard
 
 	Displays a dashboard of pending approvals for the current user,
 	with summary statistics, filterable lists, and quick approve/reject
 	actions. Also shows the user's own submitted drafts.
-
-	Phase 3 of the Approval System Development Plan.
 ***********************************************************************/
 $page_security = 'SA_APPROVALDASHBOARD';
 $path_to_root = '..';
@@ -229,13 +238,13 @@ function dashboard_escalation_cell($row)
 {
 	$escalation = get_draft_escalation_status((int)$row['id']);
 	if (!$escalation || $escalation['status'] === 'ok') {
-		return "<span style='color:#28a745;'>" . _('OK') . "</span>";
+		return "<span class='approval-escalation-badge is-ok'>" . _('OK') . "</span>";
 	} elseif ($escalation['status'] === 'warning') {
-		return "<span style='color:#ffc107;font-weight:bold;'>"
+		return "<span class='approval-escalation-badge is-warning'>"
 			. sprintf(_('Due in %d days'), $escalation['days_remaining'])
 			. "</span>";
 	} elseif ($escalation['status'] === 'overdue') {
-		return "<span style='color:#dc3545;font-weight:bold;'>"
+		return "<span class='approval-escalation-badge is-overdue'>"
 			. sprintf(_('Overdue %d days'), abs($escalation['days_remaining']))
 			. "</span>";
 	}
@@ -341,12 +350,11 @@ if (get_post('action_draft_id') > 0 && get_post('action_type') != '') {
 			: ($action_type === 'reject' ? _('Reject')
 			: ($action_type === 'delegate' ? _('Delegate')
 			: _('Cancel')));
-		$action_color = $action_type === 'approve' ? '#28a745'
-			: ($action_type === 'delegate' ? '#17a2b8' : '#dc3545');
+		$action_theme_class = $action_type === 'approve' ? 'is-approve'
+			: ($action_type === 'delegate' ? 'is-delegate' : 'is-danger');
 
-		echo "<div style='border:2px solid {$action_color};border-radius:6px;padding:16px;margin:12px 0;"
-			. "background:#fff;'>\n";
-		echo "<h3 style='color:{$action_color};margin:0 0 12px 0;'>"
+		echo "<div class='approval-action-box " . $action_theme_class . "'>\n";
+		echo "<h3 class='approval-action-title'>"
 			. sprintf(_('%s Draft #%d — %s'), $action_label, $action_draft_id,
 				htmlspecialchars($action_draft['workflow_name'], ENT_QUOTES, 'UTF-8'))
 			. "</h3>\n";
@@ -404,9 +412,7 @@ if (get_post('action_draft_id') > 0 && get_post('action_type') != '') {
 }
 
 // --- Tab buttons ---
-echo "<div style='margin:12px 0;'>\n";
-$tab_style_base = 'padding:8px 20px;border:1px solid #dee2e6;border-bottom:none;'
-	. 'cursor:pointer;font-size:13px;border-radius:4px 4px 0 0;margin-right:2px;';
+echo "<div class='approval-tabs'>\n";
 
 $tabs = array(
 	'pending'        => _('Pending Approvals'),
@@ -416,16 +422,14 @@ $tabs = array(
 
 foreach ($tabs as $tab_key => $tab_label) {
 	$is_active = ($active_tab === $tab_key);
-	$style = $tab_style_base . ($is_active
-		? 'background:#fff;font-weight:bold;border-bottom:2px solid #fff;'
-		: 'background:#f8f9fa;color:#6c757d;');
+	$tab_class = $is_active ? 'approval-tab-button is-active' : 'approval-tab-button';
 
 	$btn_name = 'Tab' . str_replace('_', '', ucwords($tab_key, '_'));
-	echo "<input type='submit' name='{$btn_name}' value='{$tab_label}' style='{$style}'>\n";
+	echo "<input type='submit' class='{$tab_class}' name='{$btn_name}' value='{$tab_label}'>\n";
 }
 
 echo "</div>\n";
-echo "<div style='border:1px solid #dee2e6;border-radius:0 4px 4px 4px;padding:16px;background:#fff;'>\n";
+echo "<div class='approval-tab-content'>\n";
 
 // --- Filter bar ---
 start_table(TABLESTYLE_NOBORDER);
@@ -464,7 +468,7 @@ if ($active_tab === 'my_submissions') {
 	echo "</td>";
 }
 
-submit_cells('RefreshDashboard', _('Search'), '', _('Refresh the list'), 'default');
+submit_cells('RefreshDashboard', _('Apply Filter'), '', _('Refresh the list'), 'default');
 
 end_row();
 end_table();
@@ -542,7 +546,7 @@ if ($active_tab === 'pending') {
 	// --- Recent Activity tab ---
 	$recent = get_recent_approval_activity(50);
 
-	echo "<table class='tablestyle' style='width:100%;'>\n";
+	echo "<table class='tablestyle approval-activity-table'>\n";
 	echo "<tr>";
 	echo "<th>" . _('Date/Time') . "</th>";
 	echo "<th>" . _('Action') . "</th>";
