@@ -54,6 +54,7 @@
 }
 
 .modern-notification-button {
+	position: relative;
 	width: 34px;
 	height: 34px;
 	padding: 0;
@@ -64,6 +65,7 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	cursor: pointer;
 }
 
 .modern-search-toggle {
@@ -95,6 +97,213 @@
 
 .modern-notification-icon {
 	margin-right: 0;
+}
+
+/* ── Notification Dropdown ── */
+.modern-notification-dropdown {
+	position: relative;
+}
+
+.modern-notification-badge {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: var(--modern-color-danger, #e53e3e);
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 18px;
+	text-align: center;
+	pointer-events: none;
+}
+
+.modern-notification-panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	width: 360px;
+	max-height: 480px;
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-sm);
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+	z-index: 110;
+	display: none;
+	overflow-y: auto;
+}
+
+.modern-notification-panel.is-open {
+	display: block;
+}
+
+.modern-notification-panel-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--modern-color-border);
+	position: sticky;
+	top: 0;
+	background: var(--modern-color-surface);
+	z-index: 1;
+}
+
+.modern-notification-panel-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--modern-color-text);
+}
+
+.modern-notification-panel-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--modern-color-danger, #e53e3e);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.modern-notification-empty {
+	padding: 40px 16px;
+	text-align: center;
+	color: var(--modern-color-muted);
+}
+
+.modern-notification-empty-icon {
+	width: 36px;
+	height: 36px;
+	margin: 0 auto 10px;
+	opacity: 0.4;
+}
+
+.modern-notification-empty p {
+	font-size: 13px;
+	margin: 0;
+}
+
+.modern-notification-section {
+	border-bottom: 1px solid var(--modern-color-border);
+}
+
+.modern-notification-section:last-child {
+	border-bottom: none;
+}
+
+.modern-notification-section-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 16px 6px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--modern-color-muted);
+}
+
+.modern-notification-section-icon {
+	width: 14px;
+	height: 14px;
+	flex: 0 0 14px;
+}
+
+.modern-notification-section-count {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: var(--modern-color-primary-50, #eff0f9);
+	color: var(--modern-color-primary, #3f51b5);
+	font-size: 10px;
+	font-weight: 700;
+}
+
+.modern-notification-items {
+	padding: 0;
+}
+
+.modern-notification-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 16px;
+	text-decoration: none;
+	color: var(--modern-color-text);
+	transition: background 0.12s;
+	border-left: 3px solid transparent;
+}
+
+.modern-notification-item:hover {
+	background: var(--modern-color-primary-50, #eff0f9);
+	text-decoration: none;
+	border-left-color: var(--modern-color-primary, #3f51b5);
+}
+
+.modern-notification-item-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.modern-notification-item-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--modern-color-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.modern-notification-item-summary {
+	font-size: 12px;
+	color: var(--modern-color-muted);
+	margin-top: 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.modern-notification-item-amount {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--modern-color-primary, #3f51b5);
+	margin-top: 2px;
+}
+
+.modern-notification-item-time {
+	flex: 0 0 auto;
+	font-size: 11px;
+	color: var(--modern-color-muted);
+	white-space: nowrap;
+	padding-top: 2px;
+}
+
+.modern-notification-view-all {
+	display: block;
+	padding: 10px 16px;
+	text-align: center;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--modern-color-primary, #3f51b5);
+	text-decoration: none;
+	transition: background 0.12s;
+}
+
+.modern-notification-view-all:hover {
+	background: var(--modern-color-primary-50, #eff0f9);
+	text-decoration: none;
 }
 
 /* ── User Dropdown ── */

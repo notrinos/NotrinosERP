@@ -441,10 +441,10 @@ foreach ($approvable_types as $type_id => $type_label) {
 	$type_options[$type_id] = $type_label;
 }
 
-echo "<td>";
+filter_cell_open(_('Type:'));
 echo array_selector('filter_trans_type', get_post('filter_trans_type'), $type_options,
 	array('select_submit' => true));
-echo "</td>";
+filter_cell_close();
 
 if ($active_tab !== 'activity') {
 	date_cells(_('From:'), 'filter_from_date', '', null, 0, 0, 0,
@@ -462,10 +462,10 @@ if ($active_tab === 'my_submissions') {
 		APPROVAL_STATUS_CANCELLED => _('Cancelled'),
 	);
 
-	echo "<td>" . _('Status') . ":</td><td>";
+	filter_cell_open(_('Status:'));
 	echo array_selector('filter_status', get_post('filter_status'), $status_options,
 		array('select_submit' => true));
-	echo "</td>";
+	filter_cell_close();
 }
 
 submit_cells('RefreshDashboard', _('Apply Filter'), '', _('Refresh the list'), 'default');

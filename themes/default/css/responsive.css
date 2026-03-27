@@ -214,6 +214,12 @@
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
+	.modern-notification-panel {
+		width: calc(100vw - 24px);
+		right: -60px;
+		max-height: 70vh;
+	}
+
 	body {
 		overflow: hidden;
 	}

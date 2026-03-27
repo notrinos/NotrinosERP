@@ -150,10 +150,10 @@ $type_options = array('' => _('All Types'));
 foreach ($approvable_types as $type_id => $type_label) {
 	$type_options[$type_id] = $type_label;
 }
-echo "<td>";
+filter_cell_open(_('Type:'));
 echo array_selector('filter_trans_type', get_post('filter_trans_type'), $type_options,
 	array('select_submit' => true));
-echo "</td>";
+filter_cell_close();
 
 // Status filter
 $status_options = array(
@@ -164,10 +164,10 @@ $status_options = array(
 	APPROVAL_STATUS_CANCELLED => _('Cancelled'),
 	APPROVAL_STATUS_EXPIRED   => _('Expired'),
 );
-echo "<td>";
+filter_cell_open(_('Status:'));
 echo array_selector('filter_status', get_post('filter_status', '-1'), $status_options,
 	array('select_submit' => true));
-echo "</td>";
+filter_cell_close();
 
 end_row();
 start_row();
@@ -184,10 +184,10 @@ $user_options = array('' => _('All Submitters'));
 foreach ($users as $uid => $uname) {
 	$user_options[$uid] = $uname;
 }
-echo "<td>";
+filter_cell_open(_('Submitter:'));
 echo array_selector('filter_submitter', get_post('filter_submitter'), $user_options,
 	array('select_submit' => true));
-echo "</td>";
+filter_cell_close();
 
 end_row();
 start_row();

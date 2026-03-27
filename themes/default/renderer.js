@@ -181,6 +181,18 @@
 			e.stopPropagation();
 			var isOpen = menu.classList.toggle('is-open');
 			trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+			// Close notification panel when user dropdown opens
+			if (isOpen) {
+				var notifPanel = document.getElementById('modern-notification-panel');
+				var notifTrigger = document.getElementById('modern-notification-trigger');
+				if (notifPanel) {
+					notifPanel.classList.remove('is-open');
+				}
+				if (notifTrigger) {
+					notifTrigger.setAttribute('aria-expanded', 'false');
+				}
+			}
 		});
 
 		document.addEventListener('click', function (e) {
@@ -591,12 +603,46 @@
 		window.addEventListener('resize', hideTooltip);
 	}
 
+	function bindNotificationDropdown() {
+		var trigger = document.getElementById('modern-notification-trigger');
+		var panel = document.getElementById('modern-notification-panel');
+		if (!trigger || !panel) {
+			return;
+		}
+
+		trigger.addEventListener('click', function (e) {
+			e.stopPropagation();
+			var isOpen = panel.classList.toggle('is-open');
+			trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+			// Close user dropdown when notification panel opens
+			if (isOpen) {
+				var userMenu = document.getElementById('modern-user-menu');
+				var userTrigger = document.getElementById('modern-user-trigger');
+				if (userMenu) {
+					userMenu.classList.remove('is-open');
+				}
+				if (userTrigger) {
+					userTrigger.setAttribute('aria-expanded', 'false');
+				}
+			}
+		});
+
+		document.addEventListener('click', function (e) {
+			if (!trigger.contains(e.target) && !panel.contains(e.target)) {
+				panel.classList.remove('is-open');
+				trigger.setAttribute('aria-expanded', 'false');
+			}
+		});
+	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function () {
 			bindSidebarToggle();
 			bindModuleGroups();
 			bindSidebarModuleActiveLinks();
 			bindUserDropdown();
+			bindNotificationDropdown();
 			bindClickableCheckboxRows();
 			bindCollapsedSidebarTooltips();
 			bindSearchToggle();
@@ -607,6 +653,7 @@
 		bindModuleGroups();
 		bindSidebarModuleActiveLinks();
 		bindUserDropdown();
+		bindNotificationDropdown();
 			bindClickableCheckboxRows();
 		bindCollapsedSidebarTooltips();
 		bindSearchToggle();

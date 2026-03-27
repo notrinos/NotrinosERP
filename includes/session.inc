@@ -437,6 +437,10 @@ include_once($path_to_root.'/includes/approval/approval_delegation.inc');
 include_once($path_to_root.'/includes/approval/approval_escalation.inc');
 include_once($path_to_root.'/includes/approval/approval_conditions.inc');
 
+// Notification system
+include_once($path_to_root.'/includes/notification_manager.inc');
+include_once($path_to_root.'/includes/approval/approval_notification_provider.inc');
+
 // Ajax communication object
 $Ajax = new Ajax();
 
@@ -597,6 +601,19 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 	if (!isset($_SESSION['App'])) {
 		$_SESSION['App'] = new NotrinosErp();
 		$_SESSION['App']->init();
+	}
+
+	// Register core notification providers for the logged-in user
+	if ($_SESSION['wa_current_user']->logged_in()) {
+		$notification_manager = get_notification_manager();
+		if (!$notification_manager->hasProvider('approval')) {
+			$notification_manager->registerProvider(
+				new ApprovalNotificationProvider(
+					(int)$_SESSION['wa_current_user']->user,
+					(int)$_SESSION['wa_current_user']->access
+				)
+			);
+		}
 	}
 }
 
