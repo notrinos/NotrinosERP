@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-    Copyright (C) FrontAccounting, LLC.
+    Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL, 
     as published by the Free Software Foundation, either version 3 
     of the License, or (at your option) any later version.
@@ -57,7 +57,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 
     // Powered by
     $power_by       = 'NotrinosERP';
-    $power_url      = 'http://notrinos.com';
+    $power_url      = 'https://notrinos.com';
 
     /* No check on edit conflicts. Maybe needed to be set to 1 in certains Windows Servers */
     $no_check_edit_conflicts = 0;
@@ -95,7 +95,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
     //  context help feed from notrinos.com
     //  set to null if not used:
     //  $help_base_url = null;
-    $help_base_url = 'http://support.notrinos.com/ERP/index.php?n=Help.';
+    $help_base_url = 'https://support.notrinos.com/1.0/index.php?n=Help.';
 
     // per user data/cache directory
     $comp_path = $path_to_root.'/company';

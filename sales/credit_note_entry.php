@@ -275,7 +275,6 @@ hidden('cart_id');
 $customer_error = display_credit_header($_SESSION['Items']);
 
 if ($customer_error == '') {
-	start_view_columns();
 	view_column_start();
 	display_credit_items(_('Credit Note Items'), $_SESSION['Items']);
 	credit_options_controls($_SESSION['Items']);

@@ -12,7 +12,13 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(120deg, var(--access-accent-1), var(--access-accent-2));
+	/*background: linear-gradient(120deg, var(--access-accent-1), var(--access-accent-2));*/
+	background-color: #4a74dc;
+  	background-image:
+    	radial-gradient(ellipse at 10% 90%, #3c2d83 0%, transparent 50%),
+    	radial-gradient(ellipse at 90% 90%, #c33c65 0%, transparent 50%),
+    	radial-gradient(ellipse at 90% 10%, #4a74dc 0%, transparent 50%),
+    	radial-gradient(ellipse at 10% 10%, #35244f 0%, transparent 50%);
 	background-size: 200% 200%;
 	animation: loginBgShift 8s ease-in-out infinite;
 	font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;

@@ -29,11 +29,13 @@ start_form();
 if (!isset($_POST['customer_id']))
 	$_POST['customer_id'] = get_global_customer();
 
-echo '<center>' . _('Select a customer: ') . '&nbsp;&nbsp;';
-echo customer_list('customer_id', $_POST['customer_id'], true, true);
-echo '<br>';
-check(_('Show Settled Items:'), 'ShowSettled', null, true);
-echo '</center><br><br>';
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+customer_list_cells(_('Customer:'), 'customer_id', $_POST['customer_id'], true, true);
+check_cells(_('Show settled items:'), 'ShowSettled', null, true);
+submit_cells('Search', _('Search'), '', '', 'default');
+end_row();
+end_table(2);
 
 set_global_customer($_POST['customer_id']);
 
