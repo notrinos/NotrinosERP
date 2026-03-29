@@ -327,9 +327,12 @@ function price_decimal_format($number, &$dec) {
 	return number_format2($number, $dec);
 }	
 
-function qty_format($number, $stock_id, &$dec) {
-	$dec = get_qty_dec($stock_id);
-	return number_format2($number, $dec);
+function qty_format($number, $stock_id=null, &$dec=null) {
+	$resolved_dec = get_qty_dec($stock_id);
+	if (func_num_args() >= 3)
+		$dec = $resolved_dec;
+
+	return number_format2($number, $resolved_dec);
 }
 
 /* and get_qty_dec */

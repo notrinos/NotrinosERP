@@ -84,6 +84,9 @@ function print_leave_balance_report() {
     $rep->Info($params, $cols, $headers, $aligns);
     $rep->NewPage();
 
+    if (function_exists('ensure_leave_balance_entitlements_for_filters'))
+        ensure_leave_balance_entitlements_for_filters($year, $employee_id, $leave_id);
+
     $result = get_report_leave_balance_rows($year, $employee_id, $leave_id);
     if (!$result || db_num_rows($result) == 0) {
         $rep->TextCol(0, 3, _('No leave balances found for selected criteria.'));

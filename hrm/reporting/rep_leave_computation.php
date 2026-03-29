@@ -44,6 +44,9 @@ function print_leave_computation_report() {
     $rep->Info(array(0 => $comments, 1 => array('text' => _('Year'), 'from' => $fiscal_year, 'to' => '')), $cols, $headers, $aligns);
     $rep->NewPage();
 
+    if (function_exists('ensure_leave_balance_entitlements_for_filters'))
+        ensure_leave_balance_entitlements_for_filters($fiscal_year);
+
     $res = get_leave_balances($fiscal_year);
     $dec = user_qty_dec();
     while ($row = db_fetch($res)) {

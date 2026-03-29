@@ -49,7 +49,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 	$k = 0;
 	
 	$as_of_date = get_post('effective_from', Today());
-	foreach($elements as $element) {
+	while ($elements && ($element = db_fetch($elements))) {
 		$amount = get_salary_structure_amount($position_id, $grade_id, $element['element_id'], $as_of_date);
 		alt_table_row_color($k);
 		label_cell($element['element_name']);
@@ -149,9 +149,8 @@ $position_id = get_post('position_id', '');
 
 $tabs = array(0 => array(_('Basic'), 1));
 $grades = get_pay_grades();
-
-foreach($grades as $grade) {
-	$tabs[$grade['grade_id']] = array($grade['grade_name'], 1);
+while ($grades && ($grade = db_fetch($grades))) {
+	$tabs[(int)$grade['grade_id']] = array($grade['grade_name'], 1);
 }
 
 tabbed_content_start('tabs', $tabs);

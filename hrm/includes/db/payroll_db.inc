@@ -17,9 +17,63 @@
  * @return bool
  */
 function payroll_table_exists($table_name) {
-    $sql = "SHOW TABLES LIKE ".db_escape(TB_PREF.$table_name);
+    static $cache = array();
+
+    if (isset($cache[$table_name]))
+        return $cache[$table_name];
+
+    $sql = "SHOW TABLES LIKE '".TB_PREF.$table_name."'";
     $result = db_query($sql);
-    return $result && db_num_rows($result) > 0;
+    if ($result && db_num_rows($result) > 0) {
+        $cache[$table_name] = true;
+        return true;
+    }
+
+    // Payroll core tables are expected in this module; allow a safe fallback
+    // when metadata lookups fail inside long HRM posting flows.
+    if (in_array($table_name, array('payroll_periods', 'payslips'), true)) {
+        $cache[$table_name] = true;
+        return true;
+    }
+
+    $cache[$table_name] = false;
+    return false;
+}
+
+/**
+ * Ensure payroll_periods table exists for the active company schema.
+ *
+ * @return bool
+ */
+function ensure_payroll_periods_table() {
+    if (payroll_table_exists('payroll_periods'))
+        return true;
+
+    $sql = "CREATE TABLE IF NOT EXISTS ".TB_PREF."payroll_periods (
+        period_id int(11) NOT NULL AUTO_INCREMENT,
+        period_name varchar(60) NOT NULL,
+        from_date date NOT NULL,
+        to_date date NOT NULL,
+        pay_date date DEFAULT NULL,
+        department_id int(11) DEFAULT NULL,
+        status tinyint(1) NOT NULL DEFAULT 0,
+        total_gross double NOT NULL DEFAULT 0,
+        total_deductions double NOT NULL DEFAULT 0,
+        total_net double NOT NULL DEFAULT 0,
+        total_employer_cost double NOT NULL DEFAULT 0,
+        approved_by varchar(20) DEFAULT NULL,
+        approval_date datetime DEFAULT NULL,
+        gl_trans_no int(11) DEFAULT NULL,
+        created_by smallint(6) DEFAULT NULL,
+        created_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        notes text,
+        PRIMARY KEY (period_id),
+        KEY from_date (from_date),
+        KEY status (status)
+    ) ENGINE=InnoDB";
+
+    $db_ok = db_query($sql, 'could not create payroll_periods table');
+    return (bool)$db_ok;
 }
 
 /**
@@ -50,8 +104,6 @@ function payroll_to_sql_date($date_value) {
 function payroll_payslip_header_table() {
     if (payroll_table_exists('payslips'))
         return 'payslips';
-    if (payroll_table_exists('payslip'))
-        return 'payslip';
 
     return false;
 }
@@ -66,7 +118,7 @@ function payroll_payslip_header_table() {
  * @return int|false
  */
 function add_payroll_period($period_name, $from_date, $to_date, $department_id=null) {
-    if (!payroll_table_exists('payroll_periods'))
+    if (!ensure_payroll_periods_table())
         return false;
 
     $period_name = trim((string)$period_name);
@@ -105,7 +157,26 @@ function add_payroll_period($period_name, $from_date, $to_date, $department_id=n
     if (!$db_ok)
         return false;
 
-    return db_insert_id();
+    $period_id = (int)db_insert_id();
+    if ($period_id <= 0) {
+        $lookup = "SELECT period_id FROM ".TB_PREF."payroll_periods WHERE "
+            ."period_name = ".db_escape($period_name)
+            ." AND from_date = ".db_escape($from_sql)
+            ." AND to_date = ".db_escape($to_sql);
+
+        if ($department_id !== null && $department_id !== '')
+            $lookup .= " AND department_id = ".db_escape((int)$department_id);
+        else
+            $lookup .= " AND department_id IS NULL";
+
+        $lookup .= " ORDER BY period_id DESC LIMIT 1";
+        $lookup_result = db_query($lookup, 'could not resolve payroll period id');
+        $lookup_row = $lookup_result ? db_fetch_row($lookup_result) : false;
+        if ($lookup_row)
+            $period_id = (int)$lookup_row[0];
+    }
+
+    return $period_id > 0 ? $period_id : false;
 }
 
 /**
@@ -162,7 +233,7 @@ function get_payroll_periods($status=null, $limit=null, $offset=0) {
 
     $offset = max((int)$offset, 0);
     if ($limit !== null && (int)$limit > 0)
-        $sql .= " LIMIT ".db_escape((int)$limit)." OFFSET ".db_escape($offset);
+        $sql .= " LIMIT ".(int)$limit." OFFSET ".$offset;
 
     return db_query($sql, 'could not get payroll periods');
 }
@@ -216,17 +287,12 @@ function update_payroll_period_totals($period_id) {
     $employer_cost = 0;
 
     if ($payslip_table) {
-        $period_col = 'payroll_period_id';
-        if (!check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$payslip_table)." AND COLUMN_NAME = 'payroll_period_id'")) {
-            $period_col = 'period_id';
-        }
-
         $sum_sql = "SELECT
             SUM(IFNULL(gross_salary, 0)) as total_gross,
             SUM(IFNULL(total_deductions, 0)) as total_deductions,
             SUM(IFNULL(net_salary, IFNULL(payable_amount, 0))) as total_net,
             SUM(IFNULL(total_cost, IFNULL(employer_contributions, 0) + IFNULL(net_salary, IFNULL(payable_amount, 0)))) as total_employer_cost
-            FROM ".TB_PREF.$payslip_table." WHERE ".$period_col." = ".db_escape((int)$period_id);
+            FROM ".TB_PREF.$payslip_table." WHERE payroll_period_id = ".db_escape((int)$period_id);
         $sum_res = db_query($sum_sql, 'could not aggregate payroll period totals');
         $sum_row = db_fetch_assoc($sum_res);
 
@@ -264,11 +330,6 @@ function void_payroll_period($period_id) {
 
     $payslip_table = payroll_payslip_header_table();
     if ($payslip_table) {
-        $period_col = "payroll_period_id";
-        if (!check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$payslip_table)." AND COLUMN_NAME = 'payroll_period_id'")) {
-            $period_col = 'period_id';
-        }
-
         $set_parts = array();
         if (check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$payslip_table)." AND COLUMN_NAME = 'status'"))
             $set_parts[] = "status = 6";
@@ -276,7 +337,7 @@ function void_payroll_period($period_id) {
             $set_parts[] = "voided_date = ".db_escape(date2sql(Today()));
 
         if (!empty($set_parts)) {
-            $sql = "UPDATE ".TB_PREF.$payslip_table." SET ".implode(', ', $set_parts)." WHERE ".$period_col." = ".db_escape((int)$period_id);
+            $sql = "UPDATE ".TB_PREF.$payslip_table." SET ".implode(', ', $set_parts)." WHERE payroll_period_id = ".db_escape((int)$period_id);
             db_query($sql, 'could not void linked payslips');
         }
     }

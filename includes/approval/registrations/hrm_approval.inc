@@ -31,11 +31,11 @@ function find_approval_draft_for_hrm_request($trans_type, $request_id)
 {
 	$key = ($trans_type == ST_PAYROLL_PERIOD) ? 'period_id' : 'request_id';
 
-	$sql = "SELECT * FROM " . TB_PREF . "approval_drafts
-		WHERE trans_type = " . db_escape((int)$trans_type) . "
-			AND status = " . APPROVAL_STATUS_PENDING . "
-			AND draft_data LIKE " . db_escape('%"' . $key . '":' . (int)$request_id . '%') . "
-		ORDER BY draft_id DESC LIMIT 1";
+	$sql = "SELECT d.*, d.id AS draft_id FROM " . TB_PREF . "approval_drafts d
+		WHERE d.trans_type = " . db_escape((int)$trans_type) . "
+			AND d.status = " . APPROVAL_STATUS_PENDING . "
+			AND d.draft_data LIKE " . db_escape('%"' . $key . '":' . (int)$request_id . '%') . "
+		ORDER BY d.id DESC LIMIT 1";
 
 	$result = db_query($sql, 'could not find approval draft for HRM request');
 	$row = db_fetch($result);

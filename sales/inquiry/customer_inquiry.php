@@ -84,9 +84,9 @@ function copy_link($row) {
     if ($page_nested)
         return '';
     if ($row['type'] == ST_CUSTDELIVERY)
-        return pager_link(_('Copy Delivery'), "/sales/sales_order_entry.php?NewDelivery=".$row['order_'], ICON_DOC);
+		return pager_link(_('Copy Delivery'), "/sales/sales_order_entry.php?NewDelivery=".$row['order_'], ICON_COPY);
     elseif ($row['type'] == ST_SALESINVOICE)
-        return pager_link(_('Copy Invoice'), "/sales/sales_order_entry.php?NewInvoice=".$row['order_'], ICON_DOC);
+		return pager_link(_('Copy Invoice'), "/sales/sales_order_entry.php?NewInvoice=".$row['order_'], ICON_COPY);
 }
 
 function prt_link($row) {

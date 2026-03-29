@@ -69,33 +69,54 @@ if (isset($_POST['Process'])) {
                 display_error(_('No active Basic pay element found. Please configure pay elements first.'));
             } else {
                 update_employee($_POST['employee_id'], array('personal_salary' => 1));
-                add_employee_salary(
+                $existing_salary = get_employee_salary_by_key(
                     $_POST['employee_id'],
                     $basic_element_id,
-                    input_num('new_salary'),
-                    $_POST['effective_date'],
-                    '',
-                    '',
-                    _('Salary revision')
+                    $_POST['effective_date']
                 );
 
-                add_employee_history(
-                    $_POST['employee_id'],
-                    HRM_HIST_SALARY_CHANGE,
-                    $_POST['effective_date'],
-                    (int)$employee['department_id'],
-                    (int)$employee['department_id'],
-                    (int)$employee['position_id'],
-                    (int)$employee['position_id'],
-                    (int)$employee['grade_id'],
-                    (int)$employee['grade_id'],
-                    $old_salary,
-                    input_num('new_salary'),
-                    $_POST['reason'],
-                    isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
-                );
+                if ($existing_salary) {
+                    $salary_saved = update_employee_salary(
+                        (int)$existing_salary['salary_id'],
+                        input_num('new_salary'),
+                        $_POST['effective_date'],
+                        empty($existing_salary['effective_to']) ? '' : sql2date($existing_salary['effective_to']),
+                        empty($existing_salary['formula']) ? '' : $existing_salary['formula'],
+                        _('Salary revision')
+                    );
+                } else {
+                    $salary_saved = (bool)add_employee_salary(
+                        $_POST['employee_id'],
+                        $basic_element_id,
+                        input_num('new_salary'),
+                        $_POST['effective_date'],
+                        '',
+                        '',
+                        _('Salary revision')
+                    );
+                }
 
-                display_notification(_('Salary revision has been processed.'));
+                if (!$salary_saved) {
+                    display_error(_('Could not save salary revision.'));
+                } else {
+                    add_employee_history(
+                        $_POST['employee_id'],
+                        HRM_HIST_SALARY_CHANGE,
+                        $_POST['effective_date'],
+                        (int)$employee['department_id'],
+                        (int)$employee['department_id'],
+                        (int)$employee['position_id'],
+                        (int)$employee['position_id'],
+                        (int)$employee['grade_id'],
+                        (int)$employee['grade_id'],
+                        $old_salary,
+                        input_num('new_salary'),
+                        $_POST['reason'],
+                        isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
+                    );
+
+                    display_notification(_('Salary revision has been processed.'));
+                }
             }
         }
     }

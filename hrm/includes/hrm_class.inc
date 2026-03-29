@@ -19,11 +19,14 @@ include_once($path_to_root.'/includes/ui/items_cart.inc');
  * employee-aware posting for HRM transactions.
  */
 class hrm_cart extends items_cart {
-	/** @var int */
-	public $employee_id = 0;
+	/** @var string */
+	public $employee_id = '';
 
 	/** @var string */
 	public $employee_name = '';
+
+	/** @var payslip_doc|null */
+	public $payslip_preview = null;
 
 	/** @var string */
 	public $Comments = '';
@@ -63,7 +66,7 @@ class hrm_cart extends items_cart {
 	 * @return void
 	 */
 	function set_employee($employee_id, $employee_name) {
-		$this->employee_id = (int)$employee_id;
+		$this->employee_id = (string)$employee_id;
 		$this->employee_name = $employee_name;
 	}
 
@@ -127,6 +130,12 @@ class payslip_doc {
 
 	/** @var string */
 	public $reference = '';
+
+	/** @var int */
+	public $gl_trans_no = 0;
+
+	/** @var string */
+	public $comments = '';
 
 	/** @var float */
 	public $basic_salary = 0;
@@ -257,13 +266,20 @@ class payslip_doc {
 	function recalculate_totals() {
 		$this->total_earnings = 0;
 		$this->total_deductions = 0;
+		$basic_category = defined('HRM_ELEM_BASIC') ? HRM_ELEM_BASIC : 1;
+		$basic_lines_total = 0;
 
 		foreach ($this->lines as $line) {
 			if ($line->is_deduction)
 				$this->total_deductions += $line->final_amount;
+			elseif ((int)$line->element_category === (int)$basic_category)
+				$basic_lines_total += $line->final_amount;
 			else
 				$this->total_earnings += $line->final_amount;
 		}
+
+		if ((float)$this->basic_salary == 0 && $basic_lines_total != 0)
+			$this->basic_salary = $basic_lines_total;
 
 		$this->gross_salary = $this->basic_salary + $this->total_earnings;
 		$this->net_salary = $this->gross_salary - $this->total_deductions;

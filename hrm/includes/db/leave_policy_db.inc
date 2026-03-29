@@ -153,3 +153,131 @@ function delete_leave_policy($policy_id) {
     db_query($sql, 'could not delete leave policy');
 }
 
+/**
+ * Normalize leave policy date input to SQL format.
+ *
+ * @param string $date_value
+ * @return string
+ */
+function leave_policy_to_sql_date($date_value) {
+    $date_value = trim((string)$date_value);
+    if ($date_value === '')
+        return '';
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
+        return $date_value;
+
+    if (is_date($date_value))
+        return date2sql($date_value);
+
+    return $date_value;
+}
+
+/**
+ * Find the best matching leave policy for an employee and leave type.
+ *
+ * @param array $employee
+ * @param int $leave_id
+ * @param string $as_of_date
+ * @return array|false
+ */
+function get_leave_policy_for_employee($employee, $leave_id, $as_of_date) {
+    if (!is_array($employee) || empty($employee['employee_id']) || (int)$leave_id <= 0)
+        return false;
+
+    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    if ($as_of_sql === '')
+        $as_of_sql = date2sql(Today());
+
+    $grade_id = isset($employee['grade_id']) ? (int)$employee['grade_id'] : 0;
+    $employment_type = isset($employee['employment_type']) ? (int)$employee['employment_type'] : -1;
+
+    $sql = "SELECT p.*, lt.leave_name, g.grade_name
+        FROM ".TB_PREF."leave_policies p
+        LEFT JOIN ".TB_PREF."leave_types lt ON lt.leave_id = p.leave_id
+        LEFT JOIN ".TB_PREF."pay_grades g ON g.grade_id = p.grade_id
+        WHERE p.inactive = 0
+            AND p.leave_id = ".db_escape((int)$leave_id)."
+            AND p.effective_from <= ".db_escape($as_of_sql)."
+            AND (p.effective_to IS NULL OR p.effective_to = '' OR p.effective_to >= ".db_escape($as_of_sql).")
+            AND (p.grade_id IS NULL OR p.grade_id = 0 OR p.grade_id = ".db_escape($grade_id).")
+            AND (p.employment_type IS NULL OR p.employment_type = ".db_escape($employment_type).")
+        ORDER BY
+            CASE WHEN p.grade_id = ".db_escape($grade_id)." THEN 0 ELSE 1 END,
+            CASE WHEN p.employment_type = ".db_escape($employment_type)." THEN 0 ELSE 1 END,
+            p.effective_from DESC,
+            p.policy_id DESC";
+
+    $result = db_query($sql, 'could not get leave policy for employee');
+    return db_fetch_assoc($result);
+}
+
+/**
+ * Calculate leave entitlement from policy settings.
+ *
+ * @param array $policy
+ * @param array $employee
+ * @param string $as_of_date
+ * @return float
+ */
+function calculate_leave_policy_entitlement($policy, $employee, $as_of_date) {
+    if (!is_array($policy) || !is_array($employee))
+        return 0;
+
+    $annual_entitlement = (float)$policy['annual_entitlement'];
+    if ($annual_entitlement <= 0)
+        return 0;
+
+    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    if ($as_of_sql === '')
+        $as_of_sql = date2sql(Today());
+
+    $hire_date_sql = !empty($employee['hire_date']) ? leave_policy_to_sql_date($employee['hire_date']) : '';
+    $probation_end_sql = !empty($employee['probation_end_date']) ? leave_policy_to_sql_date($employee['probation_end_date']) : '';
+
+    if (empty($policy['probation_applicable']) && $probation_end_sql !== '' && $probation_end_sql > $as_of_sql)
+        return 0;
+
+    $service_months = 0;
+    if ($hire_date_sql !== '') {
+        list($hire_year, $hire_month, $hire_day) = array_map('intval', explode('-', $hire_date_sql));
+        list($asof_year, $asof_month, $asof_day) = array_map('intval', explode('-', $as_of_sql));
+        $service_months = (($asof_year - $hire_year) * 12) + ($asof_month - $hire_month);
+        if ($asof_day < $hire_day)
+            $service_months--;
+        if ($service_months < 0)
+            $service_months = 0;
+    }
+
+    if ((int)$policy['min_service_months'] > $service_months)
+        return 0;
+
+    $accrual_method = isset($policy['accrual_method']) ? (int)$policy['accrual_method'] : 0;
+    if ($accrual_method === 0)
+        return round2($annual_entitlement, user_price_dec());
+
+    $period_start_sql = substr($as_of_sql, 0, 4).'-01-01';
+    if ($hire_date_sql !== '' && $hire_date_sql > $period_start_sql)
+        $period_start_sql = $hire_date_sql;
+
+    list($start_year, $start_month, $start_day) = array_map('intval', explode('-', $period_start_sql));
+    list($asof_year, $asof_month, $asof_day) = array_map('intval', explode('-', $as_of_sql));
+    $elapsed_months = (($asof_year - $start_year) * 12) + ($asof_month - $start_month) + 1;
+    if ($asof_day < $start_day)
+        $elapsed_months--;
+
+    if ($elapsed_months < 0)
+        $elapsed_months = 0;
+    if ($elapsed_months > 12)
+        $elapsed_months = 12;
+
+    if ($accrual_method === 1)
+        return round2(($annual_entitlement / 12) * $elapsed_months, user_price_dec());
+
+    $elapsed_quarters = (int)ceil($elapsed_months / 3);
+    if ($elapsed_quarters > 4)
+        $elapsed_quarters = 4;
+
+    return round2(($annual_entitlement / 4) * $elapsed_quarters, user_price_dec());
+}
+

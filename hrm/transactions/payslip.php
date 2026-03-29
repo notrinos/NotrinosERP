@@ -25,6 +25,8 @@ if (user_use_date_picker())
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/ui/payslip_ui.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/payroll_engine.inc');
 
 if (isset($_GET['ModifyPaySlip'])) {
 	$_SESSION['page_title'] = sprintf(_('Modifying Payslip #%d.'), $_GET['trans_no']);
@@ -50,7 +52,7 @@ if (isset($_GET['AddedID'])) {
 	$trans_no = $_GET['AddedID'];
 	$trans_type = ST_PAYSLIP;
 
-	if($payslip_no) {
+	if($trans_no) {
 		display_notification_centered( sprintf(_('Payslip #%d has been entered'), $trans_no));
 		display_note(get_gl_view_str($trans_type, $trans_no, _('&View this Transaction')));
 
@@ -122,11 +124,23 @@ function create_cart($type=80, $trans_no=0) {
 
 //--------------------------------------------------------------------------
 
+if (!isset($_SESSION['hrm_items']) || !is_object($_SESSION['hrm_items']) || !($_SESSION['hrm_items'] instanceof hrm_cart))
+	create_cart(ST_PAYSLIP, 0);
+
+if (!isset($_POST['from_date']) || $_POST['from_date'] == '')
+	$_POST['from_date'] = Today();
+if (!isset($_POST['to_date']) || $_POST['to_date'] == '')
+	$_POST['to_date'] = Today();
+if (!isset($_POST['due_date']) || $_POST['due_date'] == '')
+	$_POST['due_date'] = Today();
+
+//--------------------------------------------------------------------------
+
 function validate_payslip_generation() {
 
-	if(!$_POST['person_id']) {
+	if(!$_POST['employee_id']) {
 		display_error(_('Employee not selected'));
-		set_focus('person_id');
+		set_focus('employee_id');
 		return false;
 	} 
 	if(!is_date($_POST['from_date'])) {
@@ -139,17 +153,17 @@ function validate_payslip_generation() {
 		set_focus('to_date');
 		return false;
 	}
-	if(payslip_generated_for_date($_POST['from_date'], $_POST['person_id'])) {
+	if(payslip_generated_for_date($_POST['from_date'], $_POST['employee_id'])) {
 		display_error(_('Selected date has already paid for this person'));
 		set_focus('from_date');
 		return false;
 	}
-	if(payslip_generated_for_date($_POST['to_date'], $_POST['person_id'])) {
+	if(payslip_generated_for_date($_POST['to_date'], $_POST['employee_id'])) {
 		display_error(_('Selected date has already paid for this person'));
 		set_focus('to_date');
 		return false;
 	}
-	if(payslip_generated_for_period($_POST['from_date'], $_POST['to_date'], $_POST['person_id'])) {
+	if(payslip_generated_for_period($_POST['from_date'], $_POST['to_date'], $_POST['employee_id'])) {
 		display_error(_('Selected period contains a period that has already been paid for this person'));
 		set_focus('from_date');
 		return false;
@@ -169,20 +183,20 @@ function validate_payslip_generation() {
 		set_focus('to_date');
 		return false;
 	}
-	if(!check_employee_hired($_POST['person_id'], $_POST['from_date'])) {
+	if(!check_employee_hired($_POST['employee_id'], $_POST['from_date'])) {
 		display_error(_('Cannot pay for the date before hired date'));
 		set_focus('from_date');
 		return false;
 	}
 	// The following two cases need to be set in correct order
-	if(!employee_has_position($_POST['person_id'])) {
+	if(!employee_has_position($_POST['employee_id'])) {
 		display_error(_('Selected Employee does not have a Job Position, please define it first.'));
-		set_focus('person_id');
+		set_focus('employee_id');
 		return false;
 	}
-	elseif(!emp_position_has_structure($_POST['person_id'])) {
-		display_error(_("the Employee's Job Position does not have a structure, please define Salary Structure"));
-		set_focus('person_id');
+	elseif (function_exists('get_employee_salary_components') && empty(get_employee_salary_components($_POST['employee_id'], date2sql($_POST['to_date'])))) {
+		display_error(_('No salary components were found for the selected employee and period. Configure salary structure or personal salary first.'));
+		set_focus('employee_id');
 		return false;
 	}
 	return true;
@@ -198,7 +212,32 @@ if(isset($_POST['GeneratePayslip']) && validate_payslip_generation())
 
 
 if(isset($_POST['Process'])) {
-	
+	if (validate_payslip_generation()) {
+		$employee = get_employee_by_code(get_post('employee_id'));
+		if (!$employee) {
+			display_error(_('Selected employee was not found.'));
+		} else {
+			$preview_context = array(
+				'salary_components' => array(
+					get_post('employee_id') => get_employee_salary_components(get_post('employee_id'), date2sql(get_post('to_date')))
+				)
+			);
+			$payslip_doc = calculate_employee_payslip($employee, get_post('from_date'), get_post('to_date'), 0, $preview_context);
+			if (!$payslip_doc) {
+				display_error(_('Could not calculate payslip.'));
+			} else {
+				$payslip_doc->tran_date = get_post('tran_date');
+				$payslip_doc->reference = trim((string)get_post('reference'));
+				$payslip_doc->comments = trim((string)get_post('Comments'));
+
+				$trans_no = post_payslip_to_gl($payslip_doc);
+				if ($trans_no)
+					meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+				else
+					display_error(_('Could not post payslip to the general ledger.'));
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -256,7 +295,7 @@ function handle_update_item() {
 		else
 			$amount = -input_num('AmountCredit');
 
-		$_SESSION['hrm_items']->update_gl_item($_POST['Index'], $_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('person_id'));
+		$_SESSION['hrm_items']->update_gl_item($_POST['Index'], $_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('employee_id'));
 	}
 	line_start_focus();
 }
@@ -276,7 +315,7 @@ function handle_new_item() {
 	else
 		$amount = -input_num('AmountCredit');
 	
-	$_SESSION['hrm_items']->add_gl_item($_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('person_id'));
+	$_SESSION['hrm_items']->add_gl_item($_POST['code_id'], $_POST['dimension_id'], $_POST['dimension2_id'], $amount, $_POST['LineMemo'], '', get_post('employee_id'));
 	line_start_focus();
 }
 
@@ -299,6 +338,8 @@ else
 start_table();
 textarea_row(_('Comments:'), 'Comments', null, 50, 5);
 end_table();
+
+submit_center('Process', _('Generate Payslip'), true, '', 'default');
 
 // var_dump($_SESSION['hrm_items']);
 end_form();

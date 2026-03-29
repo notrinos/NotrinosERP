@@ -261,6 +261,9 @@ class BoxReports {
 			case 'SYS_TYPES_ALL':
 				return systypes_list($name, null, _('No Type Filter'));
 
+			case 'APPROVAL_STATUS':
+				return approval_report_status_list($name, null);
+
 			case 'TEXT':
 				return "<input type='text' name='$name'>";
 
@@ -507,6 +510,31 @@ function gl_systypes_list($name, $value=null, $spec_opt=false) {
 		array( 
 			'spec_option'=> $spec_opt,
 			'spec_id' => ALL_NUMERIC,
+			'async' => false,
+		)
+	);
+}
+
+/**
+ * Build approval status selector for report parameters.
+ *
+ * @param string   $name  HTML field name
+ * @param int|null $value Selected status value
+ * @return string         HTML selector markup
+ */
+function approval_report_status_list($name, $value = null) {
+	$statuses = array(
+		0 => _('Pending'),
+		1 => _('Approved'),
+		2 => _('Rejected'),
+		3 => _('Cancelled'),
+		4 => _('Expired')
+	);
+
+	return array_selector($name, $value, $statuses,
+		array(
+			'spec_option' => _('All Statuses'),
+			'spec_id' => -1,
 			'async' => false,
 		)
 	);

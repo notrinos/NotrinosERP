@@ -22,7 +22,7 @@
  * @return bool
  */
 function employee_table_exists($table_name) {
-	$sql = "SHOW TABLES LIKE ".db_escape(TB_PREF.$table_name);
+	$sql = "SHOW TABLES LIKE '".TB_PREF.$table_name."'";
 	$result = db_query($sql);
 	return $result && db_num_rows($result) > 0;
 }
@@ -302,8 +302,6 @@ function delete_employee($employee_id) {
 	// Check if employee has payslips
 	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
 		return false;
-	if (employee_table_exists('payslip') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslip WHERE employee_id = ".db_escape($employee_id)))
-		return false;
 
 	begin_transaction();
 
@@ -356,8 +354,6 @@ function delete_employee($employee_id) {
  */
 function employee_can_delete($employee_id) {
 	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
-		return false;
-	if (employee_table_exists('payslip') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslip WHERE employee_id = ".db_escape($employee_id)))
 		return false;
 	if (employee_table_exists('attendance') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."attendance WHERE employee_id = ".db_escape($employee_id)))
 		return false;

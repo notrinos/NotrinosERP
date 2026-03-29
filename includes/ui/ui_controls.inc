@@ -92,8 +92,12 @@ function start_form($multi=false, $action='', $name='') {
 
 	if ($name != '')
 		$name = "name='".$name."'";
-	if ($action == '')
+	if ($action == '') {
 		$action = $_SERVER['PHP_SELF'];
+		// Preserve application context on form submissions
+		if (isset($_GET['sel_app']) && $_GET['sel_app'] != '')
+			$action .= '?sel_app=' . urlencode($_GET['sel_app']);
+	}
 
 	if ($multi)
 		echo "<form enctype='multipart/form-data' method='post' action='$action' $name>\n";

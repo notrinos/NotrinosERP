@@ -140,6 +140,9 @@ function set_overtime_request_status($request_id, $status, $approved_by='') {
  * @return void
  */
 function approve_overtime_request($request_id, $approved_by='') {
+    global $path_to_root;
+    include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
+
     set_overtime_request_status($request_id, 1, $approved_by);
     $request = get_overtime_request($request_id);
     if ($request)

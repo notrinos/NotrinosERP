@@ -10,6 +10,9 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/db/leave_policy_db.inc');
+
 /**
  * Get leave balance row by employee/leave/year.
  *
@@ -64,6 +67,32 @@ function get_leave_balances($fiscal_year=0, $employee_id='', $leave_id=0) {
 }
 
 /**
+ * Backfill entitlement for matching leave balance rows before inquiry/reporting.
+ *
+ * @param int $fiscal_year
+ * @param string $employee_id
+ * @param int $leave_id
+ * @return void
+ */
+function ensure_leave_balance_entitlements_for_filters($fiscal_year=0, $employee_id='', $leave_id=0) {
+    $fiscal_year = (int)$fiscal_year;
+    if ($fiscal_year <= 0)
+        return;
+
+    $where = array('fiscal_year = '.db_escape($fiscal_year));
+    if ($employee_id !== '' && $employee_id !== ALL_TEXT)
+        $where[] = 'employee_id = '.db_escape($employee_id);
+    if ((int)$leave_id > 0)
+        $where[] = 'leave_id = '.db_escape((int)$leave_id);
+
+    $sql = "SELECT DISTINCT employee_id, leave_id FROM ".TB_PREF."leave_balances WHERE ".implode(' AND ', $where);
+    $result = db_query($sql, 'could not get leave balance entitlement filters');
+
+    while ($row = db_fetch($result))
+        ensure_leave_balance_entitlement($row['employee_id'], (int)$row['leave_id'], $fiscal_year, $fiscal_year.'-12-31');
+}
+
+/**
  * Insert or update leave balance.
  *
  * @param string $employee_id
@@ -106,6 +135,44 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
 }
 
 /**
+ * Ensure a leave balance row is initialized with policy entitlement.
+ *
+ * @param string $employee_id
+ * @param int $leave_id
+ * @param int $fiscal_year
+ * @param string $as_of_date
+ * @return array|false
+ */
+function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $as_of_date='') {
+    if (!function_exists('get_employee_by_code') || !function_exists('get_leave_policy_for_employee'))
+        return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+
+    $employee = get_employee_by_code($employee_id);
+    if (!$employee)
+        return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+
+    $policy = get_leave_policy_for_employee($employee, (int)$leave_id, $as_of_date);
+    if (!$policy)
+        return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+
+    $entitled = calculate_leave_policy_entitlement($policy, $employee, $as_of_date);
+    $balance = get_leave_balance($employee_id, $leave_id, $fiscal_year);
+
+    save_leave_balance(
+        $employee_id,
+        $leave_id,
+        $fiscal_year,
+        $entitled,
+        $balance ? (float)$balance['carried_forward'] : 0,
+        $balance ? (float)$balance['taken'] : 0,
+        $balance ? (float)$balance['pending'] : 0,
+        $balance ? (float)$balance['adjusted'] : 0
+    );
+
+    return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+}
+
+/**
  * Apply leave movements to balance buckets.
  *
  * @param string $employee_id
@@ -117,7 +184,7 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
  * @return void
  */
 function apply_leave_balance_movement($employee_id, $leave_id, $fiscal_year, $taken_delta=0, $pending_delta=0, $adjusted_delta=0) {
-    $balance = get_leave_balance($employee_id, $leave_id, $fiscal_year);
+    $balance = ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $fiscal_year.'-12-31');
     if (!$balance) {
         save_leave_balance($employee_id, $leave_id, $fiscal_year, 0, 0, $taken_delta, $pending_delta, $adjusted_delta);
         return;

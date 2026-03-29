@@ -83,7 +83,7 @@ while ($row = db_fetch($result)) {
 }
 end_table(1);
 
-start_table(TABLESTYLE_NONE, "width='95%'");
+start_table(TABLESTYLE2, "width='95%'");
 start_row();
 label_cell(sprintf(_('Showing %s to %s of %s payroll period(s)'), $total_periods ? ($offset + 1) : 0, min($offset + $per_page, $total_periods), $total_periods));
 submit_cells('prev_page', _('Previous'), $page_no > 0, '', '', $page_no <= 0);

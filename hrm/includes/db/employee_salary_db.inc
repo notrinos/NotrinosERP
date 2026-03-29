@@ -126,6 +126,30 @@ function get_employee_salary($salary_id) {
 }
 
 /**
+ * Get one employee salary override row by unique employee/element/date key.
+ *
+ * @param string $employee_id
+ * @param int $element_id
+ * @param string $effective_from
+ * @return array|false
+ */
+function get_employee_salary_by_key($employee_id, $element_id, $effective_from) {
+	$effective_from_sql = employee_salary_to_sql_date($effective_from);
+	if ($effective_from_sql === '')
+		return false;
+
+	$sql = "SELECT es.*, pe.element_name, pe.element_code, pe.is_deduction, pe.element_category, pe.amount_type, pe.account_code
+			FROM ".TB_PREF."employee_salary es
+			JOIN ".TB_PREF."pay_elements pe ON es.element_id = pe.element_id
+			WHERE es.employee_id = ".db_escape($employee_id)."
+				AND es.element_id = ".db_escape((int)$element_id)."
+				AND es.effective_from = ".db_escape($effective_from_sql)."
+			LIMIT 1";
+	$result = db_query($sql, 'could not get employee salary by unique key');
+	return db_fetch_assoc($result);
+}
+
+/**
  * Get employee salary overrides with optional status/date filtering.
  *
  * @param string $employee_id

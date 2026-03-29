@@ -59,7 +59,10 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
 
     $period_id = add_payroll_period($period_name, $from_date, $to_date, $department_id ? $department_id : null);
     if (!$period_id) {
-        display_error(_('Could not create payroll period.'));
+        if (!payroll_table_exists('payroll_periods'))
+            display_error(_('Could not create payroll period because payroll_periods table is missing in the current company database.'));
+        else
+            display_error(_('Could not create payroll period.'));
     } else {
         $success_count = 0;
         $failed_count = 0;
@@ -102,7 +105,7 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
 
         update_payroll_period_totals($period_id);
         if ($success_count > 0)
-            update_payroll_period_status($period_id, defined('PP_POSTED') ? PP_POSTED : 3);
+            update_payroll_period_status($period_id, 1);
 
         display_notification(_('Payroll processing completed.'));
         display_note(sprintf(_('Success: %d employee(s), Failed: %d employee(s), Period ID: %d'), $success_count, $failed_count, $period_id));

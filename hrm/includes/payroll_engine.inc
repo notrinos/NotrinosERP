@@ -270,24 +270,58 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
 }
 
 /**
+ * Get the next payslip transaction number, accounting for partial writes.
+ *
+ * Payslip posting writes GL, references and comments before the payslip header
+ * exists, so relying on the header table alone can reuse a failed transaction
+ * number on retry.
+ *
+ * @return int
+ */
+function payroll_get_next_payslip_trans_no() {
+    $next_trans_no = (int)get_next_trans_no(ST_PAYSLIP);
+    $queries = array(
+        "SELECT MAX(type_no) AS last_no FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP),
+        "SELECT MAX(id) AS last_no FROM ".TB_PREF."comments WHERE type = ".db_escape(ST_PAYSLIP)
+    );
+
+    foreach ($queries as $sql) {
+        $result = db_query($sql);
+        if (!$result)
+            continue;
+
+        $row = db_fetch($result);
+        $last_no = isset($row['last_no']) ? (int)$row['last_no'] : 0;
+        if ($last_no >= $next_trans_no)
+            $next_trans_no = $last_no + 1;
+    }
+
+    return $next_trans_no;
+}
+
+/**
  * Post payslip to GL using hrm_cart.
  *
  * @param payslip_doc $payslip_doc
  * @return int|false GL transaction number on success, false on failure
  */
 function post_payslip_to_gl(&$payslip_doc) {
+	global $Refs;
+
     if (!is_object($payslip_doc) || empty($payslip_doc->employee_id))
         return false;
 
     if (function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
         hrm_fire_hook('before_post_payslip', $payslip_doc);
 
-    $trans_no = get_next_trans_no(ST_PAYSLIP);
+    $trans_no = payroll_get_next_payslip_trans_no();
     $cart = new hrm_cart(ST_PAYSLIP, $trans_no);
     $cart->trans_no = $trans_no;
     $cart->order_id = $trans_no;
     $cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
-    $cart->reference = _payroll_get_reference(ST_PAYSLIP, $cart->tran_date);
+	$cart->reference = empty($payslip_doc->reference)
+		? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
+		: $payslip_doc->reference;
     $cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
 
     $total = 0.0;
@@ -318,26 +352,37 @@ function post_payslip_to_gl(&$payslip_doc) {
     foreach ($gl_totals as $account_code => $amount) {
         if (floatcmp($amount, 0) == 0)
             continue;
-        $cart->add_gl_item($account_code, 0, 0, $amount, _('Payroll Element'), null, $payslip_doc->employee_id, $cart->tran_date);
+		$cart->add_gl_item($account_code, 0, 0, $amount, _('Payroll Element'), null, null, $cart->tran_date);
     }
 
     if (!_payroll_is_valid_gl_account($payable_account))
         return false;
 
     if (floatcmp($total, 0) != 0)
-        $cart->add_gl_item($payable_account, 0, 0, -$total, _('Payroll Payable'), null, $payslip_doc->employee_id, $cart->tran_date);
+        $cart->add_gl_item($payable_account, 0, 0, -$total, _('Payroll Payable'), null, null, $cart->tran_date);
 
     $cart->write_gl(true);
-    add_comments(ST_PAYSLIP, $trans_no, $cart->tran_date, _('Payroll generated'));
-    add_audit_trail(ST_PAYSLIP, $trans_no, $cart->tran_date);
+    if (isset($Refs) && is_object($Refs) && method_exists($Refs, 'save') && $cart->reference !== '')
+        $Refs->save(ST_PAYSLIP, $trans_no, $cart->reference);
 
     if (function_exists('add_payslip')) {
         $payslip_doc->reference = $cart->reference;
         $payslip_doc->gl_trans_no = $trans_no;
         $payslip_id = add_payslip($payslip_doc);
-        if ($payslip_id)
-            $payslip_doc->payslip_id = $payslip_id;
+        if (!$payslip_id)
+            return false;
+
+        $payslip_doc->payslip_id = $payslip_id;
     }
+
+    $comment = trim(isset($payslip_doc->comments) ? $payslip_doc->comments : '');
+    if ($comment === '')
+        $comment = _('Payroll generated');
+
+    if (function_exists('delete_comments'))
+        delete_comments(ST_PAYSLIP, $trans_no);
+    add_comments(ST_PAYSLIP, $trans_no, $cart->tran_date, $comment);
+    add_audit_trail(ST_PAYSLIP, $trans_no, $cart->tran_date);
 
 	if (function_exists('mark_loan_repayments_paid_by_payslip') && !empty($payslip_doc->payslip_id))
 		mark_loan_repayments_paid_by_payslip($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date, $payslip_doc->payslip_id);
@@ -398,6 +443,7 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
 
     $leave_ids = array_unique(array_merge(array_keys($approved), array_keys($pending)));
     foreach ($leave_ids as $leave_id) {
+		ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $to_date);
         $existing = get_leave_balance($employee_id, $leave_id, $fiscal_year);
         $entitled = $existing ? (float)$existing['entitled'] : 0;
         $carried = $existing ? (float)$existing['carried_forward'] : 0;
@@ -751,9 +797,10 @@ function _payroll_calculate_component_amount($component, $formula, $basic, $doc)
  * @return float
  */
 function _payroll_doc_total_earnings($doc) {
+	$basic_category = defined('HRM_ELEM_BASIC') ? HRM_ELEM_BASIC : 1;
     $total = 0.0;
     foreach ((array)$doc->lines as $line) {
-        if (empty($line->is_deduction))
+		if (empty($line->is_deduction) && (int)$line->element_category !== (int)$basic_category)
             $total += (float)$line->final_amount;
     }
     return $total;

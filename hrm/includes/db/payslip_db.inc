@@ -17,15 +17,45 @@
  * @return bool
  */
 function payslip_table_exists($table_name) {
-	$sql = "SHOW TABLES LIKE ".db_escape(TB_PREF.$table_name);
+	$sql = "SHOW TABLES LIKE '".TB_PREF.$table_name."'";
 	$result = db_query($sql);
 	return $result && db_num_rows($result) > 0;
 }
 
 /**
- * Resolve payslip header table name for current installation.
+ * Get fallback header columns for the standard payslips schema.
  *
- * Supports both modern `payslips` and legacy `payslip` naming.
+ * @return array
+ */
+function payslip_default_header_columns() {
+	return array_fill_keys(array(
+		'payslip_id', 'payroll_period_id', 'trans_no', 'reference', 'employee_id',
+		'tran_date', 'from_date', 'to_date', 'department_id', 'position_id',
+		'grade_id', 'basic_salary', 'total_earnings', 'gross_salary',
+		'total_deductions', 'net_salary', 'employer_contributions', 'total_cost',
+		'working_days', 'worked_days', 'overtime_hours', 'leave_days',
+		'absent_days', 'leaves', 'deductable_leaves', 'loan_deduction',
+		'payable_amount', 'salary_amount', 'status', 'payment_trans_no', 'notes',
+		'custom_data'
+	), true);
+}
+
+/**
+ * Get fallback detail columns for the standard payslip_details schema.
+ *
+ * @return array
+ */
+function payslip_default_detail_columns() {
+	return array_fill_keys(array(
+		'detail_id', 'payslip_id', 'element_id', 'element_name', 'element_category',
+		'is_deduction', 'amount_type', 'base_amount', 'rate', 'calculated_amount',
+		'adjusted_amount', 'final_amount', 'account_code', 'formula_used',
+		'is_taxable', 'display_order', 'memo'
+	), true);
+}
+
+/**
+ * Resolve payslip header table name for current installation.
  *
  * @return string|false
  */
@@ -37,11 +67,6 @@ function payslip_header_table() {
 
 	if (payslip_table_exists('payslips')) {
 		$table_name = 'payslips';
-		return $table_name;
-	}
-
-	if (payslip_table_exists('payslip')) {
-		$table_name = 'payslip';
 		return $table_name;
 	}
 
@@ -134,11 +159,9 @@ function payslip_current_user_id() {
  * @return string
  */
 function payslip_employee_where($employee_id, $table_alias='') {
-	$table_name = payslip_header_table();
-	$employee_column = ($table_name && payslip_has_column($table_name, 'employee_id')) ? 'employee_id' : 'emp_id';
 	$prefix = $table_alias !== '' ? $table_alias.'.' : '';
 
-	return $prefix.$employee_column." = ".db_escape($employee_id);
+	return $prefix."employee_id = ".db_escape($employee_id);
 }
 
 /**
@@ -149,10 +172,14 @@ function payslip_employee_where($employee_id, $table_alias='') {
  */
 function add_payslip(&$payslip_doc) {
 	$table_name = payslip_header_table();
-	if (!$table_name || !is_object($payslip_doc))
+	if (!$table_name)
+		$table_name = 'payslips';
+	if (!is_object($payslip_doc))
 		return false;
 
 	$columns = payslip_table_columns($table_name);
+	if (empty($columns) && $table_name == 'payslips')
+		$columns = payslip_default_header_columns();
 	if (empty($columns))
 		return false;
 
@@ -166,19 +193,11 @@ function add_payslip(&$payslip_doc) {
 	if (isset($columns['employee_id'])) {
 		$fields[] = 'employee_id';
 		$values[] = db_escape($payslip_doc->employee_id);
-	} elseif (isset($columns['emp_id'])) {
-		$fields[] = 'emp_id';
-		$values[] = db_escape($payslip_doc->employee_id);
 	}
-
 	if (isset($columns['payroll_period_id'])) {
 		$fields[] = 'payroll_period_id';
 		$values[] = db_escape((int)$payslip_doc->payroll_period_id);
-	} elseif (isset($columns['period_id'])) {
-		$fields[] = 'period_id';
-		$values[] = db_escape((int)$payslip_doc->payroll_period_id);
 	}
-
 	if (isset($columns['from_date']) && $from_date !== '') {
 		$fields[] = 'from_date';
 		$values[] = db_escape($from_date);
@@ -195,12 +214,22 @@ function add_payslip(&$payslip_doc) {
 		$fields[] = 'generated_date';
 		$values[] = db_escape($tran_date);
 	}
-
 	if (isset($columns['reference'])) {
 		$fields[] = 'reference';
 		$values[] = db_escape($payslip_doc->reference);
 	}
-
+	if (isset($columns['department_id']) && isset($payslip_doc->employee['department_id'])) {
+		$fields[] = 'department_id';
+		$values[] = db_escape((int)$payslip_doc->employee['department_id']);
+	}
+	if (isset($columns['position_id']) && isset($payslip_doc->employee['position_id'])) {
+		$fields[] = 'position_id';
+		$values[] = db_escape((int)$payslip_doc->employee['position_id']);
+	}
+	if (isset($columns['grade_id']) && isset($payslip_doc->employee['grade_id'])) {
+		$fields[] = 'grade_id';
+		$values[] = db_escape((int)$payslip_doc->employee['grade_id']);
+	}
 	if (isset($columns['basic_salary'])) {
 		$fields[] = 'basic_salary';
 		$values[] = db_escape((float)$payslip_doc->basic_salary);
@@ -249,7 +278,30 @@ function add_payslip(&$payslip_doc) {
 		$fields[] = 'total_cost';
 		$values[] = db_escape((float)$payslip_doc->total_cost);
 	}
-
+	if (isset($columns['working_days'])) {
+		$fields[] = 'working_days';
+		$values[] = db_escape(isset($payslip_doc->working_days) ? (float)$payslip_doc->working_days : 0);
+	}
+	if (isset($columns['worked_days'])) {
+		$fields[] = 'worked_days';
+		$values[] = db_escape(isset($payslip_doc->worked_days) ? (float)$payslip_doc->worked_days : 0);
+	}
+	if (isset($columns['overtime_hours'])) {
+		$fields[] = 'overtime_hours';
+		$values[] = db_escape(isset($payslip_doc->overtime_hours) ? (float)$payslip_doc->overtime_hours : 0);
+	}
+	if (isset($columns['leave_days'])) {
+		$fields[] = 'leave_days';
+		$values[] = db_escape(isset($payslip_doc->leave_days) ? (float)$payslip_doc->leave_days : 0);
+	}
+	if (isset($columns['absent_days'])) {
+		$fields[] = 'absent_days';
+		$values[] = db_escape(isset($payslip_doc->absent_days) ? (float)$payslip_doc->absent_days : 0);
+	}
+	if (isset($columns['loan_deduction'])) {
+		$fields[] = 'loan_deduction';
+		$values[] = db_escape(isset($payslip_doc->loan_deduction) ? (float)$payslip_doc->loan_deduction : 0);
+	}
 	if (isset($columns['status'])) {
 		$fields[] = 'status';
 		$values[] = db_escape(isset($payslip_doc->status) ? (int)$payslip_doc->status : 0);
@@ -262,7 +314,6 @@ function add_payslip(&$payslip_doc) {
 		$fields[] = 'trans_no';
 		$values[] = db_escape((int)$payslip_doc->gl_trans_no);
 	}
-
 	if (isset($columns['created_by'])) {
 		$user_id = payslip_current_user_id();
 		if ($user_id !== null) {
@@ -273,6 +324,10 @@ function add_payslip(&$payslip_doc) {
 	if (isset($columns['created_date'])) {
 		$fields[] = 'created_date';
 		$values[] = "NOW()";
+	}
+	if (isset($columns['notes'])) {
+		$fields[] = 'notes';
+		$values[] = db_escape(isset($payslip_doc->comments) ? $payslip_doc->comments : '');
 	}
 
 	if (empty($fields))
@@ -288,9 +343,20 @@ function add_payslip(&$payslip_doc) {
 	$payslip_id = db_insert_id();
 	if (!$payslip_id)
 		$payslip_id = isset($payslip_doc->payslip_id) ? (int)$payslip_doc->payslip_id : 0;
+	if (!$payslip_id && isset($columns['trans_no'])) {
+		$lookup_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name." WHERE trans_no = ".db_escape((int)$payslip_doc->gl_trans_no)." ORDER BY payslip_id DESC LIMIT 1";
+		$lookup_result = db_query($lookup_sql);
+		if ($lookup_result) {
+			$lookup_row = db_fetch($lookup_result);
+			if ($lookup_row && isset($lookup_row['payslip_id']))
+				$payslip_id = (int)$lookup_row['payslip_id'];
+		}
+	}
 
 	if ($payslip_id && payslip_table_exists('payslip_details') && !empty($payslip_doc->lines)) {
 		$detail_columns = payslip_table_columns('payslip_details');
+		if (empty($detail_columns))
+			$detail_columns = payslip_default_detail_columns();
 		foreach ($payslip_doc->lines as $line) {
 			$d_fields = array();
 			$d_values = array();
@@ -398,8 +464,7 @@ function update_payslip($payslip_id, $data) {
 	if (empty($sets))
 		return false;
 
-	$id_column = payslip_has_column($table_name, 'payslip_id') ? 'payslip_id' : 'payslip_no';
-	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)." WHERE ".$id_column." = ".db_escape((int)$payslip_id);
+	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)." WHERE payslip_id = ".db_escape((int)$payslip_id);
 	return (bool)db_query($sql, 'could not update payslip');
 }
 
@@ -414,8 +479,7 @@ function get_payslip($payslip_id) {
 	if (!$table_name)
 		return false;
 
-	$id_column = payslip_has_column($table_name, 'payslip_id') ? 'payslip_id' : 'payslip_no';
-	$sql = "SELECT * FROM ".TB_PREF.$table_name." WHERE ".$id_column." = ".db_escape((int)$payslip_id);
+	$sql = "SELECT * FROM ".TB_PREF.$table_name." WHERE payslip_id = ".db_escape((int)$payslip_id);
 	$result = db_query($sql, 'could not get payslip');
 
 	return db_fetch($result);
@@ -446,12 +510,7 @@ function get_payslips_for_period($period_id) {
 	if (!$table_name)
 		return false;
 
-	if (payslip_has_column($table_name, 'payroll_period_id'))
-		$where = "payroll_period_id = ".db_escape((int)$period_id);
-	elseif (payslip_has_column($table_name, 'period_id'))
-		$where = "period_id = ".db_escape((int)$period_id);
-	else
-		$where = "1=0";
+	$where = "payroll_period_id = ".db_escape((int)$period_id);
 
 	$sql = "SELECT * FROM ".TB_PREF.$table_name." WHERE ".$where." ORDER BY from_date, to_date";
 	return db_query($sql, 'could not get payslips for period');
@@ -492,7 +551,6 @@ function void_payslip($payslip_id) {
 	if (!$table_name)
 		return false;
 
-	$id_column = payslip_has_column($table_name, 'payslip_id') ? 'payslip_id' : 'payslip_no';
 	$sets = array();
 
 	if (payslip_has_column($table_name, 'status'))
@@ -509,7 +567,7 @@ function void_payslip($payslip_id) {
 	if (empty($sets))
 		return false;
 
-	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)." WHERE ".$id_column." = ".db_escape((int)$payslip_id);
+	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)." WHERE payslip_id = ".db_escape((int)$payslip_id);
 	$ok = (bool)db_query($sql, 'could not void payslip');
 
 	if ($ok && function_exists('hrm_has_hook') && hrm_has_hook('on_void_payslip'))

@@ -38,7 +38,7 @@ function hrm_migration_table_exists($table_name) {
 	if (function_exists('payroll_table_exists'))
 		return payroll_table_exists($table_name);
 
-	$sql = "SHOW TABLES LIKE ".db_escape(TB_PREF.$table_name);
+	$sql = "SHOW TABLES LIKE '".TB_PREF.$table_name."'";
 	$result = db_query($sql, 'could not inspect table');
 	return $result && db_num_rows($result) > 0;
 }
