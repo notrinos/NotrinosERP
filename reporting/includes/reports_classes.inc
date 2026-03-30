@@ -264,6 +264,105 @@ class BoxReports {
 			case 'APPROVAL_STATUS':
 				return approval_report_status_list($name, null);
 
+			case 'YEAR':
+				$current_year = (int)date('Y');
+				$years = array();
+				for ($year = $current_year - 10; $year <= $current_year + 1; $year++)
+					$years[$year] = $year;
+				return array_selector($name, $current_year, $years, array('async' => false));
+
+			case 'MONTH':
+				$current_month = (int)date('n');
+				$months = array(
+					1 => _('January'),
+					2 => _('February'),
+					3 => _('March'),
+					4 => _('April'),
+					5 => _('May'),
+					6 => _('June'),
+					7 => _('July'),
+					8 => _('August'),
+					9 => _('September'),
+					10 => _('October'),
+					11 => _('November'),
+					12 => _('December')
+				);
+				return array_selector($name, $current_month, $months, array('async' => false));
+
+			// HRM report parameters
+			case 'HRM_DEPARTMENTS':
+				return departments_list($name, null, false, _('All Departments'));
+
+			case 'HRM_EMPLOYEES':
+				return employees_list($name, null, _('All Employees'), false, array('show_inactive' => true));
+
+			case 'HRM_PAYROLL_PERIOD':
+				$sql = "SELECT period_id, period_name FROM ".TB_PREF."payroll_periods ORDER BY from_date DESC, period_id DESC";
+				return combo_input($name, null, $sql, 'period_id', 'period_name',
+					array(
+						'spec_option' => _('All Payroll Periods'),
+						'spec_id' => 0,
+						'order' => false,
+						'async' => false
+					));
+
+			case 'HRM_LEAVE_TYPES':
+				include_once($path_to_root.'/hrm/includes/ui/hrm_selectors.inc');
+				return leave_types_list($name, null, true);
+
+			case 'HRM_POSITIONS':
+				return positions_list($name, null, false, _('All Positions'));
+
+			case 'HRM_PAY_GRADES':
+				$sql = "SELECT grade_id, grade_name FROM ".TB_PREF."pay_grades";
+				return combo_input($name, null, $sql, 'grade_id', 'grade_name',
+					array(
+						'spec_option' => _('All Grades'),
+						'spec_id' => 0,
+						'order' => 'grade_name',
+						'async' => false
+					));
+
+			case 'HRM_EMP_STATUS':
+				$statuses = array(
+					'' => _('All Statuses'),
+					'active' => _('Active'),
+					'inactive' => _('Inactive'),
+					'terminated' => _('Terminated'),
+					'resigned' => _('Resigned'),
+					'retired' => _('Retired'),
+					'suspended' => _('Suspended')
+				);
+				return array_selector($name, null, $statuses, array('async' => false));
+
+			case 'HRM_DOC_TYPES':
+				include_once($path_to_root.'/hrm/includes/ui/hrm_selectors.inc');
+				return document_types_list($name, null, true);
+
+			case 'HRM_LOAN_TYPES':
+				include_once($path_to_root.'/hrm/includes/ui/hrm_selectors.inc');
+				return loan_types_list($name, null, true);
+
+			case 'HRM_LOAN_STATUS':
+				$statuses = array(
+					'' => _('All Statuses'),
+					0 => _('Pending'),
+					1 => _('Active'),
+					2 => _('Completed'),
+					3 => _('Cancelled')
+				);
+				return array_selector($name, null, $statuses, array('async' => false));
+
+			case 'HRM_EMP_TYPE':
+				include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
+				$types = hrm_get_employment_types();
+				return array_selector($name, null, $types,
+					array(
+						'spec_option' => _('All Employment Types'),
+						'spec_id' => '',
+						'async' => false
+					));
+
 			case 'TEXT':
 				return "<input type='text' name='$name'>";
 

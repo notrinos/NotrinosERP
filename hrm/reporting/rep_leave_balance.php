@@ -10,7 +10,8 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 *******************************************************************************/
 $page_security = 'SA_HRMREPORTS';
-$path_to_root  = '../..';
+if (!isset($path_to_root) || $path_to_root == '')
+    $path_to_root  = '../..';
 // NOTE: This file is included by reporting/rep884.php
 // $path_to_root and session are already initialized when called via report framework.
 include_once($path_to_root.'/includes/date_functions.inc');

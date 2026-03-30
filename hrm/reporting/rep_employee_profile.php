@@ -10,7 +10,8 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 *******************************************************************************/
 $page_security = 'SA_HRMREPORTS';
-$path_to_root  = '../..';
+if (!isset($path_to_root) || $path_to_root == '')
+    $path_to_root  = '../..';
 // NOTE: This file is included by reporting/rep887.php
 // $path_to_root and session are already initialized when called via report framework.
 // Direct access uses the above declarations.
@@ -29,14 +30,15 @@ function print_employee_profile_report() {
 
     $employee_id = isset($_POST['PARAM_0']) ? $_POST['PARAM_0'] : '';
     $comments = isset($_POST['PARAM_1']) ? $_POST['PARAM_1'] : '';
-    $destination = isset($_POST['PARAM_6']) ? (int)$_POST['PARAM_6'] : 0;
+    $orientation = !empty($_POST['PARAM_2']) ? 1 : 0;
+    $destination = isset($_POST['PARAM_3']) ? (int)$_POST['PARAM_3'] : 0;
 
     if ($destination)
         include_once($path_to_root.'/reporting/includes/excel_report.inc');
     else
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
-    $rep = new FrontReport(_('Employee Profile'), 'EmployeeProfile', user_pagesize(), 9, 'P');
+    $rep = new FrontReport(_('Employee Profile'), 'EmployeeProfile', user_pagesize(), 9, $orientation ? 'L' : 'P');
     $cols = array(0, 180, 520);
     $headers = array(_('Field'), _('Value'));
     $aligns = array('left', 'left');

@@ -208,6 +208,21 @@ function dashboard_table_exists($table_name) {
 }
 
 /**
+ * Check whether a given column exists in a dashboard table.
+ *
+ * @param string $table_name Table name including TB_PREF prefix.
+ * @param string $column_name Column name to check.
+ * @return bool
+ */
+function dashboard_table_has_column($table_name, $column_name) {
+	$table_name = db_escape($table_name);
+	$column_name = db_escape($column_name);
+	$sql = "SHOW COLUMNS FROM ".$table_name." LIKE ".$column_name;
+	$result = db_query($sql, _('Could not check table column existence'));
+	return $result && db_num_rows($result) > 0;
+}
+
+/**
  * Render a compact dashboard stat card used by small widgets.
  *
  * @param string $label Metric label.
@@ -597,10 +612,12 @@ function dashboard_count_todays_payments() {
  * @return int
  */
 function dashboard_count_employees() {
-	if (!dashboard_table_exists(TB_PREF.'employees'))
+	$table_name = TB_PREF.'employees';
+	if (!dashboard_table_exists($table_name))
 		return 0;
 
-	$sql = "SELECT COUNT(*) FROM ".TB_PREF."employees WHERE inactive=0";
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."employees";
+
 	return (int)get_dashboard_scalar_value($sql, _('Could not count employees'));
 }
 
@@ -610,7 +627,10 @@ function dashboard_count_employees() {
  * @return int
  */
 function dashboard_count_doc_expiry_soon() {
-	if (!dashboard_table_exists(TB_PREF.'employee_documents'))
+	$table_name = TB_PREF.'employee_documents';
+	if (!dashboard_table_exists($table_name))
+		return 0;
+	if (!dashboard_table_has_column($table_name, 'expiry_date'))
 		return 0;
 
 	$today = date2sql(Today());
@@ -630,10 +650,12 @@ function dashboard_count_doc_expiry_soon() {
  * @return int
  */
 function dashboard_count_departments() {
-	if (!dashboard_table_exists(TB_PREF.'departments'))
+	$table_name = TB_PREF.'departments';
+	if (!dashboard_table_exists($table_name))
 		return 0;
 
-	$sql = "SELECT COUNT(*) FROM ".TB_PREF."departments WHERE inactive=0";
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."departments";
+
 	return (int)get_dashboard_scalar_value($sql, _('Could not count departments'));
 }
 
@@ -643,10 +665,15 @@ function dashboard_count_departments() {
  * @return int
  */
 function dashboard_count_unpaid_salaries_periods() {
-	if (!dashboard_table_exists(TB_PREF.'payroll_periods'))
+	$table_name = TB_PREF.'payroll_periods';
+	if (!dashboard_table_exists($table_name))
+		return 0;
+	if (!dashboard_table_has_column($table_name, 'status'))
 		return 0;
 
-	$sql = "SELECT COUNT(*) FROM ".TB_PREF."payroll_periods WHERE status IN (2,3)";
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."payroll_periods
+		WHERE status IN (1,2,3)
+			OR status IN ('open','locked','posted','approved')";
 	return (int)get_dashboard_scalar_value($sql, _('Could not count unpaid salary periods'));
 }
 
