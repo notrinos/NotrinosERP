@@ -204,8 +204,7 @@ function dashboard_urgency_cell($row)
  */
 function dashboard_view_link($row)
 {
-	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "' target='_blank' "
-		. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
+	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "'>" 
 		. default_theme_icon('search')
 		. _('View') . "</a>";
 }
@@ -288,6 +287,50 @@ function dashboard_completed_date_cell($row)
 }
 
 /**
+ * Format workflow name for dashboard grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Workflow name or dash
+ */
+function dashboard_workflow_cell($row)
+{
+	return $row['workflow_name'] ? htmlspecialchars($row['workflow_name'], ENT_QUOTES, 'UTF-8') : '-';
+}
+
+/**
+ * Format submitter name for dashboard grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Submitter name or dash
+ */
+function dashboard_submitter_cell($row)
+{
+	return $row['submitted_by_name'] ? htmlspecialchars($row['submitted_by_name'], ENT_QUOTES, 'UTF-8') : '-';
+}
+
+/**
+ * Format current approval level for dashboard grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Level number
+ */
+function dashboard_level_cell($row)
+{
+	return (int)$row['current_level'];
+}
+
+/**
+ * Format summary for dashboard grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Summary text or dash
+ */
+function dashboard_summary_cell($row)
+{
+	return $row['summary'] ? htmlspecialchars($row['summary'], ENT_QUOTES, 'UTF-8') : '-';
+}
+
+/**
  * Format reference as a clickable link to view the draft.
  *
  * @param array $row Grid row data
@@ -295,11 +338,10 @@ function dashboard_completed_date_cell($row)
  */
 function dashboard_reference_cell($row)
 {
-	$ref = $row['reference'] ? htmlspecialchars($row['reference'], ENT_QUOTES, 'UTF-8') : '#' . (int)$row['reserved_trans_no'];
+	$draft_ref = 'DRF-' . str_pad((int)$row['id'], 4, '0', STR_PAD_LEFT);
 
-	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "' target='_blank' "
-		. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
-		. $ref . "</a>";
+	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "'>" 
+		. $draft_ref . "</a>";
 }
 
 // =====================================================
@@ -354,12 +396,13 @@ if (get_post('action_draft_id') > 0 && get_post('action_type') != '') {
 			: ($action_type === 'delegate' ? 'is-delegate' : 'is-danger');
 
 		echo "<div class='approval-action-box " . $action_theme_class . "'>\n";
+		$draft_ref = 'DRF-' . str_pad($action_draft_id, 4, '0', STR_PAD_LEFT);
 		echo "<h3 class='approval-action-title'>"
-			. sprintf(_('%s Draft #%d — %s'), $action_label, $action_draft_id,
+			. sprintf(_('%s %s — %s'), $action_label, $draft_ref,
 				htmlspecialchars($action_draft['workflow_name'], ENT_QUOTES, 'UTF-8'))
 			. "</h3>\n";
 
-		echo "<p>" . _('Reference') . ": <strong>" . htmlspecialchars($action_draft['reference'], ENT_QUOTES, 'UTF-8') . "</strong>"
+		echo "<p>" . _('Draft #') . ": <strong>" . $draft_ref . "</strong>"
 			. " | " . _('Amount') . ": <strong>" . number_format2($action_draft['amount'], user_price_dec()) . "</strong>"
 			. " | " . _('Type') . ": <strong>" . get_trans_type_label((int)$action_draft['trans_type']) . "</strong>"
 			. "</p>\n";
@@ -473,6 +516,9 @@ submit_cells('RefreshDashboard', _('Apply Filter'), '', _('Refresh the list'), '
 end_row();
 end_table();
 
+// Ensure subsequent content is outside the filter-group wrapper.
+close_filter_group_if_open();
+
 // --- Build filters array ---
 $filters = array();
 if (get_post('filter_trans_type') != '')
@@ -497,15 +543,15 @@ if ($active_tab === 'pending') {
 
 	$cols = array(
 		_('Urgency') => array('insert' => true, 'fun' => 'dashboard_urgency_cell', 'align' => 'center'),
-		_('Reference') => array('fun' => 'dashboard_reference_cell'),
+		_('Reference') => array('insert' => true, 'fun' => 'dashboard_reference_cell'),
 		_('Type') => array('insert' => true, 'fun' => 'dashboard_trans_type_cell'),
-		_('Workflow') => 'workflow_name',
-		_('Submitted By') => 'submitted_by_name',
+		_('Workflow') => array('insert' => true, 'fun' => 'dashboard_workflow_cell'),
+		_('Submitted By') => array('insert' => true, 'fun' => 'dashboard_submitter_cell'),
 		_('Date') => array('insert' => true, 'fun' => 'dashboard_date_cell', 'ord' => ''),
 		_('Amount') => array('insert' => true, 'fun' => 'dashboard_amount_cell', 'align' => 'right'),
-		_('Level') => array('name' => 'current_level', 'align' => 'center'),
+		_('Level') => array('insert' => true, 'fun' => 'dashboard_level_cell', 'align' => 'center'),
 		_('Escalation') => array('insert' => true, 'fun' => 'dashboard_escalation_cell', 'align' => 'center'),
-		_('Summary') => 'summary',
+		_('Summary') => array('insert' => true, 'fun' => 'dashboard_summary_cell'),
 		_('Actions') => array('insert' => true, 'fun' => 'dashboard_action_buttons', 'align' => 'center'),
 		_('View') => array('insert' => true, 'fun' => 'dashboard_view_link', 'align' => 'center'),
 	);
@@ -524,15 +570,15 @@ if ($active_tab === 'pending') {
 	$sql = get_sql_for_my_submissions($current_user_id, $filters);
 
 	$cols = array(
-		_('Reference') => array('fun' => 'dashboard_reference_cell'),
+		_('Reference') => array('insert' => true, 'fun' => 'dashboard_reference_cell'),
 		_('Type') => array('insert' => true, 'fun' => 'dashboard_trans_type_cell'),
-		_('Workflow') => 'workflow_name',
+		_('Workflow') => array('insert' => true, 'fun' => 'dashboard_workflow_cell'),
 		_('Date') => array('insert' => true, 'fun' => 'dashboard_date_cell', 'ord' => ''),
 		_('Amount') => array('insert' => true, 'fun' => 'dashboard_amount_cell', 'align' => 'right'),
 		_('Status') => array('insert' => true, 'fun' => 'dashboard_status_cell', 'align' => 'center'),
-		_('Level') => array('name' => 'current_level', 'align' => 'center'),
+		_('Level') => array('insert' => true, 'fun' => 'dashboard_level_cell', 'align' => 'center'),
 		_('Completed') => array('insert' => true, 'fun' => 'dashboard_completed_date_cell'),
-		_('Summary') => 'summary',
+		_('Summary') => array('insert' => true, 'fun' => 'dashboard_summary_cell'),
 		_('Cancel') => array('insert' => true, 'fun' => 'dashboard_cancel_button', 'align' => 'center'),
 		_('View') => array('insert' => true, 'fun' => 'dashboard_view_link', 'align' => 'center'),
 	);
@@ -564,9 +610,8 @@ if ($active_tab === 'pending') {
 		$user_name = $action['user_name'] ? htmlspecialchars($action['user_name'], ENT_QUOTES, 'UTF-8') : _('System');
 		$workflow_name = $action['workflow_name'] ? htmlspecialchars($action['workflow_name'], ENT_QUOTES, 'UTF-8') : '-';
 		$ref_link = $action['draft_id']
-			? "<a href='approval_view_draft.php?draft_id=" . (int)$action['draft_id'] . "' target='_blank' "
-				. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
-				. htmlspecialchars($action['reference'], ENT_QUOTES, 'UTF-8') . "</a>"
+			? "<a href='approval_view_draft.php?draft_id=" . (int)$action['draft_id'] . "'>" 
+				. 'DRF-' . str_pad((int)$action['draft_id'], 4, '0', STR_PAD_LEFT) . "</a>"
 			: '-';
 		$trans_type_label = $action['trans_type'] ? get_trans_type_label((int)$action['trans_type']) : '-';
 		$summary = $action['summary'] ? htmlspecialchars($action['summary'], ENT_QUOTES, 'UTF-8') : '-';

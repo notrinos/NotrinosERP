@@ -273,34 +273,193 @@ display_approval_timeline($draft_id, true);
 // --- Section 5: Draft Data Preview ---
 echo "<h3 style='margin:16px 0 8px 0;'>"
 	. default_theme_icon('database')
-	. _('Draft Data') . "</h3>\n";
+	. _('Transaction Details') . "</h3>\n";
 
-$draft_data = json_decode($draft['draft_data'], true);
+$draft_data = null;
+$raw_draft_data = $draft['draft_data'];
+if ($raw_draft_data) {
+	$draft_data = json_decode($raw_draft_data, true);
+	if ($draft_data === null)
+		$draft_data = json_decode(stripslashes($raw_draft_data), true);
+	if ($draft_data === null)
+		$draft_data = json_decode(html_entity_decode($raw_draft_data, ENT_QUOTES, 'UTF-8'), true);
+}
 if ($draft_data && is_array($draft_data)) {
+	// Friendly labels map
+	$field_labels = array(
+		'customer_name'     => _('Customer'),
+		'customer_id'       => _('Customer ID'),
+		'customer_currency' => _('Currency'),
+		'document_date'     => _('Document Date'),
+		'due_date'          => _('Due Date'),
+		'reference'         => _('Reference'),
+		'comments'          => _('Comments'),
+		'Comments'          => _('Comments'),
+		'location_name'     => _('Location'),
+		'deliver_to'        => _('Deliver To'),
+		'delivery_address'  => _('Delivery Address'),
+		'phone'             => _('Phone'),
+		'email'             => _('Email'),
+		'freight_cost'      => _('Freight Cost'),
+		'tax_included'      => _('Tax Included'),
+		'credit'            => _('Credit Limit'),
+		'ex_rate'           => _('Exchange Rate'),
+		'ship_via'          => _('Shipping Method'),
+		'salesman'          => _('Salesman'),
+		'branch'            => _('Branch'),
+		'prepaid'           => _('Prepaid'),
+		'prep_amount'       => _('Prepaid Amount'),
+		'supplier_name'     => _('Supplier'),
+		'supplier_id'       => _('Supplier ID'),
+		'supp_ref'          => _('Supplier Reference'),
+		'requisition_no'    => _('Requisition No'),
+		'into_stock_location' => _('Into Stock Location'),
+		'grn_item_id'       => _('GRN Item'),
+		'dimension_name'    => _('Dimension'),
+		'dimension2_name'   => _('Dimension 2'),
+	);
+
+	// Fields to skip (internal/technical or duplicate code-level fields)
+	$skip_fields = array(
+		'trans_type', 'trans_no', 'tax_group_id', 'sales_type',
+		'default_discount', 'price_factor', 'dimension_id', 'dimension2_id',
+		'fixed_asset', 'bo_policy', 'so_type', 'cash_account', 'account_name',
+		'payment', 'location', 'Location', 'branch', 'Branch', 'ship_via', 'salesman',
+		'customer_id', 'supplier_id', 'person_type_id', 'person_id',
+		'loc_code',
+	);
+
+	// Fields that are complex objects — extract a readable name
+	$name_extract_fields = array(
+		'pos'           => array('pos_name', 'name'),
+		'payment_terms' => array('terms', 'name'),
+	);
+
+	// Boolean display fields
+	$boolean_fields = array('tax_included', 'prepaid', 'fixed_asset', 'cash_sale', 'credit_sale');
+
+	// --- Render key-value fields ---
 	echo "<table class='tablestyle' style='width:100%;'>\n";
-	echo "<tr><th>" . _('Field') . "</th><th>" . _('Value') . "</th></tr>\n";
+	echo "<tr><th style='width:200px;'>" . _('Field') . "</th><th>" . _('Value') . "</th></tr>\n";
 
 	$row_index = 0;
-	foreach ($draft_data as $key => $value) {
-		$row_class = ($row_index % 2 == 0) ? 'oddrow' : 'evenrow';
-		$display_key = htmlspecialchars(str_replace('_', ' ', ucfirst($key)), ENT_QUOTES, 'UTF-8');
+	$line_items_data = null;
 
-		if (is_array($value)) {
-			$display_value = '<pre style="margin:0;font-size:11px;max-height:200px;overflow:auto;">'
-				. htmlspecialchars(json_encode($value, JSON_PRETTY_PRINT), ENT_QUOTES, 'UTF-8') . '</pre>';
-		} else {
+	foreach ($draft_data as $key => $value) {
+		// Skip numeric keys (duplicate DB column indices)
+		if (is_int($key))
+			continue;
+
+		// Separate line_items for rendering as a table below
+		if ($key === 'line_items') {
+			$line_items_data = $value;
+			continue;
+		}
+
+		// Skip internal/technical fields
+		if (in_array($key, $skip_fields))
+			continue;
+
+		// Handle complex object fields — extract readable name
+		if (isset($name_extract_fields[$key]) && is_array($value)) {
+			$found_name = '';
+			foreach ($name_extract_fields[$key] as $name_key) {
+				if (isset($value[$name_key]) && $value[$name_key] !== '') {
+					$found_name = $value[$name_key];
+					break;
+				}
+			}
+			$display_value = $found_name ? htmlspecialchars($found_name, ENT_QUOTES, 'UTF-8') : '-';
+		}
+		// Handle any other arrays — show a summary or skip
+		elseif (is_array($value)) {
+			continue;
+		}
+		// Handle booleans
+		elseif (in_array($key, $boolean_fields)) {
+			$display_value = $value ? _('Yes') : _('No');
+		}
+		// Handle empty values
+		elseif ($value === '' || $value === null) {
+			$display_value = '-';
+		}
+		// Normal scalar value
+		else {
 			$display_value = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 		}
 
+		// Get friendly label
+		$display_key = isset($field_labels[$key])
+			? $field_labels[$key]
+			: ucwords(str_replace('_', ' ', $key));
+
+		$row_class = ($row_index % 2 == 0) ? 'oddrow' : 'evenrow';
 		echo "<tr class='$row_class'>";
-		echo "<td style='width:200px;font-weight:bold;'>$display_key</td>";
+		echo "<td style='font-weight:bold;'>" . htmlspecialchars($display_key, ENT_QUOTES, 'UTF-8') . "</td>";
 		echo "<td>$display_value</td>";
 		echo "</tr>\n";
-
 		$row_index++;
 	}
 
 	echo "</table>\n";
+
+	// --- Render line items as a proper table ---
+	if ($line_items_data && is_array($line_items_data) && count($line_items_data) > 0) {
+		echo "<h3 style='margin:16px 0 8px 0;'>"
+			. default_theme_icon('list-check')
+			. _('Line Items') . "</h3>\n";
+
+		start_table(TABLESTYLE, "width='100%'");
+		table_header(array(
+			_('#'),
+			_('Item Code'),
+			_('Description'),
+			_('Quantity'),
+			_('Unit'),
+			_('Unit Price'),
+			_('Discount %'),
+			_('Total')
+		));
+
+		$line_num = 0;
+		$grand_total = 0;
+		foreach ($line_items_data as $item) {
+			if (!is_array($item))
+				continue;
+			$line_num++;
+
+			$stock_id = isset($item['stock_id']) ? htmlspecialchars($item['stock_id'], ENT_QUOTES, 'UTF-8') : '-';
+			$description = isset($item['item_description']) ? htmlspecialchars($item['item_description'], ENT_QUOTES, 'UTF-8')
+				: (isset($item['description']) ? htmlspecialchars($item['description'], ENT_QUOTES, 'UTF-8') : '-');
+			$qty_dec = isset($item['stock_id']) ? get_qty_dec($item['stock_id']) : get_qty_dec();
+			$qty = isset($item['quantity']) ? (float)$item['quantity'] : 0;
+			$units = isset($item['units']) ? htmlspecialchars($item['units'], ENT_QUOTES, 'UTF-8') : '';
+			$price = isset($item['price']) ? (float)$item['price'] : 0;
+			$discount_percent = isset($item['discount_percent']) ? (float)$item['discount_percent'] : 0;
+			$line_total = (isset($item['quantity']) && isset($item['price']))
+				? $qty * $price * (1 - $discount_percent)
+				: 0;
+			$grand_total += $line_total;
+
+			start_row();
+			label_cell($line_num, "align='center'");
+			label_cell($stock_id);
+			label_cell($description);
+			qty_cell($qty, false, $qty_dec);
+			label_cell($units);
+			amount_cell($price);
+			label_cell(number_format2($discount_percent * 100, 1), "align='right' nowrap");
+			amount_cell($line_total);
+			end_row();
+		}
+
+		start_row("style='font-weight:bold;border-top:2px solid #dee2e6;'");
+		label_cell(_('Total') . ':', "colspan='7' align='right'");
+		amount_cell($grand_total);
+		end_row();
+
+		end_table();
+	}
 } else {
 	display_note(_('Draft data is not available or could not be decoded.'));
 }

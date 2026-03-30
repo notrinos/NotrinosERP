@@ -17,6 +17,7 @@ page(_($help_context = 'Approval Delegations'));
 
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/approval/db/approval_history_db.inc');
+include_once($path_to_root . '/includes/approval/approval_delegation.inc');
 include_once($path_to_root . '/admin/db/approval_rules_setup_db.inc');
 
 simple_page_mode(true);
@@ -62,6 +63,14 @@ function can_process()
 	if ($to_date != '' && date2sql($to_date) < date2sql($from_date)) {
 		display_error(_('End date cannot be before start date.'));
 		set_focus('delegation_to_date');
+		return false;
+	}
+
+	// Check for circular delegation chain
+	$trans_type = get_post('delegation_trans_type') != '' ? (int)get_post('delegation_trans_type') : null;
+	if (has_circular_delegation((int)get_post('from_user_id'), (int)get_post('to_user_id'), $trans_type)) {
+		display_error(_('Circular delegation detected. The target user already delegates back to the source user (directly or through a chain). This would create an infinite delegation loop.'));
+		set_focus('to_user_id');
 		return false;
 	}
 
@@ -177,7 +186,9 @@ while ($row = db_fetch($delegations)) {
 end_table();
 
 echo '<br>';
+start_table(TABLESTYLE_NOBORDER);
 check_row(_('Show inactive delegations:'), 'show_inactive', $show_inactive, true);
+end_table();
 echo '<br>';
 
 // =====================================================

@@ -57,6 +57,12 @@ if ($workflow_delete_id > 0) {
 $level_edit_id = find_submit('EditLevel');
 if ($level_edit_id > 0) {
 	$selected_level = $level_edit_id;
+	// Auto-select the correct workflow for this level
+	$level_info = get_approval_level($level_edit_id);
+	if ($level_info) {
+		$selected_workflow = $level_info['workflow_id'];
+		$_POST['workflow_select'] = $level_info['workflow_id'];
+	}
 	$Ajax->activate('_page_body');
 }
 

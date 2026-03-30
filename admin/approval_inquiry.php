@@ -94,11 +94,11 @@ function inquiry_view_link($row)
  */
 function inquiry_reference_cell($row)
 {
-	$ref = $row['reference'] ? htmlspecialchars($row['reference'], ENT_QUOTES, 'UTF-8') : '#' . (int)$row['reserved_trans_no'];
+	$draft_ref = 'DRF-' . str_pad((int)$row['id'], 4, '0', STR_PAD_LEFT);
 
 	return "<a href='approval_view_draft.php?draft_id=" . (int)$row['id'] . "' target='_blank' "
 		. "onclick=\"javascript:openWindow(this.href,this.target); return false;\">"
-		. $ref . "</a>";
+		. $draft_ref . "</a>";
 }
 
 /**
@@ -132,6 +132,50 @@ function inquiry_completed_date_cell($row)
 function inquiry_posted_trans_cell($row)
 {
 	return $row['approved_trans_no'] ? (int)$row['approved_trans_no'] : '-';
+}
+
+/**
+ * Format workflow name for inquiry grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Workflow name or dash
+ */
+function inquiry_workflow_cell($row)
+{
+	return $row['workflow_name'] ? htmlspecialchars($row['workflow_name'], ENT_QUOTES, 'UTF-8') : '-';
+}
+
+/**
+ * Format submitter name for inquiry grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Submitter name or dash
+ */
+function inquiry_submitter_cell($row)
+{
+	return $row['submitted_by_name'] ? htmlspecialchars($row['submitted_by_name'], ENT_QUOTES, 'UTF-8') : '-';
+}
+
+/**
+ * Format current approval level for inquiry grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Level number
+ */
+function inquiry_level_cell($row)
+{
+	return (int)$row['current_level'];
+}
+
+/**
+ * Format summary for inquiry grid.
+ *
+ * @param array $row Grid row data
+ * @return string    Summary text or dash
+ */
+function inquiry_summary_cell($row)
+{
+	return $row['summary'] ? htmlspecialchars($row['summary'], ENT_QUOTES, 'UTF-8') : '-';
 }
 
 // =====================================================
@@ -225,17 +269,17 @@ if (get_post('filter_reference') != '')
 $sql = get_sql_for_approval_inquiry($filters);
 
 $cols = array(
-	_('Reference') => array('fun' => 'inquiry_reference_cell'),
+	_('Reference') => array('insert' => true, 'fun' => 'inquiry_reference_cell'),
 	_('Type') => array('insert' => true, 'fun' => 'inquiry_trans_type_cell'),
-	_('Workflow') => 'workflow_name',
-	_('Submitted By') => 'submitted_by_name',
+	_('Workflow') => array('insert' => true, 'fun' => 'inquiry_workflow_cell'),
+	_('Submitted By') => array('insert' => true, 'fun' => 'inquiry_submitter_cell'),
 	_('Date') => array('insert' => true, 'fun' => 'inquiry_date_cell', 'ord' => ''),
 	_('Amount') => array('insert' => true, 'fun' => 'inquiry_amount_cell', 'align' => 'right'),
 	_('Status') => array('insert' => true, 'fun' => 'inquiry_status_cell', 'align' => 'center'),
-	_('Level') => array('name' => 'current_level', 'align' => 'center'),
+	_('Level') => array('insert' => true, 'fun' => 'inquiry_level_cell', 'align' => 'center'),
 	_('Completed') => array('insert' => true, 'fun' => 'inquiry_completed_date_cell'),
 	_('Posted #') => array('insert' => true, 'fun' => 'inquiry_posted_trans_cell', 'align' => 'center'),
-	_('Summary') => 'summary',
+	_('Summary') => array('insert' => true, 'fun' => 'inquiry_summary_cell'),
 	array('insert' => true, 'fun' => 'inquiry_view_link', 'align' => 'center'),
 );
 

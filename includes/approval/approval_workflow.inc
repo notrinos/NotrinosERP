@@ -203,9 +203,15 @@ class ApprovalWorkflow {
 			$exec_result = $this->executeApprovedDraft($draft_id);
 			commit_transaction();
 
+			// Reload draft to get actual posted trans_no (executor may use different number)
+			$posted_draft = get_approval_draft($draft_id);
+			$actual_trans_no = ($posted_draft && (int)$posted_draft['approved_trans_no'] > 0)
+				? (int)$posted_draft['approved_trans_no']
+				: $reserved['trans_no'];
+
 			return array(
 				'draft_id'  => $draft_id,
-				'trans_no'  => $reserved['trans_no'],
+				'trans_no'  => $actual_trans_no,
 				'reference' => $reserved['reference'],
 				'status'    => 'auto_approved',
 			);
@@ -764,6 +770,11 @@ class ApprovalWorkflow {
 
 		// Decode the JSON draft data
 		$draft_data = json_decode($draft['draft_data'], true);
+
+		// Fallback: try stripslashes if direct decode fails
+		if ($draft_data === null && $draft['draft_data']) {
+			$draft_data = json_decode(stripslashes($draft['draft_data']), true);
+		}
 
 		if ($draft_data === null)
 			return false;

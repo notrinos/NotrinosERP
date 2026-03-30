@@ -91,11 +91,9 @@
 
 	/* Keep wide tables usable on tablets/phones by making each table scroll horizontally. */
 	.modern-main-content table {
-		display: block;
+		display: table;
 		width: max-content;
 		min-width: 100%;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
 	}
 
 	/* Keep filter forms fluid on tablets/phones; do not force them into wide table scrollers. */

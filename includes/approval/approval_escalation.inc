@@ -199,9 +199,10 @@ function process_approval_escalations()
  * the escalation deadline at its current level.
  *
  * @param int $draft_id Draft ID
- * @return array ['has_escalation' => bool, 'escalation_days' => int,
+ * @return array ['status' => string, 'has_escalation' => bool, 'escalation_days' => int,
  *               'days_at_level' => int, 'days_remaining' => int,
  *               'is_overdue' => bool, 'escalation_to_level' => int|null]
+ *               status: 'ok', 'warning', 'overdue', 'no_escalation'
  */
 function get_draft_escalation_status($draft_id)
 {
@@ -209,6 +210,7 @@ function get_draft_escalation_status($draft_id)
 
 	if (!$draft || (int)$draft['status'] !== APPROVAL_STATUS_PENDING) {
 		return array(
+			'status' => 'no_escalation',
 			'has_escalation' => false,
 			'escalation_days' => 0,
 			'days_at_level' => 0,
@@ -218,10 +220,11 @@ function get_draft_escalation_status($draft_id)
 		);
 	}
 
-	$level = get_approval_level($draft['workflow_id'], (int)$draft['current_level']);
+	$level = get_approval_level_by_workflow_level($draft['workflow_id'], (int)$draft['current_level']);
 
 	if (!$level || (int)$level['escalation_days'] <= 0) {
 		return array(
+			'status' => 'no_escalation',
 			'has_escalation' => false,
 			'escalation_days' => 0,
 			'days_at_level' => 0,
@@ -246,13 +249,24 @@ function get_draft_escalation_status($draft_id)
 
 	$escalation_days = (int)$level['escalation_days'];
 	$days_remaining = max(0, $escalation_days - $days_at_level);
+	$is_overdue = ($days_at_level >= $escalation_days);
+
+	// Determine status label
+	if ($is_overdue) {
+		$status = 'overdue';
+	} elseif ($days_remaining <= 1) {
+		$status = 'warning';
+	} else {
+		$status = 'ok';
+	}
 
 	return array(
+		'status' => $status,
 		'has_escalation' => true,
 		'escalation_days' => $escalation_days,
 		'days_at_level' => $days_at_level,
 		'days_remaining' => $days_remaining,
-		'is_overdue' => ($days_at_level >= $escalation_days),
+		'is_overdue' => $is_overdue,
 		'escalation_to_level' => $level['escalation_to_level']
 	);
 }

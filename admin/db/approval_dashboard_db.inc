@@ -40,7 +40,7 @@ function get_approval_status_counts($filters = array())
 		$where[] = "d.submitted_date >= " . db_escape($filters['from_date']);
 
 	if (!empty($filters['to_date']))
-		$where[] = "d.submitted_date <= " . db_escape($filters['to_date']);
+		$where[] = "d.submitted_date <= " . db_escape($filters['to_date'] . ' 23:59:59');
 
 	if (count($where) > 0)
 		$sql .= " WHERE " . implode(' AND ', $where);
@@ -93,7 +93,7 @@ function get_sql_for_approval_dashboard($user_id, $role_id, $filters = array())
 		$sql .= " AND d.submitted_date >= " . db_escape($filters['from_date']);
 
 	if (!empty($filters['to_date']))
-		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date']);
+		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date'] . ' 23:59:59');
 
 	$sql .= " ORDER BY d.submitted_date DESC";
 
@@ -133,7 +133,7 @@ function get_sql_for_approval_inquiry($filters = array())
 		$sql .= " AND d.submitted_date >= " . db_escape($filters['from_date']);
 
 	if (!empty($filters['to_date']))
-		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date']);
+		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date'] . ' 23:59:59');
 
 	if (!empty($filters['submitter']))
 		$sql .= " AND d.submitted_by = " . db_escape($filters['submitter']);
@@ -180,7 +180,7 @@ function get_sql_for_my_submissions($user_id, $filters = array())
 		$sql .= " AND d.submitted_date >= " . db_escape($filters['from_date']);
 
 	if (!empty($filters['to_date']))
-		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date']);
+		$sql .= " AND d.submitted_date <= " . db_escape($filters['to_date'] . ' 23:59:59');
 
 	$sql .= " ORDER BY d.submitted_date DESC";
 

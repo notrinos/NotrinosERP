@@ -189,11 +189,14 @@ function display_approval_summary_box($draft)
 	echo "<tr><td class='label'>" . _('Transaction Type') . ":</td>"
 		. "<td>" . get_trans_type_label((int)$draft['trans_type']) . "</td></tr>\n";
 
-	echo "<tr><td class='label'>" . _('Reference') . ":</td>"
-		. "<td>" . htmlspecialchars($draft['reference'], ENT_QUOTES, 'UTF-8') . "</td></tr>\n";
+	$draft_ref = 'DRF-' . str_pad((int)$draft['id'], 4, '0', STR_PAD_LEFT);
+	echo "<tr><td class='label'>" . _('Draft #') . ":</td>"
+		. "<td><strong>" . $draft_ref . "</strong></td></tr>\n";
 
-	echo "<tr><td class='label'>" . _('Reserved Trans #') . ":</td>"
-		. "<td>" . (int)$draft['reserved_trans_no'] . "</td></tr>\n";
+	if ($draft['reference']) {
+		echo "<tr><td class='label'>" . _('Trans. Reference') . ":</td>"
+			. "<td>" . htmlspecialchars($draft['reference'], ENT_QUOTES, 'UTF-8') . "</td></tr>\n";
+	}
 
 	if ($draft['amount'] > 0) {
 		echo "<tr><td class='label'>" . _('Amount') . ":</td>"

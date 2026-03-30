@@ -282,6 +282,28 @@ function get_approval_level($level_id)
 }
 
 /**
+ * Get an approval level record by workflow ID and level number.
+ *
+ * @param int $workflow_id Workflow ID
+ * @param int $level       Level number (1-based)
+ * @return array|false     Level row or false
+ */
+function get_approval_level_by_workflow_level($workflow_id, $level)
+{
+	$sql = "SELECT al.*, sr.role AS role_name
+		FROM " . TB_PREF . "approval_levels al
+		LEFT JOIN " . TB_PREF . "security_roles sr ON sr.id = al.role_id
+		WHERE al.workflow_id = " . db_escape($workflow_id) . "
+		AND al.level = " . db_escape($level) . "
+		AND al.is_active = 1
+		LIMIT 1";
+
+	$result = db_query($sql, 'could not retrieve approval level by workflow and level');
+
+	return db_fetch($result);
+}
+
+/**
  * Get the maximum level number in a workflow
  *
  * @param int $workflow_id Workflow ID
