@@ -16,7 +16,11 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_policy_db.inc');
 
-page(_("Leave Policies"));
+$js = '';
+if (user_use_date_picker())
+    $js .= get_js_date_picker();
+
+page(_("Leave Policies"), false, false, '', $js);
 
 simple_page_mode(false);
 

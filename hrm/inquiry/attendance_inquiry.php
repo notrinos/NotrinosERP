@@ -15,7 +15,11 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 
-page(_("Attendance Report"));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_("Attendance Report"), false, false, '', $js);
 
 if (!isset($_POST['from_date']))
     $_POST['from_date'] = begin_month(Today());
@@ -23,12 +27,14 @@ if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
 
 start_form();
-start_table(TABLESTYLE2);
-date_row(_('From Date:'), 'from_date');
-date_row(_('To Date:'), 'to_date');
-employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+date_cells(_('From Date:'), 'from_date');
+date_cells(_('To Date:'), 'to_date');
+employees_list_cells(null, 'employee_id', null, true, false, false);
+submit_cells('Search', _('Apply Filter'));
+end_row();
 end_table(1);
-submit_center('Search', _('Apply Filter'));
 
 $sql = "SELECT a.employee_id,
         TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,''))) employee_name,

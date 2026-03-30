@@ -429,11 +429,11 @@ function check_cells($label, $name, $value=null, $submit_on_change=false, $title
 
 function check_row($label, $name, $value=null, $submit_on_change=false, $title=false) {
 	if (ui_current_table_mode() != 'table') {
-		echo "<div class='form-group inline'>";
-		echo "<label class='form-label'>".$label."</label>";
-		echo "<div class='form-control-wrap'>";
+		echo "<div class='form-group inline form-check-row'>";
+		echo "<span class='form-label'>".$label."</span>";
+		echo "<span class='form-control-wrap'>";
 		echo checkbox(null, $name, $value, $submit_on_change, $title);
-		echo "</div></div>\n";
+		echo "</span></div>\n";
 		return;
 	}
 

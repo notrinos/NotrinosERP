@@ -146,85 +146,9 @@ class renderer {
 	 * @return void
 	 */
 	function render_notification_button() {
-		$manager = get_notification_manager();
-		$total_count = $manager->getTotalCount();
-		$sections = $manager->getSections(5);
-
-		$badge_html = '';
-		if ($total_count > 0) {
-			$badge_text = $total_count > 99 ? '99+' : (string)$total_count;
-			$badge_html = "<span class='modern-notification-badge'>".$badge_text."</span>";
-		}
-
-		echo "<div class='modern-notification-dropdown'>";
-		echo "<button class='modern-notification-button' type='button' id='modern-notification-trigger' aria-haspopup='true' aria-expanded='false' aria-label='"._('Notifications')."'>";
+		echo "<button class='modern-notification-button' type='button' aria-label='"._('Notifications')."'>";
 		echo $this->icon_svg('bell', 'modern-icon modern-notification-icon');
-		echo $badge_html;
 		echo "</button>";
-
-		echo "<div class='modern-notification-panel' id='modern-notification-panel'>";
-		echo "<div class='modern-notification-panel-header'>";
-		echo "<span class='modern-notification-panel-title'>"._('Notifications')."</span>";
-		if ($total_count > 0)
-			echo "<span class='modern-notification-panel-count'>".$total_count."</span>";
-		echo "</div>";
-
-		if ($total_count == 0) {
-			echo "<div class='modern-notification-empty'>";
-			echo $this->icon_svg('bell', 'modern-icon modern-notification-empty-icon');
-			echo "<p>"._('No new notifications')."</p>";
-			echo "</div>";
-		} else {
-			echo "<div class='modern-notification-sections'>";
-			foreach ($sections as $section) {
-				if ($section['count'] == 0)
-					continue;
-
-				echo "<div class='modern-notification-section' data-section='"
-					.htmlspecialchars($section['id'], ENT_QUOTES, 'UTF-8')."'>";
-				echo "<div class='modern-notification-section-header'>";
-				echo $this->icon_svg($section['icon'], 'modern-icon modern-notification-section-icon');
-				echo "<span class='modern-notification-section-label'>"
-					.htmlspecialchars($section['label'], ENT_QUOTES, 'UTF-8')."</span>";
-				echo "<span class='modern-notification-section-count'>".$section['count']."</span>";
-				echo "</div>";
-
-				echo "<div class='modern-notification-items'>";
-				foreach ($section['items'] as $item) {
-					$item_url = htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8');
-					$item_title = htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8');
-					$item_summary = htmlspecialchars($item['summary'], ENT_QUOTES, 'UTF-8');
-
-					echo "<a class='modern-notification-item' href='".$item_url."'>";
-					echo "<div class='modern-notification-item-content'>";
-					echo "<div class='modern-notification-item-title'>".$item_title."</div>";
-					echo "<div class='modern-notification-item-summary'>".$item_summary."</div>";
-					if (!empty($item['amount'])) {
-						echo "<div class='modern-notification-item-amount'>"
-							.htmlspecialchars($item['amount'], ENT_QUOTES, 'UTF-8')."</div>";
-					}
-					echo "</div>";
-					if (!empty($item['time'])) {
-						echo "<div class='modern-notification-item-time'>"
-							.htmlspecialchars($item['time'], ENT_QUOTES, 'UTF-8')."</div>";
-					}
-					echo "</a>";
-				}
-				echo "</div>";
-
-				if ($section['view_all_url']) {
-					echo "<a class='modern-notification-view-all' href='"
-						.htmlspecialchars($section['view_all_url'], ENT_QUOTES, 'UTF-8')."'>"
-						._('View all')."</a>";
-				}
-
-				echo "</div>";
-			}
-			echo "</div>";
-		}
-
-		echo "</div>";
-		echo "</div>";
 	}
 
 	/**
@@ -233,7 +157,7 @@ class renderer {
 	 * @return array
 	 */
 	function get_company_branding_details() {
-		global $path_to_root, $db_connections;
+		global $path_to_root, $db_connections, $SysPrefs;
 
 		$company_id = user_company();
 		$company_name = $db_connections[$company_id]['name'];
@@ -241,16 +165,28 @@ class renderer {
 		$company_images_path = $project_root.'/company/'.$company_id.'/images';
 		$logo_extensions = array('png', 'svg', 'jpg', 'jpeg', 'gif', 'webp');
 		$logo_url = '';
+		$preferred_logo = isset($SysPrefs->prefs['coy_logo']) ? trim($SysPrefs->prefs['coy_logo']) : '';
 
-		foreach ($logo_extensions as $logo_extension) {
-			$logo_file_name = 'logo.'.$logo_extension;
-			$logo_file_path = $company_images_path.'/'.$logo_file_name;
-			if (!file_exists($logo_file_path))
-				continue;
+		if ($preferred_logo != '') {
+			$preferred_logo = basename($preferred_logo);
+			$preferred_logo_path = $company_images_path.'/'.$preferred_logo;
+			if (is_file($preferred_logo_path)) {
+				$logo_url = $path_to_root.'/company/'.$company_id.'/images/'.rawurlencode($preferred_logo);
+				$logo_url .= '?v='.filemtime($preferred_logo_path);
+			}
+		}
 
-			$logo_url = $path_to_root.'/company/'.$company_id.'/images/'.$logo_file_name;
-			$logo_url .= '?v='.filemtime($logo_file_path);
-			break;
+		if ($logo_url == '') {
+			foreach ($logo_extensions as $logo_extension) {
+				$logo_file_name = 'logo.'.$logo_extension;
+				$logo_file_path = $company_images_path.'/'.$logo_file_name;
+				if (!file_exists($logo_file_path))
+					continue;
+
+				$logo_url = $path_to_root.'/company/'.$company_id.'/images/'.$logo_file_name;
+				$logo_url .= '?v='.filemtime($logo_file_path);
+				break;
+			}
 		}
 
 		return array(
@@ -479,7 +415,7 @@ class renderer {
 			$selected_application_title = str_replace('&', '', $selected_application->name);
 			$page_title = $title.' / '.$selected_application_title;
 		}
-		$indicator = $path_to_root.'/themes/'.user_theme().'/images/ajax-loader.svg';
+		$indicator = $path_to_root.'/themes/'.user_theme().'/images/ajax-loader.gif';
 
 		$app_theme_colors = $this->application_theme_colors($selected_application_id);
 		$app_shell_style = "--modern-app-accent: ".$app_theme_colors['accent']."; --modern-app-accent-soft: ".$app_theme_colors['soft'].";";

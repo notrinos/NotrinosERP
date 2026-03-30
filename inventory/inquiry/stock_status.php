@@ -42,12 +42,13 @@ if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center> ' . _('Item:'). ' ';
-	echo stock_costable_items_list('stock_id', $_POST['stock_id'], false, true);
+	start_table(TABLESTYLE_NOBORDER);
+	start_row();
+	stock_costable_items_list_cells(_('Item:'), 'stock_id', $_POST['stock_id'], false, false);
+	submit_cells('RefreshInquiry', _('Apply Filter'));
+	end_row();
+	end_table(1);
 }
-echo '<br>';
-
-echo '<hr></center>';
 
 set_global_stock_item($_POST['stock_id']);
 

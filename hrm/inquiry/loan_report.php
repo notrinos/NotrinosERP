@@ -16,13 +16,19 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
 
-page(_("Loan Outstanding"));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_("Loan Outstanding"), false, false, '', $js);
 
 start_form();
-start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+submit_cells('Search', _('Apply Filter'));
+end_row();
 end_table(1);
-submit_center('Search', _('Apply Filter'));
 
 $employee_id = get_post('employee_id', '');
 

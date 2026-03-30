@@ -37,11 +37,15 @@ $change_types = array(
 );
 
 start_form();
-start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'), 'employee_id', null, true, true, false);
-array_selector_row(_('Change Type:'), 'change_type', null, $change_types);
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+filter_cell_open(_('Change Type:'));
+echo array_selector('change_type', null, $change_types);
+filter_cell_close();
+submit_cells('Refresh', _('Refresh'));
+end_row();
 end_table(1);
-submit_center('Refresh', _('Refresh'));
 
 if ($_POST['employee_id'] != '' && $_POST['employee_id'] != ALL_TEXT) {
     start_table(TABLESTYLE, "width='95%'");

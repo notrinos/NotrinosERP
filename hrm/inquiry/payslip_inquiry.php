@@ -16,7 +16,11 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 
-page(_("Payslip History"));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_("Payslip History"), false, false, '', $js);
 
 if (!isset($_POST['from_date']))
     $_POST['from_date'] = begin_month(Today());
@@ -24,12 +28,14 @@ if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
 
 start_form();
-start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
-date_row(_('From Date:'), 'from_date');
-date_row(_('To Date:'), 'to_date');
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+date_cells(_('From Date:'), 'from_date');
+date_cells(_('To Date:'), 'to_date');
+submit_cells('Search', _('Apply Filter'));
+end_row();
 end_table(1);
-submit_center('Search', _('Apply Filter'));
 
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));

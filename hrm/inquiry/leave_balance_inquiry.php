@@ -15,26 +15,28 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+
 page(_("Leave Balance"));
 
 start_form();
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE_NOBORDER);
+start_row();
 
 if (!isset($_POST['fiscal_year']) || (int)$_POST['fiscal_year'] <= 0)
     $_POST['fiscal_year'] = date('Y');
 
-text_row(_('Fiscal Year:'), 'fiscal_year', $_POST['fiscal_year'], 6, 4);
-employees_list_row(_('Employee:'), 'employee_id', null, true, false, false);
-leave_types_list_row(_('Leave Type:'), 'leave_id', null, true, false);
+text_cells(_('Fiscal Year:'), 'fiscal_year', $_POST['fiscal_year'], 6, 4);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+filter_cell_open(_('Leave Type:'));
+echo leave_types_list('leave_id', null, true, false);
+filter_cell_close();
+submit_cells('Search', _('Apply Filter'));
+end_row();
 end_table(1);
-submit_center('Search', _('Apply Filter'));
 
 $fiscal_year = (int)get_post('fiscal_year', date('Y'));
 $employee_id = get_post('employee_id', '');
 $leave_id = (int)get_post('leave_id', 0);
-
-if (function_exists('ensure_leave_balance_entitlements_for_filters'))
-    ensure_leave_balance_entitlements_for_filters($fiscal_year, $employee_id, $leave_id);
 
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Employee'), _('Leave Type'), _('Year'), _('Entitled'), _('Carry Forward'), _('Adjusted'), _('Taken'), _('Pending'), _('Available'));

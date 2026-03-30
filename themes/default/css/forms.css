@@ -19,15 +19,113 @@ textarea {
 	align-content: start;
 }
 
+.form-table:not(.filter-bar) .form-group,
+.form-table:not(.filter-bar) .form-group.inline,
+.form-table:not(.filter-bar) .form-group.readonly {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 4px;
+}
+
+.form-table:not(.filter-bar) .form-label {
+	display: block;
+}
+
+.form-table:not(.filter-bar) .form-control-wrap,
+.form-table:not(.filter-bar) div.list_container,
+.form-table:not(.filter-bar) div.list_container > span[id$='_sel'] {
+	width: 100%;
+	min-width: 0;
+}
+
+.form-table:not(.filter-bar) .filter-field:has(.combo-search-cell),
+.form-table:not(.filter-bar) .form-control-wrap:has(.combo-search-cell) {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 8px;
+	align-items: center;
+}
+
+.form-table:not(.filter-bar) .combo-search-cell,
+.form-table:not(.filter-bar) .combo-select-cell {
+	display: block;
+	width: 100%;
+	min-width: 0;
+}
+
+.form-table:not(.filter-bar) .combo-search-cell input[type='text'],
+.form-table:not(.filter-bar) .combo-select-cell input[type='text'],
+.form-table:not(.filter-bar) .combo-select-cell .select2-container,
+.form-table:not(.filter-bar) .combo-select-cell .list_container {
+	width: 100% !important;
+	min-width: 0;
+}
+
+.form-table:not(.filter-bar) .combo-select-cell .list_container {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.form-table:not(.filter-bar) .form-control-wrap input[type='text'],
+.form-table:not(.filter-bar) .form-control-wrap input[type='password'],
+.form-table:not(.filter-bar) .form-control-wrap input[type='email'],
+.form-table:not(.filter-bar) .form-control-wrap select,
+.form-table:not(.filter-bar) .form-control-wrap textarea {
+	width: 100%;
+}
+
+.form-table:not(.filter-bar) .form-group.inline.form-check-row,
+.form-table:not(.filter-bar) .form-check-row {
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	min-height: 30px;
+	padding: 2px 12px;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.form-table:not(.filter-bar) .form-group.inline.form-check-row:hover,
+.form-table:not(.filter-bar) .form-check-row:hover {
+	border-color: var(--modern-color-primary);
+	background: var(--modern-color-primary-50);
+}
+
+.form-table:not(.filter-bar) .form-check-row:focus-within {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px var(--modern-color-primary-50);
+	background: var(--modern-color-surface);
+}
+
+.form-table:not(.filter-bar) .form-check-row .form-label {
+	margin: 0;
+	cursor: pointer;
+}
+
+.form-table:not(.filter-bar) .form-check-row .form-control-wrap {
+	width: auto;
+	min-height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex: 0 0 auto;
+}
+
 /* ==================== Filter Group ==================== */
-/* Unified grid container that wraps one or more filter-bar blocks.
-   All filter-fields flow into a single CSS grid so column widths
+/* Unified flex container that wraps one or more filter-bar blocks.
+	All filter-fields flow into a single row-wrapping flex layout so widths
    are uniform regardless of how many tables they span. */
 .filter-group {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	display: flex;
+	flex-wrap: wrap;
 	gap: 10px 16px;
-	align-items: center;
+	align-items: flex-end;
 	background: var(--modern-color-surface);
 	border: 1px solid var(--modern-color-border);
 	border-radius: 8px;
@@ -36,7 +134,7 @@ textarea {
 	box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* Filter-bars inside a group become transparent grid pass-throughs */
+/* Filter-bars inside a group become transparent layout pass-throughs */
 .filter-group > .form-table.filter-bar {
 	display: contents;
 }
@@ -45,9 +143,19 @@ textarea {
 	display: contents !important;
 }
 
+.filter-group > .filter-field {
+	flex: 1 1 180px;
+	min-width: 0;
+}
+
+.filter-group > .filter-submit,
+.filter-group > .filter-check {
+	align-self: flex-end;
+}
+
 /* Any stray elements inside filter-group should span full width */
 .filter-group > hr {
-	grid-column: 1 / -1;
+	flex: 1 1 100%;
 }
 
 /* ==================== Filter Bar (standalone fallback) ==================== */
@@ -62,10 +170,10 @@ textarea {
 }
 
 .filter-bar > .form-row {
-	display: grid !important;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	display: flex !important;
+	flex-wrap: wrap;
 	gap: 10px 16px;
-	align-items: center;
+	align-items: flex-end;
 }
 
 .filter-bar > .form-row + .form-row {
@@ -76,6 +184,7 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	gap: 3px;
+	flex: 1 1 180px;
 	min-width: 0;
 }
 
@@ -186,6 +295,7 @@ textarea {
 .filter-bar .filter-submit {
 	display: flex;
 	align-items: flex-end;
+	align-self: flex-end;
 }
 
 .filter-bar .filter-submit input[type='submit'],
@@ -298,12 +408,25 @@ textarea {
 /* Filter bar responsive */
 @media (max-width: 900px) {
 	.filter-group {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 8px 10px;
 	}
 
+	.filter-group > .filter-field,
+	.filter-bar .filter-field {
+		flex: 1 1 calc(50% - 10px);
+	}
+
+	.filter-group > .filter-submit,
+	.filter-bar .filter-submit {
+		flex: 1 1 calc(50% - 10px);
+	}
+
+	.form-table:not(.filter-bar) .filter-field:has(.combo-search-cell),
+	.form-table:not(.filter-bar) .form-control-wrap:has(.combo-search-cell) {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
 	.filter-bar > .form-row {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 8px 10px;
 	}
 
@@ -333,24 +456,29 @@ textarea {
 }
 
 @media (max-width: 768px) {
-	.filter-group {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-	.filter-group .filter-submit {
-		grid-column: 1 / -1;
-	}
-	.filter-bar > .form-row {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
+	.filter-group > .filter-submit,
 	.filter-bar .filter-submit {
-		grid-column: 1 / -1;
+		flex: 1 1 100%;
 	}
 }
 
 @media (max-width: 560px) {
-	.filter-group,
 	.filter-bar > .form-row,
 	.filter-bar .filter-field:has(.combo-search-cell) {
+		gap: 8px;
+	}
+
+	.filter-group > .filter-field,
+	.filter-group > .filter-submit,
+	.filter-group > .filter-check,
+	.filter-bar .filter-field,
+	.filter-bar .filter-submit,
+	.filter-bar .filter-check {
+		flex: 1 1 100%;
+	}
+
+	.form-table:not(.filter-bar) .filter-field:has(.combo-search-cell),
+	.form-table:not(.filter-bar) .form-control-wrap:has(.combo-search-cell) {
 		grid-template-columns: 1fr;
 	}
 }

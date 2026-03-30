@@ -204,7 +204,7 @@
 	}
 
 	function bindClickableCheckboxRows() {
-		var checkboxRows = document.querySelectorAll('.form-section .form-group');
+		var checkboxRows = document.querySelectorAll('.form-section .form-group, .form-table:not(.filter-bar) .form-check-row');
 		for (var i = 0; i < checkboxRows.length; i++) {
 			(function (row) {
 				var checkbox = row.querySelector("input[type='checkbox']");
