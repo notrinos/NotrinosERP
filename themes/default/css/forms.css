@@ -46,8 +46,8 @@ textarea {
 	align-items: center;
 }
 
-.form-table:not(.filter-bar) .combo-search-cell,
-.form-table:not(.filter-bar) .combo-select-cell {
+.form-table:not(.filter-bar) .combo-search-cell:not(td),
+.form-table:not(.filter-bar) .combo-select-cell:not(td) {
 	display: block;
 	width: 100%;
 	min-width: 0;
@@ -776,6 +776,7 @@ html[dir='rtl'] .form-input-affix > .form-post-label-inside {
 
 td.combo-search-cell,
 td.combo-select-cell {
+	display: table-cell;
 	vertical-align: middle;
 	white-space: nowrap;
 }
