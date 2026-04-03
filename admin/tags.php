@@ -20,6 +20,8 @@ if (@$_GET['type'] == 'account' || get_post('type') == TAG_ACCOUNT)
 	$page_security = 'SA_GLACCOUNTTAGS';
 else if(@$_GET['type'] == "dimension" || get_post('type') == TAG_DIMENSION)
 	$page_security = 'SA_DIMTAGS';
+else if(@$_GET['type'] == 'crm' || get_post('type') == TAG_CRM)
+	$page_security = 'SA_CRM_SETTINGS';
 
 // We use $_POST['type'] throughout this script, so convert $_GET vars
 // if $_POST['type'] is not set.
@@ -28,6 +30,8 @@ if (!isset($_POST['type'])) {
 		$_POST['type'] = TAG_ACCOUNT;
 	elseif ($_GET['type'] == 'dimension')
 		$_POST['type'] = TAG_DIMENSION;
+	elseif ($_GET['type'] == 'crm')
+		$_POST['type'] = TAG_CRM;
 	else
 		die(_('Unspecified tag type'));
 }
@@ -41,6 +45,11 @@ switch ($_POST['type']) {
 	case TAG_DIMENSION:
 		// Dimension tags
 		$_SESSION['page_title'] = _($help_context = 'Dimension Tags');
+		break;
+	case TAG_CRM:
+		// CRM tags
+		$_SESSION['page_title'] = _($help_context = 'CRM Tags');
+		break;
 }
 
 page($_SESSION['page_title']);
@@ -62,12 +71,13 @@ function can_process() {
 
 if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	if (can_process()) {
+		$color = get_post('color') ? get_post('color') : null;
 		if ($selected_id != -1) {
-			if( $ret = update_tag($selected_id, $_POST['name'], $_POST['description']))
+			if( $ret = update_tag($selected_id, $_POST['name'], $_POST['description'], null, $color))
 				display_notification(_('Selected tag settings have been updated'));
 		} 
 		else {
-			if( $ret = add_tag($_POST['type'], $_POST['name'], $_POST['description']))
+			if( $ret = add_tag($_POST['type'], $_POST['name'], $_POST['description'], $color))
 				display_notification(_('New tag has been added'));
 		}
 		if ($ret) $Mode = 'RESET';
@@ -105,6 +115,7 @@ if ($Mode == 'Delete') {
 if ($Mode == 'RESET') {
 	$selected_id = -1;
 	$_POST['name'] = $_POST['description'] = '';
+	$_POST['color'] = '';
 }
 
 //-----------------------------------------------------------------------------------
@@ -113,7 +124,11 @@ $result = get_tags($_POST['type'], check_value('show_inactive'));
 
 start_form();
 start_table(TABLESTYLE);
-$th = array(_('Tag Name'), _('Tag Description'), '', '');
+$th = array(_('Tag Name'), _('Tag Description'));
+if ($_POST['type'] == TAG_CRM)
+	$th[] = _('Color');
+$th[] = '';
+$th[] = '';
 inactive_control_column($th);
 table_header($th);
 
@@ -123,6 +138,11 @@ while ($myrow = db_fetch($result)) {
 
 	label_cell($myrow['name']);
 	label_cell($myrow['description']);
+	if ($_POST['type'] == TAG_CRM) {
+		$color = !empty($myrow['color']) ? htmlspecialchars($myrow['color']) : '#2196F3';
+		label_cell("<span style='display:inline-block;padding:2px 12px;background:" . $color
+			. ";color:#fff;border-radius:3px;'>" . htmlspecialchars($myrow['name']) . "</span>");
+	}
 	inactive_control_cell($myrow['id'], $myrow['inactive'], 'tags', 'id');
 	edit_button_cell('Edit'.$myrow['id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['id'], _('Delete'));
@@ -142,6 +162,7 @@ if ($selected_id != -1) { // We've selected a tag
 		$myrow = get_tag($selected_id);
 		$_POST['name'] = $myrow['name'];
 		$_POST['description'] = $myrow['description'];
+		$_POST['color'] = isset($myrow['color']) ? $myrow['color'] : '';
 	}
 	// Note the selected tag
 	hidden('selected_id', $selected_id);
@@ -149,6 +170,10 @@ if ($selected_id != -1) { // We've selected a tag
 	
 text_row_ex(_('Tag Name:'), 'name', 15, 30);
 text_row_ex(_('Tag Description:'), 'description', 40, 60);
+if ($_POST['type'] == TAG_CRM) {
+	label_row(_('Color:'), "<input type='color' name='color' value='"
+		. htmlspecialchars(get_post('color', '#2196F3')) . "'>");
+}
 hidden('type');
 
 end_table(1);

@@ -79,10 +79,11 @@ if (isset($_POST['ApplyBulk'])) {
                 $tag_id = (int)$_POST['bulk_tag_id'];
                 if ($tag_id > 0) {
                     foreach ($ids as $id) {
-                        $check = "SELECT id FROM " . TB_PREF . "crm_entity_tags WHERE entity_type = " . db_escape(CRM_ENTITY_LEAD) . " AND entity_id = " . db_escape($id) . " AND tag_id = " . db_escape($tag_id);
+                        $record_id = CRM_ENTITY_LEAD . ':' . (int)$id;
+                        $check = "SELECT tag_id FROM " . TB_PREF . "tag_associations WHERE record_id = " . db_escape($record_id) . " AND tag_id = " . db_escape($tag_id);
                         $exists = db_query($check);
                         if (!db_fetch($exists)) {
-                            $sql = "INSERT INTO " . TB_PREF . "crm_entity_tags (entity_type, entity_id, tag_id) VALUES (" . db_escape(CRM_ENTITY_LEAD) . ", " . db_escape($id) . ", " . db_escape($tag_id) . ")";
+                            $sql = "INSERT INTO " . TB_PREF . "tag_associations (record_id, tag_id) VALUES (" . db_escape($record_id) . ", " . db_escape($tag_id) . ")";
                             db_query($sql);
                         }
                         $count++;

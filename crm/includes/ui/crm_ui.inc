@@ -354,6 +354,7 @@ function crm_activity_plan_list($name, $selected_id = null)
 
 /**
  * CRM tag multi-select checkboxes rendered as table row.
+ * Delegates to the core tag_color_checkboxes_row() with TAG_CRM type.
  *
  * @param string $label
  * @param string $name   Base name for checkboxes (e.g. 'tags').
@@ -361,18 +362,7 @@ function crm_activity_plan_list($name, $selected_id = null)
  */
 function crm_tag_checkboxes_row($label, $name, $selected_ids = array())
 {
-    echo "<tr><td class='label'>$label</td><td>";
-    $result = get_crm_tags();
-    while ($tag = db_fetch($result)) {
-        $checked = in_array($tag['id'], $selected_ids) ? ' checked' : '';
-        echo "<label style='display:inline-block; margin-right:10px; padding:2px 8px; "
-            . "background:" . htmlspecialchars($tag['color']) . "; color:#fff; "
-            . "border-radius:3px; cursor:pointer; font-size:0.9em;'>"
-            . "<input type='checkbox' name='" . $name . "[]' value='"
-            . htmlspecialchars($tag['id']) . "'$checked> "
-            . htmlspecialchars($tag['name']) . "</label>";
-    }
-    echo "</td></tr>\n";
+    tag_color_checkboxes_row($label, $name, TAG_CRM, $selected_ids);
 }
 
 // ================================================================

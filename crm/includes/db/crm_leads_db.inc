@@ -126,8 +126,10 @@ function delete_crm_lead($id, $hard = false)
 
     if ($hard) {
         // Remove related records
-        $sql = "DELETE FROM " . TB_PREF . "crm_entity_tags
-                WHERE entity_type = 'lead' AND entity_id = " . db_escape($id);
+        $sql = "DELETE ta FROM " . TB_PREF . "tag_associations ta
+                INNER JOIN " . TB_PREF . "tags t ON t.id = ta.tag_id
+                WHERE ta.record_id = " . db_escape('lead:' . (int)$id)
+            . " AND t.type = " . TAG_CRM;
         db_query($sql, "Could not delete lead tags");
 
         $sql = "DELETE FROM " . TB_PREF . "crm_activities
@@ -223,8 +225,8 @@ function get_crm_leads($filters = array(), $limit = 0, $offset = 0)
         $sql .= " AND l.date_created <= " . db_escape($filters['date_to'] . ' 23:59:59');
     }
     if (!empty($filters['tag_id'])) {
-        $sql .= " AND l.id IN (SELECT entity_id FROM " . TB_PREF . "crm_entity_tags
-                  WHERE entity_type='lead' AND tag_id=" . db_escape($filters['tag_id']) . ")";
+        $sql .= " AND CONCAT('lead:', l.id) IN (SELECT ta.record_id FROM " . TB_PREF . "tag_associations ta
+                  WHERE ta.tag_id=" . db_escape($filters['tag_id']) . ")";
     }
     if (isset($filters['inactive'])) {
         $sql .= " AND l.inactive = " . db_escape($filters['inactive']);
@@ -281,8 +283,8 @@ function count_crm_leads($filters = array())
         $sql .= " AND l.date_created <= " . db_escape($filters['date_to'] . ' 23:59:59');
     }
     if (!empty($filters['tag_id'])) {
-        $sql .= " AND l.id IN (SELECT entity_id FROM " . TB_PREF . "crm_entity_tags
-                  WHERE entity_type='lead' AND tag_id=" . db_escape($filters['tag_id']) . ")";
+        $sql .= " AND CONCAT('lead:', l.id) IN (SELECT ta.record_id FROM " . TB_PREF . "tag_associations ta
+                  WHERE ta.tag_id=" . db_escape($filters['tag_id']) . ")";
     }
     if (isset($filters['inactive'])) {
         $sql .= " AND l.inactive = " . db_escape($filters['inactive']);
@@ -423,52 +425,43 @@ function update_opportunity_stage($lead_id, $stage_id)
 }
 
 // ================================================================
-// ENTITY TAGS
+// ENTITY TAGS (shared 0_tags + 0_tag_associations, type=TAG_CRM)
 // ================================================================
 
 /**
- * Replace all tags for an entity.
+ * Replace all tags for a CRM entity.
  *
- * @param string $entity_type
+ * Uses shared tag_associations with record_id = "entity_type:entity_id".
+ *
+ * @param string $entity_type  e.g. 'lead', 'campaign'
  * @param int    $entity_id
  * @param array  $tag_ids
  * @return bool
  */
 function update_crm_entity_tags($entity_type, $entity_id, $tag_ids)
 {
-    $sql = "DELETE FROM " . TB_PREF . "crm_entity_tags
-            WHERE entity_type = " . db_escape($entity_type)
-        . " AND entity_id = " . db_escape($entity_id);
-    db_query($sql, "Could not delete entity tags");
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
 
-    foreach ($tag_ids as $tag_id) {
-        if ($tag_id) {
-            $sql = "INSERT INTO " . TB_PREF . "crm_entity_tags
-                    (entity_type, entity_id, tag_id) VALUES ("
-                . db_escape($entity_type) . ", "
-                . db_escape($entity_id) . ", "
-                . db_escape($tag_id) . ")";
-            db_query($sql, "Could not add entity tag");
-        }
-    }
+    $record_id = $entity_type . ':' . (int)$entity_id;
+    update_tag_associations(TAG_CRM, $record_id, $tag_ids);
     return true;
 }
 
 /**
- * Get tags for an entity.
+ * Get tags for a CRM entity.
  *
  * @param string $entity_type
  * @param int    $entity_id
- * @return array  Array of tag rows.
+ * @return array  Array of tag rows (each has id, name, color, etc.)
  */
 function get_crm_entity_tags($entity_type, $entity_id)
 {
-    $sql = "SELECT t.* FROM " . TB_PREF . "crm_tags t
-            INNER JOIN " . TB_PREF . "crm_entity_tags et ON t.id = et.tag_id
-            WHERE et.entity_type = " . db_escape($entity_type)
-        . " AND et.entity_id = " . db_escape($entity_id)
-        . " ORDER BY t.name";
-    $result = db_query($sql, "Could not get entity tags");
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+
+    $record_id = $entity_type . ':' . (int)$entity_id;
+    $result = get_tags_associated_with_record(TAG_CRM, $record_id);
     $tags = array();
     while ($row = db_fetch($result)) {
         $tags[] = $row;
@@ -718,49 +711,50 @@ function delete_crm_lost_reason($id)
 }
 
 // ================================================================
-// TAGS
+// TAGS (thin wrappers around shared 0_tags system, type=TAG_CRM)
 // ================================================================
 
 /**
- * Get all CRM tags.
+ * Get all CRM tags (type = TAG_CRM).
  *
  * @return resource
  */
 function get_crm_tags()
 {
-    $sql = "SELECT * FROM " . TB_PREF . "crm_tags ORDER BY name";
-    return db_query($sql, "Could not get CRM tags");
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+    return get_tags(TAG_CRM);
 }
 
 /**
- * Get a single tag.
+ * Get a single CRM tag.
  *
  * @param int $id
  * @return array|false
  */
 function get_crm_tag($id)
 {
-    $sql = "SELECT * FROM " . TB_PREF . "crm_tags WHERE id = " . db_escape($id);
-    return db_fetch(db_query($sql, "Could not get CRM tag"));
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+    return get_tag($id);
 }
 
 /**
- * Add a tag.
+ * Add a CRM tag.
  *
  * @param string $name
  * @param string $color  Hex color code.
- * @return int
+ * @return bool
  */
 function add_crm_tag($name, $color = '#2196F3')
 {
-    $sql = "INSERT INTO " . TB_PREF . "crm_tags (name, color)
-            VALUES (" . db_escape($name) . ", " . db_escape($color) . ")";
-    db_query($sql, "Could not add CRM tag");
-    return db_insert_id();
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+    return add_tag(TAG_CRM, $name, $name, $color);
 }
 
 /**
- * Update a tag.
+ * Update a CRM tag.
  *
  * @param int    $id
  * @param string $name
@@ -769,27 +763,28 @@ function add_crm_tag($name, $color = '#2196F3')
  */
 function update_crm_tag($id, $name, $color)
 {
-    $sql = "UPDATE " . TB_PREF . "crm_tags SET "
-        . "name = " . db_escape($name) . ", "
-        . "color = " . db_escape($color)
-        . " WHERE id = " . db_escape($id);
-    return db_query($sql, "Could not update CRM tag");
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+    return update_tag($id, $name, $name, null, $color);
 }
 
 /**
- * Delete a tag.
+ * Delete a CRM tag and all its associations.
  *
  * @param int $id
  * @return bool
  */
 function delete_crm_tag($id)
 {
-    // Remove tag associations first
-    $sql = "DELETE FROM " . TB_PREF . "crm_entity_tags WHERE tag_id = " . db_escape($id);
+    global $path_to_root;
+    include_once($path_to_root . '/admin/db/tags_db.inc');
+
+    // Remove all associations for this tag
+    $sql = "DELETE FROM " . TB_PREF . "tag_associations WHERE tag_id = " . db_escape($id);
     db_query($sql, "Could not delete tag associations");
 
-    $sql = "DELETE FROM " . TB_PREF . "crm_tags WHERE id = " . db_escape($id);
-    return db_query($sql, "Could not delete CRM tag");
+    // Remove the tag itself
+    delete_tag($id);
 }
 
 // ================================================================

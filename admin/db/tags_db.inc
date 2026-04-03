@@ -10,16 +10,20 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_tag($type, $name, $description) {
-	$sql = "INSERT INTO ".TB_PREF."tags (type, name, description) VALUES (".db_escape($type).", ".db_escape($name).", ".db_escape($description).")";
+function add_tag($type, $name, $description, $color=null) {
+	$sql = "INSERT INTO ".TB_PREF."tags (type, name, description, color) VALUES ("
+		.db_escape($type).", ".db_escape($name).", ".db_escape($description).", "
+		.($color !== null ? db_escape($color) : "NULL").")";
 
 	return db_query($sql, 'could not insert tag record');
 }
 
-function update_tag($id, $name, $description, $type=null) {
+function update_tag($id, $name, $description, $type=null, $color=null) {
 	$sql = "UPDATE ".TB_PREF."tags SET name=".db_escape($name).", description=".db_escape($description);
-	if ($type != null)
+	if ($type !== null)
 		$sql .= ", type=".db_escape($type);
+	if ($color !== null)
+		$sql .= ", color=".db_escape($color);
 
 	$sql .= " WHERE id = ".db_escape($id);
 
@@ -86,6 +90,15 @@ function get_tag_description($id) {
 	return $row[0];
 }
 
+function get_tag_color($id) {
+	$sql = "SELECT color FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
+
+	$result = db_query($sql, 'could not get tag color');
+
+	$row = db_fetch_row($result);
+	return $row ? $row[0] : null;
+}
+
 function delete_tag($id) {
 	$sql = "DELETE FROM ".TB_PREF."tags WHERE id = ".db_escape($id);
 
@@ -144,6 +157,12 @@ function get_records_associated_with_tag($id) {
 			$table = TB_PREF."dimensions";
 			$key = "id";
 			break;
+		case TAG_CRM:
+			// CRM uses "entity_type:entity_id" composite record_id
+			$sql = "SELECT ta.record_id FROM ".TB_PREF."tag_associations AS ta "
+				."INNER JOIN ".TB_PREF."tags AS tags ON ta.tag_id = tags.id "
+				."WHERE tags.id = ".db_escape($id);
+			return db_query($sql, 'could not get tag associations for tag');
 	}
 	
 	$sql = "SELECT $table.* FROM $table INNER JOIN ".TB_PREF."tag_associations AS ta ON ta.record_id = $table.$key INNER JOIN ".TB_PREF."tags AS tags ON ta.tag_id = tags.id WHERE tags.id = ".db_escape($id);

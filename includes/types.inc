@@ -228,6 +228,7 @@ define('TABLESTYLE_NOBORDER', 3);
 
 define('TAG_ACCOUNT',   1);
 define('TAG_DIMENSION', 2);
+define('TAG_CRM',       3);
 
 //----------------------------------------------------------------------------------
 // Payment term types

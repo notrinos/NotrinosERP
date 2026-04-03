@@ -2308,7 +2308,7 @@ INSERT INTO `0_sys_prefs` VALUES
 DROP TABLE IF EXISTS `0_tag_associations`;
 
 CREATE TABLE `0_tag_associations` (
-	`record_id` varchar(15) NOT NULL,
+	`record_id` varchar(30) NOT NULL,
 	`tag_id` int(11) NOT NULL,
 	PRIMARY KEY (`record_id`,`tag_id`)
 ) ENGINE=InnoDB ;
@@ -2324,6 +2324,7 @@ CREATE TABLE `0_tags` (
 	`type` smallint(6) NOT NULL,
 	`name` varchar(30) NOT NULL,
 	`description` varchar(60) DEFAULT NULL,
+	`color` varchar(20) DEFAULT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
@@ -2331,6 +2332,16 @@ CREATE TABLE `0_tags` (
 ) ENGINE=InnoDB ;
 
 -- Data of table `0_tags` --
+
+INSERT INTO `0_tags` (`type`, `name`, `description`, `color`) VALUES
+(3, 'Hot', 'Hot lead/opportunity', '#f44336'),
+(3, 'Warm', 'Warm lead/opportunity', '#ff9800'),
+(3, 'Cold', 'Cold lead/opportunity', '#2196F3'),
+(3, 'VIP', 'VIP client', '#9c27b0'),
+(3, 'Enterprise', 'Enterprise segment', '#4caf50'),
+(3, 'SMB', 'Small/medium business', '#00bcd4'),
+(3, 'Government', 'Government sector', '#795548'),
+(3, 'Reseller', 'Reseller partner', '#607d8b');
 
 -- Structure of table `0_tax_group_items` --
 
@@ -3722,25 +3733,8 @@ INSERT INTO `0_crm_appointment_types` (`name`, `default_duration`, `active`) VAL
 ('Follow-up Meeting', 30, 1),
 ('Contract Review', 60, 1);
 
--- Tags for categorizing leads/opportunities
-DROP TABLE IF EXISTS `0_crm_tags`;
-CREATE TABLE `0_crm_tags` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(60) NOT NULL,
-  `color` varchar(20) DEFAULT '#2196F3',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-INSERT INTO `0_crm_tags` (`name`, `color`) VALUES
-('Hot', '#f44336'),
-('Warm', '#ff9800'),
-('Cold', '#2196F3'),
-('VIP', '#9c27b0'),
-('Enterprise', '#4caf50'),
-('SMB', '#00bcd4'),
-('Government', '#795548'),
-('Reseller', '#607d8b');
+-- CRM tags use the shared 0_tags table (type=3, TAG_CRM).
+-- Seed data is inserted above in the 0_tags section.
 
 -- ================================================================
 -- SALES TEAM TABLES
@@ -3829,17 +3823,8 @@ CREATE TABLE `0_crm_leads` (
   KEY `date_created` (`date_created`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Entity tags junction table
-DROP TABLE IF EXISTS `0_crm_entity_tags`;
-CREATE TABLE `0_crm_entity_tags` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `entity_type` varchar(20) NOT NULL COMMENT 'lead, campaign',
-  `entity_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `entity_tag` (`entity_type`, `entity_id`, `tag_id`),
-  KEY `tag_id` (`tag_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+-- CRM entity-tag associations use the shared 0_tag_associations table.
+-- record_id format: "entity_type:entity_id" (e.g. "lead:42").
 
 -- ================================================================
 -- ACTIVITY TABLES

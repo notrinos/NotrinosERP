@@ -2219,6 +2219,35 @@ function tag_list_row($label, $name, $height, $type, $mult=false, $all=false, $s
 	echo "</tr>\n";	
 }
 
+/**
+ * Render colored tag checkboxes as a table row.
+ * Reusable by any module — pass the TAG_* type constant.
+ *
+ * @param string $label         Row label
+ * @param string $name          Base name for checkbox inputs
+ * @param int    $type          TAG_* type constant
+ * @param array  $selected_ids  Already-selected tag IDs
+ */
+function tag_color_checkboxes_row($label, $name, $type, $selected_ids = array())
+{
+	global $path_to_root;
+	include_once($path_to_root . '/admin/db/tags_db.inc');
+
+	echo "<tr><td class='label'>$label</td><td>";
+	$result = get_tags($type);
+	while ($tag = db_fetch($result)) {
+		$checked = in_array($tag['id'], $selected_ids) ? ' checked' : '';
+		$color = !empty($tag['color']) ? htmlspecialchars($tag['color']) : '#2196F3';
+		echo "<label style='display:inline-block; margin-right:10px; padding:2px 8px; "
+			. "background:" . $color . "; color:#fff; "
+			. "border-radius:3px; cursor:pointer; font-size:0.9em;'>"
+			. "<input type='checkbox' name='" . $name . "[]' value='"
+			. htmlspecialchars($tag['id']) . "'$checked> "
+			. htmlspecialchars($tag['name']) . "</label>";
+	}
+	echo "</td></tr>\n";
+}
+
 //---------------------------------------------------------------------------------------------
 //	List of sets of active extensions 
 //
