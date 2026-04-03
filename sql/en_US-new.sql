@@ -3234,3 +3234,498 @@ CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
 	KEY `idx_unsent` (`is_sent`),
 	KEY `idx_draft` (`draft_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- NotrinosERP CRM Module — Database Schema
+-- Version: 1.0
+-- ================================================================
+
+-- Add use_crm preference to sys_prefs if not present
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_crm', 'setup.company', 'tinyint', 1, '0');
+
+-- ================================================================
+-- CONFIGURATION TABLES
+-- ================================================================
+
+-- Lead Sources (where leads come from)
+DROP TABLE IF EXISTS `0_crm_lead_sources`;
+CREATE TABLE `0_crm_lead_sources` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_lead_sources` (`name`, `description`, `active`) VALUES
+('Website', 'Company website contact form', 1),
+('Cold Call', 'Outbound cold calling', 1),
+('Email', 'Inbound email inquiry', 1),
+('Referral', 'Customer or partner referral', 1),
+('Advertisement', 'Paid advertising', 1),
+('Trade Show', 'Trade shows and exhibitions', 1),
+('Social Media', 'Social media channels', 1),
+('Employee Referral', 'Internal employee referral', 1),
+('Walk-in', 'Walk-in customer', 1),
+('Other', 'Other sources', 1);
+
+-- Pipeline Stages (configurable opportunity stages)
+DROP TABLE IF EXISTS `0_crm_sales_stages`;
+CREATE TABLE `0_crm_sales_stages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `sequence` int(11) NOT NULL DEFAULT 0,
+  `probability` int(3) NOT NULL DEFAULT 0,
+  `description` varchar(255) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_sales_stages` (`name`, `sequence`, `probability`, `description`, `active`) VALUES
+('New', 1, 10, 'Newly identified opportunity', 1),
+('Qualification', 2, 20, 'Evaluating fit and interest', 1),
+('Needs Analysis', 3, 40, 'Understanding customer requirements', 1),
+('Value Proposition', 4, 60, 'Presenting solution and value', 1),
+('Decision Makers', 5, 70, 'Engaging decision makers', 1),
+('Proposal', 6, 80, 'Formal proposal submitted', 1),
+('Negotiation', 7, 90, 'Negotiating terms and pricing', 1),
+('Won', 8, 100, 'Deal closed successfully', 1),
+('Lost', 9, 0, 'Deal lost', 1);
+
+-- Lost Reasons
+DROP TABLE IF EXISTS `0_crm_lost_reasons`;
+CREATE TABLE `0_crm_lost_reasons` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `description` varchar(255) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_lost_reasons` (`description`, `active`) VALUES
+('Too expensive', 1),
+('Chose competitor', 1),
+('No budget', 1),
+('No response', 1),
+('Bad timing', 1),
+('Requirements not met', 1),
+('Contact lost', 1),
+('Other', 1);
+
+-- Activity Types
+DROP TABLE IF EXISTS `0_crm_activity_types`;
+CREATE TABLE `0_crm_activity_types` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(20) NOT NULL DEFAULT 'todo' COMMENT 'call, email, meeting, todo, upload',
+  `icon` varchar(50) DEFAULT NULL,
+  `default_user_id` int(11) DEFAULT NULL,
+  `default_summary` varchar(255) DEFAULT NULL,
+  `chaining_type` varchar(10) NOT NULL DEFAULT 'none' COMMENT 'none, suggest, trigger',
+  `chained_activity_type_id` int(11) DEFAULT NULL,
+  `schedule_days` int(11) DEFAULT 0,
+  `schedule_type` varchar(20) DEFAULT 'completion' COMMENT 'completion, deadline',
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_activity_types` (`name`, `category`, `icon`, `chaining_type`, `active`) VALUES
+('Email', 'email', 'fa-envelope', 'none', 1),
+('Phone Call', 'call', 'fa-phone', 'suggest', 1),
+('Meeting', 'meeting', 'fa-calendar', 'none', 1),
+('To-Do', 'todo', 'fa-check', 'none', 1),
+('Upload Document', 'upload', 'fa-upload', 'none', 1),
+('Follow-up', 'todo', 'fa-redo', 'none', 1),
+('Demo/Presentation', 'meeting', 'fa-desktop', 'none', 1),
+('Site Visit', 'meeting', 'fa-building', 'none', 1);
+
+-- Update Phone Call to suggest Follow-up
+UPDATE `0_crm_activity_types` SET
+  `chained_activity_type_id` = (SELECT `id` FROM (SELECT `id` FROM `0_crm_activity_types` WHERE `name` = 'Follow-up') t),
+  `schedule_days` = 3
+WHERE `name` = 'Phone Call';
+
+-- Appointment Types
+DROP TABLE IF EXISTS `0_crm_appointment_types`;
+CREATE TABLE `0_crm_appointment_types` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `default_duration` int(11) NOT NULL DEFAULT 60 COMMENT 'minutes',
+  `location` varchar(255) DEFAULT NULL,
+  `video_link` varchar(255) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_appointment_types` (`name`, `default_duration`, `active`) VALUES
+('General Meeting', 60, 1),
+('Product Demo', 45, 1),
+('Discovery Call', 30, 1),
+('Follow-up Meeting', 30, 1),
+('Contract Review', 60, 1);
+
+-- Tags for categorizing leads/opportunities
+DROP TABLE IF EXISTS `0_crm_tags`;
+CREATE TABLE `0_crm_tags` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(60) NOT NULL,
+  `color` varchar(20) DEFAULT '#2196F3',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_tags` (`name`, `color`) VALUES
+('Hot', '#f44336'),
+('Warm', '#ff9800'),
+('Cold', '#2196F3'),
+('VIP', '#9c27b0'),
+('Enterprise', '#4caf50'),
+('SMB', '#00bcd4'),
+('Government', '#795548'),
+('Reseller', '#607d8b');
+
+-- ================================================================
+-- SALES TEAM TABLES
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_sales_teams`;
+CREATE TABLE `0_crm_sales_teams` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `team_leader_id` int(11) DEFAULT NULL COMMENT 'FK to 0_users',
+  `email_alias` varchar(100) DEFAULT NULL,
+  `invoicing_target` decimal(14,2) DEFAULT 0.00,
+  `use_leads` tinyint(1) NOT NULL DEFAULT 1,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `0_crm_sales_team_members`;
+CREATE TABLE `0_crm_sales_team_members` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `team_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `max_leads_30days` int(11) DEFAULT 30,
+  `skip_auto_assign` tinyint(1) NOT NULL DEFAULT 0,
+  `domain_filter` text DEFAULT NULL COMMENT 'JSON assignment rule filter',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `team_member` (`team_id`, `user_id`),
+  KEY `team_id` (`team_id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- CORE ENTITY TABLES
+-- ================================================================
+
+-- Unified Lead/Opportunity table (Odoo pattern: is_opportunity flag)
+DROP TABLE IF EXISTS `0_crm_leads`;
+CREATE TABLE `0_crm_leads` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `lead_ref` varchar(30) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `company_name` varchar(200) DEFAULT NULL,
+  `contact_name` varchar(200) DEFAULT NULL,
+  `email` varchar(200) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `mobile` varchar(50) DEFAULT NULL,
+  `website` varchar(255) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `postal_code` varchar(20) DEFAULT NULL,
+  `lead_source_id` int(11) DEFAULT NULL,
+  `lead_status` varchar(20) NOT NULL DEFAULT 'new' COMMENT 'new, contacted, qualified, converted, lost',
+  `priority` tinyint(1) NOT NULL DEFAULT 0 COMMENT '0=Normal, 1=Low, 2=Medium, 3=High',
+  `is_opportunity` tinyint(1) NOT NULL DEFAULT 0,
+  `stage_id` int(11) DEFAULT NULL COMMENT 'FK to crm_sales_stages',
+  `assigned_to` int(11) DEFAULT NULL COMMENT 'FK to 0_users',
+  `sales_team_id` int(11) DEFAULT NULL,
+  `expected_revenue` decimal(14,2) DEFAULT 0.00,
+  `probability` int(3) DEFAULT 10 COMMENT '0-100 percent',
+  `expected_close_date` date DEFAULT NULL,
+  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_qualified` datetime DEFAULT NULL,
+  `date_converted` datetime DEFAULT NULL,
+  `date_won` datetime DEFAULT NULL,
+  `date_lost` datetime DEFAULT NULL,
+  `lost_reason_id` int(11) DEFAULT NULL,
+  `lost_notes` text DEFAULT NULL,
+  `linked_customer_id` int(11) DEFAULT NULL COMMENT 'FK to 0_debtors_master',
+  `linked_person_id` int(11) DEFAULT NULL COMMENT 'FK to 0_crm_persons',
+  `created_by` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `inactive` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `lead_ref` (`lead_ref`),
+  KEY `lead_status` (`lead_status`),
+  KEY `is_opportunity` (`is_opportunity`),
+  KEY `stage_id` (`stage_id`),
+  KEY `assigned_to` (`assigned_to`),
+  KEY `sales_team_id` (`sales_team_id`),
+  KEY `lead_source_id` (`lead_source_id`),
+  KEY `expected_close_date` (`expected_close_date`),
+  KEY `linked_customer_id` (`linked_customer_id`),
+  KEY `date_created` (`date_created`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Entity tags junction table
+DROP TABLE IF EXISTS `0_crm_entity_tags`;
+CREATE TABLE `0_crm_entity_tags` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(20) NOT NULL COMMENT 'lead, campaign',
+  `entity_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `entity_tag` (`entity_type`, `entity_id`, `tag_id`),
+  KEY `tag_id` (`tag_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- ACTIVITY TABLES
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_activities`;
+CREATE TABLE `0_crm_activities` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(20) NOT NULL DEFAULT 'lead' COMMENT 'lead, contact, customer',
+  `entity_id` int(11) NOT NULL,
+  `activity_type_id` int(11) NOT NULL,
+  `summary` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `date_scheduled` datetime NOT NULL,
+  `date_completed` datetime DEFAULT NULL,
+  `assigned_to` int(11) DEFAULT NULL COMMENT 'FK to 0_users',
+  `created_by` int(11) DEFAULT NULL,
+  `created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(20) NOT NULL DEFAULT 'planned' COMMENT 'planned, done, cancelled, overdue',
+  `outcome` varchar(100) DEFAULT NULL COMMENT 'positive, neutral, negative',
+  `duration_minutes` int(11) DEFAULT NULL,
+  `next_activity_id` int(11) DEFAULT NULL COMMENT 'FK to self, chained activity',
+  PRIMARY KEY (`id`),
+  KEY `entity` (`entity_type`, `entity_id`),
+  KEY `assigned_to` (`assigned_to`),
+  KEY `status` (`status`),
+  KEY `date_scheduled` (`date_scheduled`),
+  KEY `activity_type_id` (`activity_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Activity Plans (pre-configured sequences)
+DROP TABLE IF EXISTS `0_crm_activity_plans`;
+CREATE TABLE `0_crm_activity_plans` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `plan_name` varchar(100) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `0_crm_activity_plan_lines`;
+CREATE TABLE `0_crm_activity_plan_lines` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `plan_id` int(11) NOT NULL,
+  `activity_type_id` int(11) NOT NULL,
+  `summary` varchar(255) DEFAULT NULL,
+  `assignment` varchar(20) NOT NULL DEFAULT 'ask_at_launch' COMMENT 'ask_at_launch, default_user',
+  `assigned_to` int(11) DEFAULT NULL,
+  `interval_value` int(11) NOT NULL DEFAULT 0,
+  `interval_unit` varchar(10) NOT NULL DEFAULT 'days' COMMENT 'days, weeks, months',
+  `trigger_timing` varchar(10) NOT NULL DEFAULT 'after' COMMENT 'before, after',
+  `sequence` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `plan_id` (`plan_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- COMMUNICATION LOG
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_communication_log`;
+CREATE TABLE `0_crm_communication_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(20) NOT NULL DEFAULT 'lead' COMMENT 'lead, contact, customer',
+  `entity_id` int(11) NOT NULL,
+  `comm_type` varchar(20) NOT NULL COMMENT 'email, call, meeting, note, sms',
+  `subject` varchar(255) DEFAULT NULL,
+  `body` text DEFAULT NULL,
+  `direction` varchar(10) DEFAULT NULL COMMENT 'inbound, outbound',
+  `from_address` varchar(200) DEFAULT NULL,
+  `to_address` varchar(200) DEFAULT NULL,
+  `date_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int(11) DEFAULT NULL,
+  `duration_minutes` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `entity` (`entity_type`, `entity_id`),
+  KEY `date_time` (`date_time`),
+  KEY `comm_type` (`comm_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- CAMPAIGN TABLES
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_campaigns`;
+CREATE TABLE `0_crm_campaigns` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(200) NOT NULL,
+  `campaign_type` varchar(50) DEFAULT NULL COMMENT 'email, event, social, referral, other',
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft, active, completed, cancelled',
+  `budget` decimal(14,2) DEFAULT 0.00,
+  `assigned_to` int(11) DEFAULT NULL,
+  `lead_source_id` int(11) DEFAULT NULL COMMENT 'auto-tag leads from this source',
+  `description` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `status` (`status`),
+  KEY `start_date` (`start_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Email Templates
+DROP TABLE IF EXISTS `0_crm_email_templates`;
+CREATE TABLE `0_crm_email_templates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `subject` varchar(255) NOT NULL,
+  `body_html` text NOT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `variables_json` text DEFAULT NULL COMMENT 'JSON list of available variables',
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Campaign Email Schedule
+DROP TABLE IF EXISTS `0_crm_campaign_emails`;
+CREATE TABLE `0_crm_campaign_emails` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `campaign_id` int(11) NOT NULL,
+  `email_template_id` int(11) DEFAULT NULL,
+  `day_offset` int(11) NOT NULL DEFAULT 0 COMMENT 'days from campaign start',
+  `subject` varchar(255) DEFAULT NULL,
+  `body` text DEFAULT NULL,
+  `sequence` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `campaign_id` (`campaign_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Campaign-Lead tracking (which leads are enrolled in which campaigns)
+DROP TABLE IF EXISTS `0_crm_campaign_leads`;
+CREATE TABLE `0_crm_campaign_leads` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `campaign_id` int(11) NOT NULL,
+  `lead_id` int(11) NOT NULL,
+  `enrolled_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(20) NOT NULL DEFAULT 'active' COMMENT 'active, unsubscribed, completed',
+  `last_email_sent` int(11) DEFAULT NULL COMMENT 'sequence number of last email sent',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `campaign_lead` (`campaign_id`, `lead_id`),
+  KEY `lead_id` (`lead_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- CONTRACT TABLE
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_contracts`;
+CREATE TABLE `0_crm_contracts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `contract_ref` varchar(30) DEFAULT NULL,
+  `customer_id` int(11) DEFAULT NULL COMMENT 'FK to 0_debtors_master',
+  `lead_id` int(11) DEFAULT NULL COMMENT 'FK to 0_crm_leads',
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `contract_value` decimal(14,2) DEFAULT 0.00,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `renewal_alert_days` int(11) DEFAULT 30,
+  `status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft, active, expired, cancelled, renewed',
+  `signed_by` varchar(200) DEFAULT NULL,
+  `signed_date` date DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `contract_ref` (`contract_ref`),
+  KEY `customer_id` (`customer_id`),
+  KEY `status` (`status`),
+  KEY `end_date` (`end_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- APPOINTMENT TABLE
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_appointments`;
+CREATE TABLE `0_crm_appointments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `appointment_type_id` int(11) DEFAULT NULL,
+  `lead_id` int(11) DEFAULT NULL,
+  `customer_id` int(11) DEFAULT NULL,
+  `contact_person_id` int(11) DEFAULT NULL COMMENT 'FK to 0_crm_persons',
+  `date_time` datetime NOT NULL,
+  `duration_minutes` int(11) NOT NULL DEFAULT 60,
+  `location` varchar(255) DEFAULT NULL,
+  `video_link` varchar(255) DEFAULT NULL,
+  `attendees_json` text DEFAULT NULL COMMENT 'JSON list of internal user IDs',
+  `notes` text DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'scheduled' COMMENT 'scheduled, confirmed, completed, cancelled, no_show',
+  `reminder_sent` tinyint(1) NOT NULL DEFAULT 0,
+  `created_by` int(11) DEFAULT NULL,
+  `created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `lead_id` (`lead_id`),
+  KEY `customer_id` (`customer_id`),
+  KEY `date_time` (`date_time`),
+  KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ================================================================
+-- LEAD SCORING CONFIG
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_scoring_config`;
+CREATE TABLE `0_crm_scoring_config` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `variable_name` varchar(50) NOT NULL COMMENT 'source, country, email_quality, phone_quality, tags',
+  `weight` decimal(5,2) NOT NULL DEFAULT 1.00,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `variable_name` (`variable_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_scoring_config` (`variable_name`, `weight`, `active`) VALUES
+('source', 1.00, 1),
+('country', 0.50, 1),
+('email_quality', 1.50, 1),
+('phone_quality', 1.00, 1),
+('tags', 0.75, 0);
+
+-- ================================================================
+-- CRM MODULE SETTINGS
+-- ================================================================
+
+DROP TABLE IF EXISTS `0_crm_module_settings`;
+CREATE TABLE `0_crm_module_settings` (
+  `setting_key` varchar(50) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `0_crm_module_settings` (`setting_key`, `setting_value`, `description`) VALUES
+('auto_create_contact', '1', 'Automatically create contact record for each new lead'),
+('carry_forward_communication', '1', 'Copy communication history when lead converts to customer'),
+('auto_close_days', '90', 'Auto-close stale opportunities after N days (0=disabled)'),
+('lead_ref_prefix', 'LD', 'Prefix for auto-generated lead reference numbers'),
+('opportunity_ref_prefix', 'OP', 'Prefix for auto-generated opportunity reference numbers'),
+('contract_ref_prefix', 'CT', 'Prefix for auto-generated contract reference numbers'),
+('default_probability', '10', 'Default probability for new leads (percent)'),
+('enable_lead_scoring', '0', 'Enable predictive lead scoring'),
+('scoring_start_date', '', 'Consider leads created after this date for scoring'),
+('assignment_mode', 'manual', 'Lead assignment mode: manual or auto');

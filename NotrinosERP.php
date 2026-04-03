@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -21,6 +21,7 @@ include_once($path_to_root.'/applications/manufacturing.php');
 include_once($path_to_root.'/applications/dimensions.php');
 include_once($path_to_root.'/applications/generalledger.php');
 include_once($path_to_root.'/applications/hrm.php');
+include_once($path_to_root.'/applications/crm.php');
 include_once($path_to_root.'/applications/setup.php');
 include_once($path_to_root.'/installed_extensions.php');
 
@@ -81,6 +82,8 @@ class NotrinosErp {
 		$this->add_application(new GeneralLedgerApp());
 		if ($SysPrefs->prefs['use_hrm'])
 			$this->add_application(new HrmApp());
+		if (@$SysPrefs->prefs['use_crm'])
+			$this->add_application(new CrmApp());
 
 		hook_invoke_all('install_tabs', $this);
 

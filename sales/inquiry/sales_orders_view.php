@@ -111,7 +111,7 @@ function dispatch_link($row) {
 
 	if ($trans_type == ST_SALESORDER) {
 		if ($row['TotDelivered'] < $row['TotQuantity'] && !$page_nested)
-			return pager_link( _('Dispatch'), '/sales/customer_delivery.php?OrderNumber='.$row['order_no'], ICON_DOC);
+			return pager_link( _('Dispatch'), '/sales/customer_delivery.php?OrderNumber='.$row['order_no'], ICON_DEBIT);
 		else
 			return '';
 	}		
@@ -128,7 +128,7 @@ function invoice_link($row) {
 }
 
 function delivery_link($row) {
-	return pager_link( _('Delivery'), '/sales/sales_order_entry.php?NewDelivery='.$row['order_no'], ICON_DOC);
+	return pager_link( _('Delivery'), '/sales/sales_order_entry.php?NewDelivery='.$row['order_no'], ICON_DEBIT);
 }
 
 function order_link($row) {

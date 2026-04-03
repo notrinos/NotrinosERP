@@ -206,8 +206,17 @@ JsHttpRequest.formInputs = function(inp, objForm, upload) {
 					if (el.type=='file')
 						q[name] = el;
 					else {
-						if (el.type == 'checkbox')
-							q[name] = (el.checked == true);
+						if (el.type == 'checkbox') {
+							if (name.substr(name.length-2) == '[]') {
+								var checkboxName = name.substr(0, name.length-2);
+								if (!q[checkboxName])
+									q[checkboxName] = new Array;
+								if (el.checked == true)
+									q[checkboxName].push(el.value);
+							}
+							else
+								q[name] = (el.checked == true);
+						}
 						else
 							q[name] = el.value;
 					}

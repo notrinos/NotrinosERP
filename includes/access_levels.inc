@@ -60,6 +60,10 @@ define('SS_HRM_C',	71<<8);
 define('SS_HRM',	72<<8);
 define('SS_HRM_A',	73<<8);
 
+define('SS_CRM_C',	81<<8);
+define('SS_CRM',	82<<8);
+define('SS_CRM_A',	83<<8);
+
 $security_sections = array(
 	SS_SADMIN => _('System administration'),
 	SS_SETUP => _('Company setup'),
@@ -87,6 +91,9 @@ $security_sections = array(
 	SS_HRM_C => _('Human Resources configuration'),
 	SS_HRM => _('Human Resources transactions'),
 	SS_HRM_A => _('Human Resources analytics'),
+	SS_CRM_C => _('CRM configuration'),
+	SS_CRM => _('CRM transactions'),
+	SS_CRM_A => _('CRM analytics'),
 );
 
 /*
@@ -323,6 +330,22 @@ $security_areas =array(
 	'SA_LOANREPORT'        => array(SS_HRM_A|8,  _('Loan outstanding report')),
 	'SA_DEPTCOST'          => array(SS_HRM_A|9,  _('Department payroll cost')),
 	'SA_HRMREPORTS'        => array(SS_HRM_A|10, _('HRM print reports')),
+
+	// CRM — Configuration (SS_CRM_C)
+	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
+	'SA_CRM_TEAM'          => array(SS_CRM_C|2,  _('Sales team management')),
+
+	// CRM — Transactions (SS_CRM)
+	'SA_CRM_LEAD'          => array(SS_CRM|1,  _('Lead management')),
+	'SA_CRM_OPPORTUNITY'   => array(SS_CRM|2,  _('Opportunity management')),
+	'SA_CRM_ACTIVITY'      => array(SS_CRM|3,  _('Activity scheduling')),
+	'SA_CRM_CAMPAIGN'      => array(SS_CRM|4,  _('Campaign management')),
+	'SA_CRM_CONTRACT'      => array(SS_CRM|5,  _('Contract management')),
+	'SA_CRM_APPOINTMENT'   => array(SS_CRM|6,  _('Appointment management')),
+
+	// CRM — Analytics (SS_CRM_A)
+	'SA_CRM_PIPELINE'      => array(SS_CRM_A|1,  _('Pipeline view and inquiry')),
+	'SA_CRM_REPORT'        => array(SS_CRM_A|2,  _('CRM reports and analytics')),
 );
 
 if (!@$SysPrefs->allow_gl_reopen)

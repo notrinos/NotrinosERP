@@ -271,6 +271,7 @@ defined('ICON_PDF') || define('ICON_PDF', 'file');
 defined('ICON_DOC') || define('ICON_DOC', 'btn_ok file');
 defined('ICON_COPY') || define('ICON_COPY', 'btn_ok file-copy');
 defined('ICON_CREDIT') || define('ICON_CREDIT', 'btn_green file-inward');
+defined('ICON_DEBIT') || define('ICON_DEBIT', 'btn_green file-outward');
 defined('ICON_RECEIVE') || define('ICON_RECEIVE', 'btn_ok file');
 defined('ICON_DOWN') || define('ICON_DOWN', 'btn_ok download-cloud');
 defined('ICON_MONEY') || define('ICON_MONEY', 'btn_green dollar');
