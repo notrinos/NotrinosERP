@@ -78,7 +78,7 @@ if (isset($_POST['Save'])) {
         $input_error = 1;
     }
 
-    if ($_POST['expected_revenue'] != '' && !is_numeric($_POST['expected_revenue'])) {
+    if ($_POST['expected_revenue'] != '' && !check_num('expected_revenue', 0)) {
         display_error(_('Expected revenue must be numeric.'));
         set_focus('expected_revenue');
         $input_error = 1;
@@ -102,7 +102,7 @@ if (isset($_POST['Save'])) {
             'priority'         => (int)$_POST['priority'],
             'assigned_to'      => (int)$_POST['assigned_to'],
             'sales_team_id'    => (int)$_POST['team_id'],
-            'expected_revenue' => $_POST['expected_revenue'] != '' ? (float)$_POST['expected_revenue'] : 0,
+            'expected_revenue' => input_num('expected_revenue', 0),
             'notes'            => $_POST['notes'],
         );
 
@@ -357,5 +357,6 @@ if (!$is_new) {
 }
 
 end_form();
+crm_page_scripts();
 end_page();
 

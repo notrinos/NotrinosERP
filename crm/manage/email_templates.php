@@ -16,7 +16,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
  * @subpackage CRM
  */
 
-$page_security = 'SA_CRM_CAMPAIGN';
+$page_security = 'SA_CRM_SETTINGS';
 $path_to_root  = '../..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -52,8 +52,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_email_template($selected_id);
-    display_notification(_('Email template has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'crm_campaign_emails', 'email_template_id')) {
+        display_error(_('Cannot delete this template — it is referenced by existing campaign email(s).'));
+    } else {
+        delete_crm_email_template($selected_id);
+        display_notification(_('Email template has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 

@@ -42,19 +42,16 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 $statuses = crm_campaign_statuses();
-echo "<td>" . _('Status:') . "</td><td><select name='filter_status' onchange='this.form.submit();'>";
-echo "<option value=''>" . _('-- All --') . "</option>";
-foreach ($statuses as $key => $label) {
-    $sel = (get_post('filter_status') === $key) ? ' selected' : '';
-    echo "<option value='$key'$sel>" . htmlspecialchars($label) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(null, 'filter_status', $statuses, null, true, _('All Statuses'), '');
 
-submit_cells('Search', _('Search'), '', '', 'default');
+submit_cells('Search', _('Apply Filter'), '', _('Apply filter'), 'default');
+submit_cells('Reset', _('Reset'), '', '', 'default');
 end_row();
 end_table();
 
-end_form();
+if (isset($_POST['Reset'])) {
+    meta_forward($_SERVER['PHP_SELF']);
+}
 
 //--------------------------------------------------------------------------
 
@@ -64,6 +61,8 @@ if (!empty($_POST['filter_status'])) {
 }
 
 $result = get_crm_campaigns($filters);
+
+div_start('campaigns_result');
 
 start_table(TABLESTYLE, "width='90%'");
 
@@ -97,8 +96,14 @@ while ($myrow = db_fetch($result)) {
 
 end_table(1);
 
-echo "<center><a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?sel_app=crm'>"
-    . "<button class='inputsubmit'>" . _('New Campaign') . "</button></a></center>";
+echo "<center><a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?sel_app=crm' class='inputsubmit'>" . _('New Campaign') . "</a></center>";
+
+div_end();
+
+$Ajax->activate('campaigns_result');
+
+end_form();
+crm_page_scripts();
 
 end_page();
 

@@ -43,10 +43,10 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
-date_cells(_('From:'), 'filter_from', '', null, -90, 0, 0);
-date_cells(_('To:'), 'filter_to', '', null, 0, 0, 0);
-submit_cells('Refresh', _('Generate'), '', '', 'default');
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
+date_cells(_('From:'), 'filter_from', _('From'), null, -90, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 0, 0, 0);
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
@@ -54,6 +54,9 @@ end_table(1);
 //--------------------------------------------------------------------------
 // Pipeline by Stage
 //--------------------------------------------------------------------------
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $f_team = get_post('filter_team', 0);
 $f_from = get_post('filter_from', '');
@@ -124,11 +127,16 @@ end_table(1);
 
 display_heading(_('Conversion Funnel'));
 
+$funnel_where_base = " AND l.inactive = 0";
+if ($f_team > 0) $funnel_where_base .= " AND l.sales_team_id = " . db_escape((int)$f_team);
+if ($f_from && is_date($f_from)) $funnel_where_base .= " AND l.date_created >= " . db_escape(date2sql($f_from) . ' 00:00:00');
+if ($f_to && is_date($f_to))   $funnel_where_base .= " AND l.date_created <= " . db_escape(date2sql($f_to) . ' 23:59:59');
+
 $funnel_sql = "SELECT
-    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads WHERE is_opportunity = 0 AND inactive = 0) as total_leads,
-    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads WHERE is_opportunity = 1 AND inactive = 0) as total_opportunities,
-    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads WHERE lead_status = 'won' AND inactive = 0) as won_deals,
-    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads WHERE lead_status = 'lost' AND inactive = 0) as lost_deals";
+    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads l WHERE l.is_opportunity = 0" . $funnel_where_base . ") as total_leads,
+    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads l WHERE l.is_opportunity = 1" . $funnel_where_base . ") as total_opportunities,
+    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads l WHERE l.lead_status = 'won'" . $funnel_where_base . ") as won_deals,
+    (SELECT COUNT(*) FROM " . TB_PREF . "crm_leads l WHERE l.lead_status = 'lost'" . $funnel_where_base . ") as lost_deals";
 
 $funnel = db_fetch(db_query($funnel_sql));
 
@@ -158,6 +166,9 @@ $velocity_sql = "SELECT
     AVG(l.expected_revenue) as avg_deal_size
     FROM " . TB_PREF . "crm_leads l
     WHERE l.lead_status = 'won' AND l.date_converted IS NOT NULL AND l.inactive = 0";
+if ($f_team > 0) $velocity_sql .= " AND l.sales_team_id = " . db_escape((int)$f_team);
+if ($f_from && is_date($f_from)) $velocity_sql .= " AND l.date_created >= " . db_escape(date2sql($f_from) . ' 00:00:00');
+if ($f_to && is_date($f_to))   $velocity_sql .= " AND l.date_created <= " . db_escape(date2sql($f_to) . ' 23:59:59');
 
 $velocity = db_fetch(db_query($velocity_sql));
 

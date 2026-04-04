@@ -16,7 +16,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
  * @subpackage CRM
  */
 
-$page_security = 'SA_CRM_LEAD';
+$page_security = 'SA_CRM_PIPELINE';
 $path_to_root  = '../..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -37,36 +37,20 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_lead_status_list_cells(_('Status:'), 'filter_status', null, true);
-crm_lead_source_list_cells(_('Source:'), 'filter_source', null, true);
-crm_priority_list_cells(_('Priority:'), 'filter_priority', null, true);
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
+crm_lead_status_list_cells(null, 'filter_status', null, true);
+crm_lead_source_list_cells(null, 'filter_source', null, true, _('All Sources'));
+crm_priority_list_cells(null, 'filter_priority', null, true, _("All Priorities"));
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
 
-text_cells(_('Search:'), 'filter_search', null, 30, 100);
-submit_cells('Search', _('Search'), '', '', 'default');
+crm_filter_search_cells('filter_search', _('Search:'), 20);
 
-end_row();
-end_table(1);
+date_cells(_('From:'), 'filter_from', _('Created From'), null, -30, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 0, 0, 0);
 
-//--------------------------------------------------------------------------
-// Date range filter
-//--------------------------------------------------------------------------
+$show_type = array(0 => _('Leads Only'), 1 => _('Opportunities Only'));
+crm_filter_array_list_cells(null, 'filter_type', $show_type, null, true, _('Leads & Opportunities'), 2);
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-date_cells(_('Created From:'), 'filter_from', '', null, 0, 0, 1001);
-date_cells(_('To:'), 'filter_to', '', null, 0, 0, 1001);
-
-$show_type = array(0 => _('Leads Only'), 1 => _('Opportunities Only'), 2 => _('All'));
-echo '<td>' . _('Type:') . '</td><td>';
-echo "<select name='filter_type'>";
-$sel_type = (int)get_post('filter_type', 2);
-foreach ($show_type as $k => $v) {
-    $s = ($k == $sel_type) ? ' selected' : '';
-    echo "<option value='$k'$s>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+submit_cells('Search', _('Apply Filter'), '', _('Apply Filter'), 'default');
 
 end_row();
 end_table(1);
@@ -74,6 +58,9 @@ end_table(1);
 //--------------------------------------------------------------------------
 // Build filters and query
 //--------------------------------------------------------------------------
+
+if (get_post('Search'))
+    $Ajax->activate('_page_body');
 
 $filters = array();
 $f_status   = get_post('filter_status', '');
@@ -85,7 +72,7 @@ $f_from     = get_post('filter_from', '');
 $f_to       = get_post('filter_to', '');
 $f_type     = (int)get_post('filter_type', 2);
 
-if ($f_status !== '' && $f_status != -1)   $filters['lead_status'] = (int)$f_status;
+if ($f_status !== '' && $f_status != -1)   $filters['lead_status'] = $f_status;
 if ($f_source !== '' && $f_source != 0)    $filters['lead_source_id'] = (int)$f_source;
 if ($f_priority !== '' && $f_priority != -1) $filters['priority'] = (int)$f_priority;
 if ($f_team !== '' && $f_team != 0)        $filters['sales_team_id'] = (int)$f_team;
@@ -141,5 +128,6 @@ while ($row = db_fetch($result)) {
 end_table(1);
 
 end_form();
+crm_page_scripts();
 end_page();
 

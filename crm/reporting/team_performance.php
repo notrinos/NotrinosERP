@@ -44,13 +44,16 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
-date_cells(_('From:'), 'filter_from', '', null, -90, 0, 0);
-date_cells(_('To:'), 'filter_to', '', null, 0, 0, 0);
-submit_cells('Refresh', _('Generate'), '', '', 'default');
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
+date_cells(_('From:'), 'filter_from', _('From'), null, -90, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 0, 0, 0);
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $f_team = get_post('filter_team', 0);
 $f_from = get_post('filter_from', '');
@@ -175,6 +178,13 @@ $act_date_where = '';
 if ($f_from && is_date($f_from)) $act_date_where .= " AND a.created_date >= " . db_escape(date2sql($f_from) . ' 00:00:00');
 if ($f_to && is_date($f_to))   $act_date_where .= " AND a.created_date <= " . db_escape(date2sql($f_to) . ' 23:59:59');
 
+$act_team_join = '';
+$act_team_where = '';
+if ($f_team > 0) {
+    $act_team_join = " INNER JOIN " . TB_PREF . "crm_leads l ON a.entity_type = 'lead' AND a.entity_id = l.id";
+    $act_team_where = " AND l.sales_team_id = " . db_escape((int)$f_team);
+}
+
 $activity_sql = "SELECT
     u.real_name as salesperson,
     COUNT(a.id) as total_activities,
@@ -182,8 +192,8 @@ $activity_sql = "SELECT
     SUM(CASE WHEN a.status = '" . CRM_ACTIVITY_PLANNED . "' THEN 1 ELSE 0 END) as pending,
     SUM(CASE WHEN a.status = '" . CRM_ACTIVITY_OVERDUE . "' THEN 1 ELSE 0 END) as overdue
     FROM " . TB_PREF . "crm_activities a
-    INNER JOIN " . TB_PREF . "users u ON a.assigned_to = u.id
-    WHERE 1=1" . $act_date_where . "
+    INNER JOIN " . TB_PREF . "users u ON a.assigned_to = u.id" . $act_team_join . "
+    WHERE 1=1" . $act_date_where . $act_team_where . "
     GROUP BY a.assigned_to
     ORDER BY total_activities DESC";
 

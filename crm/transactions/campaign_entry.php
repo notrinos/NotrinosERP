@@ -40,8 +40,9 @@ $campaign_id = 0;
 $is_new      = true;
 $campaign    = null;
 
-if (isset($_GET['CampaignID']) && (int)$_GET['CampaignID'] > 0) {
-    $campaign_id = (int)$_GET['CampaignID'];
+$raw_id = isset($_GET['CampaignID']) ? $_GET['CampaignID'] : get_post('CampaignID', 0);
+if ((int)$raw_id > 0) {
+    $campaign_id = (int)$raw_id;
     $campaign = get_crm_campaign($campaign_id);
     if (!$campaign) {
         display_error(_('Campaign not found.'));
@@ -75,7 +76,7 @@ if (isset($_POST['Save'])) {
             'status'        => $_POST['status'],
             'start_date'    => $_POST['start_date'] ? date2sql($_POST['start_date']) : null,
             'end_date'      => $_POST['end_date'] ? date2sql($_POST['end_date']) : null,
-            'budget'        => $_POST['budget'] != '' ? (float)$_POST['budget'] : 0,
+            'budget'        => $_POST['budget'] != '' ? input_num('budget', 0) : 0,
             'description'   => $_POST['description'],
         );
 

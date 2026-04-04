@@ -189,7 +189,7 @@ function remove_crm_team_member($team_id, $user_id)
  */
 function get_crm_team_members($team_id)
 {
-    $sql = "SELECT m.*, u.real_name, u.user_id AS login_name
+    $sql = "SELECT m.*, u.real_name, u.login_id AS login_name
             FROM " . TB_PREF . "crm_sales_team_members m
             INNER JOIN " . TB_PREF . "users u ON m.user_id = u.id
             WHERE m.team_id = " . db_escape($team_id)

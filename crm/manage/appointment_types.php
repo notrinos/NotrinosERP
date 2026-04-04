@@ -52,8 +52,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_appointment_type($selected_id);
-    display_notification(_('Appointment type has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'crm_appointments', 'appointment_type_id')) {
+        display_error(_('Cannot delete this appointment type — it is referenced by existing appointment(s).'));
+    } else {
+        delete_crm_appointment_type($selected_id);
+        display_notification(_('Appointment type has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 

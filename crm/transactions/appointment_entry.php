@@ -39,8 +39,9 @@ $appointment_id = 0;
 $is_new         = true;
 $appointment    = null;
 
-if (isset($_GET['AppointmentID']) && (int)$_GET['AppointmentID'] > 0) {
-    $appointment_id = (int)$_GET['AppointmentID'];
+$raw_id = isset($_GET['AppointmentID']) ? $_GET['AppointmentID'] : get_post('AppointmentID', 0);
+if ((int)$raw_id > 0) {
+    $appointment_id = (int)$raw_id;
     $appointment = get_crm_appointment($appointment_id);
     if (!$appointment) {
         display_error(_('Appointment not found.'));

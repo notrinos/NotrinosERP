@@ -16,7 +16,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
  * @subpackage CRM
  */
 
-$page_security = 'SA_CRM_PIPELINE';
+$page_security = 'SA_CRM_SETTINGS';
 $path_to_root  = '../..';
 
 include_once($path_to_root . '/includes/session.inc');

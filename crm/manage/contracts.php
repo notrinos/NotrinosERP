@@ -42,23 +42,21 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 $statuses = crm_contract_statuses();
-echo "<td>" . _('Status:') . "</td><td><select name='filter_status' onchange='this.form.submit();'>";
-echo "<option value=''>" . _('-- All --') . "</option>";
-foreach ($statuses as $key => $label) {
-    $sel = (get_post('filter_status') === $key) ? ' selected' : '';
-    echo "<option value='$key'$sel>" . htmlspecialchars($label) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(null, 'filter_status', $statuses, null, true, _('All Statuses'), '');
 
-echo "<td>" . _('Search:') . "</td><td>";
-echo "<input type='text' name='filter_search' value='" . htmlspecialchars(get_post('filter_search', '')) . "' size='20'>";
-echo "</td>";
-submit_cells('Search', _('Search'), '', '', 'default');
+$expiring_items = array(7 => sprintf(_('%d days'), 7), 14 => sprintf(_('%d days'), 14), 30 => sprintf(_('%d days'), 30), 60 => sprintf(_('%d days'), 60), 90 => sprintf(_('%d days'), 90));
+crm_filter_array_list_cells(null, 'filter_expiring', $expiring_items, null, true, _('-- No Filter --'), '');
+
+crm_filter_search_cells('filter_search', _('Search:'), 20);
+submit_cells('Search', _('Apply Filter'), '', _('Apply filter'), 'default');
+submit_cells('Reset', _('Reset'), '', '', 'default');
 
 end_row();
 end_table();
 
-end_form();
+if (isset($_POST['Reset'])) {
+    meta_forward($_SERVER['PHP_SELF']);
+}
 
 //--------------------------------------------------------------------------
 
@@ -69,8 +67,13 @@ if (!empty($_POST['filter_status'])) {
 if (!empty($_POST['filter_search'])) {
     $filters['search'] = $_POST['filter_search'];
 }
+if (!empty($_POST['filter_expiring'])) {
+    $filters['expiring_within_days'] = (int)$_POST['filter_expiring'];
+}
 
 $result = get_crm_contracts($filters);
+
+div_start('contracts_result');
 
 start_table(TABLESTYLE, "width='90%'");
 
@@ -103,8 +106,14 @@ while ($myrow = db_fetch($result)) {
 
 end_table(1);
 
-echo "<center><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?sel_app=crm'>"
-    . "<button class='inputsubmit'>" . _('New Contract') . "</button></a></center>";
+echo "<center><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?sel_app=crm' class='inputsubmit'>" . _('New Contract') . "</a></center>";
+
+div_end();
+
+$Ajax->activate('contracts_result');
+
+end_form();
+crm_page_scripts();
 
 end_page();
 

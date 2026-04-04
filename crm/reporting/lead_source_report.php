@@ -43,12 +43,15 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-date_cells(_('From:'), 'filter_from', '', null, -365, 0, 0);
-date_cells(_('To:'), 'filter_to', '', null, 0, 0, 0);
-submit_cells('Refresh', _('Generate'), '', '', 'default');
+date_cells(_('From:'), 'filter_from', _('From'), null, -365, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 0, 0, 0);
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $f_from = get_post('filter_from', '');
 $f_to   = get_post('filter_to', '');
@@ -76,7 +79,7 @@ $source_sql = "SELECT
     FROM " . TB_PREF . "crm_leads l
     LEFT JOIN " . TB_PREF . "crm_lead_sources ls ON l.lead_source_id = ls.id
     WHERE l.inactive = 0" . $date_where . "
-    GROUP BY l.lead_source_id
+    GROUP BY COALESCE(l.lead_source_id, 0)
     ORDER BY total_leads DESC";
 
 $result = db_query($source_sql);
@@ -146,7 +149,7 @@ $quality_sql = "SELECT
     FROM " . TB_PREF . "crm_leads l
     LEFT JOIN " . TB_PREF . "crm_lead_sources ls ON l.lead_source_id = ls.id
     WHERE l.inactive = 0" . $date_where . "
-    GROUP BY l.lead_source_id
+    GROUP BY COALESCE(l.lead_source_id, 0)
     HAVING total_leads > 0
     ORDER BY (SUM(CASE WHEN l.lead_status = 'won' THEN l.expected_revenue ELSE 0 END) / COUNT(l.id)) DESC";
 
@@ -193,7 +196,7 @@ $trend_sql = "SELECT
     FROM " . TB_PREF . "crm_leads l
     LEFT JOIN " . TB_PREF . "crm_lead_sources ls ON l.lead_source_id = ls.id
     WHERE l.inactive = 0" . $date_where . "
-    GROUP BY period, l.lead_source_id
+    GROUP BY period, COALESCE(l.lead_source_id, 0)
     ORDER BY period DESC, cnt DESC";
 
 $result = db_query($trend_sql);

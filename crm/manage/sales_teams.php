@@ -76,9 +76,15 @@ if (isset($_POST['AddMember']) && !empty($_POST['new_member_id']) && !empty($_PO
     display_notification(_('Team member added.'));
 }
 
-if (isset($_POST['RemoveMember']) && !empty($_POST['remove_user_id']) && !empty($_POST['editing_team_id'])) {
-    remove_crm_team_member($_POST['editing_team_id'], $_POST['remove_user_id']);
-    display_notification(_('Team member removed.'));
+foreach ($_POST as $key => $val) {
+    if (strpos($key, 'RemoveMember_') === 0 && !empty($_POST['editing_team_id'])) {
+        $remove_uid = (int)substr($key, 13);
+        if ($remove_uid > 0) {
+            remove_crm_team_member($_POST['editing_team_id'], $remove_uid);
+            display_notification(_('Team member removed.'));
+        }
+        break;
+    }
 }
 
 if ($Mode == 'RESET') {
@@ -165,6 +171,7 @@ submit_add_or_update_center($selected_id == '', '', 'both');
 foreach ($_POST as $key => $val) {
     if (strpos($key, 'Members') === 0) {
         $_POST['editing_team_id'] = substr($key, 7);
+        $Ajax->activate('_page_body');
         break;
     }
 }
@@ -190,8 +197,7 @@ if (!empty($_POST['editing_team_id'])) {
         label_cell($member['max_leads_30days'], "align='center'");
         label_cell($member['skip_auto_assign'] ? _('Yes') : _('No'), "align='center'");
         echo "<td>";
-        hidden('remove_user_id', $member['user_id']);
-        submit('RemoveMember', _('Remove'), true, '', 'default');
+        submit('RemoveMember_' . $member['user_id'], _('Remove'), true, '', 'default');
         echo "</td>";
         end_row();
     }

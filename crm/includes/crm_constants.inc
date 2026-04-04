@@ -26,6 +26,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 define('CRM_LEAD_NEW',        'new');
 define('CRM_LEAD_CONTACTED',  'contacted');
 define('CRM_LEAD_QUALIFIED',  'qualified');
+define('CRM_LEAD_WON',        'won');
 define('CRM_LEAD_CONVERTED',  'converted');
 define('CRM_LEAD_LOST',       'lost');
 
@@ -40,6 +41,7 @@ function crm_lead_statuses()
         CRM_LEAD_NEW       => _('New'),
         CRM_LEAD_CONTACTED => _('Contacted'),
         CRM_LEAD_QUALIFIED => _('Qualified'),
+        CRM_LEAD_WON       => _('Won'),
         CRM_LEAD_CONVERTED => _('Converted'),
         CRM_LEAD_LOST      => _('Lost'),
     );
@@ -144,6 +146,7 @@ function crm_campaign_statuses()
 // ================================================================
 define('CRM_CONTRACT_DRAFT',     'draft');
 define('CRM_CONTRACT_ACTIVE',    'active');
+define('CRM_CONTRACT_SIGNED',    'signed');
 define('CRM_CONTRACT_EXPIRED',   'expired');
 define('CRM_CONTRACT_CANCELLED', 'cancelled');
 define('CRM_CONTRACT_RENEWED',   'renewed');
@@ -158,6 +161,7 @@ function crm_contract_statuses()
     return array(
         CRM_CONTRACT_DRAFT     => _('Draft'),
         CRM_CONTRACT_ACTIVE    => _('Active'),
+        CRM_CONTRACT_SIGNED    => _('Signed'),
         CRM_CONTRACT_EXPIRED   => _('Expired'),
         CRM_CONTRACT_CANCELLED => _('Cancelled'),
         CRM_CONTRACT_RENEWED   => _('Renewed'),

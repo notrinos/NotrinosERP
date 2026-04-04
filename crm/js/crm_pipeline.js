@@ -161,8 +161,13 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
                     }
                 }
             };
+            // Include CSRF token from the page's hidden input
+            var token = '';
+            var tokenInput = document.querySelector('input[name="_token"]');
+            if (tokenInput) token = tokenInput.value;
             xhr.send('lead_id=' + encodeURIComponent(leadId) +
-                     '&stage_id=' + encodeURIComponent(stageId));
+                     '&stage_id=' + encodeURIComponent(stageId) +
+                     '&_token=' + encodeURIComponent(token));
         }
     };
 

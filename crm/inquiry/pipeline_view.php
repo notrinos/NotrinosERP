@@ -39,21 +39,9 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
-
-// Assigned To
-$users_sql = "SELECT id, real_name FROM " . TB_PREF . "users ORDER BY real_name";
-$users_result = db_query($users_sql);
-echo '<td>' . _('Assigned To:') . '</td><td>';
-echo "<select name='filter_user'>";
-echo "<option value='0'>" . _('All') . "</option>";
-while ($u = db_fetch($users_result)) {
-    $sel = (get_post('filter_user') == $u['id']) ? ' selected' : '';
-    echo "<option value='" . (int)$u['id'] . "'$sel>" . htmlspecialchars($u['real_name']) . "</option>";
-}
-echo "</select></td>";
-
-submit_cells('Refresh', _('Filter'), '', '', 'default');
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
+crm_assignee_list_cells(null, 'filter_user', null, false, _('All Assignees'));
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
@@ -61,6 +49,9 @@ end_table(1);
 //--------------------------------------------------------------------------
 // Load stages and opportunities
 //--------------------------------------------------------------------------
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $stages_result = db_query("SELECT * FROM " . TB_PREF . "crm_sales_stages WHERE active = 1 ORDER BY sequence");
 $stages = array();
@@ -106,7 +97,7 @@ foreach ($stages as $sid => $stage) {
     $total_pipeline += $stage_total;
     $weighted_pipeline += $stage_total * ((int)$stage['probability'] / 100);
 
-    echo "<div class='crm-pipeline-stage' style='min-width:220px; max-width:280px; flex:1; background:#f5f5f5; border-radius:6px; padding:8px;'>";
+    echo "<div class='crm-pipeline-stage' data-stage-id='" . (int)$sid . "' style='min-width:220px; max-width:280px; flex:1; background:#f5f5f5; border-radius:6px; padding:8px;'>";
     echo "<div style='font-weight:bold; padding:4px 0; border-bottom:2px solid #4CAF50; margin-bottom:6px;'>";
     echo htmlspecialchars($stage['name']);
     echo " <span style='font-size:0.85em; color:#666;'>(" . count($stage_opps) . ")</span>";
@@ -117,7 +108,7 @@ foreach ($stages as $sid => $stage) {
     echo "</div>";
 
     foreach ($stage_opps as $opp) {
-        echo "<div class='crm-pipeline-card' style='background:#fff; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:6px; cursor:pointer;'";
+        echo "<div class='crm-pipeline-card' data-lead-id='" . (int)$opp['id'] . "' style='background:#fff; border:1px solid #ddd; border-radius:4px; padding:8px; margin-bottom:6px; cursor:pointer;'";
         echo " onclick=\"window.location='" . $path_to_root . "/crm/transactions/opportunity_entry.php?LeadID=" . (int)$opp['id'] . crm_sel_app_param() . "'\">";
         echo "<div style='font-weight:bold; font-size:0.9em;'>" . htmlspecialchars($opp['title']) . "</div>";
         if ($opp['company_name']) {
@@ -156,5 +147,10 @@ echo _('Opportunities') . ": " . $total_opps;
 echo "</div>";
 
 end_form();
+
+// Include CRM JS (common + pipeline drag-drop)
+crm_page_scripts();
+echo "<script src='" . $path_to_root . "/crm/js/crm_pipeline.js?v=" . filemtime($path_to_root . '/crm/js/crm_pipeline.js') . "'></script>";
+
 end_page();
 

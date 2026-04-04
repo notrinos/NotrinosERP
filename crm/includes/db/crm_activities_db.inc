@@ -198,9 +198,10 @@ function get_crm_activity($id)
 function get_crm_activities($filters = array(), $limit = 0, $offset = 0)
 {
     $sql = "SELECT a.*, at.name AS type_name, at.category AS type_category,
-                   at.icon AS type_icon
+                   at.icon AS type_icon, u.real_name AS assigned_name
             FROM " . TB_PREF . "crm_activities a
             LEFT JOIN " . TB_PREF . "crm_activity_types at ON a.activity_type_id = at.id
+            LEFT JOIN " . TB_PREF . "users u ON a.assigned_to = u.id
             WHERE 1=1";
 
     if (!empty($filters['entity_type'])) {
@@ -217,6 +218,9 @@ function get_crm_activities($filters = array(), $limit = 0, $offset = 0)
     }
     if (!empty($filters['status'])) {
         $sql .= " AND a.status = " . db_escape($filters['status']);
+    }
+    if (isset($filters['priority'])) {
+        $sql .= " AND a.priority = " . db_escape($filters['priority']);
     }
     if (!empty($filters['date_from'])) {
         $sql .= " AND a.date_scheduled >= " . db_escape($filters['date_from']);

@@ -80,6 +80,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             'description'      => $_POST['description'],
             'date_scheduled'   => $scheduled,
             'assigned_to'      => (int)$_POST['assigned_to'],
+            'priority'         => (int)$_POST['priority'],
         );
 
         if ($selected_id != '') {
@@ -159,6 +160,7 @@ if ($selected_id != '' && $Mode == 'Edit') {
         $_POST['due_date']         = sql2date(substr($activity['date_scheduled'], 0, 10));
         $_POST['due_time']         = substr($activity['date_scheduled'], 11, 5);
         $_POST['assigned_to']      = $activity['assigned_to'];
+        $_POST['priority']         = $activity['priority'];
         hidden('selected_id', $selected_id);
     }
 }
@@ -247,7 +249,7 @@ while ($row = db_fetch($result)) {
     label_cell(crm_activity_status_badge($row['status']));
     label_cell(@$row['assigned_name'] ?: '-');
 
-    if ((int)$row['status'] == CRM_ACTIVITY_PLANNED) {
+    if ($row['status'] == CRM_ACTIVITY_PLANNED) {
         edit_button_cell('Edit' . $row['id'], _('Edit'));
         delete_button_cell('Delete' . $row['id'], _('Delete'));
     } else {
@@ -259,5 +261,6 @@ while ($row = db_fetch($result)) {
 end_table(1);
 
 end_form();
+crm_page_scripts(true);
 end_page();
 

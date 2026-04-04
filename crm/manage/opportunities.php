@@ -31,45 +31,45 @@ page(_($help_context = 'CRM Opportunities'));
 // Filter form
 //--------------------------------------------------------------------------
 
+/**
+ * Stage list cells helper for filter.
+ */
+function crm_sales_stage_list_row_cells($label, $name, $selected_id, $submit_on_change = false)
+{
+    if (ui_current_table_mode() != 'table') {
+        echo "<div class='filter-field'>\n";
+        if ($label !== null) echo "<label class='filter-label'>" . $label . "</label>\n";
+        echo crm_sales_stage_list($name, $selected_id, $submit_on_change);
+        echo "</div>\n";
+        return;
+    }
+    if ($label !== null) {
+        echo "<td>$label</td>";
+    }
+    echo "<td>";
+    echo crm_sales_stage_list($name, $selected_id, $submit_on_change);
+    echo "</td>";
+}
+
+// Reset handling
+if (isset($_POST['Reset'])) {
+    meta_forward($_SERVER['PHP_SELF']);
+}
+
 start_form(false, false, $_SERVER['PHP_SELF']);
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_sales_stage_list_row_cells(_('Stage:'), 'filter_stage', get_post('filter_stage'), true);
-crm_sales_team_list_cells(_('Team:'), 'filter_team', get_post('filter_team'), true);
+crm_sales_stage_list_row_cells(null, 'filter_stage', get_post('filter_stage'), true);
+crm_sales_team_list_cells(null, 'filter_team', get_post('filter_team'), true, _('All Teams'));
 
-echo "<td>" . _('Search:') . "</td><td>";
-echo "<input type='text' name='filter_search' value='" . htmlspecialchars(get_post('filter_search', '')) . "' size='20'>";
-echo "</td>";
-submit_cells('Search', _('Search'), '', '', 'default');
+crm_filter_search_cells('filter_search', _('Search:'), 20);
+submit_cells('Search', _('Apply Filter'), '', _('Apply filter'), 'default');
 submit_cells('Reset', _('Reset'), '', '', 'default');
 
 end_row();
 end_table();
-
-/**
- * Stage list cells helper for filter.
- *
- * @param string $label
- * @param string $name
- * @param mixed  $selected_id
- * @param bool   $submit_on_change
- */
-function crm_sales_stage_list_row_cells($label, $name, $selected_id, $submit_on_change = false)
-{
-    echo "<td>$label</td><td>";
-    echo crm_sales_stage_list($name, $selected_id, $submit_on_change);
-    echo "</td>";
-}
-
-if (isset($_POST['Reset'])) {
-    $_POST['filter_stage'] = '';
-    $_POST['filter_team'] = '';
-    $_POST['filter_search'] = '';
-}
-
-end_form();
 
 //--------------------------------------------------------------------------
 
@@ -89,6 +89,8 @@ if (!empty($_POST['filter_search'])) {
 }
 
 $result = get_crm_leads($filters);
+
+div_start('opp_result');
 
 start_table(TABLESTYLE, "width='95%'");
 
@@ -145,8 +147,13 @@ end_row();
 
 end_table(1);
 
-echo "<center><a href='" . $path_to_root . "/crm/transactions/opportunity_entry.php?sel_app=crm'>"
-    . "<button class='inputsubmit'>" . _('New Opportunity') . "</button></a></center>";
+echo "<center><a href='" . $path_to_root . "/crm/transactions/opportunity_entry.php?sel_app=crm' class='inputsubmit'>" . _('New Opportunity') . "</a></center>";
+
+div_end();
+
+$Ajax->activate('opp_result');
+
+end_form();
 
 end_page();
 

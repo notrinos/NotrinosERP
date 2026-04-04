@@ -66,7 +66,7 @@ if (isset($_POST['ApplyBulk'])) {
                 break;
 
             case 'status':
-                $new_status = (int)$_POST['bulk_status'];
+                $new_status = $_POST['bulk_status'];
                 foreach ($ids as $id) {
                     $sql = "UPDATE " . TB_PREF . "crm_leads SET lead_status = " . db_escape($new_status) . " WHERE id = " . db_escape($id);
                     db_query($sql);
@@ -114,21 +114,14 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_lead_status_list_cells(_('Status:'), 'filter_status', null, true);
-crm_lead_source_list_cells(_('Source:'), 'filter_source', null, true);
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
+crm_lead_status_list_cells(null, 'filter_status', null, true);
+crm_lead_source_list_cells(null, 'filter_source', null, true, _('All Sources'));
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
 
 $show_opps = array(0 => _('Leads Only'), 1 => _('Opportunities Only'), 2 => _('All'));
-$sel_type = get_post('filter_type', 0);
-echo '<td>' . _('Type:') . '</td><td>';
-echo "<select name='filter_type'>";
-foreach ($show_opps as $k => $v) {
-    $s = ($k == $sel_type) ? ' selected' : '';
-    echo "<option value='$k'$s>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(null, 'filter_type', $show_opps, null, true, _('All'), 2);
 
-submit_cells('RefreshList', _('Search'), '', '', 'default');
+submit_cells('RefreshList', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
@@ -234,5 +227,6 @@ while ($row = db_fetch($result)) {
 end_table(1);
 
 end_form();
+crm_page_scripts();
 end_page();
 

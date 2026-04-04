@@ -53,8 +53,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_activity_type($selected_id);
-    display_notification(_('Activity type has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'crm_activities', 'activity_type_id')) {
+        display_error(_('Cannot delete this activity type — it is referenced by existing activity(ies).'));
+    } else {
+        delete_crm_activity_type($selected_id);
+        display_notification(_('Activity type has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 

@@ -38,8 +38,9 @@ $contract_id = 0;
 $is_new      = true;
 $contract    = null;
 
-if (isset($_GET['ContractID']) && (int)$_GET['ContractID'] > 0) {
-    $contract_id = (int)$_GET['ContractID'];
+$raw_id = isset($_GET['ContractID']) ? $_GET['ContractID'] : get_post('ContractID', 0);
+if ((int)$raw_id > 0) {
+    $contract_id = (int)$raw_id;
     $contract = get_crm_contract($contract_id);
     if (!$contract) {
         display_error(_('Contract not found.'));
@@ -95,7 +96,9 @@ if (isset($_POST['Save'])) {
             'status'         => $_POST['status'],
             'start_date'     => date2sql($_POST['start_date']),
             'end_date'       => date2sql($_POST['end_date']),
-            'contract_value' => $_POST['contract_value'] != '' ? (float)$_POST['contract_value'] : 0,
+            'contract_value' => input_num('contract_value', 0),
+            'signed_by'      => trim($_POST['signed_by']),
+            'signed_date'    => $_POST['signed_date'] ? date2sql($_POST['signed_date']) : null,
             'description'    => $_POST['description'],
         );
 
@@ -126,7 +129,7 @@ if (isset($_POST['Renew']) && !$is_new) {
     if (!is_date($_POST['renew_start']) || !is_date($_POST['renew_end'])) {
         display_error(_('Valid renewal dates are required.'));
     } else {
-        $new_value = $_POST['renew_value'] != '' ? (float)$_POST['renew_value'] : (float)$contract['contract_value'];
+        $new_value = $_POST['renew_value'] != '' ? input_num('renew_value', 0) : (float)$contract['contract_value'];
         begin_transaction();
         $new_id = renew_crm_contract($contract_id,
             date2sql($_POST['renew_start']),
@@ -151,6 +154,8 @@ if (!$is_new && !isset($_POST['Save'])) {
     $_POST['start_date']     = sql2date($contract['start_date']);
     $_POST['end_date']       = sql2date($contract['end_date']);
     $_POST['contract_value'] = $contract['contract_value'];
+    $_POST['signed_by']      = $contract['signed_by'];
+    $_POST['signed_date']    = $contract['signed_date'] ? sql2date($contract['signed_date']) : '';
     $_POST['description']    = $contract['description'];
 }
 
@@ -185,6 +190,7 @@ array_selector_row(_('Customer:'), 'customer_id', null, $cust_options);
 $statuses = array(
     CRM_CONTRACT_DRAFT     => _('Draft'),
     CRM_CONTRACT_ACTIVE    => _('Active'),
+    CRM_CONTRACT_SIGNED    => _('Signed'),
     CRM_CONTRACT_EXPIRED   => _('Expired'),
     CRM_CONTRACT_CANCELLED => _('Cancelled'),
     CRM_CONTRACT_RENEWED   => _('Renewed'),
@@ -194,6 +200,8 @@ array_selector_row(_('Status:'), 'status', null, $statuses);
 date_row(_('Start Date:'), 'start_date');
 date_row(_('End Date:'), 'end_date');
 amount_row(_('Contract Value:'), 'contract_value', null, null, '', 0);
+text_row(_('Signed By:'), 'signed_by', null, 60, 200);
+date_row(_('Signed Date:'), 'signed_date', '', null, 0, 0, 0);
 textarea_row(_('Description:'), 'description', null, 60, 4);
 
 end_table(1);
@@ -206,7 +214,7 @@ echo "</center><br>";
 // Renewal section (existing only)
 //--------------------------------------------------------------------------
 
-if (!$is_new && in_array((int)$contract['status'], array(CRM_CONTRACT_ACTIVE, CRM_CONTRACT_EXPIRED))) {
+if (!$is_new && in_array($contract['status'], array(CRM_CONTRACT_ACTIVE, CRM_CONTRACT_SIGNED, CRM_CONTRACT_EXPIRED))) {
     display_heading(_('Renew Contract'));
     start_table(TABLESTYLE2);
     date_row(_('New Start Date:'), 'renew_start', '', null, 0, 0, 0);

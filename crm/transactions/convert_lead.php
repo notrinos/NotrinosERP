@@ -109,12 +109,16 @@ if (isset($_POST['ConvertToCustomer'])) {
         $pymt_discount = 0;
         $credit_limit  = (float)get_company_pref('default_credit_limit');
 
+        // Generate debtor_ref from lead_ref
+        $debtor_ref = $lead['lead_ref'];
+
         // Insert into debtors_master
         $sql = "INSERT INTO " . TB_PREF . "debtors_master (
-            name, address, tax_id, curr_code, sales_type, dimension_id, dimension2_id,
-            credit_status, payment_terms, discount, pymt_discount, credit_limit
+            name, debtor_ref, address, tax_id, curr_code, sales_type, dimension_id, dimension2_id,
+            credit_status, payment_terms, discount, pymt_discount, credit_limit, notes
         ) VALUES ("
             . db_escape($customer_name) . ", "
+            . db_escape($debtor_ref) . ", "
             . db_escape($address) . ", "
             . db_escape($tax_id) . ", "
             . db_escape($curr_code) . ", "
@@ -125,34 +129,39 @@ if (isset($_POST['ConvertToCustomer'])) {
             . db_escape($payment_terms) . ", "
             . db_escape($discount) . ", "
             . db_escape($pymt_discount) . ", "
-            . db_escape($credit_limit)
+            . db_escape($credit_limit) . ", "
+            . db_escape('')
             . ")";
         db_query($sql, 'could not add customer');
         $customer_id = db_insert_id();
 
         // Add branch for the customer
+        $branch_ref = $debtor_ref;
         $branch_sql = "INSERT INTO " . TB_PREF . "cust_branch (
-            debtor_no, br_name, br_address, phone, email,
+            debtor_no, br_name, branch_ref, br_address, br_post_address,
+            salesman, area, tax_group_id,
             sales_account, receivables_account, payment_discount_account,
-            sales_discount_account, default_location, tax_group_id, sales_area
+            sales_discount_account, default_location, default_ship_via,
+            group_no, notes
         ) VALUES ("
             . db_escape($customer_id) . ", "
             . db_escape($customer_name) . ", "
+            . db_escape($branch_ref) . ", "
             . db_escape($address) . ", "
-            . db_escape($lead['phone']) . ", "
-            . db_escape($lead['email']) . ", "
+            . db_escape($address) . ", "
+            . "0, 1, 1, "
             . db_escape(get_company_pref('default_sales_act')) . ", "
             . db_escape(get_company_pref('debtors_act')) . ", "
             . db_escape(get_company_pref('pyt_discount_act')) . ", "
-            . db_escape(get_company_pref('sales_discount_act')) . ", "
-            . db_escape(get_company_pref('default_inventory_act')) . ", "
-            . "1, 1)";
+            . db_escape(get_company_pref('default_sales_discount_act')) . ", "
+            . db_escape('DEF') . ", "
+            . "1, 0, '')";
         db_query($branch_sql, 'could not add customer branch');
 
         // Create CRM contact for the customer if auto-create is on
         if (get_crm_setting('auto_create_contact', '1') == '1') {
             $contact_sql = "INSERT INTO " . TB_PREF . "crm_persons (
-                ref, name, name2, address, phone, phone2, email
+                ref, name, name2, address, phone, phone2, email, notes
             ) VALUES ("
                 . db_escape($lead['lead_ref']) . ", "
                 . db_escape($lead['title']) . ", "
@@ -160,7 +169,8 @@ if (isset($_POST['ConvertToCustomer'])) {
                 . db_escape($lead['address'] . ', ' . $lead['city'] . ' ' . $lead['state'] . ' ' . $lead['postal_code'] . ', ' . $lead['country']) . ", "
                 . db_escape($lead['phone']) . ", "
                 . db_escape($lead['mobile']) . ", "
-                . db_escape($lead['email'])
+                . db_escape($lead['email']) . ", "
+                . db_escape('')
                 . ")";
             db_query($contact_sql, 'could not add CRM contact');
             $person_id = db_insert_id();

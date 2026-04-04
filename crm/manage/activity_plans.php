@@ -47,8 +47,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_activity_plan($selected_id);
-    display_notification(_('Activity plan has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'crm_activity_plan_lines', 'plan_id')) {
+        display_error(_('Cannot delete this plan — it has plan line(s). Remove them first.'));
+    } else {
+        delete_crm_activity_plan($selected_id);
+        display_notification(_('Activity plan has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 

@@ -42,21 +42,24 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-date_cells(_('From:'), 'filter_from', '', null, -180, 0, 0);
-date_cells(_('To:'), 'filter_to', '', null, 0, 0, 0);
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
-submit_cells('Refresh', _('Generate'), '', '', 'default');
+date_cells(_('From:'), 'filter_from', _('From'), null, -180, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 0, 0, 0);
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $f_from = get_post('filter_from', '');
 $f_to   = get_post('filter_to', '');
 $f_team = get_post('filter_team', 0);
 
 $date_where = '';
-if ($f_from && is_date($f_from)) $date_where .= " AND l.date_converted >= " . db_escape(date2sql($f_from) . ' 00:00:00');
-if ($f_to && is_date($f_to))   $date_where .= " AND l.date_converted <= " . db_escape(date2sql($f_to) . ' 23:59:59');
+if ($f_from && is_date($f_from)) $date_where .= " AND COALESCE(l.date_won, l.date_lost, l.date_converted, l.date_created) >= " . db_escape(date2sql($f_from) . ' 00:00:00');
+if ($f_to && is_date($f_to))   $date_where .= " AND COALESCE(l.date_won, l.date_lost, l.date_converted, l.date_created) <= " . db_escape(date2sql($f_to) . ' 23:59:59');
 $team_where = ($f_team > 0) ? " AND l.sales_team_id = " . db_escape((int)$f_team) : '';
 
 //--------------------------------------------------------------------------

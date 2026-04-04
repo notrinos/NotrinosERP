@@ -60,6 +60,10 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          * @param {string} activityId
          */
         completeActivity: function(activityId) {
+            var csrfToken = '';
+            var tokenEl = document.querySelector('input[name="_token"]');
+            if (tokenEl) csrfToken = tokenEl.value;
+
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'activity_action.php', true);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -68,7 +72,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
                     window.location.reload();
                 }
             };
-            xhr.send('action=complete&activity_id=' + encodeURIComponent(activityId));
+            xhr.send('action=complete&activity_id=' + encodeURIComponent(activityId) + '&_token=' + encodeURIComponent(csrfToken));
         },
 
         /**

@@ -16,7 +16,7 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
  * @subpackage CRM
  */
 
-$page_security = 'SA_CRM_CAMPAIGN';
+$page_security = 'SA_CRM_REPORT';
 $path_to_root  = '../..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -38,33 +38,18 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 $statuses = array(
-    -1                     => _('All'),
     CRM_CAMPAIGN_DRAFT     => _('Draft'),
     CRM_CAMPAIGN_ACTIVE    => _('Active'),
     CRM_CAMPAIGN_COMPLETED => _('Completed'),
     CRM_CAMPAIGN_CANCELLED => _('Cancelled'),
 );
-echo '<td>' . _('Status:') . '</td><td>';
-$sel_status = (int)get_post('filter_status', -1);
-echo "<select name='filter_status'>";
-foreach ($statuses as $k => $v) {
-    $s = ($k == $sel_status) ? ' selected' : '';
-    echo "<option value='$k'$s>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(null, 'filter_status', $statuses, null, true, _('All Statuses'), '-1');
 
-$types = array('' => _('All'), 'email' => _('Email'), 'social' => _('Social'), 'event' => _('Event'), 'other' => _('Other'));
-echo '<td>' . _('Type:') . '</td><td>';
-$sel_type = get_post('filter_type', '');
-echo "<select name='filter_type'>";
-foreach ($types as $k => $v) {
-    $s = ($k == $sel_type) ? ' selected' : '';
-    echo "<option value='$k'$s>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+$types = array('email' => _('Email'), 'social' => _('Social'), 'event' => _('Event'), 'other' => _('Other'));
+crm_filter_array_list_cells(null, 'filter_type', $types, null, true, _('All Types'), '');
 
-text_cells(_('Search:'), 'filter_search', null, 30, 100);
-submit_cells('Refresh', _('Search'), '', '', 'default');
+crm_filter_search_cells('filter_search', _('Search:'), 20);
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
@@ -73,18 +58,23 @@ end_table(1);
 // Build filter and query
 //--------------------------------------------------------------------------
 
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
+
 $where = " WHERE 1=1";
-$f_status = (int)get_post('filter_status', -1);
+$f_status = get_post('filter_status', '-1');
 $f_type   = get_post('filter_type', '');
 $f_search = get_post('filter_search', '');
 
-if ($f_status >= 0) $where .= " AND c.status = " . db_escape($f_status);
+if ($f_status !== '' && $f_status !== '-1') $where .= " AND c.status = " . db_escape($f_status);
 if ($f_type)        $where .= " AND c.campaign_type = " . db_escape($f_type);
 if ($f_search)      $where .= " AND c.name LIKE " . db_escape('%' . $f_search . '%');
 
 $sql = "SELECT c.*,
         (SELECT COUNT(*) FROM " . TB_PREF . "crm_campaign_leads cl WHERE cl.campaign_id = c.id) as lead_count,
-        (SELECT COUNT(*) FROM " . TB_PREF . "crm_campaign_leads cl3 WHERE cl3.campaign_id = c.id AND cl3.status = 'converted') as converted_count
+        (SELECT COUNT(*) FROM " . TB_PREF . "crm_campaign_leads cl3
+            JOIN " . TB_PREF . "crm_leads l3 ON cl3.lead_id = l3.id
+            WHERE cl3.campaign_id = c.id AND l3.lead_status = 'converted') as converted_count
     FROM " . TB_PREF . "crm_campaigns c" . $where . " ORDER BY c.created_date DESC";
 
 $result = db_query($sql);

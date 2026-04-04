@@ -18,6 +18,7 @@ define('DA_DIMENSIONS', 'proj');
 define('DA_GL', 'GL');
 define('DA_FIXEDASSETS', 'assets');
 define('DA_HRM', 'hrm');
+define('DA_CRM', 'crm');
 define('DA_SETUP', 'system');
 
 define('WIDGET_FULL', 'widget_full');
@@ -970,4 +971,115 @@ function supplier_unpaid_invoices($today) {
 	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF(trans.due_date, '$today') AS days FROM ".TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) <= 0 ORDER BY days ASC";
 
 	return db_query($sql, 'could not get supplier transactions');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRM DASHBOARD HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Count active leads (not opportunities, not inactive).
+ *
+ * @return int
+ */
+function dashboard_count_crm_leads() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."crm_leads
+		WHERE inactive = 0 AND is_opportunity = 0";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count CRM leads'));
+}
+
+/**
+ * Count active opportunities (is_opportunity=1, not inactive, not won/lost).
+ *
+ * @return int
+ */
+function dashboard_count_crm_opportunities() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."crm_leads
+		WHERE inactive = 0 AND is_opportunity = 1
+		AND lead_status NOT IN ('won', 'lost')";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count CRM opportunities'));
+}
+
+/**
+ * Get total pipeline value (sum of expected_revenue for active opportunities).
+ *
+ * @return float
+ */
+function dashboard_crm_pipeline_value() {
+	$sql = "SELECT COALESCE(SUM(expected_revenue), 0) FROM ".TB_PREF."crm_leads
+		WHERE inactive = 0 AND is_opportunity = 1
+		AND lead_status NOT IN ('won', 'lost')";
+
+	return (float)get_dashboard_scalar_value($sql, _('Could not get pipeline value'));
+}
+
+/**
+ * Count won opportunities.
+ *
+ * @return int
+ */
+function dashboard_count_crm_won() {
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."crm_leads
+		WHERE inactive = 0 AND is_opportunity = 1 AND lead_status = 'won'";
+
+	return (int)get_dashboard_scalar_value($sql, _('Could not count won opportunities'));
+}
+
+/**
+ * Get opportunity counts grouped by pipeline stage.
+ *
+ * @return resource DB result with columns: stage_name, probability, total, revenue
+ */
+function dashboard_crm_pipeline_by_stage() {
+	$sql = "SELECT s.name AS stage_name, s.probability,
+			COUNT(l.id) AS total,
+			COALESCE(SUM(l.expected_revenue), 0) AS revenue
+		FROM ".TB_PREF."crm_sales_stages s
+		LEFT JOIN ".TB_PREF."crm_leads l
+			ON l.stage_id = s.id AND l.inactive = 0
+			AND l.is_opportunity = 1 AND l.lead_status NOT IN ('won', 'lost')
+		WHERE s.active = 1
+		GROUP BY s.id, s.name, s.probability
+		ORDER BY s.sequence";
+
+	return db_query($sql, _('Could not get pipeline by stage'));
+}
+
+/**
+ * Get recent leads ordered by creation date.
+ *
+ * @param int $limit Number of leads to return.
+ * @return resource DB result
+ */
+function dashboard_crm_recent_leads($limit = 10) {
+	$limit = (int)$limit;
+	$sql = "SELECT l.id, l.lead_ref, l.title, l.company_name, l.contact_name,
+			l.lead_status, l.is_opportunity, l.expected_revenue, l.date_created,
+			COALESCE(s.name, '') AS stage_name
+		FROM ".TB_PREF."crm_leads l
+		LEFT JOIN ".TB_PREF."crm_sales_stages s ON l.stage_id = s.id
+		WHERE l.inactive = 0
+		ORDER BY l.date_created DESC
+		LIMIT ".$limit;
+
+	return db_query($sql, _('Could not get recent leads'));
+}
+
+/**
+ * Get lead counts grouped by lead source.
+ *
+ * @return resource DB result with columns: source_name, total
+ */
+function dashboard_crm_leads_by_source() {
+	$sql = "SELECT COALESCE(ls.name, '"._('Unknown')."') AS source_name,
+			COUNT(l.id) AS total
+		FROM ".TB_PREF."crm_leads l
+		LEFT JOIN ".TB_PREF."crm_lead_sources ls ON l.lead_source_id = ls.id
+		WHERE l.inactive = 0
+		GROUP BY ls.id, ls.name
+		ORDER BY total DESC";
+
+	return db_query($sql, _('Could not get leads by source'));
 }

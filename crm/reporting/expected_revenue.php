@@ -43,13 +43,16 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_sales_team_list_cells(_('Team:'), 'filter_team', null, true);
-date_cells(_('Close Date From:'), 'filter_from', '', null, 0, 0, 0);
-date_cells(_('To:'), 'filter_to', '', null, 90, 0, 0);
-submit_cells('Refresh', _('Generate'), '', '', 'default');
+crm_sales_team_list_cells(null, 'filter_team', null, true, _('All Teams'));
+date_cells(_('From:'), 'filter_from', _('Close Date From'), null, 0, 0, 0);
+date_cells(_('To:'), 'filter_to', _('To'), null, 90, 0, 0);
+submit_cells('Refresh', _('Apply Filter'), '', _('Apply filter'), 'default');
 
 end_row();
 end_table(1);
+
+if (get_post('Refresh'))
+    $Ajax->activate('_page_body');
 
 $f_team = get_post('filter_team', 0);
 $f_from = get_post('filter_from', '');

@@ -121,6 +121,17 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidget(DA_HRM, 903, WIDGET_HALF);
 	$dashboard->addWidget(DA_HRM, 904, WIDGET_HALF);
 
+	// ────────────────────── CRM DASHBOARD ────────────────────────
+	$dashboard->addDashboard(_('CRM'), DA_CRM);
+	$dashboard->addWidgetWithClass(DA_CRM, 1011, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_CRM, 1012, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_CRM, 1013, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_CRM, 1014, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidget(DA_CRM, 1001, WIDGET_HALF);
+	$dashboard->addWidget(DA_CRM, 1002, WIDGET_HALF);
+	$dashboard->addWidget(DA_CRM, 1003, WIDGET_FULL);
+	$dashboard->addWidget(DA_CRM, 1004, WIDGET_HALF);
+
 	$dashboard->addDashboard(_('Setup'), DA_SETUP);
 	$dashboard->addWidgetWithClass(DA_SETUP, 821, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_SETUP, 822, WIDGET_QUARTER, 'widget-small-stat');

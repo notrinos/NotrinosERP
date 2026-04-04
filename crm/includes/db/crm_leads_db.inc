@@ -188,11 +188,13 @@ function get_crm_lead($id)
 function get_crm_leads($filters = array(), $limit = 0, $offset = 0)
 {
     $sql = "SELECT l.*, src.name AS source_name, stg.name AS stage_name,
-                   stg.probability AS stage_probability, st.name AS team_name
+                   stg.probability AS stage_probability, st.name AS team_name,
+                   u.real_name AS assigned_name
             FROM " . TB_PREF . "crm_leads l
             LEFT JOIN " . TB_PREF . "crm_lead_sources src ON l.lead_source_id = src.id
             LEFT JOIN " . TB_PREF . "crm_sales_stages stg ON l.stage_id = stg.id
             LEFT JOIN " . TB_PREF . "crm_sales_teams st ON l.sales_team_id = st.id
+            LEFT JOIN " . TB_PREF . "users u ON l.assigned_to = u.id
             WHERE 1=1";
 
     if (isset($filters['is_opportunity'])) {
@@ -212,6 +214,9 @@ function get_crm_leads($filters = array(), $limit = 0, $offset = 0)
     }
     if (!empty($filters['lead_source_id'])) {
         $sql .= " AND l.lead_source_id = " . db_escape($filters['lead_source_id']);
+    }
+    if (isset($filters['priority'])) {
+        $sql .= " AND l.priority = " . db_escape($filters['priority']);
     }
     if (!empty($filters['search'])) {
         $search = db_escape('%' . $filters['search'] . '%');
@@ -270,6 +275,9 @@ function count_crm_leads($filters = array())
     }
     if (!empty($filters['lead_source_id'])) {
         $sql .= " AND l.lead_source_id = " . db_escape($filters['lead_source_id']);
+    }
+    if (isset($filters['priority'])) {
+        $sql .= " AND l.priority = " . db_escape($filters['priority']);
     }
     if (!empty($filters['search'])) {
         $search = db_escape('%' . $filters['search'] . '%');
@@ -348,7 +356,7 @@ function convert_lead_to_opportunity($lead_id, $stage_id = null)
 function mark_opportunity_won($lead_id, $customer_id = null)
 {
     $data = array(
-        'lead_status' => CRM_LEAD_CONVERTED,
+        'lead_status' => CRM_LEAD_WON,
         'date_won' => date('Y-m-d H:i:s'),
         'probability' => 100,
     );

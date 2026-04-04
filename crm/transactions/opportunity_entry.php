@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-Copyright (C) NotrinosERP.
-Released under the terms of the GNU General Public License, GPL,
-as published by the Free Software Foundation, either version 3
-of the License, or (at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+    Copyright (C) NotrinosERP.
+    Released under the terms of the GNU General Public License, GPL,
+    as published by the Free Software Foundation, either version 3
+    of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /**
  * CRM Opportunity Entry - Create / Edit Opportunity
@@ -99,7 +99,7 @@ if (isset($_POST['Save'])) {
         $input_error = 1;
     }
 
-    if ($_POST['expected_revenue'] != '' && !is_numeric($_POST['expected_revenue'])) {
+    if ($_POST['expected_revenue'] != '' && !check_num('expected_revenue', 0)) {
         display_error(_('Expected revenue must be numeric.'));
         set_focus('expected_revenue');
         $input_error = 1;
@@ -123,7 +123,7 @@ if (isset($_POST['Save'])) {
             'priority'           => (int)$_POST['priority'],
             'assigned_to'        => (int)$_POST['assigned_to'],
             'sales_team_id'      => (int)$_POST['team_id'],
-            'expected_revenue'   => $_POST['expected_revenue'] != '' ? (float)$_POST['expected_revenue'] : 0,
+            'expected_revenue'   => input_num('expected_revenue', 0),
             'expected_close_date'=> $_POST['expected_close'] ? date2sql($_POST['expected_close']) : null,
             'linked_customer_id' => (int)$_POST['customer_id'],
             'notes'              => $_POST['notes'],
@@ -328,9 +328,13 @@ submit('Save', $is_new ? _('Create Opportunity') : _('Update Opportunity'), true
 
 if (!$is_new) {
     // Won/Lost actions
-    $won_stage = db_query("SELECT id FROM " . TB_PREF . "crm_sales_stages WHERE is_won=1 LIMIT 1");
-    $lost_stage = db_query("SELECT id FROM " . TB_PREF . "crm_sales_stages WHERE is_lost=1 LIMIT 1");
-    $is_open = (!$opp['stage_id'] || (!(int)@$opp['is_won'] && !(int)@$opp['is_lost']));
+    $won_stage = db_query("SELECT id FROM " . TB_PREF . "crm_sales_stages WHERE name='Won' LIMIT 1");
+    $lost_stage = db_query("SELECT id FROM " . TB_PREF . "crm_sales_stages WHERE name='Lost' LIMIT 1");
+    $won_stage_row = db_fetch($won_stage);
+    $lost_stage_row = db_fetch($lost_stage);
+    $is_won  = $won_stage_row && $opp['stage_id'] == $won_stage_row['id'];
+    $is_lost = $lost_stage_row && $opp['stage_id'] == $lost_stage_row['id'];
+    $is_open = (!$opp['stage_id'] || (!$is_won && !$is_lost));
 
     if ($is_open) {
         echo "</center><br>";
@@ -414,5 +418,6 @@ if (!$is_new) {
 }
 
 end_form();
+crm_page_scripts();
 end_page();
 

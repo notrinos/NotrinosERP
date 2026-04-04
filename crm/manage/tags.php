@@ -47,8 +47,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_tag($selected_id);
-    display_notification(_('Tag has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'tag_associations', 'tag_id')) {
+        display_error(_('Cannot delete this tag — it is associated with existing record(s). Remove associations first.'));
+    } else {
+        delete_crm_tag($selected_id);
+        display_notification(_('Tag has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 

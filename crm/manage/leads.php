@@ -41,41 +41,59 @@ if (isset($_GET['delete'])) {
 // Filter form
 //--------------------------------------------------------------------------
 
+if (isset($_POST['Reset'])) {
+    unset($_POST['filter_type']);
+    unset($_POST['filter_status']);
+    unset($_POST['filter_source']);
+    unset($_POST['filter_team']);
+    unset($_POST['filter_search']);
+    unset($_POST['filter_date_from']);
+    unset($_POST['filter_date_to']);
+    unset($_POST['filter_tag']);
+    meta_forward($_SERVER['PHP_SELF'], "sel_app=crm");
+}
+
 start_form(false, false, $_SERVER['PHP_SELF']);
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-crm_lead_status_list_cells(_('Status:'), 'filter_status', get_post('filter_status'), true);
-crm_lead_source_list_cells(_('Source:'), 'filter_source', get_post('filter_source'), true);
-crm_sales_team_list_cells(_('Team:'), 'filter_team', get_post('filter_team'), true);
+// Type filter: Leads / Opportunities / All
+$type_items = array('leads' => _('Leads Only'), 'opportunities' => _('Opportunities'), 'all' => _('All'));
+crm_filter_array_list_cells(null, 'filter_type', $type_items, null, true);
 
-echo "<td>" . _('Search:') . "</td><td>";
-echo "<input type='text' name='filter_search' value='" . htmlspecialchars(get_post('filter_search', '')) . "' size='20'>";
-echo "</td>";
-submit_cells('Search', _('Search'), '', '', 'default');
+crm_lead_status_list_cells(null, 'filter_status', get_post('filter_status'), true);
+crm_lead_source_list_cells(null, 'filter_source', get_post('filter_source'), true, _('All Sources'));
+crm_sales_team_list_cells(null, 'filter_team', get_post('filter_team'), true, _('All Teams'));
+
+crm_filter_search_cells('filter_search', _('Search:'), 20);
+
+date_cells(_('From:'), 'filter_date_from', _('From'), null, -30, 0, 0, null, true);
+date_cells(_('To:'), 'filter_date_to', _('To'), null, 0, 0, 0, null, true);
+tag_list_cells(null, 'filter_tag', 1, TAG_CRM, false, false, _('-- All Tags --'));
+
+submit_cells('Search', _('Apply Filter'), '', _('Apply filter'), 'default');
 submit_cells('Reset', _('Reset'), '', '', 'default');
 
 end_row();
 end_table();
 
-if (isset($_POST['Reset'])) {
-    $_POST['filter_status'] = '';
-    $_POST['filter_source'] = '';
-    $_POST['filter_team'] = '';
-    $_POST['filter_search'] = '';
-}
-
-end_form();
-
 //--------------------------------------------------------------------------
-// Leads list table
+// Leads list table (inside form for AJAX updates)
 //--------------------------------------------------------------------------
 
+div_start('leads_result');
+
+$type_val = get_post('filter_type', 'leads');
 $filters = array(
-    'is_opportunity' => 0,
     'inactive' => 0,
 );
+if ($type_val == 'leads') {
+    $filters['is_opportunity'] = 0;
+} elseif ($type_val == 'opportunities') {
+    $filters['is_opportunity'] = 1;
+}
+// 'all' => no is_opportunity filter
 
 if (!empty($_POST['filter_status'])) {
     $filters['lead_status'] = $_POST['filter_status'];
@@ -88,6 +106,15 @@ if (!empty($_POST['filter_team'])) {
 }
 if (!empty($_POST['filter_search'])) {
     $filters['search'] = $_POST['filter_search'];
+}
+if (!empty($_POST['filter_date_from'])) {
+    $filters['date_from'] = date2sql($_POST['filter_date_from']);
+}
+if (!empty($_POST['filter_date_to'])) {
+    $filters['date_to'] = date2sql($_POST['filter_date_to']);
+}
+if (!empty($_POST['filter_tag']) && $_POST['filter_tag'] > 0) {
+    $filters['tag_id'] = $_POST['filter_tag'];
 }
 
 $result = get_crm_leads($filters);
@@ -147,8 +174,14 @@ while ($myrow = db_fetch($result)) {
 end_table(1);
 
 // New lead button
-echo "<center><a href='" . $path_to_root . "/crm/transactions/lead_entry.php?sel_app=crm' class='ajaxsubmit'>"
-    . "<button class='inputsubmit'>" . _('New Lead') . "</button></a></center>";
+echo "<center><a href='" . $path_to_root . "/crm/transactions/lead_entry.php?sel_app=crm' class='inputsubmit'>" . _('New Lead') . "</a></center>";
+
+div_end();
+
+$Ajax->activate('leads_result');
+
+end_form();
+crm_page_scripts();
 
 end_page();
 

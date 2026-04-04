@@ -47,8 +47,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_crm_lead_source($selected_id);
-    display_notification(_('Lead source has been deleted.'));
+    if (key_in_foreign_table($selected_id, 'crm_leads', 'lead_source_id')) {
+        display_error(_('Cannot delete this lead source — it is referenced by existing lead(s).'));
+    } else {
+        delete_crm_lead_source($selected_id);
+        display_notification(_('Lead source has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 
