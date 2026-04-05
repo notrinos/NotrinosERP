@@ -76,7 +76,7 @@ function init_css() {
 			$path_to_root.'/libraries/select2.min.css'
 		);
 
-		$modern_css_files = array('variables.css', 'base.css', 'layout.css', 'components.css', 'tables.css', 'forms.css', 'responsive.css');
+		$modern_css_files = array('variables.css', 'base.css', 'layout.css', 'components.css', 'kanban.css', 'tables.css', 'forms.css', 'responsive.css');
 		$modern_css_root = dirname(__FILE__).'/../themes/default/css/';
 		foreach ($modern_css_files as $modern_css_file) {
 			$modern_css_path = $modern_css_root.$modern_css_file;

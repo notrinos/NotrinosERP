@@ -1,0 +1,112 @@
+/* ==========================================================================
+   Kanban Board — core layout
+   Used by includes/ui/class.kanban_board.inc
+   ========================================================================== */
+
+/* ---- Board wrapper (horizontal scroll container) ---- */
+.kanban-board {
+	display: flex;
+	gap: 10px;
+	overflow-x: auto;
+	padding: 10px 0;
+}
+
+/* ---- Column ---- */
+.kanban-column {
+	min-width: 220px;
+	max-width: 280px;
+	flex: 1;
+	background: var(--modern-color-bg, #f5f5f5);
+	border-radius: var(--modern-control-radius, 6px);
+	padding: var(--modern-space-2, 8px);
+}
+
+/* ---- Column header ---- */
+.kanban-column-header {
+	font-weight: bold;
+	padding: 4px 0;
+	border-bottom: 2px solid  #4CAF50;
+	margin-bottom: 6px;
+}
+
+.kanban-column-count {
+	font-size: 0.85em;
+	color: var(--modern-color-muted, #666);
+}
+
+.kanban-column-meta {
+	font-size: 0.8em;
+	color: var(--modern-color-muted, #888);
+	margin-bottom: 6px;
+}
+
+/* ---- Column body (card list area) ---- */
+.kanban-column-body {
+	min-height: 40px;
+}
+
+/* ---- Card ---- */
+.kanban-card {
+	background: var(--modern-color-surface, #fff);
+	border: 1px solid var(--modern-color-border, #ddd);
+	border-radius: 4px;
+	padding: var(--modern-space-2, 8px);
+	margin-bottom: 6px;
+}
+
+.kanban-card-clickable {
+	cursor: pointer;
+}
+
+.kanban-card-clickable:hover {
+	box-shadow: var(--modern-shadow-card, 0 1px 3px rgba(0,0,0,0.1));
+}
+
+.kanban-card-title {
+	font-weight: bold;
+	font-size: 0.9em;
+}
+
+.kanban-card-subtitle {
+	font-size: 0.8em;
+	color: var(--modern-color-muted, #666);
+}
+
+.kanban-card-meta {
+	font-size: 0.8em;
+	margin-top: 3px;
+}
+
+.kanban-card-footer {
+	font-size: 0.75em;
+	color: var(--modern-color-muted, #888);
+}
+
+/* ---- Summary bar ---- */
+.kanban-summary {
+	margin-top: 15px;
+	padding: 10px;
+	background: #e8f5e9;
+	border-radius: 4px;
+}
+
+/* ---- Drag-drop visual states ---- */
+.kanban-card.is-dragging {
+	opacity: 0.5;
+}
+
+.kanban-column.is-drag-over {
+	outline: 2px dashed var(--modern-color-primary, #4CAF50);
+}
+
+/* ---- Responsive: stack columns vertically on small screens ---- */
+@media (max-width: 768px) {
+	.kanban-board {
+		flex-direction: column;
+	}
+
+	.kanban-column {
+		min-width: unset;
+		max-width: unset;
+	}
+}

@@ -25,10 +25,10 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          * Initialize the pipeline board drag-and-drop.
          */
         init: function() {
-            var cards = document.querySelectorAll('.crm-pipeline-card');
-            var stages = document.querySelectorAll('.crm-pipeline-stage');
+            var cards = document.querySelectorAll('.kanban-card');
+            var columns = document.querySelectorAll('.kanban-column');
 
-            if (!cards.length || !stages.length) return;
+            if (!cards.length || !columns.length) return;
 
             // Make cards draggable
             for (var i = 0; i < cards.length; i++) {
@@ -38,11 +38,11 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
             }
 
             // Set up stage columns as drop targets
-            for (var j = 0; j < stages.length; j++) {
-                stages[j].addEventListener('dragover', CRMPipeline.onDragOver);
-                stages[j].addEventListener('dragenter', CRMPipeline.onDragEnter);
-                stages[j].addEventListener('dragleave', CRMPipeline.onDragLeave);
-                stages[j].addEventListener('drop', CRMPipeline.onDrop);
+            for (var j = 0; j < columns.length; j++) {
+                columns[j].addEventListener('dragover', CRMPipeline.onDragOver);
+                columns[j].addEventListener('dragenter', CRMPipeline.onDragEnter);
+                columns[j].addEventListener('dragleave', CRMPipeline.onDragLeave);
+                columns[j].addEventListener('drop', CRMPipeline.onDrop);
             }
         },
 
@@ -52,11 +52,11 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          * @param {DragEvent} e
          */
         onDragStart: function(e) {
-            var card = e.target.closest('.crm-pipeline-card');
+            var card = e.target.closest('.kanban-card');
             if (!card) return;
             e.dataTransfer.setData('text/plain', card.getAttribute('data-lead-id'));
             e.dataTransfer.effectAllowed = 'move';
-            card.style.opacity = '0.5';
+            card.classList.add('is-dragging');
         },
 
         /**
@@ -65,11 +65,12 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          * @param {DragEvent} e
          */
         onDragEnd: function(e) {
-            e.target.style.opacity = '1';
+            var card = e.target.closest('.kanban-card');
+            if (card) card.classList.remove('is-dragging');
             // Remove all drag-over highlights
-            var stages = document.querySelectorAll('.crm-pipeline-stage');
-            for (var i = 0; i < stages.length; i++) {
-                stages[i].classList.remove('crm-drag-over');
+            var columns = document.querySelectorAll('.kanban-column');
+            for (var i = 0; i < columns.length; i++) {
+                columns[i].classList.remove('is-drag-over');
             }
         },
 
@@ -90,9 +91,9 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          */
         onDragEnter: function(e) {
             e.preventDefault();
-            var stage = e.target.closest('.crm-pipeline-stage');
-            if (stage) {
-                stage.style.background = '#e8f5e9';
+            var column = e.target.closest('.kanban-column');
+            if (column) {
+                column.classList.add('is-drag-over');
             }
         },
 
@@ -102,9 +103,9 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          * @param {DragEvent} e
          */
         onDragLeave: function(e) {
-            var stage = e.target.closest('.crm-pipeline-stage');
-            if (stage) {
-                stage.style.background = '#f5f5f5';
+            var column = e.target.closest('.kanban-column');
+            if (column) {
+                column.classList.remove('is-drag-over');
             }
         },
 
@@ -115,20 +116,21 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
          */
         onDrop: function(e) {
             e.preventDefault();
-            var stage = e.target.closest('.crm-pipeline-stage');
-            if (!stage) return;
+            var column = e.target.closest('.kanban-column');
+            if (!column) return;
 
-            stage.style.background = '#f5f5f5';
+            column.classList.remove('is-drag-over');
 
             var leadId = e.dataTransfer.getData('text/plain');
-            var stageId = stage.getAttribute('data-stage-id');
+            var stageId = column.getAttribute('data-stage-id');
 
             if (!leadId || !stageId) return;
 
-            // Move the card DOM element
-            var card = document.querySelector('.crm-pipeline-card[data-lead-id="' + leadId + '"]');
-            if (card) {
-                stage.appendChild(card);
+            // Move the card DOM element into the column body
+            var card = document.querySelector('.kanban-card[data-lead-id="' + leadId + '"]');
+            var columnBody = column.querySelector('.kanban-column-body');
+            if (card && columnBody) {
+                columnBody.appendChild(card);
             }
 
             // AJAX update (uses NotrinosERP's JsHttpRequest if available)
