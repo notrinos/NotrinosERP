@@ -64,7 +64,7 @@ $result = get_crm_campaigns($filters);
 
 div_start('campaigns_result');
 
-start_table(TABLESTYLE, "width='90%'");
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(
     _('ID'), _('Name'), _('Type'), _('Status'), _('Start'), _('End'),

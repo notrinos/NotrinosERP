@@ -92,7 +92,7 @@ $result = get_crm_leads($filters);
 
 div_start('opp_result');
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(
     _('Ref'), _('Title'), _('Company'), _('Stage'), _('Probability'),

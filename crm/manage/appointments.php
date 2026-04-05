@@ -74,7 +74,7 @@ $result = get_crm_appointments($filters);
 
 div_start('appointments_result');
 
-start_table(TABLESTYLE, "width='90%'");
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(
     _('ID'), _('Title'), _('Type'), _('Date/Time'), _('Duration'),

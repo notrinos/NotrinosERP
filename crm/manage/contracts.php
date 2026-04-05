@@ -75,7 +75,7 @@ $result = get_crm_contracts($filters);
 
 div_start('contracts_result');
 
-start_table(TABLESTYLE, "width='90%'");
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(
     _('Ref'), _('Title'), _('Customer'), _('Value'), _('Start'), _('End'),

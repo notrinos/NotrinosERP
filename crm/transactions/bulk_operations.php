@@ -1,13 +1,13 @@
 <?php
 /**********************************************************************
-Copyright (C) NotrinosERP.
-Released under the terms of the GNU General Public License, GPL,
-as published by the Free Software Foundation, either version 3
-of the License, or (at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+	Copyright (C) NotrinosERP.
+	Released under the terms of the GNU General Public License, GPL,
+	as published by the Free Software Foundation, either version 3
+	of the License, or (at your option) any later version.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 /**
  * CRM Bulk Operations on Leads/Opportunities
@@ -141,51 +141,25 @@ $actions = array(
     'tag'    => _('Apply Tag'),
     'delete' => _('Delete (soft)'),
 );
-echo '<td>';
-echo "<select name='bulk_action'>";
-foreach ($actions as $k => $v) {
-    echo "<option value='$k'>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(_('Action'), 'bulk_action', $actions, get_post('bulk_action', ''));
 
 // Assign To
-echo '<td>';
-$users_sql = "SELECT id, real_name FROM " . TB_PREF . "users ORDER BY real_name";
-$users_result = db_query($users_sql);
-echo "<select name='bulk_assign_to'>";
-echo "<option value='0'>" . _('-- User --') . "</option>";
-while ($u = db_fetch($users_result)) {
-    echo "<option value='" . (int)$u['id'] . "'>" . htmlspecialchars($u['real_name']) . "</option>";
-}
-echo "</select></td>";
+crm_assignee_list_cells(_('Assign To'), 'bulk_assign_to', get_post('bulk_assign_to', 0), false, _('-- User --'));
 
 // Status
-echo '<td>';
-$statuses = array(
-    CRM_LEAD_NEW       => _('New'),
-    CRM_LEAD_CONTACTED => _('Contacted'),
-    CRM_LEAD_QUALIFIED => _('Qualified'),
-    CRM_LEAD_LOST      => _('Lost'),
-);
-echo "<select name='bulk_status'>";
-foreach ($statuses as $k => $v) {
-    echo "<option value='$k'>" . htmlspecialchars($v) . "</option>";
-}
-echo "</select></td>";
+crm_filter_array_list_cells(_('Status'), 'bulk_status', crm_lead_statuses(), get_post('bulk_status', ''),
+    false, _('-- Status --'), '');
 
 // Tag
-echo '<td>';
-$tags = get_crm_tags();
-echo "<select name='bulk_tag_id'>";
-echo "<option value='0'>" . _('-- Tag --') . "</option>";
-while ($t = db_fetch($tags)) {
-    echo "<option value='" . (int)$t['id'] . "'>" . htmlspecialchars($t['name']) . "</option>";
+$tag_items = array();
+$tags_result = get_crm_tags();
+while ($t = db_fetch($tags_result)) {
+    $tag_items[(int)$t['id']] = $t['name'];
 }
-echo "</select></td>";
+crm_filter_array_list_cells(_('Tag'), 'bulk_tag_id', $tag_items, get_post('bulk_tag_id', 0),
+    false, _('-- Tag --'), 0);
 
-echo '<td>';
-submit('ApplyBulk', _('Apply'), true, '', 'default');
-echo '</td>';
+submit_cells('ApplyBulk', _('Apply'), '', '', 'default');
 
 end_row();
 end_table(1);
@@ -206,7 +180,7 @@ if ($f_team !== '' && $f_team != 0)      $filters['sales_team_id'] = (int)$f_tea
 if ($f_type == 0) $filters['is_opportunity'] = 0;
 elseif ($f_type == 1) $filters['is_opportunity'] = 1;
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array('', _('Ref'), _('Name'), _('Organization'), _('Source'), _('Status'), _('Priority'), _('Assigned To'));
 table_header($th);
 
