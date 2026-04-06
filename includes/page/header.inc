@@ -161,5 +161,9 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 	include_once($path_to_root.'/themes/'.$theme.'/renderer.php');
 	$rend = new renderer();
 	$rend->menu_header($title, $no_menu, $is_index);
+
+	// Global CSRF token for AJAX requests (print/email links, etc.) on pages without forms.
+	echo "<input type='hidden' id='global_csrf_token' name='_token' value='".ensure_csrf_token()."'>";
+	
 	error_box();
 }
