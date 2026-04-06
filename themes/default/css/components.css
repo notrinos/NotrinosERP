@@ -532,6 +532,20 @@
 	grid-template-columns: 1fr;
 }
 
+.modern-app-shell.modern-sidebar-collapsed .modern-app-switcher-region.is-collapsible {
+	height: auto;
+}
+
+.modern-app-shell.modern-sidebar-collapsed .modern-app-switcher-region.is-collapsible .modern-app-switcher-panel,
+.modern-app-shell.modern-sidebar-collapsed .modern-app-switcher-region.is-collapsible:hover .modern-app-switcher-panel,
+.modern-app-shell.modern-sidebar-collapsed .modern-app-switcher-region.is-collapsible:focus-within .modern-app-switcher-panel {
+	position: static;
+	height: auto;
+	overflow: visible;
+	box-shadow: none;
+	border-color: transparent;
+}
+
 .modern-app-shell.modern-sidebar-collapsed .modern-app-link {
 	min-height: 56px;
 	padding: 12px 8px;
@@ -707,6 +721,7 @@ html[dir='rtl'] .modern-app-icon {
 	background: #eef6ff;
 	border-color: #bfdbfe;
 	color: #1e3a8a;
+	font-size: 1.2em;
 }
 
 #msgbox .warning {

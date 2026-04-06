@@ -636,6 +636,41 @@
 		});
 	}
 
+	/**
+	 * Scroll to top of the main content area when messages (errors, warnings,
+	 * notifications) are present on page load.  Also observe the msgbox for
+	 * dynamic AJAX-injected messages and scroll then too.
+	 */
+	function scrollToMessagesOnLoad() {
+		var msgbox = document.getElementById('msgbox');
+		if (!msgbox) return;
+
+		var mainContent = document.getElementById('modern-main-content');
+		var scrollTarget = mainContent || window;
+
+		function doScroll() {
+			if (mainContent) {
+				mainContent.scrollTop = 0;
+			}
+			window.scrollTo(0, 0);
+		}
+
+		// Scroll on initial page load if msgbox has content
+		if (msgbox.innerHTML && msgbox.innerHTML.trim().length > 0) {
+			doScroll();
+		}
+
+		// Observe dynamic changes (AJAX updates) to msgbox
+		if (typeof MutationObserver !== 'undefined') {
+			var observer = new MutationObserver(function () {
+				if (msgbox.innerHTML && msgbox.innerHTML.trim().length > 0) {
+					doScroll();
+				}
+			});
+			observer.observe(msgbox, { childList: true, subtree: true, characterData: true });
+		}
+	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function () {
 			bindSidebarToggle();
@@ -647,6 +682,7 @@
 			bindCollapsedSidebarTooltips();
 			bindSearchToggle();
 			bindMenuSearch();
+			scrollToMessagesOnLoad();
 		});
 	} else {
 		bindSidebarToggle();
@@ -658,5 +694,6 @@
 		bindCollapsedSidebarTooltips();
 		bindSearchToggle();
 		bindMenuSearch();
+		scrollToMessagesOnLoad();
 	}
 })();
