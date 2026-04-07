@@ -106,60 +106,6 @@ function hrm_has_paid_date_in_range($employee_id, $from_date, $to_date) {
 }
 
 /**
- * Upsert meta fields on attendance row for employee/date.
- *
- * @param string $employee_id
- * @param string $date User format date.
- * @param int $status
- * @param int $shift_id
- * @param string $clock_in
- * @param string $clock_out
- * @param string $notes
- * @return void
- */
-function hrm_upsert_attendance_meta($employee_id, $date, $status, $shift_id, $clock_in, $clock_out, $notes='') {
-    $sql_date = date2sql($date);
-    $entry = get_attendance_entry($employee_id, $date);
-
-    $shift_sql = empty($shift_id) ? 'NULL' : db_escape($shift_id);
-    $clock_in_sql = trim($clock_in) === '' ? 'NULL' : db_escape($clock_in);
-    $clock_out_sql = trim($clock_out) === '' ? 'NULL' : db_escape($clock_out);
-    $notes_sql = trim($notes) === '' ? 'NULL' : db_escape($notes);
-
-    if ($entry) {
-        $sql = "UPDATE ".TB_PREF."attendance SET
-                status = ".db_escape((int)$status).",
-                shift_id = ".$shift_sql.",
-                clock_in = ".$clock_in_sql.",
-                clock_out = ".$clock_out_sql.",
-                notes = ".$notes_sql."
-            WHERE employee_id = ".db_escape($employee_id)."
-            AND date = '".$sql_date."'";
-        db_query($sql, 'could not update attendance meta');
-        return;
-    }
-
-    $sql = "INSERT INTO ".TB_PREF."attendance
-        (employee_id, date, shift_id, clock_in, clock_out, regular_hours, overtime_hours, overtime_type_id, status, source, rate, notes)
-        VALUES (
-            ".db_escape($employee_id).",
-            '".$sql_date."',
-            ".$shift_sql.",
-            ".$clock_in_sql.",
-            ".$clock_out_sql.",
-            0,
-            0,
-            NULL,
-            ".db_escape((int)$status).",
-            0,
-            1,
-            ".$notes_sql."
-        )";
-
-    db_query($sql, 'could not create attendance meta row');
-}
-
-/**
  * Collect employee rows for selected filter.
  *
  * @param int $department_id
@@ -297,7 +243,10 @@ if ($dept_id > 0 && $emp_id !== '') {
 $employees = hrm_get_filtered_employees($dept_id, $emp_id);
 
 if (isset($_POST['bulk_regular'])) {
-    $bulk_hours = get_company_pref('default_work_hours');
+    $from_sql = date2sql($_POST['from_date']);
+    $dow = (int)date('w', strtotime($from_sql));
+    $wd_row = get_working_day($dow);
+    $bulk_hours = ($wd_row && !empty($wd_row['work_hours'])) ? $wd_row['work_hours'] : 8;
     foreach ($employees as $employee) {
         if (check_value('selected_'.$employee['employee_id']))
             $_POST[$employee['employee_id'].'-regular'] = $bulk_hours;

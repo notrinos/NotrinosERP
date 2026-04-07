@@ -1,0 +1,330 @@
+/* ════════════════════════════════════════════════════════════
+   NotrinosERP Attendance Sheet — Monthly Calendar Grid
+   ════════════════════════════════════════════════════════════ */
+
+/* Legend bar */
+.att-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    background: var(--bg-secondary, #f8f9fa);
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 4px;
+    font-size: 12px;
+}
+.att-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Scroll wrapper */
+.att-sheet-scroll {
+    overflow-x: auto;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 4px;
+}
+
+/* Main table */
+.att-sheet-table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+    font-size: 12px;
+}
+.att-sheet-table th,
+.att-sheet-table td {
+    border: 1px solid var(--border-color, #dee2e6);
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Header */
+.att-header th {
+    background: var(--bg-secondary, #f0f0f0);
+    font-weight: 600;
+    padding: 2px 0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.att-day-header {
+    min-width: 32px;
+    width: 32px;
+}
+.att-day-num {
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1.2;
+}
+.att-day-name {
+    font-size: 10px;
+    color: #666;
+    line-height: 1.1;
+}
+
+/* Employee columns — sticky */
+.att-emp-id {
+    min-width: 60px;
+    max-width: 80px;
+    text-align: left !important;
+    padding: 3px 5px !important;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.att-emp-name {
+    min-width: 120px;
+    max-width: 180px;
+    text-align: left !important;
+    padding: 3px 5px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.att-sticky-col {
+    position: sticky;
+    z-index: 3;
+    background: inherit;
+}
+td.att-sticky-col,
+th.att-sticky-col {
+    background: #fff;
+}
+th.att-sticky-col {
+    background: var(--bg-secondary, #f0f0f0);
+    z-index: 4;
+}
+.att-emp-id.att-sticky-col {
+    left: 0;
+}
+.att-sticky-name {
+    left: 60px;
+    border-right: 2px solid var(--border-color, #aaa) !important;
+}
+
+/* Row striping */
+.att-row-even td { background-color: #fff; }
+.att-row-odd td  { background-color: #fafafa; }
+.att-row-even td.att-sticky-col { background-color: #fff; }
+.att-row-odd td.att-sticky-col  { background-color: #fafafa; }
+
+/* Summary columns */
+.att-sum-col {
+    min-width: 36px;
+    width: 36px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg-secondary, #f0f0f0) !important;
+}
+.att-sum-val {
+    font-size: 11px;
+    padding: 2px 3px !important;
+    font-weight: 500;
+}
+.att-sum-absent {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+/* ── Cell status colors ── */
+.att-cell {
+    width: 32px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: default;
+    text-align: center;
+}
+.att-cell span {
+    display: block;
+}
+.att-present {
+    background-color: #d4edda !important;
+    color: #155724;
+}
+.att-absent {
+    background-color: #f8d7da !important;
+    color: #721c24;
+}
+.att-halfday {
+    background-color: #fff3cd !important;
+    color: #856404;
+}
+.att-leave {
+    background-color: #cce5ff !important;
+    color: #004085;
+}
+.att-holiday {
+    background-color: #e2d5f1 !important;
+    color: #4a235a;
+}
+.att-weekend {
+    background-color: #e9ecef !important;
+    color: #999;
+}
+.att-empty {
+    background-color: #fff !important;
+    color: #ccc;
+}
+
+/* Weekend/holiday column headers */
+.att-weekend-col {
+    background-color: #e9ecef !important;
+}
+.att-holiday-col {
+    background-color: #e2d5f1 !important;
+}
+
+/* Today highlight */
+.att-today-col {
+    box-shadow: inset 0 0 0 2px #007bff;
+}
+
+/* Clickable cells */
+.att-clickable {
+    cursor: pointer;
+}
+.att-clickable:hover {
+    filter: brightness(0.9);
+    outline: 2px solid #007bff;
+    outline-offset: -2px;
+}
+
+/* ── Modal ── */
+.att-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 9998;
+}
+.att-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    z-index: 9999;
+    min-width: 380px;
+    max-width: 480px;
+    width: 90vw;
+}
+.att-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 8px 8px 0 0;
+}
+.att-modal-title {
+    font-weight: 700;
+    font-size: 15px;
+}
+.att-modal-close {
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    color: #666;
+    padding: 0 4px;
+}
+.att-modal-close:hover {
+    color: #000;
+}
+.att-modal-body {
+    padding: 12px 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+.att-modal-body .tablestyle2 {
+    width: 100%;
+}
+.att-modal-body .tablestyle2 td {
+    padding: 4px 6px;
+}
+.att-modal-body .tablestyle2 .label {
+    white-space: nowrap;
+    font-weight: 600;
+    width: 110px;
+}
+.att-modal-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.att-btn {
+    padding: 6px 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.att-btn-save {
+    background: #28a745;
+    color: #fff;
+    border-color: #28a745;
+}
+.att-btn-save:hover {
+    background: #218838;
+}
+.att-btn-delete {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+.att-btn-delete:hover {
+    background: #c82333;
+}
+.att-btn-cancel {
+    background: #f8f9fa;
+    color: #333;
+}
+.att-btn-cancel:hover {
+    background: #e2e6ea;
+}
+
+/* ── Full-width modal inputs ── */
+.att-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+}
+.att-modal-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+}
+textarea.att-modal-input {
+    resize: vertical;
+    line-height: 1.4;
+}
+/* Make select2 widgets span full width inside modal */
+.att-modal-body .list_container,
+.att-modal-body .list_container > span {
+    display: block;
+    width: 100%;
+}
+.att-modal-body .select2-container {
+    width: 100% !important;
+}
+/* Ensure select2 dropdown panel appears above modal overlay */
+.select2-dropdown {
+    z-index: 10001 !important;
+}
+.select2-container--open {
+    z-index: 10001 !important;
+}

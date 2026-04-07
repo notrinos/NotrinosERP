@@ -25,6 +25,7 @@ include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 
 /**
  * Payroll Formula Engine.
@@ -603,15 +604,24 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
     if ($worked_days <= 0 && $absent_days <= 0)
         $worked_days = $working_days;
 
+    // Calculate extra absent days: count non-working days that fall between
+    // consecutive absent working days (e.g. absent Thu + Mon → Fri/Sat/Sun
+    // also count as absent).
+    $extra_absent_days = 0.0;
+    if ($absent_days > 0 && !empty(get_hr_setting_value('calculate_extra_absent_days', 0))) {
+        $extra_absent_days = _calculate_extra_absent_days($employee_id, $from_sql, $to_sql);
+    }
+
     $attendance_cache[$cache_key] = array(
         'working_days' => (float)$working_days,
         'worked_days' => (float)$worked_days,
         'leave_days' => (float)$leave_days,
-        'absent_days' => (float)$absent_days,
+        'absent_days' => (float)$absent_days + $extra_absent_days,
+        'extra_absent_days' => $extra_absent_days,
         'overtime_hours' => (float)@$row['overtime_hours'],
         'late_minutes' => 0.0,
         'paid_leave_days' => (float)$leave_days,
-        'unpaid_leave_days' => (float)$absent_days
+        'unpaid_leave_days' => (float)$absent_days + $extra_absent_days
     );
 
     return $attendance_cache[$cache_key];
@@ -878,6 +888,59 @@ function _payroll_is_holiday($sql_date) {
 
     $holiday_cache[$sql_date] = db_num_rows($result) > 0;
     return $holiday_cache[$sql_date];
+}
+
+/**
+ * Calculate extra absent days: non-working days that fall between consecutive
+ * absent working days. For example if employee is absent on Thursday and
+ * Monday, then Friday/Saturday/Sunday are counted as extra absent days.
+ *
+ * @param string $employee_id
+ * @param string $from_sql SQL date Y-m-d
+ * @param string $to_sql SQL date Y-m-d
+ * @return float
+ */
+function _calculate_extra_absent_days($employee_id, $from_sql, $to_sql) {
+    // Get all absent dates for this employee in the period
+    $sql = "SELECT date FROM ".TB_PREF."attendance
+        WHERE employee_id = ".db_escape($employee_id)."
+        AND date >= ".db_escape($from_sql)."
+        AND date <= ".db_escape($to_sql)."
+        AND status = 1
+        ORDER BY date";
+    $result = db_query($sql, 'Could not get absent dates');
+
+    $absent_dates = array();
+    while ($row = db_fetch_assoc($result))
+        $absent_dates[] = $row['date'];
+
+    if (count($absent_dates) < 2)
+        return 0.0;
+
+    $extra = 0.0;
+    for ($i = 0; $i < count($absent_dates) - 1; $i++) {
+        $current = new DateTime($absent_dates[$i]);
+        $next = new DateTime($absent_dates[$i + 1]);
+        $current->modify('+1 day');
+
+        // Count non-working days between two consecutive absent dates
+        $gap_non_working = 0;
+        $all_non_working = true;
+        for ($d = clone $current; $d < $next; $d->modify('+1 day')) {
+            $dow = (int)$d->format('w');
+            if (_payroll_is_working_day($dow) && !_payroll_is_holiday($d->format('Y-m-d'))) {
+                $all_non_working = false;
+                break;
+            }
+            $gap_non_working++;
+        }
+
+        // Only count if the gap contains only non-working days
+        if ($all_non_working && $gap_non_working > 0)
+            $extra += $gap_non_working;
+    }
+
+    return $extra;
 }
 
 /**

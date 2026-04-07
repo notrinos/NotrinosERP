@@ -1966,7 +1966,6 @@ INSERT INTO `0_sys_prefs` VALUES
 ('max_days_in_docs','setup.company', 'smallint', 5, '180'),
 ('use_fixed_assets','setup.company', 'tinyint', 1, '1'),
 ('use_hrm','setup.company', 'tinyint', 1, '1'),
-('default_work_hours', 'setup.company', 'float', 5, '8'),
 ('weekend_day', 'setup.company', 'titnyint', 1, '7'),
 ('payroll_month_work_days', 'setup.company', 'float', '2', 26),
 ('payroll_payable_act', 'glsetup.hrm', 'varchar', 15, 2100),

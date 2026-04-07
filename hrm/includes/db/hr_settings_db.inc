@@ -58,6 +58,12 @@ function hr_setting_definitions() {
             'type' => 'varchar',
             'length' => 15,
             'default' => ''
+        ),
+        'calculate_extra_absent_days' => array(
+            'category' => 'hrm.attendance',
+            'type' => 'tinyint',
+            'length' => 1,
+            'default' => '0'
         )
     );
 }

@@ -17,7 +17,6 @@ class HrmApp extends application {
 		// Module 0: Transactions
 		// ═══════════════════════════════════════════════════════════
 		$this->add_module(_('Transactions'));
-		$this->add_lapp_function(0, _('Attenda&nce Entry'),         'hrm/transactions/attendance.php?',                    'SA_ATTENDANCE',       MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Attendance S&heet'),         'hrm/transactions/attendance_sheet.php?',              'SA_ATTENDANCE',       MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('&Leave Request'),            'hrm/transactions/leave_request.php?',                 'SA_LEAVEREQUEST',     MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Leave A&pproval'),           'hrm/transactions/leave_approval.php?',                'SA_LEAVEAPPROVE',     MENU_TRANSACTION);

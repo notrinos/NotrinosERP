@@ -250,3 +250,220 @@ function get_attendance($from, $to, $employee_id=0, $department=0, $time_id=0) {
 
 	return $sql;
 }
+
+/**
+ * Fetch all attendance records for a given month, keyed by employee_id and day.
+ *
+ * @param int $year
+ * @param int $month
+ * @param int $department_id Optional department filter.
+ * @param string $employee_id Optional single employee filter.
+ * @return array Nested: [employee_id][day_number] => row
+ */
+function get_monthly_attendance($year, $month, $department_id = 0, $employee_id = '') {
+	$from_sql = sprintf('%04d-%02d-01', (int)$year, (int)$month);
+	$days_in_month = (int)date('t', strtotime($from_sql));
+	$to_sql = sprintf('%04d-%02d-%02d', (int)$year, (int)$month, $days_in_month);
+
+	$sql = "SELECT a.* FROM ".TB_PREF."attendance a
+		INNER JOIN ".TB_PREF."employees e ON e.employee_id = a.employee_id
+		WHERE a.date BETWEEN '".$from_sql."' AND '".$to_sql."'
+		AND !e.inactive";
+
+	if (!empty($department_id))
+		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
+	if ($employee_id !== '')
+		$sql .= " AND a.employee_id = ".db_escape($employee_id);
+
+	$sql .= " ORDER BY a.employee_id, a.date";
+	$result = db_query($sql, 'could not get monthly attendance');
+
+	$data = array();
+	while ($row = db_fetch($result)) {
+		$day = (int)date('j', strtotime($row['date']));
+		$data[$row['employee_id']][$day] = $row;
+	}
+	return $data;
+}
+
+/**
+ * Fetch holidays that fall within a given month.
+ *
+ * Returns an array keyed by day number.
+ *
+ * @param int $year
+ * @param int $month
+ * @return array [day_number] => holiday_name
+ */
+function get_month_holidays($year, $month) {
+	$from_sql = sprintf('%04d-%02d-01', (int)$year, (int)$month);
+	$days_in_month = (int)date('t', strtotime($from_sql));
+	$to_sql = sprintf('%04d-%02d-%02d', (int)$year, (int)$month, $days_in_month);
+
+	$holidays = array();
+
+	$sql = "SELECT * FROM ".TB_PREF."holidays
+		WHERE (holiday_date BETWEEN '".$from_sql."' AND '".$to_sql."')
+		   OR (to_date IS NOT NULL AND to_date >= '".$from_sql."' AND holiday_date <= '".$to_sql."')
+		   OR (recurring = 1 AND DATE_FORMAT(holiday_date, '%m-%d') BETWEEN
+		       DATE_FORMAT('".$from_sql."', '%m-%d') AND DATE_FORMAT('".$to_sql."', '%m-%d'))";
+
+	$result = db_query($sql, 'could not get holidays');
+	while ($row = db_fetch($result)) {
+		$hstart = max(strtotime($from_sql), strtotime($row['holiday_date']));
+		$hend = !empty($row['to_date']) ? min(strtotime($to_sql), strtotime($row['to_date'])) : $hstart;
+		for ($ts = $hstart; $ts <= $hend; $ts += 86400) {
+			$d = (int)date('j', $ts);
+			$holidays[$d] = $row['holiday_name'];
+		}
+	}
+	return $holidays;
+}
+
+/**
+ * Build working-day map: DOW (0=Sun..6=Sat) => [is_working, work_hours].
+ *
+ * @return array
+ */
+function get_working_day_map() {
+	$map = array();
+	$result = db_query("SELECT * FROM ".TB_PREF."working_days ORDER BY day_of_week", 'could not get working days');
+	while ($row = db_fetch($result)) {
+		$map[(int)$row['day_of_week']] = array(
+			'is_working' => (int)$row['is_working'],
+			'work_hours' => (float)$row['work_hours']
+		);
+	}
+	return $map;
+}
+
+/**
+ * Fetch leave records covering a given month for display in the attendance sheet.
+ *
+ * @param int $year
+ * @param int $month
+ * @param int $department_id
+ * @param string $employee_id
+ * @return array Nested: [employee_id][day_number] => leave row
+ */
+/**
+ * Upsert attendance metadata (status, shift, clock times, notes) for an employee/date.
+ */
+function hrm_upsert_attendance_meta($employee_id, $date, $status, $shift_id, $clock_in, $clock_out, $notes='') {
+	$sql_date = date2sql($date);
+	$entry = get_attendance_entry($employee_id, $date);
+
+	$shift_sql = empty($shift_id) ? 'NULL' : db_escape($shift_id);
+	$clock_in_sql = trim($clock_in) === '' ? 'NULL' : db_escape($clock_in);
+	$clock_out_sql = trim($clock_out) === '' ? 'NULL' : db_escape($clock_out);
+	$notes_sql = trim($notes) === '' ? 'NULL' : db_escape($notes);
+
+	if ($entry) {
+		$sql = "UPDATE ".TB_PREF."attendance SET
+				status = ".db_escape((int)$status).",
+				shift_id = ".$shift_sql.",
+				clock_in = ".$clock_in_sql.",
+				clock_out = ".$clock_out_sql.",
+				notes = ".$notes_sql."
+			WHERE employee_id = ".db_escape($employee_id)."
+			AND date = '".$sql_date."'";
+		db_query($sql, 'could not update attendance meta');
+		return;
+	}
+
+	$sql = "INSERT INTO ".TB_PREF."attendance
+		(employee_id, date, shift_id, clock_in, clock_out, regular_hours, overtime_hours, overtime_type_id, status, source, rate, notes)
+		VALUES (
+			".db_escape($employee_id).",
+			'".$sql_date."',
+			".$shift_sql.",
+			".$clock_in_sql.",
+			".$clock_out_sql.",
+			0,
+			0,
+			NULL,
+			".db_escape((int)$status).",
+			0,
+			1,
+			".$notes_sql."
+		)";
+
+	db_query($sql, 'could not create attendance meta row');
+}
+
+/**
+ * Delete a single attendance record for an employee on a given SQL-format date.
+ *
+ * @param string $employee_id
+ * @param string $date_sql  Date in Y-m-d format.
+ * @return void
+ */
+function delete_attendance_record($employee_id, $date_sql) {
+	$sql = "DELETE FROM ".TB_PREF."attendance
+		WHERE employee_id = ".db_escape($employee_id)."
+		AND date = '".db_escape($date_sql)."'";
+	db_query($sql, 'could not delete attendance record');
+}
+
+/**
+ * Get active employees for the attendance sheet, optionally filtered.
+ * Returns a db result with employee_id, employee_name (for grid)
+ * or employee_id only when $ids_only = true (for bulk operations).
+ *
+ * @param int    $department_id  0 = all departments.
+ * @param string $employee_id    '' = all employees.
+ * @param bool   $ids_only       When true, select only employee_id.
+ * @return resource DB result
+ */
+function get_attendance_sheet_employees($department_id = 0, $employee_id = '', $ids_only = false) {
+	if ($ids_only) {
+		$select = "e.employee_id";
+	} else {
+		$select = "e.employee_id, CONCAT(e.first_name, ' ', e.last_name) AS employee_name";
+	}
+
+	$sql = "SELECT ".$select."
+		FROM ".TB_PREF."employees e
+		WHERE !e.inactive";
+
+	if (!empty($department_id))
+		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
+	if ($employee_id !== '')
+		$sql .= " AND e.employee_id = ".db_escape($employee_id);
+
+	if (!$ids_only)
+		$sql .= " ORDER BY e.first_name, e.last_name";
+
+	return db_query($sql, 'could not get attendance sheet employees');
+}
+
+function get_monthly_leaves($year, $month, $department_id = 0, $employee_id = '') {
+	$from_sql = sprintf('%04d-%02d-01', (int)$year, (int)$month);
+	$days_in_month = (int)date('t', strtotime($from_sql));
+	$to_sql = sprintf('%04d-%02d-%02d', (int)$year, (int)$month, $days_in_month);
+
+	$sql = "SELECT ld.*, lt.leave_name, lt.leave_code
+		FROM ".TB_PREF."leave_details ld
+		INNER JOIN ".TB_PREF."leave_types lt ON lt.leave_id = ld.leave_type_id
+		INNER JOIN ".TB_PREF."employees e ON e.employee_id = ld.employee_id
+		WHERE ld.from_date <= '".$to_sql."' AND ld.to_date >= '".$from_sql."'
+		AND ld.approval_status <> 'rejected'
+		AND !e.inactive";
+
+	if (!empty($department_id))
+		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
+	if ($employee_id !== '')
+		$sql .= " AND ld.employee_id = ".db_escape($employee_id);
+
+	$result = db_query($sql, 'could not get monthly leaves');
+	$data = array();
+	while ($row = db_fetch($result)) {
+		$ls = max(strtotime($from_sql), strtotime($row['from_date']));
+		$le = min(strtotime($to_sql), strtotime($row['to_date']));
+		for ($ts = $ls; $ts <= $le; $ts += 86400) {
+			$d = (int)date('j', $ts);
+			$data[$row['employee_id']][$d] = $row;
+		}
+	}
+	return $data;
+}
