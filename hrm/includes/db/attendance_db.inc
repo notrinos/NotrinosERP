@@ -401,7 +401,7 @@ function hrm_upsert_attendance_meta($employee_id, $date, $status, $shift_id, $cl
 function delete_attendance_record($employee_id, $date_sql) {
 	$sql = "DELETE FROM ".TB_PREF."attendance
 		WHERE employee_id = ".db_escape($employee_id)."
-		AND date = '".db_escape($date_sql)."'";
+		AND `date` = ".db_escape($date_sql);
 	db_query($sql, 'could not delete attendance record');
 }
 

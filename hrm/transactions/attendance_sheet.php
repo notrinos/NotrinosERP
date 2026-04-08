@@ -172,16 +172,17 @@ if (isset($_POST['delete_cell'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['bulk_fill'])) {
+    $emp_checks = isset($_POST['emp_check']) ? $_POST['emp_check'] : array();
+    if (empty($emp_checks)) {
+        display_error(_('No employees selected. Please check the rows to fill.'));
+    } else {
     $wd_map = get_working_day_map();
     $days_in_month = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
     $att_data = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id);
     $holidays = get_month_holidays($sel_year, $sel_month);
     $filled = 0;
 
-    $emp_result = get_attendance_sheet_employees($dept_id, $emp_id, true);
-
-    while ($emp = db_fetch($emp_result)) {
-        $eid = $emp['employee_id'];
+    foreach ($emp_checks as $eid) {
         for ($d = 1; $d <= $days_in_month; $d++) {
             $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
             $dow = (int)date('w', $ts);
@@ -205,6 +206,31 @@ if (isset($_POST['bulk_fill'])) {
         display_notification(sprintf(_('%d attendance records filled.'), $filled));
     else
         display_notification(_('No records to fill — all working days already have entries or are in the future.'));
+    } // end else emp_checks
+    $Ajax->activate('_page_body');
+}
+
+//----------------------------------------------------------------------
+// Bulk delete handler
+//----------------------------------------------------------------------
+
+if (isset($_POST['bulk_delete'])) {
+    $emp_checks = isset($_POST['emp_check']) ? $_POST['emp_check'] : array();
+    if (empty($emp_checks)) {
+        display_error(_('No employees selected for bulk delete.'));
+    } else {
+        $days_in_month_del = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
+        foreach ($emp_checks as $eid) {
+            for ($d = 1; $d <= $days_in_month_del; $d++) {
+                $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
+                $date_sql = date('Y-m-d', $ts);
+                $user_date = sql2date($date_sql);
+                if (check_date_paid($eid, $user_date)) continue;
+                delete_attendance_record($eid, $date_sql);
+            }
+        }
+        display_notification(sprintf(_('Bulk delete completed for %d employee(s).'), count($emp_checks)));
+    }
     $Ajax->activate('_page_body');
 }
 
@@ -260,9 +286,13 @@ if ($dept_id > 0)
     $emp_list_opts['where'] = array("e.department_id = ".db_escape($dept_id));
 employees_list_cells(_('Employee:'), 'employee_id', $emp_id, _('All employees'), true, false, false, $emp_list_opts);
 
-submit_cells('bulk_fill', _('Fill Working Days'), '', _('Auto-fill all working days with scheduled hours for selected employees'), false);
+check_cells(_('Select All Rows'), 'check_all_emp', null, false, _('Select/Deselect all employees'));
+submit_cells('bulk_fill', _('Fill Working Days'), '', _('Auto-fill all working days with scheduled hours for checked employees'), false);
+submit_cells('bulk_delete', _('Bulk Delete'), '', _('Delete ALL attendance records for checked employees in the selected month'), false);
 end_row();
 end_table(1);
+
+submit_js_confirm('bulk_delete', _('Delete ALL attendance records for checked employees in the selected month?'));
 
 //----------------------------------------------------------------------
 // Legend
@@ -293,7 +323,7 @@ echo '<div class="att-sheet-scroll">';
 echo '<table class="att-sheet-table tablestyle">';
 echo '<thead>';
 echo '<tr class="att-header">';
-echo '<th class="att-emp-id att-sticky-col">'._('ID').'</th>';
+echo '<th class="att-emp-id att-sticky-col"><input type="checkbox" id="check_all_emp_header" onclick="toggleAllEmpChecks(this.checked)"> '._('ID').'</th>';
 echo '<th class="att-emp-name att-sticky-col att-sticky-name">'._('Employee').'</th>';
 
 for ($d = 1; $d <= $days_in_month; $d++) {
@@ -338,7 +368,7 @@ foreach ($employees as $emp) {
 
     $row_class = ($k % 2 == 0) ? 'att-row-even' : 'att-row-odd';
     echo '<tr class="'.$row_class.'">';
-    echo '<td class="att-emp-id att-sticky-col">'.htmlspecialchars($eid).'</td>';
+    echo '<td class="att-emp-id att-sticky-col"><input type="checkbox" name="emp_check[]" value="'.htmlspecialchars($eid, ENT_QUOTES).'" class="emp-check"> '.htmlspecialchars($eid).'</td>';
     echo '<td class="att-emp-name att-sticky-col att-sticky-name">'.htmlspecialchars($emp['employee_name']).'</td>';
 
     for ($d = 1; $d <= $days_in_month; $d++) {
@@ -535,6 +565,33 @@ function closeAttModal() {
 document.addEventListener("keydown", function(e) {
     if (e.key === "Escape") closeAttModal();
 });
+
+function toggleAllEmpChecks(checked) {
+    var boxes = document.querySelectorAll("input.emp-check");
+    for (var i = 0; i < boxes.length; i++) {
+        boxes[i].checked = checked;
+    }
+    var hdr = document.getElementById("check_all_emp_header");
+    if (hdr) hdr.checked = checked;
+    var flt = document.getElementsByName("check_all_emp");
+    if (flt.length) flt[0].checked = checked;
+}
+
+// Bind the check_all_emp checkbox (generated by check_cells)
+(function() {
+    var cb = document.getElementsByName("check_all_emp");
+    if (cb.length) {
+        cb[0].addEventListener("click", function() {
+            toggleAllEmpChecks(this.checked);
+        });
+    }
+    var hdr = document.getElementById("check_all_emp_header");
+    if (hdr) {
+        hdr.addEventListener("click", function() {
+            toggleAllEmpChecks(this.checked);
+        });
+    }
+})();
 </script>';
 
 end_page();
