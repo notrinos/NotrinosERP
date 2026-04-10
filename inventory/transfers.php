@@ -34,6 +34,9 @@ if (isset($_GET['NewTransfer'])) {
 	else
 		$_SESSION['page_title'] = _($help_context = 'Inventory Location Transfers');
 }
+if (!isset($_SESSION['page_title']) || !in_array($_SESSION['page_title'], array(_('Inventory Location Transfers'), _('Fixed Assets Location Transfers')))) {
+	$_SESSION['page_title'] = _($help_context = 'Inventory Location Transfers');
+}
 
 page($_SESSION['page_title'], false, false, '', $js);
 

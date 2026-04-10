@@ -34,6 +34,9 @@ if (isset($_GET['NewAdjustment'])) {
 		$_SESSION['page_title'] = _($help_context = 'Item Adjustments Note');
 	}
 }
+if (!isset($_SESSION['page_title']) || !in_array($_SESSION['page_title'], array(_('Item Adjustments Note'), _('Fixed Assets Disposal')))) {
+	$_SESSION['page_title'] = _($help_context = 'Item Adjustments Note');
+}
 page($_SESSION['page_title'], false, false, '', $js);
 
 //-----------------------------------------------------------------------------------------------
