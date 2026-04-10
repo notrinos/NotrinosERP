@@ -76,7 +76,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	delete_item_code($selected_id);
 	
-	display_notification(_('Item code has been sucessfully deleted.'));
+	display_notification(_('Item code has been successfully deleted.'));
 	$Mode = 'RESET';
 }
 

@@ -162,6 +162,7 @@ if ($Mode == 'RESET') {
 	$selected_id = -1;
 	unset($_POST['quantity']);
 	unset($_POST['component']);
+	unset($_POST['description']);
 }
 
 //--------------------------------------------------------------------------------------------------

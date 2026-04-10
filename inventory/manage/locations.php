@@ -102,6 +102,10 @@ function can_delete($selected_id) {
 		display_error(_('Cannot delete this location because it is used by some related records in other tables.'));
 		return false;
 	}
+	if (key_in_foreign_table($selected_id, 'wh_locations', 'warehouse_loc_code')) {
+		display_error(_('Cannot delete this location because it has warehouse management (WMS) bin locations defined. Please remove all WMS locations first.'));
+		return false;
+	}
 	return true;
 }
 

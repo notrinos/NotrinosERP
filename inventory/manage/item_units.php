@@ -42,6 +42,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error(_('The unit of measure description cannot be empty.'));
 		set_focus('description');
 	}
+	if ($input_error != 1 && $selected_id == '') {
+		$existing = get_item_unit($_POST['abbr']);
+		if ($existing) {
+			$input_error = 1;
+			display_error(_('This unit of measure abbreviation already exists. Please use a different code.'));
+			set_focus('abbr');
+		}
+	}
 
 	if ($input_error !=1) {
 		write_item_unit($selected_id, $_POST['abbr'], $_POST['description'], $_POST['decimals'] );
