@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
-	global $Refs;
+	global $Refs, $path_to_root;
 
 	// FIXME: support for WO_UNASSEMBLY case
 	begin_transaction();
@@ -75,6 +75,212 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 		update_material_cost($product['stock_id'], $product['units_issued']+$quantity, $unit_cost, $date_);
 
 		add_stock_move(ST_WORKORDER, $product['stock_id'], $woid, $product['loc_code'], $date_, $ref, $product['units_issued']+$quantity, $unit_cost);
+	}
+
+	// --- Serial/Batch tracking for finished goods production ---
+	$tracking_root = $path_to_root . '/inventory/includes/db';
+	if (file_exists($tracking_root . '/serial_batch_db.inc')) {
+		include_once($tracking_root . '/serial_batch_db.inc');
+		include_once($tracking_root . '/serial_numbers_db.inc');
+		include_once($tracking_root . '/stock_batches_db.inc');
+		include_once($path_to_root . '/manufacturing/includes/db/production_traceability_db.inc');
+
+		$tracking_mode = get_item_tracking_mode($product['stock_id']);
+		$finished_serial_ids = array();
+		$finished_batch_id = null;
+
+		// Only process if producing (not unassembling, quantity > 0)
+		if ($tracking_mode !== 'none' && $quantity > 0) {
+
+			// --- Serial tracking for finished goods ---
+			if (item_has_serial_tracking($product['stock_id'])) {
+				$serial_text = isset($_POST['produce_serials']) ? trim($_POST['produce_serials']) : '';
+				if (!empty($serial_text)) {
+					$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+					foreach ($serial_entries as $sn) {
+						$sn = trim($sn);
+						if (empty($sn)) continue;
+						// Check for duplicates
+						$existing = get_serial_number_by_code($sn, $product['stock_id']);
+						if ($existing) continue;
+						// Create new serial for produced item
+						$sid = add_serial_number(
+							$sn,
+							$product['stock_id'],
+							'available',
+							$product['loc_code'],
+							null, // wh_loc_id
+							null, // batch_id (set below if both serial+batch)
+							null, // supplier_id
+							null, // purchase_date
+							$date_, // manufacturing_date
+							null, // expiry_date
+							null, // warranty_start
+							null, // warranty_end
+							null, // warranty_type
+							$closed ? $unit_cost : 0,
+							null, // grn_id
+							sprintf(_('Produced from WO #%d'), $woid)
+						);
+						if ($sid) {
+							$finished_serial_ids[] = $sid;
+							add_serial_movement($sid, ST_MANURECEIVE, $id,
+								null, $product['loc_code'],
+								'', 'available',
+								$date_, $ref,
+								sprintf(_('Produced from WO #%d'), $woid));
+						}
+					}
+				} else {
+					// Auto-generate serials
+					for ($i = 0; $i < (int)$quantity; $i++) {
+						$sn = generate_serial_number($product['stock_id']);
+						$sid = add_serial_number(
+							$sn,
+							$product['stock_id'],
+							'available',
+							$product['loc_code'],
+							null, null, null, null,
+							$date_, null, null, null, null,
+							$closed ? $unit_cost : 0,
+							null,
+							sprintf(_('Auto-generated from WO #%d'), $woid)
+						);
+						if ($sid) {
+							$finished_serial_ids[] = $sid;
+							add_serial_movement($sid, ST_MANURECEIVE, $id,
+								null, $product['loc_code'],
+								'', 'available',
+								$date_, $ref,
+								sprintf(_('Auto-produced from WO #%d'), $woid));
+						}
+					}
+				}
+			}
+
+			// --- Batch tracking for finished goods ---
+			if (item_has_batch_tracking($product['stock_id'])) {
+				$batch_no_input = isset($_POST['produce_batch_no']) ? trim($_POST['produce_batch_no']) : '';
+				$batch_expiry = isset($_POST['produce_batch_expiry']) ? trim($_POST['produce_batch_expiry']) : '';
+				$batch_mfg = $date_;
+
+				if (empty($batch_no_input)) {
+					$batch_no_input = generate_batch_number($product['stock_id']);
+				}
+
+				// Calculate expiry from shelf life if not provided
+				if (empty($batch_expiry)) {
+					$item_data = get_item($product['stock_id']);
+					if ($item_data && !empty($item_data['shelf_life_days'])) {
+						$batch_expiry = add_days($date_, (int)$item_data['shelf_life_days']);
+					}
+				}
+
+				$finished_batch_id = add_stock_batch(
+					$batch_no_input,
+					$product['stock_id'],
+					'active',
+					$batch_mfg,      // manufacturing_date
+					$batch_expiry,    // expiry_date
+					null, null, null, // best_before, retest, shelf_life_days
+					null,             // supplier_id
+					null,             // supplier_batch_no
+					null,             // grn_id
+					$woid,            // work_order_id
+					$quantity,        // initial_qty
+					null, null,       // country, certification
+					sprintf(_('Produced from WO #%d'), $woid)
+				);
+
+				if ($finished_batch_id) {
+					add_batch_movement($finished_batch_id, ST_MANURECEIVE, $id,
+						$product['loc_code'], null, $quantity, $date_, $ref,
+						sprintf(_('Produced from WO #%d'), $woid));
+
+					// If we also generated serials, link them to the batch
+					foreach ($finished_serial_ids as $fs_id) {
+						$sql = "UPDATE " . TB_PREF . "serial_numbers SET batch_id=" . (int)$finished_batch_id
+							. " WHERE id=" . (int)$fs_id;
+						db_query($sql, 'could not link serial to batch');
+					}
+				}
+			}
+
+			// --- Update traceability: link finished serials/batch to component records ---
+			// Find existing traceability records for this WO (created during component issue)
+			// and update them with the finished product identifiers
+			if (!empty($finished_serial_ids) || $finished_batch_id) {
+				$trace_sql = "SELECT id FROM " . TB_PREF . "production_traceability"
+					. " WHERE work_order_id=" . (int)$woid
+					. " AND finished_serial_id IS NULL AND finished_batch_id IS NULL";
+				$trace_result = db_query($trace_sql, 'could not get traceability records');
+
+				while ($trace_row = db_fetch($trace_result)) {
+					$update_sets = array();
+					if (!empty($finished_serial_ids)) {
+						// Always link the first finished serial to existing records
+						$update_sets[] = "finished_serial_id=" . (int)$finished_serial_ids[0];
+					}
+					if ($finished_batch_id) {
+						$update_sets[] = "finished_batch_id=" . (int)$finished_batch_id;
+					}
+					if (!empty($update_sets)) {
+						$sql = "UPDATE " . TB_PREF . "production_traceability SET "
+							. implode(', ', $update_sets)
+							. " WHERE id=" . (int)$trace_row['id'];
+						db_query($sql, 'could not update traceability');
+					}
+				}
+
+				// If multiple finished serials, we need to create additional traceability records
+				// for each finished serial beyond the first (the first was updated in place)
+				if (count($finished_serial_ids) > 1) {
+					// Get component records for this WO
+					$comp_sql = "SELECT DISTINCT component_stock_id, component_serial_id, component_batch_id, component_qty"
+						. " FROM " . TB_PREF . "production_traceability"
+						. " WHERE work_order_id=" . (int)$woid;
+					$comp_result = db_query($comp_sql, 'could not get component records');
+					$components = array();
+					while ($cr = db_fetch($comp_result)) {
+						$components[] = $cr;
+					}
+
+					// For each additional finished serial, duplicate the component links
+					for ($i = 1; $i < count($finished_serial_ids); $i++) {
+						foreach ($components as $comp) {
+							add_production_traceability(
+								$woid,
+								$finished_serial_ids[$i],
+								$finished_batch_id,
+								$comp['component_stock_id'],
+								!empty($comp['component_serial_id']) ? (int)$comp['component_serial_id'] : null,
+								!empty($comp['component_batch_id']) ? (int)$comp['component_batch_id'] : null,
+								(float)$comp['component_qty']
+							);
+						}
+					}
+				}
+			}
+
+			// --- QC check: if item requires quality inspection, create inspection record ---
+			$item_data = get_item($product['stock_id']);
+			if ($item_data && !empty($item_data['quality_inspection_required'])) {
+				// Mark serials as quarantine pending inspection
+				foreach ($finished_serial_ids as $fs_id) {
+					update_serial_status(
+						$fs_id,
+						'quarantine',
+						ST_MANURECEIVE,
+						$id,
+						$product['loc_code'],
+						$product['loc_code'],
+						$date_,
+						$ref,
+						_('Held for quality inspection after production')
+					);
+				}
+			}
+		}
 	}
 
 	if ($memo)

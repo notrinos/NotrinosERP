@@ -553,7 +553,52 @@ function remove_not_invoice_item($id) {
 	if ($supp['tax_included'])
 		$price = get_tax_free_price_for_item($myrow['item_code'], $myrow['unit_price'], $supp['tax_group_id'], $supp['tax_included']);        
 
-	add_stock_move(ST_SUPPRECEIVE, $myrow['item_code'], $myrow['grn_batch_id'], $grn['loc_code'], sql2date($grn['delivery_date']), '', -$myrow['QtyOstdg'], $myrow['std_cost_unit'], $price);
+	// --- Advanced Inventory: serial/batch tracking for GRN removal ---
+	$extended = array();
+	$serial_batch_db_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/includes/db/serial_batch_db.inc';
+	if (file_exists($serial_batch_db_path)) {
+		include_once($serial_batch_db_path);
+		$tracking_mode = get_item_tracking_mode($myrow['item_code']);
+
+		if ($tracking_mode !== 'none') {
+			if (isset($myrow['batch_id']) && $myrow['batch_id']) {
+				$extended['batch_id'] = (int)$myrow['batch_id'];
+			}
+			if (isset($myrow['serial_numbers_json']) && !empty($myrow['serial_numbers_json'])) {
+				$serial_ids = json_decode($myrow['serial_numbers_json'], true);
+				if (is_array($serial_ids) && !empty($serial_ids)) {
+					$extended['serial_id'] = (int)reset($serial_ids);
+				}
+			}
+			if (isset($myrow['expiry_date']) && !empty($myrow['expiry_date'])) {
+				$extended['expiry_date'] = $myrow['expiry_date'];
+			}
+			$extended['stock_status'] = 'available';
+		}
+	}
+
+	if (!empty($extended)) {
+		add_stock_move_extended(ST_SUPPRECEIVE, $myrow['item_code'], $myrow['grn_batch_id'],
+			$grn['loc_code'], sql2date($grn['delivery_date']), '',
+			-$myrow['QtyOstdg'], $myrow['std_cost_unit'], $price, $extended);
+	} else {
+		add_stock_move(ST_SUPPRECEIVE, $myrow['item_code'], $myrow['grn_batch_id'],
+			$grn['loc_code'], sql2date($grn['delivery_date']), '',
+			-$myrow['QtyOstdg'], $myrow['std_cost_unit'], $price);
+	}
+
+	// --- Advanced Inventory: WMS GRN removal tracking ---
+	$wms_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/warehouse/includes/warehouse_operations.inc';
+	if (file_exists($wms_ops_path)) {
+		include_once($wms_ops_path);
+		if (function_exists('process_grn_removal_tracking')) {
+			process_grn_removal_tracking(
+				$myrow, $grn, -$myrow['QtyOstdg']
+			);
+		}
+	}
 
 	$clearing_act = get_company_pref('grn_clearing_act');
 	if ($clearing_act) {    // otherwise GRN clearing account is not used

@@ -167,6 +167,85 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 		} /*quantity dispatched is more than 0 */
 	} /*end of order_line loop */
 
+	// --- Serial/Batch + WMS outbound integration ---
+	$wms_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/warehouse/includes/warehouse_operations.inc';
+	if (file_exists($wms_ops_path)) {
+		include_once($wms_ops_path);
+		if (function_exists('process_delivery_tracking_and_wms')) {
+			process_delivery_tracking_and_wms($delivery, $delivery_no, $delivery->document_date, $delivery->Location);
+		}
+	}
+
+	// --- Warranty provision accrual at delivery ---
+	$warranty_prov_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/includes/db/warranty_provision_db.inc';
+	if (file_exists($warranty_prov_path)) {
+		include_once($warranty_prov_path);
+		if (function_exists('process_delivery_warranty_provisions')) {
+			process_delivery_warranty_provisions($delivery, $delivery_no, $delivery->document_date);
+		}
+	}
+
+	// --- Regulatory compliance — DSCSA + FSMA 204 auto-generation ---
+	$reg_compliance_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/includes/db/regulatory_compliance_db.inc';
+	if (file_exists($reg_compliance_path)) {
+		include_once($reg_compliance_path);
+		$dscsa_enabled = get_company_pref('dscsa_enabled');
+		$fsma_enabled = get_company_pref('fsma204_enabled');
+
+		if ($dscsa_enabled) {
+			$dscsa_path = dirname(dirname(dirname(dirname(__FILE__))))
+				. '/inventory/includes/regulatory_dscsa.inc';
+			if (file_exists($dscsa_path)) {
+				include_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/inventory/includes/gs1_standards.inc');
+				include_once($dscsa_path);
+				if (function_exists('generate_dscsa_transaction_info')) {
+					generate_dscsa_transaction_info($delivery_no, $delivery->document_date, $delivery->customer_id);
+				}
+			}
+		}
+
+		if ($fsma_enabled) {
+			$fsma_path = dirname(dirname(dirname(dirname(__FILE__))))
+				. '/inventory/includes/regulatory_fsma204.inc';
+			if (file_exists($fsma_path)) {
+				include_once($fsma_path);
+				if (function_exists('auto_fsma_shipping_event')) {
+					// Generate FSMA shipping CTEs for each regulated line item
+					$fsma_sql = "SELECT dl.stock_id, dl.qty_dispatched, sm.units
+						FROM " . TB_PREF . "debtor_trans_details dl
+						INNER JOIN " . TB_PREF . "stock_master sm ON dl.stock_id = sm.stock_id
+						WHERE dl.debtor_trans_no=" . (int)$delivery_no
+						. " AND dl.debtor_trans_type=" . ST_CUSTDELIVERY
+						. " AND dl.qty_dispatched != 0";
+					$fsma_lines = db_query($fsma_sql, 'could not get lines for FSMA CTE');
+					while ($fl = db_fetch($fsma_lines)) {
+						if (is_item_regulated($fl['stock_id'], REG_FSMA204)) {
+							// Find associated batch(es) for this line
+							$fb_sql = "SELECT bm.batch_id, sb.batch_no
+								FROM " . TB_PREF . "batch_movements bm
+								INNER JOIN " . TB_PREF . "stock_batches sb ON bm.batch_id = sb.id
+								WHERE bm.trans_type=" . ST_CUSTDELIVERY
+								. " AND bm.trans_no=" . (int)$delivery_no
+								. " AND bm.stock_id=" . db_escape($fl['stock_id'])
+								. " AND bm.qty < 0";
+							$fb_res = db_query($fb_sql, 'could not get batches for FSMA CTE');
+							while ($fb = db_fetch($fb_res)) {
+								auto_fsma_shipping_event(
+									$delivery_no, $fl['stock_id'], $fb['batch_id'],
+									$fb['batch_no'], abs($fl['qty_dispatched']),
+									$fl['units'], $delivery->customer_id, $delivery->Location
+								);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	if ($delivery->is_prepaid()) {
 		$deferred_act = get_company_pref('deferred_income_act');
 		add_gl_trans(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date, $deferred_act, 0, 0, 

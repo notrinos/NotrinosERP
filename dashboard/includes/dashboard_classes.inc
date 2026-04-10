@@ -1083,3 +1083,162 @@ function dashboard_crm_leads_by_source() {
 
 	return db_query($sql, _('Could not get leads by source'));
 }
+
+//--------------------------------------------------------------------
+// Advanced Inventory Dashboard Functions
+//--------------------------------------------------------------------
+
+/**
+ * Get items expiring within the given number of days (batch tracking).
+ *
+ * @param int $days Number of days to look ahead
+ * @param int $limit Maximum rows to return
+ * @return resource DB result with columns: stock_id, description, batch_no, expiry_date, qty_on_hand, location_name
+ */
+function dashboard_get_expiring_batches($days = 30, $limit = 10) {
+	if (!dashboard_table_exists('stock_batch_tracking'))
+		return db_query("SELECT 1 WHERE 0", _('Table not found'));
+
+	$cutoff = date('Y-m-d', strtotime("+{$days} days"));
+	$sql = "SELECT bt.stock_id, s.description, bt.batch_no, bt.expiry_date,
+			bt.quantity AS qty_on_hand, l.location_name
+		FROM ".TB_PREF."stock_batch_tracking bt
+		INNER JOIN ".TB_PREF."stock_master s ON bt.stock_id = s.stock_id
+		LEFT JOIN ".TB_PREF."locations l ON bt.loc_code = l.loc_code
+		WHERE bt.expiry_date IS NOT NULL
+			AND bt.expiry_date <= ".db_escape($cutoff)."
+			AND bt.expiry_date >= CURDATE()
+			AND bt.quantity > 0
+		ORDER BY bt.expiry_date ASC
+		LIMIT ".db_escape($limit);
+
+	return db_query($sql, _('Could not get expiring batches'));
+}
+
+/**
+ * Get warranty items expiring within the given number of days.
+ *
+ * @param int $days Number of days to look ahead
+ * @param int $limit Maximum rows to return
+ * @return resource DB result with columns: stock_id, description, serial_no, warranty_end, debtor_name
+ */
+function dashboard_get_warranty_expiring($days = 30, $limit = 10) {
+	if (!dashboard_table_exists('stock_warranty'))
+		return db_query("SELECT 1 WHERE 0", _('Table not found'));
+
+	$cutoff = date('Y-m-d', strtotime("+{$days} days"));
+	$sql = "SELECT w.stock_id, s.description, w.serial_no, w.warranty_end,
+			COALESCE(d.name, '') AS debtor_name
+		FROM ".TB_PREF."stock_warranty w
+		INNER JOIN ".TB_PREF."stock_master s ON w.stock_id = s.stock_id
+		LEFT JOIN ".TB_PREF."debtors_master d ON w.debtor_no = d.debtor_no
+		WHERE w.warranty_end IS NOT NULL
+			AND w.warranty_end <= ".db_escape($cutoff)."
+			AND w.warranty_end >= CURDATE()
+		ORDER BY w.warranty_end ASC
+		LIMIT ".db_escape($limit);
+
+	return db_query($sql, _('Could not get expiring warranties'));
+}
+
+/**
+ * Count pending quality inspections.
+ *
+ * @return int Number of pending QC inspections
+ */
+function dashboard_count_pending_qc() {
+	if (!dashboard_table_exists('stock_qc_inspections'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) AS cnt
+		FROM ".TB_PREF."stock_qc_inspections
+		WHERE result = 'pending'";
+
+	$result = db_query($sql, _('Could not count pending QC'));
+	$row = db_fetch($result);
+	return $row ? $row['cnt'] : 0;
+}
+
+/**
+ * Get serial number status summary counts.
+ *
+ * @return resource DB result with columns: status, total
+ */
+function dashboard_get_serial_status_summary() {
+	if (!dashboard_table_exists('stock_serial_tracking'))
+		return db_query("SELECT 1 WHERE 0", _('Table not found'));
+
+	$sql = "SELECT
+			CASE
+				WHEN st.is_sold = 1 THEN '"._('Sold')."'
+				WHEN st.is_scrapped = 1 THEN '"._('Scrapped')."'
+				WHEN st.quantity > 0 THEN '"._('In Stock')."'
+				ELSE '"._('Other')."'
+			END AS status,
+			COUNT(*) AS total
+		FROM ".TB_PREF."stock_serial_tracking st
+		GROUP BY status
+		ORDER BY total DESC";
+
+	return db_query($sql, _('Could not get serial status summary'));
+}
+
+/**
+ * Count items currently under active recall.
+ *
+ * @return int Number of active recalls
+ */
+function dashboard_count_active_recalls() {
+	if (!dashboard_table_exists('stock_recalls'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) AS cnt
+		FROM ".TB_PREF."stock_recalls
+		WHERE status = 'active'";
+
+	$result = db_query($sql, _('Could not count active recalls'));
+	$row = db_fetch($result);
+	return $row ? $row['cnt'] : 0;
+}
+
+/**
+ * Get items currently in quarantine (from QC holds).
+ *
+ * @param int $limit Maximum rows to return
+ * @return resource DB result with columns: stock_id, description, batch_no, qty, location_name, hold_date
+ */
+function dashboard_get_quarantine_items($limit = 10) {
+	if (!dashboard_table_exists('stock_qc_inspections'))
+		return db_query("SELECT 1 WHERE 0", _('Table not found'));
+
+	$sql = "SELECT qi.stock_id, s.description,
+			COALESCE(qi.batch_no, qi.serial_no, '') AS batch_no,
+			qi.quantity AS qty, COALESCE(l.location_name, '') AS location_name,
+			qi.inspection_date AS hold_date
+		FROM ".TB_PREF."stock_qc_inspections qi
+		INNER JOIN ".TB_PREF."stock_master s ON qi.stock_id = s.stock_id
+		LEFT JOIN ".TB_PREF."locations l ON qi.loc_code = l.loc_code
+		WHERE qi.result = 'quarantine'
+		ORDER BY qi.inspection_date DESC
+		LIMIT ".db_escape($limit);
+
+	return db_query($sql, _('Could not get quarantine items'));
+}
+
+/**
+ * Count open (unresolved) warranty claims.
+ *
+ * @return int Number of open warranty claims
+ */
+function dashboard_count_open_warranty_claims() {
+	if (!dashboard_table_exists('stock_warranty_claims'))
+		return 0;
+
+	$sql = "SELECT COUNT(*) AS cnt
+		FROM ".TB_PREF."stock_warranty_claims
+		WHERE status IN ('open', 'pending')";
+
+	$result = db_query($sql, _('Could not count open warranty claims'));
+	$row = db_fetch($result);
+	return $row ? $row['cnt'] : 0;
+}

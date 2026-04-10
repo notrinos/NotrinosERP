@@ -28,11 +28,16 @@ function add_stock_transfer($Items, $location_from, $location_to, $date_, $refer
 		$st_num = array();
 		$st_reorder = array();
 	}
+	$line_no = 0;
 	foreach ($Items as $line_item) {
 		if ($SysPrefs->loc_notification() == 1)
 			$loc = calculate_reorder_level($location_from, $line_item, $st_ids, $st_names, $st_num, $st_reorder);
 		add_stock_transfer_item($transfer_id, $line_item->stock_id, $location_from, $location_to, $date_, $reference, $line_item->quantity);
+		$line_no++;
 	}
+
+	// --- Serial/batch tracking for simple transfers ---
+	process_transfer_tracking($Items, $transfer_id, $location_from, $location_to, $date_, $reference);
 
 	add_comments(ST_LOCTRANSFER, $transfer_id, $date_, $memo_);
 
@@ -94,4 +99,136 @@ function get_stock_transfer_items($trans_no) {
 function void_stock_transfer($type_no) {
 	hook_db_prevoid(ST_LOCTRANSFER, $type_no);
 	void_stock_move(ST_LOCTRANSFER, $type_no);
+}
+
+/**
+ * Process serial/batch tracking for simple inventory transfers.
+ *
+ * Reads POST data (transfer_serial_{line_no}, transfer_batch_{line_no}) and
+ * updates serial locations, logs batch movements, and updates bin stock.
+ *
+ * @param array  $items         Line items from cart
+ * @param int    $transfer_id   Transaction number
+ * @param string $location_from Source location code
+ * @param string $location_to   Destination location code
+ * @param string $date_         Transfer date (display format)
+ * @param string $reference     Reference string
+ */
+function process_transfer_tracking($items, $transfer_id, $location_from, $location_to, $date_, $reference) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+
+	$line_no = 0;
+	foreach ($items as $line_item) {
+		$stock_id = $line_item->stock_id;
+		$qty = $line_item->quantity;
+		$tracking_mode = get_item_tracking_mode($stock_id);
+
+		if ($tracking_mode === 'none') {
+			$line_no++;
+			continue;
+		}
+
+		// --- Serial number processing ---
+		if (item_has_serial_tracking($stock_id)) {
+			$serial_key = 'transfer_serial_' . $line_no;
+			$serial_text = isset($_POST[$serial_key]) ? trim($_POST[$serial_key]) : '';
+
+			if (!empty($serial_text)) {
+				$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+				foreach ($serial_entries as $sn) {
+					$sn = trim($sn);
+					if (empty($sn)) continue;
+
+					// Find the serial by number and item at source location
+					$serial = get_serial_number_by_code($sn, $stock_id);
+					if ($serial && $serial['status'] === 'available') {
+						$sid = (int)$serial['id'];
+
+						// Update serial location to destination
+						$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
+							. "loc_code=" . db_escape($location_to)
+							. " WHERE id=" . (int)$sid;
+						db_query($sql, 'could not update serial location for transfer');
+
+						// Log serial movement
+						add_serial_movement(
+							$sid,
+							ST_LOCTRANSFER,
+							$transfer_id,
+							$location_from,
+							$location_to,
+							'available',
+							'available',
+							$date_,
+							$reference,
+							sprintf(_('Transferred from %s to %s'), $location_from, $location_to)
+						);
+					}
+				}
+			}
+		}
+
+		// --- Batch/Lot processing ---
+		if (item_has_batch_tracking($stock_id)) {
+			$batch_key = 'transfer_batch_' . $line_no;
+			$batch_input = isset($_POST[$batch_key]) ? trim($_POST[$batch_key]) : '';
+
+			if (!empty($batch_input)) {
+				// Format: "batch_id:qty,batch_id:qty" or "batch_id" for full qty
+				$batch_entries = preg_split('/[\r\n;]+/', $batch_input);
+				$remaining_qty = $qty;
+
+				foreach ($batch_entries as $entry) {
+					$entry = trim($entry);
+					if (empty($entry) || $remaining_qty <= 0) continue;
+
+					if (strpos($entry, ':') !== false) {
+						list($bid, $bqty) = explode(':', $entry, 2);
+						$bid = (int)trim($bid);
+						$bqty = (float)trim($bqty);
+					} else {
+						$bid = (int)$entry;
+						$bqty = $remaining_qty;
+					}
+
+					if ($bid > 0 && $bqty > 0) {
+						$alloc_qty = min($bqty, $remaining_qty);
+						$remaining_qty -= $alloc_qty;
+
+						// Log outbound batch movement from source
+						add_batch_movement(
+							$bid,
+							ST_LOCTRANSFER,
+							$transfer_id,
+							$location_from,
+							null,
+							-$alloc_qty,
+							$date_,
+							$reference,
+							sprintf(_('Transfer out to %s'), $location_to)
+						);
+
+						// Log inbound batch movement at destination
+						add_batch_movement(
+							$bid,
+							ST_LOCTRANSFER,
+							$transfer_id,
+							$location_to,
+							null,
+							$alloc_qty,
+							$date_,
+							$reference,
+							sprintf(_('Transfer in from %s'), $location_from)
+						);
+					}
+				}
+			}
+		}
+
+		$line_no++;
+	}
 }

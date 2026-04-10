@@ -23,6 +23,14 @@ include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_ui.inc');
 include_once($path_to_root.'/manufacturing/includes/work_order_issue_ui.inc');
 
+// Load serial/batch tracking if available
+if (file_exists($path_to_root.'/inventory/includes/db/serial_batch_db.inc')) {
+	include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/stock_batches_db.inc');
+	include_once($path_to_root.'/inventory/includes/serial_batch_ui.inc');
+}
+
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(800, 500);

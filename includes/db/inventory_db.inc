@@ -386,6 +386,73 @@ function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $referen
 	return db_insert_id();
 }
 
+/**
+ * Extended stock move function that records serial/batch + WMS bin tracking columns.
+ *
+ * Backward-compatible: when no extended params given, behaves identically to add_stock_move().
+ *
+ * @param int    $type       ST_ transaction type constant
+ * @param string $stock_id   Item code
+ * @param int    $trans_no   Transaction number
+ * @param string $location   Location code (loc_code from 0_locations)
+ * @param string $date_      Transaction date (display format)
+ * @param string $reference  Document reference
+ * @param float  $quantity   Quantity moved
+ * @param float  $std_cost   Standard cost (HOME currency)
+ * @param float  $price      Unit price (transaction currency)
+ * @param array  $extended   Optional extended params:
+ *   'serial_id'       => int     FK to serial_numbers
+ *   'batch_id'        => int     FK to stock_batches
+ *   'expiry_date'     => string  SQL date (Y-m-d)
+ *   'quality_status'  => string  none|pending|pass|fail
+ *   'from_bin_id'     => int     FK to wh_locations (source bin)
+ *   'to_bin_id'       => int     FK to wh_locations (dest bin)
+ *   'wh_operation_id' => int     FK to wh_operations
+ *   'package_id'      => int     FK to wh_packages
+ *   'stock_status'    => string  available|reserved|on_hold|quarantine|in_transit
+ * @return int  Inserted trans_id
+ */
+function add_stock_move_extended($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $price = 0, $extended = array()) {
+
+	// Build base columns
+	$columns = "stock_id, trans_no, type, loc_code, tran_date, reference, qty, standard_cost, price";
+	$values = db_escape($stock_id) . ", " . db_escape($trans_no) . ", "
+		. db_escape($type) . ", " . db_escape($location) . ", '" . date2sql($date_) . "', "
+		. db_escape($reference) . ", "
+		. db_escape($quantity) . ", " . db_escape($std_cost) . ", " . db_escape($price);
+
+	// Extended columns
+	$ext_map = array(
+		'serial_id'       => 'serial_id',
+		'batch_id'        => 'batch_id',
+		'expiry_date'     => 'expiry_date',
+		'quality_status'  => 'quality_status',
+		'from_bin_id'     => 'from_bin_id',
+		'to_bin_id'       => 'to_bin_id',
+		'wh_operation_id' => 'wh_operation_id',
+		'package_id'      => 'package_id',
+		'stock_status'    => 'stock_status',
+	);
+
+	foreach ($ext_map as $key => $col) {
+		if (isset($extended[$key]) && $extended[$key] !== null && $extended[$key] !== '') {
+			$columns .= ", " . $col;
+			if (in_array($key, array('serial_id', 'batch_id', 'from_bin_id', 'to_bin_id', 'wh_operation_id', 'package_id'))) {
+				$values .= ", " . (int)$extended[$key];
+			} elseif ($key === 'expiry_date') {
+				$values .= ", " . db_escape($extended[$key]);
+			} else {
+				$values .= ", " . db_escape($extended[$key]);
+			}
+		}
+	}
+
+	$sql = "INSERT INTO " . TB_PREF . "stock_moves ($columns) VALUES ($values)";
+	db_query($sql, 'The extended stock movement record cannot be inserted');
+
+	return db_insert_id();
+}
+
 function update_stock_move($type, $trans_no, $stock_id, $cost) {
 	$sql = "UPDATE ".TB_PREF."stock_moves SET standard_cost=".db_escape($cost)
 		." WHERE type=".db_escape($type)

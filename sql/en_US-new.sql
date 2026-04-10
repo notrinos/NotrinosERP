@@ -818,6 +818,11 @@ CREATE TABLE `0_grn_items` (
 	`qty_recd` double NOT NULL DEFAULT '0',
 	`quantity_inv` double NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_numbers_json` text DEFAULT NULL COMMENT 'JSON array of serial numbers received for this line',
+	`expiry_date` date DEFAULT NULL COMMENT 'Expiry date of received goods',
+	`manufacturing_date` date DEFAULT NULL COMMENT 'Manufacturing date of received goods',
+	`inspection_status` varchar(10) DEFAULT 'none' COMMENT 'none|pending|pass|fail',
 	PRIMARY KEY (`id`),
 	KEY `grn_batch_id` (`grn_batch_id`)
 ) ENGINE=InnoDB;
@@ -1023,6 +1028,17 @@ CREATE TABLE `0_locations` (
 	`fixed_asset` tinyint(1) NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`wh_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable WMS features for this location',
+	`inbound_steps` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=direct, 2=receive+putaway, 3=receive+QC+putaway',
+	`outbound_steps` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=ship, 2=pick+ship, 3=pick+pack+ship',
+	`default_route_in` int(11) DEFAULT NULL COMMENT 'FK to wh_routes',
+	`default_route_out` int(11) DEFAULT NULL COMMENT 'FK to wh_routes',
+	`removal_strategy` varchar(20) DEFAULT 'fifo' COMMENT 'fifo|fefo|lifo|closest',
+	`picking_method` varchar(20) DEFAULT 'single' COMMENT 'single|batch|wave|cluster',
+	`barcode_prefix` varchar(10) DEFAULT NULL COMMENT 'Prefix for auto-generated location barcodes',
+	`use_packages` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable packing/package tracking',
+	`use_cycle_counts` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable cycle counting',
+	`cross_dock_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable cross-docking at this warehouse',
 	PRIMARY KEY (`loc_code`)
 ) ENGINE=InnoDB ;
 
@@ -1284,6 +1300,8 @@ CREATE TABLE `0_purch_order_details` (
 	`quantity_ordered` double NOT NULL DEFAULT '0',
 	`quantity_received` double NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`cross_dock_so_no` int(11) DEFAULT NULL COMMENT 'Linked SO for cross-dock',
+	`cross_dock_so_line` int(11) DEFAULT NULL COMMENT 'Linked SO line ID for cross-dock',
 	PRIMARY KEY (`po_detail_item`),
 	KEY `order` (`order_no`,`po_detail_item`),
 	KEY `itemcode` (`item_code`)
@@ -1309,6 +1327,8 @@ CREATE TABLE `0_purch_orders` (
 	`alloc` double NOT NULL DEFAULT '0',
 	`tax_included` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`drop_ship` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'This is a drop-ship PO',
+	`drop_ship_so_no` int(11) DEFAULT NULL COMMENT 'Linked SO for drop-ship',
 	PRIMARY KEY (`order_no`),
 	KEY `ord_date` (`ord_date`)
 ) ENGINE=InnoDB;
@@ -1480,6 +1500,9 @@ CREATE TABLE `0_sales_order_details` (
 	`invoiced` double NOT NULL DEFAULT '0',
 	`discount_percent` double NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`drop_ship` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Line is drop-shipped from supplier',
+	`drop_ship_supplier_id` int(11) DEFAULT NULL COMMENT 'Supplier for drop-ship',
+	`drop_ship_po_no` int(11) DEFAULT NULL COMMENT 'Linked PO number for drop-ship',
 	PRIMARY KEY (`id`),
 	KEY `sorder` (`trans_type`,`order_no`),
 	KEY `stkcode` (`stk_code`)
@@ -1608,15 +1631,15 @@ CREATE TABLE `0_security_roles` (
 
 INSERT INTO `0_security_roles` VALUES
 ('1', 'Inquiries', 'Inquiries', '768;2816;3072;3328;5632;5888;8192;8448;10752;11008;13312;15872;16128', '257;258;259;260;513;514;515;516;517;518;519;520;521;522;523;524;525;773;774;2822;3073;3075;3076;3077;3329;3330;3331;3332;3333;3334;3335;5377;5633;5640;5889;5890;5891;7937;7938;7939;7940;8193;8194;8450;8451;10497;10753;11009;11010;11012;13313;13315;15617;15618;15619;15620;15621;15622;15623;15624;15625;15626;15873;15882;16129;16130;16131;16132;775', '0'),
-('2', 'System Administrator', 'System Administrator', '256;512;768;2816;3072;3328;5376;5632;5888;7936;8192;8448;9472;9728;10496;10752;11008;13056;13312;15616;15872;16128', '257;258;259;260;513;514;515;516;517;518;519;520;521;522;523;524;525;526;769;770;771;772;773;774;2817;2818;2819;2820;2821;2822;2823;3073;3074;3082;3075;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5634;5635;5636;5637;5641;5638;5639;5640;5889;5890;5891;7937;7938;7939;7940;8193;8194;8195;8196;8197;8449;8450;8451;9217;9218;9220;9473;9474;9475;9476;9729;10497;10753;10754;10755;10756;10757;11009;11010;11011;11012;13057;13313;13314;13315;15617;15618;15619;15620;15621;15622;15623;15624;15628;15625;15626;15627;15873;15874;15875;15876;15877;15878;15879;15880;15883;15881;15882;16129;16130;16131;16132;775', '0'),
+('2', 'System Administrator', 'System Administrator', '256;512;768;2816;3072;3328;5376;5632;5888;7936;8192;8448;9472;9728;10496;10752;11008;13056;13312;15616;15872;16128', '257;258;259;260;513;514;515;516;517;518;519;520;521;522;523;524;525;526;769;770;771;772;773;774;2817;2818;2819;2820;2821;2822;2823;3073;3074;3082;3075;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5634;5635;5636;5637;5641;5638;5639;5640;5889;5890;5891;7937;7938;7939;7940;7941;7942;7943;7944;7945;7946;7947;7948;7949;7950;7951;7952;7953;7954;7955;7956;7957;7958;7959;7960;7961;7962;7963;7964;7965;7966;7967;7968;7969;8193;8194;8195;8196;8197;8449;8450;8451;8452;8453;8454;8455;8456;8457;8458;9217;9218;9220;9473;9474;9475;9476;9729;10497;10753;10754;10755;10756;10757;11009;11010;11011;11012;13057;13313;13314;13315;15617;15618;15619;15620;15621;15622;15623;15624;15628;15625;15626;15627;15873;15874;15875;15876;15877;15878;15879;15880;15883;15881;15882;16129;16130;16131;16132;775', '0'),
 ('3', 'Salesman', 'Salesman', '768;3072;5632;8192;15872', '773;774;3073;3075;3081;5633;8194;15873;775', '0'),
-('4', 'Stock Manager', 'Stock Manager', '768;2816;3072;3328;5632;5888;8192;8448;10752;11008;13312;15872;16128', '2818;2822;3073;3076;3077;3329;3330;3330;3330;3331;3331;3332;3333;3334;3335;5633;5640;5889;5890;5891;8193;8194;8450;8451;10753;11009;11010;11012;13313;13315;15882;16129;16130;16131;16132;775', '0'),
+('4', 'Stock Manager', 'Stock Manager', '768;2816;3072;3328;5632;5888;7936;8192;8448;10752;11008;13312;15872;16128', '2818;2822;3073;3076;3077;3329;3330;3330;3330;3331;3331;3332;3333;3334;3335;5633;5640;5889;5890;5891;7941;7943;7944;7945;7946;7947;7948;7949;7950;7951;7952;7953;7954;7955;7956;7957;7958;7959;7960;7961;7962;7963;7964;7965;7966;7967;7968;7969;8193;8194;8450;8451;8452;8453;8454;8455;8456;8457;8458;10753;11009;11010;11012;13313;13315;15882;16129;16130;16131;16132;775', '0'),
 ('5', 'Production Manager', 'Production Manager', '512;768;2816;3072;3328;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '521;523;524;2818;2819;2820;2821;2822;2823;3073;3074;3076;3077;3078;3079;3080;3081;3329;3330;3330;3330;3331;3331;3332;3333;3334;3335;5633;5640;5640;5889;5890;5891;8193;8194;8196;8197;8450;8451;10753;10755;11009;11010;11012;13313;13315;15617;15619;15620;15621;15624;15624;15876;15877;15880;15882;16129;16130;16131;16132;775', '0'),
 ('6', 'Purchase Officer', 'Purchase Officer', '512;768;2816;3072;3328;5376;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '521;523;524;2818;2819;2820;2821;2822;2823;3073;3074;3076;3077;3078;3079;3080;3081;3329;3330;3330;3330;3331;3331;3332;3333;3334;3335;5377;5633;5635;5640;5640;5889;5890;5891;8193;8194;8196;8197;8449;8450;8451;10753;10755;11009;11010;11012;13313;13315;15617;15619;15620;15621;15624;15624;15876;15877;15880;15882;16129;16130;16131;16132;775', '0'),
 ('7', 'AR Officer', 'AR Officer', '512;768;2816;3072;3328;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '521;523;524;771;773;774;2818;2819;2820;2821;2822;2823;3073;3073;3074;3075;3076;3077;3078;3079;3080;3081;3081;3329;3330;3330;3330;3331;3331;3332;3333;3334;3335;5633;5633;5634;5637;5638;5639;5640;5640;5889;5890;5891;8193;8194;8194;8196;8197;8450;8451;10753;10755;11009;11010;11012;13313;13315;15617;15619;15620;15621;15624;15624;15873;15876;15877;15878;15880;15882;16129;16130;16131;16132;775', '0'),
 ('8', 'AP Officer', 'AP Officer', '512;768;2816;3072;3328;5376;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '257;258;259;260;521;523;524;769;770;771;772;773;774;2818;2819;2820;2821;2822;2823;3073;3074;3082;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5635;5640;5889;5890;5891;7937;7938;7939;7940;8193;8194;8196;8197;8449;8450;8451;10497;10753;10755;11009;11010;11012;13057;13313;13315;15617;15619;15620;15621;15624;15876;15877;15880;15882;16129;16130;16131;16132;775', '0'),
 ('9', 'Accountant', 'New Accountant', '512;768;2816;3072;3328;5376;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '257;258;259;260;521;523;524;771;772;773;774;2818;2819;2820;2821;2822;2823;3073;3074;3075;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5634;5635;5637;5638;5639;5640;5889;5890;5891;7937;7938;7939;7940;8193;8194;8196;8197;8449;8450;8451;10497;10753;10755;11009;11010;11012;13313;13315;15617;15618;15619;15620;15621;15624;15873;15876;15877;15878;15880;15882;16129;16130;16131;16132;775', '0'),
-('10', 'Sub Admin', 'Sub Admin', '512;768;2816;3072;3328;5376;5632;5888;8192;8448;10752;11008;13312;15616;15872;16128', '257;258;259;260;521;523;524;771;772;773;774;2818;2819;2820;2821;2822;2823;3073;3074;3082;3075;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5634;5635;5637;5638;5639;5640;5889;5890;5891;7937;7938;7939;7940;8193;8194;8196;8197;8449;8450;8451;10497;10753;10755;11009;11010;11012;13057;13313;13315;15617;15619;15620;15621;15624;15873;15874;15876;15877;15878;15879;15880;15882;16129;16130;16131;16132;775', '0');
+('10', 'Sub Admin', 'Sub Admin', '512;768;2816;3072;3328;5376;5632;5888;7936;8192;8448;10752;11008;13312;15616;15872;16128', '257;258;259;260;521;523;524;771;772;773;774;2818;2819;2820;2821;2822;2823;3073;3074;3082;3075;3076;3077;3078;3079;3080;3081;3329;3330;3331;3332;3333;3334;3335;5377;5633;5634;5635;5637;5638;5639;5640;5889;5890;5891;7937;7938;7939;7940;7941;7942;7943;7944;7945;7946;7947;7948;7949;7950;7951;7952;7953;7954;7955;7956;7957;7958;7959;7960;7961;7962;7963;7964;7965;7966;7967;7968;7969;8193;8194;8196;8197;8449;8450;8451;8452;8453;8454;8455;8456;8457;8458;10497;10753;10755;11009;11010;11012;13057;13313;13315;15617;15619;15620;15621;15624;15873;15874;15876;15877;15878;15879;15880;15882;16129;16130;16131;16132;775', '0');
 
 -- Structure of table `0_shippers` --
 
@@ -1736,6 +1759,26 @@ CREATE TABLE `0_stock_master` (
 	`depreciation_date` date NOT NULL DEFAULT '0000-00-00',
 	`fa_class_id` varchar(20) NOT NULL DEFAULT '',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`track_by` varchar(15) NOT NULL DEFAULT 'none' COMMENT 'none|serial|batch|serial_batch',
+	`has_serial_no` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable serial number tracking',
+	`has_batch_no` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable batch/lot tracking',
+	`has_expiry_date` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable expiry date tracking',
+	`serial_no_prefix` varchar(20) DEFAULT NULL COMMENT 'Auto-generate serial prefix',
+	`batch_no_prefix` varchar(20) DEFAULT NULL COMMENT 'Auto-generate batch prefix',
+	`warranty_days` int(11) DEFAULT NULL COMMENT 'Default warranty period in days',
+	`quality_inspection_required` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Require quality inspection on receiving',
+	`min_order_qty` double DEFAULT NULL COMMENT 'Minimum order quantity',
+	`lead_time_days` int(11) DEFAULT NULL COMMENT 'Supplier lead time in days',
+	`shelf_life_days` int(11) DEFAULT NULL COMMENT 'Default shelf life in days',
+	`item_weight` decimal(15,4) DEFAULT NULL COMMENT 'Unit weight in kg',
+	`item_volume` decimal(15,4) DEFAULT NULL COMMENT 'Unit volume in m3',
+	`putaway_rule_id` int(11) DEFAULT NULL COMMENT 'FK to wh_putaway_rules',
+	`removal_strategy` varchar(20) DEFAULT NULL COMMENT 'Item-specific removal override: fifo|fefo|lifo|closest|least_packages',
+	`default_bin_id` int(11) DEFAULT NULL COMMENT 'FK to wh_locations.loc_id',
+	`storage_category_id` int(11) DEFAULT NULL COMMENT 'FK to wh_storage_categories.id',
+	`abc_class` char(1) DEFAULT NULL COMMENT 'A/B/C velocity class',
+	`drop_ship_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item can be drop-shipped from supplier to customer',
+	`cross_dock_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item eligible for cross-docking',
 	PRIMARY KEY (`stock_id`)
 ) ENGINE=InnoDB;
 
@@ -1757,12 +1800,1300 @@ CREATE TABLE `0_stock_moves` (
 	`qty` double NOT NULL DEFAULT '1',
 	`standard_cost` double NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`expiry_date` date DEFAULT NULL COMMENT 'Expiry date at time of movement',
+	`quality_status` varchar(10) DEFAULT 'none' COMMENT 'none|pending|pass|fail',
+	`from_bin_id` int(11) DEFAULT NULL COMMENT 'FK to wh_locations.loc_id (source bin)',
+	`to_bin_id` int(11) DEFAULT NULL COMMENT 'FK to wh_locations.loc_id (dest bin)',
+	`wh_operation_id` int(11) DEFAULT NULL COMMENT 'FK to wh_operations.op_id',
+	`package_id` int(11) DEFAULT NULL COMMENT 'FK to wh_packages.package_id',
+	`stock_status` varchar(20) DEFAULT 'available' COMMENT 'available|reserved|on_hold|quarantine|in_transit',
 	PRIMARY KEY (`trans_id`),
 	KEY `type` (`type`,`trans_no`),
-	KEY `Move` (`stock_id`,`loc_code`,`tran_date`)
+	KEY `Move` (`stock_id`,`loc_code`,`tran_date`),
+	KEY `idx_sm_serial_id` (`serial_id`),
+	KEY `idx_sm_batch_id` (`batch_id`),
+	KEY `idx_sm_from_bin_id` (`from_bin_id`),
+	KEY `idx_sm_to_bin_id` (`to_bin_id`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_stock_moves` --
+
+-- =====================================================================================
+-- Advanced Inventory / Warehouse Management Tables
+-- =====================================================================================
+
+-- Structure of table `0_wh_location_types` --
+
+DROP TABLE IF EXISTS `0_wh_location_types`;
+
+CREATE TABLE `0_wh_location_types` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`type_code` varchar(20) NOT NULL,
+	`type_name` varchar(60) NOT NULL,
+	`is_physical` tinyint(1) NOT NULL DEFAULT '1',
+	`can_store` tinyint(1) NOT NULL DEFAULT '1',
+	`sort_order` int(11) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `type_code` (`type_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_location_types` --
+
+INSERT INTO `0_wh_location_types` (`type_code`, `type_name`, `is_physical`, `can_store`, `sort_order`) VALUES
+('warehouse', 'Warehouse', '1', '0', '10'),
+('zone', 'Zone', '1', '0', '20'),
+('aisle', 'Aisle', '1', '0', '30'),
+('rack', 'Rack', '1', '0', '40'),
+('shelf', 'Shelf', '1', '0', '50'),
+('bin', 'Bin', '1', '1', '60'),
+('staging', 'Staging Area', '1', '1', '70'),
+('dock', 'Dock Door', '1', '1', '80'),
+('quality', 'Quality Check', '1', '1', '90'),
+('transit', 'In Transit', '0', '0', '100'),
+('virtual', 'Virtual/View', '0', '0', '110'),
+('scrap', 'Scrap Location', '1', '1', '120'),
+('production', 'Production Floor', '1', '1', '130'),
+('packing', 'Packing Station', '1', '1', '140'),
+('returns', 'Returns Area', '1', '1', '150');
+
+-- Structure of table `0_wh_storage_categories` --
+
+DROP TABLE IF EXISTS `0_wh_storage_categories`;
+
+CREATE TABLE `0_wh_storage_categories` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`category_name` varchar(60) NOT NULL,
+	`max_weight` decimal(15,4) DEFAULT NULL,
+	`max_volume` decimal(15,4) DEFAULT NULL,
+	`max_units` int(11) DEFAULT NULL,
+	`allow_mixed_items` tinyint(1) NOT NULL DEFAULT '1',
+	`allow_mixed_lots` tinyint(1) NOT NULL DEFAULT '1',
+	`temperature_min` decimal(5,2) DEFAULT NULL,
+	`temperature_max` decimal(5,2) DEFAULT NULL,
+	`humidity_max` decimal(5,2) DEFAULT NULL,
+	`is_hazmat` tinyint(1) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_storage_categories` --
+
+-- Structure of table `0_wh_locations` --
+
+DROP TABLE IF EXISTS `0_wh_locations`;
+
+CREATE TABLE `0_wh_locations` (
+	`loc_id` int(11) NOT NULL AUTO_INCREMENT,
+	`loc_code` varchar(30) NOT NULL,
+	`loc_name` varchar(100) NOT NULL,
+	`parent_loc_id` int(11) DEFAULT NULL,
+	`warehouse_loc_code` varchar(5) NOT NULL COMMENT 'FK to 0_locations.loc_code (root warehouse)',
+	`location_type_id` int(11) NOT NULL COMMENT 'FK to 0_wh_location_types',
+	`location_path` varchar(500) DEFAULT NULL COMMENT 'Materialized path: /1/5/12/45',
+	`full_name` varchar(500) DEFAULT NULL COMMENT 'Warehouse A > Zone 1 > Aisle A > Bin 03',
+	`max_weight` decimal(15,4) DEFAULT NULL COMMENT 'Max weight capacity (kg)',
+	`max_volume` decimal(15,4) DEFAULT NULL COMMENT 'Max volume capacity (m3)',
+	`max_units` int(11) DEFAULT NULL COMMENT 'Max number of units/pallets',
+	`current_weight` decimal(15,4) DEFAULT '0.0000',
+	`current_volume` decimal(15,4) DEFAULT '0.0000',
+	`current_units` int(11) DEFAULT '0',
+	`storage_category_id` int(11) DEFAULT NULL COMMENT 'FK to 0_wh_storage_categories',
+	`zone_type` varchar(20) DEFAULT NULL COMMENT 'cold|dry|hazmat|outdoor|climate_controlled',
+	`abc_class` char(1) DEFAULT NULL COMMENT 'A/B/C classification for slotting',
+	`pick_sequence` int(11) DEFAULT '0' COMMENT 'Order for picking path optimization',
+	`barcode` varchar(50) DEFAULT NULL COMMENT 'Location barcode for scanning',
+	`is_active` tinyint(1) NOT NULL DEFAULT '1',
+	`is_default_receipt` tinyint(1) NOT NULL DEFAULT '0',
+	`is_default_ship` tinyint(1) NOT NULL DEFAULT '0',
+	`is_default_scrap` tinyint(1) NOT NULL DEFAULT '0',
+	`is_default_production` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`loc_id`),
+	UNIQUE KEY `loc_code` (`loc_code`),
+	KEY `parent_loc_id` (`parent_loc_id`),
+	KEY `warehouse_loc_code` (`warehouse_loc_code`),
+	KEY `location_type_id` (`location_type_id`),
+	KEY `storage_category_id` (`storage_category_id`),
+	KEY `barcode` (`barcode`),
+	KEY `location_path` (`location_path`(191))
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_locations` --
+
+-- Structure of table `0_serial_numbers` --
+
+DROP TABLE IF EXISTS `0_serial_numbers`;
+
+CREATE TABLE `0_serial_numbers` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`serial_no` varchar(100) NOT NULL COMMENT 'The serial number string (IMEI, VIN, etc.)',
+	`stock_id` varchar(20) NOT NULL COMMENT 'FK to stock_master.stock_id',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id (if serial belongs to a batch)',
+	`status` varchar(20) NOT NULL DEFAULT 'available' COMMENT 'available|reserved|delivered|in_transit|in_production|in_repair|quarantine|recalled|scrapped|returned|expired',
+	`loc_code` varchar(5) DEFAULT NULL COMMENT 'Current warehouse location',
+	`wh_loc_id` int(11) DEFAULT NULL COMMENT 'FK to wh_locations.loc_id (current bin)',
+	`supplier_id` int(11) DEFAULT NULL COMMENT 'Supplier who provided the serial',
+	`customer_id` int(11) DEFAULT NULL COMMENT 'Customer who received the serial',
+	`purchase_date` date DEFAULT NULL,
+	`delivery_date` date DEFAULT NULL,
+	`warranty_start` date DEFAULT NULL,
+	`warranty_end` date DEFAULT NULL,
+	`warranty_type` varchar(50) DEFAULT NULL COMMENT 'standard|extended|limited',
+	`manufacturing_date` date DEFAULT NULL,
+	`expiry_date` date DEFAULT NULL,
+	`grn_id` int(11) DEFAULT NULL COMMENT 'GRN that received this serial',
+	`delivery_id` int(11) DEFAULT NULL COMMENT 'Delivery note that shipped this serial',
+	`work_order_id` int(11) DEFAULT NULL COMMENT 'Work Order that produced this serial',
+	`purchase_cost` double DEFAULT '0' COMMENT 'Actual cost of this specific unit',
+	`actual_cost` double DEFAULT NULL COMMENT 'Actual landed cost for this specific serial (overrides standard cost for COGS)',
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL COMMENT 'Extensible attributes JSON',
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_serial_no_stock` (`serial_no`, `stock_id`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_batch_id` (`batch_id`),
+	KEY `idx_status` (`status`),
+	KEY `idx_loc_code` (`loc_code`),
+	KEY `idx_wh_loc_id` (`wh_loc_id`),
+	KEY `idx_customer_id` (`customer_id`),
+	KEY `idx_supplier_id` (`supplier_id`),
+	KEY `idx_warranty_end` (`warranty_end`),
+	KEY `idx_expiry_date` (`expiry_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_serial_numbers` --
+
+-- Structure of table `0_stock_batches` --
+
+DROP TABLE IF EXISTS `0_stock_batches`;
+
+CREATE TABLE `0_stock_batches` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`batch_no` varchar(100) NOT NULL COMMENT 'Batch/Lot number string',
+	`stock_id` varchar(20) NOT NULL COMMENT 'FK to stock_master.stock_id',
+	`status` varchar(20) NOT NULL DEFAULT 'active' COMMENT 'active|quarantine|recalled|expired|consumed|scrapped',
+	`manufacturing_date` date DEFAULT NULL,
+	`expiry_date` date DEFAULT NULL,
+	`best_before_date` date DEFAULT NULL COMMENT 'Best-before date (food)',
+	`retest_date` date DEFAULT NULL COMMENT 'Retest date (pharma/chemicals)',
+	`shelf_life_days` int(11) DEFAULT NULL,
+	`supplier_id` int(11) DEFAULT NULL,
+	`supplier_batch_no` varchar(100) DEFAULT NULL COMMENT 'Supplier own batch number',
+	`grn_id` int(11) DEFAULT NULL COMMENT 'GRN that first received this batch',
+	`work_order_id` int(11) DEFAULT NULL COMMENT 'Work Order that produced this batch',
+	`initial_qty` double DEFAULT '0' COMMENT 'Original quantity received/produced',
+	`batch_cost` double DEFAULT NULL COMMENT 'Batch-specific cost per unit (overrides standard cost for COGS)',
+	`country_of_origin` varchar(60) DEFAULT NULL,
+	`certification` varchar(200) DEFAULT NULL COMMENT 'Quality certifications (ISO, GMP)',
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL COMMENT 'Extensible attributes JSON',
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_batch_no_stock` (`batch_no`, `stock_id`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_status` (`status`),
+	KEY `idx_expiry_date` (`expiry_date`),
+	KEY `idx_manufacturing_date` (`manufacturing_date`),
+	KEY `idx_supplier_id` (`supplier_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_stock_batches` --
+
+-- Structure of table `0_serial_movements` --
+
+DROP TABLE IF EXISTS `0_serial_movements`;
+
+CREATE TABLE `0_serial_movements` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`serial_id` int(11) NOT NULL COMMENT 'FK to serial_numbers.id',
+	`stock_move_id` int(11) DEFAULT NULL COMMENT 'FK to stock_moves.trans_id',
+	`trans_type` smallint(6) NOT NULL COMMENT 'Transaction type (ST_SUPPRECEIVE, etc.)',
+	`trans_no` int(11) NOT NULL,
+	`from_loc` varchar(5) DEFAULT NULL,
+	`to_loc` varchar(5) DEFAULT NULL,
+	`from_status` varchar(20) DEFAULT NULL,
+	`to_status` varchar(20) DEFAULT NULL,
+	`tran_date` date NOT NULL,
+	`reference` varchar(60) DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_serial_id` (`serial_id`),
+	KEY `idx_trans` (`trans_type`, `trans_no`),
+	KEY `idx_stock_move` (`stock_move_id`),
+	KEY `idx_tran_date` (`tran_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_serial_movements` --
+
+-- Structure of table `0_batch_movements` --
+
+DROP TABLE IF EXISTS `0_batch_movements`;
+
+CREATE TABLE `0_batch_movements` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`batch_id` int(11) NOT NULL COMMENT 'FK to stock_batches.id',
+	`stock_move_id` int(11) DEFAULT NULL COMMENT 'FK to stock_moves.trans_id',
+	`trans_type` smallint(6) NOT NULL,
+	`trans_no` int(11) NOT NULL,
+	`loc_code` varchar(5) NOT NULL,
+	`wh_loc_id` int(11) DEFAULT NULL COMMENT 'FK to wh_locations.loc_id (bin)',
+	`quantity` double NOT NULL COMMENT 'Qty moved (+inbound, -outbound)',
+	`tran_date` date NOT NULL,
+	`reference` varchar(60) DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_batch_id` (`batch_id`),
+	KEY `idx_trans` (`trans_type`, `trans_no`),
+	KEY `idx_stock_move` (`stock_move_id`),
+	KEY `idx_tran_date` (`tran_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_batch_movements` --
+
+-- Structure of table `0_quality_parameters` --
+
+DROP TABLE IF EXISTS `0_quality_parameters`;
+
+CREATE TABLE `0_quality_parameters` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`name` varchar(100) NOT NULL COMMENT 'Parameter name (Temperature, Weight, etc.)',
+	`description` varchar(200) DEFAULT NULL,
+	`parameter_type` varchar(20) NOT NULL DEFAULT 'numeric' COMMENT 'numeric|text|boolean|list',
+	`unit` varchar(20) DEFAULT NULL COMMENT 'Measurement unit',
+	`min_value` double DEFAULT NULL,
+	`max_value` double DEFAULT NULL,
+	`acceptable_values` text DEFAULT NULL COMMENT 'JSON array for list type',
+	`stock_id` varchar(20) DEFAULT NULL COMMENT 'NULL = global, set = item-specific',
+	`category_id` int(11) DEFAULT NULL COMMENT 'NULL = all categories, set = category-specific',
+	`mandatory` tinyint(1) NOT NULL DEFAULT '0',
+	`sort_order` int(11) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`id`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_category_id` (`category_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_quality_parameters` --
+
+-- Structure of table `0_quality_inspections` --
+
+DROP TABLE IF EXISTS `0_quality_inspections`;
+
+CREATE TABLE `0_quality_inspections` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`reference` varchar(60) NOT NULL COMMENT 'Inspection document number',
+	`stock_id` varchar(20) NOT NULL,
+	`inspection_type` varchar(20) NOT NULL COMMENT 'incoming|outgoing|in_process|periodic',
+	`trans_type` smallint(6) DEFAULT NULL,
+	`trans_no` int(11) DEFAULT NULL,
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`loc_code` varchar(5) DEFAULT NULL,
+	`inspected_qty` double DEFAULT '0',
+	`accepted_qty` double DEFAULT '0',
+	`rejected_qty` double DEFAULT '0',
+	`result` varchar(20) NOT NULL DEFAULT 'pending' COMMENT 'pending|pass|fail|partial',
+	`inspector_id` int(11) DEFAULT NULL COMMENT 'FK to users',
+	`inspection_date` date NOT NULL,
+	`completion_date` date DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL COMMENT 'Flexible inspection parameters JSON',
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_trans` (`trans_type`, `trans_no`),
+	KEY `idx_batch_id` (`batch_id`),
+	KEY `idx_serial_id` (`serial_id`),
+	KEY `idx_result` (`result`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_quality_inspections` --
+
+-- Structure of table `0_quality_inspection_readings` --
+
+DROP TABLE IF EXISTS `0_quality_inspection_readings`;
+
+CREATE TABLE `0_quality_inspection_readings` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`inspection_id` int(11) NOT NULL COMMENT 'FK to quality_inspections.id',
+	`parameter_id` int(11) NOT NULL COMMENT 'FK to quality_parameters.id',
+	`reading_value` varchar(200) DEFAULT NULL COMMENT 'Actual reading',
+	`result` varchar(10) DEFAULT NULL COMMENT 'pass|fail',
+	`notes` text DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_insp_param` (`inspection_id`, `parameter_id`),
+	KEY `idx_parameter_id` (`parameter_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_quality_inspection_readings` --
+
+-- Structure of table `0_warranty_claims` --
+
+DROP TABLE IF EXISTS `0_warranty_claims`;
+
+CREATE TABLE `0_warranty_claims` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`reference` varchar(60) NOT NULL COMMENT 'Claim document number',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`stock_id` varchar(20) NOT NULL,
+	`customer_id` int(11) NOT NULL COMMENT 'FK to debtors_master',
+	`claim_date` date NOT NULL,
+	`warranty_valid` tinyint(1) DEFAULT '1' COMMENT 'Is within warranty period?',
+	`status` varchar(20) NOT NULL DEFAULT 'open' COMMENT 'open|acknowledged|in_repair|replaced|resolved|rejected|closed',
+	`issue_type` varchar(20) DEFAULT 'defective' COMMENT 'defective|damaged|malfunction|missing_parts|other',
+	`issue_description` text NOT NULL,
+	`resolution_description` text DEFAULT NULL,
+	`resolution_date` date DEFAULT NULL,
+	`replacement_serial_id` int(11) DEFAULT NULL COMMENT 'New serial if replaced',
+	`repair_cost` double DEFAULT '0',
+	`is_chargeable` tinyint(1) DEFAULT '0' COMMENT 'Bill customer?',
+	`assigned_to` int(11) DEFAULT NULL COMMENT 'Assigned technician/user',
+	`crm_lead_id` int(11) DEFAULT NULL COMMENT 'Link to CRM (support ticket)',
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_serial_id` (`serial_id`),
+	KEY `idx_customer_id` (`customer_id`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_status` (`status`),
+	KEY `idx_claim_date` (`claim_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_warranty_claims` --
+
+-- Structure of table `0_warranty_claim_parts` --
+
+DROP TABLE IF EXISTS `0_warranty_claim_parts`;
+
+CREATE TABLE `0_warranty_claim_parts` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`claim_id` int(11) NOT NULL COMMENT 'FK to warranty_claims.id',
+	`stock_id` varchar(20) NOT NULL COMMENT 'Part item code',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'Part serial (if serialized)',
+	`quantity` double NOT NULL DEFAULT '1',
+	`unit_cost` double DEFAULT '0',
+	PRIMARY KEY (`id`),
+	KEY `idx_claim_id` (`claim_id`),
+	KEY `idx_stock_id` (`stock_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_warranty_claim_parts` --
+
+-- Structure of table `0_recall_campaigns` --
+
+DROP TABLE IF EXISTS `0_recall_campaigns`;
+
+CREATE TABLE `0_recall_campaigns` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`reference` varchar(60) NOT NULL COMMENT 'Recall campaign reference',
+	`title` varchar(200) NOT NULL,
+	`description` text NOT NULL,
+	`stock_id` varchar(20) NOT NULL COMMENT 'Affected item',
+	`recall_type` varchar(30) NOT NULL COMMENT 'voluntary|mandatory|market_withdrawal',
+	`severity` varchar(10) NOT NULL DEFAULT 'medium' COMMENT 'critical|high|medium|low',
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|active|in_progress|completed|cancelled',
+	`start_date` date NOT NULL,
+	`end_date` date DEFAULT NULL,
+	`affected_batch_ids` text DEFAULT NULL COMMENT 'Comma-separated batch IDs',
+	`affected_serial_from` varchar(100) DEFAULT NULL COMMENT 'Serial range start',
+	`affected_serial_to` varchar(100) DEFAULT NULL COMMENT 'Serial range end',
+	`affected_date_from` date DEFAULT NULL COMMENT 'Manufacturing date range start',
+	`affected_date_to` date DEFAULT NULL,
+	`regulatory_reference` varchar(200) DEFAULT NULL COMMENT 'FDA/MHRA etc. reference',
+	`total_affected_units` int(11) DEFAULT '0',
+	`total_recovered_units` int(11) DEFAULT '0',
+	`resolution` varchar(200) DEFAULT NULL COMMENT 'Repair/replace/refund',
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_reference` (`reference`),
+	KEY `idx_stock_id` (`stock_id`),
+	KEY `idx_status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_recall_campaigns` --
+
+-- Structure of table `0_recall_items` --
+
+DROP TABLE IF EXISTS `0_recall_items`;
+
+CREATE TABLE `0_recall_items` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`recall_id` int(11) NOT NULL COMMENT 'FK to recall_campaigns.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`customer_id` int(11) DEFAULT NULL COMMENT 'Customer who has the item',
+	`status` varchar(20) NOT NULL DEFAULT 'identified' COMMENT 'identified|notified|returned|repaired|replaced|refunded|unreachable',
+	`notification_date` date DEFAULT NULL,
+	`return_date` date DEFAULT NULL,
+	`resolution_date` date DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_recall_id` (`recall_id`),
+	KEY `idx_serial_id` (`serial_id`),
+	KEY `idx_batch_id` (`batch_id`),
+	KEY `idx_customer_id` (`customer_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_recall_items` --
+
+-- Structure of table `0_production_traceability` --
+
+DROP TABLE IF EXISTS `0_production_traceability`;
+
+CREATE TABLE `0_production_traceability` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`work_order_id` int(11) NOT NULL,
+	`finished_serial_id` int(11) DEFAULT NULL COMMENT 'Produced serial',
+	`finished_batch_id` int(11) DEFAULT NULL COMMENT 'Produced batch',
+	`component_stock_id` varchar(20) NOT NULL COMMENT 'Component item',
+	`component_serial_id` int(11) DEFAULT NULL COMMENT 'Component serial consumed',
+	`component_batch_id` int(11) DEFAULT NULL COMMENT 'Component batch consumed',
+	`component_qty` double NOT NULL COMMENT 'Qty consumed',
+	`created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_wo` (`work_order_id`),
+	KEY `idx_finished_serial` (`finished_serial_id`),
+	KEY `idx_finished_batch` (`finished_batch_id`),
+	KEY `idx_component_serial` (`component_serial_id`),
+	KEY `idx_component_batch` (`component_batch_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_production_traceability` --
+
+-- Structure of table `0_wh_operations` --
+
+DROP TABLE IF EXISTS `0_wh_operations`;
+
+CREATE TABLE `0_wh_operations` (
+	`op_id` int(11) NOT NULL AUTO_INCREMENT,
+	`op_type` varchar(20) NOT NULL COMMENT 'receipt|quality_check|putaway|pick|pack|ship|transfer|adjustment|scrap|return',
+	`op_status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|ready|in_progress|done|cancelled',
+	`source_doc_type` int(11) DEFAULT NULL COMMENT 'ST_SUPPRECEIVE, ST_CUSTDELIVERY, etc.',
+	`source_doc_no` int(11) DEFAULT NULL,
+	`parent_op_id` int(11) DEFAULT NULL COMMENT 'Previous step in multi-step flow',
+	`next_op_id` int(11) DEFAULT NULL COMMENT 'Next step (filled when created)',
+	`route_id` int(11) DEFAULT NULL COMMENT 'FK to wh_routes',
+	`from_loc_id` int(11) DEFAULT NULL COMMENT 'Source bin/location',
+	`to_loc_id` int(11) DEFAULT NULL COMMENT 'Destination bin/location',
+	`scheduled_date` datetime DEFAULT NULL,
+	`started_at` datetime DEFAULT NULL,
+	`completed_at` datetime DEFAULT NULL,
+	`assigned_to` smallint(6) DEFAULT NULL COMMENT 'FK to 0_users (worker)',
+	`priority` tinyint(3) NOT NULL DEFAULT '5' COMMENT '1=highest, 9=lowest',
+	`wave_id` int(11) DEFAULT NULL COMMENT 'FK to wh_picking_waves',
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`op_id`),
+	KEY `op_type` (`op_type`),
+	KEY `op_status` (`op_status`),
+	KEY `source_doc` (`source_doc_type`, `source_doc_no`),
+	KEY `parent_op_id` (`parent_op_id`),
+	KEY `wave_id` (`wave_id`),
+	KEY `assigned_to` (`assigned_to`),
+	KEY `scheduled_date` (`scheduled_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_operations` --
+
+-- Structure of table `0_wh_operation_lines` --
+
+DROP TABLE IF EXISTS `0_wh_operation_lines`;
+
+CREATE TABLE `0_wh_operation_lines` (
+	`line_id` int(11) NOT NULL AUTO_INCREMENT,
+	`op_id` int(11) NOT NULL COMMENT 'FK to wh_operations',
+	`stock_id` varchar(20) NOT NULL,
+	`qty_planned` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_done` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`from_loc_id` int(11) DEFAULT NULL COMMENT 'Source bin (pick from)',
+	`to_loc_id` int(11) DEFAULT NULL COMMENT 'Destination bin (put to)',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`package_id` int(11) DEFAULT NULL COMMENT 'FK to wh_packages',
+	`unit_cost` decimal(15,4) DEFAULT '0.0000',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`line_id`),
+	KEY `op_id` (`op_id`),
+	KEY `stock_id` (`stock_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_operation_lines` --
+
+-- Structure of table `0_wh_routes` --
+
+DROP TABLE IF EXISTS `0_wh_routes`;
+
+CREATE TABLE `0_wh_routes` (
+	`route_id` int(11) NOT NULL AUTO_INCREMENT,
+	`route_name` varchar(100) NOT NULL,
+	`route_type` varchar(20) NOT NULL COMMENT 'inbound|outbound|internal|return|cross_dock|drop_ship',
+	`warehouse_loc_code` varchar(5) DEFAULT NULL COMMENT 'Apply to specific warehouse, NULL = all',
+	`is_default` tinyint(1) NOT NULL DEFAULT '0',
+	`sequence` int(11) NOT NULL DEFAULT '10',
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	`description` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`route_id`),
+	KEY `route_type` (`route_type`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_routes` --
+
+-- Structure of table `0_wh_route_rules` --
+
+DROP TABLE IF EXISTS `0_wh_route_rules`;
+
+CREATE TABLE `0_wh_route_rules` (
+	`rule_id` int(11) NOT NULL AUTO_INCREMENT,
+	`route_id` int(11) NOT NULL COMMENT 'FK to wh_routes',
+	`rule_type` varchar(10) NOT NULL COMMENT 'push|pull',
+	`sequence` int(11) NOT NULL DEFAULT '10',
+	`from_loc_id` int(11) DEFAULT NULL,
+	`to_loc_id` int(11) DEFAULT NULL,
+	`operation_type` varchar(20) NOT NULL COMMENT 'receipt|quality|putaway|pick|pack|ship|transfer',
+	`trigger_method` varchar(20) NOT NULL DEFAULT 'manual' COMMENT 'manual|auto_on_confirm|auto_on_complete',
+	`delay_days` int(11) DEFAULT '0',
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`rule_id`),
+	KEY `route_id` (`route_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_route_rules` --
+
+-- Structure of table `0_wh_putaway_rules` --
+
+DROP TABLE IF EXISTS `0_wh_putaway_rules`;
+
+CREATE TABLE `0_wh_putaway_rules` (
+	`rule_id` int(11) NOT NULL AUTO_INCREMENT,
+	`rule_name` varchar(100) NOT NULL,
+	`warehouse_loc_code` varchar(5) DEFAULT NULL,
+	`sequence` int(11) NOT NULL DEFAULT '10' COMMENT 'Lower = higher priority',
+	`stock_id` varchar(20) DEFAULT NULL COMMENT 'Specific item',
+	`category_id` smallint(6) DEFAULT NULL COMMENT 'Item category',
+	`storage_category_id` int(11) DEFAULT NULL COMMENT 'Required storage category',
+	`target_loc_id` int(11) DEFAULT NULL COMMENT 'Fixed target bin',
+	`target_zone_id` int(11) DEFAULT NULL COMMENT 'Target zone (find available bin within)',
+	`strategy` varchar(30) NOT NULL DEFAULT 'first_available' COMMENT 'first_available|nearest_available|add_to_existing|least_packages|abc_class',
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`rule_id`),
+	KEY `sequence` (`sequence`),
+	KEY `warehouse_loc_code` (`warehouse_loc_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_putaway_rules` --
+
+-- Structure of table `0_wh_removal_strategies` --
+
+DROP TABLE IF EXISTS `0_wh_removal_strategies`;
+
+CREATE TABLE `0_wh_removal_strategies` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`warehouse_loc_code` varchar(5) DEFAULT NULL COMMENT 'NULL = default for all',
+	`stock_id` varchar(20) DEFAULT NULL COMMENT 'NULL = all items',
+	`category_id` smallint(6) DEFAULT NULL COMMENT 'NULL = all categories',
+	`strategy` varchar(20) NOT NULL DEFAULT 'fifo' COMMENT 'fifo|fefo|lifo|closest|least_packages',
+	`sequence` int(11) NOT NULL DEFAULT '10',
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	PRIMARY KEY (`id`),
+	KEY `sequence` (`sequence`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_removal_strategies` --
+
+-- Structure of table `0_wh_transfer_orders` --
+
+DROP TABLE IF EXISTS `0_wh_transfer_orders`;
+
+CREATE TABLE `0_wh_transfer_orders` (
+	`transfer_id` int(11) NOT NULL AUTO_INCREMENT,
+	`transfer_no` int(11) NOT NULL COMMENT 'Sequential transfer number',
+	`transfer_type` varchar(20) NOT NULL DEFAULT 'standard' COMMENT 'standard|urgent|backorder',
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|approved|shipped|in_transit|received|cancelled',
+	`from_loc_code` varchar(5) NOT NULL COMMENT 'Source warehouse (FK 0_locations)',
+	`to_loc_code` varchar(5) NOT NULL COMMENT 'Dest warehouse (FK 0_locations)',
+	`transit_loc_id` int(11) DEFAULT NULL COMMENT 'Transit location (FK wh_locations)',
+	`request_date` date NOT NULL,
+	`expected_ship_date` date DEFAULT NULL,
+	`actual_ship_date` date DEFAULT NULL,
+	`expected_recv_date` date DEFAULT NULL,
+	`actual_recv_date` date DEFAULT NULL,
+	`requested_by` smallint(6) DEFAULT NULL,
+	`approved_by` smallint(6) DEFAULT NULL,
+	`shipped_by` smallint(6) DEFAULT NULL,
+	`received_by` smallint(6) DEFAULT NULL,
+	`approval_date` datetime DEFAULT NULL,
+	`reference` varchar(60) DEFAULT NULL,
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`transfer_id`),
+	UNIQUE KEY `transfer_no` (`transfer_no`),
+	KEY `status` (`status`),
+	KEY `from_loc_code` (`from_loc_code`),
+	KEY `to_loc_code` (`to_loc_code`),
+	KEY `request_date` (`request_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_transfer_orders` --
+
+-- Structure of table `0_wh_transfer_order_lines` --
+
+DROP TABLE IF EXISTS `0_wh_transfer_order_lines`;
+
+CREATE TABLE `0_wh_transfer_order_lines` (
+	`line_id` int(11) NOT NULL AUTO_INCREMENT,
+	`transfer_id` int(11) NOT NULL,
+	`stock_id` varchar(20) NOT NULL,
+	`qty_requested` decimal(15,4) NOT NULL,
+	`qty_shipped` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_received` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`from_bin_id` int(11) DEFAULT NULL COMMENT 'Specific source bin',
+	`to_bin_id` int(11) DEFAULT NULL COMMENT 'Specific dest bin',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`unit_cost` decimal(15,4) DEFAULT '0.0000',
+	`memo` varchar(255) DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`line_id`),
+	KEY `transfer_id` (`transfer_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_transfer_order_lines` --
+
+-- Structure of table `0_wh_material_requests` --
+
+DROP TABLE IF EXISTS `0_wh_material_requests`;
+
+CREATE TABLE `0_wh_material_requests` (
+	`request_id` int(11) NOT NULL AUTO_INCREMENT,
+	`request_no` int(11) NOT NULL,
+	`request_type` varchar(20) NOT NULL COMMENT 'purchase|transfer|manufacturing|issue',
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|submitted|approved|ordered|fulfilled|cancelled',
+	`warehouse_loc_code` varchar(5) NOT NULL COMMENT 'Requesting warehouse',
+	`requested_by` smallint(6) DEFAULT NULL,
+	`approved_by` smallint(6) DEFAULT NULL,
+	`request_date` date NOT NULL,
+	`required_date` date DEFAULT NULL,
+	`reference` varchar(60) DEFAULT NULL,
+	`memo` text DEFAULT NULL,
+	`linked_doc_type` int(11) DEFAULT NULL COMMENT 'PO, Transfer Order, Work Order',
+	`linked_doc_no` int(11) DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`request_id`),
+	UNIQUE KEY `request_no` (`request_no`),
+	KEY `status` (`status`),
+	KEY `request_type` (`request_type`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_material_requests` --
+
+-- Structure of table `0_wh_material_request_lines` --
+
+DROP TABLE IF EXISTS `0_wh_material_request_lines`;
+
+CREATE TABLE `0_wh_material_request_lines` (
+	`line_id` int(11) NOT NULL AUTO_INCREMENT,
+	`request_id` int(11) NOT NULL,
+	`stock_id` varchar(20) NOT NULL,
+	`qty_requested` decimal(15,4) NOT NULL,
+	`qty_fulfilled` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`required_date` date DEFAULT NULL,
+	`memo` varchar(255) DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`line_id`),
+	KEY `request_id` (`request_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_material_request_lines` --
+
+-- Structure of table `0_wh_picking_waves` --
+
+DROP TABLE IF EXISTS `0_wh_picking_waves`;
+
+CREATE TABLE `0_wh_picking_waves` (
+	`wave_id` int(11) NOT NULL AUTO_INCREMENT,
+	`wave_name` varchar(60) NOT NULL,
+	`wave_type` varchar(20) NOT NULL DEFAULT 'standard' COMMENT 'standard|rush|backorder',
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|released|in_progress|done|cancelled',
+	`warehouse_loc_code` varchar(5) NOT NULL,
+	`picking_method` varchar(20) NOT NULL DEFAULT 'single' COMMENT 'single|batch|cluster|wave',
+	`created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`released_date` datetime DEFAULT NULL,
+	`completed_date` datetime DEFAULT NULL,
+	`assigned_to` smallint(6) DEFAULT NULL,
+	`total_orders` int(11) DEFAULT '0',
+	`total_lines` int(11) DEFAULT '0',
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`wave_id`),
+	KEY `status` (`status`),
+	KEY `warehouse_loc_code` (`warehouse_loc_code`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_picking_waves` --
+
+-- Structure of table `0_wh_packages` --
+
+DROP TABLE IF EXISTS `0_wh_packages`;
+
+CREATE TABLE `0_wh_packages` (
+	`package_id` int(11) NOT NULL AUTO_INCREMENT,
+	`package_code` varchar(40) NOT NULL COMMENT 'Barcode/identifier',
+	`package_type` varchar(20) NOT NULL DEFAULT 'box' COMMENT 'box|pallet|crate|envelope|other',
+	`status` varchar(20) NOT NULL DEFAULT 'open' COMMENT 'open|sealed|shipped|received|returned',
+	`current_loc_id` int(11) DEFAULT NULL COMMENT 'Current warehouse location',
+	`weight` decimal(15,4) DEFAULT NULL,
+	`length` decimal(10,2) DEFAULT NULL,
+	`width` decimal(10,2) DEFAULT NULL,
+	`height` decimal(10,2) DEFAULT NULL,
+	`shipping_label` varchar(100) DEFAULT NULL,
+	`tracking_number` varchar(100) DEFAULT NULL,
+	`carrier` varchar(60) DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`package_id`),
+	UNIQUE KEY `package_code` (`package_code`),
+	KEY `current_loc_id` (`current_loc_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_packages` --
+
+-- Structure of table `0_wh_package_contents` --
+
+DROP TABLE IF EXISTS `0_wh_package_contents`;
+
+CREATE TABLE `0_wh_package_contents` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`package_id` int(11) NOT NULL,
+	`stock_id` varchar(20) NOT NULL,
+	`qty` decimal(15,4) NOT NULL,
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	PRIMARY KEY (`id`),
+	KEY `package_id` (`package_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_package_contents` --
+
+-- Structure of table `0_wh_cycle_count_plans` --
+
+DROP TABLE IF EXISTS `0_wh_cycle_count_plans`;
+
+CREATE TABLE `0_wh_cycle_count_plans` (
+	`plan_id` int(11) NOT NULL AUTO_INCREMENT,
+	`plan_name` varchar(100) NOT NULL,
+	`count_method` varchar(20) NOT NULL COMMENT 'location_based|item_based|abc_based|full',
+	`warehouse_loc_code` varchar(5) DEFAULT NULL,
+	`frequency_days` int(11) NOT NULL DEFAULT '30',
+	`abc_class` char(1) DEFAULT NULL COMMENT 'For ABC-based: A=weekly, B=monthly, C=quarterly',
+	`last_count_date` date DEFAULT NULL,
+	`next_count_date` date DEFAULT NULL,
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`plan_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_cycle_count_plans` --
+
+-- Structure of table `0_wh_cycle_counts` --
+
+DROP TABLE IF EXISTS `0_wh_cycle_counts`;
+
+CREATE TABLE `0_wh_cycle_counts` (
+	`count_id` int(11) NOT NULL AUTO_INCREMENT,
+	`plan_id` int(11) DEFAULT NULL,
+	`count_date` date NOT NULL,
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|in_progress|review|approved|posted',
+	`warehouse_loc_code` varchar(5) NOT NULL,
+	`counted_by` smallint(6) DEFAULT NULL,
+	`approved_by` smallint(6) DEFAULT NULL,
+	`posted_date` datetime DEFAULT NULL,
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`count_id`),
+	KEY `plan_id` (`plan_id`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_cycle_counts` --
+
+-- Structure of table `0_wh_cycle_count_lines` --
+
+DROP TABLE IF EXISTS `0_wh_cycle_count_lines`;
+
+CREATE TABLE `0_wh_cycle_count_lines` (
+	`line_id` int(11) NOT NULL AUTO_INCREMENT,
+	`count_id` int(11) NOT NULL,
+	`wh_loc_id` int(11) NOT NULL COMMENT 'Bin being counted',
+	`stock_id` varchar(20) NOT NULL,
+	`system_qty` decimal(15,4) NOT NULL COMMENT 'Expected QoH',
+	`counted_qty` decimal(15,4) DEFAULT NULL COMMENT 'Physically counted',
+	`variance_qty` decimal(15,4) DEFAULT NULL COMMENT 'Maintained by app code: counted_qty - system_qty',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`adjustment_posted` tinyint(1) NOT NULL DEFAULT '0',
+	`memo` varchar(255) DEFAULT NULL,
+	PRIMARY KEY (`line_id`),
+	KEY `count_id` (`count_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_cycle_count_lines` --
+
+-- Structure of table `0_wh_scrap` --
+
+DROP TABLE IF EXISTS `0_wh_scrap`;
+
+CREATE TABLE `0_wh_scrap` (
+	`scrap_id` int(11) NOT NULL AUTO_INCREMENT,
+	`scrap_date` date NOT NULL,
+	`stock_id` varchar(20) NOT NULL,
+	`qty` decimal(15,4) NOT NULL,
+	`from_loc_id` int(11) NOT NULL COMMENT 'Source bin',
+	`scrap_loc_id` int(11) DEFAULT NULL COMMENT 'Scrap destination',
+	`reason_code` varchar(20) NOT NULL COMMENT 'damaged|expired|quality_fail|obsolete|other',
+	`reason_detail` varchar(255) DEFAULT NULL,
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`unit_cost` decimal(15,4) DEFAULT '0.0000',
+	`total_cost` decimal(15,4) DEFAULT '0.0000',
+	`stock_move_id` int(11) DEFAULT NULL COMMENT 'Link to stock_moves entry',
+	`approved_by` smallint(6) DEFAULT NULL,
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`scrap_id`),
+	KEY `stock_id` (`stock_id`),
+	KEY `reason_code` (`reason_code`),
+	KEY `serial_id` (`serial_id`),
+	KEY `batch_id` (`batch_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_scrap` --
+
+-- Structure of table `0_wh_return_orders` --
+
+DROP TABLE IF EXISTS `0_wh_return_orders`;
+
+CREATE TABLE `0_wh_return_orders` (
+	`return_id` int(11) NOT NULL AUTO_INCREMENT,
+	`return_no` int(11) NOT NULL,
+	`return_type` varchar(20) NOT NULL COMMENT 'customer_return|supplier_return|rma',
+	`status` varchar(20) NOT NULL DEFAULT 'draft' COMMENT 'draft|approved|received|inspected|processed|closed',
+	`source_doc_type` int(11) DEFAULT NULL COMMENT 'Original delivery/receipt',
+	`source_doc_no` int(11) DEFAULT NULL,
+	`customer_id` int(11) DEFAULT NULL,
+	`supplier_id` int(11) DEFAULT NULL,
+	`warehouse_loc_code` varchar(5) NOT NULL,
+	`return_date` date NOT NULL,
+	`received_date` date DEFAULT NULL,
+	`disposition_code` varchar(20) DEFAULT NULL COMMENT 'restock|refurbish|scrap|return_to_vendor',
+	`reference` varchar(60) DEFAULT NULL,
+	`memo` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`return_id`),
+	UNIQUE KEY `return_no` (`return_no`),
+	KEY `status` (`status`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_return_orders` --
+
+-- Structure of table `0_wh_return_order_lines` --
+
+DROP TABLE IF EXISTS `0_wh_return_order_lines`;
+
+CREATE TABLE `0_wh_return_order_lines` (
+	`line_id` int(11) NOT NULL AUTO_INCREMENT,
+	`return_id` int(11) NOT NULL,
+	`stock_id` varchar(20) NOT NULL,
+	`qty_expected` decimal(15,4) NOT NULL,
+	`qty_received` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_good` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Restockable qty',
+	`qty_damaged` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_scrap` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`disposition_code` varchar(20) DEFAULT NULL,
+	`to_bin_id` int(11) DEFAULT NULL,
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`reason_code` varchar(20) DEFAULT NULL COMMENT 'defective|wrong_item|damaged_in_transit|not_needed',
+	`memo` varchar(255) DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`line_id`),
+	KEY `return_id` (`return_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_return_order_lines` --
+
+-- Structure of table `0_wh_consignment_stock` --
+
+DROP TABLE IF EXISTS `0_wh_consignment_stock`;
+
+CREATE TABLE `0_wh_consignment_stock` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`stock_id` varchar(20) NOT NULL,
+	`supplier_id` int(11) NOT NULL,
+	`wh_loc_id` int(11) NOT NULL COMMENT 'Bin where stored',
+	`qty_on_hand` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_consumed` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Used but not yet invoiced',
+	`unit_cost` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`receipt_date` date NOT NULL,
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`status` varchar(20) NOT NULL DEFAULT 'on_hand' COMMENT 'on_hand|consumed|returned',
+	`memo` text DEFAULT NULL COMMENT 'Notes / reference',
+	`loc_code` varchar(5) DEFAULT NULL COMMENT 'Inventory location code',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `stock_id` (`stock_id`),
+	KEY `supplier_id` (`supplier_id`),
+	KEY `batch_id` (`batch_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_consignment_stock` --
+
+-- Structure of table `0_wh_consignment_movements` --
+
+DROP TABLE IF EXISTS `0_wh_consignment_movements`;
+
+CREATE TABLE `0_wh_consignment_movements` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`consignment_id` int(11) NOT NULL COMMENT 'FK to wh_consignment_stock.id',
+	`movement_type` varchar(20) NOT NULL COMMENT 'receive|consume|return|adjust',
+	`qty` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`movement_date` date NOT NULL,
+	`description` text DEFAULT NULL,
+	`reference_no` int(11) DEFAULT NULL COMMENT 'Related transaction number',
+	`memo` text DEFAULT NULL,
+	`invoiced` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1 if covered by AP invoice',
+	`invoice_trans_no` int(11) DEFAULT NULL COMMENT 'Linked supplier invoice trans_no',
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `consignment_id` (`consignment_id`),
+	KEY `movement_type` (`movement_type`),
+	KEY `invoiced` (`invoiced`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_consignment_movements` --
+
+-- Structure of table `0_wh_vmi_levels` --
+
+DROP TABLE IF EXISTS `0_wh_vmi_levels`;
+
+CREATE TABLE `0_wh_vmi_levels` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`stock_id` varchar(20) NOT NULL,
+	`supplier_id` int(11) NOT NULL,
+	`min_level` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Minimum stock level (reorder point)',
+	`max_level` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Maximum stock level',
+	`reorder_qty` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Suggested reorder quantity',
+	`loc_code` varchar(5) DEFAULT NULL COMMENT 'Location code for level tracking',
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uk_item_supplier` (`stock_id`, `supplier_id`),
+	KEY `supplier_id` (`supplier_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_vmi_levels` --
+
+-- Structure of table `0_wh_replenishment_rules` --
+
+DROP TABLE IF EXISTS `0_wh_replenishment_rules`;
+
+CREATE TABLE `0_wh_replenishment_rules` (
+	`rule_id` int(11) NOT NULL AUTO_INCREMENT,
+	`rule_name` varchar(100) NOT NULL,
+	`rule_type` varchar(20) NOT NULL COMMENT 'min_max|mto|reorder_point|inter_warehouse|pick_face|forecast',
+	`stock_id` varchar(20) DEFAULT NULL,
+	`category_id` smallint(6) DEFAULT NULL,
+	`warehouse_loc_code` varchar(5) DEFAULT NULL,
+	`bin_loc_id` int(11) DEFAULT NULL COMMENT 'For pick-face replenishment',
+	`min_qty` decimal(15,4) DEFAULT NULL,
+	`max_qty` decimal(15,4) DEFAULT NULL,
+	`reorder_qty` decimal(15,4) DEFAULT NULL,
+	`safety_stock` decimal(15,4) DEFAULT NULL,
+	`lead_time_days` int(11) DEFAULT NULL,
+	`supply_warehouse` varchar(5) DEFAULT NULL COMMENT 'For inter-warehouse',
+	`supply_method` varchar(20) DEFAULT 'purchase' COMMENT 'purchase|transfer|manufacture',
+	`preferred_supplier` int(11) DEFAULT NULL,
+	`active` tinyint(1) NOT NULL DEFAULT '1',
+	`auto_execute` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=suggest only, 1=auto-create orders',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`rule_id`),
+	KEY `rule_type` (`rule_type`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_replenishment_rules` --
+
+-- Structure of table `0_wh_bin_stock` --
+
+DROP TABLE IF EXISTS `0_wh_bin_stock`;
+
+CREATE TABLE `0_wh_bin_stock` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`wh_loc_id` int(11) NOT NULL COMMENT 'FK to wh_locations.loc_id (bin)',
+	`stock_id` varchar(20) NOT NULL COMMENT 'FK to stock_master.stock_id',
+	`qty_on_hand` decimal(15,4) NOT NULL DEFAULT '0.0000',
+	`qty_reserved` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Reserved for orders',
+	`qty_available` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Maintained by app code: on_hand - reserved',
+	`reorder_level` decimal(15,4) DEFAULT NULL COMMENT 'Bin-specific reorder',
+	`max_level` decimal(15,4) DEFAULT NULL COMMENT 'Max for this item in this bin',
+	`batch_id` int(11) DEFAULT NULL COMMENT 'FK to stock_batches.id',
+	`serial_id` int(11) DEFAULT NULL COMMENT 'FK to serial_numbers.id',
+	`expiry_date` date DEFAULT NULL,
+	`stock_status` varchar(20) NOT NULL DEFAULT 'available' COMMENT 'available|reserved|on_hold|quarantine|damaged|in_transit',
+	`last_count_date` date DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `bin_item_batch_serial` (`wh_loc_id`, `stock_id`, `batch_id`, `serial_id`),
+	KEY `wh_loc_id` (`wh_loc_id`),
+	KEY `stock_id` (`stock_id`),
+	KEY `batch_id` (`batch_id`),
+	KEY `serial_id` (`serial_id`),
+	KEY `stock_status` (`stock_status`),
+	KEY `expiry_date` (`expiry_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_wh_bin_stock` --
+
+-- Structure of table `0_warranty_provision_log` --
+
+DROP TABLE IF EXISTS `0_warranty_provision_log`;
+
+CREATE TABLE `0_warranty_provision_log` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`trans_type` int(11) NOT NULL COMMENT 'Source trans type (e.g., ST_CUSTDELIVERY)',
+	`trans_no` int(11) NOT NULL COMMENT 'Source trans number',
+	`stock_id` varchar(20) NOT NULL,
+	`serial_id` int(11) DEFAULT NULL,
+	`batch_id` int(11) DEFAULT NULL,
+	`customer_id` int(11) NOT NULL,
+	`provision_type` varchar(10) NOT NULL COMMENT 'accrual or release',
+	`amount` double NOT NULL DEFAULT '0',
+	`warranty_end` date DEFAULT NULL,
+	`tran_date` date NOT NULL,
+	`gl_trans_id` int(11) DEFAULT NULL COMMENT 'Reference to gl_trans counter',
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_wp_trans` (`trans_type`, `trans_no`),
+	KEY `idx_wp_stock` (`stock_id`),
+	KEY `idx_wp_customer` (`customer_id`),
+	KEY `idx_wp_type` (`provision_type`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_warranty_provision_log` --
+
+-- Structure of table `0_regulatory_profiles` --
+
+DROP TABLE IF EXISTS `0_regulatory_profiles`;
+
+CREATE TABLE `0_regulatory_profiles` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`stock_id` varchar(20) DEFAULT NULL COMMENT 'Specific item (NULL = category-level)',
+	`category_id` int(11) DEFAULT NULL COMMENT 'Item category (NULL = item-level)',
+	`framework` varchar(20) NOT NULL COMMENT 'dscsa|fmd|fsma204|udi',
+	`enabled` tinyint(1) NOT NULL DEFAULT '1',
+	`settings` text DEFAULT NULL COMMENT 'JSON framework-specific settings',
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_date` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_date` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_reg_stock` (`stock_id`),
+	KEY `idx_reg_category` (`category_id`),
+	KEY `idx_reg_framework` (`framework`),
+	UNIQUE KEY `uk_reg_profile` (`stock_id`, `category_id`, `framework`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_regulatory_profiles` --
+
+-- Structure of table `0_dscsa_transactions` --
+
+DROP TABLE IF EXISTS `0_dscsa_transactions`;
+
+CREATE TABLE `0_dscsa_transactions` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`transaction_type` varchar(20) NOT NULL COMMENT 'sale|return|suspect|illegitimate',
+	`delivery_id` int(11) DEFAULT NULL COMMENT 'FK to trans_no of ST_CUSTDELIVERY',
+	`grn_id` int(11) DEFAULT NULL COMMENT 'FK to grn_batch_id for inbound',
+	`stock_id` varchar(20) NOT NULL,
+	`serial_id` int(11) DEFAULT NULL,
+	`batch_id` int(11) DEFAULT NULL,
+	`ndc` varchar(20) DEFAULT NULL COMMENT 'National Drug Code',
+	`gtin` varchar(14) DEFAULT NULL,
+	`serial_no` varchar(50) DEFAULT NULL,
+	`lot_number` varchar(50) DEFAULT NULL,
+	`expiry_date` date DEFAULT NULL,
+	`sender_id` int(11) DEFAULT NULL COMMENT 'Supplier or our company',
+	`sender_name` varchar(100) DEFAULT NULL,
+	`sender_license` varchar(50) DEFAULT NULL COMMENT 'State license number',
+	`receiver_id` int(11) DEFAULT NULL COMMENT 'Customer',
+	`receiver_name` varchar(100) DEFAULT NULL,
+	`receiver_license` varchar(50) DEFAULT NULL,
+	`transaction_date` date NOT NULL,
+	`verification_status` varchar(20) DEFAULT 'pending' COMMENT 'pending|verified|failed|suspect',
+	`verification_date` datetime DEFAULT NULL,
+	`verified_by` int(11) DEFAULT NULL,
+	`gs1_barcode` text DEFAULT NULL COMMENT 'Full GS1 DataMatrix content',
+	`transaction_history` text DEFAULT NULL COMMENT 'JSON chain of prior TI/TH/TS',
+	`suspect_reason` text DEFAULT NULL,
+	`suspect_reported_date` datetime DEFAULT NULL,
+	`quarantine_action` varchar(20) DEFAULT NULL COMMENT 'quarantine|destroy|return',
+	`notes` text DEFAULT NULL,
+	`custom_data` text DEFAULT NULL COMMENT 'JSON extensible',
+	PRIMARY KEY (`id`),
+	KEY `idx_dscsa_delivery` (`delivery_id`),
+	KEY `idx_dscsa_grn` (`grn_id`),
+	KEY `idx_dscsa_stock` (`stock_id`),
+	KEY `idx_dscsa_serial` (`serial_id`),
+	KEY `idx_dscsa_batch` (`batch_id`),
+	KEY `idx_dscsa_type` (`transaction_type`),
+	KEY `idx_dscsa_status` (`verification_status`),
+	KEY `idx_dscsa_date` (`transaction_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dscsa_transactions` --
+
+-- Structure of table `0_fsma_tracking_events` --
+
+DROP TABLE IF EXISTS `0_fsma_tracking_events`;
+
+CREATE TABLE `0_fsma_tracking_events` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`event_type` varchar(30) NOT NULL COMMENT 'growing|receiving|transforming|creating|shipping',
+	`stock_id` varchar(20) NOT NULL,
+	`batch_id` int(11) DEFAULT NULL,
+	`lot_code` varchar(50) DEFAULT NULL COMMENT 'Traceability lot code (TLC)',
+	`location_description` text DEFAULT NULL COMMENT 'Where the event occurred',
+	`loc_code` varchar(5) DEFAULT NULL COMMENT 'FK to locations',
+	`event_date` datetime NOT NULL,
+	`quantity` double DEFAULT NULL,
+	`unit_of_measure` varchar(20) DEFAULT NULL,
+	`reference_type` varchar(20) DEFAULT NULL COMMENT 'grn|delivery|transfer|production',
+	`reference_id` int(11) DEFAULT NULL COMMENT 'FK to the source transaction',
+	`trading_partner_type` varchar(20) DEFAULT NULL COMMENT 'supplier|customer|transporter',
+	`trading_partner_id` int(11) DEFAULT NULL,
+	`trading_partner_name` varchar(100) DEFAULT NULL,
+	`country_of_origin` varchar(50) DEFAULT NULL,
+	`harvest_date` date DEFAULT NULL,
+	`cooling_date` date DEFAULT NULL,
+	`pack_date` date DEFAULT NULL,
+	`ship_date` date DEFAULT NULL,
+	`temperature_data` text DEFAULT NULL COMMENT 'JSON temperature log',
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_date` datetime DEFAULT CURRENT_TIMESTAMP,
+	`custom_data` text DEFAULT NULL COMMENT 'JSON extensible for KDEs',
+	PRIMARY KEY (`id`),
+	KEY `idx_fsma_stock` (`stock_id`),
+	KEY `idx_fsma_batch` (`batch_id`),
+	KEY `idx_fsma_event` (`event_type`),
+	KEY `idx_fsma_date` (`event_date`),
+	KEY `idx_fsma_lot` (`lot_code`),
+	KEY `idx_fsma_ref` (`reference_type`, `reference_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_fsma_tracking_events` --
+
+-- Structure of table `0_udi_registrations` --
+
+DROP TABLE IF EXISTS `0_udi_registrations`;
+
+CREATE TABLE `0_udi_registrations` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`stock_id` varchar(20) NOT NULL,
+	`udi_di` varchar(50) NOT NULL COMMENT 'Device Identifier (fixed portion)',
+	`udi_pi` varchar(100) DEFAULT NULL COMMENT 'Production Identifier (variable: serial+lot+expiry+date)',
+	`issuing_agency` varchar(10) NOT NULL DEFAULT 'GS1' COMMENT 'GS1|HIBCC|ICCBBA',
+	`device_description` text DEFAULT NULL,
+	`brand_name` varchar(100) DEFAULT NULL,
+	`version_model` varchar(100) DEFAULT NULL,
+	`company_name` varchar(100) DEFAULT NULL,
+	`mri_safety` varchar(20) DEFAULT NULL COMMENT 'MR Safe|MR Conditional|MR Unsafe',
+	`device_sterile` tinyint(1) DEFAULT '0',
+	`single_use` tinyint(1) DEFAULT '0',
+	`implantable` tinyint(1) DEFAULT '0',
+	`rx_only` tinyint(1) DEFAULT '0',
+	`otc` tinyint(1) DEFAULT '0',
+	`fda_listing_number` varchar(20) DEFAULT NULL,
+	`fda_premarket_number` varchar(20) DEFAULT NULL COMMENT '510(k) or PMA number',
+	`gtin` varchar(14) DEFAULT NULL,
+	`serial_id` int(11) DEFAULT NULL,
+	`batch_id` int(11) DEFAULT NULL,
+	`manufacturing_date` date DEFAULT NULL,
+	`expiry_date` date DEFAULT NULL,
+	`gudid_submitted` tinyint(1) DEFAULT '0' COMMENT 'Submitted to FDA GUDID',
+	`gudid_submission_date` datetime DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	`created_by` int(11) DEFAULT NULL,
+	`created_date` datetime DEFAULT CURRENT_TIMESTAMP,
+	`updated_date` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`custom_data` text DEFAULT NULL COMMENT 'JSON extensible',
+	PRIMARY KEY (`id`),
+	KEY `idx_udi_stock` (`stock_id`),
+	KEY `idx_udi_di` (`udi_di`),
+	KEY `idx_udi_serial` (`serial_id`),
+	KEY `idx_udi_batch` (`batch_id`),
+	KEY `idx_udi_gtin` (`gtin`),
+	KEY `idx_udi_agency` (`issuing_agency`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_udi_registrations` --
+
+-- =====================================================================================
+-- End of Advanced Inventory / Warehouse Management Tables
+-- =====================================================================================
 
 -- Structure of table `0_supp_allocations` --
 
@@ -1970,7 +3301,21 @@ INSERT INTO `0_sys_prefs` VALUES
 ('payroll_month_work_days', 'setup.company', 'float', '2', 26),
 ('payroll_payable_act', 'glsetup.hrm', 'varchar', 15, 2100),
 ('payroll_deductleave_act', 'glsetup.hrm', 'varchar', 15, ''),
-('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420);
+('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420),
+('warranty_provision_account', 'tracking', 'VARCHAR', 15, ''),
+('warranty_expense_account', 'tracking', 'VARCHAR', 15, ''),
+('warranty_provision_rate', 'tracking', 'REAL', 8, '5.0'),
+('warranty_provision_enabled', 'tracking', 'TINYINT', 1, '0'),
+('regulatory_compliance_enabled', 'tracking', 'TINYINT', 1, '0'),
+('dscsa_enabled', 'tracking', 'TINYINT', 1, '0'),
+('fsma204_enabled', 'tracking', 'TINYINT', 1, '0'),
+('udi_enabled', 'tracking', 'TINYINT', 1, '0'),
+('dscsa_company_license', 'tracking', 'VARCHAR', 50, ''),
+('dscsa_company_dea', 'tracking', 'VARCHAR', 20, ''),
+('fsma204_firm_name', 'tracking', 'VARCHAR', 100, ''),
+('fsma204_fda_registration', 'tracking', 'VARCHAR', 30, ''),
+('udi_company_name', 'tracking', 'VARCHAR', 100, ''),
+('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
 
 -- Structure of table `0_tag_associations` --
 

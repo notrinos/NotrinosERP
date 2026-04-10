@@ -58,6 +58,14 @@ define('ST_ITEM', 43);
 define('ST_FIXEDASSET', 44);
 define('ST_BANKACCOUNT', 45);
 
+// --- Warehouse Management transaction types ---
+define('ST_WH_TRANSFER_ORDER',   50);  // Inter-branch transfer order
+define('ST_WH_MATERIAL_REQUEST', 51);  // Material request
+define('ST_WH_SCRAP',            52);  // Scrap entry
+define('ST_WH_RETURN_ORDER',     53);  // Return order
+define('ST_WH_CYCLE_COUNT',      54);  // Cycle count adjustment
+define('ST_WH_INTERNAL_MOVE',    55);  // Internal bin-to-bin move
+
 // Don't include these defines in the $systypes_array.
 // They are used for documents only.
 define ('ST_STATEMENT', 91);

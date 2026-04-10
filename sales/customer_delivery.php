@@ -23,6 +23,8 @@ include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
 include_once($path_to_root . '/taxes/tax_calc.inc');
+include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
+include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -441,6 +443,83 @@ foreach ($_SESSION['Items']->line_items as $line=>$ln_itm) {
 	amount_cell($line_total);
 
 	end_row();
+
+	// --- Serial/Batch tracking panels ---
+	$tracking_mode = get_item_tracking_mode($ln_itm->stock_id);
+	if ($tracking_mode !== 'none') {
+		$colspan_track = count($th);
+
+		if (item_has_serial_tracking($ln_itm->stock_id)) {
+			// Serial selection panel
+			echo '<tr><td colspan="'.$colspan_track.'" style="padding:4px 8px 8px 24px; border-left:3px solid #5b9bd5; background:#f7f9fc;">';
+			echo '<b style="color:#5b9bd5;"><i class="fa fa-barcode"></i> '._('Serial Numbers').'</b>';
+			echo ' <small style="color:#888;">('._('Enter serial numbers to deliver — one per line or comma-separated').')</small><br>';
+
+			// Show available serials for this item at this location
+			$loc = isset($_POST['Location']) ? $_POST['Location'] : $_SESSION['Items']->Location;
+			if (function_exists('get_serial_numbers_at_location')) {
+				$avail_serials = get_serial_numbers_at_location($ln_itm->stock_id, $loc, 'available');
+				if (!empty($avail_serials)) {
+					echo '<div style="margin:4px 0;padding:4px 8px;background:#e8f4e8;border:1px solid #c3e6c3;border-radius:3px;font-size:11px;">';
+					echo '<b>'._('Available:').'</b> ';
+					$sn_list = array();
+					foreach ($avail_serials as $asn) {
+						$sn_list[] = htmlspecialchars($asn['serial_no']);
+					}
+					echo implode(', ', $sn_list);
+					echo '</div>';
+				}
+			}
+
+			$qty_int = max(1, (int)$ln_itm->qty_dispatched);
+			$rows = min(max(2, $qty_int), 10);
+			echo '<textarea name="delivery_serial_'.$line.'" id="delivery_serial_'.$line.'" rows="'.$rows.'" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+			echo htmlspecialchars(get_post('delivery_serial_'.$line));
+			echo '</textarea>';
+			echo '</td></tr>';
+		}
+
+		if (item_has_batch_tracking($ln_itm->stock_id)) {
+			// Batch allocation panel
+			echo '<tr><td colspan="'.$colspan_track.'" style="padding:4px 8px 8px 24px; border-left:3px solid #e6a23c; background:#fdf6ec;">';
+			echo '<b style="color:#e6a23c;"><i class="fa fa-cubes"></i> '._('Batch / Lot Allocation').'</b>';
+			echo ' <small style="color:#888;">('._('Format: batch_id:qty per line. Leave blank for auto FEFO/FIFO allocation.').')</small><br>';
+
+			// Show available batches with FEFO ordering
+			$loc = isset($_POST['Location']) ? $_POST['Location'] : $_SESSION['Items']->Location;
+			$avail_batches = array();
+			if (function_exists('get_fefo_batches')) {
+				$avail_batches = get_fefo_batches($ln_itm->stock_id, $loc, $ln_itm->qty_dispatched);
+				if (!empty($avail_batches)) {
+					echo '<div style="margin:4px 0;padding:4px 8px;background:#fef0d5;border:1px solid #f5deb3;border-radius:3px;font-size:11px;">';
+					echo '<b>'._('Available (FEFO order):').'</b><br>';
+					echo '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+					echo '<tr><th style="text-align:left;padding:2px 4px;">'._('ID').'</th>';
+					echo '<th style="text-align:left;padding:2px 4px;">'._('Batch #').'</th>';
+					echo '<th style="text-align:right;padding:2px 4px;">'._('Available').'</th>';
+					echo '<th style="text-align:left;padding:2px 4px;">'._('Expiry').'</th></tr>';
+					foreach ($avail_batches as $ab) {
+						$expiry_str = !empty($ab['expiry_date']) ? sql2date($ab['expiry_date']) : '-';
+						echo '<tr>';
+						echo '<td style="padding:2px 4px;">'.(int)$ab['batch_id'].'</td>';
+						echo '<td style="padding:2px 4px;">'.htmlspecialchars($ab['batch_no']).'</td>';
+						echo '<td style="padding:2px 4px;text-align:right;">'.number_format2((float)$ab['qty_available'], get_qty_dec($ln_itm->stock_id)).'</td>';
+						echo '<td style="padding:2px 4px;">'.$expiry_str.'</td>';
+						echo '</tr>';
+					}
+					echo '</table>';
+					echo '</div>';
+				}
+			}
+
+			$rows = min(5, max(2, count($avail_batches)));
+			echo '<textarea name="delivery_batch_'.$line.'" id="delivery_batch_'.$line.'" rows="'.$rows.'" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+			echo htmlspecialchars(get_post('delivery_batch_'.$line));
+			echo '</textarea>';
+			echo '</td></tr>';
+		}
+	}
+	// --- End serial/batch tracking panels ---
 }
 
 $_POST['ChargeFreightCost'] =  get_post('ChargeFreightCost', price_format($_SESSION['Items']->freight_cost));

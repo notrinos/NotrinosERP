@@ -11,6 +11,10 @@
 ***********************************************************************/
 include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
 
+$serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
+if (file_exists($serial_batch_db_path))
+	include_once($serial_batch_db_path);
+
 //--------------------------------------------------------------------------------------------------
 
 function copy_from_cart() {
@@ -239,6 +243,9 @@ function display_po_items(&$order, $editable=true) {
 		}
 		else
 			po_item_controls($order, $k, $line_no);
+
+		if ($order->trans_type == ST_SUPPRECEIVE)
+			display_direct_grn_tracking_inputs($line_no, $po_line, count($th));
 		
 		$total += $line_total;
 	}
@@ -264,6 +271,73 @@ function display_po_items(&$order, $editable=true) {
 
 	end_table(1);
 	div_end();
+}
+
+/**
+ * Render serial/batch tracking input panels for direct GRN rows.
+ *
+ * This supports direct GRN shortcut flow in po_entry_items.php and posts keys
+ * consumed by process_grn_tracking_and_wms():
+ * - serial_{line_no}
+ * - batch_no_{line_no}
+ * - batch_expiry_{line_no}
+ * - batch_mfg_{line_no}
+ *
+ * @param int   $line_no             GRN line number
+ * @param mixed $purchase_order_line Purchase order line object
+ * @param int   $column_span         Number of table columns to span
+ *
+ * @return void
+ */
+function display_direct_grn_tracking_inputs($line_no, $purchase_order_line, $column_span) {
+	if (!function_exists('item_has_serial_tracking') || !function_exists('item_has_batch_tracking'))
+		return;
+
+	$has_serial_tracking = item_has_serial_tracking($purchase_order_line->stock_id);
+	$has_batch_tracking = item_has_batch_tracking($purchase_order_line->stock_id);
+
+	if (!$has_serial_tracking && !$has_batch_tracking)
+		return;
+
+	echo '<tr class="tracking_panel">';
+	echo '<td></td>';
+	echo '<td colspan="' . max(1, (int)$column_span - 1) . '" style="padding:4px 8px; background:#f0f9eb; border-left:3px solid #67c23a;">';
+
+	if ($has_serial_tracking) {
+		$serial_input_name = 'serial_' . $line_no;
+		$serial_input_value = get_post($serial_input_name);
+		echo '<div style="margin-bottom:4px;">';
+		echo '<label style="font-weight:bold; color: #67c23a;"><i class="fa fa-barcode"></i> ';
+		echo _('Serial Numbers') . ' <small style="color: #888;">(' . _('one per line or comma-separated') . ')</small></label><br>';
+		echo '<textarea name="' . $serial_input_name . '" id="' . $serial_input_name . '" rows="3" cols="50" style="width:400px; font-family:monospace; font-size:12px;">';
+		echo htmlspecialchars($serial_input_value, ENT_QUOTES);
+		echo '</textarea>';
+		echo '</div>';
+	}
+
+	if ($has_batch_tracking) {
+		$batch_number_input_name = 'batch_no_' . $line_no;
+		$batch_number_value = get_post($batch_number_input_name);
+		$batch_expiry_input_name = 'batch_expiry_' . $line_no;
+		$batch_expiry_value = get_post($batch_expiry_input_name);
+		$batch_mfg_input_name = 'batch_mfg_' . $line_no;
+		$batch_mfg_value = get_post($batch_mfg_input_name);
+
+		echo '<div style="margin-bottom:4px;">';
+		echo '<label style="font-weight:bold; color: #67c23a;"><i class="fa fa-cubes"></i> ';
+		echo _('Batch/Lot Info') . '</label><br>';
+		echo '<table style="margin:2px 0;">';
+		echo '<tr><td>' . _('Batch No') . ':</td>';
+		echo '<td><input type="text" name="' . $batch_number_input_name . '" id="' . $batch_number_input_name . '" value="' . htmlspecialchars($batch_number_value, ENT_QUOTES) . '" size="20" maxlength="60" style="font-family:monospace;"></td>';
+		echo '<td style="padding-left:10px;">' . _('Expiry') . ':</td>';
+		echo '<td><input type="text" name="' . $batch_expiry_input_name . '" id="' . $batch_expiry_input_name . '" value="' . htmlspecialchars($batch_expiry_value, ENT_QUOTES) . '" size="12" class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+		echo '<td style="padding-left:10px;">' . _('Mfg Date') . ':</td>';
+		echo '<td><input type="text" name="' . $batch_mfg_input_name . '" id="' . $batch_mfg_input_name . '" value="' . htmlspecialchars($batch_mfg_value, ENT_QUOTES) . '" size="12" class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+		echo '</tr></table>';
+		echo '</div>';
+	}
+
+	echo '</td></tr>';
 }
 
 //---------------------------------------------------------------------------------------------------

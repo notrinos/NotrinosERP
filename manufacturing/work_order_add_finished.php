@@ -20,6 +20,15 @@ include_once($path_to_root.'/gl/includes/db/gl_db_bank_trans.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_ui.inc');
 
+// Load serial/batch tracking if available
+$has_tracking_module = false;
+if (file_exists($path_to_root.'/inventory/includes/db/serial_batch_db.inc')) {
+	include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/stock_batches_db.inc');
+	$has_tracking_module = true;
+}
+
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 500);
@@ -175,6 +184,54 @@ small_qty_row(_('Quantity:'), 'quantity', null, null, null, $dec);
 textarea_row(_('Memo:'), 'memo_', null, 40, 3);
 
 end_table(1);
+
+// --- Serial/Batch tracking for finished product ---
+if ($has_tracking_module && isset($_POST['ProductionType']) && $_POST['ProductionType'] == 1) {
+	$tracking_mode = get_item_tracking_mode($wo_details['stock_id']);
+	if ($tracking_mode !== 'none') {
+		echo '<div style="border:1px solid #ddd; border-radius:4px; padding:10px; margin:0 auto 10px; max-width:600px;">';
+		display_heading(_('Finished Product Tracking'));
+
+		start_table(TABLESTYLE2);
+
+		if (item_has_serial_tracking($wo_details['stock_id'])) {
+			$produce_qty = isset($_POST['quantity']) ? input_num('quantity') : max($wo_details['units_reqd'] - $wo_details['units_issued'], 0);
+			echo '<tr><td class="label">' . _('Serial Numbers:') . '</td><td>';
+			echo '<small style="color:#666;">'
+				. sprintf(_('Enter %s serial numbers (one per line or comma-separated). Leave blank to auto-generate.'), number_format2($produce_qty, get_qty_dec($wo_details['stock_id'])))
+				. '</small><br>';
+			echo '<textarea name="produce_serials" rows="4" cols="50" style="width:100%;">'
+				. (isset($_POST['produce_serials']) ? htmlspecialchars($_POST['produce_serials']) : '')
+				. '</textarea>';
+			echo '</td></tr>';
+		}
+
+		if (item_has_batch_tracking($wo_details['stock_id'])) {
+			$item_data = get_item($wo_details['stock_id']);
+			$default_prefix = isset($item_data['batch_no_prefix']) ? $item_data['batch_no_prefix'] : '';
+			echo '<tr><td class="label">' . _('Batch / Lot Number:') . '</td><td>';
+			echo '<input type="text" name="produce_batch_no" size="30" maxlength="60" value="'
+				. (isset($_POST['produce_batch_no']) ? htmlspecialchars($_POST['produce_batch_no']) : '')
+				. '">';
+			echo ' <small style="color:#666;">' . _('(blank = auto-generate)') . '</small>';
+			echo '</td></tr>';
+
+			echo '<tr><td class="label">' . _('Batch Expiry Date:') . '</td><td>';
+			echo '<input type="text" name="produce_batch_expiry" size="12" maxlength="12" value="'
+				. (isset($_POST['produce_batch_expiry']) ? htmlspecialchars($_POST['produce_batch_expiry']) : '')
+				. '">';
+			if ($item_data && !empty($item_data['shelf_life_days'])) {
+				echo ' <small style="color:#666;">'
+					. sprintf(_('(blank = auto-calculate from shelf life: %d days)'), (int)$item_data['shelf_life_days'])
+					. '</small>';
+			}
+			echo '</td></tr>';
+		}
+
+		end_table();
+		echo '</div>';
+	}
+}
 
 submit_center_first('Process', _('Process'), '', 'default');
 submit_center_last('ProcessAndClose', _('Process And Close Order'), '', true);

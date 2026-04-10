@@ -1,0 +1,485 @@
+/**
+ * NotrinosERP Mobile Scanner Styles
+ *
+ * Mobile-optimized layout for warehouse scanner/tablet pages.
+ * Large touch targets, full-width buttons, step-by-step workflows.
+ */
+
+/* === Base Mobile Layout === */
+.mobile-page {
+	max-width: 600px;
+	margin: 0 auto;
+	padding: 8px;
+	font-size: 16px;
+	-webkit-text-size-adjust: 100%;
+}
+
+.mobile-page * {
+	box-sizing: border-box;
+}
+
+/* === Header / Title === */
+.mobile-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 0;
+	border-bottom: 2px solid #e0e0e0;
+	margin-bottom: 12px;
+}
+
+.mobile-header h2 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 600;
+	color: #333;
+}
+
+.mobile-header .mobile-back {
+	display: inline-flex;
+	align-items: center;
+	padding: 8px 12px;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	background: #f8f8f8;
+	color: #333;
+	text-decoration: none;
+	font-size: 14px;
+	min-height: 40px;
+}
+
+.mobile-header .mobile-back:active {
+	background: #e0e0e0;
+}
+
+/* === Scan Input Area === */
+.mobile-scan-area {
+	background: #f0f4f8;
+	border: 2px dashed #7baaf7;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 16px;
+	text-align: center;
+}
+
+.mobile-scan-area label {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: #555;
+	margin-bottom: 8px;
+}
+
+.mobile-scan-input {
+	width: 100%;
+	padding: 14px 16px;
+	font-size: 18px;
+	border: 2px solid #ccc;
+	border-radius: 8px;
+	text-align: center;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.mobile-scan-input:focus {
+	border-color: #4285f4;
+	box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+}
+
+.mobile-scan-hint {
+	font-size: 12px;
+	color: #888;
+	margin-top: 6px;
+}
+
+/* === Step Indicator === */
+.mobile-steps {
+	display: flex;
+	justify-content: center;
+	gap: 4px;
+	margin-bottom: 16px;
+}
+
+.mobile-step {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 10px;
+	border-radius: 20px;
+	font-size: 12px;
+	font-weight: 600;
+	background: #e8e8e8;
+	color: #999;
+}
+
+.mobile-step.active {
+	background: #4285f4;
+	color: #fff;
+}
+
+.mobile-step.done {
+	background: #34a853;
+	color: #fff;
+}
+
+.mobile-step-num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: rgba(255,255,255,0.3);
+	font-size: 11px;
+}
+
+/* === Info Card === */
+.mobile-card {
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	padding: 12px 16px;
+	margin-bottom: 12px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.mobile-card-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #555;
+	margin-bottom: 8px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #eee;
+}
+
+.mobile-card-row {
+	display: flex;
+	justify-content: space-between;
+	padding: 4px 0;
+	font-size: 14px;
+}
+
+.mobile-card-label {
+	color: #888;
+}
+
+.mobile-card-value {
+	font-weight: 600;
+	color: #333;
+	text-align: right;
+}
+
+/* === Form Fields === */
+.mobile-field {
+	margin-bottom: 12px;
+}
+
+.mobile-field label {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	color: #555;
+	margin-bottom: 4px;
+}
+
+.mobile-field input,
+.mobile-field select,
+.mobile-field textarea {
+	width: 100%;
+	padding: 12px 14px;
+	font-size: 16px;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	background: #fff;
+	outline: none;
+	transition: border-color 0.2s;
+	-webkit-appearance: none;
+}
+
+.mobile-field input:focus,
+.mobile-field select:focus,
+.mobile-field textarea:focus {
+	border-color: #4285f4;
+	box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+}
+
+.mobile-field select {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+	padding-right: 36px;
+}
+
+/* === Buttons === */
+.mobile-btn {
+	display: block;
+	width: 100%;
+	padding: 14px;
+	font-size: 16px;
+	font-weight: 600;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	text-align: center;
+	text-decoration: none;
+	transition: background 0.2s, transform 0.1s;
+	min-height: 48px;
+	margin-bottom: 8px;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.mobile-btn:active {
+	transform: scale(0.98);
+}
+
+.mobile-btn-primary {
+	background: #4285f4;
+	color: #fff;
+}
+
+.mobile-btn-primary:active {
+	background: #3367d6;
+}
+
+.mobile-btn-success {
+	background: #34a853;
+	color: #fff;
+}
+
+.mobile-btn-success:active {
+	background: #2d8f47;
+}
+
+.mobile-btn-warning {
+	background: #fbbc04;
+	color: #333;
+}
+
+.mobile-btn-danger {
+	background: #ea4335;
+	color: #fff;
+}
+
+.mobile-btn-secondary {
+	background: #e8e8e8;
+	color: #333;
+}
+
+.mobile-btn-secondary:active {
+	background: #d0d0d0;
+}
+
+.mobile-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Split button row */
+.mobile-btn-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.mobile-btn-row .mobile-btn {
+	flex: 1;
+	margin-bottom: 0;
+}
+
+/* === Status Badges === */
+.mobile-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.mobile-badge-green   { background: #e6f4ea; color: #1e7e34; }
+.mobile-badge-blue    { background: #e3f2fd; color: #1565c0; }
+.mobile-badge-orange  { background: #fff3e0; color: #e65100; }
+.mobile-badge-red     { background: #fce4ec; color: #c62828; }
+.mobile-badge-gray    { background: #f5f5f5; color: #616161; }
+.mobile-badge-teal    { background: #e0f2f1; color: #00695c; }
+
+/* === List / Table === */
+.mobile-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.mobile-list-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 14px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	margin-bottom: 6px;
+	background: #fff;
+	cursor: pointer;
+	transition: background 0.15s;
+	min-height: 50px;
+}
+
+.mobile-list-item:active {
+	background: #f0f4f8;
+}
+
+.mobile-list-item-main {
+	flex: 1;
+}
+
+.mobile-list-item-title {
+	font-weight: 600;
+	font-size: 15px;
+	color: #333;
+}
+
+.mobile-list-item-sub {
+	font-size: 12px;
+	color: #888;
+	margin-top: 2px;
+}
+
+.mobile-list-item-action {
+	font-size: 20px;
+	color: #ccc;
+	padding-left: 12px;
+}
+
+/* === Notification / Toast === */
+.mobile-toast {
+	position: fixed;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 12px 24px;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 600;
+	color: #fff;
+	z-index: 10000;
+	opacity: 0;
+	transition: opacity 0.3s;
+	max-width: 90%;
+	text-align: center;
+	pointer-events: none;
+}
+
+.mobile-toast.show {
+	opacity: 1;
+}
+
+.mobile-toast-success { background: #34a853; }
+.mobile-toast-error   { background: #ea4335; }
+.mobile-toast-info    { background: #4285f4; }
+
+/* === Loading Spinner === */
+.mobile-loading {
+	text-align: center;
+	padding: 20px;
+	color: #888;
+}
+
+.mobile-spinner {
+	display: inline-block;
+	width: 28px;
+	height: 28px;
+	border: 3px solid #e0e0e0;
+	border-top-color: #4285f4;
+	border-radius: 50%;
+	animation: mobileSpin 0.8s linear infinite;
+}
+
+@keyframes mobileSpin {
+	to { transform: rotate(360deg); }
+}
+
+/* === Empty State === */
+.mobile-empty {
+	text-align: center;
+	padding: 40px 20px;
+	color: #bbb;
+}
+
+.mobile-empty-icon {
+	font-size: 48px;
+	margin-bottom: 8px;
+}
+
+.mobile-empty-text {
+	font-size: 16px;
+}
+
+/* === Result Panel === */
+.mobile-result {
+	padding: 12px 16px;
+	border-radius: 8px;
+	margin-bottom: 12px;
+	font-size: 14px;
+}
+
+.mobile-result-success {
+	background: #e6f4ea;
+	border: 1px solid #34a853;
+	color: #1e7e34;
+}
+
+.mobile-result-error {
+	background: #fce4ec;
+	border: 1px solid #ea4335;
+	color: #c62828;
+}
+
+.mobile-result-info {
+	background: #e3f2fd;
+	border: 1px solid #4285f4;
+	color: #1565c0;
+}
+
+/* === Variance Highlight === */
+.mobile-variance-pos {
+	color: #34a853;
+	font-weight: 700;
+}
+
+.mobile-variance-neg {
+	color: #ea4335;
+	font-weight: 700;
+}
+
+.mobile-variance-zero {
+	color: #888;
+}
+
+/* === Responsive Overrides for Small Screens === */
+@media (max-width: 400px) {
+	.mobile-page {
+		padding: 4px;
+		font-size: 15px;
+	}
+
+	.mobile-scan-input {
+		font-size: 16px;
+		padding: 12px;
+	}
+
+	.mobile-btn {
+		padding: 12px;
+		font-size: 15px;
+	}
+
+	.mobile-card-row {
+		font-size: 13px;
+	}
+}
+
+/* === Landscape tablet === */
+@media (min-width: 768px) {
+	.mobile-page {
+		max-width: 700px;
+	}
+}

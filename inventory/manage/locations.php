@@ -16,6 +16,7 @@ include($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
+include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_locations_db.inc');
 
 if (isset($_GET['FixedAsset'])) {
 	$help_context = _('Fixed Assets Locations');
@@ -53,14 +54,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
 	
-			update_item_location($selected_id, $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'));
+			update_item_location($selected_id, $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0);
 			display_notification(_('Selected location has been updated'));
 		} 
 		else {
 	
 		// selected_id is null cos no item selected on first time round so must be adding a	record must be submitting new entries in the new Location form
 		
-			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'));
+			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0);
 			display_notification(_('New location has been added'));
 		}
 		
@@ -128,7 +129,7 @@ $result = get_item_locations(check_value('show_inactive'), get_post('fixed_asset
 
 start_form();
 start_table(TABLESTYLE);
-$th = array(_('Location Code'), _('Location Name'), _('Address'), _('Phone'), _('Secondary Phone'), '', '');
+$th = array(_('Location Code'), _('Location Name'), _('Address'), _('Phone'), _('Secondary Phone'), _('WMS'), '', '');
 inactive_control_column($th);
 table_header($th);
 $k = 0; //row colour counter
@@ -141,6 +142,7 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['delivery_address']);
 	label_cell($myrow['phone']);
 	label_cell($myrow['phone2']);
+	label_cell($myrow['wh_enabled'] ? '<span style="color:green;"><i class="fa fa-check"></i> ' . _('Enabled') . '</span>' : '-', 'align=center');
 	inactive_control_cell($myrow['loc_code'], $myrow['inactive'], 'locations', 'loc_code');
 	edit_button_cell('Edit'.$myrow['loc_code'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['loc_code'], _('Delete'));
@@ -170,6 +172,7 @@ if ($selected_id != -1) {
 		$_POST['phone2'] = $myrow['phone2'];
 		$_POST['fax'] = $myrow['fax'];
 		$_POST['email'] = $myrow['email'];
+		$_POST['wh_enabled'] = $myrow['wh_enabled'];
 	}
 	hidden('selected_id', $selected_id);
 	hidden('loc_code');
@@ -187,6 +190,8 @@ text_row_ex(_('Telephone No:'), 'phone', 32, 30);
 text_row_ex(_('Secondary Phone Number:'), 'phone2', 32, 30);
 text_row_ex(_('Facsimile No:'), 'fax', 32, 30);
 email_row_ex(_('E-mail:'), 'email', 50);
+
+check_row(_('Enable Warehouse Management (WMS)'), 'wh_enabled', get_post('wh_enabled', 0));
 
 end_table(1);
 submit_add_or_update_center($selected_id == -1, '', 'both');

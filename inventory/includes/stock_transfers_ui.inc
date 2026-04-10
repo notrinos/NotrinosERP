@@ -11,12 +11,13 @@
 ***********************************************************************/
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
+include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 
 //--------------------------------------------------------------------------------
 
 function add_to_order(&$order, $new_item, $new_item_qty, $standard_cost) {
 	$kit = get_item_kit($new_item);
-	foreach($kit as $item) {
+	while ($item = db_fetch($kit)) {
 		if ($order->find_cart_item($item['stock_id']))
 			display_error(_('For Part :').$item['stock_id'].' '.'This item is already on this document. You can change the quantity on the existing line if necessary.');
 		else
@@ -80,6 +81,49 @@ function display_transfer_items($title, &$order) {
 				edit_button_cell('Edit'.$line_no, _('Edit'), _('Edit document line'));
 			delete_button_cell('Delete'.$line_no, _('Delete'), _('Remove line from document'));
 			end_row();
+
+			// --- Serial/batch tracking panel for tracked items ---
+			if (!$order->fixed_asset) {
+				$tracking_mode = get_item_tracking_mode($stock_item->stock_id);
+				$has_serial = ($tracking_mode === 'serial' || $tracking_mode === 'serial_batch');
+				$has_batch = ($tracking_mode === 'batch' || $tracking_mode === 'serial_batch');
+
+				if ($has_serial || $has_batch) {
+					$track_colspan = count($th) - 1;
+					echo '<tr class="tracking_panel">';
+					echo '<td></td>';
+					echo '<td colspan="' . $track_colspan . '" style="padding:4px 8px; background:#f7f9fc; border-left:3px solid #5b9bd5;">';
+
+					if ($has_serial) {
+						$serial_key = 'transfer_serial_' . $line_no;
+						$serial_val = isset($_POST[$serial_key]) ? $_POST[$serial_key] : '';
+						echo '<div style="margin-bottom:4px;">';
+						echo '<label style="font-weight:bold; color:#2c5aa0;"><i class="fa fa-barcode"></i> ';
+						echo _('Serial Numbers') . ' <small>(' . _('select serials at source location') . ')</small></label><br>';
+						echo '<textarea name="' . $serial_key . '" id="' . $serial_key . '" '
+							. 'rows="3" cols="50" style="width:400px; font-family:monospace; font-size:12px;" '
+							. 'placeholder="' . _('Enter serial numbers (one per line or comma-separated)') . '">'
+							. htmlspecialchars($serial_val, ENT_QUOTES) . '</textarea>';
+						echo '</div>';
+					}
+
+					if ($has_batch) {
+						$batch_key = 'transfer_batch_' . $line_no;
+						$batch_val = isset($_POST[$batch_key]) ? $_POST[$batch_key] : '';
+						echo '<div style="margin-bottom:4px;">';
+						echo '<label style="font-weight:bold; color:#2c5aa0;"><i class="fa fa-cubes"></i> ';
+						echo _('Batch/Lot Allocation') . ' <small>(' . _('format: batch_id:qty per line') . ')</small></label><br>';
+						echo '<textarea name="' . $batch_key . '" id="' . $batch_key . '" '
+							. 'rows="2" cols="50" style="width:400px; font-family:monospace; font-size:12px;" '
+							. 'placeholder="' . _('e.g. 5:100 or batch_id:qty per line') . '">'
+							. htmlspecialchars($batch_val, ENT_QUOTES) . '</textarea>';
+						echo '</div>';
+					}
+
+					echo '</td></tr>';
+				}
+			}
+			// --- End tracking panel ---
 		}
 		else
 			transfer_edit_item_controls($order, $line_no);

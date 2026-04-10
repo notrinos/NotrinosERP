@@ -24,6 +24,7 @@ include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
 include_once($path_to_root . '/sales/includes/ui/sales_credit_ui.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)

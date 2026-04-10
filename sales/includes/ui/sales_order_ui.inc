@@ -11,6 +11,10 @@
 ***********************************************************************/
 include_once($path_to_root.'/sales/includes/cart_class.inc');
 
+$serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
+if (file_exists($serial_batch_db_path))
+	include_once($serial_batch_db_path);
+
 function add_to_order(&$order, $new_item, $new_item_qty, $price, $discount, $description='') {
 	// calculate item price to sum of kit element prices factor for value distribution over all exploded kit items
 	$std_price = get_kit_price($new_item, $order->customer_currency, $order->sales_type, $order->price_factor, get_post('OrderDate'), true);
@@ -108,6 +112,62 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 	return $ret_error;
 }
 
+/**
+ * Render serial/batch tracking input panels for direct delivery rows.
+ *
+ * This is used by direct delivery shortcut flow in sales_order_entry.php
+ * and posts keys consumed by process_delivery_tracking_and_wms():
+ * - delivery_serial_{line_no}
+ * - delivery_batch_{line_no}
+ *
+ * @param int   $line_no     Delivery line number
+ * @param mixed $stock_item  Cart line item object
+ * @param int   $column_span Number of table columns to span
+ *
+ * @return void
+ */
+function display_direct_delivery_tracking_inputs($line_no, $stock_item, $column_span) {
+	if (!function_exists('item_has_serial_tracking') || !function_exists('item_has_batch_tracking'))
+		return;
+
+	$has_serial_tracking = item_has_serial_tracking($stock_item->stock_id);
+	$has_batch_tracking = item_has_batch_tracking($stock_item->stock_id);
+
+	if (!$has_serial_tracking && !$has_batch_tracking)
+		return;
+
+	if ($has_serial_tracking) {
+		$serial_input_name = 'delivery_serial_' . $line_no;
+		$serial_input_value = get_post($serial_input_name);
+		$serial_rows = min(max(2, (int)$stock_item->qty_dispatched), 10);
+
+		echo '<tr>';
+		echo '<td></td>';
+		echo '<td colspan="' . max(1, (int)$column_span - 1) . '" style="padding:4px 8px 8px 24px; border-left:3px solid #67c23a; background:#f0f9eb;">';
+		echo '<b style="color:#67c23a;"><i class="fa fa-barcode"></i> ' . _('Serial Numbers to Deliver') . '</b>';
+		echo ' <small style="color:#888;">(' . _('One per line or comma-separated') . ')</small><br>';
+		echo '<textarea name="' . $serial_input_name . '" id="' . $serial_input_name . '" rows="' . $serial_rows . '" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+		echo htmlspecialchars($serial_input_value, ENT_QUOTES);
+		echo '</textarea>';
+		echo '</td></tr>';
+	}
+
+	if ($has_batch_tracking) {
+		$batch_input_name = 'delivery_batch_' . $line_no;
+		$batch_input_value = get_post($batch_input_name);
+
+		echo '<tr>';
+		echo '<td></td>';
+		echo '<td colspan="' . max(1, (int)$column_span - 1) . '" style="padding:4px 8px 8px 24px; border-left:3px solid #e6a23c; background:#fdf6ec;">';
+		echo '<b style="color:#e6a23c;"><i class="fa fa-cubes"></i> ' . _('Batch / Lot Allocation') . '</b>';
+		echo ' <small style="color:#888;">(' . _('Format: batch_id:qty per line') . ')</small><br>';
+		echo '<textarea name="' . $batch_input_name . '" id="' . $batch_input_name . '" rows="2" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+		echo htmlspecialchars($batch_input_value, ENT_QUOTES);
+		echo '</textarea>';
+		echo '</td></tr>';
+	}
+}
+
 //---------------------------------------------------------------------------------
 
 function display_order_summary($title, &$order, $editable_items=false) {
@@ -175,6 +235,9 @@ function display_order_summary($title, &$order, $editable_items=false) {
 		}
 		else
 			sales_order_item_controls($order, $k,  $line_no);
+
+		if ($order->trans_type == ST_CUSTDELIVERY || $order->trans_type == ST_SALESINVOICE)
+			display_direct_delivery_tracking_inputs($line_no, $stock_item, count($th));
 
 		$total += $line_total;
 	}

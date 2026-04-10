@@ -48,7 +48,13 @@ $systypes_array = array (
 	ST_EMPPAYMENT => _('Employee Payment'),
 	ST_LEAVE_REQUEST => _('Leave Request'),
 	ST_OVERTIME_REQUEST => _('Overtime Request'),
-	ST_PAYROLL_PERIOD => _('Payroll Period')
+	ST_PAYROLL_PERIOD => _('Payroll Period'),
+	ST_WH_TRANSFER_ORDER => _('Transfer Order'),
+	ST_WH_MATERIAL_REQUEST => _('Material Request'),
+	ST_WH_SCRAP => _('Scrap Entry'),
+	ST_WH_RETURN_ORDER => _('Return Order'),
+	ST_WH_CYCLE_COUNT => _('Cycle Count Adjustment'),
+	ST_WH_INTERNAL_MOVE => _('Internal Bin Move'),
 );
 
 $fa_systypes_array = array (

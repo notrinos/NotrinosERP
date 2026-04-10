@@ -125,6 +125,15 @@ function add_grn(&$po) {
 		} /*quantity received is != 0 */
 	} /*end of order_line loop */
 
+	// --- Advanced Inventory: serial/batch tracking + WMS inbound operations ---
+	$wh_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/warehouse/includes/warehouse_operations.inc';
+	if (file_exists($wh_ops_path)) {
+		include_once($wh_ops_path);
+		if (function_exists('process_grn_tracking_and_wms'))
+			process_grn_tracking_and_wms($po, $grn, $date_, $po->Location);
+	}
+
 	if ($clearing_act && $total != 0.0) {
 		$accs = get_supplier_accounts($po->supplier_id);
 		$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $clearing_act, $accs['dimension_id'], $accs['dimension2_id'], -$total, null);
@@ -212,7 +221,54 @@ function set_grn_item_credited(&$entered_grn, $supplier, $transno, $date, $taxfr
 	." WHERE id=".db_escape($entered_grn->id);
 	db_query($sql);
 
-	add_stock_move(ST_SUPPCREDIT, $entered_grn->item_code, $transno, $myrow['loc_code'], $date, '', $entered_grn->this_quantity_inv, $mcost, $taxfree_line);
+	// --- Advanced Inventory: serial/batch tracking for supplier credit ---
+	$extended = array();
+	$serial_batch_db_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/includes/db/serial_batch_db.inc';
+	if (file_exists($serial_batch_db_path)) {
+		include_once($serial_batch_db_path);
+		$tracking_mode = get_item_tracking_mode($entered_grn->item_code);
+
+		if ($tracking_mode !== 'none') {
+			// Look up serial/batch from original GRN record
+			if (isset($myrow['batch_id']) && $myrow['batch_id']) {
+				$extended['batch_id'] = (int)$myrow['batch_id'];
+			}
+			if (isset($myrow['serial_numbers_json']) && !empty($myrow['serial_numbers_json'])) {
+				$serial_ids = json_decode($myrow['serial_numbers_json'], true);
+				if (is_array($serial_ids) && !empty($serial_ids)) {
+					$extended['serial_id'] = (int)reset($serial_ids);
+				}
+			}
+			if (isset($myrow['expiry_date']) && !empty($myrow['expiry_date'])) {
+				$extended['expiry_date'] = $myrow['expiry_date'];
+			}
+			$extended['stock_status'] = 'available';
+		}
+	}
+
+	if (!empty($extended)) {
+		add_stock_move_extended(ST_SUPPCREDIT, $entered_grn->item_code, $transno,
+			$myrow['loc_code'], $date, '', $entered_grn->this_quantity_inv,
+			$mcost, $taxfree_line, $extended);
+	} else {
+		add_stock_move(ST_SUPPCREDIT, $entered_grn->item_code, $transno,
+			$myrow['loc_code'], $date, '', $entered_grn->this_quantity_inv,
+			$mcost, $taxfree_line);
+	}
+
+	// --- Advanced Inventory: WMS supplier credit tracking ---
+	$wms_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/warehouse/includes/warehouse_operations.inc';
+	if (file_exists($wms_ops_path)) {
+		include_once($wms_ops_path);
+		if (function_exists('process_supp_credit_tracking')) {
+			process_supp_credit_tracking(
+				$entered_grn, $transno, $date,
+				$myrow['loc_code'], $myrow
+			);
+		}
+	}
 }
 
 function get_grn_items($grn_batch_id=0, $supplier_id='', $outstanding_only=false, $is_invoiced_only=false, $invoice_no=0, $begin='', $end='') {

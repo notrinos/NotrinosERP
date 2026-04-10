@@ -16,6 +16,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
 
 include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -128,6 +129,75 @@ if (db_num_rows($result) > 0) {
 		label_cell($display_discount, 'nowrap align=right');
 		amount_cell($value);
 		end_row();
+
+		// --- Show serial/batch tracking info per line ---
+		$tracking_mode = get_item_tracking_mode($myrow2['stock_id']);
+		if ($tracking_mode !== 'none') {
+			$colspan_track = 7;
+
+			// Query serial movements for this delivery + item
+			if (item_has_serial_tracking($myrow2['stock_id'])) {
+				$sn_sql = "SELECT sn.serial_no, sn.status, sn.warranty_start, sn.warranty_end "
+					. "FROM " . TB_PREF . "serial_movements sm "
+					. "INNER JOIN " . TB_PREF . "serial_numbers sn ON sm.serial_id = sn.id "
+					. "WHERE sm.trans_type = " . ST_CUSTDELIVERY
+					. " AND sm.trans_no = " . (int)$trans_id
+					. " AND sn.stock_id = " . db_escape($myrow2['stock_id'])
+					. " AND sm.to_status = 'delivered'";
+				$sn_result = db_query($sn_sql, 'could not get delivery serials');
+				$serials_found = array();
+				while ($sn_row = db_fetch($sn_result)) {
+					$serials_found[] = $sn_row;
+				}
+
+				if (!empty($serials_found)) {
+					echo '<tr><td colspan="'.$colspan_track.'" style="padding:2px 8px 4px 24px; border-left:3px solid #5b9bd5; background:#f7f9fc; font-size:11px;">';
+					echo '<b style="color:#5b9bd5;"><i class="fa fa-barcode"></i> '._('Serials:').'</b> ';
+					$sn_parts = array();
+					foreach ($serials_found as $sf) {
+						$txt = htmlspecialchars($sf['serial_no']);
+						if (!empty($sf['warranty_end'])) {
+							$txt .= ' <span style="color:#888;">('._('Warranty until').': '.sql2date($sf['warranty_end']).')</span>';
+						}
+						$sn_parts[] = $txt;
+					}
+					echo implode(', ', $sn_parts);
+					echo '</td></tr>';
+				}
+			}
+
+			// Query batch movements for this delivery + item
+			if (item_has_batch_tracking($myrow2['stock_id'])) {
+				$bt_sql = "SELECT bm.batch_id, sb.batch_no, ABS(bm.quantity) as qty, sb.expiry_date "
+					. "FROM " . TB_PREF . "batch_movements bm "
+					. "INNER JOIN " . TB_PREF . "stock_batches sb ON bm.batch_id = sb.id "
+					. "WHERE bm.trans_type = " . ST_CUSTDELIVERY
+					. " AND bm.trans_no = " . (int)$trans_id
+					. " AND sb.stock_id = " . db_escape($myrow2['stock_id'])
+					. " AND bm.quantity < 0";
+				$bt_result = db_query($bt_sql, 'could not get delivery batches');
+				$batches_found = array();
+				while ($bt_row = db_fetch($bt_result)) {
+					$batches_found[] = $bt_row;
+				}
+
+				if (!empty($batches_found)) {
+					echo '<tr><td colspan="'.$colspan_track.'" style="padding:2px 8px 4px 24px; border-left:3px solid #e6a23c; background:#fdf6ec; font-size:11px;">';
+					echo '<b style="color:#e6a23c;"><i class="fa fa-cubes"></i> '._('Batches:').'</b> ';
+					$bt_parts = array();
+					foreach ($batches_found as $bf) {
+						$txt = htmlspecialchars($bf['batch_no']) . ' ×' . number_format2((float)$bf['qty'], get_qty_dec($myrow2['stock_id']));
+						if (!empty($bf['expiry_date'])) {
+							$txt .= ' <span style="color:#888;">('._('Exp').': '.sql2date($bf['expiry_date']).')</span>';
+						}
+						$bt_parts[] = $txt;
+					}
+					echo implode(', ', $bt_parts);
+					echo '</td></tr>';
+				}
+			}
+		}
+		// --- End tracking info ---
 	}
 	$display_sub_tot = price_format($sub_total);
 	label_row(_('Sub-total'), $display_sub_tot, 'colspan=6 align=right', "nowrap align=right width='15%'");

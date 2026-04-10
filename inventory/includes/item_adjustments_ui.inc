@@ -11,6 +11,7 @@
 ***********************************************************************/
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
+include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 
 //--------------------------------------------------------------------------------
 
@@ -104,6 +105,97 @@ function display_adjustment_items($title, &$order) {
 				label_cell('');
 			
 			end_row();
+
+			// --- Serial/batch tracking panel for tracked items ---
+			if (!$order->fixed_asset) {
+				$tracking_mode = get_item_tracking_mode($stock_item->stock_id);
+				$has_serial = ($tracking_mode === 'serial' || $tracking_mode === 'serial_batch');
+				$has_batch = ($tracking_mode === 'batch' || $tracking_mode === 'serial_batch');
+				$is_positive = ($stock_item->quantity > 0);
+
+				if ($has_serial || $has_batch) {
+					$track_colspan = count($th) - 1;
+					echo '<tr class="tracking_panel">';
+					echo '<td></td>';
+					echo '<td colspan="' . $track_colspan . '" style="padding:4px 8px; background:' 
+						. ($is_positive ? '#f0f9f0' : '#fff5f5') . '; border-left:3px solid '
+						. ($is_positive ? '#28a745' : '#dc3545') . ';">';
+
+					if ($is_positive) {
+						// POSITIVE: Enter new serial numbers / batch info
+						if ($has_serial) {
+							$serial_key = 'adj_serial_' . $line_no;
+							$serial_val = isset($_POST[$serial_key]) ? $_POST[$serial_key] : '';
+							echo '<div style="margin-bottom:4px;">';
+							echo '<label style="font-weight:bold; color:#28a745;"><i class="fa fa-barcode"></i> ';
+							echo _('New Serial Numbers') . ' <small>(' . _('one per line or comma-separated') . ')</small></label><br>';
+							echo '<textarea name="' . $serial_key . '" id="' . $serial_key . '" '
+								. 'rows="3" cols="50" style="width:400px; font-family:monospace; font-size:12px;" '
+								. 'placeholder="' . _('Enter new serial numbers to create') . '">'
+								. htmlspecialchars($serial_val, ENT_QUOTES) . '</textarea>';
+							echo '</div>';
+						}
+
+						if ($has_batch) {
+							$batch_key = 'adj_batch_no_' . $line_no;
+							$batch_val = isset($_POST[$batch_key]) ? $_POST[$batch_key] : '';
+							$expiry_key = 'adj_batch_expiry_' . $line_no;
+							$expiry_val = isset($_POST[$expiry_key]) ? $_POST[$expiry_key] : '';
+							$mfg_key = 'adj_batch_mfg_' . $line_no;
+							$mfg_val = isset($_POST[$mfg_key]) ? $_POST[$mfg_key] : '';
+
+							echo '<div style="margin-bottom:4px;">';
+							echo '<label style="font-weight:bold; color:#28a745;"><i class="fa fa-cubes"></i> ';
+							echo _('Batch/Lot Info') . '</label><br>';
+							echo '<table style="margin:2px 0;">';
+							echo '<tr><td>' . _('Batch No') . ':</td>';
+							echo '<td><input type="text" name="' . $batch_key . '" id="' . $batch_key . '" '
+								. 'value="' . htmlspecialchars($batch_val, ENT_QUOTES) . '" size="20" maxlength="60" '
+								. 'style="font-family:monospace;"></td>';
+							echo '<td style="padding-left:10px;">' . _('Expiry') . ':</td>';
+							echo '<td><input type="text" name="' . $expiry_key . '" id="' . $expiry_key . '" '
+								. 'value="' . htmlspecialchars($expiry_val, ENT_QUOTES) . '" size="12" '
+								. 'class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+							echo '<td style="padding-left:10px;">' . _('Mfg Date') . ':</td>';
+							echo '<td><input type="text" name="' . $mfg_key . '" id="' . $mfg_key . '" '
+								. 'value="' . htmlspecialchars($mfg_val, ENT_QUOTES) . '" size="12" '
+								. 'class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+							echo '</tr></table>';
+							echo '</div>';
+						}
+					} else {
+						// NEGATIVE: Select existing serials to scrap / batches to reduce
+						if ($has_serial) {
+							$serial_key = 'adj_scrap_serial_' . $line_no;
+							$serial_val = isset($_POST[$serial_key]) ? $_POST[$serial_key] : '';
+							echo '<div style="margin-bottom:4px;">';
+							echo '<label style="font-weight:bold; color:#dc3545;"><i class="fa fa-barcode"></i> ';
+							echo _('Serials to Scrap') . ' <small>(' . _('enter serial numbers to mark as scrapped') . ')</small></label><br>';
+							echo '<textarea name="' . $serial_key . '" id="' . $serial_key . '" '
+								. 'rows="3" cols="50" style="width:400px; font-family:monospace; font-size:12px;" '
+								. 'placeholder="' . _('Enter serial numbers to scrap (one per line)') . '">'
+								. htmlspecialchars($serial_val, ENT_QUOTES) . '</textarea>';
+							echo '</div>';
+						}
+
+						if ($has_batch) {
+							$batch_key = 'adj_scrap_batch_' . $line_no;
+							$batch_val = isset($_POST[$batch_key]) ? $_POST[$batch_key] : '';
+							echo '<div style="margin-bottom:4px;">';
+							echo '<label style="font-weight:bold; color:#dc3545;"><i class="fa fa-cubes"></i> ';
+							echo _('Batch/Lot to Reduce') . ' <small>(' . _('format: batch_id:qty per line') . ')</small></label><br>';
+							echo '<textarea name="' . $batch_key . '" id="' . $batch_key . '" '
+								. 'rows="2" cols="50" style="width:400px; font-family:monospace; font-size:12px;" '
+								. 'placeholder="' . _('e.g. 5:100 or batch_id:qty per line') . '">'
+								. htmlspecialchars($batch_val, ENT_QUOTES) . '</textarea>';
+							echo '</div>';
+						}
+					}
+
+					echo '</td></tr>';
+				}
+			}
+			// --- End tracking panel ---
 		}
 		else
 			adjustment_edit_item_controls($order, $line_no);

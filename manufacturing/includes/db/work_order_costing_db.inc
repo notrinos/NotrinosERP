@@ -169,7 +169,44 @@ function work_order_production_gl($woid, $stock_id, $quantity, $date_, $rcv_no) 
 		update_wo_requirement_issued($bom_item['id'], $bom_item['units_req'] * $quantity, $bom_item['ComponentCost']);
 
 		// insert a -ve stock move for each item
-		add_stock_move(ST_MANURECEIVE, $bom_item['stock_id'], $rcv_no, $bom_item['loc_code'], $date_, '', -$bom_item['units_req'] * $quantity, $bom_item['ComponentCost'], 0);
+		// --- Advanced Inventory: record serial/batch tracking in BOM component usage ---
+		$extended = array();
+		$serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
+		if (file_exists($serial_batch_db_path)) {
+			include_once($serial_batch_db_path);
+			$tracking_mode = get_item_tracking_mode($bom_item['stock_id']);
+			if ($tracking_mode !== 'none') {
+				// Look up batch/serial from the last issued stock move for this WO component
+				$move_sql = "SELECT serial_id, batch_id, expiry_date FROM " . TB_PREF . "stock_moves "
+					. "WHERE type=" . ST_MANUISSUE
+					. " AND stock_id=" . db_escape($bom_item['stock_id'])
+					. " AND trans_no IN (SELECT issue_no FROM " . TB_PREF . "wo_issues WHERE workorder_id=" . db_escape($woid) . ")"
+					. " AND (serial_id IS NOT NULL OR batch_id IS NOT NULL)"
+					. " ORDER BY trans_id DESC LIMIT 1";
+				$move_result = db_query($move_sql, 'could not look up WO component tracking');
+				$move_row = db_fetch($move_result);
+				if ($move_row) {
+					if ($move_row['serial_id'])
+						$extended['serial_id'] = (int)$move_row['serial_id'];
+					if ($move_row['batch_id'])
+						$extended['batch_id'] = (int)$move_row['batch_id'];
+					if ($move_row['expiry_date'])
+						$extended['expiry_date'] = $move_row['expiry_date'];
+				}
+				$extended['stock_status'] = 'available';
+			}
+		}
+
+		if (!empty($extended)) {
+			add_stock_move_extended(ST_MANURECEIVE, $bom_item['stock_id'], $rcv_no,
+				$bom_item['loc_code'], $date_, '',
+				-$bom_item['units_req'] * $quantity, $bom_item['ComponentCost'], 0,
+				$extended);
+		} else {
+			add_stock_move(ST_MANURECEIVE, $bom_item['stock_id'], $rcv_no,
+				$bom_item['loc_code'], $date_, '',
+				-$bom_item['units_req'] * $quantity, $bom_item['ComponentCost'], 0);
+		}
 
 		if (!is_service($bom_item['mb_flag']))
 			$ivaccount = $bom_item['inventory_account'];

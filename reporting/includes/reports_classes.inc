@@ -66,7 +66,7 @@ class BoxReports {
 		if (isset($_GET['Class']))
 			set_focus('class'.$_GET['Class']);
 
-		$cur_class = $_REQUEST['Class'];
+		$cur_class = isset($_REQUEST['Class']) ? $_REQUEST['Class'] : null;
 
 		foreach($this->ar_classes as $class_id => $name) {
 			if (!isset($this->ar_reports[$class_id]))
@@ -365,6 +365,31 @@ class BoxReports {
 
 			case 'TEXT':
 				return "<input type='text' name='$name'>";
+
+			case 'TRACE_DIRECTION':
+				$sel = array(_('Forward (Batch to Customers)'), _('Reverse (Serial to Components)'), _('Full Serial Lifecycle'));
+				return array_selector($name, null, $sel);
+
+			case 'RECALL_STATUS':
+				$sel = array(
+					'' => _('All Statuses'),
+					'draft' => _('Draft'),
+					'active' => _('Active'),
+					'in_progress' => _('In Progress'),
+					'completed' => _('Completed'),
+					'cancelled' => _('Cancelled'),
+				);
+				return array_selector($name, null, $sel);
+
+			case 'RECALL_SEVERITY':
+				$sel = array(
+					'' => _('All Severities'),
+					'critical' => _('Critical'),
+					'high' => _('High'),
+					'medium' => _('Medium'),
+					'low' => _('Low'),
+				);
+				return array_selector($name, null, $sel);
 
 			case 'TEXTBOX':
 				$value = (isset($_POST[$name]) ? $_POST[$name] : "");

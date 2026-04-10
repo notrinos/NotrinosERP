@@ -171,6 +171,56 @@ function display_credit_items($title, &$order) {
 			delete_button_cell('Delete'.$line_no, _('Delete'), _('Remove line from document'));
 
 			end_row();
+
+			// --- Serial/Batch return panels for credit notes ---
+			if (function_exists('get_item_tracking_mode') && isset($_POST['CreditType']) && $_POST['CreditType'] == 'Return') {
+				$tracking_mode = get_item_tracking_mode($line->stock_id);
+				if ($tracking_mode !== 'none') {
+					$colspan_credit = count($th);
+
+					if (function_exists('item_has_serial_tracking') && item_has_serial_tracking($line->stock_id)) {
+						echo '<tr><td colspan="'.$colspan_credit.'" style="padding:4px 8px 8px 24px; border-left:3px solid #67c23a; background:#f0f9eb;">';
+						echo '<b style="color:#67c23a;"><i class="fa fa-barcode"></i> '._('Serial Numbers to Return').'</b>';
+						echo ' <small style="color:#888;">('._('Enter serial numbers being returned — one per line or comma-separated').')</small><br>';
+
+						// Show delivered serials for this customer+item
+						$cust_id = isset($order->customer_id) ? (int)$order->customer_id : 0;
+						if ($cust_id > 0) {
+							$del_sql = "SELECT serial_no FROM " . TB_PREF . "serial_numbers "
+								. "WHERE stock_id = " . db_escape($line->stock_id)
+								. " AND customer_id = " . (int)$cust_id
+								. " AND status = 'delivered' ORDER BY serial_no";
+							$del_result = db_query($del_sql, 'could not get delivered serials');
+							$del_serials = array();
+							while ($dr = db_fetch($del_result)) {
+								$del_serials[] = htmlspecialchars($dr['serial_no']);
+							}
+							if (!empty($del_serials)) {
+								echo '<div style="margin:4px 0;padding:4px 8px;background:#e8f4e8;border:1px solid #c3e6c3;border-radius:3px;font-size:11px;">';
+								echo '<b>'._('Delivered to customer:').'</b> ' . implode(', ', $del_serials);
+								echo '</div>';
+							}
+						}
+
+						$rows_cr = min(max(2, (int)$line->qty_dispatched), 10);
+						echo '<textarea name="credit_serial_'.$line_no.'" id="credit_serial_'.$line_no.'" rows="'.$rows_cr.'" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+						echo htmlspecialchars(get_post('credit_serial_'.$line_no));
+						echo '</textarea>';
+						echo '</td></tr>';
+					}
+
+					if (function_exists('item_has_batch_tracking') && item_has_batch_tracking($line->stock_id)) {
+						echo '<tr><td colspan="'.$colspan_credit.'" style="padding:4px 8px 8px 24px; border-left:3px solid #e6a23c; background:#fdf6ec;">';
+						echo '<b style="color:#e6a23c;"><i class="fa fa-cubes"></i> '._('Batch / Lot Return').'</b>';
+						echo ' <small style="color:#888;">('._('Format: batch_id:qty per line').')</small><br>';
+						echo '<textarea name="credit_batch_'.$line_no.'" id="credit_batch_'.$line_no.'" rows="2" cols="40" style="width:350px;margin-top:4px;font-family:monospace;">';
+						echo htmlspecialchars(get_post('credit_batch_'.$line_no));
+						echo '</textarea>';
+						echo '</td></tr>';
+					}
+				}
+			}
+			// --- End serial/batch return panels ---
 		}
 		else
 			credit_edit_item_controls($order, $k, $line_no);

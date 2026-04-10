@@ -99,7 +99,7 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 	}
 
 	$total = 0;
-	foreach ($credit_note->line_items as $credit_line) {
+	foreach ($credit_note->line_items as $line_no => $credit_line) {
 
 		if ($credit_invoice && $credit_line->qty_dispatched!=$credit_line->qty_old )
 			update_parent_line(ST_CUSTCREDIT, $credit_line->src_id,($credit_line->qty_dispatched - $credit_line->qty_old));
@@ -117,11 +117,26 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 
 		if ($credit_type == 'Return')
 			add_credit_movements_item($credit_note, $credit_line,
-				$credit_type, ($line_taxfree_price+$line_tax)*(1-$credit_line->discount_percent), $credit_invoice);
+				$credit_type, ($line_taxfree_price+$line_tax)*(1-$credit_line->discount_percent), $credit_invoice, $line_no);
 
 		$total += add_gl_trans_credit_costs($credit_note, $credit_line, $credit_no,
 			$credit_date, $credit_type, $write_off_acc, $branch_data);
 	} /*end of credit_line loop */
+
+	// --- Serial/Batch return tracking integration ---
+	if ($credit_type == 'Return') {
+		$wms_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+			. '/inventory/warehouse/includes/warehouse_operations.inc';
+		if (file_exists($wms_ops_path)) {
+			include_once($wms_ops_path);
+			if (function_exists('process_credit_tracking_returns')) {
+				process_credit_tracking_returns(
+					$credit_note, $credit_no, $credit_date,
+					isset($credit_note->Location) ? $credit_note->Location : ''
+				);
+			}
+		}
+	}
 
 	/*Post credit note transaction to GL credit debtors,
 	debit freight re-charged and debit sales */
@@ -173,7 +188,9 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 // Insert a stock movement coming back in to show the credit note and
 // 	a reversing stock movement to show the write off
 //
-function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $price, $credited_invoice=0) {
+function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $price, $credited_invoice=0, $line_no=0) {
+	global $path_to_root;
+
 	//Chaitanya : Stamp current cost in stock moves $credit_line does not fetch cost
 	$curr_std_cost = get_unit_cost($credit_line->stock_id);
 
@@ -181,10 +198,63 @@ function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $
 	if ($credited_invoice) 
 		$reference .= ' '._('Ex Inv:').' ' . $credited_invoice;
 
-	add_stock_move(ST_CUSTCREDIT,  $credit_line->stock_id,
-		key($credit_note->trans_no), $credit_note->Location,
-		$credit_note->document_date, $reference, $credit_line->qty_dispatched,
-		$curr_std_cost, $price);
+	// --- Build extended tracking data from POST for serial/batch items ---
+	$extended = array();
+	$serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
+	if (file_exists($serial_batch_db_path)) {
+		include_once($serial_batch_db_path);
+		$tracking_mode = get_item_tracking_mode($credit_line->stock_id);
+
+		if ($tracking_mode !== 'none') {
+			// Get first serial ID from credit return data
+			if (item_has_serial_tracking($credit_line->stock_id)) {
+				$serial_key = 'credit_serial_' . $line_no;
+				$serial_text = isset($_POST[$serial_key]) ? trim($_POST[$serial_key]) : '';
+				if (!empty($serial_text)) {
+					include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
+					$serials = preg_split('/[\r\n,]+/', $serial_text);
+					$first_sn = trim(reset($serials));
+					if (!empty($first_sn)) {
+						$serial = get_serial_number_by_code($first_sn, $credit_line->stock_id);
+						if ($serial) {
+							$extended['serial_id'] = (int)$serial['id'];
+						}
+					}
+				}
+			}
+
+			// Get first batch ID from credit return data
+			if (item_has_batch_tracking($credit_line->stock_id)) {
+				$batch_key = 'credit_batch_' . $line_no;
+				$batch_text = isset($_POST[$batch_key]) ? trim($_POST[$batch_key]) : '';
+				if (!empty($batch_text)) {
+					$entries = preg_split('/[\r\n;]+/', $batch_text);
+					$first_entry = trim(reset($entries));
+					if (!empty($first_entry) && strpos($first_entry, ':') !== false) {
+						list($bid, $bqty) = explode(':', $first_entry, 2);
+						$bid = (int)trim($bid);
+						if ($bid > 0) {
+							$extended['batch_id'] = $bid;
+						}
+					}
+				}
+			}
+
+			$extended['stock_status'] = 'available';
+		}
+	}
+
+	if (!empty($extended)) {
+		add_stock_move_extended(ST_CUSTCREDIT, $credit_line->stock_id,
+			key($credit_note->trans_no), $credit_note->Location,
+			$credit_note->document_date, $reference, $credit_line->qty_dispatched,
+			$curr_std_cost, $price, $extended);
+	} else {
+		add_stock_move(ST_CUSTCREDIT, $credit_line->stock_id,
+			key($credit_note->trans_no), $credit_note->Location,
+			$credit_note->document_date, $reference, $credit_line->qty_dispatched,
+			$curr_std_cost, $price);
+	}
 }
 
 //----------------------------------------------------------------------------------------

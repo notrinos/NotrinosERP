@@ -9,11 +9,11 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0) {
-	$sql = "INSERT INTO ".TB_PREF."locations (loc_code, location_name, delivery_address, phone, phone2, fax, email, contact, fixed_asset)
+function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0) {
+	$sql = "INSERT INTO ".TB_PREF."locations (loc_code, location_name, delivery_address, phone, phone2, fax, email, contact, fixed_asset, wh_enabled)
 		VALUES (".db_escape($loc_code).", ".db_escape($location_name).", ".db_escape($delivery_address).", "
 			.db_escape($phone).", ".db_escape($phone2).", ".db_escape($fax).", ".db_escape($email).", "
-			.db_escape($contact).", ".db_escape($fixed_asset).")";
+			.db_escape($contact).", ".db_escape($fixed_asset).", ".db_escape($wh_enabled).")";
 
 	db_query($sql, 'a location could not be added');
 
@@ -22,19 +22,44 @@ function add_item_location($loc_code, $location_name, $delivery_address, $phone,
 		SELECT ".db_escape($loc_code).", ".TB_PREF."stock_master.stock_id, 0 FROM ".TB_PREF."stock_master";
 
 	db_query($sql, 'a location could not be added');
+
+	/* If WMS enabled, auto-create root warehouse location */
+	if ($wh_enabled) {
+		$wh_db_file = dirname(__FILE__) . '/../../warehouse/includes/db/warehouse_locations_db.inc';
+		if (file_exists($wh_db_file)) {
+			include_once($wh_db_file);
+			$root = get_warehouse_root_location($loc_code);
+			if (!$root) {
+				create_warehouse_root_location($loc_code, $location_name);
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------------------
 
-function update_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0) {
+function update_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0) {
 	$sql = "UPDATE ".TB_PREF."locations SET location_name=".db_escape($location_name).",
 		delivery_address=".db_escape($delivery_address).",
 		phone=".db_escape($phone).", phone2=".db_escape($phone2).", fax=".db_escape($fax).",
 		email=".db_escape($email).", contact=".db_escape($contact).",
-	  fixed_asset=".db_escape($fixed_asset)."
+		fixed_asset=".db_escape($fixed_asset).",
+		wh_enabled=".db_escape($wh_enabled)."
 		WHERE loc_code = ".db_escape($loc_code);
 
 	db_query($sql, 'a location could not be updated');
+
+	/* If WMS just enabled, auto-create root warehouse location */
+	if ($wh_enabled) {
+		$wh_db_file = dirname(__FILE__) . '/../../warehouse/includes/db/warehouse_locations_db.inc';
+		if (file_exists($wh_db_file)) {
+			include_once($wh_db_file);
+			$root = get_warehouse_root_location($loc_code);
+			if (!$root) {
+				create_warehouse_root_location($loc_code, $location_name);
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------------------

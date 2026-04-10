@@ -34,6 +34,19 @@ display_grn_summary($purchase_order);
 
 display_heading2(_('Line Details'));
 
+// Pre-load tracking data from grn_items for this GRN
+$grn_tracking = array();
+$tracking_sql = "SELECT gi.item_code, gi.serial_numbers_json, gi.batch_id, gi.expiry_date,
+	gi.manufacturing_date, gi.inspection_status,
+	sb.batch_no AS batch_code
+	FROM " . TB_PREF . "grn_items gi
+	LEFT JOIN " . TB_PREF . "stock_batches sb ON gi.batch_id = sb.id
+	WHERE gi.grn_batch_id = " . db_escape($_GET['trans_no']);
+$tracking_result = db_query($tracking_sql, 'could not get tracking data');
+while ($trow = db_fetch($tracking_result)) {
+	$grn_tracking[$trow['item_code']] = $trow;
+}
+
 start_table(TABLESTYLE, "width='90%'");
 $th = array(_('Item Code'), _('Item Description'), _('Required by'), _('Quantity'), _('Unit'), _('Price'), _('Line Total'), _('Quantity Invoiced'));
 
@@ -65,6 +78,51 @@ foreach ($purchase_order->line_items as $stock_item) {
 	amount_cell($line_total);
 	qty_cell($stock_item->qty_inv, false, $dec);
 	end_row();
+
+	// --- Advanced Inventory: display serial/batch tracking info ---
+	if (isset($grn_tracking[$stock_item->stock_id])) {
+		$track = $grn_tracking[$stock_item->stock_id];
+		$has_tracking = false;
+		$tracking_parts = array();
+
+		// Serial numbers (db_escape stores HTML-encoded data, decode before JSON parse)
+		if (!empty($track['serial_numbers_json'])) {
+			$raw_json = html_entity_decode($track['serial_numbers_json'], ENT_QUOTES, 'UTF-8');
+			$serials = json_decode($raw_json, true);
+			if (!empty($serials)) {
+				$has_tracking = true;
+				$tracking_parts[] = '<b>' . _('Serials:') . '</b> ' . htmlspecialchars(implode(', ', $serials));
+			}
+		}
+
+		// Batch info
+		if (!empty($track['batch_id']) && !empty($track['batch_code'])) {
+			$has_tracking = true;
+			$batch_info = '<b>' . _('Batch:') . '</b> ' . htmlspecialchars($track['batch_code']);
+			if (!empty($track['expiry_date']) && $track['expiry_date'] !== '0000-00-00')
+				$batch_info .= ' &nbsp; <b>' . _('Expiry:') . '</b> ' . sql2date($track['expiry_date']);
+			if (!empty($track['manufacturing_date']) && $track['manufacturing_date'] !== '0000-00-00')
+				$batch_info .= ' &nbsp; <b>' . _('Mfg:') . '</b> ' . sql2date($track['manufacturing_date']);
+			$tracking_parts[] = $batch_info;
+		}
+
+		// Inspection status
+		if (!empty($track['inspection_status']) && $track['inspection_status'] !== 'none') {
+			$has_tracking = true;
+			$status_colors = array('pending' => '#ffc107', 'pass' => '#28a745', 'fail' => '#dc3545');
+			$scolor = isset($status_colors[$track['inspection_status']]) ? $status_colors[$track['inspection_status']] : '#6c757d';
+			$tracking_parts[] = '<b>' . _('QC:') . '</b> <span style="color:' . $scolor . '; font-weight:bold;">'
+				. ucfirst($track['inspection_status']) . '</span>';
+		}
+
+		if ($has_tracking) {
+			echo '<tr><td></td>';
+			echo '<td colspan="7" style="padding:3px 8px; background:#f0f4f8; border-left:3px solid #5b9bd5; font-size:11px;">';
+			echo implode(' &nbsp;|&nbsp; ', $tracking_parts);
+			echo '</td></tr>';
+		}
+	}
+	// --- End tracking display ---
 
 	$total += $line_total;
 }

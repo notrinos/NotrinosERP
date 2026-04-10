@@ -16,6 +16,7 @@ include_once($path_to_root.'/purchasing/includes/po_class.inc');
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
 include_once($path_to_root.'/purchasing/includes/purchasing_ui.inc');
+include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -98,6 +99,61 @@ function display_po_receive_items() {
 			amount_decimal_cell($ln_itm->price);
 			amount_cell($line_total);
 			end_row();
+
+			// --- Advanced Inventory: serial/batch tracking input panels ---
+			$tracking_mode = get_item_tracking_mode($ln_itm->stock_id);
+			$has_serial = ($tracking_mode === 'serial' || $tracking_mode === 'serial_batch');
+			$has_batch = ($tracking_mode === 'batch' || $tracking_mode === 'serial_batch');
+
+			if ($has_serial || $has_batch) {
+				echo '<tr class="tracking_panel">';
+				echo '<td></td>'; // skip item code column
+				$track_colspan = count($th) - 1;
+				echo '<td colspan="' . $track_colspan . '" style="padding:4px 8px; background:#f7f9fc; border-left:3px solid #5b9bd5;">';
+
+				if ($has_serial) {
+					$serial_key = 'serial_' . $ln_itm->line_no;
+					$serial_val = isset($_POST[$serial_key]) ? $_POST[$serial_key] : '';
+					echo '<div style="margin-bottom:4px;">';
+					echo '<label style="font-weight:bold; color:#2c5aa0;"><i class="fa fa-barcode"></i> ';
+					echo _('Serial Numbers') . ' <small>(' . _('one per line or comma-separated') . ')</small></label><br>';
+					echo '<textarea name="' . $serial_key . '" id="' . $serial_key . '" '
+						. 'rows="3" cols="50" style="width:400px; font-family:monospace; font-size:12px;">'
+						. htmlspecialchars($serial_val, ENT_QUOTES) . '</textarea>';
+					echo '</div>';
+				}
+
+				if ($has_batch) {
+					$batch_key = 'batch_no_' . $ln_itm->line_no;
+					$batch_val = isset($_POST[$batch_key]) ? $_POST[$batch_key] : '';
+					$expiry_key = 'batch_expiry_' . $ln_itm->line_no;
+					$expiry_val = isset($_POST[$expiry_key]) ? $_POST[$expiry_key] : '';
+					$mfg_key = 'batch_mfg_' . $ln_itm->line_no;
+					$mfg_val = isset($_POST[$mfg_key]) ? $_POST[$mfg_key] : '';
+
+					echo '<div style="margin-bottom:4px;">';
+					echo '<label style="font-weight:bold; color:#2c5aa0;"><i class="fa fa-cubes"></i> ';
+					echo _('Batch/Lot Info') . '</label><br>';
+					echo '<table style="margin:2px 0;">';
+					echo '<tr><td>' . _('Batch No') . ':</td>';
+					echo '<td><input type="text" name="' . $batch_key . '" id="' . $batch_key . '" '
+						. 'value="' . htmlspecialchars($batch_val, ENT_QUOTES) . '" size="20" maxlength="60" '
+						. 'style="font-family:monospace;"></td>';
+					echo '<td style="padding-left:10px;">' . _('Expiry') . ':</td>';
+					echo '<td><input type="text" name="' . $expiry_key . '" id="' . $expiry_key . '" '
+						. 'value="' . htmlspecialchars($expiry_val, ENT_QUOTES) . '" size="12" '
+						. 'class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+					echo '<td style="padding-left:10px;">' . _('Mfg Date') . ':</td>';
+					echo '<td><input type="text" name="' . $mfg_key . '" id="' . $mfg_key . '" '
+						. 'value="' . htmlspecialchars($mfg_val, ENT_QUOTES) . '" size="12" '
+						. 'class="date_entry" placeholder="' . _('dd/mm/yyyy') . '"></td>';
+					echo '</tr></table>';
+					echo '</div>';
+				}
+
+				echo '</td></tr>';
+			}
+			// --- End tracking panels ---
 		}
 	}
 

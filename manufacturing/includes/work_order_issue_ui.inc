@@ -68,6 +68,92 @@ function display_issue_items($title, &$order) {
 	end_table();
 	if (@$low_stock)
 		display_note(_('Marked items have insufficient quantities in stock as on day of issue.'), 0, 1, "class='stockmankofg'");
+
+	// --- Serial/Batch tracking panels for component issues ---
+	if (function_exists('get_item_tracking_mode') && count($order->line_items) > 0) {
+		$has_tracking_items = false;
+		foreach ($order->line_items as $ln => $si) {
+			$tm = get_item_tracking_mode($si->stock_id);
+			if ($tm !== 'none') { $has_tracking_items = true; break; }
+		}
+		if ($has_tracking_items) {
+			echo '<br>';
+			display_heading(_('Serial/Batch Tracking for Components'));
+			$location = isset($_POST['Location']) ? $_POST['Location'] : '';
+			$num_cols = 3; // for table layout
+			start_table(TABLESTYLE, "width='80%'");
+			foreach ($order->line_items as $ln => $si) {
+				$tm = get_item_tracking_mode($si->stock_id);
+				if ($tm === 'none') continue;
+
+				start_row();
+				echo '<td colspan="'.$num_cols.'" style="padding:8px;">';
+				echo '<div style="border-left:3px solid '
+					. (item_has_serial_tracking($si->stock_id) ? '#2196F3' : '#FF9800')
+					. '; background:#f7f9fc; padding:8px; margin:4px 0;">';
+				echo '<b>' . $si->stock_id . '</b> — ' . $si->item_description
+					. ' (' . _('Qty:') . ' ' . number_format2($si->quantity, get_qty_dec($si->stock_id)) . ')';
+
+				if (item_has_serial_tracking($si->stock_id)) {
+					echo '<br><small style="color:#666;">' . _('Available serials at location:') . '</small> ';
+					$avail = get_serial_numbers_at_location($si->stock_id, $location, 'available');
+					$sn_list = array();
+					while ($srow = db_fetch($avail)) {
+						$sn_list[] = $srow['serial_no'];
+					}
+					if (!empty($sn_list)) {
+						echo '<small>' . implode(', ', array_slice($sn_list, 0, 20))
+							. (count($sn_list) > 20 ? ' ...' : '') . '</small>';
+					} else {
+						echo '<small style="color:#999;">' . _('None available') . '</small>';
+					}
+					echo '<br><label>' . _('Serial Numbers (one per line or comma-separated):') . '</label><br>';
+					$key = 'issue_serial_' . $ln;
+					echo '<textarea name="' . $key . '" rows="3" cols="50" style="width:90%;">'
+						. (isset($_POST[$key]) ? htmlspecialchars($_POST[$key]) : '')
+						. '</textarea>';
+				}
+
+				if (item_has_batch_tracking($si->stock_id)) {
+					echo '<br><small style="color:#666;">' . _('Available batches (FEFO order):') . '</small>';
+					$avail_batches = array();
+					if (function_exists('get_fefo_batches')) {
+						$avail_batches = get_fefo_batches($si->stock_id, $location, 0);
+					}
+					if (!empty($avail_batches)) {
+						echo '<table style="margin:4px 0; font-size:0.9em; border-collapse:collapse;">';
+						echo '<tr style="background:#eee;">'
+							. '<th style="padding:2px 8px;">' . _('ID') . '</th>'
+							. '<th style="padding:2px 8px;">' . _('Batch #') . '</th>'
+							. '<th style="padding:2px 8px;">' . _('Available') . '</th>'
+							. '<th style="padding:2px 8px;">' . _('Expiry') . '</th>'
+							. '</tr>';
+						foreach ($avail_batches as $ab) {
+							echo '<tr>'
+								. '<td style="padding:2px 8px;">' . $ab['batch_id'] . '</td>'
+								. '<td style="padding:2px 8px;">' . $ab['batch_no'] . '</td>'
+								. '<td style="padding:2px 8px; text-align:right;">' . number_format2($ab['qty_available'], get_qty_dec($si->stock_id)) . '</td>'
+								. '<td style="padding:2px 8px;">' . ($ab['expiry_date'] ? sql2date($ab['expiry_date']) : '-') . '</td>'
+								. '</tr>';
+						}
+						echo '</table>';
+					} else {
+						echo ' <small style="color:#999;">' . _('None available') . '</small>';
+					}
+					echo '<br><label>' . _('Batch allocations (batch_id:qty per line, blank = auto FEFO):') . '</label><br>';
+					$key = 'issue_batch_' . $ln;
+					echo '<textarea name="' . $key . '" rows="3" cols="50" style="width:90%;">'
+						. (isset($_POST[$key]) ? htmlspecialchars($_POST[$key]) : '')
+						. '</textarea>';
+				}
+
+				echo '</div></td>';
+				end_row();
+			}
+			end_table();
+		}
+	}
+
 	div_end();
 }
 

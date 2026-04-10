@@ -24,6 +24,17 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_ui.inc');
 
+// Load tracking modules if available
+$has_tracking = false;
+if (file_exists($path_to_root.'/inventory/includes/db/serial_batch_db.inc')) {
+	include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/stock_batches_db.inc');
+	include_once($path_to_root.'/inventory/includes/serial_batch_ui.inc');
+	include_once($path_to_root.'/manufacturing/includes/db/production_traceability_db.inc');
+	$has_tracking = true;
+}
+
 //-------------------------------------------------------------------------------------------------
 
 if ($_GET['trans_no'] != '')
@@ -104,6 +115,79 @@ display_wo_issue($wo_issue_no);
 display_heading2(_('Items for this Issue'));
 
 display_wo_issue_details($wo_issue_no);
+
+// --- Display serial/batch tracking info for this issue ---
+if ($has_tracking) {
+	$issue_data = get_work_order_issue($wo_issue_no);
+	if ($issue_data) {
+		$woid = $issue_data['workorder_id'];
+		// Get issue items with tracking info from stock_moves
+		$track_sql = "SELECT DISTINCT sm.stock_id, sm.serial_id, sm.batch_id, sm.expiry_date, sm.qty,
+				sn.serial_no, sb.batch_no, item.description
+			FROM " . TB_PREF . "stock_moves sm
+			LEFT JOIN " . TB_PREF . "serial_numbers sn ON sm.serial_id = sn.id
+			LEFT JOIN " . TB_PREF . "stock_batches sb ON sm.batch_id = sb.id
+			LEFT JOIN " . TB_PREF . "stock_master item ON sm.stock_id = item.stock_id
+			WHERE sm.type = " . ST_MANUISSUE . "
+			AND sm.trans_no = " . (int)$wo_issue_no . "
+			AND (sm.serial_id IS NOT NULL OR sm.batch_id IS NOT NULL)
+			ORDER BY sm.stock_id, sn.serial_no, sb.batch_no";
+		$track_result = db_query($track_sql, 'could not get tracking info');
+
+		$has_rows = false;
+		$current_stock = '';
+		while ($tr = db_fetch($track_result)) {
+			if (!$has_rows) {
+				$has_rows = true;
+				echo '<br>';
+				display_heading2(_('Serial/Batch Tracking'));
+				start_table(TABLESTYLE, "width='80%'");
+				$th = array(_('Component'), _('Serial #'), _('Batch #'), _('Expiry'), _('Qty'));
+				table_header($th);
+			}
+			alt_table_row_color($k);
+			if ($tr['stock_id'] !== $current_stock) {
+				label_cell($tr['stock_id'] . ' - ' . $tr['description']);
+				$current_stock = $tr['stock_id'];
+			} else {
+				label_cell('');
+			}
+			label_cell(!empty($tr['serial_no']) ? $tr['serial_no'] : '-');
+			label_cell(!empty($tr['batch_no']) ? $tr['batch_no'] : '-');
+			label_cell(!empty($tr['expiry_date']) ? sql2date($tr['expiry_date']) : '-');
+			qty_cell(abs($tr['qty']), false, 2);
+			end_row();
+		}
+		if ($has_rows)
+			end_table();
+
+		// Show production traceability
+		$trace_result = get_wo_traceability($woid);
+		$trace_rows = array();
+		while ($trow = db_fetch($trace_result)) {
+			$trace_rows[] = $trow;
+		}
+		if (!empty($trace_rows)) {
+			echo '<br>';
+			display_heading2(_('Production Traceability'));
+			start_table(TABLESTYLE, "width='80%'");
+			$th = array(_('Component'), _('Component Serial'), _('Component Batch'), _('Qty'), _('Finished Serial'), _('Finished Batch'));
+			table_header($th);
+			$k = 0;
+			foreach ($trace_rows as $trow) {
+				alt_table_row_color($k);
+				label_cell($trow['component_stock_id'] . ' - ' . $trow['component_description']);
+				label_cell(!empty($trow['component_serial_no']) ? $trow['component_serial_no'] : '-');
+				label_cell(!empty($trow['component_batch_no']) ? $trow['component_batch_no'] : '-');
+				qty_cell($trow['component_qty'], false, 2);
+				label_cell(!empty($trow['finished_serial_no']) ? $trow['finished_serial_no'] : '-');
+				label_cell(!empty($trow['finished_batch_no']) ? $trow['finished_batch_no'] : '-');
+				end_row();
+			}
+			end_table();
+		}
+	}
+}
 
 echo '<br>';
 

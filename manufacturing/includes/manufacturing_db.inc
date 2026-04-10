@@ -16,3 +16,4 @@ include_once($path_to_root . '/manufacturing/includes/db/work_order_costing_db.i
 include_once($path_to_root . '/manufacturing/includes/db/work_order_issues_db.inc');
 include_once($path_to_root . '/manufacturing/includes/db/work_order_produce_items_db.inc');
 include_once($path_to_root . '/manufacturing/includes/db/work_order_requirements_db.inc');
+include_once($path_to_root . '/manufacturing/includes/db/production_traceability_db.inc');

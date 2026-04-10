@@ -109,6 +109,70 @@ if (db_num_rows($result) > 0) {
 		label_cell($display_discount, 'align=right');
 		amount_cell($value);
 		end_row();
+
+		// --- Advanced Inventory: show serial/batch tracking info for this credit line ---
+		$serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
+		if (file_exists($serial_batch_db_path)) {
+			include_once($serial_batch_db_path);
+			if (function_exists('get_item_tracking_mode')) {
+				$tracking_mode = get_item_tracking_mode($myrow2['stock_id']);
+				if ($tracking_mode !== 'none') {
+					// Look up tracking data from stock_moves for this credit note line
+					$track_sql = "SELECT serial_id, batch_id FROM " . TB_PREF . "stock_moves "
+						. "WHERE type=" . ST_CUSTCREDIT
+						. " AND trans_no=" . db_escape($trans_id)
+						. " AND stock_id=" . db_escape($myrow2['stock_id'])
+						. " AND (serial_id IS NOT NULL AND serial_id > 0 OR batch_id IS NOT NULL AND batch_id > 0)"
+						. " LIMIT 50";
+					$track_result = db_query($track_sql, 'could not get tracking data');
+					$serial_ids = array();
+					$batch_ids = array();
+					while ($tr = db_fetch($track_result)) {
+						if (!empty($tr['serial_id'])) $serial_ids[$tr['serial_id']] = $tr['serial_id'];
+						if (!empty($tr['batch_id'])) $batch_ids[$tr['batch_id']] = $tr['batch_id'];
+					}
+
+					$tracking_parts = array();
+
+					if (!empty($serial_ids)) {
+						include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
+						$serial_labels = array();
+						foreach ($serial_ids as $sid) {
+							$sn_sql = "SELECT serial_no FROM " . TB_PREF . "serial_numbers WHERE id=" . (int)$sid;
+							$sn_row = db_fetch(db_query($sn_sql, 'could not get serial'));
+							if ($sn_row) $serial_labels[] = htmlspecialchars($sn_row['serial_no']);
+						}
+						if (!empty($serial_labels)) {
+							$tracking_parts[] = '<i class="fa fa-barcode"></i> <b>'._('Serials:').'</b> ' . implode(', ', $serial_labels);
+						}
+					}
+
+					if (!empty($batch_ids)) {
+						include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+						$batch_labels = array();
+						foreach ($batch_ids as $bid) {
+							$bn_sql = "SELECT batch_no, expiry_date FROM " . TB_PREF . "stock_batches WHERE id=" . (int)$bid;
+							$bn_row = db_fetch(db_query($bn_sql, 'could not get batch'));
+							if ($bn_row) {
+								$bl = htmlspecialchars($bn_row['batch_no']);
+								if ($bn_row['expiry_date']) $bl .= ' (exp:' . sql2date($bn_row['expiry_date']) . ')';
+								$batch_labels[] = $bl;
+							}
+						}
+						if (!empty($batch_labels)) {
+							$tracking_parts[] = '<i class="fa fa-cubes"></i> <b>'._('Batches:').'</b> ' . implode(', ', $batch_labels);
+						}
+					}
+
+					if (!empty($tracking_parts)) {
+						echo '<tr><td colspan="7" style="padding:3px 8px 6px 24px; border-left:3px solid #409eff; background:#ecf5ff; font-size:12px;">';
+						echo implode(' &nbsp;|&nbsp; ', $tracking_parts);
+						echo '</td></tr>';
+					}
+				}
+			}
+		}
+		// --- End serial/batch tracking display ---
 	}
 }
 else
