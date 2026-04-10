@@ -2088,7 +2088,7 @@ msgid "This role is currently assigned to some users and cannot be deleted"
 msgstr ""
 
 #: admin/security_roles.php:120
-msgid "Security role has been sucessfully deleted."
+msgid "Security role has been successfully deleted."
 msgstr ""
 
 #: admin/security_roles.php:167
@@ -8338,7 +8338,7 @@ msgid "Item code has been updated."
 msgstr ""
 
 #: inventory/manage/item_codes.php:79
-msgid "Item code has been sucessfully deleted."
+msgid "Item code has been successfully deleted."
 msgstr ""
 
 #: inventory/manage/item_codes.php:120
@@ -8849,7 +8849,7 @@ msgid "Supplier purchasing data has been updated."
 msgstr ""
 
 #: inventory/purchasing_data.php:76
-msgid "The purchasing data item has been sucessfully deleted."
+msgid "The purchasing data item has been successfully deleted."
 msgstr ""
 
 #: inventory/purchasing_data.php:115
@@ -8896,7 +8896,7 @@ msgid ""
 msgstr ""
 
 #: inventory/reorder_level.php:86
-msgid "Reorder levels has been updated."
+msgid "Reorder levels have been updated."
 msgstr ""
 
 #: inventory/transfers.php:32
@@ -10778,7 +10778,7 @@ msgid "Invalid purchase invoice number."
 msgstr ""
 
 #: purchasing/supplier_payment.php:86
-msgid "Payment has been sucessfully entered"
+msgid "Payment has been successfully entered"
 msgstr ""
 
 #: purchasing/supplier_payment.php:88

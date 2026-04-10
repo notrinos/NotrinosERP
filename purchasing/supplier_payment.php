@@ -83,7 +83,7 @@ if (!isset($_POST['bank_account'])) { // first page call
 if (isset($_GET['AddedID'])) {
 	$payment_id = $_GET['AddedID'];
 
-	display_notification_centered( _('Payment has been sucessfully entered'));
+	display_notification_centered( _('Payment has been successfully entered'));
 
 	submenu_print(_('&Print This Remittance'), ST_SUPPAYMENT, $payment_id.'-'.ST_SUPPAYMENT, 'prtopt');
 	submenu_print(_('&Email This Remittance'), ST_SUPPAYMENT, $payment_id.'-'.ST_SUPPAYMENT, null, 1);

@@ -117,7 +117,7 @@ if (get_post('delete')) {
 		display_error(_('This role is currently assigned to some users and cannot be deleted'));
 	else {
 		delete_security_role(get_post('role'));
-		display_notification(_('Security role has been sucessfully deleted.'));
+		display_notification(_('Security role has been successfully deleted.'));
 		unset($_POST['role']);
 	}
 	$Ajax->activate('_page_body');

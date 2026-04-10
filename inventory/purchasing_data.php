@@ -73,7 +73,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
 	delete_item_purchasing_data($selected_id, $_POST['stock_id']);
-	display_notification(_('The purchasing data item has been sucessfully deleted.'));
+	display_notification(_('The purchasing data item has been successfully deleted.'));
 	$Mode = 'RESET';
 }
 
