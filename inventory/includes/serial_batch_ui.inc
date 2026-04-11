@@ -526,7 +526,7 @@ function display_batch_movement_timeline($batch_id) {
 			label_cell('-');
 
 		label_cell($row['reference'] ? $row['reference'] : '-');
-		label_cell($row['location_name']);
+		label_cell($row['location_name'] ? $row['location_name'] : '-');
 
 		// Quantity with color
 		$qty_str = number_format2($row['quantity'], 4);
@@ -577,7 +577,7 @@ function display_batch_location_breakdown($batch_id) {
 	while ($row = db_fetch($result)) {
 		$has_rows = true;
 		alt_table_row_color($k);
-		label_cell($row['location_name']);
+		label_cell($row['location_name'] ? $row['location_name'] : _('Unassigned'));
 		qty_cell($row['qty'], false, $dec);
 		end_row();
 		$total += $row['qty'];

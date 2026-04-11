@@ -147,9 +147,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 			// Log initial creation movement with initial_qty if > 0
 			$init_qty = (float)get_post('initial_qty', 0);
 			if ($init_qty > 0) {
+				$init_loc = get_post('init_location', '');
 				add_batch_movement(
 					$new_id, 0, 0,
-					'', null, $init_qty,
+					$init_loc, null, $init_qty,
 					Today(), '', _('Batch created manually — initial quantity')
 				);
 			}
@@ -552,6 +553,11 @@ batch_status_list_row(_('Status:'), 'status', get_post('status', 'active'), fals
 
 // Initial Quantity
 small_amount_row(_('Initial Quantity:'), 'initial_qty', get_post('initial_qty', ''), null, null, 2);
+
+// Location for initial quantity (only for new batches)
+if (!$is_edit) {
+	locations_list_row(_('Initial Location:'), 'init_location', get_post('init_location'), false, false);
+}
 
 // Dates section
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Dates & Shelf Life') . "</strong></td></tr>\n";
