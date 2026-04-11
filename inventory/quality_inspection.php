@@ -419,7 +419,10 @@ if ($enter_mode && $active_insp_id > 0 && $insp) {
 			alt_table_row_color($k);
 			label_cell($r['parameter_name']);
 			label_cell(get_qc_parameter_type_label($r['parameter_type']));
-			label_cell($r['reading_value']);
+			if ($r['parameter_type'] === 'boolean')
+				label_cell($r['reading_value'] == '1' ? _('Pass') : _('Fail'));
+			else
+				label_cell($r['reading_value']);
 			label_cell(qc_result_badge($r['result']));
 			label_cell($r['notes'] ? $r['notes'] : '—');
 			end_row();

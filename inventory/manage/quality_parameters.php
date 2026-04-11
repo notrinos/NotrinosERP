@@ -206,6 +206,7 @@ div_end();
 // Display Add/Edit Form
 //----------------------------------------------------------------------
 
+div_start('param_form');
 start_table(TABLESTYLE2);
 
 if ($Mode == 'Edit') {
@@ -238,7 +239,7 @@ text_row_ex(_('Parameter Name') . ':', 'param_name', 50, 100);
 
 $param_types = get_qc_parameter_types();
 array_selector_row(_('Type') . ':', 'parameter_type', null, $param_types,
-	array('select_submit' => true));
+	array('select_submit' => true, 'async' => false));
 
 // Show applicable fields based on parameter_type
 $ptype = get_post('parameter_type', 'numeric');
@@ -265,6 +266,8 @@ textarea_row(_('Description / Instructions') . ':', 'description', null, 60, 3);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+
+div_end();
 
 end_form();
 end_page();
