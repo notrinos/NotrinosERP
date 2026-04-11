@@ -71,6 +71,17 @@ function print_traceability_report() {
 		2 => array('text' => _('Serial/Batch #'), 'from' => $search_text, 'to' => ''),
 	);
 
+	if ($search_text === '') {
+		print_traceability_no_data_report(
+			_('Traceability Report'),
+			$params,
+			$orientation,
+			$destination,
+			_('Please enter a serial or batch number.')
+		);
+		return;
+	}
+
 	// ════════════════════════════════════════════════════════════════
 	// FORWARD TRACE: Batch → Products → Customers
 	// ════════════════════════════════════════════════════════════════
@@ -100,7 +111,13 @@ function print_forward_trace_report($search_text, $params, $orientation, $destin
 	// Find the batch
 	$batch = find_batch_by_text($search_text);
 	if (!$batch) {
-		display_error(sprintf(_('Batch "%s" not found.'), $search_text));
+		print_traceability_no_data_report(
+			_('Forward Traceability Report'),
+			$params,
+			$orientation,
+			$destination,
+			sprintf(_('Batch "%s" not found.'), $search_text)
+		);
 		return;
 	}
 
@@ -204,7 +221,13 @@ function print_reverse_trace_report($search_text, $params, $orientation, $destin
 	// Find the serial
 	$serial = find_serial_by_text($search_text);
 	if (!$serial) {
-		display_error(sprintf(_('Serial number "%s" not found.'), $search_text));
+		print_traceability_no_data_report(
+			_('Reverse Traceability Report'),
+			$params,
+			$orientation,
+			$destination,
+			sprintf(_('Serial number "%s" not found.'), $search_text)
+		);
 		return;
 	}
 
@@ -291,7 +314,13 @@ function print_serial_lifecycle_report($search_text, $params, $orientation, $des
 	// Find the serial
 	$serial = find_serial_by_text($search_text);
 	if (!$serial) {
-		display_error(sprintf(_('Serial number "%s" not found.'), $search_text));
+		print_traceability_no_data_report(
+			_('Serial Lifecycle Report'),
+			$params,
+			$orientation,
+			$destination,
+			sprintf(_('Serial number "%s" not found.'), $search_text)
+		);
 		return;
 	}
 
@@ -369,6 +398,21 @@ function print_serial_lifecycle_report($search_text, $params, $orientation, $des
 	$rep->TextCol(0, 5, sprintf(_('Total events: %d'), count($events)));
 	$rep->TextCol(0, 5, _('This report is generated from an immutable audit trail.'));
 
+	$rep->End();
+}
+
+function print_traceability_no_data_report($title, $params, $orientation, $destination, $message) {
+	$cols = array(0, 515);
+	$headers = array(_('Message'));
+	$aligns = array('left');
+
+	$rep = new FrontReport($title, 'TraceabilityNoData', user_pagesize(), 9, $orientation);
+	$rep->Font();
+	$rep->Info($params, $cols, $headers, $aligns);
+	$rep->NewPage();
+	$rep->TextCol(0, 1, $message);
+	$rep->NewLine();
+	$rep->TextCol(0, 1, _('No traceability records found for the selected input.'));
 	$rep->End();
 }
 

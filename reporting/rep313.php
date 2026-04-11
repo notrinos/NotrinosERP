@@ -62,7 +62,7 @@ function print_serial_ledger_report()
 	$loc_name = $location ? get_location_name($location) : _('All');
 
 	$cols = array(0, 80, 160, 240, 300, 360, 420, 515);
-	$headers = array(_('Serial #'), _('Item'), _('Date'), _('Type'), _('From'), _('To'), _('Status Change'));
+	$headers = array(_('Serial #'), _('Reference'), _('Date'), _('Type'), _('From'), _('To'), _('Status Change'));
 	$aligns = array('left', 'left', 'left', 'left', 'left', 'left', 'left');
 
 	$params = array(
@@ -97,8 +97,8 @@ function print_serial_ledger_report()
 		}
 
 		$rep->TextCol(0, 1, '');
-		$rep->TextCol(1, 2, $row['movement_type']);
-		$rep->TextCol(2, 3, sql2date($row['movement_date']));
+		$rep->TextCol(1, 2, $row['reference'] ? $row['reference'] : ('#' . $row['trans_no']));
+		$rep->TextCol(2, 3, sql2date($row['tran_date']));
 		$type_label = isset($systypes_array[$row['trans_type']]) ? $systypes_array[$row['trans_type']] : $row['trans_type'];
 		$rep->TextCol(3, 4, $type_label);
 		$rep->TextCol(4, 5, $row['from_location'] ? $row['from_location'] : '-');

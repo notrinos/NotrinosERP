@@ -16,13 +16,12 @@
  * Cases where first-expiry-first-out was not followed.
  *
  * Parameters:
- *   PARAM_0: Start Date
- *   PARAM_1: End Date
- *   PARAM_2: Item
- *   PARAM_3: Location
- *   PARAM_4: Comments
- *   PARAM_5: Orientation
- *   PARAM_6: Destination (0=PDF, 1=Excel)
+ *   PARAM_0: As at Date
+ *   PARAM_1: Item
+ *   PARAM_2: Location
+ *   PARAM_3: Comments
+ *   PARAM_4: Orientation
+ *   PARAM_5: Destination (0=PDF, 1=Excel)
  */
 $page_security = 'SA_BATCHINQUIRY';
 $path_to_root = '..';
@@ -40,13 +39,12 @@ function print_fefo_compliance_report()
 {
 	global $path_to_root, $systypes_array;
 
-	$from_date = $_POST['PARAM_0'];
-	$to_date   = $_POST['PARAM_1'];
-	$stock_id  = $_POST['PARAM_2'];
-	$location  = $_POST['PARAM_3'];
-	$comments  = $_POST['PARAM_4'];
-	$orientation = $_POST['PARAM_5'];
-	$destination = $_POST['PARAM_6'];
+	$as_at_date = $_POST['PARAM_0'];
+	$stock_id  = $_POST['PARAM_1'];
+	$location  = $_POST['PARAM_2'];
+	$comments  = $_POST['PARAM_3'];
+	$orientation = $_POST['PARAM_4'];
+	$destination = $_POST['PARAM_5'];
 
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
@@ -67,7 +65,7 @@ function print_fefo_compliance_report()
 
 	$params = array(
 		0 => $comments,
-		1 => array('text' => _('Period'), 'from' => $from_date, 'to' => $to_date),
+		1 => array('text' => _('As at Date'), 'from' => $as_at_date, 'to' => ''),
 		2 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
 		3 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
 	);
@@ -79,7 +77,7 @@ function print_fefo_compliance_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_fefo_compliance_data($from_date, $to_date, $stock_id, $location);
+	$result = get_fefo_compliance_data(null, $as_at_date, $stock_id, $location);
 
 	$violation_count = 0;
 

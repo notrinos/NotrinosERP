@@ -36,13 +36,17 @@ function get_serial_ledger_data($stock_id = null, $serial_no = null, $from_date 
 {
 	$sql = "SELECT sm.id, sm.serial_id, sn.serial_no, sn.stock_id,
 			si.description AS item_description,
-			sm.movement_type, sm.trans_type, sm.trans_no, sm.movement_date,
-			sm.from_location, sm.to_location, sm.from_status, sm.to_status,
+			sm.trans_type, sm.trans_no, sm.tran_date,
+			sm.from_loc, sm.to_loc, sm.from_status, sm.to_status,
 			sm.reference, sm.notes,
+			COALESCE(fl.location_name, sm.from_loc) AS from_location,
+			COALESCE(tl.location_name, sm.to_loc) AS to_location,
 			CONCAT(u.real_name) AS user_name
 		FROM " . TB_PREF . "serial_movements sm
 		LEFT JOIN " . TB_PREF . "serial_numbers sn ON sn.id = sm.serial_id
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = sn.stock_id
+		LEFT JOIN " . TB_PREF . "locations fl ON fl.loc_code = sm.from_loc
+		LEFT JOIN " . TB_PREF . "locations tl ON tl.loc_code = sm.to_loc
 		LEFT JOIN " . TB_PREF . "users u ON u.id = sm.created_by
 		WHERE 1=1";
 
@@ -51,13 +55,13 @@ function get_serial_ledger_data($stock_id = null, $serial_no = null, $from_date 
 	if ($serial_no)
 		$sql .= " AND sn.serial_no LIKE " . db_escape('%' . $serial_no . '%');
 	if ($from_date)
-		$sql .= " AND sm.movement_date >= '" . date2sql($from_date) . "'";
+		$sql .= " AND sm.tran_date >= '" . date2sql($from_date) . "'";
 	if ($to_date)
-		$sql .= " AND sm.movement_date <= '" . date2sql($to_date) . "'";
+		$sql .= " AND sm.tran_date <= '" . date2sql($to_date) . "'";
 	if ($location)
-		$sql .= " AND (sm.from_location = " . db_escape($location) . " OR sm.to_location = " . db_escape($location) . ")";
+		$sql .= " AND (sm.from_loc = " . db_escape($location) . " OR sm.to_loc = " . db_escape($location) . ")";
 
-	$sql .= " ORDER BY sn.serial_no, sm.movement_date DESC, sm.id DESC";
+	$sql .= " ORDER BY sn.serial_no, sm.tran_date DESC, sm.id DESC";
 
 	return db_query($sql, 'Could not retrieve serial ledger data');
 }
@@ -76,23 +80,31 @@ function get_batch_balance_data($stock_id = null, $location = null, $category = 
 	$sql = "SELECT b.id AS batch_id, b.batch_no, b.stock_id,
 			si.description AS item_description,
 			si.category_id, cat.description AS category_name,
-			b.loc_code, loc.location_name,
-			b.quantity_on_hand, b.manufacturing_date, b.expiry_date, b.status,
-			(b.quantity_on_hand * si.material_cost) AS stock_value
+			bm.loc_code, COALESCE(loc.location_name, bm.loc_code) AS location_name,
+			SUM(bm.quantity) AS quantity_on_hand,
+			b.manufacturing_date, b.expiry_date, b.status,
+			(SUM(bm.quantity) * IF(b.batch_cost > 0, b.batch_cost, si.material_cost)) AS stock_value
 		FROM " . TB_PREF . "stock_batches b
+		INNER JOIN " . TB_PREF . "batch_movements bm ON bm.batch_id = b.id
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = b.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
-		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = b.loc_code
-		WHERE b.quantity_on_hand != 0";
+		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = bm.loc_code
+		WHERE b.inactive = 0";
 
 	if ($stock_id)
 		$sql .= " AND b.stock_id = " . db_escape($stock_id);
 	if ($location && $location != 'all')
-		$sql .= " AND b.loc_code = " . db_escape($location);
+		$sql .= " AND bm.loc_code = " . db_escape($location);
 	if ($category > 0)
 		$sql .= " AND si.category_id = " . db_escape($category);
 
-	$sql .= " ORDER BY si.category_id, b.stock_id, b.loc_code, b.batch_no";
+	$sql .= " GROUP BY b.id, b.batch_no, b.stock_id,
+		si.description, si.category_id, cat.description,
+		bm.loc_code, loc.location_name,
+		b.manufacturing_date, b.expiry_date, b.status,
+		b.batch_cost, si.material_cost
+		HAVING quantity_on_hand != 0
+		ORDER BY si.category_id, b.stock_id, bm.loc_code, b.batch_no";
 
 	return db_query($sql, 'Could not retrieve batch balance data');
 }
@@ -105,30 +117,39 @@ function get_batch_balance_data($stock_id = null, $location = null, $category = 
  * @param int         $category Filter by category (0 = all)
  * @return resource DB result
  */
-function get_batch_aging_data($stock_id = null, $location = null, $category = 0)
+function get_batch_aging_data($stock_id = null, $location = null, $category = 0, $as_of_date = null)
 {
+	$as_of_expr = $as_of_date ? ("'" . date2sql($as_of_date) . "'") : "CURDATE()";
+
 	$sql = "SELECT b.id AS batch_id, b.batch_no, b.stock_id,
 			si.description AS item_description,
-			b.loc_code, loc.location_name,
-			b.quantity_on_hand, b.manufacturing_date, b.expiry_date, b.status,
-			b.created_date,
-			DATEDIFF(NOW(), b.created_date) AS days_in_stock,
-			IF(b.expiry_date IS NOT NULL, DATEDIFF(b.expiry_date, NOW()), NULL) AS days_until_expiry,
-			(b.quantity_on_hand * si.material_cost) AS stock_value
+			bm.loc_code, COALESCE(loc.location_name, bm.loc_code) AS location_name,
+			SUM(bm.quantity) AS quantity_on_hand,
+			b.manufacturing_date, b.expiry_date, b.status,
+			b.created_at,
+			DATEDIFF($as_of_expr, DATE(b.created_at)) AS days_in_stock,
+			IF(b.expiry_date IS NOT NULL, DATEDIFF(b.expiry_date, $as_of_expr), NULL) AS days_until_expiry,
+			(SUM(bm.quantity) * IF(b.batch_cost > 0, b.batch_cost, si.material_cost)) AS stock_value
 		FROM " . TB_PREF . "stock_batches b
+		INNER JOIN " . TB_PREF . "batch_movements bm ON bm.batch_id = b.id
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = b.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
-		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = b.loc_code
-		WHERE b.quantity_on_hand > 0";
+		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = bm.loc_code
+		WHERE b.inactive = 0";
 
 	if ($stock_id)
 		$sql .= " AND b.stock_id = " . db_escape($stock_id);
 	if ($location && $location != 'all')
-		$sql .= " AND b.loc_code = " . db_escape($location);
+		$sql .= " AND bm.loc_code = " . db_escape($location);
 	if ($category > 0)
 		$sql .= " AND si.category_id = " . db_escape($category);
 
-	$sql .= " ORDER BY days_in_stock DESC, b.stock_id, b.batch_no";
+	$sql .= " GROUP BY b.id, b.batch_no, b.stock_id,
+		si.description, bm.loc_code, loc.location_name,
+		b.manufacturing_date, b.expiry_date, b.status, b.created_at,
+		b.batch_cost, si.material_cost
+		HAVING quantity_on_hand > 0
+		ORDER BY days_in_stock DESC, b.stock_id, b.batch_no";
 
 	return db_query($sql, 'Could not retrieve batch aging data');
 }
@@ -143,34 +164,42 @@ function get_batch_aging_data($stock_id = null, $location = null, $category = 0)
  * @param int         $include_expired 1 to include already expired items
  * @return resource DB result
  */
-function get_expiry_report_data($days_threshold = 90, $stock_id = null, $location = null, $category = 0, $include_expired = 1)
+function get_expiry_report_data($days_threshold = 90, $stock_id = null, $location = null, $category = 0, $include_expired = 1, $as_of_date = null)
 {
+	$as_of_expr = $as_of_date ? ("'" . date2sql($as_of_date) . "'") : "CURDATE()";
+
 	$sql = "SELECT b.id AS batch_id, b.batch_no, b.stock_id,
 			si.description AS item_description,
-			b.loc_code, loc.location_name,
-			b.quantity_on_hand, b.expiry_date,
-			DATEDIFF(b.expiry_date, NOW()) AS days_until_expiry,
+			bm.loc_code, COALESCE(loc.location_name, bm.loc_code) AS location_name,
+			SUM(bm.quantity) AS quantity_on_hand,
+			b.expiry_date,
+			DATEDIFF(b.expiry_date, $as_of_expr) AS days_until_expiry,
 			b.status,
-			(b.quantity_on_hand * si.material_cost) AS stock_value
+			(SUM(bm.quantity) * IF(b.batch_cost > 0, b.batch_cost, si.material_cost)) AS stock_value
 		FROM " . TB_PREF . "stock_batches b
+		INNER JOIN " . TB_PREF . "batch_movements bm ON bm.batch_id = b.id
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = b.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
-		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = b.loc_code
-		WHERE b.quantity_on_hand > 0
+		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = bm.loc_code
+		WHERE b.inactive = 0
 		AND b.expiry_date IS NOT NULL";
 
 	if ($days_threshold > 0)
-		$sql .= " AND b.expiry_date <= DATE_ADD(NOW(), INTERVAL " . (int)$days_threshold . " DAY)";
+		$sql .= " AND b.expiry_date <= DATE_ADD($as_of_expr, INTERVAL " . (int)$days_threshold . " DAY)";
 	if (!$include_expired)
-		$sql .= " AND b.expiry_date >= CURDATE()";
+		$sql .= " AND b.expiry_date >= $as_of_expr";
 	if ($stock_id)
 		$sql .= " AND b.stock_id = " . db_escape($stock_id);
 	if ($location && $location != 'all')
-		$sql .= " AND b.loc_code = " . db_escape($location);
+		$sql .= " AND bm.loc_code = " . db_escape($location);
 	if ($category > 0)
 		$sql .= " AND si.category_id = " . db_escape($category);
 
-	$sql .= " ORDER BY b.expiry_date ASC, b.stock_id, b.batch_no";
+	$sql .= " GROUP BY b.id, b.batch_no, b.stock_id,
+		si.description, bm.loc_code, loc.location_name,
+		b.expiry_date, b.status, b.batch_cost, si.material_cost
+		HAVING quantity_on_hand > 0
+		ORDER BY b.expiry_date ASC, b.stock_id, b.batch_no";
 
 	return db_query($sql, 'Could not retrieve expiry report data');
 }
@@ -230,7 +259,7 @@ function get_warranty_claims_summary_data($from_date = null, $to_date = null, $s
 			SUM(CASE WHEN wc.status = 'resolved' THEN 1 ELSE 0 END) AS resolved,
 			SUM(CASE WHEN wc.status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
 			SUM(IFNULL(wc.repair_cost, 0)) AS total_repair_cost,
-			SUM(IFNULL(wc.replacement_cost, 0)) AS total_replacement_cost
+			SUM(CASE WHEN wc.replacement_serial_id IS NOT NULL THEN IFNULL(si.material_cost, 0) ELSE 0 END) AS total_replacement_cost
 		FROM " . TB_PREF . "warranty_claims wc
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = wc.stock_id
 		WHERE 1=1";
@@ -305,13 +334,15 @@ function get_fefo_compliance_data($from_date = null, $to_date = null, $stock_id 
 			sb.expiry_date AS picked_expiry,
 			sm.qty AS qty_picked,
 			sm.type AS trans_type, sm.trans_no,
-			(SELECT MIN(sb2.expiry_date) 
+			(SELECT MIN(sb2.expiry_date)
 			 FROM " . TB_PREF . "stock_batches sb2
 			 WHERE sb2.stock_id = sm.stock_id
-			   AND sb2.loc_code = sm.loc_code
-			   AND sb2.quantity_on_hand > 0
 			   AND sb2.expiry_date IS NOT NULL
-			   AND sb2.status = 'available'
+			   AND sb2.inactive = 0
+			   AND (SELECT COALESCE(SUM(bm2.quantity), 0)
+					FROM " . TB_PREF . "batch_movements bm2
+					WHERE bm2.batch_id = sb2.id
+					  AND bm2.loc_code = sm.loc_code) > 0
 			) AS oldest_available_expiry
 		FROM " . TB_PREF . "stock_moves sm
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = sm.stock_id

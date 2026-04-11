@@ -16,10 +16,10 @@
  * Items approaching or past expiry date.
  *
  * Parameters:
- *   PARAM_0: Days Threshold (items expiring within N days)
- *   PARAM_1: Item Category
- *   PARAM_2: Location
- *   PARAM_3: Include Expired
+ *   PARAM_0: As at Date
+ *   PARAM_1: Days Threshold (items expiring within N days)
+ *   PARAM_2: Item
+ *   PARAM_3: Location
  *   PARAM_4: Comments
  *   PARAM_5: Orientation
  *   PARAM_6: Destination (0=PDF, 1=Excel)
@@ -40,10 +40,10 @@ function print_expiry_report()
 {
 	global $path_to_root;
 
-	$days       = $_POST['PARAM_0'];
-	$category   = $_POST['PARAM_1'];
-	$location   = $_POST['PARAM_2'];
-	$inc_expired = $_POST['PARAM_3'];
+	$as_at_date = $_POST['PARAM_0'];
+	$days       = $_POST['PARAM_1'];
+	$stock_id   = $_POST['PARAM_2'];
+	$location   = $_POST['PARAM_3'];
 	$comments   = $_POST['PARAM_4'];
 	$orientation = $_POST['PARAM_5'];
 	$destination = $_POST['PARAM_6'];
@@ -57,11 +57,10 @@ function print_expiry_report()
 	$dec = user_price_dec();
 
 	if (!$days || $days <= 0) $days = 90;
-	if ($category == ALL_NUMERIC) $category = 0;
+	if ($stock_id == ALL_TEXT) $stock_id = null;
 	if ($location == ALL_TEXT) $location = null;
-	$inc_expired = !$inc_expired; // YES_NO: 0 = Yes, 1 = No in report system
 
-	$cat_name = $category ? get_category_name($category) : _('All');
+	$item_name = $stock_id ? $stock_id : _('All');
 	$loc_name = $location ? get_location_name($location) : _('All');
 
 	$cols = array(0, 80, 200, 280, 340, 400, 440, 515);
@@ -70,10 +69,10 @@ function print_expiry_report()
 
 	$params = array(
 		0 => $comments,
-		1 => array('text' => _('Expiring Within'), 'from' => $days . ' ' . _('days'), 'to' => ''),
-		2 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
-		3 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
-		4 => array('text' => _('Include Expired'), 'from' => $inc_expired ? _('Yes') : _('No'), 'to' => ''),
+		1 => array('text' => _('As at Date'), 'from' => $as_at_date, 'to' => ''),
+		2 => array('text' => _('Days to Expiry'), 'from' => $days, 'to' => ''),
+		3 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
+		4 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
 	);
 
 	$rep = new FrontReport(_('Expiry Report'), 'ExpiryReport', user_pagesize(), 9, $orientation);
@@ -83,7 +82,7 @@ function print_expiry_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_expiry_report_data($days, null, $location, $category, $inc_expired);
+	$result = get_expiry_report_data($days, $stock_id, $location, 0, 1, $as_at_date);
 
 	$grand_total = 0;
 	$expired_count = 0;

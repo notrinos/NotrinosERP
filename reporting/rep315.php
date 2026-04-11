@@ -16,11 +16,13 @@
  * Age distribution of batch stock (days in stock, days to expiry).
  *
  * Parameters:
- *   PARAM_0: Item Category
- *   PARAM_1: Location
- *   PARAM_2: Comments
- *   PARAM_3: Orientation
- *   PARAM_4: Destination (0=PDF, 1=Excel)
+ *   PARAM_0: As at Date
+ *   PARAM_1: Item
+ *   PARAM_2: Location
+ *   PARAM_3: Item Category
+ *   PARAM_4: Comments
+ *   PARAM_5: Orientation
+ *   PARAM_6: Destination (0=PDF, 1=Excel)
  */
 $page_security = 'SA_BATCHINQUIRY';
 $path_to_root = '..';
@@ -38,11 +40,13 @@ function print_batch_aging_report()
 {
 	global $path_to_root;
 
-	$category  = $_POST['PARAM_0'];
-	$location  = $_POST['PARAM_1'];
-	$comments  = $_POST['PARAM_2'];
-	$orientation = $_POST['PARAM_3'];
-	$destination = $_POST['PARAM_4'];
+	$as_at_date = $_POST['PARAM_0'];
+	$stock_id   = $_POST['PARAM_1'];
+	$location   = $_POST['PARAM_2'];
+	$category   = $_POST['PARAM_3'];
+	$comments   = $_POST['PARAM_4'];
+	$orientation = $_POST['PARAM_5'];
+	$destination = $_POST['PARAM_6'];
 
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
@@ -53,8 +57,10 @@ function print_batch_aging_report()
 	$dec = user_price_dec();
 
 	if ($category == ALL_NUMERIC) $category = 0;
+	if ($stock_id == ALL_TEXT) $stock_id = null;
 	if ($location == ALL_TEXT) $location = null;
 
+	$item_name = $stock_id ? $stock_id : _('All');
 	$cat_name = $category ? get_category_name($category) : _('All');
 	$loc_name = $location ? get_location_name($location) : _('All');
 
@@ -64,8 +70,10 @@ function print_batch_aging_report()
 
 	$params = array(
 		0 => $comments,
-		1 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
-		2 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
+		1 => array('text' => _('As at Date'), 'from' => $as_at_date, 'to' => ''),
+		2 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
+		3 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
+		4 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
 	);
 
 	$rep = new FrontReport(_('Batch Aging Analysis'), 'BatchAging', user_pagesize(), 9, $orientation);
@@ -75,7 +83,7 @@ function print_batch_aging_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_batch_aging_data(null, $location, $category);
+	$result = get_batch_aging_data($stock_id, $location, $category, $as_at_date);
 
 	$grand_total = 0;
 

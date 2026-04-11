@@ -39,9 +39,9 @@ function print_batch_balance_report()
 {
 	global $path_to_root;
 
-	$category  = $_POST['PARAM_0'];
+	$stock_id  = $_POST['PARAM_0'];
 	$location  = $_POST['PARAM_1'];
-	$stock_id  = $_POST['PARAM_2'];
+	$category  = $_POST['PARAM_2'];
 	$comments  = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
