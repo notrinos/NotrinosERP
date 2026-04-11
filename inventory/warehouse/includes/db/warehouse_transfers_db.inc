@@ -444,7 +444,7 @@ function ship_transfer_order($transfer_id, $ship_date) {
 	if (!$order || !in_array($order['status'], array('approved')))
 		return false;
 
-	$inv_root = dirname(dirname(dirname(dirname(__FILE__)))); // → project root
+	$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__))))); // → project root
 	include_once($inv_root . '/includes/db/inventory_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_batch_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
@@ -563,7 +563,7 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 		return $result;
 	}
 
-	$inv_root = dirname(dirname(dirname(dirname(__FILE__)))); // → project root
+	$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__))))); // → project root
 	include_once($inv_root . '/includes/db/inventory_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_batch_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
@@ -747,7 +747,7 @@ function cancel_transfer_order($transfer_id) {
 
 	// If already shipped/in_transit, we need to reverse stock moves
 	if (in_array($order['status'], array('shipped', 'in_transit'))) {
-		$inv_root = dirname(dirname(dirname(dirname(__FILE__))));
+		$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__)))));
 		include_once($inv_root . '/includes/db/inventory_db.inc');
 		include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
 		include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');

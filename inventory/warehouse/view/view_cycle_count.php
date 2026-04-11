@@ -266,7 +266,7 @@ while ($line = db_fetch($lines)) {
     } else {
         label_cell($line['memo'] ? $line['memo'] : '');
         // Posted indicator
-        label_cell($line['posted'] ? '<span style="color:#28a745;">&#10003;</span>' : '-', 'align=center');
+        label_cell($line['adjustment_posted'] ? '<span style="color:#28a745;">&#10003;</span>' : '-', 'align=center');
     }
 
     end_row();

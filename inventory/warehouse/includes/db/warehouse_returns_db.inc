@@ -397,7 +397,7 @@ function receive_return_order($return_id, $date_ = null) {
 		$lines = get_return_order_lines($return_id);
 		while ($line = db_fetch($lines)) {
 			$qty = $line['qty_expected'];
-			$cost = get_standard_cost($line['stock_id']);
+			$cost = get_unit_cost($line['stock_id']);
 
 			update_average_material_cost(null, $line['stock_id'], $cost, $qty, $date_);
 
@@ -595,7 +595,7 @@ function complete_return_order($return_id, $date_ = null) {
 		$lines2 = get_return_order_lines($return_id);
 		while ($line = db_fetch($lines2)) {
 			$qty = $line['qty_expected'];
-			$cost = get_standard_cost($line['stock_id']);
+			$cost = get_unit_cost($line['stock_id']);
 
 			update_average_material_cost(null, $line['stock_id'], $cost, -$qty, $date_);
 

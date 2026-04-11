@@ -182,7 +182,7 @@ if (isset($_POST['MARK_INSPECTED']) && $selected_id > 0) {
 
 // --- Complete return ---
 if (isset($_POST['COMPLETE_RETURN']) && $selected_id > 0) {
-	if (complete_return_order($selected_id, $_POST['return_date'])) {
+	if (complete_return_order($selected_id, get_post('return_date'))) {
 		display_notification(_('Return order has been completed. Disposition routing applied.'));
 	} else {
 		display_error(_('Cannot complete this return order.'));
@@ -285,7 +285,7 @@ if ($selected_id > 0 && $order) {
 		echo array_selector('return_type', $order['return_type'], $type_options, array('select_submit' => true));
 		echo "</td></tr>";
 
-		locations_list_row(_('Warehouse:'), 'warehouse', $order['warehouse_loc_code'], false, false, true);
+		locations_list_row(_('Warehouse:'), 'warehouse', $order['warehouse_loc_code'], false, false, false);
 		date_row(_('Return Date:'), 'return_date', sql2date($order['return_date']), null, 0, 0, 0);
 
 		$return_type = get_post('return_type', $order['return_type']);
@@ -507,7 +507,7 @@ if ($selected_id > 0 && $order) {
 	echo array_selector('filter_status', get_post('filter_status'), $status_options);
 	echo "</td>";
 
-	locations_list_cells(_('Warehouse:'), 'filter_loc', get_post('filter_loc'), true, false, true);
+	locations_list_cells(_('Warehouse:'), 'filter_loc', get_post('filter_loc'), true, false, false);
 	submit_cells('SearchOrders', _('Search'), '', _('Search return orders'), 'default');
 	submit_cells('NEW_RETURN_BTN', _('+ New Return'), '', _('Create a new return order'), 'default');
 	end_row();
@@ -523,7 +523,7 @@ if ($selected_id > 0 && $order) {
 		echo array_selector('return_type', get_post('return_type', 'customer'), $type_options, array('select_submit' => true));
 		echo "</td></tr>";
 
-		locations_list_row(_('Warehouse:'), 'warehouse', get_post('warehouse'), false, false, true);
+		locations_list_row(_('Warehouse:'), 'warehouse', get_post('warehouse'), false, false, false);
 		date_row(_('Return Date:'), 'return_date', '', null, 0, 0, 0);
 
 		$return_type = get_post('return_type', 'customer');

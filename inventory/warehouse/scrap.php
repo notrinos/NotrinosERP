@@ -221,7 +221,7 @@ echo "<h3>" . _('Scrap History') . "</h3>";
 
 start_table(TABLESTYLE2);
 start_row();
-locations_list_cells(_('Warehouse:'), 'filter_warehouse', get_post('filter_warehouse'), true, false, true);
+locations_list_cells(_('Warehouse:'), 'filter_warehouse', get_post('filter_warehouse'), true, false, false);
 
 $reason_options = array_merge(array('' => _('-- All Reasons --')), get_scrap_reason_codes());
 echo "<td class='label'>" . _('Reason:') . "</td><td>";
@@ -306,7 +306,7 @@ echo "</tr>";
 small_amount_row(_('Quantity:'), 'qty', get_post('qty', ''), null, null, user_qty_dec());
 
 // Warehouse
-locations_list_row(_('Warehouse:'), 'warehouse', get_post('warehouse'), false, false, true);
+locations_list_row(_('Warehouse:'), 'warehouse', get_post('warehouse'), false, false, false);
 
 // Source Bin (optional)
 $wh_code = get_post('warehouse');

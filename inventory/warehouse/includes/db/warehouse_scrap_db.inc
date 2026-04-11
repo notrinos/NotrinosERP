@@ -97,7 +97,7 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 	begin_transaction();
 
 	// Get item cost
-	$item_cost = get_standard_cost($stock_id);
+	$item_cost = get_unit_cost($stock_id);
 	$unit_cost = round2($item_cost, user_price_dec());
 	$total_cost = round2($unit_cost * $qty, user_price_dec());
 
