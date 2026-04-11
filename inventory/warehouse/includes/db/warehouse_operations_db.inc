@@ -301,8 +301,14 @@ function get_wh_operation_lines($op_id) {
 function get_wh_operations_filtered($filters = array(), $limit = 50, $offset = 0) {
 	$where = array("1=1");
 
-	if (!empty($filters['op_type']))
-		$where[] = "op.op_type=" . db_escape($filters['op_type']);
+	if (!empty($filters['op_type'])) {
+		if (is_array($filters['op_type'])) {
+			$escaped = array_map('db_escape', $filters['op_type']);
+			$where[] = "op.op_type IN (" . implode(',', $escaped) . ")";
+		} else {
+			$where[] = "op.op_type=" . db_escape($filters['op_type']);
+		}
+	}
 
 	if (!empty($filters['op_status'])) {
 		if (is_array($filters['op_status'])) {
@@ -362,8 +368,14 @@ function get_wh_operations_filtered($filters = array(), $limit = 50, $offset = 0
 function count_wh_operations_filtered($filters = array()) {
 	$where = array("1=1");
 
-	if (!empty($filters['op_type']))
-		$where[] = "op_type=" . db_escape($filters['op_type']);
+	if (!empty($filters['op_type'])) {
+		if (is_array($filters['op_type'])) {
+			$escaped = array_map('db_escape', $filters['op_type']);
+			$where[] = "op_type IN (" . implode(',', $escaped) . ")";
+		} else {
+			$where[] = "op_type=" . db_escape($filters['op_type']);
+		}
+	}
 	if (!empty($filters['op_status'])) {
 		if (is_array($filters['op_status'])) {
 			$escaped = array_map('db_escape', $filters['op_status']);
