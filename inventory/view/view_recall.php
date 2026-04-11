@@ -72,6 +72,37 @@ if (isset($_POST['mark_customer_notified'])) {
 	}
 }
 
+// Handle Execute Recall from view page
+if (isset($_POST['execute_recall_view'])) {
+	$result_exec = execute_recall_campaign($campaign_id);
+	display_notification(sprintf(
+		_('Recall executed: %d serials added, %d serials quarantined, %d batches added.'),
+		$result_exec['serials_added'],
+		$result_exec['serials_quarantined'],
+		$result_exec['batches_added']
+	));
+	$campaign = get_recall_campaign($campaign_id);
+	$Ajax->activate('_page_body');
+}
+
+// Handle Status Change from view page using find_submit pattern
+$view_status_map = array(
+	'view_activate_'  => 'active',
+	'view_progress_'  => 'in_progress',
+	'view_complete_'  => 'completed',
+	'view_cancel_'    => 'cancelled',
+);
+foreach ($view_status_map as $prefix => $target_status) {
+	if (find_submit($prefix) != -1) {
+		update_recall_campaign_status($campaign_id, $target_status);
+		display_notification(sprintf(_('Campaign status changed to %s.'),
+			get_recall_campaign_status_label($target_status)));
+		$campaign = get_recall_campaign($campaign_id);
+		$Ajax->activate('_page_body');
+		break;
+	}
+}
+
 // Get comprehensive progress data
 $progress = get_recall_campaign_progress($campaign_id);
 
@@ -114,6 +145,44 @@ echo '<a href="' . $path_to_root . '/reporting/rep312.php?PARAM_0=&PARAM_1=' . u
 	. 'style="padding:6px 15px;text-decoration:none;background:#007bff;color:#fff;border-radius:4px;">'
 	. '<i class="fa fa-file-pdf-o"></i> ' . _('PDF Report') . '</a>';
 echo '</div>';
+
+// Campaign Action buttons (Execute Recall, Change Status)
+if (!in_array($campaign['status'], array('completed', 'cancelled'))) {
+	echo '<div class="noprint" style="text-align:center;margin:10px 0;padding:10px;background:#f8f9fa;border-radius:6px;">';
+
+	start_form(false, $_SERVER['PHP_SELF'] . '?id=' . $campaign_id);
+	hidden('id', $campaign_id);
+
+	// Execute Recall button
+	if (in_array($campaign['status'], array('draft', 'active'))) {
+		submit('execute_recall_view', _('Execute Recall'), true,
+			_('Execute recall to identify affected items from serial/batch records'), 'fa-bolt');
+		echo '&nbsp;';
+	}
+
+	// Status change buttons
+	$status_transitions = array(
+		'draft'       => array(array('view_activate_', _('Active'), 'fa-play')),
+		'active'      => array(
+			array('view_progress_', _('In Progress'), 'fa-arrow-right'),
+			array('view_cancel_', _('Cancel'), 'fa-times'),
+		),
+		'in_progress' => array(
+			array('view_complete_', _('Completed'), 'fa-check'),
+			array('view_cancel_', _('Cancel'), 'fa-times'),
+		),
+	);
+	if (isset($status_transitions[$campaign['status']])) {
+		foreach ($status_transitions[$campaign['status']] as $tr) {
+			submit($tr[0] . $campaign_id, $tr[1], true,
+				sprintf(_('Change status to %s'), $tr[1]), $tr[2]);
+			echo '&nbsp;';
+		}
+	}
+
+	end_form();
+	echo '</div>';
+}
 
 // Company header
 $company = get_company_prefs();

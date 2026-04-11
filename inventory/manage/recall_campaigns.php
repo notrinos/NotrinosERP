@@ -59,9 +59,9 @@ if ($Mode == 'Delete') {
 //----------------------------------------------------------------------
 // Handle Execute Recall
 //----------------------------------------------------------------------
-if (get_post('execute_recall')) {
-	$recall_id = (int)get_post('execute_recall_id');
-	$result_exec = execute_recall_campaign($recall_id);
+$execute_recall_id = find_submit('exec_recall_');
+if ($execute_recall_id > 0) {
+	$result_exec = execute_recall_campaign((int)$execute_recall_id);
 	display_notification(sprintf(
 		_('Recall executed: %d serials added, %d serials quarantined, %d batches added.'),
 		$result_exec['serials_added'],
@@ -74,15 +74,35 @@ if (get_post('execute_recall')) {
 //----------------------------------------------------------------------
 // Handle Campaign Status Change
 //----------------------------------------------------------------------
-if (get_post('change_campaign_status')) {
-	$campaign_id = (int)get_post('campaign_status_id');
-	$new_status = get_post('campaign_new_status');
-	$valid = array_keys(get_recall_campaign_statuses());
-	if (in_array($new_status, $valid)) {
-		update_recall_campaign_status($campaign_id, $new_status);
-		display_notification(sprintf(_('Campaign status changed to %s.'),
-			get_recall_campaign_status_label($new_status)));
-	}
+$activate_campaign_id = find_submit('activate_campaign_');
+if ($activate_campaign_id > 0) {
+	update_recall_campaign_status((int)$activate_campaign_id, 'active');
+	display_notification(sprintf(_('Campaign status changed to %s.'),
+		get_recall_campaign_status_label('active')));
+	$Ajax->activate('_page_body');
+}
+
+$progress_campaign_id = find_submit('progress_campaign_');
+if ($progress_campaign_id > 0) {
+	update_recall_campaign_status((int)$progress_campaign_id, 'in_progress');
+	display_notification(sprintf(_('Campaign status changed to %s.'),
+		get_recall_campaign_status_label('in_progress')));
+	$Ajax->activate('_page_body');
+}
+
+$complete_campaign_id = find_submit('complete_campaign_');
+if ($complete_campaign_id > 0) {
+	update_recall_campaign_status((int)$complete_campaign_id, 'completed');
+	display_notification(sprintf(_('Campaign status changed to %s.'),
+		get_recall_campaign_status_label('completed')));
+	$Ajax->activate('_page_body');
+}
+
+$cancel_campaign_id = find_submit('cancel_campaign_');
+if ($cancel_campaign_id > 0) {
+	update_recall_campaign_status((int)$cancel_campaign_id, 'cancelled');
+	display_notification(sprintf(_('Campaign status changed to %s.'),
+		get_recall_campaign_status_label('cancelled')));
 	$Ajax->activate('_page_body');
 }
 
@@ -253,7 +273,7 @@ $result = get_recall_campaigns($filter_stock, $filter_status);
 
 start_table(TABLESTYLE, "width='100%'");
 $th = array(_('#'), _('Reference'), _('Title'), _('Item'), _('Type'), _('Severity'),
-	_('Status'), _('Affected'), _('Recovered'), _('Progress'), '');
+	_('Status'), _('Affected'), _('Recovered'), _('Progress'), '', '', '');
 table_header($th);
 
 $k = 0;
@@ -291,7 +311,6 @@ while ($row = db_fetch($result)) {
 	echo '</td>';
 
 	// Actions
-	echo '<td>';
 	$edit_ok = ($row['status'] === 'draft');
 	if ($edit_ok) {
 		edit_button_cell("Edit" . $row['id'], _('Edit'));
@@ -299,6 +318,25 @@ while ($row = db_fetch($result)) {
 	$del_ok = can_delete_recall_campaign($row['id']);
 	if ($del_ok === true) {
 		delete_button_cell("Delete" . $row['id'], _('Delete'));
+	}
+	// Execute recall button and status change (in a combined action cell)
+	echo '<td nowrap>';
+	if (in_array($row['status'], array('draft', 'active'))) {
+		submit("exec_recall_" . $row['id'], _('Execute'), true,
+			_('Execute recall to identify affected items'), 'fa-bolt');
+	}
+	$status_transitions = array(
+		'draft'       => array('activate_campaign_', _('Active'), 'fa-play'),
+		'active'      => array('progress_campaign_', _('In Progress'), 'fa-arrow-right'),
+		'in_progress' => array('complete_campaign_', _('Completed'), 'fa-check'),
+	);
+	if (isset($status_transitions[$row['status']])) {
+		$tr = $status_transitions[$row['status']];
+		submit($tr[0] . $row['id'], $tr[1], true, sprintf(_('Change status to %s'), $tr[1]), $tr[2]);
+	}
+	if (in_array($row['status'], array('active', 'in_progress'))) {
+		submit("cancel_campaign_" . $row['id'], _('Cancel'), true,
+			_('Cancel this campaign'), 'fa-times');
 	}
 	echo '</td>';
 	end_row();
