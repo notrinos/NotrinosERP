@@ -222,12 +222,13 @@ function get_warehouse_location($loc_id) {
  * @param string $warehouse_loc_code The warehouse loc_code from 0_locations.
  * @return array|false The location row or false.
  */
-function get_warehouse_location_by_code($loc_code, $warehouse_loc_code) {
+function get_warehouse_location_by_code($loc_code, $warehouse_loc_code=null) {
 	$sql = "SELECT wl.*, lt.type_code, lt.type_name
 			FROM " . TB_PREF . "wh_locations wl
 			LEFT JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id
-			WHERE wl.loc_code = " . db_escape($loc_code)
-			. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code);
+			WHERE wl.loc_code = " . db_escape($loc_code);
+	if ($warehouse_loc_code !== null && $warehouse_loc_code !== '')
+		$sql .= " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code);
 	$result = db_query($sql, 'could not get warehouse location by code');
 	return db_fetch($result);
 }
@@ -1159,13 +1160,19 @@ function recalculate_warehouse_capacity($warehouse_loc_code) {
  * @param float  $a_threshold  Percentage threshold for A class (default 80).
  * @param float  $b_threshold  Percentage threshold for A+B class (default 95).
  * @param string $loc_code     Optional: filter to a specific warehouse location.
+ * @param string $method       Analysis method: 'value' (default) or 'turnover' (movement count).
  * @return array Array of items with classification: ['stock_id', 'description', 'total_value',
  *               'total_qty', 'move_count', 'cumulative_pct', 'abc_class', 'rank']
  */
-function calculate_abc_classification($months = 12, $a_threshold = 80, $b_threshold = 95, $loc_code = '') {
+function calculate_abc_classification($months = 12, $a_threshold = 80, $b_threshold = 95, $loc_code = '', $method = 'value') {
 	$date_from = date('Y-m-d', strtotime("-{$months} months"));
 
 	// Get outbound movement value per item (only count issues, not receipts)
+	// For 'turnover' method, sort/rank by total quantity moved (velocity)
+	// For 'value' method (default), sort/rank by total movement value (Pareto)
+	$order_by = ($method === 'turnover') ? 'total_qty DESC, move_count DESC' : 'total_value DESC';
+	$having   = ($method === 'turnover') ? 'total_qty > 0' : 'total_value > 0';
+
 	$sql = "SELECT sm.stock_id, sm.description, sm.units, "
 		. "ABS(SUM(m.qty)) AS total_qty, "
 		. "COUNT(m.trans_id) AS move_count, "
@@ -1180,19 +1187,21 @@ function calculate_abc_classification($months = 12, $a_threshold = 80, $b_thresh
 	}
 
 	$sql .= " GROUP BY sm.stock_id, sm.description, sm.units"
-		. " HAVING total_value > 0"
-		. " ORDER BY total_value DESC";
+		. " HAVING " . $having
+		. " ORDER BY " . $order_by;
 
 	$result = db_query($sql, 'could not calculate ABC classification');
 
 	$items = array();
 	$total_movement_value = 0;
+	$total_movement_qty   = 0;
 
 	while ($row = db_fetch($result)) {
 		$row['total_value'] = (float)$row['total_value'];
 		$row['total_qty'] = (float)$row['total_qty'];
 		$row['move_count'] = (int)$row['move_count'];
 		$total_movement_value += $row['total_value'];
+		$total_movement_qty   += $row['total_qty'];
 		$items[] = $row;
 	}
 
@@ -1219,21 +1228,28 @@ function calculate_abc_classification($months = 12, $a_threshold = 80, $b_thresh
 		);
 	}
 
-	// Assign ABC class
-	$cumulative_value = 0;
+	// Assign ABC class using previous-cumulative method (standard Pareto):
+	// an item is classified based on the cumulative % BEFORE adding its own value,
+	// so the highest-value item is always included in class A.
+	// For 'turnover' method, cumulative is based on qty moved, not value.
+	$total_for_pareto = ($method === 'turnover') ? $total_movement_qty : $total_movement_value;
+	$cumulative_measure = 0;
 	$rank = 0;
 	foreach ($items as &$item) {
 		$rank++;
 		$item['rank'] = $rank;
-		$cumulative_value += $item['total_value'];
-		$item['cumulative_pct'] = ($total_movement_value > 0)
-			? round(($cumulative_value / $total_movement_value) * 100, 2) : 100;
+		$item_measure = ($method === 'turnover') ? $item['total_qty'] : $item['total_value'];
+		$prev_pct = ($total_for_pareto > 0)
+			? round(($cumulative_measure / $total_for_pareto) * 100, 2) : 100;
+		$cumulative_measure += $item_measure;
+		$item['cumulative_pct'] = ($total_for_pareto > 0)
+			? round(($cumulative_measure / $total_for_pareto) * 100, 2) : 100;
 
-		if ($item['total_value'] == 0) {
+		if ($item_measure == 0) {
 			$item['abc_class'] = 'C';
-		} elseif ($item['cumulative_pct'] <= $a_threshold) {
+		} elseif ($prev_pct < $a_threshold) {
 			$item['abc_class'] = 'A';
-		} elseif ($item['cumulative_pct'] <= $b_threshold) {
+		} elseif ($prev_pct < $b_threshold) {
 			$item['abc_class'] = 'B';
 		} else {
 			$item['abc_class'] = 'C';

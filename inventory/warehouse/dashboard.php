@@ -173,7 +173,7 @@ $stage_idx = 0;
 foreach ($pipeline_stages as $stage) {
 	$count = $pipeline[$stage['key']];
 	$bg = $count > 0 ? $stage['color'] : '#e9ecef';
-	$text_color = $count > 0 ? '#fff' : '#666';
+	$text_color = $count > 0 ? '#fff' : '#adb5bd'; // use #adb5bd (medium gray) for visibility at zero
 
 	echo "<div style='flex:1; min-width:100px; text-align:center; padding:10px;'>";
 	if ($stage['link'] && $count > 0) {

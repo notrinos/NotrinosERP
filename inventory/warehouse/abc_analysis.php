@@ -40,6 +40,8 @@ if (isset($_POST['RunAnalysis'])) {
 	$a_threshold = (float)get_post('a_threshold', 80);
 	$b_threshold = (float)get_post('b_threshold', 95);
 	$loc_code = get_post('loc_code');
+	$analysis_method = in_array(get_post('analysis_method'), array('value', 'turnover'))
+		? get_post('analysis_method') : 'value';
 
 	// Basic validation
 	if ($months < 1 || $months > 120) {
@@ -49,7 +51,7 @@ if (isset($_POST['RunAnalysis'])) {
 	} elseif ($b_threshold <= $a_threshold || $b_threshold >= 100) {
 		display_error(_('Class A+B threshold must be greater than Class A threshold and less than 100.'));
 	} else {
-		$analysis_results = calculate_abc_classification($months, $a_threshold, $b_threshold, $loc_code);
+		$analysis_results = calculate_abc_classification($months, $a_threshold, $b_threshold, $loc_code, $analysis_method);
 	}
 }
 
@@ -62,8 +64,10 @@ if (isset($_POST['ApplyClassification'])) {
 	$a_threshold = (float)get_post('a_threshold', 80);
 	$b_threshold = (float)get_post('b_threshold', 95);
 	$loc_code = get_post('loc_code');
+	$analysis_method = in_array(get_post('analysis_method'), array('value', 'turnover'))
+		? get_post('analysis_method') : 'value';
 
-	$classifications = calculate_abc_classification($months, $a_threshold, $b_threshold, $loc_code);
+	$classifications = calculate_abc_classification($months, $a_threshold, $b_threshold, $loc_code, $analysis_method);
 
 	if (!empty($classifications)) {
 		$count = apply_abc_classification($classifications);
@@ -93,6 +97,12 @@ start_form();
 echo "<br>";
 start_table(TABLESTYLE2);
 table_section_title(_('Analysis Parameters'));
+
+// Analysis Method
+$method_options = array('value' => _('By Value (cumulative stock issue value — default Pareto)'),
+	'turnover' => _('By Turnover Rate (cumulative quantity moved)'));
+$current_method = get_post('analysis_method', 'value');
+array_selector_row(_('Analysis Method:'), 'analysis_method', $current_method, $method_options);
 
 // Period
 text_row(_('Analysis Period (months):'), 'months', get_post('months', '12'), 6, 4);
@@ -200,6 +210,57 @@ if ($analysis_results !== null) {
 	}
 
 	end_table(1);
+
+	//-------------------------------------------------------------------------------------
+	// Optimization recommendations per class
+	//-------------------------------------------------------------------------------------
+
+	$rec_a = $class_counts['A'];
+	$rec_b = $class_counts['B'];
+	$rec_c = $class_counts['C'];
+
+	echo "<br>";
+	echo "<div class='section-header'>";
+	echo "<h3 style='margin:0;'><i class='fa fa-lightbulb-o' style='margin-right:5px;'></i>" . _('Optimization Recommendations') . "</h3>";
+	echo "</div>";
+	echo "<div style='display:flex; flex-wrap:wrap; gap:15px; margin:10px 0;'>";
+
+	// Class A recommendations
+	echo "<div style='background:#fff3f3; border:1px solid " . get_abc_class_color('A') . "; border-radius:4px; padding:15px; min-width:280px; flex:1;'>";
+	echo "<strong style='color:" . get_abc_class_color('A') . ";'><i class='fa fa-star' style='margin-right:4px;'></i>" . _('Class A — High Value') . " ({$rec_a} " . _('items') . ")</strong>";
+	echo "<ul style='margin:8px 0 0 0; padding-left:20px; font-size:13px;'>";
+	echo "<li>" . _('Review stock levels weekly; set safety stock at 2–4 weeks demand.') . "</li>";
+	echo "<li>" . _('Use tight cycle counting: count at least monthly.') . "</li>";
+	echo "<li>" . _('Secure storage with access controls and audit trail.') . "</li>";
+	echo "<li>" . _('Use accurate demand forecasting; review supplier lead times.') . "</li>";
+	echo "<li>" . _('Negotiate volume pricing or service-level agreements with suppliers.') . "</li>";
+	echo "</ul>";
+	echo "</div>";
+
+	// Class B recommendations
+	echo "<div style='background:#fffdf3; border:1px solid " . get_abc_class_color('B') . "; border-radius:4px; padding:15px; min-width:280px; flex:1;'>";
+	echo "<strong style='color:" . get_abc_class_color('B') . ";'><i class='fa fa-star-half-o' style='margin-right:4px;'></i>" . _('Class B — Medium Value') . " ({$rec_b} " . _('items') . ")</strong>";
+	echo "<ul style='margin:8px 0 0 0; padding-left:20px; font-size:13px;'>";
+	echo "<li>" . _('Review stock levels monthly; maintain standard reorder points.') . "</li>";
+	echo "<li>" . _('Cycle count quarterly.') . "</li>";
+	echo "<li>" . _('Use basic safety stock formula (demand × lead time).') . "</li>";
+	echo "<li>" . _('Consider bulk ordering to reduce transaction costs.') . "</li>";
+	echo "</ul>";
+	echo "</div>";
+
+	// Class C recommendations
+	echo "<div style='background:#f3fff3; border:1px solid " . get_abc_class_color('C') . "; border-radius:4px; padding:15px; min-width:280px; flex:1;'>";
+	echo "<strong style='color:" . get_abc_class_color('C') . ";'><i class='fa fa-star-o' style='margin-right:4px;'></i>" . _('Class C — Low Value') . " ({$rec_c} " . _('items') . ")</strong>";
+	echo "<ul style='margin:8px 0 0 0; padding-left:20px; font-size:13px;'>";
+	echo "<li>" . _('Review stock levels quarterly or on exception only.') . "</li>";
+	echo "<li>" . _('Annual cycle count is sufficient.') . "</li>";
+	echo "<li>" . _('Consider reducing SKU variety; consolidate slow movers.') . "</li>";
+	echo "<li>" . _('Use simple reorder systems (e.g. two-bin or min-max).') . "</li>";
+	echo "<li>" . _('Flag zero-movement items for disposal or reclassification.') . "</li>";
+	echo "</ul>";
+	echo "</div>";
+
+	echo "</div>";
 }
 
 //-------------------------------------------------------------------------------------
