@@ -38,41 +38,8 @@ $parent_id = get_post('parent_id', '');
 if (isset($_GET['warehouse'])) $warehouse = $_GET['warehouse'];
 if (isset($_GET['parent_id'])) $parent_id = $_GET['parent_id'];
 
-// Mode tracking
-$selected_id = get_post('selected_id', -1);
-$Mode = get_post('Mode', '');
-
-if (isset($_POST['Edit'])) {
-	foreach ($_POST as $key => $val) {
-		if (strpos($key, 'Edit') === 0) {
-			$selected_id = substr($key, 4);
-			$Mode = 'Edit';
-			break;
-		}
-	}
-}
-
-if (isset($_POST['Delete'])) {
-	foreach ($_POST as $key => $val) {
-		if (strpos($key, 'Delete') === 0) {
-			$selected_id = substr($key, 6);
-			$Mode = 'Delete';
-			break;
-		}
-	}
-}
-
-// Check for edit/delete buttons via POST names
-foreach ($_POST as $key => $val) {
-	if (preg_match('/^Edit(\d+)$/', $key, $m)) {
-		$selected_id = (int)$m[1];
-		$Mode = 'Edit';
-	}
-	if (preg_match('/^Delete(\d+)$/', $key, $m)) {
-		$selected_id = (int)$m[1];
-		$Mode = 'Delete';
-	}
-}
+// Mode tracking — use standard simple_page_mode for proper ADD_ITEM/UPDATE_ITEM/Edit/Delete handling
+simple_page_mode(true);
 
 //-------------------------------------------------------------------------------------
 // Handle bulk create
@@ -127,7 +94,7 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 // Handle ADD / UPDATE
 //-------------------------------------------------------------------------------------
 
-if ($Mode == 'ADD_ITEM' || (isset($_POST['submit']) && $_POST['submit'] != '')) {
+if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$input_error = 0;
 
 	if (strlen(get_post('loc_code')) == 0) {
