@@ -21,6 +21,25 @@
 //----------------------------------------------------------------------
 
 /**
+ * Get operations filtered by type, location code, and status.
+ * Convenience wrapper around get_wh_operations_filtered().
+ *
+ * @param string $op_type   Operation type (e.g. 'receipt', 'pick')
+ * @param string $loc_code  Warehouse location code (optional)
+ * @param string $op_status Operation status (e.g. 'pending'); empty = all except cancelled
+ * @param int    $limit     Max rows (0 = unlimited)
+ * @return resource DB result
+ */
+function get_wh_operations_by_type($op_type, $loc_code = '', $op_status = '', $limit = 50) {
+	$filters = array('op_type' => $op_type);
+	if (!empty($op_status))
+		$filters['op_status'] = $op_status;
+	if (!empty($loc_code))
+		$filters['warehouse_loc_code'] = $loc_code;
+	return get_wh_operations_filtered($filters, $limit, 0);
+}
+
+/**
  * Get valid operation types.
  *
  * @return array Associative array of type_code => display_label
