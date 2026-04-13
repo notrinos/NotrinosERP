@@ -539,6 +539,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 
 	$wms_items = array(); // Collect items for WMS operation creation
 	$is_wms = false;
+	$has_qc_required_items = false;
 
 	// Check if location is WMS-enabled
 	$wms_settings = get_wms_location_settings($location);
@@ -709,6 +710,9 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		// Quality inspection required?
 		$item_data = get_item($stock_id);
 		$qc_required = isset($item_data['quality_inspection_required']) && $item_data['quality_inspection_required'];
+		if ($qc_required)
+			$has_qc_required_items = true;
+
 		if ($qc_required && $grn_item_id) {
 			$sql = "UPDATE " . TB_PREF . "grn_items SET inspection_status='pending'"
 				. " WHERE id=" . (int)$grn_item_id;
@@ -724,6 +728,16 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 				'serial_ids' => $serial_ids,
 				'batch_id'   => $batch_id,
 			);
+		}
+	}
+
+	// Auto-create QC inspections from this GRN for QC-required items.
+	if ($has_qc_required_items) {
+		$qc_db_path = $root . '/includes/db/quality_inspection_db.inc';
+		if (file_exists($qc_db_path)) {
+			include_once($qc_db_path);
+			if (function_exists('auto_create_inspections_from_grn'))
+				auto_create_inspections_from_grn((int)$grn_no, $location);
 		}
 	}
 
@@ -1126,6 +1140,8 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 
 						// Update customer and warranty info on serial
 						$sets = array("customer_id=" . (int)$delivery->customer_id);
+						$sets[] = "delivery_id=" . (int)$delivery_no;
+						$sets[] = "delivery_date=" . db_escape(date2sql($date_));
 						if ($warranty_start)
 							$sets[] = "warranty_start=" . db_escape(date2sql($warranty_start));
 						if ($warranty_end)
