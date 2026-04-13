@@ -50,7 +50,7 @@ include_once($path_to_root . '/inventory/includes/serial_batch_ui.inc');
 
 if (isset($_POST['print_labels'])) {
 	$label_type = get_post('label_source');
-	$barcode_type = get_post('barcode_type', 'C128B');
+	$barcode_type = get_post('barcode_type_label', get_post('barcode_type', 'C128B'));
 	$label_size = get_post('label_size', 'medium');
 	$labels = array();
 

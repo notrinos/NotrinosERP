@@ -100,6 +100,7 @@ class TCPDFBarcode {
  	 * @return array
 	 */
 	function setBarcode($code, $type) {
+		$arrcode = false;
 		switch (strtoupper($type)) {
 			case "C39": { // CODE 39
 				$arrcode = $this->barcode_code39($code, false, false);
@@ -166,7 +167,7 @@ class TCPDFBarcode {
 				break;
 			}
 			default: {
-				$this->barcode_array = false;
+				$arrcode = false;
 			}
 		}
 		$this->barcode_array = $arrcode;
@@ -276,7 +277,7 @@ class TCPDFBarcode {
 		$encode = array(
 			chr(0) => '%U', chr(1) => '$A', chr(2) => '$B', chr(3) => '$C',
 			chr(4) => '$D', chr(5) => '$E', chr(6) => '$F', chr(7) => '$G',
-			chr(8) => '$H', chr(9) => '$I', chr(10) => '$J', chr(11) => '£K',
+			chr(8) => '$H', chr(9) => '$I', chr(10) => '$J', chr(11) => 'ï¿½K',
 			chr(12) => '$L', chr(13) => '$M', chr(14) => '$N', chr(15) => '$O',
 			chr(16) => '$P', chr(17) => '$Q', chr(18) => '$R', chr(19) => '$S',
 			chr(20) => '$T', chr(21) => '$U', chr(22) => '$V', chr(23) => '$W',

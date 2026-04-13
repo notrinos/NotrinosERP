@@ -769,7 +769,7 @@ function generate_barcode_labels_pdf($labels, $barcode_type = 'C128B', $label_si
 				// Barcode
 				$code = isset($label['code']) ? $label['code'] : '';
 				if ($code) {
-					$bc_type = ($barcode_type === 'GS1-128') ? 'C128C' : $barcode_type;
+					$bc_type = $barcode_type;
 					$bc_y = $y + 16;
 					$bc_h = $sz['h'] - 46;
 					$bc_w = $sz['w'] - 16;
@@ -788,7 +788,28 @@ function generate_barcode_labels_pdf($labels, $barcode_type = 'C128B', $label_si
 						'text' => false,
 					);
 
-					$pdf->write1DBarcode($code, $bc_type, $x + 8, $bc_y, $bc_w, $bc_h, 0.4, $style, 'N');
+					if ($bc_type === 'QRCODE' || $bc_type === 'GS1-128') {
+						$is_qr = ($bc_type === 'QRCODE');
+						$img_w = $is_qr ? min($bc_w, $bc_h) : $bc_w;
+						$img_h = $is_qr ? min($bc_w, $bc_h) : $bc_h;
+						$img_x = $x + (($sz['w'] - $img_w) / 2);
+						$img_y = $bc_y;
+						$img_png = generate_barcode_image($code, $bc_type, $img_w, $img_h, false, false);
+						if ($img_png !== false) {
+							$tmp_dir = $path_to_root . '/tmp';
+							if (!is_dir($tmp_dir)) {
+								$tmp_dir = sys_get_temp_dir();
+							}
+							$tmp_file = tempnam($tmp_dir, 'qr_');
+							if ($tmp_file !== false) {
+								file_put_contents($tmp_file, $img_png);
+								$pdf->Image($tmp_file, $img_x, $img_y, $img_w, $img_h, 'PNG');
+								@unlink($tmp_file);
+							}
+						}
+					} else {
+						$pdf->write1DBarcode($code, $bc_type, $x + 8, $bc_y, $bc_w, $bc_h, 0.4, $style, 'N');
+					}
 				}
 
 				// Subtitle (batch#, expiry, etc.)

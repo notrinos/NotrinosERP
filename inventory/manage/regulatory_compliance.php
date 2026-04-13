@@ -15,7 +15,7 @@
  *
  * Features:
  *   - Compliance settings (enable/disable frameworks, company license info)
- *   - Regulatory profiles: assign items/categories to frameworks (DSCSA, FSMA 204, UDI)
+ *   - Regulatory profiles: assign items/categories to frameworks (DSCSA, FSMA 204, UDI, FMDA)
  *   - DSCSA transaction ledger view with verification actions
  *   - FSMA 204 Critical Tracking Events view with rapid recall lookup
  *   - UDI registration management
@@ -43,6 +43,23 @@ include_once($path_to_root . '/inventory/includes/regulatory_udi.inc');
 include_once($path_to_root . '/inventory/includes/gs1_standards.inc');
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 
+/**
+ * Persist a regulatory company preference in DB and session cache.
+ *
+ * @param string $preference_name
+ * @param string $type
+ * @param int    $length
+ * @param string $value
+ * @return void
+ */
+function save_regulatory_company_pref($preference_name, $type, $length, $value)
+{
+	set_company_pref($preference_name, 'regulatory', $type, $length, $value);
+	if (isset($_SESSION['SysPrefs']) && isset($_SESSION['SysPrefs']->prefs) && is_array($_SESSION['SysPrefs']->prefs)) {
+		$_SESSION['SysPrefs']->prefs[$preference_name] = $value;
+	}
+}
+
 // =====================================================================
 // DETERMINE ACTIVE TAB
 // =====================================================================
@@ -54,16 +71,21 @@ if (isset($_GET['tab']))
 // HANDLE SETTINGS SAVE
 // =====================================================================
 if (isset($_POST['save_settings'])) {
-	set_company_pref('regulatory_compliance_enabled', check_value('regulatory_compliance_enabled') ? '1' : '0');
-	set_company_pref('dscsa_enabled', check_value('dscsa_enabled') ? '1' : '0');
-	set_company_pref('fsma204_enabled', check_value('fsma204_enabled') ? '1' : '0');
-	set_company_pref('udi_enabled', check_value('udi_enabled') ? '1' : '0');
-	set_company_pref('dscsa_company_license', get_post('dscsa_company_license'));
-	set_company_pref('dscsa_company_dea', get_post('dscsa_company_dea'));
-	set_company_pref('fsma204_firm_name', get_post('fsma204_firm_name'));
-	set_company_pref('fsma204_fda_registration', get_post('fsma204_fda_registration'));
-	set_company_pref('udi_company_name', get_post('udi_company_name'));
-	set_company_pref('udi_issuing_agency', get_post('udi_issuing_agency'));
+	save_regulatory_company_pref('regulatory_compliance_enabled', 'TINYINT', 1, check_value('regulatory_compliance_enabled') ? '1' : '0');
+	save_regulatory_company_pref('dscsa_enabled', 'TINYINT', 1, check_value('dscsa_enabled') ? '1' : '0');
+	save_regulatory_company_pref('fsma204_enabled', 'TINYINT', 1, check_value('fsma204_enabled') ? '1' : '0');
+	save_regulatory_company_pref('udi_enabled', 'TINYINT', 1, check_value('udi_enabled') ? '1' : '0');
+	save_regulatory_company_pref('fmda_enabled', 'TINYINT', 1, check_value('fmda_enabled') ? '1' : '0');
+
+	save_regulatory_company_pref('dscsa_company_license', 'VARCHAR', 50, get_post('dscsa_company_license'));
+	save_regulatory_company_pref('dscsa_company_dea', 'VARCHAR', 20, get_post('dscsa_company_dea'));
+	save_regulatory_company_pref('fsma204_firm_name', 'VARCHAR', 100, get_post('fsma204_firm_name'));
+	save_regulatory_company_pref('fsma204_fda_registration', 'VARCHAR', 30, get_post('fsma204_fda_registration'));
+	save_regulatory_company_pref('udi_company_name', 'VARCHAR', 100, get_post('udi_company_name'));
+	save_regulatory_company_pref('udi_issuing_agency', 'VARCHAR', 10, get_post('udi_issuing_agency'));
+
+	save_regulatory_company_pref('fmda_company_license', 'VARCHAR', 50, get_post('fmda_company_license'));
+	save_regulatory_company_pref('fmda_authority_reference', 'VARCHAR', 50, get_post('fmda_authority_reference'));
 	display_notification(_('Regulatory compliance settings have been updated.'));
 	$active_tab = 'settings';
 }
@@ -273,6 +295,7 @@ if ($active_tab === 'settings') {
 	$dscsa_on = get_company_pref('dscsa_enabled');
 	$fsma_on = get_company_pref('fsma204_enabled');
 	$udi_on = get_company_pref('udi_enabled');
+	$fmda_on = get_company_pref('fmda_enabled');
 
 	start_form();
 	hidden('tab', 'settings');
@@ -331,6 +354,11 @@ if ($active_tab === 'settings') {
 	$current_agency = get_company_pref('udi_issuing_agency');
 	if (!$current_agency) $current_agency = 'GS1';
 	array_selector_row(_('Default Issuing Agency:'), 'udi_issuing_agency', $current_agency, $agencies);
+
+	table_section_title(_('FMDA — Falsified Medicines Directive (EU Pharma)'));
+	check_row(_('Enable FMDA Compliance:'), 'fmda_enabled', $fmda_on);
+	text_row(_('FMDA License Number:'), 'fmda_company_license', get_company_pref('fmda_company_license'), 50, 50);
+	text_row(_('Authority Reference Number:'), 'fmda_authority_reference', get_company_pref('fmda_authority_reference'), 50, 50);
 
 	end_outer_table(1);
 
