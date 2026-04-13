@@ -233,9 +233,11 @@ function get_stock_batch($id) {
  * @param string $stock_id The item code
  * @return array|false Row array or false
  */
-function get_stock_batch_by_code($batch_no, $stock_id) {
+function get_stock_batch_by_code($batch_no, $stock_id=null) {
 	$sql = "SELECT * FROM " . TB_PREF . "stock_batches
-		WHERE batch_no=" . db_escape($batch_no) . " AND stock_id=" . db_escape($stock_id);
+		WHERE batch_no=" . db_escape($batch_no);
+	if ($stock_id !== null && $stock_id !== '')
+		$sql .= " AND stock_id=" . db_escape($stock_id);
 	$result = db_query($sql, 'could not get batch by code');
 	return db_fetch($result);
 }

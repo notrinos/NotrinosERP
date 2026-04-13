@@ -228,9 +228,11 @@ function get_serial_number($id) {
  * @param string $stock_id  The item code
  * @return array|false Row array or false
  */
-function get_serial_number_by_code($serial_no, $stock_id) {
+function get_serial_number_by_code($serial_no, $stock_id=null) {
 	$sql = "SELECT * FROM " . TB_PREF . "serial_numbers
-		WHERE serial_no=" . db_escape($serial_no) . " AND stock_id=" . db_escape($stock_id);
+		WHERE serial_no=" . db_escape($serial_no);
+	if ($stock_id !== null && $stock_id !== '')
+		$sql .= " AND stock_id=" . db_escape($stock_id);
 	$result = db_query($sql, 'could not get serial by code');
 	return db_fetch($result);
 }

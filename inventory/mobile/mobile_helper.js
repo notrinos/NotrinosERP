@@ -29,6 +29,13 @@
 	 */
 	MobileHelper.prototype.post = function(action, data, callback) {
 		var params = 'action=' + encodeURIComponent(action);
+
+		// Include CSRF token required by session.inc check_csrf_token()
+		var csrfEl = document.getElementById('global_csrf_token');
+		if (csrfEl && csrfEl.value) {
+			params += '&_token=' + encodeURIComponent(csrfEl.value);
+		}
+
 		for (var key in data) {
 			if (data.hasOwnProperty(key)) {
 				params += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(data[key]);

@@ -30,6 +30,7 @@ $js = '';
 if (file_exists($path_to_root . '/libraries/barcode_scanner.js'))
 	$js .= get_js_open_window(0, 0); // dummy to include js infrastructure
 add_js_file('barcode_scanner.js');
+add_js_ufile($path_to_root . '/inventory/mobile/mobile_helper.js?v=' . filemtime(dirname(__FILE__) . '/mobile_helper.js'));
 
 page($_SESSION['page_title'], false, false, '', $js, false,
 	$path_to_root . '/inventory/mobile/mobile.css');

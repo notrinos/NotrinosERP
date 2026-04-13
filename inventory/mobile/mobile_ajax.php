@@ -29,6 +29,10 @@
 $page_security = 'SA_OPEN';
 $path_to_root = '../..';
 
+// Buffer any HTML error output from session/CSRF checks so it doesn't
+// corrupt the JSON response body.
+ob_start();
+
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/db/connect_db.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
@@ -64,12 +68,72 @@ elseif (isset($_GET['action']))
 	$action = trim($_GET['action']);
 
 if (empty($action)) {
+	ob_clean();
+	global $messages;
+	$messages = array();
 	echo json_encode(array('success' => false, 'error' => 'No action specified'));
+	exit();
+}
+
+/**
+ * Resolve required security areas for a given mobile AJAX action.
+ *
+ * @param string $action
+ * @return array
+ */
+function mobile_get_action_security_areas($action) {
+	$action_security_map = array(
+		'scan_lookup' => array('SA_WAREHOUSE_OPERATIONS', 'SA_DISPATCH_OPERATIONS', 'SA_LOCATIONTRANSFER', 'SA_WAREHOUSE_CYCLE_COUNT', 'SA_WAREHOUSE_PICKING', 'SA_SERIALINQUIRY'),
+		'confirm_receive' => array('SA_WAREHOUSE_OPERATIONS'),
+		'confirm_ship' => array('SA_DISPATCH_OPERATIONS'),
+		'confirm_transfer' => array('SA_LOCATIONTRANSFER'),
+		'count_line' => array('SA_WAREHOUSE_CYCLE_COUNT'),
+		'serial_lookup' => array('SA_SERIALINQUIRY'),
+		'confirm_putaway' => array('SA_WAREHOUSE_OPERATIONS'),
+		'confirm_pick' => array('SA_WAREHOUSE_PICKING'),
+		'get_pending_receive' => array('SA_WAREHOUSE_OPERATIONS'),
+		'get_pending_picks' => array('SA_WAREHOUSE_PICKING'),
+		'get_pending_counts' => array('SA_WAREHOUSE_CYCLE_COUNT'),
+		'get_bin_contents' => array('SA_WAREHOUSE_OPERATIONS', 'SA_LOCATIONTRANSFER', 'SA_WAREHOUSE_PICKING', 'SA_WAREHOUSE_CYCLE_COUNT'),
+	);
+
+	return isset($action_security_map[$action]) ? $action_security_map[$action] : array();
+}
+
+/**
+ * Check whether current user has access to at least one security area.
+ *
+ * @param array $security_areas
+ * @return bool
+ */
+function mobile_user_has_any_access($security_areas) {
+	if (empty($security_areas))
+		return false;
+
+	foreach ($security_areas as $security_area) {
+		if (user_check_access($security_area))
+			return true;
+	}
+
+	return false;
+}
+
+$required_security_areas = mobile_get_action_security_areas($action);
+if (!mobile_user_has_any_access($required_security_areas)) {
+	ob_clean();
+	header('HTTP/1.1 403 Forbidden');
+	global $messages;
+	$messages = array();
+	echo json_encode(array(
+		'success' => false,
+		'error' => _('Access denied for this mobile action')
+	));
 	exit();
 }
 
 $response = array('success' => false, 'error' => 'Unknown action');
 
+try {
 switch ($action) {
 
 	case 'scan_lookup':
@@ -120,7 +184,15 @@ switch ($action) {
 		$response = mobile_get_bin_contents();
 		break;
 }
+} catch (Throwable $e) {
+	$response = array('success' => false, 'error' => $e->getMessage());
+}
 
+ob_clean();
+// Clear any deferred error messages (stored in $messages by error_handler)
+// so output_html callback doesn't prepend HTML errors before the JSON.
+global $messages;
+$messages = array();
 echo json_encode($response);
 exit();
 
@@ -277,8 +349,8 @@ function mobile_confirm_receive() {
 		$weight = $item ? (float)$item['item_weight'] * $qty : 0;
 		$volume = $item ? (float)$item['item_volume'] * $qty : 0;
 		$cap = check_can_store($bin_loc_id, $stock_id, $qty, $weight, $volume, $batch_id);
-		if (!$cap['allowed'])
-			return array('success' => false, 'error' => $cap['reason']);
+		if (!$cap['ok'])
+			return array('success' => false, 'error' => implode(' ', $cap['errors']));
 	}
 
 	begin_transaction();
@@ -295,7 +367,7 @@ function mobile_confirm_receive() {
 			. " WHERE id=" . (int)$serial_id;
 		db_query($sql);
 		add_serial_movement($serial_id, ST_SUPPRECEIVE, 0, '', $loc_code,
-			'', 'available', date('Y-m-d'), 'Mobile receive', 'Received via mobile scanner');
+			'', 'available', Today(), 'Mobile receive', 'Received via mobile scanner');
 	}
 
 	// Update operation status if provided
@@ -335,7 +407,7 @@ function mobile_confirm_ship() {
 
 	// Mark serial as delivered
 	update_serial_status($serial['id'], 'delivered', ST_CUSTDELIVERY, 0,
-		$serial['loc_code'], '', date('Y-m-d'), 'Mobile ship', 'Shipped via mobile scanner');
+		$serial['loc_code'], '', Today(), 'Mobile ship', 'Shipped via mobile scanner');
 
 	// Remove from bin stock
 	if ($serial['wh_loc_id']) {
@@ -395,8 +467,8 @@ function mobile_confirm_transfer() {
 	$weight = $item ? (float)$item['item_weight'] * $qty : 0;
 	$volume = $item ? (float)$item['item_volume'] * $qty : 0;
 	$cap = check_can_store($to_bin_id, $stock_id, $qty, $weight, $volume, $batch_id);
-	if (!$cap['allowed'])
-		return array('success' => false, 'error' => $cap['reason']);
+	if (!$cap['ok'])
+		return array('success' => false, 'error' => implode(' ', $cap['errors']));
 
 	begin_transaction();
 
@@ -413,7 +485,7 @@ function mobile_confirm_transfer() {
 		db_query($sql);
 		add_serial_movement($serial_id, ST_LOCTRANSFER, 0,
 			$loc_code, $loc_code, 'available', 'available',
-			date('Y-m-d'), 'Mobile transfer', 'Bin-to-bin transfer via mobile');
+			Today(), 'Mobile transfer', 'Bin-to-bin transfer via mobile');
 	}
 
 	commit_transaction();
@@ -469,7 +541,9 @@ function mobile_count_line() {
 			$sql .= " AND batch_id=" . (int)$batch_id;
 		if ($serial_id)
 			$sql .= " AND serial_id=" . (int)$serial_id;
-		$system_qty = (float)db_query($sql)->fetch_row()[0];
+		$_res = db_query($sql);
+		$_row = db_fetch_row($_res);
+		$system_qty = $_row ? (float)$_row[0] : 0.0;
 	}
 
 	$variance = $counted_qty - $system_qty;
@@ -600,8 +674,8 @@ function mobile_confirm_putaway() {
 	$weight = $item ? (float)$item['item_weight'] * $qty : 0;
 	$volume = $item ? (float)$item['item_volume'] * $qty : 0;
 	$cap = check_can_store($bin_loc_id, $stock_id, $qty, $weight, $volume, $batch_id);
-	if (!$cap['allowed'])
-		return array('success' => false, 'error' => $cap['reason']);
+	if (!$cap['ok'])
+		return array('success' => false, 'error' => implode(' ', $cap['errors']));
 
 	begin_transaction();
 
@@ -613,7 +687,7 @@ function mobile_confirm_putaway() {
 			. " WHERE id=" . (int)$serial_id;
 		db_query($sql);
 		add_serial_movement($serial_id, ST_INVADJUST, 0, '', $loc_code,
-			'', 'available', date('Y-m-d'), 'Mobile putaway', 'Putaway via mobile scanner');
+			'', 'available', Today(), 'Mobile putaway', 'Putaway via mobile scanner');
 	}
 
 	if ($op_id > 0)
@@ -670,7 +744,7 @@ function mobile_confirm_pick() {
 
 	if ($serial_id) {
 		update_serial_status($serial_id, 'reserved', ST_CUSTDELIVERY, 0,
-			'', '', date('Y-m-d'), 'Mobile pick', 'Picked via mobile scanner');
+			'', '', Today(), 'Mobile pick', 'Picked via mobile scanner');
 	}
 
 	if ($op_id > 0)
@@ -707,7 +781,7 @@ function mobile_get_pending_receive() {
 			'source_doc_type' => $op['source_doc_type'],
 			'source_doc_no' => $op['source_doc_no'],
 			'scheduled_date' => $op['scheduled_date'],
-			'notes' => $op['notes'],
+			'notes' => $op['memo'],
 		);
 	}
 
@@ -732,9 +806,9 @@ function mobile_get_pending_picks() {
 		while ($line = db_fetch($lines)) {
 			$line_items[] = array(
 				'stock_id' => $line['stock_id'],
-				'description' => $line['description'],
-				'qty' => $line['qty'],
-				'from_bin_id' => $line['from_bin_id'],
+				'description' => $line['item_description'],
+				'qty' => $line['qty_planned'],
+				'from_bin_id' => $line['from_loc_id'],
 				'from_bin_code' => $line['from_bin_code'],
 			);
 		}
