@@ -183,6 +183,28 @@
 		display: inline-flex;
 	}
 
+	/* Keep primary navigation controls finger-friendly on phones. */
+	.modern-sidebar-toggle,
+	.modern-notification-button,
+	.modern-search-toggle {
+		width: 44px;
+		height: 44px;
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.modern-user-trigger {
+		min-height: 44px;
+		padding-top: 10px;
+		padding-bottom: 10px;
+	}
+
+	.modern-module-toggle {
+		min-height: 44px;
+		padding-top: 10px;
+		padding-bottom: 10px;
+	}
+
 	.modern-page-title {
 		flex-direction: column;
 		align-items: stretch;
