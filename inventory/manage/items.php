@@ -218,6 +218,11 @@ if (isset($_POST['addupdate'])) {
 		display_error( _('The item name must be entered.'));
 		set_focus('description');
 	} 
+	elseif (strlen($_POST['long_description']) > 255) {
+		$input_error = 1;
+		display_error(_('The item description is too long. Maximum length is 255 characters.'));
+		set_focus('long_description');
+	}
 	elseif (strlen($_POST['NewStockID']) == 0) {
 		$input_error = 1;
 		display_error( _('The item code cannot be empty'));

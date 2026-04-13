@@ -88,6 +88,8 @@ JsHttpRequest._request = function(trigger, form, tout, retry) {
 				}
 			}
 			set_mark(retry ? 'ajax-loader2.gif':'warning.png' );
+			if (!retry)
+				disp_msg('Request failed or timed out. Please retry.', 'err_msg');
 			if(retry)
 				JsHttpRequest._request(trigger, form, tout, retry-1);
 		},
@@ -158,6 +160,12 @@ JsHttpRequest._request = function(trigger, form, tout, retry) {
 				if(!newwin) {
 					setFocus();
 				}
+			}
+			else {
+				if(tcheck)
+					JsHttpRequest.clearTimeout(tcheck);
+				set_mark('warning.png');
+				disp_msg((errors && errors.length) ? errors : 'Request failed. Please retry.', 'err_msg');
 			}
 		},
 		false  // do not disable caching
