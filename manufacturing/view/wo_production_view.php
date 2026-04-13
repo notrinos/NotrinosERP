@@ -79,12 +79,14 @@ if ($has_tracking) {
 	if ($prod_data) {
 		$woid = $prod_data['workorder_id'];
 		$stock_id = $prod_data['stock_id'];
+		$produced_serial_ids = array();
+		$produced_batch_ids = array();
 
 		// Check if the finished product has tracking
 		$tracking_mode = get_item_tracking_mode($stock_id);
 		if ($tracking_mode !== 'none') {
 			// Find serials created for this production receipt
-			$serial_sql = "SELECT sn.serial_no, sn.status, sn.manufacturing_date
+			$serial_sql = "SELECT sn.id AS serial_id, sn.serial_no, sn.status, sn.manufacturing_date
 				FROM " . TB_PREF . "serial_movements smov
 				INNER JOIN " . TB_PREF . "serial_numbers sn ON smov.serial_id = sn.id
 				WHERE smov.trans_type = " . ST_MANURECEIVE . "
@@ -95,6 +97,7 @@ if ($has_tracking) {
 			$has_serials = false;
 
 			while ($sr = db_fetch($serial_result)) {
+				$produced_serial_ids[] = (int)$sr['serial_id'];
 				if (!$has_serials) {
 					$has_serials = true;
 					br();
@@ -113,7 +116,7 @@ if ($has_tracking) {
 			if ($has_serials) end_table();
 
 			// Find batch created for this production
-			$batch_sql = "SELECT sb.batch_no, sb.status, sb.manufacturing_date, sb.expiry_date, sb.initial_qty
+			$batch_sql = "SELECT sb.id AS batch_id, sb.batch_no, sb.status, sb.manufacturing_date, sb.expiry_date, sb.initial_qty
 				FROM " . TB_PREF . "batch_movements bm
 				INNER JOIN " . TB_PREF . "stock_batches sb ON bm.batch_id = sb.id
 				WHERE bm.trans_type = " . ST_MANURECEIVE . "
@@ -125,6 +128,7 @@ if ($has_tracking) {
 			$has_batches = false;
 
 			while ($br_row = db_fetch($batch_result)) {
+				$produced_batch_ids[] = (int)$br_row['batch_id'];
 				if (!$has_batches) {
 					$has_batches = true;
 					br();
@@ -145,8 +149,8 @@ if ($has_tracking) {
 			if ($has_batches) end_table();
 		}
 
-		// Show component traceability for this WO
-		$trace_result = get_wo_traceability($woid);
+		// Show component traceability only for outputs produced in this transaction.
+		$trace_result = get_production_traceability($produced_serial_ids, $produced_batch_ids);
 		$trace_rows = array();
 		while ($trow = db_fetch($trace_result)) {
 			$trace_rows[] = $trow;

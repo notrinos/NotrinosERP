@@ -180,6 +180,77 @@ function get_wo_traceability($work_order_id) {
 }
 
 /**
+ * Get traceability rows for finished serials/batches created by one production transaction.
+ *
+ * @param array $finished_serial_ids Finished serial IDs from ST_MANURECEIVE transaction
+ * @param array $finished_batch_ids  Finished batch IDs from ST_MANURECEIVE transaction
+ * @return resource DB result
+ */
+function get_production_traceability($finished_serial_ids, $finished_batch_ids) {
+	$serial_ids = array();
+	$batch_ids = array();
+
+	if (is_array($finished_serial_ids)) {
+		foreach ($finished_serial_ids as $id) {
+			$id = (int)$id;
+			if ($id > 0)
+				$serial_ids[] = $id;
+		}
+	}
+
+	if (is_array($finished_batch_ids)) {
+		foreach ($finished_batch_ids as $id) {
+			$id = (int)$id;
+			if ($id > 0)
+				$batch_ids[] = $id;
+		}
+	}
+
+	$serial_ids = array_values(array_unique($serial_ids));
+	$batch_ids = array_values(array_unique($batch_ids));
+
+	if (empty($serial_ids) && empty($batch_ids)) {
+		$sql = "SELECT pt.*,
+				csm.description AS component_description,
+				csn.serial_no AS component_serial_no,
+				cb.batch_no AS component_batch_no,
+				sn.serial_no AS finished_serial_no,
+				sb.batch_no AS finished_batch_no
+			FROM " . TB_PREF . "production_traceability pt
+			LEFT JOIN " . TB_PREF . "stock_master csm ON pt.component_stock_id = csm.stock_id
+			LEFT JOIN " . TB_PREF . "serial_numbers csn ON pt.component_serial_id = csn.id
+			LEFT JOIN " . TB_PREF . "stock_batches cb ON pt.component_batch_id = cb.id
+			LEFT JOIN " . TB_PREF . "serial_numbers sn ON pt.finished_serial_id = sn.id
+			LEFT JOIN " . TB_PREF . "stock_batches sb ON pt.finished_batch_id = sb.id
+			WHERE 1=0";
+		return db_query($sql, 'could not get production traceability');
+	}
+
+	$where = array();
+	if (!empty($serial_ids))
+		$where[] = "pt.finished_serial_id IN (" . implode(',', $serial_ids) . ")";
+	if (!empty($batch_ids))
+		$where[] = "pt.finished_batch_id IN (" . implode(',', $batch_ids) . ")";
+
+	$sql = "SELECT pt.*,
+			csm.description AS component_description,
+			csn.serial_no AS component_serial_no,
+			cb.batch_no AS component_batch_no,
+			sn.serial_no AS finished_serial_no,
+			sb.batch_no AS finished_batch_no
+		FROM " . TB_PREF . "production_traceability pt
+		LEFT JOIN " . TB_PREF . "stock_master csm ON pt.component_stock_id = csm.stock_id
+		LEFT JOIN " . TB_PREF . "serial_numbers csn ON pt.component_serial_id = csn.id
+		LEFT JOIN " . TB_PREF . "stock_batches cb ON pt.component_batch_id = cb.id
+		LEFT JOIN " . TB_PREF . "serial_numbers sn ON pt.finished_serial_id = sn.id
+		LEFT JOIN " . TB_PREF . "stock_batches sb ON pt.finished_batch_id = sb.id
+		WHERE (" . implode(' OR ', $where) . ")
+		ORDER BY pt.component_stock_id, pt.created_at";
+
+	return db_query($sql, 'could not get production traceability');
+}
+
+/**
  * Get traceability records for a specific WO issue (component issue transaction).
  *
  * @param int $work_order_id Work order ID
