@@ -1329,6 +1329,9 @@ CREATE TABLE `0_purch_orders` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	`drop_ship` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'This is a drop-ship PO',
 	`drop_ship_so_no` int(11) DEFAULT NULL COMMENT 'Linked SO for drop-ship',
+	`agreement_id` INT NOT NULL DEFAULT 0 COMMENT 'FK to purch_agreements.id (blanket order linking)',
+	`requisition_id` INT NOT NULL DEFAULT 0 COMMENT 'FK to purch_requisitions.id (originated from requisition)',
+	`rfq_id` INT NOT NULL DEFAULT 0 COMMENT 'FK to purch_rfq.id (response to this RFQ)',
 	PRIMARY KEY (`order_no`),
 	KEY `ord_date` (`ord_date`)
 ) ENGINE=InnoDB;
@@ -2867,6 +2870,9 @@ CREATE TABLE `0_wh_replenishment_rules` (
 	`active` tinyint(1) NOT NULL DEFAULT '1',
 	`auto_execute` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=suggest only, 1=auto-create orders',
 	`custom_data` text DEFAULT NULL,
+	`preferred_supplier_id` INT NOT NULL DEFAULT 0 COMMENT 'For purchasing-focused reorder',
+	`auto_create_rfq` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1=auto-create RFQ for multi-sourcing',
+	`auto_create_po` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1=auto-create PO from approved suppliers',
 	PRIMARY KEY (`rule_id`),
 	KEY `rule_type` (`rule_type`)
 ) ENGINE=InnoDB;
@@ -3196,6 +3202,22 @@ CREATE TABLE `0_suppliers` (
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`vendor_tier` ENUM('standard','preferred','strategic','critical') NOT NULL DEFAULT 'standard' COMMENT 'Supplier classification tier',
+	`vendor_category` VARCHAR(50) NOT NULL DEFAULT '' COMMENT 'Product/service categories supplied',
+	`overall_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Composite vendor scorecard (0-100)',
+	`quality_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Quality metrics: on-spec delivery rate',
+	`delivery_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'On-time delivery performance percentage',
+	`price_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Cost competitiveness vs market benchmarks',
+	`service_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Customer service responsiveness rating',
+	`last_evaluation_date` DATE DEFAULT NULL COMMENT 'Most recent vendor scorecard evaluation',
+	`next_evaluation_date` DATE DEFAULT NULL COMMENT 'Scheduled next evaluation date',
+	`evaluation_frequency_months` INT NOT NULL DEFAULT 6 COMMENT 'Months between periodic evaluations',
+	`certifications` TEXT COMMENT 'ISO/quality certifications held (JSON list or text)',
+	`approved_categories` VARCHAR(500) NOT NULL DEFAULT '' COMMENT 'Approved categories for this supplier',
+	`lead_time_average` INT NOT NULL DEFAULT 0 COMMENT 'Average lead time in days',
+	`on_time_delivery_pct` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Percentage of on-time deliveries',
+	`defect_rate_pct` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Quality defect rate percentage',
+	`payment_reliability_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Payment behavior and reliability score',
 	PRIMARY KEY (`supplier_id`),
 	UNIQUE KEY `supp_ref` (`supp_ref`)
 ) ENGINE=InnoDB;
@@ -4591,7 +4613,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ================================================================
--- NotrinosERP CRM Module — Database Schema
+-- NotrinosERP CRM Module -- Database Schema
 -- Version: 1.0
 -- ================================================================
 
@@ -5058,3 +5080,753 @@ INSERT INTO `0_crm_module_settings` (`setting_key`, `setting_value`, `descriptio
 ('enable_lead_scoring', '0', 'Enable predictive lead scoring'),
 ('scoring_start_date', '', 'Consider leads created after this date for scoring'),
 ('assignment_mode', 'manual', 'Lead assignment mode: manual or auto');
+
+SET @old_foreign_key_checks = @@FOREIGN_KEY_CHECKS;
+SET FOREIGN_KEY_CHECKS = 0;
+
+
+-- Indexes for new stock_moves columns (use CREATE INDEX IF NOT EXISTS alternative)
+-- MariaDB 10.5+ supports this syntax
+CREATE INDEX IF NOT EXISTS `idx_sm_serial_id`   ON `0_stock_moves` (`serial_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_batch_id`    ON `0_stock_moves` (`batch_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_from_bin_id` ON `0_stock_moves` (`from_bin_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_to_bin_id`   ON `0_stock_moves` (`to_bin_id`);
+
+-- -------------------------------------------------------------------------------------
+-- Restore foreign key checks
+-- -------------------------------------------------------------------------------------
+
+SET FOREIGN_KEY_CHECKS = @old_foreign_key_checks;
+
+-- ---------------------------------------------------------------------------
+-- 1. Company preference settings for warranty provision GL accounts
+-- ---------------------------------------------------------------------------
+
+-- Warranty provision accrual account (Balance Sheet - Current Liability)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_account', 'tracking', 'VARCHAR', 15, '');
+
+-- Warranty expense account (P&L - Warranty Expense)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_expense_account', 'tracking', 'VARCHAR', 15, '');
+
+-- Default warranty provision rate (% of item cost)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_rate', 'tracking', 'REAL', 8, '5.0');
+
+-- Enable/disable automatic warranty provision posting
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_enabled', 'tracking', 'TINYINT', 1, '0');
+
+-- ---------------------------------------------------------------------------
+-- 5. System preference: regulatory compliance master switch
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('regulatory_compliance_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_enabled', 'tracking', 'TINYINT', 1, '0');
+
+-- Company license info for DSCSA transaction statements
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_company_license', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_company_dea', 'tracking', 'VARCHAR', 20, '');
+
+-- FSMA 204 settings
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_firm_name', 'tracking', 'VARCHAR', 100, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_fda_registration', 'tracking', 'VARCHAR', 30, '');
+
+-- UDI settings
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
+
+-- ================================================================
+-- Purchase Requisition module. Confusing fields: material_request_id links to WMS request; status/priority enums drive workflow states; custom_data stores future-safe metadata.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_purch_requisitions` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `reference` VARCHAR(60) NOT NULL,
+  `material_request_id` INT NOT NULL DEFAULT 0,
+  `requester_id` SMALLINT NOT NULL,
+  `department_id` INT NOT NULL DEFAULT 0,
+  `request_date` DATE NOT NULL,
+  `required_date` DATE DEFAULT NULL,
+  `status` ENUM('draft','submitted','approved','partially_ordered','ordered','rejected','cancelled') NOT NULL DEFAULT 'draft',
+  `priority` ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  `purpose` TINYTEXT,
+  `notes` TEXT,
+  `total_estimated` DOUBLE NOT NULL DEFAULT 0,
+  `approved_by` SMALLINT NOT NULL DEFAULT 0,
+  `approved_date` DATETIME DEFAULT NULL,
+  `rejected_by` SMALLINT NOT NULL DEFAULT 0,
+  `rejected_date` DATETIME DEFAULT NULL,
+  `rejection_reason` TINYTEXT,
+  `location` VARCHAR(5) NOT NULL DEFAULT '',
+  `dimension_id` INT NOT NULL DEFAULT 0,
+  `dimension2_id` INT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_requester` (`requester_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_date` (`request_date`),
+  KEY `idx_material_request` (`material_request_id`),
+  KEY `idx_department` (`department_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `requisition_id` INT NOT NULL,
+  `material_request_line_id` INT NOT NULL DEFAULT 0,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `description` TINYTEXT,
+  `quantity` DOUBLE NOT NULL,
+  `unit_of_measure` VARCHAR(20) NOT NULL DEFAULT '',
+  `estimated_unit_price` DOUBLE NOT NULL DEFAULT 0,
+  `preferred_supplier_id` INT NOT NULL DEFAULT 0,
+  `notes` TINYTEXT,
+  `qty_ordered` DOUBLE NOT NULL DEFAULT 0,
+  `po_number` INT NOT NULL DEFAULT 0,
+  `status` ENUM('pending','approved','ordered','rejected') NOT NULL DEFAULT 'pending',
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_requisition` (`requisition_id`),
+  KEY `idx_material_request_line` (`material_request_line_id`),
+  KEY `idx_supplier` (`preferred_supplier_id`),
+  KEY `idx_status` (`status`),
+  CONSTRAINT `fk_purch_req_line_header`
+    FOREIGN KEY (`requisition_id`) REFERENCES `0_purch_requisitions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_purchase_requisitions', 'purchase', 'smallint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('requisition_auto_approval_limit', 'purchase', 'int', 11, '0');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5378'
+  ELSE CONCAT(`areas`, ';5378')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5378;%';
+
+-- ================================================================
+-- Request For Quotation module. Confusing structure: header in purch_rfq, invited vendors in purch_rfq_vendors, per-item quotes in purch_rfq_vendor_lines.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_purch_rfq` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `reference` VARCHAR(60) NOT NULL,
+  `rfq_type` ENUM('standard','call_for_tender') NOT NULL DEFAULT 'standard',
+  `status` ENUM('draft','sent','received','evaluated','awarded','expired','cancelled') NOT NULL DEFAULT 'draft',
+  `created_by` SMALLINT NOT NULL,
+  `created_date` DATE NOT NULL,
+  `deadline_date` DATE DEFAULT NULL,
+  `validity_date` DATE DEFAULT NULL,
+  `requisition_id` INT NOT NULL DEFAULT 0,
+  `description` TINYTEXT,
+  `notes` TEXT,
+  `terms_and_conditions` TEXT,
+  `delivery_location` VARCHAR(5) NOT NULL DEFAULT '',
+  `required_delivery_date` DATE DEFAULT NULL,
+  `evaluation_criteria` TEXT,
+  `dimension_id` INT NOT NULL DEFAULT 0,
+  `dimension2_id` INT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_date` (`created_date`),
+  KEY `idx_requisition` (`requisition_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `rfq_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `description` TINYTEXT,
+  `quantity` DOUBLE NOT NULL,
+  `unit_of_measure` VARCHAR(20) NOT NULL DEFAULT '',
+  `target_price` DOUBLE NOT NULL DEFAULT 0,
+  `specifications` TEXT,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_rfq` (`rfq_id`),
+  KEY `idx_stock` (`stock_id`),
+  CONSTRAINT `fk_purch_rfq_item_header`
+    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `rfq_id` INT NOT NULL,
+  `supplier_id` INT NOT NULL,
+  `status` ENUM('invited','responded','declined','awarded','rejected') NOT NULL DEFAULT 'invited',
+  `sent_date` DATETIME DEFAULT NULL,
+  `response_date` DATETIME DEFAULT NULL,
+  `total_quoted` DOUBLE NOT NULL DEFAULT 0,
+  `delivery_lead_days` INT NOT NULL DEFAULT 0,
+  `payment_terms` TINYTEXT,
+  `vendor_notes` TEXT,
+  `evaluator_score` DOUBLE NOT NULL DEFAULT 0,
+  `evaluator_notes` TEXT,
+  `is_winner` TINYINT(1) NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_rfq` (`rfq_id`),
+  KEY `idx_supplier` (`supplier_id`),
+  UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`),
+  CONSTRAINT `fk_purch_rfq_vendor_header`
+    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `rfq_vendor_id` INT NOT NULL,
+  `rfq_item_id` INT NOT NULL,
+  `quoted_price` DOUBLE NOT NULL DEFAULT 0,
+  `quoted_quantity` DOUBLE NOT NULL DEFAULT 0,
+  `delivery_lead_days` INT NOT NULL DEFAULT 0,
+  `notes` TINYTEXT,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_vendor` (`rfq_vendor_id`),
+  KEY `idx_item` (`rfq_item_id`),
+  UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`),
+  CONSTRAINT `fk_purch_rfq_vendor_line_vendor`
+    FOREIGN KEY (`rfq_vendor_id`) REFERENCES `0_purch_rfq_vendors` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_purch_rfq_vendor_line_item`
+    FOREIGN KEY (`rfq_item_id`) REFERENCES `0_purch_rfq_items` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_purchase_rfq', 'purchase', 'smallint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('rfq_default_deadline_days', 'purchase', 'smallint', 6, '14');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5379'
+  ELSE CONCAT(`areas`, ';5379')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5379;%';
+
+-- ================================================================
+-- Purchase Agreements / Blanket Orders. Confusing fields: agreement_id on purchase orders links drawdown against agreement lines and committed quantities.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_purch_agreements` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `reference` VARCHAR(60) NOT NULL,
+  `agreement_type` ENUM('blanket_order','framework_agreement','contract') NOT NULL DEFAULT 'blanket_order',
+  `supplier_id` INT NOT NULL,
+  `buyer_id` INT NOT NULL DEFAULT 0,
+  `status` ENUM('draft','confirmed','active','expired','cancelled') NOT NULL DEFAULT 'draft',
+  `date_start` DATE NOT NULL,
+  `date_end` DATE DEFAULT NULL,
+  `currency` CHAR(3) NOT NULL DEFAULT '',
+  `payment_terms` INT NOT NULL DEFAULT 0,
+  `total_committed` DOUBLE NOT NULL DEFAULT 0,
+  `total_ordered` DOUBLE NOT NULL DEFAULT 0,
+  `total_received` DOUBLE NOT NULL DEFAULT 0,
+  `total_invoiced` DOUBLE NOT NULL DEFAULT 0,
+  `delivery_location` VARCHAR(5) NOT NULL DEFAULT '',
+  `auto_renew` TINYINT(1) NOT NULL DEFAULT 0,
+  `renewal_period_months` INT NOT NULL DEFAULT 12,
+  `terms_and_conditions` TEXT,
+  `notes` TINYTEXT,
+  `rfq_id` INT NOT NULL DEFAULT 0,
+  `dimension_id` INT NOT NULL DEFAULT 0,
+  `dimension2_id` INT NOT NULL DEFAULT 0,
+  `created_by` INT NOT NULL DEFAULT 0,
+  `created_date` DATETIME DEFAULT NULL,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_dates` (`date_start`, `date_end`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `agreement_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `description` TINYTEXT,
+  `committed_qty` DOUBLE NOT NULL DEFAULT 0,
+  `min_qty_per_order` DOUBLE NOT NULL DEFAULT 0,
+  `ordered_qty` DOUBLE NOT NULL DEFAULT 0,
+  `received_qty` DOUBLE NOT NULL DEFAULT 0,
+  `invoiced_qty` DOUBLE NOT NULL DEFAULT 0,
+  `unit_price` DOUBLE NOT NULL DEFAULT 0,
+  `discount_percent` DOUBLE NOT NULL DEFAULT 0,
+  `price_valid_until` DATE DEFAULT NULL,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_agreement` (`agreement_id`),
+  KEY `idx_stock` (`stock_id`),
+  CONSTRAINT `fk_purch_agreement_lines_header`
+    FOREIGN KEY (`agreement_id`) REFERENCES `0_purch_agreements` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 0_purch_orders columns agreement_id, requisition_id, rfq_id already defined in CREATE TABLE
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_purchase_agreements', 'purchase', 'smallint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('purchase_agreement_expiry_alert_days', 'purchase', 'smallint', 6, '30');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5380'
+  ELSE CONCAT(`areas`, ';5380')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5380;%';
+
+-- ================================================================
+-- Vendor scorecard and evaluation criteria. Confusing model: criteria weights + per-evaluation scores + performance log events combine into overall supplier score.
+-- All vendor evaluation columns already defined in CREATE TABLE 0_suppliers
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_criteria` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `category` ENUM('quality','delivery','price','service','compliance') NOT NULL DEFAULT 'quality',
+  `weight` DOUBLE NOT NULL DEFAULT 1.0,
+  `description` TINYTEXT,
+  `scoring_method` ENUM('manual','calculated') NOT NULL DEFAULT 'manual',
+  `calculation_formula` TEXT,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_name_category` (`name`, `category`),
+  KEY `idx_category` (`category`),
+  KEY `idx_inactive` (`inactive`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_vendor_evaluations` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `supplier_id` INT NOT NULL,
+  `evaluation_date` DATE NOT NULL,
+  `evaluator_id` SMALLINT NOT NULL,
+  `period_from` DATE NOT NULL,
+  `period_to` DATE NOT NULL,
+  `status` ENUM('draft','submitted','approved') NOT NULL DEFAULT 'draft',
+  `overall_score` DOUBLE NOT NULL DEFAULT 0,
+  `quality_score` DOUBLE NOT NULL DEFAULT 0,
+  `delivery_score` DOUBLE NOT NULL DEFAULT 0,
+  `price_score` DOUBLE NOT NULL DEFAULT 0,
+  `service_score` DOUBLE NOT NULL DEFAULT 0,
+  `recommendation` ENUM('maintain','upgrade','downgrade','remove','probation') NOT NULL DEFAULT 'maintain',
+  `action_plan` TEXT,
+  `notes` TEXT,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_date` (`evaluation_date`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `evaluation_id` INT NOT NULL,
+  `criteria_id` INT NOT NULL,
+  `score` DOUBLE NOT NULL DEFAULT 0,
+  `evidence` TINYTEXT,
+  `notes` TINYTEXT,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_evaluation_criteria` (`evaluation_id`, `criteria_id`),
+  KEY `idx_evaluation` (`evaluation_id`),
+  KEY `idx_criteria` (`criteria_id`),
+  CONSTRAINT `fk_vendor_eval_scores_eval`
+    FOREIGN KEY (`evaluation_id`) REFERENCES `0_vendor_evaluations` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_vendor_eval_scores_criteria`
+    FOREIGN KEY (`criteria_id`) REFERENCES `0_vendor_evaluation_criteria` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_vendor_performance_log` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `supplier_id` INT NOT NULL,
+  `event_type` ENUM('delivery_received','quality_issue','price_change','late_delivery','early_delivery','complaint','resolution') NOT NULL,
+  `event_date` DATE NOT NULL,
+  `reference_type` SMALLINT NOT NULL DEFAULT 0,
+  `reference_no` INT NOT NULL DEFAULT 0,
+  `details` TINYTEXT,
+  `impact_score` DOUBLE NOT NULL DEFAULT 0,
+  `recorded_by` SMALLINT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_date` (`event_date`),
+  KEY `idx_type` (`event_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_vendor_evaluation_criteria` (`name`, `category`, `weight`, `description`, `scoring_method`, `calculation_formula`, `inactive`)
+VALUES
+  ('Inspection Pass Rate', 'quality', 1.50, 'Measures how often received items pass quality inspection on first review.', 'calculated', 'inspection_pass_rate_pct', 0),
+  ('Defect Rate', 'quality', 1.25, 'Measures defects or failed inspections recorded during the review period.', 'calculated', '100 - defect_rate_pct', 0),
+  ('On-Time Delivery', 'delivery', 1.50, 'Measures how consistently deliveries arrive on or before the requested date.', 'calculated', 'on_time_delivery_pct', 0),
+  ('Lead Time Accuracy', 'delivery', 1.00, 'Measures whether actual delivery lead time stays within the expected range.', 'manual', '', 0),
+  ('Price Competitiveness', 'price', 1.25, 'Compares vendor pricing against the average market price for the same items.', 'calculated', 'price_competitiveness_score', 0),
+  ('Responsiveness', 'service', 1.00, 'Measures communication quality, issue handling, and turnaround time.', 'manual', '', 0),
+  ('Compliance', 'compliance', 1.00, 'Measures contractual, regulatory, and documentation compliance.', 'manual', '', 0);
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_vendor_evaluation', 'purchase', 'smallint', 1, '0');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5381'
+  ELSE CONCAT(`areas`, ';5381')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5381;%';
+
+-- ================================================================
+-- Vendor pricelists and purchase templates. Note: pricing precedence can be agreement > vendor_pricelist > purch_data fallback depending on runtime logic.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_vendor_pricelists` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `supplier_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `vendor_product_code` VARCHAR(50) NOT NULL DEFAULT '',
+  `vendor_product_name` VARCHAR(100) NOT NULL DEFAULT '',
+  `vendor_uom` VARCHAR(20) NOT NULL DEFAULT '',
+  `conversion_factor` DOUBLE NOT NULL DEFAULT 1,
+  `currency` CHAR(3) NOT NULL DEFAULT '',
+  `min_order_qty` DOUBLE NOT NULL DEFAULT 0,
+  `price_break_qty_1` DOUBLE NOT NULL DEFAULT 0,
+  `price_1` DOUBLE NOT NULL DEFAULT 0,
+  `price_break_qty_2` DOUBLE NOT NULL DEFAULT 0,
+  `price_2` DOUBLE NOT NULL DEFAULT 0,
+  `price_break_qty_3` DOUBLE NOT NULL DEFAULT 0,
+  `price_3` DOUBLE NOT NULL DEFAULT 0,
+  `price_break_qty_4` DOUBLE NOT NULL DEFAULT 0,
+  `price_4` DOUBLE NOT NULL DEFAULT 0,
+  `lead_time_days` INT NOT NULL DEFAULT 0,
+  `valid_from` DATE DEFAULT NULL,
+  `valid_until` DATE DEFAULT NULL,
+  `discount_percent` DOUBLE NOT NULL DEFAULT 0,
+  `last_purchase_date` DATE DEFAULT NULL,
+  `last_purchase_price` DOUBLE NOT NULL DEFAULT 0,
+  `notes` TINYTEXT,
+  `is_preferred` TINYINT(1) NOT NULL DEFAULT 0,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_stock` (`stock_id`),
+  KEY `idx_preferred` (`stock_id`, `is_preferred`),
+  UNIQUE KEY `idx_supplier_stock` (`supplier_id`, `stock_id`, `currency`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_order_templates` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `description` TINYTEXT,
+  `supplier_id` INT NOT NULL DEFAULT 0,
+  `delivery_location` VARCHAR(5) NOT NULL DEFAULT '',
+  `default_payment_terms` INT NOT NULL DEFAULT 0,
+  `notes` TEXT,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_inactive` (`inactive`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `template_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `description` TINYTEXT,
+  `default_quantity` DOUBLE NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_template` (`template_id`),
+  KEY `idx_stock` (`stock_id`),
+  CONSTRAINT `fk_purch_template_lines_header`
+    FOREIGN KEY (`template_id`) REFERENCES `0_purch_order_templates` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_vendor_pricelists`
+  (`supplier_id`, `stock_id`, `vendor_product_code`, `vendor_product_name`, `vendor_uom`,
+   `conversion_factor`, `currency`, `min_order_qty`,
+   `price_break_qty_1`, `price_1`, `price_break_qty_2`, `price_2`,
+   `price_break_qty_3`, `price_3`, `price_break_qty_4`, `price_4`,
+   `lead_time_days`, `valid_from`, `valid_until`, `discount_percent`,
+   `last_purchase_date`, `last_purchase_price`, `notes`, `is_preferred`, `inactive`, `custom_data`)
+SELECT purch_data.`supplier_id`,
+       purch_data.`stock_id`,
+       '',
+       purch_data.`supplier_description`,
+       purch_data.`suppliers_uom`,
+       IF(purch_data.`conversion_factor` <= 0, 1, purch_data.`conversion_factor`),
+       supplier.`curr_code`,
+       0,
+       0,
+       purch_data.`price`,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       NULL,
+       NULL,
+       0,
+       NULL,
+       0,
+       '',
+       0,
+       0,
+       NULL
+FROM `0_purch_data` purch_data
+INNER JOIN `0_suppliers` supplier ON supplier.`supplier_id` = purch_data.`supplier_id`;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_vendor_pricelists', 'purchase', 'smallint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_purchase_templates', 'purchase', 'smallint', 1, '0');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5382'
+  ELSE CONCAT(`areas`, ';5382')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5382;%';
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5383'
+  ELSE CONCAT(`areas`, ';5383')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5383;%';
+
+-- ================================================================
+-- 3-way matching and bill-control policy. Confusing fields: tolerance/action_on_exceed determine block/warn/approval behavior; exceptions keep mismatch evidence.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_purch_matching_config` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `match_type` ENUM('price_variance','quantity_variance','total_variance') NOT NULL,
+  `supplier_id` INT NOT NULL DEFAULT 0,
+  `tolerance_type` ENUM('percentage','fixed_amount') NOT NULL DEFAULT 'percentage',
+  `tolerance_value` DOUBLE NOT NULL DEFAULT 0,
+  `action_on_exceed` ENUM('warn','block','require_approval') NOT NULL DEFAULT 'warn',
+  `custom_data` JSON DEFAULT NULL,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_match_type` (`match_type`),
+  KEY `idx_supplier_match` (`supplier_id`, `match_type`),
+  KEY `idx_inactive` (`inactive`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_matching_exceptions` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `exception_type` ENUM('price_variance','quantity_variance','total_variance','missing_grn','missing_po') NOT NULL,
+  `trans_type` SMALLINT NOT NULL,
+  `trans_no` INT NOT NULL,
+  `supplier_id` INT NOT NULL,
+  `po_number` INT NOT NULL DEFAULT 0,
+  `grn_batch_id` INT NOT NULL DEFAULT 0,
+  `stock_id` VARCHAR(20) NOT NULL DEFAULT '',
+  `expected_value` DOUBLE NOT NULL DEFAULT 0,
+  `actual_value` DOUBLE NOT NULL DEFAULT 0,
+  `variance_amount` DOUBLE NOT NULL DEFAULT 0,
+  `variance_percent` DOUBLE NOT NULL DEFAULT 0,
+  `status` ENUM('open','approved','rejected','resolved') NOT NULL DEFAULT 'open',
+  `resolution_notes` TINYTEXT,
+  `resolved_by` SMALLINT NOT NULL DEFAULT 0,
+  `resolved_date` DATETIME DEFAULT NULL,
+  `created_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_trans` (`trans_type`, `trans_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_purch_bill_control_policy` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `bill_basis` ENUM('on_ordered','on_received') NOT NULL DEFAULT 'on_received',
+  `require_grn_before_invoice` TINYINT(1) NOT NULL DEFAULT 1,
+  `require_po_for_invoice` TINYINT(1) NOT NULL DEFAULT 0,
+  `allow_over_invoice` TINYINT(1) NOT NULL DEFAULT 0,
+  `auto_match_on_grn` TINYINT(1) NOT NULL DEFAULT 1,
+  `is_default` TINYINT(1) NOT NULL DEFAULT 0,
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_default` (`is_default`),
+  KEY `idx_inactive` (`inactive`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_purch_matching_config`
+  (`match_type`, `supplier_id`, `tolerance_type`, `tolerance_value`, `action_on_exceed`, `custom_data`, `inactive`)
+VALUES
+  ('price_variance', 0, 'percentage', 5, 'warn', NULL, 0),
+  ('quantity_variance', 0, 'percentage', 5, 'warn', NULL, 0),
+  ('total_variance', 0, 'percentage', 5, 'warn', NULL, 0);
+
+INSERT IGNORE INTO `0_purch_bill_control_policy`
+  (`name`, `bill_basis`, `require_grn_before_invoice`, `require_po_for_invoice`, `allow_over_invoice`, `auto_match_on_grn`, `is_default`, `inactive`, `custom_data`)
+VALUES
+  ('Default 3-Way Matching Policy', 'on_received', 1, 0, 0, 1, 1, 0, NULL);
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_3way_matching', 'purchase', 'smallint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('default_matching_tolerance_pct', 'purchase', 'smallint', 6, '5');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5384'
+  ELSE CONCAT(`areas`, ';5384')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5384;%';
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5642'
+  ELSE CONCAT(`areas`, ';5642')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5642;%';
+
+-- ================================================================
+-- Automated reorder and procurement planning. Note: preferred_supplier_id extends replenishment rules; plan lines are operational staging before PO generation.
+-- All replenishment rule columns already defined in CREATE TABLE 0_wh_replenishment_rules
+-- ================================================================
+
+UPDATE `0_wh_replenishment_rules`
+SET `preferred_supplier_id` = IFNULL(`preferred_supplier`, 0)
+WHERE IFNULL(`preferred_supplier_id`, 0) = 0
+  AND IFNULL(`preferred_supplier`, 0) > 0;
+
+CREATE TABLE IF NOT EXISTS `0_procurement_plan` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `reference` VARCHAR(60) NOT NULL,
+  `plan_date` DATE NOT NULL,
+  `plan_type` ENUM('auto_reorder','demand_based','manual') NOT NULL DEFAULT 'auto_reorder',
+  `status` ENUM('draft','confirmed','in_progress','completed','cancelled') NOT NULL DEFAULT 'draft',
+  `created_by` SMALLINT NOT NULL DEFAULT 0,
+  `notes` TINYTEXT,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_date` (`plan_date`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `plan_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `location` VARCHAR(5) NOT NULL DEFAULT '',
+  `replenishment_rule_id` INT NOT NULL DEFAULT 0,
+  `current_stock` DOUBLE NOT NULL DEFAULT 0,
+  `required_qty` DOUBLE NOT NULL DEFAULT 0,
+  `suggested_order_qty` DOUBLE NOT NULL DEFAULT 0,
+  `supplier_id` INT NOT NULL DEFAULT 0,
+  `estimated_price` DOUBLE NOT NULL DEFAULT 0,
+  `estimated_lead_time` INT NOT NULL DEFAULT 0,
+  `priority` ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  `status` ENUM('pending','approved','ordered','skipped') NOT NULL DEFAULT 'pending',
+  `po_number` INT NOT NULL DEFAULT 0,
+  `custom_data` JSON DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_plan` (`plan_id`),
+  KEY `idx_stock` (`stock_id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_status` (`status`),
+  CONSTRAINT `fk_procurement_plan_lines_header`
+    FOREIGN KEY (`plan_id`) REFERENCES `0_procurement_plan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_procurement_planning', 'purchase', 'smallint', 1, '0');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5385'
+  ELSE CONCAT(`areas`, ';5385')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5385;%';
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5643'
+  ELSE CONCAT(`areas`, ';5643')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5643;%';
+
+-- ================================================================
+-- Purchase analytics and KPI cache. Confusing parts: cache table schema may evolve by metric type; reports should tolerate sparse KPI rows.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS `0_purch_kpi_cache` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `kpi_type` ENUM('monthly_spend','vendor_spend','category_spend','lead_time_avg',
+                  'on_time_delivery','price_variance','savings','open_po_value',
+                  'pending_grn','pending_invoice','matching_exceptions') NOT NULL,
+  `period_key` VARCHAR(20) NOT NULL,
+  `dimension_key` VARCHAR(50) NOT NULL DEFAULT '',
+  `value_1` DOUBLE NOT NULL DEFAULT 0,
+  `value_2` DOUBLE NOT NULL DEFAULT 0,
+  `value_3` DOUBLE NOT NULL DEFAULT 0,
+  `detail_json` JSON DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_kpi` (`kpi_type`, `period_key`, `dimension_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_purchase_dashboard', 'purchase', 'smallint', 1, '1');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5892'
+  ELSE CONCAT(`areas`, ';5892')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5892;%';
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '5893'
+  ELSE CONCAT(`areas`, ';5893')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5893;%';
+
+-- END CONSOLIDATED MIGRATIONS
