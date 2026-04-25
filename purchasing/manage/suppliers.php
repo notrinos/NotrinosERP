@@ -25,6 +25,7 @@ page(_($help_context = 'Suppliers'), @$_REQUEST['popup'], false, '', $js);
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/ui/contacts_view.inc');
 include_once($path_to_root.'/includes/ui/attachment.inc');
+include_once($path_to_root.'/purchasing/includes/db/vendor_evaluation_db.inc');
 
 check_db_has_tax_groups(_('There are no tax groups defined in the system. At least one tax group is required before proceeding.'));
 
@@ -54,7 +55,68 @@ function can_process() {
 		set_focus('supp_ref');
 		return false;
 	}
+	if (!check_num('evaluation_frequency_months', 1)) {
+		display_error(_('Evaluation frequency must be at least one month.'));
+		set_focus('evaluation_frequency_months');
+		return false;
+	}
 	return true;
+}
+
+/**
+ * Get the vendor tier selector options.
+ *
+ * @return array
+ */
+function supplier_vendor_tier_options() {
+	return get_vendor_tiers();
+}
+
+/**
+ * Render the vendor score summary block for one supplier.
+ *
+ * @param int $supplier_id
+ * @return string
+ */
+function render_supplier_vendor_score_summary($supplier_id) {
+	global $path_to_root;
+
+	$supplier = get_supplier($supplier_id);
+	if (!$supplier)
+		return '';
+
+	$score_items = array(
+		array('label' => _('Overall'), 'value' => isset($supplier['overall_score']) ? round2($supplier['overall_score'], 2) : 0),
+		array('label' => _('Quality'), 'value' => isset($supplier['quality_score']) ? round2($supplier['quality_score'], 2) : 0),
+		array('label' => _('Delivery'), 'value' => isset($supplier['delivery_score']) ? round2($supplier['delivery_score'], 2) : 0),
+		array('label' => _('Price'), 'value' => isset($supplier['price_score']) ? round2($supplier['price_score'], 2) : 0),
+		array('label' => _('Service'), 'value' => isset($supplier['service_score']) ? round2($supplier['service_score'], 2) : 0),
+		array('label' => _('On-Time %'), 'value' => isset($supplier['on_time_delivery_pct']) ? round2($supplier['on_time_delivery_pct'], 2) : 0),
+		array('label' => _('Defect %'), 'value' => isset($supplier['defect_rate_pct']) ? round2($supplier['defect_rate_pct'], 2) : 0),
+		array('label' => _('Lead Time'), 'value' => isset($supplier['lead_time_average']) ? (int)$supplier['lead_time_average'] : 0),
+	);
+
+	$html = '<div style="padding:12px;border:1px solid #d9dee3;background:#f8fafc;border-radius:4px;">';
+	$html .= '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">';
+	$html .= '<div><strong>' . _('Current Tier:') . '</strong> ' . vendor_tier_badge(isset($supplier['vendor_tier']) ? $supplier['vendor_tier'] : 'standard') . '</div>';
+	if (user_check_access('SA_VENDOREVALUATION'))
+		$html .= '<div><a href="' . $path_to_root . '/purchasing/inquiry/vendor_scorecard.php?sel_app=AP&supplier_id=' . (int)$supplier_id . '">' . _('View Scorecard') . '</a></div>';
+	$html .= '</div>';
+	$html .= '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">';
+	foreach ($score_items as $score_item) {
+		$html .= '<div style="min-width:105px;padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:4px;">';
+		$html .= '<div style="font-size:11px;color:#64748b;">' . $score_item['label'] . '</div>';
+		$html .= '<div style="font-size:16px;font-weight:bold;color:#0f172a;">' . $score_item['value'] . '</div>';
+		$html .= '</div>';
+	}
+	$html .= '</div>';
+	$html .= '<div style="margin-top:10px;font-size:12px;color:#475569;">';
+	$html .= '<strong>' . _('Last Evaluation:') . '</strong> ' . (!empty($supplier['last_evaluation_date']) ? sql2date($supplier['last_evaluation_date']) : '-') . '&nbsp;&nbsp;';
+	$html .= '<strong>' . _('Next Evaluation:') . '</strong> ' . (!empty($supplier['next_evaluation_date']) ? sql2date($supplier['next_evaluation_date']) : '-') . '&nbsp;&nbsp;';
+	$html .= '<strong>' . _('Vendor Category:') . '</strong> ' . (!empty($supplier['vendor_category']) ? htmlspecialchars($supplier['vendor_category']) : '-') . '</div>';
+	$html .= '</div>';
+
+	return $html;
 }
 
 function handle_submit(&$supplier_id) {
@@ -64,14 +126,14 @@ function handle_submit(&$supplier_id) {
 		return;
 	begin_transaction();
 	if ($supplier_id)  {
-		update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'));
+		update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''));
 		update_record_status($_POST['supplier_id'], $_POST['inactive'], 'suppliers', 'supplier_id');
 
 		$Ajax->activate('supplier_id'); // in case of status change
 		display_notification(_('Supplier has been updated.'));
 	} 
 	else {
-		add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'));
+		add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''));
 
 		$supplier_id = $_POST['supplier_id'] = db_insert_id();
 
@@ -150,6 +212,16 @@ function supplier_settings(&$supplier_id) {
 		$_POST['payment_discount_account'] = $myrow['payment_discount_account'];
 		$_POST['notes']  = $myrow['notes'];
 		$_POST['inactive'] = $myrow['inactive'];
+		$_POST['vendor_tier'] = isset($myrow['vendor_tier']) ? $myrow['vendor_tier'] : 'standard';
+		$_POST['vendor_category'] = isset($myrow['vendor_category']) ? $myrow['vendor_category'] : '';
+		$_POST['evaluation_frequency_months'] = isset($myrow['evaluation_frequency_months']) ? $myrow['evaluation_frequency_months'] : 6;
+		$_POST['certifications'] = isset($myrow['certifications']) ? $myrow['certifications'] : '';
+		$_POST['approved_categories'] = isset($myrow['approved_categories']) ? $myrow['approved_categories'] : '';
+		$_POST['overall_score'] = isset($myrow['overall_score']) ? $myrow['overall_score'] : 0;
+		$_POST['quality_score'] = isset($myrow['quality_score']) ? $myrow['quality_score'] : 0;
+		$_POST['delivery_score'] = isset($myrow['delivery_score']) ? $myrow['delivery_score'] : 0;
+		$_POST['price_score'] = isset($myrow['price_score']) ? $myrow['price_score'] : 0;
+		$_POST['service_score'] = isset($myrow['service_score']) ? $myrow['service_score'] : 0;
 	} 
 	else {
 		if (list_updated('supplier_id') || !isset($_POST['supp_name'])) {
@@ -174,6 +246,11 @@ function supplier_settings(&$supplier_id) {
 			$_POST['payable_account'] = $company_record['creditors_act'];
 			$_POST['purchase_account'] = ''; // default/item's cogs account
 			$_POST['payment_discount_account'] = $company_record['pyt_discount_act'];
+			$_POST['vendor_tier'] = 'standard';
+			$_POST['vendor_category'] = '';
+			$_POST['evaluation_frequency_months'] = 6;
+			$_POST['certifications'] = '';
+			$_POST['approved_categories'] = '';
 		}
 	}
 
@@ -198,6 +275,17 @@ function supplier_settings(&$supplier_id) {
 	text_row(_('Bank Name/Account:'), 'bank_account', null, 42, 40);
 	amount_row(_('Credit Limit:'), 'credit_limit', null);
 	payment_terms_list_row(_('Payment Terms:'), 'payment_terms', null);
+
+	table_section_title(_('Vendor Management'));
+	echo "<tr><td class='label'>" . _('Vendor Tier:') . "</td><td>";
+	echo array_selector('vendor_tier', get_post('vendor_tier', 'standard'), supplier_vendor_tier_options(), array('class' => array('nosearch')));
+	echo "</td></tr>\n";
+	text_row(_('Vendor Category:'), 'vendor_category', null, 32, 50);
+	qty_row(_('Evaluation Frequency (months):'), 'evaluation_frequency_months', get_post('evaluation_frequency_months', 6), 6);
+	textarea_row(_('Certifications:'), 'certifications', null, 35, 2);
+	textarea_row(_('Approved Categories:'), 'approved_categories', null, 35, 2);
+	if ($supplier_id)
+		echo '<tr><td colspan="2">' . render_supplier_vendor_score_summary($supplier_id) . '</td></tr>';
 	//
 	// tax_included option from supplier record is used directly in update_average_cost() function,
 	// therefore we can't edit the option after any transaction was done for the supplier.

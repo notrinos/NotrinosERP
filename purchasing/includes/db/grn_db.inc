@@ -70,6 +70,82 @@ function update_average_material_cost($supplier, $stock_id, $price, $qty, $date,
 	return $material_cost;
 }
 
+/**
+ * Log vendor delivery performance events for one received PO line.
+ *
+ * @param int    $supplier_id
+ * @param int    $grn_no
+ * @param string $delivery_date
+ * @param object $order_line
+ * @return void
+ */
+function log_grn_vendor_delivery_events($supplier_id, $grn_no, $delivery_date, $order_line)
+{
+	if ((int)$supplier_id <= 0 || !get_company_pref('use_vendor_evaluation'))
+		return;
+
+	$vendor_evaluation_db = dirname(__FILE__) . '/vendor_evaluation_db.inc';
+	if (!function_exists('log_vendor_event') && file_exists($vendor_evaluation_db))
+		include_once($vendor_evaluation_db);
+
+	if (!function_exists('log_vendor_event'))
+		return;
+
+	$item_label = !empty($order_line->item_description) ? $order_line->item_description : $order_line->stock_id;
+	$actual_date_sql = is_date($delivery_date) ? date2sql($delivery_date) : $delivery_date;
+	$custom_data = array(
+		'stock_id' => $order_line->stock_id,
+		'po_detail_item' => isset($order_line->po_detail_rec) ? (int)$order_line->po_detail_rec : 0,
+		'received_qty' => (float)$order_line->receive_qty,
+		'ordered_qty' => isset($order_line->quantity) ? (float)$order_line->quantity : 0,
+		'actual_date' => $actual_date_sql,
+	);
+
+	if (!empty($order_line->req_del_date) && is_date($order_line->req_del_date))
+		$custom_data['requested_date'] = date2sql($order_line->req_del_date);
+
+	log_vendor_event(
+		$supplier_id,
+		'delivery_received',
+		$actual_date_sql,
+		ST_SUPPRECEIVE,
+		$grn_no,
+		sprintf(_('Received %s, qty %s.'), $item_label, number_format2((float)$order_line->receive_qty, 2)),
+		0,
+		$custom_data
+	);
+
+	if (empty($order_line->req_del_date) || !is_date($order_line->req_del_date) || !is_date($delivery_date))
+		return;
+
+	$variance_days = date_diff2($delivery_date, $order_line->req_del_date, 'd');
+	$custom_data['variance_days'] = (int)$variance_days;
+
+	if ($variance_days > 0) {
+		log_vendor_event(
+			$supplier_id,
+			'late_delivery',
+			$actual_date_sql,
+			ST_SUPPRECEIVE,
+			$grn_no,
+			sprintf(_('Received %s %s day(s) late against requested date %s.'), $item_label, $variance_days, $order_line->req_del_date),
+			0 - abs($variance_days),
+			$custom_data
+		);
+	} elseif ($variance_days < 0) {
+		log_vendor_event(
+			$supplier_id,
+			'early_delivery',
+			$actual_date_sql,
+			ST_SUPPRECEIVE,
+			$grn_no,
+			sprintf(_('Received %s %s day(s) early against requested date %s.'), $item_label, abs($variance_days), $order_line->req_del_date),
+			abs($variance_days),
+			$custom_data
+		);
+	}
+}
+
 function add_grn(&$po) {
 	global $Refs;
 
@@ -112,15 +188,44 @@ function add_grn(&$po) {
 			}
 			// Update the purchase data table
 			add_or_update_purchase_data($po->supplier_id, $order_line->stock_id, $order_line->price, $order_line->item_description); 
+			if (function_exists('update_last_purchase_price'))
+				update_last_purchase_price($po->supplier_id, $order_line->stock_id, $order_line->price, $date_);
 
 			/*Need to insert a grn item */ // also need to check for over-receive.(within allowance)
 			if ($order_line->receive_qty + $order_line->qty_received > $order_line->quantity)
 				$order_line->quantity = $order_line->receive_qty + $order_line->qty_received;
 			$grn_item = add_grn_detail_item($grn, $order_line->po_detail_rec, $order_line->stock_id, $order_line->item_description, $order_line->standard_cost,	$order_line->receive_qty, $order_line->price, $order_line->quantity);
 
+			if (function_exists('get_company_pref') && get_company_pref('use_3way_matching')
+				&& function_exists('get_matching_tolerance') && function_exists('build_matching_exception_entry')) {
+				$qty_tolerance = get_matching_tolerance('quantity_variance', (int)$po->supplier_id);
+				$qty_check = check_quantity_match(
+					array('ordered_qty' => (float)$order_line->quantity),
+					array('received_qty' => (float)$order_line->quantity, 'already_invoiced_qty' => 0),
+					array('quantity' => (float)$order_line->receive_qty),
+					$qty_tolerance
+				);
+
+				if ($qty_check['exceeded']) {
+					build_matching_exception_entry(
+						'quantity_variance',
+						ST_SUPPRECEIVE,
+						$grn,
+						(int)$po->supplier_id,
+						(int)$po->order_no,
+						(int)$grn,
+						$order_line->stock_id,
+						$qty_check,
+						$qty_tolerance,
+						1
+					);
+				}
+			}
+
 			$po->line_items[$line_no]->grn_item_id = $grn_item;
 			/* Update location stock records - NB  a po cannot be entered for a service/kit parts done automatically */
 			add_stock_move(ST_SUPPRECEIVE, $order_line->stock_id, $grn, $po->Location, $date_, '', $order_line->receive_qty, $order_line->standard_cost, $order_line->taxfree_charge_value($po)/$order_line->receive_qty);		
+			log_grn_vendor_delivery_events($po->supplier_id, $grn, $date_, $order_line);
 
 		} /*quantity received is != 0 */
 	} /*end of order_line loop */
@@ -138,6 +243,14 @@ function add_grn(&$po) {
 		$accs = get_supplier_accounts($po->supplier_id);
 		$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $clearing_act, $accs['dimension_id'], $accs['dimension2_id'], -$total, null);
 	}
+
+	if (function_exists('get_company_pref') && get_company_pref('use_3way_matching')
+		&& function_exists('get_bill_control_policy') && function_exists('hook_invoke_all')) {
+		$policy = get_bill_control_policy((int)$po->supplier_id);
+		if (!empty($policy['auto_match_on_grn']))
+			hook_invoke_all('purch_match_performed', $grn, array('mode' => 'grn_auto_match', 'supplier_id' => (int)$po->supplier_id));
+	}
+
 	$Refs->save(ST_SUPPRECEIVE, $grn, $po->reference);
 
 	add_audit_trail(ST_SUPPRECEIVE, $grn, $date_);

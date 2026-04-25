@@ -10,11 +10,12 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included) {
+function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
 	$sql = "INSERT INTO ".TB_PREF."suppliers (supp_name, supp_ref, address, supp_address, gst_no, website,
 		supp_account_no, bank_account, credit_limit, dimension_id, dimension2_id, curr_code,
 		payment_terms, payable_account, purchase_account, payment_discount_account, notes, 
-		tax_group_id, tax_included)
+		tax_group_id, tax_included, vendor_tier, vendor_category, evaluation_frequency_months,
+		certifications, approved_categories)
 		VALUES (".db_escape($supp_name). ", "
 		.db_escape($supp_ref). ", "
 		.db_escape($address) . ", "
@@ -33,12 +34,17 @@ function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $
 		.db_escape($payment_discount_account). ", "
 		.db_escape($notes). ", "
 		.db_escape($tax_group_id). ", "
-		.db_escape($tax_included). ")";
+		.db_escape($tax_included). ", "
+		.db_escape($vendor_tier). ", "
+		.db_escape($vendor_category). ", "
+		.db_escape((int)$evaluation_frequency_months). ", "
+		.db_escape($certifications). ", "
+		.db_escape($approved_categories). ")";
 
 	db_query($sql, 'The supplier could not be added');
 }
 
-function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included) {
+function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
 	$sql = "UPDATE ".TB_PREF."suppliers SET supp_name=".db_escape($supp_name) . ",
 		supp_ref=".db_escape($supp_ref) . ",
 		address=".db_escape($address) . ",
@@ -57,7 +63,12 @@ function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_ad
 		payment_discount_account=".db_escape($payment_discount_account) . ",
 		notes=".db_escape($notes) . ",
 		tax_group_id=".db_escape($tax_group_id). ",
-		tax_included=".db_escape($tax_included)
+		tax_included=".db_escape($tax_included). ",
+		vendor_tier=".db_escape($vendor_tier). ",
+		vendor_category=".db_escape($vendor_category). ",
+		evaluation_frequency_months=".db_escape((int)$evaluation_frequency_months). ",
+		certifications=".db_escape($certifications). ",
+		approved_categories=".db_escape($approved_categories)
 		." WHERE supplier_id = ".db_escape($supplier_id);
 
 	db_query($sql, 'The supplier could not be updated');

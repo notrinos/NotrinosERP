@@ -58,9 +58,12 @@ function add_po(&$po_obj) {
 	hook_db_prewrite($po_obj, ST_PURCHORDER);
 
 	/*Insert to purchase order header record */
-	$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
+	$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
 	$sql .= db_escape($po_obj->supplier_id) . "," .
-		db_escape($po_obj->Comments) . ",'" .
+		db_escape($po_obj->Comments) . ", " .
+		(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0) . ", " .
+		(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0) . ", " .
+		(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0) . ", '" .
 		date2sql($po_obj->orig_order_date) . "', " .
 		db_escape($po_obj->reference) . ", " .
 		db_escape($po_obj->supp_ref) . ", " .
@@ -102,6 +105,8 @@ function add_po(&$po_obj) {
 	add_audit_trail(ST_PURCHORDER, $po_obj->order_no, $po_obj->orig_order_date);
 	hook_db_postwrite($po_obj, ST_PURCHORDER);
 	commit_transaction();
+	if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
+		update_agreement_fulfillment((int)$po_obj->agreement_id);
 
 	return $po_obj->order_no;
 }
@@ -112,6 +117,9 @@ function update_po(&$po_obj) {
 
 	/*Update the purchase order header with any changes */
 	$sql = "UPDATE ".TB_PREF."purch_orders SET Comments=".db_escape($po_obj->Comments).",
+		agreement_id=".(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0).",
+		requisition_id=".(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0).",
+		rfq_id=".(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0).",
 		supp_reference= ".db_escape( $po_obj->supp_ref).",
 		into_stock_location=".db_escape($po_obj->Location).",
 		ord_date='".date2sql($po_obj->orig_order_date)."',
@@ -153,6 +161,8 @@ function update_po(&$po_obj) {
 	add_audit_trail($po_obj->trans_type, $po_obj->order_no, Today(), _('Updated.'));
 	hook_db_postwrite($po_obj, ST_PURCHORDER);
 	commit_transaction();
+	if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
+		update_agreement_fulfillment((int)$po_obj->agreement_id);
 
 	return $po_obj->order_no;
 }
@@ -190,6 +200,9 @@ function read_po_header($order_no, &$order) {
 		$order->supp_ref = $myrow['supp_reference'];
 		$order->reference = $myrow['reference'];
 		$order->delivery_address = $myrow['delivery_address'];
+		$order->agreement_id = isset($myrow['agreement_id']) ? (int)$myrow['agreement_id'] : 0;
+		$order->requisition_id = isset($myrow['requisition_id']) ? (int)$myrow['requisition_id'] : 0;
+		$order->rfq_id = isset($myrow['rfq_id']) ? (int)$myrow['rfq_id'] : 0;
 		$order->alloc = $myrow['alloc'];
 		$order->prep_amount = $myrow['prep_amount'];
 		$order->prepayments = get_payments_for($order_no, ST_PURCHORDER, $myrow['supplier_id']);

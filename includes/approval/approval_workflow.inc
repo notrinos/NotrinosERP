@@ -65,6 +65,8 @@ class ApprovalWorkflow {
 	 *   'label'          => string   Human-readable name
 	 *   'application'    => string   Application code (orders, AP, GL, etc.)
 	 *   'executor'       => callable Function to execute approved draft
+	 *   'rejector'       => callable Function to sync business state on rejection
+	 *   'canceler'       => callable Function to sync business state on cancellation
 	 *   'amount_getter'  => callable Function to calculate draft amount from data
 	 *   'draft_renderer' => callable Function to render draft for review UI
 	 *   'edit_url'       => string   URL for editing the draft
@@ -77,6 +79,8 @@ class ApprovalWorkflow {
 			'label'          => '',
 			'application'    => '',
 			'executor'       => null,
+			'rejector'       => null,
+			'canceler'       => null,
 			'amount_getter'  => null,
 			'draft_renderer' => null,
 			'edit_url'       => '',
@@ -410,6 +414,8 @@ class ApprovalWorkflow {
 		// Mark all notifications read
 		mark_all_draft_notifications_read($draft_id);
 
+		$this->invokeDraftLifecycleHandler('rejector', $draft, $comments);
+
 		commit_transaction();
 
 		return array('status' => 'rejected', 'message' => _('Draft has been rejected.'));
@@ -442,6 +448,7 @@ class ApprovalWorkflow {
 		update_approval_draft_status($draft_id, APPROVAL_STATUS_CANCELLED);
 		void_reserved_trans_number($draft['trans_type'], $draft['reserved_trans_no'], 'Cancelled');
 		mark_all_draft_notifications_read($draft_id);
+		$this->invokeDraftLifecycleHandler('canceler', $draft, $comments);
 
 		commit_transaction();
 
@@ -801,6 +808,40 @@ class ApprovalWorkflow {
 		}
 
 		return $result !== false;
+	}
+
+	/**
+	 * Invoke a registered business-state lifecycle handler for one draft.
+	 *
+	 * @param string $config_key Config key containing the callable name
+	 * @param array  $draft      Approval draft row
+	 * @param string $comments   Optional comments passed to the handler
+	 * @return mixed
+	 */
+	private function invokeDraftLifecycleHandler($config_key, $draft, $comments = '')
+	{
+		$trans_type = isset($draft['trans_type']) ? (int)$draft['trans_type'] : 0;
+		$config = self::getTypeConfig($trans_type);
+
+		if (!$config || empty($config[$config_key]) || !is_callable($config[$config_key]))
+			return false;
+
+		$draft_data = array();
+		if (!empty($draft['draft_data'])) {
+			$draft_data = json_decode($draft['draft_data'], true);
+			if (!is_array($draft_data))
+				$draft_data = json_decode(stripslashes($draft['draft_data']), true);
+		}
+
+		if (!is_array($draft_data))
+			$draft_data = array();
+
+		return call_user_func(
+			$config[$config_key],
+			$draft_data,
+			isset($draft['id']) ? (int)$draft['id'] : 0,
+			$comments
+		);
 	}
 
 	/**

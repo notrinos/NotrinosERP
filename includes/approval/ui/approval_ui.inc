@@ -305,6 +305,9 @@ function collect_purchase_order_data($po)
 		'delivery_address'  => isset($po->delivery_address) ? $po->delivery_address : '',
 		'Comments'          => isset($po->Comments) ? $po->Comments : '',
 		'Location'          => isset($po->Location) ? $po->Location : '',
+		'agreement_id'      => isset($po->agreement_id) ? $po->agreement_id : 0,
+		'requisition_id'    => isset($po->requisition_id) ? $po->requisition_id : 0,
+		'rfq_id'            => isset($po->rfq_id) ? $po->rfq_id : 0,
 		'orig_order_date'   => isset($po->orig_order_date) ? $po->orig_order_date : '',
 		'due_date'          => isset($po->due_date) ? $po->due_date : '',
 		'order_no'          => isset($po->order_no) ? $po->order_no : 0,
@@ -342,6 +345,75 @@ function collect_purchase_order_data($po)
 				'qty_received'     => isset($line->qty_received) ? $line->qty_received : 0,
 				'standard_cost'    => isset($line->standard_cost) ? $line->standard_cost : 0,
 				'descr_editable'   => isset($line->descr_editable) ? $line->descr_editable : 0,
+			);
+		}
+	}
+
+	return $data;
+}
+
+/**
+ * Collect Supplier Transaction data as a plain array for JSON draft storage.
+ *
+ * Used for supplier invoice entry (`supp_trans` object) so approval can resume
+ * the same GRN-based invoice flow after approval.
+ *
+ * @param object $supp_trans The supp_trans instance
+ * @return array Plain array representation
+ */
+function collect_supp_trans_data($supp_trans)
+{
+	$data = array(
+		'trans_type' => isset($supp_trans->trans_type) ? $supp_trans->trans_type : ST_SUPPINVOICE,
+		'trans_no' => isset($supp_trans->trans_no) ? $supp_trans->trans_no : 0,
+		'supplier_id' => isset($supp_trans->supplier_id) ? $supp_trans->supplier_id : 0,
+		'supplier_name' => isset($supp_trans->supplier_name) ? $supp_trans->supplier_name : '',
+		'currency' => isset($supp_trans->currency) ? $supp_trans->currency : '',
+		'tax_group_id' => isset($supp_trans->tax_group_id) ? $supp_trans->tax_group_id : 0,
+		'tax_included' => isset($supp_trans->tax_included) ? $supp_trans->tax_included : 0,
+		'tran_date' => isset($supp_trans->tran_date) ? $supp_trans->tran_date : '',
+		'due_date' => isset($supp_trans->due_date) ? $supp_trans->due_date : '',
+		'reference' => isset($supp_trans->reference) ? $supp_trans->reference : '',
+		'supp_reference' => isset($supp_trans->supp_reference) ? $supp_trans->supp_reference : '',
+		'Comments' => isset($supp_trans->Comments) ? $supp_trans->Comments : '',
+		'ov_amount' => isset($supp_trans->ov_amount) ? $supp_trans->ov_amount : 0,
+		'ov_discount' => isset($supp_trans->ov_discount) ? $supp_trans->ov_discount : 0,
+		'ov_gst' => isset($supp_trans->ov_gst) ? $supp_trans->ov_gst : 0,
+		'dimension' => isset($supp_trans->dimension) ? $supp_trans->dimension : 0,
+		'dimension2' => isset($supp_trans->dimension2) ? $supp_trans->dimension2 : 0,
+		'ex_rate' => isset($supp_trans->ex_rate) ? $supp_trans->ex_rate : 1,
+		'tax_overrides' => isset($supp_trans->tax_overrides) ? $supp_trans->tax_overrides : array(),
+	);
+
+	$data['grn_items'] = array();
+	if (!empty($supp_trans->grn_items)) {
+		foreach ($supp_trans->grn_items as $key => $line) {
+			$data['grn_items'][$key] = array(
+				'id' => isset($line->id) ? $line->id : 0,
+				'po_detail_item' => isset($line->po_detail_item) ? $line->po_detail_item : 0,
+				'item_code' => isset($line->item_code) ? $line->item_code : '',
+				'item_description' => isset($line->item_description) ? $line->item_description : '',
+				'qty_recd' => isset($line->qty_recd) ? $line->qty_recd : 0,
+				'prev_quantity_inv' => isset($line->prev_quantity_inv) ? $line->prev_quantity_inv : 0,
+				'this_quantity_inv' => isset($line->this_quantity_inv) ? $line->this_quantity_inv : 0,
+				'order_price' => isset($line->order_price) ? $line->order_price : 0,
+				'chg_price' => isset($line->chg_price) ? $line->chg_price : 0,
+				'std_cost_unit' => isset($line->std_cost_unit) ? $line->std_cost_unit : null,
+				'gl_code' => isset($line->gl_code) ? $line->gl_code : '',
+			);
+		}
+	}
+
+	$data['gl_codes'] = array();
+	if (!empty($supp_trans->gl_codes)) {
+		foreach ($supp_trans->gl_codes as $key => $line) {
+			$data['gl_codes'][$key] = array(
+				'gl_code' => isset($line->gl_code) ? $line->gl_code : '',
+				'gl_act_name' => isset($line->gl_act_name) ? $line->gl_act_name : '',
+				'gl_dim' => isset($line->gl_dim) ? $line->gl_dim : 0,
+				'gl_dim2' => isset($line->gl_dim2) ? $line->gl_dim2 : 0,
+				'amount' => isset($line->amount) ? $line->amount : 0,
+				'memo_' => isset($line->memo_) ? $line->memo_ : '',
 			);
 		}
 	}

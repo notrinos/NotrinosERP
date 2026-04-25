@@ -1560,6 +1560,8 @@ function trans_editor_link($type, $trans_no) {
 		ST_CUSTDELIVERY => "/sales/customer_delivery.php?ModifyDelivery=%d",
 //   16=> Location Transfer,
 //   17=> Inventory Adjustment,
+		ST_PURCHREQUISITION => "/purchasing/purch_requisition_entry.php?requisition_id=%d",
+		ST_PURCHRFQ => "/purchasing/purch_rfq_entry.php?rfq_id=%d",
 		ST_SUPPINVOICE => "/purchasing/supplier_invoice.php?ModifyInvoice=%d",
 		ST_SUPPCREDIT =>  "/purchasing/supplier_credit.php?ModifyCredit=%d",
 //   21=> Supplier Credit Note,

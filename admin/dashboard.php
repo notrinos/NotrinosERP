@@ -62,10 +62,21 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidgetWithClass(DA_SUPPLIER, 212, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_SUPPLIER, 213, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_SUPPLIER, 214, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_SUPPLIER, 215, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_SUPPLIER, 216, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_SUPPLIER, 217, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_SUPPLIER, 218, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidget(DA_SUPPLIER, 201, WIDGET_HALF);
 	$dashboard->addWidget(DA_SUPPLIER, 202, WIDGET_HALF);
 	$dashboard->addWidget(DA_SUPPLIER, 203, WIDGET_HALF);
 	$dashboard->addWidget(DA_SUPPLIER, 204, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 219, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 220, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 221, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 222, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 223, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 224, WIDGET_HALF);
+	$dashboard->addWidget(DA_SUPPLIER, 225, WIDGET_HALF);
 
 	$dashboard->addDashboard(_('Inventory'), DA_INVENTORY);
 	$dashboard->addWidgetWithClass(DA_INVENTORY, 311, WIDGET_QUARTER, 'widget-small-stat');

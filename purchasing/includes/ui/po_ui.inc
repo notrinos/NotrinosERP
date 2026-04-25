@@ -21,6 +21,8 @@ function copy_from_cart() {
 	$cart = &$_SESSION['PO'];
 
 	$_POST['supplier_id'] = $cart->supplier_id;
+	$_POST['purch_template_id'] = isset($cart->purch_template_id) ? (int)$cart->purch_template_id : 0;
+	$_POST['agreement_id'] = isset($cart->agreement_id) ? (int)$cart->agreement_id : 0;
 	$_POST['OrderDate'] = $cart->orig_order_date;
 	if ($cart->trans_type == ST_SUPPINVOICE)
 		$_POST['due_date'] = $cart->due_date;
@@ -34,6 +36,8 @@ function copy_from_cart() {
 	$_POST['cash_account'] = $cart->cash_account;
 	$_POST['dimension'] = $cart->dimension;
 	$_POST['dimension2'] = $cart->dimension2;
+	$_POST['requisition_id'] = isset($cart->requisition_id) ? (int)$cart->requisition_id : 0;
+	$_POST['rfq_id'] = isset($cart->rfq_id) ? (int)$cart->rfq_id : 0;
 	foreach($cart->tax_overrides as $id => $value)
 		$_POST['mantax'][$id] = price_format($value);
 }
@@ -42,6 +46,8 @@ function copy_to_cart() {
 	$cart = &$_SESSION['PO'];
 
 	$cart->supplier_id = $_POST['supplier_id'];	
+	$cart->purch_template_id = isset($_POST['purch_template_id']) ? (int)$_POST['purch_template_id'] : (isset($cart->purch_template_id) ? (int)$cart->purch_template_id : 0);
+	$cart->agreement_id = isset($_POST['agreement_id']) ? (int)$_POST['agreement_id'] : (isset($cart->agreement_id) ? (int)$cart->agreement_id : 0);
 	$cart->orig_order_date = $_POST['OrderDate'];
 	if ($cart->trans_type == ST_SUPPINVOICE) {
 		$cart->due_date = $_POST['due_date'];
@@ -54,6 +60,8 @@ function copy_to_cart() {
 	$cart->delivery_address = $_POST['delivery_address'];
 	$cart->dimension = @$_POST['dimension'];
 	$cart->dimension2 =  @$_POST['dimension2'];
+	$cart->requisition_id = isset($_POST['requisition_id']) ? (int)$_POST['requisition_id'] : (isset($cart->requisition_id) ? (int)$cart->requisition_id : 0);
+	$cart->rfq_id = isset($_POST['rfq_id']) ? (int)$_POST['rfq_id'] : (isset($cart->rfq_id) ? (int)$cart->rfq_id : 0);
 	$cart->prep_amount = input_num('prep_amount', 0);
 	$cart->ex_rate = input_num('_ex_rate', null);
 
@@ -91,10 +99,94 @@ function create_new_po($trans_type, $trans_no) {
 
 //---------------------------------------------------------------------------------------------------
 
+/**
+ * Build the vendor comparison tooltip text for one item row.
+ *
+ * @param string $stock_id
+ * @param int    $current_supplier_id
+ * @param float  $quantity
+ * @param string $currency
+ * @param string $date
+ * @param int    $agreement_id
+ * @return string
+ */
+function get_vendor_price_comparison_text($stock_id, $current_supplier_id, $quantity, $currency, $date, $agreement_id = 0)
+{
+	if (!function_exists('get_item_vendors') || $stock_id === '')
+		return '';
+
+	$vendors = get_item_vendors($stock_id, true, $quantity, $currency, $date);
+	if (!count($vendors))
+		return '';
+
+	$parts = array();
+	foreach ($vendors as $vendor) {
+		$label = $vendor['supplier_name'] . ': ' . price_format($vendor['price']) . ' [' . get_purchase_price_source_label($vendor['source']) . ']';
+		if (!empty($vendor['lead_time_days']))
+			$label .= ' ' . sprintf(_('(%s days)'), (int)$vendor['lead_time_days']);
+		if ((int)$vendor['supplier_id'] === (int)$current_supplier_id)
+			$label = '* ' . $label;
+		$parts[] = $label;
+	}
+
+	if ((int)$current_supplier_id > 0 && (int)$agreement_id > 0 && function_exists('get_supplier_pricing_context')) {
+		$current_context = get_supplier_pricing_context($current_supplier_id, $stock_id, $quantity, $currency, $date, $agreement_id, true);
+		if ($current_context['source'] === 'agreement' && $current_context['price'] > 0)
+			array_unshift($parts, '* ' . get_supplier_name($current_supplier_id) . ': ' . price_format($current_context['price']) . ' [' . get_purchase_price_source_label('agreement') . ']');
+	}
+
+	return implode(' | ', array_slice($parts, 0, 4));
+}
+
+/**
+ * Render a helper row with vendor price comparison information.
+ *
+ * @param purch_order $order
+ * @param string      $stock_id
+ * @param float       $quantity
+ * @param int         $column_count
+ * @return void
+ */
+function display_vendor_price_comparison_hint($order, $stock_id, $quantity, $column_count)
+{
+	$comparison_text = get_vendor_price_comparison_text(
+		$stock_id,
+		(int)$order->supplier_id,
+		(float)$quantity,
+		$order->curr_code,
+		date2sql(get_post('OrderDate', Today())),
+		isset($order->agreement_id) ? (int)$order->agreement_id : 0
+	);
+	if ($comparison_text === '')
+		return;
+
+	echo '<tr class="vendor_price_hint">';
+	echo '<td></td>';
+	echo '<td colspan="' . max(1, (int)$column_count - 1) . '" style="padding:4px 8px;background:#fff8e7;border-left:3px solid #f59e0b;font-size:12px;color:#7c5d12;">';
+	echo '<strong>' . _('Vendor Price Comparison:') . '</strong> ' . htmlspecialchars($comparison_text, ENT_QUOTES, 'UTF-8');
+	echo '</td>';
+	echo '</tr>';
+}
+
+//---------------------------------------------------------------------------------------------------
+
 function display_po_header(&$order) {
 	global $Ajax, $Refs;
 
 	$editable = ($order->order_no == 0);
+
+	if ($order->trans_type == ST_PURCHORDER && $editable && list_updated('purch_template_id')) {
+		$order->purch_template_id = (int)get_post('purch_template_id');
+		if ($order->purch_template_id > 0 && function_exists('apply_template_to_po')) {
+			apply_template_to_po($order, $order->purch_template_id);
+			$_POST['supplier_id'] = $order->supplier_id;
+			$_POST['StkLocation'] = $order->Location;
+			$_POST['delivery_address'] = $order->delivery_address;
+			$_POST['Comments'] = $order->Comments;
+			$Ajax->activate('items_table');
+			$Ajax->activate('delivery_address');
+		}
+	}
 
 	start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
@@ -104,10 +196,53 @@ function display_po_header(&$order) {
 			$_POST['supplier_id'] = get_global_supplier();
 
 		supplier_list_row(_('Supplier:'), 'supplier_id', null, false, true, false, true);
+
+		if ($order->trans_type == ST_PURCHORDER) {
+				$selected_template_id = (int)get_post('purch_template_id', isset($order->purch_template_id) ? $order->purch_template_id : 0);
+				$template_options = array('' => _('Manual Entry / No Template')) + get_purch_template_options((int)get_post('supplier_id'));
+				echo "<tr><td class='label'>" . _('Use Template:') . "</td><td>";
+				echo array_selector('purch_template_id', $selected_template_id, $template_options, array(
+					'select_submit' => true,
+					'class' => array('nosearch')
+				));
+				echo "</td></tr>\n";
+
+			$selected_supplier_id = (int)get_post('supplier_id');
+			$selected_agreement_id = (int)get_post('agreement_id', isset($order->agreement_id) ? $order->agreement_id : 0);
+			$agreement_options = array('' => _('Manual Pricing / No Agreement'));
+			if ($selected_supplier_id > 0)
+				$agreement_options += get_active_purch_agreement_options($selected_supplier_id);
+
+			echo "<tr><td class='label'>" . _('From Agreement:') . "</td><td>";
+			echo array_selector('agreement_id', $selected_agreement_id, $agreement_options, array(
+				'select_submit' => true,
+				'class' => array('nosearch')
+			));
+			echo "</td></tr>\n";
+		}
 	}
 	else {
 		hidden('supplier_id', $order->supplier_id);
 		label_row(_('Supplier:'), $order->supplier_name);
+		if ($order->trans_type == ST_PURCHORDER) {
+			hidden('purch_template_id', isset($order->purch_template_id) ? (int)$order->purch_template_id : 0);
+			$template_name = '-';
+			if (!empty($order->purch_template_id)) {
+				$template = get_purch_template((int)$order->purch_template_id);
+				if ($template)
+					$template_name = $template['name'];
+			}
+			label_row(_('Use Template:'), $template_name);
+
+			hidden('agreement_id', isset($order->agreement_id) ? (int)$order->agreement_id : 0);
+			$agreement_reference = '-';
+			if (!empty($order->agreement_id)) {
+				$agreement = get_purch_agreement((int)$order->agreement_id);
+				if ($agreement)
+					$agreement_reference = $agreement['reference'];
+			}
+			label_row(_('From Agreement:'), $agreement_reference);
+		}
 	}
 
 	if ($order->supplier_id != get_post('supplier_id', -1)) {
@@ -116,14 +251,71 @@ function display_po_header(&$order) {
 		get_duedate_from_terms($order);
 		$_POST['due_date'] = $order->due_date;
 
+		if ((int)get_post('purch_template_id') > 0) {
+			$template = get_purch_template((int)get_post('purch_template_id'));
+			if ($template && (int)$template['supplier_id'] > 0 && (int)$template['supplier_id'] !== (int)$_POST['supplier_id']) {
+				$_POST['purch_template_id'] = 0;
+				$order->purch_template_id = 0;
+			}
+		}
+
+		if ((int)get_post('agreement_id') > 0) {
+			$agreement = get_purch_agreement((int)get_post('agreement_id'));
+			if (!$agreement || (int)$agreement['supplier_id'] !== (int)$_POST['supplier_id']) {
+				$_POST['agreement_id'] = 0;
+				$order->agreement_id = 0;
+			}
+		}
+
 		// supplier default price update
 		foreach ($order->line_items as $line_no=>$item) {
 			$line = &$order->line_items[$line_no];
-			$line->price =  get_purchase_price ($order->supplier_id, $line->stock_id);
+			$line->price = get_purchase_price(
+				$order->supplier_id,
+				$line->stock_id,
+				$line->quantity,
+				date2sql(get_post('OrderDate', Today())),
+				(int)get_post('agreement_id')
+			);
 			$line->quantity = $line->quantity/get_purchase_conversion_factor($old_supp, $line->stock_id) * get_purchase_conversion_factor($order->supplier_id, $line->stock_id);
 		}
 		$Ajax->activate('items_table');
 		$Ajax->activate('due_date');
+	}
+
+	if ($order->trans_type == ST_PURCHORDER && list_updated('agreement_id')) {
+		$order->agreement_id = (int)get_post('agreement_id');
+		if ($order->agreement_id > 0) {
+			$agreement = get_purch_agreement($order->agreement_id);
+			if ($agreement && $agreement['status'] === 'active') {
+				if ($agreement['delivery_location'] !== '') {
+					$order->Location = $agreement['delivery_location'];
+					$_POST['StkLocation'] = $agreement['delivery_location'];
+				}
+				$order->delivery_address = $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : $agreement['delivery_location'];
+				$_POST['delivery_address'] = $order->delivery_address;
+				$order->dimension = (int)$agreement['dimension_id'];
+				$order->dimension2 = (int)$agreement['dimension2_id'];
+				$_POST['dimension'] = $order->dimension;
+				$_POST['dimension2'] = $order->dimension2;
+			}
+		} else {
+			$order->agreement_id = 0;
+		}
+
+		foreach ($order->line_items as $line_no => $item) {
+			$line = &$order->line_items[$line_no];
+			$line->price = get_purchase_price(
+				$order->supplier_id,
+				$line->stock_id,
+				$line->quantity,
+				date2sql(get_post('OrderDate', Today())),
+				$order->agreement_id
+			);
+		}
+
+		$Ajax->activate('items_table');
+		$Ajax->activate('delivery_address');
 	}
 	set_global_supplier($_POST['supplier_id']);
 
@@ -221,8 +413,19 @@ function display_po_items(&$order, $editable=true) {
 		$line_total =	round($po_line->quantity * $po_line->price,  user_price_dec());
 		if (!$editable || ($id != $line_no)) {
 			alt_table_row_color($k);
+			$comparison_text = get_vendor_price_comparison_text(
+				$po_line->stock_id,
+				(int)$order->supplier_id,
+				(float)$po_line->quantity,
+				$order->curr_code,
+				date2sql(get_post('OrderDate', Today())),
+				isset($order->agreement_id) ? (int)$order->agreement_id : 0
+			);
+			$description_attributes = $comparison_text !== ''
+				? 'title="' . htmlspecialchars($comparison_text, ENT_QUOTES, 'UTF-8') . '"'
+				: '';
 			label_cell($po_line->stock_id);
-			label_cell($po_line->item_description);
+			label_cell($po_line->item_description, $description_attributes);
 			if ($order->fixed_asset)
 				label_cell(1);
 			else
@@ -458,8 +661,14 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 			$_POST['units'] = $item_info['units'];
 			$dec = $item_info['decimals'];
 		}
-		$_POST['qty'] =	number_format2(get_purchase_conversion_factor ($order->supplier_id, $_POST['stock_id']), $dec);
-		$_POST['price'] = price_decimal_format(get_purchase_price ($order->supplier_id, $_POST['stock_id']), $dec2);
+		$_POST['qty'] = number_format2(get_purchase_conversion_factor($order->supplier_id, $_POST['stock_id']), $dec);
+		$_POST['price'] = price_decimal_format(get_purchase_price(
+			$order->supplier_id,
+			$_POST['stock_id'],
+			input_num('qty'),
+			date2sql(get_post('OrderDate', Today())),
+			isset($order->agreement_id) ? (int)$order->agreement_id : 0
+		), $dec2);
 		if ($order->trans_type == ST_PURCHORDER)
 			$_POST['req_del_date'] = add_days(Today(), $SysPrefs->default_receival_required_by());
 		$qty_rcvd = '';
@@ -498,6 +707,17 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		submit_cells('EnterLine', _('Add Item'), "colspan=2 align='center'", _('Add new item to document'), true);
 
 	end_row();
+
+	$column_count = 9;
+	if ($order->trans_type != ST_PURCHORDER)
+		$column_count--;
+	if ($new)
+		$column_count--;
+	if (count($order->line_items))
+		$column_count++;
+
+	if (get_post('stock_id'))
+		display_vendor_price_comparison_hint($order, get_post('stock_id'), input_num('qty', 0), $column_count);
 }
 
 //---------------------------------------------------------------------------------------------------

@@ -176,6 +176,16 @@ $security_areas =array(
 	// Purchase related functions
 	'SA_PURCHASEPRICING' => array(SS_PURCH_C|1, _('Purchase price changes')),
 
+	// === PURCHASING SOURCING WORKFLOW ===
+	'SA_PURCHREQUISITION' => array(SS_PURCH_C|2, _('Purchase requisition entry and inquiry')),
+	'SA_PURCHRFQ' => array(SS_PURCH_C|3, _('Purchase RFQ entry and inquiry')),
+	'SA_PURCHAGREEMENT' => array(SS_PURCH_C|4, _('Purchase agreement entry and inquiry')),
+	'SA_VENDOREVALUATION' => array(SS_PURCH_C|5, _('Vendor evaluation, scorecard, and criteria maintenance')),
+	'SA_VENDORPRICELIST' => array(SS_PURCH_C|6, _('Vendor pricelist maintenance and comparison')),
+	'SA_PURCHTEMPLATE' => array(SS_PURCH_C|7, _('Purchase order template maintenance')),
+	'SA_PURCHMATCHCONFIG' => array(SS_PURCH_C|8, _('Purchase matching and bill control configuration')),
+	'SA_REORDERRULES' => array(SS_PURCH_C|9, _('Purchasing reorder rules and supplier overlays')),
+
 	'SA_SUPPTRANSVIEW' => array(SS_PURCH|1, _('Supplier transactions view')),
 	'SA_SUPPLIER' => array(SS_PURCH|2, _('Suppliers changes')),
 	'SA_PURCHASEORDER' => array(SS_PURCH|3, _('Purchase order entry')),
@@ -185,10 +195,14 @@ $security_areas =array(
 	'SA_SUPPLIERCREDIT' => array(SS_PURCH|6, _('Supplier credit notes')),
 	'SA_SUPPLIERPAYMNT' => array(SS_PURCH|7, _('Supplier payments')),
 	'SA_SUPPLIERALLOC' => array(SS_PURCH|8, _('Supplier payments allocations')),
+	'SA_PURCHMATCHEXCEPTIONS' => array(SS_PURCH|10, _('Purchase matching exception review and resolution')),
+	'SA_PROCUREMENTPLAN' => array(SS_PURCH|11, _('Procurement planning and batch PO generation')),
 
 	'SA_SUPPLIERANALYTIC' => array(SS_PURCH_A|1, _('Supplier analytical reports')),
 	'SA_SUPPBULKREP' => array(SS_PURCH_A|2, _('Supplier document bulk reports')),
 	'SA_SUPPPAYMREP' => array(SS_PURCH_A|3, _('Supplier payments report')),
+	'SA_PURCHDASHBOARD' => array(SS_PURCH_A|4, _('Purchase dashboard')),
+	'SA_PURCHREPORT' => array(SS_PURCH_A|5, _('Advanced purchase reports')),
 
 	// Inventory 
 	'SA_ITEM' => array(SS_ITEMS_C|1, _('Stock items add/edit')),

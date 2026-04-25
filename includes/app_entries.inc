@@ -34,6 +34,8 @@ $trans_editors = array(
 	//ST_LOCTRANSFER =>  ,
 	//ST_INVADJUST =>  ,
 
+	ST_PURCHREQUISITION => "/purchasing/purch_requisition_entry.php?requisition_id=%d",
+	ST_PURCHRFQ => "/purchasing/purch_rfq_entry.php?rfq_id=%d",
 	ST_PURCHORDER =>  "/purchasing/po_entry_items.php?ModifyOrderNumber=%d",
 	ST_SUPPINVOICE => "/purchasing/supplier_invoice.php?ModifyInvoice=%d",
 

@@ -40,6 +40,10 @@ class purch_order {
 
 	var $reference;
 	var $tax_overrides = array();		// array of taxes manually inserted during sales invoice entry (direct invoice)
+	var $agreement_id = 0;
+	var $requisition_id = 0;
+	var $rfq_id = 0;
+	var $purch_template_id = 0;
 	
 	var $prep_amount = 0; // prepayment required
 	var $alloc; // sum of payments allocated

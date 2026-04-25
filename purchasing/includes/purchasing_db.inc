@@ -25,6 +25,16 @@ include_once($path_to_root . '/purchasing/includes/db/invoice_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppalloc_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/supp_payment_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_rfq_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_agreement_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/vendor_pricelist_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_template_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/vendor_evaluation_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_matching_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/reorder_purchasing_bridge_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/procurement_plan_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_analytics_db.inc');
 
 // add a supplier-related gl transaction
 // $date_ is display date (non-sql)
@@ -36,37 +46,91 @@ function add_gl_trans_supplier($type, $type_no, $date_, $account, $dimension, $d
 	return add_gl_trans($type, $type_no, $date_, $account, $dimension, $dimension2, $memo, $amount, get_supplier_currency($supplier_id), PT_SUPPLIER, $supplier_id, $err_msg, $rate);
 }
 
-function get_purchase_price($supplier_id, $stock_id) {
-	$sql = "SELECT price, conversion_factor FROM ".TB_PREF."purch_data WHERE supplier_id = ".db_escape($supplier_id)." AND stock_id = ".db_escape($stock_id);
-	$result = db_query($sql, 'The supplier pricing details for ' . $stock_id . ' could not be retrieved');    
+if (!function_exists('get_purchase_price_source_label')) {
+	function get_purchase_price_source_label($source) {
+		$labels = array(
+			'agreement' => _('Agreement'),
+			'vendor_pricelist' => _('Pricelist'),
+			'purch_data' => _('Purchase Data'),
+			'manual' => _('Manual'),
+		);
 
-	if (db_num_rows($result) == 1) {
-		$myrow = db_fetch($result);
-		return $myrow['price'] / $myrow['conversion_factor'];
-	} 
-	
-	return 0;
+		return isset($labels[$source]) ? $labels[$source] : $source;
+	}
+}
+
+function get_purchase_price($supplier_id, $stock_id, $quantity=0, $date='', $agreement_id=0) {
+	$pricing_context = array(
+		'supplier_id' => (int)$supplier_id,
+		'stock_id' => $stock_id,
+		'quantity' => (float)$quantity,
+		'date' => $date !== '' ? $date : date2sql(Today()),
+		'agreement_id' => (int)$agreement_id,
+		'price' => 0,
+		'source' => 'manual',
+	);
+
+	if (function_exists('get_supplier_pricing_context')) {
+		$pricing_context = get_supplier_pricing_context(
+			(int)$supplier_id,
+			$stock_id,
+			(float)$quantity,
+			get_supplier_currency((int)$supplier_id),
+			$pricing_context['date'],
+			(int)$agreement_id,
+			function_exists('get_company_pref') ? (bool)get_company_pref('use_vendor_pricelists') : true
+		);
+	}
+
+	if (function_exists('hook_invoke_all'))
+		hook_invoke_all('purch_price_compute', $pricing_context);
+
+	return isset($pricing_context['price']) ? (float)$pricing_context['price'] : 0;
 }
 
 function get_purchase_conversion_factor($supplier_id, $stock_id) {
-	$sql = "SELECT conversion_factor FROM ".TB_PREF."purch_data WHERE supplier_id = ".db_escape($supplier_id)." AND stock_id = ".db_escape($stock_id);
-	$result = db_query($sql, 'The supplier pricing details for '.$stock_id.' could not be retrieved');    
+	if (function_exists('get_vendor_pricelist_match') && get_company_pref('use_vendor_pricelists')) {
+		$pricelist_row = get_vendor_pricelist_match($supplier_id, $stock_id, 0, get_supplier_currency($supplier_id), date2sql(Today()), true);
+		if ($pricelist_row && (float)$pricelist_row['conversion_factor'] > 0)
+			return (float)$pricelist_row['conversion_factor'];
+	}
 
-	if (db_num_rows($result) == 1) {
-		$myrow = db_fetch($result);
-		return $myrow['conversion_factor'];
-	} 
-	
+	$data = get_purchase_data_row($supplier_id, $stock_id);
+	if ($data !== false && !empty($data['conversion_factor']))
+		return (float)$data['conversion_factor'];
+
 	return 1;
 }
 
-function get_purchase_data($supplier_id, $stock_id) {
+function get_purchase_data_row($supplier_id, $stock_id) {
 	$sql = "SELECT * FROM ".TB_PREF."purch_data 
 		WHERE supplier_id = ".db_escape($supplier_id) . "
 		AND stock_id = ".db_escape($stock_id);
 	$result = db_query($sql, 'The supplier pricing details for ' . $stock_id . ' could not be retrieved');    
 
 	return db_fetch($result);
+}
+
+function get_purchase_data($supplier_id, $stock_id) {
+	$data = get_purchase_data_row($supplier_id, $stock_id);
+
+	if (function_exists('get_vendor_pricelist_match')) {
+		$pricelist_row = get_vendor_pricelist_match($supplier_id, $stock_id, 0, get_supplier_currency($supplier_id), date2sql(Today()), true);
+		if ($pricelist_row) {
+			if ($data === false)
+				$data = array('supplier_id' => $supplier_id, 'stock_id' => $stock_id);
+			$data['vendor_pricelist_id'] = $pricelist_row['id'];
+			$data['vendor_uom'] = $pricelist_row['vendor_uom'];
+			$data['conversion_factor'] = $pricelist_row['conversion_factor'];
+			$data['supplier_description'] = $pricelist_row['vendor_product_name'] !== ''
+				? $pricelist_row['vendor_product_name']
+				: (isset($data['supplier_description']) ? $data['supplier_description'] : '');
+			$data['effective_unit_price'] = $pricelist_row['effective_unit_price'];
+			$data['price_source'] = 'vendor_pricelist';
+		}
+	}
+
+	return $data;
 }
 
 function add_or_update_purchase_data($supplier_id, $stock_id, $price, $description='', $uom='') {
@@ -79,6 +143,8 @@ function add_or_update_purchase_data($supplier_id, $stock_id, $price, $descripti
 			.", ".db_escape($stock_id).", ".db_escape($price).", "
 			.db_escape($uom).", 1, ".db_escape($description).")";
 		db_query($sql, 'The supplier purchasing details could not be added');
+		if (function_exists('sync_purchase_data_to_vendor_pricelist'))
+			sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id);
 		return;
 	}	
 	//$price = round($price * $data['conversion_factor'], user_price_dec());
@@ -89,6 +155,8 @@ function add_or_update_purchase_data($supplier_id, $stock_id, $price, $descripti
 		$sql .= ",supplier_description=".db_escape($description);
 	$sql .= " WHERE stock_id=".db_escape($stock_id)." AND supplier_id=".db_escape($supplier_id);
 	db_query($sql, 'The supplier purchasing details could not be updated');
+	if (function_exists('sync_purchase_data_to_vendor_pricelist'))
+		sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id);
 	return true;
 }
 
@@ -184,6 +252,10 @@ function add_direct_supp_trans($cart) {
 	$inv->ex_rate = $cart->ex_rate;
 
 	$inv_no = add_supp_invoice($inv);
+	if (!$inv_no) {
+		cancel_transaction();
+		return false;
+	}
 
 	if ($cart->cash_account) {
 		$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);

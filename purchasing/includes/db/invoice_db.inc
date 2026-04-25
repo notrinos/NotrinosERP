@@ -109,8 +109,44 @@ function get_diff_in_home_currency($supplier, $old_date, $date, $amount1, $amoun
 }
 //----------------------------------------------------------------------------------------
 
-function add_supp_invoice(&$supp_trans) {
+function add_supp_invoice(&$supp_trans, $options = array()) {
 	global $Refs;
+
+	$skip_matching = isset($options['skip_matching']) && $options['skip_matching'];
+
+	if ((int)$supp_trans->trans_type == ST_SUPPINVOICE && !$skip_matching && function_exists('perform_3way_match')) {
+		$pre_match_result = perform_3way_match(
+			(int)$supp_trans->trans_type,
+			(int)$supp_trans->trans_no,
+			(int)$supp_trans->supplier_id,
+			$supp_trans,
+			0
+		);
+		if (function_exists('set_last_purch_match_result'))
+			set_last_purch_match_result($pre_match_result);
+
+		if (!$pre_match_result['bill_control_allowed']) {
+			display_error($pre_match_result['bill_control_reason']);
+			return false;
+		}
+
+		if ($pre_match_result['should_block']) {
+			display_error(_('Invoice cannot be posted because matching exceptions exceed configured tolerances.'));
+			if (!empty($pre_match_result['exceptions'])) {
+				foreach ($pre_match_result['exceptions'] as $exception)
+					display_error($exception['message']);
+			}
+			return false;
+		}
+
+		if ($pre_match_result['requires_approval'])
+			return false;
+
+		if (!empty($pre_match_result['warning_messages'])) {
+			foreach ($pre_match_result['warning_messages'] as $warning_message)
+				display_warning($warning_message);
+		}
+	}
 
 	$trans_no = $supp_trans->trans_no;
 	$trans_type = $supp_trans->trans_type;
@@ -297,6 +333,8 @@ function add_supp_invoice(&$supp_trans) {
 				}
 			}
 			add_or_update_purchase_data($supp_trans->supplier_id, $entered_grn->item_code, $entered_grn->chg_price); 
+			if (function_exists('update_last_purchase_price'))
+				update_last_purchase_price($supp_trans->supplier_id, $entered_grn->item_code, $entered_grn->chg_price, $date_);
 		}
 		update_purchase_value($entered_grn->item_code, $entered_grn->chg_price * $ex_rate);
 		add_supp_invoice_item($trans_type, $invoice_id, $entered_grn->item_code, $entered_grn->item_description, 0, 	$entered_grn->chg_price, $line_tax/$entered_grn->this_quantity_inv, $entered_grn->this_quantity_inv, $entered_grn->id, $entered_grn->po_detail_item, '');
@@ -333,6 +371,22 @@ function add_supp_invoice(&$supp_trans) {
 
 	reallocate_payments($invoice_id, ST_SUPPINVOICE, $date_, $to_allocate, $allocs, $supp_trans->supplier_id);
 	$supp_trans->trans_no = $invoice_id;
+
+	if ((int)$trans_type == ST_SUPPINVOICE && !$skip_matching && function_exists('perform_3way_match')) {
+		$post_match_result = perform_3way_match(
+			(int)$trans_type,
+			(int)$invoice_id,
+			(int)$supp_trans->supplier_id,
+			$supp_trans,
+			1
+		);
+		if (function_exists('set_last_purch_match_result'))
+			set_last_purch_match_result($post_match_result);
+	} else {
+		if (function_exists('clear_last_purch_match_result'))
+			clear_last_purch_match_result();
+	}
+
 	hook_db_postwrite($supp_trans, $supp_trans->trans_type);
 	commit_transaction();
 

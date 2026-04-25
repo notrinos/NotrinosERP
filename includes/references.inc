@@ -47,6 +47,8 @@ $refline_options = array(
 	ST_SUPPINVOICE => array('date', 'location', 'supplier', 'user'),
 	ST_SUPPCREDIT => array('date', 'location', 'supplier', 'user'),
 	ST_SUPPRECEIVE => array('date', 'location', 'supplier', 'user'),
+	ST_PURCHREQUISITION => array('date', 'location', 'user'),
+	ST_PURCHRFQ => array('date', 'location', 'user'),
 
 	ST_WORKORDER => array('date', 'location', 'user'),
 	ST_MANUISSUE => array('date', 'location', 'user'),

@@ -18,6 +18,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/includes/approval/ui/approval_ui.inc');
 
 include_once($path_to_root.'/purchasing/includes/purchasing_ui.inc');
 
@@ -30,6 +31,9 @@ if (user_use_date_picker())
 //----------------------------------------------------------------------------------------
 
 if (isset($_GET['New'])) {
+	if (function_exists('clear_last_purch_match_result'))
+		clear_last_purch_match_result();
+
 	if (isset( $_SESSION['supp_trans'])) {
 		unset ($_SESSION['supp_trans']->grn_items);
 		unset ($_SESSION['supp_trans']->gl_codes);
@@ -208,6 +212,42 @@ function handle_commit_invoice() {
 		return;
 	$inv = $_SESSION['supp_trans'];
 	$invoice_no = add_supp_invoice($inv);
+	if (!$invoice_no) {
+		$match_result = function_exists('get_last_purch_match_result')
+			? get_last_purch_match_result()
+			: array();
+
+		if (!empty($match_result['requires_approval'])
+			&& class_exists('ApprovalWorkflow')
+			&& ApprovalWorkflow::isRegistered(ST_SUPPINVOICE)
+			&& function_exists('collect_supp_trans_data')) {
+			$draft_data = collect_supp_trans_data($inv);
+			$amount = $inv->get_items_total();
+			$approval_result = approval_check_before_save(
+				ST_SUPPINVOICE,
+				$draft_data,
+				$amount,
+				array(
+					'summary' => sprintf(_('Supplier Invoice from %s'), $inv->supplier_name),
+					'currency' => $inv->currency,
+					'person_type' => PT_SUPPLIER,
+					'person_id' => $inv->supplier_id,
+				)
+			);
+
+			if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+				$approved_invoice_no = isset($approval_result['trans_no']) ? (int)$approval_result['trans_no'] : 0;
+				$_SESSION['supp_trans']->clear_items();
+				unset($_SESSION['supp_trans']);
+				meta_forward($_SERVER['PHP_SELF'], 'AddedID=' . $approved_invoice_no);
+			}
+		}
+
+		if (!empty($match_result['requires_approval']))
+			display_warning(_('Invoice matching requires approval before posting. A draft submission has been prepared.'));
+
+		return;
+	}
 
 	$_SESSION['supp_trans']->clear_items();
 	unset($_SESSION['supp_trans']);
@@ -219,6 +259,34 @@ function handle_commit_invoice() {
 
 if (isset($_POST['PostInvoice']))
 	handle_commit_invoice();
+
+/**
+ * Display 3-way matching status messages on invoice entry page.
+ *
+ * @return void
+ */
+function display_matching_status_panel()
+{
+	if (!function_exists('get_last_purch_match_result'))
+		return;
+
+	$match_result = get_last_purch_match_result();
+	if (empty($match_result))
+		return;
+
+	if (!empty($match_result['bill_control_reason']))
+		display_warning($match_result['bill_control_reason']);
+
+	if (!empty($match_result['exceptions'])) {
+		$open_count = count($match_result['exceptions']);
+		display_note(sprintf(_('3-way matching detected %s exception(s) for this invoice draft.'), $open_count), 0, 1);
+	}
+
+	if (!empty($match_result['warning_messages'])) {
+		foreach ($match_result['warning_messages'] as $warning_message)
+			display_warning($warning_message);
+	}
+}
 
 function check_item_data($n) {
 	global $SysPrefs;
@@ -334,6 +402,7 @@ if (isset($_POST['go'])) {
 start_form();
 
 invoice_header($_SESSION['supp_trans']);
+display_matching_status_panel();
 
 if ($_POST['supplier_id']=='') 
 		display_error(_('There is no supplier selected.'));

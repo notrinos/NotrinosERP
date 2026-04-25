@@ -66,6 +66,10 @@ define('ST_WH_RETURN_ORDER',     53);  // Return order
 define('ST_WH_CYCLE_COUNT',      54);  // Cycle count adjustment
 define('ST_WH_INTERNAL_MOVE',    55);  // Internal bin-to-bin move
 
+define('ST_PURCHREQUISITION',    58);  // Purchase requisition
+define('ST_PURCHRFQ',            59);  // Request for quotation
+define('ST_PURCHAGREEMENT',      60);  // Purchase agreement / blanket order
+
 // Don't include these defines in the $systypes_array.
 // They are used for documents only.
 define ('ST_STATEMENT', 91);

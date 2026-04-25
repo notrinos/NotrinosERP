@@ -151,6 +151,30 @@ if ($_SESSION['PO']->fixed_asset)
 else
 	check_db_has_purchasable_items(_('There are no purchasable inventory items defined in the system.'));
 
+if ($_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no == 0
+	&& isset($_GET['agreement_id']) && (int)$_GET['agreement_id'] > 0
+	&& !$_SESSION['PO']->order_has_items()) {
+	$agreement = get_purch_agreement((int)$_GET['agreement_id']);
+	if ($agreement && $agreement['status'] === 'active') {
+		get_supplier_details_to_order($_SESSION['PO'], (int)$agreement['supplier_id']);
+		$_SESSION['PO']->agreement_id = (int)$agreement['id'];
+		$_SESSION['PO']->rfq_id = (int)$agreement['rfq_id'];
+		if ($agreement['delivery_location'] !== '')
+			$_SESSION['PO']->Location = $agreement['delivery_location'];
+		$_SESSION['PO']->delivery_address = $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : $agreement['delivery_location'];
+		$_SESSION['PO']->dimension = (int)$agreement['dimension_id'];
+		$_SESSION['PO']->dimension2 = (int)$agreement['dimension2_id'];
+		copy_from_cart();
+	}
+}
+
+if ($_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no == 0
+	&& isset($_GET['template_id']) && (int)$_GET['template_id'] > 0
+	&& !$_SESSION['PO']->order_has_items()) {
+	if (apply_template_to_po($_SESSION['PO'], (int)$_GET['template_id']))
+		copy_from_cart();
+}
+
 //--------------------------------------------------------------------------------------------------
 
 function line_start_focus() {
@@ -167,6 +191,55 @@ function unset_form_variables() {
 	unset($_POST['qty']);
 	unset($_POST['price']);
 	unset($_POST['req_del_date']);
+}
+
+/**
+ * Load outstanding agreement lines into the current purchase order cart.
+ *
+ * @param purch_order $purchase_order
+ * @param int         $agreement_id
+ * @return bool
+ */
+function load_purchase_order_from_agreement(&$purchase_order, $agreement_id) {
+	$agreement = get_purch_agreement($agreement_id);
+	if (!$agreement || $agreement['status'] !== 'active')
+		return false;
+
+	get_supplier_details_to_order($purchase_order, (int)$agreement['supplier_id']);
+	$purchase_order->agreement_id = (int)$agreement['id'];
+	$purchase_order->rfq_id = (int)$agreement['rfq_id'];
+	$purchase_order->Location = $agreement['delivery_location'];
+	$purchase_order->delivery_address = $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : get_location_name($agreement['delivery_location']);
+	$purchase_order->dimension = (int)$agreement['dimension_id'];
+	$purchase_order->dimension2 = (int)$agreement['dimension2_id'];
+	$purchase_order->Comments = sprintf(_('Created from Purchase Agreement %s'), $agreement['reference']);
+	$purchase_order->line_items = array();
+	$purchase_order->lines_on_order = 0;
+
+	$agreement_lines = get_agreement_lines((int)$agreement['id']);
+	while ($agreement_line = db_fetch($agreement_lines)) {
+		$remaining_quantity = max(0, (float)$agreement_line['committed_qty'] - (float)$agreement_line['ordered_qty']);
+		if ($remaining_quantity <= 0)
+			continue;
+
+		$effective_price = round((float)$agreement_line['unit_price'] * (1 - ((float)$agreement_line['discount_percent'] / 100)), user_price_dec());
+		$required_delivery_date = ($agreement['date_end'] && $agreement['date_end'] !== '0000-00-00') ? sql2date($agreement['date_end']) : Today();
+		$description = $agreement_line['line_description'] !== '' ? $agreement_line['line_description'] : null;
+
+		$purchase_order->add_to_order(
+			count($purchase_order->line_items),
+			$agreement_line['stock_id'],
+			$remaining_quantity,
+			$description,
+			$effective_price,
+			$agreement_line['stock_units'],
+			$required_delivery_date,
+			0,
+			0
+		);
+	}
+
+	return $purchase_order->order_has_items();
 }
 
 //---------------------------------------------------------------------------------------------------
@@ -372,6 +445,37 @@ function can_commit() {
 		return false;
 	}
 
+	if ($_SESSION['PO']->trans_type == ST_PURCHORDER && (int)get_post('agreement_id') > 0) {
+		$agreement = get_purch_agreement((int)get_post('agreement_id'));
+		if (!$agreement || $agreement['status'] !== 'active') {
+			display_error(_('The selected purchase agreement is not active.'));
+			set_focus('agreement_id');
+			return false;
+		}
+		if ((int)$agreement['supplier_id'] !== (int)get_post('supplier_id')) {
+			display_error(_('The selected purchase agreement belongs to a different supplier.'));
+			set_focus('agreement_id');
+			return false;
+		}
+		if ($_SESSION['PO']->order_no == 0) {
+			foreach ($_SESSION['PO']->line_items as $line) {
+				$availability = check_agreement_availability((int)get_post('agreement_id'), $line->stock_id, $line->quantity);
+				if (!$availability['line']) {
+					display_error(sprintf(_('Item %s is not part of the selected purchase agreement.'), $line->stock_id));
+					return false;
+				}
+				if (!$availability['available']) {
+					display_error(sprintf(
+						_('Item %s exceeds the remaining agreement quantity. Remaining quantity: %s.'),
+						$line->stock_id,
+						number_format2($availability['remaining_qty'], get_qty_dec($line->stock_id))
+					));
+					return false;
+				}
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -442,6 +546,18 @@ if ($id != -1)
 if (isset($_POST['Commit']))
 	handle_commit_order();
 
+if (isset($_POST['LoadFromAgreement']) && $_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no == 0) {
+	$agreement_id = (int)get_post('agreement_id');
+	if ($agreement_id <= 0) {
+		display_error(_('Select an active purchase agreement first.'));
+	} elseif (load_purchase_order_from_agreement($_SESSION['PO'], $agreement_id)) {
+		copy_from_cart();
+		display_notification(_('Agreement lines have been loaded into the purchase order.'));
+	} else {
+		display_error(_('The selected purchase agreement has no outstanding lines available for ordering.'));
+	}
+}
+
 if (isset($_POST['UpdateLine']))
 	handle_update_item();
 
@@ -462,6 +578,8 @@ if (isset($_POST['CancelUpdate']) || isset($_POST['UpdateLine']))
 start_form();
 
 display_po_header($_SESSION['PO']);
+hidden('requisition_id', isset($_SESSION['PO']->requisition_id) ? (int)$_SESSION['PO']->requisition_id : 0);
+hidden('rfq_id', isset($_SESSION['PO']->rfq_id) ? (int)$_SESSION['PO']->rfq_id : 0);
 echo '<br>';
 
 display_po_items($_SESSION['PO']);

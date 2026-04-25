@@ -55,6 +55,9 @@ $systypes_array = array (
 	ST_WH_RETURN_ORDER => _('Return Order'),
 	ST_WH_CYCLE_COUNT => _('Cycle Count Adjustment'),
 	ST_WH_INTERNAL_MOVE => _('Internal Bin Move'),
+	ST_PURCHREQUISITION => _('Purchase Requisition'),
+	ST_PURCHRFQ => _('Purchase RFQ'),
+	ST_PURCHAGREEMENT => _('Purchase Agreement'),
 );
 
 $fa_systypes_array = array (
@@ -89,7 +92,10 @@ $type_shortcuts = array(
 	ST_EMPPAYMENT => _('EP'),
 	ST_LEAVE_REQUEST => _('LR'),
 	ST_OVERTIME_REQUEST => _('OT'),
-	ST_PAYROLL_PERIOD => _('PP')
+	ST_PAYROLL_PERIOD => _('PP'),
+	ST_PURCHREQUISITION => _('PR'),
+	ST_PURCHRFQ => _('RFQ'),
+	ST_PURCHAGREEMENT => _('AGR')
 );
 
 //----------------------------------------------------------------------------------
