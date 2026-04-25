@@ -656,9 +656,15 @@ function set_purch_agreement_status($agreement_id, $status, $reason = '')
 	db_query($sql, 'could not update purchase agreement status');
 
 	if ($status === 'confirmed')
-		hook_invoke_all('purch_agreement_confirmed', array('agreement_id' => (int)$agreement_id));
+	{
+		$hook_data = array('agreement_id' => (int)$agreement_id);
+		hook_invoke_all('purch_agreement_confirmed', $hook_data);
+	}
 	elseif ($status === 'expired')
-		hook_invoke_all('purch_agreement_expired', array('agreement_id' => (int)$agreement_id));
+	{
+		$hook_data = array('agreement_id' => (int)$agreement_id);
+		hook_invoke_all('purch_agreement_expired', $hook_data);
+	}
 
 	return true;
 }
@@ -1169,10 +1175,11 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 
 	update_agreement_fulfillment($agreement_id);
 
-	hook_invoke_all('purch_agreement_po_created', array(
+	$hook_data = array(
 		'agreement_id' => (int)$agreement_id,
 		'po_no' => (int)$po_number,
-	));
+	);
+	hook_invoke_all('purch_agreement_po_created', $hook_data);
 
 	return (int)$po_number;
 }
@@ -1276,10 +1283,11 @@ function auto_renew_agreements()
 			WHERE id = " . (int)$agreement['id'];
 		db_query($sql, 'could not mark renewed purchase agreement as expired');
 
-		hook_invoke_all('purch_agreement_renewed', array(
+		$hook_data = array(
 			'old_id' => (int)$agreement['id'],
 			'new_id' => (int)$new_agreement_id,
-		));
+		);
+		hook_invoke_all('purch_agreement_renewed', $hook_data);
 
 		$new_agreement_ids[] = (int)$new_agreement_id;
 	}
