@@ -672,7 +672,7 @@ CREATE TABLE `0_debtor_trans_details` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`debtor_trans_no` int(11) DEFAULT NULL,
 	`debtor_trans_type` int(11) DEFAULT NULL,
-	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
 	`description` tinytext,
 	`unit_price` double NOT NULL DEFAULT '0',
 	`unit_tax` double NOT NULL DEFAULT '0',
@@ -685,7 +685,7 @@ CREATE TABLE `0_debtor_trans_details` (
 	PRIMARY KEY (`id`),
 	KEY `Transaction` (`debtor_trans_type`,`debtor_trans_no`),
 	KEY `src_id` (`src_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 ;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Data of table `0_debtor_trans_details` --
 
@@ -1983,7 +1983,7 @@ CREATE TABLE `0_sales_agreements` (
 	KEY `idx_debtor` (`debtor_no`),
 	KEY `idx_status` (`status`),
 	KEY `idx_dates` (`date_start`,`date_end`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Data of table `0_sales_agreements` --
 
@@ -1994,7 +1994,7 @@ DROP TABLE IF EXISTS `0_sales_agreement_lines`;
 CREATE TABLE `0_sales_agreement_lines` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`agreement_id` int(11) NOT NULL,
-	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
 	`description` tinytext DEFAULT NULL,
 	`committed_qty` double NOT NULL DEFAULT '0',
 	`ordered_qty` double NOT NULL DEFAULT '0',
@@ -2006,7 +2006,7 @@ CREATE TABLE `0_sales_agreement_lines` (
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	KEY `idx_agreement_id` (`agreement_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Data of table `0_sales_agreement_lines` --
 
@@ -2424,7 +2424,7 @@ CREATE TABLE `0_stock_fa_class` (
 DROP TABLE IF EXISTS `0_stock_master`;
 
 CREATE TABLE `0_stock_master` (
-	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
 	`category_id` int(11) NOT NULL DEFAULT '0',
 	`tax_type_id` int(11) NOT NULL DEFAULT '0',
 	`description` varchar(200) NOT NULL DEFAULT '',
@@ -2474,7 +2474,7 @@ CREATE TABLE `0_stock_master` (
 	`drop_ship_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item can be drop-shipped from supplier to customer',
 	`cross_dock_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item eligible for cross-docking',
 	PRIMARY KEY (`stock_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Data of table `0_stock_master` --
 
