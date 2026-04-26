@@ -25,6 +25,8 @@ include_once($path_to_root . '/reporting/includes/reporting.inc');
 include_once($path_to_root . '/taxes/tax_calc.inc');
 include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
 include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+// Phase 8: Advanced Credit Control
+include_once($path_to_root . '/sales/includes/db/sales_credit_control_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -369,6 +371,16 @@ if ($row['dissallow_invoices'] == 1) {
 	end_form();
 	end_page();
 	exit();
+}
+// Phase 8: check advanced credit holds on delivery
+if (get_company_pref('use_advanced_credit_control') && get_company_pref('credit_check_on_delivery')) {
+	$credit = check_customer_credit($_SESSION['Items']->customer_id, 0, 'delivery');
+	if (!$credit['allowed']) {
+		display_error($credit['reason']);
+		end_form();
+		end_page();
+		exit();
+	}
 }	
 display_heading(_('Delivery Items'));
 div_start('items_table');

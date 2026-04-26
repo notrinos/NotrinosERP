@@ -611,6 +611,14 @@ CREATE TABLE `0_debtors_master` (
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
+	`credit_insurance_limit` double NOT NULL DEFAULT '0',
+	`credit_review_date` date DEFAULT NULL,
+	`credit_risk_score` enum('low','medium','high','critical') NOT NULL DEFAULT 'medium',
+	`payment_behavior_score` double NOT NULL DEFAULT '0',
+	`customer_tier` enum('standard','silver','gold','platinum','vip') NOT NULL DEFAULT 'standard',
+	`preferred_communication` enum('email','phone','whatsapp','portal') NOT NULL DEFAULT 'email',
+	`industry` varchar(50) NOT NULL DEFAULT '',
+	`company_size` enum('small','medium','large','enterprise') NOT NULL DEFAULT 'medium',
 	PRIMARY KEY (`debtor_no`),
 	UNIQUE KEY `debtor_ref` (`debtor_ref`),
 	KEY `name` (`name`)
@@ -1542,11 +1550,404 @@ CREATE TABLE `0_sales_orders` (
 	`total` double NOT NULL DEFAULT '0',
 	`prep_amount` double NOT NULL DEFAULT '0',
 	`alloc` double NOT NULL DEFAULT '0',
+	`template_id` int(11) NOT NULL DEFAULT '0',
+	`validity_date` date DEFAULT NULL,
+	`opportunity_id` int(11) NOT NULL DEFAULT '0',
+	`terms_and_conditions` text DEFAULT NULL,
+	`margin_total` double NOT NULL DEFAULT '0',
+	`cost_total` double NOT NULL DEFAULT '0',
+	`agreement_id` int(11) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`trans_type`,`order_no`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_sales_orders` --
+
+-- Structure of table `0_sales_pricelists` -- (Phase 1)
+CREATE TABLE IF NOT EXISTS `0_sales_pricelists` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`name` VARCHAR(100) NOT NULL,
+	`description` TINYTEXT,
+	`currency` CHAR(3) DEFAULT '',
+	`is_default` TINYINT(1) DEFAULT 0,
+	`date_start` DATE DEFAULT NULL,
+	`date_end` DATE DEFAULT NULL,
+	`priority` INT DEFAULT 10,
+	`min_order_amount` DOUBLE DEFAULT 0,
+	`applicable_to` ENUM('all','sales_type','customer','customer_group','branch') DEFAULT 'all',
+	`applicable_id` INT DEFAULT 0,
+	`inactive` TINYINT(1) DEFAULT 0,
+	`custom_data` JSON,
+	KEY `idx_dates` (`date_start`, `date_end`),
+	KEY `idx_applicable` (`applicable_to`, `applicable_id`),
+	KEY `idx_priority` (`priority`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_pricelists` --
+
+-- Structure of table `0_sales_pricelist_rules` -- (Phase 1)
+CREATE TABLE IF NOT EXISTS `0_sales_pricelist_rules` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`pricelist_id` INT NOT NULL,
+	`stock_id` VARCHAR(20) DEFAULT '',
+	`stock_category_id` INT DEFAULT 0,
+	`min_quantity` DOUBLE DEFAULT 0,
+	`computation_type` ENUM('fixed','percentage','formula') DEFAULT 'fixed',
+	`fixed_price` DOUBLE DEFAULT 0,
+	`percentage` DOUBLE DEFAULT 0,
+	`base_price_type` ENUM('list_price','cost','other_pricelist') DEFAULT 'list_price',
+	`base_pricelist_id` INT DEFAULT 0,
+	`surcharge` DOUBLE DEFAULT 0,
+	`rounding` DOUBLE DEFAULT 0.01,
+	`priority` INT DEFAULT 10,
+	`date_start` DATE DEFAULT NULL,
+	`date_end` DATE DEFAULT NULL,
+	`inactive` TINYINT(1) DEFAULT 0,
+	`custom_data` JSON,
+	KEY `idx_pricelist` (`pricelist_id`),
+	KEY `idx_stock` (`stock_id`),
+	KEY `idx_category` (`stock_category_id`),
+	KEY `idx_priority` (`priority`),
+	KEY `idx_dates` (`date_start`, `date_end`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_pricelist_rules` --
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+	VALUES ('use_advanced_pricelists', 'sys', 'tinyint', 1, '0');
+
+-- Structure of table `0_sales_quotation_templates` --
+
+DROP TABLE IF EXISTS `0_sales_quotation_templates`;
+
+CREATE TABLE `0_sales_quotation_templates` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`name` varchar(100) NOT NULL,
+	`description` tinytext,
+	`validity_days` int(11) NOT NULL DEFAULT '30',
+	`terms_and_conditions` text,
+	`notes` text,
+	`sales_type` int(11) NOT NULL DEFAULT '0',
+	`default_payment_terms` int(11) NOT NULL DEFAULT '0',
+	`default_ship_via` int(11) NOT NULL DEFAULT '0',
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` longtext,
+	PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_quotation_templates` --
+
+-- Structure of table `0_sales_quotation_template_lines` --
+
+DROP TABLE IF EXISTS `0_sales_quotation_template_lines`;
+
+CREATE TABLE `0_sales_quotation_template_lines` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`template_id` int(11) NOT NULL,
+	`line_type` enum('product','section','note','optional') NOT NULL DEFAULT 'product',
+	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`description` tinytext,
+	`quantity` double NOT NULL DEFAULT '1',
+	`discount_percent` double NOT NULL DEFAULT '0',
+	`is_optional` tinyint(1) NOT NULL DEFAULT '0',
+	`sort_order` int(11) NOT NULL DEFAULT '0',
+	`custom_data` longtext,
+	PRIMARY KEY (`id`),
+	KEY `idx_template` (`template_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_quotation_template_lines` --
+
+-- Structure of table `0_sales_agreements` --
+
+DROP TABLE IF EXISTS `0_sales_agreements`;
+
+CREATE TABLE `0_sales_agreements` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`reference` varchar(30) NOT NULL DEFAULT '',
+	`agreement_type` enum('blanket_order','framework_agreement','contract') NOT NULL DEFAULT 'blanket_order',
+	`debtor_no` int(11) NOT NULL,
+	`branch_code` int(11) NOT NULL DEFAULT '0',
+	`salesman_id` int(11) NOT NULL DEFAULT '0',
+	`status` enum('draft','confirmed','active','expired','cancelled') NOT NULL DEFAULT 'draft',
+	`date_start` date NOT NULL,
+	`date_end` date NOT NULL,
+	`currency` char(3) NOT NULL DEFAULT '',
+	`payment_terms` int(11) NOT NULL DEFAULT '0',
+	`total_committed` double NOT NULL DEFAULT '0',
+	`total_ordered` double NOT NULL DEFAULT '0',
+	`total_delivered` double NOT NULL DEFAULT '0',
+	`total_invoiced` double NOT NULL DEFAULT '0',
+	`auto_renew` tinyint(1) NOT NULL DEFAULT '0',
+	`renewal_period_months` int(11) NOT NULL DEFAULT '12',
+	`terms_and_conditions` text DEFAULT NULL,
+	`notes` text DEFAULT NULL,
+	`dimension_id` int(11) NOT NULL DEFAULT '0',
+	`dimension2_id` int(11) NOT NULL DEFAULT '0',
+	`created_by` int(11) NOT NULL DEFAULT '0',
+	`created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_debtor` (`debtor_no`),
+	KEY `idx_status` (`status`),
+	KEY `idx_dates` (`date_start`,`date_end`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_agreements` --
+
+-- Structure of table `0_sales_agreement_lines` --
+
+DROP TABLE IF EXISTS `0_sales_agreement_lines`;
+
+CREATE TABLE `0_sales_agreement_lines` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`agreement_id` int(11) NOT NULL,
+	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`description` tinytext DEFAULT NULL,
+	`committed_qty` double NOT NULL DEFAULT '0',
+	`ordered_qty` double NOT NULL DEFAULT '0',
+	`delivered_qty` double NOT NULL DEFAULT '0',
+	`invoiced_qty` double NOT NULL DEFAULT '0',
+	`unit_price` double NOT NULL DEFAULT '0',
+	`discount_percent` double NOT NULL DEFAULT '0',
+	`price_valid_until` date DEFAULT NULL,
+	`custom_data` text DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_agreement_id` (`agreement_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_agreement_lines` --
+
+-- Structure of table `0_sales_discount_programs` -- (Phase 4)
+
+CREATE TABLE IF NOT EXISTS `0_sales_discount_programs` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`name` VARCHAR(100) NOT NULL,
+	`program_type` ENUM('coupon','loyalty','automatic','volume') NOT NULL DEFAULT 'automatic',
+	`status` ENUM('draft','active','expired','cancelled') NOT NULL DEFAULT 'draft',
+	`date_start` DATE DEFAULT NULL,
+	`date_end` DATE DEFAULT NULL,
+	`min_order_amount` DOUBLE NOT NULL DEFAULT '0',
+	`min_quantity` DOUBLE NOT NULL DEFAULT '0',
+	`applicable_items` VARCHAR(500) NOT NULL DEFAULT '',
+	`applicable_categories` VARCHAR(200) NOT NULL DEFAULT '',
+	`applicable_customers` VARCHAR(200) NOT NULL DEFAULT '',
+	`applicable_sales_types` VARCHAR(100) NOT NULL DEFAULT '',
+	`reward_type` ENUM('percentage_discount','fixed_discount','free_product','free_shipping') NOT NULL DEFAULT 'percentage_discount',
+	`reward_value` DOUBLE NOT NULL DEFAULT '0',
+	`reward_product_id` VARCHAR(20) NOT NULL DEFAULT '',
+	`reward_max_amount` DOUBLE NOT NULL DEFAULT '0',
+	`usage_limit` INT NOT NULL DEFAULT '0',
+	`usage_count` INT NOT NULL DEFAULT '0',
+	`per_customer_limit` INT NOT NULL DEFAULT '0',
+	`stackable` TINYINT(1) NOT NULL DEFAULT '0',
+	`priority` INT NOT NULL DEFAULT '10',
+	`inactive` TINYINT(1) NOT NULL DEFAULT '0',
+	`custom_data` LONGTEXT DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_status` (`status`),
+	KEY `idx_type` (`program_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_discount_programs` --
+
+-- Structure of table `0_sales_coupons` -- (Phase 4)
+
+CREATE TABLE IF NOT EXISTS `0_sales_coupons` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`code` VARCHAR(30) NOT NULL,
+	`program_id` INT NOT NULL,
+	`debtor_no` INT NOT NULL DEFAULT '0',
+	`valid_from` DATE DEFAULT NULL,
+	`valid_until` DATE DEFAULT NULL,
+	`usage_limit` INT NOT NULL DEFAULT '1',
+	`usage_count` INT NOT NULL DEFAULT '0',
+	`is_active` TINYINT(1) NOT NULL DEFAULT '1',
+	`custom_data` LONGTEXT DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `idx_code` (`code`),
+	KEY `idx_program` (`program_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_coupons` --
+
+-- Structure of table `0_sales_discount_usage` -- (Phase 4)
+
+CREATE TABLE IF NOT EXISTS `0_sales_discount_usage` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`program_id` INT NOT NULL,
+	`coupon_id` INT NOT NULL DEFAULT '0',
+	`debtor_no` INT NOT NULL,
+	`trans_type` SMALLINT NOT NULL,
+	`trans_no` INT NOT NULL,
+	`discount_amount` DOUBLE NOT NULL DEFAULT '0',
+	`applied_date` DATETIME DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_program` (`program_id`),
+	KEY `idx_customer` (`debtor_no`),
+	KEY `idx_trans` (`trans_type`,`trans_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_discount_usage` --
+
+-- Structure of table `0_sales_rma_reasons` -- (Phase 5)
+
+CREATE TABLE IF NOT EXISTS `0_sales_rma_reasons` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `description` VARCHAR(100) NOT NULL,
+  `requires_inspection` TINYINT(1) NOT NULL DEFAULT 0,
+  `default_disposition` VARCHAR(20) NOT NULL DEFAULT 'restock',
+  `inactive` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_rma_reasons` --
+
+INSERT IGNORE INTO `0_sales_rma_reasons` (`description`, `requires_inspection`, `default_disposition`) VALUES
+('Defective / Faulty Product', 1, 'repair'),
+('Wrong Item Delivered', 0, 'restock'),
+('Damaged in Transit', 1, 'scrap'),
+('Customer Changed Mind', 0, 'restock'),
+('Product Not as Described', 0, 'restock'),
+('Quality Below Standard', 1, 'quarantine'),
+('Excess Quantity', 0, 'restock'),
+('Other', 0, 'restock');
+
+-- Structure of table `0_sales_rma` -- (Phase 5)
+
+CREATE TABLE IF NOT EXISTS `0_sales_rma` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `reference` VARCHAR(60) NOT NULL DEFAULT '',
+  `debtor_no` INT NOT NULL,
+  `branch_code` INT NOT NULL DEFAULT 0,
+  `request_date` DATE NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `source_type` SMALLINT NOT NULL DEFAULT 0,
+  `source_no` INT NOT NULL DEFAULT 0,
+  `return_reason_id` INT NOT NULL DEFAULT 0,
+  `return_method` VARCHAR(20) NOT NULL DEFAULT 'credit_note',
+  `customer_notes` TEXT DEFAULT NULL,
+  `internal_notes` TEXT DEFAULT NULL,
+  `authorized_by` INT NOT NULL DEFAULT 0,
+  `authorized_date` DATETIME DEFAULT NULL,
+  `rejected_by` INT NOT NULL DEFAULT 0,
+  `rejected_date` DATETIME DEFAULT NULL,
+  `rejection_reason` VARCHAR(255) DEFAULT NULL,
+  `total_amount` DOUBLE NOT NULL DEFAULT 0,
+  `refund_amount` DOUBLE NOT NULL DEFAULT 0,
+  `restocking_fee_percent` DOUBLE NOT NULL DEFAULT 0,
+  `restocking_fee_amount` DOUBLE NOT NULL DEFAULT 0,
+  `wh_return_order_id` INT NOT NULL DEFAULT 0,
+  `credit_note_no` INT NOT NULL DEFAULT 0,
+  `replacement_order_no` INT NOT NULL DEFAULT 0,
+  `created_by` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `custom_data` TEXT DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_debtor` (`debtor_no`),
+  KEY `idx_status` (`status`),
+  KEY `idx_source` (`source_type`, `source_no`),
+  KEY `idx_wh_return` (`wh_return_order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_rma` --
+
+-- Structure of table `0_sales_rma_lines` -- (Phase 5)
+
+CREATE TABLE IF NOT EXISTS `0_sales_rma_lines` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `rma_id` INT NOT NULL,
+  `stock_id` VARCHAR(20) NOT NULL,
+  `description` VARCHAR(200) DEFAULT NULL,
+  `quantity_requested` DOUBLE NOT NULL DEFAULT 0,
+  `quantity_authorized` DOUBLE NOT NULL DEFAULT 0,
+  `unit_price` DOUBLE NOT NULL DEFAULT 0,
+  `return_condition` VARCHAR(20) NOT NULL DEFAULT 'good',
+  `serial_number` VARCHAR(50) NOT NULL DEFAULT '',
+  `batch_number` VARCHAR(50) NOT NULL DEFAULT '',
+  `notes` VARCHAR(255) DEFAULT NULL,
+  `custom_data` TEXT DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_rma` (`rma_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Data of table `0_sales_rma_lines` --
+
+-- Structure of table `0_sales_pos` --
+
+-- Structure of table `0_sales_commission_plans` -- (Phase 6)
+CREATE TABLE IF NOT EXISTS `0_sales_commission_plans` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`name` VARCHAR(100) NOT NULL,
+	`plan_type` ENUM('percentage','tiered','target_based','achievement') DEFAULT 'percentage',
+	`calculation_base` ENUM('revenue','margin','quantity') DEFAULT 'revenue',
+	`period_type` ENUM('per_transaction','monthly','quarterly','yearly') DEFAULT 'per_transaction',
+	`status` ENUM('draft','active','expired') DEFAULT 'draft',
+	`date_start` DATE DEFAULT NULL,
+	`date_end` DATE DEFAULT NULL,
+	`inactive` TINYINT(1) DEFAULT 0,
+	`custom_data` LONGTEXT DEFAULT NULL COMMENT 'JSON',
+	INDEX `idx_status` (`status`),
+	INDEX `idx_inactive` (`inactive`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_commission_plans` --
+
+-- Structure of table `0_sales_commission_tiers` -- (Phase 6)
+CREATE TABLE IF NOT EXISTS `0_sales_commission_tiers` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`plan_id` INT NOT NULL,
+	`threshold_from` DOUBLE DEFAULT 0,
+	`threshold_to` DOUBLE DEFAULT 0,
+	`commission_rate` DOUBLE DEFAULT 0,
+	`fixed_bonus` DOUBLE DEFAULT 0,
+	`sort_order` INT DEFAULT 0,
+	KEY `idx_plan` (`plan_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_commission_tiers` --
+
+-- Structure of table `0_sales_commission_assignments` -- (Phase 6)
+CREATE TABLE IF NOT EXISTS `0_sales_commission_assignments` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`plan_id` INT NOT NULL,
+	`salesman_id` INT NOT NULL,
+	`date_start` DATE DEFAULT NULL,
+	`date_end` DATE DEFAULT NULL,
+	`target_amount` DOUBLE DEFAULT 0,
+	KEY `idx_salesman` (`salesman_id`),
+	KEY `idx_plan` (`plan_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_commission_assignments` --
+
+-- Structure of table `0_sales_commission_entries` -- (Phase 6)
+CREATE TABLE IF NOT EXISTS `0_sales_commission_entries` (
+	`id` INT AUTO_INCREMENT PRIMARY KEY,
+	`salesman_id` INT NOT NULL,
+	`plan_id` INT DEFAULT 0,
+	`trans_type` SMALLINT NOT NULL,
+	`trans_no` INT NOT NULL,
+	`debtor_no` INT NOT NULL,
+	`trans_date` DATE NOT NULL,
+	`base_amount` DOUBLE DEFAULT 0,
+	`commission_rate` DOUBLE DEFAULT 0,
+	`commission_amount` DOUBLE DEFAULT 0,
+	`status` ENUM('calculated','approved','paid') DEFAULT 'calculated',
+	`payment_date` DATE DEFAULT NULL,
+	`payment_reference` VARCHAR(60) DEFAULT '',
+	`custom_data` LONGTEXT DEFAULT NULL COMMENT 'JSON',
+	KEY `idx_salesman` (`salesman_id`),
+	KEY `idx_date` (`trans_date`),
+	KEY `idx_status` (`status`),
+	UNIQUE KEY `idx_trans` (`trans_type`, `trans_no`, `salesman_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_sales_commission_entries` --
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+	VALUES ('use_advanced_commissions', 'setup.company', 'tinyint', 1, '0');
 
 -- Structure of table `0_sales_pos` --
 
@@ -3337,7 +3738,9 @@ INSERT INTO `0_sys_prefs` VALUES
 ('fsma204_firm_name', 'tracking', 'VARCHAR', 100, ''),
 ('fsma204_fda_registration', 'tracking', 'VARCHAR', 30, ''),
 ('udi_company_name', 'tracking', 'VARCHAR', 100, ''),
-('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
+('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1'),
+-- Phase 4: Advanced Discount & Promotion Engine
+('use_discount_programs', 'sales', 'tinyint', 1, '0');
 
 -- Structure of table `0_tag_associations` --
 
@@ -5154,6 +5557,10 @@ VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
 VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
 
+-- Phase 4: Advanced Discount & Promotion Engine
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_discount_programs', 'sales', 'tinyint', 1, '0');
+
 -- ================================================================
 -- Purchase Requisition module. Confusing fields: material_request_id links to WMS request; status/priority enums drive workflow states; custom_data stores future-safe metadata.
 -- ================================================================
@@ -5828,5 +6235,69 @@ SET `areas` = CASE
 END
 WHERE `id` IN (2, 10)
   AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5893;%';
+
+-- ================================================================
+-- Phase 8: Advanced Credit Control & Customer Enhancements
+-- ================================================================
+
+-- Credit review history
+CREATE TABLE IF NOT EXISTS `0_sales_credit_reviews` (
+  `id`                INT NOT NULL AUTO_INCREMENT,
+  `debtor_no`         INT NOT NULL,
+  `review_date`       DATE NOT NULL,
+  `reviewer_id`       INT NOT NULL DEFAULT 0,
+  `old_credit_limit`  DOUBLE DEFAULT 0,
+  `new_credit_limit`  DOUBLE DEFAULT 0,
+  `old_credit_status` INT DEFAULT 0,
+  `new_credit_status` INT DEFAULT 0,
+  `risk_score`        ENUM('low','medium','high','critical') DEFAULT 'medium',
+  `notes`             TEXT,
+  PRIMARY KEY (`id`),
+  KEY `idx_debtor` (`debtor_no`),
+  KEY `idx_date`   (`review_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Credit holds
+CREATE TABLE IF NOT EXISTS `0_sales_credit_holds` (
+  `id`                  INT NOT NULL AUTO_INCREMENT,
+  `debtor_no`           INT NOT NULL,
+  `hold_type`           ENUM('manual','over_limit','overdue','risk') DEFAULT 'manual',
+  `hold_date`           DATETIME NOT NULL,
+  `release_date`        DATETIME DEFAULT NULL,
+  `held_by`             INT DEFAULT 0,
+  `released_by`         INT DEFAULT 0,
+  `reason`              TINYTEXT,
+  `affects_orders`      TINYINT(1) DEFAULT 1,
+  `affects_deliveries`  TINYINT(1) DEFAULT 1,
+  `affects_invoices`    TINYINT(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_debtor` (`debtor_no`),
+  KEY `idx_active` (`debtor_no`, `release_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+  VALUES ('use_advanced_credit_control', 'setup.company', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+  VALUES ('credit_check_on_order', 'setup.company', 'tinyint', 1, '1');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+  VALUES ('credit_check_on_delivery', 'setup.company', 'tinyint', 1, '1');
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '3084'
+  ELSE CONCAT(`areas`, ';3084')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;3084;%';
+
+UPDATE `0_security_roles`
+SET `areas` = CASE
+  WHEN IFNULL(`areas`, '') = '' THEN '3085'
+  ELSE CONCAT(`areas`, ';3085')
+END
+WHERE `id` IN (2, 10)
+  AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;3085;%';
 
 -- END CONSOLIDATED MIGRATIONS

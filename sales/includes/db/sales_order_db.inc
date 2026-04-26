@@ -13,14 +13,23 @@
 function add_sales_order(&$order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
+	if (!function_exists('get_discount_custom_data_for_save'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
 	begin_transaction();
 	hook_db_prewrite($order, $order->trans_type);
 	$order_no = get_next_trans_no($order->trans_type);
 	$del_date = date2sql($order->due_date);
 	$order_type = 0; // this is default on new order
 	$total = $order->get_trans_total();
+	$custom_data_sql = get_discount_custom_data_sql_value(array(), $order);
 
-	$sql = "INSERT INTO ".TB_PREF."sales_orders (order_no, type, debtor_no, trans_type, branch_code, salesman_code, customer_ref, reference, comments, ord_date, order_type, ship_via, deliver_to, delivery_address, contact_phone, freight_cost, from_stk_loc, delivery_date, payment_terms, total, prep_amount)
+// Phase 2: validity_date — for quotations, use validity_date if set, else due_date
+	$validity_date_sql = 'NULL';
+	if (!empty($order->validity_date))
+		$validity_date_sql = "'" . date2sql($order->validity_date) . "'";
+
+	$sql = "INSERT INTO ".TB_PREF."sales_orders (order_no, type, debtor_no, trans_type, branch_code, salesman_code, customer_ref, reference, comments, ord_date, order_type, ship_via, deliver_to, delivery_address, contact_phone, freight_cost, from_stk_loc, delivery_date, payment_terms, total, prep_amount, template_id, validity_date, opportunity_id, terms_and_conditions, margin_total, cost_total, agreement_id)
 		VALUES (".
 			db_escape($order_no).",".
 			db_escape($order_type).",".
@@ -30,7 +39,7 @@ function add_sales_order(&$order) {
 			db_escape($order->salesman).", ".
 			db_escape($order->cust_ref).",". 
 			db_escape($order->reference) .",". 
-			db_escape($order->Comments).",'". 
+			db_escape($order->Comments).",'".
 			date2sql($order->document_date)."', ".
 			db_escape($order->sales_type).", ".
 			db_escape($order->ship_via).",". 
@@ -42,10 +51,20 @@ function add_sales_order(&$order) {
 			db_escape($del_date).",".
 			db_escape($order->payment).",".
 			db_escape($total).",".
-			db_escape($order->prep_amount).
+			db_escape($order->prep_amount).",".
+			db_escape((int)$order->template_id).",".
+			$validity_date_sql.",".
+			db_escape((int)$order->opportunity_id).",".
+			db_escape($order->terms_and_conditions).",".
+			db_escape((float)$order->margin_total).",".
+			db_escape((float)$order->cost_total).",".
+			db_escape((int)(isset($order->agreement_id) ? $order->agreement_id : 0)).
 		")";
 
 	db_query($sql, 'sales order cannot be added');
+	db_query("UPDATE ".TB_PREF."sales_orders SET custom_data = ".$custom_data_sql."
+		WHERE order_no = ".db_escape($order_no)." AND trans_type = ".db_escape($order->trans_type),
+		'Cannot update sales order discount custom data');
 
 	$order->trans_no = array($order_no=>0);
 
@@ -76,6 +95,7 @@ function add_sales_order(&$order) {
 
 	add_audit_trail($order->trans_type, $order_no, $order->document_date);
 	$Refs->save($order->trans_type, $order_no, $order->reference, null, $order->fixed_asset);
+	record_cart_discount_usage($order, $order->trans_type, $order_no);
 
 	hook_db_postwrite($order, $order->trans_type);
 	commit_transaction();
@@ -117,9 +137,14 @@ function update_sales_order_version($order) {
 function update_sales_order($order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
+	if (!function_exists('get_discount_custom_data_for_save'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
 	$order_no =  key($order->trans_no);
 	$version= current($order->trans_no);
 	$total = $order->get_trans_total();
+	$existing_order = get_sales_order_header($order_no, $order->trans_type);
+	$custom_data_sql = get_discount_custom_data_sql_value(isset($existing_order['custom_data']) ? $existing_order['custom_data'] : array(), $order);
 
 	begin_transaction();
 	hook_db_prewrite($order, $order->trans_type);
@@ -147,7 +172,15 @@ function update_sales_order($order) {
 		version = ".($version+1).",
 		payment_terms = " .db_escape($order->payment). ",
 		total = ". db_escape($total). ",
-		prep_amount = ". db_escape($order->prep_amount) ."
+		prep_amount = ". db_escape($order->prep_amount) .",
+		template_id = ". db_escape((int)$order->template_id) .",
+		validity_date = ". (empty($order->validity_date) ? 'NULL' : "'" . date2sql($order->validity_date) . "'") .",
+		opportunity_id = ". db_escape((int)$order->opportunity_id) .",
+		terms_and_conditions = ". db_escape($order->terms_and_conditions) .",
+		margin_total = ". db_escape((float)$order->margin_total) .",
+		cost_total = ". db_escape((float)$order->cost_total) .",
+		agreement_id = ". db_escape((int)(isset($order->agreement_id) ? $order->agreement_id : 0)) .",
+		custom_data = ". $custom_data_sql ."
 	 WHERE order_no=" . db_escape($order_no) ."
 	 AND trans_type=".$order->trans_type." AND version=".$version;
 	db_query($sql, 'order Cannot be Updated, this can be concurrent edition conflict');
@@ -205,6 +238,7 @@ function update_sales_order($order) {
 
 	if ($order->trans_type == ST_SALESORDER)
 		reallocate_payments($order_no, ST_SALESORDER, $order->document_date, $total, $allocs, $order->customer_id);
+	record_cart_discount_usage($order, $order->trans_type, $order_no);
 	add_audit_trail($order->trans_type, $order_no, $order->document_date, _('Updated.'));
 	$Refs->save($order->trans_type, $order_no, $order->reference, null, $order->fixed_asset);
 
@@ -285,6 +319,7 @@ function get_sales_order_details($order_no, $trans_type) {
 }
 
 function read_sales_order($order_no, &$order, $trans_type) {
+	global $path_to_root;
 
 	$myrow = get_sales_order_header($order_no, $trans_type);
 
@@ -316,6 +351,18 @@ function read_sales_order($order_no, &$order, $trans_type) {
 	$order->sum_paid = $myrow['sum_paid']; // sum of all prepayments to so (also invoiced)
 	$order->prep_amount = $myrow['prep_amount'];
 	$order->prepayments = get_payments_for($order_no, $myrow['trans_type'], $myrow['debtor_no']);
+
+	// Phase 2: Quotation Templates & CRM Pipeline Integration
+	$order->template_id          = isset($myrow['template_id']) ? (int)$myrow['template_id'] : 0;
+	$order->validity_date        = isset($myrow['validity_date']) ? sql2date($myrow['validity_date']) : null;
+	$order->opportunity_id       = isset($myrow['opportunity_id']) ? (int)$myrow['opportunity_id'] : 0;
+	$order->terms_and_conditions = isset($myrow['terms_and_conditions']) ? $myrow['terms_and_conditions'] : '';
+	$order->margin_total         = isset($myrow['margin_total']) ? (float)$myrow['margin_total'] : 0;
+	$order->cost_total           = isset($myrow['cost_total']) ? (float)$myrow['cost_total'] : 0;
+	$order->agreement_id         = isset($myrow['agreement_id']) ? (int)$myrow['agreement_id'] : 0;
+	if (!function_exists('restore_cart_discount_state'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+	restore_cart_discount_state($order, isset($myrow['custom_data']) ? $myrow['custom_data'] : array());
 
 	$result = get_sales_order_details($order_no, $order->trans_type);
 	if (db_num_rows($result) > 0) {

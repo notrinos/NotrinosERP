@@ -219,4 +219,11 @@ end_table(1);
 
 is_voided_display(ST_CUSTDELIVERY, $trans_id, _('This dispatch has been voided.'));
 
+// Phase 5: RMA quick-link
+if ($_SESSION['wa_current_user']->can_access_page('SA_SALESRETURN')) {
+	echo '<div style="margin-top:8px;">';
+	echo '<a href="' . $path_to_root . '/sales/sales_rma_entry.php?New=1&source_type=' . ST_CUSTDELIVERY . '&source_no=' . (int)$trans_id . '" class="button">' . _('Request Return (RMA)') . '</a>';
+	echo '</div>';
+}
+
 end_page(true, false, false, ST_CUSTDELIVERY, $trans_id);

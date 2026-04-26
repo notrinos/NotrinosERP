@@ -159,4 +159,11 @@ $voided = is_voided_display(ST_SALESINVOICE, $trans_id, _('This invoice has been
 if (!$voided)
 	display_allocations_to(PT_CUSTOMER, $myrow['debtor_no'], ST_SALESINVOICE, $trans_id, $myrow['Total']);
 
+// Phase 5: RMA quick-link
+if (!$voided && $_SESSION['wa_current_user']->can_access_page('SA_SALESRETURN')) {
+	echo '<div style="margin-top:8px;">';
+	echo '<a href="' . $path_to_root . '/sales/sales_rma_entry.php?New=1&source_type=' . ST_SALESINVOICE . '&source_no=' . (int)$trans_id . '" class="button">' . _('Request Return (RMA)') . '</a>';
+	echo '</div>';
+}
+
 end_page(true, false, false, ST_SALESINVOICE, $trans_id);

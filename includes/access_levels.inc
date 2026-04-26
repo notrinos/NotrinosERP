@@ -153,6 +153,13 @@ $security_areas =array(
 	'SA_SALESGROUP' => array(SS_SALES_C|5, _('Sales groups changes')),
 	'SA_STEMPLATE' => array(SS_SALES_C|6, _('Sales templates')),
 	'SA_SRECURRENT' => array(SS_SALES_C|7, _('Recurrent invoices definitions')),
+	'SA_SALESPRICELIST' => array(SS_SALES_C|8, _('Sales pricelists')),
+	'SA_SALESQUOTETPL' => array(SS_SALES_C|9, _('Quotation templates')),
+	'SA_SALESAGREEMENT' => array(SS_SALES_C|10, _('Sales agreements')),
+	'SA_SALESDISCOUNT'   => array(SS_SALES_C|11, _('Discount programs management')),   // Phase 4
+	'SA_SALESCOMMISSION' => array(SS_SALES_C|12, _('Commission plans management')),    // Phase 6
+
+	'SA_SALESRETURN'    => array(SS_SALES|11, _('Sales RMA entry')),                   // Phase 5
 
 	'SA_SALESTRANSVIEW' => array(SS_SALES|1,  _('Sales transactions view')),
 	'SA_CUSTOMER' => array(SS_SALES|2,  _('Sales customer and branches changes')),
@@ -172,6 +179,14 @@ $security_areas =array(
 	'SA_CUSTBULKREP' => array(SS_SALES_A|5, _('Customer bulk listing')),
 	'SA_CUSTSTATREP' => array(SS_SALES_A|6, _('Customer status report')),
 	'SA_CUSTPAYMREP' => array(SS_SALES_A|7, _('Customer payments report')),
+
+	// === SALES MODULE ENHANCEMENTS (Phase 7) ===
+	'SA_SALESDASHBOARD'  => array(SS_SALES_A|8,  _('Sales dashboard')),                // Phase 7
+	'SA_SALESREPORT'     => array(SS_SALES_A|9,  _('Advanced sales reports')),         // Phase 7
+
+	// === SALES MODULE ENHANCEMENTS (Phase 8: Credit Control) ===
+	'SA_CREDITCONTROL'   => array(SS_SALES|12, _('Credit control management')),        // Phase 8
+	'SA_CREDITOVERRIDE'  => array(SS_SALES|13, _('Credit limit override')),            // Phase 8
 
 	// Purchase related functions
 	'SA_PURCHASEPRICING' => array(SS_PURCH_C|1, _('Purchase price changes')),

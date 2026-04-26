@@ -205,6 +205,15 @@ class ApprovalWorkflow {
 		if ($auto_approved) {
 			// Execute immediately
 			$exec_result = $this->executeApprovedDraft($draft_id);
+			if (!$exec_result) {
+				cancel_transaction();
+				return array(
+					'draft_id'  => $draft_id,
+					'trans_no'  => 0,
+					'reference' => $reserved['reference'],
+					'status'    => 'execution_failed',
+				);
+			}
 			commit_transaction();
 
 			// Reload draft to get actual posted trans_no (executor may use different number)

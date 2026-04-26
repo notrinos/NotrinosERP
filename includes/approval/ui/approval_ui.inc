@@ -72,6 +72,10 @@ function approval_check_before_save($trans_type, $draft_data, $amount = 0, $cont
 		return false;
 	}
 
+	if ($result['status'] === 'execution_failed') {
+		return false;
+	}
+
 	// Unexpected status — treat as error
 	display_error(sprintf(_('Approval submission failed: %s'), $result['status']));
 	return $result;

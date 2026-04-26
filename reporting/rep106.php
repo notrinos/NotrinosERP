@@ -17,6 +17,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/sales/includes/sales_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/sales/includes/db/sales_commission_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -55,6 +56,12 @@ function get_salesman_trans($from, $to) {
 
 function print_salesman_list() {
 	global $path_to_root;
+
+	// Phase 6: when advanced commissions are enabled, use commission entries
+	if (get_company_pref('use_advanced_commissions')) {
+		print_salesman_list_advanced();
+		return;
+	}
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
@@ -169,6 +176,127 @@ function print_salesman_list() {
 	$rep->AmountCol(5, 6, $total, $dec);
 	$rep->AmountCol(6, 7, $provtotal, $dec);
 	$rep->Line($rep->row  - 4);
+	$rep->NewLine();
+	$rep->End();
+}
+
+// -------------------------------------------------------------------------
+// Phase 6: Advanced commission report — reads from 0_sales_commission_entries
+// -------------------------------------------------------------------------
+
+/**
+ * Print salesman commission report using the advanced commission engine.
+ * Replaces the legacy provision-based calculation in rep106.php when
+ * use_advanced_commissions = 1.
+ */
+function print_salesman_list_advanced() {
+	global $path_to_root;
+
+	$from    = $_POST['PARAM_0'];
+	$to      = $_POST['PARAM_1'];
+	$summary = $_POST['PARAM_2'];
+	$comments    = $_POST['PARAM_3'];
+	$orientation = $_POST['PARAM_4'];
+	$destination = $_POST['PARAM_5'];
+
+	if ($destination)
+		include_once($path_to_root.'/reporting/includes/excel_report.inc');
+	else
+		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
+	$orientation = ($orientation ? 'L' : 'P');
+
+	$sum = $summary == 0 ? _('No') : _('Yes');
+	$dec = user_price_dec();
+
+	$cols    = array(0, 60, 200, 290, 360, 430, 515);
+	$headers = array(_('Trans#'), _('Customer'), _('Plan'), _('Date'), _('Base Amt'), _('Rate %'), _('Commission'));
+	$aligns  = array('left', 'left', 'left', 'left', 'right', 'right', 'right');
+
+	$headers2 = array(_('Salesman'), '', '', '', '', '', '');
+	$aligns2  = $aligns;
+
+	$params = array(
+		0 => $comments,
+		1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
+		2 => array('text' => _('Summary Only'), 'from' => $sum, 'to' => ''),
+	);
+
+	$rep = new FrontReport(_('Salesman Commission Report'), 'SalesmanCommissions',
+		user_pagesize(), 9, $orientation);
+	if ($orientation == 'L')
+		recalculate_cols($cols);
+	$rep->Font();
+	$rep->Info($params, $cols, $headers, $aligns, $cols, $headers2, $aligns2);
+	$rep->NewPage();
+
+	$result = get_commission_entries(0, '', date2sql($from), date2sql($to));
+
+	$cur_salesman = 0;
+	$sub_base     = 0;
+	$sub_comm     = 0;
+	$tot_base     = 0;
+	$tot_comm     = 0;
+
+	while ($row = db_fetch($result)) {
+		$rep->NewLine(0, 2, false, $cur_salesman);
+
+		if ($cur_salesman != $row['salesman_id']) {
+			if ($cur_salesman != 0) {
+				$rep->Line($rep->row - 8);
+				$rep->NewLine(2);
+				$rep->TextCol(0, 4, _('Sub-Total'));
+				$rep->AmountCol(4, 5, $sub_base, $dec);
+				$rep->TextCol(5, 6, '');
+				$rep->AmountCol(6, 7, $sub_comm, $dec);
+				$rep->Line($rep->row - 4);
+				$rep->NewLine(2);
+				$tot_base += $sub_base;
+				$tot_comm += $sub_comm;
+				$sub_base = $sub_comm = 0;
+			}
+			$rep->Font('bold');
+			$rep->TextCol(0, 3, $row['salesman_id'].' - '.$row['salesman_name']);
+			$rep->Font();
+			$rep->NewLine(2);
+			$cur_salesman = $row['salesman_id'];
+		}
+
+		if (!$summary) {
+			$type_label = $row['trans_type'] == ST_SALESINVOICE ? _('Inv') : _('Cr');
+			$rep->TextCol(0, 1, $type_label.' #'.$row['trans_no']);
+			$rep->TextCol(1, 2, $row['customer_name']);
+			$rep->TextCol(2, 3, $row['plan_name'] ?? '');
+			$rep->DateCol(3, 4, $row['trans_date'], true);
+			$rep->AmountCol(4, 5, $row['base_amount'], $dec);
+			$rep->TextCol(5, 6, number_format2($row['commission_rate'], user_percent_dec()).' %');
+			$rep->AmountCol(6, 7, $row['commission_amount'], $dec);
+			$rep->NewLine();
+		}
+
+		$sub_base += $row['base_amount'];
+		$sub_comm += $row['commission_amount'];
+	}
+
+	if ($cur_salesman != 0) {
+		$rep->Line($rep->row - 4);
+		$rep->NewLine(2);
+		$rep->TextCol(0, 4, _('Sub-Total'));
+		$rep->AmountCol(4, 5, $sub_base, $dec);
+		$rep->TextCol(5, 6, '');
+		$rep->AmountCol(6, 7, $sub_comm, $dec);
+		$rep->Line($rep->row - 4);
+		$rep->NewLine(2);
+		$tot_base += $sub_base;
+		$tot_comm += $sub_comm;
+	}
+
+	$rep->fontSize += 2;
+	$rep->TextCol(0, 4, _('Grand Total'));
+	$rep->fontSize -= 2;
+	$rep->AmountCol(4, 5, $tot_base, $dec);
+	$rep->TextCol(5, 6, '');
+	$rep->AmountCol(6, 7, $tot_comm, $dec);
+	$rep->Line($rep->row - 4);
 	$rep->NewLine();
 	$rep->End();
 }

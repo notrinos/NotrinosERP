@@ -16,6 +16,9 @@ include($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Sales Persons'));
 
 include($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
+
+$use_advanced_commissions = get_company_pref('use_advanced_commissions');
 
 simple_page_mode(true);
 
@@ -32,12 +35,12 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		set_focus('salesman_name');
 	}
 	$pr1 = check_num('provision', 0,100);
-	if (!$pr1 || !check_num('provision2', 0, 100)) {
+	if (!$use_advanced_commissions && (!$pr1 || !check_num('provision2', 0, 100))) {
 		$input_error = 1;
 		display_error( _('Salesman provision cannot be less than 0 or more than 100%.'));
 		set_focus(!$pr1 ? 'provision' : 'provision2');
 	}
-	if (!check_num('break_pt', 0)) {
+	if (!$use_advanced_commissions && !check_num('break_pt', 0)) {
 		$input_error = 1;
 		display_error( _('Salesman provision breakpoint must be numeric and not less than 0.'));
 		set_focus('break_pt');
@@ -83,7 +86,11 @@ $result = get_salesmen(check_value('show_inactive'));
 
 start_form();
 start_table(TABLESTYLE, "width='60%'");
-$th = array(_('Name'), _('Phone'), _('Fax'), _('Email'), _('Provision'), _('Break Pt.'), _('Provision').' 2', '', '');
+if ($use_advanced_commissions) {
+	$th = array(_('Name'), _('Phone'), _('Fax'), _('Email'), _('Commission Plan'), '', '');
+} else {
+	$th = array(_('Name'), _('Phone'), _('Fax'), _('Email'), _('Provision'), _('Break Pt.'), _('Provision').' 2', '', '');
+}
 inactive_control_column($th);
 table_header($th);
 
@@ -97,9 +104,14 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['salesman_phone']);
 	label_cell($myrow['salesman_fax']);
 	email_cell($myrow['salesman_email']);
-	label_cell(percent_format($myrow['provision']).' %', 'nowrap align=right');
-	amount_cell($myrow['break_pt']);
-	label_cell(percent_format($myrow['provision2']).' %', 'nowrap align=right');
+	if ($use_advanced_commissions) {
+		$assigned = get_salesman_plan($myrow['salesman_code'], Today());
+		label_cell($assigned ? htmlspecialchars($assigned['name']) : '-');
+	} else {
+		label_cell(percent_format($myrow['provision']).' %', 'nowrap align=right');
+		amount_cell($myrow['break_pt']);
+		label_cell(percent_format($myrow['provision2']).' %', 'nowrap align=right');
+	}
 	inactive_control_cell($myrow['salesman_code'], $myrow['inactive'],
 		'salesman', 'salesman_code');
 	edit_button_cell('Edit'.$myrow['salesman_code'], _('Edit'));
@@ -141,9 +153,25 @@ text_row_ex(_('Sales person name:'), 'salesman_name', 30);
 text_row_ex(_('Telephone number:'), 'salesman_phone', 20);
 text_row_ex(_('Fax number:'), 'salesman_fax', 20);
 email_row_ex(_('E-mail:'), 'salesman_email', 40);
-percent_row(_('Provision').':', 'provision');
-amount_row(_('Turnover Break Pt Level:'), 'break_pt');
-percent_row(_('Provision').' 2:', 'provision2');
+
+if ($use_advanced_commissions) {
+	// Show assigned plan info (read-only); link to plan management
+	$current_plan = ($selected_id != -1)
+		? get_salesman_plan($selected_id, Today())
+		: false;
+	$plan_display = $current_plan ? htmlspecialchars($current_plan['name']) : _('(none)');
+	$plan_link = "<a href='commission_plans.php?tab=2'>"._('Manage Assignments')."</a>";
+	label_row(_('Commission Plan:'), $plan_display.' &nbsp; '.$plan_link);
+	// Hidden fields to keep provision/break_pt defaults so update_salesman() doesn't overwrite
+	hidden('provision', get_post('provision', '0'));
+	hidden('break_pt',  get_post('break_pt',  '0'));
+	hidden('provision2', get_post('provision2','0'));
+} else {
+	percent_row(_('Provision').':', 'provision');
+	amount_row(_('Turnover Break Pt Level:'), 'break_pt');
+	percent_row(_('Provision').' 2:', 'provision2');
+}
+
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');

@@ -84,6 +84,22 @@ class Cart {
 	public $fixed_asset = false;
 	public $bo_policy = null;
 
+	// --- Phase 2: Quotation Templates & CRM Pipeline Integration ---
+	public $template_id = 0;           // ID of quotation template used to create this doc
+	public $validity_date = null;       // Expiry date for quotations
+	public $opportunity_id = 0;        // FK to CRM opportunity (0 = no link)
+	public $terms_and_conditions = ''; // T&C text set by template or manually
+	public $margin_total = 0;          // Calculated margin amount (sell - cost)
+	public $cost_total = 0;            // Calculated cost total for margin display
+	public $optional_items = array();  // Optional/upsell items from template (not in line_items)
+
+	// --- Phase 3: Sales Agreements & Contracts ---
+	public $agreement_id = 0;          // FK to 0_sales_agreements (0 = no agreement)
+
+	// --- Phase 4: Advanced Discount & Promotion Engine ---
+	public $applied_discounts = array(); // Array of applied discount entries (from programs/coupons)
+	public $coupon_code = '';            // Currently entered coupon code
+
 	//-------------------------------------------------------------------------
 	//
 	//  $trans_no==0 => open new/direct document
@@ -533,7 +549,7 @@ class Cart {
 	*/
 	function get_trans_total() {
 		
-		$total = $this->get_items_total() + $this->freight_cost;
+		$total = $this->get_items_total() + $this->freight_cost - $this->get_items_total_discount();
 		$dec = user_price_dec();
 		if (!$this->tax_included ) {
 			$taxes = $this->get_taxes();
@@ -615,6 +631,190 @@ class Cart {
 		else	// this is final invoice
 			$this->prep_amount = $remainder;
 	}
+	// -------------------------------------------------------------------------
+	// Phase 2: Quotation Templates & CRM Pipeline Integration Methods
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Load a quotation template into this cart.
+	 *
+	 * Populates required lines into $line_items and optional lines into
+	 * $optional_items. Requires apply_template_to_cart() from
+	 * sales_quotation_template_db.inc to be loaded.
+	 *
+	 * @param int $template_id Template ID.
+	 * @return bool False if template not found or function unavailable.
+	 */
+	function load_template($template_id)
+	{
+		global $path_to_root;
+		if (!function_exists('apply_template_to_cart')) {
+			include_once($path_to_root . '/sales/includes/db/sales_quotation_template_db.inc');
+		}
+		return apply_template_to_cart($this, $template_id);
+	}
+
+	/**
+	 * Accept an optional item (move it from $optional_items to $line_items).
+	 *
+	 * @param int $opt_index Index in $optional_items array.
+	 * @return bool True if moved successfully.
+	 */
+	function accept_optional_item($opt_index)
+	{
+		if (!isset($this->optional_items[$opt_index]))
+			return false;
+
+		$opt = $this->optional_items[$opt_index];
+		$line_no = count($this->line_items);
+		add_to_order($this, $opt['stock_id'], $opt['quantity'], $opt['price'],
+			$opt['discount_percent'], $opt['description']);
+
+		unset($this->optional_items[$opt_index]);
+		$this->optional_items = array_values($this->optional_items); // re-index
+		return true;
+	}
+
+	/**
+	 * Calculate margin amounts for each line and the cart total.
+	 *
+	 * Updates $margin_total and $cost_total on the cart.
+	 * Also fires the sales_margin_calculate hook.
+	 *
+	 * @return array Array with 'margin_total', 'cost_total', 'margin_percent'.
+	 */
+	function calculate_margins()
+	{
+		$cost_total = 0;
+		$sell_total = 0;
+		$margin_data = array();
+
+		foreach ($this->line_items as $line_no => $line) {
+			$sell_line  = round($line->qty_dispatched * $line->price * (1 - $line->discount_percent), 2);
+			$cost_line  = round($line->qty_dispatched * $line->standard_cost, 2);
+			$sell_total += $sell_line;
+			$cost_total += $cost_line;
+
+			$margin_data[$line_no] = array(
+				'sell'   => $sell_line,
+				'cost'   => $cost_line,
+				'margin' => $sell_line - $cost_line,
+			);
+		}
+
+		$this->cost_total   = $cost_total;
+		$this->margin_total = $sell_total - $cost_total;
+
+		hook_invoke_all('sales_margin_calculate', $margin_data, $this);
+		return array(
+			'margin_total'   => $this->margin_total,
+			'cost_total'     => $this->cost_total,
+			'margin_percent' => $sell_total > 0 ? (($sell_total - $cost_total) / $sell_total) * 100 : 0,
+		);
+	}
+
+	/**
+	 * Return the overall margin percentage for this cart.
+	 *
+	 * Recalculates if needed.
+	 *
+	 * @return float Margin percentage (0-100).
+	 */
+	function get_margin_percent()
+	{
+		$data = $this->calculate_margins();
+		return $data['margin_percent'];
+	}
+
+	// --- Phase 4: Advanced Discount & Promotion Engine ---
+
+	/**
+	 * Validate and apply a coupon code to the cart.
+	 * Adds the discount entry to $applied_discounts if valid.
+	 *
+	 * @param string $code Coupon code
+	 * @return array ['success'=>bool, 'message'=>string, 'discount_amount'=>double]
+	 */
+	function apply_coupon($code)
+	{
+		global $path_to_root;
+		if (!function_exists('validate_coupon'))
+			include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
+		$date = $this->document_date ? $this->document_date : today();
+		$validation = validate_coupon($code, $this->customer_id, $date);
+		if (!$validation['valid'])
+			return array('success' => false, 'message' => $validation['message'], 'discount_amount' => 0);
+
+		$prog = $validation['program'];
+		return apply_discount_to_cart($this, $prog['id'], $code);
+	}
+
+	/**
+	 * Remove any applied coupon from $applied_discounts.
+	 *
+	 * @return void
+	 */
+	function remove_coupon()
+	{
+		$this->coupon_code = '';
+		// Remove coupon-type entries from applied_discounts
+		$filtered = array();
+		foreach ($this->applied_discounts as $d) {
+			if (empty($d['coupon_code']))
+				$filtered[] = $d;
+		}
+		$this->applied_discounts = $filtered;
+	}
+
+	/**
+	 * Evaluate and return applicable automatic discount programs for this cart.
+	 * Does NOT modify $applied_discounts.
+	 *
+	 * @return array Array of applicable program discount entries
+	 */
+	function get_automatic_discounts()
+	{
+		global $path_to_root;
+		if (!function_exists('calculate_automatic_discounts'))
+			include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
+		return calculate_automatic_discounts($this);
+	}
+
+	/**
+	 * Return a breakdown of all applied discounts.
+	 *
+	 * @return array Array of ['name'=>, 'reward_type'=>, 'discount_amount'=>, 'coupon_code'=>]
+	 */
+	function get_discount_breakdown()
+	{
+		$breakdown = array();
+		foreach ($this->applied_discounts as $d) {
+			$breakdown[] = array(
+				'program_id'      => $d['program_id'],
+				'name'            => $d['name'],
+				'reward_type'     => $d['reward_type'],
+				'discount_amount' => $d['discount_amount'],
+				'coupon_code'     => $d['coupon_code'],
+			);
+		}
+		return $breakdown;
+	}
+
+	/**
+	 * Get the total discount amount from all entries in $applied_discounts.
+	 *
+	 * @return double Total discount amount
+	 */
+	function get_items_total_discount()
+	{
+		$total = 0;
+		foreach ($this->applied_discounts as $d)
+			$total += $d['discount_amount'];
+		return $total;
+	}
+
 } /* end of class defintion */
 
 class line_details {

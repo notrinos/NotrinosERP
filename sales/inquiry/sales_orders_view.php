@@ -135,6 +135,23 @@ function order_link($row) {
 	return pager_link( _('Sales Order'), '/sales/sales_order_entry.php?NewQuoteToSalesOrder='.$row['order_no'], ICON_DOC);
 }
 
+/**
+ * Phase 2: CRM Won/Lost action links for quotation rows that have opportunity_id linked.
+ *
+ * @param array $row  Pager row
+ * @return string     HTML link(s) or empty string
+ */
+function crm_pipeline_link($row) {
+	global $SysPrefs;
+	if (empty($SysPrefs->prefs['use_crm']) || empty($row['opportunity_id']))
+		return '';
+	$win_url  = '/sales/inquiry/sales_orders_view.php?QuoteWon='  . $row['order_no'] . '&cust=' . $row['debtor_no'];
+	$lost_url = '/sales/inquiry/sales_orders_view.php?QuoteLost=' . $row['order_no'];
+	return pager_link(_('Won'),  $win_url,  ICON_ACCEPT)
+		 . '&nbsp;'
+		 . pager_link(_('Lost'), $lost_url, ICON_DELETE);
+}
+
 function tmpl_checkbox($row) {
 	global $trans_type, $page_nested;
 
@@ -183,6 +200,18 @@ if (isset($_POST['Update']) && isset($_POST['last'])) {
 	foreach($_POST['last'] as $id => $value)
 		if ($value != check_value('chgtpl'.$id))
 			sales_order_set_template($id, !check_value('chgtpl'.$id));
+}
+
+// Phase 2: Handle CRM quote Won/Lost from pager links
+if (isset($_GET['QuoteWon']) && is_numeric($_GET['QuoteWon'])) {
+	include_once($path_to_root . '/sales/includes/db/sales_crm_bridge_db.inc');
+	sync_quote_won_to_crm((int)$_GET['QuoteWon'], isset($_GET['cust']) ? (int)$_GET['cust'] : 0);
+	display_notification(_('Quote has been marked as Won in CRM.'));
+}
+if (isset($_GET['QuoteLost']) && is_numeric($_GET['QuoteLost'])) {
+	include_once($path_to_root . '/sales/includes/db/sales_crm_bridge_db.inc');
+	sync_quote_lost_to_crm((int)$_GET['QuoteLost'], 0, '');
+	display_notification(_('Quote has been marked as Lost in CRM.'));
 }
 
 $show_dates = !in_array($_POST['order_view_mode'], array('OutstandingOnly', 'InvoiceTemplates', 'DeliveryTemplates'));
@@ -234,6 +263,13 @@ if ($trans_type == ST_SALESORDER)
 	check_cells(_('Zero values'), 'show_voided');
 if ($show_dates && $trans_type == ST_SALESORDER)
 	check_cells(_('No auto'), 'no_auto');
+
+// Phase 2: CRM Opportunity filter (quotation view only)
+if ($trans_type == ST_SALESQUOTE && !empty($SysPrefs->prefs['use_crm'])) {
+	include_once($path_to_root . '/sales/includes/db/sales_crm_bridge_db.inc');
+	// A simple text input is sufficient — opportunity_id filter (0 = all)
+	label_cells(_('Opportunity #:'), text_cells_ex(null, 'crm_opportunity_id', 6, 10, get_post('crm_opportunity_id', ''), false));
+}
 
 submit_cells('SearchOrders', _('Apply Filter'),'',_('Select documents'), 'default');
 hidden('order_view_mode', $_POST['order_view_mode']);
@@ -302,10 +338,16 @@ else if ($_POST['order_view_mode'] == 'PrepaidOrders') {
 
 }
 elseif ($trans_type == ST_SALESQUOTE) {
-	 array_append($cols,array(
-					array('insert'=>true, 'fun'=>'edit_link'),
-					array('insert'=>true, 'fun'=>'order_link'),
-					array('insert'=>true, 'fun'=>'prt_link')));
+	array_append($cols, array(
+		array('insert'=>true, 'fun'=>'edit_link'),
+		array('insert'=>true, 'fun'=>'order_link'),
+		array('insert'=>true, 'fun'=>'prt_link')));
+	// Phase 2: CRM Won/Lost buttons when CRM is enabled
+	if (!empty($SysPrefs->prefs['use_crm'])) {
+		array_append($cols, array(
+			array('insert'=>true, 'fun'=>'crm_pipeline_link')
+		));
+	}
 }
 elseif ($trans_type == ST_SALESORDER) {
 	 array_append($cols,array(

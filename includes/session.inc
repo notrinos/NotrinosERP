@@ -441,6 +441,7 @@ include_once($path_to_root.'/includes/approval/approval_conditions.inc');
 include_once($path_to_root.'/includes/notification_manager.inc');
 include_once($path_to_root.'/includes/approval_notification_provider.inc');
 include_once($path_to_root.'/includes/purchase_notification_provider.inc');
+include_once($path_to_root.'/includes/sales_notification_provider.inc');
 
 // Ajax communication object
 $Ajax = new Ajax();
@@ -619,6 +620,15 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		if (!$notification_manager->hasProvider('purchase')) {
 			$notification_manager->registerProvider(
 				new PurchaseNotificationProvider(
+					(int)$_SESSION['wa_current_user']->user,
+					(int)$_SESSION['wa_current_user']->access
+				)
+			);
+		}
+
+		if (!$notification_manager->hasProvider('sales')) {
+			$notification_manager->registerProvider(
+				new SalesNotificationProvider(
 					(int)$_SESSION['wa_current_user']->user,
 					(int)$_SESSION['wa_current_user']->access
 				)

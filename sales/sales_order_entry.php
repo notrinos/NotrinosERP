@@ -27,6 +27,15 @@ include_once($path_to_root . '/sales/includes/ui/sales_order_ui.inc');
 include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
+// Phase 2: Quotation Templates & CRM Pipeline Integration
+include_once($path_to_root . '/sales/includes/db/sales_quotation_template_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_crm_bridge_db.inc');
+// Phase 3: Sales Agreements & Contracts
+include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+// Phase 4: Advanced Discount & Promotion Engine
+include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+// Phase 8: Advanced Credit Control
+include_once($path_to_root . '/sales/includes/db/sales_credit_control_db.inc');
 
 set_page_security( @$_SESSION['Items']->trans_type,
 	array(	ST_SALESORDER=>'SA_SALESORDER',
@@ -57,46 +66,125 @@ if ($SysPrefs->use_popup_windows)
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
-if (isset($_GET['NewDelivery']) && is_numeric($_GET['NewDelivery'])) {
+// Don't recreate cart if we're processing POST actions
+$is_post_action = isset($_POST['ApplyCoupon']) || isset($_POST['RemoveCoupon']) 
+	|| isset($_POST['apply_template']) || isset($_POST['AcceptOptional']) 
+	|| isset($_POST['MarkQuoteWon']) || isset($_POST['MarkQuoteLost']);
 
-	$_SESSION['page_title'] = _($help_context = 'Direct Sales Delivery');
-	create_cart(ST_CUSTDELIVERY, $_GET['NewDelivery']);
+// Set page_title if not already set (for POST actions)
+if (empty($_SESSION['page_title'])) {
+	$_SESSION['page_title'] = isset($_SESSION['Items']) ? '' : 'Sales Entry';
 }
-elseif (isset($_GET['NewInvoice']) && is_numeric($_GET['NewInvoice'])) {
 
-	create_cart(ST_SALESINVOICE, $_GET['NewInvoice']);
+if (!$is_post_action) {
+	if (isset($_GET['NewDelivery']) && is_numeric($_GET['NewDelivery'])) {
 
-	if (isset($_GET['FixedAsset'])) {
-		$_SESSION['page_title'] = _($help_context = 'Fixed Assets Sale');
-		$_SESSION['Items']->fixed_asset = true;
+		$_SESSION['page_title'] = _($help_context = 'Direct Sales Delivery');
+		create_cart(ST_CUSTDELIVERY, $_GET['NewDelivery']);
 	}
-	else
-		$_SESSION['page_title'] = _($help_context = 'Direct Sales Invoice');
-}
-elseif (isset($_GET['ModifyOrderNumber']) && is_numeric($_GET['ModifyOrderNumber'])) {
-	$help_context = 'Modifying Sales Order';
-	$_SESSION['page_title'] = sprintf( _('Modifying Sales Order # %d'), $_GET['ModifyOrderNumber']);
-	create_cart(ST_SALESORDER, $_GET['ModifyOrderNumber']);
-}
-elseif (isset($_GET['ModifyQuotationNumber']) && is_numeric($_GET['ModifyQuotationNumber'])) {
-	$help_context = 'Modifying Sales Quotation';
-	$_SESSION['page_title'] = sprintf( _('Modifying Sales Quotation # %d'), $_GET['ModifyQuotationNumber']);
-	create_cart(ST_SALESQUOTE, $_GET['ModifyQuotationNumber']);
-}
-elseif (isset($_GET['NewOrder'])) {
-	$_SESSION['page_title'] = _($help_context = 'New Sales Order Entry');
-	create_cart(ST_SALESORDER, 0);
-}
-elseif (isset($_GET['NewQuotation'])) {
-	$_SESSION['page_title'] = _($help_context = 'New Sales Quotation Entry');
-	create_cart(ST_SALESQUOTE, 0);
-}
-elseif (isset($_GET['NewQuoteToSalesOrder'])) {
-	$_SESSION['page_title'] = _($help_context = 'Sales Order Entry');
-	create_cart(ST_SALESQUOTE, $_GET['NewQuoteToSalesOrder']);
+	elseif (isset($_GET['NewInvoice']) && is_numeric($_GET['NewInvoice'])) {
+
+		create_cart(ST_SALESINVOICE, $_GET['NewInvoice']);
+
+		if (isset($_GET['FixedAsset'])) {
+			$_SESSION['page_title'] = _($help_context = 'Fixed Assets Sale');
+			$_SESSION['Items']->fixed_asset = true;
+		}
+		else
+			$_SESSION['page_title'] = _($help_context = 'Direct Sales Invoice');
+	}
+	elseif (isset($_GET['ModifyOrderNumber']) && is_numeric($_GET['ModifyOrderNumber'])) {
+		$help_context = 'Modifying Sales Order';
+		$_SESSION['page_title'] = sprintf( _('Modifying Sales Order # %d'), $_GET['ModifyOrderNumber']);
+		create_cart(ST_SALESORDER, $_GET['ModifyOrderNumber']);
+	}
+	elseif (isset($_GET['ModifyQuotationNumber']) && is_numeric($_GET['ModifyQuotationNumber'])) {
+		$help_context = 'Modifying Sales Quotation';
+		$_SESSION['page_title'] = sprintf( _('Modifying Sales Quotation # %d'), $_GET['ModifyQuotationNumber']);
+		create_cart(ST_SALESQUOTE, $_GET['ModifyQuotationNumber']);
+	}
+	elseif (isset($_GET['NewOrder'])) {
+		$_SESSION['page_title'] = _($help_context = 'New Sales Order Entry');
+		create_cart(ST_SALESORDER, 0);
+	}
+	elseif (isset($_GET['NewQuotation'])) {
+		$_SESSION['page_title'] = _($help_context = 'New Sales Quotation Entry');
+		create_cart(ST_SALESQUOTE, 0);
+	}
+	elseif (isset($_GET['NewQuoteToSalesOrder'])) {
+		$_SESSION['page_title'] = _($help_context = 'Sales Order Entry');
+		create_cart(ST_SALESQUOTE, $_GET['NewQuoteToSalesOrder']);
+	}
 }
 
 page($_SESSION['page_title'], false, false, '', $js);
+
+// Phase 2: Apply quotation template if requested
+if (isset($_POST['apply_template']) && (int)get_post('quote_template_id') > 0
+	&& isset($_SESSION['Items'])
+	&& $_SESSION['Items']->trans_type == ST_SALESQUOTE)
+{
+	$_SESSION['Items']->load_template((int)get_post('quote_template_id'));
+	$Ajax->activate('items_table');
+}
+
+// Phase 2: Accept optional item from template
+$accept_opt = find_submit('AcceptOptional');
+if ($accept_opt !== -1 && isset($_SESSION['Items'])) {
+	$_SESSION['Items']->accept_optional_item($accept_opt);
+	$Ajax->activate('items_table');
+	$Ajax->activate('optional_items_table');
+}
+
+// Phase 2: Mark Quote Won (convert to SO via CRM)
+if (isset($_POST['MarkQuoteWon']) && isset($_SESSION['Items'])
+	&& $_SESSION['Items']->trans_type == ST_SALESQUOTE
+	&& $_SESSION['Items']->trans_no != 0)
+{
+	$order_no = key($_SESSION['Items']->trans_no);
+	sync_quote_won_to_crm($order_no, $_SESSION['Items']->customer_id);
+	display_notification(_('Quote has been marked as Won in CRM.'));
+}
+
+// Phase 2: Mark Quote Lost
+if (isset($_POST['MarkQuoteLost']) && isset($_SESSION['Items'])
+	&& $_SESSION['Items']->trans_type == ST_SALESQUOTE
+	&& $_SESSION['Items']->trans_no != 0)
+{
+	$order_no = key($_SESSION['Items']->trans_no);
+	sync_quote_lost_to_crm($order_no, 0, get_post('lost_notes', ''));
+	display_notification(_('Quote has been marked as Lost in CRM.'));
+}
+
+// Phase 4: Apply coupon to cart
+if (isset($_POST['ApplyCoupon']) && isset($_SESSION['Items'])
+	&& !empty(get_company_pref('use_discount_programs')))
+{
+	$code = trim(get_post('coupon_code', ''));
+	if (!empty($code)) {
+		$result = $_SESSION['Items']->apply_coupon($code);
+		if ($result['success']) {
+			// Persist coupon code in cart (will be propagated to POST via copy_from_cart)
+			$_SESSION['Items']->coupon_code = $code;
+			display_notification(sprintf(_('Coupon applied: %s discount of %s.'), $result['message'], price_format($result['discount_amount'])));
+		} else {
+			display_error($result['message']);
+		}
+	} else {
+		display_error(_('Please enter a coupon code.'));
+	}
+	$Ajax->activate('_page_body');
+}
+
+// Phase 4: Remove coupon from cart
+if (isset($_POST['RemoveCoupon']) && isset($_SESSION['Items'])
+	&& !empty(get_company_pref('use_discount_programs')))
+{
+	$_SESSION['Items']->remove_coupon();
+	$_POST['coupon_code'] = '';
+	display_notification(_('Coupon has been removed.'));
+	$Ajax->activate('_page_body');
+}
 
 if (isset($_GET['ModifyOrderNumber']) && is_prepaid_order_open($_GET['ModifyOrderNumber'])) {
 	display_error(_('This order cannot be edited because there are invoices or payments related to it, and prepayment terms were used.'));
@@ -304,6 +392,36 @@ function copy_to_cart() {
 		$cart->dimension2_id = $_POST['dimension2_id'];
 	}
 	$cart->ex_rate = input_num('_ex_rate', null);
+
+	// Phase 2: Quotation Templates & CRM Pipeline Integration
+	if ($cart->trans_type == ST_SALESQUOTE) {
+		if (isset($_POST['quote_template_id']))
+			$cart->template_id = (int)$_POST['quote_template_id'];
+		if (isset($_POST['opportunity_id']))
+			$cart->opportunity_id = (int)$_POST['opportunity_id'];
+		if (isset($_POST['terms_and_conditions']))
+			$cart->terms_and_conditions = $_POST['terms_and_conditions'];
+	}
+	// Phase 3: Sales Agreements — persist agreement_id on SO
+	if ($cart->trans_type == ST_SALESORDER) {
+		if (isset($_POST['agreement_id']))
+			$cart->agreement_id = (int)$_POST['agreement_id'];
+	}
+	// Phase 4: Discount programs — persist coupon_code and applied_discounts
+	if (!empty(get_company_pref('use_discount_programs'))) {
+		// Only update coupon_code from POST if not already set (preserve applied coupons)
+		if (empty($cart->coupon_code))
+			$cart->coupon_code = get_post('coupon_code', '');
+		// Re-evaluate automatic discounts on every save to cart
+		$auto = $cart->get_automatic_discounts();
+		// Keep coupon-type entries, replace automatic ones
+		$coupon_entries = array();
+		foreach ($cart->applied_discounts as $d) {
+			if (!empty($d['coupon_code']))
+				$coupon_entries[] = $d;
+		}
+		$cart->applied_discounts = array_merge($coupon_entries, $auto);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -338,6 +456,21 @@ function copy_from_cart() {
 	}
 	$_POST['cart_id'] = $cart->cart_id;
 	$_POST['_ex_rate'] = $cart->ex_rate;
+
+	// Phase 2: Quotation Templates & CRM Pipeline Integration
+	if ($cart->trans_type == ST_SALESQUOTE) {
+		$_POST['quote_template_id']      = $cart->template_id;
+		$_POST['opportunity_id']         = $cart->opportunity_id;
+		$_POST['terms_and_conditions']   = $cart->terms_and_conditions;
+	}
+	// Phase 3: Sales Agreements
+	if ($cart->trans_type == ST_SALESORDER) {
+		$_POST['agreement_id'] = isset($cart->agreement_id) ? $cart->agreement_id : 0;
+	}
+	// Phase 4: Discount programs
+	if (!empty(get_company_pref('use_discount_programs'))) {
+		$_POST['coupon_code'] = isset($cart->coupon_code) ? $cart->coupon_code : '';
+	}
 }
 
 //--------------------------------------------------------------------------------
@@ -453,6 +586,24 @@ function can_process() {
 
 	if ($_SESSION['Items']->payment_terms['cash_sale'] && ($_SESSION['Items']->trans_type == ST_CUSTDELIVERY || $_SESSION['Items']->trans_type == ST_SALESINVOICE)) 
 		$_SESSION['Items']->due_date = $_SESSION['Items']->document_date;
+
+	// Phase 8: Advanced Credit Control check (order/invoice entry)
+	if (get_company_pref('use_advanced_credit_control') && get_company_pref('credit_check_on_order')) {
+		$check_type = ($_SESSION['Items']->trans_type == ST_CUSTDELIVERY
+			|| $_SESSION['Items']->trans_type == ST_SALESINVOICE) ? 'delivery' : 'order';
+		$order_amount = $_SESSION['Items']->get_items_total();
+		$credit = check_customer_credit($_SESSION['Items']->customer_id, $order_amount, $check_type);
+		if (!$credit['allowed']) {
+			// Users with SA_CREDITOVERRIDE may bypass the block with a warning
+			if (user_check_access('SA_CREDITOVERRIDE')) {
+				display_warning($credit['reason'] . ' ' . _('(Credit override applied)'));
+			} else {
+				display_error($credit['reason']);
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -758,8 +909,220 @@ $customer_error = display_order_header($_SESSION['Items'], !$_SESSION['Items']->
 
 if ($customer_error == '') {
 
+	// Phase 2: Show quotation template selector for new quotations
+	$use_quote_tpl = get_company_pref('use_quotation_templates');
+	if ($use_quote_tpl && $_SESSION['Items']->trans_type == ST_SALESQUOTE
+		&& $_SESSION['Items']->trans_no == 0)
+	{
+		$templates_result = get_quotation_templates(false);
+		$tpl_options = array(0 => _('-- Select Template (optional) --'));
+		while ($tpl = db_fetch($templates_result))
+			$tpl_options[$tpl['id']] = $tpl['name'];
+
+		if (count($tpl_options) > 1) {
+			display_heading2(_('Quotation Template'));
+			start_table(TABLESTYLE_NOBORDER);
+			start_row();
+			label_cell(_('Load Template:'), "class='label'");
+			echo '<td>';
+			echo html_select('quote_template_id', $tpl_options, get_post('quote_template_id', 0));
+			echo '</td><td>';
+			submit('apply_template', _('Apply Template'), false, _('Load products from the selected template'), true);
+			echo '</td>';
+			end_row();
+			end_table(1);
+		}
+	}
+
+	// Phase 2: CRM Opportunity link (for quotations, if CRM enabled)
+	if (!empty($SysPrefs->prefs['use_crm']) && $_SESSION['Items']->trans_type == ST_SALESQUOTE) {
+		$opps = get_crm_opportunities_for_customer($_SESSION['Items']->customer_id);
+		if ($opps && db_num_rows($opps) > 0) {
+			$opp_options = array(0 => _('-- No linked opportunity --'));
+			while ($opp = db_fetch($opps))
+				$opp_options[$opp['id']] = $opp['lead_ref'] . ': ' . $opp['title'];
+
+			display_heading2(_('CRM Pipeline'));
+			start_table(TABLESTYLE_NOBORDER);
+			start_row();
+			label_cell(_('Linked Opportunity:'), "class='label'");
+			echo '<td>';
+			echo html_select('opportunity_id', $opp_options, get_post('opportunity_id', $_SESSION['Items']->opportunity_id));
+			echo '</td>';
+			end_row();
+			end_table(1);
+		}
+	}
+
 	display_order_summary($orderitems, $_SESSION['Items'], true);
-	
+
+	// Phase 3: From Agreement — show linked agreement info on new SOs
+	$use_agreements = !empty($SysPrefs->prefs['use_sales_agreements']);
+	if ($use_agreements && $_SESSION['Items']->trans_type == ST_SALESORDER
+		&& $_SESSION['Items']->trans_no == 0)
+	{
+		$cust_id = $_SESSION['Items']->customer_id;
+		$active_agreements = array();
+		if ($cust_id > 0) {
+			$agr_result = get_sales_agreements($cust_id, 'active', true);
+			while ($agr = db_fetch($agr_result))
+				$active_agreements[$agr['id']] = $agr['reference'] . ' (' . $agr['customer_name'] . ')';
+		}
+		if (!empty($active_agreements)) {
+			$agr_options = array(0 => _('-- No linked agreement --')) + $active_agreements;
+			display_heading2(_('Sales Agreement'));
+			start_table(TABLESTYLE_NOBORDER);
+			start_row();
+			label_cell(_('From Agreement:'), "class='label'");
+			echo '<td>';
+			echo html_select('agreement_id', $agr_options,
+				get_post('agreement_id', isset($_SESSION['Items']->agreement_id) ? $_SESSION['Items']->agreement_id : 0));
+			echo '</td>';
+			end_row();
+			end_table(1);
+		}
+	}
+
+	// Phase 4: Coupon code entry and discount breakdown (if feature enabled)
+	$use_discounts = !empty(get_company_pref('use_discount_programs'));
+	if ($use_discounts
+		&& in_array($_SESSION['Items']->trans_type, array(ST_SALESORDER, ST_SALESQUOTE, ST_SALESINVOICE)))
+	{
+		display_heading2(_('Discounts & Promotions'));
+		start_table(TABLESTYLE_NOBORDER);
+		start_row();
+		label_cell(_('Coupon Code:'), "class='label'");
+		echo '<td>';
+		// Coupon code persists through cart->coupon_code (propagated to $_POST via copy_from_cart)
+		$display_coupon_code = !empty($_SESSION['Items']->coupon_code) ? $_SESSION['Items']->coupon_code : '';
+		if ($display_coupon_code === '' && isset($_POST['ApplyCoupon']))
+			$display_coupon_code = get_post('coupon_code', '');
+		text_cells_ex(null, 'coupon_code', 20, 30, $display_coupon_code);
+		echo '</td><td>';
+		submit('ApplyCoupon', _('Apply Coupon'), true, _('Apply the entered coupon code'), true);
+		if (!empty($_SESSION['Items']->coupon_code)) {
+			echo '&nbsp;';
+			submit('RemoveCoupon', _('Remove'), true, _('Remove applied coupon'), false);
+		}
+		echo '</td>';
+		end_row();
+		end_table(1);
+
+		// Show available automatic discounts
+		$auto_discounts = $_SESSION['Items']->get_automatic_discounts();
+		if (!empty($auto_discounts)) {
+			display_note(_('Available automatic promotions:'));
+			echo '<ul style="margin:4px 0 8px 20px;">';
+			foreach ($auto_discounts as $ad) {
+				$val = ($ad['reward_type'] === 'percentage_discount')
+					? number_format2($ad['reward_value'], 1) . '%'
+					: price_format($ad['reward_value']);
+				echo '<li>' . htmlspecialchars($ad['name']) . ' &mdash; ' . $val . '</li>';
+			}
+			echo '</ul>';
+		}
+
+		// Show discount breakdown if any applied
+		if (!empty($_SESSION['Items']->applied_discounts)) {
+			start_table(TABLESTYLE, "width='50%'");
+			table_header(array(_('Promotion'), _('Type'), _('Discount')));
+			$grand_disc = 0;
+			$kd = 0;
+			foreach ($_SESSION['Items']->applied_discounts as $disc) {
+				alt_table_row_color($kd);
+				label_cell(htmlspecialchars($disc['name']));
+				label_cell(!empty($disc['coupon_code'])
+					? _('Coupon') . ' (' . htmlspecialchars($disc['coupon_code']) . ')'
+					: ucfirst(str_replace('_', ' ', $disc['reward_type'])));
+				amount_cell($disc['discount_amount']);
+				end_row();
+				$grand_disc += $disc['discount_amount'];
+			}
+			start_row();
+			label_cell('<strong>' . _('Total Discount') . '</strong>', 'colspan=2 align=right');
+			amount_cell($grand_disc, true);
+			end_row();
+			end_table(1);
+		}
+	}
+
+	// Phase 2: Optional items panel (upsell products from template)
+	if (!empty($_SESSION['Items']->optional_items)) {		display_heading2(_('Optional / Upsell Products'));
+		div_start('optional_items_table');
+		start_table(TABLESTYLE);
+		$opt_th = array(_('Stock ID'), _('Description'), _('Qty'), _('Unit'), _('Price'), _('Disc %'), '');
+		table_header($opt_th);
+		$k = 0;
+		foreach ($_SESSION['Items']->optional_items as $opt_idx => $opt) {
+			alt_table_row_color($k);
+			label_cell($opt['stock_id']);
+			label_cell($opt['description']);
+			qty_cell($opt['quantity'], false, user_qty_dec());
+			label_cell(isset($opt['units']) ? $opt['units'] : '');
+			amount_cell($opt['price']);
+			percent_cell($opt['discount_percent'] * 100);
+			echo '<td>';
+			submit('AcceptOptional' . $opt_idx, _('Accept'), true, _('Add this optional product to the order'));
+			echo '</td>';
+			end_row();
+		}
+		end_table(1);
+		div_end();
+	}
+
+	// Phase 2: Margin display for quotations (if enabled)
+	$use_margin = get_company_pref('use_margin_display');
+	if ($use_margin && $_SESSION['Items']->trans_type == ST_SALESQUOTE
+		&& count($_SESSION['Items']->line_items) > 0)
+	{
+		$margin_data = $_SESSION['Items']->calculate_margins();
+		display_heading2(_('Margin Summary'));
+		start_table(TABLESTYLE_NOBORDER);
+		start_row();
+		label_cell(_('Cost Total:'), "class='label'");
+		amount_cell($margin_data['cost_total']);
+		label_cell('&nbsp;&nbsp;&nbsp;' . _('Margin:'), "class='label'");
+		amount_cell($margin_data['margin_total']);
+		label_cell('&nbsp;&nbsp;&nbsp;' . _('Margin %:'), "class='label'");
+		label_cell(number_format2($margin_data['margin_percent'], 1) . '%');
+		end_row();
+		end_table(1);
+	}
+
+	// Phase 2: Terms & Conditions for quotations
+	if ($_SESSION['Items']->trans_type == ST_SALESQUOTE) {
+		$tpl_id = $_SESSION['Items']->template_id;
+		$show_tnc = !empty($_SESSION['Items']->terms_and_conditions)
+			|| ($tpl_id > 0 && ($tpl = get_quotation_template($tpl_id)) && !empty($tpl['terms_and_conditions']));
+		if ($show_tnc || $tpl_id > 0) {
+			display_heading2(_('Terms & Conditions'));
+			start_table(TABLESTYLE_NOBORDER);
+			start_row();
+			label_cell(_('T&C:'), "class='label'");
+			textarea_cell('terms_and_conditions', get_post('terms_and_conditions', $_SESSION['Items']->terms_and_conditions), 80, 4);
+			end_row();
+			end_table(1);
+		}
+	}
+
+	// Phase 2: Mark Won / Mark Lost buttons for existing quotations
+	if ($_SESSION['Items']->trans_type == ST_SALESQUOTE
+		&& $_SESSION['Items']->trans_no != 0
+		&& !empty($SysPrefs->prefs['use_crm'])
+		&& $_SESSION['Items']->opportunity_id > 0)
+	{
+		display_heading2(_('Pipeline Actions'));
+		start_table(TABLESTYLE_NOBORDER);
+		start_row();
+		echo '<td>';
+		submit('MarkQuoteWon', _('Mark Won'), false, _('Mark the linked CRM opportunity as Won'), false);
+		echo '&nbsp;&nbsp;';
+		submit('MarkQuoteLost', _('Mark Lost'), false, _('Mark the linked CRM opportunity as Lost'), false);
+		echo '</td>';
+		end_row();
+		end_table(1);
+	}
+
 	display_delivery_details($_SESSION['Items']);
 
 	if ($_SESSION['Items']->trans_no == 0) {

@@ -254,8 +254,13 @@ function display_order_summary($title, &$order, $editable_items=false) {
 	label_row(_('Sub-total'), $display_sub_total, "colspan=$colspan align=right","align=right", 2);
 	$taxes = $order->get_taxes(input_num('freight_cost'));
 	$tax_total = display_edit_tax_items($taxes, $colspan, $order->tax_included, 2);
+	$discount_total = 0;
+	if (method_exists($order, 'get_items_total_discount'))
+		$discount_total = $order->get_items_total_discount();
+	if ($discount_total > 0)
+		label_row(_('Promotions Discount'), price_format(-$discount_total), "colspan=$colspan align=right", "align=right", 2);
 
-	$display_total = price_format(($total + input_num('freight_cost') + $tax_total));
+	$display_total = price_format(($total + input_num('freight_cost') + $tax_total - $discount_total));
 
 	start_row();
 	label_cells(_('Amount Total'), $display_total, "colspan=$colspan align=right","align=right");

@@ -14,6 +14,10 @@
 */
 function write_sales_invoice(&$invoice) {
 	global $Refs;
+	global $path_to_root;
+
+	if (!function_exists('get_cart_total_discount'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
 
 	$trans_no = $invoice->trans_no;
 	if (is_array($trans_no))
@@ -84,14 +88,20 @@ function write_sales_invoice(&$invoice) {
 	}
 	else
 		$prepaid_factor = 1;
+	$discount_total = get_cart_total_discount($invoice);
+	$posted_discount_total = round($discount_total * $prepaid_factor, user_price_dec());
 
 	 // write_customer_trans have to be called after optional void_cust_allocations above
 	$invoice_no = write_customer_trans(ST_SALESINVOICE, $trans_no, $invoice->customer_id,
-		$invoice->Branch, $date_, $invoice->reference, $items_total, 0,
+		$invoice->Branch, $date_, $invoice->reference, $items_total, -$posted_discount_total,
 		$items_added_tax, $invoice->freight_cost, $freight_added_tax,
 		$invoice->sales_type, $sales_order, $invoice->ship_via, 
 		$invoice->due_date, 0, 0, $invoice->dimension_id, 
 		$invoice->dimension2_id, $invoice->payment, $invoice->tax_included, $invoice->prep_amount); 
+	$invoice_custom_data_sql = get_discount_custom_data_sql_value(array(), $invoice);
+	db_query("UPDATE ".TB_PREF."debtor_trans SET custom_data = ".$invoice_custom_data_sql."
+		WHERE trans_no = ".db_escape($invoice_no)." AND type = ".db_escape(ST_SALESINVOICE),
+		'Cannot update invoice discount custom data');
 
 	if ($trans_no == 0)
 		$invoice->trans_no = array($invoice_no=>0);
@@ -156,12 +166,18 @@ function write_sales_invoice(&$invoice) {
 		} /*quantity dispatched is more than 0 */
 	} /*end of delivery_line loop */
 
-	if (($items_total + $charge_shipping) != 0) {
+	if (($items_total + $charge_shipping - $discount_total) != 0) {
 		$total += add_gl_trans_customer(ST_SALESINVOICE, $invoice_no, $date_, $branch_data['receivables_account'], $invoice->dimension_id, $invoice->dimension2_id,
-			($items_total + $charge_shipping + $items_added_tax + $freight_added_tax)*$prepaid_factor,
+			(($items_total + $charge_shipping + $items_added_tax + $freight_added_tax)*$prepaid_factor) - $posted_discount_total,
 			$invoice->customer_id, 'The total debtor GL posting could not be inserted');
 	}
-	$to_allocate = ($items_total + $charge_shipping + $items_added_tax + $freight_added_tax);
+	$to_allocate = (($items_total + $charge_shipping + $items_added_tax + $freight_added_tax)*$prepaid_factor) - $posted_discount_total;
+
+	if ($posted_discount_total != 0) {
+		$total += add_gl_trans_customer(ST_SALESINVOICE, $invoice_no, $date_, $branch_data['sales_discount_account'],
+			$invoice->dimension_id, $invoice->dimension2_id, $posted_discount_total,
+			$invoice->customer_id, 'The promotion discount GL posting could not be inserted');
+	}
 
 	if ($charge_shipping != 0) {
 		$total += add_gl_trans_customer(ST_SALESINVOICE, $invoice_no, $date_, $company_data['freight_act'], $invoice->dimension_id, $invoice->dimension2_id,
@@ -190,8 +206,8 @@ function write_sales_invoice(&$invoice) {
 	if ($trans_no == 0) {
 		$Refs->save(ST_SALESINVOICE, $invoice_no, $invoice->reference, null, $invoice->fixed_asset);
 		if ($invoice->payment_terms['cash_sale'] && $invoice->pos['pos_account']) {
-			$amount = $items_total + $items_added_tax + $invoice->freight_cost 
-				+ $freight_added_tax;
+			$amount = (($items_total + $items_added_tax + $invoice->freight_cost 
+				+ $freight_added_tax) * $prepaid_factor) - $posted_discount_total;
 			if ($amount != 0) {
 				// to use debtors.pmt_discount on cash sale:
 				// extend invoice entry page with final amount after discount 
@@ -212,6 +228,15 @@ function write_sales_invoice(&$invoice) {
 		}
 	}
 	reallocate_payments($invoice_no, ST_SALESINVOICE, $date_, $to_allocate, $allocs, $invoice->customer_id);
+	record_cart_discount_usage($invoice, ST_SALESINVOICE, $invoice_no);
+	// Phase 6: Auto-calculate commission if advanced commissions enabled
+	if (get_company_pref('use_advanced_commissions') && !empty($invoice->salesman)) {
+		if (!function_exists('calculate_commission'))
+			include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
+		$base = $items_total + $invoice->freight_cost - $discount_total;
+		calculate_commission((int)$invoice->salesman, ST_SALESINVOICE, $invoice_no,
+			$invoice->customer_id, $base, $date_);
+	}
 	hook_db_postwrite($invoice, ST_SALESINVOICE);
 
 	commit_transaction();

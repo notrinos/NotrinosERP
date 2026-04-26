@@ -177,7 +177,17 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 
 	if ($trans_no == 0)
 		$Refs->save(ST_CUSTCREDIT, $credit_no, $credit_note->reference);
-	
+
+	// Phase 6: Reverse commission for credit note if advanced commissions enabled
+	if (get_company_pref('use_advanced_commissions') && !empty($credit_note->salesman)) {
+		global $path_to_root;
+		if (!function_exists('reverse_commission_for_credit'))
+			include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
+		$credit_base = $credit_note->get_items_total_dispatch() + $credit_note->freight_cost;
+		reverse_commission_for_credit((int)$credit_note->salesman, $credit_no,
+			$credit_note->customer_id, $credit_base, $credit_date);
+	}
+
 	hook_db_postwrite($credit_note, ST_CUSTCREDIT);
 	commit_transaction();
 

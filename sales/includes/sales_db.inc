@@ -26,6 +26,7 @@ include_once($path_to_root . '/sales/includes/db/cust_trans_details_db.inc');
 include_once($path_to_root . '/sales/includes/db/payment_db.inc');
 include_once($path_to_root . '/sales/includes/db/branches_db.inc');
 include_once($path_to_root . '/sales/includes/db/customers_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_pricelist_db.inc');
 
 //----------------------------------------------------------------------------------------
 // add a debtor-related gl transaction
@@ -65,7 +66,7 @@ function round_to_nearest($price, $round_to) {
 
 }
 
-function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=null) {
+function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=null, $customer_id=0, $branch_code=0, $quantity=0) {
 	if ($date == null)
 		$date = new_doc_date();
 
@@ -74,6 +75,22 @@ function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=nu
 		$factor = $myrow['factor'];
 	}
 
+	// Check if advanced pricelists are enabled and customer_id is provided
+	if ($customer_id > 0 && get_company_pref('use_advanced_pricelists')) {
+		// Use advanced pricelist pricing engine
+		if ($quantity == 0) {
+			$quantity = 1;  // Default quantity for non-quantity-based pricing
+		}
+		$pricelist_result = compute_pricelist_price($stock_id, $quantity, $customer_id, $branch_code, 
+			$sales_type_id, $currency, $date);
+		
+		if ($pricelist_result['source'] == 'pricelist') {
+			return $pricelist_result['price'];
+		}
+		// If pricelist pricing didn't find a rule, fall through to standard pricing
+	}
+
+	// Standard pricing logic (backward compatible)
 	$add_pct = get_company_pref('add_pct');
 	$base_id = get_base_sales_type();
 	$home_curr = get_company_currency();
@@ -194,6 +211,8 @@ function get_location(&$cart) {
 //	$trans_no - array of trans nums; special case trans_no==0 - new doc
 //
 function read_sales_trans($doc_type, $trans_no, &$cart) {
+	global $path_to_root;
+
 	if (!is_array($trans_no) && $trans_no)
 		$trans_no = array($trans_no);
 
@@ -203,6 +222,7 @@ function read_sales_trans($doc_type, $trans_no, &$cart) {
 	else {
 		// read header data from first document
 		$myrow = get_customer_trans($trans_no[0],$doc_type);
+		$header_row = $myrow;
 		$debtor_no = $myrow['debtor_no'];
 		if (count_array($trans_no)>1)
 			$cart->trans_no = get_customer_trans_version($doc_type, $trans_no);
@@ -250,6 +270,9 @@ function read_sales_trans($doc_type, $trans_no, &$cart) {
 			}
 		}
 		$cart->prepayments = get_payments_for($trans_no[0], $doc_type, $debtor_no);
+		if (!function_exists('restore_cart_discount_state'))
+			include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+		restore_cart_discount_state($cart, isset($header_row['custom_data']) ? $header_row['custom_data'] : array());
 
 	} // !newdoc
 
