@@ -86,19 +86,15 @@ start_form();
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-customer_list_cells(_('Customer:'), 'filter_customer', $filter_customer, true, true);
-echo '<td>' . _('Status:') . ' ';
-echo array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch')));
-echo '</td>';
-echo '<td>' . _('Type:') . ' ';
-echo array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch')));
-echo '</td>';
+customer_list_cells(null, 'filter_customer', $filter_customer, true, true);
+echo '<td>'.array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch'))).'</td>';
+echo '<td>'.array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch'))).'</td>';
 end_row();
 
 start_row();
 date_cells(_('From:'), 'filter_date_from', $filter_date_from, null, -user_transaction_days());
 date_cells(_('To:'),   'filter_date_to',   $filter_date_to);
-submit_cells('SearchAgreements', _('Apply Filter'), '', _('Filter agreements'), 'default');
+submit_cells('SearchAgreements', _('Apply Filter'), '', _('Filter agreements'), false);
 echo '<td>';
 hyperlink_params(
 	$path_to_root . '/sales/sales_agreement_entry.php',

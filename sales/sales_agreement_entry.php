@@ -540,7 +540,8 @@ if ($agreement) {
 		display_heading(_('Add Line'));
 		start_table(TABLESTYLE2);
 		start_row();
-		stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+		label_cell(_('Select Item:'));
+		stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 		end_row();
 		text_row(_('Description:'), 'line_description', null, 40, 255);
 		qty_row(_('Committed Quantity:'), 'line_committed_qty', null, null, null, get_qty_dec(''));

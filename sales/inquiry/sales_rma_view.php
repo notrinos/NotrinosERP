@@ -91,26 +91,16 @@ echo '</div>';
 // ============================================================================
 start_form();
 
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE_NOBORDER);
 start_row();
-echo '<td>' . _('Customer') . ':</td><td>';
-customer_list('filter_customer', $filter_customer, true, true);
-echo '</td>';
+echo '<td>'.customer_list('filter_customer', $filter_customer, true, true).'</td>';
 
-echo '<td>' . _('Status') . ':</td><td>';
+
 $status_options = array('' => _('All Statuses')) + $statuses;
-array_selector('filter_status', $filter_status, $status_options);
-echo '</td>';
-
-echo '<td>' . _('From') . ':</td><td>';
-date_cells(null, 'filter_date_from', '', null, -30);
-echo '</td><td>' . _('To') . ':</td><td>';
-date_cells(null, 'filter_date_to', '', null, 0);
-echo '</td>';
-
-echo '<td>';
-submit('filter_btn', _('Filter'), true, '', ICON_SUBMIT);
-echo '</td>';
+echo '<td>' .array_selector('filter_status', $filter_status, $status_options).'</td>';
+date_cells(_('From:'), 'filter_date_from', $filter_date_from, null, -30);
+date_cells(_('To:'), 'filter_date_to', $filter_date_to, null, 0);
+submit_cells('filter_btn', _('Apply Filter'), '', _('Filter RMAs'), false);
 end_row();
 end_table(1);
 
@@ -122,7 +112,7 @@ end_form();
 if (empty($rows)) {
 	display_note(_('No RMAs found matching the current filter.'), 1);
 } else {
-	start_table(TABLESTYLE);
+	start_table(TABLESTYLE, "width='100%'");
 	$th = array(
 		_('RMA #'), _('Reference'), _('Customer'), _('Date'),
 		_('Source'), _('Reason'), _('Method'), _('Refund Amount'),
