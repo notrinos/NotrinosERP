@@ -172,14 +172,7 @@ foreach ($rows as $row) {
 	label_cell(sales_agreement_status_badge($row['status']));
 	amount_cell($row['total_committed']);
 	amount_cell($row['total_ordered']);
-
-	echo '<td nowrap>';
-	edit_link_params(
-		$path_to_root . '/sales/sales_agreement_entry.php',
-		_('Edit'),
-		'agreement_id=' . $row['id']
-	);
-	echo '</td>';
+	label_cell("<a href = '".$path_to_root."/sales/sales_agreement_entry.php?agreement_id=" . $row['id']."'>"._('Edit')."</a>");
 
 	end_row();
 	$k++;
