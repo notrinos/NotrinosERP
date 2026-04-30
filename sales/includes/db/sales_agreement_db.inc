@@ -548,7 +548,7 @@ function get_sales_agreement_lines($agreement_id)
 {
 	$sql = "SELECT sal.*, si.description AS item_description, si.units AS stock_unit
 		FROM " . TB_PREF . "sales_agreement_lines sal
-		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = sal.stock_id
+		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = sal.stock_id 
 		WHERE sal.agreement_id = " . db_escape($agreement_id) . "
 		ORDER BY sal.id";
 
@@ -582,29 +582,29 @@ function update_agreement_committed_total($agreement_id)
  */
 function update_sales_agreement_fulfillment($agreement_id)
 {
-	// Update ordered total from linked SOs (trans_type 30 = ST_SALESORDER)
+	// Update ordered total from linked SO lines using net line values.
 	$sql_ordered = "UPDATE " . TB_PREF . "sales_agreements sa
 		SET total_ordered = IFNULL((
-			SELECT SUM(so.total)
-			FROM " . TB_PREF . "sales_orders so
+			SELECT SUM(sod.quantity * sod.unit_price * (1 - sod.discount_percent))
+			FROM " . TB_PREF . "sales_order_details sod
+			INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type
 			WHERE so.agreement_id = sa.id AND so.trans_type = 30
 		), 0)
 		WHERE sa.id = " . db_escape($agreement_id);
 
 	db_query($sql_ordered, 'Cannot update agreement ordered total');
 
-	// Update per-line ordered quantities from debtor_trans_details
+	// Update per-line ordered quantities from linked sales order lines.
 	$lines = get_sales_agreement_lines($agreement_id);
 	while ($line = db_fetch($lines)) {
 		$sql_line_ordered = "UPDATE " . TB_PREF . "sales_agreement_lines sal
 			SET ordered_qty = IFNULL((
-				SELECT SUM(dtd.quantity)
-				FROM " . TB_PREF . "debtor_trans_details dtd
-				INNER JOIN " . TB_PREF . "debtor_trans dt ON dt.trans_no = dtd.debtor_trans_no AND dt.type = dtd.debtor_trans_type
-				INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = dt.order_ AND so.trans_type = 30
+				SELECT SUM(sod.quantity)
+				FROM " . TB_PREF . "sales_order_details sod
+				INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type
 				WHERE so.agreement_id = " . db_escape($agreement_id) . "
-				  AND dtd.stock_id = " . db_escape($line['stock_id']) . "
-				  AND dt.type = 30
+				  AND so.trans_type = " . db_escape(ST_SALESORDER) . "
+				  AND sod.stk_code = " . db_escape($line['stock_id']) . "
 			), 0)
 			WHERE sal.id = " . db_escape($line['id']);
 
@@ -653,18 +653,54 @@ function create_order_from_agreement($agreement_id, $line_selections = array())
 
 	include_once($path_to_root . '/sales/includes/cart_class.inc');
 	include_once($path_to_root . '/sales/includes/sales_db.inc');
+	include_once($path_to_root . '/sales/includes/db/customers_db.inc');
+	include_once($path_to_root . '/sales/includes/db/branches_db.inc');
 
 	$agreement = get_sales_agreement($agreement_id);
 	if (!$agreement || $agreement['status'] !== 'active')
 		return 0;
 
+	$customer_row = get_customer($agreement['debtor_no']);
+	if (!$customer_row)
+		return 0;
+
+	$branch = get_branch($agreement['branch_code']);
+
 	$cart = new Cart(ST_SALESORDER);
-	$cart->set_customer($agreement['debtor_no'], $agreement['customer_name'],
-		$agreement['currency'], 0, false);
-	$cart->Branch       = $agreement['branch_code'];
+	$cart->set_customer(
+		$agreement['debtor_no'],
+		$customer_row['name'],
+		$customer_row['curr_code'],
+		isset($customer_row['discount']) ? (float)$customer_row['discount'] : 0,
+		isset($customer_row['payment_terms']) ? (int)$customer_row['payment_terms'] : 0
+	);
+	$cart->set_branch(
+		$agreement['branch_code'],
+		$branch ? (int)$branch['tax_group_id'] : 0,
+		'',
+		'',
+		''
+	);
+	$cart->set_sales_type(
+		isset($customer_row['sales_type']) ? $customer_row['sales_type'] : 0,
+		'',
+		0,
+		1
+	);
+	$cart->set_location(isset($branch['location_code']) ? $branch['location_code'] : '', '');
+	if (empty($cart->Location) && isset($branch['default_location']))
+		$cart->Location = $branch['default_location'];
+	$cart->ship_via     = isset($branch['default_ship_via']) ? (int)$branch['default_ship_via'] : 0;
+	$cart->deliver_to   = isset($branch['br_name']) ? $branch['br_name'] : '';
+	$cart->delivery_address = isset($branch['br_post_address']) && $branch['br_post_address'] !== ''
+		? $branch['br_post_address']
+		: (isset($branch['br_address']) ? $branch['br_address'] : '');
+	$cart->phone        = isset($branch['phone']) ? $branch['phone'] : '';
+	$cart->cust_ref     = isset($branch['branch_ref']) ? $branch['branch_ref'] : '';
 	$cart->salesman     = $agreement['salesman_id'];
-	$cart->payment      = $agreement['payment_terms'];
 	$cart->agreement_id = $agreement_id;
+	$cart->document_date = today();
+	$cart->due_date      = add_days(today(), 1);
 	$cart->Comments     = _('From Agreement: ') . $agreement['reference'];
 
 	// Populate lines
@@ -682,7 +718,7 @@ function create_order_from_agreement($agreement_id, $line_selections = array())
 			$line['stock_id'],
 			$qty,
 			$line['unit_price'],
-			$line['discount_percent'],
+			((float)$line['discount_percent']) / 100,
 			0,
 			0,
 			$line['description'] ? $line['description'] : $line['item_description']
@@ -789,7 +825,8 @@ function auto_renew_sales_agreements()
 					$line['unit_price'],
 					$line['discount_percent'],
 					$line['description'],
-					$line['min_qty_per_order']
+					$line['min_qty_per_order'],
+					$line['price_valid_until']
 				);
 			}
 

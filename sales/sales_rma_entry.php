@@ -41,7 +41,7 @@ if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
-page(_($help_context = 'Sales RMA Entry'), false, false, '', $js);
+page(_($help_context = 'Sales Return Material Authorization Entry'), false, false, '', $js);
 
 // ============================================================================
 // INITIALISE FROM URL PARAMS (pre-populate from invoice/delivery)
@@ -50,6 +50,8 @@ page(_($help_context = 'Sales RMA Entry'), false, false, '', $js);
 $rma_id        = get_post('selected_id', -1);
 if ($rma_id === '') $rma_id = -1;
 $rma_id = (int)$rma_id;
+if ($rma_id <= 0 && isset($_GET['selected_id']))
+	$rma_id = (int)$_GET['selected_id'];
 
 $source_type_init = isset($_GET['source_type']) ? (int)$_GET['source_type'] : 0;
 $source_no_init   = isset($_GET['source_no'])   ? (int)$_GET['source_no']   : 0;
@@ -285,7 +287,7 @@ function rma_reason_list($name, $selected = 0)
 	$items = array(0 => _('-- Select Reason --'));
 	while ($row = db_fetch($result))
 		$items[$row['id']] = $row['description'];
-	array_selector($name, $selected, $items);
+	return array_selector($name, $selected, $items);
 }
 
 // ============================================================================
@@ -324,11 +326,11 @@ if ($rma) {
 		label_cells(_('Return Reason'), '', '', '');
 		start_row(); label_cell(_('Return Reason'));
 		hidden('return_reason_id_view', $rma['return_reason_id']);
-		echo '<td>'; rma_reason_list('return_reason_id', (int)$rma['return_reason_id']); echo '</td>'; end_row();
+		echo '<td>' . rma_reason_list('return_reason_id', (int)$rma['return_reason_id']) . '</td>'; end_row();
 
 		start_row(); label_cell(_('Return Method'));
 		echo '<td>';
-		array_selector('return_method', $rma['return_method'], get_rma_return_methods());
+		echo array_selector('return_method', $rma['return_method'], get_rma_return_methods());
 		echo '</td>'; end_row();
 
 		start_row(); label_cell(_('Restocking Fee %'));
@@ -370,39 +372,55 @@ if ($rma) {
 
 } else {
 	// New RMA entry
-	start_row(); label_cell(_('Customer'));
-	echo '<td>'; customer_list('debtor_no', get_post('debtor_no', 0), false, true); echo '</td>'; end_row();
+	start_row();
+	label_cell(_('Customer'));
+	echo '<td>'.customer_list('debtor_no', get_post('debtor_no', 0), false, true).'</td>';
+	end_row();
 
-	start_row(); label_cell(_('Branch'));
-	echo '<td>'; customer_branches_list('debtor_no', 'branch_code', get_post('branch_code', 0)); echo '</td>'; end_row();
+	start_row();
+	label_cell(_('Branch'));
+	echo '<td>'.customer_branches_list('debtor_no', 'branch_code', get_post('branch_code', 0)).'</td>';
+	end_row();
 
 	date_row(_('Request Date'), 'request_date', '', null, 0, 0, 0, null, true);
 
-	start_row(); label_cell(_('Source Document Type'));
-	echo '<td>';
+	start_row();
+
 	$src_types = array(0 => _('None'),
 		ST_SALESINVOICE => _('Sales Invoice'),
 		ST_CUSTDELIVERY => _('Customer Delivery'));
-	array_selector('source_type', $source_type_init ?: get_post('source_type', 0), $src_types);
-	echo '</td>'; end_row();
+	label_cell(_('Source Document Type'));
+	echo '<td>'.array_selector('source_type', $source_type_init ?: get_post('source_type', 0), $src_types).'</td>';
+	end_row();
 
-	start_row(); label_cell(_('Source Document #'));
-	echo '<td>'; text_cells_ex(null, 'source_no', 10, 10, $source_no_init ?: get_post('source_no', '')); echo '</td>'; end_row();
+	start_row();
+	label_cell(_('Source Document #'));
+	text_cells_ex(null, 'source_no', 10, 10, $source_no_init ?: get_post('source_no', ''));
+	end_row();
 
-	start_row(); label_cell(_('Return Reason'));
-	echo '<td>'; rma_reason_list('return_reason_id', (int)get_post('return_reason_id', 0)); echo '</td>'; end_row();
+	start_row();
+	label_cell(_('Return Reason'));
+	echo '<td>'.rma_reason_list('return_reason_id', (int)get_post('return_reason_id', 0)).'</td>';
+	end_row();
 
 	start_row(); label_cell(_('Return Method'));
-	echo '<td>'; array_selector('return_method', get_post('return_method', 'credit_note'), get_rma_return_methods()); echo '</td>'; end_row();
+	echo '<td>'.array_selector('return_method', get_post('return_method', 'credit_note'), get_rma_return_methods()).'</td>';
+	end_row();
 
-	start_row(); label_cell(_('Restocking Fee %'));
-	echo '<td>'; text_cells_ex(null, 'restocking_fee_percent', 8, 8, get_post('restocking_fee_percent', 0)); echo '</td>'; end_row();
+	start_row();
+	label_cell(_('Restocking Fee %'));
+	text_cells_ex(null, 'restocking_fee_percent', 8, 8, get_post('restocking_fee_percent', 0));
+	end_row();
 
-	start_row(); label_cell(_('Customer Notes'));
-	echo '<td><textarea name="customer_notes" rows="2" style="width:350px">' . htmlspecialchars(get_post('customer_notes', '')) . '</textarea></td>'; end_row();
+	start_row();
+	label_cell(_('Customer Notes'));
+	echo '<td><textarea name="customer_notes" rows="2">' . htmlspecialchars(get_post('customer_notes', '')) . '</textarea></td>';
+	end_row();
 
-	start_row(); label_cell(_('Internal Notes'));
-	echo '<td><textarea name="internal_notes" rows="2" style="width:350px">' . htmlspecialchars(get_post('internal_notes', '')) . '</textarea></td>'; end_row();
+	start_row();
+	label_cell(_('Internal Notes'));
+	echo '<td><textarea name="internal_notes" rows="2">' . htmlspecialchars(get_post('internal_notes', '')) . '</textarea></td>';
+	end_row();
 }
 
 end_table(1);
@@ -452,7 +470,8 @@ if ($rma) {
 		label_cell($line['notes']);
 		if ($rma['status'] === 'pending') {
 			echo '<td>';
-			submit_js_button('DELETE_LINE', (int)$line['id'], _('Remove'), true);
+			echo '<button class="ajaxsubmit" type="submit" name="DELETE_LINE" value="'
+				. (int)$line['id'] . '"><span>' . _('Remove') . '</span></button>';
 			echo '</td>';
 		} else {
 			label_cell('');
@@ -467,13 +486,13 @@ if ($rma) {
 		start_table(TABLESTYLE2);
 		start_row();
 		echo '<td>' . _('Item') . ':</td><td>';
-		stock_items_list('line_stock_id', get_post('line_stock_id', ''), false, true);
+		echo stock_items_list('line_stock_id', get_post('line_stock_id', ''), false, true);
 		echo '</td><td>' . _('Qty') . ':</td><td>';
 		text_cells_ex(null, 'line_qty', 8, 8, get_post('line_qty', 1));
 		echo '</td><td>' . _('Price') . ':</td><td>';
 		text_cells_ex(null, 'line_price', 10, 10, get_post('line_price', 0));
 		echo '</td><td>' . _('Condition') . ':</td><td>';
-		array_selector('line_condition', get_post('line_condition', 'good'), $conditions);
+		echo array_selector('line_condition', get_post('line_condition', 'good'), $conditions);
 		echo '</td><td>';
 		submit('ADD_RMA_LINE', _('Add Line'), true, '', ICON_ADD);
 		echo '</td>';
@@ -484,7 +503,7 @@ if ($rma) {
 
 // ============ ACTION BUTTONS ============
 div_start('action_buttons');
-start_table('');
+start_table();
 start_row();
 
 if (!$rma) {
@@ -503,7 +522,7 @@ if (!$rma) {
 	// WH Return creation
 	if ($rma['wh_return_order_id'] == 0) {
 		echo '<td>' . _('Warehouse') . ': ';
-		locations_list('wh_location', get_post('wh_location', ''));
+		echo locations_list('wh_location', get_post('wh_location', ''));
 		echo '</td><td>&nbsp;';
 		submit('CREATE_WH_RETURN', _('Create WH Return'), true, '', ICON_SUBMIT);
 		echo '</td><td>&nbsp;</td>';

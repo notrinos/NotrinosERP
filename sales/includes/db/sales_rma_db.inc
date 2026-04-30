@@ -150,6 +150,29 @@ function update_rma_reason($id, $description, $requires_inspection, $default_dis
 // ============================================================================
 
 /**
+ * Ensure ST_SALESRETURN is registered for reference/transaction numbering.
+ *
+ * @return void
+ */
+function ensure_sales_rma_transaction_registration()
+{
+	static $is_registered = false;
+
+	if ($is_registered || !function_exists('register_systype_db_info'))
+		return;
+
+	register_systype_db_info(ST_SALESRETURN, array(
+		TB_PREF . 'sales_rma',
+		null,
+		'id',
+		'reference',
+		'request_date'
+	));
+
+	$is_registered = true;
+}
+
+/**
  * Create a new RMA header.
  *
  * @param int    $debtor_no         Customer ID
@@ -170,6 +193,7 @@ function add_sales_rma($debtor_no, $branch_code, $request_date, $source_type, $s
 {
 	global $SysPrefs;
 	hook_invoke_all('sales_rma_before_save', $debtor_no, $source_type, $source_no);
+	ensure_sales_rma_transaction_registration();
 
 	$reference = get_next_trans_no(ST_SALESRETURN);
 
@@ -367,7 +391,8 @@ function get_rma_lines($rma_id)
 {
 	$sql = "SELECT l.*, m.description AS item_name, m.units AS unit
 		FROM " . TB_PREF . "sales_rma_lines l
-		LEFT JOIN " . TB_PREF . "stock_master m ON m.stock_id = l.stock_id
+		LEFT JOIN " . TB_PREF . "stock_master m
+			ON m.stock_id COLLATE utf8_general_ci = l.stock_id COLLATE utf8_general_ci
 		WHERE l.rma_id = " . (int)$rma_id . "
 		ORDER BY l.id";
 	return db_query($sql, 'Could not get RMA lines');
@@ -404,6 +429,43 @@ function _recalc_rma_totals($rma_id)
 // ============================================================================
 
 /**
+ * Fetch customer and branch defaults for downstream RMA documents.
+ *
+ * When the RMA was created without an explicit branch, the first active
+ * customer branch is used as the downstream document context.
+ *
+ * @param int $debtor_no
+ * @param int $branch_code
+ * @return array
+ */
+function get_sales_rma_document_defaults($debtor_no, $branch_code)
+{
+	global $path_to_root;
+
+	include_once($path_to_root . '/sales/includes/db/customers_db.inc');
+	include_once($path_to_root . '/sales/includes/db/branches_db.inc');
+
+	$customer_row = get_customer($debtor_no);
+	$branch = false;
+
+	if ($branch_code > 0)
+		$branch = get_cust_branch($debtor_no, $branch_code);
+
+	if (!$branch) {
+		$sql = "SELECT * FROM " . TB_PREF . "cust_branch
+			WHERE debtor_no = " . (int)$debtor_no . "
+			ORDER BY branch_code
+			LIMIT 1";
+		$branch = db_fetch(db_query($sql, 'Could not get default customer branch for RMA'));
+	}
+
+	return array(
+		'customer' => $customer_row,
+		'branch' => $branch,
+	);
+}
+
+/**
  * Authorize an RMA (pending → authorized).
  *
  * @param int    $rma_id
@@ -412,11 +474,16 @@ function _recalc_rma_totals($rma_id)
  */
 function authorize_rma($rma_id, $notes = '')
 {
+	$auth_notes_sql = '';
+	if ($notes !== '')
+		$auth_notes_sql = ", internal_notes = CONCAT(IFNULL(internal_notes,''), "
+			. db_escape("\n[Auth] " . $notes) . ")";
+
 	$sql = "UPDATE " . TB_PREF . "sales_rma SET
 		status = 'authorized',
 		authorized_by = " . (int)$_SESSION['wa_current_user']->user . ",
 		authorized_date = NOW()"
-		. ($notes !== '' ? ", internal_notes = CONCAT(IFNULL(internal_notes,''), '\n[Auth] " . db_escape_noquote($notes) . "')" : '')
+		. $auth_notes_sql
 		. " WHERE id = " . (int)$rma_id . " AND status = 'pending'";
 	db_query($sql, 'Could not authorize RMA');
 	$success = db_num_affected_rows() > 0;
@@ -535,25 +602,34 @@ function create_credit_from_rma($rma_id)
 
 	// Build a credit Cart
 	$cart = new Cart(ST_CUSTCREDIT);
-	$customer_row = get_customer_details($rma['debtor_no']);
+	$defaults = get_sales_rma_document_defaults($rma['debtor_no'], $rma['branch_code']);
+	$customer_row = $defaults['customer'];
+	$branch = $defaults['branch'];
 	if (!$customer_row)
 		return false;
 
-	$branch = get_branch($rma['branch_code']);
-	$payment = get_payment_terms($customer_row['payment_terms']);
+	$branch_code = $branch ? (int)$branch['branch_code'] : (int)$rma['branch_code'];
 
 	$cart->set_customer(
 		$rma['debtor_no'],
 		$customer_row['name'],
 		$customer_row['curr_code'],
-		(float)$customer_row['discount'],
-		$customer_row['payment_terms']
+		isset($customer_row['discount']) ? (float)$customer_row['discount'] : 0,
+		isset($customer_row['payment_terms']) ? (int)$customer_row['payment_terms'] : 0
 	);
-	$cart->set_branch($rma['branch_code'], $branch ? (int)$branch['tax_group_id'] : 0,
+	$cart->set_branch($branch_code, $branch ? (int)$branch['tax_group_id'] : 0,
 		'', '', '');
 	$cart->set_sales_type(isset($customer_row['sales_type']) ? $customer_row['sales_type'] : 0,
 		'', 0, 1);
-	$cart->set_location(isset($branch['location_code']) ? $branch['location_code'] : '', '');
+	$cart->set_location(isset($branch['default_location']) ? $branch['default_location'] : '', '');
+	$cart->Branch = $branch_code;
+	$cart->ship_via = isset($branch['default_ship_via']) ? (int)$branch['default_ship_via'] : 0;
+	$cart->deliver_to = isset($branch['br_name']) ? $branch['br_name'] : '';
+	$cart->delivery_address = isset($branch['br_post_address']) && $branch['br_post_address'] !== ''
+		? $branch['br_post_address']
+		: (isset($branch['br_address']) ? $branch['br_address'] : '');
+	$cart->cust_ref = isset($branch['branch_ref']) ? $branch['branch_ref'] : '';
+	$cart->phone = isset($branch['phone']) ? $branch['phone'] : '';
 	$cart->document_date = today();
 	$cart->reference = $rma['reference'] . '-CN';
 	$cart->Comments = _('Credit note for RMA ') . $rma['reference'];
@@ -614,24 +690,34 @@ function create_replacement_from_rma($rma_id)
 		return false;
 
 	$cart = new Cart(ST_SALESORDER);
-	$customer_row = get_customer_details($rma['debtor_no']);
+	$defaults = get_sales_rma_document_defaults($rma['debtor_no'], $rma['branch_code']);
+	$customer_row = $defaults['customer'];
+	$branch = $defaults['branch'];
 	if (!$customer_row)
 		return false;
 
-	$branch = get_branch($rma['branch_code']);
+	$branch_code = $branch ? (int)$branch['branch_code'] : (int)$rma['branch_code'];
 
 	$cart->set_customer(
 		$rma['debtor_no'],
 		$customer_row['name'],
 		$customer_row['curr_code'],
-		(float)$customer_row['discount'],
-		$customer_row['payment_terms']
+		isset($customer_row['discount']) ? (float)$customer_row['discount'] : 0,
+		isset($customer_row['payment_terms']) ? (int)$customer_row['payment_terms'] : 0
 	);
-	$cart->set_branch($rma['branch_code'], $branch ? (int)$branch['tax_group_id'] : 0,
+	$cart->set_branch($branch_code, $branch ? (int)$branch['tax_group_id'] : 0,
 		'', '', '');
 	$cart->set_sales_type(isset($customer_row['sales_type']) ? $customer_row['sales_type'] : 0,
 		'', 0, 1);
-	$cart->set_location(isset($branch['location_code']) ? $branch['location_code'] : '', '');
+	$cart->set_location(isset($branch['default_location']) ? $branch['default_location'] : '', '');
+	$cart->Branch = $branch_code;
+	$cart->ship_via = isset($branch['default_ship_via']) ? (int)$branch['default_ship_via'] : 0;
+	$cart->deliver_to = isset($branch['br_name']) ? $branch['br_name'] : '';
+	$cart->delivery_address = isset($branch['br_post_address']) && $branch['br_post_address'] !== ''
+		? $branch['br_post_address']
+		: (isset($branch['br_address']) ? $branch['br_address'] : '');
+	$cart->cust_ref = isset($branch['branch_ref']) ? $branch['branch_ref'] : '';
+	$cart->phone = isset($branch['phone']) ? $branch['phone'] : '';
 	$cart->document_date = today();
 	$cart->reference = 'Replacement-' . $rma['reference'];
 	$cart->Comments = _('Replacement order for RMA ') . $rma['reference'];
@@ -679,7 +765,8 @@ function get_invoice_items_for_rma($trans_no)
 	$sql = "SELECT d.stock_id, d.description, d.quantity, d.unit_price, d.discount_percent,
 		m.description AS item_name
 		FROM " . TB_PREF . "debtor_trans_details d
-		LEFT JOIN " . TB_PREF . "stock_master m ON m.stock_id = d.stock_id
+		LEFT JOIN " . TB_PREF . "stock_master m
+			ON m.stock_id COLLATE utf8_general_ci = d.stock_id COLLATE utf8_general_ci
 		WHERE d.debtor_trans_type = " . ST_SALESINVOICE . "
 		AND d.debtor_trans_no = " . (int)$trans_no . "
 		AND d.quantity > 0
@@ -698,7 +785,8 @@ function get_delivery_items_for_rma($trans_no)
 	$sql = "SELECT d.stock_id, d.description, d.quantity, d.unit_price, d.discount_percent,
 		m.description AS item_name
 		FROM " . TB_PREF . "debtor_trans_details d
-		LEFT JOIN " . TB_PREF . "stock_master m ON m.stock_id = d.stock_id
+		LEFT JOIN " . TB_PREF . "stock_master m
+			ON m.stock_id COLLATE utf8_general_ci = d.stock_id COLLATE utf8_general_ci
 		WHERE d.debtor_trans_type = " . ST_CUSTDELIVERY . "
 		AND d.debtor_trans_no = " . (int)$trans_no . "
 		AND d.quantity > 0
