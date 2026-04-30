@@ -19,6 +19,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/sales/includes/db/sales_pricelist_db.inc');
 
 simple_page_mode(true);
+$selected_rule_id = get_post('selected_rule_id', -1);
 
 // ============================================================================
 // PRICELIST VALIDATION AND PROCESSING
@@ -80,6 +81,7 @@ function can_process_rule() {
 if ($Mode=='ADD_ITEM' && can_process_pricelist()) {
 	$date_start = $_POST['date_start'] ? $_POST['date_start'] : null;
 	$date_end = $_POST['date_end'] ? $_POST['date_end'] : null;
+	$applicable_id = get_post('applicable_id', 0);
 	
 	add_sales_pricelist(
 		$_POST['pricelist_name'],
@@ -88,7 +90,7 @@ if ($Mode=='ADD_ITEM' && can_process_pricelist()) {
 		$date_end,
 		input_num('priority'),
 		$_POST['applicable_to'],
-		$_POST['applicable_id'],
+		$applicable_id,
 		$_POST['pricelist_description']
 	);
 	display_notification(_('New pricelist has been added'));
@@ -96,6 +98,7 @@ if ($Mode=='ADD_ITEM' && can_process_pricelist()) {
 }
 
 if ($Mode=='UPDATE_ITEM' && can_process_pricelist()) {
+	$applicable_id = get_post('applicable_id', 0);
 	$update_data = array(
 		'name' => $_POST['pricelist_name'],
 		'description' => $_POST['pricelist_description'],
@@ -104,7 +107,7 @@ if ($Mode=='UPDATE_ITEM' && can_process_pricelist()) {
 		'date_end' => $_POST['date_end'] ? $_POST['date_end'] : null,
 		'priority' => input_num('priority'),
 		'applicable_to' => $_POST['applicable_to'],
-		'applicable_id' => $_POST['applicable_id']
+		'applicable_id' => $applicable_id
 	);
 	
 	update_sales_pricelist($selected_id, $update_data);
@@ -130,6 +133,39 @@ if ($Mode == 'RESET') {
 // RULE OPERATIONS (within pricelist)
 // ============================================================================
 
+if (isset($_POST['cancel_rule'])) {
+	$selected_rule_id = -1;
+	unset($_POST['selected_rule_id']);
+	unset($_POST['rule_stock_id'], $_POST['rule_category_id'], $_POST['rule_min_qty'],
+		$_POST['rule_computation_type'], $_POST['rule_fixed_price'], $_POST['rule_percentage'],
+		$_POST['rule_base_price_type'], $_POST['rule_base_pricelist_id'], $_POST['rule_surcharge'],
+		$_POST['rule_rounding'], $_POST['rule_priority'], $_POST['rule_date_start'], $_POST['rule_date_end']);
+}
+
+if (isset($_POST['rule_edit']) && $selected_id > 0) {
+	$selected_rule_id = (int) key($_POST['rule_edit']);
+	$rule_result = db_query(
+		"SELECT * FROM ".TB_PREF."sales_pricelist_rules WHERE id = ".db_escape($selected_rule_id)." AND pricelist_id = ".db_escape($selected_id),
+		'Pricelist rule cannot be retrieved'
+	);
+	if (db_num_rows($rule_result) > 0) {
+		$rule_row = db_fetch_assoc($rule_result);
+		$_POST['rule_stock_id'] = $rule_row['stock_id'];
+		$_POST['rule_category_id'] = $rule_row['stock_category_id'];
+		$_POST['rule_min_qty'] = price_format($rule_row['min_quantity']);
+		$_POST['rule_computation_type'] = $rule_row['computation_type'];
+		$_POST['rule_fixed_price'] = price_format($rule_row['fixed_price']);
+		$_POST['rule_percentage'] = percent_format($rule_row['percentage']);
+		$_POST['rule_base_price_type'] = $rule_row['base_price_type'];
+		$_POST['rule_base_pricelist_id'] = $rule_row['base_pricelist_id'];
+		$_POST['rule_surcharge'] = price_format($rule_row['surcharge']);
+		$_POST['rule_rounding'] = price_format($rule_row['rounding']);
+		$_POST['rule_priority'] = $rule_row['priority'];
+		$_POST['rule_date_start'] = $rule_row['date_start'] ? sql2date($rule_row['date_start']) : '';
+		$_POST['rule_date_end'] = $rule_row['date_end'] ? sql2date($rule_row['date_end']) : '';
+	}
+}
+
 if (isset($_POST['add_rule']) && $selected_id > 0 && can_process_rule()) {
 	add_pricelist_rule(
 		$selected_id,
@@ -153,13 +189,43 @@ if (isset($_POST['add_rule']) && $selected_id > 0 && can_process_rule()) {
 	unset($_POST['rule_min_qty']);
 	unset($_POST['rule_fixed_price']);
 	unset($_POST['rule_percentage']);
+	$selected_rule_id = -1;
 }
 
-if (isset($_POST['delete_rule']) && $selected_id > 0) {
-	$rule_id = key($_POST['delete_rule']);
+if (isset($_POST['update_rule']) && $selected_id > 0 && $selected_rule_id > 0 && can_process_rule()) {
+	update_pricelist_rule($selected_rule_id, array(
+		'stock_id' => $_POST['rule_stock_id'],
+		'stock_category_id' => input_num('rule_category_id'),
+		'min_quantity' => input_num('rule_min_qty'),
+		'computation_type' => $_POST['rule_computation_type'],
+		'fixed_price' => input_num('rule_fixed_price'),
+		'percentage' => input_num('rule_percentage'),
+		'base_price_type' => $_POST['rule_base_price_type'],
+		'base_pricelist_id' => input_num('rule_base_pricelist_id'),
+		'surcharge' => input_num('rule_surcharge'),
+		'rounding' => input_num('rule_rounding'),
+		'priority' => input_num('rule_priority'),
+		'date_start' => $_POST['rule_date_start'] ? $_POST['rule_date_start'] : null,
+		'date_end' => $_POST['rule_date_end'] ? $_POST['rule_date_end'] : null
+	));
+	display_notification(_('Rule has been updated.'));
+	$selected_rule_id = -1;
+	unset($_POST['selected_rule_id']);
+	unset($_POST['rule_stock_id'], $_POST['rule_category_id'], $_POST['rule_min_qty'],
+		$_POST['rule_computation_type'], $_POST['rule_fixed_price'], $_POST['rule_percentage'],
+		$_POST['rule_base_price_type'], $_POST['rule_base_pricelist_id'], $_POST['rule_surcharge'],
+		$_POST['rule_rounding'], $_POST['rule_priority'], $_POST['rule_date_start'], $_POST['rule_date_end']);
+}
+
+if (isset($_POST['rule_delete']) && $selected_id > 0) {
+	$rule_id = (int) key($_POST['rule_delete']);
 	delete_pricelist_rule($rule_id);
 	display_notification(_('Rule has been deleted from the pricelist'));
-	unset($_POST['delete_rule']);
+	if ($selected_rule_id == $rule_id) {
+		$selected_rule_id = -1;
+		unset($_POST['selected_rule_id']);
+	}
+	unset($_POST['rule_delete']);
 }
 
 // ============================================================================
@@ -173,10 +239,11 @@ $th = array(_('Pricelist Name'), _('Currency'), _('Applicable To'), _('Date Star
 inactive_control_column($th);
 table_header($th);
 
-$result = get_sales_pricelists(check_value('show_inactive'));
+$pricelists = get_sales_pricelists(check_value('show_inactive'));
 $k = 0;
 
-while ($myrow = db_fetch($result)) {
+
+foreach ($pricelists as $myrow) {
 	alt_table_row_color($k);
 	
 	label_cell($myrow['name']);
@@ -208,8 +275,8 @@ if ($selected_id != -1 && $Mode == 'Edit') {
 	$_POST['pricelist_name'] = $myrow['name'];
 	$_POST['pricelist_description'] = $myrow['description'];
 	$_POST['currency'] = $myrow['currency'];
-	$_POST['date_start'] = $myrow['date_start'];
-	$_POST['date_end'] = $myrow['date_end'];
+	$_POST['date_start'] = $myrow['date_start'] ? sql2date($myrow['date_start']) : '';
+	$_POST['date_end'] = $myrow['date_end'] ? sql2date($myrow['date_end']) : '';
 	$_POST['priority'] = $myrow['priority'];
 	$_POST['applicable_to'] = $myrow['applicable_to'];
 	$_POST['applicable_id'] = $myrow['applicable_id'];
@@ -245,6 +312,25 @@ if ($_POST['applicable_to'] !== 'all') {
 		customer_list_row(_('Customer') . ':', 'applicable_id', $_POST['applicable_id']);
 	} elseif ($_POST['applicable_to'] === 'sales_type') {
 		sales_types_list_row(_('Sales Type') . ':', 'applicable_id', $_POST['applicable_id']);
+	} elseif ($_POST['applicable_to'] === 'customer_group') {
+		sales_groups_list_row(_('Customer Group') . ':', 'applicable_id', $_POST['applicable_id']);
+	} elseif ($_POST['applicable_to'] === 'branch') {
+		label_row(
+			_('Branch') . ':',
+			combo_input(
+				'applicable_id',
+				$_POST['applicable_id'],
+				"SELECT branch_code, CONCAT(branch_ref, ' - ', br_name) AS branch_name, inactive FROM ".TB_PREF."cust_branch",
+				'branch_code',
+				'branch_name',
+				array(
+					'where' => array('inactive = 0'),
+					'order' => array('br_name'),
+					'spec_option' => false,
+					'sel_hint' => _('Select branch')
+				)
+			)
+		);
 	}
 }
 
@@ -265,7 +351,6 @@ if ($selected_id != -1) {
 	display_heading(_('Pricelist Rules'));
 	
 	start_form();
-	hidden('selected_id', $selected_id);
 	
 	start_table(TABLESTYLE, "width='100%'");
 	
@@ -302,17 +387,20 @@ if ($selected_id != -1) {
 			label_cell($rule['date_start'] ? sql2date($rule['date_start']) : '');
 			label_cell($rule['date_end'] ? sql2date($rule['date_end']) : '');
 			
-			edit_button_cell('EditRule'.$rule['id'], _('Edit'));
-			delete_button_cell('DeleteRule'.$rule['id'], _('Delete'));
+			edit_button_cell('rule_edit['.$rule['id'].']', _('Edit'));
+			delete_button_cell('rule_delete['.$rule['id'].']', _('Delete'));
 			
 			end_row();
 		}
 	} else {
+		start_row();
 		label_cell(_('No rules defined'), 'colspan=12 align=center');
 		end_row();
 	}
 	
 	end_table();
+	hidden('selected_id', $selected_id);
+	hidden('selected_rule_id', $selected_rule_id);
 	
 	// Rule addition form
 	start_table(TABLESTYLE2);
@@ -337,8 +425,13 @@ if ($selected_id != -1) {
 	date_row(_('Date End') . ':', 'rule_date_end');
 	
 	end_table(1);
-	
-	submit_row_ex(true, _('Add Rule'), 'add_rule', 'Default', false, 'style="width:100px"');
+
+	if ($selected_rule_id == -1) {
+		submit_center('add_rule', _('Add Rule'), true, '', 'both');
+	} else {
+		submit_center_first('update_rule', _('Update Rule'), '', 'both');
+		submit_center_last('cancel_rule', _('Cancel Edit'));
+	}
 	
 	end_form();
 }

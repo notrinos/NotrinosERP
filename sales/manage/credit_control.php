@@ -28,6 +28,13 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/sales/includes/db/sales_credit_control_db.inc');
 include_once($path_to_root . '/sales/includes/db/credit_status_db.inc');
 
+$current_selected_application = isset($_GET['sel_app']) && $_GET['sel_app'] !== ''
+    ? $_GET['sel_app']
+    : (isset($_SESSION['sel_app']) ? $_SESSION['sel_app'] : '');
+$selected_application_query = $current_selected_application !== ''
+    ? '&sel_app=' . urlencode($current_selected_application)
+    : '';
+
 // ============================================================================
 // ACTION: Place hold
 // ============================================================================
@@ -100,52 +107,41 @@ $dashboard = get_credit_control_dashboard();
 // PLACE HOLD FORM
 // ============================================================================
 echo "<h3>" . _('Place Credit Hold') . "</h3>";
+display_note(_('Select a customer, record the reason, and choose which outbound activity the hold should block.'));
 start_form();
-start_table(TABLESTYLE2, "width='80%'");
-$th = array(_('Customer'), _('Hold Type'), _('Reason'), _('Affects Orders'),
-            _('Affects Deliveries'), _('Affects Invoices'), '');
-table_header($th);
-start_row();
-
-// Customer selector
-customer_list_cells('', 'hold_debtor_no', null, true, false, false, false);
-
-// Hold type
+start_table(TABLESTYLE2, "width='70%'");
 $hold_types = array(
     'manual'     => _('Manual'),
     'over_limit' => _('Over Limit'),
     'overdue'    => _('Overdue'),
     'risk'       => _('Risk'),
 );
-label_cell(array_selector('hold_type', 'manual', $hold_types));
-text_cells('', 'hold_reason', '', 30, 100);
-check_cells('', 'hold_affects_orders',     1);
-check_cells('', 'hold_affects_deliveries', 1);
-check_cells('', 'hold_affects_invoices',   0);
-submit_cells('action_place_hold', _('Place Hold'), '', '', true);
-end_row();
+customer_list_row(_('Customer:'), 'hold_debtor_no', get_post('hold_debtor_no'));
+label_row(_('Hold Type:'), array_selector('hold_type', get_post('hold_type', 'manual'), $hold_types));
+textarea_row(_('Reason:'), 'hold_reason', get_post('hold_reason', ''), 40, 3);
+check_row(_('Affects Orders:'), 'hold_affects_orders', get_post('hold_affects_orders', 1));
+check_row(_('Affects Deliveries:'), 'hold_affects_deliveries', get_post('hold_affects_deliveries', 1));
+check_row(_('Affects Invoices:'), 'hold_affects_invoices', get_post('hold_affects_invoices', 0));
 end_table(1);
+submit_center('action_place_hold', _('Place Hold'), true, '', 'both');
 end_form();
 
 // ============================================================================
 // CREDIT REVIEW FORM
 // ============================================================================
 echo "<h3>" . _('Credit Review (Update Limit & Status)') . "</h3>";
+display_note(_('Review one customer at a time to update limit, status, and current risk notes without scanning a report grid.'));
 start_form();
-start_table(TABLESTYLE2, "width='90%'");
-$th = array(_('Customer'), _('New Limit'), _('New Status'), _('Risk Score'), _('Notes'), '');
-table_header($th);
-start_row();
-
-customer_list_cells('', 'review_debtor_no', null, true, false, false, false);
-amount_cells('', 'review_new_limit', 0);
+start_table(TABLESTYLE2, "width='70%'");
+customer_list_row(_('Customer:'), 'review_debtor_no', get_post('review_debtor_no'));
+amount_row(_('New Limit:'), 'review_new_limit', get_post('review_new_limit', 0));
 
 $statuses = array();
 $status_res = get_all_credit_status();
 while ($cs = db_fetch($status_res)) {
     $statuses[$cs['id']] = $cs['reason_description'];
 }
-label_cell(array_selector('review_new_status', 0, $statuses));
+label_row(_('New Status:'), array_selector('review_new_status', get_post('review_new_status', 0), $statuses));
 
 $risk_options = array(
     'low'      => _('Low'),
@@ -153,11 +149,10 @@ $risk_options = array(
     'high'     => _('High'),
     'critical' => _('Critical'),
 );
-label_cell(array_selector('review_risk_score', 'medium', $risk_options));
-text_cells('', 'review_notes', '', 40, 200);
-submit_cells('action_credit_review', _('Save Review'), '', '', true);
-end_row();
+label_row(_('Risk Score:'), array_selector('review_risk_score', get_post('review_risk_score', 'medium'), $risk_options));
+textarea_row(_('Notes:'), 'review_notes', get_post('review_notes', ''), 40, 4);
 end_table(1);
+submit_center('action_credit_review', _('Save Review'), true, '', 'both');
 end_form();
 
 // ============================================================================
@@ -185,7 +180,7 @@ if (empty($dashboard['over_limit'])) {
     foreach ($dashboard['over_limit'] as $row) {
         alt_table_row_color($k);
         label_cell('<a href="' . $path_to_root . '/sales/manage/customers.php?selected_id=' .
-            $row['debtor_no'] . '">' . htmlspecialchars($row['name']) . '</a>');
+            $row['debtor_no'] . $selected_application_query . '">' . htmlspecialchars($row['name']) . '</a>');
         amount_cell($row['credit_limit']);
         amount_cell($row['current_balance']);
         amount_cell($row['current_balance'] - $row['credit_limit']);
@@ -210,9 +205,9 @@ if (empty($dashboard['active_holds'])) {
             label_cell(htmlspecialchars($hold['hold_type']));
             label_cell(sql2date($hold['hold_date']));
             label_cell(htmlspecialchars($hold['reason']));
-            label_cell('<a href="' . $_SERVER['PHP_SELF'] . '?history_debtor=' . $row['debtor_no'] . '">'
+            label_cell('<a href="' . $_SERVER['PHP_SELF'] . '?history_debtor=' . $row['debtor_no'] . $selected_application_query . '">'
                 . _('History') . '</a>');
-            label_cell('<a href="' . $_SERVER['PHP_SELF'] . '?release_hold=' . $hold['id'] . '"'
+            label_cell('<a href="' . $_SERVER['PHP_SELF'] . '?release_hold=' . $hold['id'] . $selected_application_query . '"'
                 . ' onclick="return confirm(\'' . _('Release this hold?') . '\')">'
                 . _('Release') . '</a>');
             end_row();
@@ -232,7 +227,7 @@ if (empty($dashboard['upcoming_reviews'])) {
     foreach ($dashboard['upcoming_reviews'] as $row) {
         alt_table_row_color($k);
         label_cell('<a href="' . $path_to_root . '/sales/manage/customers.php?selected_id=' .
-            $row['debtor_no'] . '">' . htmlspecialchars($row['name']) . '</a>');
+            $row['debtor_no'] . $selected_application_query . '">' . htmlspecialchars($row['name']) . '</a>');
         label_cell($row['credit_review_date'] ? sql2date($row['credit_review_date']) : '—');
         $risk_colors = array('low' => 'green', 'medium' => 'darkorange', 'high' => 'red', 'critical' => 'darkred');
         $risk = $row['credit_risk_score'];
@@ -254,7 +249,7 @@ if (empty($dashboard['high_risk'])) {
     foreach ($dashboard['high_risk'] as $row) {
         alt_table_row_color($k);
         label_cell('<a href="' . $path_to_root . '/sales/manage/customers.php?selected_id=' .
-            $row['debtor_no'] . '">' . htmlspecialchars($row['name']) . '</a>');
+            $row['debtor_no'] . $selected_application_query . '">' . htmlspecialchars($row['name']) . '</a>');
         $risk_colors = array('low' => 'green', 'medium' => 'darkorange', 'high' => 'red', 'critical' => 'darkred');
         $risk = $row['credit_risk_score'];
         $color = isset($risk_colors[$risk]) ? $risk_colors[$risk] : '';

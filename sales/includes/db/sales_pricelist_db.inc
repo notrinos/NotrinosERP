@@ -28,13 +28,24 @@
 function add_sales_pricelist($name, $currency = '', $date_start = null, $date_end = null, $priority = 10, 
 	$applicable_to = 'all', $applicable_id = 0, $description = '', $is_default = false, $custom_data = array()) {
 	
-	global $SysPrefs;
-	
+	$pricelist_data = array(
+		'name' => $name,
+		'currency' => $currency,
+		'date_start' => $date_start,
+		'date_end' => $date_end,
+		'priority' => $priority,
+		'applicable_to' => $applicable_to,
+		'applicable_id' => $applicable_id,
+		'description' => $description,
+		'is_default' => $is_default,
+		'custom_data' => $custom_data
+	);
+
 	begin_transaction();
 	hook_invoke_all('sales_pricelist_before_save', $pricelist_data);
 	
-	$date_start_sql = ($date_start) ? date2sql($date_start) : 'NULL';
-	$date_end_sql = ($date_end) ? date2sql($date_end) : 'NULL';
+	$date_start_sql = ($date_start) ? db_escape(date2sql($date_start)) : 'NULL';
+	$date_end_sql = ($date_end) ? db_escape(date2sql($date_end)) : 'NULL';
 	
 	$sql = "INSERT INTO ".TB_PREF."sales_pricelists 
 		(name, description, currency, is_default, date_start, date_end, priority, 
@@ -80,7 +91,7 @@ function update_sales_pricelist($id, $update_data) {
 		} else if (in_array($field, array('is_default', 'priority', 'applicable_id', 'inactive'))) {
 			$set_clause[] = "$field = ".db_escape($value);
 		} else if ($field == 'date_start' || $field == 'date_end') {
-			$set_clause[] = "$field = ".($value ? date2sql($value) : 'NULL');
+			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
 		} else if ($field == 'custom_data') {
 			$set_clause[] = "$field = ".db_escape(json_encode($value));
 		}
@@ -250,8 +261,8 @@ function add_pricelist_rule($pricelist_id, $stock_id = '', $category_id = 0, $mi
 	
 	begin_transaction();
 	
-	$date_start_sql = ($date_start) ? date2sql($date_start) : 'NULL';
-	$date_end_sql = ($date_end) ? date2sql($date_end) : 'NULL';
+	$date_start_sql = ($date_start) ? db_escape(date2sql($date_start)) : 'NULL';
+	$date_end_sql = ($date_end) ? db_escape(date2sql($date_end)) : 'NULL';
 	
 	$sql = "INSERT INTO ".TB_PREF."sales_pricelist_rules 
 		(pricelist_id, stock_id, stock_category_id, min_quantity, computation_type, 
@@ -302,7 +313,7 @@ function update_pricelist_rule($id, $update_data) {
 		} else if (in_array($field, array('min_quantity', 'fixed_price', 'percentage', 'surcharge', 'rounding'))) {
 			$set_clause[] = "$field = ".db_escape($value);
 		} else if ($field == 'date_start' || $field == 'date_end') {
-			$set_clause[] = "$field = ".($value ? date2sql($value) : 'NULL');
+			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
 		} else if ($field == 'custom_data') {
 			$set_clause[] = "$field = ".db_escape(json_encode($value));
 		}

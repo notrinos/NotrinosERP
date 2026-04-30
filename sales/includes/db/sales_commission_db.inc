@@ -224,6 +224,29 @@ function assign_plan_to_salesman($plan_id, $salesman_id, $date_start, $date_end,
 }
 
 /**
+ * Update an existing commission plan assignment.
+ *
+ * @param  int    $id
+ * @param  int    $plan_id
+ * @param  int    $salesman_id
+ * @param  string $date_start SQL date or ''
+ * @param  string $date_end   SQL date or ''
+ * @param  double $target_amount
+ * @return void
+ */
+function update_commission_assignment($id, $plan_id, $salesman_id, $date_start, $date_end, $target_amount = 0)
+{
+    $sql = "UPDATE ".TB_PREF."sales_commission_assignments SET
+                plan_id = ".db_escape((int)$plan_id).",
+                salesman_id = ".db_escape((int)$salesman_id).",
+                date_start = ".($date_start ? db_escape($date_start) : 'NULL').",
+                date_end = ".($date_end ? db_escape($date_end) : 'NULL').",
+                target_amount = ".db_escape((float)$target_amount)."
+            WHERE id = ".db_escape((int)$id);
+    db_query($sql, 'Cannot update commission assignment');
+}
+
+/**
  * Get the active assignment + plan for a salesman on a given date.
  *
  * @param  int    $salesman_id
