@@ -94,9 +94,11 @@ function start_form($multi=false, $action='', $name='') {
 		$name = "name='".$name."'";
 	if ($action == '') {
 		$action = $_SERVER['PHP_SELF'];
-		// Preserve application context on form submissions
+		// Preserve application context on form submissions, including session-only flows.
 		if (isset($_GET['sel_app']) && $_GET['sel_app'] != '')
 			$action .= '?sel_app=' . urlencode($_GET['sel_app']);
+		elseif (isset($_SESSION['sel_app']) && $_SESSION['sel_app'] != '')
+			$action .= '?sel_app=' . urlencode($_SESSION['sel_app']);
 	}
 
 	if ($multi)
