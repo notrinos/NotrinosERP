@@ -30,6 +30,20 @@ function get_post($name, $dflt='') {
 		return is_float($dflt) ? input_num($name, $dflt) : ((!isset($_POST[$name]) /*|| $_POST[$name] === ''*/) ? $dflt : $_POST[$name]);
 }
 
+/**
+ * Return the current application selector query parameter.
+ *
+ * @param string $prefix
+ * @return string
+ */
+function get_sel_app_param($prefix = '&') {
+	$app = isset($_GET['sel_app']) && $_GET['sel_app'] != ''
+		? $_GET['sel_app']
+		: (isset($_SESSION['sel_app']) && $_SESSION['sel_app'] != '' ? $_SESSION['sel_app'] : '');
+
+	return $app !== '' ? $prefix . 'sel_app=' . urlencode($app) : '';
+}
+
 //---------------------------------------------------------------------------------
 
 $form_nested = -1;

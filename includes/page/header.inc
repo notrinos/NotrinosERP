@@ -115,10 +115,14 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 	if (!isset($no_menu))
 		$no_menu = false;
 	
-	if (isset($_SESSION['App']) && is_object($_SESSION['App']) && isset($_SESSION['App']->selected_application) && $_SESSION['App']->selected_application != '')
-		$sel_app = $_SESSION['App']->selected_application;
+	if (isset($_GET['sel_app']) && $_GET['sel_app'] != '')
+		$sel_app = $_GET['sel_app'];
+	elseif (isset($_GET['application']) && $_GET['application'] != '')
+		$sel_app = $_GET['application'];
 	elseif (isset($_SESSION['sel_app']) && $_SESSION['sel_app'] != '')
 		$sel_app = $_SESSION['sel_app'];
+	elseif (isset($_SESSION['App']) && is_object($_SESSION['App']) && isset($_SESSION['App']->selected_application) && $_SESSION['App']->selected_application != '')
+		$sel_app = $_SESSION['App']->selected_application;
 	else
 		$sel_app = user_startup_tab();
 	
@@ -126,8 +130,11 @@ function page_header($title, $no_menu=false, $is_index=false, $onload='', $js=''
 
 	// When startup tab for current user was set to already 
 	// removed/inactivated extension module select Sales tab as default.
-	if (isset($_SESSION['App']) && is_object($_SESSION['App']))
-		$_SESSION['App']->selected_application = isset($_SESSION['App']->applications[$sel_app]) ? $sel_app : 'orders';
+	if (isset($_SESSION['App']) && is_object($_SESSION['App'])) {
+		$sel_app = isset($_SESSION['App']->applications[$sel_app]) ? $sel_app : 'orders';
+		$_SESSION['sel_app'] = $sel_app;
+		$_SESSION['App']->selected_application = $sel_app;
+	}
 
 	$page_header_args = func_get_args();
 	if(isset($db_connections))	// skip before installation
