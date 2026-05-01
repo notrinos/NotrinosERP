@@ -374,7 +374,7 @@ if ($viewing_claim) {
 echo '<div style="margin-bottom:10px;">';
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-stock_items_list_cells(_('Item:'), 'filter_stock_id', null, _('All Items'), true, true);
+stock_items_list_cells(null, 'filter_stock_id', null, _('All Items'), true, true);
 customer_list_cells(_('Customer:'), 'filter_customer_id', null, _('All'), true);
 $status_options = array_merge(array('' => _('All Statuses')), get_warranty_claim_statuses());
 label_cell(_('Status:'));
@@ -498,7 +498,8 @@ if ($is_edit) {
 if (!isset($_POST['claim_date']))
 	$_POST['claim_date'] = Today();
 
-stock_items_list_cells(_('Item:'), 'stock_id', null, false, false, true);
+label_cell(_('Select Item:'));
+stock_items_list_cells(null, 'stock_id', null, false, false, true);
 
 customer_list_row(_('Customer:'), 'customer_id', null, false, true);
 

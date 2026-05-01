@@ -40,9 +40,9 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-customer_list_cells(_('Customer:'), 'customer_id', null, true, true);
+customer_list_cells(null, 'customer_id', null, true, true);
 
-stock_items_list_cells(_('Item:'), 'stock_id', null, true, true);
+stock_items_list_cells(null, 'stock_id', null, true, true);
 
 $type_options = array(
 	''        => _('All Types'),
@@ -60,7 +60,7 @@ date_cells(_('To:'), 'to_date', '', null);
 submit_cells('RefreshInquiry', _('Apply Filter'), '', _('Refresh provision log'), 'default');
 
 end_row();
-end_table();
+end_table(1);
 
 if (get_post('RefreshInquiry') || list_updated('customer_id')
 	|| list_updated('stock_id') || list_updated('provision_type'))

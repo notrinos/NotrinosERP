@@ -418,13 +418,14 @@ if ($current_tab == 'overview') {
 	supplier_list_cells(_('Supplier:'), 'filter_supplier_id', null, _('All Suppliers'), true);
 	locations_list_cells(_('Location:'), 'filter_loc_code', null, _('All Locations'), true);
 
-	$status_options = array('' => _('All'), 'on_hand' => _('On Hand'), 'consumed' => _('Consumed'), 'returned' => _('Returned'));
-	echo '<td class="label">' . _('Status:') . '</td><td>';
+	$status_options = array('' => _('All Statuses'), 'on_hand' => _('On Hand'), 'consumed' => _('Consumed'), 'returned' => _('Returned'));
+	echo "<div class = 'filter-field'>";
 	echo array_selector('filter_status', get_post('filter_status'), $status_options,
 		array('select_submit' => true));
-	echo '</td>';
+	echo '</div>';
 
 	check_cells(_('Show zero:'), 'filter_show_zero', null, true);
+	submit_cells('RefreshList', _('Search'), '', _('Refresh list'), 'default');
 	end_row();
 	end_table();
 
@@ -812,7 +813,6 @@ if ($current_tab == 'history') {
 	start_form();
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
-	echo '<td class="label">' . _('Supplier:') . '</td>';
 	supplier_list_cells(null, 'inv_supplier_id', null, false, false);
 	date_cells(_('From:'), 'inv_from_date', '', true);
 	date_cells(_('To:'), 'inv_to_date', '', true);

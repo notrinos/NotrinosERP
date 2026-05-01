@@ -292,16 +292,16 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-serial_tracked_items_list_cells(_('Item:'), 'filter_stock_id', get_post('filter_stock_id'), true, true);
-serial_status_list_cells(_('Status:'), 'filter_status', get_post('filter_status'), true, true);
+serial_tracked_items_list_cells(null, 'filter_stock_id', get_post('filter_stock_id'), true, true);
+serial_status_list_cells(null, 'filter_status', get_post('filter_status'), true, true);
 locations_list_cells(_('Location:'), 'filter_loc_code', null, true);
 
 end_row();
 start_row();
 
-text_cells(_('Search:'), 'filter_search', get_post('filter_search'), 30, 100);
-submit_cells('search_serials', _('Search'), '', _('Filter serial numbers'), 'default');
+ref_cells(_('Search:'), 'filter_search', '', null, _('Enter serial number fragment or leave empty'));
 check_cells(_('Show inactive:'), 'show_inactive', null, true);
+submit_cells('search_serials', _('Search'), '', _('Filter serial numbers'), 'default');
 
 end_row();
 end_table();
@@ -446,16 +446,11 @@ if (!$is_edit) {
 	echo "</td></tr>\n";
 }
 
-// Status
 serial_status_list_row(_('Status:'), 'status', get_post('status', 'available'), false, false);
 
-// Location
 locations_list_row(_('Location:'), 'loc_code', get_post('loc_code'), true);
 
-// Supplier
-echo "<tr><td class='label'>" . _('Supplier:') . "</td><td>";
-supplier_list('supplier_id', get_post('supplier_id'), _('None'), true);
-echo "</td></tr>\n";
+supplier_list_row(_('Supplier:'), 'supplier_id', get_post('supplier_id'), _('Select Supplier'), true);
 
 // Customer (only for edit)
 if ($is_edit) {

@@ -271,14 +271,13 @@ $show_inactive = check_value('show_inactive');
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-echo '<td>' . _('Type:') . '</td><td>';
-$filter_types = array('' => _('All')) + get_route_types();
-echo array_selector('filter_type', $filter_type, $filter_types, array('select_submit' => true));
-echo '</td>';
+$filter_types = array('' => _('All Route Types')) + get_route_types();
+echo '<td>'.array_selector('filter_type', $filter_type, $filter_types, array('select_submit' => true)).'</td>';
 
-warehouse_list_cells(_('Warehouse:'), 'filter_warehouse', $filter_warehouse, _('All Warehouses'), true);
+warehouse_list_cells(null, 'filter_warehouse', $filter_warehouse, _('All Warehouses'), true);
 
 check_cells(_('Show inactive:'), 'show_inactive', $show_inactive, true);
+submit_cells('search', _('Search'), '', _('Search'), 'default');
 
 end_row();
 end_table();

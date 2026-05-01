@@ -494,7 +494,7 @@ echo '</div>';
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-stock_items_list_cells(_('Item:'), 'filter_stock_id', null, _('All Items'), true);
+stock_items_list_cells(null, 'filter_stock_id', null, _('All Items'), true);
 
 $result_options = array('' => _('All Results')) + get_qc_result_statuses();
 label_cell(_('Result:'));
@@ -597,9 +597,10 @@ echo '<legend style="font-weight:600;">' . _('Create New Inspection') . '</legen
 
 start_table(TABLESTYLE2);
 
-echo '<tr><td class="label">' . _('Item') . ':</td><td>';
-echo stock_items_list('new_stock_id', null, false, false);
-echo '</td></tr>';
+start_row();
+label_cell(_('Select Item:'));
+echo stock_items_list_cells(null, 'new_stock_id', null, false, false);
+end_row();
 
 $insp_types = get_qc_inspection_types();
 array_selector_row(_('Inspection Type:'), 'new_insp_type', null, $insp_types);

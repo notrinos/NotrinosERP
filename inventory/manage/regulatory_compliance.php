@@ -333,6 +333,7 @@ if ($active_tab === 'settings') {
 	// --- Settings Form ---
 	start_outer_table(TABLESTYLE2);
 
+	table_section(1);
 	table_section_title(_('Master Compliance Settings'));
 	check_row(_('Enable Regulatory Compliance Module:'), 'regulatory_compliance_enabled', $reg_enabled);
 
@@ -346,6 +347,7 @@ if ($active_tab === 'settings') {
 	text_row(_('FDA Registered Firm Name:'), 'fsma204_firm_name', get_company_pref('fsma204_firm_name'), 100, 100);
 	text_row(_('FDA Registration Number:'), 'fsma204_fda_registration', get_company_pref('fsma204_fda_registration'), 30, 30);
 
+	table_section(2);
 	table_section_title(_('UDI — Unique Device Identification (Medical Devices)'));
 	check_row(_('Enable UDI Compliance:'), 'udi_enabled', $udi_on);
 	text_row(_('Company Name (for GUDID):'), 'udi_company_name', get_company_pref('udi_company_name'), 100, 100);
@@ -387,23 +389,27 @@ if ($active_tab === 'profiles') {
 	start_form();
 	hidden('tab', 'profiles');
 
-	echo '<h3>' . _('Add Regulatory Profile') . '</h3>';
-	start_outer_table(TABLESTYLE2);
-
-	stock_items_list_cells(_('Item (or leave blank for category):'), 'profile_stock_id', null, _('Select item...'), false, true);
+	display_heading(_('Add Regulatory Profile'));
+	start_table(TABLESTYLE2);
+	start_row();
+	label_cell(_('Item (or leave blank for category):'));
+	stock_items_list_cells(null, 'profile_stock_id', null, _('Select item...'), false, true);
+	end_row();
 
 	$cat_sql = "SELECT category_id, description FROM " . TB_PREF . "stock_category";
-	combo_input('profile_category_id', null, $cat_sql, 'category_id', 'description',
-		array('select_submit' => false, 'spec_option' => _('-- All / Not category-level --'), 'spec_id' => ''));
-	echo '</td></tr>';
+	start_row();
+	label_cell(_('Profile Category:'));
+	echo '<td>'.combo_input('profile_category_id', null, $cat_sql, 'category_id', 'description',
+		array('select_submit' => false, 'spec_option' => _('-- All / Not category-level --'), 'spec_id' => '')).'</td>';
+	end_row();
 
 	$frameworks = get_regulatory_frameworks();
 	array_selector_row(_('Regulatory Framework:'), 'profile_framework', null, $frameworks);
 
 	text_row(_('NDC (for DSCSA pharma items):'), 'profile_ndc', '', 20, 20);
-	text_row(_('Notes:'), 'profile_notes', '', 60, 255);
+	textarea_row(_('Notes:'), 'profile_notes', '', 500, 5);
 
-	end_outer_table(1);
+	end_table(1);
 
 	submit_center('add_profile', _('Add Profile'), true, '', 'default');
 	end_form();
@@ -483,20 +489,15 @@ if ($active_tab === 'dscsa') {
 	start_row();
 
 	$types = get_dscsa_transaction_types();
-	echo '<td>' . _('Type:') . '</td><td>';
-	echo array_selector('dscsa_filter_type', get_post('dscsa_filter_type', ''),
-		array_merge(array('' => _('All')), $types));
-	echo '</td>';
+	echo '<td>'.array_selector('dscsa_filter_type', get_post('dscsa_filter_type', ''),
+		array_merge(array('' => _('All Types')), $types)).'</td>';
 
 	$statuses = get_dscsa_verification_statuses();
-	echo '<td>' . _('Status:') . '</td><td>';
-	echo array_selector('dscsa_filter_status', get_post('dscsa_filter_status', ''),
-		array_merge(array('' => _('All')), $statuses));
-	echo '</td>';
+	echo '<td>'.array_selector('dscsa_filter_status', get_post('dscsa_filter_status', ''),
+		array_merge(array('' => _('All Statuses')), $statuses)).'</td>';
+	ref_cells(_('Serial Search:'), 'dscsa_filter_serial', '', null, _('Enter reference fragment or leave empty'));
 
-	text_cells(_('Serial:'), 'dscsa_filter_serial', get_post('dscsa_filter_serial', ''), 20, 50);
-
-	submit_cells('dscsa_filter', _('Filter'), '', '', 'default');
+	submit_cells('dscsa_filter', _('Apply Filter'), '', '', 'default');
 	end_row();
 	end_table();
 
@@ -576,15 +577,16 @@ if ($active_tab === 'dscsa') {
 		. _('Report a product as suspect under DSCSA. The product will be quarantined and a transaction record created.')
 		. '</p>';
 
-	start_outer_table(TABLESTYLE2);
-	stock_items_list_cells(_('Item:'), 'suspect_stock_id', null, _('Select item...'), false, true);
+	start_table(TABLESTYLE2, "style='background:#fff3cd; border:0'");
+	label_cell(_('Select Item:'));
+	stock_items_list_cells(null, 'suspect_stock_id', null, _('Select item...'), false, true);
 	text_row(_('Serial ID (if known):'), 'suspect_serial_id', '', 10, 11);
 	text_row(_('Batch ID (if known):'), 'suspect_batch_id', '', 10, 11);
 	textarea_row(_('Reason:'), 'suspect_reason', '', 60, 3);
 	$actions = get_dscsa_quarantine_actions();
 	array_selector_row(_('Action:'), 'suspect_action', 'quarantine', $actions);
 	check_row(_('Auto-quarantine the item:'), 'suspect_quarantine', 1);
-	end_outer_table(0);
+	end_table(0);
 
 	echo '</div>';
 	submit_center('report_suspect', _('Report Suspect Product'), true, '', 'default');
@@ -623,7 +625,7 @@ if ($active_tab === 'fsma') {
 	// --- Add CTE Event ---
 	echo '<h3>' . _('Record Critical Tracking Event') . '</h3>';
 	start_outer_table(TABLESTYLE2);
-
+	table_section(1);
 	$event_types = get_fsma_event_types();
 	array_selector_row(_('Event Type:'), 'fsma_event_type', null, $event_types);
 	stock_items_list_cells(_('Item:'), 'fsma_stock_id', null, _('Select item...'), false, true);
@@ -632,9 +634,10 @@ if ($active_tab === 'fsma') {
 	date_row(_('Event Date:'), 'fsma_event_date', '', true);
 	text_row(_('Quantity:'), 'fsma_quantity', '', 15, 20);
 	text_row(_('Unit of Measure:'), 'fsma_unit', '', 20, 20);
+
+	table_section(2);
 	text_row(_('Location:'), 'fsma_location', '', 60, 200);
 	text_row(_('Trading Partner:'), 'fsma_partner_name', '', 60, 100);
-
 	$partner_types = array('' => '—', 'supplier' => _('Supplier'), 'customer' => _('Customer'), 'transporter' => _('Transporter'));
 	array_selector_row(_('Partner Type:'), 'fsma_partner_type', null, $partner_types);
 
@@ -678,15 +681,16 @@ if ($active_tab === 'fsma') {
 
 	// --- Rapid Recall Lookup ---
 	echo '<h3 style="margin-top:20px;">' . _('24-Hour Rapid Recall Lookup') . '</h3>';
-	echo '<div style="padding:15px; background:#f8d7da; border:1px solid #f5c6cb; border-radius:8px; margin-bottom:15px;">';
+	echo '<div style="padding:10px; background:#f8d7da; border:1px solid #f5c6cb; border-radius:8px; margin-bottom:15px;">';
 	echo '<p style="margin:0 0 10px 0; font-size:13px; color:#721c24;">'
 		. _('Enter an item and lot code to instantly identify all affected locations and customers.')
 		. '</p>';
 
-	start_outer_table(TABLESTYLE2);
-	stock_items_list_cells(_('Item:'), 'recall_stock_id', null, _('Select item...'), false, true);
+	start_table(TABLESTYLE2, "style='background:#f8d7da; border:0'");
+	label_cell(_('Select Item:'));
+	stock_items_list_cells(null, 'recall_stock_id', null, _('Select item...'), false, true);
 	text_row(_('Lot / TLC:'), 'recall_lot_code', get_post('recall_lot_code', ''), 50, 50);
-	end_outer_table(0);
+	end_table(0);
 	echo '</div>';
 	submit_center('fsma_recall_lookup', _('Lookup'), true, '', 'default');
 
@@ -756,7 +760,9 @@ if ($active_tab === 'udi') {
 	echo '<h3>' . _('Add UDI Registration') . '</h3>';
 	start_outer_table(TABLESTYLE2);
 
-	stock_items_list_cells(_('Item:'), 'udi_stock_id', null, _('Select item...'), false, true);
+	table_section(1);
+	label_cell(_('Select Item:'));
+	stock_items_list_cells(null, 'udi_stock_id', null, _('Select item...'), false, true);
 	text_row(_('Device Identifier (UDI-DI):'), 'udi_di_input', '', 50, 50);
 	$agencies = get_udi_issuing_agencies();
 	array_selector_row(_('Issuing Agency:'), 'udi_agency', 'GS1', $agencies);
@@ -766,9 +772,9 @@ if ($active_tab === 'udi') {
 	text_row(_('Version/Model:'), 'udi_model', '', 60, 100);
 	text_row(_('Company Name:'), 'udi_company', get_company_pref('udi_company_name'), 60, 100);
 
+	table_section(2);
 	$mri_options = get_udi_mri_safety_options();
 	array_selector_row(_('MRI Safety:'), 'udi_mri', '', $mri_options);
-
 	check_row(_('Device is Sterile:'), 'udi_sterile', 0);
 	check_row(_('Single Use:'), 'udi_single_use', 0);
 	check_row(_('Implantable:'), 'udi_implantable', 0);

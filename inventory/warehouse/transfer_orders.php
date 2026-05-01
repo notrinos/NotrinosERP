@@ -218,9 +218,9 @@ start_row();
 
 $filter_status = get_post('filter_status', '');
 $statuses = array('' => _('All Statuses')) + get_transfer_order_statuses();
-echo '<td>' . _('Status:') . ' ';
+echo "<div class = 'filter-field'>";
 echo array_selector('filter_status', $filter_status, $statuses, array('select_submit' => true));
-echo '</td>';
+echo '</div>';
 
 locations_list_cells(_('From:'), 'filter_from', null, true);
 locations_list_cells(_('To:'), 'filter_to', null, true);
@@ -228,7 +228,7 @@ locations_list_cells(_('To:'), 'filter_to', null, true);
 submit_cells('SearchOrders', _('Search'), '', _('Search transfer orders'), true);
 submit_cells('New', _('New Transfer Order'), '', _('Create a new transfer order'), 'default');
 end_row();
-end_table();
+end_table(1);
 
 // --- LIST ---
 $filters = array();

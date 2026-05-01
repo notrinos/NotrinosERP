@@ -374,16 +374,16 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-batch_tracked_items_list_cells(_('Item:'), 'filter_stock_id', get_post('filter_stock_id'), true, true);
-batch_status_list_cells(_('Status:'), 'filter_status', get_post('filter_status'), true, true);
-batch_expiry_filter_cells(_('Expiry:'), 'filter_expiry', get_post('filter_expiry'), true);
+batch_tracked_items_list_cells(null, 'filter_stock_id', get_post('filter_stock_id'), true, true);
+batch_status_list_cells(null, 'filter_status', get_post('filter_status'), true, true);
+batch_expiry_filter_cells(null, 'filter_expiry', get_post('filter_expiry'), true);
 
 end_row();
 start_row();
 
-text_cells(_('Search:'), 'filter_search', get_post('filter_search'), 30, 100);
-submit_cells('search_batches', _('Search'), '', _('Filter batch numbers'), 'default');
+ref_cells(_('Search:'), 'filter_search', '', null, _('Enter reference fragment or leave empty'));
 check_cells(_('Show inactive:'), 'show_inactive', null, true);
+submit_cells('search_batches', _('Search'), '', _('Filter batch numbers'), 'default');
 
 // Auto-expire button
 submit_cells('auto_expire', _('Auto-Expire'), '', _('Mark past-expiry active batches as expired'), true);
@@ -579,9 +579,7 @@ if (!$is_edit) {
 // Supplier section
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Source') . "</strong></td></tr>\n";
 
-echo "<tr><td class='label'>" . _('Supplier:') . "</td><td>";
-supplier_list('supplier_id', get_post('supplier_id'), _('None'), true);
-echo "</td></tr>\n";
+supplier_list_row(_('Supplier:'), 'supplier_id', get_post('supplier_id'), _('Select Supplier'), true);
 
 text_row_ex(_('Supplier Batch #:'), 'supplier_batch_no', 50, 100);
 

@@ -63,32 +63,32 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 // Warehouse location filter
-locations_list_cells(_('Warehouse:'), 'loc_code', null, true, _('All'));
+locations_list_cells(null, 'loc_code', null, true, _('All Locations'));
 
 // Operation type filter
-$op_types = array('' => _('All'), 'receipt' => _('Receipt'), 'quality_check' => _('Quality Check'), 'putaway' => _('Putaway'));
-echo '<td>' . _('Type:') . '</td><td>';
+$op_types = array('' => _('All Operation Types'), 'receipt' => _('Receipt'), 'quality_check' => _('Quality Check'), 'putaway' => _('Putaway'));
+echo "<div class = 'filter-field'>";
 echo '<select name="op_type">';
 foreach ($op_types as $val => $label) {
 	$sel = (get_post('op_type') == $val) ? ' selected' : '';
 	echo '<option value="' . htmlspecialchars($val, ENT_QUOTES) . '"' . $sel . '>' . $label . '</option>';
 }
-echo '</select></td>';
+echo '</select></div>';
 
 // Status filter
-$statuses = array('' => _('All Active'), 'draft' => _('Draft'), 'ready' => _('Ready'), 'in_progress' => _('In Progress'), 'done' => _('Done'), 'cancelled' => _('Cancelled'));
-echo '<td>' . _('Status:') . '</td><td>';
+$statuses = array('' => _('All Statuses'), 'draft' => _('Draft'), 'ready' => _('Ready'), 'in_progress' => _('In Progress'), 'done' => _('Done'), 'cancelled' => _('Cancelled'));
+echo "<div class = 'filter-field'>";
 echo '<select name="op_status">';
 foreach ($statuses as $val => $label) {
 	$sel = (get_post('op_status') == $val) ? ' selected' : '';
 	echo '<option value="' . htmlspecialchars($val, ENT_QUOTES) . '"' . $sel . '>' . $label . '</option>';
 }
-echo '</select></td>';
+echo '</select></div>';
 
 submit_cells('RefreshList', _('Search'), '', _('Refresh list'), 'default');
 
 end_row();
-end_table();
+end_table(1);
 
 //-------------------------------------------------------------------------------------
 // Summary cards

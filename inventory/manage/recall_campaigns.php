@@ -231,7 +231,7 @@ start_form();
 echo '<div style="margin-bottom:10px;">';
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-stock_items_list_cells(_('Item:'), 'filter_stock_id', null, _('All Items'), true, true);
+stock_items_list_cells(null, 'filter_stock_id', null, _('All Items'), true, true);
 $status_options = array_merge(array('' => _('All Statuses')), get_recall_campaign_statuses());
 label_cell(_('Status:'));
 echo '<td>';
@@ -379,7 +379,10 @@ text_row(_('Campaign Title:'), 'title', get_post('title'), 60, 200);
 
 textarea_row(_('Description:'), 'description', get_post('description'), 60, 4);
 
-stock_items_list_cells(_('Affected Item:'), 'stock_id', null, false, false, true);
+start_row();
+label_cell(_('Affected Item:'));
+stock_items_list_cells(null, 'stock_id', null, false, false, true);
+end_row();
 
 $recall_types = get_recall_types();
 array_selector_row(_('Recall Type:'), 'recall_type', get_post('recall_type'), $recall_types);

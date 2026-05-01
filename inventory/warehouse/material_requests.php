@@ -258,22 +258,22 @@ start_row();
 
 $filter_status = get_post('filter_status', '');
 $statuses = array('' => _('All Statuses')) + get_material_request_statuses();
-echo '<td>' . _('Status:') . ' ';
+echo "<div class = 'filter-field'>";
 echo array_selector('filter_status', $filter_status, $statuses, array('select_submit' => true));
-echo '</td>';
+echo '</div>';
 
 $filter_type = get_post('filter_type', '');
 $types = array('' => _('All Types')) + get_material_request_types();
-echo '<td>' . _('Type:') . ' ';
+echo "<div class = 'filter-field'>";
 echo array_selector('filter_type', $filter_type, $types, array('select_submit' => true));
-echo '</td>';
+echo '</div>';
 
 locations_list_cells(_('Warehouse:'), 'filter_warehouse', null, true);
 
 submit_cells('SearchMR', _('Search'), '', _('Search material requests'), true);
 submit_cells('New', _('New Material Request'), '', _('Create a new material request'), 'default');
 end_row();
-end_table();
+end_table(1);
 
 // --- SUMMARY CARDS ---
 $summary = get_material_request_summary();

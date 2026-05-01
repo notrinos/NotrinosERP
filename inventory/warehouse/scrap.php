@@ -219,15 +219,12 @@ if ($pending_count > 0) {
 
 echo "<h3>" . _('Scrap History') . "</h3>";
 
-start_table(TABLESTYLE2);
+start_table(TABLESTYLE_NOBORDER);
 start_row();
-locations_list_cells(_('Warehouse:'), 'filter_warehouse', get_post('filter_warehouse'), true, false, false);
+locations_list_cells(null, 'filter_warehouse', get_post('filter_warehouse'), true, false, false);
 
 $reason_options = array_merge(array('' => _('-- All Reasons --')), get_scrap_reason_codes());
-echo "<td class='label'>" . _('Reason:') . "</td><td>";
-echo array_selector('filter_reason', get_post('filter_reason'), $reason_options);
-echo "</td>";
-
+echo "<div class = 'filter-field'>".array_selector('filter_reason', get_post('filter_reason'), $reason_options)."</div>";
 date_cells(_('From:'), 'filter_date_from', '', null, 0, 0, 1001);
 date_cells(_('To:'), 'filter_date_to', '', null, 0, 0, 1001);
 submit_cells('Search', _('Search'), '', _('Search scrap entries'), 'default');
@@ -298,9 +295,10 @@ echo "<h3>" . _('New Scrap Entry') . "</h3>";
 start_table(TABLESTYLE2);
 
 // Item
-echo "<tr>";
-stock_items_list_cells(_('Item:'), 'stock_id', get_post('stock_id'), false, true);
-echo "</tr>";
+start_row();
+label_cell(_('Select Item:'));
+stock_items_list_cells(null, 'stock_id', get_post('stock_id'), false, true);
+end_row();
 
 // Quantity
 small_amount_row(_('Quantity:'), 'qty', get_post('qty', ''), null, null, user_qty_dec());

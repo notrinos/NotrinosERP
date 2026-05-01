@@ -56,10 +56,10 @@ if (list_updated('filter_stock_id'))
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-batch_tracked_items_list_cells(_('Item:'), 'filter_stock_id', get_post('filter_stock_id'), true, true);
+batch_tracked_items_list_cells(null, 'filter_stock_id', get_post('filter_stock_id'), true, true);
 submit_cells('auto_expire', _('Auto-Expire Past Batches'), '', _('Mark all past-expiry active batches as expired'), true);
 end_row();
-end_table();
+end_table(1);
 
 $filter_stock = get_post('filter_stock_id', '');
 

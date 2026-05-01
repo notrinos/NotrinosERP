@@ -249,10 +249,10 @@ start_form();
 echo '<div style="margin-bottom:15px; border-bottom:2px solid #dee2e6; padding-bottom:0;">';
 echo '<button type="submit" name="tab_suggestions" value="1" class="ajaxsubmit" style="padding:8px 20px; border:1px solid #dee2e6; border-bottom:none; background:'
 	. ($active_tab == 'suggestions' ? '#fff' : '#f8f9fa') . '; font-weight:'
-	. ($active_tab == 'suggestions' ? 'bold' : 'normal') . '; cursor:pointer; border-radius:4px 4px 0 0; margin-right:4px;'
+	. ($active_tab == 'suggestions' ? 'bold' : 'normal') . '; cursor:pointer; border-radius:4px 4px 0 0; margin-right:4px; color:#71717b;'
 	. ($active_tab == 'suggestions' ? ' margin-bottom:-2px; padding-bottom:10px;' : '')
 	. '"><i class="fa fa-tachometer"></i> ' . _('Suggestions Dashboard') . '</button>';
-echo '<button type="submit" name="tab_rules" value="1" class="ajaxsubmit" style="padding:8px 20px; border:1px solid #dee2e6; border-bottom:none; background:'
+echo '<button type="submit" name="tab_rules" value="1" class="ajaxsubmit" style="padding:8px 20px; border:1px solid #dee2e6; border-bottom:none; color:#71717b; background:'
 	. ($active_tab == 'rules' ? '#fff' : '#f8f9fa') . '; font-weight:'
 	. ($active_tab == 'rules' ? 'bold' : 'normal') . '; cursor:pointer; border-radius:4px 4px 0 0;'
 	. ($active_tab == 'rules' ? ' margin-bottom:-2px; padding-bottom:10px;' : '')
@@ -292,9 +292,9 @@ function display_suggestions_tab() {
 	start_row();
 
 	// Warehouse filter
-	echo '<td>' . _('Warehouse:') . ' </td><td>';
+	// echo '<td>' . _('Warehouse:') . ' </td><td>';
 	$sql = "SELECT loc_code, location_name FROM " . TB_PREF . "locations WHERE inactive=0 ORDER BY location_name";
-	echo "<select name='filter_warehouse' class='combo ajaxsubmit'>";
+	echo "<div class='form-row'><select name='filter_warehouse' class='combo ajaxsubmit'>";
 	echo "<option value=''>" . _('-- All Warehouses --') . "</option>";
 	$result = db_query($sql, 'could not get locations');
 	while ($row = db_fetch($result)) {
@@ -302,28 +302,27 @@ function display_suggestions_tab() {
 		echo "<option value='" . htmlspecialchars($row['loc_code'], ENT_QUOTES, 'UTF-8') . "'$sel>"
 			. htmlspecialchars($row['location_name'], ENT_QUOTES, 'UTF-8') . "</option>";
 	}
-	echo "</select></td>";
+	echo "</select></div>";
 
 	// Rule type filter
-	echo '<td>' . _('Rule Type:') . ' </td><td>';
-	echo "<select name='filter_rule_type' class='combo ajaxsubmit'>";
+	echo "<div class='form-row'><select name='filter_rule_type' class='combo ajaxsubmit'>";
 	echo "<option value=''>" . _('-- All Types --') . "</option>";
 	foreach (get_replenishment_rule_types() as $key => $label) {
 		$sel = (get_post('filter_rule_type') == $key) ? ' selected' : '';
 		echo "<option value='" . htmlspecialchars($key, ENT_QUOTES, 'UTF-8') . "'$sel>"
 			. htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . "</option>";
 	}
-	echo "</select></td>";
+	echo "</select></div>";
 
-	echo '<td>';
-	submit('evaluate_btn', _('Evaluate Rules'), true, _('Run replenishment engine'), 'default');
-	echo ' ';
+	echo "<div class='form-row'>";
+	submit('evaluate_btn', _('Evaluate Rules'), true, _('Run replenishment engine'), '');
+	echo "</div><div class='form-row'>";
 	submit('execute_all_auto', _('Execute All Auto'), true, _('Execute all auto-execute suggestions'), true);
-	echo '</td>';
+	echo '</div>';
 	end_row();
-	end_table();
+	end_table(1);
 
-	echo '<br>';
+	// echo '<br>';
 
 	// --- Rule Summary Cards ---
 	$summary = get_replenishment_rule_summary(true);
@@ -472,13 +471,11 @@ function display_rules_tab($selected_id, $Mode) {
 	// --- Filter row ---
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
-	echo '<td>';
-	check_row(_('Show Inactive:'), 'show_inactive_rules', $show_inactive, true);
-	echo '</td>';
+	
+	check_cells(_('Show Inactive:'), 'show_inactive_rules', $show_inactive, true);
+	
 	end_row();
-	end_table();
-
-	echo '<br>';
+	end_table(1);
 
 	// --- Rules list ---
 	$rules = get_replenishment_rules(null, null, null, $show_inactive);

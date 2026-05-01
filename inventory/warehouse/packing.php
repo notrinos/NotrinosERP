@@ -193,10 +193,10 @@ start_row();
 
 // Warehouse filter
 $sql_locs = "SELECT loc_code, location_name FROM " . TB_PREF . "locations WHERE wh_enabled = 1 ORDER BY location_name";
-echo '<td>' . _('Warehouse:') . '</td><td>';
+echo "<div class = 'filter-field'>";
 echo combo_input('filter_warehouse', get_post('filter_warehouse'), $sql_locs, 'loc_code', 'location_name',
 	array('spec_option' => _('All Warehouses'), 'spec_id' => '', 'select_submit' => true, 'order' => false));
-echo '</td>';
+echo '</div>';
 
 // Status filter
 $status_options = array(
@@ -207,18 +207,18 @@ $status_options = array(
 	'delivered' => _('Delivered'),
 	'cancelled' => _('Cancelled'),
 );
-echo '<td>' . _('Status:') . '</td><td>';
+echo "<div class = 'filter-field'>";
 echo array_selector('filter_status', get_post('filter_status'), $status_options, array('select_submit' => true));
-echo '</td>';
+echo '</div>';
 
 // Type filter
 $type_options = array_merge(array('' => _('All Types')), get_package_types());
-echo '<td>' . _('Type:') . '</td><td>';
+echo "<div class = 'filter-field'>";
 echo array_selector('filter_type', get_post('filter_type'), $type_options, array('select_submit' => true));
-echo '</td>';
-
+echo '</div>';
+submit_cells('RefreshList', _('Search'), '', _('Refresh list'), 'default');
 end_row();
-end_table();
+end_table(1);
 
 // =====================================================================
 // Status Summary Cards

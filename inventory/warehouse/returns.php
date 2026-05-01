@@ -494,18 +494,18 @@ if ($selected_id > 0 && $order) {
 
 	echo "<h3>" . _('Return Orders') . "</h3>";
 
-	start_table(TABLESTYLE2);
+	start_table(TABLESTYLE_NOBORDER);
 	start_row();
 
 	$type_options = array_merge(array('' => _('-- All Types --')), get_return_order_types());
-	echo "<td class='label'>" . _('Type:') . "</td><td>";
+	echo "<div class = 'filter-field'>";
 	echo array_selector('filter_type', get_post('filter_type'), $type_options);
-	echo "</td>";
+	echo "</div>";
 
 	$status_options = array_merge(array('' => _('-- All Statuses --')), get_return_order_statuses());
-	echo "<td class='label'>" . _('Status:') . "</td><td>";
+	echo "<div class = 'filter-field'>";
 	echo array_selector('filter_status', get_post('filter_status'), $status_options);
-	echo "</td>";
+	echo "</div>";
 
 	locations_list_cells(_('Warehouse:'), 'filter_loc', get_post('filter_loc'), true, false, false);
 	submit_cells('SearchOrders', _('Search'), '', _('Search return orders'), 'default');
@@ -553,7 +553,7 @@ if ($selected_id > 0 && $order) {
 	$result = get_return_orders($filters);
 
 	div_start('return_list');
-	start_table(TABLESTYLE, "width='95%'");
+	start_table(TABLESTYLE, "width='100%'");
 	$th = array(_('RO#'), _('Type'), _('Status'), _('Date'), _('Customer/Supplier'),
 		_('Warehouse'), _('Lines'), _('Expected'), _('Received'), _('Reference'), _(''));
 	table_header($th);

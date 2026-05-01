@@ -1854,7 +1854,7 @@ INSERT INTO `0_sales_orders` VALUES
 ('8', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2026-01-21', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2026-01-21', '4', '1250', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}');
 
 
--- Structure of table `0_sales_pricelists` -- (Phase 1)
+-- Structure of table `0_sales_pricelists`
 CREATE TABLE IF NOT EXISTS `0_sales_pricelists` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`name` VARCHAR(100) NOT NULL,
@@ -1876,7 +1876,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_pricelists` (
 
 -- Data of table `0_sales_pricelists` --
 
--- Structure of table `0_sales_pricelist_rules` -- (Phase 1)
+-- Structure of table `0_sales_pricelist_rules`
 CREATE TABLE IF NOT EXISTS `0_sales_pricelist_rules` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`pricelist_id` INT NOT NULL,
@@ -2010,7 +2010,7 @@ CREATE TABLE `0_sales_agreement_lines` (
 
 -- Data of table `0_sales_agreement_lines` --
 
--- Structure of table `0_sales_discount_programs` -- (Phase 4)
+-- Structure of table `0_sales_discount_programs`
 
 CREATE TABLE IF NOT EXISTS `0_sales_discount_programs` (
 	`id` INT NOT NULL AUTO_INCREMENT,
@@ -2043,7 +2043,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_discount_programs` (
 
 -- Data of table `0_sales_discount_programs` --
 
--- Structure of table `0_sales_coupons` -- (Phase 4)
+-- Structure of table `0_sales_coupons`
 
 CREATE TABLE IF NOT EXISTS `0_sales_coupons` (
 	`id` INT NOT NULL AUTO_INCREMENT,
@@ -2063,7 +2063,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_coupons` (
 
 -- Data of table `0_sales_coupons` --
 
--- Structure of table `0_sales_discount_usage` -- (Phase 4)
+-- Structure of table `0_sales_discount_usage`
 
 CREATE TABLE IF NOT EXISTS `0_sales_discount_usage` (
 	`id` INT NOT NULL AUTO_INCREMENT,
@@ -2082,7 +2082,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_discount_usage` (
 
 -- Data of table `0_sales_discount_usage` --
 
--- Structure of table `0_sales_rma_reasons` -- (Phase 5)
+-- Structure of table `0_sales_rma_reasons`
 
 CREATE TABLE IF NOT EXISTS `0_sales_rma_reasons` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -2105,7 +2105,7 @@ INSERT IGNORE INTO `0_sales_rma_reasons` (`description`, `requires_inspection`, 
 ('Excess Quantity', 0, 'restock'),
 ('Other', 0, 'restock');
 
--- Structure of table `0_sales_rma` -- (Phase 5)
+-- Structure of table `0_sales_rma`
 
 CREATE TABLE IF NOT EXISTS `0_sales_rma` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -2144,7 +2144,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_rma` (
 
 -- Data of table `0_sales_rma` --
 
--- Structure of table `0_sales_rma_lines` -- (Phase 5)
+-- Structure of table `0_sales_rma_lines`
 
 CREATE TABLE IF NOT EXISTS `0_sales_rma_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -2165,7 +2165,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_rma_lines` (
 
 -- Data of table `0_sales_rma_lines` --
 
--- Structure of table `0_sales_commission_plans` -- (Phase 6)
+-- Structure of table `0_sales_commission_plans`
 CREATE TABLE IF NOT EXISTS `0_sales_commission_plans` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`name` VARCHAR(100) NOT NULL,
@@ -2183,7 +2183,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_plans` (
 
 -- Data of table `0_sales_commission_plans` --
 
--- Structure of table `0_sales_commission_tiers` -- (Phase 6)
+-- Structure of table `0_sales_commission_tiers`
 CREATE TABLE IF NOT EXISTS `0_sales_commission_tiers` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`plan_id` INT NOT NULL,
@@ -2197,7 +2197,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_tiers` (
 
 -- Data of table `0_sales_commission_tiers` --
 
--- Structure of table `0_sales_commission_assignments` -- (Phase 6)
+-- Structure of table `0_sales_commission_assignments`
 CREATE TABLE IF NOT EXISTS `0_sales_commission_assignments` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`plan_id` INT NOT NULL,
@@ -2211,7 +2211,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_assignments` (
 
 -- Data of table `0_sales_commission_assignments` --
 
--- Structure of table `0_sales_commission_entries` -- (Phase 6)
+-- Structure of table `0_sales_commission_entries`
 CREATE TABLE IF NOT EXISTS `0_sales_commission_entries` (
 	`id` INT AUTO_INCREMENT PRIMARY KEY,
 	`salesman_id` INT NOT NULL,
@@ -5910,7 +5910,7 @@ VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
 VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
 
--- Phase 4: Advanced Discount & Promotion Engine
+-- Advanced Discount & Promotion Engine
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
 VALUES ('use_discount_programs', 'sales', 'tinyint', 1, '0');
 
@@ -6590,7 +6590,7 @@ WHERE `id` IN (2, 10)
   AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;5893;%';
 
 -- ================================================================
--- Phase 8: Advanced Credit Control & Customer Enhancements
+-- Advanced Credit Control & Customer Enhancements
 -- ================================================================
 
 -- Credit review history

@@ -262,7 +262,8 @@ echo '<div style="padding: 8px 0;">';
 
 if ($label_source === 'item') {
 	start_table(TABLESTYLE2);
-	stock_items_list_cells(_('Item:'), 'stock_id', get_post('stock_id'), false, true);
+	label_cell(_('Select Item:'));
+	stock_items_list_cells(null, 'stock_id', get_post('stock_id'), false, true);
 	end_row();
 	start_row();
 	small_amount_row(_('Number of Copies:'), 'label_copies', get_post('label_copies', 1), null, null, 0);

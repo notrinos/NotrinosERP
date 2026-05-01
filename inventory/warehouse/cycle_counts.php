@@ -484,7 +484,7 @@ if ($active_tab == 'plans') {
     echo ' &nbsp;';
 
     // Status
-    $stat_options = array('' => _('All'), 'active' => _('Active (Draft/In Progress/Review)'),
+    $stat_options = array('' => _('All Statuses'), 'active' => _('Active (Draft/In Progress/Review)'),
         'draft' => _('Draft'), 'in_progress' => _('In Progress'), 'review' => _('Review'),
         'approved' => _('Approved'), 'posted' => _('Posted'));
     echo array_selector('filter_status', $status_filter, $stat_options,
@@ -506,7 +506,7 @@ if ($active_tab == 'plans') {
         $query_status, null, 100
     );
 
-    start_table(TABLESTYLE, "width='95%'");
+    start_table(TABLESTYLE, "width='100%'");
     $th = array(_('#'), _('Date'), _('Warehouse'), _('Plan'), _('Status'),
         _('Lines'), _('Progress'), _('Variances'), '');
     table_header($th);
