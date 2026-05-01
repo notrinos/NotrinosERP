@@ -79,6 +79,7 @@ class renderer {
 	 */
 	function application_icon($application_id) {
 		$application_icons = array(
+			'crm' => 'headphones',
 			'orders' => 'tag',
 			'AP' => 'cart',
 			'stock' => 'box',

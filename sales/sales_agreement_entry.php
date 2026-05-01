@@ -372,7 +372,8 @@ br();
 if (!$agreement)
 	display_note(_('Save the agreement header first, then add line items.'), 0, 1);
 
-start_table(TABLESTYLE, "width='100%'");
+start_outer_table();
+table_section(1);
 
 if ($editable) {
 	echo '<tr><td class="label">' . _('Agreement Type:') . '</td><td>';
@@ -386,6 +387,9 @@ if ($editable) {
 	date_row(_('End Date:'), 'date_end');
 	text_row(_('Currency:'), 'currency', get_post('currency'), 8, 8);
 	payment_terms_list_row(_('Payment Terms:'), 'payment_terms', get_post('payment_terms'));
+
+	table_section(2);
+	
 	check_row(_('Auto Renew:'), 'auto_renew', get_post('auto_renew'));
 	text_row(_('Renewal Period (Months):'), 'renewal_period_months',
 		get_post('renewal_period_months'), 6, 6);
@@ -404,6 +408,9 @@ if ($editable) {
 	label_row(_('End Date:'), $agreement['date_end'] ? sql2date($agreement['date_end']) : '-');
 	label_row(_('Currency:'), $agreement['currency']);
 	label_row(_('Payment Terms:'), $agreement['payment_terms_name'] ? $agreement['payment_terms_name'] : '-');
+
+	table_section(2);
+	
 	label_row(_('Reference:'), $agreement['reference']);
 	label_row(_('Auto Renew:'), $agreement['auto_renew'] ? _('Yes') : _('No'));
 	label_row(_('Renewal Period:'), (int)$agreement['renewal_period_months'] . ' ' . _('months'));
@@ -420,7 +427,7 @@ if ($editable) {
 	label_row(_('Invoiced Total:'),  price_format($agreement['total_invoiced']));
 }
 
-end_table(1);
+end_outer_table();
 
 if ($editable) {
 	if ($agreement)
@@ -574,7 +581,7 @@ if ($agreement) {
 	}
 	if (in_array($agreement['status'], array('confirmed', 'active'))) {
 		echo '<div style="max-width:420px;margin:12px auto 0;">';
-		text_row(_('Cancellation Reason:'), 'cancellation_reason', null, 40, 255);
+		textarea_row(_('Cancellation Reason:'), 'cancellation_reason', null, 300, 5);
 		echo '</div>';
 	}
 	echo '</div>';
