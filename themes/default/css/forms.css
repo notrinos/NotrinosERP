@@ -813,8 +813,8 @@ td.combo-select-cell.combo-layout-equal {
 .filter-field > .combo-select-cell.combo-layout-equal,
 .form-control-wrap > .combo-search-cell.combo-layout-equal,
 .form-control-wrap > .combo-select-cell.combo-layout-equal {
-	flex: 0 0 50%;
-	max-width: 50%;
+	flex: 0 0 49%;
+	max-width: 49%;
 	box-sizing: border-box;
 }
 

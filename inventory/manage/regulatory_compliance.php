@@ -628,7 +628,10 @@ if ($active_tab === 'fsma') {
 	table_section(1);
 	$event_types = get_fsma_event_types();
 	array_selector_row(_('Event Type:'), 'fsma_event_type', null, $event_types);
-	stock_items_list_cells(_('Item:'), 'fsma_stock_id', null, _('Select item...'), false, true);
+	start_row();
+	label_cell(_('Item:'));
+	stock_items_list_cells(null, 'fsma_stock_id', null, _('Select item...'), false, true, false, array('layout_class' => 'combo-layout-equal'));
+	end_row();
 	text_row(_('Traceability Lot Code (TLC):'), 'fsma_lot_code', '', 50, 50);
 	text_row(_('Batch ID:'), 'fsma_batch_id', '', 10, 11);
 	date_row(_('Event Date:'), 'fsma_event_date', '', true);

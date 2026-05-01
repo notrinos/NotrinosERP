@@ -68,14 +68,14 @@ start_row();
 // Warehouse selector
 $wms_locations = get_wms_enabled_locations();
 if ($wms_locations && db_num_rows($wms_locations) > 0) {
-	warehouse_list_cells(_('Warehouse:'), 'warehouse_filter', null, true, true);
+	warehouse_list_cells(null, 'warehouse_filter', null, true, true);
 } else {
 	label_cell(_('No WMS-enabled warehouses found. Enable WMS on Inventory Locations first.'));
 }
 
 submit_cells('RefreshDashboard', _('Refresh'), '', _('Refresh dashboard data'), true);
 end_row();
-end_table();
+end_table(1);
 
 $warehouse = get_post('warehouse_filter', '');
 

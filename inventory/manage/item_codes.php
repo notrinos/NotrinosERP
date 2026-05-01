@@ -95,11 +95,13 @@ start_form();
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
-echo '<center>' . _('Item:'). '&nbsp;';
+start_table();
+start_row();
 //Manufcatured item visible
-echo stock_items_list('stock_id', $_POST['stock_id'], false, true);
-
-echo '<hr></center>';
+labelheader_cell(_('Select Item:'));
+stock_items_list_cells(null, 'stock_id', $_POST['stock_id'], false, true, array('layout_class' => 'combo-layout-equal'));
+end_row();
+end_table();
 
 set_global_stock_item($_POST['stock_id']);
 

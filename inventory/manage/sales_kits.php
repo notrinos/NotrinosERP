@@ -169,9 +169,19 @@ if ($Mode == 'RESET') {
 
 start_form();
 
-echo '<center>'._('Select a sale kit:').'&nbsp;';
-echo sales_kits_list('item_code', null, _('New kit'), true);
-echo '</center><br>';
+start_table();
+start_row();
+//Manufcatured item visible
+labelheader_cell(_('Select a Sale Kit'));
+echo "<div class = 'filter-field'>";
+echo sales_items_list('item_code', null, _('New kit'), true, 'kits', array('cells'=>true, 'editable' => false, 'layout_class' => 'combo-layout-equal'));
+echo "</div>";
+end_row();
+end_table();
+
+// echo '<center>'._('Select a sale kit:').'&nbsp;';
+// echo sales_kits_list('item_code', null, _('New kit'), true);
+// echo '</center><br>';
 $props = get_kit_props($_POST['item_code']);
 
 if (list_updated('item_code')) {
