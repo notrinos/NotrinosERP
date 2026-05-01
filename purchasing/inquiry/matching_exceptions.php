@@ -85,18 +85,16 @@ $filter_to = get_post('filter_to', Today());
 
 start_form();
 
-start_table(TABLESTYLE2, "width='100%'");
+start_table(TABLESTYLE_NOBORDER);
 start_row();
-    label_cell(_('Status:'));
-    echo "<td>" . array_selector('filter_status', $filter_status, get_matching_exception_status_options(), array('class' => array('nosearch'))) . "</td>";
-    supplier_list_cells(_('Supplier:'), 'filter_supplier_id', $filter_supplier_id, true, true, false, true);
-    label_cell(_('Exception Type:'));
-    echo "<td>" . array_selector('filter_type', $filter_type, get_matching_exception_type_options(), array('class' => array('nosearch'))) . "</td>";
+echo "<td>" . array_selector('filter_status', $filter_status, get_matching_exception_status_options(), array('class' => array('nosearch'))) . "</td>";
+supplier_list_cells(_('Supplier:'), 'filter_supplier_id', $filter_supplier_id, true, true, false, true);
+echo "<td>" . array_selector('filter_type', $filter_type, get_matching_exception_type_options(), array('class' => array('nosearch'))) . "</td>";
 end_row();
 start_row();
-    date_cells(_('From:'), 'filter_from', $filter_from);
-    date_cells(_('To:'), 'filter_to', $filter_to);
-    submit_cells('SearchExceptions', _('Search'), '', _('Apply filters'), 'default');
+date_cells(_('From:'), 'filter_from', $filter_from);
+date_cells(_('To:'), 'filter_to', $filter_to);
+submit_cells('SearchExceptions', _('Search'), '', _('Apply filters'), 'default');
 end_row();
 end_table(1);
 

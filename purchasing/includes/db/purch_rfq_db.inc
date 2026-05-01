@@ -600,15 +600,30 @@ function get_next_purch_rfq_item_sort_order($rfq_id)
  * @return int|false
  */
 function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specifications = '',
-	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array())
+	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null)
 {
+	$error_message = null;
+
 	$rfq = get_editable_purch_rfq($rfq_id);
-	if (!$rfq || $quantity <= 0)
+	if (!$rfq) {
+		$existing_rfq = get_purch_rfq($rfq_id);
+		if (!$existing_rfq)
+			$error_message = _('The selected RFQ could not be found.');
+		else
+			$error_message = _('Items can only be added while the RFQ is in Draft status.');
 		return false;
+	}
 
 	$item = get_item($stock_id);
-	if (!$item)
+	if (!$item) {
+		$error_message = _('The selected item could not be found.');
 		return false;
+	}
+
+	if ($quantity <= 0) {
+		$error_message = _('The quantity must be greater than zero.');
+		return false;
+	}
 
 	$line_description = $description !== '' ? $description : $item['description'];
 	$line_unit = $unit_of_measure !== '' ? $unit_of_measure : $item['units'];

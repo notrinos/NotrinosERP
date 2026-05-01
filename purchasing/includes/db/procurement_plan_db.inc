@@ -107,7 +107,9 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 
 	begin_transaction();
 
-	$sql = "INSERT INTO " . TB_PREF . "procurement_plan\n\		(reference, plan_date, plan_type, status, created_by, notes, custom_data)\n\		VALUES ('', " . db_escape(date2sql(Today())) . ", " . db_escape($plan_type) . ", 'draft', "
+	$sql = "INSERT INTO " . TB_PREF . "procurement_plan
+		(reference, plan_date, plan_type, status, created_by, notes, custom_data)
+		VALUES ('', " . db_escape(date2sql(Today())) . ", " . db_escape($plan_type) . ", 'draft', "
 		. (int)$_SESSION['wa_current_user']->user . ", '', " . sql_procurement_plan_custom_data($date_range) . ")";
 	db_query($sql, 'could not create procurement plan header');
 
@@ -147,7 +149,10 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 			'price_source' => isset($pricing_context['source']) ? $pricing_context['source'] : '',
 		);
 
-		$sql = "INSERT INTO " . TB_PREF . "procurement_plan_lines\n\			(plan_id, stock_id, location, replenishment_rule_id, current_stock, required_qty,\n\			 suggested_order_qty, supplier_id, estimated_price, estimated_lead_time, priority, status, po_number, custom_data)\n\			VALUES ("
+		$sql = "INSERT INTO " . TB_PREF . "procurement_plan_lines
+			(plan_id, stock_id, location, replenishment_rule_id, current_stock, required_qty,
+			 suggested_order_qty, supplier_id, estimated_price, estimated_lead_time, priority, status, po_number, custom_data)
+			VALUES ("
 			. (int)$plan_id . ","
 			. db_escape($suggestion['stock_id']) . ","
 			. db_escape($suggestion['warehouse_loc_code']) . ","
@@ -186,7 +191,19 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
  */
 function get_procurement_plan($id)
 {
-	$sql = "SELECT plan.*,\n\	\tuser.real_name AS created_by_name,\n\	\tCOUNT(line.id) AS line_count,\n\	\tSUM(CASE WHEN line.status = 'pending' THEN 1 ELSE 0 END) AS pending_count,\n\	\tSUM(CASE WHEN line.status = 'approved' THEN 1 ELSE 0 END) AS approved_count,\n\	\tSUM(CASE WHEN line.status = 'ordered' THEN 1 ELSE 0 END) AS ordered_count,\n\	\tSUM(CASE WHEN line.status = 'skipped' THEN 1 ELSE 0 END) AS skipped_count,\n\	\tCOALESCE(SUM(line.suggested_order_qty * line.estimated_price), 0) AS estimated_total\n\	FROM " . TB_PREF . "procurement_plan plan\n\	LEFT JOIN " . TB_PREF . "users user ON user.id = plan.created_by\n\	LEFT JOIN " . TB_PREF . "procurement_plan_lines line ON line.plan_id = plan.id\n\	WHERE plan.id = " . (int)$id . "\n\	GROUP BY plan.id";
+	$sql = "SELECT plan.*,
+		user.real_name AS created_by_name,
+		COUNT(line.id) AS line_count,
+		SUM(CASE WHEN line.status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+		SUM(CASE WHEN line.status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+		SUM(CASE WHEN line.status = 'ordered' THEN 1 ELSE 0 END) AS ordered_count,
+		SUM(CASE WHEN line.status = 'skipped' THEN 1 ELSE 0 END) AS skipped_count,
+		COALESCE(SUM(line.suggested_order_qty * line.estimated_price), 0) AS estimated_total
+	FROM " . TB_PREF . "procurement_plan plan
+	LEFT JOIN " . TB_PREF . "users user ON user.id = plan.created_by
+	LEFT JOIN " . TB_PREF . "procurement_plan_lines line ON line.plan_id = plan.id
+	WHERE plan.id = " . (int)$id . "
+	GROUP BY plan.id";
 	$result = db_query($sql, 'could not retrieve procurement plan');
 	return db_fetch($result);
 }
@@ -201,7 +218,12 @@ function get_procurement_plan($id)
  */
 function get_procurement_plans($status = '', $date_from = '', $date_to = '')
 {
-	$sql = "SELECT plan.*,\n\	\tCOUNT(line.id) AS line_count,\n\	\tCOALESCE(SUM(line.suggested_order_qty * line.estimated_price), 0) AS estimated_total\n\	FROM " . TB_PREF . "procurement_plan plan\n\	LEFT JOIN " . TB_PREF . "procurement_plan_lines line ON line.plan_id = plan.id\n\	WHERE 1=1";
+	$sql = "SELECT plan.*,
+		COUNT(line.id) AS line_count,
+		COALESCE(SUM(line.suggested_order_qty * line.estimated_price), 0) AS estimated_total
+	FROM " . TB_PREF . "procurement_plan plan
+	LEFT JOIN " . TB_PREF . "procurement_plan_lines line ON line.plan_id = plan.id
+	WHERE 1=1";
 
 	if ($status !== '' && $status !== ALL_TEXT)
 		$sql .= " AND plan.status = " . db_escape($status);
@@ -222,7 +244,17 @@ function get_procurement_plans($status = '', $date_from = '', $date_to = '')
  */
 function get_plan_lines($plan_id)
 {
-	$sql = "SELECT line.*,\n\	\tstock.description AS stock_description,\n\	\tstock.units AS stock_units,\n\	\tsupplier.supp_name AS supplier_name,\n\	\tlocation.location_name AS location_name\n\	FROM " . TB_PREF . "procurement_plan_lines line\n\	LEFT JOIN " . TB_PREF . "stock_master stock ON stock.stock_id = line.stock_id\n\	LEFT JOIN " . TB_PREF . "suppliers supplier ON supplier.supplier_id = line.supplier_id\n\	LEFT JOIN " . TB_PREF . "locations location ON location.loc_code = line.location\n\	WHERE line.plan_id = " . (int)$plan_id . "\n\	ORDER BY line.priority DESC, line.id";
+	$sql = "SELECT line.*,
+		stock.description AS stock_description,
+		stock.units AS stock_units,
+		supplier.supp_name AS supplier_name,
+		location.location_name AS location_name
+	FROM " . TB_PREF . "procurement_plan_lines line
+	LEFT JOIN " . TB_PREF . "stock_master stock ON stock.stock_id = line.stock_id
+	LEFT JOIN " . TB_PREF . "suppliers supplier ON supplier.supplier_id = line.supplier_id
+	LEFT JOIN " . TB_PREF . "locations location ON location.loc_code = line.location
+	WHERE line.plan_id = " . (int)$plan_id . "
+	ORDER BY line.priority DESC, line.id";
 	return db_query($sql, 'could not retrieve procurement plan lines');
 }
 
@@ -246,7 +278,11 @@ function approve_plan_line($line_id, $approved_qty = 0, $supplier_id = 0)
 	$effective_qty = (float)$approved_qty > 0 ? (float)$approved_qty : (float)$line['suggested_order_qty'];
 	$effective_supplier = (int)$supplier_id > 0 ? (int)$supplier_id : (int)$line['supplier_id'];
 
-	$sql = "UPDATE " . TB_PREF . "procurement_plan_lines SET\n\	\tsuggested_order_qty = " . db_escape($effective_qty) . ",\n\	\tsupplier_id = " . db_escape($effective_supplier) . ",\n\	\tstatus = 'approved'\n\	WHERE id = " . $line_id;
+	$sql = "UPDATE " . TB_PREF . "procurement_plan_lines SET
+		suggested_order_qty = " . db_escape($effective_qty) . ",
+		supplier_id = " . db_escape($effective_supplier) . ",
+		status = 'approved'
+	WHERE id = " . $line_id;
 	db_query($sql, 'could not approve procurement plan line');
 
 	return true;
@@ -277,7 +313,10 @@ function skip_plan_line($line_id, $reason = '')
 	$custom_data['skipped_by'] = (int)$_SESSION['wa_current_user']->user;
 	$custom_data['skipped_date'] = date2sql(Today());
 
-	$sql = "UPDATE " . TB_PREF . "procurement_plan_lines SET\n\	\tstatus = 'skipped',\n\	\tcustom_data = " . sql_procurement_plan_custom_data($custom_data) . "\n\	WHERE id = " . $line_id;
+	$sql = "UPDATE " . TB_PREF . "procurement_plan_lines SET
+		status = 'skipped',
+		custom_data = " . sql_procurement_plan_custom_data($custom_data) . "
+	WHERE id = " . $line_id;
 	db_query($sql, 'could not skip procurement plan line');
 
 	return true;
@@ -293,7 +332,11 @@ function create_pos_from_plan($plan_id)
 {
 	global $Refs;
 
-	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines\n\	\tWHERE plan_id = " . (int)$plan_id . "\n\	\tAND status = 'approved'\n\	\tAND po_number = 0\n\	\tORDER BY supplier_id, id";
+	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines
+		WHERE plan_id = " . (int)$plan_id . "
+		AND status = 'approved'
+		AND po_number = 0
+		ORDER BY supplier_id, id";
 	$result = db_query($sql, 'could not retrieve approved procurement plan lines');
 
 	$grouped_lines = array();
@@ -364,20 +407,28 @@ function create_pos_from_plan($plan_id)
 
 		$po_numbers[] = (int)$po_number;
 		foreach ($supplier_lines as $line) {
-			$sql = "UPDATE " . TB_PREF . "procurement_plan_lines\n\	\t\t	SET status = 'ordered', po_number = " . (int)$po_number . "\n\	\t\t	WHERE id = " . (int)$line['id'];
+			$sql = "UPDATE " . TB_PREF . "procurement_plan_lines
+				SET status = 'ordered', po_number = " . (int)$po_number . "
+				WHERE id = " . (int)$line['id'];
 			db_query($sql, 'could not mark procurement plan line as ordered');
 		}
 	}
 
 	if (!empty($po_numbers)) {
-		$sql = "UPDATE " . TB_PREF . "procurement_plan\n\	\t	SET status = 'in_progress'\n\	\t	WHERE id = " . (int)$plan_id;
+		$sql = "UPDATE " . TB_PREF . "procurement_plan
+			SET status = 'in_progress'
+			WHERE id = " . (int)$plan_id;
 		db_query($sql, 'could not update procurement plan status');
 
-		$sql = "SELECT COUNT(*) AS pending_count FROM " . TB_PREF . "procurement_plan_lines\n\	\t	WHERE plan_id = " . (int)$plan_id . "\n\	\t	AND status IN ('pending', 'approved')";
+		$sql = "SELECT COUNT(*) AS pending_count FROM " . TB_PREF . "procurement_plan_lines
+			WHERE plan_id = " . (int)$plan_id . "
+			AND status IN ('pending', 'approved')";
 		$result = db_query($sql, 'could not check remaining procurement plan lines');
 		$pending_row = db_fetch($result);
 		if ($pending_row && (int)$pending_row['pending_count'] === 0) {
-			$sql = "UPDATE " . TB_PREF . "procurement_plan\n\	\t\t	SET status = 'completed'\n\	\t\t	WHERE id = " . (int)$plan_id;
+			$sql = "UPDATE " . TB_PREF . "procurement_plan
+				SET status = 'completed'
+				WHERE id = " . (int)$plan_id;
 			db_query($sql, 'could not set procurement plan completed status');
 		}
 	}
@@ -400,13 +451,24 @@ function get_demand_forecast($stock_id, $location, $months_ahead = 3)
 {
 	$months_ahead = max(1, (int)$months_ahead);
 
-	$sql = "SELECT COALESCE(SUM(sod.quantity - sod.qty_sent), 0) AS open_sales_demand\n\	\tFROM " . TB_PREF . "sales_order_details sod\n\	\tINNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type\n\	\tWHERE sod.stk_code = " . db_escape($stock_id) . "\n\	\tAND so.from_stk_loc = " . db_escape($location) . "\n\	\tAND so.trans_type = " . ST_SALESORDER . "\n\	\tAND (sod.quantity - sod.qty_sent) > 0";
+	$sql = "SELECT COALESCE(SUM(sod.quantity - sod.qty_sent), 0) AS open_sales_demand
+		FROM " . TB_PREF . "sales_order_details sod
+		INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type
+		WHERE sod.stk_code = " . db_escape($stock_id) . "
+		AND so.from_stk_loc = " . db_escape($location) . "
+		AND so.trans_type = " . ST_SALESORDER . "
+		AND (sod.quantity - sod.qty_sent) > 0";
 	$result = db_query($sql, 'could not get open sales demand for forecast');
 	$open_demand_row = db_fetch($result);
 	$open_sales_demand = $open_demand_row ? (float)$open_demand_row['open_sales_demand'] : 0;
 
 	$history_days = 180;
-	$sql = "SELECT COALESCE(SUM(ABS(qty)), 0) AS outbound_qty\n\	\tFROM " . TB_PREF . "stock_moves\n\	\tWHERE stock_id = " . db_escape($stock_id) . "\n\	\tAND loc_code = " . db_escape($location) . "\n\	\tAND qty < 0\n\	\tAND tran_date >= DATE_SUB(CURDATE(), INTERVAL " . (int)$history_days . " DAY)";
+	$sql = "SELECT COALESCE(SUM(ABS(qty)), 0) AS outbound_qty
+		FROM " . TB_PREF . "stock_moves
+		WHERE stock_id = " . db_escape($stock_id) . "
+		AND loc_code = " . db_escape($location) . "
+		AND qty < 0
+		AND tran_date >= DATE_SUB(CURDATE(), INTERVAL " . (int)$history_days . " DAY)";
 	$result = db_query($sql, 'could not calculate historical outbound quantity for forecast');
 	$history_row = db_fetch($result);
 	$avg_monthly_usage = $history_row ? ((float)$history_row['outbound_qty'] / 6) : 0;

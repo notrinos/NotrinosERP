@@ -98,9 +98,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 $statuses = array('' => _('All Statuses')) + get_purch_requisition_statuses();
-echo '<td>' . _('Status:') . ' ';
-echo array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch')));
-echo '</td>';
+echo '<td>'.array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch'))).'</td>';
 
 users_list_cells(_('Requester:'), 'filter_requester', $filter_requester, false, true);
 departments_list_cells(_('Department:'), 'filter_department', $filter_department, false, true);

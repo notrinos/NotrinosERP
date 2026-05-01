@@ -64,7 +64,16 @@ foreach ($suggestions as $suggestion) {
 		$near_items[] = $suggestion;
 }
 
-$no_rule_sql = "SELECT stock.stock_id, stock.description, stock.units\n\	FROM " . TB_PREF . "stock_master stock\n\	WHERE stock.inactive = 0\n\	AND stock.mb_flag <> 'D'\n\	AND stock.stock_id NOT IN (\n\	\tSELECT DISTINCT rule.stock_id\n\	\tFROM " . TB_PREF . "wh_replenishment_rules rule\n\	\tWHERE rule.stock_id IS NOT NULL AND rule.stock_id <> ''\n\	)\n\	ORDER BY stock.stock_id";
+$no_rule_sql = "SELECT stock.stock_id, stock.description, stock.units
+	FROM " . TB_PREF . "stock_master stock
+	WHERE stock.inactive = 0
+	AND stock.mb_flag <> 'D'
+	AND stock.stock_id NOT IN (
+		SELECT DISTINCT rule.stock_id
+		FROM " . TB_PREF . "wh_replenishment_rules rule
+		WHERE rule.stock_id IS NOT NULL AND rule.stock_id <> ''
+	)
+	ORDER BY stock.stock_id";
 $no_rule_result = db_query($no_rule_sql, 'could not get items with no reorder rule');
 
 start_form();

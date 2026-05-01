@@ -65,12 +65,8 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 supplier_list_cells(_('Supplier:'), 'filter_supplier', $filter_supplier, true, true);
-echo '<td>' . _('Status:') . ' ';
-echo array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch')));
-echo '</td>';
-echo '<td>' . _('Type:') . ' ';
-echo array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch')));
-echo '</td>';
+echo '<td>'.array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch'))).'</td>';
+echo '<td>'.array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch'))).'</td>';
 end_row();
 
 start_row();

@@ -65,12 +65,8 @@ start_row();
 $statuses = array('' => _('All Statuses')) + get_purch_rfq_statuses();
 $types = array('' => _('All Types')) + get_purch_rfq_types();
 
-echo '<td>' . _('Status:') . ' ';
-echo array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch')));
-echo '</td>';
-echo '<td>' . _('Type:') . ' ';
-echo array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch')));
-echo '</td>';
+echo '<td>'.array_selector('filter_status', $filter_status, $statuses, array('class' => array('nosearch'))).'</td>';
+echo '<td>'.array_selector('filter_type', $filter_type, $types, array('class' => array('nosearch'))).'</td>';
 
 end_row();
 start_row();

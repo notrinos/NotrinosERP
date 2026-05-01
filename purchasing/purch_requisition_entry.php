@@ -103,7 +103,7 @@ if (isset($_POST['CreateFromMaterialRequest'])) {
 	} else {
 		$bridged_requisition_id = create_requisition_from_material_request($material_request_id);
 		if ($bridged_requisition_id) {
-			meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $bridged_requisition_id);
+			meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $bridged_requisition_id . get_sel_app_param());
 		} else {
 			display_error(_('The selected material request could not be converted into a purchase requisition.'));
 		}
@@ -139,7 +139,7 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 		);
 
 		display_notification(_('Purchase requisition has been created.'));
-		meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $selected_id);
+		meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $selected_id . get_sel_app_param());
 	} else {
 		if (update_purch_requisition(
 			$selected_id,
@@ -163,6 +163,7 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisition_line()) {
 	$preferred_supplier_id = get_post('line_preferred_supplier_id') == ALL_TEXT ? 0 : (int)get_post('line_preferred_supplier_id');
+	$line_error_message = '';
 	$line_id = add_requisition_line(
 		$selected_id,
 		get_post('line_stock_id'),
@@ -171,13 +172,17 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisitio
 		$preferred_supplier_id,
 		trim(get_post('line_description')),
 		trim(get_post('line_unit_of_measure')),
-		trim(get_post('line_notes'))
+		trim(get_post('line_notes')),
+		array(),
+		$line_error_message
 	);
 
 	if ($line_id) {
 		display_notification(_('Line has been added to the purchase requisition.'));
 	} else {
-		display_error(_('The purchase requisition line could not be added.'));
+		display_error($line_error_message !== ''
+			? $line_error_message
+			: _('The purchase requisition line could not be added.'));
 	}
 }
 
@@ -320,7 +325,7 @@ if ($requisition) {
 }
 echo '</div>';
 echo '<div>';
-hyperlink_no_params('purchasing/inquiry/purch_requisitions_view.php', _('Back to Requisition Inquiry'));
+hyperlink_params($path_to_root . '/purchasing/inquiry/purch_requisitions_view.php', _('Back to Requisition Inquiry'), ltrim(get_sel_app_param(), '&'));
 echo '</div>';
 echo '</div>';
 
@@ -373,6 +378,7 @@ if ($editable) {
 }
 
 if ($requisition) {
+	$user_price_decimal_places = user_price_dec();
 	display_heading(_('Line Items'));
 	start_table(TABLESTYLE, "width='100%'");
 	$th = array(_('Item'), _('Description'), _('Quantity'), _('Qty Ordered'), _('Estimated Price'), _('Preferred Supplier'), _('Status'), _('Notes'));
@@ -386,6 +392,7 @@ if ($requisition) {
 		alt_table_row_color($k);
 
 		if ($editable) {
+			$edit_preferred_supplier_id = (int)$line['preferred_supplier_id'];
 			label_cell($line['stock_id']);
 			echo '<td><input type="text" name="edit_description_' . $line['id'] . '" value="'
 				. htmlspecialchars($line['line_description'], ENT_QUOTES, 'UTF-8') . '" size="24"></td>';
@@ -393,11 +400,11 @@ if ($requisition) {
 				. number_format2($line['quantity'], get_qty_dec($line['stock_id'])) . '" size="8" class="amount"></td>';
 			qty_cell($line['qty_ordered']);
 			echo '<td><input type="text" name="edit_estimated_price_' . $line['id'] . '" value="'
-				. price_decimal_format($line['estimated_unit_price'], user_price_dec()) . '" size="8" class="amount"></td>';
-			echo '<td>' . supplier_list('edit_supplier_' . $line['id'], $line['preferred_supplier_id'], true, false, true) . '</td>';
+				. price_decimal_format($line['estimated_unit_price'], $user_price_decimal_places) . '" size="8" class="amount"></td>';
+			echo '<td>' . supplier_list('edit_supplier_' . $line['id'], $edit_preferred_supplier_id, true, false, true) . '</td>';
 			label_cell(purch_requisition_status_badge($line['status']));
 			echo '<td><input type="text" name="edit_notes_' . $line['id'] . '" value="'
-				. htmlspecialchars($line['notes'], ENT_QUOTES, 'UTF-8') . '" size="20"></td>';
+				. htmlspecialchars($line['notes'] !== null ? $line['notes'] : '', ENT_QUOTES, 'UTF-8') . '" size="20"></td>';
 			echo '<td nowrap>';
 			hidden('edit_stock_' . $line['id'], $line['stock_id']);
 			hidden('edit_uom_' . $line['id'], $line['line_unit_of_measure']);
@@ -428,7 +435,8 @@ if ($requisition) {
 		display_heading(_('Add Line'));
 		start_table(TABLESTYLE2);
 		start_row();
-		stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+		label_cell(_('Select Item:'));
+		stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 		end_row();
 		text_row(_('Description:'), 'line_description', null, 40, 255);
 		qty_row(_('Quantity:'), 'line_quantity', null, null, null, get_qty_dec(''));

@@ -691,18 +691,34 @@ function delete_purch_requisition($requisition_id)
  * @param string      $unit_of_measure
  * @param string      $notes
  * @param mixed       $custom_data
+ * @param string|null $error_message
  * @return int|false
  */
 function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_price, $preferred_supplier_id,
-	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array())
+	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array(), &$error_message = null)
 {
+	$error_message = null;
+
 	$requisition = get_editable_purch_requisition($requisition_id);
-	if (!$requisition)
+	if (!$requisition) {
+		$existing_requisition = get_purch_requisition($requisition_id);
+		if (!$existing_requisition)
+			$error_message = _('The selected purchase requisition could not be found.');
+		else
+			$error_message = _('Lines can only be added while the purchase requisition is in Draft or Rejected status.');
 		return false;
+	}
 
 	$item = get_item($stock_id);
-	if (!$item || $quantity <= 0)
+	if (!$item) {
+		$error_message = _('The selected item could not be found.');
 		return false;
+	}
+
+	if ($quantity <= 0) {
+		$error_message = _('The quantity must be greater than zero.');
+		return false;
+	}
 
 	$line_description = $description !== '' ? $description : $item['description'];
 	$line_unit = $unit_of_measure !== '' ? $unit_of_measure : $item['units'];

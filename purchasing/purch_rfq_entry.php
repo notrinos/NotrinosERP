@@ -26,7 +26,7 @@ if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
-page(_($help_context = 'Purchase RFQ Entry'), false, false, '', $js);
+page(_($help_context = 'Purchase Request for Quotation (RFQ) Entry'), false, false, '', $js);
 
 /**
  * Validate the RFQ header form.
@@ -36,7 +36,7 @@ page(_($help_context = 'Purchase RFQ Entry'), false, false, '', $js);
 function can_save_purchase_rfq_header()
 {
 	if (!is_date(get_post('created_date'))) {
-		display_error(_('The RFQ date is invalid.'));
+		display_error(_('The Request date is invalid.'));
 		set_focus('created_date');
 		return false;
 	}
@@ -171,7 +171,7 @@ if (isset($_POST['CreateFromRequisition'])) {
 	} else {
 		$created_rfq_id = create_rfq_from_requisition($bridge_requisition_id, $bridge_supplier_ids);
 		if ($created_rfq_id) {
-			meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $created_rfq_id);
+			meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $created_rfq_id . get_sel_app_param());
 		} else {
 			display_error(_('The selected requisition could not be converted into an RFQ.'));
 		}
@@ -213,7 +213,7 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 		);
 
 		display_notification(_('Purchase RFQ has been created.'));
-		meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $selected_id);
+		meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $selected_id . get_sel_app_param());
 	} else {
 		if (update_purch_rfq(
 			$selected_id,
@@ -240,6 +240,7 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 }
 
 if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_item()) {
+	$item_error_message = '';
 	$item_id = add_rfq_item(
 		$selected_id,
 		get_post('rfq_item_stock_id'),
@@ -247,13 +248,16 @@ if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_ite
 		input_num('rfq_item_target_price'),
 		trim(get_post('rfq_item_specifications')),
 		trim(get_post('rfq_item_description')),
-		trim(get_post('rfq_item_uom'))
+		trim(get_post('rfq_item_uom')),
+		0,
+		array(),
+		$item_error_message
 	);
 
 	if ($item_id)
 		display_notification(_('RFQ item has been added.'));
 	else
-		display_error(_('The RFQ item could not be added.'));
+		display_error($item_error_message !== '' ? $item_error_message : _('The RFQ item could not be added.'));
 }
 
 $update_item_id = find_submit('UpdateRfqItem');
@@ -411,9 +415,9 @@ if ($rfq) {
 echo '</div>';
 echo '<div>';
 if ($rfq && ((int)$rfq['responded_count'] > 0 || (int)$rfq['winner_count'] > 0))
-	hyperlink_params($path_to_root . '/purchasing/purch_rfq_comparison.php', _('Comparison'), 'rfq_id=' . (int)$selected_id);
+	hyperlink_params($path_to_root . '/purchasing/purch_rfq_comparison.php', _('Comparison'), 'rfq_id=' . (int)$selected_id . get_sel_app_param());
 echo '&nbsp;';
-hyperlink_no_params('purchasing/inquiry/purch_rfq_view.php', _('Back to RFQ Inquiry'));
+hyperlink_params($path_to_root . '/purchasing/inquiry/purch_rfq_view.php', _('Back to RFQ Inquiry'), ltrim(get_sel_app_param(), '&'));
 echo '</div>';
 echo '</div>';
 
@@ -495,6 +499,7 @@ if ($editable) {
 }
 
 if ($rfq) {
+	$user_price_decimal_places = user_price_dec();
 	display_heading(_('RFQ Items'));
 	start_table(TABLESTYLE, "width='100%'");
 	$th = array(_('Item'), _('Description'), _('Quantity'), _('Unit'), _('Target Price'), _('Responses'), _('Best Quote'), _('Specifications'));
@@ -508,13 +513,13 @@ if ($rfq) {
 
 		if ($editable) {
 			label_cell($rfq_item['stock_id']);
-			echo '<td><input type="text" name="edit_rfq_description_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['line_description'], ENT_QUOTES, 'UTF-8') . '" size="24"></td>';
+			echo '<td><input type="text" name="edit_rfq_description_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['line_description'] !== null ? $rfq_item['line_description'] : '', ENT_QUOTES, 'UTF-8') . '" size="24"></td>';
 			echo '<td><input type="text" name="edit_rfq_qty_' . $rfq_item['id'] . '" value="' . number_format2($rfq_item['quantity'], get_qty_dec($rfq_item['stock_id'])) . '" size="8" class="amount"></td>';
-			echo '<td><input type="text" name="edit_rfq_uom_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['line_unit_of_measure'], ENT_QUOTES, 'UTF-8') . '" size="10"></td>';
-			echo '<td><input type="text" name="edit_rfq_price_' . $rfq_item['id'] . '" value="' . price_decimal_format($rfq_item['target_price'], user_price_dec()) . '" size="8" class="amount"></td>';
+			echo '<td><input type="text" name="edit_rfq_uom_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['line_unit_of_measure'] !== null ? $rfq_item['line_unit_of_measure'] : '', ENT_QUOTES, 'UTF-8') . '" size="10"></td>';
+			echo '<td><input type="text" name="edit_rfq_price_' . $rfq_item['id'] . '" value="' . price_decimal_format($rfq_item['target_price'], $user_price_decimal_places) . '" size="8" class="amount"></td>';
 			label_cell((int)$rfq_item['response_count'], 'align=right');
 			label_cell($rfq_item['best_quoted_price'] !== null ? price_format($rfq_item['best_quoted_price']) : '-');
-			echo '<td><input type="text" name="edit_rfq_specs_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['specifications'], ENT_QUOTES, 'UTF-8') . '" size="24"></td>';
+			echo '<td><input type="text" name="edit_rfq_specs_' . $rfq_item['id'] . '" value="' . htmlspecialchars($rfq_item['specifications'] !== null ? $rfq_item['specifications'] : '', ENT_QUOTES, 'UTF-8') . '" size="24"></td>';
 			echo '<td nowrap>';
 			hidden('edit_rfq_stock_' . $rfq_item['id'], $rfq_item['stock_id']);
 			submit('UpdateRfqItem' . $rfq_item['id'], _('Update'), true, _('Update this RFQ item'));
@@ -544,7 +549,8 @@ if ($rfq) {
 		display_heading(_('Add RFQ Item'));
 		start_table(TABLESTYLE2);
 		start_row();
-		stock_costable_items_list_cells(_('Item:'), 'rfq_item_stock_id', null, false, true);
+		label_cell(_('Select Item:'));
+		stock_costable_items_list_cells(null, 'rfq_item_stock_id', null, false, true);
 		end_row();
 		text_row(_('Description:'), 'rfq_item_description', null, 40, 255);
 		qty_row(_('Quantity:'), 'rfq_item_quantity', null, null, null, get_qty_dec(''));
@@ -612,15 +618,15 @@ if ($rfq) {
 			start_table(TABLESTYLE2, "width='100%'");
 			start_row();
 			label_cell(_('Quoted Total:'), 'class="label"');
-			echo '<td><input type="text" name="response_total_' . $rfq_vendor['id'] . '" value="' . price_decimal_format($rfq_vendor['total_quoted'], user_price_dec()) . '" size="10" class="amount"></td>';
+			echo '<td><input type="text" name="response_total_' . $rfq_vendor['id'] . '" value="' . price_decimal_format($rfq_vendor['total_quoted'], $user_price_decimal_places) . '" size="10" class="amount"></td>';
 			label_cell(_('Lead Days:'), 'class="label"');
 			echo '<td><input type="text" name="response_vendor_lead_' . $rfq_vendor['id'] . '" value="' . (int)$rfq_vendor['delivery_lead_days'] . '" size="6"></td>';
 			end_row();
 			start_row();
 			label_cell(_('Payment Terms:'), 'class="label"');
-			echo '<td><input type="text" name="response_payment_terms_' . $rfq_vendor['id'] . '" value="' . htmlspecialchars($rfq_vendor['payment_terms'], ENT_QUOTES, 'UTF-8') . '" size="30"></td>';
+			echo '<td><input type="text" name="response_payment_terms_' . $rfq_vendor['id'] . '" value="' . htmlspecialchars($rfq_vendor['payment_terms'] !== null ? $rfq_vendor['payment_terms'] : '', ENT_QUOTES, 'UTF-8') . '" size="30"></td>';
 			label_cell(_('Vendor Notes:'), 'class="label"');
-			echo '<td><input type="text" name="response_vendor_notes_' . $rfq_vendor['id'] . '" value="' . htmlspecialchars($rfq_vendor['vendor_notes'], ENT_QUOTES, 'UTF-8') . '" size="40"></td>';
+			echo '<td><input type="text" name="response_vendor_notes_' . $rfq_vendor['id'] . '" value="' . htmlspecialchars($rfq_vendor['vendor_notes'] !== null ? $rfq_vendor['vendor_notes'] : '', ENT_QUOTES, 'UTF-8') . '" size="40"></td>';
 			end_row();
 			end_table(1);
 
@@ -631,7 +637,7 @@ if ($rfq) {
 				$vendor_line = isset($vendor_line_map[(int)$rfq_item['id']]) ? $vendor_line_map[(int)$rfq_item['id']] : false;
 				alt_table_row_color($item_row_color);
 				label_cell($rfq_item['stock_id'] . ' - ' . $rfq_item['line_description']);
-				echo '<td><input type="text" name="response_price_' . $rfq_vendor['id'] . '_' . $rfq_item['id'] . '" value="' . ($vendor_line ? price_decimal_format($vendor_line['quoted_price'], user_price_dec()) : '') . '" size="8" class="amount"></td>';
+				echo '<td><input type="text" name="response_price_' . $rfq_vendor['id'] . '_' . $rfq_item['id'] . '" value="' . ($vendor_line ? price_decimal_format($vendor_line['quoted_price'], $user_price_decimal_places) : '') . '" size="8" class="amount"></td>';
 				echo '<td><input type="text" name="response_qty_' . $rfq_vendor['id'] . '_' . $rfq_item['id'] . '" value="' . ($vendor_line ? number_format2($vendor_line['quoted_quantity'], get_qty_dec($rfq_item['stock_id'])) : number_format2($rfq_item['quantity'], get_qty_dec($rfq_item['stock_id']))) . '" size="8" class="amount"></td>';
 				echo '<td><input type="text" name="response_lead_' . $rfq_vendor['id'] . '_' . $rfq_item['id'] . '" value="' . ($vendor_line ? (int)$vendor_line['delivery_lead_days'] : 0) . '" size="6"></td>';
 				echo '<td><input type="text" name="response_note_' . $rfq_vendor['id'] . '_' . $rfq_item['id'] . '" value="' . htmlspecialchars($vendor_line ? $vendor_line['notes'] : '', ENT_QUOTES, 'UTF-8') . '" size="30"></td>';
