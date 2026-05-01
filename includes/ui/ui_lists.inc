@@ -59,6 +59,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		'category' => false, // category column name or false
 		'show_inactive' => false, // show inactive records. 
 		'editable' => false, // false, or length of editable entry field
+		'layout_class' => '', // optional reusable class for combo layout styling
 		'editlink' => false // link to entity entry/edit page (optional)
 	);
 	// ------ merge options with defaults ----------
@@ -314,15 +315,16 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 
 	if ($opts['editlink'])
 		$selector .= ' '.$opts['editlink'];
+	$layout_class = trim($opts['layout_class']) !== '' ? ' '.trim($opts['layout_class']) : '';
 	if ($search_box && $opts['cells']) {
 		if (ui_current_table_mode() != 'table') {
-			$str = ($edit_entry != '' ? '<span class="combo-search-cell">'.$edit_entry.'</span>' : '')."<span class='combo-select-cell'><div class='list_container'>".$selector.$search_btn."</div></span>";
+			$str = ($edit_entry != '' ? '<span class="combo-search-cell'.$layout_class.'">'.$edit_entry.'</span>' : '')."<span class='combo-select-cell".$layout_class."'><div class='list_container".$layout_class."'>".$selector.$search_btn."</div></span>";
 		} else {
-			$str = ($edit_entry != '' ? '<td class="combo-search-cell">'.$edit_entry.'</td>' : '')."<td class='combo-select-cell' nowrap><div class='list_container'>".$selector.$search_btn."</div></td>";
+			$str = ($edit_entry != '' ? '<td class="combo-search-cell'.$layout_class.'">'.$edit_entry.'</td>' : '')."<td class='combo-select-cell".$layout_class."' nowrap><div class='list_container".$layout_class."'>".$selector.$search_btn."</div></td>";
 		}
 	}
 	else
-		$str = $edit_entry."<div class='list_container'>".$selector.$search_btn."</div>";
+		$str = $edit_entry."<div class='list_container".$layout_class."'>".$selector.$search_btn."</div>";
 
 	return $str;
 }

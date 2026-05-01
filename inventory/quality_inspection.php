@@ -191,6 +191,9 @@ if (get_post('delete_inspection')) {
 	$Ajax->activate('_page_body');
 }
 
+if (get_post('search_btn'))
+	$Ajax->activate('insp_list');
+
 //----------------------------------------------------------------------
 // Render: Inspection Execution Mode (enter readings)
 //----------------------------------------------------------------------

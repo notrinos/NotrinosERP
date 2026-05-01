@@ -789,9 +789,47 @@ td.combo-select-cell {
 	width: 60%;
 }
 
+td.combo-search-cell.combo-layout-equal,
+td.combo-select-cell.combo-layout-equal {
+	width: 50%;
+}
+
+/* Non-table (form) fields: make parent a flex row when children opt-in */
+.form-table:not(.filter-bar) .filter-field:has(> .combo-search-cell.combo-layout-equal),
+.form-table:not(.filter-bar) .form-control-wrap:has(> .combo-search-cell.combo-layout-equal),
+.filter-bar .filter-field:has(> .combo-search-cell.combo-layout-equal),
+.filter-field:has(> .combo-search-cell.combo-layout-equal),
+.form-control-wrap:has(> .combo-search-cell.combo-layout-equal) {
+	display: flex;
+	align-items: flex-start;
+	gap: 2%;
+	width: 100%;
+}
+
+
+.form-table:not(.filter-bar) .filter-field > .combo-search-cell.combo-layout-equal,
+.form-table:not(.filter-bar) .filter-field > .combo-select-cell.combo-layout-equal,
+.filter-field > .combo-search-cell.combo-layout-equal,
+.filter-field > .combo-select-cell.combo-layout-equal,
+.form-control-wrap > .combo-search-cell.combo-layout-equal,
+.form-control-wrap > .combo-select-cell.combo-layout-equal {
+	flex: 0 0 50%;
+	max-width: 50%;
+	box-sizing: border-box;
+}
+
 td.combo-search-cell input[type='text'] {
 	width: 100%;
 	max-width: 100%;
+}
+
+.combo-search-cell.combo-layout-equal input[type='text'],
+.combo-select-cell.combo-layout-equal input[type='text'],
+.combo-select-cell.combo-layout-equal .select2-container,
+.combo-select-cell.combo-layout-equal .list_container,
+div.list_container.combo-layout-equal {
+	width: 100% !important;
+	min-width: 0;
 }
 
 .form-post-label {

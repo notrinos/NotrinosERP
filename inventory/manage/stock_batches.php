@@ -361,6 +361,9 @@ if (isset($_POST['calc_expiry']) && $_POST['calc_expiry'] != '') {
 //----------------------------------------------------------------------
 // Refresh list on filter changes
 //----------------------------------------------------------------------
+if (get_post('_show_inactive_update'))
+	$Ajax->activate('_page_body');
+
 if (list_updated('filter_stock_id') || list_updated('filter_status') || list_updated('filter_expiry')
 	|| isset($_POST['search_batches']))
 	$Ajax->activate('batch_list');
@@ -370,6 +373,8 @@ if (list_updated('filter_stock_id') || list_updated('filter_status') || list_upd
 //======================================================================
 
 start_form();
+
+$show_inactive = check_value('show_inactive');
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
@@ -382,7 +387,7 @@ end_row();
 start_row();
 
 ref_cells(_('Search:'), 'filter_search', '', null, _('Enter reference fragment or leave empty'));
-check_cells(_('Show inactive:'), 'show_inactive', null, true);
+check_cells(_('Show inactive:'), 'show_inactive', $show_inactive, true);
 submit_cells('search_batches', _('Search'), '', _('Filter batch numbers'), 'default');
 
 // Auto-expire button
@@ -401,8 +406,6 @@ $stock_id_filter = get_post('filter_stock_id', '');
 $status_filter = get_post('filter_status', '');
 $expiry_filter = get_post('filter_expiry', '');
 $search_filter = get_post('filter_search', '');
-$show_inactive = check_value('show_inactive');
-
 $result = get_stock_batches($stock_id_filter, $status_filter, $search_filter,
 	$show_inactive, $expiry_filter);
 
@@ -488,7 +491,6 @@ while ($myrow = db_fetch($result)) {
 	end_row();
 }
 
-inactive_control_row($th);
 end_table(1);
 
 div_end();

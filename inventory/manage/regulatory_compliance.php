@@ -762,7 +762,8 @@ if ($active_tab === 'udi') {
 
 	table_section(1);
 	label_cell(_('Select Item:'));
-	stock_items_list_cells(null, 'udi_stock_id', null, _('Select item...'), false, true);
+	stock_items_list_cells(null, 'udi_stock_id', null, _('Select item...'), false, true, false,
+		array('layout_class' => 'combo-layout-equal'));
 	text_row(_('Device Identifier (UDI-DI):'), 'udi_di_input', '', 50, 50);
 	$agencies = get_udi_issuing_agencies();
 	array_selector_row(_('Issuing Agency:'), 'udi_agency', 'GS1', $agencies);

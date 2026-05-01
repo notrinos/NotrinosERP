@@ -605,7 +605,8 @@ function display_rule_form($selected_id, $Mode) {
 
 	// Item selector
 	echo "<tr><td class='label'>" . _('Item (specific):') . "</td>";
-	stock_items_list_cells(null, 'stock_id', get_post('stock_id'), _('-- All Items --'));
+	stock_items_list_cells(null, 'stock_id', get_post('stock_id'), _('-- All Items --'), false, false, false,
+		array('layout_class' => 'combo-layout-equal'));
 	echo "</tr>\n";
 
 	// Category selector

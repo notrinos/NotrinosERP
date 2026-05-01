@@ -223,6 +223,9 @@ if (get_post('view_campaign') || isset($_GET['id'])) {
 	exit;
 }
 
+if (get_post('search'))
+	$Ajax->activate('campaigns_list');
+
 start_form();
 
 //----------------------------------------------------------------------

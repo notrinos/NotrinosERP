@@ -238,10 +238,12 @@ while ($row = db_fetch($result)) {
 			. '<th>' . _('To Bin') . '</th><th>' . _('Batch') . '</th>'
 			. '<th>' . _('Serial') . '</th></tr>';
 		while ($line = db_fetch($lines)) {
+			$planned_qty = isset($line['qty_planned']) ? $line['qty_planned'] : (isset($line['qty']) ? $line['qty'] : 0);
+			$done_qty = isset($line['qty_done']) ? $line['qty_done'] : 0;
 			echo '<tr>';
 			echo '<td>' . $line['stock_id'] . '</td>';
-			echo '<td align="right">' . number_format2($line['qty'], get_qty_dec($line['stock_id'])) . '</td>';
-			echo '<td align="right">' . number_format2($line['qty_done'], get_qty_dec($line['stock_id'])) . '</td>';
+			echo '<td align="right">' . number_format2($planned_qty, get_qty_dec($line['stock_id'])) . '</td>';
+			echo '<td align="right">' . number_format2($done_qty, get_qty_dec($line['stock_id'])) . '</td>';
 			echo '<td>' . ($line['from_loc_id'] ? $line['from_loc_id'] : '-') . '</td>';
 			echo '<td>' . ($line['to_loc_id'] ? $line['to_loc_id'] : '-') . '</td>';
 			echo '<td>' . ($line['batch_id'] ? $line['batch_id'] : '-') . '</td>';

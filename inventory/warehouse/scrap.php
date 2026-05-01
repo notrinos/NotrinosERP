@@ -119,6 +119,9 @@ if (isset($_POST['APPROVE_SCRAP'])) {
 	$Ajax->activate('_page_body');
 }
 
+if (get_post('Search'))
+	$Ajax->activate('scrap_list');
+
 // =====================================================================
 // RENDER PAGE
 // =====================================================================

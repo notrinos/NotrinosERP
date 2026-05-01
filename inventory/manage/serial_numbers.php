@@ -279,6 +279,9 @@ if ($Mode == 'RESET') {
 //----------------------------------------------------------------------
 // Refresh list on filter changes
 //----------------------------------------------------------------------
+if (get_post('_show_inactive_update'))
+	$Ajax->activate('_page_body');
+
 if (list_updated('filter_stock_id') || list_updated('filter_status') || list_updated('filter_loc_code')
 	|| isset($_POST['search_serials']))
 	$Ajax->activate('serial_list');
@@ -288,6 +291,8 @@ if (list_updated('filter_stock_id') || list_updated('filter_status') || list_upd
 //======================================================================
 
 start_form();
+
+$show_inactive = check_value('show_inactive');
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
@@ -300,7 +305,7 @@ end_row();
 start_row();
 
 ref_cells(_('Search:'), 'filter_search', '', null, _('Enter serial number fragment or leave empty'));
-check_cells(_('Show inactive:'), 'show_inactive', null, true);
+check_cells(_('Show inactive:'), 'show_inactive', $show_inactive, true);
 submit_cells('search_serials', _('Search'), '', _('Filter serial numbers'), 'default');
 
 end_row();
@@ -316,8 +321,6 @@ $stock_id_filter = get_post('filter_stock_id', '');
 $status_filter = get_post('filter_status', '');
 $loc_filter = get_post('filter_loc_code', '');
 $search_filter = get_post('filter_search', '');
-$show_inactive = check_value('show_inactive');
-
 $result = get_serial_numbers($stock_id_filter, $status_filter, $loc_filter,
 	$search_filter, $show_inactive);
 
@@ -380,7 +383,6 @@ while ($myrow = db_fetch($result)) {
 	end_row();
 }
 
-inactive_control_row($th);
 end_table(1);
 
 div_end();
