@@ -21,7 +21,7 @@ if (!isset($_POST['status_filter']))
     $_POST['status_filter'] = '';
 
 $status_labels = array(
-    '' => _('-- All --'),
+    '' => _('-- All Statuses --'),
     0 => _('Draft'),
     1 => _('Calculated'),
     2 => _('Approved'),
@@ -32,10 +32,14 @@ $status_labels = array(
 );
 
 start_form();
-start_table(TABLESTYLE2);
-array_selector_row(_('Status:'), 'status_filter', get_post('status_filter', ''), $status_labels);
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+echo "<div class = 'filter-field'>";
+echo array_selector('status_filter', get_post('status_filter', ''), $status_labels);
+echo "</div>";
+submit_cells('Search', _('Apply Filter'));
+end_row();
 end_table(1);
-submit_center('Search', _('Apply Filter'));
 
 $status = get_post('status_filter', '');
 if ($status === '')

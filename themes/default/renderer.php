@@ -244,7 +244,7 @@ class renderer {
 			$tooltip_text = str_replace('&', '', strip_tags($access[0]));
 			$is_active = $selected_application_id == $application->id;
 			echo "<li class='modern-app-item'>";
-			echo "<a class='modern-app-link".($is_active ? ' is-active' : '')."' href='".$path_to_root."/admin/dashboard.php?sel_app=".$application->id."' title='".$tooltip_text."' data-tooltip='".$tooltip_text."' ".$access[1].">";
+			echo "<a class='modern-app-link".(($is_active ? ' is-active' : ''))."' href='".$path_to_root."/admin/dashboard.php?sel_app=".$application->id."' title='".$tooltip_text."' data-tooltip='".$tooltip_text."' ".$access[1].">";
 			echo $this->icon_svg($this->application_icon($application->id), 'modern-icon modern-app-icon');
 			echo "<span class='modern-app-label'>".$access[0]."</span>";
 			echo '</a>';
@@ -433,11 +433,12 @@ class renderer {
 			echo "<div class='modern-header-search' role='search'>";
 			echo $this->icon_svg('search', 'modern-icon modern-header-search-icon');
 			echo "<input type='text' class='modern-header-search-input' placeholder='".$search_placeholder."' data-placeholder-base='".$search_placeholder."' aria-label='"._('Search')."' autocomplete='off' spellcheck='false'>";
+			echo "<button type='button' class='modern-header-search-clear' aria-label='"._('Clear search')."' hidden>&times;</button>";
 			echo "<span class='modern-header-search-shortcut' aria-hidden='true'>/</span>";
 			echo "</div>";
 			echo "</div>";
 			echo "<div class='modern-topbar-right'>";
-			echo "<img id='ajaxmark' class='modern-ajax-indicator' src='".$indicator."' style='visibility:hidden;' alt='ajaxmark'>";
+			echo "<div id='modern-ajax-status' class='modern-ajax-status' data-kind='' aria-live='polite' aria-hidden='true'><img id='ajaxmark' class='modern-ajax-indicator' src='".$indicator."' style='visibility:hidden;' alt='ajaxmark'></div>";
 			echo "<button id='modern-search-toggle' class='modern-search-toggle' type='button' aria-label='"._('Search')."'>".$this->icon_svg('search', 'modern-icon modern-search-toggle-icon')."</button>";
 			$this->render_notification_button();
 			$this->render_user_dropdown($selected_application_id);
@@ -460,7 +461,7 @@ class renderer {
 			echo "<main class='modern-main-content' id='modern-main-content'>";
 		} else {
 			echo "<main class='modern-main-content modern-main-no-menu' id='modern-main-content'>";
-			echo "<div class='modern-floating-indicator'><img id='ajaxmark' class='modern-ajax-indicator' src='".$indicator."' style='visibility:hidden;' alt='ajaxmark'></div>";
+			echo "<div class='modern-floating-indicator'><div id='modern-ajax-status' class='modern-ajax-status' data-kind='' aria-live='polite' aria-hidden='true'><img id='ajaxmark' class='modern-ajax-indicator' src='".$indicator."' style='visibility:hidden;' alt='ajaxmark'></div></div>";
 		}
 
 		if ($page_title && !$is_index) {

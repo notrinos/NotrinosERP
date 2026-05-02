@@ -22,7 +22,8 @@ if (!isset($_POST['show_inactive']))
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-text_cells(_('Search:'), 'search_text', get_post('search_text', ''), 30, 100);
+// text_cells(_('Search:'), 'search_text', get_post('search_text', ''), 30, 100);
+ref_cells(_('Search:'), 'search_text', '', null, _('Enter fragment or leave empty'));
 check_cells(_('Show Inactive:'), 'show_inactive');
 submit_cells('Search', _('Apply Filter'));
 end_row();
@@ -53,7 +54,7 @@ if ($search !== '') {
 
 $sql .= " ORDER BY e.employee_id";
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Employee ID'), _('Employee Name'), _('Department'), _('Position'), _('Grade'), _('Email'), _('Mobile'), _('Inactive'));
 table_header($th);
 

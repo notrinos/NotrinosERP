@@ -25,7 +25,7 @@ if (!isset($_POST['change_type']))
     $_POST['change_type'] = '';
 
 $change_types = array(
-    '' => _('-- All --'),
+    '' => _('-- All Change Types --'),
     HRM_HIST_HIRE => _('Hired'),
     HRM_HIST_TRANSFER => _('Transfer'),
     HRM_HIST_PROMOTION => _('Promotion'),

@@ -5594,6 +5594,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisitions` (
   KEY `idx_department` (`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_req_line_header` (`requisition_id` -> `0_purch_requisitions`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `requisition_id` INT NOT NULL,
@@ -5613,9 +5615,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   KEY `idx_requisition` (`requisition_id`),
   KEY `idx_material_request_line` (`material_request_line_id`),
   KEY `idx_supplier` (`preferred_supplier_id`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_purch_req_line_header`
-    FOREIGN KEY (`requisition_id`) REFERENCES `0_purch_requisitions` (`id`) ON DELETE CASCADE
+	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
@@ -5661,6 +5661,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq` (
   KEY `idx_requisition` (`requisition_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_rfq_item_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_id` INT NOT NULL,
@@ -5674,11 +5676,11 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_rfq` (`rfq_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_rfq_item_header`
-    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_rfq_vendor_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_id` INT NOT NULL,
@@ -5697,11 +5699,12 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
   PRIMARY KEY (`id`),
   KEY `idx_rfq` (`rfq_id`),
   KEY `idx_supplier` (`supplier_id`),
-  UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`),
-  CONSTRAINT `fk_purch_rfq_vendor_header`
-    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+	UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FKs `fk_purch_rfq_vendor_line_vendor` (`rfq_vendor_id` -> `0_purch_rfq_vendors`.`id`) and
+-- `fk_purch_rfq_vendor_line_item` (`rfq_item_id` -> `0_purch_rfq_items`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_vendor_id` INT NOT NULL,
@@ -5714,11 +5717,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
   PRIMARY KEY (`id`),
   KEY `idx_vendor` (`rfq_vendor_id`),
   KEY `idx_item` (`rfq_item_id`),
-  UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`),
-  CONSTRAINT `fk_purch_rfq_vendor_line_vendor`
-    FOREIGN KEY (`rfq_vendor_id`) REFERENCES `0_purch_rfq_vendors` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_purch_rfq_vendor_line_item`
-    FOREIGN KEY (`rfq_item_id`) REFERENCES `0_purch_rfq_items` (`id`) ON DELETE CASCADE
+	UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
@@ -5772,6 +5771,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreements` (
   KEY `idx_dates` (`date_start`, `date_end`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_agreement_lines_header` (`agreement_id` -> `0_purch_agreements`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `agreement_id` INT NOT NULL,
@@ -5788,9 +5789,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_agreement` (`agreement_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_agreement_lines_header`
-    FOREIGN KEY (`agreement_id`) REFERENCES `0_purch_agreements` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 0_purch_orders columns agreement_id, requisition_id, rfq_id already defined in CREATE TABLE
@@ -5852,6 +5851,9 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluations` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FKs `fk_vendor_eval_scores_eval` (`evaluation_id` -> `0_vendor_evaluations`.`id`) and
+-- `fk_vendor_eval_scores_criteria` (`criteria_id` -> `0_vendor_evaluation_criteria`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `evaluation_id` INT NOT NULL,
@@ -5862,11 +5864,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_evaluation_criteria` (`evaluation_id`, `criteria_id`),
   KEY `idx_evaluation` (`evaluation_id`),
-  KEY `idx_criteria` (`criteria_id`),
-  CONSTRAINT `fk_vendor_eval_scores_eval`
-    FOREIGN KEY (`evaluation_id`) REFERENCES `0_vendor_evaluations` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_vendor_eval_scores_criteria`
-    FOREIGN KEY (`criteria_id`) REFERENCES `0_vendor_evaluation_criteria` (`id`) ON DELETE CASCADE
+	KEY `idx_criteria` (`criteria_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `0_vendor_performance_log` (
@@ -5961,6 +5959,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_templates` (
   KEY `idx_inactive` (`inactive`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_template_lines_header` (`template_id` -> `0_purch_order_templates`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `template_id` INT NOT NULL,
@@ -5971,9 +5971,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_template` (`template_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_template_lines_header`
-    FOREIGN KEY (`template_id`) REFERENCES `0_purch_order_templates` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_vendor_pricelists`
@@ -6152,6 +6150,8 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_procurement_plan_lines_header` (`plan_id` -> `0_procurement_plan`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `plan_id` INT NOT NULL,
@@ -6172,9 +6172,7 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
   KEY `idx_plan` (`plan_id`),
   KEY `idx_stock` (`stock_id`),
   KEY `idx_supplier` (`supplier_id`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_procurement_plan_lines_header`
-    FOREIGN KEY (`plan_id`) REFERENCES `0_procurement_plan` (`id`) ON DELETE CASCADE
+	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)

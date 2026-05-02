@@ -100,6 +100,34 @@
 	line-height: 1;
 }
 
+.modern-header-search-clear {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: #57606a;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.modern-header-search-clear:hover,
+.modern-header-search-clear:focus {
+	background: rgba(148, 163, 184, 0.16);
+	color: #1f2937;
+	outline: none;
+}
+
+.modern-header-search-clear[hidden] {
+	display: none;
+}
+
 /* ── Search Results Dropdown ── */
 .modern-search-results {
 	position: fixed;

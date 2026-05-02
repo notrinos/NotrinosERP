@@ -1025,7 +1025,7 @@ CREATE TABLE `0_grn_items` (
 
 -- Data of table `0_grn_items` --
 
-INSERT INTO `0_grn_items` VALUES
+INSERT INTO `0_grn_items` (`id`, `grn_batch_id`, `po_detail_item`, `item_code`, `description`, `qty_recd`, `quantity_inv`, `custom_data`) VALUES
 ('1', '1', '1', '101', 'Vsmart Aris 6GB-64GB', '100', '0', '{}'),
 ('2', '1', '2', '102', 'Vsmart Live 4 (6GB/64GB)', '100', '0', '{}'),
 ('3', '1', '3', '103', 'Vsmart Live 4 Cover Case', '100', '0', '{}'),
@@ -1268,7 +1268,7 @@ CREATE TABLE `0_locations` (
 
 -- Data of table `0_locations` --
 
-INSERT INTO `0_locations` VALUES
+INSERT INTO `0_locations` (`loc_code`, `location_name`, `delivery_address`, `phone`, `phone2`, `fax`, `email`, `contact`, `fixed_asset`, `inactive`, `custom_data`) VALUES
 ('DEF', 'Default', 'N/A', '', '', '', '', '', '0', '0', '{}');
 
 -- Structure of table `0_overtime` --
@@ -1546,7 +1546,7 @@ CREATE TABLE `0_purch_order_details` (
 
 -- Data of table `0_purch_order_details` --
 
-INSERT INTO `0_purch_order_details` VALUES
+INSERT INTO `0_purch_order_details` (`po_detail_item`, `order_no`, `item_code`, `description`, `delivery_date`, `qty_invoiced`, `unit_price`, `act_price`, `std_cost_unit`, `quantity_ordered`, `quantity_received`, `custom_data`) VALUES
 ('1', '1', '101', 'Vsmart Aris 6GB-64GB', '2025-05-15', '0', '200', '200', '200', '100', '100', '{}'),
 ('2', '1', '102', 'Vsmart Live 4 (6GB/64GB)', '2025-05-15', '0', '150', '150', '150', '100', '100', '{}'),
 ('3', '1', '103', 'Vsmart Live 4 Cover Case', '2025-05-15', '0', '10', '10', '10', '100', '100', '{}'),
@@ -1582,7 +1582,7 @@ CREATE TABLE `0_purch_orders` (
 
 -- Data of table `0_purch_orders` --
 
-INSERT INTO `0_purch_orders` VALUES
+INSERT INTO `0_purch_orders` (`order_no`, `supplier_id`, `comments`, `ord_date`, `reference`, `supp_reference`, `into_stock_location`, `delivery_address`, `total`, `prep_amount`, `alloc`, `tax_included`, `custom_data`) VALUES
 ('1', '1', NULL, '2025-05-05', '001/2025', NULL, 'DEF', 'N/A', '37800', '0', '0', '0', '{}'),
 ('2', '1', NULL, '2025-05-05', 'auto', 'rr4', 'DEF', 'N/A', '3150', '0', '0', '0', '{}'),
 ('3', '1', NULL, '2026-01-21', 'auto', 'asd5', 'DEF', 'N/A', '945', '0', '0', '0', '{}');
@@ -1788,7 +1788,7 @@ CREATE TABLE `0_sales_order_details` (
 
 -- Data of table `0_sales_order_details` --
 
-INSERT INTO `0_sales_order_details` VALUES
+INSERT INTO `0_sales_order_details` (`id`, `order_no`, `trans_type`, `stk_code`, `description`, `qty_sent`, `unit_price`, `quantity`, `invoiced`, `discount_percent`, `custom_data`) VALUES
 ('1', '1', '30', '101', 'Vsmart Aris 6GB-64GB', '20', '300', '20', '0', '0', '{}'),
 ('2', '1', '30', '301', 'Support', '3', '80', '3', '0', '0', '{}'),
 ('3', '2', '30', '101', 'Vsmart Aris 6GB-64GB', '1', '300', '1', '0', '0', '{}'),
@@ -2478,7 +2478,7 @@ CREATE TABLE `0_stock_master` (
 
 -- Data of table `0_stock_master` --
 
-INSERT INTO `0_stock_master` VALUES
+INSERT INTO `0_stock_master` (`stock_id`, `category_id`, `tax_type_id`, `description`, `long_description`, `units`, `mb_flag`, `sales_account`, `cogs_account`, `inventory_account`, `adjustment_account`, `wip_account`, `dimension_id`, `dimension2_id`, `purchase_cost`, `material_cost`, `labour_cost`, `overhead_cost`, `inactive`, `no_sale`, `no_purchase`, `editable`, `depreciation_method`, `depreciation_rate`, `depreciation_factor`, `depreciation_start`, `depreciation_date`, `fa_class_id`, `custom_data`) VALUES
 ('101', '1', '1', 'Vsmart Aris 6GB-64GB', '', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '200', '0', '0', '0', '0', '0', '0', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}'),
 ('102', '1', '1', 'Vsmart Live 4 (6GB/64GB)', '', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '150', '150', '0', '0', '0', '0', '0', '0', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}'),
 ('103', '1', '1', 'Vsmart Live 4 Cover Case', '', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '10', '0', '0', '0', '0', '0', '0', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}'),
@@ -2522,7 +2522,7 @@ CREATE TABLE `0_stock_moves` (
 
 -- Data of table `0_stock_moves` --
 
-INSERT INTO `0_stock_moves` VALUES
+INSERT INTO `0_stock_moves` (`trans_id`, `trans_no`, `stock_id`, `type`, `loc_code`, `tran_date`, `price`, `reference`, `qty`, `standard_cost`, `custom_data`) VALUES
 ('1', '1', '101', '25', 'DEF', '2025-05-05', '200', '', '100', '200', '{}'),
 ('2', '1', '102', '25', 'DEF', '2025-05-05', '150', '', '100', '150', '{}'),
 ('3', '1', '103', '25', 'DEF', '2025-05-05', '10', '', '100', '10', '{}'),
@@ -3949,7 +3949,7 @@ CREATE TABLE `0_suppliers` (
 
 -- Data of table `0_suppliers` --
 
-INSERT INTO `0_suppliers` VALUES
+INSERT INTO `0_suppliers` (`supplier_id`, `supp_name`, `supp_ref`, `address`, `supp_address`, `gst_no`, `contact`, `supp_account_no`, `website`, `bank_account`, `curr_code`, `payment_terms`, `tax_included`, `dimension_id`, `dimension2_id`, `tax_group_id`, `credit_limit`, `purchase_account`, `payable_account`, `payment_discount_account`, `notes`, `inactive`, `custom_data`) VALUES
 ('1', 'Dino Saurius Inc.', 'Dino Saurius', 'N/A', '', '987654321', '', '', '', '', 'USD', '3', '0', '0', '0', '1', '0', '', '2100', '5060', '', '0', '{}'),
 ('2', 'Beefeater Ltd.', 'Beefeater', 'N/A', '', '67565590', '', '', '', '', 'GBP', '4', '0', '0', '0', '1', '0', '', '2100', '5060', '', '0', '{}');
 
@@ -5948,6 +5948,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisitions` (
   KEY `idx_department` (`department_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_req_line_header` (`requisition_id` -> `0_purch_requisitions`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `requisition_id` INT NOT NULL,
@@ -5967,9 +5969,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   KEY `idx_requisition` (`requisition_id`),
   KEY `idx_material_request_line` (`material_request_line_id`),
   KEY `idx_supplier` (`preferred_supplier_id`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_purch_req_line_header`
-    FOREIGN KEY (`requisition_id`) REFERENCES `0_purch_requisitions` (`id`) ON DELETE CASCADE
+	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
@@ -6015,6 +6015,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq` (
   KEY `idx_requisition` (`requisition_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_rfq_item_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_id` INT NOT NULL,
@@ -6028,11 +6030,11 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_rfq` (`rfq_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_rfq_item_header`
-    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_rfq_vendor_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_id` INT NOT NULL,
@@ -6051,11 +6053,12 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
   PRIMARY KEY (`id`),
   KEY `idx_rfq` (`rfq_id`),
   KEY `idx_supplier` (`supplier_id`),
-  UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`),
-  CONSTRAINT `fk_purch_rfq_vendor_header`
-    FOREIGN KEY (`rfq_id`) REFERENCES `0_purch_rfq` (`id`) ON DELETE CASCADE
+	UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FKs `fk_purch_rfq_vendor_line_vendor` (`rfq_vendor_id` -> `0_purch_rfq_vendors`.`id`) and
+-- `fk_purch_rfq_vendor_line_item` (`rfq_item_id` -> `0_purch_rfq_items`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `rfq_vendor_id` INT NOT NULL,
@@ -6068,11 +6071,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
   PRIMARY KEY (`id`),
   KEY `idx_vendor` (`rfq_vendor_id`),
   KEY `idx_item` (`rfq_item_id`),
-  UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`),
-  CONSTRAINT `fk_purch_rfq_vendor_line_vendor`
-    FOREIGN KEY (`rfq_vendor_id`) REFERENCES `0_purch_rfq_vendors` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_purch_rfq_vendor_line_item`
-    FOREIGN KEY (`rfq_item_id`) REFERENCES `0_purch_rfq_items` (`id`) ON DELETE CASCADE
+	UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
@@ -6126,6 +6125,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreements` (
   KEY `idx_dates` (`date_start`, `date_end`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_agreement_lines_header` (`agreement_id` -> `0_purch_agreements`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `agreement_id` INT NOT NULL,
@@ -6142,9 +6143,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_agreement` (`agreement_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_agreement_lines_header`
-    FOREIGN KEY (`agreement_id`) REFERENCES `0_purch_agreements` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 0_purch_orders columns agreement_id, requisition_id, rfq_id already defined in CREATE TABLE
@@ -6206,6 +6205,9 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluations` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FKs `fk_vendor_eval_scores_eval` (`evaluation_id` -> `0_vendor_evaluations`.`id`) and
+-- `fk_vendor_eval_scores_criteria` (`criteria_id` -> `0_vendor_evaluation_criteria`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `evaluation_id` INT NOT NULL,
@@ -6216,11 +6218,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_evaluation_criteria` (`evaluation_id`, `criteria_id`),
   KEY `idx_evaluation` (`evaluation_id`),
-  KEY `idx_criteria` (`criteria_id`),
-  CONSTRAINT `fk_vendor_eval_scores_eval`
-    FOREIGN KEY (`evaluation_id`) REFERENCES `0_vendor_evaluations` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_vendor_eval_scores_criteria`
-    FOREIGN KEY (`criteria_id`) REFERENCES `0_vendor_evaluation_criteria` (`id`) ON DELETE CASCADE
+	KEY `idx_criteria` (`criteria_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `0_vendor_performance_log` (
@@ -6315,6 +6313,8 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_templates` (
   KEY `idx_inactive` (`inactive`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_purch_template_lines_header` (`template_id` -> `0_purch_order_templates`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `template_id` INT NOT NULL,
@@ -6325,9 +6325,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
   `custom_data` JSON DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_template` (`template_id`),
-  KEY `idx_stock` (`stock_id`),
-  CONSTRAINT `fk_purch_template_lines_header`
-    FOREIGN KEY (`template_id`) REFERENCES `0_purch_order_templates` (`id`) ON DELETE CASCADE
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_vendor_pricelists`
@@ -6506,6 +6504,8 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- FK `fk_procurement_plan_lines_header` (`plan_id` -> `0_procurement_plan`.`id`) moved to `sql/install_constraints.php`
+-- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
 CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `plan_id` INT NOT NULL,
@@ -6526,9 +6526,7 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
   KEY `idx_plan` (`plan_id`),
   KEY `idx_stock` (`stock_id`),
   KEY `idx_supplier` (`supplier_id`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_procurement_plan_lines_header`
-    FOREIGN KEY (`plan_id`) REFERENCES `0_procurement_plan` (`id`) ON DELETE CASCADE
+	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)

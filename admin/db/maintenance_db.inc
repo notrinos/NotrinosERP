@@ -215,6 +215,157 @@ function write_lang() {
 	}
 	return true;
 }
+
+/**
+ * Returns post-import constraint queries for installation SQL files.
+ *
+ * @param string $filename Imported SQL file path.
+ * @param array $connection Database connection settings.
+ * @param bool $init Whether table prefixes should be rewritten.
+ * @return array
+ */
+function db_get_import_constraint_queries($filename, $connection, $init) {
+	$constraint_map_file = dirname($filename).'/install_constraints.php';
+	if (!is_file($constraint_map_file))
+		return array();
+
+	$constraint_map = include($constraint_map_file);
+	if (!is_array($constraint_map))
+		return array();
+
+	$basename = basename($filename);
+	if (!isset($constraint_map[$basename]) || !is_array($constraint_map[$basename]))
+		return array();
+
+	$constraint_queries = array();
+	foreach ($constraint_map[$basename] as $constraint_query) {
+		if ($init)
+			$constraint_query = str_replace('0_', $connection['tbpref'], $constraint_query);
+
+		$constraint_queries[] = array($constraint_query, 1);
+	}
+
+	return $constraint_queries;
+}
+
+/**
+ * Extracts the constraint name from an ALTER TABLE ... ADD CONSTRAINT query.
+ *
+ * @param string $constraint_query SQL query.
+ * @return string
+ */
+function db_get_import_constraint_name($constraint_query) {
+	if (preg_match('/add\s+constraint\s+`([^`]+)`/i', $constraint_query, $matches))
+		return $matches[1];
+
+	return '';
+}
+
+/**
+ * Returns existing constraint names for the target schema.
+ *
+ * @param string $database_name Schema name.
+ * @return array
+ */
+function db_get_existing_import_constraints($database_name) {
+	$sql = "SELECT CONSTRAINT_NAME"
+		." FROM information_schema.TABLE_CONSTRAINTS"
+		." WHERE CONSTRAINT_SCHEMA = ".db_escape($database_name);
+	$result = db_query($sql);
+	$constraints = array();
+
+	if ($result) {
+		while ($row = db_fetch($result))
+			$constraints[] = $row['CONSTRAINT_NAME'];
+	}
+
+	return $constraints;
+}
+
+/**
+ * Determines whether a query adds a foreign key constraint after table creation.
+ *
+ * @param string $query SQL query.
+ * @return bool
+ */
+function db_is_import_constraint_query($query) {
+	return preg_match('/^\s*ALTER\s+TABLE\b.*\bADD\b.*\b(CONSTRAINT|FOREIGN\s+KEY)\b/i', $query) == 1;
+}
+
+/**
+ * Removes inline CREATE TABLE constraints that should not run during the main
+ * schema import phase. Foreign keys are converted into deferred ALTER TABLE
+ * statements, while inline JSON validity checks are stripped to keep legacy
+ * backups restorable.
+ *
+ * @param string $query CREATE TABLE SQL query.
+ * @return array
+ */
+function db_strip_create_table_constraints($query) {
+	if (!preg_match('/^\s*CREATE\s+TABLE\s+`?([^`\s(]+)`?\s*\(/i', $query, $matches))
+		return array($query, array());
+
+	$table_name = $matches[1];
+	$query = preg_replace('/\s+CHECK\s*\(\s*json_valid\s*\([^\)]*\)\s*\)/i', '', $query);
+	$lines = preg_split('/\r\n|\r|\n/', trim($query));
+	$clean_lines = array();
+	$constraint_queries = array();
+
+	foreach ($lines as $line) {
+		$trimmed_line = trim($line);
+		if ($trimmed_line != '' && preg_match('/^(CONSTRAINT|FOREIGN\s+KEY)\b/i', $trimmed_line)) {
+			$constraint_queries[] = "ALTER TABLE `".$table_name."` ADD ".rtrim($trimmed_line, ',');
+			continue;
+		}
+
+		$clean_lines[] = $line;
+	}
+
+	if (!count($constraint_queries))
+		return array($query, array());
+
+	for ($line_index = count($clean_lines) - 1; $line_index >= 0; $line_index--) {
+		if (preg_match('/^\)\s*/', trim($clean_lines[$line_index]))) {
+			for ($definition_index = $line_index - 1; $definition_index >= 0; $definition_index--) {
+				if (trim($clean_lines[$definition_index]) == '')
+					continue;
+
+				$clean_lines[$definition_index] = preg_replace('/,\s*$/', '', $clean_lines[$definition_index]);
+				break;
+			}
+			break;
+		}
+	}
+
+	return array(implode("\n", $clean_lines), $constraint_queries);
+}
+
+/**
+ * Executes a best-effort SQL statement without surfacing unsupported feature
+ * errors during import setup/teardown.
+ *
+ * @param string $sql SQL statement.
+ * @return void
+ */
+function db_execute_optional_import_query($sql) {
+	global $db;
+
+	if (is_object($db) && method_exists($db, 'query')) {
+		try {
+			$db->query($sql);
+		} catch (Exception $exception) {
+		}
+		return;
+	}
+
+	if (function_exists('mysqli_query')) {
+		@mysqli_query($db, $sql);
+		return;
+	}
+
+	if (function_exists('mysql_query'))
+		@mysql_query($sql, $db);
+}
 /*
 	Database import:
 		$filename - sql file name
@@ -264,12 +415,15 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	$data_queries = array();
 	$drop_queries = array();
 	$table_queries = array();
+	$constraint_queries = array();
+	$existing_constraints = array();
 	$sql_errors = array();
 
 	$old_encoding = db_get_charset($db);
 
 	ini_set('max_execution_time', max('180', ini_get('max_execution_time')));
 	db_query('SET foreign_key_checks=0');
+	db_execute_optional_import_query('SET check_constraint_checks=0');
 	db_query("SET sql_mode=''");
 
 	if (isset($connection['collation']))
@@ -286,6 +440,8 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		$lines = db_unzip('lines', $filename);
 	else
 		$lines = file(''. $filename);
+
+	$constraint_queries = db_get_import_constraint_queries($filename, $connection, $init);
 
 	// parse input file
 	$query_table = '';
@@ -329,6 +485,28 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 			if (!$skip)
 				${$table}[count(${$table}) - 1][0] .= $line . "\n";
 		}
+	}
+
+	if (is_array($table_queries)) {
+		$normalized_table_queries = array();
+
+		foreach ($table_queries as $table_query) {
+			if (db_is_import_constraint_query($table_query[0])) {
+				$constraint_queries[] = $table_query;
+				continue;
+			}
+
+			list($normalized_query, $inline_constraint_queries) = db_strip_create_table_constraints($table_query[0]);
+			$table_query[0] = $normalized_query;
+			$normalized_table_queries[] = $table_query;
+
+			if (count($inline_constraint_queries)) {
+				foreach ($inline_constraint_queries as $inline_constraint_query)
+					$constraint_queries[] = array($inline_constraint_query, $table_query[1]);
+			}
+		}
+
+		$table_queries = $normalized_table_queries;
 	}
 	
 	$encoding = $old_encoding; // UI encoding for default site language is the default
@@ -388,12 +566,29 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		}
 	}
 
+	db_execute_optional_import_query('SET check_constraint_checks=1');
+	db_query("SET foreign_key_checks=1");
+	$existing_constraints = db_get_existing_import_constraints($connection['dbname']);
+
+	if (is_array($constraint_queries)) {
+		foreach($constraint_queries as $constraint_query) {
+			$constraint_name = db_get_import_constraint_name($constraint_query[0]);
+			if ($constraint_name != '' && in_array($constraint_name, $existing_constraints))
+				continue;
+
+			if (!db_query($constraint_query[0])) {
+				if (!in_array(db_error_no(), $ignored_mysql_errors) || !$force)
+					$sql_errors[] = array(db_error_msg($db), $constraint_query[1]);
+			}
+			elseif ($constraint_name != '')
+				$existing_constraints[] = $constraint_name;
+		}
+	}
+
 	if ($return_errors)
 		$SysPrefs->go_debug = $save_debug;
 
 	$SysPrefs->sql_trail = $trail;
-
-	db_query("SET foreign_key_checks=1");
 	if ($delimiter != ';') db_query("delimiter ;"); // just for any case
 
 	db_set_charset($db, $old_encoding); // restore connection encoding
@@ -481,6 +676,7 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 	global $SysPrefs, $version;
 
 	$error = false;
+	$table_constraint_queries = array();
 	// set max string size before writing to file
 	$max_size = 1048576 * 2; // 2 MB
 	// changes max size if value can be retrieved
@@ -533,7 +729,9 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 	foreach ($all_tables as $table) {
 		$res1 = db_query("SHOW CREATE TABLE `" . $table['Name'] . "`");
 		$tmp = db_fetch($res1);
-		$table_sql[$table['Name']] = $tmp['Create Table'];
+		$normalized_export_table = db_strip_create_table_constraints($tmp['Create Table']);
+		$table_sql[$table['Name']] = $normalized_export_table[0];
+		$table_constraint_queries[$table['Name']] = $normalized_export_table[1];
 	}
 
 	// find foreign keys
@@ -637,6 +835,25 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 			}	//end if Engine set (not a view)
 		}
 		//process views last so all tables have been created before views are created
+		if (count($table_constraint_queries)) {
+			$out .= "\n\n### Foreign key constraints ###\n\n";
+			foreach ($table_constraint_queries as $constraint_group) {
+				if (!count($constraint_group))
+					continue;
+
+				foreach ($constraint_group as $constraint_query)
+					$out .= $constraint_query.";\n";
+			}
+			$out .= "\n";
+
+			if (strlen($out) > $max_size && $zip != 'zip') {
+				if (save_to_file($backupfile, $zip, $out))
+					$out = '';
+				else
+					$error = true;
+			}
+		}
+
 		foreach ($all_tables as $row) {
 			if (empty($row['Engine'])) {
 				$viewname = $row['Name'];

@@ -10,9 +10,39 @@
 ***********************************************************************/
 function set_mark(img) {
 	var box = document.getElementById('ajaxmark');
+	var statusBox = document.getElementById('modern-ajax-status');
+	var appShell = document.getElementById('modern-app-shell');
+	var state = '';
+
+	if (img) {
+		if (img.indexOf('progressbar') !== -1)
+			state = 'progress';
+		else if (img.indexOf('warning') !== -1)
+			state = 'warning';
+		else
+			state = 'spinner';
+	}
+
 	if(box) {
 		if(img) box.src = user.theme+'images/'+ img;
 		box.style.visibility = img ? 'visible' : 'hidden';
+		box.setAttribute('data-ajax-image', img || '');
+	}
+
+	if (statusBox) {
+		statusBox.className = 'modern-ajax-status' + (img ? ' is-visible' : '');
+		statusBox.setAttribute('data-kind', state);
+		statusBox.setAttribute('aria-hidden', img ? 'false' : 'true');
+	}
+
+	if (appShell) {
+		if (img) {
+			appShell.classList.add('is-ajax-busy');
+			appShell.setAttribute('data-ajax-kind', state);
+		} else {
+			appShell.classList.remove('is-ajax-busy');
+			appShell.removeAttribute('data-ajax-kind');
+		}
 	}
 }
 
@@ -38,7 +68,14 @@ JsHttpRequest.request= function(trigger, form, tout) {
 	tout = tout || 10000;	// default timeout value
 	document.getElementById('msgbox').innerHTML='';
 	set_mark(tout>10000 ? 'progressbar.gif' : 'ajax-loader.gif');
-	JsHttpRequest._request(trigger, form, tout, 0);
+	if (window.requestAnimationFrame)
+		window.requestAnimationFrame(function() {
+			JsHttpRequest._request(trigger, form, tout, 0);
+		});
+	else
+		setTimeout(function() {
+			JsHttpRequest._request(trigger, form, tout, 0);
+		}, 0);
 };
 
 JsHttpRequest._request = function(trigger, form, tout, retry) {

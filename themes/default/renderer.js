@@ -296,6 +296,7 @@
 		var resultsContainer = document.getElementById('modern-search-results');
 		var searchIndex = window.__searchIndex;
 		var searchShortcut = document.querySelector('.modern-header-search-shortcut');
+		var clearButton = document.querySelector('.modern-header-search-clear');
 		if (!searchInput || !resultsContainer || !searchIndex) {
 			return;
 		}
@@ -305,6 +306,17 @@
 		var maxResults = 12;
 		var debounceTimer = null;
 		var searchBar = document.querySelector('.modern-header-search');
+
+		function updateSearchChrome(query) {
+			var hasQuery = !!query;
+			if (searchShortcut) {
+				searchShortcut.hidden = hasQuery;
+				searchShortcut.style.visibility = hasQuery ? 'hidden' : 'visible';
+			}
+			if (clearButton) {
+				clearButton.hidden = !hasQuery;
+			}
+		}
 
 		// Pre-compute lowercase labels and keywords for faster matching
 		var indexLength = searchIndex.length;
@@ -470,14 +482,21 @@
 		// Debounced search on input
 		searchInput.addEventListener('input', function () {
 			var query = this.value.trim();
-			if (searchShortcut) {
-				searchShortcut.style.visibility = query ? 'hidden' : 'visible';
-			}
+			updateSearchChrome(query);
 			if (debounceTimer) clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(function () {
 				performSearch(query);
 			}, 60);
 		});
+
+		if (clearButton) {
+			clearButton.addEventListener('click', function () {
+				searchInput.value = '';
+				updateSearchChrome('');
+				hideResults();
+				searchInput.focus();
+			});
+		}
 
 		// Keyboard navigation
 		searchInput.addEventListener('keydown', function (e) {
@@ -500,9 +519,7 @@
 				e.preventDefault();
 				hideResults();
 				searchInput.value = '';
-				if (searchShortcut) {
-					searchShortcut.style.visibility = 'visible';
-				}
+				updateSearchChrome('');
 				searchInput.blur();
 			}
 		});
@@ -541,6 +558,8 @@
 		if (searchShortcut) {
 			searchShortcut.setAttribute('title', 'Press / or Ctrl/Cmd+K to focus search');
 		}
+
+		updateSearchChrome(searchInput.value.trim());
 	}
 
 	function bindCollapsedSidebarTooltips() {

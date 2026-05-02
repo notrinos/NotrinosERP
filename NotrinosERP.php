@@ -13,6 +13,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	die('Restricted access');
 
 include_once($path_to_root.'/applications/application.php');
+include_once($path_to_root.'/applications/crm.php');
 include_once($path_to_root.'/applications/customers.php');
 include_once($path_to_root.'/applications/suppliers.php');
 include_once($path_to_root.'/applications/inventory.php');
@@ -21,7 +22,6 @@ include_once($path_to_root.'/applications/manufacturing.php');
 include_once($path_to_root.'/applications/dimensions.php');
 include_once($path_to_root.'/applications/generalledger.php');
 include_once($path_to_root.'/applications/hrm.php');
-include_once($path_to_root.'/applications/crm.php');
 include_once($path_to_root.'/applications/setup.php');
 include_once($path_to_root.'/installed_extensions.php');
 
@@ -71,6 +71,8 @@ class NotrinosErp {
 		$this->menu->add_item(_('Main Menu'), 'index.php');
 		$this->menu->add_item(_('Logout'), '/account/access/logout.php');
 		$this->applications = array();
+		if (@$SysPrefs->prefs['use_crm'])
+			$this->add_application(new CrmApp());
 		$this->add_application(new CustomersApp());
 		$this->add_application(new SuppliersApp());
 		$this->add_application(new InventoryApp());
@@ -82,8 +84,6 @@ class NotrinosErp {
 		$this->add_application(new GeneralLedgerApp());
 		if ($SysPrefs->prefs['use_hrm'])
 			$this->add_application(new HrmApp());
-		if (@$SysPrefs->prefs['use_crm'])
-			$this->add_application(new CrmApp());
 
 		hook_invoke_all('install_tabs', $this);
 
