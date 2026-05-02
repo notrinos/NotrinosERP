@@ -33,7 +33,7 @@ $widget->Start();
 
 if ($widget->checkSecurity('SA_CRM_PIPELINE')) {
 	if ($i > 0)
-		source_graphic($title, _('Stage'), $pg, _('Deals'), null, 5);
+		source_graphic($title, _('Stage'), $pg, _('Deals'), null, 6);
 	else
 		display_note(_('No pipeline data to display.'));
 }
