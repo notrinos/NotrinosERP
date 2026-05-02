@@ -69,6 +69,7 @@ function send_scripts() {
 		$basename = basename($jsfile);
 		$fpath = user_js_cache().'/'.$basename;
 		$source_path = $js_path.$jsfile;
+		$script_version = null;
 		// compress also static files
 		if (!file_exists($fpath) || $SysPrefs->go_debug || (file_exists($source_path) && filemtime($fpath) < filemtime($source_path))) {
 			// don't need to compress minified files
@@ -78,7 +79,12 @@ function send_scripts() {
 				cache_js_file($fpath, file_get_contents($source_path));
 		}
 
-		$js .= '<script src="'.$fpath.'"></script>';
+		if (file_exists($fpath))
+			$script_version = filemtime($fpath);
+		elseif (file_exists($source_path))
+			$script_version = filemtime($source_path);
+
+		$js .= '<script src="'.$fpath.($script_version ? '?v='.$script_version : '').'"></script>';
 	}
 	foreach($js_userlib as $jsfile) {
 		$js .= '<script src="'.$jsfile.'"></script>';
