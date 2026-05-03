@@ -263,7 +263,8 @@ class renderer {
 	 */
 	function application_theme_colors($selected_application_id) {
 		$application_colors = array(
-			'orders' => array('accent' => '#2563eb', 'soft' => '#dbeafe'),
+			'crm' => array('accent' => '#9b2424', 'soft' => '#ffeded'),
+			'orders' => array('accent' => '#020202', 'soft' => '#dbeafe'),
 			'AP' => array('accent' => '#0f766e', 'soft' => '#ccfbf1'),
 			'stock' => array('accent' => '#0369a1', 'soft' => '#e0f2fe'),
 			'manuf' => array('accent' => '#0f766e', 'soft' => '#ccfbf1'),

@@ -114,7 +114,7 @@ function document_types_list($name, $selected=null, $none_option=false, $submit_
 	$sql = "SELECT doc_type_id, type_name FROM ".TB_PREF."document_types WHERE !inactive";
 	return combo_input($name, $selected, $sql, 'doc_type_id', 'type_name', array(
 		'select_submit' => $submit_on_change,
-		'spec_option' => $none_option ? _('-- Select --') : false,
+		'spec_option' => $none_option ? _('-- Select Doc Type --') : false,
 		'spec_id' => '',
 	));
 }
@@ -182,7 +182,7 @@ function leave_types_list($name, $selected=null, $none_option=false, $submit_on_
 	$sql = "SELECT leave_id, leave_name FROM ".TB_PREF."leave_types WHERE !inactive";
 	return combo_input($name, $selected, $sql, 'leave_id', 'leave_name', array(
 		'select_submit' => $submit_on_change,
-		'spec_option' => $none_option ? _('-- All --') : false,
+		'spec_option' => $none_option ? _('-- All Leave Types --') : false,
 		'spec_id' => 0,
 	));
 }
@@ -200,7 +200,7 @@ function loan_types_list($name, $selected=null, $none_option=false, $submit_on_c
 	$sql = "SELECT loan_type_id, loan_type_name FROM ".TB_PREF."loan_types WHERE !inactive";
 	return combo_input($name, $selected, $sql, 'loan_type_id', 'loan_type_name', array(
 		'select_submit' => $submit_on_change,
-		'spec_option' => $none_option ? _('-- Select --') : false,
+		'spec_option' => $none_option ? _('-- Select Loan Type --') : false,
 		'spec_id' => '',
 	));
 }

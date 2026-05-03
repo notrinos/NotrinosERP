@@ -727,6 +727,52 @@ function fiscalyears_list_row($label, $name, $selected_id=null) {
 	echo "</tr>\n";
 }
 
+/**
+ * Build a dropdown of calendar years from the first fiscal year through the current year.
+ *
+ * @param string $name
+ * @param mixed $selected_id
+ * @param bool $submit_on_change
+ * @return string
+ */
+function years_list($name, $selected_id=null, $submit_on_change=false) {
+	$sql = "SELECT MIN(begin) FROM ".TB_PREF."fiscal_year";
+	$result = db_query($sql, 'could not get first fiscal year');
+	$row = db_fetch_row($result);
+	db_free_result($result);
+
+	$current_year = (int)date('Y');
+	$first_year = $current_year;
+	if ($row != false && !empty($row[0]))
+		$first_year = (int)substr($row[0], 0, 4);
+
+	if ($first_year > $current_year)
+		$first_year = $current_year;
+
+	$years = array();
+	for ($year = $first_year; $year <= $current_year; $year++)
+		$years[$year] = $year;
+
+	return array_selector($name, $selected_id, $years, array(
+		'default' => $current_year,
+		'select_submit' => $submit_on_change,
+	));
+}
+
+/**
+ * Render the year selector inside a filter cell.
+ *
+ * @param string $label
+ * @param string $name
+ * @param mixed $selected_id
+ * @return void
+ */
+function years_list_cells($label, $name, $selected_id=null) {
+	filter_cell_open($label);
+	echo years_list($name, $selected_id);
+	filter_cell_close();
+}
+
 //------------------------------------------------------------------------------------
 
 function dimensions_list($name, $selected_id=null, $no_option=false, $showname=' ', $submit_on_change=false, $showclosed=false, $showtype=1) {

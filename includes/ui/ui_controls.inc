@@ -55,7 +55,7 @@ $filter_group_open = false;
 
 /**
  * Check whether modern theme is active.
- * Always returns true as only the modern theme is supported.
+ * Always returns true as only the modern theme is supported from NotrinosERP 1.0
  *
  * @return bool
  */

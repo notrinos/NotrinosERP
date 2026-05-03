@@ -22,10 +22,7 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-if (!isset($_POST['fiscal_year']) || (int)$_POST['fiscal_year'] <= 0)
-    $_POST['fiscal_year'] = date('Y');
-
-text_cells(_('Fiscal Year:'), 'fiscal_year', $_POST['fiscal_year'], 6, 4);
+years_list_cells(_('Fiscal Year:'), 'fiscal_year', null);
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
 filter_cell_open(_('Leave Type:'));
 echo leave_types_list('leave_id', null, true, false);
