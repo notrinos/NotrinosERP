@@ -264,11 +264,11 @@ class renderer {
 	function application_theme_colors($selected_application_id) {
 		$application_colors = array(
 			'crm' => array('accent' => '#9b2424', 'soft' => '#ffeded'),
-			'orders' => array('accent' => '#020202', 'soft' => '#dbeafe'),
+			'orders' => array('accent' => '#1e3a8a', 'soft' => '#dbeafe'),
 			'AP' => array('accent' => '#0f766e', 'soft' => '#ccfbf1'),
-			'stock' => array('accent' => '#0369a1', 'soft' => '#e0f2fe'),
-			'manuf' => array('accent' => '#0f766e', 'soft' => '#ccfbf1'),
-			'assets' => array('accent' => '#334155', 'soft' => '#e2e8f0'),
+			'stock' => array('accent' => '#925e12', 'soft' => '#FDEBD2'),
+			'manuf' => array('accent' => '#014c4f', 'soft' => '#CCE5E6'),
+			'assets' => array('accent' => '#714B67', 'soft' => '#E3DBE1'),
 			'proj' => array('accent' => '#15803d', 'soft' => '#dcfce7'),
 			'GL' => array('accent' => '#b45309', 'soft' => '#fef3c7'),
 			'hrm' => array('accent' => '#c026d3', 'soft' => '#fae8ff'),
