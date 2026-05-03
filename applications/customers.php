@@ -11,11 +11,23 @@
 ***********************************************************************/
 class CustomersApp extends application {
 	function __construct() {
+		global $SysPrefs;
+
+		$use_sales_agreements = !empty($SysPrefs->prefs['use_sales_agreements']);
+		$use_rma = !empty($SysPrefs->prefs['use_rma']);
+		$use_quotation_templates = !empty($SysPrefs->prefs['use_quotation_templates']);
+		$use_advanced_commissions = !empty($SysPrefs->prefs['use_advanced_commissions']);
+		$use_discount_programs = !empty($SysPrefs->prefs['use_discount_programs']);
+		$use_margin_display = !empty($SysPrefs->prefs['use_margin_display']);
+		$use_advanced_credit_control = !empty($SysPrefs->prefs['use_advanced_credit_control']);
+
 		parent::__construct('orders', _($this->help_context = '&Sales'));
 	
 		$this->add_module(_('Transactions'));
-		$this->add_lapp_function(0, _('Sales &Agreements'), 'sales/sales_agreement_entry.php?New=1', 'SA_SALESAGREEMENT', MENU_TRANSACTION);
-		$this->add_lapp_function(0, _('&Return (RMA) Entry'), 'sales/sales_rma_entry.php?New=1', 'SA_SALESRETURN', MENU_TRANSACTION);
+		if ($use_sales_agreements)
+			$this->add_lapp_function(0, _('Sales &Agreements'), 'sales/sales_agreement_entry.php?New=1', 'SA_SALESAGREEMENT', MENU_TRANSACTION);
+		if ($use_rma)
+			$this->add_lapp_function(0, _('&Return (RMA) Entry'), 'sales/sales_rma_entry.php?New=1', 'SA_SALESRETURN', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Sales &Quotation Entry'), 'sales/sales_order_entry.php?NewQuotation=Yes', 'SA_SALESQUOTE', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Sales &Order Entry'), 'sales/sales_order_entry.php?NewOrder=Yes', 'SA_SALESORDER', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Direct &Delivery'), 'sales/sales_order_entry.php?NewDelivery=0', 'SA_SALESDELIVERY', MENU_TRANSACTION);
@@ -34,9 +46,12 @@ class CustomersApp extends application {
 		$this->add_rapp_function(0, _('&Allocate Customer Payments or Credit Notes'), 'sales/allocations/customer_allocation_main.php?', 'SA_SALESALLOC', MENU_TRANSACTION);
 
 		$this->add_module(_('Inquiries and Reports'));
-		$this->add_lapp_function(1, _('Sales &Agreement Inquiry'), 'sales/inquiry/sales_agreements_view.php', 'SA_SALESAGREEMENT', MENU_INQUIRY);
-		$this->add_lapp_function(1, _('&RMA Inquiry'), 'sales/inquiry/sales_rma_view.php', 'SA_SALESRETURN', MENU_INQUIRY);
-		$this->add_lapp_function(1, _('&Commission Inquiry'), 'sales/inquiry/commission_inquiry.php', 'SA_SALESCOMMISSION', MENU_INQUIRY);
+		if ($use_sales_agreements)
+			$this->add_lapp_function(1, _('Sales &Agreement Inquiry'), 'sales/inquiry/sales_agreements_view.php', 'SA_SALESAGREEMENT', MENU_INQUIRY);
+		if ($use_rma)
+			$this->add_lapp_function(1, _('&RMA Inquiry'), 'sales/inquiry/sales_rma_view.php', 'SA_SALESRETURN', MENU_INQUIRY);
+		if ($use_advanced_commissions)
+			$this->add_lapp_function(1, _('&Commission Inquiry'), 'sales/inquiry/commission_inquiry.php', 'SA_SALESCOMMISSION', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Sales &Dashboard'), 'sales/dashboard/sales_dashboard.php', 'SA_SALESDASHBOARD', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Sales Quotation I&nquiry'), 'sales/inquiry/sales_orders_view.php?type=32', 'SA_SALESTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Sales Order &Inquiry'), 'sales/inquiry/sales_orders_view.php?type=30', 'SA_SALESTRANSVIEW', MENU_INQUIRY);
@@ -44,9 +59,11 @@ class CustomersApp extends application {
 		$this->add_lapp_function(1, _('Customer Allocation &Inquiry'), 'sales/inquiry/customer_allocation_inquiry.php?', 'SA_SALESALLOC', MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Customer and Sales &Reports'), 'reporting/reports_main.php?Class=0', 'SA_SALESTRANSVIEW', MENU_REPORT);
-		$this->add_rapp_function(1, _('Sales &Margin Analysis'), 'reporting/rep_sales_margin.php?', 'SA_SALESREPORT', MENU_REPORT);
+		if ($use_margin_display)
+			$this->add_rapp_function(1, _('Sales &Margin Analysis'), 'reporting/rep_sales_margin.php?', 'SA_SALESREPORT', MENU_REPORT);
 		$this->add_rapp_function(1, _('Sales &Performance'), 'reporting/rep_sales_performance.php?', 'SA_SALESREPORT', MENU_REPORT);
-		$this->add_rapp_function(1, _('&Discount Effectiveness'), 'reporting/rep_discount_analysis.php?', 'SA_SALESREPORT', MENU_REPORT);
+		if ($use_discount_programs)
+			$this->add_rapp_function(1, _('&Discount Effectiveness'), 'reporting/rep_discount_analysis.php?', 'SA_SALESREPORT', MENU_REPORT);
 
 		$this->add_module(_('Maintenance'));
 		$this->add_lapp_function(2, _('Add and Manage &Customers'), 'sales/manage/customers.php?', 'SA_CUSTOMER', MENU_ENTRY);
@@ -54,14 +71,18 @@ class CustomersApp extends application {
 		$this->add_lapp_function(2, _('Sales &Groups'), 'sales/manage/sales_groups.php?', 'SA_SALESGROUP', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Recurrent &Invoices'), 'sales/manage/recurrent_invoices.php?', 'SA_SRECURRENT', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Sales &Pricelists'), 'sales/manage/sales_pricelists.php?', 'SA_SALESPRICELIST', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Quotation &Templates'), 'sales/manage/quotation_templates.php?', 'SA_SALESQUOTETPL', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('&Commission Plans'), 'sales/manage/commission_plans.php', 'SA_SALESCOMMISSION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('&Discount Programs'), 'sales/manage/discount_programs.php?', 'SA_SALESDISCOUNT', MENU_MAINTENANCE);
+		if ($use_quotation_templates)
+			$this->add_lapp_function(2, _('Quotation &Templates'), 'sales/manage/quotation_templates.php?', 'SA_SALESQUOTETPL', MENU_MAINTENANCE);
+		if ($use_advanced_commissions)
+			$this->add_lapp_function(2, _('&Commission Plans'), 'sales/manage/commission_plans.php', 'SA_SALESCOMMISSION', MENU_MAINTENANCE);
+		if ($use_discount_programs)
+			$this->add_lapp_function(2, _('&Discount Programs'), 'sales/manage/discount_programs.php?', 'SA_SALESDISCOUNT', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Sales T&ypes'), 'sales/manage/sales_types.php?', 'SA_SALESTYPES', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Sales &Persons'), 'sales/manage/sales_people.php?', 'SA_SALESMAN', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Sales &Areas'), 'sales/manage/sales_areas.php?', 'SA_SALESAREA', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Credit &Status Setup'), 'sales/manage/credit_status.php?', 'SA_CRSTATUS', MENU_MAINTENANCE);
-		$this->add_rapp_function(2, _('Credit &Control Dashboard'), 'sales/manage/credit_control.php?', 'SA_CREDITCONTROL', MENU_MAINTENANCE);
+		if ($use_advanced_credit_control)
+			$this->add_rapp_function(2, _('Credit &Control Dashboard'), 'sales/manage/credit_control.php?', 'SA_CREDITCONTROL', MENU_MAINTENANCE);
 
 		$this->add_extensions();
 	}

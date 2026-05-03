@@ -3958,7 +3958,7 @@ INSERT INTO `0_suppliers` (`supplier_id`, `supp_name`, `supp_ref`, `address`, `s
 DROP TABLE IF EXISTS `0_sys_prefs`;
 
 CREATE TABLE `0_sys_prefs` (
-	`name` varchar(35) NOT NULL DEFAULT '',
+	`name` varchar(60) NOT NULL DEFAULT '',
 	`category` varchar(30) DEFAULT NULL,
 	`type` varchar(20) NOT NULL DEFAULT '',
 	`length` smallint(6) DEFAULT NULL,
@@ -4055,7 +4055,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420),
 ('warranty_provision_account', 'glsetup.inventory', 'varchar', 15, ''),
 ('warranty_expense_account', 'glsetup.inventory', 'varchar', 15, ''),
-('warranty_provision_rate', 'glsetup.inventory', 'float', 8, '0'),
+('warranty_provision_rate', 'glsetup.inventory', 'float', 8, '5.0'),
 ('warranty_provision_enabled', 'glsetup.inventory', 'tinyint', 1, '0'),
 ('regulatory_compliance_enabled', 'setup.company', 'tinyint', 1, '0'),
 ('dscsa_enabled', 'setup.company', 'tinyint', 1, '0'),
@@ -4066,6 +4066,9 @@ INSERT INTO `0_sys_prefs` VALUES
 ('fsma204_firm_name', 'setup.company', 'varchar', 100, ''),
 ('fsma204_fda_registration', 'setup.company', 'varchar', 50, ''),
 ('udi_company_name', 'setup.company', 'varchar', 100, ''),
+('fmda_enabled', 'setup.company', 'tinyint', 1, '0'),
+('fmda_company_license', 'setup.company', 'varchar', 50, ''),
+('fmda_authority_reference', 'setup.company', 'varchar', 50, ''),
 ('udi_issuing_agency', 'setup.company', 'varchar', 10, 'GS1');
 
 -- Structure of table `0_tag_associations` --
@@ -5909,6 +5912,30 @@ VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
 
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
 VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_company_license', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_authority_reference', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_quotation_templates', 'setup.company', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_margin_display', 'setup.company', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_sales_agreements', 'sales', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('sales_agreement_expiry_alert_days', 'sales', 'smallint', 6, '30');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_rma', 'sales', 'tinyint', 1, '1');
 
 -- Advanced Discount & Promotion Engine
 INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
