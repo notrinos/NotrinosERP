@@ -254,17 +254,6 @@ $overtime_options = array(0 => _('-- None --'));
 while ($ot = db_fetch($overtime_result))
     $overtime_options[$ot['overtime_id']] = $ot['overtime_name'];
 
-$month_names = array(
-    1 => _('January'), 2 => _('February'), 3 => _('March'),
-    4 => _('April'), 5 => _('May'), 6 => _('June'),
-    7 => _('July'), 8 => _('August'), 9 => _('September'),
-    10 => _('October'), 11 => _('November'), 12 => _('December')
-);
-
-$year_options = array();
-for ($y = (int)date('Y') - 2; $y <= (int)date('Y') + 1; $y++)
-    $year_options[$y] = $y;
-
 //----------------------------------------------------------------------
 // Render filters
 //----------------------------------------------------------------------
@@ -273,12 +262,8 @@ start_form();
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-echo '<td>';
-echo array_selector('sheet_month', $sel_month, $month_names, array('select_submit' => true, 'async' => false));
-echo '</td>';
-echo '<td>';
-echo array_selector('sheet_year', $sel_year, $year_options, array('select_submit' => true, 'async' => false));
-echo '</td>';
+months_list_cells(_('Month:'), 'sheet_month', $sel_month, true);
+years_list_cells(_('Fiscal Year:'), 'sheet_year', null);
 departments_list_cells(_('Department:'), 'department_id', get_post('department_id'), _('All departments'), true);
 
 $emp_list_opts = array('async' => false);

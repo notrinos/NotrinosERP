@@ -773,6 +773,44 @@ function years_list_cells($label, $name, $selected_id=null) {
 	filter_cell_close();
 }
 
+/**
+ * Build a dropdown of calendar months.
+ *
+ * @param string $name
+ * @param mixed $selected_id
+ * @param bool $submit_on_change
+ * @return string
+ */
+function months_list($name, $selected_id=null, $submit_on_change=false) {
+	$months = array(
+		1 => _('January'), 2 => _('February'), 3 => _('March'),
+		4 => _('April'), 5 => _('May'), 6 => _('June'),
+		7 => _('July'), 8 => _('August'), 9 => _('September'),
+		10 => _('October'), 11 => _('November'), 12 => _('December')
+	);
+
+	return array_selector($name, $selected_id, $months, array(
+		'default' => (int)date('n'),
+		'select_submit' => $submit_on_change,
+		'async' => false,
+	));
+}
+
+/**
+ * Render the month selector inside a filter cell.
+ *
+ * @param string $label
+ * @param string $name
+ * @param mixed $selected_id
+ * @param bool $submit_on_change
+ * @return void
+ */
+function months_list_cells($label, $name, $selected_id=null, $submit_on_change=false) {
+	filter_cell_open($label);
+	echo months_list($name, $selected_id, $submit_on_change);
+	filter_cell_close();
+}
+
 //------------------------------------------------------------------------------------
 
 function dimensions_list($name, $selected_id=null, $no_option=false, $showname=' ', $submit_on_change=false, $showclosed=false, $showtype=1) {

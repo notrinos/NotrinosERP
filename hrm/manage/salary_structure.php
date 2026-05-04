@@ -36,7 +36,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 	$elements = get_pay_elements();
 	$th = array(_('Pay Element'), _('Element Type'), _('Amount Type'), _('Amount'), _('Effective From'), '');
 
-	start_table(TABLESTYLE, "width='50%'");
+	start_table(TABLESTYLE, "width='100%'");
 	table_header($th);
 	start_row("class='inquirybg'");
 	label_cell(_('Base Pay'));
@@ -136,7 +136,6 @@ if ($Mode=='UPDATE_ITEM') {
 }
 
 start_form();
-
 
 start_table();
 start_row();
