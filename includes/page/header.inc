@@ -47,7 +47,8 @@ function send_css($css='') {
 	init_css();
 
 	foreach ($css_files as $css_file) {
-		echo "<link href='".$css_file."' rel='stylesheet' type='text/css'> \n";
+		$time = isset($css_file) ? fileatime($css_file) : '';
+		echo "<link href='".$css_file.'?'.$time."' rel='stylesheet' type='text/css'> \n";
 	}
 	if ($css)
 		echo "<link href='".$css."' rel='stylesheet' type='text/css'> \n";
