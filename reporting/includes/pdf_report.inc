@@ -963,6 +963,10 @@ class FrontReport extends Cpdf {
 							$Ajax->redirect($fname); // otherwise use faster method
 					}
 					else {
+						// Legacy report files still include UTF-8 BOM output, so clear buffers before streaming PDF headers.
+						while (ob_get_level() > 0)
+							@ob_end_clean();
+
 						header('Content-type: application/pdf');
 						header('Content-Disposition: inline; filename='.$this->filename);
 						header('Expires: 0');
