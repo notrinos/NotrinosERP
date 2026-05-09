@@ -213,6 +213,14 @@ function tab_personal($employee_id, $new_employee) {
 	marital_status_list_row(_('Marital Status:'), 'marital_status');
 	qty_row(_('Number of Dependents:'), 'dependents_no', null, null, null, 0);
 
+	table_section_title(_('Identification'));
+
+	text_row(_('National ID:'), 'national_id', null, 42, 100);
+	text_row(_('Passport No:'), 'passport', null, 42, 100);
+	date_row(_('Passport Expiry:'), 'passport_expiry', null, null, 0, 0, 1001);
+	text_row(_('Tax ID:'), 'tax_number', null, 42, 100);
+	text_row(_('Social Security No:'), 'social_security_no', null, 42, 100);
+
 	// ── RIGHT COLUMN ─────────────────────────────────────
 	table_section(2);
 
@@ -226,14 +234,6 @@ function tab_personal($employee_id, $new_employee) {
 	text_row(_('Mobile:'), 'mobile', null, 42, 30);
 	email_row(_('Work Email:'), 'email', get_post('email'), 42, 100);
 	email_row(_('Personal Email:'), 'personal_email', get_post('personal_email'), 42, 100);
-
-	table_section_title(_('Identification'));
-
-	text_row(_('National ID:'), 'national_id', null, 42, 100);
-	text_row(_('Passport No:'), 'passport', null, 42, 100);
-	date_row(_('Passport Expiry:'), 'passport_expiry', null, null, 0, 0, 1001);
-	text_row(_('Tax ID:'), 'tax_number', null, 42, 100);
-	text_row(_('Social Security No:'), 'social_security_no', null, 42, 100);
 
 	table_section_title(_('Banking'));
 
