@@ -168,7 +168,7 @@ class graph {
 	public $legend_box_y2;
 	public $img;
 	public $color;
-
+	
 	function __construct() {
 		global $SysPrefs;
 		$this->encoding = strtoupper($_SESSION['language']->encoding);
@@ -241,7 +241,7 @@ class graph {
 
 	function create_graphic($save='', $border=false) {
 		$size = 3;
-		$this->img = imagecreatetruecolor($this->width, $this->height);
+		$this->img = imagecreatetruecolor((int) round($this->width), (int) round($this->height));
 
 		$this->load_color_palette();
 
@@ -303,12 +303,14 @@ class graph {
 
 			$higher_value_x    = $this->graphic_area_x2 - (0.2 * $this->graphic_area_width);
 			$higher_value_size = 0.8 * $this->graphic_area_width;
+			$higher_value_x    = (int) round($higher_value_x);
+			$higher_value_size = (int) round($higher_value_size);
 
 			imageline($this->img, ($this->graphic_area_x1+$higher_value_size), $this->graphic_area_y1, ($this->graphic_area_x1+$higher_value_size), $this->graphic_area_y2, $this->color['bg_lines']);
 			$this->_imagestring($this->img, $this->size, (($this->graphic_area_x1+$higher_value_size) - ($this->string_width($this->higher_value, $this->size)/2)), ($this->graphic_area_y2+2), $this->higher_value_str, $this->color['axis_values']);
 
 			for ($i = 1, $alt = 15; $i < 10; $i++) {
-				$dec_x = number_format(round($i * ($higher_value_size  / 10), 1), 1, ".", '');
+				$dec_x = (int) round($i * ($higher_value_size / 10));
 
 				imageline($this->img, ($this->graphic_area_x1+$dec_x), $this->graphic_area_y1, ($this->graphic_area_x1+$dec_x), $this->graphic_area_y2, $this->color['bg_lines']);
 				if ($i % 2 == 0) {
@@ -320,7 +322,7 @@ class graph {
 
 			// Axis X
 			$this->_imagestring($this->img, $this->size, ($this->graphic_area_x2+10), ($this->graphic_area_y2+3), $this->axis_y, $this->color['title']);
-			imageline($this->img, $this->graphic_area_x1, $this->graphic_area_y2, $this->graphic_area_x2, $this->graphic_area_y2, $this->color['axis_line']);
+			imageline($this->img, (int) round($this->graphic_area_x1), (int) round($this->graphic_area_y2), (int) round($this->graphic_area_x2), (int) round($this->graphic_area_y2), $this->color['axis_line']);
 			// Axis Y
 			$this->_imagestring($this->img, $this->size, 20, ($this->graphic_area_y1-20), $this->axis_x, $this->color['title']);
 			imageline($this->img, $this->graphic_area_x1, $this->graphic_area_y1, $this->graphic_area_x1, $this->graphic_area_y2, $this->color['axis_line']);
@@ -903,7 +905,7 @@ class graph {
 		}
 
 		if ($this->built_in)
-			imagestring($img, $size, $x, $y + $alt, $string, $col);
+			imagestring($img, $size, (int) round($x), (int) round($y + $alt), $string, $col);
 		else {
 			if ($size == 1)
 				$size = 7;
@@ -923,7 +925,7 @@ class graph {
 				$string = str_replace(" ", "  ", $string);
 			}   
 			
-			imagettftext($img, $size, $angle, $x, $y + $alt, $col, $this->fontfile, $string);
+			imagettftext($img, $size, $angle, (int) round($x), (int) round($y + $alt), $col, $this->fontfile, $string);
 		}
 	}   
 }
