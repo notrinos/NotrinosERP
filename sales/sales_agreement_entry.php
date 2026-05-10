@@ -380,8 +380,8 @@ if ($editable) {
 	echo array_selector('agreement_type', get_post('agreement_type'), $agreement_types,
 		array('class' => array('nosearch')));
 	echo '</td></tr>';
-	customer_list_row(_('Customer:'), 'debtor_no', get_post('debtor_no'), true, true);
-	customer_branches_list_row(_('Branch:'), get_post('debtor_no'), 'branch_code', get_post('branch_code'), true, true);
+	customer_list_row(_('Customer:'), 'debtor_no', get_post('debtor_no'), _('Select a Customer'), true);
+	customer_branches_list_row(_('Branch:'), get_post('debtor_no'), 'branch_code', get_post('branch_code'), _('Select a Branch'), true);
 	sales_persons_list_row(_('Salesman:'), 'salesman_id', get_post('salesman_id'), true);
 	date_row(_('Start Date:'), 'date_start');
 	date_row(_('End Date:'), 'date_end');
