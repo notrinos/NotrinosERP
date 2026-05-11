@@ -79,8 +79,10 @@ if (isset($_POST['ConvertToOpportunity'])) {
 
 if (isset($_POST['ConvertToCustomer'])) {
     $input_error = 0;
+    $customer_name = trim($_POST['customer_name']);
+    $payment_terms = (int)$_POST['payment_terms'];
 
-    if (strlen(trim($_POST['customer_name'])) < 1) {
+    if (strlen($customer_name) < 1) {
         display_error(_('Customer name is required.'));
         set_focus('customer_name');
         $input_error = 1;
@@ -92,11 +94,17 @@ if (isset($_POST['ConvertToCustomer'])) {
         $input_error = 1;
     }
 
+    if ($payment_terms <= 0) {
+        display_error(_('Payment terms are required.'));
+        set_focus('payment_terms');
+        $input_error = 1;
+    }
+
     if ($input_error == 0) {
         begin_transaction();
+        $converted_at = date('Y-m-d H:i:s');
 
         // Create debtor (customer)
-        $customer_name = $_POST['customer_name'];
         $address       = $lead['address'];
         $tax_id        = '';
         $curr_code     = get_company_pref('curr_default');
@@ -104,7 +112,6 @@ if (isset($_POST['ConvertToCustomer'])) {
         $dimension_id  = 0;
         $dimension2_id = 0;
         $credit_status = 1; // Good
-        $payment_terms = (int)$_POST['payment_terms'];
         $discount      = 0;
         $pymt_discount = 0;
         $credit_limit  = (float)get_company_pref('default_credit_limit');
@@ -159,6 +166,7 @@ if (isset($_POST['ConvertToCustomer'])) {
         db_query($branch_sql, 'could not add customer branch');
 
         // Create CRM contact for the customer if auto-create is on
+        $person_id = 0;
         if (get_crm_setting('auto_create_contact', '1') == '1') {
             $contact_sql = "INSERT INTO " . TB_PREF . "crm_persons (
                 ref, name, name2, address, phone, phone2, email, notes
@@ -187,7 +195,9 @@ if (isset($_POST['ConvertToCustomer'])) {
         // Update lead with customer_id and mark as converted
         $update_sql = "UPDATE " . TB_PREF . "crm_leads SET
             linked_customer_id = " . db_escape($customer_id) . ",
-            lead_status = " . db_escape(CRM_LEAD_CONVERTED) . "
+            linked_person_id = " . ($person_id > 0 ? db_escape($person_id) : "NULL") . ",
+            lead_status = " . db_escape(CRM_LEAD_CONVERTED) . ",
+            date_converted = " . db_escape($converted_at) . "
             WHERE id = " . db_escape($lead_id);
         db_query($update_sql, 'could not update lead');
 

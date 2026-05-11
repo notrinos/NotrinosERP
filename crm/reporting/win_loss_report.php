@@ -74,7 +74,7 @@ $summary_sql = "SELECT
     SUM(CASE WHEN l.lead_status = 'won' THEN l.expected_revenue ELSE 0 END) as won_revenue,
     SUM(CASE WHEN l.lead_status = 'lost' THEN l.expected_revenue ELSE 0 END) as lost_revenue,
     AVG(CASE WHEN l.lead_status = 'won' THEN DATEDIFF(l.date_converted, l.date_created) ELSE NULL END) as avg_won_days,
-    AVG(CASE WHEN l.lead_status = 'lost' THEN DATEDIFF(l.date_converted, l.date_created) ELSE NULL END) as avg_lost_days
+    AVG(CASE WHEN l.lead_status = 'lost' THEN DATEDIFF(COALESCE(l.date_converted, l.date_lost), l.date_created) ELSE NULL END) as avg_lost_days
     FROM " . TB_PREF . "crm_leads l
     WHERE l.lead_status IN ('won','lost') AND l.inactive = 0" . $date_where . $team_where;
 
@@ -170,14 +170,14 @@ end_table(1);
 display_heading(_('Monthly Win/Loss Trend'));
 
 $trend_sql = "SELECT
-    DATE_FORMAT(l.date_converted, '%Y-%m') as period,
+    DATE_FORMAT(COALESCE(l.date_converted, l.date_lost), '%Y-%m') as period,
     SUM(CASE WHEN l.lead_status = 'won' THEN 1 ELSE 0 END) as won,
     SUM(CASE WHEN l.lead_status = 'lost' THEN 1 ELSE 0 END) as lost,
     SUM(CASE WHEN l.lead_status = 'won' THEN l.expected_revenue ELSE 0 END) as won_rev,
     SUM(CASE WHEN l.lead_status = 'lost' THEN l.expected_revenue ELSE 0 END) as lost_rev
     FROM " . TB_PREF . "crm_leads l
-    WHERE l.lead_status IN ('won','lost') AND l.inactive = 0 AND l.date_converted IS NOT NULL" . $date_where . $team_where . "
-    GROUP BY DATE_FORMAT(l.date_converted, '%Y-%m')
+    WHERE l.lead_status IN ('won','lost') AND l.inactive = 0 AND COALESCE(l.date_converted, l.date_lost) IS NOT NULL" . $date_where . $team_where . "
+    GROUP BY DATE_FORMAT(COALESCE(l.date_converted, l.date_lost), '%Y-%m')
     ORDER BY period DESC
     LIMIT 12";
 

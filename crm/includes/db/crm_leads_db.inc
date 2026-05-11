@@ -339,6 +339,16 @@ function convert_lead_to_opportunity($lead_id, $stage_id = null)
         }
     }
 
+    if (!empty($data['stage_id'])) {
+        $sql = "SELECT probability FROM " . TB_PREF . "crm_sales_stages
+                WHERE id = " . db_escape($data['stage_id']) . " LIMIT 1";
+        $res = db_query($sql, "Could not get stage probability");
+        $stage = db_fetch($res);
+        if ($stage) {
+            $data['probability'] = $stage['probability'];
+        }
+    }
+
     if (empty($lead['lead_ref']) || strpos($lead['lead_ref'], get_crm_setting('lead_ref_prefix', 'LD')) === 0) {
         $data['lead_ref'] = crm_next_opportunity_ref();
     }
@@ -389,6 +399,7 @@ function mark_opportunity_lost($lead_id, $reason_id = null, $notes = null)
 {
     $data = array(
         'lead_status' => CRM_LEAD_LOST,
+        'date_converted' => date('Y-m-d H:i:s'),
         'date_lost' => date('Y-m-d H:i:s'),
         'probability' => 0,
     );
