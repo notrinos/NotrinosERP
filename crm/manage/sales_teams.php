@@ -105,7 +105,7 @@ start_form();
 
 start_table(TABLESTYLE, "width='80%'");
 
-$th = array(_('ID'), _('Team Name'), _('Leader'), _('Members'), _('Invoicing Target'), _('Active'), '', '', '');
+$th = array(_('ID'), _('Team Name'), _('Leader'), _('Members'), _('Invoicing Target'), _('Active'), _('Edit'), _('Member'), _('Delete'));
 table_header($th);
 
 $result = get_crm_sales_teams(true);
@@ -161,7 +161,7 @@ if ($selected_id != '') {
 
 end_table(1);
 
-submit_add_or_update_center($selected_id == '', '', 'both');
+submit_add_or_update_center($selected_id == '', _('Add New Team'), 'both');
 
 //--------------------------------------------------------------------------
 // Team members section (shown when "Members" button clicked)

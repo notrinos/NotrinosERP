@@ -96,6 +96,11 @@ function add_sales_order(&$order) {
 	add_audit_trail($order->trans_type, $order_no, $order->document_date);
 	$Refs->save($order->trans_type, $order_no, $order->reference, null, $order->fixed_asset);
 	record_cart_discount_usage($order, $order->trans_type, $order_no);
+	if ($order->trans_type == ST_SALESORDER && !empty($order->agreement_id)) {
+		if (!function_exists('update_sales_agreement_fulfillment'))
+			include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+		update_sales_agreement_fulfillment((int)$order->agreement_id);
+	}
 
 	hook_db_postwrite($order, $order->trans_type);
 	commit_transaction();
@@ -107,10 +112,13 @@ function add_sales_order(&$order) {
 }
 
 function delete_sales_order($order_no, $trans_type) {
+	global $path_to_root;
+
 	begin_transaction();
 	hook_db_prevoid($trans_type, $order_no);
 
 	$order = get_sales_order_header($order_no, $trans_type);
+	$agreement_id = $order && isset($order['agreement_id']) ? (int)$order['agreement_id'] : 0;
 
 	$sql = "DELETE FROM ".TB_PREF."sales_orders WHERE order_no=".db_escape($order_no)." AND trans_type=".db_escape($trans_type);
 
@@ -118,6 +126,12 @@ function delete_sales_order($order_no, $trans_type) {
 
 	$sql = "DELETE FROM ".TB_PREF."sales_order_details WHERE order_no =".db_escape($order_no) . " AND trans_type=".db_escape($trans_type);
 	db_query($sql, 'order Detail Delete');
+
+	if ($trans_type == ST_SALESORDER && $agreement_id > 0) {
+		if (!function_exists('update_sales_agreement_fulfillment'))
+			include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+		update_sales_agreement_fulfillment($agreement_id);
+	}
 
 	add_audit_trail($trans_type, $order_no, sql2date($order['ord_date']), _('Deleted.'));
 	commit_transaction();
@@ -144,6 +158,8 @@ function update_sales_order($order) {
 	$version= current($order->trans_no);
 	$total = $order->get_trans_total();
 	$existing_order = get_sales_order_header($order_no, $order->trans_type);
+	$previous_agreement_id = $existing_order && isset($existing_order['agreement_id']) ? (int)$existing_order['agreement_id'] : 0;
+	$current_agreement_id = isset($order->agreement_id) ? (int)$order->agreement_id : 0;
 	$custom_data_sql = get_discount_custom_data_sql_value(isset($existing_order['custom_data']) ? $existing_order['custom_data'] : array(), $order);
 
 	begin_transaction();
@@ -239,6 +255,14 @@ function update_sales_order($order) {
 	if ($order->trans_type == ST_SALESORDER)
 		reallocate_payments($order_no, ST_SALESORDER, $order->document_date, $total, $allocs, $order->customer_id);
 	record_cart_discount_usage($order, $order->trans_type, $order_no);
+	if ($order->trans_type == ST_SALESORDER && ($current_agreement_id > 0 || $previous_agreement_id > 0)) {
+		if (!function_exists('update_sales_agreement_fulfillment'))
+			include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+		if ($current_agreement_id > 0)
+			update_sales_agreement_fulfillment($current_agreement_id);
+		if ($previous_agreement_id > 0 && $previous_agreement_id != $current_agreement_id)
+			update_sales_agreement_fulfillment($previous_agreement_id);
+	}
 	add_audit_trail($order->trans_type, $order_no, $order->document_date, _('Updated.'));
 	$Refs->save($order->trans_type, $order_no, $order->reference, null, $order->fixed_asset);
 

@@ -80,41 +80,109 @@ function can_save_sales_agreement_header()
 /**
  * Validate one agreement line form submission.
  *
+ * @param string $stock_field
+ * @param string $quantity_field
+ * @param string $price_field
+ * @param string $discount_field
+ * @param string $date_field
+ * @param string $minimum_qty_field
+ * @param int    $agreement_id
+ * @param int    $exclude_line_id
  * @return bool
  */
-function can_save_sales_agreement_line()
+function can_save_sales_agreement_line_fields($stock_field, $quantity_field, $price_field,
+	$discount_field, $date_field, $minimum_qty_field, $agreement_id = 0, $exclude_line_id = 0)
 {
-	if (get_post('line_stock_id') === '') {
+	$stock_id = trim(get_post($stock_field));
+	if ($stock_id === '') {
 		display_error(_('You must select an item.'));
-		set_focus('line_stock_id');
+		set_focus($stock_field);
 		return false;
 	}
 
-	if (!check_num('line_committed_qty', 0.001)) {
+	if (!check_num($quantity_field, 0.001)) {
 		display_error(_('The committed quantity must be greater than zero.'));
-		set_focus('line_committed_qty');
+		set_focus($quantity_field);
 		return false;
 	}
 
-	if (!check_num('line_unit_price', 0)) {
+	if ($minimum_qty_field !== '' && !check_num($minimum_qty_field, 0)) {
+		display_error(_('The minimum quantity per order must be numeric and not less than zero.'));
+		set_focus($minimum_qty_field);
+		return false;
+	}
+
+	if ($minimum_qty_field !== '' && input_num($minimum_qty_field, 0) > input_num($quantity_field)) {
+		display_error(_('The minimum quantity per order cannot exceed the committed quantity.'));
+		set_focus($minimum_qty_field);
+		return false;
+	}
+
+	if (!check_num($price_field, 0)) {
 		display_error(_('The unit price must be numeric and not less than zero.'));
-		set_focus('line_unit_price');
+		set_focus($price_field);
 		return false;
 	}
 
-	if (!check_num('line_discount_percent', 0, 100)) {
+	if (!check_num($discount_field, 0, 100)) {
 		display_error(_('The discount percent must be between 0 and 100.'));
-		set_focus('line_discount_percent');
+		set_focus($discount_field);
 		return false;
 	}
 
-	if (get_post('line_price_valid_until') !== '' && !is_date(get_post('line_price_valid_until'))) {
+	if (get_post($date_field) !== '' && !is_date(get_post($date_field))) {
 		display_error(_('The line price validity date is invalid.'));
-		set_focus('line_price_valid_until');
+		set_focus($date_field);
+		return false;
+	}
+
+	if ($agreement_id > 0 && sales_agreement_has_duplicate_stock($agreement_id, $stock_id, $exclude_line_id)) {
+		display_error(_('The selected item has already been added to this agreement.'));
+		set_focus($stock_field);
 		return false;
 	}
 
 	return true;
+}
+
+/**
+ * Validate a new agreement line form submission.
+ *
+ * @param int $agreement_id
+ * @return bool
+ */
+function can_save_sales_agreement_line($agreement_id)
+{
+	return can_save_sales_agreement_line_fields(
+		'line_stock_id',
+		'line_committed_qty',
+		'line_unit_price',
+		'line_discount_percent',
+		'line_price_valid_until',
+		'line_min_qty',
+		$agreement_id
+	);
+}
+
+/**
+ * Validate one existing agreement line update submission.
+ *
+ * @param int $agreement_id
+ * @param int $line_id
+ * @return bool
+ */
+function can_save_sales_agreement_line_update($agreement_id, $line_id)
+{
+	return can_save_sales_agreement_line_fields(
+		'edit_stock_' . $line_id,
+		'edit_committed_qty_' . $line_id,
+		'edit_unit_price_' . $line_id,
+		'edit_discount_' . $line_id,
+		'edit_price_valid_until_' . $line_id,
+		'edit_min_qty_' . $line_id,
+		$agreement_id,
+		$line_id
+	);
 }
 
 // ============================================================================
@@ -206,7 +274,7 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 }
 
 // ---- Add line ----
-if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_line()) {
+if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_line($selected_id)) {
 	$line_id = add_sales_agreement_line(
 		$selected_id,
 		get_post('line_stock_id'),
@@ -218,15 +286,23 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_lin
 		get_post('line_price_valid_until') !== '' ? date2sql(get_post('line_price_valid_until')) : null
 	);
 
-	if ($line_id)
+	if ($line_id) {
 		display_notification(_('Agreement line has been added.'));
-	else
-		display_error(_('The agreement line could not be added.'));
+		$_POST['line_stock_id'] = '';
+		$_POST['line_description'] = '';
+		$_POST['line_committed_qty'] = '';
+		$_POST['line_min_qty'] = '';
+		$_POST['line_unit_price'] = '';
+		$_POST['line_discount_percent'] = '';
+		$_POST['line_price_valid_until'] = '';
+		$Ajax->activate('_page_body');
+	} else
+		display_error(_('The agreement line could not be added. Only draft agreements accept unique valid line items.'));
 }
 
 // ---- Update existing line ----
 $update_line_id = find_submit('UpdateLine');
-if ($update_line_id > 0 && $selected_id > 0) {
+if ($update_line_id > 0 && $selected_id > 0 && can_save_sales_agreement_line_update($selected_id, $update_line_id)) {
 	$updated = update_sales_agreement_line(
 		$update_line_id,
 		get_post('edit_stock_' . $update_line_id),
@@ -240,19 +316,21 @@ if ($update_line_id > 0 && $selected_id > 0) {
 			: null
 	);
 
-	if ($updated)
+	if ($updated) {
 		display_notification(_('Agreement line has been updated.'));
-	else
-		display_error(_('The agreement line could not be updated.'));
+		$Ajax->activate('_page_body');
+	} else
+		display_error(_('The agreement line could not be updated. Only draft agreements with valid data can be edited.'));
 }
 
 // ---- Delete line ----
 $delete_line_id = find_submit('DeleteLine');
 if ($delete_line_id > 0 && $selected_id > 0) {
-	if (delete_sales_agreement_line($delete_line_id))
+	if (delete_sales_agreement_line($delete_line_id)) {
 		display_notification(_('Agreement line has been deleted.'));
-	else
-		display_error(_('The agreement line could not be deleted.'));
+		$Ajax->activate('_page_body');
+	} else
+		display_error(_('The agreement line could not be deleted. Only draft agreements can remove line items.'));
 }
 
 // ---- Status transitions ----
@@ -304,7 +382,7 @@ if (isset($_POST['CreateSO']) && $selected_id > 0) {
 	if ($so_number > 0) {
 		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&created_so=' . $so_number);
 	} else {
-		display_error(_('No sales order could be created from this agreement. Ensure the agreement is active and has valid lines.'));
+		display_error(_('No sales order could be created from this agreement. Ensure the agreement is active and still has remaining valid lines.'));
 	}
 }
 

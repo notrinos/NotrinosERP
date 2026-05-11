@@ -229,6 +229,13 @@ function write_sales_invoice(&$invoice) {
 	}
 	reallocate_payments($invoice_no, ST_SALESINVOICE, $date_, $to_allocate, $allocs, $invoice->customer_id);
 	record_cart_discount_usage($invoice, ST_SALESINVOICE, $invoice_no);
+	if (!empty($sales_order)) {
+		if (!function_exists('get_sales_agreement_id_for_sales_order'))
+			include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+		$agreement_id = get_sales_agreement_id_for_sales_order($sales_order);
+		if ($agreement_id > 0)
+			update_sales_agreement_fulfillment($agreement_id);
+	}
 	// Phase 6: Auto-calculate commission if advanced commissions enabled
 	if (get_company_pref('use_advanced_commissions') && !empty($invoice->salesman)) {
 		if (!function_exists('calculate_commission'))

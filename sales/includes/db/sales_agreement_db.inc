@@ -58,6 +58,118 @@ function get_sales_agreement_editable_statuses()
 }
 
 /**
+ * Determine whether one agreement status allows header/line editing.
+ *
+ * @param string $status
+ * @return bool
+ */
+function is_sales_agreement_editable_status($status)
+{
+	return in_array($status, get_sales_agreement_editable_statuses());
+}
+
+/**
+ * Fetch one sales agreement line by line id.
+ *
+ * @param int $line_id
+ * @return array|false
+ */
+function get_sales_agreement_line($line_id)
+{
+	$sql = "SELECT *
+		FROM " . TB_PREF . "sales_agreement_lines
+		WHERE id = " . db_escape($line_id);
+
+	$result = db_query($sql, 'Cannot fetch sales agreement line');
+
+	return db_fetch($result);
+}
+
+/**
+ * Validate one agreement line at the service layer.
+ *
+ * @param double $committed_qty
+ * @param double $unit_price
+ * @param double $discount_percent
+ * @param double $min_qty_per_order
+ * @param string $price_valid_until  SQL date or null
+ * @return bool
+ */
+function is_sales_agreement_line_data_valid($committed_qty, $unit_price, $discount_percent,
+	$min_qty_per_order = 0, $price_valid_until = null)
+{
+	if (!is_numeric($committed_qty) || (float)$committed_qty <= 0)
+		return false;
+
+	if (!is_numeric($unit_price) || (float)$unit_price < 0)
+		return false;
+
+	if (!is_numeric($discount_percent)
+		|| (float)$discount_percent < 0
+		|| (float)$discount_percent > 100)
+		return false;
+
+	if (!is_numeric($min_qty_per_order) || (float)$min_qty_per_order < 0)
+		return false;
+
+	if ((float)$min_qty_per_order > (float)$committed_qty)
+		return false;
+
+	if ($price_valid_until !== null && $price_valid_until !== '' && $price_valid_until != '0000-00-00') {
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $price_valid_until, $matches))
+			return false;
+
+		if (!checkdate((int)$matches[2], (int)$matches[3], (int)$matches[1]))
+			return false;
+	}
+
+	return true;
+}
+
+/**
+ * Check whether the agreement already contains the stock id on another line.
+ *
+ * @param int    $agreement_id
+ * @param string $stock_id
+ * @param int    $exclude_line_id
+ * @return bool
+ */
+function sales_agreement_has_duplicate_stock($agreement_id, $stock_id, $exclude_line_id = 0)
+{
+	$sql = "SELECT COUNT(*) AS duplicate_count
+		FROM " . TB_PREF . "sales_agreement_lines
+		WHERE agreement_id = " . db_escape($agreement_id) . "
+			AND stock_id = " . db_escape($stock_id);
+
+	if ($exclude_line_id > 0)
+		$sql .= " AND id <> " . db_escape($exclude_line_id);
+
+	$result = db_query($sql, 'Cannot check sales agreement line duplicates');
+	$row = db_fetch($result);
+
+	return $row && (int)$row['duplicate_count'] > 0;
+}
+
+/**
+ * Return the sales agreement id linked to one sales order.
+ *
+ * @param int $order_no
+ * @return int
+ */
+function get_sales_agreement_id_for_sales_order($order_no)
+{
+	$sql = "SELECT agreement_id
+		FROM " . TB_PREF . "sales_orders
+		WHERE order_no = " . db_escape($order_no) . "
+			AND trans_type = " . db_escape(ST_SALESORDER);
+
+	$result = db_query($sql, 'Cannot fetch sales agreement order link');
+	$row = db_fetch($result);
+
+	return $row ? (int)$row['agreement_id'] : 0;
+}
+
+/**
  * Return the badge color for a given agreement status.
  *
  * @param string $status
@@ -209,6 +321,10 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
 	$currency, $payment_terms, $auto_renew, $renewal_period_months,
 	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0)
 {
+	$agreement = get_sales_agreement($id);
+	if (!$agreement || !is_sales_agreement_editable_status($agreement['status']))
+		return false;
+
 	$data = compact('id', 'agreement_type', 'debtor_no');
 	hook_invoke_all('sales_agreement_before_save', $data);
 
@@ -237,7 +353,7 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
 
 	hook_invoke_all('sales_agreement_before_save', $id);
 
-	return db_num_affected_rows() >= 0;
+	return true;
 }
 
 /**
@@ -352,9 +468,25 @@ function get_sales_agreements($debtor_no = 0, $status = '', $active_only = false
  */
 function confirm_sales_agreement($id)
 {
+	$agreement = get_sales_agreement($id);
+	if (!$agreement || $agreement['status'] !== 'draft')
+		return false;
+
 	$lines = get_sales_agreement_lines($id);
 	if (!$lines || db_num_rows($lines) == 0)
 		return false;
+
+	while ($line = db_fetch($lines)) {
+		if (trim($line['stock_id']) === ''
+			|| !is_sales_agreement_line_data_valid(
+				$line['committed_qty'],
+				$line['unit_price'],
+				$line['discount_percent'],
+				$line['min_qty_per_order'],
+				$line['price_valid_until']
+			))
+			return false;
+	}
 
 	$sql = "UPDATE " . TB_PREF . "sales_agreements
 		SET status = 'confirmed'
@@ -447,6 +579,20 @@ function cancel_sales_agreement($id, $reason)
 function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_price,
 	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null)
 {
+	$agreement = get_sales_agreement($agreement_id);
+	if (!$agreement
+		|| !is_sales_agreement_editable_status($agreement['status'])
+		|| trim($stock_id) === ''
+		|| sales_agreement_has_duplicate_stock($agreement_id, $stock_id)
+		|| !is_sales_agreement_line_data_valid(
+			$committed_qty,
+			$unit_price,
+			$discount_percent,
+			$min_qty_per_order,
+			$price_valid_until
+		))
+		return 0;
+
 	$price_valid_sql = ($price_valid_until && $price_valid_until != '0000-00-00')
 		? "'" . $price_valid_until . "'"
 		: 'NULL';
@@ -491,13 +637,28 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
 function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null)
 {
+	$line = get_sales_agreement_line($line_id);
+	if (!$line)
+		return false;
+
+	$agreement_id = (int)$line['agreement_id'];
+	$agreement = get_sales_agreement($agreement_id);
+	if (!$agreement
+		|| !is_sales_agreement_editable_status($agreement['status'])
+		|| trim($stock_id) === ''
+		|| sales_agreement_has_duplicate_stock($agreement_id, $stock_id, $line_id)
+		|| !is_sales_agreement_line_data_valid(
+			$committed_qty,
+			$unit_price,
+			$discount_percent,
+			$min_qty_per_order,
+			$price_valid_until
+		))
+		return false;
+
 	$price_valid_sql = ($price_valid_until && $price_valid_until != '0000-00-00')
 		? "'" . $price_valid_until . "'"
 		: 'NULL';
-
-	// Get agreement_id before updating
-	$row = db_fetch(db_query("SELECT agreement_id FROM " . TB_PREF . "sales_agreement_lines WHERE id = " . db_escape($line_id)));
-	$agreement_id = $row ? $row['agreement_id'] : 0;
 
 	$sql = "UPDATE " . TB_PREF . "sales_agreement_lines SET
 		stock_id = " . db_escape($stock_id) . ",
@@ -514,7 +675,7 @@ function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_
 	if ($agreement_id)
 		update_agreement_committed_total($agreement_id);
 
-	return db_num_affected_rows() >= 0;
+	return true;
 }
 
 /**
@@ -525,9 +686,14 @@ function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_
  */
 function delete_sales_agreement_line($line_id)
 {
-	// Get agreement_id before deleting
-	$row = db_fetch(db_query("SELECT agreement_id FROM " . TB_PREF . "sales_agreement_lines WHERE id = " . db_escape($line_id)));
-	$agreement_id = $row ? $row['agreement_id'] : 0;
+	$line = get_sales_agreement_line($line_id);
+	if (!$line)
+		return false;
+
+	$agreement_id = (int)$line['agreement_id'];
+	$agreement = get_sales_agreement($agreement_id);
+	if (!$agreement || !is_sales_agreement_editable_status($agreement['status']))
+		return false;
 
 	$sql = "DELETE FROM " . TB_PREF . "sales_agreement_lines WHERE id = " . db_escape($line_id);
 	db_query($sql, 'Cannot delete sales agreement line');
@@ -535,7 +701,7 @@ function delete_sales_agreement_line($line_id)
 	if ($agreement_id)
 		update_agreement_committed_total($agreement_id);
 
-	return true;
+	return db_num_affected_rows() > 0;
 }
 
 /**
@@ -594,10 +760,38 @@ function update_sales_agreement_fulfillment($agreement_id)
 
 	db_query($sql_ordered, 'Cannot update agreement ordered total');
 
+	$sql_delivered = "UPDATE " . TB_PREF . "sales_agreements sa
+		SET total_delivered = IFNULL((
+			SELECT SUM(sod.qty_sent * sod.unit_price * (1 - sod.discount_percent))
+			FROM " . TB_PREF . "sales_order_details sod
+			INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type
+			WHERE so.agreement_id = sa.id AND so.trans_type = " . db_escape(ST_SALESORDER) . "
+		), 0)
+		WHERE sa.id = " . db_escape($agreement_id);
+
+	db_query($sql_delivered, 'Cannot update agreement delivered total');
+
+	$sql_invoiced = "UPDATE " . TB_PREF . "sales_agreements sa
+		SET total_invoiced = IFNULL((
+			SELECT SUM(dtd.quantity * dtd.unit_price * (1 - dtd.discount_percent))
+			FROM " . TB_PREF . "debtor_trans_details dtd
+			INNER JOIN " . TB_PREF . "debtor_trans dt
+				ON dt.trans_no = dtd.debtor_trans_no
+				AND dt.type = dtd.debtor_trans_type
+			INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = dt.order_ AND so.trans_type = " . db_escape(ST_SALESORDER) . "
+			LEFT JOIN " . TB_PREF . "voided v ON v.type = dt.type AND v.id = dt.trans_no
+			WHERE so.agreement_id = sa.id
+				AND dt.type = " . db_escape(ST_SALESINVOICE) . "
+				AND v.id IS NULL
+		), 0)
+		WHERE sa.id = " . db_escape($agreement_id);
+
+	db_query($sql_invoiced, 'Cannot update agreement invoiced total');
+
 	// Update per-line ordered quantities from linked sales order lines.
 	$lines = get_sales_agreement_lines($agreement_id);
 	while ($line = db_fetch($lines)) {
-		$sql_line_ordered = "UPDATE " . TB_PREF . "sales_agreement_lines sal
+		$sql_line_fulfillment = "UPDATE " . TB_PREF . "sales_agreement_lines sal
 			SET ordered_qty = IFNULL((
 				SELECT SUM(sod.quantity)
 				FROM " . TB_PREF . "sales_order_details sod
@@ -605,10 +799,31 @@ function update_sales_agreement_fulfillment($agreement_id)
 				WHERE so.agreement_id = " . db_escape($agreement_id) . "
 				  AND so.trans_type = " . db_escape(ST_SALESORDER) . "
 				  AND sod.stk_code = " . db_escape($line['stock_id']) . "
+			), 0),
+			delivered_qty = IFNULL((
+				SELECT SUM(sod.qty_sent)
+				FROM " . TB_PREF . "sales_order_details sod
+				INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = sod.order_no AND so.trans_type = sod.trans_type
+				WHERE so.agreement_id = " . db_escape($agreement_id) . "
+				  AND so.trans_type = " . db_escape(ST_SALESORDER) . "
+				  AND sod.stk_code = sal.stock_id
+			), 0),
+			invoiced_qty = IFNULL((
+				SELECT SUM(dtd.quantity)
+				FROM " . TB_PREF . "debtor_trans_details dtd
+				INNER JOIN " . TB_PREF . "debtor_trans dt
+					ON dt.trans_no = dtd.debtor_trans_no
+					AND dt.type = dtd.debtor_trans_type
+				INNER JOIN " . TB_PREF . "sales_orders so ON so.order_no = dt.order_ AND so.trans_type = " . db_escape(ST_SALESORDER) . "
+				LEFT JOIN " . TB_PREF . "voided v ON v.type = dt.type AND v.id = dt.trans_no
+				WHERE so.agreement_id = " . db_escape($agreement_id) . "
+				  AND dt.type = " . db_escape(ST_SALESINVOICE) . "
+				  AND v.id IS NULL
+				  AND dtd.stock_id = sal.stock_id
 			), 0)
 			WHERE sal.id = " . db_escape($line['id']);
 
-		db_query($sql_line_ordered, 'Cannot update agreement line ordered qty');
+		db_query($sql_line_fulfillment, 'Cannot update agreement line fulfillment');
 	}
 }
 
@@ -625,7 +840,7 @@ function update_sales_agreement_fulfillment($agreement_id)
  */
 function check_sales_agreement_availability($agreement_id, $stock_id)
 {
-	$sql = "SELECT GREATEST(0, committed_qty - ordered_qty) AS remaining
+	$sql = "SELECT IFNULL(SUM(GREATEST(0, committed_qty - ordered_qty)), 0) AS remaining
 		FROM " . TB_PREF . "sales_agreement_lines
 		WHERE agreement_id = " . db_escape($agreement_id) . "
 		  AND stock_id = " . db_escape($stock_id);
@@ -659,6 +874,8 @@ function create_order_from_agreement($agreement_id, $line_selections = array())
 	$agreement = get_sales_agreement($agreement_id);
 	if (!$agreement || $agreement['status'] !== 'active')
 		return 0;
+
+	update_sales_agreement_fulfillment($agreement_id);
 
 	$customer_row = get_customer($agreement['debtor_no']);
 	if (!$customer_row)
@@ -706,9 +923,23 @@ function create_order_from_agreement($agreement_id, $line_selections = array())
 	// Populate lines
 	$lines_result = get_sales_agreement_lines($agreement_id);
 	while ($line = db_fetch($lines_result)) {
-		$qty = isset($line_selections[$line['id']])
+		if (!is_sales_agreement_line_data_valid(
+			$line['committed_qty'],
+			$line['unit_price'],
+			$line['discount_percent'],
+			$line['min_qty_per_order'],
+			$line['price_valid_until']
+		))
+			continue;
+
+		if ($line['price_valid_until'] && $line['price_valid_until'] < date('Y-m-d'))
+			continue;
+
+		$remaining_qty = max(0, (float)$line['committed_qty'] - (float)$line['ordered_qty']);
+		$requested_qty = isset($line_selections[$line['id']])
 			? (double)$line_selections[$line['id']]
-			: (double)$line['committed_qty'];
+			: $remaining_qty;
+		$qty = min($requested_qty, $remaining_qty);
 
 		if ($qty <= 0)
 			continue;

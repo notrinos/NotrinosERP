@@ -13,7 +13,7 @@
 // insert/update sales delivery
 //
 function write_sales_delivery(&$delivery,$bo_policy) {
-	global $Refs;
+	global $Refs, $path_to_root;
 
 	$trans_no = $delivery->trans_no;
 	if (is_array($trans_no)) $trans_no = key($trans_no);
@@ -268,6 +268,13 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 	}
 
 	add_comments(ST_CUSTDELIVERY, $delivery_no, $delivery->document_date, $delivery->Comments);
+	if (!empty($delivery->order_no)) {
+		if (!function_exists('get_sales_agreement_id_for_sales_order'))
+			include_once($path_to_root . '/sales/includes/db/sales_agreement_db.inc');
+		$agreement_id = get_sales_agreement_id_for_sales_order($delivery->order_no);
+		if ($agreement_id > 0)
+			update_sales_agreement_fulfillment($agreement_id);
+	}
 
 	if ($trans_no == 0)
 		$Refs->save(ST_CUSTDELIVERY, $delivery_no, $delivery->reference);
