@@ -223,6 +223,221 @@ function get_default_purch_rfq_deadline_date($created_date_sql = '')
 }
 
 /**
+ * Validate one SQL-format RFQ date value.
+ *
+ * @param string|null $date_value
+ * @return bool
+ */
+function is_valid_purch_rfq_sql_date($date_value)
+{
+	$date_value = trim((string)$date_value);
+	if ($date_value === '')
+		return false;
+
+	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
+		return false;
+
+	$date_parts = explode('-', $date_value);
+	if (count($date_parts) !== 3)
+		return false;
+
+	return checkdate((int)$date_parts[1], (int)$date_parts[2], (int)$date_parts[0]);
+}
+
+/**
+ * Validate RFQ header values before persistence.
+ *
+ * @param string      $description
+ * @param string      $created_date
+ * @param string|null $deadline_date
+ * @param string|null $validity_date
+ * @param string|null $required_delivery_date
+ * @param string      $error_message
+ * @return bool
+ */
+function can_save_purch_rfq_header_data($description, $created_date, $deadline_date = null,
+	$validity_date = null, $required_delivery_date = null, &$error_message = '')
+{
+	$description = trim((string)$description);
+	$created_date = trim((string)$created_date);
+	$deadline_date = trim((string)$deadline_date);
+	$validity_date = trim((string)$validity_date);
+	$required_delivery_date = trim((string)$required_delivery_date);
+
+	if ($description === '') {
+		$error_message = _('Enter a short RFQ description.');
+		return false;
+	}
+
+	if (!is_valid_purch_rfq_sql_date($created_date)) {
+		$error_message = _('The RFQ date is invalid.');
+		return false;
+	}
+
+	if ($deadline_date !== '' && !is_valid_purch_rfq_sql_date($deadline_date)) {
+		$error_message = _('The deadline date is invalid.');
+		return false;
+	}
+
+	if ($validity_date !== '' && !is_valid_purch_rfq_sql_date($validity_date)) {
+		$error_message = _('The validity date is invalid.');
+		return false;
+	}
+
+	if ($required_delivery_date !== '' && !is_valid_purch_rfq_sql_date($required_delivery_date)) {
+		$error_message = _('The required delivery date is invalid.');
+		return false;
+	}
+
+	if ($deadline_date !== '' && strcmp($deadline_date, $created_date) < 0) {
+		$error_message = _('The deadline date cannot be earlier than the RFQ date.');
+		return false;
+	}
+
+	if ($validity_date !== '' && strcmp($validity_date, $created_date) < 0) {
+		$error_message = _('The validity date cannot be earlier than the RFQ date.');
+		return false;
+	}
+
+	if ($validity_date !== '' && $deadline_date !== '' && strcmp($validity_date, $deadline_date) < 0) {
+		$error_message = _('The validity date cannot be earlier than the deadline date.');
+		return false;
+	}
+
+	if ($required_delivery_date !== '' && strcmp($required_delivery_date, $created_date) < 0) {
+		$error_message = _('The required delivery date cannot be earlier than the RFQ date.');
+		return false;
+	}
+
+	if ($required_delivery_date !== '' && $deadline_date !== '' && strcmp($required_delivery_date, $deadline_date) < 0) {
+		$error_message = _('The required delivery date cannot be earlier than the deadline date.');
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Validate RFQ item values before persistence.
+ *
+ * @param string $stock_id
+ * @param float  $quantity
+ * @param float  $target_price
+ * @param string $error_message
+ * @return bool
+ */
+function can_save_purch_rfq_item_data($stock_id, $quantity, $target_price, &$error_message = '')
+{
+	$stock_id = trim((string)$stock_id);
+
+	if ($stock_id === '') {
+		$error_message = _('You must select an item.');
+		return false;
+	}
+
+	if (!is_numeric($quantity) || (float)$quantity <= 0) {
+		$error_message = _('The quantity must be greater than zero.');
+		return false;
+	}
+
+	if (!is_numeric($target_price) || (float)$target_price < 0) {
+		$error_message = _('The target price must be numeric and not less than zero.');
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Normalize RFQ vendor response lines before persistence.
+ *
+ * @param array  $item_rows
+ * @param array  $lines
+ * @param array  $normalized_lines
+ * @param string $error_message
+ * @return bool
+ */
+function normalize_purch_rfq_response_lines($item_rows, $lines, &$normalized_lines, &$error_message = '')
+{
+	$normalized_lines = array();
+
+	foreach ((array)$lines as $line) {
+		$rfq_item_id = isset($line['rfq_item_id']) ? (int)$line['rfq_item_id'] : 0;
+		if ($rfq_item_id <= 0 || !isset($item_rows[$rfq_item_id]))
+			continue;
+
+		$quoted_price_value = isset($line['quoted_price']) ? trim((string)$line['quoted_price']) : '';
+		$quoted_quantity_value = isset($line['quoted_quantity']) ? trim((string)$line['quoted_quantity']) : '';
+		$lead_days_value = isset($line['delivery_lead_days']) ? trim((string)$line['delivery_lead_days']) : '';
+		$line_notes = isset($line['notes']) ? trim((string)$line['notes']) : '';
+		$line_custom_data = isset($line['custom_data']) ? $line['custom_data'] : array();
+
+		if ($quoted_price_value === '')
+			$quoted_price = 0;
+		elseif (!is_numeric($quoted_price_value)) {
+			$error_message = _('Each quoted price must be numeric.');
+			return false;
+		} else
+			$quoted_price = (float)$quoted_price_value;
+
+		if ($quoted_quantity_value === '')
+			$quoted_quantity = 0;
+		elseif (!is_numeric($quoted_quantity_value)) {
+			$error_message = _('Each quoted quantity must be numeric.');
+			return false;
+		} else
+			$quoted_quantity = (float)$quoted_quantity_value;
+
+		if ($lead_days_value === '')
+			$line_lead_days = 0;
+		elseif (!preg_match('/^-?\d+$/', $lead_days_value)) {
+			$error_message = _('Each quoted lead time must be a whole number of days.');
+			return false;
+		} else
+			$line_lead_days = (int)$lead_days_value;
+
+		if ($quoted_price < 0) {
+			$error_message = _('Each quoted price must be zero or greater.');
+			return false;
+		}
+
+		if ($line_lead_days < 0) {
+			$error_message = _('Each quoted lead time must be zero or greater.');
+			return false;
+		}
+
+		if ($quoted_price == 0) {
+			if ($quoted_quantity > 0 || $line_lead_days > 0 || $line_notes !== '') {
+				$error_message = _('Enter a positive quoted price for each vendor response line you save.');
+				return false;
+			}
+			continue;
+		}
+
+		if ($quoted_quantity <= 0) {
+			$error_message = _('Each quoted line must have a quantity greater than zero.');
+			return false;
+		}
+
+		$normalized_lines[] = array(
+			'rfq_item_id' => $rfq_item_id,
+			'quoted_price' => $quoted_price,
+			'quoted_quantity' => $quoted_quantity,
+			'delivery_lead_days' => $line_lead_days,
+			'notes' => $line_notes,
+			'custom_data' => $line_custom_data,
+		);
+	}
+
+	if (empty($normalized_lines)) {
+		$error_message = _('Enter at least one priced vendor response line before saving.');
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * Get the editable RFQ header row.
  *
  * @param int $rfq_id
@@ -377,28 +592,52 @@ function get_purch_rfqs($status = '', $date_from = '', $date_to = '', $rfq_type 
  * @param string      $reference
  * @param string|null $created_date
  * @param mixed       $custom_data
- * @return int
+ * @param string|null $error_message
+ * @return int|false
  */
 function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 	$notes = '', $terms_and_conditions = '', $delivery_location = '',
 	$required_delivery_date = null, $evaluation_criteria = '', $validity_date = null,
 	$dimension_id = 0, $dimension2_id = 0, $reference = '', $created_date = null,
-	$custom_data = array())
+	$custom_data = array(), &$error_message = null)
 {
-	$created_date = $created_date ? $created_date : date2sql(Today());
-	$deadline_date = $deadline_date ? $deadline_date : get_default_purch_rfq_deadline_date($created_date);
+	$error_message = null;
+	$rfq_type = trim((string)$rfq_type) !== '' ? trim((string)$rfq_type) : 'standard';
+	$description = trim((string)$description);
+	$notes = trim((string)$notes);
+	$terms_and_conditions = trim((string)$terms_and_conditions);
+	$delivery_location = trim((string)$delivery_location);
+	$evaluation_criteria = trim((string)$evaluation_criteria);
+	$reference = trim((string)$reference);
+	$created_date = $created_date ? trim((string)$created_date) : date2sql(Today());
+	$deadline_date = $deadline_date ? trim((string)$deadline_date) : '';
+	$validity_date = $validity_date ? trim((string)$validity_date) : '';
+	$required_delivery_date = $required_delivery_date ? trim((string)$required_delivery_date) : '';
+
+	if ($deadline_date === '' && is_valid_purch_rfq_sql_date($created_date))
+		$deadline_date = get_default_purch_rfq_deadline_date($created_date);
+
+	if (!can_save_purch_rfq_header_data(
+		$description,
+		$created_date,
+		$deadline_date,
+		$validity_date,
+		$required_delivery_date,
+		$error_message
+	))
+		return false;
 
 	$hook_data = array(
 		'rfq_type' => $rfq_type,
 		'description' => $description,
-		'deadline_date' => $deadline_date,
+		'deadline_date' => $deadline_date !== '' ? $deadline_date : null,
 		'requisition_id' => (int)$requisition_id,
 		'notes' => $notes,
 		'terms_and_conditions' => $terms_and_conditions,
 		'delivery_location' => $delivery_location,
-		'required_delivery_date' => $required_delivery_date,
+		'required_delivery_date' => $required_delivery_date !== '' ? $required_delivery_date : null,
 		'evaluation_criteria' => $evaluation_criteria,
-		'validity_date' => $validity_date,
+		'validity_date' => $validity_date !== '' ? $validity_date : null,
 		'dimension_id' => (int)$dimension_id,
 		'dimension2_id' => (int)$dimension2_id,
 		'reference' => $reference,
@@ -477,34 +716,59 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
  * @param string      $reference
  * @param string|null $created_date
  * @param mixed       $custom_data
+ * @param string|null $error_message
  * @return bool
  */
 function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $requisition_id,
 	$notes = '', $terms_and_conditions = '', $delivery_location = '',
 	$required_delivery_date = null, $evaluation_criteria = '', $validity_date = null,
 	$dimension_id = 0, $dimension2_id = 0, $reference = '', $created_date = null,
-	$custom_data = array())
+	$custom_data = array(), &$error_message = null)
 {
+	$error_message = null;
 	$rfq = get_editable_purch_rfq($rfq_id);
 	if (!$rfq)
 		return false;
 
-	$created_date = $created_date ? $created_date : $rfq['created_date'];
-	$deadline_date = $deadline_date ? $deadline_date : get_default_purch_rfq_deadline_date($created_date);
-	$reference = $reference !== '' ? $reference : $rfq['reference'];
+	$rfq_type = trim((string)$rfq_type) !== '' ? trim((string)$rfq_type) : $rfq['rfq_type'];
+	$description = trim((string)$description);
+	$notes = trim((string)$notes);
+	$terms_and_conditions = trim((string)$terms_and_conditions);
+	$delivery_location = trim((string)$delivery_location);
+	$evaluation_criteria = trim((string)$evaluation_criteria);
+	$reference = trim((string)$reference);
+	$created_date = $created_date ? trim((string)$created_date) : $rfq['created_date'];
+	$deadline_date = $deadline_date ? trim((string)$deadline_date) : '';
+	$validity_date = $validity_date ? trim((string)$validity_date) : '';
+	$required_delivery_date = $required_delivery_date ? trim((string)$required_delivery_date) : '';
+
+	if ($deadline_date === '' && is_valid_purch_rfq_sql_date($created_date))
+		$deadline_date = get_default_purch_rfq_deadline_date($created_date);
+	if ($reference === '')
+		$reference = $rfq['reference'];
+
+	if (!can_save_purch_rfq_header_data(
+		$description,
+		$created_date,
+		$deadline_date,
+		$validity_date,
+		$required_delivery_date,
+		$error_message
+	))
+		return false;
 
 	$hook_data = array(
 		'id' => (int)$rfq_id,
 		'rfq_type' => $rfq_type,
 		'description' => $description,
-		'deadline_date' => $deadline_date,
+		'deadline_date' => $deadline_date !== '' ? $deadline_date : null,
 		'requisition_id' => (int)$requisition_id,
 		'notes' => $notes,
 		'terms_and_conditions' => $terms_and_conditions,
 		'delivery_location' => $delivery_location,
-		'required_delivery_date' => $required_delivery_date,
+		'required_delivery_date' => $required_delivery_date !== '' ? $required_delivery_date : null,
 		'evaluation_criteria' => $evaluation_criteria,
-		'validity_date' => $validity_date,
+		'validity_date' => $validity_date !== '' ? $validity_date : null,
 		'dimension_id' => (int)$dimension_id,
 		'dimension2_id' => (int)$dimension2_id,
 		'reference' => $reference,
@@ -597,12 +861,17 @@ function get_next_purch_rfq_item_sort_order($rfq_id)
  * @param string      $unit_of_measure
  * @param int         $sort_order
  * @param mixed       $custom_data
+ * @param string|null $error_message
  * @return int|false
  */
 function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specifications = '',
 	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null)
 {
 	$error_message = null;
+	$stock_id = trim((string)$stock_id);
+	$specifications = trim((string)$specifications);
+	$description = trim((string)$description);
+	$unit_of_measure = trim((string)$unit_of_measure);
 
 	$rfq = get_editable_purch_rfq($rfq_id);
 	if (!$rfq) {
@@ -614,14 +883,12 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
 		return false;
 	}
 
+	if (!can_save_purch_rfq_item_data($stock_id, $quantity, $target_price, $error_message))
+		return false;
+
 	$item = get_item($stock_id);
 	if (!$item) {
 		$error_message = _('The selected item could not be found.');
-		return false;
-	}
-
-	if ($quantity <= 0) {
-		$error_message = _('The quantity must be greater than zero.');
 		return false;
 	}
 
@@ -667,11 +934,18 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
  * @param string      $unit_of_measure
  * @param int         $sort_order
  * @param mixed       $custom_data
+ * @param string|null $error_message
  * @return bool
  */
 function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifications = '',
-	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array())
+	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null)
 {
+	$error_message = null;
+	$stock_id = trim((string)$stock_id);
+	$specifications = trim((string)$specifications);
+	$description = trim((string)$description);
+	$unit_of_measure = trim((string)$unit_of_measure);
+
 	$sql = "SELECT * FROM " . TB_PREF . "purch_rfq_items WHERE id = " . (int)$item_id;
 	$result = db_query($sql, 'could not get RFQ item');
 	$item_row = db_fetch($result);
@@ -679,7 +953,10 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 		return false;
 
 	$rfq = get_editable_purch_rfq((int)$item_row['rfq_id']);
-	if (!$rfq || $quantity <= 0)
+	if (!$rfq)
+		return false;
+
+	if (!can_save_purch_rfq_item_data($stock_id, $quantity, $target_price, $error_message))
 		return false;
 
 	$item = get_item($stock_id);
@@ -1007,28 +1284,51 @@ function update_purch_rfq_status_from_activity($rfq_id)
  *
  * @param int   $rfq_id
  * @param array $vendor_ids
+ * @param string|null $error_message
  * @return bool
  */
-function send_rfq_to_vendors($rfq_id, $vendor_ids = array())
+function send_rfq_to_vendors($rfq_id, $vendor_ids = array(), &$error_message = null)
 {
+	$error_message = null;
 	$rfq = get_purch_rfq($rfq_id);
 	if (!$rfq || !in_array($rfq['status'], array('draft', 'sent', 'received', 'evaluated')))
 		return false;
+	if ((int)$rfq['item_count'] <= 0) {
+		$error_message = _('Add at least one RFQ item before sending the RFQ to vendors.');
+		return false;
+	}
 
 	$selected_vendor_ids = array();
 	foreach ($vendor_ids as $vendor_id) {
 		if ((int)$vendor_id > 0)
 			$selected_vendor_ids[] = (int)$vendor_id;
 	}
+	$selected_vendor_ids = array_values(array_unique($selected_vendor_ids));
 
 	if (empty($selected_vendor_ids)) {
 		$vendors = get_rfq_vendors($rfq_id);
 		while ($vendor = db_fetch($vendors))
 			$selected_vendor_ids[] = (int)$vendor['id'];
+		$selected_vendor_ids = array_values(array_unique($selected_vendor_ids));
 	}
 
-	if (empty($selected_vendor_ids))
+	if (empty($selected_vendor_ids)) {
+		$error_message = _('Add at least one vendor before sending the RFQ.');
 		return false;
+	}
+
+	$valid_vendor_ids = array();
+	$rfq_vendors = get_rfq_vendors($rfq_id);
+	while ($rfq_vendor = db_fetch($rfq_vendors)) {
+		if (in_array((int)$rfq_vendor['id'], $selected_vendor_ids))
+			$valid_vendor_ids[] = (int)$rfq_vendor['id'];
+	}
+
+	$selected_vendor_ids = array_values(array_unique($valid_vendor_ids));
+	if (empty($selected_vendor_ids)) {
+		$error_message = _('The selected vendors do not belong to this RFQ.');
+		return false;
+	}
 
 	$sql = "UPDATE " . TB_PREF . "purch_rfq_vendors SET
 		sent_date = NOW(),
@@ -1066,10 +1366,13 @@ function send_rfq_to_vendors($rfq_id, $vendor_ids = array())
  * @param string $notes
  * @param string $payment_terms
  * @param mixed  $custom_data
+ * @param string|null $error_message
  * @return bool
  */
-function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_days, $notes, $payment_terms = '', $custom_data = array())
+function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_days, $notes,
+	$payment_terms = '', $custom_data = array(), &$error_message = null)
 {
+	$error_message = null;
 	$rfq = get_purch_rfq($rfq_id);
 	if (!$rfq || in_array($rfq['status'], array('awarded', 'cancelled', 'expired')))
 		return false;
@@ -1086,23 +1389,34 @@ function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_day
 	if (empty($item_rows))
 		return false;
 
+	if (!is_numeric($total) || (float)$total < 0) {
+		$error_message = _('The quoted total must be zero or greater.');
+		return false;
+	}
+
+	$lead_days_value = trim((string)$lead_days);
+	if ($lead_days_value !== '' && (!preg_match('/^-?\d+$/', $lead_days_value) || (int)$lead_days_value < 0)) {
+		$error_message = _('The vendor lead time must be a whole number of days not less than zero.');
+		return false;
+	}
+	$lead_days = $lead_days_value === '' ? 0 : (int)$lead_days_value;
+
+	$normalized_lines = array();
+	if (!normalize_purch_rfq_response_lines($item_rows, $lines, $normalized_lines, $error_message))
+		return false;
+
 	begin_transaction();
 
 	$sql = "DELETE FROM " . TB_PREF . "purch_rfq_vendor_lines WHERE rfq_vendor_id = " . (int)$rfq_vendor['id'];
 	db_query($sql, 'could not clear RFQ vendor response lines');
 
 	$computed_total = 0;
-	foreach ((array)$lines as $line) {
-		$rfq_item_id = isset($line['rfq_item_id']) ? (int)$line['rfq_item_id'] : 0;
-		if ($rfq_item_id <= 0 || !isset($item_rows[$rfq_item_id]))
-			continue;
-
-		$quoted_price = isset($line['quoted_price']) ? (float)$line['quoted_price'] : 0;
-		$quoted_quantity = isset($line['quoted_quantity']) && (float)$line['quoted_quantity'] > 0
-			? (float)$line['quoted_quantity']
-			: (float)$item_rows[$rfq_item_id]['quantity'];
-		$line_lead_days = isset($line['delivery_lead_days']) ? (int)$line['delivery_lead_days'] : 0;
-		$line_notes = isset($line['notes']) ? trim($line['notes']) : '';
+	foreach ($normalized_lines as $line) {
+		$rfq_item_id = (int)$line['rfq_item_id'];
+		$quoted_price = (float)$line['quoted_price'];
+		$quoted_quantity = (float)$line['quoted_quantity'];
+		$line_lead_days = (int)$line['delivery_lead_days'];
+		$line_notes = trim((string)$line['notes']);
 		$line_custom_data = isset($line['custom_data']) ? $line['custom_data'] : array();
 
 		$sql = "INSERT INTO " . TB_PREF . "purch_rfq_vendor_lines (
@@ -1272,13 +1586,21 @@ function award_rfq($rfq_id, $winning_vendor_id, $line_awards = array())
 		return false;
 
 	$award_map = array();
+	$vendor_line_maps = array();
 	foreach ((array)$line_awards as $rfq_item_id => $vendor_reference) {
 		if ((int)$rfq_item_id <= 0 || !in_array((int)$rfq_item_id, $item_ids))
 			continue;
 
 		$rfq_vendor = resolve_purch_rfq_vendor_reference($rfq_id, $vendor_reference);
-		if ($rfq_vendor)
-			$award_map[(int)$rfq_item_id] = (int)$rfq_vendor['id'];
+		if (!$rfq_vendor)
+			continue;
+
+		$rfq_vendor_id = (int)$rfq_vendor['id'];
+		if (!isset($vendor_line_maps[$rfq_vendor_id]))
+			$vendor_line_maps[$rfq_vendor_id] = get_rfq_vendor_line_map($rfq_vendor_id);
+
+		if (isset($vendor_line_maps[$rfq_vendor_id][(int)$rfq_item_id]))
+			$award_map[(int)$rfq_item_id] = $rfq_vendor_id;
 	}
 
 	if (empty($award_map) && (int)$winning_vendor_id > 0) {
@@ -1286,10 +1608,14 @@ function award_rfq($rfq_id, $winning_vendor_id, $line_awards = array())
 		if (!$rfq_vendor)
 			return false;
 
-		$vendor_lines = get_rfq_vendor_line_map((int)$rfq_vendor['id']);
+		$rfq_vendor_id = (int)$rfq_vendor['id'];
+		if (!isset($vendor_line_maps[$rfq_vendor_id]))
+			$vendor_line_maps[$rfq_vendor_id] = get_rfq_vendor_line_map($rfq_vendor_id);
+
+		$vendor_lines = $vendor_line_maps[$rfq_vendor_id];
 		foreach ($item_ids as $rfq_item_id) {
 			if (isset($vendor_lines[$rfq_item_id]))
-				$award_map[$rfq_item_id] = (int)$rfq_vendor['id'];
+				$award_map[$rfq_item_id] = $rfq_vendor_id;
 		}
 	}
 
@@ -1394,7 +1720,7 @@ function create_po_from_rfq($rfq_id, $vendor_id, $line_ids = array())
 		$vendor_line = $vendor_lines[$rfq_item_id];
 		$quantity = (float)$vendor_line['quoted_quantity'] > 0 ? (float)$vendor_line['quoted_quantity'] : (float)$rfq_item['quantity'];
 		$price = (float)$vendor_line['quoted_price'];
-		if ($quantity <= 0 || $price < 0)
+		if ($quantity <= 0 || $price <= 0)
 			continue;
 
 		$description = $rfq_item['line_description'] !== '' ? $rfq_item['line_description'] : null;

@@ -65,6 +65,55 @@ function can_save_purchase_rfq_header()
 		return false;
 	}
 
+	if (get_post('deadline_date') !== '' && date1_greater_date2(get_post('created_date'), get_post('deadline_date'))) {
+		display_error(_('The deadline date cannot be earlier than the RFQ date.'));
+		set_focus('deadline_date');
+		return false;
+	}
+
+	if (get_post('validity_date') !== '' && date1_greater_date2(get_post('created_date'), get_post('validity_date'))) {
+		display_error(_('The validity date cannot be earlier than the RFQ date.'));
+		set_focus('validity_date');
+		return false;
+	}
+
+	if (get_post('validity_date') !== '' && get_post('deadline_date') !== ''
+		&& date1_greater_date2(get_post('deadline_date'), get_post('validity_date')))
+	{
+		display_error(_('The validity date cannot be earlier than the deadline date.'));
+		set_focus('validity_date');
+		return false;
+	}
+
+	if (get_post('required_delivery_date') !== '' && date1_greater_date2(get_post('created_date'), get_post('required_delivery_date'))) {
+		display_error(_('The required delivery date cannot be earlier than the RFQ date.'));
+		set_focus('required_delivery_date');
+		return false;
+	}
+
+	if (get_post('required_delivery_date') !== '' && get_post('deadline_date') !== ''
+		&& date1_greater_date2(get_post('deadline_date'), get_post('required_delivery_date')))
+	{
+		display_error(_('The required delivery date cannot be earlier than the deadline date.'));
+		set_focus('required_delivery_date');
+		return false;
+	}
+
+	$linked_requisition_id = trim(get_post('linked_requisition_id'));
+	if ($linked_requisition_id !== '') {
+		if (!preg_match('/^\d+$/', $linked_requisition_id) || (int)$linked_requisition_id <= 0) {
+			display_error(_('The linked requisition ID must be a positive whole number.'));
+			set_focus('linked_requisition_id');
+			return false;
+		}
+
+		if (!get_purch_requisition((int)$linked_requisition_id)) {
+			display_error(_('The linked requisition could not be found.'));
+			set_focus('linked_requisition_id');
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -81,15 +130,132 @@ function can_save_purchase_rfq_item()
 		return false;
 	}
 
-	if (!check_num('rfq_item_quantity', 0)) {
+	if (!check_num('rfq_item_quantity', 0.001)) {
 		display_error(_('The quantity must be greater than zero.'));
 		set_focus('rfq_item_quantity');
 		return false;
 	}
 
 	if (!check_num('rfq_item_target_price', 0)) {
-		display_error(_('The target price must be numeric.'));
+		display_error(_('The target price must be numeric and not less than zero.'));
 		set_focus('rfq_item_target_price');
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Validate one inline RFQ item update.
+ *
+ * @param int $rfq_item_id
+ * @return bool
+ */
+function can_save_purchase_rfq_item_update($rfq_item_id)
+{
+	if (trim(get_post('edit_rfq_stock_' . $rfq_item_id)) === '') {
+		display_error(_('You must select an item.'));
+		return false;
+	}
+
+	if (!check_num('edit_rfq_qty_' . $rfq_item_id, 0.001)) {
+		display_error(_('The quantity must be greater than zero.'));
+		set_focus('edit_rfq_qty_' . $rfq_item_id);
+		return false;
+	}
+
+	if (!check_num('edit_rfq_price_' . $rfq_item_id, 0)) {
+		display_error(_('The target price must be numeric and not less than zero.'));
+		set_focus('edit_rfq_price_' . $rfq_item_id);
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Validate one vendor response before it is saved.
+ *
+ * @param int $rfq_vendor_id
+ * @return bool
+ */
+function can_save_purchase_rfq_vendor_response($rfq_vendor_id)
+{
+	$total_field = 'response_total_' . $rfq_vendor_id;
+	if (trim(get_post($total_field)) !== '' && !check_num($total_field, 0)) {
+		display_error(_('The quoted total must be numeric and not less than zero.'));
+		set_focus($total_field);
+		return false;
+	}
+
+	$vendor_lead_field = 'response_vendor_lead_' . $rfq_vendor_id;
+	$vendor_lead_value = trim(get_post($vendor_lead_field));
+	if ($vendor_lead_value !== '') {
+		if (!preg_match('/^-?\d+$/', $vendor_lead_value) || (int)$vendor_lead_value < 0) {
+			display_error(_('The vendor lead time must be a whole number of days not less than zero.'));
+			set_focus($vendor_lead_field);
+			return false;
+		}
+	}
+
+	$item_ids_csv = get_post('response_item_ids_' . $rfq_vendor_id);
+	$item_ids = $item_ids_csv !== '' ? explode(',', $item_ids_csv) : array();
+	$priced_line_count = 0;
+
+	foreach ($item_ids as $rfq_item_id) {
+		$rfq_item_id = (int)$rfq_item_id;
+		if ($rfq_item_id <= 0)
+			continue;
+
+		$price_field = 'response_price_' . $rfq_vendor_id . '_' . $rfq_item_id;
+		$quantity_field = 'response_qty_' . $rfq_vendor_id . '_' . $rfq_item_id;
+		$lead_field = 'response_lead_' . $rfq_vendor_id . '_' . $rfq_item_id;
+		$note_field = 'response_note_' . $rfq_vendor_id . '_' . $rfq_item_id;
+
+		$price_value = trim(get_post($price_field));
+		$quantity_value = trim(get_post($quantity_field));
+		$lead_value = trim(get_post($lead_field));
+		$note_value = trim(get_post($note_field));
+
+		if ($price_value !== '' && !check_num($price_field, 0)) {
+			display_error(_('Each quoted price must be numeric and not less than zero.'));
+			set_focus($price_field);
+			return false;
+		}
+
+		if ($quantity_value !== '' && !check_num($quantity_field, 0.001)) {
+			display_error(_('Each quoted quantity must be greater than zero.'));
+			set_focus($quantity_field);
+			return false;
+		}
+
+		if ($lead_value !== '') {
+			if (!preg_match('/^-?\d+$/', $lead_value) || (int)$lead_value < 0) {
+				display_error(_('Each quoted lead time must be a whole number of days not less than zero.'));
+				set_focus($lead_field);
+				return false;
+			}
+		}
+
+		$quoted_price = $price_value === '' ? 0 : input_num($price_field);
+		$quoted_quantity = $quantity_value === '' ? 0 : input_num($quantity_field);
+
+		if ($quoted_price > 0) {
+			if ($quoted_quantity <= 0) {
+				display_error(_('Each priced response line must include a quantity greater than zero.'));
+				set_focus($quantity_field);
+				return false;
+			}
+			$priced_line_count++;
+		} elseif ($quoted_quantity > 0 || $note_value !== '' || ($lead_value !== '' && (int)$lead_value > 0)) {
+			display_error(_('Enter a positive quoted price for each vendor response line you save.'));
+			set_focus($price_field);
+			return false;
+		}
+	}
+
+	if ($priced_line_count <= 0) {
+		display_error(_('Enter at least one priced vendor response line before saving.'));
 		return false;
 	}
 
@@ -193,6 +359,7 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 	$dimension_id = (int)get_post('dimension_id');
 	$dimension2_id = (int)get_post('dimension2_id');
 	$reference = trim(get_post('reference'));
+	$rfq_error_message = '';
 
 	if (isset($_POST['ADD_RFQ'])) {
 		$selected_id = add_purch_rfq(
@@ -209,11 +376,17 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$created_date
+			$created_date,
+			array(),
+			$rfq_error_message
 		);
 
-		display_notification(_('Purchase RFQ has been created.'));
-		meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $selected_id . get_sel_app_param());
+		if ($selected_id) {
+			display_notification(_('Purchase RFQ has been created.'));
+			meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $selected_id . get_sel_app_param());
+		} else {
+			display_error($rfq_error_message !== '' ? $rfq_error_message : _('The purchase RFQ could not be created.'));
+		}
 	} else {
 		if (update_purch_rfq(
 			$selected_id,
@@ -230,11 +403,13 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$created_date
+			$created_date,
+			array(),
+			$rfq_error_message
 		)) {
 			display_notification(_('Purchase RFQ has been updated.'));
 		} else {
-			display_error(_('The purchase RFQ could not be updated.'));
+			display_error($rfq_error_message !== '' ? $rfq_error_message : _('The purchase RFQ could not be updated.'));
 		}
 	}
 }
@@ -254,14 +429,17 @@ if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_ite
 		$item_error_message
 	);
 
-	if ($item_id)
+	if ($item_id) {
 		display_notification(_('RFQ item has been added.'));
-	else
+		$Ajax->activate('_page_body');
+	} else
 		display_error($item_error_message !== '' ? $item_error_message : _('The RFQ item could not be added.'));
 }
 
 $update_item_id = find_submit('UpdateRfqItem');
-if ($update_item_id > 0 && $selected_id > 0) {
+
+if ($update_item_id > 0 && $selected_id > 0 && can_save_purchase_rfq_item_update($update_item_id)) {
+	$item_error_message = '';
 	$updated = update_rfq_item(
 		$update_item_id,
 		get_post('edit_rfq_stock_' . $update_item_id),
@@ -269,31 +447,44 @@ if ($update_item_id > 0 && $selected_id > 0) {
 		input_num('edit_rfq_price_' . $update_item_id),
 		trim(get_post('edit_rfq_specs_' . $update_item_id)),
 		trim(get_post('edit_rfq_description_' . $update_item_id)),
-		trim(get_post('edit_rfq_uom_' . $update_item_id))
+		trim(get_post('edit_rfq_uom_' . $update_item_id)),
+		0,
+		array(),
+		$item_error_message
 	);
 
-	if ($updated)
+	if ($updated) {
 		display_notification(_('RFQ item has been updated.'));
-	else
-		display_error(_('The RFQ item could not be updated.'));
+		$Ajax->activate('_page_body');
+	} else
+		display_error($item_error_message !== '' ? $item_error_message : _('The RFQ item could not be updated.'));
 }
 
 $delete_item_id = find_submit('DeleteRfqItem');
 if ($delete_item_id > 0 && $selected_id > 0) {
-	if (delete_rfq_item($delete_item_id))
+	if (delete_rfq_item($delete_item_id)) {
 		display_notification(_('RFQ item has been deleted.'));
-	else
+		$Ajax->activate('_page_body');
+	} else
 		display_error(_('The RFQ item could not be deleted.'));
 }
 
 if (isset($_POST['AddVendor']) && $selected_id > 0) {
 	$supplier_id = get_post('add_supplier_id') == ALL_TEXT ? 0 : (int)get_post('add_supplier_id');
-	$rfq_vendor_id = add_rfq_vendor($selected_id, $supplier_id);
+	if ($supplier_id <= 0) {
+		display_error(_('You must select a vendor.'));
+		set_focus('add_supplier_id');
+	} elseif (get_purch_rfq_vendor_by_supplier($selected_id, $supplier_id)) {
+		display_error(_('The selected vendor is already invited to this RFQ.'));
+		set_focus('add_supplier_id');
+	} else {
+		$rfq_vendor_id = add_rfq_vendor($selected_id, $supplier_id);
 
-	if ($rfq_vendor_id)
-		display_notification(_('Vendor has been added to the RFQ.'));
-	else
-		display_error(_('The vendor could not be added to the RFQ.'));
+		if ($rfq_vendor_id)
+			display_notification(_('Vendor has been added to the RFQ.'));
+		else
+			display_error(_('The vendor could not be added to the RFQ.'));
+	}
 }
 
 $remove_vendor_id = find_submit('RemoveVendor');
@@ -306,11 +497,12 @@ if ($remove_vendor_id > 0 && $selected_id > 0) {
 }
 
 $record_vendor_response_id = find_submit('RecordVendorResponse');
-if ($record_vendor_response_id > 0 && $selected_id > 0) {
+if ($record_vendor_response_id > 0 && $selected_id > 0 && can_save_purchase_rfq_vendor_response($record_vendor_response_id)) {
 	$rfq_vendor = get_purch_rfq_vendor($record_vendor_response_id);
 	if (!$rfq_vendor || (int)$rfq_vendor['rfq_id'] !== (int)$selected_id) {
 		display_error(_('The selected vendor response could not be found.'));
 	} else {
+		$response_error_message = '';
 		$response_saved = record_vendor_response(
 			$selected_id,
 			(int)$rfq_vendor['supplier_id'],
@@ -318,21 +510,24 @@ if ($record_vendor_response_id > 0 && $selected_id > 0) {
 			input_num('response_total_' . $record_vendor_response_id),
 			(int)get_post('response_vendor_lead_' . $record_vendor_response_id),
 			trim(get_post('response_vendor_notes_' . $record_vendor_response_id)),
-			trim(get_post('response_payment_terms_' . $record_vendor_response_id))
+			trim(get_post('response_payment_terms_' . $record_vendor_response_id)),
+			array(),
+			$response_error_message
 		);
 
 		if ($response_saved)
 			display_notification(_('Vendor response has been saved.'));
 		else
-			display_error(_('The vendor response could not be saved.'));
+			display_error($response_error_message !== '' ? $response_error_message : _('The vendor response could not be saved.'));
 	}
 }
 
 if (isset($_POST['SendRFQ']) && $selected_id > 0) {
-	if (send_rfq_to_vendors($selected_id))
+	$send_error_message = '';
+	if (send_rfq_to_vendors($selected_id, array(), $send_error_message))
 		display_notification(_('RFQ has been marked as sent to the selected vendors.'));
 	else
-		display_error(_('The RFQ could not be sent.'));
+		display_error($send_error_message !== '' ? $send_error_message : _('The RFQ could not be sent.'));
 }
 
 $create_po_vendor_id = find_submit('CreatePOFromVendor');
@@ -381,12 +576,16 @@ if ($rfq) {
 	$_POST['dimension_id'] = $rfq['dimension_id'];
 	$_POST['dimension2_id'] = $rfq['dimension2_id'];
 	$_POST['reference'] = $rfq['reference'];
-	$_POST['linked_requisition_id'] = $rfq['requisition_id'];
+	$_POST['linked_requisition_id'] = (int)$rfq['requisition_id'] > 0 ? $rfq['requisition_id'] : '';
 } else {
 	if (!isset($_POST['created_date']))
 		$_POST['created_date'] = Today();
 	if (!isset($_POST['deadline_date']))
 		$_POST['deadline_date'] = add_days(Today(), (int)get_company_pref('rfq_default_deadline_days') > 0 ? (int)get_company_pref('rfq_default_deadline_days') : 14);
+	if (!isset($_POST['validity_date']))
+		$_POST['validity_date'] = '';
+	if (!isset($_POST['required_delivery_date']))
+		$_POST['required_delivery_date'] = '';
 	if (!isset($_POST['rfq_type']))
 		$_POST['rfq_type'] = 'standard';
 	if (!isset($_POST['dimension_id']))
@@ -394,7 +593,7 @@ if ($rfq) {
 	if (!isset($_POST['dimension2_id']))
 		$_POST['dimension2_id'] = 0;
 	if (!isset($_POST['linked_requisition_id']))
-		$_POST['linked_requisition_id'] = $bridge_requisition_id;
+		$_POST['linked_requisition_id'] = $bridge_requisition_id > 0 ? $bridge_requisition_id : '';
 }
 
 $rfq_types = get_purch_rfq_types();
@@ -451,7 +650,8 @@ if (!$rfq) {
 	br();
 }
 
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+table_section(1);
 
 if ($editable) {
 	echo '<tr><td class="label">' . _('RFQ Type:') . '</td><td>';
@@ -459,11 +659,14 @@ if ($editable) {
 	echo '</td></tr>';
 	date_row(_('RFQ Date:'), 'created_date');
 	date_row(_('Deadline Date:'), 'deadline_date');
-	date_row(_('Validity Date:'), 'validity_date');
-	date_row(_('Required Delivery Date:'), 'required_delivery_date');
+	date_row(_('Validity Date:'), 'validity_date', null, null, 0, 0, 1001);
+	date_row(_('Required Delivery Date:'), 'required_delivery_date', null, null, 0, 0, 1001);
 	locations_list_row(_('Delivery Location:'), 'delivery_location', get_post('delivery_location'), true);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	text_row(_('Description:'), 'rfq_description', get_post('rfq_description'), 50, 255);
+
+	table_section(2);
+
 	text_row(_('Linked Requisition ID:'), 'linked_requisition_id', get_post('linked_requisition_id'), 10, 10);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
@@ -479,15 +682,22 @@ if ($editable) {
 	label_row(_('Delivery Location:'), $rfq['delivery_location_name'] ? $rfq['delivery_location_name'] : '-');
 	label_row(_('Reference:'), $rfq['reference']);
 	label_row(_('Description:'), $rfq['description'] ? $rfq['description'] : '-');
+
+	table_section(2);
+
 	if ((int)$rfq['requisition_id'] > 0)
 		label_row(_('Linked Requisition:'), '<a href="' . $path_to_root . '/purchasing/purch_requisition_entry.php?requisition_id=' . (int)$rfq['requisition_id'] . '">' . htmlspecialchars($rfq['requisition_reference']) . '</a>');
+	else
+		label_row(_('Linked Requisition:'), '-');
+	label_row(_('Dimension:'), (int)$rfq['dimension_id'] > 0 ? (int)$rfq['dimension_id'] : '-');
+	label_row(_('Dimension 2:'), (int)$rfq['dimension2_id'] > 0 ? (int)$rfq['dimension2_id'] : '-');
 	label_row(_('Evaluation Criteria:'), $rfq['evaluation_criteria'] ? nl2br(htmlspecialchars($rfq['evaluation_criteria'])) : '-');
 	label_row(_('Terms and Conditions:'), $rfq['terms_and_conditions'] ? nl2br(htmlspecialchars($rfq['terms_and_conditions'])) : '-');
 	label_row(_('Notes:'), $rfq['notes'] ? nl2br(htmlspecialchars($rfq['notes'])) : '-');
 	label_row(_('Target Total:'), price_format($rfq['target_total']));
 }
 
-end_table(1);
+end_outer_table();
 
 hidden('selected_id', $selected_id);
 
@@ -540,7 +750,7 @@ if ($rfq) {
 		end_row();
 	}
 
-	if ($k == 0)
+	if (empty($rfq_items))
 		label_row('', _('No RFQ items have been added yet.'), 'colspan=' . ($editable ? 9 : 8) . ' align=center');
 
 	end_table(1);
@@ -590,7 +800,7 @@ if ($rfq) {
 		end_row();
 	}
 
-	if ($k == 0)
+	if (empty($rfq_vendors))
 		label_row('', _('No vendors have been invited yet.'), 'colspan=8 align=center');
 
 	end_table(1);

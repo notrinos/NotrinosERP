@@ -150,7 +150,7 @@ foreach ($comparison['vendors'] as $rfq_vendor_id => $vendor) {
 	amount_cell($vendor['total_quoted']);
 	label_cell((int)$vendor['delivery_lead_days'] > 0 ? (int)$vendor['delivery_lead_days'] : '-');
 	echo '<td><input type="text" name="vendor_score_' . $rfq_vendor_id . '" value="' . number_format((float)$vendor['evaluator_score'], 2) . '" size="6" class="amount"></td>';
-	echo '<td><input type="text" name="vendor_score_notes_' . $rfq_vendor_id . '" value="' . htmlspecialchars($vendor['evaluator_notes'], ENT_QUOTES, 'UTF-8') . '" size="30"></td>';
+	echo '<td><input type="text" name="vendor_score_notes_' . $rfq_vendor_id . '" value="' . htmlspecialchars($vendor['evaluator_notes'] !== null ? $vendor['evaluator_notes'] : '', ENT_QUOTES, 'UTF-8') . '" size="30"></td>';
 	echo '<td nowrap>';
 	submit('UpdateVendorScore' . $rfq_vendor_id, _('Save Score'), true, _('Save evaluation score'));
 	echo '&nbsp;';
@@ -162,6 +162,7 @@ foreach ($comparison['vendors'] as $rfq_vendor_id => $vendor) {
 	}
 	echo '</td>';
 	end_row();
+	$k++;
 }
 
 if ($k == 0)
