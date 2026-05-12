@@ -167,6 +167,28 @@ function collect_employee_data() {
 	return $data;
 }
 
+/**
+ * Validate that a child record belongs to the selected employee.
+ *
+ * @param array|false $record
+ * @param string $employee_id
+ * @param string $record_label
+ * @return bool
+ */
+function is_employee_child_record_accessible($record, $employee_id, $record_label) {
+	if (!$record) {
+		display_error(sprintf(_('%s record could not be found.'), $record_label));
+		return false;
+	}
+
+	if (!isset($record['employee_id']) || $record['employee_id'] != $employee_id) {
+		display_error(sprintf(_('%s record does not belong to the selected employee.'), $record_label));
+		return false;
+	}
+
+	return true;
+}
+
 //======================================================================
 // TAB 1: PERSONAL INFORMATION
 //======================================================================
@@ -353,7 +375,7 @@ function tab_salary($employee_id) {
 	if ($emp['personal_salary']) {
 		if (isset($_GET['edit_salary'])) {
 			$editing_salary = get_employee_salary($_GET['edit_salary']);
-			if ($editing_salary && $editing_salary['employee_id'] == $employee_id) {
+			if (is_employee_child_record_accessible($editing_salary, $employee_id, _('Salary element'))) {
 				$_POST['editing_salary_id'] = $editing_salary['salary_id'];
 				$_POST['sal_element_id'] = $editing_salary['element_id'];
 				$_POST['sal_amount'] = price_format($editing_salary['amount']);
@@ -366,14 +388,23 @@ function tab_salary($employee_id) {
 
 		// Handle delete salary element
 		if (isset($_GET['delete_salary'])) {
-			delete_employee_salary($_GET['delete_salary']);
-			display_notification(_('Salary element removed.'));
+			$deleting_salary = get_employee_salary($_GET['delete_salary']);
+			if (is_employee_child_record_accessible($deleting_salary, $employee_id, _('Salary element'))) {
+				delete_employee_salary($deleting_salary['salary_id']);
+				display_notification(_('Salary element removed.'));
+			}
 			$Ajax->activate('_page_body');
 		}
 
 		// Handle add salary element
 		if (isset($_POST['add_salary_element'])) {
 			$input_error = 0;
+			$editing_salary = false;
+			if (get_post('editing_salary_id')) {
+				$editing_salary = get_employee_salary(get_post('editing_salary_id'));
+				if (!is_employee_child_record_accessible($editing_salary, $employee_id, _('Salary element')))
+					$input_error = 1;
+			}
 			if (!get_post('sal_element_id')) {
 				$input_error = 1;
 				display_error(_('Please select a pay element.'));
@@ -388,9 +419,9 @@ function tab_salary($employee_id) {
 			}
 
 			if (!$input_error) {
-				if (get_post('editing_salary_id')) {
+				if ($editing_salary) {
 					$ok = update_employee_salary(
-						get_post('editing_salary_id'),
+						$editing_salary['salary_id'],
 						input_num('sal_amount'),
 						get_post('sal_effective_from'),
 						get_post('sal_effective_to'),
@@ -481,16 +512,19 @@ function tab_documents($employee_id) {
 	// Handle delete document
 	if (isset($_GET['delete_doc'])) {
 		$doc = get_employee_document($_GET['delete_doc']);
-		if ($doc && !empty($doc['file_path']) && file_exists($doc['file_path']))
-			@unlink($doc['file_path']);
-		delete_employee_document($_GET['delete_doc']);
-		display_notification(_('Document deleted.'));
+		if (is_employee_child_record_accessible($doc, $employee_id, _('Document'))) {
+			if (!empty($doc['file_path']) && file_exists($doc['file_path']))
+				@unlink($doc['file_path']);
+			delete_employee_document($doc['doc_id']);
+			display_notification(_('Document deleted.'));
+		}
+		$Ajax->activate('_page_body');
 	}
 
 	$editing_doc = null;
 	if (isset($_GET['edit_doc'])) {
 		$editing_doc = get_employee_document($_GET['edit_doc']);
-		if ($editing_doc) {
+		if (is_employee_child_record_accessible($editing_doc, $employee_id, _('Document'))) {
 			$_POST['doc_type_id'] = $editing_doc['doc_type_id'];
 			$_POST['doc_name']    = $editing_doc['doc_name'];
 			$_POST['doc_issue_date']  = !empty($editing_doc['issue_date']) ? sql2date($editing_doc['issue_date']) : '';
@@ -502,6 +536,12 @@ function tab_documents($employee_id) {
 
 	if (isset($_POST['save_document'])) {
 		$input_error = 0;
+		$current_doc = false;
+		if (get_post('editing_doc_id')) {
+			$current_doc = get_employee_document(get_post('editing_doc_id'));
+			if (!is_employee_child_record_accessible($current_doc, $employee_id, _('Document')))
+				$input_error = 1;
+		}
 		if (!get_post('doc_type_id')) {
 			$input_error = 1;
 			display_error(_('Please select a document type.'));
@@ -525,12 +565,11 @@ function tab_documents($employee_id) {
 		}
 
 		if (!$input_error) {
-			if (get_post('editing_doc_id')) {
-				$existing = get_employee_document(get_post('editing_doc_id'));
-				if (empty($file_path) && $existing)
-					$file_path = $existing['file_path'];
+			if ($current_doc) {
+				if (empty($file_path))
+					$file_path = $current_doc['file_path'];
 				update_employee_document(
-					get_post('editing_doc_id'),
+					$current_doc['doc_id'],
 					get_post('doc_type_id'),
 					get_post('doc_name'),
 					$file_path,
@@ -540,7 +579,7 @@ function tab_documents($employee_id) {
 				);
 				display_notification(_('Document updated.'));
 			} else {
-				add_employee_document(
+				$document_id = add_employee_document(
 					$employee_id,
 					get_post('doc_type_id'),
 					get_post('doc_name'),
@@ -552,7 +591,7 @@ function tab_documents($employee_id) {
 				display_notification(_('Document added.'));
 
 				// Fire hook
-				hrm_fire_hook('on_document_uploaded', $employee_id, get_post('doc_type_id'));
+				hrm_fire_hook('on_document_uploaded', $document_id, $employee_id);
 			}
 			unset($_POST['doc_type_id'], $_POST['doc_name'], $_POST['doc_issue_date'], 
 				$_POST['doc_expiry_date'], $_POST['doc_notes'], $_POST['editing_doc_id']);
@@ -615,14 +654,18 @@ function tab_dependents($employee_id) {
 
 	// Handle delete dependent
 	if (isset($_GET['delete_dep'])) {
-		delete_employee_dependent($_GET['delete_dep']);
-		display_notification(_('Dependent deleted.'));
+		$dependent = get_employee_dependent($_GET['delete_dep']);
+		if (is_employee_child_record_accessible($dependent, $employee_id, _('Dependent'))) {
+			delete_employee_dependent($dependent['dependent_id']);
+			display_notification(_('Dependent deleted.'));
+		}
+		$Ajax->activate('_page_body');
 	}
 
 	$editing_dep = null;
 	if (isset($_GET['edit_dep'])) {
 		$editing_dep = get_employee_dependent($_GET['edit_dep']);
-		if ($editing_dep) {
+		if (is_employee_child_record_accessible($editing_dep, $employee_id, _('Dependent'))) {
 			$_POST['dep_name']          = $editing_dep['name'];
 			$_POST['dep_relationship']  = $editing_dep['relationship'];
 			$_POST['dep_birth_date']    = !empty($editing_dep['birth_date']) ? sql2date($editing_dep['birth_date']) : '';
@@ -635,6 +678,12 @@ function tab_dependents($employee_id) {
 
 	if (isset($_POST['save_dependent'])) {
 		$input_error = 0;
+		$current_dependent = false;
+		if (get_post('editing_dep_id')) {
+			$current_dependent = get_employee_dependent(get_post('editing_dep_id'));
+			if (!is_employee_child_record_accessible($current_dependent, $employee_id, _('Dependent')))
+				$input_error = 1;
+		}
 		if (empty(trim(get_post('dep_name')))) {
 			$input_error = 1;
 			display_error(_('Please enter the dependent\'s name.'));
@@ -645,9 +694,9 @@ function tab_dependents($employee_id) {
 		}
 
 		if (!$input_error) {
-			if (get_post('editing_dep_id')) {
+			if ($current_dependent) {
 				update_employee_dependent(
-					get_post('editing_dep_id'),
+					$current_dependent['dependent_id'],
 					get_post('dep_name'),
 					get_post('dep_relationship'),
 					get_post('dep_birth_date'),
@@ -760,6 +809,9 @@ if (get_post('cancel')) {
 
 // recompute new_employee after any of the above handlers
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
+
+if (!$new_employee && empty(get_post('NewEmpID')))
+	set_edit($employee_id);
 
 //======================================================================
 // HANDLE IMAGE UPLOAD
