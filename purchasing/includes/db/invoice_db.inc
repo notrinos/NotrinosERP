@@ -407,6 +407,18 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 
 	hook_db_postwrite($supp_trans, $supp_trans->trans_type);
 	commit_transaction();
+	if ((int)$trans_type == ST_SUPPINVOICE && function_exists('get_purch_agreement_ids_for_po_detail_items')
+		&& function_exists('update_agreement_fulfillment')) {
+		$po_detail_item_ids = array();
+		foreach ($supp_trans->grn_items as $entered_grn) {
+			if (!empty($entered_grn->po_detail_item))
+				$po_detail_item_ids[] = (int)$entered_grn->po_detail_item;
+		}
+
+		$agreement_ids = get_purch_agreement_ids_for_po_detail_items($po_detail_item_ids);
+		foreach ($agreement_ids as $agreement_id)
+			update_agreement_fulfillment((int)$agreement_id);
+	}
 
 	return $invoice_id;
 }

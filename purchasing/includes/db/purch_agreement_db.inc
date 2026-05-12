@@ -168,6 +168,99 @@ function get_editable_purch_agreement($agreement_id)
 }
 
 /**
+ * Validate one agreement line at the service layer.
+ *
+ * @param float       $committed_qty
+ * @param float       $unit_price
+ * @param float       $discount_percent
+ * @param float       $min_qty_per_order
+ * @param string|null $price_valid_until SQL date or null
+ * @return bool
+ */
+function is_purch_agreement_line_data_valid($committed_qty, $unit_price, $discount_percent,
+	$min_qty_per_order = 0, $price_valid_until = null)
+{
+	if (!is_numeric($committed_qty) || (float)$committed_qty <= 0)
+		return false;
+
+	if (!is_numeric($unit_price) || (float)$unit_price < 0)
+		return false;
+
+	if (!is_numeric($discount_percent)
+		|| (float)$discount_percent < 0
+		|| (float)$discount_percent > 100)
+		return false;
+
+	if (!is_numeric($min_qty_per_order) || (float)$min_qty_per_order < 0)
+		return false;
+
+	if ((float)$min_qty_per_order > (float)$committed_qty)
+		return false;
+
+	if ($price_valid_until !== null && $price_valid_until !== '' && $price_valid_until != '0000-00-00') {
+		if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $price_valid_until, $matches))
+			return false;
+
+		if (!checkdate((int)$matches[2], (int)$matches[3], (int)$matches[1]))
+			return false;
+	}
+
+	return true;
+}
+
+/**
+ * Check whether the agreement already contains the stock id on another line.
+ *
+ * @param int    $agreement_id
+ * @param string $stock_id
+ * @param int    $exclude_line_id
+ * @return bool
+ */
+function purch_agreement_has_duplicate_stock($agreement_id, $stock_id, $exclude_line_id = 0)
+{
+	$sql = "SELECT COUNT(*) AS duplicate_count
+		FROM " . TB_PREF . "purch_agreement_lines
+		WHERE agreement_id = " . db_escape($agreement_id) . "
+			AND stock_id = " . db_escape($stock_id);
+
+	if ($exclude_line_id > 0)
+		$sql .= " AND id <> " . db_escape($exclude_line_id);
+
+	$result = db_query($sql, 'could not check duplicate purchase agreement line');
+	$row = db_fetch($result);
+
+	return $row && (int)$row['duplicate_count'] > 0;
+}
+
+/**
+ * Ensure a draft agreement contains at least one valid line before submission.
+ *
+ * @param int $agreement_id
+ * @return bool
+ */
+function can_submit_purch_agreement_draft($agreement_id)
+{
+	$agreement = get_purch_agreement($agreement_id);
+	if (!$agreement || $agreement['status'] !== 'draft' || (int)$agreement['line_count'] <= 0)
+		return false;
+
+	$lines = get_agreement_lines($agreement_id);
+	while ($line = db_fetch($lines)) {
+		if (trim($line['stock_id']) === ''
+			|| !is_purch_agreement_line_data_valid(
+				$line['committed_qty'],
+				$line['unit_price'],
+				$line['discount_percent'],
+				$line['min_qty_per_order'],
+				$line['price_valid_until']
+			))
+			return false;
+	}
+
+	return true;
+}
+
+/**
  * Calculate and persist the total committed value for one agreement.
  *
  * @param int $agreement_id
@@ -379,7 +472,7 @@ function get_purchase_agreement_submission_data($agreement_id)
 function submit_purchase_agreement($agreement_id)
 {
 	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || $agreement['status'] !== 'draft' || (int)$agreement['line_count'] <= 0)
+	if (!$agreement || !can_submit_purch_agreement_draft($agreement_id))
 		return false;
 
 	$approval_amount = (float)$agreement['total_committed'];
@@ -680,7 +773,7 @@ function confirm_agreement($agreement_id)
 	$agreement = get_purch_agreement($agreement_id);
 	if (!$agreement || $agreement['status'] !== 'draft')
 		return false;
-	if ((int)$agreement['line_count'] <= 0)
+	if (!can_submit_purch_agreement_draft($agreement_id))
 		return false;
 
 	return set_purch_agreement_status($agreement_id, 'confirmed');
@@ -793,14 +886,17 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 {
 	$agreement = get_editable_purch_agreement($agreement_id);
 	$item = get_purchase_agreement_item($stock_id);
-	if (!$agreement || $committed_qty <= 0 || !$item)
-		return false;
-
-	$sql = "SELECT id FROM " . TB_PREF . "purch_agreement_lines
-		WHERE agreement_id = " . (int)$agreement_id . "
-		AND stock_id = " . db_escape($stock_id);
-	$result = db_query($sql, 'could not check duplicate purchase agreement line');
-	if (db_num_rows($result) > 0)
+	if (!$agreement
+		|| trim($stock_id) === ''
+		|| !$item
+		|| purch_agreement_has_duplicate_stock($agreement_id, $stock_id)
+		|| !is_purch_agreement_line_data_valid(
+			$committed_qty,
+			$unit_price,
+			$discount,
+			$min_qty_per_order,
+			$price_valid_until
+		))
 		return false;
 
 	$line_description = $description !== '' ? $description : $item['description'];
@@ -820,18 +916,19 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 		" . db_escape($stock_id) . ",
 		" . db_escape($line_description) . ",
 		" . db_escape($committed_qty) . ",
-		" . db_escape(max(0, $min_qty_per_order)) . ",
+		" . db_escape($min_qty_per_order) . ",
 		" . db_escape($unit_price) . ",
-		" . db_escape(max(0, $discount)) . ",
+		" . db_escape($discount) . ",
 		" . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
 		" . sql_purch_agreement_custom_data($custom_data) . "
 	)";
 	db_query($sql, 'could not insert purchase agreement line');
+	$line_id = db_insert_id();
 
 	update_purch_agreement_total_committed($agreement_id);
 	update_agreement_fulfillment($agreement_id);
 
-	return db_insert_id();
+	return $line_id;
 }
 
 /**
@@ -857,15 +954,17 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 
 	$agreement = get_editable_purch_agreement((int)$line['agreement_id']);
 	$item = get_purchase_agreement_item($stock_id);
-	if (!$agreement || $committed_qty <= 0 || !$item)
-		return false;
-
-	$sql = "SELECT id FROM " . TB_PREF . "purch_agreement_lines
-		WHERE agreement_id = " . (int)$line['agreement_id'] . "
-		AND stock_id = " . db_escape($stock_id) . "
-		AND id <> " . (int)$line_id;
-	$result = db_query($sql, 'could not check duplicate purchase agreement line on update');
-	if (db_num_rows($result) > 0)
+	if (!$agreement
+		|| trim($stock_id) === ''
+		|| !$item
+		|| purch_agreement_has_duplicate_stock((int)$line['agreement_id'], $stock_id, $line_id)
+		|| !is_purch_agreement_line_data_valid(
+			$committed_qty,
+			$unit_price,
+			$discount,
+			$min_qty_per_order,
+			$price_valid_until
+		))
 		return false;
 
 	$line_description = $description !== '' ? $description : $item['description'];
@@ -874,9 +973,9 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 		stock_id = " . db_escape($stock_id) . ",
 		description = " . db_escape($line_description) . ",
 		committed_qty = " . db_escape($committed_qty) . ",
-		min_qty_per_order = " . db_escape(max(0, $min_qty_per_order)) . ",
+		min_qty_per_order = " . db_escape($min_qty_per_order) . ",
 		unit_price = " . db_escape($unit_price) . ",
-		discount_percent = " . db_escape(max(0, $discount)) . ",
+		discount_percent = " . db_escape($discount) . ",
 		price_valid_until = " . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
 		custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
 		WHERE id = " . (int)$line_id;
@@ -965,6 +1064,41 @@ function update_agreement_fulfillment($agreement_id)
 }
 
 /**
+ * Resolve distinct agreement ids for purchase order detail rows.
+ *
+ * @param array $po_detail_item_ids
+ * @return array
+ */
+function get_purch_agreement_ids_for_po_detail_items($po_detail_item_ids)
+{
+	$normalized_ids = array();
+	foreach ((array)$po_detail_item_ids as $po_detail_item_id) {
+		$po_detail_item_id = (int)$po_detail_item_id;
+		if ($po_detail_item_id > 0)
+			$normalized_ids[$po_detail_item_id] = $po_detail_item_id;
+	}
+
+	if (empty($normalized_ids))
+		return array();
+
+	$sql = "SELECT DISTINCT purchase_order.agreement_id
+		FROM " . TB_PREF . "purch_order_details po_line
+		INNER JOIN " . TB_PREF . "purch_orders purchase_order ON purchase_order.order_no = po_line.order_no
+		WHERE po_line.po_detail_item IN (" . implode(',', $normalized_ids) . ")
+		AND purchase_order.agreement_id > 0";
+	$result = db_query($sql, 'could not get purchase agreement ids for purchase order details');
+
+	$agreement_ids = array();
+	while ($row = db_fetch($result)) {
+		$agreement_id = (int)$row['agreement_id'];
+		if ($agreement_id > 0)
+			$agreement_ids[$agreement_id] = $agreement_id;
+	}
+
+	return array_values($agreement_ids);
+}
+
+/**
  * Check remaining agreement quantity for one stock item.
  *
  * @param int    $agreement_id
@@ -1039,6 +1173,15 @@ function get_purch_agreement_price_row($supplier_id, $stock_id, $quantity, $date
 
 	$result = db_query($sql, 'could not get purchase agreement price');
 	while ($row = db_fetch($result)) {
+		if (!is_purch_agreement_line_data_valid(
+			$row['committed_qty'],
+			$row['unit_price'],
+			$row['discount_percent'],
+			$row['min_qty_per_order'],
+			$row['price_valid_until']
+		))
+			continue;
+
 		$row['remaining_qty'] = max(0, (float)$row['committed_qty'] - (float)$row['ordered_qty']);
 		$row['effective_unit_price'] = round((float)$row['unit_price'] * (1 - ((float)$row['discount_percent'] / 100)), user_price_dec());
 		if ($row['remaining_qty'] > 0 || (int)$agreement_id > 0)
@@ -1096,6 +1239,8 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 	if (!$agreement || $agreement['status'] !== 'active')
 		return false;
 
+	update_agreement_fulfillment($agreement_id);
+
 	$purchase_order = new purch_order();
 	$purchase_order->trans_type = ST_PURCHORDER;
 	$purchase_order->orig_order_date = Today();
@@ -1117,6 +1262,20 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 
 	$agreement_lines = get_agreement_lines($agreement_id);
 	while ($agreement_line = db_fetch($agreement_lines)) {
+		if (!is_purch_agreement_line_data_valid(
+			$agreement_line['committed_qty'],
+			$agreement_line['unit_price'],
+			$agreement_line['discount_percent'],
+			$agreement_line['min_qty_per_order'],
+			$agreement_line['price_valid_until']
+		))
+			continue;
+
+		if ($agreement_line['price_valid_until']
+			&& $agreement_line['price_valid_until'] !== '0000-00-00'
+			&& $agreement_line['price_valid_until'] < date2sql(Today()))
+			continue;
+
 		$line_id = (int)$agreement_line['id'];
 		$selection = isset($line_selections[$line_id]) ? $line_selections[$line_id] : array();
 		$selected_quantity = 0;
@@ -1143,6 +1302,10 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 
 		if ((float)$agreement_line['min_qty_per_order'] > 0 && $selected_quantity < (float)$agreement_line['min_qty_per_order'])
 			$selected_quantity = (float)$agreement_line['min_qty_per_order'];
+		if ($remaining_qty > 0)
+			$selected_quantity = min($selected_quantity, $remaining_qty);
+		if ($selected_quantity <= 0)
+			continue;
 
 		$effective_price = round((float)$agreement_line['unit_price'] * (1 - ((float)$agreement_line['discount_percent'] / 100)), user_price_dec());
 		$line_delivery_date = $selected_delivery_date !== '' ? $selected_delivery_date : Today();

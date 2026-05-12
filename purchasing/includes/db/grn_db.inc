@@ -258,6 +258,8 @@ function add_grn(&$po) {
 	$po->trans_no = $grn;
 	hook_db_postwrite($po, ST_SUPPRECEIVE);
 	commit_transaction();
+	if (!empty($po->agreement_id) && function_exists('update_agreement_fulfillment'))
+		update_agreement_fulfillment((int)$po->agreement_id);
 
 	return $grn;
 }

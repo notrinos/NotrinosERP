@@ -29,6 +29,52 @@ if (user_use_date_picker())
 page(_($help_context = 'Purchase Agreement Entry'), false, false, '', $js);
 
 /**
+ * Resolve the buyer selector value to one internal user id.
+ *
+ * @param string $buyer_selector_value
+ * @return int
+ */
+function get_purchase_agreement_buyer_user_id($buyer_selector_value)
+{
+	$buyer_selector_value = trim((string)$buyer_selector_value);
+	if ($buyer_selector_value === '' || $buyer_selector_value == ALL_TEXT)
+		return 0;
+
+	if (ctype_digit($buyer_selector_value))
+		return (int)$buyer_selector_value;
+
+	$sql = "SELECT id
+		FROM " . TB_PREF . "users
+		WHERE login_id = " . db_escape($buyer_selector_value) . "
+		LIMIT 1";
+	$result = db_query($sql, 'could not get purchase agreement buyer id');
+	$row = db_fetch($result);
+
+	return $row ? (int)$row['id'] : 0;
+}
+
+/**
+ * Resolve one stored buyer id to the selector value expected by users_list_row.
+ *
+ * @param int $buyer_id
+ * @return string
+ */
+function get_purchase_agreement_buyer_selector_value($buyer_id)
+{
+	if ((int)$buyer_id <= 0)
+		return '';
+
+	$sql = "SELECT login_id
+		FROM " . TB_PREF . "users
+		WHERE id = " . (int)$buyer_id . "
+		LIMIT 1";
+	$result = db_query($sql, 'could not get purchase agreement buyer login');
+	$row = db_fetch($result);
+
+	return $row ? $row['login_id'] : '';
+}
+
+/**
  * Validate the agreement header form.
  *
  * @return bool
@@ -65,41 +111,109 @@ function can_save_purchase_agreement_header()
 /**
  * Validate one agreement line form submission.
  *
+ * @param string $stock_field
+ * @param string $quantity_field
+ * @param string $price_field
+ * @param string $discount_field
+ * @param string $date_field
+ * @param string $minimum_qty_field
+ * @param int    $agreement_id
+ * @param int    $exclude_line_id
  * @return bool
  */
-function can_save_purchase_agreement_line()
+function can_save_purchase_agreement_line_fields($stock_field, $quantity_field, $price_field,
+	$discount_field, $date_field, $minimum_qty_field, $agreement_id = 0, $exclude_line_id = 0)
 {
-	if (get_post('line_stock_id') === '') {
+	$stock_id = trim(get_post($stock_field));
+	if ($stock_id === '') {
 		display_error(_('You must select an item.'));
-		set_focus('line_stock_id');
+		set_focus($stock_field);
 		return false;
 	}
 
-	if (!check_num('line_committed_qty', 0)) {
+	if (!check_num($quantity_field, 0.001)) {
 		display_error(_('The committed quantity must be greater than zero.'));
-		set_focus('line_committed_qty');
+		set_focus($quantity_field);
 		return false;
 	}
 
-	if (!check_num('line_unit_price', 0)) {
+	if ($minimum_qty_field !== '' && !check_num($minimum_qty_field, 0)) {
+		display_error(_('The minimum quantity per order must be numeric and not less than zero.'));
+		set_focus($minimum_qty_field);
+		return false;
+	}
+
+	if ($minimum_qty_field !== '' && input_num($minimum_qty_field, 0) > input_num($quantity_field)) {
+		display_error(_('The minimum quantity per order cannot exceed the committed quantity.'));
+		set_focus($minimum_qty_field);
+		return false;
+	}
+
+	if (!check_num($price_field, 0)) {
 		display_error(_('The unit price must be numeric and not less than zero.'));
-		set_focus('line_unit_price');
+		set_focus($price_field);
 		return false;
 	}
 
-	if (!check_num('line_discount_percent', 0)) {
-		display_error(_('The discount percent must be numeric and not less than zero.'));
-		set_focus('line_discount_percent');
+	if (!check_num($discount_field, 0, 100)) {
+		display_error(_('The discount percent must be between 0 and 100.'));
+		set_focus($discount_field);
 		return false;
 	}
 
-	if (get_post('line_price_valid_until') !== '' && !is_date(get_post('line_price_valid_until'))) {
+	if (get_post($date_field) !== '' && !is_date(get_post($date_field))) {
 		display_error(_('The line price validity date is invalid.'));
-		set_focus('line_price_valid_until');
+		set_focus($date_field);
+		return false;
+	}
+
+	if ($agreement_id > 0 && purch_agreement_has_duplicate_stock($agreement_id, $stock_id, $exclude_line_id)) {
+		display_error(_('The selected item has already been added to this agreement.'));
+		set_focus($stock_field);
 		return false;
 	}
 
 	return true;
+}
+
+/**
+ * Validate a new agreement line form submission.
+ *
+ * @param int $agreement_id
+ * @return bool
+ */
+function can_save_purchase_agreement_line($agreement_id)
+{
+	return can_save_purchase_agreement_line_fields(
+		'line_stock_id',
+		'line_committed_qty',
+		'line_unit_price',
+		'line_discount_percent',
+		'line_price_valid_until',
+		'line_min_qty',
+		$agreement_id
+	);
+}
+
+/**
+ * Validate one existing agreement line update submission.
+ *
+ * @param int $agreement_id
+ * @param int $line_id
+ * @return bool
+ */
+function can_save_purchase_agreement_line_update($agreement_id, $line_id)
+{
+	return can_save_purchase_agreement_line_fields(
+		'edit_stock_' . $line_id,
+		'edit_committed_qty_' . $line_id,
+		'edit_unit_price_' . $line_id,
+		'edit_discount_' . $line_id,
+		'edit_price_valid_until_' . $line_id,
+		'edit_min_qty_' . $line_id,
+		$agreement_id,
+		$line_id
+	);
 }
 
 /**
@@ -178,7 +292,7 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 	$dimension_id = (int)get_post('dimension_id');
 	$dimension2_id = (int)get_post('dimension2_id');
 	$reference = trim(get_post('reference'));
-	$buyer_id = get_post('buyer_id') == ALL_TEXT ? 0 : (int)get_post('buyer_id');
+	$buyer_id = get_purchase_agreement_buyer_user_id(get_post('buyer_id'));
 
 	if (isset($_POST['ADD_AGREEMENT'])) {
 		$selected_id = add_purch_agreement(
@@ -233,7 +347,7 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 	}
 }
 
-if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_agreement_line()) {
+if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_agreement_line($selected_id)) {
 	$line_id = add_agreement_line(
 		$selected_id,
 		get_post('line_stock_id'),
@@ -252,7 +366,7 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_agreement_
 }
 
 $update_line_id = find_submit('UpdateLine');
-if ($update_line_id > 0 && $selected_id > 0) {
+if ($update_line_id > 0 && $selected_id > 0 && can_save_purchase_agreement_line_update($selected_id, $update_line_id)) {
 	$updated = update_agreement_line(
 		$update_line_id,
 		get_post('edit_stock_' . $update_line_id),
@@ -338,6 +452,9 @@ if (isset($_POST['CreatePO']) && $selected_id > 0) {
 	}
 }
 
+if ($selected_id > 0)
+	update_agreement_fulfillment($selected_id);
+
 $agreement = $selected_id > 0 ? get_purch_agreement($selected_id) : false;
 $editable = !$agreement || in_array($agreement['status'], get_purch_agreement_editable_statuses());
 
@@ -358,6 +475,7 @@ if ($agreement) {
 	$_POST['dimension_id'] = $agreement['dimension_id'];
 	$_POST['dimension2_id'] = $agreement['dimension2_id'];
 	$_POST['reference'] = $agreement['reference'];
+	$_POST['buyer_id'] = get_purchase_agreement_buyer_selector_value($agreement['buyer_id']);
 } else {
 	if (!isset($_POST['agreement_type']))
 		$_POST['agreement_type'] = 'blanket_order';
@@ -374,7 +492,7 @@ if ($agreement) {
 	if (!isset($_POST['dimension2_id']))
 		$_POST['dimension2_id'] = 0;
 	if (!isset($_POST['buyer_id']))
-		$_POST['buyer_id'] = $_SESSION['wa_current_user']->user;
+		$_POST['buyer_id'] = isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : '';
 }
 
 $agreement_types = get_purch_agreement_types();
@@ -401,7 +519,8 @@ br();
 if (!$agreement)
 	display_note(_('Save the agreement header first, then add line items, confirm, and activate it.'), 0, 1);
 
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+table_section(1);
 
 if ($editable) {
 	echo '<tr><td class="label">' . _('Agreement Type:') . '</td><td>';
@@ -415,12 +534,15 @@ if ($editable) {
 	payment_terms_list_row(_('Payment Terms:'), 'payment_terms', get_post('payment_terms'));
 	locations_list_row(_('Delivery Location:'), 'delivery_location', get_post('delivery_location'), true);
 	check_row(_('Auto Renew:'), 'auto_renew', get_post('auto_renew'));
+
+	table_section(2);
+
 	text_row(_('Renewal Period (Months):'), 'renewal_period_months', get_post('renewal_period_months'), 6, 6);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	text_row(_('Linked RFQ ID:'), 'rfq_id', get_post('rfq_id'), 10, 10);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
-	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions', get_post('terms_and_conditions'), 35, 4);
+	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions', get_post('terms_and_conditions'), 35, 5);
 	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 4);
 } else {
 	label_row(_('Agreement Type:'), $agreement_types[$agreement['agreement_type']]);
@@ -432,6 +554,9 @@ if ($editable) {
 	label_row(_('Payment Terms:'), $agreement['payment_terms_name'] ? $agreement['payment_terms_name'] : '-');
 	label_row(_('Delivery Location:'), $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : '-');
 	label_row(_('Reference:'), $agreement['reference']);
+
+	table_section(2);
+
 	label_row(_('Auto Renew:'), $agreement['auto_renew'] ? _('Yes') : _('No'));
 	label_row(_('Renewal Period:'), (int)$agreement['renewal_period_months'] . ' ' . _('months'));
 	label_row(_('Terms and Conditions:'), $agreement['terms_and_conditions'] ? nl2br(htmlspecialchars($agreement['terms_and_conditions'])) : '-');
@@ -442,7 +567,7 @@ if ($editable) {
 	label_row(_('Invoiced Total:'), price_format($agreement['total_invoiced']));
 }
 
-end_table(1);
+end_outer_table();
 
 if ($editable) {
 	if ($agreement)
@@ -527,7 +652,8 @@ if ($agreement) {
 		display_heading(_('Add Line'));
 		start_table(TABLESTYLE2);
 		start_row();
-		stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+		label_cell(_('Select Item:'));
+		stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 		end_row();
 		text_row(_('Description:'), 'line_description', null, 40, 255);
 		qty_row(_('Committed Quantity:'), 'line_committed_qty', null, null, null, get_qty_dec(''));
@@ -536,7 +662,7 @@ if ($agreement) {
 		amount_row(_('Discount Percent:'), 'line_discount_percent');
 		date_row(_('Price Valid Until:'), 'line_price_valid_until');
 		end_table(1);
-		submit_center('AddLine', _('Add Line'), true, '', 'default');
+		submit_center('AddLine', _('Add Line'), true, '', 'default nonajax');
 	}
 
 	br();
