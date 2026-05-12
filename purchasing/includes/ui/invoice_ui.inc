@@ -661,14 +661,16 @@ function display_grn_items(&$supp_trans, $mode=0) {
 	return $total_grn_value;
 }
 
-function get_duedate_from_terms(&$trans) {
-	$date = get_class($trans) == 'purch_order' ? $trans->orig_order_date : $trans->tran_date;
+if (!function_exists('get_duedate_from_terms')) {
+	function get_duedate_from_terms(&$trans) {
+		$date = get_class($trans) == 'purch_order' ? $trans->orig_order_date : $trans->tran_date;
 
-	if (!is_date($date))
-		$date = Today();
-	
-	if ($trans->terms['day_in_following_month']) /*Its a day in the following month when due */
-		$trans->due_date = add_days(end_month($date), $trans->terms['day_in_following_month']);
-	else /*Use the Days Before Due to add to the invoice date */
-		$trans->due_date = add_days($date, $trans->terms['days_before_due']);
+		if (!is_date($date))
+			$date = Today();
+
+		if ($trans->terms['day_in_following_month']) /*Its a day in the following month when due */
+			$trans->due_date = add_days(end_month($date), $trans->terms['day_in_following_month']);
+		else /*Use the Days Before Due to add to the invoice date */
+			$trans->due_date = add_days($date, $trans->terms['days_before_due']);
+	}
 }

@@ -683,6 +683,7 @@ function update_last_purchase_price($supplier_id, $stock_id, $price, $date)
 {
 	$price = round((float)$price, user_price_dec());
 	$effective_date = normalize_vendor_pricelist_sql_date($date, date('Y-m-d'));
+	$existing_entry = get_vendor_pricelist_entry_by_key($supplier_id, $stock_id);
 	$sql = "UPDATE " . TB_PREF . "vendor_pricelists
 		SET last_purchase_date = " . db_escape($effective_date) . ",
 			last_purchase_price = " . db_escape($price) . "
@@ -690,8 +691,8 @@ function update_last_purchase_price($supplier_id, $stock_id, $price, $date)
 			AND stock_id = " . db_escape($stock_id);
 	db_query($sql, 'could not update last purchase price in vendor pricelist');
 
-	if (db_affected_rows() > 0)
-		return db_affected_rows();
+	if ($existing_entry)
+		return db_num_affected_rows() > 0 ? db_num_affected_rows() : (int)$existing_entry['id'];
 
 	$purchase_data = get_purchase_data_row_direct($supplier_id, $stock_id);
 	$stock_defaults = get_vendor_pricelist_stock_defaults($stock_id);

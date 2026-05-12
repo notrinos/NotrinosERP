@@ -249,6 +249,22 @@ function read_po($order_no, &$order, $open_items_only=false) {
 		read_po_items($order_no, $order, $open_items_only);
 }
 
+/**
+ * Return one purchase order detail row.
+ *
+ * @param int $purchase_order_detail_id
+ * @return array|false
+ */
+function get_po_details($purchase_order_detail_id) {
+	$sql = "SELECT *
+		FROM " . TB_PREF . "purch_order_details
+		WHERE po_detail_item = " . db_escape($purchase_order_detail_id);
+
+	$result = db_query($sql, 'The purchase order detail could not be retrieved');
+
+	return db_fetch($result);
+}
+
 function get_po_items($order_no) {
 	$sql = "SELECT item_code, quantity_ordered, quantity_received, qty_invoiced FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($order_no)." ORDER BY po_detail_item";
 

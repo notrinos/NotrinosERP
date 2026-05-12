@@ -1462,7 +1462,7 @@ function expire_overdue_rfqs()
 		AND deadline_date < " . db_escape(date2sql(Today()));
 	db_query($sql, 'could not expire overdue RFQs');
 
-	return db_affected_rows();
+	return db_num_affected_rows();
 }
 
 /**

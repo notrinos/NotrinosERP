@@ -12,6 +12,24 @@
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 
+/**
+ * Derive the transaction due date from supplier terms.
+ *
+ * @param object $transaction
+ * @return void
+ */
+function get_duedate_from_terms(&$transaction) {
+	$date = get_class($transaction) == 'purch_order' ? $transaction->orig_order_date : $transaction->tran_date;
+
+	if (!is_date($date))
+		$date = Today();
+
+	if ($transaction->terms['day_in_following_month'])
+		$transaction->due_date = add_days(end_month($date), $transaction->terms['day_in_following_month']);
+	else
+		$transaction->due_date = add_days($date, $transaction->terms['days_before_due']);
+}
+
 function read_supplier_details_to_trans(&$supp_trans, $supplier_id) {
 	$sql = "SELECT supp.supp_name, terms.terms, terms.days_before_due, supp.dimension_id, supp.dimension2_id,
 		terms.day_in_following_month, supp.tax_included,

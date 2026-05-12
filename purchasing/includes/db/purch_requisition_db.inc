@@ -577,6 +577,31 @@ function add_purch_requisition($requester_id, $department_id, $required_date, $p
 }
 
 /**
+ * Validate requisition line numeric values before saving.
+ *
+ * @param float       $quantity
+ * @param mixed       $estimated_price
+ * @param string|null $error_message
+ * @return bool
+ */
+function can_save_requisition_line_values($quantity, $estimated_price, &$error_message = null)
+{
+	$error_message = null;
+
+	if (!is_numeric($quantity) || (float)$quantity <= 0) {
+		$error_message = _('The quantity must be greater than zero.');
+		return false;
+	}
+
+	if (!is_numeric($estimated_price) || (float)$estimated_price < 0) {
+		$error_message = _('The estimated unit price must be zero or greater.');
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * Update a purchase requisition header.
  *
  * @param int         $requisition_id
@@ -715,10 +740,8 @@ function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_
 		return false;
 	}
 
-	if ($quantity <= 0) {
-		$error_message = _('The quantity must be greater than zero.');
+	if (!can_save_requisition_line_values($quantity, $estimated_price, $error_message))
 		return false;
-	}
 
 	$line_description = $description !== '' ? $description : $item['description'];
 	$line_unit = $unit_of_measure !== '' ? $unit_of_measure : $item['units'];
@@ -795,11 +818,14 @@ function update_requisition_line($line_id, $stock_id, $quantity, $estimated_pric
 		return false;
 
 	$requisition = get_editable_purch_requisition((int)$line['requisition_id']);
-	if (!$requisition || $quantity <= 0)
+	if (!$requisition)
 		return false;
 
 	$item = get_item($stock_id);
 	if (!$item)
+		return false;
+
+	if (!can_save_requisition_line_values($quantity, $estimated_price))
 		return false;
 
 	$line_description = $description !== '' ? $description : $item['description'];

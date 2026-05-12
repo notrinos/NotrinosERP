@@ -65,25 +65,28 @@ function can_save_purchase_requisition_header()
 /**
  * Validate the requisition line form.
  *
+ * @param string $stock_id_field_name
+ * @param string $quantity_field_name
+ * @param string $estimated_price_field_name
  * @return bool
  */
-function can_save_purchase_requisition_line()
+function can_save_purchase_requisition_line($stock_id_field_name = 'line_stock_id', $quantity_field_name = 'line_quantity', $estimated_price_field_name = 'line_estimated_price')
 {
-	if (get_post('line_stock_id') === '') {
+	if (get_post($stock_id_field_name) === '') {
 		display_error(_('You must select an item.'));
-		set_focus('line_stock_id');
+		set_focus($stock_id_field_name);
 		return false;
 	}
 
-	if (!check_num('line_quantity', 0)) {
+	if (!check_num($quantity_field_name, 0)) {
 		display_error(_('The quantity must be greater than zero.'));
-		set_focus('line_quantity');
+		set_focus($quantity_field_name);
 		return false;
 	}
 
-	if (!check_num('line_estimated_price', 0)) {
-		display_error(_('The estimated unit price must be numeric.'));
-		set_focus('line_estimated_price');
+	if (!check_num($estimated_price_field_name, 0)) {
+		display_error(_('The estimated unit price must be zero or greater.'));
+		set_focus($estimated_price_field_name);
 		return false;
 	}
 
@@ -188,22 +191,28 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisitio
 
 $update_line_id = find_submit('UpdateLine');
 if ($update_line_id > 0 && $selected_id > 0) {
-	$preferred_supplier_id = get_post('edit_supplier_' . $update_line_id) == ALL_TEXT ? 0 : (int)get_post('edit_supplier_' . $update_line_id);
-	$updated = update_requisition_line(
-		$update_line_id,
-		get_post('edit_stock_' . $update_line_id),
-		input_num('edit_quantity_' . $update_line_id),
-		input_num('edit_estimated_price_' . $update_line_id),
-		$preferred_supplier_id,
-		trim(get_post('edit_description_' . $update_line_id)),
-		trim(get_post('edit_uom_' . $update_line_id)),
-		trim(get_post('edit_notes_' . $update_line_id))
-	);
+	if (can_save_purchase_requisition_line(
+		'edit_stock_' . $update_line_id,
+		'edit_quantity_' . $update_line_id,
+		'edit_estimated_price_' . $update_line_id
+	)) {
+		$preferred_supplier_id = get_post('edit_supplier_' . $update_line_id) == ALL_TEXT ? 0 : (int)get_post('edit_supplier_' . $update_line_id);
+		$updated = update_requisition_line(
+			$update_line_id,
+			get_post('edit_stock_' . $update_line_id),
+			input_num('edit_quantity_' . $update_line_id),
+			input_num('edit_estimated_price_' . $update_line_id),
+			$preferred_supplier_id,
+			trim(get_post('edit_description_' . $update_line_id)),
+			trim(get_post('edit_uom_' . $update_line_id)),
+			trim(get_post('edit_notes_' . $update_line_id))
+		);
 
-	if ($updated)
-		display_notification(_('Purchase requisition line has been updated.'));
-	else
-		display_error(_('The purchase requisition line could not be updated.'));
+		if ($updated)
+			display_notification(_('Purchase requisition line has been updated.'));
+		else
+			display_error(_('The purchase requisition line could not be updated.'));
+	}
 }
 
 $delete_line_id = find_submit('DeleteLine');
