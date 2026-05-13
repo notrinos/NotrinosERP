@@ -31,11 +31,20 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif ((int)$_POST['leave_id'] <= 0) {
         display_error(_('Leave type is required.'));
         set_focus('leave_id');
+    } elseif (!check_num('annual_entitlement', 0)) {
+        display_error(_('Annual entitlement must be a valid non-negative number.'));
+        set_focus('annual_entitlement');
+    } elseif (!check_num('min_service_months', 0) || (int)input_num('min_service_months') != input_num('min_service_months')) {
+        display_error(_('Minimum service months must be a non-negative whole number.'));
+        set_focus('min_service_months');
     } elseif (!is_date($_POST['effective_from'])) {
         display_error(_('Effective from date is invalid.'));
         set_focus('effective_from');
     } elseif (trim($_POST['effective_to']) != '' && !is_date($_POST['effective_to'])) {
         display_error(_('Effective to date is invalid.'));
+        set_focus('effective_to');
+    } elseif (trim($_POST['effective_to']) != '' && date1_greater_date2($_POST['effective_from'], $_POST['effective_to'])) {
+        display_error(_('Effective to date cannot be earlier than effective from date.'));
         set_focus('effective_to');
     } else {
         $grade_id = (int)$_POST['grade_id'];

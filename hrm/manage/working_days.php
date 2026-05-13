@@ -16,18 +16,6 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/working_days_db.inc');
 page(_("Working Days"));
 
-if (isset($_POST['save'])) {
-    $rules = array();
-    for ($day = 0; $day <= 6; $day++) {
-        $rules[$day] = array(
-            'is_working' => check_value('is_working_' . $day) ? 1 : 0,
-            'work_hours' => input_num('work_hours_' . $day)
-        );
-    }
-    save_working_days($rules);
-    display_notification(_('Working days configuration has been saved.'));
-}
-
 $day_labels = array(
     0 => _('Sunday'),
     1 => _('Monday'),
@@ -37,6 +25,39 @@ $day_labels = array(
     5 => _('Friday'),
     6 => _('Saturday')
 );
+
+if (isset($_POST['save'])) {
+    $rules = array();
+    $input_error = false;
+    for ($day = 0; $day <= 6; $day++) {
+        if (!check_num('work_hours_' . $day, 0)) {
+            display_error(sprintf(_('Work hours for %s must be a valid non-negative number.'), $day_labels[$day]));
+            set_focus('work_hours_' . $day);
+            $input_error = true;
+            break;
+        }
+
+        $is_working = check_value('is_working_' . $day) ? 1 : 0;
+        $work_hours = $is_working ? input_num('work_hours_' . $day) : 0;
+
+        if ($is_working && $work_hours <= 0) {
+            display_error(sprintf(_('Work hours for %s must be greater than zero when the day is marked as working.'), $day_labels[$day]));
+            set_focus('work_hours_' . $day);
+            $input_error = true;
+            break;
+        }
+
+        $rules[$day] = array(
+            'is_working' => $is_working,
+            'work_hours' => $work_hours
+        );
+    }
+
+    if (!$input_error) {
+        save_working_days($rules);
+        display_notification(_('Working days configuration has been saved.'));
+    }
+}
 
 $current = array();
 $result = get_working_days();

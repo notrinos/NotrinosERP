@@ -41,13 +41,24 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif (!check_num('to_value', 0)) {
         display_error(_('To value must be a valid number.'));
         set_focus('to_value');
+    } elseif (input_num('to_value') < input_num('from_value')) {
+        display_error(_('To value cannot be less than from value.'));
+        set_focus('to_value');
     } elseif (!check_num('deduction_rate', 0)) {
         display_error(_('Deduction rate must be a valid number.'));
         set_focus('deduction_rate');
+    } elseif (input_num('work_hours') <= 0) {
+        display_error(_('Work hours must be greater than zero.'));
+        set_focus('work_hours');
     } else {
         $day_of_week = get_post('day_of_week', '');
         if ($day_of_week === '')
             $day_of_week = null;
+        elseif (!isset($day_options[(string)$day_of_week])) {
+            display_error(_('Day of week selection is invalid.'));
+            set_focus('day_of_week');
+            return;
+        }
 
         if ($selected_id != '') {
             update_attendance_deduction_rule($selected_id, (int)$_POST['rule_type'], input_num('from_value'), input_num('to_value'), input_num('deduction_rate'), $day_of_week, input_num('work_hours'), 0);

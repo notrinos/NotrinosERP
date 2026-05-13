@@ -23,20 +23,38 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     if (trim($_POST['bracket_name']) == '') {
         display_error(_('Bracket name is required.'));
         set_focus('bracket_name');
-    } elseif (!is_numeric($_POST['from_amount'])) {
+    } elseif (!check_num('from_amount', 0)) {
         display_error(_('From amount must be numeric.'));
         set_focus('from_amount');
-    } elseif (trim($_POST['to_amount']) !== '' && !is_numeric($_POST['to_amount'])) {
+    } elseif (input_num('from_amount') < 0) {
+        display_error(_('From amount cannot be negative.'));
+        set_focus('from_amount');
+    } elseif (trim($_POST['to_amount']) !== '' && !check_num('to_amount', 0)) {
         display_error(_('To amount must be numeric.'));
         set_focus('to_amount');
-    } elseif (!is_numeric($_POST['rate'])) {
+    } elseif (trim($_POST['to_amount']) !== '' && input_num('to_amount') < input_num('from_amount')) {
+        display_error(_('To amount cannot be less than from amount.'));
+        set_focus('to_amount');
+    } elseif (!check_num('rate', 0)) {
         display_error(_('Tax rate must be numeric.'));
         set_focus('rate');
+    } elseif (input_num('rate') < 0 || input_num('rate') > 100) {
+        display_error(_('Tax rate must be between 0 and 100.'));
+        set_focus('rate');
+    } elseif (!check_num('fixed_amount', 0)) {
+        display_error(_('Fixed amount must be numeric.'));
+        set_focus('fixed_amount');
+    } elseif (input_num('fixed_amount') < 0) {
+        display_error(_('Fixed amount cannot be negative.'));
+        set_focus('fixed_amount');
     } elseif (!is_date($_POST['effective_from'])) {
         display_error(_('Effective from date is required.'));
         set_focus('effective_from');
     } elseif (trim($_POST['effective_to']) !== '' && !is_date($_POST['effective_to'])) {
         display_error(_('Effective to date is invalid.'));
+        set_focus('effective_to');
+    } elseif (trim($_POST['effective_to']) !== '' && date1_greater_date2($_POST['effective_from'], $_POST['effective_to'])) {
+        display_error(_('Effective to date cannot be earlier than effective from date.'));
         set_focus('effective_to');
     } else {
         $to_amount = trim($_POST['to_amount']) === '' ? null : input_num('to_amount');

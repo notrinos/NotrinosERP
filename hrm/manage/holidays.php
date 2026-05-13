@@ -28,6 +28,9 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif (trim($_POST['to_date']) != '' && !is_date($_POST['to_date'])) {
         display_error(_('To date is invalid.'));
         set_focus('to_date');
+    } elseif (trim($_POST['to_date']) != '' && date1_greater_date2($_POST['holiday_date'], $_POST['to_date'])) {
+        display_error(_('To date cannot be earlier than holiday date.'));
+        set_focus('to_date');
     } else {
         $to_date = trim($_POST['to_date']) == '' ? null : $_POST['to_date'];
         if ($selected_id != '') {
