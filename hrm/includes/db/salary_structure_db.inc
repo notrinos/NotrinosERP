@@ -270,3 +270,29 @@ function salary_structure_element_exist($position_id, $grade_id, $element_id, $a
 
 	return check_empty_result($sql);
 }
+
+/**
+ * Check if salary structure row exists for an exact effective-date key.
+ *
+ * Used by the maintenance page when deciding whether to insert a new
+ * revision row or update the row already stored for the same effective date.
+ *
+ * @param int $position_id
+ * @param int $grade_id
+ * @param int $element_id
+ * @param string $effective_from
+ * @return bool
+ */
+function salary_structure_exact_row_exists($position_id, $grade_id, $element_id, $effective_from) {
+	$effective_from_sql = salary_structure_to_sql_date($effective_from);
+	if ($effective_from_sql === '')
+		return false;
+
+	$sql = "SELECT COUNT(*) FROM ".TB_PREF."salary_structure
+		WHERE position_id = ".db_escape((int)$position_id)."
+		AND grade_id = ".db_escape((int)$grade_id)."
+		AND element_id = ".db_escape((int)$element_id)."
+		AND effective_from = ".db_escape($effective_from_sql);
+
+	return check_empty_result($sql);
+}

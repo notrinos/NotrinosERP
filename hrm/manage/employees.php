@@ -417,6 +417,19 @@ function tab_salary($employee_id) {
 				$input_error = 1;
 				display_error(_('Effective from date is required.'));
 			}
+			if (!$input_error && !is_date(get_post('sal_effective_from'))) {
+				$input_error = 1;
+				display_error(_('Effective from date is invalid.'));
+			}
+			if (!$input_error && get_post('sal_effective_to') !== '' && !is_date(get_post('sal_effective_to'))) {
+				$input_error = 1;
+				display_error(_('Effective to date is invalid.'));
+			}
+			if (!$input_error && get_post('sal_effective_to') !== ''
+				&& date1_greater_date2(get_post('sal_effective_from'), get_post('sal_effective_to'))) {
+				$input_error = 1;
+				display_error(_('Effective to date cannot be earlier than effective from date.'));
+			}
 
 			if (!$input_error) {
 				if ($editing_salary) {

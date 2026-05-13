@@ -371,6 +371,59 @@ function get_department_employee_count($department_id) {
 }
 
 /**
+ * Compare salary component rows for stable display ordering.
+ *
+ * @param array $left
+ * @param array $right
+ * @return int
+ */
+function compare_salary_component_rows($left, $right) {
+	$left_order = isset($left['display_order']) ? (int)$left['display_order'] : 0;
+	$right_order = isset($right['display_order']) ? (int)$right['display_order'] : 0;
+	if ($left_order != $right_order)
+		return $left_order < $right_order ? -1 : 1;
+
+	$left_name = isset($left['element_name']) ? $left['element_name'] : '';
+	$right_name = isset($right['element_name']) ? $right['element_name'] : '';
+	$name_compare = strcasecmp($left_name, $right_name);
+	if ($name_compare != 0)
+		return $name_compare;
+
+	$left_id = isset($left['element_id']) ? (int)$left['element_id'] : 0;
+	$right_id = isset($right['element_id']) ? (int)$right['element_id'] : 0;
+	if ($left_id == $right_id)
+		return 0;
+
+	return $left_id < $right_id ? -1 : 1;
+}
+
+/**
+ * Collapse overlapping effective-dated rows to the latest row per element.
+ *
+ * Queries fetch rows ordered by element and newest effective date first, so the
+ * first row for each element is the one that should drive payroll.
+ *
+ * @param array $rows
+ * @return array
+ */
+function filter_latest_salary_component_rows($rows) {
+	$latest_by_element = array();
+	foreach ((array)$rows as $row) {
+		$element_id = isset($row['element_id']) ? (int)$row['element_id'] : 0;
+		if ($element_id <= 0)
+			continue;
+
+		if (!isset($latest_by_element[$element_id]))
+			$latest_by_element[$element_id] = $row;
+	}
+
+	$rows = array_values($latest_by_element);
+	usort($rows, 'compare_salary_component_rows');
+
+	return $rows;
+}
+
+/**
  * Get employee salary components (from salary_structure or personal salary).
  * @param string $employee_id
  * @param string $as_of_date SQL date (Y-m-d)
@@ -406,8 +459,8 @@ function get_employee_salary_components($employee_id, $as_of_date=null) {
 				WHERE es.employee_id = ".db_escape($employee_id)."
 				AND es.is_active = 1
 				AND es.effective_from <= ".db_escape($as_of_date)."
-				AND (es.effective_to IS NULL OR es.effective_to >= ".db_escape($as_of_date).")
-				ORDER BY pe.display_order, pe.element_name";
+				AND (es.effective_to IS NULL OR es.effective_to = '0000-00-00' OR es.effective_to >= ".db_escape($as_of_date).")
+				ORDER BY es.element_id, es.effective_from DESC, es.salary_id DESC, pe.display_order, pe.element_name";
 	} else {
 		// Use position × grade salary structure
 		$sql = "SELECT ss.structure_id, ss.element_id, ss.pay_amount as amount, ss.formula,
@@ -421,8 +474,8 @@ function get_employee_salary_components($employee_id, $as_of_date=null) {
 				AND ss.grade_id = ".db_escape($emp['grade_id'])."
 				AND ss.is_active = 1
 				AND ss.effective_from <= ".db_escape($as_of_date)."
-				AND (ss.effective_to IS NULL OR ss.effective_to >= ".db_escape($as_of_date).")
-				ORDER BY pe.display_order, pe.element_name";
+				AND (ss.effective_to IS NULL OR ss.effective_to = '0000-00-00' OR ss.effective_to >= ".db_escape($as_of_date).")
+				ORDER BY ss.element_id, ss.effective_from DESC, ss.structure_id DESC, pe.display_order, pe.element_name";
 	}
 
 	$result = db_query($sql);
@@ -471,6 +524,7 @@ function get_employee_salary_components($employee_id, $as_of_date=null) {
 	while ($row = db_fetch_assoc($result)) {
 		$components[] = $row;
 	}
+	$components = filter_latest_salary_component_rows($components);
 
 	$cache[$cache_key] = $components;
 	return $cache[$cache_key];
@@ -544,8 +598,8 @@ function get_salary_components_for_employees($employees, $as_of_date=null) {
 				WHERE es.employee_id IN (".implode(', ', $id_list).")
 				AND es.is_active = 1
 				AND es.effective_from <= ".db_escape($as_of_sql)."
-				AND (es.effective_to IS NULL OR es.effective_to >= ".db_escape($as_of_sql).")
-				ORDER BY es.employee_id, pe.display_order, pe.element_name";
+				AND (es.effective_to IS NULL OR es.effective_to = '0000-00-00' OR es.effective_to >= ".db_escape($as_of_sql).")
+				ORDER BY es.employee_id, es.element_id, es.effective_from DESC, es.salary_id DESC, pe.display_order, pe.element_name";
 		$result = db_query($sql, 'could not preload employee salary components');
 
 		while ($row = db_fetch_assoc($result))
@@ -567,8 +621,8 @@ function get_salary_components_for_employees($employees, $as_of_date=null) {
 				WHERE (".implode(' OR ', $where).")
 				AND ss.is_active = 1
 				AND ss.effective_from <= ".db_escape($as_of_sql)."
-				AND (ss.effective_to IS NULL OR ss.effective_to >= ".db_escape($as_of_sql).")
-				ORDER BY ss.position_id, ss.grade_id, pe.display_order, pe.element_name";
+				AND (ss.effective_to IS NULL OR ss.effective_to = '0000-00-00' OR ss.effective_to >= ".db_escape($as_of_sql).")
+				ORDER BY ss.position_id, ss.grade_id, ss.element_id, ss.effective_from DESC, ss.structure_id DESC, pe.display_order, pe.element_name";
 		$result = db_query($sql, 'could not preload salary structure components');
 		$components_by_group = array();
 
@@ -584,6 +638,11 @@ function get_salary_components_for_employees($employees, $as_of_date=null) {
 			foreach ($group['employees'] as $employee_id)
 				$components_by_employee[$employee_id] = $group_components;
 		}
+	}
+
+	foreach ($components_by_employee as $employee_id => $rows) {
+		if (!empty($rows))
+			$components_by_employee[$employee_id] = filter_latest_salary_component_rows($rows);
 	}
 
 	foreach ($components_by_employee as $employee_id => $rows) {

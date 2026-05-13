@@ -110,6 +110,18 @@ if ($Mode=='UPDATE_ITEM') {
 		display_error(_('Amount/Percentage field must be a positive number.'));
 		set_focus('amount');
 	}
+	elseif (!is_date(get_post('effective_from', Today()))) {
+		display_error(_('Effective from date is invalid.'));
+		set_focus('effective_from');
+	}
+	elseif (get_post('effective_to', '') !== '' && !is_date(get_post('effective_to'))) {
+		display_error(_('Effective to date is invalid.'));
+		set_focus('effective_to');
+	}
+	elseif (get_post('effective_to', '') !== '' && date1_greater_date2(get_post('effective_from', Today()), get_post('effective_to'))) {
+		display_error(_('Effective to date cannot be earlier than effective from date.'));
+		set_focus('effective_to');
+	}
 	else {
 		$effective_from = get_post('effective_from', Today());
 		$effective_to = get_post('effective_to', '');
@@ -122,16 +134,20 @@ if ($Mode=='UPDATE_ITEM') {
 			'is_active' => 1
 		);
 
-		if(!salary_structure_element_exist($_POST['position_id'], get_post('_tabs_sel'), $selected_id, $effective_from)) {
-			add_salary_structure_element($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra);
+		$saved = false;
+		if(!salary_structure_exact_row_exists($_POST['position_id'], get_post('_tabs_sel'), $selected_id, $effective_from)) {
+			$saved = add_salary_structure_element($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra) !== false;
 		}
 		else {
-			update_salary_structure($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra);
+			$saved = update_salary_structure($_POST['position_id'], get_post('_tabs_sel'), $selected_id, input_num('amount'), $extra);
 		}
 
-		display_notification(_('The selected pay element has been updated.'));
-		
-		$Mode = 'RESET';
+		if ($saved) {
+			display_notification(_('The selected pay element has been updated.'));
+			$Mode = 'RESET';
+		} else {
+			display_error(_('Could not save the selected pay element.'));
+		}
 	}
 }
 
