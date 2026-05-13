@@ -15,6 +15,9 @@ if (!isset($path_to_root) || $path_to_root == '')
 // NOTE: This file is included by reporting/rep881.php
 // $path_to_root and session are already initialized when called via report framework.
 // Direct access uses the above declarations.
+if (!isset($_SESSION['wa_current_user']) || !defined('TB_PREF'))
+    include_once($path_to_root.'/includes/session.inc');
+
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');

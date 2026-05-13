@@ -73,7 +73,7 @@ class FrontReport extends Cpdf {
 	function __construct($title, $filename, $size = 'A4', $fontsize = 9, $orientation = 'P', $margins = NULL, $excelColWidthFactor = NULL) {
 		global $page_security;
 
-		$this->rep_id = $_POST['REP_ID'];	// FIXME
+		$this->rep_id = isset($_POST['REP_ID']) ? $_POST['REP_ID'] : '';
 		
 		if (!$_SESSION['wa_current_user']->can_access_page($page_security)) {
 			display_error(_('The security settings on your account do not permit you to print this report'));

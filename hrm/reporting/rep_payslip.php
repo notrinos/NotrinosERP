@@ -15,6 +15,9 @@ if (!isset($path_to_root) || $path_to_root == '')
 // NOTE: This file is included by reporting/rep880.php
 // $path_to_root and session are already initialized when called via report framework.
 // Direct access uses the above declarations.
+if (!isset($_SESSION['wa_current_user']) || !defined('TB_PREF'))
+    include_once($path_to_root.'/includes/session.inc');
+
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
@@ -98,11 +101,11 @@ function get_report_payslip_lines($payslip_id) {
 function print_payslip_report($email_mode=false) {
     global $path_to_root;
 
-    $year = (int)$_POST['PARAM_0'];
-    $month = (int)$_POST['PARAM_1'];
-    $department_id = (int)$_POST['PARAM_2'];
-    $employee_id = $_POST['PARAM_3'];
-    $comments = $_POST['PARAM_4'];
+    $year = isset($_POST['PARAM_0']) ? (int)$_POST['PARAM_0'] : 0;
+    $month = isset($_POST['PARAM_1']) ? (int)$_POST['PARAM_1'] : 0;
+    $department_id = isset($_POST['PARAM_2']) ? (int)$_POST['PARAM_2'] : 0;
+    $employee_id = isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : '';
+    $comments = isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : '';
     $orientation = !empty($_POST['PARAM_5']) ? 1 : 0;
     $destination = isset($_POST['PARAM_6']) ? (int)$_POST['PARAM_6'] : 0;
 
