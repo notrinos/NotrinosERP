@@ -30,6 +30,11 @@ foreach ($_POST as $name => $value) {
                 continue;
             }
 
+            if ((int)$period['status'] !== 1) {
+                display_error(_('Only calculated payroll periods can be approved.'));
+                continue;
+            }
+
             $payroll_amount = (float)$period['total_net'];
 
             // Check if core approval workflow is required
@@ -108,7 +113,7 @@ while ($row = db_fetch($result)) {
     amount_cell($row['total_net']);
     label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
 
-    if ((int)$row['status'] == 1 || (int)$row['status'] == 0)
+    if ((int)$row['status'] == 1)
         submit_cells('Approve'.$row['period_id'], _('Approve'));
     else
         label_cell('');

@@ -50,37 +50,104 @@ function validate_payroll_request() {
     return true;
 }
 
+/**
+ * Resolve the employee set targeted by the payroll run.
+ *
+ * @param int $department_id
+ * @param string $employee_id
+ * @param bool $invalid_employee_selection
+ * @return array
+ */
+function resolve_payroll_employees($department_id, $employee_id, &$invalid_employee_selection) {
+    $employees = array();
+    $invalid_employee_selection = false;
+    $employee_id = trim((string)$employee_id);
+
+    if ($employee_id !== '') {
+        $employee = get_employee_by_code($employee_id);
+        if ($employee)
+            $employees[] = $employee;
+        else
+            $invalid_employee_selection = true;
+
+        return $employees;
+    }
+
+    $result = get_active_employees((int)$department_id);
+    while ($row = db_fetch_assoc($result))
+        $employees[] = $row;
+
+    return $employees;
+}
+
+/**
+ * Remove employees who already have a payslip overlapping the selected period.
+ *
+ * @param array $employees
+ * @param string $from_date
+ * @param string $to_date
+ * @param array $skipped_employee_ids
+ * @return array
+ */
+function filter_payroll_eligible_employees($employees, $from_date, $to_date, &$skipped_employee_ids) {
+    $eligible_employees = array();
+    $skipped_employee_ids = array();
+
+    foreach ((array)$employees as $employee) {
+        if (!is_array($employee) || empty($employee['employee_id']))
+            continue;
+
+        if (function_exists('payslip_exists_for_period')
+            && payslip_exists_for_period($employee['employee_id'], $from_date, $to_date)) {
+            $skipped_employee_ids[] = $employee['employee_id'];
+            continue;
+        }
+
+        $eligible_employees[] = $employee;
+    }
+
+    return $eligible_employees;
+}
+
 if (isset($_POST['process_payroll']) && validate_payroll_request()) {
-    $period_name = get_post('period_name');
+    $period_name = trim((string)get_post('period_name'));
     $from_date = get_post('from_date');
     $to_date = get_post('to_date');
     $department_id = (int)get_post('department_id', 0);
     $employee_id = trim((string)get_post('employee_id', ''));
 
-    $period_id = add_payroll_period($period_name, $from_date, $to_date, $department_id ? $department_id : null);
-    if (!$period_id) {
-        if (!payroll_table_exists('payroll_periods'))
-            display_error(_('Could not create payroll period because payroll_periods table is missing in the current company database.'));
-        else
-            display_error(_('Could not create payroll period.'));
-    } else {
-        $success_count = 0;
-        $failed_count = 0;
+    $invalid_employee_selection = false;
+    $employees = resolve_payroll_employees($department_id, $employee_id, $invalid_employee_selection);
+    $skipped_employee_ids = array();
+    if (!$invalid_employee_selection && !empty($employees))
+        $employees = filter_payroll_eligible_employees($employees, $from_date, $to_date, $skipped_employee_ids);
 
-        $employees = array();
-        if ($employee_id !== '') {
-            $employee = get_employee_by_code($employee_id);
-            if ($employee)
-                $employees[] = $employee;
-        } else {
-            $result = get_active_employees($department_id);
-            while ($row = db_fetch_assoc($result))
-                $employees[] = $row;
+    if ($invalid_employee_selection) {
+        display_error(_('Selected employee was not found.'));
+        set_focus('employee_id');
+    } elseif (empty($employees)) {
+        if (!empty($skipped_employee_ids))
+            display_error(_('Selected employees already have payslips for the requested period.'));
+        else
+            display_warning(_('No active employees found for selected filters.'));
+    } else {
+        $period_id = add_payroll_period($period_name, $from_date, $to_date, $department_id ? $department_id : null);
+        if (!$period_id) {
+            if (!payroll_table_exists('payroll_periods'))
+                display_error(_('Could not create payroll period because payroll_periods table is missing in the current company database.'));
+            else
+                display_error(_('Could not create payroll period.'));
+            return;
         }
 
-        if (empty($employees)) {
-            display_warning(_('No active employees found for selected filters.'));
-            $failed_count++;
+        $success_count = 0;
+        $failed_count = count($skipped_employee_ids);
+
+        if (!empty($skipped_employee_ids)) {
+            display_note(sprintf(
+                _('Skipped employees with existing payslips for the selected period: %s'),
+                implode(', ', $skipped_employee_ids)
+            ));
         }
 
         $runtime_context = array(
