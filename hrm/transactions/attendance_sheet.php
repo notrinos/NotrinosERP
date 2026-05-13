@@ -47,6 +47,23 @@ $status_options = array(
 );
 
 /**
+ * Return whether the sheet modal has enough input to save.
+ *
+ * @param string $regular_hours
+ * @param string $overtime_hours
+ * @param int $leave_id
+ * @param string $clock_in
+ * @param string $clock_out
+ * @param string $notes
+ * @return bool
+ */
+function hrm_attendance_sheet_has_input($regular_hours, $overtime_hours, $leave_id, $clock_in, $clock_out, $notes) {
+    return !($regular_hours === '' && $overtime_hours === '' && (int)$leave_id <= 0
+        && trim((string)$clock_in) === '' && trim((string)$clock_out) === ''
+        && trim((string)$notes) === '');
+}
+
+/**
  * Determine CSS class, label, and tooltip for a calendar cell.
  *
  * @param int $day Day of month.
@@ -121,13 +138,50 @@ if (isset($_POST['save_cell'])) {
     $cell_leave    = (int)get_post('cell_leave');
     $cell_notes    = trim((string)get_post('cell_notes'));
     $input_error   = false;
+    $leave_flags   = hrm_get_leave_coverage_flags($cell_emp, $cell_date_sql);
 
-    if (check_date_paid($cell_emp, $cell_date)) {
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $cell_date_sql) || !is_date($cell_date)) {
+        display_error(_('Attendance date is invalid.'));
+        $input_error = true;
+    }
+    if (!$input_error && date_comp($cell_date, Today()) > 0) {
+        display_error(_('Attendance cannot be entered for future dates.'));
+        $input_error = true;
+    }
+    if (!$input_error && check_date_paid($cell_emp, $cell_date)) {
         display_error(_('Cannot modify attendance for a payroll-locked date.'));
         $input_error = true;
     }
-    if (!$input_error && $cell_regular !== '' && !is_numeric($cell_regular)) {
-        display_error(_('Regular hours must be numeric.'));
+    if (!$input_error && !hrm_validate_hours_value($cell_regular)) {
+        display_error(_('Regular hours must be numeric (0..24) or HH:MM format.'));
+        $input_error = true;
+    }
+    if (!$input_error && !hrm_validate_hours_value($cell_ot_hours)) {
+        display_error(_('Overtime hours must be numeric (0..24) or HH:MM format.'));
+        $input_error = true;
+    }
+    if (!$input_error && !hrm_validate_clock_time($cell_clock_in)) {
+        display_error(_('Clock In must be in HH:MM format.'));
+        $input_error = true;
+    }
+    if (!$input_error && !hrm_validate_clock_time($cell_clock_out)) {
+        display_error(_('Clock Out must be in HH:MM format.'));
+        $input_error = true;
+    }
+    if (!$input_error && $cell_ot_hours !== '' && $cell_ot_type <= 0) {
+        display_error(_('Overtime type is required when overtime hours are entered.'));
+        $input_error = true;
+    }
+    if (!$input_error && !hrm_attendance_sheet_has_input($cell_regular, $cell_ot_hours, $cell_leave, $cell_clock_in, $cell_clock_out, $cell_notes)) {
+        display_error(_('Enter hours, leave, clock time, or notes, or use Delete to remove the entry.'));
+        $input_error = true;
+    }
+    if (!$input_error && strlen($cell_notes) > 200) {
+        display_error(_('Notes cannot exceed 200 characters.'));
+        $input_error = true;
+    }
+    if (!$input_error && $leave_flags['has_multi_day']) {
+        display_error(_('This day is covered by a multi-day leave request. Update it from Leave Request instead.'));
         $input_error = true;
     }
     if (!$input_error) {
@@ -135,6 +189,9 @@ if (isset($_POST['save_cell'])) {
             write_attendance($cell_emp, 0, 0, 1, $cell_date, $cell_leave);
             hrm_upsert_attendance_meta($cell_emp, $cell_date, 3, $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes);
         } else {
+            if ($leave_flags['has_single_day'])
+                hrm_delete_single_day_leave_records($cell_emp, $cell_date_sql);
+
             if ($cell_regular !== '')
                 write_attendance($cell_emp, 0, time_to_float($cell_regular), 1, $cell_date);
             if ($cell_ot_hours !== '' && $cell_ot_type > 0) {
@@ -157,8 +214,11 @@ if (isset($_POST['delete_cell'])) {
     $cell_emp      = $_POST['cell_employee_id'];
     $cell_date_sql = $_POST['cell_date'];
     $cell_date     = sql2date($cell_date_sql);
+    $leave_flags   = hrm_get_leave_coverage_flags($cell_emp, $cell_date_sql);
 
-    if (check_date_paid($cell_emp, $cell_date)) {
+    if ($leave_flags['has_multi_day']) {
+        display_error(_('This day is covered by a multi-day leave request. Update it from Leave Request instead.'));
+    } elseif (check_date_paid($cell_emp, $cell_date)) {
         display_error(_('Cannot delete attendance for a payroll-locked date.'));
     } else {
         delete_attendance_record($cell_emp, $cell_date_sql);
@@ -179,6 +239,7 @@ if (isset($_POST['bulk_fill'])) {
     $wd_map = get_working_day_map();
     $days_in_month = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
     $att_data = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id);
+    $leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id);
     $holidays = get_month_holidays($sel_year, $sel_month);
     $filled = 0;
 
@@ -192,6 +253,7 @@ if (isset($_POST['bulk_fill'])) {
             if (isset($wd_map[$dow]) && !$wd_map[$dow]['is_working']) continue;
             if (isset($holidays[$d])) continue;
             if (isset($att_data[$eid][$d])) continue;
+            if (isset($leave_data[$eid][$d])) continue;
             if (strtotime($date_sql) > strtotime(date('Y-m-d'))) continue;
             if (check_date_paid($eid, $user_date)) continue;
 
@@ -407,6 +469,11 @@ foreach ($employees as $emp) {
                 echo ' data-clock-out="'.htmlspecialchars((string)$r['clock_out'], ENT_QUOTES).'"';
                 echo ' data-notes="'.htmlspecialchars((string)$r['notes'], ENT_QUOTES).'"';
             }
+            if (isset($emp_leave[$d])) {
+                echo ' data-leave="'.(int)$emp_leave[$d]['leave_type_id'].'"';
+                if (!isset($emp_att[$d]))
+                    echo ' data-status="3"';
+            }
             echo ' onclick="openAttModal(this)">';
             echo '<span>'.$cell_label.'</span></td>';
         }
@@ -488,6 +555,17 @@ end_form();
 
 echo '<script type="text/javascript">
 function openAttModal(cell) {
+    var setSelectValue = function(select, value, def) {
+        if (!select)
+            return;
+
+        var resolved = (value !== null && value !== "" && value !== "0.00") ? value : def;
+        select.value = resolved;
+
+        if (window.jQuery)
+            jQuery(select).trigger("change");
+    };
+
     var emp  = cell.getAttribute("data-emp");
     var date = cell.getAttribute("data-date");
     var name = cell.getAttribute("data-name");
@@ -513,21 +591,22 @@ function openAttModal(cell) {
     // Status selector
     var statusVal = cell.getAttribute("data-status");
     var statusSel = document.querySelector("[name=cell_status]");
-    if (statusSel) statusSel.value = (statusVal !== null) ? statusVal : "0";
+    setSelectValue(statusSel, statusVal, "0");
 
     // OT type selector
     var otVal = cell.getAttribute("data-ot-type");
     var otSel = document.querySelector("[name=cell_ot_type]");
-    if (otSel) otSel.value = (otVal !== null && otVal !== "0") ? otVal : "0";
+    setSelectValue(otSel, otVal, "0");
 
     // Shift selector
     var shiftVal = cell.getAttribute("data-shift");
     var shiftSel = document.querySelector("[name=cell_shift]");
-    if (shiftSel) shiftSel.value = (shiftVal !== null && shiftVal !== "0") ? shiftVal : "";
+    setSelectValue(shiftSel, shiftVal, "");
 
     // Leave selector
+    var leaveVal = cell.getAttribute("data-leave");
     var lvSel = document.querySelector("[name=cell_leave]");
-    if (lvSel) lvSel.value = "";
+    setSelectValue(lvSel, leaveVal, "0");
 
     document.getElementById("att-modal-overlay").style.display = "block";
     document.getElementById("att-modal").style.display = "block";

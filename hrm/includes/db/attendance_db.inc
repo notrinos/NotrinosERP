@@ -33,6 +33,46 @@ function time_to_float($time) {
 }
 
 /**
+ * Validate hours text input.
+ *
+ * Accepts HH:MM or numeric (0..24).
+ *
+ * @param string $value
+ * @return bool
+ */
+function hrm_validate_hours_value($value) {
+	$value = trim((string)$value);
+
+	if ($value === '')
+		return true;
+
+	if (preg_match("/^(?(?=\d{2})(?:2[0-3]|[01][0-9])|[0-9]):[0-5][0-9]$/", $value))
+		return true;
+
+	if (is_numeric($value)) {
+		$number = (float)$value;
+		return ($number >= 0 && $number <= 24);
+	}
+
+	return false;
+}
+
+/**
+ * Validate optional time input in HH:MM format.
+ *
+ * @param string $value
+ * @return bool
+ */
+function hrm_validate_clock_time($value) {
+	$value = trim((string)$value);
+
+	if ($value === '')
+		return true;
+
+	return (bool)preg_match('/^(?:2[0-3]|[01]?\d):[0-5]\d$/', $value);
+}
+
+/**
  * Check whether attendance exists for employee/date.
  *
  * The $time_id parameter is kept for backward compatibility.
@@ -392,13 +432,62 @@ function hrm_upsert_attendance_meta($employee_id, $date, $status, $shift_id, $cl
 }
 
 /**
- * Delete a single attendance record for an employee on a given SQL-format date.
+ * Get leave coverage flags for one employee/day.
+ *
+ * @param string $employee_id
+ * @param string $date_sql Date in Y-m-d format.
+ * @return array
+ */
+function hrm_get_leave_coverage_flags($employee_id, $date_sql) {
+	$sql = "SELECT from_date, to_date FROM ".TB_PREF."leave_details
+		WHERE employee_id = ".db_escape($employee_id)."
+		AND '".$date_sql."' BETWEEN from_date AND to_date
+		AND approval_status <> 'rejected'";
+	$result = db_query($sql, 'could not get leave coverage flags');
+
+	$flags = array(
+		'has_leave' => false,
+		'has_single_day' => false,
+		'has_multi_day' => false,
+	);
+
+	while ($row = db_fetch($result)) {
+		$flags['has_leave'] = true;
+		if ($row['from_date'] === $date_sql && $row['to_date'] === $date_sql)
+			$flags['has_single_day'] = true;
+		else
+			$flags['has_multi_day'] = true;
+	}
+
+	return $flags;
+}
+
+/**
+ * Delete exact single-day leave records for one employee/day.
+ *
+ * @param string $employee_id
+ * @param string $date_sql Date in Y-m-d format.
+ * @return void
+ */
+function hrm_delete_single_day_leave_records($employee_id, $date_sql) {
+	$sql = "DELETE FROM ".TB_PREF."leave_details
+		WHERE employee_id = ".db_escape($employee_id)."
+		AND from_date = ".db_escape($date_sql)."
+		AND to_date = ".db_escape($date_sql)."
+		AND approval_status <> 'rejected'";
+	db_query($sql, 'could not delete single-day leave records');
+}
+
+/**
+ * Delete attendance and exact single-day leave records for an employee/day.
  *
  * @param string $employee_id
  * @param string $date_sql  Date in Y-m-d format.
  * @return void
  */
 function delete_attendance_record($employee_id, $date_sql) {
+	hrm_delete_single_day_leave_records($employee_id, $date_sql);
+
 	$sql = "DELETE FROM ".TB_PREF."attendance
 		WHERE employee_id = ".db_escape($employee_id)."
 		AND `date` = ".db_escape($date_sql);

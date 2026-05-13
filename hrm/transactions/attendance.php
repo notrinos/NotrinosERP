@@ -48,20 +48,7 @@ function hrm_attendance_status_options() {
  * @return bool
  */
 function hrm_is_valid_hours_value($value) {
-    $value = trim((string)$value);
-
-    if ($value === '')
-        return true;
-
-    if (preg_match("/^(?(?=\d{2})(?:2[0-3]|[01][0-9])|[0-9]):[0-5][0-9]$/", $value))
-        return true;
-
-    if (is_numeric($value)) {
-        $number = (float)$value;
-        return ($number >= 0 && $number <= 24);
-    }
-
-    return false;
+    return hrm_validate_hours_value($value);
 }
 
 /**
@@ -71,12 +58,7 @@ function hrm_is_valid_hours_value($value) {
  * @return bool
  */
 function hrm_is_valid_clock_time($value) {
-    $value = trim((string)$value);
-
-    if ($value === '')
-        return true;
-
-    return (bool)preg_match('/^(?:2[0-3]|[01]?\d):[0-5]\d$/', $value);
+    return hrm_validate_clock_time($value);
 }
 
 /**
