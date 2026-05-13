@@ -35,6 +35,23 @@ function loan_to_sql_date($date_value) {
 }
 
 /**
+ * Validate that the repayment schedule starts on or after the loan date.
+ *
+ * @param string $loan_date
+ * @param string $first_repayment
+ * @return bool
+ */
+function loan_has_valid_repayment_start_date($loan_date, $first_repayment) {
+    $loan_date_sql = loan_to_sql_date($loan_date);
+    $first_repayment_sql = loan_to_sql_date($first_repayment);
+
+    if ($loan_date_sql === '' || $first_repayment_sql === '')
+        return false;
+
+    return $first_repayment_sql >= $loan_date_sql;
+}
+
+/**
  * Add employee loan request.
  *
  * @param string $employee_id
@@ -51,7 +68,8 @@ function loan_to_sql_date($date_value) {
 function add_employee_loan($employee_id, $loan_type_id, $loan_amount, $interest_rate, $installments, $installment_amount, $loan_date, $first_repayment, $notes='') {
     $loan_date_sql = loan_to_sql_date($loan_date);
     $first_repayment_sql = loan_to_sql_date($first_repayment);
-    if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0)
+    if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0
+        || !loan_has_valid_repayment_start_date($loan_date_sql, $first_repayment_sql))
         return false;
 
     $sql = "INSERT INTO ".TB_PREF."employee_loans
@@ -92,7 +110,8 @@ function add_employee_loan($employee_id, $loan_type_id, $loan_amount, $interest_
 function update_employee_loan($loan_id, $loan_type_id, $loan_amount, $interest_rate, $installments, $installment_amount, $loan_date, $first_repayment, $notes='') {
     $loan_date_sql = loan_to_sql_date($loan_date);
     $first_repayment_sql = loan_to_sql_date($first_repayment);
-    if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0)
+    if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0
+        || !loan_has_valid_repayment_start_date($loan_date_sql, $first_repayment_sql))
         return false;
 
     $sql = "UPDATE ".TB_PREF."employee_loans SET

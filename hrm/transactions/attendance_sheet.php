@@ -172,6 +172,10 @@ if (isset($_POST['save_cell'])) {
         display_error(_('Overtime type is required when overtime hours are entered.'));
         $input_error = true;
     }
+    if (!$input_error && $cell_status === 3 && $cell_leave <= 0) {
+        display_error(_('Leave type is required when status is On Leave.'));
+        $input_error = true;
+    }
     if (!$input_error && !hrm_attendance_sheet_has_input($cell_regular, $cell_ot_hours, $cell_leave, $cell_clock_in, $cell_clock_out, $cell_notes)) {
         display_error(_('Enter hours, leave, clock time, or notes, or use Delete to remove the entry.'));
         $input_error = true;

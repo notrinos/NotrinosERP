@@ -181,6 +181,12 @@ function hrm_can_process_attendance($employees) {
             return false;
         }
 
+        if ((int)get_post($employee_id.'-status') === 3 && (int)get_post($employee_id.'-leave') <= 0) {
+            display_error(_('Leave type is required when status is On Leave.'));
+            set_focus($employee_id.'-leave');
+            return false;
+        }
+
         if (get_post($employee_id.'-regular') === '' && get_post($employee_id.'-ot_hours') === ''
             && (int)get_post($employee_id.'-leave') <= 0 && trim((string)get_post($employee_id.'-clock_in')) === ''
             && trim((string)get_post($employee_id.'-clock_out')) === '' && trim((string)get_post($employee_id.'-notes')) === '') {

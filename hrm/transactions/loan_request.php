@@ -48,6 +48,9 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('loan_type_id');
     } elseif (!is_date($_POST['loan_date']) || !is_date($_POST['first_repayment'])) {
         display_error(_('Loan date and first repayment date are required.'));
+    } elseif (date1_greater_date2($_POST['loan_date'], $_POST['first_repayment'])) {
+        display_error(_('First repayment date must be on or after the loan date.'));
+        set_focus('first_repayment');
     } elseif ((int)$_POST['installments'] <= 0) {
         display_error(_('Installments must be greater than zero.'));
         set_focus('installments');
