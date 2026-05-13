@@ -195,8 +195,9 @@ function add_payslip(&$payslip_doc) {
 		$values[] = db_escape($payslip_doc->employee_id);
 	}
 	if (isset($columns['payroll_period_id'])) {
+		$payroll_period_id = isset($payslip_doc->payroll_period_id) ? (int)$payslip_doc->payroll_period_id : 0;
 		$fields[] = 'payroll_period_id';
-		$values[] = db_escape((int)$payslip_doc->payroll_period_id);
+		$values[] = $payroll_period_id > 0 ? db_escape($payroll_period_id) : 'NULL';
 	}
 	if (isset($columns['from_date']) && $from_date !== '') {
 		$fields[] = 'from_date';

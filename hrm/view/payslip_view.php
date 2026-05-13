@@ -94,7 +94,7 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 label_cell(_('Payslip:'));
 $payslip_list = get_payslip_view_list();
-array_selector_cell('payslip_id', null, $payslip_list, array('select_submit' => true));
+echo '<td>'.array_selector('payslip_id', null, $payslip_list, array('select_submit' => true)).'</td>';
 submit_cells('show', _('Show'), '', _('Show selected payslip'), 'default');
 end_row();
 end_table(1);
@@ -112,6 +112,12 @@ if ($selected_id > 0) {
 
         start_table(TABLESTYLE2);
         label_row(_('Payslip #:'), $header[$id_col]);
+        if (isset($header['reference']) && $header['reference'] !== '')
+            label_row(_('Reference:'), $header['reference']);
+        if (isset($header['payroll_period_id']))
+            label_row(_('Payroll Period:'), (int)$header['payroll_period_id'] > 0 ? $header['payroll_period_id'] : _('Manual Entry'));
+        if (isset($header['trans_no']) && (int)$header['trans_no'] > 0)
+            label_row(_('GL Transaction #:'), $header['trans_no']);
         label_row(_('Employee ID:'), $employee_code);
         if ($employee_name !== '')
             label_row(_('Employee Name:'), $employee_name);
@@ -127,6 +133,18 @@ if ($selected_id > 0) {
             amount_row(_('Total Deductions:'), $header['total_deductions']);
         if (isset($header['net_salary']))
             amount_row(_('Net Salary:'), $header['net_salary']);
+        if (isset($header['working_days']))
+            amount_row(_('Working Days:'), $header['working_days']);
+        if (isset($header['worked_days']))
+            amount_row(_('Worked Days:'), $header['worked_days']);
+        if (isset($header['leave_days']))
+            amount_row(_('Leave Days:'), $header['leave_days']);
+        if (isset($header['absent_days']))
+            amount_row(_('Absent Days:'), $header['absent_days']);
+        if (isset($header['overtime_hours']))
+            amount_row(_('Overtime Hours:'), $header['overtime_hours']);
+        if (isset($header['loan_deduction']))
+            amount_row(_('Loan Deduction:'), $header['loan_deduction']);
         end_table(1);
 
         $details = get_payslip_details($selected_id);

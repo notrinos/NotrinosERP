@@ -257,6 +257,7 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     }
 
     if (floatcmp($loan_deduction, 0) != 0) {
+        $doc->loan_deduction = (float)$loan_deduction;
         $doc->add_line(0, _('Loan Repayment'), HRM_ELEM_DEDUCTION, 1, HRM_AMTTYPE_FIXED,
             $loan_deduction, 0, $loan_deduction, $loan_deduction, $loan_account, null, 0, 9300);
     }
@@ -576,8 +577,8 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
 
     $sql = "SELECT
             COUNT(*) as records_count,
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as absent_days,
-            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as worked_days,
+            SUM(CASE WHEN status = 1 THEN 1 WHEN status = 2 THEN 0.5 ELSE 0 END) as absent_days,
+            SUM(CASE WHEN status = 0 THEN 1 WHEN status = 2 THEN 0.5 ELSE 0 END) as worked_days,
             SUM(IFNULL(overtime_hours, 0)) as overtime_hours,
             SUM(IFNULL(regular_hours, 0)) as regular_hours
         FROM ".TB_PREF."attendance
@@ -602,7 +603,7 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
     $leave_days = (float)@$leave_row['leave_days'];
 
     if ($worked_days <= 0 && $absent_days <= 0)
-        $worked_days = $working_days;
+        $worked_days = max($working_days - $leave_days, 0.0);
 
     // Calculate extra absent days: count non-working days that fall between
     // consecutive absent working days (e.g. absent Thu + Mon → Fri/Sat/Sun
