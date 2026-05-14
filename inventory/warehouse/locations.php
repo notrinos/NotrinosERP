@@ -29,6 +29,42 @@ include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_locatio
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_storage_categories_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/warehouse_ui.inc');
 
+/**
+ * Check whether submitted warehouse location fields contain scalar values only.
+ *
+ * @param array $field_names Expected scalar field names.
+ * @return bool
+ */
+function warehouse_location_post_fields_are_scalar($field_names) {
+	foreach ($field_names as $field_name) {
+		if (isset($_POST[$field_name]) && is_array($_POST[$field_name])) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Check whether a value is a non-negative numeric string.
+ *
+ * @param mixed $value Submitted value.
+ * @return bool
+ */
+function warehouse_location_is_non_negative_number($value) {
+	return is_numeric($value) && (float)$value >= 0;
+}
+
+/**
+ * Check whether a value is a non-negative integer string.
+ *
+ * @param mixed $value Submitted value.
+ * @return bool
+ */
+function warehouse_location_is_non_negative_integer($value) {
+	return is_scalar($value) && preg_match('/^\d+$/', trim((string)$value));
+}
+
 //-------------------------------------------------------------------------------------
 // Determine current warehouse and parent context
 //-------------------------------------------------------------------------------------
@@ -96,28 +132,90 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$input_error = 0;
+	$location_code = trim(get_post('loc_code'));
+	$location_name = trim(get_post('loc_name'));
+	$location_type_id = get_post('location_type_id');
+	$max_weight = trim(get_post('max_weight', ''));
+	$max_volume = trim(get_post('max_volume', ''));
+	$max_units = trim(get_post('max_units', ''));
+	$storage_category_id = get_post('storage_category_id');
+	$zone_type = get_post('zone_type', '');
+	$abc_class = get_post('abc_class', '');
+	$pick_sequence = trim(get_post('pick_sequence', ''));
+	$barcode = trim(get_post('barcode', ''));
+	$allowed_zone_types = array('', 'staging', 'quality', 'packing', 'dock', 'ambient', 'cold', 'frozen', 'hazmat', 'highvalue', 'bulk', 'picking');
+	$allowed_abc_classes = array('', 'A', 'B', 'C');
 
-	if (strlen(get_post('loc_code')) == 0) {
+	if (!warehouse_location_post_fields_are_scalar(array(
+		'loc_code', 'loc_name', 'location_type_id', 'max_weight', 'max_volume', 'max_units',
+		'storage_category_id', 'zone_type', 'abc_class', 'pick_sequence', 'barcode',
+		'warehouse', 'parent_id', 'selected_id'
+	))) {
+		$input_error = 1;
+		display_error(_('One or more submitted fields contained an invalid value. Please review the form and try again.'));
+	}
+
+	if ($input_error == 0 && strlen($location_code) == 0) {
 		$input_error = 1;
 		display_error(_('The location code must be entered.'));
 		set_focus('loc_code');
-	} elseif (strlen(get_post('loc_name')) == 0) {
+	} elseif ($input_error == 0 && strlen($location_name) == 0) {
 		$input_error = 1;
 		display_error(_('The location name must be entered.'));
 		set_focus('loc_name');
-	} elseif (!get_post('location_type_id')) {
+	} elseif ($input_error == 0 && !warehouse_location_is_non_negative_integer($location_type_id)) {
 		$input_error = 1;
 		display_error(_('Please select a location type.'));
 		set_focus('location_type_id');
-	} elseif (!$warehouse) {
+	} elseif ($input_error == 0 && !$warehouse) {
 		$input_error = 1;
 		display_error(_('Please select a warehouse first.'));
+	}
+
+	if ($input_error == 0 && $max_weight !== '' && !warehouse_location_is_non_negative_number($max_weight)) {
+		$input_error = 1;
+		display_error(_('Max weight must be a non-negative number.'));
+		set_focus('max_weight');
+	}
+	if ($input_error == 0 && $max_volume !== '' && !warehouse_location_is_non_negative_number($max_volume)) {
+		$input_error = 1;
+		display_error(_('Max volume must be a non-negative number.'));
+		set_focus('max_volume');
+	}
+	if ($input_error == 0 && $max_units !== '' && !warehouse_location_is_non_negative_integer($max_units)) {
+		$input_error = 1;
+		display_error(_('Max units must be a non-negative integer.'));
+		set_focus('max_units');
+	}
+	if ($input_error == 0 && $pick_sequence !== '' && !warehouse_location_is_non_negative_integer($pick_sequence)) {
+		$input_error = 1;
+		display_error(_('Pick sequence must be a non-negative integer.'));
+		set_focus('pick_sequence');
+	}
+	if ($input_error == 0
+		&& $storage_category_id !== ''
+		&& $storage_category_id != -1
+		&& $storage_category_id != 0
+		&& !warehouse_location_is_non_negative_integer($storage_category_id)) {
+		$input_error = 1;
+		display_error(_('Storage category must be a valid selection.'));
+		set_focus('storage_category_id');
+	}
+	if ($input_error == 0 && !in_array($zone_type, $allowed_zone_types, true)) {
+		$input_error = 1;
+		display_error(_('Zone type must be a valid selection.'));
+		set_focus('zone_type');
+	}
+	if ($input_error == 0 && !in_array($abc_class, $allowed_abc_classes, true)) {
+		$input_error = 1;
+		display_error(_('ABC class must be a valid selection.'));
+		set_focus('abc_class');
 	}
 
 	// Validate code uniqueness
 	if ($input_error == 0) {
 		$exclude_id = ($selected_id != -1) ? $selected_id : null;
-		if (!is_warehouse_location_code_unique(get_post('loc_code'), $warehouse, $exclude_id)) {
+		if (!is_warehouse_location_code_unique($location_code, $warehouse, $exclude_id)) {
 			$input_error = 1;
 			display_error(_('This location code already exists in this warehouse.'));
 			set_focus('loc_code');
@@ -126,14 +224,16 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 	if ($input_error == 0) {
 		$extra = array();
-		if (get_post('max_weight') !== '') $extra['max_weight'] = get_post('max_weight');
-		if (get_post('max_volume') !== '') $extra['max_volume'] = get_post('max_volume');
-		if (get_post('max_units') !== '') $extra['max_units'] = get_post('max_units');
-		if (get_post('storage_category_id') !== '') $extra['storage_category_id'] = get_post('storage_category_id');
-		if (get_post('zone_type') !== '') $extra['zone_type'] = get_post('zone_type');
-		if (get_post('abc_class') !== '') $extra['abc_class'] = get_post('abc_class');
-		if (get_post('pick_sequence') !== '') $extra['pick_sequence'] = get_post('pick_sequence');
-		if (get_post('barcode') !== '') $extra['barcode'] = get_post('barcode');
+		if ($max_weight !== '') $extra['max_weight'] = $max_weight;
+		if ($max_volume !== '') $extra['max_volume'] = $max_volume;
+		if ($max_units !== '') $extra['max_units'] = (int)$max_units;
+		if ($storage_category_id !== '' && $storage_category_id != -1 && $storage_category_id != 0) {
+			$extra['storage_category_id'] = (int)$storage_category_id;
+		}
+		if ($zone_type !== '') $extra['zone_type'] = $zone_type;
+		if ($abc_class !== '') $extra['abc_class'] = $abc_class;
+		if ($pick_sequence !== '') $extra['pick_sequence'] = (int)$pick_sequence;
+		if ($barcode !== '') $extra['barcode'] = $barcode;
 		$extra['is_default_receipt'] = check_value('is_default_receipt') ? 1 : 0;
 		$extra['is_default_ship'] = check_value('is_default_ship') ? 1 : 0;
 		$extra['is_default_scrap'] = check_value('is_default_scrap') ? 1 : 0;
@@ -143,8 +243,8 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 			// Update
 			update_warehouse_location(
 				$selected_id,
-				get_post('loc_name'),
-				get_post('location_type_id'),
+				$location_name,
+				(int)$location_type_id,
 				$extra
 			);
 			display_notification(_('Location has been updated.'));
@@ -152,11 +252,11 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 			// Add
 			$effective_parent = $parent_id ? $parent_id : null;
 			add_warehouse_location(
-				get_post('loc_code'),
-				get_post('loc_name'),
+				$location_code,
+				$location_name,
 				$effective_parent,
 				$warehouse,
-				get_post('location_type_id'),
+				(int)$location_type_id,
 				$extra
 			);
 			display_notification(_('New location has been added.'));
@@ -426,6 +526,10 @@ echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Classificatio
 
 $zone_types = array(
 	'' => _('-- none --'),
+	'staging' => _('Staging'),
+	'quality' => _('Quality'),
+	'packing' => _('Packing'),
+	'dock' => _('Dock'),
 	'ambient' => _('Ambient'),
 	'cold' => _('Cold Storage'),
 	'frozen' => _('Frozen'),

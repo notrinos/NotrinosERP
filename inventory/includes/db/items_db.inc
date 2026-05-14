@@ -237,7 +237,8 @@ function build_tracking_sql_set($tracking) {
 		'track_by', 'has_serial_no', 'has_batch_no', 'has_expiry_date',
 		'serial_no_prefix', 'batch_no_prefix', 'warranty_days',
 		'quality_inspection_required', 'min_order_qty', 'lead_time_days',
-		'shelf_life_days', 'item_weight', 'item_volume'
+		'shelf_life_days', 'item_weight', 'item_volume',
+		'storage_category_id', 'abc_class'
 	);
 
 	$sql = '';
@@ -264,7 +265,8 @@ function build_tracking_sql_insert($tracking) {
 		'track_by', 'has_serial_no', 'has_batch_no', 'has_expiry_date',
 		'serial_no_prefix', 'batch_no_prefix', 'warranty_days',
 		'quality_inspection_required', 'min_order_qty', 'lead_time_days',
-		'shelf_life_days', 'item_weight', 'item_volume'
+		'shelf_life_days', 'item_weight', 'item_volume',
+		'storage_category_id', 'abc_class'
 	);
 
 	$cols = '';

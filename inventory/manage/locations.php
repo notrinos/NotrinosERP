@@ -29,6 +29,16 @@ page($help_context);
 
 simple_page_mode(true);
 
+/**
+ * Check whether a warehouse step count is valid.
+ *
+ * @param mixed $step_count Submitted value.
+ * @return bool
+ */
+function inventory_location_has_valid_step_count($step_count) {
+	return is_scalar($step_count) && in_array((string)$step_count, array('1', '2', '3'), true);
+}
+
 if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	//initialise no input errors assumed initially before we test
@@ -39,6 +49,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	//first off validate inputs sensible
 	$_POST['loc_code'] = strtoupper($_POST['loc_code']);
+	$inbound_steps = get_post('inbound_steps', 1);
+	$outbound_steps = get_post('outbound_steps', 1);
 
 	if ((strlen(db_escape($_POST['loc_code'])) > 7) || empty($_POST['loc_code'])) { //check length after conversion
 		$input_error = 1;
@@ -50,18 +62,28 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error( _('The location name must be entered.'));		
 		set_focus('location_name');
 	}
+	elseif (!inventory_location_has_valid_step_count($inbound_steps)) {
+		$input_error = 1;
+		display_error(_('Inbound steps must be a valid selection.'));
+		set_focus('inbound_steps');
+	}
+	elseif (!inventory_location_has_valid_step_count($outbound_steps)) {
+		$input_error = 1;
+		display_error(_('Outbound steps must be a valid selection.'));
+		set_focus('outbound_steps');
+	}
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
 	
-			update_item_location($selected_id, $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0);
+			update_item_location($selected_id, $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0, (int)$inbound_steps, (int)$outbound_steps);
 			display_notification(_('Selected location has been updated'));
 		} 
 		else {
 	
 		// selected_id is null cos no item selected on first time round so must be adding a	record must be submitting new entries in the new Location form
 		
-			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0);
+			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0, (int)$inbound_steps, (int)$outbound_steps);
 			display_notification(_('New location has been added'));
 		}
 		
@@ -133,7 +155,7 @@ $result = get_item_locations(check_value('show_inactive'), get_post('fixed_asset
 
 start_form();
 start_table(TABLESTYLE);
-$th = array(_('Location Code'), _('Location Name'), _('Address'), _('Phone'), _('Secondary Phone'), _('WMS'), '', '');
+$th = array(_('Location Code'), _('Location Name'), _('Address'), _('Phone'), _('Secondary Phone'), _('WMS'), _('Inbound Steps'), _('Outbound Steps'), '', '');
 inactive_control_column($th);
 table_header($th);
 $k = 0; //row colour counter
@@ -147,6 +169,8 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['phone']);
 	label_cell($myrow['phone2']);
 	label_cell($myrow['wh_enabled'] ? '<span style="color:green;"><i class="fa fa-check"></i> ' . _('Enabled') . '</span>' : '-', 'align=center');
+	label_cell($myrow['wh_enabled'] ? (int)$myrow['inbound_steps'] : '-', 'align=center');
+	label_cell($myrow['wh_enabled'] ? (int)$myrow['outbound_steps'] : '-', 'align=center');
 	inactive_control_cell($myrow['loc_code'], $myrow['inactive'], 'locations', 'loc_code');
 	edit_button_cell('Edit'.$myrow['loc_code'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['loc_code'], _('Delete'));
@@ -177,6 +201,8 @@ if ($selected_id != -1) {
 		$_POST['fax'] = $myrow['fax'];
 		$_POST['email'] = $myrow['email'];
 		$_POST['wh_enabled'] = $myrow['wh_enabled'];
+		$_POST['inbound_steps'] = $myrow['inbound_steps'];
+		$_POST['outbound_steps'] = $myrow['outbound_steps'];
 	}
 	hidden('selected_id', $selected_id);
 	hidden('loc_code');
@@ -196,6 +222,20 @@ text_row_ex(_('Facsimile No:'), 'fax', 32, 30);
 email_row_ex(_('E-mail:'), 'email', 50);
 
 check_row(_('Enable Warehouse Management (WMS)'), 'wh_enabled', get_post('wh_enabled', 0));
+
+$step_options = array(
+	'1' => _('1 - Direct'),
+	'2' => _('2 - Receive + Putaway'),
+	'3' => _('3 - Receive + QC + Putaway')
+);
+array_selector_row(_('Inbound Steps:'), 'inbound_steps', get_post('inbound_steps', 1), $step_options);
+
+$outbound_step_options = array(
+	'1' => _('1 - Ship'),
+	'2' => _('2 - Pick + Ship'),
+	'3' => _('3 - Pick + Pack + Ship')
+);
+array_selector_row(_('Outbound Steps:'), 'outbound_steps', get_post('outbound_steps', 1), $outbound_step_options);
 
 end_table(1);
 submit_add_or_update_center($selected_id == -1, '', 'both');

@@ -9,11 +9,18 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0) {
-	$sql = "INSERT INTO ".TB_PREF."locations (loc_code, location_name, delivery_address, phone, phone2, fax, email, contact, fixed_asset, wh_enabled)
+function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0, $inbound_steps = 1, $outbound_steps = 1) {
+	$inbound_steps = (int)$inbound_steps;
+	if ($inbound_steps < 1 || $inbound_steps > 3)
+		$inbound_steps = 1;
+	$outbound_steps = (int)$outbound_steps;
+	if ($outbound_steps < 1 || $outbound_steps > 3)
+		$outbound_steps = 1;
+
+	$sql = "INSERT INTO ".TB_PREF."locations (loc_code, location_name, delivery_address, phone, phone2, fax, email, contact, fixed_asset, wh_enabled, inbound_steps, outbound_steps)
 		VALUES (".db_escape($loc_code).", ".db_escape($location_name).", ".db_escape($delivery_address).", "
 			.db_escape($phone).", ".db_escape($phone2).", ".db_escape($fax).", ".db_escape($email).", "
-			.db_escape($contact).", ".db_escape($fixed_asset).", ".db_escape($wh_enabled).")";
+			.db_escape($contact).", ".db_escape($fixed_asset).", ".db_escape($wh_enabled).", ".db_escape($inbound_steps).", ".db_escape($outbound_steps).")";
 
 	db_query($sql, 'a location could not be added');
 
@@ -38,13 +45,23 @@ function add_item_location($loc_code, $location_name, $delivery_address, $phone,
 
 //------------------------------------------------------------------------------------
 
-function update_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0) {
+
+function update_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0, $inbound_steps = 1, $outbound_steps = 1) {
+	$inbound_steps = (int)$inbound_steps;
+	if ($inbound_steps < 1 || $inbound_steps > 3)
+		$inbound_steps = 1;
+	$outbound_steps = (int)$outbound_steps;
+	if ($outbound_steps < 1 || $outbound_steps > 3)
+		$outbound_steps = 1;
+
 	$sql = "UPDATE ".TB_PREF."locations SET location_name=".db_escape($location_name).",
 		delivery_address=".db_escape($delivery_address).",
 		phone=".db_escape($phone).", phone2=".db_escape($phone2).", fax=".db_escape($fax).",
 		email=".db_escape($email).", contact=".db_escape($contact).",
 		fixed_asset=".db_escape($fixed_asset).",
-		wh_enabled=".db_escape($wh_enabled)."
+		wh_enabled=".db_escape($wh_enabled).",
+		inbound_steps=".db_escape($inbound_steps).",
+		outbound_steps=".db_escape($outbound_steps)."
 		WHERE loc_code = ".db_escape($loc_code);
 
 	db_query($sql, 'a location could not be updated');

@@ -42,6 +42,7 @@ include_once($path_to_root.'/includes/ui/attachment.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
 include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
+include_once($path_to_root.'/inventory/warehouse/includes/warehouse_ui.inc');
 
 $new_item = get_post('stock_id') == '' || get_post('cancel') || get_post('clone');
 
@@ -204,6 +205,8 @@ function clear_data() {
 	unset($_POST['quality_inspection_required']);
 	unset($_POST['item_weight']);
 	unset($_POST['item_volume']);
+	unset($_POST['storage_category_id']);
+	unset($_POST['abc_class']);
 }
 
 //------------------------------------------------------------------------------------
@@ -237,6 +240,39 @@ if (isset($_POST['addupdate'])) {
 		$input_error = 1;
 		display_error( _('This item code is already assigned to stock item or sale kit.'));
 		set_focus('NewStockID');
+	}
+
+	$storage_category_id = get_post('storage_category_id', '');
+	$abc_class = get_post('abc_class', '');
+	if (!get_post('fixed_asset') && isset($_POST['storage_category_id']) && is_array($_POST['storage_category_id'])) {
+		$input_error = 1;
+		display_error(_('Storage category must be a valid selection.'));
+		set_focus('storage_category_id');
+	}
+	elseif (!get_post('fixed_asset') && isset($_POST['abc_class']) && is_array($_POST['abc_class'])) {
+		$input_error = 1;
+		display_error(_('ABC class must be a valid selection.'));
+		set_focus('abc_class');
+	}
+	elseif (!get_post('fixed_asset') && $storage_category_id !== '' && $storage_category_id != -1 && $storage_category_id != 0 && (!is_scalar($storage_category_id) || !preg_match('/^\d+$/', trim((string)$storage_category_id)))) {
+		$input_error = 1;
+		display_error(_('Storage category must be a valid selection.'));
+		set_focus('storage_category_id');
+	}
+	elseif (!get_post('fixed_asset') && $abc_class !== '' && !in_array($abc_class, array('A', 'B', 'C'), true)) {
+		$input_error = 1;
+		display_error(_('ABC class must be a valid selection.'));
+		set_focus('abc_class');
+	}
+	elseif (!get_post('fixed_asset') && get_post('item_weight') !== '' && input_num('item_weight') < 0) {
+		$input_error = 1;
+		display_error(_('Item weight must be a non-negative number.'));
+		set_focus('item_weight');
+	}
+	elseif (!get_post('fixed_asset') && get_post('item_volume') !== '' && input_num('item_volume') < 0) {
+		$input_error = 1;
+		display_error(_('Item volume must be a non-negative number.'));
+		set_focus('item_volume');
 	}
 	
 	if (get_post('fixed_asset')) {
@@ -281,6 +317,8 @@ if (isset($_POST['addupdate'])) {
 				'quality_inspection_required' => check_value('quality_inspection_required'),
 				'item_weight' => get_post('item_weight') !== '' ? input_num('item_weight') : null,
 				'item_volume' => get_post('item_volume') !== '' ? input_num('item_volume') : null,
+				'storage_category_id' => ($storage_category_id !== '' && $storage_category_id != -1 && $storage_category_id != 0) ? (int)$storage_category_id : null,
+				'abc_class' => $abc_class !== '' ? $abc_class : null,
 			);
 		}
 
@@ -592,6 +630,15 @@ function item_settings(&$stock_id, $new_item) {
 
 		small_amount_row(_('Item Weight (kg):'), 'item_weight', get_post('item_weight'), null, null, 4);
 		small_amount_row(_('Item Volume (m³):'), 'item_volume', get_post('item_volume'), null, null, 4);
+		storage_category_list_row(_('Storage Category:'), 'storage_category_id', get_post('storage_category_id'), true);
+
+		$abc_class_options = array(
+			'' => _('-- none --'),
+			'A' => 'A - ' . _('High'),
+			'B' => 'B - ' . _('Medium'),
+			'C' => 'C - ' . _('Low')
+		);
+		array_selector_row(_('ABC Class:'), 'abc_class', get_post('abc_class', ''), $abc_class_options);
 	}
 
 	end_outer_table(1);
