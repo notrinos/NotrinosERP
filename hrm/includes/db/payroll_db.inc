@@ -109,6 +109,21 @@ function payroll_payslip_header_table() {
 }
 
 /**
+ * Check whether a linked payslip column exists.
+ *
+ * @param string $table_name Table name without prefix.
+ * @param string $column_name
+ * @return bool
+ */
+function payroll_payslip_has_column($table_name, $column_name) {
+    return check_empty_result(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
+        ." AND TABLE_NAME = ".db_escape(TB_PREF.$table_name)
+        ." AND COLUMN_NAME = ".db_escape($column_name)
+    );
+}
+
+/**
  * Add payroll period.
  *
  * @param string $period_name
@@ -271,6 +286,86 @@ function update_payroll_period_status($period_id, $status) {
 }
 
 /**
+ * Promote a payroll period to paid when all linked payslips are paid.
+ *
+ * @param int $period_id
+ * @return bool
+ */
+function sync_payroll_period_payment_status($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id <= 0 || !payroll_table_exists('payroll_periods'))
+        return false;
+
+    $period = get_payroll_period($period_id);
+    if (!$period)
+        return false;
+
+    $current_status = isset($period['status']) ? (int)$period['status'] : 0;
+    if (!in_array($current_status, array(2, 3, 4), true))
+        return true;
+
+    $payslip_table = payroll_payslip_header_table();
+    if (!$payslip_table)
+        return true;
+
+    $sql = "SELECT COUNT(*) AS total_count,
+        SUM(CASE WHEN COALESCE(status, 0) >= 3 AND COALESCE(status, 0) < 6 THEN 1 ELSE 0 END) AS paid_count
+        FROM ".TB_PREF.$payslip_table.
+        " WHERE payroll_period_id = ".db_escape($period_id)." AND COALESCE(status, 0) <> 6";
+    $result = db_query($sql, 'could not summarize payroll period payment status');
+    $row = db_fetch_assoc($result);
+
+    $total_count = $row ? (int)$row['total_count'] : 0;
+    $paid_count = $row ? (int)$row['paid_count'] : 0;
+
+    if ($total_count > 0 && $paid_count >= $total_count && $current_status !== 4)
+        return update_payroll_period_status($period_id, 4);
+
+    return true;
+}
+
+/**
+ * Mark a payroll period as paid and synchronize linked payslips.
+ *
+ * @param int $period_id
+ * @return bool
+ */
+function mark_payroll_period_paid($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id <= 0)
+        return false;
+
+    $period = get_payroll_period($period_id);
+    if (!$period)
+        return false;
+
+    $current_status = isset($period['status']) ? (int)$period['status'] : 0;
+    if ($current_status === 4)
+        return true;
+    if (!in_array($current_status, array(2, 3), true))
+        return false;
+
+    begin_transaction();
+
+    $ok = update_payroll_period_status($period_id, 4);
+    $payslip_table = payroll_payslip_header_table();
+    if ($ok && $payslip_table) {
+        $sql = "UPDATE ".TB_PREF.$payslip_table." SET status = 3"
+            ." WHERE payroll_period_id = ".db_escape($period_id)
+            ." AND COALESCE(status, 0) <> 6";
+        $ok = (bool)db_query($sql, 'could not mark linked payslips as paid');
+    }
+
+    if (!$ok) {
+        cancel_transaction();
+        return false;
+    }
+
+    commit_transaction();
+    return true;
+}
+
+/**
  * Recalculate and update payroll period totals from payslips.
  *
  * @param int $period_id
@@ -331,9 +426,9 @@ function void_payroll_period($period_id) {
     $payslip_table = payroll_payslip_header_table();
     if ($payslip_table) {
         $set_parts = array();
-        if (check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$payslip_table)." AND COLUMN_NAME = 'status'"))
+        if (payroll_payslip_has_column($payslip_table, 'status'))
             $set_parts[] = "status = 6";
-        if (check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$payslip_table)." AND COLUMN_NAME = 'voided_date'"))
+        if (payroll_payslip_has_column($payslip_table, 'voided_date'))
             $set_parts[] = "voided_date = ".db_escape(date2sql(Today()));
 
         if (!empty($set_parts)) {

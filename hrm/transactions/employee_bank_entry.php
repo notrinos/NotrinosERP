@@ -16,6 +16,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
+include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 
 page(_($help_context = 'Payment Advice'));
 
@@ -51,6 +52,9 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
     $sql .= " FROM ".TB_PREF.$table." p
         LEFT JOIN ".TB_PREF."employees e ON e.employee_id = p.".$employee_col." WHERE 1=1";
 
+    if ($status_col)
+        $sql .= " AND COALESCE(p.".$status_col.", 0) <> ".db_escape(payslip_voided_status_value());
+
     if ($employee_id !== '')
         $sql .= " AND p.".$employee_col." = ".db_escape($employee_id);
 
@@ -72,9 +76,14 @@ if (($payslip_id = find_submit('MarkPaid')) != -1) {
 
     if (!$payslip) {
         display_error(_('The selected payslip could not be found.'));
+    } elseif (payslip_is_voided($payslip)) {
+        display_error(_('Voided payslips cannot be marked as paid.'));
+    } elseif (payslip_is_paid($payslip)) {
+        display_warning(_('The selected payslip is already marked as paid.'));
+    } elseif (!payslip_requires_payment($payslip)) {
+        display_warning(_('Only payslips with a positive payable amount can be marked as paid.'));
     } else {
-        $data = array('status' => 3);
-        if (update_payslip($payslip_id, $data))
+        if (mark_payslip_paid($payslip_id))
             display_notification(_('Payslip marked as paid.'));
         else
             display_error(_('Could not update payslip payment status.'));
@@ -124,13 +133,10 @@ if (!$rows) {
         label_cell(!empty($row['to_date']) ? sql2date($row['to_date']) : '-');
         amount_cell((float)$row['payable_amount']);
 
-        $status = isset($row['status']) ? (int)$row['status'] : 0;
-        $status_txt = $status >= 3 ? _('Paid') : _('Pending');
-        if (isset($row['payment_trans_no']) && !empty($row['payment_trans_no']))
-            $status_txt .= ' #'.$row['payment_trans_no'];
+        $status_txt = payslip_payment_status_label($row);
         label_cell($status_txt);
 
-        if ($status >= 3)
+        if (payslip_is_paid($row) || payslip_is_voided($row) || !payslip_requires_payment($row))
             label_cell('-');
         else
             submit_cells('MarkPaid'.$row['payslip_id'], _('Mark Paid'), false, '', '', false);

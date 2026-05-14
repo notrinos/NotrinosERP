@@ -23,9 +23,11 @@ if (($period_id = find_submit('MarkPaid')) != -1) {
 
     if (!$period) {
         display_error(_('The selected payroll period was not found.'));
+    } elseif ((int)$period['status'] === 4) {
+        display_warning(_('The selected payroll period is already marked as paid.'));
     } elseif (!in_array((int)$period['status'], array(2, 3))) {
         display_error(_('Only approved or posted payroll periods can be marked as paid.'));
-    } elseif (update_payroll_period_status($period_id, 4)) {
+    } elseif (mark_payroll_period_paid($period_id)) {
         display_notification(_('Payroll period has been marked as Paid.'));
     } else {
         display_error(_('Could not update payroll period status.'));

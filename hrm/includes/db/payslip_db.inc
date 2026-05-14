@@ -152,6 +152,130 @@ function payslip_current_user_id() {
 }
 
 /**
+ * Return the numeric paid status value used by payslips.
+ *
+ * @return int
+ */
+function payslip_paid_status_value() {
+	return 3;
+}
+
+/**
+ * Return the numeric voided status value used by payslips.
+ *
+ * @return int
+ */
+function payslip_voided_status_value() {
+	return 6;
+}
+
+/**
+ * Normalize a payslip status payload to an integer value.
+ *
+ * @param mixed $payslip_or_status
+ * @return int
+ */
+function payslip_status_value($payslip_or_status) {
+	if (is_array($payslip_or_status) && isset($payslip_or_status['status']))
+		return (int)$payslip_or_status['status'];
+
+	if (is_numeric($payslip_or_status))
+		return (int)$payslip_or_status;
+
+	return 0;
+}
+
+/**
+ * Check whether a payslip is already paid.
+ *
+ * @param mixed $payslip_or_status
+ * @return bool
+ */
+function payslip_is_paid($payslip_or_status) {
+	$status = payslip_status_value($payslip_or_status);
+	return $status >= payslip_paid_status_value() && $status < payslip_voided_status_value();
+}
+
+/**
+ * Check whether a payslip has been voided.
+ *
+ * @param mixed $payslip_or_status
+ * @return bool
+ */
+function payslip_is_voided($payslip_or_status) {
+	return payslip_status_value($payslip_or_status) === payslip_voided_status_value();
+}
+
+/**
+ * Build a SQL condition that excludes voided payslip rows when status exists.
+ *
+ * @param string $table_name
+ * @param string $table_alias
+ * @return string
+ */
+function payslip_non_voided_condition($table_name, $table_alias='') {
+	if (!$table_name || !payslip_has_column($table_name, 'status'))
+		return '1=1';
+
+	$prefix = $table_alias !== '' ? $table_alias.'.' : '';
+	return "COALESCE(".$prefix."status, 0) <> ".(int)payslip_voided_status_value();
+}
+
+/**
+ * Resolve the payable amount for a payslip row.
+ *
+ * @param mixed $payslip
+ * @return float
+ */
+function payslip_payable_amount($payslip) {
+	if (!is_array($payslip))
+		return 0;
+
+	if (isset($payslip['payable_amount']) && is_numeric($payslip['payable_amount']))
+		return (float)$payslip['payable_amount'];
+	if (isset($payslip['net_salary']) && is_numeric($payslip['net_salary']))
+		return (float)$payslip['net_salary'];
+
+	return 0;
+}
+
+/**
+ * Check whether a payslip requires a positive employee payment.
+ *
+ * @param mixed $payslip
+ * @return bool
+ */
+function payslip_requires_payment($payslip) {
+	if (!is_array($payslip))
+		return true;
+
+	return payslip_payable_amount($payslip) > 0;
+}
+
+/**
+ * Format a human-readable payslip payment status label.
+ *
+ * @param mixed $payslip_or_status
+ * @param mixed $payment_trans_no
+ * @return string
+ */
+function payslip_payment_status_label($payslip_or_status, $payment_trans_no=null) {
+	if (is_array($payslip_or_status) && $payment_trans_no === null && isset($payslip_or_status['payment_trans_no']))
+		$payment_trans_no = $payslip_or_status['payment_trans_no'];
+
+	if (payslip_is_voided($payslip_or_status))
+		return _('Voided');
+	if (is_array($payslip_or_status) && !payslip_requires_payment($payslip_or_status))
+		return _('No Payment Due');
+
+	$label = payslip_is_paid($payslip_or_status) ? _('Paid') : _('Pending');
+	if ($label === _('Paid') && !empty($payment_trans_no))
+		$label .= ' #'.(int)$payment_trans_no;
+
+	return $label;
+}
+
+/**
  * Build employee condition for current payslip header table.
  *
  * @param string $employee_id
@@ -484,6 +608,46 @@ function get_payslip($payslip_id) {
 	$result = db_query($sql, 'could not get payslip');
 
 	return db_fetch($result);
+}
+
+/**
+ * Mark a payslip as paid and synchronize the linked payroll period when possible.
+ *
+ * @param int $payslip_id
+ * @param int|null $payment_trans_no
+ * @return bool
+ */
+function mark_payslip_paid($payslip_id, $payment_trans_no=null) {
+	$payslip_id = (int)$payslip_id;
+	if ($payslip_id <= 0)
+		return false;
+
+	$payslip = get_payslip($payslip_id);
+	if (!$payslip || payslip_is_voided($payslip))
+		return false;
+
+	if (payslip_is_paid($payslip)) {
+		if (!empty($payslip['payroll_period_id']) && function_exists('sync_payroll_period_payment_status'))
+			sync_payroll_period_payment_status((int)$payslip['payroll_period_id']);
+		return true;
+	}
+
+	$data = array('status' => payslip_paid_status_value());
+	if ($payment_trans_no !== null)
+		$data['payment_trans_no'] = (int)$payment_trans_no > 0 ? (int)$payment_trans_no : null;
+
+	begin_transaction();
+	$ok = update_payslip($payslip_id, $data);
+	if ($ok && !empty($payslip['payroll_period_id']) && function_exists('sync_payroll_period_payment_status'))
+		$ok = sync_payroll_period_payment_status((int)$payslip['payroll_period_id']);
+
+	if (!$ok) {
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return true;
 }
 
 /**
