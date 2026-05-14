@@ -248,9 +248,10 @@ echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Scope (Matchi
 
 warehouse_list_row(_('Warehouse:'), 'warehouse_loc_code', get_post('warehouse_loc_code'), _('-- All Warehouses --'));
 
-echo "<tr><td class='label'>" . _('Specific Item:') . "</td><td>";
-echo stock_items_list('stock_id', get_post('stock_id'), _('-- All Items --'), false, array('cells' => false));
-echo "</td></tr>\n";
+start_row();
+label_cell(_('Specific Item:'));
+stock_items_list_cells(null, 'stock_id', get_post('stock_id'), _('-- All Items --'));
+end_row();
 
 stock_categories_list_row(_('Item Category:'), 'category_id', get_post('category_id'), _('-- All Categories --'));
 
@@ -273,9 +274,10 @@ echo "<p style='color:#555; font-size:13px;'>"
 
 start_table(TABLESTYLE2);
 
-echo "<tr><td class='label'>" . _('Item:') . "</td><td>";
-echo stock_items_list('test_stock_id', get_post('test_stock_id'), false, false, array('cells' => false));
-echo "</td></tr>\n";
+start_row();
+label_cell(_('Select Item:'));
+stock_items_list_cells(null, 'test_stock_id', get_post('test_stock_id'));
+end_row();
 
 warehouse_list_row(_('Warehouse:'), 'test_warehouse', get_post('test_warehouse'));
 
