@@ -89,6 +89,9 @@ elseif (isset($_GET['trans_no']))
 if (!isset($_POST['payslip_id']))
     $_POST['payslip_id'] = '';
 
+if(list_updated('payslip_id') || get_post('show'))
+    $Ajax->activate('_page_body');
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
@@ -112,7 +115,10 @@ if ($selected_id > 0) {
         $gross_amount = isset($header['gross_salary']) ? $header['gross_salary'] : (isset($header['salary_amount']) ? $header['salary_amount'] : null);
         $net_amount = payslip_payable_amount($header);
 
-        start_table(TABLESTYLE2);
+        start_outer_table(TABLESTYLE2);
+
+        table_section(1);
+
         label_row(_('Payslip #:'), $header[$id_col]);
         if (isset($header['reference']) && $header['reference'] !== '')
             label_row(_('Reference:'), $header['reference']);
@@ -129,6 +135,9 @@ if ($selected_id > 0) {
             label_row(_('To Date:'), sql2date($header['to_date']));
         if (isset($header['tran_date']))
             label_row(_('Transaction Date:'), sql2date($header['tran_date']));
+
+        table_section(2);
+
         if ($gross_amount !== null)
             label_row(_('Gross Salary:'), price_format($gross_amount));
         if (isset($header['total_deductions']))
@@ -147,7 +156,8 @@ if ($selected_id > 0) {
             label_row(_('Overtime Hours:'), price_format($header['overtime_hours']));
         if (isset($header['loan_deduction']))
             label_row(_('Loan Deduction:'), price_format($header['loan_deduction']));
-        end_table(1);
+        
+        end_outer_table(1);
 
         $details = get_payslip_details($selected_id);
         if ($details && db_num_rows($details) > 0) {
