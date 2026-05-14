@@ -53,6 +53,7 @@ function get_report_payslips($year, $month, $department_id=0, $employee_id='') {
         : "'' employee_name";
 
     $where = array(
+        payslip_non_voided_condition($table_name, 'p'),
         "YEAR(p.$date_col) = ".db_escape((int)$year),
         "MONTH(p.$date_col) = ".db_escape((int)$month)
     );
@@ -145,6 +146,9 @@ function print_payslip_report($email_mode=false) {
     }
 
     while ($row = db_fetch($rows)) {
+        $gross_amount = isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : null);
+        $net_amount = payslip_payable_amount($row);
+
         $rep->Font();
         $rep->Info($params, $cols, $headers, $aligns);
         $rep->NewPage();
@@ -195,9 +199,9 @@ function print_payslip_report($email_mode=false) {
 
         $rep->Line($rep->row - 2);
         $rep->Font('bold');
-        if (isset($row['gross_salary'])) {
+        if ($gross_amount !== null) {
             $rep->TextCol(2, 4, _('Gross Salary'));
-            $rep->AmountCol(4, 5, $row['gross_salary'], $dec);
+            $rep->AmountCol(4, 5, $gross_amount, $dec);
             $rep->NewLine();
         }
         if (isset($row['total_deductions'])) {
@@ -205,9 +209,9 @@ function print_payslip_report($email_mode=false) {
             $rep->AmountCol(4, 5, $row['total_deductions'], $dec);
             $rep->NewLine();
         }
-        if (isset($row['net_salary'])) {
+        if (isset($row['net_salary']) || isset($row['payable_amount'])) {
             $rep->TextCol(2, 4, _('Net Salary'));
-            $rep->AmountCol(4, 5, $row['net_salary'], $dec);
+            $rep->AmountCol(4, 5, $net_amount, $dec);
             $rep->NewLine();
         }
         $rep->Font();

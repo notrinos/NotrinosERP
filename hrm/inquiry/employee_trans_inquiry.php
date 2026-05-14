@@ -52,9 +52,9 @@ if ($employee_id != '' && $employee_id != ALL_TEXT) {
             label_cell(isset($row['payslip_id']) ? $row['payslip_id'] : (isset($row['payslip_no']) ? $row['payslip_no'] : ''));
             label_cell(isset($row['from_date']) ? sql2date($row['from_date']) : '');
             label_cell(isset($row['to_date']) ? sql2date($row['to_date']) : '');
-            amount_cell(isset($row['gross_salary']) ? $row['gross_salary'] : 0);
+            amount_cell(isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : 0));
             amount_cell(isset($row['total_deductions']) ? $row['total_deductions'] : 0);
-            amount_cell(isset($row['net_salary']) ? $row['net_salary'] : 0);
+            amount_cell(payslip_payable_amount($row));
             end_row();
         }
     }

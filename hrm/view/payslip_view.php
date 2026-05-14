@@ -109,6 +109,8 @@ if ($selected_id > 0) {
         $emp_col = isset($header['employee_id']) ? 'employee_id' : 'emp_id';
         $employee_code = isset($header[$emp_col]) ? $header[$emp_col] : '';
         $employee_name = get_payslip_view_employee_name((string)$employee_code);
+        $gross_amount = isset($header['gross_salary']) ? $header['gross_salary'] : (isset($header['salary_amount']) ? $header['salary_amount'] : null);
+        $net_amount = payslip_payable_amount($header);
 
         start_table(TABLESTYLE2);
         label_row(_('Payslip #:'), $header[$id_col]);
@@ -127,24 +129,24 @@ if ($selected_id > 0) {
             label_row(_('To Date:'), sql2date($header['to_date']));
         if (isset($header['tran_date']))
             label_row(_('Transaction Date:'), sql2date($header['tran_date']));
-        if (isset($header['gross_salary']))
-            amount_row(_('Gross Salary:'), $header['gross_salary']);
+        if ($gross_amount !== null)
+            label_row(_('Gross Salary:'), price_format($gross_amount));
         if (isset($header['total_deductions']))
-            amount_row(_('Total Deductions:'), $header['total_deductions']);
-        if (isset($header['net_salary']))
-            amount_row(_('Net Salary:'), $header['net_salary']);
+            label_row(_('Total Deductions:'), price_format($header['total_deductions']));
+        if (isset($header['net_salary']) || isset($header['payable_amount']))
+            label_row(_('Net Salary:'), price_format($net_amount));
         if (isset($header['working_days']))
-            amount_row(_('Working Days:'), $header['working_days']);
+            label_row(_('Working Days:'), price_format($header['working_days']));
         if (isset($header['worked_days']))
-            amount_row(_('Worked Days:'), $header['worked_days']);
+            label_row(_('Worked Days:'), price_format($header['worked_days']));
         if (isset($header['leave_days']))
-            amount_row(_('Leave Days:'), $header['leave_days']);
+            label_row(_('Leave Days:'), price_format($header['leave_days']));
         if (isset($header['absent_days']))
-            amount_row(_('Absent Days:'), $header['absent_days']);
+            label_row(_('Absent Days:'), price_format($header['absent_days']));
         if (isset($header['overtime_hours']))
-            amount_row(_('Overtime Hours:'), $header['overtime_hours']);
+            label_row(_('Overtime Hours:'), price_format($header['overtime_hours']));
         if (isset($header['loan_deduction']))
-            amount_row(_('Loan Deduction:'), $header['loan_deduction']);
+            label_row(_('Loan Deduction:'), price_format($header['loan_deduction']));
         end_table(1);
 
         $details = get_payslip_details($selected_id);

@@ -66,6 +66,7 @@ function print_salary_sheet_report() {
     $rep->NewPage();
 
     $where = array(
+        payslip_non_voided_condition($table, 'p'),
         "YEAR(p.$date_col) = ".db_escape($year),
         "MONTH(p.$date_col) = ".db_escape($month)
     );

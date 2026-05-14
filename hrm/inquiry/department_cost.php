@@ -65,7 +65,8 @@ $sql = "SELECT d.department_id,
     FROM ".TB_PREF.$table." p
     JOIN ".TB_PREF."employees e ON e.employee_id = p.$emp_col
     LEFT JOIN ".TB_PREF."departments d ON d.department_id = e.department_id
-    WHERE p.$from_col >= ".db_escape(date2sql($_POST['from_date']))."
+    WHERE ".payslip_non_voided_condition($table, 'p')."
+        AND p.$from_col >= ".db_escape(date2sql($_POST['from_date']))."
         AND p.$from_col <= ".db_escape(date2sql($_POST['to_date']))."
     GROUP BY d.department_id, d.department_name
     ORDER BY d.department_name";
