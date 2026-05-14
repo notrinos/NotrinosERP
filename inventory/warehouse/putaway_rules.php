@@ -31,6 +31,44 @@ include_once($path_to_root . '/inventory/warehouse/includes/warehouse_ui.inc');
 
 simple_page_mode(true);
 
+/**
+ * Normalize expected scalar POST fields for the putaway rules page.
+ *
+ * Crafted array payloads can otherwise reach page validation and form helpers,
+ * which breaks normal rendering instead of producing a user-facing validation error.
+ *
+ * @param array $field_defaults Associative array of field name => fallback value.
+ * @return void
+ */
+function normalize_putaway_rules_scalar_post_fields($field_defaults)
+{
+	foreach ($field_defaults as $field_name => $default_value) {
+		if (!isset($_POST[$field_name])) {
+			continue;
+		}
+
+		if (is_array($_POST[$field_name]) || is_object($_POST[$field_name])) {
+			$_POST[$field_name] = $default_value;
+		}
+	}
+}
+
+normalize_putaway_rules_scalar_post_fields(array(
+	'rule_name' => '',
+	'sequence' => '',
+	'strategy' => '',
+	'warehouse_loc_code' => '',
+	'stock_id' => '',
+	'category_id' => '',
+	'storage_category_id' => '',
+	'target_loc_id' => '',
+	'target_zone_id' => '',
+	'show_inactive' => '',
+	'test_stock_id' => '',
+	'test_warehouse' => '',
+	'test_qty' => '',
+));
+
 //-------------------------------------------------------------------------------------
 // Handle ADD / UPDATE
 //-------------------------------------------------------------------------------------
@@ -153,8 +191,8 @@ if (isset($_POST['TestPutaway'])) {
 		display_error(_('Please select an item to test.'));
 	} elseif (!$test_warehouse) {
 		display_error(_('Please select a warehouse to test.'));
-	} elseif (!$test_qty || !is_numeric($test_qty) || (float)$test_qty <= 0) {
-		display_error(_('Please enter a valid quantity to test.'));
+	} elseif (!is_valid_putaway_quantity($test_qty)) {
+		display_error(_('Please enter a valid finite quantity to test.'));
 	} else {
 		$test_result = test_putaway($test_stock_id, $test_warehouse, (float)$test_qty);
 	}

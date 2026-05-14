@@ -33,6 +33,21 @@
 include_once(dirname(__FILE__) . '/db/warehouse_putaway_db.inc');
 
 /**
+ * Check whether a putaway quantity is safe for engine calculations.
+ *
+ * @param mixed $quantity Quantity candidate from UI or runtime callers.
+ * @return bool
+ */
+function is_valid_putaway_quantity($quantity) {
+	if (!is_numeric($quantity)) {
+		return false;
+	}
+
+	$quantity = (float)$quantity;
+	return $quantity > 0 && is_finite($quantity);
+}
+
+/**
  * Execute the putaway engine for a given item and warehouse.
  *
  * Finds the matching rule and applies the appropriate strategy to determine
@@ -49,6 +64,10 @@ include_once(dirname(__FILE__) . '/db/warehouse_putaway_db.inc');
  *               Empty array if no suitable bin found.
  */
 function execute_putaway($stock_id, $warehouse_loc_code, $quantity, $item_weight = null, $item_volume = null) {
+	if (!is_valid_putaway_quantity($quantity)) {
+		return array();
+	}
+
 	// Find matching rule
 	$rule = find_putaway_rule_for_item($stock_id, $warehouse_loc_code);
 
@@ -120,6 +139,11 @@ function test_putaway($stock_id, $warehouse_loc_code, $quantity) {
 		'assignments' => array(),
 		'message' => '',
 	);
+
+	if (!is_valid_putaway_quantity($quantity)) {
+		$result['message'] = _('Quantity must be a finite positive number.');
+		return $result;
+	}
 
 	// Find the item
 	$item_sql = "SELECT stock_id, description, item_weight, item_volume, abc_class, "
@@ -518,6 +542,10 @@ function calculate_available_capacity($bin, $quantity, $item_weight = null, $ite
  * @return array Array of assignments.
  */
 function allocate_to_bins($bins_result, $quantity, $item_weight, $item_volume, $preference = 'any') {
+	if (!is_valid_putaway_quantity($quantity)) {
+		return array();
+	}
+
 	$bins = array();
 	while ($row = db_fetch($bins_result)) {
 		$bins[] = $row;
