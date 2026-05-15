@@ -308,21 +308,131 @@ function mobile_scan_lookup() {
 }
 
 /**
+ * Check whether a scalar value contains ASCII control characters.
+ *
+ * @param mixed $value
+ * @return bool
+ */
+function mobile_has_control_chars($value) {
+	if (!is_scalar($value))
+		return true;
+
+	return preg_match('/[\x00-\x1F\x7F]/', (string)$value) === 1;
+}
+
+/**
+ * Validate positive numeric input and reject non-finite values.
+ *
+ * @param mixed $value
+ * @param float|null $normalized_value
+ * @return bool
+ */
+function mobile_parse_positive_numeric($value, &$normalized_value) {
+	$normalized_value = null;
+
+	if (!is_scalar($value))
+		return false;
+
+	$trimmed = trim((string)$value);
+	if ($trimmed === '' || !is_numeric($trimmed))
+		return false;
+
+	$parsed = (float)$trimmed;
+	if (is_nan($parsed) || is_infinite($parsed) || $parsed <= 0)
+		return false;
+
+	$normalized_value = $parsed;
+	return true;
+}
+
+/**
+ * Validate stock item code and load active item master row.
+ *
+ * @param mixed $stock_id_raw
+ * @param array|null $item_row
+ * @return array
+ */
+function mobile_validate_stock_item($stock_id_raw, &$item_row) {
+	$item_row = null;
+
+	if (!is_scalar($stock_id_raw))
+		return array('success' => false, 'error' => _('Invalid item code'));
+
+	$stock_id = trim((string)$stock_id_raw);
+	if ($stock_id === '')
+		return array('success' => false, 'error' => _('Item is required'));
+
+	if (mobile_has_control_chars($stock_id))
+		return array('success' => false, 'error' => _('Invalid item code format'));
+
+	$item = get_item($stock_id);
+	if (!$item || (isset($item['inactive']) && (int)$item['inactive'] !== 0))
+		return array('success' => false, 'error' => sprintf(_('Item "%s" not found'), $stock_id));
+
+	$item_row = $item;
+	return array('success' => true, 'stock_id' => $stock_id);
+}
+
+/**
+ * Validate destination/source bin and ensure the location is active and storable.
+ *
+ * @param mixed $bin_loc_id_raw
+ * @param int|null $bin_loc_id
+ * @return array
+ */
+function mobile_validate_storable_bin($bin_loc_id_raw, &$bin_loc_id) {
+	$bin_loc_id = 0;
+
+	if (!is_scalar($bin_loc_id_raw))
+		return array('success' => false, 'error' => _('Invalid bin value'));
+
+	$parsed_bin = (int)$bin_loc_id_raw;
+	if ($parsed_bin <= 0)
+		return array('success' => false, 'error' => _('Bin is required'));
+
+	$sql = 'SELECT wl.loc_id, wl.loc_code FROM ' . TB_PREF . 'wh_locations wl '
+		. 'INNER JOIN ' . TB_PREF . 'wh_location_types lt ON wl.location_type_id=lt.id '
+		. 'WHERE wl.loc_id=' . $parsed_bin . ' AND wl.is_active=1 AND lt.can_store=1 LIMIT 1';
+	$result = db_query($sql, 'could not validate bin location');
+	$bin = db_fetch($result);
+	if (!$bin)
+		return array('success' => false, 'error' => _('Bin not found or inactive'));
+
+	$bin_loc_id = (int)$bin['loc_id'];
+	return array('success' => true, 'bin' => $bin);
+}
+
+/**
  * Confirm receipt of item into a bin (part of inbound flow).
  *
  * @return array JSON response
  */
 function mobile_confirm_receive() {
 	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
-	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
-	$qty = isset($_POST['qty']) ? (float)$_POST['qty'] : 0;
-	$bin_loc_id = isset($_POST['bin_loc_id']) ? (int)$_POST['bin_loc_id'] : 0;
-	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
-	$batch_no = isset($_POST['batch_no']) ? trim($_POST['batch_no']) : '';
-	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
+	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
+	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
+	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
 
-	if (empty($stock_id) || $qty <= 0)
-		return array('success' => false, 'error' => _('Item and quantity are required'));
+	$qty = null;
+	if (!mobile_parse_positive_numeric(isset($_POST['qty']) ? $_POST['qty'] : null, $qty))
+		return array('success' => false, 'error' => _('Quantity must be a positive finite number'));
+
+	$stock_item = null;
+	$stock_validation = mobile_validate_stock_item(isset($_POST['stock_id']) ? $_POST['stock_id'] : '', $stock_item);
+	if (!$stock_validation['success'])
+		return $stock_validation;
+	$stock_id = $stock_validation['stock_id'];
+
+	$bin_loc_id = 0;
+	$bin_validation = mobile_validate_storable_bin(isset($_POST['bin_loc_id']) ? $_POST['bin_loc_id'] : 0, $bin_loc_id);
+	if (!$bin_validation['success'])
+		return $bin_validation;
+
+	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
+		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
+
+	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
+		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
 
 	$serial_id = null;
 	$batch_id = null;
@@ -345,9 +455,8 @@ function mobile_confirm_receive() {
 
 	// Capacity check if bin specified
 	if ($bin_loc_id > 0) {
-		$item = get_item($stock_id);
-		$weight = $item ? (float)$item['item_weight'] * $qty : 0;
-		$volume = $item ? (float)$item['item_volume'] * $qty : 0;
+		$weight = $stock_item ? (float)$stock_item['item_weight'] * $qty : 0;
+		$volume = $stock_item ? (float)$stock_item['item_volume'] * $qty : 0;
 		$cap = check_can_store($bin_loc_id, $stock_id, $qty, $weight, $volume, $batch_id);
 		if (!$cap['ok'])
 			return array('success' => false, 'error' => implode(' ', $cap['errors']));
@@ -641,16 +750,31 @@ function mobile_serial_lookup() {
  * @return array JSON response
  */
 function mobile_confirm_putaway() {
-	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
-	$qty = isset($_POST['qty']) ? (float)$_POST['qty'] : 0;
-	$bin_loc_id = isset($_POST['bin_loc_id']) ? (int)$_POST['bin_loc_id'] : 0;
-	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
-	$batch_no = isset($_POST['batch_no']) ? trim($_POST['batch_no']) : '';
+	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
+	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
 	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
-	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
+	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
 
-	if (empty($stock_id) || $qty <= 0 || $bin_loc_id <= 0)
-		return array('success' => false, 'error' => _('Item, quantity, and bin are required'));
+	$qty = null;
+	if (!mobile_parse_positive_numeric(isset($_POST['qty']) ? $_POST['qty'] : null, $qty))
+		return array('success' => false, 'error' => _('Quantity must be a positive finite number'));
+
+	$stock_item = null;
+	$stock_validation = mobile_validate_stock_item(isset($_POST['stock_id']) ? $_POST['stock_id'] : '', $stock_item);
+	if (!$stock_validation['success'])
+		return $stock_validation;
+	$stock_id = $stock_validation['stock_id'];
+
+	$bin_loc_id = 0;
+	$bin_validation = mobile_validate_storable_bin(isset($_POST['bin_loc_id']) ? $_POST['bin_loc_id'] : 0, $bin_loc_id);
+	if (!$bin_validation['success'])
+		return $bin_validation;
+
+	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
+		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
+
+	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
+		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
 
 	$serial_id = null;
 	$batch_id = null;
@@ -670,9 +794,8 @@ function mobile_confirm_putaway() {
 	}
 
 	// Capacity check
-	$item = get_item($stock_id);
-	$weight = $item ? (float)$item['item_weight'] * $qty : 0;
-	$volume = $item ? (float)$item['item_volume'] * $qty : 0;
+	$weight = $stock_item ? (float)$stock_item['item_weight'] * $qty : 0;
+	$volume = $stock_item ? (float)$stock_item['item_volume'] * $qty : 0;
 	$cap = check_can_store($bin_loc_id, $stock_id, $qty, $weight, $volume, $batch_id);
 	if (!$cap['ok'])
 		return array('success' => false, 'error' => implode(' ', $cap['errors']));
