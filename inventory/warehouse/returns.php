@@ -115,6 +115,10 @@ if (isset($_POST['ADD_LINE']) && $selected_id > 0) {
 		display_error(_('You must select an item.'));
 		$input_error = 1;
 	}
+	if (empty(get_post('line_to_bin_id'))) {
+		display_error(_('You must select a quarantine bin.'));
+		$input_error = 1;
+	}
 	$line_qty = input_num('line_qty', 0);
 	if ($line_qty <= 0) {
 		display_error(_('Quantity must be greater than zero.'));
@@ -126,6 +130,7 @@ if (isset($_POST['ADD_LINE']) && $selected_id > 0) {
 			$selected_id,
 			$_POST['line_stock_id'],
 			$line_qty,
+			get_post('line_to_bin_id') ? (int)get_post('line_to_bin_id') : null,
 			get_post('line_serial_id') ? (int)get_post('line_serial_id') : null,
 			get_post('line_batch_id') ? (int)get_post('line_batch_id') : null,
 			get_post('line_reason_code'),
@@ -167,8 +172,11 @@ if (isset($_POST['INSPECT_LINE'])) {
 	$disposition = get_post('inspect_disposition_' . $line_id);
 
 	if ($line_id > 0) {
-		inspect_return_line($line_id, $qty_good, $qty_damaged, $qty_scrap, $disposition);
-		display_notification(_('Line inspection has been saved.'));
+		if (inspect_return_line($line_id, $qty_good, $qty_damaged, $qty_scrap, $disposition)) {
+			display_notification(_('Line inspection has been saved.'));
+		} else {
+			display_error(_('Cannot save line inspection. Check the entered quantities.'));
+		}
 	}
 	$Ajax->activate('_page_body');
 }
@@ -362,6 +370,8 @@ if ($selected_id > 0 && $order) {
 		// Serial/Batch selectors based on item tracking
 		$line_stock = get_post('line_stock_id');
 		if ($line_stock) {
+			warehouse_bin_list_row(_('Quarantine Bin:'), 'line_to_bin_id', $order['warehouse_loc_code'], get_post('line_to_bin_id'), true);
+
 			$tracking = get_item_tracking_mode($line_stock);
 			if ($tracking === 'serial' || $tracking === 'both') {
 				$serial_sql = "SELECT id, serial_no FROM " . TB_PREF . "serial_numbers"

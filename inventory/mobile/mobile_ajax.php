@@ -540,16 +540,21 @@ function mobile_confirm_ship() {
  * @return array JSON response
  */
 function mobile_confirm_transfer() {
-	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
-	$qty = isset($_POST['qty']) ? (float)$_POST['qty'] : 0;
+	$stock_id = isset($_POST['stock_id']) && is_scalar($_POST['stock_id']) ? trim((string)$_POST['stock_id']) : '';
+	$qty = null;
+	if (!mobile_parse_positive_numeric(isset($_POST['qty']) ? $_POST['qty'] : null, $qty))
+		return array('success' => false, 'error' => _('Quantity must be a positive finite number'));
 	$from_bin_id = isset($_POST['from_bin_id']) ? (int)$_POST['from_bin_id'] : 0;
 	$to_bin_id = isset($_POST['to_bin_id']) ? (int)$_POST['to_bin_id'] : 0;
-	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
-	$batch_no = isset($_POST['batch_no']) ? trim($_POST['batch_no']) : '';
-	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
+	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
+	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
+	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
 
 	if (empty($stock_id) || $qty <= 0 || $from_bin_id <= 0 || $to_bin_id <= 0)
 		return array('success' => false, 'error' => _('Item, quantity, source bin, and destination bin are required'));
+
+	if (mobile_has_control_chars($stock_id) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no) || mobile_has_control_chars($loc_code))
+		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	if ($from_bin_id === $to_bin_id)
 		return array('success' => false, 'error' => _('Source and destination bins cannot be the same'));
@@ -561,6 +566,8 @@ function mobile_confirm_transfer() {
 		$serial = get_serial_number_by_code($serial_no, $stock_id);
 		if (!$serial)
 			return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $serial_no));
+		if (abs($qty - 1.0) > 0.000001)
+			return array('success' => false, 'error' => _('Serial-tracked transfer requires quantity 1'));
 		$serial_id = $serial['id'];
 	}
 

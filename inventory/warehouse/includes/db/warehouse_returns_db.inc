@@ -197,6 +197,7 @@ function update_return_order($return_id, $return_type, $warehouse_loc_code, $ret
  * @param int         $return_id       Return order ID
  * @param string      $stock_id        Item code
  * @param float       $qty_expected    Expected return quantity
+ * @param int|null    $to_bin_id       Quarantine / destination bin
  * @param int|null    $serial_id       Serial number FK
  * @param int|null    $batch_id        Batch FK
  * @param string|null $reason_code     Reason for return
@@ -204,15 +205,16 @@ function update_return_order($return_id, $return_type, $warehouse_loc_code, $ret
  * @return int line_id
  */
 function add_return_order_line($return_id, $stock_id, $qty_expected,
-	$serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
+	$to_bin_id = null, $serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
 
 	$sql = "INSERT INTO " . TB_PREF . "wh_return_order_lines (
-		return_id, stock_id, qty_expected, serial_id, batch_id,
+		return_id, stock_id, qty_expected, to_bin_id, serial_id, batch_id,
 		reason_code, memo
 	) VALUES ("
 		. (int)$return_id . ", "
 		. db_escape($stock_id) . ", "
 		. db_escape($qty_expected) . ", "
+		. ($to_bin_id ? (int)$to_bin_id : 'NULL') . ", "
 		. ($serial_id ? (int)$serial_id : 'NULL') . ", "
 		. ($batch_id ? (int)$batch_id : 'NULL') . ", "
 		. ($reason_code ? db_escape($reason_code) : 'NULL') . ", "
@@ -228,6 +230,7 @@ function add_return_order_line($return_id, $stock_id, $qty_expected,
  * @param int         $line_id         Line ID
  * @param string      $stock_id        Item code
  * @param float       $qty_expected    Expected quantity
+ * @param int|null    $to_bin_id       Quarantine / destination bin
  * @param int|null    $serial_id       Serial number FK
  * @param int|null    $batch_id        Batch FK
  * @param string|null $reason_code     Reason code
@@ -235,11 +238,12 @@ function add_return_order_line($return_id, $stock_id, $qty_expected,
  * @return bool Success
  */
 function update_return_order_line($line_id, $stock_id, $qty_expected,
-	$serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
+	$to_bin_id = null, $serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_return_order_lines SET "
 		. "stock_id = " . db_escape($stock_id) . ", "
 		. "qty_expected = " . db_escape($qty_expected) . ", "
+		. "to_bin_id = " . ($to_bin_id ? (int)$to_bin_id : 'NULL') . ", "
 		. "serial_id = " . ($serial_id ? (int)$serial_id : 'NULL') . ", "
 		. "batch_id = " . ($batch_id ? (int)$batch_id : 'NULL') . ", "
 		. "reason_code = " . ($reason_code ? db_escape($reason_code) : 'NULL') . ", "
@@ -490,7 +494,71 @@ function receive_return_order($return_id, $date_ = null) {
  * @param string|null $disposition_code Overall disposition for the line
  * @return bool Success
  */
+
+/**
+ * Validate inspection quantities for a return line.
+ *
+ * @param int   $line_id           Return line ID
+ * @param float $qty_good          Good quantity
+ * @param float $qty_damaged        Damaged quantity
+ * @param float $qty_scrap          Scrap quantity
+ * @param bool  $require_exact_total Whether totals must match the received quantity exactly
+ * @param string $error_message     Output error message
+ * @return bool
+ */
+function validate_return_line_quantities($line_id, $qty_good, $qty_damaged, $qty_scrap, $require_exact_total, &$error_message) {
+	$error_message = '';
+
+	if (!is_scalar($qty_good) || !is_scalar($qty_damaged) || !is_scalar($qty_scrap)) {
+		$error_message = _('Inspection quantities must be plain numeric values.');
+		return false;
+	}
+
+	$qty_good = (float)$qty_good;
+	$qty_damaged = (float)$qty_damaged;
+	$qty_scrap = (float)$qty_scrap;
+
+	if (is_nan($qty_good) || is_infinite($qty_good)
+		|| is_nan($qty_damaged) || is_infinite($qty_damaged)
+		|| is_nan($qty_scrap) || is_infinite($qty_scrap)) {
+		$error_message = _('Inspection quantities must be finite numbers.');
+		return false;
+	}
+
+	if ($qty_good < 0 || $qty_damaged < 0 || $qty_scrap < 0) {
+		$error_message = _('Inspection quantities cannot be negative.');
+		return false;
+	}
+
+	$sql = "SELECT qty_received FROM " . TB_PREF . "wh_return_order_lines WHERE line_id = " . (int)$line_id;
+	$result = db_query($sql, 'Could not validate return order line quantities');
+	$line = db_fetch($result);
+	if (!$line) {
+		$error_message = _('Return order line was not found.');
+		return false;
+	}
+
+	$qty_received = (float)$line['qty_received'];
+	$qty_total = round2($qty_good + $qty_damaged + $qty_scrap, user_qty_dec());
+
+	if ($qty_total - $qty_received > 0.000001) {
+		$error_message = sprintf(_('Inspection quantities must not exceed the received quantity of %s.'), number_format2($qty_received, user_qty_dec()));
+		return false;
+	}
+
+	if ($require_exact_total && abs($qty_total - $qty_received) > 0.000001) {
+		$error_message = sprintf(_('Inspection quantities must total %s before completion.'), number_format2($qty_received, user_qty_dec()));
+		return false;
+	}
+
+	return true;
+}
+
 function inspect_return_line($line_id, $qty_good, $qty_damaged, $qty_scrap, $disposition_code = null) {
+	$error_message = '';
+	if (!validate_return_line_quantities($line_id, $qty_good, $qty_damaged, $qty_scrap, false, $error_message)) {
+		return false;
+	}
 	$sql = "UPDATE " . TB_PREF . "wh_return_order_lines SET "
 		. "qty_good = " . db_escape($qty_good) . ", "
 		. "qty_damaged = " . db_escape($qty_damaged) . ", "
@@ -535,6 +603,12 @@ function complete_return_order($return_id, $date_ = null) {
 
 	$lines = get_return_order_lines($return_id);
 	while ($line = db_fetch($lines)) {
+		$error_message = '';
+		if (!validate_return_line_quantities($line['line_id'], $line['qty_good'], $line['qty_damaged'], $line['qty_scrap'], true, $error_message)) {
+			cancel_transaction();
+			return false;
+		}
+
 		// Handle qty_good — restock: update serial/batch status
 		if ($line['qty_good'] > 0) {
 			if ($line['serial_id']) {
