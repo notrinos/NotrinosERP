@@ -235,8 +235,13 @@ function add_grn(&$po) {
 		. '/inventory/warehouse/includes/warehouse_operations.inc';
 	if (file_exists($wh_ops_path)) {
 		include_once($wh_ops_path);
-		if (function_exists('process_grn_tracking_and_wms'))
-			process_grn_tracking_and_wms($po, $grn, $date_, $po->Location);
+		if (function_exists('process_grn_tracking_and_wms')) {
+			$tracking_result = process_grn_tracking_and_wms($po, $grn, $date_, $po->Location);
+			if ($tracking_result === false) {
+				cancel_transaction();
+				return false;
+			}
+		}
 	}
 
 	if ($clearing_act && $total != 0.0) {

@@ -71,6 +71,8 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 		return $result;
 	}
 
+	$single_step_direct_receipt = (count($rule_list) === 1 && $rule_list[0]['operation_type'] === 'receipt');
+
 	$op_ids = array();
 	$prev_op_id = null;
 	$now = date('Y-m-d H:i:s');
@@ -124,16 +126,49 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 				if ($rule['operation_type'] === 'putaway' && !$to_loc) {
 					$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
 					$line_to = $putaway_bin;
+				} elseif ($rule['operation_type'] === 'receipt' && !$line_to) {
+					$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
+					$line_to = $putaway_bin;
+				}
+
+				if ($single_step_direct_receipt && !$line_to) {
+					$result['message'] = sprintf(
+						_('No putaway bin found for item %s in warehouse %s.'),
+						$stock_id,
+						$warehouse_loc_code
+					);
+					return $result;
 				}
 
 				if (!empty($item['serial_ids'])) {
 					foreach ($item['serial_ids'] as $serial_id) {
 						add_wh_operation_line($op_id, $stock_id, 1, 0,
 							$from_loc, $line_to, $batch_id, $serial_id, null, $std_cost);
+
+						if ($single_step_direct_receipt && $line_to) {
+							update_bin_stock($line_to, $stock_id, 1, $batch_id, $serial_id, null, 'available');
+
+							$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
+								. "wh_loc_id=" . (int)$line_to . ", "
+								. "loc_code=" . db_escape($warehouse_loc_code) . ", "
+								. "status='available' "
+								. "WHERE id=" . (int)$serial_id;
+							db_query($sql, 'could not update serial location from route receipt');
+						}
 					}
 				} else {
 					add_wh_operation_line($op_id, $stock_id, $qty, 0,
 						$from_loc, $line_to, $batch_id, null, null, $std_cost);
+
+					if ($single_step_direct_receipt && $line_to) {
+						$expiry = null;
+						if ($batch_id) {
+							$batch_data = get_stock_batch($batch_id);
+							if ($batch_data && !empty($batch_data['expiry_date']))
+								$expiry = $batch_data['expiry_date'];
+						}
+						update_bin_stock($line_to, $stock_id, $qty, $batch_id, null, $expiry, 'available');
+					}
 				}
 			}
 
@@ -275,6 +310,14 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		if ($inbound_steps === 1) {
 			$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
 			$to_bin = $putaway_bin;
+			if (!$to_bin) {
+				$result['message'] = sprintf(
+					_('No putaway bin found for item %s in warehouse %s.'),
+					$stock_id,
+					$warehouse_loc_code
+				);
+				return $result;
+			}
 		}
 
 		// If serial-tracked, create one line per serial
@@ -283,12 +326,35 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 				add_wh_operation_line($receipt_op, $stock_id, 1, 0, null, $to_bin,
 					isset($item['batch_id']) ? $item['batch_id'] : null,
 					$serial_id, null, $std_cost);
+
+				if ($inbound_steps === 1) {
+					$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
+					update_bin_stock($to_bin, $stock_id, 1, $batch_id, $serial_id, null, 'available');
+
+					$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
+						. "wh_loc_id=" . (int)$to_bin . ", "
+						. "loc_code=" . db_escape($warehouse_loc_code) . ", "
+						. "status='available' "
+						. "WHERE id=" . (int)$serial_id;
+					db_query($sql, 'could not update serial location from 1-step inbound');
+				}
 			}
 		} else {
 			// One line for the whole quantity
 			add_wh_operation_line($receipt_op, $stock_id, $qty, 0, null, $to_bin,
 				isset($item['batch_id']) ? $item['batch_id'] : null,
 				null, null, $std_cost);
+
+			if ($inbound_steps === 1) {
+				$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
+				$expiry = null;
+				if ($batch_id) {
+					$batch_data = get_stock_batch($batch_id);
+					if ($batch_data && !empty($batch_data['expiry_date']))
+						$expiry = $batch_data['expiry_date'];
+				}
+				update_bin_stock($to_bin, $stock_id, $qty, $batch_id, null, $expiry, 'available');
+			}
 		}
 	}
 
@@ -444,6 +510,167 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 }
 
 /**
+ * Validate GRN tracking payload before serial/batch processing.
+ *
+ * @param object $po                 Purchase order/cart object.
+ * @param array  $validation_errors  Output list of validation errors.
+ * @return bool
+ */
+function validate_grn_tracking_payload($po, &$validation_errors) {
+	$validation_errors = array();
+
+	$root = dirname(dirname(dirname(__FILE__))); // -> inventory/
+	$serial_batch_path = $root . '/includes/db/serial_batch_db.inc';
+	if (file_exists($serial_batch_path))
+		include_once($serial_batch_path);
+
+	if (!function_exists('item_has_serial_tracking') || !function_exists('item_has_batch_tracking'))
+		return true;
+
+	$seen_serials = array();
+
+	foreach ($po->line_items as $line_no => $order_line) {
+		if (!isset($order_line->receive_qty))
+			continue;
+
+		$receive_qty = (float)$order_line->receive_qty;
+		if ($receive_qty <= 0)
+			continue;
+
+		$stock_id = $order_line->stock_id;
+
+		if (item_has_serial_tracking($stock_id)) {
+			$expected_serial_count = (int)round($receive_qty);
+			if ($receive_qty != $expected_serial_count) {
+				$validation_errors[] = sprintf(
+					_('Item %s requires serial tracking and must be received in whole units.'),
+					$stock_id
+				);
+				continue;
+			}
+
+			$serial_data_key = 'serial_' . $line_no;
+			$serial_text = isset($_POST[$serial_data_key]) ? trim($_POST[$serial_data_key]) : '';
+			if ($serial_text === '') {
+				$validation_errors[] = sprintf(
+					_('Item %s requires %d serial number(s), but none were provided.'),
+					$stock_id,
+					$expected_serial_count
+				);
+				continue;
+			}
+
+			$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+			$clean_serials = array();
+			foreach ($serial_entries as $serial_entry) {
+				$serial_number = trim($serial_entry);
+				if ($serial_number === '')
+					continue;
+
+				if (preg_match('/[\x00-\x1F\x7F]/', $serial_number)) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s contains invalid control characters.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (strlen($serial_number) > 60) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s exceeds 60 characters.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				$serial_key = strtoupper($serial_number);
+				if (isset($seen_serials[$serial_key])) {
+					$validation_errors[] = sprintf(
+						_('Duplicate serial number "%s" was provided in this GRN payload.'),
+						$serial_number
+					);
+					continue;
+				}
+
+				$seen_serials[$serial_key] = true;
+				$clean_serials[] = $serial_number;
+			}
+
+			if (count($clean_serials) != $expected_serial_count) {
+				$validation_errors[] = sprintf(
+					_('Item %s requires exactly %d serial number(s); received %d.'),
+					$stock_id,
+					$expected_serial_count,
+					count($clean_serials)
+				);
+			}
+		}
+
+		if (item_has_batch_tracking($stock_id)) {
+			$batch_no_key = 'batch_no_' . $line_no;
+			$batch_no = isset($_POST[$batch_no_key]) ? trim($_POST[$batch_no_key]) : '';
+
+			if ($batch_no === '') {
+				$validation_errors[] = sprintf(
+					_('Item %s requires a batch number, but none was provided.'),
+					$stock_id
+				);
+			} else {
+				if (preg_match('/[\x00-\x1F\x7F]/', $batch_no)) {
+					$validation_errors[] = sprintf(
+						_('Batch number "%s" for item %s contains invalid control characters.'),
+						$batch_no,
+						$stock_id
+					);
+				}
+
+				if (strlen($batch_no) > 60) {
+					$validation_errors[] = sprintf(
+						_('Batch number "%s" for item %s exceeds 60 characters.'),
+						$batch_no,
+						$stock_id
+					);
+				}
+			}
+
+			$expiry_key = 'batch_expiry_' . $line_no;
+			$expiry_date = isset($_POST[$expiry_key]) ? trim($_POST[$expiry_key]) : '';
+			$mfg_key = 'batch_mfg_' . $line_no;
+			$mfg_date = isset($_POST[$mfg_key]) ? trim($_POST[$mfg_key]) : '';
+
+			if ($expiry_date !== '' && !is_date($expiry_date)) {
+				$validation_errors[] = sprintf(
+					_('Batch expiry date "%s" for item %s is invalid.'),
+					$expiry_date,
+					$stock_id
+				);
+			}
+
+			if ($mfg_date !== '' && !is_date($mfg_date)) {
+				$validation_errors[] = sprintf(
+					_('Batch manufacturing date "%s" for item %s is invalid.'),
+					$mfg_date,
+					$stock_id
+				);
+			}
+
+			if ($expiry_date !== '' && $mfg_date !== '' && is_date($expiry_date) && is_date($mfg_date)) {
+				if (date2sql($mfg_date) > date2sql($expiry_date)) {
+					$validation_errors[] = sprintf(
+						_('Batch manufacturing date cannot be later than expiry date for item %s.'),
+						$stock_id
+					);
+				}
+			}
+		}
+	}
+
+	return empty($validation_errors);
+}
+
+/**
  * Update bin stock when stock is placed into a bin.
  *
  * Inserts or updates 0_wh_bin_stock for the given bin/item/batch/serial combo.
@@ -536,6 +763,13 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 	include_once($root . '/includes/db/serial_batch_db.inc');
 	include_once($root . '/includes/db/serial_numbers_db.inc');
 	include_once($root . '/includes/db/stock_batches_db.inc');
+
+	$validation_errors = array();
+	if (!validate_grn_tracking_payload($po, $validation_errors)) {
+		if (function_exists('display_error') && !empty($validation_errors))
+			display_error(implode('<br>', $validation_errors));
+		return false;
+	}
 
 	$wms_items = array(); // Collect items for WMS operation creation
 	$is_wms = false;
@@ -789,9 +1023,16 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 
 		// Create standard inbound operations for remaining items
 		if (!empty($normal_items)) {
-			create_inbound_operations($grn_no, $location, $normal_items);
+			$inbound_result = create_inbound_operations($grn_no, $location, $normal_items);
+			if (!$inbound_result['success']) {
+				if (function_exists('display_error') && !empty($inbound_result['message']))
+					display_error($inbound_result['message']);
+				return false;
+			}
 		}
 	}
+
+	return true;
 }
 
 // =====================================================================
