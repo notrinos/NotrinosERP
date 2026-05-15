@@ -262,7 +262,7 @@ end_table();
 //-------------------------------------------------------------------------------------
 
 echo '<br>';
-start_table(TABLESTYLE2);
+start_outer_table();
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
@@ -282,26 +282,13 @@ if ($selected_id != -1) {
 }
 
 // --- Basic Info ---
+table_section(1);
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Rule Definition') . "</strong></td></tr>\n";
 text_row_ex(_('Rule Name:'), 'rule_name', 50, 100);
 text_row_ex(_('Sequence (Priority):'), 'sequence', 10, 10, null, null, null, get_post('sequence', '10'));
 
-// --- Scope ---
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Scope (Matching Criteria)') . "</strong>"
-	. " <small style='color:#777;'>" . _('Leave blank for "any"') . "</small></td></tr>\n";
-
-warehouse_list_row(_('Warehouse:'), 'warehouse_loc_code', get_post('warehouse_loc_code'), _('-- All Warehouses --'));
-
-start_row();
-label_cell(_('Specific Item:'));
-stock_items_list_cells(null, 'stock_id', get_post('stock_id'), _('-- Any Item --'), false);
-end_row();
-
-stock_categories_list_row(_('Item Category:'), 'category_id', get_post('category_id'), _('-- Any Category --'));
-
-storage_category_list_row(_('Storage Category:'), 'storage_category_id', get_post('storage_category_id'), _('-- Any --'));
-
 // --- Target ---
+table_section(2);
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Target Location') . "</strong>"
 	. " <small style='color:#777;'>" . _('Specify a fixed bin or a zone to search within') . "</small></td></tr>\n";
 
@@ -337,7 +324,24 @@ echo combo_input('target_zone_id', get_post('target_zone_id'), $zone_sql, 'loc_i
 	array('spec_option' => _('-- none --'), 'spec_id' => '', 'order' => false, 'async' => false));
 echo "</td></tr>\n";
 
+// --- Scope ---
+table_section(3);
+echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Scope (Matching Criteria)') . "</strong>"
+	. " <small style='color:#777;'>" . _('Leave blank for "any"') . "</small></td></tr>\n";
+
+warehouse_list_row(_('Warehouse:'), 'warehouse_loc_code', get_post('warehouse_loc_code'), _('-- All Warehouses --'));
+
+start_row();
+label_cell(_('Specific Item:'));
+stock_items_list_cells(null, 'stock_id', get_post('stock_id'), _('-- Any Item --'), false, false, false, array('layout_class' => 'combo-layout-equal'));
+end_row();
+
+stock_categories_list_row(_('Item Category:'), 'category_id', get_post('category_id'), _('-- Any Category --'));
+
+storage_category_list_row(_('Storage Category:'), 'storage_category_id', get_post('storage_category_id'), _('-- Any --'));
+
 // --- Strategy ---
+table_section(4);
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Strategy') . "</strong></td></tr>\n";
 $strategies = get_putaway_strategies();
 echo "<tr><td class='label'>" . _('Putaway Strategy:') . "</td><td>";
@@ -360,7 +364,7 @@ if ($selected_id != -1) {
 	check_row(_('Active'), 'active', get_post('active', 1));
 }
 
-end_table(1);
+end_outer_table(1);
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
 //-------------------------------------------------------------------------------------
