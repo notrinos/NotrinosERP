@@ -194,6 +194,29 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 }
 
 /**
+ * Validate whether a resolved inbound route is safe for GRN operation creation.
+ *
+ * @param array $route Resolved route row.
+ * @return bool
+ */
+function is_valid_grn_inbound_route($route) {
+	if (!$route || !function_exists('get_route_rules'))
+		return false;
+
+	$allowed_operation_types = array('receipt', 'quality_check', 'putaway');
+	$rules = get_route_rules($route['route_id'], true);
+	$rule_count = 0;
+
+	while ($rule = db_fetch($rules)) {
+		$rule_count++;
+		if (!in_array($rule['operation_type'], $allowed_operation_types))
+			return false;
+	}
+
+	return $rule_count > 0;
+}
+
+/**
  * Check if a location (0_locations.loc_code) is WMS-enabled.
  *
  * @param string $loc_code The 0_locations.loc_code
@@ -240,7 +263,8 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 	if (function_exists('resolve_route')) {
 		$route = resolve_route($loc_code, 'inbound');
 		if ($route) {
-			return create_operations_from_route($route, ST_SUPPRECEIVE, $grn_no, $items, $loc_code);
+			if (is_valid_grn_inbound_route($route))
+				return create_operations_from_route($route, ST_SUPPRECEIVE, $grn_no, $items, $loc_code);
 		}
 	}
 
@@ -510,6 +534,32 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 }
 
 /**
+ * Read a POST field as trimmed text, rejecting non-scalar payloads.
+ *
+ * @param string $key                 POST key.
+ * @param array  $validation_errors   Validation errors array (by reference).
+ * @param string $field_label         Human-readable field label.
+ * @param string $stock_id            Item code for error context.
+ * @return string Trimmed text value, or empty string if missing/invalid.
+ */
+function get_grn_post_text_field($key, &$validation_errors, $field_label, $stock_id) {
+	if (!isset($_POST[$key]) || $_POST[$key] === null)
+		return '';
+
+	$value = $_POST[$key];
+	if (!is_scalar($value)) {
+		$validation_errors[] = sprintf(
+			_('%s for item %s must be plain text.'),
+			$field_label,
+			$stock_id
+		);
+		return '';
+	}
+
+	return trim((string)$value);
+}
+
+/**
  * Validate GRN tracking payload before serial/batch processing.
  *
  * @param object $po                 Purchase order/cart object.
@@ -550,7 +600,14 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 			}
 
 			$serial_data_key = 'serial_' . $line_no;
-			$serial_text = isset($_POST[$serial_data_key]) ? trim($_POST[$serial_data_key]) : '';
+			$serial_text = get_grn_post_text_field(
+				$serial_data_key,
+				$validation_errors,
+				_('Serial input'),
+				$stock_id
+			);
+			if ($serial_text === '' && isset($_POST[$serial_data_key]) && !is_scalar($_POST[$serial_data_key]))
+				continue;
 			if ($serial_text === '') {
 				$validation_errors[] = sprintf(
 					_('Item %s requires %d serial number(s), but none were provided.'),
@@ -610,7 +667,14 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 
 		if (item_has_batch_tracking($stock_id)) {
 			$batch_no_key = 'batch_no_' . $line_no;
-			$batch_no = isset($_POST[$batch_no_key]) ? trim($_POST[$batch_no_key]) : '';
+			$batch_no = get_grn_post_text_field(
+				$batch_no_key,
+				$validation_errors,
+				_('Batch number'),
+				$stock_id
+			);
+			if ($batch_no === '' && isset($_POST[$batch_no_key]) && !is_scalar($_POST[$batch_no_key]))
+				continue;
 
 			if ($batch_no === '') {
 				$validation_errors[] = sprintf(
@@ -636,9 +700,19 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 			}
 
 			$expiry_key = 'batch_expiry_' . $line_no;
-			$expiry_date = isset($_POST[$expiry_key]) ? trim($_POST[$expiry_key]) : '';
+			$expiry_date = get_grn_post_text_field(
+				$expiry_key,
+				$validation_errors,
+				_('Batch expiry date'),
+				$stock_id
+			);
 			$mfg_key = 'batch_mfg_' . $line_no;
-			$mfg_date = isset($_POST[$mfg_key]) ? trim($_POST[$mfg_key]) : '';
+			$mfg_date = get_grn_post_text_field(
+				$mfg_key,
+				$validation_errors,
+				_('Batch manufacturing date'),
+				$stock_id
+			);
 
 			if ($expiry_date !== '' && !is_date($expiry_date)) {
 				$validation_errors[] = sprintf(
@@ -798,7 +872,9 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		// --- Serial Number Processing ---
 		if (item_has_serial_tracking($stock_id)) {
 			$serial_data_key = 'serial_' . $line_no;
-			$serial_text = isset($_POST[$serial_data_key]) ? trim($_POST[$serial_data_key]) : '';
+			$serial_text = '';
+			if (isset($_POST[$serial_data_key]) && is_scalar($_POST[$serial_data_key]))
+				$serial_text = trim((string)$_POST[$serial_data_key]);
 
 			if (!empty($serial_text)) {
 				$serials = preg_split('/[\r\n,]+/', $serial_text);
@@ -862,11 +938,17 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		// --- Batch/Lot Processing ---
 		if (item_has_batch_tracking($stock_id)) {
 			$batch_no_key = 'batch_no_' . $line_no;
-			$batch_no = isset($_POST[$batch_no_key]) ? trim($_POST[$batch_no_key]) : '';
+			$batch_no = '';
+			if (isset($_POST[$batch_no_key]) && is_scalar($_POST[$batch_no_key]))
+				$batch_no = trim((string)$_POST[$batch_no_key]);
 			$expiry_key = 'batch_expiry_' . $line_no;
-			$expiry_date = isset($_POST[$expiry_key]) ? $_POST[$expiry_key] : '';
+			$expiry_date = '';
+			if (isset($_POST[$expiry_key]) && is_scalar($_POST[$expiry_key]))
+				$expiry_date = trim((string)$_POST[$expiry_key]);
 			$mfg_key = 'batch_mfg_' . $line_no;
-			$mfg_date = isset($_POST[$mfg_key]) ? $_POST[$mfg_key] : '';
+			$mfg_date = '';
+			if (isset($_POST[$mfg_key]) && is_scalar($_POST[$mfg_key]))
+				$mfg_date = trim((string)$_POST[$mfg_key]);
 
 			if (!empty($batch_no)) {
 				// Check if batch already exists for this item
