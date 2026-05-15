@@ -39,6 +39,114 @@ if (file_exists($crossdock_db_path))
 	include_once($crossdock_db_path);
 
 /**
+ * Normalize one warehouse operation item payload and reject unsafe input shapes.
+ *
+ * @param mixed  $item          One item row from operation payload.
+ * @param int    $item_index    Zero-based row index for error context.
+ * @param string $error_message Validation error output.
+ * @return array|false Normalized payload or false when validation fails.
+ */
+function normalize_wh_operation_item_payload($item, $item_index, &$error_message) {
+	$error_message = '';
+
+	if (!is_array($item)) {
+		$error_message = sprintf(_('Inbound item row %d must be an array.'), $item_index + 1);
+		return false;
+	}
+
+	if (!isset($item['stock_id']) || !is_scalar($item['stock_id'])) {
+		$error_message = sprintf(_('Inbound item row %d has an invalid item code.'), $item_index + 1);
+		return false;
+	}
+
+	$stock_id = trim((string)$item['stock_id']);
+	if ($stock_id === '') {
+		$error_message = sprintf(_('Inbound item row %d has an empty item code.'), $item_index + 1);
+		return false;
+	}
+
+	if (!isset($item['qty']) || !is_scalar($item['qty']) || !is_numeric($item['qty'])) {
+		$error_message = sprintf(_('Inbound item %s has an invalid quantity.'), $stock_id);
+		return false;
+	}
+
+	$qty = (float)$item['qty'];
+	if ($qty <= 0) {
+		$error_message = sprintf(_('Inbound item %s must have quantity greater than zero.'), $stock_id);
+		return false;
+	}
+
+	$std_cost = 0;
+	if (isset($item['std_cost']) && $item['std_cost'] !== null && $item['std_cost'] !== '') {
+		if (!is_scalar($item['std_cost']) || !is_numeric($item['std_cost'])) {
+			$error_message = sprintf(_('Inbound item %s has an invalid standard cost.'), $stock_id);
+			return false;
+		}
+		$std_cost = (float)$item['std_cost'];
+	}
+
+	$batch_id = null;
+	if (isset($item['batch_id']) && $item['batch_id'] !== null && $item['batch_id'] !== '') {
+		if (!is_scalar($item['batch_id']) || !is_numeric($item['batch_id']) || (int)$item['batch_id'] <= 0) {
+			$error_message = sprintf(_('Inbound item %s has an invalid batch id.'), $stock_id);
+			return false;
+		}
+		$batch_id = (int)$item['batch_id'];
+	}
+
+	$serial_ids = array();
+	if (isset($item['serial_ids']) && $item['serial_ids'] !== null && $item['serial_ids'] !== '') {
+		if (!is_array($item['serial_ids'])) {
+			$error_message = sprintf(_('Inbound item %s has an invalid serial list payload.'), $stock_id);
+			return false;
+		}
+
+		foreach ($item['serial_ids'] as $serial_id) {
+			if (!is_scalar($serial_id) || !is_numeric($serial_id) || (int)$serial_id <= 0) {
+				$error_message = sprintf(_('Inbound item %s contains an invalid serial id value.'), $stock_id);
+				return false;
+			}
+			$serial_ids[] = (int)$serial_id;
+		}
+	}
+
+	return array(
+		'stock_id' => $stock_id,
+		'qty' => $qty,
+		'std_cost' => $std_cost,
+		'batch_id' => $batch_id,
+		'serial_ids' => $serial_ids,
+	);
+}
+
+/**
+ * Normalize a warehouse operation items payload.
+ *
+ * @param mixed  $items          Raw items payload.
+ * @param string $error_message  Validation error output.
+ * @return array|false Normalized list or false on validation failure.
+ */
+function normalize_wh_operation_items_payload($items, &$error_message) {
+	$error_message = '';
+
+	if (!is_array($items) || empty($items)) {
+		$error_message = _('At least one valid inbound item is required to create operations.');
+		return false;
+	}
+
+	$normalized_items = array();
+	foreach ($items as $item_index => $item) {
+		$normalized_item = normalize_wh_operation_item_payload($item, $item_index, $error_message);
+		if ($normalized_item === false)
+			return false;
+
+		$normalized_items[] = $normalized_item;
+	}
+
+	return $normalized_items;
+}
+
+/**
  * Create operations from a resolved route's rules.
  *
  * Given a route and its push rules, creates a chained series of WMS operations
@@ -53,6 +161,12 @@ if (file_exists($crossdock_db_path))
  */
 function create_operations_from_route($route, $source_doc_type, $source_doc_no, $items, $warehouse_loc_code) {
 	$result = array('success' => false, 'operations' => array(), 'message' => '');
+
+	$normalized_items = normalize_wh_operation_items_payload($items, $payload_error_message);
+	if ($normalized_items === false) {
+		$result['message'] = $payload_error_message;
+		return $result;
+	}
 
 	if (!$route || !function_exists('get_route_rules')) {
 		$result['message'] = _('Route system not available.');
@@ -115,7 +229,7 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 
 		// Add operation lines
 		if ($op_id) {
-			foreach ($items as $item) {
+			foreach ($normalized_items as $item) {
 				$stock_id = $item['stock_id'];
 				$qty = $item['qty'];
 				$std_cost = isset($item['std_cost']) ? $item['std_cost'] : 0;
@@ -134,6 +248,26 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 				if ($single_step_direct_receipt && !$line_to) {
 					$result['message'] = sprintf(
 						_('No putaway bin found for item %s in warehouse %s.'),
+						$stock_id,
+						$warehouse_loc_code
+					);
+					return $result;
+				}
+
+				if (($rule['operation_type'] === 'putaway' || $single_step_direct_receipt)
+					&& $line_to
+					&& !is_valid_putaway_bin_location($line_to, $warehouse_loc_code)) {
+					$result['message'] = sprintf(
+						_('Putaway destination for item %s must be an active bin location in warehouse %s.'),
+						$stock_id,
+						$warehouse_loc_code
+					);
+					return $result;
+				}
+
+				if ($rule['operation_type'] === 'putaway' && !$line_to) {
+					$result['message'] = sprintf(
+						_('No putaway bin found for item %s in warehouse %s for route putaway step.'),
 						$stock_id,
 						$warehouse_loc_code
 					);
@@ -252,6 +386,12 @@ function get_wms_location_settings($loc_code) {
 function create_inbound_operations($grn_no, $loc_code, $items) {
 	$result = array('success' => false, 'operations' => array(), 'message' => '');
 
+	$normalized_items = normalize_wh_operation_items_payload($items, $payload_error_message);
+	if ($normalized_items === false) {
+		$result['message'] = $payload_error_message;
+		return $result;
+	}
+
 	// Check if warehouse is WMS-enabled
 	$wms = get_wms_location_settings($loc_code);
 	if (!$wms) {
@@ -264,7 +404,7 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		$route = resolve_route($loc_code, 'inbound');
 		if ($route) {
 			if (is_valid_grn_inbound_route($route))
-				return create_operations_from_route($route, ST_SUPPRECEIVE, $grn_no, $items, $loc_code);
+				return create_operations_from_route($route, ST_SUPPRECEIVE, $grn_no, $normalized_items, $loc_code);
 		}
 	}
 
@@ -293,6 +433,22 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 	// Find special zones (input/QC) by type
 	$input_zone_id = find_zone_by_type($warehouse_loc_code, 'staging');
 	$qc_zone_id = find_zone_by_type($warehouse_loc_code, 'quality');
+
+	if ($inbound_steps >= 2 && !$input_zone_id) {
+		$result['message'] = sprintf(
+			_('No active staging zone found for warehouse %s. Inbound operations cannot be created.'),
+			$warehouse_loc_code
+		);
+		return $result;
+	}
+
+	if ($inbound_steps === 3 && !$qc_zone_id) {
+		$result['message'] = sprintf(
+			_('No active quality zone found for warehouse %s. Inbound operations cannot be created.'),
+			$warehouse_loc_code
+		);
+		return $result;
+	}
 
 	$op_ids = array();
 	$now = date('Y-m-d H:i:s');
@@ -324,7 +480,7 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 	$op_ids[] = $receipt_op;
 
 	// Add lines to receipt operation
-	foreach ($items as $item) {
+	foreach ($normalized_items as $item) {
 		$stock_id = $item['stock_id'];
 		$qty = $item['qty'];
 		$std_cost = isset($item['std_cost']) ? $item['std_cost'] : 0;
@@ -334,7 +490,7 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		if ($inbound_steps === 1) {
 			$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
 			$to_bin = $putaway_bin;
-			if (!$to_bin) {
+			if (!$to_bin || !is_valid_putaway_bin_location($to_bin, $warehouse_loc_code)) {
 				$result['message'] = sprintf(
 					_('No putaway bin found for item %s in warehouse %s.'),
 					$stock_id,
@@ -408,7 +564,7 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		link_wh_operations($receipt_op, $qc_op);
 
 		// Add lines (same items)
-		foreach ($items as $item) {
+		foreach ($normalized_items as $item) {
 			if (!empty($item['serial_ids'])) {
 				foreach ($item['serial_ids'] as $serial_id) {
 					add_wh_operation_line($qc_op, $item['stock_id'], 1, 0,
@@ -448,10 +604,19 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		link_wh_operations($parent_for_putaway, $putaway_op);
 
 		// Add lines with putaway destination per item
-		foreach ($items as $item) {
+		foreach ($normalized_items as $item) {
 			$stock_id = $item['stock_id'];
 			$qty = $item['qty'];
 			$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
+
+			if (!$putaway_bin || !is_valid_putaway_bin_location($putaway_bin, $warehouse_loc_code)) {
+				$result['message'] = sprintf(
+					_('No putaway bin found for item %s in warehouse %s.'),
+					$stock_id,
+					$warehouse_loc_code
+				);
+				return $result;
+			}
 
 			if (!empty($item['serial_ids'])) {
 				foreach ($item['serial_ids'] as $serial_id) {
@@ -499,6 +664,31 @@ function find_zone_by_type($warehouse_loc_code, $zone_type_code) {
 }
 
 /**
+ * Check whether a location can be used as a final putaway bin destination.
+ *
+ * @param int    $loc_id             Candidate location id.
+ * @param string $warehouse_loc_code Warehouse scope code.
+ * @return bool
+ */
+function is_valid_putaway_bin_location($loc_id, $warehouse_loc_code) {
+	if (!$loc_id)
+		return false;
+
+	$sql = "SELECT wl.loc_id FROM " . TB_PREF . "wh_locations wl
+		INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id
+		WHERE wl.loc_id=" . (int)$loc_id
+		. " AND wl.warehouse_loc_code=" . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1
+		AND lt.can_store = 1
+		AND lt.type_code = 'bin'
+		LIMIT 1";
+	$result = db_query($sql, 'could not validate putaway bin location');
+	$row = db_fetch($result);
+
+	return (bool)$row;
+}
+
+/**
  * Get the best putaway bin for an item using the putaway engine.
  * Falls back to the first storable bin in the warehouse.
  *
@@ -515,7 +705,9 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 		if (function_exists('execute_putaway')) {
 			$assignments = execute_putaway($stock_id, $warehouse_loc_code, $qty);
 			if (!empty($assignments)) {
-				return (int)$assignments[0]['bin_loc_id'];
+				$candidate_bin = (int)$assignments[0]['bin_loc_id'];
+				if (is_valid_putaway_bin_location($candidate_bin, $warehouse_loc_code))
+					return $candidate_bin;
 			}
 		}
 	}
@@ -525,6 +717,7 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 		INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id
 		WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
 		. " AND lt.can_store = 1
+		AND lt.type_code = 'bin'
 		AND wl.is_active = 1
 		ORDER BY wl.pick_sequence ASC, wl.loc_id ASC
 		LIMIT 1";

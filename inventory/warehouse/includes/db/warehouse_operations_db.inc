@@ -405,6 +405,12 @@ function count_wh_operations_filtered($filters = array()) {
 	}
 	if (!empty($filters['source_doc_type']))
 		$where[] = "source_doc_type=" . db_escape($filters['source_doc_type']);
+
+	if (!empty($filters['warehouse_loc_code'])) {
+		$where[] = "(from_loc_id IN (SELECT loc_id FROM " . TB_PREF . "wh_locations WHERE warehouse_loc_code=" . db_escape($filters['warehouse_loc_code']) . ")"
+			. " OR to_loc_id IN (SELECT loc_id FROM " . TB_PREF . "wh_locations WHERE warehouse_loc_code=" . db_escape($filters['warehouse_loc_code']) . "))";
+	}
+
 	if (!isset($filters['include_cancelled']) || !$filters['include_cancelled'])
 		$where[] = "op_status <> 'cancelled'";
 
