@@ -120,7 +120,24 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		$target_loc_id = ($target_loc_id && $target_loc_id !== '' && $target_loc_id != -1 && $target_loc_id != 0) ? (int)$target_loc_id : null;
 		$target_zone_id = ($target_zone_id && $target_zone_id !== '' && $target_zone_id != -1 && $target_zone_id != 0) ? (int)$target_zone_id : null;
 
-		if ($selected_id != -1) {
+		$validation_errors = validate_putaway_rule_definition(
+			$warehouse_loc_code,
+			$stock_id,
+			$category_id,
+			$storage_category_id,
+			$target_loc_id,
+			$target_zone_id,
+			$strategy
+		);
+
+		if (!empty($validation_errors)) {
+			$input_error = 1;
+			foreach ($validation_errors as $validation_error) {
+				display_error($validation_error);
+			}
+		}
+
+		if ($input_error != 1 && $selected_id != -1) {
 			update_putaway_rule(
 				$selected_id,
 				get_post('rule_name'),
@@ -135,7 +152,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				check_value('active') ? 1 : 0
 			);
 			display_notification(_('Putaway rule has been updated.'));
-		} else {
+		} elseif ($input_error != 1) {
 			add_putaway_rule(
 				get_post('rule_name'),
 				$warehouse_loc_code,
@@ -202,9 +219,17 @@ if (isset($_POST['TestPutaway'])) {
 // List table
 //-------------------------------------------------------------------------------------
 
-$result = get_putaway_rules(null, check_value('show_inactive'));
+$show_inactive = check_value('show_inactive');
+$result = get_putaway_rules(null, $show_inactive);
 
 start_form();
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+check_cells(_('Show inactive:'), 'show_inactive', $show_inactive, true);
+end_row();
+end_table();
+
+echo '<br>';
 start_table(TABLESTYLE);
 $th = array(
 	_('#'), _('Rule Name'), _('Warehouse'), _('Sequence'),

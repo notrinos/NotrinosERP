@@ -195,6 +195,162 @@ function get_putaway_rules_list($warehouse_loc_code = null) {
 }
 
 /**
+ * Check whether a warehouse code exists.
+ *
+ * @param string $warehouse_loc_code Warehouse location code.
+ * @return bool True when the warehouse exists.
+ */
+function putaway_rule_warehouse_exists($warehouse_loc_code) {
+	$sql = "SELECT loc_code FROM " . TB_PREF . "locations WHERE loc_code = " . db_escape($warehouse_loc_code);
+	$result = db_query($sql, 'could not validate putaway warehouse');
+	return db_num_rows($result) > 0;
+}
+
+/**
+ * Check whether a stock item exists.
+ *
+ * @param string $stock_id Stock item code.
+ * @return bool True when the item exists.
+ */
+function putaway_rule_stock_item_exists($stock_id) {
+	$sql = "SELECT stock_id FROM " . TB_PREF . "stock_master WHERE stock_id = " . db_escape($stock_id);
+	$result = db_query($sql, 'could not validate putaway stock item');
+	return db_num_rows($result) > 0;
+}
+
+/**
+ * Check whether an item category exists.
+ *
+ * @param int $category_id Item category identifier.
+ * @return bool True when the category exists.
+ */
+function putaway_rule_category_exists($category_id) {
+	$sql = "SELECT category_id FROM " . TB_PREF . "stock_category WHERE category_id = " . db_escape((int)$category_id);
+	$result = db_query($sql, 'could not validate putaway item category');
+	return db_num_rows($result) > 0;
+}
+
+/**
+ * Check whether a storage category exists.
+ *
+ * @param int $storage_category_id Storage category identifier.
+ * @return bool True when the storage category exists.
+ */
+function putaway_rule_storage_category_exists($storage_category_id) {
+	$sql = "SELECT id FROM " . TB_PREF . "wh_storage_categories WHERE id = " . db_escape((int)$storage_category_id);
+	$result = db_query($sql, 'could not validate putaway storage category');
+	return db_num_rows($result) > 0;
+}
+
+/**
+ * Get a warehouse location row with type metadata for putaway validation.
+ *
+ * @param int $location_id Warehouse location identifier.
+ * @return array|false The location row or false when missing.
+ */
+function get_putaway_rule_location($location_id) {
+	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.warehouse_loc_code, wl.is_active, lt.can_store "
+		. "FROM " . TB_PREF . "wh_locations wl "
+		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
+		. "WHERE wl.loc_id = " . db_escape((int)$location_id);
+	$result = db_query($sql, 'could not validate putaway target location');
+	return db_fetch($result);
+}
+
+/**
+ * Validate putaway rule references and target/scope consistency.
+ *
+ * @param string|null $warehouse_loc_code  Warehouse code or null for global rules.
+ * @param string|null $stock_id            Specific item code.
+ * @param int|null    $category_id         Item category identifier.
+ * @param int|null    $storage_category_id Storage category identifier.
+ * @param int|null    $target_loc_id       Fixed-bin location identifier.
+ * @param int|null    $target_zone_id      Zone location identifier.
+ * @param string      $strategy            Putaway strategy name.
+ * @return array Validation error messages.
+ */
+function validate_putaway_rule_definition($warehouse_loc_code, $stock_id, $category_id,
+	$storage_category_id, $target_loc_id, $target_zone_id, $strategy) {
+	$validation_errors = array();
+	$target_location = false;
+	$target_zone = false;
+
+	if ($warehouse_loc_code !== null && $warehouse_loc_code !== ''
+		&& !putaway_rule_warehouse_exists($warehouse_loc_code)) {
+		$validation_errors[] = _('Selected warehouse does not exist.');
+	}
+
+	if ($stock_id !== null && $stock_id !== '' && !putaway_rule_stock_item_exists($stock_id)) {
+		$validation_errors[] = _('Selected item does not exist.');
+	}
+
+	if ($category_id !== null && !putaway_rule_category_exists($category_id)) {
+		$validation_errors[] = _('Selected item category does not exist.');
+	}
+
+	if ($storage_category_id !== null && !putaway_rule_storage_category_exists($storage_category_id)) {
+		$validation_errors[] = _('Selected storage category does not exist.');
+	}
+
+	if ($target_loc_id !== null) {
+		$target_location = get_putaway_rule_location($target_loc_id);
+		if (!$target_location) {
+			$validation_errors[] = _('Selected target bin does not exist.');
+		} elseif (!$target_location['is_active']) {
+			$validation_errors[] = _('Selected target bin is inactive.');
+		} elseif (!$target_location['can_store']) {
+			$validation_errors[] = _('Selected target bin must be a storable bin location.');
+		}
+	}
+
+	if ($target_zone_id !== null) {
+		$target_zone = get_putaway_rule_location($target_zone_id);
+		if (!$target_zone) {
+			$validation_errors[] = _('Selected target zone does not exist.');
+		} elseif (!$target_zone['is_active']) {
+			$validation_errors[] = _('Selected target zone is inactive.');
+		} elseif ($target_zone['can_store']) {
+			$validation_errors[] = _('Selected target zone must be a non-storable parent location.');
+		}
+	}
+
+	if (($target_loc_id !== null || $target_zone_id !== null)
+		&& ($warehouse_loc_code === null || $warehouse_loc_code === '')) {
+		$validation_errors[] = _('Please select a warehouse when a target bin or target zone is specified.');
+	}
+
+	if ($strategy == 'fixed_bin') {
+		if ($target_zone_id !== null) {
+			$validation_errors[] = _('Fixed Bin strategy cannot also target a zone.');
+		}
+	} elseif ($target_loc_id !== null) {
+		$validation_errors[] = _('Only Fixed Bin strategy may target a specific bin.');
+	}
+
+	if ($warehouse_loc_code !== null && $warehouse_loc_code !== '') {
+		if ($target_location && $target_location['warehouse_loc_code'] !== $warehouse_loc_code) {
+			$validation_errors[] = sprintf(
+				_('Selected target bin %s belongs to warehouse %s and cannot be used with warehouse %s.'),
+				$target_location['loc_code'],
+				$target_location['warehouse_loc_code'],
+				$warehouse_loc_code
+			);
+		}
+
+		if ($target_zone && $target_zone['warehouse_loc_code'] !== $warehouse_loc_code) {
+			$validation_errors[] = sprintf(
+				_('Selected target zone %s belongs to warehouse %s and cannot be used with warehouse %s.'),
+				$target_zone['loc_code'],
+				$target_zone['warehouse_loc_code'],
+				$warehouse_loc_code
+			);
+		}
+	}
+
+	return $validation_errors;
+}
+
+/**
  * Find matching putaway rules for a given item and warehouse.
  *
  * Resolves rules in priority order: item-specific -> category -> warehouse -> default.
