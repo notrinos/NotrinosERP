@@ -374,6 +374,46 @@ function mobile_validate_stock_item($stock_id_raw, &$item_row) {
 }
 
 /**
+ * Validate a mobile action's operation linkage before completion.
+ *
+ * @param int   $op_id             Operation id from payload.
+ * @param array $allowed_op_types  Allowed operation types for the action.
+ * @return array Validation result array with success/error.
+ */
+function mobile_validate_operation_for_completion($op_id, $allowed_op_types) {
+	if ($op_id <= 0)
+		return array('success' => true, 'operation' => null);
+
+	$operation = get_wh_operation($op_id);
+	if (!$operation)
+		return array('success' => false, 'error' => _('Operation not found'));
+
+	if (!in_array($operation['op_type'], $allowed_op_types)) {
+		return array(
+			'success' => false,
+			'error' => sprintf(
+				_('Operation #%d type %s is invalid for this action.'),
+				$op_id,
+				$operation['op_type']
+			)
+		);
+	}
+
+	if (!in_array($operation['op_status'], array('draft', 'ready', 'in_progress'))) {
+		return array(
+			'success' => false,
+			'error' => sprintf(
+				_('Operation #%d is already %s and cannot be completed again.'),
+				$op_id,
+				$operation['op_status']
+			)
+		);
+	}
+
+	return array('success' => true, 'operation' => $operation);
+}
+
+/**
  * Validate destination/source bin and ensure the location is active and storable.
  *
  * @param mixed $bin_loc_id_raw
@@ -430,6 +470,10 @@ function mobile_confirm_receive() {
 
 	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
 		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
+
+	$operation_validation = mobile_validate_operation_for_completion($op_id, array('receipt'));
+	if (!$operation_validation['success'])
+		return $operation_validation;
 
 	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
 		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
@@ -504,6 +548,10 @@ function mobile_confirm_ship() {
 
 	if (empty($serial_no) || empty($stock_id))
 		return array('success' => false, 'error' => _('Serial number and item are required'));
+
+	$operation_validation = mobile_validate_operation_for_completion($op_id, array('ship'));
+	if (!$operation_validation['success'])
+		return $operation_validation;
 
 	$serial = get_serial_number_by_code($serial_no, $stock_id);
 	if (!$serial)
@@ -780,6 +828,10 @@ function mobile_confirm_putaway() {
 	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
 		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
+	$operation_validation = mobile_validate_operation_for_completion($op_id, array('putaway'));
+	if (!$operation_validation['success'])
+		return $operation_validation;
+
 	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
 		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
 
@@ -849,6 +901,10 @@ function mobile_confirm_pick() {
 
 	if (empty($stock_id) || $qty <= 0 || $bin_loc_id <= 0)
 		return array('success' => false, 'error' => _('Item, quantity, and bin are required'));
+
+	$operation_validation = mobile_validate_operation_for_completion($op_id, array('pick'));
+	if (!$operation_validation['success'])
+		return $operation_validation;
 
 	$serial_id = null;
 	$batch_id = null;

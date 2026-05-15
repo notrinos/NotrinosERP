@@ -129,7 +129,7 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 			$serial_ids[] = $serial_id_int;
 		}
 
-		if (abs($qty - count($serial_ids)) > 0.000001) {
+		if (!empty($serial_ids) && abs($qty - count($serial_ids)) > 0.000001) {
 			$error_message = sprintf(
 				_('Inbound item %s quantity %.2f does not match serial count %d.'),
 				$stock_id,
@@ -770,6 +770,13 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 				$candidate_bin = (int)$assignments[0]['bin_loc_id'];
 				if (is_valid_putaway_bin_location($candidate_bin, $warehouse_loc_code))
 					return $candidate_bin;
+			} elseif (function_exists('find_putaway_rule_for_item')) {
+				$matched_rule = find_putaway_rule_for_item($stock_id, $warehouse_loc_code);
+				if ($matched_rule) {
+					// Do not silently route to fallback bins when an explicit rule matched
+					// but could not provide a valid assignment (inactive target/zone/capacity).
+					return null;
+				}
 			}
 		}
 	}
@@ -1335,14 +1342,38 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 							$alloc_total += $a['qty_allocated'];
 						}
 
+						$crossdock_item = $item;
+						$crossdock_item['qty'] = $alloc_total;
+						$remaining_serial_ids = array();
+
+						if (!empty($item['serial_ids'])) {
+							$allocated_serial_count = (int)round($alloc_total);
+							if ($allocated_serial_count < 0)
+								$allocated_serial_count = 0;
+							if ($allocated_serial_count > count($item['serial_ids']))
+								$allocated_serial_count = count($item['serial_ids']);
+
+							$crossdock_item['serial_ids'] = array_slice($item['serial_ids'], 0, $allocated_serial_count);
+							$remaining_serial_ids = array_slice($item['serial_ids'], $allocated_serial_count);
+						}
+
 						// Create cross-dock operations for the allocated portion
-						create_cross_dock_operations($grn_no, $location, $allocations, $item);
+						$crossdock_result = create_cross_dock_operations($grn_no, $location, $allocations, $crossdock_item);
+						if (!$crossdock_result['success']) {
+							if (function_exists('display_error') && !empty($crossdock_result['message'])) {
+								display_error($crossdock_result['message']);
+							}
+							$normal_items[] = $item;
+							continue;
+						}
 
 						// Remaining qty goes through normal inbound
 						$remaining = $item['qty'] - $alloc_total;
 						if ($remaining > 0) {
 							$normal_item = $item;
 							$normal_item['qty'] = $remaining;
+							if (!empty($item['serial_ids']))
+								$normal_item['serial_ids'] = $remaining_serial_ids;
 							$normal_items[] = $normal_item;
 						}
 					} else {

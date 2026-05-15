@@ -130,6 +130,35 @@ function allocate_cross_dock_qty($stock_id, $loc_code, $received_qty)
 	return $allocations;
 }
 
+/**
+ * Validate whether a resolved cross-dock route is safe for bypass flow.
+ *
+ * @param array $route Resolved route row.
+ * @return bool
+ */
+function is_valid_crossdock_route($route)
+{
+	if (!$route || !function_exists('get_route_rules'))
+		return false;
+
+	$rules = get_route_rules($route['route_id'], true);
+	$rule_count = 0;
+	$has_receipt = false;
+	$has_ship = false;
+
+	while ($rule = db_fetch($rules)) {
+		$rule_count++;
+		if ($rule['operation_type'] === 'receipt')
+			$has_receipt = true;
+		elseif ($rule['operation_type'] === 'ship')
+			$has_ship = true;
+		else
+			return false;
+	}
+
+	return $rule_count > 0 && $has_receipt && $has_ship;
+}
+
 // =====================================================================
 // CROSS-DOCK: Operation Creation
 // =====================================================================
@@ -154,7 +183,17 @@ function create_cross_dock_operations($grn_no, $loc_code, $allocations, $item_in
 		return $result;
 	}
 
-	$stock_id = $item_info['stock_id'];
+	if (!isset($item_info['stock_id']) || !is_scalar($item_info['stock_id'])) {
+		$result['message'] = _('Invalid cross-dock item payload.');
+		return $result;
+	}
+
+	$stock_id = trim((string)$item_info['stock_id']);
+	if ($stock_id === '') {
+		$result['message'] = _('Cross-dock item code is required.');
+		return $result;
+	}
+
 	$std_cost = isset($item_info['std_cost']) ? $item_info['std_cost'] : 0;
 	$serial_ids = isset($item_info['serial_ids']) ? $item_info['serial_ids'] : array();
 	$batch_id = isset($item_info['batch_id']) ? $item_info['batch_id'] : null;
@@ -162,10 +201,16 @@ function create_cross_dock_operations($grn_no, $loc_code, $allocations, $item_in
 	// Try route-based creation
 	if (function_exists('resolve_route')) {
 		$route = resolve_route($loc_code, 'crossdock');
-		if ($route) {
+		if ($route && is_valid_crossdock_route($route)) {
 			$total_qty = 0;
 			foreach ($allocations as $a) {
-				$total_qty += $a['qty_allocated'];
+				$qty = isset($a['qty_allocated']) && is_numeric($a['qty_allocated']) ? (float)$a['qty_allocated'] : 0;
+				if ($qty > 0)
+					$total_qty += $qty;
+			}
+			if ($total_qty <= 0) {
+				$result['message'] = _('Cross-dock allocation quantity must be greater than zero.');
+				return $result;
 			}
 			$items = array(array(
 				'stock_id'   => $stock_id,
@@ -216,12 +261,18 @@ function create_cross_dock_operations($grn_no, $loc_code, $allocations, $item_in
 		sprintf(_('Cross-dock ship for GRN #%d'), $grn_no)
 	);
 
-	if ($receipt_op && $ship_op)
-		link_wh_operations($receipt_op, $ship_op);
+	if (!$receipt_op || !$ship_op) {
+		$result['message'] = _('Unable to create cross-dock receipt/ship operations.');
+		return $result;
+	}
+
+	link_wh_operations($receipt_op, $ship_op);
 
 	// Add operation lines for each allocation
 	foreach ($allocations as $alloc) {
-		$qty = $alloc['qty_allocated'];
+		$qty = isset($alloc['qty_allocated']) && is_numeric($alloc['qty_allocated']) ? (float)$alloc['qty_allocated'] : 0;
+		if ($qty <= 0)
+			continue;
 
 		// Receipt line
 		add_wh_operation_line($receipt_op, $stock_id, $qty, 0,

@@ -36,26 +36,65 @@ if (user_use_date_picker())
 
 page(_($help_context = 'Dispatch Operations'), false, false, '', $js);
 
+/**
+ * Read a submitted operation id from action button payload.
+ *
+ * @param string $action_key POST key that contains the operation id.
+ * @return int
+ */
+function get_submitted_dispatch_operation_id($action_key)
+{
+	if (!isset($_POST[$action_key]) || !is_scalar($_POST[$action_key]))
+		return 0;
+
+	$op_id = (int)$_POST[$action_key];
+	return $op_id > 0 ? $op_id : 0;
+}
+
 // =====================================================================
 // Process action buttons: Start, Complete, Cancel
 // =====================================================================
 
 if (isset($_POST['start_op'])) {
-	$op_id = (int)$_POST['start_op'];
-	update_wh_operation_status($op_id, 'in_progress');
-	display_notification(sprintf(_('Operation #%d started.'), $op_id));
+	$op_id = get_submitted_dispatch_operation_id('start_op');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Start action.'));
+	} elseif (!in_array($operation['op_status'], array('draft', 'ready'))) {
+		display_error(sprintf(_('Operation #%d cannot be started from status %s.'), $op_id, $operation['op_status']));
+	} else {
+		update_wh_operation_status($op_id, 'in_progress');
+		display_notification(sprintf(_('Operation #%d started.'), $op_id));
+	}
 }
 
 if (isset($_POST['complete_op'])) {
-	$op_id = (int)$_POST['complete_op'];
-	complete_wh_operation($op_id);
-	display_notification(sprintf(_('Operation #%d completed.'), $op_id));
+	$op_id = get_submitted_dispatch_operation_id('complete_op');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Complete action.'));
+	} elseif ($operation['op_status'] !== 'in_progress') {
+		display_error(sprintf(_('Operation #%d can only be completed from In Progress status.'), $op_id));
+	} else {
+		complete_wh_operation($op_id);
+		display_notification(sprintf(_('Operation #%d completed.'), $op_id));
+	}
 }
 
 if (isset($_POST['cancel_op'])) {
-	$op_id = (int)$_POST['cancel_op'];
-	cancel_wh_operation($op_id);
-	display_notification(sprintf(_('Operation #%d cancelled.'), $op_id));
+	$op_id = get_submitted_dispatch_operation_id('cancel_op');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Cancel action.'));
+	} elseif ($operation['op_status'] === 'done') {
+		display_error(sprintf(_('Operation #%d is already completed and cannot be cancelled.'), $op_id));
+	} else {
+		cancel_wh_operation($op_id);
+		display_notification(sprintf(_('Operation #%d cancelled.'), $op_id));
+	}
 }
 
 // =====================================================================
