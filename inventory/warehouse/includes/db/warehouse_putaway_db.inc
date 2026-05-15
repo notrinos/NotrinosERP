@@ -383,22 +383,27 @@ function find_putaway_rule_for_item($stock_id, $warehouse_loc_code) {
 		}
 	}
 
-	// Find all matching rules sorted by sequence
+	// Item-scoped rows should outrank broader category/default rows.
+	$item_rule_sql = "SELECT * FROM " . TB_PREF . "wh_putaway_rules "
+		. "WHERE active = 1 "
+		. "AND (warehouse_loc_code = " . db_escape($warehouse_loc_code) . " OR warehouse_loc_code IS NULL) "
+		. "AND stock_id = " . db_escape($stock_id) . " "
+		. "ORDER BY sequence, rule_id";
+	$item_rule_result = db_query($item_rule_sql, 'could not find item-scoped putaway rules');
+	$item_rule = db_fetch($item_rule_result);
+	if ($item_rule) {
+		return $item_rule;
+	}
+
+	// Find all remaining matching rules sorted by sequence.
 	$sql = "SELECT * FROM " . TB_PREF . "wh_putaway_rules "
 		. "WHERE active = 1 "
 		. "AND (warehouse_loc_code = " . db_escape($warehouse_loc_code) . " OR warehouse_loc_code IS NULL) "
+		. "AND (stock_id IS NULL OR stock_id = '' OR stock_id = '-1') "
 		. "ORDER BY sequence, rule_id";
 	$result = db_query($sql, 'could not find putaway rules');
 
 	while ($rule = db_fetch($result)) {
-		// Check item-specific match
-		if ($rule['stock_id'] !== null && $rule['stock_id'] !== '' && $rule['stock_id'] != -1) {
-			if ($rule['stock_id'] == $stock_id) {
-				return $rule;
-			}
-			continue; // Item-specific rule didn't match this item
-		}
-
 		// Check category match
 		if ($rule['category_id'] !== null && $rule['category_id'] !== '' && $rule['category_id'] != -1 && $rule['category_id'] != 0) {
 			if ($rule['category_id'] != $item['category_id']) {
@@ -421,6 +426,24 @@ function find_putaway_rule_for_item($stock_id, $warehouse_loc_code) {
 }
 
 /**
+ * Build the shared usage subquery used by putaway bin candidate lookups.
+ *
+ * @return string SQL subquery text.
+ */
+function get_putaway_bin_usage_subquery() {
+	return "("
+		. " SELECT bs.wh_loc_id, "
+		. " SUM(bs.qty_on_hand) AS total_qty, "
+		. " COUNT(DISTINCT bs.stock_id) AS item_count, "
+		. " SUM(bs.qty_on_hand * COALESCE(sm.item_weight, 0)) AS total_weight, "
+		. " SUM(bs.qty_on_hand * COALESCE(sm.item_volume, 0)) AS total_volume "
+		. " FROM " . TB_PREF . "wh_bin_stock bs "
+		. " LEFT JOIN " . TB_PREF . "stock_master sm ON sm.stock_id = bs.stock_id "
+		. " GROUP BY bs.wh_loc_id"
+		. ")";
+}
+
+/**
  * Get bins within a zone ordered for putaway use.
  *
  * Returns storable bin locations within the specified zone (or warehouse)
@@ -432,6 +455,7 @@ function find_putaway_rule_for_item($stock_id, $warehouse_loc_code) {
  * @return resource DB result with bin details and utilization.
  */
 function get_bins_for_putaway($zone_loc_id, $warehouse_loc_code, $storage_category_id = null) {
+	$usage_sql = get_putaway_bin_usage_subquery();
 	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
 		. "wl.max_weight, wl.max_volume, wl.max_units, "
 		. "wl.storage_category_id, wl.pick_sequence, wl.abc_class, "
@@ -443,14 +467,7 @@ function get_bins_for_putaway($zone_loc_id, $warehouse_loc_code, $storage_catego
 		. "FROM " . TB_PREF . "wh_locations wl "
 		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
 		. "LEFT JOIN " . TB_PREF . "wh_storage_categories sc ON wl.storage_category_id = sc.id "
-		. "LEFT JOIN ("
-		. "  SELECT wh_loc_id, "
-		. "    SUM(qty_on_hand) AS total_qty, "
-		. "    COUNT(DISTINCT stock_id) AS item_count, "
-		. "    0 AS total_weight, 0 AS total_volume "
-		. "  FROM " . TB_PREF . "wh_bin_stock "
-		. "  GROUP BY wh_loc_id"
-		. ") bs ON wl.loc_id = bs.wh_loc_id "
+		. "LEFT JOIN " . $usage_sql . " bs ON wl.loc_id = bs.wh_loc_id "
 		. "WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
 		. " AND lt.can_store = 1 AND wl.is_active = 1 "
 		. " AND wl.location_path LIKE (SELECT CONCAT(location_path, '%') FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape((int)$zone_loc_id) . ")";
@@ -474,20 +491,17 @@ function get_bins_for_putaway($zone_loc_id, $warehouse_loc_code, $storage_catego
  * @return resource DB result.
  */
 function get_all_bins_for_putaway($warehouse_loc_code, $storage_category_id = null) {
+	$usage_sql = get_putaway_bin_usage_subquery();
 	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
 		. "wl.max_weight, wl.max_volume, wl.max_units, "
 		. "wl.storage_category_id, wl.pick_sequence, wl.abc_class, "
 		. "COALESCE(bs.total_qty, 0) AS current_qty, "
+		. "COALESCE(bs.total_weight, 0) AS current_weight, "
+		. "COALESCE(bs.total_volume, 0) AS current_volume, "
 		. "COALESCE(bs.item_count, 0) AS distinct_items "
 		. "FROM " . TB_PREF . "wh_locations wl "
 		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
-		. "LEFT JOIN ("
-		. "  SELECT wh_loc_id, "
-		. "    SUM(qty_on_hand) AS total_qty, "
-		. "    COUNT(DISTINCT stock_id) AS item_count "
-		. "  FROM " . TB_PREF . "wh_bin_stock "
-		. "  GROUP BY wh_loc_id"
-		. ") bs ON wl.loc_id = bs.wh_loc_id "
+		. "LEFT JOIN " . $usage_sql . " bs ON wl.loc_id = bs.wh_loc_id "
 		. "WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
 		. " AND lt.can_store = 1 AND wl.is_active = 1";
 
@@ -503,22 +517,38 @@ function get_all_bins_for_putaway($warehouse_loc_code, $storage_category_id = nu
 /**
  * Get bins that already contain a specific item (for add_to_existing strategy).
  *
- * @param string $stock_id            The item code.
- * @param string $warehouse_loc_code  The warehouse code.
+ * @param string   $stock_id             The item code.
+ * @param string   $warehouse_loc_code   The warehouse code.
+ * @param int|null $zone_loc_id          Optional zone restriction.
+ * @param int|null $storage_category_id  Optional storage category restriction.
  * @return resource DB result.
  */
-function get_bins_with_existing_item($stock_id, $warehouse_loc_code) {
-	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
+function get_bins_with_existing_item($stock_id, $warehouse_loc_code, $zone_loc_id = null, $storage_category_id = null) {
+	$usage_sql = get_putaway_bin_usage_subquery();
+	$sql = "SELECT DISTINCT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
 		. "wl.max_weight, wl.max_volume, wl.max_units, "
 		. "wl.storage_category_id, wl.pick_sequence, "
-		. "bs.qty_on_hand AS current_qty, bs.qty_reserved "
-		. "FROM " . TB_PREF . "wh_bin_stock bs "
-		. "INNER JOIN " . TB_PREF . "wh_locations wl ON bs.wh_loc_id = wl.loc_id "
+		. "COALESCE(bs.total_qty, 0) AS current_qty, "
+		. "COALESCE(bs.total_weight, 0) AS current_weight, "
+		. "COALESCE(bs.total_volume, 0) AS current_volume, "
+		. "COALESCE(bs.item_count, 0) AS distinct_items "
+		. "FROM " . TB_PREF . "wh_bin_stock item_bins "
+		. "INNER JOIN " . TB_PREF . "wh_locations wl ON item_bins.wh_loc_id = wl.loc_id "
 		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
-		. "WHERE bs.stock_id = " . db_escape($stock_id)
+		. "LEFT JOIN " . $usage_sql . " bs ON bs.wh_loc_id = wl.loc_id "
+		. "WHERE item_bins.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
-		. " AND lt.can_store = 1 AND wl.is_active = 1 "
-		. "ORDER BY wl.pick_sequence, wl.loc_code";
+		. " AND lt.can_store = 1 AND wl.is_active = 1 ";
+
+	if ($zone_loc_id !== null) {
+		$sql .= " AND wl.location_path LIKE (SELECT CONCAT(location_path, '%') FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape((int)$zone_loc_id) . ")";
+	}
+
+	if ($storage_category_id !== null) {
+		$sql .= " AND wl.storage_category_id = " . db_escape((int)$storage_category_id);
+	}
+
+	$sql .= "ORDER BY wl.pick_sequence, wl.loc_code";
 
 	return db_query($sql, 'could not get bins with existing item');
 }
@@ -526,26 +556,32 @@ function get_bins_with_existing_item($stock_id, $warehouse_loc_code) {
 /**
  * Get bins matching a specific ABC class within a warehouse.
  *
- * @param string $abc_class           The ABC class letter (A/B/C).
- * @param string $warehouse_loc_code  The warehouse code.
+ * @param string   $abc_class           The ABC class letter (A/B/C).
+ * @param string   $warehouse_loc_code  The warehouse code.
+ * @param int|null $zone_loc_id         Optional zone restriction.
  * @return resource DB result.
  */
-function get_bins_by_abc_class($abc_class, $warehouse_loc_code) {
+function get_bins_by_abc_class($abc_class, $warehouse_loc_code, $zone_loc_id = null) {
+	$usage_sql = get_putaway_bin_usage_subquery();
 	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
 		. "wl.max_weight, wl.max_volume, wl.max_units, "
 		. "wl.storage_category_id, wl.pick_sequence, "
 		. "COALESCE(bs.total_qty, 0) AS current_qty, "
+		. "COALESCE(bs.total_weight, 0) AS current_weight, "
+		. "COALESCE(bs.total_volume, 0) AS current_volume, "
 		. "COALESCE(bs.item_count, 0) AS distinct_items "
 		. "FROM " . TB_PREF . "wh_locations wl "
 		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
-		. "LEFT JOIN ("
-		. "  SELECT wh_loc_id, SUM(qty_on_hand) AS total_qty, COUNT(DISTINCT stock_id) AS item_count "
-		. "  FROM " . TB_PREF . "wh_bin_stock GROUP BY wh_loc_id"
-		. ") bs ON wl.loc_id = bs.wh_loc_id "
+		. "LEFT JOIN " . $usage_sql . " bs ON wl.loc_id = bs.wh_loc_id "
 		. "WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
 		. " AND lt.can_store = 1 AND wl.is_active = 1 "
-		. " AND wl.abc_class = " . db_escape($abc_class)
-		. " ORDER BY wl.pick_sequence, wl.loc_code";
+		. " AND wl.abc_class = " . db_escape($abc_class);
+
+	if ($zone_loc_id !== null) {
+		$sql .= " AND wl.location_path LIKE (SELECT CONCAT(location_path, '%') FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape((int)$zone_loc_id) . ")";
+	}
+
+	$sql .= " ORDER BY wl.pick_sequence, wl.loc_code";
 
 	return db_query($sql, 'could not get bins by ABC class');
 }

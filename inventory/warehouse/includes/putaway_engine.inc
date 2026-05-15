@@ -219,6 +219,35 @@ function get_putaway_strategies() {
 	);
 }
 
+/**
+ * Merge putaway assignments by bin so fallback passes do not duplicate rows.
+ *
+ * @param array $base_assignments  Existing assignment rows.
+ * @param array $extra_assignments Additional assignment rows.
+ * @return array
+ */
+function merge_putaway_assignments($base_assignments, $extra_assignments) {
+	$merged = $base_assignments;
+
+	foreach ($extra_assignments as $assignment) {
+		$merged_row = false;
+		foreach ($merged as &$existing_assignment) {
+			if ($existing_assignment['bin_loc_id'] == $assignment['bin_loc_id']) {
+				$existing_assignment['qty'] += $assignment['qty'];
+				$merged_row = true;
+				break;
+			}
+		}
+		unset($existing_assignment);
+
+		if (!$merged_row) {
+			$merged[] = $assignment;
+		}
+	}
+
+	return $merged;
+}
+
 // =====================================================================
 // Strategy implementations
 // =====================================================================
@@ -240,12 +269,13 @@ function putaway_strategy_fixed_bin($rule, $stock_id, $quantity, $item_weight, $
 		return array();
 	}
 
+	$usage_sql = get_putaway_bin_usage_subquery();
 	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.max_weight, wl.max_volume, wl.max_units, "
-		. "COALESCE(bs.total_qty, 0) AS current_qty "
+		. "COALESCE(bs.total_qty, 0) AS current_qty, "
+		. "COALESCE(bs.total_weight, 0) AS current_weight, "
+		. "COALESCE(bs.total_volume, 0) AS current_volume "
 		. "FROM " . TB_PREF . "wh_locations wl "
-		. "LEFT JOIN ("
-		. "  SELECT wh_loc_id, SUM(qty_on_hand) AS total_qty FROM " . TB_PREF . "wh_bin_stock GROUP BY wh_loc_id"
-		. ") bs ON wl.loc_id = bs.wh_loc_id "
+		. "LEFT JOIN " . $usage_sql . " bs ON wl.loc_id = bs.wh_loc_id "
 		. "WHERE wl.loc_id = " . db_escape((int)$rule['target_loc_id'])
 		. " AND wl.is_active = 1";
 
@@ -308,7 +338,12 @@ function putaway_strategy_first_available($rule, $stock_id, $warehouse_loc_code,
  */
 function putaway_strategy_add_to_existing($rule, $stock_id, $warehouse_loc_code, $quantity, $item_weight, $item_volume) {
 	// First try bins with existing stock of this item
-	$existing_result = get_bins_with_existing_item($stock_id, $warehouse_loc_code);
+	$existing_result = get_bins_with_existing_item(
+		$stock_id,
+		$warehouse_loc_code,
+		$rule['target_zone_id'] ? (int)$rule['target_zone_id'] : null,
+		$rule['storage_category_id'] ? (int)$rule['storage_category_id'] : null
+	);
 	$assignments = allocate_to_bins($existing_result, $quantity, $item_weight, $item_volume, 'any');
 
 	$assigned_qty = 0;
@@ -325,7 +360,7 @@ function putaway_strategy_add_to_existing($rule, $stock_id, $warehouse_loc_code,
 			$bins_result = get_all_bins_for_putaway($warehouse_loc_code, $rule['storage_category_id']);
 		}
 		$extra = allocate_to_bins($bins_result, $remaining, $item_weight, $item_volume, 'empty_first');
-		$assignments = array_merge($assignments, $extra);
+		$assignments = merge_putaway_assignments($assignments, $extra);
 	}
 
 	return $assignments;
@@ -378,7 +413,11 @@ function putaway_strategy_abc_class($rule, $stock_id, $warehouse_loc_code, $quan
 
 	$abc_class = $item && $item['abc_class'] ? $item['abc_class'] : 'C';
 
-	$bins_result = get_bins_by_abc_class($abc_class, $warehouse_loc_code);
+	$bins_result = get_bins_by_abc_class(
+		$abc_class,
+		$warehouse_loc_code,
+		$rule['target_zone_id'] ? (int)$rule['target_zone_id'] : null
+	);
 	$assignments = allocate_to_bins($bins_result, $quantity, $item_weight, $item_volume, 'any');
 
 	// Fallback if no matching ABC bins
@@ -389,9 +428,13 @@ function putaway_strategy_abc_class($rule, $stock_id, $warehouse_loc_code, $quan
 
 	if ($assigned_qty < $quantity) {
 		$remaining = $quantity - $assigned_qty;
-		$all_bins = get_all_bins_for_putaway($warehouse_loc_code, null);
+		if ($rule['target_zone_id']) {
+			$all_bins = get_bins_for_putaway($rule['target_zone_id'], $warehouse_loc_code, null);
+		} else {
+			$all_bins = get_all_bins_for_putaway($warehouse_loc_code, null);
+		}
 		$extra = allocate_to_bins($all_bins, $remaining, $item_weight, $item_volume, 'empty_first');
-		$assignments = array_merge($assignments, $extra);
+		$assignments = merge_putaway_assignments($assignments, $extra);
 	}
 
 	return $assignments;
@@ -419,7 +462,11 @@ function putaway_strategy_storage_category_match($rule, $stock_id, $warehouse_lo
 	$storage_cat = $item && $item['storage_category_id'] ? (int)$item['storage_category_id'] : null;
 
 	if ($storage_cat) {
-		$bins_result = get_all_bins_for_putaway($warehouse_loc_code, $storage_cat);
+		if ($rule['target_zone_id']) {
+			$bins_result = get_bins_for_putaway($rule['target_zone_id'], $warehouse_loc_code, $storage_cat);
+		} else {
+			$bins_result = get_all_bins_for_putaway($warehouse_loc_code, $storage_cat);
+		}
 		$assignments = allocate_to_bins($bins_result, $quantity, $item_weight, $item_volume, 'any');
 
 		$assigned_qty = 0;
@@ -433,13 +480,21 @@ function putaway_strategy_storage_category_match($rule, $stock_id, $warehouse_lo
 
 		// Fallback: any available bin
 		$remaining = $quantity - $assigned_qty;
-		$all_bins = get_all_bins_for_putaway($warehouse_loc_code, null);
+		if ($rule['target_zone_id']) {
+			$all_bins = get_bins_for_putaway($rule['target_zone_id'], $warehouse_loc_code, null);
+		} else {
+			$all_bins = get_all_bins_for_putaway($warehouse_loc_code, null);
+		}
 		$extra = allocate_to_bins($all_bins, $remaining, $item_weight, $item_volume, 'empty_first');
-		return array_merge($assignments, $extra);
+		return merge_putaway_assignments($assignments, $extra);
 	}
 
 	// No storage category on item — use any available bin
-	$bins_result = get_all_bins_for_putaway($warehouse_loc_code, null);
+	if ($rule['target_zone_id']) {
+		$bins_result = get_bins_for_putaway($rule['target_zone_id'], $warehouse_loc_code, null);
+	} else {
+		$bins_result = get_all_bins_for_putaway($warehouse_loc_code, null);
+	}
 	return allocate_to_bins($bins_result, $quantity, $item_weight, $item_volume, 'empty_first');
 }
 
@@ -457,19 +512,23 @@ function putaway_strategy_storage_category_match($rule, $stock_id, $warehouse_lo
  * @return array Array of bin assignments.
  */
 function putaway_strategy_least_packages($rule, $stock_id, $warehouse_loc_code, $quantity, $item_weight, $item_volume) {
+	$usage_sql = get_putaway_bin_usage_subquery();
 	$sql = "SELECT wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path, "
 		. "wl.max_weight, wl.max_volume, wl.max_units, "
 		. "wl.storage_category_id, wl.pick_sequence, "
 		. "COALESCE(bs.total_qty, 0) AS current_qty, "
+		. "COALESCE(bs.total_weight, 0) AS current_weight, "
+		. "COALESCE(bs.total_volume, 0) AS current_volume, "
 		. "COALESCE(bs.item_count, 0) AS distinct_items "
 		. "FROM " . TB_PREF . "wh_locations wl "
 		. "INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id "
-		. "LEFT JOIN ("
-		. "  SELECT wh_loc_id, SUM(qty_on_hand) AS total_qty, COUNT(DISTINCT stock_id) AS item_count "
-		. "  FROM " . TB_PREF . "wh_bin_stock GROUP BY wh_loc_id"
-		. ") bs ON wl.loc_id = bs.wh_loc_id "
+		. "LEFT JOIN " . $usage_sql . " bs ON wl.loc_id = bs.wh_loc_id "
 		. "WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
 		. " AND lt.can_store = 1 AND wl.is_active = 1 ";
+
+	if ($rule['target_zone_id']) {
+		$sql .= " AND wl.location_path LIKE (SELECT CONCAT(location_path, '%') FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape((int)$rule['target_zone_id']) . ")";
+	}
 
 	if ($rule['storage_category_id']) {
 		$sql .= " AND wl.storage_category_id = " . db_escape((int)$rule['storage_category_id']);
