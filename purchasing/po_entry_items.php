@@ -154,18 +154,8 @@ else
 if ($_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no == 0
 	&& isset($_GET['agreement_id']) && (int)$_GET['agreement_id'] > 0
 	&& !$_SESSION['PO']->order_has_items()) {
-	$agreement = get_purch_agreement((int)$_GET['agreement_id']);
-	if ($agreement && $agreement['status'] === 'active') {
-		get_supplier_details_to_order($_SESSION['PO'], (int)$agreement['supplier_id']);
-		$_SESSION['PO']->agreement_id = (int)$agreement['id'];
-		$_SESSION['PO']->rfq_id = (int)$agreement['rfq_id'];
-		if ($agreement['delivery_location'] !== '')
-			$_SESSION['PO']->Location = $agreement['delivery_location'];
-		$_SESSION['PO']->delivery_address = $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : $agreement['delivery_location'];
-		$_SESSION['PO']->dimension = (int)$agreement['dimension_id'];
-		$_SESSION['PO']->dimension2 = (int)$agreement['dimension2_id'];
+	if (load_purchase_order_from_agreement($_SESSION['PO'], (int)$_GET['agreement_id']))
 		copy_from_cart();
-	}
 }
 
 if ($_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no == 0
@@ -205,6 +195,8 @@ function load_purchase_order_from_agreement(&$purchase_order, $agreement_id) {
 	if (!$agreement || $agreement['status'] !== 'active')
 		return false;
 
+	update_agreement_fulfillment($agreement_id);
+
 	get_supplier_details_to_order($purchase_order, (int)$agreement['supplier_id']);
 	$purchase_order->agreement_id = (int)$agreement['id'];
 	$purchase_order->rfq_id = (int)$agreement['rfq_id'];
@@ -218,6 +210,20 @@ function load_purchase_order_from_agreement(&$purchase_order, $agreement_id) {
 
 	$agreement_lines = get_agreement_lines((int)$agreement['id']);
 	while ($agreement_line = db_fetch($agreement_lines)) {
+		if (!is_purch_agreement_line_data_valid(
+			$agreement_line['committed_qty'],
+			$agreement_line['unit_price'],
+			$agreement_line['discount_percent'],
+			$agreement_line['min_qty_per_order'],
+			$agreement_line['price_valid_until']
+		))
+			continue;
+
+		if ($agreement_line['price_valid_until']
+			&& $agreement_line['price_valid_until'] !== '0000-00-00'
+			&& $agreement_line['price_valid_until'] < date2sql(Today()))
+			continue;
+
 		$remaining_quantity = max(0, (float)$agreement_line['committed_qty'] - (float)$agreement_line['ordered_qty']);
 		if ($remaining_quantity <= 0)
 			continue;
