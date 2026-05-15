@@ -208,8 +208,10 @@ function get_dashboard_alert_counts($warehouse_loc_code = '') {
 	// Low stock: items below reorder level
 	$sql = "SELECT COUNT(*) FROM " . TB_PREF . "loc_stock rl
 		INNER JOIN " . TB_PREF . "stock_master sm ON rl.stock_id = sm.stock_id
-		WHERE rl.reorder_level > 0 AND sm.inactive = 0 AND sm.mb_flag <> 'D'
-		AND COALESCE((SELECT SUM(qty) FROM " . TB_PREF . "stock_moves WHERE stock_id = rl.stock_id AND loc_code = rl.loc_code), 0) < rl.reorder_level";
+		WHERE rl.reorder_level > 0 AND sm.inactive = 0 AND sm.mb_flag <> 'D'";
+	if ($warehouse_loc_code)
+		$sql .= " AND rl.loc_code = " . db_escape($warehouse_loc_code);
+	$sql .= " AND COALESCE((SELECT SUM(qty) FROM " . TB_PREF . "stock_moves WHERE stock_id = rl.stock_id AND loc_code = rl.loc_code), 0) < rl.reorder_level";
 	$result = db_query($sql, 'alert count');
 	$row = db_fetch_row($result);
 	$alerts['low_stock'] = (int)$row[0];

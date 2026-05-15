@@ -1025,6 +1025,10 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 {
 	if (!$wh_loc_id) return;
 
+	$qty = (float)$qty;
+	if (!is_finite($qty) || abs($qty) < 0.0000001)
+		return;
+
 	// Check if a matching bin_stock row exists
 	$where = "wh_loc_id=" . (int)$wh_loc_id
 		. " AND stock_id=" . db_escape($stock_id)
@@ -1034,16 +1038,30 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 	$sql = "SELECT id, qty_on_hand FROM " . TB_PREF . "wh_bin_stock WHERE " . $where;
 	$result = db_query($sql, 'could not check bin stock');
 	$existing = db_fetch($result);
+	$applied_qty = 0.0;
 
 	if ($existing) {
-		$new_qty = $existing['qty_on_hand'] + $qty;
-		$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
-			. "qty_on_hand=" . (float)$new_qty . ","
-			. "qty_available=" . (float)$new_qty . ","
-			. "stock_status=" . db_escape($status)
-			. " WHERE id=" . (int)$existing['id'];
-		db_query($sql, 'could not update bin stock');
+		$current_qty = (float)$existing['qty_on_hand'];
+		$new_qty = $current_qty + $qty;
+
+		if ($new_qty <= 0.0000001) {
+			$applied_qty = -$current_qty;
+			$sql = "DELETE FROM " . TB_PREF . "wh_bin_stock WHERE id=" . (int)$existing['id'];
+			db_query($sql, 'could not delete depleted bin stock row');
+		} else {
+			$applied_qty = $qty;
+			$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
+				. "qty_on_hand=" . (float)$new_qty . ","
+				. "qty_available=" . (float)$new_qty . ","
+				. "stock_status=" . db_escape($status)
+				. " WHERE id=" . (int)$existing['id'];
+			db_query($sql, 'could not update bin stock');
+		}
 	} else {
+		if ($qty < 0)
+			return;
+
+		$applied_qty = $qty;
 		$sql = "INSERT INTO " . TB_PREF . "wh_bin_stock (
 			wh_loc_id, stock_id, qty_on_hand, qty_reserved, qty_available,
 			batch_id, serial_id, expiry_date, stock_status
@@ -1072,9 +1090,9 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 			$item_result = db_query($item_sql, 'could not get item weight/volume');
 			$item_row = db_fetch($item_result);
 			if ($item_row) {
-				$weight_delta = (float)$item_row['item_weight'] * $qty;
-				$volume_delta = (float)$item_row['item_volume'] * $qty;
-				update_bin_current_capacity($wh_loc_id, $weight_delta, $volume_delta, $qty);
+				$weight_delta = (float)$item_row['item_weight'] * $applied_qty;
+				$volume_delta = (float)$item_row['item_volume'] * $applied_qty;
+				update_bin_current_capacity($wh_loc_id, $weight_delta, $volume_delta, $applied_qty);
 			}
 		}
 	}

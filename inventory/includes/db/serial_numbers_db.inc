@@ -72,6 +72,27 @@ function get_serial_status_color($status) {
 	return isset($colors[$status]) ? $colors[$status] : '#6c757d';
 }
 
+/**
+ * Resolve warehouse location code from a bin id.
+ *
+ * @param int $wh_loc_id Bin location id.
+ * @return string|null Warehouse location code or null when unresolved.
+ */
+function get_serial_warehouse_loc_code_from_bin($wh_loc_id) {
+	$wh_loc_id = (int)$wh_loc_id;
+	if ($wh_loc_id <= 0)
+		return null;
+
+	$sql = "SELECT warehouse_loc_code FROM " . TB_PREF . "wh_locations WHERE loc_id=" . $wh_loc_id;
+	$result = db_query($sql, 'could not resolve serial warehouse location code');
+	$row = db_fetch($result);
+
+	if (!$row || !isset($row['warehouse_loc_code']) || $row['warehouse_loc_code'] === '')
+		return null;
+
+	return $row['warehouse_loc_code'];
+}
+
 //----------------------------------------------------------------------
 // CRUD Operations
 //----------------------------------------------------------------------
@@ -103,6 +124,12 @@ function add_serial_number($serial_no, $stock_id, $status = 'available', $loc_co
 	$warranty_end = null, $warranty_type = null, $purchase_cost = 0, $grn_id = null,
 	$notes = null)
 {
+	if (($loc_code === null || trim((string)$loc_code) === '') && $wh_loc_id !== null && $wh_loc_id !== '') {
+		$resolved_loc_code = get_serial_warehouse_loc_code_from_bin($wh_loc_id);
+		if ($resolved_loc_code !== null)
+			$loc_code = $resolved_loc_code;
+	}
+
 	$sql = "INSERT INTO " . TB_PREF . "serial_numbers (
 		serial_no, stock_id, status, loc_code, wh_loc_id, batch_id,
 		supplier_id, purchase_date, manufacturing_date, expiry_date,
@@ -163,6 +190,12 @@ function update_serial_number($id, $serial_no, $status = null, $loc_code = null,
 	$warranty_type = null, $purchase_cost = null, $grn_id = null,
 	$delivery_id = null, $work_order_id = null, $notes = null)
 {
+	if (($loc_code === null || trim((string)$loc_code) === '') && $wh_loc_id !== null && $wh_loc_id !== '') {
+		$resolved_loc_code = get_serial_warehouse_loc_code_from_bin($wh_loc_id);
+		if ($resolved_loc_code !== null)
+			$loc_code = $resolved_loc_code;
+	}
+
 	$sets = array();
 	$sets[] = "serial_no=" . db_escape($serial_no);
 
