@@ -65,7 +65,17 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 		return false;
 	}
 
-	if (!isset($item['qty']) || !is_scalar($item['qty']) || !is_numeric($item['qty'])) {
+	if (preg_match('/[\x00-\x1F\x7F]/', $stock_id)) {
+		$error_message = sprintf(_('Inbound item row %d has invalid control characters in item code.'), $item_index + 1);
+		return false;
+	}
+
+	if (!is_valid_wh_operation_stock_id($stock_id)) {
+		$error_message = sprintf(_('Inbound item %s does not exist or is inactive.'), $stock_id);
+		return false;
+	}
+
+	if (!isset($item['qty']) || !is_scalar($item['qty']) || !is_valid_finite_numeric($item['qty'])) {
 		$error_message = sprintf(_('Inbound item %s has an invalid quantity.'), $stock_id);
 		return false;
 	}
@@ -78,7 +88,7 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 
 	$std_cost = 0;
 	if (isset($item['std_cost']) && $item['std_cost'] !== null && $item['std_cost'] !== '') {
-		if (!is_scalar($item['std_cost']) || !is_numeric($item['std_cost'])) {
+		if (!is_scalar($item['std_cost']) || !is_valid_finite_numeric($item['std_cost'])) {
 			$error_message = sprintf(_('Inbound item %s has an invalid standard cost.'), $stock_id);
 			return false;
 		}
@@ -101,12 +111,32 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 			return false;
 		}
 
+		$seen_serial_ids = array();
+
 		foreach ($item['serial_ids'] as $serial_id) {
 			if (!is_scalar($serial_id) || !is_numeric($serial_id) || (int)$serial_id <= 0) {
 				$error_message = sprintf(_('Inbound item %s contains an invalid serial id value.'), $stock_id);
 				return false;
 			}
-			$serial_ids[] = (int)$serial_id;
+
+			$serial_id_int = (int)$serial_id;
+			if (isset($seen_serial_ids[$serial_id_int])) {
+				$error_message = sprintf(_('Inbound item %s contains duplicate serial id %d.'), $stock_id, $serial_id_int);
+				return false;
+			}
+
+			$seen_serial_ids[$serial_id_int] = 1;
+			$serial_ids[] = $serial_id_int;
+		}
+
+		if (abs($qty - count($serial_ids)) > 0.000001) {
+			$error_message = sprintf(
+				_('Inbound item %s quantity %.2f does not match serial count %d.'),
+				$stock_id,
+				$qty,
+				count($serial_ids)
+			);
+			return false;
 		}
 	}
 
@@ -117,6 +147,38 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 		'batch_id' => $batch_id,
 		'serial_ids' => $serial_ids,
 	);
+}
+
+/**
+ * Check whether a numeric input is finite and safe for SQL numeric fields.
+ *
+ * @param mixed $value Raw numeric input.
+ * @return bool
+ */
+function is_valid_finite_numeric($value) {
+	if (!is_numeric($value))
+		return false;
+
+	$float_value = (float)$value;
+	if (is_infinite($float_value) || is_nan($float_value))
+		return false;
+
+	return true;
+}
+
+/**
+ * Validate that a stock item exists and is active for operation payload use.
+ *
+ * @param string $stock_id Item code.
+ * @return bool
+ */
+function is_valid_wh_operation_stock_id($stock_id) {
+	$sql = "SELECT stock_id FROM " . TB_PREF . "stock_master WHERE stock_id=" . db_escape($stock_id)
+		. " AND inactive=0 LIMIT 1";
+	$result = db_query($sql, 'could not validate stock item for warehouse operation payload');
+	$row = db_fetch($result);
+
+	return (bool)$row;
 }
 
 /**

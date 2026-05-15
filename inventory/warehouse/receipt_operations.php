@@ -28,28 +28,105 @@ page($_SESSION['page_title']);
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_operations_db.inc');
 
+/**
+ * Read an operation id from a submitted action button payload.
+ *
+ * @param string $action_key POST key for the clicked action button.
+ * @return int Operation id, or 0 when missing/invalid.
+ */
+function get_submitted_operation_id($action_key)
+{
+	if (!isset($_POST[$action_key]) || !is_scalar($_POST[$action_key]))
+		return 0;
+
+	$op_id = (int)$_POST[$action_key];
+	return $op_id > 0 ? $op_id : 0;
+}
+
+/**
+ * Validate and normalize receipt dashboard filter values.
+ *
+ * @return array Normalized filters with keys: loc_code, op_type, op_status.
+ */
+function get_receipt_operations_filters()
+{
+	$allowed_types = array('receipt', 'quality_check', 'putaway');
+	$allowed_statuses = array('draft', 'ready', 'in_progress', 'done', 'cancelled');
+
+	$loc_code = get_post('loc_code');
+	if (!is_scalar($loc_code))
+		$loc_code = '';
+	$loc_code = trim((string)$loc_code);
+
+	$op_type = get_post('op_type');
+	if (!is_scalar($op_type))
+		$op_type = '';
+	$op_type = trim((string)$op_type);
+	if ($op_type !== '' && !in_array($op_type, $allowed_types))
+		$op_type = '';
+
+	$op_status = get_post('op_status');
+	if (!is_scalar($op_status))
+		$op_status = '';
+	$op_status = trim((string)$op_status);
+	if ($op_status !== '' && !in_array($op_status, $allowed_statuses))
+		$op_status = '';
+
+	return array(
+		'loc_code' => $loc_code,
+		'op_type' => $op_type,
+		'op_status' => $op_status,
+	);
+}
+
 //-------------------------------------------------------------------------------------
 // Process actions
 //-------------------------------------------------------------------------------------
 
-if (isset($_POST['StartOp']) && isset($_POST['op_id'])) {
-	$op_id = (int)$_POST['op_id'];
-	update_wh_operation_status($op_id, 'in_progress');
-	display_notification(sprintf(_('Operation #%d started.'), $op_id));
+$submitted_filters = get_receipt_operations_filters();
+
+if (isset($_POST['StartOp'])) {
+	$op_id = get_submitted_operation_id('StartOp');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Start action.'));
+	} elseif (!in_array($operation['op_status'], array('draft', 'ready'))) {
+		display_error(sprintf(_('Operation #%d cannot be started from status %s.'), $op_id, $operation['op_status']));
+	} else {
+		update_wh_operation_status($op_id, 'in_progress');
+		display_notification(sprintf(_('Operation #%d started.'), $op_id));
+	}
 	$Ajax->activate('_page_body');
 }
 
-if (isset($_POST['CompleteOp']) && isset($_POST['op_id'])) {
-	$op_id = (int)$_POST['op_id'];
-	complete_wh_operation($op_id);
-	display_notification(sprintf(_('Operation #%d completed.'), $op_id));
+if (isset($_POST['CompleteOp'])) {
+	$op_id = get_submitted_operation_id('CompleteOp');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Complete action.'));
+	} elseif ($operation['op_status'] !== 'in_progress') {
+		display_error(sprintf(_('Operation #%d can only be completed from In Progress status.'), $op_id));
+	} else {
+		complete_wh_operation($op_id);
+		display_notification(sprintf(_('Operation #%d completed.'), $op_id));
+	}
 	$Ajax->activate('_page_body');
 }
 
-if (isset($_POST['CancelOp']) && isset($_POST['op_id'])) {
-	$op_id = (int)$_POST['op_id'];
-	cancel_wh_operation($op_id);
-	display_notification(sprintf(_('Operation #%d cancelled.'), $op_id));
+if (isset($_POST['CancelOp'])) {
+	$op_id = get_submitted_operation_id('CancelOp');
+	$operation = $op_id ? get_wh_operation($op_id) : false;
+
+	if (!$operation) {
+		display_error(_('Invalid operation id for Cancel action.'));
+	} elseif ($operation['op_status'] === 'done') {
+		display_error(sprintf(_('Operation #%d is already completed and cannot be cancelled.'), $op_id));
+	} else {
+		cancel_wh_operation($op_id);
+		display_notification(sprintf(_('Operation #%d cancelled.'), $op_id));
+	}
 	$Ajax->activate('_page_body');
 }
 
@@ -63,14 +140,14 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 // Warehouse location filter
-locations_list_cells(null, 'loc_code', null, true, _('All Locations'));
+locations_list_cells(null, 'loc_code', $submitted_filters['loc_code'], true, _('All Locations'));
 
 // Operation type filter
 $op_types = array('' => _('All Operation Types'), 'receipt' => _('Receipt'), 'quality_check' => _('Quality Check'), 'putaway' => _('Putaway'));
 echo "<div class = 'filter-field'>";
 echo '<select name="op_type">';
 foreach ($op_types as $val => $label) {
-	$sel = (get_post('op_type') == $val) ? ' selected' : '';
+	$sel = ($submitted_filters['op_type'] == $val) ? ' selected' : '';
 	echo '<option value="' . htmlspecialchars($val, ENT_QUOTES) . '"' . $sel . '>' . $label . '</option>';
 }
 echo '</select></div>';
@@ -80,7 +157,7 @@ $statuses = array('' => _('All Statuses'), 'draft' => _('Draft'), 'ready' => _('
 echo "<div class = 'filter-field'>";
 echo '<select name="op_status">';
 foreach ($statuses as $val => $label) {
-	$sel = (get_post('op_status') == $val) ? ' selected' : '';
+	$sel = ($submitted_filters['op_status'] == $val) ? ' selected' : '';
 	echo '<option value="' . htmlspecialchars($val, ENT_QUOTES) . '"' . $sel . '>' . $label . '</option>';
 }
 echo '</select></div>';
@@ -97,20 +174,23 @@ end_table(1);
 display_heading(_('Inbound Operations Summary'));
 
 // Build filter params for count queries
-$filter_loc = get_post('loc_code');
+$filter_loc = $submitted_filters['loc_code'];
 
 // Count by type+status  
 $pending_receipts = count_wh_operations_filtered(array(
 	'op_type' => 'receipt',
 	'op_status' => array('draft', 'ready', 'in_progress'),
+	'warehouse_loc_code' => $filter_loc,
 ));
 $pending_qc = count_wh_operations_filtered(array(
 	'op_type' => 'quality_check',
 	'op_status' => array('draft', 'ready', 'in_progress'),
+	'warehouse_loc_code' => $filter_loc,
 ));
 $pending_putaway = count_wh_operations_filtered(array(
 	'op_type' => 'putaway',
 	'op_status' => array('draft', 'ready', 'in_progress'),
+	'warehouse_loc_code' => $filter_loc,
 ));
 
 echo '<div style="display:flex; gap:16px; margin:12px 0; flex-wrap:wrap;">';
@@ -145,12 +225,14 @@ div_start('ops_table');
 
 // Build filters
 $filters = array();
-if (!empty(get_post('op_type')))
-	$filters['op_type'] = get_post('op_type');
-if (!empty(get_post('op_status')))
-	$filters['op_status'] = get_post('op_status');
+if (!empty($submitted_filters['op_type']))
+	$filters['op_type'] = $submitted_filters['op_type'];
+if (!empty($submitted_filters['op_status']))
+	$filters['op_status'] = $submitted_filters['op_status'];
 else
 	$filters['op_status'] = array('draft', 'ready', 'in_progress'); // default: active only
+if (!empty($submitted_filters['loc_code']))
+	$filters['warehouse_loc_code'] = $submitted_filters['loc_code'];
 
 $result = get_wh_operations_filtered($filters, 100);
 
@@ -204,19 +286,17 @@ while ($row = db_fetch($result)) {
 	echo '<td nowrap>';
 	$status = $row['op_status'];
 	if ($status === 'ready' || $status === 'draft') {
-		echo '<input type="hidden" name="op_id" value="' . $row['op_id'] . '">';
-		echo '<button type="submit" name="StartOp" value="1" class="ajaxsubmit" '
+		echo '<button type="submit" name="StartOp" value="' . (int)$row['op_id'] . '" class="ajaxsubmit" '
 			. 'style="padding:2px 8px; background:#28a745; color:#fff; border:none; border-radius:3px; cursor:pointer; margin-right:4px;">'
 			. _('Start') . '</button>';
-		echo '<button type="submit" name="CancelOp" value="1" class="ajaxsubmit" '
+		echo '<button type="submit" name="CancelOp" value="' . (int)$row['op_id'] . '" class="ajaxsubmit" '
 			. 'style="padding:2px 8px; background:#dc3545; color:#fff; border:none; border-radius:3px; cursor:pointer;">'
 			. _('Cancel') . '</button>';
 	} elseif ($status === 'in_progress') {
-		echo '<input type="hidden" name="op_id" value="' . $row['op_id'] . '">';
-		echo '<button type="submit" name="CompleteOp" value="1" class="ajaxsubmit" '
+		echo '<button type="submit" name="CompleteOp" value="' . (int)$row['op_id'] . '" class="ajaxsubmit" '
 			. 'style="padding:2px 8px; background:#007bff; color:#fff; border:none; border-radius:3px; cursor:pointer; margin-right:4px;">'
 			. _('Complete') . '</button>';
-		echo '<button type="submit" name="CancelOp" value="1" class="ajaxsubmit" '
+		echo '<button type="submit" name="CancelOp" value="' . (int)$row['op_id'] . '" class="ajaxsubmit" '
 			. 'style="padding:2px 8px; background:#dc3545; color:#fff; border:none; border-radius:3px; cursor:pointer;">'
 			. _('Cancel') . '</button>';
 	} else {
