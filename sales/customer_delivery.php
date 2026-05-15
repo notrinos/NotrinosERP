@@ -287,6 +287,9 @@ if (isset($_POST['process_delivery']) && check_data()) {
 		display_error(_('The entered reference is already in use.'));
 		set_focus('ref');
 	}
+	elseif ($delivery_no == -2) {
+		display_error(_('Dispatch validation failed. Please correct serial/batch input and try again.'));
+	}
 	else {
 		$is_prepaid = $dn->is_prepaid() ? '&prepaid=Yes' : '';
 

@@ -657,6 +657,9 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 		}
 		set_focus('ref');
 	}
+	elseif ($ret == -2) {
+		display_error(_('Delivery tracking validation failed. Please correct serial/batch input and try again.'));
+	}
 	else {
 		if (count($messages)) { // abort on failure or error messages are lost
 			$Ajax->activate('_page_body');

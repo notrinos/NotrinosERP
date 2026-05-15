@@ -1647,6 +1647,13 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 	include_once($root . '/includes/db/serial_numbers_db.inc');
 	include_once($root . '/includes/db/stock_batches_db.inc');
 
+	$validation_errors = array();
+	if (!validate_delivery_tracking_payload($delivery, $location, $validation_errors)) {
+		if (function_exists('display_error') && !empty($validation_errors))
+			display_error(implode('<br>', $validation_errors));
+		return false;
+	}
+
 	$removal_path = dirname(__FILE__) . '/removal_engine.inc';
 	if (file_exists($removal_path))
 		include_once($removal_path);
@@ -1657,6 +1664,12 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 	$wms_settings = get_wms_location_settings($location);
 	if ($wms_settings)
 		$is_wms = true;
+
+	$delivery_source_reference = '';
+	if (isset($delivery->reference) && is_scalar($delivery->reference))
+		$delivery_source_reference = trim((string)$delivery->reference);
+	if ($delivery_source_reference === '')
+		$delivery_source_reference = sprintf(_('Delivered via DN #%d'), (int)$delivery_no);
 
 	foreach ($delivery->line_items as $line_no => $delivery_line) {
 		if ($delivery_line->qty_dispatched == 0)
@@ -1791,7 +1804,9 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 			} else {
 				// Auto-allocate using removal strategy (FEFO/FIFO)
 				$allocated = allocate_batches($stock_id, $qty, $location);
+				$allocated_total = 0;
 				foreach ($allocated as $alloc) {
+					$allocated_total += (float)$alloc['qty'];
 					$batch_allocations[] = array(
 						'batch_id' => $alloc['batch_id'],
 						'qty' => $alloc['qty'],
@@ -1808,6 +1823,18 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 						$delivery->reference,
 						sprintf(_('Auto-allocated (FEFO/FIFO) via DN #%d'), $delivery_no)
 					);
+				}
+
+				if ($allocated_total + 0.000001 < (float)$qty) {
+					if (function_exists('display_error')) {
+						display_error(sprintf(
+							_('Item %s does not have enough batch quantity available at location %s for requested dispatch quantity %.2f.'),
+							$stock_id,
+							$location,
+							(float)$qty
+						));
+					}
+					return false;
 				}
 			}
 
@@ -1839,7 +1866,91 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 						);
 						$remaining -= $pick;
 					}
+
+					if ($remaining > 0.000001) {
+						if (function_exists('display_error')) {
+							display_error(sprintf(
+								_('Item %s batch id %d has insufficient available bin stock in warehouse %s. Required %.2f, remaining %.2f after allocation.'),
+								$stock_id,
+								(int)$ba['batch_id'],
+								$location,
+								(float)$ba['qty'],
+								(float)$remaining
+							));
+						}
+						return false;
+					}
 				}
+			}
+		}
+
+		if ($is_wms && $tracking_mode === 'none') {
+			if (!function_exists('execute_removal')) {
+				if (function_exists('display_error')) {
+					display_error(sprintf(
+						_('Removal strategy engine is unavailable for item %s in warehouse %s.'),
+						$stock_id,
+						$location
+					));
+				}
+				return false;
+			}
+
+			$removal_allocations = execute_removal($stock_id, $location, $qty);
+			$allocated_qty = 0;
+			foreach ($removal_allocations as $allocation)
+				$allocated_qty += isset($allocation['qty_to_pick']) ? (float)$allocation['qty_to_pick'] : 0;
+
+			if ($allocated_qty + 0.000001 < (float)$qty) {
+				if (function_exists('display_error')) {
+					display_error(sprintf(
+						_('Item %s does not have enough available bin stock in warehouse %s for requested dispatch quantity %.2f.'),
+						$stock_id,
+						$location,
+						(float)$qty
+					));
+				}
+				return false;
+			}
+
+			foreach ($removal_allocations as $allocation) {
+				$pick_qty = isset($allocation['qty_to_pick']) ? (float)$allocation['qty_to_pick'] : 0;
+				if ($pick_qty <= 0)
+					continue;
+
+				$from_bin_id = isset($allocation['bin_loc_id']) ? (int)$allocation['bin_loc_id'] : 0;
+				if ($from_bin_id <= 0)
+					continue;
+
+				$alloc_batch_id = (isset($allocation['batch_id']) && $allocation['batch_id'] !== null)
+					? (int)$allocation['batch_id'] : null;
+				$alloc_expiry = null;
+				if (isset($allocation['expiry_date']) && $allocation['expiry_date'] !== '')
+					$alloc_expiry = $allocation['expiry_date'];
+
+				update_bin_stock($from_bin_id, $stock_id, -$pick_qty, $alloc_batch_id, null, $alloc_expiry, 'available');
+				$bin_allocations[] = array(
+					'bin_loc_id' => $from_bin_id,
+					'qty_to_pick' => $pick_qty,
+					'batch_id' => $alloc_batch_id,
+					'serial_id' => null,
+				);
+
+				add_stock_move(
+					ST_CUSTDELIVERY,
+					$stock_id,
+					$delivery_no,
+					$location,
+					$date_,
+					$delivery_source_reference,
+					-$pick_qty,
+					0,
+					0,
+					$from_bin_id,
+					null,
+					null,
+					$alloc_batch_id
+				);
 			}
 		}
 
@@ -1859,8 +1970,351 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 
 	// Create WMS outbound operations if warehouse is WMS-enabled
 	if ($is_wms && !empty($wms_items)) {
-		create_outbound_operations($delivery_no, $location, $wms_items);
+		$outbound_result = create_outbound_operations($delivery_no, $location, $wms_items);
+		if (is_array($outbound_result)
+			&& isset($outbound_result['success'])
+			&& !$outbound_result['success']) {
+			if (function_exists('display_error') && !empty($outbound_result['message']))
+				display_error($outbound_result['message']);
+			return false;
+		}
 	}
+
+	return true;
+}
+
+/**
+ * Get a delivery post text field and validate scalar shape.
+ *
+ * @param string $key               Post field key.
+ * @param array  $validation_errors Output validation errors.
+ * @param string $field_label       Human label.
+ * @param string $stock_id          Item code for context.
+ * @return string
+ */
+function get_delivery_post_text_field($key, &$validation_errors, $field_label, $stock_id) {
+	if (!isset($_POST[$key]) || $_POST[$key] === null)
+		return '';
+
+	$value = $_POST[$key];
+	if (!is_scalar($value)) {
+		$validation_errors[] = sprintf(
+			_('%s for item %s must be plain text.'),
+			$field_label,
+			$stock_id
+		);
+		return '';
+	}
+
+	return trim((string)$value);
+}
+
+/**
+ * Validate delivery serial/batch payload before stock mutation.
+ *
+ * @param object $delivery          Delivery cart object.
+ * @param string $location          Delivery location code.
+ * @param array  $validation_errors Output list of validation errors.
+ * @return bool
+ */
+function validate_delivery_tracking_payload($delivery, $location, &$validation_errors) {
+	$validation_errors = array();
+
+	$root = dirname(dirname(dirname(__FILE__))); // -> inventory/
+	$serial_batch_path = $root . '/includes/db/serial_batch_db.inc';
+	if (file_exists($serial_batch_path))
+		include_once($serial_batch_path);
+	$serial_numbers_path = $root . '/includes/db/serial_numbers_db.inc';
+	if (file_exists($serial_numbers_path))
+		include_once($serial_numbers_path);
+	$stock_batches_path = $root . '/includes/db/stock_batches_db.inc';
+	if (file_exists($stock_batches_path))
+		include_once($stock_batches_path);
+
+	if (!function_exists('item_has_serial_tracking') || !function_exists('item_has_batch_tracking'))
+		return true;
+
+	$seen_serial_ids = array();
+
+	foreach ($delivery->line_items as $line_no => $delivery_line) {
+		if (!isset($delivery_line->qty_dispatched) || !is_valid_finite_numeric($delivery_line->qty_dispatched)) {
+			$validation_errors[] = sprintf(
+				_('Delivery line for item %s has invalid dispatch quantity.'),
+				$delivery_line->stock_id
+			);
+			continue;
+		}
+
+		$dispatch_qty = (float)$delivery_line->qty_dispatched;
+		if ($dispatch_qty <= 0)
+			continue;
+
+		$stock_id = $delivery_line->stock_id;
+
+		if (item_has_serial_tracking($stock_id)) {
+			$expected_serial_count = (int)round($dispatch_qty);
+			if (abs($dispatch_qty - $expected_serial_count) > 0.000001) {
+				$validation_errors[] = sprintf(
+					_('Item %s requires serial tracking and must be dispatched in whole units.'),
+					$stock_id
+				);
+				continue;
+			}
+
+			$serial_data_key = 'delivery_serial_' . $line_no;
+			$serial_text = get_delivery_post_text_field(
+				$serial_data_key,
+				$validation_errors,
+				_('Delivery serial input'),
+				$stock_id
+			);
+
+			if ($serial_text === '' && isset($_POST[$serial_data_key]) && !is_scalar($_POST[$serial_data_key]))
+				continue;
+
+			if ($serial_text === '') {
+				$validation_errors[] = sprintf(
+					_('Item %s requires exactly %d serial number(s), but none were provided.'),
+					$stock_id,
+					$expected_serial_count
+				);
+				continue;
+			}
+
+			$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+			$line_serial_count = 0;
+
+			foreach ($serial_entries as $entry) {
+				$serial_number = trim($entry);
+				if ($serial_number === '')
+					continue;
+
+				if (preg_match('/[\x00-\x1F\x7F]/', $serial_number)) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s contains invalid control characters.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (strlen($serial_number) > 60) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s exceeds 60 characters.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				$serial = get_serial_number_by_code($serial_number, $stock_id);
+				if (!$serial) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" was not found for item %s.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (isset($serial['inactive']) && (int)$serial['inactive'] === 1) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s is inactive.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (!isset($serial['status']) || strtolower(trim($serial['status'])) !== 'available') {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s is not available for dispatch.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (isset($serial['loc_code']) && $serial['loc_code'] !== '' && $serial['loc_code'] !== $location) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s is at location %s, not %s.'),
+						$serial_number,
+						$stock_id,
+						$serial['loc_code'],
+						$location
+					);
+					continue;
+				}
+
+				$serial_id = (int)$serial['id'];
+				if ($serial_id <= 0) {
+					$validation_errors[] = sprintf(
+						_('Serial number "%s" for item %s has invalid identifier.'),
+						$serial_number,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (isset($seen_serial_ids[$serial_id])) {
+					$validation_errors[] = sprintf(
+						_('Duplicate serial number "%s" was provided in this delivery payload.'),
+						$serial_number
+					);
+					continue;
+				}
+
+				$seen_serial_ids[$serial_id] = true;
+				$line_serial_count++;
+			}
+
+			if ($line_serial_count !== $expected_serial_count) {
+				$validation_errors[] = sprintf(
+					_('Item %s requires exactly %d serial number(s); received %d valid serial(s).'),
+					$stock_id,
+					$expected_serial_count,
+					$line_serial_count
+				);
+			}
+		}
+
+		if (item_has_batch_tracking($stock_id)) {
+			$batch_data_key = 'delivery_batch_' . $line_no;
+			$batch_text = get_delivery_post_text_field(
+				$batch_data_key,
+				$validation_errors,
+				_('Delivery batch input'),
+				$stock_id
+			);
+
+			if ($batch_text === '' && isset($_POST[$batch_data_key]) && !is_scalar($_POST[$batch_data_key]))
+				continue;
+
+			if ($batch_text === '')
+				continue; // Auto-allocation path.
+
+			$entries = preg_split('/[\r\n;]+/', $batch_text);
+			$line_batch_ids = array();
+			$total_batch_qty = 0;
+
+			foreach ($entries as $entry) {
+				$entry = trim($entry);
+				if ($entry === '')
+					continue;
+
+				if (preg_match('/[\x00-\x1F\x7F]/', $entry)) {
+					$validation_errors[] = sprintf(
+						_('Batch allocation "%s" for item %s contains invalid control characters.'),
+						$entry,
+						$stock_id
+					);
+					continue;
+				}
+
+				$batch_id_raw = $entry;
+				$qty_raw = $dispatch_qty;
+
+				if (strpos($entry, ':') !== false) {
+					$parts = explode(':', $entry, 2);
+					$batch_id_raw = trim($parts[0]);
+					$qty_raw = trim($parts[1]);
+				}
+
+				if ($batch_id_raw === '' || !preg_match('/^\d+$/', $batch_id_raw)) {
+					$validation_errors[] = sprintf(
+						_('Batch allocation "%s" for item %s has invalid batch id.'),
+						$entry,
+						$stock_id
+					);
+					continue;
+				}
+
+				$batch_id = (int)$batch_id_raw;
+				if ($batch_id <= 0) {
+					$validation_errors[] = sprintf(
+						_('Batch allocation "%s" for item %s has invalid batch id.'),
+						$entry,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (!is_scalar($qty_raw) || !is_valid_finite_numeric($qty_raw)) {
+					$validation_errors[] = sprintf(
+						_('Batch allocation "%s" for item %s has invalid quantity.'),
+						$entry,
+						$stock_id
+					);
+					continue;
+				}
+
+				$batch_qty = (float)$qty_raw;
+				if ($batch_qty <= 0) {
+					$validation_errors[] = sprintf(
+						_('Batch allocation "%s" for item %s must have quantity greater than zero.'),
+						$entry,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (isset($line_batch_ids[$batch_id])) {
+					$validation_errors[] = sprintf(
+						_('Batch id %d is duplicated in delivery payload for item %s.'),
+						$batch_id,
+						$stock_id
+					);
+					continue;
+				}
+
+				$batch = get_stock_batch($batch_id);
+				if (!$batch) {
+					$validation_errors[] = sprintf(
+						_('Batch id %d was not found for item %s.'),
+						$batch_id,
+						$stock_id
+					);
+					continue;
+				}
+
+				if (!isset($batch['stock_id']) || $batch['stock_id'] !== $stock_id) {
+					$validation_errors[] = sprintf(
+						_('Batch id %d does not belong to item %s.'),
+						$batch_id,
+						$stock_id
+					);
+					continue;
+				}
+
+				$available_qty = (float)get_batch_quantity_on_hand($batch_id, $location);
+				if ($batch_qty > $available_qty + 0.000001) {
+					$validation_errors[] = sprintf(
+						_('Batch id %d for item %s has only %.2f available at location %s, requested %.2f.'),
+						$batch_id,
+						$stock_id,
+						$available_qty,
+						$location,
+						$batch_qty
+					);
+					continue;
+				}
+
+				$line_batch_ids[$batch_id] = true;
+				$total_batch_qty += $batch_qty;
+			}
+
+			if (abs($total_batch_qty - $dispatch_qty) > 0.000001) {
+				$validation_errors[] = sprintf(
+					_('Item %s batch allocations must total %.2f; received %.2f.'),
+					$stock_id,
+					$dispatch_qty,
+					$total_batch_qty
+				);
+			}
+		}
+	}
+
+	return empty($validation_errors);
 }
 
 /**

@@ -173,7 +173,10 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 	if (file_exists($wms_ops_path)) {
 		include_once($wms_ops_path);
 		if (function_exists('process_delivery_tracking_and_wms')) {
-			process_delivery_tracking_and_wms($delivery, $delivery_no, $delivery->document_date, $delivery->Location);
+			if (process_delivery_tracking_and_wms($delivery, $delivery_no, $delivery->document_date, $delivery->Location) === false) {
+				cancel_transaction();
+				return -2;
+			}
 		}
 	}
 
