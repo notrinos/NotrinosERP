@@ -14,7 +14,7 @@
  * Return Orders â€” Customer & Supplier return processing with inspection
  * and disposition routing (restock / refurbish / scrap / return to vendor).
  *
- * Lifecycle: Draft â†’ Received â†’ Inspected â†’ Completed (or Cancelled)
+ * Lifecycle: Draft -> Received -> Inspected -> Completed (or Cancelled)
  *
  * @package NotrinosERP
  * @subpackage Inventory/Warehouse
@@ -232,6 +232,9 @@ if (isset($_GET['return_id'])) {
 	$selected_id = (int)$_GET['return_id'];
 }
 
+if(isset($_POST['ADD_LINE']))
+	$Ajax->activate('_page_body');
+
 // =====================================================================
 // START FORM
 // =====================================================================
@@ -362,9 +365,10 @@ if ($selected_id > 0 && $order) {
 		// Add line form
 		echo "<h5>" . _('Add Line Item') . "</h5>";
 		start_table(TABLESTYLE2);
-		echo "<tr>";
-		stock_items_list_cells(_('Item:'), 'line_stock_id', get_post('line_stock_id'), false, true);
-		echo "</tr>";
+		start_row();
+		label_cell(_('Item:'));
+		stock_items_list_cells(null, 'line_stock_id', get_post('line_stock_id'), false, true);
+		end_row();
 		small_amount_row(_('Expected Qty:'), 'line_qty', get_post('line_qty', ''), null, null, user_qty_dec());
 
 		// Serial/Batch selectors based on item tracking
