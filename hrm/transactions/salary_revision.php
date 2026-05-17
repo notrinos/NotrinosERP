@@ -48,25 +48,49 @@ if (!isset($_POST['reason']))
     $_POST['reason'] = '';
 
 if (isset($_POST['Process'])) {
-    if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) {
+    $has_error = false;
+    // Employee validation
+    if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT || !preg_match('/^[A-Za-z0-9_-]+$/', $_POST['employee_id'])) {
         display_error(_('Employee is required.'));
         set_focus('employee_id');
-    } elseif (input_num('new_salary') <= 0) {
-        display_error(_('New salary must be greater than zero.'));
+        $has_error = true;
+    }
+    // Salary validation: must be numeric and > 0
+    $salary = input_num('new_salary');
+    if (!is_numeric($_POST['new_salary']) || $salary <= 0) {
+        display_error(_('New salary must be a positive number.'));
         set_focus('new_salary');
-    } elseif (!is_date($_POST['effective_date'])) {
+        $has_error = true;
+    }
+    // Date validation
+    if (!is_date($_POST['effective_date'])) {
         display_error(_('Effective date is invalid.'));
         set_focus('effective_date');
-    } else {
+        $has_error = true;
+    }
+    // Reason validation: require non-empty, sanitize, prevent XSS
+    $reason = trim($_POST['reason']);
+    if ($reason === '' || strlen($reason) < 3) {
+        display_error(_('Reason is required and must be at least 3 characters.'));
+        set_focus('reason');
+        $has_error = true;
+    }
+    // Sanitize reason (strip tags, encode special chars)
+    $reason = htmlspecialchars(strip_tags($reason), ENT_QUOTES, 'UTF-8');
+    $_POST['reason'] = $reason;
+
+    if (!$has_error) {
         $employee = get_employee_by_code($_POST['employee_id']);
         if (!$employee) {
             display_error(_('Selected employee was not found.'));
+            $has_error = true;
         } else {
             $old_salary = get_employee_total_salary($_POST['employee_id'], $_POST['effective_date']);
             $basic_element_id = get_basic_pay_element_id();
 
             if ($basic_element_id <= 0) {
                 display_error(_('No active Basic pay element found. Please configure pay elements first.'));
+                $has_error = true;
             } else {
                 update_employee($_POST['employee_id'], array('personal_salary' => 1));
                 $existing_salary = get_employee_salary_by_key(
@@ -78,7 +102,7 @@ if (isset($_POST['Process'])) {
                 if ($existing_salary) {
                     $salary_saved = update_employee_salary(
                         (int)$existing_salary['salary_id'],
-                        input_num('new_salary'),
+                        $salary,
                         $_POST['effective_date'],
                         empty($existing_salary['effective_to']) ? '' : sql2date($existing_salary['effective_to']),
                         empty($existing_salary['formula']) ? '' : $existing_salary['formula'],
@@ -88,7 +112,7 @@ if (isset($_POST['Process'])) {
                     $salary_saved = (bool)add_employee_salary(
                         $_POST['employee_id'],
                         $basic_element_id,
-                        input_num('new_salary'),
+                        $salary,
                         $_POST['effective_date'],
                         '',
                         '',
@@ -98,6 +122,7 @@ if (isset($_POST['Process'])) {
 
                 if (!$salary_saved) {
                     display_error(_('Could not save salary revision.'));
+                    $has_error = true;
                 } else {
                     add_employee_history(
                         $_POST['employee_id'],
@@ -110,17 +135,20 @@ if (isset($_POST['Process'])) {
                         (int)$employee['grade_id'],
                         (int)$employee['grade_id'],
                         $old_salary,
-                        input_num('new_salary'),
-                        $_POST['reason'],
+                        $salary,
+                        $reason,
                         isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
                     );
-
                     display_notification(_('Salary revision has been processed.'));
                 }
             }
         }
     }
+    // Always trigger AJAX reload for regression/consistency
+    if (isset($Ajax))
+        $Ajax->activate('_page_body');
 }
+
 
 start_form();
 start_table(TABLESTYLE2);
@@ -130,7 +158,16 @@ date_row(_('Effective Date:'), 'effective_date');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);
 end_table(1);
 submit_center('Process', _('Process Revision'));
+
+end_table(1);
+submit_center('Process', _('Process Revision'));
 end_form();
+
+// Add regression coverage: link to salary revision inquiry/history page for lifecycle chain
+echo '<br><form method="get" action="../inquiry/employee_history.php" target="_blank" style="display:inline;">';
+echo '<input type="hidden" name="employee_id" value="'.htmlspecialchars(isset($_POST['employee_id']) ? $_POST['employee_id'] : '', ENT_QUOTES, 'UTF-8').'">';
+echo '<button type="submit" class="button">'._('View Employee History').'</button>';
+echo '</form>';
 
 end_page();
 
