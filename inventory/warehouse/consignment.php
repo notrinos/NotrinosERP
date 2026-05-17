@@ -79,14 +79,23 @@ echo '</div>';
 
 if (isset($_POST['ADD_CONSIGNMENT'])) {
 	$input_error = 0;
+	$recv_stock_id = get_post('recv_stock_id');
+	$recv_supplier_id = (int)get_post('recv_supplier_id');
+	$recv_date = get_post('recv_date');
 
-	if (empty($_POST['recv_stock_id'])) {
+	if (empty($recv_stock_id)) {
 		display_error(_('You must select an item.'));
+		$input_error = 1;
+	} elseif (!get_item($recv_stock_id)) {
+		display_error(_('Selected item does not exist.'));
 		$input_error = 1;
 	}
 
-	if (empty($_POST['recv_supplier_id'])) {
+	if ($recv_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
+		$input_error = 1;
+	} elseif (!get_supplier($recv_supplier_id)) {
+		display_error(_('Selected supplier does not exist.'));
 		$input_error = 1;
 	}
 
@@ -107,16 +116,21 @@ if (isset($_POST['ADD_CONSIGNMENT'])) {
 		$input_error = 1;
 	}
 
+	if (!is_date($recv_date)) {
+		display_error(_('The receipt date is invalid.'));
+		$input_error = 1;
+	}
+
 	if ($input_error == 0) {
 		$wh_loc_id = get_post('recv_bin_id') ? (int)get_post('recv_bin_id') : null;
 		$batch_id = get_post('recv_batch_id') ? (int)get_post('recv_batch_id') : null;
 
 		$consignment_id = receive_consignment_stock(
-			$_POST['recv_stock_id'],
-			$_POST['recv_supplier_id'],
+			$recv_stock_id,
+			$recv_supplier_id,
 			$recv_qty,
 			$recv_cost,
-			$_POST['recv_date'],
+			$recv_date,
 			$_POST['recv_loc_code'],
 			$wh_loc_id,
 			$batch_id,
@@ -126,6 +140,9 @@ if (isset($_POST['ADD_CONSIGNMENT'])) {
 		if ($consignment_id) {
 			display_notification(sprintf(_('Consignment stock #%s received successfully.'), $consignment_id));
 			$current_tab = 'receive';
+			if (isset($Ajax)) {
+				$Ajax->activate('_page_body');
+			}
 			// Clear form
 			unset($_POST['recv_stock_id'], $_POST['recv_supplier_id'], $_POST['recv_qty'],
 				$_POST['recv_unit_cost'], $_POST['recv_memo'], $_POST['recv_batch_id']);
@@ -139,6 +156,7 @@ if (isset($_POST['ADD_CONSIGNMENT'])) {
 
 if (isset($_POST['CONSUME_CONSIGNMENT'])) {
 	$input_error = 0;
+	$consume_date = get_post('consume_date');
 
 	$consume_id = (int)get_post('consume_consignment_id');
 	if ($consume_id <= 0) {
@@ -152,11 +170,16 @@ if (isset($_POST['CONSUME_CONSIGNMENT'])) {
 		$input_error = 1;
 	}
 
+	if (!is_date($consume_date)) {
+		display_error(_('The consumption date is invalid.'));
+		$input_error = 1;
+	}
+
 	if ($input_error == 0) {
 		$result = consume_consignment_stock(
 			$consume_id,
 			$consume_qty,
-			$_POST['consume_date'],
+			$consume_date,
 			get_post('consume_memo')
 		);
 
@@ -169,6 +192,9 @@ if (isset($_POST['CONSUME_CONSIGNMENT'])) {
 				price_format($result['amount'])
 			));
 			$current_tab = 'consume';
+			if (isset($Ajax)) {
+				$Ajax->activate('_page_body');
+			}
 			unset($_POST['consume_consignment_id'], $_POST['consume_qty'], $_POST['consume_memo']);
 		}
 	}
@@ -180,6 +206,7 @@ if (isset($_POST['CONSUME_CONSIGNMENT'])) {
 
 if (isset($_POST['RETURN_CONSIGNMENT'])) {
 	$input_error = 0;
+	$return_date = get_post('return_date');
 
 	$return_id = (int)get_post('return_consignment_id');
 	if ($return_id <= 0) {
@@ -193,11 +220,16 @@ if (isset($_POST['RETURN_CONSIGNMENT'])) {
 		$input_error = 1;
 	}
 
+	if (!is_date($return_date)) {
+		display_error(_('The return date is invalid.'));
+		$input_error = 1;
+	}
+
 	if ($input_error == 0) {
 		$success = return_consignment_stock(
 			$return_id,
 			$return_qty,
-			$_POST['return_date'],
+			$return_date,
 			get_post('return_memo')
 		);
 
@@ -208,6 +240,9 @@ if (isset($_POST['RETURN_CONSIGNMENT'])) {
 				$return_id
 			));
 			$current_tab = 'return';
+			if (isset($Ajax)) {
+				$Ajax->activate('_page_body');
+			}
 			unset($_POST['return_consignment_id'], $_POST['return_qty'], $_POST['return_memo']);
 		}
 	}
@@ -219,14 +254,22 @@ if (isset($_POST['RETURN_CONSIGNMENT'])) {
 
 if (isset($_POST['SAVE_VMI'])) {
 	$input_error = 0;
+	$vmi_stock_id = get_post('vmi_stock_id');
+	$vmi_supplier_id = (int)get_post('vmi_supplier_id');
 
-	if (empty($_POST['vmi_stock_id'])) {
+	if (empty($vmi_stock_id)) {
 		display_error(_('You must select an item.'));
+		$input_error = 1;
+	} elseif (!get_item($vmi_stock_id)) {
+		display_error(_('Selected item does not exist.'));
 		$input_error = 1;
 	}
 
-	if (empty($_POST['vmi_supplier_id'])) {
+	if ($vmi_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
+		$input_error = 1;
+	} elseif (!get_supplier($vmi_supplier_id)) {
+		display_error(_('Selected supplier does not exist.'));
 		$input_error = 1;
 	}
 
@@ -239,6 +282,11 @@ if (isset($_POST['SAVE_VMI'])) {
 		$input_error = 1;
 	}
 
+	if ($vmi_reorder < 0) {
+		display_error(_('Reorder quantity cannot be negative.'));
+		$input_error = 1;
+	}
+
 	if ($vmi_max > 0 && $vmi_min > $vmi_max) {
 		display_error(_('Minimum level cannot exceed maximum level.'));
 		$input_error = 1;
@@ -246,8 +294,8 @@ if (isset($_POST['SAVE_VMI'])) {
 
 	if ($input_error == 0) {
 		set_vmi_level(
-			$_POST['vmi_stock_id'],
-			$_POST['vmi_supplier_id'],
+			$vmi_stock_id,
+			$vmi_supplier_id,
 			$vmi_min,
 			$vmi_max,
 			$vmi_reorder,
@@ -256,6 +304,9 @@ if (isset($_POST['SAVE_VMI'])) {
 
 		display_notification(_('VMI level has been saved.'));
 		$current_tab = 'vmi';
+		if (isset($Ajax)) {
+			$Ajax->activate('_page_body');
+		}
 		unset($_POST['vmi_stock_id'], $_POST['vmi_supplier_id'], $_POST['vmi_min_level'],
 			$_POST['vmi_max_level'], $_POST['vmi_reorder_qty']);
 	}
@@ -267,8 +318,15 @@ if (isset($_POST['SAVE_VMI'])) {
 
 if (isset($_GET['delete_vmi'])) {
 	$vmi_id = (int)$_GET['delete_vmi'];
-	delete_vmi_level($vmi_id);
-	display_notification(_('VMI level has been deleted.'));
+	if ($vmi_id <= 0) {
+		display_error(_('Invalid VMI level selected for deletion.'));
+	} else {
+		delete_vmi_level($vmi_id);
+		display_notification(_('VMI level has been deleted.'));
+		if (isset($Ajax)) {
+			$Ajax->activate('_page_body');
+		}
+	}
 	$current_tab = 'vmi';
 }
 
@@ -278,17 +336,31 @@ if (isset($_GET['delete_vmi'])) {
 
 if (isset($_POST['GENERATE_INVOICE'])) {
 	$input_error = 0;
+	$invoice_supplier_id = (int)get_post('inv_supplier_id');
+	$invoice_from_date = get_post('inv_from_date');
+	$invoice_to_date = get_post('inv_to_date');
 
-	if (empty($_POST['inv_supplier_id'])) {
+	if ($invoice_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
+		$input_error = 1;
+	} elseif (!get_supplier($invoice_supplier_id)) {
+		display_error(_('Selected supplier does not exist.'));
+		$input_error = 1;
+	}
+
+	if (!is_date($invoice_from_date) || !is_date($invoice_to_date)) {
+		display_error(_('Invoice date range is invalid.'));
+		$input_error = 1;
+	} elseif (date1_greater_date2($invoice_from_date, $invoice_to_date)) {
+		display_error(_('From date cannot be later than To date.'));
 		$input_error = 1;
 	}
 
 	if ($input_error == 0) {
 		$inv_result = generate_consignment_invoice(
-			$_POST['inv_supplier_id'],
-			$_POST['inv_from_date'],
-			$_POST['inv_to_date']
+			$invoice_supplier_id,
+			$invoice_from_date,
+			$invoice_to_date
 		);
 
 		if ($inv_result) {
@@ -303,6 +375,9 @@ if (isset($_POST['GENERATE_INVOICE'])) {
 			display_warning(_('No uninvoiced consumption found for this supplier in the selected period.'));
 		}
 		$current_tab = 'history';
+		if (isset($Ajax)) {
+			$Ajax->activate('_page_body');
+		}
 	}
 }
 
@@ -311,29 +386,33 @@ if (isset($_POST['GENERATE_INVOICE'])) {
 // =====================================================================
 
 if (isset($_POST['EXPORT_VMI'])) {
-	if (!empty($_POST['export_supplier_id'])) {
-		$export_data = export_vmi_stock_levels($_POST['export_supplier_id']);
-		$supplier_name = get_supplier_name($_POST['export_supplier_id']);
-
-		if (!empty($export_data)) {
-			// Generate CSV output
-			header('Content-Type: text/csv; charset=utf-8');
-			header('Content-Disposition: attachment; filename="vmi_stock_levels_' . date('Ymd') . '.csv"');
-			$out = fopen('php://output', 'w');
-			fputcsv($out, array('Item Code', 'Item Name', 'Unit', 'Min Level', 'Max Level',
-				'Reorder Qty', 'Location', 'Current On Hand', 'Suggested Replenish', 'Status'));
-			foreach ($export_data as $row) {
-				fputcsv($out, array(
-					$row['stock_id'], $row['item_name'], $row['units'],
-					$row['min_level'], $row['max_level'], $row['reorder_qty'],
-					$row['loc_code'], $row['current_on_hand'],
-					$row['suggested_replenish'], $row['status']
-				));
-			}
-			fclose($out);
-			exit;
+	$export_supplier_id = (int)get_post('export_supplier_id');
+	if ($export_supplier_id > 0) {
+		if (!get_supplier($export_supplier_id)) {
+			display_error(_('Selected supplier does not exist.'));
 		} else {
-			display_warning(_('No VMI levels configured for this supplier.'));
+			$export_data = export_vmi_stock_levels($export_supplier_id);
+
+			if (!empty($export_data)) {
+				// Generate CSV output
+				header('Content-Type: text/csv; charset=utf-8');
+				header('Content-Disposition: attachment; filename="vmi_stock_levels_' . date('Ymd') . '.csv"');
+				$out = fopen('php://output', 'w');
+				fputcsv($out, array('Item Code', 'Item Name', 'Unit', 'Min Level', 'Max Level',
+					'Reorder Qty', 'Location', 'Current On Hand', 'Suggested Replenish', 'Status'), ',', '"', '\\');
+				foreach ($export_data as $row) {
+					fputcsv($out, array(
+						$row['stock_id'], $row['item_name'], $row['units'],
+						$row['min_level'], $row['max_level'], $row['reorder_qty'],
+						$row['loc_code'], $row['current_on_hand'],
+						$row['suggested_replenish'], $row['status']
+					), ',', '"', '\\');
+				}
+				fclose($out);
+				exit;
+			} else {
+				display_warning(_('No VMI levels configured for this supplier.'));
+			}
 		}
 	}
 }

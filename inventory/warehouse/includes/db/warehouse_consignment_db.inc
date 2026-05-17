@@ -799,7 +799,7 @@ function export_vmi_stock_levels($supplier_id)
 			GREATEST(0, vmi.min_level - COALESCE(cs_sum.total_on_hand, 0)) AS suggested_replenish,
 			CASE
 				WHEN COALESCE(cs_sum.total_on_hand, 0) < vmi.min_level THEN 'BELOW MIN'
-				WHEN COALESCE(cs_sum.total_on_hand, 0) > vmi.max_level THEN 'ABOVE MAX'
+				WHEN vmi.max_level > 0 AND COALESCE(cs_sum.total_on_hand, 0) > vmi.max_level THEN 'ABOVE MAX'
 				ELSE 'OK'
 			END AS status
 		FROM " . TB_PREF . "wh_vmi_levels vmi
