@@ -47,7 +47,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif (!is_date($date)) {
         display_error(_('Date is required.'));
         set_focus('date');
-    } elseif (!check_num('hours', 0)) {
+    } elseif ($hours <= 0) {
         display_error(_('Hours must be greater than zero.'));
         set_focus('hours');
     } elseif ($hours > 24) {
