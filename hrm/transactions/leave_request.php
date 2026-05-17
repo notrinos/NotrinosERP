@@ -36,6 +36,25 @@ function leave_request_days_between($from_date, $to_date, $half_day=0) {
     return (float)$days;
 }
 
+/**
+ * Validate leave request date boundaries before save.
+ *
+ * @param string $from_date
+ * @param string $to_date
+ * @param int $half_day
+ * @return bool
+ */
+function leave_request_has_valid_date_range($from_date, $to_date, $half_day)
+{
+    if ((int)$half_day > 0 && date2sql($from_date) !== date2sql($to_date)) {
+        display_error(_('Half-day leave requests must use the same From and To date.'));
+        set_focus('to_date');
+        return false;
+    }
+
+    return true;
+}
+
 page(_("Leave Request"));
 
 simple_page_mode(false);
@@ -53,9 +72,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('From and To dates are required.'));
     } elseif (date1_greater_date2($_POST['from_date'], $_POST['to_date'])) {
         display_error(_('To date must be on or after From date.'));
+    } elseif (!leave_request_has_valid_date_range($_POST['from_date'], $_POST['to_date'], (int)$_POST['half_day'])) {
     } else {
         $days = leave_request_days_between($_POST['from_date'], $_POST['to_date'], (int)$_POST['half_day']);
-        if ($selected_id != '') {
+        if ($days <= 0) {
+            display_error(_('Leave days must be greater than zero.'));
+            set_focus('from_date');
+        } elseif ($selected_id != '') {
             update_leave_request(
                 $selected_id,
                 (int)$_POST['leave_id'],
@@ -66,6 +89,8 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 $_POST['reason']
             );
             display_notification(_('Leave request has been updated.'));
+            if (isset($Ajax))
+                $Ajax->activate('_page_body');
         } else {
             $request_id = add_leave_request(
                 $_POST['employee_id'],
@@ -112,6 +137,8 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             } else {
                 display_notification(_('Leave request has been created.'));
             }
+            if (isset($Ajax))
+                $Ajax->activate('_page_body');
         }
         $Mode = 'RESET';
     }
@@ -125,6 +152,8 @@ if ($Mode == 'Delete') {
         $sql = "DELETE FROM ".TB_PREF."leave_requests WHERE request_id = ".db_escape((int)$selected_id)." AND status = 0";
         db_query($sql, 'could not delete leave request');
         display_notification(_('Selected request has been deleted.'));
+        if (isset($Ajax))
+            $Ajax->activate('_page_body');
     }
     $Mode = 'RESET';
 }

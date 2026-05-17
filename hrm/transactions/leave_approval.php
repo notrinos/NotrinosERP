@@ -16,6 +16,50 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
+
+/**
+ * Normalize the leave approval status filter value.
+ *
+ * @param mixed $filter_status
+ * @return int|null
+ */
+function get_leave_approval_filter_status($filter_status)
+{
+    if ($filter_status === null || $filter_status === '' || $filter_status === 'all' || $filter_status === ALL_TEXT)
+        return null;
+
+    return (int)$filter_status;
+}
+
+/**
+ * Check whether a leave request can be approved safely.
+ *
+ * @param array $request
+ * @return bool
+ */
+function leave_request_is_approvable($request)
+{
+    if (empty($request))
+        return false;
+
+    if ((int)$request['status'] !== 0) {
+        display_error(_('Only pending requests can be processed.'));
+        return false;
+    }
+
+    if ((int)$request['half_day'] > 0 && $request['from_date'] !== $request['to_date']) {
+        display_error(_('Half-day leave requests must use the same From and To date before approval.'));
+        return false;
+    }
+
+    if ((float)$request['days'] <= 0) {
+        display_error(_('Leave request days must be greater than zero before approval.'));
+        return false;
+    }
+
+    return true;
+}
+
 page(_("Leave Approval"));
 
 simple_page_mode(false);
@@ -28,11 +72,10 @@ if (isset($_POST['approve']) || isset($_POST['reject'])) {
 
     if (!$request) {
         display_error(_('Leave request was not found.'));
-    } elseif ((int)$request['status'] != 0) {
-        display_error(_('Only pending requests can be processed.'));
+    } elseif (!leave_request_is_approvable($request) && isset($_POST['approve'])) {
     } else {
         $user = $_SESSION['wa_current_user']->loginname;
-        $remarks = get_post('approval_remarks');
+        $remarks = get_post('approval_remarks', '');
 
         // Check for core approval draft linked to this request
         $approval_service = get_approval_workflow_service();
@@ -67,6 +110,8 @@ if (isset($_POST['approve']) || isset($_POST['reject'])) {
                 display_notification(_('Leave request has been rejected.'));
             }
         }
+        if (isset($Ajax))
+            $Ajax->activate('_page_body');
     }
 }
 
@@ -75,17 +120,17 @@ if ($Mode == 'Edit') {
     $Mode = 'RESET';
 }
 
-$filter_status = get_post('filter_status', 0);
+$filter_status = get_post('filter_status', '0');
 
 start_form();
 
 start_table(TABLESTYLE2);
 $status_filter_opts = array(
-    '' => _('All Statuses'),
-    0 => _('Pending'),
-    1 => _('Approved'),
-    2 => _('Rejected'),
-    3 => _('Cancelled')
+    'all' => _('All Statuses'),
+    '0' => _('Pending'),
+    '1' => _('Approved'),
+    '2' => _('Rejected'),
+    '3' => _('Cancelled')
 );
 array_selector_row(null, 'filter_status', $filter_status, $status_filter_opts, array('select_submit' => true));
 end_table(1);
@@ -94,7 +139,7 @@ start_table(TABLESTYLE, "width='98%'");
 $th = array(_('ID'), _('Employee'), _('Leave Type'), _('From'), _('To'), _('Days'), _('Reason'), _('Status'), _('Approved By'), _('Approval Date'), '');
 table_header($th);
 
-$status_arg = ($filter_status === '' || $filter_status === ALL_TEXT) ? null : (int)$filter_status;
+$status_arg = get_leave_approval_filter_status($filter_status);
 $result = get_leave_requests($status_arg, '', '', '');
 
 $k = 0;
