@@ -40,6 +40,9 @@ if (isset($_POST['Process'])) {
     } elseif (!is_date($_POST['effective_date'])) {
         display_error(_('Effective date is invalid.'));
         set_focus('effective_date');
+    } elseif ((int)$_POST['new_department_id'] == 0) {
+        display_error(_('New Department is required and must be selected.'));
+        set_focus('new_department_id');
     } else {
         $employee = get_employee_by_code($_POST['employee_id']);
         if (!$employee) {
