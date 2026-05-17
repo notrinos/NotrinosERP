@@ -176,7 +176,7 @@ end_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 
 start_table(TABLESTYLE, "width='95%'");
-$th = array(_('ID'), _('Employee'), _('Leave Type'), _('From'), _('To'), _('Days'), _('Status'), _('Requested On'), '', '');
+$th = array(_('ID'), _('Employee'), _('Leave Type'), _('From'), _('To'), _('Days'), _('Reason'), _('Status'), _('Requested On'), '', '');
 table_header($th);
 
 $result = get_leave_requests(null, '', '', '');
@@ -189,6 +189,8 @@ while ($row = db_fetch($result)) {
     label_cell(sql2date($row['from_date']));
     label_cell(sql2date($row['to_date']));
     qty_cell($row['days']);
+    // XSS protection for Reason field
+    label_cell(htmlspecialchars($row['reason'], ENT_QUOTES, 'UTF-8'));
     label_cell($status_labels[(int)$row['status']]);
     label_cell(sql2date(substr($row['request_date'], 0, 10)));
     if ((int)$row['status'] == 0) {
