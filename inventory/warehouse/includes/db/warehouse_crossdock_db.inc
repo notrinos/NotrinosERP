@@ -420,7 +420,7 @@ function create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty, $supplier_id 
 	}
 
 	// Get item purchasing data
-	$purch_data = get_items_purchasing_data($supplier_id, $stock_id);
+	$purch_data = get_item_purchasing_data($supplier_id, $stock_id);
 	$purchase_price = $purch_data ? (float)$purch_data['price'] : 0;
 	$supplier_uom = $purch_data ? $purch_data['suppliers_uom'] : '';
 	$conversion = $purch_data ? (float)$purch_data['conversion_factor'] : 1;
@@ -431,17 +431,20 @@ function create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty, $supplier_id 
 
 	// Build minimal PO object for add_po()
 	$po = new purch_order;
-	$po->supplier_id = $supplier_id;
 	$po->orig_order_date = Today();
-	$po->delivery_date = Today();
 	$po->reference = $reference;
-	$po->requisition_no = '';
 	$po->Comments = sprintf(_('Drop-ship for SO#%d — ship to: %s'), $so_no, $deliver_to);
 	$po->Location = $loc_code;
 	$po->delivery_address = $delivery_address;
-	$po->curr_code = $supplier['curr_code'];
-	$po->supplier_name = $supplier['supp_name'];
-	$po->tax_group_id = $supplier['tax_group_id'];
+	
+	// Set supplier using proper setter method to initialize all required fields
+	$po->set_supplier(
+		$supplier_id,
+		$supplier['supp_name'],
+		$supplier['curr_code'],
+		$supplier['tax_group_id'],
+		$supplier['tax_included']
+	);
 
 	// Add PO line
 	$po->add_to_order(
