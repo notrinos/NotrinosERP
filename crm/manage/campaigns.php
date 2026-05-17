@@ -76,7 +76,7 @@ $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($myrow['id']);
-    label_cell("<a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?id="
+    label_cell("<a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?CampaignID="
         . $myrow['id'] . crm_sel_app_param() . "'>" . htmlspecialchars($myrow['name']) . "</a>");
     label_cell(ucfirst($myrow['campaign_type'] ?: '-'));
     label_cell(crm_status_badge($myrow['status']));
@@ -85,7 +85,7 @@ while ($myrow = db_fetch($result)) {
     amount_cell($myrow['budget']);
     label_cell($myrow['lead_count'], "align='center'");
 
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?id="
+    echo "<td><a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?CampaignID="
         . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
     echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
         . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this campaign?') . "');\">"

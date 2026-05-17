@@ -384,6 +384,21 @@ function add_crm_campaign_email($campaign_id, $email_template_id, $day_offset, $
 }
 
 /**
+ * Delete one campaign email step by id.
+ *
+ * @param int $id
+ * @param int $campaign_id
+ * @return bool
+ */
+function delete_crm_campaign_email($id, $campaign_id)
+{
+    $sql = "DELETE FROM " . TB_PREF . "crm_campaign_emails
+            WHERE id = " . db_escape($id)
+        . " AND campaign_id = " . db_escape($campaign_id);
+    return db_query($sql, "Could not delete campaign email");
+}
+
+/**
  * Delete all email steps for a campaign.
  *
  * @param int $campaign_id

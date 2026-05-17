@@ -40,7 +40,7 @@ $campaign_id = 0;
 $is_new      = true;
 $campaign    = null;
 
-$raw_id = isset($_GET['CampaignID']) ? $_GET['CampaignID'] : get_post('CampaignID', 0);
+$raw_id = isset($_GET['CampaignID']) ? $_GET['CampaignID'] : (isset($_GET['id']) ? $_GET['id'] : get_post('CampaignID', 0));
 if ((int)$raw_id > 0) {
     $campaign_id = (int)$raw_id;
     $campaign = get_crm_campaign($campaign_id);
@@ -63,21 +63,72 @@ page(_($help_context = 'CRM Campaign Entry'), false, false, '', $js);
 if (isset($_POST['Save'])) {
     $input_error = 0;
 
-    if (strlen(trim($_POST['campaign_name'])) < 1) {
+    // Campaign name validation
+    $campaign_name = trim(strip_tags($_POST['campaign_name']));
+    if (strlen($campaign_name) < 1) {
         display_error(_('Campaign name is required.'));
         set_focus('campaign_name');
+        $input_error = 1;
+    } elseif (strlen($campaign_name) > 100) {
+        display_error(_('Campaign name is too long (max 100 chars).'));
+        set_focus('campaign_name');
+        $input_error = 1;
+    } elseif (preg_match('/[<>]/', $campaign_name)) {
+        display_error(_('Campaign name cannot contain < or > characters.'));
+        set_focus('campaign_name');
+        $input_error = 1;
+    }
+
+    // Budget validation
+    $budget_raw = trim($_POST['budget']);
+    $normalized_budget = str_replace(array(',', ' '), '', $budget_raw);
+    $budget = ($normalized_budget === '') ? 0 : (float)$normalized_budget;
+    if ($budget_raw !== '' && !is_numeric($normalized_budget)) {
+        display_error(_('Budget must be a numeric value.'));
+        set_focus('budget');
+        $input_error = 1;
+    } elseif ($budget < 0) {
+        display_error(_('Budget cannot be negative.'));
+        set_focus('budget');
+        $input_error = 1;
+    } elseif ($budget > 1000000000) {
+        display_error(_('Budget is unrealistically large.'));
+        set_focus('budget');
+        $input_error = 1;
+    }
+
+    // Description validation (strip tags, limit length)
+    $description = trim($_POST['description']);
+    if (preg_match('/[<>]/', $description)) {
+        display_error(_('Description cannot contain < or > characters.'));
+        set_focus('description');
+        $input_error = 1;
+    }
+    $description = strip_tags($description);
+    if (strlen($description) > 1000) {
+        display_error(_('Description is too long (max 1000 chars).'));
+        set_focus('description');
+        $input_error = 1;
+    }
+
+    // Date validation
+    $start_date = $_POST['start_date'] ? date2sql($_POST['start_date']) : null;
+    $end_date = $_POST['end_date'] ? date2sql($_POST['end_date']) : null;
+    if ($start_date && $end_date && $end_date < $start_date) {
+        display_error(_('End date cannot be before start date.'));
+        set_focus('end_date');
         $input_error = 1;
     }
 
     if ($input_error == 0) {
         $data = array(
-            'name'          => $_POST['campaign_name'],
+            'name'          => $campaign_name,
             'campaign_type' => $_POST['campaign_type'],
             'status'        => $_POST['status'],
-            'start_date'    => $_POST['start_date'] ? date2sql($_POST['start_date']) : null,
-            'end_date'      => $_POST['end_date'] ? date2sql($_POST['end_date']) : null,
-            'budget'        => $_POST['budget'] != '' ? input_num('budget', 0) : 0,
-            'description'   => $_POST['description'],
+            'start_date'    => $start_date,
+            'end_date'      => $end_date,
+            'budget'        => $budget,
+            'description'   => $description,
         );
 
         begin_transaction();
@@ -90,10 +141,7 @@ if (isset($_POST['Save'])) {
             display_notification(_('Campaign has been updated.'));
         }
         commit_transaction();
-
-        if ($is_new) {
-            meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
-        }
+        meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
         $campaign = get_crm_campaign($campaign_id);
     }
 }
@@ -109,16 +157,22 @@ if (isset($_POST['EnrollLead']) && !$is_new) {
         enroll_crm_campaign_lead($campaign_id, $enroll_lead_id);
         commit_transaction();
         display_notification(_('Lead enrolled in campaign.'));
+        meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
+    } else {
+        display_error(_('Please select a lead to enroll.'));
     }
 }
 
 if (isset($_POST['UnenrollLead']) && !$is_new) {
-    $unenroll_lead_id = (int)$_POST['unenroll_lead_id'];
+    $unenroll_lead_id = (int)$_POST['UnenrollLead'];
     if ($unenroll_lead_id > 0) {
         begin_transaction();
         unenroll_crm_campaign_lead($campaign_id, $unenroll_lead_id);
         commit_transaction();
         display_notification(_('Lead removed from campaign.'));
+        meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
+    } else {
+        display_error(_('Invalid lead selected for removal.'));
     }
 }
 
@@ -128,17 +182,44 @@ if (isset($_POST['UnenrollLead']) && !$is_new) {
 
 if (isset($_POST['AddEmail']) && !$is_new) {
     $template_id = (int)$_POST['email_template_id'];
-    $send_day = (int)$_POST['send_day'];
-    if ($template_id > 0 && $send_day >= 0) {
+    $send_day_raw = trim($_POST['send_day']);
+    $send_day = (int)$send_day_raw;
+
+    if ($template_id <= 0) {
+        display_error(_('Please select an email template.'));
+    } elseif ($send_day_raw === '' || !is_numeric($send_day_raw) || $send_day < 0) {
+        display_error(_('Send day must be a non-negative number.'));
+    } else {
+        $template = get_crm_email_template($template_id);
+        if (!$template) {
+            display_error(_('Selected email template was not found.'));
+        } else {
+            begin_transaction();
+            add_crm_campaign_email(
+                $campaign_id,
+                $template_id,
+                $send_day,
+                $template['subject'],
+                $template['body_html'],
+                $send_day
+            );
+            commit_transaction();
+            display_notification(_('Email added to schedule.'));
+            meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
+        }
+    }
+}
+
+if (isset($_POST['DeleteEmail']) && !$is_new) {
+    $delete_email_id = (int)$_POST['DeleteEmail'];
+    if ($delete_email_id > 0) {
         begin_transaction();
-        add_crm_campaign_email(array(
-            'campaign_id' => $campaign_id,
-            'template_id' => $template_id,
-            'send_day'    => $send_day,
-            'sequence'    => $send_day,
-        ));
+        delete_crm_campaign_email($delete_email_id, $campaign_id);
         commit_transaction();
-        display_notification(_('Email added to schedule.'));
+        display_notification(_('Email removed from schedule.'));
+        meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
+    } else {
+        display_error(_('Invalid email schedule row selected for removal.'));
     }
 }
 
@@ -160,7 +241,13 @@ if (!$is_new && !isset($_POST['Save'])) {
 // Display Form
 //--------------------------------------------------------------------------
 
-start_form();
+$form_action = $_SERVER['PHP_SELF'] . '?';
+if (!$is_new) {
+    $form_action .= 'CampaignID=' . $campaign_id . crm_sel_app_param();
+} else {
+    $form_action .= ltrim(crm_sel_app_param(), '&');
+}
+start_form(false, false, $form_action);
 
 if (!$is_new) {
     hidden('CampaignID', $campaign_id);
@@ -225,9 +312,8 @@ if (!$is_new) {
         label_cell($row['lead_status']);
         label_cell(sql2date(substr($row['enrolled_date'], 0, 10)));
         echo '<td>';
-        echo "<button type='submit' name='UnenrollLead' value='1' class='ajaxsubmit'>"
+        echo "<button type='submit' name='UnenrollLead' value='" . (int)$row['lead_id'] . "' class='ajaxsubmit'>"
             . _('Remove') . "</button>";
-        echo "<input type='hidden' name='unenroll_lead_id' value='" . (int)$row['lead_id'] . "'>";
         echo '</td>';
         end_row();
     }
@@ -236,10 +322,17 @@ if (!$is_new) {
     // Enroll new lead
     start_table(TABLESTYLE2);
     // Simple lead selector
-    $leads_sql = "SELECT id, CONCAT(lead_ref, ' - ', title) as label
-                  FROM " . TB_PREF . "crm_leads
-                  WHERE is_opportunity = 0 AND inactive = 0
-                  ORDER BY title";
+        $leads_sql = "SELECT l.id, CONCAT(l.lead_ref, ' - ', l.title) as label
+                                    FROM " . TB_PREF . "crm_leads l
+                                    WHERE l.is_opportunity = 0
+                                        AND l.inactive = 0
+                                        AND NOT EXISTS (
+                                                SELECT 1
+                                                FROM " . TB_PREF . "crm_campaign_leads cl
+                                                WHERE cl.campaign_id = " . db_escape($campaign_id) . "
+                                                    AND cl.lead_id = l.id
+                                        )
+                                    ORDER BY l.title";
     $leads_res = db_query($leads_sql);
     $lead_options = array(0 => _('-- Select Lead --'));
     while ($l = db_fetch($leads_res)) {
@@ -255,16 +348,20 @@ if (!$is_new) {
     // -- Email Schedule ------------------------------------------------------
     display_heading(_('Email Schedule'));
     start_table(TABLESTYLE, "width='95%'");
-    $th = array(_('Day'), _('Template'), _('Subject'));
+    $th = array(_('Day'), _('Template'), _('Subject'), '');
     table_header($th);
 
     $emails = get_crm_campaign_emails($campaign_id);
     $k = 0;
     while ($row = db_fetch($emails)) {
         alt_table_row_color($k);
-        label_cell(_('Day') . ' ' . (int)$row['send_day']);
+        label_cell(_('Day') . ' ' . (int)$row['day_offset']);
         label_cell($row['template_name']);
         label_cell($row['subject']);
+        echo '<td>';
+        echo "<button type='submit' name='DeleteEmail' value='" . (int)$row['id'] . "' class='ajaxsubmit'>"
+            . _('Remove') . "</button>";
+        echo '</td>';
         end_row();
     }
     end_table(1);
