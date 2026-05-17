@@ -27,9 +27,16 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     $date = $_POST['date'];
     $hours = input_num('hours');
     $reason = isset($_POST['reason']) ? trim($_POST['reason']) : '';
-    $reason = strip_tags($reason); // Remove HTML tags
+    $encoding = isset($_SESSION['language']->encoding) && $_SESSION['language']->encoding == 'iso-8859-2'
+        ? 'ISO-8859-1'
+        : (isset($_SESSION['language']->encoding) ? $_SESSION['language']->encoding : 'UTF-8');
+    $reason = html_entity_decode($reason, ENT_QUOTES, $encoding);
+    $reason = strip_tags($reason); // Remove HTML tags from decoded input
+    $reason = str_replace(array('<', '>'), '', $reason);
     $reason = preg_replace('/[\x00-\x1F\x7F]/u', '', $reason); // Remove control chars
-    if (mb_strlen($reason) > 255) $reason = mb_substr($reason, 0, 255);
+    if (strlen($reason) > 255) {
+        $reason = substr($reason, 0, 255);
+    }
 
     if ($employee_id == '' || $employee_id == ALL_TEXT) {
         display_error(_('Employee is required.'));
@@ -52,9 +59,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } else {
         // Check for duplicate request (pending/approved for same employee/date/type)
         $dup_sql = "SELECT COUNT(*) FROM ".TB_PREF."overtime_requests WHERE employee_id=".db_escape($employee_id)." AND overtime_id=".db_escape($overtime_id)." AND date=".db_escape(date2sql($date))." AND status IN (0,1)";
+        if ($Mode == 'UPDATE_ITEM' && $selected_id != '') {
+            $dup_sql .= " AND request_id <> ".db_escape((int)$selected_id);
+        }
         $dup_res = db_query($dup_sql, 'Could not check duplicate overtime request');
         $dup_row = db_fetch_row($dup_res);
-        if ($dup_row && $dup_row[0] > 0 && $Mode == 'ADD_ITEM') {
+        if ($dup_row && $dup_row[0] > 0) {
             display_error(_('Duplicate overtime request for this employee, date, and type already exists.'));
             set_focus('employee_id');
         } else {
