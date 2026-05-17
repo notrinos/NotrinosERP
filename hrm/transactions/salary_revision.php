@@ -159,14 +159,14 @@ textarea_row(_('Reason:'), 'reason', null, 50, 3);
 end_table(1);
 submit_center('Process', _('Process Revision'));
 
-end_table(1);
-submit_center('Process', _('Process Revision'));
 end_form();
 
-// Add regression coverage: link to salary revision inquiry/history page for lifecycle chain
-echo '<br><form method="get" action="../inquiry/employee_history.php" target="_blank" style="display:inline;">';
-echo '<input type="hidden" name="employee_id" value="'.htmlspecialchars(isset($_POST['employee_id']) ? $_POST['employee_id'] : '', ENT_QUOTES, 'UTF-8').'">';
-echo '<button type="submit" class="button">'._('View Employee History').'</button>';
+// Regression/lifecycle shortcut: open employee history using POST filter values.
+echo '<form method="post" action="../inquiry/employee_history.php" target="_blank" style="margin-top:8px;">';
+echo '<input type="hidden" name="_token" value="'.htmlspecialchars(ensure_csrf_token(), ENT_QUOTES, 'UTF-8').'">';
+echo '<input type="hidden" name="employee_id" value="'.htmlspecialchars($_POST['employee_id'], ENT_QUOTES, 'UTF-8').'">';
+echo '<input type="hidden" name="change_type" value="'.htmlspecialchars(HRM_HIST_SALARY_CHANGE, ENT_QUOTES, 'UTF-8').'">';
+echo '<button type="submit" class="button">'._('View Salary Change History').'</button>';
 echo '</form>';
 
 end_page();
