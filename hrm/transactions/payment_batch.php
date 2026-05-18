@@ -14,8 +14,18 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
+include_once($path_to_root . '/hrm/includes/db/payment_posting.inc');
 
 page(_("Payment Batch"));
+
+$default_bank_account = get_default_bank_account();
+if (!isset($_POST['bank_account']) || (int)$_POST['bank_account'] <= 0)
+    $_POST['bank_account'] = $default_bank_account ? $default_bank_account['id'] : '';
+if (!isset($_POST['payment_date']) || trim((string)$_POST['payment_date']) === '')
+    $_POST['payment_date'] = Today();
+if (!isset($_POST['payment_memo']))
+    $_POST['payment_memo'] = '';
 
 if (($period_id = find_submit('MarkPaid')) != -1) {
     $period_id = (int)$period_id;
@@ -27,10 +37,30 @@ if (($period_id = find_submit('MarkPaid')) != -1) {
         display_warning(_('The selected payroll period is already marked as paid.'));
     } elseif (!in_array((int)$period['status'], array(2, 3))) {
         display_error(_('Only approved or posted payroll periods can be marked as paid.'));
-    } elseif (mark_payroll_period_paid($period_id)) {
-        display_notification(_('Payroll period has been marked as Paid.'));
     } else {
-        display_error(_('Could not update payroll period status.'));
+        $bank_account = get_payroll_payment_bank_account(get_post('bank_account'));
+        if (!$bank_account) {
+            display_error(_('A valid source bank account is required.'));
+        } elseif (get_payroll_payment_payable_account() === false) {
+            display_error(_('Configure Payroll Payable Account in HR Settings before processing payroll batch payments.'));
+        } else {
+            $transactions = create_payment_transactions_for_period(
+                $period_id,
+                get_post('bank_account'),
+                get_post('payment_date'),
+                '',
+                get_post('payment_memo')
+            );
+            if ($transactions === false) {
+                display_error(_('Could not create payroll payment batch.'));
+            } elseif (count($transactions) > 0) {
+                display_notification(sprintf(_('Created %s bank payment transaction(s) and marked the payroll period as paid.'), count($transactions)));
+                $_POST['payment_memo'] = '';
+            } else {
+                display_notification(_('Payroll period has been marked as paid. No positive payable payslips required bank payment.'));
+                $_POST['payment_memo'] = '';
+            }
+        }
     }
 }
 
@@ -61,6 +91,12 @@ $status_labels = array(
 
 start_form();
 hidden('page_no', $page_no);
+start_table(TABLESTYLE_NOBORDER);
+bank_accounts_list_row(_('Pay From:'), 'bank_account', null, true);
+date_row(_('Payment Date:'), 'payment_date');
+textarea_row(_('Memo:'), 'payment_memo', null, 35, 2);
+end_table(1);
+
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Period ID'), _('Name'), _('From'), _('To'), _('Total Net'), _('Status'), '');
 table_header($th);
@@ -77,7 +113,7 @@ while ($row = db_fetch($result)) {
     label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
 
     if ((int)$row['status'] == 2 || (int)$row['status'] == 3)
-        submit_cells('MarkPaid'.$row['period_id'], _('Mark Paid'));
+        submit_cells('MarkPaid'.$row['period_id'], _('Process Batch'));
     else
         label_cell('');
 

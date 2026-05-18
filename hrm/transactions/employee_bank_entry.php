@@ -17,8 +17,19 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
+include_once($path_to_root.'/hrm/includes/db/payment_posting.inc');
 
 page(_($help_context = 'Payment Advice'));
+
+$default_bank_account = get_default_bank_account();
+if (!isset($_POST['bank_account']) || (int)$_POST['bank_account'] <= 0)
+    $_POST['bank_account'] = $default_bank_account ? $default_bank_account['id'] : '';
+if (!isset($_POST['payment_date']) || trim((string)$_POST['payment_date']) === '')
+    $_POST['payment_date'] = Today();
+if (!isset($_POST['payment_ref']) || trim((string)$_POST['payment_ref']) === '')
+    $_POST['payment_ref'] = get_payroll_payment_reference('', get_post('payment_date', Today()));
+if (!isset($_POST['payment_memo']))
+    $_POST['payment_memo'] = '';
 
 /**
  * Get payslip rows for payment advice list.
@@ -67,59 +78,100 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
 
     $sql .= " ORDER BY p.to_date DESC";
 
-    return db_query($sql, 'could not get payment advice rows');
+    $result = db_query($sql, 'could not get payment advice rows');
+    
+    // Validate query result
+    if (!$result)
+        return false;
+        
+    return $result;
 }
 
 if (($payslip_id = find_submit('MarkPaid')) != -1) {
     $payslip_id = (int)$payslip_id;
-    $payslip = get_payslip($payslip_id);
-
-    if (!$payslip) {
-        display_error(_('The selected payslip could not be found.'));
-    } elseif (payslip_is_voided($payslip)) {
-        display_error(_('Voided payslips cannot be marked as paid.'));
-    } elseif (payslip_is_paid($payslip)) {
-        display_warning(_('The selected payslip is already marked as paid.'));
-    } elseif (!payslip_requires_payment($payslip)) {
-        display_warning(_('Only payslips with a positive payable amount can be marked as paid.'));
+    
+    // Validate payslip_id is positive
+    if ($payslip_id <= 0) {
+        display_error(_('Invalid payslip ID provided.'));
     } else {
-        if (mark_payslip_paid($payslip_id))
-            display_notification(_('Payslip marked as paid.'));
-        else
-            display_error(_('Could not update payslip payment status.'));
+        $payslip = get_payslip($payslip_id);
+
+        // Comprehensive validation
+        if (!$payslip) {
+            display_error(_('The selected payslip could not be found.'));
+        } elseif (empty($payslip['payslip_id'])) {
+            display_error(_('The selected payslip does not have a valid ID.'));
+        } elseif (payslip_is_voided($payslip)) {
+            display_error(_('Voided payslips cannot be marked as paid.'));
+        } elseif (payslip_is_paid($payslip)) {
+            display_warning(_('The selected payslip is already marked as paid.'));
+        } else {
+            $validation = validate_payslip_payment($payslip, get_post('bank_account'));
+            if (!$validation['valid']) {
+                display_error($validation['message']);
+            } else {
+                $payment_trans_no = create_payment_transaction_for_payslip(
+                    $payslip_id,
+                    get_post('bank_account'),
+                    get_post('payment_date'),
+                    get_post('payment_ref'),
+                    get_post('payment_memo')
+                );
+                if ($payment_trans_no) {
+                    display_notification(sprintf(_('Payment transaction %s created and payslip marked as paid.'), $payment_trans_no));
+                    $_POST['payment_ref'] = get_payroll_payment_reference('', get_post('payment_date', Today()));
+                    $_POST['payment_memo'] = '';
+                } else {
+                    display_error(_('Could not create payroll payment transaction.'));
+                }
+            }
+        }
     }
 }
 
 $selected_employee = trim((string)get_post('employee_id', ''));
 $selected_employee_row = false;
 if ($selected_employee !== '') {
-    $selected_employee_row = get_employee_by_code($selected_employee);
-    if (!$selected_employee_row) {
-        display_error(_('The selected employee does not exist.'));
+    // Validate that employee ID is not excessively long (prevent buffer overflow)
+    if (strlen($selected_employee) > 100) {
+        display_error(_('Invalid employee ID: exceeds maximum length.'));
         $selected_employee = '';
+    } else {
+        $selected_employee_row = get_employee_by_code($selected_employee);
+        if (!$selected_employee_row) {
+            display_error(_('The selected employee does not exist.'));
+            $selected_employee = '';
+        }
     }
 }
 $show_paid = check_value('show_paid');
 
 start_form();
 
-start_table(TABLESTYLE2);
-$employee_sql = "SELECT employee_id, CONCAT(employee_id, ' - ', first_name, ' ', last_name) as name
-    FROM ".TB_PREF."employees WHERE !inactive";
-label_row(_('Employee:'), combo_input('employee_id', $selected_employee, $employee_sql, 'employee_id', 'name', array(
-    'spec_option' => _('-- All Employees --'),
-    'spec_id' => ''
-)));
-check_row(_('Show Already Paid:'), 'show_paid', $show_paid);
+start_table(TABLESTYLE_NOBORDER);
+
+start_row();
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+check_cells(_('Show Already Paid'), 'show_paid', $show_paid);
+submit_cells('refresh_list', _('Refresh'));
+end_row();
 end_table(1);
 
-submit_center('refresh_list', _('Refresh'));
+start_outer_table(TABLESTYLE, "data-order-header='1'");
+table_section(1);
+bank_accounts_list_row(_('Pay From:'), 'bank_account', null, true);
+date_row(_('Payment Date:'), 'payment_date');
+
+table_section(2);
+ref_row(_('Reference:'), 'payment_ref', '', get_payroll_payment_reference('', get_post('payment_date', Today())), false, ST_BANKPAYMENT, array('date' => get_post('payment_date', Today())));
+textarea_row(_('Memo:'), 'payment_memo', null, 35, 2);
+end_outer_table(1);
 
 $rows = get_payment_advice_rows($selected_employee, $show_paid);
 if (!$rows) {
     display_warning(_('Payslip header table is not available.'));
 } else {
-    start_table(TABLESTYLE);
+    start_table(TABLESTYLE, "width='100%'");
     $th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Payable Amount'), _('Status'), _('Action'));
     table_header($th);
 
@@ -127,11 +179,22 @@ if (!$rows) {
     while ($row = db_fetch_assoc($rows)) {
         alt_table_row_color($k);
 
-        label_cell($row['payslip_id']);
-        label_cell($row['employee_id'].' - '.$row['employee_name']);
-        label_cell(!empty($row['from_date']) ? sql2date($row['from_date']) : '-');
-        label_cell(!empty($row['to_date']) ? sql2date($row['to_date']) : '-');
-        amount_cell((float)$row['payable_amount']);
+        // Safely display payslip ID
+        $payslip_id_safe = isset($row['payslip_id']) ? (int)$row['payslip_id'] : '';
+        label_cell(!empty($payslip_id_safe) ? $payslip_id_safe : '-');
+        
+        // Safely display employee
+        $employee_safe = isset($row['employee_id']) ? $row['employee_id'] : '';
+        $employee_name_safe = isset($row['employee_name']) ? $row['employee_name'] : '';
+        label_cell(!empty($employee_safe) ? $employee_safe.' - '.$employee_name_safe : '-');
+        
+        // Safely display dates with null checking
+        label_cell(isset($row['from_date']) && !empty($row['from_date']) ? sql2date($row['from_date']) : '-');
+        label_cell(isset($row['to_date']) && !empty($row['to_date']) ? sql2date($row['to_date']) : '-');
+        
+        // Safely display payable amount
+        $payable_amount = isset($row['payable_amount']) ? (float)$row['payable_amount'] : 0;
+        amount_cell($payable_amount);
 
         $status_txt = payslip_payment_status_label($row);
         label_cell($status_txt);
@@ -139,7 +202,7 @@ if (!$rows) {
         if (payslip_is_paid($row) || payslip_is_voided($row) || !payslip_requires_payment($row))
             label_cell('-');
         else
-            submit_cells('MarkPaid'.$row['payslip_id'], _('Mark Paid'), false, '', '', false);
+            submit_cells('MarkPaid'.$payslip_id_safe, _('Process Payment'), false, '', '', false);
 
         end_row();
     }

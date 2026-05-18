@@ -615,9 +615,10 @@ function get_payslip($payslip_id) {
  *
  * @param int $payslip_id
  * @param int|null $payment_trans_no
+ * @param bool $use_transaction
  * @return bool
  */
-function mark_payslip_paid($payslip_id, $payment_trans_no=null) {
+function mark_payslip_paid($payslip_id, $payment_trans_no=null, $use_transaction=true) {
 	$payslip_id = (int)$payslip_id;
 	if ($payslip_id <= 0)
 		return false;
@@ -626,27 +627,37 @@ function mark_payslip_paid($payslip_id, $payment_trans_no=null) {
 	if (!$payslip || payslip_is_voided($payslip))
 		return false;
 
-	if (payslip_is_paid($payslip)) {
-		if (!empty($payslip['payroll_period_id']) && function_exists('sync_payroll_period_payment_status'))
-			sync_payroll_period_payment_status((int)$payslip['payroll_period_id']);
-		return true;
+	$data = array();
+	if (!payslip_is_paid($payslip))
+		$data['status'] = payslip_paid_status_value();
+
+	if ($payment_trans_no !== null) {
+		$payment_trans_no = (int)$payment_trans_no;
+		$current_trans_no = isset($payslip['payment_trans_no']) ? (int)$payslip['payment_trans_no'] : 0;
+
+		if ($payment_trans_no > 0 && $current_trans_no !== $payment_trans_no)
+			$data['payment_trans_no'] = $payment_trans_no;
+		elseif ($payment_trans_no <= 0 && $current_trans_no > 0)
+			$data['payment_trans_no'] = null;
 	}
 
-	$data = array('status' => payslip_paid_status_value());
-	if ($payment_trans_no !== null)
-		$data['payment_trans_no'] = (int)$payment_trans_no > 0 ? (int)$payment_trans_no : null;
+	if ($use_transaction)
+		begin_transaction();
 
-	begin_transaction();
-	$ok = update_payslip($payslip_id, $data);
+	$ok = true;
+	if (!empty($data))
+		$ok = update_payslip($payslip_id, $data);
 	if ($ok && !empty($payslip['payroll_period_id']) && function_exists('sync_payroll_period_payment_status'))
 		$ok = sync_payroll_period_payment_status((int)$payslip['payroll_period_id']);
 
 	if (!$ok) {
-		cancel_transaction();
+		if ($use_transaction)
+			cancel_transaction();
 		return false;
 	}
 
-	commit_transaction();
+	if ($use_transaction)
+		commit_transaction();
 	return true;
 }
 
