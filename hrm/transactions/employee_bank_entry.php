@@ -119,6 +119,8 @@ if (($payslip_id = find_submit('MarkPaid')) != -1) {
                 );
                 if ($payment_trans_no) {
                     display_notification(sprintf(_('Payment transaction %s created and payslip marked as paid.'), $payment_trans_no));
+                    display_note(get_trans_view_str(ST_BANKPAYMENT, $payment_trans_no, _('&View this Payment')));
+                    display_note(get_gl_view_str(ST_BANKPAYMENT, $payment_trans_no, _('&View the GL Postings for this Payment')));
                     $_POST['payment_ref'] = get_payroll_payment_reference('', get_post('payment_date', Today()));
                     $_POST['payment_memo'] = '';
                 } else {
