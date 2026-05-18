@@ -114,9 +114,12 @@ function update_employee_loan($loan_id, $loan_type_id, $loan_amount, $interest_r
         || !loan_has_valid_repayment_start_date($loan_date_sql, $first_repayment_sql))
         return false;
 
+    // For pending loans (status=0), keep outstanding_amount in sync with loan_amount.
+    // Active loans (status=1) have their outstanding managed by apply_loan_repayment().
     $sql = "UPDATE ".TB_PREF."employee_loans SET
         loan_type_id = ".db_escape((int)$loan_type_id).",
         loan_amount = ".db_escape((float)$loan_amount).",
+        outstanding_amount = CASE WHEN status = 0 THEN ".db_escape((float)$loan_amount)." ELSE outstanding_amount END,
         interest_rate = ".db_escape((float)$interest_rate).",
         installments = ".db_escape((int)$installments).",
         installment_amount = ".db_escape((float)$installment_amount).",
@@ -177,12 +180,18 @@ function get_employee_loans($employee_id='', $status=null) {
  * @return bool
  */
 function delete_employee_loan($loan_id) {
+    // Verify the loan is actually pending before touching any data.
+    $check = db_query("SELECT loan_id FROM ".TB_PREF."employee_loans WHERE loan_id = ".db_escape((int)$loan_id)." AND status = 0", 'could not check loan status');
+    if (!db_fetch_assoc($check))
+        return false;
+
     begin_transaction();
     db_query("DELETE FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id), 'could not delete loan repayments');
-    $result = db_query("DELETE FROM ".TB_PREF."employee_loans WHERE loan_id = ".db_escape((int)$loan_id)." AND status = 0", 'could not delete employee loan');
+    db_query("DELETE FROM ".TB_PREF."employee_loans WHERE loan_id = ".db_escape((int)$loan_id)." AND status = 0", 'could not delete employee loan');
+    $deleted = db_num_affected_rows() > 0;
     commit_transaction();
 
-    return (bool)$result;
+    return $deleted;
 }
 
 /**
@@ -245,10 +254,12 @@ function generate_loan_repayment_schedule($loan_id) {
         $interest = $interest_each;
 
         if ($index === $installments) {
-            $scheduled_principal_sql = "SELECT IFNULL(SUM(principal_amount),0) amount FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id);
-            $scheduled_result = db_query($scheduled_principal_sql, 'could not aggregate principal');
+            // Absorb cumulative rounding errors in both principal and interest on the last row.
+            $scheduled_sql = "SELECT IFNULL(SUM(principal_amount),0) p, IFNULL(SUM(interest_amount),0) i FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id);
+            $scheduled_result = db_query($scheduled_sql, 'could not aggregate scheduled amounts');
             $scheduled_row = db_fetch_assoc($scheduled_result);
-            $principal = round2($loan_amount - (float)$scheduled_row['amount'], user_price_dec());
+            $principal = round2($loan_amount - (float)$scheduled_row['p'], user_price_dec());
+            $interest  = round2($total_interest - (float)$scheduled_row['i'], user_price_dec());
         }
 
         add_loan_repayment_row((int)$loan_id, $index, $current->format('Y-m-d'), $principal, $interest);
@@ -276,6 +287,16 @@ function approve_employee_loan($loan_id, $approved_by='') {
     db_query($sql, 'could not approve employee loan');
 
     $ok = generate_loan_repayment_schedule((int)$loan_id);
+
+    // Sync outstanding_amount to the actual repayment schedule total (includes interest).
+    if ($ok) {
+        $total_sql = "SELECT IFNULL(SUM(total_amount),0) tot FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id);
+        $total_result = db_query($total_sql, 'could not sum repayment schedule');
+        $total_row = db_fetch_assoc($total_result);
+        db_query("UPDATE ".TB_PREF."employee_loans SET outstanding_amount = ".db_escape((float)$total_row['tot'])."
+            WHERE loan_id = ".db_escape((int)$loan_id), 'could not sync outstanding amount after approve');
+    }
+
     commit_transaction();
 
     return $ok;

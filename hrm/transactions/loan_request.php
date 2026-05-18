@@ -57,11 +57,29 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif (input_num('loan_amount') <= 0) {
         display_error(_('Loan amount must be greater than zero.'));
         set_focus('loan_amount');
+    } elseif (input_num('interest_rate') < 0) {
+        display_error(_('Interest rate cannot be negative.'));
+        set_focus('interest_rate');
+    } elseif ((int)$_POST['installments'] > 360) {
+        display_error(_('Installments cannot exceed 360.'));
+        set_focus('installments');
     } else {
         $loan_type = get_loan_type((int)$_POST['loan_type_id']);
         $interest_rate = input_num('interest_rate');
         if ($interest_rate == 0 && $loan_type)
             $interest_rate = (float)$loan_type['interest_rate'];
+
+        if ($loan_type && $loan_type['max_amount'] !== null && $loan_type['max_amount'] > 0
+            && input_num('loan_amount') > (float)$loan_type['max_amount']) {
+            display_error(sprintf(_('Loan amount exceeds the maximum of %s for this loan type.'),
+                price_format((float)$loan_type['max_amount'])));
+            set_focus('loan_amount');
+        } elseif ($loan_type && $loan_type['max_installments'] !== null && $loan_type['max_installments'] > 0
+            && (int)$_POST['installments'] > (int)$loan_type['max_installments']) {
+            display_error(sprintf(_('Installments exceed the maximum of %d for this loan type.'),
+                (int)$loan_type['max_installments']));
+            set_focus('installments');
+        } else {
 
         $installments = max((int)$_POST['installments'], 1);
         $total = input_num('loan_amount') + (input_num('loan_amount') * $interest_rate / 100);
@@ -96,6 +114,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         }
 
         $Mode = 'RESET';
+        } // end max_amount/max_installments else
     }
 }
 
@@ -114,6 +133,7 @@ foreach ($_POST as $name => $value) {
         if ($loan_id > 0) {
             approve_employee_loan($loan_id, current_hrm_user_login());
             display_notification(_('Loan request has been approved.'));
+            $Mode = 'RESET';
         }
     }
     if (strpos($name, 'Cancel') === 0) {
@@ -121,6 +141,7 @@ foreach ($_POST as $name => $value) {
         if ($loan_id > 0) {
             cancel_employee_loan($loan_id);
             display_notification(_('Loan request has been cancelled.'));
+            $Mode = 'RESET';
         }
     }
 }
