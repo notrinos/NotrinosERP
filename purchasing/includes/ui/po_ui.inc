@@ -546,6 +546,12 @@ function display_direct_grn_tracking_inputs($line_no, $purchase_order_line, $col
 //---------------------------------------------------------------------------------------------------
 
 function display_po_summary(&$po, $is_self=false, $editable=false) {
+	$location_label = '-';
+	if ($po->Location !== '') {
+		$location = get_item_location($po->Location);
+		$location_label = $location ? $location['location_name'] : $po->Location;
+	}
+
 	start_table(TABLESTYLE, "width='90%'");
 
 	start_row();
@@ -570,7 +576,7 @@ function display_po_summary(&$po, $is_self=false, $editable=false) {
 		locations_list_cells(null, 'Location', $_POST['Location']);
 	}
 	else
-		label_cells(_('Deliver Into Location'), get_location_name($po->Location), "class='tableheader2'");
+		label_cells(_('Deliver Into Location'), $location_label, "class='tableheader2'");
 
 	if ($po->supp_ref != "")
 		label_cells(_("Supplier's Reference"), $po->supp_ref, "class='tableheader2'");

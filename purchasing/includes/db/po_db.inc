@@ -176,10 +176,10 @@ function get_po($order_no) {
 
 function read_po_header($order_no, &$order) {
 		$sql = "SELECT po.*, supplier.*, loc.location_name 
-		FROM ".TB_PREF."purch_orders po,".TB_PREF."suppliers supplier,".TB_PREF."locations loc
-		WHERE po.supplier_id = supplier.supplier_id
-		AND loc.loc_code = into_stock_location
-		AND po.order_no = ".db_escape($order_no);
+		FROM ".TB_PREF."purch_orders po
+		INNER JOIN ".TB_PREF."suppliers supplier ON po.supplier_id = supplier.supplier_id
+		LEFT JOIN ".TB_PREF."locations loc ON loc.loc_code = po.into_stock_location
+		WHERE po.order_no = ".db_escape($order_no);
 
 	$result = db_query($sql, 'The order cannot be retrieved');
 

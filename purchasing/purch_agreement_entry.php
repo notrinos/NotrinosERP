@@ -87,6 +87,18 @@ function can_save_purchase_agreement_header()
 		return false;
 	}
 
+	if (trim(get_post('delivery_location')) === '') {
+		display_error(_('You must select a delivery location.'));
+		set_focus('delivery_location');
+		return false;
+	}
+
+	if (!get_item_location(trim(get_post('delivery_location')))) {
+		display_error(_('The selected delivery location is invalid.'));
+		set_focus('delivery_location');
+		return false;
+	}
+
 	if (!is_date(get_post('date_start'))) {
 		display_error(_('The agreement start date is invalid.'));
 		set_focus('date_start');

@@ -1225,6 +1225,27 @@ function get_active_purch_agreement_options($supplier_id, $date = '')
 }
 
 /**
+ * Resolve a valid stock location row for an agreement-created purchase order.
+ *
+ * @param array $agreement
+ * @return array|false
+ */
+function get_purch_agreement_order_location($agreement)
+{
+	$delivery_location = isset($agreement['delivery_location']) ? trim($agreement['delivery_location']) : '';
+	if ($delivery_location !== '') {
+		$location = get_item_location($delivery_location);
+		if ($location)
+			return $location;
+	}
+
+	$locations = get_item_locations(false);
+	$location = db_fetch($locations);
+
+	return $location ? $location : false;
+}
+
+/**
  * Create a purchase order from a purchase agreement.
  *
  * @param int   $agreement_id
@@ -1239,15 +1260,21 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 	if (!$agreement || $agreement['status'] !== 'active')
 		return false;
 
+	$location = get_purch_agreement_order_location($agreement);
+	if (!$location)
+		return false;
+
 	update_agreement_fulfillment($agreement_id);
 
 	$purchase_order = new purch_order();
 	$purchase_order->trans_type = ST_PURCHORDER;
 	$purchase_order->orig_order_date = Today();
 	$purchase_order->due_date = Today();
-	$purchase_order->Location = $agreement['delivery_location'];
+	$purchase_order->Location = $location['loc_code'];
 	$purchase_order->Comments = sprintf(_('Created from Purchase Agreement %s'), $agreement['reference']);
-	$purchase_order->delivery_address = $agreement['delivery_location_name'] ? $agreement['delivery_location_name'] : $agreement['delivery_location'];
+	$purchase_order->delivery_address = $location['delivery_address'] !== ''
+		? $location['delivery_address']
+		: ($location['location_name'] !== '' ? $location['location_name'] : $location['loc_code']);
 
 	get_supplier_details_to_order($purchase_order, (int)$agreement['supplier_id']);
 	$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
