@@ -91,13 +91,15 @@ $status_labels = array(
 
 start_form();
 hidden('page_no', $page_no);
-start_table(TABLESTYLE_NOBORDER);
+start_outer_table(TABLESTYLE, "data-order-header='1'");
+table_section(1);
 bank_accounts_list_row(_('Pay From:'), 'bank_account', null, true);
 date_row(_('Payment Date:'), 'payment_date');
-textarea_row(_('Memo:'), 'payment_memo', null, 35, 2);
-end_table(1);
+table_section(2);
+textarea_row(_('Memo:'), 'payment_memo', null, 35, 5);
+end_outer_table(1);
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Period ID'), _('Name'), _('From'), _('To'), _('Total Net'), _('Status'), '');
 table_header($th);
 
@@ -121,7 +123,7 @@ while ($row = db_fetch($result)) {
 }
 end_table(1);
 
-start_table(TABLESTYLE2, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 start_row();
 label_cell(sprintf(_('Showing %s to %s of %s payroll period(s)'), $total_periods ? ($offset + 1) : 0, min($offset + $per_page, $total_periods), $total_periods));
 submit_cells('prev_page', _('Previous'), $page_no > 0, '', '', $page_no <= 0);
