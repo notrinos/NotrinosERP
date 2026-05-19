@@ -45,6 +45,12 @@ if (isset($_POST['add_opening'])) {
         display_error(_('Job title is required.'));
     elseif (!is_date(get_post('opening_date')))
         display_error(_('Opening date is invalid.'));
+    elseif (trim(get_post('closing_date')) !== '' && !is_date(get_post('closing_date')))
+        display_error(_('Closing date is invalid.'));
+    elseif (trim(get_post('closing_date')) !== '' && date_comp(get_post('closing_date'), get_post('opening_date')) < 0)
+        display_error(_('Closing date cannot be before opening date.'));
+    elseif (!check_num('headcount', 1))
+        display_error(_('Headcount must be a positive integer.'));
     else {
         add_recruitment_opening(array(
             'job_title' => get_post('job_title'),
@@ -65,6 +71,12 @@ if (isset($_POST['add_applicant'])) {
         display_error(_('Applicant name is required.'));
     elseif (!is_date(get_post('applied_date')))
         display_error(_('Applied date is invalid.'));
+    elseif (trim(get_post('email')) !== '' && !filter_var(get_post('email'), FILTER_VALIDATE_EMAIL))
+        display_error(_('Email address is invalid.'));
+    elseif ((int)get_post('opening_id', 0) > 0 && !get_recruitment_opening(get_post('opening_id', 0)))
+        display_error(_('Selected recruitment opening was not found.'));
+    elseif (trim(get_post('expected_salary', '')) !== '' && !is_numeric(get_post('expected_salary', '')))
+        display_error(_('Expected salary must be numeric.'));
     else {
         add_recruitment_applicant(array(
             'opening_id' => get_post('opening_id', 0),

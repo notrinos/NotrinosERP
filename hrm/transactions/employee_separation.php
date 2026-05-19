@@ -54,9 +54,15 @@ if (isset($_POST['Calculate']) || isset($_POST['Process'])) {
     if ($_POST['employee_id'] != '' && $_POST['employee_id'] != ALL_TEXT && is_date($_POST['separation_date'])) {
         $employee = get_employee_by_code($_POST['employee_id']);
         if ($employee && !empty($employee['hire_date'])) {
-            $monthly_salary = get_employee_total_salary($_POST['employee_id'], $_POST['separation_date']);
-            $years = employee_service_years(sql2date($employee['hire_date']), $_POST['separation_date']);
-            $eos_amount = calculate_eos_amount($monthly_salary, $years, check_value('is_resignation') ? 1 : 0);
+            $hire_date = sql2date($employee['hire_date']);
+            if (date_comp($_POST['separation_date'], $hire_date) < 0) {
+                display_error(_('Separation date cannot be before hire date.'));
+                set_focus('separation_date');
+            } else {
+                $monthly_salary = get_employee_total_salary($_POST['employee_id'], $_POST['separation_date']);
+                $years = employee_service_years($hire_date, $_POST['separation_date']);
+                $eos_amount = calculate_eos_amount($monthly_salary, $years, check_value('is_resignation') ? 1 : 0);
+            }
         }
     }
 }
@@ -72,6 +78,9 @@ if (isset($_POST['Process'])) {
         $employee = get_employee_by_code($_POST['employee_id']);
         if (!$employee) {
             display_error(_('Selected employee was not found.'));
+        } elseif (!empty($employee['hire_date']) && date_comp($_POST['separation_date'], sql2date($employee['hire_date'])) < 0) {
+            display_error(_('Separation date cannot be before hire date.'));
+            set_focus('separation_date');
         } else {
             update_employee($_POST['employee_id'], array(
                 'inactive' => 1,

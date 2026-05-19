@@ -42,10 +42,22 @@ if (isset($_POST['add_course'])) {
 if (isset($_POST['assign_training'])) {
     if (trim(get_post('employee_id')) == '' || get_post('employee_id') == ALL_TEXT)
         display_error(_('Please select an employee.'));
+    elseif (!get_employee_by_code(get_post('employee_id')))
+        display_error(_('Selected employee was not found.'));
     elseif ((int)get_post('course_id', 0) <= 0)
         display_error(_('Please select a training course.'));
+    elseif (!get_training_course(get_post('course_id', 0)))
+        display_error(_('Selected training course was not found.'));
     elseif (!is_date(get_post('training_date')))
         display_error(_('Training date is invalid.'));
+    elseif (trim(get_post('completion_date')) !== '' && !is_date(get_post('completion_date')))
+        display_error(_('Completion date is invalid.'));
+    elseif (trim(get_post('completion_date')) !== '' && date_comp(get_post('completion_date'), get_post('training_date')) < 0)
+        display_error(_('Completion date cannot be before training date.'));
+    elseif (trim(get_post('score', '')) !== '' && !is_numeric(get_post('score', '')))
+        display_error(_('Score must be numeric.'));
+    elseif (trim(get_post('cost_amount', '')) !== '' && !is_numeric(get_post('cost_amount', '')))
+        display_error(_('Cost amount must be numeric.'));
     else {
         add_employee_training(array(
             'employee_id' => get_post('employee_id'),

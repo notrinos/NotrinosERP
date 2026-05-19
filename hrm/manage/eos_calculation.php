@@ -26,6 +26,9 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } elseif (trim($_POST['to_years']) !== '' && !is_numeric($_POST['to_years'])) {
         display_error(_('To years must be numeric.'));
         set_focus('to_years');
+    } elseif (trim($_POST['to_years']) !== '' && input_num('to_years') < input_num('from_years')) {
+        display_error(_('To years must be greater than or equal to from years.'));
+        set_focus('to_years');
     } elseif (!is_numeric($_POST['termination_rate']) || !is_numeric($_POST['resignation_rate'])) {
         display_error(_('Termination and resignation rates must be numeric.'));
     } else {
