@@ -163,7 +163,7 @@ $status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'),
 
 start_form();
 
-start_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
     $myrow = get_employee_loan($selected_id);
     if ($myrow && (int)$myrow['status'] == 0) {
@@ -178,18 +178,22 @@ if ($selected_id != '' && $Mode == 'Edit') {
         hidden('selected_id', $selected_id);
     }
 }
-
+table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
 loan_types_list_row(_('Loan Type:'), 'loan_type_id');
 amount_row(_('Loan Amount:'), 'loan_amount');
 amount_row(_('Interest Rate (%):'), 'interest_rate');
+
+table_section(2);
 small_amount_row(_('Installments:'), 'installments', get_post('installments', 1), 1, 360);
 date_row(_('Loan Date:'), 'loan_date');
 date_row(_('First Repayment Date:'), 'first_repayment');
 textarea_row(_('Notes:'), 'notes', null, 50, 3);
 
-end_table(1);
+end_outer_table();
 submit_add_or_update_center($selected_id == '', '', 'both');
+
+br();
 
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('ID'), _('Employee'), _('Loan Type'), _('Amount'), _('Outstanding'), _('Installments'), _('Loan Date'), _('Status'), '', '', '', '');
