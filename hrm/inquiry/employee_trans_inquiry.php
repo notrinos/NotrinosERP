@@ -89,6 +89,37 @@ function get_employee_loan_inquiry_sql($employee_id, $from_date, $to_date) {
 }
 
 /**
+ * Build loan repayment inquiry SQL for the selected employee and date range.
+ *
+ * @param string $employee_id
+ * @param string $from_date
+ * @param string $to_date
+ * @return string
+ */
+function get_employee_repayment_inquiry_sql($employee_id, $from_date, $to_date) {
+    $where = array("l.employee_id = ".db_escape($employee_id));
+    if ($from_date !== '')
+        $where[] = "r.due_date >= ".db_escape(loan_to_sql_date($from_date));
+    if ($to_date !== '')
+        $where[] = "r.due_date <= ".db_escape(loan_to_sql_date($to_date));
+
+        return "SELECT r.repayment_id,
+            r.loan_id,
+            lt.loan_type_name,
+            r.installment_no,
+            r.due_date,
+            r.total_amount,
+            r.paid_amount,
+            (r.total_amount - IFNULL(r.paid_amount, 0)) AS outstanding_amount,
+            r.status
+        FROM ".TB_PREF."loan_repayments r
+        JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id
+        LEFT JOIN ".TB_PREF."loan_types lt ON lt.loan_type_id = l.loan_type_id
+        WHERE ".implode(' AND ', $where)."
+        ORDER BY r.due_date DESC, r.repayment_id DESC";
+}
+
+/**
  * Build employee payment inquiry SQL for core bank payment transactions.
  *
  * @param string $employee_id
@@ -108,10 +139,9 @@ function get_employee_payment_inquiry_sql($employee_id, $from_date, $to_date) {
     if ($to_date !== '')
         $where[] = "bt.trans_date <= ".db_escape(date2sql($to_date));
 
-    return "SELECT bt.type,
-            bt.trans_no,
-            IFNULL(r.reference, '') AS reference,
+        return "SELECT bt.trans_no,
             bt.trans_date,
+            IFNULL(r.reference, '') AS reference,
             ba.bank_account_name,
             ABS(bt.amount) AS payment_amount,
             IFNULL(c.memo_, '') AS memo_
@@ -149,6 +179,20 @@ function employee_trans_loan_status($row, $cell) {
 }
 
 /**
+ * Format loan repayment status labels for pager output.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function employee_trans_repayment_status($row, $cell) {
+    $status_labels = array(0 => _('Scheduled'), 1 => _('Paid'), 2 => _('Overdue'));
+    $status = (int)$cell;
+
+    return isset($status_labels[$status]) ? $status_labels[$status] : $cell;
+}
+
+/**
  * Render a bank payment transaction link for pager output.
  *
  * @param array $row
@@ -156,7 +200,7 @@ function employee_trans_loan_status($row, $cell) {
  * @return string
  */
 function employee_trans_payment_view($row, $cell) {
-    return get_trans_view_str($row['type'], $row['trans_no'], $cell !== '' ? $cell : $row['trans_no']);
+    return get_trans_view_str(ST_BANKPAYMENT, $row['trans_no'], $cell !== '' ? $cell : $row['trans_no']);
 }
 
 /**
@@ -167,7 +211,7 @@ function employee_trans_payment_view($row, $cell) {
  * @return string
  */
 function employee_trans_payment_gl_view($row, $cell) {
-    return get_gl_view_str($row['type'], $row['trans_no'], _('GL'));
+    return get_gl_view_str(ST_BANKPAYMENT, $row['trans_no'], _('GL'));
 }
 
 /**
@@ -223,6 +267,32 @@ function display_employee_loan_transactions($employee_id, $from_date, $to_date) 
 }
 
 /**
+ * Render the loan repayment transactions pager.
+ *
+ * @param string $employee_id
+ * @param string $from_date
+ * @param string $to_date
+ * @return void
+ */
+function display_employee_repayment_transactions($employee_id, $from_date, $to_date) {
+    $cols = array(
+        _('Repayment ID') => array('name' => 'repayment_id', 'ord' => 'desc'),
+        _('Loan ID') => array('name' => 'loan_id', 'ord' => ''),
+        _('Loan Type') => array('name' => 'loan_type_name', 'ord' => ''),
+        _('Installment #') => array('name' => 'installment_no', 'ord' => ''),
+        _('Due Date') => array('name' => 'due_date', 'type' => 'date', 'ord' => 'desc'),
+        _('Total Amount') => array('name' => 'total_amount', 'type' => 'amount'),
+        _('Paid Amount') => array('name' => 'paid_amount', 'type' => 'amount'),
+        _('Outstanding') => array('name' => 'outstanding_amount', 'type' => 'amount'),
+        _('Status') => array('name' => 'status', 'fun' => 'employee_trans_repayment_status', 'ord' => '')
+    );
+
+    $table =& new_db_pager('employee_repayment_tbl', get_employee_repayment_inquiry_sql($employee_id, $from_date, $to_date), $cols);
+    $table->width = '95%';
+    display_db_pager($table);
+}
+
+/**
  * Render the payment transactions pager.
  *
  * @param string $employee_id
@@ -232,7 +302,7 @@ function display_employee_loan_transactions($employee_id, $from_date, $to_date) 
  */
 function display_employee_payment_transactions($employee_id, $from_date, $to_date) {
     $cols = array(
-        _('#') => array('name' => 'reference', 'fun' => 'employee_trans_payment_view', 'ord' => ''),
+        _('#') => array('name' => 'trans_no', 'fun' => 'employee_trans_payment_view', 'ord' => '', 'align' => 'center'),
         _('Date') => array('name' => 'trans_date', 'type' => 'date', 'ord' => 'desc'),
         _('Reference') => array('name' => 'reference', 'ord' => ''),
         _('Bank Account') => array('name' => 'bank_account_name', 'ord' => ''),
@@ -266,6 +336,7 @@ if ($employee_id != '' && $employee_id != ALL_TEXT) {
     $tabs = array(
         'payslips' => array(_('Payslip Transactions'), true),
         'loans' => array(_('Loan Transactions'), true),
+        'repayments' => array(_('Loan Repayment Transactions'), true),
         'payments' => array(_('Payment Transactions'), true)
     );
 
@@ -274,6 +345,10 @@ if ($employee_id != '' && $employee_id != ALL_TEXT) {
     switch (get_post('_employee_trans_tabs_sel')) {
         case 'loans':
             display_employee_loan_transactions($employee_id, get_post('from_date'), get_post('to_date'));
+            break;
+
+        case 'repayments':
+            display_employee_repayment_transactions($employee_id, get_post('from_date'), get_post('to_date'));
             break;
 
         case 'payments':
