@@ -24,6 +24,7 @@ include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
+include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 
@@ -156,6 +157,9 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $doc->leave_days = $attendance['leave_days'];
     $doc->absent_days = $attendance['absent_days'];
     $doc->overtime_hours = $attendance['overtime_hours'];
+    $doc->paid_leave_days = isset($attendance['paid_leave_days']) ? (float)$attendance['paid_leave_days'] : 0.0;
+    $doc->unpaid_leave_days = isset($attendance['unpaid_leave_days']) ? (float)$attendance['unpaid_leave_days'] : (float)$doc->absent_days;
+    $doc->payable_days = isset($attendance['payable_days']) ? (float)$attendance['payable_days'] : (float)$doc->worked_days;
 
     $salary_components = array();
     if (isset($context['salary_components'][$doc->employee_id]) && is_array($context['salary_components'][$doc->employee_id]))
@@ -171,8 +175,8 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $doc->basic_salary = $basic;
 
     $working_days = max((float)$doc->working_days, 1.0);
-    $worked_days = (float)$doc->worked_days;
-    if ($worked_days <= 0 && $doc->absent_days <= 0)
+    $worked_days = min(max((float)$doc->payable_days, 0.0), $working_days);
+    if ($worked_days <= 0 && (float)$doc->unpaid_leave_days <= 0)
         $worked_days = $working_days;
 
     $daily_rate = $basic / $working_days;
@@ -182,10 +186,14 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
         'BASIC' => $basic,
         'GROSS' => $basic,
         'DAYS_WORKED' => $worked_days,
+        'PAYABLE_DAYS' => $worked_days,
         'WORKING_DAYS' => $working_days,
         'DAYS_IN_MONTH' => $working_days,
+        'LEAVE_DAYS' => (float)$doc->leave_days,
+        'PAID_LEAVE_DAYS' => (float)$doc->paid_leave_days,
+        'ABSENT_DAYS' => (float)$doc->absent_days,
         'OVERTIME_HOURS' => (float)$doc->overtime_hours,
-        'UNPAID_LEAVE_DAYS' => (float)$doc->absent_days,
+        'UNPAID_LEAVE_DAYS' => (float)$doc->unpaid_leave_days,
         'HOURLY_RATE' => $hourly_rate
     ));
 
@@ -592,15 +600,10 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
     $worked_days = (float)@$row['worked_days'];
     $absent_days = (float)@$row['absent_days'];
 
-    $leave_sql = "SELECT SUM(days) as leave_days
-        FROM ".TB_PREF."leave_details
-        WHERE employee_id = ".db_escape($employee_id)."
-        AND from_date <= ".db_escape($to_sql)."
-        AND to_date >= ".db_escape($from_sql)."
-        AND approval_status <> 'rejected'";
-    $leave_res = db_query($leave_sql, 'Could not get leave summary');
-    $leave_row = db_fetch_assoc($leave_res);
-    $leave_days = (float)@$leave_row['leave_days'];
+    $leave_summary = _payroll_get_leave_summary($employee_id, $from_sql, $to_sql);
+    $leave_days = (float)$leave_summary['leave_days'];
+    $paid_leave_days = (float)$leave_summary['paid_leave_days'];
+    $leave_unpaid_days = (float)$leave_summary['unpaid_leave_days'];
 
     if ($worked_days <= 0 && $absent_days <= 0)
         $worked_days = max($working_days - $leave_days, 0.0);
@@ -613,6 +616,12 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
         $extra_absent_days = _calculate_extra_absent_days($employee_id, $from_sql, $to_sql);
     }
 
+    $payable_days = $worked_days + $paid_leave_days;
+    if ($payable_days > $working_days)
+        $payable_days = (float)$working_days;
+
+    $unpaid_leave_days = $leave_unpaid_days + $absent_days + $extra_absent_days;
+
     $attendance_cache[$cache_key] = array(
         'working_days' => (float)$working_days,
         'worked_days' => (float)$worked_days,
@@ -621,11 +630,138 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
         'extra_absent_days' => $extra_absent_days,
         'overtime_hours' => (float)@$row['overtime_hours'],
         'late_minutes' => 0.0,
-        'paid_leave_days' => (float)$leave_days,
-        'unpaid_leave_days' => (float)$absent_days + $extra_absent_days
+        'paid_leave_days' => (float)$paid_leave_days,
+        'unpaid_leave_days' => (float)$unpaid_leave_days,
+        'payable_days' => (float)$payable_days
     );
 
     return $attendance_cache[$cache_key];
+}
+
+/**
+ * Get effective leave day totals for the requested period.
+ *
+ * Clips overlapping leave rows to the payslip window, ignores non-approved
+ * requests, and converts leave payability into paid/unpaid day equivalents.
+ *
+ * @param string $employee_id
+ * @param string $from_sql SQL date Y-m-d
+ * @param string $to_sql SQL date Y-m-d
+ * @return array
+ */
+function _payroll_get_leave_summary($employee_id, $from_sql, $to_sql) {
+    static $leave_cache = array();
+
+    $cache_key = $employee_id.'|'.$from_sql.'|'.$to_sql;
+    if (isset($leave_cache[$cache_key]))
+        return $leave_cache[$cache_key];
+
+    $summary = array(
+        'leave_days' => 0.0,
+        'paid_leave_days' => 0.0,
+        'unpaid_leave_days' => 0.0,
+    );
+
+    if (!function_exists('employee_table_exists') || !employee_table_exists('leave_details')) {
+        $leave_cache[$cache_key] = $summary;
+        return $leave_cache[$cache_key];
+    }
+
+    $has_leave_types = employee_table_exists('leave_types');
+    $select_pay_rate = ($has_leave_types && function_exists('leave_type_has_column') && leave_type_has_column('pay_rate'))
+        ? 'lt.pay_rate'
+        : 'NULL';
+    $select_is_paid = ($has_leave_types && function_exists('leave_type_has_column') && leave_type_has_column('is_paid'))
+        ? 'lt.is_paid'
+        : 'NULL';
+    $join_leave_types = $has_leave_types
+        ? ' LEFT JOIN '.TB_PREF.'leave_types lt ON lt.leave_id = ld.leave_type_id'
+        : '';
+
+    $sql = "SELECT ld.from_date, ld.to_date, ld.days, ".$select_pay_rate." AS pay_rate, ".$select_is_paid." AS is_paid
+        FROM ".TB_PREF."leave_details ld".$join_leave_types."
+        WHERE ld.employee_id = ".db_escape($employee_id)."
+        AND ld.from_date <= ".db_escape($to_sql)."
+        AND ld.to_date >= ".db_escape($from_sql)."
+        AND COALESCE(ld.approval_status, '') = ".db_escape(HRM_STATUS_APPROVED);
+    $result = db_query($sql, 'Could not get leave summary');
+
+    while ($row = db_fetch_assoc($result)) {
+        $range_days = _payroll_count_days_inclusive($row['from_date'], $row['to_date']);
+        if ($range_days <= 0)
+            continue;
+
+        $overlap_from = ($row['from_date'] > $from_sql) ? $row['from_date'] : $from_sql;
+        $overlap_to = ($row['to_date'] < $to_sql) ? $row['to_date'] : $to_sql;
+        $overlap_days = _payroll_count_days_inclusive($overlap_from, $overlap_to);
+        if ($overlap_days <= 0)
+            continue;
+
+        $recorded_days = isset($row['days']) && is_numeric($row['days']) ? max((float)$row['days'], 0.0) : 0.0;
+        $effective_days = $recorded_days > 0
+            ? min($recorded_days, ($recorded_days * $overlap_days / $range_days))
+            : (float)$overlap_days;
+
+        $pay_ratio = _payroll_get_leave_pay_ratio($row);
+        $paid_days = $effective_days * $pay_ratio;
+
+        $summary['leave_days'] += $effective_days;
+        $summary['paid_leave_days'] += $paid_days;
+        $summary['unpaid_leave_days'] += max($effective_days - $paid_days, 0.0);
+    }
+
+    $summary['leave_days'] = _payroll_round($summary['leave_days']);
+    $summary['paid_leave_days'] = _payroll_round($summary['paid_leave_days']);
+    $summary['unpaid_leave_days'] = _payroll_round($summary['unpaid_leave_days']);
+
+    $leave_cache[$cache_key] = $summary;
+    return $leave_cache[$cache_key];
+}
+
+/**
+ * Count inclusive calendar days between two SQL dates.
+ *
+ * @param string $from_sql SQL date Y-m-d
+ * @param string $to_sql SQL date Y-m-d
+ * @return int
+ */
+function _payroll_count_days_inclusive($from_sql, $to_sql) {
+    if ($from_sql === '' || $to_sql === '')
+        return 0;
+
+    $from = new DateTime($from_sql);
+    $to = new DateTime($to_sql);
+    if ($from > $to)
+        return 0;
+
+    return (int)$from->diff($to)->days + 1;
+}
+
+/**
+ * Resolve the payable portion of one leave row as a 0-1 ratio.
+ *
+ * @param array $leave_row
+ * @return float
+ */
+function _payroll_get_leave_pay_ratio($leave_row) {
+    $has_pay_rate = isset($leave_row['pay_rate']) && $leave_row['pay_rate'] !== null && $leave_row['pay_rate'] !== '' && is_numeric($leave_row['pay_rate']);
+    $has_is_paid = isset($leave_row['is_paid']) && $leave_row['is_paid'] !== null && $leave_row['is_paid'] !== '';
+
+    if ($has_is_paid && !(int)$leave_row['is_paid'] && (!$has_pay_rate || (float)$leave_row['pay_rate'] >= 100))
+        $pay_rate = 0.0;
+    elseif ($has_pay_rate)
+        $pay_rate = (float)$leave_row['pay_rate'];
+    elseif ($has_is_paid)
+        $pay_rate = !empty($leave_row['is_paid']) ? 100.0 : 0.0;
+    else
+        $pay_rate = 100.0;
+
+    if ($pay_rate < 0)
+        $pay_rate = 0.0;
+    if ($pay_rate > 100)
+        $pay_rate = 100.0;
+
+    return $pay_rate / 100;
 }
 
 /**
@@ -789,7 +925,8 @@ function _payroll_calculate_component_amount($component, $formula, $basic, $doc)
             break;
         case HRM_AMTTYPE_ATTENDANCE:
             $working = max((float)$doc->working_days, 1.0);
-            $worked = min((float)$doc->worked_days, $working);
+            $worked = isset($doc->payable_days) ? (float)$doc->payable_days : (float)$doc->worked_days;
+            $worked = min(max($worked, 0.0), $working);
             $amount = $base_amount * ($worked / $working);
             break;
         case HRM_AMTTYPE_FIXED:

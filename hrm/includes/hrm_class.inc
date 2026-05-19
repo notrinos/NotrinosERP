@@ -171,6 +171,15 @@ class payslip_doc {
 	public $leave_days = 0;
 
 	/** @var float */
+	public $paid_leave_days = 0;
+
+	/** @var float */
+	public $unpaid_leave_days = 0;
+
+	/** @var float */
+	public $payable_days = 0;
+
+	/** @var float */
 	public $absent_days = 0;
 
 	/** @var float */
