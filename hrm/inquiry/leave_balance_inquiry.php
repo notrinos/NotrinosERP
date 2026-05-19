@@ -35,6 +35,8 @@ $fiscal_year = (int)get_post('fiscal_year', date('Y'));
 $employee_id = get_post('employee_id', '');
 $leave_id = (int)get_post('leave_id', 0);
 
+ensure_leave_balance_entitlements_for_filters($fiscal_year, $employee_id, $leave_id);
+
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('Employee'), _('Leave Type'), _('Year'), _('Entitled'), _('Carry Forward'), _('Adjusted'), _('Taken'), _('Pending'), _('Available'));
 table_header($th);

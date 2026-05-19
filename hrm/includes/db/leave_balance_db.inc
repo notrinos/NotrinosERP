@@ -79,6 +79,8 @@ function ensure_leave_balance_entitlements_for_filters($fiscal_year=0, $employee
     if ($fiscal_year <= 0)
         return;
 
+    $as_of_date = $fiscal_year.'-12-31';
+    $pairs = array();
     $where = array('fiscal_year = '.db_escape($fiscal_year));
     if ($employee_id !== '' && $employee_id !== ALL_TEXT)
         $where[] = 'employee_id = '.db_escape($employee_id);
@@ -89,7 +91,38 @@ function ensure_leave_balance_entitlements_for_filters($fiscal_year=0, $employee
     $result = db_query($sql, 'could not get leave balance entitlement filters');
 
     while ($row = db_fetch($result))
-        ensure_leave_balance_entitlement($row['employee_id'], (int)$row['leave_id'], $fiscal_year, $fiscal_year.'-12-31');
+        $pairs[$row['employee_id'].':'.(int)$row['leave_id']] = array($row['employee_id'], (int)$row['leave_id']);
+
+    if (!function_exists('employee_table_exists')
+        || !employee_table_exists('employees')
+        || !employee_table_exists('leave_policies')) {
+        foreach ($pairs as $pair)
+            ensure_leave_balance_entitlement($pair[0], $pair[1], $fiscal_year, $as_of_date);
+        return;
+    }
+
+    $policy_where = array('e.inactive = 0');
+    if ($employee_id !== '' && $employee_id !== ALL_TEXT)
+        $policy_where[] = 'e.employee_id = '.db_escape($employee_id);
+    if ((int)$leave_id > 0)
+        $policy_where[] = 'p.leave_id = '.db_escape((int)$leave_id);
+
+    $policy_sql = "SELECT DISTINCT e.employee_id, p.leave_id
+        FROM ".TB_PREF."employees e
+        INNER JOIN ".TB_PREF."leave_policies p
+            ON p.inactive = 0
+            AND p.effective_from <= ".db_escape($as_of_date)."
+            AND (p.effective_to IS NULL OR p.effective_to = '' OR p.effective_to >= ".db_escape($as_of_date).")
+            AND (p.grade_id IS NULL OR p.grade_id = 0 OR p.grade_id = e.grade_id)
+            AND (p.employment_type IS NULL OR p.employment_type = e.employment_type)
+        WHERE ".implode(' AND ', $policy_where);
+    $policy_result = db_query($policy_sql, 'could not get leave policy entitlement filters');
+
+    while ($row = db_fetch($policy_result))
+        $pairs[$row['employee_id'].':'.(int)$row['leave_id']] = array($row['employee_id'], (int)$row['leave_id']);
+
+    foreach ($pairs as $pair)
+        ensure_leave_balance_entitlement($pair[0], $pair[1], $fiscal_year, $as_of_date);
 }
 
 /**
