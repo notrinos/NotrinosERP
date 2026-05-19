@@ -206,6 +206,8 @@ function validate_payslip_generation() {
 
 if(isset($_POST['GeneratePayslip']) && validate_payslip_generation())
 	generate_gl_items($_SESSION['hrm_items']);
+if(isset($_POST['refresh']))
+	$Ajax->activate('payslip_details');
 	
 //--------------------------------------------------------------------------
 
@@ -329,6 +331,8 @@ start_form();
 
 $emp_error = display_payslip_header($_SESSION['hrm_items']);
 
+submit_center('refresh', _('Generate Payslip Details'), true, '', '');
+
 if(empty($emp_error)) {
 	display_order_summary(_('Payslip Elements'), $_SESSION['hrm_items']);
 }
@@ -339,7 +343,7 @@ start_table();
 textarea_row(_('Comments:'), 'Comments', null, 50, 5);
 end_table();
 
-submit_center('Process', _('Generate Payslip'), true, '', 'default');
+submit_center('Process', _('Process Payslip'), true, '', 'default');
 
 // var_dump($_SESSION['hrm_items']);
 end_form();

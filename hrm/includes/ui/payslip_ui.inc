@@ -142,7 +142,7 @@ function display_payslip_header($Order) {
 
 	date_row(_('Payment Due:'), 'due_date', '', $new, 0, 0, 0, null, true);
 
-	end_outer_table(1);
+	end_outer_table();
 
 	return $emp_error;
 }
@@ -160,7 +160,7 @@ function display_order_summary($title, $order, $editable_items=false) {
 		return;
 	}
 
-	start_table(TABLESTYLE);
+	start_table(TABLESTYLE, "width='50%'");
 
 	$th = array(_('Pay Element'), _('Earnings'), _('Deduction'));
 
