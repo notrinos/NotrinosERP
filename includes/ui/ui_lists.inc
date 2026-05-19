@@ -177,6 +177,8 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		while ($contact_row = db_fetch($result)) {
 			$value = $contact_row[0];
 			$descr = $opts['format']==null ?  $contact_row[1] : call_user_func($opts['format'], $contact_row, $pname);
+			$value_attr = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+			$descr_text = htmlspecialchars((string)$descr, ENT_QUOTES, 'UTF-8');
 			$sel = '';
 			if (get_post($search_button) && ($txt == $value))
 				$selected_id[] = $value;
@@ -201,13 +203,13 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				if ($opts['category'] !== false && $cat != $lastcat) {
 					if ($lastcat!==null)
 						$selector .= '</optgroup>';
-					$selector .= "<optgroup label='".$cat."'>\n";
+					$selector .= "<optgroup label='".htmlspecialchars((string)$cat, ENT_QUOTES, 'UTF-8')."'>\n";
 					$lastcat = $cat;
 				}
-				$selector .= "<option ".$sel.' '.$optclass." value='".$value."'>".$descr."</option>\n";
+				$selector .= "<option ".$sel.' '.$optclass." value='".$value_attr."'>".$descr_text."</option>\n";
 			}
 
-			$data_options .= "<option value='".$value."'>".$descr."</option>\n";
+			$data_options .= "<option value='".$value_attr."'>".$descr_text."</option>\n";
 		}
 		if ($lastcat!==null)
 			$selector .= '</optgroup>';
@@ -220,7 +222,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		$first_opt = $spec_option;
 		$sel = $found===false ? 'selected' : '';
 		$optclass = @$contact_row['inactive'] ? "class='inactive'" : '';
-		$selector = "<option ".$sel." value='".$first_id."'>".$first_opt."</option>\n".$selector;
+		$selector = "<option ".$sel." value='".htmlspecialchars((string)$first_id, ENT_QUOTES, 'UTF-8')."'>".htmlspecialchars((string)$first_opt, ENT_QUOTES, 'UTF-8')."</option>\n".$selector;
 	}
 
 	if ($found===false)
@@ -229,21 +231,21 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	$_POST[$name] = $multi ? $selected_id : $selected_id[0];
 
 	if ($SysPrefs->use_popup_search)
-		$selector = "<select id='$name' autocomplete='off' ".($multi ? 'multiple' : '')
+		$selector = "<select id='".htmlspecialchars($name, ENT_QUOTES, 'UTF-8')."' autocomplete='off' ".($multi ? 'multiple' : '')
 		. ($opts['height']!==false ? ' size="'.$opts['height'].'"' : '')
-		. "$disabled name='$name".($multi ? '[]':'')."' class='$class' title='"
-		. $opts['sel_hint']."' $rel>".$selector."</select>\n";
+		. "$disabled name='".htmlspecialchars($name.($multi ? '[]':''), ENT_QUOTES, 'UTF-8')."' class='$class' title='"
+		. htmlspecialchars((string)$opts['sel_hint'], ENT_QUOTES, 'UTF-8')."' $rel>".$selector."</select>\n";
 	else
 		$selector = "<select autocomplete='off' ".($multi ? "multiple" : '')
 		. ($opts['height']!==false ? ' size="'.$opts['height'].'"' : '')
-		. "$disabled name='$name".($multi ? '[]':'')."' class='$class' title='"
-		. $opts['sel_hint']."' $rel>".$selector."</select>\n";
+		. "$disabled name='".htmlspecialchars($name.($multi ? '[]':''), ENT_QUOTES, 'UTF-8')."' class='$class' title='"
+		. htmlspecialchars((string)$opts['sel_hint'], ENT_QUOTES, 'UTF-8')."' $rel>".$selector."</select>\n";
 	if ($by_id && ($search_box != false || $opts['editable']) ) {
 		// on first display show selector list
 		if (isset($_POST[$search_box]) && $opts['editable'] && $edit) {
-			$selector = "<input type='hidden' name='$name' value='".$_POST[$name]."'>"
-			."<input type='text' $disabled name='{$name}_text' id='{$name}_text' size='"
-			.$opts['editable']."' maxlength='".$opts['max']."' $rel value='$edit'>\n";
+			$selector = "<input type='hidden' name='".htmlspecialchars($name, ENT_QUOTES, 'UTF-8')."' value='".htmlspecialchars($_POST[$name], ENT_QUOTES, 'UTF-8')."'>"
+			."<input type='text' $disabled name='".htmlspecialchars($name.'_text', ENT_QUOTES, 'UTF-8')."' id='".htmlspecialchars($name.'_text', ENT_QUOTES, 'UTF-8')."' size='"
+			.$opts['editable']."' maxlength='".$opts['max']."' $rel value='".htmlspecialchars((string)$edit, ENT_QUOTES, 'UTF-8')."'>\n";
 
 			set_focus($name.'_text'); // prevent lost focus
 		}
@@ -251,7 +253,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			set_focus($name); // prevent lost focus
 		if (!$opts['editable'])
 			$txt = $found;
-		$datalist = "<datalist id='$datalist_id'>".$data_options."</datalist>";
+		$datalist = "<datalist id='".htmlspecialchars($datalist_id, ENT_QUOTES, 'UTF-8')."'>".$data_options."</datalist>";
 		$Ajax->addUpdate($name, $search_box, $txt ? $txt : '');
 	}
 
@@ -271,10 +273,10 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 	// ------ make combo ----------
 	$edit_entry = '';
 	if ($search_box != false) {
-		$edit_entry = "<input $disabled type='text' list='$datalist_id' name='$search_box' id='$search_box' size='".
+		$edit_entry = "<input $disabled type='text' list='".htmlspecialchars($datalist_id, ENT_QUOTES, 'UTF-8')."' name='".htmlspecialchars($search_box, ENT_QUOTES, 'UTF-8')."' id='".htmlspecialchars($search_box, ENT_QUOTES, 'UTF-8')."' size='".
 			$opts['size']."' maxlength='".$opts['max'].
-			"' value='$txt' class='$class' rel='$name' autocomplete='off' title='"
-			.$opts['box_hint']."'"
+			"' value='".htmlspecialchars((string)$txt, ENT_QUOTES, 'UTF-8')."' class='$class' rel='".htmlspecialchars($name, ENT_QUOTES, 'UTF-8')."' autocomplete='off' title='"
+			.htmlspecialchars((string)$opts['box_hint'], ENT_QUOTES, 'UTF-8')."'"
 			.(!fallback_mode() && !$by_id ? " style=display:none;":'')
 			.">\n";
 		if ($search_submit != false || $opts['editable']) {
@@ -450,9 +452,9 @@ function _format_add_curr($row, $pname=false) {
 		$company_currency = get_company_currency();
 	
 	if (!$pname)
-		return $row[1].($row[2] == $company_currency ? '' : ("&nbsp;-&nbsp;".$row[2]));
+		return $row[1].($row[2] == $company_currency ? '' : (' - '.$row[2]));
 	else
-		return $row[1]."&nbsp;-&nbsp;".$row[2] . ($row[3] == $company_currency ? '' : ("&nbsp;-&nbsp;".$row[3]));
+		return $row[1].' - '.$row[2] . ($row[3] == $company_currency ? '' : (' - '.$row[3]));
 }
 
 function add_edit_combo($type, $name=false) {
@@ -712,7 +714,7 @@ function fiscalyears_list($name, $selected_id=null, $submit_on_change=false) {
 }
 
 function _format_fiscalyears($row) {
-	return sql2date($row[1]) . "&nbsp;-&nbsp;" . sql2date($row[2])."&nbsp;&nbsp;".($row[3] ? _('Closed') : _('Active'));
+	return sql2date($row[1]) . ' - ' . sql2date($row[2]).'  '.($row[3] ? _('Closed') : _('Active'));
 }
 
 function fiscalyears_list_cells($label, $name, $selected_id=null) {
@@ -888,7 +890,7 @@ function stock_items_list($name, $selected_id=null, $all_option=false, $submit_o
 }
 
 function _format_stock_items($row) {
-	return (user_show_codes() ? ($row[0] . "&nbsp;-&nbsp;") : '') . $row[1];
+	return (user_show_codes() ? ($row[0] . ' - ') : '') . $row[1];
 }
 
 function stock_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
@@ -1323,7 +1325,7 @@ function sales_groups_list_row($label, $name, $selected_id=null, $special_option
 //------------------------------------------------------------------------------------
 
 function _format_template_items($row) {
-	return ($row[0].'&nbsp;- &nbsp;'._('Amount').'&nbsp;'.$row[1]);
+	return $row[0].' - '._('Amount').' '.$row[1];
 }
 
 function templates_list($name, $selected_id=null, $special_option=false) {
@@ -1763,7 +1765,7 @@ function gl_all_accounts_list($name, $selected_id=null, $skip_bank_accounts=fals
 }
 
 function _format_account($row) {
-	return $row[0]."&nbsp;&nbsp;&nbsp;&nbsp;".$row[1];
+	return $row[0].'    '.$row[1];
 }
 
 function gl_all_accounts_list_cells($label, $name, $selected_id=null, $skip_bank_accounts=false, $cells=false, $all_option=false, $submit_on_change=false, $all=false, $type_id=false) {
@@ -2614,7 +2616,7 @@ function employees_list($name, $selected_id=null, $all_option=false, $submit_on_
 }
 
 function _format_employee_list($row) {
-	return (user_show_codes() ? ($row[0] . "&nbsp;-&nbsp;") : '') . $row[1];
+	return (user_show_codes() ? ($row[0] . ' - ') : '') . $row[1];
 }
 
 function employees_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
