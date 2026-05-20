@@ -305,12 +305,10 @@ date_row(_('From Date:'), 'from_date', get_post('from_date', begin_month(Today()
 date_row(_('To Date:'), 'to_date', get_post('to_date', end_month(Today())));
 departments_list_row(_('Department (Optional):'), 'department_id', null, true, _('All departments'));
 
-$employee_sql = "SELECT employee_id, CONCAT(employee_id, ' - ', first_name, ' ', last_name) as name
-    FROM ".TB_PREF."employees WHERE !inactive";
-label_row(_('Employee (Optional):'), combo_input('employee_id', get_post('employee_id', ''), $employee_sql, 'employee_id', 'name', array(
-    'spec_option' => _('-- All Employees --'),
-    'spec_id' => ''
-)));
+start_row();
+label_cell(_('Employee (Optional):'));
+employees_list_cells(null, 'employee_id', null, _('-- All Employees --'), true, false, true, array('layout_class' => 'combo-layout-equal'));
+end_row();
 end_table(1);
 
 submit_center('process_payroll', _('Process Payroll'), true, '', 'default');
