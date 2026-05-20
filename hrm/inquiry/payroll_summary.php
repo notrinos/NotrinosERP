@@ -47,7 +47,7 @@ if ($status === '')
 else
     $result = get_payroll_periods((int)$status);
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Period ID'), _('Period Name'), _('From'), _('To'), _('Status'), _('Gross'), _('Deductions'), _('Net'), _('Employer Cost'));
 table_header($th);
 

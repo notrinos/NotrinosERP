@@ -37,7 +37,7 @@ submit_cells('Search', _('Apply Filter'));
 end_row();
 end_table(1);
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));
 table_header($th);
 

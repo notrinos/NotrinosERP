@@ -32,7 +32,7 @@ end_table(1);
 
 $employee_id = get_post('employee_id', '');
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Loan ID'), _('Employee'), _('Loan Type'), _('Loan Date'), _('Loan Amount'), _('Outstanding'), _('Installments'), _('Status'));
 table_header($th);
 

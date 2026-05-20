@@ -71,7 +71,7 @@ $sql = "SELECT d.department_id,
     GROUP BY d.department_id, d.department_name
     ORDER BY d.department_name";
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Department'), _('Gross Total'), _('Deductions Total'), _('Net Total'));
 table_header($th);
 

@@ -52,7 +52,7 @@ if (get_post('employee_id') != '' && get_post('employee_id') != ALL_TEXT)
 
 $sql .= " GROUP BY a.employee_id, employee_name ORDER BY a.employee_id";
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Employee ID'), _('Employee Name'), _('Records'), _('Regular Hours'), _('Overtime Hours'), _('Absent Days'));
 table_header($th);
 

@@ -48,7 +48,7 @@ end_row();
 end_table(1);
 
 if ($_POST['employee_id'] != '' && $_POST['employee_id'] != ALL_TEXT) {
-    start_table(TABLESTYLE, "width='95%'");
+    start_table(TABLESTYLE, "width='100%'");
     $th = array(_('Date'), _('Type'), _('Old Dept'), _('New Dept'), _('Old Position'), _('New Position'), _('Old Grade'), _('New Grade'), _('Old Salary'), _('New Salary'), _('Reason'));
     table_header($th);
 
