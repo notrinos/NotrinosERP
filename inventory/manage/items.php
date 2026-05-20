@@ -285,10 +285,70 @@ if (isset($_POST['addupdate'])) {
 			display_warning(_('The depracation cannot start before the fixed asset purchase date'));
 	}
 
+	$track_by = normalize_tracking_mode(get_post('track_by', 'none'));
+	if ($track_by === false) {
+		$input_error = 1;
+		display_error(_('Tracking mode must be a valid selection.'));
+		set_focus('track_by');
+	}
+	elseif (get_post('fixed_asset') && $track_by !== 'none') {
+		$input_error = 1;
+		display_error(_('Fixed asset items cannot use serial or batch tracking.'));
+		set_focus('fixed_asset');
+	}
+	elseif (!get_post('fixed_asset')) {
+		$serial_no_prefix = null;
+		$batch_no_prefix = null;
+		$warranty_days = null;
+		$shelf_life_days = null;
+		$show_serial = ($track_by === 'serial' || $track_by === 'serial_batch');
+		$show_batch = ($track_by === 'batch' || $track_by === 'serial_batch');
+
+		if ($show_serial) {
+			$prefix_error = normalize_tracking_prefix(get_post('serial_no_prefix'), 20, 'Serial No Prefix', $serial_no_prefix);
+			if ($prefix_error !== null) {
+				$input_error = 1;
+				display_error(_($prefix_error));
+				set_focus('serial_no_prefix');
+			}
+			else {
+				$warranty_error = normalize_tracking_non_negative_int(get_post('warranty_days'), 'Warranty Days', $warranty_days);
+				if ($warranty_error !== null) {
+					$input_error = 1;
+					display_error(_($warranty_error));
+					set_focus('warranty_days');
+				}
+			}
+		}
+
+		if (!$input_error && $show_batch) {
+			$prefix_error = normalize_tracking_prefix(get_post('batch_no_prefix'), 20, 'Batch No Prefix', $batch_no_prefix);
+			if ($prefix_error !== null) {
+				$input_error = 1;
+				display_error(_($prefix_error));
+				set_focus('batch_no_prefix');
+			}
+			else {
+				$shelf_life_error = normalize_tracking_non_negative_int(get_post('shelf_life_days'), 'Shelf Life (days)', $shelf_life_days);
+				if ($shelf_life_error !== null) {
+					$input_error = 1;
+					display_error(_($shelf_life_error));
+					set_focus('shelf_life_days');
+				}
+			}
+		}
+
+		$_POST['track_by'] = $track_by;
+		$_POST['serial_no_prefix'] = $serial_no_prefix === null ? '' : $serial_no_prefix;
+		$_POST['batch_no_prefix'] = $batch_no_prefix === null ? '' : $batch_no_prefix;
+		$_POST['warranty_days'] = $warranty_days === null ? '' : $warranty_days;
+		$_POST['shelf_life_days'] = $shelf_life_days === null ? '' : $shelf_life_days;
+	}
+
 	// Validate tracking mode change
-	if (!$new_item && !get_post('fixed_asset') && get_post('track_by', 'none') !== 'none') {
+	if (!$input_error && !$new_item && !get_post('fixed_asset')) {
 		$existing = get_item($_POST['NewStockID']);
-		if ($existing && isset($existing['track_by']) && $existing['track_by'] !== get_post('track_by')) {
+		if ($existing && isset($existing['track_by']) && $existing['track_by'] !== $track_by) {
 			if (item_has_stock_movements($_POST['NewStockID'])) {
 				$input_error = 1;
 				display_error(_('Cannot change tracking mode for an item that already has stock movements.'));
@@ -304,16 +364,15 @@ if (isset($_POST['addupdate'])) {
 		// Collect tracking data (only for non-fixed-asset items)
 		$tracking = null;
 		if (!get_post('fixed_asset')) {
-			$track_by = get_post('track_by', 'none');
 			$tracking = array(
 				'track_by' => $track_by,
 				'has_serial_no' => ($track_by === 'serial' || $track_by === 'serial_batch') ? 1 : 0,
 				'has_batch_no' => ($track_by === 'batch' || $track_by === 'serial_batch') ? 1 : 0,
 				'has_expiry_date' => ($track_by === 'batch' || $track_by === 'serial_batch') ? check_value('has_expiry_date') : 0,
-				'serial_no_prefix' => ($track_by === 'serial' || $track_by === 'serial_batch') ? get_post('serial_no_prefix') : null,
-				'batch_no_prefix' => ($track_by === 'batch' || $track_by === 'serial_batch') ? get_post('batch_no_prefix') : null,
-				'warranty_days' => ($track_by === 'serial' || $track_by === 'serial_batch') ? (get_post('warranty_days') !== '' ? (int)get_post('warranty_days') : null) : null,
-				'shelf_life_days' => ($track_by === 'batch' || $track_by === 'serial_batch') ? (get_post('shelf_life_days') !== '' ? (int)get_post('shelf_life_days') : null) : null,
+				'serial_no_prefix' => ($track_by === 'serial' || $track_by === 'serial_batch') ? ($serial_no_prefix !== null ? $serial_no_prefix : null) : null,
+				'batch_no_prefix' => ($track_by === 'batch' || $track_by === 'serial_batch') ? ($batch_no_prefix !== null ? $batch_no_prefix : null) : null,
+				'warranty_days' => ($track_by === 'serial' || $track_by === 'serial_batch') ? $warranty_days : null,
+				'shelf_life_days' => ($track_by === 'batch' || $track_by === 'serial_batch') ? $shelf_life_days : null,
 				'quality_inspection_required' => check_value('quality_inspection_required'),
 				'item_weight' => get_post('item_weight') !== '' ? input_num('item_weight') : null,
 				'item_volume' => get_post('item_volume') !== '' ? input_num('item_volume') : null,

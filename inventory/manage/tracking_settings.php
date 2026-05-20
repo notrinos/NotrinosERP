@@ -29,17 +29,19 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 
 	// Validate serial number format
 	$serial_fmt = get_post('serial_number_format');
-	if ($serial_fmt !== '' && strpos($serial_fmt, '{SEQ:') === false) {
+	$serial_error = validate_tracking_number_format($serial_fmt, 'Serial number format');
+	if ($serial_error !== null) {
 		$input_error = 1;
-		display_error(_('Serial number format must contain a {SEQ:n} token for sequential numbering.'));
+		display_error(_($serial_error));
 		set_focus('serial_number_format');
 	}
 
 	// Validate batch number format
 	$batch_fmt = get_post('batch_number_format');
-	if ($batch_fmt !== '' && strpos($batch_fmt, '{SEQ:') === false) {
+	$batch_error = validate_tracking_number_format($batch_fmt, 'Batch number format');
+	if ($batch_error !== null) {
 		$input_error = 1;
-		display_error(_('Batch number format must contain a {SEQ:n} token for sequential numbering.'));
+		display_error(_($batch_error));
 		set_focus('batch_number_format');
 	}
 
@@ -52,8 +54,8 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	}
 
 	if ($input_error == 0) {
-		set_tracking_setting('serial_number_format', get_post('serial_number_format'));
-		set_tracking_setting('batch_number_format', get_post('batch_number_format'));
+		set_tracking_setting('serial_number_format', trim((string)get_post('serial_number_format')));
+		set_tracking_setting('batch_number_format', trim((string)get_post('batch_number_format')));
 		set_tracking_setting('expiry_warning_days', get_post('expiry_warning_days'));
 		set_tracking_setting('enforce_fefo', check_value('enforce_fefo') ? '1' : '0');
 		set_tracking_setting('barcode_format', get_post('barcode_format'));

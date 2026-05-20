@@ -11,6 +11,194 @@
 ***********************************************************************/
 
 /**
+ * Get the supported item tracking modes.
+ *
+ * @return array
+ */
+function get_supported_tracking_modes() {
+	return array('none', 'serial', 'batch', 'serial_batch');
+}
+
+/**
+ * Normalize and validate an item tracking mode value.
+ *
+ * @param mixed  $value   Raw posted value
+ * @param string $default Default mode when blank
+ * @return string|false Normalized mode or false when invalid
+ */
+function normalize_tracking_mode($value, $default = 'none') {
+	if (!is_scalar($value) && $value !== null)
+		return false;
+
+	$mode = trim((string)$value);
+	if ($mode === '')
+		$mode = $default;
+
+	return in_array($mode, get_supported_tracking_modes(), true) ? $mode : false;
+}
+
+/**
+ * Normalize an optional tracking prefix.
+ *
+ * Blank or whitespace-only values are converted to null so generation can
+ * fall back to the stock-based default prefix.
+ *
+ * @param mixed  $value      Raw prefix value
+ * @param int    $max_length Maximum allowed length
+ * @param string $label      Field label for error text
+ * @param string &$normalized Normalized output value
+ * @return string|null Validation error or null when valid
+ */
+function normalize_tracking_prefix($value, $max_length, $label, &$normalized) {
+	$normalized = null;
+
+	if ($value === null || $value === '')
+		return null;
+	if (!is_scalar($value))
+		return $label . ' must be a valid text value.';
+
+	$trimmed = trim((string)$value);
+	if ($trimmed === '')
+		return null;
+	if (strlen($trimmed) > $max_length)
+		return $label . ' cannot be longer than ' . (int)$max_length . ' characters.';
+
+	$normalized = $trimmed;
+	return null;
+}
+
+/**
+ * Normalize an optional non-negative integer tracking field.
+ *
+ * @param mixed  $value       Raw posted value
+ * @param string $label       Field label for error text
+ * @param int|null &$normalized Normalized integer output
+ * @return string|null Validation error or null when valid
+ */
+function normalize_tracking_non_negative_int($value, $label, &$normalized) {
+	$normalized = null;
+
+	if ($value === null || $value === '')
+		return null;
+	if (!is_scalar($value))
+		return $label . ' must be a whole number.';
+
+	$trimmed = trim((string)$value);
+	if ($trimmed === '')
+		return $label . ' cannot contain only whitespace.';
+	if (!preg_match('/^\d+$/', $trimmed))
+		return $label . ' must be a non-negative whole number.';
+
+	$normalized = (int)$trimmed;
+	return null;
+}
+
+/**
+ * Validate a generated serial or batch number format.
+ *
+ * Allowed tokens: {PREFIX} {YYYY} {YY} {MM} {DD} {SEQ:n}
+ *
+ * @param mixed  $format Raw format value
+ * @param string $label  Field label for error text
+ * @return string|null Validation error or null when valid
+ */
+function validate_tracking_number_format($format, $label) {
+	if ($format === null || $format === '')
+		return null;
+	if (!is_scalar($format))
+		return $label . ' must be a valid text value.';
+
+	$trimmed = trim((string)$format);
+	if ($trimmed === '')
+		return null;
+	if (!preg_match('/\{SEQ:\d+\}/', $trimmed))
+		return $label . ' must contain a {SEQ:n} token for sequential numbering.';
+
+	$remainder = preg_replace('/\{PREFIX\}|\{YYYY\}|\{YY\}|\{MM\}|\{DD\}|\{SEQ:\d+\}/', '', $trimmed);
+	if (strpos($remainder, '{') !== false || strpos($remainder, '}') !== false)
+		return $label . ' contains unsupported or malformed tokens. Allowed tokens: {PREFIX} {YYYY} {YY} {MM} {DD} {SEQ:n}.';
+
+	return null;
+}
+
+/**
+ * Resolve a stored/generated number format, falling back to a safe default
+ * when the configured value is blank or malformed.
+ *
+ * @param mixed  $format         Raw format value
+ * @param string $default_format Safe fallback format
+ * @return string
+ */
+function resolve_tracking_number_format($format, $default_format) {
+	if (validate_tracking_number_format($format, 'Tracking format') !== null)
+		return $default_format;
+
+	$trimmed = trim((string)$format);
+	return $trimmed === '' ? $default_format : $trimmed;
+}
+
+/**
+ * Render a serial or batch number from a validated format.
+ *
+ * @param string   $format    Format string
+ * @param string   $prefix    Prefix value
+ * @param int      $seq       Sequence number
+ * @param int|null $timestamp Optional unix timestamp
+ * @return string
+ */
+function render_tracking_number_format($format, $prefix, $seq, $timestamp = null) {
+	$timestamp = $timestamp === null ? time() : $timestamp;
+
+	$result = $format;
+	$result = str_replace('{PREFIX}', $prefix, $result);
+	$result = str_replace('{YYYY}', date('Y', $timestamp), $result);
+	$result = str_replace('{YY}', date('y', $timestamp), $result);
+	$result = str_replace('{MM}', date('m', $timestamp), $result);
+	$result = str_replace('{DD}', date('d', $timestamp), $result);
+
+	return preg_replace_callback('/\{SEQ:(\d+)\}/', function ($matches) use ($seq) {
+		$pad_length = (int)$matches[1];
+		return str_pad($seq, $pad_length, '0', STR_PAD_LEFT);
+	}, $result);
+}
+
+/**
+ * Build a unique generated serial or batch identifier for an item.
+ *
+ * @param string   $stock_id        Item code
+ * @param mixed    $format          Stored format value
+ * @param string   $default_format  Safe fallback format
+ * @param string   $prefix_field    Item column holding the prefix
+ * @param string   $default_prefix  Safe fallback prefix
+ * @param callable $sequence_getter Callback returning the starting sequence
+ * @param callable $duplicate_check Callback checking item-level duplicates
+ * @return string
+ */
+function generate_tracking_identifier($stock_id, $format, $default_format, $prefix_field,
+	$default_prefix, $sequence_getter, $duplicate_check) {
+	$item = get_item($stock_id);
+	$resolved_format = resolve_tracking_number_format($format, $default_format);
+	$normalized_prefix = null;
+	$prefix_value = isset($item[$prefix_field]) ? $item[$prefix_field] : null;
+	normalize_tracking_prefix($prefix_value, 20, 'Tracking prefix', $normalized_prefix);
+	if ($normalized_prefix === null)
+		$normalized_prefix = $default_prefix;
+
+	$start_seq = (int)call_user_func($sequence_getter, $stock_id);
+	if ($start_seq < 1)
+		$start_seq = 1;
+
+	for ($offset = 0; $offset < 1000; $offset++) {
+		$sequence = $start_seq + $offset;
+		$candidate = render_tracking_number_format($resolved_format, $normalized_prefix, $sequence);
+		if (!call_user_func($duplicate_check, $candidate, $stock_id))
+			return $candidate;
+	}
+
+	return render_tracking_number_format($default_format, $normalized_prefix, $start_seq + 1000);
+}
+
+/**
  * Generate the next serial number for a given stock item.
  *
  * Supports format tokens:
@@ -28,31 +216,16 @@
 function generate_serial_number($stock_id, $format = null) {
 	if ($format === null)
 		$format = get_tracking_setting('serial_number_format');
-	if (empty($format))
-		$format = '{PREFIX}{YYYY}{MM}{SEQ:6}';
 
-	$item = get_item($stock_id);
-	$prefix = isset($item['serial_no_prefix']) && $item['serial_no_prefix'] !== '' 
-		? $item['serial_no_prefix'] 
-		: strtoupper(substr($stock_id, 0, 3));
-
-	// Get next sequence number
-	$seq = get_next_serial_sequence($stock_id);
-
-	$result = $format;
-	$result = str_replace('{PREFIX}', $prefix, $result);
-	$result = str_replace('{YYYY}', date('Y'), $result);
-	$result = str_replace('{YY}', date('y'), $result);
-	$result = str_replace('{MM}', date('m'), $result);
-	$result = str_replace('{DD}', date('d'), $result);
-
-	// Handle {SEQ:n} token
-	if (preg_match('/\{SEQ:(\d+)\}/', $result, $matches)) {
-		$pad_length = (int)$matches[1];
-		$result = str_replace($matches[0], str_pad($seq, $pad_length, '0', STR_PAD_LEFT), $result);
-	}
-
-	return $result;
+	return generate_tracking_identifier(
+		$stock_id,
+		$format,
+		'{PREFIX}{YYYY}{MM}{SEQ:6}',
+		'serial_no_prefix',
+		strtoupper(substr($stock_id, 0, 3)),
+		'get_next_serial_sequence',
+		'is_serial_number_duplicate'
+	);
 }
 
 /**
@@ -67,29 +240,16 @@ function generate_serial_number($stock_id, $format = null) {
 function generate_batch_number($stock_id, $format = null) {
 	if ($format === null)
 		$format = get_tracking_setting('batch_number_format');
-	if (empty($format))
-		$format = '{PREFIX}{YYYY}{MM}{SEQ:5}';
 
-	$item = get_item($stock_id);
-	$prefix = isset($item['batch_no_prefix']) && $item['batch_no_prefix'] !== '' 
-		? $item['batch_no_prefix'] 
-		: 'LOT';
-
-	$seq = get_next_batch_sequence($stock_id);
-
-	$result = $format;
-	$result = str_replace('{PREFIX}', $prefix, $result);
-	$result = str_replace('{YYYY}', date('Y'), $result);
-	$result = str_replace('{YY}', date('y'), $result);
-	$result = str_replace('{MM}', date('m'), $result);
-	$result = str_replace('{DD}', date('d'), $result);
-
-	if (preg_match('/\{SEQ:(\d+)\}/', $result, $matches)) {
-		$pad_length = (int)$matches[1];
-		$result = str_replace($matches[0], str_pad($seq, $pad_length, '0', STR_PAD_LEFT), $result);
-	}
-
-	return $result;
+	return generate_tracking_identifier(
+		$stock_id,
+		$format,
+		'{PREFIX}{YYYY}{MM}{SEQ:5}',
+		'batch_no_prefix',
+		'LOT',
+		'get_next_batch_sequence',
+		'is_batch_number_duplicate'
+	);
 }
 
 /**
@@ -198,17 +358,5 @@ function item_has_batch_tracking($stock_id) {
  * @return string The preview string
  */
 function preview_number_format($format, $prefix = 'ABC', $seq = 1) {
-	$result = $format;
-	$result = str_replace('{PREFIX}', $prefix, $result);
-	$result = str_replace('{YYYY}', date('Y'), $result);
-	$result = str_replace('{YY}', date('y'), $result);
-	$result = str_replace('{MM}', date('m'), $result);
-	$result = str_replace('{DD}', date('d'), $result);
-
-	if (preg_match('/\{SEQ:(\d+)\}/', $result, $matches)) {
-		$pad_length = (int)$matches[1];
-		$result = str_replace($matches[0], str_pad($seq, $pad_length, '0', STR_PAD_LEFT), $result);
-	}
-
-	return $result;
+	return render_tracking_number_format(resolve_tracking_number_format($format, '{PREFIX}{YYYY}{MM}{SEQ:6}'), $prefix, $seq);
 }
