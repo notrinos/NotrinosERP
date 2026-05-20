@@ -729,7 +729,10 @@ function display_payslip_header($Order) {
 	table_section(1);
 
 	if($new) {
-		employees_list_row(_('Employee:'), 'employee_id', null, _('Select employee'), true, false, true);
+		start_row();
+		label_cell(_('Employee:'));
+		employees_list_cells(null, 'employee_id', null, _('Select employee'), true, false, true, array('layout_class' => 'combo-layout-equal'));
+		end_row();
 	}
 	else {
 		hidden('employee_id', $Order->employee_id);
