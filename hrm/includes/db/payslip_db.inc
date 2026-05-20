@@ -771,7 +771,7 @@ function payslip_exists_for_period($employee_id, $from_date, $to_date) {
 		return false;
 
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF.$table_name." WHERE ".payslip_employee_where($employee_id)." AND "
-		."(from_date <= ".db_escape($to_sql)." AND to_date >= ".db_escape($from_sql).")";
+		."(from_date <= ".db_escape($to_sql)." AND to_date >= ".db_escape($from_sql).") AND ".payslip_non_voided_condition($table_name);
 
 	return check_empty_result($sql);
 }
@@ -793,7 +793,8 @@ function payslip_generated_for_date($date, $employee) {
 		return false;
 
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF.$table_name." WHERE ".payslip_employee_where($employee)
-		." AND (".db_escape($sql_date)." BETWEEN from_date AND to_date)";
+		." AND (".db_escape($sql_date)." BETWEEN from_date AND to_date)"
+		." AND ".payslip_non_voided_condition($table_name);
 
 	return check_empty_result($sql);
 }
@@ -817,7 +818,8 @@ function payslip_generated_for_period($from_date, $to_date, $employee) {
 		return false;
 
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF.$table_name." WHERE ".payslip_employee_where($employee)
-		." AND (".db_escape($from_sql)." <= from_date AND ".db_escape($to_sql)." >= to_date)";
+		." AND (".db_escape($from_sql)." <= from_date AND ".db_escape($to_sql)." >= to_date)"
+		." AND ".payslip_non_voided_condition($table_name);
 
 	return check_empty_result($sql);
 }

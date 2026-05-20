@@ -21,6 +21,7 @@ include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_hooks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_class.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
