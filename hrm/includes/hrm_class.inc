@@ -183,6 +183,12 @@ class payslip_doc {
 	public $absent_days = 0;
 
 	/** @var float */
+	public $extra_absent_days = 0;
+
+	/** @var float */
+	public $regular_hours = 0;
+
+	/** @var float */
 	public $loan_deduction = 0;
 
 	/** @var string */
@@ -199,6 +205,12 @@ class payslip_doc {
 
 	/** @var array */
 	public $gl_entries = array();
+
+	/** @var array */
+	public $leave_breakdown = array();
+
+	/** @var array */
+	public $overtime_breakdown = array();
 
 	/**
 	 * Add one payslip element line.

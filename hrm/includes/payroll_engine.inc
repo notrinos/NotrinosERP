@@ -26,6 +26,7 @@ include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
+include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 
@@ -157,10 +158,18 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $doc->worked_days = $attendance['worked_days'];
     $doc->leave_days = $attendance['leave_days'];
     $doc->absent_days = $attendance['absent_days'];
+    $doc->extra_absent_days = isset($attendance['extra_absent_days']) ? (float)$attendance['extra_absent_days'] : 0.0;
     $doc->overtime_hours = $attendance['overtime_hours'];
+    $doc->regular_hours = isset($attendance['regular_hours']) ? (float)$attendance['regular_hours'] : 0.0;
     $doc->paid_leave_days = isset($attendance['paid_leave_days']) ? (float)$attendance['paid_leave_days'] : 0.0;
     $doc->unpaid_leave_days = isset($attendance['unpaid_leave_days']) ? (float)$attendance['unpaid_leave_days'] : (float)$doc->absent_days;
     $doc->payable_days = isset($attendance['payable_days']) ? (float)$attendance['payable_days'] : (float)$doc->worked_days;
+    $doc->leave_breakdown = isset($attendance['leave_breakdown']) && is_array($attendance['leave_breakdown'])
+        ? $attendance['leave_breakdown']
+        : array();
+    $doc->overtime_breakdown = isset($attendance['overtime_breakdown']) && is_array($attendance['overtime_breakdown'])
+        ? $attendance['overtime_breakdown']
+        : array();
 
     $salary_components = array();
     if (isset($context['salary_components'][$doc->employee_id]) && is_array($context['salary_components'][$doc->employee_id]))
@@ -605,6 +614,7 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
     $leave_days = (float)$leave_summary['leave_days'];
     $paid_leave_days = (float)$leave_summary['paid_leave_days'];
     $leave_unpaid_days = (float)$leave_summary['unpaid_leave_days'];
+    $overtime_breakdown = _payroll_get_overtime_breakdown($employee_id, $from_sql, $to_sql);
 
     if ($worked_days <= 0 && $absent_days <= 0)
         $worked_days = max($working_days - $leave_days, 0.0);
@@ -630,10 +640,15 @@ function get_attendance_summary($employee_id, $from_date, $to_date) {
         'absent_days' => (float)$absent_days + $extra_absent_days,
         'extra_absent_days' => $extra_absent_days,
         'overtime_hours' => (float)@$row['overtime_hours'],
+        'regular_hours' => (float)@$row['regular_hours'],
         'late_minutes' => 0.0,
         'paid_leave_days' => (float)$paid_leave_days,
         'unpaid_leave_days' => (float)$unpaid_leave_days,
-        'payable_days' => (float)$payable_days
+        'payable_days' => (float)$payable_days,
+        'leave_breakdown' => isset($leave_summary['breakdown']) && is_array($leave_summary['breakdown'])
+            ? $leave_summary['breakdown']
+            : array(),
+        'overtime_breakdown' => $overtime_breakdown
     );
 
     return $attendance_cache[$cache_key];
@@ -661,6 +676,7 @@ function _payroll_get_leave_summary($employee_id, $from_sql, $to_sql) {
         'leave_days' => 0.0,
         'paid_leave_days' => 0.0,
         'unpaid_leave_days' => 0.0,
+        'breakdown' => array(),
     );
 
     if (!function_exists('employee_table_exists') || !employee_table_exists('leave_details')) {
@@ -675,11 +691,15 @@ function _payroll_get_leave_summary($employee_id, $from_sql, $to_sql) {
     $select_is_paid = ($has_leave_types && function_exists('leave_type_has_column') && leave_type_has_column('is_paid'))
         ? 'lt.is_paid'
         : 'NULL';
+    $select_leave_name = $has_leave_types ? 'lt.leave_name' : 'NULL';
+    $select_leave_code = $has_leave_types ? 'lt.leave_code' : 'NULL';
     $join_leave_types = $has_leave_types
         ? ' LEFT JOIN '.TB_PREF.'leave_types lt ON lt.leave_id = ld.leave_type_id'
         : '';
 
-    $sql = "SELECT ld.from_date, ld.to_date, ld.days, ".$select_pay_rate." AS pay_rate, ".$select_is_paid." AS is_paid
+    $sql = "SELECT ld.leave_type_id, ld.from_date, ld.to_date, ld.days,
+            ".$select_leave_name." AS leave_name, ".$select_leave_code." AS leave_code,
+            ".$select_pay_rate." AS pay_rate, ".$select_is_paid." AS is_paid
         FROM ".TB_PREF."leave_details ld".$join_leave_types."
         WHERE ld.employee_id = ".db_escape($employee_id)."
         AND ld.from_date <= ".db_escape($to_sql)."
@@ -705,18 +725,117 @@ function _payroll_get_leave_summary($employee_id, $from_sql, $to_sql) {
 
         $pay_ratio = _payroll_get_leave_pay_ratio($row);
         $paid_days = $effective_days * $pay_ratio;
+        $leave_type_id = isset($row['leave_type_id']) ? (int)$row['leave_type_id'] : 0;
+        $leave_name = isset($row['leave_name']) ? trim((string)$row['leave_name']) : '';
+        $leave_code = isset($row['leave_code']) ? trim((string)$row['leave_code']) : '';
+        $leave_label = $leave_name !== '' ? $leave_name : ($leave_code !== '' ? $leave_code : _('Unspecified Leave'));
+        $breakdown_key = $leave_type_id.'|'.$leave_label;
+
+        if (!isset($summary['breakdown'][$breakdown_key])) {
+            $summary['breakdown'][$breakdown_key] = array(
+                'leave_type_id' => $leave_type_id,
+                'leave_name' => $leave_name,
+                'leave_code' => $leave_code,
+                'leave_label' => $leave_label,
+                'leave_days' => 0.0,
+                'paid_days' => 0.0,
+                'unpaid_days' => 0.0,
+            );
+        }
 
         $summary['leave_days'] += $effective_days;
         $summary['paid_leave_days'] += $paid_days;
         $summary['unpaid_leave_days'] += max($effective_days - $paid_days, 0.0);
+        $summary['breakdown'][$breakdown_key]['leave_days'] += $effective_days;
+        $summary['breakdown'][$breakdown_key]['paid_days'] += $paid_days;
+        $summary['breakdown'][$breakdown_key]['unpaid_days'] += max($effective_days - $paid_days, 0.0);
     }
 
     $summary['leave_days'] = _payroll_round($summary['leave_days']);
     $summary['paid_leave_days'] = _payroll_round($summary['paid_leave_days']);
     $summary['unpaid_leave_days'] = _payroll_round($summary['unpaid_leave_days']);
+    foreach ($summary['breakdown'] as $breakdown_key => $breakdown_row) {
+        $summary['breakdown'][$breakdown_key]['leave_days'] = _payroll_round($breakdown_row['leave_days']);
+        $summary['breakdown'][$breakdown_key]['paid_days'] = _payroll_round($breakdown_row['paid_days']);
+        $summary['breakdown'][$breakdown_key]['unpaid_days'] = _payroll_round($breakdown_row['unpaid_days']);
+    }
+    $summary['breakdown'] = _payroll_sort_breakdown_rows($summary['breakdown'], 'leave_label');
 
     $leave_cache[$cache_key] = $summary;
     return $leave_cache[$cache_key];
+}
+
+/**
+ * Get overtime hour totals grouped by overtime type for a period.
+ *
+ * @param string $employee_id
+ * @param string $from_sql SQL date Y-m-d
+ * @param string $to_sql SQL date Y-m-d
+ * @return array
+ */
+function _payroll_get_overtime_breakdown($employee_id, $from_sql, $to_sql) {
+    static $overtime_cache = array();
+
+    $cache_key = $employee_id.'|'.$from_sql.'|'.$to_sql;
+    if (isset($overtime_cache[$cache_key]))
+        return $overtime_cache[$cache_key];
+
+    $rows = array();
+    $overtime_table = function_exists('overtime_type_table') ? overtime_type_table() : 'overtime';
+    $has_overtime_master = function_exists('check_empty_result')
+        ? check_empty_result("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ".db_escape(TB_PREF.$overtime_table))
+        : false;
+    $overtime_join = $has_overtime_master
+        ? ' LEFT JOIN '.TB_PREF.$overtime_table.' ot ON ot.overtime_id = a.overtime_type_id'
+        : '';
+    $overtime_name_select = $has_overtime_master ? 'ot.overtime_name' : 'NULL';
+    $overtime_rate_select = $has_overtime_master ? 'ot.pay_rate' : 'NULL';
+    $sql = "SELECT a.overtime_type_id,
+            SUM(IFNULL(a.overtime_hours, 0)) AS overtime_hours,
+            MAX(IFNULL(a.rate, 0)) AS applied_rate,
+            ".$overtime_name_select." AS overtime_name,
+            ".$overtime_rate_select." AS pay_rate
+        FROM ".TB_PREF."attendance a
+        ".$overtime_join."
+        WHERE a.employee_id = ".db_escape($employee_id)."
+        AND a.date >= ".db_escape($from_sql)."
+        AND a.date <= ".db_escape($to_sql)."
+        AND IFNULL(a.overtime_hours, 0) > 0
+        GROUP BY a.overtime_type_id, ".$overtime_name_select.", ".$overtime_rate_select."
+        ORDER BY ".$overtime_name_select.", a.overtime_type_id";
+    $result = db_query($sql, 'Could not get overtime summary');
+
+    while ($row = db_fetch_assoc($result)) {
+        $overtime_name = isset($row['overtime_name']) ? trim((string)$row['overtime_name']) : '';
+        $rows[] = array(
+            'overtime_type_id' => isset($row['overtime_type_id']) ? (int)$row['overtime_type_id'] : 0,
+            'overtime_name' => $overtime_name !== '' ? $overtime_name : _('Unassigned Overtime'),
+            'overtime_hours' => _payroll_round(isset($row['overtime_hours']) ? (float)$row['overtime_hours'] : 0.0),
+            'pay_rate' => isset($row['pay_rate']) && is_numeric($row['pay_rate']) ? (float)$row['pay_rate'] : 0.0,
+            'applied_rate' => isset($row['applied_rate']) && is_numeric($row['applied_rate']) ? (float)$row['applied_rate'] : 0.0,
+        );
+    }
+
+    $overtime_cache[$cache_key] = _payroll_sort_breakdown_rows($rows, 'overtime_name');
+    return $overtime_cache[$cache_key];
+}
+
+/**
+ * Sort breakdown rows by one label field.
+ *
+ * @param array $rows
+ * @param string $label_key
+ * @return array
+ */
+function _payroll_sort_breakdown_rows($rows, $label_key) {
+    $rows = array_values((array)$rows);
+    usort($rows, function($left, $right) use ($label_key) {
+        $left_label = isset($left[$label_key]) ? (string)$left[$label_key] : '';
+        $right_label = isset($right[$label_key]) ? (string)$right[$label_key] : '';
+        return strnatcasecmp($left_label, $right_label);
+    });
+
+    return $rows;
 }
 
 /**

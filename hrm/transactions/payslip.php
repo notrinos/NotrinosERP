@@ -127,10 +127,11 @@ function create_cart($type=80, $trans_no=0) {
 if (!isset($_SESSION['hrm_items']) || !is_object($_SESSION['hrm_items']) || !($_SESSION['hrm_items'] instanceof hrm_cart))
 	create_cart(ST_PAYSLIP, 0);
 
+$previous_month_anchor = add_months(Today(), -1);
 if (!isset($_POST['from_date']) || $_POST['from_date'] == '')
-	$_POST['from_date'] = Today();
+	$_POST['from_date'] = begin_month($previous_month_anchor);
 if (!isset($_POST['to_date']) || $_POST['to_date'] == '')
-	$_POST['to_date'] = Today();
+	$_POST['to_date'] = end_month($previous_month_anchor);
 if (!isset($_POST['due_date']) || $_POST['due_date'] == '')
 	$_POST['due_date'] = Today();
 
@@ -329,22 +330,29 @@ function handle_new_item() {
 
 start_form();
 
+echo "<div class='payslip-entry-page'>";
+render_payslip_entry_styles();
+
 $emp_error = display_payslip_header($_SESSION['hrm_items']);
 
 submit_center('refresh', _('Generate Payslip Details'), true, '', '');
 
 if(empty($emp_error)) {
-	display_order_summary(_('Payslip Elements'), $_SESSION['hrm_items']);
+	display_order_summary(_('Payslip Details'), $_SESSION['hrm_items']);
 }
 else
 	display_error($emp_error);
 
+echo "<section class='payslip-entry-panel'>";
+echo "<div class='payslip-entry-panel-head'><div><h3>".payslip_escape(_('Notes'))."</h3><p>".payslip_escape(_('Comments saved with the posted payslip for audit and payment follow-up.'))."</p></div></div>";
 start_table();
 textarea_row(_('Comments:'), 'Comments', null, 50, 5);
 end_table();
+echo "</section>";
 
 submit_center('Process', _('Process Payslip'), true, '', 'default');
 
 // var_dump($_SESSION['hrm_items']);
+echo "</div>";
 end_form();
 end_page();
