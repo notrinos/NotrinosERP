@@ -219,7 +219,7 @@ end_table(1);
 
 display_heading($selected_id == -1 ? _('New Discount Program') : _('Edit Discount Program'));
 
-start_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2);
 
 if ($selected_id != -1 && $Mode == 'Edit') {
 	$myrow = get_discount_program($selected_id);
@@ -254,6 +254,8 @@ if (!isset($_POST['reward_max_amount']))$_POST['reward_max_amount'] = price_form
 if (!isset($_POST['usage_limit']))     $_POST['usage_limit']     = 0;
 if (!isset($_POST['per_customer_limit'])) $_POST['per_customer_limit'] = 0;
 
+table_section(1);
+
 text_row_ex(_('Program Name') . ':', 'prog_name', 60);
 
 $prog_types = array(
@@ -281,6 +283,8 @@ array_selector_row(_('Reward Type') . ':', 'reward_type', get_post('reward_type'
 amount_row(_('Reward Value (% or amount)') . ':', 'reward_value');
 amount_row(_('Maximum Discount Amount (0 = unlimited)') . ':', 'reward_max_amount');
 
+table_section(2);
+
 small_amount_row(_('Usage Limit (0 = unlimited)') . ':', 'usage_limit', null, null, null, 0);
 small_amount_row(_('Per Customer Limit (0 = unlimited)') . ':', 'per_customer_limit', null, null, null, 0);
 small_amount_row(_('Priority (lower = higher priority)') . ':', 'priority', null, null, null, 0);
@@ -307,7 +311,7 @@ label_cell(_('Applicable Sales Types (comma-separated type IDs, empty = all)') .
 text_cells_ex(null, 'applicable_sales_types', 40, 100, null, null);
 end_row();
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
