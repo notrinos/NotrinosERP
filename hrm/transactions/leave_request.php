@@ -188,7 +188,10 @@ if ($selected_id != '' && $Mode == 'Edit') {
     }
 }
 
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+start_row();
+label_cell(_('Employee:'));
+employees_list_cells(null, 'employee_id', null, false, false, false, false, array('layout_class' => 'combo-layout-equal'));
+end_row();
 leave_types_list_row(_('Leave Type:'), 'leave_id');
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
@@ -201,10 +204,12 @@ $half_day_options = array(
 array_selector_row(_('Half-day option:'), 'half_day', null, $half_day_options);
 textarea_row(_('Reason:'), 'reason', null, 50, 3);
 
-end_table(1);
+end_table();
 submit_add_or_update_center($selected_id == '', '', 'both');
 
-start_table(TABLESTYLE, "width='95%'");
+br();
+
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('ID'), _('Employee'), _('Leave Type'), _('From'), _('To'), _('Days'), _('Reason'), _('Status'), _('Requested On'), '', '');
 table_header($th);
 
