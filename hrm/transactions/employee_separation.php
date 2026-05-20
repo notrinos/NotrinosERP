@@ -110,7 +110,9 @@ if (isset($_POST['Process'])) {
 
 start_form();
 start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+label_cell(_('Employee:'));
+employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class' => 'combo-layout-equal'));
+end_row();
 date_row(_('Separation Date:'), 'separation_date');
 check_row(_('Is Resignation:'), 'is_resignation');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);

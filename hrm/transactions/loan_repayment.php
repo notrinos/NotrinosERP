@@ -46,7 +46,10 @@ foreach ($_POST as $name => $value) {
 start_form();
 
 start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'), 'employee_id', null, true, true, false);
+start_row();
+label_cell(_('Employee:'));
+employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class' => 'combo-layout-equal'));
+end_row();
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 end_table(1);

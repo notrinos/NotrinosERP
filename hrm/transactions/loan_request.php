@@ -179,7 +179,10 @@ if ($selected_id != '' && $Mode == 'Edit') {
     }
 }
 table_section(1);
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+start_row();
+label_cell(_('Employee:'));
+employees_list_cells(null, 'employee_id', null, false, false, false, false, array('layout_class' => 'combo-layout-equal'));
+end_row();
 loan_types_list_row(_('Loan Type:'), 'loan_type_id');
 amount_row(_('Loan Amount:'), 'loan_amount');
 amount_row(_('Interest Rate (%):'), 'interest_rate');
@@ -195,7 +198,7 @@ submit_add_or_update_center($selected_id == '', '', 'both');
 
 br();
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('ID'), _('Employee'), _('Loan Type'), _('Amount'), _('Outstanding'), _('Installments'), _('Loan Date'), _('Status'), '', '', '', '');
 table_header($th);
 
