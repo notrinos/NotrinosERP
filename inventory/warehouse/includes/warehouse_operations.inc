@@ -263,6 +263,8 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 		}
 }
 
+}
+
 /**
  * Check whether a numeric input is finite and safe for SQL numeric fields.
  *
@@ -1939,6 +1941,7 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 						$sets = array("customer_id=" . (int)$delivery->customer_id);
 						$sets[] = "delivery_id=" . (int)$delivery_no;
 						$sets[] = "delivery_date=" . db_escape(date2sql($date_));
+						$sets[] = "wh_loc_id=NULL";
 						if ($warranty_start)
 							$sets[] = "warranty_start=" . db_escape(date2sql($warranty_start));
 						if ($warranty_end)
@@ -2565,6 +2568,23 @@ function process_credit_tracking_returns($credit_note, $credit_no, $date_, $loca
 					$serial = get_serial_number_by_code($sn, $stock_id);
 					if ($serial && $serial['status'] === 'delivered') {
 						$sid = (int)$serial['id'];
+						$destination_bin_id = null;
+						$wms_settings = get_wms_location_settings($location);
+
+						if ($wms_settings) {
+							$destination_bin_id = get_putaway_bin_for_item($stock_id, $location, 1);
+							if ($destination_bin_id && function_exists('reconcile_serial_bin_stock_location')) {
+								$reconcile_error = '';
+								reconcile_serial_bin_stock_location(
+									$stock_id,
+									$sid,
+									$destination_bin_id,
+									true,
+									$sn,
+									$reconcile_error
+								);
+							}
+						}
 
 						update_serial_status(
 							$sid,
@@ -2578,19 +2598,22 @@ function process_credit_tracking_returns($credit_note, $credit_no, $date_, $loca
 							sprintf(_('Returned via Credit Note #%d'), $credit_no)
 						);
 
-						// Clear customer from serial
+						// Clear customer from serial and reassign any warehouse bin explicitly.
+						if ($wms_settings && $destination_bin_id) {
+							update_bin_stock(
+								$destination_bin_id,
+								$stock_id,
+								1,
+								!empty($serial['batch_id']) ? (int)$serial['batch_id'] : null,
+								$sid
+							);
+						}
+
 						$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
-							. "customer_id=NULL"
+							. "customer_id=NULL, wh_loc_id="
+							. ($destination_bin_id ? (int)$destination_bin_id : 'NULL')
 							. " WHERE id=" . (int)$sid;
 						db_query($sql, 'could not clear serial customer on return');
-
-						// Restore bin stock if WMS
-						$wms_settings = get_wms_location_settings($location);
-						if ($wms_settings && !empty($serial['wh_loc_id'])) {
-							update_bin_stock($serial['wh_loc_id'], $stock_id, 1,
-								!empty($serial['batch_id']) ? (int)$serial['batch_id'] : null,
-								$sid);
-						}
 					}
 				}
 			}

@@ -399,6 +399,71 @@ function get_rma_lines($rma_id)
 }
 
 /**
+ * Resolve persisted RMA tracking fields to runtime serial or batch ids.
+ *
+ * @param array $line RMA line row.
+ * @return array
+ */
+function resolve_rma_line_tracking_payload($line)
+{
+	global $path_to_root;
+
+	$payload = array(
+		'serial_id' => null,
+		'batch_id' => null,
+		'serial_input' => '',
+		'batch_input' => '',
+	);
+
+	if (!is_array($line) || empty($line['stock_id']))
+		return $payload;
+
+	$stock_id = $line['stock_id'];
+	$qty = isset($line['quantity_authorized']) ? (float)$line['quantity_authorized'] : 0;
+
+	if (!empty($line['serial_number'])) {
+		include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
+		$serial_number = trim((string)$line['serial_number']);
+		if ($serial_number !== '') {
+			$payload['serial_input'] = $serial_number;
+			if (function_exists('get_serial_number_by_code')) {
+				$serial = get_serial_number_by_code($serial_number, $stock_id);
+				if ($serial) {
+					$payload['serial_id'] = (int)$serial['id'];
+					if (!empty($serial['batch_id']))
+						$payload['batch_id'] = (int)$serial['batch_id'];
+				}
+			}
+		}
+	}
+
+	if (!empty($line['batch_number']) || !empty($payload['batch_id'])) {
+		include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+		$batch_number = !empty($line['batch_number']) ? trim((string)$line['batch_number']) : '';
+
+		if ($batch_number !== '') {
+			$batch = false;
+			if (preg_match('/^\d+$/', $batch_number)) {
+				$batch = get_stock_batch((int)$batch_number);
+				if ($batch && isset($batch['stock_id']) && $batch['stock_id'] !== $stock_id)
+					$batch = false;
+			}
+
+			if (!$batch && function_exists('get_stock_batch_by_code'))
+				$batch = get_stock_batch_by_code($batch_number, $stock_id);
+
+			if ($batch)
+				$payload['batch_id'] = (int)$batch['id'];
+		}
+
+		if ($payload['batch_id'] && $qty > 0)
+			$payload['batch_input'] = $payload['batch_id'] . ':' . $qty;
+	}
+
+	return $payload;
+}
+
+/**
  * Recalculate and persist total_amount and refund_amount on an RMA.
  *
  * @param int $rma_id
@@ -548,12 +613,14 @@ function create_wh_return_from_rma($rma_id, $warehouse_loc_code)
 	);
 
 	while ($line = db_fetch($lines_result)) {
+		$tracking = resolve_rma_line_tracking_payload($line);
 		add_return_order_line(
 			$wh_return_id,
 			$line['stock_id'],
 			(float)$line['quantity_authorized'],
 			null,
-			null,
+			$tracking['serial_id'],
+			$tracking['batch_id'],
 			null,
 			$line['notes']
 		);
@@ -636,10 +703,12 @@ function create_credit_from_rma($rma_id)
 
 	// Apply restocking fee as a discount so net amount = refund_amount
 	$fee_pct = (float)$rma['restocking_fee_percent'];
+	$tracking_post_keys = array();
 
 	foreach ($lines as $line) {
+		$cart_line_no = count($cart->line_items);
 		$cart->add_to_cart(
-			count($cart->line_items),
+			$cart_line_no,
 			$line['stock_id'],
 			(float)$line['quantity_authorized'],
 			(float)$line['unit_price'],
@@ -648,9 +717,23 @@ function create_credit_from_rma($rma_id)
 			0,
 			$line['description']
 		);
+
+		$tracking = resolve_rma_line_tracking_payload($line);
+		if ($tracking['serial_input'] !== '') {
+			$serial_key = 'credit_serial_' . $cart_line_no;
+			$_POST[$serial_key] = $tracking['serial_input'];
+			$tracking_post_keys[] = $serial_key;
+		}
+		if ($tracking['batch_input'] !== '') {
+			$batch_key = 'credit_batch_' . $cart_line_no;
+			$_POST[$batch_key] = $tracking['batch_input'];
+			$tracking_post_keys[] = $batch_key;
+		}
 	}
 
 	$credit_no = $cart->write(0);
+	foreach ($tracking_post_keys as $tracking_post_key)
+		unset($_POST[$tracking_post_key]);
 	if (!$credit_no || $credit_no == -1)
 		return false;
 
