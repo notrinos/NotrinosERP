@@ -478,15 +478,23 @@ function delete_route_rules($route_id) {
  * @return array|false The route row or false if none found
  */
 function resolve_route($warehouse_loc_code, $route_type, $stock_id = null) {
-	// 1. Check location's default inbound/outbound route
-	$route_col = ($route_type === 'inbound') ? 'default_route_in' : 'default_route_out';
-	$sql = "SELECT $route_col FROM " . TB_PREF . "locations WHERE loc_code=" . db_escape($warehouse_loc_code);
-	$result = db_query($sql, 'could not get location default route');
-	$loc = db_fetch($result);
-	if ($loc && $loc[$route_col]) {
-		$route = get_route((int)$loc[$route_col]);
-		if ($route && $route['active']) {
-			return $route;
+	// 1. Check location defaults only for inbound/outbound types.
+	// Internal and crossdock routes do not have dedicated default columns.
+	$route_col = null;
+	if ($route_type === 'inbound')
+		$route_col = 'default_route_in';
+	elseif ($route_type === 'outbound')
+		$route_col = 'default_route_out';
+
+	if ($route_col !== null) {
+		$sql = "SELECT $route_col FROM " . TB_PREF . "locations WHERE loc_code=" . db_escape($warehouse_loc_code);
+		$result = db_query($sql, 'could not get location default route');
+		$loc = db_fetch($result);
+		if ($loc && $loc[$route_col]) {
+			$route = get_route((int)$loc[$route_col]);
+			if ($route && $route['active']) {
+				return $route;
+			}
 		}
 	}
 
