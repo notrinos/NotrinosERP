@@ -11,6 +11,168 @@
 ***********************************************************************/
 //--------------------------------------------------------------------------------------
 
+/**
+ * Validate tracked component allocations before posting a work-order issue.
+ *
+ * @param array $items Cart line items.
+ * @param string $location Source location code.
+ * @return bool
+ */
+function validate_work_order_issue_tracking($items, $location) {
+	global $path_to_root;
+
+	$tracking_root = $path_to_root . '/inventory/includes/db';
+	if (!file_exists($tracking_root . '/serial_batch_db.inc'))
+		return true;
+
+	include_once($tracking_root . '/serial_batch_db.inc');
+	include_once($tracking_root . '/serial_numbers_db.inc');
+	include_once($tracking_root . '/stock_batches_db.inc');
+
+	$seen_serial_ids = array();
+	foreach ($items as $line_no => $item) {
+		$stock_id = $item->stock_id;
+		$tracking_mode = get_item_tracking_mode($stock_id);
+		if ($tracking_mode === 'none')
+			continue;
+
+		$required_qty = abs((float)$item->quantity);
+		if (item_has_serial_tracking($stock_id)) {
+			if ((float)(int)$required_qty != (float)$required_qty) {
+				display_error(sprintf(_('Component %s requires a whole-number quantity because it is serial tracked.'), $stock_id));
+				set_focus('qty');
+				return false;
+			}
+
+			$serial_key = 'issue_serial_' . $line_no;
+			$serial_text = isset($_POST[$serial_key]) ? trim($_POST[$serial_key]) : '';
+			if ($serial_text === '') {
+				display_error(sprintf(_('Enter exactly %d component serial numbers for %s.'), (int)$required_qty, $stock_id));
+				set_focus($serial_key);
+				return false;
+			}
+
+			$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+			$serial_numbers = array();
+			$seen_line_serials = array();
+			foreach ($serial_entries as $serial_entry) {
+				$serial_no = trim($serial_entry);
+				if ($serial_no === '')
+					continue;
+
+				$serial_lookup = strtoupper($serial_no);
+				if (isset($seen_line_serials[$serial_lookup])) {
+					display_error(sprintf(_('Component serial %s is entered more than once for %s.'), $serial_no, $stock_id));
+					set_focus($serial_key);
+					return false;
+				}
+
+				$seen_line_serials[$serial_lookup] = true;
+				$serial_numbers[] = $serial_no;
+			}
+
+			if (count($serial_numbers) != (int)$required_qty) {
+				display_error(sprintf(_('Component %s requires exactly %d serial numbers.'), $stock_id, (int)$required_qty));
+				set_focus($serial_key);
+				return false;
+			}
+
+			foreach ($serial_numbers as $serial_no) {
+				$serial = get_serial_number_by_code($serial_no, $stock_id);
+				if (!$serial || $serial['status'] !== 'available' || $serial['loc_code'] !== $location) {
+					display_error(sprintf(_('Component serial %s is not available at location %s for item %s.'), $serial_no, $location, $stock_id));
+					set_focus($serial_key);
+					return false;
+				}
+
+				$serial_id = (int)$serial['id'];
+				if (isset($seen_serial_ids[$serial_id])) {
+					display_error(sprintf(_('Component serial %s is entered on more than one issue line.'), $serial_no));
+					set_focus($serial_key);
+					return false;
+				}
+
+				$seen_serial_ids[$serial_id] = true;
+			}
+			continue;
+		}
+
+		if (item_has_batch_tracking($stock_id)) {
+			$batch_key = 'issue_batch_' . $line_no;
+			$batch_text = isset($_POST[$batch_key]) ? trim($_POST[$batch_key]) : '';
+
+			if ($batch_text === '') {
+				$available_qty = 0;
+				$fefo_batches = function_exists('get_fefo_batches') ? get_fefo_batches($stock_id, $location, $required_qty) : array();
+				foreach ($fefo_batches as $batch_row)
+					$available_qty += (float)$batch_row['qty_available'];
+
+				if ($available_qty + 0.000001 < $required_qty) {
+					display_error(sprintf(_('Component %s does not have enough available batch quantity at %s for FEFO issue.'), $stock_id, $location));
+					set_focus($batch_key);
+					return false;
+				}
+				continue;
+			}
+
+			$batch_lines = preg_split('/[\r\n]+/', $batch_text);
+			$total_allocated = 0;
+			$seen_batches = array();
+			foreach ($batch_lines as $batch_line) {
+				$batch_line = trim($batch_line);
+				if ($batch_line === '')
+					continue;
+
+				$parts = explode(':', $batch_line, 2);
+				if (count($parts) !== 2) {
+					display_error(sprintf(_('Component %s batch allocation must use the format batch_id:qty.'), $stock_id));
+					set_focus($batch_key);
+					return false;
+				}
+
+				$batch_id = (int)trim($parts[0]);
+				$batch_qty = (float)trim($parts[1]);
+				if ($batch_id <= 0 || $batch_qty <= 0) {
+					display_error(sprintf(_('Component %s has an invalid batch allocation entry.'), $stock_id));
+					set_focus($batch_key);
+					return false;
+				}
+
+				if (isset($seen_batches[$batch_id])) {
+					display_error(sprintf(_('Batch %d is entered more than once for component %s.'), $batch_id, $stock_id));
+					set_focus($batch_key);
+					return false;
+				}
+
+				$batch = get_stock_batch($batch_id);
+				if (!$batch || $batch['stock_id'] !== $stock_id) {
+					display_error(sprintf(_('Batch %d does not belong to component %s.'), $batch_id, $stock_id));
+					set_focus($batch_key);
+					return false;
+				}
+
+				$available_qty = function_exists('get_batch_quantity_on_hand') ? (float)get_batch_quantity_on_hand($batch_id, $location) : 0;
+				if ($available_qty + 0.000001 < $batch_qty) {
+					display_error(sprintf(_('Batch %d for component %s does not have enough quantity at location %s.'), $batch_id, $stock_id, $location));
+					set_focus($batch_key);
+					return false;
+				}
+
+				$seen_batches[$batch_id] = true;
+				$total_allocated += $batch_qty;
+			}
+
+			if (abs($total_allocated - $required_qty) > 0.000001) {
+				display_error(sprintf(_('Component %s batch allocations must add up exactly to %s.'), $stock_id, number_format2($required_qty, get_qty_dec($stock_id))));
+				set_focus($batch_key);
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $workcentre, $date_, $memo_) {
 	global $Refs, $path_to_root;
 

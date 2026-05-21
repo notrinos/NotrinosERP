@@ -99,6 +99,10 @@ function can_process() {
 		return false;
 	}
 
+	if (!$_POST['IssueType'] && !validate_work_order_issue_tracking($_SESSION['issue_items']->line_items, $_POST['Location'])) {
+		return false;
+	}
+
 	return true;
 }
 

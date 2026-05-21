@@ -9,6 +9,241 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+
+/**
+ * Normalize manual finished-serial input into a unique ordered list.
+ *
+ * @param string $serial_text Raw textarea input.
+ * @return array
+ */
+function parse_work_order_production_serials($serial_text) {
+	$serial_text = trim((string)$serial_text);
+	if ($serial_text === '')
+		return array();
+
+	$entries = preg_split('/[\r\n,]+/', $serial_text);
+	$serials = array();
+	$seen = array();
+
+	foreach ($entries as $entry) {
+		$serial_no = trim($entry);
+		if ($serial_no === '')
+			continue;
+
+		$serial_key = strtoupper($serial_no);
+		if (isset($seen[$serial_key]))
+			continue;
+
+		$seen[$serial_key] = true;
+		$serials[] = $serial_no;
+	}
+
+	return $serials;
+}
+
+/**
+ * Validate finished-goods tracking input before production is posted.
+ *
+ * @param array $product Work order product row.
+ * @param float $quantity Production quantity.
+ * @param string $date_ Production date in display format.
+ * @return bool
+ */
+function validate_work_order_production_tracking($product, $quantity, $date_) {
+	global $path_to_root;
+
+	$tracking_root = $path_to_root . '/inventory/includes/db';
+	if (!file_exists($tracking_root . '/serial_batch_db.inc'))
+		return true;
+
+	include_once($tracking_root . '/serial_batch_db.inc');
+	include_once($tracking_root . '/serial_numbers_db.inc');
+	include_once($tracking_root . '/stock_batches_db.inc');
+
+	$stock_id = isset($product['stock_id']) ? $product['stock_id'] : '';
+	if ($stock_id === '')
+		return true;
+
+	$tracking_mode = get_item_tracking_mode($stock_id);
+	if ($tracking_mode === 'none' || $quantity <= 0)
+		return true;
+
+	if (item_has_serial_tracking($stock_id)) {
+		if ((float)(int)$quantity != (float)$quantity) {
+			display_error(_('Serial-tracked finished goods require a whole-number production quantity.'));
+			set_focus('quantity');
+			return false;
+		}
+
+		$serials = parse_work_order_production_serials(isset($_POST['produce_serials']) ? $_POST['produce_serials'] : '');
+		if (!empty($serials) && count($serials) != (int)$quantity) {
+			display_error(_('The number of finished serial numbers must exactly match the production quantity.'));
+			set_focus('produce_serials');
+			return false;
+		}
+
+		$seen_serials = array();
+		foreach ($serials as $serial_no) {
+			$serial_key = strtoupper($serial_no);
+			if (isset($seen_serials[$serial_key])) {
+				display_error(sprintf(_('Finished serial number %s is entered more than once.'), $serial_no));
+				set_focus('produce_serials');
+				return false;
+			}
+
+			$seen_serials[$serial_key] = true;
+			if (get_serial_number_by_code($serial_no, $stock_id)) {
+				display_error(sprintf(_('Finished serial number %s already exists for this item.'), $serial_no));
+				set_focus('produce_serials');
+				return false;
+			}
+		}
+	}
+
+	if (item_has_batch_tracking($stock_id)) {
+		$batch_no = isset($_POST['produce_batch_no']) ? trim($_POST['produce_batch_no']) : '';
+		if ($batch_no !== '' && get_stock_batch_by_code($batch_no, $stock_id)) {
+			display_error(sprintf(_('Batch/Lot number %s already exists for this item.'), $batch_no));
+			set_focus('produce_batch_no');
+			return false;
+		}
+
+		$batch_expiry = isset($_POST['produce_batch_expiry']) ? trim($_POST['produce_batch_expiry']) : '';
+		if ($batch_expiry !== '') {
+			if (!is_date($batch_expiry)) {
+				display_error(_('The entered batch expiry date is invalid.'));
+				set_focus('produce_batch_expiry');
+				return false;
+			}
+			if (date_diff2($date_, $batch_expiry, 'd') > 0) {
+				display_error(_('The batch expiry date cannot be before the manufacturing date.'));
+				set_focus('produce_batch_expiry');
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Attach pending component trace rows to the finished outputs for one production event.
+ *
+ * Existing pending rows are updated in place, and batch-only rows are split across
+ * multiple finished serials when needed so component quantities are preserved without
+ * cloning the full genealogy for every output serial.
+ *
+ * @param int $woid Work order id.
+ * @param array $finished_serial_ids Finished serial ids created by this production event.
+ * @param int|null $finished_batch_id Finished batch id created by this production event.
+ * @param float $quantity Produced quantity.
+ * @return void
+ */
+function assign_work_order_production_traceability($woid, $finished_serial_ids, $finished_batch_id, $quantity) {
+	$woid = (int)$woid;
+	$finished_batch_id = $finished_batch_id ? (int)$finished_batch_id : null;
+	$serial_ids = array();
+
+	if (is_array($finished_serial_ids)) {
+		foreach ($finished_serial_ids as $serial_id) {
+			$serial_id = (int)$serial_id;
+			if ($serial_id > 0)
+				$serial_ids[] = $serial_id;
+		}
+	}
+
+	$serial_ids = array_values(array_unique($serial_ids));
+	if ($woid <= 0 || (empty($serial_ids) && $finished_batch_id === null))
+		return;
+
+	$pending_sql = "SELECT id, component_stock_id, component_serial_id, component_batch_id, component_qty"
+		. " FROM " . TB_PREF . "production_traceability"
+		. " WHERE work_order_id=" . $woid
+		. " AND finished_serial_id IS NULL AND finished_batch_id IS NULL"
+		. " ORDER BY id";
+	$pending_result = db_query($pending_sql, 'could not get pending production traceability rows');
+	$pending_rows = array();
+	while ($pending_row = db_fetch($pending_result))
+		$pending_rows[] = $pending_row;
+
+	if (empty($pending_rows))
+		return;
+
+	if (count($serial_ids) <= 1) {
+		$sets = array();
+		if (!empty($serial_ids))
+			$sets[] = "finished_serial_id=" . (int)$serial_ids[0];
+		if ($finished_batch_id !== null)
+			$sets[] = "finished_batch_id=" . $finished_batch_id;
+
+		if (!empty($sets)) {
+			$sql = "UPDATE " . TB_PREF . "production_traceability SET " . implode(', ', $sets)
+				. " WHERE work_order_id=" . $woid
+				. " AND finished_serial_id IS NULL AND finished_batch_id IS NULL";
+			db_query($sql, 'could not update production traceability rows');
+		}
+		return;
+	}
+
+	$serial_count = count($serial_ids);
+	$serial_component_index = 0;
+	foreach ($pending_rows as $pending_row) {
+		$row_id = (int)$pending_row['id'];
+		$component_qty = (float)$pending_row['component_qty'];
+		$component_serial_id = !empty($pending_row['component_serial_id']) ? (int)$pending_row['component_serial_id'] : null;
+		$component_batch_id = !empty($pending_row['component_batch_id']) ? (int)$pending_row['component_batch_id'] : null;
+
+		if ($component_serial_id !== null) {
+			$target_serial_id = (int)$serial_ids[$serial_component_index % $serial_count];
+			$serial_component_index++;
+
+			$sets = array("finished_serial_id=" . $target_serial_id);
+			if ($finished_batch_id !== null)
+				$sets[] = "finished_batch_id=" . $finished_batch_id;
+
+			$sql = "UPDATE " . TB_PREF . "production_traceability SET " . implode(', ', $sets)
+				. " WHERE id=" . $row_id;
+			db_query($sql, 'could not assign serial component traceability');
+			continue;
+		}
+
+		$remaining_qty = $component_qty;
+		$per_serial_qty = $quantity != 0 ? round($component_qty / (float)$quantity, 6) : 0;
+		for ($index = 0; $index < $serial_count; $index++) {
+			$target_serial_id = (int)$serial_ids[$index];
+			$allocated_qty = ($index == $serial_count - 1) ? $remaining_qty : $per_serial_qty;
+			$remaining_qty = round($remaining_qty - $allocated_qty, 6);
+
+			if (abs($allocated_qty) < 0.000001)
+				continue;
+
+			if ($index == 0) {
+				$sets = array(
+					"finished_serial_id=" . $target_serial_id,
+					"component_qty=" . (float)$allocated_qty
+				);
+				if ($finished_batch_id !== null)
+					$sets[] = "finished_batch_id=" . $finished_batch_id;
+
+				$sql = "UPDATE " . TB_PREF . "production_traceability SET " . implode(', ', $sets)
+					. " WHERE id=" . $row_id;
+				db_query($sql, 'could not update split production traceability row');
+				continue;
+			}
+
+			add_production_traceability(
+				$woid,
+				$target_serial_id,
+				$finished_batch_id,
+				$pending_row['component_stock_id'],
+				$component_serial_id,
+				$component_batch_id,
+				$allocated_qty
+			);
+		}
+	}
+}
+
 function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 	global $Refs, $path_to_root;
 
@@ -206,60 +441,8 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 				}
 			}
 
-			// --- Update traceability: link finished serials/batch to component records ---
-			// Find existing traceability records for this WO (created during component issue)
-			// and update them with the finished product identifiers
 			if (!empty($finished_serial_ids) || $finished_batch_id) {
-				$trace_sql = "SELECT id FROM " . TB_PREF . "production_traceability"
-					. " WHERE work_order_id=" . (int)$woid
-					. " AND finished_serial_id IS NULL AND finished_batch_id IS NULL";
-				$trace_result = db_query($trace_sql, 'could not get traceability records');
-
-				while ($trace_row = db_fetch($trace_result)) {
-					$update_sets = array();
-					if (!empty($finished_serial_ids)) {
-						// Always link the first finished serial to existing records
-						$update_sets[] = "finished_serial_id=" . (int)$finished_serial_ids[0];
-					}
-					if ($finished_batch_id) {
-						$update_sets[] = "finished_batch_id=" . (int)$finished_batch_id;
-					}
-					if (!empty($update_sets)) {
-						$sql = "UPDATE " . TB_PREF . "production_traceability SET "
-							. implode(', ', $update_sets)
-							. " WHERE id=" . (int)$trace_row['id'];
-						db_query($sql, 'could not update traceability');
-					}
-				}
-
-				// If multiple finished serials, we need to create additional traceability records
-				// for each finished serial beyond the first (the first was updated in place)
-				if (count($finished_serial_ids) > 1) {
-					// Get component records for this WO
-					$comp_sql = "SELECT DISTINCT component_stock_id, component_serial_id, component_batch_id, component_qty"
-						. " FROM " . TB_PREF . "production_traceability"
-						. " WHERE work_order_id=" . (int)$woid;
-					$comp_result = db_query($comp_sql, 'could not get component records');
-					$components = array();
-					while ($cr = db_fetch($comp_result)) {
-						$components[] = $cr;
-					}
-
-					// For each additional finished serial, duplicate the component links
-					for ($i = 1; $i < count($finished_serial_ids); $i++) {
-						foreach ($components as $comp) {
-							add_production_traceability(
-								$woid,
-								$finished_serial_ids[$i],
-								$finished_batch_id,
-								$comp['component_stock_id'],
-								!empty($comp['component_serial_id']) ? (int)$comp['component_serial_id'] : null,
-								!empty($comp['component_batch_id']) ? (int)$comp['component_batch_id'] : null,
-								(float)$comp['component_qty']
-							);
-						}
-					}
-				}
+				assign_work_order_production_traceability($woid, $finished_serial_ids, $finished_batch_id, $quantity);
 			}
 
 			// --- QC check: if item requires quality inspection, create inspection record ---

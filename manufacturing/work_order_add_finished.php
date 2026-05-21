@@ -134,6 +134,11 @@ function can_process($wo_details) {
 			return false;
 		}	
 	}
+
+	if ($_POST['ProductionType'] == 1 && !validate_work_order_production_tracking($wo_details, input_num('quantity'), $_POST['date_'])) {
+		return false;
+	}
+
 	return true;
 }
 
