@@ -16,6 +16,111 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
 
 include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
+
+/**
+ * Returns parent delivery numbers for a sales invoice.
+ *
+ * @param int $invoice_no Sales invoice transaction number.
+ * @return array
+ */
+function get_invoice_parent_delivery_numbers($invoice_no)
+{
+	static $cache = array();
+
+	$invoice_no = (int)$invoice_no;
+	if (isset($cache[$invoice_no]))
+		return $cache[$invoice_no];
+
+	$sql = "SELECT DISTINCT del.debtor_trans_no"
+		. " FROM " . TB_PREF . "debtor_trans_details inv"
+		. " INNER JOIN " . TB_PREF . "debtor_trans_details del ON del.id = inv.src_id"
+		. " WHERE inv.debtor_trans_type = " . ST_SALESINVOICE
+		. " AND inv.debtor_trans_no = " . db_escape($invoice_no)
+		. " AND del.debtor_trans_type = " . ST_CUSTDELIVERY
+		. " ORDER BY del.debtor_trans_no";
+	$result = db_query($sql, 'could not get invoice parent deliveries');
+	$cache[$invoice_no] = array();
+	while ($row = db_fetch($result))
+		$cache[$invoice_no][] = (int)$row['debtor_trans_no'];
+
+	return $cache[$invoice_no];
+}
+
+/**
+ * Renders tracked serial and batch identifiers for an invoice line.
+ *
+ * @param int    $invoice_no Sales invoice transaction number.
+ * @param string $stock_id   Inventory item code.
+ * @param int    $colspan    Table column span.
+ * @return void
+ */
+function display_invoice_line_tracking($invoice_no, $stock_id, $colspan)
+{
+	$tracking_mode = get_item_tracking_mode($stock_id);
+	if ($tracking_mode === 'none')
+		return;
+
+	$delivery_numbers = get_invoice_parent_delivery_numbers($invoice_no);
+	if (empty($delivery_numbers))
+		return;
+
+	$delivery_list = implode(',', array_map('intval', $delivery_numbers));
+
+	if (item_has_serial_tracking($stock_id)) {
+		$serial_sql = "SELECT DISTINCT sn.id, sn.serial_no, sn.status, sn.warranty_end"
+			. " FROM " . TB_PREF . "serial_movements sm"
+			. " INNER JOIN " . TB_PREF . "serial_numbers sn ON sn.id = sm.serial_id"
+			. " WHERE sm.trans_type = " . ST_CUSTDELIVERY
+			. " AND sm.trans_no IN (" . $delivery_list . ")"
+			. " AND sn.stock_id = " . db_escape($stock_id)
+			. " AND sm.to_status = 'delivered'"
+			. " ORDER BY sn.serial_no";
+		$serial_result = db_query($serial_sql, 'could not get invoice serials');
+		$serial_parts = array();
+		while ($serial = db_fetch($serial_result)) {
+			$serial_link = viewer_link(
+				htmlspecialchars($serial['serial_no']),
+				'inventory/inquiry/serial_lifecycle.php?serial_id=' . (int)$serial['id']
+			);
+			if (!empty($serial['warranty_end']))
+				$serial_link .= ' <span style="color:#888;">(' . _('Warranty until') . ': ' . sql2date($serial['warranty_end']) . ')</span>';
+			$serial_parts[] = $serial_link;
+		}
+		if (!empty($serial_parts)) {
+			echo '<tr><td colspan="' . (int)$colspan . '" style="padding:2px 8px 4px 24px; border-left:3px solid #5b9bd5; background:#f7f9fc; font-size:11px;">';
+			echo '<b style="color:#5b9bd5;">' . _('Serials:') . '</b> ' . implode(', ', $serial_parts);
+			echo '</td></tr>';
+		}
+	}
+
+	if (item_has_batch_tracking($stock_id)) {
+		$batch_sql = "SELECT DISTINCT sb.id, sb.batch_no, ABS(bm.quantity) AS qty, sb.expiry_date"
+			. " FROM " . TB_PREF . "batch_movements bm"
+			. " INNER JOIN " . TB_PREF . "stock_batches sb ON sb.id = bm.batch_id"
+			. " WHERE bm.trans_type = " . ST_CUSTDELIVERY
+			. " AND bm.trans_no IN (" . $delivery_list . ")"
+			. " AND sb.stock_id = " . db_escape($stock_id)
+			. " AND bm.quantity < 0"
+			. " ORDER BY sb.batch_no";
+		$batch_result = db_query($batch_sql, 'could not get invoice batches');
+		$batch_parts = array();
+		while ($batch = db_fetch($batch_result)) {
+			$batch_link = viewer_link(
+				htmlspecialchars($batch['batch_no']),
+				'inventory/inquiry/batch_lifecycle.php?batch_id=' . (int)$batch['id']
+			) . ' ×' . number_format2((float)$batch['qty'], get_qty_dec($stock_id));
+			if (!empty($batch['expiry_date']))
+				$batch_link .= ' <span style="color:#888;">(' . _('Exp') . ': ' . sql2date($batch['expiry_date']) . ')</span>';
+			$batch_parts[] = $batch_link;
+		}
+		if (!empty($batch_parts)) {
+			echo '<tr><td colspan="' . (int)$colspan . '" style="padding:2px 8px 4px 24px; border-left:3px solid #e6a23c; background:#fdf6ec; font-size:11px;">';
+			echo '<b style="color:#e6a23c;">' . _('Batches:') . '</b> ' . implode(', ', $batch_parts);
+			echo '</td></tr>';
+		}
+	}
+}
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -130,6 +235,8 @@ if (db_num_rows($result) > 0) {
 		label_cell($display_discount, 'nowrap align=right');
 		amount_cell($value);
 		end_row();
+
+		display_invoice_line_tracking($trans_id, $myrow2['stock_id'], 7);
 	} //end while there are line items to print out
 
 	$display_sub_tot = price_format($sub_total);
