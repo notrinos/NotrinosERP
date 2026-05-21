@@ -192,6 +192,130 @@ function update_return_order($return_id, $return_type, $warehouse_loc_code, $ret
 }
 
 /**
+ * Find an open return order line for a serial number.
+ *
+ * @param int $serial_id Serial number id
+ * @return array|false Matching open return line row or false
+ */
+function find_open_return_line_by_serial($serial_id)
+{
+	$sql = "SELECT rl.line_id, ro.return_id, ro.return_no, ro.status
+		FROM " . TB_PREF . "wh_return_order_lines rl
+		INNER JOIN " . TB_PREF . "wh_return_orders ro ON ro.return_id = rl.return_id
+		WHERE rl.serial_id = " . (int)$serial_id
+		. " AND ro.status IN ('draft', 'received', 'inspected')
+		ORDER BY rl.line_id DESC LIMIT 1";
+	$result = db_query($sql, 'Could not find open return line by serial');
+	return db_fetch($result);
+}
+
+/**
+ * Validate a tracked return line before it is inserted.
+ *
+ * @param int         $return_id    Return order id
+ * @param string      $stock_id     Item code
+ * @param float       $qty_expected Expected quantity
+ * @param int|null    $serial_id    Serial id
+ * @param int|null    $batch_id     Batch id
+ * @param string|null $error_message Output error text
+ * @return bool
+ */
+function validate_return_order_line_request($return_id, $stock_id, $qty_expected,
+	$serial_id = null, $batch_id = null, &$error_message = '')
+{
+	$error_message = '';
+	$order = get_return_order($return_id);
+	if (!$order || $order['status'] !== 'draft') {
+		$error_message = _('Only draft return orders can accept new line items.');
+		return false;
+	}
+
+	if (!is_scalar($qty_expected) || (float)$qty_expected <= 0) {
+		$error_message = _('Return quantity must be greater than zero.');
+		return false;
+	}
+
+	$tracking_mode = function_exists('get_item_tracking_mode')
+		? get_item_tracking_mode($stock_id)
+		: 'none';
+	$requires_serial = in_array($tracking_mode, array('serial', 'serial_batch'));
+	$requires_batch = in_array($tracking_mode, array('batch', 'serial_batch'));
+	$qty_expected = (float)$qty_expected;
+
+	if ($requires_serial && !$serial_id) {
+		$error_message = _('A serial number is required for this tracked item.');
+		return false;
+	}
+
+	if ($requires_batch && !$batch_id) {
+		$error_message = _('A batch number is required for this tracked item.');
+		return false;
+	}
+
+	if ($requires_serial && abs($qty_expected - 1.0) > 0.000001) {
+		$error_message = _('Serial-tracked returns must use a quantity of exactly 1.');
+		return false;
+	}
+
+	if ($serial_id) {
+		$serial = function_exists('get_serial_number') ? get_serial_number($serial_id) : false;
+		if (!$serial) {
+			$error_message = _('The selected serial number was not found.');
+			return false;
+		}
+
+		if ($serial['stock_id'] !== $stock_id) {
+			$error_message = _('The selected serial number does not belong to the chosen item.');
+			return false;
+		}
+
+		if ($order['return_type'] === 'customer') {
+			$allowed_statuses = array('delivered', 'in_repair', 'recalled');
+			if (!$order['customer_id'] || (int)$serial['customer_id'] !== (int)$order['customer_id']) {
+				$error_message = _('The selected serial number is not assigned to this customer.');
+				return false;
+			}
+			if (!in_array($serial['status'], $allowed_statuses)) {
+				$error_message = sprintf(
+					_('The selected serial number cannot be returned while its status is %s.'),
+					$serial['status']
+				);
+				return false;
+			}
+		}
+
+		$existing_line = find_open_return_line_by_serial($serial_id);
+		if ($existing_line) {
+			$error_message = sprintf(
+				_('This serial number is already assigned to open return order RO#%s.'),
+				$existing_line['return_no']
+			);
+			return false;
+		}
+
+		if ($requires_batch && (int)$serial['batch_id'] !== (int)$batch_id) {
+			$error_message = _('The selected serial number does not belong to the chosen batch.');
+			return false;
+		}
+	}
+
+	if ($batch_id) {
+		$batch = function_exists('get_stock_batch') ? get_stock_batch($batch_id) : false;
+		if (!$batch) {
+			$error_message = _('The selected batch number was not found.');
+			return false;
+		}
+
+		if ($batch['stock_id'] !== $stock_id) {
+			$error_message = _('The selected batch number does not belong to the chosen item.');
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
  * Add a line item to a return order.
  *
  * @param int         $return_id       Return order ID
@@ -202,10 +326,17 @@ function update_return_order($return_id, $return_type, $warehouse_loc_code, $ret
  * @param int|null    $batch_id        Batch FK
  * @param string|null $reason_code     Reason for return
  * @param string|null $memo            Line memo
- * @return int line_id
+ * @return int|false line_id on success, false on validation failure
  */
 function add_return_order_line($return_id, $stock_id, $qty_expected,
 	$to_bin_id = null, $serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
+	$error_message = '';
+	if (!validate_return_order_line_request($return_id, $stock_id, $qty_expected,
+		$serial_id, $batch_id, $error_message)) {
+		if ($error_message !== '')
+			display_error($error_message);
+		return false;
+	}
 
 	$sql = "INSERT INTO " . TB_PREF . "wh_return_order_lines (
 		return_id, stock_id, qty_expected, to_bin_id, serial_id, batch_id,

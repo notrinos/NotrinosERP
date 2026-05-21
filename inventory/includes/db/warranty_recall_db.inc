@@ -1126,12 +1126,16 @@ function identify_recall_affected_batches($campaign_id)
 function execute_recall_campaign($campaign_id)
 {
 	$result = array('serials_added' => 0, 'serials_quarantined' => 0, 'batches_added' => 0);
+	$covered_batch_ids = array();
 
 	begin_transaction();
 
 	// Find affected serials
 	$serials = identify_recall_affected_serials($campaign_id);
 	foreach ($serials as $serial) {
+		if (!empty($serial['batch_id']))
+			$covered_batch_ids[(int)$serial['batch_id']] = true;
+
 		// Check if already in recall items
 		$check = "SELECT COUNT(*) FROM " . TB_PREF . "recall_items
 			WHERE recall_id=" . (int)$campaign_id . " AND serial_id=" . (int)$serial['id'];
@@ -1156,6 +1160,9 @@ function execute_recall_campaign($campaign_id)
 	// Find affected batches
 	$batches = identify_recall_affected_batches($campaign_id);
 	foreach ($batches as $batch) {
+		if (isset($covered_batch_ids[(int)$batch['id']]))
+			continue;
+
 		$check = "SELECT COUNT(*) FROM " . TB_PREF . "recall_items
 			WHERE recall_id=" . (int)$campaign_id . " AND batch_id=" . (int)$batch['id']
 			. " AND serial_id IS NULL";

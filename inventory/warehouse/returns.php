@@ -126,7 +126,7 @@ if (isset($_POST['ADD_LINE']) && $selected_id > 0) {
 	}
 
 	if ($input_error == 0) {
-		add_return_order_line(
+		$line_id = add_return_order_line(
 			$selected_id,
 			$_POST['line_stock_id'],
 			$line_qty,
@@ -136,9 +136,11 @@ if (isset($_POST['ADD_LINE']) && $selected_id > 0) {
 			get_post('line_reason_code'),
 			get_post('line_memo')
 		);
-		display_notification(_('Line item has been added.'));
-		unset($_POST['line_stock_id'], $_POST['line_qty'], $_POST['line_serial_id'],
-			$_POST['line_batch_id'], $_POST['line_reason_code'], $_POST['line_memo']);
+		if ($line_id !== false) {
+			display_notification(_('Line item has been added.'));
+			unset($_POST['line_stock_id'], $_POST['line_qty'], $_POST['line_serial_id'],
+				$_POST['line_batch_id'], $_POST['line_reason_code'], $_POST['line_memo']);
+		}
 	}
 	$Ajax->activate('_page_body');
 }
@@ -377,19 +379,23 @@ if ($selected_id > 0 && $order) {
 			warehouse_bin_list_row(_('Quarantine Bin:'), 'line_to_bin_id', $order['warehouse_loc_code'], get_post('line_to_bin_id'), true);
 
 			$tracking = get_item_tracking_mode($line_stock);
-			if ($tracking === 'serial' || $tracking === 'both') {
+			if ($tracking === 'serial' || $tracking === 'serial_batch') {
 				$serial_sql = "SELECT id, serial_no FROM " . TB_PREF . "serial_numbers"
 					. " WHERE stock_id = " . db_escape($line_stock)
-					. " AND status IN ('available', 'delivered', 'returned', 'quarantine')"
+					. ($order['return_type'] === 'customer'
+						? " AND customer_id = " . (int)$order['customer_id']
+						. " AND status IN ('delivered', 'in_repair', 'recalled')"
+						: " AND status IN ('available', 'quarantine', 'returned', 'recalled')")
 					. " ORDER BY serial_no";
 				echo "<tr><td class='label'>" . _('Serial:') . "</td><td>";
 				echo combo_input('line_serial_id', get_post('line_serial_id'), $serial_sql, 'id', 'serial_no',
 					array('spec_option' => _('-- None --'), 'spec_id' => '', 'order' => false));
 				echo "</td></tr>";
 			}
-			if ($tracking === 'batch' || $tracking === 'both') {
+			if ($tracking === 'batch' || $tracking === 'serial_batch') {
 				$batch_sql = "SELECT id, batch_no FROM " . TB_PREF . "stock_batches"
 					. " WHERE stock_id = " . db_escape($line_stock)
+					. " AND status NOT IN ('scrapped', 'consumed')"
 					. " ORDER BY batch_no";
 				echo "<tr><td class='label'>" . _('Batch:') . "</td><td>";
 				echo combo_input('line_batch_id', get_post('line_batch_id'), $batch_sql, 'id', 'batch_no',

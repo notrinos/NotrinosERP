@@ -32,6 +32,38 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/inventory/includes/db/warranty_provision_db.inc');
 
+/**
+ * Render warranty provision tracking identifiers with lifecycle drill-through links.
+ *
+ * @param array $entry Warranty provision log row
+ * @return string HTML fragment
+ */
+function render_warranty_provision_tracking_cell($entry)
+{
+	global $path_to_root;
+
+	$parts = array();
+	if (!empty($entry['serial_no'])) {
+		$serial_label = _('S/N: ') . htmlspecialchars($entry['serial_no']);
+		if (!empty($entry['serial_id'])) {
+			$serial_label = "<a href='" . $path_to_root . "/inventory/inquiry/serial_lifecycle.php?serial_id="
+				. (int)$entry['serial_id'] . "'>" . $serial_label . "</a>";
+		}
+		$parts[] = $serial_label;
+	}
+
+	if (!empty($entry['batch_no'])) {
+		$batch_label = _('Batch: ') . htmlspecialchars($entry['batch_no']);
+		if (!empty($entry['batch_id'])) {
+			$batch_label = "<a href='" . $path_to_root . "/inventory/inquiry/batch_lifecycle.php?batch_id="
+				. (int)$entry['batch_id'] . "'>" . $batch_label . "</a>";
+		}
+		$parts[] = $batch_label;
+	}
+
+	return !empty($parts) ? implode(' / ', $parts) : '-';
+}
+
 //----------------------------------------------------------------------
 // Filter form
 //----------------------------------------------------------------------
@@ -170,12 +202,7 @@ if (db_num_rows($log) == 0) {
 		label_cell($entry['stock_id'] . ' - ' . $entry['item_description']);
 
 		// Serial or Batch
-		$serial_batch = '';
-		if ($entry['serial_no'])
-			$serial_batch = _('S/N: ') . $entry['serial_no'];
-		if ($entry['batch_no'])
-			$serial_batch .= ($serial_batch ? ' / ' : '') . _('Batch: ') . $entry['batch_no'];
-		label_cell($serial_batch ? $serial_batch : '-');
+		label_cell(render_warranty_provision_tracking_cell($entry));
 
 		label_cell($entry['customer_name']);
 		amount_cell($entry['provision_type'] == 'accrual' ? $entry['amount'] : -$entry['amount']);
