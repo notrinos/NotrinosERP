@@ -127,10 +127,12 @@ if ($customer_id && $customer_id != '' && $customer_id != ALL_TEXT) {
 
 	$cols = array(
 		_('Serial No') => array('fun' => 'fmt_serial_link', 'ord' => ''),
+		_('Batch No') => array('fun' => 'fmt_batch_link', 'ord' => ''),
 		_('Item Code')  => array('name' => 'stock_id', 'ord' => ''),
 		_('Description') => 'item_description',
 		_('Status')     => array('fun' => 'fmt_serial_status'),
 		_('Delivered')  => array('name' => 'delivery_date', 'type' => 'date', 'ord' => 'desc'),
+		_('Delivery')   => array('fun' => 'fmt_delivery_link', 'ord' => ''),
 		_('Warranty Start') => array('name' => 'warranty_start', 'type' => 'date'),
 		_('Warranty End')   => array('name' => 'warranty_end', 'type' => 'date'),
 		_('Warranty')   => array('fun' => 'fmt_warranty_badge'),
@@ -199,6 +201,17 @@ function fmt_serial_link($row) {
 }
 
 /**
+ * Format batch number as a hyperlink to batch lifecycle.
+ */
+function fmt_batch_link($row) {
+	global $path_to_root;
+	if (empty($row['batch_id']) || empty($row['batch_no']))
+		return '&mdash;';
+	return "<a href='" . $path_to_root . "/inventory/inquiry/batch_lifecycle.php?batch_id="
+		. (int)$row['batch_id'] . "'>" . htmlspecialchars($row['batch_no']) . "</a>";
+}
+
+/**
  * Format serial status with color badge.
  */
 function fmt_serial_status($row) {
@@ -263,6 +276,15 @@ function fmt_claim_count($row) {
 	return "<a href='" . $path_to_root
 		. "/inventory/manage/warranty_claims.php?customer_id=" . get_post('customer_id')
 		. "&serial_id=" . $row['id'] . "'>" . $count . "</a>";
+}
+
+/**
+ * Format original delivery reference as a transaction drill-through.
+ */
+function fmt_delivery_link($row) {
+	if (empty($row['delivery_id']))
+		return '&mdash;';
+	return get_customer_trans_view_str(ST_CUSTDELIVERY, $row['delivery_id']);
 }
 
 /**

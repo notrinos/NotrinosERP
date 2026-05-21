@@ -278,7 +278,7 @@ function get_sql_for_customer_equipment($customer_id, $stock_id = '', $warranty_
 			sn.delivery_date, sn.delivery_id,
 			sn.warranty_start, sn.warranty_end, sn.warranty_type,
 			sn.purchase_cost, sn.actual_cost,
-			sn.batch_id,
+			sn.batch_id, sb.batch_no,
 			CASE
 				WHEN sn.warranty_end IS NULL THEN 'none'
 				WHEN sn.warranty_end < '$today' THEN 'expired'
@@ -291,6 +291,7 @@ function get_sql_for_customer_equipment($customer_id, $stock_id = '', $warranty_
 			) AS claim_count
 		FROM " . TB_PREF . "serial_numbers sn
 		LEFT JOIN " . TB_PREF . "stock_master sm ON sn.stock_id = sm.stock_id
+		LEFT JOIN " . TB_PREF . "stock_batches sb ON sn.batch_id = sb.id
 		WHERE sn.customer_id = " . (int)$customer_id
 		. " AND sn.status IN ('delivered', 'in_repair', 'returned', 'recalled')";
 

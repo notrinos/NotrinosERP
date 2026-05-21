@@ -401,8 +401,8 @@ echo '<h3>' . _('Affected Items Detail') . '</h3>';
 $items_result = get_recall_items($campaign_id);
 
 start_table(TABLESTYLE, "width='100%'");
-$th = array(_('#'), _('Serial No'), _('Batch No'), _('Customer'), _('Status'),
-	_('Notified'), _('Returned'), _('Resolved'), _('Notes'));
+$th = array(_('#'), _('Serial No'), _('Batch No'), _('Tracked State'), _('Customer'),
+	_('Status'), _('Notified'), _('Returned'), _('Resolved'), _('Notes'));
 table_header($th);
 
 $k = 0;
@@ -412,9 +412,10 @@ while ($item = db_fetch($items_result)) {
 	alt_table_row_color($k);
 
 	label_cell($item['id']);
-	label_cell($item['serial_no'] ? htmlspecialchars($item['serial_no']) : '&mdash;');
-	label_cell($item['batch_no'] ? htmlspecialchars($item['batch_no']) : '&mdash;');
-	label_cell($item['customer_name'] ? htmlspecialchars($item['customer_name']) : '&mdash;');
+	label_cell(fmt_recall_serial_link($item));
+	label_cell(fmt_recall_batch_link($item));
+	label_cell(fmt_recall_tracked_state($item));
+	label_cell(fmt_recall_customer_link($item));
 	label_cell(recall_item_status_badge($item['status']));
 	label_cell($item['notification_date'] ? sql2date($item['notification_date']) : '&mdash;');
 	label_cell($item['return_date'] ? sql2date($item['return_date']) : '&mdash;');
@@ -425,7 +426,7 @@ while ($item = db_fetch($items_result)) {
 }
 
 if (!$has_items) {
-	echo '<tr><td colspan="9" align="center">' . _('No affected items identified yet. Execute recall to identify affected items.') . '</td></tr>';
+	echo '<tr><td colspan="10" align="center">' . _('No affected items identified yet. Execute recall to identify affected items.') . '</td></tr>';
 }
 
 end_table(1);
@@ -456,6 +457,80 @@ if (!empty($timeline)) {
 	}
 
 	echo '</div>';
+}
+
+/**
+ * Render recall serial number as a lifecycle drill-through.
+ *
+ * @param array $item Recall item row
+ * @return string
+ */
+function fmt_recall_serial_link($item)
+{
+	global $path_to_root;
+	if (empty($item['serial_id']) || empty($item['serial_no']))
+		return '&mdash;';
+	return "<a href='" . $path_to_root . "/inventory/inquiry/serial_lifecycle.php?serial_id="
+		. (int)$item['serial_id'] . "'>" . htmlspecialchars($item['serial_no']) . "</a>";
+}
+
+/**
+ * Render recall batch number as a lifecycle drill-through.
+ *
+ * @param array $item Recall item row
+ * @return string
+ */
+function fmt_recall_batch_link($item)
+{
+	global $path_to_root;
+	if (empty($item['batch_id']) || empty($item['batch_no']))
+		return '&mdash;';
+	return "<a href='" . $path_to_root . "/inventory/inquiry/batch_lifecycle.php?batch_id="
+		. (int)$item['batch_id'] . "'>" . htmlspecialchars($item['batch_no']) . "</a>";
+}
+
+/**
+ * Render customer name as a link to the customer equipment register.
+ *
+ * @param array $item Recall item row
+ * @return string
+ */
+function fmt_recall_customer_link($item)
+{
+	global $path_to_root;
+	if (empty($item['customer_id']) || empty($item['customer_name']))
+		return '&mdash;';
+	return "<a href='" . $path_to_root . "/inventory/inquiry/customer_equipment.php?customer_id="
+		. (int)$item['customer_id'] . "'>" . htmlspecialchars($item['customer_name']) . "</a>";
+}
+
+/**
+ * Render tracked lifecycle state alongside recall workflow state.
+ *
+ * @param array $item Recall item row
+ * @return string
+ */
+function fmt_recall_tracked_state($item)
+{
+	if (!empty($item['serial_status'])) {
+		$colors = array(
+			'available' => '#17a2b8',
+			'delivered' => '#6c757d',
+			'in_repair' => '#fd7e14',
+			'returned' => '#6610f2',
+			'recalled' => '#dc3545',
+			'quarantine' => '#343a40',
+		);
+		$status = $item['serial_status'];
+		$color = isset($colors[$status]) ? $colors[$status] : '#6c757d';
+		$label = ucfirst(str_replace('_', ' ', $status));
+		return "<span style='background:" . $color . ";color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;'>"
+			. htmlspecialchars($label) . "</span>";
+	}
+	if (!empty($item['batch_id']))
+		return "<span style='background:#adb5bd;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;'>"
+			. _('Batch Match') . "</span>";
+	return '&mdash;';
 }
 
 end_page();
