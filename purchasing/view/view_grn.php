@@ -14,6 +14,7 @@ $path_to_root = '../..';
 include($path_to_root.'/purchasing/includes/po_class.inc');
 
 include($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -36,7 +37,7 @@ display_heading2(_('Line Details'));
 
 // Pre-load tracking data from grn_items for this GRN
 $grn_tracking = array();
-$tracking_sql = "SELECT gi.item_code, gi.serial_numbers_json, gi.batch_id, gi.expiry_date,
+$tracking_sql = "SELECT gi.po_detail_item, gi.item_code, gi.serial_numbers_json, gi.batch_id, gi.expiry_date,
 	gi.manufacturing_date, gi.inspection_status,
 	sb.batch_no AS batch_code
 	FROM " . TB_PREF . "grn_items gi
@@ -44,7 +45,8 @@ $tracking_sql = "SELECT gi.item_code, gi.serial_numbers_json, gi.batch_id, gi.ex
 	WHERE gi.grn_batch_id = " . db_escape($_GET['trans_no']);
 $tracking_result = db_query($tracking_sql, 'could not get tracking data');
 while ($trow = db_fetch($tracking_result)) {
-	$grn_tracking[$trow['item_code']] = $trow;
+	$tracking_key = !empty($trow['po_detail_item']) ? (int)$trow['po_detail_item'] : 'item:' . $trow['item_code'];
+	$grn_tracking[$tracking_key] = $trow;
 }
 
 start_table(TABLESTYLE, "width='90%'");
@@ -80,19 +82,18 @@ foreach ($purchase_order->line_items as $stock_item) {
 	end_row();
 
 	// --- Advanced Inventory: display serial/batch tracking info ---
-	if (isset($grn_tracking[$stock_item->stock_id])) {
-		$track = $grn_tracking[$stock_item->stock_id];
+	$tracking_key = !empty($stock_item->po_detail_rec) ? (int)$stock_item->po_detail_rec : 'item:' . $stock_item->stock_id;
+	if (isset($grn_tracking[$tracking_key])) {
+		$track = $grn_tracking[$tracking_key];
 		$has_tracking = false;
 		$tracking_parts = array();
 
-		// Serial numbers (db_escape stores HTML-encoded data, decode before JSON parse)
-		if (!empty($track['serial_numbers_json'])) {
-			$raw_json = html_entity_decode($track['serial_numbers_json'], ENT_QUOTES, 'UTF-8');
-			$serials = json_decode($raw_json, true);
-			if (!empty($serials)) {
-				$has_tracking = true;
-				$tracking_parts[] = '<b>' . _('Serials:') . '</b> ' . htmlspecialchars(implode(', ', $serials));
-			}
+		$serials = function_exists('get_grn_serial_numbers_from_json')
+			? get_grn_serial_numbers_from_json($track['serial_numbers_json'])
+			: array();
+		if (!empty($serials)) {
+			$has_tracking = true;
+			$tracking_parts[] = '<b>' . _('Serials:') . '</b> ' . htmlspecialchars(implode(', ', $serials));
 		}
 
 		// Batch info

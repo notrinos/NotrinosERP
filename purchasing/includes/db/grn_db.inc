@@ -150,6 +150,11 @@ function add_grn(&$po) {
 	global $Refs;
 
 	$date_ = $po->orig_order_date;
+	$wh_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/warehouse/includes/warehouse_operations.inc';
+	if (file_exists($wh_ops_path))
+		include_once($wh_ops_path);
+	$can_process_grn_tracking = function_exists('process_grn_tracking_and_wms');
 
 	begin_transaction();
 	hook_db_prewrite($po, ST_SUPPRECEIVE);
@@ -224,23 +229,22 @@ function add_grn(&$po) {
 
 			$po->line_items[$line_no]->grn_item_id = $grn_item;
 			/* Update location stock records - NB  a po cannot be entered for a service/kit parts done automatically */
-			add_stock_move(ST_SUPPRECEIVE, $order_line->stock_id, $grn, $po->Location, $date_, '', $order_line->receive_qty, $order_line->standard_cost, $order_line->taxfree_charge_value($po)/$order_line->receive_qty);		
+			$tracking_mode = get_item_tracking_mode($order_line->stock_id);
+			$has_tracking = ($tracking_mode === 'serial' || $tracking_mode === 'batch' || $tracking_mode === 'serial_batch');
+			if (!$has_tracking || !$can_process_grn_tracking) {
+				add_stock_move(ST_SUPPRECEIVE, $order_line->stock_id, $grn, $po->Location, $date_, '', $order_line->receive_qty, $order_line->standard_cost, $order_line->taxfree_charge_value($po)/$order_line->receive_qty);
+			}
 			log_grn_vendor_delivery_events($po->supplier_id, $grn, $date_, $order_line);
 
 		} /*quantity received is != 0 */
 	} /*end of order_line loop */
 
 	// --- Advanced Inventory: serial/batch tracking + WMS inbound operations ---
-	$wh_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
-		. '/inventory/warehouse/includes/warehouse_operations.inc';
-	if (file_exists($wh_ops_path)) {
-		include_once($wh_ops_path);
-		if (function_exists('process_grn_tracking_and_wms')) {
-			$tracking_result = process_grn_tracking_and_wms($po, $grn, $date_, $po->Location);
-			if ($tracking_result === false) {
-				cancel_transaction();
-				return false;
-			}
+	if ($can_process_grn_tracking) {
+		$tracking_result = process_grn_tracking_and_wms($po, $grn, $date_, $po->Location);
+		if ($tracking_result === false) {
+			cancel_transaction();
+			return false;
 		}
 	}
 
@@ -355,8 +359,10 @@ function set_grn_item_credited(&$entered_grn, $supplier, $transno, $date, $taxfr
 				$extended['batch_id'] = (int)$myrow['batch_id'];
 			}
 			if (isset($myrow['serial_numbers_json']) && !empty($myrow['serial_numbers_json'])) {
-				$serial_ids = json_decode($myrow['serial_numbers_json'], true);
-				if (is_array($serial_ids) && !empty($serial_ids)) {
+				$serial_ids = function_exists('get_grn_serial_ids_from_json')
+					? get_grn_serial_ids_from_json($myrow['serial_numbers_json'], $entered_grn->item_code)
+					: array();
+				if (count($serial_ids) === 1) {
 					$extended['serial_id'] = (int)reset($serial_ids);
 				}
 			}

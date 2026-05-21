@@ -317,6 +317,119 @@ function set_tracking_setting($name, $value) {
 }
 
 /**
+ * Decode GRN serial JSON into raw array entries.
+ *
+ * Accepts HTML-encoded JSON because older writes may have passed through
+ * db_escape() before persistence.
+ *
+ * @param mixed $serial_numbers_json Stored JSON payload.
+ * @return array
+ */
+function decode_grn_serial_numbers_json($serial_numbers_json) {
+	if (!is_scalar($serial_numbers_json))
+		return array();
+
+	$raw_json = trim((string)$serial_numbers_json);
+	if ($raw_json === '')
+		return array();
+
+	$decoded_json = html_entity_decode($raw_json, ENT_QUOTES, 'UTF-8');
+	$entries = json_decode($decoded_json, true);
+
+	return is_array($entries) ? $entries : array();
+}
+
+/**
+ * Resolve stored GRN serial JSON to serial number strings.
+ *
+ * Supports current string payloads and legacy integer-id payloads.
+ *
+ * @param mixed $serial_numbers_json Stored JSON payload.
+ * @return array
+ */
+function get_grn_serial_numbers_from_json($serial_numbers_json) {
+	$entries = decode_grn_serial_numbers_json($serial_numbers_json);
+	if (empty($entries))
+		return array();
+
+	$serial_numbers = array();
+	$seen_serials = array();
+	$serial_numbers_db_path = dirname(__FILE__) . '/serial_numbers_db.inc';
+	if (file_exists($serial_numbers_db_path))
+		include_once($serial_numbers_db_path);
+
+	foreach ($entries as $entry) {
+		$serial_number = '';
+
+		if (is_int($entry) || is_float($entry)) {
+			if (function_exists('get_serial_number')) {
+				$serial_row = get_serial_number((int)$entry);
+				if ($serial_row && !empty($serial_row['serial_no']))
+					$serial_number = trim((string)$serial_row['serial_no']);
+			}
+		} elseif (is_scalar($entry)) {
+			$serial_number = trim((string)$entry);
+		}
+
+		if ($serial_number === '')
+			continue;
+
+		$serial_key = strtoupper($serial_number);
+		if (isset($seen_serials[$serial_key]))
+			continue;
+
+		$seen_serials[$serial_key] = true;
+		$serial_numbers[] = $serial_number;
+	}
+
+	return $serial_numbers;
+}
+
+/**
+ * Resolve stored GRN serial JSON to serial record ids.
+ *
+ * Supports current string payloads and legacy integer-id payloads.
+ *
+ * @param mixed  $serial_numbers_json Stored JSON payload.
+ * @param string $stock_id            Item code for string lookups.
+ * @return array
+ */
+function get_grn_serial_ids_from_json($serial_numbers_json, $stock_id = '') {
+	$entries = decode_grn_serial_numbers_json($serial_numbers_json);
+	if (empty($entries))
+		return array();
+
+	$serial_ids = array();
+	$seen_ids = array();
+	$serial_numbers_db_path = dirname(__FILE__) . '/serial_numbers_db.inc';
+	if (file_exists($serial_numbers_db_path))
+		include_once($serial_numbers_db_path);
+
+	foreach ($entries as $entry) {
+		$serial_id = 0;
+
+		if (is_int($entry) || is_float($entry)) {
+			$serial_id = (int)$entry;
+		} elseif (is_scalar($entry) && function_exists('get_serial_number_by_code')) {
+			$serial_number = trim((string)$entry);
+			if ($serial_number !== '') {
+				$serial_row = get_serial_number_by_code($serial_number, $stock_id);
+				if ($serial_row)
+					$serial_id = (int)$serial_row['id'];
+			}
+		}
+
+		if ($serial_id <= 0 || isset($seen_ids[$serial_id]))
+			continue;
+
+		$seen_ids[$serial_id] = true;
+		$serial_ids[] = $serial_id;
+	}
+
+	return $serial_ids;
+}
+
+/**
  * Get the tracking mode for an item.
  *
  * @param string $stock_id The item code

@@ -650,8 +650,10 @@ function remove_not_invoice_item($id) {
 				$extended['batch_id'] = (int)$myrow['batch_id'];
 			}
 			if (isset($myrow['serial_numbers_json']) && !empty($myrow['serial_numbers_json'])) {
-				$serial_ids = json_decode($myrow['serial_numbers_json'], true);
-				if (is_array($serial_ids) && !empty($serial_ids)) {
+				$serial_ids = function_exists('get_grn_serial_ids_from_json')
+					? get_grn_serial_ids_from_json($myrow['serial_numbers_json'], $myrow['item_code'])
+					: array();
+				if (count($serial_ids) === 1) {
 					$extended['serial_id'] = (int)reset($serial_ids);
 				}
 			}
