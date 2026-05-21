@@ -62,10 +62,10 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
 $action = '';
-if (isset($_POST['action']) && is_scalar($_POST['action']))
-	$action = trim((string)$_POST['action']);
-elseif (isset($_GET['action']) && is_scalar($_GET['action']))
-	$action = trim((string)$_GET['action']);
+if (isset($_POST['action']))
+	$action = trim($_POST['action']);
+elseif (isset($_GET['action']))
+	$action = trim($_GET['action']);
 
 if (empty($action)) {
 	ob_clean();
@@ -184,7 +184,7 @@ switch ($action) {
 		$response = mobile_get_bin_contents();
 		break;
 }
-} catch (Exception $e) {
+} catch (Throwable $e) {
 	$response = array('success' => false, 'error' => $e->getMessage());
 }
 
@@ -206,12 +206,9 @@ exit();
  * @return array JSON response
  */
 function mobile_scan_lookup() {
-	$scan = mobile_get_request_string('scan');
+	$scan = isset($_POST['scan']) ? trim($_POST['scan']) : '';
 	if (empty($scan))
 		return array('success' => false, 'error' => _('No scan data'));
-
-	if (mobile_has_control_chars($scan))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$result = array('success' => true, 'scan' => $scan, 'matches' => array());
 
@@ -349,91 +346,6 @@ function mobile_parse_positive_numeric($value, &$normalized_value) {
 }
 
 /**
- * Parse any finite numeric input (allows negatives and zero).
- *
- * @param mixed $value
- * @param float|null $normalized_value
- * @return bool
- */
-function mobile_parse_finite_numeric($value, &$normalized_value) {
-	$normalized_value = null;
-
-	if (!is_scalar($value))
-		return false;
-
-	$trimmed = trim((string)$value);
-	if ($trimmed === '' || !is_numeric($trimmed))
-		return false;
-
-	$parsed = (float)$trimmed;
-	if (is_nan($parsed) || is_infinite($parsed))
-		return false;
-
-	$normalized_value = $parsed;
-	return true;
-}
-
-/**
- * Validate positive integer input (no decimals/exponents/signs).
- *
- * @param mixed $value
- * @param int|null $normalized_value
- * @return bool
- */
-function mobile_parse_positive_integer($value, &$normalized_value) {
-	$normalized_value = null;
-
-	if (!is_scalar($value))
-		return false;
-
-	$trimmed = trim((string)$value);
-	if ($trimmed === '' || !preg_match('/^[1-9][0-9]*$/', $trimmed))
-		return false;
-
-	$parsed = (int)$trimmed;
-	if ($parsed <= 0)
-		return false;
-
-	$normalized_value = $parsed;
-	return true;
-}
-
-/**
- * Read optional operation id from POST with strict integer validation.
- *
- * @param int $operation_id
- * @return array
- */
-function mobile_get_optional_operation_id(&$operation_id) {
-	$operation_id = 0;
-
-	if (!isset($_POST['op_id']) || $_POST['op_id'] === '' || $_POST['op_id'] === null)
-		return array('success' => true);
-
-	if (!mobile_parse_positive_integer($_POST['op_id'], $operation_id))
-		return array('success' => false, 'error' => _('Operation id must be a positive integer'));
-
-	return array('success' => true);
-}
-
-/**
- * Get a request string value from POST safely, rejecting non-scalar payloads.
- *
- * @param string $key
- * @param string $default
- * @return string
- */
-function mobile_get_request_string($key, $default = '') {
-	if (!isset($_POST[$key]))
-		return $default;
-
-	if (!is_scalar($_POST[$key]))
-		return $default;
-
-	return trim((string)$_POST[$key]);
-}
-
-/**
  * Validate stock item code and load active item master row.
  *
  * @param mixed $stock_id_raw
@@ -510,8 +422,13 @@ function mobile_validate_operation_for_completion($op_id, $allowed_op_types) {
  */
 function mobile_validate_storable_bin($bin_loc_id_raw, &$bin_loc_id) {
 	$bin_loc_id = 0;
-	if (!mobile_parse_positive_integer($bin_loc_id_raw, $parsed_bin))
+
+	if (!is_scalar($bin_loc_id_raw))
 		return array('success' => false, 'error' => _('Invalid bin value'));
+
+	$parsed_bin = (int)$bin_loc_id_raw;
+	if ($parsed_bin <= 0)
+		return array('success' => false, 'error' => _('Bin is required'));
 
 	$sql = 'SELECT wl.loc_id, wl.loc_code FROM ' . TB_PREF . 'wh_locations wl '
 		. 'INNER JOIN ' . TB_PREF . 'wh_location_types lt ON wl.location_type_id=lt.id '
@@ -526,107 +443,12 @@ function mobile_validate_storable_bin($bin_loc_id_raw, &$bin_loc_id) {
 }
 
 /**
- * Validate source bin has enough stock for the exact stock/batch/serial tuple.
- *
- * @param int $bin_loc_id
- * @param string $stock_id
- * @param float $required_qty
- * @param int|null $batch_id
- * @param int|null $serial_id
- * @return array
- */
-function mobile_validate_source_bin_quantity($bin_loc_id, $stock_id, $required_qty, $batch_id = null, $serial_id = null) {
-	$bin_loc_id = (int)$bin_loc_id;
-	$required_qty = (float)$required_qty;
-
-	if ($bin_loc_id <= 0 || !is_scalar($stock_id) || trim((string)$stock_id) === '' || !is_finite($required_qty) || $required_qty <= 0)
-		return array('success' => false, 'error' => _('Invalid source stock validation request'));
-
-	$stock_id = trim((string)$stock_id);
-	$sql = "SELECT COALESCE(SUM(qty_on_hand), 0) AS qty_on_hand FROM " . TB_PREF . "wh_bin_stock"
-		. " WHERE wh_loc_id=" . $bin_loc_id
-		. " AND stock_id=" . db_escape($stock_id)
-		. " AND " . ($batch_id !== null ? "batch_id=" . (int)$batch_id : "batch_id IS NULL")
-		. " AND " . ($serial_id !== null ? "serial_id=" . (int)$serial_id : "serial_id IS NULL");
-	$result = db_query($sql, 'could not validate source bin stock quantity');
-	$row = db_fetch($result);
-	$available_qty = $row ? (float)$row['qty_on_hand'] : 0.0;
-
-	if ($available_qty + 0.000001 < $required_qty) {
-		return array(
-			'success' => false,
-			'error' => sprintf(
-				_('Source bin has only %s of %s but %s is required.'),
-				number_format2($available_qty, get_qty_dec($stock_id)),
-				$stock_id,
-				number_format2($required_qty, get_qty_dec($stock_id))
-			)
-		);
-	}
-
-	return array('success' => true, 'available_qty' => $available_qty);
-}
-
-/**
- * Reconcile serial bin stock so a serial exists in exactly one target bin with qty=1.
- *
- * @param int $serial_id
- * @param string $stock_id
- * @param int $target_bin_loc_id
- * @return array
- */
-function mobile_reconcile_serial_bin_stock($serial_id, $stock_id, $target_bin_loc_id) {
-	$serial_id = (int)$serial_id;
-	$target_bin_loc_id = (int)$target_bin_loc_id;
-
-	if ($serial_id <= 0 || $target_bin_loc_id <= 0 || !is_scalar($stock_id) || trim((string)$stock_id) === '')
-		return array('success' => false, 'error' => _('Invalid serial reconciliation input'));
-
-	$stock_id = trim((string)$stock_id);
-	$rows_sql = "SELECT wh_loc_id, qty_on_hand, stock_status FROM " . TB_PREF . "wh_bin_stock"
-		. " WHERE serial_id=" . $serial_id
-		. " AND stock_id=" . db_escape($stock_id)
-		. " AND qty_on_hand<>0";
-	$rows_res = db_query($rows_sql, 'could not read serial bin stock rows');
-
-	$target_qty = 0.0;
-	$target_status = 'available';
-
-	while ($row = db_fetch($rows_res)) {
-		$row_bin = (int)$row['wh_loc_id'];
-		$row_qty = (float)$row['qty_on_hand'];
-		$row_status = $row['stock_status'] ? $row['stock_status'] : 'available';
-
-		if ($row_bin === $target_bin_loc_id) {
-			$target_qty += $row_qty;
-			$target_status = $row_status;
-			continue;
-		}
-
-		if ($row_qty > 0)
-			update_bin_stock($row_bin, $stock_id, -$row_qty, null, $serial_id, null, $row_status);
-		elseif ($row_qty < 0)
-			update_bin_stock($row_bin, $stock_id, abs($row_qty), null, $serial_id, null, $row_status);
-	}
-
-	if ($target_qty < 1.0)
-		update_bin_stock($target_bin_loc_id, $stock_id, 1.0 - $target_qty, null, $serial_id, null, $target_status);
-	elseif ($target_qty > 1.0)
-		update_bin_stock($target_bin_loc_id, $stock_id, -(($target_qty) - 1.0), null, $serial_id, null, $target_status);
-
-	return array('success' => true);
-}
-
-/**
  * Confirm receipt of item into a bin (part of inbound flow).
  *
  * @return array JSON response
  */
 function mobile_confirm_receive() {
-	$op_id = 0;
-	$operation_id_result = mobile_get_optional_operation_id($op_id);
-	if (!$operation_id_result['success'])
-		return $operation_id_result;
+	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
 	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
 	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
 	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
@@ -645,7 +467,6 @@ function mobile_confirm_receive() {
 	$bin_validation = mobile_validate_storable_bin(isset($_POST['bin_loc_id']) ? $_POST['bin_loc_id'] : 0, $bin_loc_id);
 	if (!$bin_validation['success'])
 		return $bin_validation;
-	$bin_loc_code = isset($bin_validation['bin']['loc_code']) ? $bin_validation['bin']['loc_code'] : '';
 
 	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
 		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
@@ -659,6 +480,7 @@ function mobile_confirm_receive() {
 
 	$serial_id = null;
 	$batch_id = null;
+	$batch = null;
 
 	// Resolve serial
 	if (!empty($serial_no)) {
@@ -676,6 +498,22 @@ function mobile_confirm_receive() {
 		$batch_id = $batch['id'];
 	}
 
+	$received_stock_status = !empty($stock_item['quality_inspection_required']) ? 'quarantine' : 'available';
+	$serial_reconcile = array('success' => true, 'already_in_target' => false, 'moved_from_bin_ids' => array());
+	if ($serial_id) {
+		$reconcile_error = '';
+		$serial_reconcile = reconcile_serial_bin_stock_location(
+			$stock_id,
+			$serial_id,
+			$bin_loc_id,
+			false,
+			$serial_no,
+			$reconcile_error
+		);
+		if (!$serial_reconcile['success'])
+			return array('success' => false, 'error' => $reconcile_error);
+	}
+
 	// Capacity check if bin specified
 	if ($bin_loc_id > 0) {
 		$weight = $stock_item ? (float)$stock_item['item_weight'] * $qty : 0;
@@ -688,26 +526,34 @@ function mobile_confirm_receive() {
 	begin_transaction();
 
 	// Update bin stock
-	if ($serial_id) {
-		$reconcile_result = mobile_reconcile_serial_bin_stock($serial_id, $stock_id, $bin_loc_id);
-		if (!$reconcile_result['success']) {
-			cancel_transaction();
-			return $reconcile_result;
-		}
-	}
-	elseif ($bin_loc_id > 0) {
-		update_bin_stock($bin_loc_id, $stock_id, $qty, $batch_id, $serial_id, null, 'available');
+	if ($bin_loc_id > 0) {
+		$bin_qty = ($serial_id && !empty($serial_reconcile['already_in_target'])) ? 0 : $qty;
+		update_bin_stock($bin_loc_id, $stock_id, $bin_qty, $batch_id, $serial_id, null, $received_stock_status);
 	}
 
 	// Update serial location if applicable
 	if ($serial_id) {
-		$serial_loc_code = $bin_loc_code !== '' ? $bin_loc_code : $loc_code;
+		$serial_state_changed = !empty($serial_reconcile['moved_from_bin_ids'])
+			|| empty($serial_reconcile['already_in_target'])
+			|| $serial['status'] !== $received_stock_status
+			|| (int)$serial['wh_loc_id'] !== $bin_loc_id
+			|| $serial['loc_code'] !== $loc_code;
+
 		$sql = "UPDATE " . TB_PREF . "serial_numbers SET status='available', loc_code="
-			. db_escape($serial_loc_code) . ", wh_loc_id=" . (int)$bin_loc_id
+			. db_escape($loc_code) . ", wh_loc_id=" . (int)$bin_loc_id
 			. " WHERE id=" . (int)$serial_id;
+		$sql = str_replace("status='available'", "status=" . db_escape($received_stock_status), $sql);
 		db_query($sql);
-		add_serial_movement($serial_id, ST_SUPPRECEIVE, 0, '', $serial_loc_code,
-			'', 'available', Today(), 'Mobile receive', 'Received via mobile scanner');
+		if ($serial_state_changed) {
+			add_serial_movement($serial_id, ST_SUPPRECEIVE, 0, $serial['loc_code'], $loc_code,
+				$serial['status'], $received_stock_status, Today(), 'Mobile receive', 'Received via mobile scanner');
+		}
+	}
+
+	if ($batch_id && $batch) {
+		$desired_batch_status = $received_stock_status === 'quarantine' ? 'quarantine' : 'active';
+		if (!isset($batch['status']) || $batch['status'] !== $desired_batch_status)
+			update_batch_status($batch_id, $desired_batch_status, 'Mobile receive');
 	}
 
 	// Update operation status if provided
@@ -729,24 +575,12 @@ function mobile_confirm_receive() {
  * @return array JSON response
  */
 function mobile_confirm_ship() {
-	$serial_no = mobile_get_request_string('serial_no');
-	$stock_id = mobile_get_request_string('stock_id');
-	$op_id = 0;
-	$operation_id_result = mobile_get_optional_operation_id($op_id);
-	if (!$operation_id_result['success'])
-		return $operation_id_result;
+	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
+	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
+	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
 
 	if (empty($serial_no) || empty($stock_id))
 		return array('success' => false, 'error' => _('Serial number and item are required'));
-
-	if (mobile_has_control_chars($serial_no) || mobile_has_control_chars($stock_id))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
-
-	$stock_item = null;
-	$stock_validation = mobile_validate_stock_item($stock_id, $stock_item);
-	if (!$stock_validation['success'])
-		return $stock_validation;
-	$stock_id = $stock_validation['stock_id'];
 
 	$operation_validation = mobile_validate_operation_for_completion($op_id, array('ship'));
 	if (!$operation_validation['success'])
@@ -791,32 +625,14 @@ function mobile_confirm_transfer() {
 	$qty = null;
 	if (!mobile_parse_positive_numeric(isset($_POST['qty']) ? $_POST['qty'] : null, $qty))
 		return array('success' => false, 'error' => _('Quantity must be a positive finite number'));
-	$from_bin_id = isset($_POST['from_bin_id']) ? $_POST['from_bin_id'] : 0;
-	$to_bin_id = isset($_POST['to_bin_id']) ? $_POST['to_bin_id'] : 0;
+	$from_bin_id = isset($_POST['from_bin_id']) ? (int)$_POST['from_bin_id'] : 0;
+	$to_bin_id = isset($_POST['to_bin_id']) ? (int)$_POST['to_bin_id'] : 0;
 	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
 	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
 	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
 
-	if (empty($stock_id) || $qty <= 0)
+	if (empty($stock_id) || $qty <= 0 || $from_bin_id <= 0 || $to_bin_id <= 0)
 		return array('success' => false, 'error' => _('Item, quantity, source bin, and destination bin are required'));
-
-	$stock_item = null;
-	$stock_validation = mobile_validate_stock_item($stock_id, $stock_item);
-	if (!$stock_validation['success'])
-		return $stock_validation;
-	$stock_id = $stock_validation['stock_id'];
-
-	$validated_from_bin_id = 0;
-	$from_bin_validation = mobile_validate_storable_bin($from_bin_id, $validated_from_bin_id);
-	if (!$from_bin_validation['success'])
-		return $from_bin_validation;
-	$from_bin_id = $validated_from_bin_id;
-
-	$validated_to_bin_id = 0;
-	$to_bin_validation = mobile_validate_storable_bin($to_bin_id, $validated_to_bin_id);
-	if (!$to_bin_validation['success'])
-		return $to_bin_validation;
-	$to_bin_id = $validated_to_bin_id;
 
 	if (mobile_has_control_chars($stock_id) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no) || mobile_has_control_chars($loc_code))
 		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
@@ -833,12 +649,6 @@ function mobile_confirm_transfer() {
 			return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $serial_no));
 		if (abs($qty - 1.0) > 0.000001)
 			return array('success' => false, 'error' => _('Serial-tracked transfer requires quantity 1'));
-		if ((int)$serial['wh_loc_id'] !== $from_bin_id) {
-			return array(
-				'success' => false,
-				'error' => sprintf(_('Serial "%s" is not in the selected source bin'), $serial_no)
-			);
-		}
 		$serial_id = $serial['id'];
 	}
 
@@ -849,44 +659,29 @@ function mobile_confirm_transfer() {
 		$batch_id = $batch['id'];
 	}
 
-	$source_qty_validation = mobile_validate_source_bin_quantity($from_bin_id, $stock_id, $qty, $batch_id, $serial_id);
-	if (!$source_qty_validation['success'])
-		return $source_qty_validation;
-
 	// Capacity check on destination bin
-	$weight = $stock_item ? (float)$stock_item['item_weight'] * $qty : 0;
-	$volume = $stock_item ? (float)$stock_item['item_volume'] * $qty : 0;
+	$item = get_item($stock_id);
+	$weight = $item ? (float)$item['item_weight'] * $qty : 0;
+	$volume = $item ? (float)$item['item_volume'] * $qty : 0;
 	$cap = check_can_store($to_bin_id, $stock_id, $qty, $weight, $volume, $batch_id);
 	if (!$cap['ok'])
 		return array('success' => false, 'error' => implode(' ', $cap['errors']));
 
 	begin_transaction();
 
-	if ($serial_id) {
-		$reconcile_result = mobile_reconcile_serial_bin_stock($serial_id, $stock_id, $to_bin_id);
-		if (!$reconcile_result['success']) {
-			cancel_transaction();
-			return $reconcile_result;
-		}
-	}
-	else {
-		// Remove from source bin
-		update_bin_stock($from_bin_id, $stock_id, -$qty, $batch_id, $serial_id, null, 'available');
+	// Remove from source bin
+	update_bin_stock($from_bin_id, $stock_id, -$qty, $batch_id, $serial_id, null, 'available');
 
-		// Add to destination bin
-		update_bin_stock($to_bin_id, $stock_id, $qty, $batch_id, $serial_id, null, 'available');
-	}
+	// Add to destination bin
+	update_bin_stock($to_bin_id, $stock_id, $qty, $batch_id, $serial_id, null, 'available');
 
 	// Update serial location if applicable
 	if ($serial_id) {
 		$sql = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=" . (int)$to_bin_id
-			. ", loc_code=" . db_escape(isset($to_bin_validation['bin']['loc_code']) ? $to_bin_validation['bin']['loc_code'] : '')
 			. " WHERE id=" . (int)$serial_id;
 		db_query($sql);
-		$from_loc_code = isset($from_bin_validation['bin']['loc_code']) ? $from_bin_validation['bin']['loc_code'] : '';
-		$to_loc_code = isset($to_bin_validation['bin']['loc_code']) ? $to_bin_validation['bin']['loc_code'] : '';
 		add_serial_movement($serial_id, ST_LOCTRANSFER, 0,
-			$from_loc_code, $to_loc_code, 'available', 'available',
+			$loc_code, $loc_code, 'available', 'available',
 			Today(), 'Mobile transfer', 'Bin-to-bin transfer via mobile');
 	}
 
@@ -911,19 +706,14 @@ function mobile_confirm_transfer() {
  */
 function mobile_count_line() {
 	$count_id = isset($_POST['count_id']) ? (int)$_POST['count_id'] : 0;
-	$stock_id = mobile_get_request_string('stock_id');
+	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
 	$bin_loc_id = isset($_POST['bin_loc_id']) ? (int)$_POST['bin_loc_id'] : 0;
-	$counted_qty = 0;
-	if (!mobile_parse_finite_numeric(isset($_POST['counted_qty']) ? $_POST['counted_qty'] : null, $counted_qty))
-		return array('success' => false, 'error' => _('Counted quantity must be a finite number'));
-	$batch_no = mobile_get_request_string('batch_no');
-	$serial_no = mobile_get_request_string('serial_no');
+	$counted_qty = isset($_POST['counted_qty']) ? (float)$_POST['counted_qty'] : 0;
+	$batch_no = isset($_POST['batch_no']) ? trim($_POST['batch_no']) : '';
+	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
 
 	if ($count_id <= 0 || empty($stock_id))
 		return array('success' => false, 'error' => _('Count session and item are required'));
-
-	if (mobile_has_control_chars($stock_id) || mobile_has_control_chars($batch_no) || mobile_has_control_chars($serial_no))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$batch_id = null;
 	$serial_id = null;
@@ -979,15 +769,12 @@ function mobile_count_line() {
  * @return array JSON response
  */
 function mobile_serial_lookup() {
-	$serial_no = mobile_get_request_string('serial_no');
-	$scan = mobile_get_request_string('scan');
+	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
+	$scan = isset($_POST['scan']) ? trim($_POST['scan']) : '';
 
 	$search = !empty($serial_no) ? $serial_no : $scan;
 	if (empty($search))
 		return array('success' => false, 'error' => _('Serial number is required'));
-
-	if (mobile_has_control_chars($search))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$serial = get_serial_number_by_code($search);
 	if (!$serial)
@@ -1053,10 +840,7 @@ function mobile_serial_lookup() {
 function mobile_confirm_putaway() {
 	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
 	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
-	$op_id = 0;
-	$operation_id_result = mobile_get_optional_operation_id($op_id);
-	if (!$operation_id_result['success'])
-		return $operation_id_result;
+	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
 	$loc_code = isset($_POST['loc_code']) && is_scalar($_POST['loc_code']) ? trim((string)$_POST['loc_code']) : '';
 
 	$qty = null;
@@ -1073,7 +857,6 @@ function mobile_confirm_putaway() {
 	$bin_validation = mobile_validate_storable_bin(isset($_POST['bin_loc_id']) ? $_POST['bin_loc_id'] : 0, $bin_loc_id);
 	if (!$bin_validation['success'])
 		return $bin_validation;
-	$bin_loc_code = isset($bin_validation['bin']['loc_code']) ? $bin_validation['bin']['loc_code'] : '';
 
 	if (mobile_has_control_chars($loc_code) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
 		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
@@ -1087,11 +870,18 @@ function mobile_confirm_putaway() {
 
 	$serial_id = null;
 	$batch_id = null;
+	$batch = null;
 
 	if (!empty($serial_no)) {
 		$serial = get_serial_number_by_code($serial_no, $stock_id);
 		if (!$serial)
 			return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $serial_no));
+		if (isset($serial['status']) && $serial['status'] === 'quarantine') {
+			return array(
+				'success' => false,
+				'error' => sprintf(_('Serial "%s" is in quarantine. Complete quality inspection before putaway.'), $serial_no),
+			);
+		}
 		$serial_id = $serial['id'];
 	}
 
@@ -1099,7 +889,28 @@ function mobile_confirm_putaway() {
 		$batch = get_stock_batch_by_code($batch_no, $stock_id);
 		if (!$batch)
 			return array('success' => false, 'error' => sprintf(_('Batch "%s" not found'), $batch_no));
+		if (isset($batch['status']) && $batch['status'] === 'quarantine') {
+			return array(
+				'success' => false,
+				'error' => sprintf(_('Batch "%s" is in quarantine. Complete quality inspection before putaway.'), $batch_no),
+			);
+		}
 		$batch_id = $batch['id'];
+	}
+
+	$serial_reconcile = array('success' => true, 'already_in_target' => false, 'moved_from_bin_ids' => array());
+	if ($serial_id) {
+		$reconcile_error = '';
+		$serial_reconcile = reconcile_serial_bin_stock_location(
+			$stock_id,
+			$serial_id,
+			$bin_loc_id,
+			true,
+			$serial_no,
+			$reconcile_error
+		);
+		if (!$serial_reconcile['success'])
+			return array('success' => false, 'error' => $reconcile_error);
 	}
 
 	// Capacity check
@@ -1111,26 +922,29 @@ function mobile_confirm_putaway() {
 
 	begin_transaction();
 
-	if ($serial_id) {
-		$reconcile_result = mobile_reconcile_serial_bin_stock($serial_id, $stock_id, $bin_loc_id);
-		if (!$reconcile_result['success']) {
-			cancel_transaction();
-			return $reconcile_result;
-		}
-	}
-	else {
-		update_bin_stock($bin_loc_id, $stock_id, $qty, $batch_id, $serial_id, null, 'available');
-	}
+	$bin_qty = ($serial_id && !empty($serial_reconcile['already_in_target'])) ? 0 : $qty;
+	update_bin_stock($bin_loc_id, $stock_id, $bin_qty, $batch_id, $serial_id, null, 'available');
 
 	if ($serial_id) {
-		$serial_loc_code = $bin_loc_code !== '' ? $bin_loc_code : $loc_code;
+		$serial_state_changed = !empty($serial_reconcile['moved_from_bin_ids'])
+			|| empty($serial_reconcile['already_in_target'])
+			|| $serial['status'] !== 'available'
+			|| (int)$serial['wh_loc_id'] !== $bin_loc_id
+			|| $serial['loc_code'] !== $loc_code;
+
 		$sql = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=" . (int)$bin_loc_id
-			. ", loc_code=" . db_escape($serial_loc_code)
+			. ", loc_code=" . db_escape($loc_code)
 			. ", status='available'"
 			. " WHERE id=" . (int)$serial_id;
 		db_query($sql);
-		add_serial_movement($serial_id, ST_INVADJUST, 0, '', $serial_loc_code,
-			'', 'available', Today(), 'Mobile putaway', 'Putaway via mobile scanner');
+		if ($serial_state_changed) {
+			add_serial_movement($serial_id, ST_INVADJUST, 0, $serial['loc_code'], $loc_code,
+				$serial['status'], 'available', Today(), 'Mobile putaway', 'Putaway via mobile scanner');
+		}
+	}
+
+	if ($batch_id && $batch && isset($batch['status']) && $batch['status'] !== 'active') {
+		update_batch_status($batch_id, 'active', 'Mobile putaway');
 	}
 
 	if ($op_id > 0)
@@ -1153,35 +967,15 @@ function mobile_confirm_putaway() {
  * @return array JSON response
  */
 function mobile_confirm_pick() {
-	$stock_id = isset($_POST['stock_id']) && is_scalar($_POST['stock_id']) ? trim((string)$_POST['stock_id']) : '';
-	$qty = null;
-	if (!mobile_parse_positive_numeric(isset($_POST['qty']) ? $_POST['qty'] : null, $qty))
-		return array('success' => false, 'error' => _('Quantity must be a positive finite number'));
-	$bin_loc_id = isset($_POST['bin_loc_id']) ? $_POST['bin_loc_id'] : 0;
-	$serial_no = isset($_POST['serial_no']) && is_scalar($_POST['serial_no']) ? trim((string)$_POST['serial_no']) : '';
-	$batch_no = isset($_POST['batch_no']) && is_scalar($_POST['batch_no']) ? trim((string)$_POST['batch_no']) : '';
-	$op_id = 0;
-	$operation_id_result = mobile_get_optional_operation_id($op_id);
-	if (!$operation_id_result['success'])
-		return $operation_id_result;
+	$stock_id = isset($_POST['stock_id']) ? trim($_POST['stock_id']) : '';
+	$qty = isset($_POST['qty']) ? (float)$_POST['qty'] : 0;
+	$bin_loc_id = isset($_POST['bin_loc_id']) ? (int)$_POST['bin_loc_id'] : 0;
+	$serial_no = isset($_POST['serial_no']) ? trim($_POST['serial_no']) : '';
+	$batch_no = isset($_POST['batch_no']) ? trim($_POST['batch_no']) : '';
+	$op_id = isset($_POST['op_id']) ? (int)$_POST['op_id'] : 0;
 
-	if (empty($stock_id) || $qty <= 0)
+	if (empty($stock_id) || $qty <= 0 || $bin_loc_id <= 0)
 		return array('success' => false, 'error' => _('Item, quantity, and bin are required'));
-
-	$stock_item = null;
-	$stock_validation = mobile_validate_stock_item($stock_id, $stock_item);
-	if (!$stock_validation['success'])
-		return $stock_validation;
-	$stock_id = $stock_validation['stock_id'];
-
-	$validated_bin_loc_id = 0;
-	$bin_validation = mobile_validate_storable_bin($bin_loc_id, $validated_bin_loc_id);
-	if (!$bin_validation['success'])
-		return $bin_validation;
-	$bin_loc_id = $validated_bin_loc_id;
-
-	if (mobile_has_control_chars($stock_id) || mobile_has_control_chars($serial_no) || mobile_has_control_chars($batch_no))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$operation_validation = mobile_validate_operation_for_completion($op_id, array('pick'));
 	if (!$operation_validation['success'])
@@ -1194,14 +988,6 @@ function mobile_confirm_pick() {
 		$serial = get_serial_number_by_code($serial_no, $stock_id);
 		if (!$serial)
 			return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $serial_no));
-		if (abs($qty - 1.0) > 0.000001)
-			return array('success' => false, 'error' => _('Serial-tracked pick requires quantity 1'));
-		if ((int)$serial['wh_loc_id'] !== $bin_loc_id) {
-			return array(
-				'success' => false,
-				'error' => sprintf(_('Serial "%s" is not in the selected source bin'), $serial_no)
-			);
-		}
 		$serial_id = $serial['id'];
 	}
 
@@ -1211,10 +997,6 @@ function mobile_confirm_pick() {
 			return array('success' => false, 'error' => sprintf(_('Batch "%s" not found'), $batch_no));
 		$batch_id = $batch['id'];
 	}
-
-	$source_qty_validation = mobile_validate_source_bin_quantity($bin_loc_id, $stock_id, $qty, $batch_id, $serial_id);
-	if (!$source_qty_validation['success'])
-		return $source_qty_validation;
 
 	begin_transaction();
 
@@ -1246,12 +1028,9 @@ function mobile_confirm_pick() {
  * @return array JSON response
  */
 function mobile_get_pending_receive() {
-	$loc_code = mobile_get_request_string('loc_code');
+	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
 	if (empty($loc_code))
 		return array('success' => false, 'error' => _('Location code is required'));
-
-	if (mobile_has_control_chars($loc_code))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$ops = get_wh_operations_by_type('receipt', $loc_code, 'pending');
 	$items = array();
@@ -1276,12 +1055,9 @@ function mobile_get_pending_receive() {
  * @return array JSON response
  */
 function mobile_get_pending_picks() {
-	$loc_code = mobile_get_request_string('loc_code');
+	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
 	if (empty($loc_code))
 		return array('success' => false, 'error' => _('Location code is required'));
-
-	if (mobile_has_control_chars($loc_code))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
 
 	$ops = get_wh_operations_by_type('pick', $loc_code, 'pending');
 	$items = array();
@@ -1314,10 +1090,7 @@ function mobile_get_pending_picks() {
  * @return array JSON response
  */
 function mobile_get_pending_counts() {
-	$loc_code = mobile_get_request_string('loc_code');
-
-	if (mobile_has_control_chars($loc_code))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
+	$loc_code = isset($_POST['loc_code']) ? trim($_POST['loc_code']) : '';
 
 	if (!function_exists('get_cycle_counts'))
 		return array('success' => false, 'error' => _('Cycle counting module not available'));
@@ -1345,10 +1118,7 @@ function mobile_get_pending_counts() {
  */
 function mobile_get_bin_contents() {
 	$bin_loc_id = isset($_POST['bin_loc_id']) ? (int)$_POST['bin_loc_id'] : 0;
-	$bin_code = mobile_get_request_string('bin_code');
-
-	if (mobile_has_control_chars($bin_code))
-		return array('success' => false, 'error' => _('Input contains unsupported control characters'));
+	$bin_code = isset($_POST['bin_code']) ? trim($_POST['bin_code']) : '';
 
 	if ($bin_loc_id <= 0 && !empty($bin_code)) {
 		$bin = get_warehouse_location_by_code($bin_code);

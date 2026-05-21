@@ -10,6 +10,10 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+$serial_batch_db_path = dirname(__FILE__) . '/serial_batch_db.inc';
+if (file_exists($serial_batch_db_path))
+	include_once($serial_batch_db_path);
+
 /**
  * Quality Inspection Database Layer.
  *
@@ -798,6 +802,38 @@ function evaluate_list_reading($value, $acceptable_values)
  * @param float  $rejected_qty  Rejected quantity
  * @return array Result array with 'success', 'result', 'message'
  */
+function update_quality_tracking_bin_stock_status($stock_id, $stock_status, $batch_id = null, $serial_id = null)
+{
+	$where = array(
+		"stock_id=" . db_escape($stock_id),
+		"qty_on_hand > 0",
+	);
+
+	if ($serial_id)
+		$where[] = "serial_id=" . (int)$serial_id;
+	elseif ($batch_id)
+		$where[] = "batch_id=" . (int)$batch_id;
+	else
+		return;
+
+	$qty_available_sql = $stock_status === 'available' ? 'qty_on_hand' : '0';
+	$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
+		. "stock_status=" . db_escape($stock_status) . ", "
+		. "qty_available=" . $qty_available_sql
+		. " WHERE " . implode(' AND ', $where);
+	db_query($sql, 'could not update QC tracking bin stock status');
+}
+
+/**
+ * Complete an inspection: determine overall result, update accepted/rejected quantities,
+ * update GRN inspection_status, and handle batch/serial status changes.
+ *
+ * @param int    $inspection_id Inspection ID
+ * @param string $result        'pass' or 'fail' (or auto-determined if empty)
+ * @param float  $accepted_qty  Accepted quantity
+ * @param float  $rejected_qty  Rejected quantity
+ * @return array Result array with 'success', 'result', 'message'
+ */
 function complete_quality_inspection($inspection_id, $result = '', $accepted_qty = 0, $rejected_qty = 0)
 {
 	$return = array('success' => false, 'result' => '', 'message' => '');
@@ -859,33 +895,48 @@ function complete_quality_inspection($inspection_id, $result = '', $accepted_qty
 		db_query($sql, 'could not update grn inspection status');
 	}
 
+	$qc_reference = sprintf(_('QC inspection #%d'), $inspection_id);
+	$qc_notes = sprintf(_('QC %s - Inspection #%d'), strtoupper($result), $inspection_id);
+	$serial_status = $result === 'fail' ? 'quarantine' : 'available';
+	$batch_status = $result === 'fail' ? 'quarantine' : 'active';
+	$bin_stock_status = $result === 'fail' ? 'quarantine' : 'available';
+
 	// Update batch status if batch-tracked and failed
-	if ($insp['batch_id'] && $result === 'fail') {
+	if ($insp['batch_id']) {
 		$batch_db_path = dirname(__FILE__) . '/stock_batches_db.inc';
 		if (file_exists($batch_db_path)) {
 			include_once($batch_db_path);
 			if (function_exists('update_batch_status')) {
-				update_batch_status($insp['batch_id'], 'quarantine',
-					'quality_check', ST_SUPPRECEIVE, $insp['trans_no'],
-					$insp['loc_code'], $insp['loc_code'],
-					sprintf(_('QC failed - Inspection #%d'), $inspection_id));
+				update_batch_status($insp['batch_id'], $batch_status, $qc_notes);
 			}
 		}
 	}
 
 	// Update serial status if serial-tracked and failed
-	if ($insp['serial_id'] && $result === 'fail') {
+	if ($insp['serial_id']) {
 		$serial_db_path = dirname(__FILE__) . '/serial_numbers_db.inc';
 		if (file_exists($serial_db_path)) {
 			include_once($serial_db_path);
 			if (function_exists('update_serial_status')) {
-				update_serial_status($insp['serial_id'], 'defective',
-					'quality_check', ST_SUPPRECEIVE, $insp['trans_no'],
-					$insp['loc_code'], $insp['loc_code'],
-					sprintf(_('QC failed - Inspection #%d'), $inspection_id));
+				update_serial_status(
+					$insp['serial_id'],
+					$serial_status,
+					ST_SUPPRECEIVE,
+					$insp['trans_no'],
+					$insp['loc_code'],
+					$insp['loc_code'],
+					Today(),
+					$qc_reference,
+					$qc_notes
+				);
 			}
 		}
 	}
+
+	if ($insp['serial_id'])
+		update_quality_tracking_bin_stock_status($insp['stock_id'], $bin_stock_status, null, $insp['serial_id']);
+	elseif ($insp['batch_id'])
+		update_quality_tracking_bin_stock_status($insp['stock_id'], $bin_stock_status, $insp['batch_id'], null);
 
 	// Complete the WMS quality_check operation if exists
 	$wh_ops_db = dirname(dirname(dirname(__FILE__))) . '/warehouse/includes/db/warehouse_operations_db.inc';
@@ -953,8 +1004,9 @@ function auto_create_inspections_from_grn($grn_no, $loc_code)
 
 		// For serial-tracked items, create one inspection per serial
 		if (in_array($row['track_by'], array('serial', 'serial_batch')) && !empty($row['serial_numbers_json'])) {
-			$json = html_entity_decode($row['serial_numbers_json'], ENT_QUOTES, 'UTF-8');
-			$serial_ids = json_decode($json, true);
+			$serial_ids = function_exists('get_grn_serial_ids_from_json')
+				? get_grn_serial_ids_from_json($row['serial_numbers_json'], $row['item_code'])
+				: array();
 			if (is_array($serial_ids)) {
 				foreach ($serial_ids as $sid) {
 					$insp_id = add_quality_inspection(
