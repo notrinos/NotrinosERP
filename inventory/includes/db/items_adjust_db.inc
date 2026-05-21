@@ -10,6 +10,54 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+/**
+ * Remove tracked batch quantity from warehouse bins for an adjustment.
+ *
+ * @param string $stock_id      Item code.
+ * @param int    $batch_id      Batch id.
+ * @param string $location_code Warehouse location code.
+ * @param float  $qty           Quantity to remove.
+ * @return float
+ */
+function adjustment_remove_batch_quantity_from_bin_stock($stock_id, $batch_id, $location_code, $qty) {
+	if (!function_exists('update_bin_stock') || $stock_id === '' || !$batch_id
+		|| $location_code === '' || (float)$qty <= 0)
+		return 0;
+
+	$remaining_qty = (float)$qty;
+	$removed_qty = 0;
+
+	$sql = "SELECT bs.wh_loc_id, bs.qty_on_hand, bs.stock_status
+		FROM " . TB_PREF . "wh_bin_stock bs
+		INNER JOIN " . TB_PREF . "wh_locations wl ON wl.loc_id = bs.wh_loc_id
+		WHERE wl.warehouse_loc_code=" . db_escape($location_code)
+			. " AND bs.stock_id=" . db_escape($stock_id)
+			. " AND bs.batch_id=" . (int)$batch_id
+			. " AND bs.qty_on_hand > 0
+		ORDER BY CASE WHEN bs.stock_status='available' THEN 0 ELSE 1 END, bs.id";
+	$result = db_query($sql, 'could not get tracked batch bin stock for adjustment');
+
+	while (($row = db_fetch($result)) && $remaining_qty > 0) {
+		$pick_qty = min($remaining_qty, (float)$row['qty_on_hand']);
+		if ($pick_qty <= 0)
+			continue;
+
+		update_bin_stock(
+			(int)$row['wh_loc_id'],
+			$stock_id,
+			-$pick_qty,
+			(int)$batch_id,
+			null,
+			null,
+			$row['stock_status']
+		);
+		$remaining_qty -= $pick_qty;
+		$removed_qty += $pick_qty;
+	}
+
+	return $removed_qty;
+}
+
 function add_stock_adjustment($items, $location, $date_, $reference, $memo_) {
 	global $SysPrefs, $path_to_root, $Refs;
 
@@ -142,6 +190,7 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 	include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
 	include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
 	include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+	include_once($path_to_root . '/inventory/warehouse/includes/warehouse_operations.inc');
 
 	$line_no = 0;
 	foreach ($items as $line_item) {
@@ -274,8 +323,20 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 						if (empty($sn)) continue;
 
 						$serial = get_serial_number_by_code($sn, $stock_id);
-						if ($serial && $serial['status'] === 'available') {
+						if ($serial && in_array($serial['status'], array('available', 'quarantine'))) {
 							$sid = (int)$serial['id'];
+
+							if (!empty($serial['wh_loc_id']) && function_exists('update_bin_stock')) {
+								update_bin_stock(
+									(int)$serial['wh_loc_id'],
+									$stock_id,
+									-1,
+									!empty($serial['batch_id']) ? (int)$serial['batch_id'] : null,
+									$sid,
+									null,
+									$serial['status']
+								);
+							}
 
 							update_serial_status(
 								$sid,
@@ -288,6 +349,9 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 								$reference,
 								sprintf(_('Scrapped via adjustment #%d'), $adj_id)
 							);
+
+							$sql_clear_bin = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=NULL WHERE id=" . $sid;
+							db_query($sql_clear_bin, 'could not clear scrapped serial bin location');
 						}
 					}
 				}
@@ -330,6 +394,19 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 								$reference,
 								sprintf(_('Scrapped via adjustment #%d'), $adj_id)
 							);
+
+							adjustment_remove_batch_quantity_from_bin_stock(
+								$stock_id,
+								$bid,
+								$location,
+								$alloc_qty
+							);
+
+							if (function_exists('get_batch_quantity_on_hand')
+								&& function_exists('update_batch_status')
+								&& get_batch_quantity_on_hand($bid) <= 0.000001) {
+								update_batch_status($bid, 'scrapped', sprintf(_('Scrapped via adjustment #%d'), $adj_id));
+							}
 						}
 					}
 				}

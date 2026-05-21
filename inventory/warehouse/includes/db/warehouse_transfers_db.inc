@@ -449,6 +449,7 @@ function ship_transfer_order($transfer_id, $ship_date) {
 	include_once($inv_root . '/inventory/includes/db/serial_batch_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
 	include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');
+	include_once($inv_root . '/inventory/warehouse/includes/warehouse_operations.inc');
 
 	begin_transaction();
 
@@ -496,6 +497,9 @@ function ship_transfer_order($transfer_id, $ship_date) {
 					$order['reference'] ? $order['reference'] : '',
 					sprintf(_('Shipped via Transfer Order #%d'), $order['transfer_no'])
 				);
+
+				$sql_clear_serial_bin = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=NULL WHERE id=" . (int)$line['serial_id'];
+				db_query($sql_clear_serial_bin, 'could not clear shipped serial bin location');
 			}
 		}
 
@@ -568,6 +572,7 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 	include_once($inv_root . '/inventory/includes/db/serial_batch_db.inc');
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
 	include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');
+	include_once($inv_root . '/inventory/warehouse/includes/warehouse_operations.inc');
 
 	begin_transaction();
 
@@ -658,6 +663,22 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 			if ($line['batch_id'] && function_exists('get_stock_batch')) {
 				$batch_data = get_stock_batch($line['batch_id']);
 				$expiry = $batch_data ? $batch_data['expiry_date'] : null;
+			}
+			if ($line['serial_id'] && function_exists('reconcile_serial_bin_stock_location')) {
+				$serial_error = '';
+				$serial_reconcile = reconcile_serial_bin_stock_location(
+					$stock_id,
+					(int)$line['serial_id'],
+					(int)$line['to_bin_id'],
+					true,
+					isset($line['serial_no']) ? $line['serial_no'] : '',
+					$serial_error
+				);
+				if (!$serial_reconcile['success']) {
+					rollback_transaction();
+					$result['message'] = $serial_error !== '' ? $serial_error : _('Transfer receipt serial reconciliation failed.');
+					return $result;
+				}
 			}
 			update_bin_stock(
 				(int)$line['to_bin_id'],
