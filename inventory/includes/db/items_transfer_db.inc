@@ -58,6 +58,137 @@ function transfer_remove_batch_quantity_from_bin_stock($stock_id, $batch_id, $lo
 	return $removed_qty;
 }
 
+/**
+ * Validate tracked transfer input before processing the document.
+ *
+ * @param array  $items          Transfer cart line items.
+ * @param string $location_from  Source location code.
+ * @param string $error_message  Validation error output.
+ * @return bool
+ */
+function validate_transfer_tracking_input($items, $location_from, &$error_message) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root . '/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root . '/inventory/includes/db/stock_batches_db.inc');
+
+	$error_message = '';
+	$line_no = 0;
+
+	foreach ($items as $line_item) {
+		$stock_id = $line_item->stock_id;
+		$required_qty = abs((float)$line_item->quantity);
+
+		if (get_item_tracking_mode($stock_id) === 'none') {
+			$line_no++;
+			continue;
+		}
+
+		if (item_has_serial_tracking($stock_id)) {
+			if (abs($required_qty - round($required_qty)) > 0.000001) {
+				$error_message = sprintf(_('Serial-tracked item %s requires a whole-number quantity.'), $stock_id);
+				return false;
+			}
+
+			$serial_text = isset($_POST['transfer_serial_' . $line_no]) ? trim($_POST['transfer_serial_' . $line_no]) : '';
+			if ($serial_text === '') {
+				$error_message = sprintf(_('Serial numbers are required for item %s.'), $stock_id);
+				return false;
+			}
+
+			$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+			$serial_entries = array_values(array_filter(array_map('trim', $serial_entries), 'strlen'));
+			if (count($serial_entries) !== (int)round($required_qty)) {
+				$error_message = sprintf(_('Item %s requires %d serial number(s).'), $stock_id, (int)round($required_qty));
+				return false;
+			}
+
+			$seen_serials = array();
+			foreach ($serial_entries as $serial_no) {
+				if (preg_match('/[\x00-\x1F\x7F]/', $serial_no)) {
+					$error_message = sprintf(_('Serial number for item %s contains unsupported control characters.'), $stock_id);
+					return false;
+				}
+				if (isset($seen_serials[$serial_no])) {
+					$error_message = sprintf(_('Duplicate serial number %s entered for item %s.'), $serial_no, $stock_id);
+					return false;
+				}
+				$seen_serials[$serial_no] = true;
+
+				$serial = get_serial_number_by_code($serial_no, $stock_id);
+				if (!$serial || $serial['status'] !== 'available' || $serial['loc_code'] !== $location_from) {
+					$error_message = sprintf(_('Serial %s is not available at location %s for item %s.'), $serial_no, $location_from, $stock_id);
+					return false;
+				}
+			}
+		}
+
+		if (item_has_batch_tracking($stock_id)) {
+			$batch_input = isset($_POST['transfer_batch_' . $line_no]) ? trim($_POST['transfer_batch_' . $line_no]) : '';
+			if ($batch_input === '') {
+				$error_message = sprintf(_('Batch allocation is required for item %s.'), $stock_id);
+				return false;
+			}
+
+			$batch_entries = preg_split('/[\r\n;]+/', $batch_input);
+			$remaining_qty = $required_qty;
+			$allocated_qty = 0;
+			$seen_batches = array();
+
+			foreach ($batch_entries as $entry) {
+				$entry = trim($entry);
+				if ($entry === '')
+					continue;
+
+				if (strpos($entry, ':') !== false) {
+					list($batch_id_raw, $batch_qty_raw) = explode(':', $entry, 2);
+					$batch_id_raw = trim($batch_id_raw);
+					$batch_qty_raw = trim($batch_qty_raw);
+					if (!preg_match('/^\d+$/', $batch_id_raw) || !is_numeric($batch_qty_raw) || (float)$batch_qty_raw <= 0) {
+						$error_message = sprintf(_('Invalid batch allocation entry "%s" for item %s.'), $entry, $stock_id);
+						return false;
+					}
+					$batch_id = (int)$batch_id_raw;
+					$batch_qty = (float)$batch_qty_raw;
+				} else {
+					if (!preg_match('/^\d+$/', $entry)) {
+						$error_message = sprintf(_('Invalid batch allocation entry "%s" for item %s.'), $entry, $stock_id);
+						return false;
+					}
+					$batch_id = (int)$entry;
+					$batch_qty = $remaining_qty;
+				}
+
+				if (isset($seen_batches[$batch_id])) {
+					$error_message = sprintf(_('Duplicate batch id %d entered for item %s.'), $batch_id, $stock_id);
+					return false;
+				}
+				$seen_batches[$batch_id] = true;
+
+				$batch = get_stock_batch($batch_id);
+				if (!$batch || $batch['stock_id'] !== $stock_id) {
+					$error_message = sprintf(_('Batch id %d is invalid for item %s.'), $batch_id, $stock_id);
+					return false;
+				}
+
+				$alloc_qty = min($batch_qty, $remaining_qty);
+				$allocated_qty += $alloc_qty;
+				$remaining_qty -= $alloc_qty;
+			}
+
+			if ($allocated_qty <= 0 || abs($allocated_qty - $required_qty) > 0.000001) {
+				$error_message = sprintf(_('Allocated batch quantity does not match transfer quantity for item %s.'), $stock_id);
+				return false;
+			}
+		}
+
+		$line_no++;
+	}
+
+	return true;
+}
+
 function add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_) {
 	global $SysPrefs, $path_to_root, $Refs;
 

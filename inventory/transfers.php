@@ -127,6 +127,13 @@ if (isset($_POST['Process'])) {
 			$input_error = 1;
 		}
 	}
+	if ($input_error == 0) {
+		$tracking_error = '';
+		if (!validate_transfer_tracking_input($tr->line_items, $_POST['FromStockLocation'], $tracking_error)) {
+			display_error($tracking_error);
+			$input_error = 1;
+		}
+	}
 
 	if ($input_error == 1)
 		unset($_POST['Process']);

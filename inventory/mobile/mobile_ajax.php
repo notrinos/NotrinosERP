@@ -219,11 +219,14 @@ function mobile_scan_lookup() {
 		if (isset($gs1['21'])) {
 			$serial = get_serial_number_by_code($gs1['21']);
 			if ($serial) {
+				$item = get_item($serial['stock_id']);
 				$result['matches'][] = array(
 					'type' => 'serial',
 					'serial_id' => $serial['id'],
 					'serial_no' => $serial['serial_no'],
 					'stock_id' => $serial['stock_id'],
+					'description' => $item ? $item['description'] : '',
+					'track_by' => $item ? $item['track_by'] : 'serial',
 					'status' => $serial['status'],
 					'loc_code' => $serial['loc_code'],
 					'wh_loc_id' => $serial['wh_loc_id'],
@@ -233,11 +236,14 @@ function mobile_scan_lookup() {
 		if (isset($gs1['10'])) {
 			$batch = get_stock_batch_by_code($gs1['10']);
 			if ($batch) {
+				$item = get_item($batch['stock_id']);
 				$result['matches'][] = array(
 					'type' => 'batch',
 					'batch_id' => $batch['id'],
 					'batch_no' => $batch['batch_no'],
 					'stock_id' => $batch['stock_id'],
+					'description' => $item ? $item['description'] : '',
+					'track_by' => $item ? $item['track_by'] : 'batch',
 					'status' => $batch['status'],
 					'expiry_date' => $batch['expiry_date'],
 				);
@@ -250,11 +256,14 @@ function mobile_scan_lookup() {
 	// 2. Try serial number exact match
 	$serial = get_serial_number_by_code($scan);
 	if ($serial) {
+		$item = get_item($serial['stock_id']);
 		$result['matches'][] = array(
 			'type' => 'serial',
 			'serial_id' => $serial['id'],
 			'serial_no' => $serial['serial_no'],
 			'stock_id' => $serial['stock_id'],
+			'description' => $item ? $item['description'] : '',
+			'track_by' => $item ? $item['track_by'] : 'serial',
 			'status' => $serial['status'],
 			'loc_code' => $serial['loc_code'],
 			'wh_loc_id' => $serial['wh_loc_id'],
@@ -265,11 +274,14 @@ function mobile_scan_lookup() {
 	// 3. Try batch number exact match
 	$batch = get_stock_batch_by_code($scan);
 	if ($batch) {
+		$item = get_item($batch['stock_id']);
 		$result['matches'][] = array(
 			'type' => 'batch',
 			'batch_id' => $batch['id'],
 			'batch_no' => $batch['batch_no'],
 			'stock_id' => $batch['stock_id'],
+			'description' => $item ? $item['description'] : '',
+			'track_by' => $item ? $item['track_by'] : 'batch',
 			'status' => $batch['status'],
 			'expiry_date' => $batch['expiry_date'],
 		);
@@ -443,6 +455,72 @@ function mobile_validate_storable_bin($bin_loc_id_raw, &$bin_loc_id) {
 }
 
 /**
+ * Check whether a tracking mode requires serial capture.
+ *
+ * @param string $track_by Item tracking mode.
+ * @return bool
+ */
+function mobile_item_has_serial_tracking($track_by) {
+	return in_array($track_by, array('serial', 'serial_batch', 'both'));
+}
+
+/**
+ * Check whether a tracking mode requires batch capture.
+ *
+ * @param string $track_by Item tracking mode.
+ * @return bool
+ */
+function mobile_item_has_batch_tracking($track_by) {
+	return in_array($track_by, array('batch', 'serial_batch', 'both'));
+}
+
+/**
+ * Validate tracked input requirements for mobile warehouse actions.
+ *
+ * @param array  $stock_item   Active item master row.
+ * @param float  $qty          Requested quantity.
+ * @param string $serial_no    Serial number input.
+ * @param string $batch_no     Batch number input.
+ * @param string $action_label Action label for error text.
+ * @return array
+ */
+function mobile_validate_tracking_payload($stock_item, $qty, $serial_no, $batch_no, $action_label) {
+	$track_by = isset($stock_item['track_by']) && is_scalar($stock_item['track_by'])
+		? trim((string)$stock_item['track_by']) : 'none';
+	$stock_id = isset($stock_item['stock_id']) ? $stock_item['stock_id'] : '';
+	$requires_serial = mobile_item_has_serial_tracking($track_by);
+	$requires_batch = mobile_item_has_batch_tracking($track_by);
+
+	if ($requires_serial && abs((float)$qty - 1.0) > 0.000001) {
+		return array(
+			'success' => false,
+			'error' => sprintf(_('Serial-tracked %s requires quantity 1'), $action_label),
+		);
+	}
+
+	if ($requires_serial && $serial_no === '') {
+		return array(
+			'success' => false,
+			'error' => sprintf(_('Serial number is required for item "%s".'), $stock_id),
+		);
+	}
+
+	if ($requires_batch && $batch_no === '') {
+		return array(
+			'success' => false,
+			'error' => sprintf(_('Batch number is required for item "%s".'), $stock_id),
+		);
+	}
+
+	return array(
+		'success' => true,
+		'track_by' => $track_by,
+		'requires_serial' => $requires_serial,
+		'requires_batch' => $requires_batch,
+	);
+}
+
+/**
  * Confirm receipt of item into a bin (part of inbound flow).
  *
  * @return array JSON response
@@ -475,8 +553,9 @@ function mobile_confirm_receive() {
 	if (!$operation_validation['success'])
 		return $operation_validation;
 
-	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
-		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
+	$tracking_validation = mobile_validate_tracking_payload($stock_item, $qty, $serial_no, $batch_no, 'receipt');
+	if (!$tracking_validation['success'])
+		return $tracking_validation;
 
 	$serial_id = null;
 	$batch_id = null;
@@ -640,6 +719,14 @@ function mobile_confirm_transfer() {
 	if ($from_bin_id === $to_bin_id)
 		return array('success' => false, 'error' => _('Source and destination bins cannot be the same'));
 
+	$item = get_item($stock_id);
+	if (!$item || (isset($item['inactive']) && (int)$item['inactive'] !== 0))
+		return array('success' => false, 'error' => sprintf(_('Item "%s" not found'), $stock_id));
+
+	$tracking_validation = mobile_validate_tracking_payload($item, $qty, $serial_no, $batch_no, 'transfer');
+	if (!$tracking_validation['success'])
+		return $tracking_validation;
+
 	$serial_id = null;
 	$batch_id = null;
 
@@ -647,8 +734,6 @@ function mobile_confirm_transfer() {
 		$serial = get_serial_number_by_code($serial_no, $stock_id);
 		if (!$serial)
 			return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $serial_no));
-		if (abs($qty - 1.0) > 0.000001)
-			return array('success' => false, 'error' => _('Serial-tracked transfer requires quantity 1'));
 		$serial_id = $serial['id'];
 	}
 
@@ -660,7 +745,6 @@ function mobile_confirm_transfer() {
 	}
 
 	// Capacity check on destination bin
-	$item = get_item($stock_id);
 	$weight = $item ? (float)$item['item_weight'] * $qty : 0;
 	$volume = $item ? (float)$item['item_volume'] * $qty : 0;
 	$cap = check_can_store($to_bin_id, $stock_id, $qty, $weight, $volume, $batch_id);
@@ -865,8 +949,9 @@ function mobile_confirm_putaway() {
 	if (!$operation_validation['success'])
 		return $operation_validation;
 
-	if ($serial_no !== '' && abs($qty - 1.0) > 0.000001)
-		return array('success' => false, 'error' => _('Serial-tracked putaway requires quantity 1'));
+	$tracking_validation = mobile_validate_tracking_payload($stock_item, $qty, $serial_no, $batch_no, 'putaway');
+	if (!$tracking_validation['success'])
+		return $tracking_validation;
 
 	$serial_id = null;
 	$batch_id = null;

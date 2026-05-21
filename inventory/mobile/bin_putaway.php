@@ -166,9 +166,9 @@ function lookupItem() {
 
 			var tb = match.track_by || 'none';
 			document.getElementById('serial-field').style.display =
-				(tb === 'serial' || tb === 'both') ? '' : 'none';
+				(tb === 'serial' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
 			document.getElementById('batch-field').style.display =
-				(tb === 'batch' || tb === 'both') ? '' : 'none';
+				(tb === 'batch' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
 
 			// Pre-fill serial/batch if scanned
 			if (match.type === 'serial') {

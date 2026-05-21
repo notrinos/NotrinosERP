@@ -128,6 +128,12 @@ function can_process() {
 			return false;
 		}
 	}
+	$tracking_error = '';
+	if (!validate_adjustment_tracking_input($adj->line_items, $_POST['StockLocation'], $tracking_error)) {
+		display_error($tracking_error);
+		unset($_POST['Process']);
+		return false;
+	}
 	return true;
 }
 

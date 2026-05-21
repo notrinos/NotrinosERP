@@ -185,47 +185,29 @@ function lookupItem() {
 	mh.post('scan_lookup', { scan: code }, function(resp) {
 		if (resp.success && resp.matches && resp.matches.length > 0) {
 			var match = resp.matches[0];
-			if (match.type === 'item' || match.type === 'serial' || match.type === 'batch') {
-				currentItem = match;
-				// Show item card
-				var html = '<div class="mobile-card-title">' + mh.escapeHtml(match.stock_id || '') + '</div>';
-				html += mh.cardRow('Description', match.description || '');
-				html += mh.cardRow('Track By', match.track_by || 'none');
-				document.getElementById('item-card').innerHTML = html;
+			currentItem = match;
+			var html = '<div class="mobile-card-title">' + mh.escapeHtml(match.stock_id || '') + '</div>';
+			html += mh.cardRow('Description', match.description || '');
+			html += mh.cardRow('Track By', match.track_by || 'none');
+			if (match.type === 'serial' && match.serial_no)
+				html += mh.cardRow('Serial', match.serial_no);
+			if (match.type === 'batch' && match.batch_no)
+				html += mh.cardRow('Batch', match.batch_no);
+			document.getElementById('item-card').innerHTML = html;
 
-				// Toggle serial/batch fields
-				var tb = match.track_by || 'none';
-				document.getElementById('serial-field').style.display =
-					(tb === 'serial' || tb === 'both') ? '' : 'none';
-				document.getElementById('batch-field').style.display =
-					(tb === 'batch' || tb === 'both') ? '' : 'none';
+			var tb = match.track_by || 'none';
+			document.getElementById('serial-field').style.display =
+				(tb === 'serial' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
+			document.getElementById('batch-field').style.display =
+				(tb === 'batch' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
 
-				mh.clearResult('item-result');
-				goStep(2);
-			} else {
-				mh.showResult('item-result', 'Scanned: ' + match.type + ' — ' + (match.stock_id || match.serial_no || match.batch_no), 'info');
-				currentItem = match;
-				// For serial/batch scans, populate tracking fields
-				if (match.type === 'serial') {
-					currentItem = { stock_id: match.stock_id, track_by: 'serial' };
-					document.getElementById('item-card').innerHTML =
-						'<div class="mobile-card-title">' + mh.escapeHtml(match.stock_id) + '</div>' +
-						mh.cardRow('Serial', match.serial_no);
-					document.getElementById('serial-field').style.display = '';
-					document.getElementById('batch-field').style.display = 'none';
-					document.getElementById('recv_serial').value = match.serial_no;
-					goStep(2);
-				} else if (match.type === 'batch') {
-					currentItem = { stock_id: match.stock_id, track_by: 'batch' };
-					document.getElementById('item-card').innerHTML =
-						'<div class="mobile-card-title">' + mh.escapeHtml(match.stock_id) + '</div>' +
-						mh.cardRow('Batch', match.batch_no);
-					document.getElementById('serial-field').style.display = 'none';
-					document.getElementById('batch-field').style.display = '';
-					document.getElementById('recv_batch').value = match.batch_no;
-					goStep(2);
-				}
-			}
+			if (match.type === 'serial')
+				document.getElementById('recv_serial').value = match.serial_no || '';
+			if (match.type === 'batch')
+				document.getElementById('recv_batch').value = match.batch_no || '';
+
+			mh.clearResult('item-result');
+			goStep(2);
 		} else {
 			mh.showResult('item-result', resp.error || 'No match found', 'error');
 		}

@@ -188,9 +188,15 @@ function lookupItem() {
 
 			var tb = match.track_by || 'none';
 			document.getElementById('serial-field').style.display =
-				(tb === 'serial' || tb === 'both') ? '' : 'none';
+				(tb === 'serial' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
 			document.getElementById('batch-field').style.display =
-				(tb === 'batch' || tb === 'both') ? '' : 'none';
+				(tb === 'batch' || tb === 'serial_batch' || tb === 'both') ? '' : 'none';
+
+			if (match.type === 'serial') {
+				document.getElementById('xfer_serial').value = match.serial_no || '';
+			} else if (match.type === 'batch') {
+				document.getElementById('xfer_batch').value = match.batch_no || '';
+			}
 
 			mh.clearResult('item-result');
 			goStep(2);
