@@ -25,6 +25,15 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_ui.inc');
 
+$has_tracking = false;
+if (file_exists($path_to_root.'/inventory/includes/db/serial_batch_db.inc')) {
+	include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/serial_numbers_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/stock_batches_db.inc');
+	include_once($path_to_root.'/manufacturing/includes/db/production_traceability_db.inc');
+	$has_tracking = true;
+}
+
 //-------------------------------------------------------------------------------------------------
 
 if ($_GET['trans_no'] != '')
@@ -70,6 +79,40 @@ function display_wo_costs($prod_id) {
 	end_table(1);
 }
 
+/**
+ * Display work-order-level production traceability when tracked genealogy exists.
+ *
+ * @param int $wo_id
+ * @return void
+ */
+function display_wo_traceability_summary($wo_id) {
+	$trace_result = get_wo_traceability($wo_id);
+	$trace_rows = array();
+	while ($trow = db_fetch($trace_result))
+		$trace_rows[] = $trow;
+
+	if (empty($trace_rows))
+		return;
+
+	br(1);
+	display_heading2(_('Component Traceability'));
+	start_table(TABLESTYLE, "width='80%'");
+	$th = array(_('Component'), _('Component Serial'), _('Component Batch'), _('Qty'), _('Finished Serial'), _('Finished Batch'));
+	table_header($th);
+	$k = 0;
+	foreach ($trace_rows as $trow) {
+		alt_table_row_color($k);
+		label_cell($trow['component_stock_id'] . ' - ' . $trow['component_description']);
+		label_cell(!empty($trow['component_serial_no']) ? $trow['component_serial_no'] : '-');
+		label_cell(!empty($trow['component_batch_no']) ? $trow['component_batch_no'] : '-');
+		qty_cell($trow['component_qty'], false, 2);
+		label_cell(!empty($trow['finished_serial_no']) ? $trow['finished_serial_no'] : '-');
+		label_cell(!empty($trow['finished_batch_no']) ? $trow['finished_batch_no'] : '-');
+		end_row();
+	}
+	end_table();
+}
+
 //-------------------------------------------------------------------------------------------------
 
 display_heading(sprintf(_('Production Costs for Work Order # %d'), $wo_id));
@@ -77,6 +120,9 @@ display_heading(sprintf(_('Production Costs for Work Order # %d'), $wo_id));
 display_wo_details($wo_id, true);
 
 display_wo_costs($wo_id);
+
+if ($has_tracking)
+	display_wo_traceability_summary($wo_id);
 
 br(2);
 
