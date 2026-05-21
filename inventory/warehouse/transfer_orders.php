@@ -41,7 +41,7 @@ page(_($help_context = 'Transfer Orders'), false, false, '', $js);
 // HANDLE ACTIONS
 // =====================================================================
 
-$selected_id = get_post('selected_id', -1);
+$selected_id = get_post('selected_id', isset($_GET['selected_id']) ? $_GET['selected_id'] : -1);
 if ($selected_id == '') $selected_id = -1;
 
 // --- Approve action ---
