@@ -70,6 +70,7 @@ $status_options = array(
 	''          => _('All Statuses'),
 	'delivered' => _('Delivered'),
 	'in_repair' => _('In Repair'),
+	'quarantine' => _('Quarantine'),
 	'returned'  => _('Returned'),
 	'recalled'  => _('Recalled'),
 );
@@ -218,6 +219,7 @@ function fmt_serial_status($row) {
 	$colors = array(
 		'delivered'  => '#6c757d',
 		'in_repair'  => '#fd7e14',
+		'quarantine' => '#343a40',
 		'returned'   => '#6610f2',
 		'recalled'   => '#dc3545',
 	);

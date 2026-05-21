@@ -67,7 +67,7 @@ function get_customer_equipment($customer_id, $stock_id = '', $warranty_filter =
 		LEFT JOIN " . TB_PREF . "stock_master sm ON sn.stock_id = sm.stock_id
 		LEFT JOIN " . TB_PREF . "stock_batches sb ON sn.batch_id = sb.id
 		WHERE sn.customer_id = " . (int)$customer_id
-		. " AND sn.status IN ('delivered', 'in_repair', 'returned', 'recalled')";
+		. " AND sn.status IN ('delivered', 'in_repair', 'quarantine', 'returned', 'recalled')";
 
 	if ($stock_id !== '' && $stock_id !== null)
 		$sql .= " AND sn.stock_id = " . db_escape($stock_id);
@@ -110,7 +110,7 @@ function count_customer_equipment($customer_id, $stock_id = '', $warranty_filter
 
 	$sql = "SELECT COUNT(*) FROM " . TB_PREF . "serial_numbers sn
 		WHERE sn.customer_id = " . (int)$customer_id
-		. " AND sn.status IN ('delivered', 'in_repair', 'returned', 'recalled')";
+		. " AND sn.status IN ('delivered', 'in_repair', 'quarantine', 'returned', 'recalled')";
 
 	if ($stock_id !== '' && $stock_id !== null)
 		$sql .= " AND sn.stock_id = " . db_escape($stock_id);
@@ -151,7 +151,7 @@ function get_customer_equipment_summary($customer_id)
 		SUM(CASE WHEN sn.warranty_end IS NULL THEN 1 ELSE 0 END) AS no_warranty
 		FROM " . TB_PREF . "serial_numbers sn
 		WHERE sn.customer_id = " . (int)$customer_id
-		. " AND sn.status IN ('delivered', 'in_repair', 'returned', 'recalled')";
+		. " AND sn.status IN ('delivered', 'in_repair', 'quarantine', 'returned', 'recalled')";
 
 	$result = db_query($sql, 'could not get customer equipment summary');
 	$row = db_fetch($result);
@@ -293,7 +293,7 @@ function get_sql_for_customer_equipment($customer_id, $stock_id = '', $warranty_
 		LEFT JOIN " . TB_PREF . "stock_master sm ON sn.stock_id = sm.stock_id
 		LEFT JOIN " . TB_PREF . "stock_batches sb ON sn.batch_id = sb.id
 		WHERE sn.customer_id = " . (int)$customer_id
-		. " AND sn.status IN ('delivered', 'in_repair', 'returned', 'recalled')";
+		. " AND sn.status IN ('delivered', 'in_repair', 'quarantine', 'returned', 'recalled')";
 
 	if ($stock_id !== '' && $stock_id !== null)
 		$sql .= " AND sn.stock_id = " . db_escape($stock_id);

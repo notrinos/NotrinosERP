@@ -1147,8 +1147,8 @@ function execute_recall_campaign($campaign_id)
 			$serial['customer_id'], _('Auto-identified by recall campaign'));
 		$result['serials_added']++;
 
-		// Quarantine in-stock serials
-		if ($serial['status'] === 'available') {
+		// Move active customer/in-stock serials into the recalled state.
+		if (in_array($serial['status'], array('available', 'delivered', 'in_repair'))) {
 			include_once(dirname(__FILE__) . '/serial_numbers_db.inc');
 			update_serial_status($serial['id'], 'recalled', 0, 0,
 				$serial['loc_code'], $serial['loc_code'], null,

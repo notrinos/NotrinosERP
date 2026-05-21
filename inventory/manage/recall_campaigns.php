@@ -63,7 +63,7 @@ $execute_recall_id = find_submit('exec_recall_');
 if ($execute_recall_id > 0) {
 	$result_exec = execute_recall_campaign((int)$execute_recall_id);
 	display_notification(sprintf(
-		_('Recall executed: %d serials added, %d serials quarantined, %d batches added.'),
+		_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
 		$result_exec['serials_added'],
 		$result_exec['serials_quarantined'],
 		$result_exec['batches_added']

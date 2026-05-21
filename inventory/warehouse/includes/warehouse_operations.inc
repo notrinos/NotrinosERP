@@ -2132,8 +2132,9 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 				}
 			}
 
-			// Update bin stock for batch allocations if WMS
-			if ($is_wms && !empty($batch_allocations) && function_exists('execute_removal')) {
+			// Dual-tracked rows are already removed during serial handling.
+			if ($is_wms && !empty($batch_allocations) && function_exists('execute_removal')
+				&& $tracking_mode !== 'serial_batch') {
 				foreach ($batch_allocations as $ba) {
 					// Find bins with this batch stock
 					$sql = "SELECT bs.wh_loc_id, bs.qty_available FROM " . TB_PREF . "wh_bin_stock bs "

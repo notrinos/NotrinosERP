@@ -76,7 +76,7 @@ if (isset($_POST['mark_customer_notified'])) {
 if (isset($_POST['execute_recall_view'])) {
 	$result_exec = execute_recall_campaign($campaign_id);
 	display_notification(sprintf(
-		_('Recall executed: %d serials added, %d serials quarantined, %d batches added.'),
+		_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
 		$result_exec['serials_added'],
 		$result_exec['serials_quarantined'],
 		$result_exec['batches_added']

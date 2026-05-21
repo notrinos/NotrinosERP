@@ -128,14 +128,33 @@ if ($SysPrefs->use_popup_windows)
 page(_($help_context = 'View Sales Invoice'), true, false, '', $js);
 
 
+$trans_id = 0;
 if (isset($_GET['trans_no']))
-	$trans_id = $_GET['trans_no'];
+	$trans_id = (int)$_GET['trans_no'];
 elseif (isset($_POST['trans_no']))
-	$trans_id = $_POST['trans_no'];
+	$trans_id = (int)$_POST['trans_no'];
+
+if ($trans_id <= 0) {
+	display_error(_('No sales invoice transaction was specified.'));
+	end_page(true);
+	exit;
+}
+
+if (!exists_customer_trans(ST_SALESINVOICE, $trans_id)) {
+	display_error(_('Sales invoice not found.'));
+	end_page(true);
+	exit;
+}
 
 // 3 different queries to get the information - what a JOKE !!!!
 
 $myrow = get_customer_trans($trans_id, ST_SALESINVOICE);
+if (!$myrow) {
+	display_error(_('Sales invoice not found.'));
+	end_page(true);
+	exit;
+}
+
 $paym = get_payment_terms($myrow['payment_terms']);
 $branch = get_branch($myrow['branch_code']);
 $sales_order = get_sales_order_header($myrow['order_'], ST_SALESORDER);

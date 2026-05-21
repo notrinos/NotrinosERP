@@ -89,10 +89,24 @@ function display_transfer_line_tracking($trans_no, $stock_id, $colspan)
 	}
 }
 
+$trans_no = 0;
 if (isset($_GET['trans_no']))
-	$trans_no = $_GET['trans_no'];
+	$trans_no = (int)$_GET['trans_no'];
+elseif (isset($_POST['trans_no']))
+	$trans_no = (int)$_POST['trans_no'];
+
+if ($trans_no <= 0) {
+	display_error(_('No inventory transfer transaction was specified.'));
+	end_page(true);
+	exit;
+}
 
 $trans = get_stock_transfer($trans_no);
+if (!$trans) {
+	display_error(_('Inventory transfer not found.'));
+	end_page(true);
+	exit;
+}
 
 display_heading($systypes_array[ST_LOCTRANSFER]." #$trans_no");
 
