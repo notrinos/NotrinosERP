@@ -138,9 +138,15 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 	}
 
 	$rule_sequence = get_post('rule_sequence');
-	if ($rule_sequence === '' || !is_numeric($rule_sequence)) {
+	if ($rule_sequence === '' || !is_numeric($rule_sequence) || (int)$rule_sequence < 0) {
 		$input_error = 1;
-		display_error(_('Rule sequence must be a number.'));
+		display_error(_('Rule sequence must be a non-negative number.'));
+	}
+
+	$delay_days = get_post('rule_delay_days');
+	if ($delay_days === '' || !is_numeric($delay_days) || (int)$delay_days < 0) {
+		$input_error = 1;
+		display_error(_('Delay days must be a non-negative number.'));
 	}
 
 	if ($input_error != 1) {
@@ -148,8 +154,7 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 		$from_loc_id = ($from_loc_id && $from_loc_id !== '' && $from_loc_id != 0 && $from_loc_id != -1) ? (int)$from_loc_id : null;
 		$to_loc_id = get_post('rule_to_loc_id');
 		$to_loc_id = ($to_loc_id && $to_loc_id !== '' && $to_loc_id != 0 && $to_loc_id != -1) ? (int)$to_loc_id : null;
-		$delay_days = get_post('rule_delay_days');
-		$delay_days = is_numeric($delay_days) ? (int)$delay_days : 0;
+		$delay_days = (int)$delay_days;
 
 		add_route_rule(
 			$edit_route_id,
@@ -610,7 +615,7 @@ submit('TestResolve', _('Test Resolution'), true, _('Find which route applies'),
 echo "</div>";
 
 // Display test result
-if ($test_result !== null) {
+if ($test_result !== null && $test_result !== false) {
 	echo "<div style='background:#d4edda;border:1px solid #c3e6cb;border-radius:4px;padding:12px;margin-top:10px;'>";
 	echo "<strong><i class='fa fa-check-circle' style='color:#28a745;'></i> " . _('Resolved Route:') . "</strong><br>";
 	echo "<table style='margin-top:8px;'>";
