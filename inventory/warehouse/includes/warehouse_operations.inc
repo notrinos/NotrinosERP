@@ -95,6 +95,51 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 		$std_cost = (float)$item['std_cost'];
 	}
 
+	$normalized_item = array(
+		'stock_id' => $stock_id,
+		'qty' => $qty,
+		'std_cost' => $std_cost,
+		'serial_ids' => array(),
+		'batch_id' => null,
+	);
+
+	if (isset($item['batch_id']) && $item['batch_id'] !== null && $item['batch_id'] !== '') {
+		if (!is_scalar($item['batch_id'])) {
+			$error_message = sprintf(_('Inbound item %s has an invalid batch id.'), $stock_id);
+			return false;
+		}
+
+		$batch_id = trim((string)$item['batch_id']);
+		if ($batch_id === '' || !preg_match('/^\d+$/', $batch_id) || (int)$batch_id <= 0) {
+			$error_message = sprintf(_('Inbound item %s has an invalid batch id.'), $stock_id);
+			return false;
+		}
+
+		$normalized_item['batch_id'] = (int)$batch_id;
+	}
+
+	if (isset($item['serial_ids']) && $item['serial_ids'] !== null && $item['serial_ids'] !== '') {
+		if (!is_array($item['serial_ids'])) {
+			$error_message = sprintf(_('Inbound item %s serial ids must be an array.'), $stock_id);
+			return false;
+		}
+
+		foreach ($item['serial_ids'] as $serial_index => $serial_id) {
+			if (!is_scalar($serial_id)) {
+				$error_message = sprintf(_('Inbound item %s serial id at row %d is invalid.'), $stock_id, $serial_index + 1);
+				return false;
+			}
+
+			$serial_value = trim((string)$serial_id);
+			if ($serial_value === '' || !preg_match('/^\d+$/', $serial_value) || (int)$serial_value <= 0) {
+				$error_message = sprintf(_('Inbound item %s serial id at row %d is invalid.'), $stock_id, $serial_index + 1);
+				return false;
+			}
+
+			$normalized_item['serial_ids'][] = (int)$serial_value;
+		}
+	}
+
 	/**
 	 * Resolve the available quantity for a bin-stock row from its status.
 	 *
@@ -102,13 +147,15 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 	 * @param string $status      Stock status value.
 	 * @return float
 	 */
-	function get_bin_stock_available_qty_for_status($qty_on_hand, $status)
-	{
-		$qty_on_hand = (float)$qty_on_hand;
-		if ($qty_on_hand <= 0)
-			return 0;
+	if (!function_exists('get_bin_stock_available_qty_for_status')) {
+		function get_bin_stock_available_qty_for_status($qty_on_hand, $status)
+		{
+			$qty_on_hand = (float)$qty_on_hand;
+			if ($qty_on_hand <= 0)
+				return 0;
 
-		return $status === 'available' ? $qty_on_hand : 0;
+			return $status === 'available' ? $qty_on_hand : 0;
+		}
 	}
 
 	/**
@@ -118,25 +165,27 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 	 * @param int    $serial_id Serial id.
 	 * @return array
 	 */
-	function get_positive_serial_bin_stock_rows($stock_id, $serial_id)
-	{
-		$rows = array();
-		if (!$serial_id || $stock_id === '')
+	if (!function_exists('get_positive_serial_bin_stock_rows')) {
+		function get_positive_serial_bin_stock_rows($stock_id, $serial_id)
+		{
+			$rows = array();
+			if (!$serial_id || $stock_id === '')
+				return $rows;
+
+			$sql = "SELECT bs.id, bs.wh_loc_id, bs.stock_id, bs.batch_id, bs.qty_on_hand, bs.stock_status, "
+				. "COALESCE(wl.loc_code, '') AS loc_code "
+				. "FROM " . TB_PREF . "wh_bin_stock bs "
+				. "LEFT JOIN " . TB_PREF . "wh_locations wl ON bs.wh_loc_id = wl.loc_id "
+				. "WHERE bs.stock_id=" . db_escape($stock_id)
+				. " AND bs.serial_id=" . (int)$serial_id
+				. " AND bs.qty_on_hand > 0 "
+				. "ORDER BY bs.id";
+			$result = db_query($sql, 'could not get positive serial bin stock rows');
+			while ($row = db_fetch($result))
+				$rows[] = $row;
+
 			return $rows;
-
-		$sql = "SELECT bs.id, bs.wh_loc_id, bs.stock_id, bs.batch_id, bs.qty_on_hand, bs.stock_status, "
-			. "COALESCE(wl.loc_code, '') AS loc_code "
-			. "FROM " . TB_PREF . "wh_bin_stock bs "
-			. "LEFT JOIN " . TB_PREF . "wh_locations wl ON bs.wh_loc_id = wl.loc_id "
-			. "WHERE bs.stock_id=" . db_escape($stock_id)
-			. " AND bs.serial_id=" . (int)$serial_id
-			. " AND bs.qty_on_hand > 0 "
-			. "ORDER BY bs.id";
-		$result = db_query($sql, 'could not get positive serial bin stock rows');
-		while ($row = db_fetch($result))
-			$rows[] = $row;
-
-		return $rows;
+		}
 	}
 
 	/**
@@ -150,56 +199,58 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 	 * @param string &$error_message       Validation error output.
 	 * @return array
 	 */
-	function reconcile_serial_bin_stock_location($stock_id, $serial_id, $target_bin_id,
-		$allow_move_existing, $serial_reference, &$error_message)
-	{
-		$error_message = '';
-		$result = array(
-			'success' => true,
-			'already_in_target' => false,
-			'moved_from_bin_ids' => array(),
-		);
-
-		$existing_rows = get_positive_serial_bin_stock_rows($stock_id, $serial_id);
-		if (empty($existing_rows))
-			return $result;
-
-		$has_other_bin = false;
-		$has_target_bin = false;
-		foreach ($existing_rows as $row) {
-			if ((int)$row['wh_loc_id'] === (int)$target_bin_id)
-				$has_target_bin = true;
-			else
-				$has_other_bin = true;
-		}
-
-		if ($has_other_bin && !$allow_move_existing) {
-			$first_row = $existing_rows[0];
-			$serial_label = $serial_reference !== '' ? $serial_reference : ('#' . (int)$serial_id);
-			$bin_label = $first_row['loc_code'] !== '' ? $first_row['loc_code'] : ('#' . (int)$first_row['wh_loc_id']);
-			$error_message = sprintf(_('Serial %s is already stored in bin %s.'), $serial_label, $bin_label);
-			$result['success'] = false;
-			return $result;
-		}
-
-		foreach ($existing_rows as $row) {
-			if ((int)$row['wh_loc_id'] === (int)$target_bin_id)
-				continue;
-
-			update_bin_stock(
-				(int)$row['wh_loc_id'],
-				$stock_id,
-				-(float)$row['qty_on_hand'],
-				$row['batch_id'] !== null ? (int)$row['batch_id'] : null,
-				$serial_id,
-				null,
-				$row['stock_status']
+	if (!function_exists('reconcile_serial_bin_stock_location')) {
+		function reconcile_serial_bin_stock_location($stock_id, $serial_id, $target_bin_id,
+			$allow_move_existing, $serial_reference, &$error_message)
+		{
+			$error_message = '';
+			$result = array(
+				'success' => true,
+				'already_in_target' => false,
+				'moved_from_bin_ids' => array(),
 			);
-			$result['moved_from_bin_ids'][] = (int)$row['wh_loc_id'];
-		}
 
-		$result['already_in_target'] = $has_target_bin;
-		return $result;
+			$existing_rows = get_positive_serial_bin_stock_rows($stock_id, $serial_id);
+			if (empty($existing_rows))
+				return $result;
+
+			$has_other_bin = false;
+			$has_target_bin = false;
+			foreach ($existing_rows as $row) {
+				if ((int)$row['wh_loc_id'] === (int)$target_bin_id)
+					$has_target_bin = true;
+				else
+					$has_other_bin = true;
+			}
+
+			if ($has_other_bin && !$allow_move_existing) {
+				$first_row = $existing_rows[0];
+				$serial_label = $serial_reference !== '' ? $serial_reference : ('#' . (int)$serial_id);
+				$bin_label = $first_row['loc_code'] !== '' ? $first_row['loc_code'] : ('#' . (int)$first_row['wh_loc_id']);
+				$error_message = sprintf(_('Serial %s is already stored in bin %s.'), $serial_label, $bin_label);
+				$result['success'] = false;
+				return $result;
+			}
+
+			foreach ($existing_rows as $row) {
+				if ((int)$row['wh_loc_id'] === (int)$target_bin_id)
+					continue;
+
+				update_bin_stock(
+					(int)$row['wh_loc_id'],
+					$stock_id,
+					-(float)$row['qty_on_hand'],
+					$row['batch_id'] !== null ? (int)$row['batch_id'] : null,
+					$serial_id,
+					null,
+					$row['stock_status']
+				);
+				$result['moved_from_bin_ids'][] = (int)$row['wh_loc_id'];
+			}
+
+			$result['already_in_target'] = $has_target_bin;
+			return $result;
+		}
 	}
 
 	/**
@@ -214,55 +265,58 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 	 * @param string|null $expiry_date SQL date
 	 * @param string      $status      Stock status (default 'available')
 	 */
-	function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
-		$serial_id = null, $expiry_date = null, $status = 'available')
-	{
-		if (!$wh_loc_id)
-			return;
-
-		$where = "wh_loc_id=" . (int)$wh_loc_id
-			. " AND stock_id=" . db_escape($stock_id)
-			. " AND " . ($batch_id !== null ? "batch_id=" . (int)$batch_id : "batch_id IS NULL")
-			. " AND " . ($serial_id !== null ? "serial_id=" . (int)$serial_id : "serial_id IS NULL");
-
-		$sql = "SELECT id, qty_on_hand FROM " . TB_PREF . "wh_bin_stock WHERE " . $where;
-		$result = db_query($sql, 'could not check bin stock');
-		$existing = db_fetch($result);
-
-		if ($existing) {
-			$new_qty = (float)$existing['qty_on_hand'] + (float)$qty;
-			if (abs($new_qty) < 0.000001)
-				$new_qty = 0;
-			$new_qty_available = get_bin_stock_available_qty_for_status($new_qty, $status);
-			$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
-				. "qty_on_hand=" . (float)$new_qty . ","
-				. "qty_available=" . (float)$new_qty_available . ","
-				. "stock_status=" . db_escape($status)
-				. " WHERE id=" . (int)$existing['id'];
-			db_query($sql, 'could not update bin stock');
-		} else {
-			if ((float)$qty <= 0)
+	if (!function_exists('update_bin_stock')) {
+		function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
+			$serial_id = null, $expiry_date = null, $status = 'available')
+		{
+			if (!$wh_loc_id)
 				return;
 
-			$insert_qty_available = get_bin_stock_available_qty_for_status((float)$qty, $status);
-			$sql = "INSERT INTO " . TB_PREF . "wh_bin_stock (
-				wh_loc_id, stock_id, qty_on_hand, qty_reserved, qty_available,
-				batch_id, serial_id, expiry_date, stock_status
-			) VALUES (
-				" . (int)$wh_loc_id . ",
-				" . db_escape($stock_id) . ",
-				" . (float)$qty . ",
-				0,
-				" . (float)$insert_qty_available . ",
-				" . ($batch_id !== null ? (int)$batch_id : 'NULL') . ",
-				" . ($serial_id !== null ? (int)$serial_id : 'NULL') . ",
-				" . ($expiry_date ? db_escape($expiry_date) : 'NULL') . ",
-				" . db_escape($status) . "
-			)";
-			db_query($sql, 'could not insert bin stock');
-		}
-}
+			$where = "wh_loc_id=" . (int)$wh_loc_id
+				. " AND stock_id=" . db_escape($stock_id)
+				. " AND " . ($batch_id !== null ? "batch_id=" . (int)$batch_id : "batch_id IS NULL")
+				. " AND " . ($serial_id !== null ? "serial_id=" . (int)$serial_id : "serial_id IS NULL");
 
+			$sql = "SELECT id, qty_on_hand FROM " . TB_PREF . "wh_bin_stock WHERE " . $where;
+			$result = db_query($sql, 'could not check bin stock');
+			$existing = db_fetch($result);
+
+			if ($existing) {
+				$new_qty = (float)$existing['qty_on_hand'] + (float)$qty;
+				if (abs($new_qty) < 0.000001)
+					$new_qty = 0;
+				$new_qty_available = get_bin_stock_available_qty_for_status($new_qty, $status);
+				$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
+					. "qty_on_hand=" . (float)$new_qty . ","
+					. "qty_available=" . (float)$new_qty_available . ","
+					. "stock_status=" . db_escape($status)
+					. " WHERE id=" . (int)$existing['id'];
+				db_query($sql, 'could not update bin stock');
+			} else {
+				if ((float)$qty <= 0)
+					return;
+
+				$insert_qty_available = get_bin_stock_available_qty_for_status((float)$qty, $status);
+				$sql = "INSERT INTO " . TB_PREF . "wh_bin_stock (
+					wh_loc_id, stock_id, qty_on_hand, qty_reserved, qty_available,
+					batch_id, serial_id, expiry_date, stock_status
+				) VALUES (
+					" . (int)$wh_loc_id . ",
+					" . db_escape($stock_id) . ",
+					" . (float)$qty . ",
+					0,
+					" . (float)$insert_qty_available . ",
+					" . ($batch_id !== null ? (int)$batch_id : 'NULL') . ",
+					" . ($serial_id !== null ? (int)$serial_id : 'NULL') . ",
+					" . ($expiry_date ? db_escape($expiry_date) : 'NULL') . ",
+					" . db_escape($status) . "
+				)";
+				db_query($sql, 'could not insert bin stock');
+			}
+		}
+	}
+
+	return $normalized_item;
 }
 
 /**
@@ -951,6 +1005,11 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 	if (!function_exists('item_has_serial_tracking') || !function_exists('item_has_batch_tracking'))
 		return true;
 
+	$auto_generate_serial = function_exists('get_tracking_setting')
+		&& get_tracking_setting('auto_generate_serial', '1') === '1';
+	$auto_generate_batch = function_exists('get_tracking_setting')
+		&& get_tracking_setting('auto_generate_batch', '1') === '1';
+
 	$seen_serials = array();
 
 	foreach ($po->line_items as $line_no => $order_line) {
@@ -983,74 +1042,78 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 			if ($serial_text === '' && isset($_POST[$serial_data_key]) && !is_scalar($_POST[$serial_data_key]))
 				continue;
 			if ($serial_text === '') {
-				$validation_errors[] = sprintf(
-					_('Item %s requires %d serial number(s), but none were provided.'),
-					$stock_id,
-					$expected_serial_count
-				);
-				continue;
+				if (!$auto_generate_serial) {
+					$validation_errors[] = sprintf(
+						_('Item %s requires %d serial number(s), but none were provided.'),
+						$stock_id,
+						$expected_serial_count
+					);
+					continue;
+				}
 			}
 
-			$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
-			$clean_serials = array();
-			$serial_line_error_count = 0;
-			foreach ($serial_entries as $serial_entry) {
-				$serial_number = trim($serial_entry);
-				if ($serial_number === '')
-					continue;
+			if ($serial_text !== '') {
+				$serial_entries = preg_split('/[\r\n,]+/', $serial_text);
+				$clean_serials = array();
+				$serial_line_error_count = 0;
+				foreach ($serial_entries as $serial_entry) {
+					$serial_number = trim($serial_entry);
+					if ($serial_number === '')
+						continue;
 
-				if (preg_match('/[\x00-\x1F\x7F]/', $serial_number)) {
-					$serial_line_error_count++;
-					$validation_errors[] = sprintf(
-						_('Serial number "%s" for item %s contains invalid control characters.'),
-						$serial_number,
-						$stock_id
-					);
-					continue;
+					if (preg_match('/[\x00-\x1F\x7F]/', $serial_number)) {
+						$serial_line_error_count++;
+						$validation_errors[] = sprintf(
+							_('Serial number "%s" for item %s contains invalid control characters.'),
+							$serial_number,
+							$stock_id
+						);
+						continue;
+					}
+
+					if (strlen($serial_number) > 60) {
+						$serial_line_error_count++;
+						$validation_errors[] = sprintf(
+							_('Serial number "%s" for item %s exceeds 60 characters.'),
+							$serial_number,
+							$stock_id
+						);
+						continue;
+					}
+
+					$serial_key = strtoupper($serial_number);
+					if (isset($seen_serials[$serial_key])) {
+						$serial_line_error_count++;
+						$validation_errors[] = sprintf(
+							_('Duplicate serial number "%s" was provided in this GRN payload.'),
+							$serial_number
+						);
+						continue;
+					}
+
+					if (function_exists('is_serial_number_duplicate')
+						&& is_serial_number_duplicate($serial_number, $stock_id)) {
+						$serial_line_error_count++;
+						$validation_errors[] = sprintf(
+							_('Serial number "%s" already exists for item %s.'),
+							$serial_number,
+							$stock_id
+						);
+						continue;
+					}
+
+					$seen_serials[$serial_key] = true;
+					$clean_serials[] = $serial_number;
 				}
 
-				if (strlen($serial_number) > 60) {
-					$serial_line_error_count++;
+				if ($serial_line_error_count === 0 && count($clean_serials) != $expected_serial_count) {
 					$validation_errors[] = sprintf(
-						_('Serial number "%s" for item %s exceeds 60 characters.'),
-						$serial_number,
-						$stock_id
+						_('Item %s requires exactly %d serial number(s); received %d.'),
+						$stock_id,
+						$expected_serial_count,
+						count($clean_serials)
 					);
-					continue;
 				}
-
-				$serial_key = strtoupper($serial_number);
-				if (isset($seen_serials[$serial_key])) {
-					$serial_line_error_count++;
-					$validation_errors[] = sprintf(
-						_('Duplicate serial number "%s" was provided in this GRN payload.'),
-						$serial_number
-					);
-					continue;
-				}
-
-				if (function_exists('is_serial_number_duplicate')
-					&& is_serial_number_duplicate($serial_number, $stock_id)) {
-					$serial_line_error_count++;
-					$validation_errors[] = sprintf(
-						_('Serial number "%s" already exists for item %s.'),
-						$serial_number,
-						$stock_id
-					);
-					continue;
-				}
-
-				$seen_serials[$serial_key] = true;
-				$clean_serials[] = $serial_number;
-			}
-
-			if ($serial_line_error_count === 0 && count($clean_serials) != $expected_serial_count) {
-				$validation_errors[] = sprintf(
-					_('Item %s requires exactly %d serial number(s); received %d.'),
-					$stock_id,
-					$expected_serial_count,
-					count($clean_serials)
-				);
 			}
 		}
 
@@ -1066,10 +1129,12 @@ function validate_grn_tracking_payload($po, &$validation_errors) {
 				continue;
 
 			if ($batch_no === '') {
-				$validation_errors[] = sprintf(
-					_('Item %s requires a batch number, but none was provided.'),
-					$stock_id
-				);
+				if (!$auto_generate_batch) {
+					$validation_errors[] = sprintf(
+						_('Item %s requires a batch number, but none was provided.'),
+						$stock_id
+					);
+				}
 			} else {
 				if (preg_match('/[\x00-\x1F\x7F]/', $batch_no)) {
 					$validation_errors[] = sprintf(
@@ -1229,14 +1294,21 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 	$existing = db_fetch($result);
 
 	if ($existing) {
-		$new_qty = $existing['qty_on_hand'] + $qty;
+		$new_qty = (float)$existing['qty_on_hand'] + (float)$qty;
+		if (abs($new_qty) < 0.000001)
+			$new_qty = 0;
+		$new_qty_available = $status === 'available' && $new_qty > 0 ? (float)$new_qty : 0;
 		$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET "
 			. "qty_on_hand=" . (float)$new_qty . ","
-			. "qty_available=" . (float)$new_qty . ","
+			. "qty_available=" . (float)$new_qty_available . ","
 			. "stock_status=" . db_escape($status)
 			. " WHERE id=" . (int)$existing['id'];
 		db_query($sql, 'could not update bin stock');
 	} else {
+		if ((float)$qty <= 0)
+			return;
+
+		$insert_qty_available = $status === 'available' && (float)$qty > 0 ? (float)$qty : 0;
 		$sql = "INSERT INTO " . TB_PREF . "wh_bin_stock (
 			wh_loc_id, stock_id, qty_on_hand, qty_reserved, qty_available,
 			batch_id, serial_id, expiry_date, stock_status
@@ -1245,7 +1317,7 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 			" . db_escape($stock_id) . ",
 			" . (float)$qty . ",
 			0,
-			" . (float)$qty . ",
+			" . (float)$insert_qty_available . ",
 			" . ($batch_id !== null ? (int)$batch_id : 'NULL') . ",
 			" . ($serial_id !== null ? (int)$serial_id : 'NULL') . ",
 			" . ($expiry_date ? db_escape($expiry_date) : 'NULL') . ",
@@ -1292,6 +1364,8 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 	include_once($root . '/includes/db/serial_batch_db.inc');
 	include_once($root . '/includes/db/serial_numbers_db.inc');
 	include_once($root . '/includes/db/stock_batches_db.inc');
+	$auto_generate_serial = get_tracking_setting('auto_generate_serial', '1') === '1';
+	$auto_generate_batch = get_tracking_setting('auto_generate_batch', '1') === '1';
 
 	$validation_errors = array();
 	if (!validate_grn_tracking_payload($po, $validation_errors)) {
@@ -1341,6 +1415,9 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 			if (isset($_POST[$mfg_key]) && is_scalar($_POST[$mfg_key]))
 				$mfg_date = trim((string)$_POST[$mfg_key]);
 
+			if ($batch_no === '' && $auto_generate_batch)
+				$batch_no = generate_batch_number($stock_id);
+
 			if (!empty($batch_no)) {
 				$existing_batch = get_stock_batch_by_code($batch_no, $stock_id);
 
@@ -1379,11 +1456,19 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		if (item_has_serial_tracking($stock_id)) {
 			$serial_data_key = 'serial_' . $line_no;
 			$serial_text = '';
+			$serials = array();
 			if (isset($_POST[$serial_data_key]) && is_scalar($_POST[$serial_data_key]))
 				$serial_text = trim((string)$_POST[$serial_data_key]);
 
 			if (!empty($serial_text)) {
 				$serials = preg_split('/[\r\n,]+/', $serial_text);
+			} elseif ($auto_generate_serial) {
+				$serial_count = (int)round($receive_qty);
+				for ($serial_index = 0; $serial_index < $serial_count; $serial_index++)
+					$serials[] = generate_serial_number($stock_id);
+			}
+
+			if (!empty($serials)) {
 				foreach ($serials as $sn) {
 					$sn = trim($sn);
 					if (empty($sn)) continue;

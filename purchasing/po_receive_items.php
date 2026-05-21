@@ -282,6 +282,11 @@ function process_receive_po() {
 	$grn->ex_rate = input_num('_ex_rate', null);
 
 	$grn_no = add_grn($grn);
+	if (!$grn_no) {
+		unset($_POST['ProcessGoodsReceived']);
+		$Ajax->activate('_page_body');
+		return;
+	}
 
 	new_doc_date($_POST['DefaultReceivedDate']);
 	unset($_SESSION['PO']->line_items);

@@ -46,17 +46,21 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	}
 
 	// Validate expiry warning days
-	$expiry_warn = get_post('expiry_warning_days');
-	if ($expiry_warn !== '' && (!is_numeric($expiry_warn) || (int)$expiry_warn < 0)) {
+	$expiry_warn = null;
+	$expiry_warn_error = normalize_tracking_non_negative_int(get_post('expiry_warning_days'), 'Expiry Warning Days', $expiry_warn);
+	if ($expiry_warn_error !== null) {
 		$input_error = 1;
-		display_error(_('Expiry warning days must be a positive number.'));
+		display_error(_($expiry_warn_error));
 		set_focus('expiry_warning_days');
+	}
+	else {
+		$_POST['expiry_warning_days'] = $expiry_warn === null ? '' : (string)$expiry_warn;
 	}
 
 	if ($input_error == 0) {
 		set_tracking_setting('serial_number_format', trim((string)get_post('serial_number_format')));
 		set_tracking_setting('batch_number_format', trim((string)get_post('batch_number_format')));
-		set_tracking_setting('expiry_warning_days', get_post('expiry_warning_days'));
+		set_tracking_setting('expiry_warning_days', $_POST['expiry_warning_days']);
 		set_tracking_setting('enforce_fefo', check_value('enforce_fefo') ? '1' : '0');
 		set_tracking_setting('barcode_format', get_post('barcode_format'));
 		set_tracking_setting('auto_generate_serial', check_value('auto_generate_serial') ? '1' : '0');
