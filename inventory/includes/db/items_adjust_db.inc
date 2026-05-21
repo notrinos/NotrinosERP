@@ -357,6 +357,7 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 
 		if ($qty > 0) {
 			// === POSITIVE ADJUSTMENT: Create new serial/batch records ===
+			$created_serial_ids = array();
 
 			// --- Serial numbers: create new ---
 			if (item_has_serial_tracking($stock_id)) {
@@ -389,6 +390,7 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 						);
 
 						if ($sid) {
+							$created_serial_ids[] = (int)$sid;
 							add_serial_movement(
 								$sid,
 								ST_INVADJUST,
@@ -445,6 +447,13 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 					}
 
 					if ($batch_id) {
+						if (!empty($created_serial_ids) && $tracking_mode === 'serial_batch') {
+							$sql_link_serial_batch = "UPDATE " . TB_PREF . "serial_numbers"
+								. " SET batch_id=" . (int)$batch_id
+								. " WHERE id IN (" . implode(',', array_map('intval', $created_serial_ids)) . ")";
+							db_query($sql_link_serial_batch, 'could not link adjusted serials to batch');
+						}
+
 						add_batch_movement(
 							$batch_id,
 							ST_INVADJUST,

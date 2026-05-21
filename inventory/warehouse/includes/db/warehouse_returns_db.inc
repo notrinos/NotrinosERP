@@ -210,6 +210,38 @@ function find_open_return_line_by_serial($serial_id)
 }
 
 /**
+ * Normalize and validate optional return-order line text input.
+ *
+ * @param mixed  $value         Submitted value
+ * @param int    $max_length    Maximum allowed length
+ * @param string $field_label   Translated field label
+ * @param string $error_message Output error text
+ * @return string|null|false Normalized value, null for blank input, false on validation failure
+ */
+function normalize_return_order_line_text($value, $max_length, $field_label, &$error_message)
+{
+	if ($value === null || $value === '')
+		return null;
+
+	if (!is_scalar($value)) {
+		$error_message = sprintf(_('%s must be plain text.'), $field_label);
+		return false;
+	}
+
+	$value = trim((string)$value);
+	if ($value === '')
+		return null;
+
+	$length = function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
+	if ($length > $max_length) {
+		$error_message = sprintf(_('%s cannot exceed %s characters.'), $field_label, $max_length);
+		return false;
+	}
+
+	return $value;
+}
+
+/**
  * Validate a tracked return line before it is inserted.
  *
  * @param int         $return_id    Return order id
@@ -331,6 +363,17 @@ function validate_return_order_line_request($return_id, $stock_id, $qty_expected
 function add_return_order_line($return_id, $stock_id, $qty_expected,
 	$to_bin_id = null, $serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
 	$error_message = '';
+	$reason_code = normalize_return_order_line_text($reason_code, 20, _('Return reason'), $error_message);
+	if ($reason_code === false) {
+		display_error($error_message);
+		return false;
+	}
+	$memo = normalize_return_order_line_text($memo, 255, _('Return memo'), $error_message);
+	if ($memo === false) {
+		display_error($error_message);
+		return false;
+	}
+
 	if (!validate_return_order_line_request($return_id, $stock_id, $qty_expected,
 		$serial_id, $batch_id, $error_message)) {
 		if ($error_message !== '')
@@ -370,6 +413,17 @@ function add_return_order_line($return_id, $stock_id, $qty_expected,
  */
 function update_return_order_line($line_id, $stock_id, $qty_expected,
 	$to_bin_id = null, $serial_id = null, $batch_id = null, $reason_code = null, $memo = null) {
+	$error_message = '';
+	$reason_code = normalize_return_order_line_text($reason_code, 20, _('Return reason'), $error_message);
+	if ($reason_code === false) {
+		display_error($error_message);
+		return false;
+	}
+	$memo = normalize_return_order_line_text($memo, 255, _('Return memo'), $error_message);
+	if ($memo === false) {
+		display_error($error_message);
+		return false;
+	}
 
 	$sql = "UPDATE " . TB_PREF . "wh_return_order_lines SET "
 		. "stock_id = " . db_escape($stock_id) . ", "
