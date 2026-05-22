@@ -307,9 +307,12 @@ if ($rma) {
 }
 
 // ============ HEADER SECTION ============
-start_table(TABLESTYLE2);
-$th = array(_('RMA Details'), '');
-table_header($th);
+start_outer_table(TABLESTYLE2);
+
+table_section(1);
+
+// $th = array(_('RMA Details'), '');
+// table_header($th);
 
 if ($rma) {
 	// View mode: show customer/branch read-only
@@ -321,6 +324,7 @@ if ($rma) {
 		$src_label = isset($src_types[$rma['source_type']]) ? $src_types[$rma['source_type']] : _('Document');
 		label_row(_('Source Document'), $src_label . ' #' . $rma['source_no']);
 	}
+	
 	// Editable fields if still pending
 	if ($rma['status'] === 'pending') {
 		label_cells(_('Return Reason'), '', '', '');
@@ -336,6 +340,8 @@ if ($rma) {
 		start_row(); label_cell(_('Restocking Fee %'));
 		echo '<td>'; text_cells_ex(null, 'restocking_fee_percent', 8, 8, $rma['restocking_fee_percent']); echo '</td>'; end_row();
 
+		table_section(2);
+
 		start_row(); label_cell(_('Customer Notes'));
 		echo '<td><textarea name="customer_notes" rows="2" style="width:350px">' . htmlspecialchars($rma['customer_notes']) . '</textarea></td>'; end_row();
 
@@ -347,8 +353,12 @@ if ($rma) {
 		label_row(_('Return Reason'), $rma['reason_description']);
 		label_row(_('Return Method'), isset($methods[$rma['return_method']]) ? $methods[$rma['return_method']] : $rma['return_method']);
 		label_row(_('Restocking Fee %'), number_format2((float)$rma['restocking_fee_percent'], 2) . '%');
+
 		if ($rma['customer_notes'])
 			label_row(_('Customer Notes'), nl2br(htmlspecialchars($rma['customer_notes'])));
+		
+		table_section(2);
+
 		if ($rma['internal_notes'])
 			label_row(_('Internal Notes'), nl2br(htmlspecialchars($rma['internal_notes'])));
 	}
@@ -398,6 +408,8 @@ if ($rma) {
 	text_cells_ex(null, 'source_no', 10, 10, $source_no_init ?: get_post('source_no', ''));
 	end_row();
 
+	table_section(2);
+
 	start_row();
 	label_cell(_('Return Reason'));
 	echo '<td>'.rma_reason_list('return_reason_id', (int)get_post('return_reason_id', 0)).'</td>';
@@ -423,7 +435,7 @@ if ($rma) {
 	end_row();
 }
 
-end_table(1);
+end_outer_table(1);
 
 // ============ SOURCE ITEMS SELECTOR (new RMA from document) ============
 if (!$rma && !empty($source_items)) {
