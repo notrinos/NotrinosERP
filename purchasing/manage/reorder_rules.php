@@ -56,9 +56,26 @@ function load_reorder_overlay_form($rule)
  */
 function can_save_reorder_overlay()
 {
-	if ((int)get_post('selected_rule_id') <= 0) {
+	$selected_rule_id = (int)get_post('selected_rule_id');
+	if ($selected_rule_id <= 0) {
 		display_error(_('Select a replenishment rule first.'));
 		return false;
+	}
+
+	$rule = get_purchasing_reorder_rule_by_id($selected_rule_id, 1);
+	if (!$rule) {
+		display_error(_('The selected replenishment rule no longer exists. Refresh and try again.'));
+		return false;
+	}
+
+	$supplier_id = (int)get_post('overlay_supplier_id');
+	if ($supplier_id > 0) {
+		$supplier = get_supplier($supplier_id);
+		if (!$supplier || (int)$supplier['inactive']) {
+			display_error(_('Select a valid active supplier.'));
+			set_focus('overlay_supplier_id');
+			return false;
+		}
 	}
 
 	if (!check_num('overlay_lead_time_days', 0)) {
@@ -83,15 +100,20 @@ if ($edit_rule_id > 0)
 	$selected_rule_id = $edit_rule_id;
 
 if (isset($_POST['SaveOverlay']) && can_save_reorder_overlay()) {
-	set_preferred_supplier_for_rule(
+	if (set_preferred_supplier_for_rule(
 		(int)get_post('selected_rule_id'),
 		(int)get_post('overlay_supplier_id'),
 		check_value('overlay_auto_create_rfq') ? 1 : 0,
 		check_value('overlay_auto_create_po') ? 1 : 0,
 		(int)input_num('overlay_lead_time_days')
-	);
-	display_notification(_('Reorder rule purchasing overlay has been updated.'));
-	$selected_rule_id = (int)get_post('selected_rule_id');
+	)) {
+		display_notification(_('Reorder rule purchasing overlay has been updated.'));
+		$selected_rule_id = (int)get_post('selected_rule_id');
+	} else {
+		display_error(_('The selected replenishment rule no longer exists. Refresh and try again.'));
+		$selected_rule_id = 0;
+		reset_reorder_overlay_form();
+	}
 }
 
 if (isset($_POST['ResetOverlay'])) {
@@ -105,24 +127,22 @@ $filter_supplier = (int)get_post('filter_supplier', 0);
 $show_inactive = check_value('show_inactive');
 
 if ($selected_rule_id > 0) {
-	$rule_result = get_purchasing_reorder_rules('', '', 0, 1);
-	while ($rule = db_fetch($rule_result)) {
-		if ((int)$rule['rule_id'] === $selected_rule_id) {
-			load_reorder_overlay_form($rule);
-			break;
-		}
-	}
+	$rule = get_purchasing_reorder_rule_by_id($selected_rule_id, 1);
+	if ($rule)
+		load_reorder_overlay_form($rule);
+	else
+		reset_reorder_overlay_form();
 }
 
 start_form(true);
 
-start_table(TABLESTYLE2, "width='100%'");
+start_table(TABLESTYLE_NOBORDER);
 start_row();
-	stock_costable_items_list_cells(_('Item:'), 'filter_stock', $filter_stock, true, true);
-	locations_list_cells(_('Warehouse:'), 'filter_location', $filter_location, true, true);
-	supplier_list_cells(_('Preferred Supplier:'), 'filter_supplier', $filter_supplier, true, true);
-	check_cells(_('Show Inactive Rules:'), 'show_inactive', $show_inactive);
-	submit_cells('SearchRules', _('Apply Filter'), '', '', 'default');
+stock_costable_items_list_cells(null, 'filter_stock', $filter_stock, true, true);
+locations_list_cells(null, 'filter_location', $filter_location, true, true);
+supplier_list_cells(null, 'filter_supplier', $filter_supplier, true, true);
+check_cells(_('Show Inactive Rules:'), 'show_inactive', $show_inactive);
+submit_cells('SearchRules', _('Apply Filter'), '', '', 'default');
 end_row();
 end_table(1);
 

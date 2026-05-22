@@ -52,7 +52,7 @@ function resolve_reorder_suggestion_supplier_id($suggestion)
  */
 function get_purchasing_reorder_rules($stock_id = '', $location = '', $supplier_id = 0, $show_inactive = 0)
 {
-	$sql = "SELECT r.*,\n\	\tlocation.location_name AS warehouse_name,\n\	\tsupplier.supp_name AS supplier_name,\n\	\tCOALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0) AS effective_supplier_id\n\	FROM " . TB_PREF . "wh_replenishment_rules r\n\	LEFT JOIN " . TB_PREF . "locations location ON location.loc_code = r.warehouse_loc_code\n\	LEFT JOIN " . TB_PREF . "suppliers supplier ON supplier.supplier_id = COALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0)\n\	WHERE 1=1";
+	$sql = "SELECT r.*,\n\t\tlocation.location_name AS warehouse_name,\n\t\tsupplier.supp_name AS supplier_name,\n\t\tCOALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0) AS effective_supplier_id\n\tFROM " . TB_PREF . "wh_replenishment_rules r\n\tLEFT JOIN " . TB_PREF . "locations location ON location.loc_code = r.warehouse_loc_code\n\tLEFT JOIN " . TB_PREF . "suppliers supplier ON supplier.supplier_id = COALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0)\n\tWHERE 1=1";
 
 	if ($stock_id !== '' && $stock_id !== ALL_TEXT)
 		$sql .= " AND r.stock_id = " . db_escape($stock_id);
@@ -71,6 +71,25 @@ function get_purchasing_reorder_rules($stock_id = '', $location = '', $supplier_
 }
 
 /**
+ * Retrieve one purchasing reorder rule by id.
+ *
+ * @param int $rule_id
+ * @param int $show_inactive
+ * @return array|false
+ */
+function get_purchasing_reorder_rule_by_id($rule_id, $show_inactive = 1)
+{
+	$sql = "SELECT r.*,\n\t\tlocation.location_name AS warehouse_name,\n\t\tsupplier.supp_name AS supplier_name,\n\t\tCOALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0) AS effective_supplier_id\n\tFROM " . TB_PREF . "wh_replenishment_rules r\n\tLEFT JOIN " . TB_PREF . "locations location ON location.loc_code = r.warehouse_loc_code\n\tLEFT JOIN " . TB_PREF . "suppliers supplier ON supplier.supplier_id = COALESCE(NULLIF(r.preferred_supplier_id, 0), r.preferred_supplier, 0)\n\tWHERE r.rule_id = " . db_escape((int)$rule_id);
+
+	if (!(int)$show_inactive)
+		$sql .= " AND r.active = 1";
+
+	$sql .= " LIMIT 1";
+	$result = db_query($sql, 'could not retrieve purchasing reorder rule');
+	return db_fetch($result);
+}
+
+/**
  * Update the preferred supplier and purchasing automation flags on one rule.
  *
  * @param int $rule_id
@@ -82,7 +101,13 @@ function get_purchasing_reorder_rules($stock_id = '', $location = '', $supplier_
  */
 function set_preferred_supplier_for_rule($rule_id, $supplier_id, $auto_create_rfq = 0, $auto_create_po = 0, $lead_time_days = 0)
 {
-	$sql = "UPDATE " . TB_PREF . "wh_replenishment_rules SET\n\	\tpreferred_supplier_id = " . db_escape((int)$supplier_id) . ",\n\	\tpreferred_supplier = " . db_escape((int)$supplier_id) . ",\n\	\tauto_create_rfq = " . db_escape((int)$auto_create_rfq) . ",\n\	\tauto_create_po = " . db_escape((int)$auto_create_po) . ",\n\	\tlead_time_days = " . db_escape((int)$lead_time_days) . "\n\	WHERE rule_id = " . (int)$rule_id;
+	if ((int)$rule_id <= 0)
+		return false;
+
+	if (!get_purchasing_reorder_rule_by_id($rule_id, 1))
+		return false;
+
+	$sql = "UPDATE " . TB_PREF . "wh_replenishment_rules SET\n\t\tpreferred_supplier_id = " . db_escape((int)$supplier_id) . ",\n\t\tpreferred_supplier = " . db_escape((int)$supplier_id) . ",\n\t\tauto_create_rfq = " . db_escape((int)$auto_create_rfq) . ",\n\t\tauto_create_po = " . db_escape((int)$auto_create_po) . ",\n\t\tlead_time_days = " . db_escape((int)$lead_time_days) . "\n\tWHERE rule_id = " . (int)$rule_id;
 
 	db_query($sql, 'could not update purchasing reorder rule overlay');
 	return true;
