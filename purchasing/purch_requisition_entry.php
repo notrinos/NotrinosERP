@@ -344,7 +344,9 @@ if (!$requisition) {
 	display_note(_('Save the requisition header first, then add line items and submit it for approval.'), 0, 1);
 }
 
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+
+table_section(1);
 
 if ($editable) {
 	users_list_row(_('Requester:'), 'requester_id', get_post('requester_id'), false, false);
@@ -355,11 +357,12 @@ if ($editable) {
 	echo '<tr><td class="label">' . _('Priority:') . '</td><td>';
 	echo array_selector('priority', get_post('priority'), $priorities, array('class' => array('nosearch')));
 	echo '</td></tr>';
+	table_section(2);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
 	text_row(_('Purpose:'), 'purpose', get_post('purpose'), 50, 255);
-	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 4);
+	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 5);
 } else {
 	label_row(_('Requester:'), $requisition['requester_name']);
 	label_row(_('Department:'), $requisition['department_name'] ? $requisition['department_name'] : '-');
@@ -367,6 +370,7 @@ if ($editable) {
 	label_row(_('Required Date:'), $requisition['required_date'] ? sql2date($requisition['required_date']) : '-');
 	label_row(_('Location:'), $requisition['location_name']);
 	label_row(_('Priority:'), purch_requisition_priority_badge($requisition['priority']));
+	table_section(2);
 	label_row(_('Reference:'), $requisition['reference']);
 	label_row(_('Purpose:'), $requisition['purpose'] ? $requisition['purpose'] : '-');
 	label_row(_('Notes:'), $requisition['notes'] ? nl2br(htmlspecialchars($requisition['notes'])) : '-');
@@ -375,7 +379,7 @@ if ($editable) {
 		label_row(_('Linked Material Request:'), format_material_request_no($requisition['material_request_no']));
 }
 
-end_table(1);
+end_outer_table(1);
 
 hidden('selected_id', $selected_id);
 
