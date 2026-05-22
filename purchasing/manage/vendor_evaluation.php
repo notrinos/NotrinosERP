@@ -66,6 +66,41 @@ function can_save_vendor_evaluation_header()
 }
 
 /**
+ * Validate posted criteria scores before saving.
+ *
+ * @param array $criteria_rows
+ * @return bool
+ */
+function can_save_vendor_evaluation_scores($criteria_rows)
+{
+	foreach ($criteria_rows as $criteria) {
+		$score_key = 'criteria_score_' . $criteria['id'];
+		$raw_score = trim(get_post($score_key, ''));
+
+		if ($raw_score === '' && $criteria['scoring_method'] === 'calculated')
+			continue;
+
+		if ($raw_score === '')
+			continue;
+
+		$normalized_score = input_num($score_key, false);
+		if ($normalized_score === false || $normalized_score === null) {
+			display_error(sprintf(_('Score for "%s" must be numeric.'), $criteria['name']));
+			set_focus($score_key);
+			return false;
+		}
+
+		if ($normalized_score < 0 || $normalized_score > 100) {
+			display_error(sprintf(_('Score for "%s" must be between 0 and 100.'), $criteria['name']));
+			set_focus($score_key);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
  * Resolve the computed score for one calculated criteria formula.
  *
  * @param string $formula
@@ -240,9 +275,19 @@ if (isset($_POST['delete_evaluation']) && $selected_id > 0) {
 		display_error(_('The selected evaluation could not be deleted.'));
 }
 
-if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || isset($_POST['approve_evaluation'])) && can_save_vendor_evaluation_header()) {
+if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || isset($_POST['approve_evaluation'])) && can_save_vendor_evaluation_header() && can_save_vendor_evaluation_scores($criteria_rows)) {
+	$can_process = true;
 	if ($selected_id > 0) {
-		update_vendor_evaluation(
+		$existing_eval = get_vendor_evaluation($selected_id);
+		if ($existing_eval && $existing_eval['status'] === 'approved') {
+			display_error(_('Approved evaluations are read-only and cannot be modified.'));
+			$can_process = false;
+		}
+	}
+
+	if ($can_process) {
+	if ($selected_id > 0) {
+		if (!update_vendor_evaluation(
 			$selected_id,
 			(int)get_post('supplier_id'),
 			get_post('period_from'),
@@ -253,7 +298,10 @@ if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || i
 			trim(get_post('action_plan')),
 			trim(get_post('notes')),
 			'draft'
-		);
+		)) {
+			display_error(_('The selected evaluation could not be updated.'));
+			$can_process = false;
+		}
 	} else {
 		$selected_id = add_vendor_evaluation(
 			(int)get_post('supplier_id'),
@@ -268,21 +316,37 @@ if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || i
 		);
 	}
 
+	if ($can_process) {
 	$metrics = get_vendor_form_metrics((int)get_post('supplier_id'), get_post('period_from'), get_post('period_to'));
 	save_vendor_evaluation_scores_from_post($selected_id, $criteria_rows, $metrics);
 	calculate_evaluation_totals($selected_id);
 
 	if (isset($_POST['submit_evaluation'])) {
-		submit_evaluation($selected_id);
+		if (!submit_evaluation($selected_id)) {
+			display_error(_('The selected evaluation could not be submitted.'));
+			$can_process = false;
+		}
+	}
+
+	if ($can_process && isset($_POST['submit_evaluation'])) {
 		meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=submitted'));
 	}
 
 	if (isset($_POST['approve_evaluation'])) {
-		approve_evaluation($selected_id, isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0);
+		if (!approve_evaluation($selected_id, isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0)) {
+			display_error(_('The selected evaluation could not be approved.'));
+			$can_process = false;
+		}
+	}
+
+	if ($can_process && isset($_POST['approve_evaluation'])) {
 		meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=approved'));
 	}
 
-	meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=saved'));
+	if ($can_process)
+		meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=saved'));
+	}
+	}
 }
 
 if ($selected_id > 0 && !isset($_POST['save_evaluation']) && !isset($_POST['submit_evaluation']) && !isset($_POST['approve_evaluation'])) {
@@ -292,6 +356,7 @@ if ($selected_id > 0 && !isset($_POST['save_evaluation']) && !isset($_POST['subm
 }
 
 $current_evaluation = $selected_id > 0 ? get_vendor_evaluation($selected_id) : false;
+$is_editable_evaluation = !$current_evaluation || $current_evaluation['status'] !== 'approved';
 $score_map = get_vendor_evaluation_score_map($selected_id);
 $metrics = get_vendor_form_metrics((int)get_post('supplier_id', 0), get_post('period_from'), get_post('period_to'));
 $recommendation_options = get_vendor_recommendations();
@@ -371,6 +436,7 @@ if (empty($criteria_rows)) {
 		alt_table_row_color($k);
 		$saved_score = isset($score_map[$criteria['id']]) ? $score_map[$criteria['id']] : null;
 		$display_score = $saved_score ? $saved_score['score'] : '';
+		$readonly_attr = $is_editable_evaluation ? '' : ' readonly';
 		if ($display_score === '' && $criteria['scoring_method'] === 'calculated')
 			$display_score = round2(resolve_vendor_formula_score($criteria['calculation_formula'], $metrics), 2);
 
@@ -378,9 +444,9 @@ if (empty($criteria_rows)) {
 		label_cell('<strong>' . htmlspecialchars($criteria['name']) . '</strong><br><span style="font-size:11px;color:#64748b;">' . htmlspecialchars($criteria['description']) . '</span>');
 		qty_cell($criteria['weight']);
 		label_cell(ucfirst($criteria['scoring_method']) . ($criteria['calculation_formula'] ? '<br><span style="font-size:11px;color:#64748b;">' . htmlspecialchars($criteria['calculation_formula']) . '</span>' : ''));
-		echo '<td><input type="text" name="criteria_score_' . $criteria['id'] . '" value="' . htmlspecialchars((string)$display_score, ENT_QUOTES, 'UTF-8') . '" size="8" class="amount"></td>';
-		echo '<td><input type="text" name="criteria_evidence_' . $criteria['id'] . '" value="' . htmlspecialchars($saved_score ? $saved_score['evidence'] : '', ENT_QUOTES, 'UTF-8') . '" size="25"></td>';
-		echo '<td><input type="text" name="criteria_notes_' . $criteria['id'] . '" value="' . htmlspecialchars($saved_score ? $saved_score['notes'] : '', ENT_QUOTES, 'UTF-8') . '" size="35"></td>';
+		echo '<td><input type="text" name="criteria_score_' . $criteria['id'] . '" value="' . htmlspecialchars((string)$display_score, ENT_QUOTES, 'UTF-8') . '" size="8" class="amount"' . $readonly_attr . '></td>';
+		echo '<td><input type="text" name="criteria_evidence_' . $criteria['id'] . '" value="' . htmlspecialchars((string)($saved_score ? $saved_score['evidence'] : ''), ENT_QUOTES, 'UTF-8') . '" size="25"' . $readonly_attr . '></td>';
+		echo '<td><input type="text" name="criteria_notes_' . $criteria['id'] . '" value="' . htmlspecialchars((string)($saved_score ? $saved_score['notes'] : ''), ENT_QUOTES, 'UTF-8') . '" size="35"' . $readonly_attr . '></td>';
 		end_row();
 	}
 
@@ -388,17 +454,21 @@ if (empty($criteria_rows)) {
 }
 
 echo '<div style="text-align:center;margin:16px 0;">';
-submit('save_evaluation', _('Save Evaluation'), true, _('Save the current vendor evaluation'), 'default');
-echo '&nbsp;';
-submit('submit_evaluation', _('Submit Evaluation'), true, _('Submit this evaluation for review'));
-if ($selected_id > 0)
+if ($is_editable_evaluation) {
+	submit('save_evaluation', _('Save Evaluation'), true, _('Save the current vendor evaluation'), 'default');
 	echo '&nbsp;';
-if ($selected_id > 0)
-	submit('approve_evaluation', _('Approve Evaluation'), true, _('Approve this evaluation and update supplier scores'));
-if ($selected_id > 0)
-	echo '&nbsp;';
-if ($selected_id > 0)
-	submit('delete_evaluation', _('Delete Evaluation'), true, _('Delete this evaluation while still editable'));
+	submit('submit_evaluation', _('Submit Evaluation'), true, _('Submit this evaluation for review'));
+	if ($selected_id > 0)
+		echo '&nbsp;';
+	if ($selected_id > 0)
+		submit('approve_evaluation', _('Approve Evaluation'), true, _('Approve this evaluation and update supplier scores'));
+	if ($selected_id > 0)
+		echo '&nbsp;';
+	if ($selected_id > 0)
+		submit('delete_evaluation', _('Delete Evaluation'), true, _('Delete this evaluation while still editable'));
+} else {
+	display_note(_('Approved evaluations are read-only.'), 0, 1);
+}
 echo '</div>';
 
 display_heading(_('Recent Evaluations'));

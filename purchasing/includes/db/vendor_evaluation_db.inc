@@ -624,6 +624,16 @@ function get_vendor_evaluation_score_row($evaluation_id, $criteria_id)
  */
 function set_evaluation_score($evaluation_id, $criteria_id, $score, $evidence = '', $notes = '')
 {
+	$evaluation = get_editable_vendor_evaluation($evaluation_id);
+	if (!$evaluation)
+		return false;
+
+	$score = (float)$score;
+	if ($score < 0)
+		$score = 0;
+	if ($score > 100)
+		$score = 100;
+
 	$existing = get_vendor_evaluation_score_row($evaluation_id, $criteria_id);
 	if ($existing) {
 		$sql = "UPDATE " . TB_PREF . "vendor_evaluation_scores SET
