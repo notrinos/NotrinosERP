@@ -192,6 +192,35 @@ function get_matching_config($supplier_id = -1, $match_type = '', $include_inact
 }
 
 /**
+ * Find existing matching config id for one scope/type combination.
+ *
+ * @param string $match_type
+ * @param int    $supplier_id
+ * @param int    $exclude_id
+ * @param int    $include_inactive
+ * @return int
+ */
+function find_matching_config_duplicate_id($match_type, $supplier_id, $exclude_id = 0, $include_inactive = 0)
+{
+    $sql = "SELECT id FROM " . TB_PREF . "purch_matching_config
+        WHERE match_type = " . db_escape($match_type) . "
+            AND supplier_id = " . (int)$supplier_id;
+
+    if (!(int)$include_inactive)
+        $sql .= " AND inactive = 0";
+
+    if ((int)$exclude_id > 0)
+        $sql .= " AND id <> " . (int)$exclude_id;
+
+    $sql .= " ORDER BY id DESC LIMIT 1";
+
+    $result = db_query($sql, 'could not check duplicate purchase matching configuration');
+    $row = db_fetch($result);
+
+    return $row ? (int)$row['id'] : 0;
+}
+
+/**
  * Resolve the effective tolerance config for one match type and supplier.
  *
  * @param string $match_type
@@ -417,10 +446,9 @@ function get_bill_control_policies($include_inactive = 0)
 /**
  * Resolve the active bill control policy.
  *
- * @param int $supplier_id
  * @return array
  */
-function get_bill_control_policy($supplier_id = 0)
+function get_bill_control_policy()
 {
     $sql = "SELECT * FROM " . TB_PREF . "purch_bill_control_policy
         WHERE inactive = 0 AND is_default = 1
@@ -538,7 +566,7 @@ function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before
  */
 function check_invoice_allowed($supplier_id, $po_number, $grn_batch_id, $context = array())
 {
-    $policy = get_bill_control_policy((int)$supplier_id);
+    $policy = get_bill_control_policy();
     $allowed = true;
     $reason = '';
 
@@ -550,6 +578,22 @@ function check_invoice_allowed($supplier_id, $po_number, $grn_batch_id, $context
     if ($allowed && (int)$policy['require_po_for_invoice'] && empty($context['has_po'])) {
         $allowed = false;
         $reason = _('Bill control policy requires a purchase order reference before invoicing.');
+    }
+
+    if ($allowed && !(int)$policy['allow_over_invoice']) {
+        $invoice_total = isset($context['invoice_total']) ? (float)$context['invoice_total'] : 0;
+        $grn_total = isset($context['grn_total']) ? (float)$context['grn_total'] : 0;
+        $po_total = isset($context['po_total']) ? (float)$context['po_total'] : 0;
+        $baseline_total = ($policy['bill_basis'] === 'on_ordered') ? $po_total : $grn_total;
+
+        // Fallback to PO total when GRN total is not available for received-basis checks.
+        if ($policy['bill_basis'] === 'on_received' && $baseline_total <= 0 && $po_total > 0)
+            $baseline_total = $po_total;
+
+        if ($baseline_total > 0 && ($invoice_total - $baseline_total) > 0.000001) {
+            $allowed = false;
+            $reason = _('Bill control policy does not allow invoicing above the matched reference amount.');
+        }
     }
 
     if (function_exists('hook_invoke_all'))
@@ -868,7 +912,15 @@ function perform_3way_match($trans_type, $trans_no, $supplier_id, $supp_trans = 
         (int)$supplier_id,
         0,
         0,
-        array('has_grn' => $has_grn, 'has_po' => $has_po, 'trans_type' => $trans_type, 'trans_no' => $trans_no)
+        array(
+            'has_grn' => $has_grn,
+            'has_po' => $has_po,
+            'trans_type' => $trans_type,
+            'trans_no' => $trans_no,
+            'invoice_total' => $result['totals']['invoice_total'],
+            'po_total' => $result['totals']['po_total'],
+            'grn_total' => $result['totals']['grn_total'],
+        )
     );
 
     if (!$bill_control['allowed']) {

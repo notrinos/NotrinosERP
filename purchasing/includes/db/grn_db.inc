@@ -255,7 +255,7 @@ function add_grn(&$po) {
 
 	if (function_exists('get_company_pref') && get_company_pref('use_3way_matching')
 		&& function_exists('get_bill_control_policy') && function_exists('hook_invoke_all')) {
-		$policy = get_bill_control_policy((int)$po->supplier_id);
+		$policy = get_bill_control_policy();
 		if (!empty($policy['auto_match_on_grn']))
 			hook_invoke_all('purch_match_performed', $grn, array('mode' => 'grn_auto_match', 'supplier_id' => (int)$po->supplier_id));
 	}

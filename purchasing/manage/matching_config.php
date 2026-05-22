@@ -92,6 +92,21 @@ function can_save_matching_config()
         return false;
     }
 
+    if (!check_value('match_inactive') && function_exists('find_matching_config_duplicate_id')) {
+        $duplicate_id = find_matching_config_duplicate_id(
+            get_post('match_type'),
+            (int)get_post('supplier_id'),
+            (int)get_post('selected_match_id'),
+            0
+        );
+
+        if ($duplicate_id > 0) {
+            display_error(_('An active matching configuration already exists for this match type and supplier. Edit the existing row instead of creating a duplicate.'));
+            set_focus('match_type');
+            return false;
+        }
+    }
+
     return true;
 }
 
