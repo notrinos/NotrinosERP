@@ -386,15 +386,17 @@ date_row(_('Evaluation Date:'), 'evaluation_date');
 date_row(_('Period From:'), 'period_from');
 date_row(_('Period To:'), 'period_to');
 
+if (!$current_evaluation)
+	table_section(2);
 echo "<tr><td class='label'>" . _('Recommendation:') . "</td><td>";
 echo array_selector('recommendation', get_post('recommendation', 'maintain'), $recommendation_options, array('class' => array('nosearch')));
 echo "</td></tr>\n";
 
-table_section(2);
 textarea_row(_('Action Plan:'), 'action_plan', get_post('action_plan', ''), 45, 4);
 textarea_row(_('Notes:'), 'notes', get_post('notes', ''), 45, 4);
 
 if ($current_evaluation) {
+	table_section(2);
 	label_row(_('Overall Score:'), number_format2($current_evaluation['overall_score'], 2));
 	label_row(_('Quality Score:'), number_format2($current_evaluation['quality_score'], 2));
 	label_row(_('Delivery Score:'), number_format2($current_evaluation['delivery_score'], 2));
