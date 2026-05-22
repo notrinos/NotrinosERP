@@ -178,13 +178,18 @@ function display_po_header(&$order) {
 	if ($order->trans_type == ST_PURCHORDER && $editable && list_updated('purch_template_id')) {
 		$order->purch_template_id = (int)get_post('purch_template_id');
 		if ($order->purch_template_id > 0 && function_exists('apply_template_to_po')) {
-			apply_template_to_po($order, $order->purch_template_id);
-			$_POST['supplier_id'] = $order->supplier_id;
-			$_POST['StkLocation'] = $order->Location;
-			$_POST['delivery_address'] = $order->delivery_address;
-			$_POST['Comments'] = $order->Comments;
-			$Ajax->activate('items_table');
-			$Ajax->activate('delivery_address');
+			if (apply_template_to_po($order, $order->purch_template_id)) {
+				$_POST['supplier_id'] = $order->supplier_id;
+				$_POST['StkLocation'] = $order->Location;
+				$_POST['delivery_address'] = $order->delivery_address;
+				$_POST['Comments'] = $order->Comments;
+				$Ajax->activate('items_table');
+				$Ajax->activate('delivery_address');
+			} else {
+				display_error(_('The selected purchase template is inactive, invalid, or has no valid lines.'));
+				$order->purch_template_id = 0;
+				$_POST['purch_template_id'] = 0;
+			}
 		}
 	}
 

@@ -43,17 +43,17 @@ function can_save_purchase_template_header()
  *
  * @return bool
  */
-function can_save_purchase_template_line()
+function can_save_purchase_template_line($stock_field = 'line_stock_id', $quantity_field = 'line_default_quantity')
 {
-	if (trim(get_post('line_stock_id')) === '') {
+	if (trim(get_post($stock_field)) === '') {
 		display_error(_('You must select an item.'));
-		set_focus('line_stock_id');
+		set_focus($stock_field);
 		return false;
 	}
 
-	if (!check_num('line_default_quantity', 0)) {
+    if (!check_num($quantity_field) || input_num($quantity_field) <= 0) {
 		display_error(_('The default quantity must be greater than zero.'));
-		set_focus('line_default_quantity');
+		set_focus($quantity_field);
 		return false;
 	}
 
@@ -116,21 +116,31 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_template_l
 
 $update_line_id = find_submit('UpdateLine');
 if ($update_line_id > 0 && $selected_id > 0) {
-	update_template_line(
-		$update_line_id,
-		trim(get_post('edit_stock_' . $update_line_id)),
-		trim(get_post('edit_description_' . $update_line_id)),
-		input_num('edit_quantity_' . $update_line_id),
-		(int)input_num('edit_sort_' . $update_line_id),
-		array('updated_by_ui' => 1)
-	);
-	display_notification(_('Template line has been updated.'));
+	$line = get_template_line($update_line_id, $selected_id);
+	if (!$line) {
+		display_error(_('The selected template line no longer exists. Refresh and try again.'));
+	} elseif (can_save_purchase_template_line('edit_stock_' . $update_line_id, 'edit_quantity_' . $update_line_id)) {
+		update_template_line(
+			$update_line_id,
+			trim(get_post('edit_stock_' . $update_line_id)),
+			trim(get_post('edit_description_' . $update_line_id)),
+			input_num('edit_quantity_' . $update_line_id),
+			(int)input_num('edit_sort_' . $update_line_id),
+			array('updated_by_ui' => 1),
+			$selected_id
+		);
+		display_notification(_('Template line has been updated.'));
+	}
 }
 
 $delete_line_id = find_submit('DeleteLine');
 if ($delete_line_id > 0 && $selected_id > 0) {
-	delete_template_line($delete_line_id);
-	display_notification(_('Template line has been deleted.'));
+	if (!get_template_line($delete_line_id, $selected_id)) {
+		display_error(_('The selected template line no longer exists. Refresh and try again.'));
+	} else {
+		delete_template_line($delete_line_id, $selected_id);
+		display_notification(_('Template line has been deleted.'));
+	}
 }
 
 $template = $selected_id > 0 ? get_purch_template($selected_id) : false;

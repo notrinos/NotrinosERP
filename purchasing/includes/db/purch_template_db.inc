@@ -265,6 +265,13 @@ function update_template_line($line_id, $stock_id, $description, $default_qty, $
 		sort_order = " . db_escape((int)$sort) . ",
 		custom_data = " . sql_purch_template_custom_data($custom_data) . "
 		WHERE id = " . (int)$line_id;
+
+	if ((int)func_num_args() >= 7) {
+		$template_id = (int)func_get_arg(6);
+		if ($template_id > 0)
+			$sql .= " AND template_id = " . $template_id;
+	}
+
 	db_query($sql, 'could not update purchase template line');
 
 	return true;
@@ -279,9 +286,34 @@ function update_template_line($line_id, $stock_id, $description, $default_qty, $
 function delete_template_line($line_id)
 {
 	$sql = "DELETE FROM " . TB_PREF . "purch_order_template_lines WHERE id = " . (int)$line_id;
+
+	if ((int)func_num_args() >= 2) {
+		$template_id = (int)func_get_arg(1);
+		if ($template_id > 0)
+			$sql .= " AND template_id = " . $template_id;
+	}
+
 	db_query($sql, 'could not delete purchase template line');
 
 	return true;
+}
+
+/**
+ * Get one template line row.
+ *
+ * @param int $line_id
+ * @param int $template_id
+ * @return array|false
+ */
+function get_template_line($line_id, $template_id = 0)
+{
+	$sql = "SELECT * FROM " . TB_PREF . "purch_order_template_lines WHERE id = " . (int)$line_id;
+	if ((int)$template_id > 0)
+		$sql .= " AND template_id = " . (int)$template_id;
+
+	$result = db_query($sql, 'could not retrieve purchase template line');
+
+	return db_fetch($result);
 }
 
 /**
@@ -332,6 +364,9 @@ function apply_template_to_po(&$purchase_order, $template_id)
 	if (!$template)
 		return false;
 
+	if (!empty($template['inactive']))
+		return false;
+
 	$purchase_order->purch_template_id = (int)$template_id;
 
 	if ((int)$template['supplier_id'] > 0 && (int)$purchase_order->supplier_id !== (int)$template['supplier_id'])
@@ -345,12 +380,18 @@ function apply_template_to_po(&$purchase_order, $template_id)
 		$purchase_order->delivery_address = get_purch_template_location_delivery_address($template['delivery_location']);
 	}
 
+	if ((int)$template['default_payment_terms'] > 0)
+		$purchase_order->terms = (int)$template['default_payment_terms'];
+
 	if (trim($template['notes']) !== '')
 		$purchase_order->Comments = $template['notes'];
 
 	$template_lines = get_template_lines($template_id);
 	while ($template_line = db_fetch($template_lines)) {
 		$default_quantity = (float)$template_line['default_quantity'];
+		if ($default_quantity <= 0)
+			continue;
+
 		$default_description = trim($template_line['description']) !== '' ? $template_line['description'] : $template_line['stock_description'];
 		$required_date = $purchase_order->orig_order_date ? $purchase_order->orig_order_date : Today();
 		$unit_price = (int)$purchase_order->supplier_id > 0

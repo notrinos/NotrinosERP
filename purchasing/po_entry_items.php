@@ -163,6 +163,8 @@ if ($_SESSION['PO']->trans_type == ST_PURCHORDER && $_SESSION['PO']->order_no ==
 	&& !$_SESSION['PO']->order_has_items()) {
 	if (apply_template_to_po($_SESSION['PO'], (int)$_GET['template_id']))
 		copy_from_cart();
+	else
+		display_error(_('The selected purchase template is inactive, invalid, or has no valid lines.'));
 }
 
 //--------------------------------------------------------------------------------------------------
