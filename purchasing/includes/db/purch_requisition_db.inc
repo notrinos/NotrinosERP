@@ -1204,6 +1204,9 @@ function create_requisition_from_material_request($material_request_id)
 	if (!$material_request || $material_request['request_type'] !== 'purchase')
 		return false;
 
+	if ($material_request['status'] === 'cancelled' || count_material_request_lines($material_request_id) === 0)
+		return false;
+
 	$sql = "SELECT id FROM " . TB_PREF . "purch_requisitions WHERE material_request_id = " . (int)$material_request_id;
 	$result = db_query($sql, 'could not check existing purchase requisition bridge');
 	$existing = db_fetch($result);

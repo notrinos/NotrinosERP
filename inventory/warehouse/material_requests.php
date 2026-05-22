@@ -231,6 +231,7 @@ $edit_id = find_submit('Edit');
 if ($edit_id > 0) {
 	$selected_id = $edit_id;
 	$Ajax->activate('mr_detail');
+	$Ajax->addScript('mr_detail', "document.getElementById('mr_detail').scrollIntoView({behavior:'smooth',block:'start'});");
 }
 
 // --- View button from list ---
@@ -238,6 +239,7 @@ $view_id = find_submit('View');
 if ($view_id > 0) {
 	$selected_id = $view_id;
 	$Ajax->activate('mr_detail');
+	$Ajax->addScript('mr_detail', "document.getElementById('mr_detail').scrollIntoView({behavior:'smooth',block:'start'});");
 }
 
 // --- New button ---
@@ -354,6 +356,9 @@ div_end();
 // =====================================================================
 
 div_start('mr_detail');
+if ($selected_id > 0 && !in_ajax()) {
+	echo '<script>window.addEventListener("load",function(){var el=document.getElementById("mr_detail");if(el)el.scrollIntoView({behavior:"smooth",block:"start"}); });</script>';
+}
 if ($selected_id > 0 || isset($_POST['New'])) {
 	$editing = false;
 	$mr = null;
@@ -498,7 +503,8 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 		if ($editing) {
 			display_heading(_('Add Line'));
 			start_table(TABLESTYLE2);
-			stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+			label_cell(_('Item:'));
+			stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 			qty_row(_('Quantity:'), 'line_qty', null, null, null, 4);
 			date_row(_('Required Date:'), 'line_required_date');
 			text_row(_('Memo:'), 'line_memo', null, 30, 255);
@@ -513,7 +519,7 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 		echo '<div style="text-align:center;margin:15px 0;">';
 		hidden('selected_id', $selected_id);
 
-		if ($mr['status'] === 'draft') {
+		if (in_array($mr['status'], array('draft', 'cancelled'))) {
 			submit('Submit', _('Submit for Approval'), true, _('Submit this request for approval'));
 			echo ' ';
 			submit('Delete', _('Delete'), true, _('Delete this material request'));
