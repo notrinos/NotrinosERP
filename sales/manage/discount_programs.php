@@ -35,6 +35,24 @@ function can_process_discount_program() {
 		set_focus('prog_name');
 		return false;
 	}
+	if (!empty(get_post('date_start')) && !is_date(get_post('date_start'))) {
+		display_error(_('Start date is invalid.'));
+		set_focus('date_start');
+		return false;
+	}
+	if (!empty(get_post('date_end')) && !is_date(get_post('date_end'))) {
+		display_error(_('End date is invalid.'));
+		set_focus('date_end');
+		return false;
+	}
+	if (!empty(get_post('date_start')) && !empty(get_post('date_end'))
+		&& is_date(get_post('date_start')) && is_date(get_post('date_end'))
+		&& date1_greater_date2(get_post('date_start'), get_post('date_end')))
+	{
+		display_error(_('End date must be on or after start date.'));
+		set_focus('date_end');
+		return false;
+	}
 	if (!check_num('reward_value', 0)) {
 		display_error(_('Reward value must be a valid number >= 0.'));
 		set_focus('reward_value');
@@ -57,6 +75,24 @@ function can_process_coupon_generation() {
 	if (!check_num('coupon_count', 1)) {
 		display_error(_('Number of coupons must be at least 1.'));
 		set_focus('coupon_count');
+		return false;
+	}
+	if (!empty(get_post('coupon_valid_from')) && !is_date(get_post('coupon_valid_from'))) {
+		display_error(_('Coupon valid-from date is invalid.'));
+		set_focus('coupon_valid_from');
+		return false;
+	}
+	if (!empty(get_post('coupon_valid_until')) && !is_date(get_post('coupon_valid_until'))) {
+		display_error(_('Coupon valid-until date is invalid.'));
+		set_focus('coupon_valid_until');
+		return false;
+	}
+	if (!empty(get_post('coupon_valid_from')) && !empty(get_post('coupon_valid_until'))
+		&& is_date(get_post('coupon_valid_from')) && is_date(get_post('coupon_valid_until'))
+		&& date1_greater_date2(get_post('coupon_valid_from'), get_post('coupon_valid_until')))
+	{
+		display_error(_('Coupon valid-until date must be on or after valid-from date.'));
+		set_focus('coupon_valid_until');
 		return false;
 	}
 	return true;
@@ -266,8 +302,8 @@ $prog_types = array(
 );
 array_selector_row(_('Program Type') . ':', 'program_type', get_post('program_type', 'automatic'), $prog_types);
 
-date_row(_('Start Date (empty = any)') . ':', 'date_start', '', true);
-date_row(_('End Date (empty = no expiry)') . ':', 'date_end', '', true);
+date_row(_('Start Date (empty = any)') . ':', 'date_start', '', true, 0, 0, 1001);
+date_row(_('End Date (empty = no expiry)') . ':', 'date_end', '', true, 0, 0, 1001);
 
 amount_row(_('Minimum Order Amount (0 = any)') . ':', 'min_order_amount');
 amount_row(_('Minimum Quantity (0 = any)') . ':', 'min_quantity', null, null, null, user_qty_dec());
@@ -370,8 +406,8 @@ if ($selected_id != -1) {
 		text_row_ex(_('Code Prefix (optional)') . ':', 'coupon_prefix', 10);
 		small_amount_row(_('Usage Limit per Coupon') . ':', 'coupon_usage_limit', 1, null, null, 0);
 		customer_list_row(_('Restrict to Customer (optional)') . ':', 'coupon_customer', 0, true);
-		date_row(_('Valid From (optional)') . ':', 'coupon_valid_from', '', true);
-		date_row(_('Valid Until (optional)') . ':', 'coupon_valid_until', '', true);
+		date_row(_('Valid From (optional)') . ':', 'coupon_valid_from', '', true, 0, 0, 1001);
+		date_row(_('Valid Until (optional)') . ':', 'coupon_valid_until', '', true, 0, 0, 1001);
 
 		end_table(1);
 

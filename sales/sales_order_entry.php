@@ -928,7 +928,7 @@ if ($customer_error == '') {
 			start_row();
 			label_cell(_('Load Template:'), "class='label'");
 			echo '<td>';
-			echo html_select('quote_template_id', $tpl_options, get_post('quote_template_id', 0));
+			echo array_selector('quote_template_id', get_post('quote_template_id', 0), $tpl_options);
 			echo '</td><td>';
 			submit('apply_template', _('Apply Template'), false, _('Load products from the selected template'), true);
 			echo '</td>';
@@ -950,7 +950,7 @@ if ($customer_error == '') {
 			start_row();
 			label_cell(_('Linked Opportunity:'), "class='label'");
 			echo '<td>';
-			echo html_select('opportunity_id', $opp_options, get_post('opportunity_id', $_SESSION['Items']->opportunity_id));
+			echo array_selector('opportunity_id', get_post('opportunity_id', $_SESSION['Items']->opportunity_id), $opp_options);
 			echo '</td>';
 			end_row();
 			end_table(1);
@@ -978,8 +978,9 @@ if ($customer_error == '') {
 			start_row();
 			label_cell(_('From Agreement:'), "class='label'");
 			echo '<td>';
-			echo html_select('agreement_id', $agr_options,
-				get_post('agreement_id', isset($_SESSION['Items']->agreement_id) ? $_SESSION['Items']->agreement_id : 0));
+			echo array_selector('agreement_id',
+				get_post('agreement_id', isset($_SESSION['Items']->agreement_id) ? $_SESSION['Items']->agreement_id : 0),
+				$agr_options);
 			echo '</td>';
 			end_row();
 			end_table(1);
