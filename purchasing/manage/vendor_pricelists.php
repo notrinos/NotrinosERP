@@ -263,12 +263,12 @@ $show_inactive = check_value('show_inactive');
 start_form(true);
 
 display_heading(_('Vendor Pricelist Filters'));
-start_table(TABLESTYLE2, "width='100%'");
+start_table(TABLESTYLE_NOBORDER, "width='100%'");
 start_row();
-	supplier_list_cells(_('Supplier:'), 'filter_supplier_id', $filter_supplier_id, true, true);
-	stock_costable_items_list_cells(_('Item:'), 'filter_stock_id', $filter_stock_id, true, true);
-	check_cells(_('Show Inactive:'), 'show_inactive', $show_inactive);
-	submit_cells('filter_pricelists', _('Apply Filter'), '', _('Apply filter'), 'default');
+supplier_list_cells(_('Supplier:'), 'filter_supplier_id', $filter_supplier_id, true, true);
+stock_costable_items_list_cells(null, 'filter_stock_id', $filter_stock_id, true, true);
+check_cells(_('Show Inactive:'), 'show_inactive', $show_inactive);
+submit_cells('filter_pricelists', _('Apply Filter'), '', _('Apply filter'), 'default');
 end_row();
 end_table(1);
 
@@ -345,7 +345,8 @@ echo '<tr><td class="label">' . _('Supplier:') . '</td>';
 supplier_list_cells(null, 'pricelist_supplier_id', get_post('pricelist_supplier_id'), false, true);
 echo '</tr>';
 start_row();
-	stock_costable_items_list_cells(_('Item:'), 'pricelist_stock_id', get_post('pricelist_stock_id'), false, true);
+label_cell(_('Item:'));
+stock_costable_items_list_cells(null, 'pricelist_stock_id', get_post('pricelist_stock_id'), false, true);
 end_row();
 text_row(_('Vendor Product Code:'), 'pricelist_vendor_product_code', get_post('pricelist_vendor_product_code'), 30, 50);
 text_row(_('Vendor Product Name:'), 'pricelist_vendor_product_name', get_post('pricelist_vendor_product_name'), 40, 100);
