@@ -77,7 +77,7 @@ if($Mode == 'RESET') {
 
 start_form();
 
-start_table(TABLESTYLE, "width='40%'");
+start_table(TABLESTYLE);
 
 $th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), '', '');
 
@@ -111,6 +111,7 @@ if($selected_id != '') {
 		$myrow = get_job_position($selected_id);
 		$_POST['position_name']  = $myrow['position_name'];
 		$_POST['basic_amount'] = price_format($myrow['basic_amount']);
+		$_POST['job_class_id'] = $myrow['job_class_id'];
 	}
 	hidden('selected_id', $selected_id);
 }
