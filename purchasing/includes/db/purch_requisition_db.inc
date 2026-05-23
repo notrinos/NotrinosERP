@@ -928,6 +928,16 @@ function submit_requisition($requisition_id)
 	if (count_material_request_lines((int)$requisition['material_request_id']) === 0)
 		return false;
 
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_PURCHREQUISITION);
+	$approval_amount = (float)$requisition['total_estimated'];
+	$approval_required = false;
+	$approval = null;
+
+	if ($approval_registered) {
+		$approval = get_approval_workflow_service();
+		$approval_required = $approval->isApprovalRequired(ST_PURCHREQUISITION, $approval_amount);
+	}
+
 	begin_transaction();
 
 	if (!$requisition['material_request_status'] || $requisition['material_request_status'] === 'draft') {
@@ -956,20 +966,14 @@ function submit_requisition($requisition_id)
 	$submitted_requisition_id = (int)$requisition_id;
 	hook_invoke_all('purch_requisition_submitted', $submitted_requisition_id);
 
-	$reloaded = get_purch_requisition($requisition_id);
-	$auto_approval_limit = (float)get_company_pref('requisition_auto_approval_limit');
-	if ($auto_approval_limit > 0 && (float)$reloaded['total_estimated'] <= $auto_approval_limit) {
-		approve_requisition($requisition_id, (int)$_SESSION['wa_current_user']->user);
+	if (!$approval_registered || !$approval_required) {
+		if (!approve_requisition($requisition_id, (int)$_SESSION['wa_current_user']->user))
+			return false;
+
 		return array('status' => 'auto_approved', 'requisition_id' => (int)$requisition_id);
 	}
 
-	if (!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_PURCHREQUISITION))
-		return array('status' => 'submitted', 'requisition_id' => (int)$requisition_id);
-
-	$approval = get_approval_workflow_service();
-	$approval_amount = (float)$reloaded['total_estimated'];
-	if (!$approval->isApprovalRequired(ST_PURCHREQUISITION, $approval_amount))
-		return array('status' => 'submitted', 'requisition_id' => (int)$requisition_id);
+	$reloaded = get_purch_requisition($requisition_id);
 
 	$draft_data = get_purch_requisition_submission_data($requisition_id);
 	return $approval->submit(

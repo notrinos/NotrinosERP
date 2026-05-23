@@ -237,26 +237,7 @@ if (isset($_POST['SubmitRequisition']) && $selected_id > 0) {
 	} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved') {
 		display_notification(_('Purchase requisition has been auto-approved.'));
 	} else {
-		display_notification(_('Purchase requisition has been submitted.'));
-	}
-}
-
-if (isset($_POST['ApproveRequisition']) && $selected_id > 0) {
-	if (approve_requisition($selected_id, (int)$_SESSION['wa_current_user']->user))
-		display_notification(_('Purchase requisition has been approved.'));
-	else
-		display_error(_('The purchase requisition could not be approved.'));
-}
-
-if (isset($_POST['RejectRequisition']) && $selected_id > 0) {
-	$rejection_reason = trim(get_post('rejection_reason'));
-	if ($rejection_reason === '') {
-		display_error(_('Enter a rejection reason.'));
-		set_focus('rejection_reason');
-	} elseif (reject_requisition($selected_id, (int)$_SESSION['wa_current_user']->user, $rejection_reason)) {
-		display_notification(_('Purchase requisition has been rejected.'));
-	} else {
-		display_error(_('The purchase requisition could not be rejected.'));
+		display_notification(_('Purchase requisition has been submitted for approval.'));
 	}
 }
 
@@ -437,6 +418,7 @@ if ($requisition) {
 		}
 
 		end_row();
+		$k++;
 	}
 
 	if ($k == 0)
@@ -470,12 +452,8 @@ if ($requisition) {
 		if ($requisition['status'] === 'draft')
 			submit('DeleteRequisition', _('Delete Requisition'), true, _('Delete this requisition'));
 	} elseif ($requisition['status'] === 'submitted') {
-		submit('ApproveRequisition', _('Approve'), true, _('Approve this requisition'));
-		echo '&nbsp;';
-		submit('RejectRequisition', _('Reject'), true, _('Reject this requisition'));
-		echo '<div style="max-width:420px;margin:12px auto 0;">';
-		text_row(_('Rejection Reason:'), 'rejection_reason', null, 40, 255);
-		echo '</div>';
+		display_note(_('This requisition is pending approval in the core Approval Dashboard.'), 0, 1);
+		hyperlink_no_params('admin/approval_dashboard.php', _('Go to Approval Dashboard'));
 	} elseif (in_array($requisition['status'], array('approved', 'partially_ordered'))) {
 		start_table(TABLESTYLE_NOBORDER, "style='margin:0 auto;' width='420'");
 		supplier_list_row(_('Create PO For Supplier:'), 'create_po_supplier', null, true, false, true);

@@ -32,6 +32,7 @@ function get_approvable_transaction_types()
 		ST_LOCTRANSFER,
 		ST_INVADJUST,
 		ST_PURCHORDER,
+		ST_PURCHREQUISITION,
 		ST_SUPPINVOICE,
 		ST_SUPPCREDIT,
 		ST_SUPPAYMENT,
