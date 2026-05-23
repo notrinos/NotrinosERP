@@ -326,7 +326,8 @@ if ($viewing_claim) {
 	if (in_array($claim['status'], array('open', 'acknowledged', 'in_repair'))) {
 		echo '<h4>' . _('Add Repair Part') . '</h4>';
 		start_table(TABLESTYLE2);
-		stock_items_list_cells(_('Part Item'), 'part_stock_id', null, false, false, true);
+		label_cell(_('Part Item'));
+		stock_items_list_cells(null, 'part_stock_id', null, false, false, true);
 		end_row();
 		small_amount_row(_('Quantity'), 'part_qty', 1);
 		small_amount_row(_('Unit Cost'), 'part_cost', 0);
