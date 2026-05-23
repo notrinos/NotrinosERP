@@ -104,7 +104,7 @@ $categories = hrm_get_element_categories();
 $amount_types = hrm_get_amount_types();
 
 start_form();
-start_table(TABLESTYLE);
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Code'), _('Element Name'), _('Category'), _('Element Type'), _('Amount Type'), _('Account Code'), _('Account Name'), '', '');
 
 table_header($th);
@@ -131,7 +131,7 @@ end_table(1);
 
 //--------------------------------------------------------------------------
 
-start_table(TABLESTYLE2);
+start_outer_table(TABLESTYLE2, "data-order-header='1'");
 
 if($selected_id != '') {
 	
@@ -156,20 +156,21 @@ if($selected_id != '') {
 	hidden('selected_id', $selected_id);
 }
 
+table_section(1);
+
 text_row_ex(_('Element Code:'), 'element_code', 20, 20);
 text_row_ex(_('Element Name:'), 'element_name', 37, 50);
-label_row(_('Element Category:'), array_selector('element_category', get_post('element_category', 1), $categories));
+array_selector_row(_('Element Category:'), 'element_category', get_post('element_category', 1), $categories);
 gl_all_accounts_list_row(_('Select Account:'), 'account_code', null, true);
-gl_all_accounts_list_row(_('Employer Account:'), 'employer_account', null, true, true, _('Optional'));
+gl_all_accounts_list_row(_('Employer Account:'), 'employer_account', null, true, false, _('Optional'));
 label_row(_('Element Type:'), radio(_('Earnings'), 'is_deduction', 0, 1).'&nbsp;&nbsp;'.radio(_('Deduction'), 'is_deduction', 1));
-label_row(_('Amount Type:'),
-	radio(_('Fixed Amount'), 'amount_type', 0, 1).'&nbsp;&nbsp;'
-	.radio(_('Percentage of Basic'), 'amount_type', 1).'&nbsp;&nbsp;'
-	.radio(_('Percentage of Gross'), 'amount_type', 2).'&nbsp;&nbsp;'
-	.radio(_('Formula'), 'amount_type', 3).'&nbsp;&nbsp;'
-	.radio(_('Attendance Based'), 'amount_type', 4));
+$types = array(_('Fixed Amount'), _('Percentage of Basic'), _('Percentage of Gross'), _('Formula'), _('Attendance Based'));
+array_selector_row(_('Amount Type:'), 'amount_type', 0, $types);
 amount_row(_('Default Amount:'), 'default_amount');
-text_row(_('Formula:'), 'formula', null, 50, 255);
+
+table_section(2);
+
+textarea_row(_('Formula:'), 'formula', null, 255, 3);
 yesno_list_row(_('Taxable:'), 'is_taxable');
 yesno_list_row(_('Affects Gross:'), 'affects_gross');
 amount_row(_('Minimum Amount:'), 'min_amount');
@@ -177,7 +178,7 @@ amount_row(_('Maximum Amount:'), 'max_amount');
 small_amount_row(_('Display Order:'), 'display_order', get_post('display_order', 0), 0, 9999);
 textarea_row(_('Description:'), 'description', null, 50, 3);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == '', '', 'both');
 
