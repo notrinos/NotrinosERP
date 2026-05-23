@@ -225,7 +225,8 @@ if ($selected_id > 0) {
 	display_heading(_('Add Template Line'));
 	start_table(TABLESTYLE2, "width='100%'");
 	start_row();
-		stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+	label_cell(_('Item:'));
+	stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 	end_row();
 	text_row(_('Description:'), 'line_description', null, 40, 255);
 	qty_row(_('Default Quantity:'), 'line_default_quantity', null);
