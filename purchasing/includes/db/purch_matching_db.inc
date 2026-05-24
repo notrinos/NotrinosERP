@@ -474,10 +474,16 @@ function get_matching_exception_submission_data($id, $target_status, $notes = ''
  */
 function has_pending_matching_exception_approval($exception_id)
 {
+    $raw_pattern = '%\"exception_id\":' . (int)$exception_id . '%';
+    $encoded_pattern = '%&quot;exception_id&quot;:' . (int)$exception_id . '%';
+
     $sql = "SELECT id FROM " . TB_PREF . "approval_drafts
         WHERE trans_type = " . ST_PURCHMATCHEXCEPTION . "
             AND status = " . APPROVAL_STATUS_PENDING . "
-            AND draft_data LIKE " . db_escape('%\"exception_id\":' . (int)$exception_id . '%') . "
+            AND (
+                draft_data LIKE " . db_escape($raw_pattern) . "
+                OR draft_data LIKE " . db_escape($encoded_pattern) . "
+            )
         ORDER BY id DESC LIMIT 1";
 
     $result = db_query($sql, 'could not check pending matching exception approval draft');

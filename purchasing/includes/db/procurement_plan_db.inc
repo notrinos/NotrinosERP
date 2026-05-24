@@ -323,10 +323,16 @@ function get_procurement_plan_submission_data($plan_id)
  */
 function has_pending_procurement_plan_approval($plan_id)
 {
+	$raw_pattern = '%\"plan_id\":' . (int)$plan_id . '%';
+	$encoded_pattern = '%&quot;plan_id&quot;:' . (int)$plan_id . '%';
+
 	$sql = "SELECT id FROM " . TB_PREF . "approval_drafts
 		WHERE trans_type = " . ST_PROCUREMENTPLAN . "
 			AND status = " . APPROVAL_STATUS_PENDING . "
-			AND draft_data LIKE " . db_escape('%\"plan_id\":' . (int)$plan_id . '%') . "
+			AND (
+				draft_data LIKE " . db_escape($raw_pattern) . "
+				OR draft_data LIKE " . db_escape($encoded_pattern) . "
+			)
 		ORDER BY id DESC LIMIT 1";
 
 	$result = db_query($sql, 'could not check pending procurement plan approval draft');
@@ -394,12 +400,6 @@ function submit_procurement_plan_for_core_approval($plan_id)
 		$approval = get_approval_workflow_service();
 		$approval_required = $approval->isApprovalRequired(ST_PROCUREMENTPLAN, $approval_amount);
 	}
-
-	$sql = "UPDATE " . TB_PREF . "procurement_plan SET
-		status = 'submitted'
-		WHERE id = " . (int)$plan_id . "
-		AND status IN ('draft', 'submitted')";
-	db_query($sql, 'could not set procurement plan submitted status');
 
 	if (!$approval_registered || !$approval_required) {
 		if (!confirm_procurement_plan($plan_id))

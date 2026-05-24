@@ -205,6 +205,8 @@ function get_systype_db_info($type) {
 		case    ST_SUPPRECEIVE  : return array(TB_PREF."grn_batch", null, "id", "reference", "delivery_date");
 		case    ST_PURCHREQUISITION : return array(TB_PREF."purch_requisitions", null, "id", "reference", "request_date");
 		case    ST_PURCHRFQ     : return array(TB_PREF."purch_rfq", null, "id", "reference", "created_date");
+		case    ST_PROCUREMENTPLAN : return array(TB_PREF."procurement_plan", null, "id", "reference", "plan_date");
+		case    ST_PURCHMATCHEXCEPTION : return array(TB_PREF."purch_matching_exceptions", null, "id", null, "created_date");
 		case    ST_WORKORDER    : return array(TB_PREF."workorders", null, "id", "wo_ref", "released_date");
 		case    ST_MANUISSUE    : return array(TB_PREF."wo_issues", null, "issue_no", "reference", "issue_date");
 		case    ST_MANURECEIVE  : return array(TB_PREF."wo_manufacture", null, "id", "reference", "date_");
