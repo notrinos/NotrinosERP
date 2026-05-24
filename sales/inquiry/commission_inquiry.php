@@ -17,6 +17,7 @@ page(_($help_context = 'Commission Inquiry'));
 
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
+include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
 
@@ -26,8 +27,37 @@ include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
 
 if (isset($_POST['action_approve']) && !empty($_POST['chk'])) {
     $ids = array_map('intval', array_keys($_POST['chk']));
-    approve_commissions($ids, (int)$_SESSION['wa_current_user']->user);
-    display_notification(sprintf(_('%d commission entries approved.'), count($ids)));
+    $submitted = 0;
+    $auto_approved = 0;
+    $already_pending = 0;
+    $skipped = 0;
+
+    foreach ($ids as $entry_id) {
+        $result = submit_sales_commission_entry_for_core_approval($entry_id);
+
+        if ($result === false) {
+            $skipped++;
+            continue;
+        }
+
+        if (isset($result['status']) && $result['status'] === 'pending')
+            $submitted++;
+        elseif (isset($result['status']) && $result['status'] === 'auto_approved')
+            $auto_approved++;
+        elseif (isset($result['status']) && $result['status'] === 'pending_existing')
+            $already_pending++;
+        else
+            $skipped++;
+    }
+
+    if ($submitted > 0)
+        display_notification(sprintf(_('%d commission entries were submitted to core approval.'), $submitted));
+    if ($auto_approved > 0)
+        display_notification(sprintf(_('%d commission entries were auto-approved by core workflow.'), $auto_approved));
+    if ($already_pending > 0)
+        display_notification(sprintf(_('%d commission entries were already pending core approval.'), $already_pending));
+    if ($skipped > 0)
+        display_error(sprintf(_('%d commission entries could not be submitted.'), $skipped));
 }
 
 if (isset($_POST['action_paid']) && !empty($_POST['chk'])) {
@@ -146,8 +176,13 @@ if ($view_mode == 'summary') {
     $total_commission = 0;
     while ($row = db_fetch($result)) {
         alt_table_row_color($k);
+        $has_pending_core_approval = ($row['status'] == 'calculated') ? has_pending_sales_commission_approval((int)$row['id']) : false;
         // Checkbox for bulk actions
-        echo "<td><input type='checkbox' name='chk[".intval($row['id'])."]' value='1'></td>";
+        $can_select_row = ($row['status'] == 'approved') || ($row['status'] == 'calculated' && !$has_pending_core_approval);
+        if ($can_select_row)
+            echo "<td><input type='checkbox' name='chk[".intval($row['id'])."]' value='1'></td>";
+        else
+            echo '<td></td>';
         label_cell(sql2date($row['trans_date']));
         label_cell(htmlspecialchars($row['salesman_name']));
         label_cell(htmlspecialchars($row['plan_name'] ?? '-'));
@@ -159,7 +194,10 @@ if ($view_mode == 'summary') {
         amount_cell($row['commission_amount']);
         $status_colors = array('calculated'=>'orange', 'approved'=>'blue', 'paid'=>'green');
         $color = isset($status_colors[$row['status']]) ? $status_colors[$row['status']] : 'black';
-        label_cell("<span style='color:{$color}'>"._($row['status'])."</span>");
+        $status_label = _($row['status']);
+        if ($has_pending_core_approval)
+            $status_label .= ' (' . _('Pending Core Approval') . ')';
+        label_cell("<span style='color:{$color}'>".$status_label."</span>");
         if ($row['status'] == 'paid')
             label_cell(htmlspecialchars($row['payment_reference']));
         else
@@ -179,7 +217,7 @@ if ($view_mode == 'summary') {
     echo "<div style='font-size:15px;font-weight:600;margin-bottom:10px;'>" . _('Bulk Actions') . "</div>";
     echo "<div style='display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;'>";
     echo "<div>";
-    submit('action_approve', _('Approve Selected'), true, '', false);
+    submit('action_approve', _('Submit Selected For Core Approval'), true, '', false);
     echo "</div>";
     echo "<div style='min-width:220px;'>";
     echo "<div style='font-size:12px;color:#666;margin-bottom:4px;'>" . _('Payment Ref:') . "</div>";

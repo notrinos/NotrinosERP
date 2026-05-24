@@ -74,40 +74,24 @@ if (isset($_POST['approve']) || isset($_POST['reject'])) {
         display_error(_('Leave request was not found.'));
     } elseif (!leave_request_is_approvable($request) && isset($_POST['approve'])) {
     } else {
-        $user = $_SESSION['wa_current_user']->loginname;
         $remarks = get_post('approval_remarks', '');
 
-        // Check for core approval draft linked to this request
         $approval_service = get_approval_workflow_service();
         $core_draft = find_approval_draft_for_hrm_request(ST_LEAVE_REQUEST, $request_id);
 
-        if ($core_draft && (int)$core_draft['status'] === APPROVAL_STATUS_PENDING) {
-            // Use core approval workflow
-            if (isset($_POST['approve'])) {
-                $result = $approval_service->approve($core_draft['draft_id'], $remarks);
-                if ($result['status'] === 'error') {
-                    display_error($result['message']);
-                } else {
-                    display_notification($result['message']);
-                }
-            } else {
-                $result = $approval_service->reject($core_draft['draft_id'], $remarks);
-                if ($result['status'] === 'error') {
-                    display_error($result['message']);
-                } else {
-                    display_notification($result['message']);
-                }
-            }
+        if (!$core_draft || (int)$core_draft['status'] !== APPROVAL_STATUS_PENDING) {
+            display_error(_('This leave request is not pending in the core approval workflow.'));
         } else {
-            // Fallback: use legacy direct approval
             if (isset($_POST['approve'])) {
-                approve_leave_request($request_id, $user, $remarks);
-                $fiscal_year = (int)date('Y', strtotime($request['from_date']));
-                apply_leave_balance_movement($request['employee_id'], (int)$request['leave_id'], $fiscal_year, (float)$request['days'], 0, 0);
-                display_notification(_('Leave request has been approved.'));
+                $result = $approval_service->approve((int)$core_draft['draft_id'], $remarks);
             } else {
-                reject_leave_request($request_id, $user, $remarks);
-                display_notification(_('Leave request has been rejected.'));
+                $result = $approval_service->reject((int)$core_draft['draft_id'], $remarks);
+            }
+
+            if (isset($result['status']) && $result['status'] === 'error') {
+                display_error($result['message']);
+            } else {
+                display_notification(isset($result['message']) ? $result['message'] : _('Leave request processed through core approval.'));
             }
         }
         if (isset($Ajax))
@@ -155,7 +139,8 @@ while ($row = db_fetch($result)) {
     label_cell($status_labels[(int)$row['status']]);
     label_cell($row['approved_by']);
     label_cell(empty($row['approval_date']) ? '' : sql2date(substr($row['approval_date'], 0, 10)));
-    if ((int)$row['status'] == 0)
+    $has_pending_core_approval = ((int)$row['status'] == 0) ? find_approval_draft_for_hrm_request(ST_LEAVE_REQUEST, (int)$row['request_id']) : false;
+    if ((int)$row['status'] == 0 && $has_pending_core_approval)
         edit_button_cell('Edit' . $row['request_id'], _('Process'));
     else
         label_cell('');

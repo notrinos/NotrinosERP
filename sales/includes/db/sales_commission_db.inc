@@ -533,6 +533,119 @@ function get_commission_entries($salesman_id = 0, $status = '', $date_from = '',
 }
 
 /**
+ * Get one commission entry by ID.
+ *
+ * @param int $entry_id
+ * @return array|false
+ */
+function get_sales_commission_entry($entry_id)
+{
+    $sql = "SELECT e.*, s.salesman_name, p.name AS plan_name,
+                c.name AS customer_name
+            FROM " . TB_PREF . "sales_commission_entries e
+            LEFT JOIN " . TB_PREF . "salesman s ON s.salesman_code = e.salesman_id
+            LEFT JOIN " . TB_PREF . "sales_commission_plans p ON p.id = e.plan_id
+            LEFT JOIN " . TB_PREF . "debtors_master c ON c.debtor_no = e.debtor_no
+            WHERE e.id = " . db_escape((int)$entry_id) . "
+            LIMIT 1";
+
+    $result = db_query($sql, 'Cannot get commission entry');
+    return db_fetch($result);
+}
+
+/**
+ * Check whether a commission entry already has a pending core approval draft.
+ *
+ * @param int $entry_id
+ * @return bool
+ */
+function has_pending_sales_commission_approval($entry_id)
+{
+    $sql = "SELECT id FROM " . TB_PREF . "approval_drafts
+        WHERE trans_type = " . ST_SALES_COMMISSION . "
+            AND status = " . APPROVAL_STATUS_PENDING . "
+            AND draft_data LIKE " . db_escape('%\"entry_id\":' . (int)$entry_id . '%') . "
+        ORDER BY id DESC
+        LIMIT 1";
+
+    $result = db_query($sql, 'Cannot check pending commission approval draft');
+    return (bool)db_fetch($result);
+}
+
+/**
+ * Approve one commission entry as part of core approval execution.
+ *
+ * @param int $entry_id
+ * @param string $approved_by
+ * @return bool
+ */
+function approve_sales_commission_entry_from_core($entry_id, $approved_by)
+{
+    $sql = "UPDATE " . TB_PREF . "sales_commission_entries
+        SET status = 'approved'
+        WHERE id = " . db_escape((int)$entry_id) . "
+            AND status = 'calculated'";
+
+    db_query($sql, 'Cannot approve sales commission entry from core approval');
+    return db_num_affected_rows() > 0;
+}
+
+/**
+ * Submit a commission entry for core approval workflow.
+ *
+ * @param int $entry_id
+ * @return array|bool
+ */
+function submit_sales_commission_entry_for_core_approval($entry_id)
+{
+    $entry = get_sales_commission_entry((int)$entry_id);
+    if (!$entry || $entry['status'] !== 'calculated')
+        return false;
+
+    if (has_pending_sales_commission_approval((int)$entry_id))
+        return array('status' => 'pending_existing', 'entry_id' => (int)$entry_id);
+
+    $approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_SALES_COMMISSION);
+    $approval_amount = (float)$entry['commission_amount'];
+
+    if (!$approval_registered) {
+        $approved = approve_sales_commission_entry_from_core((int)$entry_id, 'approval_system');
+        return $approved ? array('status' => 'auto_approved', 'entry_id' => (int)$entry_id) : false;
+    }
+
+    $approval = get_approval_workflow_service();
+    if (!$approval->isApprovalRequired(ST_SALES_COMMISSION, $approval_amount)) {
+        $approved = approve_sales_commission_entry_from_core((int)$entry_id, 'approval_system');
+        return $approved ? array('status' => 'auto_approved', 'entry_id' => (int)$entry_id) : false;
+    }
+
+    $draft_data = array(
+        'entry_id' => (int)$entry['id'],
+        'salesman_id' => (int)$entry['salesman_id'],
+        'salesman_name' => $entry['salesman_name'],
+        'plan_name' => $entry['plan_name'],
+        'trans_type' => (int)$entry['trans_type'],
+        'trans_no' => (int)$entry['trans_no'],
+        'debtor_no' => (int)$entry['debtor_no'],
+        'customer_name' => $entry['customer_name'],
+        'trans_date' => $entry['trans_date'],
+        'base_amount' => (float)$entry['base_amount'],
+        'commission_rate' => (float)$entry['commission_rate'],
+        'commission_amount' => (float)$entry['commission_amount'],
+    );
+
+    return $approval->submit(
+        ST_SALES_COMMISSION,
+        $draft_data,
+        $approval_amount,
+        array(
+            'summary' => sprintf(_('Sales Commission Entry #%d'), (int)$entry['id']),
+            'currency' => get_company_pref('curr_default')
+        )
+    );
+}
+
+/**
  * Get commission summary per salesman for a period.
  *
  * @param  int    $salesman_id 0 = all

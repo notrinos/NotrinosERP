@@ -11,6 +11,32 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
+include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
+
+/**
+ * Ensure Sales Commission transaction type has numbering metadata.
+ *
+ * @return void
+ */
+function ensure_sales_commission_transaction_registration()
+{
+	static $is_registered = false;
+
+	if ($is_registered || !function_exists('register_systype_db_info'))
+		return;
+
+	register_systype_db_info(ST_SALES_COMMISSION, array(
+		TB_PREF . 'sales_commission_entries',
+		null,
+		'id',
+		null,
+		'trans_date'
+	));
+
+	$is_registered = true;
+}
+
+ensure_sales_commission_transaction_registration();
 
 // =====================================================
 // TRANSACTION TYPE REGISTRATIONS
@@ -41,6 +67,17 @@ ApprovalWorkflow::registerTransactionType(ST_CUSTDELIVERY, array(
 	'amount_getter'  => 'get_sales_draft_amount',
 	'draft_renderer' => 'render_sales_draft',
 	'edit_url'       => 'sales/customer_delivery.php',
+));
+
+ApprovalWorkflow::registerTransactionType(ST_SALES_COMMISSION, array(
+	'label'          => _('Sales Commission'),
+	'application'    => 'orders',
+	'executor'       => 'execute_approved_sales_commission',
+	'rejector'       => 'reject_sales_commission_draft',
+	'canceler'       => 'cancel_sales_commission_draft',
+	'amount_getter'  => 'get_sales_commission_draft_amount',
+	'draft_renderer' => 'render_sales_commission_draft',
+	'edit_url'       => 'sales/inquiry/commission_inquiry.php',
 ));
 
 // Phase 5: Sales RMA
@@ -230,6 +267,52 @@ function execute_approved_customer_delivery($draft_data, $reserved_trans_no, $dr
 	return key($cart->trans_no);
 }
 
+/**
+ * Execute an approved Sales Commission draft.
+ *
+ * @param array $draft_data
+ * @param int   $reserved_trans_no
+ * @param int   $draft_id
+ * @return int|false
+ */
+function execute_approved_sales_commission($draft_data, $reserved_trans_no, $draft_id)
+{
+	$entry_id = isset($draft_data['entry_id']) ? (int)$draft_data['entry_id'] : 0;
+	if ($entry_id <= 0)
+		return false;
+
+	if (!approve_sales_commission_entry_from_core($entry_id, 'approval_system'))
+		return false;
+
+	return $entry_id;
+}
+
+/**
+ * Keep commission entry calculated when approval draft is rejected.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function reject_sales_commission_draft($draft_data, $draft_id, $comments)
+{
+	return true;
+}
+
+/**
+ * Keep commission entry calculated when approval draft is cancelled.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function cancel_sales_commission_draft($draft_data, $draft_id, $comments)
+{
+	return true;
+}
+
 // =====================================================
 // AMOUNT GETTERS
 // =====================================================
@@ -254,6 +337,17 @@ function get_sales_draft_amount($draft_data)
 	$total += isset($draft_data['freight_cost']) ? (float)$draft_data['freight_cost'] : 0;
 
 	return $total;
+}
+
+/**
+ * Get amount for Sales Commission draft.
+ *
+ * @param array $draft_data
+ * @return float
+ */
+function get_sales_commission_draft_amount($draft_data)
+{
+	return isset($draft_data['commission_amount']) ? (float)$draft_data['commission_amount'] : 0;
 }
 
 // =====================================================
@@ -314,6 +408,29 @@ function render_sales_draft($draft_data)
 		$html .= '<td align="right"><b>' . number_format($grand_total, 2) . '</b></td></tr>';
 		$html .= '</table>';
 	}
+
+	return $html;
+}
+
+/**
+ * Render Sales Commission draft details for approval viewer.
+ *
+ * @param array $draft_data
+ * @return string
+ */
+function render_sales_commission_draft($draft_data)
+{
+	$html = '<table class="tablestyle" width="100%">';
+	$html .= '<tr><th>' . _('Entry ID') . '</th><td>' . (int)(isset($draft_data['entry_id']) ? $draft_data['entry_id'] : 0) . '</td>';
+	$html .= '<th>' . _('Date') . '</th><td>' . htmlspecialchars(isset($draft_data['trans_date']) ? $draft_data['trans_date'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Sales Person') . '</th><td>' . htmlspecialchars(isset($draft_data['salesman_name']) ? $draft_data['salesman_name'] : '') . '</td>';
+	$html .= '<th>' . _('Plan') . '</th><td>' . htmlspecialchars(isset($draft_data['plan_name']) ? $draft_data['plan_name'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Customer') . '</th><td>' . htmlspecialchars(isset($draft_data['customer_name']) ? $draft_data['customer_name'] : '') . '</td>';
+	$html .= '<th>' . _('Transaction') . '</th><td>#' . (int)(isset($draft_data['trans_no']) ? $draft_data['trans_no'] : 0) . '</td></tr>';
+	$html .= '<tr><th>' . _('Base Amount') . '</th><td>' . number_format((float)(isset($draft_data['base_amount']) ? $draft_data['base_amount'] : 0), 2) . '</td>';
+	$html .= '<th>' . _('Rate %') . '</th><td>' . number_format((float)(isset($draft_data['commission_rate']) ? $draft_data['commission_rate'] : 0), 2) . '</td></tr>';
+	$html .= '<tr><th>' . _('Commission') . '</th><td colspan="3"><b>' . number_format((float)(isset($draft_data['commission_amount']) ? $draft_data['commission_amount'] : 0), 2) . '</b></td></tr>';
+	$html .= '</table>';
 
 	return $html;
 }

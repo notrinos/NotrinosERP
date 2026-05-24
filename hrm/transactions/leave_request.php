@@ -135,7 +135,24 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 // Pending approval — page already stopped by display_footer_exit()
                 return;
             } else {
-                display_notification(_('Leave request has been created.'));
+                if (!$leave_request_row)
+                    $leave_request_row = get_leave_request($request_id);
+
+                approve_leave_request($request_id, 'approval_system', '');
+                $from_date = $leave_request_row ? $leave_request_row['from_date'] : date2sql($_POST['from_date']);
+                $employee_id = $leave_request_row ? $leave_request_row['employee_id'] : $_POST['employee_id'];
+                $leave_id = $leave_request_row ? (int)$leave_request_row['leave_id'] : (int)$_POST['leave_id'];
+
+                $fiscal_year = (int)date('Y', strtotime($from_date));
+                apply_leave_balance_movement(
+                    $employee_id,
+                    $leave_id,
+                    $fiscal_year,
+                    $days,
+                    0,
+                    0
+                );
+                display_notification(_('Leave request has been created and auto-approved (no active core workflow).'));
             }
             if (isset($Ajax))
                 $Ajax->activate('_page_body');
