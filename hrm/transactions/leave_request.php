@@ -15,6 +15,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
+include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
 
 /**
  * Calculate leave day count from date range.
