@@ -39,6 +39,12 @@ foreach ($_POST as $name => $value) {
 
             // Check if core approval workflow is required
             if ($approval_service->isApprovalRequired(ST_PAYROLL_PERIOD, $payroll_amount)) {
+                $existing_core_draft = find_approval_draft_for_hrm_request(ST_PAYROLL_PERIOD, $period_id);
+                if ($existing_core_draft && (int)$existing_core_draft['status'] === APPROVAL_STATUS_PENDING) {
+                    display_notification(_('Payroll period is already pending in the core approval workflow.'));
+                    continue;
+                }
+
                 $payroll_draft_data = array(
                     'period_id'        => $period_id,
                     'period_name'      => $period['period_name'],

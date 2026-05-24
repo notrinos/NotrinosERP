@@ -30,40 +30,29 @@ if (isset($_POST['approve']) || isset($_POST['reject'])) {
     } elseif ((int)$request['status'] != 0) {
         display_error(_('Only pending requests can be processed.'));
     } else {
-        $user = $_SESSION['wa_current_user']->loginname;
         $remarks = get_post('approval_remarks', '');
 
-        // Check for core approval draft linked to this request
         $approval_service = get_approval_workflow_service();
         $core_draft = find_approval_draft_for_hrm_request(ST_OVERTIME_REQUEST, $request_id);
 
-        if ($core_draft && (int)$core_draft['status'] === APPROVAL_STATUS_PENDING) {
-            // Use core approval workflow
-            if (isset($_POST['approve'])) {
-                $result = $approval_service->approve($core_draft['draft_id'], $remarks);
-                if ($result['status'] === 'error') {
-                    display_error($result['message']);
-                } else {
-                    display_notification($result['message']);
-                }
-            } else {
-                $result = $approval_service->reject($core_draft['draft_id'], $remarks);
-                if ($result['status'] === 'error') {
-                    display_error($result['message']);
-                } else {
-                    display_notification($result['message']);
-                }
-            }
+        if (!$core_draft || (int)$core_draft['status'] !== APPROVAL_STATUS_PENDING) {
+            display_error(_('This overtime request is not pending in the core approval workflow.'));
         } else {
-            // Fallback: use legacy direct approval
             if (isset($_POST['approve'])) {
-                approve_overtime_request($request_id, $user);
-                display_notification(_('Overtime request has been approved.'));
+                $result = $approval_service->approve((int)$core_draft['draft_id'], $remarks);
             } else {
-                reject_overtime_request($request_id, $user);
-                display_notification(_('Overtime request has been rejected.'));
+                $result = $approval_service->reject((int)$core_draft['draft_id'], $remarks);
+            }
+
+            if (isset($result['status']) && $result['status'] === 'error') {
+                display_error($result['message']);
+            } else {
+                display_notification(isset($result['message']) ? $result['message'] : _('Overtime request processed through core approval.'));
             }
         }
+
+        if (isset($Ajax))
+            $Ajax->activate('_page_body');
     }
 }
 
@@ -98,7 +87,8 @@ while ($row = db_fetch($result)) {
     label_cell($status_labels[(int)$row['status']]);
     label_cell($row['approved_by']);
     label_cell(empty($row['approval_date']) ? '' : sql2date(substr($row['approval_date'], 0, 10)));
-    if ((int)$row['status'] == 0)
+    $has_pending_core_approval = ((int)$row['status'] == 0) ? find_approval_draft_for_hrm_request(ST_OVERTIME_REQUEST, (int)$row['request_id']) : false;
+    if ((int)$row['status'] == 0 && $has_pending_core_approval)
         edit_button_cell('Edit' . $row['request_id'], _('Process'));
     else
         label_cell('');

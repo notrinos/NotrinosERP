@@ -12,6 +12,39 @@
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
 
+/**
+ * Ensure HRM core approval transaction types have numbering metadata.
+ *
+ * @return void
+ */
+function ensure_hrm_approval_transaction_registration()
+{
+	static $is_registered = false;
+
+	if ($is_registered || !function_exists('register_systype_db_info'))
+		return;
+
+	register_systype_db_info(ST_OVERTIME_REQUEST, array(
+		TB_PREF . 'overtime_requests',
+		null,
+		'request_id',
+		'request_id',
+		'request_date'
+	));
+
+	register_systype_db_info(ST_PAYROLL_PERIOD, array(
+		TB_PREF . 'payroll_periods',
+		null,
+		'period_id',
+		'period_name',
+		'created_date'
+	));
+
+	$is_registered = true;
+}
+
+ensure_hrm_approval_transaction_registration();
+
 // =====================================================
 // HELPER: Find approval draft linked to an HRM request
 // =====================================================

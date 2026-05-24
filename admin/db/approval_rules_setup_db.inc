@@ -44,6 +44,7 @@ function get_approvable_transaction_types()
 		ST_SALESORDER,
 		ST_SALESQUOTE,
 		ST_PAYSLIP,
+		// HRM core approval transactions
 		ST_LEAVE_REQUEST,
 		ST_OVERTIME_REQUEST,
 		ST_PAYROLL_PERIOD,
