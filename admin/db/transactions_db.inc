@@ -224,6 +224,8 @@ function get_systype_db_info($type) {
 		case    ST_PAYSLIP      : return array(TB_PREF."payslips", null, "trans_no", "reference", "tran_date");
 		case    ST_WH_TRANSFER_ORDER : return array(TB_PREF."wh_transfer_orders", null, "transfer_no", "reference", "request_date");
 		case    ST_WH_MATERIAL_REQUEST : return array(TB_PREF."wh_material_requests", null, "request_no", "reference", "request_date");
+		case    ST_WH_SCRAP : return array(TB_PREF."wh_scrap", null, "scrap_id", "memo", "scrap_date");
+		case    ST_WH_CYCLE_COUNT : return array(TB_PREF."wh_cycle_counts", null, "count_id", "memo", "count_date");
 	}
 
 	display_db_error("invalid type ($type) sent to get_systype_db_info", '', true);

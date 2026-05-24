@@ -85,10 +85,11 @@ function get_scrap_reason_label($reason_code) {
  * @param int|null    $serial_id     Serial number FK
  * @param int|null    $batch_id      Batch FK
  * @param string|null $memo          Memo text
+ * @param int|null    $approved_by   User ID that approved this entry
  * @return int|false  scrap_id on success, false on failure
  */
 function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reason_detail = null,
-	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = null) {
+	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = null, $approved_by = null) {
 
 	global $Refs, $path_to_root;
 
@@ -147,7 +148,7 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 	$sql = "INSERT INTO " . TB_PREF . "wh_scrap (
 		scrap_date, stock_id, qty, from_loc_id, scrap_loc_id,
 		reason_code, reason_detail, serial_id, batch_id,
-		unit_cost, total_cost, stock_move_id, memo
+		unit_cost, total_cost, stock_move_id, memo, approved_by
 	) VALUES ("
 		. "'" . date2sql($date_) . "', "
 		. db_escape($stock_id) . ", "
@@ -161,7 +162,8 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 		. db_escape($unit_cost) . ", "
 		. db_escape($total_cost) . ", "
 		. ($stock_move_id ? (int)$stock_move_id : 'NULL') . ", "
-		. ($memo ? db_escape($memo) : 'NULL')
+		. ($memo ? db_escape($memo) : 'NULL') . ", "
+		. ($approved_by ? (int)$approved_by : 'NULL')
 		. ")";
 	db_query($sql, 'Could not insert scrap record');
 	$scrap_id = db_insert_id();
@@ -437,6 +439,7 @@ function submit_scrap_entry_for_core_approval($stock_id, $qty, $loc_code, $date_
 	}
 
 	if (!$approval_registered || !$approval_required) {
+		$approved_by = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : null;
 		$scrap_id = add_scrap_entry(
 			$stock_id,
 			$qty,
@@ -448,7 +451,8 @@ function submit_scrap_entry_for_core_approval($stock_id, $qty, $loc_code, $date_
 			$scrap_loc_id,
 			$serial_id,
 			$batch_id,
-			$memo
+			$memo,
+			$approved_by
 		);
 
 		if (!$scrap_id)

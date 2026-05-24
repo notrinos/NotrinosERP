@@ -277,6 +277,7 @@ function cancel_warehouse_transfer_order_draft($draft_data, $draft_id, $comments
  */
 function execute_approved_warehouse_scrap_entry($draft_data, $reserved_trans_no, $draft_id)
 {
+	$approved_by = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : null;
 	$stock_id = isset($draft_data['stock_id']) ? $draft_data['stock_id'] : '';
 	$qty = isset($draft_data['qty']) ? (float)$draft_data['qty'] : 0;
 	$loc_code = isset($draft_data['loc_code']) ? $draft_data['loc_code'] : '';
@@ -297,7 +298,8 @@ function execute_approved_warehouse_scrap_entry($draft_data, $reserved_trans_no,
 		!empty($draft_data['scrap_loc_id']) ? (int)$draft_data['scrap_loc_id'] : null,
 		!empty($draft_data['serial_id']) ? (int)$draft_data['serial_id'] : null,
 		!empty($draft_data['batch_id']) ? (int)$draft_data['batch_id'] : null,
-		isset($draft_data['memo']) ? $draft_data['memo'] : null
+		isset($draft_data['memo']) ? $draft_data['memo'] : null,
+		$approved_by
 	);
 }
 
