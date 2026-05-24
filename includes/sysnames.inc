@@ -58,6 +58,8 @@ $systypes_array = array (
 	ST_PURCHREQUISITION => _('Purchase Requisition'),
 	ST_PURCHRFQ => _('Purchase RFQ'),
 	ST_PURCHAGREEMENT => _('Purchase Agreement'),
+	ST_PROCUREMENTPLAN => _('Procurement Plan'),
+	ST_PURCHMATCHEXCEPTION => _('Purchase Matching Exception'),
 );
 
 $fa_systypes_array = array (
@@ -95,7 +97,9 @@ $type_shortcuts = array(
 	ST_PAYROLL_PERIOD => _('PP'),
 	ST_PURCHREQUISITION => _('PR'),
 	ST_PURCHRFQ => _('RFQ'),
-	ST_PURCHAGREEMENT => _('AGR')
+	ST_PURCHAGREEMENT => _('AGR'),
+	ST_PROCUREMENTPLAN => _('PPL'),
+	ST_PURCHMATCHEXCEPTION => _('PME')
 );
 
 //----------------------------------------------------------------------------------

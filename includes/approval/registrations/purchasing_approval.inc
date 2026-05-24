@@ -56,6 +56,28 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHAGREEMENT, array(
 	'edit_url'       => 'purchasing/purch_agreement_entry.php',
 ));
 
+ApprovalWorkflow::registerTransactionType(ST_PROCUREMENTPLAN, array(
+	'label'          => _('Procurement Plan'),
+	'application'    => 'AP',
+	'executor'       => 'execute_approved_procurement_plan',
+	'rejector'       => 'reject_procurement_plan_draft',
+	'canceler'       => 'cancel_procurement_plan_draft',
+	'amount_getter'  => 'get_procurement_plan_draft_amount',
+	'draft_renderer' => 'render_procurement_plan_draft',
+	'edit_url'       => 'purchasing/procurement_plan.php',
+));
+
+ApprovalWorkflow::registerTransactionType(ST_PURCHMATCHEXCEPTION, array(
+	'label'          => _('Purchase Matching Exception'),
+	'application'    => 'AP',
+	'executor'       => 'execute_approved_matching_exception',
+	'rejector'       => 'reject_matching_exception_draft',
+	'canceler'       => 'cancel_matching_exception_draft',
+	'amount_getter'  => 'get_matching_exception_draft_amount',
+	'draft_renderer' => 'render_matching_exception_draft',
+	'edit_url'       => 'purchasing/inquiry/matching_exceptions.php',
+));
+
 // =====================================================
 // EXECUTOR CALLBACKS
 // =====================================================
@@ -284,6 +306,51 @@ function execute_approved_purchase_agreement($draft_data, $reserved_trans_no, $d
 }
 
 /**
+ * Execute an approved Procurement Plan draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @param int   $reserved_trans_no Reserved transaction number
+ * @param int   $draft_id Approval draft ID
+ * @return int|false
+ */
+function execute_approved_procurement_plan($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	include_once($path_to_root . '/purchasing/includes/db/procurement_plan_db.inc');
+
+	$plan_id = isset($draft_data['plan_id']) ? (int)$draft_data['plan_id'] : 0;
+	if ($plan_id <= 0)
+		return false;
+
+	return confirm_procurement_plan($plan_id) ? $plan_id : false;
+}
+
+/**
+ * Execute an approved Purchase Matching Exception draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @param int   $reserved_trans_no Reserved transaction number
+ * @param int   $draft_id Approval draft ID
+ * @return int|false
+ */
+function execute_approved_matching_exception($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	include_once($path_to_root . '/purchasing/includes/db/purch_matching_db.inc');
+
+	$exception_id = isset($draft_data['exception_id']) ? (int)$draft_data['exception_id'] : 0;
+	$target_status = isset($draft_data['target_status']) ? $draft_data['target_status'] : 'approved';
+	$requested_notes = isset($draft_data['requested_notes']) ? $draft_data['requested_notes'] : '';
+
+	if ($exception_id <= 0)
+		return false;
+
+	return apply_matching_exception_decision($exception_id, $target_status, (int)$_SESSION['wa_current_user']->user, $requested_notes)
+		? $exception_id
+		: false;
+}
+
+/**
  * Sync a rejected requisition approval draft back to the requisition record.
  *
  * @param array  $draft_data Decoded JSON draft data
@@ -389,6 +456,65 @@ function cancel_purchase_agreement_draft($draft_data, $draft_id, $comments)
 	return true;
 }
 
+/**
+ * Sync a rejected procurement plan draft back to draft status.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Rejection comments
+ * @return bool
+ */
+function reject_procurement_plan_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+	include_once($path_to_root . '/purchasing/includes/db/procurement_plan_db.inc');
+
+	$plan_id = isset($draft_data['plan_id']) ? (int)$draft_data['plan_id'] : 0;
+	if ($plan_id <= 0)
+		return false;
+
+	return reopen_procurement_plan($plan_id);
+}
+
+/**
+ * Sync a cancelled procurement plan draft back to draft status.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Cancellation comments
+ * @return bool
+ */
+function cancel_procurement_plan_draft($draft_data, $draft_id, $comments)
+{
+	return reject_procurement_plan_draft($draft_data, $draft_id, $comments);
+}
+
+/**
+ * Handle matching exception draft rejection by keeping business record open.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Rejection comments
+ * @return bool
+ */
+function reject_matching_exception_draft($draft_data, $draft_id, $comments)
+{
+	return true;
+}
+
+/**
+ * Handle matching exception draft cancellation by keeping business record open.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Cancellation comments
+ * @return bool
+ */
+function cancel_matching_exception_draft($draft_data, $draft_id, $comments)
+{
+	return true;
+}
+
 // =====================================================
 // AMOUNT GETTERS
 // =====================================================
@@ -445,6 +571,34 @@ function get_purchase_agreement_draft_amount($draft_data)
 	}
 
 	return $total;
+}
+
+/**
+ * Calculate the total estimated amount of a procurement plan draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return float
+ */
+function get_procurement_plan_draft_amount($draft_data)
+{
+	return isset($draft_data['estimated_total']) ? (float)$draft_data['estimated_total'] : 0;
+}
+
+/**
+ * Calculate approval amount for one matching exception draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return float
+ */
+function get_matching_exception_draft_amount($draft_data)
+{
+	if (isset($draft_data['variance_amount']))
+		return abs((float)$draft_data['variance_amount']);
+
+	if (isset($draft_data['actual_value']) && isset($draft_data['expected_value']))
+		return abs((float)$draft_data['actual_value'] - (float)$draft_data['expected_value']);
+
+	return 0;
 }
 
 // =====================================================
@@ -595,5 +749,75 @@ function render_purchase_agreement_draft($draft_data)
 		$html .= '</table>';
 	}
 
+	return $html;
+}
+
+/**
+ * Render a procurement plan draft for the approval review UI.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return string
+ */
+function render_procurement_plan_draft($draft_data)
+{
+	$html = '<table class="tablestyle" width="100%">';
+	$html .= '<tr><th>' . _('Reference') . '</th><td>' . htmlspecialchars(isset($draft_data['reference']) ? $draft_data['reference'] : '') . '</td>';
+	$html .= '<th>' . _('Plan Date') . '</th><td>' . htmlspecialchars(isset($draft_data['plan_date']) ? $draft_data['plan_date'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Plan Type') . '</th><td>' . htmlspecialchars(isset($draft_data['plan_type']) ? ucwords(str_replace('_', ' ', $draft_data['plan_type'])) : '') . '</td>';
+	$html .= '<th>' . _('Estimated Total') . '</th><td><b>' . number_format(get_procurement_plan_draft_amount($draft_data), 2) . '</b></td></tr>';
+	$html .= '<tr><th>' . _('Line Count') . '</th><td>' . (isset($draft_data['line_count']) ? (int)$draft_data['line_count'] : 0) . '</td>';
+	$html .= '<th>' . _('Pending/Approved/Ordered/Skipped') . '</th><td>'
+		. (isset($draft_data['pending_count']) ? (int)$draft_data['pending_count'] : 0) . ' / '
+		. (isset($draft_data['approved_count']) ? (int)$draft_data['approved_count'] : 0) . ' / '
+		. (isset($draft_data['ordered_count']) ? (int)$draft_data['ordered_count'] : 0) . ' / '
+		. (isset($draft_data['skipped_count']) ? (int)$draft_data['skipped_count'] : 0)
+		. '</td></tr>';
+	$html .= '</table>';
+
+	if (!empty($draft_data['lines'])) {
+		$html .= '<br><table class="tablestyle" width="100%">';
+		$html .= '<tr><th>' . _('Item') . '</th><th>' . _('Location') . '</th><th>' . _('Qty') . '</th>';
+		$html .= '<th>' . _('Supplier') . '</th><th>' . _('Estimated Price') . '</th><th>' . _('Status') . '</th></tr>';
+
+		foreach ($draft_data['lines'] as $line) {
+			$html .= '<tr><td>' . htmlspecialchars(isset($line['stock_id']) ? $line['stock_id'] : '') . '</td>';
+			$html .= '<td>' . htmlspecialchars(isset($line['location_name']) && $line['location_name'] !== '' ? $line['location_name'] : (isset($line['location']) ? $line['location'] : '')) . '</td>';
+			$html .= '<td align="right">' . number_format(isset($line['suggested_order_qty']) ? (float)$line['suggested_order_qty'] : 0, 2) . '</td>';
+			$html .= '<td>' . htmlspecialchars(isset($line['supplier_name']) ? $line['supplier_name'] : '') . '</td>';
+			$html .= '<td align="right">' . number_format(isset($line['estimated_price']) ? (float)$line['estimated_price'] : 0, 2) . '</td>';
+			$html .= '<td>' . htmlspecialchars(isset($line['status_label']) ? $line['status_label'] : '') . '</td></tr>';
+		}
+
+		$html .= '</table>';
+	}
+
+	return $html;
+}
+
+/**
+ * Render a matching exception draft for the approval review UI.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return string
+ */
+function render_matching_exception_draft($draft_data)
+{
+	$target_status = isset($draft_data['target_status']) ? ucfirst($draft_data['target_status']) : _('Approve');
+	$html = '<table class="tablestyle" width="100%">';
+	$html .= '<tr><th>' . _('Exception ID') . '</th><td>#' . (isset($draft_data['exception_id']) ? (int)$draft_data['exception_id'] : 0) . '</td>';
+	$html .= '<th>' . _('Requested Action') . '</th><td><b>' . htmlspecialchars($target_status) . '</b></td></tr>';
+	$html .= '<tr><th>' . _('Type') . '</th><td>' . htmlspecialchars(isset($draft_data['exception_type']) ? $draft_data['exception_type'] : '') . '</td>';
+	$html .= '<th>' . _('Supplier') . '</th><td>' . htmlspecialchars(isset($draft_data['supplier_name']) ? $draft_data['supplier_name'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Document') . '</th><td>' . htmlspecialchars((isset($draft_data['trans_no']) ? (int)$draft_data['trans_no'] : 0) > 0 ? ('#' . (int)$draft_data['trans_no']) : '') . '</td>';
+	$html .= '<th>' . _('Item') . '</th><td>' . htmlspecialchars(isset($draft_data['stock_id']) ? $draft_data['stock_id'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Expected') . '</th><td>' . number_format(isset($draft_data['expected_value']) ? (float)$draft_data['expected_value'] : 0, 2) . '</td>';
+	$html .= '<th>' . _('Actual') . '</th><td>' . number_format(isset($draft_data['actual_value']) ? (float)$draft_data['actual_value'] : 0, 2) . '</td></tr>';
+	$html .= '<tr><th>' . _('Variance') . '</th><td>' . number_format(get_matching_exception_draft_amount($draft_data), 2) . '</td>';
+	$html .= '<th>' . _('Variance %') . '</th><td>' . number_format(isset($draft_data['variance_percent']) ? (float)$draft_data['variance_percent'] : 0, 2) . '%</td></tr>';
+
+	if (!empty($draft_data['requested_notes']))
+		$html .= '<tr><th>' . _('Notes') . '</th><td colspan="3">' . htmlspecialchars($draft_data['requested_notes']) . '</td></tr>';
+
+	$html .= '</table>';
 	return $html;
 }

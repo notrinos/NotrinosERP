@@ -415,6 +415,150 @@ function resolve_exception($id, $resolved_by, $notes)
 }
 
 /**
+ * Retrieve one matching exception row by ID.
+ *
+ * @param int $id
+ * @return array|false
+ */
+function get_matching_exception($id)
+{
+    $sql = "SELECT ex.*, sup.supp_name
+        FROM " . TB_PREF . "purch_matching_exceptions ex
+        LEFT JOIN " . TB_PREF . "suppliers sup ON sup.supplier_id = ex.supplier_id
+        WHERE ex.id = " . (int)$id;
+
+    $result = db_query($sql, 'could not get purchase matching exception');
+    return db_fetch($result);
+}
+
+/**
+ * Build matching exception draft payload for core approval.
+ *
+ * @param int    $id
+ * @param string $target_status
+ * @param string $notes
+ * @return array|false
+ */
+function get_matching_exception_submission_data($id, $target_status, $notes = '')
+{
+    $exception = get_matching_exception($id);
+    if (!$exception)
+        return false;
+
+    return array(
+        'exception_id' => (int)$exception['id'],
+        'target_status' => $target_status,
+        'requested_notes' => $notes,
+        'exception_type' => $exception['exception_type'],
+        'trans_type' => (int)$exception['trans_type'],
+        'trans_no' => (int)$exception['trans_no'],
+        'supplier_id' => (int)$exception['supplier_id'],
+        'supplier_name' => isset($exception['supp_name']) ? $exception['supp_name'] : '',
+        'po_number' => (int)$exception['po_number'],
+        'grn_batch_id' => (int)$exception['grn_batch_id'],
+        'stock_id' => $exception['stock_id'],
+        'status' => $exception['status'],
+        'expected_value' => (float)$exception['expected_value'],
+        'actual_value' => (float)$exception['actual_value'],
+        'variance_amount' => (float)$exception['variance_amount'],
+        'variance_percent' => (float)$exception['variance_percent'],
+        'created_date' => $exception['created_date'],
+    );
+}
+
+/**
+ * Check whether a matching exception already has a pending core approval draft.
+ *
+ * @param int $exception_id
+ * @return bool
+ */
+function has_pending_matching_exception_approval($exception_id)
+{
+    $sql = "SELECT id FROM " . TB_PREF . "approval_drafts
+        WHERE trans_type = " . ST_PURCHMATCHEXCEPTION . "
+            AND status = " . APPROVAL_STATUS_PENDING . "
+            AND draft_data LIKE " . db_escape('%\"exception_id\":' . (int)$exception_id . '%') . "
+        ORDER BY id DESC LIMIT 1";
+
+    $result = db_query($sql, 'could not check pending matching exception approval draft');
+    return (bool)db_fetch($result);
+}
+
+/**
+ * Apply one approved matching exception decision.
+ *
+ * @param int    $id
+ * @param string $target_status
+ * @param int    $resolved_by
+ * @param string $notes
+ * @return bool
+ */
+function apply_matching_exception_decision($id, $target_status, $resolved_by, $notes)
+{
+    $target_status = in_array($target_status, array('approved', 'rejected', 'resolved'))
+        ? $target_status
+        : 'approved';
+
+    return update_matching_exception_status($id, $target_status, $resolved_by, $notes);
+}
+
+/**
+ * Submit one matching exception decision to core approval.
+ *
+ * @param int    $id
+ * @param string $target_status
+ * @param string $notes
+ * @return array|bool
+ */
+function submit_matching_exception_for_core_approval($id, $target_status, $notes = '')
+{
+    $target_status = in_array($target_status, array('approved', 'rejected', 'resolved'))
+        ? $target_status
+        : 'approved';
+
+    $exception = get_matching_exception($id);
+    if (!$exception || $exception['status'] !== 'open')
+        return false;
+
+    if (has_pending_matching_exception_approval($id))
+        return false;
+
+    $approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_PURCHMATCHEXCEPTION);
+    $approval_amount = abs((float)$exception['variance_amount']);
+    $approval_required = false;
+    $approval = null;
+
+    if ($approval_registered) {
+        $approval = get_approval_workflow_service();
+        $approval_required = $approval->isApprovalRequired(ST_PURCHMATCHEXCEPTION, $approval_amount);
+    }
+
+    if (!$approval_registered || !$approval_required) {
+        if (!apply_matching_exception_decision($id, $target_status, (int)$_SESSION['wa_current_user']->user, $notes))
+            return false;
+
+        return array('status' => 'auto_approved', 'exception_id' => (int)$id, 'target_status' => $target_status);
+    }
+
+    $draft_data = get_matching_exception_submission_data($id, $target_status, $notes);
+    if ($draft_data === false)
+        return false;
+
+    return $approval->submit(
+        ST_PURCHMATCHEXCEPTION,
+        $draft_data,
+        $approval_amount,
+        array(
+            'summary' => sprintf(_('Matching Exception #%d (%s)'), (int)$id, ucfirst($target_status)),
+            'currency' => get_company_pref('curr_default'),
+            'person_type' => PT_SUPPLIER,
+            'person_id' => (int)$exception['supplier_id'],
+            'loc_code' => '',
+        )
+    );
+}
+
+/**
  * Fetch one bill control policy row by id.
  *
  * @param int $id

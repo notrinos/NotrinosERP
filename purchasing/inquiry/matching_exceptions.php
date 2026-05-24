@@ -63,18 +63,42 @@ $reject_id = find_submit('Reject');
 $resolve_id = find_submit('Resolve');
 
 if ($approve_id > 0) {
-    approve_exception($approve_id, (int)$_SESSION['wa_current_user']->user, trim(get_post('resolution_notes_' . $approve_id)));
-    display_notification(_('Exception has been approved.'));
+    $result = submit_matching_exception_for_core_approval($approve_id, 'approved', trim(get_post('resolution_notes_' . $approve_id)));
+    if ($result) {
+        if (is_array($result) && isset($result['status']) && $result['status'] === 'pending')
+            display_notification(_('Exception approval has been submitted to the core approval workflow.'));
+        elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved')
+            display_notification(_('Exception has been approved by the core approval workflow.'));
+        else
+            display_notification(_('Exception has been approved.'));
+    } else
+        display_error(_('This exception cannot be submitted for approval right now. It may already be pending or no longer open.'));
 }
 
 if ($reject_id > 0) {
-    reject_exception($reject_id, (int)$_SESSION['wa_current_user']->user, trim(get_post('resolution_notes_' . $reject_id)));
-    display_notification(_('Exception has been rejected.'));
+    $result = submit_matching_exception_for_core_approval($reject_id, 'rejected', trim(get_post('resolution_notes_' . $reject_id)));
+    if ($result) {
+        if (is_array($result) && isset($result['status']) && $result['status'] === 'pending')
+            display_notification(_('Exception rejection has been submitted to the core approval workflow.'));
+        elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved')
+            display_notification(_('Exception has been rejected by the core approval workflow.'));
+        else
+            display_notification(_('Exception has been rejected.'));
+    } else
+        display_error(_('This exception cannot be submitted for approval right now. It may already be pending or no longer open.'));
 }
 
 if ($resolve_id > 0) {
-    resolve_exception($resolve_id, (int)$_SESSION['wa_current_user']->user, trim(get_post('resolution_notes_' . $resolve_id)));
-    display_notification(_('Exception has been resolved.'));
+    $result = submit_matching_exception_for_core_approval($resolve_id, 'resolved', trim(get_post('resolution_notes_' . $resolve_id)));
+    if ($result) {
+        if (is_array($result) && isset($result['status']) && $result['status'] === 'pending')
+            display_notification(_('Exception resolution has been submitted to the core approval workflow.'));
+        elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved')
+            display_notification(_('Exception has been resolved by the core approval workflow.'));
+        else
+            display_notification(_('Exception has been resolved.'));
+    } else
+        display_error(_('This exception cannot be submitted for approval right now. It may already be pending or no longer open.'));
 }
 
 $filter_status = get_post('filter_status', 'open');
@@ -120,13 +144,17 @@ table_header($th);
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
+    $pending_core_approval = has_pending_matching_exception_approval((int)$row['id']);
 
     $doc_label = ($row['trans_type'] > 0 && $row['trans_no'] > 0)
         ? get_trans_view_str($row['trans_type'], $row['trans_no'], $row['trans_no'])
         : '';
 
     label_cell(sql2date(substr($row['created_date'], 0, 10)));
-    label_cell(ucfirst($row['status']));
+    $status_label = ucfirst($row['status']);
+    if ($pending_core_approval)
+        $status_label .= ' (' . _('Pending Core Approval') . ')';
+    label_cell($status_label);
     label_cell(isset(get_matching_exception_type_options()[$row['exception_type']]) ? get_matching_exception_type_options()[$row['exception_type']] : $row['exception_type']);
     label_cell($row['supp_name']);
     label_cell($doc_label, "nowrap");
@@ -137,7 +165,7 @@ while ($row = db_fetch($result)) {
 
     text_cells(null, 'resolution_notes_' . $row['id'], $row['resolution_notes'], 20, 120);
 
-    if ($row['status'] === 'open') {
+    if ($row['status'] === 'open' && !$pending_core_approval) {
         echo "<td nowrap>";
         submit('Approve' . $row['id'], _('Approve'), false, _('Approve exception'));
         echo '&nbsp;';

@@ -50,6 +50,8 @@ function get_approvable_transaction_types()
 		ST_WH_SCRAP,
 		ST_WH_CYCLE_COUNT,
 		ST_WH_MATERIAL_REQUEST,
+		ST_PROCUREMENTPLAN,
+		ST_PURCHMATCHEXCEPTION,
 	);
 
 	$result = array();

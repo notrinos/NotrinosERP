@@ -72,6 +72,8 @@ define('ST_SALESRETURN',         57);  // Sales return (RMA)
 define('ST_PURCHREQUISITION',    58);  // Purchase requisition
 define('ST_PURCHRFQ',            59);  // Request for quotation
 define('ST_PURCHAGREEMENT',      60);  // Purchase agreement / blanket order
+define('ST_PROCUREMENTPLAN',     61);  // Procurement plan
+define('ST_PURCHMATCHEXCEPTION', 62);  // Purchase matching exception
 
 // Don't include these defines in the $systypes_array.
 // They are used for documents only.

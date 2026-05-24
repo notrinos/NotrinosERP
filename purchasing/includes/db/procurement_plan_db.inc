@@ -35,6 +35,7 @@ function get_procurement_plan_statuses()
 {
 	return array(
 		'draft' => _('Draft'),
+		'submitted' => _('Submitted'),
 		'confirmed' => _('Confirmed'),
 		'in_progress' => _('In Progress'),
 		'completed' => _('Completed'),
@@ -259,6 +260,179 @@ function get_plan_lines($plan_id)
 }
 
 /**
+ * Build procurement plan draft data for core approval submission.
+ *
+ * @param int $plan_id
+ * @return array|false
+ */
+function get_procurement_plan_submission_data($plan_id)
+{
+	$plan = get_procurement_plan($plan_id);
+	if (!$plan)
+		return false;
+
+	$statuses = get_procurement_plan_statuses();
+	$line_statuses = get_procurement_plan_line_statuses();
+	$data = array(
+		'plan_id' => (int)$plan['id'],
+		'reference' => $plan['reference'],
+		'plan_date' => $plan['plan_date'],
+		'plan_type' => $plan['plan_type'],
+		'status' => $plan['status'],
+		'status_label' => isset($statuses[$plan['status']]) ? $statuses[$plan['status']] : $plan['status'],
+		'line_count' => (int)$plan['line_count'],
+		'pending_count' => (int)$plan['pending_count'],
+		'approved_count' => (int)$plan['approved_count'],
+		'ordered_count' => (int)$plan['ordered_count'],
+		'skipped_count' => (int)$plan['skipped_count'],
+		'estimated_total' => (float)$plan['estimated_total'],
+		'created_by' => (int)$plan['created_by'],
+		'created_by_name' => isset($plan['created_by_name']) ? $plan['created_by_name'] : '',
+		'lines' => array(),
+	);
+
+	$lines = get_plan_lines($plan_id);
+	while ($line = db_fetch($lines)) {
+		$data['lines'][] = array(
+			'id' => (int)$line['id'],
+			'stock_id' => $line['stock_id'],
+			'stock_description' => isset($line['stock_description']) ? $line['stock_description'] : '',
+			'location' => $line['location'],
+			'location_name' => isset($line['location_name']) ? $line['location_name'] : '',
+			'supplier_id' => (int)$line['supplier_id'],
+			'supplier_name' => isset($line['supplier_name']) ? $line['supplier_name'] : '',
+			'current_stock' => (float)$line['current_stock'],
+			'required_qty' => (float)$line['required_qty'],
+			'suggested_order_qty' => (float)$line['suggested_order_qty'],
+			'estimated_price' => (float)$line['estimated_price'],
+			'priority' => $line['priority'],
+			'status' => $line['status'],
+			'status_label' => isset($line_statuses[$line['status']]) ? $line_statuses[$line['status']] : $line['status'],
+			'po_number' => (int)$line['po_number'],
+		);
+	}
+
+	return $data;
+}
+
+/**
+ * Check whether a procurement plan already has a pending core approval draft.
+ *
+ * @param int $plan_id
+ * @return bool
+ */
+function has_pending_procurement_plan_approval($plan_id)
+{
+	$sql = "SELECT id FROM " . TB_PREF . "approval_drafts
+		WHERE trans_type = " . ST_PROCUREMENTPLAN . "
+			AND status = " . APPROVAL_STATUS_PENDING . "
+			AND draft_data LIKE " . db_escape('%\"plan_id\":' . (int)$plan_id . '%') . "
+		ORDER BY id DESC LIMIT 1";
+
+	$result = db_query($sql, 'could not check pending procurement plan approval draft');
+	return (bool)db_fetch($result);
+}
+
+/**
+ * Mark a procurement plan as confirmed.
+ *
+ * @param int $plan_id
+ * @return bool
+ */
+function confirm_procurement_plan($plan_id)
+{
+	$sql = "UPDATE " . TB_PREF . "procurement_plan SET
+		status = 'confirmed'
+		WHERE id = " . (int)$plan_id . "
+		AND status IN ('draft', 'submitted', 'confirmed')";
+
+	db_query($sql, 'could not confirm procurement plan');
+	return db_num_affected_rows() > 0;
+}
+
+/**
+ * Revert a procurement plan to draft after core approval rejection/cancellation.
+ *
+ * @param int $plan_id
+ * @return bool
+ */
+function reopen_procurement_plan($plan_id)
+{
+	$sql = "UPDATE " . TB_PREF . "procurement_plan SET
+		status = 'draft'
+		WHERE id = " . (int)$plan_id . "
+		AND status IN ('submitted', 'draft')";
+
+	db_query($sql, 'could not reopen procurement plan');
+	return db_num_affected_rows() > 0;
+}
+
+/**
+ * Submit a procurement plan to the core approval workflow.
+ *
+ * @param int $plan_id
+ * @return array|bool
+ */
+function submit_procurement_plan_for_core_approval($plan_id)
+{
+	$plan = get_procurement_plan($plan_id);
+	if (!$plan || !in_array($plan['status'], array('draft', 'submitted')))
+		return false;
+
+	if ((int)$plan['line_count'] <= 0)
+		return false;
+
+	if (has_pending_procurement_plan_approval($plan_id))
+		return false;
+
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_PROCUREMENTPLAN);
+	$approval_amount = (float)$plan['estimated_total'];
+	$approval_required = false;
+	$approval = null;
+
+	if ($approval_registered) {
+		$approval = get_approval_workflow_service();
+		$approval_required = $approval->isApprovalRequired(ST_PROCUREMENTPLAN, $approval_amount);
+	}
+
+	$sql = "UPDATE " . TB_PREF . "procurement_plan SET
+		status = 'submitted'
+		WHERE id = " . (int)$plan_id . "
+		AND status IN ('draft', 'submitted')";
+	db_query($sql, 'could not set procurement plan submitted status');
+
+	if (!$approval_registered || !$approval_required) {
+		if (!confirm_procurement_plan($plan_id))
+			return false;
+
+		return array('status' => 'auto_approved', 'plan_id' => (int)$plan_id);
+	}
+
+	$reloaded = get_procurement_plan($plan_id);
+	$draft_data = get_procurement_plan_submission_data($plan_id);
+	if ($draft_data === false)
+		return false;
+
+	$result = $approval->submit(
+		ST_PROCUREMENTPLAN,
+		$draft_data,
+		$approval_amount,
+		array(
+			'summary' => sprintf(_('Procurement Plan %s'), $reloaded['reference']),
+			'currency' => get_company_pref('curr_default'),
+			'person_type' => PT_MISC,
+			'person_id' => $reloaded['created_by'],
+			'loc_code' => '',
+		)
+	);
+
+	if (isset($result['status']) && $result['status'] === 'execution_failed')
+		reopen_procurement_plan($plan_id);
+
+	return $result;
+}
+
+/**
  * Approve a procurement plan line.
  *
  * @param int   $line_id
@@ -331,6 +505,13 @@ function skip_plan_line($line_id, $reason = '')
 function create_pos_from_plan($plan_id)
 {
 	global $Refs;
+
+	$plan = get_procurement_plan($plan_id);
+	if (!$plan || !in_array($plan['status'], array('confirmed', 'in_progress', 'completed')))
+		return array();
+
+	if (has_pending_procurement_plan_approval($plan_id))
+		return array();
 
 	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines
 		WHERE plan_id = " . (int)$plan_id . "
