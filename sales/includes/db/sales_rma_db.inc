@@ -531,6 +531,82 @@ function get_sales_rma_document_defaults($debtor_no, $branch_code)
 }
 
 /**
+ * Build approval draft payload for a sales RMA.
+ *
+ * @param int $rma_id
+ * @return array|false
+ */
+function get_sales_rma_approval_draft_data($rma_id)
+{
+	$rma = get_sales_rma($rma_id);
+	if (!$rma)
+		return false;
+
+	$lines = array();
+	$lines_result = get_rma_lines($rma_id);
+	while ($line = db_fetch($lines_result)) {
+		$lines[] = array(
+			'stock_id' => $line['stock_id'],
+			'description' => $line['description'] ? $line['description'] : $line['item_name'],
+			'quantity_authorized' => (float)$line['quantity_authorized'],
+			'unit_price' => (float)$line['unit_price'],
+			'return_condition' => $line['return_condition'],
+		);
+	}
+
+	return array(
+		'rma_id' => (int)$rma['id'],
+		'reference' => $rma['reference'],
+		'request_date' => sql2date($rma['request_date']),
+		'debtor_no' => (int)$rma['debtor_no'],
+		'customer_name' => $rma['customer_name'],
+		'branch_code' => (int)$rma['branch_code'],
+		'branch_name' => $rma['branch_name'],
+		'return_reason_id' => (int)$rma['return_reason_id'],
+		'reason_description' => $rma['reason_description'],
+		'return_method' => $rma['return_method'],
+		'customer_notes' => $rma['customer_notes'],
+		'internal_notes' => $rma['internal_notes'],
+		'restocking_fee_percent' => (float)$rma['restocking_fee_percent'],
+		'refund_amount' => (float)$rma['refund_amount'],
+		'lines' => $lines,
+	);
+}
+
+/**
+ * Find a pending core approval draft for a sales RMA.
+ *
+ * @param int $rma_id
+ * @return array|false
+ */
+function find_pending_sales_rma_approval_draft($rma_id)
+{
+	$sql = "SELECT d.*, d.id AS draft_id
+		FROM " . TB_PREF . "approval_drafts d
+		WHERE d.trans_type = " . db_escape((int)ST_SALESRETURN) . "
+			AND d.status = 0
+			AND d.draft_data LIKE " . db_escape('%\"rma_id\":'.(int)$rma_id.'%') . "
+		ORDER BY d.id DESC
+		LIMIT 1";
+
+	$res = db_query($sql, 'Could not get pending Sales RMA approval draft');
+	$row = db_fetch($res);
+
+	return $row ? $row : false;
+}
+
+/**
+ * Check whether a sales RMA has a pending core approval draft.
+ *
+ * @param int $rma_id
+ * @return bool
+ */
+function has_pending_sales_rma_approval($rma_id)
+{
+	return find_pending_sales_rma_approval_draft($rma_id) !== false;
+}
+
+/**
  * Authorize an RMA (pending → authorized).
  *
  * @param int    $rma_id
@@ -577,6 +653,62 @@ function reject_rma($rma_id, $rejection_reason)
 	if ($success)
 		hook_invoke_all('sales_rma_rejected', $rma_id, $rejection_reason);
 	return $success;
+}
+
+/**
+ * Sync a rejected core draft to the Sales RMA record.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function reject_sales_rma_draft($draft_data, $draft_id, $comments)
+{
+	$rma_id = isset($draft_data['rma_id']) ? (int)$draft_data['rma_id'] : 0;
+	if ($rma_id <= 0)
+		return false;
+
+	$rma = get_sales_rma($rma_id);
+	if (!$rma)
+		return false;
+
+	if ($rma['status'] !== 'pending')
+		return true;
+
+	$reason = trim((string)$comments);
+	if ($reason === '')
+		$reason = _('Rejected in core approval workflow');
+
+	return reject_rma($rma_id, $reason);
+}
+
+/**
+ * Sync a cancelled core draft to the Sales RMA record.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function cancel_sales_rma_draft($draft_data, $draft_id, $comments)
+{
+	$rma_id = isset($draft_data['rma_id']) ? (int)$draft_data['rma_id'] : 0;
+	if ($rma_id <= 0)
+		return false;
+
+	$rma = get_sales_rma($rma_id);
+	if (!$rma)
+		return false;
+
+	if ($rma['status'] !== 'pending')
+		return true;
+
+	$reason = trim((string)$comments);
+	if ($reason === '')
+		$reason = _('Core approval draft cancelled');
+
+	return reject_rma($rma_id, $reason);
 }
 
 /**

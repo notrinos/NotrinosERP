@@ -85,6 +85,8 @@ ApprovalWorkflow::registerTransactionType(ST_SALESRETURN, array(
 	'label'          => _('Sales RMA'),
 	'application'    => 'orders',
 	'executor'       => 'execute_approved_sales_rma',
+	'rejector'       => 'reject_sales_rma_draft',
+	'canceler'       => 'cancel_sales_rma_draft',
 	'amount_getter'  => 'get_rma_draft_amount',
 	'draft_renderer' => 'render_rma_draft',
 	'edit_url'       => 'sales/sales_rma_entry.php',

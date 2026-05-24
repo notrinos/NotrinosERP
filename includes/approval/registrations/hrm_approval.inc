@@ -40,6 +40,14 @@ function ensure_hrm_approval_transaction_registration()
 		'created_date'
 	));
 
+		register_systype_db_info(ST_EMPLOYEE_APPRAISAL, array(
+			TB_PREF . 'employee_appraisals',
+			null,
+			'appraisal_id',
+			null,
+			'appraisal_date'
+		));
+
 	$is_registered = true;
 }
 
@@ -116,6 +124,17 @@ ApprovalWorkflow::registerTransactionType(ST_LOAN_REQUEST, array(
 	'amount_getter'  => 'get_loan_request_draft_amount',
 	'draft_renderer' => 'render_loan_request_draft',
 	'edit_url'       => 'hrm/transactions/loan_request.php',
+));
+
+ApprovalWorkflow::registerTransactionType(ST_EMPLOYEE_APPRAISAL, array(
+	'label'          => _('Employee Appraisal'),
+	'application'    => 'HRM',
+	'executor'       => 'execute_approved_employee_appraisal',
+	'rejector'       => 'reject_employee_appraisal_draft',
+	'canceler'       => 'cancel_employee_appraisal_draft',
+	'amount_getter'  => 'get_employee_appraisal_draft_amount',
+	'draft_renderer' => 'render_employee_appraisal_draft',
+	'edit_url'       => 'hrm/manage/appraisals.php',
 ));
 
 // =====================================================
@@ -299,6 +318,71 @@ function cancel_loan_request_draft($draft_data, $draft_id, $comments)
 	return reject_loan_request_draft($draft_data, $draft_id, $comments);
 }
 
+/**
+ * Execute an approved Employee Appraisal draft.
+ *
+ * @param array $draft_data
+ * @param int   $reserved_trans_no
+ * @param int   $draft_id
+ * @return int|false
+ */
+function execute_approved_employee_appraisal($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
+
+	$appraisal_id = isset($draft_data['appraisal_id']) ? (int)$draft_data['appraisal_id'] : 0;
+	if ($appraisal_id <= 0)
+		return false;
+
+	$appraisal = get_employee_appraisal($appraisal_id);
+	if (!$appraisal)
+		return false;
+
+	if ((int)$appraisal['status'] === 2)
+		return $appraisal_id;
+
+	if (!in_array((int)$appraisal['status'], array(0, 1), true))
+		return false;
+
+	return update_employee_appraisal_status($appraisal_id, 2) ? $appraisal_id : false;
+}
+
+/**
+ * Sync rejected appraisal draft back to business status.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function reject_employee_appraisal_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
+
+	$appraisal_id = isset($draft_data['appraisal_id']) ? (int)$draft_data['appraisal_id'] : 0;
+	if ($appraisal_id <= 0)
+		return false;
+
+	return update_employee_appraisal_status($appraisal_id, 3);
+}
+
+/**
+ * Sync cancelled appraisal draft back to business status.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function cancel_employee_appraisal_draft($draft_data, $draft_id, $comments)
+{
+	return reject_employee_appraisal_draft($draft_data, $draft_id, $comments);
+}
+
 // =====================================================
 // AMOUNT GETTER CALLBACKS
 // =====================================================
@@ -351,6 +435,17 @@ function get_payroll_period_draft_amount($draft_data)
 function get_loan_request_draft_amount($draft_data)
 {
 	return isset($draft_data['loan_amount']) ? (float)$draft_data['loan_amount'] : 0;
+}
+
+/**
+ * Get amount for employee appraisal draft.
+ *
+ * @param array $draft_data
+ * @return float
+ */
+function get_employee_appraisal_draft_amount($draft_data)
+{
+	return isset($draft_data['overall_score']) ? (float)$draft_data['overall_score'] : 0;
 }
 
 // =====================================================
@@ -425,6 +520,59 @@ function render_overtime_request_draft($draft_data)
 			. nl2br(htmlspecialchars($draft_data['reason']))
 			. '</td></tr>';
 	}
+	$html .= '</table>';
+
+	return $html;
+}
+
+/**
+ * Render an employee appraisal draft for approval review.
+ *
+ * @param array $draft_data
+ * @return string
+ */
+function render_employee_appraisal_draft($draft_data)
+{
+	$html = '<table class="tablestyle2">';
+	$html .= '<tr><td class="label">' . _('Employee') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['employee_name']) ? $draft_data['employee_name'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Reviewer') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['reviewer_name']) ? $draft_data['reviewer_name'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Period') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['period_from']) ? $draft_data['period_from'] : '')
+		. ' - '
+		. htmlspecialchars(isset($draft_data['period_to']) ? $draft_data['period_to'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Appraisal Date') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['appraisal_date']) ? $draft_data['appraisal_date'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Overall Score') . ':</td><td>'
+		. number_format((float)(isset($draft_data['overall_score']) ? $draft_data['overall_score'] : 0), 2)
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Rating Scale') . ':</td><td>'
+		. (int)(isset($draft_data['rating_scale']) ? $draft_data['rating_scale'] : 0)
+		. '</td></tr>';
+
+	if (!empty($draft_data['strengths'])) {
+		$html .= '<tr><td class="label">' . _('Strengths') . ':</td><td>'
+			. nl2br(htmlspecialchars($draft_data['strengths']))
+			. '</td></tr>';
+	}
+
+	if (!empty($draft_data['improvements'])) {
+		$html .= '<tr><td class="label">' . _('Improvements') . ':</td><td>'
+			. nl2br(htmlspecialchars($draft_data['improvements']))
+			. '</td></tr>';
+	}
+
+	if (!empty($draft_data['recommendation'])) {
+		$html .= '<tr><td class="label">' . _('Recommendation') . ':</td><td>'
+			. nl2br(htmlspecialchars($draft_data['recommendation']))
+			. '</td></tr>';
+	}
+
 	$html .= '</table>';
 
 	return $html;

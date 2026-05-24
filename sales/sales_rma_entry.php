@@ -86,6 +86,22 @@ function can_save_rma_header()
 	return true;
 }
 
+/**
+ * Guard modifications when the RMA is already pending in core approval.
+ *
+ * @param int $rma_id
+ * @return bool
+ */
+function can_modify_rma_draft($rma_id)
+{
+	if ($rma_id > 0 && has_pending_sales_rma_approval($rma_id)) {
+		display_error(_('This RMA is pending in the core approval workflow and cannot be modified.'));
+		return false;
+	}
+
+	return true;
+}
+
 // ============================================================================
 // ACTION HANDLERS
 // ============================================================================
@@ -134,7 +150,30 @@ if (isset($_POST['SAVE_RMA_NEW'])) {
 			}
 		}
 
-		display_notification(sprintf(_('RMA #%d has been created.'), $rma_id));
+		$draft_data = get_sales_rma_approval_draft_data($rma_id);
+		if (!$draft_data) {
+			display_error(_('RMA was created but could not be prepared for approval submission.'));
+			$Ajax->activate('_page_body');
+		} else {
+			$approval_result = approval_check_before_save(
+				ST_SALESRETURN,
+				$draft_data,
+				(float)$draft_data['refund_amount'],
+				array('summary' => sprintf(_('Sales RMA: %s'), $draft_data['reference']))
+			);
+
+			if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+				display_notification(sprintf(_('RMA #%d has been created and automatically approved.'), $rma_id));
+			} elseif ($approval_result !== false) {
+				return;
+			} else {
+				if (authorize_rma($rma_id, _('Auto-approved (no active core workflow).')))
+					display_notification(sprintf(_('RMA #%d has been created and auto-approved (no active core workflow).'), $rma_id));
+				else
+					display_error(_('RMA was created but could not be auto-approved.'));
+			}
+		}
+
 		$Ajax->activate('_page_body');
 	} else {
 		$Ajax->activate('_page_body');
@@ -143,7 +182,7 @@ if (isset($_POST['SAVE_RMA_NEW'])) {
 
 // --- Update existing RMA ---
 if (isset($_POST['SAVE_RMA_UPDATE']) && $rma_id > 0) {
-	if (can_save_rma_header()) {
+	if (can_modify_rma_draft($rma_id) && can_save_rma_header()) {
 		update_sales_rma(
 			$rma_id,
 			(int)get_post('return_reason_id'),
@@ -159,25 +198,38 @@ if (isset($_POST['SAVE_RMA_UPDATE']) && $rma_id > 0) {
 	}
 }
 
-// --- Authorize ---
-if (isset($_POST['AUTHORIZE_RMA']) && $rma_id > 0) {
-	if (authorize_rma($rma_id, get_post('auth_notes', ''))) {
-		display_notification(_('RMA has been authorized.'));
+// --- Submit to Core Approval ---
+if (isset($_POST['SUBMIT_RMA_FOR_APPROVAL']) && $rma_id > 0) {
+	$rma_row = get_sales_rma($rma_id);
+	if (!$rma_row) {
+		display_error(_('RMA was not found.'));
+	} elseif ($rma_row['status'] !== 'pending') {
+		display_error(_('Only pending RMAs can be submitted for approval.'));
+	} elseif (has_pending_sales_rma_approval($rma_id)) {
+		display_notification(_('This RMA is already pending in the core approval workflow.'));
 	} else {
-		display_error(_('Could not authorize this RMA. It may no longer be in pending status.'));
-	}
-	$Ajax->activate('_page_body');
-}
+		$draft_data = get_sales_rma_approval_draft_data($rma_id);
+		if (!$draft_data) {
+			display_error(_('Could not prepare this RMA for approval submission.'));
+		} else {
+			$approval_result = approval_check_before_save(
+				ST_SALESRETURN,
+				$draft_data,
+				(float)$draft_data['refund_amount'],
+				array('summary' => sprintf(_('Sales RMA: %s'), $draft_data['reference']))
+			);
 
-// --- Reject ---
-if (isset($_POST['REJECT_RMA']) && $rma_id > 0) {
-	$reason = get_post('rejection_reason', '');
-	if (empty($reason)) {
-		display_error(_('You must provide a rejection reason.'));
-	} elseif (reject_rma($rma_id, $reason)) {
-		display_notification(_('RMA has been rejected.'));
-	} else {
-		display_error(_('Could not reject this RMA.'));
+			if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+				display_notification(_('RMA has been automatically approved.'));
+			} elseif ($approval_result !== false) {
+				return;
+			} else {
+				if (authorize_rma($rma_id, _('Auto-approved (no active core workflow).')))
+					display_notification(_('RMA has been auto-approved (no active core workflow).'));
+				else
+					display_error(_('RMA could not be auto-approved.'));
+			}
+		}
 	}
 	$Ajax->activate('_page_body');
 }
@@ -222,6 +274,9 @@ if (isset($_POST['CREATE_REPLACEMENT']) && $rma_id > 0) {
 
 // --- Add manual line ---
 if (isset($_POST['ADD_RMA_LINE']) && $rma_id > 0) {
+	if (!can_modify_rma_draft($rma_id)) {
+		$Ajax->activate('_page_body');
+	} else {
 	$stock_id = get_post('line_stock_id', '');
 	$qty      = (float)get_post('line_qty', 0);
 	$price    = (float)get_post('line_price', 0);
@@ -238,16 +293,21 @@ if (isset($_POST['ADD_RMA_LINE']) && $rma_id > 0) {
 		display_notification(_('Line added.'));
 	}
 	$Ajax->activate('_page_body');
+	}
 }
 
 // --- Delete line ---
 if (isset($_POST['DELETE_LINE'])) {
-	$line_id = (int)get_post('DELETE_LINE');
-	if ($line_id > 0) {
-		delete_rma_line($line_id);
-		display_notification(_('Line removed.'));
+	if (!can_modify_rma_draft($rma_id)) {
+		$Ajax->activate('_page_body');
+	} else {
+		$line_id = (int)get_post('DELETE_LINE');
+		if ($line_id > 0) {
+			delete_rma_line($line_id);
+			display_notification(_('Line removed.'));
+		}
+		$Ajax->activate('_page_body');
 	}
-	$Ajax->activate('_page_body');
 }
 
 // Reload RMA data after any action
@@ -255,6 +315,8 @@ if ($rma_id > 0)
 	$rma = get_sales_rma($rma_id);
 else
 	$rma = null;
+
+$has_pending_core_approval = ($rma && $rma['status'] === 'pending') ? has_pending_sales_rma_approval($rma['id']) : false;
 
 // Pre-load source document items if coming from invoice/delivery link
 $source_items = array();
@@ -304,6 +366,9 @@ if ($rma) {
 	echo '<div style="background:' . $status_color . '; color:#fff; padding:6px 14px; border-radius:4px; margin-bottom:10px; font-weight:bold;">'
 		. sprintf(_('RMA #%d — %s — %s'), $rma['id'], $rma['reference'], $status_label)
 		. '</div>';
+
+	if ($has_pending_core_approval)
+		display_notification(_('This RMA is pending in the core approval workflow. Edit actions are locked until it is processed.'));
 }
 
 // ============ HEADER SECTION ============
@@ -326,7 +391,7 @@ if ($rma) {
 	}
 	
 	// Editable fields if still pending
-	if ($rma['status'] === 'pending') {
+	if ($rma['status'] === 'pending' && !$has_pending_core_approval) {
 		label_cells(_('Return Reason'), '', '', '');
 		start_row(); label_cell(_('Return Reason'));
 		hidden('return_reason_id_view', $rma['return_reason_id']);
@@ -480,7 +545,7 @@ if ($rma) {
 		label_cell($line['serial_number']);
 		label_cell($line['batch_number']);
 		label_cell($line['notes']);
-		if ($rma['status'] === 'pending') {
+		if ($rma['status'] === 'pending' && !$has_pending_core_approval) {
 			echo '<td>';
 			echo '<button class="ajaxsubmit" type="submit" name="DELETE_LINE" value="'
 				. (int)$line['id'] . '"><span>' . _('Remove') . '</span></button>';
@@ -493,7 +558,7 @@ if ($rma) {
 	end_table(1);
 
 	// Add line form (only in pending status)
-	if ($rma['status'] === 'pending') {
+	if ($rma['status'] === 'pending' && !$has_pending_core_approval) {
 		echo '<b>' . _('Add Line') . '</b><br>';
 		start_table(TABLESTYLE2);
 		start_row();
@@ -521,15 +586,13 @@ start_row();
 if (!$rma) {
 	submit_center('SAVE_RMA_NEW', _('Create RMA'), true, '', ICON_SUBMIT);
 } elseif ($rma['status'] === 'pending') {
-	submit('SAVE_RMA_UPDATE', _('Save Changes'), true, '', ICON_SUBMIT);
-	echo '&nbsp;';
-	// Authorize button
-	echo '<input type="text" name="auth_notes" placeholder="' . _('Authorization note (optional)') . '" style="width:200px">&nbsp;';
-	submit('AUTHORIZE_RMA', _('Authorize'), true, '', ICON_SUBMIT);
-	echo '&nbsp;';
-	// Reject button
-	echo '<input type="text" name="rejection_reason" placeholder="' . _('Rejection reason') . '" style="width:200px">&nbsp;';
-	submit('REJECT_RMA', _('Reject'), true, '', ICON_DELETE);
+	if ($has_pending_core_approval) {
+		label_cell(_('Pending core approval...'));
+	} else {
+		submit('SAVE_RMA_UPDATE', _('Save Changes'), true, '', ICON_SUBMIT);
+		echo '&nbsp;';
+		submit('SUBMIT_RMA_FOR_APPROVAL', _('Submit For Core Approval'), true, '', ICON_SUBMIT);
+	}
 } elseif ($rma['status'] === 'authorized') {
 	// WH Return creation
 	if ($rma['wh_return_order_id'] == 0) {

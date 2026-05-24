@@ -13,6 +13,7 @@ $page_security = 'SA_EMPLOYEE';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 
@@ -24,7 +25,12 @@ page(_("Employee Appraisals"));
  * @return array
  */
 function appraisal_statuses() {
-    return array(0 => _('Draft'), 1 => _('Submitted'), 2 => _('Approved'));
+    return array(
+        0 => _('Draft'),
+        1 => _('Submitted'),
+        2 => _('Approved'),
+        3 => _('Rejected')
+    );
 }
 
 if (!isset($_POST['period_from']))
@@ -40,7 +46,7 @@ if (isset($_POST['add_appraisal'])) {
     elseif (!is_date(get_post('period_from')) || !is_date(get_post('period_to')) || !is_date(get_post('appraisal_date')))
         display_error(_('Please provide valid dates.'));
     else {
-        add_employee_appraisal(array(
+        $appraisal_id = add_employee_appraisal(array(
             'employee_id' => get_post('employee_id'),
             'reviewer_id' => get_post('reviewer_id', ''),
             'period_from' => get_post('period_from'),
@@ -48,12 +54,48 @@ if (isset($_POST['add_appraisal'])) {
             'appraisal_date' => get_post('appraisal_date'),
             'overall_score' => input_num('overall_score', 0),
             'rating_scale' => input_num('rating_scale', 5),
-            'status' => get_post('appraisal_status', 0),
+            'status' => 1,
             'strengths' => get_post('strengths', ''),
             'improvements' => get_post('improvements', ''),
             'recommendation' => get_post('recommendation', '')
         ));
-        display_notification(_('Appraisal has been added.'));
+
+        $appraisal = get_employee_appraisal($appraisal_id);
+        if (!$appraisal) {
+            display_error(_('Appraisal was created but could not be loaded for approval submission.'));
+        } else {
+            $draft_data = array(
+                'appraisal_id'   => (int)$appraisal['appraisal_id'],
+                'employee_id'    => $appraisal['employee_id'],
+                'employee_name'  => trim($appraisal['employee_name']),
+                'reviewer_id'    => $appraisal['reviewer_id'],
+                'reviewer_name'  => trim($appraisal['reviewer_name']),
+                'period_from'    => sql2date($appraisal['period_from']),
+                'period_to'      => sql2date($appraisal['period_to']),
+                'appraisal_date' => sql2date($appraisal['appraisal_date']),
+                'overall_score'  => (float)$appraisal['overall_score'],
+                'rating_scale'   => (int)$appraisal['rating_scale'],
+                'strengths'      => $appraisal['strengths'],
+                'improvements'   => $appraisal['improvements'],
+                'recommendation' => $appraisal['recommendation'],
+            );
+
+            $approval_result = approval_check_before_save(
+                ST_EMPLOYEE_APPRAISAL,
+                $draft_data,
+                (float)$appraisal['overall_score'],
+                array('summary' => sprintf(_('Employee Appraisal: %s (%s)'), $appraisal['employee_id'], sql2date($appraisal['appraisal_date'])))
+            );
+
+            if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                display_notification(_('Appraisal has been added and automatically approved.'));
+            } elseif ($approval_result !== false) {
+                return;
+            } else {
+                update_employee_appraisal_status((int)$appraisal['appraisal_id'], 2);
+                display_notification(_('Appraisal has been added and auto-approved (no active core workflow).'));
+            }
+        }
     }
 }
 
@@ -67,7 +109,6 @@ date_row(_('Period To:'), 'period_to');
 date_row(_('Appraisal Date:'), 'appraisal_date');
 qty_row(_('Overall Score:'), 'overall_score', get_post('overall_score', 0));
 qty_row(_('Rating Scale:'), 'rating_scale', get_post('rating_scale', 5));
-label_row(_('Status:'), array_selector('appraisal_status', get_post('appraisal_status', 0), appraisal_statuses()));
 textarea_row(_('Strengths:'), 'strengths', get_post('strengths', ''), 50, 2);
 textarea_row(_('Improvements:'), 'improvements', get_post('improvements', ''), 50, 2);
 textarea_row(_('Recommendation:'), 'recommendation', get_post('recommendation', ''), 50, 2);
