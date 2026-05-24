@@ -78,6 +78,17 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHMATCHEXCEPTION, array(
 	'edit_url'       => 'purchasing/inquiry/matching_exceptions.php',
 ));
 
+ApprovalWorkflow::registerTransactionType(ST_VENDOR_EVALUATION, array(
+	'label'          => _('Vendor Evaluation'),
+	'application'    => 'AP',
+	'executor'       => 'execute_approved_vendor_evaluation',
+	'rejector'       => 'reject_vendor_evaluation_draft',
+	'canceler'       => 'cancel_vendor_evaluation_draft',
+	'amount_getter'  => 'get_vendor_evaluation_draft_amount',
+	'draft_renderer' => 'render_vendor_evaluation_draft',
+	'edit_url'       => 'purchasing/manage/vendor_evaluation.php',
+));
+
 // =====================================================
 // EXECUTOR CALLBACKS
 // =====================================================
@@ -351,6 +362,28 @@ function execute_approved_matching_exception($draft_data, $reserved_trans_no, $d
 }
 
 /**
+ * Execute an approved Vendor Evaluation draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @param int   $reserved_trans_no Reserved transaction number
+ * @param int   $draft_id Approval draft ID
+ * @return int|false
+ */
+function execute_approved_vendor_evaluation($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	include_once($path_to_root . '/purchasing/includes/db/vendor_evaluation_db.inc');
+
+	$evaluation_id = isset($draft_data['evaluation_id']) ? (int)$draft_data['evaluation_id'] : 0;
+	if ($evaluation_id <= 0)
+		return false;
+
+	$approver_user_id = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0;
+
+	return approve_evaluation($evaluation_id, $approver_user_id) ? $evaluation_id : false;
+}
+
+/**
  * Sync a rejected requisition approval draft back to the requisition record.
  *
  * @param array  $draft_data Decoded JSON draft data
@@ -515,6 +548,39 @@ function cancel_matching_exception_draft($draft_data, $draft_id, $comments)
 	return true;
 }
 
+/**
+ * Reopen vendor evaluation on approval rejection.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Rejection comments
+ * @return bool
+ */
+function reject_vendor_evaluation_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+	include_once($path_to_root . '/purchasing/includes/db/vendor_evaluation_db.inc');
+
+	$evaluation_id = isset($draft_data['evaluation_id']) ? (int)$draft_data['evaluation_id'] : 0;
+	if ($evaluation_id <= 0)
+		return false;
+
+	return reopen_vendor_evaluation($evaluation_id);
+}
+
+/**
+ * Reopen vendor evaluation on approval cancellation.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Cancellation comments
+ * @return bool
+ */
+function cancel_vendor_evaluation_draft($draft_data, $draft_id, $comments)
+{
+	return reject_vendor_evaluation_draft($draft_data, $draft_id, $comments);
+}
+
 // =====================================================
 // AMOUNT GETTERS
 // =====================================================
@@ -597,6 +663,23 @@ function get_matching_exception_draft_amount($draft_data)
 
 	if (isset($draft_data['actual_value']) && isset($draft_data['expected_value']))
 		return abs((float)$draft_data['actual_value'] - (float)$draft_data['expected_value']);
+
+	return 0;
+}
+
+/**
+ * Calculate amount for vendor evaluation draft.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return float
+ */
+function get_vendor_evaluation_draft_amount($draft_data)
+{
+	if (isset($draft_data['overall_score']))
+		return (float)$draft_data['overall_score'];
+
+	if (isset($draft_data['amount']))
+		return (float)$draft_data['amount'];
 
 	return 0;
 }
@@ -819,5 +902,46 @@ function render_matching_exception_draft($draft_data)
 		$html .= '<tr><th>' . _('Notes') . '</th><td colspan="3">' . htmlspecialchars($draft_data['requested_notes']) . '</td></tr>';
 
 	$html .= '</table>';
+	return $html;
+}
+
+/**
+ * Render vendor evaluation draft summary.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return string HTML
+ */
+function render_vendor_evaluation_draft($draft_data)
+{
+	$html = '<table class="tablestyle2">';
+	$html .= '<tr><td class="label">' . _('Evaluation ID') . ':</td><td>'
+		. (int)(isset($draft_data['evaluation_id']) ? $draft_data['evaluation_id'] : 0)
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Supplier') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['supplier_name']) ? $draft_data['supplier_name'] : (isset($draft_data['supplier_id']) ? $draft_data['supplier_id'] : ''))
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Evaluator') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['evaluator_name']) ? $draft_data['evaluator_name'] : (isset($draft_data['evaluator_id']) ? $draft_data['evaluator_id'] : ''))
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Evaluation Date') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['evaluation_date']) ? $draft_data['evaluation_date'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Period') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['period_from']) ? $draft_data['period_from'] : '')
+		. ' - '
+		. htmlspecialchars(isset($draft_data['period_to']) ? $draft_data['period_to'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Overall Score') . ':</td><td>'
+		. number_format((float)(isset($draft_data['overall_score']) ? $draft_data['overall_score'] : 0), 2)
+		. '</td></tr>';
+
+	if (!empty($draft_data['recommendation'])) {
+		$html .= '<tr><td class="label">' . _('Recommendation') . ':</td><td>'
+			. htmlspecialchars($draft_data['recommendation'])
+			. '</td></tr>';
+	}
+
+	$html .= '</table>';
+
 	return $html;
 }

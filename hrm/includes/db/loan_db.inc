@@ -314,6 +314,108 @@ function cancel_employee_loan($loan_id) {
 }
 
 /**
+ * Mark loan as cancelled by approval rejection/cancellation.
+ *
+ * @param int $loan_id
+ * @return bool
+ */
+function mark_employee_loan_cancelled_by_approval($loan_id) {
+    $sql = "UPDATE ".TB_PREF."employee_loans
+        SET status = 3
+        WHERE loan_id = ".db_escape((int)$loan_id)."
+            AND status = 0";
+    db_query($sql, 'could not set cancelled status for employee loan');
+
+    return db_num_affected_rows() > 0;
+}
+
+/**
+ * Check whether a loan already has a pending core approval draft.
+ *
+ * @param int $loan_id
+ * @return bool
+ */
+function has_pending_loan_request_approval($loan_id) {
+    $sql = "SELECT id FROM ".TB_PREF."approval_drafts
+        WHERE trans_type = ".ST_LOAN_REQUEST."
+            AND status = ".APPROVAL_STATUS_PENDING."
+            AND draft_data LIKE ".db_escape('%\"loan_id\":'.(int)$loan_id.'%')."
+        ORDER BY id DESC LIMIT 1";
+    $result = db_query($sql, 'could not check pending loan request approval draft');
+
+    return (bool)db_fetch($result);
+}
+
+/**
+ * Build approval draft payload for a loan request.
+ *
+ * @param int $loan_id
+ * @return array|false
+ */
+function get_loan_request_approval_data($loan_id) {
+    $loan = get_employee_loan((int)$loan_id);
+    if (!$loan)
+        return false;
+
+    return array(
+        'loan_id' => (int)$loan['loan_id'],
+        'employee_id' => $loan['employee_id'],
+        'employee_name' => $loan['employee_name'],
+        'loan_type_id' => (int)$loan['loan_type_id'],
+        'loan_type_name' => isset($loan['loan_type_name']) ? $loan['loan_type_name'] : '',
+        'loan_amount' => (float)$loan['loan_amount'],
+        'interest_rate' => (float)$loan['interest_rate'],
+        'installments' => (int)$loan['installments'],
+        'installment_amount' => (float)$loan['installment_amount'],
+        'loan_date' => $loan['loan_date'],
+        'first_repayment' => $loan['first_repayment'],
+        'notes' => isset($loan['notes']) ? $loan['notes'] : '',
+    );
+}
+
+/**
+ * Submit a loan request to core approval workflow.
+ *
+ * @param int $loan_id
+ * @return array|bool
+ */
+function submit_employee_loan_for_core_approval($loan_id) {
+    $loan = get_employee_loan((int)$loan_id);
+    if (!$loan || (int)$loan['status'] !== 0)
+        return false;
+
+    if (has_pending_loan_request_approval((int)$loan_id))
+        return false;
+
+    $approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_LOAN_REQUEST);
+    $approval_amount = (float)$loan['loan_amount'];
+
+    if (!$approval_registered)
+        return approve_employee_loan((int)$loan_id, 'approval_system') ? array('status' => 'auto_approved', 'loan_id' => (int)$loan_id) : false;
+
+    $approval = get_approval_workflow_service();
+    if (!$approval->isApprovalRequired(ST_LOAN_REQUEST, $approval_amount))
+        return approve_employee_loan((int)$loan_id, 'approval_system') ? array('status' => 'auto_approved', 'loan_id' => (int)$loan_id) : false;
+
+    $draft_data = get_loan_request_approval_data((int)$loan_id);
+    if ($draft_data === false)
+        return false;
+
+    return $approval->submit(
+        ST_LOAN_REQUEST,
+        $draft_data,
+        $approval_amount,
+        array(
+            'summary' => sprintf(_('Loan Request #%d'), (int)$loan_id),
+            'currency' => get_company_pref('curr_default'),
+            'person_type' => PT_EMPLOYEE,
+            'person_id' => $loan['employee_id'],
+            'loc_code' => '',
+        )
+    );
+}
+
+/**
  * Get repayment rows for a loan.
  *
  * @param int $loan_id

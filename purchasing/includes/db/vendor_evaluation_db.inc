@@ -774,6 +774,131 @@ function submit_evaluation($evaluation_id)
 }
 
 /**
+ * Reopen one vendor evaluation to draft after approval rejection/cancellation.
+ *
+ * @param int $evaluation_id
+ * @return bool
+ */
+function reopen_vendor_evaluation($evaluation_id)
+{
+	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET status = 'draft'
+		WHERE id = " . (int)$evaluation_id . "
+		AND status IN ('submitted', 'draft')";
+	db_query($sql, 'could not reopen vendor evaluation');
+
+	return db_num_affected_rows() > 0;
+}
+
+/**
+ * Check whether a vendor evaluation has a pending core approval draft.
+ *
+ * @param int $evaluation_id
+ * @return bool
+ */
+function has_pending_vendor_evaluation_approval($evaluation_id)
+{
+	$sql = "SELECT id FROM " . TB_PREF . "approval_drafts
+		WHERE trans_type = " . ST_VENDOR_EVALUATION . "
+			AND status = " . APPROVAL_STATUS_PENDING . "
+			AND draft_data LIKE " . db_escape('%\"evaluation_id\":' . (int)$evaluation_id . '%') . "
+		ORDER BY id DESC LIMIT 1";
+	$result = db_query($sql, 'could not check pending vendor evaluation approval draft');
+
+	return (bool)db_fetch($result);
+}
+
+/**
+ * Build approval draft payload for one vendor evaluation.
+ *
+ * @param int $evaluation_id
+ * @return array|false
+ */
+function get_vendor_evaluation_approval_data($evaluation_id)
+{
+	$evaluation = get_vendor_evaluation($evaluation_id);
+	if (!$evaluation)
+		return false;
+
+	$totals = calculate_evaluation_totals($evaluation_id);
+	$recommendations = get_vendor_recommendations();
+
+	return array(
+		'evaluation_id' => (int)$evaluation['id'],
+		'supplier_id' => (int)$evaluation['supplier_id'],
+		'supplier_name' => isset($evaluation['supp_name']) ? $evaluation['supp_name'] : '',
+		'evaluator_id' => (int)$evaluation['evaluator_id'],
+		'evaluator_name' => isset($evaluation['evaluator_name']) ? $evaluation['evaluator_name'] : '',
+		'evaluation_date' => $evaluation['evaluation_date'],
+		'period_from' => $evaluation['period_from'],
+		'period_to' => $evaluation['period_to'],
+		'recommendation' => isset($recommendations[$evaluation['recommendation']]) ? $recommendations[$evaluation['recommendation']] : $evaluation['recommendation'],
+		'overall_score' => (float)$totals['overall_score'],
+		'quality_score' => (float)$totals['category_scores']['quality'],
+		'delivery_score' => (float)$totals['category_scores']['delivery'],
+		'price_score' => (float)$totals['category_scores']['price'],
+		'service_score' => (float)$totals['category_scores']['service'],
+	);
+}
+
+/**
+ * Submit one vendor evaluation to the core approval workflow.
+ *
+ * @param int $evaluation_id
+ * @return array|bool
+ */
+function submit_vendor_evaluation_for_core_approval($evaluation_id)
+{
+	$evaluation = get_vendor_evaluation($evaluation_id);
+	if (!$evaluation)
+		return false;
+
+	if ($evaluation['status'] === 'approved')
+		return false;
+
+	if (has_pending_vendor_evaluation_approval($evaluation_id))
+		return false;
+
+	if (!submit_evaluation($evaluation_id))
+		return false;
+
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_VENDOR_EVALUATION);
+	$draft_data = get_vendor_evaluation_approval_data($evaluation_id);
+	if ($draft_data === false)
+		return false;
+
+	$approval_amount = (float)$draft_data['overall_score'];
+
+	if (!$approval_registered)
+		return approve_evaluation($evaluation_id, isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0)
+			? array('status' => 'auto_approved', 'evaluation_id' => (int)$evaluation_id)
+			: false;
+
+	$approval = get_approval_workflow_service();
+	if (!$approval->isApprovalRequired(ST_VENDOR_EVALUATION, $approval_amount))
+		return approve_evaluation($evaluation_id, isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0)
+			? array('status' => 'auto_approved', 'evaluation_id' => (int)$evaluation_id)
+			: false;
+
+	$result = $approval->submit(
+		ST_VENDOR_EVALUATION,
+		$draft_data,
+		$approval_amount,
+		array(
+			'summary' => sprintf(_('Vendor Evaluation #%d'), (int)$evaluation_id),
+			'currency' => get_company_pref('curr_default'),
+			'person_type' => PT_SUPPLIER,
+			'person_id' => $evaluation['supplier_id'],
+			'loc_code' => '',
+		)
+	);
+
+	if (isset($result['status']) && $result['status'] === 'execution_failed')
+		reopen_vendor_evaluation($evaluation_id);
+
+	return $result;
+}
+
+/**
  * Calculate delivery performance metrics.
  *
  * @param int    $supplier_id

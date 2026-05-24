@@ -74,6 +74,8 @@ define('ST_PURCHRFQ',            59);  // Request for quotation
 define('ST_PURCHAGREEMENT',      60);  // Purchase agreement / blanket order
 define('ST_PROCUREMENTPLAN',     61);  // Procurement plan
 define('ST_PURCHMATCHEXCEPTION', 62);  // Purchase matching exception
+define('ST_VENDOR_EVALUATION',   63);  // Vendor evaluation approval request
+define('ST_LOAN_REQUEST',        64);  // HRM loan request approval
 
 // Don't include these defines in the $systypes_array.
 // They are used for documents only.

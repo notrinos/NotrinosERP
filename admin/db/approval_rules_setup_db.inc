@@ -52,6 +52,8 @@ function get_approvable_transaction_types()
 		ST_WH_MATERIAL_REQUEST,
 		ST_PROCUREMENTPLAN,
 		ST_PURCHMATCHEXCEPTION,
+		ST_VENDOR_EVALUATION,
+		ST_LOAN_REQUEST,
 	);
 
 	$result = array();

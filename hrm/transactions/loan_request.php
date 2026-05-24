@@ -86,20 +86,25 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         $installment_amount = round2($total / $installments, user_price_dec());
 
         if ($selected_id != '') {
-            update_employee_loan(
-                $selected_id,
-                (int)$_POST['loan_type_id'],
-                input_num('loan_amount'),
-                $interest_rate,
-                $installments,
-                $installment_amount,
-                $_POST['loan_date'],
-                $_POST['first_repayment'],
-                $_POST['notes']
-            );
-            display_notification(_('Loan request has been updated.'));
+            if (has_pending_loan_request_approval((int)$selected_id)) {
+                display_error(_('This loan request is pending core approval and cannot be edited.'));
+                set_focus('selected_id');
+            } else {
+                update_employee_loan(
+                    $selected_id,
+                    (int)$_POST['loan_type_id'],
+                    input_num('loan_amount'),
+                    $interest_rate,
+                    $installments,
+                    $installment_amount,
+                    $_POST['loan_date'],
+                    $_POST['first_repayment'],
+                    $_POST['notes']
+                );
+                display_notification(_('Loan request has been updated.'));
+            }
         } else {
-            add_employee_loan(
+            $created_loan_id = add_employee_loan(
                 $_POST['employee_id'],
                 (int)$_POST['loan_type_id'],
                 input_num('loan_amount'),
@@ -110,7 +115,20 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 $_POST['first_repayment'],
                 $_POST['notes']
             );
-            display_notification(_('Loan request has been created.'));
+
+            if (!$created_loan_id)
+                display_error(_('Loan request was created but could not be submitted to core approval.'));
+            else {
+                $approval_result = submit_employee_loan_for_core_approval($created_loan_id);
+                if (!$approval_result)
+                    display_error(_('Loan request could not be submitted to the core approval workflow.'));
+                elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending')
+                    display_notification(_('Loan request has been submitted to the core approval workflow.'));
+                elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved')
+                    display_notification(_('Loan request has been auto-approved by the core approval workflow.'));
+                else
+                    display_notification(_('Loan request has been created.'));
+            }
         }
 
         $Mode = 'RESET';
@@ -119,28 +137,33 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    if (!delete_employee_loan($selected_id))
-        display_error(_('Only pending loans can be deleted.'));
-    else
-        display_notification(_('Selected loan has been deleted.'));
+    if (has_pending_loan_request_approval((int)$selected_id)) {
+        display_error(_('This loan request is pending core approval and cannot be deleted.'));
+        $Mode = 'RESET';
+    }
+
+    if (!has_pending_loan_request_approval((int)$selected_id)) {
+        if (!delete_employee_loan($selected_id))
+            display_error(_('Only pending loans can be deleted.'));
+        else
+            display_notification(_('Selected loan has been deleted.'));
+    }
 
     $Mode = 'RESET';
 }
 
 foreach ($_POST as $name => $value) {
-    if (strpos($name, 'Approve') === 0) {
-        $loan_id = (int)substr($name, 7);
-        if ($loan_id > 0) {
-            approve_employee_loan($loan_id, current_hrm_user_login());
-            display_notification(_('Loan request has been approved.'));
-            $Mode = 'RESET';
-        }
-    }
-    if (strpos($name, 'Cancel') === 0) {
+    if (strpos($name, 'Submit') === 0) {
         $loan_id = (int)substr($name, 6);
         if ($loan_id > 0) {
-            cancel_employee_loan($loan_id);
-            display_notification(_('Loan request has been cancelled.'));
+            $approval_result = submit_employee_loan_for_core_approval($loan_id);
+            if (!$approval_result)
+                display_error(_('Loan request could not be submitted to core approval workflow.'));
+            elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending')
+                display_notification(_('Loan request has been submitted to the core approval workflow.'));
+            elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved')
+                display_notification(_('Loan request has been auto-approved by the core approval workflow.'));
+
             $Mode = 'RESET';
         }
     }
@@ -199,7 +222,7 @@ submit_add_or_update_center($selected_id == '', '', 'both');
 br();
 
 start_table(TABLESTYLE, "width='100%'");
-$th = array(_('ID'), _('Employee'), _('Loan Type'), _('Amount'), _('Outstanding'), _('Installments'), _('Loan Date'), _('Status'), '', '', '', '');
+$th = array(_('ID'), _('Employee'), _('Loan Type'), _('Amount'), _('Outstanding'), _('Installments'), _('Loan Date'), _('Status'), '', '', '');
 table_header($th);
 
 $result = get_employee_loans();
@@ -213,15 +236,17 @@ while ($row = db_fetch($result)) {
     amount_cell($row['outstanding_amount']);
     label_cell($row['installments']);
     label_cell(sql2date($row['loan_date']));
-    label_cell($status_labels[(int)$row['status']]);
+    $row_status = $status_labels[(int)$row['status']];
+    $has_pending_core_approval = ((int)$row['status'] === 0) ? has_pending_loan_request_approval((int)$row['loan_id']) : false;
+    if ($has_pending_core_approval)
+        $row_status .= ' (' . _('Pending Core Approval') . ')';
+    label_cell($row_status);
 
-    if ((int)$row['status'] == 0) {
+    if ((int)$row['status'] == 0 && !$has_pending_core_approval) {
         edit_button_cell('Edit'.$row['loan_id'], _('Edit'));
         delete_button_cell('Delete'.$row['loan_id'], _('Delete'));
-        submit_cells('Approve'.$row['loan_id'], _('Approve'));
-        submit_cells('Cancel'.$row['loan_id'], _('Cancel'));
+        submit_cells('Submit'.$row['loan_id'], _('Submit For Core Approval'));
     } else {
-        label_cell('');
         label_cell('');
         label_cell('');
         label_cell('');

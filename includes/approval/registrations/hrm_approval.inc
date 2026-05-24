@@ -74,6 +74,17 @@ ApprovalWorkflow::registerTransactionType(ST_PAYROLL_PERIOD, array(
 	'edit_url'       => 'hrm/transactions/payroll_approval.php',
 ));
 
+ApprovalWorkflow::registerTransactionType(ST_LOAN_REQUEST, array(
+	'label'          => _('Loan Request'),
+	'application'    => 'HRM',
+	'executor'       => 'execute_approved_loan_request',
+	'rejector'       => 'reject_loan_request_draft',
+	'canceler'       => 'cancel_loan_request_draft',
+	'amount_getter'  => 'get_loan_request_draft_amount',
+	'draft_renderer' => 'render_loan_request_draft',
+	'edit_url'       => 'hrm/transactions/loan_request.php',
+));
+
 // =====================================================
 // EXECUTOR CALLBACKS
 // =====================================================
@@ -192,6 +203,69 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 	return $period_id;
 }
 
+/**
+ * Execute an approved Loan Request draft.
+ *
+ * @param array $draft_data         Decoded JSON draft data
+ * @param int   $reserved_trans_no  Reserved transaction number
+ * @param int   $draft_id           Approval draft ID
+ * @return int|false Loan ID or false on failure
+ */
+function execute_approved_loan_request($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+
+	$loan_id = isset($draft_data['loan_id']) ? (int)$draft_data['loan_id'] : 0;
+	if ($loan_id <= 0)
+		return false;
+
+	$loan = get_employee_loan($loan_id);
+	if (!$loan || (int)$loan['status'] !== 0)
+		return false;
+
+	$approved_by = isset($_SESSION['wa_current_user']) && !empty($_SESSION['wa_current_user']->loginname)
+		? $_SESSION['wa_current_user']->loginname
+		: 'approval_system';
+
+	return approve_employee_loan($loan_id, $approved_by) ? $loan_id : false;
+}
+
+/**
+ * Sync a rejected loan approval draft back to the loan status.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Rejection comments
+ * @return bool
+ */
+function reject_loan_request_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+
+	$loan_id = isset($draft_data['loan_id']) ? (int)$draft_data['loan_id'] : 0;
+	if ($loan_id <= 0)
+		return false;
+
+	return mark_employee_loan_cancelled_by_approval($loan_id);
+}
+
+/**
+ * Sync a cancelled loan approval draft back to the loan status.
+ *
+ * @param array  $draft_data Decoded JSON draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Cancellation comments
+ * @return bool
+ */
+function cancel_loan_request_draft($draft_data, $draft_id, $comments)
+{
+	return reject_loan_request_draft($draft_data, $draft_id, $comments);
+}
+
 // =====================================================
 // AMOUNT GETTER CALLBACKS
 // =====================================================
@@ -233,6 +307,17 @@ function get_overtime_request_draft_amount($draft_data)
 function get_payroll_period_draft_amount($draft_data)
 {
 	return isset($draft_data['total_net']) ? (float)$draft_data['total_net'] : 0;
+}
+
+/**
+ * Get the amount for a loan request draft (loan amount).
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return float
+ */
+function get_loan_request_draft_amount($draft_data)
+{
+	return isset($draft_data['loan_amount']) ? (float)$draft_data['loan_amount'] : 0;
 }
 
 // =====================================================
@@ -343,6 +428,47 @@ function render_payroll_period_draft($draft_data)
 	if (isset($draft_data['department_name']) && $draft_data['department_name'] !== '') {
 		$html .= '<tr><td class="label">' . _('Department') . ':</td><td>'
 			. htmlspecialchars($draft_data['department_name'])
+			. '</td></tr>';
+	}
+	$html .= '</table>';
+
+	return $html;
+}
+
+/**
+ * Render a loan request draft for the approval viewer.
+ *
+ * @param array $draft_data Decoded JSON draft data
+ * @return string HTML content
+ */
+function render_loan_request_draft($draft_data)
+{
+	$html = '<table class="tablestyle2">';
+	$html .= '<tr><td class="label">' . _('Employee') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['employee_name']) ? $draft_data['employee_name'] : (isset($draft_data['employee_id']) ? $draft_data['employee_id'] : ''))
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Loan Type') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['loan_type_name']) ? $draft_data['loan_type_name'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Loan Amount') . ':</td><td>'
+		. number_format((float)(isset($draft_data['loan_amount']) ? $draft_data['loan_amount'] : 0), 2)
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Interest Rate') . ':</td><td>'
+		. number_format((float)(isset($draft_data['interest_rate']) ? $draft_data['interest_rate'] : 0), 2) . '%'
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Installments') . ':</td><td>'
+		. (int)(isset($draft_data['installments']) ? $draft_data['installments'] : 0)
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('Loan Date') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['loan_date']) ? $draft_data['loan_date'] : '')
+		. '</td></tr>';
+	$html .= '<tr><td class="label">' . _('First Repayment') . ':</td><td>'
+		. htmlspecialchars(isset($draft_data['first_repayment']) ? $draft_data['first_repayment'] : '')
+		. '</td></tr>';
+
+	if (!empty($draft_data['notes'])) {
+		$html .= '<tr><td class="label">' . _('Notes') . ':</td><td>'
+			. nl2br(htmlspecialchars($draft_data['notes']))
 			. '</td></tr>';
 	}
 	$html .= '</table>';

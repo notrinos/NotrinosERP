@@ -255,7 +255,8 @@ if (isset($_GET['notice'])) {
 	$notices = array(
 		'saved' => _('Vendor evaluation has been saved.'),
 		'submitted' => _('Vendor evaluation has been submitted.'),
-		'approved' => _('Vendor evaluation has been approved.'),
+		'core_submitted' => _('Vendor evaluation has been submitted to the core approval workflow.'),
+		'auto_approved' => _('Vendor evaluation has been auto-approved by the core approval workflow.'),
 		'deleted' => _('Vendor evaluation has been deleted.'),
 	);
 	if (isset($notices[$_GET['notice']]))
@@ -275,7 +276,7 @@ if (isset($_POST['delete_evaluation']) && $selected_id > 0) {
 		display_error(_('The selected evaluation could not be deleted.'));
 }
 
-if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || isset($_POST['approve_evaluation'])) && can_save_vendor_evaluation_header() && can_save_vendor_evaluation_scores($criteria_rows)) {
+if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation'])) && can_save_vendor_evaluation_header() && can_save_vendor_evaluation_scores($criteria_rows)) {
 	$can_process = true;
 	if ($selected_id > 0) {
 		$existing_eval = get_vendor_evaluation($selected_id);
@@ -322,25 +323,15 @@ if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || i
 	calculate_evaluation_totals($selected_id);
 
 	if (isset($_POST['submit_evaluation'])) {
-		if (!submit_evaluation($selected_id)) {
-			display_error(_('The selected evaluation could not be submitted.'));
+		$approval_result = submit_vendor_evaluation_for_core_approval($selected_id);
+		if (!$approval_result) {
+			display_error(_('The selected evaluation could not be submitted for core approval.'));
 			$can_process = false;
+		} elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending') {
+			meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=core_submitted'));
+		} elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved') {
+			meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=auto_approved'));
 		}
-	}
-
-	if ($can_process && isset($_POST['submit_evaluation'])) {
-		meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=submitted'));
-	}
-
-	if (isset($_POST['approve_evaluation'])) {
-		if (!approve_evaluation($selected_id, isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0)) {
-			display_error(_('The selected evaluation could not be approved.'));
-			$can_process = false;
-		}
-	}
-
-	if ($can_process && isset($_POST['approve_evaluation'])) {
-		meta_forward($_SERVER['PHP_SELF'], get_vendor_evaluation_nav_params('evaluation_id=' . $selected_id . '&notice=approved'));
 	}
 
 	if ($can_process)
@@ -349,14 +340,15 @@ if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation']) || i
 	}
 }
 
-if ($selected_id > 0 && !isset($_POST['save_evaluation']) && !isset($_POST['submit_evaluation']) && !isset($_POST['approve_evaluation'])) {
+if ($selected_id > 0 && !isset($_POST['save_evaluation']) && !isset($_POST['submit_evaluation'])) {
 	$evaluation = get_vendor_evaluation($selected_id);
 	if ($evaluation)
 		load_vendor_evaluation_into_post($evaluation);
 }
 
 $current_evaluation = $selected_id > 0 ? get_vendor_evaluation($selected_id) : false;
-$is_editable_evaluation = !$current_evaluation || $current_evaluation['status'] !== 'approved';
+$evaluation_pending_core_approval = $selected_id > 0 ? has_pending_vendor_evaluation_approval($selected_id) : false;
+$is_editable_evaluation = (!$current_evaluation || $current_evaluation['status'] !== 'approved') && !$evaluation_pending_core_approval;
 $score_map = get_vendor_evaluation_score_map($selected_id);
 $metrics = get_vendor_form_metrics((int)get_post('supplier_id', 0), get_post('period_from'), get_post('period_to'));
 $recommendation_options = get_vendor_recommendations();
@@ -368,7 +360,10 @@ hidden('selected_id', $selected_id);
 
 if ($current_evaluation) {
 	echo '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">';
-	echo '<div><strong>' . _('Evaluation #') . (int)$current_evaluation['id'] . '</strong> &nbsp; ' . vendor_evaluation_status_badge($current_evaluation['status']) . '</div>';
+	$eval_status_badge = vendor_evaluation_status_badge($current_evaluation['status']);
+	if ($evaluation_pending_core_approval)
+		$eval_status_badge .= ' <span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;color:#fff;background:#f59e0b;">' . _('Pending Core Approval') . '</span>';
+	echo '<div><strong>' . _('Evaluation #') . (int)$current_evaluation['id'] . '</strong> &nbsp; ' . $eval_status_badge . '</div>';
 	echo '<div>';
 	hyperlink_params($_SERVER['PHP_SELF'], _('New Evaluation'), get_vendor_evaluation_nav_params('New=1&supplier_id=' . (int)$current_evaluation['supplier_id']));
 	echo '&nbsp;&nbsp;';
@@ -459,17 +454,16 @@ echo '<div style="text-align:center;margin:16px 0;">';
 if ($is_editable_evaluation) {
 	submit('save_evaluation', _('Save Evaluation'), true, _('Save the current vendor evaluation'), 'default');
 	echo '&nbsp;';
-	submit('submit_evaluation', _('Submit Evaluation'), true, _('Submit this evaluation for review'));
-	if ($selected_id > 0)
-		echo '&nbsp;';
-	if ($selected_id > 0)
-		submit('approve_evaluation', _('Approve Evaluation'), true, _('Approve this evaluation and update supplier scores'));
+	submit('submit_evaluation', _('Submit For Core Approval'), true, _('Submit this evaluation to core approval workflow'));
 	if ($selected_id > 0)
 		echo '&nbsp;';
 	if ($selected_id > 0)
 		submit('delete_evaluation', _('Delete Evaluation'), true, _('Delete this evaluation while still editable'));
 } else {
-	display_note(_('Approved evaluations are read-only.'), 0, 1);
+	if ($evaluation_pending_core_approval)
+		display_note(_('This evaluation is pending core approval and is read-only.'), 0, 1);
+	else
+		display_note(_('Approved evaluations are read-only.'), 0, 1);
 }
 echo '</div>';
 
