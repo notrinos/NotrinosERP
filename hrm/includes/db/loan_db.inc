@@ -380,12 +380,19 @@ function get_loan_request_approval_data($loan_id) {
  * @return array|bool
  */
 function submit_employee_loan_for_core_approval($loan_id) {
+    global $path_to_root;
+
     $loan = get_employee_loan((int)$loan_id);
     if (!$loan || (int)$loan['status'] !== 0)
         return false;
 
     if (has_pending_loan_request_approval((int)$loan_id))
         return false;
+
+    if (class_exists('ApprovalWorkflow') && !ApprovalWorkflow::isRegistered(ST_LOAN_REQUEST)) {
+        if (isset($path_to_root) && $path_to_root !== '')
+            include_once($path_to_root . '/includes/approval/registrations/hrm_approval.inc');
+    }
 
     $approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_LOAN_REQUEST);
     $approval_amount = (float)$loan['loan_amount'];

@@ -224,6 +224,8 @@ function get_systype_db_info($type) {
 		case    ST_BANKACCOUNT  : return array(TB_PREF."bank_accounts", null, "id", "bank_account_number", null);
 
 		case    ST_PAYSLIP      : return array(TB_PREF."payslips", null, "trans_no", "reference", "tran_date");
+		case    ST_VENDOR_EVALUATION : return array(TB_PREF."vendor_evaluations", null, "id", null, "evaluation_date");
+		case    ST_LOAN_REQUEST : return array(TB_PREF."employee_loans", null, "loan_id", null, "loan_date");
 		case    ST_WH_TRANSFER_ORDER : return array(TB_PREF."wh_transfer_orders", null, "transfer_no", "reference", "request_date");
 		case    ST_WH_MATERIAL_REQUEST : return array(TB_PREF."wh_material_requests", null, "request_no", "reference", "request_date");
 		case    ST_WH_SCRAP : return array(TB_PREF."wh_scrap", null, "scrap_id", "memo", "scrap_date");
