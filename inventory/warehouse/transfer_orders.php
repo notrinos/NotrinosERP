@@ -421,7 +421,8 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 		if ($editing) {
 			display_heading(_('Add Line'));
 			start_table(TABLESTYLE2);
-			stock_costable_items_list_cells(_('Item:'), 'line_stock_id', null, false, true);
+			label_cell(_('Item:'));
+			stock_costable_items_list_cells(null, 'line_stock_id', null, false, true);
 			qty_row(_('Quantity:'), 'line_qty', null, null, null, 4);
 			end_table(1);
 
