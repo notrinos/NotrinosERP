@@ -41,8 +41,12 @@ page(_($help_context = 'Material Requests'), false, false, '', $js);
 // HANDLE ACTIONS
 // =====================================================================
 
-$selected_id = get_post('selected_id', -1);
-if ($selected_id == '') $selected_id = -1;
+$selected_id = get_post('selected_id', null);
+if ($selected_id === null || $selected_id === '')
+	$selected_id = isset($_GET['selected_id']) ? $_GET['selected_id'] : -1;
+if ($selected_id === '')
+	$selected_id = -1;
+$is_new_request = isset($_POST['New']) || isset($_GET['New']);
 
 // --- Submit action ---
 if (isset($_POST['Submit']) && $selected_id > 0) {
@@ -64,7 +68,7 @@ if (isset($_POST['Submit']) && $selected_id > 0) {
 
 // --- Cancel action ---
 if (isset($_POST['CancelMR']) && $selected_id > 0) {
-	if (cancel_material_request($selected_id)) {
+	if (cancel_material_request($selected_id, _('Cancelled from material request entry.'))) {
 		display_notification(_('Material request has been cancelled.'));
 	} else {
 		display_error(_('Cannot cancel this material request.'));
@@ -228,7 +232,7 @@ if ($view_id > 0) {
 }
 
 // --- New button ---
-if (isset($_POST['New'])) {
+if ($is_new_request) {
 	$selected_id = -1;
 	$Ajax->activate('mr_detail');
 }
@@ -344,7 +348,7 @@ div_start('mr_detail');
 if ($selected_id > 0 && !in_ajax()) {
 	echo '<script>window.addEventListener("load",function(){var el=document.getElementById("mr_detail");if(el)el.scrollIntoView({behavior:"smooth",block:"start"}); });</script>';
 }
-if ($selected_id > 0 || isset($_POST['New'])) {
+if ($selected_id > 0 || $is_new_request) {
 	$editing = false;
 	$mr = null;
 
@@ -589,7 +593,7 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 			. $selected_id . '" target="_blank">' . _('Open printable view') . '</a>';
 		echo '</div>';
 
-	} elseif (isset($_POST['New']) || $selected_id == -1 && !isset($_POST['SearchMR'])) {
+	} elseif ($is_new_request || $selected_id == -1 && !isset($_POST['SearchMR'])) {
 		// --- New request form ---
 		display_heading(_('New Material Request'));
 		start_table(TABLESTYLE2);

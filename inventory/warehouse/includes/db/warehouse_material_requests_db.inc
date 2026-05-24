@@ -378,6 +378,26 @@ function count_material_request_lines($request_id) {
 	return (int)$row['cnt'];
 }
 
+/**
+ * Find the latest pending core approval draft for a material request.
+ *
+ * @param int $request_id Request ID
+ * @return array|false Draft row or false
+ */
+function get_pending_material_request_approval_draft($request_id)
+{
+	$sql = "SELECT d.*
+		FROM " . TB_PREF . "approval_drafts d
+		WHERE d.trans_type = " . db_escape((int)ST_WH_MATERIAL_REQUEST) . "
+		AND d.status = 0
+		AND d.draft_data LIKE " . db_escape('%\"request_id\":' . (int)$request_id . '%') . "
+		ORDER BY d.id DESC
+		LIMIT 1";
+
+	$result = db_query($sql, 'could not get pending material request approval draft');
+	return db_fetch($result);
+}
+
 // =====================================================================
 // LIFECYCLE — Status Transitions
 // =====================================================================
@@ -576,10 +596,19 @@ function reject_material_request($request_id) {
  * @param int $request_id Request ID
  * @return bool Success
  */
-function cancel_material_request($request_id) {
+function cancel_material_request($request_id, $comments = '') {
 	$mr = get_material_request($request_id);
 	if (!$mr || !in_array($mr['status'], array('draft', 'submitted', 'approved')))
 		return false;
+
+	if ($mr['status'] === 'submitted') {
+		$pending_draft = get_pending_material_request_approval_draft($request_id);
+		if ($pending_draft && function_exists('get_approval_workflow_service')) {
+			$approval = get_approval_workflow_service();
+			$result = $approval->cancel((int)$pending_draft['id'], $comments);
+			return (is_array($result) && isset($result['status']) && $result['status'] !== 'error');
+		}
+	}
 
 	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
 		. "status = 'cancelled',"
