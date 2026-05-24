@@ -46,32 +46,17 @@ if ($selected_id == '') $selected_id = -1;
 
 // --- Submit action ---
 if (isset($_POST['Submit']) && $selected_id > 0) {
-	if (submit_material_request($selected_id)) {
-		display_notification(_('Material request has been submitted for approval.'));
+	$result = submit_material_request_for_core_approval($selected_id);
+	if ($result !== false) {
+		if (is_array($result) && isset($result['status']) && $result['status'] === 'pending') {
+			display_notification(_('Material request has been submitted to the core approval workflow.'));
+		} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved') {
+			display_notification(_('Material request has been auto-approved by the core approval workflow.'));
+		} else {
+			display_notification(_('Material request has been submitted.'));
+		}
 	} else {
-		display_error(_('Cannot submit this material request. It must be in Draft status and have at least one line.'));
-	}
-	$Ajax->activate('mr_list');
-	$Ajax->activate('mr_detail');
-}
-
-// --- Approve action ---
-if (isset($_POST['Approve']) && $selected_id > 0) {
-	if (approve_material_request($selected_id)) {
-		display_notification(_('Material request has been approved.'));
-	} else {
-		display_error(_('Cannot approve this material request. It must be in Submitted status.'));
-	}
-	$Ajax->activate('mr_list');
-	$Ajax->activate('mr_detail');
-}
-
-// --- Reject action ---
-if (isset($_POST['Reject']) && $selected_id > 0) {
-	if (reject_material_request($selected_id)) {
-		display_notification(_('Material request has been rejected and returned to Draft status.'));
-	} else {
-		display_error(_('Cannot reject this material request.'));
+		display_error(_('Cannot submit this material request. It must be in Draft status, have at least one line, and pass approval setup validation.'));
 	}
 	$Ajax->activate('mr_list');
 	$Ajax->activate('mr_detail');
@@ -526,9 +511,12 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 		}
 
 		if ($mr['status'] === 'submitted') {
-			submit('Approve', _('Approve'), true, _('Approve this material request'));
-			echo ' ';
-			submit('Reject', _('Reject'), true, _('Reject and return to Draft'));
+			echo '<div style="background:#fff3cd;border:1px solid #ffeeba;border-radius:4px;padding:10px;margin:8px 0;">';
+			echo '<strong>' . _('Pending Core Approval') . '</strong><br>';
+			echo _('This material request is in the core approval queue. Approve or reject it from the Approval Dashboard.');
+			echo '<br><a href="' . $path_to_root . '/admin/approval_dashboard.php?&sel_app=system" target="_blank">'
+				. _('Open Approval Dashboard') . '</a>';
+			echo '</div>';
 		}
 
 		if ($mr['status'] === 'approved') {

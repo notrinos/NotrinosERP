@@ -46,6 +46,7 @@ function get_approvable_transaction_types()
 		ST_LEAVE_REQUEST,
 		ST_OVERTIME_REQUEST,
 		ST_PAYROLL_PERIOD,
+		ST_WH_MATERIAL_REQUEST,
 	);
 
 	$result = array();

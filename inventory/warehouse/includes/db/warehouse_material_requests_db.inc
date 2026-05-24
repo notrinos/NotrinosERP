@@ -409,6 +409,122 @@ function submit_material_request($request_id) {
 }
 
 /**
+ * Build material request draft payload for the core approval engine.
+ *
+ * @param int $request_id Request ID
+ * @return array|false
+ */
+function get_material_request_submission_data($request_id) {
+	$mr = get_material_request($request_id);
+	if (!$mr)
+		return false;
+
+	$lines_data = array();
+	$lines = get_material_request_lines($request_id);
+	while ($line = db_fetch($lines)) {
+		$lines_data[] = array(
+			'line_id' => (int)$line['line_id'],
+			'stock_id' => $line['stock_id'],
+			'description' => isset($line['item_description']) ? $line['item_description'] : '',
+			'units' => isset($line['item_units']) ? $line['item_units'] : '',
+			'qty_requested' => (float)$line['qty_requested'],
+			'qty_fulfilled' => (float)$line['qty_fulfilled'],
+			'unit_cost' => isset($line['material_cost']) ? (float)$line['material_cost'] : 0,
+			'required_date' => $line['required_date'] ? $line['required_date'] : '',
+			'memo' => $line['memo'] ? $line['memo'] : '',
+		);
+	}
+
+	$statuses = get_material_request_statuses();
+	$types = get_material_request_types();
+
+	return array(
+		'request_id' => (int)$mr['request_id'],
+		'request_no' => (int)$mr['request_no'],
+		'request_no_formatted' => format_material_request_no($mr['request_no']),
+		'request_type' => $mr['request_type'],
+		'request_type_label' => isset($types[$mr['request_type']]) ? $types[$mr['request_type']] : $mr['request_type'],
+		'status' => $mr['status'],
+		'status_label' => isset($statuses[$mr['status']]) ? $statuses[$mr['status']] : $mr['status'],
+		'warehouse_loc_code' => $mr['warehouse_loc_code'],
+		'warehouse_name' => isset($mr['warehouse_name']) ? $mr['warehouse_name'] : '',
+		'requested_by' => (int)$mr['requested_by'],
+		'requested_by_name' => isset($mr['requested_by_name']) ? $mr['requested_by_name'] : '',
+		'request_date' => $mr['request_date'],
+		'required_date' => $mr['required_date'] ? $mr['required_date'] : '',
+		'reference' => $mr['reference'] ? $mr['reference'] : '',
+		'memo' => $mr['memo'] ? $mr['memo'] : '',
+		'total_estimated' => (float)get_material_request_total_value($request_id),
+		'line_count' => count($lines_data),
+		'lines' => $lines_data,
+	);
+}
+
+/**
+ * Submit one material request into the core approval workflow.
+ *
+ * @param int $request_id Request ID
+ * @return array|bool
+ */
+function submit_material_request_for_core_approval($request_id) {
+	$mr = get_material_request($request_id);
+	if (!$mr || $mr['status'] !== 'draft')
+		return false;
+
+	if (count_material_request_lines($request_id) == 0)
+		return false;
+
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_MATERIAL_REQUEST);
+	$approval_amount = (float)get_material_request_total_value($request_id);
+	$approval_required = false;
+	$approval = null;
+
+	if ($approval_registered) {
+		$approval = get_approval_workflow_service();
+		$approval_required = $approval->isApprovalRequired(ST_WH_MATERIAL_REQUEST, $approval_amount);
+	}
+
+	if (!submit_material_request($request_id))
+		return false;
+
+	if (!$approval_registered || !$approval_required) {
+		if (!approve_material_request($request_id))
+			return false;
+
+		return array('status' => 'auto_approved', 'request_id' => (int)$request_id);
+	}
+
+	$reloaded = get_material_request($request_id);
+	$draft_data = get_material_request_submission_data($request_id);
+	if ($draft_data === false)
+		return false;
+
+	$result = $approval->submit(
+		ST_WH_MATERIAL_REQUEST,
+		$draft_data,
+		$approval_amount,
+		array(
+			'summary' => sprintf(_('Material Request %s'), format_material_request_no($reloaded['request_no'])),
+			'currency' => get_company_pref('curr_default'),
+			'person_type' => PT_MISC,
+			'person_id' => $reloaded['requested_by'],
+			'loc_code' => $reloaded['warehouse_loc_code'],
+		)
+	);
+
+	if (isset($result['status']) && $result['status'] === 'execution_failed') {
+		$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
+			. "status = 'draft',"
+			. "updated_at = NOW()"
+			. " WHERE request_id = " . (int)$request_id
+			. " AND status = 'submitted'";
+		db_query($sql, 'could not rollback material request to draft after approval execution failure');
+	}
+
+	return $result;
+}
+
+/**
  * Approve a material request.
  * Transitions: submitted → approved
  *
