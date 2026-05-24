@@ -44,12 +44,19 @@ page(_($help_context = 'Transfer Orders'), false, false, '', $js);
 $selected_id = get_post('selected_id', isset($_GET['selected_id']) ? $_GET['selected_id'] : -1);
 if ($selected_id == '') $selected_id = -1;
 
-// --- Approve action ---
-if (isset($_POST['Approve']) && $selected_id > 0) {
-	if (approve_transfer_order($selected_id)) {
-		display_notification(_('Transfer order has been approved.'));
+// --- Submit action (core approval) ---
+if (isset($_POST['Submit']) && $selected_id > 0) {
+	$result = submit_transfer_order_for_core_approval($selected_id);
+	if ($result) {
+		if (is_array($result) && isset($result['status']) && $result['status'] === 'pending') {
+			display_notification(_('Transfer order has been submitted to the core approval workflow.'));
+		} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved') {
+			display_notification(_('Transfer order has been auto-approved by the core approval workflow.'));
+		} else {
+			display_notification(_('Transfer order has been submitted for approval.'));
+		}
 	} else {
-		display_error(_('Cannot approve this transfer order. It may not be in Draft status.'));
+		display_error(_('Cannot submit this transfer order. It must be in Draft status, have at least one line, and pass approval setup validation.'));
 	}
 	$selected_id = -1;
 }
@@ -244,6 +251,7 @@ $summary = get_transfer_order_summary();
 echo '<div style="display:flex;gap:10px;margin:10px 0;flex-wrap:wrap;">';
 $status_cards = array(
 	'draft'      => array('icon' => 'fa-file-o',     'color' => '#6c757d'),
+	'submitted'  => array('icon' => 'fa-hourglass-half', 'color' => '#ffc107'),
 	'approved'   => array('icon' => 'fa-check',       'color' => '#007bff'),
 	'in_transit' => array('icon' => 'fa-truck',        'color' => '#fd7e14'),
 	'received'   => array('icon' => 'fa-check-circle', 'color' => '#28a745'),
@@ -427,9 +435,17 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 		hidden('selected_id', $selected_id);
 
 		if ($order['status'] === 'draft') {
-			submit('Approve', _('Approve'), true, _('Approve this transfer order'));
+			submit('Submit', _('Submit for Approval'), true, _('Submit this transfer order for approval'));
 			echo ' ';
 			submit('Delete', _('Delete'), true, _('Delete this transfer order'));
+		}
+		if ($order['status'] === 'submitted') {
+			echo '<div style="display:inline-block;padding:8px 12px;background:#fff3cd;border:1px solid #ffeeba;border-radius:4px;color:#856404;">';
+			echo '<strong>' . _('Pending Core Approval') . '</strong><br>';
+			echo _('This transfer order is in the core approval queue. Approve or reject it from the Approval Dashboard.');
+			echo '<br><a href="' . $path_to_root . '/admin/approval_dashboard.php?&sel_app=system" target="_blank">'
+				. _('Open Approval Dashboard') . '</a>';
+			echo '</div>';
 		}
 		if ($order['status'] === 'approved') {
 			echo '<br><br>';
@@ -445,7 +461,7 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 			end_table();
 			submit('Receive', _('Receive Items'), true, _('Receive items at destination'));
 		}
-		if (in_array($order['status'], array('draft', 'approved', 'in_transit', 'shipped'))) {
+		if (in_array($order['status'], array('draft', 'submitted', 'approved', 'in_transit', 'shipped'))) {
 			echo ' ';
 			submit('Cancel', _('Cancel Order'), true, _('Cancel this transfer order'));
 		}

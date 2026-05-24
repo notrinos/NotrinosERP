@@ -33,6 +33,7 @@ function get_count_statuses() {
         'draft'       => _('Draft'),
         'in_progress' => _('In Progress'),
         'review'      => _('Review'),
+        'submitted'   => _('Submitted'),
         'approved'    => _('Approved'),
         'posted'      => _('Posted'),
     );
@@ -49,6 +50,7 @@ function get_count_status_color($status) {
         'draft'       => '#6c757d',
         'in_progress' => '#17a2b8',
         'review'      => '#ffc107',
+        'submitted'   => '#fd7e14',
         'approved'    => '#28a745',
         'posted'      => '#007bff',
     );
@@ -622,21 +624,187 @@ function submit_cycle_count_for_review($count_id) {
 }
 
 /**
- * Approve a count session (review → approved).
+ * Calculate approval amount for a cycle count based on variance value.
+ *
+ * @param int $count_id
+ * @return float
+ */
+function get_cycle_count_approval_amount($count_id)
+{
+    $lines = get_cycle_count_lines($count_id, true);
+    $amount = 0;
+
+    while ($line = db_fetch($lines)) {
+        $variance = isset($line['variance_qty']) ? (float)$line['variance_qty'] : 0;
+        if ($variance == 0)
+            continue;
+
+        $item = get_item($line['stock_id']);
+        $cost = $item ? (float)$item['material_cost'] : 0;
+        $amount += abs($variance * $cost);
+    }
+
+    return (float)$amount;
+}
+
+/**
+ * Build cycle count draft payload for core approval.
+ *
+ * @param int $count_id
+ * @return array|false
+ */
+function get_cycle_count_submission_data($count_id)
+{
+    $count = get_cycle_count($count_id);
+    if (!$count)
+        return false;
+
+    $lines = get_cycle_count_lines($count_id, true);
+    $line_data = array();
+
+    while ($line = db_fetch($lines)) {
+        $variance = isset($line['variance_qty']) ? (float)$line['variance_qty'] : 0;
+        if ($variance == 0)
+            continue;
+
+        $item = get_item($line['stock_id']);
+        $cost = $item ? (float)$item['material_cost'] : 0;
+
+        $line_data[] = array(
+            'line_id' => (int)$line['line_id'],
+            'stock_id' => $line['stock_id'],
+            'item_description' => isset($line['item_description']) ? $line['item_description'] : '',
+            'system_qty' => (float)$line['system_qty'],
+            'counted_qty' => (float)$line['counted_qty'],
+            'variance_qty' => $variance,
+            'unit_cost' => $cost,
+            'variance_value' => $variance * $cost,
+            'bin_code' => isset($line['bin_code']) ? $line['bin_code'] : '',
+            'batch_no' => isset($line['batch_no']) ? $line['batch_no'] : '',
+            'serial_no' => isset($line['serial_no']) ? $line['serial_no'] : '',
+        );
+    }
+
+    $statuses = get_count_statuses();
+
+    return array(
+        'count_id' => (int)$count['count_id'],
+        'count_date' => $count['count_date'],
+        'warehouse_loc_code' => $count['warehouse_loc_code'],
+        'warehouse_name' => isset($count['location_name']) ? $count['location_name'] : '',
+        'status' => $count['status'],
+        'status_label' => isset($statuses[$count['status']]) ? $statuses[$count['status']] : $count['status'],
+        'plan_id' => $count['plan_id'] ? (int)$count['plan_id'] : 0,
+        'plan_name' => isset($count['plan_name']) ? $count['plan_name'] : '',
+        'memo' => $count['memo'] ? $count['memo'] : '',
+        'variance_line_count' => count($line_data),
+        'total_variance_value' => (float)get_cycle_count_approval_amount($count_id),
+        'lines' => $line_data,
+    );
+}
+
+/**
+ * Submit a review-ready cycle count to core approval.
+ *
+ * @param int $count_id
+ * @return array|bool
+ */
+function submit_cycle_count_for_core_approval($count_id)
+{
+    $count = get_cycle_count($count_id);
+    if (!$count || $count['status'] != 'review')
+        return false;
+
+    $approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_CYCLE_COUNT);
+    $approval_amount = (float)get_cycle_count_approval_amount($count_id);
+    $approval_required = false;
+    $approval = null;
+
+    if ($approval_registered) {
+        $approval = get_approval_workflow_service();
+        $approval_required = $approval->isApprovalRequired(ST_WH_CYCLE_COUNT, $approval_amount);
+    }
+
+    if (!$approval_registered || !$approval_required) {
+        if (!approve_cycle_count($count_id))
+            return false;
+        return array('status' => 'auto_approved', 'count_id' => (int)$count_id);
+    }
+
+    $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
+        . "status = 'submitted'"
+        . " WHERE count_id = " . db_escape((int)$count_id)
+        . " AND status = 'review'";
+    db_query($sql, 'could not mark cycle count as submitted');
+    if (db_num_affected_rows() <= 0)
+        return false;
+
+    $reloaded = get_cycle_count($count_id);
+    $draft_data = get_cycle_count_submission_data($count_id);
+    if ($draft_data === false)
+        return false;
+
+    $result = $approval->submit(
+        ST_WH_CYCLE_COUNT,
+        $draft_data,
+        $approval_amount,
+        array(
+            'summary' => sprintf(_('Cycle Count #%d'), (int)$reloaded['count_id']),
+            'currency' => get_company_pref('curr_default'),
+            'person_type' => PT_MISC,
+            'person_id' => $_SESSION['wa_current_user']->user,
+            'loc_code' => $reloaded['warehouse_loc_code'],
+        )
+    );
+
+    if (isset($result['status']) && $result['status'] === 'execution_failed') {
+        $rollback_sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
+            . "status = 'review'"
+            . " WHERE count_id = " . db_escape((int)$count_id)
+            . " AND status = 'submitted'";
+        db_query($rollback_sql, 'could not rollback cycle count review status after approval execution failure');
+    }
+
+    return $result;
+}
+
+/**
+ * Approve a count session (submitted → approved).
  *
  * @param int $count_id
  * @return bool success
  */
 function approve_cycle_count($count_id) {
     $count = get_cycle_count($count_id);
-    if (!$count || $count['status'] != 'review') return false;
+    if (!$count || $count['status'] != 'submitted') return false;
 
     $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
         . "status = 'approved', "
         . "approved_by = " . db_escape($_SESSION['wa_current_user']->user)
         . " WHERE count_id = " . db_escape(intval($count_id));
     db_query($sql, 'could not approve cycle count');
-    return true;
+    return db_num_affected_rows() > 0;
+}
+
+/**
+ * Reject a submitted cycle count back to review.
+ *
+ * @param int $count_id
+ * @return bool
+ */
+function reject_cycle_count($count_id)
+{
+    $count = get_cycle_count($count_id);
+    if (!$count || $count['status'] != 'submitted')
+        return false;
+
+    $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
+        . "status = 'review'"
+        . " WHERE count_id = " . db_escape((int)$count_id)
+        . " AND status = 'submitted'";
+    db_query($sql, 'could not reject cycle count');
+
+    return db_num_affected_rows() > 0;
 }
 
 /**
@@ -647,7 +815,7 @@ function approve_cycle_count($count_id) {
  */
 function recount_cycle_count($count_id) {
     $count = get_cycle_count($count_id);
-    if (!$count || !in_array($count['status'], array('review', 'approved'))) return false;
+    if (!$count || !in_array($count['status'], array('review', 'submitted', 'approved'))) return false;
 
     // Clear counted quantities so counter must re-enter
     $sql = "UPDATE " . TB_PREF . "wh_cycle_count_lines SET
@@ -670,11 +838,32 @@ function recount_cycle_count($count_id) {
  */
 function cancel_cycle_count($count_id) {
     $count = get_cycle_count($count_id);
-    if (!$count || in_array($count['status'], array('posted'))) return false;
+    if (!$count || in_array($count['status'], array('posted', 'submitted'))) return false;
 
     // Simply delete the count (cascade deletes lines via FK)
     delete_cycle_count($count_id);
     return true;
+}
+
+/**
+ * Cancel a submitted cycle count from approval queue back to review.
+ *
+ * @param int $count_id
+ * @return bool
+ */
+function cancel_cycle_count_submission($count_id)
+{
+    $count = get_cycle_count($count_id);
+    if (!$count || $count['status'] != 'submitted')
+        return false;
+
+    $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
+        . "status = 'review'"
+        . " WHERE count_id = " . db_escape((int)$count_id)
+        . " AND status = 'submitted'";
+    db_query($sql, 'could not cancel submitted cycle count');
+
+    return db_num_affected_rows() > 0;
 }
 
 /**

@@ -201,12 +201,19 @@ if (isset($_POST['SubmitReview'])) {
     $Ajax->activate('_page_body');
 }
 
-if (isset($_POST['ApproveCount'])) {
-    $cid = key($_POST['ApproveCount']);
-    if (approve_cycle_count($cid))
-        display_notification(sprintf(_('Count #%d approved.'), $cid));
-    else
-        display_error(_('Cannot approve this count.'));
+if (isset($_POST['SubmitApproval'])) {
+    $cid = key($_POST['SubmitApproval']);
+    $result = submit_cycle_count_for_core_approval($cid);
+    if ($result) {
+        if (is_array($result) && isset($result['status']) && $result['status'] === 'pending')
+            display_notification(sprintf(_('Count #%d has been submitted to the core approval workflow.'), $cid));
+        elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved')
+            display_notification(sprintf(_('Count #%d has been auto-approved by the core approval workflow.'), $cid));
+        else
+            display_notification(sprintf(_('Count #%d has been submitted for approval.'), $cid));
+    } else {
+        display_error(_('Cannot submit this count for approval. It must be in Review status and pass approval setup validation.'));
+    }
     $Ajax->activate('_page_body');
 }
 
@@ -459,6 +466,7 @@ if ($active_tab == 'plans') {
         array('Draft', $summary['draft'], '#6c757d'),
         array('In Progress', $summary['in_progress'], '#17a2b8'),
         array('Review', $summary['review'], '#ffc107'),
+        array('Submitted', isset($summary['submitted']) ? $summary['submitted'] : 0, '#fd7e14'),
         array('Approved', $summary['approved'], '#28a745'),
         array('Posted', $summary['posted'], '#007bff'),
     );
@@ -484,9 +492,9 @@ if ($active_tab == 'plans') {
     echo ' &nbsp;';
 
     // Status
-    $stat_options = array('' => _('All Statuses'), 'active' => _('Active (Draft/In Progress/Review)'),
+    $stat_options = array('' => _('All Statuses'), 'active' => _('Active (Draft/In Progress/Review/Submitted)'),
         'draft' => _('Draft'), 'in_progress' => _('In Progress'), 'review' => _('Review'),
-        'approved' => _('Approved'), 'posted' => _('Posted'));
+        'submitted' => _('Submitted'), 'approved' => _('Approved'), 'posted' => _('Posted'));
     echo array_selector('filter_status', $status_filter, $stat_options,
         array('select_submit' => true));
     echo '</div>';
@@ -494,7 +502,7 @@ if ($active_tab == 'plans') {
     // Determine status filter for query
     $query_status = null;
     if ($status_filter == 'active')
-        $query_status = array('draft', 'in_progress', 'review');
+        $query_status = array('draft', 'in_progress', 'review', 'submitted');
     elseif ($status_filter && $status_filter != '')
         $query_status = $status_filter;
 
@@ -574,15 +582,21 @@ if ($active_tab == 'plans') {
                 . ' style="padding:2px 8px;margin:1px;cursor:pointer;color:#dc3545;">'
                 . _('Cancel') . '</button>';
         } elseif ($st == 'review') {
-            echo '<button type="submit" name="ApproveCount[' . $cid . ']" class="ajaxsubmit"'
+            echo '<button type="submit" name="SubmitApproval[' . $cid . ']" class="ajaxsubmit"'
                 . ' style="padding:2px 8px;margin:1px;cursor:pointer;background:#28a745;color:#fff;border:none;border-radius:3px;">'
-                . _('Approve') . '</button>';
+                . _('Submit for Approval') . '</button>';
             echo '<button type="submit" name="RecountCount[' . $cid . ']" class="ajaxsubmit"'
                 . ' style="padding:2px 8px;margin:1px;cursor:pointer;background:#ffc107;color:#000;border:none;border-radius:3px;">'
                 . _('Recount') . '</button>';
             echo '<button type="submit" name="CancelCount[' . $cid . ']" class="ajaxsubmit"'
                 . ' style="padding:2px 8px;margin:1px;cursor:pointer;color:#dc3545;">'
                 . _('Cancel') . '</button>';
+        } elseif ($st == 'submitted') {
+            echo '<span style="display:inline-block;padding:2px 8px;margin:1px;background:#fff3cd;color:#856404;border:1px solid #ffeeba;border-radius:3px;">'
+                . _('Pending Core Approval') . '</span> ';
+            echo '<a href="' . $path_to_root . '/admin/approval_dashboard.php?&sel_app=system" target="_blank" '
+                . 'style="padding:2px 8px;margin:1px;text-decoration:none;color:#007bff;">'
+                . _('Open Dashboard') . '</a>';
         } elseif ($st == 'approved') {
             echo '<button type="submit" name="PostCount[' . $cid . ']" class="ajaxsubmit"'
                 . ' style="padding:2px 8px;margin:1px;cursor:pointer;background:#007bff;color:#fff;border:none;border-radius:3px;">'
@@ -599,8 +613,8 @@ if ($active_tab == 'plans') {
 
         end_row();
 
-        // Expandable detail: show variance lines for review/approved/posted
-        if (in_array($st, array('review', 'approved', 'posted'))) {
+        // Expandable detail: show variance lines for review/submitted/approved/posted
+        if (in_array($st, array('review', 'submitted', 'approved', 'posted'))) {
             $var_lines_result = get_cycle_count_lines($cid, true);
             $var_count = 0;
             $var_rows = array();

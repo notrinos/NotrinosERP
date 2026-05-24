@@ -82,19 +82,27 @@ if (isset($_POST['ADD_SCRAP'])) {
 		$batch_id = get_post('batch_id') ? (int)get_post('batch_id') : null;
 		$memo = get_post('memo');
 
-		$scrap_id = add_scrap_entry($stock_id, $qty, $loc_code, $date_,
+		$result = submit_scrap_entry_for_core_approval(
+			$stock_id, $qty, $loc_code, $date_,
 			$reason_code, $reason_detail, $from_bin_id, $scrap_loc_id,
-			$serial_id, $batch_id, $memo);
+			$serial_id, $batch_id, $memo
+		);
 
-		if ($scrap_id) {
-			$entry = get_scrap_entry($scrap_id);
-			$needs_approval = scrap_needs_approval($entry['total_cost']);
-
-			display_notification(sprintf(_('Scrap entry #%s has been created. Cost: %s'),
-				$scrap_id, price_format($entry['total_cost'])));
-
-			if ($needs_approval) {
-				display_warning(_('This scrap entry exceeds the approval threshold and requires manager approval.'));
+		if ($result) {
+			if (is_array($result) && isset($result['status']) && $result['status'] === 'pending') {
+				display_notification(_('Scrap entry has been submitted to the core approval workflow.'));
+			} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved') {
+				$scrap_id = isset($result['scrap_id']) ? (int)$result['scrap_id'] : 0;
+				if ($scrap_id > 0) {
+					$entry = get_scrap_entry($scrap_id);
+					$cost_text = $entry ? price_format($entry['total_cost']) : _('N/A');
+					display_notification(sprintf(_('Scrap entry #%s has been auto-approved by the core approval workflow. Cost: %s'),
+						$scrap_id, $cost_text));
+				} else {
+					display_notification(_('Scrap entry has been auto-approved by the core approval workflow.'));
+				}
+			} else {
+				display_notification(_('Scrap entry has been submitted for approval.'));
 			}
 
 			// Reset form
@@ -103,18 +111,8 @@ if (isset($_POST['ADD_SCRAP'])) {
 				$_POST['scrap_loc_id'], $_POST['serial_id'],
 				$_POST['batch_id'], $_POST['memo']);
 		} else {
-			display_error(_('Failed to create scrap entry.'));
+			display_error(_('Failed to submit scrap entry for approval.'));
 		}
-	}
-	$Ajax->activate('_page_body');
-}
-
-// --- Approve scrap entry ---
-if (isset($_POST['APPROVE_SCRAP'])) {
-	$scrap_id = (int)get_post('approve_scrap_id');
-	if ($scrap_id > 0) {
-		approve_scrap_entry($scrap_id);
-		display_notification(sprintf(_('Scrap entry #%s has been approved.'), $scrap_id));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -133,8 +131,6 @@ start_form();
 // =====================================================================
 
 $summary = get_scrap_summary(get_post('filter_warehouse'));
-$pending_result = get_scrap_pending_approval();
-$pending_count = db_num_rows($pending_result);
 
 echo "<div style='display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;'>";
 
@@ -156,14 +152,6 @@ echo "<div style='font-size:11px;color:#6c757d;text-transform:uppercase;'>" . _(
 echo "<div style='font-size:22px;font-weight:600;color:#fd7e14;'>" . price_format($summary['total_cost']) . "</div>";
 echo "</div>";
 
-// Pending approval
-if ($pending_count > 0) {
-	echo "<div style='flex:1;min-width:150px;padding:12px 16px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:4px;'>";
-	echo "<div style='font-size:11px;color:#856404;text-transform:uppercase;'>" . _('Pending Approval') . "</div>";
-	echo "<div style='font-size:22px;font-weight:600;color:#856404;'>" . $pending_count . "</div>";
-	echo "</div>";
-}
-
 echo "</div>";
 
 // =====================================================================
@@ -181,39 +169,6 @@ if (!empty($summary['by_reason'])) {
 			. "</span>";
 	}
 	echo "</div>";
-}
-
-// =====================================================================
-// Pending Approval Table
-// =====================================================================
-
-if ($pending_count > 0) {
-	echo "<h3 style='color:#856404;'>" . _('Scrap Entries Pending Approval') . "</h3>";
-	start_table(TABLESTYLE, "width='80%'");
-	$th = array(_('#'), _('Date'), _('Item'), _('Qty'), _('Cost'), _('Reason'), _('Action'));
-	table_header($th);
-
-	// Re-query since we consumed the result counting
-	$pending_result2 = get_scrap_pending_approval();
-	$k = 0;
-	while ($row = db_fetch($pending_result2)) {
-		alt_table_row_color($k);
-		label_cell($row['scrap_id']);
-		label_cell(sql2date($row['scrap_date']));
-		label_cell($row['stock_id'] . ' â€” ' . $row['description']);
-		qty_cell($row['qty']);
-		amount_cell($row['total_cost']);
-		$reason_label = get_scrap_reason_label($row['reason_code']);
-		$reason_color = get_scrap_reason_color($row['reason_code']);
-		label_cell("<span style='color:" . $reason_color . ";font-weight:600;'>" . $reason_label . "</span>");
-		// Approve button
-		echo "<td>";
-		hidden('approve_scrap_id', $row['scrap_id']);
-		submit('APPROVE_SCRAP', _('Approve'), true, _('Approve this scrap entry'), 'default');
-		echo "</td>";
-		end_row();
-	}
-	end_table(1);
 }
 
 // =====================================================================

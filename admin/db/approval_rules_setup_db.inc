@@ -46,6 +46,9 @@ function get_approvable_transaction_types()
 		ST_LEAVE_REQUEST,
 		ST_OVERTIME_REQUEST,
 		ST_PAYROLL_PERIOD,
+		ST_WH_TRANSFER_ORDER,
+		ST_WH_SCRAP,
+		ST_WH_CYCLE_COUNT,
 		ST_WH_MATERIAL_REQUEST,
 	);
 

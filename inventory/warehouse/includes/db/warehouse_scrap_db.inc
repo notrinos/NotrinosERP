@@ -346,6 +346,146 @@ function get_scrap_summary($loc_code = null) {
 }
 
 /**
+ * Estimate total scrap value before posting.
+ *
+ * @param string $stock_id Item code
+ * @param float  $qty Quantity
+ * @return float
+ */
+function estimate_scrap_total_cost($stock_id, $qty)
+{
+	$qty = (float)$qty;
+	if ($qty <= 0)
+		return 0;
+
+	$unit_cost = (float)get_unit_cost($stock_id);
+	return round2($unit_cost * $qty, user_price_dec());
+}
+
+/**
+ * Build scrap draft payload for core approval.
+ *
+ * @param string   $stock_id
+ * @param float    $qty
+ * @param string   $loc_code
+ * @param string   $date_
+ * @param string   $reason_code
+ * @param string   $reason_detail
+ * @param int|null $from_bin_id
+ * @param int|null $scrap_loc_id
+ * @param int|null $serial_id
+ * @param int|null $batch_id
+ * @param string   $memo
+ * @return array
+ */
+function get_scrap_submission_data($stock_id, $qty, $loc_code, $date_, $reason_code, $reason_detail = '',
+	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = '')
+{
+	$item = get_item($stock_id);
+	$reason_label = get_scrap_reason_label($reason_code);
+
+	return array(
+		'stock_id' => $stock_id,
+		'item_description' => $item ? $item['description'] : '',
+		'qty' => (float)$qty,
+		'loc_code' => $loc_code,
+		'scrap_date' => $date_,
+		'reason_code' => $reason_code,
+		'reason_label' => $reason_label,
+		'reason_detail' => $reason_detail ? $reason_detail : '',
+		'from_bin_id' => $from_bin_id ? (int)$from_bin_id : 0,
+		'scrap_loc_id' => $scrap_loc_id ? (int)$scrap_loc_id : 0,
+		'serial_id' => $serial_id ? (int)$serial_id : 0,
+		'batch_id' => $batch_id ? (int)$batch_id : 0,
+		'memo' => $memo ? $memo : '',
+		'unit_cost' => (float)get_unit_cost($stock_id),
+		'total_cost' => (float)estimate_scrap_total_cost($stock_id, $qty),
+	);
+}
+
+/**
+ * Submit a scrap entry into the core approval workflow.
+ *
+ * @param string   $stock_id
+ * @param float    $qty
+ * @param string   $loc_code
+ * @param string   $date_
+ * @param string   $reason_code
+ * @param string   $reason_detail
+ * @param int|null $from_bin_id
+ * @param int|null $scrap_loc_id
+ * @param int|null $serial_id
+ * @param int|null $batch_id
+ * @param string   $memo
+ * @return array|bool
+ */
+function submit_scrap_entry_for_core_approval($stock_id, $qty, $loc_code, $date_, $reason_code,
+	$reason_detail = '', $from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = '')
+{
+	$qty = (float)$qty;
+	if ($qty <= 0)
+		return false;
+
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_SCRAP);
+	$approval_amount = (float)estimate_scrap_total_cost($stock_id, $qty);
+	$approval_required = false;
+	$approval = null;
+
+	if ($approval_registered) {
+		$approval = get_approval_workflow_service();
+		$approval_required = $approval->isApprovalRequired(ST_WH_SCRAP, $approval_amount);
+	}
+
+	if (!$approval_registered || !$approval_required) {
+		$scrap_id = add_scrap_entry(
+			$stock_id,
+			$qty,
+			$loc_code,
+			$date_,
+			$reason_code,
+			$reason_detail,
+			$from_bin_id,
+			$scrap_loc_id,
+			$serial_id,
+			$batch_id,
+			$memo
+		);
+
+		if (!$scrap_id)
+			return false;
+
+		return array('status' => 'auto_approved', 'scrap_id' => (int)$scrap_id);
+	}
+
+	$draft_data = get_scrap_submission_data(
+		$stock_id,
+		$qty,
+		$loc_code,
+		$date_,
+		$reason_code,
+		$reason_detail,
+		$from_bin_id,
+		$scrap_loc_id,
+		$serial_id,
+		$batch_id,
+		$memo
+	);
+
+	return $approval->submit(
+		ST_WH_SCRAP,
+		$draft_data,
+		$approval_amount,
+		array(
+			'summary' => sprintf(_('Scrap Entry %s x %s'), $stock_id, number_format2($qty, user_qty_dec())),
+			'currency' => get_company_pref('curr_default'),
+			'person_type' => PT_MISC,
+			'person_id' => $_SESSION['wa_current_user']->user,
+			'loc_code' => $loc_code,
+		)
+	);
+}
+
+/**
  * Check if a scrap entry needs approval based on threshold value.
  *
  * The threshold is stored in company preferences as 'scrap_approval_threshold'.

@@ -30,6 +30,7 @@
 function get_transfer_order_statuses() {
 	return array(
 		'draft'      => _('Draft'),
+		'submitted'  => _('Submitted'),
 		'approved'   => _('Approved'),
 		'shipped'    => _('Shipped'),
 		'in_transit' => _('In Transit'),
@@ -47,6 +48,7 @@ function get_transfer_order_statuses() {
 function get_transfer_order_status_color($status) {
 	$colors = array(
 		'draft'      => '#6c757d',
+		'submitted'  => '#ffc107',
 		'approved'   => '#007bff',
 		'shipped'    => '#17a2b8',
 		'in_transit' => '#fd7e14',
@@ -291,6 +293,21 @@ function get_transfer_order_lines($transfer_id) {
 }
 
 /**
+ * Count lines for one transfer order.
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return int
+ */
+function count_transfer_order_lines($transfer_id)
+{
+	$sql = "SELECT COUNT(*) AS cnt FROM " . TB_PREF . "wh_transfer_order_lines"
+		. " WHERE transfer_id = " . (int)$transfer_id;
+	$result = db_query($sql, 'could not count transfer order lines');
+	$row = db_fetch($result);
+	return $row ? (int)$row['cnt'] : 0;
+}
+
+/**
  * Get filtered list of transfer orders.
  *
  * @param array $filters Associative array: status, from_loc_code, to_loc_code,
@@ -408,6 +425,174 @@ function delete_transfer_order($transfer_id) {
 // =====================================================================
 
 /**
+ * Get the total estimated value of a transfer order.
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return float
+ */
+function get_transfer_order_total_value($transfer_id)
+{
+	$sql = "SELECT COALESCE(SUM(qty_requested * unit_cost), 0) AS total_value"
+		. " FROM " . TB_PREF . "wh_transfer_order_lines"
+		. " WHERE transfer_id = " . (int)$transfer_id;
+
+	$result = db_query($sql, 'could not get transfer order total value');
+	$row = db_fetch($result);
+
+	return $row ? (float)$row['total_value'] : 0;
+}
+
+/**
+ * Build transfer order draft payload for the core approval engine.
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return array|false
+ */
+function get_transfer_order_submission_data($transfer_id)
+{
+	$order = get_transfer_order($transfer_id);
+	if (!$order)
+		return false;
+
+	$lines = get_transfer_order_lines($transfer_id);
+	$line_data = array();
+	while ($line = db_fetch($lines)) {
+		$line_data[] = array(
+			'line_id' => (int)$line['line_id'],
+			'stock_id' => $line['stock_id'],
+			'description' => isset($line['item_description']) ? $line['item_description'] : '',
+			'units' => isset($line['item_units']) ? $line['item_units'] : '',
+			'qty_requested' => (float)$line['qty_requested'],
+			'qty_shipped' => (float)$line['qty_shipped'],
+			'qty_received' => (float)$line['qty_received'],
+			'unit_cost' => (float)$line['unit_cost'],
+			'line_total' => (float)$line['qty_requested'] * (float)$line['unit_cost'],
+			'from_bin_id' => $line['from_bin_id'] ? (int)$line['from_bin_id'] : 0,
+			'to_bin_id' => $line['to_bin_id'] ? (int)$line['to_bin_id'] : 0,
+			'batch_id' => $line['batch_id'] ? (int)$line['batch_id'] : 0,
+			'serial_id' => $line['serial_id'] ? (int)$line['serial_id'] : 0,
+			'batch_no' => isset($line['batch_no']) ? $line['batch_no'] : '',
+			'serial_no' => isset($line['serial_no']) ? $line['serial_no'] : '',
+		);
+	}
+
+	$statuses = get_transfer_order_statuses();
+
+	return array(
+		'transfer_id' => (int)$order['transfer_id'],
+		'transfer_no' => (int)$order['transfer_no'],
+		'transfer_type' => $order['transfer_type'],
+		'status' => $order['status'],
+		'status_label' => isset($statuses[$order['status']]) ? $statuses[$order['status']] : $order['status'],
+		'from_loc_code' => $order['from_loc_code'],
+		'from_loc_name' => isset($order['from_loc_name']) ? $order['from_loc_name'] : '',
+		'to_loc_code' => $order['to_loc_code'],
+		'to_loc_name' => isset($order['to_loc_name']) ? $order['to_loc_name'] : '',
+		'request_date' => $order['request_date'],
+		'expected_ship_date' => $order['expected_ship_date'] ? $order['expected_ship_date'] : '',
+		'expected_recv_date' => $order['expected_recv_date'] ? $order['expected_recv_date'] : '',
+		'reference' => $order['reference'] ? $order['reference'] : '',
+		'memo' => $order['memo'] ? $order['memo'] : '',
+		'requested_by' => (int)$order['requested_by'],
+		'requested_by_name' => isset($order['requested_by_name']) ? $order['requested_by_name'] : '',
+		'line_count' => count($line_data),
+		'total_estimated' => (float)get_transfer_order_total_value($transfer_id),
+		'lines' => $line_data,
+	);
+}
+
+/**
+ * Submit a transfer order for approval (draft -> submitted).
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return bool
+ */
+function submit_transfer_order($transfer_id)
+{
+	$order = get_transfer_order($transfer_id);
+	if (!$order || $order['status'] !== 'draft')
+		return false;
+
+	$line_count = count_transfer_order_lines($transfer_id);
+	if ($line_count <= 0)
+		return false;
+
+	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
+		. "status='submitted',"
+		. "updated_at=NOW()"
+		. " WHERE transfer_id=" . (int)$transfer_id
+		. " AND status='draft'";
+
+	db_query($sql, 'could not submit transfer order');
+	return db_num_affected_rows() > 0;
+}
+
+/**
+ * Submit one transfer order into the core approval workflow.
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return array|bool
+ */
+function submit_transfer_order_for_core_approval($transfer_id)
+{
+	$order = get_transfer_order($transfer_id);
+	if (!$order || $order['status'] !== 'draft')
+		return false;
+
+	if (count_transfer_order_lines($transfer_id) <= 0)
+		return false;
+
+	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_TRANSFER_ORDER);
+	$approval_amount = (float)get_transfer_order_total_value($transfer_id);
+	$approval_required = false;
+	$approval = null;
+
+	if ($approval_registered) {
+		$approval = get_approval_workflow_service();
+		$approval_required = $approval->isApprovalRequired(ST_WH_TRANSFER_ORDER, $approval_amount);
+	}
+
+	if (!submit_transfer_order($transfer_id))
+		return false;
+
+	if (!$approval_registered || !$approval_required) {
+		if (!approve_transfer_order($transfer_id))
+			return false;
+
+		return array('status' => 'auto_approved', 'transfer_id' => (int)$transfer_id);
+	}
+
+	$reloaded = get_transfer_order($transfer_id);
+	$draft_data = get_transfer_order_submission_data($transfer_id);
+	if ($draft_data === false)
+		return false;
+
+	$result = $approval->submit(
+		ST_WH_TRANSFER_ORDER,
+		$draft_data,
+		$approval_amount,
+		array(
+			'summary' => sprintf(_('Transfer Order TO-%s'), str_pad($reloaded['transfer_no'], 4, '0', STR_PAD_LEFT)),
+			'currency' => get_company_pref('curr_default'),
+			'person_type' => PT_MISC,
+			'person_id' => $reloaded['requested_by'],
+			'loc_code' => $reloaded['from_loc_code'],
+		)
+	);
+
+	if (isset($result['status']) && $result['status'] === 'execution_failed') {
+		$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
+			. "status='draft',"
+			. "updated_at=NOW()"
+			. " WHERE transfer_id=" . (int)$transfer_id
+			. " AND status='submitted'";
+		db_query($sql, 'could not rollback transfer order to draft after approval execution failure');
+	}
+
+	return $result;
+}
+
+/**
  * Approve a transfer order.
  *
  * @param int $transfer_id Transfer order ID
@@ -415,7 +600,7 @@ function delete_transfer_order($transfer_id) {
  */
 function approve_transfer_order($transfer_id) {
 	$order = get_transfer_order($transfer_id);
-	if (!$order || $order['status'] !== 'draft')
+	if (!$order || $order['status'] !== 'submitted')
 		return false;
 
 	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
@@ -426,7 +611,29 @@ function approve_transfer_order($transfer_id) {
 		. " WHERE transfer_id=" . (int)$transfer_id;
 
 	db_query($sql, 'could not approve transfer order');
-	return true;
+	return db_num_affected_rows() > 0;
+}
+
+/**
+ * Reject a submitted transfer order back to draft.
+ *
+ * @param int $transfer_id Transfer order ID
+ * @return bool
+ */
+function reject_transfer_order($transfer_id)
+{
+	$order = get_transfer_order($transfer_id);
+	if (!$order || $order['status'] !== 'submitted')
+		return false;
+
+	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
+		. "status='draft',"
+		. "updated_at=NOW()"
+		. " WHERE transfer_id=" . (int)$transfer_id
+		. " AND status='submitted'";
+
+	db_query($sql, 'could not reject transfer order');
+	return db_num_affected_rows() > 0;
 }
 
 /**
