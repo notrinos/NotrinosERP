@@ -220,7 +220,7 @@ $edit_id = find_submit('Edit');
 if ($edit_id > 0) {
 	$selected_id = $edit_id;
 	$Ajax->activate('mr_detail');
-	$Ajax->addScript('mr_detail', "document.getElementById('mr_detail').scrollIntoView({behavior:'smooth',block:'start'});");
+	add_scroll_into_view('mr_detail');
 }
 
 // --- View button from list ---
@@ -228,7 +228,7 @@ $view_id = find_submit('View');
 if ($view_id > 0) {
 	$selected_id = $view_id;
 	$Ajax->activate('mr_detail');
-	$Ajax->addScript('mr_detail', "document.getElementById('mr_detail').scrollIntoView({behavior:'smooth',block:'start'});");
+	add_scroll_into_view('mr_detail');
 }
 
 // --- New button ---
@@ -346,7 +346,7 @@ div_end();
 
 div_start('mr_detail');
 if ($selected_id > 0 && !in_ajax()) {
-	echo '<script>window.addEventListener("load",function(){var el=document.getElementById("mr_detail");if(el)el.scrollIntoView({behavior:"smooth",block:"start"}); });</script>';
+	add_scroll_into_view('mr_detail');
 }
 if ($selected_id > 0 || $is_new_request) {
 	$editing = false;

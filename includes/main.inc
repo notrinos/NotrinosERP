@@ -161,6 +161,31 @@ function add_js_source($text) {
 		$js_lib[] = $text;
 }
 
+/**
+ * Queue a scroll-into-view action for a shared detail container.
+ *
+ * During Ajax requests the scroll runs as part of the Ajax response. During
+ * normal page renders the scroll is deferred until window load so the target
+ * element is present in the DOM.
+ *
+ * @param string $element_id Target element id to scroll into view.
+ * @param bool   $trigger    Ajax trigger flag or command name.
+ * @param string $behavior   Scroll behavior, defaults to smooth.
+ * @param string $block      Scroll alignment, defaults to start.
+ */
+function add_scroll_into_view($element_id, $trigger=true, $behavior='smooth', $block='start') {
+	global $Ajax;
+
+	$js = 'var el=document.getElementById(' . json_encode($element_id) . ');'
+		. 'if(el)el.scrollIntoView({behavior:' . json_encode($behavior)
+		. ',block:' . json_encode($block) . ', inline: "nearest"});';
+
+	if (in_ajax())
+		$Ajax->addScript($trigger, $js);
+	else
+		add_js_source('window.addEventListener("load",function(){' . $js . '});');
+}
+
 /*
  * Compresses the Javascript code for more efficient delivery.
  * copyright (c) 2005 by Jared White & J. Max Wilson
