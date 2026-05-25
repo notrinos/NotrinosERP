@@ -1,3 +1,440 @@
+commit 78b4fb5a7b71eb166994add0eb0d2109076d56a0
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon May 25 10:25:51 2026 +0700
+
+    strstr(): Passing null to parameter #1 ($haystack) of type string is deprecated. Fixed
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit 7637d656f854332b6641c0ab134a5e072e3e2856
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon May 11 03:49:29 2026 +0700
+
+    php 8.4 error: Implicit conversion from float. Fixed
+
+M	reporting/includes/class.graphic.inc
+
+commit 58af2abc8904b97997b01e8b1ad15d06d7b9d6c7
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat May 9 05:56:03 2026 +0700
+
+    Clear buffers before streaming PDF headers to avoid UTF-8 BOM output.
+
+M	reporting/includes/pdf_report.inc
+
+commit 8d902c03ba5cb25953724d34ade15029dc0160fd
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu May 7 22:20:49 2026 +0700
+
+    force reload css everytime modified
+
+M	includes/page/header.inc
+
+commit 33ade92fabcb69812397a90ce0e847d16e1d1557
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Apr 6 23:41:28 2026 +0700
+
+    Global CSRF token for AJAX requests (print/email links, etc.) on pages without forms.
+
+M	admin/db/security_db.inc
+M	includes/page/header.inc
+
+commit 0c914bbd21cef87401dc218a3ac1dccab1cf92ee
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Mar 20 12:50:59 2026 +0700
+
+    Always carry _tocken even before a report parameters from is rendered.
+
+M	reporting/reports_main.php
+
+commit 7c2ca021becb414f32c9f258beef950756a28fd8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Mar 20 12:31:59 2026 +0700
+
+    New CSRF protection blocking ajax post. Fixed
+
+M	libraries/utils.js
+M	reporting/includes/reports_classes.inc
+
+commit 5063c10c9870b58175a446967ae0d12594697a16
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Mar 20 00:53:16 2026 +0700
+
+    Missing CSRF Protection. Fixed.
+
+M	includes/session.inc
+M	includes/ui/ui_controls.inc
+
+commit 82f5a804def0f11139b96043d1e5151d220b9db8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Mar 16 21:11:13 2026 +0700
+
+    Install Page Missing exit() After Redirect. Fixed.
+
+M	install/index.php
+
+commit df779a697ccc98ae8682edbabe48d0e6446b1f4d
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Mar 16 21:06:58 2026 +0700
+
+    SQL injection in purchase order search and GL transaction filter. Fixed.
+
+M	gl/includes/db/gl_db_trans.inc
+M	purchasing/includes/db/po_db.inc
+
+commit 61c9d41000af8b228a9777e1e6446385d24e36c1
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Feb 4 14:09:52 2026 +0700
+
+    delete hrm.php
+
+D	applications/hrm.php
+
+commit d5f7208c08b970d7f1120c451b847fa9949b8449
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Feb 3 13:25:37 2026 +0700
+
+    php 8 error deprecated null parameter. Fixed
+
+M	reporting/includes/pdf_report.inc
+
+commit dfa034d91cf482c4a0cebcbc5369d1d3c7cfe41c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 13:54:08 2026 +0700
+
+    marge with origin master branch, revert to state 7e64451cbcb04a7038ce208b2149e4c37d7701ae
+
+M	.gitignore
+M	NotrinosERP.php
+M	admin/attachments.php
+M	admin/change_current_user_password.php
+M	admin/company_preferences.php
+M	admin/db/maintenance_db.inc
+M	admin/db/transactions_db.inc
+M	admin/db/users_db.inc
+M	admin/gl_setup.php
+M	admin/users.php
+M	applications/application.php
+D	company/0/images/employees/index.php
+D	company/0/images/stock_items/101.jpg
+D	company/0/images/stock_items/102.jpg
+D	company/0/images/stock_items/103.jpg
+D	company/0/images/stock_items/index.php
+M	fixed_assets/includes/fixed_assets_db.inc
+M	gl/includes/db/gl_db_trans.inc
+M	gl/includes/db/gl_journal.inc
+M	gl/manage/gl_quick_entries.php
+D	hrm/attendance.php
+D	hrm/includes/db/attendance_db.inc
+D	hrm/includes/db/department_db.inc
+D	hrm/includes/db/employee_db.inc
+D	hrm/includes/db/grade_db.inc
+D	hrm/includes/db/index.php
+D	hrm/includes/db/job_classes_db.inc
+D	hrm/includes/db/job_position_db.inc
+D	hrm/includes/db/leave_db.inc
+D	hrm/includes/db/overtime_db.inc
+D	hrm/includes/db/pay_element_db.inc
+D	hrm/includes/db/payslip_db.inc
+D	hrm/includes/db/salary_structure_db.inc
+D	hrm/includes/hrm_class.inc
+D	hrm/includes/hrm_db.inc
+D	hrm/includes/hrm_ui.inc
+D	hrm/includes/index.php
+D	hrm/includes/ui/index.php
+D	hrm/includes/ui/payslip_ui.inc
+D	hrm/index.php
+D	hrm/inquiry/index.php
+D	hrm/manage/departments.php
+D	hrm/manage/employees.php
+D	hrm/manage/grades.php
+D	hrm/manage/index.php
+D	hrm/manage/job_classes.php
+D	hrm/manage/job_positions.php
+D	hrm/manage/leave_types.php
+D	hrm/manage/overtime.php
+D	hrm/manage/pay_elements.php
+D	hrm/manage/salary_structure.php
+D	hrm/payslip.php
+D	hrm/view/index.php
+M	includes/access_levels.inc
+M	includes/archive.inc
+M	includes/banking.inc
+M	includes/current_user.inc
+M	includes/references.inc
+M	includes/sysnames.inc
+M	includes/types.inc
+M	includes/ui/allocation_cart.inc
+M	includes/ui/ui_controls.inc
+M	includes/ui/ui_globals.inc
+M	includes/ui/ui_input.inc
+M	includes/ui/ui_lists.inc
+M	install/index.php
+M	inventory/manage/items.php
+M	purchasing/includes/db/po_db.inc
+M	purchasing/includes/db/supp_trans_db.inc
+M	purchasing/includes/db/suppalloc_db.inc
+M	purchasing/includes/ui/invoice_ui.inc
+M	purchasing/supplier_payment.php
+M	reporting/includes/Workbook.php
+M	reporting/includes/class.pdf.inc
+M	reporting/includes/doctext.inc
+M	reporting/includes/pdf_report.inc
+M	reporting/includes/reports_classes.inc
+M	reporting/includes/tcpdf.php
+M	reporting/prn_redirect.php
+M	reporting/rep106.php
+M	reporting/rep111.php
+M	reporting/rep112.php
+M	reporting/rep113.php
+M	reporting/rep115.php
+M	reporting/rep206.php
+M	reporting/rep209.php
+M	reporting/rep210.php
+M	reporting/rep302.php
+M	reporting/rep303.php
+M	reporting/rep304.php
+M	reporting/rep305.php
+M	reporting/rep306.php
+M	reporting/rep401.php
+M	reporting/rep402.php
+M	reporting/rep501.php
+M	reporting/rep601.php
+M	reporting/rep701.php
+M	reporting/rep702.php
+M	reporting/rep704.php
+M	reporting/rep706.php
+M	reporting/rep707.php
+M	reporting/rep708.php
+M	reporting/rep710.php
+M	sales/customer_invoice.php
+M	sales/includes/cart_class.inc
+M	sales/includes/db/cust_trans_db.inc
+M	sales/includes/db/sales_order_db.inc
+M	sales/includes/sales_db.inc
+M	sales/includes/ui/sales_order_ui.inc
+M	sales/sales_order_entry.php
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+M	themes/default/renderer.php
+M	themes/dropdown/renderer.php
+M	version.php
+
+commit 87269b42beb0dc2e5790c0f5da4d16ed4fb44e4b
+Merge: 7e64451 c8ac205
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 13:02:18 2026 +0700
+
+    Merge branch 'master' of github.com:notrinos/NotrinosERP
+
+commit 7e64451cbcb04a7038ce208b2149e4c37d7701ae
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 13:00:50 2026 +0700
+
+    update exchange rate portal of exchange-rate.org
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit c8ac205bbbff43b7d7a9ee651e51797b253efbe7
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:33:27 2026 +0700
+
+    Revert "php 8 error: Creation of dynamic property. Fixed."
+    
+    This reverts commit 9f1d95e78c0411cabc63aaeacd2717f134d31867.
+
+M	includes/archive.inc
+
+commit e671195ca828d3b0d055200d84c2d9de9cdaaa6a
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:31:17 2026 +0700
+
+    Revert "synctax error in company preference. Fixed."
+    
+    This reverts commit 9fde141fc9bb427b399f3e5d43390c4dd43977d0.
+
+M	admin/company_preferences.php
+
+commit 42f24753abd3cdf0bf880903fff74798c9ed99b8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:31:14 2026 +0700
+
+    Revert "prevent duplicated supplier short name and customer short name"
+    
+    This reverts commit 2b55c9c1c43124148e11db1d86e1eecc7b2cfa18.
+
+M	purchasing/manage/suppliers.php
+M	sales/manage/customers.php
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit 4a4689a9fba2c2c3f9c6648cdb7dcde9f258ff68
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:31:11 2026 +0700
+
+    Revert "update exchange rate portal of exchange-rate.org"
+    
+    This reverts commit 8e7f7096bd38d6c782851a12cf718e24ee8937e3.
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit c93a0ac9993b9cc26a2907aae030a166e32b8f93
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:31:03 2026 +0700
+
+    Revert "Revert "update exchange rate portal of exchange-rate.org""
+    
+    This reverts commit 0d18cd4af4c8a529f40d86cda2a2bdb4a6dfe8a5.
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit 4703162dbf46cae5c910684d1cbae5587ba3fc14
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:20:55 2026 +0700
+
+    Revert "Add Supplier Invoice Menu after Supplier Payment"
+    
+    This reverts commit 6918d375f7645e3ec01058e0122adf4937a8abd5.
+
+M	purchasing/supplier_payment.php
+
+commit 0d18cd4af4c8a529f40d86cda2a2bdb4a6dfe8a5
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 10:07:15 2026 +0700
+
+    Revert "update exchange rate portal of exchange-rate.org"
+    
+    This reverts commit 8e7f7096bd38d6c782851a12cf718e24ee8937e3.
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit 8e7f7096bd38d6c782851a12cf718e24ee8937e3
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 2 09:59:57 2026 +0700
+
+    update exchange rate portal of exchange-rate.org
+
+M	gl/includes/db/gl_db_rates.inc
+
+commit 2b55c9c1c43124148e11db1d86e1eecc7b2cfa18
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jan 31 10:38:59 2026 +0700
+
+    prevent duplicated supplier short name and customer short name
+
+M	purchasing/manage/suppliers.php
+M	sales/manage/customers.php
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit 9fde141fc9bb427b399f3e5d43390c4dd43977d0
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jan 31 00:32:19 2026 +0700
+
+    synctax error in company preference. Fixed.
+
+M	admin/company_preferences.php
+
+commit f0931ba4fe80b07968231962bec5f8cac7a3cf1d
+Merge: 6918d37 9f1d95e
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Jan 30 22:47:55 2026 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
+commit 9f1d95e78c0411cabc63aaeacd2717f134d31867
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 27 14:27:16 2026 +0700
+
+    php 8 error: Creation of dynamic property. Fixed.
+
+M	includes/archive.inc
+
+commit 6d4dcf6fb8147e0620082e38ddbc6a55cc20dfc2
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 27 11:37:00 2026 +0700
+
+    OrderNumber parameter is not sanitized and escaped in customer delivery. Fixed
+
+M	sales/customer_delivery.php
+M	sales/includes/db/sales_delivery_db.inc
+
+commit 27a7eb48fd9a7e51475680fcac0d004a5b500363
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Jan 26 10:14:28 2026 +0700
+
+    moved year to 2026
+
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit c35c8ab77b2cd5b18333f07e70baf7c5b3be4f26
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Jan 16 11:09:55 2026 +0700
+
+    php 8 error creation of dynamic property in grn_db.inc. Fixed.
+
+M	purchasing/includes/po_class.inc
+
+commit eeeb1219d6da1c14c6585be4f919290c8318aa35
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Jan 15 11:31:52 2026 +0700
+
+    added 2 new widgets for Inventory Dashboard: Items Below Reorder Level & Items Are Running Low
+
+M	admin/dashboard.php
+M	dashboard/includes/dashboard_classes.inc
+A	dashboard/widget303.php
+A	dashboard/widget304.php
+
+commit 74a119c7ca6a3f526b87f745e133db00dfc5c40c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Jan 15 04:45:20 2026 +0700
+
+    Make Item Image clickable to view larger image
+
+M	inventory/manage/items.php
+
+commit ef90582fe150ecde561f7cf80ba12ae8aa8c913b
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Jan 14 11:26:51 2026 +0700
+
+    Adjusting in Items Entry. Adding extra space for item image.
+
+M	inventory/manage/items.php
+
+commit 98fda93b590e804aa7c48599d07fac2e808de7b6
+Merge: 9d9bb4b ff83f13
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jan 10 00:40:37 2026 +0700
+
+    Merge branch 'master' of github.com:notrinos/NotrinosERP
+
+commit 9d9bb4b9587b9c565facad8914f7ac305b35668d
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jan 10 00:23:22 2026 +0700
+
+    Update PHP version requirement to 8.4
+
+M	README.md
+
+commit ff83f13a842c958551e51dba054cdf262cafe47b
+Author: Phương <trananhphuong83@gmail.com>
+Date:   Sat Jan 10 00:21:35 2026 +0700
+
+    Update PHP version requirement to 8.4
+
+M	README.md
+
+commit 85f6475171b1013988ed87d811786a11473db8e1
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jan 10 00:17:38 2026 +0700
+
+    Release 0.8
+
+M	CHANGELOG.txt
+M	version.php
+
 commit ca22a393e56227d9025f77daffda1c4618e7cfff
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sat Jan 10 00:10:57 2026 +0700
@@ -849,6 +1286,14 @@ Date:   Mon Dec 15 12:09:05 2025 +0700
 M	inventory/includes/db/items_adjust_db.inc
 M	sales/includes/db/sales_delivery_db.inc
 
+commit 6918d375f7645e3ec01058e0122adf4937a8abd5
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Mar 21 09:45:09 2023 +0700
+
+    Add Supplier Invoice Menu after Supplier Payment
+
+M	purchasing/supplier_payment.php
+
 commit 943a559dc96b7354febc7a3bb9d9a90dc1952abf
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Mar 21 09:43:25 2023 +0700
@@ -856,6 +1301,14 @@ Date:   Tue Mar 21 09:43:25 2023 +0700
     Add Supplier Invoice Menu after Supplier Payment
 
 M	purchasing/supplier_payment.php
+
+commit 1e09924b56e5fa4b72dc3563267f178bc48335d3
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Mar 11 13:41:44 2023 +0700
+
+    Supplier credit note not process in php8. Fixed
+
+M	purchasing/includes/db/invoice_db.inc
 
 commit b7fcf1260f16ee138ee786db84f30cc6a44de525
 Author: notrinos <trananhphuong83@gmail.com>
@@ -876,6 +1329,25 @@ M	purchasing/includes/db/invoice_db.inc
 M	purchasing/includes/db/suppalloc_db.inc
 M	purchasing/supplier_credit.php
 
+commit ed8898d138f47bc1b246b22aa5e5f26094871519
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Mar 11 10:04:40 2023 +0700
+
+    Modifying Supplier Credit: reverted GL postings - fixed.
+    Supplier Credit Note: invalid reference number selected for credit against invoice - fixed
+
+M	purchasing/includes/db/invoice_db.inc
+M	purchasing/includes/db/suppalloc_db.inc
+M	purchasing/supplier_credit.php
+
+commit 2aa1b22c59a56db964985ecb34da66e3402423a2
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 11 22:06:16 2023 +0700
+
+    php8 error: Trying to access array offset on value of type bool. Fixed.
+
+M	sales/customer_payments.php
+
 commit 7ba68d4cb3ffa82023b141b89b0e97b334be811f
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sat Feb 11 22:04:03 2023 +0700
@@ -895,6 +1367,32 @@ M	purchasing/supplier_credit.php
 M	purchasing/supplier_invoice.php
 M	sales/credit_note_entry.php
 
+commit e6c968d517df69c5e57d408ee89db17bd44284cc
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 11 04:11:49 2023 +0700
+
+    Credit note can be posted without customer, supplier selected when search customer list, supplier list is enabled. Fixed
+
+M	purchasing/supplier_credit.php
+M	purchasing/supplier_invoice.php
+M	sales/credit_note_entry.php
+
+commit 4c92fedc9132bb8815d2eaaa370ce783c2d5ec25
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Feb 10 00:12:02 2023 +0700
+
+    Incorrect Journal Balance when many decimals... Continue.
+
+M	gl/includes/db/gl_db_trans.inc
+
+commit 5049e80ca04dbc5dd81f2f904f206cf41c11d255
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Feb 10 00:09:24 2023 +0700
+
+    Incorrect Journal Balance (sales invoice) when many decimals in tax and price.
+
+M	gl/includes/db/gl_db_trans.inc
+
 commit 7b8e528fd16c0482a428d4ca232dffa634be432f
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Fri Feb 10 00:06:49 2023 +0700
@@ -902,6 +1400,15 @@ Date:   Fri Feb 10 00:06:49 2023 +0700
     Incorrect Journal Balance (sales invoice) when many decimals in tax and price.
 
 M	gl/includes/db/gl_db_trans.inc
+
+commit ea2e137699a2920601a9570121807a423dab157b
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Sep 6 23:32:23 2022 +0700
+
+    Sales group query error in mysql 8. groups is a reserved word. Fixed
+
+M	includes/ui/ui_lists.inc
+M	sales/includes/db/sales_groups_db.inc
 
 commit 5a5e01cd7c823eac357dbbb8afe73b2792dc8d21
 Author: notrinos <trananhphuong83@gmail.com>
@@ -912,6 +1419,14 @@ Date:   Tue Sep 6 23:28:30 2022 +0700
 M	includes/ui/ui_lists.inc
 M	sales/includes/db/sales_groups_db.inc
 
+commit 4895f607d39ccb721d5e08f290728cbade4cf391
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Aug 25 21:34:06 2022 +0700
+
+    Attach Documents error: Selected transaction does not exists. Fixed
+
+M	admin/attachments.php
+
 commit 3a2d88d5f140fb6f413f96477c51aedd339c0403
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Thu Aug 25 21:32:52 2022 +0700
@@ -919,6 +1434,14 @@ Date:   Thu Aug 25 21:32:52 2022 +0700
     Attach Documents error: Selected transaction does not exists. Fixed
 
 M	admin/attachments.php
+
+commit 55f160e3f739fbb051f1117dbe6f67561de984f9
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Aug 25 19:51:23 2022 +0700
+
+    Wrong button title in po_receive_items. Fixed.
+
+M	purchasing/po_receive_items.php
 
 commit 5dc0979afeb26b78d03b0bd036686f113e015a19
 Author: notrinos <trananhphuong83@gmail.com>
@@ -936,6 +1459,16 @@ Date:   Thu Aug 25 00:56:03 2022 +0700
 
 M	lang/new_language_template/LC_MESSAGES/empty.po
 
+commit d2298ca26b0fd17627be1f49ddb4214844a46981
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Aug 23 21:41:42 2022 +0700
+
+    no x-frame-options header set which allow clickjacking attack. Fixed.
+
+M	access/login.php
+M	access/password_reset.php
+M	includes/page/header.inc
+
 commit c2ff3d8e85a811003b796ca38f5b3290deeaa3aa
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Aug 23 21:31:52 2022 +0700
@@ -945,6 +1478,14 @@ Date:   Tue Aug 23 21:31:52 2022 +0700
 M	access/login.php
 M	access/password_reset.php
 M	includes/page/header.inc
+
+commit a42dacb32c58b04df01d4bace8b7c3f9f25e1e28
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Aug 22 14:47:57 2022 +0700
+
+    added password validation for adding new user.
+
+M	admin/users.php
 
 commit e61e76b44c6a2b28a4a648a06ef34f65c376ec1e
 Author: notrinos <trananhphuong83@gmail.com>
@@ -962,12 +1503,32 @@ Date:   Sun Aug 21 21:22:52 2022 +0700
 
 M	admin/users.php
 
+commit 8cc19ec7d1dada77f9de97980335a6f62f6a02e4
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 21 21:21:26 2022 +0700
+
+    strtotime(): Passing null to parameter #1. Fixed
+
+M	admin/users.php
+
 commit 5de765bd465849b82d16f947cf7923f7ad4ee615
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Aug 21 10:13:26 2022 +0700
 
     error password_hash() expects at least 2 arguments. Fixed.
 
+M	includes/current_user.inc
+
+commit d0ee2358234c3a3a17b0a69b3ca7278d0df96120
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 21 10:04:09 2022 +0700
+
+    changed password hash method from md5 to bcrypt.
+
+M	admin/change_current_user_password.php
+M	admin/create_coy.php
+M	admin/db/users_db.inc
+M	admin/users.php
 M	includes/current_user.inc
 
 commit 1b9903f4deea3289872793e60d730c63ecbf7b45
@@ -982,6 +1543,16 @@ M	admin/db/users_db.inc
 M	admin/users.php
 M	includes/current_user.inc
 
+commit bbaf2950e67e7ed85f6ee7af84ba545227043430
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 21 00:16:41 2022 +0700
+
+    Added dashboard widget for unpaid purchase invoices.
+
+M	admin/dashboard.php
+M	dashboard/includes/dashboard_classes.inc
+A	dashboard/widget204.php
+
 commit 84c959c30a63720681dca5a44b05bcc7536aec07
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Aug 21 00:13:00 2022 +0700
@@ -991,6 +1562,15 @@ Date:   Sun Aug 21 00:13:00 2022 +0700
 M	admin/dashboard.php
 M	dashboard/includes/dashboard_classes.inc
 A	dashboard/widget204.php
+
+commit 97de1527d7c3fae3a7c18df1def56e3edf8d8362
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Aug 16 08:21:51 2022 +0700
+
+    Prevent cross-site scripting(XSS) vulnerabilities.
+
+M	SECURITY.md
+M	libraries/select.js
 
 commit 0362778f4f678156c22a009094225823df8a4760
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1008,6 +1588,22 @@ Date:   Mon Aug 15 11:15:02 2022 +0700
     Added security policy file.
 
 A	SECURITY.md
+
+commit 5bfe9b8223f99e637c36bb79c92085150026e799
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Aug 15 11:11:32 2022 +0700
+
+    Added security policy file.
+
+A	SECURITY.md
+
+commit 76126b89a476959183578222fb1219fd1045d817
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Aug 15 07:46:40 2022 +0700
+
+    attachment.php error: data truncated for column 'trans_no'. Fixed.
+
+M	admin/attachments.php
 
 commit 66bb42a5e6da69badfd2c68c754462108d4da2fe
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1028,6 +1624,27 @@ M	reporting/rep107.php
 M	sales/customer_invoice.php
 M	sales/includes/db/sales_invoice_db.inc
 
+commit fc6a84aec2e34cfb689039dcd6f08428d59e9d08
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Aug 15 00:18:07 2022 +0700
+
+    Additional bugfixes for prepayment handling in sales reports (Customer Balances, Aged Customer Analysys, Customer Statements and Sales Invoice)
+
+M	reporting/rep102.php
+M	reporting/rep107.php
+M	sales/customer_invoice.php
+M	sales/includes/db/sales_invoice_db.inc
+
+commit 81d6722f3d2f6bfc5a34aa40a755a38b9e5332f6
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 14 22:09:03 2022 +0700
+
+    Customer balances reports: further fixes and cleanups.
+
+M	reporting/rep101.php
+M	reporting/rep102.php
+M	reporting/rep115.php
+
 commit 58b4e31cd9a33eeb9b45e3851a0a76dbce7ffeca
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Aug 14 21:32:59 2022 +0700
@@ -1045,6 +1662,26 @@ Date:   Sun Aug 14 15:25:05 2022 +0700
     Customer balances reports: additional bug fixes to balance totals calculations.
 
 M	sales/includes/db/customers_db.inc
+
+commit c82657ee5de4da86d437535ef20c2d2a233c642b
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 14 15:18:48 2022 +0700
+
+    Customer balances reports: additional bug fixes to balance totals calculations.
+
+M	sales/includes/db/customers_db.inc
+
+commit 1a86b72e52be2428601187216d079399ccd157c2
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 14 14:57:12 2022 +0700
+
+    Customer balances reports: fixed balance sums for prepayment invoices.
+
+M	reporting/includes/doctext.inc
+M	reporting/rep101.php
+M	reporting/rep102.php
+M	reporting/rep108.php
+M	reporting/rep115.php
 
 commit fe2d16dae3bcaed5e0c6d36a4a781fe6c295b81d
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1066,6 +1703,22 @@ Date:   Sun Aug 14 07:58:05 2022 +0700
 
 M	reporting/includes/class.mail.inc
 
+commit d29c4748327ae82afae4e84f302e4e46911cf647
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 14 07:55:51 2022 +0700
+
+    php 8 error parameter cannot be null.
+
+M	reporting/includes/class.mail.inc
+
+commit 55b438af6acf39c52add2a8ae122d85078e3e38a
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Aug 14 01:02:52 2022 +0700
+
+    php 8 error. strpos(): Passing null to parameter. Fixed
+
+M	includes/date_functions.inc
+
 commit 7b127823e8d27962a5362a233cdbc019f5a749e3
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Aug 14 01:00:10 2022 +0700
@@ -1081,6 +1734,23 @@ Date:   Fri Aug 12 22:55:20 2022 +0700
     php 8. cannot generate recurring invoices. Fixed.
 
 M	reporting/includes/reporting.inc
+
+commit ea24744defab0e90f6b3639dde1ceb7fa8ef9d60
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Aug 12 22:51:04 2022 +0700
+
+    php 8. cannot generate recurring invoices. Fixed.
+
+M	reporting/includes/reporting.inc
+
+commit 5ed2b481b529719e025cbe38e25c268bea40939b
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Aug 12 22:47:34 2022 +0700
+
+    Invoice not converting from DN due to float bug in PHP. Rerun
+
+M	sales/customer_delivery.php
+M	sales/customer_invoice.php
 
 commit e19b7966d216ebb2446bd21a501194b469519cde
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1100,6 +1770,23 @@ Date:   Fri Aug 12 22:42:38 2022 +0700
 M	sales/customer_delivery.php
 M	sales/customer_invoice.php
 
+commit b18b8f566c658f11be093e2ec08422fb4a7d2f35
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Aug 12 22:37:51 2022 +0700
+
+    Invoice not converting from DN due to float bug. Fixed.
+
+M	sales/customer_delivery.php
+M	sales/customer_invoice.php
+
+commit 7edbee9614c31e4f7b1b532748a7395d48d31505
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Aug 12 14:36:50 2022 +0700
+
+    get_stock_gl_code function called twice in the add_supp_invoice. Fixed.
+
+M	purchasing/includes/db/invoice_db.inc
+
 commit 6670317ab7aef415edcc52e7a8b0650d57a9a357
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Fri Aug 12 14:35:28 2022 +0700
@@ -1116,6 +1803,22 @@ Date:   Fri Aug 12 00:09:46 2022 +0700
 
 M	admin/db/voiding_db.inc
 
+commit 1961599bb42c83e617edf194246c91a10e86ab71
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Aug 12 00:05:36 2022 +0700
+
+    Removed delivery in a batch cannot be voided after the invoice is made. Fixed.
+
+M	admin/db/voiding_db.inc
+
+commit 00a741a1de82437aeae590517a48d26ec3cbc0cc
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Aug 11 07:42:03 2022 +0700
+
+    php 8.1 bug. Parameter to urlencode cannot be null. Fixed.
+
+M	reporting/includes/reporting.inc
+
 commit 8e2f611d3e406fa98062803129d028ac61f8431a
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Thu Aug 11 07:40:48 2022 +0700
@@ -1123,6 +1826,14 @@ Date:   Thu Aug 11 07:40:48 2022 +0700
     php 8.1 bug. Parameter to urlencode cannot be null. Fixed.
 
 M	reporting/includes/reporting.inc
+
+commit 13b6446006b64c55dd525eb5ebe7d93b6785607c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Aug 10 22:50:13 2022 +0700
+
+    Generating an EAN-8 Barcode throws an error "Trying to access array offset on value of type bool". Fixed.
+
+M	inventory/manage/items.php
 
 commit d67c17f3f88daca33f1bd97405d629261b2edcb0
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1148,6 +1859,15 @@ Date:   Mon Aug 8 20:04:26 2022 +0700
 
 M	purchasing/supplier_payment.php
 
+commit 73d259204961554738717150c66736245cdd4ba8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Aug 4 08:26:34 2022 +0700
+
+    Clean up local months names.
+
+M	reporting/rep302.php
+M	reporting/rep705.php
+
 commit 6b4d9c1b825c690435089672312e1eab75d3eb91
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Thu Aug 4 08:15:01 2022 +0700
@@ -1157,6 +1877,14 @@ Date:   Thu Aug 4 08:15:01 2022 +0700
 M	reporting/rep302.php
 M	reporting/rep705.php
 
+commit e1549a0a707cef266f614616d79f806b16bca215
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Aug 2 00:19:03 2022 +0700
+
+    Buttons missing on Chart of Accounts page (on some editions). Fixed.
+
+M	gl/manage/gl_accounts.php
+
 commit b1de91250843e09cc758dcc20b6ae5531c976d4d
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Aug 2 00:17:45 2022 +0700
@@ -1164,6 +1892,15 @@ Date:   Tue Aug 2 00:17:45 2022 +0700
     Buttons missing on Chart of Accounts page (on some editions). Fixed.
 
 M	gl/manage/gl_accounts.php
+
+commit 9356bb02bd064cfa26177a8537763c25b955ab03
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Jul 24 10:22:02 2022 +0700
+
+    Invoice Prepaid Orders: Added new payments column for direct review of order invoicing status.
+
+M	sales/includes/db/sales_order_db.inc
+M	sales/inquiry/sales_orders_view.php
 
 commit e1133de4cbb20100b72dd69db557e2c7a1c9cbe9
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1173,6 +1910,14 @@ Date:   Sun Jul 24 07:33:36 2022 +0700
 
 M	sales/includes/db/sales_order_db.inc
 M	sales/inquiry/sales_orders_view.php
+
+commit 6210ca6db74b950e91f8338ac9d5a78ad52f42e3
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Jul 20 05:19:15 2022 +0700
+
+    php 8 fixes, continue.
+
+M	includes/db/audit_trail_db.inc
 
 commit 3c923f1544ddd54581e14511d0a3ce68bb7048bc
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1189,6 +1934,23 @@ Date:   Sun Jul 17 07:59:56 2022 +0700
     php 8.1 Deprecated null parameters in functions. Fixed.
 
 M	includes/packages.inc
+
+commit eb70f1eb89a74d29526f86455c1358a9c1655b58
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Jul 17 07:57:33 2022 +0700
+
+    php 8.1 Deprecated null parameters in functions. Fixed.
+
+M	includes/packages.inc
+
+commit 64d9f9cbc5d91500f42fe5d24b3c3606b0cd6b84
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jul 16 23:47:51 2022 +0700
+
+    php 8.1 deprecated null parameters fixed & code clean up.
+
+M	reporting/rep302.php
+M	reporting/rep705.php
 
 commit e5af838b4e263a4d282853e5b0531a68bfbd3461
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1207,6 +1969,23 @@ Date:   Sun Jun 5 07:34:27 2022 +0700
 
 M	includes/JsHttpRequest.php
 
+commit 332f74b783b82f2e056fd19faa78b8e4c8df43be
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Jun 5 07:30:54 2022 +0700
+
+    php 8.1 error deprecated null parameters, fixed.
+
+M	includes/JsHttpRequest.php
+
+commit 52e5f7206550aeeb4f5c1384a6bac2a58eea6e9a
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu May 26 23:41:47 2022 +0700
+
+    Long description on sales quotation
+
+M	reporting/rep111.php
+M	sales/includes/db/sales_order_db.inc
+
 commit b6e90cb0c42e237d405c386c0ab09422fe32858c
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Thu May 26 23:31:30 2022 +0700
@@ -1223,6 +2002,49 @@ Date:   Sat May 7 20:09:34 2022 +0700
     avoid fixed asset deprecation rate greater than 100%.
 
 M	fixed_assets/fixed_asset_classes.php
+
+commit e04d41825f4322e76883e9d172ebcfc9c3414edf
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat May 7 20:07:18 2022 +0700
+
+    avoid fixed asset deprecation rate greater than 100%.
+
+M	fixed_assets/fixed_asset_classes.php
+
+commit 14e9c1cc2ff636bd640df77c3c2d7b79905ecdfa
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed May 4 08:07:31 2022 +0700
+
+    hrm implementation, continue.
+
+M	includes/ui/ui_globals.inc
+
+commit 3b087b2d9ca30cbf6596c7b037665f5ec5d67c88
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed May 4 08:00:26 2022 +0700
+
+    hrm implementation, continue.
+
+M	hrm/includes/hrm_class.inc
+M	hrm/includes/ui/payslip_ui.inc
+M	hrm/payslip.php
+
+commit 15795d0743a8aabde9dc2353f4da390c92192a7c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Apr 22 22:09:28 2022 +0700
+
+    code cleanup
+
+M	gl/manage/gl_quick_entries.php
+M	reporting/includes/tcpdf.php
+
+commit 0ebbbe8c71e3e3afdd8db5f54aab338ea43e6fdf
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Apr 19 23:06:17 2022 +0700
+
+    email invoice alwayls show invoice 0. Fixed.
+
+M	reporting/rep107.php
 
 commit 2326e31bb8ae29e72401fbcd53ec57c4c71f911d
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1249,6 +2071,22 @@ Date:   Tue Apr 12 06:04:02 2022 +0700
 
 M	gl/includes/ui/gl_journal_ui.inc
 
+commit 73b406f9f522643c89780891cca5381ba9c401a8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Apr 12 06:01:18 2022 +0700
+
+    cursor skips through dimension field in gl journal entry. Fixed.
+
+M	gl/includes/ui/gl_journal_ui.inc
+
+commit 125c37b02c304ea958c6c42326d976a42d632d14
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Apr 10 11:52:12 2022 +0700
+
+    Code cleanup in inventory_db.inc
+
+M	inventory/includes/inventory_db.inc
+
 commit 9dec415a253a6fdf2ebba8b96afcd8bddca7499e
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Apr 10 11:50:50 2022 +0700
@@ -1256,6 +2094,14 @@ Date:   Sun Apr 10 11:50:50 2022 +0700
     Code cleanup in inventory_db.inc
 
 M	inventory/includes/inventory_db.inc
+
+commit 74d9e0af776545d8fd0dfe6b59f48dacf4c255a9
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Apr 7 23:10:23 2022 +0700
+
+    wrong bank transfer transaction reference on page reload. Fixed.
+
+M	gl/bank_transfer.php
 
 commit c2842a66ad4994bd84ed1469fe15bcc8ddb90d23
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1265,6 +2111,15 @@ Date:   Thu Apr 7 23:08:24 2022 +0700
 
 M	gl/bank_transfer.php
 
+commit f93de5d7013543e56d0c1bfb7c9f1de2e544c801
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Mar 29 21:52:43 2022 +0700
+
+    Added dimensions to bank account transfers.
+
+M	gl/bank_transfer.php
+M	gl/includes/db/gl_db_banking.inc
+
 commit e3671cea3d06b07ec081166e46dd055c171f3de2
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Mar 29 21:44:08 2022 +0700
@@ -1273,6 +2128,22 @@ Date:   Tue Mar 29 21:44:08 2022 +0700
 
 M	gl/bank_transfer.php
 M	gl/includes/db/gl_db_banking.inc
+
+commit 0b21df79da76a0b7293b318cef737546f91bb887
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Mar 13 08:39:02 2022 +0700
+
+    translatable string typo
+
+M	purchasing/allocations/supplier_allocate.php
+
+commit be5a1a7d5d02128eaebb7ff2817e35756deab591
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Mar 13 08:37:43 2022 +0700
+
+    code cleanup in supplier_allocate.php
+
+M	purchasing/allocations/supplier_allocate.php
 
 commit a31c9a2012863b3de70fa0c88e993a019403eef5
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1292,6 +2163,14 @@ M	CHANGELOG.txt
 M	README.md
 M	version.php
 
+commit f2aa6a6c967c496e40cbd9b4c6505604d6e2bf7a
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Mar 7 14:59:06 2022 +0700
+
+    added secure flag on session cookie
+
+M	includes/session.inc
+
 commit a6196b0c157f0ef3f9d75e3ef811ba5d3741d58e
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Mon Mar 7 14:53:08 2022 +0700
@@ -1299,6 +2178,43 @@ Date:   Mon Mar 7 14:53:08 2022 +0700
     added secure flag on session cookie
 
 M	includes/session.inc
+
+commit 2fe0321742d1f66aced9d5f1c057579dbfe04f4a
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 26 05:35:45 2022 +0700
+
+    Removed search item list option in company setup
+
+M	admin/company_preferences.php
+M	includes/ui/ui_lists.inc
+M	inventory/inquiry/stock_list.php
+
+commit fe21d51645aba5129d31a2791144bad3705a9267
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 26 05:08:20 2022 +0700
+
+    Added HRM, continue.
+
+M	admin/db/transactions_db.inc
+M	admin/gl_setup.php
+M	applications/hrm.php
+A	hrm/attendance.php
+A	hrm/includes/db/attendance_db.inc
+M	hrm/includes/db/employee_db.inc
+R065	hrm/includes/hrm_classes.inc	hrm/includes/db/payslip_db.inc
+A	hrm/includes/hrm_class.inc
+M	hrm/includes/hrm_ui.inc
+D	hrm/includes/ui/employee_ui.inc
+A	hrm/includes/ui/payslip_ui.inc
+M	hrm/manage/employees.php
+A	hrm/payslip.php
+M	includes/access_levels.inc
+M	includes/references.inc
+M	includes/sysnames.inc
+M	includes/types.inc
+M	includes/ui/ui_lists.inc
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
 
 commit 9373fc5c4230fc4847787599547a73ae0f532405
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1319,6 +2235,68 @@ Date:   Sat Feb 19 14:24:57 2022 +0700
 
 M	admin/company_preferences.php
 
+commit 52b8790df8e3b205c549c8c2f59f7745f1595667
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 19 09:08:37 2022 +0700
+
+    Added HRM module, continue.
+
+M	applications/hrm.php
+A	hrm/includes/db/grade_db.inc
+A	hrm/includes/db/job_classes_db.inc
+M	hrm/includes/db/job_position_db.inc
+A	hrm/includes/db/pay_element_db.inc
+A	hrm/includes/db/salary_structure_db.inc
+M	hrm/includes/hrm_db.inc
+R100	hrm/includes/db/employee_ui.inc	hrm/includes/ui/employee_ui.inc
+A	hrm/manage/grades.php
+A	hrm/manage/job_classes.php
+M	hrm/manage/job_positions.php
+A	hrm/manage/pay_elements.php
+A	hrm/manage/salary_structure.php
+M	includes/access_levels.inc
+M	includes/ui/ui_lists.inc
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit b898fed6b4e2bf3fab6a8e6f01014d4c5204597c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Feb 16 05:40:04 2022 +0700
+
+    added HRM module to core
+
+M	.gitignore
+M	applications/hrm.php
+A	company/0/images/no_image.svg
+A	hrm/includes/db/department_db.inc
+A	hrm/includes/db/employee_db.inc
+A	hrm/includes/db/employee_ui.inc
+A	hrm/includes/db/index.php
+A	hrm/includes/db/job_position_db.inc
+A	hrm/includes/db/leave_db.inc
+A	hrm/includes/db/overtime_db.inc
+A	hrm/includes/hrm_classes.inc
+A	hrm/includes/hrm_db.inc
+A	hrm/includes/hrm_ui.inc
+A	hrm/includes/index.php
+A	hrm/includes/ui/index.php
+A	hrm/inquiry/index.php
+A	hrm/manage/departments.php
+A	hrm/manage/employees.php
+A	hrm/manage/index.php
+A	hrm/manage/job_positions.php
+A	hrm/manage/leave_types.php
+A	hrm/manage/overtime.php
+A	hrm/view/index.php
+M	includes/access_levels.inc
+M	includes/types.inc
+M	includes/ui/ui_controls.inc
+M	includes/ui/ui_input.inc
+M	includes/ui/ui_lists.inc
+M	inventory/manage/items.php
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
 commit 49347724ebfec242ad6f6337d11c34bc33eace45
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Thu Feb 10 15:03:01 2022 +0700
@@ -1328,6 +2306,109 @@ Date:   Thu Feb 10 15:03:01 2022 +0700
 M	.htaccess
 M	README.md
 
+commit c96492930a6cafe8fcd306f5bebb152137051985
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Feb 10 14:57:32 2022 +0700
+
+    Updated support php version, protect pem file, updated .gitignore.
+
+M	.gitignore
+M	.htaccess
+M	README.md
+
+commit 4e0971ce7def141a975376e926ccccc809348855
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Feb 10 10:15:00 2022 +0700
+
+    added separate folders for employee and item images
+
+M	.gitignore
+A	company/0/images/employees/index.php
+R100	company/0/images/101.jpg	company/0/images/stock_items/101.jpg
+R100	company/0/images/102.jpg	company/0/images/stock_items/102.jpg
+R100	company/0/images/103.jpg	company/0/images/stock_items/103.jpg
+A	company/0/images/stock_items/index.php
+
+commit 787d2aaa4def00fbbff2fdfe23a5cfd1db13b795
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Feb 10 00:11:12 2022 +0700
+
+    changed field name user_id to login_id
+
+M	admin/change_current_user_password.php
+M	admin/db/maintenance_db.inc
+M	admin/db/users_db.inc
+M	admin/users.php
+M	fixed_assets/includes/fixed_assets_db.inc
+M	gl/includes/db/gl_db_trans.inc
+M	includes/current_user.inc
+M	includes/ui/ui_lists.inc
+M	install/index.php
+M	reporting/includes/reports_classes.inc
+M	reporting/rep710.php
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit c214af92b0b086e0e9eb67b5a608ec9fb7330ecd
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Feb 9 21:03:33 2022 +0700
+
+    Integrate HRM module into core
+
+M	NotrinosERP.php
+M	admin/company_preferences.php
+M	applications/application.php
+A	applications/hrm.php
+A	hrm/index.php
+M	themes/default/renderer.php
+
+commit 7d5de96fb0d9fb7884bb8d33c01f114a8f165387
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Feb 9 14:19:35 2022 +0700
+
+    add relationship between customer transaction and sales point, continue.
+
+M	gl/includes/db/gl_journal.inc
+M	sales/includes/db/cust_trans_db.inc
+
+commit 2f4575a7fde0790c8bea2458c2aa5a036af83da7
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Feb 8 22:10:05 2022 +0700
+
+    add relationship between customer transaction and sales point
+
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit 568bcb4c54672fb0efa44de74f970c808372986e
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Feb 8 17:09:38 2022 +0700
+
+    add relationship between salesman and sales order, continue.
+
+M	reporting/rep106.php
+M	reporting/rep115.php
+M	sales/includes/cart_class.inc
+M	sales/includes/db/sales_order_db.inc
+M	sales/includes/ui/sales_order_ui.inc
+M	sales/sales_order_entry.php
+
+commit 83087d7eebd47bbc7c53cffd9c96b356b590784d
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Feb 7 21:31:58 2022 +0700
+
+    add relationship between salesman and sales order
+
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+
+commit 0a38fd48553a6f83c690ceca384ae3a4f5ddcba7
+Merge: 3b73e39 12abe05
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Feb 6 22:02:01 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit 12abe055eebb437313412191bfea2f6a9ffa8c58
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Feb 6 22:01:07 2022 +0700
@@ -1335,6 +2416,13 @@ Date:   Sun Feb 6 22:01:07 2022 +0700
     php8.1.1 error file_exists(): Passing null to parameter of type string is deprecated. Fixed.
 
 M	dashboard/includes/dashboard_classes.inc
+
+commit 3b73e3926bab7089e0a36327297ed25f9565c24a
+Merge: 6a17b59 8f3d263
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Feb 6 19:41:31 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
 
 commit 8f3d263650b2869f51a9913c5d86589df0692c32
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1344,6 +2432,13 @@ Date:   Sun Feb 6 19:40:56 2022 +0700
 
 M	reporting/includes/class.graphic.inc
 
+commit 6a17b59504f3892a9f350d9876138fae2af15f1e
+Merge: 53ec898 96fb0a2
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Feb 6 13:45:09 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit 96fb0a2c8104fce815e46bc39dc70fba71fd0437
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sun Feb 6 13:44:08 2022 +0700
@@ -1351,6 +2446,13 @@ Date:   Sun Feb 6 13:44:08 2022 +0700
     php8.1.1 error Passing null to parameter of type string|int|float is deprecated. Fixed.
 
 M	reporting/includes/class.graphic.inc
+
+commit 53ec898c809ba9fcf101fbd33e7510a8f7bc8908
+Merge: 1a366ee 5776262
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sun Feb 6 01:19:33 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
 
 commit 577626210584e1ff92db5f1e0e231f5e990ca8a1
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1360,6 +2462,13 @@ Date:   Sun Feb 6 01:17:55 2022 +0700
 
 M	reporting/includes/class.graphic.inc
 
+commit 1a366eeaa602ea6d7e322ece14d984343c32c96e
+Merge: bc7a38e ddcba2f
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 5 23:57:19 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit ddcba2fd1653bc142ccd0a8c47384b98d848bd5f
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Sat Feb 5 23:56:00 2022 +0700
@@ -1367,6 +2476,13 @@ Date:   Sat Feb 5 23:56:00 2022 +0700
     php8.1.1 error continue and code cleanup
 
 M	reporting/includes/class.graphic.inc
+
+commit bc7a38e949575c6847420d2e90fde44eb45d6d70
+Merge: 339ddf2 c1e37e1
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Feb 5 20:39:57 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
 
 commit c1e37e1453b5407ef4598ad808fa7a68a228e0da
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1376,6 +2492,13 @@ Date:   Sat Feb 5 20:38:44 2022 +0700
 
 M	reporting/includes/class.graphic.inc
 
+commit 339ddf210bed267ffbbc7c43f2e983cb22758b93
+Merge: e866ba4 38d4633
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Fri Feb 4 16:18:10 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit 38d4633521eaba1b231748bf27bc669e41cc0bd1
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Fri Feb 4 16:17:33 2022 +0700
@@ -1383,6 +2506,62 @@ Date:   Fri Feb 4 16:17:33 2022 +0700
     php8.1.1 error strlen(): Passing null to parameter #1 ($string) of type string is deprecated. Fixed.
 
 M	dashboard/includes/dashboard_classes.inc
+
+commit e866ba484db39c782394ddce66c4cd800a957925
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Thu Feb 3 20:23:50 2022 +0700
+
+    code cleanup
+
+M	admin/db/voiding_db.inc
+M	includes/banking.inc
+M	includes/ui/allocation_cart.inc
+M	purchasing/includes/db/invoice_db.inc
+M	purchasing/includes/ui/invoice_ui.inc
+M	reporting/includes/Workbook.php
+M	reporting/includes/class.pdf.inc
+M	reporting/includes/tcpdf.php
+M	reporting/prn_redirect.php
+M	reporting/rep104.php
+M	reporting/rep105.php
+M	reporting/rep106.php
+M	reporting/rep107.php
+M	reporting/rep110.php
+M	reporting/rep111.php
+M	reporting/rep112.php
+M	reporting/rep113.php
+M	reporting/rep205.php
+M	reporting/rep206.php
+M	reporting/rep209.php
+M	reporting/rep210.php
+M	reporting/rep302.php
+M	reporting/rep303.php
+M	reporting/rep304.php
+M	reporting/rep305.php
+M	reporting/rep306.php
+M	reporting/rep401.php
+M	reporting/rep402.php
+M	reporting/rep501.php
+M	reporting/rep601.php
+M	reporting/rep701.php
+M	reporting/rep702.php
+M	reporting/rep704.php
+M	reporting/rep705.php
+M	reporting/rep706.php
+M	reporting/rep707.php
+M	reporting/rep708.php
+M	reporting/rep710.php
+M	sales/includes/cart_class.inc
+M	sales/includes/db/sales_order_db.inc
+M	sales/includes/sales_db.inc
+M	themes/dropdown/renderer.php
+
+commit e32fa586da48f92835ee89dca9b0aa58f3d8bf1e
+Merge: b2b5f06 1479c60
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 25 23:53:37 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
 
 commit 1479c60483cec1f65892318af892988f5c264254
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1393,6 +2572,22 @@ Date:   Tue Jan 25 22:03:43 2022 +0700
 M	includes/db/crm_contacts_db.inc
 M	purchasing/includes/db/suppliers_db.inc
 
+commit b2b5f069b70740810a95ad6383e5fabc7d584721
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 25 22:01:37 2022 +0700
+
+    Add and Manage Customers, Suppliers: contact persons where not removed when deleting customer/supplier. Fixed.
+
+M	includes/db/crm_contacts_db.inc
+M	purchasing/includes/db/suppliers_db.inc
+
+commit 3e6bc3f57ea64c0618233aeac3cdaa3998658bd3
+Merge: 090fcc9 5893053
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 18 20:26:17 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit 5893053ef391404fc392161fa4f18c62135c9ea4
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Jan 18 20:25:45 2022 +0700
@@ -1400,6 +2595,21 @@ Date:   Tue Jan 18 20:25:45 2022 +0700
     error: Trying to access array offset on value of type bool. Fixed.
 
 M	inventory/includes/stock_transfers_ui.inc
+
+commit 090fcc97c96a760fe5c8730820ecd5ccfca0c87c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 18 14:39:14 2022 +0700
+
+    updated .gitignore
+
+M	.gitignore
+
+commit 7f5ed6a1637ed5c1df88ba357bc93b5ce220709a
+Merge: 213afea df0b5a2
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 18 11:53:05 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
 
 commit df0b5a294ec1ff79307ab0dabd60140daa7d0c8c
 Author: notrinos <trananhphuong83@gmail.com>
@@ -1409,6 +2619,23 @@ Date:   Tue Jan 18 11:49:22 2022 +0700
 
 M	gl/bank_account_reconcile.php
 
+commit 213afea78226a22b2bd1b6142a07752f1f3f4d41
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 18 05:58:27 2022 +0700
+
+    version changed.
+
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
+M	version.php
+
+commit c61f6b39022882dad875389fa7cc24331e65dca5
+Merge: 50e6238 2394f68
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jan 18 04:58:24 2022 +0700
+
+    Merge branch 'master' into 1.0.Pre-Alpha
+
 commit 2394f68dc1072c323920cd11a924900bbad58be3
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Tue Jan 18 04:56:01 2022 +0700
@@ -1416,6 +2643,20 @@ Date:   Tue Jan 18 04:56:01 2022 +0700
     php 8.1.1 error preg_match_all(): Passing null to parameter #2 ($subject) of type string is deprecated. Fixed.
 
 M	admin/inst_chart.php
+
+commit 50e62385b29c4c58dd65060d6789147e3ccf80eb
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon Jan 17 21:20:21 2022 +0700
+
+    changed field name requisition_no to supp_reference
+
+M	purchasing/includes/db/po_db.inc
+M	purchasing/includes/db/supp_trans_db.inc
+M	purchasing/includes/db/suppalloc_db.inc
+M	reporting/includes/doctext.inc
+M	reporting/includes/pdf_report.inc
+M	sql/en_US-demo.sql
+M	sql/en_US-new.sql
 
 commit 024e204fb34ae3a3fa35c2f637ca881b13ee3d22
 Author: notrinos <trananhphuong83@gmail.com>
