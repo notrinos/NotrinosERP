@@ -193,6 +193,8 @@ function getInnerStr($str, $start, $end) {
 	// $start must be the first occurrence
 	// $start must not be part of $end
 	$val = '';
+	if(empty($str))
+		return '';
 	$val = strstr($str, $start);
 	$val = trim($val);
 	$val = substr($val, strlen($start));
