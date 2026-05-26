@@ -233,7 +233,7 @@ if (isset($_POST['SubmitRequisition']) && $selected_id > 0) {
 			$result['draft_id'],
 			$result['reference']
 		));
-		hyperlink_no_params('admin/approval_dashboard.php', _('Go to Approval Dashboard'));
+		hyperlink_no_params($path_to_root.'/admin/approval_dashboard.php?&sel_app=system', _('Go to Approval Dashboard'));
 	} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'auto_approved') {
 		display_notification(_('Purchase requisition has been auto-approved.'));
 	} else {
@@ -453,7 +453,7 @@ if ($requisition) {
 			submit('DeleteRequisition', _('Delete Requisition'), true, _('Delete this requisition'));
 	} elseif ($requisition['status'] === 'submitted') {
 		display_note(_('This requisition is pending approval in the core Approval Dashboard.'), 0, 1);
-		hyperlink_no_params('admin/approval_dashboard.php', _('Go to Approval Dashboard'));
+		hyperlink_no_params($path_to_root.'/admin/approval_dashboard.php?&sel_app=system', _('Go to Approval Dashboard'));
 	} elseif (in_array($requisition['status'], array('approved', 'partially_ordered'))) {
 		start_table(TABLESTYLE_NOBORDER, "style='margin:0 auto;' width='420'");
 		supplier_list_row(_('Create PO For Supplier:'), 'create_po_supplier', null, true, false, true);
