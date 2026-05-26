@@ -25,42 +25,6 @@ if (user_use_date_picker())
 
 page(_($help_context = 'Purchase Requisitions Inquiry'), false, false, '', $js);
 
-if (isset($_POST['BatchApprove']) || isset($_POST['BatchReject'])) {
-	$selected_requisitions = array();
-	if (!empty($_POST['selected_req']) && is_array($_POST['selected_req'])) {
-		foreach ($_POST['selected_req'] as $requisition_id) {
-			if ((int)$requisition_id > 0)
-				$selected_requisitions[] = (int)$requisition_id;
-		}
-	}
-
-	if (empty($selected_requisitions)) {
-		display_error(_('Select at least one requisition first.'));
-	} elseif (isset($_POST['BatchApprove'])) {
-		$approved_count = 0;
-		foreach ($selected_requisitions as $requisition_id) {
-			if (approve_requisition($requisition_id, (int)$_SESSION['wa_current_user']->user))
-				$approved_count++;
-		}
-
-		display_notification(sprintf(_('Approved %d requisition(s).'), $approved_count));
-	} else {
-		$rejection_reason = trim(get_post('batch_rejection_reason'));
-		if ($rejection_reason === '') {
-			display_error(_('Enter one rejection reason for the selected requisitions.'));
-			set_focus('batch_rejection_reason');
-		} else {
-			$rejected_count = 0;
-			foreach ($selected_requisitions as $requisition_id) {
-				if (reject_requisition($requisition_id, (int)$_SESSION['wa_current_user']->user, $rejection_reason))
-					$rejected_count++;
-			}
-
-			display_notification(sprintf(_('Rejected %d requisition(s).'), $rejected_count));
-		}
-	}
-}
-
 $filter_status = get_post('filter_status', '');
 $filter_requester = get_post('filter_requester', 0);
 $filter_department = get_post('filter_department', 0);
@@ -130,7 +94,6 @@ if (!empty($department_summary)) {
 
 start_table(TABLESTYLE, "width='100%'");
 $th = array(
-	'',
 	_('Reference'),
 	_('Status'),
 	_('Priority'),
@@ -150,7 +113,6 @@ $k = 0;
 foreach ($rows as $row) {
 	alt_table_row_color($k);
 
-	echo '<td align="center"><input type="checkbox" name="selected_req[]" value="' . (int)$row['id'] . '"></td>';
 	label_cell('<a href="' . $path_to_root . '/purchasing/purch_requisition_entry.php?requisition_id=' . (int)$row['id'] . '">' . htmlspecialchars($row['reference']) . '</a>');
 	label_cell(purch_requisition_status_badge($row['status']));
 	label_cell(purch_requisition_priority_badge($row['priority']));
@@ -167,21 +129,9 @@ foreach ($rows as $row) {
 }
 
 if ($k == 0)
-	label_row('', _('No purchase requisitions matched the selected filters.'), 'colspan=13 align=center');
+	label_row('', _('No purchase requisitions matched the selected filters.'), 'colspan=12 align=center');
 
 end_table(1);
-
-if (!empty($rows)) {
-	start_table(TABLESTYLE_NOBORDER, "width='60%'");
-	text_row(_('Batch Reject Reason:'), 'batch_rejection_reason', null, 40, 255);
-	end_table(1);
-
-	echo '<div style="text-align:center;margin-top:14px;">';
-	submit('BatchApprove', _('Batch Approve'), true, _('Approve selected requisitions'));
-	echo '&nbsp;';
-	submit('BatchReject', _('Batch Reject'), true, _('Reject selected requisitions'));
-	echo '</div>';
-}
 
 end_form();
 end_page();
