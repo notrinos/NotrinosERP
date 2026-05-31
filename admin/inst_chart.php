@@ -14,10 +14,15 @@ $path_to_root = '..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/packages.inc');
 
+if ($_SERVER['REQUEST_METHOD'] != 'POST' && (!isset($_GET['legacy']) || $_GET['legacy'] != 'manage')) {
+	header('Location: '.get_notrinos_store_url('chart'));
+	exit;
+}
+
 if ($SysPrefs->use_popup_windows)
 	$js = get_js_open_window(900, 500);
 
-page(_($help_context = 'Install Charts of Accounts'), false, false, '', $js);
+page(_($help_context = 'Manage Local/Manual Charts of Accounts'), false, false, '', $js);
 
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/admin/db/company_db.inc');
@@ -50,7 +55,9 @@ start_form(true);
 
 div_start('ext_tbl');
 
-$mods = get_charts_list();
+$mods = get_local_charts_list();
+
+display_note(_('Repository chart discovery and installs now live in Notrinos Store. Use this page for local/manual chart cleanup.'), 0, 1);
 
 if (!$mods)
 	display_note(_('No optional chart of accounts is currently available.'));

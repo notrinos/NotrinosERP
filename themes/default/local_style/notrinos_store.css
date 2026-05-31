@@ -1,0 +1,467 @@
+.notrinos-store-hero {
+	padding: 18px 22px;
+	border: 1px solid #d8dee8;
+	border-radius: 14px;
+	background: linear-gradient(135deg, #fcfdff 0%, #eef4ff 100%);
+	margin-bottom: 18px;
+}
+
+.notrinos-store-hero h2 {
+	margin: 0 0 8px 0;
+	font-size: 24px;
+}
+
+.notrinos-store-hero p {
+	margin: 0;
+	color: #4c5668;
+	line-height: 1.55;
+}
+
+.notrinos-store-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.notrinos-store-tag {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 999px;
+	background: #fff;
+	border: 1px solid #d8dee8;
+	color: #344054;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.notrinos-store-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 0 0 14px 0;
+}
+
+.notrinos-store-tab {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 14px;
+	border: 1px solid #d8dee8;
+	border-radius: 999px;
+	background: #fff;
+	color: #344054;
+	text-decoration: none;
+	font-weight: 600;
+	box-shadow: 0 8px 20px rgba(18, 44, 88, 0.04);
+}
+
+.notrinos-store-tab:hover,
+.notrinos-store-tab:focus {
+	border-color: #23406d;
+	color: #23406d;
+	text-decoration: none;
+}
+
+.notrinos-store-tab.active {
+	background: #203056;
+	border-color: #203056;
+	color: #fff;
+	box-shadow: 0 12px 28px rgba(18, 44, 88, 0.14);
+}
+
+.notrinos-store-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: end;
+	padding: 14px 16px;
+	margin-bottom: 16px;
+	border: 1px solid #d8dee8;
+	border-radius: 12px;
+	background: #fff;
+}
+
+.notrinos-store-filter {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 180px;
+	flex: 1 1 180px;
+}
+
+.notrinos-store-filter label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #475467;
+}
+
+.notrinos-store-filter input,
+.notrinos-store-filter select {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.notrinos-store-filter .list_container,
+.notrinos-store-filter .list_container select,
+.notrinos-store-filter .combo {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.notrinos-store-filter-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-left: auto;
+}
+
+.notrinos-store-filter-actions a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 36px;
+	padding: 0 12px;
+	border-radius: 8px;
+	border: 1px solid #cbd5e1;
+	background: #fff;
+	color: #344054;
+	text-decoration: none;
+}
+
+.notrinos-store-summary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 12px;
+	margin-bottom: 18px;
+}
+
+.notrinos-store-card {
+	padding: 14px 16px;
+	border: 1px solid #d8dee8;
+	border-radius: 12px;
+	background: #fff;
+}
+
+.notrinos-store-card strong {
+	display: block;
+	font-size: 24px;
+	color: #111827;
+	line-height: 1.2;
+}
+
+.notrinos-store-card span {
+	display: block;
+	margin-top: 4px;
+	color: #667085;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.notrinos-store-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 0 0 18px 0;
+}
+
+.notrinos-store-links a {
+	display: inline-flex;
+	align-items: center;
+	padding: 8px 12px;
+	border-radius: 999px;
+	border: 1px solid #d8dee8;
+	background: #fff;
+	text-decoration: none;
+}
+
+.notrinos-store-section {
+	margin-bottom: 20px;
+}
+
+.notrinos-store-section-head {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.notrinos-store-section-head-main {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.notrinos-store-section-head-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.notrinos-store-section-head h3 {
+	margin: 0;
+}
+
+.notrinos-store-section-note {
+	color: #667085;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.notrinos-store-section-count {
+	color: #203056;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.notrinos-store-view-all {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 34px;
+	padding: 0 14px;
+	border: 1px solid #d8dee8;
+	border-radius: 999px;
+	background: #fff;
+	color: #203056;
+	font-size: 12px;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.notrinos-store-view-all:hover,
+.notrinos-store-view-all:focus {
+	border-color: #203056;
+	color: #203056;
+	text-decoration: none;
+}
+
+.notrinos-store-empty-state {
+	padding: 26px 24px;
+	border: 1px dashed #cbd5e1;
+	border-radius: 16px;
+	background: #fff;
+	text-align: center;
+	color: #475467;
+}
+
+.notrinos-store-empty-state h3 {
+	margin: 0 0 8px 0;
+	color: #203056;
+}
+
+.storefront-card-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 16px;
+	align-items: stretch;
+}
+
+.storefront-card {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid #e3ebf8;
+	border-radius: 16px;
+	background: #ffffff;
+	box-shadow: 0 16px 34px rgba(18, 44, 88, 0.06);
+	overflow: hidden;
+	height: 100%;
+}
+
+.storefront-card-media {
+	position: relative;
+	display: block;
+	aspect-ratio: 16/9;
+	background: linear-gradient(140deg, #eef4ff 0%, #dde8ff 100%);
+	overflow: hidden;
+	text-decoration: none;
+}
+
+.storefront-card-media img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.storefront-card-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	padding: 1em;
+	font-size: 1.1em;
+	font-weight: 700;
+	color: #23406d;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.storefront-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.9em;
+	padding: 1.2em;
+	flex: 1;
+}
+
+.storefront-card-kicker {
+	margin: 0;
+	font-size: 0.82em;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #4b68c9;
+}
+
+.storefront-card h3 {
+	margin: 0;
+	font-weight: 700;
+	color: #203056;
+	font-size: 20px;
+}
+
+.storefront-card h3 a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.storefront-card-copy {
+	margin: 0;
+	color: #596b88;
+	line-height: 1.6;
+	flex: 1;
+}
+
+.storefront-card-badges,
+.storefront-card-meta,
+.storefront-card-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55em;
+}
+
+.storefront-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.38em 0.75em;
+	border-radius: 999px;
+	background: #eef3ff;
+	color: #2d4fa8;
+	font-size: 0.8em;
+	font-weight: 700;
+}
+
+.storefront-badge--featured {
+	background: #fff1d7;
+	color: #b86a00;
+}
+
+.storefront-badge--trust {
+	background: #def8ea;
+	color: #1d7d4f;
+}
+
+.storefront-badge--price {
+	background: #eaf5ff;
+	color: #16557c;
+}
+
+.storefront-card-meta,
+.storefront-card-compatibility,
+.storefront-inline-link {
+	color: #60708c;
+	line-height: 1.5;
+}
+
+.storefront-card-meta span:not(:last-child)::after {
+	content: '·';
+	margin-left: 0.55em;
+	color: #a0acc2;
+}
+
+.storefront-card-compatibility {
+	margin: 0;
+	font-size: 0.92em;
+}
+
+.storefront-card-actions {
+	align-items: center;
+	margin-top: auto;
+}
+
+.storefront-inline-link {
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.storefront-inline-link:hover,
+.storefront-inline-link:focus {
+	color: #2f55d4;
+	text-decoration: none;
+}
+
+.notrinos-store-install-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 38px;
+	padding: 0 14px;
+	border: 1px solid #23406d;
+	border-radius: 999px;
+	background: #23406d;
+	color: #fff;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.notrinos-store-install-button span {
+	color: inherit;
+}
+
+.notrinos-store-install-button:hover,
+.notrinos-store-install-button:focus {
+	background: #1b3356;
+	border-color: #1b3356;
+}
+
+.notrinos-store-install-button-disabled {
+	color: #667085;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+	.storefront-card-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 900px) {
+	.storefront-card-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.storefront-card-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.notrinos-store-filters {
+		padding: 12px;
+	}
+
+	.notrinos-store-filter-actions {
+		margin-left: 0;
+	}
+}

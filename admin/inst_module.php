@@ -14,10 +14,15 @@ $path_to_root = '..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/packages.inc');
 
+if ($_SERVER['REQUEST_METHOD'] != 'POST' && (!isset($_GET['legacy']) || $_GET['legacy'] != 'manage')) {
+	header('Location: '.get_notrinos_store_url('extension'));
+	exit;
+}
+
 if ($SysPrefs->use_popup_windows)
 	$js = get_js_open_window(900, 500);
 
-page(_($help_context = 'Install/Activate extensions'), false, false, '', $js);
+page(_($help_context = 'Manage Local/Manual Extensions'), false, false, '', $js);
 
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/admin/db/company_db.inc');
@@ -279,8 +284,10 @@ echo '<center>' . _('Extensions:') . '&nbsp;&nbsp;';
 echo extset_list('extset', null, true);
 echo '</center><br>';
 
+display_note(_('Remote catalog browsing and repository installs now live in Notrinos Store. Use this page for local/manual extension activation and deletion.'), 0, 1);
+
 if ($set == -1) {
-	$mods = get_extensions_list('extension');
+	$mods = get_local_extensions_list('extension');
 	if (!$mods)
 		display_note(_('No optional extension module is currently available.'));
 	else

@@ -14,6 +14,25 @@ $path_to_root = '../..';
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/packages.inc');
 
+/**
+ * Render a package field value for the details table.
+ *
+ * @param string $field
+ * @param mixed $value
+ * @return string
+ */
+function render_package_field_value($field, $value) {
+	$text = is_array($value) ? implode("\n", $value) : (string) $value;
+	$text = trim($text);
+	if ($text == '')
+		return '';
+
+	if (in_array($field, array('Homepage', 'DocsUrl', 'DemoUrl', 'SupportUrl', 'ChangelogUrl')))
+		return "<a href='".html_specials_encode($text)."' target='_blank' rel='noopener noreferrer'>".html_specials_encode($text)."</a>";
+
+	return nl2br(html_specials_encode($text));
+}
+
 page(_($help_context = 'Package Details'), true);
 
 include_once($path_to_root . '/includes/ui.inc');
@@ -31,16 +50,29 @@ $field_labels = array(
 	'Name' => _('Package content'),
 	'Description' => _('Description'),
 	'Content' => _('Content information'),
+	'PricingModel' => _('Pricing model'),
 	'Price' => _('Price'),
+	'Categories' => _('Categories'),
+	'Tags' => _('Tags'),
+	'CompatibilityMin' => _('Compatibility from'),
+	'CompatibilityMax' => _('Compatibility to'),
+	'ReleaseDate' => _('Release date'),
 	'Author' => _('Author'),
+	'PublisherName' => _('Publisher'),
+	'PublisherFlags' => _('Publisher flags'),
+	'TrustFlags' => _('Trust indicators'),
 	'Homepage' => _('Home page'),
+	'DocsUrl' => _('Documentation'),
+	'DemoUrl' => _('Demo'),
+	'SupportUrl' => _('Support'),
+	'ChangelogUrl' => _('Changelog'),
 	'Maintenance' => _('Package maintainer'),
 	'InstallPath' => _('Installation path'),
 	'Depends' => _('Minimal software versions'),
 	'RTLDir' => _('Right to left'),
 	'Encoding' => _('Charset encoding')
 );
-$field_order = array('Package', 'Version', 'Type', 'Name', 'Description', 'Content', 'Price', 'Author', 'Homepage', 'Maintenance', 'InstallPath', 'Depends', 'RTLDir', 'Encoding');
+$field_order = array('Package', 'Version', 'ReleaseDate', 'Type', 'Name', 'Description', 'Content', 'Categories', 'Tags', 'CompatibilityMin', 'CompatibilityMax', 'PricingModel', 'Price', 'PublisherName', 'PublisherFlags', 'TrustFlags', 'Author', 'Homepage', 'DocsUrl', 'DemoUrl', 'SupportUrl', 'ChangelogUrl', 'Maintenance', 'InstallPath', 'Depends', 'RTLDir', 'Encoding');
 
 $pkg = get_package_info($_GET['id']);
 if (!$pkg) {
@@ -66,7 +98,7 @@ foreach ($field_order as $field) {
 	if (package_meta_text($value) == '')
 		continue;
 	start_row();
-	label_cells($field_labels[$field], nl2br(html_specials_encode(is_array($value) ? implode("\n", $value) : $value)),
+	label_cells($field_labels[$field], render_package_field_value($field, $value),
 		 "class='tableheader2'");
 	end_row();
 }

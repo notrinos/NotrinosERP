@@ -17,10 +17,15 @@ include_once($path_to_root.'/includes/packages.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
 include_once($path_to_root.'/includes/ui.inc');
 
+if ($_SERVER['REQUEST_METHOD'] != 'POST' && (!isset($_GET['legacy']) || $_GET['legacy'] != 'manage')) {
+	header('Location: '.get_notrinos_store_url('theme'));
+	exit;
+}
+
 if ($SysPrefs->use_popup_windows)
 	$js = get_js_open_window(900, 500);
 
-page(_($help_context = 'Install Themes'), false, false, '', $js);
+page(_($help_context = 'Manage Local/Manual Themes'), false, false, '', $js);
 
 //---------------------------------------------------------------------------------------------
 
@@ -54,7 +59,9 @@ start_table(TABLESTYLE);
 $th = array(_('Theme'),  _('Installed'), _('Available'), _('Price'), _('Downloads'), '', '');
 $k = 0;
 
-$mods = get_themes_list();
+$mods = get_local_themes_list();
+
+display_note(_('Repository theme discovery and installs now live in Notrinos Store. Use this page for local/manual theme cleanup.'), 0, 1);
 
 if (!$mods)
 	display_note(_('No optional theme is currently available.'));

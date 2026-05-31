@@ -23,6 +23,7 @@ include_once($path_to_root.'/applications/dimensions.php');
 include_once($path_to_root.'/applications/generalledger.php');
 include_once($path_to_root.'/applications/hrm.php');
 include_once($path_to_root.'/applications/setup.php');
+include_once($path_to_root.'/applications/store.php');
 include_once($path_to_root.'/installed_extensions.php');
 
 class NotrinosErp {
@@ -86,7 +87,8 @@ class NotrinosErp {
 			$this->add_application(new HrmApp());
 
 		hook_invoke_all('install_tabs', $this);
-
+		
 		$this->add_application(new SetupApp());
+		$this->add_application(new StoreApp());
 	}
 }

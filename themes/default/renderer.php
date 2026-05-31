@@ -88,6 +88,7 @@ class renderer {
 			'proj' => 'map',
 			'GL' => 'book',
 			'hrm' => 'users',
+			'store' => 'store',
 			'system' => 'cog'
 		);
 
@@ -269,9 +270,10 @@ class renderer {
 			'stock' => array('accent' => '#925e12', 'soft' => '#FDEBD2'),
 			'manuf' => array('accent' => '#014c4f', 'soft' => '#CCE5E6'),
 			'assets' => array('accent' => '#714B67', 'soft' => '#E3DBE1'),
-			'proj' => array('accent' => '#15803d', 'soft' => '#dcfce7'),
+			'proj' => array('accent' => '#028377', 'soft' => '#CBF2EE'),
 			'GL' => array('accent' => '#b45309', 'soft' => '#fef3c7'),
 			'hrm' => array('accent' => '#c026d3', 'soft' => '#fae8ff'),
+			'store' => array('accent' => '#028377', 'soft' => '#D9FDD3'),
 			'system' => array('accent' => '#475569', 'soft' => '#f1f5f9')
 		);
 

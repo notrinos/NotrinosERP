@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -48,6 +48,7 @@ class SetupApp extends application {
 
 		$this->add_rapp_function(3, _('&Backup and Restore'), 'admin/backups.php?', 'SA_BACKUP', MENU_SYSTEM);
 		$this->add_rapp_function(3, _('Create/Update &Companies'), 'admin/create_coy.php?', 'SA_CREATECOMPANY', MENU_UPDATE);
+		$this->add_rapp_function(3, _('Notrinos App &Store'), 'admin/notrinos_store.php?sel_app=store', 'SA_CREATEMODULES', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Install/Update &Languages'), 'admin/inst_lang.php?', 'SA_CREATELANGUAGE', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Install/Activate &Extensions'), 'admin/inst_module.php?', 'SA_CREATEMODULES', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Install/Activate &Themes'), 'admin/inst_theme.php?', 'SA_CREATEMODULES', MENU_UPDATE);

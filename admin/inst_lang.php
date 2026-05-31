@@ -17,10 +17,15 @@ include_once($path_to_root.'/includes/packages.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
 include_once($path_to_root.'/includes/ui.inc');
 
+if ($_SERVER['REQUEST_METHOD'] != 'POST' && (!isset($_GET['legacy']) || $_GET['legacy'] != 'manage')) {
+	header('Location: '.get_notrinos_store_url('language'));
+	exit;
+}
+
 if ($SysPrefs->use_popup_windows)
 	$js = get_js_open_window(900, 500);
 
-page(_($help_context = 'Install/Update Languages'), false, false, '', $js);
+page(_($help_context = 'Manage Local/Manual Languages'), false, false, '', $js);
 
 simple_page_mode(true);
 
@@ -52,7 +57,7 @@ function display_languages() {
 	$k = 0;
 
 	// get list of all (available and installed) langauges
-	$langs = get_languages_list();
+	$langs = get_local_languages_list();
 	foreach ($langs as $pkg_name => $lng) {
 		if ($lng == 'C') // skip default locale (aka no translation)
 			continue;
@@ -262,6 +267,9 @@ if (get_post('_DisplayAll_update'))
 if (isset($_GET['popup']) || get_post('Add') || $Mode == 'Edit' || $Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM')
 	display_language_edit($selected_id);
 else
+	display_note(_('Repository language discovery and installs now live in Notrinos Store. Use this page for manual language files, defaults, and cleanup.'), 0, 1);
+
+if (!(isset($_GET['popup']) || get_post('Add') || $Mode == 'Edit' || $Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM'))
 	display_languages();
 
 end_page();

@@ -178,7 +178,7 @@ function add_scroll_into_view($element_id, $trigger=true, $behavior='smooth', $b
 
 	$js = 'var el=document.getElementById(' . json_encode($element_id) . ');'
 		. 'if(el)el.scrollIntoView({behavior:' . json_encode($behavior)
-		. ',block:' . json_encode($block) . ', inline: "nearest"});';
+		. ',block:' . json_encode($block) . '});';
 
 	if (in_ajax())
 		$Ajax->addScript($trigger, $js);

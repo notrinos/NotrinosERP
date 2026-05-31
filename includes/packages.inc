@@ -430,12 +430,181 @@ function uninstall_package($name) {
 	return count($pkg->error)==0;
 }
 
+/**
+ * Normalize package type input to a list.
+ *
+ * @param mixed $type
+ * @param array $default_types
+ * @return array
+ */
+function normalize_package_types($type, $default_types = array()) {
+	if (is_array($type))
+		return $type;
+	if ($type === null)
+		return $default_types;
+	return array($type);
+}
+
+/**
+ * Build an admin URL while preserving the current application context.
+ *
+ * @param string $script_path
+ * @param array $params
+ * @return string
+ */
+function get_package_admin_url($script_path, $params = array()) {
+	global $path_to_root;
+
+	if (isset($_GET['sel_app']) && $_GET['sel_app'] != '')
+		$params['sel_app'] = $_GET['sel_app'];
+	elseif (isset($_SESSION['sel_app']) && $_SESSION['sel_app'] != '')
+		$params['sel_app'] = $_SESSION['sel_app'];
+
+	$query = http_build_query($params);
+	return $path_to_root.'/'.ltrim($script_path, '/').($query != '' ? '?'.$query : '');
+}
+
+/**
+ * Return the unified store URL for a package type.
+ *
+ * @param string $type
+ * @param array $params
+ * @return string
+ */
+function get_notrinos_store_url($type = 'all', $params = array()) {
+	if ($type != '' && $type != 'all')
+		$params['type'] = $type;
+
+	return get_package_admin_url('admin/notrinos_store.php', $params);
+}
+
+/**
+ * Return the legacy local/manual manager URL for a package type.
+ *
+ * @param string $type
+ * @param array $params
+ * @return string
+ */
+function get_legacy_package_manager_url($type, $params = array()) {
+	$map = array(
+		'extension' => 'admin/inst_module.php',
+		'theme' => 'admin/inst_theme.php',
+		'chart' => 'admin/inst_chart.php',
+		'language' => 'admin/inst_lang.php',
+	);
+
+	if (!isset($map[$type]))
+		return get_notrinos_store_url($type, $params);
+
+	$params['legacy'] = 'manage';
+	return get_package_admin_url($map[$type], $params);
+}
+
+/**
+ * Return languages installed locally for manual management pages.
+ *
+ * @return array
+ */
+function get_local_languages_list() {
+	global $installed_languages;
+
+	$pkgs = array();
+	foreach ($installed_languages as $id => $lang) {
+		if (!is_array($lang))
+			continue;
+
+		$lang['local_id'] = $id;
+		if (!isset($lang['package']))
+			$lang['package'] = '';
+		if (!isset($lang['version']))
+			$lang['version'] = '';
+		if (!isset($lang['name']) || trim($lang['name']) == '')
+			$lang['name'] = isset($lang['code']) ? $lang['code'] : '';
+
+		$key = $lang['package'] != '' ? $lang['package'] : (isset($lang['code']) ? $lang['code'] : $id);
+		$pkgs[$key] = $lang;
+	}
+
+	if ($pkgs)
+		ksort($pkgs);
+
+	return $pkgs;
+}
+
+/**
+ * Return locally managed extensions, themes, or charts.
+ *
+ * @param mixed $type
+ * @return array
+ */
+function get_local_extensions_list($type = null) {
+	global $path_to_root;
+
+	$types = normalize_package_types($type, array('extension', 'theme', 'chart'));
+	$pkgs = array();
+
+	if (in_array('extension', $types)) {
+		$path = $path_to_root.'/modules/';
+		if (is_dir($path) && ($moddir = opendir($path))) {
+			while (false != ($fname = readdir($moddir))) {
+				if (!in_array($fname, array('.', '..', 'CVS', '_cache')) && is_dir($path.$fname)) {
+					$pkgs[$fname] = array(
+						'package' => $fname,
+						'name' => $fname,
+						'version' => '',
+						'available' => '',
+						'type' => 'extension',
+						'path' => 'modules/'.$fname,
+						'active' => false
+					);
+				}
+			}
+			closedir($moddir);
+		}
+	}
+
+	foreach (get_company_extensions() as $extno => $ext) {
+		if (!isset($ext['type']) || !in_array($ext['type'], $types))
+			continue;
+
+		$ext['local_id'] = $extno;
+		$key = isset($ext['package']) && $ext['package'] != '' ? $ext['package'] : $extno;
+		if (!isset($pkgs[$key]))
+			$pkgs[$key] = $ext;
+		else
+			$pkgs[$key] = array_merge($pkgs[$key], $ext);
+	}
+
+	if ($pkgs)
+		ksort($pkgs);
+
+	return $pkgs;
+}
+
+/**
+ * Return locally managed themes.
+ *
+ * @return array
+ */
+function get_local_themes_list() {
+	return get_local_extensions_list('theme');
+}
+
+/**
+ * Return locally managed charts of accounts.
+ *
+ * @return array
+ */
+function get_local_charts_list() {
+	return get_local_extensions_list('chart');
+}
+
 //---------------------------------------------------------------------------------------
 //
 //	Return merged list of available and installed languages in inform of local 
 // configuration array supplemented with installed versions information.
 //
-function get_languages_list() {
+function get_store_languages_list() {
 	global $installed_languages;
 	
 	$pkgs = get_pkg_or_list('language', null, array(
@@ -443,14 +612,32 @@ function get_languages_list() {
 		'Version' => 'available',
 		'Filename' => 'filename',
 		'Name' => 'name',
+		'Content' => 'content',
 		'Language' => 'code',
 		'Encoding' => 'encoding',
 		'RTLDir' => 'rtl',
 		'Price' => 'price',
 		'IsFree' => 'is_free',
+		'PricingModel' => 'pricing_model',
 		'Description' => 'Descr',
+		'Homepage' => 'homepage',
+		'Pictures' => 'pictures',
+		'Categories' => 'categories',
+		'Tags' => 'tags',
+		'CompatibilityMin' => 'compatibility_min',
+		'CompatibilityMax' => 'compatibility_max',
+		'ReleaseDate' => 'release_date',
+		'DocsUrl' => 'docs_url',
+		'DemoUrl' => 'demo_url',
+		'SupportUrl' => 'support_url',
+		'ChangelogUrl' => 'changelog_url',
+		'PublisherName' => 'publisher_name',
+		'PublisherFlags' => 'publisher_flags',
+		'TrustFlags' => 'trust_flags',
 		'InstallPath' => 'path'
 	));
+	if (!is_array($pkgs))
+		$pkgs = array();
 
 	// add/update languages already installed
 	// 
@@ -474,16 +661,24 @@ function get_languages_list() {
 	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
+
+/**
+ * Backward-compatible alias for remote store language listings.
+ *
+ * @return array
+ */
+function get_languages_list() {
+	return get_store_languages_list();
+}
 //---------------------------------------------------------------------------------------
 //
 //	Return merged list of available and installed extensions as a local 
 // configuration array supplemented with installed versions information.
 //
-function get_extensions_list($type = null) {
+function get_store_extensions_list($type = null) {
 	global $path_to_root;
 
-	if (isset($type) || !is_array($type))
-		$type = array($type);
+	$type = normalize_package_types($type, array('extension', 'theme', 'chart'));
 
 	$pkgs = get_pkg_or_list($type, null, array(
 		'Package' => 'package',
@@ -491,36 +686,57 @@ function get_extensions_list($type = null) {
 		'Filename' => 'filename',
 		'Name' => 'name',
 		'Description' => 'Descr',
+		'Content' => 'content',
 		'Price' => 'price',
 		'IsFree' => 'is_free',
+		'PricingModel' => 'pricing_model',
 		'Type' => 'type',
 		'DefaultStatus' => 'active',
 		// 'MenuTabs' => 'tabs',
 		// 'MenuEntries' => 'entries',
+		'Homepage' => 'homepage',
+		'Pictures' => 'pictures',
+		'Categories' => 'categories',
+		'Tags' => 'tags',
+		'CompatibilityMin' => 'compatibility_min',
+		'CompatibilityMax' => 'compatibility_max',
+		'ReleaseDate' => 'release_date',
+		'DocsUrl' => 'docs_url',
+		'DemoUrl' => 'demo_url',
+		'SupportUrl' => 'support_url',
+		'ChangelogUrl' => 'changelog_url',
+		'PublisherName' => 'publisher_name',
+		'PublisherFlags' => 'publisher_flags',
+		'TrustFlags' => 'trust_flags',
 		'Encoding' => 'encoding',
 		// 'AccessExtensions' => 'acc_file',
 		'InstallPath' => 'path'
 	));
+	if (!is_array($pkgs))
+		$pkgs = array();
 
 	// lookup for local extensions
 	$path = $path_to_root.'/modules/';
 	$loc = array();
-	$moddir = opendir($path);
+	$moddir = is_dir($path) ? opendir($path) : false;
 
-	while(false != ($fname = readdir($moddir))) {
-		if(!in_array($fname, array('.','..','CVS','_cache')) && is_dir($path.$fname)) {
-			if (!isset($pkgs[$fname])) {
-				$pkgs[$fname] = array(
-					'package' => $fname,
-					'name' => $fname,
-					'version' => '',
-					'available' => '',
-					'type' => 'extension',
-					'path' => 'modules/'.$fname,
-					'active' => false
-				);
+	if ($moddir) {
+		while(false != ($fname = readdir($moddir))) {
+			if(!in_array($fname, array('.','..','CVS','_cache')) && is_dir($path.$fname)) {
+				if (!isset($pkgs[$fname])) {
+					$pkgs[$fname] = array(
+						'package' => $fname,
+						'name' => $fname,
+						'version' => '',
+						'available' => '',
+						'type' => 'extension',
+						'path' => 'modules/'.$fname,
+						'active' => false
+					);
+				}
 			}
 		}
+		closedir($moddir);
 	}
 
 	// add/update extensions already installed
@@ -540,20 +756,48 @@ function get_extensions_list($type = null) {
 	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
+
+/**
+ * Backward-compatible alias for remote store extension listings.
+ *
+ * @param mixed $type
+ * @return array
+ */
+function get_extensions_list($type = null) {
+	return get_store_extensions_list($type);
+}
 //
 // Return merged list of available and installed extensions as a local
 // configuration array supplemented with installed versions information.
 //
-function get_themes_list() {
+function get_store_themes_list() {
 	$pkgs = get_pkg_or_list('theme', null, array(
 		'Package' => 'package',
 		'Version' => 'available',
 		'Filename' => 'filename',
 		'Name' => 'name',
+		'Content' => 'content',
 		'Price' => 'price',
 		'IsFree' => 'is_free',
+		'PricingModel' => 'pricing_model',
+		'Homepage' => 'homepage',
+		'Pictures' => 'pictures',
+		'Categories' => 'categories',
+		'Tags' => 'tags',
+		'CompatibilityMin' => 'compatibility_min',
+		'CompatibilityMax' => 'compatibility_max',
+		'ReleaseDate' => 'release_date',
+		'DocsUrl' => 'docs_url',
+		'DemoUrl' => 'demo_url',
+		'SupportUrl' => 'support_url',
+		'ChangelogUrl' => 'changelog_url',
+		'PublisherName' => 'publisher_name',
+		'PublisherFlags' => 'publisher_flags',
+		'TrustFlags' => 'trust_flags',
 		'Description' => 'Descr'
 	));
+	if (!is_array($pkgs))
+		$pkgs = array();
 
 	// add/update extensions already installed
 	// 
@@ -571,25 +815,52 @@ function get_themes_list() {
 	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
 }
+
+/**
+ * Backward-compatible alias for remote store theme listings.
+ *
+ * @return array
+ */
+function get_themes_list() {
+	return get_store_themes_list();
+}
 //---------------------------------------------------------------------------------------
 //
 // Return merged list of available and installed COAs as a local 
 // configuration array supplemented with installed versions information.
 //
-function get_charts_list() {
+function get_store_charts_list() {
 	$pkgs = get_pkg_or_list('chart', null, array(
 		'Package' => 'package',
 		'Version' => 'available',
 		'Filename' => 'filename',
 		'Name' => 'name',
 		'Description' => 'Descr',
+		'Content' => 'content',
 		'Price' => 'price',
 		'IsFree' => 'is_free',
+		'PricingModel' => 'pricing_model',
 		'Type' => 'type',
+		'Homepage' => 'homepage',
+		'Pictures' => 'pictures',
+		'Categories' => 'categories',
+		'Tags' => 'tags',
+		'CompatibilityMin' => 'compatibility_min',
+		'CompatibilityMax' => 'compatibility_max',
+		'ReleaseDate' => 'release_date',
+		'DocsUrl' => 'docs_url',
+		'DemoUrl' => 'demo_url',
+		'SupportUrl' => 'support_url',
+		'ChangelogUrl' => 'changelog_url',
+		'PublisherName' => 'publisher_name',
+		'PublisherFlags' => 'publisher_flags',
+		'TrustFlags' => 'trust_flags',
 		'InstallPath' => 'path',
 		'Encoding' => 'encoding',
 		'SqlScript' => 'sql'
 	));
+	if (!is_array($pkgs))
+		$pkgs = array();
 
 	// add/update default charts
 	$local = get_company_extensions();
@@ -607,6 +878,15 @@ function get_charts_list() {
 		ksort($pkgs);
 	$pkgs = fill_package_download_counts($pkgs);
 	return $pkgs;
+}
+
+/**
+ * Backward-compatible alias for remote store chart listings.
+ *
+ * @return array
+ */
+function get_charts_list() {
+	return get_store_charts_list();
 }
 //---------------------------------------------------------------------------------------------
 //	Install/update package from repository
@@ -765,6 +1045,77 @@ function package_meta_text($value) {
 }
 
 /**
+ * Normalize a package metadata value to a list of strings.
+ *
+ * @param mixed $value
+ * @return array
+ */
+function package_meta_list($value) {
+	if (is_array($value))
+		$items = $value;
+	else
+		$items = preg_split('/[\r\n,]+/', (string) $value);
+
+	$list = array();
+	foreach ((array) $items as $item) {
+		$item = trim((string) $item);
+		if ($item == '' || in_array($item, $list, true))
+			continue;
+		$list[] = $item;
+	}
+
+	return $list;
+}
+
+/**
+ * Return the canonical pricing model for a package.
+ *
+ * @param array $pkg
+ * @return string
+ */
+function get_package_pricing_model($pkg) {
+	$pricing_model = package_meta_text(isset($pkg['PricingModel']) ? $pkg['PricingModel'] : @$pkg['pricing_model']);
+	$pricing_model = strtolower($pricing_model);
+	if ($pricing_model != '')
+		return $pricing_model;
+
+	if (package_meta_flag_enabled(@$pkg['IsFree']) || package_meta_flag_enabled(@$pkg['is_free']))
+		return 'free';
+
+	return package_meta_text(isset($pkg['Price']) ? $pkg['Price'] : @$pkg['price']) != '' ? 'commercial' : '';
+}
+
+/**
+ * Return normalized discovery metadata for a package.
+ *
+ * @param array $pkg
+ * @return array
+ */
+function get_package_store_metadata($pkg) {
+	$publisher_name = package_meta_text(isset($pkg['PublisherName']) ? $pkg['PublisherName'] : @$pkg['publisher_name']);
+	if ($publisher_name == '')
+		$publisher_name = package_meta_text(isset($pkg['Author']) ? $pkg['Author'] : @$pkg['author']);
+
+	return array(
+		'pricing_model' => get_package_pricing_model($pkg),
+		'homepage' => package_meta_text(isset($pkg['Homepage']) ? $pkg['Homepage'] : @$pkg['homepage']),
+		'docs_url' => package_meta_text(isset($pkg['DocsUrl']) ? $pkg['DocsUrl'] : @$pkg['docs_url']),
+		'demo_url' => package_meta_text(isset($pkg['DemoUrl']) ? $pkg['DemoUrl'] : @$pkg['demo_url']),
+		'support_url' => package_meta_text(isset($pkg['SupportUrl']) ? $pkg['SupportUrl'] : @$pkg['support_url']),
+		'changelog_url' => package_meta_text(isset($pkg['ChangelogUrl']) ? $pkg['ChangelogUrl'] : @$pkg['changelog_url']),
+		'compatibility_min' => package_meta_text(isset($pkg['CompatibilityMin']) ? $pkg['CompatibilityMin'] : @$pkg['compatibility_min']),
+		'compatibility_max' => package_meta_text(isset($pkg['CompatibilityMax']) ? $pkg['CompatibilityMax'] : @$pkg['compatibility_max']),
+		'release_date' => package_meta_text(isset($pkg['ReleaseDate']) ? $pkg['ReleaseDate'] : @$pkg['release_date']),
+		'categories' => package_meta_list(isset($pkg['Categories']) ? $pkg['Categories'] : @$pkg['categories']),
+		'tags' => package_meta_list(isset($pkg['Tags']) ? $pkg['Tags'] : @$pkg['tags']),
+		'publisher_name' => $publisher_name,
+		'publisher_flags' => package_meta_list(isset($pkg['PublisherFlags']) ? $pkg['PublisherFlags'] : @$pkg['publisher_flags']),
+		'trust_flags' => package_meta_list(isset($pkg['TrustFlags']) ? $pkg['TrustFlags'] : @$pkg['trust_flags']),
+		'pictures' => get_package_image_urls($pkg),
+	);
+}
+
+/**
  * Build the base URL for the configured repository.
  *
  * @return string
@@ -810,6 +1161,80 @@ function get_package_repository_root_url() {
 }
 
 /**
+ * Return the website storefront base URL used by the ERP store catalog API.
+ *
+ * @return string
+ */
+function get_package_storefront_base_url() {
+	global $repo_auth, $power_url;
+	$host = isset($_SERVER['HTTP_HOST']) ? strtolower(trim($_SERVER['HTTP_HOST'])) : '';
+
+	if ($host == '' && isset($_SERVER['SERVER_NAME']))
+		$host = strtolower(trim($_SERVER['SERVER_NAME']));
+
+	if ($host == 'localhost' || strpos($host, '127.0.0.1') !== false)
+		return 'http://localhost/notrinos.com';
+
+	if (!empty($repo_auth['storefront_url']))
+		return rtrim(trim($repo_auth['storefront_url']), '/');
+
+	if (isset($power_url) && trim($power_url) != '')
+		return rtrim(trim($power_url), '/');
+
+	$repo_root = get_package_repository_root_url();
+	if ($repo_root != '') {
+		$parts = @parse_url($repo_root);
+		if (is_array($parts) && !empty($parts['host'])) {
+			$scheme = !empty($parts['scheme']) ? $parts['scheme'] : 'https';
+			$host = preg_replace('/^repo\./i', '', $parts['host']);
+			$url = $scheme.'://'.$host;
+			if (!empty($parts['port']))
+				$url .= ':'.$parts['port'];
+			return rtrim($url, '/');
+		}
+	}
+
+	return 'https://notrinos.com';
+}
+
+/**
+ * Build the website storefront catalog API URL.
+ *
+ * @param array $params
+ * @return string
+ */
+function get_package_storefront_catalog_api_url($params = array()) {
+	$base_url = get_package_storefront_base_url();
+	if ($base_url == '')
+		return '';
+
+	$api_url = $base_url.'/store_api_catalog.php';
+	if (!empty($params))
+		$api_url .= '?'.http_build_query($params);
+
+	return $api_url;
+}
+
+/**
+ * Fetch the website storefront catalog API response.
+ *
+ * @param array $params
+ * @return array|null
+ */
+function get_package_storefront_catalog($params = array()) {
+	$api_url = get_package_storefront_catalog_api_url($params);
+	if ($api_url == '')
+		return null;
+
+	$response = url_get_contents($api_url, 15);
+	if ($response === null)
+		return null;
+
+	$data = json_decode($response, true);
+	return is_array($data) ? $data : null;
+}
+
+/**
  * Resolve repository-hosted package image URLs from package metadata.
  *
  * @param array $pkg
@@ -843,11 +1268,20 @@ function get_package_image_urls($pkg) {
  * @return string
  */
 function get_package_price_label($pkg, $empty_label='') {
-	if (package_meta_flag_enabled(@$pkg['IsFree']) || package_meta_flag_enabled(@$pkg['is_free']))
+	$pricing_model = get_package_pricing_model($pkg);
+	if ($pricing_model == 'free')
 		return _('Free');
+	if ($pricing_model == 'byol')
+		return _('BYOL');
+	if ($pricing_model == 'contact')
+		return _('Contact');
 
 	$price = package_meta_text(isset($pkg['Price']) ? $pkg['Price'] : @$pkg['price']);
-	return $price != '' ? $price : $empty_label;
+	if ($price != '')
+		return $price;
+	if ($pricing_model == 'commercial')
+		return _('Commercial');
+	return $empty_label;
 }
 
 /**

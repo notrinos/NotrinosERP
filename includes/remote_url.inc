@@ -17,9 +17,15 @@
 function url_get_contents($url, $timeout=10) {
 	// get the host name and url path
 	$parsedUrl = parse_url($url);
+	if ($parsedUrl === false)
+		return null;
 
-	if (@$parsedUrl['scheme'] == 'file')
-		return file_get_contents($parsedUrl['path']);
+	if (@$parsedUrl['scheme'] == 'file') {
+		$file_path = isset($parsedUrl['path']) ? str_replace('\\', '/', $parsedUrl['path']) : '';
+		if (preg_match('/^\/[a-z]:\//i', $file_path))
+			$file_path = substr($file_path, 1);
+		return $file_path !== '' ? file_get_contents($file_path) : null;
+	}
 
 	$host = $parsedUrl['host'];
 
@@ -74,9 +80,15 @@ function url_get_contents($url, $timeout=10) {
 }
 
 function url_copy($from, $to, $timeout=10) {
-	$f = fopen($to, 'wb');
-	if (!$f || !fwrite($f, url_get_contents($from, $timeout)))
+	$content = url_get_contents($from, $timeout);
+	if ($content === null || $content === false)
 		return false;
+
+	$f = fopen($to, 'wb');
+	if (!$f)
+		return false;
+
+	$written = fwrite($f, $content);
 	fclose($f);
-	return true;
+	return $written !== false && $written === strlen($content);
 }
