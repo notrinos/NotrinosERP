@@ -260,7 +260,7 @@
 
 .storefront-card-grid {
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 16px;
 	align-items: stretch;
 }
@@ -327,7 +327,6 @@
 	margin: 0;
 	font-weight: 700;
 	color: #203056;
-	font-size: 20px;
 }
 
 .storefront-card h3 a {
@@ -339,6 +338,9 @@
 	margin: 0;
 	color: #596b88;
 	line-height: 1.6;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	flex: 1;
 }
 
@@ -372,8 +374,13 @@
 }
 
 .storefront-badge--price {
-	background: #eaf5ff;
-	color: #16557c;
+	padding: .42em .85em;
+	font-size: .85em;
+	font-weight: 800;
+	letter-spacing: .02em;
+	background: #0e4f7d;
+	color: #ffffff;
+	box-shadow: 0 6px 14px rgba(14, 79, 125, 0.28);
 }
 
 .storefront-card-meta,
@@ -397,6 +404,10 @@
 .storefront-card-actions {
 	align-items: center;
 	margin-top: auto;
+}
+
+.storefront-card-actions form {
+	margin: 0;
 }
 
 .storefront-inline-link {

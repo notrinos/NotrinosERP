@@ -1153,10 +1153,10 @@ function notrinos_store_package_links($item) {
 		$links[_('Details')] = $detail_url;
 	if (!empty($metadata['demo_url']))
 		$links[_('Demo')] = $metadata['demo_url'];
-	if (!empty($metadata['support_url']))
-		$links[_('Support')] = $metadata['support_url'];
-	if (!empty($metadata['changelog_url']))
-		$links[_('Changelog')] = $metadata['changelog_url'];
+	// if (!empty($metadata['support_url']))
+	// 	$links[_('Support')] = $metadata['support_url'];
+	// if (!empty($metadata['changelog_url']))
+	// 	$links[_('Changelog')] = $metadata['changelog_url'];
 
 	return array_slice($links, 0, 4, true);
 }
