@@ -87,7 +87,7 @@ $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($myrow['contract_ref'] ?: '#' . $myrow['id']);
-    label_cell("<a href='" . $path_to_root . "/crm/transactions/contract_entry.php?id="
+    label_cell("<a href='" . $path_to_root . "/crm/transactions/contract_entry.php?ContractID="
         . $myrow['id'] . crm_sel_app_param() . "'>" . htmlspecialchars($myrow['title']) . "</a>");
     label_cell($myrow['customer_name'] ?: '-');
     amount_cell($myrow['contract_value']);
@@ -95,7 +95,7 @@ while ($myrow = db_fetch($result)) {
     label_cell($myrow['end_date'] ? sql2date($myrow['end_date']) : '-');
     label_cell(crm_status_badge($myrow['status']));
 
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?id="
+    echo "<td><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?ContractID="
         . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
     echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
         . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this contract?') . "');\">"
