@@ -12,9 +12,21 @@
 $page_security = 'SA_EMPLOYEEREP';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 
 page(_("Employee Directory"));
+
+/**
+ * Format inactive flag for pager output.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function employee_directory_inactive_label($row, $cell) {
+    return ((int)$cell) ? _('Yes') : _('No');
+}
 
 if (!isset($_POST['show_inactive']))
     $_POST['show_inactive'] = 0;
@@ -54,26 +66,20 @@ if ($search !== '') {
 
 $sql .= " ORDER BY e.employee_id";
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Employee ID'), _('Employee Name'), _('Department'), _('Position'), _('Grade'), _('Email'), _('Mobile'), _('Inactive'));
-table_header($th);
+$cols = array(
+    _('Employee ID') => array('name' => 'employee_id', 'ord' => 'asc'),
+    _('Employee Name') => array('name' => 'employee_name', 'ord' => ''),
+    _('Department') => array('name' => 'department_name', 'ord' => ''),
+    _('Position') => array('name' => 'position_name', 'ord' => ''),
+    _('Grade') => array('name' => 'grade_name', 'ord' => ''),
+    _('Email') => array('name' => 'email', 'ord' => ''),
+    _('Mobile') => array('name' => 'mobile', 'ord' => ''),
+    _('Inactive') => array('name' => 'inactive', 'fun' => 'employee_directory_inactive_label', 'ord' => '')
+);
 
-$res = db_query($sql, 'could not get employee directory');
-$k = 0;
-while ($row = db_fetch($res)) {
-    alt_table_row_color($k);
-    label_cell($row['employee_id']);
-    label_cell($row['employee_name']);
-    label_cell($row['department_name']);
-    label_cell($row['position_name']);
-    label_cell($row['grade_name']);
-    label_cell($row['email']);
-    label_cell($row['mobile']);
-    label_cell($row['inactive'] ? _('Yes') : _('No'));
-    end_row();
-}
-
-end_table(1);
+$table =& new_db_pager('employee_directory_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();

@@ -12,6 +12,7 @@
 $page_security = 'SA_DEPTCOST';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 
@@ -71,21 +72,16 @@ $sql = "SELECT d.department_id,
     GROUP BY d.department_id, d.department_name
     ORDER BY d.department_name";
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Department'), _('Gross Total'), _('Deductions Total'), _('Net Total'));
-table_header($th);
+$cols = array(
+    _('Department') => array('name' => 'department_name', 'ord' => 'asc'),
+    _('Gross Total') => array('name' => 'gross_total', 'type' => 'amount'),
+    _('Deductions Total') => array('name' => 'deductions_total', 'type' => 'amount'),
+    _('Net Total') => array('name' => 'net_total', 'type' => 'amount')
+);
 
-$res = db_query($sql, 'could not get department cost inquiry');
-$k = 0;
-while ($row = db_fetch($res)) {
-    alt_table_row_color($k);
-    label_cell($row['department_name']);
-    amount_cell($row['gross_total']);
-    amount_cell($row['deductions_total']);
-    amount_cell($row['net_total']);
-    end_row();
-}
-end_table(1);
+$table =& new_db_pager('department_cost_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();

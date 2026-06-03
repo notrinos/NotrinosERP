@@ -12,6 +12,7 @@
 $page_security = 'SA_PAYROLLSUMMARY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 
@@ -31,6 +32,20 @@ $status_labels = array(
     6 => _('Voided')
 );
 
+/**
+ * Format payroll status code for pager output.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function payroll_summary_status_label($row, $cell) {
+    global $status_labels;
+
+    $status = (int)$cell;
+    return isset($status_labels[$status]) ? $status_labels[$status] : $cell;
+}
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
@@ -42,31 +57,34 @@ end_row();
 end_table(1);
 
 $status = get_post('status_filter', '');
-if ($status === '')
-    $result = get_payroll_periods();
-else
-    $result = get_payroll_periods((int)$status);
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Period ID'), _('Period Name'), _('From'), _('To'), _('Status'), _('Gross'), _('Deductions'), _('Net'), _('Employer Cost'));
-table_header($th);
-
-$k = 0;
-while ($row = db_fetch($result)) {
-    alt_table_row_color($k);
-    label_cell($row['period_id']);
-    label_cell($row['period_name']);
-    label_cell(sql2date($row['from_date']));
-    label_cell(sql2date($row['to_date']));
-    label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
-    amount_cell($row['total_gross']);
-    amount_cell($row['total_deductions']);
-    amount_cell($row['total_net']);
-    amount_cell($row['total_employer_cost']);
-    end_row();
+if (!payroll_table_exists('payroll_periods')) {
+    display_note(_('No payroll period records found.'), 0, 1);
+    end_form();
+    end_page();
+    return;
 }
 
-end_table(1);
+$sql = "SELECT * FROM ".TB_PREF."payroll_periods WHERE 1=1";
+if ($status !== '')
+    $sql .= " AND status = ".db_escape((int)$status);
+$sql .= " ORDER BY from_date DESC, period_id DESC";
+
+$cols = array(
+    _('Period ID') => array('name' => 'period_id', 'ord' => 'desc'),
+    _('Period Name') => array('name' => 'period_name', 'ord' => ''),
+    _('From') => array('name' => 'from_date', 'type' => 'date', 'ord' => ''),
+    _('To') => array('name' => 'to_date', 'type' => 'date', 'ord' => ''),
+    _('Status') => array('name' => 'status', 'fun' => 'payroll_summary_status_label', 'ord' => ''),
+    _('Gross') => array('name' => 'total_gross', 'type' => 'amount'),
+    _('Deductions') => array('name' => 'total_deductions', 'type' => 'amount'),
+    _('Net') => array('name' => 'total_net', 'type' => 'amount'),
+    _('Employer Cost') => array('name' => 'total_employer_cost', 'type' => 'amount')
+);
+
+$table =& new_db_pager('payroll_summary_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();

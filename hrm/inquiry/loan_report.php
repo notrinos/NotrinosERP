@@ -12,6 +12,7 @@
 $page_security = 'SA_LOANREPORT';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
@@ -21,6 +22,20 @@ if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
 page(_("Loan Outstanding"), false, false, '', $js);
+
+/**
+ * Format loan status code for pager output.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function loan_report_status_label($row, $cell) {
+    $status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'), 3 => _('Cancelled'));
+    $status = (int)$cell;
+
+    return isset($status_labels[$status]) ? $status_labels[$status] : $cell;
+}
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
@@ -32,26 +47,38 @@ end_table(1);
 
 $employee_id = get_post('employee_id', '');
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Loan ID'), _('Employee'), _('Loan Type'), _('Loan Date'), _('Loan Amount'), _('Outstanding'), _('Installments'), _('Status'));
-table_header($th);
+$sql = "SELECT l.loan_id,
+        CONCAT(l.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+        lt.loan_type_name,
+        l.loan_date,
+        l.loan_amount,
+        l.outstanding_amount,
+        l.installments,
+        l.status
+    FROM ".TB_PREF."employee_loans l
+    LEFT JOIN ".TB_PREF."loan_types lt ON lt.loan_type_id = l.loan_type_id
+    LEFT JOIN ".TB_PREF."employees e ON e.employee_id = l.employee_id
+    WHERE 1=1";
 
-$status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'), 3 => _('Cancelled'));
-$res = get_employee_loans($employee_id == ALL_TEXT ? '' : $employee_id);
-$k = 0;
-while ($row = db_fetch($res)) {
-    alt_table_row_color($k);
-    label_cell($row['loan_id']);
-    label_cell($row['employee_id'].' '.$row['employee_name']);
-    label_cell($row['loan_type_name']);
-    label_cell(sql2date($row['loan_date']));
-    amount_cell($row['loan_amount']);
-    amount_cell($row['outstanding_amount']);
-    label_cell($row['installments']);
-    label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
-    end_row();
-}
-end_table(1);
+if ($employee_id !== '' && $employee_id !== ALL_TEXT)
+    $sql .= " AND l.employee_id = ".db_escape($employee_id);
+
+$sql .= " ORDER BY l.loan_date DESC, l.loan_id DESC";
+
+$cols = array(
+    _('Loan ID') => array('name' => 'loan_id', 'ord' => 'desc'),
+    _('Employee') => array('name' => 'employee_label', 'ord' => ''),
+    _('Loan Type') => array('name' => 'loan_type_name', 'ord' => ''),
+    _('Loan Date') => array('name' => 'loan_date', 'type' => 'date', 'ord' => ''),
+    _('Loan Amount') => array('name' => 'loan_amount', 'type' => 'amount'),
+    _('Outstanding') => array('name' => 'outstanding_amount', 'type' => 'amount'),
+    _('Installments') => array('name' => 'installments', 'ord' => ''),
+    _('Status') => array('name' => 'status', 'fun' => 'loan_report_status_label', 'ord' => '')
+);
+
+$table =& new_db_pager('loan_report_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 
 end_form();
 

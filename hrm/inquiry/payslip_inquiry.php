@@ -11,7 +11,9 @@
 ***********************************************************************/
 $page_security = 'SA_PAYSLIPINQUIRY';
 $path_to_root = "../..";
+include_once($path_to_root . '/includes/db_pager.inc');
 include($path_to_root . "/includes/session.inc");
+
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
@@ -37,56 +39,71 @@ submit_cells('Search', _('Apply Filter'));
 end_row();
 end_table(1);
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));
-table_header($th);
-
-$employee_filter = get_post('employee_id', '');
-$k = 0;
-
-if ($employee_filter != '' && $employee_filter != ALL_TEXT) {
-    $result = get_payslips_for_employee($employee_filter, $_POST['from_date'], $_POST['to_date']);
-    $emp_name = function_exists('get_employee_name') ? get_employee_name($employee_filter) : '';
-    while ($row = db_fetch($result)) {
-        alt_table_row_color($k);
-        label_cell(isset($row['payslip_id']) ? $row['payslip_id'] : (isset($row['payslip_no']) ? $row['payslip_no'] : ''));
-        label_cell($employee_filter.' '.$emp_name);
-        label_cell(isset($row['from_date']) ? sql2date($row['from_date']) : '');
-        label_cell(isset($row['to_date']) ? sql2date($row['to_date']) : '');
-        amount_cell(isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : 0));
-        amount_cell(isset($row['total_deductions']) ? $row['total_deductions'] : 0);
-        amount_cell(isset($row['net_salary']) ? $row['net_salary'] : (isset($row['payable_amount']) ? $row['payable_amount'] : 0));
-        label_cell(isset($row['reference']) ? $row['reference'] : '');
-        end_row();
-    }
-} else {
-    $table_name = payslip_header_table();
-    if ($table_name) {
-        $emp_col = payslip_has_column($table_name, 'employee_id') ? 'employee_id' : 'emp_id';
-        $sql = "SELECT p.*, p.$emp_col employee_ref,
-            TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,''))) employee_name
-            FROM ".TB_PREF.$table_name." p
-            LEFT JOIN ".TB_PREF."employees e ON e.employee_id = p.$emp_col
-            WHERE p.from_date >= ".db_escape(date2sql($_POST['from_date']))."
-                AND p.to_date <= ".db_escape(date2sql($_POST['to_date']))."
-            ORDER BY p.from_date DESC";
-        $result = db_query($sql, 'could not get payslip inquiry rows');
-        while ($row = db_fetch($result)) {
-            alt_table_row_color($k);
-            label_cell(isset($row['payslip_id']) ? $row['payslip_id'] : (isset($row['payslip_no']) ? $row['payslip_no'] : ''));
-            label_cell($row['employee_ref'].' '.$row['employee_name']);
-            label_cell(isset($row['from_date']) ? sql2date($row['from_date']) : '');
-            label_cell(isset($row['to_date']) ? sql2date($row['to_date']) : '');
-            amount_cell(isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : 0));
-            amount_cell(isset($row['total_deductions']) ? $row['total_deductions'] : 0);
-            amount_cell(isset($row['net_salary']) ? $row['net_salary'] : (isset($row['payable_amount']) ? $row['payable_amount'] : 0));
-            label_cell(isset($row['reference']) ? $row['reference'] : '');
-            end_row();
-        }
-    }
+$table_name = payslip_header_table();
+if (!$table_name) {
+    display_note(_('No payslip records found.'), 0, 1);
+    end_form();
+    end_page();
+    return;
 }
 
-end_table(1);
+$employee_filter = get_post('employee_id', '');
+$employee_col = payslip_has_column($table_name, 'employee_id') ? 'employee_id' : (payslip_has_column($table_name, 'emp_id') ? 'emp_id' : '');
+$id_col = payslip_has_column($table_name, 'payslip_id') ? 'payslip_id' : (payslip_has_column($table_name, 'payslip_no') ? 'payslip_no' : '');
+
+if ($employee_col === '' || $id_col === '') {
+    display_error(_('Payslip inquiry cannot run because required columns are missing.'));
+    end_form();
+    end_page();
+    return;
+}
+
+$from_expr = payslip_has_column($table_name, 'from_date') ? 'p.from_date' : "''";
+$to_expr = payslip_has_column($table_name, 'to_date') ? 'p.to_date' : "''";
+$gross_expr = payslip_has_column($table_name, 'gross_salary') ? 'p.gross_salary' : (payslip_has_column($table_name, 'salary_amount') ? 'p.salary_amount' : '0');
+$ded_expr = payslip_has_column($table_name, 'total_deductions') ? 'p.total_deductions' : '0';
+$net_expr = payslip_has_column($table_name, 'net_salary') ? 'p.net_salary' : (payslip_has_column($table_name, 'payable_amount') ? 'p.payable_amount' : '0');
+$ref_expr = payslip_has_column($table_name, 'reference') ? 'p.reference' : "''";
+
+$where = array('1=1', payslip_non_voided_condition($table_name, 'p'));
+if ($employee_filter != '' && $employee_filter != ALL_TEXT)
+    $where[] = "p.$employee_col = ".db_escape($employee_filter);
+if (payslip_has_column($table_name, 'from_date'))
+    $where[] = "p.from_date >= ".db_escape(date2sql($_POST['from_date']));
+if (payslip_has_column($table_name, 'to_date'))
+    $where[] = "p.to_date <= ".db_escape(date2sql($_POST['to_date']));
+
+$sql = "SELECT p.$id_col AS payslip_no,
+        CONCAT(p.$employee_col, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+        $from_expr AS from_date,
+        $to_expr AS to_date,
+        $gross_expr AS gross_amount,
+        $ded_expr AS deduction_amount,
+        $net_expr AS net_amount,
+        $ref_expr AS reference
+    FROM ".TB_PREF.$table_name." p
+    LEFT JOIN ".TB_PREF."employees e ON e.employee_id = p.$employee_col
+    WHERE ".implode(' AND ', $where);
+
+if (payslip_has_column($table_name, 'from_date'))
+    $sql .= " ORDER BY p.from_date DESC, p.$id_col DESC";
+else
+    $sql .= " ORDER BY p.$id_col DESC";
+
+$cols = array(
+    _('Payslip #') => array('name' => 'payslip_no', 'ord' => 'desc'),
+    _('Employee') => array('name' => 'employee_label', 'ord' => ''),
+    _('From') => array('name' => 'from_date', 'type' => 'date', 'ord' => ''),
+    _('To') => array('name' => 'to_date', 'type' => 'date', 'ord' => ''),
+    _('Gross') => array('name' => 'gross_amount', 'type' => 'amount'),
+    _('Deductions') => array('name' => 'deduction_amount', 'type' => 'amount'),
+    _('Net') => array('name' => 'net_amount', 'type' => 'amount'),
+    _('Reference') => array('name' => 'reference', 'ord' => '')
+);
+
+$table =& new_db_pager('payslip_inquiry_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();

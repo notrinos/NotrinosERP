@@ -12,6 +12,7 @@
 $page_security = 'SA_ATTINQUIRY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 
@@ -52,23 +53,18 @@ if (get_post('employee_id') != '' && get_post('employee_id') != ALL_TEXT)
 
 $sql .= " GROUP BY a.employee_id, employee_name ORDER BY a.employee_id";
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Employee ID'), _('Employee Name'), _('Records'), _('Regular Hours'), _('Overtime Hours'), _('Absent Days'));
-table_header($th);
+$cols = array(
+    _('Employee ID') => array('name' => 'employee_id', 'ord' => 'asc'),
+    _('Employee Name') => array('name' => 'employee_name', 'ord' => ''),
+    _('Records') => array('name' => 'records_count', 'ord' => ''),
+    _('Regular Hours') => array('name' => 'regular_hours', 'type' => 'qty'),
+    _('Overtime Hours') => array('name' => 'overtime_hours', 'type' => 'qty'),
+    _('Absent Days') => array('name' => 'absent_days', 'ord' => '')
+);
 
-$res = db_query($sql, 'could not get attendance inquiry');
-$k = 0;
-while ($row = db_fetch($res)) {
-    alt_table_row_color($k);
-    label_cell($row['employee_id']);
-    label_cell($row['employee_name']);
-    label_cell($row['records_count']);
-    qty_cell($row['regular_hours']);
-    qty_cell($row['overtime_hours']);
-    label_cell($row['absent_days']);
-    end_row();
-}
-end_table(1);
+$table =& new_db_pager('attendance_inquiry_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();

@@ -12,6 +12,7 @@
 $page_security = 'SA_LEAVEINQUIRY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . '/includes/db_pager.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
@@ -37,28 +38,44 @@ $leave_id = (int)get_post('leave_id', 0);
 
 ensure_leave_balance_entitlements_for_filters($fiscal_year, $employee_id, $leave_id);
 
-start_table(TABLESTYLE, "width='100%'");
-$th = array(_('Employee'), _('Leave Type'), _('Year'), _('Entitled'), _('Carry Forward'), _('Adjusted'), _('Taken'), _('Pending'), _('Available'));
-table_header($th);
+$where = array('1=1');
+if ($fiscal_year > 0)
+    $where[] = 'lb.fiscal_year = '.db_escape($fiscal_year);
+if ($employee_id !== '' && $employee_id !== ALL_TEXT)
+    $where[] = 'lb.employee_id = '.db_escape($employee_id);
+if ($leave_id > 0)
+    $where[] = 'lb.leave_id = '.db_escape($leave_id);
 
-$result = get_leave_balances($fiscal_year, $employee_id, $leave_id);
-$k = 0;
-while ($row = db_fetch($result)) {
-    $available = (float)$row['entitled'] + (float)$row['carried_forward'] + (float)$row['adjusted'] - (float)$row['taken'] - (float)$row['pending'];
+$sql = "SELECT CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+        lt.leave_name,
+        lb.fiscal_year,
+        lb.entitled,
+        lb.carried_forward,
+        lb.adjusted,
+        lb.taken,
+        lb.pending,
+        (IFNULL(lb.entitled,0) + IFNULL(lb.carried_forward,0) + IFNULL(lb.adjusted,0) - IFNULL(lb.taken,0) - IFNULL(lb.pending,0)) available
+    FROM ".TB_PREF."leave_balances lb
+    LEFT JOIN ".TB_PREF."leave_types lt ON lt.leave_id = lb.leave_id
+    LEFT JOIN ".TB_PREF."employees e ON e.employee_id = lb.employee_id
+    WHERE ".implode(' AND ', $where)."
+    ORDER BY lb.employee_id, lb.fiscal_year DESC, lb.leave_id";
 
-    alt_table_row_color($k);
-    label_cell($row['employee_id'] . ' ' . $row['employee_name']);
-    label_cell($row['leave_name']);
-    label_cell($row['fiscal_year']);
-    qty_cell($row['entitled']);
-    qty_cell($row['carried_forward']);
-    qty_cell($row['adjusted']);
-    qty_cell($row['taken']);
-    qty_cell($row['pending']);
-    qty_cell($available);
-    end_row();
-}
-end_table(1);
+$cols = array(
+    _('Employee') => array('name' => 'employee_label', 'ord' => 'asc'),
+    _('Leave Type') => array('name' => 'leave_name', 'ord' => ''),
+    _('Year') => array('name' => 'fiscal_year', 'ord' => ''),
+    _('Entitled') => array('name' => 'entitled', 'type' => 'qty'),
+    _('Carry Forward') => array('name' => 'carried_forward', 'type' => 'qty'),
+    _('Adjusted') => array('name' => 'adjusted', 'type' => 'qty'),
+    _('Taken') => array('name' => 'taken', 'type' => 'qty'),
+    _('Pending') => array('name' => 'pending', 'type' => 'qty'),
+    _('Available') => array('name' => 'available', 'type' => 'qty')
+);
+
+$table =& new_db_pager('leave_balance_inquiry_tbl', $sql, $cols);
+$table->width = '100%';
+display_db_pager($table);
 end_form();
 
 end_page();
