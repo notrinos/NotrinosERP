@@ -172,16 +172,19 @@ if ($selected_id != '' && $Mode == 'Edit') {
 start_form();
 
 display_heading(_('Activity Details'));
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 crm_activity_type_list_row(_('Activity Type:'), 'activity_type_id', null);
 
 text_row(_('Subject:'), 'subject', null, 60, 200);
 textarea_row(_('Description:'), 'description', null, 60, 3);
+
+table_section(2);
 date_row(_('Due Date:'), 'due_date');
 
 $due_time = get_post('due_time', '09:00');
-label_row(_('Due Time:'), "<input type='time' name='due_time' value='" . htmlspecialchars($due_time) . "'>");
+label_row(null, _('Due Time:')." <input type='time' name='due_time' value='" . htmlspecialchars($due_time) . "'>");
 
 crm_priority_list_row(_('Priority:'), 'priority', null);
 
@@ -194,21 +197,23 @@ while ($u = db_fetch($users_result)) {
 }
 array_selector_row(_('Assigned To:'), 'assigned_to', null, $user_options);
 
-end_table(1);
+end_outer_table(1);
 
 // -- Linked Entity -------------------------------------------------------
 display_heading(_('Linked Entity'));
-start_table(TABLESTYLE2);
+start_outer_table();
 
 $entity_types = array(
     ''              => _('-- None --'),
     CRM_ENTITY_LEAD     => _('Lead'),
     CRM_ENTITY_CUSTOMER => _('Customer'),
 );
+table_section(1);
 array_selector_row(_('Entity Type:'), 'entity_type', null, $entity_types);
+table_section(2);
 text_row(_('Entity ID:'), 'entity_id', null, 10, 10);
 
-end_table(1);
+end_outer_table(1);
 
 // -- Buttons -------------------------------------------------------------
 submit_add_or_update_center($selected_id == '', '', 'both');
