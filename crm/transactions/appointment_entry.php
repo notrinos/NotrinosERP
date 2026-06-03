@@ -165,10 +165,10 @@ if (!$is_new) {
 }
 
 display_heading(_('Appointment Details'));
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 text_row(_('Title:'), 'title', null, 60, 200);
-crm_appointment_type_list_row(_('Type:'), 'appt_type_id', null);
 
 date_row(_('Date:'), 'appointment_date');
 
@@ -178,6 +178,9 @@ $end_time   = get_post('end_time', '09:30');
 label_row(_('Start Time:'), "<input type='time' name='start_time' value='" . htmlspecialchars($start_time) . "'>");
 label_row(_('End Time:'), "<input type='time' name='end_time' value='" . htmlspecialchars($end_time) . "'>");
 
+table_section(2);
+
+crm_appointment_type_list_row(_('Type:'), 'appt_type_id', null);
 text_row(_('Location:'), 'location', null, 60, 200);
 text_row(_('Video/Meeting Link:'), 'video_link', null, 60, 500);
 
@@ -200,12 +203,13 @@ while ($u = db_fetch($users_result)) {
 }
 array_selector_row(_('Assigned To:'), 'assigned_to', null, $user_options);
 
-end_table(1);
+end_outer_table(1);
 
 // -- Link to Entity (Lead/Customer) --------------------------------------
 display_heading(_('Linked Entity'));
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 $entity_types = array(
     ''              => _('-- None --'),
     CRM_ENTITY_LEAD     => _('Lead'),
@@ -213,10 +217,11 @@ $entity_types = array(
 );
 array_selector_row(_('Entity Type:'), 'entity_type', null, $entity_types);
 
+table_section(2);
 $entity_id_val = get_post('entity_id', 0);
 text_row(_('Entity ID:'), 'entity_id', $entity_id_val, 10, 10);
 
-end_table(1);
+end_outer_table(1);
 
 // -- Notes ---------------------------------------------------------------
 display_heading(_('Notes'));
