@@ -189,7 +189,9 @@ if ($Mode == 'RESET') {
 
 start_form();
 
-start_table(TABLESTYLE2);
+start_outer_table();
+
+table_section(1);
 if ($selected_id != '' && $Mode == 'Edit') {
     $myrow = get_leave_request($selected_id);
     if ($myrow && (int)$myrow['status'] == 0) {
@@ -211,18 +213,19 @@ label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, false, false, false, false, array('layout_class' => 'combo-layout-equal'));
 end_row();
 leave_types_list_row(_('Leave Type:'), 'leave_id');
-date_row(_('From Date:'), 'from_date');
-date_row(_('To Date:'), 'to_date');
-
 $half_day_options = array(
     0 => _('Full Day(s)'),
     1 => _('First Half'),
     2 => _('Second Half')
 );
 array_selector_row(_('Half-day option:'), 'half_day', null, $half_day_options);
+
+table_section(2);
+date_row(_('From Date:'), 'from_date');
+date_row(_('To Date:'), 'to_date');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);
 
-end_table();
+end_outer_table();
 submit_add_or_update_center($selected_id == '', '', 'both');
 
 br();
