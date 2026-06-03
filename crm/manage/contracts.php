@@ -104,7 +104,7 @@ while ($myrow = db_fetch($result)) {
     end_row();
 }
 
-end_table(1);
+end_outer_table(1);
 
 echo "<center><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?sel_app=crm' class='inputsubmit'>" . _('New Contract') . "</a></center>";
 
