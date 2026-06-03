@@ -94,7 +94,7 @@ while ($myrow = db_fetch($result)) {
     label_cell(crm_activity_status_badge($myrow['status']));
     label_cell($myrow['location'] ?: '-');
 
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/appointment_entry.php?id="
+    echo "<td><a href='" . $path_to_root . "/crm/transactions/appointment_entry.php?AppointmentID="
         . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
     echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
         . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this appointment?') . "');\">"
