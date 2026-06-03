@@ -11,8 +11,8 @@
 ***********************************************************************/
 $page_security = 'SA_EMPLOYEEREP';
 $path_to_root = "../..";
-include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/db_pager.inc');
+include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 
 page(_("Employee Directory"));
