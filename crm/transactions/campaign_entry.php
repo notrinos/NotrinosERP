@@ -254,8 +254,9 @@ if (!$is_new) {
 }
 
 display_heading(_('Campaign Details'));
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 text_row(_('Campaign Name:'), 'campaign_name', null, 60, 100);
 
 $types = array('email' => _('Email'), 'social' => _('Social Media'), 'event' => _('Event'), 'other' => _('Other'));
@@ -270,11 +271,13 @@ $statuses = array(
 array_selector_row(_('Status:'), 'status', null, $statuses);
 
 date_row(_('Start Date:'), 'start_date', '', null, 0, 0, 0);
+
+table_section(2);
 date_row(_('End Date:'), 'end_date', '', null, 0, 0, 0);
 amount_row(_('Budget:'), 'budget', null, null, '', 0);
 textarea_row(_('Description:'), 'description', null, 60, 4);
 
-end_table(1);
+end_outer_table(1);
 
 echo "<center>";
 submit('Save', $is_new ? _('Create Campaign') : _('Update Campaign'), true, '', 'default');
