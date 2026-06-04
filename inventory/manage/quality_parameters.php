@@ -253,9 +253,10 @@ if ($ptype === 'numeric') {
 }
 
 // Scope fields
-echo '<tr><td class="label">' . _('Item (blank = global)') . ':</td><td>';
-echo stock_items_list('stock_id_filter', null, _('Global - All Items'), true, array(), false, 'stock');
-echo '</td></tr>';
+start_row();
+label_cell(_('Item (blank = global)'));
+stock_items_list_cells(null, 'stock_id_filter', null, _('Global - All Items'), true);
+end_row();
 stock_categories_list_row(_('Category (blank = all)') . ':', 'category_id_filter',
 	null, _('All Categories'));
 
