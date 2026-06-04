@@ -100,11 +100,11 @@ $fixed_asset = is_fixed_asset(get_post('mb_flag'));
 $result = get_item_categories(check_value('show_inactive'), $fixed_asset);
 
 start_form();
-start_table(TABLESTYLE, "width='80%'");
+start_table(TABLESTYLE, "width='100%'");
 if ($fixed_asset)
-	$th = array(_('Name'), _('Tax type'), _('Units'), _('Sales Act'), _('Asset Account'), _('Deprecation Cost Account'), _('Depreciation/Disposal Account'), '', '');
+	$th = array(_('ID'), _('Name'), _('Tax type'), _('Units'), _('Sales Act'), _('Asset Account'), _('Deprecation Cost Account'), _('Depreciation/Disposal Account'), '', '');
 else
-	$th = array(_('Name'), _('Tax type'), _('Units'), _('Type'), _('Sales Act'), _('Inventory Account'), _('COGS Account'), _('Adjustment Account'), _('Assembly Account'), '', '');
+	$th = array(_('ID'), _('Name'), _('Tax type'), _('Units'), _('Type'), _('Sales Act'), _('Inventory Account'), _('COGS Account'), _('Adjustment Account'), _('Assembly Account'), '', '');
 
 inactive_control_column($th);
 
@@ -115,6 +115,7 @@ while ($myrow = db_fetch($result)) {
 	
 	alt_table_row_color($k);
 
+	label_cell($myrow['category_id']);
 	label_cell($myrow['description']);
 	label_cell($myrow['tax_name']);
 	label_cell($myrow['dflt_units'], 'align=center');
@@ -139,7 +140,7 @@ echo '<br>';
 //----------------------------------------------------------------------------------
 
 div_start('details');
-start_table(TABLESTYLE2);
+start_outer_table();
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
@@ -184,6 +185,7 @@ else if ($Mode != 'CLONE') {
 		$_POST['wip_account'] = $company_record['default_wip_act'];
 }
 
+table_section(1);
 text_row(_('Category Name:'), 'description', null, 30, 30);  
 
 table_section_title(_('Default values for new items'));
@@ -203,6 +205,8 @@ else
 	check_row(_('Exclude from sales:'), 'no_sale');
 
 check_row(_('Exclude from purchases:'), 'no_purchase');
+
+table_section(2);
 
 gl_all_accounts_list_row(_('Sales Account:'), 'sales_account', $_POST['sales_account']);
 
@@ -239,7 +243,7 @@ if ($dim < 1)
 if ($dim < 2)
 	hidden('dim2', 0);
 
-end_table(1);
+end_outer_table(1);
 div_end();
 submit_add_or_update_center($selected_id == -1, '', 'both', true);
 
