@@ -510,6 +510,7 @@ check_row(_('Check Credit on Sales Orders:'), 'credit_check_on_order', $_POST['c
 check_row(_('Check Credit on Deliveries:'), 'credit_check_on_delivery', $_POST['credit_check_on_delivery']);
 check_row(_('Enable Return Merchandise Authorization (RMA):'), 'use_rma', $_POST['use_rma']);
 
+table_section(2);
 table_section_title(_('Warranty Provision Controls'));
 check_row(_('Enable Automatic Warranty Provision:'), 'warranty_provision_enabled', $_POST['warranty_provision_enabled']);
 gl_all_accounts_list_row(_('Warranty Provision Account:'), 'warranty_provision_account', $_POST['warranty_provision_account'], true, false);
@@ -517,6 +518,7 @@ gl_all_accounts_list_row(_('Warranty Expense Account:'), 'warranty_expense_accou
 small_amount_row(_('Warranty Provision Rate (%):'), 'warranty_provision_rate', $_POST['warranty_provision_rate']);
 label_row(_('Detailed warranty setup:'), "<a href='$path_to_root/inventory/manage/warranty_provision_settings.php?sel_app=stock'>"._('Warranty Provision Settings')."</a>");
 
+table_section(1);
 table_section_title(_('Regulatory Compliance Controls'));
 check_row(_('Enable Regulatory Compliance Module:'), 'regulatory_compliance_enabled', $_POST['regulatory_compliance_enabled']);
 check_row(_('Enable DSCSA Compliance:'), 'dscsa_enabled', $_POST['dscsa_enabled']);
