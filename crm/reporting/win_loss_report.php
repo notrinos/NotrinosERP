@@ -85,13 +85,16 @@ $lost = (int)$summary['lost_count'];
 $total = $won + $lost;
 $win_rate = $total > 0 ? round(($won / $total) * 100, 1) : 0;
 
-start_table(TABLESTYLE2);
+start_outer_table();
+table_section(1);
 label_row(_('Won Deals:'), '<strong style="color:green;">' . $won . '</strong> (' . price_format($summary['won_revenue']) . ')');
 label_row(_('Lost Deals:'), '<strong style="color:red;">' . $lost . '</strong> (' . price_format($summary['lost_revenue']) . ')');
 label_row(_('Win Rate:'), '<strong>' . $win_rate . '%</strong>');
+
+table_section(2);
 label_row(_('Avg Days to Win:'), round((float)$summary['avg_won_days'], 1));
 label_row(_('Avg Days to Lose:'), round((float)$summary['avg_lost_days'], 1));
-end_table(1);
+end_outer_table(1);
 
 //--------------------------------------------------------------------------
 // Win/Loss by Source
