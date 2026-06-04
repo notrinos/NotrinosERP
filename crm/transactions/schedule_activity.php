@@ -32,16 +32,47 @@ $js = '';
 if (user_use_date_picker())
     $js .= get_js_date_picker();
 
+// Seed first-load defaults from the incoming context.
+$entity_type = isset($_GET['entity_type']) ? $_GET['entity_type'] : '';
+$entity_id   = isset($_GET['entity_id']) ? (int)$_GET['entity_id'] : 0;
+$activity_id = isset($_GET['activity_id']) ? (int)$_GET['activity_id'] : (isset($_GET['selected_id']) ? (int)$_GET['selected_id'] : 0);
+
+if (!isset($_POST['entity_type']) && $entity_type !== '')
+    $_POST['entity_type'] = $entity_type;
+if (!isset($_POST['entity_id']) && $entity_id > 0)
+    $_POST['entity_id'] = $entity_id;
+if (!isset($_POST['activity_type_id']))
+    $_POST['activity_type_id'] = 0;
+if (!isset($_POST['subject']))
+    $_POST['subject'] = '';
+if (!isset($_POST['description']))
+    $_POST['description'] = '';
+if (!isset($_POST['due_date']))
+    $_POST['due_date'] = Today();
+if (!isset($_POST['due_time']))
+    $_POST['due_time'] = '09:00';
+if (!isset($_POST['assigned_to']))
+    $_POST['assigned_to'] = $_SESSION['wa_current_user']->user;
+if (!isset($_POST['priority']))
+    $_POST['priority'] = CRM_PRIORITY_MEDIUM;
+if (!isset($_POST['selected_id'])) {
+    if (isset($_GET['selected_id'])) {
+        $_POST['selected_id'] = $_GET['selected_id'];
+        $_POST['Edit' . $_GET['selected_id']] = true;
+    } elseif ($activity_id > 0) {
+        $_POST['selected_id'] = $activity_id;
+        $_POST['Edit' . $activity_id] = true;
+    }
+}
+
 page(_($help_context = 'Schedule CRM Activity'), false, false, '', $js);
 
 simple_page_mode(false);
 
-//--------------------------------------------------------------------------
-// Pre-fill entity from GET params
-//--------------------------------------------------------------------------
-
-$entity_type = isset($_GET['entity_type']) ? $_GET['entity_type'] : '';
-$entity_id   = isset($_GET['entity_id'])   ? (int)$_GET['entity_id'] : 0;
+if ($activity_id > 0 && $Mode === '') {
+    $selected_id = $activity_id;
+    $Mode = 'Edit';
+}
 
 //--------------------------------------------------------------------------
 // Handle Save
@@ -162,6 +193,11 @@ if ($selected_id != '' && $Mode == 'Edit') {
         $_POST['assigned_to']      = $activity['assigned_to'];
         $_POST['priority']         = $activity['priority'];
         hidden('selected_id', $selected_id);
+    } else {
+        display_error(_('Activity not found.'));
+        $selected_id = '';
+        $_POST['selected_id'] = '';
+        $Mode = 'RESET';
     }
 }
 
@@ -217,6 +253,7 @@ end_outer_table(1);
 
 // -- Buttons -------------------------------------------------------------
 submit_add_or_update_center($selected_id == '', '', 'both');
+br();
 
 if ($selected_id != '') {
     echo "<center>";

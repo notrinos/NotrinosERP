@@ -184,7 +184,8 @@ function get_crm_activity($id)
             FROM " . TB_PREF . "crm_activities a
             LEFT JOIN " . TB_PREF . "crm_activity_types at ON a.activity_type_id = at.id
             WHERE a.id = " . db_escape($id);
-    return db_fetch(db_query($sql, "Could not get CRM activity"));
+    $result = db_query($sql, "Could not get CRM activity");
+    return db_fetch($result);
 }
 
 /**

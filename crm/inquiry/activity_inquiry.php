@@ -148,6 +148,7 @@ while ($row = db_fetch($result)) {
         if ($row['entity_type'] && $row['entity_id']) {
             echo 'entity_type=' . urlencode($row['entity_type']) . '&entity_id=' . (int)$row['entity_id'];
         }
+        echo '&selected_id=' . (int)$row['id'];
         echo crm_sel_app_param() . '">' . _('Edit') . '</a> ';
         echo '<button type="button" data-action="complete-activity" data-activity-id="' . (int)$row['id'] . '" '
             . 'style="font-size:0.85em; cursor:pointer;">' . _('Done') . '</button>';
