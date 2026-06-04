@@ -140,10 +140,13 @@ $funnel_sql = "SELECT
 
 $funnel = db_fetch(db_query($funnel_sql));
 
-start_table(TABLESTYLE2);
+start_outer_table();
+table_section(1);
 label_row(_('Total Leads:'), '<strong>' . (int)$funnel['total_leads'] . '</strong>');
 label_row(_('Total Opportunities:'), '<strong>' . (int)$funnel['total_opportunities'] . '</strong>');
 label_row(_('Won Deals:'), '<strong style="color:green;">' . (int)$funnel['won_deals'] . '</strong>');
+
+table_section(2);
 label_row(_('Lost Deals:'), '<strong style="color:red;">' . (int)$funnel['lost_deals'] . '</strong>');
 
 $lead_to_opp = $funnel['total_leads'] > 0
@@ -153,7 +156,7 @@ $opp_to_won = $funnel['total_opportunities'] > 0
 
 label_row(_('Lead â†’ Opportunity Rate:'), $lead_to_opp . '%');
 label_row(_('Opportunity â†’ Won Rate:'), $opp_to_won . '%');
-end_table(1);
+end_outer_table(1);
 
 //--------------------------------------------------------------------------
 // Pipeline Velocity
@@ -172,8 +175,10 @@ if ($f_to && is_date($f_to))   $velocity_sql .= " AND l.date_created <= " . db_e
 
 $velocity = db_fetch(db_query($velocity_sql));
 
-start_table(TABLESTYLE2);
+start_outer_table();
+table_section(1);
 label_row(_('Average Sales Cycle (days):'), round((float)$velocity['avg_cycle_days'], 1));
+table_section(2);
 label_row(_('Average Deal Size:'), price_format((float)$velocity['avg_deal_size']));
 
 // Pipeline velocity = (# deals * avg deal value * win rate) / avg cycle days
@@ -181,7 +186,7 @@ if ($velocity['avg_cycle_days'] > 0 && $opp_to_won > 0) {
     $pv = ($grand_count * (float)$velocity['avg_deal_size'] * ($opp_to_won / 100)) / (float)$velocity['avg_cycle_days'];
     label_row(_('Pipeline Velocity (daily):'), price_format($pv));
 }
-end_table(1);
+end_outer_table(1);
 
 end_form();
 end_page();
