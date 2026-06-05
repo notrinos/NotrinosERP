@@ -282,7 +282,9 @@ define('TR_INPUT', 1);	// purchase
 // Constants optionally redefined locally
 //
 defined('ICON_EDIT') || define('ICON_EDIT', 'btn_warning edit');
+defined('ICON_EDIT2') || define('ICON_EDIT2', 'btn_warning edit2');
 defined('ICON_DELETE') || define('ICON_DELETE', 'btn_danger x-circle');
+defined('ICON_THRASH') || define('ICON_THRASH', 'btn_danger thrash');
 defined('ICON_ADD')	|| define('ICON_ADD', 'btn_ok check-circle');
 defined('ICON_UPDATE') || define('ICON_UPDATE', 'btn_ok check-circle');
 defined('ICON_OK') || define('ICON_OK', 'btn_ok check-circle');

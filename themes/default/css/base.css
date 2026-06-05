@@ -131,6 +131,26 @@ input[type='button']:hover {
 	background: var(--modern-color-primary-strong);
 }
 
+/* Maintenance and master-data CRUD table buttons, class from button_cell() */
+.button-cell button,
+.button-cell input[type='submit'],
+.button-cell input[type='button'] {
+	padding: 6px 12px;
+	border: none;
+	background: none;
+	color: var(--modern-color-primary);
+	cursor: pointer;
+}
+
+.button-cell button:hover,
+.button-cell input[type='submit']:hover,
+.button-cell input[type='button']:hover {
+	border: none;
+	background: none;
+	color: var(--modern-color-primary);
+	box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+}
+
 /* Danger action styling for delete actions across forms and tables */
 .modern-app-shell input[type='submit'][value*='Delete'],
 .modern-app-shell input[type='button'][value*='Delete'],
@@ -161,6 +181,37 @@ input[type='button']:hover {
 	background: #b91c1c !important;
 	color: #fff !important;
 	text-decoration: none;
+}
+
+/* Maintenance and master-data CRUD table buttons, class from button_cell() */
+.button-cell input[type='submit'][value*='Delete'],
+.button-cell input[type='button'][value*='Delete'],
+.button-cell button[value*='Delete'],
+.button-cell button[name*='Delete'],
+.button-cell input[name*='Delete'],
+.button-cell .delete,
+.button-cell .btn-delete,
+.button-cell .btn-danger,
+.button-cell a.delete,
+.button-cell a.del {
+	border: none !important;
+	background: none !important;
+	color: #dc2626 !important;
+}
+
+.button-cell input[type='submit'][value*='Delete']:hover,
+.button-cell input[type='button'][value*='Delete']:hover,
+.button-cell button[value*='Delete']:hover,
+.button-cell button[name*='Delete']:hover,
+.button-cell input[name*='Delete']:hover,
+.button-cell .delete:hover,
+.button-cell .btn-delete:hover,
+.button-cell .btn-danger:hover,
+.button-cell a.delete:hover,
+.button-cell a.del:hover {
+	color: #dc2626 !important;
+	background: none !important;
+	box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14), 0 3px 10px rgba(15, 23, 42, 0.08) !important;
 }
 
 /* Override default.css small button padding */

@@ -324,7 +324,7 @@ function button($name, $value, $title=false, $icon=false,  $aspect='') {
 	}
 	if (user_graphic_links() && $icon) {
 		if ($value == _('Delete')) // Helper during implementation
-			$icon = ICON_DELETE;
+			$icon = empty($icon) ? ICON_DELETE : $icon;
 		return "<button type='submit' class='editbutton' name='"
 			.html_specials_encode(strtr($name, array('.'=>'=2E', '='=>'=3D',// ' '=>'=20','['=>'=5B'
 			)))
@@ -353,16 +353,18 @@ function button_cell($name, $value, $title=false, $icon=false, $aspect='') {
 	}
 
 	echo "<td align='center'>";
+	echo "<div class='button-cell'>";
 	echo button($name, $value, $title, $icon, $aspect);
+	echo "</div>";
 	echo "</td>";
 }
 
 function delete_button_cell($name, $value, $title=false) {
-	button_cell($name, $value, $title, ICON_DELETE);
+	button_cell($name, $value, $title, ICON_THRASH);
 }
 
 function edit_button_cell($name, $value, $title=false) {
-	button_cell($name, $value, $title, ICON_EDIT);
+	button_cell($name, $value, $title, ICON_EDIT2);
 }
 
 function select_button_cell($name, $value, $title=false) {
