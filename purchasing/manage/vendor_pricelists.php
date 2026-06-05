@@ -339,7 +339,10 @@ if ($filter_stock_id !== '' && $filter_stock_id != ALL_TEXT) {
 }
 
 display_heading($selected_id > 0 ? _('Edit Vendor Pricelist Entry') : _('Add Vendor Pricelist Entry'));
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+
+table_section(1);
+
 hidden('selected_id', $selected_id);
 echo '<tr><td class="label">' . _('Supplier:') . '</td>';
 supplier_list_cells(null, 'pricelist_supplier_id', get_post('pricelist_supplier_id'), false, true);
@@ -366,6 +369,9 @@ start_row();
 	label_cell(_('Price 2:'));
 	text_cells(null, 'pricelist_price_2', get_post('pricelist_price_2', 0), 10, 12);
 end_row();
+
+table_section(2)
+;
 start_row();
 	label_cell(_('Break Qty 3:'));
 	text_cells(null, 'pricelist_break_qty_3', get_post('pricelist_break_qty_3', 0), 10, 12);
@@ -385,7 +391,7 @@ amount_row(_('Discount Percent:'), 'pricelist_discount_percent', get_post('price
 check_row(_('Preferred Vendor for Item:'), 'pricelist_is_preferred', get_post('pricelist_is_preferred'));
 check_row(_('Inactive:'), 'pricelist_inactive', get_post('pricelist_inactive'));
 textarea_row(_('Notes:'), 'pricelist_notes', get_post('pricelist_notes'), 40, 4);
-end_table(1);
+end_outer_table(1);
 
 if ($selected_id > 0)
 	submit_center('update_pricelist', _('Update Vendor Pricelist Entry'));

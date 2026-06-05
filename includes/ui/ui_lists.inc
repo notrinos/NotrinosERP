@@ -1024,7 +1024,7 @@ function stock_costable_items_list($name, $selected_id=null, $all_option=false, 
 
 function stock_costable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
 	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
-		array('where'=>array("mb_flag!='D'"), 'search_submit'=>true));
+		array('where'=>array("mb_flag!='D'"), 'search_submit'=>true, 'layout_class'=>'combo-layout-equal'));
 }
 
 //------------------------------------------------------------------------------------
