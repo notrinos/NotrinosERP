@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 $page_security = 'SA_PURCHREPORT';
-$path_to_root = '..';
+$path_to_root = '../..';
 
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
@@ -39,14 +39,16 @@ submit_cells('RefreshSpend', _('Apply Filter'), '', _('Refresh spend analysis'),
 end_row();
 end_table(1);
 
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+table_section(1);
 label_row(_('Total Spend:'), price_format($dashboard_data['total_spend']));
 label_row(_('Open PO Value:'), price_format($dashboard_data['open_po_value']));
 label_row(_('Average PO Value:'), price_format($dashboard_data['avg_po_value']));
+table_section(2);
 label_row(_('Budget Amount:'), price_format($budget_variance['budget_amount']));
 label_row(_('Actual Amount:'), price_format($budget_variance['actual_amount']));
 label_row(_('Budget Variance:'), price_format($budget_variance['variance_amount']) . ' (' . number_format2($budget_variance['variance_pct'], 2) . '%)');
-end_table(2);
+end_outer_table(2);
 
 display_heading(_('Vendor Spend Ranking'));
 start_table(TABLESTYLE, "width='100%'");

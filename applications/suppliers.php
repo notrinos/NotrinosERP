@@ -62,7 +62,7 @@ class SuppliersApp extends application {
 			$this->add_lapp_function(1, _('Reorder &Status'), 'purchasing/inquiry/reorder_status.php?', 'SA_REORDERRULES', MENU_INQUIRY);
 		if ($use_purchase_dashboard) {
 			$this->add_lapp_function(1, _('Purchase &Dashboard'), 'purchasing/dashboard/purchase_dashboard.php?', 'SA_PURCHDASHBOARD', MENU_INQUIRY);
-			$this->add_lapp_function(1, _('Purchase Spend &Analysis'), 'reporting/rep_purchase_spend.php?', 'SA_PURCHREPORT', MENU_INQUIRY);
+			$this->add_lapp_function(1, _('Purchase Spend &Analysis'), 'purchasing/inquiry/rep_purchase_spend.php?', 'SA_PURCHREPORT', MENU_INQUIRY);
 			$this->add_lapp_function(1, _('Vendor Per&formance'), 'reporting/rep_vendor_performance.php?', 'SA_PURCHREPORT', MENU_INQUIRY);
 			$this->add_lapp_function(1, _('Purchase Price &Variance'), 'reporting/rep_purchase_variance.php?', 'SA_PURCHREPORT', MENU_INQUIRY);
 		}
