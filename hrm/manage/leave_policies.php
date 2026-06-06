@@ -138,7 +138,9 @@ while ($row = db_fetch($result)) {
 }
 end_table(1);
 
-start_table(TABLESTYLE2);
+start_outer_table();
+
+table_section(1);
 if ($selected_id != '' && $Mode == 'Edit') {
     $myrow = get_leave_policy($selected_id);
     $_POST['policy_name'] = $myrow['policy_name'];
@@ -160,6 +162,7 @@ grades_list_row(_('Grade (optional):'), 'grade_id', null, _('-- All Grades --'))
 employment_type_list_row(_('Employment Type (optional):'), 'employment_type');
 amount_row(_('Annual Entitlement (days):'), 'annual_entitlement');
 
+table_section(2);
 $accrual_methods = array(
     0 => _('Annual Grant'),
     1 => _('Monthly Accrual'),
@@ -171,7 +174,7 @@ small_amount_row(_('Minimum Service (months):'), 'min_service_months');
 date_row(_('Effective From:'), 'effective_from');
 date_row(_('Effective To:'), 'effective_to');
 
-end_table(1);
+end_outer_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 
 end_form();
