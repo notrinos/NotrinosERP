@@ -1022,9 +1022,9 @@ function stock_costable_items_list($name, $selected_id=null, $all_option=false, 
 	return stock_items_list($name, $selected_id, $all_option, $submit_on_change, array('where'=>array("mb_flag!='D'"), 'search_submit'=>true), false, 'stock_costable');
 }
 
-function stock_costable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false) {
+function stock_costable_items_list_cells($label, $name, $selected_id=null, $all_option=false, $submit_on_change=false, $opts=array()) {
 	echo stock_items_list_cells($label, $name, $selected_id, $all_option, $submit_on_change, false, false,
-		array('where'=>array("mb_flag!='D'"), 'search_submit'=>true, 'layout_class'=>'combo-layout-equal'));
+		array_merge(array('where'=>array("mb_flag!='D'"), 'search_submit'=>true), $opts));
 }
 
 //------------------------------------------------------------------------------------

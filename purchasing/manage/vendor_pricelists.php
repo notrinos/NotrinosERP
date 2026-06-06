@@ -349,7 +349,7 @@ supplier_list_cells(null, 'pricelist_supplier_id', get_post('pricelist_supplier_
 echo '</tr>';
 start_row();
 label_cell(_('Item:'));
-stock_costable_items_list_cells(null, 'pricelist_stock_id', get_post('pricelist_stock_id'), false, true);
+stock_costable_items_list_cells(null, 'pricelist_stock_id', get_post('pricelist_stock_id'), false, true, array('layout_class'=>'combo-layout-equal'));
 end_row();
 text_row(_('Vendor Product Code:'), 'pricelist_vendor_product_code', get_post('pricelist_vendor_product_code'), 30, 50);
 text_row(_('Vendor Product Name:'), 'pricelist_vendor_product_name', get_post('pricelist_vendor_product_name'), 40, 100);
