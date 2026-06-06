@@ -176,17 +176,21 @@ echo '</div>';
 
 br();
 
-start_table(TABLESTYLE2, "width='100%'");
+start_outer_table();
+
+table_section(1);
 text_row(_('Template Name:'), 'template_name', get_post('template_name'), 40, 100);
 text_row(_('Description:'), 'template_description', get_post('template_description'), 50, 255);
 echo '<tr><td class="label">' . _('Default Supplier:') . '</td>';
 supplier_list_cells(null, 'template_supplier_id', get_post('template_supplier_id'), true, true);
 echo '</tr>';
 locations_list_row(_('Delivery Location:'), 'template_delivery_location', get_post('template_delivery_location'), true);
+
+table_section(2);
 payment_terms_list_row(_('Payment Terms:'), 'template_payment_terms', get_post('template_payment_terms'));
 check_row(_('Inactive:'), 'template_inactive', get_post('template_inactive'));
 textarea_row(_('Notes:'), 'template_notes', get_post('template_notes'), 40, 4);
-end_table(1);
+end_outer_table(1);
 
 if ($selected_id > 0)
 	submit_center('update_template', _('Update Purchase Template'));
