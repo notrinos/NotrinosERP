@@ -68,6 +68,7 @@ if ($download_id != -1) {
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(800, 500);
+
 page(_($help_context = 'Attach Documents'), false, false, '', $js);
 
 simple_page_mode(true);
@@ -198,19 +199,19 @@ function trans_view($trans) {
 }
 
 function edit_link($row) {
-	return button('Edit'.$row['id'], _('Edit'), _('Edit'), ICON_EDIT);
+	return "<div class='button-cell'>".button('Edit'.$row['id'], _('Edit'), _('Edit'), ICON_EDIT2)."</div>";
 }
 
 function view_link($row) {
-	return button('view'.$row['id'], _('View'), _('View'), ICON_VIEW);
+	return "<div class='button-cell'>".button('view'.$row['id'], _('View'), _('View'), ICON_VIEW)."</div>";
 }
 
 function download_link($row) {
-	return button('download'.$row['id'], _('Download'), _('Download'), ICON_DOWN);
+	return "<div class='button-cell'>".button('download'.$row['id'], _('Download'), _('Download'), ICON_DOWN)."</div>";
 }
 
 function delete_link($row) {
-	return button('Delete'.$row['id'], _('Delete'), _('Delete'), ICON_DELETE);
+	return "<div class='button-cell'>".button('Delete'.$row['id'], _('Delete'), _('Delete'), ICON_THRASH)."</div>";
 }
 
 function display_rows($type, $trans_no) {
