@@ -264,8 +264,9 @@ function display_companies() {
 function display_company_edit($selected_id) {
 	global $def_coy, $db_connections, $tb_pref_counter;
 
-	start_table(TABLESTYLE2);
+	start_outer_table();
 
+	table_section(1);
 	if ($selected_id != -1) {
 		$conn = $db_connections[$selected_id];
 		$_POST['name'] = $conn['name'];
@@ -303,6 +304,8 @@ function display_company_edit($selected_id) {
 		text_row_ex(_('Port'), 'port', 30, 60);
 		text_row_ex(_('Database User'), 'dbuser', 30);
 		text_row_ex(_('Database Password'), 'dbpassword', 30);
+
+		table_section(2);
 		text_row_ex(_('Database Name'), 'dbname', 30);
 		collations_list_row(_('Database Collation:'), 'collation');
 		yesno_list_row(_('Table Pref'), 'tbpref', 1, $_POST['tbpref'], _('None'), false);
@@ -314,6 +317,8 @@ function display_company_edit($selected_id) {
 		label_row(_('Host'), $_POST['host']);
 		label_row(_('Port'), $_POST['port']);
 		label_row(_('Database User'), $_POST['dbuser']);
+
+		table_section(2);
 		label_row(_('Database Name'), $_POST['dbname']);
 		collations_list_row(_('Database Collation:'), 'collation');
 		label_row(_('Table Pref'), $_POST['tbpref']);
@@ -323,7 +328,7 @@ function display_company_edit($selected_id) {
 			label_row(_('Default Company'), _('Yes'));
 	}
 
-	end_table(1);
+	end_outer_table(1);
 	hidden('selected_id', $selected_id);
 }
 
