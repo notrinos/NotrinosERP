@@ -85,7 +85,7 @@ if ($Mode == 'Delete' && check_csrf_token()) {
 	if ($cancel_delete == 0) {
 		delete_user($selected_id);
 		display_notification_centered(_('User has been deleted.'));
-	} //end if Delete group
+	}
 	$Mode = 'RESET';
 }
 
@@ -148,7 +148,9 @@ end_table(1);
 
 //-------------------------------------------------------------------------------------------------
 
-start_table(TABLESTYLE2);
+start_outer_table();
+
+table_section(1);
 
 $_POST['email'] = '';
 if ($selected_id != -1) {
@@ -169,8 +171,7 @@ if ($selected_id != -1) {
 	}
 	hidden('selected_id', $selected_id);
 	hidden('login_id');
-
-	start_row();
+	
 	label_row(_('User login:'), $_POST['login_id']);
 } 
 else { //end of if $selected_id only do the else when a new record is being entered
@@ -189,13 +190,16 @@ if ($selected_id != -1)
 text_row_ex(_('Full Name').':', 'real_name',  50);
 text_row_ex(_('Telephone No.:'), 'phone', 30);
 email_row_ex(_('Email Address:'), 'email', 50);
+
+table_section(2);
+
 security_roles_list_row(_('Access Level:'), 'role_id', null); 
 languages_list_row(_('Language:'), 'language', null);
 pos_list_row(_("User's POS"). ':', 'pos', null);
 print_profiles_list_row(_('Printing profile').':', 'print_profile', null, _('Browser printing support'));
 check_row(_('Use popup window for reports:'), 'rep_popup', $_POST['rep_popup'], false, _('Set this option to on if your browser directly supports pdf files'));
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
