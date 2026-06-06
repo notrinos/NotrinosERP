@@ -96,17 +96,22 @@ if (isset($_POST['add_applicant'])) {
 start_form();
 
 display_heading(_('Recruitment Openings'));
-start_table(TABLESTYLE2, "width='85%'");
+
+start_outer_table();
+
+table_section(1);
 text_row_ex(_('Job Title:'), 'job_title', 50, 120);
 departments_list_row(_('Department:'), 'department_id', null, true, _('None'));
 $text_sql = "SELECT position_id, position_name FROM ".TB_PREF."positions WHERE !inactive";
 label_row(_('Position:'), combo_input('position_id', get_post('position_id', 0), $text_sql, 'position_id', 'position_name', array('spec_option' => _('None'), 'spec_id' => 0)));
 qty_row(_('Headcount:'), 'headcount', get_post('headcount', 1), null, null, 1);
+
+table_section(2);
 date_row(_('Opening Date:'), 'opening_date');
 date_row(_('Closing Date:'), 'closing_date');
-label_row(_('Status:'), array_selector('opening_status', get_post('opening_status', 0), recruitment_statuses()));
+array_selector_row(_('Status:'), 'opening_status', get_post('opening_status', 0), recruitment_statuses());
 textarea_row(_('Description:'), 'opening_description', get_post('opening_description', ''), 50, 2);
-end_table(1);
+end_outer_table(1);
 submit_center('add_opening', _('Add Opening'));
 
 start_table(TABLESTYLE, "width='95%'");
@@ -130,17 +135,21 @@ end_table(2);
 $opening_sql = "SELECT opening_id, job_title FROM ".TB_PREF."recruitment_openings WHERE status IN (0,1)";
 
 display_heading(_('Applicants'));
-start_table(TABLESTYLE2, "width='85%'");
+start_outer_table();
+
+table_section(1);
 label_row(_('Opening:'), combo_input('opening_id', get_post('opening_id', 0), $opening_sql, 'opening_id', 'job_title', array('spec_option' => _('General Pool'), 'spec_id' => 0)));
 text_row_ex(_('Full Name:'), 'full_name', 40, 140);
 text_row_ex(_('Email:'), 'email', 40, 120);
 text_row_ex(_('Mobile:'), 'mobile', 30, 40);
 text_row_ex(_('Source:'), 'source', 30, 80);
+
+table_section(2);
 date_row(_('Applied Date:'), 'applied_date');
 amount_row(_('Expected Salary:'), 'expected_salary');
 label_row(_('Status:'), array_selector('applicant_status', get_post('applicant_status', 0), applicant_statuses()));
-textarea_row(_('Remarks:'), 'remarks', get_post('remarks', ''), 50, 2);
-end_table(1);
+textarea_row(_('Remarks:'), 'remarks', get_post('remarks', ''), 50, 3);
+end_outer_table(1);
 submit_center('add_applicant', _('Add Applicant'));
 
 start_table(TABLESTYLE, "width='95%'");
