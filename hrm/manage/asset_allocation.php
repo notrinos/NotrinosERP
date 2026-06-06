@@ -55,17 +55,20 @@ if (isset($_POST['add_allocation'])) {
 
 start_form();
 
-start_table(TABLESTYLE2, "width='80%'");
+start_outer_table();
+table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
 text_row_ex(_('Asset Name:'), 'asset_name', 40, 140);
 text_row_ex(_('Asset Code:'), 'asset_code', 30, 60);
 text_row_ex(_('Serial No:'), 'serial_no', 30, 80);
 date_row(_('Allocation Date:'), 'allocation_date');
+
+table_section(2);
 date_row(_('Expected Return:'), 'expected_return');
 date_row(_('Returned Date:'), 'return_date');
 label_row(_('Status:'), array_selector('asset_status', get_post('asset_status', 0), asset_statuses()));
-textarea_row(_('Notes:'), 'asset_notes', get_post('asset_notes', ''), 50, 2);
-end_table(1);
+textarea_row(_('Notes:'), 'asset_notes', get_post('asset_notes', ''), 50, 4);
+end_outer_table(1);
 submit_center('add_allocation', _('Add Allocation'));
 
 start_table(TABLESTYLE, "width='98%'");
