@@ -122,7 +122,7 @@ function select_link($row) {
 		$row['type'] = $_POST['filterType'];
 	if (!is_date_in_fiscalyear($row['trans_date'], true))
 		return _('N/A');
-	return button('Edit'.$row['trans_no'], _('Select'), _('Select'), ICON_EDIT);
+	return "<div class='button-cell'>".button('Edit'.$row['trans_no'], _('Select'), _('Select'), ICON_EDIT2)."</div>";
 }
 
 function gl_view($row) {
