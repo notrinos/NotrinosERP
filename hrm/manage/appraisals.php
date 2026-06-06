@@ -101,21 +101,26 @@ if (isset($_POST['add_appraisal'])) {
 
 start_form();
 
-start_table(TABLESTYLE2, "width='85%'");
+start_outer_table();
+
+table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
 employees_list_row(_('Reviewer:'), 'reviewer_id', null, true, false, false);
 date_row(_('Period From:'), 'period_from');
 date_row(_('Period To:'), 'period_to');
 date_row(_('Appraisal Date:'), 'appraisal_date');
 qty_row(_('Overall Score:'), 'overall_score', get_post('overall_score', 0));
+
+table_section();
 qty_row(_('Rating Scale:'), 'rating_scale', get_post('rating_scale', 5));
-textarea_row(_('Strengths:'), 'strengths', get_post('strengths', ''), 50, 2);
-textarea_row(_('Improvements:'), 'improvements', get_post('improvements', ''), 50, 2);
-textarea_row(_('Recommendation:'), 'recommendation', get_post('recommendation', ''), 50, 2);
-end_table(1);
+textarea_row(_('Strengths:'), 'strengths', get_post('strengths', ''), 50, 4);
+textarea_row(_('Improvements:'), 'improvements', get_post('improvements', ''), 50, 4);
+textarea_row(_('Recommendation:'), 'recommendation', get_post('recommendation', ''), 50, 4);
+end_outer_table(1);
 submit_center('add_appraisal', _('Add Appraisal'));
 
-start_table(TABLESTYLE, "width='98%'");
+br();
+start_table(TABLESTYLE, "width='100%'");
 table_header(array(_('ID'), _('Employee'), _('Reviewer'), _('Period'), _('Date'), _('Score'), _('Status')));
 $status_labels = appraisal_statuses();
 $rows = get_employee_appraisals();
