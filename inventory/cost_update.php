@@ -91,13 +91,14 @@ if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center>'._('Item:').'&nbsp;';
+	start_table(TABLESTYLE_NOBORDER);
+	
 	if (get_post('fixed_asset') == 1)
-		echo stock_disposable_fa_list('stock_id', $_POST['stock_id'], false, true);
+		stock_disposable_fa_list_cells(null, 'stock_id', $_POST['stock_id'], false, true);
 	else
-		echo stock_items_list('stock_id', $_POST['stock_id'], false, true);
+		stock_items_list_cells(null, 'stock_id', $_POST['stock_id'], false, true);
 
-	echo '</center><hr>';
+	end_table();
 }
 else
 	br(2);
