@@ -351,8 +351,9 @@ end_table(1);
 display_heading($edit_workflow ? _('Edit Approval Workflow') : _('Add New Approval Workflow'));
 echo '<br>';
 
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 if ($edit_workflow && $selected_workflow > 0) {
 	$workflow_row = get_approval_workflow($selected_workflow);
 	if ($workflow_row) {
@@ -388,6 +389,8 @@ if ($edit_workflow && $selected_workflow > 0) {
 text_row(_('Workflow Name:'), 'workflow_name', get_post('workflow_name'), 50, 100);
 text_row(_('Description:'), 'workflow_description', get_post('workflow_description'), 60, 255);
 
+table_section(2);
+
 if ($edit_workflow) {
 	check_row(_('Active:'), 'workflow_active', get_post('workflow_active'));
 }
@@ -401,7 +404,7 @@ check_row(_('Allow Edit on Approve:'), 'allow_edit_approve',
 check_row(_('Allow Self-Approve:'), 'allow_self_approve',
 	isset($_POST['allow_self_approve']) ? $_POST['allow_self_approve'] : 0);
 
-end_table(1);
+end_outer_table(1);
 
 if ($edit_workflow) {
 	echo "<div class='form-actions' style='justify-content:center;'>";
@@ -524,7 +527,7 @@ if ($level_workflow_id > 0) {
 		display_heading($editing_level ? _('Edit Approval Level') : _('Add New Approval Level'));
 		echo '<br>';
 
-		start_table(TABLESTYLE2);
+		start_outer_table();
 
 		if ($editing_level) {
 			$_POST['level_role_id'] = $level_data['role_id'];
@@ -539,6 +542,7 @@ if ($level_workflow_id > 0) {
 			hidden('selected_level_id', $selected_level);
 		}
 
+		table_section(1);
 		// Security role dropdown
 		$roles = get_security_roles_for_approval();
 		echo "<tr><td class='label'>" . _('Security Role:') . "</td><td>";
@@ -562,6 +566,8 @@ if ($level_workflow_id > 0) {
 		small_amount_row(_('Escalation Days (0=none):'), 'level_escalation_days',
 			isset($_POST['level_escalation_days']) ? $_POST['level_escalation_days'] : 0, null, null, 0);
 
+		table_section(2);
+
 		// Escalation to level
 		$max_level = get_max_approval_level($level_workflow_id);
 		$escalation_options = array('' => _('N/A'));
@@ -571,7 +577,6 @@ if ($level_workflow_id > 0) {
 		echo "<tr><td class='label'>" . _('Escalate To Level:') . "</td><td>";
 		echo array_selector('level_escalation_to', get_post('level_escalation_to'), $escalation_options);
 		echo "</td></tr>\n";
-
 		// Location restriction
 		locations_list_row(_('Location:'), 'level_loc_code',
 			get_post('level_loc_code'), _('All Locations'));
@@ -595,7 +600,7 @@ if ($level_workflow_id > 0) {
 			check_row(_('Active:'), 'level_active', get_post('level_active'));
 		}
 
-		end_table(1);
+		end_outer_table(1);
 
 		hidden('workflow_id', $level_workflow_id);
 
