@@ -198,6 +198,7 @@ $edit_id = find_submit('Edit');
 if ($edit_id > 0) {
 	$selected_id = $edit_id;
 	$Ajax->activate('to_detail');
+	add_scroll_into_view('to_detail');
 }
 
 // --- View button from list ---
@@ -205,12 +206,14 @@ $view_id = find_submit('View');
 if ($view_id > 0) {
 	$selected_id = $view_id;
 	$Ajax->activate('to_detail');
+	add_scroll_into_view('to_detail');
 }
 
 // --- New button ---
 if (isset($_POST['New'])) {
 	$selected_id = -1;
 	$Ajax->activate('to_detail');
+	add_scroll_into_view('to_detail');
 }
 
 // =====================================================================
@@ -309,6 +312,9 @@ div_end();
 // =====================================================================
 
 div_start('to_detail');
+if ($selected_id > 0 && !in_ajax()) {
+	add_scroll_into_view('to_detail');
+}
 if ($selected_id > 0 || isset($_POST['New'])) {
 	$editing = false;
 	$order = null;
@@ -331,30 +337,26 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 			. transfer_order_status_badge($order['status']) . ' '
 			. transfer_order_type_badge($order['transfer_type']) . '</h3>';
 
-		start_table(TABLESTYLE2);
+		start_outer_table();
+
+		table_section(1);
 		label_row(_('From Location:'), $order['from_loc_name']);
 		label_row(_('To Location:'), $order['to_loc_name']);
 		label_row(_('Request Date:'), sql2date($order['request_date']));
-		if ($order['expected_ship_date'])
-			label_row(_('Expected Ship:'), sql2date($order['expected_ship_date']));
-		if ($order['actual_ship_date'])
-			label_row(_('Actual Ship:'), sql2date($order['actual_ship_date']));
-		if ($order['expected_recv_date'])
-			label_row(_('Expected Receive:'), sql2date($order['expected_recv_date']));
-		if ($order['actual_recv_date'])
-			label_row(_('Actual Receive:'), sql2date($order['actual_recv_date']));
-		if ($order['reference'])
-			label_row(_('Reference:'), $order['reference']);
-		if ($order['memo'])
-			label_row(_('Memo:'), $order['memo']);
+		label_row(_('Expected Ship:'), $order['expected_ship_date'] ? sql2date($order['expected_ship_date']) : '--');
+		label_row(_('Actual Ship:'), $order['actual_ship_date'] ? sql2date($order['actual_ship_date']) : '--');
+		label_row(_('Expected Receive:'), $order['expected_recv_date'] ? sql2date($order['expected_recv_date']) : '--');
+		label_row(_('Actual Receive:'), $order['actual_recv_date'] ? sql2date($order['actual_recv_date']) : '--');
+
+		table_section(2);
+		
+		label_row(_('Reference:'), $order['reference'] ? $order['reference'] : '--');
+		label_row(_('Memo:'), $order['memo'] ? $order['memo'] : '--');
 		label_row(_('Requested By:'), $order['requested_by_name']);
-		if ($order['approved_by_name'])
-			label_row(_('Approved By:'), $order['approved_by_name']);
-		if ($order['shipped_by_name'])
-			label_row(_('Shipped By:'), $order['shipped_by_name']);
-		if ($order['received_by_name'])
-			label_row(_('Received By:'), $order['received_by_name']);
-		end_table(1);
+		label_row(_('Approved By:'), $order['approved_by_name'] ? $order['approved_by_name'] : '--');
+		label_row(_('Shipped By:'), $order['shipped_by_name'] ? $order['shipped_by_name'] : '--');
+		label_row(_('Received By:'), $order['received_by_name'] ? $order['received_by_name'] : '--');
+		end_outer_table(1);
 
 		// --- Line items ---
 		display_heading(_('Line Items'));
@@ -472,19 +474,22 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 	} elseif (isset($_POST['New']) || $selected_id == -1) {
 		// --- New order form ---
 		display_heading(_('New Transfer Order'));
-		start_table(TABLESTYLE2);
+		start_outer_table();
 
+		table_section(1);
 		$types = array('standard' => _('Standard'), 'urgent' => _('Urgent'));
 		array_selector_row(_('Transfer Type:'), 'transfer_type', null, $types);
 		locations_list_row(_('From Location:'), 'from_loc', null);
 		locations_list_row(_('To Location:'), 'to_loc', null);
 		date_row(_('Request Date:'), 'request_date', '', true);
+
+		table_section(2);
 		date_row(_('Expected Ship Date:'), 'expected_ship');
 		date_row(_('Expected Receive Date:'), 'expected_recv');
 		text_row(_('Reference:'), 'reference', null, 30, 60);
 		textarea_row(_('Memo:'), 'memo', null, 50, 3);
 
-		end_table(1);
+		end_outer_table(1);
 		submit_center('ADD_ITEM', _('Create Transfer Order'), true, '', 'default');
 	}
 }
