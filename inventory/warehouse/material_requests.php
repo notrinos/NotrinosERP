@@ -235,6 +235,7 @@ if ($view_id > 0) {
 if ($is_new_request) {
 	$selected_id = -1;
 	$Ajax->activate('mr_detail');
+	add_scroll_into_view('mr_detail');
 }
 
 // =====================================================================
@@ -370,12 +371,17 @@ if ($selected_id > 0 || $is_new_request) {
 			. material_request_status_badge($mr['status']) . ' '
 			. material_request_type_badge($mr['request_type']) . '</h3>';
 
-		start_table(TABLESTYLE2);
+		start_outer_table();
+
+		table_section(1);
 		label_row(_('Type:'), material_request_type_badge($mr['request_type']));
 		label_row(_('Warehouse:'), $mr['warehouse_name']);
 		label_row(_('Request Date:'), sql2date($mr['request_date']));
 		if ($mr['required_date'])
 			label_row(_('Required Date:'), sql2date($mr['required_date']));
+
+		table_section(2);
+
 		if ($mr['reference'])
 			label_row(_('Reference:'), $mr['reference']);
 		if ($mr['memo'])
@@ -412,7 +418,7 @@ if ($selected_id > 0 || $is_new_request) {
 		// Estimated value
 		$total_value = get_material_request_total_value($selected_id);
 		label_row(_('Estimated Value:'), price_format($total_value));
-		end_table(1);
+		end_outer_table(1);
 
 		// --- Line items ---
 		display_heading(_('Line Items'));
@@ -596,17 +602,20 @@ if ($selected_id > 0 || $is_new_request) {
 	} elseif ($is_new_request || $selected_id == -1 && !isset($_POST['SearchMR'])) {
 		// --- New request form ---
 		display_heading(_('New Material Request'));
-		start_table(TABLESTYLE2);
+		start_outer_table();
 
+		table_section(1);
 		$types = get_material_request_types();
 		array_selector_row(_('Request Type:'), 'request_type', null, $types);
 		locations_list_row(_('Requesting Warehouse:'), 'warehouse_loc', null);
 		date_row(_('Request Date:'), 'request_date', '', true);
 		date_row(_('Required Date:'), 'required_date');
-		text_row(_('Reference:'), 'reference', null, 30, 60);
-		textarea_row(_('Memo:'), 'memo', null, 50, 3);
 
-		end_table(1);
+		table_section(2);
+		text_row(_('Reference:'), 'reference', null, 30, 60);
+		textarea_row(_('Memo:'), 'memo', null, 50, 5);
+
+		end_outer_table(1);
 		submit_center('ADD_ITEM', _('Create Material Request'), true, '', 'default');
 	}
 }
