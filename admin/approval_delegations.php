@@ -182,21 +182,16 @@ while ($row = db_fetch($delegations)) {
 	delete_button_cell('Delete' . $row['id'], _('Deactivate'));
 	end_row();
 }
-
-end_table();
-
-echo '<br>';
-start_table(TABLESTYLE_NOBORDER);
-check_row(_('Show inactive delegations:'), 'show_inactive', $show_inactive, true);
-end_table();
-echo '<br>';
+inactive_control_row($th);
+end_table(1);
 
 // =====================================================
 // RENDERING — Delegation Add/Edit Form
 // =====================================================
 
-start_table(TABLESTYLE2);
+start_outer_table();
 
+table_section(1);
 if ($selected_id != -1 && $Mode == 'Edit') {
 	$delegation_row = get_approval_delegation($selected_id);
 	if ($delegation_row) {
@@ -230,6 +225,8 @@ echo array_selector('delegation_trans_type', get_post('delegation_trans_type'), 
 	array('spec_option' => _('All Transaction Types'), 'spec_id' => ''));
 echo "</td></tr>\n";
 
+table_section(2);
+
 // From Date
 date_row(_('From Date:'), 'delegation_from_date',
 	isset($_POST['delegation_from_date']) ? $_POST['delegation_from_date'] : null);
@@ -241,7 +238,7 @@ date_row(_('To Date (blank=indefinite):'), 'delegation_to_date',
 // Reason
 text_row(_('Reason:'), 'delegation_reason', get_post('delegation_reason'), 60, 255);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
