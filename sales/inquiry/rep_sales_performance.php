@@ -11,13 +11,13 @@
 ***********************************************************************/
 
 /*
-    Phase 7: Salesman Performance Report.
+    Salesman Performance Report.
     Shows revenue, margin, commission, and targets per salesman.
     Uses HTML page pattern (consistent with other custom reports in this codebase).
 */
 
 $page_security = 'SA_SALESREPORT';
-$path_to_root = '..';
+$path_to_root = '../..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');

@@ -60,10 +60,10 @@ class CustomersApp extends application {
 
 		$this->add_rapp_function(1, _('Customer and Sales &Reports'), 'reporting/reports_main.php?Class=0', 'SA_SALESTRANSVIEW', MENU_REPORT);
 		if ($use_margin_display)
-			$this->add_rapp_function(1, _('Sales &Margin Analysis'), 'reporting/rep_sales_margin.php?', 'SA_SALESREPORT', MENU_REPORT);
-		$this->add_rapp_function(1, _('Sales &Performance'), 'reporting/rep_sales_performance.php?', 'SA_SALESREPORT', MENU_REPORT);
+			$this->add_rapp_function(1, _('Sales &Margin Analysis'), 'sales/inquiry/rep_sales_margin.php?', 'SA_SALESREPORT', MENU_REPORT);
+		$this->add_rapp_function(1, _('Sales &Performance'), 'sales/inquiry/rep_sales_performance.php?', 'SA_SALESREPORT', MENU_REPORT);
 		if ($use_discount_programs)
-			$this->add_rapp_function(1, _('&Discount Effectiveness'), 'reporting/rep_discount_analysis.php?', 'SA_SALESREPORT', MENU_REPORT);
+			$this->add_rapp_function(1, _('&Discount Effectiveness'), 'sales/inquiry/rep_discount_analysis.php?', 'SA_SALESREPORT', MENU_REPORT);
 
 		$this->add_module(_('Maintenance'));
 		$this->add_lapp_function(2, _('Add and Manage &Customers'), 'sales/manage/customers.php?', 'SA_CUSTOMER', MENU_ENTRY);
