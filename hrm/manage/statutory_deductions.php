@@ -108,7 +108,7 @@ if ($Mode == 'RESET') {
 
 start_form();
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('ID'), _('Name'), _('Code'), _('Emp Rate'), _('Er Rate'), _('Base'), _('Effective From'), _('Inactive'), '', '');
 table_header($th);
 
@@ -130,7 +130,9 @@ while ($row = db_fetch($result)) {
 }
 end_table(1);
 
-start_table(TABLESTYLE2);
+start_outer_table();
+
+table_section(1);
 if ($selected_id != '' && $Mode == 'Edit') {
     $myrow = get_statutory_deduction($selected_id);
     $_POST['statutory_name'] = $myrow['statutory_name'];
@@ -157,6 +159,8 @@ amount_row(_('Employer Rate (%):'), 'employer_rate');
 amount_row(_('Employee Fixed:'), 'employee_fixed');
 amount_row(_('Employer Fixed:'), 'employer_fixed');
 amount_row(_('Ceiling Amount:'), 'ceiling_amount');
+
+table_section(2);
 amount_row(_('Floor Amount:'), 'floor_amount');
 array_selector_row(_('Calculation Base:'), 'calculation_base', null, array(HRM_STAT_BASE_BASIC => _('Basic Salary'), HRM_STAT_BASE_GROSS => _('Gross Salary')));
 gl_all_accounts_list_row(_('Employee Account:'), 'employee_account', null, true, true, _('Optional'));
@@ -165,7 +169,7 @@ date_row(_('Effective From:'), 'effective_from');
 date_row(_('Effective To:'), 'effective_to');
 check_row(_('Inactive:'), 'inactive');
 
-end_table(1);
+end_outer_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 end_form();
 
