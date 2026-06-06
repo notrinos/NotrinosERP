@@ -57,9 +57,9 @@ if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center>'._('Item:').'&nbsp;';
-	echo sales_items_list('stock_id', $_POST['stock_id'], false, true, '', array('editable' => false));
-	echo '<hr></center>';
+	start_table(TABLESTYLE_NOBORDER);
+	sales_items_list_cells(null, 'stock_id', $_POST['stock_id'], false, true, '', array('editable' => false));
+	end_table();
 }
 else
 	br(2);
@@ -168,7 +168,7 @@ if ($Mode == 'Edit') {
 hidden('selected_id', $selected_id);
 
 div_start('price_details');
-start_table(TABLESTYLE);
+start_table(TABLESTYLE2);
 
 currencies_list_row(_('Currency:'), 'curr_abrev', null, true);
 
