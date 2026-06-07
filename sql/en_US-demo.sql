@@ -850,7 +850,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 	KEY `position_id` (`position_id`),
 	KEY `grade_id` (`grade_id`),
 	KEY `reporting_to` (`reporting_to`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
 
 -- Data of table `0_employees` --
 
@@ -1844,14 +1844,14 @@ CREATE TABLE `0_sales_orders` (
 -- Data of table `0_sales_orders` --
 
 INSERT INTO `0_sales_orders` VALUES
-('1', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2025-05-10', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-05', '4', '6240', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('2', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-07', '4', '300', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('3', '30', '0', '0', '1', '1', '1', '001/2025', '', NULL, '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-08', '4', '300', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('4', '30', '0', '0', '2', '2', '1', '002/2025', '', NULL, '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2025-05-08', '1', '267.14', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('5', '30', '1', '0', '2', '2', '1', 'auto', '', NULL, '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2025-06-17', '1', '267.14', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('6', '30', '0', '1', '1', '1', '1', '003/2025', '', NULL, '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-08', '4', '450', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('1', '30', '1', '0', '1', '1', '1', 'auto', '', '', '2025-05-10', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-05', '4', '6240', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('2', '30', '1', '0', '1', '1', '1', 'auto', '', '', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-07', '4', '300', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('3', '30', '0', '0', '1', '1', '1', '001/2025', '', '', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-08', '4', '300', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('4', '30', '0', '0', '2', '2', '1', '002/2025', '', '', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2025-05-08', '1', '267.14', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('5', '30', '1', '0', '2', '2', '1', 'auto', '', '', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'MoneyMaker Ltd.', '0', 'DEF', '2025-06-17', '1', '267.14', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
+('6', '30', '0', '1', '1', '1', '1', '003/2025', '', '', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-08', '4', '450', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
 ('7', '30', '1', '0', '1', '1', '1', 'auto', '', 'Recurrent Invoice covers period 04/01/2025 - 04/07/2025.', '2025-05-07', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2025-05-07', '4', '0', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}'),
-('8', '30', '1', '0', '1', '1', '1', 'auto', '', NULL, '2026-01-21', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2026-01-21', '4', '1250', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}');
+('8', '30', '1', '0', '1', '1', '1', 'auto', '', '', '2026-01-21', '1', '1', 'N/A', NULL, NULL, 'Donald Easter LLC', '0', 'DEF', '2026-01-21', '4', '1250', '0', '0', 0, NULL, 0, NULL, 0, 0, 0, '{}');
 
 
 -- Structure of table `0_sales_pricelists`
@@ -1903,9 +1903,6 @@ CREATE TABLE IF NOT EXISTS `0_sales_pricelist_rules` (
 ) ENGINE=InnoDB;
 
 -- Data of table `0_sales_pricelist_rules` --
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-	VALUES ('use_advanced_pricelists', 'sys', 'tinyint', 1, '0');
 
 -- Structure of table `0_sales_quotation_templates` --
 
@@ -2082,6 +2079,24 @@ CREATE TABLE IF NOT EXISTS `0_sales_discount_usage` (
 
 -- Data of table `0_sales_discount_usage` --
 
+-- Structure of table `0_sales_kpi_cache` --
+
+CREATE TABLE IF NOT EXISTS `0_sales_kpi_cache` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kpi_type` enum('daily_revenue','monthly_revenue','conversion_rate','avg_order_value','top_customers','top_products','pipeline_value','return_rate','commission_total','aging_summary') NOT NULL,
+  `period_key` varchar(20) NOT NULL,
+  `dimension_key` varchar(50) DEFAULT '',
+  `value_1` double DEFAULT 0,
+  `value_2` double DEFAULT 0,
+  `value_3` double DEFAULT 0,
+  `detail_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_kpi` (`kpi_type`,`period_key`,`dimension_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+
+-- Data of table `0_sales_kpi_cache` --
+
 -- Structure of table `0_sales_rma_reasons`
 
 CREATE TABLE IF NOT EXISTS `0_sales_rma_reasons` (
@@ -2235,9 +2250,6 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_entries` (
 
 -- Data of table `0_sales_commission_entries` --
 
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-	VALUES ('use_advanced_commissions', 'setup.company', 'tinyint', 1, '0');
-
 -- Structure of table `0_sales_pos` --
 
 DROP TABLE IF EXISTS `0_sales_pos`;
@@ -2369,7 +2381,6 @@ CREATE TABLE `0_sql_trail` (
 
 -- Data of table `0_sql_trail` --
 
-
 -- Structure of table `0_stock_category` --
 
 DROP TABLE IF EXISTS `0_stock_category`;
@@ -2485,6 +2496,21 @@ INSERT INTO `0_stock_master` (`stock_id`, `category_id`, `tax_type_id`, `descrip
 ('201', '3', '1', 'AP Surf Set', '', 'each', 'M', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '360', '0', '0', '0', '0', '0', '0', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}'),
 ('202', '4', '1', 'Maintenance', '', 'hr', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}'),
 ('301', '4', '1', 'Support', '', 'hr', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'S', '0', '1', '0000-00-00', '0000-00-00', '', '{}');
+
+-- Structure of table `0_stock_material` --
+
+DROP TABLE IF EXISTS `0_stock_material`;
+
+CREATE TABLE `0_stock_material` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(60) COLLATE utf8_unicode_ci NOT NULL,
+  `description` text COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `inactive` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;
+
+-- Data of table `0_stock_material` --
 
 -- Structure of table `0_stock_moves` --
 
@@ -3817,6 +3843,7 @@ CREATE TABLE `0_udi_registrations` (
 
 -- =====================================================================================
 -- End of Advanced Inventory / Warehouse Management Tables
+-- =====================================================================================
 
 -- Structure of table `0_supp_allocations` --
 
@@ -3970,106 +3997,229 @@ CREATE TABLE `0_sys_prefs` (
 -- Data of table `0_sys_prefs` --
 
 INSERT INTO `0_sys_prefs` VALUES
-('coy_name', 'setup.company', 'varchar', 60, 'Company name'),
-('gst_no', 'setup.company', 'varchar', 25, ''),
-('coy_no', 'setup.company', 'varchar', 25, ''),
-('tax_prd', 'setup.company', 'int', 11, '1'),
-('tax_last', 'setup.company', 'int', 11, '1'),
-('postal_address', 'setup.company', 'tinytext', 0, 'N/A'),
-('phone', 'setup.company', 'varchar', 30, ''),
-('fax', 'setup.company', 'varchar', 30, ''),
-('email', 'setup.company', 'varchar', 100, ''),
-('coy_logo', 'setup.company', 'varchar', 100, ''),
-('domicile', 'setup.company', 'varchar', 55, ''),
-('curr_default', 'setup.company', 'char', 3, 'USD'),
-('use_dimension', 'setup.company', 'tinyint', 1, '1'),
-('f_year', 'setup.company', 'int', 11, '2'),
-('shortname_name_in_list','setup.company', 'tinyint', 1, '0'),
-('no_customer_list', 'setup.company', 'tinyint', 1, '0'),
-('no_supplier_list', 'setup.company', 'tinyint', 1, '0'),
-('base_sales', 'setup.company', 'int', 11, '1'),
-('time_zone', 'setup.company', 'tinyint', 1, '0'),
-('add_pct', 'setup.company', 'int', 5, '-1'),
-('round_to', 'setup.company', 'int', 5, '1'),
-('login_tout', 'setup.company', 'smallint', 6, '600'),
-('past_due_days', 'glsetup.general', 'int', 11, '30'),
-('profit_loss_year_act', 'glsetup.general', 'varchar', 15, '9990'),
-('retained_earnings_act', 'glsetup.general', 'varchar', 15, '3590'),
-('bank_charge_act', 'glsetup.general', 'varchar', 15, '5690'),
-('exchange_diff_act', 'glsetup.general', 'varchar', 15, '4450'),
-('tax_algorithm', 'glsetup.customer', 'tinyint', 1, '1'),
-('default_credit_limit', 'glsetup.customer', 'int', 11, '1000'),
-('accumulate_shipping', 'glsetup.customer', 'tinyint', 1, '0'),
-('legal_text', 'glsetup.customer', 'tinytext', 0, ''),
-('freight_act', 'glsetup.customer', 'varchar', 15, '4430'),
-('debtors_act', 'glsetup.sales', 'varchar', 15, '1200'),
-('default_sales_act', 'glsetup.sales', 'varchar', 15, '4010'),
-('default_sales_discount_act', 'glsetup.sales', 'varchar', 15, '4510'),
-('default_prompt_payment_act', 'glsetup.sales', 'varchar', 15, '4500'),
-('default_delivery_required', 'glsetup.sales', 'smallint', 6, '1'),
-('default_receival_required', 'glsetup.purchase', 'smallint', 6, '10'),
-('default_quote_valid_days', 'glsetup.sales', 'smallint', 6, '30'),
-('default_dim_required', 'glsetup.dims', 'int', 11, '20'),
-('pyt_discount_act', 'glsetup.purchase', 'varchar', 15, '5060'),
-('creditors_act', 'glsetup.purchase', 'varchar', 15, '2100'),
-('po_over_receive', 'glsetup.purchase', 'int', 11, '10'),
-('po_over_charge', 'glsetup.purchase', 'int', 11, '10'),
-('allow_negative_stock', 'glsetup.inventory', 'tinyint', 1, '0'),
-('default_inventory_act', 'glsetup.items', 'varchar', 15, '1510'),
-('default_cogs_act', 'glsetup.items', 'varchar', 15, '5010'),
-('default_adj_act', 'glsetup.items', 'varchar', 15, '5040'),
-('default_inv_sales_act', 'glsetup.items', 'varchar', 15, '4010'),
-('default_wip_act', 'glsetup.items', 'varchar', 15, '1530'),
-('default_workorder_required', 'glsetup.manuf', 'int', 11, '20'),
-('version_id', 'system', 'varchar', 11, '1.0'),
-('auto_curr_reval', 'setup.company', 'smallint', 6, '1'),
-('grn_clearing_act', 'glsetup.purchase', 'varchar', 15, '1550'),
-('bcc_email', 'setup.company', 'varchar', 100, ''),
+('coy_name', 'setup.company', 'varchar', '60', 'Company name'),
+('gst_no', 'setup.company', 'varchar', '25', ''),
+('coy_no', 'setup.company', 'varchar', '25', ''),
+('tax_prd', 'setup.company', 'int', '11', '1'),
+('tax_last', 'setup.company', 'int', '11', '1'),
+('postal_address', 'setup.company', 'tinytext', '0', 'N/A'),
+('phone', 'setup.company', 'varchar', '30', ''),
+('fax', 'setup.company', 'varchar', '30', ''),
+('email', 'setup.company', 'varchar', '100', ''),
+('coy_logo', 'setup.company', 'varchar', '100', ''),
+('domicile', 'setup.company', 'varchar', '55', ''),
+('curr_default', 'setup.company', 'char', '3', 'USD'),
+('use_dimension', 'setup.company', 'tinyint', '1', '1'),
+('f_year', 'setup.company', 'int', '11', '1'),
+('shortname_name_in_list','setup.company', 'tinyint', '1', '0'),
+('no_customer_list', 'setup.company', 'tinyint', '1', '0'),
+('no_supplier_list', 'setup.company', 'tinyint', '1', '0'),
+('base_sales', 'setup.company', 'int', '11', '1'),
+('time_zone', 'setup.company', 'tinyint', '1', '0'),
+('add_pct', 'setup.company', 'int', '5', '-1'),
+('round_to', 'setup.company', 'int', '5', '1'),
+('login_tout', 'setup.company', 'smallint', '6', '600'),
+('past_due_days', 'glsetup.general', 'int', '11', '30'),
+('profit_loss_year_act', 'glsetup.general', 'varchar', '15', '9990'),
+('retained_earnings_act', 'glsetup.general', 'varchar', '15', '3590'),
+('bank_charge_act', 'glsetup.general', 'varchar', '15', '5690'),
+('exchange_diff_act', 'glsetup.general', 'varchar', '15', '4450'),
+('tax_algorithm', 'glsetup.customer', 'tinyint', '1', '1'),
+('default_credit_limit', 'glsetup.customer', 'int', '11', '1000'),
+('accumulate_shipping', 'glsetup.customer', 'tinyint', '1', '0'),
+('legal_text', 'glsetup.customer', 'tinytext', '0', ''),
+('freight_act', 'glsetup.customer', 'varchar', '15', '4430'),
+('debtors_act', 'glsetup.sales', 'varchar', '15', '1200'),
+('default_sales_act', 'glsetup.sales', 'varchar', '15', '4010'),
+('default_sales_discount_act', 'glsetup.sales', 'varchar', '15', '4510'),
+('default_prompt_payment_act', 'glsetup.sales', 'varchar', '15', '4500'),
+('default_delivery_required', 'glsetup.sales', 'smallint', '6', '1'),
+('default_receival_required', 'glsetup.purchase', 'smallint', '6', '10'),
+('default_quote_valid_days', 'glsetup.sales', 'smallint', '6', '30'),
+('default_dim_required', 'glsetup.dims', 'int', '11', '20'),
+('pyt_discount_act', 'glsetup.purchase', 'varchar', '15', '5060'),
+('creditors_act', 'glsetup.purchase', 'varchar', '15', '2100'),
+('po_over_receive', 'glsetup.purchase', 'int', '11', '10'),
+('po_over_charge', 'glsetup.purchase', 'int', '11', '10'),
+('allow_negative_stock', 'glsetup.inventory', 'tinyint', '1', '0'),
+('default_inventory_act', 'glsetup.items', 'varchar', '15', '1510'),
+('default_cogs_act', 'glsetup.items', 'varchar', '15', '5010'),
+('default_adj_act', 'glsetup.items', 'varchar', '15', '5040'),
+('default_inv_sales_act', 'glsetup.items', 'varchar', '15', '4010'),
+('default_wip_act', 'glsetup.items', 'varchar', '15', '1530'),
+('default_workorder_required', 'glsetup.manuf', 'int', '11', '20'),
+('version_id', 'system', 'varchar', '11', '1.0'),
+('auto_curr_reval', 'setup.company', 'smallint', '6', '1'),
+('grn_clearing_act', 'glsetup.purchase', 'varchar', '15', '1550'),
+('bcc_email', 'setup.company', 'varchar', '100', ''),
 ('deferred_income_act', 'glsetup.sales', 'varchar', '15', '2105'),
-('gl_closing_date','setup.closing_date', 'date', 8, ''),
-('alternative_tax_include_on_docs','setup.company', 'tinyint', 1, '0'),
-('no_zero_lines_amount','glsetup.sales', 'tinyint', 1, '1'),
-('show_po_item_codes','glsetup.purchase', 'tinyint', 1, '0'),
-('accounts_alpha','glsetup.general', 'tinyint', 1, '0'),
-('loc_notification','glsetup.inventory', 'tinyint', 1, '0'),
-('print_invoice_no','glsetup.sales', 'tinyint', 1, '0'),
-('allow_negative_prices','glsetup.inventory', 'tinyint', 1, '1'),
-('print_item_images_on_quote','glsetup.inventory', 'tinyint', 1, '0'),
-('suppress_tax_rates','setup.company', 'tinyint', 1, '0'),
-('company_logo_report','setup.company', 'tinyint', 1, '0'),
-('barcodes_on_stock','setup.company', 'tinyint', 1, '0'),
-('print_dialog_direct','setup.company', 'tinyint', 1, '0'),
-('ref_no_auto_increase','setup.company', 'tinyint', 1, '0'),
+('gl_closing_date','setup.closing_date', 'date', '8', ''),
+('alternative_tax_include_on_docs','setup.company', 'tinyint', '1', '0'),
+('no_zero_lines_amount','glsetup.sales', 'tinyint', '1', '1'),
+('show_po_item_codes','glsetup.purchase', 'tinyint', '1', '0'),
+('accounts_alpha','glsetup.general', 'tinyint', '1', '0'),
+('loc_notification','glsetup.inventory', 'tinyint', '1', '0'),
+('print_invoice_no','glsetup.sales', 'tinyint', '1', '0'),
+('allow_negative_prices','glsetup.inventory', 'tinyint', '1', '1'),
+('print_item_images_on_quote','glsetup.inventory', 'tinyint', '1', '0'),
+('suppress_tax_rates','setup.company', 'tinyint', '1', '0'),
+('company_logo_report','setup.company', 'tinyint', '1', '0'),
+('barcodes_on_stock','setup.company', 'tinyint', '1', '0'),
+('print_dialog_direct','setup.company', 'tinyint', '1', '0'),
+('ref_no_auto_increase','setup.company', 'tinyint', '1', '0'),
 ('default_loss_on_asset_disposal_act', 'glsetup.items', 'varchar', '15', '5660'),
 ('depreciation_period', 'glsetup.company', 'tinyint', '1', '1'),
-('use_manufacturing','setup.company', 'tinyint', 1, '1'),
-('dim_on_recurrent_invoice','setup.company', 'tinyint', 1, '0'),
-('long_description_invoice','setup.company', 'tinyint', 1, '0'),
-('max_days_in_docs','setup.company', 'smallint', 5, '180'),
-('use_fixed_assets','setup.company', 'tinyint', 1, '1'),
-('use_hrm','setup.company', 'tinyint', 1, '1'),
-('weekend_day', 'setup.company', 'titnyint', 1, '7'),
-('payroll_month_work_days', 'setup.company', 'float', '2', 26),
-('payroll_payable_act', 'glsetup.hrm', 'varchar', 15, 2100),
-('payroll_deductleave_act', 'glsetup.hrm', 'varchar', 15, ''),
-('payroll_overtime_act', 'glsetup.hrm', 'varchar', 15, 5420),
-('warranty_provision_account', 'glsetup.inventory', 'varchar', 15, ''),
-('warranty_expense_account', 'glsetup.inventory', 'varchar', 15, ''),
-('warranty_provision_rate', 'glsetup.inventory', 'float', 8, '5.0'),
-('warranty_provision_enabled', 'glsetup.inventory', 'tinyint', 1, '0'),
-('regulatory_compliance_enabled', 'setup.company', 'tinyint', 1, '0'),
-('dscsa_enabled', 'setup.company', 'tinyint', 1, '0'),
-('fsma204_enabled', 'setup.company', 'tinyint', 1, '0'),
-('udi_enabled', 'setup.company', 'tinyint', 1, '0'),
-('dscsa_company_license', 'setup.company', 'varchar', 50, ''),
-('dscsa_company_dea', 'setup.company', 'varchar', 50, ''),
-('fsma204_firm_name', 'setup.company', 'varchar', 100, ''),
-('fsma204_fda_registration', 'setup.company', 'varchar', 50, ''),
-('udi_company_name', 'setup.company', 'varchar', 100, ''),
-('fmda_enabled', 'setup.company', 'tinyint', 1, '0'),
-('fmda_company_license', 'setup.company', 'varchar', 50, ''),
-('fmda_authority_reference', 'setup.company', 'varchar', 50, ''),
-('udi_issuing_agency', 'setup.company', 'varchar', 10, 'GS1');
+('use_manufacturing','setup.company', 'tinyint', '1', '1'),
+('dim_on_recurrent_invoice','setup.company', 'tinyint', '1', '0'),
+('long_description_invoice','setup.company', 'tinyint', '1', '0'),
+('max_days_in_docs','setup.company', 'smallint', '5', '180'),
+('use_fixed_assets','setup.company', 'tinyint', '1', '1'),
+('use_hrm','setup.company', 'tinyint', '1', '1'),
+('weekend_day', 'setup.company', 'titnyint', '1', '7'),
+('payroll_month_work_days', 'setup.company', 'float', '2', '26'),
+('payroll_payable_act', 'glsetup.hrm', 'varchar', '15', '2100'),
+('payroll_deductleave_act', 'glsetup.hrm', 'varchar', '15', ''),
+('payroll_overtime_act', 'glsetup.hrm', 'varchar', '15', '5420'),
+('warranty_provision_account', 'tracking', 'VARCHAR', '15', ''),
+('warranty_expense_account', 'tracking', 'VARCHAR', '15', ''),
+('warranty_provision_rate', 'tracking', 'REAL', '8', '5.0'),
+('warranty_provision_enabled', 'tracking', 'TINYINT', '1', '0'),
+('regulatory_compliance_enabled', 'tracking', 'TINYINT', '1', '0'),
+('dscsa_enabled', 'tracking', 'TINYINT', '1', '0'),
+('fsma204_enabled', 'tracking', 'TINYINT', '1', '0'),
+('udi_enabled', 'tracking', 'TINYINT', '1', '0'),
+('dscsa_company_license', 'tracking', 'VARCHAR', '50', ''),
+('dscsa_company_dea', 'tracking', 'VARCHAR', '20', ''),
+('fsma204_firm_name', 'tracking', 'VARCHAR', '100', ''),
+('fsma204_fda_registration', 'tracking', 'VARCHAR', '30', ''),
+('udi_company_name', 'tracking', 'VARCHAR', '100', ''),
+('udi_issuing_agency', 'tracking', 'VARCHAR', '10', 'GS1'),
+('fmda_enabled', 'tracking', 'TINYINT', '1', '0'),
+('fmda_company_license', 'tracking', 'VARCHAR', '50', ''),
+('fmda_authority_reference', 'tracking', 'VARCHAR', '50', ''),
+('use_discount_programs', 'sales', 'tinyint', '1', '0'),
+('use_sales_dashboard', 'setup.company', 'tinyint', '1', '1'),
+('attendance_deduction_type', 'hrm.attendance', 'tinyint', '1', '0'),
+('auto_generate_batch', 'inventory.tracking', 'varchar', '60', '1'),
+('auto_generate_serial', 'inventory.tracking', 'varchar', '60', '1'),
+('barcode_format', 'inventory.tracking', 'varchar', '60', 'code128'),
+('batch_number_format', 'inventory.tracking', 'varchar', '60', '{PREFIX}{YYYY}{MM}{SEQ:5}'),
+('calculate_extra_absent_days', 'hrm.attendance', 'tinyint', '1', '0'),
+('company_logo_on_views', 'setup.company', 'tinyint', '1', '0'),
+('credit_check_on_delivery', 'setup.company', 'tinyint', '1', '1'),
+('credit_check_on_order', 'setup.company', 'tinyint', '1', '1'),
+('default_matching_tolerance_pct', 'purchase', 'smallint', '6', '5'),
+('default_work_hours', 'setup.company', 'float', '5', '8'),
+('enforce_fefo', 'inventory.tracking', 'varchar', '60', '0'),
+('expiry_warning_days', 'inventory.tracking', 'varchar', '60', '30'),
+('hrm_absence_deduct_from', 'hrm.attendance', 'tinyint', '1', '0'),
+('payroll_attendance_calculate', 'hrm.payroll', 'tinyint', '1', '0'),
+('purchase_agreement_expiry_alert_days', 'purchase', 'smallint', '6', '30'),
+('requisition_auto_approval_limit', 'purchase', 'int', '11', '0'),
+('rfq_default_deadline_days', 'purchase', 'smallint', '6', '14'),
+('sales_agreement_expiry_alert_days', 'sales', 'smallint', '6', '30'),
+('serial_number_format', 'inventory.tracking', 'varchar', '60', '{PREFIX}{YYYY}{MM}{SEQ:6}'),
+('use_3way_matching', 'purchase', 'smallint', '1', '1'),
+('use_advanced_commissions', 'setup.company', 'tinyint', '1', '1'),
+('use_advanced_credit_control', 'setup.company', 'tinyint', '1', '1'),
+('use_advanced_pricelists', 'sys', 'tinyint', '1', '1'),
+('use_crm', 'setup.company', 'tinyint', '1', '1'),
+('use_margin_display', 'setup.company', 'tinyint', '1', '1'),
+('use_procurement_planning', 'purchase', 'smallint', '1', '1'),
+('use_purchase_agreements', 'purchase', 'smallint', '1', '1'),
+('use_purchase_dashboard', 'purchase', 'smallint', '1', '1'),
+('use_purchase_requisitions', 'purchase', 'smallint', '1', '1'),
+('use_purchase_rfq', 'purchase', 'smallint', '1', '1'),
+('use_purchase_templates', 'purchase', 'smallint', '1', '1'),
+('use_quotation_templates', 'setup.company', 'tinyint', '1', '1'),
+('use_rma', 'sales', 'tinyint', '1', '1'),
+('use_sales_agreements', 'sales', 'tinyint', '1', '1'),
+('use_vendor_evaluation', 'purchase', 'smallint', '1', '1'),
+('use_vendor_pricelists', 'purchase', 'smallint', '1', '1');
+
+-- ---------------------------------------------------------------------------
+-- 1. Company preference settings for warranty provision GL accounts
+-- ---------------------------------------------------------------------------
+
+-- Warranty provision accrual account (Balance Sheet - Current Liability)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_account', 'tracking', 'VARCHAR', 15, '');
+
+-- Warranty expense account (P&L - Warranty Expense)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_expense_account', 'tracking', 'VARCHAR', 15, '');
+
+-- Default warranty provision rate (% of item cost)
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_rate', 'tracking', 'REAL', 8, '5.0');
+
+-- Enable/disable automatic warranty provision posting
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('warranty_provision_enabled', 'tracking', 'TINYINT', 1, '0');
+
+-- ---------------------------------------------------------------------------
+-- 5. System preference: regulatory compliance master switch
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('regulatory_compliance_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_enabled', 'tracking', 'TINYINT', 1, '0');
+
+-- Company license info for DSCSA transaction statements
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_company_license', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('dscsa_company_dea', 'tracking', 'VARCHAR', 20, '');
+
+-- FSMA 204 settings
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_firm_name', 'tracking', 'VARCHAR', 100, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fsma204_fda_registration', 'tracking', 'VARCHAR', 30, '');
+
+-- UDI settings
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_enabled', 'tracking', 'TINYINT', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_company_license', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('fmda_authority_reference', 'tracking', 'VARCHAR', 50, '');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_quotation_templates', 'setup.company', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_margin_display', 'setup.company', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_sales_agreements', 'sales', 'tinyint', 1, '0');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('sales_agreement_expiry_alert_days', 'sales', 'smallint', 6, '30');
+
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_rma', 'sales', 'tinyint', 1, '1');
+
+-- Advanced Discount & Promotion Engine
+INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
+VALUES ('use_discount_programs', 'sales', 'tinyint', 1, '0');
 
 -- Structure of table `0_tag_associations` --
 
@@ -5375,10 +5525,6 @@ CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
 -- Version: 1.0
 -- ================================================================
 
--- Add use_crm preference to sys_prefs if not present
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_crm', 'setup.company', 'tinyint', 1, '0');
-
 -- ================================================================
 -- CONFIGURATION TABLES
 -- ================================================================
@@ -5850,96 +5996,11 @@ CREATE INDEX IF NOT EXISTS `idx_sm_batch_id`    ON `0_stock_moves` (`batch_id`);
 CREATE INDEX IF NOT EXISTS `idx_sm_from_bin_id` ON `0_stock_moves` (`from_bin_id`);
 CREATE INDEX IF NOT EXISTS `idx_sm_to_bin_id`   ON `0_stock_moves` (`to_bin_id`);
 
-
 -- -------------------------------------------------------------------------------------
 -- Restore foreign key checks
 -- -------------------------------------------------------------------------------------
 
 SET FOREIGN_KEY_CHECKS = @old_foreign_key_checks;
-
--- ---------------------------------------------------------------------------
--- 1. Company preference settings for warranty provision GL accounts
--- ---------------------------------------------------------------------------
-
--- Warranty provision accrual account (Balance Sheet - Current Liability)
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('warranty_provision_account', 'tracking', 'VARCHAR', 15, '');
-
--- Warranty expense account (P&L - Warranty Expense)
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('warranty_expense_account', 'tracking', 'VARCHAR', 15, '');
-
--- Default warranty provision rate (% of item cost)
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('warranty_provision_rate', 'tracking', 'REAL', 8, '5.0');
-
--- Enable/disable automatic warranty provision posting
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('warranty_provision_enabled', 'tracking', 'TINYINT', 1, '0');
-
--- ---------------------------------------------------------------------------
--- 5. System preference: regulatory compliance master switch
--- ---------------------------------------------------------------------------
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('regulatory_compliance_enabled', 'tracking', 'TINYINT', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('dscsa_enabled', 'tracking', 'TINYINT', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fsma204_enabled', 'tracking', 'TINYINT', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('udi_enabled', 'tracking', 'TINYINT', 1, '0');
-
--- Company license info for DSCSA transaction statements
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('dscsa_company_license', 'tracking', 'VARCHAR', 50, '');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('dscsa_company_dea', 'tracking', 'VARCHAR', 20, '');
-
--- FSMA 204 settings
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fsma204_firm_name', 'tracking', 'VARCHAR', 100, '');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fsma204_fda_registration', 'tracking', 'VARCHAR', 30, '');
-
--- UDI settings
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('udi_company_name', 'tracking', 'VARCHAR', 100, '');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('udi_issuing_agency', 'tracking', 'VARCHAR', 10, 'GS1');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fmda_enabled', 'tracking', 'TINYINT', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fmda_company_license', 'tracking', 'VARCHAR', 50, '');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('fmda_authority_reference', 'tracking', 'VARCHAR', 50, '');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_quotation_templates', 'setup.company', 'tinyint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_margin_display', 'setup.company', 'tinyint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_sales_agreements', 'sales', 'tinyint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('sales_agreement_expiry_alert_days', 'sales', 'smallint', 6, '30');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_rma', 'sales', 'tinyint', 1, '1');
-
--- Advanced Discount & Promotion Engine
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_discount_programs', 'sales', 'tinyint', 1, '0');
 
 -- ================================================================
 -- Purchase Requisition module. Confusing fields: material_request_id links to WMS request; status/priority enums drive workflow states; custom_data stores future-safe metadata.
@@ -5998,12 +6059,6 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   KEY `idx_supplier` (`preferred_supplier_id`),
 	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_purchase_requisitions', 'purchase', 'smallint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('requisition_auto_approval_limit', 'purchase', 'int', 11, '0');
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -6101,12 +6156,6 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
 	UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_purchase_rfq', 'purchase', 'smallint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('rfq_default_deadline_days', 'purchase', 'smallint', 6, '14');
-
 UPDATE `0_security_roles`
 SET `areas` = CASE
   WHEN IFNULL(`areas`, '') = '' THEN '5379'
@@ -6172,14 +6221,6 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   KEY `idx_agreement` (`agreement_id`),
 	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 0_purch_orders columns agreement_id, requisition_id, rfq_id already defined in CREATE TABLE
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_purchase_agreements', 'purchase', 'smallint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('purchase_agreement_expiry_alert_days', 'purchase', 'smallint', 6, '30');
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -6274,9 +6315,6 @@ VALUES
   ('Price Competitiveness', 'price', 1.25, 'Compares vendor pricing against the average market price for the same items.', 'calculated', 'price_competitiveness_score', 0),
   ('Responsiveness', 'service', 1.00, 'Measures communication quality, issue handling, and turnaround time.', 'manual', '', 0),
   ('Compliance', 'compliance', 1.00, 'Measures contractual, regulatory, and documentation compliance.', 'manual', '', 0);
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_vendor_evaluation', 'purchase', 'smallint', 1, '0');
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -6391,12 +6429,6 @@ SELECT purch_data.`supplier_id`,
 FROM `0_purch_data` purch_data
 INNER JOIN `0_suppliers` supplier ON supplier.`supplier_id` = purch_data.`supplier_id`;
 
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_vendor_pricelists', 'purchase', 'smallint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_purchase_templates', 'purchase', 'smallint', 1, '0');
-
 UPDATE `0_security_roles`
 SET `areas` = CASE
   WHEN IFNULL(`areas`, '') = '' THEN '5382'
@@ -6485,12 +6517,6 @@ INSERT IGNORE INTO `0_purch_bill_control_policy`
 VALUES
   ('Default 3-Way Matching Policy', 'on_received', 1, 0, 0, 1, 1, 0, NULL);
 
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_3way_matching', 'purchase', 'smallint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('default_matching_tolerance_pct', 'purchase', 'smallint', 6, '5');
-
 UPDATE `0_security_roles`
 SET `areas` = CASE
   WHEN IFNULL(`areas`, '') = '' THEN '5384'
@@ -6556,9 +6582,6 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
 	KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_procurement_planning', 'purchase', 'smallint', 1, '0');
-
 UPDATE `0_security_roles`
 SET `areas` = CASE
   WHEN IFNULL(`areas`, '') = '' THEN '5385'
@@ -6594,9 +6617,6 @@ CREATE TABLE IF NOT EXISTS `0_purch_kpi_cache` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_kpi` (`kpi_type`, `period_key`, `dimension_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-VALUES ('use_purchase_dashboard', 'purchase', 'smallint', 1, '1');
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -6652,15 +6672,6 @@ CREATE TABLE IF NOT EXISTS `0_sales_credit_holds` (
   KEY `idx_debtor` (`debtor_no`),
   KEY `idx_active` (`debtor_no`, `release_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-  VALUES ('use_advanced_credit_control', 'setup.company', 'tinyint', 1, '0');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-  VALUES ('credit_check_on_order', 'setup.company', 'tinyint', 1, '1');
-
-INSERT IGNORE INTO `0_sys_prefs` (`name`, `category`, `type`, `length`, `value`)
-  VALUES ('credit_check_on_delivery', 'setup.company', 'tinyint', 1, '1');
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
