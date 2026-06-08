@@ -10,9 +10,9 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 
 | | |
 |---|---|
-| **Demo** | [demo.notrinos.com/erp1.0](http://demo.notrinos.com/erp1.0) |
-| **Forum** | [forums.notrinos.com](http://forums.notrinos.com) |
-| **Wiki / Docs** | [support.notrinos.com/1.0](http://support.notrinos.com/1.0/index.php?n=Help.Help) |
+| **Demo** | [demo.notrinos.com/erp1.0](https://demo.notrinos.com/erp1.0) |
+| **Forum** | [forums.notrinos.com](https://forums.notrinos.com) |
+| **Wiki / Docs** | [support.notrinos.com/1.0](https://support.notrinos.com/1.0/index.php?n=Help.Help) |
 | **License** | GNU GPL v3 or later |
 
 ![Entry screen](https://notrinos.com/misc/1.0-entry.jpg)
@@ -31,7 +31,6 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 7. [Debugging](#debugging)
 8. [Security](#security)
 9. [Contributing](#contributing)
-10. [License](#license)
 
 ---
 
@@ -73,7 +72,7 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 ### Via Composer
 
 ```bash
-composer create-project notrinos/notrinos-erp:dev-master my-erp
+composer create-project notrinos/notrinos-erp:dev-main my-erp-folder
 ```
 
 ---
@@ -107,50 +106,225 @@ Multi-company database connections are defined as the `$db_connections` array in
 NotrinosERP 1.0 ships the following built-in application modules:
 
 ### Sales (Customers)
-Full order-to-cash cycle:
-- Sales Quotations → Orders → Deliveries → Invoices
-- Direct Delivery and Direct Invoice shortcuts
-- Recurrent (template) invoices
-- Customer Payments, Credit Notes, and Allocation
-- Reports: Customer & Sales Reports
+Complete agreement-to-cash cycle with advanced pricing, discounting, commission, credit control, and returns management:
+
+**Transactions**
+- **Sales Agreements & Contracts** — blanket orders, framework agreements, and contracts with Draft → Confirmed → Active lifecycle; inline line-item editor; "Create Sales Order" from active agreements
+- **Sales Quotations** — create and send price quotes with validity dates; quote templates for one-click quoting (required + optional/upsell products); mark won/lost with CRM pipeline integration
+- **Sales Orders** — full order entry with configurable sales types, price lists, and multi-currency support
+- **Direct Deliveries & Invoices** — shortcut paths bypassing the full quote→order→delivery→invoice flow
+- **Template Deliveries & Invoices** — create from recurring invoice templates; batch-generate recurrent invoices
+- **Prepaid Orders** — invoice against prepaid sales orders
+- **Returns (RMA)** — customer-facing Return Material Authorization with reason tracking, authorization workflow, and downstream actions: WH Return, Credit Note, or Replacement Order
+- **Customer Payments & Credit Notes** — freehand credits, invoice-linked credits, payment entry with multi-currency
+- **Payment/Credit Allocation** — allocate customer payments and credit notes against outstanding invoices
+
+**Pricing, Discounts & Commissions**
+- **Sales Pricelists** — multiple price lists per currency with effective dates
+- **Discount Programs** — rule-based discount engine supporting percentage, fixed-amount, quantity-tier, and buy-X-get-Y rewards; coupon generation with validity windows; stackable promotions
+- **Commission Plans** — multi-tier commission structures (flat, tiered, quota-based); configurable calculation base (revenue, margin, quantity); period-based resets; sales person assignment
+- **Sales Types** — configurable transaction categories with price and tax factors
+
+**Credit Control**
+- **Credit Control Dashboard** — at-risk customer identification; manual/automatic credit holds with configurable scope (orders, deliveries, invoices); hold release with audit trail
+- **Credit Reviews** — record credit limit changes and risk score adjustments; batch risk evaluation
+- **Credit Status Setup** — define credit status levels with reason codes
+
+**Inquiries & Reports**
+- **Sales Dashboard** — KPI overview: revenue, orders, conversion rate, receivables, pipeline; period comparison with trend indicators; date-range filtering
+- **Transaction Inquiries** — quotation, order, agreement, RMA, and customer transaction histories; outstanding order/delivery views for dispatch planning
+- **Analytics** — Sales Performance, Margin Analysis, Discount Effectiveness reports
+- **Commission Inquiry** — track earned commissions and payouts per sales person
+
+**Maintenance**
+- Customers & Branches | Sales Groups | Sales People | Sales Areas
+- Quotation Templates | Sales Pricelists | Sales Types
+- Commission Plans | Discount Programs | Credit Status | Credit Control
 
 ### Purchases (Suppliers)
-Purchase-to-pay cycle:
-- Purchase Orders → GRNs → Supplier Invoices
-- Payments, Credit Notes, and Allocation
-- Reports: Supplier & Purchasing Reports
+Complete purchase-to-pay cycle with sourcing workflow, vendor management, matching controls, and procurement planning:
+
+**Transactions**
+- **Purchase Requisitions** — formalize internal demand with requester, department, required-by dates, and estimated pricing; inline line-item editor
+- **Request for Quotation (RFQ)** — issue competitive RFQs to suppliers with deadline/validity date controls; RFQ comparison matrix for side-by-side vendor response evaluation
+- **Purchase Agreements** — blanket agreements and framework contracts with configurable buyer, delivery location, and payment terms; Draft → Confirmed → Active lifecycle
+- **Purchase Orders** — full PO entry; outstanding PO maintenance with search; direct GRN/Invoice shortcuts
+- **Goods Received Notes (GRN)** — receive items against POs or standalone; PO receive items workflow
+- **Supplier Invoices & Credit Notes** — direct entry or PO-linked; fixed asset purchase support
+- **Supplier Payments & Allocation** — multi-currency payments; allocation of payments and credit notes
+
+**Sourcing & Vendor Management**
+- **Vendor Evaluation** — configurable evaluation criteria with scoring methods (manual, calculated, formula); weighted scorecards with 0–100 scoring; evaluator assignment; period-based assessments
+- **Vendor Scorecard** — aggregate performance view per vendor across evaluation periods
+- **Vendor Pricelists** — maintain and compare supplier pricing across items and dates
+- **Purchase Order Templates** — pre-define PO lines for frequently ordered items with default quantities and preferred suppliers
+
+**Matching & Bill Control**
+- **3-Way / 2-Way Matching** — PO → GRN → Invoice matching with configurable tolerances (percentage or fixed amount) per matching type (price, quantity, total variance)
+- **Matching Actions** — warn, block, or require approval when tolerances are exceeded
+- **Matching Exceptions** — central exception dashboard to review, approve, reject, or resolve matching variances with core approval workflow integration
+
+**Procurement Planning**
+- **Procurement Plan** — auto-generate replenishment suggestions (auto-reorder, demand-based, or manual); approve line-by-line; batch create POs from approved plan
+- **Reorder Rules** — per-item replenishment rules with min/max levels, reorder quantities, preferred suppliers, lead times, and auto-create RFQ/PO flags
+
+**Inquiries & Reports**
+- **Purchase Dashboard** — spend overview, vendor performance, price variance analysis
+- **Transaction Inquiries** — requisition, RFQ, agreement, PO, and supplier transaction histories
+- **Analytics** — Purchase Spend Analysis, Vendor Performance, Purchase Price Variance reports
+
+**Maintenance**
+- Suppliers | Vendor Evaluations | Vendor Evaluation Criteria | Vendor Pricelists
+- Purchase Order Templates | Purchase Matching Configuration | Reorder Rules
 
 ### Inventory
-- Location Transfers and Adjustments
-- Item Categories, Units of Measure, Reorder Levels
-- Sales Kits and Foreign Item Codes
-- Sales Pricing, Purchasing Pricing, Standard Costs
-- Reports: Inventory Reports
+Comprehensive inventory management with full warehouse management system (WMS), advanced item tracking, and pricing/costing engines:
+
+**Transactions**
+- **Inventory Location Transfers** — move stock between locations with full audit trail
+- **Inventory Adjustments** — quantity and value adjustments with reason codes
+
+**Warehouse Management (WMS)**
+- **Warehouse Dashboard** — real-time visibility of stock levels, movements, and warehouse KPIs
+- **Warehouse Locations** — hierarchical location structure with zones, aisles, racks, and bins
+- **Storage Categories** — capacity-aware storage classification with attribute-based bin assignment rules
+- **Putaway Rules Engine** — configurable putaway strategies by item, category, or storage type with sequence ordering; "Test Putaway" preview tool for bin assignment validation
+- **Removal Strategies** — FEFO, FIFO, LIFO, and custom removal rule configuration per storage category
+- **Receipt Operations** — guided receiving workflows with quality check gates
+- **Dispatch Operations** — outbound processing with shipment consolidation
+- **Transfer Orders** — warehouse-to-warehouse transfer planning and execution
+- **Routes & Rules** — configurable walking paths and routing logic for optimized pick paths
+- **Wave/Batch Picking** — create, release, start, complete, and cancel picking waves; pick lists sorted by walking path; per-line confirmation with short-pick handling and alternate bin suggestions — 30%+ productivity improvement
+- **Packing Stations** — structured pack operations with container tracking and shipment verification
+- **Shipping** — carrier integration, label generation, and shipment tracking
+- **Cycle Counting** — rolling count plans (ABC-class based, by location, or blind); count sessions with variance review; replace annual physical counts with continuous verification
+- **Replenishment Engine** — demand-driven bin replenishment with min/max triggers
+- **Material Requests** — formalize internal demand for non-sales stock consumption
+- **Scrap Entry** — record and track scrap/waste with reason codes
+- **Return Orders** — structured return processing with condition assessment and disposition routing
+- **Cross-Dock / Drop-Ship** — monitor cross-dock candidates from pending SO lines; create drop-ship POs linked to sales orders; item eligibility and location configuration
+- **Consignment & VMI** — receive, consume, and return vendor-owned stock; VMI min/max level configuration with alerts and stock level export
+- **ABC Classification** — item ranking by value, velocity, or quantity with dynamic class thresholds
+- **Mobile Scanner** — web-based barcode scanning for receive, putaway, pick, count, transfer, and ship operations; serial number lookup
+
+**Advanced Item Management**
+- **Serial Number Tracking** — full lifecycle tracking with serial inquiry and lifecycle audit; customer equipment register for installed-base management
+- **Batch/Lot Management** — batch number assignment, inquiry, and lifecycle traceability
+- **Expiry Date Tracking** — expiry dashboard with FEFO picking support and shelf-life monitoring
+- **Quality Inspection** — configurable quality parameters per item; inspection entry with pass/fail disposition; link to batches and serials
+- **Warranty Management** — warranty claim entry, tracking, and resolution; warranty provision settings and financial provisioning inquiry
+- **Recall Campaigns** — manage product recalls with batch/serial targeting and status tracking
+- **Full Lifecycle Traceability** — serial and batch lifecycle views with forward/backward trace
+- **Regulatory Compliance** — compliance rule configuration for pharma, food, and regulated industries (e.g. GS1, FDA 21 CFR Part 11 readiness)
+- **Barcode/QR/RFID Labels** — label generation and printing with configurable formats
+
+**Pricing and Costs**
+- **Sales Pricing** — manage selling prices by item, customer group, or currency
+- **Purchasing Pricing** — manage purchase costs by item and supplier
+- **Standard Costs** — update and maintain standard costing with variance tracking
+
+**Inquiries & Reports**
+- **Stock Movements & Status** — real-time quantity-on-hand, available-to-promise, and movement history
+- **Serial & Batch Inquiries** — search by serial/batch number with full chain of custody
+- **Expiry Dashboard** — visual expiry status with date-range filtering
+- **Warranty Provision Inquiry** — track warranty exposure and provision balances
+- **Inventory Reports** — valuation, stock status, and analytical reports
+
+**Maintenance**
+- Items | Foreign Item Codes | Sales Kits | Item Categories
+- Inventory Locations | Units of Measure | Reorder Levels
+- Serial Numbers | Batch/Lot Numbers | Quality Parameters
+- Tracking Settings | Barcode Labels | Provision Settings | Regulatory Compliance
 
 ### General Ledger
-- Payments, Deposits, Bank Transfers
-- Journal Entry, Budget Entry, Accruals
-- Bank Account Reconciliation
-- Currency management and Revaluation
-- Drilldown: Trial Balance, Balance Sheet, Profit & Loss
-- Reports: Banking Reports, GL Reports
+Complete double-entry accounting with multi-currency support, budgeting, accruals, and full financial reporting:
+
+**Transactions**
+- **Payments** — record outgoing payments with multi-account allocation
+- **Deposits** — record incoming deposits linked to bank accounts
+- **Bank Account Transfers** — transfer funds between bank accounts with currency handling
+- **Journal Entry** — general purpose journal vouchers with multi-line debit/credit entries; quick entry templates for recurring journal patterns
+- **Budget Entry** — define fiscal year budgets per GL account with period-level detail
+- **Revenue / Cost Accruals** — schedule and post accrual entries for revenue and expense recognition across periods
+- **Bank Account Reconciliation** — reconcile bank statements against GL transactions with starting/ending balance verification
+
+**Currency Management**
+- **Currencies & Exchange Rates** — define currencies with ISO codes, symbols, and decimal places; maintain exchange rate history
+- **Revaluation of Currency Accounts** — process currency revaluation for bank and GL accounts, generating automatic journal entries for unrealized gains/losses
+
+**Inquiries & Reports**
+- **Journal Inquiry** — search and review all journal entries with drill-down to source transactions
+- **GL Account Inquiry** — view transaction history for any GL account with running balance
+- **Bank Account Inquiry** — view all transactions affecting a bank account with current balance
+- **Tax Inquiry** — review tax collected/paid with transaction-level detail
+- **Trial Balance** — period-end trial balance with drill-down to account transactions
+- **Balance Sheet Drilldown** — interactive balance sheet with account-level drill-down
+- **Profit and Loss Drilldown** — interactive P&L with period comparison and drill-down
+- **Banking Reports** — bank statement, reconciliation, and transaction reports
+- **General Ledger Reports** — chart of accounts, journal reports, and GL analytics
+
+**Maintenance**
+- GL Accounts | GL Account Groups | GL Account Classes
+- Bank Accounts | Quick Entries | Account Tags
+- Currencies | Exchange Rates | Close Period | Revaluation
 
 ### Manufacturing
-- Work Order Entry and tracking
-- Costed Bill of Materials Inquiry
-- Where-Used Inquiry
-- Reports: Manufacturing Reports
+Complete production management from BOM definition through work order lifecycle:
+
+**Transactions**
+- **Work Order Entry** — create production orders with configurable types (standard, advanced); specify required quantity, start date, and delivery location
+- **Outstanding Work Orders** — search and manage open work orders with status filtering
+- **Work Order Release** — release approved work orders to the production floor; validates BOM components and work centre availability
+- **Issue Items to Work Order** — record material issues against work orders with serial/batch tracking support for component traceability
+- **Add Finished Products** — receive completed goods into inventory with optional QC acceptance
+- **Work Order Costs** — review actual vs. standard costs per work order with material, labour, and overhead breakdowns
+
+**Inquiries & Reports**
+- **Costed Bill of Materials Inquiry** — view BOM structure with rolled-up material, labour, and overhead costs
+- **Where-Used Inquiry** — trace where a component item is used across all BOMs and work orders
+- **Work Order Inquiry** — search and view work orders by status, date range, item, or location
+- **Manufacturing Reports** — work order status, production variance, and BOM reports
+
+**Maintenance**
+- **Bills of Material** — define multi-level BOMs with component quantities, work centres, and locations; supports manufactured items and sales kits
+- **Work Centres** — define production centres with capacity and cost rate configuration
 
 ### Fixed Assets
-- Asset Purchase, Location Transfer, Disposal, Sale
-- Depreciation processing
-- Asset Categories and Classes
-- Reports: Fixed Assets Reports
+Complete asset lifecycle management from acquisition through disposal with depreciation processing:
+
+**Transactions**
+- **Fixed Assets Purchase** — acquire assets via supplier invoice with automatic asset register creation
+- **Fixed Assets Location Transfers** — move assets between locations while maintaining cost centre history
+- **Fixed Assets Disposal** — write off or dispose of assets with gain/loss calculation
+- **Fixed Assets Sale** — sell assets via sales invoice with automatic disposal and gain/loss posting
+- **Process Depreciation** — run periodic depreciation (straight-line or diminishing balance) per asset class; generates GL journal entries automatically
+
+**Inquiries & Reports**
+- **Fixed Assets Movements** — view asset transaction history with acquisition, transfer, depreciation, and disposal events
+- **Fixed Assets Inquiry** — detailed asset register view with current book value, accumulated depreciation, and net book value
+- **Fixed Assets Reports** — depreciation schedule, asset register, and disposal reports
+
+**Maintenance**
+- **Fixed Assets** — manage asset master records (capitalization date, cost, salvage value, depreciation method, useful life)
+- **Fixed Assets Locations** — define physical locations for asset tracking
+- **Fixed Assets Categories** — classify assets by type for default depreciation settings
+- **Fixed Assets Classes** — define depreciation parameters: method (straight-line / declining balance), rate, and GL accounts for cost, accumulated depreciation, and depreciation expense
 
 ### Dimensions (optional)
-- Project/cost-centre tagging on transactions
-- Dimension Inquiry and Reports
-- Enabled via Company Setup → `use_dimension`
+Project and cost-centre tagging system for cross-module transaction analysis. Enabled via Company Setup → `use_dimension`.
+
+**Transactions**
+- **Dimension Entry** — create dimensions (projects, cost centres, departments, campaigns) with reference, name, dates, and tags
+- **Outstanding Dimensions** — view and close active dimensions
+
+**Inquiries & Reports**
+- **Dimension Inquiry** — search dimensions by reference, name, date range, or tag; view all transactions linked to a dimension
+- **Dimension Reports** — dimension-level profitability and cost analysis reports
+
+**Maintenance**
+- **Dimension Tags** — tag dimensions for categorization and filtering
+
+Dimensions can be tagged on transactions across Sales, Purchasing, Inventory, GL, and Manufacturing modules for consolidated project/cost-centre reporting.
 
 ---
 
@@ -242,11 +416,6 @@ $go_debug = 2;  // Show backtrace on failure
 3. Test against PHP 5.6 and PHP 8.x.
 4. Submit a pull request with a clear description of the change.
 
-Bug reports and feature requests: [forums.notrinos.com/t/bugs-problems](http://forums.notrinos.com/t/bugs-problems)
+Bug reports and feature requests: [forums.notrinos.com/forums/bugs-problems](https://forums.notrinos.com/forums/bugs-problems)
 
 ---
-
-## License
-
-NotrinosERP is released under the **GNU General Public License v3 or later**.  
-See [LICENSE](LICENSE) or <https://www.gnu.org/licenses/gpl-3.0.html>.

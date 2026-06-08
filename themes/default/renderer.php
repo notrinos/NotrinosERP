@@ -224,6 +224,8 @@ class renderer {
 	function render_sidebar_applications($applications, $selected_application_id) {
 		global $path_to_root;
 
+		add_access_extensions();
+
 		$visible_applications = array();
 		foreach ($applications as $application) {
 			if (!$_SESSION['wa_current_user']->check_application_access($application))
@@ -579,6 +581,8 @@ class renderer {
 	 */
 	function build_search_index() {
 		global $path_to_root;
+
+		add_access_extensions();
 
 		$applications = $_SESSION['App']->applications;
 		$current_user = $_SESSION['wa_current_user'];
