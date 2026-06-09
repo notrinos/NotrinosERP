@@ -104,7 +104,7 @@ start_form();
 display_note(_('To avoid problems with manual journal entry all tax types should have unique Sales/Purchasing GL accounts.'), 0, 1);
 start_table(TABLESTYLE);
 
-$th = array(_('Description'), _('Default Rate (%)'),
+$th = array(_('ID'), _('Description'), _('Default Rate (%)'),
 	_('Sales GL Account'), _('Purchasing GL Account'), '', '');
 inactive_control_column($th);
 table_header($th);
@@ -114,6 +114,7 @@ while ($myrow = db_fetch($result)) {
 
 	alt_table_row_color($k);
 
+	label_cell($myrow['id']);
 	label_cell($myrow['name']);
 	label_cell(percent_format($myrow['rate']), 'align=right');
 	label_cell($myrow['sales_gl_code'] . '&nbsp;' . $myrow['SalesAccountName']);

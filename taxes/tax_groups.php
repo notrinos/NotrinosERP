@@ -109,7 +109,7 @@ $result = get_all_tax_groups(check_value('show_inactive'));
 start_form();
 
 start_table(TABLESTYLE);
-$th = array(_('Description'), '', '');
+$th = array(_('ID'), _('Description'), '', '');
 inactive_control_column($th);
 
 table_header($th);
@@ -119,6 +119,7 @@ while ($myrow = db_fetch($result)) {
 
 	alt_table_row_color($k);
 
+	label_cell($myrow['id']);
 	label_cell($myrow['name']);
 
 	inactive_control_cell($myrow['id'], $myrow['inactive'], 'tax_groups', 'id');

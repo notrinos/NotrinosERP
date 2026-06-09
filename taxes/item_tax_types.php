@@ -100,7 +100,7 @@ $result2 = $result = get_all_item_tax_types(check_value('show_inactive'));
 
 start_form();
 start_table(TABLESTYLE, "width='50%'");
-$th = array(_('Name'), _('Tax exempt'),'','');
+$th = array(_('ID'), _('Name'), _('Tax exempt'),'','');
 inactive_control_column($th);
 table_header($th);
 
@@ -114,6 +114,7 @@ while ($myrow = db_fetch($result2)) {
 	else
 		$disallow_text = _('Yes');
 	
+	label_cell($myrow['id']);
 	label_cell($myrow['name']);
 	label_cell($disallow_text);
 	inactive_control_cell($myrow['id'], $myrow['inactive'], 'item_tax_types', 'id');
