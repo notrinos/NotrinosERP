@@ -22,6 +22,38 @@ include_once($path_to_root.'/admin/db/attachments_db.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_db.inc');
 
+/**
+ * Validate that a stored unique_name resolves safely within the attachments directory.
+ * Returns the resolved absolute path on success, or false if the path is unsafe.
+ * This prevents path traversal attacks when reading, downloading, or deleting files.
+ *
+ * @param string $unique_name The stored attachment filename (must be a plain filename, not a path).
+ * @return string|false The resolved safe absolute path, or false if the path is unsafe.
+ */
+function safe_attachment_file_path($unique_name) {
+	if ($unique_name === '' || $unique_name === null) {
+		return false;
+	}
+	// Reject any path separators, null bytes, or parent directory traversal sequences.
+	if (strpbrk($unique_name, "\\/\0") !== false || strpos($unique_name, '..') !== false) {
+		return false;
+	}
+	$attach_dir = company_path() . '/attachments';
+	$full_path = realpath($attach_dir . '/' . $unique_name);
+	if ($full_path === false) {
+		return false;
+	}
+	$real_attach_dir = realpath($attach_dir);
+	if ($real_attach_dir === false) {
+		return false;
+	}
+	// Ensure the resolved path is strictly within the attachments directory.
+	if (strpos($full_path, $real_attach_dir . DIRECTORY_SEPARATOR) !== 0) {
+		return false;
+	}
+	return $full_path;
+}
+
 if (isset($_GET['vw']))
 	$view_id = $_GET['vw'];
 else
@@ -35,11 +67,19 @@ if ($view_id != -1) {
 		if(in_ajax())
 			$Ajax->popup($_SERVER['PHP_SELF'].'?vw='.$view_id);
 		else {
+			$safe_path = safe_attachment_file_path($row['unique_name']);
+			if ($safe_path === false) {
+				display_error(_('Invalid attachment path.'));
+				exit();
+			}
 			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
+			// Clean output buffer to prevent output_html callback from corrupting binary data
+			while (ob_get_level())
+				ob_end_clean();
 			header('Content-type: '.$type);
 			header('Content-Length: '.$row['filesize']);
 			header('Content-Disposition: inline');
-			echo file_get_contents(company_path().'/attachments/'.$row['unique_name']);
+			echo file_get_contents($safe_path);
 			exit();
 		}
 	}	
@@ -55,11 +95,19 @@ if ($download_id != -1) {
 		if(in_ajax())
 			$Ajax->redirect($_SERVER['PHP_SELF'].'?dl='.$download_id);
 		else {
+			$safe_path = safe_attachment_file_path($row['unique_name']);
+			if ($safe_path === false) {
+				display_error(_('Invalid attachment path.'));
+				exit();
+			}
 			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
+			// Clean output buffer to prevent output_html callback from corrupting binary data
+			while (ob_get_level())
+				ob_end_clean();
 			header('Content-type: '.$type);
 			header('Content-Length: '.$row['filesize']);
 			header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
-			echo file_get_contents(company_path().'/attachments/'.$row['unique_name']);
+			echo file_get_contents($safe_path);
 			exit();
 		}
 	}	
@@ -149,9 +197,11 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
 	$row = get_attachment($selected_id);
-	$dir =  company_path().'/attachments';
-	if (file_exists($dir.'/'.$row['unique_name']))
-		unlink($dir.'/'.$row['unique_name']);
+	if ($row['unique_name']) {
+		$safe_path = safe_attachment_file_path($row['unique_name']);
+		if ($safe_path !== false && file_exists($safe_path))
+			unlink($safe_path);
+	}
 	delete_attachment($selected_id);	
 	display_notification(_('Attachment has been deleted.'));
 	reset_form();
@@ -264,7 +314,8 @@ if ($selected_id != -1) {
 		$_POST['trans_no']  = $row['trans_no'];
 		$_POST['description']  = $row['description'];
 		hidden('trans_no', $row['trans_no']);
-		hidden('unique_name', $row['unique_name']);
+		// Do NOT expose unique_name to the client via hidden field.
+		// Server-side update handler generates its own random filename.
 		if ($type != ST_SUPPLIER && $type != ST_CUSTOMER && $type != ST_ITEM && $type != ST_BANKACCOUNT)
 			label_row(_('Transaction #'), $row['trans_no']);
 	}	

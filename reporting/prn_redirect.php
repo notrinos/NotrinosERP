@@ -31,12 +31,19 @@ if (isset($_GET['xls']) || isset($_GET['xml'])) {
 	$filename = $_GET['filename'];
 	$unique_name = preg_replace('/[^0-9_a-z.\-]/i', '', $_GET['unique']);
 	$path =  company_path(). '/pdf_files/';
+	// Validate the resolved path stays within pdf_files directory (defense-in-depth).
+	$real_path = realpath($path . $unique_name);
+	$real_pdf_dir = realpath($path);
+	if ($real_path === false || $real_pdf_dir === false
+		|| strpos($real_path, $real_pdf_dir . DIRECTORY_SEPARATOR) !== 0) {
+		die('Invalid report file path.');
+	}
 	header('Content-type: '. (isset($_GET['xls']) ? 'application/vnd.ms-excel' : 'text/xml'));
 	header('Content-Disposition: attachment; filename='.$filename );
 	header('Expires: 0');
 	header('Cache-Control: must-revalidate, post-check=0,pre-check=0');
 	header('Pragma: public');
-	echo file_get_contents($path.$unique_name);
+	echo file_get_contents($real_path);
 	exit();
 }
 

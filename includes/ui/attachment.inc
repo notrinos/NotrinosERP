@@ -29,6 +29,38 @@ class attachments extends simple_crud {
 		
 	}
 
+	/**
+	 * Validate that a stored unique_name resolves safely within the attachments directory.
+	 * Returns the resolved absolute path on success, or false if the path is unsafe.
+	 * This prevents path traversal attacks when reading, downloading, or deleting files.
+	 *
+	 * @param string $unique_name The stored attachment filename (must be a plain filename, not a path).
+	 * @return string|false The resolved safe absolute path, or false if the path is unsafe.
+	 */
+	function _safe_attachment_path($unique_name) {
+		if ($unique_name === '' || $unique_name === null) {
+			return false;
+		}
+		// Reject any path separators, null bytes, or parent directory traversal sequences.
+		if (strpbrk($unique_name, "\\/\0") !== false || strpos($unique_name, '..') !== false) {
+			return false;
+		}
+		$attach_dir = company_path() . '/attachments';
+		$full_path = realpath($attach_dir . '/' . $unique_name);
+		if ($full_path === false) {
+			return false;
+		}
+		$real_attach_dir = realpath($attach_dir);
+		if ($real_attach_dir === false) {
+			return false;
+		}
+		// Ensure the resolved path is strictly within the attachments directory.
+		if (strpos($full_path, $real_attach_dir . DIRECTORY_SEPARATOR) !== 0) {
+			return false;
+		}
+		return $full_path;
+	}
+
 	function list_view() {
 		global $Ajax, $path_to_root, $session_debtor_no, $session_supplier_id;
 		br();
@@ -42,11 +74,19 @@ class attachments extends simple_crud {
 				if(in_ajax())
 					$Ajax->redirect($path_to_root.'/admin/attachments.php?dl='.$keys[0]);
 				else {					
-					Header("Content-type: 'application/octet-stream' ");
-					//header('Content-Length: '.$row['filesize']);
-					header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
-					echo file_get_contents(company_path()."/attachments/".$row['unique_name']);
-					exit();
+					$safe_path = $this->_safe_attachment_path($row['unique_name']);
+					if ($safe_path === false || !file_exists($safe_path)) {
+						display_error(_('Attachment file not found or path is invalid.'));
+					} else {
+						// Clean output buffer to prevent output_html callback from corrupting binary data
+						while (ob_get_level())
+							ob_end_clean();
+						Header("Content-type: 'application/octet-stream' ");
+						//header('Content-Length: '.$row['filesize']);
+						header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
+						echo file_get_contents($safe_path);
+						exit();
+					}
 				}
 			}
 		}
@@ -58,15 +98,6 @@ class attachments extends simple_crud {
 			if ($row['unique_name'] != ''){
 
 				$Ajax->redirect($path_to_root.'/admin/attachments.php?vw='.$keys[0]);	
-				/*if(in_ajax()) {
-					
-				} else {					
-					$type_no = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
-					header("Content-type: ".$type_no);
-					header("Content-Disposition: inline");
-					echo file_get_contents(company_path(). "/attachments/".$row['unique_name']);
-					exit();
-				}*/
 			}
 		}
 		$filters = array('trans_no' => $this->entity, 'type_no' => (isset($_GET['type_no']) ? $_GET['type_no'] : ST_CUSTOMER)); // default ST_CUSTOMER
@@ -114,7 +145,8 @@ class attachments extends simple_crud {
 		if($this->selected_id != null && $this->selected_id != '') {
 			$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 			$row = db_fetch(db_query($sql), "Cannot retrieve attachment $this->selected_id");
-			hidden('unique_name', $row['unique_name']);
+			// Do NOT expose unique_name to the client.
+			// Server-side insert/update handlers always generate their own random filenames.
 			$_POST['tran_date'] = sql2date($row['tran_date']);
 			$_POST['title'] = $row['description'];
 			$_POST['trans_no'] = $row['trans_no'];
@@ -122,7 +154,6 @@ class attachments extends simple_crud {
 		else {
 			$_POST['trans_no'] = $this->entity;
 			$_POST['tran_date'] = Today();
-			hidden('unique_name', '');
 		}
 
 		$type_no= $_GET['type_no'];
@@ -190,14 +221,15 @@ class attachments extends simple_crud {
 			$attr_dir = company_path().'/attachments' ; 
 			if (!file_exists($attr_dir))		
 				mkdir($attr_dir);
-			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir))
-				mkdir($attach_dir);
+			$attach_dir = realpath($attr_dir);
+			if ($attach_dir === false || !file_exists($attach_dir))
+				mkdir($attr_dir);
 			
-			if(isset($_POST['unique_name']) && $_POST['unique_name'] <> '')
-				$attachment_file_name = $_POST['unique_name'];			
-			else
-				$attachment_file_name = uniqid(); 
+			// ALWAYS generate a server-side random filename.
+			// NEVER trust client-supplied unique_name values — they can contain
+			// path traversal sequences (../) leading to arbitrary file write and
+			// PHP code execution.
+			$attachment_file_name = uniqid(); 
 				
 			$filesize = $_FILES['file_attachment_name']['size'];
 			$filetype = $_FILES['file_attachment_name']['type'];
@@ -241,14 +273,13 @@ class attachments extends simple_crud {
 			$attr_dir = company_path().'/attachments' ; 
 			if (!file_exists($attr_dir))
 				mkdir($attr_dir);
-			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir))
-				mkdir($attach_dir);
+			$attach_dir = realpath($attr_dir);
+			if ($attach_dir === false || !file_exists($attach_dir))
+				mkdir($attr_dir);
 			
-			if(isset($_POST['unique_name']) && $_POST['unique_name'] == '')
-				$attachment_file_name = uniqid();
-			else
-				$attachment_file_name = $_POST['unique_name']; 
+			// ALWAYS generate a server-side random filename on update too.
+			// Never trust client-supplied unique_name — path traversal risk.
+			$attachment_file_name = uniqid(); 
 				
 			$filesize = $_FILES['file_attachment_name']['size'];
 			$filetype = $_FILES['file_attachment_name']['type'];
@@ -307,9 +338,11 @@ class attachments extends simple_crud {
 		$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 		$row = db_fetch(db_query($sql), "Cannot retrieve attachment $this->selected_id");
 
-		$dir =  company_path().'/attachments';
-		if ($row['unique_name'] && file_exists($dir.'/'.$row['unique_name']))
-			unlink($dir.'/'.$row['unique_name']);
+		if ($row['unique_name']) {
+			$safe_path = $this->_safe_attachment_path($row['unique_name']);
+			if ($safe_path !== false && file_exists($safe_path))
+				unlink($safe_path);
+		}
 
 		$sql = "DELETE FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 		if(db_query($sql, "Could not Delete Attachment $this->selected_id"))

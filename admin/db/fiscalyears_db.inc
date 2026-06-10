@@ -11,6 +11,39 @@
 ***********************************************************************/
 require_once($path_to_root.'/includes/ui/items_cart.inc');
 
+/**
+ * Validate that a stored unique_name resolves safely within the attachments directory.
+ * Returns the resolved absolute path on success, or false if the path is unsafe.
+ * This is a standalone helper for db-level functions that need to safely unlink
+ * attachment files without including the full UI attachment class.
+ *
+ * @param string $unique_name The stored attachment filename.
+ * @return string|false The resolved safe absolute path, or false if the path is unsafe.
+ */
+function _safe_attach_file_path($unique_name) {
+	if ($unique_name === '' || $unique_name === null) {
+		return false;
+	}
+	// Reject any path separators, null bytes, or parent directory traversal sequences.
+	if (strpbrk($unique_name, "\\/\0") !== false || strpos($unique_name, '..') !== false) {
+		return false;
+	}
+	$attach_dir = company_path() . '/attachments';
+	$full_path = realpath($attach_dir . '/' . $unique_name);
+	if ($full_path === false) {
+		return false;
+	}
+	$real_attach_dir = realpath($attach_dir);
+	if ($real_attach_dir === false) {
+		return false;
+	}
+	// Ensure the resolved path is strictly within the attachments directory.
+	if (strpos($full_path, $real_attach_dir . DIRECTORY_SEPARATOR) !== 0) {
+		return false;
+	}
+	return $full_path;
+}
+
 // fiscal year routines
 function add_fiscalyear($from_date, $to_date, $closed) {
 	$from = date2sql($from_date);
@@ -176,9 +209,12 @@ function delete_attachments_and_comments($type_no, $trans_no) {
 	$delflag = false;
 	while ($row = db_fetch($result)) {
 		$delflag = true;
-		$dir =  company_path(). '/attachments';
-		if (file_exists($dir.'/'.$row['unique_name']))
-			unlink($dir.'/'.$row['unique_name']);
+		// Validate stored unique_name before unlinking to prevent path traversal.
+		if ($row['unique_name']) {
+			$safe_path = _safe_attach_file_path($row['unique_name']);
+			if ($safe_path !== false && file_exists($safe_path))
+				unlink($safe_path);
+		}
 	}
 	if ($delflag) {
 		$sql = "DELETE FROM ".TB_PREF."attachments WHERE  type_no = $type_no AND trans_no = $trans_no";
