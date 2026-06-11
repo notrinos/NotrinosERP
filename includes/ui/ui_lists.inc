@@ -526,6 +526,7 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'async' => false,
 		'sel_hint' => _('Select supplier'),
 		'show_inactive'=>$all,
+		'layout_class' => empty($opts['layout_class']) ? 'combo-layout-equal' : $opts['layout_class'],
 		'editlink' => $editkey ? add_edit_combo('supplier', $name) : false
 		), $opts), 'supplier');
 
@@ -543,7 +544,7 @@ function supplier_list_row($label, $name, $selected_id=null, $all_option=false, 
 		echo "<div class='form-group'>";
 		echo "<label class='form-label'>".$label."</label>";
 		echo "<div class='form-control-wrap'>";
-		echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey);
+		echo supplier_list($name, $selected_id, $all_option, $submit_on_change, $all, $editkey, array('cells'=>true));
 		echo "</div></div>\n";
 		return;
 	}
@@ -579,6 +580,7 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 		'async' => false,
 		'sel_hint' => _('Select customer'),
 		'show_inactive' => $show_inactive,
+		'layout_class' => empty($opts['layout_class']) ? 'combo-layout-equal' : $opts['layout_class'],
 		'editlink' => $editkey ? add_edit_combo('customer', $name) : false
 	), $opts), 'customer' );
 
@@ -596,7 +598,7 @@ function customer_list_row($label, $name, $selected_id=null, $all_option=false, 
 		echo "<div class='form-group'>";
 		echo "<label class='form-label'>".$label."</label>";
 		echo "<div class='form-control-wrap'>";
-		echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey);
+		echo customer_list($name, $selected_id, $all_option, $submit_on_change, $show_inactive, $editkey, array('cells'=>true));
 		echo "</div></div>\n";
 		return;
 	}
