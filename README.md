@@ -93,8 +93,6 @@ Key variables in `config.default.php` (override in `config.php`):
 $debug          = 0;    // 1 = show SQL on DB errors
 $show_sql       = 0;    // 1 = dump all SQL to page footer
 $go_debug       = 0;    // 1 = basic debug; 2 = backtrace on failure
-$app_title      = 'NotrinosERP';
-$use_popup_windows = 1;
 ```
 
 Multi-company database connections are defined as the `$db_connections` array in `config_db.php`.
@@ -324,7 +322,7 @@ Project and cost-centre tagging system for cross-module transaction analysis. En
 **Maintenance**
 - **Dimension Tags** — tag dimensions for categorization and filtering
 
-Dimensions can be tagged on transactions across Sales, Purchasing, Inventory, GL, and Manufacturing modules for consolidated project/cost-centre reporting.
+Dimensions can be tagged on transactions across Sales, Purchasing, Inventory, GL, and Manufacturing modules for consolidated reporting.
 
 ---
 
@@ -384,8 +382,6 @@ A **universal, multi-level approval workflow** available for any transaction typ
 - Transaction number reserved at draft creation (no separate draft numbering)
 - Approval dashboard across all modules
 - HRM approvals (leave, overtime, payroll) run through the unified engine
-
-Install approval tables: `php install_approval_tables.php` (requires DB credentials in `config_db.php`).
 
 ---
 
