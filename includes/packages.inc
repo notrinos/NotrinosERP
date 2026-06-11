@@ -12,6 +12,7 @@
 include_once($path_to_root.'/includes/archive.inc');
 include_once($path_to_root.'/includes/remote_url.inc');
 include_once($path_to_root.'/includes/hooks.inc');
+include_once($path_to_root.'/admin/db/maintenance_db.inc');
 
 define('PKG_CACHE_PATH', $path_to_root.'/modules/_cache');
 define('PUBKEY_PATH', $path_to_root);
