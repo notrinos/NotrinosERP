@@ -54,6 +54,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		'cells' => false,	// combo displayed as 2 <td></td> cells
 		'search' => array(), // sql field names to search
 		'format' => null, 	 // format functions for regular options
+		'data_format' => null, // separate format for datalist entries (null = use 'format')
 		'disabled' => false,
 		'box_hint' => null, // box/selectors hints; null = std see below
 		'category' => false, // category column name or false
@@ -209,7 +210,11 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 				$selector .= "<option ".$sel.' '.$optclass." value='".$value_attr."'>".$descr_text."</option>\n";
 			}
 
-			$data_options .= "<option value='".$value_attr."'>".$descr_text."</option>\n";
+			// Data list entry - use data_format if set, otherwise regular format
+			$data_descr = $opts['data_format'] !== null
+				? call_user_func($opts['data_format'], $contact_row, true)
+				: $descr_text;
+			$data_options .= "<option value='".$value_attr."'>".htmlspecialchars((string)$data_descr, ENT_QUOTES, 'UTF-8')."</option>\n";
 		}
 		if ($lastcat!==null)
 			$selector .= '</optgroup>';
@@ -451,10 +456,35 @@ function _format_add_curr($row, $pname=false) {
 	if ($company_currency == null)
 		$company_currency = get_company_currency();
 	
-	if (!$pname)
-		return $row[1].($row[2] == $company_currency ? '' : (' - '.$row[2]));
-	else
-		return $row[1].' - '.$row[2] . ($row[3] == $company_currency ? '' : (' - '.$row[3]));
+	// Detect row format:
+	// 5-column rows (id, short_name, full_name, curr_code, inactive) from customer/supplier lists
+	// 4-column rows (id, name, curr_code, inactive) from bank_accounts_list etc.
+	$has_full_name = isset($row[4]);
+
+	if (!$pname || !$has_full_name) {
+		// Show short_name (or account name) + optional currency suffix
+		$curr_idx = $has_full_name ? 3 : 2;
+		return $row[1] . ($row[$curr_idx] == $company_currency ? '' : (' - ' . $row[$curr_idx]));
+	}
+	// shortname_name_in_list mode: short_name - full_name + optional currency
+	return $row[1] . ' - ' . $row[2] . ($row[3] == $company_currency ? '' : (' - ' . $row[3]));
+}
+
+/**
+ * Format for datalist entries - always includes both short name and full name
+ * so the search box can match on either one, regardless of shortname_name_in_list.
+ * Row structure: 0=id, 1=short_name, 2=full_name, 3=curr_code, ...
+ */
+function _format_for_datalist($row, $dummy=null) {
+	static $company_currency;
+
+	if ($company_currency == null)
+		$company_currency = get_company_currency();
+
+	$text = $row[1] . ' - ' . $row[2];
+	if (isset($row[3]) && $row[3] != $company_currency)
+		$text .= ' (' . $row[3] . ')';
+	return $text;
 }
 
 function add_edit_combo($type, $name=false) {
@@ -475,12 +505,8 @@ function add_edit_combo($type, $name=false) {
 function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $all=false, $editkey=false, $opts=array()) {
 	global $SysPrefs;
 
-	if (!empty($SysPrefs->prefs['shortname_name_in_list']))
-		$sql = "SELECT supplier_id, supp_ref, supp_name, curr_code, inactive FROM ".TB_PREF."suppliers ";
-	else	
-		$sql = "SELECT supplier_id, supp_ref, curr_code, inactive FROM ".TB_PREF."suppliers ";
-
-	$mode = get_company_pref('no_supplier_list');
+	// Always include supp_name so the search datalist can match on it
+	$sql = "SELECT supplier_id, supp_ref, supp_name, curr_code, inactive FROM ".TB_PREF."suppliers ";
 
 	if ($editkey)
 		set_editor('supplier', $name, $editkey);
@@ -488,15 +514,17 @@ function supplier_list($name, $selected_id=null, $spec_option=false, $submit_on_
 	$ret = combo_input($name, $selected_id, $sql, 'supplier_id', 'supp_name',
 	array_merge(array(
 		'format' => '_format_add_curr',
+		'data_format' => '_format_for_datalist',
 		'order' => array('supp_ref'),
-		'search_box' => $mode!=0,
-		'type' => 1,
-		'search' => array('supp_ref', 'supp_name', 'gst_no'),        
+		'search_box' => true,
+		'type' => 0,
+		'search' => array('supp_ref', 'supp_name', 'gst_no'),
+		'search_submit' => true,
 		'spec_option' => $spec_option === true ? _('All Suppliers') : $spec_option,
 		'spec_id' => ALL_TEXT,
 		'select_submit'=> $submit_on_change,
 		'async' => false,
-		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment') : _('Select supplier'),
+		'sel_hint' => _('Select supplier'),
 		'show_inactive'=>$all,
 		'editlink' => $editkey ? add_edit_combo('supplier', $name) : false
 		), $opts), 'supplier');
@@ -529,12 +557,8 @@ function supplier_list_row($label, $name, $selected_id=null, $all_option=false, 
 function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_change=false, $show_inactive=false, $editkey=false, $opts=array()) {
 	global $SysPrefs;
 
-	if (!empty($SysPrefs->prefs['shortname_name_in_list']))
-		$sql = "SELECT debtor_no, debtor_ref, name, curr_code, inactive FROM ".TB_PREF."debtors_master ";
-	else	
-		$sql = "SELECT debtor_no, debtor_ref, curr_code, inactive FROM ".TB_PREF."debtors_master ";
-
-	$mode = get_company_pref('no_customer_list');
+	// Always include name so the search datalist can match on it
+	$sql = "SELECT debtor_no, debtor_ref, name, curr_code, inactive FROM ".TB_PREF."debtors_master ";
 
 	if ($editkey)
 		set_editor('customer', $name, $editkey);
@@ -542,16 +566,18 @@ function customer_list($name, $selected_id=null, $spec_option=false, $submit_on_
 	$ret = combo_input($name, $selected_id, $sql, 'debtor_no', 'debtor_ref',
 	array_merge(array(
 		'format' => '_format_add_curr',
+		'data_format' => '_format_for_datalist',
 		'order' => array('debtor_ref'),
-		'search_box' => $mode!=0,
-		'type' => 1,
+		'search_box' => true,
+		'type' => 0,
 		'size' => 20,
-		'search' => array('debtor_ref','name','tax_id'),        
+		'search' => array('debtor_ref','name','tax_id'),
+		'search_submit' => true,
 		'spec_option' => $spec_option === true ? _('All Customers') : $spec_option,
 		'spec_id' => ALL_TEXT,
 		'select_submit'=> $submit_on_change,
 		'async' => false,
-		'sel_hint' => $mode ? _('Press Space tab to filter by name fragment; F2 - entry new customer') : _('Select customer'),
+		'sel_hint' => _('Select customer'),
 		'show_inactive' => $show_inactive,
 		'editlink' => $editkey ? add_edit_combo('customer', $name) : false
 	), $opts), 'customer' );

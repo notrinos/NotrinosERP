@@ -358,7 +358,7 @@ function supplier_settings(&$supplier_id) {
 start_form(true);
 
 if (db_has_suppliers()) {
-	start_table(false, '', 3);
+	start_table(TABLESTYLE_NOBORDER);
 	start_row();
 	supplier_list_cells(_('Select a supplier: '), 'supplier_id', null,
 		  _('New supplier'), true, check_value('show_inactive'));
