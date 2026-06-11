@@ -111,6 +111,7 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		$selected_id = array((string)$selected_id); // code is generalized for multiple selection support
 
 	$txt = get_post($search_box);
+	$txt_match = is_string($txt) ? trim($txt) : '';
 	$rel = '';
 	$limit = '';
 
@@ -178,11 +179,20 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		while ($contact_row = db_fetch($result)) {
 			$value = $contact_row[0];
 			$descr = $opts['format']==null ?  $contact_row[1] : call_user_func($opts['format'], $contact_row, $pname);
+			$data_descr = $opts['data_format'] !== null
+				? call_user_func($opts['data_format'], $contact_row, true)
+				: $descr;
+			$value_text = trim((string)$value);
+			$descr_text_raw = trim((string)$descr);
+			$data_descr_raw = trim((string)$data_descr);
 			$value_attr = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 			$descr_text = htmlspecialchars((string)$descr, ENT_QUOTES, 'UTF-8');
 			$sel = '';
-			if (get_post($search_button) && ($txt == $value))
-				$selected_id[] = $value;
+			if (isset($_POST[$search_button]) && $txt_match !== ''
+				&& ($txt_match === $value_text
+					|| $txt_match === $descr_text_raw
+					|| $txt_match === $data_descr_raw))
+				$selected_id[] = $value_text;
 
 			if (in_array((string)$value, $selected_id, true)) {
 				$sel = 'selected';
@@ -211,9 +221,6 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 			}
 
 			// Data list entry - use data_format if set, otherwise regular format
-			$data_descr = $opts['data_format'] !== null
-				? call_user_func($opts['data_format'], $contact_row, true)
-				: $descr_text;
 			$data_options .= "<option value='".$value_attr."'>".htmlspecialchars((string)$data_descr, ENT_QUOTES, 'UTF-8')."</option>\n";
 		}
 		if ($lastcat!==null)
