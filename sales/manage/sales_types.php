@@ -84,9 +84,9 @@ if ($Mode == 'RESET') {
 $result = get_all_sales_types(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='30%'");
+start_table(TABLESTYLE, "width='80%'");
 
-$th = array (_('Type Name'), _('Factor'), _('Tax Incl'), '','');
+$th = array (_('ID'), _('Type Name'), _('Factor'), _('Tax Incl'), '','');
 inactive_control_column($th);
 table_header($th);
 $k = 0;
@@ -97,9 +97,14 @@ while ($myrow = db_fetch($result)) {
 		start_row("class='overduebg'");
 	else
 		alt_table_row_color($k);
+
+	label_cell($myrow['id']);
 	label_cell($myrow['sales_type']);
 	$f = number_format2($myrow['factor'],4);
-	if($myrow['id'] == $base_sales) $f = '<I>'._('Base').'</I>';
+	if($myrow['id'] == $base_sales) {
+		$f = '<I>'._('Base').'</I>';
+	}
+	
 	label_cell($f);
 	label_cell($myrow['tax_included'] ? _('Yes'):_('No'), 'align=center');
 	inactive_control_cell($myrow['id'], $myrow['inactive'], 'sales_types', 'id');
@@ -108,9 +113,10 @@ while ($myrow = db_fetch($result)) {
 	end_row();
 }
 inactive_control_row($th);
-end_table();
+end_table(1);
 
 display_note(_('Marked sales type is the company base pricelist for prices calculations.'), 0, 0, "class='overduefg'");
+br();
 
 //----------------------------------------------------------------------------------------------------
 

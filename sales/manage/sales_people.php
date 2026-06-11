@@ -85,11 +85,11 @@ if ($Mode == 'RESET') {
 $result = get_salesmen(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='60%'");
+start_table(TABLESTYLE, "width='90%'");
 if ($use_advanced_commissions) {
-	$th = array(_('Name'), _('Phone'), _('Fax'), _('Email'), _('Commission Plan'), '', '');
+	$th = array(_('ID'), _('Name'), _('Phone'), _('Fax'), _('Email'), _('Commission Plan'), '', '');
 } else {
-	$th = array(_('Name'), _('Phone'), _('Fax'), _('Email'), _('Provision'), _('Break Pt.'), _('Provision').' 2', '', '');
+	$th = array(_('ID'), _('Name'), _('Phone'), _('Fax'), _('Email'), _('Provision'), _('Break Pt.'), _('Provision').' 2', '', '');
 }
 inactive_control_column($th);
 table_header($th);
@@ -100,6 +100,7 @@ while ($myrow = db_fetch($result)) {
 
 	alt_table_row_color($k);
 
+	label_cell($myrow['salesman_code']);
 	label_cell($myrow['salesman_name']);
 	label_cell($myrow['salesman_phone']);
 	label_cell($myrow['salesman_fax']);

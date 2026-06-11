@@ -84,8 +84,8 @@ if ($Mode == 'RESET') {
 $result = get_all_credit_status(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width=40%");
-$th = array(_('Description'), _('Dissallow Invoices'),'','');
+start_table(TABLESTYLE, "width=80%");
+$th = array(_('ID'), _('Description'), _('Dissallow Invoices'),'','');
 inactive_control_column($th);
 table_header($th);
 
@@ -99,6 +99,7 @@ while ($myrow = db_fetch($result)) {
 	else 
 		$disallow_text = '<b>' . _('NO INVOICING') . '</b>';
 	
+	label_cell($myrow['id']);
 	label_cell($myrow['reason_description']);
 	label_cell($disallow_text);
 	inactive_control_cell($myrow['id'], $myrow['inactive'], 'credit_status', 'id');

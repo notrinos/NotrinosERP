@@ -73,9 +73,9 @@ if ($Mode == 'RESET') {
 $result = get_sales_areas(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='30%'");
+start_table(TABLESTYLE, "width='50%'");
 
-$th = array(_('Area Name'), '', '');
+$th = array(_('ID'), _('Area Name'), '', '');
 inactive_control_column($th);
 
 table_header($th);
@@ -84,7 +84,8 @@ $k = 0;
 while ($myrow = db_fetch($result)) {
 	
 	alt_table_row_color($k);
-		
+	
+	label_cell($myrow['area_code']);
 	label_cell($myrow['description']);
 	
 	inactive_control_cell($myrow['area_code'], $myrow['inactive'], 'areas', 'area_code');
