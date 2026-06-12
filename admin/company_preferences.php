@@ -449,48 +449,14 @@ label_row(_('Company Logo:'), $_POST['coy_logo']);
 file_row(_('New Company Logo (.jpg)') . ':', 'pic', 'pic');
 check_row(_('Delete Company Logo:'), 'del_coy_logo', $_POST['del_coy_logo']);
 
-check_row(_('Time Zone on Reports:'), 'time_zone', $_POST['time_zone']);
-check_row(_('Company Logo on Reports:'), 'company_logo_report', $_POST['company_logo_report']);
-check_row(_('Use Barcodes on Stocks:'), 'barcodes_on_stock', $_POST['barcodes_on_stock']);
 check_row(_('Auto Increase of Document References:'), 'ref_no_auto_increase', $_POST['ref_no_auto_increase']);
 check_row(_('Use Dimensions on Recurrent Invoices:'), 'dim_on_recurrent_invoice', $_POST['dim_on_recurrent_invoice']);
-check_row(_('Use Long Descriptions on Invoices:'), 'long_description_invoice', $_POST['long_description_invoice']);
-check_row(_('Company Logo on Views'), 'company_logo_on_views', $_POST['company_logo_on_views']);
 label_row(_('Database Scheme Version:'), $_POST['version_id']);
+check_row(_('Company Logo on Reports:'), 'company_logo_report', $_POST['company_logo_report']);
+check_row(_('Use Barcodes on Stocks:'), 'barcodes_on_stock', $_POST['barcodes_on_stock']);
+check_row(_('Company Logo on Views'), 'company_logo_on_views', $_POST['company_logo_on_views']);
 
 table_section(2);
-
-table_section_title(_('General Ledger Settings'));
-fiscalyears_list_row(_('Fiscal Year:'), 'f_year', $_POST['f_year']);
-text_row_ex(_('Tax Periods:'), 'tax_prd', 10, 10, '', null, null, _('Months.'));
-text_row_ex(_('Tax Last Period:'), 'tax_last', 10, 10, '', null, null, _('Months back.'));
-check_row(_('Put alternative Tax Include on Docs:'), 'alternative_tax_include_on_docs', null);
-check_row(_('Suppress Tax Rates on Docs:'), 'suppress_tax_rates', null);
-check_row(_('Automatic Revaluation Currency Accounts:'), 'auto_curr_reval', $_POST['auto_curr_reval']);
-
-table_section_title(_('Sales Pricing'));
-sales_types_list_row(_('Base for auto price calculations:'), 'base_sales', $_POST['base_sales'], false, _('No base price list') );
-
-text_row_ex(_('Add Price from Std Cost:'), 'add_pct', 10, 10, '', null, null, '%');
-$curr = get_currency($_POST['curr_default']);
-text_row_ex(_('Round calculated prices to nearest:'), 'round_to', 10, 10, '', null, null, $curr['hundreds_name']);
-label_row('', '&nbsp;');
-
-table_section_title(_('Optional Modules'));
-check_row(_('Manufacturing:'), 'use_manufacturing', null);
-check_row(_('Fixed Assets').':', 'use_fixed_assets', null);
-number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
-check_row(_('Human Resources Management:'), 'use_hrm', null);
-check_row(_('CRM (Customer Relationship Management):'), 'use_crm', null);
-
-table_section_title(_('User Interface Options'));
-
-check_row(_('Short Name and Name in List:'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
-check_row(_('Open Print Dialog Direct on Reports:'), 'print_dialog_direct', null);
-text_row_ex(_('Login Timeout:'), 'login_tout', 10, 10, '', null, null, _('seconds'));
-text_row_ex(_('Max day range in documents:'), 'max_days_in_docs', 10, 10, '', null, null, _('days.'));
-
-table_section(1);
 
 table_section_title(_('Advanced Sales Features'));
 check_row(_('Enable Advanced Pricelists:'), 'use_advanced_pricelists', $_POST['use_advanced_pricelists']);
@@ -505,32 +471,7 @@ check_row(_('Check Credit on Sales Orders:'), 'credit_check_on_order', $_POST['c
 check_row(_('Check Credit on Deliveries:'), 'credit_check_on_delivery', $_POST['credit_check_on_delivery']);
 check_row(_('Enable Return Merchandise Authorization (RMA):'), 'use_rma', $_POST['use_rma']);
 
-table_section(2);
-table_section_title(_('Warranty Provision Controls'));
-check_row(_('Enable Automatic Warranty Provision:'), 'warranty_provision_enabled', $_POST['warranty_provision_enabled']);
-gl_all_accounts_list_row(_('Warranty Provision Account:'), 'warranty_provision_account', $_POST['warranty_provision_account'], true, false);
-gl_all_accounts_list_row(_('Warranty Expense Account:'), 'warranty_expense_account', $_POST['warranty_expense_account'], true, false);
-small_amount_row(_('Warranty Provision Rate (%):'), 'warranty_provision_rate', $_POST['warranty_provision_rate']);
-label_row(_('Detailed warranty setup:'), "<a href='$path_to_root/inventory/manage/warranty_provision_settings.php?sel_app=stock'>"._('Warranty Provision Settings')."</a>");
-
-table_section(1);
-table_section_title(_('Regulatory Compliance Controls'));
-check_row(_('Enable Regulatory Compliance Module:'), 'regulatory_compliance_enabled', $_POST['regulatory_compliance_enabled']);
-check_row(_('Enable DSCSA Compliance:'), 'dscsa_enabled', $_POST['dscsa_enabled']);
-text_row_ex(_('DSCSA State License Number:'), 'dscsa_company_license', 30, 50);
-text_row_ex(_('DSCSA DEA Registration Number:'), 'dscsa_company_dea', 20, 20);
-check_row(_('Enable FSMA 204 Compliance:'), 'fsma204_enabled', $_POST['fsma204_enabled']);
-text_row_ex(_('FSMA Registered Firm Name:'), 'fsma204_firm_name', 40, 100);
-text_row_ex(_('FSMA FDA Registration Number:'), 'fsma204_fda_registration', 30, 30);
-check_row(_('Enable UDI Compliance:'), 'udi_enabled', $_POST['udi_enabled']);
-text_row_ex(_('UDI Company Name:'), 'udi_company_name', 40, 100);
-text_row_ex(_('UDI Issuing Agency:'), 'udi_issuing_agency', 20, 10);
-check_row(_('Enable FMDA Compliance:'), 'fmda_enabled', $_POST['fmda_enabled']);
-text_row_ex(_('FMDA Company License:'), 'fmda_company_license', 30, 50);
-text_row_ex(_('FMDA Authority Reference:'), 'fmda_authority_reference', 30, 50);
-label_row(_('Detailed regulatory setup:'), "<a href='$path_to_root/inventory/manage/regulatory_compliance.php?sel_app=stock'>"._('Regulatory Compliance')."</a>");
-
-table_section(2);
+$curr = get_currency($_POST['curr_default']);
 
 table_section_title(_('Advanced Purchasing Features'));
 check_row(_('Enable Purchase Requisitions:'), 'use_purchase_requisitions', $_POST['use_purchase_requisitions']);
@@ -546,6 +487,73 @@ check_row(_('Enable 3-Way Matching:'), 'use_3way_matching', $_POST['use_3way_mat
 text_row_ex(_('Default Matching Tolerance:'), 'default_matching_tolerance_pct', 10, 10, '', null, null, '%');
 check_row(_('Enable Procurement Planning:'), 'use_procurement_planning', $_POST['use_procurement_planning']);
 check_row(_('Enable Purchase Dashboard and Analytics:'), 'use_purchase_dashboard', $_POST['use_purchase_dashboard']);
+
+table_section(1);
+table_section_title(_('User Interface Options'));
+
+check_row(_('Short Name and Name in List:'), 'shortname_name_in_list', $_POST['shortname_name_in_list']);
+check_row(_('Open Print Dialog Direct on Reports:'), 'print_dialog_direct', null);
+text_row_ex(_('Login Timeout:'), 'login_tout', 10, 10, '', null, null, _('seconds'));
+text_row_ex(_('Max day range in documents:'), 'max_days_in_docs', 10, 10, '', null, null, _('days.'));
+check_row(_('Use Long Descriptions on Invoices:'), 'long_description_invoice', $_POST['long_description_invoice']);
+check_row(_('Time Zone on Reports:'), 'time_zone', $_POST['time_zone']);
+
+table_section(2);
+
+table_section_title(_('General Ledger Settings'));
+fiscalyears_list_row(_('Fiscal Year:'), 'f_year', $_POST['f_year']);
+text_row_ex(_('Tax Periods:'), 'tax_prd', 10, 10, '', null, null, _('Months.'));
+text_row_ex(_('Tax Last Period:'), 'tax_last', 10, 10, '', null, null, _('Months back.'));
+check_row(_('Put alternative Tax Include on Docs:'), 'alternative_tax_include_on_docs', null);
+check_row(_('Suppress Tax Rates on Docs:'), 'suppress_tax_rates', null);
+check_row(_('Automatic Revaluation Currency Accounts:'), 'auto_curr_reval', $_POST['auto_curr_reval']);
+
+table_section(2);
+table_section_title(_('Optional Modules'));
+check_row(_('Manufacturing:'), 'use_manufacturing', null);
+check_row(_('Fixed Assets').':', 'use_fixed_assets', null);
+number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
+check_row(_('Human Resources Management:'), 'use_hrm', null);
+check_row(_('CRM (Customer Relationship Management):'), 'use_crm', null);
+
+table_section(2);
+table_section_title(_('Sales Pricing'));
+sales_types_list_row(_('Base for auto price calculations:'), 'base_sales', $_POST['base_sales'], false, _('No base price list') );
+
+text_row_ex(_('Add Price from Std Cost:'), 'add_pct', 10, 10, '', null, null, '%');
+text_row_ex(_('Round calculated prices to nearest:'), 'round_to', 10, 10, '', null, null, $curr['hundreds_name']);
+label_row('', '&nbsp;');
+
+table_section(2);
+table_section_title(_('Warranty Provision Controls'));
+check_row(_('Enable Automatic Warranty Provision:'), 'warranty_provision_enabled', $_POST['warranty_provision_enabled']);
+gl_all_accounts_list_row(_('Warranty Provision Account:'), 'warranty_provision_account', $_POST['warranty_provision_account'], true, false);
+gl_all_accounts_list_row(_('Warranty Expense Account:'), 'warranty_expense_account', $_POST['warranty_expense_account'], true, false);
+small_amount_row(_('Warranty Provision Rate (%):'), 'warranty_provision_rate', $_POST['warranty_provision_rate']);
+label_row(_('Detailed warranty setup:'), "<a href='$path_to_root/inventory/manage/warranty_provision_settings.php?sel_app=stock'>"._('Warranty Provision Settings')."</a>");
+
+table_section(2);
+table_section_title(_('Regulatory Compliance Controls'));
+check_row(_('Enable Regulatory Compliance Module:'), 'regulatory_compliance_enabled', $_POST['regulatory_compliance_enabled']);
+check_row(_('Enable DSCSA Compliance:'), 'dscsa_enabled', $_POST['dscsa_enabled']);
+text_row_ex(_('DSCSA State License Number:'), 'dscsa_company_license', 30, 50);
+text_row_ex(_('DSCSA DEA Registration Number:'), 'dscsa_company_dea', 20, 20);
+check_row(_('Enable FSMA 204 Compliance:'), 'fsma204_enabled', $_POST['fsma204_enabled']);
+check_row(_('Enable UDI Compliance:'), 'udi_enabled', $_POST['udi_enabled']);
+
+table_section(2);
+table_section_title(_('Regulatory Compliance Controls'));
+text_row_ex(_('FSMA Registered Firm Name:'), 'fsma204_firm_name', 40, 100);
+text_row_ex(_('FSMA FDA Registration Number:'), 'fsma204_fda_registration', 30, 30);
+text_row_ex(_('UDI Company Name:'), 'udi_company_name', 40, 100);
+text_row_ex(_('UDI Issuing Agency:'), 'udi_issuing_agency', 20, 10);
+
+table_section(2);
+table_section_title(_('Regulatory Compliance Controls'));
+check_row(_('Enable FMDA Compliance:'), 'fmda_enabled', $_POST['fmda_enabled']);
+text_row_ex(_('FMDA Company License:'), 'fmda_company_license', 30, 50);
+text_row_ex(_('FMDA Authority Reference:'), 'fmda_authority_reference', 30, 50);
+label_row(_('Detailed regulatory setup:'), "<a href='$path_to_root/inventory/manage/regulatory_compliance.php?sel_app=stock'>"._('Regulatory Compliance')."</a>");
 
 end_outer_table(1);
 
