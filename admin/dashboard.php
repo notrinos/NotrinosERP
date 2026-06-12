@@ -52,7 +52,7 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 112, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 113, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 114, WIDGET_QUARTER, 'widget-small-stat');
-	// Phase 7: Sales dashboard widgets (115-120)
+	// Sales dashboard widgets (115-120)
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 115, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 116, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_CUSTOMER, 117, WIDGET_QUARTER, 'widget-small-stat');
@@ -167,6 +167,9 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidget(DA_SETUP, 810, WIDGET_HALF);
 	$dashboard->addWidget(DA_SETUP, 811, WIDGET_HALF);
 	$dashboard->addWidget(DA_SETUP, 812, WIDGET_HALF);
+
+	$dashboard->addDashboard(_('Applications Store'), DA_STORE);
+	$dashboard->addWidget(DA_STORE, 2000, WIDGET_FULL);
 
 	add_custom_dashboards($dashboard);
 
