@@ -20,6 +20,7 @@ define('DA_FIXEDASSETS', 'assets');
 define('DA_HRM', 'hrm');
 define('DA_CRM', 'crm');
 define('DA_SETUP', 'system');
+define('DA_STORE', 'store');
 
 define('WIDGET_FULL', 'widget_full');
 define('WIDGET_HALF', 'widget_half');

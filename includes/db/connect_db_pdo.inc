@@ -761,7 +761,7 @@ function db_set_collation($dbase, $fa_collation) {
 }
 
 /*
-	Create database for FA company. If database already exists,
+	Create database for NotrinosERP company. If database already exists,
 	just set collation to be sure nothing weird will happen later.
 */
 function db_create_db($connection) {

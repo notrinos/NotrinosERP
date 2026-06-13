@@ -448,8 +448,8 @@ if ($rma) {
 } else {
 	// New RMA entry
 	start_row();
-	label_cell(_('Customer'));
-	echo '<td>'.customer_list('debtor_no', get_post('debtor_no', 0), false, true).'</td>';
+	label_cell(_('Customer:'));
+	customer_list_cells(null, 'debtor_no', get_post('debtor_no', 0), false, true);
 	end_row();
 
 	start_row();
