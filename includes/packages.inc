@@ -1147,12 +1147,19 @@ function get_package_repository_base_url() {
 function get_package_repository_root_url() {
 	global $repo_auth;
 
-	$scheme = isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://';
+	$scheme = isset($repo_auth['scheme']) ? $repo_auth['scheme'] : '';
 	$host = isset($repo_auth['host']) ? trim($repo_auth['host'], '/') : '';
 	$path = isset($repo_auth['path']) ? trim($repo_auth['path'], '/') : '';
 
 	if ($host == '')
 		return '';
+
+	// Auto-detect scheme when not configured: prefer https unless running on localhost.
+	if ($scheme == '') {
+		$scheme = (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+			? 'https://'
+			: 'http://';
+	}
 
 	$url = $scheme.$host;
 	if ($path != '')
