@@ -740,7 +740,7 @@ function db_field_name($result, $n) {
  * Set the current database collation.
  *
  * @param PDO|null $dbase Optional connection override.
- * @param string $fa_collation FrontAccounting collation key.
+ * @param string $fa_collation NotrinosERP collation key.
  *
  * @return bool True on success, false on failure.
  */
