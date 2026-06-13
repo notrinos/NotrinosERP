@@ -1432,7 +1432,7 @@ CREATE TABLE `0_reflines` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `prefix` (`trans_type`,`prefix`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 ;
+) ENGINE=InnoDB AUTO_INCREMENT=24 ;
 
 -- Data of table `0_reflines` --
 
