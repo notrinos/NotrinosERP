@@ -949,9 +949,9 @@ function install_extension($pkg_name) {
 			$ext_id = array_search_key($pkg['Package'], $local_exts, 'package');
 			if ($ext_id === null)
 				$ext_id = $next_extension_id++;
-			else {	// remove another already installed package for this language 
+			else {	// remove old package only when the package identity has changed
 				$old_pkg = $installed_extensions[$ext_id]['package'];
-				if ($old_pkg)
+				if ($old_pkg && $old_pkg != $pkg['Package'])
 					uninstall_package($old_pkg);
 			}
 			$ext = array(
