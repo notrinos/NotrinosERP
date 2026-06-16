@@ -581,7 +581,7 @@ function setHotKeys() {
 			ev.returnValue = false;
 			return false;
 		}
-		if (editors!==undefined && editors[key]) {
+	if (editors!==undefined && editors[key]) {
 			callEditor(key);
 			return stopEv(ev); // prevent default binding
 		}
@@ -611,6 +611,14 @@ function setHotKeys() {
 		}
 		return true;
 	}
+
+	// Reset hotkeys when window loses focus (e.g. Alt+Tab, Win+L)
+	// Prevents _hotkeys.alt from staying stuck true because the keyup
+	// event for Alt is never received after focus returns.
+	window.onblur = function() {
+		_hotkeys.alt = false;
+		_hotkeys.focus = -1;
+	};
 }
 
 Behaviour.register(inserts);
