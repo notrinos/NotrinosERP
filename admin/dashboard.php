@@ -28,7 +28,8 @@ if (isset($_GET['sel_app'])) {
 
 	$selected_app = $_GET['sel_app'];
 
-	if (!$_SESSION['wa_current_user']->check_application_access($selected_app))
+	$app = $_SESSION['App']->get_application($selected_app);
+	if (!$app || !$_SESSION['wa_current_user']->check_application_access($app))
 		return;
 
 	$dir = company_path().'/pdf_files';

@@ -209,6 +209,9 @@ class current_user {
 		if (!$this->hide_inaccessible_menu_items())
 			return true;
 
+		if (!is_object($waapp) || !isset($waapp->modules))
+			return false;
+
 		foreach ($waapp->modules as $module) {
 			if ($this->check_module_access($module))
 				return true;
