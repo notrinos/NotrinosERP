@@ -268,7 +268,7 @@
 .storefront-card {
 	display: flex;
 	flex-direction: column;
-	border: 1px solid #e3ebf8;
+	border: 1px solid #d8dee8;
 	border-radius: 16px;
 	background: #ffffff;
 	box-shadow: 0 16px 34px rgba(18, 44, 88, 0.06);

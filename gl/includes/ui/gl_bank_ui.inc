@@ -34,14 +34,15 @@ function display_bank_header(&$order) {
 	}		
 	
 	bank_accounts_list_row( $payment ? _('From:') : _('Into:'), 'bank_account', null, true);
+
+	table_section(2);
+	
 	if ($payment)
 		bank_balance_row($_POST['bank_account']);
 
 	$bank_currency = get_bank_account_currency($_POST['bank_account']);
 
 	exchange_rate_display(get_company_currency(), $bank_currency, $_POST['date_']);
-
-	table_section(2);
 
 	if (!isset($_POST['PayType'])) {
 		if (isset($_GET['PayType']))
