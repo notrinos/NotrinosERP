@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-include_once $path_to_root.'/includes/db/class.data_set.inc';
+include_once $path_to_root.'/includes/db/class.entity.inc';
 
 class UI {
 	var $ui_mode;

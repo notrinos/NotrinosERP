@@ -9,14 +9,14 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once 'class.data_set.inc';
+include_once 'class.entity.inc';
 
 /**
 *	Reference lines.
 *
 **/
 
-class reflines_db extends data_set {
+class reflines_db extends Entity {
 	function __construct() {
 		$this->set_validator('prefix:ui:_check_prefix', _("This prefix conflicts with another one already defined. Prefix have to be unambigous."));
 		$this->set_validator('prefix:ui:_check_template', _("Invalid template format."));
