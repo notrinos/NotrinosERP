@@ -108,6 +108,12 @@ JsHttpRequest._request = function(trigger, form, tout, retry) {
 		if (!submitObj) {
 			content[trigger] = 1;
 		}
+		// Include CSRF token for POST requests; guards against missing _token
+		// inside the form (e.g. after Ajax DOM updates).
+		if (!content['_token']) {
+			var _csrfTokenEl = document.querySelector('input[name="_token"]');
+			if (_csrfTokenEl) content['_token'] = _csrfTokenEl.value;
+		}
 	}
 	// this is to avoid caching problems
 	content['_random'] = Math.random()*1234567;
