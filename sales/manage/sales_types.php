@@ -16,7 +16,7 @@ include_once($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Sales Types'));
 
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_types_entity.inc');
 
 simple_page_mode(true);
 
@@ -40,7 +40,11 @@ function can_process() {
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='ADD_ITEM' && can_process()) {
-	add_sales_type($_POST['sales_type'], check_value('tax_included'), input_num('factor'));
+	sales_types_entity::create(array(
+		'sales_type' => $_POST['sales_type'],
+		'tax_included' => check_value('tax_included') ? 1 : 0,
+		'factor' => input_num('factor')
+	));
 	display_notification(_('New sales type has been added'));
 	$Mode = 'RESET';
 }
@@ -49,7 +53,11 @@ if ($Mode=='ADD_ITEM' && can_process()) {
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	update_sales_type($selected_id, $_POST['sales_type'], check_value('tax_included'), input_num('factor'));
+	sales_types_entity::modify($selected_id, array(
+		'sales_type' => $_POST['sales_type'],
+		'tax_included' => check_value('tax_included') ? 1 : 0,
+		'factor' => input_num('factor')
+	));
 	display_notification(_('Selected sales type has been updated'));
 	$Mode = 'RESET';
 }
@@ -81,7 +89,7 @@ if ($Mode == 'RESET') {
 
 //----------------------------------------------------------------------------------------------------
 
-$result = get_all_sales_types(check_value('show_inactive'));
+$result = sales_types_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width='80%'");
@@ -130,7 +138,7 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 
 	if ($Mode == 'Edit') {
-		$myrow = get_sales_type($selected_id);
+		$myrow = sales_types_entity::find($selected_id);
 
 		$_POST['sales_type']  = $myrow['sales_type'];
 		$_POST['tax_included']  = $myrow['tax_included'];

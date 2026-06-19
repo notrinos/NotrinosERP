@@ -17,6 +17,7 @@ include_once($path_to_root . '/sales/includes/db/sales_credit_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_invoice_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_delivery_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_types_entity.inc');
 include_once($path_to_root . '/sales/includes/db/sales_points_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
 include_once($path_to_root . '/sales/includes/db/recurrent_invoices_db.inc');
@@ -71,7 +72,7 @@ function get_price ($stock_id, $currency, $sales_type_id, $factor=null, $date=nu
 		$date = new_doc_date();
 
 	if ($factor === null) {
-		$myrow = get_sales_type($sales_type_id);
+		$myrow = sales_types_entity::find($sales_type_id);
 		$factor = $myrow['factor'];
 	}
 

@@ -18,6 +18,7 @@ include_once($path_to_root . '/includes/ui/ui_input.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_types_entity.inc');
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 
 //----------------------------------------------------------------------------------------------------
@@ -89,7 +90,7 @@ function print_price_listing() {
 	if ($salestype == 0)
 		$stype = _('All');
 	else
-		$stype = get_sales_type_name($salestype);
+		$stype = sales_types_entity::find($salestype)['sales_type'];
 	if ($showGP == 0)
 		$GP = _('No');
 	else
