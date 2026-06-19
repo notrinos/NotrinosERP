@@ -15,7 +15,6 @@ $path_to_root = @$_GET['page_level'] == 1 ? '../..' : '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/sales/includes/sales_db.inc');
-include_once($path_to_root.'/sales/includes/db/sales_types_db.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');

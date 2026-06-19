@@ -25,7 +25,8 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/sales/includes/sales_ui.inc');
 include_once($path_to_root . '/sales/includes/ui/sales_order_ui.inc');
 include_once($path_to_root . '/sales/includes/sales_db.inc');
-include_once($path_to_root . '/sales/includes/db/sales_types_db.inc');
+include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
+include_once($path_to_root . '/sales/includes/db/sales_points_entity.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
 // Phase 2: Quotation Templates & CRM Pipeline Integration
 include_once($path_to_root . '/sales/includes/db/sales_quotation_template_db.inc');
@@ -355,7 +356,7 @@ function copy_to_cart() {
 
 	if (isset($_POST['payment']) && ($cart->payment != $_POST['payment'])) {
 		$cart->payment = $_POST['payment'];
-		$cart->payment_terms = get_payment_terms($_POST['payment']);
+		$cart->payment_terms = payment_terms_entity::find($_POST['payment']);
 		$newpayment = true;
 	}
 	if ($cart->payment_terms['cash_sale']) {
@@ -832,7 +833,7 @@ function create_cart($type, $trans_no) {
 		$doc->document_date = new_doc_date();
 		if ($type == ST_SALESINVOICE) {
 			$doc->due_date = get_invoice_duedate($doc->payment, $doc->document_date);
-			$doc->pos = get_sales_point(user_pos());
+			$doc->pos = sales_points_entity::find(user_pos());
 		}
 		else
 			$doc->due_date = $doc->document_date;
