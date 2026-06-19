@@ -17,8 +17,7 @@
  * ::all() returns a plain PHP array (foreach-ready).
  * ::all_db_resource() returns a DB resource for streaming/backward-compat with while(db_fetch()).
  *
- * Note: delete_sales_type() also deletes from prices table. The static ::remove() is a simple
- * single-table delete — use the existing delete_sales_type() function for full multi-table cleanup.
+ * ::remove() overrides the base to also delete from the prices table (multi-table transaction).
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
 
@@ -29,5 +28,26 @@ class sales_types_entity extends Entity {
 			array('sales_type', 'tax_included', 'factor', 'id', 'inactive'),
 			'id'
 		);
+	}
+
+	/**
+	 * Delete a sales type and its associated prices.
+	 *
+	 * @param mixed $key Primary key value (id)
+	 * @return bool True on success
+	 */
+	public static function remove($key) {
+		$e = new static();
+		begin_transaction();
+		$result = $e->delete($key);
+		if ($result) {
+			$sql = "DELETE FROM ".TB_PREF."prices WHERE sales_type_id=".db_escape($key);
+			db_query($sql, 'The Sales type prices could not be deleted');
+		}
+		if ($result)
+			commit_transaction();
+		else
+			rollback_transaction();
+		return $result;
 	}
 }

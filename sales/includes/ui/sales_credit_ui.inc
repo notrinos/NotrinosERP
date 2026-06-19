@@ -89,7 +89,7 @@ function display_credit_header(&$order) {
 	sales_types_list_row(_('Sales Type'), 'sales_type_id', $_POST['sales_type_id'], true);
 	
 	if ($order->sales_type != $_POST['sales_type_id']) {
-		$myrow = get_sales_type($_POST['sales_type_id']);
+		$myrow = sales_types_entity::find($_POST['sales_type_id']);
 		$order->set_sales_type($myrow['id'], $myrow['sales_type'],
 		$myrow['tax_included'], $myrow['factor']);
 		$Ajax->activate('sales_type_id');

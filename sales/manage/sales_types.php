@@ -73,7 +73,7 @@ if ($Mode == 'Delete') {
 		if (key_in_foreign_table($selected_id, 'debtors_master', 'sales_type'))
 			display_error(_('Cannot delete this sale type because customers are currently set up to use this sales type.'));
 		else {
-			delete_sales_type($selected_id);
+			sales_types_entity::remove($selected_id);
 			display_notification(_('Selected sales type has been deleted'));
 		}
 	} //end if sales type used in debtor transactions or in customers set up

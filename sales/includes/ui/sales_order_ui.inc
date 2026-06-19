@@ -426,7 +426,7 @@ function display_order_header(&$order, $editable, $date_text) {
 		label_row(_('Price List:'), $order->sales_type_name);
 	
 	if ($order->sales_type != $_POST['sales_type']) {
-		$myrow = get_sales_type($_POST['sales_type']);
+		$myrow = sales_types_entity::find($_POST['sales_type']);
 		$order->set_sales_type($myrow['id'], $myrow['sales_type'], $myrow['tax_included'], $myrow['factor']);
 		$Ajax->activate('sales_type');
 		$change_prices = 1;
