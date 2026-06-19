@@ -22,10 +22,16 @@
  *
  * ```
  * abstract class record_set          ← Core CRUD engine + validation framework
- *     └── class Entity               ← Concrete base for all module entities
+ *     └── class Entity               ← Concrete base with SQL-backed CRUD
+ *         ├── Instance API: get(), get_all(), insert(), update(), delete()
+ *         ├── Static API:  ::find(), ::all(), ::create(), ::modify(), ::remove()
  *         ├── class credit_status_entity
- *         ├── class debtors_master_entity
- *         ├── class stock_master_entity
+ *         ├── class payment_terms_entity
+ *         ├── class shippers_entity
+ *         ├── class printers_entity
+ *         ├── class work_centres_entity
+ *         ├── class sales_types_entity
+ *         ├── class sales_points_entity
  *         ├── class reflines_db
  *         └── ... (26+ subclasses planned)
  * ```
@@ -43,49 +49,35 @@
  *   `::all_db_resource()` returns a DB resource for streaming large datasets or
  *   backward-compatible `while(db_fetch())` iteration.
  *
- * ## Quick Start — Creating a New Entity Subclass
+ * ## Usage — Static API (preferred for simple CRUD)
  *
  * ```php
- * include_once($path_to_root.'/includes/db/class.entity.inc');
- *
- * class credit_status_entity extends Entity {
- *     function __construct() {
- *         // Declare validators (optional — omit if no validation needed)
- *         $this->set_validator('description:iu:required', _("Description cannot be empty."));
- *
- *         // Declare table name, fields, and primary key column(s)
- *         parent::__construct(
- *             'credit_status',                         // table name (without TB_PREF prefix)
- *             array('description', 'disallow_invoicing', 'id', 'inactive'),  // field list
- *             'id'                                      // PK column(s)
- *         );
- *     }
- * }
- * ```
- *
- * ## Using the Static API (No Wrapper Functions Needed)
- *
- * ```php
- * // Fetch single record
+ * // Fetch single record — returns assoc array or null
  * $row = credit_status_entity::find($id);
  *
- * // Fetch all active records as plain array (foreach-ready)
+ * // Fetch multiple records — returns plain PHP array (foreach-ready)
  * $rows = credit_status_entity::all('!inactive');
  * foreach ($rows as $myrow) { ... }
  *
- * // Fetch all records as DB resource (backward-compat / streaming)
+ * // Fetch as DB resource — for streaming or backward-compat while(db_fetch())
  * $result = credit_status_entity::all_db_resource('!inactive');
  * while ($myrow = db_fetch($result)) { ... }
  *
- * // Insert a new record
- * credit_status_entity::create(['description' => 'New Status', 'disallow_invoicing' => 0]);
- *
- * // Update a record
- * credit_status_entity::modify($id, ['description' => 'Updated Status']);
- *
- * // Delete a record (validates via delete_check first)
+ * // Insert / Update / Delete — each runs validators, returns bool
+ * credit_status_entity::create(['reason_description' => 'New Status', 'dissallow_invoices' => 0]);
+ * credit_status_entity::modify($id, ['reason_description' => 'Updated']);
  * credit_status_entity::remove($id);
  * ```
+ *
+ * ## Usage — Instance API (for complex multi-table operations)
+ *
+ * ```php
+ * $e = new credit_status_entity();
+ * $row = $e->get($id);
+ * $result = $e->get_all('!inactive');
+ * $e->insert($data);
+ * $e->update($id, $data);
+ * $e->delete($id);
  *
  * ## PK Column Types Supported
  *
