@@ -531,7 +531,7 @@ abstract class record_set {
  *     }
  * }
  *
- * // Call sites — clean static calls, no global get_*/add_*/update_*/delete_* functions
+ * // Call sites — clean static calls, no global get_* / add_* / update_* / delete_* functions
  * $row  = my_entity::find($id);
  * $rows = my_entity::all('!inactive');          // plain array, foreach-ready
  * $res  = my_entity::all_db_resource('!inactive'); // DB resource, while(db_fetch())

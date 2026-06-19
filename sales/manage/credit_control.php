@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 // ============================================================================
-// Phase 8 – Credit Control Dashboard
+// Credit Control Dashboard
 // Provides: at-risk customers, active holds, place/release hold, credit review.
 // Requires SA_CREDITCONTROL. Place/release hold also requires SA_CREDITCONTROL.
 // Credit review (limit + status change) requires SA_CREDITCONTROL.
@@ -26,7 +26,7 @@ page(_($help_context = 'Credit Control Dashboard'));
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/sales/includes/db/sales_credit_control_db.inc');
-include_once($path_to_root . '/sales/includes/db/credit_status_db.inc');
+include_once($path_to_root . '/sales/includes/db/credit_status_entity.inc');
 
 $current_selected_application = isset($_GET['sel_app']) && $_GET['sel_app'] !== ''
     ? $_GET['sel_app']
@@ -137,8 +137,7 @@ customer_list_row(_('Customer:'), 'review_debtor_no', get_post('review_debtor_no
 amount_row(_('New Limit:'), 'review_new_limit', get_post('review_new_limit', 0));
 
 $statuses = array();
-$status_res = get_all_credit_status();
-while ($cs = db_fetch($status_res)) {
+foreach (credit_status_entity::all('!inactive') as $cs) {
     $statuses[$cs['id']] = $cs['reason_description'];
 }
 label_row(_('New Status:'), array_selector('review_new_status', get_post('review_new_status', 0), $statuses));

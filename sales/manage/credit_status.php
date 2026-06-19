@@ -15,7 +15,7 @@ include($path_to_root . '/includes/session.inc');
 
 page(_($help_context = 'Credit Status')); 
 
-include($path_to_root . '/sales/includes/db/credit_status_db.inc');
+include($path_to_root . '/sales/includes/db/credit_status_entity.inc');
 
 include($path_to_root . '/includes/ui.inc');
 
@@ -37,7 +37,10 @@ function can_process() {
 
 if ($Mode=='ADD_ITEM' && can_process()) {
 
-	add_credit_status($_POST['reason_description'], $_POST['DisallowInvoices']);
+	credit_status_entity::create(array(
+		'reason_description' => $_POST['reason_description'],
+		'dissallow_invoices' => check_value('DisallowInvoices') ? 1 : 0
+	));
 	display_notification(_('New credit status has been added'));
 	$Mode = 'RESET';
 } 
@@ -46,7 +49,10 @@ if ($Mode=='ADD_ITEM' && can_process()) {
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 	display_notification(_('Selected credit status has been updated'));
-	update_credit_status($selected_id, $_POST['reason_description'], $_POST['DisallowInvoices']);
+	credit_status_entity::modify($selected_id, array(
+		'reason_description' => $_POST['reason_description'],
+		'dissallow_invoices' => check_value('DisallowInvoices') ? 1 : 0
+	));
 	$Mode = 'RESET';
 }
 
@@ -66,7 +72,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_credit_status($selected_id);
+		credit_status_entity::remove($selected_id);
 		display_notification(_('Selected credit status has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -81,7 +87,7 @@ if ($Mode == 'RESET') {
 
 //-----------------------------------------------------------------------------------
 
-$result = get_all_credit_status(check_value('show_inactive'));
+$rows = credit_status_entity::all(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width=80%");
@@ -90,7 +96,7 @@ inactive_control_column($th);
 table_header($th);
 
 $k = 0;
-while ($myrow = db_fetch($result)) {
+foreach ($rows as $myrow) {
 	
 	alt_table_row_color($k);	
 
@@ -120,7 +126,7 @@ if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing status code
 
-		$myrow = get_credit_status($selected_id);
+		$myrow = credit_status_entity::find($selected_id);
 		$_POST['reason_description']  = $myrow['reason_description'];
 		$_POST['DisallowInvoices']  = $myrow['dissallow_invoices'];
 	}
