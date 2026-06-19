@@ -117,7 +117,7 @@ class Cart {
 			$this->trans_type = ST_SALESORDER;
 		$this->dimension_id = 0;
 		$this->dimension2_id = 0;
-		$this->pos = get_sales_point(user_pos());
+		$this->pos = sales_points_entity::find(user_pos());
 		$this->read($type, $trans_no, $prepare_child);
 		$this->cart_id = uniqid('');
 	}

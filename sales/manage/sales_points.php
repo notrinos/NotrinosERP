@@ -16,7 +16,7 @@ include_once($path_to_root . '/includes/session.inc');
 page(_($help_context = 'POS settings'));
 
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/sales/includes/db/sales_points_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_points_entity.inc');
 
 simple_page_mode(true);
 
@@ -34,7 +34,13 @@ function can_process() {
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='ADD_ITEM' && can_process()) {
-	add_sales_point($_POST['name'], $_POST['location'], $_POST['account'], check_value('cash'), check_value('credit'));
+	sales_points_entity::create(array(
+		'pos_name' => $_POST['name'],
+		'pos_location' => $_POST['location'],
+		'pos_account' => $_POST['account'],
+		'cash_sale' => check_value('cash') ? 1 : 0,
+		'credit_sale' => check_value('credit') ? 1 : 0
+	));
 	display_notification(_('New point of sale has been added'));
 	$Mode = 'RESET';
 }
@@ -43,7 +49,13 @@ if ($Mode=='ADD_ITEM' && can_process()) {
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	update_sales_point($selected_id, $_POST['name'], $_POST['location'], $_POST['account'], check_value('cash'), check_value('credit'));
+	sales_points_entity::modify($selected_id, array(
+		'pos_name' => $_POST['name'],
+		'pos_location' => $_POST['location'],
+		'pos_account' => $_POST['account'],
+		'cash_sale' => check_value('cash') ? 1 : 0,
+		'credit_sale' => check_value('credit') ? 1 : 0
+	));
 	display_notification(_('Selected point of sale has been updated'));
 	$Mode = 'RESET';
 }
@@ -54,7 +66,7 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'users', 'pos'))
 		display_error(_('Cannot delete this POS because it is used in users setup.'));
 	else {
-		delete_sales_point($selected_id);
+		sales_points_entity::remove($selected_id);
 		display_notification(_('Selected point of sale has been deleted'));
 		$Mode = 'RESET';
 	}
@@ -69,7 +81,7 @@ if ($Mode == 'RESET') {
 
 //----------------------------------------------------------------------------------------------------
 
-$result = get_all_sales_points(check_value('show_inactive'));
+$result = sales_points_entity::all_with_details(check_value('show_inactive'));
 
 start_form();
 start_table(TABLESTYLE);
@@ -107,7 +119,7 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 
 	if ($Mode == 'Edit') {
-		$myrow = get_sales_point($selected_id);
+		$myrow = sales_points_entity::find($selected_id);
 
 		$_POST['name']  = $myrow['pos_name'];
 		$_POST['location']  = $myrow['pos_location'];
