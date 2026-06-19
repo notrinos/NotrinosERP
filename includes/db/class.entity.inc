@@ -11,8 +11,8 @@
 ***********************************************************************/
 
 /**
- * Entity Pattern — PK-Agnostic CRUD Base Class
- * =============================================
+ * Entity Pattern — PK-Agnostic CRUD Base Class with Static Convenience API
+ * ========================================================================
  *
  * This file provides the Entity pattern for NotrinosERP: a generic, validation-aware
  * CRUD layer that works with ANY primary key naming convention — no PK column renaming
@@ -36,8 +36,12 @@
  *   `array('col1','col2')`, varchar natural keys like `'stock_id'` — no renaming needed.
  * - **Built-in Validation**: Declarative `set_validator()` calls run automatically before
  *   insert/update/delete. Supports required fields, numeric ranges, and custom check methods.
- * - **Zero-Risk Refactoring**: Use wrapper functions in legacy `*_db.inc` files for 100%
- *   backward compatibility. All existing call sites continue to work unchanged.
+ * - **Static Convenience API**: Every entity subclass inherits five static methods —
+ *   `::find()`, `::all()`, `::create()`, `::modify()`, `::remove()` — eliminating the
+ *   need for boilerplate wrapper functions in `*_db.inc` files.
+ * - **Dual Fetch Modes**: `::all()` returns a plain PHP array (foreach-ready, modern).
+ *   `::all_db_resource()` returns a DB resource for streaming large datasets or
+ *   backward-compatible `while(db_fetch())` iteration.
  *
  * ## Quick Start — Creating a New Entity Subclass
  *
@@ -57,6 +61,30 @@
  *         );
  *     }
  * }
+ * ```
+ *
+ * ## Using the Static API (No Wrapper Functions Needed)
+ *
+ * ```php
+ * // Fetch single record
+ * $row = credit_status_entity::find($id);
+ *
+ * // Fetch all active records as plain array (foreach-ready)
+ * $rows = credit_status_entity::all('!inactive');
+ * foreach ($rows as $myrow) { ... }
+ *
+ * // Fetch all records as DB resource (backward-compat / streaming)
+ * $result = credit_status_entity::all_db_resource('!inactive');
+ * while ($myrow = db_fetch($result)) { ... }
+ *
+ * // Insert a new record
+ * credit_status_entity::create(['description' => 'New Status', 'disallow_invoicing' => 0]);
+ *
+ * // Update a record
+ * credit_status_entity::modify($id, ['description' => 'Updated Status']);
+ *
+ * // Delete a record (validates via delete_check first)
+ * credit_status_entity::remove($id);
  * ```
  *
  * ## PK Column Types Supported
@@ -470,31 +498,70 @@ abstract class record_set {
 /**
  * Concrete Entity base class — provides full CRUD implementation backed by SQL queries.
  *
- * This is the class that ALL module entities MUST extend. It implements:
- * - `get()` — SELECT single record by PK (supports single + composite keys)
- * - `get_all()` — SELECT multiple records with WHERE/ORDER BY
- * - `insert()` — INSERT with validation + auto-column filtering
- * - `update()` — UPDATE by PK with validation + auto-column filtering
- * - `delete()` — DELETE by PK with validation
+ * This is the class that ALL module entities MUST extend. It implements both an
+ * instance API (for complex multi-table operations) and a static convenience API
+ * (for simple single-table CRUD call sites).
  *
- * ## Usage Pattern
+ * ## Instance API (Use for Complex Operations)
+ *
+ * - `get($key)` — SELECT single record by PK (supports single + composite keys)
+ * - `get_all($where, $order_by)` — SELECT multiple records with WHERE/ORDER BY
+ * - `insert($data)` — INSERT with validation + auto-column filtering
+ * - `update($key, $data)` — UPDATE by PK with validation + auto-column filtering
+ * - `delete($key)` — DELETE by PK with validation
+ *
+ * ## Static Convenience API (Use for Simple CRUD Call Sites)
+ *
+ * - `::find($key)` — Fetch single record by PK; returns assoc array or null
+ * - `::all($where, $order_by)` — Fetch multiple records as a **plain PHP array** (foreach-ready)
+ * - `::all_db_resource($where, $order_by)` — Fetch multiple records as a **DB resource**
+ *   for backward-compatible `while(db_fetch())` iteration or streaming large datasets
+ * - `::create($data)` — Insert a new record with validation; returns bool
+ * - `::modify($key, $data)` — Update a record by PK with validation; returns bool
+ * - `::remove($key)` — Delete a record by PK (runs delete_check first); returns bool
+ *
+ * ## Usage Pattern (Static API Recommended)
  *
  * ```php
+ * // Entity subclass — one file per table, no wrapper functions needed
  * class my_entity extends Entity {
  *     function __construct() {
  *         $this->set_validator('name:iu:required');
  *         parent::__construct('table_name', array('name', 'value', 'id', 'inactive'), 'id');
  *     }
  * }
+ *
+ * // Call sites — clean static calls, no global get_*/add_*/update_*/delete_* functions
+ * $row  = my_entity::find($id);
+ * $rows = my_entity::all('!inactive');          // plain array, foreach-ready
+ * $res  = my_entity::all_db_resource('!inactive'); // DB resource, while(db_fetch())
+ * my_entity::create(['name' => 'Foo', 'value' => 42]);
+ * my_entity::modify($id, ['name' => 'Bar']);
+ * my_entity::remove($id);
  * ```
  *
- * ## Backward Compatibility
+ * ## Multi-Table Transactions
  *
- * Original `*_db.inc` functions should remain as thin wrappers:
+ * For entities that span multiple tables (e.g., tax groups with child items),
+ * override `::create()`, `::modify()`, and `::remove()` in the subclass to wrap
+ * the parent call in `begin_transaction()`/`commit_transaction()`:
+ *
  * ```php
- * function get_my_entity($id) {
- *     $entity = new my_entity();
- *     return $entity->get($id);
+ * class tax_group_entity extends Entity {
+ *     function __construct() {
+ *         parent::__construct('tax_groups', array('name', 'id', 'inactive'), 'id');
+ *     }
+ *
+ *     public static function create($data) {
+ *         begin_transaction();
+ *         $e = new static();
+ *         $result = $e->insert($data);
+ *         if ($result && !empty($data['taxes'])) {
+ *             $e->_add_items(db_insert_id(), $data['taxes']);
+ *         }
+ *         $result ? commit_transaction() : rollback_transaction();
+ *         return $result;
+ *     }
  * }
  * ```
  */
@@ -681,6 +748,82 @@ class Entity extends record_set {
 			return $this->error(_("Cannot insert record into ").$this->name);
 
 		return $result;
+	}
+
+	/**
+	 * Fetch a single record by primary key. Returns assoc array or null.
+	 *
+	 * @param mixed|null $key Primary key value(s)
+	 * @return array|null Associative array of field_name => value, or null if not found
+	 */
+	public static function find($key=null) {
+		$e = new static();
+		return $e->get($key);
+	}
+
+	/**
+	 * Fetch multiple records. Returns a plain PHP array (foreach-ready).
+	 *
+	 * @param string|null          $where    SQL WHERE clause (without WHERE keyword)
+	 * @param string|string[]|null $order_by Column name or array of column names
+	 * @return array Array of associative arrays
+	 */
+	public static function all($where=null, $order_by=null) {
+		$e = new static();
+		$result = $e->get_all($where, $order_by);
+		if (!$result) return array();
+		$rows = array();
+		while ($row = db_fetch($result)) {
+			$rows[] = $row;
+		}
+		return $rows;
+	}
+
+	/**
+	 * Fetch multiple records as a DB resource, for streaming/backward-compat
+	 * with while(db_fetch()) loops.
+	 *
+	 * @param string|null          $where    SQL WHERE clause
+	 * @param string|string[]|null $order_by Column name or array of column names
+	 * @return mixed DB result set, or false on error
+	 */
+	public static function all_db_resource($where=null, $order_by=null) {
+		$e = new static();
+		return $e->get_all($where, $order_by);
+	}
+
+	/**
+	 * Insert a new record. Validates before insert. Returns bool.
+	 *
+	 * @param array $data Associative array of field_name => value
+	 * @return bool True on success, false on validation failure or DB error
+	 */
+	public static function create($data) {
+		$e = new static();
+		return $e->insert($data);
+	}
+
+	/**
+	 * Update a record by primary key. Validates before update. Returns bool.
+	 *
+	 * @param mixed $key  Primary key value(s)
+	 * @param array $data Associative array of field_name => new_value
+	 * @return bool True on success, false on validation failure or DB error
+	 */
+	public static function modify($key, $data) {
+		$e = new static();
+		return $e->update($key, $data);
+	}
+
+	/**
+	 * Delete a record by primary key. Runs delete_check() first. Returns bool.
+	 *
+	 * @param mixed $key Primary key value(s)
+	 * @return bool True on success, false if deletion is not allowed or on DB error
+	 */
+	public static function remove($key) {
+		$e = new static();
+		return $e->delete($key);
 	}
 }
 
