@@ -36,11 +36,17 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	if ($input_error != 1) {
 		
 		if ($selected_id != -1) {
-			update_work_centre($selected_id, $_POST['name'], $_POST['description']);
+			work_centres_entity::modify($selected_id, array(
+				'name' => $_POST['name'],
+				'description' => $_POST['description']
+			));
 			display_notification(_('Selected work center has been updated'));
 		} 
 		else {
-			add_work_centre($_POST['name'], $_POST['description']);
+			work_centres_entity::create(array(
+				'name' => $_POST['name'],
+				'description' => $_POST['description']
+			));
 			display_notification(_('New work center has been added'));
 		}
 		$Mode = 'RESET';
@@ -69,7 +75,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_work_centre($selected_id);
+		work_centres_entity::remove($selected_id);
 		display_notification(_('Selected work center has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -84,7 +90,7 @@ if ($Mode == 'RESET') {
 
 //-----------------------------------------------------------------------------------
 
-$result = get_all_work_centres(check_value('show_inactive'));
+$result = work_centres_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width='50%'");
@@ -115,8 +121,8 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing status code
-		$myrow = get_work_centre($selected_id);
-		
+		$myrow = work_centres_entity::find($selected_id);
+
 		$_POST['name']  = $myrow['name'];
 		$_POST['description']  = $myrow['description'];
 	}

@@ -17,6 +17,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/inventory/includes/db/items_db.inc');
+include_once($path_to_root . '/manufacturing/includes/db/work_centres_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -94,7 +95,7 @@ function print_bill_of_material() {
 		$dec = get_qty_dec($trans['component']);
 		$rep->TextCol(0, 1, $trans['component']);
 		$rep->TextCol(1, 2, $trans['CompDescription']);
-		$wc = get_work_centre($trans['workcentre_added']);
+		$wc = work_centres_entity::find($trans['workcentre_added']);
 		$rep->TextCol(2, 3, get_location_name($trans['loc_code']));
 		$rep->TextCol(3, 4, $wc['name']);
 		$rep->AmountCol(4, 5, $trans['quantity'], $dec);
