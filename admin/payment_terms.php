@@ -16,6 +16,7 @@ include($path_to_root.'/includes/session.inc');
 page(_($help_context = 'Payment Terms'));
 
 include($path_to_root.'/includes/ui.inc');
+include($path_to_root.'/admin/db/payment_terms_entity.inc');
 
 simple_page_mode(true);
 
@@ -64,12 +65,18 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		if ($type == PTT_PRE)
 			$days = -1;
 
+		$data = array(
+			'terms' => $_POST['terms'],
+			'days_before_due' => $from_now ? $days : 0,
+			'day_in_following_month' => $from_now ? 0 : $days
+		);
+
 		if ($selected_id != -1) {
-			update_payment_terms($selected_id, $from_now, $_POST['terms'], $days); 
+			payment_terms_entity::modify($selected_id, $data);
 			$note = _('Selected payment terms have been updated');
 		} 
 		else {
-			add_payment_terms($from_now, $_POST['terms'], $days);
+			payment_terms_entity::create($data);
 			$note = _('New payment terms have been added');
 		}
 		//run the sql from either of the above possibilites
@@ -87,7 +94,7 @@ if ($Mode == 'Delete') {
 			display_error(_('Cannot delete this payment term, because supplier accounts have been created referring to this term'));
 		else {
 			//only delete if used in neither customer or supplier accounts
-			delete_payment_terms($selected_id);
+			payment_terms_entity::remove($selected_id);
 			display_notification(_('Selected payment terms have been deleted'));
 		}
 	}
@@ -104,7 +111,7 @@ if ($Mode == 'RESET') {
 
 //-------------------------------------------------------------------------------------------------
 
-$result = get_payment_terms_all(check_value('show_inactive'));
+$result = payment_terms_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE);
@@ -143,7 +150,7 @@ $day_in_following_month = $days_before_due = 0;
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing payment terms
-		$myrow = get_payment_terms($selected_id);
+		$myrow = payment_terms_entity::find($selected_id);
 
 		$_POST['terms']  = $myrow['terms'];
 		$_POST['DayNumber'] = term_days($myrow);

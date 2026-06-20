@@ -401,7 +401,7 @@ function display_order_header(&$order, $editable, $date_text) {
 		// editable payment type 
 		if (isset($_POST['payment']) && $_POST['payment'] !== $order->payment) {
 			$order->payment = get_post('payment');
-			$order->payment_terms = get_payment_terms($order->payment);
+			$order->payment_terms = payment_terms_entity::find($order->payment);
 			$order->due_date = get_invoice_duedate($order->payment, $order->document_date);
 			if ($order->payment_terms['cash_sale']) {
 				$_POST['Location'] = $order->Location = $order->pos['pos_location'];

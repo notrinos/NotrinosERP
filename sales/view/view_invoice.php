@@ -17,6 +17,7 @@ include_once($path_to_root . '/sales/includes/sales_ui.inc');
 
 include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
+include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
 
 /**
  * Returns parent delivery numbers for a sales invoice.
@@ -155,7 +156,7 @@ if (!$myrow) {
 	exit;
 }
 
-$paym = get_payment_terms($myrow['payment_terms']);
+$paym = payment_terms_entity::find($myrow['payment_terms']);
 $branch = get_branch($myrow['branch_code']);
 $sales_order = get_sales_order_header($myrow['order_'], ST_SALESORDER);
 

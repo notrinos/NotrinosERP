@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
+
 function add_sales_order(&$order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
@@ -428,7 +430,7 @@ function get_invoice_duedate($terms, $invdate) {
 	if (!is_date($invdate))
 		return new_doc_date();
 	
-	$myrow = get_payment_terms($terms);
+	$myrow = payment_terms_entity::find($terms);
 	
 	if (!$myrow)
 		return $invdate;

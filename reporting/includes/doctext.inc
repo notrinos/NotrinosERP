@@ -32,7 +32,7 @@
 	$Footer[0] = _('All amounts stated in').' - '.@$this->formData['curr_code'];
 
 	if (!in_array($this->formData['doctype'], array(ST_STATEMENT, ST_WORKORDER))) {
-		$row = get_payment_terms($this->formData['payment_terms']);
+		$row = payment_terms_entity::find($this->formData['payment_terms']);
 		$Payment_Terms = _('Payment Terms').': '.$row['terms'];
 		if ($this->formData['doctype'] == ST_SALESINVOICE && $this->formData['prepaid'])
 			$this->formData['prepaid'] = ($row['days_before_due'] >= 0) ? 'final' : 'partial';

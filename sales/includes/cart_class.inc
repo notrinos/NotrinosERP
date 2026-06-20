@@ -358,7 +358,7 @@ class Cart {
 		$this->default_discount = $discount;
 		$this->customer_currency = $currency;
 		$this->payment = $payment;
-		$this->payment_terms = get_payment_terms($payment);
+		$this->payment_terms = payment_terms_entity::find($payment);
 		$this->cash_discount = $cdiscount;
 
 		if ($this->payment_terms['cash_sale']) {
