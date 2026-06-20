@@ -14,7 +14,7 @@ $path_to_root = '..';
 include($path_to_root.'/includes/session.inc');
 page(_($help_context = 'Shipping Company'));
 include($path_to_root.'/includes/ui.inc');
-include($path_to_root.'/admin/db/shipping_db.inc');
+include($path_to_root.'/admin/db/shippers_entity.inc');
 
 simple_page_mode(true);
 
@@ -32,13 +32,25 @@ function can_process() {
 //----------------------------------------------------------------------------------------------
 
 if ($Mode=='ADD_ITEM' && can_process()) {
-	add_shipper($_POST['shipper_name'], $_POST['contact'], $_POST['phone'], $_POST['phone2'], $_POST['address']);
+	shippers_entity::create(array(
+		'shipper_name' => $_POST['shipper_name'],
+		'contact' => $_POST['contact'],
+		'phone' => $_POST['phone'],
+		'phone2' => $_POST['phone2'],
+		'address' => $_POST['address']
+	));
 	display_notification(_('New shipping company has been added'));
 	$Mode = 'RESET';
 }
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
-	update_shipper($selected_id, $_POST['shipper_name'], $_POST['contact'], $_POST['phone'], $_POST['phone2'], $_POST['address']);
+	shippers_entity::modify($selected_id, array(
+		'shipper_name' => $_POST['shipper_name'],
+		'contact' => $_POST['contact'],
+		'phone' => $_POST['phone'],
+		'phone2' => $_POST['phone2'],
+		'address' => $_POST['address']
+	));
 	display_notification(_('Selected shipping company has been updated'));
 	$Mode = 'RESET';
 }
@@ -57,7 +69,7 @@ if ($Mode == 'Delete') {
 			display_error(_('Cannot delete this shipping company because invoices have been created using this shipping company.'));
 		} 
 		else {
-			delete_shipper($selected_id);
+			shippers_entity::remove($selected_id);
 			display_notification(_('Selected shipping company has been deleted'));
 		}
 	}
@@ -73,7 +85,7 @@ if ($Mode == 'RESET') {
 
 //----------------------------------------------------------------------------------------------
 
-$result = get_shippers(check_value('show_inactive'));
+$result = shippers_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive', 'shipper_id');
 
 start_form();
 start_table(TABLESTYLE);
@@ -107,7 +119,7 @@ if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing Shipper
 
-		$myrow = get_shipper($selected_id);
+		$myrow = shippers_entity::find($selected_id);
 
 		$_POST['shipper_name']	= $myrow['shipper_name'];
 		$_POST['contact']	= $myrow['contact'];

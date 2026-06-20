@@ -23,7 +23,8 @@ include_once($path_to_root.'/sales/includes/sales_db.inc');
 include_once($path_to_root.'/sales/includes/sales_ui.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
 include_once($path_to_root.'/taxes/tax_calc.inc');
-include_once($path_to_root.'/admin/db/shipping_db.inc');
+include_once($path_to_root.'/admin/db/payment_terms_entity.inc');
+include_once($path_to_root.'/admin/db/shippers_entity.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -238,7 +239,7 @@ function copy_to_cart() {
 	$cart->due_date =  $_POST['due_date'];
 	if (($cart->pos['cash_sale'] || $cart->pos['credit_sale']) && isset($_POST['payment'])) {
 		$cart->payment = $_POST['payment'];
-		$cart->payment_terms = get_payment_terms($_POST['payment']);
+		$cart->payment_terms = payment_terms_entity::find($_POST['payment']);
 	}
 	if ($_SESSION['Items']->trans_no == 0)
 		$cart->reference = $_POST['ref'];
@@ -377,7 +378,7 @@ if(list_updated('payment')) {
 	$order = &$_SESSION['Items']; 
 	copy_to_cart();
 	$order->payment = get_post('payment');
-	$order->payment_terms = get_payment_terms($order->payment);
+	$order->payment_terms = payment_terms_entity::find($order->payment);
 	$_POST['due_date'] = $order->due_date = get_invoice_duedate($order->payment, $order->document_date);
 	$_POST['Comments'] = '';
 	$Ajax->activate('due_date');
@@ -450,7 +451,7 @@ table_section(2);
 		$_POST['ship_via'] = $_SESSION['Items']->ship_via;
 
 	if ($prepaid) {
-		$shipper = get_shipper($_SESSION['Items']->ship_via);
+		$shipper = shippers_entity::find($_SESSION['Items']->ship_via);
 		label_row(_('Shipping Company:'), $shipper['shipper_name']);
 	}
 	else
