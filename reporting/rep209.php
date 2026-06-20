@@ -40,7 +40,7 @@ function get_supp_po($order_no) {
 	return db_fetch($result);
 }
 
-function get_po_details($order_no) {
+function po_details($order_no) {
 	$sql = "SELECT poline.*, units, editable
 		FROM ".TB_PREF."purch_order_details poline
 			LEFT JOIN ".TB_PREF."stock_master item ON poline.item_code=item.stock_id
@@ -102,7 +102,7 @@ function print_po() {
 		$rep->SetHeaderType('Header2');
 		$rep->NewPage();
 
-		$result = get_po_details($i);
+		$result = po_details($i);
 		$SubTotal = 0;
 		$items = $prices = array();
 		while ($myrow2=db_fetch($result)) {
