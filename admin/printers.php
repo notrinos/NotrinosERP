@@ -15,7 +15,7 @@ include($path_to_root.'/includes/session.inc');
 
 page(_($help_context = 'Printer Locations'));
 
-include($path_to_root.'/admin/db/printers_db.inc');
+include($path_to_root.'/admin/db/printers_entity.inc');
 include($path_to_root.'/includes/ui.inc');
 
 simple_page_mode(true);
@@ -41,8 +41,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	} 
 
 	if ($error != 1) {
-		write_printer_def($selected_id, get_post('name'), get_post('descr'), get_post('queue'), get_post('host'), input_num('port',0), input_num('tout',0));
-
+		$data = array(
+			'name' => get_post('name'),
+			'description' => get_post('descr'),
+			'queue' => get_post('queue'),
+			'host' => get_post('host'),
+			'port' => input_num('port', 0),
+			'timeout' => input_num('tout', 0)
+		);
+		if ($selected_id > 0) {
+			printers_entity::modify($selected_id, $data);
+		} else {
+			printers_entity::create($data);
+		}
 		display_notification_centered($selected_id == -1 ? _('New printer definition has been created') : _('Selected printer definition has been updated'));
 		$Mode = 'RESET';
 	}
@@ -54,7 +65,7 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'print_profiles', 'printer'))
 		display_error(_('Cannot delete this printer definition, because print profile have been created using it.'));
 	else {
-		delete_printer($selected_id);
+		printers_entity::remove($selected_id);
 		display_notification(_('Selected printer definition has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -67,7 +78,7 @@ if ($Mode == 'RESET') {
 
 //-------------------------------------------------------------------------------------------------
 
-$result = get_all_printers();
+$result = printers_entity::all_db_resource();
 start_form();
 start_table(TABLESTYLE);
 $th = array(_('Name'), _('Description'), _('Host'), _('Printer Queue'), '', '');
@@ -98,7 +109,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
-		$myrow = get_printer($selected_id);
+		$myrow = printers_entity::find($selected_id);
 		$_POST['name'] = $myrow['name'];
 		$_POST['descr'] = $myrow['description'];
 		$_POST['queue'] = $myrow['queue'];

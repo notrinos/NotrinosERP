@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root . '/admin/db/printers_entity.inc');
+
 function write_printer_def($id, $name, $descr, $queue, $host, $port, $timeout) {
 	if ($id>0)
 		$sql = "UPDATE ".TB_PREF."printers SET description=".db_escape($descr)
@@ -83,7 +85,7 @@ function get_report_printer($profile, $report) {
 		$ret = db_fetch($result);
 		if (!$ret) return false;
 	}
-	return get_printer($ret['printer']);
+	return printers_entity::find($ret['printer']);
 }
 
 function delete_printer_profile($name) {
