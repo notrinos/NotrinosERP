@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/admin/db/company_db.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
+include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/sales/includes/db/cust_trans_db.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
@@ -68,14 +69,18 @@ function handle_submit() {
 		else
 			open_year($selected_id);
 		if ($ok) {
-			update_fiscalyear($selected_id, $_POST['closed']);
+			fiscal_year_entity::modify($selected_id, array('closed' => $_POST['closed']));
 			display_notification(_('Selected fiscal year has been updated'));
 		}	
 	}
 	else {
 		if (!check_data())
 			return false;
-		add_fiscalyear($_POST['from_date'], $_POST['to_date'], $_POST['closed']);
+		fiscal_year_entity::create(array(
+			'begin' => date2sql($_POST['from_date']),
+			'end' => date2sql($_POST['to_date']),
+			'closed' => $_POST['closed']
+		));
 		display_notification(_('New fiscal year has been added'));
 	}
 	$Mode = 'RESET';
@@ -84,7 +89,7 @@ function handle_submit() {
 //---------------------------------------------------------------------------------------------
 
 function check_can_delete($selected_id) {
-	$myrow = get_fiscalyear($selected_id);
+	$myrow = fiscal_year_entity::find($selected_id);
 	// PREVENT DELETES IF DEPENDENT RECORDS IN gl_trans
 	if (check_years_before(sql2date($myrow['begin']), true)) {
 		display_error(_('Cannot delete this fiscal year because there are fiscal years before.'));
@@ -113,7 +118,7 @@ function handle_delete() {
 function display_fiscalyears() {
 	$company_year = get_company_pref('f_year');
 
-	$result = get_all_fiscalyears();
+	$result = fiscal_year_entity::all_db_resource(null, 'begin');
 	start_form();
 	display_note(_('Warning: Deleting a fiscal year all transactions are removed and converted into relevant balances. This process is irreversible!'), 0, 1, "class='currentfg'");
 	start_table(TABLESTYLE);
@@ -163,7 +168,7 @@ function display_fiscalyear_edit($selected_id) {
 
 	if ($selected_id != -1) {
 		if($Mode =='Edit') {
-			$myrow = get_fiscalyear($selected_id);
+			$myrow = fiscal_year_entity::find($selected_id);
 
 			$_POST['from_date'] = sql2date($myrow['begin']);
 			$_POST['to_date']  = sql2date($myrow['end']);

@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once($path_to_root.'/includes/ui/items_cart.inc');
+require_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 
 /**
  * Validate that a stored unique_name resolves safely within the attachments directory.
@@ -44,37 +45,13 @@ function _safe_attach_file_path($unique_name) {
 	return $full_path;
 }
 
-// fiscal year routines
-function add_fiscalyear($from_date, $to_date, $closed) {
-	$from = date2sql($from_date);
-	$to = date2sql($to_date);
-
-	$sql = "INSERT INTO ".TB_PREF."fiscal_year (begin, end, closed)
-		VALUES (".db_escape($from).",".db_escape($to).", ".db_escape($closed).")";
-
-	db_query($sql, 'could not add fiscal year');
-}
-
-function update_fiscalyear($id, $closed) {
-	$sql = "UPDATE ".TB_PREF."fiscal_year SET closed=".db_escape($closed)."
-		WHERE id=".db_escape($id);
-
-	db_query($sql, 'could not update fiscal year');
-}
-
-function get_all_fiscalyears() {
-	$sql = "SELECT * FROM ".TB_PREF."fiscal_year ORDER BY begin";
-
-	return db_query($sql, 'could not get all fiscal years');
-}
-
-function get_fiscalyear($id) {
-	$sql = "SELECT * FROM ".TB_PREF."fiscal_year WHERE id=".db_escape($id);
-
-	$result = db_query($sql, 'could not get fiscal year');
-
-	return db_fetch($result);
-}
+// fiscal year CRUD has been migrated to fiscal_year_entity class
+//    ::find()         → replaces get_fiscalyear()
+//    ::all_db_resource() → replaces get_all_fiscalyears()
+//    ::create()        → replaces add_fiscalyear()
+//    ::modify()        → replaces update_fiscalyear()
+//    ::remove()        → replaces delete_fiscalyear()
+// See admin/db/fiscal_years_entity.inc
 
 function get_current_fiscalyear() {
 	$year = get_company_pref('f_year');
@@ -86,16 +63,6 @@ function get_current_fiscalyear() {
 	return db_fetch($result);
 }
 
-
-function delete_fiscalyear($id) {
-	begin_transaction();
-
-	$sql="DELETE FROM ".TB_PREF."fiscal_year WHERE id=".db_escape($id);
-
-	db_query($sql, 'could not delete fiscal year');
-
-	commit_transaction();
-}
 
 function is_date_in_fiscalyears($date, $closed=true) {
 	$date = date2sql($date);
@@ -165,35 +132,7 @@ function close_year($year) {
 
 	begin_transaction();
 
-	$myrow = get_fiscalyear($year);
-	$to = $myrow['end'];
-	// retrieve total balances from balance sheet accounts
-	$sql = "SELECT SUM(amount) FROM ".TB_PREF."gl_trans INNER JOIN ".TB_PREF."chart_master ON account=account_code INNER JOIN ".TB_PREF."chart_types ON account_type=id INNER JOIN ".TB_PREF."chart_class ON class_id=cid WHERE ctype>=".CL_ASSETS." AND ctype <=".CL_EQUITY." AND tran_date <= '$to'";
-	$result = db_query($sql, 'The total balance could not be calculated');
-
-	$row = db_fetch_row($result);
-	$balance = round2($row[0], user_price_dec());
-
-	$to = sql2date($to);
-
-	if ($balance != 0.0) {
-		$cart = new items_cart(ST_JOURNAL);
-		$cart->reference = $Refs->get_next(ST_JOURNAL, null, $to);
-		$cart->tran_date = $cart->doc_date = $cart->event_date = $to;
-
-		$cart->add_gl_item($co['retained_earnings_act'], 0, 0, -$balance, _('Closing Year'), '', 0);
-		$cart->add_gl_item($co['profit_loss_year_act'], 0, 0, $balance, _('Closing Year'), '', 0);
-		$cart->memo_ = _('Closing Year');
-		write_journal_entries($cart);
-	}
-	close_transactions($to);
-
-	commit_transaction();
-	return true;
-}
-
-function open_year($year) {
-	$myrow = get_fiscalyear($year);
+	$myrow = fiscal_year_entity::find($year);
 	$from = sql2date($myrow['begin']);
 
 	begin_transaction();
@@ -233,7 +172,7 @@ function delete_this_fiscalyear($selected_id) {
 	db_backup($db_connections[user_company()], 'Security backup before Fiscal Year Removal');
 	begin_transaction();
 	$ref = _('Open Balance');
-	$myrow = get_fiscalyear($selected_id);
+	$myrow = fiscal_year_entity::find($selected_id);
 	$to = $myrow['end'];
 	$sql = "SELECT order_no, trans_type FROM ".TB_PREF."sales_orders WHERE ord_date <= '$to' AND type <> 1"; // don't take the templates
 	$result = db_query($sql, 'Could not retrieve sales orders');
@@ -414,7 +353,7 @@ function delete_this_fiscalyear($selected_id) {
 		}
 	}	
 		
-	delete_fiscalyear($selected_id);
+	fiscal_year_entity::remove($selected_id);
 	commit_transaction();	
 }
 

@@ -21,6 +21,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
+include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 
 check_db_has_gl_account_groups(_('There are no account groups defined. Please define at least one account group before entering accounts.'));
 
@@ -86,7 +87,7 @@ if (db_has_gl_accounts()) {
 	table_header($th);
 	$year = $_POST['fyear'];
 	if (get_post('update') == '') {
-		$fyear = get_fiscalyear($year);
+		$fyear = fiscal_year_entity::find($year);
 		$_POST['begin'] = sql2date($fyear['begin']);
 		$_POST['end'] = sql2date($fyear['end']);
 	}
