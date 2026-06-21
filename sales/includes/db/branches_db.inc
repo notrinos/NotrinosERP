@@ -9,56 +9,61 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+
+/**
+ * Simple CRUD operations delegate to cust_branch_entity (static API).
+ * Complex/reporting queries (JOINs, contacts) remain standalone.
+ */
+include_once($path_to_root.'/sales/includes/db/cust_branch_entity.inc');
+
 function add_branch($customer_id, $br_name, $br_ref, $br_address, $salesman, $area, $tax_group_id, $sales_account, $sales_discount_account, $receivables_account, $payment_discount_account, $default_location, $br_post_address, $group_no, $default_ship_via, $notes, $bank_account) {
-	$sql = "INSERT INTO ".TB_PREF."cust_branch (debtor_no, br_name, branch_ref, br_address,
-		salesman, area, tax_group_id, sales_account, receivables_account, payment_discount_account, 
-		sales_discount_account, default_location,
-		br_post_address, group_no, default_ship_via, notes, bank_account)
-		VALUES (".db_escape($customer_id). ",".db_escape($br_name) . ", "
-			.db_escape($br_ref) . ", "
-			.db_escape($br_address) . ", ".db_escape($salesman) . ", "
-			.db_escape($area) . ","
-			.db_escape($tax_group_id) . ", "
-			.db_escape($sales_account) . ", "
-			.db_escape($receivables_account) . ", "
-			.db_escape($payment_discount_account) . ", "
-			.db_escape($sales_discount_account) . ", "
-			.db_escape($default_location) . ", "
-			.db_escape($br_post_address) . ","
-			.db_escape($group_no) . ", "
-			.db_escape($default_ship_via). ", "
-			.db_escape($notes). ", "
-			.db_escape($bank_account, true).")";
-	db_query($sql, 'The branch record could not be added');
+	return cust_branch_entity::create(array(
+		'debtor_no' => $customer_id,
+		'br_name' => $br_name,
+		'branch_ref' => $br_ref,
+		'br_address' => $br_address,
+		'salesman' => $salesman,
+		'area' => $area,
+		'tax_group_id' => $tax_group_id,
+		'sales_account' => $sales_account,
+		'sales_discount_account' => $sales_discount_account,
+		'receivables_account' => $receivables_account,
+		'payment_discount_account' => $payment_discount_account,
+		'default_location' => $default_location,
+		'br_post_address' => $br_post_address,
+		'group_no' => $group_no,
+		'default_ship_via' => $default_ship_via,
+		'notes' => $notes,
+		'bank_account' => $bank_account
+	));
 }
 
 function update_branch($customer_id, $branch_code, $br_name, $br_ref, $br_address, $salesman, $area, $tax_group_id, $sales_account, $sales_discount_account, $receivables_account, $payment_discount_account, $default_location, $br_post_address, $group_no, $default_ship_via, $notes, $bank_account) {
-	$sql = "UPDATE ".TB_PREF."cust_branch SET br_name = " . db_escape($br_name) . ",
-		branch_ref = " . db_escape($br_ref) . ",
-		br_address = ".db_escape($br_address). ",
-		salesman= ".db_escape($salesman) . ",
-		area=".db_escape($area) . ",
-		tax_group_id=".db_escape($tax_group_id). ",
-		sales_account=".db_escape($sales_account) . ",
-		sales_discount_account=".db_escape($sales_discount_account) . ",
-		receivables_account=".db_escape($receivables_account) . ",
-		payment_discount_account=".db_escape($payment_discount_account) . ",
-		default_location=".db_escape($default_location) . ",
-		br_post_address =".db_escape($br_post_address) . ",
-		group_no=".db_escape($group_no) . ", 
-		default_ship_via=".db_escape($default_ship_via) . ",
-		notes=".db_escape($notes) . ",
-		bank_account=".db_escape($bank_account, true)."
-		WHERE branch_code =".db_escape($branch_code) . "
-		AND debtor_no=".db_escape($customer_id);
-	db_query($sql, 'The branch record could not be updated');
+	return cust_branch_entity::modify(
+		array('branch_code' => $branch_code, 'debtor_no' => $customer_id),
+		array(
+			'br_name' => $br_name,
+			'branch_ref' => $br_ref,
+			'br_address' => $br_address,
+			'salesman' => $salesman,
+			'area' => $area,
+			'tax_group_id' => $tax_group_id,
+			'sales_account' => $sales_account,
+			'sales_discount_account' => $sales_discount_account,
+			'receivables_account' => $receivables_account,
+			'payment_discount_account' => $payment_discount_account,
+			'default_location' => $default_location,
+			'br_post_address' => $br_post_address,
+			'group_no' => $group_no,
+			'default_ship_via' => $default_ship_via,
+			'notes' => $notes,
+			'bank_account' => $bank_account
+		)
+	);
 }
 
 function delete_branch($customer_id, $branch_code) {
-	delete_entity_contacts('cust_branch', $branch_code);
-
-	$sql="DELETE FROM ".TB_PREF."cust_branch WHERE branch_code=".db_escape($branch_code)." AND debtor_no=".db_escape($customer_id);
-	db_query($sql, 'could not delete branch');
+	return cust_branch_entity::remove(array('branch_code' => $branch_code, 'debtor_no' => $customer_id));
 }
 
 function branch_in_foreign_table($customer_id, $branch_code, $table) {
