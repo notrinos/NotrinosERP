@@ -251,7 +251,7 @@ if (isset($_POST['Process'])) {
 			$input_error = 1;
 		}
 		else {
-			$taxes = get_all_tax_types();
+			$taxes = tax_types_entity::all_with_accounts();
 			$net_amount = 0;
 			while ($tax = db_fetch($taxes)) {
 				$tax_id = $tax['id'];
@@ -290,7 +290,7 @@ if (isset($_POST['Process'])) {
 		// complete tax register data
 		$cart->tax_info['tax_date'] = $_POST['tax_date'];
 		//$cart->tax_info['tax_group'] = $_POST['tax_group'];
-		$taxes = get_all_tax_types();
+		$taxes = tax_types_entity::all_with_accounts();
 		while ($tax = db_fetch($taxes)) {
 			$tax_id = $tax['id'];
 			$cart->tax_info['net_amount'][$tax_id] = input_num('net_amount_'.$tax_id);
@@ -445,7 +445,7 @@ elseif (tab_closed('tabs', 'tax')) {
 	$cart = &$_SESSION['journal_items'];
 	$cart->tax_info['tax_date'] = $_POST['tax_date'];
 	//$cart->tax_info['tax_group'] = $_POST['tax_group'];
-	$taxes = get_all_tax_types();
+	$taxes = tax_types_entity::all_with_accounts();
 	while ($tax = db_fetch($taxes)) {
 		$tax_id = $tax['id'];
 		$cart->tax_info['net_amount'][$tax_id] = input_num('net_amount_'.$tax_id);
@@ -514,7 +514,7 @@ switch (get_post('_tabs_sel')) {
 
 		start_table(TABLESTYLE2, 'width=60%');
 		table_header(array(_('Name'), _('Input Tax'), _('Output Tax'), _('Net amount')));
-		$taxes = get_all_tax_types();
+		$taxes = tax_types_entity::all_with_accounts();
 		while ($tax = db_fetch($taxes)) {
 			start_row();
 			label_cell($tax['name'].' '.$tax['rate'].'%');

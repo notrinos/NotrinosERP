@@ -16,7 +16,7 @@ include($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Tax Types'));
 
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/taxes/db/tax_types_db.inc');
+include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 
 simple_page_mode(true);
 
@@ -48,8 +48,12 @@ function can_process() {
 
 if ($Mode=='ADD_ITEM' && can_process()) {
 
-	add_tax_type($_POST['name'], $_POST['sales_gl_code'],
-		$_POST['purchasing_gl_code'], input_num('rate', 0));
+	tax_types_entity::create(array(
+		'name'             => $_POST['name'],
+		'sales_gl_code'    => $_POST['sales_gl_code'],
+		'purchasing_gl_code' => $_POST['purchasing_gl_code'],
+		'rate'             => input_num('rate', 0)
+	));
 	display_notification(_('New tax type has been added'));
 	$Mode = 'RESET';
 }
@@ -58,8 +62,12 @@ if ($Mode=='ADD_ITEM' && can_process()) {
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	update_tax_type($selected_id, $_POST['name'],
-		$_POST['sales_gl_code'], $_POST['purchasing_gl_code'], input_num('rate'));
+	tax_types_entity::modify($selected_id, array(
+		'name'             => $_POST['name'],
+		'sales_gl_code'    => $_POST['sales_gl_code'],
+		'purchasing_gl_code' => $_POST['purchasing_gl_code'],
+		'rate'             => input_num('rate')
+	));
 	display_notification(_('Selected tax type has been updated'));
 	$Mode = 'RESET';
 }
@@ -82,7 +90,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_tax_type($selected_id);
+		tax_types_entity::remove($selected_id);
 		display_notification(_('Selected tax type has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -97,7 +105,7 @@ if ($Mode == 'RESET') {
 
 //-----------------------------------------------------------------------------------
 
-$result = get_all_tax_types(check_value('show_inactive'));
+$result = tax_types_entity::all_with_accounts(check_value('show_inactive'));
 
 start_form();
 
@@ -138,7 +146,7 @@ if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing status code
 
-		$myrow = get_tax_type($selected_id);
+		$myrow = tax_types_entity::find_with_accounts($selected_id);
 
 		$_POST['name']  = $myrow['name'];
 		$_POST['rate']  = percent_format($myrow['rate']);

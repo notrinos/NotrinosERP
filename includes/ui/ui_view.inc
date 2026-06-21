@@ -11,6 +11,8 @@
 ***********************************************************************/
 include_once($path_to_root . '/admin/db/voiding_db.inc');
 include_once($path_to_root . '/includes/types.inc');
+include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
+include_once($path_to_root . '/taxes/db/tax_groups_db.inc');
 
 //--------------------------------------------------------------------------------------
 
@@ -641,7 +643,7 @@ function quickentry_calculate($base, $id, $taxgroup=null, $date=null) {
 			case 't+': // ditto & increase base amount
 			case 't-': // ditto & reduce base amount
 				if (substr($row['action'], 0, 1) != 'T') 
-					$totrate += get_tax_type_rate($row['dest_id']);
+					$totrate += tax_types_entity::rate($row['dest_id']);
 		}
 	}
 	$first = true;
@@ -685,7 +687,7 @@ function quickentry_calculate($base, $id, $taxgroup=null, $date=null) {
 				else
 					$part = $base/100;
 
-				$item_tax = get_tax_type($qe_line['dest_id']);
+				$item_tax = tax_types_entity::find($qe_line['dest_id']);
 				//if ($type == QE_SUPPINV && substr($qe_line['action'],0,1) != 'T')
 				if ($type == QE_SUPPINV) {
 					$rates = 0;

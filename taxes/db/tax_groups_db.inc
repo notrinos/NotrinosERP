@@ -9,71 +9,14 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function add_tax_group($name, $taxes, $tax_shippings) {
-	begin_transaction();
 
-	$sql = "INSERT INTO ".TB_PREF."tax_groups (name) VALUES (".db_escape($name).")";
-	db_query($sql, 'could not add tax group');
-	
-	$id = db_insert_id();
-	
-	add_tax_group_items($id, $taxes, $tax_shippings);	
-	
-	commit_transaction();	
-}
-
-function update_tax_group($id, $name, $taxes, $tax_shippings) {
-	begin_transaction();	
-
-	$sql = "UPDATE ".TB_PREF."tax_groups SET name=".db_escape($name)." WHERE id=".db_escape($id);
-	db_query($sql, 'could not update tax group');
-	
-	delete_tax_group_items($id);
-	add_tax_group_items($id, $taxes, $tax_shippings);	
-	
-	commit_transaction();			
-}
-
-function get_all_tax_groups($all=false) {
-	$sql = "SELECT * FROM ".TB_PREF."tax_groups";
-	if (!$all) $sql .= " WHERE !inactive";
-	
-	return db_query($sql, 'could not get all tax group');
-} 
-
-function get_tax_group($type_id) {
-	$sql = "SELECT * FROM ".TB_PREF."tax_groups WHERE id=".db_escape($type_id);
-	
-	$result = db_query($sql, 'could not get tax group');
-	
-	return db_fetch($result);
-}
-
-function delete_tax_group($id) {
-	begin_transaction();
-		
-	$sql = "DELETE FROM ".TB_PREF."tax_groups WHERE id=".db_escape($id);
-		
-	db_query($sql, 'could not delete tax group');
-	
-	delete_tax_group_items($id);	
-	
-	commit_transaction();
-}
-
-function add_tax_group_items($id, $items, $tax_shippings) {
-	for ($i=0; $i < count($items); $i++) {
-		$sql = "INSERT INTO ".TB_PREF."tax_group_items (tax_group_id, tax_type_id, tax_shipping)
-			VALUES (".db_escape($id).",  ".db_escape($items[$i]).", " . $tax_shippings[$i] .")";
-		db_query($sql, 'could not add item tax group item');					
-	}		
-}
-
-function delete_tax_group_items($id) {
-	$sql = "DELETE FROM ".TB_PREF."tax_group_items WHERE tax_group_id=".db_escape($id);
-	
-	db_query($sql, 'could not delete item tax group items');					
-}
+/**
+ * Tax Groups helper functions.
+ *
+ * Simple CRUD (get/add/update/delete) is provided by the tax_group_entity class.
+ * This file retains only cross-table helper functions (get_tax_group_rates,
+ * get_tax_group_items_as_array, get_shipping_tax_as_array).
+ */
 
 //
 //	Return all tax types with rate value updated according to tax group selected

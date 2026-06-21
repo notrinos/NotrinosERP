@@ -9,6 +9,9 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+
+include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
+
 /*
 *	Base function for adding a GL transaction
 *	$date_ is display date (non-sql)
@@ -389,7 +392,7 @@ function add_gl_tax_details($gl_code, $trans_type, $trans_no, $amount, $ex_rate,
 	$tax_type = is_tax_account($gl_code);
 	if(!$tax_type) return;	// $gl_code is not tax account
 	
-	$tax = get_tax_type($tax_type);
+	$tax = tax_types_entity::find($tax_type);
 	if ($trans_type == ST_SALESINVOICE || $trans_type == ST_CUSTDELIVERY || $trans_type == ST_CUSTCREDIT)
 		$amount = -$amount;
 	// we have to restore net amount as we cannot know the base amount

@@ -16,8 +16,9 @@ include($path_to_root . '/includes/session.inc');
 
 page(_($help_context = 'Item Tax Types')); 
 
+include_once($path_to_root . '/taxes/db/item_tax_types_entity.inc');
+include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 include_once($path_to_root . '/taxes/db/item_tax_types_db.inc');
-include_once($path_to_root . '/taxes/db/tax_types_db.inc');
 
 include($path_to_root . '/includes/ui.inc');
 
@@ -39,7 +40,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		// create an array of the exemptions
 		$exempt_from = array();
 		
-		$tax_types = get_all_tax_types_simple();
+		$tax_types = tax_types_entity::all_simple();
 		$i = 0;    	
 		
 		while ($myrow = db_fetch($tax_types)) {
@@ -50,11 +51,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		}  
 		
 		if ($selected_id != -1) { 		
-			update_item_tax_type($selected_id, $_POST['name'], $_POST['exempt'], $exempt_from);
+			item_tax_types_entity::modify($selected_id, array(
+				'name'        => $_POST['name'],
+				'exempt'      => $_POST['exempt'],
+				'exempt_from' => $exempt_from
+			));
 			display_notification(_('Selected item tax type has been updated'));
 		} 
 		else {
-			add_item_tax_type($_POST['name'], $_POST['exempt'], $exempt_from);
+			item_tax_types_entity::create(array(
+				'name'        => $_POST['name'],
+				'exempt'      => $_POST['exempt'],
+				'exempt_from' => $exempt_from
+			));
 			display_notification(_('New item tax type has been added'));
 		}
 		$Mode = 'RESET';
@@ -81,7 +90,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_item_tax_type($selected_id);
+		item_tax_types_entity::remove($selected_id);
 		display_notification(_('Selected item tax type has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -96,7 +105,7 @@ if ($Mode == 'RESET') {
 
 //-----------------------------------------------------------------------------------
 
-$result2 = $result = get_all_item_tax_types(check_value('show_inactive'));
+$result2 = $result = item_tax_types_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width='50%'");
@@ -132,7 +141,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
-		$myrow = get_item_tax_type($selected_id);
+		$myrow = item_tax_types_entity::find($selected_id);
 		unset($_POST); // clear exemption checkboxes
 		$_POST['name']  = $myrow['name'];
 		$_POST['exempt']  = $myrow['exempt'];
@@ -164,7 +173,7 @@ if (!isset($_POST['exempt']) || $_POST['exempt'] == 0) {
 	$th = array(_('Tax Name'), _('Rate'), _('Is exempt'));
 	table_header($th);
 		
-	$tax_types = get_all_tax_types_simple();    	
+	$tax_types = tax_types_entity::all_simple();    	
 	
 	while ($myrow = db_fetch($tax_types)) {
 		

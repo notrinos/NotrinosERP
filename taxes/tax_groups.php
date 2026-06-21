@@ -19,8 +19,9 @@ page(_($help_context = 'Tax Groups'));
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 
+include_once($path_to_root . '/taxes/db/tax_groups_entity.inc');
+include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 include_once($path_to_root . '/taxes/db/tax_groups_db.inc');
-include_once($path_to_root . '/taxes/db/tax_types_db.inc');
 
 simple_page_mode(true);
 	
@@ -53,11 +54,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM')  {
 			unset($_POST['tax_shipping' . $id]);
 		}
 		if ($selected_id != -1) {
-			update_tax_group($selected_id, $_POST['name'], $taxes, $tax_shippings);
+			tax_group_entity::modify($selected_id, array(
+				'name'          => $_POST['name'],
+				'taxes'         => $taxes,
+				'tax_shippings' => $tax_shippings
+			));
 			display_notification(_('Selected tax group has been updated'));
 		} 
 		else {
-			add_tax_group($_POST['name'], $taxes, $tax_shippings);
+			tax_group_entity::create(array(
+				'name'          => $_POST['name'],
+				'taxes'         => $taxes,
+				'tax_shippings' => $tax_shippings
+			));
 			display_notification(_('New tax group has been added'));
 		}
 
@@ -88,7 +97,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_tax_group($selected_id);
+		tax_group_entity::remove($selected_id);
 		display_notification(_('Selected tax group has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -104,7 +113,7 @@ if ($Mode == 'RESET') {
 
 //-----------------------------------------------------------------------------------
 
-$result = get_all_tax_groups(check_value('show_inactive'));
+$result = tax_group_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 
@@ -139,7 +148,7 @@ if ($selected_id != -1) {
 	//editing an existing status code
 
 	if ($Mode == 'Edit') {
-		$group = get_tax_group($selected_id);
+		$group = tax_group_entity::find($selected_id);
 
 		$_POST['name']  = $group['name'];
 

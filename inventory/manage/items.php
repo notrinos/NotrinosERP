@@ -43,6 +43,7 @@ include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
 include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 include_once($path_to_root.'/inventory/warehouse/includes/warehouse_ui.inc');
+include_once($path_to_root.'/taxes/db/item_tax_types_entity.inc');
 
 $new_item = get_post('stock_id') == '' || get_post('cancel') || get_post('clone');
 
@@ -526,7 +527,7 @@ function item_settings(&$stock_id, $new_item) {
 	$fresh_item = !isset($_POST['NewStockID']) || $new_item || check_usage($_POST['stock_id'], false);
 
 	// show inactive item tax type in selector only if already set.
-	item_tax_types_list_row(_('Item Tax Type:'), 'tax_type_id', null, !$new_item && item_type_inactive(get_post('tax_type_id')));
+	item_tax_types_list_row(_('Item Tax Type:'), 'tax_type_id', null, !$new_item && item_tax_types_entity::is_inactive(get_post('tax_type_id')));
 
 	if (!get_post('fixed_asset'))
 		stock_item_types_list_row(_('Item Type:'), 'mb_flag', null, $fresh_item);

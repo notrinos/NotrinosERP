@@ -11,6 +11,7 @@
 ***********************************************************************/
 include_once($path_to_root.'/includes/prefs/sysprefs.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
+include_once($path_to_root.'/taxes/db/tax_types_entity.inc');
 
 class items_cart {
 	var $trans_type;
@@ -246,7 +247,7 @@ class items_cart {
 				$subledger_sum += $gl->amount;
 			}
 			elseif ($tax_id = is_tax_account($gl->code_id)) {
-				$tax_type = get_tax_type($tax_id);
+				$tax_type = tax_types_entity::find($tax_id);
 				if ($gl->code_id == $tax_type['purchasing_gl_code'] && $gl->amount > 0) {
 					if (!isset($tax_info['tax_in'][$tax_id]))
 						$tax_info['tax_in'][$tax_id] = 0;
