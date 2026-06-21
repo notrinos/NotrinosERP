@@ -133,6 +133,34 @@ function close_year($year) {
 	begin_transaction();
 
 	$myrow = fiscal_year_entity::find($year);
+	$to = $myrow['end'];
+	// retrieve total balances from balance sheet accounts
+	$sql = "SELECT SUM(amount) FROM ".TB_PREF."gl_trans INNER JOIN ".TB_PREF."chart_master ON account=account_code INNER JOIN ".TB_PREF."chart_types ON account_type=id INNER JOIN ".TB_PREF."chart_class ON class_id=cid WHERE ctype>=".CL_ASSETS." AND ctype <=".CL_EQUITY." AND tran_date <= '$to'";
+	$result = db_query($sql, 'The total balance could not be calculated');
+
+	$row = db_fetch_row($result);
+	$balance = round2($row[0], user_price_dec());
+
+	$to = sql2date($to);
+
+	if ($balance != 0.0) {
+		$cart = new items_cart(ST_JOURNAL);
+		$cart->reference = $Refs->get_next(ST_JOURNAL, null, $to);
+		$cart->tran_date = $cart->doc_date = $cart->event_date = $to;
+
+		$cart->add_gl_item($co['retained_earnings_act'], 0, 0, -$balance, _('Closing Year'), '', 0);
+		$cart->add_gl_item($co['profit_loss_year_act'], 0, 0, $balance, _('Closing Year'), '', 0);
+		$cart->memo_ = _('Closing Year');
+		write_journal_entries($cart);
+	}
+	close_transactions($to);
+
+	commit_transaction();
+	return true;
+}
+
+function open_year($year) {
+	$myrow = fiscal_year_entity::find($year);
 	$from = sql2date($myrow['begin']);
 
 	begin_transaction();
