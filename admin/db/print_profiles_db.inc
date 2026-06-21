@@ -12,41 +12,6 @@
 
 include_once($path_to_root . '/admin/db/printers_entity.inc');
 
-function write_printer_def($id, $name, $descr, $queue, $host, $port, $timeout) {
-	if ($id>0)
-		$sql = "UPDATE ".TB_PREF."printers SET description=".db_escape($descr)
-		.",name=".db_escape($name).",queue=".db_escape($queue)
-		.",host=".db_escape($host).",port=".db_escape($port).",timeout=".db_escape($timeout)
-		." WHERE id=".db_escape($id);
-	else 
-		$sql = "INSERT INTO ".TB_PREF."printers ("
-			."name,description,queue,host,port,timeout) "
-			."VALUES (".db_escape($name).",".db_escape($descr).","
-			.db_escape($queue).",".db_escape($host).",".db_escape($port).",".db_escape($timeout).")";
-
-	return db_query($sql, 'could not write printer definition');
-}
-
-function get_all_printers() {
-	$sql = "SELECT * FROM ".TB_PREF."printers";
-	return db_query($sql, 'could not get printer definitions');
-}
-
-function get_printer($id) {
-		$sql = "SELECT * FROM ".TB_PREF."printers
-			WHERE id=".db_escape($id);
-
-		$result = db_query($sql, 'could not get printer definition');
-		return  db_fetch($result);
-}
-
-function delete_printer($id) {
-	$sql="DELETE FROM ".TB_PREF."printers WHERE id=".db_escape($id);
-	db_query($sql, 'could not delete printer definition');
-}
-//============================================================================
-// printer profiles functions
-//
 function update_printer_profile($name, $dest) {
 	foreach( $dest as $rep => $printer) {
 		if ($printer != '' || $rep == '') {
