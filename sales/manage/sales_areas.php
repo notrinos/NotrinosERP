@@ -16,6 +16,7 @@ include($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Sales Areas'));
 
 include($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/sales/includes/db/areas_entity.inc');
 
 simple_page_mode(true);
 
@@ -31,11 +32,11 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			update_sales_area($selected_id, $_POST['description']);
+			areas_entity::modify($selected_id, array('description' => $_POST['description']));
 			$note = _('Selected sales area has been updated');
 		} 
 		else {
-			add_sales_area($_POST['description']);
+			areas_entity::create(array('description' => $_POST['description']));
 			$note = _('New sales area has been added');
 		}
 	
@@ -55,7 +56,7 @@ if ($Mode == 'Delete') {
 		display_error(_('Cannot delete this area because customer branches have been created using this area.'));
 	} 
 	if ($cancel_delete == 0) {
-		delete_sales_area($selected_id);
+		areas_entity::remove($selected_id);
 		display_notification(_('Selected sales area has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -70,7 +71,7 @@ if ($Mode == 'RESET') {
 
 //-------------------------------------------------------------------------------------------------
 
-$result = get_sales_areas(check_value('show_inactive'));
+$result = areas_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width='50%'");
@@ -106,7 +107,7 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing area
-		$myrow = get_sales_area($selected_id);
+		$myrow = areas_entity::find($selected_id);
 
 		$_POST['description']  = $myrow['description'];
 	}

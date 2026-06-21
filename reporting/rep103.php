@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/sales/includes/db/areas_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -117,7 +118,7 @@ function print_customer_details_listing() {
 	if ($folk == ALL_NUMERIC)
 		$folk = 0;
 
-	$sarea = $area == 0 ? _('All Areas') : get_area_name($area);
+	$sarea = $area == 0 ? _('All Areas') : areas_entity::get_name($area);
 	$salesfolk = $folk == 0 ? _('All Sales Folk') : get_salesman_name($folk);
 	$morestr = $more != '' ? _('Greater than ').number_format2($more, $dec) : '';
 	$lessstr = $less != '' ? _('Less than ').number_format2($less, $dec) : '';

@@ -46,43 +46,6 @@ function get_sales_group_name($group_no) {
 	return $row[0];
 }
 
-function add_sales_area($description) {
-	$sql = "INSERT INTO ".TB_PREF."areas (description) VALUES (".db_escape($description) . ")";
-	db_query($sql, 'The sales area could not be added');
-}
-
-function update_sales_area($selected_id, $description) {
-	$sql = "UPDATE ".TB_PREF."areas SET description=".db_escape($description)." WHERE area_code = ".db_escape($selected_id);
-	db_query($sql, 'The sales area could not be updated');
-}
-
-function delete_sales_area($selected_id) {
-	$sql="DELETE FROM ".TB_PREF."areas WHERE area_code=".db_escape($selected_id);
-	db_query($sql, 'could not delete sales area');
-}
-
-function get_sales_areas($show_inactive) {
-	$sql = "SELECT * FROM ".TB_PREF."areas";
-	if (!$show_inactive) $sql .= " WHERE !inactive";
-	return db_query($sql, 'could not get areas');
-}
-
-function get_sales_area($selected_id) {
-	$sql = "SELECT * FROM ".TB_PREF."areas WHERE area_code=".db_escape($selected_id);
-
-	$result = db_query($sql, 'could not get area');
-	return db_fetch($result);
-}
-
-function get_area_name($id) {
-	$sql = "SELECT description FROM ".TB_PREF."areas WHERE area_code=".db_escape($id);
-
-	$result = db_query($sql, 'could not get sales type');
-
-	$row = db_fetch_row($result);
-	return $row[0];
-}
-
 function add_salesman($salesman_name, $salesman_phone, $salesman_fax, $salesman_email, $provision, $break_pt, $provision2) {
 	$sql = "INSERT INTO ".TB_PREF."salesman (salesman_name, salesman_phone, salesman_fax, salesman_email,
 		provision, break_pt, provision2)
