@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
 /*
 	Update main or gl company setup.
 */
@@ -108,18 +109,15 @@ function delete_payment_terms($selected_id) {
 }
 
 function get_payment_terms($selected_id) {
-	$sql = "SELECT *, (t.days_before_due=0) AND (t.day_in_following_month=0) as cash_sale
-	 FROM ".TB_PREF."payment_terms t WHERE terms_indicator=".db_escape($selected_id);
-
-	$result = db_query($sql, 'could not get payment term');
-
-	return db_fetch($result);
+	$row = payment_terms_entity::find($selected_id);
+	if ($row) {
+		$row['cash_sale'] = ($row['days_before_due'] == 0) && ($row['day_in_following_month'] == 0);
+	}
+	return $row;
 }
 
 function get_payment_terms_all($show_inactive) {
-	$sql = "SELECT * FROM ".TB_PREF."payment_terms";
-	if (!$show_inactive) $sql .= " WHERE !inactive";
-	return db_query($sql, 'could not get payment terms');
+	return payment_terms_entity::all_db_resource($show_inactive ? '' : '!inactive');
 }
 /*
 	Return number of records in tables, where some foreign key $id is used.
