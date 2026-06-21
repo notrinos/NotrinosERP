@@ -269,7 +269,7 @@ function exchange_rate_display($from_currency, $to_currency, $date_, $force_edit
 				$readonly = true; // if we have already local exrate keep it unchanged 
 
 			if (!$rate) {	// retry from remote service
-				$row = get_currency($currency);
+				$row = currencies_entity::find($currency);
 
 				if ($row['auto_update']) {// autoupdate means use remote service & store exrate on first transaction.
 				

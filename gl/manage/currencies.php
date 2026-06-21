@@ -56,11 +56,24 @@ function handle_submit() {
 		return false;
 		
 	if ($selected_id != '') {
-		update_currency($_POST['Abbreviation'], $_POST['Symbol'], $_POST['CurrencyName'], $_POST['country'], $_POST['hundreds_name'], check_value('auto_update'));
+		currencies_entity::modify($_POST['Abbreviation'], array(
+			'curr_symbol' => $_POST['Symbol'],
+			'currency' => $_POST['CurrencyName'],
+			'country' => $_POST['country'],
+			'hundreds_name' => $_POST['hundreds_name'],
+			'auto_update' => check_value('auto_update')
+		));
 		display_notification(_('Selected currency settings has been updated'));
 	} 
 	else {
-		add_currency($_POST['Abbreviation'], $_POST['Symbol'], $_POST['CurrencyName'], $_POST['country'], $_POST['hundreds_name'], check_value('auto_update'));
+		currencies_entity::create(array(
+			'curr_abrev' => $_POST['Abbreviation'],
+			'curr_symbol' => $_POST['Symbol'],
+			'currency' => $_POST['CurrencyName'],
+			'country' => $_POST['country'],
+			'hundreds_name' => $_POST['hundreds_name'],
+			'auto_update' => check_value('auto_update')
+		));
 		display_notification(_('New currency has been added'));
 	}	
 	$Mode = 'RESET';
@@ -101,7 +114,7 @@ function handle_delete() {
 	global $selected_id, $Mode;
 	if (check_can_delete($selected_id)) {
 	//only delete if used in neither customer or supplier, comp prefs, bank trans accounts
-		delete_currency($selected_id);
+		currencies_entity::remove($selected_id);
 		display_notification(_('Selected currency has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -112,7 +125,7 @@ function handle_delete() {
 function display_currencies() {
 	$company_currency = get_company_currency();
 	
-	$result = get_currencies(check_value('show_inactive'));
+	$rows = currencies_entity::all(check_value('show_inactive') ? '' : '!inactive');
 	start_table(TABLESTYLE);
 	$th = array(_('Abbreviation'), _('Symbol'), _('Currency Name'),
 		_('Hundredths name'), _('Country'), _('Auto update'), '', '');
@@ -121,9 +134,9 @@ function display_currencies() {
 	
 	$k = 0; //row colour counter
 	
-	while ($myrow = db_fetch($result)) {
+	foreach ($rows as $myrow) {
 		
-		if ($myrow[1] == $company_currency) 
+		if ($myrow['curr_abrev'] == $company_currency) 
 			start_row("class='currencybg'");
 		else
 			alt_table_row_color($k);
@@ -133,7 +146,7 @@ function display_currencies() {
 		label_cell($myrow['currency']);
 		label_cell($myrow['hundreds_name']);
 		label_cell($myrow['country']);
-		label_cell(	$myrow[1] == $company_currency ? '-' : ($myrow['auto_update'] ? _('Yes') :_('No')), "align='center'");
+		label_cell(	$myrow['curr_abrev'] == $company_currency ? '-' : ($myrow['auto_update'] ? _('Yes') :_('No')), "align='center'");
 		inactive_control_cell($myrow['curr_abrev'], $myrow['inactive'], 'currencies', 'curr_abrev');
 		edit_button_cell('Edit'.$myrow['curr_abrev'], _('Edit'));
 		if ($myrow['curr_abrev'] != $company_currency)
@@ -159,7 +172,7 @@ function display_currency_edit($selected_id) {
 	if ($selected_id != '') {
 		if ($Mode == 'Edit') {
 			//editing an existing currency
-			$myrow = get_currency($selected_id);
+			$myrow = currencies_entity::find($selected_id);
 
 			$_POST['Abbreviation'] = $myrow['curr_abrev'];
 			$_POST['Symbol'] = $myrow['curr_symbol'];

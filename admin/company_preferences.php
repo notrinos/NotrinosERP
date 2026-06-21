@@ -471,7 +471,7 @@ check_row(_('Check Credit on Sales Orders:'), 'credit_check_on_order', $_POST['c
 check_row(_('Check Credit on Deliveries:'), 'credit_check_on_delivery', $_POST['credit_check_on_delivery']);
 check_row(_('Enable Return Merchandise Authorization (RMA):'), 'use_rma', $_POST['use_rma']);
 
-$curr = get_currency($_POST['curr_default']);
+$curr = currencies_entity::find($_POST['curr_default']);
 
 table_section_title(_('Advanced Purchasing Features'));
 check_row(_('Enable Purchase Requisitions:'), 'use_purchase_requisitions', $_POST['use_purchase_requisitions']);
