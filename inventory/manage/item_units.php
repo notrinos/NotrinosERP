@@ -16,6 +16,7 @@ include($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Units of Measure'));
 
 include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/inventory/includes/db/items_units_entity.inc');
 include_once($path_to_root . '/inventory/includes/db/items_units_db.inc');
 
 simple_page_mode(false);
@@ -43,7 +44,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		set_focus('description');
 	}
 	if ($input_error != 1 && $selected_id == '') {
-		$existing = get_item_unit($_POST['abbr']);
+		$existing = item_units_entity::find($_POST['abbr']);
 		if ($existing) {
 			$input_error = 1;
 			display_error(_('This unit of measure abbreviation already exists. Please use a different code.'));
@@ -52,7 +53,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	}
 
 	if ($input_error !=1) {
-		write_item_unit($selected_id, $_POST['abbr'], $_POST['description'], $_POST['decimals'] );
+		item_units_entity::upsert($selected_id, array('abbr' => $_POST['abbr'], 'name' => $_POST['description'], 'decimals' => $_POST['decimals']));
 		if($selected_id != '')
 			display_notification(_('Selected unit has been updated'));
 		else
@@ -70,7 +71,7 @@ if ($Mode == 'Delete') {
 	if (item_unit_used($selected_id))
 		display_error(_('Cannot delete this unit of measure because items have been created using this unit.'));
 	else {
-		delete_item_unit($selected_id);
+		item_units_entity::remove($selected_id);
 		display_notification(_('Selected unit has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -85,7 +86,7 @@ if ($Mode == 'RESET') {
 
 //----------------------------------------------------------------------------------
 
-$result = get_all_item_units(check_value('show_inactive'));
+$result = item_units_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive', 'name');
 
 start_form();
 start_table(TABLESTYLE, "width='40%'");
@@ -120,7 +121,7 @@ if ($selected_id != '') {
 	if ($Mode == 'Edit') {
 		//editing an existing item category
 
-		$myrow = get_item_unit($selected_id);
+		$myrow = item_units_entity::find($selected_id);
 
 		$_POST['abbr'] = $myrow['abbr'];
 		$_POST['description']  = $myrow['name'];
