@@ -20,6 +20,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
+include_once($path_to_root . '/sales/includes/db/salesman_entity.inc');
 
 // ============================================================================
 // ACTION HANDLING (Approve / Mark Paid / Batch Calculate)
@@ -97,7 +98,7 @@ date_cells(_('To:'), 'date_to',   $date_to);
 
 // Salesman selector
 $salesmen_arr = array(0 => _('-- All Salesman --'));
-$salesmen_res = get_salesmen(false);
+$salesmen_res = salesman_entity::all_db_resource('!inactive');
 while ($s = db_fetch($salesmen_res))
     $salesmen_arr[$s['salesman_code']] = $s['salesman_name'];
 $statuses_arr = array('' => _('-- All Statuses--'), 'calculated' => _('Calculated'), 'approved' => _('Approved'), 'paid' => _('Paid'));

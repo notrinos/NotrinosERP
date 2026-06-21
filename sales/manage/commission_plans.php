@@ -406,9 +406,9 @@ if ($tab == 2) {
     }
     label_row(_('Commission Plan:'), array_selector('assign_plan_id', get_post('assign_plan_id'), $plans_arr));
 
-    include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
+    include_once($path_to_root . '/sales/includes/db/salesman_entity.inc');
     $salesmen_arr = array();
-    $salesmen_res = get_salesmen(false);
+    $salesmen_res = salesman_entity::all_db_resource('!inactive');
     while ($salesman_row = db_fetch($salesmen_res)) {
         $salesmen_arr[$salesman_row['salesman_code']] = $salesman_row['salesman_name'];
     }
