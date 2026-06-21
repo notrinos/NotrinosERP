@@ -50,7 +50,7 @@ function validate_hr_settings_form() {
     }
 
     $payable_account = trim((string)$_POST['payroll_payable_act']);
-    if ($payable_account !== '' && !get_gl_account($payable_account)) {
+    if ($payable_account !== '' && chart_master_entity::find($payable_account) === null) {
         display_error(_('Payroll payable account is invalid.'));
         set_focus('payroll_payable_act');
         $input_error = 1;

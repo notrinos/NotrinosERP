@@ -106,9 +106,9 @@ function print_GL_transactions() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$accounts = get_gl_accounts($fromacc, $toacc);
+	$account_rows = chart_master_entity::all_with_types($fromacc, $toacc);
 
-	while ($account=db_fetch($accounts)) {
+	foreach ($account_rows as $account) {
 		if (is_account_balancesheet($account['account_code']))
 			$begin = '';
 		else {

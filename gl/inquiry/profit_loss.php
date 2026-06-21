@@ -59,9 +59,9 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 	$totals_arr = array();
 	
 	//Get Accounts directly under this group/type
-	$result = get_gl_accounts(null, null, $type);	
+	$accounts = chart_master_entity::all_with_types(null, null, $type);
 
-	while ($account=db_fetch($result)) {
+	foreach ($accounts as $account) {
 		$per_balance = get_gl_trans_from_to($from, $to, $account['account_code'], $dimension, $dimension2);
 
 		if ($compare == 2)

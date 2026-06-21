@@ -52,9 +52,9 @@ function display_type ($type, $typename, $from, $to, $convert, $dimension, $dime
 	$typestotal = 0;
 	
 	//Get Accounts directly under this group/type
-	$result = get_gl_accounts(null, null, $type);	
-		
-	while ($account=db_fetch($result)) {
+	$accounts = chart_master_entity::all_with_types(null, null, $type);
+
+	foreach ($accounts as $account) {
 		$net_balance = get_gl_trans_from_to('', $to, $account['account_code'], $dimension, $dimension2);
 		if (!$net_balance)
 			continue;

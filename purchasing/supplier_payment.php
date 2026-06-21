@@ -138,7 +138,7 @@ function check_inputs() {
 	}
 	if (isset($_POST['charge']) && input_num('charge') > 0) {
 		$charge_acct = get_bank_charge_account($_POST['bank_account']);
-		if (get_gl_account($charge_acct) == false) {
+		if (chart_master_entity::find($charge_acct) === null) {
 			display_error(_('The Bank Charge Account has not been set in System and General GL Setup.'));
 			set_focus('charge');
 			return false;

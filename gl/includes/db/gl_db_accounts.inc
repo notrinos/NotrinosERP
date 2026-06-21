@@ -9,42 +9,17 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-function add_gl_account($account_code, $account_name, $account_type, $account_code2) {
-	$sql = "INSERT INTO ".TB_PREF."chart_master (account_code, account_code2, account_name, account_type) VALUES (".db_escape($account_code).", ".db_escape($account_code2).", ".db_escape($account_name).", ".db_escape($account_type).")";
 
-	return db_query($sql, 'could not add gl account');
-}
-
-function update_gl_account($account_code, $account_name, $account_type, $account_code2) {
-	$sql = "UPDATE ".TB_PREF."chart_master SET account_name=".db_escape($account_name).",account_type=".db_escape($account_type).", account_code2=".db_escape($account_code2)." WHERE account_code = ".db_escape($account_code);
-
-	return db_query($sql, 'could not update gl account');
-}
-
-function delete_gl_account($code) {
-	$sql = "DELETE FROM ".TB_PREF."chart_master WHERE account_code=".db_escape($code);
-
-	db_query($sql, 'could not delete gl account');
-}
-
-function get_gl_accounts($from=null, $to=null, $type=null) {
-	$sql = "SELECT coa.*, act_type.name AS AccountTypeName FROM ".TB_PREF."chart_master coa,".TB_PREF."chart_types act_type WHERE coa.account_type=act_type.id";
-	if ($from != null)
-		$sql .= " AND coa.account_code >= ".db_escape($from);
-	if ($to != null)
-		$sql .= " AND coa.account_code <= ".db_escape($to);
-	if ($type != null)
-		$sql .= " AND account_type=".db_escape($type);
-	$sql .= " ORDER BY account_code";
-
-	return db_query($sql, 'could not get gl accounts');
-}
-
-function get_gl_account($code) {
-	$sql = "SELECT * FROM ".TB_PREF."chart_master WHERE account_code=".db_escape($code);
-	$result = db_query($sql, 'could not get gl account');
-	return db_fetch($result);
-}
+/**
+ * Non-CRUD GL account helper functions.
+ *
+ * CRUD operations (add, update, delete, get, get_all) have been migrated to
+ * chart_master_entity static API:
+ *   chart_master_entity::find(), ::all_with_types(), ::create(), ::modify(), ::remove()
+ *
+ * This file retains only cross-table FK-check helpers and reporting-query
+ * functions that are NOT simple single-table CRUD.
+ */
 
 function is_account_balancesheet($code) {
 	$sql = "SELECT act_class.ctype FROM ".TB_PREF."chart_class act_class, ".TB_PREF."chart_types act_type, ".TB_PREF."chart_master coa WHERE coa.account_type=act_type.id AND act_type.class_id=act_class.cid AND coa.account_code=".db_escape($code);

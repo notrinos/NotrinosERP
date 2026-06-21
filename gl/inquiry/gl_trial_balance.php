@@ -83,7 +83,7 @@ function display_trial_balance($type, $typename) {
 	$k = 0;
 
 	//Get Accounts directly under this group/type
-	$accounts = get_gl_accounts(null, null, $type);
+	$account_rows = chart_master_entity::all_with_types(null, null, $type);
 
 	$begin = get_fiscalyear_begin_for_date($_POST['TransFromDate']);
 	if (date1_greater_date2($begin, $_POST['TransFromDate']))
@@ -100,7 +100,7 @@ function display_trial_balance($type, $typename) {
 	$Acbal=$cbal;
 	$Atbal=$tbal;
 
-	while ($account = db_fetch($accounts)) {
+	foreach ($account_rows as $account) {
 		//Print Type Title if it has atleast one non-zero account
 		if (!$printtitle) {
 			if (!check_value('GroupTotalOnly')) {

@@ -21,6 +21,7 @@ page(_($help_context = 'Chart of Accounts'), false, false, '', $js);
 
 include($path_to_root.'/includes/ui.inc');
 include($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/gl/includes/db/chart_master_entity.inc');
 include_once($path_to_root.'/admin/db/tags_db.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 
@@ -74,7 +75,11 @@ if (isset($_POST['add']) || isset($_POST['update'])) {
 		if ($selected_account) {
 			if (get_post('inactive') == 1 && is_bank_account($_POST['account_code']))
 				display_error(_('The account belongs to a bank account and cannot be inactivated.'));
-			elseif (update_gl_account($_POST['account_code'], $_POST['account_name'], $_POST['account_type'], $_POST['account_code2'])) {
+			elseif (chart_master_entity::modify($_POST['account_code'], array(
+				'account_name' => $_POST['account_name'],
+				'account_type' => $_POST['account_type'],
+				'account_code2' => $_POST['account_code2']
+			))) {
 				update_record_status($_POST['account_code'], $_POST['inactive'], 'chart_master', 'account_code');
 				update_tag_associations(TAG_ACCOUNT, $_POST['account_code'], $_POST['account_tags']);
 				$Ajax->activate('account_code'); // in case of status change
@@ -82,7 +87,12 @@ if (isset($_POST['add']) || isset($_POST['update'])) {
 			}
 		}
 		else {
-			if (add_gl_account($_POST['account_code'], $_POST['account_name'], $_POST['account_type'], $_POST['account_code2'])) {
+			if (chart_master_entity::create(array(
+				'account_code' => $_POST['account_code'],
+				'account_name' => $_POST['account_name'],
+				'account_type' => $_POST['account_type'],
+				'account_code2' => $_POST['account_code2']
+			))) {
 				add_tag_associations($_POST['account_code'], $_POST['account_tags']);
 				display_notification(_('New account has been added.'));
 				$selected_account = $_POST['AccountList'] = $_POST['account_code'];
@@ -145,7 +155,7 @@ function can_delete($selected_account) {
 if (isset($_POST['delete'])) {
 
 	if (can_delete($selected_account)) {
-		delete_gl_account($selected_account);
+		chart_master_entity::remove($selected_account);
 		$selected_account = $_POST['AccountList'] = '';
 		delete_tag_associations(TAG_ACCOUNT, $selected_account, true);
 		$selected_account = $_POST['AccountList'] = '';
@@ -182,7 +192,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_account != '') {
 	//editing an existing account
-	$myrow = get_gl_account($selected_account);
+	$myrow = chart_master_entity::find($selected_account);
 
 	$_POST['account_code'] = $myrow['account_code'];
 	$_POST['account_code2'] = $myrow['account_code2'];

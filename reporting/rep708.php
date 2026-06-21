@@ -29,13 +29,13 @@ function display_type ($type, $typename, &$dec, &$rep, $from, $to, $zero, $balan
 	$printtitle = 0; //Flag for printing type name	
 	
 	//Get Accounts directly under this group/type
-	$accounts = get_gl_accounts(null, null, $type);	
+	$account_rows = chart_master_entity::all_with_types(null, null, $type);	
 	
 	$begin = get_fiscalyear_begin_for_date($from);
 	if (date1_greater_date2($begin, $from))
 		$begin = $from;
 	$begin = add_days($begin, -1);
-	while ($account=db_fetch($accounts)) {
+	foreach ($account_rows as $account) {
 		//Print Type Title if it has atleast one non-zero account	
 		if (!$printtitle) {
 			$rep->row -= 4;

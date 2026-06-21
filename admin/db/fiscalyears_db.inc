@@ -154,7 +154,7 @@ function close_year($year) {
 	global $Refs;
 
 	$co = get_company_prefs();
-	if (get_gl_account($co['retained_earnings_act']) == false || get_gl_account($co['profit_loss_year_act']) == false) {
+	if (chart_master_entity::find($co['retained_earnings_act']) === null || chart_master_entity::find($co['profit_loss_year_act']) === null) {
 		display_error(_('The Retained Earnings Account or the Profit and Loss Year Account has not been set in System and General GL Setup'));
 		return false;
 	}

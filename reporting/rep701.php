@@ -23,8 +23,8 @@ function display_type ($type, $typename, &$dec, &$rep, $showbalance, $level) {
 	$printtitle = 0; //Flag for printing type name	
 
 	//Get Accounts directly under this group/type
-	$result = get_gl_accounts(null, null, $type);	
-	while ($account=db_fetch($result)) {
+	$accounts = chart_master_entity::all_with_types(null, null, $type);
+	foreach ($accounts as $account) {
 		//Print Type Title if it has atleast one non-zero account	
 		if (!$printtitle) {
 			$prefix = '';

@@ -1224,7 +1224,7 @@ function _payroll_is_valid_gl_account($account_code) {
         return false;
 
     if (function_exists('get_gl_account')) {
-        $account = get_gl_account($account_code);
+        $account = chart_master_entity::find($account_code);
         return is_array($account) && !empty($account);
     }
 

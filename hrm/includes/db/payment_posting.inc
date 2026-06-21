@@ -41,7 +41,7 @@ function get_payroll_payment_payable_account() {
 	$payable_account = trim((string)get_company_pref('payroll_payable_act'));
 	if ($payable_account === '')
 		return false;
-	if (function_exists('get_gl_account') && !get_gl_account($payable_account))
+	if (class_exists('chart_master_entity') && chart_master_entity::find($payable_account) === null)
 		return false;
 
 	return $payable_account;
