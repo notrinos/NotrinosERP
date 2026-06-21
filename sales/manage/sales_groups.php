@@ -31,11 +31,11 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM')  {
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			update_sales_group($selected_id, $_POST['description']);
+			sales_group_entity::modify($selected_id, array('description' => $_POST['description']));
 			$note = _('Selected sales group has been updated');
 		} 
 		else {
-			add_sales_group($_POST['description']);
+			sales_group_entity::create(array('description' => $_POST['description']));
 			$note = _('New sales group has been added');
 		}
 	
@@ -55,7 +55,7 @@ if ($Mode == 'Delete') {
 		display_error(_('Cannot delete this group because customers have been created using this group.'));
 	} 
 	if ($cancel_delete == 0) {
-		delete_sales_group($selected_id);
+		sales_group_entity::remove($selected_id);
 		display_notification(_('Selected sales group has been deleted'));
 	} //end if Delete group
 	$Mode = 'RESET';
@@ -70,7 +70,7 @@ if ($Mode == 'RESET') {
 
 //-------------------------------------------------------------------------------------------------
 
-$result = get_sales_groups(check_value('show_inactive'));
+$result = sales_group_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive', 'description');
 
 start_form();
 start_table(TABLESTYLE, "width='30%'");
@@ -102,7 +102,7 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing group
-		$myrow = get_sales_group($selected_id);
+		$myrow = sales_group_entity::find($selected_id);
 		$_POST['description']  = $myrow['description'];
 	}
 	hidden('selected_id', $selected_id);

@@ -32,7 +32,7 @@ while ($myrow = db_fetch($result)) {
 	label_cell(get_customer_trans_view_str(ST_SALESORDER, $myrow['order_no']));
 	if ($myrow['debtor_no'] == 0) {
 		label_cell('');
-		label_cell(get_sales_group_name($myrow['group_no']));
+		label_cell(sales_group_entity::name($myrow['group_no']));
 	}
 	else {
 		label_cell(get_customer_name($myrow['debtor_no']));

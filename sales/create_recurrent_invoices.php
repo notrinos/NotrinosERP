@@ -13,6 +13,7 @@ $page_security = 'SA_SALESINVOICE';
 $path_to_root = '..';
 include_once($path_to_root . '/sales/includes/cart_class.inc');
 include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/sales/includes/db/sales_group_entity.inc');
 include_once($path_to_root . '/sales/includes/ui/sales_order_ui.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
@@ -207,7 +208,7 @@ else {
 		if ($myrow['debtor_no'] == 0) {
 			label_cell('');
 
-			label_cell(get_sales_group_name($myrow['group_no']));
+			label_cell(sales_group_entity::name($myrow['group_no']));
 		}
 		else {
 			label_cell(get_customer_name($myrow['debtor_no']));

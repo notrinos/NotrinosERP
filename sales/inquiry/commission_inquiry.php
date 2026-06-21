@@ -19,7 +19,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
-include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
+include_once($path_to_root . '/sales/includes/db/sales_group_entity.inc');
 include_once($path_to_root . '/sales/includes/db/salesman_entity.inc');
 
 // ============================================================================
