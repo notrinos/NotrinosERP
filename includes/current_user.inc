@@ -341,9 +341,9 @@ function qty_format($number, $stock_id=null, &$dec=null) {
 /* and get_qty_dec */
 function get_qty_dec($stock_id=null) {
 	global $path_to_root;
-	include_once($path_to_root.'/inventory/includes/db/items_units_db.inc');
+	include_once($path_to_root.'/inventory/includes/db/items_units_entity.inc');
 	if ($stock_id != null)
-		$dec = get_unit_dec($stock_id);
+		$dec = item_units_entity::get_decimals_for_item($stock_id);
 	if ($stock_id == null || $dec == -1 || $dec == null)
 		$dec = user_qty_dec();
 	return $dec;

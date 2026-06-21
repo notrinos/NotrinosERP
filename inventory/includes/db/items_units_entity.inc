@@ -46,4 +46,45 @@ class item_units_entity extends Entity {
 			return $e->insert($data);
 		}
 	}
+
+	/**
+	 * Get the decimal places for a given item's unit of measure.
+	 * Replaces legacy get_unit_dec().
+	 *
+	 * @param string $stock_id
+	 * @return int|null
+	 */
+	public static function get_decimals_for_item($stock_id) {
+		$sql = "SELECT decimals FROM " . TB_PREF . "item_units, " . TB_PREF . "stock_master
+			WHERE abbr=units AND stock_id=" . db_escape($stock_id) . " LIMIT 1";
+		$result = db_query($sql, 'could not get unit decimals');
+		$row = db_fetch_row($result);
+		return isset($row[0]) ? $row[0] : null;
+	}
+
+	/**
+	 * Get the descriptive name for a unit abbreviation.
+	 * Replaces legacy get_unit_descr().
+	 *
+	 * @param string $unit
+	 * @return string|null
+	 */
+	public static function get_description($unit) {
+		$row = self::find($unit);
+		return $row ? $row['name'] : null;
+	}
+
+	/**
+	 * Check whether a unit is in use by any stock_master record.
+	 * Replaces legacy item_unit_used().
+	 *
+	 * @param string $unit
+	 * @return bool
+	 */
+	public static function is_in_use($unit) {
+		$sql = "SELECT COUNT(*) FROM " . TB_PREF . "stock_master WHERE units=" . db_escape($unit);
+		$result = db_query($sql, 'could not query stock master');
+		$myrow = db_fetch_row($result);
+		return ($myrow[0] > 0);
+	}
 }

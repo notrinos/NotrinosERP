@@ -17,7 +17,6 @@ page(_($help_context = 'Units of Measure'));
 
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/inventory/includes/db/items_units_entity.inc');
-include_once($path_to_root . '/inventory/includes/db/items_units_db.inc');
 
 simple_page_mode(false);
 
@@ -68,7 +67,7 @@ if ($Mode == 'Delete') {
 
 	// PREVENT DELETES IF DEPENDENT RECORDS IN 'stock_master'
 
-	if (item_unit_used($selected_id))
+	if (item_units_entity::is_in_use($selected_id))
 		display_error(_('Cannot delete this unit of measure because items have been created using this unit.'));
 	else {
 		item_units_entity::remove($selected_id);
@@ -129,7 +128,7 @@ if ($selected_id != '') {
 	}
 	hidden('selected_id', $myrow['abbr']);
 }
-if ($selected_id != '' && item_unit_used($selected_id)) {
+if ($selected_id != '' && item_units_entity::is_in_use($selected_id)) {
 	label_row(_('Unit Abbreviation:'), $_POST['abbr']);
 	hidden('abbr', $_POST['abbr']);
 }
