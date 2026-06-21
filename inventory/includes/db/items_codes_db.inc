@@ -12,47 +12,33 @@
 /*
 	item_codes table is used to store both multiply foreign codes (aliases) and 
 	sales kits definition.
-*/
-function update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign=0) {
-	$sql = "UPDATE ".TB_PREF."item_codes SET
-		item_code = ".db_escape($item_code).",
-		stock_id = ".db_escape($stock_id).",
-		description = ".db_escape($description).",
-		category_id = ".db_escape($category).",
-		quantity = ".db_escape($qty).",
-		is_foreign = ".db_escape($foreign)."
-			WHERE ";
-			
-	if ($id == -1) // update with unknown $id i.e. from items table editor
-		$sql .= "item_code = ".db_escape($item_code)
-		." AND stock_id = ".db_escape($stock_id);
-	else
-		$sql .= "id = ".db_escape($id);
 
-	db_query($sql, 'an item code could not be updated');
+	Simple CRUD operations delegate to item_codes_entity (static API).
+	Complex/reporting queries (JOINs, recursive checks) remain standalone.
+*/
+include_once($path_to_root.'/inventory/includes/db/items_codes_entity.inc');
+
+function update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign=0) {
+	return item_codes_entity::update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign);
 }
 
 function add_item_code($item_code, $stock_id, $description, $category, $qty, $foreign=0) {
-	$sql = "INSERT INTO ".TB_PREF."item_codes
-			(item_code, stock_id, description, category_id, quantity, is_foreign) 
-			VALUES( ".db_escape($item_code).",".db_escape($stock_id).",
-			".db_escape($description).",".db_escape($category)
-			.",".db_escape($qty).",".db_escape($foreign).")";
-
-	db_query($sql, 'an item code could not be added');
+	return item_codes_entity::create(array(
+		'item_code' => $item_code,
+		'stock_id' => $stock_id,
+		'description' => $description,
+		'category_id' => $category,
+		'quantity' => $qty,
+		'is_foreign' => $foreign
+	));
 }
 
 function delete_item_code($id) {
-	$sql="DELETE FROM ".TB_PREF."item_codes WHERE id=".db_escape($id);
-	db_query($sql, 'an item code could not be deleted');
+	return item_codes_entity::remove($id);
 }
 
 function get_item_code($id) {
-	$sql="SELECT * FROM ".TB_PREF."item_codes WHERE id=".db_escape($id);
-
-	$result = db_query($sql, 'item code could not be retrieved');
-
-	return db_fetch($result);
+	return item_codes_entity::find($id);
 }
 
 function get_all_item_codes($stock_id, $foreign=1) {
