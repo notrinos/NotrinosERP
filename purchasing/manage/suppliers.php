@@ -81,7 +81,7 @@ function supplier_vendor_tier_options() {
 function render_supplier_vendor_score_summary($supplier_id) {
 	global $path_to_root;
 
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find((int)$supplier_id);
 	if (!$supplier)
 		return '';
 
@@ -189,7 +189,7 @@ function supplier_settings(&$supplier_id) {
 
 	if ($supplier_id) {
 		//SupplierID exists - either passed when calling the form or from the form itself
-		$myrow = get_supplier($_POST['supplier_id']);
+		$myrow = suppliers_entity::find((int)$_POST['supplier_id']);
 
 		$_POST['supp_name'] = $myrow['supp_name'];
 		$_POST['supp_ref'] = $myrow['supp_ref'];

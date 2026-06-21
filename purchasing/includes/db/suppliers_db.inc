@@ -10,77 +10,68 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
-	$sql = "INSERT INTO ".TB_PREF."suppliers (supp_name, supp_ref, address, supp_address, gst_no, website,
-		supp_account_no, bank_account, credit_limit, dimension_id, dimension2_id, curr_code,
-		payment_terms, payable_account, purchase_account, payment_discount_account, notes, 
-		tax_group_id, tax_included, vendor_tier, vendor_category, evaluation_frequency_months,
-		certifications, approved_categories)
-		VALUES (".db_escape($supp_name). ", "
-		.db_escape($supp_ref). ", "
-		.db_escape($address) . ", "
-		.db_escape($supp_address) . ", "
-		.db_escape($gst_no). ", "
-		.db_escape($website). ", "
-		.db_escape($supp_account_no). ", "
-		.db_escape($bank_account). ", "
-		.$credit_limit. ", "
-		.db_escape($dimension_id). ", "
-		.db_escape($dimension2_id). ", "
-		.db_escape($curr_code). ", "
-		.db_escape($payment_terms). ", "
-		.db_escape($payable_account). ", "
-		.db_escape($purchase_account). ", "
-		.db_escape($payment_discount_account). ", "
-		.db_escape($notes). ", "
-		.db_escape($tax_group_id). ", "
-		.db_escape($tax_included). ", "
-		.db_escape($vendor_tier). ", "
-		.db_escape($vendor_category). ", "
-		.db_escape((int)$evaluation_frequency_months). ", "
-		.db_escape($certifications). ", "
-		.db_escape($approved_categories). ")";
+include_once($path_to_root . '/purchasing/includes/db/suppliers_entity.inc');
 
-	db_query($sql, 'The supplier could not be added');
+function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
+	return suppliers_entity::create(array(
+		'supp_name' => $supp_name,
+		'supp_ref' => $supp_ref,
+		'address' => $address,
+		'supp_address' => $supp_address,
+		'gst_no' => $gst_no,
+		'website' => $website,
+		'supp_account_no' => $supp_account_no,
+		'bank_account' => $bank_account,
+		'credit_limit' => $credit_limit,
+		'dimension_id' => $dimension_id,
+		'dimension2_id' => $dimension2_id,
+		'curr_code' => $curr_code,
+		'payment_terms' => $payment_terms,
+		'payable_account' => $payable_account,
+		'purchase_account' => $purchase_account,
+		'payment_discount_account' => $payment_discount_account,
+		'notes' => $notes,
+		'tax_group_id' => $tax_group_id,
+		'tax_included' => $tax_included ? 1 : 0,
+		'vendor_tier' => $vendor_tier,
+		'vendor_category' => $vendor_category,
+		'evaluation_frequency_months' => (int)$evaluation_frequency_months,
+		'certifications' => $certifications,
+		'approved_categories' => $approved_categories,
+	));
 }
 
 function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
-	$sql = "UPDATE ".TB_PREF."suppliers SET supp_name=".db_escape($supp_name) . ",
-		supp_ref=".db_escape($supp_ref) . ",
-		address=".db_escape($address) . ",
-		supp_address=".db_escape($supp_address) . ",
-		gst_no=".db_escape($gst_no) . ",
-		website=".db_escape($website) . ",
-		supp_account_no=".db_escape($supp_account_no) . ",
-		bank_account=".db_escape($bank_account) . ",
-		credit_limit=".$credit_limit . ",
-		dimension_id=".db_escape($dimension_id) . ",
-		dimension2_id=".db_escape($dimension2_id) . ",
-		curr_code=".db_escape($curr_code).",
-		payment_terms=".db_escape($payment_terms) . ",
-		payable_account=".db_escape($payable_account) . ",
-		purchase_account=".db_escape($purchase_account) . ",
-		payment_discount_account=".db_escape($payment_discount_account) . ",
-		notes=".db_escape($notes) . ",
-		tax_group_id=".db_escape($tax_group_id). ",
-		tax_included=".db_escape($tax_included). ",
-		vendor_tier=".db_escape($vendor_tier). ",
-		vendor_category=".db_escape($vendor_category). ",
-		evaluation_frequency_months=".db_escape((int)$evaluation_frequency_months). ",
-		certifications=".db_escape($certifications). ",
-		approved_categories=".db_escape($approved_categories)
-		." WHERE supplier_id = ".db_escape($supplier_id);
-
-	db_query($sql, 'The supplier could not be updated');
+	return suppliers_entity::modify((int)$supplier_id, array(
+		'supp_name' => $supp_name,
+		'supp_ref' => $supp_ref,
+		'address' => $address,
+		'supp_address' => $supp_address,
+		'gst_no' => $gst_no,
+		'website' => $website,
+		'supp_account_no' => $supp_account_no,
+		'bank_account' => $bank_account,
+		'credit_limit' => $credit_limit,
+		'dimension_id' => $dimension_id,
+		'dimension2_id' => $dimension2_id,
+		'curr_code' => $curr_code,
+		'payment_terms' => $payment_terms,
+		'payable_account' => $payable_account,
+		'purchase_account' => $purchase_account,
+		'payment_discount_account' => $payment_discount_account,
+		'notes' => $notes,
+		'tax_group_id' => $tax_group_id,
+		'tax_included' => $tax_included ? 1 : 0,
+		'vendor_tier' => $vendor_tier,
+		'vendor_category' => $vendor_category,
+		'evaluation_frequency_months' => (int)$evaluation_frequency_months,
+		'certifications' => $certifications,
+		'approved_categories' => $approved_categories,
+	));
 }
 
 function delete_supplier($supplier_id) {
-	begin_transaction();
-	delete_entity_contacts('supplier', $supplier_id);
-	$sql="DELETE FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
-
-	db_query($sql, 'failed deletting supplier');
-	commit_transaction();
+	return suppliers_entity::remove((int)$supplier_id);
 }
 
 function get_supplier_details($supplier_id, $to=null, $all=true) {
@@ -133,21 +124,11 @@ function get_supplier_details($supplier_id, $to=null, $all=true) {
 }
 
 function get_supplier($supplier_id) {
-	$sql = "SELECT * FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
-
-	$result = db_query($sql, 'could not get supplier');
-
-	return db_fetch($result);
+	return suppliers_entity::find((int)$supplier_id);
 }
 
 function get_supplier_name($supplier_id) {
-	$sql = "SELECT supp_name AS name FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
-
-	$result = db_query($sql, 'could not get supplier name');
-
-	$row = db_fetch_row($result);
-
-	return $row[0];
+	return suppliers_entity::name((int)$supplier_id);
 }
 
 function get_supplier_accounts($supplier_id) {
