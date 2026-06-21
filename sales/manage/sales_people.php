@@ -16,6 +16,7 @@ include($path_to_root . '/includes/session.inc');
 page(_($help_context = 'Sales Persons'));
 
 include($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/sales/includes/db/salesman_entity.inc');
 include_once($path_to_root . '/sales/includes/db/sales_commission_db.inc');
 
 $use_advanced_commissions = get_company_pref('use_advanced_commissions');
@@ -46,12 +47,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		set_focus('break_pt');
 	}
 	if ($input_error != 1) {
+		$sdata = array(
+			'salesman_name' => $_POST['salesman_name'],
+			'salesman_phone' => $_POST['salesman_phone'],
+			'salesman_fax' => $_POST['salesman_fax'],
+			'salesman_email' => $_POST['salesman_email'],
+			'provision' => input_num('provision'),
+			'break_pt' => input_num('break_pt'),
+			'provision2' => input_num('provision2'),
+		);
 		if ($selected_id != -1)
-			/*selected_id could also exist if submit had not been clicked this code would not run in this case cos submit is false of course  see the delete code below*/
-			update_salesman($selected_id, $_POST['salesman_name'], $_POST['salesman_phone'], $_POST['salesman_fax'], $_POST['salesman_email'], input_num('provision'), input_num('break_pt'), input_num('provision2'));
+			salesman_entity::modify($selected_id, $sdata);
 		else
-			/*Selected group is null cos no item selected on first time round so must be adding a record must be submitting new entries in the new Sales-person form */
-			add_salesman($_POST['salesman_name'], $_POST['salesman_phone'], $_POST['salesman_fax'], $_POST['salesman_email'], input_num('provision'), input_num('break_pt'), input_num('provision2'));
+			salesman_entity::create($sdata);
 
 		if ($selected_id != -1) 
 			display_notification(_('Selected sales person data have been updated'));
@@ -67,7 +75,7 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'cust_branch', 'salesman'))
 		display_error(_('Cannot delete this sales-person because branches are set up referring to this sales-person - first alter the branches concerned.'));
 	else {
-		delete_salesman($selected_id);
+		salesman_entity::remove($selected_id);
 		display_notification(_('Selected sales person data have been deleted'));
 	}
 	$Mode = 'RESET';
@@ -82,7 +90,7 @@ if ($Mode == 'RESET') {
 
 //------------------------------------------------------------------------------------------------
 
-$result = get_salesmen(check_value('show_inactive'));
+$result = salesman_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 start_form();
 start_table(TABLESTYLE, "width='90%'");
@@ -130,7 +138,7 @@ $_POST['salesman_email'] = '';
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		//editing an existing Sales-person
-		$myrow = get_salesman($selected_id);
+		$myrow = salesman_entity::find($selected_id);
 
 		$_POST['salesman_name'] = $myrow['salesman_name'];
 		$_POST['salesman_phone'] = $myrow['salesman_phone'];

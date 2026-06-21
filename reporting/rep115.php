@@ -129,7 +129,7 @@ function print_customer_balances() {
 	if ($folk == ALL_NUMERIC)
 		$folk = 0;
 
-	$salesfolk = $folk == 0 ? _('All Sales Man') : get_salesman_name($folk);
+	$salesfolk = $folk == 0 ? _('All Sales Man') : salesman_entity::get_name($folk);
 
 	if ($currency == ALL_TEXT) {
 		$convert = true;

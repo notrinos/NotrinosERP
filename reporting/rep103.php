@@ -119,7 +119,7 @@ function print_customer_details_listing() {
 		$folk = 0;
 
 	$sarea = $area == 0 ? _('All Areas') : areas_entity::get_name($area);
-	$salesfolk = $folk == 0 ? _('All Sales Folk') : get_salesman_name($folk);
+	$salesfolk = $folk == 0 ? _('All Sales Folk') : salesman_entity::get_name($folk);
 	$morestr = $more != '' ? _('Greater than ').number_format2($more, $dec) : '';
 	$lessstr = $less != '' ? _('Less than ').number_format2($less, $dec) : '';
 

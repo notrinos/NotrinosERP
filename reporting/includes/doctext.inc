@@ -48,7 +48,7 @@
 				? $this->formData['reference'] : $this->formData['order_no'];
 			$aux_info = array(
 				_("Customer's Reference") => $this->formData['customer_ref'],
-				_('Sales Person') => get_salesman_name($this->formData['salesman']),
+				_('Sales Person') => salesman_entity::get_name($this->formData['salesman']),
 				_('Your VAT no.') => $this->formData['tax_id'],
 				_('Our Quotation No') => $this->formData['order_no'],
 				_('Valid until') => sql2date($this->formData['delivery_date']),
@@ -65,7 +65,7 @@
 
 			$aux_info = array(
 				_("Customer's Reference") => $this->formData['customer_ref'],
-				_('Sales Person') => get_salesman_name($this->formData['salesman']),
+			_('Sales Person') => salesman_entity::get_name($this->formData['salesman']),
 				_('Your VAT no.') => $this->formData['tax_id'],
 				_('Our Order No') => $this->formData['order_no'],
 				_('Delivery Date') => sql2date($this->formData['delivery_date']),
@@ -85,7 +85,7 @@
 			}
 			$aux_info = array(
 				_("Customer's Reference") => $this->formData['customer_ref'],
-				_('Sales Person') => get_salesman_name($this->formData['salesman']),
+			_('Sales Person') => salesman_entity::get_name($this->formData['salesman']),
 				_('Your VAT no.') => $this->formData['tax_id'],
 				_('Our Order No') => $ref,
 				_('To Be Invoiced Before') => sql2date($this->formData['due_date']),
@@ -99,7 +99,7 @@
 
 			$aux_info = array(
 				_("Customer's Reference") => @$this->formData['customer_ref'],
-				_('Sales Person') => get_salesman_name($this->formData['salesman']),
+			_('Sales Person') => salesman_entity::get_name($this->formData['salesman']),
 				_('Your VAT no.') => $this->formData['tax_id'],
 				_('Our Order No') => $this->formData['order_'],
 				_('Due Date') => '',
@@ -121,7 +121,7 @@
 			}
 			$aux_info = array(
 				_("Customer's Reference") => $this->formData['customer_ref'],
-				_('Sales Person') => get_salesman_name($this->formData['salesman']),
+				_('Sales Person') => salesman_entity::get_name($this->formData['salesman']),
 				_('Your VAT no.') => $this->formData['tax_id'],
 			);
 			if ($this->formData['prepaid'] == 'partial') {

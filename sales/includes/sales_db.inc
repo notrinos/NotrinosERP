@@ -19,6 +19,7 @@ include_once($path_to_root . '/sales/includes/db/sales_delivery_db.inc');
 include_once($path_to_root . '/sales/includes/db/sales_types_entity.inc');
 include_once($path_to_root . '/sales/includes/db/sales_points_entity.inc');
 include_once($path_to_root . '/sales/includes/db/sales_groups_db.inc');
+include_once($path_to_root . '/sales/includes/db/salesman_entity.inc');
 include_once($path_to_root . '/sales/includes/db/recurrent_invoices_db.inc');
 include_once($path_to_root . '/sales/includes/db/custalloc_db.inc');
 include_once($path_to_root . '/sales/includes/db/cust_trans_db.inc');
