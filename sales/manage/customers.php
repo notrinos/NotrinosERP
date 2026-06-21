@@ -175,7 +175,7 @@ function customer_settings($selected_id) {
 		}
 	}
 	else {
-		$myrow = get_customer($selected_id);
+		$myrow = debtors_master_entity::find($selected_id);
 
 		$_POST['CustName'] = $myrow['name'];
 		$_POST['cust_ref'] = $myrow['debtor_ref'];
