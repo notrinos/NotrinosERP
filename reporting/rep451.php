@@ -18,7 +18,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
-include_once($path_to_root.'/fixed_assets/includes/fa_classes_db.inc');
+include_once($path_to_root.'/fixed_assets/includes/db/stock_fa_class_entity.inc');
 
 function find_last_location($stock_id, $end_date) {
 	
@@ -58,7 +58,7 @@ function print_fixed_assets_valuation_report() {
 	if ($class == ALL_NUMERIC)
 		$class = 0;
 
-	$cln = $class == 0 ? _('All') : get_fixed_asset_classname($class);
+	$cln = $class == 0 ? _('All') : stock_fa_class_entity::find($class)['description'];
 
 	if ($location == ALL_TEXT)
 		$location = 'all';

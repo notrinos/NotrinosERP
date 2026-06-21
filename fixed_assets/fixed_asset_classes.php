@@ -16,7 +16,7 @@ include($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 
 include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
-include_once($path_to_root.'/fixed_assets/includes/fa_classes_db.inc');
+include_once($path_to_root.'/fixed_assets/includes/db/stock_fa_class_entity.inc');
 
 page(_($help_context = 'Fixed asset classes'));
 
@@ -26,7 +26,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	
 	$input_error = 0;
 
-	if($Mode=='ADD_ITEM' && fa_class_id_exists($_POST['fa_class_id'])) {
+	if($Mode=='ADD_ITEM' && stock_fa_class_entity::find($_POST['fa_class_id'])) {
 		$input_error = 1;
 		display_error(_('Duplicate Class ID found.'));
 		set_focus('fa_class_id');
@@ -39,11 +39,22 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			update_fixed_asset_class($selected_id, $_POST['parent_id'], $_POST['description'], $_POST['long_description'], input_num('depreciation_rate'));
+			stock_fa_class_entity::modify($selected_id, array(
+				'parent_id' => $_POST['parent_id'],
+				'description' => $_POST['description'],
+				'long_description' => $_POST['long_description'],
+				'depreciation_rate' => input_num('depreciation_rate')
+			));
 			display_notification(_('Selected fixed asset class has been updated'));
 		} 
 		else {
-			add_fixed_asset_class($_POST['fa_class_id'], $_POST['parent_id'], $_POST['description'], $_POST['long_description'], input_num('depreciation_rate'));
+			stock_fa_class_entity::create(array(
+				'fa_class_id' => $_POST['fa_class_id'],
+				'parent_id' => $_POST['parent_id'],
+				'description' => $_POST['description'],
+				'long_description' => $_POST['long_description'],
+				'depreciation_rate' => input_num('depreciation_rate')
+			));
 			display_notification(_('New fixed asset class has been added'));
 		}
 
@@ -64,7 +75,7 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_fixed_asset_class($selected_id);
+		stock_fa_class_entity::remove($selected_id);
 		display_notification(_('Selected fixed asset class has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -75,7 +86,7 @@ if ($Mode == 'RESET') {
 	unset($_POST);
 }
 
-$result = get_fixed_asset_classes();
+$rows = stock_fa_class_entity::all();
 
 start_form();
 start_table(TABLESTYLE);
@@ -83,7 +94,7 @@ $th = array(_('Fixed asset class'), _('Description'), _('Basic Depreciation Rate
 inactive_control_column($th);
 table_header($th);
 $k = 0;
-while ($myrow = db_fetch($result)) {
+foreach ($rows as $myrow) {
 	alt_table_row_color($k);
 	
 	label_cell($myrow['fa_class_id']);
@@ -105,7 +116,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
-		$myrow = get_fixed_asset_class($selected_id);
+		$myrow = stock_fa_class_entity::find($selected_id);
 
 		$_POST['fa_class_id'] = $myrow['fa_class_id'];
 		$_POST['parent_id'] = $myrow['parent_id'];

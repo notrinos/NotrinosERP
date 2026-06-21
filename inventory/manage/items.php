@@ -40,7 +40,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/ui/attachment.inc');
 
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
-include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
+include_once($path_to_root.'/fixed_assets/includes/db/stock_fa_class_entity.inc');
 include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 include_once($path_to_root.'/inventory/warehouse/includes/warehouse_ui.inc');
 include_once($path_to_root.'/taxes/db/item_tax_types_entity.inc');
@@ -548,7 +548,7 @@ function item_settings(&$stock_id, $new_item) {
 		array_selector_row(_('Depreciation Method').':', 'depreciation_method', null, $depreciation_methods, array('select_submit'=> true));
 
 		if (!isset($_POST['depreciation_rate']) || (list_updated('fa_class_id') || list_updated('depreciation_method'))) {
-			$class_row = get_fixed_asset_class($_POST['fa_class_id']);
+			$class_row = stock_fa_class_entity::find($_POST['fa_class_id']);
 			$_POST['depreciation_rate'] = get_post('depreciation_method') == 'N' ? ceil(100/$class_row['depreciation_rate']) : $class_row['depreciation_rate'];
 		}
 
