@@ -71,54 +71,7 @@ function get_company_extensions($id = -1) {
 	return $installed_extensions;
 }
 
-function add_payment_terms($daysOrFoll, $terms, $dayNumber) {
-	if ($daysOrFoll) {
-		$sql = "INSERT INTO ".TB_PREF."payment_terms (terms,
-			days_before_due, day_in_following_month)
-			VALUES (" .
-			db_escape($terms) . ", " . db_escape($dayNumber) . ", 0)";
-	} 
-	else {
-		$sql = "INSERT INTO ".TB_PREF."payment_terms (terms,
-			days_before_due, day_in_following_month)
-			VALUES (" . db_escape($terms) . ",
-			0, " . db_escape($dayNumber) . ")";
-	}
-	db_query($sql, 'The payment term could not be added');
-}
 
-function update_payment_terms($selected_id, $daysOrFoll, $terms, $dayNumber) {
-	if ($daysOrFoll) {
-		$sql = "UPDATE ".TB_PREF."payment_terms SET terms=" . db_escape($terms) . ",
-			day_in_following_month=0,
-			days_before_due=" . db_escape($dayNumber) . "
-			WHERE terms_indicator = " .db_escape($selected_id);
-	} 
-	else {
-		$sql = "UPDATE ".TB_PREF."payment_terms SET terms=" . db_escape($terms) . ",
-			day_in_following_month=" . db_escape($dayNumber) . ",
-			days_before_due=0
-			WHERE terms_indicator = " .db_escape($selected_id);
-	}
-	db_query($sql, 'The payment term could not be updated');
-}
-
-function delete_payment_terms($selected_id) {
-	$sql="DELETE FROM ".TB_PREF."payment_terms WHERE terms_indicator=".db_escape($selected_id);
-	db_query($sql, 'could not delete a payment terms');
-}
-
-function get_payment_terms($selected_id) {
-	$row = payment_terms_entity::find($selected_id);
-	if ($row) {
-		$row['cash_sale'] = ($row['days_before_due'] == 0) && ($row['day_in_following_month'] == 0);
-	}
-	return $row;
-}
-
-function get_payment_terms_all($show_inactive) {
-	return payment_terms_entity::all_db_resource($show_inactive ? '' : '!inactive');
-}
 /*
 	Return number of records in tables, where some foreign key $id is used.
 	$id - searched key value
