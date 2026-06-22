@@ -1094,14 +1094,14 @@ function stock_item_types_list_row($label, $name, $selected_id=null, $enabled=tr
 }
 
 function stock_units_list_row($label, $name, $value=null, $enabled=true) {
-	$result = get_all_item_units();
+	$units = array();
+	foreach (item_units_entity::all('!inactive', 'name') as $unit) {
+		$units[$unit['abbr']] = $unit['name'];
+	}
 	echo "<tr>";
 	if ($label != null)
 		echo "<td class='label'>".$label."</td>\n";
 	echo "<td>";
-
-	while($unit = db_fetch($result))
-		$units[$unit['abbr']] = $unit['name'];
 
 	echo array_selector($name, $value, $units, array( 'disabled' => !$enabled) );
 
