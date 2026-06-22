@@ -219,7 +219,7 @@ function mobile_scan_lookup() {
 		if (isset($gs1['21'])) {
 			$serial = get_serial_number_by_code($gs1['21']);
 			if ($serial) {
-				$item = get_item($serial['stock_id']);
+				$item = stock_master_entity::find($serial['stock_id']);
 				$result['matches'][] = array(
 					'type' => 'serial',
 					'serial_id' => $serial['id'],
@@ -236,7 +236,7 @@ function mobile_scan_lookup() {
 		if (isset($gs1['10'])) {
 			$batch = get_stock_batch_by_code($gs1['10']);
 			if ($batch) {
-				$item = get_item($batch['stock_id']);
+				$item = stock_master_entity::find($batch['stock_id']);
 				$result['matches'][] = array(
 					'type' => 'batch',
 					'batch_id' => $batch['id'],
@@ -256,7 +256,7 @@ function mobile_scan_lookup() {
 	// 2. Try serial number exact match
 	$serial = get_serial_number_by_code($scan);
 	if ($serial) {
-		$item = get_item($serial['stock_id']);
+		$item = stock_master_entity::find($serial['stock_id']);
 		$result['matches'][] = array(
 			'type' => 'serial',
 			'serial_id' => $serial['id'],
@@ -274,7 +274,7 @@ function mobile_scan_lookup() {
 	// 3. Try batch number exact match
 	$batch = get_stock_batch_by_code($scan);
 	if ($batch) {
-		$item = get_item($batch['stock_id']);
+		$item = stock_master_entity::find($batch['stock_id']);
 		$result['matches'][] = array(
 			'type' => 'batch',
 			'batch_id' => $batch['id'],
@@ -302,7 +302,7 @@ function mobile_scan_lookup() {
 	}
 
 	// 5. Try item stock_id
-	$item = get_item($scan);
+	$item = stock_master_entity::find($scan);
 	if ($item) {
 		$result['matches'][] = array(
 			'type' => 'item',
@@ -377,7 +377,7 @@ function mobile_validate_stock_item($stock_id_raw, &$item_row) {
 	if (mobile_has_control_chars($stock_id))
 		return array('success' => false, 'error' => _('Invalid item code format'));
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item || (isset($item['inactive']) && (int)$item['inactive'] !== 0))
 		return array('success' => false, 'error' => sprintf(_('Item "%s" not found'), $stock_id));
 
@@ -719,7 +719,7 @@ function mobile_confirm_transfer() {
 	if ($from_bin_id === $to_bin_id)
 		return array('success' => false, 'error' => _('Source and destination bins cannot be the same'));
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item || (isset($item['inactive']) && (int)$item['inactive'] !== 0))
 		return array('success' => false, 'error' => sprintf(_('Item "%s" not found'), $stock_id));
 
@@ -865,7 +865,7 @@ function mobile_serial_lookup() {
 		return array('success' => false, 'error' => sprintf(_('Serial "%s" not found'), $search));
 
 	// Get item info
-	$item = get_item($serial['stock_id']);
+	$item = stock_master_entity::find($serial['stock_id']);
 
 	// Get location name
 	$loc_name = '';

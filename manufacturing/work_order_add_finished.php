@@ -212,7 +212,7 @@ if ($has_tracking_module && isset($_POST['ProductionType']) && $_POST['Productio
 		}
 
 		if (item_has_batch_tracking($wo_details['stock_id'])) {
-			$item_data = get_item($wo_details['stock_id']);
+			$item_data = stock_master_entity::find($wo_details['stock_id']);
 			$default_prefix = isset($item_data['batch_no_prefix']) ? $item_data['batch_no_prefix'] : '';
 			echo '<tr><td class="label">' . _('Batch / Lot Number:') . '</td><td>';
 			echo '<input type="text" name="produce_batch_no" size="30" maxlength="60" value="'

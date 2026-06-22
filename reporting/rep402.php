@@ -107,7 +107,7 @@ function print_work_order_listing() {
 	if ($item == '')
 		$items = _('All');
 	else {
-		$row = get_item($item);
+		$row = stock_master_entity::find($item);
 		$items = $row['description']; 
 	}
 

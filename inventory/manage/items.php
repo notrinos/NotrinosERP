@@ -40,7 +40,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/ui/attachment.inc');
 
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
-include_once($path_to_root.'/fixed_assets/includes/db/stock_fa_class_entity.inc');
+include_once($path_to_root.'/fixed_assets/includes/fixed_assets_db.inc');
 include_once($path_to_root.'/inventory/includes/db/serial_batch_db.inc');
 include_once($path_to_root.'/inventory/warehouse/includes/warehouse_ui.inc');
 include_once($path_to_root.'/taxes/db/item_tax_types_entity.inc');
@@ -50,7 +50,7 @@ $new_item = get_post('stock_id') == '' || get_post('cancel') || get_post('clone'
 //------------------------------------------------------------------------------------
 
 function set_edit($stock_id) {
-	$_POST = array_merge($_POST, get_item($stock_id));
+	$_POST = array_merge($_POST, stock_master_entity::find($stock_id));
 
 	$_POST['depreciation_rate'] = number_format2($_POST['depreciation_rate'], 1);
 	$_POST['depreciation_factor'] = number_format2($_POST['depreciation_factor'], 1);
@@ -348,7 +348,7 @@ if (isset($_POST['addupdate'])) {
 
 	// Validate tracking mode change
 	if (!$input_error && !$new_item && !get_post('fixed_asset')) {
-		$existing = get_item($_POST['NewStockID']);
+		$existing = stock_master_entity::find($_POST['NewStockID']);
 		if ($existing && isset($existing['track_by']) && $existing['track_by'] !== $track_by) {
 			if (item_has_stock_movements($_POST['NewStockID'])) {
 				$input_error = 1;
@@ -548,7 +548,7 @@ function item_settings(&$stock_id, $new_item) {
 		array_selector_row(_('Depreciation Method').':', 'depreciation_method', null, $depreciation_methods, array('select_submit'=> true));
 
 		if (!isset($_POST['depreciation_rate']) || (list_updated('fa_class_id') || list_updated('depreciation_method'))) {
-			$class_row = stock_fa_class_entity::find($_POST['fa_class_id']);
+			$class_row = get_fixed_asset_class($_POST['fa_class_id']);
 			$_POST['depreciation_rate'] = get_post('depreciation_method') == 'N' ? ceil(100/$class_row['depreciation_rate']) : $class_row['depreciation_rate'];
 		}
 

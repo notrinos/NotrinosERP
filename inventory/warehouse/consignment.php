@@ -86,7 +86,7 @@ if (isset($_POST['ADD_CONSIGNMENT'])) {
 	if (empty($recv_stock_id)) {
 		display_error(_('You must select an item.'));
 		$input_error = 1;
-	} elseif (!get_item($recv_stock_id)) {
+	} elseif (!stock_master_entity::find($recv_stock_id)) {
 		display_error(_('Selected item does not exist.'));
 		$input_error = 1;
 	}
@@ -260,7 +260,7 @@ if (isset($_POST['SAVE_VMI'])) {
 	if (empty($vmi_stock_id)) {
 		display_error(_('You must select an item.'));
 		$input_error = 1;
-	} elseif (!get_item($vmi_stock_id)) {
+	} elseif (!stock_master_entity::find($vmi_stock_id)) {
 		display_error(_('Selected item does not exist.'));
 		$input_error = 1;
 	}

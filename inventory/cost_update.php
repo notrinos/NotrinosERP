@@ -105,7 +105,7 @@ else
 
 set_global_stock_item($_POST['stock_id']);
 
-$myrow = get_item($_POST['stock_id']);
+$myrow = stock_master_entity::find($_POST['stock_id']);
 
 div_start('cost_table');
 

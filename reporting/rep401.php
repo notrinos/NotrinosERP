@@ -85,7 +85,7 @@ function print_bill_of_material() {
 				$rep->NewLine(2, 3);
 			}
 			$rep->TextCol(0, 1, $trans['parent']);
-			$desc = get_item($trans['parent']);
+			$desc = stock_master_entity::find($trans['parent']);
 			$rep->TextCol(1, 2, $desc['description']);
 			$parent = $trans['parent'];
 			$rep->NewLine();

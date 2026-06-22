@@ -23,6 +23,7 @@ include_once($path_to_root.'/inventory/includes/db/items_locations_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_adjust_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_transfer_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_units_entity.inc');
+include_once($path_to_root.'/inventory/includes/db/stock_master_entity.inc');
 
 function item_img_name($stock_id) {
 	$stock_id = strtr($stock_id, "><\\/:|*?", '________');

@@ -32,7 +32,7 @@ page(_($help_context = 'Process Depreciation'), false, false, '', $js);
 //---------------------------------------------------------------------------------------------
 
 function check_data() {
-	$myrow = get_item($_POST['stock_id']);
+	$myrow = stock_master_entity::find($_POST['stock_id']);
 
 	if ($_POST['months'] > depreciation_months($myrow['depreciation_date'])) {
 		display_error(_('The number of months is greater than the timespan between the depreciation start and the end of the fiscal year.'));
@@ -49,7 +49,7 @@ function handle_submit() {
 	if (!check_data())
 		return;
 
-	$item = get_item($_POST['stock_id']);
+	$item = stock_master_entity::find($_POST['stock_id']);
 	$period = get_company_pref('depreciation_period'); 
 	$gl_rows = compute_gl_rows_for_depreciation($item, $_POST['months'], $period);
 	$trans_no = process_fixed_asset_depreciation($_POST['stock_id'], $gl_rows, $_POST['refline'], $_POST['memo_']);
@@ -85,7 +85,7 @@ check_db_has_depreciable_fixed_assets(_('There are no fixed assets that could be
 
 function show_gl_rows() {
 
-	$item = get_item($_POST['stock_id']);
+	$item = stock_master_entity::find($_POST['stock_id']);
 
 	hidden('stock_id');
 	hidden('months');
@@ -135,7 +135,7 @@ function show_gl_controls() {
 	 end_row();
 	end_table();
 
-	$myrow = get_item($_POST['stock_id']);
+	$myrow = stock_master_entity::find($_POST['stock_id']);
 
 	if (list_updated('stock_id') || !isset($_POST['months'])) {
 		//$_POST['depreciation_start'] = sql2date($myrow['depreciation_start']);

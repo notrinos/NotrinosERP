@@ -126,7 +126,7 @@ yesno_list_row(_('Type:'), 'PaymentType', null,	$wo_cost_types[WO_OVERHEAD], $wo
 if (list_updated('PaymentType'))
 	$Ajax->activate('costs');
 
-$item = get_item($wo_details['stock_id']);
+$item = stock_master_entity::find($wo_details['stock_id']);
 $r = get_default_bank_account(get_company_pref('curr_default'));
 $_POST['cr_acc'] = $r['account_code'];
 $_POST['costs'] = price_format(get_post('PaymentType')==WO_OVERHEAD ? $item['overhead_cost'] : $item['labour_cost']);

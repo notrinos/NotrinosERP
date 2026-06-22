@@ -190,7 +190,7 @@ function check_data() {
 		foreach ($_SESSION['supp_trans']->grn_items as $n => $item) {
 			if (is_inventory_item($item->item_code)) {
 				if (check_negative_stock($item->item_code, -$item->this_quantity_inv, null, $_SESSION['supp_trans']->tran_date)) {
-					$stock = get_item($item->item_code);
+					$stock = stock_master_entity::find($item->item_code);
 					display_error(_('The return cannot be processed because there is an insufficient quantity for item:').' '.$stock['stock_id'].' - '.$stock['description'].' - '._('Quantity On Hand').' = '.number_format2(get_qoh_on_date($stock['stock_id'], null, $_SESSION['supp_trans']->tran_date), get_qty_dec($stock['stock_id'])));
 					return false;
 				}
