@@ -71,20 +71,50 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 		begin_transaction();
 		if ($selected_id != -1) {
-			update_branch($_POST['customer_id'], $_POST['branch_code'], $_POST['br_name'], $_POST['br_ref'],
-				$_POST['br_address'], $_POST['salesman'], $_POST['area'], $_POST['tax_group_id'], $_POST['sales_account'],
-				$_POST['sales_discount_account'], $_POST['receivables_account'], $_POST['payment_discount_account'],
-				$_POST['default_location'], $_POST['br_post_address'], $_POST['group_no'],
-				$_POST['default_ship_via'], $_POST['notes'], $_POST['bank_account']);
+			cust_branch_entity::modify(
+				array('branch_code' => $_POST['branch_code'], 'debtor_no' => $_POST['customer_id']),
+				array(
+					'br_name' => $_POST['br_name'],
+					'branch_ref' => $_POST['br_ref'],
+					'br_address' => $_POST['br_address'],
+					'salesman' => $_POST['salesman'],
+					'area' => $_POST['area'],
+					'tax_group_id' => $_POST['tax_group_id'],
+					'sales_account' => $_POST['sales_account'],
+					'sales_discount_account' => $_POST['sales_discount_account'],
+					'receivables_account' => $_POST['receivables_account'],
+					'payment_discount_account' => $_POST['payment_discount_account'],
+					'default_location' => $_POST['default_location'],
+					'br_post_address' => $_POST['br_post_address'],
+					'group_no' => $_POST['group_no'],
+					'default_ship_via' => $_POST['default_ship_via'],
+					'notes' => $_POST['notes'],
+					'bank_account' => $_POST['bank_account']
+				)
+			);
 
 			$note =_('Selected customer branch has been updated');
 		}
 		else {
-			add_branch($_POST['customer_id'], $_POST['br_name'], $_POST['br_ref'],
-				$_POST['br_address'], $_POST['salesman'], $_POST['area'], $_POST['tax_group_id'], $_POST['sales_account'],
-				$_POST['sales_discount_account'], $_POST['receivables_account'], $_POST['payment_discount_account'],
-				$_POST['default_location'], $_POST['br_post_address'], $_POST['group_no'],
-				$_POST['default_ship_via'], $_POST['notes'], $_POST['bank_account']);
+			cust_branch_entity::create(array(
+				'debtor_no' => $_POST['customer_id'],
+				'br_name' => $_POST['br_name'],
+				'branch_ref' => $_POST['br_ref'],
+				'br_address' => $_POST['br_address'],
+				'salesman' => $_POST['salesman'],
+				'area' => $_POST['area'],
+				'tax_group_id' => $_POST['tax_group_id'],
+				'sales_account' => $_POST['sales_account'],
+				'sales_discount_account' => $_POST['sales_discount_account'],
+				'receivables_account' => $_POST['receivables_account'],
+				'payment_discount_account' => $_POST['payment_discount_account'],
+				'default_location' => $_POST['default_location'],
+				'br_post_address' => $_POST['br_post_address'],
+				'group_no' => $_POST['group_no'],
+				'default_ship_via' => $_POST['default_ship_via'],
+				'notes' => $_POST['notes'],
+				'bank_account' => $_POST['bank_account']
+			));
 			$selected_id = db_insert_id();
 
 			add_crm_person($_POST['contact_name'], $_POST['contact_name'], '', $_POST['br_post_address'], 
@@ -110,7 +140,7 @@ elseif ($Mode == 'Delete') {
 		if (branch_in_foreign_table($_POST['customer_id'], $_POST['branch_code'], 'sales_orders'))
 			display_error(_('Cannot delete this branch because sales orders exist for it. Purge old sales orders first.'));
 		else {
-			delete_branch($_POST['customer_id'], $_POST['branch_code']);
+			cust_branch_entity::remove(array('branch_code' => $_POST['branch_code'], 'debtor_no' => $_POST['customer_id']));
 			display_notification(_('Selected customer branch has been deleted'));
 		}
 	}

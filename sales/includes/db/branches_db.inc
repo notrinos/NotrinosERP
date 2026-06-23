@@ -16,56 +16,14 @@
  */
 include_once($path_to_root.'/sales/includes/db/cust_branch_entity.inc');
 
-function add_branch($customer_id, $br_name, $br_ref, $br_address, $salesman, $area, $tax_group_id, $sales_account, $sales_discount_account, $receivables_account, $payment_discount_account, $default_location, $br_post_address, $group_no, $default_ship_via, $notes, $bank_account) {
-	return cust_branch_entity::create(array(
-		'debtor_no' => $customer_id,
-		'br_name' => $br_name,
-		'branch_ref' => $br_ref,
-		'br_address' => $br_address,
-		'salesman' => $salesman,
-		'area' => $area,
-		'tax_group_id' => $tax_group_id,
-		'sales_account' => $sales_account,
-		'sales_discount_account' => $sales_discount_account,
-		'receivables_account' => $receivables_account,
-		'payment_discount_account' => $payment_discount_account,
-		'default_location' => $default_location,
-		'br_post_address' => $br_post_address,
-		'group_no' => $group_no,
-		'default_ship_via' => $default_ship_via,
-		'notes' => $notes,
-		'bank_account' => $bank_account
-	));
-}
-
-function update_branch($customer_id, $branch_code, $br_name, $br_ref, $br_address, $salesman, $area, $tax_group_id, $sales_account, $sales_discount_account, $receivables_account, $payment_discount_account, $default_location, $br_post_address, $group_no, $default_ship_via, $notes, $bank_account) {
-	return cust_branch_entity::modify(
-		array('branch_code' => $branch_code, 'debtor_no' => $customer_id),
-		array(
-			'br_name' => $br_name,
-			'branch_ref' => $br_ref,
-			'br_address' => $br_address,
-			'salesman' => $salesman,
-			'area' => $area,
-			'tax_group_id' => $tax_group_id,
-			'sales_account' => $sales_account,
-			'sales_discount_account' => $sales_discount_account,
-			'receivables_account' => $receivables_account,
-			'payment_discount_account' => $payment_discount_account,
-			'default_location' => $default_location,
-			'br_post_address' => $br_post_address,
-			'group_no' => $group_no,
-			'default_ship_via' => $default_ship_via,
-			'notes' => $notes,
-			'bank_account' => $bank_account
-		)
-	);
-}
-
-function delete_branch($customer_id, $branch_code) {
-	return cust_branch_entity::remove(array('branch_code' => $branch_code, 'debtor_no' => $customer_id));
-}
-
+/**
+ * Check if a branch is referenced in a given foreign table.
+ *
+ * @param string $customer_id
+ * @param string $branch_code
+ * @param string $table
+ * @return bool
+ */
 function branch_in_foreign_table($customer_id, $branch_code, $table) {
 	$sql= "SELECT COUNT(*) FROM ".TB_PREF."$table WHERE branch_code=".db_escape($branch_code)
 		." AND debtor_no = ".db_escape($customer_id);

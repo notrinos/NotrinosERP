@@ -94,7 +94,24 @@ function handle_submit(&$selected_id) {
 		$selected_id = $_POST['customer_id'] = db_insert_id();
 		 
 		if (isset($SysPrefs->auto_create_branch) && $SysPrefs->auto_create_branch == 1) {
-			add_branch($selected_id, $_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['salesman'], $_POST['area'], $_POST['tax_group_id'], '', get_company_pref('default_sales_discount_act'), get_company_pref('debtors_act'), get_company_pref('default_prompt_payment_act'), $_POST['location'], $_POST['address'], 0, $_POST['ship_via'], $_POST['notes'], $_POST['bank_account']);
+			cust_branch_entity::create(array(
+				'debtor_no' => $selected_id,
+				'br_name' => $_POST['CustName'],
+				'branch_ref' => $_POST['cust_ref'],
+				'br_address' => $_POST['address'],
+				'salesman' => $_POST['salesman'],
+				'area' => $_POST['area'],
+				'tax_group_id' => $_POST['tax_group_id'],
+				'sales_discount_account' => get_company_pref('default_sales_discount_act'),
+				'receivables_account' => get_company_pref('debtors_act'),
+				'payment_discount_account' => get_company_pref('default_prompt_payment_act'),
+				'default_location' => $_POST['location'],
+				'br_post_address' => $_POST['address'],
+				'group_no' => 0,
+				'default_ship_via' => $_POST['ship_via'],
+				'notes' => $_POST['notes'],
+				'bank_account' => $_POST['bank_account']
+			));
 				
 			$selected_branch = db_insert_id();
 		
