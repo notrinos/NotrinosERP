@@ -18,29 +18,13 @@
 */
 include_once($path_to_root.'/inventory/includes/db/items_codes_entity.inc');
 
-function update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign=0) {
-	return item_codes_entity::update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign);
-}
-
-function add_item_code($item_code, $stock_id, $description, $category, $qty, $foreign=0) {
-	return item_codes_entity::create(array(
-		'item_code' => $item_code,
-		'stock_id' => $stock_id,
-		'description' => $description,
-		'category_id' => $category,
-		'quantity' => $qty,
-		'is_foreign' => $foreign
-	));
-}
-
-function delete_item_code($id) {
-	return item_codes_entity::remove($id);
-}
-
-function get_item_code($id) {
-	return item_codes_entity::find($id);
-}
-
+/**
+ * Get all item codes for a stock item (with JOIN to stock_category).
+ *
+ * @param string $stock_id
+ * @param int    $foreign  1 = foreign codes, 0 = kit components
+ * @return ADORecordSet|resource
+ */
 function get_all_item_codes($stock_id, $foreign=1) {
 	$sql="SELECT i.*, c.description as cat_name FROM "
 		.TB_PREF."item_codes as i,"

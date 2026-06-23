@@ -104,13 +104,20 @@ function update_kit($selected_kit, $component_id) {
 		else
 			$msg =_('New component has been added to selected kit.');
 
-		add_item_code($selected_kit, get_post('component'), get_post('description'), get_post('category'), input_num('quantity'), 0);
+		item_codes_entity::create(array(
+			'item_code' => $selected_kit,
+			'stock_id' => get_post('component'),
+			'description' => get_post('description'),
+			'category_id' => get_post('category'),
+			'quantity' => input_num('quantity'),
+			'is_foreign' => 0
+		));
 		display_notification($msg);
 
 	}
 	else { // update component
 		$props = get_kit_props($selected_kit);
-		update_item_code($component_id, $selected_kit, get_post('component'), $props['description'], $props['category_id'], input_num('quantity'), 0);
+		item_codes_entity::update_item_code($component_id, $selected_kit, get_post('component'), $props['description'], $props['category_id'], input_num('quantity'), 0);
 		display_notification(_('Component of selected kit has been updated.'));
 	}
 	$Mode = 'RESET';
@@ -152,7 +159,7 @@ if ($Mode == 'Delete') {
 		display_error($msg);
 	}
 	else {
-		delete_item_code($selected_id);
+		item_codes_entity::remove($selected_id);
 		display_notification(_('The component item has been deleted from this bom'));
 		$Mode = 'RESET';
 	}
@@ -213,7 +220,7 @@ else { // Kit selected so display bom or edit component
 }
 
 if ($Mode == 'Edit') {
-	$myrow = get_item_code($selected_id);
+	$myrow = item_codes_entity::find($selected_id);
 	$_POST['component'] = $myrow['stock_id'];
 	$_POST['quantity'] = number_format2($myrow['quantity'], get_qty_dec($myrow['stock_id']));
 }

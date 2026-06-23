@@ -58,12 +58,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	
 	if ($input_error == 0) {
 		if ($Mode == 'ADD_ITEM') {
-			add_item_code($_POST['item_code'], $_POST['stock_id'], $_POST['description'], $_POST['category_id'], $_POST['quantity'], 1); 
+			item_codes_entity::create(array(
+				'item_code' => $_POST['item_code'],
+				'stock_id' => $_POST['stock_id'],
+				'description' => $_POST['description'],
+				'category_id' => $_POST['category_id'],
+				'quantity' => $_POST['quantity'],
+				'is_foreign' => 1
+			));
 
 			display_notification(_('New item code has been added.'));
 		}
 		else {
-			update_item_code($selected_id, $_POST['item_code'], $_POST['stock_id'], $_POST['description'], $_POST['category_id'], $_POST['quantity'], 1); 
+			item_codes_entity::update_item_code($selected_id, $_POST['item_code'], $_POST['stock_id'], $_POST['description'], $_POST['category_id'], $_POST['quantity'], 1);
 
 			display_notification(_('Item code has been updated.'));
 		}
@@ -74,7 +81,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 //--------------------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-	delete_item_code($selected_id);
+	item_codes_entity::remove($selected_id);
 	
 	display_notification(_('Item code has been successfully deleted.'));
 	$Mode = 'RESET';
@@ -151,7 +158,7 @@ div_end();
 
 if ($selected_id != '') {
 	if ($Mode =='Edit') {
-		$myrow = get_item_code($selected_id);
+		$myrow = item_codes_entity::find($selected_id);
 		$_POST['item_code'] = $myrow['item_code'];
 		$_POST['quantity'] = $myrow['quantity'];
 		$_POST['description'] = $myrow['description'];
