@@ -18,6 +18,7 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/banking.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root . '/sales/includes/db/debtors_master_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -109,7 +110,7 @@ function print_inventory_sales() {
 	if ($fromcust == '')
 		$fromc = _('All');
 	else
-		$fromc = get_customer_name($fromcust);
+		$fromc = debtors_master_entity::name($fromcust);
 	if ($show_service) $show_service_items = _('Yes');
 	else $show_service_items = _('No');
 

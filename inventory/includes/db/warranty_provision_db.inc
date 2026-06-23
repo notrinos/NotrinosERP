@@ -372,7 +372,7 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 		$warranty_end = add_days($date_, $item['warranty_days']);
 
 		// Get dimensions
-		$customer = get_customer($delivery->customer_id);
+		$customer = debtors_master_entity::find($delivery->customer_id);
 		$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
 		$dim = ($delivery->dimension_id != $customer['dimension_id'] ? $delivery->dimension_id :
 			($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));

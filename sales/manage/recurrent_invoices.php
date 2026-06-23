@@ -14,6 +14,7 @@ $path_to_root = '../..';
 include($path_to_root . '/includes/session.inc');
 include($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/sales/includes/sales_db.inc');
+include_once($path_to_root . '/sales/includes/db/debtors_master_entity.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)
@@ -127,7 +128,7 @@ while ($myrow = db_fetch($result)) {
 		label_cell(sales_group_entity::name($myrow['group_no']));
 	}	
 	else {
-		label_cell(get_customer_name($myrow['debtor_no']));
+		label_cell(debtors_master_entity::name($myrow['debtor_no']));
 		label_cell(get_branch_name($myrow['group_no']));
 	}	
 	label_cell($myrow['days']);

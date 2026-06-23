@@ -17,7 +17,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/sales/includes/db/areas_entity.inc');
-include_once($path_to_root.'/sales/includes/db/customers_db.inc');
+include_once($path_to_root.'/sales/includes/db/debtors_master_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ function print_customer_balances() {
 		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	$cust = $fromcust == ALL_TEXT ? _('All') : get_customer_name($fromcust);
+	$cust = $fromcust == ALL_TEXT ? _('All') : debtors_master_entity::name($fromcust);
 	$dec = user_price_dec();
 
 	if ($area == ALL_NUMERIC)

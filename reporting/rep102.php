@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/sales/includes/db/debtors_master_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ function print_aged_customer_analysis() {
 		$pg = new graph();
 	}
 
-	$from = $fromcust == ALL_TEXT ? _('All') : get_customer_name($fromcust);
+	$from = $fromcust == ALL_TEXT ? _('All') : debtors_master_entity::name($fromcust);
 	$dec = user_price_dec();
 
 	$summary = $summaryOnly == 1 ? _('Summary Only') : _('Detailed Report');

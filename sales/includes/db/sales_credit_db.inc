@@ -271,7 +271,7 @@ function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $
 
 function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $credit_type, $write_off_gl_code, &$branch_data) {
 	$stock_gl_codes = get_stock_gl_code($order_line->stock_id);
-	$customer = get_customer($order->customer_id);
+	$customer = debtors_master_entity::find($order->customer_id);
 	// If there is a Customer Dimension, then override with this,
 	// else take the Item Dimension (if any)
 	$dim = ($order->dimension_id != $customer['dimension_id'] ? $order->dimension_id : 

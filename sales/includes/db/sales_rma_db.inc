@@ -510,7 +510,7 @@ function get_sales_rma_document_defaults($debtor_no, $branch_code)
 	include_once($path_to_root . '/sales/includes/db/customers_db.inc');
 	include_once($path_to_root . '/sales/includes/db/branches_db.inc');
 
-	$customer_row = get_customer($debtor_no);
+	$customer_row = debtors_master_entity::find($debtor_no);
 	$branch = false;
 
 	if ($branch_code > 0)

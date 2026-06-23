@@ -22,7 +22,7 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 	$delivery->bo_policy = $bo_policy;
 	hook_db_prewrite($delivery, ST_CUSTDELIVERY);
 
-	$customer = get_customer($delivery->customer_id);
+	$customer = debtors_master_entity::find($delivery->customer_id);
 
 	add_new_exchange_rate($customer['curr_code'], $delivery->document_date, $delivery->ex_rate);
 

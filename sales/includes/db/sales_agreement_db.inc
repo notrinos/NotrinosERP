@@ -877,7 +877,7 @@ function create_order_from_agreement($agreement_id, $line_selections = array())
 
 	update_sales_agreement_fulfillment($agreement_id);
 
-	$customer_row = get_customer($agreement['debtor_no']);
+	$customer_row = debtors_master_entity::find($agreement['debtor_no']);
 	if (!$customer_row)
 		return 0;
 

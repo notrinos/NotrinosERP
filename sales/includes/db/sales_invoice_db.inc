@@ -33,7 +33,7 @@ function write_sales_invoice(&$invoice) {
 
 	$branch_data = get_branch_accounts($invoice->Branch);
 
-	$customer = get_customer($invoice->customer_id);
+	$customer = debtors_master_entity::find($invoice->customer_id);
 
 	add_new_exchange_rate($customer['curr_code'], $date_, $invoice->ex_rate);
 

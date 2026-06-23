@@ -35,7 +35,7 @@ while ($myrow = db_fetch($result)) {
 		label_cell(sales_group_entity::name($myrow['group_no']));
 	}
 	else {
-		label_cell(get_customer_name($myrow['debtor_no']));
+		label_cell(debtors_master_entity::name($myrow['debtor_no']));
 		label_cell(get_branch_name($myrow['group_no']));
 	}
 	label_cell(calculate_next_invoice($myrow), "align='center'");

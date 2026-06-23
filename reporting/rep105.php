@@ -15,6 +15,7 @@ $path_to_root = '..';
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
+include_once($path_to_root . '/sales/includes/db/debtors_master_entity.inc');
 include_once($path_to_root . '/sales/includes/sales_db.inc');
 include_once($path_to_root . '/inventory/includes/db/items_category_db.inc');
 
@@ -135,7 +136,7 @@ function print_order_status_list() {
 				$rep->NewLine();
 			}
 			$rep->TextCol(0, 1,	$myrow['order_no']);
-			$rep->TextCol(1, 2,	get_customer_name($myrow['debtor_no']));
+			$rep->TextCol(1, 2,	debtors_master_entity::name($myrow['debtor_no']));
 			$rep->TextCol(2, 3,	get_branch_name($myrow['branch_code']));
 			$rep->TextCol(3, 4,	$myrow['customer_ref']);
 			$rep->DateCol(4, 5,	$myrow['ord_date'], true);

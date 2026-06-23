@@ -17,6 +17,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
+include_once($path_to_root.'/sales/includes/db/debtors_master_entity.inc');
 include_once($path_to_root.'/sales/includes/sales_db.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
 
@@ -343,7 +344,7 @@ if ($cust_currency != $bank_currency)
 
 amount_row(_('Bank Charge:'), 'charge', null, '', $bank_currency);
 
-$row = get_customer($_POST['customer_id']);
+$row = debtors_master_entity::find((int)$_POST['customer_id']);
 $_POST['dimension_id'] = isset($row['dimension_id']) ? $row['dimension_id'] : 0;
 $_POST['dimension2_id'] = isset($row['dimension2_id']) ? $row['dimension2_id'] : 0;
 $dim = get_company_pref('use_dimension');

@@ -169,7 +169,7 @@ class Cart {
 		
 		if ($type == ST_CUSTDELIVERY) {
 			$this->order_no = key($this->trans_no);
-			$cust = get_customer($this->customer_id);
+			$cust = debtors_master_entity::find($this->customer_id);
 			$this->dimension_id = $cust['dimension_id'];
 			$this->dimension2_id = $cust['dimension2_id'];
 		}
@@ -268,7 +268,7 @@ class Cart {
 					if ($this->customer_id == '')
 						$this->dimension_id = 0;
 					else {
-						$cust = get_customer($this->customer_id);
+						$cust = debtors_master_entity::find($this->customer_id);
 						$this->dimension_id = $cust['dimension_id'];
 					}	
 					if ($dim > 1) {
