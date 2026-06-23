@@ -169,7 +169,7 @@ function barcode_lookup($scan_data) {
 	}
 
 	// Step 4: Try item stock_id exact match
-	$item = get_item($scan_data);
+	$item = stock_master_entity::find($scan_data);
 	if ($item) {
 		$result['success'] = true;
 		$result['type'] = 'item';
@@ -292,7 +292,7 @@ function lookup_item_by_gtin($gtin) {
 	}
 
 	// Try stock_id directly (for items where stock_id is the barcode)
-	$item = get_item($gtin);
+	$item = stock_master_entity::find($gtin);
 	if ($item) {
 		return format_item_match($item);
 	}
@@ -349,7 +349,7 @@ function lookup_items_by_description($search) {
 /**
  * Format an item record as a match result.
  *
- * @param array $item Item record from get_item()
+ * @param array $item Item record from stock_master_entity::find()
  * @return array Formatted match data
  */
 function format_item_match($item) {

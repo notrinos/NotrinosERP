@@ -289,7 +289,7 @@ function consume_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 	}
 
 	// 2. Create stock move — positive qty = stock in (now owned)
-	$item_row = get_item($stock_id);
+	$item_row = stock_master_entity::find($stock_id);
 	$std_cost = $item_row ? $item_row['material_cost'] : $unit_cost;
 	$move_id = add_stock_move(ST_INVADJUST, $stock_id, 0, $loc_code, $date_,
 		'CONSIGN-' . $consignment_id, $qty, $std_cost, $unit_cost);

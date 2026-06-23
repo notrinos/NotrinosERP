@@ -867,7 +867,7 @@ class line_details {
 		$this->id = $id;
 		$this->src_no = $src_no;
 		$this->src_id = $src_id;
-		$item_row = get_item($stock_id);
+		$item_row = stock_master_entity::find($stock_id);
 
 		if (!$item_row) 
 			return;

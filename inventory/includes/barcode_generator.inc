@@ -849,7 +849,7 @@ function get_serial_label_data($serial_id) {
 		return false;
 	}
 
-	$item = get_item($serial['stock_id']);
+	$item = stock_master_entity::find($serial['stock_id']);
 	$item_name = $item ? $item['description'] : $serial['stock_id'];
 
 	$subtitle_parts = array();
@@ -877,7 +877,7 @@ function get_batch_label_data($batch_id) {
 		return false;
 	}
 
-	$item = get_item($batch['stock_id']);
+	$item = stock_master_entity::find($batch['stock_id']);
 	$item_name = $item ? $item['description'] : $batch['stock_id'];
 
 	$subtitle_parts = array();
@@ -903,7 +903,7 @@ function get_batch_label_data($batch_id) {
  * @return array|false Label data array or false
  */
 function get_item_label_data($stock_id) {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item) {
 		return false;
 	}

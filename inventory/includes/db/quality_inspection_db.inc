@@ -328,7 +328,7 @@ function get_quality_parameters($stock_id = null, $category_id = null, $type = n
  */
 function get_quality_parameters_for_item($stock_id)
 {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	$category_id = $item ? $item['category_id'] : 0;
 
 	$sql = "SELECT *, id AS parameter_id FROM " . TB_PREF . "quality_parameters "

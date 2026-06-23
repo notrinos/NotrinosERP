@@ -886,7 +886,7 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
 	if (!can_save_purch_rfq_item_data($stock_id, $quantity, $target_price, $error_message))
 		return false;
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item) {
 		$error_message = _('The selected item could not be found.');
 		return false;
@@ -959,7 +959,7 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 	if (!can_save_purch_rfq_item_data($stock_id, $quantity, $target_price, $error_message))
 		return false;
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item)
 		return false;
 

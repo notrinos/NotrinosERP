@@ -203,7 +203,7 @@ class po_line_details {
 		/* Constructor function to add a new LineDetail object with passed params */
 		$this->line_no = $line_no;
 		$this->stock_id = $stock_item;
-		$item_row = get_item($stock_item);
+		$item_row = stock_master_entity::find($stock_item);
 		if (!$item_row) 
 			return;
 

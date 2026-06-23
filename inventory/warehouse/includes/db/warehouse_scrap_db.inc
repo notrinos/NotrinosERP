@@ -383,7 +383,7 @@ function estimate_scrap_total_cost($stock_id, $qty)
 function get_scrap_submission_data($stock_id, $qty, $loc_code, $date_, $reason_code, $reason_detail = '',
 	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = '')
 {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	$reason_label = get_scrap_reason_label($reason_code);
 
 	return array(

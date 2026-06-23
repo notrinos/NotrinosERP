@@ -639,7 +639,7 @@ function get_cycle_count_approval_amount($count_id)
         if ($variance == 0)
             continue;
 
-        $item = get_item($line['stock_id']);
+        $item = stock_master_entity::find($line['stock_id']);
         $cost = $item ? (float)$item['material_cost'] : 0;
         $amount += abs($variance * $cost);
     }
@@ -667,7 +667,7 @@ function get_cycle_count_submission_data($count_id)
         if ($variance == 0)
             continue;
 
-        $item = get_item($line['stock_id']);
+        $item = stock_master_entity::find($line['stock_id']);
         $cost = $item ? (float)$item['material_cost'] : 0;
 
         $line_data[] = array(
@@ -931,7 +931,7 @@ function post_cycle_count_adjustments($count_id) {
         $has_variances = true;
 
         // Get item standard cost
-        $item_row = get_item($line['stock_id']);
+        $item_row = stock_master_entity::find($line['stock_id']);
         $standard_cost = $item_row ? $item_row['material_cost'] : 0;
 
         // Update average material cost for positive adjustments

@@ -13,7 +13,7 @@
 function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_) {
 	global $Refs;
 
-	$row = get_item($stock_id);
+	$row = stock_master_entity::find($stock_id);
 	$old_cost = $row['material_cost'];
 
 	begin_transaction();
@@ -107,47 +107,3 @@ function get_sql_for_fixed_assets($show_inactive = false) {
 
 	return $sql;
 }
-
-//--------------------------------------------------------------------------------------------------
-
-//function get_sql_for_fa_journal_inquiry($stock_id)
-//{
-//
-//	$sql = "SELECT	IF(ISNULL(a.gl_seq),0,a.gl_seq) as gl_seq,
-//		gl.tran_date,
-//		gl.type as trans_type,
-//		gl.type_no as trans_no,
-//		IFNULL(max(supp.supp_name), max(cust.name)) as name,
-//		refs.reference,
-//		SUM(IF(gl.amount>0, gl.amount,0)) as amount,
-//		com.memo_,
-//		IF(ISNULL(u.login_id),'',u.login_id) as login_id";
-//
-//	$sql.= " FROM ".TB_PREF."gl_trans as gl
-//		 LEFT JOIN ".TB_PREF."audit_trail as a ON
-//			(gl.type=a.type AND gl.type_no=a.trans_no)
-//		 LEFT JOIN ".TB_PREF."comments as com ON
-//			(gl.type=com.type AND gl.type_no=com.id)
-//		 LEFT JOIN ".TB_PREF."refs as refs ON
-//			(gl.type=refs.type AND gl.type_no=refs.id)
-//		 LEFT JOIN ".TB_PREF."users as u ON
-//			a.user=u.id
-//	 	 LEFT JOIN ".TB_PREF."debtor_trans dt ON dt.type=gl.type AND gl.type_no=dt.trans_no
-//	 	 LEFT JOIN ".TB_PREF."debtors_master cust ON gl.person_type_id=2 AND gl.person_id=cust.debtor_no
-//	 	 LEFT JOIN ".TB_PREF."supp_trans st ON st.type=gl.type AND gl.type_no=st.trans_no
-//	 	 LEFT JOIN ".TB_PREF."suppliers supp ON gl.person_type_id=3 AND gl.person_id=supp.supplier_id
-//		 WHERE gl.amount!=0
-//     AND NOT ISNULL(a.gl_seq)";
-//
-////	if (!$alsoclosed) {
-////		$sql .= " AND gl_seq=0";
-////	}
-//// 	else
-//// 		$sql .= " AND NOT ISNULL(a.gl_seq)";
-//
-//	$sql .= " GROUP BY tran_date, gl_seq, trans_type, trans_no";
-//
-//	return $sql;
-//}
-
-//--------------------------------------------------------------------------------------------------

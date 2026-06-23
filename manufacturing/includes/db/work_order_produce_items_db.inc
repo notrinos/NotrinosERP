@@ -405,7 +405,7 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 
 				// Calculate expiry from shelf life if not provided
 				if (empty($batch_expiry)) {
-					$item_data = get_item($product['stock_id']);
+					$item_data = stock_master_entity::find($product['stock_id']);
 					if ($item_data && !empty($item_data['shelf_life_days'])) {
 						$batch_expiry = add_days($date_, (int)$item_data['shelf_life_days']);
 					}
@@ -446,7 +446,7 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 			}
 
 			// --- QC check: if item requires quality inspection, create inspection record ---
-			$item_data = get_item($product['stock_id']);
+			$item_data = stock_master_entity::find($product['stock_id']);
 			if ($item_data && !empty($item_data['quality_inspection_required'])) {
 				// Mark serials as quarantine pending inspection
 				foreach ($finished_serial_ids as $fs_id) {

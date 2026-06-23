@@ -344,7 +344,7 @@ function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $w
 		$unit_cost = get_unit_cost($item->stock_id);
 		$issue_cost = $unit_cost * $item->quantity;
 
-		$stockitem = get_item($item->stock_id);
+		$stockitem = stock_master_entity::find($item->stock_id);
 
 		// Compatibility for Service Items
 		if (!is_service($stockitem['mb_flag']))
@@ -355,7 +355,7 @@ function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $w
 		$total_cost += add_gl_trans_std_cost(ST_MANUISSUE, $number, $date_, $ivaccount, 0, 0, $date_.': '._('Issue of').' '.$stockitem['description'], -$issue_cost);
 	}
 
-	$stockitem = get_item($wo['stock_id']);
+	$stockitem = stock_master_entity::find($wo['stock_id']);
 
 	$wip_account = $stockitem['wip_account'];
 

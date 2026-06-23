@@ -855,7 +855,7 @@ function get_agreement_lines($agreement_id)
  */
 function get_purchase_agreement_item($stock_id)
 {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if ($item)
 		return $item;
 

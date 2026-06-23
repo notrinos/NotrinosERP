@@ -43,7 +43,7 @@ function delete_wo_costing($trans_type, $trans_no) {
 function update_material_cost($stock_id, $qty, $unit_cost, $date) {
 	global $Refs;
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	$avg_cost =  $item['material_cost'];
 
 	$qoh = get_qoh_on_date($stock_id, null, $date);

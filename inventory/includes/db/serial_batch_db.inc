@@ -176,7 +176,7 @@ function render_tracking_number_format($format, $prefix, $seq, $timestamp = null
  */
 function generate_tracking_identifier($stock_id, $format, $default_format, $prefix_field,
 	$default_prefix, $sequence_getter, $duplicate_check) {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	$resolved_format = resolve_tracking_number_format($format, $default_format);
 	$normalized_prefix = null;
 	$prefix_value = isset($item[$prefix_field]) ? $item[$prefix_field] : null;
@@ -436,7 +436,7 @@ function get_grn_serial_ids_from_json($serial_numbers_json, $stock_id = '') {
  * @return string 'none'|'serial'|'batch'|'serial_batch'
  */
 function get_item_tracking_mode($stock_id) {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	return isset($item['track_by']) ? $item['track_by'] : 'none';
 }
 

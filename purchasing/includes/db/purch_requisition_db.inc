@@ -734,7 +734,7 @@ function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_
 		return false;
 	}
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item) {
 		$error_message = _('The selected item could not be found.');
 		return false;
@@ -821,7 +821,7 @@ function update_requisition_line($line_id, $stock_id, $quantity, $estimated_pric
 	if (!$requisition)
 		return false;
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item)
 		return false;
 

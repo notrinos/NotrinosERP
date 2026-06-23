@@ -410,7 +410,7 @@ class line_item {
 	var $standard_cost;
 
 	function __construct($stock_id, $qty, $standard_cost=null, $description=null) {
-		$item_row = get_item($stock_id);
+		$item_row = stock_master_entity::find($stock_id);
 
 		if ($item_row == null)
 			display_error("invalid item added to order : $stock_id", '');

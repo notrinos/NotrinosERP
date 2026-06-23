@@ -51,7 +51,7 @@ function display_bom($item_check) {
 			}
 		}
 
-		$item = get_item($item_check);
+		$item = stock_master_entity::find($item_check);
 		if ($item['labour_cost'] != 0) {
 			$total_cost += $item['labour_cost'];
 			alt_table_row_color($k);

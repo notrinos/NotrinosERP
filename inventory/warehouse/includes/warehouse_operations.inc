@@ -1572,7 +1572,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		}
 
 		// Quality inspection required?
-		$item_data = get_item($stock_id);
+		$item_data = stock_master_entity::find($stock_id);
 		$qc_required = isset($item_data['quality_inspection_required']) && $item_data['quality_inspection_required'];
 		if ($qc_required)
 			$has_qc_required_items = true;
@@ -2003,7 +2003,7 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 							$warranty_end = add_days($date_, (int)$serial['warranty_days']);
 						} else {
 							// Check item-level warranty
-							$item_data = get_item($stock_id);
+							$item_data = stock_master_entity::find($stock_id);
 							if ($item_data && !empty($item_data['warranty_days'])) {
 								$warranty_end = add_days($date_, (int)$item_data['warranty_days']);
 							}

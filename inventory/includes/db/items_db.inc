@@ -112,17 +112,6 @@ function delete_item($stock_id) {
 	delete_item_kit($stock_id);
 }
 
-function get_item($stock_id) {
-	$sql = "SELECT item.*, taxtype.name AS tax_type_name
-		FROM ".TB_PREF."stock_master item,"
-			.TB_PREF."item_tax_types taxtype
-		WHERE taxtype.id=item.tax_type_id
-		AND stock_id=".db_escape($stock_id);
-	$result = db_query($sql, 'an item could not be retreived');
-
-	return db_fetch_assoc($result);
-}
-
 function get_items($fixed_asset = 0) {
 	$sql = "SELECT * FROM ".TB_PREF."stock_master WHERE fixed_asset=".db_escape($fixed_asset);
 	return db_query($sql, 'items could not be retreived');

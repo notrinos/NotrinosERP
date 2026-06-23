@@ -423,7 +423,7 @@ function bulk_create_stock_batches($stock_id, $count, $status = 'active',
 
 	// Auto-calculate expiry from shelf_life if not provided
 	if (!$expiry_date && $manufacturing_date) {
-		$item = get_item($stock_id);
+		$item = stock_master_entity::find($stock_id);
 		if ($item && $item['shelf_life_days'] > 0) {
 			$mfg_ts = strtotime(date2sql($manufacturing_date));
 			if ($mfg_ts)
@@ -739,7 +739,7 @@ function get_fifo_batches($stock_id, $loc_code = '', $qty_needed = 0) {
  * @return array Array of ['batch_id' => id, 'batch_no' => no, 'qty' => allocated_qty]
  */
 function allocate_batches($stock_id, $qty, $loc_code = '') {
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	$strategy = isset($item['removal_strategy']) && $item['removal_strategy']
 		? $item['removal_strategy'] : 'fefo';
 
@@ -1038,7 +1038,7 @@ function calculate_expiry_from_shelf_life($stock_id, $manufacturing_date) {
 	if (!$manufacturing_date)
 		return null;
 
-	$item = get_item($stock_id);
+	$item = stock_master_entity::find($stock_id);
 	if (!$item || !$item['shelf_life_days'] || $item['shelf_life_days'] <= 0)
 		return null;
 

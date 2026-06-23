@@ -45,7 +45,7 @@ function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date
 	hook_db_postwrite($args, ST_WORKORDER);
 
 	if ($type != WO_ADVANCED) {
-		$stockitem = get_item($stock_id);
+		$stockitem = stock_master_entity::find($stock_id);
 		release_work_order($woid, $date_, '');
 		if ($costs != 0)
 			add_wo_costs_journal($woid, $costs, WO_OVERHEAD, $cr_acc, $date_, $stockitem['dimension_id'], $stockitem['dimension2_id']);
