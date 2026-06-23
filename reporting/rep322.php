@@ -54,7 +54,7 @@ function print_supplier_quality_report()
 	$orientation = ($orientation ? 'L' : 'P');
 
 	if ($supplier_id == ALL_NUMERIC) $supplier_id = null;
-	$supp_name = $supplier_id ? get_supplier_name($supplier_id) : _('All');
+	$supp_name = $supplier_id ? suppliers_entity::name($supplier_id) : _('All');
 
 	$cols = array(0, 140, 200, 260, 320, 380, 450, 515);
 	$headers = array(_('Supplier'), _('Total'), _('Passed'), _('Failed'), _('Conditional'), _('Reject %'), _('Items'));

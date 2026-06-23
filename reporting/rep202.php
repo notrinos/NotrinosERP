@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/purchasing/includes/db/suppliers_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -84,7 +85,7 @@ function print_aged_supplier_analysis() {
 		$pg = new graph();
 	}
 
-	$from = $fromsupp == ALL_TEXT ? _('All') : get_supplier_name($fromsupp);
+	$from = $fromsupp == ALL_TEXT ? _('All') : suppliers_entity::name($fromsupp);
 	$dec = user_price_dec();
 	$summary = $summaryOnly == 1 ? _('Summary Only') : _('Detailed Report');
 

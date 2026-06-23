@@ -531,7 +531,7 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 	$terms_and_conditions = '', $notes = '', $rfq_id = 0, $dimension_id = 0, $dimension2_id = 0,
 	$reference = '', $buyer_id = 0, $custom_data = array())
 {
-	if ((int)$supplier_id <= 0 || !get_supplier((int)$supplier_id))
+	if ((int)$supplier_id <= 0 || !suppliers_entity::find((int)$supplier_id))
 		return false;
 
 	$hook_data = array(
@@ -641,7 +641,7 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 	$reference = '', $buyer_id = 0, $custom_data = array())
 {
 	$agreement = get_editable_purch_agreement($agreement_id);
-	if (!$agreement || (int)$supplier_id <= 0 || !get_supplier((int)$supplier_id))
+	if (!$agreement || (int)$supplier_id <= 0 || !suppliers_entity::find((int)$supplier_id))
 		return false;
 
 	$hook_data = array(

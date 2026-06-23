@@ -1212,7 +1212,7 @@ function get_vendor_performance_summary($supplier_id, $months = 12)
  */
 function get_vendor_scorecard($supplier_id)
 {
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	if (!$supplier)
 		return array();
 
@@ -1311,7 +1311,7 @@ function get_vendors_due_evaluation($days_ahead = 30)
  */
 function update_supplier_vendor_metrics($supplier_id, $metrics, $score_overrides = array(), $evaluation_date = '')
 {
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	if (!$supplier)
 		return false;
 

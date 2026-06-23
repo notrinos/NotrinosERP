@@ -15,7 +15,7 @@
 // save a couple of db calls like get_supplier()
 function update_average_material_cost($supplier, $stock_id, $price, $qty, $date, $adj_only=false) {
 	
-	$supp = get_supplier($supplier);
+	$supp = suppliers_entity::find($supplier);
 	if ($supplier != null) {
 		$currency = $supp['curr_code'];
 		if ($supp['tax_included'])

@@ -229,7 +229,7 @@ function auto_fsma_receiving_event($grn_id, $stock_id, $batch_id, $lot_code, $qu
 	if (!is_item_regulated($stock_id, REG_FSMA204))
 		return false;
 
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	$supplier_name = $supplier ? $supplier['supp_name'] : '';
 
 	$loc = get_item_location($loc_code);
@@ -267,7 +267,7 @@ function auto_fsma_shipping_event($delivery_id, $stock_id, $batch_id, $lot_code,
 	if (!is_item_regulated($stock_id, REG_FSMA204))
 		return false;
 
-	$customer = get_customer($customer_id);
+	$customer = debtors_master_entity::find($customer_id);
 	$customer_name = $customer ? $customer['name'] : '';
 
 	$loc = get_item_location($loc_code);

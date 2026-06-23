@@ -1117,7 +1117,7 @@ function add_rfq_vendor($rfq_id, $supplier_id, $custom_data = array())
 	if (!$rfq || (int)$supplier_id <= 0)
 		return false;
 
-	if (!get_supplier((int)$supplier_id))
+	if (!suppliers_entity::find((int)$supplier_id))
 		return false;
 
 	$existing = get_purch_rfq_vendor_by_supplier($rfq_id, $supplier_id);

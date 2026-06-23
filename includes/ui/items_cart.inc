@@ -239,7 +239,7 @@ class items_cart {
 						$tax_info['tax_group'] = $branch['tax_group_id'];
 					}
 					else {
-						$supplier = get_supplier($gl->person_id);
+						$supplier = suppliers_entity::find($gl->person_id);
 						$tax_info['tax_group'] = $supplier['tax_group_id'];
 					}
 				}

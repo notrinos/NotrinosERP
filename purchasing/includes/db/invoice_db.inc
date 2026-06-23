@@ -168,7 +168,7 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 
 	$trans_no = $supp_trans->trans_no;
 	$trans_type = $supp_trans->trans_type;
-	$supplier = get_supplier($supp_trans->supplier_id);
+	$supplier = suppliers_entity::find($supp_trans->supplier_id);
 	$dim = !empty($supp_trans->dimension) ? $supp_trans->dimension : ($supplier['dimension_id'] ? $supplier['dimension_id'] : 0);
 	$dim2 = !empty($supp_trans->dimension2) ? $supp_trans->dimension2 : ($supplier['dimension2_id'] ? $supplier['dimension2_id'] : 0);
 
@@ -623,7 +623,7 @@ function remove_not_invoice_item($id) {
 
 	$grn = get_grn_batch($myrow['grn_batch_id']);
 
-	$supp = get_supplier($grn['supplier_id']);
+	$supp = suppliers_entity::find($grn['supplier_id']);
 
 	$sql = "UPDATE ".TB_PREF."purch_order_details SET quantity_received = qty_invoiced, quantity_ordered = qty_invoiced WHERE po_detail_item = ".$myrow["po_detail_item"];
 	db_query($sql, 'The quantity invoiced of the purchase order line could not be updated');

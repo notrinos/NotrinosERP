@@ -302,7 +302,7 @@ $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell(get_matching_type_options()[$row['match_type']]);
-    label_cell((int)$row['supplier_id'] > 0 ? get_supplier_name($row['supplier_id']) : _('Default (All Suppliers)'));
+    label_cell((int)$row['supplier_id'] > 0 ? suppliers_entity::name($row['supplier_id']) : _('Default (All Suppliers)'));
     label_cell(($row['tolerance_type'] === 'percentage' ? number_format2($row['tolerance_value'], 2) . '%' : price_format($row['tolerance_value'])));
     label_cell(get_matching_action_options()[$row['action_on_exceed']]);
     label_cell($row['inactive'] ? _('Yes') : _('No'));

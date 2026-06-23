@@ -135,7 +135,7 @@ function get_items_needing_reorder_by_supplier($location = '')
 		if (!isset($grouped[$supplier_id])) {
 			$grouped[$supplier_id] = array(
 				'supplier_id' => $supplier_id,
-				'supplier_name' => get_supplier_name($supplier_id),
+				'supplier_name' => suppliers_entity::name($supplier_id),
 				'items' => array(),
 				'total_lines' => 0,
 				'total_estimated' => 0,

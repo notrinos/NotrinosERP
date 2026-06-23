@@ -70,7 +70,7 @@ function can_save_reorder_overlay()
 
 	$supplier_id = (int)get_post('overlay_supplier_id');
 	if ($supplier_id > 0) {
-		$supplier = get_supplier($supplier_id);
+		$supplier = suppliers_entity::find($supplier_id);
 		if (!$supplier || (int)$supplier['inactive']) {
 			display_error(_('Select a valid active supplier.'));
 			set_focus('overlay_supplier_id');

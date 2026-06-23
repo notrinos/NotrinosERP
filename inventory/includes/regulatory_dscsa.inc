@@ -117,7 +117,7 @@ function generate_dscsa_transaction_info($delivery_id, $delivery_date, $customer
 	$sender_license = get_company_pref('dscsa_company_license');
 
 	// Get customer info for receiver
-	$customer = get_customer($customer_id);
+	$customer = debtors_master_entity::find($customer_id);
 	$receiver_name = $customer ? $customer['name'] : '';
 
 	// Get delivery line items
@@ -196,7 +196,7 @@ function generate_dscsa_grn_transaction_info($grn_id, $grn_date, $supplier_id)
 	$receiver_license = get_company_pref('dscsa_company_license');
 
 	// Get supplier info
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	$sender_name = $supplier ? $supplier['supp_name'] : '';
 
 	// Get GRN items

@@ -18,6 +18,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
+include_once($path_to_root.'/purchasing/includes/db/suppliers_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -108,7 +109,7 @@ function print_inventory_purchase() {
 		$category = 0;
 	$cat = $category == 0 ? _('All') : get_category_name($category);
 	$loc = $location == '' ? _('All') : get_location_name($location);
-	$froms = $fromsupp == '' ? _('All') : get_supplier_name($fromsupp);
+	$froms = $fromsupp == '' ? _('All') : suppliers_entity::name($fromsupp);
 	$itm = $item == '' ? _('All') : $item;
 
 	$cols = array(0, 50, 180, 230, 275, 400, 420, 465,	520);

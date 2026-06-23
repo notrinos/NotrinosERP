@@ -413,7 +413,7 @@ function create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty, $supplier_id 
 	}
 
 	// Get supplier details
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	if (!$supplier) {
 		$result['message'] = _('Invalid supplier.');
 		return $result;

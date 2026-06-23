@@ -132,7 +132,7 @@ function get_vendor_price_comparison_text($stock_id, $current_supplier_id, $quan
 	if ((int)$current_supplier_id > 0 && (int)$agreement_id > 0 && function_exists('get_supplier_pricing_context')) {
 		$current_context = get_supplier_pricing_context($current_supplier_id, $stock_id, $quantity, $currency, $date, $agreement_id, true);
 		if ($current_context['source'] === 'agreement' && $current_context['price'] > 0)
-			array_unshift($parts, '* ' . get_supplier_name($current_supplier_id) . ': ' . price_format($current_context['price']) . ' [' . get_purchase_price_source_label('agreement') . ']');
+			array_unshift($parts, '* ' . suppliers_entity::name($current_supplier_id) . ': ' . price_format($current_context['price']) . ' [' . get_purchase_price_source_label('agreement') . ']');
 	}
 
 	return implode(' | ', array_slice($parts, 0, 4));

@@ -484,7 +484,7 @@ function get_item_vendors($stock_id, $active_only = true, $quantity = 0, $curren
 		if ($pricing_context['price'] <= 0)
 			continue;
 
-		$supplier_name = get_supplier_name((int)$row['supplier_id']);
+		$supplier_name = suppliers_entity::name((int)$row['supplier_id']);
 		$pricing_context['supplier_name'] = $supplier_name;
 		$vendors[] = $pricing_context;
 	}

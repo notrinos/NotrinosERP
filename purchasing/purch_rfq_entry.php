@@ -309,7 +309,7 @@ function get_bridge_requisition_supplier_options($requisition_id)
 		if ($supplier_id <= 0 || isset($options[$supplier_id]))
 			continue;
 
-		$options[$supplier_id] = $line['preferred_supplier_name'] ? $line['preferred_supplier_name'] : get_supplier_name($supplier_id);
+		$options[$supplier_id] = $line['preferred_supplier_name'] ? $line['preferred_supplier_name'] : suppliers_entity::name($supplier_id);
 	}
 
 	return $options;

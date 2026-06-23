@@ -231,7 +231,7 @@ function add_direct_supp_trans($cart) {
 	$inv->reference = $ref;
 	$inv->supp_reference = $cart->supp_ref;
 	$inv->tax_included = $cart->tax_included;
-	$supp = get_supplier($cart->supplier_id);
+	$supp = suppliers_entity::find($cart->supplier_id);
 	$inv->tax_group_id = $supp['tax_group_id'];
 	$inv->ov_amount = $inv->ov_gst = $inv->ov_discount = 0;
 	$total = 0;

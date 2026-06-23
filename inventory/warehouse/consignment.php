@@ -94,7 +94,7 @@ if (isset($_POST['ADD_CONSIGNMENT'])) {
 	if ($recv_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
 		$input_error = 1;
-	} elseif (!get_supplier($recv_supplier_id)) {
+	} elseif (!suppliers_entity::find($recv_supplier_id)) {
 		display_error(_('Selected supplier does not exist.'));
 		$input_error = 1;
 	}
@@ -268,7 +268,7 @@ if (isset($_POST['SAVE_VMI'])) {
 	if ($vmi_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
 		$input_error = 1;
-	} elseif (!get_supplier($vmi_supplier_id)) {
+	} elseif (!suppliers_entity::find($vmi_supplier_id)) {
 		display_error(_('Selected supplier does not exist.'));
 		$input_error = 1;
 	}
@@ -343,7 +343,7 @@ if (isset($_POST['GENERATE_INVOICE'])) {
 	if ($invoice_supplier_id <= 0) {
 		display_error(_('You must select a supplier.'));
 		$input_error = 1;
-	} elseif (!get_supplier($invoice_supplier_id)) {
+	} elseif (!suppliers_entity::find($invoice_supplier_id)) {
 		display_error(_('Selected supplier does not exist.'));
 		$input_error = 1;
 	}
@@ -367,7 +367,7 @@ if (isset($_POST['GENERATE_INVOICE'])) {
 			display_notification(sprintf(
 				_('Consignment invoice #%s created for %s — %s lines, total %s'),
 				$inv_result['trans_no'],
-				get_supplier_name($inv_result['supplier_id']),
+				suppliers_entity::name($inv_result['supplier_id']),
 				$inv_result['line_count'],
 				price_format($inv_result['total'])
 			));
@@ -388,7 +388,7 @@ if (isset($_POST['GENERATE_INVOICE'])) {
 if (isset($_POST['EXPORT_VMI'])) {
 	$export_supplier_id = (int)get_post('export_supplier_id');
 	if ($export_supplier_id > 0) {
-		if (!get_supplier($export_supplier_id)) {
+		if (!suppliers_entity::find($export_supplier_id)) {
 			display_error(_('Selected supplier does not exist.'));
 		} else {
 			$export_data = export_vmi_stock_levels($export_supplier_id);

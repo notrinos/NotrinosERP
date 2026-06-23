@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/purchasing/includes/db/suppliers_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -57,7 +58,7 @@ function print_payment_report() {
 		include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	$from = $fromsupp == ALL_TEXT ? _('All') : get_supplier_name($fromsupp);
+	$from = $fromsupp == ALL_TEXT ? _('All') : suppliers_entity::name($fromsupp);
 	$dec = user_price_dec();
 
 	if ($currency == ALL_TEXT) {

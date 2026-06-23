@@ -273,7 +273,7 @@ if ($bank_currency != $supplier_currency)
 
 amount_row(_('Bank Charge:'), 'charge', null, '', $bank_currency);
 
-$row = get_supplier($_POST['supplier_id']);
+$row = suppliers_entity::find((int)$_POST['supplier_id']);
 $_POST['dimension_id'] = @$row['dimension_id'];
 $_POST['dimension2_id'] = @$row['dimension2_id'];
 $dim = get_company_pref('use_dimension');

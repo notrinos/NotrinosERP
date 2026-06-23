@@ -280,7 +280,7 @@ if (isset($_GET['created_po']) && (int)$_GET['created_po'] > 0) {
 }
 
 if (list_updated('supplier_id') && !$selected_id) {
-	$supplier = get_supplier((int)get_post('supplier_id'));
+	$supplier = suppliers_entity::find((int)get_post('supplier_id'));
 	if ($supplier) {
 		$_POST['currency'] = $supplier['curr_code'];
 		$_POST['payment_terms'] = $supplier['payment_terms'];
@@ -289,7 +289,7 @@ if (list_updated('supplier_id') && !$selected_id) {
 
 if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can_save_purchase_agreement_header()) {
 	$supplier_id = (int)get_post('supplier_id');
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 	$date_start = date2sql(get_post('date_start'));
 	$date_end = get_post('date_end') !== '' ? date2sql(get_post('date_end')) : null;
 	$agreement_type = get_post('agreement_type') !== '' ? get_post('agreement_type') : 'blanket_order';

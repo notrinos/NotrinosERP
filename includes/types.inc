@@ -162,9 +162,9 @@ function payment_person_name($type, $person_id, $full=true) {
 			global $wo_cost_types;
 			return (!$full ? _('Work Order').' '.$person_id : get_trans_view_str(ST_WORKORDER, $person_id, _('Work Order').' '.$person_id));
 		case PT_CUSTOMER :
-			return ($full ?$payment_person_types[$type] . " ":"") . sprintf("[%05s] %s", $person_id, get_customer_name($person_id));
+			return ($full ?$payment_person_types[$type] . " ":"") . sprintf("[%05s] %s", $person_id, debtors_master_entity::name($person_id));
 		case PT_SUPPLIER :
-			return ($full ? $payment_person_types[$type] . " ":"") . sprintf("[%05s] %s", $person_id, get_supplier_name($person_id));
+			return ($full ? $payment_person_types[$type] . " ":"") . sprintf("[%05s] %s", $person_id, suppliers_entity::name($person_id));
 		default :
 			return '';
 	}

@@ -18,6 +18,7 @@ include_once($path_to_root . '/includes/ui/ui_input.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/suppliers_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -28,7 +29,7 @@ function get_domestic_price($myrow, $stock_id) {
 		$price = $myrow['price'];
 		if ($myrow['person_id'] > 0) {
 			// Do we have foreign currency?
-			$supp = get_supplier($myrow['person_id']);
+			$supp = suppliers_entity::find($myrow['person_id']);
 			$currency = $supp['curr_code'];
 			$ex_rate = $myrow['ex_rate'];
 			$price *= $ex_rate;

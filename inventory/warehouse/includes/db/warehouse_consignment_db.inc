@@ -299,7 +299,7 @@ function consume_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 
 	// 3. GL posting — Debit inventory, Credit supplier payable
 	$stock_gl = get_stock_gl_code($stock_id);
-	$supplier = get_supplier($supplier_id);
+	$supplier = suppliers_entity::find($supplier_id);
 
 	if (!$supplier) {
 		display_error(_('Supplier not found.'));
