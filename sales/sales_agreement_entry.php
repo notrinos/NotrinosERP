@@ -219,7 +219,7 @@ if (isset($_GET['created_so']) && (int)$_GET['created_so'] > 0) {
 if (list_updated('debtor_no') && !$selected_id) {
 	$debtor_no = (int)get_post('debtor_no');
 	if ($debtor_no > 0) {
-		$customer = get_customer($debtor_no);
+		$customer = debtors_master_entity::find($debtor_no);
 		if ($customer) {
 			$_POST['currency']      = $customer['curr_code'];
 			$_POST['payment_terms'] = $customer['payment_terms'];
