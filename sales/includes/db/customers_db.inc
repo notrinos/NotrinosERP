@@ -105,14 +105,6 @@ function get_customer_details($customer_id, $to=null, $all=true) {
 	return db_fetch($result);
 }
 
-function get_customer($customer_id) {
-	return debtors_master_entity::find((int)$customer_id);
-}
-
-function get_customer_name($customer_id) {
-	return debtors_master_entity::name((int)$customer_id);
-}
-
 function get_customer_habit($customer_id) {
 	$sql = "SELECT debtor.pymt_discount, credit_status.dissallow_invoices
 			FROM ".TB_PREF."debtors_master debtor,"

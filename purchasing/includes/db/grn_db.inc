@@ -12,7 +12,7 @@
 
 // probably this function should be optimized
 // passing transaction cart as argument. This would
-// save a couple of db calls like get_supplier()
+// save a couple of db calls like suppliers_entity::find
 function update_average_material_cost($supplier, $stock_id, $price, $qty, $date, $adj_only=false) {
 	
 	$supp = suppliers_entity::find($supplier);

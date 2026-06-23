@@ -123,14 +123,6 @@ function get_supplier_details($supplier_id, $to=null, $all=true) {
 	return $supp;
 }
 
-function get_supplier($supplier_id) {
-	return suppliers_entity::find((int)$supplier_id);
-}
-
-function get_supplier_name($supplier_id) {
-	return suppliers_entity::name((int)$supplier_id);
-}
-
 function get_supplier_accounts($supplier_id) {
 	$sql = "SELECT payable_account,purchase_account,payment_discount_account, dimension_id, dimension2_id FROM ".TB_PREF."suppliers WHERE supplier_id=".db_escape($supplier_id);
 
