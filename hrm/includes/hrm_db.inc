@@ -37,7 +37,7 @@ include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_deduction_db.inc');
 include_once($path_to_root.'/hrm/includes/db/work_shift_db.inc');
 include_once($path_to_root.'/hrm/includes/db/working_days_db.inc');
-include_once($path_to_root.'/hrm/includes/db/holiday_db.inc');
+include_once($path_to_root.'/hrm/includes/db/holidays_entity.inc');
 
 // Leave
 include_once($path_to_root.'/hrm/includes/db/leave_db.inc');

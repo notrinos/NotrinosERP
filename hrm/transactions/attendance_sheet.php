@@ -22,7 +22,6 @@ if (user_use_date_picker())
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
-include_once($path_to_root.'/hrm/includes/db/holiday_db.inc');
 
 add_js_ufile($path_to_root.'/hrm/js/attendance_sheet.js');
 

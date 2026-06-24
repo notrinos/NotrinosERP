@@ -13,7 +13,7 @@ $page_security = 'SA_HOLIDAY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/hrm/includes/db/holiday_db.inc');
+include_once($path_to_root . '/hrm/includes/db/holidays_entity.inc');
 page(_("Holiday Calendar"));
 
 simple_page_mode(false);
@@ -33,11 +33,19 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('to_date');
     } else {
         $to_date = trim($_POST['to_date']) == '' ? null : $_POST['to_date'];
+        $holiday_data = array(
+            'holiday_name' => $_POST['holiday_name'],
+            'holiday_date' => date2sql($_POST['holiday_date']),
+            'to_date' => $to_date !== null ? date2sql($to_date) : '',
+            'recurring' => check_value('recurring') ? 1 : 0,
+            'is_paid' => check_value('is_paid') ? 1 : 0,
+            'description' => $_POST['description'],
+        );
         if ($selected_id != '') {
-            update_holiday($selected_id, $_POST['holiday_name'], $_POST['holiday_date'], $to_date, check_value('recurring') ? 1 : 0, check_value('is_paid') ? 1 : 0, $_POST['description']);
+            holidays_entity::modify($selected_id, $holiday_data);
             display_notification(_('Holiday has been updated.'));
         } else {
-            add_holiday($_POST['holiday_name'], $_POST['holiday_date'], $to_date, check_value('recurring') ? 1 : 0, check_value('is_paid') ? 1 : 0, $_POST['description']);
+            holidays_entity::create($holiday_data);
             display_notification(_('Holiday has been added.'));
         }
         $Mode = 'RESET';
@@ -45,7 +53,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_holiday($selected_id);
+    holidays_entity::remove($selected_id);
     display_notification(_('Selected holiday has been deleted.'));
     $Mode = 'RESET';
 }
@@ -66,7 +74,7 @@ start_form();
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('ID'), _('Holiday Name'), _('Date'), _('To Date'), _('Recurring'), _('Paid'), _('Description'), '', '');
 table_header($th);
-$result = get_holidays('', '');
+$result = holidays_entity::all_db_resource('', array('holiday_date', 'holiday_name'));
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -85,7 +93,7 @@ end_table(1);
 
 start_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
-    $myrow = get_holiday($selected_id);
+    $myrow = holidays_entity::find($selected_id);
     $_POST['holiday_name'] = $myrow['holiday_name'];
     $_POST['holiday_date'] = sql2date($myrow['holiday_date']);
     $_POST['to_date'] = empty($myrow['to_date']) ? '' : sql2date($myrow['to_date']);
