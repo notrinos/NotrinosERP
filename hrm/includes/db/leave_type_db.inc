@@ -10,6 +10,8 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root . '/hrm/includes/db/leave_types_entity.inc');
+
 /**
  * Check whether a column exists in leave_types table.
  *
@@ -39,13 +41,7 @@ function leave_type_has_column($column_name) {
  * @return array|false
  */
 function get_leave_type_extended($leave_id) {
-    if (!function_exists('employee_table_exists') || !employee_table_exists('leave_types'))
-        return false;
-
-    $sql = "SELECT * FROM ".TB_PREF."leave_types WHERE leave_id = ".db_escape((int)$leave_id);
-    $result = db_query($sql, 'could not get extended leave type');
-
-    return db_fetch($result);
+    return leave_types_entity::find($leave_id);
 }
 
 /**
@@ -102,7 +98,11 @@ function update_leave_type_attributes($leave_id, $attributes=array()) {
  * @return int Inserted leave id.
  */
 function add_leave_type_extended($leave_name, $leave_code, $pay_rate, $attributes=array()) {
-    add_leave_type($leave_name, $leave_code, $pay_rate);
+    leave_types_entity::create(array(
+        'leave_name' => $leave_name,
+        'leave_code' => $leave_code,
+        'pay_rate'   => $pay_rate,
+    ));
     $leave_id = db_insert_id();
     update_leave_type_attributes($leave_id, $attributes);
 
@@ -122,7 +122,11 @@ function add_leave_type_extended($leave_name, $leave_code, $pay_rate, $attribute
  * @return void
  */
 function update_leave_type_extended($leave_id, $leave_name, $leave_code, $pay_rate, $attributes=array()) {
-    update_leave_type($leave_id, $leave_name, $leave_code, $pay_rate);
+    leave_types_entity::modify($leave_id, array(
+        'leave_name' => $leave_name,
+        'leave_code' => $leave_code,
+        'pay_rate'   => $pay_rate,
+    ));
     update_leave_type_attributes($leave_id, $attributes);
 }
 
@@ -133,13 +137,6 @@ function update_leave_type_extended($leave_id, $leave_name, $leave_code, $pay_ra
  * @return resource
  */
 function get_leave_types_extended($all=false) {
-    $sql = "SELECT * FROM ".TB_PREF."leave_types";
-
-    if (!$all && leave_type_has_column('inactive'))
-        $sql .= " WHERE !inactive";
-
-    $sql .= " ORDER BY leave_name";
-
-    return db_query($sql, 'could not get extended leave types data');
+    return leave_types_entity::all_db_resource($all ? '' : '!inactive');
 }
 

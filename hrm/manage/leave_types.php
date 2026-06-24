@@ -16,7 +16,7 @@ $path_to_root  = '../..';
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/leave_db.inc');
+include_once($path_to_root.'/hrm/includes/db/leave_types_entity.inc');
 
 //--------------------------------------------------------------------------
 
@@ -41,11 +41,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			update_leave_type($selected_id, $_POST['leave_name'], $_POST['leave_code'], input_num('pay_rate'));
+			leave_types_entity::modify($selected_id, array(
+				'leave_name' => $_POST['leave_name'],
+				'leave_code' => $_POST['leave_code'],
+				'pay_rate'   => input_num('pay_rate'),
+			));
 			display_notification(_('Selected leave type has been updated'));
 		}
 		else {
-			add_leave_type($_POST['leave_name'], $_POST['leave_code'], input_num('pay_rate'));
+			leave_types_entity::create(array(
+				'leave_name' => $_POST['leave_name'],
+				'leave_code' => $_POST['leave_code'],
+				'pay_rate'   => input_num('pay_rate'),
+			));
 			display_notification(_('New leave type has been added'));
 		}
 		
@@ -58,7 +66,7 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'attendance', 'leave_id'))
 		display_error(_('The selected leave type cannot be deleted.'));
 	else {
-		delete_leave_type($selected_id);
+		leave_types_entity::remove($selected_id);
 		display_notification(_('Selected leave type has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -83,7 +91,7 @@ $th = array(_('Id'), _('Leave Name'), _('Leave Code'), _('Pay Rate').'(%)', '', 
 inactive_control_column($th);
 table_header($th);
 
-$result = get_leave_types(check_value('show_inactive'));
+$result = leave_types_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
@@ -107,7 +115,7 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		
-		$myrow = get_leave_type($selected_id);
+		$myrow = leave_types_entity::find($selected_id);
 		$_POST['leave_name']  = $myrow['leave_name'];
 		$_POST['leave_code']  = $myrow['leave_code'];
 		$_POST['pay_rate'] = percent_format($myrow['pay_rate']);
