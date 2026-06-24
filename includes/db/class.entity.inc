@@ -817,6 +817,19 @@ class Entity extends record_set {
 		$e = new static();
 		return $e->delete($key);
 	}
+
+	/**
+	 * Check whether any records exist in this entity's table.
+	 *
+	 * Returns true if the table contains at least one row.
+	 * Useful for gating forms that require seed data (e.g. "define X before Y").
+	 *
+	 * @return bool True if at least one record exists.
+	 */
+	public static function has_records() {
+		$e = new static();
+		return check_empty_result("SELECT COUNT(*) FROM ".TB_PREF.$e->name);
+	}
 }
 
 /**
