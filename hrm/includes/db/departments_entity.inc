@@ -49,8 +49,15 @@ class departments_entity extends Entity {
 		$sql = "SELECT d.*, p.department_name AS parent_department_name
 			FROM " . TB_PREF . "departments d
 			LEFT JOIN " . TB_PREF . "departments p ON p.department_id = d.parent_department_id";
-		if ($where)
+		if ($where) {
+			// Prefix bare `inactive` / `!inactive` with `d.` to avoid ambiguous-column errors from self-join.
+			// `!inactive` is MySQL shorthand for `NOT inactive`; rewrite to `NOT d.inactive`.
+			// Use negative lookbehind so already-qualified columns are left alone.
+			$where = preg_replace_callback('/(?<!\w\.)(!?)inactive\b/', function($m) {
+				return $m[1] === '!' ? 'NOT d.inactive' : 'd.inactive';
+			}, $where);
 			$sql .= " WHERE " . ($this->subset ? '(' . $this->subset . ') AND ' : '') . $where;
+		}
 		if ($order_by !== null) {
 			$order_by = (array)$order_by;
 			$sql .= " ORDER BY " . implode(', ', $order_by);

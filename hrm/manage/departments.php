@@ -46,11 +46,11 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		$data = array(
 			'department_code' => get_post('department_code', ''),
 			'department_name' => $_POST['department_name'],
-			'parent_department_id' => (int)get_post('parent_department_id', 0) ?: null,
-			'manager_employee_id' => get_post('manager_employee_id', '') ?: null,
+			'parent_department_id' => (int)get_post('parent_department_id', 0),
+			'manager_employee_id' => get_post('manager_employee_id', ''),
 			'cost_center_id' => (int)get_post('cost_center_id', 0),
 			'payroll_expense_account' => $_POST['payroll_expense_account'],
-			'payroll_liability_account' => get_post('payroll_liability_account', '') ?: null,
+			'payroll_liability_account' => get_post('payroll_liability_account', ''),
 			'description' => get_post('description', ''),
 		);
 
