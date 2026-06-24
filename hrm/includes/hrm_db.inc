@@ -18,8 +18,7 @@
 include_once($path_to_root.'/hrm/includes/db/departments_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
-include_once($path_to_root.'/hrm/includes/db/pay_grade_db.inc');
-include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
+include_once($path_to_root.'/hrm/includes/db/grades_entity.inc');
 
 // Employee
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');

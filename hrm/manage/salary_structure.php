@@ -23,7 +23,7 @@ if (user_use_date_picker())
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/salary_structure_db.inc');
-include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
+include_once($path_to_root.'/hrm/includes/db/grades_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 
@@ -163,7 +163,7 @@ end_table();
 $position_id = get_post('position_id', '');
 
 $tabs = array(0 => array(_('Basic'), 1));
-$grades = get_pay_grades();
+$grades = grades_entity::all_db_resource('!inactive', array('grade_level', 'grade_name'));
 while ($grades && ($grade = db_fetch($grades))) {
 	$tabs[(int)$grade['grade_id']] = array($grade['grade_name'], 1);
 }

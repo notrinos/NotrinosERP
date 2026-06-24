@@ -16,7 +16,7 @@ $path_to_root  = '../..';
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
+include_once($path_to_root.'/hrm/includes/db/grades_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 
 //--------------------------------------------------------------------------
@@ -42,11 +42,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			update_pay_grade($selected_id, $_POST['grade_name'], $_POST['position_id'], input_num('pay_amount'));
+			grades_entity::modify($selected_id, array(
+				'grade_name' => $_POST['grade_name'],
+				'position_id' => $_POST['position_id'],
+				'pay_amount' => input_num('pay_amount')
+			));
 			display_notification(_('Selected pay grade has been updated'));
 		}
 		else {
-			add_pay_grade($_POST['grade_name'], $_POST['position_id'], input_num('pay_amount'));
+			grades_entity::create(array(
+				'grade_name' => $_POST['grade_name'],
+				'position_id' => $_POST['position_id'],
+				'pay_amount' => input_num('pay_amount')
+			));
 			display_notification(_('New pay grade has been added'));
 		}
 		
@@ -59,7 +67,7 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'employees', 'grade_id'))
 		display_error(_('The selected pay grade cannot be deleted.'));
 	else {
-		delete_pay_grade($selected_id);
+		grades_entity::remove($selected_id);
 		display_notification(_('Selected pay grade has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -79,7 +87,7 @@ start_form();
 
 start_table(TABLESTYLE, "width='40%'");
 
-$result = get_pay_grades(check_value('show_inactive'));
+$result = grades_entity::all_db_resource(check_value('show_inactive') ? '1=1' : '!inactive', 'grade_name');
 
 $th = array(_('Position'), _('Basic Amount'), _('Grade ID'), _('Grade Name'), _('Pay Amount'), '', '');
 $dec = user_price_dec();
@@ -112,7 +120,7 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		
-		$myrow = get_pay_grade($selected_id);
+		$myrow = grades_entity::find($selected_id);
 		$_POST['grade_name']  = $myrow['grade_name'];
 		$_POST['position_id'] = $myrow['position_id'];
 		$_POST['pay_amount'] = price_format($myrow['pay_amount'], $dec);

@@ -14,7 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
+include_once($path_to_root.'/hrm/includes/db/grades_entity.inc');
 
 page(_($help_context = 'Manage Pay Grades'));
 
@@ -25,11 +25,11 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
         display_error(_('Pay grade name cannot be empty.'));
         set_focus('grade_name');
     }
-    elseif (pay_grade_has_column('min_salary') && pay_grade_has_column('max_salary') && input_num('min_salary') > 0 && input_num('max_salary') > 0 && input_num('min_salary') > input_num('max_salary')) {
+    elseif (input_num('min_salary') > 0 && input_num('max_salary') > 0 && input_num('min_salary') > input_num('max_salary')) {
         display_error(_('Minimum salary cannot be greater than maximum salary.'));
         set_focus('min_salary');
     }
-    elseif (pay_grade_has_column('mid_salary') && input_num('mid_salary') > 0) {
+    elseif (input_num('mid_salary') > 0) {
         $min = input_num('min_salary');
         $mid = input_num('mid_salary');
         $max = input_num('max_salary');
@@ -47,12 +47,22 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
                 'description' => get_post('description', '')
             );
 
+            $data = array(
+                'grade_name' => get_post('grade_name'),
+                'grade_code' => get_post('grade_code', ''),
+                'grade_level' => get_post('grade_level', 0),
+                'min_salary' => input_num('min_salary'),
+                'mid_salary' => input_num('mid_salary'),
+                'max_salary' => input_num('max_salary'),
+                'description' => get_post('description', '')
+            );
+
             if ($selected_id != '') {
-                update_pay_grade($selected_id, get_post('grade_name'), get_post('position_id', 0), input_num('pay_amount'), $extra);
+                grades_entity::modify($selected_id, $data);
                 display_notification(_('Selected pay grade has been updated.'));
             }
             else {
-                add_pay_grade(get_post('grade_name'), get_post('position_id', 0), input_num('pay_amount'), $extra);
+                grades_entity::create($data);
                 display_notification(_('New pay grade has been added.'));
             }
 
@@ -69,12 +79,22 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
             'description' => get_post('description', '')
         );
 
+        $data = array_merge(array(
+            'grade_name' => get_post('grade_name'),
+            'grade_code' => get_post('grade_code', ''),
+            'grade_level' => get_post('grade_level', 0),
+            'min_salary' => input_num('min_salary'),
+            'mid_salary' => input_num('mid_salary'),
+            'max_salary' => input_num('max_salary'),
+            'description' => get_post('description', '')
+        ), $extra);
+
         if ($selected_id != '') {
-            update_pay_grade($selected_id, get_post('grade_name'), get_post('position_id', 0), input_num('pay_amount'), $extra);
+            grades_entity::modify($selected_id, $data);
             display_notification(_('Selected pay grade has been updated.'));
         }
         else {
-            add_pay_grade(get_post('grade_name'), get_post('position_id', 0), input_num('pay_amount'), $extra);
+            grades_entity::create($data);
             display_notification(_('New pay grade has been added.'));
         }
 
@@ -87,7 +107,7 @@ if ($Mode == 'Delete') {
         display_error(_('The selected pay grade cannot be deleted because it is in use by employees.'));
     }
     else {
-        delete_pay_grade($selected_id);
+        grades_entity::remove($selected_id);
         display_notification(_('Selected pay grade has been deleted.'));
     }
     $Mode = 'RESET';
@@ -102,57 +122,29 @@ if ($Mode == 'RESET') {
     $_POST['min_salary'] = '';
     $_POST['mid_salary'] = '';
     $_POST['max_salary'] = '';
-    $_POST['position_id'] = 0;
-    $_POST['pay_amount'] = '';
     $_POST['description'] = '';
 }
 
 start_form();
 
 start_table(TABLESTYLE, "width='75%'");
-$th = array(_('ID'));
-if (pay_grade_has_column('grade_code'))
-    $th[] = _('Code');
-$th[] = _('Grade Name');
-if (pay_grade_has_column('grade_level'))
-    $th[] = _('Level');
-if (pay_grade_has_column('min_salary'))
-    $th[] = _('Min Salary');
-if (pay_grade_has_column('mid_salary'))
-    $th[] = _('Mid Salary');
-if (pay_grade_has_column('max_salary'))
-    $th[] = _('Max Salary');
-if (pay_grade_has_column('position_id'))
-    $th[] = _('Position');
-if (pay_grade_has_column('pay_amount'))
-    $th[] = _('Base Amount');
-$th[] = '';
-$th[] = '';
+$th = array(_('ID'), _('Code'), _('Grade Name'), _('Level'), _('Min Salary'), _('Mid Salary'), _('Max Salary'), '', '');
 
 inactive_control_column($th);
 table_header($th);
 
-$result = get_pay_grades(check_value('show_inactive'));
+$result = grades_entity::all_db_resource(check_value('show_inactive') ? '1=1' : '!inactive', array('grade_level', 'grade_name'));
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
 
     label_cell($myrow['grade_id']);
-    if (pay_grade_has_column('grade_code'))
-        label_cell($myrow['grade_code']);
+    label_cell($myrow['grade_code']);
     label_cell($myrow['grade_name']);
-    if (pay_grade_has_column('grade_level'))
-        label_cell($myrow['grade_level']);
-    if (pay_grade_has_column('min_salary'))
-        amount_cell($myrow['min_salary']);
-    if (pay_grade_has_column('mid_salary'))
-        amount_cell($myrow['mid_salary']);
-    if (pay_grade_has_column('max_salary'))
-        amount_cell($myrow['max_salary']);
-    if (pay_grade_has_column('position_id'))
-        label_cell($myrow['position_id']);
-    if (pay_grade_has_column('pay_amount'))
-        amount_cell($myrow['pay_amount']);
+    label_cell($myrow['grade_level']);
+    amount_cell($myrow['min_salary']);
+    amount_cell($myrow['mid_salary']);
+    amount_cell($myrow['max_salary']);
 
     inactive_control_cell($myrow['grade_id'], $myrow['inactive'], 'pay_grades', 'grade_id');
     edit_button_cell('Edit'.$myrow['grade_id'], _('Edit'));
@@ -166,7 +158,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_pay_grade($selected_id);
+        $myrow = grades_entity::find($selected_id);
         $_POST['grade_code'] = @$myrow['grade_code'];
         $_POST['grade_name'] = $myrow['grade_name'];
         $_POST['grade_level'] = @$myrow['grade_level'];
@@ -180,23 +172,13 @@ if ($selected_id != '') {
     hidden('selected_id', $selected_id);
 }
 
-if (pay_grade_has_column('grade_code'))
-    text_row_ex(_('Grade Code:'), 'grade_code', 20, 20);
+text_row_ex(_('Grade Code:'), 'grade_code', 20, 20);
 text_row_ex(_('Grade Name:'), 'grade_name', 40, 60);
-if (pay_grade_has_column('grade_level'))
-    qty_row(_('Grade Level:'), 'grade_level', get_post('grade_level', 0), null, null, 0);
-if (pay_grade_has_column('min_salary'))
-    amount_row(_('Minimum Salary:'), 'min_salary');
-if (pay_grade_has_column('mid_salary'))
-    amount_row(_('Mid Salary:'), 'mid_salary');
-if (pay_grade_has_column('max_salary'))
-    amount_row(_('Maximum Salary:'), 'max_salary');
-if (pay_grade_has_column('position_id'))
-    qty_row(_('Position ID (legacy):'), 'position_id', get_post('position_id', 0), null, null, 0);
-if (pay_grade_has_column('pay_amount'))
-    amount_row(_('Base Amount (legacy):'), 'pay_amount');
-if (pay_grade_has_column('description'))
-    textarea_row(_('Description:'), 'description', null, 50, 3);
+qty_row(_('Grade Level:'), 'grade_level', get_post('grade_level', 0), null, null, 0);
+amount_row(_('Minimum Salary:'), 'min_salary');
+amount_row(_('Mid Salary:'), 'mid_salary');
+amount_row(_('Maximum Salary:'), 'max_salary');
+textarea_row(_('Description:'), 'description', null, 50, 3);
 
 end_table(1);
 
