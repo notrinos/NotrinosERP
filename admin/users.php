@@ -43,6 +43,11 @@ function can_process($new) {
 			return false;
 		}
 	}
+	if($new && key_in_foreign_table($_POST['login_id'], 'users', 'login_id')) {
+		display_error(_('Duplicated Login ID found. Please select another Login ID'));
+		set_focus('login_id');
+		return false;
+	}
 
 	return true;
 }
@@ -102,7 +107,7 @@ $result = get_users(check_value('show_inactive'));
 start_form();
 start_table(TABLESTYLE);
 
-$th = array(_('User login'), _('Full Name'), _('Phone'), _('E-mail'), _('Last Visit'), _('Access Level'), '', '');
+$th = array(_('User login ID'), _('Full Name'), _('Phone'), _('E-mail'), _('Last Visit'), _('Access Level'), '', '');
 
 inactive_control_column($th);
 table_header($th);	
@@ -172,7 +177,7 @@ if ($selected_id != -1) {
 	hidden('selected_id', $selected_id);
 	hidden('login_id');
 	
-	label_row(_('User login:'), $_POST['login_id']);
+	label_row(_('User login ID:'), $_POST['login_id']);
 } 
 else { //end of if $selected_id only do the else when a new record is being entered
 	text_row(_('User Login:'), 'login_id',  null, 22, 20);
