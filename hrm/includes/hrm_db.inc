@@ -16,7 +16,7 @@
 
 // Organization
 include_once($path_to_root.'/hrm/includes/db/departments_entity.inc');
-include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_grade_db.inc');
 include_once($path_to_root.'/hrm/includes/db/grade_db.inc');

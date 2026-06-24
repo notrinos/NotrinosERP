@@ -22,7 +22,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
-include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
 
 //--------------------------------------------------------------------------
 
@@ -39,11 +39,17 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			update_job_class($selected_id, $_POST['class_name'], $_POST['pay_basis']);
+			job_classes_entity::modify($selected_id, array(
+				'class_name' => $_POST['class_name'],
+				'pay_basis'  => $_POST['pay_basis'],
+			));
 			display_notification(_('Selected job class has been updated'));
 		}
 		else {
-			add_job_class($_POST['class_name'], $_POST['pay_basis']);
+			job_classes_entity::create(array(
+				'class_name' => $_POST['class_name'],
+				'pay_basis'  => $_POST['pay_basis'],
+			));
 			display_notification(_('New job class has been added'));
 		}
 		
@@ -56,7 +62,7 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'positions', 'job_class_id'))
 		display_error(_('The selected job class cannot be deleted.'));
 	else {
-		delete_job_class($selected_id);
+		job_classes_entity::remove($selected_id);
 		display_notification(_('Selected job class has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -79,7 +85,7 @@ $th = array(_('Class Id'), _('Class Name'), _('Pay Basis'), '', '');
 inactive_control_column($th);
 table_header($th);
 
-$result = get_job_classes(check_value('show_inactive'));
+$result = job_classes_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
@@ -103,7 +109,7 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		
-		$myrow = get_job_class($selected_id);
+		$myrow = job_classes_entity::find($selected_id);
 		$_POST['class_name']  = $myrow['class_name'];
 		$_POST['pay_basis']  = $myrow['pay_basis'];
 	}
