@@ -65,8 +65,9 @@ include_once($path_to_root.'/hrm/includes/db/tax_bracket_db.inc');
 include_once($path_to_root.'/hrm/includes/db/statutory_db.inc');
 include_once($path_to_root.'/hrm/includes/db/deduction_code_db.inc');
 
-// EOS & Settings
+// EOS calculation business logic
 include_once($path_to_root.'/hrm/includes/db/eos_db.inc');
+// HR Settings
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 
 // Extended HRM (Phase 3 matrix features)

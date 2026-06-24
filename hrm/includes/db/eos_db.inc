@@ -11,89 +11,13 @@
 ***********************************************************************/
 
 /**
- * End of Service calculation tiers CRUD
- */
-
-/**
- * Add EOS tier.
+ * End of Service calculation — high-level business logic.
  *
- * @param float $from_years
- * @param float|null $to_years
- * @param float $termination_rate
- * @param float $resignation_rate
- * @param string $description
- * @return int
+ * CRUD for eos_calculation tiers is handled by eos_rules_entity
+ * via static API: ::find(), ::all(), ::create(), ::modify(), ::remove().
  */
-function add_eos_tier($from_years, $to_years, $termination_rate, $resignation_rate, $description='') {
-    $sql = "INSERT INTO ".TB_PREF."eos_calculation
-        (from_years, to_years, termination_rate, resignation_rate, description)
-        VALUES (
-            ".db_escape((float)$from_years).",
-            ".($to_years === null || $to_years === '' ? 'NULL' : db_escape((float)$to_years)).",
-            ".db_escape((float)$termination_rate).",
-            ".db_escape((float)$resignation_rate).",
-            ".db_escape($description)."
-        )";
-    db_query($sql, 'could not add eos tier');
 
-    return (int)db_insert_id();
-}
-
-/**
- * Update EOS tier.
- *
- * @param int $eos_id
- * @param float $from_years
- * @param float|null $to_years
- * @param float $termination_rate
- * @param float $resignation_rate
- * @param string $description
- * @return bool
- */
-function update_eos_tier($eos_id, $from_years, $to_years, $termination_rate, $resignation_rate, $description='') {
-    $sql = "UPDATE ".TB_PREF."eos_calculation SET
-        from_years = ".db_escape((float)$from_years).",
-        to_years = ".($to_years === null || $to_years === '' ? 'NULL' : db_escape((float)$to_years)).",
-        termination_rate = ".db_escape((float)$termination_rate).",
-        resignation_rate = ".db_escape((float)$resignation_rate).",
-        description = ".db_escape($description)."
-        WHERE eos_id = ".db_escape((int)$eos_id);
-
-    return (bool)db_query($sql, 'could not update eos tier');
-}
-
-/**
- * Get one EOS tier.
- *
- * @param int $eos_id
- * @return array|false
- */
-function get_eos_tier($eos_id) {
-    $sql = "SELECT * FROM ".TB_PREF."eos_calculation WHERE eos_id = ".db_escape((int)$eos_id);
-    $result = db_query($sql, 'could not get eos tier');
-    return db_fetch_assoc($result);
-}
-
-/**
- * Get EOS tiers.
- *
- * @return resource
- */
-function get_eos_tiers() {
-    $sql = "SELECT * FROM ".TB_PREF."eos_calculation ORDER BY from_years, eos_id";
-    return db_query($sql, 'could not get eos tiers');
-}
-
-/**
- * Delete EOS tier.
- *
- * @param int $eos_id
- * @return bool
- */
-function delete_eos_tier($eos_id) {
-    $sql = "DELETE FROM ".TB_PREF."eos_calculation WHERE eos_id = ".db_escape((int)$eos_id);
-    return (bool)db_query($sql, 'could not delete eos tier');
-}
+include_once($path_to_root . '/hrm/includes/db/eos_calculation_entity.inc');
 
 /**
  * Calculate EOS amount from years of service and monthly salary.
@@ -110,7 +34,7 @@ function calculate_eos_amount($monthly_salary, $years_of_service, $is_resignatio
         return 0.0;
 
     $rate_field = (int)$is_resignation ? 'resignation_rate' : 'termination_rate';
-    $tiers = get_eos_tiers();
+    $tiers = eos_calculation_entity::all_db_resource(null, array('from_years', 'eos_id'));
 
     $amount = 0.0;
     while ($tier = db_fetch_assoc($tiers)) {

@@ -651,7 +651,7 @@ class Entity extends record_set {
 
 		foreach($data as $fld => $value) {	// select only data relevant for this model
 			if (in_array($fld, $this->fields))
-				$updates[$fld] = "`$fld`=".db_escape($value);
+				$updates[$fld] = "`$fld`=".db_escape($value, $value === null);
 		}
 		if (count($updates) == 0)
 			return $this->error(_("Empty update data for table ").$this->name);
@@ -728,7 +728,7 @@ class Entity extends record_set {
 		$fields = array();
 		foreach($data as $fld => $value) {
 			if (in_array($fld, $this->fields) || (is_array($this->key) ? in_array($this->key) : $fld==$this->key))
-				$fields["`$fld`"] = db_escape($value);
+				$fields["`$fld`"] = db_escape($value, $value === null);
 		}
 		if (!count($fields))
 			return $this->error(_("Empty data set for insertion into ").$this->name);
