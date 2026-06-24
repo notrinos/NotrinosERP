@@ -16,7 +16,7 @@ $path_to_root  = '../..';
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/department_db.inc');
+include_once($path_to_root.'/hrm/includes/db/departments_entity.inc');
 
 //--------------------------------------------------------------------------
 
@@ -38,31 +38,28 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error(_('Salary Expense Account should not be a balance account.'));
 		set_focus('payroll_expense_account');
 	}
-	elseif (department_has_column('parent_department_id') && get_post('parent_department_id') && $Mode=='UPDATE_ITEM' && get_post('parent_department_id') == $selected_id) {
+	elseif (get_post('parent_department_id') && $Mode=='UPDATE_ITEM' && get_post('parent_department_id') == $selected_id) {
 		display_error(_('A department cannot be parent of itself.'));
 		set_focus('parent_department_id');
 	}
 	else {
-		$extra = array();
-		if (department_has_column('department_code'))
-			$extra['department_code'] = get_post('department_code', '');
-		if (department_has_column('parent_department_id'))
-			$extra['parent_department_id'] = get_post('parent_department_id', 0);
-		if (department_has_column('manager_employee_id'))
-			$extra['manager_employee_id'] = get_post('manager_employee_id', '');
-		if (department_has_column('cost_center_id'))
-			$extra['cost_center_id'] = get_post('cost_center_id', 0);
-		if (department_has_column('payroll_liability_account'))
-			$extra['payroll_liability_account'] = get_post('payroll_liability_account', '');
-		if (department_has_column('description'))
-			$extra['description'] = get_post('description', '');
+		$data = array(
+			'department_code' => get_post('department_code', ''),
+			'department_name' => $_POST['department_name'],
+			'parent_department_id' => (int)get_post('parent_department_id', 0) ?: null,
+			'manager_employee_id' => get_post('manager_employee_id', '') ?: null,
+			'cost_center_id' => (int)get_post('cost_center_id', 0),
+			'payroll_expense_account' => $_POST['payroll_expense_account'],
+			'payroll_liability_account' => get_post('payroll_liability_account', '') ?: null,
+			'description' => get_post('description', ''),
+		);
 
 		if ($selected_id != '') {
-			update_department($selected_id, $_POST['department_name'], $_POST['payroll_expense_account'], $extra);
+			departments_entity::modify($selected_id, $data);
 			display_notification(_('Selected department has been updated'));
 		}
 		else {
-			add_department($_POST['department_name'], $_POST['payroll_expense_account'], $extra);
+			departments_entity::create($data);
 			display_notification(_('New department has been added'));
 		}
 		
@@ -74,7 +71,9 @@ if ($Mode == 'Delete') {
 
 	if(key_in_foreign_table($selected_id, 'employees', 'department_id'))
 		display_error(_('The Department cannot be deleted.'));
-	else if (!delete_department($selected_id))
+	else if (departments_entity::has_children($selected_id))
+		display_error(_('The Department cannot be deleted.'));
+	else if (!departments_entity::remove($selected_id))
 		display_error(_('The Department cannot be deleted.'));
 	else
 		display_notification(_('Selected department has been deleted'));
@@ -100,46 +99,39 @@ start_form();
 
 start_table(TABLESTYLE, "width='75%'");
 
-$th = array(_('Id'));
-if (department_has_column('department_code'))
-	$th[] = _('Code');
-$th[] = _('Department Name');
-if (department_has_column('parent_department_id'))
-	$th[] = _('Parent');
-if (department_has_column('manager_employee_id'))
-	$th[] = _('Manager');
-$th[] = _('Salary Expense Account');
-if (department_has_column('payroll_liability_account'))
-	$th[] = _('Payroll Liability Account');
-$th[] = '';
-$th[] = '';
+$th = array(
+	_('Id'),
+	_('Code'),
+	_('Department Name'),
+	_('Parent'),
+	_('Manager'),
+	_('Salary Expense Account'),
+	_('Payroll Liability Account'),
+	'',
+	''
+);
 
 inactive_control_column($th);
 table_header($th);
 
-$result = get_departments(check_value('show_inactive'));
+$result = departments_entity::all_db_resource(check_value('show_inactive') ? '1' : '!inactive');
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
 	alt_table_row_color($k);
 
 	label_cell($myrow['department_id']);
-	if (department_has_column('department_code'))
-		label_cell($myrow['department_code']);
+	label_cell($myrow['department_code']);
 	label_cell($myrow['department_name']);
-	if (department_has_column('parent_department_id'))
-		label_cell(@$myrow['parent_department_name']);
-	if (department_has_column('manager_employee_id'))
-		label_cell($myrow['manager_employee_id']);
+	label_cell(@$myrow['parent_department_name']);
+	label_cell($myrow['manager_employee_id']);
 	$account_name = get_gl_account_name($myrow['payroll_expense_account']);
 	label_cell($myrow['payroll_expense_account'].' - '.$account_name);
-	if (department_has_column('payroll_liability_account')) {
-		$liability_acc = $myrow['payroll_liability_account'];
-		if (!empty($liability_acc))
-			label_cell($liability_acc.' - '.get_gl_account_name($liability_acc));
-		else
-			label_cell('');
-	}
+	$liability_acc = $myrow['payroll_liability_account'];
+	if (!empty($liability_acc))
+		label_cell($liability_acc.' - '.get_gl_account_name($liability_acc));
+	else
+		label_cell('');
 	inactive_control_cell($myrow['department_id'], $myrow['inactive'], 'departments', 'department_id');
 	edit_button_cell('Edit'.$myrow['department_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['department_id'], _('Delete'));
@@ -154,7 +146,7 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		
-		$myrow = get_department($selected_id);
+		$myrow = departments_entity::find($selected_id);
 		$_POST['department_code'] = @$myrow['department_code'];
 		$_POST['department_name']  = $myrow['department_name'];
 		$_POST['payroll_expense_account'] = $myrow['payroll_expense_account'];
@@ -167,33 +159,26 @@ if($selected_id != '') {
 	hidden('selected_id', $selected_id);
 }
 
-if (department_has_column('department_code'))
-	text_row_ex(_('Department Code:'), 'department_code', 20, 20);
+text_row_ex(_('Department Code:'), 'department_code', 20, 20);
 
 text_row_ex(_('Department Name:'), 'department_name', 50, 60);
 
-if (department_has_column('parent_department_id')) {
-	$parent_sql = "SELECT department_id, department_name FROM ".TB_PREF."departments";
-	if ($selected_id != '')
-		$parent_sql .= " WHERE department_id <> ".db_escape($selected_id);
-	label_row(_('Parent Department:'), combo_input('parent_department_id', get_post('parent_department_id', 0), $parent_sql, 'department_id', 'department_name', array(
-		'spec_option' => _('-- None --'), 'spec_id' => 0
-	)));
-}
+$parent_sql = "SELECT department_id, department_name FROM ".TB_PREF."departments";
+if ($selected_id != '')
+	$parent_sql .= " WHERE department_id <> ".db_escape($selected_id);
+label_row(_('Parent Department:'), combo_input('parent_department_id', get_post('parent_department_id', 0), $parent_sql, 'department_id', 'department_name', array(
+	'spec_option' => _('-- None --'), 'spec_id' => 0
+)));
 
-if (department_has_column('manager_employee_id'))
-	text_row(_('Manager Employee ID:'), 'manager_employee_id', null, 20, 20);
+text_row(_('Manager Employee ID:'), 'manager_employee_id', null, 20, 20);
 
-if (department_has_column('cost_center_id'))
-	dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
+dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
 
 gl_all_accounts_list_row(_('Salary Expense Account:'), 'payroll_expense_account', null, true, false, _('Select an expense account'));
 
-if (department_has_column('payroll_liability_account'))
-	gl_all_accounts_list_row(_('Payroll Liability Account:'), 'payroll_liability_account', null, true, true, _('Select liability account'));
+gl_all_accounts_list_row(_('Payroll Liability Account:'), 'payroll_liability_account', null, true, true, _('Select liability account'));
 
-if (department_has_column('description'))
-	textarea_row(_('Description:'), 'description', null, 50, 3);
+textarea_row(_('Description:'), 'description', null, 50, 3);
 
 end_table(1);
 
