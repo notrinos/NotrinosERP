@@ -13,7 +13,7 @@ $page_security = 'SA_WORKSHIFT';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/hrm/includes/db/work_shift_db.inc');
+include_once($path_to_root . '/hrm/includes/db/work_shifts_entity.inc');
 page(_("Work Shifts"));
 
 simple_page_mode(false);
@@ -28,10 +28,25 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('Break duration and work hours must be positive values.'));
     } else {
         if ($selected_id != '') {
-            update_work_shift($selected_id, $_POST['shift_name'], $_POST['start_time'], $_POST['end_time'], input_num('break_duration'), input_num('work_hours'), check_value('is_night_shift') ? 1 : 0, 0);
+            work_shifts_entity::modify($selected_id, array(
+                'shift_name' => $_POST['shift_name'],
+                'start_time' => $_POST['start_time'],
+                'end_time' => $_POST['end_time'],
+                'break_duration' => input_num('break_duration'),
+                'work_hours' => input_num('work_hours'),
+                'is_night_shift' => check_value('is_night_shift') ? 1 : 0,
+                'inactive' => 0
+            ));
             display_notification(_('Work shift has been updated.'));
         } else {
-            add_work_shift($_POST['shift_name'], $_POST['start_time'], $_POST['end_time'], input_num('break_duration'), input_num('work_hours'), check_value('is_night_shift') ? 1 : 0);
+            work_shifts_entity::create(array(
+                'shift_name' => $_POST['shift_name'],
+                'start_time' => $_POST['start_time'],
+                'end_time' => $_POST['end_time'],
+                'break_duration' => input_num('break_duration'),
+                'work_hours' => input_num('work_hours'),
+                'is_night_shift' => check_value('is_night_shift') ? 1 : 0
+            ));
             display_notification(_('Work shift has been added.'));
         }
         $Mode = 'RESET';
@@ -39,7 +54,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_work_shift($selected_id);
+    work_shifts_entity::remove($selected_id);
     display_notification(_('Selected work shift has been deleted.'));
     $Mode = 'RESET';
 }
@@ -60,7 +75,7 @@ start_form();
 start_table(TABLESTYLE, "width='90%'");
 $th = array(_('ID'), _('Shift Name'), _('Start'), _('End'), _('Break (min)'), _('Work Hours'), _('Night Shift'), '', '');
 table_header($th);
-$result = get_work_shifts(check_value('show_inactive'));
+$result = work_shifts_entity::all_db_resource(check_value('show_inactive') ? null : 'inactive = 0', 'shift_name');
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -79,7 +94,7 @@ end_table(1);
 
 start_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
-    $myrow = get_work_shift($selected_id);
+    $myrow = work_shifts_entity::find($selected_id);
     $_POST['shift_name'] = $myrow['shift_name'];
     $_POST['start_time'] = $myrow['start_time'];
     $_POST['end_time'] = $myrow['end_time'];
