@@ -17,7 +17,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
-include_once($path_to_root.'/hrm/includes/db/job_classes_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
 
 //--------------------------------------------------------------------------
 
@@ -88,7 +88,8 @@ $result = get_job_positions(check_value('show_inactive'));
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
-	$class_name = get_job_class($myrow['job_class_id'])['class_name'];
+	$job_class = job_classes_entity::find($myrow['job_class_id']);
+	$class_name = $job_class ? $job_class['class_name'] : '';
 	alt_table_row_color($k);
 	label_cell($myrow['position_id']);
 	label_cell($myrow['position_name']);
