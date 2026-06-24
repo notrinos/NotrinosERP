@@ -34,8 +34,8 @@ include_once($path_to_root.'/hrm/includes/db/salary_structure_db.inc');
 
 // Attendance
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
-include_once($path_to_root.'/hrm/includes/db/attendance_deduction_db.inc');
-include_once($path_to_root.'/hrm/includes/db/work_shift_db.inc');
+include_once($path_to_root.'/hrm/includes/db/attendance_deduction_rules_entity.inc');
+include_once($path_to_root.'/hrm/includes/db/work_shifts_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/working_days_db.inc');
 include_once($path_to_root.'/hrm/includes/db/holidays_entity.inc');
 

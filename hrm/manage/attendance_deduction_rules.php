@@ -13,7 +13,7 @@ $page_security = 'SA_ATTDEDUCTRULE';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/hrm/includes/db/attendance_deduction_db.inc');
+include_once($path_to_root . '/hrm/includes/db/attendance_deduction_rules_entity.inc');
 page(_("Attendance Deduction Rules"));
 
 simple_page_mode(false);
@@ -24,7 +24,7 @@ $rule_types = array(
 );
 
 $day_options = array(
-    '' => _('All Days'),
+    -1 => _('All Days'),
     0 => _('Sunday'),
     1 => _('Monday'),
     2 => _('Tuesday'),
@@ -52,7 +52,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('work_hours');
     } else {
         $day_of_week = get_post('day_of_week', '');
-        if ($day_of_week === '')
+        if ($day_of_week === -1)
             $day_of_week = null;
         elseif (!isset($day_options[(string)$day_of_week])) {
             display_error(_('Day of week selection is invalid.'));
@@ -61,10 +61,25 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         }
 
         if ($selected_id != '') {
-            update_attendance_deduction_rule($selected_id, (int)$_POST['rule_type'], input_num('from_value'), input_num('to_value'), input_num('deduction_rate'), $day_of_week, input_num('work_hours'), 0);
+            attendance_deduction_rules_entity::modify($selected_id, array(
+                'rule_type' => (int)$_POST['rule_type'],
+                'from_value' => input_num('from_value'),
+                'to_value' => input_num('to_value'),
+                'deduction_rate' => input_num('deduction_rate'),
+                'day_of_week' => $day_of_week,
+                'work_hours' => input_num('work_hours'),
+                'inactive' => 0
+            ));
             display_notification(_('Attendance deduction rule has been updated.'));
         } else {
-            add_attendance_deduction_rule((int)$_POST['rule_type'], input_num('from_value'), input_num('to_value'), input_num('deduction_rate'), $day_of_week, input_num('work_hours'));
+            attendance_deduction_rules_entity::create(array(
+                'rule_type' => (int)$_POST['rule_type'],
+                'from_value' => input_num('from_value'),
+                'to_value' => input_num('to_value'),
+                'deduction_rate' => input_num('deduction_rate'),
+                'day_of_week' => $day_of_week,
+                'work_hours' => input_num('work_hours')
+            ));
             display_notification(_('Attendance deduction rule has been added.'));
         }
         $Mode = 'RESET';
@@ -72,7 +87,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_attendance_deduction_rule($selected_id);
+    attendance_deduction_rules_entity::remove($selected_id);
     display_notification(_('Selected rule has been deleted.'));
     $Mode = 'RESET';
 }
@@ -84,7 +99,7 @@ if ($Mode == 'RESET') {
     $_POST['from_value'] = 0;
     $_POST['to_value'] = 0;
     $_POST['deduction_rate'] = 0;
-    $_POST['day_of_week'] = '';
+    $_POST['day_of_week'] = -1;
     $_POST['work_hours'] = 8;
 }
 
@@ -93,7 +108,10 @@ start_form();
 start_table(TABLESTYLE, "width='95%'");
 $th = array(_('ID'), _('Type'), _('From'), _('To'), _('Deduction Rate (days)'), _('Day'), _('Work Hours'), '', '');
 table_header($th);
-$result = get_attendance_deduction_rules(check_value('show_inactive'));
+$result = attendance_deduction_rules_entity::all_db_resource(
+    check_value('show_inactive') ? '' : '!inactive',
+    array('rule_type', 'from_value')
+);
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -102,7 +120,7 @@ while ($row = db_fetch($result)) {
     qty_cell($row['from_value']);
     qty_cell($row['to_value']);
     qty_cell($row['deduction_rate']);
-    label_cell(isset($day_options[(string)$row['day_of_week']]) ? $day_options[(string)$row['day_of_week']] : $day_options['']);
+    label_cell(isset($day_options[(string)$row['day_of_week']]) ? $day_options[(string)$row['day_of_week']] : $day_options[-1]);
     qty_cell($row['work_hours']);
     edit_button_cell('Edit' . $row['rule_id'], _('Edit'));
     delete_button_cell('Delete' . $row['rule_id'], _('Delete'));
@@ -112,12 +130,12 @@ end_table(1);
 
 start_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
-    $myrow = get_attendance_deduction_rule($selected_id);
+    $myrow = attendance_deduction_rules_entity::find($selected_id);
     $_POST['rule_type'] = (int)$myrow['rule_type'];
     $_POST['from_value'] = qty_format($myrow['from_value']);
     $_POST['to_value'] = qty_format($myrow['to_value']);
     $_POST['deduction_rate'] = qty_format($myrow['deduction_rate']);
-    $_POST['day_of_week'] = is_null($myrow['day_of_week']) ? '' : (string)$myrow['day_of_week'];
+    $_POST['day_of_week'] = $myrow['day_of_week'];
     $_POST['work_hours'] = qty_format($myrow['work_hours']);
     hidden('selected_id', $selected_id);
 }
