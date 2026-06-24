@@ -21,7 +21,7 @@ include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_hooks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_class.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
-include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
@@ -1004,8 +1004,8 @@ function _payroll_get_basic_salary($components, $employee) {
             return _payroll_round(@$row['amount']);
     }
 
-    if (!empty($employee['position_id']) && function_exists('get_job_position')) {
-        $position = get_job_position($employee['position_id']);
+    if (!empty($employee['position_id']) && class_exists('job_positions_entity', false)) {
+        $position = job_positions_entity::find($employee['position_id']);
         if (is_array($position) && isset($position['basic_amount']))
             return _payroll_round($position['basic_amount']);
     }

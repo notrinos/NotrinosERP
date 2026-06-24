@@ -24,7 +24,7 @@ if (user_use_date_picker())
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/salary_structure_db.inc');
 include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
-include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 
 //--------------------------------------------------------------------------
@@ -32,7 +32,7 @@ include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 function display_salary_structure($position_id, $grade_id=0) {
 	global $selected_id, $Mode;
 
-	$position = get_job_position($position_id);
+	$position = job_positions_entity::find($position_id);
 	$elements = get_pay_elements();
 	$th = array(_('Pay Element'), _('Element Type'), _('Amount Type'), _('Amount'), _('Effective From'), '');
 
@@ -99,7 +99,7 @@ function display_salary_structure($position_id, $grade_id=0) {
 page(_($help_context = 'Manage Salary Structure'), false, false, '', $js);
 simple_page_mode();
 
-if(!db_has_job_position()) {
+if(!job_positions_entity::has_records()) {
 	display_error(_('No job position found in the system, please create job positions first.'));
 	display_footer_exit();
 }

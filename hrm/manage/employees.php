@@ -322,7 +322,7 @@ function tab_employment($employee_id, $new_employee) {
 	$job_class_name = _('Not assigned');
 	$position_id = get_post('position_id');
 	if ($position_id) {
-		$position = get_job_position($position_id);
+		$position = job_positions_entity::find($position_id);
 		if ($position && !empty($position['job_class_id'])) {
 			$job_class = job_classes_entity::find($position['job_class_id']);
 			$job_class_name = $job_class ? $job_class['class_name'] : _('Not assigned');

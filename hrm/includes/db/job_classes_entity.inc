@@ -15,12 +15,3 @@ class job_classes_entity extends Entity {
 		);
 	}
 }
-
-/**
- * Check whether any job classes exist in the system.
- *
- * @return bool True if at least one job class record exists.
- */
-function db_has_job_classes() {
-	return check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."job_classes");
-}

@@ -17,7 +17,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
-include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 
 //--------------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ $k = 0;
 while ($myrow = db_fetch($result)) {
 	alt_table_row_color($k);
 
-	$position = get_job_position($myrow['position_id']);
+	$position = job_positions_entity::find($myrow['position_id']);
 
 	label_cell($position['position_name']);
 	amount_cell($position['basic_amount'], $dec);

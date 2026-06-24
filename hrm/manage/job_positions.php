@@ -16,14 +16,14 @@ $path_to_root  = '../..';
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/job_position_db.inc');
+include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
 
 //--------------------------------------------------------------------------
 
 page(_($help_context = 'Manage Job Positions'));
 
-if(!db_has_job_classes()) {
+if(!job_classes_entity::has_records()) {
 	display_error(_('No Job Class found in the system, please define Job Classes first.'));
 	display_footer_exit();
 }
@@ -43,11 +43,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			update_job_position($selected_id, $_POST['position_name'], input_num('basic_amount'), $_POST['job_class_id']);
+			job_positions_entity::modify($selected_id, array(
+				'position_name' => $_POST['position_name'],
+				'basic_amount' => input_num('basic_amount'),
+				'job_class_id' => $_POST['job_class_id']
+			));
 			display_notification(_('Selected job position has been updated'));
 		}
 		else {
-			add_job_position($_POST['position_name'], input_num('basic_amount'), $_POST['job_class_id']);
+			job_positions_entity::create(array(
+				'position_name' => $_POST['position_name'],
+				'basic_amount' => input_num('basic_amount'),
+				'job_class_id' => $_POST['job_class_id']
+			));
 			display_notification(_('New job position has been added'));
 		}
 		
@@ -60,7 +68,7 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'employees', 'position_id'))
 		display_error(_('The Position cannot be deleted.'));
 	else {
-		delete_job_position($selected_id);
+		job_positions_entity::remove($selected_id);
 		display_notification(_('Selected job position has been deleted'));
 	}
 	$Mode = 'RESET';
@@ -84,7 +92,7 @@ $th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), '
 inactive_control_column($th);
 table_header($th);
 
-$result = get_job_positions(check_value('show_inactive'));
+$result = job_positions_entity::all_db_resource(check_value('show_inactive') ? '' : '!inactive');
 
 $k = 0;
 while ($myrow = db_fetch($result)) {
@@ -109,7 +117,7 @@ if($selected_id != '') {
 	
 	if($Mode == 'Edit') {
 		
-		$myrow = get_job_position($selected_id);
+		$myrow = job_positions_entity::find($selected_id);
 		$_POST['position_name']  = $myrow['position_name'];
 		$_POST['basic_amount'] = price_format($myrow['basic_amount']);
 		$_POST['job_class_id'] = $myrow['job_class_id'];
