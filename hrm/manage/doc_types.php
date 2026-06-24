@@ -13,7 +13,7 @@ $page_security = 'SA_DOCTYPE';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/hrm/includes/db/doc_type_db.inc');
+include_once($path_to_root . '/hrm/includes/db/doc_types_entity.inc');
 
 page(_("Document Types"));
 
@@ -24,11 +24,16 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('Document type name is required.'));
         set_focus('type_name');
     } else {
+        $data = array(
+            'type_name'     => $_POST['type_name'],
+            'notify_before' => (int)$_POST['notify_before'],
+            'is_required'   => check_value('is_required') ? 1 : 0,
+        );
         if ($selected_id != '') {
-            update_document_type($selected_id, $_POST['type_name'], (int)$_POST['notify_before'], check_value('is_required') ? 1 : 0);
+            doc_types_entity::modify($selected_id, $data);
             display_notification(_('Document type has been updated.'));
         } else {
-            add_document_type($_POST['type_name'], (int)$_POST['notify_before'], check_value('is_required') ? 1 : 0);
+            doc_types_entity::create($data);
             display_notification(_('Document type has been added.'));
         }
         $Mode = 'RESET';
@@ -36,10 +41,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    if (!delete_document_type($selected_id))
+    if (key_in_foreign_table($selected_id, 'employee_documents', 'doc_type_id'))
         display_error(_('Document type cannot be deleted because employee documents already use it.'));
-    else
+    else {
+        doc_types_entity::remove($selected_id);
         display_notification(_('Selected document type has been deleted.'));
+    }
     $Mode = 'RESET';
 }
 
@@ -57,7 +64,7 @@ start_table(TABLESTYLE, "width='95%'");
 $th = array(_('ID'), _('Document Type'), _('Notify Before (days)'), _('Required'), '', '');
 table_header($th);
 
-$result = get_document_types(true);
+$result = doc_types_entity::all_db_resource();
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -73,7 +80,7 @@ end_table(1);
 
 start_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
-    $myrow = get_document_type($selected_id);
+    $myrow = doc_types_entity::find($selected_id);
     $_POST['type_name'] = $myrow['type_name'];
     $_POST['notify_before'] = (int)$myrow['notify_before'];
     $_POST['is_required'] = (int)$myrow['is_required'];

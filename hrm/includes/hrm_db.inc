@@ -27,7 +27,7 @@ include_once($path_to_root.'/hrm/includes/db/employee_history_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_document_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_dependent_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_salary_db.inc');
-include_once($path_to_root.'/hrm/includes/db/doc_type_db.inc');
+include_once($path_to_root.'/hrm/includes/db/doc_types_entity.inc');
 
 // Compensation
 include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
