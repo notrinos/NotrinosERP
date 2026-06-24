@@ -43,6 +43,11 @@ function can_process($new) {
 			return false;
 		}
 	}
+	if($new && key_in_foreign_table($_POST['user_id'], 'users', 'user_id')) {
+		display_error(_('Duplicated User Login ID found. Please select another User Login ID'));
+		set_focus('user_id');
+		return false;
+	}
 
 	return true;
 }
