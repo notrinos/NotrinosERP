@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_sales_stages_entity.inc');
 
 page(_($help_context = 'CRM Pipeline Stages'));
 
@@ -41,13 +41,21 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('probability');
     } else {
         if ($selected_id != '') {
-            update_crm_sales_stage($selected_id, $_POST['name'],
-                $_POST['sequence'], $_POST['probability'],
-                $_POST['description'], check_value('active'));
+            crm_sales_stages_entity::modify($selected_id, array(
+                'name' => $_POST['name'],
+                'sequence' => $_POST['sequence'],
+                'probability' => $_POST['probability'],
+                'description' => $_POST['description'],
+                'active' => check_value('active')
+            ));
             display_notification(_('Pipeline stage has been updated.'));
         } else {
-            add_crm_sales_stage($_POST['name'], $_POST['sequence'],
-                $_POST['probability'], $_POST['description']);
+            crm_sales_stages_entity::create(array(
+                'name' => $_POST['name'],
+                'sequence' => $_POST['sequence'],
+                'probability' => $_POST['probability'],
+                'description' => $_POST['description']
+            ));
             display_notification(_('New pipeline stage has been added.'));
         }
         $Mode = 'RESET';
@@ -62,7 +70,7 @@ if ($Mode == 'Delete') {
     if ($row['cnt'] > 0) {
         display_error(_('This stage is in use and cannot be deleted.'));
     } else {
-        delete_crm_sales_stage($selected_id);
+        crm_sales_stages_entity::remove($selected_id);
         display_notification(_('Pipeline stage has been deleted.'));
     }
     $Mode = 'RESET';
@@ -85,7 +93,7 @@ start_table(TABLESTYLE, "width='70%'");
 $th = array(_('ID'), _('Stage Name'), _('Sequence'), _('Probability %'), _('Description'), _('Active'), '', '');
 table_header($th);
 
-$result = get_crm_sales_stages(true);
+$result = crm_sales_stages_entity::all_db_resource('1=1 ORDER BY sequence, name');
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -105,7 +113,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_sales_stage($selected_id);
+        $myrow = crm_sales_stages_entity::find($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['sequence'] = $myrow['sequence'];
         $_POST['probability'] = $myrow['probability'];
