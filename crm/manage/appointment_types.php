@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_appointments_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_appointment_types_entity.inc');
 
 page(_($help_context = 'CRM Appointment Types'));
 
@@ -38,13 +38,21 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('default_duration');
     } else {
         if ($selected_id != '') {
-            update_crm_appointment_type($selected_id, $_POST['name'],
-                (int)$_POST['default_duration'], $_POST['location'],
-                $_POST['video_link'], check_value('active'));
+            crm_appointment_types_entity::modify($selected_id, array(
+                'name'             => $_POST['name'],
+                'default_duration' => (int)$_POST['default_duration'],
+                'location'         => $_POST['location'],
+                'video_link'       => $_POST['video_link'],
+                'active'           => check_value('active') ? 1 : 0,
+            ));
             display_notification(_('Appointment type has been updated.'));
         } else {
-            add_crm_appointment_type($_POST['name'], (int)$_POST['default_duration'],
-                $_POST['location'], $_POST['video_link']);
+            crm_appointment_types_entity::create(array(
+                'name'             => $_POST['name'],
+                'default_duration' => (int)$_POST['default_duration'],
+                'location'         => $_POST['location'],
+                'video_link'       => $_POST['video_link'],
+            ));
             display_notification(_('New appointment type has been added.'));
         }
         $Mode = 'RESET';
@@ -55,7 +63,7 @@ if ($Mode == 'Delete') {
     if (key_in_foreign_table($selected_id, 'crm_appointments', 'appointment_type_id')) {
         display_error(_('Cannot delete this appointment type — it is referenced by existing appointment(s).'));
     } else {
-        delete_crm_appointment_type($selected_id);
+        crm_appointment_types_entity::remove($selected_id);
         display_notification(_('Appointment type has been deleted.'));
     }
     $Mode = 'RESET';
@@ -78,9 +86,9 @@ start_table(TABLESTYLE, "width='70%'");
 $th = array(_('ID'), _('Name'), _('Duration (min)'), _('Location'), _('Active'), '', '');
 table_header($th);
 
-$result = get_crm_appointment_types(true);
+$rows = crm_appointment_types_entity::all();
 $k = 0;
-while ($myrow = db_fetch($result)) {
+foreach ($rows as $myrow) {
     alt_table_row_color($k);
     label_cell($myrow['id']);
     label_cell($myrow['name']);
@@ -97,7 +105,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_appointment_type($selected_id);
+        $myrow = crm_appointment_types_entity::find($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['default_duration'] = $myrow['default_duration'];
         $_POST['location'] = $myrow['location'];

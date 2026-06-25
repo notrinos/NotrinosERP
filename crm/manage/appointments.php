@@ -22,6 +22,8 @@ $path_to_root  = '../..';
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
+include_once($path_to_root . '/crm/includes/db/crm_appointments_entity.inc');
+include_once($path_to_root . '/crm/includes/db/crm_appointments_db.inc');
 
 include_crm_files();
 
@@ -30,7 +32,7 @@ page(_($help_context = 'CRM Appointments'));
 //--------------------------------------------------------------------------
 
 if (isset($_GET['delete'])) {
-    delete_crm_appointment((int)$_GET['delete']);
+    crm_appointments_entity::remove((int)$_GET['delete']);
     display_notification(_('Appointment has been deleted.'));
 }
 

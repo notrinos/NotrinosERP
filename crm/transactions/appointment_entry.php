@@ -24,7 +24,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_appointments_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_appointments_entity.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 $js = '';
@@ -42,7 +42,7 @@ $appointment    = null;
 $raw_id = isset($_GET['AppointmentID']) ? $_GET['AppointmentID'] : get_post('AppointmentID', 0);
 if ((int)$raw_id > 0) {
     $appointment_id = (int)$raw_id;
-    $appointment = get_crm_appointment($appointment_id);
+    $appointment = crm_appointments_entity::find($appointment_id);
     if (!$appointment) {
         display_error(_('Appointment not found.'));
         hyperlink_params($path_to_root . '/crm/manage/appointments.php', _('Back to Appointments'), 'sel_app=crm');
@@ -108,10 +108,11 @@ if (isset($_POST['Save'])) {
         begin_transaction();
         if ($is_new) {
             $data['created_by'] = $_SESSION['wa_current_user']->user;
-            $appointment_id = add_crm_appointment($data);
+            crm_appointments_entity::create($data);
+            $appointment_id = db_insert_id();
             display_notification(_('Appointment has been created.'));
         } else {
-            update_crm_appointment($appointment_id, $data);
+            crm_appointments_entity::modify($appointment_id, $data);
             display_notification(_('Appointment has been updated.'));
         }
         commit_transaction();
@@ -119,7 +120,7 @@ if (isset($_POST['Save'])) {
         if ($is_new) {
             meta_forward($_SERVER['PHP_SELF'], 'AppointmentID=' . $appointment_id . crm_sel_app_param());
         }
-        $appointment = get_crm_appointment($appointment_id);
+        $appointment = crm_appointments_entity::find($appointment_id);
     }
 }
 
