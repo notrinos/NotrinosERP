@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_lead_sources_entity.inc');
 
 page(_($help_context = 'CRM Lead Sources'));
 
@@ -35,11 +35,17 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('name');
     } else {
         if ($selected_id != '') {
-            update_crm_lead_source($selected_id, $_POST['name'],
-                $_POST['description'], check_value('active'));
+            crm_lead_sources_entity::modify($selected_id, array(
+                'name' => $_POST['name'],
+                'description' => $_POST['description'],
+                'active' => check_value('active')
+            ));
             display_notification(_('Lead source has been updated.'));
         } else {
-            add_crm_lead_source($_POST['name'], $_POST['description']);
+            crm_lead_sources_entity::create(array(
+                'name' => $_POST['name'],
+                'description' => $_POST['description']
+            ));
             display_notification(_('New lead source has been added.'));
         }
         $Mode = 'RESET';
@@ -50,7 +56,7 @@ if ($Mode == 'Delete') {
     if (key_in_foreign_table($selected_id, 'crm_leads', 'lead_source_id')) {
         display_error(_('Cannot delete this lead source — it is referenced by existing lead(s).'));
     } else {
-        delete_crm_lead_source($selected_id);
+        crm_lead_sources_entity::remove($selected_id);
         display_notification(_('Lead source has been deleted.'));
     }
     $Mode = 'RESET';
@@ -71,7 +77,7 @@ start_table(TABLESTYLE, "width='60%'");
 $th = array(_('ID'), _('Name'), _('Description'), _('Active'), '', '');
 table_header($th);
 
-$result = get_crm_lead_sources(true);
+$result = crm_lead_sources_entity::all_db_resource('1=1 ORDER BY name');
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -89,7 +95,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_lead_source($selected_id);
+        $myrow = crm_lead_sources_entity::find($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['description'] = $myrow['description'];
         $_POST['active'] = $myrow['active'];
