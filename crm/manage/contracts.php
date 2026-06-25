@@ -30,7 +30,7 @@ page(_($help_context = 'CRM Contracts'));
 //--------------------------------------------------------------------------
 
 if (isset($_GET['delete'])) {
-    delete_crm_contract((int)$_GET['delete']);
+    crm_contracts_entity::remove((int)$_GET['delete']);
     display_notification(_('Contract has been deleted.'));
 }
 

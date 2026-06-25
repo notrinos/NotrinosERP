@@ -12,107 +12,17 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 /**
  * CRM Contracts Database Layer
  *
- * CRUD and query functions for customer contracts, renewal alerts,
- * and contract lifecycle management.
+ * JOIN-based query helpers and renewal logic for customer contracts.
+ * Simple single-table CRUD is handled by crm_contracts_entity.
  *
  * @package NotrinosERP
  * @subpackage CRM
  */
 
-/**
- * Add a new contract.
- *
- * @param array $data
- * @return int|false
- */
-function add_crm_contract($data)
-{
-    $sql = "INSERT INTO " . TB_PREF . "crm_contracts
-            (contract_ref, customer_id, lead_id, title, description,
-             contract_value, start_date, end_date, renewal_alert_days,
-             status, signed_by, signed_date, created_by) VALUES ("
-        . db_escape(@$data['contract_ref']) . ", "
-        . (@$data['customer_id'] ? db_escape($data['customer_id']) : "NULL") . ", "
-        . (@$data['lead_id'] ? db_escape($data['lead_id']) : "NULL") . ", "
-        . db_escape($data['title']) . ", "
-        . db_escape(@$data['description']) . ", "
-        . db_escape(@$data['contract_value'] ?: 0) . ", "
-        . (!empty($data['start_date']) ? db_escape($data['start_date']) : "NULL") . ", "
-        . (!empty($data['end_date']) ? db_escape($data['end_date']) : "NULL") . ", "
-        . db_escape(@$data['renewal_alert_days'] ?: 30) . ", "
-        . db_escape(@$data['status'] ?: CRM_CONTRACT_DRAFT) . ", "
-        . db_escape(@$data['signed_by']) . ", "
-        . (!empty($data['signed_date']) ? db_escape($data['signed_date']) : "NULL") . ", "
-        . (@$data['created_by'] ? db_escape($data['created_by']) : "NULL") . ")";
-
-    db_query($sql, "Could not add CRM contract");
-    return db_insert_id();
-}
+include_once($path_to_root . '/crm/includes/db/crm_contracts_entity.inc');
 
 /**
- * Update a contract.
- *
- * @param int   $id
- * @param array $data
- * @return bool
- */
-function update_crm_contract($id, $data)
-{
-    $fields = array(
-        'contract_ref', 'customer_id', 'lead_id', 'title', 'description',
-        'contract_value', 'start_date', 'end_date', 'renewal_alert_days',
-        'status', 'signed_by', 'signed_date',
-    );
-
-    $sets = array();
-    foreach ($fields as $f) {
-        if (array_key_exists($f, $data)) {
-            $sets[] = "$f = " . (($data[$f] === null || $data[$f] === '')
-                ? "NULL"
-                : db_escape($data[$f]));
-        }
-    }
-
-    if (empty($sets)) {
-        return true;
-    }
-
-    $sql = "UPDATE " . TB_PREF . "crm_contracts SET "
-        . implode(', ', $sets)
-        . " WHERE id = " . db_escape($id);
-
-    return db_query($sql, "Could not update CRM contract");
-}
-
-/**
- * Delete a contract.
- *
- * @param int $id
- * @return bool
- */
-function delete_crm_contract($id)
-{
-    $sql = "DELETE FROM " . TB_PREF . "crm_contracts WHERE id = " . db_escape($id);
-    return db_query($sql, "Could not delete CRM contract");
-}
-
-/**
- * Retrieve a single contract by ID.
- *
- * @param int $id
- * @return array|false
- */
-function get_crm_contract($id)
-{
-    $sql = "SELECT c.*, d.name AS customer_name
-            FROM " . TB_PREF . "crm_contracts c
-            LEFT JOIN " . TB_PREF . "debtors_master d ON c.customer_id = d.debtor_no
-            WHERE c.id = " . db_escape($id);
-    return db_fetch(db_query($sql, "Could not get CRM contract"));
-}
-
-/**
- * List contracts with optional filtering.
+ * List contracts with optional filtering (with customer name JOIN).
  *
  * @param array $filters
  * @param int   $limit
@@ -179,7 +89,7 @@ function get_expiring_contracts($days = null)
  */
 function renew_crm_contract($id, $new_start_date, $new_end_date, $new_value = null)
 {
-    $old = get_crm_contract($id);
+    $old = crm_contracts_entity::find($id);
     if (!$old) {
         return false;
     }
@@ -187,10 +97,10 @@ function renew_crm_contract($id, $new_start_date, $new_end_date, $new_value = nu
     begin_transaction();
 
     // Mark old contract as renewed
-    update_crm_contract($id, array('status' => CRM_CONTRACT_RENEWED));
+    crm_contracts_entity::modify($id, array('status' => CRM_CONTRACT_RENEWED));
 
     // Create new contract
-    $new_id = add_crm_contract(array(
+    crm_contracts_entity::create(array(
         'contract_ref' => crm_next_contract_ref(),
         'customer_id' => $old['customer_id'],
         'lead_id' => $old['lead_id'],
@@ -203,6 +113,7 @@ function renew_crm_contract($id, $new_start_date, $new_end_date, $new_value = nu
         'status' => CRM_CONTRACT_DRAFT,
         'created_by' => $old['created_by'],
     ));
+    $new_id = db_insert_id();
 
     commit_transaction();
     return $new_id;

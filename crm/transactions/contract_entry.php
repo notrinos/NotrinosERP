@@ -23,6 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_contracts_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_contracts_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
@@ -41,12 +42,17 @@ $contract    = null;
 $raw_id = isset($_GET['ContractID']) ? $_GET['ContractID'] : get_post('ContractID', 0);
 if ((int)$raw_id > 0) {
     $contract_id = (int)$raw_id;
-    $contract = get_crm_contract($contract_id);
+    $contract = crm_contracts_entity::find($contract_id);
     if (!$contract) {
         display_error(_('Contract not found.'));
         hyperlink_params($path_to_root . '/crm/manage/contracts.php', _('Back to Contracts'), 'sel_app=crm');
         end_page();
         exit;
+    }
+    // Enrich with customer name for display (JOIN not in entity)
+    if (!empty($contract['customer_id'])) {
+        $cust = db_fetch(db_query("SELECT name FROM " . TB_PREF . "debtors_master WHERE debtor_no = " . db_escape($contract['customer_id'])));
+        $contract['customer_name'] = $cust ? $cust['name'] : null;
     }
     $is_new = false;
 }
@@ -106,10 +112,11 @@ if (isset($_POST['Save'])) {
         if ($is_new) {
             $data['contract_ref'] = crm_next_contract_ref();
             $data['created_by']   = $_SESSION['wa_current_user']->user;
-            $contract_id = add_crm_contract($data);
+            crm_contracts_entity::create($data);
+            $contract_id = db_insert_id();
             display_notification(_('Contract has been created.'));
         } else {
-            update_crm_contract($contract_id, $data);
+            crm_contracts_entity::modify($contract_id, $data);
             display_notification(_('Contract has been updated.'));
         }
         commit_transaction();
@@ -117,7 +124,11 @@ if (isset($_POST['Save'])) {
         if ($is_new) {
             meta_forward($_SERVER['PHP_SELF'], 'ContractID=' . $contract_id . crm_sel_app_param());
         }
-        $contract = get_crm_contract($contract_id);
+        $contract = crm_contracts_entity::find($contract_id);
+        if ($contract && !empty($contract['customer_id'])) {
+            $cust = db_fetch(db_query("SELECT name FROM " . TB_PREF . "debtors_master WHERE debtor_no = " . db_escape($contract['customer_id'])));
+            $contract['customer_name'] = $cust ? $cust['name'] : null;
+        }
     }
 }
 
