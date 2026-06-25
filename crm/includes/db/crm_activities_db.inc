@@ -12,87 +12,21 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 /**
  * CRM Activities Database Layer
  *
- * CRUD and query functions for CRM activities (calls, emails,
+ * Complex query functions for CRM activities (calls, emails,
  * meetings, to-dos) linked to leads, contacts, or customers.
+ *
+ * Simple CRUD operations have been migrated to crm_activities_entity.
  *
  * @package NotrinosERP
  * @subpackage CRM
  */
 
-/**
- * Add a new activity.
- *
- * @param array $data  Associative array of column => value.
- * @return int|false   The new activity ID.
- */
-function add_crm_activity($data)
-{
-    $fields = array(
-        'entity_type', 'entity_id', 'activity_type_id',
-        'summary', 'description', 'date_scheduled', 'date_completed',
-        'assigned_to', 'created_by', 'status', 'outcome',
-        'duration_minutes', 'next_activity_id',
-    );
-
-    $cols = array();
-    $vals = array();
-    foreach ($fields as $f) {
-        if (array_key_exists($f, $data)) {
-            $cols[] = $f;
-            $vals[] = ($data[$f] === null || $data[$f] === '')
-                ? "NULL"
-                : db_escape($data[$f]);
-        }
-    }
-
-    $sql = "INSERT INTO " . TB_PREF . "crm_activities (" . implode(', ', $cols) . ")
-            VALUES (" . implode(', ', $vals) . ")";
-
-    begin_transaction();
-    $ret = db_query($sql, "Could not add CRM activity");
-    $id = $ret ? db_insert_id() : false;
-    commit_transaction();
-    return $id;
-}
-
-/**
- * Update an existing activity.
- *
- * @param int   $id
- * @param array $data
- * @return bool
- */
-function update_crm_activity($id, $data)
-{
-    $fields = array(
-        'entity_type', 'entity_id', 'activity_type_id',
-        'summary', 'description', 'date_scheduled', 'date_completed',
-        'assigned_to', 'status', 'outcome',
-        'duration_minutes', 'next_activity_id',
-    );
-
-    $sets = array();
-    foreach ($fields as $f) {
-        if (array_key_exists($f, $data)) {
-            $sets[] = "$f = " . (($data[$f] === null || $data[$f] === '')
-                ? "NULL"
-                : db_escape($data[$f]));
-        }
-    }
-
-    if (empty($sets)) {
-        return true;
-    }
-
-    $sql = "UPDATE " . TB_PREF . "crm_activities SET "
-        . implode(', ', $sets)
-        . " WHERE id = " . db_escape($id);
-
-    return db_query($sql, "Could not update CRM activity");
-}
+include_once($path_to_root . '/crm/includes/db/crm_activities_entity.inc');
 
 /**
  * Mark an activity as done.
+ *
+ * Uses crm_activities_entity for CRUD and handles activity chaining.
  *
  * @param int    $id
  * @param string $outcome  Optional outcome note.
@@ -109,11 +43,11 @@ function complete_crm_activity($id, $outcome = null)
     }
 
     begin_transaction();
-    $ret = update_crm_activity($id, $data);
+    $ret = crm_activities_entity::modify($id, $data);
 
     // Handle activity chaining
     if ($ret) {
-        $activity = get_crm_activity($id);
+        $activity = crm_activities_entity::find($id);
         if ($activity && $activity['activity_type_id']) {
             $type = get_crm_activity_type($activity['activity_type_id']);
             if ($type && $type['chaining_type'] === CRM_CHAIN_TRIGGER && $type['chained_activity_type_id']) {
@@ -123,7 +57,7 @@ function complete_crm_activity($id, $outcome = null)
                     : date('Y-m-d H:i:s');
                 $new_date = date('Y-m-d H:i:s', strtotime($schedule_from . " +$days days"));
 
-                $new_activity_id = add_crm_activity(array(
+                $new_activity_id = crm_activities_entity::create(array(
                     'entity_type' => $activity['entity_type'],
                     'entity_id' => $activity['entity_id'],
                     'activity_type_id' => $type['chained_activity_type_id'],
@@ -135,10 +69,7 @@ function complete_crm_activity($id, $outcome = null)
                 ));
 
                 if ($new_activity_id) {
-                    $sql = "UPDATE " . TB_PREF . "crm_activities SET
-                            next_activity_id = " . db_escape($new_activity_id)
-                        . " WHERE id = " . db_escape($id);
-                    db_query($sql, "Could not link chained activity");
+                    crm_activities_entity::modify($id, array('next_activity_id' => $new_activity_id));
                 }
             }
         }
@@ -156,7 +87,7 @@ function complete_crm_activity($id, $outcome = null)
  */
 function cancel_crm_activity($id)
 {
-    return update_crm_activity($id, array('status' => CRM_ACTIVITY_CANCELLED));
+    return crm_activities_entity::modify($id, array('status' => CRM_ACTIVITY_CANCELLED));
 }
 
 /**
@@ -167,12 +98,11 @@ function cancel_crm_activity($id)
  */
 function delete_crm_activity($id)
 {
-    $sql = "DELETE FROM " . TB_PREF . "crm_activities WHERE id = " . db_escape($id);
-    return db_query($sql, "Could not delete CRM activity");
+    return crm_activities_entity::remove($id);
 }
 
 /**
- * Retrieve a single activity by ID.
+ * Retrieve a single activity by ID (with JOINs for type info).
  *
  * @param int $id
  * @return array|false

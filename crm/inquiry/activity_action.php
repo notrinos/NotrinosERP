@@ -26,6 +26,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_activities_entity.inc');
 
 header('Content-Type: application/json');
 
@@ -48,7 +49,7 @@ begin_transaction();
 if ($action === 'complete') {
     complete_crm_activity($activity_id);
 } elseif ($action === 'cancel') {
-    update_crm_activity($activity_id, array('status' => CRM_ACTIVITY_CANCELLED));
+    crm_activities_entity::modify($activity_id, array('status' => CRM_ACTIVITY_CANCELLED));
 } else {
     echo json_encode(array('error' => 'Unknown action'));
     exit;

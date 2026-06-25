@@ -26,6 +26,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_activities_entity.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 $js = '';
@@ -115,12 +116,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         );
 
         if ($selected_id != '') {
-            update_crm_activity($selected_id, $data);
+            crm_activities_entity::modify($selected_id, $data);
             display_notification(_('Activity has been updated.'));
         } else {
             $data['created_by'] = $_SESSION['wa_current_user']->user;
             $data['status'] = CRM_ACTIVITY_PLANNED;
-            add_crm_activity($data);
+            crm_activities_entity::create($data);
             display_notification(_('Activity has been scheduled.'));
         }
         $Mode = 'RESET';
@@ -141,7 +142,7 @@ if (isset($_POST['Complete']) && $selected_id != '') {
 
 if (isset($_POST['CancelActivity']) && $selected_id != '') {
     begin_transaction();
-    cancel_crm_activity($selected_id);
+    crm_activities_entity::modify($selected_id, array('status' => CRM_ACTIVITY_CANCELLED));
     commit_transaction();
     display_notification(_('Activity cancelled.'));
     $Mode = 'RESET';
@@ -152,8 +153,7 @@ if (isset($_POST['CancelActivity']) && $selected_id != '') {
 //--------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-    $sql = "DELETE FROM " . TB_PREF . "crm_activities WHERE id = " . db_escape((int)$selected_id);
-    db_query($sql, 'could not delete activity');
+    crm_activities_entity::remove($selected_id);
     display_notification(_('Activity has been deleted.'));
     $Mode = 'RESET';
 }
