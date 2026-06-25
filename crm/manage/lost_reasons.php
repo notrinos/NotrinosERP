@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_lost_reasons_entity.inc');
 
 page(_($help_context = 'CRM Lost Reasons'));
 
@@ -35,10 +35,15 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         set_focus('description');
     } else {
         if ($selected_id != '') {
-            update_crm_lost_reason($selected_id, $_POST['description'], check_value('active'));
+            crm_lost_reasons_entity::modify($selected_id, array(
+                'description' => $_POST['description'],
+                'active' => check_value('active')
+            ));
             display_notification(_('Lost reason has been updated.'));
         } else {
-            add_crm_lost_reason($_POST['description']);
+            crm_lost_reasons_entity::create(array(
+                'description' => $_POST['description']
+            ));
             display_notification(_('New lost reason has been added.'));
         }
         $Mode = 'RESET';
@@ -49,7 +54,7 @@ if ($Mode == 'Delete') {
     if (key_in_foreign_table($selected_id, 'crm_leads', 'lost_reason_id')) {
         display_error(_('Cannot delete this lost reason — it is referenced by existing lead(s).'));
     } else {
-        delete_crm_lost_reason($selected_id);
+        crm_lost_reasons_entity::remove($selected_id);
         display_notification(_('Lost reason has been deleted.'));
     }
     $Mode = 'RESET';
@@ -69,7 +74,7 @@ start_table(TABLESTYLE, "width='50%'");
 $th = array(_('ID'), _('Description'), _('Active'), '', '');
 table_header($th);
 
-$result = get_crm_lost_reasons(true);
+$result = crm_lost_reasons_entity::all_db_resource('1=1 ORDER BY description');
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -86,7 +91,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_lost_reason($selected_id);
+        $myrow = crm_lost_reasons_entity::find($selected_id);
         $_POST['description'] = $myrow['description'];
         $_POST['active'] = $myrow['active'];
     }
