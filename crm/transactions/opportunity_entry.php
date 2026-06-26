@@ -29,7 +29,6 @@ include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_communication_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 $js = '';

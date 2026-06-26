@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_sales_teams_entity.inc');
 
 page(_($help_context = 'CRM Sales Teams'));
 
@@ -39,14 +39,25 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } else {
         $leader = !empty($_POST['team_leader_id']) ? $_POST['team_leader_id'] : null;
         if ($selected_id != '') {
-            update_crm_sales_team($selected_id, $_POST['name'], $leader,
-                $_POST['email_alias'], $_POST['invoicing_target'],
-                check_value('use_leads'), check_value('active'));
+            crm_sales_teams_entity::modify($selected_id, array(
+                'name'             => $_POST['name'],
+                'team_leader_id'   => $leader,
+                'email_alias'      => $_POST['email_alias'],
+                'invoicing_target' => $_POST['invoicing_target'],
+                'use_leads'        => check_value('use_leads'),
+                'active'           => check_value('active')
+            ));
             display_notification(_('Sales team has been updated.'));
         } else {
-            $selected_id = add_crm_sales_team($_POST['name'], $leader,
-                $_POST['email_alias'], $_POST['invoicing_target'],
-                check_value('use_leads'));
+            $selected_id = db_insert_id();
+            crm_sales_teams_entity::create(array(
+                'name'             => $_POST['name'],
+                'team_leader_id'   => $leader,
+                'email_alias'      => $_POST['email_alias'],
+                'invoicing_target' => $_POST['invoicing_target'],
+                'use_leads'        => check_value('use_leads')
+            ));
+            $selected_id = db_insert_id();
             display_notification(_('New sales team has been added.'));
         }
         $Mode = 'RESET';
@@ -61,7 +72,7 @@ if ($Mode == 'Delete') {
     if ($row['cnt'] > 0) {
         display_error(_('This team has assigned leads and cannot be deleted.'));
     } else {
-        delete_crm_sales_team($selected_id);
+        crm_sales_teams_entity::remove($selected_id);
         display_notification(_('Sales team has been deleted.'));
     }
     $Mode = 'RESET';
@@ -71,7 +82,7 @@ if ($Mode == 'Delete') {
 // Handle Add/Remove team member
 //--------------------------------------------------------------------------
 if (isset($_POST['AddMember']) && !empty($_POST['new_member_id']) && !empty($_POST['editing_team_id'])) {
-    add_crm_team_member($_POST['editing_team_id'], $_POST['new_member_id'],
+    crm_sales_teams_entity::add_member($_POST['editing_team_id'], $_POST['new_member_id'],
         (int)$_POST['member_max_leads']);
     display_notification(_('Team member added.'));
 }
@@ -80,7 +91,7 @@ foreach ($_POST as $key => $val) {
     if (strpos($key, 'RemoveMember_') === 0 && !empty($_POST['editing_team_id'])) {
         $remove_uid = (int)substr($key, 13);
         if ($remove_uid > 0) {
-            remove_crm_team_member($_POST['editing_team_id'], $remove_uid);
+            crm_sales_teams_entity::remove_member($_POST['editing_team_id'], $remove_uid);
             display_notification(_('Team member removed.'));
         }
         break;
@@ -108,7 +119,7 @@ start_table(TABLESTYLE, "width='80%'");
 $th = array(_('ID'), _('Team Name'), _('Leader'), _('Members'), _('Invoicing Target'), _('Active'), _('Edit'), _('Member'), _('Delete'));
 table_header($th);
 
-$result = get_crm_sales_teams(true);
+$result = crm_sales_teams_entity::all_with_counts();
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -133,7 +144,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_sales_team($selected_id);
+        $myrow = crm_sales_teams_entity::find($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['team_leader_id'] = $myrow['team_leader_id'];
         $_POST['email_alias'] = $myrow['email_alias'];
@@ -178,7 +189,7 @@ foreach ($_POST as $key => $val) {
 
 if (!empty($_POST['editing_team_id'])) {
     $team_id = $_POST['editing_team_id'];
-    $team = get_crm_sales_team($team_id);
+    $team = crm_sales_teams_entity::find($team_id);
 
     echo "<br>";
     display_heading(sprintf(_('Members of Team: %s'), $team['name']));
@@ -189,7 +200,7 @@ if (!empty($_POST['editing_team_id'])) {
     $th = array(_('User'), _('Max Leads/30d'), _('Skip Auto-Assign'), '');
     table_header($th);
 
-    $members = get_crm_team_members($team_id);
+    $members = crm_sales_teams_entity::get_members($team_id);
     $k = 0;
     while ($member = db_fetch($members)) {
         alt_table_row_color($k);
