@@ -13,7 +13,11 @@ $page_security = 'SA_SALESDISCOUNT';
 $path_to_root = '../..';
 include_once($path_to_root . '/includes/session.inc');
 
-page(_($help_context = 'Discount Programs'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Discount Programs'), false, false, '', $js);
 
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');

@@ -27,7 +27,11 @@ include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
-page(_($help_context = 'CRM Lead Inquiry'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'CRM Lead Inquiry'), false, false, '', $js);
 
 //--------------------------------------------------------------------------
 // Filters

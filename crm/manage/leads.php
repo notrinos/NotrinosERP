@@ -26,7 +26,11 @@ include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 include_crm_files();
 
-page(_($help_context = 'CRM Leads'));
+$js = '';
+if (user_use_date_picker())
+    $js .= get_js_date_picker();
+
+page(_($help_context = 'CRM Leads'), false, false, '', $js);
 
 //--------------------------------------------------------------------------
 // Delete handling

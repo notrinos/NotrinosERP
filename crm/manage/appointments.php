@@ -27,7 +27,11 @@ include_once($path_to_root . '/crm/includes/db/crm_appointments_db.inc');
 
 include_crm_files();
 
-page(_($help_context = 'CRM Appointments'));
+$js = '';
+if (user_use_date_picker())
+    $js .= get_js_date_picker();
+
+page(_($help_context = 'CRM Appointments'), false, false, '', $js);
 
 //--------------------------------------------------------------------------
 

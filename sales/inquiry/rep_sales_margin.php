@@ -23,7 +23,11 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/sales/includes/db/sales_analytics_db.inc');
 
-page(_($help_context = 'Sales Margin Analysis'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Sales Margin Analysis'), false, false, '', $js);
 
 $date_from = get_post('date_from', begin_fiscalyear());
 $date_to   = get_post('date_to', Today());

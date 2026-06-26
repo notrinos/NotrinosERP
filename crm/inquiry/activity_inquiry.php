@@ -26,7 +26,11 @@ include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
-page(_($help_context = 'CRM Activity Inquiry'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'CRM Activity Inquiry'), false, false, '', $js);
 
 // Mark overdue activities on page load
 mark_overdue_crm_activities();

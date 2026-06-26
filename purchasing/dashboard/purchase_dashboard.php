@@ -18,7 +18,11 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
 
-page(_($help_context = 'Purchase Dashboard'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Purchase Dashboard'), false, false, '', $js);
 
 /**
  * Render one KPI card for the dashboard.

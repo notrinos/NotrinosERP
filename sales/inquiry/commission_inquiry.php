@@ -13,7 +13,11 @@ $page_security = 'SA_SALESCOMMISSION';
 $path_to_root  = '../..';
 include_once($path_to_root . '/includes/session.inc');
 
-page(_($help_context = 'Commission Inquiry'));
+$js = '';
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Commission Inquiry'), false, false, '', $js);
 
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
