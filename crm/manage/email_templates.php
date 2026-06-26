@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_campaigns_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_campaigns_entity.inc');
 
 page(_($help_context = 'CRM Email Templates'));
 
@@ -37,14 +37,19 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('Subject cannot be empty.'));
         set_focus('subject');
     } else {
+        $template_data = array(
+            'name' => $_POST['name'],
+            'subject' => $_POST['subject'],
+            'body_html' => $_POST['body_html'],
+            'category' => $_POST['category'],
+            'variables_json' => $_POST['variables_json'],
+        );
         if ($selected_id != '') {
-            update_crm_email_template($selected_id, $_POST['name'],
-                $_POST['subject'], $_POST['body_html'], $_POST['category'],
-                $_POST['variables_json'], check_value('active'));
+            $template_data['active'] = check_value('active');
+            crm_campaigns_entity::modify_email_template($selected_id, $template_data);
             display_notification(_('Email template has been updated.'));
         } else {
-            add_crm_email_template($_POST['name'], $_POST['subject'],
-                $_POST['body_html'], $_POST['category'], $_POST['variables_json']);
+            crm_campaigns_entity::create_email_template($template_data);
             display_notification(_('New email template has been added.'));
         }
         $Mode = 'RESET';
@@ -55,7 +60,7 @@ if ($Mode == 'Delete') {
     if (key_in_foreign_table($selected_id, 'crm_campaign_emails', 'email_template_id')) {
         display_error(_('Cannot delete this template — it is referenced by existing campaign email(s).'));
     } else {
-        delete_crm_email_template($selected_id);
+        crm_campaigns_entity::remove_email_template($selected_id);
         display_notification(_('Email template has been deleted.'));
     }
     $Mode = 'RESET';
@@ -79,7 +84,7 @@ start_table(TABLESTYLE, "width='80%'");
 $th = array(_('ID'), _('Name'), _('Subject'), _('Category'), _('Active'), '', '');
 table_header($th);
 
-$result = get_crm_email_templates(true);
+$result = crm_campaigns_entity::email_templates(true);
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -98,7 +103,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_email_template($selected_id);
+        $myrow = crm_campaigns_entity::email_template($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['subject'] = $myrow['subject'];
         $_POST['body_html'] = $myrow['body_html'];

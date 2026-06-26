@@ -24,7 +24,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
-include_once($path_to_root . '/crm/includes/db/crm_campaigns_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_campaigns_entity.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 $js = '';
@@ -42,7 +42,7 @@ $campaign    = null;
 $raw_id = isset($_GET['CampaignID']) ? $_GET['CampaignID'] : (isset($_GET['id']) ? $_GET['id'] : get_post('CampaignID', 0));
 if ((int)$raw_id > 0) {
     $campaign_id = (int)$raw_id;
-    $campaign = get_crm_campaign($campaign_id);
+    $campaign = crm_campaigns_entity::find($campaign_id);
     if (!$campaign) {
         display_error(_('Campaign not found.'));
         hyperlink_params($path_to_root . '/crm/manage/campaigns.php', _('Back to Campaigns'), 'sel_app=crm');
@@ -133,15 +133,15 @@ if (isset($_POST['Save'])) {
         begin_transaction();
         if ($is_new) {
             $data['created_by'] = $_SESSION['wa_current_user']->user;
-            $campaign_id = add_crm_campaign($data);
+            $campaign_id = crm_campaigns_entity::create($data);
             display_notification(_('Campaign has been created.'));
         } else {
-            update_crm_campaign($campaign_id, $data);
+            crm_campaigns_entity::modify($campaign_id, $data);
             display_notification(_('Campaign has been updated.'));
         }
         commit_transaction();
         meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
-        $campaign = get_crm_campaign($campaign_id);
+        $campaign = crm_campaigns_entity::find($campaign_id);
     }
 }
 
@@ -153,7 +153,7 @@ if (isset($_POST['EnrollLead']) && !$is_new) {
     $enroll_lead_id = (int)$_POST['enroll_lead_id'];
     if ($enroll_lead_id > 0) {
         begin_transaction();
-        enroll_crm_campaign_lead($campaign_id, $enroll_lead_id);
+        crm_campaigns_entity::enroll_lead($campaign_id, $enroll_lead_id);
         commit_transaction();
         display_notification(_('Lead enrolled in campaign.'));
         meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
@@ -166,7 +166,7 @@ if (isset($_POST['UnenrollLead']) && !$is_new) {
     $unenroll_lead_id = (int)$_POST['UnenrollLead'];
     if ($unenroll_lead_id > 0) {
         begin_transaction();
-        unenroll_crm_campaign_lead($campaign_id, $unenroll_lead_id);
+        crm_campaigns_entity::unenroll_lead($campaign_id, $unenroll_lead_id);
         commit_transaction();
         display_notification(_('Lead removed from campaign.'));
         meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
@@ -189,12 +189,12 @@ if (isset($_POST['AddEmail']) && !$is_new) {
     } elseif ($send_day_raw === '' || !is_numeric($send_day_raw) || $send_day < 0) {
         display_error(_('Send day must be a non-negative number.'));
     } else {
-        $template = get_crm_email_template($template_id);
+        $template = crm_campaigns_entity::email_template($template_id);
         if (!$template) {
             display_error(_('Selected email template was not found.'));
         } else {
             begin_transaction();
-            add_crm_campaign_email(
+            crm_campaigns_entity::create_campaign_email(
                 $campaign_id,
                 $template_id,
                 $send_day,
@@ -213,7 +213,7 @@ if (isset($_POST['DeleteEmail']) && !$is_new) {
     $delete_email_id = (int)$_POST['DeleteEmail'];
     if ($delete_email_id > 0) {
         begin_transaction();
-        delete_crm_campaign_email($delete_email_id, $campaign_id);
+        crm_campaigns_entity::remove_campaign_email($delete_email_id, $campaign_id);
         commit_transaction();
         display_notification(_('Email removed from schedule.'));
         meta_forward($_SERVER['PHP_SELF'], 'CampaignID=' . $campaign_id . crm_sel_app_param());
@@ -289,7 +289,7 @@ echo "</center><br>";
 if (!$is_new) {
 
     // -- Stats ---------------------------------------------------------------
-    $stats = get_crm_campaign_stats($campaign_id);
+    $stats = crm_campaigns_entity::stats($campaign_id);
     if ($stats) {
         display_heading(_('Campaign Statistics'));
         start_table(TABLESTYLE2);
@@ -305,7 +305,7 @@ if (!$is_new) {
     $th = array(_('Lead Name'), _('Organization'), _('Status'), _('Enrolled Date'), '');
     table_header($th);
 
-    $enrolled = get_crm_campaign_leads($campaign_id);
+    $enrolled = crm_campaigns_entity::enrolled_leads($campaign_id);
     $k = 0;
     while ($row = db_fetch($enrolled)) {
         alt_table_row_color($k);
@@ -353,7 +353,7 @@ if (!$is_new) {
     $th = array(_('Day'), _('Template'), _('Subject'), '');
     table_header($th);
 
-    $emails = get_crm_campaign_emails($campaign_id);
+    $emails = crm_campaigns_entity::campaign_emails($campaign_id);
     $k = 0;
     while ($row = db_fetch($emails)) {
         alt_table_row_color($k);

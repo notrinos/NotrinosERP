@@ -30,7 +30,7 @@ page(_($help_context = 'CRM Campaigns'));
 //--------------------------------------------------------------------------
 
 if (isset($_GET['delete'])) {
-    delete_crm_campaign((int)$_GET['delete']);
+    crm_campaigns_entity::remove((int)$_GET['delete']);
     display_notification(_('Campaign has been deleted.'));
 }
 
@@ -60,7 +60,15 @@ if (!empty($_POST['filter_status'])) {
     $filters['status'] = $_POST['filter_status'];
 }
 
-$result = get_crm_campaigns($filters);
+$sql = "SELECT c.*, src.name AS source_name,
+               (SELECT COUNT(*) FROM " . TB_PREF . "crm_campaign_leads cl
+                WHERE cl.campaign_id = c.id) AS lead_count
+        FROM " . TB_PREF . "crm_campaigns c
+        LEFT JOIN " . TB_PREF . "crm_lead_sources src ON c.lead_source_id = src.id
+        WHERE 1=1";
+if (!empty($filters['status'])) $sql .= " AND c.status = " . db_escape($filters['status']);
+$sql .= " ORDER BY c.created_date DESC";
+$result = db_query($sql);
 
 div_start('campaigns_result');
 
