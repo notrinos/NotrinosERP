@@ -33,7 +33,7 @@ page(_($help_context = 'CRM Leads'));
 //--------------------------------------------------------------------------
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
-    delete_crm_lead($id, false);
+    crm_leads_entity::delete_cascade($id, false);
     display_notification(_('Lead has been deactivated.'));
 }
 
@@ -117,7 +117,7 @@ if (!empty($_POST['filter_tag']) && $_POST['filter_tag'] > 0) {
     $filters['tag_id'] = $_POST['filter_tag'];
 }
 
-$result = get_crm_leads($filters);
+$result = crm_leads_entity::get_all_joined($filters);
 
 start_table(TABLESTYLE, "width='95%'");
 

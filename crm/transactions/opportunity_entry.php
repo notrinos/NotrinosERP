@@ -26,7 +26,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_communication_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
@@ -47,7 +47,7 @@ $opp     = null;
 $raw_lead_id = isset($_GET['LeadID']) ? (int)$_GET['LeadID'] : (int)get_post('LeadID', 0);
 if ($raw_lead_id > 0) {
     $lead_id = $raw_lead_id;
-    $opp = get_crm_lead($lead_id);
+    $opp = crm_leads_entity::find_joined($lead_id);
     if (!$opp || !$opp['is_opportunity']) {
         display_error(_('Opportunity not found.'));
         hyperlink_params($path_to_root . '/crm/manage/opportunities.php', _('Back to Opportunities'), 'sel_app=crm');
@@ -70,20 +70,20 @@ if (isset($_POST['MarkWon']) && !$is_new) {
         display_error(_('Please select a customer for the won opportunity.'));
     } else {
         begin_transaction();
-        mark_opportunity_won($lead_id, $customer_id);
+        crm_leads_entity::mark_won($lead_id, $customer_id);
         commit_transaction();
         display_notification(_('Opportunity marked as WON!'));
-        $opp = get_crm_lead($lead_id);
+        $opp = crm_leads_entity::find_joined($lead_id);
     }
 }
 
 if (isset($_POST['MarkLost']) && !$is_new) {
     $reason_id = (int)$_POST['lost_reason_id'];
     begin_transaction();
-    mark_opportunity_lost($lead_id, $reason_id, $_POST['lost_notes']);
+    crm_leads_entity::mark_lost($lead_id, $reason_id, $_POST['lost_notes']);
     commit_transaction();
     display_notification(_('Opportunity marked as LOST.'));
-    $opp = get_crm_lead($lead_id);
+    $opp = crm_leads_entity::find_joined($lead_id);
 }
 
 //--------------------------------------------------------------------------
@@ -134,19 +134,20 @@ if (isset($_POST['Save'])) {
             $data['lead_ref']   = crm_next_opportunity_ref();
             $data['created_by'] = $_SESSION['wa_current_user']->user;
             $data['lead_status']= CRM_LEAD_QUALIFIED;
-            $lead_id = add_crm_lead($data);
+            crm_leads_entity::create($data);
+            $lead_id = db_insert_id();
 
             // Update stage probability
             if ($data['stage_id'] > 0) {
-                update_opportunity_stage($lead_id, $data['stage_id']);
+                crm_leads_entity::update_stage($lead_id, $data['stage_id']);
             }
             display_notification(_('Opportunity has been created.'));
         } else {
-            update_crm_lead($lead_id, $data);
+            crm_leads_entity::modify($lead_id, $data);
 
             // Update stage
             if ($data['stage_id'] > 0 && $data['stage_id'] != $opp['stage_id']) {
-                update_opportunity_stage($lead_id, $data['stage_id']);
+                crm_leads_entity::update_stage($lead_id, $data['stage_id']);
             }
             display_notification(_('Opportunity has been updated.'));
         }
@@ -159,14 +160,14 @@ if (isset($_POST['Save'])) {
                     $tag_ids[] = (int)$tid;
                 }
             }
-            update_crm_entity_tags(CRM_ENTITY_LEAD, $lead_id, $tag_ids);
+            crm_leads_entity::update_tags($lead_id, $tag_ids);
         }
 
         if ($is_new) {
             meta_forward($_SERVER['PHP_SELF'], 'LeadID=' . $lead_id . crm_sel_app_param());
         }
         // Reload data
-        $opp = get_crm_lead($lead_id);
+        $opp = crm_leads_entity::find_joined($lead_id);
     }
 }
 
@@ -302,7 +303,7 @@ start_table(TABLESTYLE2);
 
 $existing_tags = array();
 if (!$is_new) {
-    $et = get_crm_entity_tags(CRM_ENTITY_LEAD, $lead_id);
+    $et = crm_leads_entity::get_tags($lead_id);
     foreach ($et as $t) {
         $existing_tags[] = (int)$t['id'];
     }

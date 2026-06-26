@@ -25,7 +25,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
@@ -94,7 +94,7 @@ if (isset($_POST['ApplyBulk'])) {
 
             case 'delete':
                 foreach ($ids as $id) {
-                    delete_crm_lead($id, false); // soft delete
+                    crm_leads_entity::delete_cascade($id, false); // soft delete
                     $count++;
                 }
                 display_notification(sprintf(_('%d lead(s) deleted.'), $count));
@@ -152,7 +152,7 @@ crm_filter_array_list_cells(_('Status'), 'bulk_status', crm_lead_statuses(), get
 
 // Tag
 $tag_items = array();
-$tags_result = get_crm_tags();
+$tags_result = crm_leads_entity::all_db_resource('type = ' . TAG_CRM . ' ORDER BY name');
 while ($t = db_fetch($tags_result)) {
     $tag_items[(int)$t['id']] = $t['name'];
 }
@@ -184,7 +184,7 @@ start_table(TABLESTYLE, "width='100%'");
 $th = array('', _('Ref'), _('Name'), _('Organization'), _('Source'), _('Status'), _('Priority'), _('Assigned To'));
 table_header($th);
 
-$result = get_crm_leads($filters, 200, 0);
+$result = crm_leads_entity::get_all_joined($filters, 200, 0);
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);

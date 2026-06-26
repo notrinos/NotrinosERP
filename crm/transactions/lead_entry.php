@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_communication_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
@@ -44,7 +44,7 @@ $lead_data = null;
 $raw_lead_id = isset($_GET['LeadID']) ? (int)$_GET['LeadID'] : (int)get_post('LeadID', 0);
 if ($raw_lead_id > 0) {
     $lead_id = $raw_lead_id;
-    $lead_data = get_crm_lead($lead_id);
+    $lead_data = crm_leads_entity::find_joined($lead_id);
     if (!$lead_data) {
         display_error(_('Lead not found.'));
         hyperlink_params('lead_entry.php', _('Create New Lead'), 'sel_app=crm');
@@ -109,12 +109,13 @@ if (isset($_POST['Save'])) {
         if ($is_new) {
             $data['lead_ref']   = crm_next_lead_ref();
             $data['created_by'] = $_SESSION['wa_current_user']->user;
-            $lead_id = add_crm_lead($data);
+            crm_leads_entity::create($data);
+            $lead_id = db_insert_id();
             display_notification(_('Lead has been created successfully.'));
         } else {
-            update_crm_lead($lead_id, $data);
+            crm_leads_entity::modify($lead_id, $data);
             display_notification(_('Lead has been updated.'));
-            $lead_data = get_crm_lead($lead_id); // reload after update
+            $lead_data = crm_leads_entity::find_joined($lead_id); // reload after update
         }
 
         // Save tags
@@ -125,7 +126,7 @@ if (isset($_POST['Save'])) {
                     $tag_ids[] = (int)$tid;
                 }
             }
-            update_crm_entity_tags(CRM_ENTITY_LEAD, $lead_id, $tag_ids);
+            crm_leads_entity::update_tags($lead_id, $tag_ids);
         }
 
         if ($is_new) {
@@ -139,9 +140,7 @@ if (isset($_POST['Save'])) {
 //--------------------------------------------------------------------------
 
 if (isset($_POST['Delete']) && !$is_new) {
-    begin_transaction();
-    delete_crm_lead($lead_id, false); // soft delete
-    commit_transaction();
+    crm_leads_entity::delete_cascade($lead_id, false); // soft delete
     display_notification(_('Lead has been deleted.'));
     meta_forward($path_to_root . '/crm/manage/leads.php', 'sel_app=crm');
     exit;
@@ -271,7 +270,7 @@ start_table(TABLESTYLE2);
 
 $existing_tags = array();
 if (!$is_new) {
-    $et = get_crm_entity_tags(CRM_ENTITY_LEAD, $lead_id);
+    $et = crm_leads_entity::get_tags($lead_id);
     foreach ($et as $t) {
         $existing_tags[] = (int)$t['id'];
     }

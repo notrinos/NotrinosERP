@@ -27,7 +27,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_communication_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
@@ -45,7 +45,7 @@ if ($lead_id <= 0) {
     exit;
 }
 
-$lead = get_crm_lead($lead_id);
+$lead = crm_leads_entity::find_joined($lead_id);
 if (!$lead) {
     display_error(_('Lead not found.'));
     hyperlink_params($path_to_root . '/crm/manage/leads.php', _('Back to Leads'), 'sel_app=crm');
@@ -61,7 +61,7 @@ if (isset($_POST['ConvertToOpportunity'])) {
     $stage_id = (int)$_POST['stage_id'];
 
     begin_transaction();
-    convert_lead_to_opportunity($lead_id, $stage_id);
+    crm_leads_entity::convert_to_opportunity($lead_id, $stage_id);
     commit_transaction();
 
     display_notification(sprintf(

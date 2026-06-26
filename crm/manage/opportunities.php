@@ -88,7 +88,7 @@ if (!empty($_POST['filter_search'])) {
     $filters['search'] = $_POST['filter_search'];
 }
 
-$result = get_crm_leads($filters);
+$result = crm_leads_entity::get_all_joined($filters);
 
 div_start('opp_result');
 

@@ -25,7 +25,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_pipeline_kanban.inc');
@@ -67,7 +67,7 @@ $f_user = (int)get_post('filter_user', 0);
 if ($f_team > 0) $filters['sales_team_id'] = (int)$f_team;
 if ($f_user > 0) $filters['assigned_to'] = $f_user;
 
-$opps_result = get_crm_leads($filters, 500, 0);
+$opps_result = crm_leads_entity::get_all_joined($filters, 500, 0);
 $opps_by_stage = array();
 foreach ($stages as $sid => $st) {
     $opps_by_stage[$sid] = array();

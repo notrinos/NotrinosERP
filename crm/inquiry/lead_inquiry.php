@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_teams_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
@@ -82,8 +82,8 @@ if ($f_to && is_date($f_to))              $filters['date_to'] = date2sql($f_to);
 if ($f_type == 0) $filters['is_opportunity'] = 0;
 elseif ($f_type == 1) $filters['is_opportunity'] = 1;
 
-$total_count = count_crm_leads($filters);
-$result = get_crm_leads($filters, 200, 0);
+$total_count = crm_leads_entity::count_joined($filters);
+$result = crm_leads_entity::get_all_joined($filters, 200, 0);
 
 //--------------------------------------------------------------------------
 // Display Results

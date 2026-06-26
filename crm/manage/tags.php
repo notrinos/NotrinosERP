@@ -23,7 +23,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/admin/db/tags_db.inc');
 
 page(_($help_context = 'CRM Tags'));
 
@@ -36,10 +36,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     } else {
         $color = !empty($_POST['color']) ? $_POST['color'] : '#2196F3';
         if ($selected_id != '') {
-            update_crm_tag($selected_id, $_POST['name'], $color);
+            update_tag($selected_id, $_POST['name'], $_POST['name'], null, $color);
             display_notification(_('Tag has been updated.'));
         } else {
-            add_crm_tag($_POST['name'], $color);
+            add_tag(TAG_CRM, $_POST['name'], $_POST['name'], $color);
             display_notification(_('New tag has been added.'));
         }
         $Mode = 'RESET';
@@ -50,7 +50,9 @@ if ($Mode == 'Delete') {
     if (key_in_foreign_table($selected_id, 'tag_associations', 'tag_id')) {
         display_error(_('Cannot delete this tag — it is associated with existing record(s). Remove associations first.'));
     } else {
-        delete_crm_tag($selected_id);
+        $sql_del = "DELETE FROM " . TB_PREF . "tag_associations WHERE tag_id = " . db_escape($selected_id);
+        db_query($sql_del, "Could not delete tag associations");
+        delete_tag($selected_id);
         display_notification(_('Tag has been deleted.'));
     }
     $Mode = 'RESET';
@@ -71,7 +73,7 @@ start_table(TABLESTYLE, "width='50%'");
 $th = array(_('ID'), _('Name'), _('Color'), _('Preview'), '', '');
 table_header($th);
 
-$result = get_crm_tags();
+$result = get_tags(TAG_CRM);
 $k = 0;
 while ($myrow = db_fetch($result)) {
     alt_table_row_color($k);
@@ -91,7 +93,7 @@ start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
     if ($Mode == 'Edit') {
-        $myrow = get_crm_tag($selected_id);
+        $myrow = get_tag($selected_id);
         $_POST['name'] = $myrow['name'];
         $_POST['color'] = $myrow['color'];
     }

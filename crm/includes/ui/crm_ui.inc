@@ -810,7 +810,7 @@ function include_crm_files()
 
     include_once($path_to_root . '/crm/includes/crm_constants.inc');
     include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-    include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+    include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
     include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
     include_once($path_to_root . '/crm/includes/db/crm_campaigns_db.inc');
     include_once($path_to_root . '/crm/includes/db/crm_contracts_entity.inc');

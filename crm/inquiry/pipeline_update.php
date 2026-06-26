@@ -25,7 +25,7 @@ $path_to_root  = '../..';
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
-include_once($path_to_root . '/crm/includes/db/crm_leads_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 
 header('Content-Type: application/json');
 
@@ -37,14 +37,14 @@ if ($lead_id <= 0 || $stage_id <= 0) {
     exit;
 }
 
-$lead = get_crm_lead($lead_id);
+$lead = crm_leads_entity::find_joined($lead_id);
 if (!$lead || !$lead['is_opportunity']) {
     echo json_encode(array('error' => 'Opportunity not found'));
     exit;
 }
 
 begin_transaction();
-update_opportunity_stage($lead_id, $stage_id);
+crm_leads_entity::update_stage($lead_id, $stage_id);
 commit_transaction();
 
 echo json_encode(array('success' => true, 'lead_id' => $lead_id, 'stage_id' => $stage_id));
