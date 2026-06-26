@@ -13,7 +13,7 @@ $page_security = 'SA_EOSCALC';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
-include_once($path_to_root . '/hrm/includes/db/eos_db.inc');
+include_once($path_to_root . '/hrm/includes/db/eos_calculation_entity.inc');
 
 page(_("End of Service Calculation"));
 
@@ -33,12 +33,19 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('Termination and resignation rates must be numeric.'));
     } else {
         $to_years = trim($_POST['to_years']) === '' ? null : input_num('to_years');
+        $data = array(
+            'from_years' => input_num('from_years'),
+            'to_years' => $to_years,
+            'termination_rate' => input_num('termination_rate'),
+            'resignation_rate' => input_num('resignation_rate'),
+            'description' => $_POST['description'],
+        );
 
         if ($selected_id != '') {
-            update_eos_tier($selected_id, input_num('from_years'), $to_years, input_num('termination_rate'), input_num('resignation_rate'), $_POST['description']);
+            eos_calculation_entity::modify($selected_id, $data);
             display_notification(_('EOS tier has been updated.'));
         } else {
-            add_eos_tier(input_num('from_years'), $to_years, input_num('termination_rate'), input_num('resignation_rate'), $_POST['description']);
+            eos_calculation_entity::create($data);
             display_notification(_('EOS tier has been added.'));
         }
 
@@ -47,7 +54,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    delete_eos_tier($selected_id);
+    eos_calculation_entity::remove($selected_id);
     display_notification(_('Selected EOS tier has been deleted.'));
     $Mode = 'RESET';
 }
@@ -68,7 +75,7 @@ start_table(TABLESTYLE, "width='95%'");
 $th = array(_('ID'), _('From Years'), _('To Years'), _('Termination Rate %'), _('Resignation Rate %'), _('Description'), '', '');
 table_header($th);
 
-$result = get_eos_tiers();
+$result = eos_calculation_entity::all_db_resource(null, array('from_years', 'eos_id'));
 $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
@@ -86,7 +93,7 @@ end_table(1);
 
 start_table(TABLESTYLE2);
 if ($selected_id != '' && $Mode == 'Edit') {
-    $myrow = get_eos_tier($selected_id);
+    $myrow = eos_calculation_entity::find($selected_id);
     $_POST['from_years'] = qty_format($myrow['from_years']);
     $_POST['to_years'] = is_null($myrow['to_years']) ? '' : qty_format($myrow['to_years']);
     $_POST['termination_rate'] = qty_format($myrow['termination_rate']);
