@@ -21,6 +21,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
 
 include_once($path_to_root.'/admin/db/voiding_db.inc');
+include_once($path_to_root.'/inventory/includes/db/stock_master_entity.inc');
 
 $js = '';
 
@@ -225,7 +226,7 @@ function voiding_controls() {
 					while ($myrow = db_fetch($result)) {
 						if (is_inventory_item($myrow['item_code'])) {
 							if (check_negative_stock($myrow['item_code'], -$myrow['qty_recd'], null, $_POST['date_'])) {
-								$stock = get_item($myrow['item_code']);
+								$stock = stock_master_entity::find($myrow['item_code']);
 								display_error(_('The void cannot be processed because there is an insufficient quantity for item:').' '.$stock['stock_id'].' - '.$stock['description'].' - '._('Quantity On Hand').' = '.number_format2(get_qoh_on_date($stock['stock_id'], null, $_POST['date_']), get_qty_dec($stock['stock_id'])));
 								return false;
 							}
