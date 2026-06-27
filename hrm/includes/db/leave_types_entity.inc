@@ -10,7 +10,7 @@ class leave_types_entity extends Entity {
 	function __construct() {
 		parent::__construct(
 			'leave_types',
-			array('leave_name', 'leave_code', 'pay_rate', 'entitlement', 'inactive', 'leave_id'),
+			array('leave_name', 'leave_code', 'pay_rate', 'inactive', 'leave_id'),
 			'leave_id'
 		);
 	}

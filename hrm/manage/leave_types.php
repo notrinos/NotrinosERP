@@ -63,8 +63,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
 
-	if(key_in_foreign_table($selected_id, 'attendance', 'leave_id'))
-		display_error(_('The selected leave type cannot be deleted.'));
+	if(key_in_foreign_table($selected_id, 'leave_details', 'leave_type_id'))
+		display_error(_('The selected leave type cannot be deleted because there is attendance data associated with it.'));
 	else {
 		leave_types_entity::remove($selected_id);
 		display_notification(_('Selected leave type has been deleted'));
