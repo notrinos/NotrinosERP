@@ -1,0 +1,158 @@
+<?php
+/**********************************************************************
+    Copyright (C) NotrinosERP.
+    Released under the terms of the GNU General Public License, GPL,
+    as published by the Free Software Foundation, either version 3
+    of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
+***********************************************************************/
+
+/**
+ * NotrinosERP Centralized Formula Framework — Bootstrap File
+ *
+ * This file registers the autoloader for the Formula Framework and
+ * defines all framework-wide constants. It must be included during
+ * session bootstrap (after session.inc loads the hook system).
+ *
+ * The autoloader maps the Formula_ prefix to directories under
+ * includes/formula/, converting underscores to directory separators.
+ *
+ * Class: Formula_Compiler_Lexer → includes/formula/Compiler/Lexer.php
+ * Class: Formula_Runtime_FormulaRuntime → includes/formula/Runtime/FormulaRuntime.php
+ *
+ * @package Formula
+ * @version 1.0.0
+ * @since   2.0.0
+ */
+
+defined('FORMULA_BOOTSTRAP_LOADED') || define('FORMULA_BOOTSTRAP_LOADED', true);
+
+// ---------------------------------------------------------------------------
+// Framework version constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Formula Framework version.
+ * Uses Semantic Versioning: MAJOR.MINOR.PATCH
+ */
+define('FORMULA_VERSION', '1.0.0');
+
+/**
+ * Formula language specification version.
+ * Incremented when the NFX grammar changes.
+ */
+define('FORMULA_LANGUAGE_VERSION', '1.0');
+
+/**
+ * Compiler version. Incremented when the compiler produces
+ * structurally different compiled output. Triggers cache
+ * invalidation for all cached formulas.
+ */
+define('FORMULA_COMPILER_VERSION', '1.0.0');
+
+// ---------------------------------------------------------------------------
+// Security and resource limit constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum formula source length in characters.
+ * Formulas longer than this are rejected before lexing.
+ *
+ * @see Formula_Exceptions_ResourceExhaustedException
+ */
+define('FORMULA_MAX_SOURCE_LENGTH', 10000);
+
+/**
+ * Maximum AST depth (nesting level of expressions).
+ * Prevents stack overflow in recursive descent parser
+ * and tree-walk evaluator.
+ *
+ * @see Formula_Exceptions_ResourceExhaustedException
+ */
+define('FORMULA_MAX_AST_DEPTH', 100);
+
+/**
+ * Maximum number of AST node evaluations per execution session.
+ * Prevents infinite evaluation in degenerate cases.
+ */
+define('FORMULA_MAX_NODE_EVALUATIONS', 10000);
+
+/**
+ * Maximum execution time per formula evaluation in milliseconds.
+ */
+define('FORMULA_MAX_EXECUTION_TIME_MS', 5000);
+
+/**
+ * Maximum memory consumption per formula evaluation in bytes.
+ */
+define('FORMULA_MAX_MEMORY_BYTES', 16 * 1024 * 1024);
+
+/**
+ * Maximum number of elements in a collection aggregate function.
+ */
+define('FORMULA_MAX_COLLECTION_SIZE', 10000);
+
+/**
+ * Default number of decimal places for financial rounding.
+ */
+define('FORMULA_DEFAULT_PRECISION', 6);
+
+// ---------------------------------------------------------------------------
+// Autoloader registration
+// ---------------------------------------------------------------------------
+
+/**
+ * Formula Framework autoloader.
+ *
+ * Converts a Formula_-prefixed class name into a file path by:
+ * 1. Stripping the Formula_ prefix
+ * 2. Replacing remaining underscores with DIRECTORY_SEPARATOR
+ * 3. Appending .php
+ * 4. Looking in includes/formula/
+ *
+ * @param string $class_name The fully qualified class name
+ * @return void
+ */
+function formula_autoload($class_name)
+{
+    // Only handle Formula_ prefixed classes
+    $prefix = 'Formula_';
+    if (strncmp($class_name, $prefix, strlen($prefix)) !== 0) {
+        return;
+    }
+
+    // Strip prefix and prepare relative path
+    $relative_class = substr($class_name, strlen($prefix));
+    $file_path = str_replace('_', DIRECTORY_SEPARATOR, $relative_class) . '.php';
+
+    // Resolve to absolute path within includes/formula/
+    global $path_to_root;
+    $absolute_path = $path_to_root . '/includes/formula/' . $file_path;
+
+    if (file_exists($absolute_path)) {
+        require_once $absolute_path;
+    }
+}
+
+// Register the autoloader
+spl_autoload_register('formula_autoload');
+
+// ---------------------------------------------------------------------------
+// Backward compatibility — rename old directory if it exists
+// ---------------------------------------------------------------------------
+
+/**
+ * The framework was originally planned in includes/formula_engine/.
+ * If that directory still exists (from older installs), issue a
+ * deprecation notice but do NOT break the application.
+ */
+if (is_dir(dirname(__FILE__) . '/../formula_engine')) {
+    error_log(
+        'NotrinosERP Formula Framework: Deprecated directory "includes/formula_engine/" '
+        . 'still exists. Framework code now resides in "includes/formula/". '
+        . 'The old directory can be safely removed.'
+    );
+}
