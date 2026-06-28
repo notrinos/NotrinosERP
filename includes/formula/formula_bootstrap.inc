@@ -118,6 +118,16 @@ define('FORMULA_DEFAULT_PRECISION', 6);
  */
 function formula_autoload($class_name)
 {
+    // Handle FormulaFacade (no underscore separator)
+    if ($class_name === 'FormulaFacade') {
+        global $path_to_root;
+        $absolute_path = $path_to_root . '/includes/formula/FormulaFacade.php';
+        if (file_exists($absolute_path)) {
+            require_once $absolute_path;
+        }
+        return;
+    }
+
     // Only handle Formula_ prefixed classes
     $prefix = 'Formula_';
     if (strncmp($class_name, $prefix, strlen($prefix)) !== 0) {
