@@ -127,29 +127,70 @@ class Formula_Runtime_FormulaRuntime
     /**
      * Execute a compiled formula against a context.
      *
-     * Walks the AST in post-order (children before parent) and evaluates
-     * each node. The tree-walk evaluator (NodeEvaluator) is the component
-     * that performs the actual computation.
+     * Creates a RuntimeSession for this evaluation, constructs a
+     * NodeEvaluator (tree-walk interpreter) wired to the variable and
+     * function resolution infrastructure, and walks the AST in
+     * post-order (children before parent) to produce the result.
      *
-     * @param Formula_Compiler_CompiledFormula $compiled
-     * @param Formula_Context_FormulaContext   $context
-     * @return mixed
-     * @throws RuntimeException The tree-walk evaluator is not yet implemented
+     * ## Evaluation Semantics
+     *
+     * - Post-order traversal: children evaluated before parent
+     * - Short-circuit: AND, OR, IF skip unused branches
+     * - Lazy variable resolution via NamespaceRegistry
+     * - Resource limits enforced via RuntimeSession
+     *
+     * @param Formula_Compiler_CompiledFormula $compiled The compiled formula
+     * @param Formula_Context_FormulaContext   $context  The immutable execution context
+     * @return mixed The evaluation result
+     * @throws Formula_Exceptions_DivideByZeroException On division by zero
+     * @throws Formula_Exceptions_TypeMismatchException On runtime type errors
+     * @throws Formula_Exceptions_PermissionDeniedException On permission check failure
+     * @throws Formula_Exceptions_ResourceExhaustedException On resource limit exceeded
+     * @throws Formula_Exceptions_RuntimeExecutionException On unexpected runtime errors
      */
     public function execute(
         Formula_Compiler_CompiledFormula $compiled,
         Formula_Context_FormulaContext $context
     ) {
-        // The tree-walk evaluator (Runtime/NodeEvaluator.php) is the next
-        // component to be implemented. It traverses the AST and evaluates
-        // each node type. Until then, compilation works end-to-end but
-        // execution throws this controlled exception.
-        throw new RuntimeException(
-            'Formula execution is not yet available. '
-            . 'The tree-walk AST evaluator (NodeEvaluator) is the next component '
-            . 'to be implemented. Compilation works — formulas can be parsed '
-            . 'into ASTs and validated.'
-        );
+        // Build the variable resolver callable: delegates to NamespaceRegistry
+        $namespaceRegistry = new Formula_Registry_NamespaceRegistry($this->variableRegistry);
+
+        $variableResolver = function ($qualifiedName, Formula_Context_FormulaContext $ctx) use ($namespaceRegistry) {
+            return $namespaceRegistry->resolve($qualifiedName, $ctx);
+        };
+
+        // Build the function executor callable
+        $functionExecutor = new Formula_Runtime_FunctionExecutor($this->functionRegistry);
+
+        $fnCallable = function ($functionName, array $args, Formula_Context_FormulaContext $ctx) use ($functionExecutor) {
+            return $functionExecutor->execute($functionName, $args, $ctx);
+        };
+
+        // Create the tree-walk evaluator
+        $evaluator = new Formula_Runtime_NodeEvaluator($variableResolver, $fnCallable);
+
+        // Create a per-evaluation session for resource tracking and memoization
+        $session = new Formula_Runtime_RuntimeSession($context);
+
+        // Walk the AST and produce the result
+        $startTime = microtime(true);
+
+        try {
+            $result = $evaluator->evaluate($compiled->ast, $session);
+        } catch (Formula_Exceptions_FormulaException $e) {
+            // Re-throw framework exceptions as-is
+            throw $e;
+        } catch (Exception $e) {
+            // Wrap unexpected exceptions
+            throw new Formula_Exceptions_RuntimeExecutionException(
+                'Unexpected runtime error: ' . $e->getMessage(),
+                0,
+                0,
+                $e
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -193,10 +234,13 @@ class Formula_Runtime_FormulaRuntime
     /**
      * Explain formula evaluation step by step.
      *
-     * Compiles the formula through the full pipeline and produces
-     * an ExplainResult with AST structure information. Full
-     * step-by-step evaluation trace requires the ExplainVisitor
-     * (planned for v2.1).
+     * Compiles the formula through the full pipeline, then evaluates
+     * it with the ExplainVisitor which records every evaluation step,
+     * intermediate value, and timing.
+     *
+     * The ExplainVisitor wraps the production NodeEvaluator, guaranteeing
+     * that the explain trace produces identical results to production
+     * evaluation.
      *
      * @param string                        $formula
      * @param Formula_Context_FormulaContext $context
@@ -205,24 +249,29 @@ class Formula_Runtime_FormulaRuntime
     public function explain($formula, Formula_Context_FormulaContext $context)
     {
         $compiled = $this->compile($formula);
-        $explain  = new Formula_Diagnostics_ExplainResult();
-        $explain->result          = null;
-        $explain->formulaSource   = $formula;
-        $explain->durationMs      = $compiled->compileTimeMs;
-        $explain->nodesEvaluated  = $compiled->metadata->astNodeCount;
-        $explain->variablesResolved = count($compiled->metadata->referencedVariables);
-        $explain->functionsCalled = count($compiled->metadata->referencedFunctions);
-        $explain->steps           = array(
-            array(
-                'step'       => 1,
-                'operation'  => 'compile',
-                'input'      => $formula,
-                'output'     => $compiled->metadata->astNodeCount . ' AST nodes, depth=' . $compiled->metadata->astDepth,
-                'durationMs' => $compiled->compileTimeMs,
-                'nodeType'   => get_class($compiled->ast),
-            ),
-        );
-        return $explain;
+
+        // Build the same resolver/executor as execute()
+        $namespaceRegistry = new Formula_Registry_NamespaceRegistry($this->variableRegistry);
+        $functionExecutor = new Formula_Runtime_FunctionExecutor($this->functionRegistry);
+
+        $variableResolver = function ($qualifiedName, Formula_Context_FormulaContext $ctx) use ($namespaceRegistry) {
+            return $namespaceRegistry->resolve($qualifiedName, $ctx);
+        };
+
+        $fnCallable = function ($functionName, array $args, Formula_Context_FormulaContext $ctx) use ($functionExecutor) {
+            return $functionExecutor->execute($functionName, $args, $ctx);
+        };
+
+        // Create production evaluator
+        $evaluator = new Formula_Runtime_NodeEvaluator($variableResolver, $fnCallable);
+
+        // Wrap with ExplainVisitor for step-by-step tracing
+        $explainVisitor = new Formula_Runtime_ExplainVisitor($evaluator, $formula);
+
+        // Create session and evaluate
+        $session = new Formula_Runtime_RuntimeSession($context);
+
+        return $explainVisitor->evaluate($compiled->ast, $session);
     }
 
     /**
