@@ -481,8 +481,8 @@ function hyperlink_params($target, $label, $params, $center=true, $icon=null) {
 		echo "</center>";
 }
 
-function hyperlink_params_td($target, $label, $params, $icon=null) {
-	echo "<td>";
+function hyperlink_params_td($target, $label, $params, $icon=null, $cell_params='') {
+	echo "<td $cell_params>";
 	hyperlink_params($target, $label, $params, false, $icon);
 	echo "</td>\n";
 }

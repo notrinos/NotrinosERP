@@ -94,7 +94,7 @@ $result = crm_leads_entity::get_all_joined($filters, 200, 0);
 
 display_heading(sprintf(_('Results: %d record(s)'), $total_count));
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 $th = array(
     _('Ref'), _('Name'), _('Organization'), _('Email'), _('Phone'),
     _('Source'), _('Status'), _('Priority'), _('Score'), _('Team'),
@@ -118,14 +118,16 @@ while ($row = db_fetch($result)) {
     label_cell(@$row['assigned_name'] ?: '-');
     label_cell(sql2date(substr($row['date_created'], 0, 10)));
 
-    // View link â€“ preserve CRM sidebar context via sel_app
+    // View link – preserve CRM sidebar context via sel_app
     $sel_app_param = isset($_SESSION['sel_app']) ? '&amp;sel_app=' . urlencode($_SESSION['sel_app']) : '';
     if ($row['is_opportunity']) {
-        $link = $path_to_root . '/crm/transactions/opportunity_entry.php?LeadID=' . $row['id'] . $sel_app_param;
+        $link = $path_to_root . '/crm/transactions/opportunity_entry.php';
     } else {
-        $link = $path_to_root . '/crm/transactions/lead_entry.php?LeadID=' . $row['id'] . $sel_app_param;
+        $link = $path_to_root . '/crm/transactions/lead_entry.php';
     }
-    echo '<td><a href="' . $link . '">' . _('View') . '</a></td>';
+    
+    hyperlink_params_td($link, _('View'), 'LeadID=' . $row['id'] . $sel_app_param, ICON_VIEW, "align='right'");
+
     end_row();
 }
 end_table(1);

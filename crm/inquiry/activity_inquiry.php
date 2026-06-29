@@ -113,10 +113,10 @@ echo "</div>";
 // Activity Table
 //--------------------------------------------------------------------------
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 $th = array(
     _('ID'), _('Type'), _('Subject'), _('Entity'), _('Due Date'), _('Time'),
-    _('Priority'), _('Status'), _('Assigned To'), _('Created'), ''
+    _('Priority'), _('Status'), _('Assigned To'), _('Created'), '', ''
 );
 table_header($th);
 
@@ -147,17 +147,19 @@ while ($row = db_fetch($result)) {
 
     // Action links
     if ($row['status'] == CRM_ACTIVITY_PLANNED || $row['status'] == CRM_ACTIVITY_OVERDUE) {
-        echo '<td>';
-        echo '<a href="' . $path_to_root . '/crm/transactions/schedule_activity.php?';
+        $params = '';
         if ($row['entity_type'] && $row['entity_id']) {
-            echo 'entity_type=' . urlencode($row['entity_type']) . '&entity_id=' . (int)$row['entity_id'];
+            $params .= 'entity_type=' . urlencode($row['entity_type']) . '&entity_id=' . (int)$row['entity_id'];
         }
-        echo '&selected_id=' . (int)$row['id'];
-        echo crm_sel_app_param() . '">' . _('Edit') . '</a> ';
-        echo '<button type="button" data-action="complete-activity" data-activity-id="' . (int)$row['id'] . '" '
+        $params .= '&selected_id=' . (int)$row['id'] . crm_sel_app_param();
+
+        hyperlink_params_td($path_to_root . '/crm/transactions/schedule_activity.php', _('Edit'), $params, ICON_EDIT2);
+
+        echo '<td align="center"><button type="button" data-action="complete-activity" data-activity-id="' . (int)$row['id'] . '" '
             . 'style="font-size:0.85em; cursor:pointer;">' . _('Done') . '</button>';
         echo '</td>';
     } else {
+        label_cell('');
         label_cell('');
     }
     end_row();

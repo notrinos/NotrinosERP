@@ -103,7 +103,7 @@ echo "</div>";
 // Campaign Table
 //--------------------------------------------------------------------------
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 $th = array(
     _('ID'), _('Campaign Name'), _('Type'), _('Status'),
     _('Start'), _('End'), _('Budget'), _('Leads'),
@@ -138,7 +138,8 @@ foreach ($campaigns as $row) {
         : '0%';
     label_cell($rate, 'align=right');
 
-    echo '<td><a href="' . $path_to_root . '/crm/transactions/campaign_entry.php?CampaignID=' . (int)$row['id'] . crm_sel_app_param() . '">' . _('View') . '</a></td>';
+    hyperlink_params_td($path_to_root . '/crm/transactions/campaign_entry.php', _('VIEW'), 'CampaignID=' . (int)$row['id'] . crm_sel_app_param(), ICON_VIEW, "align='center'");
+
     end_row();
 }
 end_table(1);
