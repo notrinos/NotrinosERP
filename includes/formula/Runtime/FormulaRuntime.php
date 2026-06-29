@@ -35,70 +35,76 @@ class Formula_Runtime_FormulaRuntime
     /** @var Formula_Registry_VariableRegistry */
     private $variableRegistry;
 
+    /** @var Formula_Compiler_FormulaCompiler|null Lazily-initialized compiler */
+    private $compiler = null;
+
+    /** @var string[] Simple variable names known to the context (for semantic validation) */
+    private $knownContextVariables = array();
+
     /**
      * Construct the runtime engine.
      *
+     * The compiler is lazily-initialized on first use (compile, evaluate,
+     * validate, or explain). This allows the registries to be populated
+     * during bootstrap before any formula processing begins.
+     *
      * @param Formula_Registry_FunctionRegistry $functionRegistry
      * @param Formula_Registry_VariableRegistry $variableRegistry
+     * @param string[]                          $knownContextVariables Simple variable names valid without namespace
      */
     public function __construct(
         Formula_Registry_FunctionRegistry $functionRegistry,
-        Formula_Registry_VariableRegistry $variableRegistry
+        Formula_Registry_VariableRegistry $variableRegistry,
+        array $knownContextVariables = array()
     ) {
-        $this->functionRegistry = $functionRegistry;
-        $this->variableRegistry = $variableRegistry;
+        $this->functionRegistry      = $functionRegistry;
+        $this->variableRegistry      = $variableRegistry;
+        $this->knownContextVariables = $knownContextVariables;
+    }
+
+    /**
+     * Get or create the compiler instance.
+     *
+     * Lazy initialization ensures the registries are fully populated
+     * before the compiler's validator pipeline is constructed.
+     *
+     * @return Formula_Compiler_FormulaCompiler
+     */
+    private function getCompiler()
+    {
+        if ($this->compiler === null) {
+            $this->compiler = new Formula_Compiler_FormulaCompiler(
+                $this->functionRegistry,
+                $this->variableRegistry,
+                array(),  // Default validators (created by FormulaCompiler)
+                array(),  // No optimizers yet
+                100,      // Max AST depth
+                10000,    // Max source length
+                $this->knownContextVariables
+            );
+        }
+        return $this->compiler;
     }
 
     /**
      * Compile a formula string into a compiled form.
      *
-     * The compilation pipeline:
-     * 1. Lex the formula into tokens via Formula_Compiler_Lexer
-     * 2. Parse tokens into AST via Formula_Compiler_Parser
-     * 3. (Future) Validate AST via validator pipeline
-     * 4. (Future) Optimize AST via optimizer pipeline
-     * 5. Produce CompiledFormula with metadata
+     * Delegates to the FormulaCompiler which runs the full pipeline:
+     * preprocess → lex → parse → validate (syntax, semantic, type,
+     * dependency) → optimize → CompiledFormula.
      *
      * @param string $formula The preprocessed formula string
-     * @return Formula_Compiler_CompiledFormula The compiled, validated, optimized formula
+     * @return Formula_Compiler_CompiledFormula
      * @throws Formula_Exceptions_SyntaxErrorException On lexer/parser errors
      * @throws Formula_Exceptions_UnknownFunctionException On unknown function references
      * @throws Formula_Exceptions_UnknownVariableException On unknown variable references
+     * @throws Formula_Exceptions_TypeMismatchException On type incompatibility
+     * @throws Formula_Exceptions_CircularReferenceException On circular dependencies
      * @throws Formula_Exceptions_ResourceExhaustedException On resource limit exceeded
      */
     public function compile($formula)
     {
-        $compileStart = microtime(true);
-
-        // Stage 1: Lexical analysis
-        $lexer  = new Formula_Compiler_Lexer($formula);
-        $tokens = $lexer->tokenize();
-
-        // Stage 2: Parse tokens into AST
-        $tokenStream = new Formula_Compiler_TokenStream($tokens);
-        $parser      = new Formula_Compiler_Parser(
-            $tokenStream,
-            $this->functionRegistry,
-            $this->variableRegistry
-        );
-        $ast = $parser->parse();
-
-        // Stage 3-4: Validation and optimization will be added in future sprints.
-        // For now, the AST is used as-is.
-
-        // Build metadata from the AST
-        $metadata = $this->buildMetadata($formula, $ast, $parser->getWarnings());
-
-        // Compute elapsed time
-        $compileTimeMs = (microtime(true) - $compileStart) * 1000.0;
-
-        return new Formula_Compiler_CompiledFormula(
-            $ast,
-            $metadata,
-            sha1($formula),
-            $compileTimeMs,
-            $parser->getWarnings()
-        );
+        return $this->getCompiler()->compile($formula);
     }
 
     /**
@@ -149,8 +155,9 @@ class Formula_Runtime_FormulaRuntime
     /**
      * Validate a formula without executing.
      *
-     * Compiles the formula to check for syntax and semantic errors.
-     * Returns a ValidationResult with errors and warnings.
+     * Runs the full validation pipeline (syntax, semantic, type,
+     * dependency checks) via the FormulaCompiler and returns a
+     * ValidationResult with all errors and warnings.
      *
      * @param string $formula
      * @return Formula_Compiler_ValidationResult
@@ -160,26 +167,17 @@ class Formula_Runtime_FormulaRuntime
         $result = new Formula_Compiler_ValidationResult();
 
         try {
-            $lexer  = new Formula_Compiler_Lexer($formula);
-            $tokens = $lexer->tokenize();
-
-            $tokenStream = new Formula_Compiler_TokenStream($tokens);
-            $parser      = new Formula_Compiler_Parser(
-                $tokenStream,
-                $this->functionRegistry,
-                $this->variableRegistry
-            );
-            $ast = $parser->parse();
-
-            $warnings = $parser->getWarnings();
-            if (!empty($warnings)) {
-                foreach ($warnings as $warning) {
-                    $result->addWarning($warning);
+            $compiler = $this->getCompiler();
+            // Compile to trigger validation pipeline
+            $compiled = $compiler->compile($formula);
+            $result->isValid = true;
+            if (!empty($compiled->warnings)) {
+                foreach ($compiled->warnings as $warning) {
+                    $result->addWarning(
+                        isset($warning['message']) ? $warning['message'] : $warning
+                    );
                 }
             }
-
-            $result->isValid = true;
-            $result->astNodeCount = $this->countNodes($ast);
         } catch (Formula_Exceptions_FormulaException $e) {
             $result->isValid = false;
             $result->addError(
@@ -195,8 +193,10 @@ class Formula_Runtime_FormulaRuntime
     /**
      * Explain formula evaluation step by step.
      *
-     * Compiles the formula and produces an explanation of the AST structure.
-     * Full step-by-step evaluation trace requires the ExplainVisitor.
+     * Compiles the formula through the full pipeline and produces
+     * an ExplainResult with AST structure information. Full
+     * step-by-step evaluation trace requires the ExplainVisitor
+     * (planned for v2.1).
      *
      * @param string                        $formula
      * @param Formula_Context_FormulaContext $context
@@ -206,16 +206,18 @@ class Formula_Runtime_FormulaRuntime
     {
         $compiled = $this->compile($formula);
         $explain  = new Formula_Diagnostics_ExplainResult();
-        $explain->result        = null;
-        $explain->formulaSource = $formula;
-        $explain->durationMs    = $compiled->compileTimeMs;
-        $explain->nodesEvaluated = $compiled->metadata->astNodeCount;
-        $explain->steps          = array(
+        $explain->result          = null;
+        $explain->formulaSource   = $formula;
+        $explain->durationMs      = $compiled->compileTimeMs;
+        $explain->nodesEvaluated  = $compiled->metadata->astNodeCount;
+        $explain->variablesResolved = count($compiled->metadata->referencedVariables);
+        $explain->functionsCalled = count($compiled->metadata->referencedFunctions);
+        $explain->steps           = array(
             array(
                 'step'       => 1,
                 'operation'  => 'compile',
                 'input'      => $formula,
-                'output'     => 'AST with ' . $compiled->metadata->astNodeCount . ' nodes',
+                'output'     => $compiled->metadata->astNodeCount . ' AST nodes, depth=' . $compiled->metadata->astDepth,
                 'durationMs' => $compiled->compileTimeMs,
                 'nodeType'   => get_class($compiled->ast),
             ),

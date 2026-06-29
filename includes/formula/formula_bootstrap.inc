@@ -166,3 +166,56 @@ if (is_dir(dirname(__FILE__) . '/../formula_engine')) {
         . 'The old directory can be safely removed.'
     );
 }
+
+// ---------------------------------------------------------------------------
+// Framework initialization
+// ---------------------------------------------------------------------------
+
+/**
+ * Initialize the Centralized Formula Framework.
+ *
+ * Performs the full bootstrap sequence:
+ * 1. Create empty FunctionRegistry and VariableRegistry
+ * 2. Create the FormulaRuntime engine (serves as singleton container)
+ * 3. Fire hook_invoke_all('formula_register_providers') for extensions
+ * 4. Freeze registries — no further registrations allowed
+ * 5. Register engine with FormulaFacade
+ *
+ * This function MUST be called once during session bootstrap, after
+ * the hook system (includes/hooks.inc) is available.
+ *
+ * @param string[] $knownContextVariables Simple variable names known to the calling context
+ * @param array    $variableProviders     Namespace => VariableProviderInterface map
+ * @return void
+ */
+function formula_initialize_framework(
+    array $knownContextVariables = array(),
+    array $variableProviders = array()
+) {
+    $functionRegistry = new Formula_Registry_FunctionRegistry();
+    $variableRegistry = new Formula_Registry_VariableRegistry();
+
+    foreach ($variableProviders as $namespace => $provider) {
+        $variableRegistry->register($namespace, $provider);
+    }
+
+    $runtime = new Formula_Runtime_FormulaRuntime(
+        $functionRegistry,
+        $variableRegistry,
+        $knownContextVariables
+    );
+
+    if (function_exists('hook_invoke_all')) {
+        hook_invoke_all('formula_register_providers', $functionRegistry, $variableRegistry);
+    }
+
+    $functionRegistry->freeze();
+    $variableRegistry->freeze();
+
+    FormulaFacade::initialize($functionRegistry, $variableRegistry);
+    FormulaFacade::setEngine($runtime);
+    FormulaFacade::freeze();
+}
+
+// Mark bootstrap as loaded
+$GLOBALS['formula_bootstrap_initialized'] = true;
