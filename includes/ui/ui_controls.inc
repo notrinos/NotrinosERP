@@ -209,7 +209,7 @@ function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 		close_filter_group_if_open();
 	}
 
-	$mode = ($class != TABLESTYLE) ? 'form' : 'table';
+	$mode = ($class != TABLESTYLE && $class != TABLESTYLE_DATA) ? 'form' : 'table';
 	ui_push_table_mode($mode);
 
 	if ($mode == 'form') {
@@ -223,7 +223,7 @@ function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 		return;
 	}
 
-	$table_class = 'tablestyle';
+	$table_class = $class == TABLESTYLE_DATA ? 'tablestyle data-grid' : 'tablestyle';
 
 	if ($extra != '' && preg_match('/class\s*=\s*[\"\']([^\"\']+)[\"\']/i', $extra, $class_match)) {
 		$table_class = trim($table_class.' '.$class_match[1]);

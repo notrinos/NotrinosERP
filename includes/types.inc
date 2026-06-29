@@ -244,6 +244,7 @@ define('ALL_NUMERIC', -1);
 define('TABLESTYLE',  1);
 define('TABLESTYLE2', 2);
 define('TABLESTYLE_NOBORDER', 3);
+define('TABLESTYLE_DATA', 4);
 
 //----------------------------------------------------------------------------------
 
