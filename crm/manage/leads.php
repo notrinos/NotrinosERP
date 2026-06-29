@@ -123,7 +123,7 @@ if (!empty($_POST['filter_tag']) && $_POST['filter_tag'] > 0) {
 
 $result = crm_leads_entity::get_all_joined($filters);
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(
     _('Ref'), _('Title'), _('Company'), _('Contact'), _('Email'),
@@ -158,18 +158,16 @@ while ($myrow = db_fetch($result)) {
     label_cell(sql2date($myrow['date_created']));
 
     // Action buttons
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/lead_entry.php?LeadID="
-        . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
+    hyperlink_params_td($path_to_root . "/crm/transactions/lead_entry.php", _('Edit'), "LeadID=" . $myrow['id'] . crm_sel_app_param(), ICON_EDIT2);
 
     if ($myrow['lead_status'] !== CRM_LEAD_CONVERTED) {
-        echo "<td><a href='" . $path_to_root . "/crm/transactions/convert_lead.php?LeadID="
-            . $myrow['id'] . crm_sel_app_param() . "'>" . _('Convert') . "</a></td>";
+        hyperlink_params_td($path_to_root . "/crm/transactions/convert_lead.php", _('Convert'), "LeadID=" . $myrow['id'] . crm_sel_app_param(), ICON_DEBIT);
     } else {
         echo "<td>-</td>";
     }
-
+    
     echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
-        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure?') . "');\">"
+        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure deactive the selected lead ?') . "');\">"
         . _('Deactivate') . "</a></td>";
 
     end_row();
