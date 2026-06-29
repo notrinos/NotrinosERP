@@ -141,7 +141,7 @@ $sql_to   = date2sql($date_to);
 if ($view_mode == 'summary') {
     // Summary view
     $result = get_commission_summary($filter_rep, $sql_from, $sql_to);
-    start_table(TABLESTYLE, "width='100%'");
+    start_table(TABLESTYLE_DATA, "width='100%'");
     $th = array(_('Sales Person'), _('Revenue'), _('Commission'), _('# Invoices'), _('Paid'), _('Unpaid'));
     table_header($th);
     $k = 0;
@@ -174,7 +174,7 @@ if ($view_mode == 'summary') {
     start_form();
 
     $result = get_commission_entries($filter_rep, $filter_status, $sql_from, $sql_to);
-    start_table(TABLESTYLE, "width='100%'");
+    start_table(TABLESTYLE_DATA, "width='100%'");
     $th = array('', _('Date'), _('Sales Person'), _('Plan'), _('Customer'), _('Trans'), _('Base Amount'), _('Rate %'), _('Commission'), _('Status'), '');
     table_header($th);
     $k = 0;

@@ -134,7 +134,7 @@ if (!empty($status_summary)) {
 // RESULTS TABLE
 // ============================================================================
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 table_header(array(
 	_('Reference'),
 	_('Type'),
@@ -168,7 +168,7 @@ foreach ($rows as $row) {
 	label_cell(sales_agreement_status_badge($row['status']));
 	amount_cell($row['total_committed']);
 	amount_cell($row['total_ordered']);
-	label_cell("<a href = '".$path_to_root."/sales/sales_agreement_entry.php?agreement_id=" . $row['id']."'>"._('Edit')."</a>");
+	hyperlink_params_td($path_to_root."/sales/sales_agreement_entry.php", _('Edit'), "agreement_id=" . $row['id'], ICON_EDIT2);
 
 	end_row();
 	$k++;

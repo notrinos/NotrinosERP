@@ -45,7 +45,7 @@ end_row();
 end_table(1);
 
 display_heading(_('Salesman Performance'));
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 table_header(array(_('Salesman'), _('Revenue'), _('Orders'), _('Margin'), _('Margin %'), _('Commission')));
 
 $total_revenue    = 0;

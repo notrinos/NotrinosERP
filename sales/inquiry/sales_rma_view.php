@@ -93,7 +93,7 @@ start_form();
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-echo '<td>'.customer_list('filter_customer', $filter_customer, true, true).'</td>';
+customer_list_cells(null, 'filter_customer', $filter_customer, true, true);
 
 
 $status_options = array('' => _('All Statuses')) + $statuses;
@@ -112,7 +112,7 @@ end_form();
 if (empty($rows)) {
 	display_note(_('No RMAs found matching the current filter.'), 1);
 } else {
-	start_table(TABLESTYLE, "width='100%'");
+	start_table(TABLESTYLE_DATA, "width='100%'");
 	$th = array(
 		_('RMA #'), _('Reference'), _('Customer'), _('Date'),
 		_('Source'), _('Reason'), _('Method'), _('Refund Amount'),
