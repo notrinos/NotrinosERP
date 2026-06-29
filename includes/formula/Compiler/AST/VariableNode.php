@@ -45,6 +45,14 @@ class Formula_Compiler_AST_VariableNode extends Formula_Compiler_AST_Node
     }
 
     /**
+     * @return string The NodeType constant for this node class
+     */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::VARIABLE;
+    }
+
+    /**
      * Accept a visitor.
      *
      * @param Formula_Compiler_AST_NodeVisitor $visitor
@@ -79,15 +87,37 @@ class Formula_Compiler_AST_VariableNode extends Formula_Compiler_AST_Node
     }
 
     /**
-     * Serialize for cache.
+     * Serialize for cache storage.
      *
      * @return array
      */
     public function serialize()
     {
         $data = parent::serialize();
-        $data['namespace']  = $this->namespace;
-        $data['identifier'] = $this->identifier;
+        $data['namespace']     = $this->namespace;
+        $data['identifier']    = $this->identifier;
+        $data['qualifiedName'] = $this->getQualifiedName();
         return $data;
+    }
+
+    /**
+     * Compute per-node metadata: variables are non-constant but deterministic.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    protected function computeMetadata()
+    {
+        $name = $this->getQualifiedName();
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf(
+            'mixed', // Type unknown at compile time
+            2,        // Complexity: 2 (requires runtime resolution)
+            false,    // NOT constant-foldable
+            true      // Deterministic (same context → same value)
+        );
+        $metadata->referencedVariables = array($name);
+        if ($this->namespace !== '') {
+            $metadata->referencedNamespaces = array($this->namespace);
+        }
+        return $metadata;
     }
 }

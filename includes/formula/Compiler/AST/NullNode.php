@@ -37,6 +37,14 @@ class Formula_Compiler_AST_NullNode extends Formula_Compiler_AST_Node
     }
 
     /**
+     * @return string The NodeType constant for this node class
+     */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::NULL_NODE;
+    }
+
+    /**
      * Accept a visitor.
      *
      * @param Formula_Compiler_AST_NodeVisitor $visitor
@@ -70,12 +78,22 @@ class Formula_Compiler_AST_NullNode extends Formula_Compiler_AST_Node
     }
 
     /**
+     * Compute per-node metadata: null is constant and deterministic.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    protected function computeMetadata()
+    {
+        return Formula_Compiler_AST_NodeMetadata::leaf('null', 0, true, true);
+    }
+
+    /**
      * Human-readable representation.
      *
      * @return string
      */
     public function __toString()
     {
-        return 'NULL';
+        return 'NULL @ ' . $this->sourceLine . ':' . $this->sourceColumn;
     }
 }

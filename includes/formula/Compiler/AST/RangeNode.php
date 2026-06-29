@@ -38,6 +38,12 @@ class Formula_Compiler_AST_RangeNode extends Formula_Compiler_AST_Node
         $this->sheetName = $sheetName !== null ? (string)$sheetName : null;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::RANGE;
+    }
+
     public function accept(Formula_Compiler_AST_NodeVisitor $visitor) { return $visitor->visitRange($this); }
     public function getChildren() { return array(); }
 
@@ -48,5 +54,11 @@ class Formula_Compiler_AST_RangeNode extends Formula_Compiler_AST_Node
         $data['endCell']   = $this->endCell;
         $data['sheetName'] = $this->sheetName;
         return $data;
+    }
+
+    /** @return Formula_Compiler_AST_NodeMetadata */
+    protected function computeMetadata()
+    {
+        return Formula_Compiler_AST_NodeMetadata::leaf('mixed', 4, false, true);
     }
 }

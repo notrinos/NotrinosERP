@@ -30,6 +30,12 @@ class Formula_Compiler_AST_ComparisonNode extends Formula_Compiler_AST_Node
         $this->right    = $right;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::COMPARISON;
+    }
+
     public function accept(Formula_Compiler_AST_NodeVisitor $visitor) { return $visitor->visitComparison($this); }
     public function getChildren() { return array($this->left, $this->right); }
 
@@ -40,5 +46,16 @@ class Formula_Compiler_AST_ComparisonNode extends Formula_Compiler_AST_Node
         $data['left']     = $this->left->serialize();
         $data['right']    = $this->right->serialize();
         return $data;
+    }
+
+    /** @return Formula_Compiler_AST_NodeMetadata */
+    protected function computeMetadata()
+    {
+        $leftMeta  = $this->left->getMetadata();
+        $rightMeta = $this->right->getMetadata();
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf('boolean', 3, false, true);
+        $metadata->mergeChild($leftMeta);
+        $metadata->mergeChild($rightMeta);
+        return $metadata;
     }
 }

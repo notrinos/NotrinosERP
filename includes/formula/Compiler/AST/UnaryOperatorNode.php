@@ -31,6 +31,12 @@ class Formula_Compiler_AST_UnaryOperatorNode extends Formula_Compiler_AST_Node
         $this->operand  = $operand;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::UNARY_OP;
+    }
+
     public function accept(Formula_Compiler_AST_NodeVisitor $visitor) { return $visitor->visitUnary($this); }
     public function getChildren() { return array($this->operand); }
 
@@ -40,5 +46,15 @@ class Formula_Compiler_AST_UnaryOperatorNode extends Formula_Compiler_AST_Node
         $data['operator'] = $this->operator;
         $data['operand']  = $this->operand->serialize();
         return $data;
+    }
+
+    /** @return Formula_Compiler_AST_NodeMetadata */
+    protected function computeMetadata()
+    {
+        $childMeta = $this->operand->getMetadata();
+        $type = $this->operator === 'NOT' ? 'boolean' : $childMeta->returnType;
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf($type, 2, false, $childMeta->isDeterministic);
+        $metadata->mergeChild($childMeta);
+        return $metadata;
     }
 }

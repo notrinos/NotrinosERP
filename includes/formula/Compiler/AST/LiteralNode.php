@@ -43,6 +43,14 @@ class Formula_Compiler_AST_LiteralNode extends Formula_Compiler_AST_Node
     }
 
     /**
+     * @return string The NodeType constant for this node class
+     */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::LITERAL;
+    }
+
+    /**
      * Accept a visitor.
      *
      * @param Formula_Compiler_AST_NodeVisitor $visitor
@@ -64,7 +72,7 @@ class Formula_Compiler_AST_LiteralNode extends Formula_Compiler_AST_Node
     }
 
     /**
-     * Serialize for cache.
+     * Serialize for cache storage.
      *
      * @return array
      */
@@ -74,5 +82,20 @@ class Formula_Compiler_AST_LiteralNode extends Formula_Compiler_AST_Node
         $data['value']    = $this->value;
         $data['dataType'] = $this->dataType;
         return $data;
+    }
+
+    /**
+     * Compute per-node metadata: literals are constant, deterministic leaves.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    protected function computeMetadata()
+    {
+        return Formula_Compiler_AST_NodeMetadata::leaf(
+            $this->dataType,
+            1,     // Complexity: 1 (baseline)
+            true,  // Literals are always constant-foldable
+            true   // Literals are always deterministic
+        );
     }
 }

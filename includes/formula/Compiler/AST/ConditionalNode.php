@@ -35,6 +35,12 @@ class Formula_Compiler_AST_ConditionalNode extends Formula_Compiler_AST_Node
         $this->falseBranch = $falseBranch;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::CONDITIONAL;
+    }
+
     public function accept(Formula_Compiler_AST_NodeVisitor $visitor) { return $visitor->visitConditional($this); }
     public function getChildren() { return array($this->condition, $this->trueBranch, $this->falseBranch); }
 
@@ -45,5 +51,20 @@ class Formula_Compiler_AST_ConditionalNode extends Formula_Compiler_AST_Node
         $data['trueBranch']  = $this->trueBranch->serialize();
         $data['falseBranch'] = $this->falseBranch->serialize();
         return $data;
+    }
+
+    /** @return Formula_Compiler_AST_NodeMetadata */
+    protected function computeMetadata()
+    {
+        $condMeta  = $this->condition->getMetadata();
+        $trueMeta  = $this->trueBranch->getMetadata();
+        $falseMeta = $this->falseBranch->getMetadata();
+        $returnType = ($trueMeta->returnType === $falseMeta->returnType)
+            ? $trueMeta->returnType : 'mixed';
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf($returnType, 5, false, true);
+        $metadata->mergeChild($condMeta);
+        $metadata->mergeChild($trueMeta);
+        $metadata->mergeChild($falseMeta);
+        return $metadata;
     }
 }

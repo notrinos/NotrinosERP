@@ -36,6 +36,9 @@ abstract class Formula_Compiler_AST_Node
     /** @var int Source column number (1-based) */
     protected $sourceColumn;
 
+    /** @var Formula_Compiler_AST_NodeMetadata|null Lazily computed per-node metadata */
+    protected $nodeMetadata = null;
+
     /**
      * Construct a node with source location.
      *
@@ -47,6 +50,10 @@ abstract class Formula_Compiler_AST_Node
         $this->sourceLine   = (int)$line;
         $this->sourceColumn = (int)$column;
     }
+
+    // -----------------------------------------------------------------------
+    //  Abstract contract
+    // -----------------------------------------------------------------------
 
     /**
      * Accept a visitor for traversal (Visitor Pattern entry point).
@@ -71,6 +78,21 @@ abstract class Formula_Compiler_AST_Node
     abstract public function getChildren();
 
     /**
+     * Get the node type identifier from NodeType constants.
+     *
+     * This short string (e.g., 'literal', 'binary', 'variable') is used
+     * as the type discriminator in serialized output. It is always one
+     * of the Formula_Compiler_AST_NodeType constants.
+     *
+     * @return string
+     */
+    abstract public function getNodeType();
+
+    // -----------------------------------------------------------------------
+    //  Source location
+    // -----------------------------------------------------------------------
+
+    /**
      * Get the source line number.
      *
      * @return int
@@ -90,8 +112,50 @@ abstract class Formula_Compiler_AST_Node
         return $this->sourceColumn;
     }
 
+    // -----------------------------------------------------------------------
+    //  Metadata
+    // -----------------------------------------------------------------------
+
+    /**
+     * Get the per-node compile-time metadata.
+     *
+     * Returns lazily-initialized metadata. Subclasses override
+     * computeMetadata() to supply type-specific metadata.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    public function getMetadata()
+    {
+        if ($this->nodeMetadata === null) {
+            $this->nodeMetadata = $this->computeMetadata();
+        }
+        return $this->nodeMetadata;
+    }
+
+    /**
+     * Compute type-specific metadata for this node.
+     *
+     * Subclasses override this to provide accurate type inference,
+     * complexity scoring, and constant-foldability information.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    protected function computeMetadata()
+    {
+        return Formula_Compiler_AST_NodeMetadata::leaf('unknown', 1, false, true);
+    }
+
+    // -----------------------------------------------------------------------
+    //  Serialization
+    // -----------------------------------------------------------------------
+
     /**
      * Serialize the node to an array for cache storage.
+     *
+     * The serialized form uses short NodeType constants (e.g., 'literal',
+     * 'binary') as the type discriminator — NOT fully qualified class names.
+     * This makes the serialized output compact, language-agnostic, and
+     * immune to class renaming.
      *
      * Subclasses MUST override this to include their specific data.
      * The base implementation returns structural metadata.
@@ -101,11 +165,15 @@ abstract class Formula_Compiler_AST_Node
     public function serialize()
     {
         return array(
-            'type'         => get_class($this),
-            'source_line'  => $this->sourceLine,
-            'source_column'=> $this->sourceColumn,
+            'type'          => $this->getNodeType(),
+            'source_line'   => $this->sourceLine,
+            'source_column' => $this->sourceColumn,
         );
     }
+
+    // -----------------------------------------------------------------------
+    //  Helpers
+    // -----------------------------------------------------------------------
 
     /**
      * Get a human-readable representation for debugging.
@@ -114,6 +182,46 @@ abstract class Formula_Compiler_AST_Node
      */
     public function __toString()
     {
-        return get_class($this);
+        return get_class($this) . ' @ ' . $this->sourceLine . ':' . $this->sourceColumn;
+    }
+
+    /**
+     * Check whether this node is a leaf (has no children).
+     *
+     * @return bool
+     */
+    public function isLeaf()
+    {
+        return count($this->getChildren()) === 0;
+    }
+
+    /**
+     * Check whether this node type can be constant-folded.
+     *
+     * @return bool
+     */
+    public function isConstant()
+    {
+        return $this->getMetadata()->isConstant;
+    }
+
+    /**
+     * Get the number of nodes in the subtree rooted at this node.
+     *
+     * @return int
+     */
+    public function getSubtreeNodeCount()
+    {
+        return $this->getMetadata()->subtreeNodeCount;
+    }
+
+    /**
+     * Get the maximum depth of the subtree rooted at this node.
+     *
+     * @return int
+     */
+    public function getSubtreeDepth()
+    {
+        return $this->getMetadata()->subtreeDepth;
     }
 }

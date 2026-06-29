@@ -44,6 +44,12 @@ class Formula_Compiler_AST_BinaryOperatorNode extends Formula_Compiler_AST_Node
         $this->right    = $right;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::BINARY_OP;
+    }
+
     /** @return mixed */
     public function accept(Formula_Compiler_AST_NodeVisitor $visitor)
     {
@@ -64,5 +70,18 @@ class Formula_Compiler_AST_BinaryOperatorNode extends Formula_Compiler_AST_Node
         $data['left']     = $this->left->serialize();
         $data['right']    = $this->right->serialize();
         return $data;
+    }
+
+    /** @return Formula_Compiler_AST_NodeMetadata */
+    protected function computeMetadata()
+    {
+        $leftMeta  = $this->left->getMetadata();
+        $rightMeta = $this->right->getMetadata();
+        $returnType = ($leftMeta->returnType === $rightMeta->returnType)
+            ? $leftMeta->returnType : 'mixed';
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf($returnType, 3, false, true);
+        $metadata->mergeChild($leftMeta);
+        $metadata->mergeChild($rightMeta);
+        return $metadata;
     }
 }

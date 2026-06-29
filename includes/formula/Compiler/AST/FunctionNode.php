@@ -41,6 +41,12 @@ class Formula_Compiler_AST_FunctionNode extends Formula_Compiler_AST_Node
         $this->arguments    = $arguments;
     }
 
+    /** @return string */
+    public function getNodeType()
+    {
+        return Formula_Compiler_AST_NodeType::FUNCTION;
+    }
+
     /**
      * @param Formula_Compiler_AST_NodeVisitor $visitor
      * @return mixed
@@ -59,6 +65,8 @@ class Formula_Compiler_AST_FunctionNode extends Formula_Compiler_AST_Node
     }
 
     /**
+     * Serialize for cache storage.
+     *
      * @return array
      */
     public function serialize()
@@ -70,5 +78,20 @@ class Formula_Compiler_AST_FunctionNode extends Formula_Compiler_AST_Node
             $data['arguments'][] = $arg->serialize();
         }
         return $data;
+    }
+
+    /**
+     * Compute per-node metadata: functions reference themselves, merge child metadata.
+     *
+     * @return Formula_Compiler_AST_NodeMetadata
+     */
+    protected function computeMetadata()
+    {
+        $metadata = Formula_Compiler_AST_NodeMetadata::leaf('mixed', 5, false, false);
+        $metadata->referencedFunctions = array($this->functionName);
+        foreach ($this->arguments as $arg) {
+            $metadata->mergeChild($arg->getMetadata());
+        }
+        return $metadata;
     }
 }
