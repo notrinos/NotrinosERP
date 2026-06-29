@@ -466,10 +466,12 @@ function submenu_print($title, $type, $number, $id=null, $email=0, $extra=0) {
 
 //-----------------------------------------------------------------------------------
 
-function hyperlink_params($target, $label, $params, $center=true) {
+function hyperlink_params($target, $label, $params, $center=true, $icon=null) {
 	$id = default_focus();
 	
 	$pars = access_string($label);
+	if (user_graphic_links() && $icon)
+		$pars[0] = set_icon($icon, $pars[0]);
 	if ($target == '')
 		$target = $_SERVER['PHP_SELF'];
 	if ($center)
@@ -479,9 +481,9 @@ function hyperlink_params($target, $label, $params, $center=true) {
 		echo "</center>";
 }
 
-function hyperlink_params_td($target, $label, $params) {
+function hyperlink_params_td($target, $label, $params, $icon=null) {
 	echo "<td>";
-	hyperlink_params($target, $label, $params, false);
+	hyperlink_params($target, $label, $params, false, $icon);
 	echo "</td>\n";
 }
 
