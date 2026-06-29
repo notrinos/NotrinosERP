@@ -76,14 +76,39 @@ class Formula_Runtime_FormulaRuntime
             $this->compiler = new Formula_Compiler_FormulaCompiler(
                 $this->functionRegistry,
                 $this->variableRegistry,
-                array(),  // Default validators (created by FormulaCompiler)
-                array(),  // No optimizers yet
-                100,      // Max AST depth
-                10000,    // Max source length
+                array(),               // Default validators (created by FormulaCompiler)
+                $this->createOptimizers(), // Standard optimizer pipeline
+                100,                   // Max AST depth
+                10000,                 // Max source length
                 $this->knownContextVariables
             );
         }
         return $this->compiler;
+    }
+
+    /**
+     * Create the standard optimizer pipeline.
+     *
+     * Optimizers are applied in this order: ConstantFolder →
+     * BooleanSimplifier → DeadBranchEliminator → AlgebraicSimplifier →
+     * NullCoalescingOptimizer.
+     *
+     * Each optimizer transforms the AST into a semantically equivalent
+     * but more efficient form. The order matters — constant folding must
+     * run first so that boolean simplifier and dead branch eliminator
+     * can act on the resulting constant booleans.
+     *
+     * @return Formula_Contracts_OptimizerInterface[]
+     */
+    private function createOptimizers()
+    {
+        return array(
+            new Formula_Compiler_ConstantFolder($this->functionRegistry),
+            new Formula_Compiler_BooleanSimplifier(),
+            new Formula_Compiler_DeadBranchEliminator(),
+            new Formula_Compiler_AlgebraicSimplifier(),
+            new Formula_Compiler_NullCoalescingOptimizer(),
+        );
     }
 
     /**
