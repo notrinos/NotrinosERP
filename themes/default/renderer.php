@@ -143,14 +143,89 @@ class renderer {
 	}
 
 	/**
-	 * Render notification button in the topbar.
+	 * Render notification button with badge count and dropdown panel in the topbar.
+	 *
+	 * Fetches pending notification data from the notification manager and renders
+	 * the bell icon with a badge showing total pending count, plus a dropdown
+	 * panel listing recent notifications grouped by provider section.
 	 *
 	 * @return void
 	 */
 	function render_notification_button() {
-		echo "<button class='modern-notification-button' type='button' aria-label='"._('Notifications')."'>";
+		global $path_to_root;
+
+		$manager = get_notification_manager();
+		$total_count = $manager->getTotalCount();
+		$sections = $manager->getSections(5);
+
+		$badge_html = '';
+		if ($total_count > 0) {
+			$badge_count = $total_count > 99 ? '99+' : (string)$total_count;
+			$badge_html = "<span class='modern-notification-badge' data-count='" . $badge_count . "'>" . $badge_count . "</span>";
+		}
+
+		echo "<div class='modern-notification-container'>";
+		echo "<button id='modern-notification-trigger' class='modern-notification-button' type='button' aria-label='" . _('Notifications') . "' aria-haspopup='true' aria-expanded='false'>";
 		echo $this->icon_svg('bell', 'modern-icon modern-notification-icon');
+		echo $badge_html;
 		echo "</button>";
+
+		echo "<div id='modern-notification-panel' class='modern-notification-panel'>";
+		echo "<div class='modern-notification-panel-header'>";
+		echo "<span class='modern-notification-panel-title'>" . _('Notifications') . "</span>";
+		if ($total_count > 0) {
+			echo "<span class='modern-notification-panel-count'>" . sprintf(_('%d pending'), $total_count) . "</span>";
+		}
+		echo "</div>";
+
+		$has_any_items = false;
+		foreach ($sections as $section) {
+			if (empty($section['items']))
+				continue;
+
+			$has_any_items = true;
+			echo "<div class='modern-notification-section'>";
+			echo "<div class='modern-notification-section-header'>";
+			echo $this->icon_svg($section['icon'], 'modern-icon modern-notification-section-icon');
+			echo "<span class='modern-notification-section-label'>" . $section['label'] . "</span>";
+			if ($section['count'] > 0) {
+				echo "<span class='modern-notification-section-count'>(" . $section['count'] . ")</span>";
+			}
+			echo "</div>";
+			echo "<div class='modern-notification-items'>";
+			foreach ($section['items'] as $item) {
+				$item_type_class = '';
+				if (isset($item['type']) && $item['type']) {
+					$item_type_class = ' modern-notification-item-' . $item['type'];
+				}
+				echo "<a class='modern-notification-item" . $item_type_class . "' href='" . $item['url'] . "'>";
+				echo "<div class='modern-notification-item-content'>";
+				echo "<div class='modern-notification-item-title'>" . htmlspecialchars($item['title']) . "</div>";
+				if (!empty($item['summary'])) {
+					echo "<div class='modern-notification-item-summary'>" . htmlspecialchars($item['summary']) . "</div>";
+				}
+				echo "</div>";
+				if (!empty($item['time'])) {
+					echo "<div class='modern-notification-item-time'>" . $item['time'] . "</div>";
+				}
+				echo "</a>";
+			}
+			echo "</div>";
+			echo "</div>";
+		}
+
+		if (!$has_any_items) {
+			echo "<div class='modern-notification-empty'>";
+			echo $this->icon_svg('bell-off', 'modern-icon modern-notification-empty-icon');
+			echo "<span>" . _('No notifications') . "</span>";
+			echo "</div>";
+		}
+
+		echo "<div class='modern-notification-panel-footer'>";
+		echo "<a href='" . $path_to_root . "/admin/approval_inquiry.php' class='modern-notification-view-all'>" . _('View all notifications') . "</a>";
+		echo "</div>";
+		echo "</div>";
+		echo "</div>";
 	}
 
 	/**
