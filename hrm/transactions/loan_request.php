@@ -35,7 +35,12 @@ function current_hrm_user_login() {
     return '';
 }
 
-page(_("Loan Request"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Loan Request"), false, false, '', $js);
 
 simple_page_mode(false);
 

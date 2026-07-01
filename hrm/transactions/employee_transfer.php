@@ -18,7 +18,12 @@ include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_history_db.inc');
 
-page(_("Employee Transfer"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Employee Transfer"), false, false, '', $js);
 
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';

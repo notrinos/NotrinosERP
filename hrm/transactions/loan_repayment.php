@@ -16,7 +16,12 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
 
-page(_("Loan Repayment"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Loan Repayment'), false, false, '', $js);
 
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';
@@ -53,7 +58,8 @@ end_row();
 date_row(_('From Date:'), 'from_date');
 date_row(_('To Date:'), 'to_date');
 end_table(1);
-submit_center('Refresh', _('Refresh')); 
+submit_center('Refresh', _('Refresh'));
+br();
 
 if ($_POST['employee_id'] != '' && $_POST['employee_id'] != ALL_TEXT) {
     start_table(TABLESTYLE, "width='95%'");

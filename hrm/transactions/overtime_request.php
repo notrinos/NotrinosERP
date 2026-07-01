@@ -14,7 +14,13 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
-page(_("Overtime Entry/Request"));
+
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Overtime Entry/Request"), false, false, '', $js);
 
 simple_page_mode(false);
 

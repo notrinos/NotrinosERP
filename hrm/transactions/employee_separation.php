@@ -37,7 +37,12 @@ function employee_service_years($from_date, $to_date) {
     return round2($days / 365, 4);
 }
 
-page(_("Employee Separation / EOS"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Employee Separation / EOS'), false, false, '', $js);
 
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';

@@ -19,7 +19,12 @@ include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/payroll_engine.inc');
 
-page(_($help_context = 'Payroll Processing'));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Payroll Processing"), false, false, '', $js);
 
 /**
  * Validate payroll process request.

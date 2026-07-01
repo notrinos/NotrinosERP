@@ -56,7 +56,12 @@ function leave_request_has_valid_date_range($from_date, $to_date, $half_day)
     return true;
 }
 
-page(_("Leave Request"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Leave Request"), false, false, '', $js);
 
 simple_page_mode(false);
 

@@ -36,7 +36,12 @@ function get_basic_pay_element_id() {
     return $row ? (int)$row['element_id'] : 0;
 }
 
-page(_("Salary Revision"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = "Salary Revision"), false, false, '', $js);
 
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';

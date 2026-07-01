@@ -17,7 +17,12 @@ include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root . '/hrm/includes/db/payment_posting.inc');
 
-page(_("Payment Batch"));
+$js = '';
+
+if (user_use_date_picker())
+	$js .= get_js_date_picker();
+
+page(_($help_context = 'Payment Batch'), false, false, '', $js);
 
 $default_bank_account = get_default_bank_account();
 if (!isset($_POST['bank_account']) || (int)$_POST['bank_account'] <= 0)
