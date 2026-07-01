@@ -106,7 +106,7 @@ class Formula_Context_FormulaContext
 
         throw new Formula_Exceptions_UnknownVariableException(
             'Undefined variable: ' . $name,
-            '',     // No namespace — simple variable
+            '',     // No namespace — simple (unqualified) variable
             $name   // The variable identifier
         );
     }

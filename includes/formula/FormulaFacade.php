@@ -519,13 +519,10 @@ class FormulaFacade
                     strlen($formula),
                     FORMULA_MAX_SOURCE_LENGTH
                 ),
+                'source_length',
+                FORMULA_MAX_SOURCE_LENGTH,
                 0,
-                0,
-                '',
-                '',
-                'Shorten the formula or break it into multiple smaller formulas.',
-                0,
-                null
+                0
             );
         }
 

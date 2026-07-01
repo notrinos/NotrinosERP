@@ -160,7 +160,7 @@ class Formula_Compiler_FormulaCompiler implements Formula_Contracts_CompilerInte
 
         if (!$validationResult->isValid) {
             // Convert the first error into an appropriate exception.
-            return $this->throwValidationError($validationResult);
+            $this->throwValidationError($validationResult);
         }
 
         // ---- Stage 5: Optimization ----
@@ -235,7 +235,11 @@ class Formula_Compiler_FormulaCompiler implements Formula_Contracts_CompilerInte
                     'Formula source length (%d) exceeds maximum allowed (%d).',
                     strlen($formula),
                     $this->maxSourceLength
-                )
+                ),
+                'source_length',
+                $this->maxSourceLength,
+                0,
+                0
             );
         }
 
@@ -291,14 +295,14 @@ class Formula_Compiler_FormulaCompiler implements Formula_Contracts_CompilerInte
         // Map error message content to exception type.
         if (strpos($message, 'Unknown function') !== false) {
             throw new Formula_Exceptions_UnknownFunctionException(
-                $message, $line, $column
+                $message, '', $line, $column
             );
         }
 
         if (strpos($message, 'Variable namespace') !== false
             || strpos($message, 'not registered') !== false) {
             throw new Formula_Exceptions_UnknownVariableException(
-                $message, $line, $column
+                $message, '', $message, $line, $column
             );
         }
 
@@ -311,7 +315,7 @@ class Formula_Compiler_FormulaCompiler implements Formula_Contracts_CompilerInte
 
         if (strpos($message, 'Circular') !== false) {
             throw new Formula_Exceptions_CircularReferenceException(
-                $message, $line, $column
+                $message, array(), $line, $column
             );
         }
 
