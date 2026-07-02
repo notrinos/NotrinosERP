@@ -397,7 +397,10 @@
 			return;
 		}
 
-		this.instance.replaceTokens(simulated);
+		this.instance.replaceTokens(simulated, {
+			source: 'dragdrop',
+			description: payload.action === 'move' ? 'Move' : 'Insert'
+		});
 	};
 
 	function sequenceIsValid(tokens) {

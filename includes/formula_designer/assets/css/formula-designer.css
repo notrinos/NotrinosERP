@@ -225,6 +225,36 @@
 	font-size: 14px;
 }
 
+/* Phase 6: Undo / Redo toolbar button states */
+.fd-toolbar-action--undo,
+.fd-toolbar-action--redo {
+	min-width: 44px;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.fd-toolbar-action--undo[disabled],
+.fd-toolbar-action--redo[disabled],
+.fd-toolbar-action[disabled] {
+	opacity: 0.35;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.fd-toolbar-action--undo[disabled]:hover,
+.fd-toolbar-action--redo[disabled]:hover,
+.fd-toolbar-action[disabled]:hover {
+	background: var(--modern-color-surface-soft);
+	transform: none;
+	box-shadow: none;
+}
+
+.fd-toolbar-group--undo {
+	border-right: 1px solid var(--modern-color-border);
+	padding-right: var(--modern-space-3);
+}
+
 .fd-toolbar-action.is-busy {
 	opacity: 0.7;
 	pointer-events: none;

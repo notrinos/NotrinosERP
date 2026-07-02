@@ -10,6 +10,146 @@
 	var VALIDATION_DEBOUNCE_MS = 500;
 	var tokenIdCounter = 0;
 
+	// ---- Phase 6: Undo / Redo Manager ---------------------------------
+	/**
+	 * UndoManager — unlimited undo/redo stack with configurable entry cap.
+	 * Each entry stores complete before/after token snapshots for reliability.
+	 */
+	function UndoManager(maxEntries) {
+		this.undoStack = [];
+		this.redoStack = [];
+		this.maxEntries = typeof maxEntries === 'number' && maxEntries > 0 ? maxEntries : 200;
+		this.enabled = true;
+	}
+
+	UndoManager.prototype.push = function (type, description, reverseTokens, forwardTokens, options) {
+		if (!this.enabled) {
+			return;
+		}
+
+		this.redoStack = [];
+
+		this.undoStack.push({
+			type: type,
+			description: description || type,
+			timestamp: Date.now(),
+			reverseTokens: cloneExpression({ tokens: reverseTokens }).tokens,
+			forwardTokens: cloneExpression({ tokens: forwardTokens }).tokens,
+			selectionId: (options && options.selectionId) || null
+		});
+
+		while (this.undoStack.length > this.maxEntries) {
+			this.undoStack.shift();
+		}
+	};
+
+	UndoManager.prototype.undo = function (currentTokens) {
+		var entry;
+
+		if (!this.enabled || this.undoStack.length === 0) {
+			return null;
+		}
+
+		entry = this.undoStack.pop();
+		this.redoStack.push(entry);
+
+		return {
+			tokens: entry.reverseTokens,
+			selectionId: entry.selectionId
+		};
+	};
+
+	UndoManager.prototype.redo = function (currentTokens) {
+		var entry;
+
+		if (!this.enabled || this.redoStack.length === 0) {
+			return null;
+		}
+
+		entry = this.redoStack.pop();
+		this.undoStack.push(entry);
+
+		return {
+			tokens: entry.forwardTokens,
+			selectionId: entry.selectionId
+		};
+	};
+
+	UndoManager.prototype.canUndo = function () {
+		return this.enabled && this.undoStack.length > 0;
+	};
+
+	UndoManager.prototype.canRedo = function () {
+		return this.enabled && this.redoStack.length > 0;
+	};
+
+	UndoManager.prototype.getLastActionLabel = function () {
+		if (!this.canUndo()) {
+			return '';
+		}
+
+		return this.undoStack[this.undoStack.length - 1].description;
+	};
+
+	UndoManager.prototype.clear = function () {
+		this.undoStack = [];
+		this.redoStack = [];
+	};
+
+	UndoManager.prototype.setEnabled = function (value) {
+		this.enabled = !!value;
+	};
+
+	// ---- Phase 6: Clipboard Manager -----------------------------------
+	/**
+	 * ClipboardManager — internal token clipboard (no system clipboard access).
+	 */
+	function ClipboardManager() {
+		this.buffer = [];
+		this.sourcePosition = -1;
+	}
+
+	ClipboardManager.prototype.copy = function (tokens, sourcePosition) {
+		if (!tokens || !tokens.length) {
+			return false;
+		}
+
+		this.buffer = cloneExpression({ tokens: tokens }).tokens;
+		this.sourcePosition = typeof sourcePosition === 'number' ? sourcePosition : -1;
+		return true;
+	};
+
+	ClipboardManager.prototype.cut = function (tokens, sourcePosition) {
+		var copied = this.copy(tokens, sourcePosition);
+
+		return copied;
+	};
+
+	ClipboardManager.prototype.getPasteTokens = function () {
+		if (!this.buffer.length) {
+			return null;
+		}
+
+		return cloneExpression({ tokens: this.buffer }).tokens;
+	};
+
+	ClipboardManager.prototype.hasContent = function () {
+		return this.buffer.length > 0;
+	};
+
+	ClipboardManager.prototype.clear = function () {
+		this.buffer = [];
+		this.sourcePosition = -1;
+	};
+
+	ClipboardManager.prototype.getTokenCount = function () {
+		return this.buffer.length;
+	};
+
+	// ---- Phase 6: Shared Undo/Clipboard instances --------------------
+	var sharedUndoManager = new UndoManager(200);
+	var sharedClipboard = new ClipboardManager();
+
 	var testExpression = {
 		id: 'expr-root',
 		type: 'expression',
@@ -813,6 +953,9 @@
 		this.lastValidatedFormula = '';
 		this.allowSubmitOnce = false;
 		this.pendingSubmitter = null;
+		this.undoManager = sharedUndoManager;
+		this.clipboard = sharedClipboard;
+		this.disableUndoSnapshot = false;
 
 		this.bindToolbar();
 		this.bindCanvas();
@@ -850,6 +993,10 @@
 				self.setZoom(DEFAULT_ZOOM);
 			} else if (action === 'validate') {
 				self.runValidation(true);
+			} else if (action === 'undo') {
+				self.performUndo();
+			} else if (action === 'redo') {
+				self.performRedo();
 			}
 		});
 	};
@@ -995,7 +1142,47 @@
 				return;
 			}
 
-			if (event.ctrlKey || event.metaKey || event.altKey) {
+			// Phase 6: Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+X / Ctrl+V
+			if (event.ctrlKey || event.metaKey) {
+				if (event.key === 'z' || event.key === 'Z') {
+					event.preventDefault();
+					if (event.shiftKey) {
+						self.performRedo();
+					} else {
+						self.performUndo();
+					}
+					return;
+				}
+
+				if (event.key === 'y' || event.key === 'Y') {
+					event.preventDefault();
+					self.performRedo();
+					return;
+				}
+
+				if (event.key === 'c' || event.key === 'C') {
+					event.preventDefault();
+					self.copySelection();
+					return;
+				}
+
+				if (event.key === 'x' || event.key === 'X') {
+					event.preventDefault();
+					self.cutSelection();
+					return;
+				}
+
+				if (event.key === 'v' || event.key === 'V') {
+					event.preventDefault();
+					self.pasteAtSelection();
+					return;
+				}
+
+				return;
+			}
+
+			// Alt modifier shortcuts — ignore for now
+			if (event.altKey) {
 				return;
 			}
 
@@ -1040,6 +1227,8 @@
 			tokens: tokens
 		});
 
+		var previousTokens = this.expression.tokens;
+
 		this.expression = normalized;
 
 		if (options && typeof options.selectedTokenId !== 'undefined') {
@@ -1048,9 +1237,198 @@
 			this.selectedTokenId = null;
 		}
 
+		// Phase 6: auto-snapshot for undo (unless suppressed)
+		if (options && options.source && !this.disableUndoSnapshot) {
+			this.snapshotForUndo(options.source, options.description || options.source, previousTokens, normalized.tokens, { selectionId: this.selectedTokenId });
+		}
+
 		this.render();
 		this.scheduleTextareaSync(options && options.source ? options.source : 'canvas');
 		this.scheduleValidation(options && options.source ? options.source : 'canvas');
+		this.syncUndoRedoButtons();
+	};
+
+	/**
+	 * Phase 6: Record an undo snapshot for the current mutation.
+	 */
+	DesignerInstance.prototype.snapshotForUndo = function (type, description, reverseTokens, forwardTokens, options) {
+		if (!this.undoManager) {
+			return;
+		}
+
+		this.undoManager.push(type, description, reverseTokens, forwardTokens, options);
+	};
+
+	/**
+	 * Phase 6: Undo — revert to the previous token snapshot.
+	 */
+	DesignerInstance.prototype.performUndo = function () {
+		var currentTokens = this.expression.tokens;
+		var result;
+
+		if (!this.undoManager || !this.undoManager.canUndo()) {
+			return;
+		}
+
+		this.disableUndoSnapshot = true;
+		result = this.undoManager.undo(currentTokens);
+
+		if (result && result.tokens) {
+			this.replaceTokens(result.tokens, {
+				source: 'undo',
+				description: 'Undo',
+				selectedTokenId: result.selectionId || null
+			});
+		}
+		this.disableUndoSnapshot = false;
+	};
+
+	/**
+	 * Phase 6: Redo — restore the previously undone mutation.
+	 */
+	DesignerInstance.prototype.performRedo = function () {
+		var currentTokens = this.expression.tokens;
+		var result;
+
+		if (!this.undoManager || !this.undoManager.canRedo()) {
+			return;
+		}
+
+		this.disableUndoSnapshot = true;
+		result = this.undoManager.redo(currentTokens);
+
+		if (result && result.tokens) {
+			this.replaceTokens(result.tokens, {
+				source: 'redo',
+				description: 'Redo',
+				selectedTokenId: result.selectionId || null
+			});
+		}
+		this.disableUndoSnapshot = false;
+	};
+
+	/**
+	 * Phase 6: Copy selected token(s) to internal clipboard.
+	 */
+	DesignerInstance.prototype.copySelection = function () {
+		var tokens = this.expression.tokens;
+		var index;
+		var token;
+
+		if (!this.selectedTokenId || !this.clipboard) {
+			return;
+		}
+
+		index = this.findTokenIndex(this.selectedTokenId);
+		if (index === -1) {
+			return;
+		}
+
+		token = tokens[index];
+
+		// Copy function + paired closing group token together
+		if (token.type === 'function' && tokens[index + 1] && tokens[index + 1].type === 'group' && tokens[index + 1].metadata && tokens[index + 1].metadata.generatedBy === token.id) {
+			this.clipboard.copy([token, tokens[index + 1]], index);
+			return;
+		}
+
+		this.clipboard.copy([token], index);
+	};
+
+	/**
+	 * Phase 6: Cut selected token(s) to internal clipboard, removing them.
+	 */
+	DesignerInstance.prototype.cutSelection = function () {
+		var tokens = this.getTokens();
+		var index;
+		var token;
+		var ids;
+
+		if (!this.selectedTokenId || !this.clipboard) {
+			return;
+		}
+
+		index = this.findTokenIndex(this.selectedTokenId);
+		if (index === -1) {
+			return;
+		}
+
+		token = tokens[index];
+		ids = [];
+
+		if (token.type === 'function' && tokens[index + 1] && tokens[index + 1].type === 'group' && tokens[index + 1].metadata && tokens[index + 1].metadata.generatedBy === token.id) {
+			ids = [token.id, tokens[index + 1].id];
+			this.clipboard.cut([token, tokens[index + 1]], index);
+			tokens.splice(index, 2);
+		} else {
+			ids = [token.id];
+			this.clipboard.cut([token], index);
+			tokens.splice(index, 1);
+		}
+
+		this.replaceTokens(tokens, {
+			source: 'cut',
+			description: 'Cut',
+			selectedTokenId: tokens[index] ? tokens[index].id : (tokens[index - 1] ? tokens[index - 1].id : null)
+		});
+	};
+
+	/**
+	 * Phase 6: Paste clipboard content at the current selection or cursor position.
+	 */
+	DesignerInstance.prototype.pasteAtSelection = function () {
+		var tokens = this.getTokens();
+		var pasteTokens;
+		var insertIndex;
+
+		if (!this.clipboard || !this.clipboard.hasContent()) {
+			return;
+		}
+
+		pasteTokens = this.clipboard.getPasteTokens();
+		if (!pasteTokens || !pasteTokens.length) {
+			return;
+		}
+
+		insertIndex = this.selectedTokenId ? this.findTokenIndex(this.selectedTokenId) + 1 : tokens.length;
+
+		pasteTokens.forEach(function (token, offset) {
+			tokens.splice(insertIndex + offset, 0, token);
+		});
+
+		this.replaceTokens(tokens, {
+			source: 'paste',
+			description: 'Paste (' + pasteTokens.length + ' token' + (pasteTokens.length !== 1 ? 's' : '') + ')',
+			selectedTokenId: pasteTokens[0].id
+		});
+	};
+
+	/**
+	 * Phase 6: Synchronize undo/redo toolbar button enabled states.
+	 */
+	DesignerInstance.prototype.syncUndoRedoButtons = function () {
+		var undoButton = this.root.querySelector('[data-action="undo"]');
+		var redoButton = this.root.querySelector('[data-action="redo"]');
+
+		if (undoButton) {
+			if (this.undoManager && this.undoManager.canUndo()) {
+				undoButton.removeAttribute('disabled');
+				undoButton.setAttribute('title', 'Undo — ' + escapeHtml(this.undoManager.getLastActionLabel()));
+			} else {
+				undoButton.setAttribute('disabled', 'disabled');
+				undoButton.setAttribute('title', 'Undo');
+			}
+		}
+
+		if (redoButton) {
+			if (this.undoManager && this.undoManager.canRedo()) {
+				redoButton.removeAttribute('disabled');
+				redoButton.setAttribute('title', 'Redo');
+			} else {
+				redoButton.setAttribute('disabled', 'disabled');
+				redoButton.setAttribute('title', 'Redo');
+			}
+		}
 	};
 
 	DesignerInstance.prototype.findTokenById = function (tokenId) {
@@ -1158,7 +1536,7 @@
 
 		if (formula.replace(/\s+/g, '') === '') {
 			this.applyParseError(null);
-			this.replaceTokens([], { source: 'textarea', selectedTokenId: null });
+			this.replaceTokens([], { source: 'textarea', description: 'Clear formula', selectedTokenId: null });
 			return;
 		}
 
@@ -1184,7 +1562,7 @@
 		}
 
 		this.applyParseError(null);
-		this.replaceTokens(tokens, { source: 'textarea', selectedTokenId: null });
+		this.replaceTokens(tokens, { source: 'textarea', description: 'Edit formula text', selectedTokenId: null });
 	};
 
 	DesignerInstance.prototype.applyParseError = function (error) {
@@ -1419,7 +1797,7 @@
 		delete updated.metadata.editing;
 		delete updated.metadata.editingValue;
 		this.activeLiteralEditorId = null;
-		this.replaceTokens(tokens, { source: 'literal-edit', selectedTokenId: tokenId });
+		this.replaceTokens(tokens, { source: 'literal-edit', description: 'Edit literal', selectedTokenId: tokenId });
 	};
 
 	DesignerInstance.prototype.cancelLiteralEdit = function () {
@@ -1490,7 +1868,7 @@
 			nextSelectionId = tokens[index - 1].id;
 		}
 
-		this.replaceTokens(tokens, { source: 'delete', selectedTokenId: nextSelectionId });
+		this.replaceTokens(tokens, { source: 'delete', description: 'Delete', selectedTokenId: nextSelectionId });
 	};
 
 	DesignerInstance.prototype.insertOperator = function (operatorValue) {
@@ -1505,7 +1883,7 @@
 		}
 
 		tokens.splice(index, 0, operatorToken);
-		this.replaceTokens(tokens, { source: 'keyboard', selectedTokenId: operatorToken.id });
+		this.replaceTokens(tokens, { source: 'keyboard', description: 'Insert operator', selectedTokenId: operatorToken.id });
 	};
 
 	DesignerInstance.prototype.applyZoom = function () {
@@ -1613,6 +1991,10 @@
 	window.FormulaDesigner.serializeTokens = serializeTokens;
 	window.FormulaDesigner.tokenizeFormula = tokenizeFormula;
 	window.FormulaDesigner.isTokenSequenceValid = isTokenSequenceValid;
+	window.FormulaDesigner.UndoManager = UndoManager;
+	window.FormulaDesigner.ClipboardManager = ClipboardManager;
+	window.FormulaDesigner.sharedUndoManager = sharedUndoManager;
+	window.FormulaDesigner.sharedClipboard = sharedClipboard;
 
 	function boot() {
 		var roots = document.querySelectorAll('.fd-container[data-designer="root"]');
