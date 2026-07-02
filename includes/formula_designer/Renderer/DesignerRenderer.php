@@ -87,6 +87,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</div>';
         $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
         $parts[] = $this->renderPropertyPanel();
+        $parts[] = $this->renderTemplateBrowser();
         $parts[] = '</div>';
         $parts[] = $editor_renderer->renderSourceTextarea(
             $textarea_name,
@@ -126,7 +127,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 8 property panel</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 9 templates &amp; favorites</span>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--undo">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--undo" data-action="undo" aria-label="Undo" disabled="disabled" title="Undo">↩</button>';
@@ -138,6 +139,9 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</button>';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--preview" data-action="toggle-preview" aria-label="Preview formula result">Preview</button>';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--explain" data-action="toggle-explain" aria-label="Explain formula step-by-step">Explain</button>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--templates">';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--template" data-action="toggle-template-browser" aria-label="Browse templates and favorites" title="Templates &amp; Favorites">📋</button>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--zoom">';
         $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-out" aria-label="Zoom out">-</button>';
@@ -424,6 +428,58 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-property-panel-body" data-designer="property-panel-body">';
         $parts[] = '<div class="fd-property-panel-empty">Select a token to view its properties</div>';
         $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render the template browser and favorites panel.
+     *
+     * The panel is hidden by default and shown via the 📋 toolbar toggle.
+     *
+     * @return string
+     */
+    private function renderTemplateBrowser()
+    {
+        $template_api_url = isset($this->options['baseUrl'])
+            ? rtrim((string)$this->options['baseUrl'], '/') . '/includes/formula_designer/API/DesignerTemplateAPI.php?module=' . rawurlencode($this->module)
+            : '';
+
+        $parts = array();
+        $parts[] = '<div class="fd-template-browser" data-designer="template-browser" hidden aria-label="Templates and favorites browser">';
+        $parts[] = '<div class="fd-template-browser-header">';
+        $parts[] = '<span class="fd-template-browser-title">Templates &amp; Favorites</span>';
+        $parts[] = '<button type="button" class="fd-template-browser-close" data-action="close-template-browser" aria-label="Close template browser">×</button>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-template-browser-body">';
+
+        // Template browser section
+        $parts[] = '<div class="fd-template-section">';
+        $parts[] = '<div class="fd-template-section-header">';
+        $parts[] = '<span class="fd-template-section-title">Built-in Templates</span>';
+        $parts[] = '<span class="fd-template-section-count" data-designer="template-count">34</span>';
+        $parts[] = '</div>';
+        $parts[] = '<input class="fd-template-search" type="search" placeholder="Search templates..." aria-label="Search templates" data-designer="template-search">';
+        $parts[] = '<div class="fd-template-list" data-designer="template-list" role="list">';
+        $parts[] = '<div class="fd-template-loading">Loading templates...</div>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        // Favorites section
+        $parts[] = '<div class="fd-template-section fd-favorites-section">';
+        $parts[] = '<div class="fd-template-section-header">';
+        $parts[] = '<span class="fd-template-section-title">Favorites</span>';
+        $parts[] = '<span class="fd-template-section-count" data-designer="favorite-count">0</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-favorite-list" data-designer="favorite-list" role="list">';
+        $parts[] = '<div class="fd-favorites-empty" data-designer="favorites-empty">No favorites saved yet. Use the star ⭐ to save formulas.</div>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        $parts[] = '</div>';
+        // Hidden template API URL for JS
+        $parts[] = '<input type="hidden" data-designer="template-api-url" value="' . $this->escape($template_api_url) . '">';
         $parts[] = '</div>';
 
         return implode('', $parts);

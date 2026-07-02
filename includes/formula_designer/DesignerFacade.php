@@ -48,7 +48,7 @@ class DesignerFacade
     }
 
     /**
-     * Render the Phase 2/3 visual editor shell.
+     * Render the visual editor shell.
      *
      * @param string $formula
      * @param string $module
@@ -433,5 +433,145 @@ class DesignerFacade
             isset($left['label']) ? $left['label'] : '',
             isset($right['label']) ? $right['label'] : ''
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Templates &amp; Favorites API
+    // -----------------------------------------------------------------------
+
+    /**
+     * Get all templates registered for a module, grouped by category.
+     *
+     * @param string $module Module identifier (hrm, sales, inventory, etc.)
+     * @return array Category-grouped template metadata arrays
+     */
+    public static function getAvailableTemplates($module)
+    {
+        if (!self::$initialized) {
+            self::initialize();
+        }
+
+        return self::buildTemplateSections($module);
+    }
+
+    /**
+     * Build the template palette sections grouped by category.
+     *
+     * @param string $module
+     * @return array
+     */
+    private static function buildTemplateSections($module)
+    {
+        $registry = self::createTemplateRegistry($module);
+        $sections = array();
+
+        foreach ($registry->all() as $template) {
+            $metadata = $template->getMetadata();
+            $category = isset($metadata['category'])
+                ? (string)$metadata['category']
+                : 'General';
+
+            if (!isset($sections[$category])) {
+                $sections[$category] = array(
+                    'category' => $category,
+                    'label'    => $category,
+                    'count'    => 0,
+                    'items'    => array(),
+                );
+            }
+
+            $item = array(
+                'id'          => $template->getId(),
+                'label'       => isset($metadata['label']) ? (string)$metadata['label'] : '',
+                'description' => isset($metadata['description']) ? (string)$metadata['description'] : '',
+                'formula'     => $template->getFormula(),
+                'module'      => isset($metadata['module']) ? (string)$metadata['module'] : $module,
+                'difficulty'  => isset($metadata['difficulty']) ? (string)$metadata['difficulty'] : 'beginner',
+                'tags'        => isset($metadata['tags']) && is_array($metadata['tags']) ? $metadata['tags'] : array(),
+            );
+
+            $sections[$category]['items'][] = $item;
+            $sections[$category]['count'] += 1;
+        }
+
+        // Sort sections by label
+        uasort($sections, array('DesignerFacade', 'compareTemplateSectionsByLabel'));
+
+        return array_values($sections);
+    }
+
+    /**
+     * Sort template section arrays by label.
+     *
+     * @param array $left
+     * @param array $right
+     * @return int
+     */
+    private static function compareTemplateSectionsByLabel(array $left, array $right)
+    {
+        return strcasecmp(
+            isset($left['label']) ? $left['label'] : '',
+            isset($right['label']) ? $right['label'] : ''
+        );
+    }
+
+    /**
+     * Create and populate the designer template registry for a module.
+     *
+     * @param string $module
+     * @return FormulaDesigner_Registry_DesignerTemplateRegistry
+     */
+    private static function createTemplateRegistry($module)
+    {
+        $registry = new FormulaDesigner_Registry_DesignerTemplateRegistry();
+        $module   = strtolower((string)$module);
+
+        // Load built-in templates from provider classes
+        self::loadBuiltInTemplates($registry, $module);
+
+        // Allow extensions to register additional templates
+        if (function_exists('hook_invoke_all') && defined('FORMULA_DESIGNER_HOOK_REGISTER_TEMPLATES')) {
+            hook_invoke_all(FORMULA_DESIGNER_HOOK_REGISTER_TEMPLATES, $registry, $module);
+        }
+
+        $registry->freeze();
+
+        return $registry;
+    }
+
+    /**
+     * Load all built-in template provider all() sets into the registry.
+     *
+     * @param FormulaDesigner_Registry_DesignerTemplateRegistry $registry
+     * @param string                                            $module
+     * @return void
+     */
+    private static function loadBuiltInTemplates(
+        FormulaDesigner_Registry_DesignerTemplateRegistry $registry,
+        $module
+    ) {
+        $provider_map = array(
+            'hrm'           => 'FormulaDesigner_Templates_PayrollTemplateProvider',
+            'sales'         => 'FormulaDesigner_Templates_PricingTemplateProvider',
+            'inventory'     => 'FormulaDesigner_Templates_InventoryTemplateProvider',
+            'manufacturing' => 'FormulaDesigner_Templates_ManufacturingTemplateProvider',
+            'gl'            => 'FormulaDesigner_Templates_GLTemplateProvider',
+        );
+
+        $star_providers = array();
+
+        foreach ($provider_map as $provider_module => $class_name) {
+            if (!class_exists($class_name)) {
+                continue;
+            }
+
+            $templates = call_user_func(array($class_name, 'all'));
+
+            if ($provider_module === $module || $provider_module === '*') {
+                foreach ($templates as $template) {
+                    $registry->register($template);
+                }
+            }
+        }
     }
 }
