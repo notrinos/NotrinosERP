@@ -250,6 +250,7 @@ if ($designer_available) {
         'hrm',
         array(
             'textareaName' => 'formula_designer_modal',
+            'baseUrl'      => $path_to_root,
         )
     );
     echo '</div>';
