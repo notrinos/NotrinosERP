@@ -16,8 +16,6 @@ require_once dirname(__DIR__) . '/Validator/DesignerPreSubmitValidator.php';
 /**
  * DesignerRenderer — base renderer for the Visual Formula Designer shell.
  *
- * Phase 2 owns the visual canvas shell and test-expression bootstrap while
- * later phases progressively add richer interaction layers.
  *
  * @package FormulaDesigner\Renderer
  * @since   2.0.0
@@ -104,7 +102,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     }
 
     /**
-     * Build the Phase 2 editor state.
+     * Build the editor state.
      *
      * @return FormulaDesigner_Editor_DesignerEditor
      */
@@ -118,7 +116,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     }
 
     /**
-     * Render the compact toolbar used in Phase 2.
+     * Render the compact toolbar.
      *
      * @return string
      */
@@ -154,7 +152,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     }
 
     /**
-     * Render the Phase 2 canvas shell.
+     * Render the canvas shell.
      *
      * @param string                                            $instance_id
      * @param FormulaDesigner_Renderer_DesignerEditorRenderer $editor_renderer
@@ -409,7 +407,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     }
 
     /**
-     * Render the Phase 8 property panel shell.
+     * Render the Property panel shell.
      *
      * The panel is hidden by default and shown when a token is selected.
      *
