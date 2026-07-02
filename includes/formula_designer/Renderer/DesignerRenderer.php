@@ -88,6 +88,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = $editor_renderer->renderErrorPanel();
         $parts[] = '</div>';
         $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
+        $parts[] = $this->renderPropertyPanel();
         $parts[] = '</div>';
         $parts[] = $editor_renderer->renderSourceTextarea(
             $textarea_name,
@@ -127,7 +128,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 7 preview &amp; explain mode</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 8 property panel</span>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--undo">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--undo" data-action="undo" aria-label="Undo" disabled="disabled" title="Undo">↩</button>';
@@ -405,6 +406,29 @@ class FormulaDesigner_Renderer_DesignerRenderer
             default:
                 return 'M';
         }
+    }
+
+    /**
+     * Render the Phase 8 property panel shell.
+     *
+     * The panel is hidden by default and shown when a token is selected.
+     *
+     * @return string
+     */
+    private function renderPropertyPanel()
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-property-panel" data-designer="property-panel" hidden aria-label="Token properties">';
+        $parts[] = '<div class="fd-property-panel-header">';
+        $parts[] = '<span class="fd-property-panel-title">Token Properties</span>';
+        $parts[] = '<button type="button" class="fd-property-panel-close" data-action="close-property-panel" aria-label="Close property panel">×</button>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-property-panel-body" data-designer="property-panel-body">';
+        $parts[] = '<div class="fd-property-panel-empty">Select a token to view its properties</div>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
     }
 
     /**

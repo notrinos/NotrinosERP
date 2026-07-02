@@ -956,6 +956,8 @@
 		this.undoManager = sharedUndoManager;
 		this.clipboard = sharedClipboard;
 		this.disableUndoSnapshot = false;
+		this.propertyPanel = root.querySelector('[data-designer="property-panel"]');
+		this.propertyPanelBody = root.querySelector('[data-designer="property-panel-body"]');
 
 		this.bindToolbar();
 		this.bindCanvas();
@@ -1007,17 +1009,28 @@
 		this.root.addEventListener('click', function (event) {
 			var literalValue = closest(event.target, '.fd-token--literal .fd-token-value');
 			var token = event.target.closest('.fd-token');
+			var closePropPanel = event.target.closest('[data-action="close-property-panel"]');
+
+			if (closePropPanel) {
+				self.selectedTokenId = null;
+				self.applySelection();
+				self.renderPropertyPanel();
+				return;
+			}
+
 			if (!token) {
 				if (self.activeLiteralEditorId) {
 					self.commitLiteralEdit();
 				}
 				self.selectedTokenId = null;
 				self.applySelection();
+				self.renderPropertyPanel();
 				return;
 			}
 
 			self.selectedTokenId = token.getAttribute('data-token-id');
 			self.applySelection();
+			self.renderPropertyPanel();
 			self.canvas.focus();
 
 			if (literalValue || token.getAttribute('data-token-type') === 'literal') {
@@ -1951,7 +1964,86 @@
 		input.select();
 	};
 
-	DesignerInstance.prototype.renderGrid = function () {
+	DesignerInstance.prototype.renderPropertyPanel = function () {
+		var tokenId = this.selectedTokenId;
+		var token;
+		var html = '';
+
+		if (!this.propertyPanel || !this.propertyPanelBody) {
+			return;
+		}
+
+		if (!tokenId) {
+			this.propertyPanel.hidden = true;
+			this.propertyPanelBody.innerHTML = '<div class="fd-property-panel-empty">Select a token to view its properties</div>';
+			return;
+		}
+
+		token = this.findTokenById(tokenId);
+		if (!token) {
+			this.propertyPanel.hidden = true;
+			this.propertyPanelBody.innerHTML = '<div class="fd-property-panel-empty">Select a token to view its properties</div>';
+			return;
+		}
+
+		html = buildPropertyPanelContent(token);
+		this.propertyPanelBody.innerHTML = html;
+		this.propertyPanel.hidden = false;
+
+		// Bind property panel input listeners
+		this.bindPropertyPanelInputs();
+	};
+
+	DesignerInstance.prototype.bindPropertyPanelInputs = function () {
+		var self = this;
+		var input = this.propertyPanelBody.querySelector('.fd-property-input');
+		if (!input) {
+			return;
+		}
+
+		input.addEventListener('keydown', function (event) {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				self.commitPropertyPanelEdit(input);
+			} else if (event.key === 'Escape') {
+				event.preventDefault();
+				self.cancelPropertyPanelEdit(input);
+			}
+		});
+
+		input.addEventListener('blur', function () {
+			self.commitPropertyPanelEdit(input);
+		});
+
+		input.focus();
+		input.select();
+	};
+
+	DesignerInstance.prototype.commitPropertyPanelEdit = function (input) {
+		var token = this.findTokenById(this.selectedTokenId);
+		var newValue = input ? input.value : '';
+		var tokens;
+		var index;
+
+		if (!token || token.type !== 'literal') {
+			this.renderPropertyPanel();
+			return;
+		}
+
+		index = this.findTokenIndex(this.selectedTokenId);
+		if (index === -1) {
+			this.renderPropertyPanel();
+			return;
+		}
+
+		tokens = this.getTokens();
+		this.applyLiteralValue(tokens[index], newValue);
+		this.replaceTokens(tokens, { source: 'property-panel', description: 'Edit literal via properties', selectedTokenId: this.selectedTokenId });
+	};
+
+	DesignerInstance.prototype.cancelPropertyPanelEdit = function (input) {
+		this.renderPropertyPanel();
+	};
 		var width = Math.max(this.canvas.clientWidth, 640);
 		var height = Math.max(this.canvas.clientHeight, 260);
 		var step = parseInt(this.canvas.getAttribute('data-grid-size'), 10) || 20;
@@ -1971,6 +2063,153 @@
 
 		this.gridNode.innerHTML = circles;
 	};
+
+	function buildPropertyPanelContent(token) {
+		var metadata = (token.metadata && typeof token.metadata === 'object') ? token.metadata : {};
+		var typeLabel = escapeHtml(token.type.charAt(0).toUpperCase() + token.type.slice(1));
+		var html = '';
+
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">General</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Type</span>';
+		html += '<span class="fd-property-badge fd-property-badge--type">' + typeLabel + '</span>';
+		html += '</div>';
+		html += '</div>';
+
+		if (token.type === 'variable') {
+			html += buildVariableProperties(metadata);
+		} else if (token.type === 'function') {
+			html += buildFunctionProperties(token, metadata);
+		} else if (token.type === 'literal') {
+			html += buildLiteralProperties(token, metadata);
+		} else if (token.type === 'operator') {
+			html += buildOperatorProperties(token, metadata);
+		} else if (token.type === 'group') {
+			html += buildGroupProperties(token, metadata);
+		}
+
+		if (metadata.description) {
+			html += '<div class="fd-property-group">';
+			html += '<div class="fd-property-group-header">Description</div>';
+			html += '<p class="fd-property-description">' + escapeHtml(String(metadata.description)) + '</p>';
+			html += '</div>';
+		}
+
+		if (metadata.permission) {
+			html += '<div class="fd-property-group">';
+			html += '<div class="fd-property-row">';
+			html += '<span class="fd-property-label">Permission</span>';
+			html += '<span class="fd-property-badge fd-property-badge--permission">' + escapeHtml(String(metadata.permission)) + '</span>';
+			html += '</div>';
+			html += '</div>';
+		}
+
+		return html;
+	}
+
+	function buildVariableProperties(metadata) {
+		var html = '';
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">Field</div>';
+		if (metadata.namespace) {
+			html += '<div class="fd-property-row">';
+			html += '<span class="fd-property-label">Namespace</span>';
+			html += '<span class="fd-property-value">' + escapeHtml(String(metadata.namespace)) + '</span>';
+			html += '</div>';
+		}
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Field Name</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(String(metadata.name || '')) + '</span>';
+		html += '</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Data Type</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(String(metadata.dataType || 'mixed')) + '</span>';
+		html += '</div>';
+		html += '</div>';
+		return html;
+	}
+
+	function buildFunctionProperties(token, metadata) {
+		var html = '';
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">Function</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Name</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(String(metadata.name || token.label || '')) + '</span>';
+		html += '</div>';
+		if (typeof metadata.minArgs !== 'undefined' || typeof metadata.maxArgs !== 'undefined') {
+			html += '<div class="fd-property-row">';
+			html += '<span class="fd-property-label">Arguments</span>';
+			if (typeof metadata.minArgs !== 'undefined' && typeof metadata.maxArgs !== 'undefined') {
+				html += '<span class="fd-property-value">' + String(metadata.minArgs) + ' – ' + String(metadata.maxArgs) + '</span>';
+			} else if (typeof metadata.minArgs !== 'undefined') {
+				html += '<span class="fd-property-value">≥ ' + String(metadata.minArgs) + '</span>';
+			} else {
+				html += '<span class="fd-property-value">≤ ' + String(metadata.maxArgs) + '</span>';
+			}
+			html += '</div>';
+		}
+		if (metadata.returnType) {
+			html += '<div class="fd-property-row">';
+			html += '<span class="fd-property-label">Returns</span>';
+			html += '<span class="fd-property-value">' + escapeHtml(String(metadata.returnType)) + '</span>';
+			html += '</div>';
+		}
+		html += '</div>';
+		return html;
+	}
+
+	function buildLiteralProperties(token, metadata) {
+		var html = '';
+		var editableValue = getEditableLiteralValue(token);
+		var dataType = String(metadata.dataType || 'number').toLowerCase();
+
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">Value</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Value</span>';
+		html += '<input type="text" class="fd-property-input" value="' + escapeAttribute(editableValue) + '" data-property="literal-value" aria-label="Literal value">';
+		html += '</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Data Type</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(String(metadata.dataType || 'number')) + '</span>';
+		html += '</div>';
+		html += '</div>';
+		return html;
+	}
+
+	function buildOperatorProperties(token, metadata) {
+		var html = '';
+		var kind = metadata.operatorKind || 'binary';
+
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">Operator</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Operator</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(String(token.value || token.label || '')) + '</span>';
+		html += '</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Kind</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(kind.charAt(0).toUpperCase() + kind.slice(1)) + '</span>';
+		html += '</div>';
+		html += '</div>';
+		return html;
+	}
+
+	function buildGroupProperties(token, metadata) {
+		var html = '';
+		var groupRole = (token.value === '(') ? 'Opening parenthesis' : 'Closing parenthesis';
+
+		html += '<div class="fd-property-group">';
+		html += '<div class="fd-property-group-header">Group</div>';
+		html += '<div class="fd-property-row">';
+		html += '<span class="fd-property-label">Role</span>';
+		html += '<span class="fd-property-value">' + escapeHtml(groupRole) + '</span>';
+		html += '</div>';
+		html += '</div>';
+		return html;
+	}
 
 	function initDesigner(root) {
 		if (root.getAttribute('data-designer-initialized') === '1') {
