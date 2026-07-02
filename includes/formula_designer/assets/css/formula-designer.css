@@ -1000,3 +1000,425 @@
 	border-left: 1px solid var(--modern-color-border);
 	padding-left: var(--modern-space-3);
 }
+
+/* ===================================================================
+ * No-JS Form Builder (Progressive Enhancement Base Layer)
+ * ===================================================================
+ * These styles are active when JavaScript is disabled or when the
+ * progressive enhancement layer has not yet initialized. The visual
+ * designer enhances these elements when JS is enabled.
+ */
+
+.fd-form-builder {
+	display: flex;
+	flex-direction: column;
+	gap: var(--modern-space-4);
+	width: 100%;
+	max-width: 860px;
+	margin: 0 auto;
+	padding: var(--modern-space-4);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-lg);
+	background: var(--modern-color-surface);
+	color: var(--modern-color-text);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	box-shadow: var(--modern-shadow-soft);
+}
+
+.fd-form-header {
+	padding-bottom: var(--modern-space-3);
+	border-bottom: 1px solid var(--modern-color-border);
+}
+
+.fd-form-title {
+	margin: 0 0 4px 0;
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--modern-color-text);
+}
+
+.fd-form-subtitle {
+	margin: 0;
+	font-size: 13px;
+	color: var(--modern-color-muted);
+}
+
+/* Expression area */
+.fd-form-expression {
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-md);
+	background: var(--modern-color-surface-soft);
+	overflow: hidden;
+}
+
+.fd-form-expression-header {
+	display: flex;
+	align-items: center;
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-bottom: 1px solid var(--modern-color-border);
+	background: var(--modern-color-surface);
+}
+
+.fd-form-expression-label {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--modern-color-text);
+}
+
+.fd-form-token-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-height: 80px;
+	padding: var(--modern-space-2);
+	background: var(--modern-color-border);
+}
+
+.fd-form-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 80px;
+	padding: var(--modern-space-4);
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-muted);
+	font-size: 13px;
+	font-style: italic;
+	text-align: center;
+}
+
+.fd-form-token-row {
+	display: flex;
+	align-items: center;
+	gap: var(--modern-space-3);
+	padding: var(--modern-space-2) var(--modern-space-3);
+	background: var(--modern-color-surface);
+}
+
+.fd-form-token-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	height: 28px;
+	padding: 0 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+}
+
+.fd-form-token-badge--variable {
+	background: var(--modern-color-primary-50);
+	color: var(--modern-color-primary-dark);
+}
+
+.fd-form-token-badge--function {
+	background: color-mix(in srgb, var(--modern-color-accent) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-accent);
+}
+
+.fd-form-token-badge--literal {
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-text);
+	border: 1px solid var(--modern-color-border);
+}
+
+.fd-form-token-badge--operator {
+	background: color-mix(in srgb, var(--modern-color-muted) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-text);
+}
+
+.fd-form-token-badge--group {
+	border: 1px solid var(--modern-color-border);
+	background: var(--modern-color-surface);
+	color: var(--modern-color-muted);
+}
+
+.fd-form-token-value {
+	flex: 1;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--modern-color-text);
+	word-break: break-all;
+}
+
+.fd-form-token-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--modern-space-2);
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+/* Add-token row */
+.fd-form-add-row {
+	padding: var(--modern-space-2) var(--modern-space-3);
+	background: var(--modern-color-surface-soft);
+	text-align: center;
+}
+
+/* Add/Edit token section */
+.fd-form-add-section {
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-md);
+	background: var(--modern-color-surface);
+	overflow: hidden;
+}
+
+.fd-form-add-header {
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-bottom: 1px solid var(--modern-color-border);
+	background: var(--modern-color-surface-soft);
+}
+
+.fd-form-add-label {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--modern-color-text);
+}
+
+.fd-form-add-controls {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--modern-space-3);
+	padding: var(--modern-space-4);
+	flex-wrap: wrap;
+}
+
+.fd-form-add-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 180px;
+}
+
+.fd-form-add-field--action {
+	flex-direction: row;
+	align-items: flex-end;
+	gap: var(--modern-space-2);
+}
+
+.fd-form-add-field-label {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--modern-color-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+/* Form inputs */
+.fd-form-input {
+	height: 42px;
+	padding: 0 var(--modern-space-3);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	color: var(--modern-color-text);
+	font-size: 14px;
+	outline: none;
+	transition: border-color var(--modern-transition), box-shadow var(--modern-transition);
+}
+
+.fd-form-input:focus {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--modern-color-primary) 18%, transparent 82%);
+}
+
+.fd-form-select {
+	height: 42px;
+	padding: 0 var(--modern-space-3);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	color: var(--modern-color-text);
+	font-size: 14px;
+	outline: none;
+	cursor: pointer;
+	transition: border-color var(--modern-transition), box-shadow var(--modern-transition);
+}
+
+.fd-form-select:focus {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--modern-color-primary) 18%, transparent 82%);
+}
+
+/* Form buttons */
+.fd-form-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 40px;
+	height: 40px;
+	padding: 0 var(--modern-space-4);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-text);
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--modern-transition), box-shadow var(--modern-transition), background var(--modern-transition);
+	text-decoration: none;
+}
+
+.fd-form-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--modern-shadow-soft);
+	background: var(--modern-color-primary-50);
+}
+
+.fd-form-btn:active {
+	transform: translateY(0);
+}
+
+.fd-form-btn--small {
+	min-width: 36px;
+	height: 34px;
+	padding: 0 var(--modern-space-2);
+	font-size: 12px;
+}
+
+.fd-form-btn--primary {
+	border-color: var(--modern-color-primary);
+	background: var(--modern-color-primary);
+	color: var(--modern-color-surface);
+}
+
+.fd-form-btn--primary:hover {
+	background: var(--modern-color-primary-dark);
+}
+
+.fd-form-btn--danger {
+	color: var(--modern-color-danger);
+}
+
+.fd-form-btn--danger:hover {
+	border-color: var(--modern-color-danger);
+	background: color-mix(in srgb, var(--modern-color-danger) 8%, var(--modern-color-surface) 92%);
+}
+
+.fd-form-btn--add {
+	width: 100%;
+	border-style: dashed;
+	border-color: var(--modern-color-border);
+	background: transparent;
+	color: var(--modern-color-muted);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.fd-form-btn--add:hover {
+	border-color: var(--modern-color-primary);
+	background: color-mix(in srgb, var(--modern-color-primary) 5%, transparent 95%);
+	color: var(--modern-color-primary);
+}
+
+.fd-form-btn--validate {
+	border-color: var(--modern-color-primary);
+	color: var(--modern-color-primary);
+	font-weight: 700;
+}
+
+.fd-form-btn--validate:hover {
+	background: var(--modern-color-primary);
+	color: var(--modern-color-surface);
+}
+
+.fd-form-btn--reset {
+	color: var(--modern-color-muted);
+}
+
+/* Preview notice */
+.fd-form-preview-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--modern-space-3);
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border: 1px solid color-mix(in srgb, var(--modern-color-warning) 25%, var(--modern-color-border) 75%);
+	border-radius: var(--modern-radius-md);
+	background: color-mix(in srgb, var(--modern-color-warning) 5%, var(--modern-color-surface) 95%);
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--modern-color-muted);
+}
+
+.fd-form-preview-icon {
+	flex-shrink: 0;
+	font-size: 18px;
+	color: var(--modern-color-warning);
+}
+
+.fd-form-preview-text {
+	flex: 1;
+}
+
+/* Actions footer */
+.fd-form-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--modern-space-2);
+	padding-top: var(--modern-space-2);
+}
+
+/* Validation messages */
+.fd-form-validation {
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border: 1px solid var(--modern-color-danger);
+	border-radius: var(--modern-radius-md);
+	background: color-mix(in srgb, var(--modern-color-danger) 5%, var(--modern-color-surface) 95%);
+}
+
+.fd-form-validation--error {
+	border-color: var(--modern-color-danger);
+}
+
+.fd-form-validation--ok {
+	border-color: var(--modern-color-success);
+	background: color-mix(in srgb, var(--modern-color-success) 5%, var(--modern-color-surface) 95%);
+}
+
+.fd-form-validation-title {
+	margin: 0 0 var(--modern-space-2) 0;
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.fd-form-validation-title--error {
+	color: var(--modern-color-danger);
+}
+
+.fd-form-validation-title--ok {
+	color: var(--modern-color-success);
+}
+
+.fd-form-validation-list {
+	margin: 0;
+	padding: 0 0 0 var(--modern-space-4);
+	list-style: disc;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* -----------------------------------------------------------------------
+ * Progressive Enhancement — JS-enabled states
+ * -----------------------------------------------------------------------
+ * When JavaScript is enabled and the designer initializes, the form builder
+ * can be hidden and replaced with the full visual designer.
+ */
+
+/* Default: show form builder, hide designer canvas */
+html.no-js .fd-container,
+html.no-js .fd-workspace,
+html.no-js .fd-canvas,
+html.no-js .fd-toolbar {
+	display: none !important;
+}
+
+/* The .fd-source textarea is the bridge — always present, always the
+ * canonical source of truth whether JS is enabled or disabled. */
