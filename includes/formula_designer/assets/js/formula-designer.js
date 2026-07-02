@@ -10,7 +10,7 @@
 	var VALIDATION_DEBOUNCE_MS = 500;
 	var tokenIdCounter = 0;
 
-	// ---- Phase 6: Undo / Redo Manager ---------------------------------
+	// ---- Undo / Redo Manager ---------------------------------
 	/**
 	 * UndoManager — unlimited undo/redo stack with configurable entry cap.
 	 * Each entry stores complete before/after token snapshots for reliability.
@@ -100,7 +100,7 @@
 		this.enabled = !!value;
 	};
 
-	// ---- Phase 6: Clipboard Manager -----------------------------------
+	// ---- Clipboard Manager -----------------------------------
 	/**
 	 * ClipboardManager — internal token clipboard (no system clipboard access).
 	 */
@@ -146,7 +146,7 @@
 		return this.buffer.length;
 	};
 
-	// ---- Phase 6: Shared Undo/Clipboard instances --------------------
+	// ---- Shared Undo/Clipboard instances --------------------
 	var sharedUndoManager = new UndoManager(200);
 	var sharedClipboard = new ClipboardManager();
 
@@ -1015,6 +1015,7 @@
 				self.selectedTokenId = null;
 				self.applySelection();
 				self.renderPropertyPanel();
+				self.announceToScreenReader('Property panel closed');
 				return;
 			}
 
@@ -1032,6 +1033,9 @@
 			self.applySelection();
 			self.renderPropertyPanel();
 			self.canvas.focus();
+
+			// Announce token selection to screen reader
+			self.announceTokenToScreenReader(self.selectedTokenId);
 
 			if (literalValue || token.getAttribute('data-token-type') === 'literal') {
 				self.startLiteralEdit(self.selectedTokenId);
@@ -1151,12 +1155,88 @@
 			var target = event.target;
 			var operatorKey = event.key;
 
+			// Escape — cancel literal edit, close panels, dismiss modals
+			if (event.key === 'Escape') {
+				var activePanel = self.root.querySelector('.fd-palette-panel:not([hidden]), .fd-template-browser:not([hidden])');
+				var activeLiteral = self.root.querySelector('.fd-literal-editor');
+
+				if (activeLiteral) {
+					event.preventDefault();
+					self.cancelLiteralEdit();
+					return;
+				}
+
+				if (self.activeLiteralEditorId) {
+					event.preventDefault();
+					self.cancelLiteralEdit();
+					return;
+				}
+
+				if (activePanel) {
+					event.preventDefault();
+					activePanel.hidden = true;
+					self.canvas.focus();
+					return;
+				}
+
+				if (self.selectedTokenId) {
+					event.preventDefault();
+					self.selectedTokenId = null;
+					self.applySelection();
+					self.renderPropertyPanel();
+					self.canvas.focus();
+					return;
+				}
+
+				// Allow Escape to bubble for modal close
+				return;
+			}
+
 			if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)) {
 				return;
 			}
 
-			// Phase 6: Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+X / Ctrl+V
+			// Ctrl+Shift shortcuts
 			if (event.ctrlKey || event.metaKey) {
+				// Ctrl+S — trigger save (submit form via pre-submit validation flow)
+				if (event.key === 's' || event.key === 'S') {
+					if (event.shiftKey) {
+						return; // Allow Ctrl+Shift+S (browser save as)
+					}
+					event.preventDefault();
+					self.flushTextareaSync('keyboard-save');
+					if (self.form && typeof self.form.requestSubmit === 'function') {
+						self.form.requestSubmit();
+					} else if (self.form) {
+						self.pendingSubmitter = null;
+						self.allowSubmitOnce = true;
+						self.form.submit();
+					}
+					return;
+				}
+
+				// Ctrl+Shift+V — trigger validation
+				if (event.key === 'V' && event.shiftKey) {
+					event.preventDefault();
+					self.runValidation(true);
+					return;
+				}
+
+				// Ctrl+Shift+F — focus function search
+				if (event.key === 'F' && event.shiftKey) {
+					event.preventDefault();
+					self.focusPaletteSearch('function');
+					return;
+				}
+
+				// Ctrl+Shift+B — focus field/variable search
+				if (event.key === 'B' && event.shiftKey) {
+					event.preventDefault();
+					self.focusPaletteSearch('field');
+					return;
+				}
+
+				// Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+X / Ctrl+V
 				if (event.key === 'z' || event.key === 'Z') {
 					event.preventDefault();
 					if (event.shiftKey) {
@@ -1194,7 +1274,46 @@
 				return;
 			}
 
-			// Alt modifier shortcuts — ignore for now
+			// Alt+Left — return focus to module page
+			if (event.altKey && event.key === 'ArrowLeft') {
+				var moduleTrigger = document.querySelector('.fd-modal-trigger-btn');
+				if (moduleTrigger) {
+					event.preventDefault();
+					moduleTrigger.focus();
+				}
+				return;
+			}
+
+			// Arrow keys — navigate between tokens on canvas
+			if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+				if (target && target.closest && target.closest('.fd-expression')) {
+					event.preventDefault();
+					self.navigateToolbarTokens(event.key === 'ArrowRight' ? 1 : -1);
+					return;
+				}
+				var focusedToken = document.activeElement && document.activeElement.closest && document.activeElement.closest('.fd-token');
+				if (focusedToken && focusedToken.closest('.fd-expression')) {
+					event.preventDefault();
+					self.navigateToolbarTokens(event.key === 'ArrowRight' ? 1 : -1);
+					return;
+				}
+			}
+
+			// Enter / Space on focused token — select it
+			if ((event.key === 'Enter' || event.key === ' ') && target) {
+				var activeToken = target.closest ? target.closest('.fd-token') : null;
+				if (activeToken && activeToken.closest('.fd-expression')) {
+					event.preventDefault();
+					var tid = activeToken.getAttribute('data-token-id');
+					self.selectedTokenId = tid;
+					self.applySelection();
+					self.renderPropertyPanel();
+					self.canvas.focus();
+					return;
+				}
+			}
+
+			// Alt modifier shortcuts — ignore remaining
 			if (event.altKey) {
 				return;
 			}
@@ -1210,6 +1329,196 @@
 				self.insertOperator(operatorKey);
 			}
 		});
+
+		// Tab navigation — manage focus between tokens in the expression
+		this.canvas.addEventListener('keydown', function (event) {
+			if (event.key === 'Tab' && !event.ctrlKey && !event.altKey) {
+				event.preventDefault();
+				var direction = event.shiftKey ? -1 : 1;
+				self.navigateToolbarTokens(direction);
+			}
+		});
+	};
+
+	/**
+	 * Navigate focus between expression tokens.
+	 *
+	 * Moves focus to the next or previous token. If no token is currently
+	 * focused, focuses the first (or last) token in the expression.
+	 *
+	 * @param {number} direction  1 for next, -1 for previous
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.navigateToolbarTokens = function (direction) {
+		var tokens = this.expressionNode.querySelectorAll('.fd-token');
+		var tokenCount = tokens.length;
+		var activeIndex = -1;
+		var newIndex;
+		var index;
+		var focused;
+
+		if (!tokenCount) {
+			this.canvas.focus();
+			return;
+		}
+
+		// Find currently focused token
+		focused = document.activeElement;
+		for (index = 0; index < tokenCount; index += 1) {
+			tokens[index].setAttribute('tabindex', '-1');
+			if (focused && tokens[index] === focused) {
+				activeIndex = index;
+			}
+		}
+
+		// Compute target index
+		if (activeIndex === -1) {
+			if (direction >= 0) {
+				newIndex = 0;
+			} else {
+				newIndex = tokenCount - 1;
+			}
+		} else {
+			newIndex = activeIndex + direction;
+			if (newIndex < 0) {
+				newIndex = tokenCount - 1;
+			}
+			if (newIndex >= tokenCount) {
+				newIndex = 0;
+			}
+		}
+
+		// Apply focus + select
+		tokens[newIndex].setAttribute('tabindex', '0');
+		tokens[newIndex].focus();
+		this.selectedTokenId = tokens[newIndex].getAttribute('data-token-id');
+		this.applySelection();
+		this.renderPropertyPanel();
+	};
+
+	/**
+	 * Focus a palette search input by type.
+	 *
+	 * @param {'field'|'function'} paletteType
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.focusPaletteSearch = function (paletteType) {
+		var selector = paletteType === 'field'
+			? '[data-designer="field-palette"] .fd-palette-search'
+			: '[data-designer="function-palette"] .fd-palette-search';
+		var input = this.root.querySelector(selector);
+
+		if (input) {
+			input.focus();
+			input.select();
+		}
+	};
+
+	/**
+	 * Announce a message to screen readers via an aria-live region.
+	 *
+	 * Creates a temporary live region if a permanent one is not available,
+	 * sets the message, and removes it after a short delay.
+	 *
+	 * @param {string} message  The message to announce
+	 * @param {'polite'|'assertive'} [priority='polite']
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.announceToScreenReader = function (message, priority) {
+		var liveRegion = this.root.querySelector('[data-designer="live-region"]');
+		var tempRegion;
+		var clearTimer;
+
+		priority = priority || 'polite';
+
+		if (!liveRegion) {
+			tempRegion = document.createElement('div');
+			tempRegion.setAttribute('data-designer', 'live-region');
+			tempRegion.setAttribute('aria-live', priority);
+			tempRegion.setAttribute('aria-atomic', 'true');
+			tempRegion.className = 'fd-sr-only';
+			this.root.appendChild(tempRegion);
+			liveRegion = tempRegion;
+		}
+
+		// Clear to trigger re-announcement even for identical messages
+		liveRegion.textContent = '';
+		clearTimer = setTimeout(function () {
+			liveRegion.textContent = message;
+		}, 50);
+
+		// Clean up temp region
+		if (tempRegion) {
+			setTimeout(function () {
+				if (tempRegion.parentNode) {
+					tempRegion.parentNode.removeChild(tempRegion);
+				}
+			}, 5000);
+		}
+	};
+
+	/**
+	 * Create a focus trap within a container element.
+	 *
+	 * Traps Tab/Shift+Tab within the container so that keyboard focus
+	 * cannot escape into the background page.
+	 *
+	 * @param {Element} container  The container element to trap focus in
+	 * @return {Function}  A cleanup function to remove the trap
+	 */
+	DesignerInstance.prototype.createFocusTrap = function (container) {
+		var self = this;
+		var focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), '
+			+ 'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), '
+			+ '[contenteditable="true"]';
+
+		function getFocusableNodes() {
+			var nodes = container.querySelectorAll(focusableSelector);
+			var result = [];
+			var index;
+			for (index = 0; index < nodes.length; index += 1) {
+				if (nodes[index].offsetParent !== null) {
+					result.push(nodes[index]);
+				}
+			}
+			return result;
+		}
+
+		function handleTrap(event) {
+			if (event.key !== 'Tab') {
+				return;
+			}
+
+			if (!container.contains(document.activeElement) && !container.isSameNode(document.activeElement)) {
+				return;
+			}
+
+			var nodes = getFocusableNodes();
+			if (!nodes.length) {
+				event.preventDefault();
+				return;
+			}
+
+			var first = nodes[0];
+			var last = nodes[nodes.length - 1];
+
+			if (event.shiftKey) {
+				if (document.activeElement === first || !container.contains(document.activeElement)) {
+					event.preventDefault();
+					last.focus();
+				}
+			} else {
+				if (document.activeElement === last || !container.contains(document.activeElement)) {
+					event.preventDefault();
+					first.focus();
+				}
+			}
+		}
+
+		document.addEventListener('keydown', handleTrap);
+		return function cleanup() {
+			document.removeEventListener('keydown', handleTrap);
+		};
 	};
 
 	DesignerInstance.prototype.bindResize = function () {
@@ -1250,7 +1559,7 @@
 			this.selectedTokenId = null;
 		}
 
-		// Phase 6: auto-snapshot for undo (unless suppressed)
+		// auto-snapshot for undo (unless suppressed)
 		if (options && options.source && !this.disableUndoSnapshot) {
 			this.snapshotForUndo(options.source, options.description || options.source, previousTokens, normalized.tokens, { selectionId: this.selectedTokenId });
 		}
@@ -1262,7 +1571,7 @@
 	};
 
 	/**
-	 * Phase 6: Record an undo snapshot for the current mutation.
+	 * Record an undo snapshot for the current mutation.
 	 */
 	DesignerInstance.prototype.snapshotForUndo = function (type, description, reverseTokens, forwardTokens, options) {
 		if (!this.undoManager) {
@@ -1273,7 +1582,7 @@
 	};
 
 	/**
-	 * Phase 6: Undo — revert to the previous token snapshot.
+	 * Undo — revert to the previous token snapshot.
 	 */
 	DesignerInstance.prototype.performUndo = function () {
 		var currentTokens = this.expression.tokens;
@@ -1297,7 +1606,7 @@
 	};
 
 	/**
-	 * Phase 6: Redo — restore the previously undone mutation.
+	 * Redo — restore the previously undone mutation.
 	 */
 	DesignerInstance.prototype.performRedo = function () {
 		var currentTokens = this.expression.tokens;
@@ -1321,7 +1630,7 @@
 	};
 
 	/**
-	 * Phase 6: Copy selected token(s) to internal clipboard.
+	 * Copy selected token(s) to internal clipboard.
 	 */
 	DesignerInstance.prototype.copySelection = function () {
 		var tokens = this.expression.tokens;
@@ -1349,7 +1658,7 @@
 	};
 
 	/**
-	 * Phase 6: Cut selected token(s) to internal clipboard, removing them.
+	 * Cut selected token(s) to internal clipboard, removing them.
 	 */
 	DesignerInstance.prototype.cutSelection = function () {
 		var tokens = this.getTokens();
@@ -1387,7 +1696,7 @@
 	};
 
 	/**
-	 * Phase 6: Paste clipboard content at the current selection or cursor position.
+	 * Paste clipboard content at the current selection or cursor position.
 	 */
 	DesignerInstance.prototype.pasteAtSelection = function () {
 		var tokens = this.getTokens();
@@ -1417,7 +1726,7 @@
 	};
 
 	/**
-	 * Phase 6: Synchronize undo/redo toolbar button enabled states.
+	 * Synchronize undo/redo toolbar button enabled states.
 	 */
 	DesignerInstance.prototype.syncUndoRedoButtons = function () {
 		var undoButton = this.root.querySelector('[data-action="undo"]');
@@ -1725,6 +2034,20 @@
 		if (this.errorPanel) {
 			this.errorPanel.hidden = !shouldShowPanel;
 		}
+
+		// Announce validation result to screen reader via aria-live
+		if (errors.length > 0) {
+			this.announceToScreenReader(
+				errors.length + ' validation error' + (errors.length !== 1 ? 's' : '') + '. ' +
+				errors.length + ' error' + (errors.length !== 1 ? 's' : '') + ' found.',
+				'assertive'
+			);
+		} else if (warnings.length > 0) {
+			this.announceToScreenReader(
+				'Validation passed with ' + warnings.length + ' warning' + (warnings.length !== 1 ? 's' : '') + '.',
+				'polite'
+			);
+		}
 	};
 
 	DesignerInstance.prototype.applyTokenValidationClasses = function (errorTokenIds, warningTokenIds) {
@@ -1917,6 +2240,29 @@
 				'fd-token--selected',
 				this.selectedTokenId !== null && tokens[index].getAttribute('data-token-id') === this.selectedTokenId
 			);
+		}
+	};
+
+	/**
+	 * Announce token selection to screen readers.
+	 *
+	 * Uses the ARIA label from the token element to build a descriptive
+	 * announcement for assistive technologies.
+	 *
+	 * @param {string} tokenId  The ID of the selected token
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.announceTokenToScreenReader = function (tokenId) {
+		var tokenEl = this.expressionNode.querySelector('[data-token-id="' + tokenId + '"]');
+		var label;
+
+		if (!tokenEl) {
+			return;
+		}
+
+		label = tokenEl.getAttribute('aria-label') || '';
+		if (label) {
+			this.announceToScreenReader('Selected: ' + label, 'polite');
 		}
 	};
 
@@ -2224,6 +2570,17 @@
 			return;
 		}
 		var instanceId = root.getAttribute('data-instance-id') || ('fd-' + Object.keys(window.FormulaDesigner.instances).length);
+
+		// Ensure a permanent screen-reader live region exists
+		if (!root.querySelector('[data-designer="live-region"]')) {
+			var live = document.createElement('div');
+			live.setAttribute('data-designer', 'live-region');
+			live.setAttribute('aria-live', 'polite');
+			live.setAttribute('aria-atomic', 'true');
+			live.className = 'fd-sr-only';
+			root.appendChild(live);
+		}
+
 		window.FormulaDesigner.instances[instanceId] = new DesignerInstance(root);
 		root.setAttribute('data-designer-initialized', '1');
 	}

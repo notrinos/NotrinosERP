@@ -1422,3 +1422,182 @@ html.no-js .fd-toolbar {
 
 /* The .fd-source textarea is the bridge — always present, always the
  * canonical source of truth whether JS is enabled or disabled. */
+
+/* ===================================================================
+ * Accessibility &amp; Keyboard Navigation
+ * ===================================================================
+ * WCAG 2.1 AA — Focus indicators, screen-reader utilities,
+ * high-contrast mode, and reduced-motion support.
+ */
+
+/* Screen-reader-only utility (visible only to assistive tech) */
+.fd-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Enhanced keyboard focus ring for all interactive designer elements
+ * Meets WCAG 2.4.7 — Focus Visible (minimum 2px outline with 3:1 contrast) */
+.fd-toolbar-action:focus-visible,
+.fd-palette-item:focus-visible,
+.fd-template-item:focus-visible,
+.fd-token:focus-visible,
+.fd-property-input:focus-visible,
+.fd-palette-search:focus-visible,
+.fd-template-search:focus-visible,
+.fd-form-input:focus-visible,
+.fd-form-select:focus-visible,
+.fd-form-btn:focus-visible,
+.fd-namespace-header:focus-visible,
+.fd-category-header:focus-visible,
+.fd-property-panel-close:focus-visible,
+.fd-error-panel-close:focus-visible,
+.fd-template-browser-close:focus-visible,
+.fd-template-fav-btn:focus-visible,
+.fd-modal-trigger-btn:focus-visible {
+	outline: 2px solid var(--modern-color-primary);
+	outline-offset: 2px;
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--modern-color-primary) 12%, transparent 88%);
+}
+
+/* Token keyboard focus — enhanced to distinguish from selection */
+.fd-token:focus-visible {
+	outline: 2px solid var(--modern-color-primary);
+	outline-offset: 3px;
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--modern-color-primary) 20%, transparent 80%), var(--modern-shadow-soft);
+}
+
+/* Canvas focus ring */
+.fd-canvas:focus-visible {
+	outline: 2px solid var(--modern-color-primary);
+	outline-offset: 2px;
+}
+
+/* Error panel — aria-live region styling */
+.fd-error-panel[role="alert"] {
+	animation: fd-panel-fade-in 200ms ease-out;
+}
+
+@keyframes fd-panel-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ===================================================================
+ * High Contrast Mode (Windows High Contrast / forced-colors)
+ * ===================================================================
+ * Ensures the designer remains usable when system high-contrast
+ * mode is active.
+ */
+@media (forced-colors: active) {
+	.fd-token {
+		border: 1px solid ButtonText;
+	}
+
+	.fd-token--selected,
+	.fd-token:focus-visible {
+		outline: 3px solid Highlight;
+		outline-offset: 2px;
+	}
+
+	.fd-token--error {
+		border-color: Mark;
+	}
+
+	.fd-toolbar-action {
+		border: 1px solid ButtonText;
+	}
+
+	.fd-toolbar-action:focus-visible {
+		outline: 3px solid Highlight;
+	}
+
+	.fd-canvas {
+		border: 1px solid ButtonText;
+	}
+
+	.fd-palette-item {
+		border: 1px solid ButtonText;
+	}
+
+	.fd-error-panel {
+		border: 2px solid Mark;
+	}
+
+	/* Override color-based token backgrounds — use border style instead */
+	.fd-token--variable {
+		border-left: 4px solid ButtonText;
+	}
+
+	.fd-token--function {
+		border-left: 4px solid Highlight;
+	}
+
+	.fd-token--literal {
+		border-left: 4px solid GrayText;
+	}
+
+	.fd-token--operator {
+		border-style: dashed;
+	}
+
+	.fd-token--group {
+		border-style: dotted;
+	}
+}
+
+/* ===================================================================
+ * Reduced Motion (prefers-reduced-motion)
+ * ===================================================================
+ * Disables animations and transitions for users who have requested
+ * reduced motion at the OS level.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.fd-token,
+	.fd-token:hover,
+	.fd-token--hover,
+	.fd-palette-item,
+	.fd-palette-item:hover,
+	.fd-toolbar-action,
+	.fd-toolbar-action:hover,
+	.fd-template-item,
+	.fd-template-item:hover,
+	.fd-property-panel-close:hover,
+	.fd-form-btn:hover,
+	.fd-error-panel[role="alert"] {
+		transition: none !important;
+		animation: none !important;
+		transform: none !important;
+	}
+}
+
+/* ===================================================================
+ * Focus trap support — ensures trapped focus doesn't escape modal
+ * ===================================================================
+ * The .fd-modal-overlay (from module integration) needs
+ * focus containment when active.
+ */
+.fd-modal-overlay[aria-modal="true"] {
+	display: flex;
+}
+
+/* Backdrop click target for modal close — accessible via Escape key */
+.fd-modal-overlay[aria-modal="true"] .fd-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+}

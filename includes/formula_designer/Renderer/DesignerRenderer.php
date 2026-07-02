@@ -127,7 +127,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 9 templates &amp; favorites</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 12 accessibility &amp; keyboard navigation</span>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--undo">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--undo" data-action="undo" aria-label="Undo" disabled="disabled" title="Undo">↩</button>';
