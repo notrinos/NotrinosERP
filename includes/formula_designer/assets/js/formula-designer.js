@@ -2266,22 +2266,27 @@
 		}
 	};
 
+	/**
+	 * Render the expression canvas using DOM recycling.
+	 *
+	 * optimization — existing token DOM nodes are reused when
+	 * the token array changes, avoiding full innerHTML replacement.  Only
+	 * tokens that differ (by id, type, or position) are created or removed.
+	 * This eliminates layout thrashing and reduces GC pressure for
+	 * large formulas (100+ tokens).
+	 *
+	 * @return {void}
+	 */
 	DesignerInstance.prototype.render = function () {
 		var self = this;
+
 		if (this.renderQueued) {
 			return;
 		}
 
 		this.renderQueued = true;
 		window.requestAnimationFrame(function () {
-			var html = connectorMarkup(0);
-
-			self.expression.tokens.forEach(function (token, index) {
-				html += tokenMarkup(token, index);
-				html += connectorMarkup(index + 1);
-			});
-
-			self.expressionNode.innerHTML = html;
+			self.renderTokensPatch();
 			self.renderQueued = false;
 			self.applyZoom();
 			self.applySelection();
@@ -2292,6 +2297,202 @@
 				tokenCount: self.expression.tokens.length
 			});
 		});
+	};
+
+	/**
+	 * Patch-based token rendering using DOM recycling.
+	 *
+	 * Compares the current DOM child list with the desired token array
+	 * and applies the minimal set of insertions, removals, and in-place
+	 * updates needed.  Falls back to full innerHTML rebuild when the
+	 * token count changes by more than DOM_RECYCLE_THRESHOLD (set to
+	 * 50 to avoid N^2 diff for huge batches like template insertion).
+	 *
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.renderTokensPatch = function () {
+		var desiredTokens = this.expression.tokens;
+		var children = this.expressionNode.children;
+		var desiredLen = desiredTokens.length;
+		var currentLen = children.length;
+		var DOM_RECYCLE_THRESHOLD = 50;
+		var index;
+		var desired;
+		var existing;
+		var html;
+		var fragment;
+		var i;
+
+		// Build a count of connectors + tokens from children.  The
+		// DOM always interleaves: connector(0), token(0), connector(1),
+		// token(1), ... token(N-1), connector(N).  So:
+		//   extistingTokenCount = (children.length - 1) / 2
+		var existingTokenCount = currentLen > 0 ? (currentLen - 1) / 2 : 0;
+
+		// ----- Full rebuild: empty canvas, delta overload, or first render -----
+		if (
+			currentLen === 0
+			|| desiredLen === 0
+			|| existingTokenCount < 0
+			|| Math.abs(desiredLen - existingTokenCount) > DOM_RECYCLE_THRESHOLD
+		) {
+			this.renderTokensFull(desiredTokens);
+			return;
+		}
+
+		// ----- Fast path: token count unchanged, update in place -----
+		if (desiredLen === existingTokenCount) {
+			for (index = 0; index < desiredLen; index += 1) {
+				desired = desiredTokens[index];
+
+				// DOM position: each token at index maps to children[2*index + 1]
+				existing = children[2 * index + 1];
+
+				var existingId = existing ? existing.getAttribute('data-token-id') : null;
+				var existingType = existing ? existing.getAttribute('data-token-type') : null;
+
+				if (existingId === desired.id && existingType === desired.type) {
+					// Same token — just update label if literal and not editing
+					if (desired.type === 'literal' && !(desired.metadata && desired.metadata.editing)) {
+						var labelNode = existing.querySelector('.fd-token-value');
+						if (labelNode) {
+							labelNode.textContent = desired.label || desired.value || '';
+						}
+					}
+					// Update index attribute
+					existing.setAttribute('data-token-index', index);
+					existing.setAttribute('data-token-value', escapeAttribute(desired.value || ''));
+				} else {
+					// Different token — replace the DOM node
+					var replacement = this.createTokenElement(desired, index);
+					if (replacement && existing.parentNode) {
+						existing.parentNode.replaceChild(replacement, existing);
+					}
+				}
+			}
+
+			// Re-apply selection (may have been dropped during replace)
+			this.applySelection();
+			return;
+		}
+
+		// ----- General case: token count changed, patch with fragment -----
+		fragment = document.createDocumentFragment();
+		fragment.appendChild(this.createConnectorElement(0));
+
+		for (index = 0; index < desiredLen; index += 1) {
+			desired = desiredTokens[index];
+			if (index < existingTokenCount) {
+				existing = children[2 * index + 1];
+				var eId = existing ? existing.getAttribute('data-token-id') : null;
+				var eType = existing ? existing.getAttribute('data-token-type') : null;
+
+				if (eId === desired.id && eType === desired.type) {
+					// Reuse existing DOM
+					existing.setAttribute('data-token-index', index);
+					fragment.appendChild(existing);
+				} else {
+					fragment.appendChild(this.createTokenElement(desired, index));
+				}
+			} else {
+				fragment.appendChild(this.createTokenElement(desired, index));
+			}
+
+			fragment.appendChild(this.createConnectorElement(index + 1));
+		}
+
+		// Replace all children at once — single layout operation
+		this.expressionNode.innerHTML = '';
+		this.expressionNode.appendChild(fragment);
+	};
+
+	/**
+	 * Full innerHTML-based render (fallback for large delta or first render).
+	 *
+	 * @param {Array} tokens
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.renderTokensFull = function (tokens) {
+		var html = connectorMarkup(0);
+
+		tokens.forEach(function (token, index) {
+			html += tokenMarkup(token, index);
+			html += connectorMarkup(index + 1);
+		});
+
+		this.expressionNode.innerHTML = html;
+	};
+
+	/**
+	 * Create a single token DOM element from a token data object.
+	 *
+	 * Used during patched (non-full) renders to create new token nodes
+	 * without rebuilding the entire canvas HTML.
+	 *
+	 * @param {Object}  token  Normalized token data
+	 * @param {number}  index  Position within the expression
+	 * @return {Element}
+	 */
+	DesignerInstance.prototype.createTokenElement = function (token, index) {
+		var span = document.createElement('span');
+		var classes = 'fd-token fd-token--' + token.type + ' fd-token-' + token.type;
+		var label = token.label || token.value || '';
+		var isEditing = token.type === 'literal' && token.metadata && token.metadata.editing === true;
+		var ariaLabel = label;
+
+		if (token.type === 'variable') {
+			span.innerHTML = '<span class="fd-token-badge fd-token-badge--namespace fd-token-badge-namespace">'
+				+ namespaceAbbreviation(token.metadata.namespace) + '</span>'
+				+ '<span class="fd-token-label">' + escapeHtml(label) + '</span>';
+			ariaLabel = 'Variable: ' + label;
+		} else if (token.type === 'function') {
+			span.innerHTML = '<span class="fd-token-prefix">fx</span>'
+				+ '<span class="fd-token-label">' + escapeHtml(label) + '</span>'
+				+ '<span class="fd-token-suffix">(</span>';
+			ariaLabel = 'Function: ' + label;
+		} else if (token.type === 'literal') {
+			if (isEditing) {
+				classes += ' fd-token--editing';
+				span.innerHTML = '<input type="text" class="fd-literal-editor" value="'
+					+ escapeAttribute(getEditableLiteralValue(token)) + '" aria-label="Edit literal value">';
+			} else {
+				span.innerHTML = '<span class="fd-token-value">' + escapeHtml(label) + '</span>';
+			}
+			ariaLabel = 'Literal: ' + label;
+		} else if (token.type === 'operator') {
+			span.innerHTML = '<span class="fd-token-symbol">' + escapeHtml(label || token.value) + '</span>';
+			ariaLabel = 'Operator: ' + label;
+		} else {
+			span.innerHTML = '<span class="fd-token-symbol">' + escapeHtml(token.value || ')') + '</span>';
+			ariaLabel = 'Group: ' + (token.value || ')');
+		}
+
+		span.className = classes;
+		span.setAttribute('draggable', isEditing ? 'false' : 'true');
+		span.setAttribute('data-token-id', token.id);
+		span.setAttribute('data-token-index', index);
+		span.setAttribute('data-token-type', token.type);
+		span.setAttribute('data-token-value', token.value || '');
+		span.setAttribute('tabindex', '-1');
+		span.setAttribute('role', 'button');
+		span.setAttribute('aria-label', ariaLabel);
+
+		return span;
+	};
+
+	/**
+	 * Create a connector drop-zone element.
+	 *
+	 * @param {number} position  Connector position index
+	 * @return {Element}
+	 */
+	DesignerInstance.prototype.createConnectorElement = function (position) {
+		var span = document.createElement('span');
+		span.className = 'fd-connector';
+		span.setAttribute('data-connector-position', position);
+		span.setAttribute('data-designer', 'connector');
+		span.setAttribute('aria-hidden', 'true');
+		return span;
 	};
 
 	DesignerInstance.prototype.focusLiteralEditor = function () {
