@@ -10,6 +10,9 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once dirname(__FILE__) . '/DesignerEditorRenderer.php';
+require_once dirname(__DIR__) . '/Validator/DesignerPreSubmitValidator.php';
+
 /**
  * DesignerRenderer — base renderer for the Visual Formula Designer shell.
  *
@@ -55,8 +58,16 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $base_url = isset($this->options['baseUrl']) ? rtrim((string)$this->options['baseUrl'], '/') : '';
         $field_api_url = $base_url . '/includes/formula_designer/API/DesignerFieldListAPI.php?module=' . rawurlencode($this->module);
         $function_api_url = $base_url . '/includes/formula_designer/API/DesignerFunctionListAPI.php?module=' . rawurlencode($this->module);
+        $validate_api_url = $base_url . '/includes/formula_designer/API/DesignerValidateAPI.php';
+        $textarea_name = isset($this->options['textareaName']) && $this->options['textareaName'] !== ''
+            ? (string)$this->options['textareaName']
+            : 'formula_designer_formula';
+        $textarea_id = isset($this->options['textareaId']) && $this->options['textareaId'] !== ''
+            ? (string)$this->options['textareaId']
+            : $instance_id . '-source';
         $field_sections = DesignerFacade::getAvailableFields($this->module);
         $function_sections = DesignerFacade::getAvailableFunctions($this->module);
+        $submit_block_message = FormulaDesigner_Validator_DesignerPreSubmitValidator::getSubmitBlockMessage();
 
         $editor = $this->createEditor();
         $editor_renderer = new FormulaDesigner_Renderer_DesignerEditorRenderer($editor, $this->options);
@@ -65,15 +76,24 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-container" role="application" data-designer="root" data-instance-id="'
             . $this->escape($instance_id) . '" data-module="' . $this->escape($this->module)
             . '" data-field-api-url="' . $this->escape($field_api_url)
-            . '" data-function-api-url="' . $this->escape($function_api_url) . '">';
+            . '" data-function-api-url="' . $this->escape($function_api_url)
+            . '" data-validate-api-url="' . $this->escape($validate_api_url)
+            . '" data-textarea-id="' . $this->escape($textarea_id)
+            . '" data-submit-block-message="' . $this->escape($submit_block_message) . '">';
         $parts[] = $this->renderToolbar();
         $parts[] = '<div class="fd-workspace">';
         $parts[] = $this->renderFieldPalette($field_sections, $field_api_url);
         $parts[] = '<div class="fd-main-area">';
         $parts[] = $this->renderCanvas($instance_id, $editor_renderer);
+        $parts[] = $editor_renderer->renderErrorPanel();
         $parts[] = '</div>';
         $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
         $parts[] = '</div>';
+        $parts[] = $editor_renderer->renderSourceTextarea(
+            $textarea_name,
+            $editor->getFormula(),
+            $textarea_id
+        );
         $parts[] = '<script type="application/json" class="fd-expression-data">'
             . $this->encodeJson($editor->getExpression())
             . '</script>';
@@ -93,7 +113,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
             return new FormulaDesigner_Editor_DesignerEditor($this->options['expression']);
         }
 
-        return new FormulaDesigner_Editor_DesignerEditor();
+        return new FormulaDesigner_Editor_DesignerEditor($this->formula);
     }
 
     /**
@@ -107,7 +127,12 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 2 canvas preview</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 5 editing and validation</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--actions">';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--validate" data-action="validate" aria-label="Validate formula">';
+        $parts[] = 'Validate <span class="fd-toolbar-badge" data-role="validation-count">0</span>';
+        $parts[] = '</button>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--zoom">';
         $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-out" aria-label="Zoom out">-</button>';

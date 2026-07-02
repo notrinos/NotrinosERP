@@ -55,6 +55,43 @@ class FormulaDesigner_Renderer_DesignerEditorRenderer
     }
 
     /**
+     * Render the canonical hidden textarea.
+     *
+     * @param string $name
+     * @param string $value
+     * @param string $id
+     * @return string
+     */
+    public function renderSourceTextarea($name, $value, $id)
+    {
+        return '<textarea class="fd-source" data-designer="source" name="'
+            . $this->escape($name) . '" id="' . $this->escape($id)
+            . '" spellcheck="false" aria-hidden="true">'
+            . $this->escape($value) . '</textarea>';
+    }
+
+    /**
+     * Render the collapsible validation error panel shell.
+     *
+     * @return string
+     */
+    public function renderErrorPanel()
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-error-panel" data-designer="error-panel" hidden="hidden">';
+        $parts[] = '<div class="fd-error-panel-header">';
+        $parts[] = '<span class="fd-error-panel-title">Validation Errors (<span data-role="validation-count">0</span>)</span>';
+        $parts[] = '<button type="button" class="fd-error-panel-close" data-action="dismiss-errors" aria-label="Dismiss validation errors">x</button>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-error-panel-body">';
+        $parts[] = '<ul class="fd-error-list"></ul>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
      * Render one connector drop zone.
      *
      * @param int $position

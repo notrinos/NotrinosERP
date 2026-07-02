@@ -385,7 +385,7 @@
 		var simulated = simulateInsertion(tokens, position, payload);
 
 		return {
-			valid: simulated !== null && isSequenceValid(simulated)
+			valid: simulated !== null && sequenceIsValid(simulated)
 		};
 	};
 
@@ -393,12 +393,20 @@
 		var tokens = this.instance.getTokens();
 		var simulated = simulateInsertion(tokens, position, payload);
 
-		if (simulated === null || !isSequenceValid(simulated)) {
+		if (simulated === null || !sequenceIsValid(simulated)) {
 			return;
 		}
 
 		this.instance.replaceTokens(simulated);
 	};
+
+	function sequenceIsValid(tokens) {
+		if (window.FormulaDesigner && typeof window.FormulaDesigner.isTokenSequenceValid === 'function') {
+			return window.FormulaDesigner.isTokenSequenceValid(tokens);
+		}
+
+		return isSequenceValid(tokens);
+	}
 
 	DragManager.prototype.highlightConnector = function (connector, valid) {
 		this.clearConnectorState();
