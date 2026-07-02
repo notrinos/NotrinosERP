@@ -13,9 +13,6 @@
 /**
  * Visual Formula Designer bootstrap file.
  *
- * Phase 1 only establishes the package scaffold: constants, autoloading,
- * and reserved hook names. Rendering, field registration, and module
- * integration are intentionally deferred to later roadmap phases.
  *
  * @package FormulaDesigner
  * @since   2.0.0
@@ -36,6 +33,208 @@ defined('FORMULA_DESIGNER_HOOK_REGISTER_EXTENSIONS') || define(
     'FORMULA_DESIGNER_HOOK_REGISTER_EXTENSIONS',
     'formula_designer_register_extensions'
 );
+
+/**
+ * ---------------------------------------------------------------------------
+ * Module provider bridge
+ * ---------------------------------------------------------------------------
+ *
+ * The existing NotrinosERP hook system dispatches only to extension hook
+ * classes (modules/ hooks classes), not to core module provider files under
+ * {module}/includes/. This bridge allows core modules to register fields,
+ * templates, and validator callbacks without requiring a full extension
+ * hook class.
+ *
+ * Module provider files call `formula_designer_register_provider()` to
+ * register their callback. The designer facade dispatches to registered
+ * callbacks in addition to the legacy hook_invoke_all() path, preserving
+ * backward compatibility for extensions that already use hooks.
+ *
+ * @since 2.0.0
+ */
+
+defined('FORMULA_DESIGNER_PROVIDER_TYPE_FIELDS') || define(
+    'FORMULA_DESIGNER_PROVIDER_TYPE_FIELDS',
+    'fields'
+);
+defined('FORMULA_DESIGNER_PROVIDER_TYPE_TEMPLATES') || define(
+    'FORMULA_DESIGNER_PROVIDER_TYPE_TEMPLATES',
+    'templates'
+);
+
+/**
+ * Register a provider callback that will be invoked when the designer builds
+ * its field or template registry.
+ *
+ * @param string $provider_type   One of FORMULA_DESIGNER_PROVIDER_TYPE_* constants.
+ * @param string $module          Lowercase module identifier (e.g. 'hrm').
+ * @param string $file_path       Absolute path to the provider include file.
+ * @return void
+ */
+function formula_designer_register_provider($provider_type, $module, $file_path)
+{
+    if (!isset($GLOBALS['formula_designer_providers'])) {
+        $GLOBALS['formula_designer_providers'] = array();
+    }
+
+    $key = $provider_type . '::' . strtolower($module);
+
+    if (!isset($GLOBALS['formula_designer_providers'][$key])) {
+        $GLOBALS['formula_designer_providers'][$key] = array();
+    }
+
+    $GLOBALS['formula_designer_providers'][$key][] = $file_path;
+}
+
+/**
+ * Load registered provider files for a given type and module.
+ *
+ * Each provider .inc file is expected to define one or more functions that
+ * implement the designer's provider contract. Loading the file registers
+ * those functions (or callback data) with the global provider store.
+ *
+ * @param string $provider_type  One of FORMULA_DESIGNER_PROVIDER_TYPE_* constants.
+ * @param string $module         Lowercase module identifier.
+ * @return void
+ */
+function formula_designer_load_providers($provider_type, $module)
+{
+    if (!isset($GLOBALS['formula_designer_providers'])) {
+        return;
+    }
+
+    $key = $provider_type . '::' . strtolower($module);
+
+    if (!isset($GLOBALS['formula_designer_providers'][$key])) {
+        return;
+    }
+
+    foreach ((array)$GLOBALS['formula_designer_providers'][$key] as $file) {
+        if (is_string($file) && file_exists($file)) {
+            require_once $file;
+        }
+    }
+}
+
+/**
+ * Invoke all registered field-provider callbacks for a module.
+ *
+ * Modules register callbacks via the `formula_designer_register_field_`
+ * family of functions. This dispatcher calls each callback with the field
+ * registry and module identifier.
+ *
+ * @param FormulaDesigner_Registry_DesignerFieldRegistry $registry
+ * @param string                                         $module
+ * @return void
+ */
+function formula_designer_invoke_field_providers(
+    FormulaDesigner_Registry_DesignerFieldRegistry $registry,
+    $module
+) {
+    if (!isset($GLOBALS['formula_designer_provider_fields'])) {
+        return;
+    }
+
+    $module_lower = strtolower($module);
+    $callbacks = &$GLOBALS['formula_designer_provider_fields'];
+
+    // Invoke module-specific callbacks
+    if (isset($callbacks[$module_lower])) {
+        foreach ((array)$callbacks[$module_lower] as $cb) {
+            if (is_callable($cb)) {
+                call_user_func($cb, $registry, $module_lower);
+            }
+        }
+    }
+
+    // Invoke wildcard callbacks (register fields for all modules)
+    if ($module_lower !== '*' && isset($callbacks['*'])) {
+        foreach ((array)$callbacks['*'] as $cb) {
+            if (is_callable($cb)) {
+                call_user_func($cb, $registry, $module_lower);
+            }
+        }
+    }
+}
+
+/**
+ * Invoke all registered template-provider callbacks for a module.
+ *
+ * @param FormulaDesigner_Registry_DesignerTemplateRegistry $registry
+ * @param string                                            $module
+ * @return void
+ */
+function formula_designer_invoke_template_providers(
+    FormulaDesigner_Registry_DesignerTemplateRegistry $registry,
+    $module
+) {
+    if (!isset($GLOBALS['formula_designer_provider_templates'])) {
+        return;
+    }
+
+    $module_lower = strtolower($module);
+    $callbacks = &$GLOBALS['formula_designer_provider_templates'];
+
+    if (isset($callbacks[$module_lower])) {
+        foreach ((array)$callbacks[$module_lower] as $cb) {
+            if (is_callable($cb)) {
+                call_user_func($cb, $registry, $module_lower);
+            }
+        }
+    }
+
+    if ($module_lower !== '*' && isset($callbacks['*'])) {
+        foreach ((array)$callbacks['*'] as $cb) {
+            if (is_callable($cb)) {
+                call_user_func($cb, $registry, $module_lower);
+            }
+        }
+    }
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Auto-discovery of module providers
+ * ---------------------------------------------------------------------------
+ *
+ * When the designer is loaded during a full session-bootstrap (i.e. when
+ * $path_to_root is available), this function automatically discovers and
+ * loads module formula providers from their canonical locations.
+ *
+ * Providers are located at: {module}/includes/{module}_formula_provider.inc
+ * for the six target modules.
+ *
+ * @return void
+ */
+function formula_designer_autodiscover_providers()
+{
+    global $path_to_root;
+
+    if (!isset($path_to_root) || !$path_to_root) {
+        return;
+    }
+
+    $root = rtrim($path_to_root, '/\\');
+
+    $module_provider_map = array(
+        'hrm'           => $root . '/hrm/includes/hrm_formula_provider.inc',
+        'sales'         => $root . '/sales/includes/sales_formula_provider.inc',
+        'inventory'     => $root . '/inventory/includes/inventory_formula_provider.inc',
+        'purchasing'    => $root . '/purchasing/includes/purchasing_formula_provider.inc',
+        'manufacturing' => $root . '/manufacturing/includes/manufacturing_formula_provider.inc',
+        'gl'            => $root . '/gl/includes/gl_formula_provider.inc',
+    );
+
+    foreach ($module_provider_map as $module => $file_path) {
+        if (file_exists($file_path)) {
+            require_once $file_path;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Original constants and autoloader (unchanged)
+// ---------------------------------------------------------------------------
 
 /**
  * Resolve the absolute package base path.
@@ -90,9 +289,6 @@ function formula_designer_autoload($class_name)
 /**
  * Get the reserved hook names owned by the designer package.
  *
- * Phase 1 reserves these identifiers so later phases can wire real hook
- * dispatch without changing the public bootstrap contract.
- *
  * @return array
  */
 function formula_designer_get_registered_hooks()
@@ -112,6 +308,10 @@ function formula_designer_get_registered_hooks()
 function formula_designer_initialize_framework()
 {
     $GLOBALS['formula_designer_registered_hooks'] = formula_designer_get_registered_hooks();
+
+    // auto-discover and load module providers
+    formula_designer_autodiscover_providers();
+
     return $GLOBALS['formula_designer_registered_hooks'];
 }
 

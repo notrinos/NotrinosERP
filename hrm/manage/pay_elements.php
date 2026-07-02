@@ -21,6 +21,33 @@ include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 
 //--------------------------------------------------------------------------
 	
+// ---------------------------------------------------------------------------
+// Designer bootstrap — load the Visual Formula Designer when available.
+// The designer replaces the plain textarea with a visual formula builder.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Designer bootstrap — load the Visual Formula Designer when available.
+// The designer renders in a modal triggered by a button next to the
+// formula textarea. The modal's "Create Formula" button fills the textarea.
+// ---------------------------------------------------------------------------
+
+$designer_available = false;
+$designer_web_base = $path_to_root . '/includes/formula_designer';
+$designer_bootstrap = $designer_web_base . '/designer_bootstrap.inc';
+if (file_exists($designer_bootstrap)) {
+    include_once $designer_bootstrap;
+    if (class_exists('DesignerFacade')) {
+        $designer_available = true;
+        add_css_file($designer_web_base . '/assets/css/formula-designer.css');
+        add_js_ufile($designer_web_base . '/assets/js/formula-designer.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-dragdrop.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-preview.js');
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 page(_($help_context = 'Manage Pay Elements'));
 simple_page_mode(false);
 
@@ -170,7 +197,21 @@ amount_row(_('Default Amount:'), 'default_amount');
 
 table_section(2);
 
+// Phase 10: Keep the original textarea for formula input.
+// If the Visual Formula Designer is available, add an
+// "Open Formula Designer" button that launches the designer in
+// a modal overlay.  The modal's "Create Formula" button fills
+// the textarea from the designer's serialized output.
 textarea_row(_('Formula:'), 'formula', null, 255, 3);
+if ($designer_available) {
+    echo '<tr><td></td><td>';
+    echo '<button type="button" class="fd-modal-trigger-btn" '
+        . 'id="formula-designer-trigger">'
+        . _('Open Formula Designer') . '</button>';
+    echo '</td></tr>';
+} else {
+    textarea_row(_('Formula:'), 'formula', null, 255, 3);
+}
 yesno_list_row(_('Taxable:'), 'is_taxable');
 yesno_list_row(_('Affects Gross:'), 'affects_gross');
 amount_row(_('Minimum Amount:'), 'min_amount');
@@ -183,4 +224,112 @@ end_outer_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 
 end_form();
+
+// ---------------------------------------------------------------------------
+// Phase 10: Formula Designer Modal
+// Rendered when the "Open Formula Designer" button is clicked.
+// The designer's serialized formula is transferred to the hidden source
+// textarea (named 'formula') when the user clicks "Create Formula".
+// ---------------------------------------------------------------------------
+if ($designer_available) {
+    $formula_value = get_post('formula', '');
+
+    echo '<div class="fd-modal-overlay" id="fd-modal-overlay" style="display:none;">';
+    echo '<div class="fd-modal-panel" id="fd-modal-panel">';
+    echo '<div class="fd-modal-header">';
+    echo '<h3 class="fd-modal-title">' . _('Formula Designer') . '</h3>';
+    echo '<button type="button" class="fd-modal-close" '
+        . 'aria-label="' . _('Close') . '">×</button>';
+    echo '</div>';
+    echo '<div class="fd-modal-body" id="fd-modal-body">';
+    // Render the designer inside the modal, writing to a temporary
+    // textarea so the modal instance does not interfere with the
+    // page-level source textarea.
+    echo DesignerFacade::renderEditor(
+        $formula_value,
+        'hrm',
+        array(
+            'textareaName' => 'formula_designer_modal',
+        )
+    );
+    echo '</div>';
+    echo '<div class="fd-modal-footer">';
+    echo '<button type="button" class="fd-modal-action fd-modal-action--create">'
+        . _('Create Formula') . '</button>';
+    echo '<button type="button" class="fd-modal-action fd-modal-action--cancel">'
+        . _('Cancel') . '</button>';
+    echo '</div>';
+    echo '</div>';
+    echo '</div>';
+
+    // Inline JavaScript controllers for modal open/close and formula transfer.
+    add_js_source('
+        jQuery(function($) {
+            $("#fd-modal-overlay").on("click", function(e) {
+                if (e.target === this) {
+                    $(this).hide();
+                }
+            });
+            $("#formula-designer-trigger").on("click", function() {
+                $("#fd-modal-overlay").css("display", "flex");
+            });
+            $(".fd-modal-close, .fd-modal-action--cancel").on("click", function() {
+                $("#fd-modal-overlay").hide();
+            });
+            $(".fd-modal-action--create").on("click", function() {
+                var modalVal = $(\'textarea[name="formula_designer_modal"]\').val();
+                $(\'textarea[name="formula"]\').val(modalVal).trigger("input");
+                $("#fd-modal-overlay").hide();
+            });
+        });
+    ');
+
+    // Modal styling — injected inline to avoid a separate CSS request.
+    add_js_source('
+        (function() {
+            var style = document.createElement("style");
+            style.textContent = '
+        . json_encode(
+            '.fd-modal-overlay {'
+            . 'display:flex; align-items:flex-start; justify-content:center;'
+            . 'position:fixed; z-index:10000; left:0; top:0; width:100%;'
+            . 'height:100%; overflow:auto; background-color:rgba(0,0,0,0.55);'
+            . 'padding-top:60px; }'
+            . '.fd-modal-panel {'
+            . 'background:#fff; border-radius:8px; min-width:1100px;'
+            . 'max-width:96vw; max-height:90vh; overflow:auto;'
+            . 'box-shadow:0 20px 60px rgba(0,0,0,0.25); display:flex;'
+            . 'flex-direction:column; }'
+            . '.fd-modal-header {'
+            . 'display:flex; justify-content:space-between; align-items:center;'
+            . 'padding:14px 20px; border-bottom:1px solid #e5e7eb; }'
+            . '.fd-modal-title { margin:0; font-size:1.15rem; }'
+            . '.fd-modal-close {'
+            . 'background:none; border:none; font-size:1.5rem;'
+            . 'cursor:pointer; line-height:1; padding:0 4px; }'
+            . '.fd-modal-body { padding:0; flex:1 1 auto; overflow:auto; }'
+            . '.fd-modal-footer {'
+            . 'display:flex; justify-content:flex-end; gap:10px;'
+            . 'padding:12px 20px; border-top:1px solid #e5e7eb; }'
+            . '.fd-modal-action--create {'
+            . 'background:var(--modern-color-primary,#4361ee); color:#fff;'
+            . 'border:none; border-radius:5px; padding:8px 22px;'
+            . 'cursor:pointer; font-weight:600; }'
+            . '.fd-modal-action--cancel {'
+            . 'background:#f1f5f9; color:#334155;'
+            . 'border:1px solid #cbd5e1; border-radius:5px; padding:8px 22px;'
+            . 'cursor:pointer; }'
+            . '.fd-modal-trigger-btn {'
+            . 'background:var(--modern-color-primary,#4361ee); color:#fff;'
+            . 'border:none; border-radius:5px; padding:8px 22px;'
+            . 'cursor:pointer; font-weight:600;'
+            . 'display:inline-flex; align-items:center; gap:6px; }'
+            . '.fd-modal-trigger-btn:hover { opacity:0.92; }'
+        )
+        . ';
+        document.head.appendChild(style);
+        })();
+    ');
+}
+
 end_page();

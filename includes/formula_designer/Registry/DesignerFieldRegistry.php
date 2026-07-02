@@ -74,6 +74,18 @@ class FormulaDesigner_Registry_DesignerFieldRegistry
     }
 
     /**
+     * Check whether a field with the given qualified name is registered.
+     *
+     * @param string $qualified_name
+     * @return bool
+     */
+    public function has($qualified_name)
+    {
+        $key = strtoupper($qualified_name);
+        return isset($this->fields[$key]);
+    }
+
+    /**
      * Freeze the registry to prevent further mutation.
      *
      * @return void

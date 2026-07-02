@@ -194,14 +194,33 @@ class DesignerFacade
         $registry = new FormulaDesigner_Registry_DesignerFieldRegistry();
         $module = strtolower((string)$module);
 
+        // Phase 10: load module provider files and invoke field callbacks
+        if (function_exists('formula_designer_load_providers')) {
+            formula_designer_load_providers(FORMULA_DESIGNER_PROVIDER_TYPE_FIELDS, $module);
+        }
+
+        if (function_exists('formula_designer_invoke_field_providers')) {
+            formula_designer_invoke_field_providers($registry, $module);
+        }
+
+        // Built-in fallback definitions (still used when no provider has registered)
         foreach (self::getBuiltInFieldDefinitions() as $definition) {
             if (!self::fieldAppliesToModule($definition, $module)) {
+                continue;
+            }
+
+            $qualified = isset($definition['namespace'])
+                ? $definition['namespace'] . '.' . $definition['name']
+                : $definition['name'];
+
+            if ($registry->has($qualified)) {
                 continue;
             }
 
             $registry->register(new FormulaDesigner_Registry_DesignerFieldMetadata($definition));
         }
 
+        // Legacy hook path for extensions already using hook_invoke_all
         if (function_exists('hook_invoke_all') && defined('FORMULA_DESIGNER_HOOK_REGISTER_FIELDS')) {
             hook_invoke_all(FORMULA_DESIGNER_HOOK_REGISTER_FIELDS, $registry, $module);
         }
