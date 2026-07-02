@@ -666,6 +666,12 @@ class DesignerFacade
                 });
                 \$(document).on('click', '#formula-designer-trigger', function() {
                     \$('#fd-modal-overlay').css('display', 'flex');
+                    // Dispatch custom event so formula-designer.js re-scans for
+                    // .fd-container elements inside the now-injected modal and
+                    // initialises each instance (drag-drop, grid, palettes, etc.).
+                    var e = document.createEvent('Event');
+                    e.initEvent('fd:boot', true, false);
+                    document.dispatchEvent(e);
                 });
                 \$(document).on('click', '.fd-modal-close, .fd-modal-action--cancel', function() {
                     \$('#fd-modal-overlay').hide();

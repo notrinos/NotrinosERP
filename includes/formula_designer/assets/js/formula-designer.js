@@ -2815,4 +2815,10 @@
 	} else {
 		boot();
 	}
+
+	// Support for dynamically-added designer instances (e.g. modal overlays).
+	// When renderModal() finishes injecting the designer HTML, it dispatches
+	// 'fd:boot' on the document so we can initialise any containers that were
+	// added after the initial boot.
+	document.addEventListener('fd:boot', boot);
 }(window, document));

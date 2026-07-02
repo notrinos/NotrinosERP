@@ -107,11 +107,11 @@ function display_salary_structure($position_id, $grade_id=0) {
 			
 			textarea_row(_('Formula Override:'), 'formula', get_post('formula', ''), 255, 3);
 			if ($designer_available) {
-				echo '<tr><td></td><td>';
-				echo '<button type="button" class="fd-modal-trigger-btn" '
+				start_row();
+				echo '<td><button type="button" class="fd-modal-trigger-btn" '
 					. 'id="formula-designer-trigger">'
-					. _('Open Formula Designer') . '</button>';
-				echo '</td></tr>';
+					. _('Open Formula Designer') . '</button></td>';
+				end_row();
 			}
 
 			end_table(1);
@@ -206,7 +206,7 @@ tabbed_content_end();
 end_form();
 
 // ---------------------------------------------------------------------------
-// Phase 14: Formula Designer Modal (centralized via DesignerFacade)
+// Formula Designer Modal (centralized via DesignerFacade)
 // ---------------------------------------------------------------------------
 if ($designer_available) {
     DesignerFacade::renderModal(array(

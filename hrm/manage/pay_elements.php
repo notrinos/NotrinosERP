@@ -204,11 +204,11 @@ table_section(2);
 // the textarea from the designer's serialized output.
 textarea_row(_('Formula:'), 'formula', null, 255, 3);
 if ($designer_available) {
-    echo '<tr><td></td><td>';
-    echo '<button type="button" class="fd-modal-trigger-btn" '
+	start_row();
+    echo '<td><button type="button" class="fd-modal-trigger-btn" '
         . 'id="formula-designer-trigger">'
-        . _('Open Formula Designer') . '</button>';
-    echo '</td></tr>';
+        . _('Open Formula Designer') . '</button></td>';
+    end_row();
 } else {
     textarea_row(_('Formula:'), 'formula', null, 255, 3);
 }

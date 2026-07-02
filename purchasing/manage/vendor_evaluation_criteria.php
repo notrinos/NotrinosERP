@@ -165,11 +165,11 @@ echo "</td></tr>\n";
 textarea_row(_('Description:'), 'criteria_description', get_post('criteria_description', ''), 45, 2);
 textarea_row(_('Calculation Formula:'), 'calculation_formula', get_post('calculation_formula', ''), 45, 2);
 if ($designer_available) {
-    echo '<tr><td></td><td>';
-    echo '<button type="button" class="fd-modal-trigger-btn" '
+    start_row();
+    echo '<td><button type="button" class="fd-modal-trigger-btn" '
         . 'id="formula-designer-trigger">'
-        . _('Open Formula Designer') . '</button>';
-    echo '</td></tr>';
+        . _('Open Formula Designer') . '</button></td>';
+    end_row();
 }
 check_row(_('Inactive:'), 'inactive', check_value('inactive'));
 
