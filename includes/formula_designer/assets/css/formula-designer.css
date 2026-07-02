@@ -1396,6 +1396,352 @@
 
 .fd-form-validation-list {
 	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--modern-space-2);
+}
+
+.fd-form-validation-item {
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--modern-color-text);
+}
+
+/* ===================================================================
+ * Phase 15 — AI Formula Assistant Panel
+ * =================================================================== */
+
+/* Toolbar AI button */
+.fd-toolbar-action--ai {
+	min-width: 44px;
+	font-size: 13px;
+	font-weight: 700;
+	gap: 4px;
+}
+
+.fd-toolbar-group--ai {
+	border-left: 1px solid var(--modern-color-border);
+	padding-left: var(--modern-space-3);
+}
+
+/* AI Panel container */
+.fd-ai-panel {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 1000;
+	width: 520px;
+	max-width: 92vw;
+	max-height: 76vh;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-lg);
+	background: var(--modern-color-surface);
+	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+	overflow: hidden;
+}
+
+.fd-ai-panel[hidden] {
+	display: none;
+}
+
+/* AI Panel header */
+.fd-ai-panel-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--modern-space-2);
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-bottom: 1px solid var(--modern-color-border);
+	background: linear-gradient(135deg, color-mix(in srgb, var(--modern-color-primary) 8%, var(--modern-color-surface) 92%), var(--modern-color-surface));
+}
+
+.fd-ai-panel-title {
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--modern-color-text);
+}
+
+.fd-ai-provider-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	background: color-mix(in srgb, var(--modern-color-primary) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-primary-dark);
+}
+
+.fd-ai-panel-close {
+	min-width: 34px;
+	height: 34px;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface);
+	color: var(--modern-color-text);
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 700;
+	transition: transform var(--modern-transition), box-shadow var(--modern-transition);
+}
+
+.fd-ai-panel-close:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--modern-shadow-soft);
+}
+
+/* Chat body */
+.fd-ai-chat-body {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--modern-space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--modern-space-3);
+	min-height: 200px;
+	max-height: 420px;
+	background: var(--modern-color-surface-soft);
+}
+
+/* Chat bubbles */
+.fd-ai-bubble {
+	display: flex;
+	max-width: 88%;
+}
+
+.fd-ai-bubble--user {
+	align-self: flex-end;
+}
+
+.fd-ai-bubble--assistant {
+	align-self: flex-start;
+}
+
+.fd-ai-bubble-content {
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-radius: var(--modern-radius-md);
+	box-shadow: var(--modern-shadow-soft);
+	font-size: 13px;
+	line-height: 1.55;
+	color: var(--modern-color-text);
+}
+
+.fd-ai-bubble--user .fd-ai-bubble-content {
+	background: var(--modern-color-primary);
+	color: var(--modern-color-surface);
+	border-bottom-right-radius: 4px;
+}
+
+.fd-ai-bubble--assistant .fd-ai-bubble-content {
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	border-bottom-left-radius: 4px;
+}
+
+/* Formula code in chat */
+.fd-ai-formula-code {
+	display: block;
+	padding: var(--modern-space-2) var(--modern-space-3);
+	margin-bottom: var(--modern-space-2);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface-soft);
+	font-family: "Consolas", "Monaco", "Courier New", monospace;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--modern-color-primary-dark);
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+/* AI explanation text */
+.fd-ai-explanation {
+	margin: 0 0 var(--modern-space-2) 0;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--modern-color-muted);
+}
+
+/* Confidence indicator */
+.fd-ai-confidence {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	margin-right: var(--modern-space-2);
+}
+
+.fd-ai-confidence--high {
+	background: color-mix(in srgb, var(--modern-color-success) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-success);
+}
+
+.fd-ai-confidence--medium {
+	background: color-mix(in srgb, var(--modern-color-warning) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-warning);
+}
+
+.fd-ai-confidence--low {
+	background: color-mix(in srgb, var(--modern-color-danger) 12%, var(--modern-color-surface) 88%);
+	color: var(--modern-color-danger);
+}
+
+/* Apply formula button */
+.fd-ai-apply-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 34px;
+	padding: 0 var(--modern-space-4);
+	margin-top: var(--modern-space-2);
+	border: 1px solid var(--modern-color-primary);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-primary);
+	color: var(--modern-color-surface);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: transform var(--modern-transition), box-shadow var(--modern-transition);
+}
+
+.fd-ai-apply-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--modern-shadow-card);
+	background: var(--modern-color-primary-dark);
+}
+
+/* Typing indicator */
+.fd-ai-typing {
+	align-self: flex-start;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-radius: var(--modern-radius-md);
+	border-bottom-left-radius: 4px;
+	background: var(--modern-color-surface);
+	border: 1px solid var(--modern-color-border);
+	box-shadow: var(--modern-shadow-soft);
+}
+
+.fd-ai-typing span {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--modern-color-muted);
+	animation: fd-ai-typing 1.4s ease-in-out infinite both;
+}
+
+.fd-ai-typing span:nth-child(1) { animation-delay: 0s; }
+.fd-ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+.fd-ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes fd-ai-typing {
+	0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+	30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Chat input area */
+.fd-ai-chat-input-area {
+	display: flex;
+	flex-direction: column;
+	gap: var(--modern-space-2);
+	padding: var(--modern-space-3) var(--modern-space-4);
+	border-top: 1px solid var(--modern-color-border);
+	background: var(--modern-color-surface);
+}
+
+.fd-ai-chat-input {
+	width: 100%;
+	padding: var(--modern-space-2) var(--modern-space-3);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-text);
+	font-size: 13px;
+	line-height: 1.5;
+	resize: none;
+	outline: none;
+	font-family: inherit;
+	transition: border-color var(--modern-transition), box-shadow var(--modern-transition);
+}
+
+.fd-ai-chat-input:focus {
+	border-color: var(--modern-color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--modern-color-primary) 18%, transparent 82%);
+}
+
+.fd-ai-chat-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--modern-space-2);
+	justify-content: flex-end;
+}
+
+.fd-ai-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 36px;
+	height: 34px;
+	padding: 0 var(--modern-space-2);
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-control-radius);
+	background: var(--modern-color-surface-soft);
+	color: var(--modern-color-text);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--modern-transition), box-shadow var(--modern-transition), background var(--modern-transition);
+}
+
+.fd-ai-action-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: var(--modern-shadow-soft);
+	background: var(--modern-color-primary-50);
+}
+
+.fd-ai-send-btn--primary {
+	border-color: var(--modern-color-primary);
+	background: var(--modern-color-primary);
+	color: var(--modern-color-surface);
+}
+
+.fd-ai-send-btn--primary:hover {
+	background: var(--modern-color-primary-dark);
+}
+
+/* AI panel responsive */
+@media (max-width: 600px) {
+	.fd-ai-panel {
+		width: 96vw;
+		max-height: 88vh;
+		top: 4vh;
+		transform: translate(-50%, 0);
+	}
+
+	.fd-ai-chat-body {
+		max-height: 300px;
+	}
+}
+
+.fd-form-validation-title--error {
+	color: var(--modern-color-danger);
+}
+
+.fd-form-validation-title--ok {
+	color: var(--modern-color-success);
+}
+
+.fd-form-validation-list {
+	margin: 0;
 	padding: 0 0 0 var(--modern-space-4);
 	list-style: disc;
 	display: flex;

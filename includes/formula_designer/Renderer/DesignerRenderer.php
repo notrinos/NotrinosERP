@@ -88,6 +88,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
         $parts[] = $this->renderPropertyPanel();
         $parts[] = $this->renderTemplateBrowser();
+        $parts[] = $this->renderAIPanel();
         $parts[] = '</div>';
         $parts[] = $editor_renderer->renderSourceTextarea(
             $textarea_name,
@@ -127,7 +128,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 12 accessibility &amp; keyboard navigation</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 15 AI features</span>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--undo">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--undo" data-action="undo" aria-label="Undo" disabled="disabled" title="Undo">↩</button>';
@@ -142,6 +143,9 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--templates">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--template" data-action="toggle-template-browser" aria-label="Browse templates and favorites" title="Templates &amp; Favorites">📋</button>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--ai">';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--ai" data-action="toggle-ai-panel" aria-label="Open AI assistant" title="AI Formula Assistant">🤖 AI</button>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--zoom">';
         $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-out" aria-label="Zoom out">-</button>';
@@ -480,6 +484,52 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</div>';
         // Hidden template API URL for JS
         $parts[] = '<input type="hidden" data-designer="template-api-url" value="' . $this->escape($template_api_url) . '">';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render the AI assistant panel.
+     *
+     * @return string
+     */
+    private function renderAIPanel()
+    {
+        $ai_api_url = isset($this->options['baseUrl'])
+            ? rtrim((string)$this->options['baseUrl'], '/') . '/includes/formula_designer/API/DesignerAIApi.php'
+            : '';
+
+        $parts = array();
+        $parts[] = '<div class="fd-ai-panel" data-designer="ai-panel" hidden aria-label="AI Formula Assistant">';
+        $parts[] = '<div class="fd-ai-panel-header">';
+        $parts[] = '<span class="fd-ai-panel-title">🤖 AI Formula Assistant</span>';
+        $parts[] = '<span class="fd-ai-provider-badge" data-designer="ai-provider-name">RuleBased</span>';
+        $parts[] = '<button type="button" class="fd-ai-panel-close" data-action="close-ai-panel" aria-label="Close AI assistant">×</button>';
+        $parts[] = '</div>';
+
+        // Chat body
+        $parts[] = '<div class="fd-ai-chat-body">';
+        $parts[] = '<div class="fd-ai-bubble fd-ai-bubble--assistant">';
+        $parts[] = '<div class="fd-ai-bubble-content">';
+        $parts[] = 'Hello! I can help you create formulas. Describe what you want to calculate in plain language, or paste an Excel formula using the <strong>Import Excel</strong> button below.';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        // Chat input area
+        $parts[] = '<div class="fd-ai-chat-input-area">';
+        $parts[] = '<textarea class="fd-ai-chat-input" placeholder="Describe the formula you need..." rows="2" aria-label="Describe your formula"></textarea>';
+        $parts[] = '<div class="fd-ai-chat-actions">';
+        $parts[] = '<button type="button" class="fd-ai-action-btn fd-ai-import-btn" title="Import Excel formula">📎 Excel</button>';
+        $parts[] = '<button type="button" class="fd-ai-action-btn fd-ai-clear-btn" title="Clear chat">🗑 Clear</button>';
+        $parts[] = '<button type="button" class="fd-ai-action-btn fd-ai-send-btn fd-ai-send-btn--primary" title="Send message">Send ✉</button>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        // Hidden API URL for JS
+        $parts[] = '<input type="hidden" data-designer="ai-api-url" value="' . $this->escape($ai_api_url) . '">';
+
         $parts[] = '</div>';
 
         return implode('', $parts);

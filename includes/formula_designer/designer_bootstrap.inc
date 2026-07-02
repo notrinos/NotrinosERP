@@ -33,6 +33,10 @@ defined('FORMULA_DESIGNER_HOOK_REGISTER_EXTENSIONS') || define(
     'FORMULA_DESIGNER_HOOK_REGISTER_EXTENSIONS',
     'formula_designer_register_extensions'
 );
+defined('FORMULA_DESIGNER_HOOK_REGISTER_AI_PROVIDERS') || define(
+    'FORMULA_DESIGNER_HOOK_REGISTER_AI_PROVIDERS',
+    'formula_designer_register_ai_providers'
+);
 
 /**
  * ---------------------------------------------------------------------------
