@@ -127,7 +127,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
         $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
-        $parts[] = '<span class="fd-toolbar-subtitle">Phase 6 editing with undo and clipboard</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 7 preview &amp; explain mode</span>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--undo">';
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--undo" data-action="undo" aria-label="Undo" disabled="disabled" title="Undo">↩</button>';
@@ -137,6 +137,8 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--validate" data-action="validate" aria-label="Validate formula">';
         $parts[] = 'Validate <span class="fd-toolbar-badge" data-role="validation-count">0</span>';
         $parts[] = '</button>';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--preview" data-action="toggle-preview" aria-label="Preview formula result">Preview</button>';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--explain" data-action="toggle-explain" aria-label="Explain formula step-by-step">Explain</button>';
         $parts[] = '</div>';
         $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--zoom">';
         $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-out" aria-label="Zoom out">-</button>';

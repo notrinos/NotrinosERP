@@ -1,0 +1,21 @@
+/**
+ * Visual Formula Designer — Phase 7 preview & explain CSS erweitert.
+ *
+ * Die vorhandene formula-designer.css enthält bereits die
+ * .fd-preview-* und .fd-explain-* Regeln.  Diese Datei fügt nur
+ * die Toolbar-Button-Overrides hinzu, die nach dem Basis-CSS
+ * geladen werden müssen.
+ *
+ * @package FormulaDesigner
+ * @phase   7
+ * @since   2.0.0
+ */
+
+@charset "UTF-8";
+
+/* Toolbar-Toggle-Buttons (müssen nach formula-designer.css geladen werden) */
+.fd-toolbar-action--preview,
+.fd-toolbar-action--explain {
+	min-width: 90px;
+	font-size: 13px;
+}
