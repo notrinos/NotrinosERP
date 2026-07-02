@@ -31,6 +31,15 @@ class FormulaDesigner_Registry_DesignerFieldMetadata
     /** @var string */
     public $label;
 
+    /** @var string */
+    public $description;
+
+    /** @var string|null */
+    public $requiredPermission;
+
+    /** @var string */
+    public $module;
+
     /**
      * Construct field metadata.
      *
@@ -41,7 +50,10 @@ class FormulaDesigner_Registry_DesignerFieldMetadata
         $this->name = isset($data['name']) ? (string)$data['name'] : '';
         $this->type = isset($data['type']) ? (string)$data['type'] : 'mixed';
         $this->namespace = isset($data['namespace']) ? (string)$data['namespace'] : '';
-        $this->label = isset($data['label']) ? (string)$data['label'] : $this->name;
+        $this->label = isset($data['label']) ? (string)$data['label'] : $this->humanize($this->name);
+        $this->description = isset($data['description']) ? (string)$data['description'] : $this->label;
+        $this->requiredPermission = isset($data['requiredPermission']) ? (string)$data['requiredPermission'] : null;
+        $this->module = isset($data['module']) ? (string)$data['module'] : '*';
     }
 
     /**
@@ -56,6 +68,9 @@ class FormulaDesigner_Registry_DesignerFieldMetadata
             'type' => $this->type,
             'namespace' => $this->namespace,
             'label' => $this->label,
+            'description' => $this->description,
+            'requiredPermission' => $this->requiredPermission,
+            'module' => $this->module,
         );
     }
 
@@ -92,5 +107,19 @@ class FormulaDesigner_Registry_DesignerFieldMetadata
     public static function fromArray(array $data)
     {
         return new self($data);
+    }
+
+    /**
+     * Convert a raw identifier into a human-readable label.
+     *
+     * @param string $value
+     * @return string
+     */
+    private function humanize($value)
+    {
+        $value = preg_replace('/([a-z])([A-Z])/', '$1 $2', (string)$value);
+        $value = str_replace(array('_', '-'), ' ', $value);
+
+        return trim($value);
     }
 }

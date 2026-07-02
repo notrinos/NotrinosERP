@@ -11,16 +11,37 @@
 ***********************************************************************/
 
 /**
- * DesignerRenderer — base renderer scaffold for the Visual Formula Designer.
+ * DesignerRenderer — base renderer for the Visual Formula Designer shell.
  *
- * Phase 1 intentionally returns an empty string. Concrete editor rendering is
- * introduced in Phase 2.
+ * Phase 2 owns the visual canvas shell and test-expression bootstrap while
+ * later phases progressively add richer interaction layers.
  *
  * @package FormulaDesigner\Renderer
  * @since   2.0.0
  */
 class FormulaDesigner_Renderer_DesignerRenderer
 {
+    /** @var string */
+    private $formula;
+
+    /** @var string */
+    private $module;
+
+    /** @var array */
+    private $options;
+
+    /**
+     * @param string $formula
+     * @param string $module
+     * @param array  $options
+     */
+    public function __construct($formula = '', $module = '', array $options = array())
+    {
+        $this->formula = (string)$formula;
+        $this->module = (string)$module;
+        $this->options = $options;
+    }
+
     /**
      * Render the base designer output.
      *
@@ -28,6 +49,357 @@ class FormulaDesigner_Renderer_DesignerRenderer
      */
     public function render()
     {
-        return '';
+        $instance_id = isset($this->options['instanceId']) && $this->options['instanceId'] !== ''
+            ? (string)$this->options['instanceId']
+            : 'fd-' . substr(md5($this->module . '|' . $this->formula), 0, 8);
+        $base_url = isset($this->options['baseUrl']) ? rtrim((string)$this->options['baseUrl'], '/') : '';
+        $field_api_url = $base_url . '/includes/formula_designer/API/DesignerFieldListAPI.php?module=' . rawurlencode($this->module);
+        $function_api_url = $base_url . '/includes/formula_designer/API/DesignerFunctionListAPI.php?module=' . rawurlencode($this->module);
+        $field_sections = DesignerFacade::getAvailableFields($this->module);
+        $function_sections = DesignerFacade::getAvailableFunctions($this->module);
+
+        $editor = $this->createEditor();
+        $editor_renderer = new FormulaDesigner_Renderer_DesignerEditorRenderer($editor, $this->options);
+
+        $parts = array();
+        $parts[] = '<div class="fd-container" role="application" data-designer="root" data-instance-id="'
+            . $this->escape($instance_id) . '" data-module="' . $this->escape($this->module)
+            . '" data-field-api-url="' . $this->escape($field_api_url)
+            . '" data-function-api-url="' . $this->escape($function_api_url) . '">';
+        $parts[] = $this->renderToolbar();
+        $parts[] = '<div class="fd-workspace">';
+        $parts[] = $this->renderFieldPalette($field_sections, $field_api_url);
+        $parts[] = '<div class="fd-main-area">';
+        $parts[] = $this->renderCanvas($instance_id, $editor_renderer);
+        $parts[] = '</div>';
+        $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
+        $parts[] = '</div>';
+        $parts[] = '<script type="application/json" class="fd-expression-data">'
+            . $this->encodeJson($editor->getExpression())
+            . '</script>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Build the Phase 2 editor state.
+     *
+     * @return FormulaDesigner_Editor_DesignerEditor
+     */
+    private function createEditor()
+    {
+        if (isset($this->options['expression']) && is_array($this->options['expression'])) {
+            return new FormulaDesigner_Editor_DesignerEditor($this->options['expression']);
+        }
+
+        return new FormulaDesigner_Editor_DesignerEditor();
+    }
+
+    /**
+     * Render the compact toolbar used in Phase 2.
+     *
+     * @return string
+     */
+    private function renderToolbar()
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-toolbar" role="toolbar" aria-label="Formula editor toolbar">';
+        $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--title">';
+        $parts[] = '<span class="fd-toolbar-title">Visual Formula Designer</span>';
+        $parts[] = '<span class="fd-toolbar-subtitle">Phase 2 canvas preview</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-toolbar-group fd-toolbar-group--zoom">';
+        $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-out" aria-label="Zoom out">-</button>';
+        $parts[] = '<button type="button" class="fd-toolbar-action fd-toolbar-action--ghost" data-action="reset-zoom" aria-label="Reset zoom">';
+        $parts[] = '<span class="fd-zoom-value">100%</span>';
+        $parts[] = '</button>';
+        $parts[] = '<button type="button" class="fd-toolbar-action" data-action="zoom-in" aria-label="Zoom in">+</button>';
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render the Phase 2 canvas shell.
+     *
+     * @param string                                            $instance_id
+     * @param FormulaDesigner_Renderer_DesignerEditorRenderer $editor_renderer
+     * @return string
+     */
+    private function renderCanvas($instance_id, FormulaDesigner_Renderer_DesignerEditorRenderer $editor_renderer)
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-canvas" id="fd-canvas-' . $this->escape($instance_id) . '"';
+        $parts[] = ' data-designer="canvas" data-grid-size="20" data-zoom-level="1"';
+        $parts[] = ' role="group" aria-label="Formula expression editor" tabindex="0">';
+        $parts[] = '<svg class="fd-grid-background" aria-hidden="true"></svg>';
+        $parts[] = '<div class="fd-expression" data-designer="expression" data-expression-id="root">';
+        $parts[] = $editor_renderer->render();
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-drop-indicator" aria-hidden="true"></div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render the field palette shell and initial namespace sections.
+     *
+     * @param array  $sections
+     * @param string $api_url
+     * @return string
+     */
+    private function renderFieldPalette(array $sections, $api_url)
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-palette fd-palette-left" data-designer="field-palette" data-api-url="'
+            . $this->escape($api_url) . '" role="region" aria-label="Available fields">';
+        $parts[] = '<div class="fd-palette-header">';
+        $parts[] = '<span class="fd-palette-title">Fields</span>';
+        $parts[] = '<input class="fd-palette-search" type="search" placeholder="Search fields..." aria-label="Search fields">';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-palette-body">';
+
+        foreach ($sections as $section) {
+            $parts[] = $this->renderFieldSection($section);
+        }
+
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render the function palette shell and initial category sections.
+     *
+     * @param array  $sections
+     * @param string $api_url
+     * @return string
+     */
+    private function renderFunctionPalette(array $sections, $api_url)
+    {
+        $parts = array();
+        $parts[] = '<div class="fd-palette fd-palette-right" data-designer="function-palette" data-api-url="'
+            . $this->escape($api_url) . '" role="region" aria-label="Available functions">';
+        $parts[] = '<div class="fd-palette-header">';
+        $parts[] = '<span class="fd-palette-title">Functions</span>';
+        $parts[] = '<input class="fd-palette-search" type="search" placeholder="Search functions..." aria-label="Search functions">';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-palette-body">';
+
+        foreach ($sections as $section) {
+            $parts[] = $this->renderFunctionSection($section);
+        }
+
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render one namespace section.
+     *
+     * @param array $section
+     * @return string
+     */
+    private function renderFieldSection(array $section)
+    {
+        $namespace = isset($section['namespace']) ? $section['namespace'] : 'General';
+        $items = isset($section['items']) && is_array($section['items']) ? $section['items'] : array();
+        $parts = array();
+
+        $parts[] = '<div class="fd-namespace-section" data-namespace="' . $this->escape($namespace) . '">';
+        $parts[] = '<div class="fd-namespace-header" role="button" aria-expanded="true" tabindex="0">';
+        $parts[] = '<span class="fd-namespace-icon">' . $this->escape(substr($namespace, 0, 3)) . '</span>';
+        $parts[] = '<span class="fd-namespace-label">' . $this->escape(isset($section['label']) ? $section['label'] : $namespace) . '</span>';
+        $parts[] = '<span class="fd-namespace-count">' . (int)count($items) . '</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-namespace-items">';
+
+        foreach ($items as $item) {
+            $parts[] = $this->renderFieldItem($item);
+        }
+
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render one function category section.
+     *
+     * @param array $section
+     * @return string
+     */
+    private function renderFunctionSection(array $section)
+    {
+        $category = isset($section['category']) ? $section['category'] : 'General';
+        $items = isset($section['items']) && is_array($section['items']) ? $section['items'] : array();
+        $parts = array();
+
+        $parts[] = '<div class="fd-category-section" data-category="' . $this->escape($category) . '">';
+        $parts[] = '<div class="fd-category-header" role="button" aria-expanded="true" tabindex="0">';
+        $parts[] = '<span class="fd-category-icon">fx</span>';
+        $parts[] = '<span class="fd-category-label">' . $this->escape(isset($section['label']) ? $section['label'] : $category) . '</span>';
+        $parts[] = '<span class="fd-category-count">' . (int)count($items) . '</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-category-items">';
+
+        foreach ($items as $item) {
+            $parts[] = $this->renderFunctionItem($item);
+        }
+
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render one draggable field palette item.
+     *
+     * @param array $item
+     * @return string
+     */
+    private function renderFieldItem(array $item)
+    {
+        $qualified = isset($item['qualifiedName']) ? $item['qualifiedName'] : ((isset($item['namespace']) ? $item['namespace'] . '.' : '') . (isset($item['name']) ? $item['name'] : ''));
+        $metadata = array(
+            'namespace' => isset($item['namespace']) ? $item['namespace'] : '',
+            'name' => isset($item['name']) ? $item['name'] : '',
+            'dataType' => isset($item['type']) ? $item['type'] : 'mixed',
+            'description' => isset($item['description']) ? $item['description'] : '',
+        );
+
+        $parts = array();
+        $parts[] = '<div class="fd-palette-item fd-palette-field" draggable="true"';
+        $parts[] = ' data-token-type="variable"';
+        $parts[] = ' data-token-value="' . $this->escape($qualified) . '"';
+        $parts[] = ' data-display-label="' . $this->escape(isset($item['label']) ? $item['label'] : $qualified) . '"';
+        $parts[] = ' data-metadata="' . $this->escape($this->encodeAttributeJson($metadata)) . '"';
+        $parts[] = ' data-field-type="' . $this->escape(isset($item['type']) ? $item['type'] : 'mixed') . '"';
+        $parts[] = ' data-field-qualified="' . $this->escape($qualified) . '"';
+        $parts[] = ' data-field-label="' . $this->escape(isset($item['label']) ? $item['label'] : $qualified) . '"';
+        $parts[] = ' role="listitem">';
+        $parts[] = '<span class="fd-palette-item-icon fd-icon-variable">' . $this->escape($this->typeAbbreviation(isset($item['type']) ? $item['type'] : 'mixed')) . '</span>';
+        $parts[] = '<span class="fd-palette-item-label">' . $this->escape(isset($item['label']) ? $item['label'] : $qualified) . '</span>';
+        $parts[] = '<span class="fd-palette-item-type">' . $this->escape(isset($item['type']) ? $item['type'] : 'mixed') . '</span>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Render one function palette item.
+     *
+     * @param array $item
+     * @return string
+     */
+    private function renderFunctionItem(array $item)
+    {
+        $enabled = !isset($item['enabled']) || $item['enabled'];
+        $metadata = array(
+            'name' => isset($item['name']) ? $item['name'] : '',
+            'minArgs' => isset($item['minArgs']) ? (int)$item['minArgs'] : 0,
+            'maxArgs' => isset($item['maxArgs']) ? (int)$item['maxArgs'] : 0,
+            'returnType' => isset($item['returnType']) ? $item['returnType'] : 'mixed',
+            'description' => isset($item['description']) ? $item['description'] : '',
+        );
+        $classes = 'fd-palette-item fd-palette-function';
+
+        if (!$enabled) {
+            $classes .= ' fd-palette-item--disabled';
+        }
+
+        $parts = array();
+        $parts[] = '<div class="' . $classes . '" draggable="' . ($enabled ? 'true' : 'false') . '"';
+        $parts[] = ' data-token-type="function"';
+        $parts[] = ' data-token-value="' . $this->escape(isset($item['tokenValue']) ? $item['tokenValue'] : ((isset($item['name']) ? $item['name'] : '') . '(')) . '"';
+        $parts[] = ' data-display-label="' . $this->escape(isset($item['label']) ? $item['label'] : '') . '"';
+        $parts[] = ' data-metadata="' . $this->escape($this->encodeAttributeJson($metadata)) . '"';
+        $parts[] = ' data-function-name="' . $this->escape(isset($item['name']) ? $item['name'] : '') . '"';
+        $parts[] = ' data-function-signature="' . $this->escape(isset($item['signature']) ? $item['signature'] : '') . '"';
+        $parts[] = ' data-function-description="' . $this->escape(isset($item['description']) ? $item['description'] : '') . '"';
+        $parts[] = ' role="listitem">';
+        $parts[] = '<span class="fd-palette-item-icon fd-icon-function">fx</span>';
+        $parts[] = '<span class="fd-palette-item-label">' . $this->escape(isset($item['label']) ? $item['label'] : '') . '</span>';
+        $parts[] = '<span class="fd-palette-item-signature">' . $this->escape(isset($item['signature']) ? $item['signature'] : '') . '</span>';
+        $parts[] = '</div>';
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Encode a JSON payload for a data attribute.
+     *
+     * @param array $payload
+     * @return string
+     */
+    private function encodeAttributeJson(array $payload)
+    {
+        $json = json_encode($payload);
+
+        return $json === false ? '{}' : $json;
+    }
+
+    /**
+     * Convert a field type to a compact badge label.
+     *
+     * @param string $type
+     * @return string
+     */
+    private function typeAbbreviation($type)
+    {
+        switch (strtolower((string)$type)) {
+            case 'number':
+            case 'decimal':
+            case 'integer':
+                return 'N';
+
+            case 'text':
+            case 'string':
+                return 'T';
+
+            case 'date':
+                return 'D';
+
+            case 'boolean':
+                return 'B';
+
+            default:
+                return 'M';
+        }
+    }
+
+    /**
+     * Escape plain text for HTML output.
+     *
+     * @param string $value
+     * @return string
+     */
+    private function escape($value)
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
+     * Safely embed JSON inside a script tag.
+     *
+     * @param array $payload
+     * @return string
+     */
+    private function encodeJson(array $payload)
+    {
+        $json = json_encode($payload);
+        if ($json === false) {
+            return '{}';
+        }
+
+        return str_replace('</', '<\/', $json);
     }
 }
