@@ -27,10 +27,31 @@ include_once($path_to_root.'/hrm/includes/db/grades_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_element_db.inc');
 
+// ---------------------------------------------------------------------------
+// Designer bootstrap — load the Visual Formula Designer when available.
+// When the designer is loaded, an "Open Formula Designer" button appears
+// next to formula fields. The designer renders in a modal; on "Create Formula"
+// the serialized formula is transferred back to the page-level input.
+// ---------------------------------------------------------------------------
+
+$designer_available = false;
+$designer_web_base = $path_to_root . '/includes/formula_designer';
+$designer_bootstrap = $designer_web_base . '/designer_bootstrap.inc';
+if (file_exists($designer_bootstrap)) {
+    include_once $designer_bootstrap;
+    if (class_exists('DesignerFacade')) {
+        $designer_available = true;
+        add_css_file($designer_web_base . '/assets/css/formula-designer.css');
+        add_js_ufile($designer_web_base . '/assets/js/formula-designer.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-dragdrop.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-preview.js');
+    }
+}
+
 //--------------------------------------------------------------------------
 
 function display_salary_structure($position_id, $grade_id=0) {
-	global $selected_id, $Mode;
+	global $selected_id, $Mode, $designer_available;
 
 	$position = job_positions_entity::find($position_id);
 	$elements = get_pay_elements();
@@ -83,7 +104,15 @@ function display_salary_structure($position_id, $grade_id=0) {
 				percent_row(_('Percentage of Base Pay:'), 'amount');
 			date_row(_('Effective From:'), 'effective_from', get_post('effective_from', Today()), null, 0, 0, 1001);
 			date_row(_('Effective To:'), 'effective_to', get_post('effective_to', ''), null, 0, 0, 1001);
-			text_row(_('Formula Override:'), 'formula', get_post('formula', ''), 50, 255);
+			
+			textarea_row(_('Formula Override:'), 'formula', get_post('formula', ''), 255, 3);
+			if ($designer_available) {
+				echo '<tr><td></td><td>';
+				echo '<button type="button" class="fd-modal-trigger-btn" '
+					. 'id="formula-designer-trigger">'
+					. _('Open Formula Designer') . '</button>';
+				echo '</td></tr>';
+			}
 
 			end_table(1);
 
@@ -156,7 +185,7 @@ start_form();
 start_table();
 start_row();
 positions_list_cells(_('Job Position:'), 'position_id', null, true, false);
-date_cells(_('As of Date:'), 'effective_from', get_post('effective_from', Today()));
+// date_cells(_('As of Date:'), 'effective_from', get_post('effective_from', Today()));
 end_row();
 end_table();
 
@@ -175,4 +204,17 @@ display_salary_structure($position_id, get_post('_tabs_sel'));
 tabbed_content_end();
 
 end_form();
+
+// ---------------------------------------------------------------------------
+// Phase 14: Formula Designer Modal (centralized via DesignerFacade)
+// ---------------------------------------------------------------------------
+if ($designer_available) {
+    DesignerFacade::renderModal(array(
+        'formulaValue'        => get_post('formula', ''),
+        'module'              => 'hrm',
+        'textareaName'        => 'formula_designer_modal_ss',
+        'targetFieldSelector' => 'textarea[name="formula"]',
+    ));
+}
+
 end_page();

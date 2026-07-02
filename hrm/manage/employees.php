@@ -22,6 +22,27 @@ include_once($path_to_root.'/includes/db_pager.inc');
 include_once($path_to_root.'/includes/session.inc');
 include($path_to_root.'/reporting/includes/tcpdf.php');
 
+// ---------------------------------------------------------------------------
+// Designer bootstrap — load the Visual Formula Designer when available.
+// When the designer is loaded, an "Open Formula Designer" button appears
+// next to formula fields. The designer renders in a modal; on "Create Formula"
+// the serialized formula is transferred back to the page-level textarea.
+// ---------------------------------------------------------------------------
+
+$designer_available = false;
+$designer_web_base = $path_to_root . '/includes/formula_designer';
+$designer_bootstrap = $designer_web_base . '/designer_bootstrap.inc';
+if (file_exists($designer_bootstrap)) {
+    include_once $designer_bootstrap;
+    if (class_exists('DesignerFacade')) {
+        $designer_available = true;
+        add_css_file($designer_web_base . '/assets/css/formula-designer.css');
+        add_js_ufile($designer_web_base . '/assets/js/formula-designer.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-dragdrop.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-preview.js');
+    }
+}
+
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 500);
@@ -359,7 +380,7 @@ function tab_employment($employee_id, $new_employee) {
 // TAB 3: SALARY STRUCTURE
 //======================================================================
 function tab_salary($employee_id) {
-	global $path_to_root, $Ajax;
+	global $path_to_root, $Ajax, $designer_available;
 
 	if (empty($employee_id)) {
 		hidden('NewEmpID', get_post('NewEmpID'));
@@ -495,7 +516,15 @@ function tab_salary($employee_id) {
 		)));
 
 		amount_row(_('Amount:'), 'sal_amount');
-		text_row(_('Formula:'), 'sal_formula', null, 50, 200);
+		
+		textarea_row(_('Formula:'), 'sal_formula', null, 255, 3);
+		if ($designer_available) {
+			echo '<tr><td></td><td>';
+			echo '<button type="button" class="fd-modal-trigger-btn" '
+				. 'id="formula-designer-trigger">'
+				. _('Open Formula Designer') . '</button>';
+			echo '</td></tr>';
+		}
 
 		table_section(2);
 
@@ -1220,4 +1249,17 @@ tabbed_content_end();
 div_end();
 
 end_form();
+
+// ---------------------------------------------------------------------------
+// Phase 14: Formula Designer Modal (centralized via DesignerFacade)
+// ---------------------------------------------------------------------------
+if ($designer_available) {
+    DesignerFacade::renderModal(array(
+        'formulaValue'        => get_post('sal_formula', ''),
+        'module'              => 'hrm',
+        'textareaName'        => 'formula_designer_modal_sal',
+        'targetFieldSelector' => 'textarea[name="sal_formula"]',
+    ));
+}
+
 end_page(@$_REQUEST['popup']);

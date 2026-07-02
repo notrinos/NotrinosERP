@@ -17,6 +17,27 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
 
+// ---------------------------------------------------------------------------
+// Designer bootstrap — load the Visual Formula Designer when available.
+// When the designer is loaded, an "Open Formula Designer" button appears
+// next to the calculation formula textarea. The designer renders in a modal;
+// on "Create Formula" the serialized formula is transferred back.
+// ---------------------------------------------------------------------------
+
+$designer_available = false;
+$designer_web_base = $path_to_root . '/includes/formula_designer';
+$designer_bootstrap = $designer_web_base . '/designer_bootstrap.inc';
+if (file_exists($designer_bootstrap)) {
+    include_once $designer_bootstrap;
+    if (class_exists('DesignerFacade')) {
+        $designer_available = true;
+        add_css_file($designer_web_base . '/assets/css/formula-designer.css');
+        add_js_ufile($designer_web_base . '/assets/js/formula-designer.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-dragdrop.js');
+        add_js_ufile($designer_web_base . '/assets/js/formula-preview.js');
+    }
+}
+
 page(_($help_context = 'Vendor Evaluation Criteria'));
 
 simple_page_mode(false);
@@ -143,6 +164,13 @@ echo "</td></tr>\n";
 
 textarea_row(_('Description:'), 'criteria_description', get_post('criteria_description', ''), 45, 2);
 textarea_row(_('Calculation Formula:'), 'calculation_formula', get_post('calculation_formula', ''), 45, 2);
+if ($designer_available) {
+    echo '<tr><td></td><td>';
+    echo '<button type="button" class="fd-modal-trigger-btn" '
+        . 'id="formula-designer-trigger">'
+        . _('Open Formula Designer') . '</button>';
+    echo '</td></tr>';
+}
 check_row(_('Inactive:'), 'inactive', check_value('inactive'));
 
 end_table(1);
@@ -150,4 +178,17 @@ end_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 
 end_form();
+
+// ---------------------------------------------------------------------------
+// Phase 14: Formula Designer Modal (centralized via DesignerFacade)
+// ---------------------------------------------------------------------------
+if ($designer_available) {
+    DesignerFacade::renderModal(array(
+        'formulaValue'        => get_post('calculation_formula', ''),
+        'module'              => 'purchasing',
+        'textareaName'        => 'formula_designer_modal_vec',
+        'targetFieldSelector' => 'textarea[name="calculation_formula"]',
+    ));
+}
+
 end_page();

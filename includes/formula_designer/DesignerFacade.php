@@ -593,4 +593,161 @@ class DesignerFacade
             }
         }
     }
+
+    /**
+     * Render the formula designer modal overlay.
+     *
+     * Centralized single-call method that outputs the complete modal HTML,
+     * inline JavaScript controllers, and modal styles. Safe to call from
+     * any module page after the designer bootstrap has been loaded.
+     *
+     * Usage from a module page:
+     * <pre>
+     * DesignerFacade::renderModal(array(
+     *     'formulaValue'        => get_post('formula', ''),
+     *     'module'              => 'hrm',
+     *     'textareaName'        => 'formula_designer_modal',
+     *     'targetFieldSelector' => 'textarea[name="formula"]',
+     * ));
+     * </pre>
+     *
+     * @param array $config {
+     *     @type string $formulaValue        Current formula text to pre-populate.
+     *     @type string $module              Module identifier (hrm, purchasing, etc.).
+     *     @type string $textareaName        Unique name for the modal's hidden textarea.
+     *     @type string $targetFieldSelector jQuery selector for the page-level field.
+     * }
+     * @return void
+     */
+    public static function renderModal(array $config)
+    {
+        $formulaValue = isset($config['formulaValue']) ? (string)$config['formulaValue'] : '';
+        $module = isset($config['module']) ? (string)$config['module'] : 'hrm';
+        $textareaName = isset($config['textareaName']) ? (string)$config['textareaName'] : 'formula_designer_modal';
+        $targetFieldSelector = isset($config['targetFieldSelector']) ? (string)$config['targetFieldSelector'] : 'textarea[name="formula"]';
+
+        // Modal HTML shell
+        echo '<div class="fd-modal-overlay" id="fd-modal-overlay" style="display:none;">';
+        echo '<div class="fd-modal-panel" id="fd-modal-panel">';
+        echo '<div class="fd-modal-header">';
+        echo '<h3 class="fd-modal-title">' . _('Formula Designer') . '</h3>';
+        echo '<button type="button" class="fd-modal-close" '
+            . 'aria-label="' . _('Close') . '">×</button>';
+        echo '</div>';
+        echo '<div class="fd-modal-body" id="fd-modal-body">';
+        echo self::renderEditor(
+            $formulaValue,
+            $module,
+            array(
+                'textareaName' => $textareaName,
+                'baseUrl'      => $GLOBALS['path_to_root'],
+            )
+        );
+        echo '</div>';
+        echo '<div class="fd-modal-footer">';
+        echo '<button type="button" class="fd-modal-action fd-modal-action--create">'
+            . _('Create Formula') . '</button>';
+        echo '<button type="button" class="fd-modal-action fd-modal-action--cancel">'
+            . _('Cancel') . '</button>';
+        echo '</div>';
+        echo '</div>';
+        echo '</div>';
+
+        // Modal JS controllers — inline so they bind against the current page's jQuery.
+        // Uses event delegation (on document) so buttons inside tabs or
+        // conditionally-rendered blocks are caught even if they are added
+        // to the DOM after this script runs.
+        $escapedTextareaName = addslashes($textareaName);
+        $escapedTargetSelector = addslashes($targetFieldSelector);
+        add_js_source("
+            jQuery(function(\$) {
+                \$(document).on('click', '#fd-modal-overlay', function(e) {
+                    if (e.target === this) { \$(this).hide(); }
+                });
+                \$(document).on('click', '#formula-designer-trigger', function() {
+                    \$('#fd-modal-overlay').css('display', 'flex');
+                });
+                \$(document).on('click', '.fd-modal-close, .fd-modal-action--cancel', function() {
+                    \$('#fd-modal-overlay').hide();
+                });
+                \$(document).on('click', '.fd-modal-action--create', function() {
+                    var modalVal = \$('textarea[name=\"{$escapedTextareaName}\"]').val();
+                    \$('{$escapedTargetSelector}').val(modalVal).trigger('input');
+                    \$('#fd-modal-overlay').hide();
+                });
+            });
+        ");
+
+        // Modal CSS — injected once per page load (idempotent)
+        self::injectModalStyles();
+    }
+
+    /**
+     * Inject modal overlay CSS into the page head.
+     *
+     * Safe to call multiple times; the style element is tagged with a unique
+     * id so it is only ever injected once per page load.
+     *
+     * @return void
+     */
+    private static function injectModalStyles()
+    {
+        static $injected = false;
+        if ($injected) {
+            return;
+        }
+        $injected = true;
+
+        $css = '.fd-modal-overlay {'
+            . 'display:flex; align-items:flex-start; justify-content:center;'
+            . 'position:fixed; z-index:10000; left:0; top:0; width:100%;'
+            . 'height:100%; overflow:auto; background-color:rgba(0,0,0,0.55);'
+            . 'padding-top:60px; }'
+            . '.fd-modal-panel {'
+            . 'background:#fff; border-radius:8px; min-width:1100px;'
+            . 'max-width:96vw; max-height:90vh; overflow:auto;'
+            . 'box-shadow:0 20px 60px rgba(0,0,0,0.25); display:flex;'
+            . 'flex-direction:column; }'
+            . '.fd-modal-header {'
+            . 'display:flex; justify-content:space-between; align-items:center;'
+            . 'padding:14px 20px; border-bottom:1px solid #e5e7eb; }'
+            . '.fd-modal-title { margin:0; font-size:1.15rem; }'
+            . '.fd-modal-close {'
+            . 'background:none; border:none; font-size:1.5rem;'
+            . 'cursor:pointer; line-height:1; padding:0 4px; }'
+            . '.fd-modal-body { padding:0; flex:1 1 auto; overflow:auto; }'
+            . '.fd-modal-footer {'
+            . 'display:flex; justify-content:flex-end; gap:10px;'
+            . 'padding:14px 20px; border-top:1px solid #e5e7eb; }'
+            . '.fd-modal-trigger-btn {'
+            . 'display:inline-block; margin:4px 0 8px 0; padding:6px 16px;'
+            . 'font-size:0.875rem; font-weight:500; line-height:1.5;'
+            . 'border:1px solid #d1d5db; border-radius:6px;'
+            . 'background:#f3f4f6; color:#374151; cursor:pointer;'
+            . 'transition:background-color .15s, border-color .15s; }'
+            . '.fd-modal-trigger-btn:hover {'
+            . 'background:#e5e7eb; border-color:#9ca3af; }'
+            . '.fd-modal-action {'
+            . 'padding:8px 20px; font-size:0.875rem; font-weight:500;'
+            . 'line-height:1.5; border-radius:6px; border:1px solid transparent;'
+            . 'cursor:pointer; transition:background-color .15s, border-color .15s; }'
+            . '.fd-modal-action--create {'
+            . 'background:#2563eb; color:#fff; border-color:#2563eb; }'
+            . '.fd-modal-action--create:hover {'
+            . 'background:#1d4ed8; }'
+            . '.fd-modal-action--cancel {'
+            . 'background:#f3f4f6; color:#374151; border-color:#d1d5db; }'
+            . '.fd-modal-action--cancel:hover {'
+            . 'background:#e5e7eb; }';
+
+        add_js_source("
+            (function() {
+                if (document.getElementById('fd-modal-css-injected')) return;
+                var s = document.createElement('style');
+                s.id = 'fd-modal-css-injected';
+                s.textContent = " . json_encode($css) . ";
+                document.head.appendChild(s);
+            })();
+        ");
+    }
 }
