@@ -2044,6 +2044,14 @@
 	DesignerInstance.prototype.cancelPropertyPanelEdit = function (input) {
 		this.renderPropertyPanel();
 	};
+
+	/**
+	 * Render the SVG dot-grid background on the canvas.
+	 * Called on init, resize, and zoom changes.
+	 *
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.renderGrid = function () {
 		var width = Math.max(this.canvas.clientWidth, 640);
 		var height = Math.max(this.canvas.clientHeight, 260);
 		var step = parseInt(this.canvas.getAttribute('data-grid-size'), 10) || 20;
