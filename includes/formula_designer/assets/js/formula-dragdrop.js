@@ -630,11 +630,14 @@
 			];
 		}
 
+		// For operators, use the symbol as label (not the palette display name)
+		var isOp = payload.tokenType === 'operator';
+
 		return [{
 			id: tokenId,
 			type: payload.tokenType || 'literal',
 			value: payload.tokenValue || '',
-			label: payload.displayLabel || payload.tokenValue || '',
+			label: isOp ? (payload.tokenValue || '') : (payload.displayLabel || payload.tokenValue || ''),
 			metadata: metadata
 		}];
 	}
