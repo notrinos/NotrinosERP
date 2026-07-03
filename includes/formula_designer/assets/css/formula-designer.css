@@ -225,6 +225,12 @@
 	font-size: 14px;
 }
 
+/* Preview / Explain toolbar buttons */
+.fd-toolbar-action--preview,
+.fd-toolbar-action--explain {
+	font-size: 14px;
+}
+
 /* Undo / Redo toolbar button states */
 .fd-toolbar-action--undo,
 .fd-toolbar-action--redo {
@@ -769,13 +775,111 @@
 		grid-template-columns: 1fr;
 	}
 
+	/* Toolbar: single-row on mobile with smaller buttons */
 	.fd-toolbar {
-		flex-direction: column;
-		align-items: stretch;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 6px;
+		padding: 8px 10px;
 	}
 
 	.fd-toolbar-group {
-		justify-content: space-between;
+		gap: 4px;
+		flex-shrink: 0;
+	}
+
+	.fd-toolbar-group--title {
+		flex: 1 1 100%;
+		flex-direction: row;
+		align-items: baseline;
+		gap: 8px;
+		margin-bottom: 2px;
+	}
+
+	.fd-toolbar-title {
+		font-size: 14px;
+	}
+
+	.fd-toolbar-subtitle {
+		font-size: 11px;
+	}
+
+	/* Shrink all toolbar buttons */
+	.fd-toolbar-action {
+		min-width: 32px;
+		height: 32px;
+		padding: 0 8px;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	/* Validate button — compact */
+	.fd-toolbar-action--validate {
+		min-width: 92px;
+		font-size: 12px;
+		gap: 4px;
+	}
+
+	/* Undo / Redo — compact */
+	.fd-toolbar-action--undo,
+	.fd-toolbar-action--redo {
+		min-width: 32px;
+		font-size: 14px;
+	}
+
+	/* Preview / Explain — compact */
+	.fd-toolbar-action--preview,
+	.fd-toolbar-action--explain {
+		font-size: 12px;
+		padding: 0 8px;
+	}
+
+	/* Template button — compact */
+	.fd-toolbar-action--template {
+		min-width: 32px;
+		font-size: 14px;
+		padding: 0 6px;
+	}
+
+	/* AI button — compact */
+	.fd-toolbar-action--ai {
+		min-width: 44px;
+		font-size: 11px;
+		padding: 0 6px;
+		gap: 2px;
+	}
+
+	.fd-toolbar-group--actions {
+		margin-left: 0;
+	}
+
+	.fd-toolbar-group--undo {
+		border-right: 0;
+		padding-right: 0;
+	}
+
+	.fd-toolbar-group--templates {
+		border-left: 0;
+		padding-left: 0;
+	}
+
+	.fd-toolbar-group--ai {
+		border-left: 0;
+		padding-left: 0;
+	}
+
+	.fd-toolbar-badge {
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		font-size: 10px;
+	}
+
+	.fd-toolbar-action--ghost {
+		min-width: 54px;
+		font-size: 12px;
 	}
 
 	.fd-canvas {
