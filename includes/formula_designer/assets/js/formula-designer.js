@@ -494,7 +494,10 @@
 			return true;
 		}
 
-		if (!canStart(tokens) || !canEnd(tokens)) {
+		// Only check that the first token can start a sequence.
+		// Do NOT check canEnd — intermediate editing states naturally
+		// end with operators (e.g. "BASIC *" while user continues building).
+		if (!canStart(tokens)) {
 			return false;
 		}
 
@@ -1324,6 +1327,13 @@
 				return;
 			}
 
+			// Direct number entry: insert or replace literal when user types a digit
+			if (/^[0-9.]$/.test(event.key)) {
+				event.preventDefault();
+				self.handleNumberEntry(event.key);
+				return;
+			}
+
 			if (operatorKey === '+' || operatorKey === '-' || operatorKey === '*' || operatorKey === '/') {
 				event.preventDefault();
 				self.insertOperator(operatorKey);
@@ -2086,7 +2096,7 @@
 		this.errorListNode.innerHTML = html;
 	};
 
-	DesignerInstance.prototype.startLiteralEdit = function (tokenId) {
+	DesignerInstance.prototype.startLiteralEdit = function (tokenId, selectAll) {
 		var token = this.findTokenById(tokenId);
 
 		if (!token || token.type !== 'literal') {
@@ -2099,7 +2109,7 @@
 
 		token.metadata = token.metadata || {};
 		token.metadata.editing = true;
-		token.metadata.editingValue = getEditableLiteralValue(token);
+		token.metadata.editingValue = selectAll ? '' : getEditableLiteralValue(token);
 		this.activeLiteralEditorId = tokenId;
 		this.render();
 	};
@@ -2220,6 +2230,86 @@
 
 		tokens.splice(index, 0, operatorToken);
 		this.replaceTokens(tokens, { source: 'keyboard', description: 'Insert operator', selectedTokenId: operatorToken.id });
+	};
+
+	/**
+	 * Handle direct number entry via keyboard.
+	 *
+	 * When the user types a digit (0-9) or decimal point while the canvas
+	 * is focused, this method either:
+	 *  - Starts an inline edit on a selected literal token (appending), or
+	 *  - Creates a new literal number token and starts editing it inline
+	 *
+	 * @param {string} digit  The character typed (0-9 or .)
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.handleNumberEntry = function (digit) {
+		var tokens = this.getTokens();
+		var token = this.selectedTokenId ? this.findTokenById(this.selectedTokenId) : null;
+		var index;
+		var newToken;
+		var editingToken;
+
+		// If a literal is selected and not already editing, start editing with the typed digit
+		if (token && token.type === 'literal' && token.metadata && token.metadata.dataType === 'number') {
+			index = this.findTokenIndex(this.selectedTokenId);
+			// Start editing with just the digit (replacing the current value)
+			this.selectedTokenId = token.id;
+			this.startLiteralEdit(token.id, true); // true = edit mode
+			// Queue the digit insertion after the editor renders
+			var self = this;
+			var char = digit;
+			window.setTimeout(function () {
+				self.queueLiteralEditorInsert(char);
+			}, 50);
+			return;
+		}
+
+		// If a literal is already being edited, insert the digit
+		if (token && token.type === 'literal' && token.metadata && token.metadata.editing) {
+			this.queueLiteralEditorInsert(digit);
+			return;
+		}
+
+		// Create a new literal number token
+		index = this.selectedTokenId ? this.findTokenIndex(this.selectedTokenId) + 1 : tokens.length;
+		newToken = normalizeToken({
+			id: nextTokenId('tok'),
+			type: 'literal',
+			value: digit,
+			label: digit,
+			metadata: { dataType: 'number', rawValue: parseFloat(digit), editing: true, editingValue: digit }
+		});
+
+		tokens.splice(index, 0, newToken);
+		this.replaceTokens(tokens, { source: 'keyboard', description: 'Insert number literal', selectedTokenId: newToken.id });
+
+		// Immediately start inline editing
+		var self2 = this;
+		window.setTimeout(function () {
+			self2.startLiteralEdit(newToken.id);
+		}, 50);
+	};
+
+	/**
+	 * Insert a character into an active literal editor input.
+	 *
+	 * @param {string} character  Single character to insert at cursor position
+	 * @return {void}
+	 */
+	DesignerInstance.prototype.queueLiteralEditorInsert = function (character) {
+		var input = this.expressionNode.querySelector('.fd-literal-editor');
+		if (!input) {
+			return;
+		}
+
+		var start = input.selectionStart || 0;
+		var end = input.selectionEnd || 0;
+		var value = input.value;
+		input.value = value.substring(0, start) + character + value.substring(end);
+		var newPos = start + character.length;
+		input.setSelectionRange(newPos, newPos);
+		input.focus();
 	};
 
 	DesignerInstance.prototype.applyZoom = function () {

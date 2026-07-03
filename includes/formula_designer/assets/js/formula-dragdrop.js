@@ -287,6 +287,7 @@
 			return;
 		}
 
+		// Build the AJAX-fetched section HTML
 		if (type === 'fields') {
 			(payload.namespaces || []).forEach(function (section) {
 				html += renderFieldSection(section);
@@ -297,7 +298,25 @@
 			});
 		}
 
+		// Preserve operator and literal sections (server-rendered, not in AJAX payload)
+		var operatorsSection = body.querySelector('.fd-category-section[data-category="operators"]');
+		var literalsSection  = body.querySelector('.fd-category-section[data-category="literals"]');
+
 		body.innerHTML = html;
+
+		// Re-insert operators at the top of the palette body
+		if (operatorsSection) {
+			body.insertBefore(operatorsSection, body.firstChild);
+		}
+
+		// Re-insert literals after operators (or at top if no operators)
+		if (literalsSection) {
+			if (operatorsSection && operatorsSection.nextSibling) {
+				body.insertBefore(literalsSection, operatorsSection.nextSibling);
+			} else {
+				body.insertBefore(literalsSection, body.firstChild);
+			}
+		}
 	};
 
 	DragManager.prototype.filterPalette = function (palette, query) {
@@ -313,6 +332,16 @@
 		}
 
 		for (index = 0; index < sections.length; index += 1) {
+			// Always keep operator and literal sections visible regardless of search
+			var category = sections[index].getAttribute('data-category');
+			if (category === 'operators' || category === 'literals') {
+				sections[index].style.display = '';
+				var sectionItems = sections[index].querySelectorAll('.fd-palette-item');
+				for (var j = 0; j < sectionItems.length; j += 1) {
+					sectionItems[j].style.display = '';
+				}
+				continue;
+			}
 			var visibleItems = sections[index].querySelectorAll('.fd-palette-item:not([style*="display: none"])');
 			sections[index].style.display = visibleItems.length ? '' : 'none';
 		}
@@ -668,7 +697,10 @@
 			return true;
 		}
 
-		if (!canStart(tokens[0]) || !canEnd(tokens[tokens.length - 1])) {
+		// Only check that the first token can start a sequence.
+		// Do NOT check canEnd — intermediate editing states naturally
+		// end with operators (e.g. "BASIC *" while the user continues building).
+		if (!canStart(tokens[0])) {
 			return false;
 		}
 
@@ -772,4 +804,11 @@
 	} else {
 		boot();
 	}
+
+	// Re-invoke boot when designer instances are created dynamically
+	// (e.g. inside a modal overlay that is rendered after page load).
+	// The main formula-designer.js dispatches 'fd:boot' after initialising
+	// new .fd-container elements, so we pick them up here and attach a
+	// DragManager to any instance that does not already have one.
+	document.addEventListener('fd:boot', boot);
 }(window, document, window.jQuery || null));

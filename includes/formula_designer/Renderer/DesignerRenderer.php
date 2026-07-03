@@ -228,6 +228,75 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</div>';
         $parts[] = '<div class="fd-palette-body">';
 
+        // ---- Built-in operator tokens ---- //
+        $parts[] = '<div class="fd-category-section" data-category="operators">';
+        $parts[] = '<div class="fd-category-header" role="button" aria-expanded="true" tabindex="0">';
+        $parts[] = '<span class="fd-category-icon">±</span>';
+        $parts[] = '<span class="fd-category-label">Operators</span>';
+        $parts[] = '<span class="fd-category-count">4</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-category-items">';
+        $operators = array(
+            array('label' => 'Addition (+)', 'value' => '+'),
+            array('label' => 'Subtraction (−)', 'value' => '-'),
+            array('label' => 'Multiplication (×)', 'value' => '*'),
+            array('label' => 'Division (÷)', 'value' => '/'),
+        );
+        foreach ($operators as $op) {
+            $parts[] = '<div class="fd-palette-item fd-palette-function" draggable="true"'
+                . ' data-token-type="operator"'
+                . ' data-token-value="' . $this->escape($op['value']) . '"'
+                . ' data-display-label="' . $this->escape($op['label']) . '"'
+                . ' data-metadata="{}"'
+                . ' data-function-name="' . $this->escape($op['value']) . '"'
+                . ' data-function-signature="' . $this->escape($op['label']) . '"'
+                . ' data-function-description="' . $this->escape($op['label']) . '"'
+                . ' role="listitem">';
+            $parts[] = '<span class="fd-palette-item-icon fd-icon-function">±</span>';
+            $parts[] = '<span class="fd-palette-item-label">' . $this->escape($op['label']) . '</span>';
+            $parts[] = '<span class="fd-palette-item-signature"></span>';
+            $parts[] = '</div>';
+        }
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
+        // ---- Built-in literal tokens ---- //
+        $parts[] = '<div class="fd-category-section" data-category="literals">';
+        $parts[] = '<div class="fd-category-header" role="button" aria-expanded="true" tabindex="0">';
+        $parts[] = '<span class="fd-category-icon">#</span>';
+        $parts[] = '<span class="fd-category-label">Literals</span>';
+        $parts[] = '<span class="fd-category-count">4</span>';
+        $parts[] = '</div>';
+        $parts[] = '<div class="fd-category-items">';
+        $literals = array(
+            array('label' => 'Number', 'value' => '0', 'hint' => 'Click → type a number (e.g. 5, 0.1, 3000)'),
+            array('label' => 'TRUE', 'value' => 'TRUE', 'hint' => 'Boolean True'),
+            array('label' => 'FALSE', 'value' => 'FALSE', 'hint' => 'Boolean False'),
+            array('label' => 'NULL', 'value' => 'NULL', 'hint' => 'Null / Empty'),
+        );
+        foreach ($literals as $lit) {
+            $meta = array('dataType' => ($lit['value'] === 'TRUE' || $lit['value'] === 'FALSE') ? 'boolean' : ($lit['value'] === 'NULL' ? 'null' : 'number'));
+            if ($lit['value'] === 'TRUE') $meta['rawValue'] = true;
+            if ($lit['value'] === 'FALSE') $meta['rawValue'] = false;
+            if ($lit['value'] === 'NULL') $meta['rawValue'] = null;
+            $metaJson = json_encode($meta);
+            $parts[] = '<div class="fd-palette-item fd-palette-function" draggable="true"'
+                . ' data-token-type="literal"'
+                . ' data-token-value="' . $this->escape($lit['value']) . '"'
+                . ' data-display-label="' . $this->escape($lit['label']) . '"'
+                . ' data-metadata="' . $this->escape($metaJson) . '"'
+                . ' data-function-name="' . $this->escape($lit['value']) . '"'
+                . ' data-function-signature="' . $this->escape($lit['hint']) . '"'
+                . ' data-function-description="' . $this->escape($lit['hint']) . '"'
+                . ' role="listitem">';
+            $parts[] = '<span class="fd-palette-item-icon fd-icon-function">#</span>';
+            $parts[] = '<span class="fd-palette-item-label">' . $this->escape($lit['label']) . '</span>';
+            $parts[] = '<span class="fd-palette-item-signature"></span>';
+            $parts[] = '</div>';
+        }
+        $parts[] = '</div>';
+        $parts[] = '</div>';
+
         foreach ($sections as $section) {
             $parts[] = $this->renderFunctionSection($section);
         }
