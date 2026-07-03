@@ -652,6 +652,87 @@
 .modern-app-shell.modern-sidebar-collapsed .modern-app-link {
 	min-height: 56px;
 	padding: 12px 8px;
+	cursor: default;
+}
+
+/* ── Drop-Right Menu (collapsed sidebar hover) ── */
+.modern-dropmenu-container {
+	pointer-events: none;
+}
+
+.modern-app-dropmenu {
+	position: fixed;
+	display: none;
+	width: 280px;
+	background: #fff;
+	border: 1px solid var(--modern-color-border);
+	border-radius: var(--modern-radius-sm);
+	box-shadow: 0 12px 36px rgba(15, 23, 42, 0.16), 0 3px 8px rgba(15, 23, 42, 0.08);
+	z-index: 90;
+	overflow-y: auto;
+	padding: 8px 0;
+}
+
+.modern-app-dropmenu.is-open {
+	display: block;
+	pointer-events: auto;
+}
+
+.modern-dropmenu-section {
+	padding: 0;
+	border-bottom: 1px solid var(--modern-color-border);
+}
+
+.modern-dropmenu-section:last-child {
+	border-bottom: none;
+}
+
+.modern-dropmenu-section-title {
+	display: block;
+	padding: 8px 14px 4px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--modern-color-muted);
+}
+
+.modern-dropmenu-links {
+	display: grid;
+	gap: 0;
+	padding: 2px 8px 6px;
+}
+
+.modern-dropmenu-link a,
+.modern-dropmenu-link .inactive {
+	display: flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: var(--modern-color-text);
+	text-decoration: none;
+	transition: background 0.1s ease;
+}
+
+.modern-dropmenu-link a:hover {
+	background: var(--modern-app-accent-soft, var(--modern-color-primary-50));
+	color: var(--modern-app-accent, var(--modern-color-primary));
+	text-decoration: none;
+}
+
+.modern-dropmenu-link a.is-current {
+	background: var(--modern-app-accent-soft, var(--modern-color-primary-50));
+	color: var(--modern-app-accent, var(--modern-color-primary));
+}
+
+.modern-dropmenu-link-inactive .inactive {
+	color: var(--modern-color-muted);
+	opacity: 0.55;
+}
+
+.modern-app-link.is-hover {
+	box-shadow: inset 0 0 0 2px rgba(148, 163, 184, 0.2);
 }
 
 .modern-module-group {

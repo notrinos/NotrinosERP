@@ -322,7 +322,7 @@ class renderer {
 			$tooltip_text = str_replace('&', '', strip_tags($access[0]));
 			$is_active = $selected_application_id == $application->id;
 			echo "<li class='modern-app-item'>";
-			echo "<a class='modern-app-link".(($is_active ? ' is-active' : ''))."' href='".$path_to_root."/admin/dashboard.php?sel_app=".$application->id."' title='".$tooltip_text."' data-tooltip='".$tooltip_text."' ".$access[1].">";
+			echo "<a class='modern-app-link".(($is_active ? ' is-active' : ''))."' href='".$path_to_root."/admin/dashboard.php?sel_app=".$application->id."' title='".$tooltip_text."' data-tooltip='".$tooltip_text."' data-app-id='".$application->id."' ".$access[1].">";
 			echo $this->icon_svg($this->application_icon($application->id), 'modern-icon modern-app-icon');
 			echo "<span class='modern-app-label'>".$access[0]."</span>";
 			echo '</a>';
@@ -544,6 +544,9 @@ class renderer {
 			echo "<div class='modern-floating-indicator'><div id='modern-ajax-status' class='modern-ajax-status' data-kind='' aria-live='polite' aria-hidden='true'><img id='ajaxmark' class='modern-ajax-indicator' src='".$indicator."' style='visibility:hidden;' alt='ajaxmark'></div></div>";
 		}
 
+		// Render drop-right menu panels AFTER .modern-shell grid, outside its layout
+		$this->render_dropmenu_panels($applications, $selected_application_id);
+
 		if ($page_title && !$is_index) {
 			echo "<section class='modern-page-title'>";
 			echo "<div class='modern-page-title-main'>";
@@ -723,5 +726,88 @@ class renderer {
 			echo "<div class='modern-workspace-link'>".menu_link($function_link, $icon."<span class='modern-link-label'>".$app_function->label."</span>")."</div>";
 		elseif (!$_SESSION['wa_current_user']->hide_inaccessible_menu_items())
 			echo "<div class='modern-workspace-link modern-workspace-link-inactive'><span class='inactive'>".access_string($icon."<span class='modern-link-label'>".$app_function->label."</span>", true)."</span></div>";
+	}
+
+	/**
+	 * Render hidden drop-right menu panels for collapsed sidebar hover.
+	 *
+	 * Each panel contains the module groups and links for one application.
+	 * These panels are hidden by default and shown via JavaScript when
+	 * the user hovers over the corresponding app icon in collapsed mode.
+	 *
+	 * @param array  $applications
+	 * @param string $selected_application_id
+	 * @return void
+	 */
+	function render_dropmenu_panels($applications, $selected_application_id) {
+		global $path_to_root;
+
+		add_access_extensions();
+
+		echo "<div id='modern-dropmenu-container' class='modern-dropmenu-container'>";
+
+		foreach ($applications as $application) {
+			if (!$_SESSION['wa_current_user']->check_application_access($application))
+				continue;
+
+			$panel_id = 'modern-dropmenu-' . $application->id;
+
+			echo "<div id='" . $panel_id . "' class='modern-app-dropmenu' data-app-id='" . $application->id . "'>";
+
+			foreach ($application->modules as $module) {
+				if (!$_SESSION['wa_current_user']->check_module_access($module))
+					continue;
+
+				$has_items = false;
+				$items_html = '';
+
+				foreach ($module->lappfunctions as $app_function) {
+					if ($app_function->label == '')
+						continue;
+					$has_items = true;
+					$link = $this->app_context_link($app_function->link, $application->id);
+					$icon = $this->menu_icon($app_function->category);
+					if ($_SESSION['wa_current_user']->can_access_page($app_function->access)) {
+						$items_html .= "<div class='modern-dropmenu-link'>"
+							. menu_link($link, $icon . "<span class='modern-link-label'>" . $app_function->label . "</span>")
+							. "</div>";
+					} elseif (!$_SESSION['wa_current_user']->hide_inaccessible_menu_items()) {
+						$items_html .= "<div class='modern-dropmenu-link modern-dropmenu-link-inactive'><span class='inactive'>"
+							. access_string($icon . "<span class='modern-link-label'>" . $app_function->label . "</span>", true)
+							. "</span></div>";
+					}
+				}
+
+				foreach ($module->rappfunctions as $app_function) {
+					if ($app_function->label == '')
+						continue;
+					$has_items = true;
+					$link = $this->app_context_link($app_function->link, $application->id);
+					$icon = $this->menu_icon($app_function->category);
+					if ($_SESSION['wa_current_user']->can_access_page($app_function->access)) {
+						$items_html .= "<div class='modern-dropmenu-link'>"
+							. menu_link($link, $icon . "<span class='modern-link-label'>" . $app_function->label . "</span>")
+							. "</div>";
+					} elseif (!$_SESSION['wa_current_user']->hide_inaccessible_menu_items()) {
+						$items_html .= "<div class='modern-dropmenu-link modern-dropmenu-link-inactive'><span class='inactive'>"
+							. access_string($icon . "<span class='modern-link-label'>" . $app_function->label . "</span>", true)
+							. "</span></div>";
+					}
+				}
+
+				if ($has_items) {
+					echo "<div class='modern-dropmenu-section'>";
+					echo "<div class='modern-dropmenu-section-title'>" . $module->name . "</div>";
+					echo "<div class='modern-dropmenu-links'>";
+					echo $items_html;
+					echo "</div>";
+					echo "</div>";
+				}
+			}
+
+			echo "</div>";
+		}
+
+		echo "</div>";
 	}
 }

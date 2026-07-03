@@ -82,21 +82,6 @@
 				applyStoredSidebarCollapsedState();
 			}
 		});
-
-		var appLinks = document.querySelectorAll('.modern-app-link');
-		for (var i = 0; i < appLinks.length; i++) {
-			appLinks[i].addEventListener('click', function () {
-				var appShell = getAppShell();
-				if (!appShell || isMobileLayout()) {
-					return;
-				}
-
-				if (appShell.classList.contains('modern-sidebar-collapsed')) {
-					appShell.classList.remove('modern-sidebar-collapsed');
-					persistSidebarCollapsedState(appShell);
-				}
-			});
-		}
 	}
 
 	function bindModuleGroups() {
@@ -562,64 +547,119 @@
 		updateSearchChrome(searchInput.value.trim());
 	}
 
-	function bindCollapsedSidebarTooltips() {
+	function bindCollapsedSidebarDropmenus() {
 		var appShell = getAppShell();
 		if (!appShell) {
 			return;
 		}
 
-		var tooltipElement = document.createElement('div');
-		tooltipElement.id = 'modern-sidebar-tooltip';
-		tooltipElement.style.position = 'fixed';
-		tooltipElement.style.zIndex = '4000';
-		tooltipElement.style.pointerEvents = 'none';
-		tooltipElement.style.padding = '6px 10px';
-		tooltipElement.style.borderRadius = '6px';
-		tooltipElement.style.background = '#0f172a';
-		tooltipElement.style.color = '#ffffff';
-		tooltipElement.style.fontSize = '11px';
-		tooltipElement.style.fontWeight = '600';
-		tooltipElement.style.whiteSpace = 'nowrap';
-		tooltipElement.style.opacity = '0';
-		tooltipElement.style.transition = 'opacity 0.12s ease';
-		document.body.appendChild(tooltipElement);
+		var activeDropmenu = null;
+		var activeAppLink = null;
+		var hideTimer = null;
 
-		function hideTooltip() {
-			tooltipElement.style.opacity = '0';
-		}
-
-		function showTooltip(linkElement) {
+		function showDropmenu(appLink, appId) {
 			if (!appShell.classList.contains('modern-sidebar-collapsed') || isMobileLayout()) {
-				hideTooltip();
 				return;
 			}
 
-			var text = linkElement.getAttribute('data-tooltip');
-			if (!text) {
-				hideTooltip();
+			// Hide any currently open dropmenu
+			if (activeDropmenu && activeDropmenu !== null) {
+				activeDropmenu.classList.remove('is-open');
+			}
+
+			// Clear hover from previously active link
+			if (activeAppLink && activeAppLink !== appLink) {
+				activeAppLink.classList.remove('is-hover');
+			}
+
+			var dropmenu = document.getElementById('modern-dropmenu-' + appId);
+			if (!dropmenu) {
 				return;
 			}
 
-			tooltipElement.textContent = text;
-			var rect = linkElement.getBoundingClientRect();
-			tooltipElement.style.left = Math.round(rect.right + 10) + 'px';
-			tooltipElement.style.top = Math.round(rect.top + rect.height / 2) + 'px';
-			tooltipElement.style.transform = 'translateY(-50%)';
-			tooltipElement.style.opacity = '1';
+			// Position dropmenu right of the sidebar, aligned with the hovered icon minus one link height
+			var sidebarRect = document.getElementById('modern-sidebar').getBoundingClientRect();
+			var linkRect = appLink.getBoundingClientRect();
+			var dropTop = Math.round(linkRect.top) - 30;
+			// Clamp top so the menu never goes above the header
+			if (dropTop < 56) {
+				dropTop = 56;
+			}
+			dropmenu.style.position = 'fixed';
+			dropmenu.style.top = dropTop + 'px';
+			dropmenu.style.left = Math.round(sidebarRect.right) + 'px';
+			dropmenu.style.maxHeight = (window.innerHeight - dropTop) + 'px';
+
+			dropmenu.classList.add('is-open');
+			activeDropmenu = dropmenu;
+			activeAppLink = appLink;
+
+			if (appLink) {
+				appLink.classList.add('is-hover');
+			}
 		}
 
+		function hideDropmenu() {
+			if (activeDropmenu) {
+				activeDropmenu.classList.remove('is-open');
+				activeDropmenu = null;
+			}
+			if (activeAppLink) {
+				activeAppLink.classList.remove('is-hover');
+				activeAppLink = null;
+			}
+		}
+
+		// Attach hover listeners to each app link
 		var appLinks = document.querySelectorAll('.modern-app-link');
 		for (var i = 0; i < appLinks.length; i++) {
-			appLinks[i].addEventListener('mouseenter', function () {
-				showTooltip(this);
+			(function (link) {
+				var appId = link.getAttribute('data-app-id');
+				if (!appId) {
+					return;
+				}
+
+				link.addEventListener('mouseenter', function () {
+					if (hideTimer) {
+						clearTimeout(hideTimer);
+						hideTimer = null;
+					}
+					showDropmenu(link, appId);
+				});
+
+				link.addEventListener('mouseleave', function () {
+					// Short delay so user can move mouse to the dropmenu
+					hideTimer = setTimeout(function () {
+						hideDropmenu();
+					}, 150);
+				});
+			})(appLinks[i]);
+		}
+
+		// Keep dropmenu open when hovering over it
+		var dropmenuContainer = document.getElementById('modern-dropmenu-container');
+		if (dropmenuContainer) {
+			dropmenuContainer.addEventListener('mouseenter', function () {
+				if (hideTimer) {
+					clearTimeout(hideTimer);
+					hideTimer = null;
+				}
 			});
-			appLinks[i].addEventListener('mouseleave', function () {
-				hideTooltip();
+
+			dropmenuContainer.addEventListener('mouseleave', function () {
+				hideTimer = setTimeout(function () {
+					hideDropmenu();
+				}, 150);
 			});
 		}
 
-		window.addEventListener('scroll', hideTooltip, true);
-		window.addEventListener('resize', hideTooltip);
+		// Hide on sidebar expand
+		var observer = new MutationObserver(function () {
+			if (!appShell.classList.contains('modern-sidebar-collapsed')) {
+				hideDropmenu();
+			}
+		});
+		observer.observe(appShell, { attributes: true, attributeFilter: ['class'] });
 	}
 
 	function bindNotificationDropdown() {
@@ -698,7 +738,7 @@
 			bindUserDropdown();
 			bindNotificationDropdown();
 			bindClickableCheckboxRows();
-			bindCollapsedSidebarTooltips();
+			bindCollapsedSidebarDropmenus();
 			bindSearchToggle();
 			bindMenuSearch();
 			scrollToMessagesOnLoad();
@@ -710,7 +750,7 @@
 		bindUserDropdown();
 		bindNotificationDropdown();
 			bindClickableCheckboxRows();
-		bindCollapsedSidebarTooltips();
+		bindCollapsedSidebarDropmenus();
 		bindSearchToggle();
 		bindMenuSearch();
 		scrollToMessagesOnLoad();
