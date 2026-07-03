@@ -998,6 +998,40 @@
 				self.setZoom(DEFAULT_ZOOM);
 			} else if (action === 'validate') {
 				self.runValidation(true);
+			} else if (action === 'preview') {
+				// Show/hide preview panel
+				if (window.FormulaDesigner.preview) {
+					var previewPanel = self.root.querySelector('[data-designer="preview-panel"]');
+					if (previewPanel) {
+						previewPanel.hidden = !previewPanel.hidden;
+						self.announceToScreenReader(
+							previewPanel.hidden ? 'Preview panel closed' : 'Preview panel opened',
+							'polite'
+						);
+					}
+				}
+			} else if (action === 'explain') {
+				// Show/hide explain panel
+				if (window.FormulaDesigner.preview) {
+					var explainPanel = self.root.querySelector('[data-designer="explain-panel"]');
+					if (explainPanel) {
+						explainPanel.hidden = !explainPanel.hidden;
+						self.announceToScreenReader(
+							explainPanel.hidden ? 'Explain panel closed' : 'Explain panel opened',
+							'polite'
+						);
+					}
+				}
+			} else if (action === 'template') {
+				// Show/hide template browser
+				var templateBrowser = self.root.querySelector('[data-designer="template-browser"]');
+				if (templateBrowser) {
+					templateBrowser.hidden = !templateBrowser.hidden;
+					self.announceToScreenReader(
+						templateBrowser.hidden ? 'Template browser closed' : 'Template browser opened',
+						'polite'
+					);
+				}
 			} else if (action === 'undo') {
 				self.performUndo();
 			} else if (action === 'redo') {
@@ -1010,15 +1044,31 @@
 		var self = this;
 
 		this.root.addEventListener('click', function (event) {
-			var literalValue = closest(event.target, '.fd-token--literal .fd-token-value');
-			var token = event.target.closest('.fd-token');
+			// Find the closest token -- use our custom `closest` helper which
+			// walks ancestors to locate the .fd-token wrapper.  Then determine
+			// whether the token is a literal *and* the click landed on (or
+			// inside) its value-rendering element.
+			var hitToken = closest(event.target, '.fd-token');
+			var token = hitToken ? hitToken : null;
+			var isLiteralToken = token ? token.classList.contains('fd-token--literal') : false;
+			var hitLiteralValue = isLiteralToken
+				? closest(event.target, '.fd-token-value') !== null
+				: false;
 			var closePropPanel = event.target.closest('[data-action="close-property-panel"]');
+			var insidePropertyPanel = closest(event.target, '.fd-property-panel');
+			var insideToolbar = closest(event.target, '.fd-toolbar');
 
 			if (closePropPanel) {
 				self.selectedTokenId = null;
 				self.applySelection();
 				self.renderPropertyPanel();
 				self.announceToScreenReader('Property panel closed');
+				return;
+			}
+
+			// Bug 3: Clicking inside the property panel or toolbar should
+			// never deselect the current token or close the property panel.
+			if (insidePropertyPanel || insideToolbar) {
 				return;
 			}
 
@@ -1040,7 +1090,7 @@
 			// Announce token selection to screen reader
 			self.announceTokenToScreenReader(self.selectedTokenId);
 
-			if (literalValue || token.getAttribute('data-token-type') === 'literal') {
+			if (hitLiteralValue || (isLiteralToken && token === hitToken && event.target === hitToken)) {
 				self.startLiteralEdit(self.selectedTokenId);
 			}
 		});
@@ -1060,7 +1110,7 @@
 			}
 		}, true);
 
-		this.root.addEventListener('blur', function (event) {
+		this.root.addEventListener('focusout', function (event) {
 			if (closest(event.target, '.fd-literal-editor')) {
 				self.commitLiteralEdit();
 			}
@@ -2442,8 +2492,19 @@
 				var existingType = existing ? existing.getAttribute('data-token-type') : null;
 
 				if (existingId === desired.id && existingType === desired.type) {
-					// Same token — just update label if literal and not editing
-					if (desired.type === 'literal' && !(desired.metadata && desired.metadata.editing)) {
+					// Same token — update label / DOM only if the editing mode
+					// did NOT change (input ↔ span transition requires a full
+					// node replacement because the inner structure differs).
+					var wasEditing = existing.querySelector('.fd-literal-editor') !== null;
+					var isEditing = desired.metadata && desired.metadata.editing === true;
+
+					if (desired.type === 'literal' && wasEditing !== isEditing) {
+						// Editing state changed — replace the whole node
+						var replacement = this.createTokenElement(desired, index);
+						if (replacement && existing.parentNode) {
+							existing.parentNode.replaceChild(replacement, existing);
+						}
+					} else if (desired.type === 'literal' && !isEditing) {
 						var labelNode = existing.querySelector('.fd-token-value');
 						if (labelNode) {
 							labelNode.textContent = desired.label || desired.value || '';

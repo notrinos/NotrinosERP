@@ -237,20 +237,20 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '</div>';
         $parts[] = '<div class="fd-category-items">';
         $operators = array(
-            array('label' => 'Addition (+)', 'value' => '+'),
-            array('label' => 'Subtraction (−)', 'value' => '-'),
-            array('label' => 'Multiplication (×)', 'value' => '*'),
-            array('label' => 'Division (÷)', 'value' => '/'),
+            array('label' => '+', 'value' => '+'),
+            array('label' => '−', 'value' => '-'),
+            array('label' => '×', 'value' => '*'),
+            array('label' => '÷', 'value' => '/'),
         );
         foreach ($operators as $op) {
             $parts[] = '<div class="fd-palette-item fd-palette-function" draggable="true"'
                 . ' data-token-type="operator"'
                 . ' data-token-value="' . $this->escape($op['value']) . '"'
-                . ' data-display-label="' . $this->escape($op['label']) . '"'
+                . ' data-display-label="' . $this->escape($op['value']) . '"'
                 . ' data-metadata="{}"'
                 . ' data-function-name="' . $this->escape($op['value']) . '"'
-                . ' data-function-signature="' . $this->escape($op['label']) . '"'
-                . ' data-function-description="' . $this->escape($op['label']) . '"'
+                . ' data-function-signature="' . $this->escape($op['value']) . '"'
+                . ' data-function-description="' . $this->escape($op['value']) . '"'
                 . ' role="listitem">';
             $parts[] = '<span class="fd-palette-item-icon fd-icon-function">±</span>';
             $parts[] = '<span class="fd-palette-item-label">' . $this->escape($op['label']) . '</span>';

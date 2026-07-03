@@ -421,15 +421,42 @@
 	DragManager.prototype.applyPayload = function (position, payload) {
 		var tokens = this.instance.getTokens();
 		var simulated = simulateInsertion(tokens, position, payload);
+		var inserted;
+		var newTokenIds;
+		var i;
 
 		if (simulated === null || !sequenceIsValid(simulated)) {
 			return;
 		}
 
+		// Build a lookup of existing token IDs so we can detect which
+		// tokens in the simulated result are brand-new insertions.
+		var existingIds = {};
+		for (i = 0; i < tokens.length; i += 1) {
+			existingIds[tokens[i].id] = true;
+		}
+
+		// The first token in simulated that does NOT have a pre-existing
+		// ID is the first newly-inserted token (they appear at the insertion
+		// point, not necessarily at the end).
+		for (i = 0; i < simulated.length; i += 1) {
+			if (!existingIds[simulated[i].id]) {
+				inserted = simulated[i];
+				break;
+			}
+		}
+
 		this.instance.replaceTokens(simulated, {
 			source: 'dragdrop',
-			description: payload.action === 'move' ? 'Move' : 'Insert'
+			description: payload.action === 'move' ? 'Move' : 'Insert',
+			selectedTokenId: (inserted ? inserted.id : null)
 		});
+
+		// Bug 4: If the inserted token is a literal (number), auto-start
+		// inline editing so the user can type the value immediately.
+		if (inserted && inserted.type === 'literal') {
+			this.instance.startLiteralEdit(inserted.id, true);
+		}
 	};
 
 	function sequenceIsValid(tokens) {
