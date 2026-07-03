@@ -38,11 +38,25 @@ class email
 	var $body = '';
 	var $charset = 'ISO-8859-1';
 	var $add_params = '';
+
+	// SMTP envelope sender email.
+	var $from_email = '';
 	
 	function __construct($name, $mail)
 	{
 		$this->boundary = md5(uniqid(time()));
-		$this->headers['From'] = $this->encode($name)." <$mail>";
+		// Configure sender headers for SPF/DMARC compliance.
+		$this->from_email=trim($mail);
+		$this->headers['From']=$this->encode($name)." <{$this->from_email}>";
+		$this->headers['Reply-To']=$this->from_email;
+		$this->headers['Return-Path']=$this->from_email;
+		$this->headers['Sender']=$this->from_email;
+		$this->headers['MIME-Version']='1.0';
+		$this->headers['Date']=date(DATE_RFC2822);
+		$domain=preg_replace('/^.*@/','',$this->from_email);
+		$this->headers['Message-ID']='<'.time().'.'.md5(uniqid('',true)).'@'.$domain.'>';
+		// Using escapeshellarg() avoids command injection if an invalid address somehow reaches this code.
+		$this->add_params='-f '.escapeshellarg($this->from_email);
 		$bcc = get_company_pref('bcc_email');
 		if ($bcc)
 			$this->bcc[] = $bcc;
