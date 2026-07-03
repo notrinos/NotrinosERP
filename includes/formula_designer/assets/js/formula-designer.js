@@ -1058,6 +1058,12 @@
 			var insidePropertyPanel = closest(event.target, '.fd-property-panel');
 			var insideToolbar = closest(event.target, '.fd-toolbar');
 
+			// Clicking on an active literal editor (the <input> itself) must
+			// be a no-op — the browser handles the input focus natively.
+			// Stealing focus via canvas.focus() or re-triggering startLiteralEdit
+			// would cause the input to blur (commitLiteralEdit) and collapse.
+			var insideLiteralEditor = closest(event.target, '.fd-literal-editor') !== null;
+
 			if (closePropPanel) {
 				self.selectedTokenId = null;
 				self.applySelection();
@@ -1068,7 +1074,7 @@
 
 			// Bug 3: Clicking inside the property panel or toolbar should
 			// never deselect the current token or close the property panel.
-			if (insidePropertyPanel || insideToolbar) {
+			if (insidePropertyPanel || insideToolbar || insideLiteralEditor) {
 				return;
 			}
 
@@ -1085,7 +1091,12 @@
 			self.selectedTokenId = token.getAttribute('data-token-id');
 			self.applySelection();
 			self.renderPropertyPanel();
-			self.canvas.focus();
+			// Only steal focus for the canvas when we are NOT inside an
+			// active literal editor — otherwise the input loses focus and
+			// the focusout handler commits the edit prematurely.
+			if (!insideLiteralEditor) {
+				self.canvas.focus();
+			}
 
 			// Announce token selection to screen reader
 			self.announceTokenToScreenReader(self.selectedTokenId);
