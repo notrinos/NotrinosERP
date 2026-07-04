@@ -742,6 +742,7 @@
 			bindSearchToggle();
 			bindMenuSearch();
 			scrollToMessagesOnLoad();
+			bindDataTableScrollHints();
 		});
 	} else {
 		bindSidebarToggle();
@@ -754,5 +755,101 @@
 		bindSearchToggle();
 		bindMenuSearch();
 		scrollToMessagesOnLoad();
+		bindDataTableScrollHints();
+	}
+
+	/**
+	 * Initialize custom JS scrollbars for all erp-data-table wrappers.
+	 *
+	 * Replaces native scrollbar with a slim custom track visible only
+	 * during scrolling, positioned outside the table on the right.
+	 */
+	function bindDataTableScrollHints() {
+		var tables = document.querySelectorAll('.erp-data-table');
+		for (var i = 0; i < tables.length; i++) {
+			(function (table) {
+				if (table.scrollHeight <= table.clientHeight + 2) {
+					return;
+				}
+
+				var hintScrolled = false;
+				var scrollHideTimer = null;
+
+				// ── Scroll hint overlay ──
+				var hint = document.createElement('div');
+				hint.className = 'erp-data-table-hint';
+				hint.innerHTML = '<span class="erp-data-table-hint-text">&#8595; Scroll down &#8595;</span>';
+				table.appendChild(hint);
+
+				table.addEventListener('mouseenter', function () {
+					if (!hintScrolled) hint.classList.add('is-visible');
+				});
+				table.addEventListener('mouseleave', function () {
+					hint.classList.remove('is-visible');
+				});
+
+				// ── Custom scrollbar (positioned outside wrapper) ──
+			var wrapper = table.closest('.erp-data-table');
+
+			var track = document.createElement('div');
+			track.className = 'erp-custom-scrollbar-track';
+
+			var thumb = document.createElement('div');
+			thumb.className = 'erp-custom-scrollbar-thumb';
+			track.appendChild(thumb);
+
+			// Insert track as a sibling after the wrapper, not inside it
+			if (wrapper) {
+				wrapper.parentNode.insertBefore(track, wrapper.nextSibling);
+			}
+
+			function updateThumb() {
+				if (!wrapper) return;
+				var viewH = wrapper.clientHeight;
+				var totalH = wrapper.scrollHeight;
+				if (totalH <= viewH) return;
+
+				var ratio = viewH / totalH;
+				var thumbHeight = Math.max(ratio * viewH, 24);
+				var maxScroll = totalH - viewH;
+				var scrollRatio = wrapper.scrollTop / maxScroll;
+				var trackSpace = viewH - thumbHeight;
+
+				var wrapperRect = wrapper.getBoundingClientRect();
+				track.style.height = viewH + 'px';
+				track.style.top = wrapperRect.top + 'px';
+				track.style.left = (wrapperRect.right - 6) + 'px';
+
+				thumb.style.height = thumbHeight + 'px';
+				thumb.style.top = Math.round(scrollRatio * trackSpace) + 'px';
+			}
+
+			function showScrollbar() {
+				track.classList.add('is-visible');
+				updateThumb();
+				if (scrollHideTimer) clearTimeout(scrollHideTimer);
+				scrollHideTimer = setTimeout(function () {
+					track.classList.remove('is-visible');
+				}, 1200);
+			}
+
+			var onScroll = function () {
+				showScrollbar();
+				updateThumb();
+				if (!hintScrolled) {
+					hintScrolled = true;
+					hint.classList.remove('is-visible');
+				}
+			};
+
+			if (wrapper) {
+				wrapper.addEventListener('scroll', onScroll);
+			}
+
+			updateThumb();
+			window.addEventListener('scroll', updateThumb);
+			window.addEventListener('resize', updateThumb);
+			})(tables[i]);
+		}
 	}
 })();

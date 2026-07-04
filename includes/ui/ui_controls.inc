@@ -198,7 +198,7 @@ function close_filter_group_if_open() {
 }
 
 function start_table($class=false, $extra='', $padding='2', $spacing='0') {
-	global $filter_group_open;
+	global $filter_group_open, $ui_last_table_class;
 
 	if ($class == TABLESTYLE_NOBORDER) {
 		if (!$filter_group_open) {
@@ -230,6 +230,11 @@ function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 		$extra = trim(preg_replace('/class\s*=\s*[\"\'][^\"\']+[\"\']/i', '', $extra));
 	}
 
+	if ($class == TABLESTYLE_DATA)
+		echo "<div class='erp-data-table'>\n";
+
+	$ui_last_table_class = $class;
+
 	echo "<center><table";
 	if ($table_class != '')
 		echo " class='".$table_class."'";
@@ -242,8 +247,13 @@ function end_table($breaks=0) {
 	$mode = ui_pop_table_mode();
 	if ($mode == 'form')
 		echo "</div>\n";
-	else
+	else {
 		echo "</table></center>\n";
+		// Close erp-data-table wrapper if current mode was a data table
+		global $ui_last_table_class;
+		if (isset($ui_last_table_class) && $ui_last_table_class == TABLESTYLE_DATA)
+			echo "</div>\n";
+	}
 	output_hidden();
 	if ($breaks) {
 		close_filter_group_if_open();

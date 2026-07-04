@@ -330,7 +330,7 @@ $total = count_serial_numbers($stock_id_filter, $status_filter, $loc_filter,
 // Summary line
 display_note(sprintf(_('Showing %d serial number(s)'), $total), 0, 0, "style='margin:5px 0;'");
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 $th = array(
 	_('Serial Number'), _('Item'), _('Status'), _('Location'),
 	_('Supplier'), _('Customer'), _('Warranty End'), _('Created'), '', ''

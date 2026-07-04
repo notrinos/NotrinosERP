@@ -1,3 +1,133 @@
+/* ======================================================================
+   Scrollable Data Table Wrapper for TABLESTYLE_DATA
+   Automatically wraps every start_table(TABLESTYLE_DATA) call.
+   ====================================================================== */
+
+:root {
+	--erp-data-table-height: 480px;
+	--erp-data-table-border-color: var(--modern-color-border, #e4e4e7);
+	--erp-data-table-radius: var(--modern-radius-sm, 8px);
+}
+
+.erp-data-table {
+	position: relative;
+	max-height: var(--erp-data-table-height);
+	overflow-y: auto;
+	overflow-x: auto;
+	border: 1px solid var(--erp-data-table-border-color);
+	border-radius: var(--erp-data-table-radius);
+	background: var(--modern-color-surface, #fff);
+	margin-bottom: 12px;
+}
+
+.erp-data-table > center {
+	display: contents;
+}
+
+.erp-data-table table {
+	min-width: 100%;
+	margin: 0;
+}
+
+/* ── Sticky header inside scrollable wrapper ── */
+.erp-data-table table thead th,
+.erp-data-table table .tableheader td,
+.erp-data-table table .tableheader th,
+.erp-data-table table tr.tableheader td,
+.erp-data-table table tr.tableheader th {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	background: #e8eefb;
+	color: #1e293b;
+	font-weight: 700;
+	border-bottom: 1px solid #c7d3ea;
+}
+
+/* ── Hidden scrollbars (Chrome, Edge, Safari) ── */
+.erp-data-table {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.erp-data-table::-webkit-scrollbar,
+.erp-data-table::-webkit-scrollbar-track,
+.erp-data-table::-webkit-scrollbar-thumb,
+.erp-data-table::-webkit-scrollbar-corner,
+.erp-data-table::-webkit-scrollbar-button {
+	display: none;
+	width: 0 !important;
+	height: 0 !important;
+	background: transparent;
+}
+
+/* ── Scroll Hint Overlay ── */
+.erp-data-table-hint {
+	position: sticky;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	height: 80px;
+	margin-top: -80px;
+	display: none;
+	align-items: flex-end;
+	justify-content: center;
+	pointer-events: none;
+	background: linear-gradient(
+        to top,
+        rgba(30, 41, 59, 0.8) 0%,
+        rgba(30, 41, 59, 0.16) 55%,
+        transparent 100%
+    );
+}
+
+.erp-data-table-hint.is-visible {
+	display: flex;
+}
+
+.erp-data-table-hint-text {
+	padding: 4px 16px 8px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #fff;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+	letter-spacing: 0.02em;
+	pointer-events: none;
+}
+
+/* ── Custom JS Scrollbar (replaces native) ── */
+.erp-custom-scrollbar-track {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 6px;
+	height: 100%;
+	background: transparent;
+	z-index: 11;
+	pointer-events: none;
+	opacity: 0;
+}
+
+.erp-custom-scrollbar-track.is-visible {
+	opacity: 1 !important;
+}
+
+.erp-custom-scrollbar-thumb {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 6px;
+	min-height: 24px;
+	border-radius: 3px;
+	background: rgba(100, 116, 139, 0.45);
+	transition: background 0.15s ease;
+}
+
+.erp-custom-scrollbar-thumb:hover {
+	background: rgba(71, 85, 105, 0.65);
+}
+
 table {
 	border-collapse: collapse;
 	max-width: 100%;
