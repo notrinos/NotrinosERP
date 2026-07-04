@@ -275,7 +275,7 @@ if ($enter_mode && $active_insp_id > 0 && $insp) {
 		hidden('active_insp_id', $active_insp_id);
 		hidden('enter_mode', 1);
 
-		start_table(TABLESTYLE, "width='95%'");
+		start_table(TABLESTYLE, "width='100%'");
 		$th = array(_('Parameter'), _('Type'), _('Range / Options'), _('Reading'), _('Result'), _('Override'), _('Notes'));
 		table_header($th);
 
@@ -412,7 +412,7 @@ if ($enter_mode && $active_insp_id > 0 && $insp) {
 		$readings_result = get_inspection_readings($active_insp_id);
 		$has_readings = false;
 
-		start_table(TABLESTYLE, "width='95%'");
+		start_table(TABLESTYLE, "width='100%'");
 		$th = array(_('Parameter'), _('Type'), _('Reading'), _('Result'), _('Notes'));
 		table_header($th);
 
@@ -531,7 +531,7 @@ if (!empty($_POST['filter_type']))
 
 $inspections = get_quality_inspections($filters, 50);
 
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA);
 
 $th = array(
 	_('#'), _('Item'), _('Type'), _('Result'), _('Qty'),
@@ -595,11 +595,12 @@ div_end();
 //----------------------------------------------------------------------
 // Create Inspection Section
 //----------------------------------------------------------------------
-echo '<fieldset style="margin:10px 0;padding:10px 15px;border:1px solid #ddd;border-radius:4px;">';
-echo '<legend style="font-weight:600;">' . _('Create New Inspection') . '</legend>';
 
-start_table(TABLESTYLE2);
+start_fieldset(_('Create New Inspection'));
 
+start_outer_table();
+
+table_section(1);
 start_row();
 label_cell(_('Select Item:'));
 echo stock_items_list_cells(null, 'new_stock_id', null, false, false);
@@ -612,23 +613,23 @@ text_row_ex(_('Quantity:'), 'new_qty', 15, 15);
 
 locations_list_row(_('Location:'), 'new_loc_code', null, false);
 
+table_section(2);
 text_row_ex(_('Batch ID:'), 'new_batch_id', 10, 10);
 text_row_ex(_('Serial ID:'), 'new_serial_id', 10, 10);
-textarea_row(_('Notes:'), 'new_notes', null, 50, 2);
+textarea_row(_('Notes:'), 'new_notes', null, 50, 3);
 
-end_table(0);
+end_outer_table();
 
 echo '<div style="text-align:center;margin:8px 0;">';
 submit('create_inspection', _('Create Inspection'), true, _('Create a new quality inspection'), 'default');
 echo '</div>';
 
-echo '</fieldset>';
+end_fieldset();
 
 //----------------------------------------------------------------------
 // Auto-create from GRN Section
 //----------------------------------------------------------------------
-echo '<fieldset style="margin:10px 0;padding:10px 15px;border:1px solid #ddd;border-radius:4px;">';
-echo '<legend style="font-weight:600;">' . _('Auto-Create from GRN') . '</legend>';
+start_fieldset(_('Auto-Create from GRN'));
 
 start_table(TABLESTYLE2);
 
@@ -642,7 +643,7 @@ submit('auto_create_grn', _('Create Inspections from GRN'), true,
 	_('Auto-create inspections for QC-required items in this GRN'), 'default');
 echo '</div>';
 
-echo '</fieldset>';
+end_fieldset();
 
 end_form();
 end_page();
