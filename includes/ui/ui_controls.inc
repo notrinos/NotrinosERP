@@ -294,6 +294,26 @@ function filter_cell_close() {
 		echo "</td>\n";
 }
 
+/**
+ * Open a fieldset wrapper.
+ *
+ * @param string $legend The legend text or empty for no legend
+ * @return void
+ */
+function start_fieldset($legend='') {
+	echo '<fieldset style="margin:10px 0;padding:10px 15px;border:1px solid #ddd;border-radius:4px;">';
+	echo '<legend style="font-weight:600;">' . $legend . '</legend>';
+}
+
+/**
+ * Close a legend wrapper.
+ *
+ * @return void
+ */
+function end_fieldset() {
+	echo '</fieldset>';
+}
+
 function start_outer_table($class=false, $extra='', $padding='2', $spacing='0', $br=false) {
 	global $ui_outer_section_open;
 
