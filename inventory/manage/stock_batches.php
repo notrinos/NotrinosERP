@@ -430,7 +430,7 @@ echo "<span style='display:inline-block;padding:3px 10px;margin:2px;border-radiu
 	. sprintf(_('No Expiry: %d'), $expiry_summary['no_expiry']) . "</span>";
 echo "</div>";
 
-start_table(TABLESTYLE, "width='98%'");
+start_table(TABLESTYLE_DATA);
 $th = array(
 	_('Batch #'), _('Item'), _('Status'), _('Expiry Date'), _('Days'),
 	_('Mfg Date'), _('Initial Qty'), _('Supplier'), _('Created'), '', ''
@@ -499,7 +499,7 @@ div_end();
 //  A D D  /  E D I T   F O R M
 //======================================================================
 
-start_table(TABLESTYLE2);
+start_outer_table();
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
@@ -527,7 +527,8 @@ if ($selected_id != -1) {
 $is_edit = ($selected_id != -1);
 
 // Section header
-echo "<tr><td colspan='2'><strong>" . ($is_edit ? _('Edit Batch') : _('Add New Batch')) . "</strong></td></tr>\n";
+table_section(1);
+table_section_title($is_edit ? _('Edit Batch') : _('Add New Batch'));
 
 // Batch Number
 text_row_ex(_('Batch Number:'), 'batch_no', 50, 100);
@@ -562,11 +563,13 @@ if (!$is_edit) {
 }
 
 // Dates section
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Dates & Shelf Life') . "</strong></td></tr>\n";
-
+table_section_title(_('Dates & Shelf Life'));
 date_row(_('Manufacturing Date:'), 'manufacturing_date', '', null, 0, 0, 1001);
 date_row(_('Expiry Date:'), 'expiry_date', '', null, 0, 0, 1001);
 date_row(_('Best Before Date:'), 'best_before_date', '', null, 0, 0, 1001);
+
+table_section(2);
+table_section_title(_('Dates & Shelf Life'));
 date_row(_('Retest Date:'), 'retest_date', '', null, 0, 0, 1001);
 text_row_ex(_('Shelf Life (days):'), 'shelf_life_days', 10, 10);
 
@@ -579,14 +582,14 @@ if (!$is_edit) {
 }
 
 // Supplier section
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Source') . "</strong></td></tr>\n";
+table_section_title(_('Source'));
 
 supplier_list_row(_('Supplier:'), 'supplier_id', get_post('supplier_id'), _('Select Supplier'), true);
 
 text_row_ex(_('Supplier Batch #:'), 'supplier_batch_no', 50, 100);
 
 // Origin & Certification
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Quality & Origin') . "</strong></td></tr>\n";
+table_section_title(_('Quality & Origin'));
 
 text_row_ex(_('Country of Origin:'), 'country_of_origin', 50, 60);
 text_row_ex(_('Certification:'), 'certification', 50, 200);
@@ -594,7 +597,7 @@ text_row_ex(_('Certification:'), 'certification', 50, 200);
 // Notes
 textarea_row(_('Notes:'), 'notes', get_post('notes', ''), 40, 3);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
