@@ -763,9 +763,22 @@
 	 *
 	 * Replaces native scrollbar with a slim custom track visible only
 	 * during scrolling, positioned outside the table on the right.
+	 *
+	 * Idempotent — wrappers already marked data-scrollbar-bound="1" are
+	 * skipped.  Also cleans up orphaned tracks whose wrapper was removed
+	 * from the DOM (e.g. by an AJAX refresh).
 	 */
 	function bindDataTableScrollHints() {
-		var tables = document.querySelectorAll('.erp-data-table');
+		// ── Clean up orphaned tracks whose wrapper is gone ──
+		var orphanTracks = document.querySelectorAll('.erp-custom-scrollbar-track');
+		for (var t = 0; t < orphanTracks.length; t++) {
+			var prev = orphanTracks[t].previousElementSibling;
+			if (!prev || !prev.classList.contains('erp-data-table') || prev.getAttribute('data-scrollbar-bound') !== '1') {
+				orphanTracks[t].parentNode.removeChild(orphanTracks[t]);
+			}
+		}
+
+		var tables = document.querySelectorAll('.erp-data-table:not([data-scrollbar-bound])');
 		for (var i = 0; i < tables.length; i++) {
 			(function (table) {
 				if (table.scrollHeight <= table.clientHeight + 2) {
@@ -790,6 +803,8 @@
 
 				// ── Custom scrollbar (positioned outside wrapper) ──
 			var wrapper = table.closest('.erp-data-table');
+			if (!wrapper) return;
+			wrapper.setAttribute('data-scrollbar-bound', '1');
 
 			var track = document.createElement('div');
 			track.className = 'erp-custom-scrollbar-track';
@@ -799,9 +814,7 @@
 			track.appendChild(thumb);
 
 			// Insert track as a sibling after the wrapper, not inside it
-			if (wrapper) {
-				wrapper.parentNode.insertBefore(track, wrapper.nextSibling);
-			}
+			wrapper.parentNode.insertBefore(track, wrapper.nextSibling);
 
 			function updateThumb() {
 				if (!wrapper) return;
@@ -842,9 +855,7 @@
 				}
 			};
 
-			if (wrapper) {
-				wrapper.addEventListener('scroll', onScroll);
-			}
+			wrapper.addEventListener('scroll', onScroll);
 
 			updateThumb();
 			window.addEventListener('scroll', updateThumb);
@@ -852,4 +863,42 @@
 			})(tables[i]);
 		}
 	}
+
+	/**
+	 * MutationObserver that re-runs bindDataTableScrollHints whenever
+	 * new .erp-data-table wrappers are inserted into the DOM (e.g. by
+	 * AJAX page updates that replace table content).
+	 */
+	function observeDataTableScrollbars() {
+		if (typeof MutationObserver === 'undefined') return;
+
+		var observer = new MutationObserver(function (mutations) {
+			var needsRefresh = false;
+			for (var i = 0; i < mutations.length; i++) {
+				var addedNodes = mutations[i].addedNodes;
+				for (var j = 0; j < addedNodes.length; j++) {
+					if (addedNodes[j].nodeType !== 1) continue;
+					// Check the node itself or any descendant
+					if (addedNodes[j].classList && addedNodes[j].classList.contains('erp-data-table')) {
+						needsRefresh = true;
+						break;
+					}
+					if (addedNodes[j].querySelectorAll) {
+						var nested = addedNodes[j].querySelectorAll('.erp-data-table');
+						if (nested.length > 0) {
+							needsRefresh = true;
+							break;
+						}
+					}
+				}
+				if (needsRefresh) break;
+			}
+			if (needsRefresh) bindDataTableScrollHints();
+		});
+
+		observer.observe(document.body, { childList: true, subtree: true });
+	}
+
+	// Start watching for DOM changes to re-bind scrollbars
+	observeDataTableScrollbars();
 })();
