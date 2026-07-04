@@ -286,6 +286,18 @@ if (list_updated('filter_stock_id') || list_updated('filter_status') || list_upd
 	|| isset($_POST['search_serials']))
 	$Ajax->activate('serial_list');
 
+//----------------------------------------------------------------------
+// Handle Auto-Generate button
+//----------------------------------------------------------------------
+if (isset($_POST['auto_generate']) && $_POST['auto_generate'] != '') {
+	if (strlen(get_post('stock_id_edit')) > 0) {
+		$_POST['serial_no'] = generate_serial_number(get_post('stock_id_edit'));
+		$Ajax->activate('_page_body');
+	} else {
+		display_error(_('Select an item first before auto-generating.'));
+	}
+}
+
 //======================================================================
 //  F I L T E R S
 //======================================================================
@@ -391,7 +403,7 @@ div_end();
 //  A D D  /  E D I T   F O R M
 //======================================================================
 
-start_table(TABLESTYLE2);
+start_outer_table();
 
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
@@ -423,7 +435,8 @@ if ($selected_id != -1) {
 $is_edit = ($selected_id != -1);
 
 // Section header
-echo "<tr><td colspan='2'><strong>" . ($is_edit ? _('Edit Serial Number') : _('Add New Serial Number')) . "</strong></td></tr>\n";
+table_section(1);
+table_section_title($is_edit ? _('Edit Serial Number') : _('Add New Serial Number'));
 
 // Serial Number
 text_row_ex(_('Serial Number:'), 'serial_no', 50, 100);
@@ -462,15 +475,17 @@ if ($is_edit) {
 }
 
 // Dates section
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Dates') . "</strong></td></tr>\n";
+table_section_title(_('Dates'));
 
 date_row(_('Purchase Date:'), 'purchase_date', '', null, 0, 0, 1001);
 date_row(_('Manufacturing Date:'), 'manufacturing_date', '', null, 0, 0, 1001);
+
+table_section(2);
+table_section_title(_('Dates'));
 date_row(_('Expiry Date:'), 'expiry_date', '', null, 0, 0, 1001);
 
 // Warranty section
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Warranty') . "</strong></td></tr>\n";
-
+table_section_title(_('Warranty'));
 date_row(_('Warranty Start:'), 'warranty_start', '', null, 0, 0, 1001);
 date_row(_('Warranty End:'), 'warranty_end', '', null, 0, 0, 1001);
 
@@ -481,9 +496,9 @@ array_selector_row(_('Warranty Type:'), 'warranty_type', get_post('warranty_type
 small_amount_row(_('Purchase Cost:'), 'purchase_cost', get_post('purchase_cost', ''), null, null, 2);
 
 // Notes
-textarea_row(_('Notes:'), 'notes', get_post('notes', ''), 40, 3);
+textarea_row(_('Notes:'), 'notes', get_post('notes', ''), 40, 4);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
@@ -547,18 +562,6 @@ if ($selected_id == -1) {
 	submit_center('import_serials', _('Import'), true, _('Import serial numbers from text'), 'default');
 
 	echo "</fieldset>";
-}
-
-//----------------------------------------------------------------------
-// Handle Auto-Generate button
-//----------------------------------------------------------------------
-if (isset($_POST['auto_generate']) && $_POST['auto_generate'] != '') {
-	if (strlen(get_post('stock_id_edit')) > 0) {
-		$_POST['serial_no'] = generate_serial_number(get_post('stock_id_edit'));
-		$Ajax->activate('_page_body');
-	} else {
-		display_error(_('Select an item first before auto-generating.'));
-	}
 }
 
 end_form();
