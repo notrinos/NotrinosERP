@@ -287,7 +287,7 @@ if ($viewing_claim) {
 
 	// Repair Parts
 	echo '<h3>' . _('Repair Parts') . '</h3>';
-	start_table(TABLESTYLE, "width='80%'");
+	start_table(TABLESTYLE, "width='100%'");
 	$th = array(_('Part'), _('Description'), _('Qty'), _('Unit Cost'), _('Total'), '');
 	table_header($th);
 
@@ -376,7 +376,7 @@ echo '<div style="margin-bottom:10px;">';
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 stock_items_list_cells(null, 'filter_stock_id', null, _('All Items'), true, true);
-customer_list_cells(_('Customer:'), 'filter_customer_id', null, _('All'), true);
+customer_list_cells(_('Customer:'), 'filter_customer_id', null, _('All Customers'), true);
 $status_options = array_merge(array('' => _('All Statuses')), get_warranty_claim_statuses());
 label_cell(_('Status:'));
 echo '<td>';
@@ -426,7 +426,7 @@ $filter_to = get_post('filter_date_to');
 
 $result = get_warranty_claims($filter_stock, $filter_customer, $filter_status, $filter_from, $filter_to);
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA);
 $th = array(_('#'), _('Reference'), _('Item'), _('Customer'), _('Serial/Batch'),
 	_('Date'), _('Issue'), _('Status'), _('Cost'), _('Assigned'), '');
 table_header($th);
@@ -476,7 +476,7 @@ div_end();
 //----------------------------------------------------------------------
 // Add / Edit Form
 //----------------------------------------------------------------------
-start_table(TABLESTYLE2);
+start_outer_table();
 
 $is_edit = ($selected_id != -1 && $Mode == 'Edit');
 if ($is_edit) {
@@ -499,6 +499,7 @@ if ($is_edit) {
 if (!isset($_POST['claim_date']))
 	$_POST['claim_date'] = Today();
 
+table_section(1);
 label_cell(_('Select Item:'));
 stock_items_list_cells(null, 'stock_id', null, false, false, true);
 
@@ -512,6 +513,8 @@ submit_row('check_warranty', _('Check Warranty Validity'), true, '', '', false);
 
 date_row(_('Claim Date:'), 'claim_date');
 
+
+table_section(2);
 $issue_types = get_warranty_issue_types();
 array_selector_row(_('Issue Type:'), 'issue_type', get_post('issue_type'), $issue_types);
 
@@ -524,7 +527,7 @@ users_list_row(_('Assigned To:'), 'assigned_to', get_post('assigned_to'), true, 
 
 textarea_row(_('Notes:'), 'notes', get_post('notes'), 50, 3);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 

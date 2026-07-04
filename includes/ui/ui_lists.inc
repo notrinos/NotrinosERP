@@ -918,8 +918,10 @@ function stock_items_list($name, $selected_id=null, $all_option=false, $submit_o
 			'order' => array('c.description','stock_id'),
 			'editlink' => $editkey ? add_edit_combo('item', $name) : false,
 			'editable' => false,
+			'layout_class' => empty($opts['layout_class']) ? 'combo-layout-equal' : $opts['layout_class'],
 			'max' => 255
 		  ), $opts), $type );
+
 
 	return $ret;
 }
