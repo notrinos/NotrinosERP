@@ -220,7 +220,6 @@ $edit_id = find_submit('Edit');
 if ($edit_id > 0) {
 	$selected_id = $edit_id;
 	$Ajax->activate('mr_detail');
-	add_scroll_into_view('mr_detail');
 }
 
 // --- View button from list ---
@@ -228,14 +227,12 @@ $view_id = find_submit('View');
 if ($view_id > 0) {
 	$selected_id = $view_id;
 	$Ajax->activate('mr_detail');
-	add_scroll_into_view('mr_detail');
 }
 
 // --- New button ---
 if ($is_new_request) {
 	$selected_id = -1;
 	$Ajax->activate('mr_detail');
-	add_scroll_into_view('mr_detail');
 }
 
 // =====================================================================
@@ -299,7 +296,7 @@ if (!empty(get_post('filter_warehouse')) && get_post('filter_warehouse') != 'all
 
 div_start('mr_list');
 $requests = get_material_requests_filtered($filters, 100);
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, "width='100%'");
 $th = array('#', _('Request #'), _('Type'), _('Status'), _('Warehouse'),
 	_('Lines'), _('Total Qty'), _('Fulfilled'), _('Request Date'), _('Required Date'),
 	_('Requested By'), '');
@@ -346,9 +343,7 @@ div_end();
 // =====================================================================
 
 div_start('mr_detail');
-if ($selected_id > 0 && !in_ajax()) {
-	add_scroll_into_view('mr_detail');
-}
+
 if ($selected_id > 0 || $is_new_request) {
 	$editing = false;
 	$mr = null;
