@@ -9,6 +9,11 @@
 	--erp-data-table-radius: var(--modern-radius-sm, 8px);
 }
 
+/* ── Extra height for data table ── */
+.erp-data-table:has(table.extra-height-data-table) {
+	--erp-data-table-height: 640px;
+}
+
 /*	── FIELDSET ── */
 fieldset {
 	margin: 10px 0;

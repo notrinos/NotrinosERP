@@ -223,6 +223,7 @@ function start_table($class=false, $extra='', $padding='2', $spacing='0') {
 		return;
 	}
 
+	// when calling start_table(TABLESTYLE_DATA) add second parameter 'class="extra-height-data-table"' to get more heigher table
 	$table_class = $class == TABLESTYLE_DATA ? 'tablestyle data-grid' : 'tablestyle';
 
 	if ($extra != '' && preg_match('/class\s*=\s*[\"\']([^\"\']+)[\"\']/i', $extra, $class_match)) {

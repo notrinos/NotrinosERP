@@ -123,7 +123,7 @@ if (!empty($_POST['filter_tag']) && $_POST['filter_tag'] > 0) {
 
 $result = crm_leads_entity::get_all_joined($filters);
 
-start_table(TABLESTYLE_DATA);
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 
 $th = array(
     _('Ref'), _('Title'), _('Company'), _('Contact'), _('Email'),

@@ -92,7 +92,7 @@ $result = crm_leads_entity::get_all_joined($filters);
 
 div_start('opp_result');
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 
 $th = array(
     _('Ref'), _('Title'), _('Company'), _('Stage'), _('Probability'),
@@ -126,7 +126,7 @@ while ($myrow = db_fetch($result)) {
     }
 
     echo "<td><a href='" . $path_to_root . "/crm/transactions/opportunity_entry.php?LeadID="
-        . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
+        . $myrow['id'] . crm_sel_app_param() . "'>" . set_icon(ICON_EDIT2, _('Edit')) . "</a></td>";
 
     end_row();
 
