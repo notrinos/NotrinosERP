@@ -901,4 +901,71 @@
 
 	// Start watching for DOM changes to re-bind scrollbars
 	observeDataTableScrollbars();
+
+	/**
+	* Observe DOM mutations and automatically bind click handlers for
+	* checkbox rows inserted after the initial page load.
+	*
+	* Many ERP screens replace portions of the form via AJAX, creating new
+	* `.form-group` / `.form-check-row` elements after
+	* `bindClickableCheckboxRows()` has already executed. Without additional
+	* initialization, these dynamically inserted rows would not receive the
+	* click-to-toggle behavior.
+	*
+	* This observer watches for newly added DOM nodes and re-runs
+	* `bindClickableCheckboxRows()`. The binding function is idempotent and
+	* skips rows already marked with `data-checkbox-row-bound="1"`, so only
+	* newly inserted checkbox rows are initialized.
+	*
+	* This approach provides AJAX compatibility while preserving the existing
+	* event-binding implementation. It serves as an intermediate solution
+	* until the renderer is fully refactored to use delegated event handling,
+	* at which point this observer can be removed.
+	*/
+	function observeCheckboxRows() {
+		if (typeof MutationObserver === 'undefined') {
+			return;
+		}
+
+		var observer = new MutationObserver(function (mutations) {
+			var needsRefresh = false;
+
+			for (var i = 0; i < mutations.length; i++) {
+				var addedNodes = mutations[i].addedNodes;
+
+				for (var j = 0; j < addedNodes.length; j++) {
+					if (addedNodes[j].nodeType !== 1) {
+						continue;
+					}
+
+					if (
+						(addedNodes[j].classList &&
+							(addedNodes[j].classList.contains('form-group') ||
+							addedNodes[j].classList.contains('form-check-row'))) ||
+						(addedNodes[j].querySelector &&
+							addedNodes[j].querySelector('.form-group, .form-check-row'))
+					) {
+						needsRefresh = true;
+						break;
+					}
+				}
+
+				if (needsRefresh) {
+					break;
+				}
+			}
+
+			if (needsRefresh) {
+				bindClickableCheckboxRows();
+			}
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true
+		});
+	}
+
+	// Start watching for AJAX-inserted checkbox rows.
+	observeCheckboxRows();
 })();
