@@ -502,6 +502,9 @@ class renderer {
 		$app_shell_style = "--modern-app-accent: ".$app_theme_colors['accent']."; --modern-app-accent-soft: ".$app_theme_colors['soft'].";";
 
 		echo "<div id='modern-app-shell' class='modern-app-shell' style='".$app_shell_style."'>";
+		// Synchronous inline script: apply collapsed class before first paint
+		// to prevent flash-of-expanded-sidebar when reloading with collapsed state.
+		echo "<script>!function(){try{var s='modernSidebarCollapsed';if(window.localStorage.getItem(s)==='1'){var e=document.getElementById('modern-app-shell');if(e)e.classList.add('modern-sidebar-collapsed')}}catch(t){}}();</script>";
 
 		if (!$no_menu) {
 			echo "<header class='modern-topbar'>";
