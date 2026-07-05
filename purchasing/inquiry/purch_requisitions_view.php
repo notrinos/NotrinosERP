@@ -92,7 +92,7 @@ if (!empty($department_summary)) {
 	echo '</div>';
 }
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 $th = array(
 	_('Reference'),
 	_('Status'),

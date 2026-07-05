@@ -93,7 +93,7 @@ if (!empty($status_summary)) {
 	echo '</div>';
 }
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 table_header(array(
 	_('Reference'),
 	_('Type'),
