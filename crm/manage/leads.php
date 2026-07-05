@@ -123,7 +123,7 @@ if (!empty($_POST['filter_tag']) && $_POST['filter_tag'] > 0) {
 
 $result = crm_leads_entity::get_all_joined($filters);
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA);
 
 $th = array(
     _('Ref'), _('Title'), _('Company'), _('Contact'), _('Email'),
@@ -166,9 +166,9 @@ while ($myrow = db_fetch($result)) {
         echo "<td>-</td>";
     }
     
-    echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
+    echo "<td><a style='color:#dc2626;' href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
         . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure deactive the selected lead ?') . "');\">"
-        . _('Deactivate') . "</a></td>";
+        . set_icon(ICON_CLOSED, _('Deactivate')) . "</a></td>";
 
     end_row();
 }
