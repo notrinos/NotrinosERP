@@ -154,6 +154,7 @@ table td,
 table th {
 	padding: 6px 8px;
 	border-color: #dbe3ef;
+	font-size: 12px;
 }
 
 table td.stickyheader {
