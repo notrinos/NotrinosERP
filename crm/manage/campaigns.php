@@ -66,13 +66,14 @@ $sql = "SELECT c.*, src.name AS source_name,
         FROM " . TB_PREF . "crm_campaigns c
         LEFT JOIN " . TB_PREF . "crm_lead_sources src ON c.lead_source_id = src.id
         WHERE 1=1";
-if (!empty($filters['status'])) $sql .= " AND c.status = " . db_escape($filters['status']);
+if (!empty($filters['status']))
+    $sql .= " AND c.status = " . db_escape($filters['status']);
 $sql .= " ORDER BY c.created_date DESC";
 $result = db_query($sql);
 
 div_start('campaigns_result');
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 
 $th = array(
     _('ID'), _('Name'), _('Type'), _('Status'), _('Start'), _('End'),
@@ -92,12 +93,10 @@ while ($myrow = db_fetch($result)) {
     label_cell($myrow['end_date'] ? sql2date($myrow['end_date']) : '-');
     amount_cell($myrow['budget']);
     label_cell($myrow['lead_count'], "align='center'");
-
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/campaign_entry.php?CampaignID="
-        . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
-    echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
-        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this campaign?') . "');\">"
-        . _('Delete') . "</a></td>";
+    hyperlink_params_td($path_to_root . '/crm/transactions/campaign_entry.php', _('Edit'), "CampaignID=".$myrow['id'].crm_sel_app_param(), ICON_EDIT2);
+    echo "<td><a style='color:#dc2626;' href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
+        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure delete the selected campaign ?') . "');\">"
+        . set_icon(ICON_CLOSED, _('Delete')) . "</a></td>";
 
     end_row();
 }
