@@ -301,8 +301,8 @@ function filter_cell_close() {
  * @return void
  */
 function start_fieldset($legend='') {
-	echo '<fieldset style="margin:10px 0;padding:10px 15px;border:1px solid #ddd;border-radius:4px;">';
-	echo '<legend style="font-weight:600;">' . $legend . '</legend>';
+	echo '<fieldset>';
+	echo '<legend>' . $legend . '</legend>';
 }
 
 /**

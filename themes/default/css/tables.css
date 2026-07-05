@@ -9,6 +9,18 @@
 	--erp-data-table-radius: var(--modern-radius-sm, 8px);
 }
 
+/*	── FIELDSET ── */
+fieldset {
+	margin: 10px 0;
+	padding: 10px 15px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+legend {
+	font-weight: 600;
+}
+
 .erp-data-table {
 	position: relative;
 	max-height: var(--erp-data-table-height);
