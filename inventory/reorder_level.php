@@ -44,16 +44,18 @@ if (list_updated('stock_id')) {
 $action = $_SERVER['PHP_SELF'];
 if ($page_nested)
 	$action .= '?stock_id='.get_post('stock_id');
+
 start_form(false, $action);
 
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
 if (!$page_nested) {
-	echo '<center>'._('Item:').'&nbsp;';
-	echo stock_costable_items_list('stock_id', $_POST['stock_id'], false, true);
-
-	echo '<hr></center>';
+	start_table(TABLESTYLE_NOBORDER);
+	start_row();
+	stock_costable_items_list_cells(_('Item:'), 'stock_id', $_POST['stock_id'], false, true);
+	end_row();
+	end_table();
 }
 else
 	br(2);
@@ -68,9 +70,8 @@ div_start('reorders');
 start_table(TABLESTYLE);
 
 $th = array(_('Location'), _('Quantity On Hand'), _('Re-Order Level'));
-table_header($th);
+table_header_sticky($th);
 
-$j = 1;
 $k=0; //row colour counter
 
 $result = get_loc_details($_POST['stock_id']);
@@ -95,11 +96,6 @@ while ($myrow = db_fetch($result)) {
 	qty_cell($qoh, false, $dec);
 	qty_cells(null, $myrow['loc_code'], null, null, null, $dec);
 	end_row();
-	$j++;
-	if ($j == 12) {
-		$j = 1;
-		table_header($th);
-	}
 }
 
 end_table(1);
