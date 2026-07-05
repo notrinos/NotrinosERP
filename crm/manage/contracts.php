@@ -75,7 +75,7 @@ $result = get_crm_contracts($filters);
 
 div_start('contracts_result');
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 
 $th = array(
     _('Ref'), _('Title'), _('Customer'), _('Value'), _('Start'), _('End'),
@@ -94,12 +94,10 @@ while ($myrow = db_fetch($result)) {
     label_cell($myrow['start_date'] ? sql2date($myrow['start_date']) : '-');
     label_cell($myrow['end_date'] ? sql2date($myrow['end_date']) : '-');
     label_cell(crm_status_badge($myrow['status']));
-
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/contract_entry.php?ContractID="
-        . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
-    echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
-        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this contract?') . "');\">"
-        . _('Delete') . "</a></td>";
+    hyperlink_params_td($path_to_root . '/crm/transactions/contract_entry.php', _('Edit'), "ContractID=" . $myrow['id'] . crm_sel_app_param(), ICON_EDIT2);
+    echo "<td><a style='color:#dc2626;' href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
+        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure delete the selected contract ?') . "');\">"
+        . set_icon(ICON_CLOSED, _('Delete')) . "</a></td>";
 
     end_row();
 }
