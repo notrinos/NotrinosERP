@@ -235,7 +235,7 @@ submit_add_or_update_center($selected_id == '', '', 'both');
 
 br();
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 $th = array(_('ID'), _('Employee'), _('Leave Type'), _('From'), _('To'), _('Days'), _('Reason'), _('Status'), _('Requested On'), '', '');
 table_header($th);
 
