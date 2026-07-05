@@ -80,7 +80,7 @@ $result = get_crm_appointments($filters);
 
 div_start('appointments_result');
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 
 $th = array(
     _('ID'), _('Title'), _('Type'), _('Date/Time'), _('Duration'),
@@ -99,12 +99,10 @@ while ($myrow = db_fetch($result)) {
     label_cell($myrow['lead_title'] ?: ($myrow['customer_name'] ?: '-'));
     label_cell(crm_activity_status_badge($myrow['status']));
     label_cell($myrow['location'] ?: '-');
-
-    echo "<td><a href='" . $path_to_root . "/crm/transactions/appointment_entry.php?AppointmentID="
-        . $myrow['id'] . crm_sel_app_param() . "'>" . _('Edit') . "</a></td>";
-    echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
-        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Delete this appointment?') . "');\">"
-        . _('Delete') . "</a></td>";
+    hyperlink_params_td($path_to_root . '/crm/transactions/appointment_entry.php', _('Edit'), "AppointmentID=".$myrow['id'].crm_sel_app_param(), ICON_EDIT2);
+    echo "<td><a style='color:#dc2626;' href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
+        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure delete the selected appointment ?') . "');\">"
+        . set_icon(ICON_THRASH, _('Delete')) . "</a></td>";
 
     end_row();
 }
