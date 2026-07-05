@@ -151,6 +151,12 @@ table th {
 	border-color: #dbe3ef;
 }
 
+table td.stickyheader {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+}
+
 table.tablestyle,
 table.tablestyle2,
 table.tablestyle_noborder,

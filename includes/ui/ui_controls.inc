@@ -582,6 +582,25 @@ function table_header($labels, $params='') {
 	end_row();
 }
 
+function table_header_sticky($labels, $params='') {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='table-header-row'>";
+		foreach ($labels as $label)
+			echo "<span class='table-header-cell' ".$params.">".$label."</span>";
+		echo "</div>\n";
+		return;
+	}
+
+	start_row();
+	foreach ($labels as $label) {
+		if (ui_current_table_mode() == 'table')
+			echo "<td class='tableheader stickyheader' ".$params.">".$label."</td>\n";
+		else
+			echo "<span class='table-header-cell' ".$params.">".$label."</span>\n";
+	}
+	end_row();
+}
+
 //-----------------------------------------------------------------------------------
 
 function start_row($param='') {
