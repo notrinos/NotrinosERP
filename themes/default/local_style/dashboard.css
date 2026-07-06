@@ -40,7 +40,7 @@ div.widget_quarter {
 }
 
 div.widget.widget-small-stat {
-	height: 110px;
+	height: auto;
 	min-height: 110px;
 }
 
@@ -53,11 +53,13 @@ div.widget.widget-small-stat div.widget_content {
 	display: flex;
 	align-items: stretch;
 	justify-content: stretch;
+	overflow: visible;
 }
 
 div.widget.widget-small-stat .dashboard-small-stat {
 	border-radius: 0;
-	min-height: 100%;
+	min-height: 110px;
+	height: auto;
 }
 
 div.widget_title {
@@ -133,6 +135,12 @@ div.widget.widget-has-chart div.widget_content svg {
 	width: 100% !important;
 	height: 100% !important;
 	object-fit: contain;
+}
+
+div.widget.widget-small-stat div.widget_content {
+	overflow: visible;
+	align-items: stretch;
+	justify-content: stretch;
 }
 
 .widget_content table {

@@ -1139,11 +1139,12 @@ html[dir='rtl'] .modern-app-icon {
 	text-align: left;
 	display: grid;
 	grid-template-areas: "icon value" "label label";
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	align-items: center;
 	gap: 12px;
 	column-gap: 16px;
 	row-gap: 8px;
+	overflow: hidden;
 }
 
 .dashboard-small-stat-icon {
@@ -1160,11 +1161,16 @@ html[dir='rtl'] .modern-app-icon {
 
 .dashboard-small-stat-value {
 	grid-area: value;
-	font-size: 26px;
+	min-width: 0;
+	max-width: 100%;
+	font-size: clamp(18px, 2.1vw, 26px);
 	font-weight: 700;
 	line-height: 1.15;
 	letter-spacing: 0.01em;
 	align-self: center;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	font-variant-numeric: tabular-nums;
 }
 
 .dashboard-small-stat-label {
