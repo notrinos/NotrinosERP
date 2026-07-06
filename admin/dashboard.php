@@ -125,10 +125,10 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidgetWithClass(DA_GL, 712, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_GL, 713, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_GL, 714, WIDGET_QUARTER, 'widget-small-stat');
-	$dashboard->addWidget(DA_GL, 701, WIDGET_HALF);
-	$dashboard->addWidget(DA_GL, 704, WIDGET_HALF);
 	$dashboard->addWidget(DA_GL, 703, WIDGET_HALF);
+	$dashboard->addWidget(DA_GL, 701, WIDGET_HALF);
 	$dashboard->addWidget(DA_GL, 702, WIDGET_HALF);
+	$dashboard->addWidget(DA_GL, 704, WIDGET_HALF);
 
 	$dashboard->addDashboard(_('Human Resources'), DA_HRM);
 	$dashboard->addWidgetWithClass(DA_HRM, 911, WIDGET_QUARTER, 'widget-small-stat');
