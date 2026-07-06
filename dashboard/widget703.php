@@ -30,7 +30,8 @@ while ($myrow = db_fetch($result)) {
 	elseif ($myrow['ctype'] == 2)
 		$liabilities += $myrow['total'];
 }
-$return = abs(-$total);
+$calculated_return = -$total;
+$return = abs($calculated_return);
 $class_total = $income + $cost + $return;
 
 $chart_id = 'class_balance_' . substr(md5(uniqid('', true)), 0, 10);
@@ -49,7 +50,7 @@ $chart_data = array(
 		'liabilities' => _('Liabilities'),
 	),
 	'values' => array(
-		'calculated' => number_format2($return, user_price_dec()),
+		'calculated' => number_format2($calculated_return, user_price_dec()),
 		'income' => number_format2($income, user_price_dec()),
 		'cost' => number_format2($cost, user_price_dec()),
 		'assets' => number_format2(abs($assets), 2),
