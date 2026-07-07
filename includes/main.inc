@@ -134,7 +134,7 @@ function force_open($fname) {
 		}
 		$path .= '/';
 	}
-	return fopen($fname, 'w');
+	return @fopen($fname, 'w');
 }
 
 function add_js_file($filename) {
