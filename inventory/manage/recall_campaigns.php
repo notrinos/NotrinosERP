@@ -62,12 +62,16 @@ if ($Mode == 'Delete') {
 $execute_recall_id = find_submit('exec_recall_');
 if ($execute_recall_id > 0) {
 	$result_exec = execute_recall_campaign((int)$execute_recall_id);
-	display_notification(sprintf(
-		_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
-		$result_exec['serials_added'],
-		$result_exec['serials_quarantined'],
-		$result_exec['batches_added']
-	));
+	if (isset($result_exec['error'])) {
+		display_error($result_exec['error']);
+	} else {
+		display_notification(sprintf(
+			_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
+			$result_exec['serials_added'],
+			$result_exec['serials_quarantined'],
+			$result_exec['batches_added']
+		));
+	}
 	$Ajax->activate('_page_body');
 }
 
@@ -76,33 +80,45 @@ if ($execute_recall_id > 0) {
 //----------------------------------------------------------------------
 $activate_campaign_id = find_submit('activate_campaign_');
 if ($activate_campaign_id > 0) {
-	update_recall_campaign_status((int)$activate_campaign_id, 'active');
-	display_notification(sprintf(_('Campaign status changed to %s.'),
-		get_recall_campaign_status_label('active')));
+	$status_result = update_recall_campaign_status((int)$activate_campaign_id, 'active');
+	if ($status_result === true)
+		display_notification(sprintf(_('Campaign status changed to %s.'),
+			get_recall_campaign_status_label('active')));
+	else
+		display_error($status_result);
 	$Ajax->activate('_page_body');
 }
 
 $progress_campaign_id = find_submit('progress_campaign_');
 if ($progress_campaign_id > 0) {
-	update_recall_campaign_status((int)$progress_campaign_id, 'in_progress');
-	display_notification(sprintf(_('Campaign status changed to %s.'),
-		get_recall_campaign_status_label('in_progress')));
+	$status_result = update_recall_campaign_status((int)$progress_campaign_id, 'in_progress');
+	if ($status_result === true)
+		display_notification(sprintf(_('Campaign status changed to %s.'),
+			get_recall_campaign_status_label('in_progress')));
+	else
+		display_error($status_result);
 	$Ajax->activate('_page_body');
 }
 
 $complete_campaign_id = find_submit('complete_campaign_');
 if ($complete_campaign_id > 0) {
-	update_recall_campaign_status((int)$complete_campaign_id, 'completed');
-	display_notification(sprintf(_('Campaign status changed to %s.'),
-		get_recall_campaign_status_label('completed')));
+	$status_result = update_recall_campaign_status((int)$complete_campaign_id, 'completed');
+	if ($status_result === true)
+		display_notification(sprintf(_('Campaign status changed to %s.'),
+			get_recall_campaign_status_label('completed')));
+	else
+		display_error($status_result);
 	$Ajax->activate('_page_body');
 }
 
 $cancel_campaign_id = find_submit('cancel_campaign_');
 if ($cancel_campaign_id > 0) {
-	update_recall_campaign_status((int)$cancel_campaign_id, 'cancelled');
-	display_notification(sprintf(_('Campaign status changed to %s.'),
-		get_recall_campaign_status_label('cancelled')));
+	$status_result = update_recall_campaign_status((int)$cancel_campaign_id, 'cancelled');
+	if ($status_result === true)
+		display_notification(sprintf(_('Campaign status changed to %s.'),
+			get_recall_campaign_status_label('cancelled')));
+	else
+		display_error($status_result);
 	$Ajax->activate('_page_body');
 }
 
@@ -113,14 +129,15 @@ if (get_post('update_item_status')) {
 	$item_id = (int)get_post('recall_item_id');
 	$new_item_status = get_post('item_new_status');
 	$item_notes = get_post('item_status_notes');
-	$valid = array_keys(get_recall_item_statuses());
-	if (in_array($new_item_status, $valid)) {
+	$recall_id = (int)get_post('item_recall_id');
+	$can_update_item = can_update_recall_item_status($item_id, $new_item_status, $recall_id);
+	if ($can_update_item === true) {
 		update_recall_item_status($item_id, $new_item_status, $item_notes);
-		// Update campaign totals
-		$recall_id = (int)get_post('item_recall_id');
 		update_recall_campaign_totals($recall_id);
 		display_notification(sprintf(_('Recall item status updated to %s.'),
-			get_recall_item_statuses()[$new_item_status]));
+			get_recall_item_status_label($new_item_status)));
+	} else {
+		display_error($can_update_item);
 	}
 	$Ajax->activate('_page_body');
 }
@@ -144,6 +161,70 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		$input_error = 1;
 		display_error(_('Please select an affected item.'));
 	}
+	if (!is_date(get_post('start_date'))) {
+		$input_error = 1;
+		display_error(_('Please enter a valid start date.'));
+	}
+	if (get_post('end_date') && !is_date(get_post('end_date'))) {
+		$input_error = 1;
+		display_error(_('Please enter a valid end date.'));
+	}
+	if (is_date(get_post('start_date')) && get_post('end_date') && is_date(get_post('end_date'))
+		&& date2sql(get_post('end_date')) < date2sql(get_post('start_date'))) {
+		$input_error = 1;
+		display_error(_('End date cannot be before start date.'));
+	}
+	$recall_types = get_recall_types();
+	if (!isset($recall_types[get_post('recall_type')])) {
+		$input_error = 1;
+		display_error(_('Please select a valid recall type.'));
+	}
+	$severity_levels = get_recall_severity_levels();
+	if (!isset($severity_levels[get_post('severity')])) {
+		$input_error = 1;
+		display_error(_('Please select a valid severity.'));
+	}
+	if ((get_post('affected_serial_from') && !get_post('affected_serial_to'))
+		|| (!get_post('affected_serial_from') && get_post('affected_serial_to'))) {
+		$input_error = 1;
+		display_error(_('Please enter both serial range values, or leave both blank.'));
+	}
+	if (get_post('affected_serial_from') && get_post('affected_serial_to')
+		&& strcmp(get_post('affected_serial_from'), get_post('affected_serial_to')) > 0) {
+		$input_error = 1;
+		display_error(_('Serial range start cannot be greater than serial range end.'));
+	}
+	if (get_post('affected_date_from') && !is_date(get_post('affected_date_from'))) {
+		$input_error = 1;
+		display_error(_('Please enter a valid manufacturing date from.'));
+	}
+	if (get_post('affected_date_to') && !is_date(get_post('affected_date_to'))) {
+		$input_error = 1;
+		display_error(_('Please enter a valid manufacturing date to.'));
+	}
+	if (get_post('affected_date_from') && get_post('affected_date_to')
+		&& is_date(get_post('affected_date_from')) && is_date(get_post('affected_date_to'))
+		&& date2sql(get_post('affected_date_to')) < date2sql(get_post('affected_date_from'))) {
+		$input_error = 1;
+		display_error(_('Manufacturing date to cannot be before manufacturing date from.'));
+	}
+
+	list($normalized_batch_ids, $batch_id_error) = normalize_recall_batch_id_list(get_post('affected_batch_ids'));
+	if ($batch_id_error) {
+		$input_error = 1;
+		display_error($batch_id_error);
+	}
+
+	if ($Mode == 'UPDATE_ITEM') {
+		$existing_campaign = get_recall_campaign($selected_id);
+		if (!$existing_campaign) {
+			$input_error = 1;
+			display_error(_('Recall campaign not found.'));
+		} elseif ($existing_campaign['status'] !== 'draft') {
+			$input_error = 1;
+			display_error(_('Only draft recall campaigns can be edited.'));
+		}
+	}
 
 	if ($input_error != 1) {
 		$affected_date_from = get_post('affected_date_from');
@@ -160,7 +241,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('severity'),
 				get_post('start_date'),
 				get_post('end_date'),
-				get_post('affected_batch_ids'),
+				$normalized_batch_ids,
 				get_post('affected_serial_from'),
 				get_post('affected_serial_to'),
 				$affected_date_from,
@@ -180,7 +261,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('severity'),
 				get_post('start_date'),
 				get_post('end_date'),
-				get_post('affected_batch_ids'),
+				$normalized_batch_ids,
 				get_post('affected_serial_from'),
 				get_post('affected_serial_to'),
 				$affected_date_from,
@@ -274,7 +355,7 @@ $filter_status = get_post('filter_status');
 
 $result = get_recall_campaigns($filter_stock, $filter_status);
 
-start_table(TABLESTYLE, "width='100%'");
+start_table(TABLESTYLE_DATA);
 $th = array(_('#'), _('Reference'), _('Title'), _('Item'), _('Type'), _('Severity'),
 	_('Status'), _('Affected'), _('Recovered'), _('Progress'), '', '', '');
 table_header($th);
@@ -285,14 +366,15 @@ while ($row = db_fetch($result)) {
 
 	label_cell($row['id']);
 
-	$link = '<a href="' . $path_to_root . '/inventory/view/view_recall.php?id=' . $row['id'] . '">' . $row['reference'] . '</a>';
+	$link = '<a href="' . $path_to_root . '/inventory/view/view_recall.php?id=' . (int)$row['id'] . '">'
+		. htmlspecialchars($row['reference']) . '</a>';
 	label_cell($link);
 
 	label_cell(htmlspecialchars($row['title']));
-	label_cell($row['item_description'] . ' (' . $row['stock_id'] . ')');
+	label_cell(htmlspecialchars($row['item_description']) . ' (' . htmlspecialchars($row['stock_id']) . ')');
 
 	$recall_types = get_recall_types();
-	label_cell(isset($recall_types[$row['recall_type']]) ? $recall_types[$row['recall_type']] : $row['recall_type']);
+	label_cell(htmlspecialchars(isset($recall_types[$row['recall_type']]) ? $recall_types[$row['recall_type']] : $row['recall_type']));
 	label_cell(recall_severity_badge($row['severity']));
 	label_cell(recall_campaign_status_badge($row['status']));
 

@@ -87,7 +87,7 @@ function get_customer_equipment($customer_id, $stock_id = '', $warranty_filter =
 			break;
 	}
 
-	$sql .= " ORDER BY sn.delivery_date DESC, sn.serial_no";
+	$sql .= " ORDER BY sn.delivery_date DESC, sn.id DESC, sn.serial_no";
 
 	if ($limit > 0)
 		$sql .= " LIMIT " . (int)$offset . ", " . (int)$limit;
@@ -312,6 +312,8 @@ function get_sql_for_customer_equipment($customer_id, $stock_id = '', $warranty_
 			$sql .= " AND sn.warranty_end IS NOT NULL AND sn.warranty_end >= '$today' AND sn.warranty_end <= '$soon'";
 			break;
 	}
+
+	$sql .= " ORDER BY sn.delivery_date DESC, sn.id DESC, sn.serial_no";
 
 	return $sql;
 }

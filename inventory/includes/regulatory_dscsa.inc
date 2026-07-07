@@ -121,13 +121,13 @@ function generate_dscsa_transaction_info($delivery_id, $delivery_date, $customer
 	$receiver_name = $customer ? $customer['name'] : '';
 
 	// Get delivery line items
-	$sql = "SELECT dl.stock_id, dl.qty_dispatched, dl.standard_cost,
+	$sql = "SELECT dl.stock_id, ABS(dl.quantity) AS qty_dispatched, dl.standard_cost,
 			sm.description, sm.long_description
 		FROM " . TB_PREF . "debtor_trans_details dl
 		INNER JOIN " . TB_PREF . "stock_master sm ON dl.stock_id = sm.stock_id
 		WHERE dl.debtor_trans_no=" . (int)$delivery_id
 		. " AND dl.debtor_trans_type=" . ST_CUSTDELIVERY
-		. " AND dl.qty_dispatched != 0";
+		. " AND dl.quantity != 0";
 
 	$lines = db_query($sql, 'could not get delivery lines for DSCSA');
 

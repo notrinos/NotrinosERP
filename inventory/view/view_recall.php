@@ -56,15 +56,21 @@ if (!$campaign) {
 // Handle batch actions via POST
 // =====================================================================
 if (isset($_POST['batch_mark_notified'])) {
-	$count = batch_update_recall_items_by_status($campaign_id, 'identified', 'notified',
-		_('Batch notified via recall view'));
-	display_notification(sprintf(_('%d items marked as notified.'), $count));
-	$campaign = get_recall_campaign($campaign_id);
+	if (in_array($campaign['status'], array('completed', 'cancelled'))) {
+		display_error(_('Recall items cannot be updated after the campaign is completed or cancelled.'));
+	} else {
+		$count = batch_update_recall_items_by_status($campaign_id, 'identified', 'notified',
+			_('Batch notified via recall view'));
+		display_notification(sprintf(_('%d items marked as notified.'), $count));
+		$campaign = get_recall_campaign($campaign_id);
+	}
 }
 
 if (isset($_POST['mark_customer_notified'])) {
 	$cust_id = (int)$_POST['notify_customer_id'];
-	if ($cust_id) {
+	if (in_array($campaign['status'], array('completed', 'cancelled'))) {
+		display_error(_('Recall items cannot be updated after the campaign is completed or cancelled.'));
+	} elseif ($cust_id) {
 		$count = mark_customer_notified($campaign_id, $cust_id,
 			_('Marked notified from recall view'));
 		display_notification(sprintf(_('%d items for customer marked as notified.'), $count));
@@ -75,12 +81,16 @@ if (isset($_POST['mark_customer_notified'])) {
 // Handle Execute Recall from view page
 if (isset($_POST['execute_recall_view'])) {
 	$result_exec = execute_recall_campaign($campaign_id);
-	display_notification(sprintf(
-		_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
-		$result_exec['serials_added'],
-		$result_exec['serials_quarantined'],
-		$result_exec['batches_added']
-	));
+	if (isset($result_exec['error'])) {
+		display_error($result_exec['error']);
+	} else {
+		display_notification(sprintf(
+			_('Recall executed: %d serials added, %d serials flagged recalled, %d batches added.'),
+			$result_exec['serials_added'],
+			$result_exec['serials_quarantined'],
+			$result_exec['batches_added']
+		));
+	}
 	$campaign = get_recall_campaign($campaign_id);
 	$Ajax->activate('_page_body');
 }
@@ -94,9 +104,12 @@ $view_status_map = array(
 );
 foreach ($view_status_map as $prefix => $target_status) {
 	if (find_submit($prefix) != -1) {
-		update_recall_campaign_status($campaign_id, $target_status);
-		display_notification(sprintf(_('Campaign status changed to %s.'),
-			get_recall_campaign_status_label($target_status)));
+		$status_result = update_recall_campaign_status($campaign_id, $target_status);
+		if ($status_result === true)
+			display_notification(sprintf(_('Campaign status changed to %s.'),
+				get_recall_campaign_status_label($target_status)));
+		else
+			display_error($status_result);
 		$campaign = get_recall_campaign($campaign_id);
 		$Ajax->activate('_page_body');
 		break;
@@ -209,7 +222,7 @@ echo '<td class="label">' . _('Title') . ':</td><td>' . htmlspecialchars($campai
 
 echo '<tr><td class="label">' . _('Item') . ':</td><td>' . htmlspecialchars($campaign['item_description']) . ' (' . htmlspecialchars($campaign['stock_id']) . ')</td>';
 $recall_types = get_recall_types();
-echo '<td class="label">' . _('Recall Type') . ':</td><td>' . (isset($recall_types[$campaign['recall_type']]) ? $recall_types[$campaign['recall_type']] : $campaign['recall_type']) . '</td></tr>';
+echo '<td class="label">' . _('Recall Type') . ':</td><td>' . htmlspecialchars(isset($recall_types[$campaign['recall_type']]) ? $recall_types[$campaign['recall_type']] : $campaign['recall_type']) . '</td></tr>';
 
 echo '<tr><td class="label">' . _('Severity') . ':</td><td>' . recall_severity_badge($campaign['severity']) . '</td>';
 echo '<td class="label">' . _('Status') . ':</td><td>' . recall_campaign_status_badge($campaign['status']) . '</td></tr>';

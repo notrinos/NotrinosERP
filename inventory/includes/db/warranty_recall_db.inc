@@ -550,6 +550,69 @@ function get_recall_campaign_statuses()
 }
 
 /**
+ * Get allowed status transitions for a recall campaign status.
+ *
+ * @param string $status Current campaign status
+ * @return array List of allowed target status codes
+ */
+function get_recall_campaign_status_transitions($status)
+{
+	$transitions = array(
+		'draft'       => array('active', 'in_progress', 'cancelled'),
+		'active'      => array('in_progress', 'cancelled'),
+		'in_progress' => array('completed', 'cancelled'),
+		'completed'   => array(),
+		'cancelled'   => array(),
+	);
+	return isset($transitions[$status]) ? $transitions[$status] : array();
+}
+
+/**
+ * Check whether a recall campaign can move to a target status.
+ *
+ * @param int    $id     Campaign id
+ * @param string $status Target status code
+ * @return bool|string True when allowed, otherwise translated error text
+ */
+function can_update_recall_campaign_status($id, $status)
+{
+	$statuses = get_recall_campaign_statuses();
+	if (!isset($statuses[$status]))
+		return _('Invalid recall campaign status.');
+
+	$campaign = get_recall_campaign($id);
+	if (!$campaign)
+		return _('Recall campaign not found.');
+
+	if ($campaign['status'] === $status)
+		return true;
+
+	$allowed = get_recall_campaign_status_transitions($campaign['status']);
+	if (!in_array($status, $allowed))
+		return sprintf(_('Cannot change recall campaign status from %s to %s.'),
+			get_recall_campaign_status_label($campaign['status']),
+			get_recall_campaign_status_label($status));
+
+	return true;
+}
+
+/**
+ * Check whether a recall campaign is eligible for execution.
+ *
+ * @param int $id Campaign id
+ * @return bool|string True when executable, otherwise translated error text
+ */
+function can_execute_recall_campaign($id)
+{
+	$campaign = get_recall_campaign($id);
+	if (!$campaign)
+		return _('Recall campaign not found.');
+	if (!in_array($campaign['status'], array('draft', 'active')))
+		return _('Only draft or active recall campaigns can be executed.');
+	return true;
+}
+
+/**
  * Get display label for a recall campaign status.
  *
  * @param string $status Status code
@@ -644,6 +707,90 @@ function get_recall_item_statuses()
 }
 
 /**
+ * Get allowed status transitions for a recall item status.
+ *
+ * @param string $status Current item status
+ * @return array List of allowed target status codes
+ */
+function get_recall_item_status_transitions($status)
+{
+	$transitions = array(
+		'identified'  => array('notified', 'unreachable'),
+		'notified'    => array('returned', 'unreachable'),
+		'returned'    => array('repaired', 'replaced', 'refunded'),
+		'repaired'    => array(),
+		'replaced'    => array(),
+		'refunded'    => array(),
+		'unreachable' => array(),
+	);
+	return isset($transitions[$status]) ? $transitions[$status] : array();
+}
+
+/**
+ * Get a single recall item.
+ *
+ * @param int $id Recall item id
+ * @return array|false
+ */
+function get_recall_item($id)
+{
+	$sql = "SELECT * FROM " . TB_PREF . "recall_items WHERE id=" . (int)$id;
+	$result = db_query($sql, 'could not get recall item');
+	return db_fetch($result);
+}
+
+/**
+ * Check whether a recall item can move to a target status.
+ *
+ * @param int    $id          Recall item id
+ * @param string $status      Target status code
+ * @param int    $campaign_id Optional campaign id ownership check
+ * @return bool|string True when allowed, otherwise translated error text
+ */
+function can_update_recall_item_status($id, $status, $campaign_id = 0)
+{
+	$statuses = get_recall_item_statuses();
+	if (!isset($statuses[$status]))
+		return _('Invalid recall item status.');
+
+	$item = get_recall_item($id);
+	if (!$item)
+		return _('Recall item not found.');
+
+	if ($campaign_id && (int)$item['recall_id'] !== (int)$campaign_id)
+		return _('Recall item does not belong to this campaign.');
+
+	$campaign = get_recall_campaign($item['recall_id']);
+	if (!$campaign)
+		return _('Recall campaign not found.');
+	if (in_array($campaign['status'], array('completed', 'cancelled')))
+		return _('Recall items cannot be updated after the campaign is completed or cancelled.');
+
+	if ($item['status'] === $status)
+		return true;
+
+	$allowed = get_recall_item_status_transitions($item['status']);
+	if (!in_array($status, $allowed))
+		return sprintf(_('Cannot change recall item status from %s to %s.'),
+			get_recall_item_status_label($item['status']),
+			get_recall_item_status_label($status));
+
+	return true;
+}
+
+/**
+ * Get display label for a recall item status.
+ *
+ * @param string $status Status code
+ * @return string
+ */
+function get_recall_item_status_label($status)
+{
+	$statuses = get_recall_item_statuses();
+	return isset($statuses[$status]) ? $statuses[$status] : $status;
+}
+
+/**
  * Get CSS color for recall item status.
  *
  * @param string $status
@@ -689,6 +836,32 @@ function get_next_recall_campaign_reference()
 		$seq = 1;
 	}
 	return 'RC-' . $year . '-' . str_pad($seq, 5, '0', STR_PAD_LEFT);
+}
+
+/**
+ * Normalize and validate a comma-separated recall batch id list.
+ *
+ * @param string $batch_ids User-entered CSV list
+ * @return array Tuple of normalized CSV string and error text
+ */
+function normalize_recall_batch_id_list($batch_ids)
+{
+	$batch_ids = trim((string)$batch_ids);
+	if ($batch_ids === '')
+		return array('', '');
+
+	$normalized = array();
+	$parts = explode(',', $batch_ids);
+	foreach ($parts as $part) {
+		$part = trim($part);
+		if ($part === '')
+			continue;
+		if (!ctype_digit($part) || (int)$part <= 0)
+			return array('', _('Affected Batch IDs must be a comma-separated list of positive numbers.'));
+		$normalized[(int)$part] = (string)(int)$part;
+	}
+
+	return array(implode(',', $normalized), '');
 }
 
 /**
@@ -803,9 +976,14 @@ function update_recall_campaign($id, $title, $description, $stock_id,
  */
 function update_recall_campaign_status($id, $status)
 {
+	$can = can_update_recall_campaign_status($id, $status);
+	if ($can !== true)
+		return $can;
+
 	$sql = "UPDATE " . TB_PREF . "recall_campaigns SET status=" . db_escape($status)
 		. " WHERE id=" . (int)$id;
 	db_query($sql, 'could not update recall campaign status');
+	return true;
 }
 
 /**
@@ -957,6 +1135,10 @@ function add_recall_item($recall_id, $serial_id = null, $batch_id = null,
  */
 function update_recall_item_status($id, $status, $notes = null)
 {
+	$can = can_update_recall_item_status($id, $status);
+	if ($can !== true)
+		return $can;
+
 	$sets = array("status=" . db_escape($status));
 
 	if ($status === 'notified')
@@ -972,6 +1154,7 @@ function update_recall_item_status($id, $status, $notes = null)
 	$sql = "UPDATE " . TB_PREF . "recall_items SET " . implode(',', $sets)
 		. " WHERE id=" . (int)$id;
 	db_query($sql, 'could not update recall item status');
+	return true;
 }
 
 /**
@@ -1128,6 +1311,10 @@ function execute_recall_campaign($campaign_id)
 	$result = array('serials_added' => 0, 'serials_quarantined' => 0, 'batches_added' => 0);
 	$covered_batch_ids = array();
 
+	$can = can_execute_recall_campaign($campaign_id);
+	if ($can !== true)
+		return array_merge($result, array('error' => $can));
+
 	begin_transaction();
 
 	// Find affected serials
@@ -1236,7 +1423,7 @@ function recall_campaign_status_badge($status)
 	$label = get_recall_campaign_status_label($status);
 	$color = get_recall_campaign_status_color($status);
 	return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;'
-		. 'color:#fff;background-color:' . $color . ';">' . $label . '</span>';
+		. 'color:#fff;background-color:' . $color . ';">' . htmlspecialchars($label) . '</span>';
 }
 
 /**
@@ -1251,7 +1438,7 @@ function recall_severity_badge($severity)
 	$label = isset($levels[$severity]) ? $levels[$severity] : $severity;
 	$color = get_recall_severity_color($severity);
 	return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;'
-		. 'color:#fff;background-color:' . $color . ';">' . $label . '</span>';
+		. 'color:#fff;background-color:' . $color . ';">' . htmlspecialchars($label) . '</span>';
 }
 
 /**
@@ -1266,5 +1453,5 @@ function recall_item_status_badge($status)
 	$label = isset($statuses[$status]) ? $statuses[$status] : $status;
 	$color = get_recall_item_status_color($status);
 	return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;'
-		. 'color:#fff;background-color:' . $color . ';">' . $label . '</span>';
+		. 'color:#fff;background-color:' . $color . ';">' . htmlspecialchars($label) . '</span>';
 }

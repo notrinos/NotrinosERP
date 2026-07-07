@@ -38,17 +38,47 @@ include_once($path_to_root . '/inventory/includes/db/recall_db.inc');
 
 print_recall_status_report();
 
+/**
+ * Read report parameters from POST or GET.
+ *
+ * Reports are normally posted from reports_main.php, while recall detail links
+ * open this report directly with query-string PARAM values.
+ *
+ * @param string $name    Parameter name
+ * @param string $default Default value
+ * @return string
+ */
+function recall_report_param($name, $default = '')
+{
+	if (isset($_POST[$name]))
+		return $_POST[$name];
+	if (isset($_GET[$name]))
+		return $_GET[$name];
+	return $default;
+}
+
 function print_recall_status_report()
 {
 	global $path_to_root;
 
-	$date_from   = $_POST['PARAM_0'];
-	$status      = $_POST['PARAM_1'];
-	$severity    = $_POST['PARAM_2'];
-	$stock_id    = $_POST['PARAM_3'];
-	$comments    = $_POST['PARAM_4'];
-	$orientation = $_POST['PARAM_5'];
-	$destination = $_POST['PARAM_6'];
+	$date_from   = recall_report_param('PARAM_0');
+	$status      = recall_report_param('PARAM_1');
+	$severity    = recall_report_param('PARAM_2');
+	$stock_id    = recall_report_param('PARAM_3');
+	$comments    = recall_report_param('PARAM_4');
+	$orientation = recall_report_param('PARAM_5', 0);
+	$destination = recall_report_param('PARAM_6', 0);
+
+	if ($date_from != '' && !is_date($date_from))
+		$date_from = '';
+
+	$statuses = get_recall_campaign_statuses();
+	if ($status != '' && !isset($statuses[$status]))
+		$status = '';
+
+	$severities = get_recall_severity_levels();
+	if ($severity != '' && !isset($severities[$severity]))
+		$severity = '';
 
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
@@ -60,13 +90,11 @@ function print_recall_status_report()
 	// Resolve filter labels
 	$status_label = _('All');
 	if ($status != '') {
-		$statuses = get_recall_campaign_statuses();
 		$status_label = isset($statuses[$status]) ? $statuses[$status] : $status;
 	}
 
 	$severity_label = _('All');
 	if ($severity != '') {
-		$severities = get_recall_severity_levels();
 		$severity_label = isset($severities[$severity]) ? $severities[$severity] : $severity;
 	}
 

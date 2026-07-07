@@ -217,12 +217,12 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 				include_once($fsma_path);
 				if (function_exists('auto_fsma_shipping_event')) {
 					// Generate FSMA shipping CTEs for each regulated line item
-					$fsma_sql = "SELECT dl.stock_id, dl.qty_dispatched, sm.units
+					$fsma_sql = "SELECT dl.stock_id, ABS(dl.quantity) AS qty_dispatched, sm.units
 						FROM " . TB_PREF . "debtor_trans_details dl
 						INNER JOIN " . TB_PREF . "stock_master sm ON dl.stock_id = sm.stock_id
 						WHERE dl.debtor_trans_no=" . (int)$delivery_no
 						. " AND dl.debtor_trans_type=" . ST_CUSTDELIVERY
-						. " AND dl.qty_dispatched != 0";
+						. " AND dl.quantity != 0";
 					$fsma_lines = db_query($fsma_sql, 'could not get lines for FSMA CTE');
 					while ($fl = db_fetch($fsma_lines)) {
 						if (is_item_regulated($fl['stock_id'], REG_FSMA204)) {
