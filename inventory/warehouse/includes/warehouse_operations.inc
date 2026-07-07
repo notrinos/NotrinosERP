@@ -467,17 +467,15 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 				$std_cost = isset($item['std_cost']) ? $item['std_cost'] : 0;
 				$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
 
-				// For putaway operations, try to find target bin per item
-				$line_to = $to_loc;
-				if ($rule['operation_type'] === 'putaway' && !$to_loc) {
-					$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
-					$line_to = $putaway_bin;
-				} elseif ($rule['operation_type'] === 'receipt' && !$line_to) {
-					$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
-					$line_to = $putaway_bin;
+				$line_assignments = array();
+				if (($rule['operation_type'] === 'putaway' && !$to_loc)
+					|| ($rule['operation_type'] === 'receipt' && !$to_loc)) {
+					$line_assignments = get_putaway_assignments_for_item($stock_id, $warehouse_loc_code, $qty);
+				} else {
+					$line_assignments[] = array('bin_loc_id' => $to_loc, 'qty' => $qty);
 				}
 
-				if ($single_step_direct_receipt && !$line_to) {
+				if ($single_step_direct_receipt && empty($line_assignments)) {
 					$result['message'] = sprintf(
 						_('No putaway bin found for item %s in warehouse %s.'),
 						$stock_id,
@@ -486,18 +484,21 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 					return $result;
 				}
 
-				if (($rule['operation_type'] === 'putaway' || $single_step_direct_receipt)
-					&& $line_to
-					&& !is_valid_putaway_bin_location($line_to, $warehouse_loc_code)) {
-					$result['message'] = sprintf(
-						_('Putaway destination for item %s must be an active bin location in warehouse %s.'),
-						$stock_id,
-						$warehouse_loc_code
-					);
-					return $result;
+				if ($rule['operation_type'] === 'putaway' || $single_step_direct_receipt) {
+					foreach ($line_assignments as $assignment) {
+						$assignment_bin = isset($assignment['bin_loc_id']) ? (int)$assignment['bin_loc_id'] : 0;
+						if (!$assignment_bin || !is_valid_putaway_bin_location($assignment_bin, $warehouse_loc_code)) {
+							$result['message'] = sprintf(
+								_('Putaway destination for item %s must be an active bin location in warehouse %s.'),
+								$stock_id,
+								$warehouse_loc_code
+							);
+							return $result;
+						}
+					}
 				}
 
-				if ($rule['operation_type'] === 'putaway' && !$line_to) {
+				if ($rule['operation_type'] === 'putaway' && empty($line_assignments)) {
 					$result['message'] = sprintf(
 						_('No putaway bin found for item %s in warehouse %s for route putaway step.'),
 						$stock_id,
@@ -506,36 +507,14 @@ function create_operations_from_route($route, $source_doc_type, $source_doc_no, 
 					return $result;
 				}
 
-				if (!empty($item['serial_ids'])) {
-					foreach ($item['serial_ids'] as $serial_id) {
-						add_wh_operation_line($op_id, $stock_id, 1, 0,
-							$from_loc, $line_to, $batch_id, $serial_id, null, $std_cost);
-
-						if ($single_step_direct_receipt && $line_to) {
-							update_bin_stock($line_to, $stock_id, 1, $batch_id, $serial_id, null, 'available');
-
-							$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
-								. "wh_loc_id=" . (int)$line_to . ", "
-								. "loc_code=" . db_escape($warehouse_loc_code) . ", "
-								. "status='available' "
-								. "WHERE id=" . (int)$serial_id;
-							db_query($sql, 'could not update serial location from route receipt');
-						}
-					}
-				} else {
-					add_wh_operation_line($op_id, $stock_id, $qty, 0,
-						$from_loc, $line_to, $batch_id, null, null, $std_cost);
-
-					if ($single_step_direct_receipt && $line_to) {
-						$expiry = null;
-						if ($batch_id) {
-							$batch_data = get_stock_batch($batch_id);
-							if ($batch_data && !empty($batch_data['expiry_date']))
-								$expiry = $batch_data['expiry_date'];
-						}
-						update_bin_stock($line_to, $stock_id, $qty, $batch_id, null, $expiry, 'available');
-					}
-				}
+				add_wh_operation_assignment_lines(
+					$op_id,
+					$item,
+					$from_loc,
+					$line_assignments,
+					$warehouse_loc_code,
+					$single_step_direct_receipt && $rule['operation_type'] === 'receipt'
+				);
 			}
 
 			$op_ids[] = $op_id;
@@ -717,12 +696,11 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		$qty = $item['qty'];
 		$std_cost = isset($item['std_cost']) ? $item['std_cost'] : 0;
 
-		// For 1-step: try to find putaway bin per item
-		$to_bin = $receipt_to;
+		// For 1-step: try to find putaway bins per item
+		$line_assignments = array(array('bin_loc_id' => $receipt_to, 'qty' => $qty));
 		if ($inbound_steps === 1) {
-			$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
-			$to_bin = $putaway_bin;
-			if (!$to_bin || !is_valid_putaway_bin_location($to_bin, $warehouse_loc_code)) {
+			$line_assignments = get_putaway_assignments_for_item($stock_id, $warehouse_loc_code, $qty);
+			if (empty($line_assignments)) {
 				$result['message'] = sprintf(
 					_('No putaway bin found for item %s in warehouse %s.'),
 					$stock_id,
@@ -730,44 +708,22 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 				);
 				return $result;
 			}
-		}
 
-		// If serial-tracked, create one line per serial
-		if (!empty($item['serial_ids'])) {
-			foreach ($item['serial_ids'] as $serial_id) {
-				add_wh_operation_line($receipt_op, $stock_id, 1, 0, null, $to_bin,
-					isset($item['batch_id']) ? $item['batch_id'] : null,
-					$serial_id, null, $std_cost);
-
-				if ($inbound_steps === 1) {
-					$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
-					update_bin_stock($to_bin, $stock_id, 1, $batch_id, $serial_id, null, 'available');
-
-					$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
-						. "wh_loc_id=" . (int)$to_bin . ", "
-						. "loc_code=" . db_escape($warehouse_loc_code) . ", "
-						. "status='available' "
-						. "WHERE id=" . (int)$serial_id;
-					db_query($sql, 'could not update serial location from 1-step inbound');
+			foreach ($line_assignments as $assignment) {
+				$assignment_bin = isset($assignment['bin_loc_id']) ? (int)$assignment['bin_loc_id'] : 0;
+				if (!$assignment_bin || !is_valid_putaway_bin_location($assignment_bin, $warehouse_loc_code)) {
+					$result['message'] = sprintf(
+						_('No putaway bin found for item %s in warehouse %s.'),
+						$stock_id,
+						$warehouse_loc_code
+					);
+					return $result;
 				}
 			}
-		} else {
-			// One line for the whole quantity
-			add_wh_operation_line($receipt_op, $stock_id, $qty, 0, null, $to_bin,
-				isset($item['batch_id']) ? $item['batch_id'] : null,
-				null, null, $std_cost);
-
-			if ($inbound_steps === 1) {
-				$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
-				$expiry = null;
-				if ($batch_id) {
-					$batch_data = get_stock_batch($batch_id);
-					if ($batch_data && !empty($batch_data['expiry_date']))
-						$expiry = $batch_data['expiry_date'];
-				}
-				update_bin_stock($to_bin, $stock_id, $qty, $batch_id, null, $expiry, 'available');
-			}
 		}
+
+		add_wh_operation_assignment_lines($receipt_op, $item, null, $line_assignments,
+			$warehouse_loc_code, $inbound_steps === 1);
 	}
 
 	// For 1-step: mark receipt as done immediately (goods go directly to stock)
@@ -839,9 +795,9 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 		foreach ($normalized_items as $item) {
 			$stock_id = $item['stock_id'];
 			$qty = $item['qty'];
-			$putaway_bin = get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty);
+			$line_assignments = get_putaway_assignments_for_item($stock_id, $warehouse_loc_code, $qty);
 
-			if (!$putaway_bin || !is_valid_putaway_bin_location($putaway_bin, $warehouse_loc_code)) {
+			if (empty($line_assignments)) {
 				$result['message'] = sprintf(
 					_('No putaway bin found for item %s in warehouse %s.'),
 					$stock_id,
@@ -850,19 +806,20 @@ function create_inbound_operations($grn_no, $loc_code, $items) {
 				return $result;
 			}
 
-			if (!empty($item['serial_ids'])) {
-				foreach ($item['serial_ids'] as $serial_id) {
-					add_wh_operation_line($putaway_op, $stock_id, 1, 0,
-						$putaway_from, $putaway_bin,
-						isset($item['batch_id']) ? $item['batch_id'] : null,
-						$serial_id, null, isset($item['std_cost']) ? $item['std_cost'] : 0);
+			foreach ($line_assignments as $assignment) {
+				$assignment_bin = isset($assignment['bin_loc_id']) ? (int)$assignment['bin_loc_id'] : 0;
+				if (!$assignment_bin || !is_valid_putaway_bin_location($assignment_bin, $warehouse_loc_code)) {
+					$result['message'] = sprintf(
+						_('No putaway bin found for item %s in warehouse %s.'),
+						$stock_id,
+						$warehouse_loc_code
+					);
+					return $result;
 				}
-			} else {
-				add_wh_operation_line($putaway_op, $stock_id, $qty, 0,
-					$putaway_from, $putaway_bin,
-					isset($item['batch_id']) ? $item['batch_id'] : null,
-					null, null, isset($item['std_cost']) ? $item['std_cost'] : 0);
 			}
+
+			add_wh_operation_assignment_lines($putaway_op, $item, $putaway_from, $line_assignments,
+				$warehouse_loc_code, false);
 		}
 	}
 
@@ -921,30 +878,36 @@ function is_valid_putaway_bin_location($loc_id, $warehouse_loc_code) {
 }
 
 /**
- * Get the best putaway bin for an item using the putaway engine.
- * Falls back to the first storable bin in the warehouse.
+ * Get putaway assignments for an item and require the full quantity to fit.
  *
- * @param string $stock_id            Item code
- * @param string $warehouse_loc_code  Warehouse code
- * @param float  $qty                 Quantity
- * @return int|null Bin loc_id or null
+ * @param string $stock_id            Item code.
+ * @param string $warehouse_loc_code  Warehouse code.
+ * @param float  $qty                 Quantity.
+ * @return array Assignment rows with bin_loc_id and qty, or empty when not fully assigned.
  */
-function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
-	// Try putaway engine
+function get_putaway_assignments_for_item($stock_id, $warehouse_loc_code, $qty) {
+	if (!is_valid_finite_numeric($qty) || (float)$qty <= 0)
+		return array();
+
+	$qty = (float)$qty;
+	$assignments = array();
+
 	$engine_path = dirname(__FILE__) . '/putaway_engine.inc';
 	if (file_exists($engine_path)) {
 		include_once($engine_path);
 		if (function_exists('execute_putaway')) {
 			$assignments = execute_putaway($stock_id, $warehouse_loc_code, $qty);
-			if (!empty($assignments)) {
-				$candidate_bin = (int)$assignments[0]['bin_loc_id'];
-				if (is_valid_putaway_bin_location($candidate_bin, $warehouse_loc_code))
-					return $candidate_bin;
+			$total_assigned = 0;
+			foreach ($assignments as $assignment) {
+				$total_assigned += isset($assignment['qty']) ? (float)$assignment['qty'] : 0;
 			}
+			if (!empty($assignments) && $total_assigned + 0.000001 >= $qty)
+				return $assignments;
+			if (!empty($assignments))
+				return array();
 		}
 	}
 
-	// Fallback: find any storable bin in the warehouse
 	$sql = "SELECT wl.loc_id FROM " . TB_PREF . "wh_locations wl
 		INNER JOIN " . TB_PREF . "wh_location_types lt ON wl.location_type_id = lt.id
 		WHERE wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
@@ -955,7 +918,88 @@ function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
 		LIMIT 1";
 	$result = db_query($sql, 'could not find fallback bin');
 	$row = db_fetch($result);
-	return $row ? (int)$row['loc_id'] : null;
+	if (!$row)
+		return array();
+
+	return array(array('bin_loc_id' => (int)$row['loc_id'], 'qty' => $qty));
+}
+
+/**
+ * Add operation lines for bin assignments and optionally move stock immediately.
+ *
+ * @param int    $op_id               Operation id.
+ * @param array  $item                Normalized item payload.
+ * @param int|null $from_loc_id       Source bin/zone.
+ * @param array  $assignments         Putaway assignments.
+ * @param string $warehouse_loc_code  Warehouse code.
+ * @param bool   $move_stock_now      Whether stock should be written to bins now.
+ * @return void
+ */
+function add_wh_operation_assignment_lines($op_id, $item, $from_loc_id, $assignments,
+	$warehouse_loc_code, $move_stock_now = false) {
+	$stock_id = $item['stock_id'];
+	$std_cost = isset($item['std_cost']) ? $item['std_cost'] : 0;
+	$batch_id = isset($item['batch_id']) ? $item['batch_id'] : null;
+	$serial_ids = !empty($item['serial_ids']) ? array_values($item['serial_ids']) : array();
+	$serial_index = 0;
+	$expiry = null;
+
+	if ($move_stock_now && $batch_id) {
+		$batch_data = get_stock_batch($batch_id);
+		if ($batch_data && !empty($batch_data['expiry_date']))
+			$expiry = $batch_data['expiry_date'];
+	}
+
+	foreach ($assignments as $assignment) {
+		$to_loc_id = isset($assignment['bin_loc_id']) && $assignment['bin_loc_id'] !== null
+			? (int)$assignment['bin_loc_id'] : null;
+		$assignment_qty = isset($assignment['qty']) ? (float)$assignment['qty'] : 0;
+		if ($assignment_qty <= 0)
+			continue;
+
+		if (!empty($serial_ids)) {
+			$serial_count = min((int)round($assignment_qty), count($serial_ids) - $serial_index);
+			for ($i = 0; $i < $serial_count; $i++) {
+				$serial_id = $serial_ids[$serial_index++];
+				add_wh_operation_line($op_id, $stock_id, 1, 0,
+					$from_loc_id, $to_loc_id, $batch_id, $serial_id, null, $std_cost);
+
+				if ($move_stock_now && $to_loc_id) {
+					update_bin_stock($to_loc_id, $stock_id, 1, $batch_id, $serial_id, null, 'available');
+					$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
+						. "wh_loc_id=" . (int)$to_loc_id . ", "
+						. "loc_code=" . db_escape($warehouse_loc_code) . ", "
+						. "status='available' "
+						. "WHERE id=" . (int)$serial_id;
+					db_query($sql, 'could not update serial location from putaway assignment');
+				}
+			}
+		} else {
+			add_wh_operation_line($op_id, $stock_id, $assignment_qty, 0,
+				$from_loc_id, $to_loc_id, $batch_id, null, null, $std_cost);
+
+			if ($move_stock_now && $to_loc_id)
+				update_bin_stock($to_loc_id, $stock_id, $assignment_qty, $batch_id, null, $expiry, 'available');
+		}
+	}
+}
+
+/**
+ * Get the best putaway bin for an item using the putaway engine.
+ * Falls back to the first storable bin in the warehouse.
+ *
+ * @param string $stock_id            Item code
+ * @param string $warehouse_loc_code  Warehouse code
+ * @param float  $qty                 Quantity
+ * @return int|null Bin loc_id or null
+ */
+function get_putaway_bin_for_item($stock_id, $warehouse_loc_code, $qty) {
+	$assignments = get_putaway_assignments_for_item($stock_id, $warehouse_loc_code, $qty);
+	if (empty($assignments))
+		return null;
+
+	$candidate_bin = (int)$assignments[0]['bin_loc_id'];
+	return is_valid_putaway_bin_location($candidate_bin, $warehouse_loc_code) ? $candidate_bin : null;
 }
 
 /**

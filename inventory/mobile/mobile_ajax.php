@@ -61,6 +61,27 @@ if (file_exists($picking_db))
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
+/**
+ * Emit a clean JSON response, discarding any buffered page/session output.
+ *
+ * @param array       $response
+ * @param string|null $status_header
+ * @return void
+ */
+function mobile_emit_json($response, $status_header = null) {
+	while (ob_get_level() > 0) {
+		ob_end_clean();
+	}
+
+	if ($status_header !== null)
+		header($status_header);
+
+	global $messages;
+	$messages = array();
+	echo json_encode($response);
+	exit();
+}
+
 $action = '';
 if (isset($_POST['action']))
 	$action = trim($_POST['action']);
@@ -68,11 +89,7 @@ elseif (isset($_GET['action']))
 	$action = trim($_GET['action']);
 
 if (empty($action)) {
-	ob_clean();
-	global $messages;
-	$messages = array();
-	echo json_encode(array('success' => false, 'error' => 'No action specified'));
-	exit();
+	mobile_emit_json(array('success' => false, 'error' => 'No action specified'));
 }
 
 /**
@@ -120,15 +137,10 @@ function mobile_user_has_any_access($security_areas) {
 
 $required_security_areas = mobile_get_action_security_areas($action);
 if (!mobile_user_has_any_access($required_security_areas)) {
-	ob_clean();
-	header('HTTP/1.1 403 Forbidden');
-	global $messages;
-	$messages = array();
-	echo json_encode(array(
+	mobile_emit_json(array(
 		'success' => false,
 		'error' => _('Access denied for this mobile action')
-	));
-	exit();
+	), 'HTTP/1.1 403 Forbidden');
 }
 
 $response = array('success' => false, 'error' => 'Unknown action');
@@ -188,13 +200,7 @@ switch ($action) {
 	$response = array('success' => false, 'error' => $e->getMessage());
 }
 
-ob_clean();
-// Clear any deferred error messages (stored in $messages by error_handler)
-// so output_html callback doesn't prepend HTML errors before the JSON.
-global $messages;
-$messages = array();
-echo json_encode($response);
-exit();
+mobile_emit_json($response);
 
 // ======================================================================
 // Action handlers
@@ -423,6 +429,72 @@ function mobile_validate_operation_for_completion($op_id, $allowed_op_types) {
 	}
 
 	return array('success' => true, 'operation' => $operation);
+}
+
+/**
+ * Apply a mobile putaway confirmation to matching planned operation lines.
+ *
+ * @param int      $op_id       Operation id.
+ * @param string   $stock_id    Item code.
+ * @param int      $bin_loc_id  Destination bin id.
+ * @param float    $qty         Confirmed quantity.
+ * @param int|null $batch_id    Batch id.
+ * @param int|null $serial_id   Serial id.
+ * @return array
+ */
+function mobile_complete_putaway_operation_lines($op_id, $stock_id, $bin_loc_id, $qty, $batch_id = null, $serial_id = null) {
+	if ($op_id <= 0)
+		return array('success' => true, 'completed' => false);
+
+	$where = "op_id=" . (int)$op_id
+		. " AND stock_id=" . db_escape($stock_id)
+		. " AND to_loc_id=" . (int)$bin_loc_id;
+
+	if ($serial_id !== null)
+		$where .= " AND serial_id=" . (int)$serial_id;
+	elseif ($batch_id !== null)
+		$where .= " AND batch_id=" . (int)$batch_id;
+
+	$sql = "SELECT line_id, qty_planned, qty_done FROM " . TB_PREF . "wh_operation_lines "
+		. "WHERE " . $where . " ORDER BY line_id";
+	$result = db_query($sql, 'could not get putaway operation lines for mobile confirmation');
+	$lines = array();
+	$available = 0;
+	while ($line = db_fetch($result)) {
+		$remaining_line_qty = (float)$line['qty_planned'] - (float)$line['qty_done'];
+		if ($remaining_line_qty <= 0)
+			continue;
+		$line['remaining_qty'] = $remaining_line_qty;
+		$available += $remaining_line_qty;
+		$lines[] = $line;
+	}
+
+	if ($available + 0.000001 < (float)$qty) {
+		return array(
+			'success' => false,
+			'error' => _('Confirmed quantity exceeds the remaining planned putaway quantity for this item and bin.'),
+		);
+	}
+
+	$remaining = (float)$qty;
+	foreach ($lines as $line) {
+		if ($remaining <= 0)
+			break;
+
+		$done_now = min($remaining, (float)$line['remaining_qty']);
+		update_wh_operation_line_done($line['line_id'], (float)$line['qty_done'] + $done_now);
+		$remaining -= $done_now;
+	}
+
+	$totals_sql = "SELECT COUNT(*) AS line_count, "
+		. "SUM(CASE WHEN qty_done + 0.000001 >= qty_planned THEN 0 ELSE 1 END) AS open_lines "
+		. "FROM " . TB_PREF . "wh_operation_lines WHERE op_id=" . (int)$op_id;
+	$totals_result = db_query($totals_sql, 'could not summarize putaway operation completion');
+	$totals = db_fetch($totals_result);
+	$completed = $totals && (int)$totals['line_count'] > 0 && (int)$totals['open_lines'] === 0;
+
+	update_wh_operation_status($op_id, $completed ? 'done' : 'in_progress');
+	return array('success' => true, 'completed' => $completed);
 }
 
 /**
@@ -1007,6 +1079,12 @@ function mobile_confirm_putaway() {
 
 	begin_transaction();
 
+	$line_completion = mobile_complete_putaway_operation_lines($op_id, $stock_id, $bin_loc_id, $qty, $batch_id, $serial_id);
+	if (!$line_completion['success']) {
+		cancel_transaction();
+		return $line_completion;
+	}
+
 	$bin_qty = ($serial_id && !empty($serial_reconcile['already_in_target'])) ? 0 : $qty;
 	update_bin_stock($bin_loc_id, $stock_id, $bin_qty, $batch_id, $serial_id, null, 'available');
 
@@ -1031,9 +1109,6 @@ function mobile_confirm_putaway() {
 	if ($batch_id && $batch && isset($batch['status']) && $batch['status'] !== 'active') {
 		update_batch_status($batch_id, 'active', 'Mobile putaway');
 	}
-
-	if ($op_id > 0)
-		complete_wh_operation($op_id);
 
 	commit_transaction();
 
