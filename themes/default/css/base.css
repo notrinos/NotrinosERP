@@ -6,6 +6,8 @@ html,
 body {
 	margin: 0;
 	padding: 0;
+	height: 100%;
+	overflow: hidden;
 	background: var(--modern-color-bg);
 	color: var(--modern-color-text);
 	font-family: "Segoe UI", "Trebuchet MS", Tahoma, sans-serif;
@@ -15,7 +17,7 @@ body {
 
 body {
 	min-height: 100vh;
-	overflow: hidden;
+	height: 100vh;
 }
 
 /* Keep scrollbars visible but very subtle for a cleaner UI. */

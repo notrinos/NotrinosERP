@@ -350,7 +350,27 @@ function setFocus(name, byId) {
 	// The timeout is needed to prevent unpredictable behaviour on IE & Gecko.
 	// Using tmp var prevents crash on IE5
 
-		var tmp = function() {el.focus(); if (el.select) el.select();};
+		// Modern theme pages scroll inside the app shell, not the outer window.
+		var restoreWindowScroll = document.getElementById('modern-app-shell')
+			? {
+				x: window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
+			}
+			: null;
+		var tmp = function() {
+			try {
+				el.focus({ preventScroll: true });
+			} catch (e) {
+				el.focus();
+			}
+			if (el.select)
+				el.select();
+			if (restoreWindowScroll) {
+				window.scrollTo(restoreWindowScroll.x, 0);
+				setTimeout(function() {
+					window.scrollTo(restoreWindowScroll.x, 0);
+				}, 25);
+			}
+		};
 		setTimeout(tmp, 0);
 	}
 }
