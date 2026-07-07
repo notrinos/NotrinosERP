@@ -52,7 +52,12 @@ function warehouse_location_post_fields_are_scalar($field_names) {
  * @return bool
  */
 function warehouse_location_is_non_negative_number($value) {
-	return is_numeric($value) && (float)$value >= 0;
+	if (!is_scalar($value) || !is_numeric($value)) {
+		return false;
+	}
+
+	$number = (float)$value;
+	return is_finite($number) && $number >= 0 && $number <= 99999999999.9999;
 }
 
 /**
@@ -61,8 +66,27 @@ function warehouse_location_is_non_negative_number($value) {
  * @param mixed $value Submitted value.
  * @return bool
  */
-function warehouse_location_is_non_negative_integer($value) {
-	return is_scalar($value) && preg_match('/^\d+$/', trim((string)$value));
+function warehouse_location_is_non_negative_integer($value, $max_value = 2147483647) {
+	if (!is_scalar($value) || !preg_match('/^\d+$/', trim((string)$value))) {
+		return false;
+	}
+
+	$value = trim((string)$value);
+	if (strlen($value) > 10) {
+		return false;
+	}
+
+	return (int)$value <= $max_value;
+}
+
+/**
+ * Check whether a submitted location ID is a positive integer.
+ *
+ * @param mixed $value Submitted value.
+ * @return bool
+ */
+function warehouse_location_is_positive_integer($value) {
+	return warehouse_location_is_non_negative_integer($value) && (int)$value > 0;
 }
 
 //-------------------------------------------------------------------------------------
@@ -85,26 +109,49 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 	$input_error = 0;
 
 	$bulk_type = get_post('bulk_type_id');
-	$bulk_count = (int)get_post('bulk_count', 0);
+	$bulk_count_value = trim(get_post('bulk_count', ''));
 	$bulk_parent = get_post('bulk_parent_id', '');
 
-	if (!$bulk_type) {
+	if (!warehouse_location_post_fields_are_scalar(array('bulk_type_id', 'bulk_count', 'bulk_parent_id', 'warehouse'))) {
+		$input_error = 1;
+		display_error(_('One or more submitted fields contained an invalid value. Please review the form and try again.'));
+	}
+	if ($input_error == 0 && !warehouse_location_is_positive_integer($bulk_type)) {
 		$input_error = 1;
 		display_error(_('Please select a location type for bulk creation.'));
 	}
-	if ($bulk_count < 1 || $bulk_count > 200) {
+	if ($input_error == 0 && !warehouse_location_is_non_negative_integer($bulk_count_value, 200)) {
 		$input_error = 1;
 		display_error(_('Bulk count must be between 1 and 200.'));
 	}
-	if (!$warehouse) {
+	$bulk_count = (int)$bulk_count_value;
+	if ($input_error == 0 && $bulk_count < 1) {
+		$input_error = 1;
+		display_error(_('Bulk count must be between 1 and 200.'));
+	}
+	if ($input_error == 0 && !$warehouse) {
 		$input_error = 1;
 		display_error(_('Please select a warehouse first.'));
 	}
+	if ($input_error == 0 && $bulk_parent !== '' && !warehouse_location_is_positive_integer($bulk_parent)) {
+		$input_error = 1;
+		display_error(_('Parent location must be a valid warehouse location.'));
+	}
+	if ($input_error == 0 && $bulk_parent !== '' && !warehouse_location_belongs_to_warehouse((int)$bulk_parent, $warehouse)) {
+		$input_error = 1;
+		display_error(_('Parent location does not belong to the selected warehouse.'));
+	}
 
 	if ($input_error == 0) {
-		$type = get_warehouse_location_type($bulk_type);
-		$type_code = $type ? $type['type_code'] : 'bin';
+		$type = get_warehouse_location_type((int)$bulk_type, false);
+		if (!$type) {
+			$input_error = 1;
+			display_error(_('Please select a valid active location type for bulk creation.'));
+		}
+	}
 
+	if ($input_error == 0) {
+		$type_code = $type['type_code'];
 		begin_transaction();
 		for ($i = 0; $i < $bulk_count; $i++) {
 			$auto_code = generate_warehouse_location_code(
@@ -112,6 +159,12 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 				$warehouse,
 				$type_code
 			);
+			if (!is_warehouse_location_code_globally_unique($auto_code)) {
+				cancel_transaction();
+				$input_error = 1;
+				display_error(sprintf(_('Generated location code "%s" already exists. Please retry after reviewing existing locations.'), $auto_code));
+				break;
+			}
 			add_warehouse_location(
 				$auto_code,
 				$type['type_name'] . ' ' . ($i + 1),
@@ -120,9 +173,11 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 				$bulk_type
 			);
 		}
-		commit_transaction();
-		display_notification(sprintf(_('%d locations created successfully.'), $bulk_count));
-		$Mode = 'RESET';
+		if ($input_error == 0) {
+			commit_transaction();
+			display_notification(sprintf(_('%d locations created successfully.'), $bulk_count));
+			$Mode = 'RESET';
+		}
 	}
 }
 
@@ -145,11 +200,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$barcode = trim(get_post('barcode', ''));
 	$allowed_zone_types = array('', 'staging', 'quality', 'packing', 'dock', 'ambient', 'cold', 'frozen', 'hazmat', 'highvalue', 'bulk', 'picking');
 	$allowed_abc_classes = array('', 'A', 'B', 'C');
+	$location_type = false;
 
 	if (!warehouse_location_post_fields_are_scalar(array(
 		'loc_code', 'loc_name', 'location_type_id', 'max_weight', 'max_volume', 'max_units',
 		'storage_category_id', 'zone_type', 'abc_class', 'pick_sequence', 'barcode',
-		'warehouse', 'parent_id', 'selected_id'
+		'warehouse', 'parent_id', 'selected_id', 'is_default_receipt', 'is_default_ship',
+		'is_default_scrap', 'is_default_production'
 	))) {
 		$input_error = 1;
 		display_error(_('One or more submitted fields contained an invalid value. Please review the form and try again.'));
@@ -159,9 +216,17 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		$input_error = 1;
 		display_error(_('The location code must be entered.'));
 		set_focus('loc_code');
+	} elseif ($input_error == 0 && strlen($location_code) > 30) {
+		$input_error = 1;
+		display_error(_('The location code must be 30 characters or less.'));
+		set_focus('loc_code');
 	} elseif ($input_error == 0 && strlen($location_name) == 0) {
 		$input_error = 1;
 		display_error(_('The location name must be entered.'));
+		set_focus('loc_name');
+	} elseif ($input_error == 0 && strlen($location_name) > 100) {
+		$input_error = 1;
+		display_error(_('The location name must be 100 characters or less.'));
 		set_focus('loc_name');
 	} elseif ($input_error == 0 && !warehouse_location_is_non_negative_integer($location_type_id)) {
 		$input_error = 1;
@@ -172,6 +237,30 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		display_error(_('Please select a warehouse first.'));
 	}
 
+	if ($input_error == 0) {
+		$location_type = get_warehouse_location_type((int)$location_type_id, false);
+		if (!$location_type) {
+			$input_error = 1;
+			display_error(_('Please select a valid active location type.'));
+			set_focus('location_type_id');
+		}
+	}
+	if ($input_error == 0 && $selected_id != -1 && !warehouse_location_is_positive_integer($selected_id)) {
+		$input_error = 1;
+		display_error(_('Selected location must be a valid warehouse location.'));
+	}
+	if ($input_error == 0 && $selected_id != -1 && !warehouse_location_belongs_to_warehouse((int)$selected_id, $warehouse)) {
+		$input_error = 1;
+		display_error(_('Selected location does not belong to the selected warehouse.'));
+	}
+	if ($input_error == 0 && $selected_id == -1 && $parent_id !== '' && !warehouse_location_is_positive_integer($parent_id)) {
+		$input_error = 1;
+		display_error(_('Parent location must be a valid warehouse location.'));
+	}
+	if ($input_error == 0 && $selected_id == -1 && $parent_id !== '' && !warehouse_location_belongs_to_warehouse((int)$parent_id, $warehouse)) {
+		$input_error = 1;
+		display_error(_('Parent location does not belong to the selected warehouse.'));
+	}
 	if ($input_error == 0 && $max_weight !== '' && !warehouse_location_is_non_negative_number($max_weight)) {
 		$input_error = 1;
 		display_error(_('Max weight must be a non-negative number.'));
@@ -201,6 +290,17 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		display_error(_('Storage category must be a valid selection.'));
 		set_focus('storage_category_id');
 	}
+	if ($input_error == 0
+		&& $storage_category_id !== ''
+		&& $storage_category_id != -1
+		&& $storage_category_id != 0) {
+		$storage_category = get_storage_category((int)$storage_category_id);
+		if (!$storage_category || (isset($storage_category['inactive']) && $storage_category['inactive'])) {
+			$input_error = 1;
+			display_error(_('Storage category must be an active valid selection.'));
+			set_focus('storage_category_id');
+		}
+	}
 	if ($input_error == 0 && !in_array($zone_type, $allowed_zone_types, true)) {
 		$input_error = 1;
 		display_error(_('Zone type must be a valid selection.'));
@@ -211,13 +311,18 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		display_error(_('ABC class must be a valid selection.'));
 		set_focus('abc_class');
 	}
+	if ($input_error == 0 && strlen($barcode) > 50) {
+		$input_error = 1;
+		display_error(_('Barcode must be 50 characters or less.'));
+		set_focus('barcode');
+	}
 
 	// Validate code uniqueness
 	if ($input_error == 0) {
 		$exclude_id = ($selected_id != -1) ? $selected_id : null;
-		if (!is_warehouse_location_code_unique($location_code, $warehouse, $exclude_id)) {
+		if (!is_warehouse_location_code_globally_unique($location_code, $exclude_id)) {
 			$input_error = 1;
-			display_error(_('This location code already exists in this warehouse.'));
+			display_error(_('This location code already exists. Location codes must be unique across warehouses.'));
 			set_focus('loc_code');
 		}
 	}
@@ -271,12 +376,18 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 //-------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete' && $selected_id != -1) {
-	$can = can_delete_warehouse_location($selected_id);
-	if ($can === true) {
-		delete_warehouse_location($selected_id);
-		display_notification(_('Location has been deleted.'));
+	if (!warehouse_location_is_positive_integer($selected_id)) {
+		display_error(_('Selected location must be a valid warehouse location.'));
+	} elseif ($warehouse && !warehouse_location_belongs_to_warehouse((int)$selected_id, $warehouse)) {
+		display_error(_('Selected location does not belong to the selected warehouse.'));
 	} else {
-		display_error($can);
+		$can = can_delete_warehouse_location($selected_id);
+		if ($can === true) {
+			delete_warehouse_location($selected_id);
+			display_notification(_('Location has been deleted.'));
+		} else {
+			display_error($can);
+		}
 	}
 	$selected_id = -1;
 	$Mode = 'RESET';
@@ -322,20 +433,55 @@ if (!$warehouse && !empty($warehouses)) {
 	$warehouse = key($warehouses);
 }
 
+// Handle warehouse change before validating parent/selected context from the previous warehouse.
+if (list_updated('warehouse')) {
+	$warehouse = get_post('warehouse');
+	$parent_id = '';
+	$selected_id = -1;
+	$_POST['parent_id'] = '';
+	$Ajax->activate('_page_body');
+}
+
+if ($parent_id !== '') {
+	if (!warehouse_location_is_positive_integer($parent_id) || !warehouse_location_belongs_to_warehouse((int)$parent_id, $warehouse)) {
+		display_error(_('Parent location does not belong to the selected warehouse.'));
+		$parent_id = '';
+		$_POST['parent_id'] = '';
+	}
+}
+
+if ($selected_id != -1 && (!warehouse_location_is_positive_integer($selected_id) || !warehouse_location_belongs_to_warehouse((int)$selected_id, $warehouse))) {
+	display_error(_('Selected location does not belong to the selected warehouse.'));
+	$selected_id = -1;
+	$Mode = 'RESET';
+}
+
 echo "<div style='margin-bottom:10px;'>";
 echo "<table class='tablestyle_noborder'><tr>";
 warehouse_list_cells(_('Warehouse:'), 'warehouse', $warehouse, false, true);
 echo "</tr></table>";
 echo "</div>";
-
-// Handle warehouse change
-if (list_updated('warehouse')) {
-	$warehouse = get_post('warehouse');
-	$parent_id = '';
-	$selected_id = -1;
-}
-
-hidden('warehouse', $warehouse);
+echo "<script>
+(function() {
+	var select = document.getElementById('warehouse');
+	if (!select || select.getAttribute('data-wh-submit-bound') === '1') return;
+	select.setAttribute('data-wh-submit-bound', '1');
+	var submitting = false;
+	var submitWarehouse = function() {
+		if (submitting) return;
+		submitting = true;
+		if (window.JsHttpRequest && select.form) {
+			JsHttpRequest.request('_warehouse_update', select.form);
+		} else {
+			submitting = false;
+		}
+	};
+	select.addEventListener('change', submitWarehouse);
+	if (window.jQuery) {
+		window.jQuery(select).on('select2:select', submitWarehouse);
+	}
+})();
+</script>";
 
 //-------------------------------------------------------------------------------------
 // Breadcrumb navigation
@@ -396,10 +542,10 @@ while ($myrow = db_fetch($children)) {
 	$icon = get_location_type_icon($myrow['type_code']);
 	$inactive_label = $myrow['is_active'] ? '' : ' <span style="color:red; font-size:10px;">(' . _('inactive') . ')</span>';
 
-	// Name column - clickable if has children
+	// Name column - non-storable locations remain navigable so their first child can be created.
 	echo "<td>";
 	echo "<i class='" . $icon . "' style='margin-right:4px; color:#555;'></i>";
-	if ($has_sub) {
+	if ($has_sub || !$myrow['can_store']) {
 		echo "<a href='" . $_SERVER['PHP_SELF'] . "?warehouse=" . urlencode($warehouse) . "&parent_id=" . $myrow['loc_id'] . "'>";
 		echo htmlspecialchars($myrow['loc_name']);
 		echo "</a>";

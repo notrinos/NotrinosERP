@@ -42,11 +42,15 @@ function get_warehouse_location_types($show_inactive = false) {
 /**
  * Get a single location type by ID.
  *
- * @param int $type_id The location type ID.
+ * @param int  $type_id       The location type ID.
+ * @param bool $show_inactive Whether to allow inactive types.
  * @return array|false The type row or false.
  */
-function get_warehouse_location_type($type_id) {
+function get_warehouse_location_type($type_id, $show_inactive = true) {
 	$sql = "SELECT * FROM " . TB_PREF . "wh_location_types WHERE id = " . db_escape($type_id);
+	if (!$show_inactive) {
+		$sql .= " AND inactive = 0";
+	}
 	$result = db_query($sql, 'could not get warehouse location type');
 	return db_fetch($result);
 }
@@ -231,6 +235,26 @@ function get_warehouse_location_by_code($loc_code, $warehouse_loc_code=null) {
 		$sql .= " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code);
 	$result = db_query($sql, 'could not get warehouse location by code');
 	return db_fetch($result);
+}
+
+/**
+ * Check whether a warehouse location belongs to a selected warehouse.
+ *
+ * @param int    $loc_id              Location ID to check.
+ * @param string $warehouse_loc_code  Warehouse loc_code.
+ * @return bool True when the location exists in the warehouse.
+ */
+function warehouse_location_belongs_to_warehouse($loc_id, $warehouse_loc_code) {
+	if (!$loc_id || $warehouse_loc_code === null || $warehouse_loc_code === '') {
+		return false;
+	}
+
+	$sql = "SELECT COUNT(*) AS cnt FROM " . TB_PREF . "wh_locations "
+		. "WHERE loc_id = " . db_escape($loc_id)
+		. " AND warehouse_loc_code = " . db_escape($warehouse_loc_code);
+	$result = db_query($sql, 'could not validate warehouse location ownership');
+	$row = db_fetch($result);
+	return $row && (int)$row['cnt'] === 1;
 }
 
 //----------------------------------------------------------------------
@@ -543,23 +567,36 @@ function get_warehouse_location_type_counts($warehouse_loc_code) {
 }
 
 /**
- * Check if a location code is unique within a warehouse.
+ * Check if a location code is unique.
  *
  * @param string   $loc_code The code to check.
- * @param string   $warehouse_loc_code The warehouse code.
+ * @param string|null $warehouse_loc_code Optional warehouse code filter for legacy callers.
  * @param int|null $exclude_loc_id Location ID to exclude (for updates).
  * @return bool True if the code is unique.
  */
-function is_warehouse_location_code_unique($loc_code, $warehouse_loc_code, $exclude_loc_id = null) {
+function is_warehouse_location_code_unique($loc_code, $warehouse_loc_code = null, $exclude_loc_id = null) {
 	$sql = "SELECT COUNT(*) AS cnt FROM " . TB_PREF . "wh_locations "
-		. "WHERE loc_code = " . db_escape($loc_code)
-		. " AND warehouse_loc_code = " . db_escape($warehouse_loc_code);
+		. "WHERE loc_code = " . db_escape($loc_code);
+	if ($warehouse_loc_code !== null && $warehouse_loc_code !== '') {
+		$sql .= " AND warehouse_loc_code = " . db_escape($warehouse_loc_code);
+	}
 	if ($exclude_loc_id) {
 		$sql .= " AND loc_id <> " . db_escape($exclude_loc_id);
 	}
 	$result = db_query($sql, 'could not check code uniqueness');
 	$row = db_fetch($result);
 	return ((int)$row['cnt']) === 0;
+}
+
+/**
+ * Check if a location code is unique across the globally unique loc_code column.
+ *
+ * @param string   $loc_code       Location code to check.
+ * @param int|null $exclude_loc_id Location ID to exclude.
+ * @return bool
+ */
+function is_warehouse_location_code_globally_unique($loc_code, $exclude_loc_id = null) {
+	return is_warehouse_location_code_unique($loc_code, null, $exclude_loc_id);
 }
 
 /**
