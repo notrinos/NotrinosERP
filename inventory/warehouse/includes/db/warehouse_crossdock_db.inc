@@ -50,10 +50,13 @@ function get_cross_dock_candidates($stock_id, $loc_code, $available_qty = 0)
 			so.deliver_to, so.delivery_address, so.from_stk_loc,
 			sod.drop_ship, sod.drop_ship_supplier_id
 		FROM " . TB_PREF . "sales_order_details sod
-		INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no AND so.trans_type = " . ST_SALESORDER . "
+		INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no
+			AND sod.trans_type = so.trans_type
+			AND so.trans_type = " . ST_SALESORDER . "
 		INNER JOIN " . TB_PREF . "debtors_master d ON so.debtor_no = d.debtor_no
 		INNER JOIN " . TB_PREF . "stock_master sm ON sod.stk_code = sm.stock_id
 		WHERE sod.stk_code = " . db_escape($stock_id) . "
+			AND sod.trans_type = " . ST_SALESORDER . "
 			AND so.from_stk_loc = " . db_escape($loc_code) . "
 			AND (sod.quantity - sod.qty_sent) > 0
 			AND sm.cross_dock_eligible = 1
@@ -197,21 +200,21 @@ function create_cross_dock_operations($grn_no, $loc_code, $allocations, $item_in
 	$std_cost = isset($item_info['std_cost']) ? $item_info['std_cost'] : 0;
 	$serial_ids = isset($item_info['serial_ids']) ? $item_info['serial_ids'] : array();
 	$batch_id = isset($item_info['batch_id']) ? $item_info['batch_id'] : null;
+	$total_qty = 0;
+	foreach ($allocations as $a) {
+		$qty = isset($a['qty_allocated']) && is_numeric($a['qty_allocated']) ? (float)$a['qty_allocated'] : 0;
+		if ($qty > 0)
+			$total_qty += $qty;
+	}
+	if ($total_qty <= 0) {
+		$result['message'] = _('Cross-dock allocation quantity must be greater than zero.');
+		return $result;
+	}
 
 	// Try route-based creation
 	if (function_exists('resolve_route')) {
 		$route = resolve_route($loc_code, 'crossdock');
 		if ($route && is_valid_crossdock_route($route)) {
-			$total_qty = 0;
-			foreach ($allocations as $a) {
-				$qty = isset($a['qty_allocated']) && is_numeric($a['qty_allocated']) ? (float)$a['qty_allocated'] : 0;
-				if ($qty > 0)
-					$total_qty += $qty;
-			}
-			if ($total_qty <= 0) {
-				$result['message'] = _('Cross-dock allocation quantity must be greater than zero.');
-				return $result;
-			}
 			$items = array(array(
 				'stock_id'   => $stock_id,
 				'qty'        => $total_qty,
@@ -350,6 +353,124 @@ function get_drop_ship_supplier($stock_id)
 }
 
 /**
+ * Load purchase-order dependencies required by drop-ship PO creation.
+ *
+ * @return void
+ */
+function load_drop_ship_purchase_dependencies()
+{
+	global $path_to_root;
+
+	if (!isset($path_to_root) || $path_to_root === '')
+		$path_to_root = dirname(__FILE__) . '/../../../..';
+
+	include_once($path_to_root . '/purchasing/includes/po_class.inc');
+	include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+	include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
+	include_once($path_to_root . '/inventory/includes/db/items_purchases_db.inc');
+}
+
+/**
+ * Return a sales order line only when the order, line, and optional item match.
+ *
+ * @param int         $so_no      Sales order number
+ * @param int         $so_line_id Sales order detail id
+ * @param string|null $stock_id   Optional item code guard
+ * @return array|false Matching line row or false
+ */
+function get_drop_ship_sales_order_line($so_no, $so_line_id, $stock_id = null)
+{
+	$sql = "SELECT sod.id, sod.order_no, sod.trans_type, sod.stk_code,
+			sod.description, sod.quantity, sod.qty_sent, sod.drop_ship,
+			sod.drop_ship_supplier_id, sod.drop_ship_po_no,
+			(sod.quantity - sod.qty_sent) AS outstanding_qty,
+			so.delivery_address, so.deliver_to, so.from_stk_loc,
+			so.debtor_no, sm.drop_ship_eligible
+		FROM " . TB_PREF . "sales_order_details sod
+		INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no
+			AND sod.trans_type = so.trans_type
+			AND so.trans_type = " . ST_SALESORDER . "
+		INNER JOIN " . TB_PREF . "stock_master sm ON sod.stk_code = sm.stock_id
+		WHERE sod.id = " . (int)$so_line_id . "
+			AND sod.order_no = " . (int)$so_no . "
+			AND sod.trans_type = " . ST_SALESORDER;
+
+	if ($stock_id !== null)
+		$sql .= " AND sod.stk_code = " . db_escape($stock_id);
+
+	$sql .= " LIMIT 1";
+	$result = db_query($sql, 'could not get drop-ship sales order line');
+	$row = db_fetch($result);
+	return $row ? $row : false;
+}
+
+/**
+ * Validate and normalize a drop-ship PO request.
+ *
+ * @param int    $so_no       Sales order number
+ * @param int    $so_line_id  Sales order detail id
+ * @param string $stock_id    Item code
+ * @param float  $qty         Requested drop-ship quantity
+ * @param int    $supplier_id Supplier id, or zero to auto-select
+ * @return array Result with success, message, line, qty, and supplier_id keys
+ */
+function validate_drop_ship_po_request($so_no, $so_line_id, $stock_id, $qty, $supplier_id = 0)
+{
+	$result = array(
+		'success' => false,
+		'message' => '',
+		'line' => false,
+		'qty' => 0,
+		'supplier_id' => (int)$supplier_id,
+	);
+
+	$stock_id = trim((string)$stock_id);
+	$qty = is_numeric($qty) ? (float)$qty : 0;
+
+	if ((int)$so_no <= 0 || (int)$so_line_id <= 0) {
+		$result['message'] = _('Invalid sales order reference.');
+		return $result;
+	}
+	if ($stock_id === '') {
+		$result['message'] = _('No item specified.');
+		return $result;
+	}
+	if (!is_finite($qty) || $qty <= 0) {
+		$result['message'] = _('Quantity must be greater than zero.');
+		return $result;
+	}
+
+	$line = get_drop_ship_sales_order_line($so_no, $so_line_id, $stock_id);
+	if (!$line) {
+		$result['message'] = _('The sales order line does not match the supplied order and item.');
+		return $result;
+	}
+	if ((int)$line['drop_ship']) {
+		$result['message'] = _('This sales order line is already linked to a drop-ship purchase order.');
+		return $result;
+	}
+	if (!(int)$line['drop_ship_eligible']) {
+		$result['message'] = sprintf(_('Item %s is not eligible for drop-shipping.'), $stock_id);
+		return $result;
+	}
+
+	$outstanding_qty = (float)$line['outstanding_qty'];
+	if ($outstanding_qty <= 0) {
+		$result['message'] = _('This sales order line has no outstanding quantity to drop-ship.');
+		return $result;
+	}
+	if ($qty > $outstanding_qty) {
+		$result['message'] = sprintf(_('Drop-ship quantity cannot exceed the outstanding quantity of %s.'), number_format2($outstanding_qty, user_qty_dec()));
+		return $result;
+	}
+
+	$result['success'] = true;
+	$result['line'] = $line;
+	$result['qty'] = $qty;
+	return $result;
+}
+
+/**
  * Mark a SO line as drop-ship and record the supplier/PO reference.
  *
  * @param int $so_line_id     Sales order detail id
@@ -401,6 +522,22 @@ function create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty, $supplier_id 
 	$delivery_address = '', $deliver_to = '', $loc_code = '')
 {
 	$result = array('success' => false, 'po_no' => 0, 'message' => '');
+	load_drop_ship_purchase_dependencies();
+
+	$validation = validate_drop_ship_po_request($so_no, $so_line_id, $stock_id, $qty, $supplier_id);
+	if (!$validation['success']) {
+		$result['message'] = $validation['message'];
+		return $result;
+	}
+
+	$line = $validation['line'];
+	$qty = $validation['qty'];
+	if ($delivery_address === '')
+		$delivery_address = $line['delivery_address'];
+	if ($deliver_to === '')
+		$deliver_to = $line['deliver_to'];
+	if ($loc_code === '')
+		$loc_code = $line['from_stk_loc'];
 
 	// Get supplier
 	if (!$supplier_id) {
@@ -421,13 +558,15 @@ function create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty, $supplier_id 
 
 	// Get item purchasing data
 	$purch_data = get_item_purchasing_data($supplier_id, $stock_id);
-	$purchase_price = $purch_data ? (float)$purch_data['price'] : 0;
-	$supplier_uom = $purch_data ? $purch_data['suppliers_uom'] : '';
-	$conversion = $purch_data ? (float)$purch_data['conversion_factor'] : 1;
-	$supplier_desc = $purch_data ? $purch_data['supplier_description'] : '';
+	if (!$purch_data) {
+		$result['message'] = _('The selected supplier does not have purchasing data for this item.');
+		return $result;
+	}
+	$purchase_price = (float)$purch_data['price'];
+	$supplier_uom = $purch_data['suppliers_uom'];
 
 	// Reference with drop-ship identifier
-	$reference = sprintf('DS-%d-%s', $so_no, $stock_id);
+	$reference = sprintf('DS-%d-%d-%s', $so_no, $so_line_id, $stock_id);
 
 	// Build minimal PO object for add_po()
 	$po = new purch_order;
@@ -546,7 +685,9 @@ function get_drop_ship_orders($from_date = null, $to_date = null, $supplier_id =
 	if ($supplier_id)
 		$sql .= " AND po.supplier_id = " . (int)$supplier_id;
 
-	$sql .= " GROUP BY po.order_no ORDER BY po.ord_date DESC";
+	$sql .= " GROUP BY po.order_no, po.supplier_id, s.supp_name, po.ord_date,
+			po.delivery_address, po.drop_ship_so_no, po.comments, po.total
+		ORDER BY po.ord_date DESC";
 	return db_query($sql, 'could not get drop-ship orders');
 }
 
@@ -564,10 +705,12 @@ function get_drop_ship_so_lines($so_no = null)
 			so.debtor_no, d.name AS customer_name, so.deliver_to
 		FROM " . TB_PREF . "sales_order_details sod
 		INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no
+			AND sod.trans_type = so.trans_type
 			AND so.trans_type = " . ST_SALESORDER . "
 		INNER JOIN " . TB_PREF . "debtors_master d ON so.debtor_no = d.debtor_no
 		LEFT JOIN " . TB_PREF . "suppliers s ON sod.drop_ship_supplier_id = s.supplier_id
-		WHERE sod.drop_ship = 1";
+		WHERE sod.drop_ship = 1
+			AND sod.trans_type = " . ST_SALESORDER;
 
 	if ($so_no)
 		$sql .= " AND sod.order_no = " . (int)$so_no;
@@ -656,10 +799,12 @@ function get_pending_cross_dock_count()
 	$sql = "SELECT COUNT(DISTINCT sod.id) AS cnt
 		FROM " . TB_PREF . "sales_order_details sod
 		INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no
+			AND sod.trans_type = so.trans_type
 			AND so.trans_type = " . ST_SALESORDER . "
 		INNER JOIN " . TB_PREF . "stock_master sm ON sod.stk_code = sm.stock_id
 		INNER JOIN " . TB_PREF . "locations loc ON so.from_stk_loc = loc.loc_code
 		WHERE (sod.quantity - sod.qty_sent) > 0
+			AND sod.trans_type = " . ST_SALESORDER . "
 			AND sm.cross_dock_eligible = 1
 			AND loc.cross_dock_enabled = 1
 			AND sod.drop_ship = 0";

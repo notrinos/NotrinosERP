@@ -33,6 +33,9 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/ui/ui_lists.inc');
 include_once($path_to_root . '/includes/db/inventory_db.inc');
+include_once($path_to_root . '/inventory/includes/db/items_purchases_db.inc');
+include_once($path_to_root . '/purchasing/includes/po_class.inc');
+include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_crossdock_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/warehouse_ui.inc');
@@ -71,6 +74,7 @@ if (isset($_POST['CREATE_DS_PO'])) {
 	$stock_id = get_post('ds_stock_id');
 	$qty = input_num('ds_qty', 0);
 	$supplier_id = (int)get_post('ds_supplier_id');
+	$validation = null;
 
 	if (!$so_no || !$so_line_id) {
 		display_error(_('Invalid sales order reference.'));
@@ -84,21 +88,19 @@ if (isset($_POST['CREATE_DS_PO'])) {
 		display_error(_('Quantity must be greater than zero.'));
 		$input_error = 1;
 	}
-	if (!is_item_drop_ship_eligible($stock_id)) {
-		display_error(sprintf(_('Item %s is not eligible for drop-shipping.'), $stock_id));
-		$input_error = 1;
+	if ($input_error == 0) {
+		$validation = validate_drop_ship_po_request($so_no, $so_line_id, $stock_id, $qty, $supplier_id);
+		if (!$validation['success']) {
+			display_error($validation['message']);
+			$input_error = 1;
+		}
 	}
 
 	if ($input_error == 0) {
-		// Get SO delivery info
-		$so_sql = "SELECT deliver_to, delivery_address, from_stk_loc
-			FROM " . TB_PREF . "sales_orders
-			WHERE order_no = " . (int)$so_no . " AND trans_type = " . ST_SALESORDER;
-		$so_result = db_query($so_sql, 'could not get SO');
-		$so_row = db_fetch($so_result);
-		$delivery_address = $so_row ? $so_row['delivery_address'] : '';
-		$deliver_to = $so_row ? $so_row['deliver_to'] : '';
-		$loc_code = $so_row ? $so_row['from_stk_loc'] : '';
+		$so_line = $validation['line'];
+		$delivery_address = $so_line['delivery_address'];
+		$deliver_to = $so_line['deliver_to'];
+		$loc_code = $so_line['from_stk_loc'];
 
 		$result = create_drop_ship_po($so_no, $so_line_id, $stock_id, $qty,
 			$supplier_id ? $supplier_id : null,
@@ -156,6 +158,7 @@ echo '</div>';
 
 if ($current_tab === 'crossdock') {
 	start_form();
+	hidden('tab', $current_tab);
 
 	div_start('crossdock_list');
 
@@ -180,10 +183,12 @@ if ($current_tab === 'crossdock') {
 					so.deliver_to, sm.cross_dock_eligible, sm.drop_ship_eligible
 				FROM " . TB_PREF . "sales_order_details sod
 				INNER JOIN " . TB_PREF . "sales_orders so ON sod.order_no = so.order_no
+					AND sod.trans_type = so.trans_type
 					AND so.trans_type = " . ST_SALESORDER . "
 				INNER JOIN " . TB_PREF . "debtors_master d ON so.debtor_no = d.debtor_no
 				INNER JOIN " . TB_PREF . "stock_master sm ON sod.stk_code = sm.stock_id
 				WHERE so.from_stk_loc = " . db_escape($loc['loc_code']) . "
+					AND sod.trans_type = " . ST_SALESORDER . "
 					AND (sod.quantity - sod.qty_sent) > 0
 					AND sm.cross_dock_eligible = 1
 					AND sod.drop_ship = 0
@@ -223,6 +228,7 @@ if ($current_tab === 'crossdock') {
 
 if ($current_tab === 'dropship') {
 	start_form();
+	hidden('tab', $current_tab);
 
 	// --- Drop-ship PO creation form ---
 	display_heading(_('Create Drop-Ship Purchase Order'));
@@ -331,6 +337,7 @@ if ($current_tab === 'dropship') {
 
 if ($current_tab === 'config') {
 	start_form();
+	hidden('tab', $current_tab);
 
 	// --- Item flags ---
 	display_heading(_('Item Cross-Dock / Drop-Ship Eligibility'));
@@ -462,6 +469,7 @@ if ($current_tab === 'config') {
 
 if ($current_tab === 'history') {
 	start_form();
+	hidden('tab', $current_tab);
 
 	display_heading(_('Cross-Dock & Drop-Ship History'));
 	echo '<br>';

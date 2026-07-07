@@ -1651,7 +1651,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 
 	// Create WMS inbound operations if warehouse is WMS-enabled
 	if ($is_wms && !empty($wms_items)) {
-		// --- Cross-dock detection (Session 25) ---
+		// --- Cross-dock detection ---
 		// Check if location has cross-docking enabled. If so, try to match
 		// received items against pending outbound demand (SO lines).
 		// Items matched are routed receipt → ship, bypassing putaway.
@@ -1672,15 +1672,20 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 							$alloc_total += $a['qty_allocated'];
 						}
 
-						// Create cross-dock operations for the allocated portion
-						create_cross_dock_operations($grn_no, $location, $allocations, $item);
-
-						// Remaining qty goes through normal inbound
-						$remaining = $item['qty'] - $alloc_total;
-						if ($remaining > 0) {
-							$normal_item = $item;
-							$normal_item['qty'] = $remaining;
-							$normal_items[] = $normal_item;
+						// Create cross-dock operations for the allocated portion.
+						$crossdock_result = create_cross_dock_operations($grn_no, $location, $allocations, $item);
+						if ($crossdock_result['success']) {
+							// Remaining qty goes through normal inbound.
+							$remaining = $item['qty'] - $alloc_total;
+							if ($remaining > 0) {
+								$normal_item = $item;
+								$normal_item['qty'] = $remaining;
+								$normal_items[] = $normal_item;
+							}
+						} else {
+							if (function_exists('display_error') && !empty($crossdock_result['message']))
+								display_error($crossdock_result['message']);
+							$normal_items[] = $item;
 						}
 					} else {
 						// No matching demand — process normally
