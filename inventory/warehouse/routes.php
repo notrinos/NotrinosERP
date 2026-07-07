@@ -17,7 +17,6 @@
  * with ordered push/pull rules. Includes one-click template installation and
  * route resolution testing.
  *
- * Session 13 of the Unified Advanced Inventory Implementation Plan.
  */
 $page_security = 'SA_WAREHOUSE_ROUTES';
 $path_to_root = '../..';
@@ -31,7 +30,57 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_routes_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/warehouse_ui.inc');
 
+/**
+ * Check whether submitted route fields contain scalar values only.
+ *
+ * @param array $field_names Expected scalar field names.
+ * @return bool
+ */
+function warehouse_route_post_fields_are_scalar($field_names) {
+	foreach ($field_names as $field_name) {
+		if (isset($_POST[$field_name]) && is_array($_POST[$field_name])) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Check whether a submitted value is a non-negative integer string.
+ *
+ * @param mixed $value Submitted value.
+ * @param int $max_value Maximum accepted value.
+ * @return bool
+ */
+function warehouse_route_is_non_negative_integer($value, $max_value = 2147483647) {
+	if (!is_scalar($value) || !preg_match('/^\d+$/', trim((string)$value))) {
+		return false;
+	}
+
+	$value = trim((string)$value);
+	if (strlen($value) > 10) {
+		return false;
+	}
+
+	return (int)$value <= $max_value;
+}
+
+/**
+ * Check whether a submitted value is a positive integer string.
+ *
+ * @param mixed $value Submitted value.
+ * @return bool
+ */
+function warehouse_route_is_positive_integer($value) {
+	return warehouse_route_is_non_negative_integer($value) && (int)$value > 0;
+}
+
 simple_page_mode(true);
+if (isset($_POST['DeleteRule'])) {
+	$Mode = '';
+	$selected_id = get_post('edit_route_id', -1);
+}
 
 //-------------------------------------------------------------------------------------
 // Handle ROUTE ADD / UPDATE
@@ -39,56 +88,76 @@ simple_page_mode(true);
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$input_error = 0;
+	$route_name = get_post('route_name');
+	$route_type = get_post('route_type');
+	$sequence = get_post('sequence');
+	$warehouse_loc_code = get_post('warehouse_loc_code');
+	$description = get_post('description');
 
-	if (strlen(trim(get_post('route_name'))) == 0) {
+	if (!warehouse_route_post_fields_are_scalar(array(
+		'route_name', 'route_type', 'warehouse_loc_code', 'sequence',
+		'description', 'selected_id', 'is_default', 'active'
+	))) {
+		$input_error = 1;
+		display_error(_('One or more submitted fields contained an invalid value. Please review the form and try again.'));
+	}
+
+	if ($input_error == 0 && strlen(trim((string)$route_name)) == 0) {
 		$input_error = 1;
 		display_error(_('The route name must be entered.'));
 		set_focus('route_name');
 	}
 
-	$route_type = get_post('route_type');
 	$valid_types = array_keys(get_route_types());
-	if (!in_array($route_type, $valid_types)) {
+	if ($input_error == 0 && !in_array($route_type, $valid_types, true)) {
 		$input_error = 1;
 		display_error(_('Please select a valid route type.'));
 		set_focus('route_type');
 	}
 
-	$sequence = get_post('sequence');
-	if ($sequence === '' || !is_numeric($sequence) || (int)$sequence < 0) {
+	if ($input_error == 0 && !warehouse_route_is_non_negative_integer($sequence)) {
 		$input_error = 1;
-		display_error(_('Sequence must be a non-negative number.'));
+		display_error(_('Sequence must be a non-negative integer.'));
 		set_focus('sequence');
 	}
 
+	if ($input_error == 0 && $selected_id != -1 && !warehouse_route_is_positive_integer($selected_id)) {
+		$input_error = 1;
+		display_error(_('Selected route must be a valid warehouse route.'));
+	}
+
+	$warehouse_loc_code = ($warehouse_loc_code && $warehouse_loc_code !== '' && $warehouse_loc_code !== ALL_TEXT) ? trim((string)$warehouse_loc_code) : null;
+	if ($input_error == 0 && $warehouse_loc_code !== null && !warehouse_route_warehouse_exists($warehouse_loc_code)) {
+		$input_error = 1;
+		display_error(_('Please select a valid active warehouse.'));
+		set_focus('warehouse_loc_code');
+	}
+
 	if ($input_error != 1) {
-		$warehouse_loc_code = get_post('warehouse_loc_code');
-		$warehouse_loc_code = ($warehouse_loc_code && $warehouse_loc_code !== '' && $warehouse_loc_code !== ALL_TEXT) ? $warehouse_loc_code : null;
 		$is_default = check_value('is_default') ? true : false;
 		$active = check_value('active') ? true : false;
-		$description = get_post('description');
 
 		if ($selected_id != -1) {
 			update_route(
 				$selected_id,
-				get_post('route_name'),
+				trim((string)$route_name),
 				$route_type,
 				$warehouse_loc_code,
 				$is_default,
 				(int)$sequence,
 				$active,
-				$description
+				(string)$description
 			);
 			display_notification(_('Route has been updated.'));
 		} else {
 			$new_id = add_route(
-				get_post('route_name'),
+				trim((string)$route_name),
 				$route_type,
 				$warehouse_loc_code,
 				$is_default,
 				(int)$sequence,
 				true,
-				$description
+				(string)$description
 			);
 			display_notification(_('New route has been added.'));
 		}
@@ -101,12 +170,16 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 //-------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-	$can = can_delete_route($selected_id);
-	if ($can === true) {
-		delete_route($selected_id);
-		display_notification(_('Selected route and its rules have been deleted.'));
+	if (!warehouse_route_is_positive_integer($selected_id) || !get_route((int)$selected_id)) {
+		display_error(_('Selected route must be a valid warehouse route.'));
 	} else {
-		display_error($can);
+		$can = can_delete_route($selected_id);
+		if ($can === true) {
+			delete_route($selected_id);
+			display_notification(_('Selected route and its rules have been deleted.'));
+		} else {
+			display_error($can);
+		}
 	}
 	$Mode = 'RESET';
 }
@@ -119,40 +192,63 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 	$edit_route_id = (int)get_post('edit_route_id');
 	$input_error = 0;
 
+	if (!warehouse_route_post_fields_are_scalar(array(
+		'edit_route_id', 'rule_type', 'rule_sequence', 'rule_operation_type',
+		'rule_trigger_method', 'rule_delay_days', 'rule_from_loc_id', 'rule_to_loc_id'
+	))) {
+		$input_error = 1;
+		display_error(_('One or more submitted rule fields contained an invalid value. Please review the form and try again.'));
+	}
+
+	if ($input_error == 0 && (!warehouse_route_is_positive_integer(get_post('edit_route_id')) || !get_route($edit_route_id))) {
+		$input_error = 1;
+		display_error(_('Please select a valid route before adding rules.'));
+	}
+
 	$rule_type = get_post('rule_type');
-	if (!in_array($rule_type, array_keys(get_rule_types()))) {
+	if ($input_error == 0 && !in_array($rule_type, array_keys(get_rule_types()), true)) {
 		$input_error = 1;
 		display_error(_('Please select a valid rule type.'));
 	}
 
 	$operation_type = get_post('rule_operation_type');
-	if (!in_array($operation_type, array_keys(get_rule_operation_types()))) {
+	if ($input_error == 0 && !in_array($operation_type, array_keys(get_rule_operation_types()), true)) {
 		$input_error = 1;
 		display_error(_('Please select a valid operation type.'));
 	}
 
 	$trigger_method = get_post('rule_trigger_method');
-	if (!in_array($trigger_method, array_keys(get_trigger_methods()))) {
+	if ($input_error == 0 && !in_array($trigger_method, array_keys(get_trigger_methods()), true)) {
 		$input_error = 1;
 		display_error(_('Please select a valid trigger method.'));
 	}
 
 	$rule_sequence = get_post('rule_sequence');
-	if ($rule_sequence === '' || !is_numeric($rule_sequence) || (int)$rule_sequence < 0) {
+	if ($input_error == 0 && !warehouse_route_is_non_negative_integer($rule_sequence)) {
 		$input_error = 1;
-		display_error(_('Rule sequence must be a non-negative number.'));
+		display_error(_('Rule sequence must be a non-negative integer.'));
 	}
 
 	$delay_days = get_post('rule_delay_days');
-	if ($delay_days === '' || !is_numeric($delay_days) || (int)$delay_days < 0) {
+	if ($input_error == 0 && !warehouse_route_is_non_negative_integer($delay_days, 3650)) {
 		$input_error = 1;
-		display_error(_('Delay days must be a non-negative number.'));
+		display_error(_('Delay days must be a non-negative integer.'));
+	}
+
+	$from_loc_id = get_post('rule_from_loc_id');
+	if ($input_error == 0 && $from_loc_id !== '' && $from_loc_id != 0 && $from_loc_id != -1 && !warehouse_route_is_positive_integer($from_loc_id)) {
+		$input_error = 1;
+		display_error(_('From location must be a valid warehouse location.'));
+	}
+
+	$to_loc_id = get_post('rule_to_loc_id');
+	if ($input_error == 0 && $to_loc_id !== '' && $to_loc_id != 0 && $to_loc_id != -1 && !warehouse_route_is_positive_integer($to_loc_id)) {
+		$input_error = 1;
+		display_error(_('To location must be a valid warehouse location.'));
 	}
 
 	if ($input_error != 1) {
-		$from_loc_id = get_post('rule_from_loc_id');
 		$from_loc_id = ($from_loc_id && $from_loc_id !== '' && $from_loc_id != 0 && $from_loc_id != -1) ? (int)$from_loc_id : null;
-		$to_loc_id = get_post('rule_to_loc_id');
 		$to_loc_id = ($to_loc_id && $to_loc_id !== '' && $to_loc_id != 0 && $to_loc_id != -1) ? (int)$to_loc_id : null;
 		$delay_days = (int)$delay_days;
 
@@ -177,9 +273,17 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 //-------------------------------------------------------------------------------------
 
 if (isset($_POST['DeleteRule'])) {
-	$rule_id = (int)$_POST['DeleteRule'];
-	delete_route_rule($rule_id);
-	display_notification(_('Rule has been deleted.'));
+	$rule_id = $_POST['DeleteRule'];
+	$edit_route_id = get_post('edit_route_id');
+	if (!warehouse_route_post_fields_are_scalar(array('DeleteRule', 'edit_route_id'))
+		|| !warehouse_route_is_positive_integer($rule_id)
+		|| !warehouse_route_is_positive_integer($edit_route_id)
+		|| !route_rule_belongs_to_route((int)$rule_id, (int)$edit_route_id)) {
+		display_error(_('Selected rule must belong to the route being edited.'));
+	} else {
+		delete_route_rule((int)$rule_id);
+		display_notification(_('Rule has been deleted.'));
+	}
 	$Ajax->activate('_page_body');
 }
 
@@ -193,11 +297,17 @@ if (isset($_POST['InstallTemplate'])) {
 	$template_warehouse = ($template_warehouse && $template_warehouse !== '' && $template_warehouse !== ALL_TEXT) ? $template_warehouse : null;
 	$template_default = check_value('template_default');
 
-	$route_id = install_route_template($template_key, $template_warehouse, $template_default);
-	if ($route_id) {
-		display_notification(sprintf(_('Route template installed successfully (Route #%d).'), $route_id));
+	if (!warehouse_route_post_fields_are_scalar(array('template_key', 'template_warehouse', 'template_default'))) {
+		display_error(_('One or more submitted template fields contained an invalid value. Please review the form and try again.'));
+	} elseif ($template_warehouse !== null && !warehouse_route_warehouse_exists($template_warehouse)) {
+		display_error(_('Please select a valid active warehouse.'));
 	} else {
-		display_error(_('Failed to install route template. Invalid template selected.'));
+		$route_id = install_route_template($template_key, $template_warehouse, $template_default);
+		if ($route_id) {
+			display_notification(sprintf(_('Route template installed successfully (Route #%d).'), $route_id));
+		} else {
+			display_error(_('Failed to install route template. Invalid template selected.'));
+		}
 	}
 	$Ajax->activate('_page_body');
 }
@@ -211,10 +321,14 @@ if (isset($_POST['TestResolve'])) {
 	$test_warehouse = get_post('test_warehouse');
 	$test_type = get_post('test_type');
 
-	if (!$test_warehouse) {
+	if (!warehouse_route_post_fields_are_scalar(array('test_warehouse', 'test_type'))) {
+		display_error(_('One or more submitted test fields contained an invalid value. Please review the form and try again.'));
+	} elseif (!$test_warehouse) {
 		display_error(_('Please select a warehouse to test.'));
-	} elseif (!$test_type) {
+	} elseif (!$test_type || !in_array($test_type, array_keys(get_route_types()), true)) {
 		display_error(_('Please select a route type to test.'));
+	} elseif (!warehouse_route_warehouse_exists($test_warehouse)) {
+		display_error(_('Please select a valid active warehouse.'));
 	} else {
 		$test_result = resolve_route($test_warehouse, $test_type);
 	}
@@ -230,6 +344,12 @@ if ($Mode == 'RESET') {
 	$sav = get_post('show_inactive');
 	unset($_POST);
 	$_POST['show_inactive'] = $sav;
+}
+
+if ($selected_id != -1 && (!warehouse_route_is_positive_integer($selected_id) || !get_route((int)$selected_id))) {
+	display_error(_('Selected route must be a valid warehouse route.'));
+	$selected_id = -1;
+	$Mode = 'RESET';
 }
 
 //============================================================================================
@@ -344,17 +464,25 @@ start_table(TABLESTYLE2);
 if ($selected_id != -1) {
 	if ($Mode == 'Edit') {
 		$myrow = get_route($selected_id);
-		$_POST['route_name'] = $myrow['route_name'];
-		$_POST['route_type'] = $myrow['route_type'];
-		$_POST['warehouse_loc_code'] = $myrow['warehouse_loc_code'];
-		$_POST['is_default'] = $myrow['is_default'];
-		$_POST['sequence'] = $myrow['sequence'];
-		$_POST['active'] = $myrow['active'];
-		$_POST['description'] = $myrow['description'];
-		$_POST['edit_route_id'] = $selected_id;
+		if (!$myrow) {
+			display_error(_('Selected route must be a valid warehouse route.'));
+			$selected_id = -1;
+			$Mode = 'RESET';
+		} else {
+			$_POST['route_name'] = $myrow['route_name'];
+			$_POST['route_type'] = $myrow['route_type'];
+			$_POST['warehouse_loc_code'] = $myrow['warehouse_loc_code'];
+			$_POST['is_default'] = $myrow['is_default'];
+			$_POST['sequence'] = $myrow['sequence'];
+			$_POST['active'] = $myrow['active'];
+			$_POST['description'] = $myrow['description'];
+			$_POST['edit_route_id'] = $selected_id;
+		}
 	}
-	hidden('selected_id', $selected_id);
-	hidden('edit_route_id', $selected_id);
+	if ($selected_id != -1) {
+		hidden('selected_id', $selected_id);
+		hidden('edit_route_id', $selected_id);
+	}
 }
 
 echo "<tr><td colspan='2' style='padding-top:10px;'><strong>"

@@ -25,7 +25,6 @@
  * Push rule execution: when stock arrives at a trigger location, auto-create
  * the next operation defined by the route's push rules.
  *
- * Session 13 of the Unified Advanced Inventory Implementation Plan.
  *
  * @package NotrinosERP
  * @subpackage Inventory/Warehouse
@@ -314,6 +313,47 @@ function get_route_type_summary() {
 	return $summary;
 }
 
+/**
+ * Check whether a submitted warehouse code exists and is WMS-enabled.
+ *
+ * @param string $warehouse_loc_code Warehouse code from 0_locations.loc_code
+ * @return bool
+ */
+function warehouse_route_warehouse_exists($warehouse_loc_code) {
+	if (!is_scalar($warehouse_loc_code) || trim((string)$warehouse_loc_code) === '')
+		return false;
+
+	$sql = "SELECT loc_code FROM " . TB_PREF . "locations"
+		. " WHERE loc_code=" . db_escape(trim((string)$warehouse_loc_code))
+		. " AND wh_enabled=1 AND inactive=0 LIMIT 1";
+	$result = db_query($sql, 'could not validate warehouse route warehouse');
+	return (bool)db_fetch($result);
+}
+
+/**
+ * Check whether a warehouse route belongs to the requested route type/scope.
+ *
+ * Global routes are valid for any warehouse. Warehouse-specific routes must
+ * match the warehouse being resolved.
+ *
+ * @param array       $route               Route row
+ * @param string      $route_type          Requested route type
+ * @param string|null $warehouse_loc_code  Requested warehouse code
+ * @return bool
+ */
+function route_matches_resolution_context($route, $route_type, $warehouse_loc_code = null) {
+	if (!$route || empty($route['active']))
+		return false;
+
+	if ($route['route_type'] !== $route_type)
+		return false;
+
+	if ($warehouse_loc_code === null || $warehouse_loc_code === '')
+		return true;
+
+	return empty($route['warehouse_loc_code']) || $route['warehouse_loc_code'] === $warehouse_loc_code;
+}
+
 //----------------------------------------------------------------------
 // CRUD: Route Rules
 //----------------------------------------------------------------------
@@ -400,6 +440,21 @@ function get_route_rule($rule_id) {
 		WHERE rr.rule_id=" . (int)$rule_id;
 	$result = db_query($sql, 'could not get route rule');
 	return db_fetch($result);
+}
+
+/**
+ * Check whether a route rule belongs to the expected route.
+ *
+ * @param int $rule_id  Rule ID
+ * @param int $route_id Route ID
+ * @return bool
+ */
+function route_rule_belongs_to_route($rule_id, $route_id) {
+	$sql = "SELECT rule_id FROM " . TB_PREF . "wh_route_rules"
+		. " WHERE rule_id=" . (int)$rule_id
+		. " AND route_id=" . (int)$route_id . " LIMIT 1";
+	$result = db_query($sql, 'could not validate route rule ownership');
+	return (bool)db_fetch($result);
 }
 
 /**
@@ -492,7 +547,7 @@ function resolve_route($warehouse_loc_code, $route_type, $stock_id = null) {
 		$loc = db_fetch($result);
 		if ($loc && $loc[$route_col]) {
 			$route = get_route((int)$loc[$route_col]);
-			if ($route && $route['active']) {
+			if (route_matches_resolution_context($route, $route_type, $warehouse_loc_code)) {
 				return $route;
 			}
 		}
