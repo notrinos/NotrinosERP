@@ -730,8 +730,47 @@
 		}
 	}
 
+	function bindModernShellScrollGuard() {
+		var appShell = getAppShell();
+		var mainContent = document.getElementById('modern-main-content');
+		if (window.modernShellScrollGuardBound) {
+			return;
+		}
+
+		if (!appShell || !mainContent) {
+			window.modernShellScrollGuardAttempts = (window.modernShellScrollGuardAttempts || 0) + 1;
+			if (window.modernShellScrollGuardAttempts <= 20) {
+				setTimeout(bindModernShellScrollGuard, 50);
+			}
+			return;
+		}
+
+		window.modernShellScrollGuardBound = true;
+
+		function keepShellScrollInsideMain() {
+			var outerX = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+			var outerY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+			if (!outerX && !outerY) {
+				return;
+			}
+
+			if (outerY) {
+				mainContent.scrollTop += outerY;
+			}
+			if (outerX) {
+				mainContent.scrollLeft += outerX;
+			}
+			window.scrollTo(0, 0);
+		}
+
+		window.addEventListener('scroll', keepShellScrollInsideMain, false);
+		keepShellScrollInsideMain();
+	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function () {
+			bindModernShellScrollGuard();
 			bindSidebarToggle();
 			bindModuleGroups();
 			bindSidebarModuleActiveLinks();
@@ -745,6 +784,7 @@
 			bindDataTableScrollHints();
 		});
 	} else {
+		bindModernShellScrollGuard();
 		bindSidebarToggle();
 		bindModuleGroups();
 		bindSidebarModuleActiveLinks();
