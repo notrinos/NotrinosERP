@@ -731,7 +731,76 @@ function get_fifo_batches($stock_id, $loc_code = '', $qty_needed = 0) {
 }
 
 /**
- * Allocate batch quantities using the item's configured removal strategy (FEFO/FIFO).
+ * Get batches available for allocation, ordered by LIFO (Last In, First Out).
+ *
+ * @param string $stock_id  Item code
+ * @param string $loc_code  Location code ('' for all)
+ * @param float  $qty_needed Quantity needed (0 = return all)
+ * @return array Array of batch rows ordered by reverse creation date
+ */
+function get_lifo_batches($stock_id, $loc_code = '', $qty_needed = 0) {
+	$where = "b.stock_id=" . db_escape($stock_id) . " AND b.status='active' AND b.inactive=0";
+	if ($loc_code !== '' && $loc_code !== null)
+		$where .= " AND bm.loc_code=" . db_escape($loc_code);
+
+	$sql = "SELECT b.id AS batch_id, b.batch_no, b.expiry_date,
+			SUM(bm.quantity) AS qty_available,
+			DATEDIFF(b.expiry_date, CURDATE()) AS days_until_expiry
+		FROM " . TB_PREF . "stock_batches b
+		INNER JOIN " . TB_PREF . "batch_movements bm ON b.id = bm.batch_id
+		WHERE $where
+		GROUP BY b.id
+		HAVING qty_available > 0
+		ORDER BY b.created_at DESC, b.id DESC";
+
+	$result = db_query($sql, 'could not get LIFO batches');
+	$batches = array();
+	$allocated = 0;
+
+	while ($row = db_fetch($result)) {
+		$batches[] = $row;
+		$allocated += $row['qty_available'];
+		if ($qty_needed > 0 && $allocated >= $qty_needed)
+			break;
+	}
+
+	return $batches;
+}
+
+/**
+ * Resolve the strategy used by batch allocation.
+ *
+ * @param string $stock_id Item code
+ * @param string $loc_code Location code
+ * @return string
+ */
+function resolve_batch_allocation_strategy($stock_id, $loc_code = '') {
+	$removal_engine_path = dirname(dirname(dirname(__FILE__))) . '/warehouse/includes/removal_engine.inc';
+	if (file_exists($removal_engine_path)) {
+		include_once($removal_engine_path);
+	}
+
+	if (function_exists('resolve_removal_strategy') && $loc_code !== '' && $loc_code !== null) {
+		$resolution = resolve_removal_strategy($stock_id, $loc_code);
+		if (isset($resolution['strategy']) && function_exists('is_valid_removal_strategy')
+			&& is_valid_removal_strategy($resolution['strategy'])) {
+			return $resolution['strategy'];
+		}
+	}
+
+	$item = stock_master_entity::find($stock_id);
+	if (isset($item['removal_strategy']) && $item['removal_strategy']) {
+		if (function_exists('is_valid_removal_strategy')) {
+			return is_valid_removal_strategy($item['removal_strategy']) ? $item['removal_strategy'] : 'fefo';
+		}
+		return in_array($item['removal_strategy'], array('fifo', 'fefo', 'lifo')) ? $item['removal_strategy'] : 'fefo';
+	}
+
+	return 'fefo';
+}
+
+/**
+ * Allocate batch quantities using the configured removal strategy hierarchy.
  *
  * @param string $stock_id  Item code
  * @param float  $qty       Quantity to allocate
@@ -739,14 +808,18 @@ function get_fifo_batches($stock_id, $loc_code = '', $qty_needed = 0) {
  * @return array Array of ['batch_id' => id, 'batch_no' => no, 'qty' => allocated_qty]
  */
 function allocate_batches($stock_id, $qty, $loc_code = '') {
-	$item = stock_master_entity::find($stock_id);
-	$strategy = isset($item['removal_strategy']) && $item['removal_strategy']
-		? $item['removal_strategy'] : 'fefo';
+	if ((float)$qty <= 0)
+		return array();
 
-	if ($strategy === 'fifo')
+	$strategy = resolve_batch_allocation_strategy($stock_id, $loc_code);
+
+	if ($strategy === 'fifo') {
 		$available = get_fifo_batches($stock_id, $loc_code, $qty);
-	else
+	} elseif ($strategy === 'lifo') {
+		$available = get_lifo_batches($stock_id, $loc_code, $qty);
+	} else {
 		$available = get_fefo_batches($stock_id, $loc_code, $qty);
+	}
 
 	$allocations = array();
 	$remaining = $qty;

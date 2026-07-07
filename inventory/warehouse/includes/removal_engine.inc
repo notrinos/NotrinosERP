@@ -38,6 +38,30 @@ include_once(dirname(__FILE__) . '/db/warehouse_locations_db.inc');
 // =====================================================================
 
 /**
+ * Check whether a removal strategy key is supported by the engine.
+ *
+ * @param string|null $strategy Strategy key.
+ * @return bool
+ */
+function is_valid_removal_strategy($strategy) {
+	$strategy = trim((string)$strategy);
+	$strategies = get_removal_strategies();
+	return isset($strategies[$strategy]);
+}
+
+/**
+ * Normalize a strategy key and return a safe fallback for invalid values.
+ *
+ * @param string|null $strategy Strategy key.
+ * @param string      $fallback Fallback strategy.
+ * @return string
+ */
+function normalize_removal_strategy($strategy, $fallback = 'fifo') {
+	$strategy = trim((string)$strategy);
+	return is_valid_removal_strategy($strategy) ? $strategy : $fallback;
+}
+
+/**
  * Resolve the effective removal strategy for a given item in a warehouse.
  *
  * Hierarchy:
@@ -57,9 +81,9 @@ function resolve_removal_strategy($stock_id, $warehouse_loc_code) {
 	$result = db_query($sql, 'could not get item removal strategy');
 	$item = db_fetch($result);
 
-	if ($item && !empty($item['removal_strategy'])) {
+	if ($item && !empty($item['removal_strategy']) && is_valid_removal_strategy($item['removal_strategy'])) {
 		return array(
-			'strategy' => $item['removal_strategy'],
+			'strategy' => normalize_removal_strategy($item['removal_strategy']),
 			'source'   => _('Item override'),
 			'rule_id'  => null,
 		);
@@ -68,13 +92,20 @@ function resolve_removal_strategy($stock_id, $warehouse_loc_code) {
 	$category_id = $item ? (int)$item['category_id'] : null;
 
 	// 2. Check removal strategy rules (ordered by sequence)
-	$sql = "SELECT id, strategy, warehouse_loc_code, stock_id, category_id, sequence "
+	$sql = "SELECT id, strategy, warehouse_loc_code, stock_id, category_id, sequence, "
+		. "(CASE WHEN stock_id IS NOT NULL AND stock_id <> '' THEN 8 ELSE 0 END "
+		. "+ CASE WHEN category_id IS NOT NULL THEN 4 ELSE 0 END "
+		. "+ CASE WHEN warehouse_loc_code IS NOT NULL AND warehouse_loc_code <> '' THEN 2 ELSE 0 END) AS specificity "
 		. "FROM " . TB_PREF . "wh_removal_strategies "
 		. "WHERE active = 1 "
-		. "ORDER BY sequence ASC, id ASC";
+		. "ORDER BY sequence ASC, specificity DESC, id ASC";
 	$result = db_query($sql, 'could not get removal strategy rules');
 
 	while ($rule = db_fetch($result)) {
+		if (!is_valid_removal_strategy($rule['strategy'])) {
+			continue;
+		}
+
 		// Match specificity: item > category > warehouse > global
 		$matches = true;
 
@@ -112,7 +143,7 @@ function resolve_removal_strategy($stock_id, $warehouse_loc_code) {
 			}
 
 			return array(
-				'strategy' => $rule['strategy'],
+				'strategy' => normalize_removal_strategy($rule['strategy']),
 				'source'   => $source,
 				'rule_id'  => (int)$rule['id'],
 			);
@@ -125,9 +156,9 @@ function resolve_removal_strategy($stock_id, $warehouse_loc_code) {
 	$result = db_query($sql, 'could not get warehouse removal strategy');
 	$warehouse = db_fetch($result);
 
-	if ($warehouse && !empty($warehouse['removal_strategy'])) {
+	if ($warehouse && !empty($warehouse['removal_strategy']) && is_valid_removal_strategy($warehouse['removal_strategy'])) {
 		return array(
-			'strategy' => $warehouse['removal_strategy'],
+			'strategy' => normalize_removal_strategy($warehouse['removal_strategy']),
 			'source'   => _('Warehouse default'),
 			'rule_id'  => null,
 		);
@@ -160,17 +191,24 @@ function resolve_removal_strategy($stock_id, $warehouse_loc_code) {
  *               'pick_sequence', 'strategy', 'source']
  */
 function execute_removal($stock_id, $warehouse_loc_code, $quantity, $force_strategy = null) {
-	if ($force_strategy) {
+	if ((float)$quantity <= 0) {
+		return array();
+	}
+
+	if ($force_strategy !== null && $force_strategy !== '') {
+		$strategy = normalize_removal_strategy($force_strategy);
 		$resolution = array(
-			'strategy' => $force_strategy,
-			'source'   => _('Forced') . ': ' . $force_strategy,
+			'strategy' => $strategy,
+			'source'   => is_valid_removal_strategy($force_strategy)
+				? _('Forced') . ': ' . $strategy
+				: _('Fallback (FIFO)'),
 			'rule_id'  => null,
 		);
 	} else {
 		$resolution = resolve_removal_strategy($stock_id, $warehouse_loc_code);
 	}
 
-	$strategy = $resolution['strategy'];
+	$strategy = normalize_removal_strategy($resolution['strategy']);
 	$source = $resolution['source'];
 
 	// Get bin stock sorted by strategy
@@ -239,10 +277,13 @@ function test_removal($stock_id, $warehouse_loc_code, $quantity, $force_strategy
 	}
 
 	// Resolve strategy
-	if ($force_strategy) {
+	if ($force_strategy !== null && $force_strategy !== '') {
+		$strategy = normalize_removal_strategy($force_strategy);
 		$resolution = array(
-			'strategy' => $force_strategy,
-			'source'   => _('Forced') . ': ' . $force_strategy,
+			'strategy' => $strategy,
+			'source'   => is_valid_removal_strategy($force_strategy)
+				? _('Forced') . ': ' . $strategy
+				: _('Fallback (FIFO)'),
 			'rule_id'  => null,
 		);
 	} else {
@@ -254,10 +295,13 @@ function test_removal($stock_id, $warehouse_loc_code, $quantity, $force_strategy
 	$total_sql = "SELECT COALESCE(SUM(bs.qty_available), 0) AS total "
 		. "FROM " . TB_PREF . "wh_bin_stock bs "
 		. "INNER JOIN " . TB_PREF . "wh_locations wl ON bs.wh_loc_id = wl.loc_id "
+		. "LEFT JOIN " . TB_PREF . "stock_batches b ON bs.batch_id = b.id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
-		. " AND bs.qty_available > 0";
+		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))";
 	$total_result = db_query($total_sql, 'could not get total available');
 	$total_row = db_fetch($total_result);
 	$result['total_available'] = (float)$total_row['total'];
@@ -337,8 +381,10 @@ function get_bin_stock_fifo($stock_id, $warehouse_loc_code) {
 		. "LEFT JOIN " . TB_PREF . "stock_batches b ON bs.batch_id = b.id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
 		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))"
 		. " ORDER BY bs.id ASC, wl.pick_sequence ASC"; // id ASC = oldest first
 
 	$result = db_query($sql, 'could not get FIFO bin stock');
@@ -372,8 +418,10 @@ function get_bin_stock_fefo($stock_id, $warehouse_loc_code) {
 		. "LEFT JOIN " . TB_PREF . "stock_batches b ON bs.batch_id = b.id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
 		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))"
 		// Exclude already expired batches in quarantine status
 		. " ORDER BY "
 		// Sort NULLs (no expiry) last, then by earliest expiry
@@ -407,8 +455,10 @@ function get_bin_stock_lifo($stock_id, $warehouse_loc_code) {
 		. "LEFT JOIN " . TB_PREF . "stock_batches b ON bs.batch_id = b.id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
 		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))"
 		. " ORDER BY bs.id DESC, wl.pick_sequence ASC"; // id DESC = newest first
 
 	$result = db_query($sql, 'could not get LIFO bin stock');
@@ -437,8 +487,10 @@ function get_bin_stock_closest($stock_id, $warehouse_loc_code) {
 		. "LEFT JOIN " . TB_PREF . "stock_batches b ON bs.batch_id = b.id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
 		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))"
 		. " ORDER BY wl.pick_sequence ASC, wl.loc_code ASC, bs.id ASC";
 
 	$result = db_query($sql, 'could not get Closest bin stock');
@@ -472,13 +524,15 @@ function get_bin_stock_least_packages($stock_id, $warehouse_loc_code) {
 		. "LEFT JOIN ("
 		. "  SELECT wh_loc_id, COUNT(DISTINCT stock_id) AS item_count "
 		. "  FROM " . TB_PREF . "wh_bin_stock "
-		. "  WHERE qty_on_hand > 0 "
+		. "  WHERE stock_status = 'available' AND qty_available > 0 "
 		. "  GROUP BY wh_loc_id"
 		. ") pkg ON bs.wh_loc_id = pkg.wh_loc_id "
 		. "WHERE bs.stock_id = " . db_escape($stock_id)
 		. " AND wl.warehouse_loc_code = " . db_escape($warehouse_loc_code)
+		. " AND wl.is_active = 1"
 		. " AND bs.stock_status = 'available'"
 		. " AND bs.qty_available > 0"
+		. " AND (bs.batch_id IS NULL OR (b.id IS NOT NULL AND b.status = 'active' AND b.inactive = 0))"
 		. " ORDER BY COALESCE(pkg.item_count, 0) ASC, wl.pick_sequence ASC, bs.id ASC";
 
 	$result = db_query($sql, 'could not get Least Packages bin stock');
@@ -508,6 +562,10 @@ function get_bin_stock_least_packages($stock_id, $warehouse_loc_code) {
 function allocate_removal($bins, $quantity, $strategy, $source) {
 	$allocations = array();
 	$remaining = $quantity;
+
+	if ((float)$remaining <= 0) {
+		return $allocations;
+	}
 
 	foreach ($bins as $bin) {
 		if ($remaining <= 0) {

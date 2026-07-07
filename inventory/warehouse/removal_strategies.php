@@ -13,8 +13,6 @@
 /**
  * Removal Strategies — CRUD page for warehouse removal strategy rules
  * and a "Test Removal" tool to preview bin selection results.
- *
- * Session 8 of the Unified Advanced Inventory Implementation Plan.
  */
 $page_security = 'SA_WAREHOUSE_REMOVAL';
 $path_to_root = '../..';
@@ -37,6 +35,12 @@ simple_page_mode(true);
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$input_error = 0;
 
+	$warehouse_loc_code = trim((string)get_post('warehouse_loc_code'));
+	$stock_id = trim((string)get_post('stock_id'));
+	$category_id = trim((string)get_post('category_id'));
+	if ($category_id === '0' || $category_id === '-1') {
+		$category_id = '';
+	}
 	$strategy = get_post('strategy');
 	$valid_strategies = array_keys(get_removal_strategies());
 	if (!in_array($strategy, $valid_strategies)) {
@@ -45,18 +49,52 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		set_focus('strategy');
 	}
 
+	if ($warehouse_loc_code !== '') {
+		$sql = "SELECT loc_code FROM " . TB_PREF . "locations "
+			. "WHERE loc_code = " . db_escape($warehouse_loc_code);
+		$warehouse_result = db_query($sql, 'could not validate removal strategy warehouse');
+		if (!db_fetch($warehouse_result)) {
+			$input_error = 1;
+			display_error(_('Please select a valid warehouse.'));
+			set_focus('warehouse_loc_code');
+		}
+	}
+
+	if ($category_id !== '') {
+		$sql = "SELECT category_id FROM " . TB_PREF . "stock_category "
+			. "WHERE category_id = " . db_escape((int)$category_id);
+		$category_result = db_query($sql, 'could not validate removal strategy category');
+		if (!db_fetch($category_result)) {
+			$input_error = 1;
+			display_error(_('Please select a valid item category.'));
+			set_focus('category_id');
+		}
+	}
+
+	if ($stock_id !== '') {
+		$sql = "SELECT stock_id, category_id FROM " . TB_PREF . "stock_master "
+			. "WHERE stock_id = " . db_escape($stock_id);
+		$item_result = db_query($sql, 'could not validate removal strategy item');
+		$item = db_fetch($item_result);
+		if (!$item) {
+			$input_error = 1;
+			display_error(_('Please select a valid item.'));
+			set_focus('stock_id');
+		} elseif ($category_id !== '' && (int)$item['category_id'] !== (int)$category_id) {
+			$input_error = 1;
+			display_error(_('The selected item does not belong to the selected category.'));
+			set_focus('category_id');
+		}
+	}
+
 	$sequence = get_post('sequence');
 	if ($sequence === '' || !is_numeric($sequence) || (int)$sequence < 0) {
 		$input_error = 1;
-		display_error(_('Sequence must be a positive number.'));
+		display_error(_('Sequence must be a non-negative number.'));
 		set_focus('sequence');
 	}
 
 	if ($input_error != 1) {
-		$warehouse_loc_code = get_post('warehouse_loc_code');
-		$stock_id = get_post('stock_id');
-		$category_id = get_post('category_id');
-
 		if ($selected_id != -1) {
 			update_removal_strategy_rule(
 				$selected_id,
