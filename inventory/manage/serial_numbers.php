@@ -52,10 +52,21 @@ if (isset($_GET['stock_id']))
 //----------------------------------------------------------------------
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	$input_error = 0;
+	$_POST['serial_no'] = trim(get_post('serial_no'));
 
 	if (strlen(get_post('serial_no')) == 0) {
 		$input_error = 1;
 		display_error(_('The serial number must be entered.'));
+		set_focus('serial_no');
+	}
+	elseif (strlen(get_post('serial_no')) > 100) {
+		$input_error = 1;
+		display_error(_('The serial number cannot be longer than 100 characters.'));
+		set_focus('serial_no');
+	}
+	elseif (preg_match('/[\x00-\x1F\x7F]/', get_post('serial_no'))) {
+		$input_error = 1;
+		display_error(_('The serial number contains unsupported control characters.'));
 		set_focus('serial_no');
 	}
 
@@ -342,7 +353,7 @@ $total = count_serial_numbers($stock_id_filter, $status_filter, $loc_filter,
 // Summary line
 display_note(sprintf(_('Showing %d serial number(s)'), $total), 0, 0, "style='margin:5px 0;'");
 
-start_table(TABLESTYLE_DATA, "width='100%'");
+start_table(TABLESTYLE_DATA);
 $th = array(
 	_('Serial Number'), _('Item'), _('Status'), _('Location'),
 	_('Supplier'), _('Customer'), _('Warranty End'), _('Created'), '', ''
@@ -356,23 +367,23 @@ while ($myrow = db_fetch($result)) {
 
 	// Serial number — link to inquiry
 	$serial_link = '<a href="' . $path_to_root . '/inventory/inquiry/serial_inquiry.php?serial_id='
-		. $myrow['id'] . '">' . $myrow['serial_no'] . '</a>';
+		. (int)$myrow['id'] . '">' . htmlspecialchars($myrow['serial_no'], ENT_QUOTES) . '</a>';
 	label_cell($serial_link);
 
 	// Item
-	label_cell($myrow['stock_id'] . ' - ' . $myrow['item_description']);
+	label_cell(htmlspecialchars($myrow['stock_id'] . ' - ' . $myrow['item_description'], ENT_QUOTES));
 
 	// Status badge
 	label_cell(serial_status_badge($myrow['status']));
 
 	// Location
-	label_cell($myrow['location_name'] ? $myrow['location_name'] : '-');
+	label_cell($myrow['location_name'] ? htmlspecialchars($myrow['location_name'], ENT_QUOTES) : '-');
 
 	// Supplier
-	label_cell($myrow['supplier_name'] ? $myrow['supplier_name'] : '-');
+	label_cell($myrow['supplier_name'] ? htmlspecialchars($myrow['supplier_name'], ENT_QUOTES) : '-');
 
 	// Customer
-	label_cell($myrow['customer_name'] ? $myrow['customer_name'] : '-');
+	label_cell($myrow['customer_name'] ? htmlspecialchars($myrow['customer_name'], ENT_QUOTES) : '-');
 
 	// Warranty end
 	if ($myrow['warranty_end']) {

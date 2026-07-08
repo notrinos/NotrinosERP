@@ -116,7 +116,7 @@ if (isset($_POST['Process']) && can_process()) {
 	if ($failed_data != null)
 		display_error(_('The process cannot be completed because there is an insufficient total quantity for a component.').'<br>'._('Component is :').$failed_data[0].'<br>'._('From location :').$failed_data[1] . '<br>');
 	else 
-		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_SESSION['issue_items']->order_id);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_SESSION['issue_items']->order_id.get_sel_app_param('&'));
 
 } /*end of process credit note */
 
@@ -198,7 +198,7 @@ echo '</td></tr>';
 
 end_table();
 
-submit_center('Process', _('Process Issue'), true, '', 'default');
+submit_center('Process', _('Process Issue'), true, '', 'nonajax');
 
 end_form();
 

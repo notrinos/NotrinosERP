@@ -28,7 +28,7 @@ function serial_status_badge($status) {
 	$label = get_serial_status_label($status);
 	$color = get_serial_status_color($status);
 	return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;'
-		. 'color:#fff;background-color:' . $color . ';">' . $label . '</span>';
+		. 'color:#fff;background-color:' . $color . ';">' . htmlspecialchars($label, ENT_QUOTES) . '</span>';
 }
 
 /**

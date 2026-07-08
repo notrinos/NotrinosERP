@@ -445,8 +445,16 @@ function bulk_create_serial_numbers($stock_id, $count, $status = 'available', $l
 			$serial_no .= '-' . strtoupper(substr(md5(uniqid('', true)), 0, 4));
 		}
 
-		add_serial_number($serial_no, $stock_id, $status, $loc_code, $wh_loc_id,
+		$serial_id = add_serial_number($serial_no, $stock_id, $status, $loc_code, $wh_loc_id,
 			null, $supplier_id, $purchase_date, null, null, null, null, null, 0, null, $notes);
+		$serial = get_serial_number($serial_id);
+		$movement_loc_code = $serial && isset($serial['loc_code']) ? $serial['loc_code'] : $loc_code;
+		add_serial_movement(
+			$serial_id, 0, 0,
+			null, $movement_loc_code,
+			null, $status,
+			Today(), '', _('Serial number bulk generated')
+		);
 
 		$generated[] = $serial_no;
 	}
@@ -492,8 +500,16 @@ function import_serial_numbers($stock_id, $csv_text, $status = 'available', $loc
 			continue;
 		}
 
-		add_serial_number($serial_no, $stock_id, $status, $loc_code, null,
+		$serial_id = add_serial_number($serial_no, $stock_id, $status, $loc_code, null,
 			null, $supplier_id, null, null, null, null, null, null, 0, null, null);
+		$serial = get_serial_number($serial_id);
+		$movement_loc_code = $serial && isset($serial['loc_code']) ? $serial['loc_code'] : $loc_code;
+		add_serial_movement(
+			$serial_id, 0, 0,
+			null, $movement_loc_code,
+			null, $status,
+			Today(), '', _('Serial number imported')
+		);
 		$result['imported']++;
 	}
 

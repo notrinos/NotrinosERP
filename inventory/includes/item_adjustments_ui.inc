@@ -34,6 +34,7 @@ function display_order_header(&$order) {
 	table_section(2);
 
 	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))), false, ST_INVADJUST);
+	hidden('ref_original_auto', get_post('ref'));
 
 	end_outer_table(1);
 }
