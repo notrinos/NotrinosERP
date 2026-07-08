@@ -936,7 +936,9 @@
 			if (needsRefresh) bindDataTableScrollHints();
 		});
 
-		observer.observe(document.body, { childList: true, subtree: true });
+		if (document.body) {
+			observer.observe(document.body, { childList: true, subtree: true });
+		}
 	}
 
 	// Start watching for DOM changes to re-bind scrollbars
@@ -1000,10 +1002,12 @@
 			}
 		});
 
-		observer.observe(document.body, {
-			childList: true,
-			subtree: true
-		});
+		if (document.body) {
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+		}
 	}
 
 	// Start watching for AJAX-inserted checkbox rows.
