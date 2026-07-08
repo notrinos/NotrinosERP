@@ -117,15 +117,15 @@ function get_bin_movement_ledger_data($from_date = null, $to_date = null, $loc_c
 	$sql = "SELECT sm.trans_id, sm.type, sm.trans_no, sm.tran_date, sm.stock_id,
 			si.description AS item_description,
 			sm.loc_code, sm.qty, sm.standard_cost, sm.price,
-			sm.from_bin_id, fb.location_code AS from_bin_code,
-			sm.to_bin_id, tb.location_code AS to_bin_code,
+			sm.from_bin_id, fb.loc_code AS from_bin_code,
+			sm.to_bin_id, tb.loc_code AS to_bin_code,
 			sm.serial_id, sn.serial_no,
 			sm.batch_id, sb.batch_no,
 			sm.quality_status, sm.stock_status
 		FROM " . TB_PREF . "stock_moves sm
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = sm.stock_id
-		LEFT JOIN " . TB_PREF . "wh_locations fb ON fb.id = sm.from_bin_id
-		LEFT JOIN " . TB_PREF . "wh_locations tb ON tb.id = sm.to_bin_id
+		LEFT JOIN " . TB_PREF . "wh_locations fb ON fb.loc_id = sm.from_bin_id
+		LEFT JOIN " . TB_PREF . "wh_locations tb ON tb.loc_id = sm.to_bin_id
 		LEFT JOIN " . TB_PREF . "serial_numbers sn ON sn.id = sm.serial_id
 		LEFT JOIN " . TB_PREF . "stock_batches sb ON sb.id = sm.batch_id
 		WHERE (sm.from_bin_id IS NOT NULL OR sm.to_bin_id IS NOT NULL)";
