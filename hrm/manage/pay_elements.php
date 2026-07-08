@@ -58,6 +58,10 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		display_error(_('Element Name cannot be empty.'));
 		set_focus('element_name');
 	}
+	elseif(empty(get_post('account_code'))) {
+		display_error(_('Select Account cannot be empty.'));
+		set_focus('account_code');
+	}
 	elseif(check_pay_element_duplicated($selected_id, $_POST['account_code'])) {
 		display_error(_('Selected account is being used for another element.'));
 		set_focus('account_code');
