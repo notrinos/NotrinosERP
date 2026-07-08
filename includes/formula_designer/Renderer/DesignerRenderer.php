@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 require_once dirname(__FILE__) . '/DesignerEditorRenderer.php';
+require_once dirname(__FILE__) . '/DesignerPreviewRenderer.php';
 require_once dirname(__DIR__) . '/Validator/DesignerPreSubmitValidator.php';
 
 /**
@@ -69,6 +70,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
 
         $editor = $this->createEditor();
         $editor_renderer = new FormulaDesigner_Renderer_DesignerEditorRenderer($editor, $this->options);
+        $preview_renderer = new FormulaDesigner_Renderer_DesignerPreviewRenderer();
 
         $parts = array();
         $parts[] = '<div class="fd-container" role="application" data-designer="root" data-instance-id="'
@@ -84,6 +86,8 @@ class FormulaDesigner_Renderer_DesignerRenderer
         $parts[] = '<div class="fd-main-area">';
         $parts[] = $this->renderCanvas($instance_id, $editor_renderer);
         $parts[] = $editor_renderer->renderErrorPanel();
+        $parts[] = $preview_renderer->renderPreviewPanel();
+        $parts[] = $preview_renderer->renderExplainPanel();
         $parts[] = '</div>';
         $parts[] = $this->renderFunctionPalette($function_sections, $function_api_url);
         $parts[] = $this->renderPropertyPanel();

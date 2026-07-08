@@ -835,6 +835,10 @@
 		boot();
 	}
 
+	window.FormulaDesigner.dragdrop = {
+		boot: boot
+	};
+
 	// Re-invoke boot when designer instances are created dynamically
 	// (e.g. inside a modal overlay that is rendered after page load).
 	// The main formula-designer.js dispatches 'fd:boot' after initialising

@@ -530,4 +530,18 @@
     }
     window.FormulaDesigner.preview = DesignerPreview;
 
+    function boot() {
+        $('.fd-container[data-designer="root"]').each(function () {
+            initPreviewPanel(this);
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+
+    document.addEventListener('fd:boot', boot);
+
 })(jQuery, window);

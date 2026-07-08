@@ -199,6 +199,9 @@ function formula_initialize_framework(
         $variableRegistry->register($namespace, $provider);
     }
 
+    formula_register_builtin_functions($functionRegistry);
+    formula_register_builtin_variable_providers($variableRegistry);
+
     $runtime = new Formula_Runtime_FormulaRuntime(
         $functionRegistry,
         $variableRegistry,
@@ -215,6 +218,102 @@ function formula_initialize_framework(
     FormulaFacade::initialize($functionRegistry, $variableRegistry);
     FormulaFacade::setEngine($runtime);
     FormulaFacade::freeze();
+}
+
+/**
+ * Register all built-in function providers shipped with the framework.
+ *
+ * @param Formula_Registry_FunctionRegistry $registry
+ * @return void
+ */
+function formula_register_builtin_functions(Formula_Registry_FunctionRegistry $registry)
+{
+    foreach (formula_discover_provider_classes() as $class_name) {
+        $reflection = new ReflectionClass($class_name);
+
+        if (!$reflection->isInstantiable()) {
+            continue;
+        }
+
+        if (!$reflection->implementsInterface('Formula_Contracts_FormulaFunctionInterface')) {
+            continue;
+        }
+
+        $function = $reflection->newInstance();
+        if (!$registry->has($function->getName())) {
+            $registry->register($function);
+        }
+    }
+}
+
+/**
+ * Register all built-in variable providers shipped with the framework.
+ *
+ * @param Formula_Registry_VariableRegistry $registry
+ * @return void
+ */
+function formula_register_builtin_variable_providers(Formula_Registry_VariableRegistry $registry)
+{
+    foreach (formula_discover_provider_classes() as $class_name) {
+        $reflection = new ReflectionClass($class_name);
+
+        if (!$reflection->isInstantiable()) {
+            continue;
+        }
+
+        if (!$reflection->implementsInterface('Formula_Contracts_VariableProviderInterface')) {
+            continue;
+        }
+
+        $provider = $reflection->newInstance();
+        $metadata = $provider->getMetadata();
+        $namespaces = $metadata instanceof Formula_Registry_ProviderMetadata
+            ? $metadata->namespaces
+            : array();
+
+        foreach ($namespaces as $namespace) {
+            if (!$registry->hasNamespace($namespace)) {
+                $registry->register($namespace, $provider);
+            }
+        }
+    }
+}
+
+/**
+ * Discover all provider classes from the aggregate provider files.
+ *
+ * @return string[]
+ */
+function formula_discover_provider_classes()
+{
+    $classes = array();
+    $files = glob(dirname(__FILE__) . '/Providers/*.php');
+
+    if (!is_array($files)) {
+        return array();
+    }
+
+    foreach ($files as $file_path) {
+        if (basename($file_path) === 'index.php') {
+            continue;
+        }
+
+        require_once $file_path;
+
+        $content = @file_get_contents($file_path);
+        $matches = array();
+
+        if ($content === false) {
+            continue;
+        }
+
+        preg_match_all('/^\s*(?:abstract\s+|final\s+)?class\s+([A-Za-z0-9_]+)/m', $content, $matches);
+        if (isset($matches[1])) {
+            $classes = array_merge($classes, $matches[1]);
+        }
+    }
+
+    return array_values(array_unique($classes));
 }
 
 // Mark bootstrap as loaded

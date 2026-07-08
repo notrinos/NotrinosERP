@@ -10,12 +10,12 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once dirname(__FILE__) . '/designer_bootstrap.inc';
+require_once dirname(__DIR__) . '/designer_bootstrap.inc';
 define('FORMULA_DESIGNER_API_NO_AUTO_RUN', true);
 require_once dirname(__FILE__) . '/DesignerAPI.php';
 
 /**
- * DesignerExplainAPI — Phase 7 preview and explain endpoint.
+ * DesignerExplainAPI — preview and explain endpoint.
  *
  * Accepts POST requests with the formula, module, and optional sample
  * values. Uses the frozen FormulaFacade to produce a live preview result
@@ -199,6 +199,7 @@ class FormulaDesigner_API_DesignerExplainAPI
     private static function buildContextFromSampleValues(array $sampleValues)
     {
         $builder = Formula_Context_FormulaContextBuilder::create();
+        $businessData = array();
 
         foreach ($sampleValues as $key => $value) {
             $key   = trim((string)$key);
@@ -213,10 +214,46 @@ class FormulaDesigner_API_DesignerExplainAPI
                 $value = strpos($value, '.') !== false ? (float)$value : (int)$value;
             }
 
+            if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/', $key, $matches)) {
+                $namespace = strtolower($matches[1]);
+                $identifier = $matches[2];
+
+                if (!isset($businessData[$namespace])) {
+                    $businessData[$namespace] = array();
+                }
+
+                foreach (self::sampleValueAliases($identifier) as $alias) {
+                    $businessData[$namespace][$alias] = $value;
+                }
+            }
+
             $builder->withVariable($key, $value);
         }
 
+        foreach ($businessData as $namespace => $values) {
+            $builder->withBusinessData($namespace, $values);
+        }
+
         return $builder->withCompatibilityMode(true)->build();
+    }
+
+    /**
+     * Build practical aliases for provider business-data lookups.
+     *
+     * @param string $identifier
+     * @return string[]
+     */
+    private static function sampleValueAliases($identifier)
+    {
+        $identifier = (string)$identifier;
+        $snake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $identifier));
+
+        return array_values(array_unique(array(
+            $identifier,
+            strtoupper($identifier),
+            strtolower($identifier),
+            $snake,
+        )));
     }
 
     /**
@@ -276,15 +313,129 @@ class FormulaDesigner_API_DesignerExplainAPI
             return;
         }
 
-        // Standalone initialisation for the designer preview/explain endpoints
+        // Standalone initialisation for the designer preview/explain endpoints.
         $functionRegistry = new Formula_Registry_FunctionRegistry();
         $variableRegistry = new Formula_Registry_VariableRegistry();
+
+        self::registerBuiltInFunctions($functionRegistry);
+        self::registerBuiltInVariableProviders($variableRegistry);
 
         FormulaFacade::initialize($functionRegistry, $variableRegistry);
         FormulaFacade::setEngine(
             new Formula_Runtime_FormulaRuntime($functionRegistry, $variableRegistry)
         );
         FormulaFacade::freeze();
+    }
+
+    /**
+     * Register all built-in function providers shipped with the framework.
+     *
+     * @param Formula_Registry_FunctionRegistry $registry
+     * @return void
+     */
+    private static function registerBuiltInFunctions(Formula_Registry_FunctionRegistry $registry)
+    {
+        foreach (self::discoverProviderClasses() as $className) {
+            $reflection = new ReflectionClass($className);
+
+            if (!$reflection->isInstantiable()) {
+                continue;
+            }
+
+            if (!$reflection->implementsInterface('Formula_Contracts_FormulaFunctionInterface')) {
+                continue;
+            }
+
+            $registry->register($reflection->newInstance());
+        }
+    }
+
+    /**
+     * Register all built-in variable providers shipped with the framework.
+     *
+     * @param Formula_Registry_VariableRegistry $registry
+     * @return void
+     */
+    private static function registerBuiltInVariableProviders(Formula_Registry_VariableRegistry $registry)
+    {
+        foreach (self::discoverProviderClasses() as $className) {
+            $reflection = new ReflectionClass($className);
+
+            if (!$reflection->isInstantiable()) {
+                continue;
+            }
+
+            if (!$reflection->implementsInterface('Formula_Contracts_VariableProviderInterface')) {
+                continue;
+            }
+
+            $provider = $reflection->newInstance();
+            $metadata = $provider->getMetadata();
+            $namespaces = $metadata instanceof Formula_Registry_ProviderMetadata
+                ? $metadata->namespaces
+                : array();
+
+            foreach ($namespaces as $namespace) {
+                if (!$registry->hasNamespace($namespace)) {
+                    $registry->register($namespace, $provider);
+                }
+            }
+        }
+    }
+
+    /**
+     * Discover all provider classes from the aggregate provider files.
+     *
+     * @return string[]
+     */
+    private static function discoverProviderClasses()
+    {
+        $classes = array();
+
+        foreach (self::getProviderFiles() as $filePath) {
+            require_once $filePath;
+            $classes = array_merge($classes, self::extractClassNames($filePath));
+        }
+
+        return array_values(array_unique($classes));
+    }
+
+    /**
+     * Get the built-in provider file list.
+     *
+     * @return string[]
+     */
+    private static function getProviderFiles()
+    {
+        $files = glob($GLOBALS['path_to_root'] . '/includes/formula/Providers/*.php');
+
+        if (!is_array($files)) {
+            return array();
+        }
+
+        return array_values(array_filter($files, function ($filePath) {
+            return basename($filePath) !== 'index.php';
+        }));
+    }
+
+    /**
+     * Extract class names declared in one provider file.
+     *
+     * @param string $filePath
+     * @return string[]
+     */
+    private static function extractClassNames($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        $matches = array();
+
+        if ($content === false) {
+            return array();
+        }
+
+        preg_match_all('/^\s*(?:abstract\s+|final\s+)?class\s+([A-Za-z0-9_]+)/m', $content, $matches);
+
+        return isset($matches[1]) ? $matches[1] : array();
     }
 }
 
