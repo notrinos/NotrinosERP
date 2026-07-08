@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 /**
- * Database query functions for warehouse management reports (Session 29 — Plan B).
+ * Database query functions for warehouse management reports.
  *
  * Reports: Bin contents, stock by location, stock movement ledger,
  *   stock aging, dead stock, warehouse utilization, turn rate,
@@ -72,18 +72,22 @@ function get_bin_contents_data($loc_code = null, $wh_loc_id = null, $stock_id = 
  */
 function get_stock_by_location_data($loc_code = null, $category = 0)
 {
-	$sql = "SELECT wl.id AS wh_loc_id, wl.location_code, wl.location_name, wl.location_path,
-			lt.type_name AS location_type, lt.hierarchy_level,
+	$sql = "SELECT wl.loc_id AS wh_loc_id, wl.loc_code AS location_code,
+			wl.loc_name AS location_name, wl.location_path,
+			lt.type_name AS location_type,
+			CASE WHEN IFNULL(wl.location_path, '') = '' THEN 0
+				ELSE LENGTH(wl.location_path) - LENGTH(REPLACE(wl.location_path, '/', ''))
+			END AS hierarchy_level,
 			bs.stock_id,
 			si.description AS item_description,
-			SUM(bs.quantity) AS total_qty,
-			SUM(bs.reserved_qty) AS total_reserved,
-			SUM(bs.quantity - bs.reserved_qty) AS total_available,
-			SUM(bs.quantity * si.material_cost) AS total_value,
+			SUM(bs.qty_on_hand) AS total_qty,
+			SUM(bs.qty_reserved) AS total_reserved,
+			SUM(bs.qty_on_hand - bs.qty_reserved) AS total_available,
+			SUM(bs.qty_on_hand * si.material_cost) AS total_value,
 			COUNT(DISTINCT bs.stock_id) AS unique_items
 		FROM " . TB_PREF . "wh_locations wl
 		LEFT JOIN " . TB_PREF . "wh_location_types lt ON lt.id = wl.location_type_id
-		LEFT JOIN " . TB_PREF . "wh_bin_stock bs ON bs.wh_loc_id = wl.id
+		LEFT JOIN " . TB_PREF . "wh_bin_stock bs ON bs.wh_loc_id = wl.loc_id
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = bs.stock_id
 		WHERE 1=1";
 
@@ -92,9 +96,9 @@ function get_stock_by_location_data($loc_code = null, $category = 0)
 	if ($category > 0)
 		$sql .= " AND (si.category_id = " . db_escape($category) . " OR bs.stock_id IS NULL)";
 
-	$sql .= " GROUP BY wl.id, wl.location_code, wl.location_name, wl.location_path,
-			lt.type_name, lt.hierarchy_level, bs.stock_id, si.description
-		ORDER BY wl.location_path, wl.location_code, bs.stock_id";
+	$sql .= " GROUP BY wl.loc_id, wl.loc_code, wl.loc_name, wl.location_path,
+			lt.type_name, bs.stock_id, si.description
+		ORDER BY wl.location_path, wl.loc_code, bs.stock_id";
 
 	return db_query($sql, 'Could not retrieve stock by location data');
 }
