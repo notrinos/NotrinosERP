@@ -654,12 +654,28 @@ function display_payslip_overtime_breakdown_panel($doc) {
 function get_payslip_display_lines($doc) {
 	$rows = array();
 	$basic_category = defined('HRM_ELEM_BASIC') ? HRM_ELEM_BASIC : 1;
+	$basic_row_added = false;
 
-	$rows[] = array(
-		'element_name' => _('Basic Salary'),
-		'type_key' => 'basic',
-		'amount' => (float)$doc->basic_salary,
-	);
+	foreach ((array)$doc->lines as $line) {
+		if (!empty($line->is_deduction) || (int)$line->element_category !== (int)$basic_category)
+			continue;
+
+		$rows[] = array(
+			'element_name' => trim((string)$line->element_name) !== '' ? $line->element_name : _('Basic Salary'),
+			'type_key' => 'basic',
+			'amount' => isset($line->final_amount) ? (float)$line->final_amount : (float)$doc->basic_salary,
+		);
+		$basic_row_added = true;
+		break;
+	}
+
+	if (!$basic_row_added) {
+		$rows[] = array(
+			'element_name' => _('Basic Salary'),
+			'type_key' => 'basic',
+			'amount' => (float)$doc->basic_salary,
+		);
+	}
 
 	foreach ((array)$doc->lines as $line) {
 		if (empty($line->is_deduction) && (int)$line->element_category === (int)$basic_category)

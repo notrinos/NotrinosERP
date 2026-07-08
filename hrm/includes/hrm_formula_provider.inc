@@ -11,17 +11,17 @@
 ***********************************************************************/
 
 /**
- * HRM Module Formula Provider — Phase 10 integration.
+ * HRM Module Formula Provider.
  *
  * Registers HRM-specific fields (Employee.*, Payroll.* namespaces)
  * and templates with the Visual Formula Designer via the provider
- * bridge introduced in Phase 10.
+ * bridge.
  *
  * This file is auto-discovered by {@see formula_designer_autodiscover_providers()}
  * when the designer bootstrap loads during a full NotrinosERP session.
  *
  * @package HRM
- * @since   2.0.0 Phase 10
+ * @since   2.0.0
  */
 
 // ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ function hrm_formula_designer_register_templates(
         return;
     }
 
-    // Delegate to the existing PayrollTemplateProvider (Phase 9)
+    // Delegate to the existing PayrollTemplateProvider
     // which already defines 10 HRM/payroll templates.
     if (class_exists('FormulaDesigner_Templates_PayrollTemplateProvider')) {
         $templates = FormulaDesigner_Templates_PayrollTemplateProvider::all();
@@ -138,7 +138,7 @@ if (!isset($GLOBALS['formula_designer_provider_templates'])) {
 }
 $GLOBALS['formula_designer_provider_templates']['hrm'][] = 'hrm_formula_designer_register_templates';
 
-// Also tell the Phase 10 bridge where this file lives
+// Also tell the bridge where this file lives
 if (function_exists('formula_designer_register_provider')) {
     $provider_file = __FILE__;
     if (!defined('FORMULA_DESIGNER_PROVIDER_TYPE_FIELDS')) {
