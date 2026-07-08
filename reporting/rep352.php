@@ -19,10 +19,11 @@
  *   PARAM_0: Start Date
  *   PARAM_1: End Date
  *   PARAM_2: Location
- *   PARAM_3: Item
- *   PARAM_4: Comments
- *   PARAM_5: Orientation
- *   PARAM_6: Destination (0=PDF, 1=Excel)
+ *   PARAM_3: Bin Code
+ *   PARAM_4: Item
+ *   PARAM_5: Comments
+ *   PARAM_6: Orientation
+ *   PARAM_7: Destination (0=PDF, 1=Excel)
  */
 $page_security = 'SA_WAREHOUSE_DASHBOARD';
 $path_to_root = '..';
@@ -43,10 +44,11 @@ function print_bin_movement_ledger_report()
 	$from_date = $_POST['PARAM_0'];
 	$to_date   = $_POST['PARAM_1'];
 	$location  = $_POST['PARAM_2'];
-	$stock_id  = $_POST['PARAM_3'];
-	$comments  = $_POST['PARAM_4'];
-	$orientation = $_POST['PARAM_5'];
-	$destination = $_POST['PARAM_6'];
+	$bin_code  = $_POST['PARAM_3'];
+	$stock_id  = $_POST['PARAM_4'];
+	$comments  = $_POST['PARAM_5'];
+	$orientation = $_POST['PARAM_6'];
+	$destination = $_POST['PARAM_7'];
 
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
@@ -57,9 +59,11 @@ function print_bin_movement_ledger_report()
 	$dec = user_price_dec();
 
 	if ($location == ALL_TEXT) $location = null;
+	if ($bin_code == '') $bin_code = null;
 	if ($stock_id == ALL_TEXT) $stock_id = null;
 
 	$loc_name = $location ? get_location_name($location) : _('All');
+	$bin_name = $bin_code ? $bin_code : _('All');
 	$item_name = $stock_id ? $stock_id : _('All');
 
 	$cols = array(0, 60, 140, 200, 260, 330, 395, 515);
@@ -70,7 +74,8 @@ function print_bin_movement_ledger_report()
 		0 => $comments,
 		1 => array('text' => _('Period'), 'from' => $from_date, 'to' => $to_date),
 		2 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
-		3 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
+		3 => array('text' => _('Bin Code'), 'from' => $bin_name, 'to' => ''),
+		4 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
 	);
 
 	$rep = new FrontReport(_('Bin-Level Movement Ledger'), 'BinMovementLedger', user_pagesize(), 9, $orientation);
@@ -80,7 +85,7 @@ function print_bin_movement_ledger_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_bin_movement_ledger_data($from_date, $to_date, $location, $stock_id);
+	$result = get_bin_movement_ledger_data($from_date, $to_date, $location, $bin_code, $stock_id);
 
 	$move_count = 0;
 

@@ -376,6 +376,19 @@ class BoxReports {
 				);
 				return array_selector($name, null, $sel);
 
+			case 'TRANSFER_STATUS':
+				$sel = array(
+					'' => _('All Statuses'),
+					'draft' => _('Draft'),
+					'submitted' => _('Submitted'),
+					'approved' => _('Approved'),
+					'shipped' => _('Shipped'),
+					'in_transit' => _('In Transit'),
+					'received' => _('Received'),
+					'cancelled' => _('Cancelled'),
+				);
+				return array_selector($name, null, $sel);
+
 			case 'TEXTBOX':
 				$value = (isset($_POST[$name]) ? $_POST[$name] : "");
 				return "<textarea rows=4 cols=30 maxlength=130 name='$name'>$value</textarea>";

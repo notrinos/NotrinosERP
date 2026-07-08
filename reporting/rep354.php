@@ -16,12 +16,13 @@
  * Items with no movement in N days.
  *
  * Parameters:
- *   PARAM_0: No Movement Days (threshold)
- *   PARAM_1: Location
- *   PARAM_2: Item Category
- *   PARAM_3: Comments
- *   PARAM_4: Orientation
- *   PARAM_5: Destination (0=PDF, 1=Excel)
+ *   PARAM_0: End Date
+ *   PARAM_1: No Movement Days (threshold)
+ *   PARAM_2: Location
+ *   PARAM_3: Item Category
+ *   PARAM_4: Comments
+ *   PARAM_5: Orientation
+ *   PARAM_6: Destination (0=PDF, 1=Excel)
  */
 $page_security = 'SA_ITEMSVALREP';
 $path_to_root = '..';
@@ -39,12 +40,13 @@ function print_dead_stock_report()
 {
 	global $path_to_root;
 
-	$no_move_days = $_POST['PARAM_0'];
-	$location     = $_POST['PARAM_1'];
-	$category     = $_POST['PARAM_2'];
-	$comments     = $_POST['PARAM_3'];
-	$orientation  = $_POST['PARAM_4'];
-	$destination  = $_POST['PARAM_5'];
+	$end_date     = $_POST['PARAM_0'];
+	$no_move_days = $_POST['PARAM_1'];
+	$location     = $_POST['PARAM_2'];
+	$category     = $_POST['PARAM_3'];
+	$comments     = $_POST['PARAM_4'];
+	$orientation  = $_POST['PARAM_5'];
+	$destination  = $_POST['PARAM_6'];
 
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
@@ -67,9 +69,10 @@ function print_dead_stock_report()
 
 	$params = array(
 		0 => $comments,
-		1 => array('text' => _('No Movement For'), 'from' => $no_move_days . ' ' . _('days'), 'to' => ''),
-		2 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
-		3 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
+		1 => array('text' => _('End Date'), 'from' => $end_date, 'to' => ''),
+		2 => array('text' => _('No Movement For'), 'from' => $no_move_days . ' ' . _('days'), 'to' => ''),
+		3 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
+		4 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
 	);
 
 	$rep = new FrontReport(_('Dead Stock Report'), 'DeadStock', user_pagesize(), 9, $orientation);
@@ -79,7 +82,7 @@ function print_dead_stock_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_dead_stock_data($no_move_days, $location, $category);
+	$result = get_dead_stock_data($end_date, $no_move_days, $location, $category);
 
 	$grand_total = 0;
 	$item_count = 0;

@@ -39,9 +39,9 @@ function print_bin_stock_aging_report()
 {
 	global $path_to_root;
 
-	$location   = $_POST['PARAM_0'];
-	$category   = $_POST['PARAM_1'];
-	$min_days   = $_POST['PARAM_2'];
+	$as_at_date = $_POST['PARAM_0'];
+	$location   = $_POST['PARAM_1'];
+	$category   = $_POST['PARAM_2'];
 	$comments   = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
@@ -56,7 +56,6 @@ function print_bin_stock_aging_report()
 
 	if ($category == ALL_NUMERIC) $category = 0;
 	if ($location == ALL_TEXT) $location = null;
-	if (!$min_days || $min_days < 0) $min_days = 0;
 
 	$loc_name = $location ? get_location_name($location) : _('All');
 	$cat_name = $category ? get_category_name($category) : _('All');
@@ -67,9 +66,9 @@ function print_bin_stock_aging_report()
 
 	$params = array(
 		0 => $comments,
-		1 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
-		2 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
-		3 => array('text' => _('Min Days'), 'from' => $min_days, 'to' => ''),
+		1 => array('text' => _('As at Date'), 'from' => $as_at_date, 'to' => ''),
+		2 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
+		3 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
 	);
 
 	$rep = new FrontReport(_('Stock Aging by Bin'), 'BinStockAging', user_pagesize(), 9, $orientation);
@@ -79,7 +78,7 @@ function print_bin_stock_aging_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_bin_stock_aging_data($location, $category, $min_days);
+	$result = get_bin_stock_aging_data($as_at_date, $location, $category);
 
 	$grand_total = 0;
 

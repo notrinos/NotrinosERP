@@ -17,7 +17,7 @@
  *
  * Parameters:
  *   PARAM_0: Location
- *   PARAM_1: Item Category
+ *   PARAM_1: Bin Code
  *   PARAM_2: Item
  *   PARAM_3: Comments
  *   PARAM_4: Orientation
@@ -40,7 +40,7 @@ function print_bin_contents_report()
 	global $path_to_root;
 
 	$location  = $_POST['PARAM_0'];
-	$category  = $_POST['PARAM_1'];
+	$bin_code  = $_POST['PARAM_1'];
 	$stock_id  = $_POST['PARAM_2'];
 	$comments  = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
@@ -54,12 +54,12 @@ function print_bin_contents_report()
 	$orientation = ($orientation ? 'L' : 'P');
 	$dec = user_price_dec();
 
-	if ($category == ALL_NUMERIC) $category = 0;
 	if ($location == ALL_TEXT) $location = null;
+	if ($bin_code == '') $bin_code = null;
 	if ($stock_id == ALL_TEXT) $stock_id = null;
 
 	$loc_name = $location ? get_location_name($location) : _('All');
-	$cat_name = $category ? get_category_name($category) : _('All');
+	$bin_name = $bin_code ? $bin_code : _('All');
 	$item_name = $stock_id ? $stock_id : _('All');
 
 	$cols = array(0, 80, 170, 260, 310, 360, 420, 515);
@@ -69,7 +69,7 @@ function print_bin_contents_report()
 	$params = array(
 		0 => $comments,
 		1 => array('text' => _('Location'), 'from' => $loc_name, 'to' => ''),
-		2 => array('text' => _('Category'), 'from' => $cat_name, 'to' => ''),
+		2 => array('text' => _('Bin Code'), 'from' => $bin_name, 'to' => ''),
 		3 => array('text' => _('Item'), 'from' => $item_name, 'to' => ''),
 	);
 
@@ -80,7 +80,7 @@ function print_bin_contents_report()
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = get_bin_contents_data($location, null, $stock_id, $category);
+	$result = get_bin_contents_data($location, $bin_code, $stock_id);
 
 	$current_bin = '';
 	$bin_total = 0;

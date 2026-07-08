@@ -53,7 +53,16 @@ function print_transfer_order_status_report()
 
 	$orientation = ($orientation ? 'L' : 'P');
 
-	$status_names = array(0 => _('All'), 1 => _('Pending'), 2 => _('In Transit'), 3 => _('Completed'));
+	$status_names = array(
+		'' => _('All'),
+		'draft' => _('Draft'),
+		'submitted' => _('Submitted'),
+		'approved' => _('Approved'),
+		'shipped' => _('Shipped'),
+		'in_transit' => _('In Transit'),
+		'received' => _('Received'),
+		'cancelled' => _('Cancelled'),
+	);
 	$status_name = isset($status_names[$status]) ? $status_names[$status] : _('All');
 
 	$cols = array(0, 70, 130, 210, 290, 345, 395, 445, 515);

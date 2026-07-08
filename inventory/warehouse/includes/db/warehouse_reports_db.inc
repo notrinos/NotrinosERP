@@ -21,44 +21,40 @@
 /**
  * Get bin-level stock contents.
  *
- * @param string|null $loc_code   Inventory location code
- * @param int|null    $wh_loc_id  Warehouse location (bin) id
- * @param string|null $stock_id   Filter by item
- * @param int         $category   Filter by category (0 = all)
+ * @param string|null $loc_code Inventory location code
+ * @param string|null $bin_code Filter by warehouse bin code
+ * @param string|null $stock_id Filter by item
  * @return resource DB result
  */
-function get_bin_contents_data($loc_code = null, $wh_loc_id = null, $stock_id = null, $category = 0)
+function get_bin_contents_data($loc_code = null, $bin_code = null, $stock_id = null)
 {
 	$sql = "SELECT bs.id, bs.wh_loc_id, bs.stock_id,
 			si.description AS item_description,
 			si.category_id, cat.description AS category_name,
-			wl.location_code, wl.location_name, wl.location_path,
+			wl.loc_code AS location_code, wl.loc_name AS location_name, wl.location_path,
 			lt.type_name AS location_type,
-			bs.quantity, bs.reserved_qty,
-			(bs.quantity - bs.reserved_qty) AS qty_available,
+			bs.qty_on_hand AS quantity, bs.qty_reserved AS reserved_qty,
+			(bs.qty_on_hand - bs.qty_reserved) AS qty_available,
 			bs.batch_id, sb.batch_no,
 			bs.serial_id, sn.serial_no,
-			bs.last_movement_date,
-			(bs.quantity * si.material_cost) AS stock_value
+			(bs.qty_on_hand * si.material_cost) AS stock_value
 		FROM " . TB_PREF . "wh_bin_stock bs
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = bs.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
-		LEFT JOIN " . TB_PREF . "wh_locations wl ON wl.id = bs.wh_loc_id
+		LEFT JOIN " . TB_PREF . "wh_locations wl ON wl.loc_id = bs.wh_loc_id
 		LEFT JOIN " . TB_PREF . "wh_location_types lt ON lt.id = wl.location_type_id
 		LEFT JOIN " . TB_PREF . "stock_batches sb ON sb.id = bs.batch_id
 		LEFT JOIN " . TB_PREF . "serial_numbers sn ON sn.id = bs.serial_id
-		WHERE bs.quantity != 0";
+		WHERE bs.qty_on_hand != 0";
 
 	if ($loc_code && $loc_code != 'all')
 		$sql .= " AND wl.loc_code = " . db_escape($loc_code);
-	if ($wh_loc_id > 0)
-		$sql .= " AND bs.wh_loc_id = " . (int)$wh_loc_id;
+	if ($bin_code)
+		$sql .= " AND wl.loc_code LIKE " . db_escape('%' . $bin_code . '%');
 	if ($stock_id)
 		$sql .= " AND bs.stock_id = " . db_escape($stock_id);
-	if ($category > 0)
-		$sql .= " AND si.category_id = " . db_escape($category);
 
-	$sql .= " ORDER BY wl.location_code, bs.stock_id, sb.batch_no, sn.serial_no";
+	$sql .= " ORDER BY wl.loc_code, bs.stock_id, sb.batch_no, sn.serial_no";
 
 	return db_query($sql, 'Could not retrieve bin contents data');
 }
@@ -109,10 +105,11 @@ function get_stock_by_location_data($loc_code = null, $category = 0)
  * @param string|null $from_date Start date
  * @param string|null $to_date   End date
  * @param string|null $loc_code  Inventory location
+ * @param string|null $bin_code  Filter by warehouse bin code
  * @param string|null $stock_id  Filter by item
  * @return resource DB result
  */
-function get_bin_movement_ledger_data($from_date = null, $to_date = null, $loc_code = null, $stock_id = null)
+function get_bin_movement_ledger_data($from_date = null, $to_date = null, $loc_code = null, $bin_code = null, $stock_id = null)
 {
 	$sql = "SELECT sm.trans_id, sm.type, sm.trans_no, sm.tran_date, sm.stock_id,
 			si.description AS item_description,
@@ -136,6 +133,9 @@ function get_bin_movement_ledger_data($from_date = null, $to_date = null, $loc_c
 		$sql .= " AND sm.tran_date <= '" . date2sql($to_date) . "'";
 	if ($loc_code && $loc_code != 'all')
 		$sql .= " AND sm.loc_code = " . db_escape($loc_code);
+	if ($bin_code)
+		$sql .= " AND (fb.loc_code LIKE " . db_escape('%' . $bin_code . '%')
+			. " OR tb.loc_code LIKE " . db_escape('%' . $bin_code . '%') . ")";
 	if ($stock_id)
 		$sql .= " AND sm.stock_id = " . db_escape($stock_id);
 
@@ -147,36 +147,46 @@ function get_bin_movement_ledger_data($from_date = null, $to_date = null, $loc_c
 /**
  * Get stock aging in bins — how long items have been sitting.
  *
- * @param string|null $loc_code Inventory location
- * @param int         $category Filter by category (0 = all)
- * @param int         $min_days Show only items sitting longer than N days
+ * @param string|null $as_at_date Aging cutoff date
+ * @param string|null $loc_code   Inventory location
+ * @param int         $category   Filter by category (0 = all)
  * @return resource DB result
  */
-function get_bin_stock_aging_data($loc_code = null, $category = 0, $min_days = 0)
+function get_bin_stock_aging_data($as_at_date = null, $loc_code = null, $category = 0)
 {
-	$sql = "SELECT bs.wh_loc_id, wl.location_code, wl.location_name,
+	$as_at_sql = $as_at_date ? date2sql($as_at_date) : date('Y-m-d');
+
+	$sql = "SELECT bs.wh_loc_id, wl.loc_code AS location_code, wl.loc_name AS location_name,
 			bs.stock_id,
 			si.description AS item_description,
 			si.category_id, cat.description AS category_name,
-			bs.quantity,
-			bs.last_movement_date,
-			DATEDIFF(NOW(), bs.last_movement_date) AS days_since_movement,
-			(bs.quantity * si.material_cost) AS stock_value,
-			bs.batch_id, sb.batch_no, sb.expiry_date
+			bs.qty_on_hand AS quantity,
+			COALESCE(last_move.last_movement_date, DATE(IFNULL(bs.updated_at, '$as_at_sql'))) AS last_movement_date,
+			DATEDIFF('$as_at_sql', COALESCE(last_move.last_movement_date, DATE(IFNULL(bs.updated_at, '$as_at_sql')))) AS days_since_movement,
+			(bs.qty_on_hand * si.material_cost) AS stock_value,
+			bs.batch_id, sb.batch_no, COALESCE(bs.expiry_date, sb.expiry_date) AS expiry_date
 		FROM " . TB_PREF . "wh_bin_stock bs
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = bs.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
-		LEFT JOIN " . TB_PREF . "wh_locations wl ON wl.id = bs.wh_loc_id
+		LEFT JOIN " . TB_PREF . "wh_locations wl ON wl.loc_id = bs.wh_loc_id
 		LEFT JOIN " . TB_PREF . "stock_batches sb ON sb.id = bs.batch_id
-		WHERE bs.quantity > 0";
+		LEFT JOIN (
+			SELECT stock_id, batch_id, serial_id, COALESCE(to_bin_id, from_bin_id) AS wh_loc_id,
+				MAX(tran_date) AS last_movement_date
+			FROM " . TB_PREF . "stock_moves
+			WHERE (from_bin_id IS NOT NULL OR to_bin_id IS NOT NULL)
+				AND tran_date <= '$as_at_sql'
+			GROUP BY stock_id, batch_id, serial_id, COALESCE(to_bin_id, from_bin_id)
+		) last_move ON last_move.stock_id = bs.stock_id
+			AND last_move.wh_loc_id = bs.wh_loc_id
+			AND (last_move.batch_id = bs.batch_id OR (last_move.batch_id IS NULL AND bs.batch_id IS NULL))
+			AND (last_move.serial_id = bs.serial_id OR (last_move.serial_id IS NULL AND bs.serial_id IS NULL))
+		WHERE bs.qty_on_hand > 0";
 
 	if ($loc_code && $loc_code != 'all')
 		$sql .= " AND wl.loc_code = " . db_escape($loc_code);
 	if ($category > 0)
 		$sql .= " AND si.category_id = " . db_escape($category);
-	if ($min_days > 0)
-		$sql .= " AND DATEDIFF(NOW(), bs.last_movement_date) >= " . (int)$min_days;
-
 	$sql .= " ORDER BY days_since_movement DESC, bs.stock_id";
 
 	return db_query($sql, 'Could not retrieve stock aging data');
@@ -190,38 +200,55 @@ function get_bin_stock_aging_data($loc_code = null, $category = 0, $min_days = 0
  * @param int         $category     Filter by category (0 = all)
  * @return resource DB result
  */
-function get_dead_stock_data($no_move_days = 180, $loc_code = null, $category = 0)
+function get_dead_stock_data($as_at_date = null, $no_move_days = 180, $loc_code = null, $category = 0)
 {
+	$as_at_sql = $as_at_date ? date2sql($as_at_date) : date('Y-m-d');
+
 	$sql = "SELECT si.stock_id, si.description AS item_description,
 			si.category_id, cat.description AS category_name,
 			si.units, si.material_cost,
 			ls.loc_code, loc.location_name,
-			ls.quantity AS qty_on_hand,
-			(ls.quantity * si.material_cost) AS stock_value,
+			COALESCE((
+				SELECT SUM(smq.qty)
+				FROM " . TB_PREF . "stock_moves smq
+				WHERE smq.stock_id = si.stock_id
+					AND smq.loc_code = ls.loc_code
+					AND smq.tran_date <= '$as_at_sql'
+			), 0) AS qty_on_hand,
+			(COALESCE((
+				SELECT SUM(smv.qty)
+				FROM " . TB_PREF . "stock_moves smv
+				WHERE smv.stock_id = si.stock_id
+					AND smv.loc_code = ls.loc_code
+					AND smv.tran_date <= '$as_at_sql'
+			), 0) * si.material_cost) AS stock_value,
 			(SELECT MAX(sm.tran_date) 
 			 FROM " . TB_PREF . "stock_moves sm 
 			 WHERE sm.stock_id = si.stock_id 
 			   AND sm.loc_code = ls.loc_code
+			   AND sm.tran_date <= '$as_at_sql'
 			) AS last_movement_date,
-			DATEDIFF(NOW(), 
+			DATEDIFF('$as_at_sql', 
 				(SELECT MAX(sm2.tran_date) 
 				 FROM " . TB_PREF . "stock_moves sm2 
 				 WHERE sm2.stock_id = si.stock_id 
 				   AND sm2.loc_code = ls.loc_code
+				   AND sm2.tran_date <= '$as_at_sql'
 				)
 			) AS days_since_movement
 		FROM " . TB_PREF . "loc_stock ls
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = ls.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
 		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = ls.loc_code
-		WHERE ls.quantity > 0
-		AND si.mb_flag <> 'D' AND si.mb_flag <> 'F'
-		HAVING days_since_movement >= " . (int)$no_move_days . " OR last_movement_date IS NULL";
+		WHERE si.mb_flag <> 'D' AND si.mb_flag <> 'F'";
 
 	if ($loc_code && $loc_code != 'all')
 		$sql .= " AND ls.loc_code = " . db_escape($loc_code);
 	if ($category > 0)
 		$sql .= " AND si.category_id = " . db_escape($category);
+
+	$sql .= " HAVING qty_on_hand > 0
+		AND (days_since_movement >= " . (int)$no_move_days . " OR last_movement_date IS NULL)";
 
 	$sql .= " ORDER BY days_since_movement DESC, stock_value DESC";
 
@@ -236,7 +263,7 @@ function get_dead_stock_data($no_move_days = 180, $loc_code = null, $category = 
  */
 function get_warehouse_utilization_data($loc_code = null)
 {
-	$sql = "SELECT wl.id AS wh_loc_id, wl.location_code, wl.location_name,
+	$sql = "SELECT wl.loc_id AS wh_loc_id, wl.loc_code AS location_code, wl.loc_name AS location_name,
 			lt.type_name AS location_type,
 			wl.max_weight, wl.max_volume,
 			sc.max_weight AS cat_max_weight, sc.max_volume AS cat_max_volume,
@@ -252,22 +279,22 @@ function get_warehouse_utilization_data($loc_code = null)
 		LEFT JOIN " . TB_PREF . "wh_storage_categories sc ON sc.id = wl.storage_category_id
 		LEFT JOIN (
 			SELECT bs2.wh_loc_id,
-				SUM(bs2.quantity) AS total_qty,
-				SUM(bs2.quantity * IFNULL(si2.item_weight, 0)) AS total_weight,
-				SUM(bs2.quantity * IFNULL(si2.item_volume, 0)) AS total_volume,
-				SUM(bs2.quantity * si2.material_cost) AS total_value,
+				SUM(bs2.qty_on_hand) AS total_qty,
+				SUM(bs2.qty_on_hand * IFNULL(si2.item_weight, 0)) AS total_weight,
+				SUM(bs2.qty_on_hand * IFNULL(si2.item_volume, 0)) AS total_volume,
+				SUM(bs2.qty_on_hand * si2.material_cost) AS total_value,
 				COUNT(DISTINCT bs2.stock_id) AS unique_items
 			FROM " . TB_PREF . "wh_bin_stock bs2
 			LEFT JOIN " . TB_PREF . "stock_master si2 ON si2.stock_id = bs2.stock_id
-			WHERE bs2.quantity > 0
+			WHERE bs2.qty_on_hand > 0
 			GROUP BY bs2.wh_loc_id
-		) stock ON stock.wh_loc_id = wl.id
+		) stock ON stock.wh_loc_id = wl.loc_id
 		WHERE wl.is_active = 1";
 
 	if ($loc_code && $loc_code != 'all')
 		$sql .= " AND wl.loc_code = " . db_escape($loc_code);
 
-	$sql .= " ORDER BY wl.location_path, wl.location_code";
+	$sql .= " ORDER BY wl.location_path, wl.loc_code";
 
 	return db_query($sql, 'Could not retrieve warehouse utilization data');
 }
@@ -314,7 +341,13 @@ function get_inventory_turn_rate_data($from_date = null, $to_date = null, $locat
 		) cogs ON cogs.stock_id = si.stock_id
 		LEFT JOIN (
 			SELECT ls.stock_id,
-				SUM(ls.quantity * smi.material_cost) AS avg_inventory
+				SUM(COALESCE((
+					SELECT SUM(smq.qty)
+					FROM " . TB_PREF . "stock_moves smq
+					WHERE smq.stock_id = ls.stock_id
+						AND smq.loc_code = ls.loc_code
+						AND smq.tran_date <= '$to_sql'
+				), 0) * smi.material_cost) AS avg_inventory
 			FROM " . TB_PREF . "loc_stock ls
 			LEFT JOIN " . TB_PREF . "stock_master smi ON smi.stock_id = ls.stock_id";
 
@@ -344,29 +377,29 @@ function get_inventory_turn_rate_data($from_date = null, $to_date = null, $locat
  */
 function get_transfer_order_status_data($from_date = null, $to_date = null, $status = '')
 {
-	$sql = "SELECT t.id AS transfer_id, t.reference, t.transfer_date,
-			t.from_loc, fl.location_name AS from_location_name,
-			t.to_loc, tl.location_name AS to_location_name,
-			t.status, t.ship_date, t.receive_date,
-			t.notes,
-			COUNT(tl2.id) AS line_count,
-			SUM(tl2.quantity) AS total_qty,
-			SUM(tl2.received_qty) AS total_received
+	$sql = "SELECT t.transfer_id, t.reference, t.request_date AS tran_date,
+			t.from_loc_code, fl.location_name AS from_location,
+			t.to_loc_code, tl.location_name AS to_location,
+			t.status, t.status AS status_text, t.actual_ship_date, t.actual_recv_date,
+			t.memo,
+			COUNT(tl2.line_id) AS total_lines,
+			SUM(tl2.qty_requested) AS total_qty,
+			SUM(tl2.qty_received) AS received_qty
 		FROM " . TB_PREF . "wh_transfer_orders t
-		LEFT JOIN " . TB_PREF . "locations fl ON fl.loc_code = t.from_loc
-		LEFT JOIN " . TB_PREF . "locations tl ON tl.loc_code = t.to_loc
-		LEFT JOIN " . TB_PREF . "wh_transfer_order_lines tl2 ON tl2.transfer_id = t.id
+		LEFT JOIN " . TB_PREF . "locations fl ON fl.loc_code = t.from_loc_code
+		LEFT JOIN " . TB_PREF . "locations tl ON tl.loc_code = t.to_loc_code
+		LEFT JOIN " . TB_PREF . "wh_transfer_order_lines tl2 ON tl2.transfer_id = t.transfer_id
 		WHERE 1=1";
 
 	if ($from_date)
-		$sql .= " AND t.transfer_date >= '" . date2sql($from_date) . "'";
+		$sql .= " AND t.request_date >= '" . date2sql($from_date) . "'";
 	if ($to_date)
-		$sql .= " AND t.transfer_date <= '" . date2sql($to_date) . "'";
-	if ($status)
+		$sql .= " AND t.request_date <= '" . date2sql($to_date) . "'";
+	if ($status && $status != 'all')
 		$sql .= " AND t.status = " . db_escape($status);
 
-	$sql .= " GROUP BY t.id
-		ORDER BY t.transfer_date DESC, t.id DESC";
+	$sql .= " GROUP BY t.transfer_id
+		ORDER BY t.request_date DESC, t.transfer_id DESC";
 
 	return db_query($sql, 'Could not retrieve transfer order status data');
 }
@@ -381,18 +414,19 @@ function get_transfer_order_status_data($from_date = null, $to_date = null, $sta
  */
 function get_cycle_count_accuracy_data($from_date = null, $to_date = null, $loc_code = null)
 {
-	$sql = "SELECT cc.id AS count_id, cc.reference, cc.count_date,
-			cc.loc_code, loc.location_name,
+	$sql = "SELECT cc.count_id, CONCAT('#', cc.count_id) AS reference, cc.count_date,
+			cc.warehouse_loc_code AS loc_code, loc.location_name,
 			cc.status,
-			COUNT(ccl.id) AS total_lines,
-			SUM(CASE WHEN ccl.variance_qty = 0 THEN 1 ELSE 0 END) AS accurate_lines,
-			SUM(CASE WHEN ccl.variance_qty != 0 THEN 1 ELSE 0 END) AS variance_lines,
-			ROUND(SUM(CASE WHEN ccl.variance_qty = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(ccl.id), 1) AS accuracy_pct,
-			SUM(ABS(ccl.variance_qty)) AS total_abs_variance,
-			SUM(ccl.variance_qty * ccl.standard_cost) AS total_variance_value
+			COUNT(ccl.line_id) AS total_lines,
+			SUM(CASE WHEN COALESCE(ccl.variance_qty, 0) = 0 THEN 1 ELSE 0 END) AS accurate_lines,
+			SUM(CASE WHEN COALESCE(ccl.variance_qty, 0) != 0 THEN 1 ELSE 0 END) AS variance_lines,
+			ROUND(SUM(CASE WHEN COALESCE(ccl.variance_qty, 0) = 0 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ccl.line_id), 0), 1) AS accuracy_pct,
+			SUM(ABS(COALESCE(ccl.variance_qty, 0))) AS total_abs_variance,
+			SUM(COALESCE(ccl.variance_qty, 0) * COALESCE(si.material_cost, 0)) AS variance_value
 		FROM " . TB_PREF . "wh_cycle_counts cc
-		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = cc.loc_code
-		LEFT JOIN " . TB_PREF . "wh_cycle_count_lines ccl ON ccl.cycle_count_id = cc.id
+		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = cc.warehouse_loc_code
+		LEFT JOIN " . TB_PREF . "wh_cycle_count_lines ccl ON ccl.count_id = cc.count_id
+		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = ccl.stock_id
 		WHERE 1=1";
 
 	if ($from_date)
@@ -400,10 +434,10 @@ function get_cycle_count_accuracy_data($from_date = null, $to_date = null, $loc_
 	if ($to_date)
 		$sql .= " AND cc.count_date <= '" . date2sql($to_date) . "'";
 	if ($loc_code && $loc_code != 'all')
-		$sql .= " AND cc.loc_code = " . db_escape($loc_code);
+		$sql .= " AND cc.warehouse_loc_code = " . db_escape($loc_code);
 
-	$sql .= " GROUP BY cc.id
-		ORDER BY cc.count_date DESC, cc.id DESC";
+	$sql .= " GROUP BY cc.count_id
+		ORDER BY cc.count_date DESC, cc.count_id DESC";
 
 	return db_query($sql, 'Could not retrieve cycle count accuracy data');
 }
