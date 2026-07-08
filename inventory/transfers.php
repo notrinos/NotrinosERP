@@ -100,7 +100,9 @@ if (isset($_POST['Process'])) {
 		set_focus('stock_id');
 		$input_error = 1;
 	}
-	if (!check_reference($_POST['ref'], ST_LOCTRANSFER)) {
+	$reference_context = array('date'=>$_POST['AdjDate'], 'location'=>$_POST['FromStockLocation']);
+	refresh_unchanged_auto_reference('ref', 'ref_original_auto', ST_LOCTRANSFER, $reference_context);
+	if (!check_reference($_POST['ref'], ST_LOCTRANSFER, 0, $reference_context)) {
 		set_focus('ref');
 		$input_error = 1;
 	} 
@@ -160,7 +162,7 @@ if (isset($_POST['Process'])) {
 		$_SESSION['transfer_items']->clear_items();
 		unset($_SESSION['transfer_items']);
 		new_doc_date($_POST['AdjDate']);
-		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no.get_sel_app_param('&'));
 	}
 	if ($approval_result !== false) {
 		return; // pending approval
@@ -172,7 +174,7 @@ if (isset($_POST['Process'])) {
 	$_SESSION['transfer_items']->clear_items();
 	unset($_SESSION['transfer_items']);
 
-	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no.get_sel_app_param('&'));
 } /*end of process credit note */
 
 //-----------------------------------------------------------------------------------------------
@@ -255,7 +257,7 @@ end_row();
 end_table(1);
 
 submit_center_first('Update', _('Update'), '', null);
-submit_center_last('Process', _('Process Transfer'), '',  'default');
+submit_center_last('Process', _('Process Transfer'), '', 'nonajax');
 
 end_form();
 end_page();

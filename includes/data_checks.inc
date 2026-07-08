@@ -563,6 +563,74 @@ function check_reference($reference, $trans_type, $trans_no=0, $context=null, $l
 	return true;
 }
 
+/**
+ * Refresh an unchanged auto-filled reference that has gone stale.
+ *
+ * Transaction entry forms often render the next reference with ref_row() when the
+ * page opens. If two users or browser workflows open the same form before either
+ * one submits, both can carry the same generated reference. The first submit
+ * consumes it, and the second submit would fail check_reference() even though the
+ * second user did not manually choose a duplicate reference.
+ *
+ * Call this immediately before check_reference() to replace only that unchanged
+ * auto-filled value with the next available reference. It is intentionally
+ * conservative:
+ * - the current reference must be syntactically valid for the transaction/context;
+ * - an unused current reference is left alone;
+ * - a used current reference is refreshed only when it still matches the hidden
+ *   original auto reference rendered with the form;
+ * - a user-edited duplicate reference is not refreshed, so check_reference()
+ *   still reports the normal duplicate-reference error.
+ *
+ * Usage pattern:
+ *   ref_row(..., 'ref', '', $Refs->get_next($type, null, $context), false, $type);
+ *   hidden('ref_original_auto', get_post('ref'));
+ *
+ *   refresh_unchanged_auto_reference('ref', 'ref_original_auto', $type, $context);
+ *   if (!check_reference($_POST['ref'], $type, 0, $context)) { ... }
+ *
+ * Use this on editable transaction reference fields that are prefilled from
+ * $Refs->get_next() and can be submitted after another transaction consumes the
+ * same next reference. Do not use it for intentionally manual reference fields or
+ * where no hidden original auto reference proves the user left the generated
+ * value unchanged.
+ *
+ * @param string $reference_field Posted reference field name.
+ * @param string $original_field Posted hidden original-reference field name.
+ * @param int $trans_type Transaction type constant.
+ * @param array|string|null $context Reference context.
+ * @param int|null $line Reference line id.
+ * @return bool True when the current reference is available or was refreshed.
+ */
+function refresh_unchanged_auto_reference($reference_field, $original_field, $trans_type, $context=null, $line=null) {
+	global $Refs;
+
+	if (!isset($_POST[$reference_field]))
+		return false;
+
+	$reference = trim($_POST[$reference_field]);
+	if (!$Refs->is_valid($reference, $trans_type, $context, $line))
+		return false;
+	if ($Refs->is_new_reference($reference, $trans_type))
+		return true;
+
+	if (!isset($_POST[$original_field]) || trim($_POST[$original_field]) !== $reference)
+		return false;
+
+	$next_reference = $Refs->get_next($trans_type, $line, $context);
+	for ($attempt = 0; $attempt < 25; $attempt++) {
+		if ($next_reference && $Refs->is_valid($next_reference, $trans_type, $context, $line)
+			&& $Refs->is_new_reference($next_reference, $trans_type)) {
+			$_POST[$reference_field] = $next_reference;
+			$_POST[$original_field] = $next_reference;
+			return true;
+		}
+		$next_reference = $Refs->_increment($next_reference ? $next_reference : $reference);
+	}
+
+	return false;
+}
+
 function check_sys_pref($name, $msg, $empty = '') {
 	global $path_to_root;
 

@@ -105,7 +105,9 @@ function can_process() {
 		set_focus('stock_id');
 		return false;
 	}
-	if (!check_reference($_POST['ref'], ST_INVADJUST)) {
+	$reference_context = array('location'=>$_POST['StockLocation'], 'date'=>$_POST['AdjDate']);
+	refresh_unchanged_auto_reference('ref', 'ref_original_auto', ST_INVADJUST, $reference_context);
+	if (!check_reference($_POST['ref'], ST_INVADJUST, 0, $reference_context)) {
 		set_focus('ref');
 		return false;
 	}
