@@ -406,14 +406,21 @@ function get_serial_cost_data($stock_id = null, $location = null)
 /**
  * Get supplier quality analysis — rejection rates by supplier.
  *
- * @param string|null $from_date Start date
- * @param string|null $to_date   End date
+ * Resolves supplier information through the existing data relationships:
+ * - Incoming inspections (trans_type=ST_SUPPRECEIVE=25): joins through
+ *   grn_batch to get the purchase-order supplier.
+ * - Batch-tracked inspections: falls back to stock_batches.supplier_id.
+ * - Inspections with neither GRN nor batch linkage are excluded (no
+ *   supplier attribution possible).
+ *
+ * @param string|null $from_date   Start date
+ * @param string|null $to_date     End date
  * @param int|null    $supplier_id Filter by supplier
  * @return resource DB result
  */
 function get_supplier_quality_data($from_date = null, $to_date = null, $supplier_id = null)
 {
-	$sql = "SELECT qi.supplier_id,
+	$sql = "SELECT COALESCE(gb.supplier_id, sb.supplier_id, 0) AS supplier_id,
 			sup.supp_name AS supplier_name,
 			COUNT(*) AS total_inspections,
 			SUM(CASE WHEN qi.result = 'pass' THEN 1 ELSE 0 END) AS passed,
@@ -422,17 +429,22 @@ function get_supplier_quality_data($from_date = null, $to_date = null, $supplier
 			ROUND(SUM(CASE WHEN qi.result = 'fail' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS rejection_rate,
 			COUNT(DISTINCT qi.stock_id) AS unique_items
 		FROM " . TB_PREF . "quality_inspections qi
-		LEFT JOIN " . TB_PREF . "suppliers sup ON sup.supplier_id = qi.supplier_id
-		WHERE qi.supplier_id IS NOT NULL AND qi.supplier_id > 0";
+		LEFT JOIN " . TB_PREF . "grn_batch gb
+			ON qi.trans_type = ".ST_SUPPRECEIVE." AND qi.trans_no = gb.id
+		LEFT JOIN " . TB_PREF . "stock_batches sb
+			ON qi.batch_id = sb.id
+		LEFT JOIN " . TB_PREF . "suppliers sup
+			ON sup.supplier_id = COALESCE(gb.supplier_id, sb.supplier_id)
+		WHERE COALESCE(gb.supplier_id, sb.supplier_id, 0) > 0";
 
 	if ($from_date)
 		$sql .= " AND qi.inspection_date >= '" . date2sql($from_date) . "'";
 	if ($to_date)
 		$sql .= " AND qi.inspection_date <= '" . date2sql($to_date) . "'";
 	if ($supplier_id && $supplier_id > 0)
-		$sql .= " AND qi.supplier_id = " . db_escape($supplier_id);
+		$sql .= " AND COALESCE(gb.supplier_id, sb.supplier_id) = " . db_escape($supplier_id);
 
-	$sql .= " GROUP BY qi.supplier_id, sup.supp_name
+	$sql .= " GROUP BY COALESCE(gb.supplier_id, sb.supplier_id, 0), sup.supp_name
 		ORDER BY rejection_rate DESC, total_inspections DESC";
 
 	return db_query($sql, 'Could not retrieve supplier quality data');
