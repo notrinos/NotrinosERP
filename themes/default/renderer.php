@@ -745,6 +745,17 @@ class renderer {
 	function render_dropmenu_panels($applications, $selected_application_id) {
 		global $path_to_root;
 
+		/**
+		 * Bail out when there is no logged-in user or when the install wizard is
+		 * active (config_db.php missing).  Even when $_SESSION['wa_current_user'] is
+		 * still present from a previous session, the drop-right panels are
+		 * meaningless in that context and accessing $_SESSION['wa_current_user']
+		 * methods without a full application bootstrap would cause a fatal
+		 * error or white-screen install winzard.
+		 */
+		if (!isset($_SESSION['wa_current_user']) || !file_exists($path_to_root.'/config_db.php'))
+			return;
+
 		add_access_extensions();
 
 		echo "<div id='modern-dropmenu-container' class='modern-dropmenu-container'>";
