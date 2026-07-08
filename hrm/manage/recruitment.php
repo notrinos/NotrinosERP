@@ -75,8 +75,8 @@ if (isset($_POST['add_applicant'])) {
         display_error(_('Email address is invalid.'));
     elseif ((int)get_post('opening_id', 0) > 0 && !get_recruitment_opening(get_post('opening_id', 0)))
         display_error(_('Selected recruitment opening was not found.'));
-    // elseif (trim(get_post('expected_salary', '')) !== '' && !is_numeric(get_post('expected_salary', '')))
-        // display_error(_('Expected salary must be numeric.'));
+    elseif (trim(get_post('expected_salary', '')) !== '' && !check_num('expected_salary', 0))
+        display_error(_('Expected salary must be numeric.'));
     else {
         add_recruitment_applicant(array(
             'opening_id' => get_post('opening_id', 0),
