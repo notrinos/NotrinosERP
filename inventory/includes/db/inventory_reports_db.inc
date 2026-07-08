@@ -383,7 +383,7 @@ function get_serial_cost_data($stock_id = null, $location = null)
 			sn.purchase_cost,
 			IFNULL(sn.purchase_cost, si.material_cost) AS unit_cost,
 			(SELECT COUNT(*) FROM " . TB_PREF . "serial_movements sm2 WHERE sm2.serial_id = sn.id) AS movement_count,
-			sn.created_date,
+			sn.created_at,
 			sn.purchase_date,
 			sn.supplier_id,
 			sup.supp_name AS supplier_name
