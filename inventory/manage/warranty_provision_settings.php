@@ -36,11 +36,22 @@ if (isset($_POST['save'])) {
 	$expense_account = get_post('warranty_expense_account', '');
 	$rate = input_num('warranty_provision_rate', 5.0);
 	$enabled = check_value('warranty_provision_enabled') ? 1 : 0;
+	$input_error = 0;
+
+	// Validate: rate must be non-negative
+	if ($rate < 0) {
+		display_error(_('Warranty provision rate cannot be negative.'));
+		set_focus('warranty_provision_rate');
+		$input_error = 1;
+	}
 
 	// Validate: if enabling, both accounts must be set
 	if ($enabled && ($provision_account == '' || $expense_account == '')) {
 		display_error(_('Both Warranty Provision Account and Warranty Expense Account must be set to enable automatic provisioning.'));
-	} else {
+		$input_error = 1;
+	}
+
+	if (!$input_error) {
 		set_company_pref('warranty_provision_account', 'tracking', 'VARCHAR', 15, $provision_account);
 		set_company_pref('warranty_expense_account', 'tracking', 'VARCHAR', 15, $expense_account);
 		set_company_pref('warranty_provision_rate', 'tracking', 'REAL', 8, $rate);
