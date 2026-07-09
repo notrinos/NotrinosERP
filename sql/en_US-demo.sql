@@ -3672,6 +3672,8 @@ CREATE TABLE `0_warranty_provision_log` (
 	`warranty_end` date DEFAULT NULL,
 	`tran_date` date NOT NULL,
 	`gl_trans_id` int(11) DEFAULT NULL COMMENT 'Reference to gl_trans counter',
+	`dimension_id` int(11) NOT NULL DEFAULT '0',
+	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`notes` text DEFAULT NULL,
 	`created_by` int(11) DEFAULT NULL,
 	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -3679,7 +3681,8 @@ CREATE TABLE `0_warranty_provision_log` (
 	KEY `idx_wp_trans` (`trans_type`, `trans_no`),
 	KEY `idx_wp_stock` (`stock_id`),
 	KEY `idx_wp_customer` (`customer_id`),
-	KEY `idx_wp_type` (`provision_type`)
+	KEY `idx_wp_type` (`provision_type`),
+	KEY `idx_wp_dim` (`dimension_id`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_warranty_provision_log` --

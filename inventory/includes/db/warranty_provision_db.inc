@@ -391,3 +391,63 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 
 	return $count;
 }
+
+/**
+ * Reverse warranty provision accruals when a delivery is voided.
+ *
+ * Posts offsetting GL entries (release) for all warranty provisions
+ * that were accrued against the specified delivery transaction.
+ *
+ * @param int $trans_type Transaction type (ST_CUSTDELIVERY)
+ * @param int $trans_no   Transaction number (delivery_no)
+ * @return int Number of provisions reversed
+ */
+function reverse_delivery_warranty_provisions($trans_type, $trans_no)
+{
+	$config = get_warranty_provision_config();
+	if (!$config['enabled'])
+		return 0;
+
+	// Find all accrual log entries for this delivery
+	$sql = "SELECT * FROM " . TB_PREF . "warranty_provision_log
+		WHERE trans_type = " . (int)$trans_type
+		. " AND trans_no = " . (int)$trans_no
+		. " AND provision_type = 'accrual'";
+	$result = db_query($sql, 'could not find warranty provisions for void');
+
+	$count = 0;
+	while ($entry = db_fetch($result)) {
+		if ($entry['amount'] <= 0)
+			continue;
+
+		$date_ = sql2date($entry['tran_date']);
+
+		// Post reverse GL entries: DR provision (reduce), CR expense (reduce)
+		add_gl_trans_std_cost(ST_JOURNAL, $trans_no, $date_,
+			$config['provision_account'],
+			isset($entry['dimension_id']) ? (int)$entry['dimension_id'] : 0,
+			isset($entry['dimension2_id']) ? (int)$entry['dimension2_id'] : 0,
+			_('Warranty provision reversal — delivery voided'),
+			$entry['amount'],
+			PT_CUSTOMER, $entry['customer_id']);
+
+		add_gl_trans_std_cost(ST_JOURNAL, $trans_no, $date_,
+			$config['expense_account'],
+			isset($entry['dimension_id']) ? (int)$entry['dimension_id'] : 0,
+			isset($entry['dimension2_id']) ? (int)$entry['dimension2_id'] : 0,
+			_('Warranty provision reversal — delivery voided'),
+			-$entry['amount'],
+			PT_CUSTOMER, $entry['customer_id']);
+
+		// Log the reversal
+		add_warranty_provision_log(ST_JOURNAL, $trans_no,
+			$entry['stock_id'], $entry['serial_id'], $entry['batch_id'],
+			$entry['customer_id'], 'release', $entry['amount'],
+			$entry['warranty_end'], $date_,
+			_('Automatic reversal: delivery voided'));
+
+		$count++;
+	}
+
+	return $count;
+}

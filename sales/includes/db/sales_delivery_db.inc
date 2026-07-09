@@ -328,6 +328,16 @@ function void_sales_delivery($type, $type_no, $transactions=true) {
 
 	void_cust_allocations($type, $type_no);
 
+	// --- Reverse warranty provision accruals for voided delivery ---
+	$warranty_prov_path = dirname(dirname(dirname(dirname(__FILE__))))
+		. '/inventory/includes/db/warranty_provision_db.inc';
+	if (file_exists($warranty_prov_path)) {
+		include_once($warranty_prov_path);
+		if (function_exists('reverse_delivery_warranty_provisions')) {
+			reverse_delivery_warranty_provisions($type, $type_no);
+		}
+	}
+
 	// do this last because other voidings can depend on it
 	// DO NOT MOVE THIS ABOVE VOIDING or we can end up with trans with alloc < 0
 	void_customer_trans($type, $type_no);
