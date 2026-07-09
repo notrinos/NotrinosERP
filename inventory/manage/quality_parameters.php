@@ -207,7 +207,7 @@ div_end();
 //----------------------------------------------------------------------
 
 div_start('param_form');
-start_table(TABLESTYLE2);
+start_outer_table();
 
 if ($Mode == 'Edit') {
 	$row = get_quality_parameter($selected_id);
@@ -235,6 +235,8 @@ if ($Mode == 'Edit') {
 if ($selected_id != -1)
 	hidden('selected_id', $selected_id);
 
+table_section(1);
+
 text_row_ex(_('Parameter Name') . ':', 'param_name', 50, 100);
 
 $param_types = get_qc_parameter_types();
@@ -252,6 +254,8 @@ if ($ptype === 'numeric') {
 	text_row_ex(_('Acceptable Values (comma-separated)') . ':', 'acceptable_values', 60, 255);
 }
 
+table_section(2);
+
 // Scope fields
 start_row();
 label_cell(_('Item (blank = global)'));
@@ -264,7 +268,7 @@ check_row(_('Required') . ':', 'is_required', null);
 text_row_ex(_('Display Sequence') . ':', 'sequence', 10, 10);
 textarea_row(_('Description / Instructions') . ':', 'description', null, 60, 3);
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
