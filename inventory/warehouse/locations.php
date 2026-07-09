@@ -602,7 +602,7 @@ end_table();
 //-------------------------------------------------------------------------------------
 
 echo '<br>';
-start_table(TABLESTYLE2);
+start_outer_table();
 
 // If editing, load existing data
 if ($selected_id != -1 && $Mode == 'Edit') {
@@ -629,6 +629,7 @@ if ($selected_id != -1 && $Mode == 'Edit') {
 
 hidden('parent_id', $parent_id);
 
+table_section(1);
 // Location code
 if ($selected_id != -1) {
 	hidden('loc_code', get_post('loc_code'));
@@ -659,7 +660,7 @@ text_row_ex(_('Location Name:'), 'loc_name', 50, 100);
 warehouse_location_type_list_row(_('Location Type:'), 'location_type_id', get_post('location_type_id'), true);
 
 // Capacity fields
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Capacity Limits') . "</strong></td></tr>\n";
+table_section_title(_('Capacity Limits'));
 small_amount_row(_('Max Weight (kg):'), 'max_weight', get_post('max_weight', ''), null, null, 2);
 small_amount_row(_('Max Volume (m³):'), 'max_volume', get_post('max_volume', ''), null, null, 4);
 text_row_ex(_('Max Units:'), 'max_units', 10, 10);
@@ -667,8 +668,10 @@ text_row_ex(_('Max Units:'), 'max_units', 10, 10);
 // Storage category
 storage_category_list_row(_('Storage Category:'), 'storage_category_id', get_post('storage_category_id'), true);
 
+table_section(2);
+
 // Zone/Classification
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Classification') . "</strong></td></tr>\n";
+table_section_title(_('Classification'));
 
 $zone_types = array(
 	'' => _('-- none --'),
@@ -693,13 +696,13 @@ text_row_ex(_('Pick Sequence:'), 'pick_sequence', 10, 10);
 text_row_ex(_('Barcode:'), 'barcode', 50, 50);
 
 // Default flags
-echo "<tr><td colspan='2' style='padding-top:10px;'><strong>" . _('Default Flags') . "</strong></td></tr>\n";
+table_section_title(_('Default Flags'));
 check_row(_('Default Receipt Location'), 'is_default_receipt', get_post('is_default_receipt', 0));
 check_row(_('Default Shipping Location'), 'is_default_ship', get_post('is_default_ship', 0));
 check_row(_('Default Scrap Location'), 'is_default_scrap', get_post('is_default_scrap', 0));
 check_row(_('Default Production Location'), 'is_default_production', get_post('is_default_production', 0));
 
-end_table(1);
+end_outer_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 
@@ -707,9 +710,7 @@ submit_add_or_update_center($selected_id == -1, '', 'both');
 // Bulk create section
 //-------------------------------------------------------------------------------------
 
-echo '<br>';
-echo "<fieldset style='border:1px solid #ddd; padding:10px; border-radius:4px; margin-top:10px;'>";
-echo "<legend style='font-weight:bold; padding:0 5px;'>" . _('Bulk Create Locations') . "</legend>";
+start_fieldset(_('Bulk Create Locations'));
 
 start_table(TABLESTYLE2);
 warehouse_location_type_list_row(_('Location Type:'), 'bulk_type_id', get_post('bulk_type_id'));
@@ -728,8 +729,7 @@ if ($parent_id) {
 
 end_table(1);
 submit_center('bulk_create', _('Bulk Create'), true, '', 'default');
-echo "</fieldset>";
-
+end_fieldset();
 end_form();
 
 end_page();
