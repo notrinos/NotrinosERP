@@ -282,7 +282,7 @@ if ($selected_id > 0 && $order) {
 	$types = get_return_order_types();
 	$type_label = isset($types[$order['return_type']]) ? $types[$order['return_type']] : $order['return_type'];
 
-	echo "<h3>";
+	echo "<br><h3>";
 	echo sprintf(_('Return Order RO#%s'), $order['return_no']);
 	echo " <span style='display:inline-block;padding:3px 10px;border-radius:10px;font-size:12px;"
 		. "background:" . $status_color . ";color:#fff;'>" . $status_label . "</span>";
@@ -290,17 +290,17 @@ if ($selected_id > 0 && $order) {
 	echo "</h3>";
 
 	// --- Header details ---
-	start_table(TABLESTYLE2);
+	start_outer_table(TABLESTYLE2);
+
+	table_section(1);
 	if ($order['status'] === 'draft') {
 		// Editable form
 		$type_options = get_return_order_types();
-		echo "<tr><td class='label'>" . _('Return Type:') . "</td><td>";
-		echo array_selector('return_type', $order['return_type'], $type_options, array('select_submit' => true));
-		echo "</td></tr>";
-
+		array_selector_row(_('Return Type:'), 'return_type', $order['return_type'], $type_options, array('select_submit' => true));
 		locations_list_row(_('Warehouse:'), 'warehouse', $order['warehouse_loc_code'], false, false, false);
 		date_row(_('Return Date:'), 'return_date', sql2date($order['return_date']), null, 0, 0, 0);
 
+		table_section(2);
 		$return_type = get_post('return_type', $order['return_type']);
 		if ($return_type === 'customer') {
 			customer_list_row(_('Customer:'), 'customer_id', $order['customer_id'], false, true);
@@ -317,6 +317,8 @@ if ($selected_id > 0 && $order) {
 		label_row(_('Return Date:'), sql2date($order['return_date']));
 		if ($order['received_date'])
 			label_row(_('Received Date:'), sql2date($order['received_date']));
+
+		table_section(2);
 		if ($order['return_type'] === 'customer')
 			label_row(_('Customer:'), $order['customer_name']);
 		else
@@ -331,7 +333,7 @@ if ($selected_id > 0 && $order) {
 			label_row(_('Disposition:'), $disp_label);
 		}
 	}
-	end_table(1);
+	end_outer_table(1);
 
 	// --- Line Items ---
 	echo "<h4>" . _('Line Items') . "</h4>";
@@ -501,9 +503,8 @@ if ($selected_id > 0 && $order) {
 		submit_center_first('COMPLETE_RETURN', _('Complete & Route'), true, _('Complete return and apply disposition routing'), 'default');
 		submit('CANCEL_RETURN', _('Cancel'), true, _('Cancel this return order'), 'cancel');
 	}
-
-	echo "&nbsp;&nbsp;";
-	submit('NEW_RETURN', _('New Return Order'), true, _('Create a new return order'), 'default');
+	
+	submit_center('NEW_RETURN', _('New Return Order'), true, _('Create a new return order'), 'default');
 	echo "</div>";
 
 } else {
@@ -512,7 +513,7 @@ if ($selected_id > 0 && $order) {
 	// Filter Bar
 	// =====================================================================
 
-	echo "<h3>" . _('Return Orders') . "</h3>";
+	echo "<br><h3>" . _('Return Orders') . "</h3>";
 
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
@@ -537,15 +538,16 @@ if ($selected_id > 0 && $order) {
 	if (isset($_POST['NEW_RETURN_BTN'])) {
 		// Show creation form below
 		echo "<h3>" . _('New Return Order') . "</h3>";
-		start_table(TABLESTYLE2);
+		start_outer_table();
+
+		table_section(1);
 		$type_options = get_return_order_types();
-		echo "<tr><td class='label'>" . _('Return Type:') . "</td><td>";
-		echo array_selector('return_type', get_post('return_type', 'customer'), $type_options, array('select_submit' => true));
-		echo "</td></tr>";
+		echo array_selector_row(_('Return Type:'), 'return_type', get_post('return_type', 'customer'), $type_options, array('select_submit' => true));
 
 		locations_list_row(_('Warehouse:'), 'warehouse', get_post('warehouse'), false, false, false);
 		date_row(_('Return Date:'), 'return_date', '', null, 0, 0, 0);
 
+		table_section(2);
 		$return_type = get_post('return_type', 'customer');
 		if ($return_type === 'customer') {
 			customer_list_row(_('Customer:'), 'customer_id', null, false, true);
@@ -555,8 +557,9 @@ if ($selected_id > 0 && $order) {
 
 		text_row(_('Reference:'), 'reference', '', 30, 60);
 		textarea_row(_('Memo:'), 'memo', '', 60, 3);
-		end_table(1);
+		end_outer_table(1);
 		submit_center('CREATE_RETURN', _('Create Return Order'), true, _('Create a new return order'), 'default');
+		br();
 
 		$Ajax->activate('_page_body');
 	}
@@ -566,14 +569,17 @@ if ($selected_id > 0 && $order) {
 	// =====================================================================
 
 	$filters = array();
-	if (get_post('filter_type')) $filters['return_type'] = get_post('filter_type');
-	if (get_post('filter_status')) $filters['status'] = get_post('filter_status');
-	if (get_post('filter_loc')) $filters['loc_code'] = get_post('filter_loc');
+	if (get_post('filter_type'))
+		$filters['return_type'] = get_post('filter_type');
+	if (get_post('filter_status'))
+		$filters['status'] = get_post('filter_status');
+	if (get_post('filter_loc'))
+		$filters['loc_code'] = get_post('filter_loc');
 
 	$result = get_return_orders($filters);
 
 	div_start('return_list');
-	start_table(TABLESTYLE, "width='100%'");
+	start_table(TABLESTYLE_DATA, "");
 	$th = array(_('RO#'), _('Type'), _('Status'), _('Date'), _('Customer/Supplier'),
 		_('Warehouse'), _('Lines'), _('Expected'), _('Received'), _('Reference'), _(''));
 	table_header($th);
