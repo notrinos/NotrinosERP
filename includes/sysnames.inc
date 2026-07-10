@@ -44,6 +44,7 @@ $systypes_array = array (
 	ST_ITEM => _('Item'),
 	ST_FIXEDASSET => _('Fixed Asset'),
 	ST_BANKACCOUNT => _("Bank Account"),
+	ST_EMPLOYEE    => _('Employee'),
 	ST_PAYSLIP    => _('Employee Payslip'),
 	ST_EMPPAYMENT => _('Employee Payment'),
 	ST_LEAVE_REQUEST => _('Leave Request'),

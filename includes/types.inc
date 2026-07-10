@@ -59,6 +59,7 @@ define('ST_SUPPLIER', 42);
 define('ST_ITEM', 43);
 define('ST_FIXEDASSET', 44);
 define('ST_BANKACCOUNT', 45);
+define('ST_EMPLOYEE',     46);
 
 // --- Warehouse Management transaction types ---
 define('ST_WH_TRANSFER_ORDER',   50);  // Inter-branch transfer order

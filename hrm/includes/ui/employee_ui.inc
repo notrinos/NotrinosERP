@@ -106,7 +106,26 @@ function display_salary_components($employee_id, $editable=false) {
 //------------------------------------------------------------------
 // Display employee documents table
 //------------------------------------------------------------------
-function display_employee_documents($employee_id) {
+
+/**
+ * Display employee documents table with optional action controls.
+ *
+ * @param string $employee_id  Employee code.
+ * @param array  $options      Display options:
+ *   'allow_edit'   => bool  Show Edit action (default: true).
+ *   'allow_delete' => bool  Show Delete action (default: true).
+ *   'allow_view'   => bool  Show View action (default: true).
+ */
+function display_employee_documents($employee_id, $options = array()) {
+	global $path_to_root;
+
+	$defaults = array(
+		'allow_edit'   => true,
+		'allow_delete' => true,
+		'allow_view'   => true,
+	);
+	$opts = array_merge($defaults, $options);
+
 	$docs = get_employee_documents($employee_id);
 
 	start_table(TABLESTYLE);
@@ -148,11 +167,27 @@ function display_employee_documents($employee_id) {
 		label_cell($doc['notes']);
 
 		// Action buttons
-		$actions = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&edit_doc=".$doc['doc_id'])."'>"._('Edit')."</a>"
-			." | <a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&delete_doc=".$doc['doc_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
-		if (!empty($doc['file_path']))
-			$actions .= " | <a href='".$doc['file_path']."' target='_blank'>"._('View')."</a>";
-		label_cell($actions, "nowrap");
+		$actions = array();
+		if ($opts['allow_edit']) {
+			$actions[] = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&edit_doc=".$doc['doc_id'])."'>"._('Edit')."</a>";
+		}
+		if ($opts['allow_delete']) {
+			$actions[] = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&delete_doc=".$doc['doc_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+		}
+		if ($opts['allow_view']) {
+			$has_file = !empty($doc['attachment_id']) || !empty($doc['file_path']);
+			if ($has_file) {
+				// Prefer the HR-authorized view endpoint for core attachments.
+				if (!empty($doc['attachment_id'])) {
+					$view_url = $path_to_root.'/hrm/view/employee_document_attachment.php?doc_id='.(int)$doc['doc_id'];
+				} else {
+					// Legacy file_path: route through the safe endpoint.
+					$view_url = $path_to_root.'/hrm/view/employee_document_attachment.php?doc_id='.(int)$doc['doc_id'];
+				}
+				$actions[] = "<a href='".$view_url."' target='_blank'>"._('View')."</a>";
+			}
+		}
+		label_cell(implode(' | ', $actions), "nowrap");
 
 		end_row();
 	}

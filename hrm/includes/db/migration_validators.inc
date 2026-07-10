@@ -135,6 +135,76 @@ function hrm_validate_salary_structure_references() {
 }
 
 /**
+ * Validate employee document attachment integrity.
+ *
+ * Checks for:
+ *  - non-null attachment_id pointing to a missing attachment
+ *  - linked attachment type not equal to ST_EMPLOYEE
+ *  - linked attachment owner not equal to the employee's employee_number
+ *  - orphan ST_EMPLOYEE attachments with no employee_document link
+ *
+ * @return array
+ */
+function hrm_validate_employee_attachment_integrity() {
+	$title = _('Employee document attachment integrity');
+	$issues = array();
+
+	if (!hrm_migration_table_exists('employee_documents') || !hrm_migration_table_exists('attachments')) {
+		return hrm_migration_result($title, 'warn', _('Skipped because required tables are not available.'));
+	}
+
+	// Check: non-null attachment_id pointing to a missing attachment.
+	$sql = "SELECT COUNT(*) AS cnt FROM ".TB_PREF."employee_documents d
+		LEFT JOIN ".TB_PREF."attachments a ON a.id = d.attachment_id
+		WHERE d.attachment_id IS NOT NULL AND a.id IS NULL";
+	$result = db_query($sql, 'could not validate attachment links');
+	$row = db_fetch($result);
+	if ($row && (int)$row['cnt'] > 0) {
+		$issues[] = sprintf(_('%d employee document(s) have broken attachment links.'), (int)$row['cnt']);
+	}
+
+	// Check: linked attachment type not equal to ST_EMPLOYEE.
+	$sql = "SELECT COUNT(*) AS cnt FROM ".TB_PREF."employee_documents d
+		JOIN ".TB_PREF."attachments a ON a.id = d.attachment_id
+		WHERE a.type_no != " . (int)ST_EMPLOYEE;
+	$result = db_query($sql, 'could not validate attachment types');
+	$row = db_fetch($result);
+	if ($row && (int)$row['cnt'] > 0) {
+		$issues[] = sprintf(_('%d employee document(s) linked to non-employee attachment type.'), (int)$row['cnt']);
+	}
+
+	// Check: linked attachment owner (trans_no) does not match employee_number.
+	$sql = "SELECT COUNT(*) AS cnt FROM ".TB_PREF."employee_documents d
+		JOIN ".TB_PREF."attachments a ON a.id = d.attachment_id
+		JOIN ".TB_PREF."employees e ON e.employee_id = d.employee_id
+		WHERE a.trans_no != e.employee_number";
+	$result = db_query($sql, 'could not validate attachment ownership');
+	$row = db_fetch($result);
+	if ($row && (int)$row['cnt'] > 0) {
+		$issues[] = sprintf(_('%d employee document(s) linked to wrong employee attachment.'), (int)$row['cnt']);
+	}
+
+	// Check: orphan ST_EMPLOYEE attachments (no employee_document references them).
+	$sql = "SELECT COUNT(*) AS cnt FROM ".TB_PREF."attachments a
+		WHERE a.type_no = " . (int)ST_EMPLOYEE . "
+		AND NOT EXISTS (
+			SELECT 1 FROM ".TB_PREF."employee_documents d
+			WHERE d.attachment_id = a.id
+		)";
+	$result = db_query($sql, 'could not validate orphan attachments');
+	$row = db_fetch($result);
+	if ($row && (int)$row['cnt'] > 0) {
+		$issues[] = sprintf(_('%d orphan employee attachment(s) found.'), (int)$row['cnt']);
+	}
+
+	if (!empty($issues)) {
+		return hrm_migration_result($title, 'fail', implode(' ', $issues));
+	}
+
+	return hrm_migration_result($title, 'pass', _('All employee document attachments are valid.'));
+}
+
+/**
  * Validate HRM migration data against the current company database.
  *
  * @return array
@@ -148,6 +218,7 @@ function hrm_run_migration_validations() {
 		sprintf(_('%s employee row(s) found.'), hrm_migration_count_rows('employees'))
 	);
 	$results[] = hrm_validate_orphan_links('employee_documents', 'employee_id', 'employees', 'employee_id', _('Employee document ownership'));
+	$results[] = hrm_validate_employee_attachment_integrity();
 	$results[] = hrm_validate_orphan_links('employee_history', 'employee_id', 'employees', 'employee_id', _('Employee history ownership'));
 	$results[] = hrm_validate_orphan_links('employee_salary', 'employee_id', 'employees', 'employee_id', _('Employee salary ownership'));
 	$results[] = hrm_validate_orphan_links('payslip_details', 'payslip_id', payslip_header_table() ? payslip_header_table() : 'payslips', payslip_header_table() && payslip_has_column(payslip_header_table(), 'payslip_id') ? 'payslip_id' : 'payslip_no', _('Payslip detail linkage'));

@@ -21,6 +21,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_db.inc');
+include_once($path_to_root.'/includes/attachment_service.inc');
 
 /**
  * Validate that a stored unique_name resolves safely within the attachments directory.
@@ -63,6 +64,12 @@ if ($view_id != -1) {
 
 	$row = get_attachment($view_id);
 
+	// Block generic access to employee document attachments.
+	if (attachment_is_hr_employee_document($row)) {
+		display_error(_('Employee documents must be accessed through the HR module.'));
+		exit();
+	}
+
 	if ($row['filename'] != '') {
 		if(in_ajax())
 			$Ajax->popup($_SERVER['PHP_SELF'].'?vw='.$view_id);
@@ -91,6 +98,13 @@ else
 
 if ($download_id != -1) {
 	$row = get_attachment($download_id);
+
+	// Block generic access to employee document attachments.
+	if (attachment_is_hr_employee_document($row)) {
+		display_error(_('Employee documents must be accessed through the HR module.'));
+		exit();
+	}
+
 	if ($row['filename'] != '') {
 		if(in_ajax())
 			$Ajax->redirect($_SERVER['PHP_SELF'].'?dl='.$download_id);
@@ -132,7 +146,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 	
 	$filename = basename($_FILES['filename']['name']);
 	
-	if (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
+	// Block generic add/update for ST_EMPLOYEE type.
+	if ((int)get_post('filterType') === ST_EMPLOYEE) {
+		display_error(_('Employee documents must be managed through the HR module.'));
+		reset_form();
+		$Mode = 'RESET';
+	} elseif (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
 		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
 		display_error(_('Selected transaction does not exists.'));
@@ -197,7 +216,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
 	$row = get_attachment($selected_id);
-	if ($row['unique_name']) {
+
+	// Block generic deletion of employee document attachments.
+	if (attachment_is_hr_employee_document($row)) {
+		display_error(_('Employee documents must be managed through the HR module.'));
+		reset_form();
+		$Mode = 'RESET';
+	} elseif ($row['unique_name']) {
 		$safe_path = safe_attachment_file_path($row['unique_name']);
 		if ($safe_path !== false && file_exists($safe_path))
 			unlink($safe_path);
@@ -223,7 +248,7 @@ function viewing_controls() {
 	start_table(TABLESTYLE_NOBORDER);
 
 	start_row();
-	systypes_list_cells(_('Type:'), 'filterType', null, true);
+	systypes_list_cells(_('Type:'), 'filterType', null, true, array(ST_EMPLOYEE));
 	if (list_updated('filterType'))
 		reset_form();
 
@@ -265,6 +290,12 @@ function delete_link($row) {
 }
 
 function display_rows($type, $trans_no) {
+
+	// Do not list employee attachments in generic attachment page.
+	if ((int)$type === ST_EMPLOYEE) {
+		display_note(_('Employee documents are managed through the HR module.'));
+		return;
+	}
 
 	$sql = get_sql_for_attached_documents($type, $type==ST_SUPPLIER || $type==ST_CUSTOMER || $type==ST_BANKACCOUNT ? $trans_no : ($type==ST_ITEM || $type==ST_FIXEDASSET ? get_item_code_id($trans_no) : 0));
 

@@ -25,12 +25,12 @@ DROP TABLE IF EXISTS `0_attachments`;
 
 CREATE TABLE `0_attachments` (
 	`id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-	`description` varchar(60) NOT NULL DEFAULT '',
+	`description` varchar(200) NOT NULL DEFAULT '',
 	`type_no` int(11) NOT NULL DEFAULT '0',
 	`trans_no` int(11) NOT NULL DEFAULT '0',
-	`unique_name` varchar(60) NOT NULL DEFAULT '',
+	`unique_name` varchar(256) NOT NULL DEFAULT '',
 	`tran_date` date NOT NULL DEFAULT '0000-00-00',
-	`filename` varchar(60) NOT NULL DEFAULT '',
+	`filename` varchar(200) NOT NULL DEFAULT '',
 	`filesize` int(11) NOT NULL DEFAULT '0',
 	`filetype` varchar(60) NOT NULL DEFAULT '',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
@@ -4325,6 +4325,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	`doc_type_id`   int(11) NOT NULL,
 	`doc_name`      varchar(200) NOT NULL,
 	`file_path`     varchar(500) DEFAULT NULL,
+	`attachment_id` int(11) unsigned DEFAULT NULL,
 	`issue_date`    date DEFAULT NULL,
 	`expiry_date`   date DEFAULT NULL,
 	`notes`         text,
@@ -4332,7 +4333,8 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	`uploaded_by`   smallint(6) DEFAULT NULL,
 	PRIMARY KEY (`doc_id`),
 	KEY `employee_id` (`employee_id`),
-	KEY `expiry_date` (`expiry_date`)
+	KEY `expiry_date` (`expiry_date`),
+	UNIQUE KEY `employee_document_attachment_uq` (`attachment_id`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_employee_documents` --

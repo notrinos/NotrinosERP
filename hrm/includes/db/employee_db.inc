@@ -10,6 +10,9 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once($path_to_root . '/admin/db/attachments_db.inc');
+include_once($path_to_root . '/includes/attachment_service.inc');
+
 /**
  * Enhanced Employee CRUD
  * Supports comprehensive employee profile with all fields from the enhanced 0_employees table.
@@ -307,11 +310,18 @@ function delete_employee($employee_id) {
 
 	// Delete related records
 	if (employee_table_exists('employee_documents')) {
+		// Clean up core attachments linked to employee documents.
 		$docs = db_query(
-			"SELECT file_path FROM ".TB_PREF."employee_documents WHERE employee_id = ".db_escape($employee_id),
+			"SELECT doc_id, attachment_id, file_path FROM ".TB_PREF."employee_documents
+			 WHERE employee_id = ".db_escape($employee_id),
 			'could not get employee documents for delete'
 		);
 		while ($doc = db_fetch($docs)) {
+			// Delete linked core attachment through the service.
+			if (!empty($doc['attachment_id'])) {
+				delete_attachment_with_file((int)$doc['attachment_id']);
+			}
+			// Legacy fallback: clean up old filesystem paths.
 			if (!empty($doc['file_path']) && file_exists($doc['file_path'])) {
 				@unlink($doc['file_path']);
 			}

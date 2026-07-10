@@ -542,7 +542,7 @@ function tab_salary($employee_id) {
 // TAB 4: DOCUMENTS
 //======================================================================
 function tab_documents($employee_id) {
-	global $Ajax;
+	global $Ajax, $path_to_root;
 
 	hidden('NewEmpID', get_post('NewEmpID'));
 
@@ -555,8 +555,8 @@ function tab_documents($employee_id) {
 	if (isset($_GET['delete_doc'])) {
 		$doc = get_employee_document($_GET['delete_doc']);
 		if (is_employee_child_record_accessible($doc, $employee_id, _('Document'))) {
-			if (!empty($doc['file_path']) && file_exists($doc['file_path']))
-				@unlink($doc['file_path']);
+			// delete_employee_document() handles core attachment cleanup.
+			// Legacy file_path cleanup is handled inside that function too.
 			delete_employee_document($doc['doc_id']);
 			display_notification(_('Document deleted.'));
 		}
@@ -593,47 +593,66 @@ function tab_documents($employee_id) {
 			display_error(_('Please enter a document name.'));
 		}
 
-		$file_path = '';
+		// --- Core Attachment Upload ---
+		$upload_info = array();
 		if (isset($_FILES['doc_file']) && $_FILES['doc_file']['name'] != '') {
-			$upload_dir = company_path().'/documents/employees';
-			if (!file_exists($upload_dir))
-				mkdir($upload_dir, 0777, true);
-			$file_path = $upload_dir.'/'.$employee_id.'_'.time().'_'.$_FILES['doc_file']['name'];
-			if (!move_uploaded_file($_FILES['doc_file']['tmp_name'], $file_path)) {
+			// Use the shared attachment service for validation.
+			$policy = array(
+				'max_size'  => 10 * 1024 * 1024, // 10 MB for HR documents
+				'allowed_ext' => array('pdf', 'doc', 'docx', 'odt', 'xls', 'xlsx', 'ods',
+					'jpg', 'jpeg', 'png', 'gif', 'txt', 'csv', 'rtf'),
+			);
+			$upload_info = validate_attachment_upload($_FILES['doc_file'], $policy);
+			if (!$upload_info['ok']) {
 				$input_error = 1;
-				display_error(_('Failed to upload file.'));
-				$file_path = '';
+				display_error($upload_info['error']);
+				$upload_info = array();
+			}
+		}
+
+		if (!$input_error) {
+			// Resolve employee_number for core attachment ownership.
+			$employee_number = resolve_employee_number($employee_id);
+			if ($employee_number === false) {
+				display_error(_('Cannot resolve employee record.'));
+				$input_error = 1;
 			}
 		}
 
 		if (!$input_error) {
 			if ($current_doc) {
-				if (empty($file_path))
-					$file_path = $current_doc['file_path'];
-				update_employee_document(
+				// Update existing document with core attachment integration.
+				update_employee_document_with_attachment(
 					$current_doc['doc_id'],
+					$employee_number,
 					get_post('doc_type_id'),
 					get_post('doc_name'),
-					$file_path,
+					$upload_info,
 					get_post('doc_issue_date'),
 					get_post('doc_expiry_date'),
 					get_post('doc_notes')
 				);
 				display_notification(_('Document updated.'));
 			} else {
-				$document_id = add_employee_document(
+				// Create new document with core attachment integration.
+				$document_id = add_employee_document_with_attachment(
 					$employee_id,
+					$employee_number,
 					get_post('doc_type_id'),
 					get_post('doc_name'),
-					$file_path,
+					$upload_info,
 					get_post('doc_issue_date'),
 					get_post('doc_expiry_date'),
 					get_post('doc_notes')
 				);
-				display_notification(_('Document added.'));
+				if ($document_id !== false) {
+					display_notification(_('Document added.'));
 
-				// Fire hook
-				hrm_fire_hook('on_document_uploaded', $document_id, $employee_id);
+					// Fire backward-compatible hook.
+					hrm_fire_hook('on_document_uploaded', $document_id, $employee_id);
+				} else {
+					display_error(_('Failed to save document.'));
+				}
 			}
 			unset($_POST['doc_type_id'], $_POST['doc_name'], $_POST['doc_issue_date'], 
 				$_POST['doc_expiry_date'], $_POST['doc_notes'], $_POST['editing_doc_id']);
