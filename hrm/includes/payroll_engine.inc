@@ -238,8 +238,9 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
 
     $attendance_deduction = calculate_attendance_deductions($doc->employee_id, $from_date, $to_date, $daily_rate, $attendance);
     if (floatcmp($attendance_deduction, 0) != 0) {
+        $deduction_account = _payroll_resolve_synthetic_account('attendance_deduction', $salary_components);
         $doc->add_line(0, _('Attendance Deduction'), HRM_ELEM_DEDUCTION, 1, HRM_AMTTYPE_ATTENDANCE,
-            $attendance_deduction, 0, $attendance_deduction, $attendance_deduction, '', null, 0, 9000);
+            $attendance_deduction, 0, $attendance_deduction, $attendance_deduction, $deduction_account, null, 0, 9000);
     }
 
     if (function_exists('hrm_has_hook') && hrm_has_hook('before_calculate_deductions'))
@@ -248,8 +249,9 @@ function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=
     $taxable_income = max(_payroll_doc_total_taxable_income($doc), 0);
     $income_tax = calculate_income_tax($taxable_income, $to_date);
     if (floatcmp($income_tax, 0) != 0) {
+        $tax_account = _payroll_resolve_synthetic_account('income_tax', $salary_components);
         $doc->add_line(0, _('Income Tax'), HRM_ELEM_STATUTORY_DEDUCTION, 1, HRM_AMTTYPE_FIXED,
-            $income_tax, 0, $income_tax, $income_tax, '', null, 0, 9100);
+            $income_tax, 0, $income_tax, $income_tax, $tax_account, null, 0, 9100);
     }
 
     $statutory = calculate_statutory_deductions($doc->basic_salary, max(_payroll_doc_total_earnings($doc), $doc->basic_salary), $to_date);
@@ -1312,5 +1314,59 @@ function _payroll_get_employee_name($employee) {
 function _payroll_round($amount) {
     $dec = function_exists('user_price_dec') ? user_price_dec() : 2;
     return round2((float)$amount, $dec);
+}
+
+/**
+ * Resolve a GL account for a synthetic pay element.
+ *
+ * Synthetic pay elements (Attendance Deduction, Income Tax) are generated
+ * programmatically and don't have a fixed pay_element_id. This function
+ * resolves their GL account using a priority chain:
+ *
+ *   1. Company preference (payroll_deduct_act for deductions)
+ *   2. First deduction element account from salary components
+ *   3. Payroll payable account (last resort for balancing)
+ *
+ * @param string $type              Synthetic element type ('attendance_deduction', 'income_tax')
+ * @param array  $salary_components Employee salary component rows
+ * @return string A non-empty GL account code
+ */
+function _payroll_resolve_synthetic_account($type, $salary_components) {
+    // Priority 1: Company preference
+    $pref_key = ($type === 'income_tax')
+        ? 'payroll_tax_act'
+        : 'payroll_deduct_act';
+
+    $pref_account = get_company_pref($pref_key);
+    if (!empty($pref_account) && _payroll_is_valid_gl_account($pref_account)) {
+        return $pref_account;
+    }
+
+    // Priority 2: First deduction element account from salary components
+    if (is_array($salary_components)) {
+        foreach ($salary_components as $component) {
+            $cat = isset($component['element_category']) ? (int)$component['element_category'] : -1;
+            $is_deduction = !empty($component['is_deduction']);
+            if ($is_deduction && !empty($component['account_code'])
+                && _payroll_is_valid_gl_account($component['account_code'])) {
+                return $component['account_code'];
+            }
+            // Also match by category: HRM_ELEM_DEDUCTION or HRM_ELEM_STATUTORY_DEDUCTION
+            if (($cat === HRM_ELEM_DEDUCTION || $cat === HRM_ELEM_STATUTORY_DEDUCTION)
+                && !empty($component['account_code'])
+                && _payroll_is_valid_gl_account($component['account_code'])) {
+                return $component['account_code'];
+            }
+        }
+    }
+
+    // Priority 3: Fallback to payroll payable account
+    $payable = get_company_pref('payroll_payable_act');
+    if (!empty($payable) && _payroll_is_valid_gl_account($payable)) {
+        return $payable;
+    }
+
+    // Absolute last resort: return empty string - will be caught by GL validation
+    return '';
 }
 

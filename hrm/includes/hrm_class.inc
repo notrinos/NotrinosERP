@@ -227,7 +227,9 @@ class payslip_doc {
 	 * @param string $account_code
 	 * @param string|null $formula_used
 	 * @param bool $is_taxable
-	 * @param int $display_order
+	 * @param int $display_order  Render/sort order; lower values appear first.
+	 *                            See {@see payslip_line::$display_order} for
+	 *                            standard position assignments.
 	 * @return void
 	 */
 	function add_line($element_id, $element_name, $element_category,
@@ -349,7 +351,21 @@ class payslip_line {
 	/** @var bool */
 	public $is_taxable;
 
-	/** @var int */
+	/**
+	 * Display/sort order for the payslip line item.
+	 *
+	 * Controls the sequence in which payslip element rows are rendered
+	 * on the payslip view, report, and PDF output. Lower values appear
+	 * first. Standard position assignments:
+	 *   - 1xxx: Earning elements (salary, allowances, overtime)
+	 *   - 9xxx: Deduction elements (attendance deductions, tax, statutory, loan)
+	 *
+	 * This value is set by the caller during line construction and is
+	 * not auto-computed. The payslip detail table stores it as
+	 * `display_order` for consistent ordering across all output formats.
+	 *
+	 * @var int
+	 */
 	public $display_order;
 
 	/**
@@ -367,7 +383,8 @@ class payslip_line {
 	 * @param string $account_code
 	 * @param string|null $formula_used
 	 * @param bool $is_taxable
-	 * @param int $display_order
+	 * @param int $display_order  Render/sort order. See {@see payslip_line::$display_order}
+	 *                            for position convention.
 	 */
 	function __construct($element_id, $element_name, $element_category,
 		$is_deduction, $amount_type, $base_amount, $rate,
