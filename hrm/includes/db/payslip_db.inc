@@ -800,7 +800,13 @@ function payslip_generated_for_date($date, $employee) {
 }
 
 /**
- * Validate if any payslip is fully enclosed in requested period.
+ * Validate if any payslip overlaps the requested period.
+ *
+ * Any overlap with a non-voided payslip for the same employee is blocked.
+ * Overlap is defined as: existing.from_date <= requested.to_date
+ *                     AND existing.to_date   >= requested.from_date
+ *
+ * This replaces the previous logic that only detected full enclosure.
  *
  * @param string $from_date
  * @param string $to_date
@@ -817,8 +823,11 @@ function payslip_generated_for_period($from_date, $to_date, $employee) {
 	if ($from_sql === '' || $to_sql === '')
 		return false;
 
+	// Detect ANY overlap: existing starts before requested ends AND
+	// existing ends after requested starts. This catches partial overlaps,
+	// full enclosures, and edge-to-edge cases.
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF.$table_name." WHERE ".payslip_employee_where($employee)
-		." AND (".db_escape($from_sql)." <= from_date AND ".db_escape($to_sql)." >= to_date)"
+		." AND (from_date <= ".db_escape($to_sql)." AND to_date >= ".db_escape($from_sql).")"
 		." AND ".payslip_non_voided_condition($table_name);
 
 	return check_empty_result($sql);

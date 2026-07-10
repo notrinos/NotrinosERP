@@ -302,7 +302,9 @@ function payroll_get_next_payslip_trans_no() {
     $next_trans_no = (int)get_next_trans_no(ST_PAYSLIP);
     $queries = array(
         "SELECT MAX(type_no) AS last_no FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP),
-        "SELECT MAX(id) AS last_no FROM ".TB_PREF."comments WHERE type = ".db_escape(ST_PAYSLIP)
+        "SELECT MAX(id) AS last_no FROM ".TB_PREF."comments WHERE type = ".db_escape(ST_PAYSLIP),
+        "SELECT MAX(id) AS last_no FROM ".TB_PREF."refs WHERE type = ".db_escape(ST_PAYSLIP),
+        "SELECT MAX(trans_no) AS last_no FROM ".TB_PREF."audit_trail WHERE type = ".db_escape(ST_PAYSLIP)
     );
 
     foreach ($queries as $sql) {
@@ -346,12 +348,20 @@ function post_payslip_to_gl(&$payslip_doc) {
 
     $total = 0.0;
     $gl_totals = array();
+    $invalid_accounts = array();
     foreach ($payslip_doc->lines as $line) {
-        if (empty($line->account_code) || floatcmp($line->final_amount, 0) == 0)
+        if (floatcmp($line->final_amount, 0) == 0)
             continue;
 
-        if (!_payroll_is_valid_gl_account($line->account_code))
+        if (empty($line->account_code)) {
+            $invalid_accounts[] = $line->element_name;
             continue;
+        }
+
+        if (!_payroll_is_valid_gl_account($line->account_code)) {
+            $invalid_accounts[] = $line->element_name . ' (' . $line->account_code . ')';
+            continue;
+        }
 
         $amount = (float)$line->final_amount;
         if (!empty($line->is_deduction))
@@ -365,9 +375,49 @@ function post_payslip_to_gl(&$payslip_doc) {
         $gl_totals[$line->account_code] += $amount;
     }
 
-    $payable_account = get_company_pref('payroll_payable_act');
-    if (empty($payable_account))
+    // Reject posting if any pay elements have invalid GL accounts, rather
+    // than silently omitting them from the GL entry. This prevents
+    // unbalanced GL transactions (BUG-HRM-PAY-6-07, BUG-HRM-PAY-6-08).
+    if (!empty($invalid_accounts)) {
+        display_error(sprintf(
+            _('Cannot post payslip. The following pay elements have missing or invalid GL accounts: %s. Please correct them in Pay Elements setup.'),
+            implode(', ', $invalid_accounts)
+        ));
         return false;
+    }
+
+    // Require at least one valid GL line before posting.
+    if (empty($gl_totals) || floatcmp($total, 0) == 0) {
+        display_error(_('Cannot post payslip. No valid GL account lines were found.'));
+        return false;
+    }
+
+    $payable_account = get_company_pref('payroll_payable_act');
+    if (empty($payable_account)) {
+        display_error(_('Payroll Payable GL account is not configured. Please set it in System Preferences.'));
+        return false;
+    }
+
+    if (!_payroll_is_valid_gl_account($payable_account)) {
+        display_error(sprintf(
+            _('Payroll Payable GL account (%s) is invalid. Please correct it in System Preferences.'),
+            $payable_account
+        ));
+        return false;
+    }
+
+    // Save the payslip header and details FIRST, before writing GL entries.
+    // This prevents orphaned GL transactions when the payslip save fails.
+    // (Fixes BUG-HRM-PAY-6-05: GL posted before payslip saved)
+    $payslip_doc->reference = $cart->reference;
+    $payslip_doc->gl_trans_no = $trans_no;
+    if (function_exists('add_payslip')) {
+        $payslip_id = add_payslip($payslip_doc);
+        if (!$payslip_id)
+            return false;
+
+        $payslip_doc->payslip_id = $payslip_id;
+    }
 
     foreach ($gl_totals as $account_code => $amount) {
         if (floatcmp($amount, 0) == 0)
@@ -375,25 +425,12 @@ function post_payslip_to_gl(&$payslip_doc) {
 		$cart->add_gl_item($account_code, 0, 0, $amount, _('Payroll Element'), null, null, $cart->tran_date);
     }
 
-    if (!_payroll_is_valid_gl_account($payable_account))
-        return false;
-
     if (floatcmp($total, 0) != 0)
         $cart->add_gl_item($payable_account, 0, 0, -$total, _('Payroll Payable'), null, null, $cart->tran_date);
 
     $cart->write_gl(true);
     if (isset($Refs) && is_object($Refs) && method_exists($Refs, 'save') && $cart->reference !== '')
         $Refs->save(ST_PAYSLIP, $trans_no, $cart->reference);
-
-    if (function_exists('add_payslip')) {
-        $payslip_doc->reference = $cart->reference;
-        $payslip_doc->gl_trans_no = $trans_no;
-        $payslip_id = add_payslip($payslip_doc);
-        if (!$payslip_id)
-            return false;
-
-        $payslip_doc->payslip_id = $payslip_id;
-    }
 
     $comment = trim(isset($payslip_doc->comments) ? $payslip_doc->comments : '');
     if ($comment === '')
