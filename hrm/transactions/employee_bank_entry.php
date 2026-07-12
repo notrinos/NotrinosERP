@@ -178,7 +178,7 @@ $rows = get_payment_advice_rows($selected_employee, $show_paid);
 if (!$rows) {
     display_warning(_('Payslip header table is not available.'));
 } else {
-    start_table(TABLESTYLE, "width='100%'");
+    start_table(TABLESTYLE_DATA);
     $th = array(_('Payslip #'), _('Employee'), _('From'), _('To'), _('Payable Amount'), _('Status'), _('Action'));
     table_header($th);
 
