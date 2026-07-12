@@ -102,7 +102,7 @@ $status_labels = array(
 );
 
 start_form();
-start_table(TABLESTYLE, "width='95%'");
+start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');
 $th = array(_('Period ID'), _('Name'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'), _('Status'), '', '');
 table_header($th);
 
