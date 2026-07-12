@@ -142,7 +142,7 @@ if ($Mode == 'RESET') {
 
 start_form();
 
-start_table(TABLESTYLE2);
+start_outer_table();
 if ($selected_id != '' && $Mode == 'Edit') {
     $myrow = get_overtime_request($selected_id);
     if ($myrow && (int)$myrow['status'] == 0) {
@@ -155,18 +155,22 @@ if ($selected_id != '' && $Mode == 'Edit') {
     }
 }
 
+table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
 
 $sql = "SELECT overtime_id, overtime_name FROM ".TB_PREF."overtime WHERE !inactive";
 label_row(_('Overtime Type:'), combo_input('overtime_id', get_post('overtime_id', 0), $sql, 'overtime_id', 'overtime_name', array('spec_option' => _('Select overtime'), 'spec_id' => 0)));
 
 date_row(_('Date:'), 'date');
-amount_row(_('Hours:'), 'hours');
-textarea_row(_('Reason:'), 'reason', null, 50, 3);
-end_table(1);
-submit_add_or_update_center($selected_id == '', '', 'both');
 
-start_table(TABLESTYLE, "width='95%'");
+table_section(2);
+amount_row(_('Hours:'), 'hours');
+textarea_row(_('Reason:'), 'reason', null, 50, 4);
+end_outer_table();
+submit_add_or_update_center($selected_id == '', '', 'both');
+br();
+
+start_table(TABLESTYLE_DATA, "");
 $th = array(_('ID'), _('Employee'), _('Type'), _('Date'), _('Hours'), _('Reason'), _('Status'), _('Requested On'), '', '');
 table_header($th);
 
