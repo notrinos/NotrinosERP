@@ -391,6 +391,8 @@ function update_payroll_period_totals($period_id) {
             SUM(IFNULL(net_salary, IFNULL(payable_amount, 0))) as total_net,
             SUM(IFNULL(total_cost, IFNULL(employer_contributions, 0) + IFNULL(net_salary, IFNULL(payable_amount, 0)))) as total_employer_cost
             FROM ".TB_PREF.$payslip_table." WHERE payroll_period_id = ".db_escape((int)$period_id);
+		if (payroll_payslip_has_column($payslip_table, 'status'))
+			$sum_sql .= " AND COALESCE(status, 0) <> 6";
         $sum_res = db_query($sum_sql, 'could not aggregate payroll period totals');
         $sum_row = db_fetch_assoc($sum_res);
 
