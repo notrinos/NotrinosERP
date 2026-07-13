@@ -47,6 +47,11 @@ function validate_payroll_request() {
         set_focus('from_date');
         return false;
     }
+	if (date_comp(get_post('from_date'), Today()) > 0 || date_comp(get_post('to_date'), Today()) > 0) {
+		display_error(_('Payroll cannot be processed for future dates.'));
+		set_focus('to_date');
+		return false;
+	}
     if (empty(trim(get_post('period_name')))) {
         display_error(_('Payroll Period Name is required.'));
         set_focus('period_name');
@@ -321,4 +326,3 @@ submit_center('process_payroll', _('Process Payroll'), true, '', 'default');
 end_form();
 
 end_page();
-
