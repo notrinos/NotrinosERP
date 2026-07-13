@@ -411,12 +411,27 @@ function post_payslip_to_gl(&$payslip_doc) {
     // Save the payslip header and details FIRST, before writing GL entries.
     // This prevents orphaned GL transactions when the payslip save fails.
     // (Fixes BUG-HRM-PAY-6-05: GL posted before payslip saved)
+    begin_transaction();
+    $employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
+        ." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
+    if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting')) {
+        cancel_transaction();
+        return false;
+    }
+    if (payslip_exists_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date)) {
+        cancel_transaction();
+        display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
+        return false;
+    }
+
     $payslip_doc->reference = $cart->reference;
     $payslip_doc->gl_trans_no = $trans_no;
     if (function_exists('add_payslip')) {
         $payslip_id = add_payslip($payslip_doc);
-        if (!$payslip_id)
+        if (!$payslip_id) {
+            cancel_transaction();
             return false;
+        }
 
         $payslip_doc->payslip_id = $payslip_id;
     }
@@ -451,6 +466,7 @@ function post_payslip_to_gl(&$payslip_doc) {
     if (function_exists('hrm_has_hook') && hrm_has_hook('after_post_payslip'))
         hrm_fire_hook('after_post_payslip', $payslip_doc->payslip_id, $trans_no);
 
+    commit_transaction();
     return $trans_no;
 }
 
@@ -1369,4 +1385,3 @@ function _payroll_resolve_synthetic_account($type, $salary_components) {
     // Absolute last resort: return empty string - will be caught by GL validation
     return '';
 }
-
