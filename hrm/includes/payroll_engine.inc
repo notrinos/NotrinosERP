@@ -338,16 +338,6 @@ function post_payslip_to_gl(&$payslip_doc) {
     if (function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
         hrm_fire_hook('before_post_payslip', $payslip_doc);
 
-    $trans_no = payroll_get_next_payslip_trans_no();
-    $cart = new hrm_cart(ST_PAYSLIP, $trans_no);
-    $cart->trans_no = $trans_no;
-    $cart->order_id = $trans_no;
-    $cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
-	$cart->reference = empty($payslip_doc->reference)
-		? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
-		: $payslip_doc->reference;
-    $cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
-
     $total = 0.0;
     $gl_totals = array();
     $invalid_accounts = array();
@@ -412,6 +402,15 @@ function post_payslip_to_gl(&$payslip_doc) {
     // This prevents orphaned GL transactions when the payslip save fails.
     // (Fixes BUG-HRM-PAY-6-05: GL posted before payslip saved)
     begin_transaction();
+    // Transaction numbers and generated references are shared by every
+    // employee. Lock an always-present company row before allocating them so
+    // concurrent payroll runs for different employees cannot reuse a number.
+    $allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
+        ." WHERE name = 'coy_name' FOR UPDATE";
+    if (!db_query($allocation_lock_sql, 'could not lock payslip transaction allocation')) {
+        cancel_transaction();
+        return false;
+    }
     $employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
         ." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
     if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting')) {
@@ -423,6 +422,16 @@ function post_payslip_to_gl(&$payslip_doc) {
         display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
         return false;
     }
+
+    $trans_no = payroll_get_next_payslip_trans_no();
+    $cart = new hrm_cart(ST_PAYSLIP, $trans_no);
+    $cart->trans_no = $trans_no;
+    $cart->order_id = $trans_no;
+    $cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
+    $cart->reference = empty($payslip_doc->reference)
+        ? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
+        : $payslip_doc->reference;
+    $cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
 
     $payslip_doc->reference = $cart->reference;
     $payslip_doc->gl_trans_no = $trans_no;
