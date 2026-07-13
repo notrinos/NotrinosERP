@@ -279,6 +279,9 @@ function update_payroll_period_status($period_id, $status) {
         if ($approved_by !== '')
             $set[] = "approved_by = ".db_escape($approved_by);
         $set[] = "approval_date = NOW()";
+	} elseif ($status < 2) {
+		$set[] = "approved_by = NULL";
+		$set[] = "approval_date = NULL";
     }
 
     $sql = "UPDATE ".TB_PREF."payroll_periods SET ".implode(', ', $set)." WHERE period_id = ".db_escape((int)$period_id);
@@ -440,4 +443,3 @@ function void_payroll_period($period_id) {
     commit_transaction();
     return true;
 }
-
