@@ -307,8 +307,17 @@ function create_payment_transactions_for_period($period_id, $bank_account_code='
 	$transactions = array();
 
 	while ($payslip = db_fetch_assoc($payslip_rows)) {
-		if (!payslip_requires_payment($payslip) || payslip_is_voided($payslip) || payslip_is_paid($payslip))
+		if (payslip_is_voided($payslip) || payslip_is_paid($payslip))
 			continue;
+
+		if (!payslip_requires_payment($payslip)) {
+			if (!mark_payslip_paid($payslip['payslip_id'], null, false)) {
+				if ($use_transaction)
+					cancel_transaction();
+				return false;
+			}
+			continue;
+		}
 
 		$payment_reference = '';
 		if ($reference !== '' && empty($transactions))
