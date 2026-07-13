@@ -78,13 +78,4 @@ class purch_orders_entity extends Entity {
 		return $rows;
 	}
 
-	/**
-	 * Get PO header by order_no (alias for find(), for backward compatibility).
-	 *
-	 * @param int $order_no Purchase order number
-	 * @return array|null
-	 */
-	public static function get($order_no) {
-		return self::find((int)$order_no);
-	}
 }

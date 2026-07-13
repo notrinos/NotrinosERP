@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+include_once($path_to_root . '/purchasing/includes/db/purch_orders_entity.inc');
 
 function get_supplier_details_to_order(&$order, $supplier_id) {
 	$sql = "SELECT curr_code, supp_name, tax_group_id, supp.tax_included, dimension_id, dimension2_id, supp.credit_limit - Sum((ov_amount + ov_gst + ov_discount)) as cur_credit, terms.terms, terms.days_before_due, terms.day_in_following_month
