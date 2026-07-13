@@ -326,8 +326,12 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
         if ($success_count > 0)
             update_payroll_period_status($period_id, 1);
 
-        display_notification(_('Payroll processing completed.'));
-        display_note(sprintf(_('Success: %d employee(s), Failed: %d employee(s), Period ID: %d'), $success_count, $failed_count, $period_id));
+		display_notification(sprintf(
+			_('Payroll processing completed. Success: %d employee(s), Failed: %d employee(s), Period ID: %d'),
+			$success_count,
+			$failed_count,
+			$period_id
+		));
     }
 }
 
