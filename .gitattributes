@@ -1,0 +1,6 @@
+# Use Linux line endings for all text files in the repository.
+* text=auto eol=lf
+
+# Preserve native Windows line endings for command scripts.
+*.bat text eol=crlf
+*.cmd text eol=crlf
