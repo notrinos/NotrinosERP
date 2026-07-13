@@ -98,6 +98,7 @@ function resolve_payroll_employees($department_id, $employee_id, &$invalid_emplo
 function get_payroll_skip_reason_buckets() {
     return array(
         'existing_payslips' => array(),
+		'not_hired' => array(),
         'missing_position' => array(),
         'missing_salary_components' => array()
     );
@@ -126,18 +127,24 @@ function add_payroll_skip_reason(&$skip_reasons, $reason_key, $employee_id) {
  * Check whether one employee is eligible for payroll generation.
  *
  * @param array $employee
+ * @param string $from_date
  * @param string $to_date
  * @param array $salary_components_by_employee
  * @param array $skip_reasons
  * @return bool
  */
-function is_employee_payroll_eligible($employee, $to_date, $salary_components_by_employee, &$skip_reasons) {
+function is_employee_payroll_eligible($employee, $from_date, $to_date, $salary_components_by_employee, &$skip_reasons) {
     if (!is_array($employee) || empty($employee['employee_id']))
         return false;
 
     $employee_id = trim((string)$employee['employee_id']);
     if ($employee_id === '')
         return false;
+
+	if (function_exists('check_employee_hired') && !check_employee_hired($employee_id, $from_date)) {
+		add_payroll_skip_reason($skip_reasons, 'not_hired', $employee_id);
+		return false;
+	}
 
     if (function_exists('employee_has_position') && !employee_has_position($employee_id)) {
         add_payroll_skip_reason($skip_reasons, 'missing_position', $employee_id);
@@ -186,7 +193,7 @@ function filter_payroll_eligible_employees($employees, $from_date, $to_date, &$s
             continue;
         }
 
-        if (!is_employee_payroll_eligible($employee, $to_date, $salary_components_by_employee, $skip_reasons))
+        if (!is_employee_payroll_eligible($employee, $from_date, $to_date, $salary_components_by_employee, $skip_reasons))
             continue;
 
         $eligible_employees[] = $employee;
@@ -216,6 +223,13 @@ function display_payroll_skip_messages($skip_reasons) {
         ));
     }
 
+	if (!empty($skip_reasons['not_hired'])) {
+		display_note(sprintf(
+			_('Skipped employees not yet hired for the requested period: %s'),
+			implode(', ', $skip_reasons['not_hired'])
+		));
+	}
+
     if (!empty($skip_reasons['missing_salary_components'])) {
         display_note(sprintf(
             _('Skipped employees without salary components for the requested period: %s'),
@@ -242,18 +256,27 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
         set_focus('employee_id');
     } elseif (empty($employees)) {
         if (!empty($skip_reasons['existing_payslips'])
+			&& empty($skip_reasons['not_hired'])
             && empty($skip_reasons['missing_position'])
             && empty($skip_reasons['missing_salary_components']))
             display_error(_('Selected employees already have payslips for the requested period.'));
         elseif (!empty($skip_reasons['missing_position'])
+			&& empty($skip_reasons['not_hired'])
             && empty($skip_reasons['existing_payslips'])
             && empty($skip_reasons['missing_salary_components']))
             display_error(_('Selected employees are missing job positions.'));
         elseif (!empty($skip_reasons['missing_salary_components'])
+			&& empty($skip_reasons['not_hired'])
             && empty($skip_reasons['existing_payslips'])
             && empty($skip_reasons['missing_position']))
             display_error(_('Selected employees do not have salary components for the requested period.'));
-        elseif (!empty($skip_reasons['existing_payslips'])
+		elseif (!empty($skip_reasons['not_hired'])
+			&& empty($skip_reasons['existing_payslips'])
+			&& empty($skip_reasons['missing_position'])
+			&& empty($skip_reasons['missing_salary_components']))
+			display_error(_('Selected employees were not yet hired for the requested period.'));
+		elseif (!empty($skip_reasons['existing_payslips'])
+			|| !empty($skip_reasons['not_hired'])
             || !empty($skip_reasons['missing_position'])
             || !empty($skip_reasons['missing_salary_components']))
             display_error(_('No eligible employees were found for payroll processing.'));
@@ -273,6 +296,7 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
 
         $success_count = 0;
         $failed_count = count($skip_reasons['existing_payslips'])
+			+ count($skip_reasons['not_hired'])
             + count($skip_reasons['missing_position'])
             + count($skip_reasons['missing_salary_components']);
 
