@@ -497,7 +497,7 @@ function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_da
         return;
 
     $to_sql = date2sql($to_date);
-    $fiscal_year = (int)date('Y', strtotime($to_sql));
+    $fiscal_year = get_leave_balance_fiscal_year_for_date($to_sql);
     list($year_start, $year_end) = _payroll_get_year_bounds($fiscal_year);
 
     $approved = array();
@@ -1273,6 +1273,9 @@ function _calculate_extra_absent_days($employee_id, $from_sql, $to_sql) {
  */
 function _payroll_get_year_bounds($year) {
     $year = (int)$year;
+    if (function_exists('get_leave_balance_fiscal_year_bounds'))
+        return get_leave_balance_fiscal_year_bounds($year);
+
     return array($year.'-01-01', $year.'-12-31');
 }
 

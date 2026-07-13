@@ -218,9 +218,10 @@ function get_leave_policy_for_employee($employee, $leave_id, $as_of_date) {
  * @param array $policy
  * @param array $employee
  * @param string $as_of_date
+ * @param string $period_start_date
  * @return float
  */
-function calculate_leave_policy_entitlement($policy, $employee, $as_of_date) {
+function calculate_leave_policy_entitlement($policy, $employee, $as_of_date, $period_start_date='') {
     if (!is_array($policy) || !is_array($employee))
         return 0;
 
@@ -234,6 +235,9 @@ function calculate_leave_policy_entitlement($policy, $employee, $as_of_date) {
 
     $hire_date_sql = !empty($employee['hire_date']) ? leave_policy_to_sql_date($employee['hire_date']) : '';
     $probation_end_sql = !empty($employee['probation_end_date']) ? leave_policy_to_sql_date($employee['probation_end_date']) : '';
+
+    if ($hire_date_sql !== '' && $hire_date_sql > $as_of_sql)
+        return 0;
 
     if (empty($policy['probation_applicable']) && $probation_end_sql !== '' && $probation_end_sql > $as_of_sql)
         return 0;
@@ -256,7 +260,13 @@ function calculate_leave_policy_entitlement($policy, $employee, $as_of_date) {
     if ($accrual_method === 0)
         return round2($annual_entitlement, user_price_dec());
 
-    $period_start_sql = substr($as_of_sql, 0, 4).'-01-01';
+    $period_start_sql = leave_policy_to_sql_date($period_start_date);
+    if ($period_start_sql === '')
+        $period_start_sql = substr($as_of_sql, 0, 4).'-01-01';
+
+    $policy_start_sql = !empty($policy['effective_from']) ? leave_policy_to_sql_date($policy['effective_from']) : '';
+    if ($policy_start_sql !== '' && $policy_start_sql > $period_start_sql)
+        $period_start_sql = $policy_start_sql;
     if ($hire_date_sql !== '' && $hire_date_sql > $period_start_sql)
         $period_start_sql = $hire_date_sql;
 
@@ -280,4 +290,3 @@ function calculate_leave_policy_entitlement($policy, $employee, $as_of_date) {
 
     return round2(($annual_entitlement / 4) * $elapsed_quarters, user_price_dec());
 }
-

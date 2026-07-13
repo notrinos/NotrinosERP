@@ -149,7 +149,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 $employee_id = $leave_request_row ? $leave_request_row['employee_id'] : $_POST['employee_id'];
                 $leave_id = $leave_request_row ? (int)$leave_request_row['leave_id'] : (int)$_POST['leave_id'];
 
-                $fiscal_year = (int)date('Y', strtotime($from_date));
+                $fiscal_year = get_leave_balance_fiscal_year_for_date($from_date);
                 apply_leave_balance_movement(
                     $employee_id,
                     $leave_id,
@@ -267,4 +267,3 @@ end_table(1);
 end_form();
 
 end_page();
-

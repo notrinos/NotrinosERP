@@ -174,7 +174,7 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 	approve_leave_request($request_id, 'approval_system', $remarks);
 
 	// Apply leave balance movement
-	$fiscal_year = (int)date('Y', strtotime($request['from_date']));
+	$fiscal_year = get_leave_balance_fiscal_year_for_date($request['from_date']);
 	apply_leave_balance_movement(
 		$request['employee_id'],
 		(int)$request['leave_id'],

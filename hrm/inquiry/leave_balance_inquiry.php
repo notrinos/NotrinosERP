@@ -32,7 +32,8 @@ submit_cells('Search', _('Apply Filter'));
 end_row();
 end_table(1);
 
-$fiscal_year = (int)get_post('fiscal_year', date('Y'));
+$default_fiscal_year = get_leave_balance_fiscal_year_for_date(date('Y-m-d'));
+$fiscal_year = (int)get_post('fiscal_year', $default_fiscal_year);
 $employee_id = get_post('employee_id', '');
 $leave_id = (int)get_post('leave_id', 0);
 
@@ -79,4 +80,3 @@ display_db_pager($table);
 end_form();
 
 end_page();
-

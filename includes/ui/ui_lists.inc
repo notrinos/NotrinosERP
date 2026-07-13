@@ -765,7 +765,7 @@ function fiscalyears_list_row($label, $name, $selected_id=null) {
 }
 
 /**
- * Build a dropdown of calendar years from the first fiscal year through the current year.
+ * Build calendar year labels spanning configured fiscal dates and the current year.
  *
  * @param string $name
  * @param mixed $selected_id
@@ -773,7 +773,7 @@ function fiscalyears_list_row($label, $name, $selected_id=null) {
  * @return string
  */
 function years_list($name, $selected_id=null, $submit_on_change=false) {
-	$sql = "SELECT MIN(begin) FROM ".TB_PREF."fiscal_year";
+	$sql = "SELECT MIN(begin), MAX(end) FROM ".TB_PREF."fiscal_year";
 	$result = db_query($sql, 'could not get first fiscal year');
 	$row = db_fetch_row($result);
 	db_free_result($result);
@@ -782,12 +782,15 @@ function years_list($name, $selected_id=null, $submit_on_change=false) {
 	$first_year = $current_year;
 	if ($row != false && !empty($row[0]))
 		$first_year = (int)substr($row[0], 0, 4);
+	$last_year = $current_year;
+	if ($row != false && !empty($row[1]))
+		$last_year = max($last_year, (int)substr($row[1], 0, 4));
 
 	if ($first_year > $current_year)
 		$first_year = $current_year;
 
 	$years = array();
-	for ($year = $first_year; $year <= $current_year; $year++)
+	for ($year = $first_year; $year <= $last_year; $year++)
 		$years[$year] = $year;
 
 	return array_selector($name, $selected_id, $years, array(

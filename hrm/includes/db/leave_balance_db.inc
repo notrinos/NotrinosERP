@@ -14,6 +14,69 @@ include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_policy_db.inc');
 
 /**
+ * Get the configured fiscal-period bounds for a leave-balance year.
+ *
+ * Leave balances use the year in which the fiscal period ends as their
+ * integer key. Calendar bounds are retained as a compatibility fallback for
+ * historical rows whose year has no matching fiscal-year configuration.
+ *
+ * @param int $fiscal_year
+ * @return array
+ */
+function get_leave_balance_fiscal_year_bounds($fiscal_year) {
+    $fiscal_year = (int)$fiscal_year;
+    $calendar_start = $fiscal_year.'-01-01';
+    $calendar_end = $fiscal_year.'-12-31';
+
+    if ($fiscal_year <= 0)
+        return array($calendar_start, $calendar_end);
+
+    $sql = "SELECT begin, end
+        FROM ".TB_PREF."fiscal_year
+        WHERE end >= ".db_escape($calendar_start)."
+            AND end <= ".db_escape($calendar_end)."
+        ORDER BY end DESC
+        LIMIT 1";
+    $result = db_query($sql, 'could not get leave balance fiscal year bounds');
+    $row = db_fetch($result);
+
+    if ($row
+        && preg_match('/^\d{4}-\d{2}-\d{2}$/', $row['begin'])
+        && preg_match('/^\d{4}-\d{2}-\d{2}$/', $row['end'])
+        && $row['begin'] <= $row['end']) {
+        return array($row['begin'], $row['end']);
+    }
+
+    return array($calendar_start, $calendar_end);
+}
+
+/**
+ * Resolve a date to the ending-year key used by leave balances.
+ *
+ * @param string $date_value
+ * @return int
+ */
+function get_leave_balance_fiscal_year_for_date($date_value) {
+    $date_sql = leave_policy_to_sql_date($date_value);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_sql))
+        return 0;
+
+    $sql = "SELECT end
+        FROM ".TB_PREF."fiscal_year
+        WHERE begin <= ".db_escape($date_sql)."
+            AND end >= ".db_escape($date_sql)."
+        ORDER BY begin DESC
+        LIMIT 1";
+    $result = db_query($sql, 'could not resolve leave balance fiscal year');
+    $row = db_fetch($result);
+
+    if ($row && preg_match('/^\d{4}-\d{2}-\d{2}$/', $row['end']))
+        return (int)substr($row['end'], 0, 4);
+
+    return (int)substr($date_sql, 0, 4);
+}
+
+/**
  * Get leave balance row by employee/leave/year.
  *
  * @param string $employee_id
@@ -79,7 +142,7 @@ function ensure_leave_balance_entitlements_for_filters($fiscal_year=0, $employee
     if ($fiscal_year <= 0)
         return;
 
-    $as_of_date = $fiscal_year.'-12-31';
+    list(, $as_of_date) = get_leave_balance_fiscal_year_bounds($fiscal_year);
     $pairs = array();
     $where = array('fiscal_year = '.db_escape($fiscal_year));
     if ($employee_id !== '' && $employee_id !== ALL_TEXT)
@@ -180,15 +243,20 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
     if (!function_exists('get_employee_by_code') || !function_exists('get_leave_policy_for_employee'))
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
+    list($fiscal_year_start, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
+    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    if ($as_of_sql === '')
+        $as_of_sql = $fiscal_year_end;
+
     $employee = get_employee_by_code($employee_id);
     if (!$employee)
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
-    $policy = get_leave_policy_for_employee($employee, (int)$leave_id, $as_of_date);
+    $policy = get_leave_policy_for_employee($employee, (int)$leave_id, $as_of_sql);
     if (!$policy)
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
-    $entitled = calculate_leave_policy_entitlement($policy, $employee, $as_of_date);
+    $entitled = calculate_leave_policy_entitlement($policy, $employee, $as_of_sql, $fiscal_year_start);
     $balance = get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
     save_leave_balance(
@@ -217,7 +285,8 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
  * @return void
  */
 function apply_leave_balance_movement($employee_id, $leave_id, $fiscal_year, $taken_delta=0, $pending_delta=0, $adjusted_delta=0) {
-    $balance = ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $fiscal_year.'-12-31');
+    list(, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
+    $balance = ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $fiscal_year_end);
     if (!$balance) {
         save_leave_balance($employee_id, $leave_id, $fiscal_year, 0, 0, $taken_delta, $pending_delta, $adjusted_delta);
         return;
@@ -258,4 +327,3 @@ function get_leave_balance_available_days($employee_id, $leave_id, $fiscal_year)
         - (float)$balance['taken']
         - (float)$balance['pending'];
 }
-

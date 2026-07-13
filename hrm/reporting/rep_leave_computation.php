@@ -37,7 +37,7 @@ function print_leave_computation_report() {
     $destination = isset($_POST['PARAM_6']) ? (int)$_POST['PARAM_6'] : 0;
 
     $to_date_sql = is_date($to_date) ? date2sql($to_date) : date('Y-m-d');
-    $fiscal_year = (int)substr($to_date_sql, 0, 4);
+    $fiscal_year = get_leave_balance_fiscal_year_for_date($to_date_sql);
 
     if ($destination)
         include_once($path_to_root.'/reporting/includes/excel_report.inc');
