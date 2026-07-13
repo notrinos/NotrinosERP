@@ -177,17 +177,51 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 		return false;
 
 	$payslip = get_payslip($payslip_id);
-	$validation = validate_payslip_payment($payslip, $bank_account_code);
-	if (!$validation['valid'])
+	if (!$payslip)
 		return false;
 
-	$bank_account = get_payroll_payment_bank_account($bank_account_code);
-	if (!$bank_account)
-		return false;
-
-	$payment_date = get_payroll_payment_date($payment_date);
 	if ($use_transaction)
 		begin_transaction();
+
+	if ($use_transaction && !empty($payslip['payroll_period_id'])) {
+		$period_lock_sql = "SELECT period_id FROM ".TB_PREF."payroll_periods"
+			." WHERE period_id = ".db_escape((int)$payslip['payroll_period_id'])." FOR UPDATE";
+		if (!db_query($period_lock_sql, 'could not lock payroll period for payslip payment')) {
+			cancel_transaction();
+			return false;
+		}
+	}
+
+	if ($use_transaction) {
+		$table_name = payslip_header_table();
+		if (!$table_name) {
+			cancel_transaction();
+			return false;
+		}
+		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
+			." WHERE payslip_id = ".db_escape($payslip_id)." FOR UPDATE";
+		if (!db_query($lock_sql, 'could not lock payslip for payment')) {
+			cancel_transaction();
+			return false;
+		}
+	}
+
+	$payslip = get_payslip($payslip_id);
+	$validation = validate_payslip_payment($payslip, $bank_account_code);
+	if (!$validation['valid']) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$bank_account = get_payroll_payment_bank_account($bank_account_code);
+	if (!$bank_account) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$payment_date = get_payroll_payment_date($payment_date);
 	$next_trans_no = write_payslip_payment_transaction($payslip, $bank_account['id'], $payment_date, $reference, $memo, false);
 	if (!$next_trans_no || !mark_payslip_paid($payslip_id, $next_trans_no, false)) {
 		if ($use_transaction)
@@ -216,26 +250,61 @@ function create_payment_transactions_for_period($period_id, $bank_account_code='
 	if ($period_id <= 0)
 		return false;
 
-	$period = get_payroll_period($period_id);
-	if (!$period)
-		return false;
-
-	$current_status = isset($period['status']) ? (int)$period['status'] : 0;
-	if (!in_array($current_status, array(2, 3), true))
-		return false;
-
-	$bank_account = get_payroll_payment_bank_account($bank_account_code);
-	if (!$bank_account)
-		return false;
-
-	$payment_date = get_payroll_payment_date($payment_date);
-	$payslip_rows = get_payslips_for_period($period_id);
-	if (!$payslip_rows)
-		return false;
-
-	$transactions = array();
 	if ($use_transaction)
 		begin_transaction();
+
+	if ($use_transaction) {
+		$period_lock_sql = "SELECT period_id FROM ".TB_PREF."payroll_periods"
+			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE";
+		if (!db_query($period_lock_sql, 'could not lock payroll period for payment batch')) {
+			cancel_transaction();
+			return false;
+		}
+	}
+
+	$period = get_payroll_period($period_id);
+	if (!$period) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$current_status = isset($period['status']) ? (int)$period['status'] : 0;
+	if (!in_array($current_status, array(2, 3), true)) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$bank_account = get_payroll_payment_bank_account($bank_account_code);
+	if (!$bank_account) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$payment_date = get_payroll_payment_date($payment_date);
+	if ($use_transaction) {
+		$table_name = payslip_header_table();
+		if (!$table_name) {
+			cancel_transaction();
+			return false;
+		}
+		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
+			." WHERE payroll_period_id = ".db_escape($period_id)." FOR UPDATE";
+		if (!db_query($lock_sql, 'could not lock payroll period payslips')) {
+			cancel_transaction();
+			return false;
+		}
+	}
+	$payslip_rows = get_payslips_for_period($period_id);
+	if (!$payslip_rows) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
+	$transactions = array();
 
 	while ($payslip = db_fetch_assoc($payslip_rows)) {
 		if (!payslip_requires_payment($payslip) || payslip_is_voided($payslip) || payslip_is_paid($payslip))
