@@ -33,6 +33,10 @@ function print_salary_sheet_report() {
 
     $year = isset($_POST['PARAM_0']) ? (int)$_POST['PARAM_0'] : (int)date('Y');
     $month = isset($_POST['PARAM_1']) ? (int)$_POST['PARAM_1'] : (int)date('n');
+	$year = $year > 0 ? $year : (int)date('Y');
+	$month = max(1, min(12, $month));
+	$month_start = sprintf('%04d-%02d-01', $year, $month);
+	$month_end = date('Y-m-t', strtotime($month_start));
     $department_id = isset($_POST['PARAM_2']) ? (int)$_POST['PARAM_2'] : 0;
     $employee_id = isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : '';
     $comments = isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : '';
@@ -67,8 +71,7 @@ function print_salary_sheet_report() {
 
     $where = array(
         payslip_non_voided_condition($table, 'p'),
-        "YEAR(p.$date_col) = ".db_escape($year),
-        "MONTH(p.$date_col) = ".db_escape($month)
+		payslip_period_overlap_condition($table, $month_start, $month_end, 'p')
     );
 
     if ($employee_id !== '' && $employee_id !== ALL_TEXT)

@@ -39,6 +39,9 @@ function print_department_cost_report() {
     $destination = isset($_POST['PARAM_5']) ? (int)$_POST['PARAM_5'] : 0;
 
     $month = max(1, min(12, $month));
+	$year = $year > 0 ? $year : (int)date('Y');
+	$month_start = sprintf('%04d-%02d-01', $year, $month);
+	$month_end = date('Y-m-t', strtotime($month_start));
 
     if ($destination)
         include_once($path_to_root.'/reporting/includes/excel_report.inc');
@@ -68,8 +71,7 @@ function print_department_cost_report() {
 
     $where = array(
         payslip_non_voided_condition($table, 'p'),
-        "YEAR(p.$from_col) = ".db_escape($year),
-        "MONTH(p.$from_col) = ".db_escape($month)
+		payslip_period_overlap_condition($table, $month_start, $month_end, 'p')
     );
 
     if ($department_id > 0)

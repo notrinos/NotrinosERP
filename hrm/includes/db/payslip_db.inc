@@ -222,6 +222,33 @@ function payslip_non_voided_condition($table_name, $table_alias='') {
 }
 
 /**
+ * Build a date-range overlap condition for payslip inquiry and report filters.
+ *
+ * @param string $table_name Table name without prefix.
+ * @param string $from_date SQL or user-format start date.
+ * @param string $to_date SQL or user-format end date.
+ * @param string $table_alias Optional SQL table alias.
+ * @return string
+ */
+function payslip_period_overlap_condition($table_name, $from_date, $to_date, $table_alias='') {
+	$from_sql = payslip_to_sql_date($from_date);
+	$to_sql = payslip_to_sql_date($to_date);
+	if (!$table_name || $from_sql === '' || $to_sql === '')
+		return '1=0';
+
+	$prefix = $table_alias !== '' ? $table_alias.'.' : '';
+	if (payslip_has_column($table_name, 'from_date') && payslip_has_column($table_name, 'to_date')) {
+		return $prefix."from_date <= ".db_escape($to_sql)
+			." AND ".$prefix."to_date >= ".db_escape($from_sql);
+	}
+
+	$date_column = payslip_has_column($table_name, 'tran_date') ? 'tran_date'
+		: (payslip_has_column($table_name, 'from_date') ? 'from_date' : 'to_date');
+	return $prefix.$date_column." >= ".db_escape($from_sql)
+		." AND ".$prefix.$date_column." <= ".db_escape($to_sql);
+}
+
+/**
  * Resolve the payable amount for a payslip row.
  *
  * @param mixed $payslip

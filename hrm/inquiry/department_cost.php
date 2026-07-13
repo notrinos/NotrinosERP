@@ -67,8 +67,7 @@ $sql = "SELECT d.department_id,
     JOIN ".TB_PREF."employees e ON e.employee_id = p.$emp_col
     LEFT JOIN ".TB_PREF."departments d ON d.department_id = e.department_id
     WHERE ".payslip_non_voided_condition($table, 'p')."
-        AND p.$from_col >= ".db_escape(date2sql($_POST['from_date']))."
-        AND p.$from_col <= ".db_escape(date2sql($_POST['to_date']))."
+		AND ".payslip_period_overlap_condition($table, $_POST['from_date'], $_POST['to_date'], 'p')."
     GROUP BY d.department_id, d.department_name
     ORDER BY d.department_name";
 
@@ -85,4 +84,3 @@ display_db_pager($table);
 end_form();
 
 end_page();
-

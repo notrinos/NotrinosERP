@@ -37,6 +37,11 @@ function get_report_payslips($year, $month, $department_id=0, $employee_id='') {
     if (!$table_name)
         return false;
 
+    $year = (int)$year > 0 ? (int)$year : (int)date('Y');
+    $month = max(1, min(12, (int)$month));
+	$month_start = sprintf('%04d-%02d-01', $year, $month);
+	$month_end = date('Y-m-t', strtotime($month_start));
+
     $id_col = payslip_has_column($table_name, 'payslip_id') ? 'payslip_id' : 'payslip_no';
     $emp_col = payslip_has_column($table_name, 'employee_id') ? 'employee_id' : 'emp_id';
     $date_col = payslip_has_column($table_name, 'from_date') ? 'from_date' : (payslip_has_column($table_name, 'tran_date') ? 'tran_date' : 'to_date');
@@ -54,8 +59,7 @@ function get_report_payslips($year, $month, $department_id=0, $employee_id='') {
 
     $where = array(
         payslip_non_voided_condition($table_name, 'p'),
-        "YEAR(p.$date_col) = ".db_escape((int)$year),
-        "MONTH(p.$date_col) = ".db_escape((int)$month)
+		payslip_period_overlap_condition($table_name, $month_start, $month_end, 'p')
     );
 
     if ($employee_id !== '' && $employee_id !== ALL_TEXT)

@@ -67,10 +67,7 @@ $ref_expr = payslip_has_column($table_name, 'reference') ? 'p.reference' : "''";
 $where = array('1=1', payslip_non_voided_condition($table_name, 'p'));
 if ($employee_filter != '' && $employee_filter != ALL_TEXT)
     $where[] = "p.$employee_col = ".db_escape($employee_filter);
-if (payslip_has_column($table_name, 'from_date'))
-    $where[] = "p.from_date >= ".db_escape(date2sql($_POST['from_date']));
-if (payslip_has_column($table_name, 'to_date'))
-    $where[] = "p.to_date <= ".db_escape(date2sql($_POST['to_date']));
+$where[] = payslip_period_overlap_condition($table_name, $_POST['from_date'], $_POST['to_date'], 'p');
 
 $sql = "SELECT p.$id_col AS payslip_no,
         CONCAT(p.$employee_col, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
@@ -106,4 +103,3 @@ display_db_pager($table);
 end_form();
 
 end_page();
-
