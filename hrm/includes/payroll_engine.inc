@@ -401,46 +401,46 @@ function post_payslip_to_gl(&$payslip_doc) {
     // Save the payslip header and details FIRST, before writing GL entries.
     // This prevents orphaned GL transactions when the payslip save fails.
     // (Fixes BUG-HRM-PAY-6-05: GL posted before payslip saved)
-    begin_transaction();
-    // Transaction numbers and generated references are shared by every
-    // employee. Lock an always-present company row before allocating them so
-    // concurrent payroll runs for different employees cannot reuse a number.
-    $allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
-        ." WHERE name = 'coy_name' FOR UPDATE";
-    if (!db_query($allocation_lock_sql, 'could not lock payslip transaction allocation')) {
-        cancel_transaction();
-        return false;
-    }
-    $employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
-        ." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
-    if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting')) {
-        cancel_transaction();
-        return false;
-    }
-    if (payslip_exists_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date)) {
-        cancel_transaction();
-        display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
-        return false;
-    }
+	begin_transaction();
+	// Transaction numbers and generated references are shared by every
+	// employee. Lock an always-present company row before allocating them so
+	// concurrent payroll runs for different employees cannot reuse a number.
+	$allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
+		." WHERE name = 'coy_name' FOR UPDATE";
+	if (!db_query($allocation_lock_sql, 'could not lock payslip transaction allocation')) {
+		cancel_transaction();
+		return false;
+	}
+	$employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
+	if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting')) {
+		cancel_transaction();
+		return false;
+	}
+	if (payslip_exists_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date)) {
+		cancel_transaction();
+		display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
+		return false;
+	}
 
-    $trans_no = payroll_get_next_payslip_trans_no();
-    $cart = new hrm_cart(ST_PAYSLIP, $trans_no);
-    $cart->trans_no = $trans_no;
-    $cart->order_id = $trans_no;
-    $cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
-    $cart->reference = empty($payslip_doc->reference)
-        ? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
-        : $payslip_doc->reference;
-    $cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
+	$trans_no = payroll_get_next_payslip_trans_no();
+	$cart = new hrm_cart(ST_PAYSLIP, $trans_no);
+	$cart->trans_no = $trans_no;
+	$cart->order_id = $trans_no;
+	$cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
+	$cart->reference = empty($payslip_doc->reference)
+		? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
+		: $payslip_doc->reference;
+	$cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
 
     $payslip_doc->reference = $cart->reference;
     $payslip_doc->gl_trans_no = $trans_no;
     if (function_exists('add_payslip')) {
         $payslip_id = add_payslip($payslip_doc);
         if (!$payslip_id) {
-            cancel_transaction();
+			cancel_transaction();
             return false;
-        }
+		}
 
         $payslip_doc->payslip_id = $payslip_id;
     }
@@ -475,7 +475,7 @@ function post_payslip_to_gl(&$payslip_doc) {
     if (function_exists('hrm_has_hook') && hrm_has_hook('after_post_payslip'))
         hrm_fire_hook('after_post_payslip', $payslip_doc->payslip_id, $trans_no);
 
-    commit_transaction();
+	commit_transaction();
     return $trans_no;
 }
 

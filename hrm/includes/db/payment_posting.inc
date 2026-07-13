@@ -194,13 +194,9 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 
 	if ($use_transaction) {
 		$table_name = payslip_header_table();
-		if (!$table_name) {
-			cancel_transaction();
-			return false;
-		}
 		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
 			." WHERE payslip_id = ".db_escape($payslip_id)." FOR UPDATE";
-		if (!db_query($lock_sql, 'could not lock payslip for payment')) {
+		if (!$table_name || !db_query($lock_sql, 'could not lock payslip for payment')) {
 			cancel_transaction();
 			return false;
 		}
@@ -286,13 +282,9 @@ function create_payment_transactions_for_period($period_id, $bank_account_code='
 	$payment_date = get_payroll_payment_date($payment_date);
 	if ($use_transaction) {
 		$table_name = payslip_header_table();
-		if (!$table_name) {
-			cancel_transaction();
-			return false;
-		}
 		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
 			." WHERE payroll_period_id = ".db_escape($period_id)." FOR UPDATE";
-		if (!db_query($lock_sql, 'could not lock payroll period payslips')) {
+		if (!$table_name || !db_query($lock_sql, 'could not lock payroll period payslips')) {
 			cancel_transaction();
 			return false;
 		}
@@ -305,7 +297,6 @@ function create_payment_transactions_for_period($period_id, $bank_account_code='
 	}
 
 	$transactions = array();
-
 	while ($payslip = db_fetch_assoc($payslip_rows)) {
 		if (payslip_is_voided($payslip) || payslip_is_paid($payslip))
 			continue;
