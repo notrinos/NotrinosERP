@@ -14,12 +14,40 @@ include_once($path_to_root.'/purchasing/includes/purchasing_db.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/manufacturing/includes/manufacturing_db.inc');
 
+/**
+ * Validate that voiding a transaction complies with the negative inventory preference.
+ *
+ * @param int $type Transaction type.
+ * @param int $type_no Transaction number.
+ * @param string $date Voiding date in the current user date format.
+ * @return string|false Error message when stock is insufficient, otherwise false.
+ */
+function validate_void_stock($type, $type_no, $date) {
+	global $SysPrefs;
+
+	if ($SysPrefs->allow_negative_stock())
+		return false;
+
+	$shortage = check_negative_stock_on_void($type, $type_no, $date);
+	if (!$shortage)
+		return false;
+
+	return _('The void cannot be processed because there is an insufficient quantity for item:').' '
+		.$shortage['stock_id'].' - '.$shortage['description'].' - '
+		._('Location:').' '.get_location_name($shortage['loc_code']).' - '
+		._('Quantity On Hand').' = '.number_format2($shortage['qoh'], get_qty_dec($shortage['stock_id']));
+}
+
 function void_transaction($type, $type_no, $date_, $memo_) {
 	global $Refs;
 	$void_entry = get_voided_entry($type, $type_no);
 
 	if ($void_entry != null)
 		return _('This transaction was already voided before.');
+
+	$stock_error = validate_void_stock($type, $type_no, $date_);
+	if ($stock_error)
+		return $stock_error;
 
 	switch ($type) {
 		case ST_JOURNAL : // it's a journal entry

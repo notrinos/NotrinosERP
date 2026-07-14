@@ -479,6 +479,42 @@ function get_stock_moves($type, $type_no) {
 
 //--------------------------------------------------------------------------------------------------
 
+/**
+ * Find the first inventory shortage caused by removing a transaction's stock movements.
+ *
+ * Only net positive movements can reduce stock when they are voided. Movements are grouped by
+ * item and location so transfers and transactions containing repeated item lines are checked
+ * against the exact quantity that will be removed.
+ *
+ * @param int $type Transaction type.
+ * @param int $type_no Transaction number.
+ * @param string $date Voiding date in the current user date format.
+ * @return array|null Shortage details, or null when voiding cannot create negative stock.
+ */
+function check_negative_stock_on_void($type, $type_no, $date) {
+	$sql = "SELECT move.stock_id, move.loc_code, item.description, item.mb_flag,
+			SUM(move.qty) AS qty
+		FROM ".TB_PREF."stock_moves move
+		INNER JOIN ".TB_PREF."stock_master item ON item.stock_id=move.stock_id
+		WHERE move.type=".db_escape($type)."
+		AND move.trans_no=".db_escape($type_no)."
+		GROUP BY move.stock_id, move.loc_code, item.description, item.mb_flag
+		HAVING SUM(move.qty) > 0";
+
+	$result = db_query($sql, 'Could not check stock movements before voiding');
+	while ($row = db_fetch($result)) {
+		if ($row['mb_flag'] != 'D'
+			&& check_negative_stock($row['stock_id'], -$row['qty'], $row['loc_code'], $date)) {
+			$row['qoh'] = get_qoh_on_date($row['stock_id'], $row['loc_code'], $date);
+			return $row;
+		}
+	}
+
+	return null;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 function void_stock_move($type, $type_no) {
 	$sql = "SELECT move.*, supplier.supplier_id
 		FROM ".TB_PREF."stock_moves move
