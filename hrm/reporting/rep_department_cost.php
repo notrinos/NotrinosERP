@@ -59,7 +59,7 @@ function print_department_cost_report() {
     $from_col = payslip_has_column($table, 'from_date') ? 'from_date' : 'tran_date';
 
     $rep = new FrontReport(_('Department Cost Report'), 'DepartmentCost', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 220, 340, 440, 540);
+    $cols = array(0, 220, 320, 420, 520);
     $headers = array(_('Department'), _('Gross'), _('Deductions'), _('Net'));
     $aligns = array('left', 'right', 'right', 'right');
 
