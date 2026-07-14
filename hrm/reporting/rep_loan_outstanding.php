@@ -41,9 +41,9 @@ function print_loan_outstanding_report() {
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
     $rep = new FrontReport(_('Loan Outstanding Report'), 'LoanOutstanding', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 70, 220, 330, 430, 520, 620);
+    $cols = array(0, 55, 220, 310, 400, 480, 520);
     $headers = array(_('Loan ID'), _('Employee'), _('Loan Type'), _('Loan Amount'), _('Outstanding'), _('Status'));
-    $aligns = array('left', 'left', 'left', 'right', 'right', 'left');
+    $aligns = array('left', 'left', 'left', 'right', 'right', 'right');
 
     if ($orientation)
         recalculate_cols($cols);
