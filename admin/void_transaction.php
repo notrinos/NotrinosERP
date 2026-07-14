@@ -219,19 +219,10 @@ function voiding_controls() {
 			submit_center('ProcessVoiding', _('Void Transaction'), true, '', 'default');
 		}	
 		else {
-			if ($_POST['filterType'] == ST_SUPPRECEIVE) {
-				$result = get_grn_items($_POST['trans_no']);
-				if (db_num_rows($result) > 0) {
-					while ($myrow = db_fetch($result)) {
-						if (is_inventory_item($myrow['item_code'])) {
-							if (check_negative_stock($myrow['item_code'], -$myrow['qty_recd'], null, $_POST['date_'])) {
-								$stock = get_item($myrow['item_code']);
-								display_error(_('The void cannot be processed because there is an insufficient quantity for item:').' '.$stock['stock_id'].' - '.$stock['description'].' - '._('Quantity On Hand').' = '.number_format2(get_qoh_on_date($stock['stock_id'], null, $_POST['date_']), get_qty_dec($stock['stock_id'])));
-								return false;
-							}
-						}
-					}
-				}
+			$stock_error = validate_void_stock($_POST['filterType'], $_POST['trans_no'], $_POST['date_']);
+			if ($stock_error) {
+				display_error($stock_error);
+				return false;
 			}
 			display_warning(_('Are you sure you want to void this transaction ? This action cannot be undone.'), 0, 1);
 			br();
