@@ -43,7 +43,7 @@ function print_employee_list_report() {
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
     $rep = new FrontReport(_('Employee List'), 'EmployeeList', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 70, 230, 340, 450, 540, 620);
+    $cols = array(0, 60, 220, 330, 420, 505, 530);
     $headers = array(_('Employee ID'), _('Employee Name'), _('Department'), _('Position'), _('Grade'), _('Status'));
     $aligns = array('left', 'left', 'left', 'left', 'left', 'left');
     if ($orientation)
