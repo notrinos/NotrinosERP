@@ -51,9 +51,9 @@ function print_overtime_report() {
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
     $rep = new FrontReport(_('Overtime Report'), 'OvertimeReport', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 80, 230, 330, 430, 530, 620);
+    $cols = array(0, 80, 230, 290, 340, 420, 520);
     $headers = array(_('Emp ID'), _('Employee'), _('Date'), _('Regular Hrs'), _('OT Hrs'), _('OT Type'));
-    $aligns = array('left', 'left', 'left', 'right', 'right', 'left');
+    $aligns = array('left', 'left', 'left', 'right', 'right', 'right');
 
     if ($orientation)
         recalculate_cols($cols);
