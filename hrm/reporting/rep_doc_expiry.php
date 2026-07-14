@@ -42,7 +42,7 @@ function print_document_expiry_report() {
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
     $rep = new FrontReport(_('Document Expiration Report'), 'DocumentExpiry', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 90, 260, 380, 500, 620);
+    $cols = array(0, 90, 250, 350, 470, 520);
     $headers = array(_('Employee ID'), _('Employee'), _('Document Type'), _('Document Name'), _('Expiry Date'));
     $aligns = array('left', 'left', 'left', 'left', 'left');
 
