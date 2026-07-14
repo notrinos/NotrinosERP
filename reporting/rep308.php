@@ -18,158 +18,140 @@ include_once($path_to_root . '/includes/ui/ui_input.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
-include_once($path_to_root . '/purchasing/includes/db/suppliers_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 inventory_movements();
 
-function get_domestic_price($myrow, $stock_id) {
-	if ($myrow['type'] == ST_SUPPRECEIVE || $myrow['type'] == ST_SUPPCREDIT) {
-		$price = $myrow['price'];
-		if ($myrow['person_id'] > 0) {
-			// Do we have foreign currency?
-			$supp = suppliers_entity::find($myrow['person_id']);
-			$currency = $supp['curr_code'];
-			$ex_rate = $myrow['ex_rate'];
-			$price *= $ex_rate;
-		}
+/**
+ * Resolve a movement price in domestic currency without additional queries.
+ *
+ * @param array $movement Bulk-loaded stock movement row.
+ * @return float Domestic movement price.
+ */
+function get_bulk_domestic_price($movement) {
+	if ($movement['type'] == ST_SUPPRECEIVE || $movement['type'] == ST_SUPPCREDIT) {
+		$price = $movement['price'];
+		if ($movement['person_id'] > 0)
+			$price *= $movement['ex_rate'];
+		return $price;
 	}
-	else
-		$price = $myrow['standard_cost']; //pick standard_cost for sales deliveries
 
-	return $price;
+	return $movement['standard_cost'];
 }
 
+/**
+ * Fetch report item metadata and unit precision in one query.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @return resource Database result.
+ */
 function fetch_items($category=0) {
-		$sql = "SELECT stock_id, stock.description AS name,
-				stock.category_id,units,
-				cat.description
-			FROM ".TB_PREF."stock_master stock LEFT JOIN ".TB_PREF."stock_category cat ON stock.category_id=cat.category_id
-				WHERE mb_flag <> 'D' AND mb_flag <> 'F'";
-		if ($category != 0)
-			$sql .= " AND cat.category_id = ".db_escape($category);
-		$sql .= " ORDER BY stock.category_id, stock_id";
+	$sql = "SELECT stock.stock_id, stock.description AS name,
+			stock.category_id, stock.units, cat.description,
+			units.decimals
+		FROM ".TB_PREF."stock_master stock
+		LEFT JOIN ".TB_PREF."stock_category cat ON stock.category_id=cat.category_id
+		LEFT JOIN ".TB_PREF."item_units units ON units.abbr=stock.units
+		WHERE stock.mb_flag <> 'D' AND stock.mb_flag <> 'F'";
+	if ($category != 0)
+		$sql .= " AND cat.category_id = ".db_escape($category);
+	$sql .= " ORDER BY stock.category_id, stock.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
 }
 
-function trans_qty($stock_id, $location, $from_date, $to_date, $inward = true) {
-	if ($from_date == null)
-		$from_date = Today();
-
-	$from_date = date2sql($from_date);	
-
-	if ($to_date == null)
-		$to_date = Today();
-
-	$to_date = date2sql($to_date);
-
-	$sql = "SELECT ".($inward ? '' : '-')."SUM(qty) FROM ".TB_PREF."stock_moves
-		WHERE stock_id=".db_escape($stock_id)."
-		AND tran_date >= '$from_date' 
-		AND tran_date <= '$to_date' AND type <> ".ST_LOCTRANSFER;
-
-	if ($location != '')
-		$sql .= " AND loc_code = ".db_escape($location);
-
-	if ($inward)
-		$sql .= " AND qty > 0 ";
-	else
-		$sql .= " AND qty < 0 ";
-
-	$result = db_query($sql, 'QOH calculation failed');
-
-	$myrow = db_fetch_row($result);	
-
-	return $myrow[0];
-}
-
-function avg_unit_cost($stock_id, $location, $to_date) {
-	if ($to_date == null)
-		$to_date = Today();
-
-	$to_date = date2sql($to_date);
-
-	$sql = "SELECT move.*, supplier.supplier_id person_id, IF(ISNULL(grn.rate), credit.rate, grn.rate) ex_rate
+/**
+ * Load the ordered movement history once and calculate every report metric by item.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @param string $location Location code, or an empty string for all locations.
+ * @param string $from_date Period start date.
+ * @param string $to_date Period end date.
+ * @return array Quantity and cost accumulators keyed by stock ID.
+ */
+function get_costed_movement_metrics($category, $location, $from_date, $to_date) {
+	$from_sql = date2sql($from_date == null ? Today() : $from_date);
+	$to_sql = date2sql($to_date == null ? Today() : $to_date);
+	$sql = "SELECT move.stock_id, move.tran_date, move.trans_id, move.type,
+			move.qty, move.price, move.standard_cost,
+			supplier.supplier_id AS person_id,
+			IF(ISNULL(grn.rate), credit.rate, grn.rate) AS ex_rate,
+			voided.id AS voided_id
 		FROM ".TB_PREF."stock_moves move
-				LEFT JOIN ".TB_PREF."supp_trans credit ON credit.trans_no=move.trans_no AND credit.type=move.type
-				LEFT JOIN ".TB_PREF."grn_batch grn ON grn.id=move.trans_no AND 25=move.type
-				LEFT JOIN ".TB_PREF."suppliers supplier ON IFNULL(grn.supplier_id, credit.supplier_id)=supplier.supplier_id
-				LEFT JOIN ".TB_PREF."debtor_trans cust_trans ON cust_trans.trans_no=move.trans_no AND cust_trans.type=move.type
-				LEFT JOIN ".TB_PREF."debtors_master debtor ON cust_trans.debtor_no=debtor.debtor_no
-			WHERE stock_id=".db_escape($stock_id)."
-			AND move.tran_date < '$to_date' AND qty <> 0 AND move.type <> ".ST_LOCTRANSFER;
-
+		INNER JOIN ".TB_PREF."stock_master stock ON stock.stock_id=move.stock_id
+		LEFT JOIN ".TB_PREF."supp_trans credit
+			ON credit.trans_no=move.trans_no AND credit.type=move.type
+		LEFT JOIN ".TB_PREF."grn_batch grn
+			ON grn.id=move.trans_no AND move.type=".ST_SUPPRECEIVE."
+		LEFT JOIN ".TB_PREF."suppliers supplier
+			ON IFNULL(grn.supplier_id, credit.supplier_id)=supplier.supplier_id
+		LEFT JOIN ".TB_PREF."voided voided
+			ON voided.type=move.type AND voided.id=move.trans_no
+		WHERE move.tran_date <= '$to_sql'
+			AND stock.mb_flag <> 'D' AND stock.mb_flag <> 'F'";
+	if ($category != 0)
+		$sql .= " AND stock.category_id=".db_escape($category);
 	if ($location != '')
-		$sql .= " AND move.loc_code = ".db_escape($location);
-
-	$sql .= " ORDER BY tran_date";	
+		$sql .= " AND move.loc_code=".db_escape($location);
+	$sql .= " ORDER BY move.stock_id, move.tran_date, move.trans_id";
 
 	$result = db_query($sql, 'No standard cost transactions were returned');
+	$metrics = array();
+	while ($movement = db_fetch($result)) {
+		$stock_id = $movement['stock_id'];
+		if (!isset($metrics[$stock_id])) {
+			$metrics[$stock_id] = array(
+				'opening_qty' => 0, 'inward_qty' => 0, 'outward_qty' => 0, 'closing_qty' => 0,
+				'opening_cost_qty' => 0, 'opening_cost_total' => 0,
+				'inward_cost_qty' => 0, 'inward_cost_total' => 0,
+				'outward_cost_qty' => 0, 'outward_cost_total' => 0,
+				'closing_cost_qty' => 0, 'closing_cost_total' => 0,
+			);
+		}
 
-	if ($result == false)
-		return 0;
+		$qty = $movement['qty'];
+		$is_before_period = $movement['tran_date'] < $from_sql;
+		if ($movement['voided_id'] === null) {
+			if ($is_before_period)
+				$metrics[$stock_id]['opening_qty'] += $qty;
+			$metrics[$stock_id]['closing_qty'] += $qty;
+		}
 
-	$qty = $tot_cost = 0;
-	while ($row=db_fetch($result)) {
-		$qty += $row['qty'];	
-		$price = get_domestic_price($row, $stock_id);
-		$tran_cost = $price * $row['qty'];
-		$tot_cost += $tran_cost;
+		if ($qty == 0 || $movement['type'] == ST_LOCTRANSFER)
+			continue;
+
+		$movement_cost = $qty * get_bulk_domestic_price($movement);
+		$metrics[$stock_id]['closing_cost_qty'] += $qty;
+		$metrics[$stock_id]['closing_cost_total'] += $movement_cost;
+		if ($is_before_period) {
+			$metrics[$stock_id]['opening_cost_qty'] += $qty;
+			$metrics[$stock_id]['opening_cost_total'] += $movement_cost;
+		}
+		elseif ($qty > 0) {
+			$metrics[$stock_id]['inward_qty'] += $qty;
+			$metrics[$stock_id]['inward_cost_qty'] += $qty;
+			$metrics[$stock_id]['inward_cost_total'] += $movement_cost;
+		}
+		else {
+			$metrics[$stock_id]['outward_qty'] -= $qty;
+			$metrics[$stock_id]['outward_cost_qty'] += $qty;
+			$metrics[$stock_id]['outward_cost_total'] += $movement_cost;
+		}
 	}
-	if ($qty == 0)
-		return 0;
-	return $tot_cost / $qty;
+
+	return $metrics;
 }
 
-//----------------------------------------------------------------------------------------------------
-
-function trans_qty_unit_cost($stock_id, $location, $from_date, $to_date, $inward = true) {
-	if ($from_date == null)
-		$from_date = Today();
-
-	$from_date = date2sql($from_date);	
-
-	if ($to_date == null)
-		$to_date = Today();
-
-	$to_date = date2sql($to_date);
-
-	$sql = "SELECT move.*, supplier.supplier_id person_id, IF(ISNULL(grn.rate), credit.rate, grn.rate) ex_rate
-		FROM ".TB_PREF."stock_moves move
-				LEFT JOIN ".TB_PREF."supp_trans credit ON credit.trans_no=move.trans_no AND credit.type=move.type
-				LEFT JOIN ".TB_PREF."grn_batch grn ON grn.id=move.trans_no AND 25=move.type
-				LEFT JOIN ".TB_PREF."suppliers supplier ON IFNULL(grn.supplier_id, credit.supplier_id)=supplier.supplier_id
-				LEFT JOIN ".TB_PREF."debtor_trans cust_trans ON cust_trans.trans_no=move.trans_no AND cust_trans.type=move.type
-				LEFT JOIN ".TB_PREF."debtors_master debtor ON cust_trans.debtor_no=debtor.debtor_no
-		WHERE stock_id=".db_escape($stock_id)."
-		AND move.tran_date >= '$from_date' AND move.tran_date <= '$to_date' AND qty <> 0 AND move.type <> ".ST_LOCTRANSFER;
-
-	if ($location != '')
-		$sql .= " AND move.loc_code = ".db_escape($location);
-
-	if ($inward)
-		$sql .= " AND qty > 0 ";
-	else
-		$sql .= " AND qty < 0 ";
-	$sql .= " ORDER BY tran_date";
-	
-	$result = db_query($sql, "No standard cost transactions were returned");
-	
-	if ($result == false)
-		return 0;
-	
-	$qty = $tot_cost = 0;
-	while ($row=db_fetch($result)) {
-		$qty += $row['qty'];
-		$price = get_domestic_price($row, $stock_id); 
-		$tran_cost = $row['qty'] * $price;
-		$tot_cost += $tran_cost;
-	}	
-	if ($qty == 0)
-		return 0;
-	return $tot_cost / $qty;
+/**
+ * Calculate an average from quantity and total-cost accumulators.
+ *
+ * @param float $quantity Accumulated signed quantity.
+ * @param float $total_cost Accumulated signed cost.
+ * @return float Average unit cost, or zero for a zero quantity.
+ */
+function get_accumulated_average_cost($quantity, $total_cost) {
+	return $quantity == 0 ? 0 : $total_cost / $quantity;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -224,6 +206,7 @@ function inventory_movements() {
 
 	$totval_open = $totval_in = $totval_out = $totval_close = 0; 
 	$result = fetch_items($category);
+	$movement_metrics = get_costed_movement_metrics($category, $location, $from_date, $to_date);
 
 	$dec = user_price_dec();
 	$catgor = '';
@@ -236,28 +219,36 @@ function inventory_movements() {
 			$rep->fontSize -= 2;
 			$rep->NewLine();
 		}
-		$qoh_start = get_qoh_on_date($myrow['stock_id'], $location, add_days($from_date, -1));
-		$qoh_end = get_qoh_on_date($myrow['stock_id'], $location, $to_date);
-		
-		$inward = trans_qty($myrow['stock_id'], $location, $from_date, $to_date);
-		$outward = trans_qty($myrow['stock_id'], $location, $from_date, $to_date, false);
-		$openCost = avg_unit_cost($myrow['stock_id'], $location, $from_date);
-		$unitCost = avg_unit_cost($myrow['stock_id'], $location, add_days($to_date, 1));
+		$metrics = isset($movement_metrics[$myrow['stock_id']]) ? $movement_metrics[$myrow['stock_id']] : array(
+			'opening_qty' => 0, 'inward_qty' => 0, 'outward_qty' => 0, 'closing_qty' => 0,
+			'opening_cost_qty' => 0, 'opening_cost_total' => 0,
+			'inward_cost_qty' => 0, 'inward_cost_total' => 0,
+			'outward_cost_qty' => 0, 'outward_cost_total' => 0,
+			'closing_cost_qty' => 0, 'closing_cost_total' => 0,
+		);
+		$qoh_start = $metrics['opening_qty'];
+		$qoh_end = $metrics['closing_qty'];
+		$inward = $metrics['inward_qty'];
+		$outward = $metrics['outward_qty'];
+		$openCost = get_accumulated_average_cost($metrics['opening_cost_qty'], $metrics['opening_cost_total']);
+		$unitCost = get_accumulated_average_cost($metrics['closing_cost_qty'], $metrics['closing_cost_total']);
 		if ($qoh_start == 0 && $inward == 0 && $outward == 0 && $qoh_end == 0)
 			continue;
+		$qty_dec = $myrow['decimals'] == -1 || $myrow['decimals'] === null
+			? user_qty_dec() : $myrow['decimals'];
 		$rep->NewLine();
 		$rep->TextCol(0, 1,	$myrow['stock_id']);
 		$rep->TextCol(1, 2, substr($myrow['name'], 0, 24) . ' ');
 		$rep->TextCol(2, 3, $myrow['units']);
-		$rep->AmountCol(3, 4, $qoh_start, get_qty_dec($myrow['stock_id']));
+		$rep->AmountCol(3, 4, $qoh_start, $qty_dec);
 		$rep->AmountCol(4, 5, $openCost, $dec);
 		$openCost *= $qoh_start;
 		$totval_open += $openCost;
 		$rep->AmountCol(5, 6, $openCost);
 		
 		if($inward>0){
-			$rep->AmountCol(6, 7, $inward, get_qty_dec($myrow['stock_id']));
-			$unitCost_in = trans_qty_unit_cost($myrow['stock_id'], $location, $from_date, $to_date);
+			$rep->AmountCol(6, 7, $inward, $qty_dec);
+			$unitCost_in = get_accumulated_average_cost($metrics['inward_cost_qty'], $metrics['inward_cost_total']);
 			$rep->AmountCol(7, 8, $unitCost_in,$dec);
 			$unitCost_in *= $inward;
 			$totval_in += $unitCost_in;
@@ -265,15 +256,15 @@ function inventory_movements() {
 		}
 		
 		if($outward>0){
-			$rep->AmountCol(9, 10, $outward, get_qty_dec($myrow['stock_id']));
-			$unitCost_out =	trans_qty_unit_cost($myrow['stock_id'], $location, $from_date, $to_date, false);
+			$rep->AmountCol(9, 10, $outward, $qty_dec);
+			$unitCost_out = get_accumulated_average_cost($metrics['outward_cost_qty'], $metrics['outward_cost_total']);
 			$rep->AmountCol(10, 11, $unitCost_out,$dec);
 			$unitCost_out *= $outward;
 			$totval_out += $unitCost_out;
 			$rep->AmountCol(11, 12, $unitCost_out);
 		}
 		
-		$rep->AmountCol(12, 13, $qoh_end, get_qty_dec($myrow['stock_id']));
+		$rep->AmountCol(12, 13, $qoh_end, $qty_dec);
 		$rep->AmountCol(13, 14, $unitCost,$dec);
 		$unitCost *= $qoh_end;
 		$totval_close += $unitCost;

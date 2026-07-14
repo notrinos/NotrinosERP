@@ -23,49 +23,50 @@ include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 
 inventory_movements();
 
-function fetch_items($category=0) {
-		$sql = "SELECT stock_id, stock.description AS name,
-				stock.category_id,
-				units,
-				cat.description
-			FROM ".TB_PREF."stock_master stock LEFT JOIN ".TB_PREF."stock_category cat ON stock.category_id=cat.category_id
-				WHERE mb_flag <> 'D' AND mb_flag <>'F'";
-		if ($category != 0)
-			$sql .= " AND cat.category_id = ".db_escape($category);
-		$sql .= " ORDER BY stock.category_id, stock_id";
+/**
+ * Fetch item metadata and all movement quantities in one conditional aggregate.
+ *
+ * Opening and closing quantities retain the voided-transaction exclusion used by
+ * get_qoh_on_date(), while period movements retain the report's existing behavior.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @param string $location Location code, or an empty string for all locations.
+ * @param string $from_date Period start date.
+ * @param string $to_date Period end date.
+ * @return resource Database result.
+ */
+function fetch_inventory_movements($category, $location, $from_date, $to_date) {
+	$from_sql = date2sql($from_date == null ? Today() : $from_date);
+	$to_sql = date2sql($to_date == null ? Today() : $to_date);
+	$opening_sql = date2sql(add_days($from_date == null ? Today() : $from_date, -1));
+
+	$sql = "SELECT stock.stock_id, stock.description AS name,
+			stock.category_id, stock.units, cat.description,
+			units.decimals,
+			SUM(CASE WHEN voided.id IS NULL AND move.tran_date <= '$opening_sql'
+				THEN move.qty ELSE 0 END) AS opening_qty,
+			SUM(CASE WHEN move.tran_date >= '$from_sql' AND move.tran_date <= '$to_sql'
+				AND move.qty > 0 THEN move.qty ELSE 0 END) AS inward_qty,
+			-SUM(CASE WHEN move.tran_date >= '$from_sql' AND move.tran_date <= '$to_sql'
+				AND move.qty < 0 THEN move.qty ELSE 0 END) AS outward_qty,
+			SUM(CASE WHEN voided.id IS NULL AND move.tran_date <= '$to_sql'
+				THEN move.qty ELSE 0 END) AS closing_qty
+		FROM ".TB_PREF."stock_master stock
+		LEFT JOIN ".TB_PREF."stock_category cat ON stock.category_id=cat.category_id
+		LEFT JOIN ".TB_PREF."item_units units ON units.abbr=stock.units
+		LEFT JOIN ".TB_PREF."stock_moves move ON move.stock_id=stock.stock_id";
+	if ($location != '')
+		$sql .= " AND move.loc_code=".db_escape($location);
+	$sql .= " LEFT JOIN ".TB_PREF."voided voided
+		ON voided.type=move.type AND voided.id=move.trans_no
+		WHERE stock.mb_flag <> 'D' AND stock.mb_flag <> 'F'";
+	if ($category != 0)
+		$sql .= " AND cat.category_id = ".db_escape($category);
+	$sql .= " GROUP BY stock.stock_id, stock.description, stock.category_id,
+			stock.units, cat.description, units.decimals
+		ORDER BY stock.category_id, stock.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
-}
-
-function trans_qty($stock_id, $location, $from_date, $to_date, $inward=true) {
-	if ($from_date == null)
-		$from_date = Today();
-
-	$from_date = date2sql($from_date);	
-
-	if ($to_date == null)
-		$to_date = Today();
-
-	$to_date = date2sql($to_date);
-
-	$sql = "SELECT ".($inward ? '' : '-')."SUM(qty) FROM ".TB_PREF."stock_moves
-		WHERE stock_id=".db_escape($stock_id)."
-		AND tran_date >= '$from_date' 
-		AND tran_date <= '$to_date'";
-
-	if ($location != '')
-		$sql .= " AND loc_code = ".db_escape($location);
-
-	if ($inward)
-		$sql .= " AND qty > 0 ";
-	else
-		$sql .= " AND qty < 0 ";
-
-	$result = db_query($sql, 'QOH calculation failed');
-
-	$myrow = db_fetch_row($result);	
-
-	return $myrow[0];
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -117,7 +118,7 @@ function inventory_movements() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
-	$result = fetch_items($category);
+	$result = fetch_inventory_movements($category, $location, $from_date, $to_date);
 
 	$catgor = '';
 	while ($myrow=db_fetch($result)) {
@@ -134,19 +135,12 @@ function inventory_movements() {
 		$rep->TextCol(0, 1,	$myrow['stock_id']);
 		$rep->TextCol(1, 2, $myrow['name']);
 		$rep->TextCol(2, 3, $myrow['units']);
-		$qoh_start= $inward = $outward = $qoh_end = 0; 
-		
-		$qoh_start += get_qoh_on_date($myrow['stock_id'], $location, add_days($from_date, -1));
-		$qoh_end += get_qoh_on_date($myrow['stock_id'], $location, $to_date);
-		
-		$inward += trans_qty($myrow['stock_id'], $location, $from_date, $to_date);
-		$outward += trans_qty($myrow['stock_id'], $location, $from_date, $to_date, false);
-
-		$stock_qty_dec = get_qty_dec($myrow['stock_id']);
-		$rep->AmountCol(3, 4, $qoh_start, $stock_qty_dec);
-		$rep->AmountCol(4, 5, $inward, $stock_qty_dec);
-		$rep->AmountCol(5, 6, $outward, $stock_qty_dec);
-		$rep->AmountCol(6, 7, $qoh_end, $stock_qty_dec);
+		$stock_qty_dec = $myrow['decimals'] == -1 || $myrow['decimals'] === null
+			? user_qty_dec() : $myrow['decimals'];
+		$rep->AmountCol(3, 4, $myrow['opening_qty'], $stock_qty_dec);
+		$rep->AmountCol(4, 5, $myrow['inward_qty'], $stock_qty_dec);
+		$rep->AmountCol(5, 6, $myrow['outward_qty'], $stock_qty_dec);
+		$rep->AmountCol(6, 7, $myrow['closing_qty'], $stock_qty_dec);
 		$rep->NewLine(0, 1);
 	}
 	$rep->Line($rep->row  - 4);

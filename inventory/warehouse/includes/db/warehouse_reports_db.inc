@@ -208,38 +208,21 @@ function get_dead_stock_data($as_at_date = null, $no_move_days = 180, $loc_code 
 			si.category_id, cat.description AS category_name,
 			si.units, si.material_cost,
 			ls.loc_code, loc.location_name,
-			COALESCE((
-				SELECT SUM(smq.qty)
-				FROM " . TB_PREF . "stock_moves smq
-				WHERE smq.stock_id = si.stock_id
-					AND smq.loc_code = ls.loc_code
-					AND smq.tran_date <= '$as_at_sql'
-			), 0) AS qty_on_hand,
-			(COALESCE((
-				SELECT SUM(smv.qty)
-				FROM " . TB_PREF . "stock_moves smv
-				WHERE smv.stock_id = si.stock_id
-					AND smv.loc_code = ls.loc_code
-					AND smv.tran_date <= '$as_at_sql'
-			), 0) * si.material_cost) AS stock_value,
-			(SELECT MAX(sm.tran_date) 
-			 FROM " . TB_PREF . "stock_moves sm 
-			 WHERE sm.stock_id = si.stock_id 
-			   AND sm.loc_code = ls.loc_code
-			   AND sm.tran_date <= '$as_at_sql'
-			) AS last_movement_date,
-			DATEDIFF('$as_at_sql', 
-				(SELECT MAX(sm2.tran_date) 
-				 FROM " . TB_PREF . "stock_moves sm2 
-				 WHERE sm2.stock_id = si.stock_id 
-				   AND sm2.loc_code = ls.loc_code
-				   AND sm2.tran_date <= '$as_at_sql'
-				)
-			) AS days_since_movement
+			COALESCE(moves.qty_on_hand, 0) AS qty_on_hand,
+			(COALESCE(moves.qty_on_hand, 0) * si.material_cost) AS stock_value,
+			moves.last_movement_date,
+			DATEDIFF('$as_at_sql', moves.last_movement_date) AS days_since_movement
 		FROM " . TB_PREF . "loc_stock ls
 		LEFT JOIN " . TB_PREF . "stock_master si ON si.stock_id = ls.stock_id
 		LEFT JOIN " . TB_PREF . "stock_category cat ON cat.category_id = si.category_id
 		LEFT JOIN " . TB_PREF . "locations loc ON loc.loc_code = ls.loc_code
+		LEFT JOIN (
+			SELECT stock_id, loc_code, SUM(qty) AS qty_on_hand,
+				MAX(tran_date) AS last_movement_date
+			FROM " . TB_PREF . "stock_moves
+			WHERE tran_date <= '$as_at_sql'
+			GROUP BY stock_id, loc_code
+		) moves ON moves.stock_id = ls.stock_id AND moves.loc_code = ls.loc_code
 		WHERE si.mb_flag <> 'D' AND si.mb_flag <> 'F'";
 
 	if ($loc_code && $loc_code != 'all')
@@ -341,15 +324,15 @@ function get_inventory_turn_rate_data($from_date = null, $to_date = null, $locat
 		) cogs ON cogs.stock_id = si.stock_id
 		LEFT JOIN (
 			SELECT ls.stock_id,
-				SUM(COALESCE((
-					SELECT SUM(smq.qty)
-					FROM " . TB_PREF . "stock_moves smq
-					WHERE smq.stock_id = ls.stock_id
-						AND smq.loc_code = ls.loc_code
-						AND smq.tran_date <= '$to_sql'
-				), 0) * smi.material_cost) AS avg_inventory
+				SUM(COALESCE(qoh.qty_on_hand, 0) * smi.material_cost) AS avg_inventory
 			FROM " . TB_PREF . "loc_stock ls
-			LEFT JOIN " . TB_PREF . "stock_master smi ON smi.stock_id = ls.stock_id";
+			LEFT JOIN " . TB_PREF . "stock_master smi ON smi.stock_id = ls.stock_id
+			LEFT JOIN (
+				SELECT stock_id, loc_code, SUM(qty) AS qty_on_hand
+				FROM " . TB_PREF . "stock_moves
+				WHERE tran_date <= '$to_sql'
+				GROUP BY stock_id, loc_code
+			) qoh ON qoh.stock_id = ls.stock_id AND qoh.loc_code = ls.loc_code";
 
 	if ($location && $location != 'all')
 		$sql .= " WHERE ls.loc_code = " . db_escape($location);

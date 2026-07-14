@@ -22,63 +22,63 @@ include_once($path_to_root.'/inventory/includes/db/items_category_db.inc');
 
 print_inventory_valuation_report();
 
-function get_domestic_price($myrow, $stock_id) {
-	if ($myrow['type'] == ST_SUPPRECEIVE || $myrow['type'] == ST_SUPPCREDIT) {
-		$price = $myrow['price'];
-		if ($myrow['person_id'] > 0) {
-			// Do we have foreign currency?
-			$supp = suppliers_entity::find($myrow['person_id']);
-			$currency = $supp['curr_code'];
-			$ex_rate = $myrow['ex_rate'];
-			$price *= $ex_rate;
-		}
-	}
-	else
-		$price = $myrow['standard_cost']; //pick standard_cost for sales deliveries
-
-	return $price;
-}
-
-function getAverageCost($stock_id, $location, $to_date) {
+/**
+ * Load average movement costs for every item selected by the report.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @param string $location Location code, or 'all' for all locations.
+ * @param string|null $to_date Report end date.
+ * @return array Average costs keyed by stock ID.
+ */
+function get_inventory_average_costs($category, $location, $to_date) {
 	if ($to_date == null)
 		$to_date = Today();
 
 	$to_date = date2sql($to_date);
-
-	$sql = "SELECT move.*, supplier.supplier_id person_id, IF(ISNULL(grn.rate), credit.rate, grn.rate) ex_rate
+	$sql = "SELECT move.stock_id,
+			SUM(move.qty) AS total_qty,
+			SUM(move.qty * IFNULL(CASE
+				WHEN move.type IN (".ST_SUPPRECEIVE.", ".ST_SUPPCREDIT.") THEN
+					move.price * IF(supplier.supplier_id > 0,
+						IF(ISNULL(grn.rate), credit.rate, grn.rate), 1)
+				ELSE move.standard_cost
+			END, 0)) AS total_cost
 		FROM ".TB_PREF."stock_moves move
-				LEFT JOIN ".TB_PREF."supp_trans credit ON credit.trans_no=move.trans_no AND credit.type=move.type
-				LEFT JOIN ".TB_PREF."grn_batch grn ON grn.id=move.trans_no AND 25=move.type
-				LEFT JOIN ".TB_PREF."suppliers supplier ON IFNULL(grn.supplier_id, credit.supplier_id)=supplier.supplier_id
-				LEFT JOIN ".TB_PREF."debtor_trans cust_trans ON cust_trans.trans_no=move.trans_no AND cust_trans.type=move.type
-				LEFT JOIN ".TB_PREF."debtors_master debtor ON cust_trans.debtor_no=debtor.debtor_no
-			WHERE stock_id=".db_escape($stock_id)."
-			AND move.tran_date <= '$to_date' AND standard_cost > 0.001 AND qty <> 0 AND move.type <> ".ST_LOCTRANSFER;
+		INNER JOIN ".TB_PREF."stock_master item ON item.stock_id=move.stock_id
+		LEFT JOIN ".TB_PREF."supp_trans credit
+			ON credit.trans_no=move.trans_no AND credit.type=move.type
+		LEFT JOIN ".TB_PREF."grn_batch grn
+			ON grn.id=move.trans_no AND move.type=".ST_SUPPRECEIVE."
+		LEFT JOIN ".TB_PREF."suppliers supplier
+			ON IFNULL(grn.supplier_id, credit.supplier_id)=supplier.supplier_id
+		WHERE move.tran_date <= '$to_date'
+			AND move.standard_cost > 0.001
+			AND move.qty <> 0
+			AND move.type <> ".ST_LOCTRANSFER."
+			AND item.mb_flag <> 'D' AND item.mb_flag <> 'F'";
 
+	if ($category != 0)
+		$sql .= " AND item.category_id = ".db_escape($category);
 	if ($location != 'all')
 		$sql .= " AND move.loc_code = ".db_escape($location);
 
-	$sql .= " ORDER BY tran_date";	
-
+	$sql .= " GROUP BY move.stock_id";
 	$result = db_query($sql, 'No standard cost transactions were returned');
-	
-	if ($result == false)
-		return 0;
+	$costs = array();
+	while ($row = db_fetch($result))
+		$costs[$row['stock_id']] = $row['total_qty'] == 0 ? 0 : $row['total_cost'] / $row['total_qty'];
 
-	$qty = 0;
-	$tot_cost = 0;
-
-	while ($row = db_fetch($result)) {
-		$qty += $row['qty'];	
-		$price = get_domestic_price($row, $stock_id);
-		$tran_cost = $row['qty'] * $price;
-		$tot_cost += $tran_cost;
-	}
-	if ($qty == 0)
-		return 0;
-	return $tot_cost / $qty;
+	return $costs;
 }
 
+/**
+ * Fetch the inventory valuation rows and unit precision in one query.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @param string $location Location code, or 'all' for all locations.
+ * @param string $date Report end date.
+ * @return resource Database result.
+ */
 function getTransactions($category, $location, $date) {
 
 	$dec = user_qty_dec();
@@ -101,18 +101,23 @@ function getTransactions($category, $location, $date) {
 		AND item.category_id=category.category_id
 		AND item.mb_flag<>'D' AND mb_flag <> 'F' 
 		AND move.tran_date <= '".date2sql($date)."'
-		AND item.units = units.abbr
+		AND item.units = units.abbr";
+		if ($category != 0)
+			$sql .= " AND item.category_id = ".db_escape($category);
+		if ($location != 'all')
+			$sql .= " AND move.loc_code = ".db_escape($location);
+		$sql .= "
 		GROUP BY item.category_id,
 			category.description, ";
 		if ($location != 'all')
 			$sql .= "move.loc_code, ";
 		$sql .= "item.stock_id,
-			item.description
+			item.units,
+			item.description,
+			item.inactive,
+			item.material_cost,
+			units.decimals
 		HAVING ROUND(SUM(move.qty), IF(units.decimals <> -1, units.decimals, $dec)) != 0";
-		if ($category != 0)
-			$sql .= " AND item.category_id = ".db_escape($category);
-		if ($location != 'all')
-			$sql .= " AND move.loc_code = ".db_escape($location);
 		$sql .= " ORDER BY item.category_id, item.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
@@ -165,6 +170,9 @@ function print_inventory_valuation_report() {
 	$rep->NewPage();
 
 	$res = getTransactions($category, $location, $date);
+	$average_costs = array();
+	if (isset($SysPrefs->use_costed_values) && $SysPrefs->use_costed_values == 1)
+		$average_costs = get_inventory_average_costs($category, $location, $date);
 	$total = $grandtotal = 0.0;
 	$catt = '';
 	while ($trans=db_fetch($res)) {
@@ -189,7 +197,7 @@ function print_inventory_valuation_report() {
 				$rep->NewLine();
 		}
 		if (isset($SysPrefs->use_costed_values) && $SysPrefs->use_costed_values == 1) {
-			$UnitCost = getAverageCost($trans['stock_id'], $location, $date);
+			$UnitCost = isset($average_costs[$trans['stock_id']]) ? $average_costs[$trans['stock_id']] : 0;
 			$ItemTotal = $trans['QtyOnHand'] * $UnitCost;
 		}	
 		else {
@@ -202,7 +210,8 @@ function print_inventory_valuation_report() {
 			$rep->TextCol(0, 1, $trans['stock_id']);
 			$rep->TextCol(1, 2, $trans['description'].($trans['inactive'] == 1 ? ' ('._('Inactive').')' : ''), -1);
 			$rep->TextCol(2, 3, $trans['units']);
-			$rep->AmountCol(3, 4, $trans['QtyOnHand'], get_qty_dec($trans['stock_id']));
+			$qty_dec = $trans['decimals'] == -1 ? user_qty_dec() : $trans['decimals'];
+			$rep->AmountCol(3, 4, $trans['QtyOnHand'], $qty_dec);
 			$dec2 = 0;
 			price_decimal_format($UnitCost, $dec2);
 			$rep->AmountCol(4, 5, $UnitCost, $dec2);

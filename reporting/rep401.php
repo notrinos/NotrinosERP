@@ -16,24 +16,36 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/inventory/includes/db/items_db.inc');
-include_once($path_to_root . '/manufacturing/includes/db/work_centres_entity.inc');
 
 //----------------------------------------------------------------------------------------------------
 
 print_bill_of_material();
 
+/**
+ * Fetch BOM rows with all display metadata and unit precision.
+ *
+ * @param string $from First parent product.
+ * @param string $to Last parent product.
+ * @return resource Database result.
+ */
 function getTransactions($from, $to) {
 	$sql = "SELECT bom.parent,
 			bom.component,
-			item.description as CompDescription,
+			component.description AS CompDescription,
+			parent.description AS ParentDescription,
+			units.decimals AS ComponentDecimals,
 			bom.quantity,
 			bom.loc_code,
-			bom.workcentre_added
-		FROM "
-			.TB_PREF."stock_master item,"
-			.TB_PREF."bom bom
-		WHERE item.stock_id=bom.component
+			bom.workcentre_added,
+			location.location_name AS LocationName,
+			workcentre.name AS WorkCentreName
+		FROM ".TB_PREF."bom bom
+		INNER JOIN ".TB_PREF."stock_master component ON component.stock_id=bom.component
+		LEFT JOIN ".TB_PREF."stock_master parent ON parent.stock_id=bom.parent
+		LEFT JOIN ".TB_PREF."item_units units ON units.abbr=component.units
+		LEFT JOIN ".TB_PREF."locations location ON location.loc_code=bom.loc_code
+		LEFT JOIN ".TB_PREF."workcentres workcentre ON workcentre.id=bom.workcentre_added
+		WHERE 1=1
 		AND bom.parent >= ".db_escape($from)."
 		AND bom.parent <= ".db_escape($to)."
 		ORDER BY
@@ -85,19 +97,18 @@ function print_bill_of_material() {
 				$rep->NewLine(2, 3);
 			}
 			$rep->TextCol(0, 1, $trans['parent']);
-			$desc = stock_master_entity::find($trans['parent']);
-			$rep->TextCol(1, 2, $desc['description']);
+			$rep->TextCol(1, 2, $trans['ParentDescription']);
 			$parent = $trans['parent'];
 			$rep->NewLine();
 		}
 
 		$rep->NewLine();
-		$dec = get_qty_dec($trans['component']);
+		$dec = $trans['ComponentDecimals'] == -1 || $trans['ComponentDecimals'] === null
+			? user_qty_dec() : $trans['ComponentDecimals'];
 		$rep->TextCol(0, 1, $trans['component']);
 		$rep->TextCol(1, 2, $trans['CompDescription']);
-		$wc = work_centres_entity::find($trans['workcentre_added']);
-		$rep->TextCol(2, 3, get_location_name($trans['loc_code']));
-		$rep->TextCol(3, 4, $wc['name']);
+		$rep->TextCol(2, 3, $trans['LocationName']);
+		$rep->TextCol(3, 4, $trans['WorkCentreName']);
 		$rep->AmountCol(4, 5, $trans['quantity'], $dec);
 	}
 	$rep->Line($rep->row - 4);
