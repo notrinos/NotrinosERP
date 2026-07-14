@@ -43,7 +43,7 @@ function print_payroll_summary_report() {
         include_once($path_to_root.'/reporting/includes/pdf_report.inc');
 
     $rep = new FrontReport(_('Payroll Summary Report'), 'PayrollSummary', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 60, 210, 280, 350, 430, 510, 620);
+    $cols = array(0, 35, 200, 260, 320, 390, 450, 530);
     $headers = array(_('ID'), _('Period'), _('From'), _('To'), _('Gross'), _('Deductions'), _('Net'));
     $aligns = array('left', 'left', 'left', 'left', 'right', 'right', 'right');
 
