@@ -121,18 +121,29 @@ function getTransactions($category, $location, $item_like) {
 			category.description AS cat_description,
 			item.stock_id, item.units,
 			item.description, item.inactive,
-			IF(move.stock_id IS NULL, '', move.loc_code) AS loc_code,
-			SUM(IF(move.stock_id IS NULL,0,move.qty)) AS QtyOnHand
-		FROM ("
-			.TB_PREF."stock_master item,"
-			.TB_PREF."stock_category category)
-			LEFT JOIN ".TB_PREF."stock_moves move ON item.stock_id=move.stock_id
-		WHERE item.category_id=category.category_id
+			unit.decimals AS qty_dec,
+			COALESCE(qoh.quantity, 0) AS QtyOnHand
+		FROM ".TB_PREF."stock_master item
+		INNER JOIN ".TB_PREF."stock_category category
+			ON item.category_id=category.category_id
+		LEFT JOIN ".TB_PREF."item_units unit ON unit.abbr=item.units
+		LEFT JOIN (
+			SELECT stock_id, SUM(qty) AS quantity
+			FROM ".TB_PREF."stock_moves";
+	if ($location != 'all')
+		$sql .= " WHERE loc_code=".db_escape($location);
+	$sql .= " GROUP BY stock_id
+		) qoh ON qoh.stock_id=item.stock_id";
+	if ($location != 'all')
+		$sql .= " LEFT JOIN (
+			SELECT DISTINCT stock_id FROM ".TB_PREF."stock_moves
+		) moved ON moved.stock_id=item.stock_id";
+	$sql .= " WHERE 1=1
 		AND (item.mb_flag='B' OR item.mb_flag='M')";
 	if ($category != 0)
 		$sql .= " AND item.category_id = ".db_escape($category);
 	if ($location != 'all')
-		$sql .= " AND IF(move.stock_id IS NULL, '1=1',move.loc_code = ".db_escape($location).")";
+		$sql .= " AND (moved.stock_id IS NULL OR qoh.stock_id IS NOT NULL)";
 	if($item_like) {
 		$regexp = null;
 
@@ -141,11 +152,7 @@ function getTransactions($category, $location, $item_like) {
 		else
 			$sql .= " AND item.stock_id LIKE ".db_escape($item_like);
 	}
-	$sql .= " GROUP BY item.category_id,
-		category.description,
-		item.stock_id,
-		item.description
-		ORDER BY item.category_id,
+	$sql .= " ORDER BY item.category_id,
 		item.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
@@ -244,16 +251,18 @@ function print_stock_check() {
 	$rep->NewPage();
 
 	$res = getTransactions($category, $location, $like);
+	$availability = get_inventory_availability_maps($category, $location, $like);
 	$catt = '';
 	while ($trans=db_fetch($res)) {
-		if ($location == 'all')
-			$loc_code = '';
-		else
-			$loc_code = $location;
-		$demandqty = get_demand_qty($trans['stock_id'], $loc_code);
-		$demandqty += get_demand_asm_qty($trans['stock_id'], $loc_code);
-		$onorder = get_on_porder_qty($trans['stock_id'], $loc_code);
-		$onorder += get_on_worder_qty($trans['stock_id'], $loc_code);
+		$stock_id = $trans['stock_id'];
+		$demandqty = isset($availability['direct_demand'][$stock_id])
+			? $availability['direct_demand'][$stock_id] : 0;
+		$demandqty += isset($availability['assembly_demand'][$stock_id])
+			? $availability['assembly_demand'][$stock_id] : 0;
+		$onorder = isset($availability['purchase_order'][$stock_id])
+			? $availability['purchase_order'][$stock_id] : 0;
+		$onorder += isset($availability['work_order'][$stock_id])
+			? $availability['work_order'][$stock_id] : 0;
 		if ($no_zeros && $trans['QtyOnHand'] == 0 && $demandqty == 0 && $onorder == 0)
 			continue;
 		if ($shortage && $trans['QtyOnHand'] - $demandqty >= 0)
@@ -270,7 +279,8 @@ function print_stock_check() {
 			$rep->NewLine();
 		}
 		$rep->NewLine();
-		$dec = get_qty_dec($trans['stock_id']);
+		$dec = $trans['qty_dec'] === null || $trans['qty_dec'] == -1
+			? user_qty_dec() : $trans['qty_dec'];
 		$rep->TextCol(0, 1, $trans['stock_id']);
 		$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
 		$rep->TextCol(2, 3, $trans['units']);

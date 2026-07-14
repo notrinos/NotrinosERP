@@ -17,7 +17,6 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/ui/ui_input.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
-include_once($path_to_root . '/sales/includes/db/sales_types_entity.inc');
 include_once($path_to_root . '/inventory/includes/inventory_db.inc');
 
 //----------------------------------------------------------------------------------------------------
@@ -52,6 +51,168 @@ function get_kits($category=0) {
 	return db_query($sql, 'No kits were returned');
 }
 
+/**
+ * Load all pricing and sales-kit inputs needed by the price listing.
+ *
+ * @param string $currency Selected report currency.
+ * @param int $sales_type_id Selected sales type ID.
+ * @param string $home_currency Company currency.
+ * @return array Pricing metadata and maps keyed by their natural IDs.
+ */
+function load_price_listing_context($currency, $sales_type_id, $home_currency) {
+	$context = array(
+		'currency_name' => '',
+		'sales_types' => array(),
+		'prices' => array(),
+		'has_price_rows' => array(),
+		'costs' => array(),
+		'kit_graph' => array(),
+		'currency' => $currency,
+		'home_currency' => $home_currency,
+		'sales_type_id' => $sales_type_id,
+		'base_sales_type_id' => get_base_sales_type(),
+		'add_pct' => get_company_pref('add_pct'),
+		'round_to' => get_company_pref('round_to'),
+		'rates' => array()
+	);
+
+	$sql = "SELECT curr_abrev, currency FROM ".TB_PREF."currencies
+		WHERE curr_abrev=".db_escape($currency);
+	$result = db_query($sql, 'Could not load price-listing currency');
+	$row = db_fetch($result);
+	if ($row)
+		$context['currency_name'] = $row['currency'];
+
+	$sql = "SELECT id, sales_type, factor FROM ".TB_PREF."sales_types";
+	$result = db_query($sql, 'Could not load sales types for price listing');
+	while ($row = db_fetch($result))
+		$context['sales_types'][$row['id']] = $row;
+
+	$sql = "SELECT stock_id, sales_type_id, curr_abrev, price
+		FROM ".TB_PREF."prices
+		WHERE curr_abrev=".db_escape($currency)."
+			OR curr_abrev=".db_escape($home_currency);
+	$result = db_query($sql, 'Could not load prices for price listing');
+	while ($row = db_fetch($result)) {
+		$context['prices'][$row['stock_id']][$row['sales_type_id']][$row['curr_abrev']]
+			= $row['price'];
+		$context['has_price_rows'][$row['stock_id']] = true;
+	}
+
+	$sql = "SELECT stock_id, material_cost FROM ".TB_PREF."stock_master";
+	$result = db_query($sql, 'Could not load item costs for price listing');
+	while ($row = db_fetch($result))
+		$context['costs'][$row['stock_id']] = $row['material_cost'];
+
+	$sql = "SELECT DISTINCT kit.item_code AS parent_code,
+			kit.stock_id AS component_code, kit.quantity
+		FROM ".TB_PREF."item_codes kit
+		INNER JOIN ".TB_PREF."item_codes component
+			ON component.item_code=kit.stock_id
+		ORDER BY kit.id";
+	$result = db_query($sql, 'Could not load sales-kit graph');
+	while ($row = db_fetch($result))
+		$context['kit_graph'][$row['parent_code']][] = array(
+			'component_code' => $row['component_code'],
+			'quantity' => $row['quantity']
+		);
+
+	$date = new_doc_date();
+	$context['rates'][$home_currency] = 1.0;
+	$context['rates'][$currency] = round2(
+		get_exchange_rate_from_home_currency($currency, $date), user_exrate_dec());
+
+	return $context;
+}
+
+/**
+ * Reproduce standard item pricing from bulk-loaded price and metadata maps.
+ *
+ * @param string $stock_id Item or kit code.
+ * @param string $currency Requested currency.
+ * @param array $context Bulk pricing context.
+ * @return float Resolved item price.
+ */
+function get_bulk_price_listing_item_price($stock_id, $currency, $context) {
+	$sales_type_id = $context['sales_type_id'];
+	$base_id = $context['base_sales_type_id'];
+	$home_currency = $context['home_currency'];
+	$factor = isset($context['sales_types'][$sales_type_id])
+		? $context['sales_types'][$sales_type_id]['factor'] : null;
+	$rate = isset($context['rates'][$currency]) ? $context['rates'][$currency] : 1.0;
+	$prices = isset($context['prices'][$stock_id]) ? $context['prices'][$stock_id] : array();
+	$price = false;
+
+	if (isset($prices[$sales_type_id][$currency]))
+		$price = $prices[$sales_type_id][$currency];
+	elseif (isset($prices[$base_id][$currency]))
+		$price = $prices[$base_id][$currency] * $factor;
+	elseif (isset($prices[$sales_type_id][$home_currency]))
+		$price = $prices[$sales_type_id][$home_currency] / $rate;
+	elseif (isset($prices[$base_id][$home_currency]))
+		$price = $prices[$base_id][$home_currency] * $factor / $rate;
+	elseif (empty($context['has_price_rows'][$stock_id]) && $context['add_pct'] != -1) {
+		$cost = isset($context['costs'][$stock_id]) ? $context['costs'][$stock_id] : 0;
+		$price = $cost == 0 ? 0 : round2(
+			$cost * (1 + $context['add_pct'] / 100), user_price_dec());
+		if ($currency != $home_currency)
+			$price /= $rate;
+		if ($factor != 0)
+			$price *= $factor;
+	}
+
+	if ($price === false)
+		return 0;
+	if ($context['round_to'] != 1)
+		return round_to_nearest($price, $context['round_to']);
+	return round2($price, user_price_dec());
+}
+
+/**
+ * Resolve a kit price from the one-time graph preload without database access.
+ *
+ * Direct kit prices take precedence. Missing direct prices fall back to the
+ * recursively accumulated component prices and are memoized per currency/code.
+ *
+ * @param string $item_code Item or kit code.
+ * @param string $currency Requested currency.
+ * @param array $context Bulk pricing context.
+ * @param array $memo Previously resolved kit prices.
+ * @param array $visiting Active recursion path used to guard invalid cycles.
+ * @return float Resolved kit price.
+ */
+function get_bulk_price_listing_kit_price($item_code, $currency, $context,
+	&$memo, &$visiting) {
+	$key = $currency."\0".$item_code;
+	if (isset($memo[$key]))
+		return $memo[$key];
+
+	$direct_price = get_bulk_price_listing_item_price($item_code, $currency, $context);
+	if ($direct_price != 0) {
+		$memo[$key] = $direct_price;
+		return $direct_price;
+	}
+	if (!empty($visiting[$key]))
+		return 0;
+
+	$visiting[$key] = true;
+	$kit_price = 0.0;
+	if (!empty($context['kit_graph'][$item_code])) {
+		foreach ($context['kit_graph'][$item_code] as $component) {
+			if ($component['component_code'] != $item_code)
+				$component_price = get_bulk_price_listing_kit_price(
+					$component['component_code'], $currency, $context, $memo, $visiting);
+			else
+				$component_price = get_bulk_price_listing_item_price(
+					$component['component_code'], $currency, $context);
+			$kit_price += $component['quantity'] * $component_price;
+		}
+	}
+	unset($visiting[$key]);
+	$memo[$key] = $kit_price;
+	return $kit_price;
+}
+
 //----------------------------------------------------------------------------------------------------
 
 function print_price_listing() {
@@ -76,12 +237,12 @@ function print_price_listing() {
 	$home_curr = get_company_pref('curr_default');
 	if ($currency == ALL_TEXT)
 		$currency = $home_curr;
-	$curr = currencies_entity::find($currency);
-	$curr_sel = $currency . ' - ' . $curr['currency'];
 	if ($category == ALL_NUMERIC)
 		$category = 0;
 	if ($salestype == ALL_NUMERIC)
 		$salestype = 0;
+	$pricing_context = load_price_listing_context($currency, $salestype, $home_curr);
+	$curr_sel = $currency . ' - ' . $pricing_context['currency_name'];
 	if ($category == 0)
 		$cat = _('All');
 	else
@@ -89,7 +250,8 @@ function print_price_listing() {
 	if ($salestype == 0)
 		$stype = _('All');
 	else
-		$stype = sales_types_entity::find($salestype)['sales_type'];
+		$stype = isset($pricing_context['sales_types'][$salestype])
+			? $pricing_context['sales_types'][$salestype]['sales_type'] : '';
 	if ($showGP == 0)
 		$GP = _('No');
 	else
@@ -121,9 +283,10 @@ function print_price_listing() {
 	$rep->NewPage();
 
 	$result = fetch_items($category);
+	$kit_price_memo = array();
+	$kit_price_visiting = array();
 
 	$catgor = '';
-	$_POST['sales_type_id'] = $salestype;
 	while ($myrow=db_fetch($result)) {
 		if ($catgor != $myrow['description']) {
 			$rep->Line($rep->row  - $rep->lineHeight);
@@ -138,10 +301,12 @@ function print_price_listing() {
 		$rep->TextCol(0, 1,	$myrow['stock_id']);
 		$rep->TextCol(1, 2, $myrow['name']);
 		$rep->TextCol(2, 3, $myrow['units']);
-		$price = get_price($myrow['stock_id'], $currency, $salestype);
+		$price = get_bulk_price_listing_item_price(
+			$myrow['stock_id'], $currency, $pricing_context);
 		$rep->AmountCol(3, 4, $price, $dec);
 		if ($showGP) {
-			$price2 = get_price($myrow['stock_id'], $home_curr, $salestype);
+			$price2 = get_bulk_price_listing_item_price(
+				$myrow['stock_id'], $home_curr, $pricing_context);
 			if ($price2 != 0.0)
 				$disp = ($price2 - $myrow['Standardcost']) * 100 / $price2;
 			else
@@ -187,7 +352,8 @@ function print_price_listing() {
 		$rep->NewLine();
 		$rep->TextCol(0, 1,	$myrow['kit_code']);
 		$rep->TextCol(1, 3, $myrow['kit_name']);
-		$price = get_kit_price($myrow['kit_code'], $currency, $salestype);
+		$price = get_bulk_price_listing_kit_price($myrow['kit_code'], $currency,
+			$pricing_context, $kit_price_memo, $kit_price_visiting);
 		$rep->AmountCol(3, 4, $price, $dec);
 		$rep->NewLine(0, 1);
 	}

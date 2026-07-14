@@ -28,29 +28,45 @@ function getTransactions($category, $location) {
 			category.description AS cat_description,
 			item.stock_id,
 			item.description, item.inactive,
-			IF(move.stock_id IS NULL, '', move.loc_code) AS loc_code,
-			SUM(IF(move.stock_id IS NULL, 0, move.qty)) AS qty_on_hand
-		FROM (".TB_PREF."stock_master item,"
-			.TB_PREF."stock_category category)
-			LEFT JOIN ".TB_PREF."stock_moves move ON item.stock_id=move.stock_id
-		WHERE item.category_id=category.category_id
+			unit.decimals AS qty_dec,
+			COALESCE(qoh.loc_code, '') AS loc_code,
+			COALESCE(qoh.quantity, 0) AS qty_on_hand
+		FROM ".TB_PREF."stock_master item
+		INNER JOIN ".TB_PREF."stock_category category
+			ON item.category_id=category.category_id
+		LEFT JOIN ".TB_PREF."item_units unit ON unit.abbr=item.units
+		LEFT JOIN (
+			SELECT stock_id, MIN(loc_code) AS loc_code, SUM(qty) AS quantity
+			FROM ".TB_PREF."stock_moves";
+	if ($location != 'all')
+		$sql .= " WHERE loc_code=".db_escape($location);
+	$sql .= " GROUP BY stock_id
+		) qoh ON qoh.stock_id=item.stock_id";
+	if ($location != 'all')
+		$sql .= " LEFT JOIN (
+			SELECT DISTINCT stock_id FROM ".TB_PREF."stock_moves
+		) moved ON moved.stock_id=item.stock_id";
+	$sql .= " WHERE 1=1
 		AND (item.mb_flag='B' OR item.mb_flag='M')";
 	if ($category != 0)
 		$sql .= " AND item.category_id = ".db_escape($category);
 	if ($location != 'all')
-		$sql .= " AND IF(move.stock_id IS NULL, '1=1',move.loc_code = ".db_escape($location).")";
-	$sql .= " GROUP BY item.category_id,
-		category.description,
-		item.stock_id,
-		item.description
-		ORDER BY item.category_id,
+		$sql .= " AND (moved.stock_id IS NULL OR qoh.stock_id IS NOT NULL)";
+	$sql .= " ORDER BY item.category_id,
 		item.stock_id";
 
 	return db_query($sql, 'No transactions were returned');
 
 }
 
-function getPeriods($stockid, $location) {
+/**
+ * Load five sales periods for every selected item in one aggregate query.
+ *
+ * @param int $category Inventory category, or zero for all categories.
+ * @param string $location Location code, or "all" for all locations.
+ * @return array Period quantities keyed by stock ID.
+ */
+function getPeriods($category, $location) {
 	$date5 = date('Y-m-d');
 	$date4 = date('Y-m-d',mktime(0,0,0,date('m'),1,date('Y')));
 	$date3 = date('Y-m-d',mktime(0,0,0,date('m')-1,1,date('Y')));
@@ -58,18 +74,28 @@ function getPeriods($stockid, $location) {
 	$date1 = date('Y-m-d',mktime(0,0,0,date('m')-3,1,date('Y')));
 	$date0 = date('Y-m-d',mktime(0,0,0,date('m')-4,1,date('Y')));
 
-	$sql = "SELECT SUM(CASE WHEN tran_date >= '$date0' AND tran_date < '$date1' THEN -qty ELSE 0 END) AS prd0,
+	$sql = "SELECT move.stock_id, move.loc_code,
+				SUM(CASE WHEN tran_date >= '$date0' AND tran_date < '$date1' THEN -qty ELSE 0 END) AS prd0,
 				SUM(CASE WHEN tran_date >= '$date1' AND tran_date < '$date2' THEN -qty ELSE 0 END) AS prd1,
 				SUM(CASE WHEN tran_date >= '$date2' AND tran_date < '$date3' THEN -qty ELSE 0 END) AS prd2,
 				SUM(CASE WHEN tran_date >= '$date3' AND tran_date < '$date4' THEN -qty ELSE 0 END) AS prd3,
 				SUM(CASE WHEN tran_date >= '$date4' AND tran_date <= '$date5' THEN -qty ELSE 0 END) AS prd4
-			FROM ".TB_PREF."stock_moves
-			WHERE stock_id='$stockid'
-			AND loc_code ='$location'
-			AND (type=13 OR type=11)";
+			FROM ".TB_PREF."stock_moves move
+			INNER JOIN ".TB_PREF."stock_master item ON item.stock_id=move.stock_id
+			WHERE move.tran_date >= '$date0' AND move.tran_date <= '$date5'
+			AND (move.type=13 OR move.type=11)
+			AND (item.mb_flag='B' OR item.mb_flag='M')";
+	if ($category != 0)
+		$sql .= " AND item.category_id=".db_escape($category);
+	if ($location != 'all')
+		$sql .= " AND move.loc_code=".db_escape($location);
+	$sql .= " GROUP BY move.stock_id, move.loc_code";
 
-	$TransResult = db_query($sql, 'No transactions were returned');
-	return db_fetch($TransResult);
+	$result = db_query($sql, 'No transactions were returned');
+	$periods = array();
+	while ($row = db_fetch($result))
+		$periods[$row['stock_id']][$row['loc_code']] = $row;
+	return $periods;
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -127,6 +153,8 @@ function print_inventory_planning() {
 	$rep->NewPage();
 
 	$res = getTransactions($category, $location);
+	$availability = get_inventory_availability_maps($category, $location);
+	$periods = getPeriods($category, $location);
 	$catt = '';
 	while ($trans=db_fetch($res)) {
 		if ($catt != $trans['cat_description']) {
@@ -139,17 +167,21 @@ function print_inventory_planning() {
 			$catt = $trans['cat_description'];
 			$rep->NewLine();
 		}
-		if ($location == 'all')
-			$loc_code = '';
-		else
-			$loc_code = $location;
-		$custqty = get_demand_qty($trans['stock_id'], $loc_code);
-		$custqty += get_demand_asm_qty($trans['stock_id'], $loc_code);
-		$suppqty = get_on_porder_qty($trans['stock_id'], $loc_code);
-		$suppqty += get_on_worder_qty($trans['stock_id'], $loc_code);
-		$period = getPeriods($trans['stock_id'], $trans['loc_code']);
+		$stock_id = $trans['stock_id'];
+		$custqty = isset($availability['direct_demand'][$stock_id])
+			? $availability['direct_demand'][$stock_id] : 0;
+		$custqty += isset($availability['assembly_demand'][$stock_id])
+			? $availability['assembly_demand'][$stock_id] : 0;
+		$suppqty = isset($availability['purchase_order'][$stock_id])
+			? $availability['purchase_order'][$stock_id] : 0;
+		$suppqty += isset($availability['work_order'][$stock_id])
+			? $availability['work_order'][$stock_id] : 0;
+		$period = isset($periods[$stock_id][$trans['loc_code']])
+			? $periods[$stock_id][$trans['loc_code']]
+			: array('prd0' => 0, 'prd1' => 0, 'prd2' => 0, 'prd3' => 0, 'prd4' => 0);
 		$rep->NewLine();
-		$dec = get_qty_dec($trans['stock_id']);
+		$dec = $trans['qty_dec'] === null || $trans['qty_dec'] == -1
+			? user_qty_dec() : $trans['qty_dec'];
 		$rep->TextCol(0, 1, $trans['stock_id']);
 		$rep->TextCol(1, 2, $trans['description'].($trans['inactive']==1 ? ' ('._('Inactive').')' : ''), -1);
 		$rep->AmountCol(2, 3, $period['prd0'], $dec);
