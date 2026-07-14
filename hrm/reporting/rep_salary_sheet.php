@@ -59,9 +59,9 @@ function print_salary_sheet_report() {
     $date_col = payslip_has_column($table, 'from_date') ? 'from_date' : (payslip_has_column($table, 'tran_date') ? 'tran_date' : 'to_date');
 
     $rep = new FrontReport(_('Salary Sheet'), 'SalarySheet', user_pagesize(), 9, $orientation ? 'L' : 'P');
-    $cols = array(0, 80, 230, 340, 430, 520, 620);
-    $headers = array(_('Emp ID'), _('Employee'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));
-    $aligns = array('left', 'left', 'right', 'right', 'right', 'left');
+    $cols = array(0, 80, 220, 310, 380, 460, 520);
+    $headers = array(_('Emp ID'), _('Employee Name'), _('Gross'), _('Deductions'), _('Net'), _('Reference'));
+    $aligns = array('left', 'left', 'right', 'right', 'right', 'right');
 
     if ($orientation)
         recalculate_cols($cols);
