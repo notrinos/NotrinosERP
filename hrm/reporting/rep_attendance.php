@@ -83,8 +83,8 @@ function print_attendance_report() {
     $orientation = ($orientation ? 'L' : 'P');
     $rep = new FrontReport(_('Attendance Report'), 'AttendanceReport', user_pagesize(), 9, $orientation);
 
-    $cols = array(0, 70, 210, 330, 400, 470, 540, 620);
-    $headers = array(_('Emp ID'), _('Employee'), _('Department'), _('Worked Days'), _('Absent Days'), _('Regular Hrs'), _('Overtime Hrs'));
+    $cols = array(0, 60, 190, 290, 350, 410, 470, 530);
+    $headers = array(_('Emp ID'), _('Employee'), _('Department'), _('Worked Days'), _('Absent Days'), _('RegularHrs'), _('OvertimeHrs'));
     $aligns = array('left', 'left', 'left', 'right', 'right', 'right', 'right');
 
     $params = array(
