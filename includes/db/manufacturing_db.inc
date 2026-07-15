@@ -410,17 +410,34 @@ function check_for_recursive_bom($ultimate_parent, $component_to_check) {
 
 	/* returns true ie 1 if the bom contains the parent part as a component
 	ie the bom is recursive otherwise false ie 0 */
-
-	$sql = "SELECT component FROM ".TB_PREF."bom WHERE parent=".db_escape($component_to_check);
+	// Traverse each component only once. Existing circular BOM data must not
+	// cause an unbounded recursion while validating a new component or copying
+	// a BOM.
+	$sql = "SELECT parent, component FROM ".TB_PREF."bom";
 	$result = db_query($sql,"could not check recursive bom");
+	$components_by_parent = array();
 
-	if ($result) {
-		while ($myrow = db_fetch_row($result)) {
-			if ($myrow[0] == $ultimate_parent)
+	while ($myrow = db_fetch_row($result))
+		$components_by_parent[$myrow[0]][] = $myrow[1];
+
+	$components_to_check = array($component_to_check);
+	$visited_components = array();
+
+	while (count($components_to_check)) {
+		$current_component = array_pop($components_to_check);
+		if (isset($visited_components[$current_component]))
+			continue;
+
+		$visited_components[$current_component] = true;
+		if (!isset($components_by_parent[$current_component]))
+			continue;
+
+		foreach ($components_by_parent[$current_component] as $component) {
+			if ($component == $ultimate_parent)
 				return 1;
 
-			if (check_for_recursive_bom($ultimate_parent, $myrow[0]))
-				return 1;
+			if (!isset($visited_components[$component]))
+				$components_to_check[] = $component;
 		}
 	}
 
