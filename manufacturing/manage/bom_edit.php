@@ -39,7 +39,7 @@ function display_bom_items($selected_parent) {
 	
 	$result = get_bom($selected_parent);
 	div_start('bom');
-	start_table(TABLESTYLE, "width='60%'");
+	start_table(TABLESTYLE, "width='80%'");
 	$th = array(_('Code'), _('Description'), _('Location'), _('Work Centre'), _('Quantity'), _('Units'), '', '');
 	table_header($th);
 
@@ -62,8 +62,13 @@ function display_bom_items($selected_parent) {
 	end_table();
 	
 	if ($found) {
-		start_table(TABLESTYLE, "width='60%'");
-		stock_manufactured_items_list_row(_('Copy BOM to another manufacturable item'), 'new_stock_id', $selected_parent, false, true);
+		start_table(TABLESTYLE, "width='80%'");
+		start_row();
+		label_cell(_('Copy BOM to another manufacturable item'));
+		end_row();
+		start_row();
+		stock_manufactured_items_list_cells(null, 'new_stock_id', $selected_parent, false, true);
+		end_row();
 		end_table();
 	}
 
@@ -184,13 +189,11 @@ if (get_post('stock_id') != '') { //Parent Item selected so display bom or edit 
 	else {
 		start_row();
 		label_cell(_('Component:'), "class='label'");
+		stock_component_items_list_cells(null, 'component', $selected_parent, null, false, true);
 
-		echo '<td>';
-		echo stock_component_items_list('component', $selected_parent, null, false, true);
 		if (get_post('_component_update')) 
 			$Ajax->activate('quantity');
 		
-		echo '</td>';
 		end_row();
 	}
 
