@@ -71,8 +71,9 @@ function display_bom_items($selected_parent) {
 }
 
 function copy_bom_items($stock_id, $new_stock_id) {
-	
-	while ($myrow = db_fetch(get_bom($stock_id))) {
+	$result = get_bom($stock_id);
+
+	while ($myrow = db_fetch($result)) {
 		$_POST['component'] = $myrow['component'];
 		$_POST['loc_code'] = $myrow['loc_code'];
 		$_POST['workcentre_added'] = $myrow['workcentre_added'];
