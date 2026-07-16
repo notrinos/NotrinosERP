@@ -30,6 +30,11 @@ include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 
+if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
+    define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
+if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.0');
+
 /**
  * Payroll Formula Engine.
  *
@@ -117,7 +122,25 @@ class payroll_formula_engine {
 }
 
 /**
- * Calculate employee payslip for a period.
+ * Return the active legacy payroll compatibility contract metadata.
+ *
+ * This identifier is intentionally available without database access so
+ * calculation, posting, and regression evidence can name the exact legacy
+ * behavior being exercised.
+ *
+ * @return array
+ */
+function hrm_legacy_payroll_contract_metadata() {
+    return array(
+        'contract_id' => HRM_LEGACY_PAYROLL_CONTRACT_ID,
+        'version' => HRM_LEGACY_PAYROLL_CONTRACT_VERSION,
+        'entrypoint' => 'calculate_employee_payslip',
+        'implementation' => 'calculate_employee_payslip_legacy_v1'
+    );
+}
+
+/**
+ * Calculate an employee payslip through the frozen legacy v1 contract.
  *
  * @param array  $employee Employee row (or minimum with employee_id)
  * @param string $from_date User date format
@@ -127,6 +150,24 @@ class payroll_formula_engine {
  * @return payslip_doc|false
  */
 function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=0, $context=array()) {
+    return calculate_employee_payslip_legacy_v1($employee, $from_date, $to_date, $period_id, $context);
+}
+
+/**
+ * Implement the frozen legacy v1 employee payslip calculation behavior.
+ *
+ * Keep the public `calculate_employee_payslip()` entrypoint for all existing
+ * callers. Changes to this implementation require a new contract version and
+ * updated golden evidence.
+ *
+ * @param array  $employee Employee row (or minimum with employee_id)
+ * @param string $from_date User date format
+ * @param string $to_date User date format
+ * @param int    $period_id Payroll period id
+ * @param array  $context Optional preloaded runtime context.
+ * @return payslip_doc|false
+ */
+function calculate_employee_payslip_legacy_v1($employee, $from_date, $to_date, $period_id=0, $context=array()) {
     if (!is_array($employee) || empty($employee['employee_id']))
         return false;
 
