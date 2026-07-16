@@ -19,55 +19,104 @@ include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/migration_validators.inc');
 
-page(_($help_context = 'HRM Migration Validation'));
+header('Cache-Control: no-store, private');
+header('X-Content-Type-Options: nosniff');
 
-$results = hrm_run_migration_validations();
-$pass_count = 0;
-$warn_count = 0;
-$fail_count = 0;
+$profile = hrm_run_migration_profile();
 
-foreach ($results as $result) {
-	switch ($result['status']) {
-		case 'pass':
-			$pass_count++;
-			break;
-		case 'fail':
-			$fail_count++;
-			break;
-		default:
-			$warn_count++;
-	}
+if (get_post('download_profile')) {
+	$filename = 'hrm-migration-profile-company-'.(int)$profile['scope']['company_index'].'-'.gmdate('Ymd-His').'.json';
+	while (ob_get_level())
+		ob_end_clean();
+	header('Content-Type: application/json; charset=UTF-8');
+	header('Content-Disposition: attachment; filename="'.$filename.'"');
+	echo hrm_migration_profile_json($profile, true);
+	exit;
 }
 
-if ($fail_count > 0)
-	display_error(sprintf(_('Migration validation completed with %s failing check(s).'), $fail_count));
-elseif ($warn_count > 0)
-	display_warning(sprintf(_('Migration validation completed with %s warning(s).'), $warn_count));
+page(_($help_context = 'HRM Migration Validation'));
+
+$status_counts = $profile['summary']['status_counts'];
+$finding_count = $status_counts['finding'];
+$skipped_count = $status_counts['skipped'];
+$error_count = $status_counts['error'];
+$blocking_count = $profile['summary']['blocking_finding_count'];
+
+if ($error_count > 0 || $skipped_count > 0)
+	display_error(sprintf(_('Migration profile is incomplete: %s error(s), %s skipped check(s).'), $error_count, $skipped_count));
+elseif ($blocking_count > 0)
+	display_error(sprintf(_('Migration profile found %s blocking check(s). No migration or cutover is authorized.'), $blocking_count));
+elseif ($finding_count > 0)
+	display_warning(sprintf(_('Migration profile found %s review item(s).'), $finding_count));
 else
-	display_notification(_('Migration validation completed successfully.'));
+	display_notification(_('Migration profile completed with no aggregate anomalies.'));
 
 start_form();
 submit_center('refresh_validation', _('Re-run Validation'));
+submit_center('download_profile', _('Download Masked JSON Report'), true, _('Download aggregate counts and hashes only'), false);
 
 start_table(TABLESTYLE2, "width='95%'");
 $summary = array(
-	sprintf(_('Passed: %s'), $pass_count),
-	sprintf(_('Warnings: %s'), $warn_count),
-	sprintf(_('Failed: %s'), $fail_count)
+	sprintf(_('Passed: %s'), $status_counts['pass']),
+	sprintf(_('Findings: %s'), $finding_count),
+	sprintf(_('Skipped: %s'), $skipped_count),
+	sprintf(_('Errors: %s'), $error_count)
 );
-	label_row(_('Summary:'), implode(' | ', $summary));
-	label_row(_('Scope:'), _('Current company database with live HRM migration integrity checks.'));
+label_row(_('Summary:'), implode(' | ', $summary));
+label_row(_('Scope:'), _('Current company database; consistent read-only snapshot; aggregate evidence only.'));
+label_row(_('Profile contract:'), $profile['contract']['id'].' '.$profile['contract']['version']);
+label_row(_('Source fingerprint:'), $profile['source_fingerprint']);
+label_row(_('Profile hash:'), $profile['profile_hash']);
+label_row(_('Generated at (UTC):'), $profile['run']['generated_at_utc']);
+label_row(_('Recovery:'), _('The read-only transaction was rolled back; no source or historical payroll/accounting row was written.'));
 end_table(1);
 
 start_table(TABLESTYLE, "width='95%'");
-table_header(array(_('Validation Check'), _('Status'), _('Details')));
+table_header(array(_('Source Table'), _('Present'), _('Rows'), _('Columns'), _('Schema Hash')));
 
 $k = 0;
-foreach ($results as $result) {
+foreach ($profile['inventory']['tables'] as $table_name => $table) {
 	alt_table_row_color($k);
-	label_cell($result['title']);
-	label_cell(ucfirst($result['status']));
-	label_cell($result['details']);
+	label_cell($table_name);
+	label_cell($table['present'] ? _('Yes') : _('No'));
+	label_cell((string)$table['row_count']);
+	label_cell((string)$table['column_count']);
+	label_cell($table['schema_hash']);
+	end_row();
+}
+end_table(1);
+
+start_table(TABLESTYLE, "width='95%'");
+table_header(array(_('Formula Source'), _('Available'), _('Rows With Formula'), _('Distinct Formulas'), _('Formula Set Hash')));
+
+$k = 0;
+foreach ($profile['inventory']['formula_sources'] as $source_name => $formula_source) {
+	alt_table_row_color($k);
+	label_cell($source_name);
+	label_cell($formula_source['available'] ? _('Yes') : _('No'));
+	label_cell((string)$formula_source['formula_count']);
+	label_cell((string)$formula_source['distinct_formula_count']);
+	label_cell($formula_source['formula_set_hash']);
+	end_row();
+}
+end_table(1);
+
+start_table(TABLESTYLE, "width='95%'");
+table_header(array(_('Validation Check'), _('Family'), _('Status'), _('Count'), _('Severity'), _('Owner'), _('Details')));
+
+$k = 0;
+foreach ($profile['findings'] as $finding) {
+	alt_table_row_color($k);
+	label_cell($finding['key']);
+	label_cell(ucfirst($finding['family']));
+	label_cell(ucfirst($finding['status']));
+	label_cell((string)$finding['count']);
+	label_cell(ucfirst($finding['severity']));
+	label_cell($finding['owner']);
+	$details = _($finding['description']).' '._($finding['recommendation']);
+	if (isset($finding['missing_sources']))
+		$details .= ' '.sprintf(_('Missing source: %s'), implode(', ', $finding['missing_sources']));
+	label_cell($details);
 	end_row();
 }
 
