@@ -49,10 +49,11 @@ if (isset($_POST['Process'])) {
         display_error(_('New Department is required and must be selected.'));
         set_focus('new_department_id');
     } else {
-        $employee = get_employee_by_code($_POST['employee_id']);
+        $employee = get_employee_assignment_context_projection($_POST['employee_id']);
         if (!$employee) {
             display_error(_('Selected employee was not found.'));
         } else {
+            hrm_log_restricted_employee_projection('employee_transfer_context');
             $old_department = (int)$employee['department_id'];
             $old_position = (int)$employee['position_id'];
             $old_grade = (int)$employee['grade_id'];
@@ -101,4 +102,3 @@ submit_center('Process', _('Process Transfer'));
 end_form();
 
 end_page();
-

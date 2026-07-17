@@ -53,6 +53,7 @@ page(_($help_context = 'Manage Employees'), @$_REQUEST['popup'], false, '', $js)
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/hrm_hooks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
@@ -189,6 +190,46 @@ function collect_employee_data() {
 }
 
 /**
+ * Return only bank-detail keys present in the current request.
+ *
+ * @return array
+ */
+function collect_submitted_employee_bank_details() {
+	$submitted = array();
+	foreach (hrm_restricted_bank_detail_fields() as $field) {
+		if (array_key_exists($field, $_POST))
+			$submitted[$field] = $_POST[$field];
+	}
+
+	return $submitted;
+}
+
+/**
+ * Return only identity/tax keys present in the current request.
+ *
+ * @return array
+ */
+function collect_submitted_employee_identity_details() {
+	$submitted = array();
+	foreach (hrm_restricted_identity_detail_fields() as $field) {
+		if (array_key_exists($field, $_POST))
+			$submitted[$field] = $_POST[$field];
+	}
+
+	return $submitted;
+}
+
+/**
+ * Escape one restricted display value before it reaches a read-only label.
+ *
+ * @param string $value
+ * @return string
+ */
+function escape_employee_restricted_display($value) {
+	return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+/**
  * Validate that a child record belongs to the selected employee.
  *
  * @param array|false $record
@@ -208,6 +249,35 @@ function is_employee_child_record_accessible($record, $employee_id, $record_labe
 	}
 
 	return true;
+}
+
+/**
+ * Record an auditable employee-history row for a salary-element mutation.
+ *
+ * @param array $employee
+ * @param float|null $old_amount
+ * @param float|null $new_amount
+ * @param string $reason
+ * @return int
+ */
+function record_employee_salary_element_history($employee, $old_amount, $new_amount, $reason) {
+	if (!$employee || !isset($employee['employee_id']))
+		return 0;
+
+	return add_employee_history(
+		$employee['employee_id'],
+		HRM_HIST_SALARY_CHANGE,
+		Today(),
+		isset($employee['department_id']) ? (int)$employee['department_id'] : null,
+		isset($employee['department_id']) ? (int)$employee['department_id'] : null,
+		isset($employee['position_id']) ? (int)$employee['position_id'] : null,
+		isset($employee['position_id']) ? (int)$employee['position_id'] : null,
+		isset($employee['grade_id']) ? (int)$employee['grade_id'] : null,
+		isset($employee['grade_id']) ? (int)$employee['grade_id'] : null,
+		$old_amount,
+		$new_amount,
+		$reason
+	);
 }
 
 //======================================================================
@@ -258,11 +328,38 @@ function tab_personal($employee_id, $new_employee) {
 
 	table_section_title(_('Identification'));
 
-	text_row(_('National ID:'), 'national_id', null, 42, 100);
-	text_row(_('Passport No:'), 'passport', null, 42, 100);
-	date_row(_('Passport Expiry:'), 'passport_expiry', null, null, 0, 0, 1001);
-	text_row(_('Tax ID:'), 'tax_number', null, 42, 100);
-	text_row(_('Social Security No:'), 'social_security_no', null, 42, 100);
+	$can_view_identity_details = hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_IDENTITY,
+		HRM_FIELD_ACTION_VIEW
+	);
+	if (!$new_employee && $can_view_identity_details) {
+		$identity_labels = array(
+			'national_id' => _('National ID:'),
+			'passport' => _('Passport No:'),
+			'tax_number' => _('Tax ID:'),
+			'social_security_no' => _('Social Security No:'),
+		);
+		foreach ($identity_labels as $field => $label) {
+			$masked_value = hrm_mask_restricted_value(get_post($field));
+			label_row(
+				$label,
+				escape_employee_restricted_display(
+					$masked_value === '' ? _('Not provided') : $masked_value
+				)
+			);
+		}
+		hrm_log_sensitive_field_access(
+			HRM_FIELD_RESTRICTED_IDENTITY,
+			HRM_FIELD_ACTION_VIEW,
+			'granted_masked'
+		);
+	} else {
+		label_row(_('Identity / Tax Details:'), _('Restricted'));
+	}
+	label_row(
+		_('Identity / Tax Changes:'),
+		_('Unavailable until verification and independent approval controls are implemented.')
+	);
 
 	// ── RIGHT COLUMN ─────────────────────────────────────
 	table_section(2);
@@ -280,11 +377,40 @@ function tab_personal($employee_id, $new_employee) {
 
 	table_section_title(_('Banking'));
 
-	text_row(_('Bank Name:'), 'bank_name', null, 42, 100);
-	text_row(_('Bank Branch:'), 'bank_branch', null, 42, 100);
-	text_row(_('Account Number:'), 'bank_account', null, 42, 100);
-	text_row(_('Routing/IBAN:'), 'bank_routing', null, 42, 60);
-	payment_method_list_row(_('Payment Method:'), 'payment_method');
+	$can_view_bank_details = hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_FINANCIAL,
+		HRM_FIELD_ACTION_VIEW
+	);
+	if (!$new_employee && $can_view_bank_details) {
+		$masked_account = hrm_mask_restricted_value(get_post('bank_account'));
+		$masked_routing = hrm_mask_restricted_value(get_post('bank_routing'));
+		$payment_methods = hrm_get_payment_methods();
+		$payment_method = (int)get_post('payment_method', 0);
+		label_row(
+			_('Account Number:'),
+			escape_employee_restricted_display($masked_account === '' ? _('Not provided') : $masked_account)
+		);
+		label_row(
+			_('Routing/IBAN:'),
+			escape_employee_restricted_display($masked_routing === '' ? _('Not provided') : $masked_routing)
+		);
+		label_row(
+			_('Payment Method:'),
+			escape_employee_restricted_display(isset($payment_methods[$payment_method])
+				? $payment_methods[$payment_method] : _('Unknown'))
+		);
+		hrm_log_sensitive_field_access(
+			HRM_FIELD_RESTRICTED_FINANCIAL,
+			HRM_FIELD_ACTION_VIEW,
+			'granted_masked'
+		);
+	} else {
+		label_row(_('Bank Details:'), _('Restricted'));
+	}
+	label_row(
+		_('Bank Detail Changes:'),
+		_('Unavailable until step-up and independent approval controls are implemented.')
+	);
 
 	table_section_title(_('Emergency Contact'));
 
@@ -382,6 +508,14 @@ function tab_employment($employee_id, $new_employee) {
 function tab_salary($employee_id) {
 	global $path_to_root, $Ajax, $designer_available;
 
+	$has_manage_request = isset($_GET['edit_salary'])
+		|| isset($_GET['delete_salary'])
+		|| isset($_POST['add_salary_element']);
+	$required_action = $has_manage_request
+		? HRM_FIELD_ACTION_MANAGE : HRM_FIELD_ACTION_VIEW;
+	if (!hrm_require_sensitive_field_access(HRM_FIELD_RESTRICTED_COMPENSATION, $required_action))
+		return;
+
 	if (empty($employee_id)) {
 		hidden('NewEmpID', get_post('NewEmpID'));
 		display_note(_('Please save the employee first before configuring salary.'));
@@ -411,8 +545,25 @@ function tab_salary($employee_id) {
 		if (isset($_GET['delete_salary'])) {
 			$deleting_salary = get_employee_salary($_GET['delete_salary']);
 			if (is_employee_child_record_accessible($deleting_salary, $employee_id, _('Salary element'))) {
-				delete_employee_salary($deleting_salary['salary_id']);
-				display_notification(_('Salary element removed.'));
+				begin_transaction();
+				$deleted = delete_employee_salary($deleting_salary['salary_id']);
+				$history_id = $deleted ? record_employee_salary_element_history(
+					$emp,
+					(float)$deleting_salary['amount'],
+					null,
+					sprintf(
+						_('Employee salary element removed (salary ID %d, element ID %d).'),
+						(int)$deleting_salary['salary_id'],
+						(int)$deleting_salary['element_id']
+					)
+				) : 0;
+				if ($deleted && $history_id) {
+					commit_transaction();
+					display_notification(_('Salary element removed.'));
+				} else {
+					cancel_transaction();
+					display_error(_('Could not remove salary element with its audit history.'));
+				}
 			}
 			$Ajax->activate('_page_body');
 		}
@@ -454,6 +605,7 @@ function tab_salary($employee_id) {
 
 			if (!$input_error) {
 				if ($editing_salary) {
+					begin_transaction();
 					$ok = update_employee_salary(
 						$editing_salary['salary_id'],
 						input_num('sal_amount'),
@@ -462,11 +614,25 @@ function tab_salary($employee_id) {
 						get_post('sal_formula'),
 						get_post('sal_reference')
 					);
-					if ($ok)
+					$history_id = $ok ? record_employee_salary_element_history(
+						$emp,
+						(float)$editing_salary['amount'],
+						(float)input_num('sal_amount'),
+						sprintf(
+							_('Employee salary element updated (salary ID %d, element ID %d).'),
+							(int)$editing_salary['salary_id'],
+							(int)$editing_salary['element_id']
+						)
+					) : 0;
+					if ($ok && $history_id) {
+						commit_transaction();
 						display_notification(_('Salary element updated.'));
-					else
-						display_error(_('Could not update salary element.'));
+					} else {
+						cancel_transaction();
+						display_error(_('Could not update salary element with its audit history.'));
+					}
 				} else {
+					begin_transaction();
 					$salary_id = add_employee_salary(
 						$employee_id,
 						get_post('sal_element_id'),
@@ -476,10 +642,23 @@ function tab_salary($employee_id) {
 						get_post('sal_formula'),
 						get_post('sal_reference')
 					);
-					if ($salary_id)
+					$history_id = $salary_id ? record_employee_salary_element_history(
+						$emp,
+						null,
+						(float)input_num('sal_amount'),
+						sprintf(
+							_('Employee salary element added (salary ID %d, element ID %d).'),
+							(int)$salary_id,
+							(int)get_post('sal_element_id')
+						)
+					) : 0;
+					if ($salary_id && $history_id) {
+						commit_transaction();
 						display_notification(_('Salary element added.'));
-					else
-						display_error(_('Could not add salary element. Check effective dates and duplicates.'));
+					} else {
+						cancel_transaction();
+						display_error(_('Could not add salary element with its audit history. Check effective dates and duplicates.'));
+					}
 				}
 				unset($_POST['editing_salary_id'], $_POST['sal_element_id'], $_POST['sal_amount'], $_POST['sal_formula'], $_POST['sal_reference'], $_POST['sal_effective_from'], $_POST['sal_effective_to']);
 				$Ajax->activate('_page_body');
@@ -496,11 +675,15 @@ function tab_salary($employee_id) {
 	end_table(1);
 
 	// Display salary components after processing actions so the list is current.
-	$editable = $emp['personal_salary'] ? true : false;
+	$can_manage_salary = hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_COMPENSATION,
+		HRM_FIELD_ACTION_MANAGE
+	);
+	$editable = $emp['personal_salary'] && $can_manage_salary;
 	display_salary_components($employee_id, $editable);
 
 	// If personal salary, show add form
-	if ($emp['personal_salary']) {
+	if ($emp['personal_salary'] && $can_manage_salary) {
 		br();
 		display_heading(_('Add / Edit Salary Element'));
 
@@ -731,7 +914,6 @@ function tab_dependents($employee_id) {
 			$_POST['dep_relationship']  = $editing_dep['relationship'];
 			$_POST['dep_birth_date']    = !empty($editing_dep['birth_date']) ? sql2date($editing_dep['birth_date']) : '';
 			$_POST['dep_gender']        = $editing_dep['gender'];
-			$_POST['dep_national_id']   = $editing_dep['national_id'];
 			$_POST['dep_is_beneficiary'] = $editing_dep['is_beneficiary'];
 			$_POST['editing_dep_id']    = $editing_dep['dependent_id'];
 		}
@@ -754,6 +936,21 @@ function tab_dependents($employee_id) {
 			display_error(_('Please select a relationship.'));
 		}
 
+		$dependent_identity_data = array(
+			'national_id' => get_post('dep_national_id', ''),
+		);
+		$submitted_dependent_identity = array();
+		if (array_key_exists('dep_national_id', $_POST))
+			$submitted_dependent_identity['national_id'] = $_POST['dep_national_id'];
+		if (!hrm_enforce_restricted_identity_write(
+			$dependent_identity_data,
+			$submitted_dependent_identity,
+			$current_dependent,
+			array('national_id')
+		)) {
+			$input_error = 1;
+		}
+
 		if (!$input_error) {
 			if ($current_dependent) {
 				update_employee_dependent(
@@ -762,7 +959,7 @@ function tab_dependents($employee_id) {
 					get_post('dep_relationship'),
 					get_post('dep_birth_date'),
 					get_post('dep_gender', 0),
-					get_post('dep_national_id'),
+					$dependent_identity_data['national_id'],
 					get_post('dep_is_beneficiary', 0)
 				);
 				display_notification(_('Dependent updated.'));
@@ -773,7 +970,7 @@ function tab_dependents($employee_id) {
 					get_post('dep_relationship'),
 					get_post('dep_birth_date'),
 					get_post('dep_gender', 0),
-					get_post('dep_national_id'),
+					$dependent_identity_data['national_id'],
 					get_post('dep_is_beneficiary', 0)
 				);
 				display_notification(_('Dependent added.'));
@@ -786,7 +983,18 @@ function tab_dependents($employee_id) {
 	}
 
 	// Display existing dependents after processing so the table is current.
-	display_employee_dependents($employee_id);
+	$can_view_identity_details = hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_IDENTITY,
+		HRM_FIELD_ACTION_VIEW
+	);
+	display_employee_dependents($employee_id, $can_view_identity_details);
+	if ($can_view_identity_details) {
+		hrm_log_sensitive_field_access(
+			HRM_FIELD_RESTRICTED_IDENTITY,
+			HRM_FIELD_ACTION_VIEW,
+			'granted_masked'
+		);
+	}
 
 	// Add/Edit form
 	br();
@@ -804,7 +1012,15 @@ function tab_dependents($employee_id) {
 	table_section(2);
 
 	date_row(_('Date of Birth:'), 'dep_birth_date', '', false, 0, 0, -80);
-	text_row(_('National ID:'), 'dep_national_id', null, 42, 100);
+	$dependent_identity_value = $editing_dep && $can_view_identity_details
+		? hrm_mask_restricted_value($editing_dep['national_id']) : '';
+	label_row(
+		_('National ID:'),
+		$can_view_identity_details && $editing_dep
+			? escape_employee_restricted_display(
+				$dependent_identity_value === '' ? _('Not provided') : $dependent_identity_value
+			) : _('Restricted')
+	);
 	yesno_list_row(_('Beneficiary:'), 'dep_is_beneficiary');
 
 	end_outer_table(1);
@@ -1069,15 +1285,36 @@ if (isset($_POST['addupdate'])) {
 		set_focus('passport_expiry');
 	}
 
+	$data = array();
+	$old_emp = null;
+	if (!$input_error) {
+		$data = collect_employee_data();
+		$old_emp = !$new_employee ? get_employee_by_code($_POST['NewEmpID']) : null;
+		if (!$new_employee && !$old_emp) {
+			$input_error = 1;
+			display_error(_('Employee record could not be found.'));
+		} else {
+			$bank_write_allowed = hrm_enforce_restricted_bank_write(
+				$data,
+				collect_submitted_employee_bank_details(),
+				$old_emp
+			);
+			$identity_write_allowed = hrm_enforce_restricted_identity_write(
+				$data,
+				collect_submitted_employee_identity_details(),
+				$old_emp
+			);
+			if (!$bank_write_allowed || !$identity_write_allowed)
+				$input_error = 1;
+		}
+	}
+
 	if (!$input_error) {
 		if (check_value('del_image'))
 			del_image($_POST['NewEmpID']);
 
-		$data = collect_employee_data();
-
 		if (!$new_employee) {
 			// Track changes for history
-			$old_emp = get_employee_by_code($_POST['NewEmpID']);
 			$changes_detected = false;
 
 			if ($old_emp) {
@@ -1207,7 +1444,7 @@ if (!$employee_id) // force personal tab for new employee
 $tabs = array(
 	'tab_personal'     => array(_('&Personal'), $employee_id),
 	'tab_employment'   => array(_('E&mployment'), $employee_id),
-	'tab_salary'       => array(_('&Salary'), (user_check_access('SA_SALARYSTRUCTURE') ? $employee_id : null)),
+	'tab_salary'       => array(_('&Salary'), (hrm_user_can_access_sensitive_field(HRM_FIELD_RESTRICTED_COMPENSATION, HRM_FIELD_ACTION_VIEW) ? $employee_id : null)),
 	'tab_documents'    => array(_('&Documents'), (user_check_access('SA_EMPLOYEE') ? $employee_id : null)),
 	'tab_history'      => array(_('&History'), $employee_id),
 	'tab_dependents'   => array(_('De&pendents'), (user_check_access('SA_EMPLOYEE') ? $employee_id : null)),

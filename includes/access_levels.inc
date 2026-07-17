@@ -396,6 +396,9 @@ $security_areas =array(
 	'SA_LOANREPORT'        => array(SS_HRM_A|8,  _('Loan outstanding report')),
 	'SA_DEPTCOST'          => array(SS_HRM_A|9,  _('Department payroll cost')),
 	'SA_HRMREPORTS'        => array(SS_HRM_A|10, _('HRM print reports')),
+	'SA_HRM_VIEW_SALARY'   => array(SS_HRM_A|11, _('View restricted employee compensation')),
+	'SA_HRM_VIEW_BANK_DETAILS' => array(SS_HRM_A|12, _('View masked employee bank details')),
+	'SA_HRM_VIEW_IDENTITY_DETAILS' => array(SS_HRM_A|13, _('View masked employee identity and tax details')),
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

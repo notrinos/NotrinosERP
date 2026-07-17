@@ -15,6 +15,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 page(_("Employee Card"));
 
 /**
@@ -61,10 +62,11 @@ end_table(1);
 
 $employee_id = trim((string)get_post('employee_id', ''));
 if ($employee_id !== '' && $employee_id !== ALL_TEXT) {
-    $employee = get_employee_by_code($employee_id);
+    $employee = get_employee_profile_projection($employee_id);
     if (!$employee) {
         display_error(_('Employee was not found.'));
     } else {
+        hrm_log_restricted_employee_projection('employee_card');
         $department_name = employee_card_lookup_name('departments', 'department_id', (int)$employee['department_id'], 'department_name');
         $position_name = employee_card_lookup_name('positions', 'position_id', (int)$employee['position_id'], 'position_name');
         $grade_name = employee_card_lookup_name('pay_grades', 'grade_id', isset($employee['grade_id']) ? (int)$employee['grade_id'] : 0, 'grade_name');
@@ -113,4 +115,3 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT) {
 end_form();
 
 end_page();
-

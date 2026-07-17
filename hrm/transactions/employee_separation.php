@@ -57,7 +57,9 @@ $eos_amount = 0;
 
 if (isset($_POST['Calculate']) || isset($_POST['Process'])) {
     if ($_POST['employee_id'] != '' && $_POST['employee_id'] != ALL_TEXT && is_date($_POST['separation_date'])) {
-        $employee = get_employee_by_code($_POST['employee_id']);
+        $employee = get_employee_separation_context_projection($_POST['employee_id']);
+        if ($employee)
+            hrm_log_restricted_employee_projection('employee_separation_context');
         if ($employee && !empty($employee['hire_date'])) {
             $hire_date = sql2date($employee['hire_date']);
             if (date_comp($_POST['separation_date'], $hire_date) < 0) {
@@ -80,13 +82,14 @@ if (isset($_POST['Process'])) {
         display_error(_('Separation date is invalid.'));
         set_focus('separation_date');
     } else {
-        $employee = get_employee_by_code($_POST['employee_id']);
+        $employee = get_employee_separation_context_projection($_POST['employee_id']);
         if (!$employee) {
             display_error(_('Selected employee was not found.'));
         } elseif (!empty($employee['hire_date']) && date_comp($_POST['separation_date'], sql2date($employee['hire_date'])) < 0) {
             display_error(_('Separation date cannot be before hire date.'));
             set_focus('separation_date');
         } else {
+            hrm_log_restricted_employee_projection('employee_separation_context');
             update_employee($_POST['employee_id'], array(
                 'inactive' => 1,
                 'released_date' => $_POST['separation_date']
@@ -128,4 +131,3 @@ submit_center('Process', _('Process Separation'));
 end_form();
 
 end_page();
-

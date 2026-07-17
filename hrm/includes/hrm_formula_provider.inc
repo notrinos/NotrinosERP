@@ -60,8 +60,8 @@ function hrm_formula_designer_register_fields(
         array('namespace' => 'Employee', 'name' => 'ConfirmationDate','label' => 'Confirmation Date',         'type' => 'date',    'description' => 'Employee confirmation date.'),
         array('namespace' => 'Employee', 'name' => 'TerminationDate', 'label' => 'Termination Date',          'type' => 'date',    'description' => 'Employee termination date.'),
         array('namespace' => 'Employee', 'name' => 'IsActive',        'label' => 'Is Active',               'type' => 'boolean', 'description' => 'Whether the employee is active.'),
-        array('namespace' => 'Employee', 'name' => 'BankAccount',     'label' => 'Bank Account',            'type' => 'text',    'description' => 'Employee bank account number.',         'requiredPermission' => 'SA_HRM_VIEW_SALARY'),
-        array('namespace' => 'Employee', 'name' => 'TaxId',           'label' => 'Tax ID',                  'type' => 'text',    'description' => 'Employee tax identifier.',              'requiredPermission' => 'SA_HRM_VIEW_SALARY'),
+        array('namespace' => 'Employee', 'name' => 'BankAccount',     'label' => 'Bank Account',            'type' => 'text',    'description' => 'Employee bank account number.',         'requiredPermission' => 'SA_DENIED'),
+        array('namespace' => 'Employee', 'name' => 'TaxId',           'label' => 'Tax ID',                  'type' => 'text',    'description' => 'Employee tax identifier.',              'requiredPermission' => 'SA_DENIED'),
         array('namespace' => 'Employee', 'name' => 'EmployeeCode',    'label' => 'Employee Code',           'type' => 'text',    'description' => 'Employee code.'),
         // Payroll namespace
         array('namespace' => 'Payroll',  'name' => 'Basic',           'label' => 'Basic',                   'type' => 'number',  'description' => 'Payroll basic amount for the period.'),

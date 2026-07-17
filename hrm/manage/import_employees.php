@@ -102,8 +102,7 @@ if (isset($_POST['import_employees'])) {
                     continue;
                 }
 
-                $existing = get_employee_by_code($data['employee_id']);
-                if ($existing) {
+                if (employee_exists_by_code($data['employee_id'])) {
                     update_employee($data['employee_id'], $data);
                     $updated++;
                 } else {
@@ -135,4 +134,3 @@ submit_center('export_employees', _('Export Employees'));
 end_form();
 
 end_page();
-

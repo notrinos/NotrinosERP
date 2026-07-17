@@ -12,6 +12,7 @@
 
 include_once($path_to_root . '/admin/db/attachments_db.inc');
 include_once($path_to_root . '/includes/attachment_service.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 
 /**
  * Enhanced Employee CRUD
@@ -223,6 +224,311 @@ function get_employee_by_code($employee_id) {
 	$result = db_query($sql, 'could not get employee data');
 
 	return db_fetch_assoc($result);
+}
+
+/**
+ * Get the least-data employee projection used by profile/card outputs.
+ *
+ * The explicit column list intentionally excludes restricted compensation,
+ * bank, identity, and tax data so secondary output channels cannot inherit a
+ * complete employee row from the legacy helper.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_profile_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT e.employee_id, e.first_name, e.last_name, e.email, e.mobile,
+				e.hire_date, e.department_id, e.position_id, e.grade_id, e.inactive,
+				d.department_name, p.position_name, g.grade_name
+			FROM ".TB_PREF."employees e
+			LEFT JOIN ".TB_PREF."departments d ON e.department_id = d.department_id
+			LEFT JOIN ".TB_PREF."positions p ON e.position_id = p.position_id
+			LEFT JOIN ".TB_PREF."pay_grades g ON e.grade_id = g.grade_id
+			WHERE e.employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee profile projection');
+
+	return db_fetch_assoc($result);
+}
+
+/**
+ * Reduce an employee row to the fields rendered by the compact summary card.
+ *
+ * @param array $employee Employee source row.
+ * @return array|false
+ */
+function employee_summary_projection($employee) {
+	if (!is_array($employee))
+		return false;
+
+	$employee_id = isset($employee['employee_id'])
+		? trim((string)$employee['employee_id']) : '';
+	if ($employee_id === '')
+		return false;
+
+	return array(
+		'employee_id' => $employee_id,
+		'first_name' => isset($employee['first_name']) ? (string)$employee['first_name'] : '',
+		'middle_name' => isset($employee['middle_name']) ? (string)$employee['middle_name'] : '',
+		'last_name' => isset($employee['last_name']) ? (string)$employee['last_name'] : '',
+		'department_name' => isset($employee['department_name']) ? (string)$employee['department_name'] : '',
+		'position_name' => isset($employee['position_name']) ? (string)$employee['position_name'] : '',
+		'grade_name' => isset($employee['grade_name']) ? (string)$employee['grade_name'] : '',
+		'hire_date' => isset($employee['hire_date']) ? (string)$employee['hire_date'] : '',
+		'employment_type' => isset($employee['employment_type']) ? (int)$employee['employment_type'] : -1,
+		'released_date' => isset($employee['released_date']) ? (string)$employee['released_date'] : '',
+		'inactive' => !empty($employee['inactive']) ? 1 : 0,
+	);
+}
+
+/**
+ * Get the least-data employee projection rendered by the compact summary card.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_summary_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT e.employee_id, e.first_name, e.middle_name, e.last_name,
+			d.department_name, p.position_name, g.grade_name, e.hire_date,
+			e.employment_type, e.released_date, e.inactive
+		FROM ".TB_PREF."employees e
+		LEFT JOIN ".TB_PREF."departments d ON e.department_id = d.department_id
+		LEFT JOIN ".TB_PREF."positions p ON e.position_id = p.position_id
+		LEFT JOIN ".TB_PREF."pay_grades g ON e.grade_id = g.grade_id
+		WHERE e.employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee summary projection');
+
+	return employee_summary_projection(db_fetch_assoc($result));
+}
+
+/**
+ * Build the least-data employee directory query.
+ *
+ * The explicit projection is the repository boundary for the directory pager.
+ * It excludes compensation, bank, identity, and tax columns before the result
+ * reaches the inquiry page.
+ *
+ * @param bool $show_inactive Include inactive employees.
+ * @param string $search Search employee code, name, or business email.
+ * @return string
+ */
+function get_employee_directory_projection_sql($show_inactive = false, $search = '') {
+	$sql = "SELECT e.employee_id,
+			TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,''))) employee_name,
+			e.email, e.mobile, d.department_name, p.position_name, g.grade_name, e.inactive
+		FROM ".TB_PREF."employees e
+		LEFT JOIN ".TB_PREF."departments d ON d.department_id = e.department_id
+		LEFT JOIN ".TB_PREF."positions p ON p.position_id = e.position_id
+		LEFT JOIN ".TB_PREF."pay_grades g ON g.grade_id = e.grade_id
+		WHERE 1=1";
+
+	if (!$show_inactive)
+		$sql .= " AND e.inactive = 0";
+
+	$search = trim((string)$search);
+	if ($search !== '') {
+		$like = db_escape('%'.$search.'%');
+		$sql .= " AND (e.employee_id LIKE $like
+			OR e.first_name LIKE $like
+			OR e.last_name LIKE $like
+			OR e.email LIKE $like)";
+	}
+
+	return $sql." ORDER BY e.employee_id";
+}
+
+/**
+ * Check employee-code existence without loading a complete employee row.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return bool
+ */
+function employee_exists_by_code($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT 1 FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id)." LIMIT 1";
+	$result = db_query($sql, 'could not verify employee existence');
+
+	return $result && db_num_rows($result) > 0;
+}
+
+/**
+ * Reduce an employee row to the fields used to route salary components.
+ *
+ * This in-memory boundary prevents callers that already hold a legacy complete
+ * row from forwarding bank, identity, tax, contact, or other unrelated fields
+ * into salary-component selection.
+ *
+ * @param array $employee Employee source row.
+ * @return array|false
+ */
+function employee_salary_context_projection($employee) {
+	if (!is_array($employee))
+		return false;
+
+	$employee_id = isset($employee['employee_id'])
+		? trim((string)$employee['employee_id']) : '';
+	if ($employee_id === '')
+		return false;
+
+	return array(
+		'employee_id' => $employee_id,
+		'personal_salary' => !empty($employee['personal_salary']) ? 1 : 0,
+		'position_id' => isset($employee['position_id']) ? (int)$employee['position_id'] : 0,
+		'grade_id' => isset($employee['grade_id']) ? (int)$employee['grade_id'] : 0,
+	);
+}
+
+/**
+ * Get the least-data employee context required to route salary components.
+ *
+ * The projection contains configuration-routing identifiers only. Salary
+ * amounts remain in the existing effective-dated salary repositories, and no
+ * restricted employee bank, identity, tax, or profile value is selected.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_salary_context_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT employee_id, personal_salary, position_id, grade_id"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee salary context');
+
+	return employee_salary_context_projection(db_fetch_assoc($result));
+}
+
+/**
+ * Reduce an employee row to the assignment fields preserved in history.
+ *
+ * @param array $employee Employee source row.
+ * @return array|false
+ */
+function employee_assignment_context_projection($employee) {
+	if (!is_array($employee))
+		return false;
+
+	$employee_id = isset($employee['employee_id'])
+		? trim((string)$employee['employee_id']) : '';
+	if ($employee_id === '')
+		return false;
+
+	return array(
+		'employee_id' => $employee_id,
+		'department_id' => isset($employee['department_id']) ? (int)$employee['department_id'] : 0,
+		'position_id' => isset($employee['position_id']) ? (int)$employee['position_id'] : 0,
+		'grade_id' => isset($employee['grade_id']) ? (int)$employee['grade_id'] : 0,
+	);
+}
+
+/**
+ * Get the least-data assignment context required by employee history writes.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_assignment_context_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT employee_id, department_id, position_id, grade_id"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee assignment context');
+
+	return employee_assignment_context_projection(db_fetch_assoc($result));
+}
+
+/**
+ * Reduce an employee row to the fields required by separation processing.
+ *
+ * @param array $employee Employee source row.
+ * @return array|false
+ */
+function employee_separation_context_projection($employee) {
+	$context = employee_assignment_context_projection($employee);
+	if ($context === false)
+		return false;
+
+	$context['hire_date'] = isset($employee['hire_date']) ? (string)$employee['hire_date'] : '';
+	return $context;
+}
+
+/**
+ * Get the least-data assignment and service-date context for separation.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_separation_context_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT employee_id, department_id, position_id, grade_id, hire_date"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee separation context');
+
+	return employee_separation_context_projection(db_fetch_assoc($result));
+}
+
+/**
+ * Reduce an employee row to fields used by leave-policy entitlement.
+ *
+ * @param array $employee Employee source row.
+ * @return array|false
+ */
+function employee_leave_policy_context_projection($employee) {
+	if (!is_array($employee))
+		return false;
+
+	$employee_id = isset($employee['employee_id'])
+		? trim((string)$employee['employee_id']) : '';
+	if ($employee_id === '')
+		return false;
+
+	return array(
+		'employee_id' => $employee_id,
+		'grade_id' => isset($employee['grade_id']) ? (int)$employee['grade_id'] : 0,
+		'employment_type' => isset($employee['employment_type']) ? (int)$employee['employment_type'] : -1,
+		'hire_date' => isset($employee['hire_date']) ? (string)$employee['hire_date'] : '',
+		'probation_end_date' => isset($employee['probation_end_date']) ? (string)$employee['probation_end_date'] : '',
+	);
+}
+
+/**
+ * Get the least-data employee context used by leave-policy entitlement.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_leave_policy_context_projection($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	$sql = "SELECT employee_id, grade_id, employment_type, hire_date, probation_end_date"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+	$result = db_query($sql, 'could not get employee leave policy context');
+
+	return employee_leave_policy_context_projection(db_fetch_assoc($result));
 }
 
 /**
@@ -451,11 +757,13 @@ function get_employee_salary_components($employee_id, $as_of_date=null) {
 	if (array_key_exists($cache_key, $cache))
 		return $cache[$cache_key];
 
-	$emp = get_employee_by_code($employee_id);
+	$emp = get_employee_salary_context_projection($employee_id);
 	if (!$emp) {
 		$cache[$cache_key] = array();
 		return $cache[$cache_key];
 	}
+	if (function_exists('hrm_log_restricted_employee_projection'))
+		hrm_log_restricted_employee_projection('salary_component_routing');
 
 	if ($emp['personal_salary']) {
 		// Use personal salary table
@@ -559,11 +867,11 @@ function get_salary_components_for_employees($employees, $as_of_date=null) {
 
 	foreach ((array)$employees as $employee) {
 		if (is_array($employee)) {
-			$employee_id = isset($employee['employee_id']) ? trim((string)$employee['employee_id']) : '';
-			$employee_row = $employee;
+			$employee_row = employee_salary_context_projection($employee);
+			$employee_id = $employee_row ? $employee_row['employee_id'] : '';
 		} else {
 			$employee_id = trim((string)$employee);
-			$employee_row = $employee_id === '' ? false : get_employee_by_code($employee_id);
+			$employee_row = $employee_id === '' ? false : get_employee_salary_context_projection($employee_id);
 		}
 
 		if ($employee_id === '' || !is_array($employee_row))
@@ -592,6 +900,9 @@ function get_salary_components_for_employees($employees, $as_of_date=null) {
 		}
 		$structure_groups[$group_key]['employees'][] = $employee_id;
 	}
+
+	if (!empty($components_by_employee) && function_exists('hrm_log_restricted_employee_projection'))
+		hrm_log_restricted_employee_projection('salary_component_routing');
 
 	if (!empty($personal_ids)) {
 		$id_list = array();

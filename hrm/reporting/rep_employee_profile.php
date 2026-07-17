@@ -19,6 +19,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 
 /**
  * Print employee profile report.
@@ -51,12 +52,13 @@ function print_employee_profile_report() {
         return;
     }
 
-    $row = get_employee_by_code($employee_id);
+    $row = get_employee_profile_projection($employee_id);
     if (!$row) {
         $rep->TextCol(0, 2, _('Employee not found.'));
         $rep->End();
         return;
     }
+    hrm_log_restricted_employee_projection('employee_profile_report');
 
     $fields = array(
         _('Employee ID') => $row['employee_id'],

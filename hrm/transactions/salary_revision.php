@@ -85,11 +85,12 @@ if (isset($_POST['Process'])) {
     $_POST['reason'] = $reason;
 
     if (!$has_error) {
-        $employee = get_employee_by_code($_POST['employee_id']);
+        $employee = get_employee_assignment_context_projection($_POST['employee_id']);
         if (!$employee) {
             display_error(_('Selected employee was not found.'));
             $has_error = true;
         } else {
+            hrm_log_restricted_employee_projection('salary_revision_context');
             $old_salary = get_employee_total_salary($_POST['employee_id'], $_POST['effective_date']);
             $basic_element_id = get_basic_pay_element_id();
 
@@ -175,4 +176,3 @@ echo '<button type="submit" class="button">'._('View Salary Change History').'</
 echo '</form>';
 
 end_page();
-

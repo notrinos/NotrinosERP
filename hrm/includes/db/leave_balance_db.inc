@@ -240,7 +240,7 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
  * @return array|false
  */
 function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $as_of_date='') {
-    if (!function_exists('get_employee_by_code') || !function_exists('get_leave_policy_for_employee'))
+    if (!function_exists('get_employee_leave_policy_context_projection') || !function_exists('get_leave_policy_for_employee'))
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
     list($fiscal_year_start, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
@@ -248,9 +248,11 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
     if ($as_of_sql === '')
         $as_of_sql = $fiscal_year_end;
 
-    $employee = get_employee_by_code($employee_id);
+    $employee = get_employee_leave_policy_context_projection($employee_id);
     if (!$employee)
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+
+    hrm_log_restricted_employee_projection('leave_entitlement_context');
 
     $policy = get_leave_policy_for_employee($employee, (int)$leave_id, $as_of_sql);
     if (!$policy)

@@ -42,7 +42,7 @@ if (isset($_POST['add_course'])) {
 if (isset($_POST['assign_training'])) {
     if (trim(get_post('employee_id')) == '' || get_post('employee_id') == ALL_TEXT)
         display_error(_('Please select an employee.'));
-    elseif (!get_employee_by_code(get_post('employee_id')))
+    elseif (!employee_exists_by_code(get_post('employee_id')))
         display_error(_('Selected employee was not found.'));
     elseif ((int)get_post('course_id', 0) <= 0)
         display_error(_('Please select a training course.'));

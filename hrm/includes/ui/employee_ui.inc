@@ -21,7 +21,7 @@ function display_salary_components($employee_id, $editable=false) {
 	global $Ajax;
 
 	$components = get_employee_salary_components($employee_id);
-	$emp = get_employee_by_code($employee_id);
+	$emp = get_employee_salary_context_projection($employee_id);
 	
 	if (empty($components)) {
 		if ($emp && $emp['personal_salary']) {
@@ -204,7 +204,14 @@ function display_employee_documents($employee_id, $options = array()) {
 //------------------------------------------------------------------
 // Display employee dependents table
 //------------------------------------------------------------------
-function display_employee_dependents($employee_id) {
+/**
+ * Display dependents without exposing full identity values.
+ *
+ * @param string $employee_id
+ * @param bool $can_view_identity_details
+ * @return void
+ */
+function display_employee_dependents($employee_id, $can_view_identity_details = false) {
 	$deps = get_employee_dependents($employee_id);
 	$genders = hrm_get_gender_types();
 
@@ -225,7 +232,16 @@ function display_employee_dependents($employee_id) {
 		label_cell(ucfirst($dep['relationship']));
 		label_cell(isset($genders[$dep['gender']]) ? $genders[$dep['gender']] : '-');
 		label_cell(!empty($dep['birth_date']) ? sql2date($dep['birth_date']) : '-');
-		label_cell($dep['national_id']);
+		if ($can_view_identity_details) {
+			$masked_national_id = hrm_mask_restricted_value($dep['national_id']);
+			label_cell(htmlspecialchars(
+				$masked_national_id === '' ? _('Not provided') : $masked_national_id,
+				ENT_QUOTES,
+				'UTF-8'
+			));
+		} else {
+			label_cell(_('Restricted'));
+		}
 		label_cell($dep['is_beneficiary'] ? _('Yes') : _('No'));
 
 		$actions = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_dependents&edit_dep=".$dep['dependent_id'])."'>"._('Edit')."</a>"
@@ -411,8 +427,10 @@ function display_employee_transactions($employee_id) {
 // Employee summary card display (compact info box)
 //------------------------------------------------------------------
 function display_employee_summary_card($employee_id) {
-	$emp = get_employee_by_code($employee_id);
+	$emp = get_employee_summary_projection($employee_id);
 	if (!$emp) return;
+
+	hrm_log_restricted_employee_projection('employee_summary');
 
 	start_table(TABLESTYLE2);
 
@@ -434,4 +452,3 @@ function display_employee_summary_card($employee_id) {
 
 	end_table(1);
 }
-

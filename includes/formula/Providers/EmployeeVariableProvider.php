@@ -34,9 +34,9 @@
  *   Employee.TaxId             — Tax identification number
  *   Employee.EmployeeCode      — Employee code / payroll ID
  *
- * Security note: Restricted fields (BasicSalary, GrossSalary, BankAccount)
- * require SA_HRM_VIEW_SALARY permission. The permission check is enforced
- * at resolution time.
+ * Security note: compensation fields require SA_HRM_VIEW_SALARY. Full bank
+ * and tax values remain denied even when a caller has a masked-view policy.
+ * A missing security context fails closed for every restricted field.
  *
  * @package Formula\Providers
  * @since   2.0.0
@@ -44,15 +44,18 @@
 class Formula_Providers_EmployeeVariableProvider implements Formula_Contracts_VariableProviderInterface
 {
     /**
-     * Restricted fields requiring SA_HRM_VIEW_SALARY permission.
+     * Restricted fields and their required security permissions.
+     *
+     * SA_DENIED is an explicit containment marker. It prevents any masked
+     * employee-page permission from becoming full-value formula authority.
      *
      * @var string[]
      */
-    private static $restrictedFields = array(
-        'BASICSALARY',
-        'GROSSSALARY',
-        'BANKACCOUNT',
-        'TAXID',
+    private static $restrictedFieldPermissions = array(
+        'BASICSALARY' => 'SA_HRM_VIEW_SALARY',
+        'GROSSSALARY' => 'SA_HRM_VIEW_SALARY',
+        'BANKACCOUNT' => 'SA_DENIED',
+        'TAXID' => 'SA_DENIED',
     );
 
     /**
@@ -76,14 +79,17 @@ class Formula_Providers_EmployeeVariableProvider implements Formula_Contracts_Va
     {
         $key = strtoupper((string)$identifier);
 
-        // Check permissions for restricted fields
-        if (in_array($key, self::$restrictedFields, true)) {
+        // Check permissions for restricted fields before reading business data.
+        if (isset(self::$restrictedFieldPermissions[$key])) {
+            $requiredPermission = self::$restrictedFieldPermissions[$key];
             $securityCtx = $context->getSecurityContext();
-            if ($securityCtx !== null && !$securityCtx->hasPermission('SA_HRM_VIEW_SALARY')) {
+            if ($requiredPermission === 'SA_DENIED'
+                || $securityCtx === null
+                || !$securityCtx->hasPermission($requiredPermission)) {
                 throw new Formula_Exceptions_PermissionDeniedException(
                     'Permission denied accessing Employee.' . $identifier
-                    . '. SA_HRM_VIEW_SALARY is required.',
-                    'SA_HRM_VIEW_SALARY',
+                    . '. ' . $requiredPermission . ' is required.',
+                    $requiredPermission,
                     'Employee.' . $identifier
                 );
             }

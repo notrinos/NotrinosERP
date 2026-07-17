@@ -95,7 +95,7 @@ function hrm_has_paid_date_in_range($employee_id, $from_date, $to_date) {
  * @return array<int,array>
  */
 function hrm_get_filtered_employees($department_id, $employee_id='') {
-    $sql = "SELECT e.*, CONCAT(e.first_name, ' ', e.last_name) as employee_name
+    $sql = "SELECT e.employee_id, CONCAT(e.first_name, ' ', e.last_name) as employee_name
         FROM ".TB_PREF."employees e
         WHERE !e.inactive";
 
@@ -113,6 +113,9 @@ function hrm_get_filtered_employees($department_id, $employee_id='') {
     while ($row = db_fetch($result)) {
         $rows[] = $row;
     }
+
+    if (!empty($rows))
+        hrm_log_restricted_employee_projection('attendance_roster');
 
     return $rows;
 }
@@ -404,4 +407,3 @@ submit_center('save_attendance', _('Save Attendance'), true, '', 'default');
 
 end_form();
 end_page();
-
