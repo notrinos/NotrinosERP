@@ -109,6 +109,26 @@ class Formula_Diagnostics_ExplainResult
     }
 
     /**
+     * Get the final evaluation result.
+     *
+     * @return mixed
+     */
+    public function getFinalValue()
+    {
+        return $this->result;
+    }
+
+    /**
+     * Get the evaluation steps.
+     *
+     * @return array
+     */
+    public function getSteps()
+    {
+        return $this->steps;
+    }
+
+    /**
      * Build a human-readable explanation string.
      *
      * Example output:

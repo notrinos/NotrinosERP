@@ -88,6 +88,36 @@ class Formula_Compiler_ValidationResult
     }
 
     /**
+     * Whether the formula passed validation (zero errors).
+     *
+     * @return bool
+     */
+    public function isValid()
+    {
+        return $this->isValid;
+    }
+
+    /**
+     * Get all errors.
+     *
+     * @return array
+     */
+    public function getErrors()
+    {
+        return $this->errors;
+    }
+
+    /**
+     * Get all warnings.
+     *
+     * @return array
+     */
+    public function getWarnings()
+    {
+        return $this->warnings;
+    }
+
+    /**
      * Merge another validation result into this one.
      *
      * Combines errors and warnings. If the other result has errors,
