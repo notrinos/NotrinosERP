@@ -67,7 +67,9 @@ function display_salary_components($employee_id, $editable=false) {
 			$actions = '';
 			if (isset($comp['salary_id'])) {
 				$actions = "<a href='".$_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_salary&edit_salary=".$comp['salary_id']."'>"._('Edit')."</a>"
-					." | <a href='".$_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_salary&delete_salary=".$comp['salary_id']."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+					." | <button type='submit' class='editbutton' name='delete_salary".(int)$comp['salary_id']."' value='1'"
+					." onclick=\"return confirm('".htmlspecialchars(_('Are you sure?'), ENT_QUOTES, 'UTF-8')."');\">"
+					.htmlspecialchars(_('Delete'), ENT_QUOTES, 'UTF-8')."</button>";
 			}
 			label_cell($actions, "align='center' nowrap");
 		}

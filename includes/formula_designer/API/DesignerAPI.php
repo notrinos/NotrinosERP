@@ -10,6 +10,16 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+if (!defined('FORMULA_DESIGNER_AUTHORIZED_CONTROLLER')) {
+    http_response_code(404);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
+    error_log('[formula_designer_security] outcome=denied_direct_endpoint endpoint=designer method=' . strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET'));
+    echo json_encode(array('ok' => false, 'error' => 'Not found.'));
+    exit;
+}
+
 require_once dirname(__DIR__) . '/designer_bootstrap.inc';
 
 /**
@@ -87,6 +97,10 @@ class FormulaDesigner_API_DesignerAPI
      */
     public static function respond(array $payload, $status_code = 200)
     {
+        if (function_exists('formula_designer_api_json_response')) {
+            formula_designer_api_json_response($payload, $status_code);
+        }
+
         if (!headers_sent()) {
             http_response_code((int)$status_code);
             header('Content-Type: application/json; charset=UTF-8');

@@ -234,7 +234,7 @@ function print_aged_supplier_analysis() {
 		$pg->skin      = $SysPrefs->graph_skin;
 		$pg->built_in  = false;
 		$pg->latin_notation = ($SysPrefs->decseps[user_dec_sep()] != '.');
-		$filename = company_path().'/pdf_files/'. random_id().'.png';
+		$filename = report_artifact_private_directory().'/'.random_id().'.png';
 		$pg->display($filename, true);
 		$w = $pg->width / 1.5;
 		$h = $pg->height / 1.5;

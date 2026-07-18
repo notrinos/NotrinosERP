@@ -10,7 +10,9 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-define('FORMULA_DESIGNER_API_NO_AUTO_RUN', true);
+if (!defined('FORMULA_DESIGNER_API_NO_AUTO_RUN')) {
+    define('FORMULA_DESIGNER_API_NO_AUTO_RUN', true);
+}
 require_once dirname(__FILE__) . '/DesignerAPI.php';
 require_once dirname(__DIR__) . '/Validator/DesignerPreSubmitValidator.php';
 
@@ -60,4 +62,6 @@ class FormulaDesigner_API_DesignerValidateAPI
     }
 }
 
-FormulaDesigner_API_DesignerValidateAPI::handleRequest();
+if (!defined('FORMULA_DESIGNER_API_NO_AUTO_RUN')) {
+    FormulaDesigner_API_DesignerValidateAPI::handleRequest();
+}

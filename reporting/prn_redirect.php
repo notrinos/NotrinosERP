@@ -17,6 +17,7 @@ $path_to_root = '..';
 global $page_security;
 $page_security = 'SA_OPEN';	// this level is later overriden in rep file
 include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
 
 if (user_save_report_selections() > 0 && isset($_POST['REP_ID'])) {	// save parameters from Report Center
 	for($i=0; $i<12; $i++) {
@@ -27,23 +28,37 @@ if (user_save_report_selections() > 0 && isset($_POST['REP_ID'])) {	// save para
 	}
 }	
 
-if (isset($_GET['xls']) || isset($_GET['xml'])) {
-	$filename = $_GET['filename'];
-	$unique_name = preg_replace('/[^0-9_a-z.\-]/i', '', $_GET['unique']);
-	$path =  company_path(). '/pdf_files/';
-	// Validate the resolved path stays within pdf_files directory (defense-in-depth).
-	$real_path = realpath($path . $unique_name);
-	$real_pdf_dir = realpath($path);
-	if ($real_path === false || $real_pdf_dir === false
-		|| strpos($real_path, $real_pdf_dir . DIRECTORY_SEPARATOR) !== 0) {
-		die('Invalid report file path.');
+if (isset($_GET['artifact'])) {
+	$grant = report_artifact_consume((string)$_GET['artifact']);
+	if ($grant === false) {
+		http_response_code(404);
+		header('Cache-Control: no-store, private');
+		header('X-Content-Type-Options: nosniff');
+		echo _('The report artifact is unavailable or no longer authorized.');
+		exit();
 	}
-	header('Content-type: '. (isset($_GET['xls']) ? 'application/vnd.ms-excel' : 'text/xml'));
-	header('Content-Disposition: attachment; filename='.$filename );
-	header('Expires: 0');
-	header('Cache-Control: must-revalidate, post-check=0,pre-check=0');
-	header('Pragma: public');
-	echo file_get_contents($real_path);
+
+	while (ob_get_level() > 0)
+		@ob_end_clean();
+	header('Content-Type: '.$grant['mime_type']);
+	header('Content-Disposition: attachment; filename="'.$grant['filename'].'"');
+	header('Content-Length: '.(int)$grant['bytes']);
+	header('Cache-Control: no-store, private');
+	header('Pragma: no-cache');
+	header('X-Content-Type-Options: nosniff');
+	readfile($grant['path']);
+	@unlink($grant['path']);
+	exit();
+}
+
+// Legacy filename-bearing downloads are intentionally invalidated. Generated
+// artifacts must be private, principal-bound, permission-revalidated grants.
+if (isset($_GET['xls']) || isset($_GET['xml']) || isset($_GET['unique'])) {
+	report_artifact_log('legacy_download_denied', 'unknown', 'legacy_unbound');
+	http_response_code(404);
+	header('Cache-Control: no-store, private');
+	header('X-Content-Type-Options: nosniff');
+	echo _('The report artifact is unavailable or no longer authorized.');
 	exit();
 }
 

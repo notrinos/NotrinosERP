@@ -55,9 +55,10 @@ class FormulaDesigner_Renderer_DesignerRenderer
             ? (string)$this->options['instanceId']
             : 'fd-' . substr(md5($this->module . '|' . $this->formula), 0, 8);
         $base_url = isset($this->options['baseUrl']) ? rtrim((string)$this->options['baseUrl'], '/') : '';
-        $field_api_url = $base_url . '/includes/formula_designer/API/DesignerFieldListAPI.php?module=' . rawurlencode($this->module);
-        $function_api_url = $base_url . '/includes/formula_designer/API/DesignerFunctionListAPI.php?module=' . rawurlencode($this->module);
-        $validate_api_url = $base_url . '/includes/formula_designer/API/DesignerValidateAPI.php';
+        $controller_url = $base_url . '/formula_designer_api.php';
+        $field_api_url = $controller_url . '?endpoint=fields&module=' . rawurlencode($this->module);
+        $function_api_url = $controller_url . '?endpoint=functions&module=' . rawurlencode($this->module);
+        $validate_api_url = $controller_url . '?endpoint=validate';
         $textarea_name = isset($this->options['textareaName']) && $this->options['textareaName'] !== ''
             ? (string)$this->options['textareaName']
             : 'formula_designer_formula';
@@ -520,7 +521,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     private function renderTemplateBrowser()
     {
         $template_api_url = isset($this->options['baseUrl'])
-            ? rtrim((string)$this->options['baseUrl'], '/') . '/includes/formula_designer/API/DesignerTemplateAPI.php?module=' . rawurlencode($this->module)
+            ? rtrim((string)$this->options['baseUrl'], '/') . '/formula_designer_api.php?endpoint=templates&module=' . rawurlencode($this->module)
             : '';
 
         $parts = array();
@@ -570,7 +571,7 @@ class FormulaDesigner_Renderer_DesignerRenderer
     private function renderAIPanel()
     {
         $ai_api_url = isset($this->options['baseUrl'])
-            ? rtrim((string)$this->options['baseUrl'], '/') . '/includes/formula_designer/API/DesignerAIApi.php'
+            ? rtrim((string)$this->options['baseUrl'], '/') . '/formula_designer_api.php?endpoint=ai'
             : '';
 
         $parts = array();

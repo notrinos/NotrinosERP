@@ -12,7 +12,9 @@
 include_once($path_to_root . '/reporting/includes/Workbook.php');
 include_once($path_to_root . '/admin/db/company_db.inc');
 include_once($path_to_root . '/admin/db/fiscalyears_db.inc');
+include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
 include_once($path_to_root . '/config.php');
+include_once($path_to_root . '/includes/ui/ui_globals.inc');
 define('MAX_ROW_SHEET', 65530);
 // xls version
 class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
@@ -25,6 +27,8 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 	var $filename;
 	var $unique_name;
 	var $path;
+	var $rep_id;
+	var $security_area;
 	var $code;
 	var $bottomMargin = 0;
 	var $lineHeight;
@@ -85,8 +89,15 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		$rtl = ($_SESSION['language']->dir == 'rtl');
 		$this->code = strtolower($_SESSION['language']->encoding);
 		$this->filename = $filename.'.xls';
+		$this->rep_id = isset($_POST['REP_ID']) ? $_POST['REP_ID'] : 'unknown';
+		$this->security_area = $page_security;
 		$this->unique_name = random_id().'.xls';
-		$this->path = company_path(). '/pdf_files';
+		$this->path = report_artifact_private_directory();
+		if ($this->path === false) {
+			display_error(_('The private report directory is unavailable.'));
+			end_page();
+			exit;
+		}
 		parent::__construct($this->path.'/'.$this->unique_name);
 		if ($this->code != 'iso-8859-1')
 			$this->setVersion(8); // set biff version to 8 (0x0006 internal)
@@ -648,21 +659,20 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 			$this->sheet->writeBlank($this->y, $i, $this->formatFooter);
 		$this->sheet->mergeCells($this->y, 0, $this->y, $this->numcols - 1);
 		$this->close();
-		// first have a look through the directory, 
-		// and remove old temporary pdfs
-		if ($d = @opendir($this->path)) {
-			while (($file = readdir($d)) !== false) {
-				if (!is_file($this->path.'/'.$file) || $file == 'index.php') continue;
-				// then check to see if this one is too old
-				$ftime = filemtime($this->path.'/'.$file);
-				// seems 3 min is enough for any report download, isn't it?
-				if (time()-$ftime > 180)
-					unlink($this->path.'/'.$file);
-			}
-			closedir($d);
+		$token = report_artifact_register(
+			$this->path.'/'.$this->unique_name,
+			$this->filename,
+			'application/vnd.ms-excel',
+			$this->rep_id,
+			$this->security_area,
+			'interactive_report_download'
+		);
+		if ($token === false) {
+			display_error(_('The generated report could not be registered for secure download.'));
+			exit;
 		}
 
-		meta_forward($path_to_root.'/reporting/prn_redirect.php', "xls=1&filename=$this->filename&unique=$this->unique_name");
+		meta_forward($path_to_root.'/reporting/prn_redirect.php', 'artifact='.urlencode($token));
 		exit();
 	}
 }

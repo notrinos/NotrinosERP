@@ -10,8 +10,9 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once dirname(__DIR__) . '/designer_bootstrap.inc';
-define('FORMULA_DESIGNER_API_NO_AUTO_RUN', true);
+if (!defined('FORMULA_DESIGNER_API_NO_AUTO_RUN')) {
+    define('FORMULA_DESIGNER_API_NO_AUTO_RUN', true);
+}
 require_once dirname(__FILE__) . '/DesignerAPI.php';
 
 /**
@@ -439,4 +440,6 @@ class FormulaDesigner_API_DesignerExplainAPI
     }
 }
 
-FormulaDesigner_API_DesignerExplainAPI::handleRequest();
+if (!defined('FORMULA_DESIGNER_API_NO_AUTO_RUN')) {
+    FormulaDesigner_API_DesignerExplainAPI::handleRequest();
+}

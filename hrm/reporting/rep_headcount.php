@@ -12,6 +12,8 @@
 $page_security = 'SA_HRMREPORTS';
 if (!isset($path_to_root) || $path_to_root == '')
     $path_to_root  = '../..';
+include_once($path_to_root.'/hrm/reporting/report_controller_security.inc');
+hrm_require_report_controller(892);
 // NOTE: This file is included by reporting/rep892.php
 // $path_to_root and session are already initialized when called via report framework.
 // Direct access uses the above declarations.

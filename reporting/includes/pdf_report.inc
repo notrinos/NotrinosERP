@@ -21,6 +21,7 @@
 include_once(dirname(__FILE__).'/class.pdf.inc');
 include_once(dirname(__FILE__).'/printer_class.inc');
 include_once($path_to_root . '/reporting/includes/reporting.inc');
+include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
 include_once($path_to_root . '/admin/db/company_db.inc');
 include_once($path_to_root . '/admin/db/fiscalyears_db.inc');
 include_once($path_to_root . '/admin/db/print_profiles_db.inc');
@@ -864,7 +865,7 @@ class FrontReport extends Cpdf {
 	}
 
 	function End($email=0, $subject='') {
-		global $SysPrefs, $path_to_root;
+		global $SysPrefs, $path_to_root, $page_security;
 
 		if (!empty($SysPrefs->prefs['print_dialog_direct']))		
 			$this->includeJS('print();'); // force to open print dialog
@@ -877,15 +878,21 @@ class FrontReport extends Cpdf {
 			echo '</body></html>';
 		}
 		else {
-			$dir =  company_path(). '/pdf_files';
-			//save the file
-			if (!file_exists($dir))
-				mkdir ($dir,0777);
-			
-			// do not use standard filenames or your sensitive company data 
-			// are world readable
+			$dir = report_artifact_private_directory();
+			if ($dir === false) {
+				display_error(_('The private report directory is unavailable.'));
+				exit;
+			}
+			// Save to a private temporary path for email, printer, or authorized download.
 			$fname = $dir.'/'.random_id().'.pdf';
 			$this->Output($fname, 'F');
+			$pdf_bytes = @filesize($fname);
+			if ($pdf_bytes === false || $pdf_bytes <= 0 || $pdf_bytes > REPORT_ARTIFACT_MAX_BYTES) {
+				@unlink($fname);
+				report_artifact_log('generation_denied_size', $this->rep_id, 'pdf_output', $pdf_bytes === false ? 0 : $pdf_bytes);
+				display_error(_('The generated report exceeds the secure output limit.'));
+				exit;
+			}
 
 			if ($email == 1) {
 				$contactData = array();
@@ -956,23 +963,43 @@ class FrontReport extends Cpdf {
 				if ($printer == false) {
 					if (in_ajax()) {
 						global $Ajax;
-
-						if (user_rep_popup()) 
-							$Ajax->popup($fname); // when embeded pdf viewer used
+						$token = report_artifact_register(
+							$fname,
+							$this->filename,
+							'application/pdf',
+							$this->rep_id,
+							$page_security,
+							'ajax_report_download'
+						);
+						if ($token === false) {
+							display_error(_('The generated report could not be registered for secure download.'));
+							exit;
+						}
+						$download_url = $path_to_root.'/reporting/prn_redirect.php?artifact='.urlencode($token);
+						if (user_rep_popup())
+							$Ajax->popup($download_url);
 						else
-							$Ajax->redirect($fname); // otherwise use faster method
+							$Ajax->redirect($download_url);
 					}
 					else {
+						$pdf_contents = @file_get_contents($fname);
+						@unlink($fname);
+						if ($pdf_contents === false) {
+							display_error(_('The generated report could not be read for secure output.'));
+							exit;
+						}
 						// Legacy report files still include UTF-8 BOM output, so clear buffers before streaming PDF headers.
 						while (ob_get_level() > 0)
 							@ob_end_clean();
 						
 						header('Content-type: application/pdf');
-						header('Content-Disposition: inline; filename='.$this->filename);
+						header('Content-Disposition: inline; filename="'.report_artifact_safe_filename($this->filename, 'pdf').'"');
 						header('Expires: 0');
-						header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-						header('Pragma: public');
-						$this->Stream($this->filename);
+						header('Cache-Control: no-store, private');
+						header('Pragma: no-cache');
+						header('X-Content-Type-Options: nosniff');
+						header('Content-Length: '.(int)$pdf_bytes);
+						echo $pdf_contents;
 					}
 				}
 				else { // send report to network printer
@@ -983,22 +1010,12 @@ class FrontReport extends Cpdf {
 						display_error($error);
 					else
 						display_notification(_('Report has been sent to network printer ').$printer['name']);
+					@unlink($fname);
 				}
 			}
-			// first have a look through the directory, 
-			// and remove old temporary pdfs
-			if ($d = @opendir($dir)) {
-				while (($file = readdir($d)) !== false) {
-					if (!is_file($dir.'/'.$file) || $file == 'index.php') continue;
-				// then check to see if this one is too old
-					$ftime = filemtime($dir.'/'.$file);
-				// seems 3 min is enough for any report download, isn't it?
-					if (time()-$ftime > 180){
-						unlink($dir.'/'.$file);
-					}
-				}
-				closedir($d);
-			}
+			if ($email == 1 && is_file($fname))
+				@unlink($fname);
+			report_artifact_cleanup();
 		}
 	}
 }

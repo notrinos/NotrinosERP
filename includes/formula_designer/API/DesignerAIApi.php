@@ -10,6 +10,16 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+if (!defined('FORMULA_DESIGNER_AUTHORIZED_CONTROLLER')) {
+    http_response_code(404);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
+    error_log('[formula_designer_security] outcome=denied_direct_endpoint endpoint=ai method=' . strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET'));
+    echo json_encode(array('success' => false, 'errorMessage' => 'Not found.'));
+    exit;
+}
+
 require_once dirname(__FILE__) . '/../designer_bootstrap.inc';
 
 // Ensure AI classes are loaded
@@ -307,6 +317,9 @@ class FormulaDesigner_API_DesignerAIApi
      */
     private static function respondSuccess(array $data)
     {
+        if (function_exists('formula_designer_api_json_response')) {
+            formula_designer_api_json_response(array_merge(array('success' => true), $data), 200);
+        }
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(array_merge(array('success' => true), $data));
         exit;
@@ -321,6 +334,12 @@ class FormulaDesigner_API_DesignerAIApi
      */
     private static function respondError($message, $httpCode = 400)
     {
+        if (function_exists('formula_designer_api_json_response')) {
+            formula_designer_api_json_response(array(
+                'success' => false,
+                'errorMessage' => $message,
+            ), $httpCode);
+        }
         http_response_code($httpCode);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(array(

@@ -82,95 +82,25 @@ class HrmNotificationProvider implements NotificationProvider
 	 */
 	public function getItems($limit)
 	{
-		global $path_to_root;
-
 		$stats = $this->get_hrm_alert_counts();
-		$items = array(
-			array(
-				'id'      => 'hrm-leave-pending',
-				'title'   => _('Pending Leave Approvals'),
-				'summary' => sprintf(_('%d leave requests awaiting approval'), (int)$stats['pending_leave_requests']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/leave_requests.php',
-				'type'    => 'pending',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-overtime-pending',
-				'title'   => _('Pending Overtime Approvals'),
-				'summary' => sprintf(_('%d overtime requests awaiting approval'), (int)$stats['pending_overtime_requests']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/overtime_requests.php',
-				'type'    => 'pending',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-loan-pending',
-				'title'   => _('Pending Loan Approvals'),
-				'summary' => sprintf(_('%d loan applications awaiting approval'), (int)$stats['pending_loan_applications']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/employee_loans.php',
-				'type'    => 'pending',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-payslip-draft',
-				'title'   => _('Draft Payslips'),
-				'summary' => sprintf(_('%d payslips pending finalization'), (int)$stats['draft_payslips']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/manage/payslips.php',
-				'type'    => 'pending',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-attendance-missing',
-				'title'   => _('Missing Attendance Today'),
-				'summary' => sprintf(_('%d employees have not recorded attendance today'), (int)$stats['missing_attendance_today']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/attendance.php',
-				'type'    => 'warning',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-documents-expiring',
-				'title'   => _('Expiring Employee Documents'),
-				'summary' => sprintf(_('%d employee documents expire in next 30 days'), (int)$stats['documents_expiring']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/employee_documents.php',
-				'type'    => 'warning',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-probation-ending',
-				'title'   => _('Probation Periods Ending'),
-				'summary' => sprintf(_('%d employees reach end of probation in next 30 days'), (int)$stats['probation_ending']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/employee_inquiry.php',
-				'type'    => 'warning',
-				'is_read' => false,
-			),
-			array(
-				'id'      => 'hrm-appraisal-pending',
-				'title'   => _('Pending Appraisals'),
-				'summary' => sprintf(_('%d employee appraisals awaiting approval'), (int)$stats['pending_appraisals']),
-				'time'    => '',
-				'url'     => $path_to_root . '/hrm/inquiry/appraisals.php',
-				'type'    => 'pending',
-				'is_read' => false,
-			),
-		);
-
-		$filtered = array();
-		foreach ($items as $item) {
-			if (preg_match('/(\d+)/', $item['summary'], $matches) && (int)$matches[1] <= 0)
+		$items = array();
+		foreach ($this->get_allowed_category_definitions() as $key => $definition) {
+			$count = isset($stats[$key]) ? (int)$stats[$key] : 0;
+			if ($count <= 0)
 				continue;
-			$filtered[] = $item;
+			$items[] = array(
+				'id' => $definition['id'],
+				'title' => $definition['title'],
+				'summary' => sprintf($definition['summary'], $count),
+				'time' => '',
+				'url' => $definition['url'],
+				'type' => $definition['type'],
+				'is_read' => false,
+			);
 		}
 
-		if ((int)$limit > 0)
-			$filtered = array_slice($filtered, 0, (int)$limit);
-
-		return $filtered;
+		$limit = max(1, min(8, (int)$limit));
+		return array_slice($items, 0, $limit);
 	}
 
 	/**
@@ -179,7 +109,79 @@ class HrmNotificationProvider implements NotificationProvider
 	public function getViewAllUrl()
 	{
 		global $path_to_root;
-		return $path_to_root . '/hrm/dashboard/hrm_dashboard.php';
+		$definitions = $this->get_allowed_category_definitions();
+		if (!empty($definitions)) {
+			$first = reset($definitions);
+			return $first['url'];
+		}
+		return $path_to_root . '/index.php';
+	}
+
+	/**
+	 * Return the exact page-capability and valid-route contract for HRM alerts.
+	 *
+	 * @return array
+	 */
+	private function get_category_definitions()
+	{
+		global $path_to_root;
+		return array(
+			'pending_leave_requests' => array('id' => 'hrm-leave-pending', 'area' => 'SA_LEAVEAPPROVE', 'title' => _('Pending Leave Approvals'), 'summary' => _('%d leave requests awaiting approval'), 'url' => $path_to_root.'/hrm/transactions/leave_approval.php?sel_app=hrm', 'type' => 'pending'),
+			'pending_overtime_requests' => array('id' => 'hrm-overtime-pending', 'area' => 'SA_OVERTIMEAPPROVE', 'title' => _('Pending Overtime Approvals'), 'summary' => _('%d overtime requests awaiting approval'), 'url' => $path_to_root.'/hrm/transactions/overtime_approval.php?sel_app=hrm', 'type' => 'pending'),
+			'pending_loan_applications' => array('id' => 'hrm-loan-pending', 'area' => 'SA_LOAN', 'title' => _('Pending Loan Applications'), 'summary' => _('%d loan applications awaiting review'), 'url' => $path_to_root.'/hrm/transactions/loan_request.php?sel_app=hrm', 'type' => 'pending'),
+			'draft_payslips' => array('id' => 'hrm-payslip-draft', 'area' => 'SA_PAYSLIP', 'title' => _('Draft Payslips'), 'summary' => _('%d payslips pending finalization'), 'url' => $path_to_root.'/hrm/transactions/payslip.php?NewPayslip=Yes&sel_app=hrm', 'type' => 'pending'),
+			'missing_attendance_today' => array('id' => 'hrm-attendance-missing', 'area' => 'SA_ATTINQUIRY', 'title' => _('Missing Attendance Today'), 'summary' => _('%d employees have not recorded attendance today'), 'url' => $path_to_root.'/hrm/inquiry/attendance_inquiry.php?sel_app=hrm', 'type' => 'warning'),
+			'documents_expiring' => array('id' => 'hrm-documents-expiring', 'area' => 'SA_EMPLOYEE', 'title' => _('Expiring Employee Documents'), 'summary' => _('%d employee documents expire in next 30 days'), 'url' => $path_to_root.'/hrm/manage/employees.php?_tabs_sel=tab_documents&sel_app=hrm', 'type' => 'warning'),
+			'probation_ending' => array('id' => 'hrm-probation-ending', 'area' => 'SA_EMPLOYEEREP', 'title' => _('Probation Periods Ending'), 'summary' => _('%d employees reach end of probation in next 30 days'), 'url' => $path_to_root.'/hrm/inquiry/employee_directory.php?sel_app=hrm', 'type' => 'warning'),
+			'pending_appraisals' => array('id' => 'hrm-appraisal-pending', 'area' => 'SA_EMPLOYEE', 'title' => _('Pending Appraisals'), 'summary' => _('%d employee appraisals awaiting approval'), 'url' => $path_to_root.'/hrm/manage/appraisals.php?sel_app=hrm', 'type' => 'pending'),
+		);
+	}
+
+	/**
+	 * Check the provider actor and current session capability for one category.
+	 *
+	 * @param string $area
+	 * @return bool
+	 */
+	private function can_access_area($area)
+	{
+		return isset($_SESSION['wa_current_user'])
+			&& $_SESSION['wa_current_user']->logged_in()
+			&& (int)$_SESSION['wa_current_user']->user === $this->user_id
+			&& $_SESSION['wa_current_user']->can_access_page($area);
+	}
+
+	/**
+	 * Filter alert definitions before any category count query runs.
+	 *
+	 * @return array
+	 */
+	private function get_allowed_category_definitions()
+	{
+		$allowed = array();
+		foreach ($this->get_category_definitions() as $key => $definition) {
+			if ($this->can_access_area($definition['area']))
+				$allowed[$key] = $definition;
+		}
+		return $allowed;
+	}
+
+	/**
+	 * Record the capability-filtered notification category set without counts or PII.
+	 *
+	 * @param array $allowed
+	 * @return void
+	 */
+	private function log_scope_decision($allowed)
+	{
+		$company = isset($_SESSION['wa_current_user']->company)
+			? (int)$_SESSION['wa_current_user']->company : -1;
+		error_log(sprintf(
+			'[HRM_NOTIFICATION_SECURITY] actor_id=%d company=%d allowed_categories=%d outcome=filtered',
+			$this->user_id,
+			$company,
+			count($allowed)
+		));
 	}
 
 	/**
@@ -218,6 +220,8 @@ class HrmNotificationProvider implements NotificationProvider
 	{
 		$today         = date2sql(Today());
 		$thirty_days   = date('Y-m-d', strtotime($today . ' +30 days'));
+		$allowed       = $this->get_allowed_category_definitions();
+		$this->log_scope_decision($allowed);
 
 		$counts = array(
 			'pending_leave_requests'     => 0,
@@ -232,7 +236,8 @@ class HrmNotificationProvider implements NotificationProvider
 
 		// ---- Pending Leave Requests ----
 		// Count from approval_drafts (approval workflow) + direct table (no workflow)
-		if ($this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
+		if (isset($allowed['pending_leave_requests'])
+			&& $this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
 			$sql = "SELECT COUNT(DISTINCT d.id)
 				FROM " . TB_PREF . "approval_drafts d
 				INNER JOIN " . TB_PREF . "approval_levels al
@@ -246,7 +251,7 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// Also count from leave_requests table directly (no-approval-workflow case)
-		if ($this->table_exists(TB_PREF . 'leave_requests')) {
+		if (isset($allowed['pending_leave_requests']) && $this->table_exists(TB_PREF . 'leave_requests')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "leave_requests
 				WHERE status = 0";
@@ -256,7 +261,8 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Pending Overtime Requests ----
-		if ($this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
+		if (isset($allowed['pending_overtime_requests'])
+			&& $this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
 			$sql = "SELECT COUNT(DISTINCT d.id)
 				FROM " . TB_PREF . "approval_drafts d
 				INNER JOIN " . TB_PREF . "approval_levels al
@@ -269,7 +275,7 @@ class HrmNotificationProvider implements NotificationProvider
 			$counts['pending_overtime_requests'] = (int)$this->scalar($sql, 'could not count pending overtime approvals');
 		}
 
-		if ($this->table_exists(TB_PREF . 'overtime_requests')) {
+		if (isset($allowed['pending_overtime_requests']) && $this->table_exists(TB_PREF . 'overtime_requests')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "overtime_requests
 				WHERE status = 0";
@@ -279,7 +285,8 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Pending Loan Applications ----
-		if ($this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
+		if (isset($allowed['pending_loan_applications'])
+			&& $this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
 			$sql = "SELECT COUNT(DISTINCT d.id)
 				FROM " . TB_PREF . "approval_drafts d
 				INNER JOIN " . TB_PREF . "approval_levels al
@@ -292,7 +299,7 @@ class HrmNotificationProvider implements NotificationProvider
 			$counts['pending_loan_applications'] = (int)$this->scalar($sql, 'could not count pending loan approvals');
 		}
 
-		if ($this->table_exists(TB_PREF . 'employee_loans')) {
+		if (isset($allowed['pending_loan_applications']) && $this->table_exists(TB_PREF . 'employee_loans')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "employee_loans
 				WHERE status = 0";
@@ -302,7 +309,7 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Draft Payslips ----
-		if ($this->table_exists(TB_PREF . 'payslips')) {
+		if (isset($allowed['draft_payslips']) && $this->table_exists(TB_PREF . 'payslips')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "payslips
 				WHERE status = 0";
@@ -310,7 +317,8 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Missing Attendance Today ----
-		if ($this->table_exists(TB_PREF . 'employees') && $this->table_exists(TB_PREF . 'attendance')) {
+		if (isset($allowed['missing_attendance_today'])
+			&& $this->table_exists(TB_PREF . 'employees') && $this->table_exists(TB_PREF . 'attendance')) {
 			$sql = "SELECT COUNT(DISTINCT e.employee_id)
 				FROM " . TB_PREF . "employees e
 				WHERE e.inactive = 0
@@ -323,7 +331,7 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Expiring Employee Documents ----
-		if ($this->table_exists(TB_PREF . 'employee_documents')) {
+		if (isset($allowed['documents_expiring']) && $this->table_exists(TB_PREF . 'employee_documents')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "employee_documents
 				WHERE expiry_date IS NOT NULL
@@ -333,7 +341,8 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Probation Periods Ending ----
-		if ($this->table_exists(TB_PREF . 'employees') && $this->column_exists(TB_PREF . 'employees', 'probation_end_date')) {
+		if (isset($allowed['probation_ending'])
+			&& $this->table_exists(TB_PREF . 'employees') && $this->column_exists(TB_PREF . 'employees', 'probation_end_date')) {
 			$sql = "SELECT COUNT(*)
 				FROM " . TB_PREF . "employees
 				WHERE inactive = 0
@@ -344,7 +353,8 @@ class HrmNotificationProvider implements NotificationProvider
 		}
 
 		// ---- Pending Appraisals ----
-		if ($this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
+		if (isset($allowed['pending_appraisals'])
+			&& $this->table_exists(TB_PREF . 'approval_drafts') && $this->table_exists(TB_PREF . 'approval_levels')) {
 			$sql = "SELECT COUNT(DISTINCT d.id)
 				FROM " . TB_PREF . "approval_drafts d
 				INNER JOIN " . TB_PREF . "approval_levels al

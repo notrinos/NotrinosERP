@@ -1984,6 +1984,9 @@
 			module: this.root.getAttribute('data-module') || ''
 		};
 		var csrfInput = this.form ? this.form.querySelector('input[name="_token"]') : null;
+		if (!csrfInput) {
+			csrfInput = document.querySelector('input[name="_token"]');
+		}
 
 		if (csrfInput && csrfInput.value) {
 			payload._token = csrfInput.value;

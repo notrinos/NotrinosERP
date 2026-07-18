@@ -17,4 +17,5 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 // Include the named HRM report implementation
+define('HRM_REPORT_CONTROLLER_ID', 886);
 require_once($path_to_root.'/hrm/reporting/rep_employee_list.php');

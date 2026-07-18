@@ -147,6 +147,7 @@
             }
 
             // Send AJAX request
+            var csrfInput = document.querySelector('input[name="_token"]');
             $.ajax({
                 url: this.endpointUrl,
                 type: 'POST',
@@ -155,7 +156,8 @@
                     description: description,
                     module: module,
                     availableVariables: availableVariables,
-                    availableFunctions: []
+                    availableFunctions: [],
+                    _token: csrfInput && csrfInput.value ? csrfInput.value : ''
                 },
                 success: function (response) {
                     self.hideTyping();
@@ -200,12 +202,16 @@
             this.isProcessing = true;
             this.showTyping();
 
+            var csrfInput = document.querySelector('input[name="_token"]');
+
             $.ajax({
                 url: this.endpointUrl,
                 type: 'POST',
                 data: {
                     action: 'convert_excel',
-                    excel_formula: excelFormula
+                    excel_formula: excelFormula,
+                    module: this.designer.config ? this.designer.config.module : 'hrm',
+                    _token: csrfInput && csrfInput.value ? csrfInput.value : ''
                 },
                 success: function (response) {
                     self.hideTyping();

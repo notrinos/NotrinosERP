@@ -510,6 +510,7 @@ function tab_salary($employee_id) {
 
 	$has_manage_request = isset($_GET['edit_salary'])
 		|| isset($_GET['delete_salary'])
+		|| find_submit('delete_salary') != -1
 		|| isset($_POST['add_salary_element']);
 	$required_action = $has_manage_request
 		? HRM_FIELD_ACTION_MANAGE : HRM_FIELD_ACTION_VIEW;
@@ -528,6 +529,18 @@ function tab_salary($employee_id) {
 
 	// If personal salary, process actions before rendering the current list.
 	if ($emp['personal_salary']) {
+		// Salary deletion is a state-changing action and must never execute from
+		// a bookmarked or crafted GET request. Keep the old parameter as an
+		// explicit denial so undocumented clients cannot silently mutate data.
+		if (isset($_GET['delete_salary'])) {
+			hrm_log_sensitive_field_access(
+				HRM_FIELD_RESTRICTED_COMPENSATION,
+				HRM_FIELD_ACTION_MANAGE,
+				'denied_invalid_method'
+			);
+			display_error(_('Salary element removal requires a confirmed form submission.'));
+		}
+
 		if (isset($_GET['edit_salary'])) {
 			$editing_salary = get_employee_salary($_GET['edit_salary']);
 			if (is_employee_child_record_accessible($editing_salary, $employee_id, _('Salary element'))) {
@@ -541,9 +554,11 @@ function tab_salary($employee_id) {
 			}
 		}
 
-		// Handle delete salary element
-		if (isset($_GET['delete_salary'])) {
-			$deleting_salary = get_employee_salary($_GET['delete_salary']);
+		// Handle POST/CSRF-protected salary element deletion.
+		$delete_salary_id = find_submit('delete_salary');
+		if ($delete_salary_id != -1) {
+			$deleting_salary = $delete_salary_id > 0
+				? get_employee_salary($delete_salary_id) : false;
 			if (is_employee_child_record_accessible($deleting_salary, $employee_id, _('Salary element'))) {
 				begin_transaction();
 				$deleted = delete_employee_salary($deleting_salary['salary_id']);
@@ -559,6 +574,11 @@ function tab_salary($employee_id) {
 				) : 0;
 				if ($deleted && $history_id) {
 					commit_transaction();
+					hrm_log_sensitive_field_access(
+						HRM_FIELD_RESTRICTED_COMPENSATION,
+						HRM_FIELD_ACTION_MANAGE,
+						'granted_salary_delete'
+					);
 					display_notification(_('Salary element removed.'));
 				} else {
 					cancel_transaction();

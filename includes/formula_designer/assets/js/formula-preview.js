@@ -175,6 +175,10 @@
             module: module,
             sampleValues: sampleValues
         };
+        var csrfInput = document.querySelector('input[name="_token"]');
+        if (csrfInput && csrfInput.value) {
+            payload._token = csrfInput.value;
+        }
 
         JsHttpRequest.query(
             window.FORMULA_DESIGNER_EXPLAIN_URL || getDefaultPreviewUrl($container),
@@ -235,6 +239,10 @@
             module: module,
             sampleValues: sampleValues
         };
+        var csrfInput = document.querySelector('input[name="_token"]');
+        if (csrfInput && csrfInput.value) {
+            payload._token = csrfInput.value;
+        }
 
         JsHttpRequest.query(
             window.FORMULA_DESIGNER_EXPLAIN_URL || getDefaultPreviewUrl($container),
@@ -498,7 +506,7 @@
      */
     function getDefaultPreviewUrl($container) {
         var url = $container.attr('data-validate-api-url') || '';
-        return url.replace(/DesignerValidateAPI\.php$/i, 'DesignerExplainAPI.php');
+        return url.replace(/endpoint=validate(?:&.*)?$/i, 'endpoint=explain');
     }
 
     // -------------------------------------------------------------------
