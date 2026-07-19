@@ -11,21 +11,26 @@
 ***********************************************************************/
 define('VARLIB_PATH', $path_to_root.'/tmp');
 define('VARLOG_PATH', $path_to_root.'/tmp');
-define('SECURE_ONLY', null);
+include_once($path_to_root.'/includes/session_security.inc');
 
 class SessionManager {
 	function sessionStart($name, $limit=0, $path='/', $domain=null, $secure=null) {
+		if (!session_https_transport_allowed($secure)) {
+			if (!headers_sent())
+				header('HTTP/1.1 426 Upgrade Required');
+			echo 'HTTPS is required for this deployment.';
+			exit;
+		}
+
 		// Set the cookie name
 		session_name($name);
 
 		// Set SSL level
-		$https = isset($secure) ? $secure : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+		$https = session_transport_is_https($secure);
 
-		// Set session cookie options
-		if (version_compare(PHP_VERSION, '5.2', '<')) // avoid failure on older php versions
-			session_set_cookie_params($limit, $path, $domain, $https);
-		else
-			session_set_cookie_params($limit, $path, $domain, $https, true);
+		// Set the browser cookie and HTTPS transport policy before session output.
+		session_configure_cookie_policy($limit, $path, $domain, $https);
+		session_send_transport_security_header($https);
 
 		session_start();
 
@@ -62,10 +67,21 @@ class SessionManager {
 		return true;
 	}
 
-	function regenerateSession() {
+	function regenerateSession($invalidate_old_session = false) {
+		if ($invalidate_old_session) {
+			unset($_SESSION['OBSOLETE']);
+			unset($_SESSION['EXPIRES']);
+			if (!session_regenerate_id(true))
+				return false;
+
+			$_SESSION['IPaddress'] = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+			$_SESSION['userAgent'] = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+			return true;
+		}
+
 		// If this session is obsolete it means there already is a new id
 		if (isset($_SESSION['OBSOLETE']) && ($_SESSION['OBSOLETE'] == true))
-			return;
+			return true;
 
 		// Set current session to expire in 10 seconds
 		$_SESSION['OBSOLETE'] = true;
@@ -84,6 +100,7 @@ class SessionManager {
 		// Now we unset the obsolete and expiration values for the session we want to keep
 		unset($_SESSION['OBSOLETE']);
 		unset($_SESSION['EXPIRES']);
+		return true;
 	}
 
 	function validateSession() {
@@ -114,6 +131,7 @@ function output_html($text) {
 function kill_login() {
 	session_unset();
 	session_destroy();
+	session_expire_browser_cookie();
 }
 
 //----------------------------------------------------------------------------------------
@@ -131,29 +149,20 @@ function login_fail() {
 	die();
 }
 
-function password_reset_fail() {
-	global $path_to_root;
-	
-	echo "<center><br><br><font size='5' color='red'><b>"._('Incorrect Email') . '<b></font><br><br>';
-	echo '<b>'._('The email address does not exist in the system, or is used by more than one user.') . '<b><br><br>';
+//----------------------------------------------------------------------------------------
 
-	echo _('Plase try again or contact your system administrator to obtain new password.');
-	echo "<br><a href='".$path_to_root."/index.php?reset=1'>"._('Try again') . '</a>';
-	echo '</center>';
-
-	kill_login();
-	die();
-}
-
-function password_reset_success() {
+/**
+ * Fail closed when an authenticated session cannot be rotated.
+ *
+ * @return void
+ */
+function login_session_rotation_fail() {
 	global $path_to_root;
 
-	echo "<center><br><br><font size='5' color='green'><b>"._('New password sent').'<b></font><br><br>';
-	echo '<b>'._('A new password has been sent to your mailbox.').'<b><br><br>';
-
-	echo "<br><a href='".$path_to_root."/index.php'>"._('Login here').'</a>';
-	echo '</center>';
-	
+	header('HTTP/1.1 500 Internal Server Error');
+	echo '<center><br><br><b>'._('The secure login session could not be created.').'</b><br><br>';
+	echo _('Please try again. If the problem continues, contact your system administrator.');
+	echo "<br><a href='".$path_to_root."/index.php'>"._('Try again').'</a></center>';
 	kill_login();
 	die();
 }
@@ -343,6 +352,8 @@ include_once($path_to_root.'/NotrinosERP.php');
 include_once($path_to_root.'/admin/db/security_db.inc');
 include_once($path_to_root.'/includes/lang/language.inc');
 include_once($path_to_root.'/config_db.php');
+if (!defined('SECURE_ONLY'))
+	define('SECURE_ONLY', null);
 include_once($path_to_root.'/includes/ajax.inc');
 include_once($path_to_root.'/includes/ui/ui_msgs.inc');
 include_once($path_to_root.'/includes/prefs/sysprefs.inc');
@@ -423,6 +434,7 @@ if (isset($dflt_lang) && isset($installed_languages)) {
 include_once($path_to_root.'/includes/access_levels.inc');
 include_once($path_to_root.'/version.php');
 include_once($path_to_root.'/includes/main.inc');
+include_once($path_to_root.'/includes/session_registry.inc');
 include_once($path_to_root.'/includes/app_entries.inc');
 include_once($path_to_root.'/includes/approval/approval_workflow.inc');
 
@@ -499,29 +511,10 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 	install_hooks();
 
 	if (!$_SESSION['wa_current_user']->logged_in()) {
-		if (@$SysPrefs->allow_password_reset && !$SysPrefs->allow_demo_mode && (isset($_GET['reset']) || isset($_POST['email_entry_field']))) {
-			if (!isset($_POST['email_entry_field'])) {
-				include($path_to_root.'/access/password_reset.php');
-				exit();
-			}
-			else {
-				if (isset($_POST['company_login_nickname']) && !isset($_POST['company_login_name'])) {
-					for ($i = 0; $i < count($db_connections); $i++) {
-						if ($db_connections[$i]['name'] == $_POST['company_login_nickname']) {
-							$_POST['company_login_name'] = $i;
-							unset($_POST['company_login_nickname']);
-							break 1; // cannot pass variables to break from PHP v5.4 onwards
-						}
-					}
-				}
-				$_succeed = isset($db_connections[$_POST['company_login_name']]) &&
-				$_SESSION['wa_current_user']->reset_password($_POST['company_login_name'],
-				$_POST['email_entry_field']);
-				if ($_succeed)
-					password_reset_success();
-
-				password_reset_fail();
-			}
+		if (isset($_GET['reset']) || isset($_POST['email_entry_field']) || isset($_POST['SubmitReset'])) {
+			session_log_security_event('denied_legacy_password_reset');
+			include($path_to_root.'/access/password_reset.php');
+			exit();
 		}
 		// Show login screen
 		if (!isset($_POST['user_name_entry_field']) or $_POST['user_name_entry_field'] == '') {
@@ -544,6 +537,18 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 				}
 			}
 			$succeed = isset($db_connections[$_POST['company_login_name']]) && $_SESSION['wa_current_user']->login($_POST['company_login_name'], $_POST['user_name_entry_field'], $_POST['password']);
+			if ($succeed) {
+				if (!$Session_manager->regenerateSession(true)) {
+					session_log_security_event('denied_login_session_rotation_failed');
+					login_session_rotation_fail();
+				}
+				session_log_security_event('login_session_rotated');
+				$registry_result = session_registry_register_current_session();
+				if ($registry_result === false) {
+					session_log_security_event('denied_login_session_registration_failed');
+					login_session_rotation_fail();
+				}
+			}
 			// select full vs fallback ui mode on login
 			$_SESSION['wa_current_user']->ui_mode = $_POST['ui_mode'];
 			if (!$succeed) {
@@ -572,6 +577,14 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		db_set_encoding($_SESSION['language']->encoding);
 
 		$SysPrefs->refresh();
+		$registry_result = session_registry_validate_current_session();
+		if ($registry_result === false) {
+			session_log_security_event('denied_session_invalid_or_revoked');
+			header('HTTP/1.1 401 Authorization Required');
+			kill_login();
+			header('Location: '.$path_to_root.'/index.php');
+			exit;
+		}
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && !check_csrf_token()) {
 			$post_keys = array_keys($_POST);

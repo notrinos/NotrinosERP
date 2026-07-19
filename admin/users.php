@@ -52,18 +52,50 @@ function can_process($new) {
 	return true;
 }
 
+/**
+ * Render and process the user-specific active-status control.
+ *
+ * Status mutation uses the authenticated-session revocation boundary instead
+ * of the generic record helper used by non-security tables.
+ *
+ * @param int $id
+ * @param bool $value
+ * @return void
+ */
+function user_inactive_control_cell($id, $value) {
+	$name = 'Inactive'.$id;
+	$value = $value ? 1 : 0;
+	if (check_value('show_inactive')) {
+		if (isset($_POST['LInact'][$id])
+			&& (get_post('_Inactive'.$id.'_update') || get_post('Update'))
+			&& check_value('Inactive'.$id) != $value) {
+			if (update_user_inactive($id, !$value))
+				$value = !$value;
+			else
+				display_error(_('The user status could not be updated securely.'));
+		}
+		echo '<td align="center">'.checkbox(null, $name, $value, true, '')
+			.hidden("LInact[$id]", $value, false).'</td>';
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 
 if (($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') && check_csrf_token()) {
 
 	if (can_process($Mode == 'ADD_ITEM')) {
 		if ($selected_id != -1) {
-			update_user_prefs($selected_id, get_post(array('login_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
+			$updated = update_user_prefs($selected_id, get_post(array('login_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
 
-			if ($_POST['password'] != '')
-				update_user_password($selected_id, $_POST['login_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
+			if ($updated && $_POST['password'] != '')
+				$updated = update_user_password($selected_id, $_POST['login_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
 
-			display_notification_centered(_('The selected user has been updated.'));
+			if ($updated) {
+				display_notification_centered(_('The selected user has been updated.'));
+				$Mode = 'RESET';
+			}
+			else
+				display_error(_('The selected user could not be updated securely. No further changes were attempted.'));
 		} 
 		else {
 			add_user($_POST['login_id'], $_POST['real_name'], password_hash($_POST['password'], PASSWORD_DEFAULT), $_POST['phone'], $_POST['email'], $_POST['role_id'], $_POST['language'], $_POST['print_profile'], check_value('rep_popup'), $_POST['pos']);
@@ -74,8 +106,8 @@ if (($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') && check_csrf_token()) {
 			update_user_prefs($id, array_merge($prefs, get_post(array('print_profile', 'rep_popup' => 0, 'language'))));
 
 			display_notification_centered(_('A new user has been added.'));
+			$Mode = 'RESET';
 		}
-		$Mode = 'RESET';
 	}
 }
 
@@ -88,8 +120,10 @@ if ($Mode == 'Delete' && check_csrf_token()) {
 		display_error(_('Cannot delete this user because entries are associated with this user.'));
 	}
 	if ($cancel_delete == 0) {
-		delete_user($selected_id);
-		display_notification_centered(_('User has been deleted.'));
+		if (delete_user($selected_id))
+			display_notification_centered(_('User has been deleted.'));
+		else
+			display_error(_('The user could not be deleted securely.'));
 	}
 	$Mode = 'RESET';
 }
@@ -136,7 +170,7 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['role']);
 	
 	if ($not_me)
-		inactive_control_cell($myrow['id'], $myrow['inactive'], 'users', 'id');
+		user_inactive_control_cell($myrow['id'], $myrow['inactive']);
 	elseif (check_value('show_inactive'))
 		label_cell('');
 

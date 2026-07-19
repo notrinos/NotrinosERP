@@ -16,6 +16,11 @@ $page_security = 'SA_OPEN';
 $path_to_root = '..';
 
 include($path_to_root.'/includes/session.inc');
+if (isset($_SESSION['wa_current_user']) && $_SESSION['wa_current_user']->logged_in()) {
+	set_global_connection(user_company());
+	db_set_encoding($_SESSION['language']->encoding);
+	session_registry_revoke_current_session('logout');
+}
 add_js_file('login.js');
 include($path_to_root.'/includes/page/header.inc');
 
@@ -29,5 +34,4 @@ echo "<a class='logout-login-link' href='".$path_to_root."/index.php'>"._('Click
 echo "</div>\n";
 
 end_page(false, true);
-session_unset();
-@session_destroy();
+kill_login();

@@ -29,8 +29,6 @@ if ($SysPrefs->allow_demo_mode == true)
 	$demo_text = _('Login as user: demouser and password: password');
 else {
 	$demo_text = _('Please login here');
-	if (@$SysPrefs->allow_password_reset)
-		$demo_text .= ' '._('or')." <a href='".$path_to_root."/index.php?reset=1'>"._('request new password')."</a>";
 }
 
 if (check_faillog()) {

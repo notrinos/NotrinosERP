@@ -1,116 +1,33 @@
 <?php
-/**********************************************************************
-	Copyright (C) NotrinosERP.
-	Released under the terms of the GNU General Public License, GPL, 
-	as published by the Free Software Foundation, either version 3 
-	of the License, or (at your option) any later version.
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
-***********************************************************************/
+/**
+ * Retired anonymous password-by-email compatibility page.
+ *
+ * No account lookup, password mutation, or email is performed. A replacement
+ * recovery flow must use verified identity and single-use hashed material.
+ */
 if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_to_root']))
 	die(_('Restricted access'));
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/page/header.inc');
 
-$js = "<script>
-function defaultCompany() {
-	document.forms[0].company_login_name.options[".user_company()."].selected = true;
-}
-</script>";
-add_js_file('login.js');
-
-if (!isset($def_coy))
-	$def_coy = 0;
 $def_theme = 'default';
-
-$login_timeout = $_SESSION['wa_current_user']->last_act;
-
-$title = $SysPrefs->app_title.' '.$version.' - '._('Password reset');
+$title = $SysPrefs->app_title.' '.$version.' - '._('Password recovery unavailable');
 $encoding = isset($_SESSION['language']->encoding) ? $_SESSION['language']->encoding : 'iso-8859-1';
 $rtl = isset($_SESSION['language']->dir) ? $_SESSION['language']->dir : 'ltr';
-$onload = !$login_timeout ? "onload='defaultCompany()'" : '';
-
-if (!headers_sent())
-	header("X-Frame-Options: SAMEORIGIN");
-
-echo "<!DOCTYPE html>\n";
-echo "<html dir='".$rtl."' >\n";
-echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>".$title."</title>\n";
-echo "<meta charset='".$encoding."' >\n";
-echo "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'> \n";
-echo "<link href='".$path_to_root."/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
-send_scripts();
-echo $js;
-echo "</head>\n";
-
-echo "<body id='loginscreen' ".$onload.">\n";
-
-echo "<div class='login-title-bar'>" . htmlspecialchars($title) . "</div>\n";
-
-echo "<div class='login-card'>\n";
-start_form(false, @$_SESSION['timeout']['uri'], 'resetform');
-
-// Logo
-echo "<div class='login-logo'>";
-echo "<a target='_blank' href='".$SysPrefs->power_url."'><img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP' height='50'></a>";
-echo "</div>\n";
-
-// Subtitle
-echo "<div class='login-subtitle'>"._('Version').' '.$version.'   Build '.$SysPrefs->build_version.' - '._('Password reset')."</div>\n";
-
-echo "<input type='hidden' id='ui_mode' name='ui_mode' value='".fallback_mode()."'>\n";
-
-// Email field
-echo "<div class='login-field'><div class='input_container'>".default_theme_icon('mail', '', _('Email'));
-echo "<input required class='input' id='email' name='email_entry_field' type='text' placeholder='"._('Email')."'></div></div>\n";
-
-// Company selector
-$coy = user_company();
-if (!isset($coy))
-	$coy = $def_coy;
-echo "<div class='login-field'><div class='input_container'>".default_theme_icon('building', '', _('Company'));
-if (!@$SysPrefs->text_company_selection) {
-	echo "<select name='company_login_name'>\n";
-	for ($i = 0; $i < count($db_connections); $i++)
-		echo "<option value=".$i.' '.($i==$coy ? 'selected' : '').'>'.$db_connections[$i]['name'].'</option>';
-	echo "</select>\n";
+if (!headers_sent()) {
+	header('X-Frame-Options: SAMEORIGIN');
+	header('Cache-Control: no-store');
 }
-else
-	echo "<input required type='text' name='company_login_nickname' placeholder='"._('Company')."'>";
-echo "</div></div>\n";
 
-// Status message
-echo "<div class='login-message' id='log_msg'>"._('Please enter your e-mail')."</div>\n";
-
-// Submit
-echo "<div class='login-submit'><input type='submit' value='"._('Send password')." &#8250;' name='SubmitReset' onclick='set_fullmode();'></div>\n";
-
-end_form(1);
-echo "</div>\n"; // end login-card
-
-$Ajax->addScript(true, "document.forms[0].email_entry_field.focus();");
-
-echo "<script>
-//<![CDATA[
-	<!--
-	document.forms[0].email_entry_field.select();
-	document.forms[0].email_entry_field.focus();
-	//-->
-//]]>
-</script>";
-
-// Footer
-if (isset($_SESSION['wa_current_user']))
-	$date = Today().' | '.Now();
-else
-	$date = date('m/d/Y').' | '.date("h.i am");
-echo "<div class='login-footer'>";
-echo htmlspecialchars($date)."<br>";
-echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->app_title.' '.$version."</a><br>";
-echo "<a target='_blank' href='".$SysPrefs->power_url."' tabindex='-1'>".$SysPrefs->power_by."</a>";
-echo "</div>\n";
-echo "</body></html>\n";
+echo "<!DOCTYPE html>\n<html dir='".$rtl."'>\n<head><title>".$title."</title>\n";
+echo "<meta charset='".$encoding."'>\n<meta name='viewport' content='width=device-width,initial-scale=1'>\n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/default.css' rel='stylesheet'>\n";
+echo "<link href='".$path_to_root."/themes/".$def_theme."/local_style/access.css' rel='stylesheet'>\n";
+echo "</head><body id='loginscreen'>\n";
+echo "<div class='login-title-bar'>".htmlspecialchars($title)."</div>\n";
+echo "<div class='login-card'>\n<div class='login-logo'>";
+echo "<img src='".$path_to_root."/themes/default/images/notrinos_erp.png' alt='NotrinosERP' height='50'>";
+echo "</div>\n<div class='login-message'>";
+echo _('Password recovery by email is unavailable. Contact an authorized system administrator.');
+echo "</div>\n<div class='login-submit'><a href='".$path_to_root."/index.php'>"._('Return to login')."</a></div>\n";
+echo "</div>\n</body></html>\n";

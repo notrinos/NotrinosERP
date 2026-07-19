@@ -23,9 +23,17 @@ function add_user($login_id, $real_name, $password, $phone, $email, $role_id, $l
 }
 
 function update_user_password($id, $login_id, $password) {
+	if (function_exists('session_registry_table_exists')
+		&& session_registry_table_exists()) {
+		$actor_id = isset($_SESSION['wa_current_user']->user)
+			? (int)$_SESSION['wa_current_user']->user : 0;
+		if (!session_registry_revoke_user_sessions((int)$id, $actor_id, 'password_changed'))
+			return false;
+	}
 	$sql = "UPDATE ".TB_PREF."users SET password=".db_escape($password).",login_id = ".db_escape($login_id)." WHERE id=".db_escape($id);
 
-	return db_query($sql, 'could not update user password for '.$login_id);
+	$result = db_query($sql, 'could not update user password for '.$login_id);
+	return $result;
 }
 
 function update_user($id, $login_id, $real_name, $phone, $email, $role_id, $language, $profile, $rep_popup, $pos) {
@@ -43,13 +51,55 @@ function update_user($id, $login_id, $real_name, $phone, $email, $role_id, $lang
 }
 
 function update_user_prefs($id, $prefs) {
+	$security_context_changed = false;
+	if (isset($prefs['role_id']) || isset($prefs['inactive'])) {
+		$result = db_query(
+			"SELECT role_id, inactive FROM ".TB_PREF."users WHERE id=".db_escape($id),
+			'could not verify user security context for '.$id
+		);
+		if (!$result || db_num_rows($result) !== 1)
+			return false;
+		$current = db_fetch($result);
+		$security_context_changed = (isset($prefs['role_id'])
+			&& (int)$prefs['role_id'] !== (int)$current['role_id'])
+			|| (isset($prefs['inactive'])
+			&& (int)$prefs['inactive'] !== (int)$current['inactive']);
+	}
+	if ($security_context_changed && function_exists('session_registry_table_exists')
+		&& session_registry_table_exists()) {
+		$actor_id = isset($_SESSION['wa_current_user']->user)
+			? (int)$_SESSION['wa_current_user']->user : 0;
+		if (!session_registry_revoke_user_sessions((int)$id, $actor_id, 'role_or_status_changed'))
+			return false;
+	}
 	$sql = "UPDATE ".TB_PREF."users SET ";
 	foreach($prefs as $name => $value) {
 		$prefs[$name] = $name.'='.db_escape($value);
 	}
 	$sql .= implode(',', $prefs)." WHERE id=".db_escape($id);
 
-	return db_query($sql, 'could not update user display prefs for '.$id);
+	$result = db_query($sql, 'could not update user display prefs for '.$id);
+	return $result;
+}
+
+/**
+ * Update one user's active status after revoking every authenticated session.
+ *
+ * @param int $id
+ * @param bool $inactive
+ * @return bool
+ */
+function update_user_inactive($id, $inactive) {
+	if (function_exists('session_registry_table_exists')
+		&& session_registry_table_exists()) {
+		$actor_id = isset($_SESSION['wa_current_user']->user)
+			? (int)$_SESSION['wa_current_user']->user : 0;
+		if (!session_registry_revoke_user_sessions((int)$id, $actor_id, 'status_changed'))
+			return false;
+	}
+	$sql = "UPDATE ".TB_PREF."users SET inactive=".((int)(bool)$inactive)
+		." WHERE id=".db_escape($id);
+	return db_query($sql, 'could not update user status for '.$id);
 }
 
 function get_users($all=false) {
@@ -88,9 +138,16 @@ function get_user_by_email($email) {
 }
 
 function delete_user($id) {
+	if (function_exists('session_registry_table_exists')
+		&& session_registry_table_exists()) {
+		$actor_id = isset($_SESSION['wa_current_user']->user)
+			? (int)$_SESSION['wa_current_user']->user : 0;
+		if (!session_registry_revoke_user_sessions((int)$id, $actor_id, 'user_deleted'))
+			return false;
+	}
 	$sql = "DELETE FROM ".TB_PREF."users WHERE id=".db_escape($id);
 
-	db_query($sql, 'could not delete user '.$id);
+	return db_query($sql, 'could not delete user '.$id);
 }
 
 function authenticate_user($login_id, $password) {

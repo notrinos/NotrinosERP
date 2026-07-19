@@ -16,6 +16,7 @@ class SetupApp extends application {
 		$this->add_module(_('Company Setup'));
 		$this->add_lapp_function(0, _('&Company Setup'), 'admin/company_preferences.php?', 'SA_SETUPCOMPANY', MENU_SETTINGS);
 		$this->add_lapp_function(0, _('&User Accounts Setup'), 'admin/users.php?', 'SA_USERS', MENU_SETTINGS);
+		$this->add_lapp_function(0, _('Authenticated &Sessions'), 'admin/user_sessions.php?', 'SA_USERS', MENU_MAINTENANCE);
 		$this->add_lapp_function(0, _('&Access Setup'), 'admin/security_roles.php?', 'SA_SECROLES', MENU_SETTINGS);
 		$this->add_lapp_function(0, _('&Display Setup'), 'admin/display_prefs.php?', 'SA_SETUPDISPLAY', MENU_SETTINGS);
 		$this->add_lapp_function(0, _('Transaction &References'), 'admin/forms_setup.php?', 'SA_FORMSETUP', MENU_SETTINGS);

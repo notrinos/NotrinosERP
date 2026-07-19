@@ -4029,6 +4029,34 @@ CREATE TABLE `0_useronline` (
 -- Data of table `0_useronline` --
 
 
+-- Structure of table `0_user_sessions` --
+
+DROP TABLE IF EXISTS `0_user_sessions`;
+
+CREATE TABLE `0_user_sessions` (
+	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`session_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`user_id` smallint(6) NOT NULL,
+	`role_id` int(11) NOT NULL,
+	`auth_method` varchar(32) NOT NULL DEFAULT 'unknown',
+	`assurance_level` tinyint(3) unsigned NOT NULL DEFAULT '1',
+	`created_at` datetime NOT NULL,
+	`last_seen_at` datetime NOT NULL,
+	`idle_expires_at` datetime NOT NULL,
+	`absolute_expires_at` datetime NOT NULL,
+	`revoked_at` datetime DEFAULT NULL,
+	`revoked_by` smallint(6) DEFAULT NULL,
+	`revocation_reason` varchar(40) DEFAULT NULL,
+	`user_agent_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `session_key_hash` (`session_key_hash`),
+	KEY `user_active` (`user_id`,`revoked_at`),
+	KEY `session_expiry` (`idle_expires_at`,`absolute_expires_at`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_sessions` --
+
+
 -- Structure of table `0_users` --
 
 DROP TABLE IF EXISTS `0_users`;

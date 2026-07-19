@@ -57,8 +57,10 @@ if (isset($_POST['UPDATE_ITEM']) && check_csrf_token()) {
 		if ($SysPrefs->allow_demo_mode)
 			display_warning(_('Password cannot be changed in demo mode.'));
 		else {
-			update_user_password($_SESSION['wa_current_user']->user, $_SESSION['wa_current_user']->username, password_hash($_POST['password'], PASSWORD_DEFAULT));
-			display_notification(_('Your password has been updated.'));
+			if (update_user_password($_SESSION['wa_current_user']->user, $_SESSION['wa_current_user']->username, password_hash($_POST['password'], PASSWORD_DEFAULT)))
+				display_notification(_('Your password has been updated.'));
+			else
+				display_error(_('Your password could not be updated securely.'));
 		}
 		$Ajax->activate('_page_body');
 	}

@@ -32,6 +32,7 @@ class current_user {
 	var $logged;
 	var $ui_mode = 0;
 	var $login_attempt=0;
+	var $auth_method = 'local_password';
 	
 	var $prefs;
 	var $cur_con; // current db connection (can be different from $company for superuser)
@@ -71,6 +72,7 @@ class current_user {
 		// Keep in mind you need to have user data set for $loginname
 		// in NotrinosERP users table anyway to successfully log in.
 		$Auth_Result = hook_authenticate($loginname, $password);
+		$external_auth_used = isset($Auth_Result);
 
 		if (!isset($Auth_Result))	// if not used: standard method
 			$Auth_Result = authenticate_user($loginname, $password);
@@ -132,6 +134,7 @@ class current_user {
 				$this->login_attempt = 0;
 				$this->last_act = time();
 				$this->timeout = session_timeout();
+				$this->auth_method = $external_auth_used ? 'external_hook' : 'local_password';
 				flush_dir(user_js_cache()); // refresh cache on login
 			}
 		}
@@ -139,32 +142,10 @@ class current_user {
 	}
 
 	function reset_password($company, $email) {
-		global $SysPrefs;
-
-		$this->set_company($company);
-		$this->logged = false;
-
-		set_global_connection();
-
-		$user = get_user_by_email($email);
-
-		if ($user != false) {
-
-			$password = generate_password();
-			$hash = password_hash($password, PASSWORD_DEFAULT);
-
-			update_user_password($user['id'], $user['login_id'], $hash);
-			
-			$sender = get_company_pref('email');
-			if (empty($sender))
-				$header = '';
-			else
-				$header = "From: $sender";
-
-			mail($email, _('New password for').' '.$SysPrefs->app_title, $password, $header);
-
-			return true;
-		}
+		// Anonymous password-by-email is retired. Keep this method as a
+		// compatibility-deny boundary for extensions until secure recovery exists.
+		if (function_exists('session_log_security_event'))
+			session_log_security_event('denied_legacy_password_reset_method');
 		return false;
 	}
 
