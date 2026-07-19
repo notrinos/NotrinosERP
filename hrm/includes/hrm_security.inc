@@ -17,6 +17,7 @@
 define('HRM_FIELD_RESTRICTED_COMPENSATION', 'restricted_compensation');
 define('HRM_FIELD_RESTRICTED_FINANCIAL', 'restricted_financial');
 define('HRM_FIELD_RESTRICTED_IDENTITY', 'restricted_identity');
+define('HRM_FIELD_RESTRICTED_DOCUMENT', 'restricted_document');
 define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
 
@@ -56,6 +57,15 @@ function hrm_sensitive_field_permission_matrix() {
 			),
 			// Full reveal and mutation intentionally have no policy entry. They
 			// remain denied until verification and maker/checker controls exist.
+		),
+		HRM_FIELD_RESTRICTED_DOCUMENT => array(
+			HRM_FIELD_ACTION_VIEW => array(
+				'all' => array('SA_EMPLOYEE'),
+				'any' => array(),
+			),
+			// All current employee-document categories are treated as restricted.
+			// Category-specific grants remain denied until the data model records
+			// a governed visibility classification.
 		),
 	);
 }
@@ -196,6 +206,8 @@ function hrm_sensitive_field_denial_message($field_class) {
 		return _('You do not have permission to change restricted employee bank details.');
 	if ($field_class === HRM_FIELD_RESTRICTED_IDENTITY)
 		return _('You do not have permission to change restricted employee identity or tax details.');
+	if ($field_class === HRM_FIELD_RESTRICTED_DOCUMENT)
+		return _('You do not have permission to access restricted employee documents.');
 
 	return _('You do not have permission to access restricted employee compensation.');
 }

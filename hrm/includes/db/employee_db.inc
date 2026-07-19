@@ -611,6 +611,12 @@ function delete_employee($employee_id) {
 	// Check if employee has payslips
 	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
 		return false;
+	// A whole-employee delete must not bypass an employee-document retention hold.
+	if (employee_table_exists('employee_documents') && check_empty_result(
+		"SELECT COUNT(*) FROM ".TB_PREF."employee_documents
+		 WHERE employee_id = ".db_escape($employee_id)." AND retention_locked = 1"
+	))
+		return false;
 
 	begin_transaction();
 
@@ -627,10 +633,8 @@ function delete_employee($employee_id) {
 			if (!empty($doc['attachment_id'])) {
 				delete_attachment_with_file((int)$doc['attachment_id']);
 			}
-			// Legacy fallback: clean up old filesystem paths.
-			if (!empty($doc['file_path']) && file_exists($doc['file_path'])) {
-				@unlink($doc['file_path']);
-			}
+			// Historical source paths are migration/recovery evidence and are never
+			// deleted by the compatibility employee-delete cascade.
 		}
 
 		$sql = "DELETE FROM ".TB_PREF."employee_documents WHERE employee_id = ".db_escape($employee_id);

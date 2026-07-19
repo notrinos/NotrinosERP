@@ -199,58 +199,175 @@ class Formula_Compiler_Token
     }
 
     // -----------------------------------------------------------------------
-    // Static factory helpers
+    // Factory Methods
     // -----------------------------------------------------------------------
 
     /**
      * Create an integer literal token.
      *
-     * @param string $value
-     * @param int    $line
-     * @param int    $column
-     * @return Formula_Compiler_Token
+     * @param int $value The integer value
+     * @param int $line  Source line (1-based)
+     * @param int $col   Source column (1-based)
+     * @param int $offset Byte offset
+     * @return self
      */
-    public static function integerToken($value, $line, $column)
+    public static function integer($value, $line, $col, $offset = 0)
     {
-        return new self(Formula_Compiler_TokenType::T_INTEGER, $value, $line, $column);
+        return new self(
+            Formula_Compiler_TokenType::T_INTEGER,
+            (string)$value,
+            $line,
+            $col,
+            $offset,
+            strlen((string)$value)
+        );
+    }
+
+    /**
+     * Create a decimal literal token.
+     *
+     * @param float $value The decimal value
+     * @param int   $line  Source line (1-based)
+     * @param int   $col   Source column (1-based)
+     * @param int   $offset Byte offset
+     * @return self
+     */
+    public static function decimal($value, $line, $col, $offset = 0)
+    {
+        $str = (string)$value;
+        return new self(
+            Formula_Compiler_TokenType::T_DECIMAL,
+            $str,
+            $line,
+            $col,
+            $offset,
+            strlen($str)
+        );
+    }
+
+    /**
+     * Create a string literal token.
+     *
+     * @param string $value  The string value (quotes stripped)
+     * @param int    $line   Source line (1-based)
+     * @param int    $col    Source column (1-based)
+     * @param int    $offset Byte offset
+     * @return self
+     */
+    public static function stringLiteral($value, $line, $col, $offset = 0)
+    {
+        return new self(
+            Formula_Compiler_TokenType::T_STRING,
+            (string)$value,
+            $line,
+            $col,
+            $offset,
+            strlen((string)$value)
+        );
     }
 
     /**
      * Create an identifier token.
      *
-     * @param string $value
-     * @param int    $line
-     * @param int    $column
-     * @return Formula_Compiler_Token
+     * @param string $name   The identifier name
+     * @param int    $line   Source line (1-based)
+     * @param int    $col    Source column (1-based)
+     * @param int    $offset Byte offset
+     * @return self
      */
-    public static function identifierToken($value, $line, $column)
+    public static function identifier($name, $line, $col, $offset = 0)
     {
-        return new self(Formula_Compiler_TokenType::T_IDENTIFIER, $value, $line, $column);
+        return new self(
+            Formula_Compiler_TokenType::T_IDENTIFIER,
+            (string)$name,
+            $line,
+            $col,
+            $offset,
+            strlen((string)$name)
+        );
     }
 
     /**
      * Create an operator token.
      *
-     * @param int    $type
-     * @param string $value
-     * @param int    $line
-     * @param int    $column
-     * @return Formula_Compiler_Token
+     * @param int    $type   The TokenType constant for the operator
+     * @param string $symbol The operator symbol (e.g., '+', '-*')
+     * @param int    $line   Source line (1-based)
+     * @param int    $col    Source column (1-based)
+     * @param int    $offset Byte offset
+     * @return self
      */
-    public static function operatorToken($type, $value, $line, $column)
+    public static function operatorSymbol($type, $symbol, $line, $col, $offset = 0)
     {
-        return new self($type, $value, $line, $column);
+        return new self(
+            $type,
+            $symbol,
+            $line,
+            $col,
+            $offset,
+            strlen($symbol)
+        );
+    }
+
+    /**
+     * Create a boolean token (TRUE or FALSE).
+     *
+     * @param bool $value  The boolean value
+     * @param int  $line   Source line (1-based)
+     * @param int  $col    Source column (1-based)
+     * @param int  $offset Byte offset
+     * @return self
+     */
+    public static function booleanLiteral($value, $line, $col, $offset = 0)
+    {
+        $boolStr = $value ? 'TRUE' : 'FALSE';
+        return new self(
+            $value ? Formula_Compiler_TokenType::T_TRUE : Formula_Compiler_TokenType::T_FALSE,
+            $boolStr,
+            $line,
+            $col,
+            $offset,
+            strlen($boolStr)
+        );
+    }
+
+    /**
+     * Create a NULL literal token.
+     *
+     * @param int $line   Source line (1-based)
+     * @param int $col    Source column (1-based)
+     * @param int $offset Byte offset
+     * @return self
+     */
+    public static function nullLiteral($line, $col, $offset = 0)
+    {
+        return new self(
+            Formula_Compiler_TokenType::T_NULL,
+            'NULL',
+            $line,
+            $col,
+            $offset,
+            4
+        );
     }
 
     /**
      * Create an EOF token.
      *
-     * @param int $line
-     * @param int $column
-     * @return Formula_Compiler_Token
+     * @param int $line   Source line (1-based)
+     * @param int $col    Source column (1-based)
+     * @param int $offset Byte offset
+     * @return self
      */
-    public static function eofToken($line, $column)
+    public static function eof($line, $col, $offset = 0)
     {
-        return new self(Formula_Compiler_TokenType::T_EOF, '', $line, $column);
+        return new self(
+            Formula_Compiler_TokenType::T_EOF,
+            '',
+            $line,
+            $col,
+            $offset,
+            0
+        );
     }
 }

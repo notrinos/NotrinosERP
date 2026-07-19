@@ -16,13 +16,13 @@
  * Provides a safe, permission-checked endpoint for viewing and downloading
  * employee document files stored through the core attachment subsystem.
  *
- * This endpoint does NOT require SA_ATTACHDOCUMENT. Instead, it uses
- * SA_EMPLOYEE and SA_EMPLOYEEREP, matching the HR permissions already
- * required to view the employee's Documents tab or Employee Card.
+ * This endpoint does NOT require SA_ATTACHDOCUMENT. Employee-document bytes
+ * are a restricted HR field class and require SA_EMPLOYEE. The broader
+ * SA_EMPLOYEEREP capability may view document metadata only.
  *
  * Usage:
- *   view:  hrm/view/employee_document_attachment.php?doc_id=123
- *   download: hrm/view/employee_document_attachment.php?doc_id=123&dl=1
+ *   view:  hrm/view/employee_document_attachment.php?key=<opaque-key>
+ *   download: hrm/view/employee_document_attachment.php?key=<opaque-key>&dl=1
  */
 
 $path_to_root = '../..';
@@ -32,6 +32,7 @@ include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui/ui_msgs.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_document_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/admin/db/attachments_db.inc');
 include_once($path_to_root . '/includes/attachment_service.inc');
 
@@ -43,26 +44,36 @@ if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logge
     exit();
 }
 
-// Require at least one HR permission that exposes document viewing:
-// SA_EMPLOYEE (Manage Employees) or SA_EMPLOYEEREP (Employee Card / Reports).
-// Uses the standard NotrinosERP access-control API.
-if (!user_check_access('SA_EMPLOYEE') && !user_check_access('SA_EMPLOYEEREP')) {
+// Classified document metadata does not yet supply subject/relationship/legal-
+// entity authority. Treat every current category as restricted; broader report
+// access and unknown classes fail shut.
+if (!hrm_user_can_access_sensitive_field(
+	HRM_FIELD_RESTRICTED_DOCUMENT,
+	HRM_FIELD_ACTION_VIEW
+)) {
+	hrm_log_sensitive_field_access(
+		HRM_FIELD_RESTRICTED_DOCUMENT,
+		HRM_FIELD_ACTION_VIEW,
+		'denied_content_stream'
+	);
+	header('Cache-Control: private, no-store, max-age=0');
+	header('X-Content-Type-Options: nosniff');
     header('HTTP/1.0 403 Forbidden');
     exit();
 }
 
 // --- Input validation ---
 
-$doc_id = isset($_GET['doc_id']) ? (int)$_GET['doc_id'] : 0;
-if ($doc_id <= 0) {
+$access_key = isset($_GET['key']) ? strtolower(trim((string)$_GET['key'])) : '';
+if (!preg_match('/^[a-f0-9]{64}$/D', $access_key)) {
     header('HTTP/1.0 400 Bad Request');
-    echo _('Invalid document ID.');
+    echo _('Invalid document reference.');
     exit();
 }
 
 // --- Load the employee document ---
 
-$doc = get_employee_document($doc_id);
+$doc = get_employee_document_by_access_key($access_key);
 if (!$doc) {
     header('HTTP/1.0 404 Not Found');
     echo _('Document not found.');
@@ -71,20 +82,9 @@ if (!$doc) {
 
 // --- Verify linked core attachment ---
 
-if (empty($doc['attachment_id'])) {
-    // Legacy fallback: document has no core attachment.
-    // Stream the legacy file only after safe-path validation.
-    if (!empty($doc['file_path'])) {
-        $canonical_path = canonical_legacy_employee_document_path($doc['file_path']);
-        if ($canonical_path === false) {
-            header('HTTP/1.0 404 Not Found');
-            exit();
-        }
-        // Safety: never expose the raw file_path in HTML or headers.
-        stream_legacy_file_safely($canonical_path, $doc['doc_name']);
-        // stream_legacy_file_safely() exits internally.
-    }
-    // Metadata-only document (no file at all).
+if (empty($doc['attachment_id']) || !isset($doc['content_state']) || $doc['content_state'] !== 'available') {
+    // Legacy fallback is retired after PAY-SEC-002 reconciliation. Metadata-only,
+    // quarantined, failed and unavailable content never streams.
     header('HTTP/1.0 404 Not Found');
     exit();
 }
@@ -115,7 +115,23 @@ if ((int)$attachment['trans_no'] !== $employee_number) {
     exit();
 }
 
+$custom = attachment_custom_data_array(isset($attachment['custom_data']) ? $attachment['custom_data'] : '');
+if (!isset($custom['storage_backend']) || $custom['storage_backend'] !== 'hrm_private_v1'
+	|| !isset($custom['content_state']) || $custom['content_state'] !== 'available'
+	|| !isset($custom['plaintext_sha256'])
+	|| !attachment_hash_equals($custom['plaintext_sha256'], $doc['content_sha256'])
+) {
+	header('HTTP/1.0 404 Not Found');
+	exit();
+}
+
 // --- Stream via core attachment service ---
 
+$outcome = isset($_GET['dl']) ? 'granted_content_download' : 'granted_content_view';
+hrm_log_sensitive_field_access(
+	HRM_FIELD_RESTRICTED_DOCUMENT,
+	HRM_FIELD_ACTION_VIEW,
+	$outcome
+);
 $mode = isset($_GET['dl']) ? 'download' : 'inline';
 stream_attachment_file($attachment, $mode);

@@ -754,14 +754,15 @@ function tab_documents($employee_id) {
 		return;
 	}
 
-	// Handle delete document
-	if (isset($_GET['delete_doc'])) {
-		$doc = get_employee_document($_GET['delete_doc']);
+	// Handle POST/CSRF-protected document deletion.
+	$delete_doc_id = find_submit('delete_doc');
+	if ($delete_doc_id > 0) {
+		$doc = get_employee_document($delete_doc_id);
 		if (is_employee_child_record_accessible($doc, $employee_id, _('Document'))) {
-			// delete_employee_document() handles core attachment cleanup.
-			// Legacy file_path cleanup is handled inside that function too.
-			delete_employee_document($doc['doc_id']);
-			display_notification(_('Document deleted.'));
+			if (delete_employee_document($doc['doc_id']))
+				display_notification(_('Document deleted.'));
+			else
+				display_error(_('Document deletion was blocked by retention or storage validation.'));
 		}
 		$Ajax->activate('_page_body');
 	}
@@ -799,13 +800,8 @@ function tab_documents($employee_id) {
 		// --- Core Attachment Upload ---
 		$upload_info = array();
 		if (isset($_FILES['doc_file']) && $_FILES['doc_file']['name'] != '') {
-			// Use the shared attachment service for validation.
-			$policy = array(
-				'max_size'  => 10 * 1024 * 1024, // 10 MB for HR documents
-				'allowed_ext' => array('pdf', 'doc', 'docx', 'odt', 'xls', 'xlsx', 'ods',
-					'jpg', 'jpeg', 'png', 'gif', 'txt', 'csv', 'rtf'),
-			);
-			$upload_info = validate_attachment_upload($_FILES['doc_file'], $policy);
+			// Employee documents require strict content agreement and a clean scan.
+			$upload_info = validate_hrm_employee_document_upload($_FILES['doc_file']);
 			if (!$upload_info['ok']) {
 				$input_error = 1;
 				display_error($upload_info['error']);
@@ -825,7 +821,7 @@ function tab_documents($employee_id) {
 		if (!$input_error) {
 			if ($current_doc) {
 				// Update existing document with core attachment integration.
-				update_employee_document_with_attachment(
+				$updated = update_employee_document_with_attachment(
 					$current_doc['doc_id'],
 					$employee_number,
 					get_post('doc_type_id'),
@@ -835,7 +831,10 @@ function tab_documents($employee_id) {
 					get_post('doc_expiry_date'),
 					get_post('doc_notes')
 				);
-				display_notification(_('Document updated.'));
+				if ($updated)
+					display_notification(_('Document updated.'));
+				else
+					display_error(_('Document update was blocked. Add a new document for replacement content, or review retention and scan status.'));
 			} else {
 				// Create new document with core attachment integration.
 				$document_id = add_employee_document_with_attachment(

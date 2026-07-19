@@ -40,8 +40,9 @@ if (isset($_GET['artifact'])) {
 
 	while (ob_get_level() > 0)
 		@ob_end_clean();
+	$disposition = $grant['mime_type'] === 'application/pdf' ? 'inline' : 'attachment';
 	header('Content-Type: '.$grant['mime_type']);
-	header('Content-Disposition: attachment; filename="'.$grant['filename'].'"');
+	header('Content-Disposition: '.$disposition.'; filename="'.$grant['filename'].'"');
 	header('Content-Length: '.(int)$grant['bytes']);
 	header('Cache-Control: no-store, private');
 	header('Pragma: no-cache');

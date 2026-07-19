@@ -151,6 +151,287 @@ function detect_attachment_mime($tmp_path, $upload = array()) {
 }
 
 /**
+ * Detect a MIME type without trusting browser-supplied metadata.
+ *
+ * @param string $path
+ * @return string|false
+ */
+function detect_attachment_mime_strict($path) {
+    if (!is_string($path) || !is_file($path)) {
+        return false;
+    }
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $mime = finfo_file($finfo, $path);
+            finfo_close($finfo);
+            if (is_string($mime) && $mime !== '') {
+                return strtolower(trim($mime));
+            }
+        }
+    }
+    if (function_exists('mime_content_type')) {
+        $mime = @mime_content_type($path);
+        if (is_string($mime) && $mime !== '') {
+            return strtolower(trim($mime));
+        }
+    }
+    return false;
+}
+
+/**
+ * Return the configured or locally available employee-document scanner command.
+ *
+ * The optional HRM_DOCUMENT_SCANNER_COMMAND value must contain a {file}
+ * placeholder or the escaped file path is appended. Ordinary users cannot
+ * override this server-side setting.
+ *
+ * @param string $path
+ * @return string|false
+ */
+function hrm_document_scanner_command($path) {
+    if (defined('HRM_DOCUMENT_SCANNER_COMMAND')) {
+        $template = trim((string)HRM_DOCUMENT_SCANNER_COMMAND);
+        if ($template === '') {
+            return false;
+        }
+        $escaped = escapeshellarg($path);
+        return strpos($template, '{file}') !== false
+            ? str_replace('{file}', $escaped, $template)
+            : $template.' '.$escaped;
+    }
+
+    if (DIRECTORY_SEPARATOR === '\\') {
+        $candidates = array(
+            'C:\\Program Files\\Windows Defender\\MpCmdRun.exe',
+        );
+        $platform = 'C:\\ProgramData\\Microsoft\\Windows Defender\\Platform';
+        if (is_dir($platform)) {
+            $versions = glob($platform.'\\*\\MpCmdRun.exe');
+            if (is_array($versions)) {
+                rsort($versions, SORT_STRING);
+                $candidates = array_merge($versions, $candidates);
+            }
+        }
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return escapeshellarg($candidate).' -Scan -ScanType 3 -File '
+                    .escapeshellarg($path).' -DisableRemediation';
+            }
+        }
+    } else {
+        foreach (array('/usr/bin/clamscan', '/usr/local/bin/clamscan') as $candidate) {
+            if (is_executable($candidate)) {
+                return escapeshellarg($candidate).' --no-summary --infected -- '
+                    .escapeshellarg($path);
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Scan an employee-document file and fail closed on rejection, error or timeout.
+ *
+ * @param string $path
+ * @param int $timeout_seconds
+ * @param string|null $command_override Test-only/server-owned command override.
+ * @return array
+ */
+function scan_hrm_employee_document($path, $timeout_seconds = 30, $command_override = null) {
+    $command = $command_override !== null
+        ? str_replace('{file}', escapeshellarg($path), (string)$command_override)
+        : hrm_document_scanner_command($path);
+    if ($command === false || trim($command) === '' || !function_exists('proc_open')) {
+        return array('ok' => false, 'status' => 'scanner_unavailable', 'error_code' => 'scanner_unavailable');
+    }
+
+    $descriptors = array(
+        0 => array('pipe', 'r'),
+        1 => array('pipe', 'w'),
+        2 => array('pipe', 'w'),
+    );
+    $pipes = array();
+    $process = @proc_open($command, $descriptors, $pipes);
+    if (!is_resource($process)) {
+        return array('ok' => false, 'status' => 'scanner_unavailable', 'error_code' => 'scanner_unavailable');
+    }
+    fclose($pipes[0]);
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+
+    $deadline = microtime(true) + max(1, (int)$timeout_seconds);
+    $exit_code = -1;
+    do {
+        // Drain output without persisting filenames, paths, scanner text or content.
+        stream_get_contents($pipes[1], 8192);
+        stream_get_contents($pipes[2], 8192);
+        $status = proc_get_status($process);
+        if (!$status['running']) {
+            $exit_code = (int)$status['exitcode'];
+            break;
+        }
+        if (microtime(true) >= $deadline) {
+            proc_terminate($process);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+            return array('ok' => false, 'status' => 'scanner_timeout', 'error_code' => 'scanner_timeout');
+        }
+        usleep(50000);
+    } while (true);
+
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    $closed_code = proc_close($process);
+    if ($exit_code < 0) {
+        $exit_code = (int)$closed_code;
+    }
+    if ($exit_code === 0) {
+        return array('ok' => true, 'status' => 'clean', 'error_code' => '');
+    }
+    return array('ok' => false, 'status' => 'rejected', 'error_code' => 'scanner_rejected_or_failed');
+}
+
+/**
+ * Validate one regular HR document using strict extension, MIME and magic rules.
+ *
+ * Office/archive formats are intentionally denied until a reviewed sandbox/CDR
+ * adapter exists. PDF is accepted only without common active-content markers.
+ *
+ * @param string $path
+ * @param string $filename
+ * @param int $max_size
+ * @param bool $scan
+ * @param string|null $scanner_command
+ * @return array
+ */
+function validate_hrm_employee_document_file($path, $filename, $max_size = 10485760, $scan = true, $scanner_command = null) {
+    $failure = array(
+        'ok' => false, 'error' => _('Employee document content was rejected.'),
+        'error_code' => 'invalid_file', 'filename' => '', 'size' => 0,
+        'mime' => '', 'tmp_name' => $path, 'sha256' => '', 'scanner_status' => 'not_scanned',
+    );
+    if (!is_string($path) || $path === '' || is_link($path) || !is_file($path) || !is_readable($path)) {
+        $failure['error_code'] = 'not_regular_readable_file';
+        return $failure;
+    }
+    $safe_name = sanitize_attachment_filename($filename);
+    if ($safe_name === '' || basename(str_replace('\\', '/', $filename)) !== $safe_name) {
+        $failure['error_code'] = 'invalid_filename';
+        return $failure;
+    }
+    $size = filesize($path);
+    if ($size === false || $size <= 0 || $size > (int)$max_size) {
+        $failure['error_code'] = $size === 0 ? 'empty_file' : 'size_limit';
+        return $failure;
+    }
+	$failure['filename'] = $safe_name;
+	$failure['size'] = (int)$size;
+    $mime = detect_attachment_mime_strict($path);
+    if ($mime === false) {
+        $failure['error_code'] = 'mime_unavailable';
+        return $failure;
+    }
+	$failure['mime'] = $mime;
+    $extension = strtolower(pathinfo($safe_name, PATHINFO_EXTENSION));
+	// Some minimal valid images are reported as application/octet-stream by
+	// platform magic databases. Derive only image MIME from getimagesize after
+	// an exact image-type check; no client value participates.
+	if ($mime === 'application/octet-stream' && in_array($extension, array('jpg', 'jpeg', 'png'), true)) {
+		$image_info = @getimagesize($path);
+		if (is_array($image_info) && isset($image_info[2])) {
+			if ((int)$image_info[2] === IMAGETYPE_JPEG) $mime = 'image/jpeg';
+			elseif ((int)$image_info[2] === IMAGETYPE_PNG) $mime = 'image/png';
+		}
+	}
+    $allowed = array(
+        'txt' => array('text/plain'),
+        'csv' => array('text/plain', 'text/csv', 'application/csv'),
+        'jpg' => array('image/jpeg'),
+        'jpeg' => array('image/jpeg'),
+        'png' => array('image/png'),
+        'pdf' => array('application/pdf'),
+    );
+    if (!isset($allowed[$extension]) || !in_array($mime, $allowed[$extension], true)) {
+        $failure['error_code'] = 'extension_mime_mismatch';
+        return $failure;
+    }
+    $payload = file_get_contents($path);
+    if ($payload === false || strlen($payload) !== (int)$size) {
+        $failure['error_code'] = 'read_or_size_mismatch';
+        return $failure;
+    }
+    $magic_ok = true;
+    if ($extension === 'jpg' || $extension === 'jpeg') {
+        $image = @getimagesize($path);
+        $magic_ok = substr($payload, 0, 2) === "\xFF\xD8"
+            && substr($payload, -2) === "\xFF\xD9"
+            && is_array($image) && isset($image[2]) && (int)$image[2] === IMAGETYPE_JPEG;
+    } elseif ($extension === 'png') {
+        $image = @getimagesize($path);
+        $magic_ok = substr($payload, 0, 8) === "\x89PNG\x0D\x0A\x1A\x0A"
+            && substr($payload, -12, 8) === "\x00\x00\x00\x00IEND"
+            && is_array($image) && isset($image[2]) && (int)$image[2] === IMAGETYPE_PNG;
+    } elseif ($extension === 'pdf') {
+        $tail = rtrim(substr($payload, -2048));
+        $magic_ok = substr($payload, 0, 5) === '%PDF-'
+            && substr($tail, -5) === '%%EOF'
+            && !preg_match('/\/(?:JavaScript|JS|Launch|EmbeddedFile|OpenAction|AA)\b/i', $payload);
+    } else {
+        $magic_ok = strpos($payload, "\0") === false
+            && stripos($payload, '<?php') === false
+            && stripos($payload, '<script') === false;
+    }
+    if (!$magic_ok) {
+        $failure['error_code'] = 'magic_or_active_content_rejected';
+        return $failure;
+    }
+
+    $scan_result = $scan
+        ? scan_hrm_employee_document($path, 30, $scanner_command)
+        : array('ok' => true, 'status' => 'not_required', 'error_code' => '');
+    if (!$scan_result['ok']) {
+        $failure['error_code'] = $scan_result['error_code'];
+        $failure['scanner_status'] = $scan_result['status'];
+        return $failure;
+    }
+
+    return array(
+        'ok' => true, 'error' => '', 'error_code' => '', 'filename' => $safe_name,
+        'size' => (int)$size, 'mime' => $mime, 'tmp_name' => $path,
+        'sha256' => hash('sha256', $payload), 'scanner_status' => $scan_result['status'],
+    );
+}
+
+/**
+ * Validate a browser upload using the strict employee-document policy.
+ *
+ * @param array $upload
+ * @param string|null $scanner_command
+ * @return array
+ */
+function validate_hrm_employee_document_upload($upload, $scanner_command = null) {
+    if (!isset($upload['error']) || is_array($upload['error'])
+        || (int)$upload['error'] !== UPLOAD_ERR_OK
+        || empty($upload['tmp_name']) || !is_uploaded_file($upload['tmp_name'])
+    ) {
+        return array(
+            'ok' => false, 'error' => _('Employee document upload failed.'),
+            'error_code' => 'invalid_upload', 'filename' => '', 'size' => 0,
+            'mime' => '', 'tmp_name' => '', 'sha256' => '', 'scanner_status' => 'not_scanned',
+        );
+    }
+    return validate_hrm_employee_document_file(
+        $upload['tmp_name'],
+        isset($upload['name']) ? $upload['name'] : '',
+        10 * 1024 * 1024,
+        true,
+        $scanner_command
+    );
+}
+
+/**
  * Sanitize a client-supplied filename to a safe basename.
  * Strips path separators, control characters, and restricts length.
  *
@@ -230,7 +511,22 @@ function ensure_attachments_directory() {
         @mkdir($dir, 0777, true);
     }
 
-    // Ensure index.php redirect exists.
+    // Deny direct web access independently of the index redirect. All content
+    // must pass through an authorized streaming controller.
+    $deny_file = $dir . '/.htaccess';
+    if (!file_exists($deny_file)) {
+        @file_put_contents($deny_file, "Require all denied\nDeny from all\n");
+    }
+    $web_config = $dir . '/web.config';
+    if (!file_exists($web_config)) {
+        @file_put_contents($web_config, '<?xml version="1.0" encoding="UTF-8"?>'
+            .'<configuration><system.webServer><security><authorization>'
+            .'<remove users="*" roles="" verbs="" />'
+            .'<add accessType="Deny" users="*" />'
+            .'</authorization></security></system.webServer></configuration>');
+    }
+
+    // Keep the compatibility redirect as a secondary directory-level guard.
     $index_file = $dir . '/index.php';
     if (!file_exists($index_file)) {
         $content = "<?php\nheader(\"Location: ../index.php\");\n";
@@ -238,6 +534,349 @@ function ensure_attachments_directory() {
     }
 
     return $dir;
+}
+
+/**
+ * Return the private employee-document root outside the application web root.
+ *
+ * Production may define HRM_DOCUMENT_PRIVATE_ROOT to an approved absolute
+ * path. The default is a sibling of the web-root parent, never company_path().
+ *
+ * @param int|null $company
+ * @return string|false
+ */
+function hrm_document_private_root($company = null) {
+    global $path_to_root;
+
+    if ($company === null) {
+        $company = function_exists('user_company') ? user_company() : 0;
+    }
+    $application_root = realpath($path_to_root);
+    if ($application_root === false) {
+        return false;
+    }
+    if (defined('HRM_DOCUMENT_PRIVATE_ROOT')) {
+        $base = rtrim((string)HRM_DOCUMENT_PRIVATE_ROOT, "\\/");
+    } else {
+        $web_parent = dirname($application_root);
+        $base = dirname($web_parent).DIRECTORY_SEPARATOR.'.notrinoserp-private'
+            .DIRECTORY_SEPARATOR.substr(hash('sha256', $application_root), 0, 16);
+    }
+    if ($base === '' || !preg_match('/^(?:[A-Za-z]:[\\\\\/]|\/)/', $base)) {
+        return false;
+    }
+    $normalized_base = str_replace('\\', '/', $base);
+    $normalized_app = str_replace('\\', '/', $application_root);
+    if ($normalized_base === $normalized_app
+        || strpos($normalized_base.'/', rtrim($normalized_app, '/').'/') === 0
+    ) {
+        return false;
+    }
+    return $base.DIRECTORY_SEPARATOR.'company-'.(int)$company;
+}
+
+/**
+ * Create and harden private storage directories.
+ *
+ * @param int|null $company
+ * @return array|false
+ */
+function ensure_hrm_document_private_storage($company = null) {
+    $root = hrm_document_private_root($company);
+    if ($root === false) {
+        return false;
+    }
+    $paths = array(
+        'root' => $root,
+        'objects' => $root.DIRECTORY_SEPARATOR.'objects',
+        'quarantine' => $root.DIRECTORY_SEPARATOR.'quarantine',
+        'keys' => $root.DIRECTORY_SEPARATOR.'keys',
+    );
+    foreach ($paths as $path) {
+        if (!is_dir($path) && !@mkdir($path, 0700, true) && !is_dir($path)) {
+            return false;
+        }
+        @chmod($path, 0700);
+    }
+    foreach (array($paths['root'], $paths['objects'], $paths['quarantine'], $paths['keys']) as $path) {
+        if (!file_exists($path.DIRECTORY_SEPARATOR.'.htaccess')) {
+            @file_put_contents($path.DIRECTORY_SEPARATOR.'.htaccess', "Require all denied\nDeny from all\n");
+        }
+        if (!file_exists($path.DIRECTORY_SEPARATOR.'web.config')) {
+            @file_put_contents($path.DIRECTORY_SEPARATOR.'web.config', '<?xml version="1.0" encoding="UTF-8"?>'
+                .'<configuration><system.webServer><security><authorization>'
+                .'<remove users="*" roles="" verbs="" />'
+                .'<add accessType="Deny" users="*" />'
+                .'</authorization></security></system.webServer></configuration>');
+        }
+    }
+    return $paths;
+}
+
+/**
+ * Load or securely create the per-company employee-document encryption key.
+ *
+ * @param int|null $company
+ * @return string|false Raw 32-byte key.
+ */
+function hrm_document_encryption_key($company = null) {
+    if (defined('HRM_DOCUMENT_ENCRYPTION_KEY')) {
+        $decoded = base64_decode((string)HRM_DOCUMENT_ENCRYPTION_KEY, true);
+        return is_string($decoded) && strlen($decoded) === 32 ? $decoded : false;
+    }
+    $paths = ensure_hrm_document_private_storage($company);
+    if ($paths === false) {
+        return false;
+    }
+    $key_path = $paths['keys'].DIRECTORY_SEPARATOR.'content-v1.key.pem';
+    if (is_file($key_path)) {
+        $encoded = trim((string)@file_get_contents($key_path));
+        $decoded = base64_decode($encoded, true);
+        return is_string($decoded) && strlen($decoded) === 32 ? $decoded : false;
+    }
+    if (!function_exists('openssl_random_pseudo_bytes')) {
+        return false;
+    }
+    $strong = false;
+    $key = openssl_random_pseudo_bytes(32, $strong);
+    if ($key === false || strlen($key) !== 32 || !$strong) {
+        return false;
+    }
+    $handle = @fopen($key_path, 'x+b');
+    if ($handle === false) {
+        // A concurrent creator may have completed first.
+        if (is_file($key_path)) {
+            $decoded = base64_decode(trim((string)@file_get_contents($key_path)), true);
+            return is_string($decoded) && strlen($decoded) === 32 ? $decoded : false;
+        }
+        return false;
+    }
+    $encoded_key = base64_encode($key)."\n";
+    $written = fwrite($handle, $encoded_key);
+    $flushed = fflush($handle);
+    fclose($handle);
+    @chmod($key_path, 0600);
+    if ($written !== strlen($encoded_key) || !$flushed) {
+        @unlink($key_path);
+        return false;
+    }
+    return $key;
+}
+
+/**
+ * Compare authentication values in constant time on PHP 5.6+.
+ *
+ * @param string $known
+ * @param string $actual
+ * @return bool
+ */
+function attachment_hash_equals($known, $actual) {
+    if (function_exists('hash_equals')) {
+        return hash_equals($known, $actual);
+    }
+    if (!is_string($known) || !is_string($actual) || strlen($known) !== strlen($actual)) {
+        return false;
+    }
+    $difference = 0;
+    for ($i = 0, $length = strlen($known); $i < $length; $i++) {
+        $difference |= ord($known[$i]) ^ ord($actual[$i]);
+    }
+    return $difference === 0;
+}
+
+/**
+ * Encrypt bytes using the versioned employee-document storage envelope.
+ *
+ * @param string $plaintext
+ * @param string $master_key
+ * @return string|false
+ */
+function encrypt_hrm_document_bytes($plaintext, $master_key) {
+    if (!function_exists('openssl_encrypt') || strlen($master_key) !== 32) {
+        return false;
+    }
+    $strong = false;
+    $iv = openssl_random_pseudo_bytes(16, $strong);
+    if ($iv === false || strlen($iv) !== 16 || !$strong) {
+        return false;
+    }
+    $encryption_key = hash_hmac('sha256', 'encryption-v1', $master_key, true);
+    $authentication_key = hash_hmac('sha256', 'authentication-v1', $master_key, true);
+    $ciphertext = openssl_encrypt($plaintext, 'AES-256-CBC', $encryption_key, OPENSSL_RAW_DATA, $iv);
+    if ($ciphertext === false) {
+        return false;
+    }
+    $magic = 'NERPHRD1';
+    $mac = hash_hmac('sha256', $magic.$iv.$ciphertext, $authentication_key, true);
+    return $magic.$iv.$mac.$ciphertext;
+}
+
+/**
+ * Authenticate and decrypt a versioned employee-document storage envelope.
+ *
+ * @param string $payload
+ * @param string $master_key
+ * @return string|false
+ */
+function decrypt_hrm_document_bytes($payload, $master_key) {
+    if (!function_exists('openssl_decrypt') || strlen($master_key) !== 32
+        || !is_string($payload) || strlen($payload) < 72 || substr($payload, 0, 8) !== 'NERPHRD1'
+    ) {
+        return false;
+    }
+    $magic = substr($payload, 0, 8);
+    $iv = substr($payload, 8, 16);
+    $mac = substr($payload, 24, 32);
+    $ciphertext = substr($payload, 56);
+    $authentication_key = hash_hmac('sha256', 'authentication-v1', $master_key, true);
+    $expected = hash_hmac('sha256', $magic.$iv.$ciphertext, $authentication_key, true);
+    if (!attachment_hash_equals($expected, $mac)) {
+        return false;
+    }
+    $encryption_key = hash_hmac('sha256', 'encryption-v1', $master_key, true);
+    return openssl_decrypt($ciphertext, 'AES-256-CBC', $encryption_key, OPENSSL_RAW_DATA, $iv);
+}
+
+/**
+ * Store a validated HR document in the private encrypted object directory.
+ *
+ * @param string $source_path
+ * @param int|null $company
+ * @return array|false
+ */
+function store_private_hrm_document($source_path, $company = null) {
+    $paths = ensure_hrm_document_private_storage($company);
+    $key = hrm_document_encryption_key($company);
+    if ($paths === false || $key === false || !is_file($source_path)) {
+        return false;
+    }
+    $plaintext = file_get_contents($source_path);
+    if ($plaintext === false) {
+        return false;
+    }
+    $payload = encrypt_hrm_document_bytes($plaintext, $key);
+    if ($payload === false) {
+        return false;
+    }
+    do {
+        $object_key = generate_attachment_unique_name();
+        $final_path = $paths['objects'].DIRECTORY_SEPARATOR.$object_key;
+    } while (file_exists($final_path));
+    if (!preg_match('/^[A-Za-z0-9_-]{16,128}$/', $object_key)) {
+        return false;
+    }
+    $temporary = $paths['quarantine'].DIRECTORY_SEPARATOR.$object_key.'.staged';
+    if (file_put_contents($temporary, $payload, LOCK_EX) !== strlen($payload)) {
+        @unlink($temporary);
+        return false;
+    }
+    @chmod($temporary, 0600);
+    $verify_payload = file_get_contents($temporary);
+    $verify_plaintext = $verify_payload === false ? false : decrypt_hrm_document_bytes($verify_payload, $key);
+    if ($verify_plaintext === false || !attachment_hash_equals(hash('sha256', $plaintext), hash('sha256', $verify_plaintext))) {
+        @unlink($temporary);
+        return false;
+    }
+    if (!@rename($temporary, $final_path)) {
+        @unlink($temporary);
+        return false;
+    }
+    @chmod($final_path, 0600);
+    return array(
+        'object_key' => $object_key,
+        'path' => $final_path,
+        'plaintext_size' => strlen($plaintext),
+        'plaintext_sha256' => hash('sha256', $plaintext),
+        'stored_size' => strlen($payload),
+    );
+}
+
+/**
+ * Resolve a private HR object path from an opaque storage key.
+ *
+ * @param string $object_key
+ * @param int|null $company
+ * @return string|false
+ */
+function get_private_hrm_document_path($object_key, $company = null) {
+    if (!is_string($object_key) || !preg_match('/^[A-Za-z0-9_-]{16,128}$/', $object_key)) {
+        return false;
+    }
+    $paths = ensure_hrm_document_private_storage($company);
+    if ($paths === false) {
+        return false;
+    }
+    $root = realpath($paths['objects']);
+    $path = realpath($paths['objects'].DIRECTORY_SEPARATOR.$object_key);
+    if ($root === false || $path === false || strpos($path, $root.DIRECTORY_SEPARATOR) !== 0 || !is_file($path)) {
+        return false;
+    }
+    return $path;
+}
+
+/**
+ * Decode attachment custom data defensively.
+ *
+ * @param mixed $value
+ * @return array
+ */
+function attachment_custom_data_array($value) {
+    if (is_array($value)) {
+        return $value;
+    }
+    if (!is_string($value) || $value === '') {
+        return array();
+    }
+    $decoded = json_decode($value, true);
+    if (!is_array($decoded) && strpos($value, '&quot;') !== false) {
+        // Recover metadata written through the legacy HTML-oriented db_escape().
+        $decoded = json_decode(html_entity_decode($value, ENT_QUOTES, 'UTF-8'), true);
+    }
+    return is_array($decoded) ? $decoded : array();
+}
+
+/**
+ * Quote JSON for SQL without applying UI HTML encoding.
+ *
+ * @param string $json
+ * @return string
+ */
+function attachment_db_json($json) {
+    $escaped = function_exists('db_escape_function')
+        ? db_escape_function($json) : addslashes($json);
+    return "'".$escaped."'";
+}
+
+/**
+ * Load and verify plaintext from a private encrypted attachment row.
+ *
+ * @param array $attachment
+ * @return string|false
+ */
+function read_private_hrm_attachment($attachment) {
+    $custom = attachment_custom_data_array(isset($attachment['custom_data']) ? $attachment['custom_data'] : '');
+    if (!isset($custom['storage_backend']) || $custom['storage_backend'] !== 'hrm_private_v1'
+        || !isset($custom['content_state']) || $custom['content_state'] !== 'available'
+        || !isset($custom['encryption_format']) || $custom['encryption_format'] !== 'aes-256-cbc-hmac-sha256-v1'
+    ) {
+        return false;
+    }
+    $path = get_private_hrm_document_path($attachment['unique_name']);
+    $key = hrm_document_encryption_key();
+    if ($path === false || $key === false) {
+        return false;
+    }
+    $payload = file_get_contents($path);
+    $plaintext = $payload === false ? false : decrypt_hrm_document_bytes($payload, $key);
+    if ($plaintext === false
+        || !isset($custom['plaintext_sha256'])
+        || !attachment_hash_equals($custom['plaintext_sha256'], hash('sha256', $plaintext))
+        || !isset($custom['plaintext_size'])
+        || (int)$custom['plaintext_size'] !== strlen($plaintext)
+    ) {
+        return false;
+    }
+    return $plaintext;
 }
 
 /**
@@ -311,11 +950,67 @@ function create_attachment($type_no, $trans_no, $description, $upload_info, $tra
         . db_escape($filesize) . ", "
         . db_escape($filetype) . ", '"
         . $tran_date . "', "
-        . db_escape($custom_json) . ")";
+        . attachment_db_json($custom_json) . ")";
 
     db_query($sql, 'Attachment could not be inserted');
 
     return db_insert_id();
+}
+
+/**
+ * Store a validated employee document in encrypted private storage and add its
+ * core attachment metadata. The caller remains responsible for authorization
+ * and for linking the returned attachment in the same database transaction.
+ *
+ * @param int $trans_no Numeric employee_number.
+ * @param string $description
+ * @param array $validated Result from validate_hrm_employee_document_*().
+ * @param array $custom_data
+ * @return array|false Attachment id, object path and object key.
+ */
+function create_private_hrm_attachment($trans_no, $description, $validated, $custom_data = array()) {
+    if (empty($validated['ok']) || empty($validated['sha256'])
+        || empty($validated['scanner_status']) || $validated['scanner_status'] !== 'clean'
+    ) {
+        return false;
+    }
+    $stored = store_private_hrm_document($validated['tmp_name']);
+    if ($stored === false
+        || !attachment_hash_equals($stored['plaintext_sha256'], $validated['sha256'])
+        || (int)$stored['plaintext_size'] !== (int)$validated['size']
+    ) {
+        if ($stored !== false && isset($stored['path'])) {
+            @unlink($stored['path']);
+        }
+        return false;
+    }
+    $metadata = array_merge($custom_data, array(
+        'storage_backend' => 'hrm_private_v1',
+        'encryption_format' => 'aes-256-cbc-hmac-sha256-v1',
+        'content_state' => 'available',
+        'plaintext_sha256' => $validated['sha256'],
+        'plaintext_size' => (int)$validated['size'],
+        'validated_mime' => $validated['mime'],
+        'scanner_status' => 'clean',
+        'content_policy_version' => 'hrm-document-v1',
+    ));
+    $custom_json = json_encode($metadata, JSON_UNESCAPED_UNICODE);
+    if ($custom_json === false) {
+        @unlink($stored['path']);
+        return false;
+    }
+    $sql = "INSERT INTO ".TB_PREF."attachments
+        (type_no, trans_no, description, filename, unique_name, filesize, filetype, tran_date, custom_data)
+        VALUES (".db_escape(ST_EMPLOYEE).", ".db_escape((int)$trans_no).", "
+        .db_escape($description).", ".db_escape($validated['filename']).", "
+        .db_escape($stored['object_key']).", ".db_escape((int)$validated['size']).", "
+        .db_escape($validated['mime']).", '".date2sql(Today())."', ".attachment_db_json($custom_json).")";
+    if (!db_query($sql)) {
+        @unlink($stored['path']);
+        return false;
+    }
+    $stored['attachment_id'] = (int)db_insert_id();
+    return $stored;
 }
 
 /**
@@ -402,7 +1097,7 @@ function update_attachment_metadata($attachment_id, $description, $tran_date = '
         if ($custom_json === false) {
             $custom_json = '{}';
         }
-        $sets[] = 'custom_data = ' . db_escape($custom_json);
+        $sets[] = 'custom_data = ' . attachment_db_json($custom_json);
     }
 
     $sql = "UPDATE " . TB_PREF . "attachments SET " . implode(', ', $sets)
@@ -427,9 +1122,16 @@ function delete_attachment_with_file($attachment_id) {
     }
 
     // Delete the physical file first.
-    $safe_path = get_safe_attachment_path($existing['unique_name']);
+    $custom = attachment_custom_data_array(isset($existing['custom_data']) ? $existing['custom_data'] : '');
+    $safe_path = isset($custom['storage_backend']) && $custom['storage_backend'] === 'hrm_private_v1'
+        ? get_private_hrm_document_path($existing['unique_name'])
+        : get_safe_attachment_path($existing['unique_name']);
     if ($safe_path !== false && file_exists($safe_path)) {
-        @unlink($safe_path);
+        if (!@unlink($safe_path)) {
+            return false;
+        }
+    } elseif (isset($custom['storage_backend']) && $custom['storage_backend'] === 'hrm_private_v1') {
+        return false;
     }
 
     // Delete the database record.
@@ -449,10 +1151,22 @@ function delete_attachment_with_file($attachment_id) {
  * @param string $mode        'inline' or 'download'.
  */
 function stream_attachment_file($attachment, $mode = 'inline') {
-    $safe_path = get_safe_attachment_path($attachment['unique_name']);
-    if ($safe_path === false || !file_exists($safe_path)) {
-        display_error(_('Attachment file not found or path is invalid.'));
-        exit();
+    $custom = attachment_custom_data_array(isset($attachment['custom_data']) ? $attachment['custom_data'] : '');
+    $private = isset($custom['storage_backend']) && $custom['storage_backend'] === 'hrm_private_v1';
+    $plaintext = false;
+    $safe_path = false;
+    if ($private) {
+        $plaintext = read_private_hrm_attachment($attachment);
+        if ($plaintext === false) {
+            header('HTTP/1.0 404 Not Found');
+            exit();
+        }
+    } else {
+        $safe_path = get_safe_attachment_path($attachment['unique_name']);
+        if ($safe_path === false || !file_exists($safe_path)) {
+            display_error(_('Attachment file not found or path is invalid.'));
+            exit();
+        }
     }
 
     $type     = (!empty($attachment['filetype'])) ? $attachment['filetype'] : 'application/octet-stream';
@@ -471,8 +1185,14 @@ function stream_attachment_file($attachment, $mode = 'inline') {
         ob_end_clean();
     }
 
+    if ($private) {
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store, max-age=0');
+        header('Pragma: no-cache');
+        header("Content-Security-Policy: sandbox; default-src 'none'");
+    }
     header('Content-Type: ' . $type);
-    header('Content-Length: ' . $attachment['filesize']);
+    header('Content-Length: ' . ($private ? strlen($plaintext) : $attachment['filesize']));
 
     if ($mode === 'download') {
         // Escape filename for Content-Disposition header.
@@ -485,7 +1205,11 @@ function stream_attachment_file($attachment, $mode = 'inline') {
         header('Content-Disposition: inline');
     }
 
-    readfile($safe_path);
+    if ($private) {
+        echo $plaintext;
+    } else {
+        readfile($safe_path);
+    }
     exit();
 }
 
@@ -585,6 +1309,80 @@ function canonical_legacy_employee_document_path($file_path) {
     }
 
     return $full_path;
+}
+
+/**
+ * Resolve the one verified historical relative-path format for migration only.
+ *
+ * Legacy rows stored paths relative to hrm/manage as
+ * ../../company/{company}/documents/employees/{basename}. This function never
+ * follows that traversal. It extracts a plain basename and reconstructs the
+ * candidate below the trusted current-company directory.
+ *
+ * @param string $file_path
+ * @param int|null $company
+ * @return string|false
+ */
+function canonical_historical_employee_document_path($file_path, $company = null) {
+    if (!is_string($file_path) || $file_path === '' || strpos($file_path, "\0") !== false) {
+        return false;
+    }
+    if ($company === null) {
+        $company = function_exists('user_company') ? user_company() : 0;
+    }
+    $normalized = str_replace('\\', '/', $file_path);
+    $pattern = '#^\.\./\.\./company/'.(int)$company.'/documents/employees/([^/]+)$#D';
+    if (!preg_match($pattern, $normalized, $matches)) {
+        return false;
+    }
+    $basename = $matches[1];
+    if ($basename === '' || $basename === '.' || $basename === '..'
+        || strpos($basename, '..') !== false || sanitize_attachment_filename($basename) !== $basename
+    ) {
+        return false;
+    }
+    $root = realpath(company_path($company).'/documents/employees');
+    $candidate = realpath(company_path($company).'/documents/employees/'.$basename);
+    if ($root === false || $candidate === false
+        || strpos($candidate, $root.DIRECTORY_SEPARATOR) !== 0
+        || is_link(company_path($company).'/documents/employees/'.$basename)
+        || !is_file($candidate) || !is_readable($candidate)
+    ) {
+        return false;
+    }
+    return $candidate;
+}
+
+/**
+ * Deny direct HTTP access to current and legacy employee-document directories.
+ *
+ * @param int|null $company
+ * @return bool
+ */
+function harden_hrm_document_public_directories($company = null) {
+    if ($company === null) {
+        $company = function_exists('user_company') ? user_company() : 0;
+    }
+    $directories = array(
+        ensure_attachments_directory(),
+        company_path($company).'/documents/employees',
+    );
+    foreach ($directories as $directory) {
+        if (!is_dir($directory)) {
+            continue;
+        }
+        $apache = $directory.'/.htaccess';
+        $iis = $directory.'/web.config';
+        if ((!file_exists($apache) && @file_put_contents($apache, "Require all denied\nDeny from all\n") === false)
+            || (!file_exists($iis) && @file_put_contents($iis, '<?xml version="1.0" encoding="UTF-8"?>'
+                .'<configuration><system.webServer><security><authorization>'
+                .'<remove users="*" roles="" verbs="" /><add accessType="Deny" users="*" />'
+                .'</authorization></security></system.webServer></configuration>') === false)
+        ) {
+            return false;
+        }
+    }
+    return true;
 }
 
 /**

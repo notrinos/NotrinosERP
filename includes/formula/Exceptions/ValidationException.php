@@ -11,18 +11,12 @@
 ***********************************************************************/
 
 /**
- * Entity class for document_types (HRM).
+ * ValidationException — thrown when formula validation discovers errors
+ * such as undefined functions, type mismatches, or security violations.
  *
- * Single-table CRUD via static API: ::find(), ::all(), ::create(), ::modify(), ::remove().
+ * @package NotrinosERP
+ * @subpackage Formula\Exceptions
  */
-include_once($path_to_root . '/includes/db/class.entity.inc');
-
-class doc_types_entity extends Entity {
-	function __construct() {
-		parent::__construct(
-			'document_types',
-			array('type_name', 'security_class', 'notify_before', 'is_required', 'inactive', 'doc_type_id'),
-			'doc_type_id'
-		);
-	}
+class Formula_Exceptions_ValidationException extends Formula_Exceptions_FormulaException
+{
 }

@@ -89,7 +89,11 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT) {
 
         if (function_exists('display_employee_documents')) {
             display_heading(_('Documents'));
-            display_employee_documents($employee_id);
+            display_employee_documents($employee_id, array(
+                'allow_edit' => false,
+                'allow_delete' => false,
+                'allow_view' => false,
+            ));
         }
 
         $history = get_employee_history($employee_id);

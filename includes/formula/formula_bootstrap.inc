@@ -128,22 +128,32 @@ function formula_autoload($class_name)
         return;
     }
 
-    // Only handle Formula_ prefixed classes
+    // Handle Formula_ prefixed classes (sub-namespace)
     $prefix = 'Formula_';
-    if (strncmp($class_name, $prefix, strlen($prefix)) !== 0) {
+    if (strncmp($class_name, $prefix, strlen($prefix)) === 0) {
+        $relative_class = substr($class_name, strlen($prefix));
+        $file_path = str_replace('_', DIRECTORY_SEPARATOR, $relative_class) . '.php';
+
+        global $path_to_root;
+        $absolute_path = $path_to_root . '/includes/formula/' . $file_path;
+
+        if (file_exists($absolute_path)) {
+            require_once $absolute_path;
+        }
         return;
     }
 
-    // Strip prefix and prepare relative path
-    $relative_class = substr($class_name, strlen($prefix));
-    $file_path = str_replace('_', DIRECTORY_SEPARATOR, $relative_class) . '.php';
+    // Handle root-level Formula classes (e.g., FormulaFacade)
+    if (strncmp($class_name, 'Formula', 7) === 0 && $class_name !== 'Formula') {
+        $relative_class = substr($class_name, 7);
+        $file_path = 'Formula' . $relative_class . '.php';
 
-    // Resolve to absolute path within includes/formula/
-    global $path_to_root;
-    $absolute_path = $path_to_root . '/includes/formula/' . $file_path;
+        global $path_to_root;
+        $absolute_path = $path_to_root . '/includes/formula/' . $file_path;
 
-    if (file_exists($absolute_path)) {
-        require_once $absolute_path;
+        if (file_exists($absolute_path)) {
+            require_once $absolute_path;
+        }
     }
 }
 

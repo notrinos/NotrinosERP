@@ -4300,6 +4300,7 @@ DROP TABLE IF EXISTS `0_document_types`;
 CREATE TABLE IF NOT EXISTS `0_document_types` (
 	`doc_type_id`   int(11) NOT NULL AUTO_INCREMENT,
 	`type_name`     varchar(100) NOT NULL,
+	`security_class` varchar(32) NOT NULL DEFAULT 'restricted',
 	`notify_before` int(11) DEFAULT '30' COMMENT 'days before expiry to alert',
 	`is_required`   tinyint(1) DEFAULT '0',
 	`inactive`      tinyint(1) NOT NULL DEFAULT '0',
@@ -4308,13 +4309,13 @@ CREATE TABLE IF NOT EXISTS `0_document_types` (
 
 -- Data of table `0_document_types` --
 
-INSERT INTO `0_document_types` (`type_name`, `notify_before`, `is_required`) VALUES
-('Passport', 60, 1),
-('National ID', 90, 1),
-('Residence Permit', 60, 0),
-('Work Permit', 60, 0),
-('Driving License', 30, 0),
-('Medical Certificate', 30, 0);
+INSERT INTO `0_document_types` (`type_name`, `security_class`, `notify_before`, `is_required`) VALUES
+('Passport', 'identity', 60, 1),
+('National ID', 'identity', 90, 1),
+('Residence Permit', 'work_authorization', 60, 0),
+('Work Permit', 'work_authorization', 60, 0),
+('Driving License', 'identity', 30, 0),
+('Medical Certificate', 'medical', 30, 0);
 
 -- ============================================================
 -- EMPLOYEE DEPENDENTS
@@ -4354,6 +4355,12 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	`doc_name`      varchar(200) NOT NULL,
 	`file_path`     varchar(500) DEFAULT NULL,
 	`attachment_id` int(11) unsigned DEFAULT NULL,
+	`access_key`    char(64) NOT NULL,
+	`content_state` varchar(24) NOT NULL DEFAULT 'metadata_only',
+	`content_sha256` char(64) DEFAULT NULL,
+	`content_size`  int(11) unsigned DEFAULT NULL,
+	`content_mime`  varchar(100) DEFAULT NULL,
+	`retention_locked` tinyint(1) NOT NULL DEFAULT '0',
 	`issue_date`    date DEFAULT NULL,
 	`expiry_date`   date DEFAULT NULL,
 	`notes`         text,
@@ -4362,7 +4369,35 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	PRIMARY KEY (`doc_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `expiry_date` (`expiry_date`),
+	KEY `content_state` (`content_state`),
+	UNIQUE KEY `employee_document_access_key_uq` (`access_key`),
 	UNIQUE KEY `employee_document_attachment_uq` (`attachment_id`)
+) ENGINE=InnoDB;
+
+-- Structure of table `0_employee_document_migration_journal` --
+
+DROP TABLE IF EXISTS `0_employee_document_migration_journal`;
+CREATE TABLE `0_employee_document_migration_journal` (
+	`journal_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`doc_id` int(11) NOT NULL,
+	`source_path_hash` char(64) NOT NULL,
+	`source_size` int(11) unsigned DEFAULT NULL,
+	`source_mtime` bigint(20) unsigned DEFAULT NULL,
+	`source_sha256` char(64) DEFAULT NULL,
+	`detected_mime` varchar(100) DEFAULT NULL,
+	`target_attachment_id` int(11) unsigned DEFAULT NULL,
+	`attempt_no` int(11) unsigned NOT NULL DEFAULT '1',
+	`policy_version` varchar(40) NOT NULL,
+	`scanner_status` varchar(32) NOT NULL,
+	`status` varchar(24) NOT NULL,
+	`error_code` varchar(64) NOT NULL DEFAULT '',
+	`actor_id` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`batch_id` char(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`journal_id`),
+	KEY `employee_document_migration_source` (`doc_id`,`source_path_hash`,`journal_id`),
+	KEY `employee_document_migration_target` (`target_attachment_id`),
+	KEY `employee_document_migration_status` (`status`,`journal_id`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_employee_documents` --

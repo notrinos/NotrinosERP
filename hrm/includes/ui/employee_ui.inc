@@ -174,18 +174,14 @@ function display_employee_documents($employee_id, $options = array()) {
 			$actions[] = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&edit_doc=".$doc['doc_id'])."'>"._('Edit')."</a>";
 		}
 		if ($opts['allow_delete']) {
-			$actions[] = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_documents&delete_doc=".$doc['doc_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+			$actions[] = button('delete_doc'.(int)$doc['doc_id'], _('Delete'), _('Delete'), ICON_THRASH);
 		}
 		if ($opts['allow_view']) {
-			$has_file = !empty($doc['attachment_id']) || !empty($doc['file_path']);
+			$has_file = !empty($doc['attachment_id']) && isset($doc['content_state'])
+				&& $doc['content_state'] === 'available' && !empty($doc['access_key']);
 			if ($has_file) {
-				// Prefer the HR-authorized view endpoint for core attachments.
-				if (!empty($doc['attachment_id'])) {
-					$view_url = $path_to_root.'/hrm/view/employee_document_attachment.php?doc_id='.(int)$doc['doc_id'];
-				} else {
-					// Legacy file_path: route through the safe endpoint.
-					$view_url = $path_to_root.'/hrm/view/employee_document_attachment.php?doc_id='.(int)$doc['doc_id'];
-				}
+				$view_url = $path_to_root.'/hrm/view/employee_document_attachment.php?key='
+					.rawurlencode($doc['access_key']);
 				$actions[] = "<a href='".$view_url."' target='_blank'>"._('View')."</a>";
 			}
 		}
