@@ -97,9 +97,12 @@ class BoxReports {
 					$action = $_SERVER['PHP_SELF'];
 					$st_params = "<form method='POST' action='$action' target='_blank' class='report-params-form'>\n";
 					$st_params .= "<input type='hidden' name='_token' value='".ensure_csrf_token()."'>\n";
-					$st_params .= submit('Rep'.$report->id,  
+					$display_aspect = false;
+					if (!$SysPrefs->pdf_debug)
+						$display_aspect = user_rep_popup() ? 'default nonajax popup' : 'default';
+					$st_params .= submit('Rep'.$report->id,
 						_('Display: ') . access_string($report->name, true),
-						false, '', $SysPrefs->pdf_debug ? false : 'default popup') . hidden('REP_ID', $report->id, false);
+						false, '', $display_aspect) . hidden('REP_ID', $report->id, false);
 					$st_params .= $this->getOptions($report->get_controls(), $report->id);
 					$st_params .= "\n<input type='hidden' name='Class' value='".htmlspecialchars($cur_class, ENT_QUOTES)."'>"
 						."\n</form>\n";
