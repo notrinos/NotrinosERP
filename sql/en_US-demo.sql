@@ -131,6 +131,102 @@ INSERT INTO `0_audit_trail` VALUES
 ('35', '20', '2', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
 ('36', '0', '1', '1', '2026-01-21 11:15:35', NULL, '1', '2025-12-31', '16', '{}');
 
+-- =====================================================
+-- PAY-AUD-001 append-only HR/payroll domain audit foundation
+-- =====================================================
+
+DROP TABLE IF EXISTS `0_domain_audit_chain_state`;
+CREATE TABLE `0_domain_audit_chain_state` (
+  `chain_scope` varchar(96) NOT NULL,
+  `last_sequence` bigint unsigned NOT NULL DEFAULT '0',
+  `last_event_hash` char(64) NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`chain_scope`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `0_domain_audit_events`;
+CREATE TABLE `0_domain_audit_events` (
+  `event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `chain_scope` varchar(96) NOT NULL,
+  `chain_sequence` bigint unsigned NOT NULL,
+  `occurred_at` datetime NOT NULL,
+  `actor_user_id` smallint unsigned NOT NULL DEFAULT '0',
+  `security_context_hash` char(64) NOT NULL,
+  `company_id` int unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL DEFAULT '0',
+  `entity_type` varchar(64) NOT NULL,
+  `entity_key_hash` char(64) NOT NULL,
+  `action` varchar(64) NOT NULL,
+  `reason_code` varchar(64) NOT NULL,
+  `correlation_id` char(32) NOT NULL,
+  `legacy_source` varchar(64) NOT NULL DEFAULT '',
+  `legacy_id` bigint unsigned NOT NULL DEFAULT '0',
+  `before_hash` char(64) DEFAULT NULL,
+  `after_hash` char(64) DEFAULT NULL,
+  `restricted_diff` text NOT NULL,
+  `previous_event_hash` char(64) NOT NULL,
+  `event_hash` char(64) NOT NULL,
+  `key_id` char(16) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`event_id`),
+  UNIQUE KEY `domain_audit_chain_sequence_uq` (`chain_scope`,`chain_sequence`),
+  UNIQUE KEY `domain_audit_event_hash_uq` (`event_hash`),
+  KEY `domain_audit_actor_time_idx` (`actor_user_id`,`occurred_at`),
+  KEY `domain_audit_entity_time_idx` (`entity_type`,`entity_key_hash`,`occurred_at`),
+  KEY `domain_audit_correlation_idx` (`correlation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `0_domain_audit_outbox`;
+CREATE TABLE `0_domain_audit_outbox` (
+  `outbox_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `event_id` bigint unsigned NOT NULL,
+  `chain_scope` varchar(96) NOT NULL,
+  `chain_sequence` bigint unsigned NOT NULL,
+  `payload` longtext NOT NULL,
+  `payload_hash` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`outbox_id`),
+  UNIQUE KEY `domain_audit_outbox_event_uq` (`event_id`),
+  UNIQUE KEY `domain_audit_outbox_chain_uq` (`chain_scope`,`chain_sequence`),
+  KEY `domain_audit_outbox_created_idx` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `0_domain_audit_checkpoints`;
+CREATE TABLE `0_domain_audit_checkpoints` (
+  `checkpoint_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `chain_scope` varchar(96) NOT NULL,
+  `chain_sequence` bigint unsigned NOT NULL,
+  `event_hash` char(64) NOT NULL,
+  `event_count` bigint unsigned NOT NULL,
+  `key_id` char(16) NOT NULL,
+  `signature` char(64) NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`checkpoint_id`),
+  UNIQUE KEY `domain_audit_checkpoint_chain_uq` (`chain_scope`,`chain_sequence`),
+  KEY `domain_audit_checkpoint_created_idx` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TRIGGER IF EXISTS `0_domain_audit_events_no_update`;
+CREATE TRIGGER `0_domain_audit_events_no_update` BEFORE UPDATE ON `0_domain_audit_events`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be updated';
+DROP TRIGGER IF EXISTS `0_domain_audit_events_no_delete`;
+CREATE TRIGGER `0_domain_audit_events_no_delete` BEFORE DELETE ON `0_domain_audit_events`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be deleted';
+DROP TRIGGER IF EXISTS `0_domain_audit_outbox_no_update`;
+CREATE TRIGGER `0_domain_audit_outbox_no_update` BEFORE UPDATE ON `0_domain_audit_outbox`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be updated';
+DROP TRIGGER IF EXISTS `0_domain_audit_outbox_no_delete`;
+CREATE TRIGGER `0_domain_audit_outbox_no_delete` BEFORE DELETE ON `0_domain_audit_outbox`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be deleted';
+DROP TRIGGER IF EXISTS `0_domain_audit_checkpoints_no_update`;
+CREATE TRIGGER `0_domain_audit_checkpoints_no_update` BEFORE UPDATE ON `0_domain_audit_checkpoints`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be updated';
+DROP TRIGGER IF EXISTS `0_domain_audit_checkpoints_no_delete`;
+CREATE TRIGGER `0_domain_audit_checkpoints_no_delete` BEFORE DELETE ON `0_domain_audit_checkpoints`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be deleted';
+
+-- End PAY-AUD-001 foundation
+
 -- Structure of table `0_bank_accounts` --
 
 DROP TABLE IF EXISTS `0_bank_accounts`;

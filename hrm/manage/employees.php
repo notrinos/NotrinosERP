@@ -56,6 +56,7 @@ include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/hrm_hooks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_salary_audit.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
@@ -572,7 +573,15 @@ function tab_salary($employee_id) {
 						(int)$deleting_salary['element_id']
 					)
 				) : 0;
-				if ($deleted && $history_id) {
+				$audit_event = ($deleted && $history_id) ? append_employee_salary_domain_audit(
+					'delete',
+					$employee_id,
+					(int)$deleting_salary['salary_id'],
+					$deleting_salary,
+					null,
+					(int)$history_id
+				) : false;
+				if ($deleted && $history_id && $audit_event) {
 					commit_transaction();
 					hrm_log_sensitive_field_access(
 						HRM_FIELD_RESTRICTED_COMPENSATION,
@@ -582,7 +591,7 @@ function tab_salary($employee_id) {
 					display_notification(_('Salary element removed.'));
 				} else {
 					cancel_transaction();
-					display_error(_('Could not remove salary element with its audit history.'));
+					display_error(_('Could not remove salary element with complete audit evidence.'));
 				}
 			}
 			$Ajax->activate('_page_body');
@@ -644,12 +653,22 @@ function tab_salary($employee_id) {
 							(int)$editing_salary['element_id']
 						)
 					) : 0;
-					if ($ok && $history_id) {
+					$updated_salary = ($ok && $history_id)
+						? get_employee_salary((int)$editing_salary['salary_id']) : false;
+					$audit_event = ($updated_salary && $history_id) ? append_employee_salary_domain_audit(
+						'update',
+						$employee_id,
+						(int)$editing_salary['salary_id'],
+						$editing_salary,
+						$updated_salary,
+						(int)$history_id
+					) : false;
+					if ($ok && $history_id && $updated_salary && $audit_event) {
 						commit_transaction();
 						display_notification(_('Salary element updated.'));
 					} else {
 						cancel_transaction();
-						display_error(_('Could not update salary element with its audit history.'));
+						display_error(_('Could not update salary element with complete audit evidence.'));
 					}
 				} else {
 					begin_transaction();
@@ -672,12 +691,22 @@ function tab_salary($employee_id) {
 							(int)get_post('sal_element_id')
 						)
 					) : 0;
-					if ($salary_id && $history_id) {
+					$created_salary = ($salary_id && $history_id)
+						? get_employee_salary((int)$salary_id) : false;
+					$audit_event = ($created_salary && $history_id) ? append_employee_salary_domain_audit(
+						'create',
+						$employee_id,
+						(int)$salary_id,
+						null,
+						$created_salary,
+						(int)$history_id
+					) : false;
+					if ($salary_id && $history_id && $created_salary && $audit_event) {
 						commit_transaction();
 						display_notification(_('Salary element added.'));
 					} else {
 						cancel_transaction();
-						display_error(_('Could not add salary element with its audit history. Check effective dates and duplicates.'));
+						display_error(_('Could not add salary element with complete audit evidence. Check effective dates, duplicates, and audit-key storage.'));
 					}
 				}
 				unset($_POST['editing_salary_id'], $_POST['sal_element_id'], $_POST['sal_amount'], $_POST['sal_formula'], $_POST['sal_reference'], $_POST['sal_effective_from'], $_POST['sal_effective_to']);
