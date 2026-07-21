@@ -122,7 +122,7 @@ function domain_audit_hash_equals($known, $actual) {
  * @return string|false
  */
 function domain_audit_private_root($company = null) {
-    global $path_to_root;
+    global $path_to_root, $db_connections;
 
     if ($company === null) {
         $company = function_exists('user_company') ? user_company() : 0;
@@ -133,6 +133,8 @@ function domain_audit_private_root($company = null) {
     }
     if (defined('PAYROLL_AUDIT_PRIVATE_ROOT')) {
         $base = rtrim((string)PAYROLL_AUDIT_PRIVATE_ROOT, "\\/");
+    } elseif (isset($db_connections[$company]['payroll_audit_private_root'])) {
+        $base = rtrim((string)$db_connections[$company]['payroll_audit_private_root'], "\\/");
     } else {
         $web_parent = dirname($application_root);
         $base = dirname($web_parent).DIRECTORY_SEPARATOR.'.notrinoserp-private'
@@ -209,15 +211,36 @@ function ensure_domain_audit_private_storage($company = null) {
 }
 
 /**
- * Load or atomically create the per-company audit signing/HMAC key.
+ * Load the per-company audit signing/HMAC key and create it only when explicitly allowed.
+ *
+ * Normal audit writes and verification must never generate a replacement key after
+ * key loss. Initial key creation is reserved for the controlled migration path.
  *
  * @param int|null $company
+ * @param bool $allow_create
  * @return string|false Raw 32-byte key.
  */
-function domain_audit_signing_key($company = null) {
+function domain_audit_signing_key($company = null, $allow_create = false) {
     if (defined('PAYROLL_AUDIT_SIGNING_KEY')) {
         $decoded = base64_decode((string)PAYROLL_AUDIT_SIGNING_KEY, true);
         return is_string($decoded) && strlen($decoded) === 32 ? $decoded : false;
+    }
+    $root = domain_audit_private_root($company);
+    if ($root === false) {
+        return false;
+    }
+    $key_path = $root.DIRECTORY_SEPARATOR.'keys'.DIRECTORY_SEPARATOR.'domain-audit-hmac-v1.key';
+    if (is_file($key_path)) {
+        @chmod($key_path, 0600);
+        $permissions = @fileperms($key_path);
+        if (DIRECTORY_SEPARATOR === '/' && $permissions !== false && ($permissions & 0077) !== 0) {
+            return false;
+        }
+        $decoded = base64_decode(trim((string)@file_get_contents($key_path)), true);
+        return is_string($decoded) && strlen($decoded) === 32 ? $decoded : false;
+    }
+    if (!$allow_create) {
+        return false;
     }
     $paths = ensure_domain_audit_private_storage($company);
     if ($paths === false) {

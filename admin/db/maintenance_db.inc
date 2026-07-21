@@ -262,14 +262,14 @@ function db_get_import_constraint_name($constraint_query) {
 }
 
 /**
- * Returns existing constraint names for the target schema.
+ * Returns existing foreign-key constraint names for the target schema.
  *
  * @param string $database_name Schema name.
  * @return array
  */
 function db_get_existing_import_constraints($database_name) {
 	$sql = "SELECT CONSTRAINT_NAME"
-		." FROM information_schema.TABLE_CONSTRAINTS"
+		." FROM information_schema.REFERENTIAL_CONSTRAINTS"
 		." WHERE CONSTRAINT_SCHEMA = ".db_escape($database_name);
 	$result = db_query($sql);
 	$constraints = array();
@@ -280,6 +280,25 @@ function db_get_existing_import_constraints($database_name) {
 	}
 
 	return $constraints;
+}
+
+/**
+ * Escapes a database value for a lossless SQL backup.
+ *
+ * Backup data must not pass through the UI HTML decode/encode path used by
+ * db_escape(), because that can rewrite historical text and can collapse an
+ * invalidly converted value to an empty string. Preserve NULL separately from
+ * an empty string and otherwise use the active database driver's quoting.
+ *
+ * @param mixed $value Database value.
+ * @param bool $nullable Whether the column permits SQL NULL.
+ * @return string SQL literal.
+ */
+function db_export_escape_value($value, $nullable = false) {
+	if ($value === null)
+		return $nullable ? 'NULL' : "''";
+
+	return "'".db_escape_function((string)$value)."'";
 }
 
 /**
@@ -661,9 +680,9 @@ function db_unzip($mode, $path) {
 
 function db_backup($conn, $ext='no', $comm='', $path='') {
 	if ($conn['tbpref'] != '')
-		$filename = $conn['dbname'].'_'.$conn['tbpref'].date('Ymd_Hi').'.sql';
+		$filename = $conn['dbname'].'_'.$conn['tbpref'].date('Ymd_His').'.sql';
 	else
-		$filename = $conn['dbname'].'_'.date('Ymd_Hi').'.sql';
+		$filename = $conn['dbname'].'_'.date('Ymd_His').'.sql';
 
 	return db_export($conn, $path.clean_file_name($filename), $ext, $comm);
 }
@@ -784,7 +803,7 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 						$row2 = db_fetch_row($res2);
 						$values = '(';
 						for ($k = 0; $k < $nf = db_num_fields($res2); $k++) {
-							$values .= db_escape($row2[$k], $field_null[$k]);
+							$values .= db_export_escape_value($row2[$k], $field_null[$k]);
 							if ($k < ($nf - 1))
 								$values .= ', ';
 						}
