@@ -478,7 +478,8 @@ function db_query($sql, $err_msg = null) {
 	if ($normalized_sql === 'BEGIN' || $normalized_sql === 'COMMIT' || $normalized_sql === 'ROLLBACK') {
 		$result = db_pdo_execute_transaction_sql($db, $normalized_sql);
 
-		if (!$result && $normalized_sql === 'BEGIN' && db_pdo_has_active_result_error($db_last_error_no)) {
+		if (!$result && $normalized_sql === 'BEGIN' && db_pdo_has_active_result_error($db_last_error_no)
+			&& empty($GLOBALS['domain_audit_export_identity_active'])) {
 			$reconnected = set_global_connection($comp);
 			if ($reconnected instanceof PDO)
 				$result = db_pdo_execute_transaction_sql($reconnected, $normalized_sql);
