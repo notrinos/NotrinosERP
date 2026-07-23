@@ -13,6 +13,7 @@
 include_once($path_to_root . '/admin/db/attachments_db.inc');
 include_once($path_to_root . '/includes/attachment_service.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
 
 /**
  * Enhanced Employee CRUD
@@ -127,20 +128,31 @@ function add_employee($data) {
 	$cols = implode(', ', array_keys($fields));
 	$vals = implode(', ', array_values($fields));
 
+	begin_transaction();
 	$sql = "INSERT INTO ".TB_PREF."employees ($cols) VALUES ($vals)";
-	db_query($sql, 'could not add employee record');
-
-	return db_insert_id();
+	$inserted = db_query($sql, 'could not add employee record');
+	$employee_number = $inserted ? db_insert_id() : false;
+	$after = $employee_number ? hrm_employee_domain_audit_row($employee_id) : false;
+	$audit = $after ? append_employee_profile_domain_audit(
+		'created', $employee_id, null, $after
+	) : false;
+	if (!$inserted || !$employee_number || !$audit) {
+		cancel_transaction();
+		return false;
+	}
+	commit_transaction();
+	return $employee_number;
 }
 
 /**
  * Update an existing employee by employee_id (string code).
  * @param string $employee_id The employee code (e.g. 'EMP001')
  * @param array $data Associative array of fields to update
+ * @return bool
  */
 function update_employee($employee_id, $data) {
 	if (!is_array($data))
-		return;
+		return false;
 
 	$sets = array();
 
@@ -186,12 +198,26 @@ function update_employee($employee_id, $data) {
 	}
 
 	if (empty($sets))
-		return;
+		return false;
 
+	$before = hrm_employee_domain_audit_row($employee_id);
+	if (!$before)
+		return false;
+	begin_transaction();
 	$sql = "UPDATE ".TB_PREF."employees SET ".implode(', ', $sets)
 		." WHERE ".employee_where_condition($employee_id);
 
-	db_query($sql, 'could not update employee');
+	$updated = db_query($sql, 'could not update employee');
+	$after = $updated ? hrm_employee_domain_audit_row($employee_id) : false;
+	$audit = $after ? append_employee_profile_domain_audit(
+		'updated', $employee_id, $before, $after
+	) : false;
+	if (!$updated || !$audit) {
+		cancel_transaction();
+		return false;
+	}
+	commit_transaction();
+	return true;
 }
 
 /**
@@ -611,45 +637,27 @@ function delete_employee($employee_id) {
 	// Check if employee has payslips
 	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
 		return false;
-	// A whole-employee delete must not bypass an employee-document retention hold.
+	// Document bytes cannot participate in this database transaction. Deny the
+	// cascade while any document exists so rollback can never orphan or erase it.
 	if (employee_table_exists('employee_documents') && check_empty_result(
 		"SELECT COUNT(*) FROM ".TB_PREF."employee_documents
-		 WHERE employee_id = ".db_escape($employee_id)." AND retention_locked = 1"
+		 WHERE employee_id = ".db_escape($employee_id)
 	))
+		return false;
+	$snapshot = hrm_employee_deletion_audit_snapshot($employee_id);
+	if ($snapshot === false)
 		return false;
 
 	begin_transaction();
 
-	// Delete related records
-	if (employee_table_exists('employee_documents')) {
-		// Clean up core attachments linked to employee documents.
-		$docs = db_query(
-			"SELECT doc_id, attachment_id, file_path FROM ".TB_PREF."employee_documents
-			 WHERE employee_id = ".db_escape($employee_id),
-			'could not get employee documents for delete'
-		);
-		while ($doc = db_fetch($docs)) {
-			// Delete linked core attachment through the service.
-			if (!empty($doc['attachment_id'])) {
-				delete_attachment_with_file((int)$doc['attachment_id']);
-			}
-			// Historical source paths are migration/recovery evidence and are never
-			// deleted by the compatibility employee-delete cascade.
-		}
-
-		$sql = "DELETE FROM ".TB_PREF."employee_documents WHERE employee_id = ".db_escape($employee_id);
-		db_query($sql, 'could not delete employee documents');
-	}
-
+	// Delete only database rows whose removal can share this transaction.
 	if (employee_table_exists('employee_dependents')) {
 		$sql = "DELETE FROM ".TB_PREF."employee_dependents WHERE employee_id = ".db_escape($employee_id);
 		db_query($sql, 'could not delete employee dependents');
 	}
 
-	if (employee_table_exists('employee_history')) {
-		$sql = "DELETE FROM ".TB_PREF."employee_history WHERE employee_id = ".db_escape($employee_id);
-		db_query($sql, 'could not delete employee history');
-	}
+	// Historical employee changes are accounting/audit evidence and survive
+	// deletion of the current employee profile.
 
 	if (employee_table_exists('employee_salary')) {
 		$sql = "DELETE FROM ".TB_PREF."employee_salary WHERE employee_id = ".db_escape($employee_id);
@@ -662,7 +670,13 @@ function delete_employee($employee_id) {
 	}
 
 	$sql = "DELETE FROM ".TB_PREF."employees WHERE ".$employee_where;
-	db_query($sql, 'could not delete employee');
+	$deleted = db_query($sql, 'could not delete employee');
+	$audit = $deleted
+		? append_employee_deletion_domain_audit($employee_id, $snapshot) : false;
+	if (!$deleted || !$audit) {
+		cancel_transaction();
+		return false;
+	}
 
 	commit_transaction();
 

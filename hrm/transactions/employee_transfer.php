@@ -62,29 +62,33 @@ if (isset($_POST['Process'])) {
             $new_position = (int)$_POST['new_position_id'];
             $new_grade = (int)$_POST['new_grade_id'];
 
-            update_employee($_POST['employee_id'], array(
+            $employee_updated = update_employee($_POST['employee_id'], array(
                 'department_id' => $new_department,
                 'position_id' => $new_position,
                 'grade_id' => $new_grade
             ));
 
-            add_employee_history(
-                $_POST['employee_id'],
-                HRM_HIST_TRANSFER,
-                $_POST['effective_date'],
-                $old_department,
-                $new_department,
-                $old_position,
-                $new_position,
-                $old_grade,
-                $new_grade,
-                null,
-                null,
-                $_POST['reason'],
-                isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
-            );
+            if (!$employee_updated) {
+                display_error(_('Could not update the employee or append required audit evidence.'));
+            } else {
+                add_employee_history(
+                    $_POST['employee_id'],
+                    HRM_HIST_TRANSFER,
+                    $_POST['effective_date'],
+                    $old_department,
+                    $new_department,
+                    $old_position,
+                    $new_position,
+                    $old_grade,
+                    $new_grade,
+                    null,
+                    null,
+                    $_POST['reason'],
+                    isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
+                );
 
-            display_notification(_('Employee transfer has been processed.'));
+                display_notification(_('Employee transfer has been processed.'));
+            }
         }
     }
 }

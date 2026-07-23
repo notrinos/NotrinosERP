@@ -107,7 +107,7 @@ include_once $path_to_root.'/includes/db/domain_audit_export.inc';
 if (!domain_audit_activate_export_identity($company)) {
     domain_audit_custody_cli_exit(false, 'export_identity_rejected');
 }
-if (!isset($db_version) || $db_version !== '1.0.19') {
+if (!isset($db_version) || $db_version !== '1.0.26') {
     domain_audit_custody_cli_exit(false, 'source_upgrade_required');
 }
 

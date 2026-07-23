@@ -90,28 +90,32 @@ if (isset($_POST['Process'])) {
             set_focus('separation_date');
         } else {
             hrm_log_restricted_employee_projection('employee_separation_context');
-            update_employee($_POST['employee_id'], array(
+            $employee_updated = update_employee($_POST['employee_id'], array(
                 'inactive' => 1,
                 'released_date' => $_POST['separation_date']
             ));
 
-            add_employee_history(
-                $_POST['employee_id'],
-                HRM_HIST_SEPARATION,
-                $_POST['separation_date'],
-                (int)$employee['department_id'],
-                null,
-                (int)$employee['position_id'],
-                null,
-                (int)$employee['grade_id'],
-                null,
-                get_employee_total_salary($_POST['employee_id'], $_POST['separation_date']),
-                null,
-                $_POST['reason'].'; EOS='.(string)$eos_amount,
-                isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
-            );
+            if (!$employee_updated) {
+                display_error(_('Could not update the employee or append required audit evidence.'));
+            } else {
+                add_employee_history(
+                    $_POST['employee_id'],
+                    HRM_HIST_SEPARATION,
+                    $_POST['separation_date'],
+                    (int)$employee['department_id'],
+                    null,
+                    (int)$employee['position_id'],
+                    null,
+                    (int)$employee['grade_id'],
+                    null,
+                    get_employee_total_salary($_POST['employee_id'], $_POST['separation_date']),
+                    null,
+                    $_POST['reason'].'; EOS='.(string)$eos_amount,
+                    isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
+                );
 
-            display_notification(_('Employee separation has been processed. Calculated EOS: ').price_format($eos_amount));
+                display_notification(_('Employee separation has been processed. Calculated EOS: ').price_format($eos_amount));
+            }
         }
     }
 }

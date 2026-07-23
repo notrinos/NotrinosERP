@@ -93,44 +93,6 @@ CREATE TABLE `0_audit_trail` (
 
 -- Data of table `0_audit_trail` --
 
-INSERT INTO `0_audit_trail` VALUES
-('1', '18', '1', '1', '2025-05-05 14:08:02', NULL, '1', '2025-05-05', '0', '{}'),
-('2', '25', '1', '1', '2025-05-05 14:08:14', NULL, '1', '2025-05-05', '1', '{}'),
-('3', '30', '1', '1', '2025-05-05 14:09:54', NULL, '1', '2025-05-10', '0', '{}'),
-('4', '13', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '13', '{}'),
-('5', '10', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '14', '{}'),
-('6', '12', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '15', '{}'),
-('7', '29', '1', '1', '2025-05-05 14:18:49', 'Quick production.', '1', '2025-05-05', '2', '{}'),
-('8', '18', '2', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '0', '{}'),
-('9', '25', '2', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '3', '{}'),
-('10', '20', '1', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '4', '{}'),
-('11', '30', '2', '1', '2025-05-07 07:55:15', NULL, '1', '2025-05-07', '0', '{}'),
-('12', '13', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '7', '{}'),
-('13', '10', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '8', '{}'),
-('14', '12', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '9', '{}'),
-('15', '30', '3', '1', '2025-05-07 08:08:24', NULL, '1', '2025-05-07', '0', '{}'),
-('16', '30', '4', '1', '2025-05-07 09:18:44', NULL, '1', '2025-05-07', '0', '{}'),
-('17', '30', '5', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '0', '{}'),
-('18', '13', '3', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '10', '{}'),
-('19', '10', '3', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '11', '{}'),
-('20', '30', '6', '1', '2025-05-07 14:02:35', NULL, '1', '2025-05-07', '0', '{}'),
-('21', '30', '7', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
-('22', '13', '4', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
-('23', '10', '4', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
-('24', '12', '3', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
-('25', '26', '1', '1', '2025-05-07 15:59:34', NULL, '1', '2025-05-07', NULL, '{}'),
-('26', '29', '1', '1', '2025-05-07 15:59:01', 'Production.', '1', '2025-05-07', '5', '{}'),
-('27', '26', '1', '1', '2025-05-07 15:59:34', 'Released.', '1', '2025-05-07', '6', '{}'),
-('28', '1', '1', '1', '2025-05-07 16:01:00', NULL, '1', '2025-05-07', '12', '{}'),
-('29', '30', '8', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
-('30', '13', '5', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
-('31', '10', '5', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
-('32', '12', '4', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
-('33', '18', '3', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
-('34', '25', '3', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
-('35', '20', '2', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
-('36', '0', '1', '1', '2026-01-21 11:15:35', NULL, '1', '2025-12-31', '16', '{}');
-
 -- =====================================================
 -- PAY-AUD-001 append-only HR/payroll domain audit foundation
 -- =====================================================
@@ -206,6 +168,34 @@ CREATE TABLE `0_domain_audit_checkpoints` (
   KEY `domain_audit_checkpoint_created_idx` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `0_domain_audit_export_receipts`;
+CREATE TABLE `0_domain_audit_export_receipts` (
+  `receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `company_id` int unsigned NOT NULL,
+  `chain_scope` varchar(96) NOT NULL,
+  `sequence_start` bigint unsigned NOT NULL,
+  `sequence_end` bigint unsigned NOT NULL,
+  `event_count` int unsigned NOT NULL,
+  `package_hash` char(64) NOT NULL,
+  `checkpoint_event_hash` char(64) NOT NULL,
+  `previous_receipt_hash` char(64) NOT NULL,
+  `custody_provider` varchar(64) NOT NULL,
+  `custody_object_token` char(64) NOT NULL,
+  `custody_key_id` char(64) NOT NULL,
+  `received_at` datetime NOT NULL,
+  `retained_until` date NOT NULL,
+  `receipt_payload` text NOT NULL,
+  `receipt_signature` varchar(1024) NOT NULL,
+  `receipt_hash` char(64) NOT NULL,
+  `recorded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`receipt_id`),
+  UNIQUE KEY `domain_audit_receipt_start_uq` (`chain_scope`,`sequence_start`),
+  UNIQUE KEY `domain_audit_receipt_end_uq` (`chain_scope`,`sequence_end`),
+  UNIQUE KEY `domain_audit_receipt_hash_uq` (`receipt_hash`),
+  UNIQUE KEY `domain_audit_receipt_object_uq` (`custody_provider`,`custody_object_token`),
+  KEY `domain_audit_receipt_recorded_idx` (`recorded_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 DROP TRIGGER IF EXISTS `0_domain_audit_events_no_update`;
 CREATE TRIGGER `0_domain_audit_events_no_update` BEFORE UPDATE ON `0_domain_audit_events`
 FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be updated';
@@ -224,8 +214,204 @@ FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only e
 DROP TRIGGER IF EXISTS `0_domain_audit_checkpoints_no_delete`;
 CREATE TRIGGER `0_domain_audit_checkpoints_no_delete` BEFORE DELETE ON `0_domain_audit_checkpoints`
 FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 append-only evidence cannot be deleted';
+DROP TRIGGER IF EXISTS `0_domain_audit_export_receipts_no_update`;
+CREATE TRIGGER `0_domain_audit_export_receipts_no_update` BEFORE UPDATE ON `0_domain_audit_export_receipts`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 custody receipts are append-only';
+DROP TRIGGER IF EXISTS `0_domain_audit_export_receipts_no_delete`;
+CREATE TRIGGER `0_domain_audit_export_receipts_no_delete` BEFORE DELETE ON `0_domain_audit_export_receipts`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AUD-001 custody receipts are append-only';
+
+DROP VIEW IF EXISTS `0_domain_audit_chain_state_read_v1`;
+CREATE SQL SECURITY DEFINER VIEW `0_domain_audit_chain_state_read_v1` AS
+SELECT `chain_scope`, `last_sequence`, `last_event_hash`
+FROM `0_domain_audit_chain_state`;
+
+DROP VIEW IF EXISTS `0_domain_audit_genesis_checkpoint_read_v1`;
+CREATE SQL SECURITY DEFINER VIEW `0_domain_audit_genesis_checkpoint_read_v1` AS
+SELECT `chain_scope`, `chain_sequence`, `event_hash`, `event_count`, `key_id`, `signature`, `created_at`
+FROM `0_domain_audit_checkpoints`
+WHERE `chain_sequence` = 0;
+
+DROP VIEW IF EXISTS `0_domain_audit_review_v1`;
+CREATE SQL SECURITY DEFINER VIEW `0_domain_audit_review_v1` AS
+SELECT `event_id`, `chain_scope`, `chain_sequence`, `occurred_at`,
+       `actor_user_id`, `company_id`, `legal_entity_id`, `entity_type`,
+       `action`, `reason_code`, `correlation_id`, `previous_event_hash`,
+       `event_hash`, `key_id`
+FROM `0_domain_audit_events`;
+
+DROP PROCEDURE IF EXISTS `0_domain_audit_chain_initialize_v1`;
+DROP PROCEDURE IF EXISTS `0_domain_audit_event_insert_v1`;
+DROP PROCEDURE IF EXISTS `0_domain_audit_outbox_insert_v1`;
+DROP PROCEDURE IF EXISTS `0_domain_audit_checkpoint_insert_v1`;
+DROP PROCEDURE IF EXISTS `0_domain_audit_chain_advance_v1`;
+
+DELIMITER $$
+
+CREATE PROCEDURE `0_domain_audit_chain_initialize_v1`(
+  IN p_chain_scope varchar(96),
+  IN p_zero_hash char(64)
+)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+INSERT IGNORE INTO `0_domain_audit_chain_state`
+  (`chain_scope`, `last_sequence`, `last_event_hash`, `updated_at`)
+SELECT p_chain_scope, 0, p_zero_hash, CURRENT_TIMESTAMP
+WHERE p_chain_scope REGEXP '^company:[[:digit:]]+:legal_entity:[[:digit:]]+$'
+  AND p_zero_hash REGEXP '^[a-f0-9]{64}$'$$
+
+CREATE PROCEDURE `0_domain_audit_event_insert_v1`(
+  IN p_chain_scope varchar(96),
+  IN p_chain_sequence bigint unsigned,
+  IN p_occurred_at datetime,
+  IN p_actor_user_id int unsigned,
+  IN p_security_context_hash char(64),
+  IN p_company_id int unsigned,
+  IN p_legal_entity_id bigint unsigned,
+  IN p_entity_type varchar(64),
+  IN p_entity_key_hash char(64),
+  IN p_action varchar(64),
+  IN p_reason_code varchar(64),
+  IN p_correlation_id char(32),
+  IN p_legacy_source varchar(64),
+  IN p_legacy_id bigint unsigned,
+  IN p_before_hash char(64),
+  IN p_after_hash char(64),
+  IN p_restricted_diff text,
+  IN p_previous_event_hash char(64),
+  IN p_event_hash char(64),
+  IN p_key_id char(16)
+)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+INSERT INTO `0_domain_audit_events`
+  (`chain_scope`, `chain_sequence`, `occurred_at`, `actor_user_id`,
+   `security_context_hash`, `company_id`, `legal_entity_id`, `entity_type`,
+   `entity_key_hash`, `action`, `reason_code`, `correlation_id`,
+   `legacy_source`, `legacy_id`, `before_hash`, `after_hash`,
+   `restricted_diff`, `previous_event_hash`, `event_hash`, `key_id`)
+SELECT
+  p_chain_scope, p_chain_sequence, p_occurred_at, p_actor_user_id,
+  p_security_context_hash, p_company_id, p_legal_entity_id, p_entity_type,
+  p_entity_key_hash, p_action, p_reason_code, p_correlation_id,
+  p_legacy_source, p_legacy_id, p_before_hash, p_after_hash,
+  p_restricted_diff, p_previous_event_hash, p_event_hash, p_key_id
+WHERE p_chain_scope = CONCAT('company:', p_company_id, ':legal_entity:', p_legal_entity_id)
+  AND p_chain_sequence > 0
+  AND p_actor_user_id <= 65535
+  AND p_entity_type REGEXP '^[A-Za-z0-9_.:-]{1,64}$'
+  AND p_action REGEXP '^[A-Za-z0-9_.:-]{1,64}$'
+  AND p_reason_code REGEXP '^[A-Za-z0-9_.:-]{1,64}$'
+  AND (p_legacy_source = '' OR p_legacy_source REGEXP '^[A-Za-z0-9_.:-]{1,64}$')
+  AND p_security_context_hash REGEXP '^[a-f0-9]{64}$'
+  AND p_entity_key_hash REGEXP '^[a-f0-9]{64}$'
+  AND (p_before_hash IS NULL OR p_before_hash REGEXP '^[a-f0-9]{64}$')
+  AND (p_after_hash IS NULL OR p_after_hash REGEXP '^[a-f0-9]{64}$')
+  AND p_previous_event_hash REGEXP '^[a-f0-9]{64}$'
+  AND p_event_hash REGEXP '^[a-f0-9]{64}$'
+  AND p_correlation_id REGEXP '^[a-f0-9]{32}$'
+  AND p_key_id REGEXP '^[a-f0-9]{16}$'
+  AND OCTET_LENGTH(p_restricted_diff) <= 8192$$
+
+CREATE PROCEDURE `0_domain_audit_outbox_insert_v1`(
+  IN p_event_id bigint unsigned,
+  IN p_chain_scope varchar(96),
+  IN p_chain_sequence bigint unsigned,
+  IN p_payload longtext,
+  IN p_payload_hash char(64)
+)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+INSERT INTO `0_domain_audit_outbox`
+  (`event_id`, `chain_scope`, `chain_sequence`, `payload`, `payload_hash`, `created_at`)
+SELECT p_event_id, p_chain_scope, p_chain_sequence, p_payload, p_payload_hash, CURRENT_TIMESTAMP
+WHERE p_event_id > 0
+  AND p_chain_scope REGEXP '^company:[[:digit:]]+:legal_entity:[[:digit:]]+$'
+  AND p_chain_sequence > 0
+  AND OCTET_LENGTH(p_payload) <= 32768
+  AND p_payload_hash = SHA2(p_payload, 256)$$
+
+CREATE PROCEDURE `0_domain_audit_checkpoint_insert_v1`(
+  IN p_chain_scope varchar(96),
+  IN p_chain_sequence bigint unsigned,
+  IN p_event_hash char(64),
+  IN p_event_count bigint unsigned,
+  IN p_key_id char(16),
+  IN p_signature char(64),
+  IN p_created_at datetime
+)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+INSERT INTO `0_domain_audit_checkpoints`
+  (`chain_scope`, `chain_sequence`, `event_hash`, `event_count`, `key_id`, `signature`, `created_at`)
+SELECT p_chain_scope, p_chain_sequence, p_event_hash, p_event_count, p_key_id, p_signature, p_created_at
+WHERE p_chain_scope REGEXP '^company:[[:digit:]]+:legal_entity:[[:digit:]]+$'
+  AND p_chain_sequence = p_event_count
+  AND p_event_hash REGEXP '^[a-f0-9]{64}$'
+  AND p_key_id REGEXP '^[a-f0-9]{16}$'
+  AND p_signature REGEXP '^[a-f0-9]{64}$'$$
+
+CREATE PROCEDURE `0_domain_audit_chain_advance_v1`(
+  IN p_chain_scope varchar(96),
+  IN p_previous_sequence bigint unsigned,
+  IN p_previous_hash char(64),
+  IN p_chain_sequence bigint unsigned,
+  IN p_event_hash char(64)
+)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+UPDATE `0_domain_audit_chain_state`
+SET `last_sequence` = p_chain_sequence,
+    `last_event_hash` = p_event_hash,
+    `updated_at` = CURRENT_TIMESTAMP
+WHERE BINARY `chain_scope` = BINARY p_chain_scope
+  AND `last_sequence` = p_previous_sequence
+  AND BINARY `last_event_hash` = BINARY p_previous_hash
+  AND p_chain_sequence = p_previous_sequence + 1
+  AND p_previous_hash REGEXP '^[a-f0-9]{64}$'
+  AND p_event_hash REGEXP '^[a-f0-9]{64}$'$$
+
+DELIMITER ;
 
 -- End PAY-AUD-001 foundation
+
+INSERT INTO `0_audit_trail` VALUES
+('1', '18', '1', '1', '2025-05-05 14:08:02', NULL, '1', '2025-05-05', '0', '{}'),
+('2', '25', '1', '1', '2025-05-05 14:08:14', NULL, '1', '2025-05-05', '1', '{}'),
+('3', '30', '1', '1', '2025-05-05 14:09:54', NULL, '1', '2025-05-10', '0', '{}'),
+('4', '13', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '13', '{}'),
+('5', '10', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '14', '{}'),
+('6', '12', '1', '1', '2025-05-05 14:09:55', NULL, '1', '2025-05-10', '15', '{}'),
+('7', '29', '1', '1', '2025-05-05 14:18:49', 'Quick production.', '1', '2025-05-05', '2', '{}'),
+('8', '18', '2', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '0', '{}'),
+('9', '25', '2', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '3', '{}'),
+('10', '20', '1', '1', '2025-05-05 14:22:32', NULL, '1', '2025-05-05', '4', '{}'),
+('11', '30', '2', '1', '2025-05-07 07:55:15', NULL, '1', '2025-05-07', '0', '{}'),
+('12', '13', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '7', '{}'),
+('13', '10', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '8', '{}'),
+('14', '12', '2', '1', '2025-05-07 07:55:16', NULL, '1', '2025-05-07', '9', '{}'),
+('15', '30', '3', '1', '2025-05-07 08:08:24', NULL, '1', '2025-05-07', '0', '{}'),
+('16', '30', '4', '1', '2025-05-07 09:18:44', NULL, '1', '2025-05-07', '0', '{}'),
+('17', '30', '5', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '0', '{}'),
+('18', '13', '3', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '10', '{}'),
+('19', '10', '3', '1', '2025-05-07 11:42:41', NULL, '1', '2025-05-07', '11', '{}'),
+('20', '30', '6', '1', '2025-05-07 14:02:35', NULL, '1', '2025-05-07', '0', '{}'),
+('21', '30', '7', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
+('22', '13', '4', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
+('23', '10', '4', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
+('24', '12', '3', '1', '2025-05-07 14:05:38', NULL, '1', '2025-05-07', '0', '{}'),
+('25', '26', '1', '1', '2025-05-07 15:59:34', NULL, '1', '2025-05-07', NULL, '{}'),
+('26', '29', '1', '1', '2025-05-07 15:59:01', 'Production.', '1', '2025-05-07', '5', '{}'),
+('27', '26', '1', '1', '2025-05-07 15:59:34', 'Released.', '1', '2025-05-07', '6', '{}'),
+('28', '1', '1', '1', '2025-05-07 16:01:00', NULL, '1', '2025-05-07', '12', '{}'),
+('29', '30', '8', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
+('30', '13', '5', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
+('31', '10', '5', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
+('32', '12', '4', '1', '2026-01-21 11:13:06', NULL, '2', '2026-01-21', '0', '{}'),
+('33', '18', '3', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
+('34', '25', '3', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
+('35', '20', '2', '1', '2026-01-21 11:14:14', NULL, '2', '2026-01-21', '0', '{}'),
+('36', '0', '1', '1', '2026-01-21 11:15:35', NULL, '1', '2025-12-31', '16', '{}');
 
 -- Structure of table `0_bank_accounts` --
 

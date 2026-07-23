@@ -183,6 +183,7 @@ function collect_employee_data() {
 	$data['personal_salary']    = get_post('personal_salary', 0);
 	$data['cost_center_id']     = get_post('cost_center_id', 0);
 	$data['login_id']           = get_post('login_id', '');
+	$data['inactive']           = get_post('inactive', 0);
 
 	// Notes
 	$data['notes']              = get_post('notes', '');
@@ -1358,9 +1359,6 @@ if (isset($_POST['addupdate'])) {
 	}
 
 	if (!$input_error) {
-		if (check_value('del_image'))
-			del_image($_POST['NewEmpID']);
-
 		if (!$new_employee) {
 			// Track changes for history
 			$changes_detected = false;
@@ -1376,60 +1374,67 @@ if (isset($_POST['addupdate'])) {
 				}
 			}
 
-			update_employee($_POST['NewEmpID'], $data);
-			update_record_status($_POST['NewEmpID'], get_post('inactive'), 'employees', 'employee_id');
+			if (!update_employee($_POST['NewEmpID'], $data)) {
+				display_error(_('Could not update this employee or append required audit evidence.'));
+			} else {
+				if (check_value('del_image'))
+					del_image($_POST['NewEmpID']);
 
-			// Record history if significant changes
-			if ($changes_detected && $old_emp) {
-				record_employee_history($_POST['NewEmpID'], $change_type,
-					Today(),
-					array(
-						'department_id' => $old_emp['department_id'],
-						'position_id'   => $old_emp['position_id'],
-						'grade_id'      => $old_emp['grade_id'],
-						'salary'        => 0,
-					),
-					array(
-						'department_id' => $data['department_id'],
-						'position_id'   => $data['position_id'],
-						'grade_id'      => $data['grade_id'],
-						'salary'        => 0,
-					)
-				);
+				// Record history if significant changes
+				if ($changes_detected && $old_emp) {
+					record_employee_history($_POST['NewEmpID'], $change_type,
+						Today(),
+						array(
+							'department_id' => $old_emp['department_id'],
+							'position_id'   => $old_emp['position_id'],
+							'grade_id'      => $old_emp['grade_id'],
+							'salary'        => 0,
+						),
+						array(
+							'department_id' => $data['department_id'],
+							'position_id'   => $data['position_id'],
+							'grade_id'      => $data['grade_id'],
+							'salary'        => 0,
+						)
+					);
+				}
+
+				// Fire hook
+				hrm_fire_hook('on_employee_updated', $_POST['NewEmpID'], $old_emp, $data);
+
+				set_focus('employee_id');
+				$Ajax->activate('employee_id');
+				display_notification(_('Employee information has been updated.'));
 			}
-
-			// Fire hook
-			hrm_fire_hook('on_employee_updated', $_POST['NewEmpID'], $old_emp, $data);
-
-			set_focus('employee_id');
-			$Ajax->activate('employee_id');
-			display_notification(_('Employee information has been updated.'));
 		}
 		else {
 			$data['employee_id'] = $_POST['NewEmpID'];
 			$emp_number = add_employee($data);
+			if (!$emp_number) {
+				display_error(_('Could not add this employee or append required audit evidence.'));
+			} else {
+				// Record hire history
+				if (!empty($data['hire_date'])) {
+					record_employee_history($_POST['NewEmpID'], HRM_HIST_HIRE, $data['hire_date'],
+						array(),
+						array(
+							'department_id' => $data['department_id'],
+							'position_id'   => $data['position_id'],
+							'grade_id'      => $data['grade_id'],
+							'salary'        => 0,
+						)
+					);
+				}
 
-			// Record hire history
-			if (!empty($data['hire_date'])) {
-				record_employee_history($_POST['NewEmpID'], HRM_HIST_HIRE, $data['hire_date'],
-					array(),
-					array(
-						'department_id' => $data['department_id'],
-						'position_id'   => $data['position_id'],
-						'grade_id'      => $data['grade_id'],
-						'salary'        => 0,
-					)
-				);
+				// Fire hook
+				hrm_fire_hook('on_employee_created', $_POST['NewEmpID']);
+
+				display_notification(_('A new employee has been added.'));
+				$_POST['employee_id'] = '';
+				$_POST['NewEmpID'] = '';
+				clear_inputs();
+				set_focus('NewEmpID');
 			}
-
-			// Fire hook
-			hrm_fire_hook('on_employee_created', $_POST['NewEmpID']);
-
-			display_notification(_('A new employee has been added.'));
-			$_POST['employee_id'] = '';
-			$_POST['NewEmpID'] = '';
-			clear_inputs();
-			set_focus('NewEmpID');
 		}
 		$Ajax->activate('_page_body');
 	}
@@ -1444,8 +1449,8 @@ if (isset($_POST['delete'])) {
 	if (!employee_can_delete($emp_id)) {
 		display_error(_('Cannot delete this employee — there are transactions linked to this employee.'));
 	} else {
-		del_image($emp_id);
 		if (delete_employee($emp_id)) {
+			del_image($emp_id);
 			display_notification(_('Employee has been deleted.'));
 			$_POST['employee_id'] = '';
 			$_POST['NewEmpID'] = '';

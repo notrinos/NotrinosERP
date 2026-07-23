@@ -7,6 +7,7 @@
 ***********************************************************************/
 
 include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+include_once($path_to_root.'/includes/db/domain_audit_governance.inc');
 
 /** Maximum number of outbox events in one custody package. */
 define('DOMAIN_AUDIT_EXPORT_MAX_EVENTS', 1000);
@@ -569,8 +570,7 @@ function domain_audit_build_export_package($company, $legal_entity, $sequence_st
         ." FROM ".TB_PREF."domain_audit_checkpoints WHERE chain_scope=".domain_audit_db_string($chain_scope)
         ." AND chain_sequence=".$sequence_end." LIMIT 1", 'could not read domain audit export checkpoint');
     $checkpoint = $checkpoint_result ? db_fetch_assoc($checkpoint_result) : false;
-    $key = domain_audit_signing_key($company);
-    if (!$checkpoint || $key === false || !domain_audit_verify_checkpoint($checkpoint, $key)) {
+    if (!$checkpoint || !domain_audit_verify_checkpoint_with_keyring($checkpoint, $company)) {
         return false;
     }
     $package = array(
@@ -778,6 +778,18 @@ function record_domain_audit_custody_receipt($envelope, $company)
         return false;
     }
     $receipt = $verified_receipt['receipt'];
+    $received_at = str_replace(array('T', 'Z'), array(' ', ''), (string)$receipt['received_at']);
+    $governance = domain_audit_governance_state(
+        $company,
+        (int)$receipt['legal_entity_id']
+    );
+    if (!domain_audit_retention_allows_receipt(
+        $governance,
+        $received_at,
+        (string)$receipt['retained_until']
+    )) {
+        return false;
+    }
     begin_transaction();
     $duplicate_result = db_query("SELECT receipt_id,receipt_hash FROM ".TB_PREF."domain_audit_export_receipts"
         ." WHERE receipt_hash=".domain_audit_db_string($verified_receipt['receipt_hash'])." LIMIT 1",
@@ -815,7 +827,6 @@ function record_domain_audit_custody_receipt($envelope, $company)
         cancel_transaction();
         return false;
     }
-    $received_at = str_replace(array('T', 'Z'), array(' ', ''), (string)$receipt['received_at']);
     $sql = "INSERT INTO ".TB_PREF."domain_audit_export_receipts"
         ." (company_id,chain_scope,sequence_start,sequence_end,event_count,package_hash,checkpoint_event_hash,"
         ."previous_receipt_hash,custody_provider,custody_object_token,custody_key_id,received_at,retained_until,"
@@ -987,31 +998,148 @@ function domain_audit_evaluate_custody_status($verification, $oldest_pending_cre
 }
 
 /**
- * Emit only normalized custody-monitor metadata to the server log.
+ * Build a redacted, stable alert integration envelope.
  *
  * @param int $company
  * @param int $legal_entity
  * @param array $status
- * @return void
+ * @param string|null $observed_at
+ * @return array
  */
-function domain_audit_log_custody_monitor($company, $legal_entity, $status)
+function domain_audit_alert_envelope(
+    $company,
+    $legal_entity,
+    $status,
+    $observed_at = null
+)
 {
     $outcome = isset($status['status']) ? (string)$status['status'] : 'monitor_error';
     if (preg_match('/^[a-z_]{2,40}$/', $outcome) !== 1) {
         $outcome = 'monitor_error';
     }
-    $record = array(
-        'event' => 'domain_audit_custody_monitor',
+    $error = isset($status['error']) ? (string)$status['error'] : '';
+    if ($error !== '' && preg_match('/^[a-z0-9_]{2,80}$/', $error) !== 1) {
+        $error = 'verification_failure';
+    }
+    if (!empty($status['ok'])) {
+        $severity = 'info';
+        $control_code = 'audit_evidence_current';
+    } elseif ($error === 'custody_delivery_overdue') {
+        $severity = 'high';
+        $control_code = 'audit_custody_overdue';
+    } elseif ($error === 'legal_hold_external_confirmation_required') {
+        $severity = 'high';
+        $control_code = 'audit_legal_hold_confirmation';
+    } elseif ($error === 'retention_policy_missing'
+        || $outcome === 'configuration_error'
+    ) {
+        $severity = 'high';
+        $control_code = 'audit_monitor_configuration';
+    } elseif (preg_match(
+        '/(?:outbox|chain|hash|signature|checkpoint|receipt|source|sequence|gap|omission)/',
+        $error
+    ) === 1) {
+        $severity = 'critical';
+        $control_code = 'audit_tamper_or_omission';
+    } else {
+        $severity = 'critical';
+        $control_code = 'audit_verification_failure';
+    }
+    $identity = array(
         'company_id' => max(0, (int)$company),
         'legal_entity_id' => max(0, (int)$legal_entity),
         'status' => $outcome,
+        'error' => $error,
+        'severity' => $severity,
+        'control_code' => $control_code,
         'pending_count' => isset($status['pending_count']) ? max(0, (int)$status['pending_count']) : 0,
         'oldest_pending_age_seconds' => isset($status['oldest_pending_age_seconds'])
             ? max(0, (int)$status['oldest_pending_age_seconds']) : 0,
         'maximum_delay_seconds' => isset($status['maximum_delay_seconds'])
             ? max(0, (int)$status['maximum_delay_seconds']) : 0,
+        'active_hold_count' => isset($status['active_hold_count'])
+            ? max(0, (int)$status['active_hold_count']) : 0,
     );
-    error_log(domain_audit_canonical_json($record));
+    return array_merge(array(
+        'schema_version' => 'notrinoserp.domain-audit-alert.v1',
+        'event' => 'domain_audit_integrity_monitor',
+        'observed_at' => $observed_at === null
+            ? gmdate('Y-m-d H:i:s') : (string)$observed_at,
+        'alert_id' => hash('sha256', domain_audit_canonical_json($identity)),
+    ), $identity);
+}
+
+/**
+ * Return a configured pre-provisioned external alert sink path.
+ *
+ * @param int $company
+ * @return string|false|null False invalid, null not configured.
+ */
+function domain_audit_alert_sink_path($company)
+{
+    global $db_connections, $path_to_root;
+
+    $company = (int)$company;
+    if (!isset($db_connections[$company]['payroll_audit_alert_sink_file'])) {
+        return null;
+    }
+    $path = trim((string)$db_connections[$company]['payroll_audit_alert_sink_file']);
+    if ($path === '' || !preg_match('/^(?:[A-Za-z]:[\\\\\/]|\/)/', $path)
+        || is_link($path) || !is_file($path) || filesize($path) > 67108864
+    ) {
+        return false;
+    }
+    $resolved = realpath($path);
+    $application = realpath($path_to_root);
+    $private_root = domain_audit_private_root($company);
+    if ($resolved === false || $application === false || $private_root === false
+        || domain_audit_export_path_is_within($resolved, $application)
+        || domain_audit_export_path_is_within($resolved, $private_root)
+    ) {
+        return false;
+    }
+    if (DIRECTORY_SEPARATOR !== '\\') {
+        $permissions = @fileperms($resolved);
+        if ($permissions === false || (($permissions & 0007) !== 0)
+            || (($permissions & 0020) !== 0)
+        ) {
+            return false;
+        }
+    }
+    return $resolved;
+}
+
+/**
+ * Emit one normalized alert to the server log and optional external sink.
+ *
+ * @param int $company
+ * @param int $legal_entity
+ * @param array $status
+ * @return array|false
+ */
+function domain_audit_log_custody_monitor($company, $legal_entity, $status)
+{
+    $alert = domain_audit_alert_envelope($company, $legal_entity, $status);
+    $line = domain_audit_canonical_json($alert);
+    error_log($line);
+    $sink = domain_audit_alert_sink_path($company);
+    if ($sink === null) {
+        return $alert;
+    }
+    if ($sink === false) {
+        return false;
+    }
+    $handle = @fopen($sink, 'ab');
+    if (!$handle) {
+        return false;
+    }
+    $locked = @flock($handle, LOCK_EX);
+    $written = $locked ? @fwrite($handle, $line."\n") : false;
+    if ($locked) {
+        @flock($handle, LOCK_UN);
+    }
+    @fclose($handle);
+    return $written === strlen($line) + 1 ? $alert : false;
 }
 
 /**
@@ -1047,6 +1175,40 @@ function domain_audit_custody_status($company, $legal_entity = 0, $now_timestamp
         }
     }
     $status = domain_audit_evaluate_custody_status($verification, $oldest_pending, $maximum, $now_timestamp);
-    domain_audit_log_custody_monitor($company, $legal_entity, $status);
+    if (!empty($status['ok'])) {
+        $governance = domain_audit_governance_state(
+            $company,
+            $legal_entity,
+            gmdate('Y-m-d H:i:s', $now_timestamp === null ? time() : (int)$now_timestamp)
+        );
+        if (empty($governance['ok']) || empty($governance['policy'])) {
+            $status = array(
+                'ok' => false,
+                'error' => empty($governance['error'])
+                    ? 'retention_policy_missing' : (string)$governance['error'],
+                'active_hold_count' => 0,
+            );
+        } elseif (!empty($governance['active_hold_count'])) {
+            $status = array_merge($status, array(
+                'ok' => false,
+                'error' => 'legal_hold_external_confirmation_required',
+                'active_hold_count' => (int)$governance['active_hold_count'],
+                'retention_days' => (int)$governance['policy']['retention_days'],
+                'jurisdiction_code' => (string)$governance['policy']['jurisdiction_code'],
+            ));
+        } else {
+            $status['active_hold_count'] = 0;
+            $status['retention_days'] = (int)$governance['policy']['retention_days'];
+            $status['jurisdiction_code'] = (string)$governance['policy']['jurisdiction_code'];
+        }
+    }
+    $alert = domain_audit_log_custody_monitor($company, $legal_entity, $status);
+    if ($alert === false) {
+        $status['ok'] = false;
+        $status['status'] = 'configuration_error';
+        $status['error'] = 'alert_sink_write_failed';
+    } else {
+        $status['alert'] = $alert;
+    }
     return $status;
 }

@@ -409,6 +409,7 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		'set names' => 'set_names',
 		'drop table if exists' => 'drop_queries',
 		'drop function if exists' => 'drop_queries',
+		'drop procedure if exists' => 'drop_queries',
 		'drop trigger if exists' => 'drop_queries',
 		'select' => 'data_queries', 
 		'delete' => 'data_queries',
@@ -744,10 +745,17 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 			($conn['tbpref'] != '' && strpos($row['Name'], $conn['tbpref']) === 0))
 			$all_tables[] = $row;
 	}
-		// get table structures
+	// get table structures
 	foreach ($all_tables as $table) {
+		if (empty($table['Engine'])) {
+			continue; // Views are exported after base tables through db_get_view_schema().
+		}
 		$res1 = db_query("SHOW CREATE TABLE `" . $table['Name'] . "`");
 		$tmp = db_fetch($res1);
+		if (!$tmp || !isset($tmp['Create Table'])) {
+			$error = true;
+			break;
+		}
 		$normalized_export_table = db_strip_create_table_constraints($tmp['Create Table']);
 		$table_sql[$table['Name']] = $normalized_export_table[0];
 		$table_constraint_queries[$table['Name']] = $normalized_export_table[1];

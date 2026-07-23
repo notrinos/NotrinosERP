@@ -87,6 +87,7 @@ if (isset($_POST['import_employees'])) {
             $inserted = 0;
             $updated = 0;
             $failed = 0;
+            $write_failed = false;
 
             begin_transaction();
             while (($row = fgetcsv($handle, 0, ',')) !== false) {
@@ -103,8 +104,13 @@ if (isset($_POST['import_employees'])) {
                 }
 
                 if (employee_exists_by_code($data['employee_id'])) {
-                    update_employee($data['employee_id'], $data);
-                    $updated++;
+                    if (update_employee($data['employee_id'], $data)) {
+                        $updated++;
+                    } else {
+                        $failed++;
+                        $write_failed = true;
+                        break;
+                    }
                 } else {
                     $new_data = $data;
                     unset($new_data['employee_id']);
@@ -112,11 +118,21 @@ if (isset($_POST['import_employees'])) {
                     $created = add_employee($new_data);
                     if ($created)
                         $inserted++;
-                    else
+                    else {
                         $failed++;
+                        $write_failed = true;
+                        break;
+                    }
                 }
             }
-            commit_transaction();
+            if ($write_failed) {
+                cancel_transaction();
+                $inserted = 0;
+                $updated = 0;
+                display_error(_('Import was rolled back because an employee write or required audit append failed.'));
+            } else {
+                commit_transaction();
+            }
             fclose($handle);
             display_notification(sprintf(_('Import complete. Added: %s, Updated: %s, Failed: %s'), $inserted, $updated, $failed));
         }
