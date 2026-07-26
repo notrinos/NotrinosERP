@@ -98,6 +98,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             if (isset($Ajax))
                 $Ajax->activate('_page_body');
         } else {
+            begin_transaction();
             $request_id = add_leave_request(
                 $_POST['employee_id'],
                 (int)$_POST['leave_id'],
@@ -127,24 +128,41 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 $leave_draft_data['leave_name']    = $leave_request_row['leave_name'];
             }
 
-            $approval_result = approval_check_before_save(
+            $approval_service = get_approval_workflow_service();
+            $approval_result = $approval_service->isApprovalRequired(
+                ST_LEAVE_REQUEST,
+                $days
+            ) ? $approval_service->submit(
                 ST_LEAVE_REQUEST,
                 $leave_draft_data,
                 $days,
                 array('summary' => sprintf(_('Leave: %s, %s days'), $_POST['from_date'], $days))
-            );
+            ) : false;
 
             if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                commit_transaction();
                 display_notification(_('Leave request has been created and automatically approved.'));
                 $Mode = 'RESET';
             } elseif ($approval_result !== false) {
-                // Pending approval — page already stopped by display_footer_exit()
-                return;
+                if ($approval_result['status'] === 'pending') {
+                    commit_transaction();
+                    display_notification(sprintf(
+                        _('Leave request has been submitted for approval. Draft #%d, Reference: %s'),
+                        $approval_result['draft_id'],
+                        $approval_result['reference']
+                    ));
+                } else {
+                    cancel_transaction();
+                    display_error(_('Leave approval submission failed. No leave request was created.'));
+                }
             } else {
-                if (execute_approved_leave_request($leave_draft_data, 0, 0) === false)
-                    display_error(_('Leave approval failed. The request remains pending.'));
-                else
+                if (execute_approved_leave_request($leave_draft_data, 0, 0) === false) {
+                    cancel_transaction();
+                    display_error(_('Leave approval failed. No leave request was created.'));
+                } else {
+                    commit_transaction();
                     display_notification(_('Leave request has been created and auto-approved under the direct policy.'));
+                }
             }
             if (isset($Ajax))
                 $Ajax->activate('_page_body');

@@ -75,13 +75,161 @@ function find_approval_draft_for_hrm_request($trans_type, $request_id)
 	$sql = "SELECT d.*, d.id AS draft_id FROM " . TB_PREF . "approval_drafts d
 		WHERE d.trans_type = " . db_escape((int)$trans_type) . "
 			AND d.status = " . APPROVAL_STATUS_PENDING . "
-			AND d.draft_data LIKE " . db_escape('%"' . $key . '":' . (int)$request_id . '%') . "
-		ORDER BY d.id DESC LIMIT 1";
+		ORDER BY d.id DESC";
 
 	$result = db_query($sql, 'could not find approval draft for HRM request');
-	$row = db_fetch($result);
+	while ($row = db_fetch($result)) {
+		$draft_source = html_entity_decode(
+			(string)$row['draft_data'],
+			ENT_QUOTES,
+			isset($_SESSION['language']->encoding)
+				? $_SESSION['language']->encoding
+				: 'UTF-8'
+		);
+		$draft_data = json_decode($draft_source, true);
+		if (is_array($draft_data)
+			&& isset($draft_data[$key])
+			&& (int)$draft_data[$key] === (int)$request_id
+		) {
+			return $row;
+		}
+	}
 
-	return $row ? $row : false;
+	return false;
+}
+
+/**
+ * Recover one pending leave request that has no approval draft.
+ *
+ * The existing leave row is locked before exact draft lookup and submission,
+ * so retries return the same pending draft and concurrent recovery cannot
+ * create a duplicate. The recovery actor is recorded in approval history.
+ *
+ * @param int $request_id Leave request ID
+ * @return array Recovery result with status and message
+ */
+function reconcile_pending_leave_request_approval($request_id)
+{
+	if (!user_check_access('SA_LEAVEAPPROVE')) {
+		return array(
+			'status' => 'error',
+			'message' => _('You do not have permission to recover leave approvals.'),
+		);
+	}
+
+	$request_id = (int)$request_id;
+	if ($request_id <= 0) {
+		return array(
+			'status' => 'error',
+			'message' => _('Leave request was not found.'),
+		);
+	}
+
+	global $path_to_root;
+	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
+
+	begin_transaction();
+	$request = get_leave_request_for_update($request_id);
+	if (!$request || (int)$request['status'] !== 0) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only pending leave requests can be recovered.'),
+		);
+	}
+
+	$existing = find_approval_draft_for_hrm_request(
+		ST_LEAVE_REQUEST,
+		$request_id
+	);
+	if ($existing) {
+		commit_transaction();
+		return array(
+			'status' => 'already_pending',
+			'draft_id' => (int)$existing['draft_id'],
+			'message' => _('The leave request already has a pending approval draft.'),
+		);
+	}
+
+	if (trim((string)$request['employee_id']) === ''
+		|| (int)$request['leave_id'] <= 0
+		|| (float)$request['days'] <= 0
+		|| ((int)$request['half_day'] > 0
+			&& $request['from_date'] !== $request['to_date'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The pending leave request must be corrected before recovery.'),
+		);
+	}
+
+	$display_request = get_leave_request($request_id);
+	if (!$display_request) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Leave request was not found.'),
+		);
+	}
+
+	$draft_data = array(
+		'request_id' => $request_id,
+		'employee_id' => $request['employee_id'],
+		'leave_id' => (int)$request['leave_id'],
+		'from_date' => sql2date($request['from_date']),
+		'to_date' => sql2date($request['to_date']),
+		'days' => (float)$request['days'],
+		'half_day' => (int)$request['half_day'],
+		'reason' => $request['reason'],
+		'employee_name' => $display_request['employee_name'],
+		'leave_name' => $display_request['leave_name'],
+	);
+	$approval = get_approval_workflow_service();
+	$result = $approval->submit(
+		ST_LEAVE_REQUEST,
+		$draft_data,
+		(float)$request['days'],
+		array(
+			'summary' => sprintf(
+				_('Recovered leave request #%d: %s days'),
+				$request_id,
+				(float)$request['days']
+			),
+		)
+	);
+
+	if (!isset($result['status'])
+		|| !in_array($result['status'], array('pending', 'auto_approved'), true)
+		|| empty($result['draft_id'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The leave approval could not be recovered. No changes were committed.'),
+		);
+	}
+
+	$action_id = add_approval_action(
+		(int)$result['draft_id'],
+		'resubmit',
+		null,
+		0,
+		_('Recovered pending leave request without an approval draft.')
+	);
+	if (!$action_id) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The leave approval recovery audit could not be recorded. No changes were committed.'),
+		);
+	}
+
+	commit_transaction();
+	$result['message'] = ($result['status'] === 'auto_approved')
+		? _('The leave request was recovered and automatically approved.')
+		: _('The leave request was recovered and submitted for approval.');
+	return $result;
 }
 
 // ==============================================

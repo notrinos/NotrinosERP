@@ -66,6 +66,19 @@ simple_page_mode(false);
 
 $status_labels = array(0 => _('Pending'), 1 => _('Approved'), 2 => _('Rejected'), 3 => _('Cancelled'));
 
+$recover_request_id = find_submit('Recover');
+if ($recover_request_id > 0) {
+    $recovery = reconcile_pending_leave_request_approval($recover_request_id);
+    if (!isset($recovery['status']) || $recovery['status'] === 'error')
+        display_error(isset($recovery['message'])
+            ? $recovery['message']
+            : _('The leave approval could not be recovered.'));
+    else
+        display_notification($recovery['message']);
+    if (isset($Ajax))
+        $Ajax->activate('_page_body');
+}
+
 if (isset($_POST['approve']) || isset($_POST['reject'])) {
     $request_id = (int)get_post('request_id');
     $request = get_leave_request($request_id);
@@ -142,6 +155,13 @@ while ($row = db_fetch($result)) {
     $has_pending_core_approval = ((int)$row['status'] == 0) ? find_approval_draft_for_hrm_request(ST_LEAVE_REQUEST, (int)$row['request_id']) : false;
     if ((int)$row['status'] == 0 && $has_pending_core_approval)
         edit_button_cell('Edit' . $row['request_id'], _('Process'));
+    elseif ((int)$row['status'] == 0)
+        submit_cells(
+            'Recover' . $row['request_id'],
+            _('Recover'),
+            _('Create the missing approval draft from this pending request.'),
+            true
+        );
     else
         label_cell('');
     end_row();
@@ -169,4 +189,3 @@ if ($selected_request && (int)$selected_request['status'] == 0) {
 end_form();
 
 end_page();
-
