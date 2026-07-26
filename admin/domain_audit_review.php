@@ -110,7 +110,7 @@ $_SESSION['SysPrefs'] =& $SysPrefs;
 include_once $path_to_root.'/includes/main.inc';
 include_once $path_to_root.'/includes/db/domain_audit_review.inc';
 
-if (!isset($db_version) || $db_version !== '1.0.26') {
+if (!isset($db_version) || version_compare((string)$db_version, '1.0.26', '<')) {
     domain_audit_review_cli_exit(false, 'source_upgrade_required');
 }
 $reviewer = domain_audit_reviewer_authorized($company);

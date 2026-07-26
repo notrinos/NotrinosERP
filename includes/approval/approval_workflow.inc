@@ -304,6 +304,14 @@ class ApprovalWorkflow {
 				// All levels approved — execute the draft
 				update_approval_draft_status($draft_id, APPROVAL_STATUS_APPROVED);
 				$exec_result = $this->executeApprovedDraft($draft_id);
+				if (!$exec_result) {
+					cancel_transaction();
+					return array(
+						'status'   => 'error',
+						'trans_no' => null,
+						'message'  => _('The approved transaction could not be posted. No approval changes were committed.'),
+					);
+				}
 
 				// Notify submitter
 				notify_approval_submitter($draft_id, $draft['submitted_by'], 'approved');
@@ -331,7 +339,15 @@ class ApprovalWorkflow {
 
 				if ($auto_approved) {
 					update_approval_draft_status($draft_id, APPROVAL_STATUS_APPROVED);
-					$this->executeApprovedDraft($draft_id);
+					$exec_result = $this->executeApprovedDraft($draft_id);
+					if (!$exec_result) {
+						cancel_transaction();
+						return array(
+							'status'   => 'error',
+							'trans_no' => null,
+							'message'  => _('The approved transaction could not be posted. No approval changes were committed.'),
+						);
+					}
 					notify_approval_submitter($draft_id, $draft['submitted_by'], 'approved');
 					mark_all_draft_notifications_read($draft_id);
 

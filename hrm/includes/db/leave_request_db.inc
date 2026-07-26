@@ -29,6 +29,21 @@ function get_leave_request($request_id) {
 }
 
 /**
+ * Lock and return one leave request for a guarded terminal transition.
+ *
+ * @param int $request_id
+ * @return array|false
+ */
+function get_leave_request_for_update($request_id) {
+    $sql = "SELECT * FROM ".TB_PREF."leave_requests
+        WHERE request_id = ".db_escape((int)$request_id)."
+        FOR UPDATE";
+    $result = db_query($sql, 'could not lock leave request');
+
+    return $result ? db_fetch($result) : false;
+}
+
+/**
  * Get leave request list by optional filters.
  *
  * @param int|null $status
@@ -136,9 +151,16 @@ function update_leave_request($request_id, $leave_id, $from_date, $to_date, $day
  * @param int $status 1=approved,2=rejected,3=cancelled
  * @param string $approved_by
  * @param string $remarks
- * @return void
+ * @param int|null $expected_status Optional current status required for the update
+ * @return bool
  */
-function set_leave_request_status($request_id, $status, $approved_by='', $remarks='') {
+function set_leave_request_status(
+    $request_id,
+    $status,
+    $approved_by='',
+    $remarks='',
+    $expected_status=null
+) {
     $approval_user = trim((string)$approved_by);
     $approval_user_sql = ($approval_user === '') ? 'NULL' : db_escape($approval_user);
     $approval_date_sql = ((int)$status === 0) ? 'NULL' : 'NOW()';
@@ -149,23 +171,29 @@ function set_leave_request_status($request_id, $status, $approved_by='', $remark
             approval_date = $approval_date_sql,
             approval_remarks = ".db_escape($remarks)."
         WHERE request_id = ".db_escape((int)$request_id);
+    if ($expected_status !== null)
+        $sql .= " AND status = ".db_escape((int)$expected_status);
 
-    db_query($sql, 'could not update leave request status');
+    $result = db_query($sql, 'could not update leave request status');
+    if ($result === false)
+        return false;
+
+    return $expected_status === null || db_num_affected_rows() === 1;
 }
 
 /**
  * Sync approved leave request to legacy leave_details table.
  *
  * @param int $request_id
- * @return void
+ * @return bool
  */
 function sync_leave_request_to_leave_details($request_id) {
     if (!function_exists('employee_table_exists') || !employee_table_exists('leave_details'))
-        return;
+        return true;
 
     $request = get_leave_request($request_id);
     if (!$request)
-        return;
+        return false;
 
     $sql = "SELECT id FROM ".TB_PREF."leave_details
         WHERE employee_id = ".db_escape($request['employee_id'])."
@@ -188,7 +216,7 @@ function sync_leave_request_to_leave_details($request_id) {
                 approved_by = $approved_by_sql,
                 approved_date = $approved_date_sql
             WHERE id = ".db_escape((int)$row['id']);
-        db_query($update, 'could not update leave_details from request');
+        return db_query($update, 'could not update leave_details from request') !== false;
     } else {
         $insert = "INSERT INTO ".TB_PREF."leave_details
             (employee_id, leave_type_id, from_date, to_date, days, approval_status, approved_by, approved_date)
@@ -202,7 +230,7 @@ function sync_leave_request_to_leave_details($request_id) {
                 $approved_by_sql,
                 $approved_date_sql
             )";
-        db_query($insert, 'could not insert leave_details from request');
+        return db_query($insert, 'could not insert leave_details from request') !== false;
     }
 }
 
@@ -212,11 +240,13 @@ function sync_leave_request_to_leave_details($request_id) {
  * @param int $request_id
  * @param string $approved_by
  * @param string $remarks
- * @return void
+ * @return bool
  */
 function approve_leave_request($request_id, $approved_by, $remarks='') {
-    set_leave_request_status($request_id, 1, $approved_by, $remarks);
-    sync_leave_request_to_leave_details($request_id);
+    if (!set_leave_request_status($request_id, 1, $approved_by, $remarks, 0))
+        return false;
+
+    return sync_leave_request_to_leave_details($request_id);
 }
 
 /**
@@ -244,4 +274,3 @@ function cancel_leave_request($request_id, $approved_by='', $remarks='') {
     set_leave_request_status($request_id, 3, $approved_by, $remarks);
     sync_leave_request_to_leave_details($request_id);
 }
-

@@ -73,7 +73,8 @@ function approval_check_before_save($trans_type, $draft_data, $amount = 0, $cont
 	}
 
 	if ($result['status'] === 'execution_failed') {
-		return false;
+		display_error(_('Approval execution failed. The transaction was not posted directly.'));
+		return $result;
 	}
 
 	// Unexpected status — treat as error

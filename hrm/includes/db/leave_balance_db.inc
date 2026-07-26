@@ -77,6 +77,29 @@ function get_leave_balance_fiscal_year_for_date($date_value) {
 }
 
 /**
+ * Get leave balance row for update with row lock.
+ *
+ * Locks the unique (employee_id, leave_id, fiscal_year) row so
+ * no other transaction can concurrently modify the same balance.
+ * Returns false when the row is absent.
+ *
+ * @param string $employee_id
+ * @param int    $leave_id
+ * @param int    $fiscal_year
+ * @return array|false
+ */
+function get_leave_balance_for_update($employee_id, $leave_id, $fiscal_year) {
+    $sql = "SELECT * FROM ".TB_PREF."leave_balances
+        WHERE employee_id = ".db_escape($employee_id)."
+            AND leave_id = ".db_escape((int)$leave_id)."
+            AND fiscal_year = ".db_escape((int)$fiscal_year)."
+        FOR UPDATE";
+    $result = db_query($sql, 'could not lock leave balance');
+
+    return db_fetch($result);
+}
+
+/**
  * Get leave balance row by employee/leave/year.
  *
  * @param string $employee_id
@@ -212,7 +235,7 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
                 pending = ".db_escape((float)$pending).",
                 adjusted = ".db_escape((float)$adjusted)."
             WHERE balance_id = ".db_escape((int)$existing['balance_id']);
-        db_query($sql, 'could not update leave balance');
+        return db_query($sql, 'could not update leave balance') !== false;
     } else {
         $sql = "INSERT INTO ".TB_PREF."leave_balances
             (employee_id, leave_id, fiscal_year, entitled, carried_forward, taken, pending, adjusted)
@@ -226,7 +249,7 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
                 ".db_escape((float)$pending).",
                 ".db_escape((float)$adjusted)."
             )";
-        db_query($sql, 'could not insert leave balance');
+        return db_query($sql, 'could not insert leave balance') !== false;
     }
 }
 
@@ -284,21 +307,29 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
  * @param float $taken_delta
  * @param float $pending_delta
  * @param float $adjusted_delta
- * @return void
+ * @return bool
  */
 function apply_leave_balance_movement($employee_id, $leave_id, $fiscal_year, $taken_delta=0, $pending_delta=0, $adjusted_delta=0) {
     list(, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
     $balance = ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $fiscal_year_end);
     if (!$balance) {
-        save_leave_balance($employee_id, $leave_id, $fiscal_year, 0, 0, $taken_delta, $pending_delta, $adjusted_delta);
-        return;
+        return save_leave_balance(
+            $employee_id,
+            $leave_id,
+            $fiscal_year,
+            0,
+            0,
+            $taken_delta,
+            $pending_delta,
+            $adjusted_delta
+        );
     }
 
     $new_taken = (float)$balance['taken'] + (float)$taken_delta;
     $new_pending = (float)$balance['pending'] + (float)$pending_delta;
     $new_adjusted = (float)$balance['adjusted'] + (float)$adjusted_delta;
 
-    save_leave_balance(
+    return save_leave_balance(
         $employee_id,
         $leave_id,
         $fiscal_year,

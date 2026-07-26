@@ -113,7 +113,7 @@ include_once $path_to_root.'/includes/main.inc';
 include_once $path_to_root.'/includes/db/domain_audit_db.inc';
 include_once $path_to_root.'/includes/db/domain_audit_governance.inc';
 
-if (!isset($db_version) || $db_version !== '1.0.26') {
+if (!isset($db_version) || version_compare((string)$db_version, '1.0.26', '<')) {
     domain_audit_governance_cli_exit(false, 'source_upgrade_required');
 }
 if (domain_audit_records_admin_authorized($company) === false) {

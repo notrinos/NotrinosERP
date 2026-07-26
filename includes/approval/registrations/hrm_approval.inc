@@ -158,32 +158,108 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 
 	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 	include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
 	if ($request_id <= 0)
 		return false;
 
-	$request = get_leave_request($request_id);
-	if (!$request || (int)$request['status'] !== 0)
+	begin_transaction();
+
+	$request = get_leave_request_for_update($request_id);
+	if (!$request
+		|| (int)$request['status'] !== 0
+		|| trim((string)$request['employee_id']) === ''
+		|| (int)$request['leave_id'] <= 0
+		|| (float)$request['days'] <= 0
+	) {
+		cancel_transaction();
 		return false;
+	}
 
 	// Get the final approver remarks from approval actions
 	$remarks = isset($draft_data['approval_remarks']) ? $draft_data['approval_remarks'] : '';
 
-	// Approve the leave request
-	approve_leave_request($request_id, 'approval_system', $remarks);
-
-	// Apply leave balance movement
 	$fiscal_year = get_leave_balance_fiscal_year_for_date($request['from_date']);
-	apply_leave_balance_movement(
+	$balance_before = get_leave_balance_for_update(
 		$request['employee_id'],
 		(int)$request['leave_id'],
-		$fiscal_year,
-		(float)$request['days'],
-		0,
-		0
+		$fiscal_year
 	);
+	$taken_before = $balance_before ? (float)$balance_before['taken'] : 0.0;
 
+	if (!approve_leave_request($request_id, 'approval_system', $remarks)
+		|| !apply_leave_balance_movement(
+			$request['employee_id'],
+			(int)$request['leave_id'],
+			$fiscal_year,
+			(float)$request['days'],
+			0,
+			0
+		)
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	$request_after = get_leave_request($request_id);
+	$balance_after = get_leave_balance(
+		$request['employee_id'],
+		(int)$request['leave_id'],
+		$fiscal_year
+	);
+	if (!$request_after
+		|| (int)$request_after['status'] !== 1
+		|| !$balance_after
+		|| abs(
+			(float)$balance_after['taken']
+				- ($taken_before + (float)$request['days'])
+		) > 0.000001
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	// Record the verified terminal state before the same outer transaction commits.
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'leave_request',
+		'entity_key'      => array('request_id' => $request_id),
+		'action'          => 'leave_request.approved',
+		'reason_code'     => (int)$draft_id > 0
+			? 'approval_workflow_terminal'
+			: 'approval_direct_policy_terminal',
+		'legacy_source'   => (int)$draft_id > 0 ? 'approval_drafts' : null,
+		'legacy_id'       => (int)$draft_id > 0 ? (int)$draft_id : null,
+		'before'          => $request,
+		'after'           => $request_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(
+				'approval_date',
+				'approval_remarks',
+				'approved_by',
+				'leave_balance.taken',
+				'status',
+			),
+			'mutation_kind' => 'approved',
+			'restricted_values_stored' => false,
+		),
+	));
+
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Leave request %d approval audit append failed: %s',
+			$request_id,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
 	return $request_id;
 }
 
