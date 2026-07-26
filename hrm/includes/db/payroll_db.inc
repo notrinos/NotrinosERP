@@ -195,6 +195,23 @@ function add_payroll_period($period_name, $from_date, $to_date, $department_id=n
 }
 
 /**
+ * Get one payroll period by id FOR UPDATE (row lock).
+ *
+ * @param int $period_id
+ * @return array|false
+ */
+function get_payroll_period_for_update($period_id) {
+    if (!payroll_table_exists('payroll_periods'))
+        return false;
+
+    $sql = "SELECT * FROM ".TB_PREF."payroll_periods
+        WHERE period_id = ".db_escape((int)$period_id)." FOR UPDATE";
+    $result = db_query($sql, 'could not get payroll period for update');
+
+    return db_fetch($result);
+}
+
+/**
  * Get one payroll period by id.
  *
  * @param int $period_id
@@ -258,9 +275,14 @@ function get_payroll_periods($status=null, $limit=null, $offset=0) {
  *
  * @param int $period_id
  * @param int $status
+ * @param int|null $expected_status Optional current status required for update
  * @return bool
  */
-function update_payroll_period_status($period_id, $status) {
+function update_payroll_period_status(
+    $period_id,
+    $status,
+    $expected_status=null
+) {
     if (!payroll_table_exists('payroll_periods'))
         return false;
 
@@ -284,8 +306,16 @@ function update_payroll_period_status($period_id, $status) {
 		$set[] = "approval_date = NULL";
     }
 
-    $sql = "UPDATE ".TB_PREF."payroll_periods SET ".implode(', ', $set)." WHERE period_id = ".db_escape((int)$period_id);
-    return (bool)db_query($sql, 'could not update payroll period status');
+    $sql = "UPDATE ".TB_PREF."payroll_periods SET ".implode(', ', $set).
+        " WHERE period_id = ".db_escape((int)$period_id);
+    if ($expected_status !== null)
+        $sql .= " AND status = ".db_escape((int)$expected_status);
+
+    $result = db_query($sql, 'could not update payroll period status');
+    if (!$result)
+        return false;
+
+    return $expected_status === null || db_num_affected_rows() === 1;
 }
 
 /**

@@ -66,19 +66,12 @@ foreach ($_POST as $name => $value) {
                 if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
                     display_notification(_('Payroll period has been approved (auto-approved).'));
                 } elseif ($approval_result !== false) {
-                    // Pending approval — page already stopped by display_footer_exit()
                     return;
-                } else {
-                    // No workflow — fallback to direct approval
-                    update_payroll_period_status($period_id, 2);
-                    update_payroll_period_totals($period_id);
-                    display_notification(_('Payroll period has been approved.'));
                 }
             } else {
-                // No approval required — direct approve
-                update_payroll_period_status($period_id, 2);
-                update_payroll_period_totals($period_id);
-                display_notification(_('Payroll period has been approved.'));
+                display_error(
+                    _('A configured core approval workflow is required before this payroll period can be approved.')
+                );
             }
         }
     }
@@ -135,4 +128,3 @@ end_table(1);
 end_form();
 
 end_page();
-

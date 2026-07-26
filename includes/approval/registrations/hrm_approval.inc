@@ -979,10 +979,13 @@ function reconcile_pending_overtime_request_approval($request_id)
 }
 
 /**
- * Execute an approved Payroll Period draft.
+ * Execute an approved Payroll Period draft with PAY-AUD evidence.
  *
- * Updates the payroll period status to Approved (2) and
- * recalculates period totals.
+ * Locks the payroll period row, validates draft/period agreement,
+ * approves, reconciles totals, and appends a minimized audit event
+ * through the existing PAY-AUD gateway in one transaction.
+ * Failure rolls back approval, status, totals, audit, reserved-
+ * number, and notification work.
  *
  * @param array $draft_data         Decoded JSON draft data
  * @param int   $reserved_trans_no  Reserved transaction number
@@ -994,24 +997,120 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 	global $path_to_root;
 
 	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$period_id = isset($draft_data['period_id']) ? (int)$draft_data['period_id'] : 0;
 	if ($period_id <= 0)
 		return false;
 
-	$period = get_payroll_period($period_id);
-	if (!$period)
+	begin_transaction();
+
+	$period = get_payroll_period_for_update($period_id);
+	if (!$period
+		|| (int)$period['status'] !== 1
+	) {
+		cancel_transaction();
 		return false;
+	}
 
-	// Only approve if still in Draft (0) or Calculated (1) status
-	$current_status = (int)$period['status'];
-	if ($current_status !== 0 && $current_status !== 1)
+	if ((int)$draft_id > 0
+		&& (
+			!isset($draft_data['period_name'])
+			|| (string)$draft_data['period_name'] !== (string)$period['period_name']
+			|| !isset($draft_data['from_date'])
+			|| (string)$draft_data['from_date'] !== (string)$period['from_date']
+			|| !isset($draft_data['to_date'])
+			|| (string)$draft_data['to_date'] !== (string)$period['to_date']
+			|| !isset($draft_data['total_gross'])
+			|| !isset($draft_data['total_deductions'])
+			|| !isset($draft_data['total_net'])
+		)
+	) {
+		cancel_transaction();
 		return false;
+	}
 
-	// Approve the payroll period
-	update_payroll_period_status($period_id, 2);
-	update_payroll_period_totals($period_id);
+	if (!update_payroll_period_totals($period_id)) {
+		cancel_transaction();
+		return false;
+	}
 
+	$period_reconciled = get_payroll_period_for_update($period_id);
+	if (!$period_reconciled
+		|| (int)$period_reconciled['status'] !== 1
+		|| ((int)$draft_id > 0
+			&& (
+				abs(
+					(float)$draft_data['total_gross']
+					- (float)$period_reconciled['total_gross']
+				) > 0.000001
+				|| abs(
+					(float)$draft_data['total_deductions']
+					- (float)$period_reconciled['total_deductions']
+				) > 0.000001
+				|| abs(
+					(float)$draft_data['total_net']
+					- (float)$period_reconciled['total_net']
+				) > 0.000001
+			)
+		)
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	if (!update_payroll_period_status($period_id, 2, 1)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$period_after = get_payroll_period_for_update($period_id);
+	if (!$period_after || (int)$period_after['status'] !== 2) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'payroll_period',
+		'entity_key'      => array('period_id' => $period_id),
+		'action'          => 'payroll_period.approved',
+		'reason_code'     => (int)$draft_id > 0
+			? 'approval_workflow_terminal'
+			: 'approval_direct_policy_terminal',
+		'legacy_source'   => (int)$draft_id > 0 ? 'approval_drafts' : null,
+		'legacy_id'       => (int)$draft_id > 0 ? (int)$draft_id : null,
+		'before'          => $period,
+		'after'           => $period_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(
+				'approval_date',
+				'approved_by',
+				'status',
+				'total_gross',
+				'total_deductions',
+				'total_net',
+				'total_employer_cost',
+			),
+			'mutation_kind' => 'approved',
+			'restricted_values_stored' => false,
+		),
+	));
+
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Payroll period %d approval audit append failed: %s',
+			$period_id,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
 	return $period_id;
 }
 
