@@ -20,17 +20,33 @@ page(_("Payroll Approval"));
 
 $approval_service = get_approval_workflow_service();
 
+$recover_period_id = find_submit('Recover');
+if ($recover_period_id > 0) {
+	$recovery = reconcile_pending_payroll_period_approval($recover_period_id);
+	if (!isset($recovery['status']) || $recovery['status'] === 'error')
+		display_error(isset($recovery['message'])
+			? $recovery['message']
+			: _('The payroll period approval could not be recovered.'));
+	else
+		display_notification($recovery['message']);
+	if (isset($Ajax))
+		$Ajax->activate('_page_body');
+}
+
 foreach ($_POST as $name => $value) {
     if (strpos($name, 'Approve') === 0) {
         $period_id = (int)substr($name, 7);
         if ($period_id > 0) {
-            $period = get_payroll_period($period_id);
+            begin_transaction();
+            $period = get_payroll_period_for_update($period_id);
             if (!$period) {
+                cancel_transaction();
                 display_error(_('Payroll period not found.'));
                 continue;
             }
 
             if ((int)$period['status'] !== 1) {
+                cancel_transaction();
                 display_error(_('Only calculated payroll periods can be approved.'));
                 continue;
             }
@@ -41,6 +57,7 @@ foreach ($_POST as $name => $value) {
             if ($approval_service->isApprovalRequired(ST_PAYROLL_PERIOD, $payroll_amount)) {
                 $existing_core_draft = find_approval_draft_for_hrm_request(ST_PAYROLL_PERIOD, $period_id);
                 if ($existing_core_draft && (int)$existing_core_draft['status'] === APPROVAL_STATUS_PENDING) {
+                    cancel_transaction();
                     display_notification(_('Payroll period is already pending in the core approval workflow.'));
                     continue;
                 }
@@ -64,11 +81,20 @@ foreach ($_POST as $name => $value) {
                 );
 
                 if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                    commit_transaction();
                     display_notification(_('Payroll period has been approved (auto-approved).'));
                 } elseif ($approval_result !== false) {
+                    if ($approval_result['status'] === 'pending') {
+                        commit_transaction();
+                    } else {
+                        cancel_transaction();
+                    }
                     return;
+                } else {
+                    cancel_transaction();
                 }
             } else {
+                cancel_transaction();
                 display_error(
                     _('A configured core approval workflow is required before this payroll period can be approved.')
                 );
@@ -112,9 +138,18 @@ while ($row = db_fetch($result)) {
     amount_cell($row['total_net']);
     label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
 
-    if ((int)$row['status'] == 1)
-        submit_cells('Approve'.$row['period_id'], _('Approve'));
-    else
+    if ((int)$row['status'] == 1) {
+        $has_pending_core_approval = find_approval_draft_for_hrm_request(ST_PAYROLL_PERIOD, (int)$row['period_id']);
+        if ($has_pending_core_approval && (int)$has_pending_core_approval['status'] === APPROVAL_STATUS_PENDING)
+            submit_cells('Approve'.$row['period_id'], _('Approve'));
+        else
+            submit_cells(
+                'Recover' . $row['period_id'],
+                _('Recover'),
+                _('Create the missing approval draft from this calculated period.'),
+                true
+            );
+    } else
         label_cell('');
 
     if ((int)$row['status'] == 2 || (int)$row['status'] == 3)

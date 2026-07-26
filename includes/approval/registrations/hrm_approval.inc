@@ -1007,7 +1007,7 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 
 	$period = get_payroll_period_for_update($period_id);
 	if (!$period
-		|| (int)$period['status'] !== 1
+		|| !in_array((int)$period['status'], array(0, 1), true)
 	) {
 		cancel_transaction();
 		return false;
@@ -1018,54 +1018,28 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 			!isset($draft_data['period_name'])
 			|| (string)$draft_data['period_name'] !== (string)$period['period_name']
 			|| !isset($draft_data['from_date'])
-			|| (string)$draft_data['from_date'] !== (string)$period['from_date']
+			|| (string)$draft_data['from_date'] !== sql2date($period['from_date'])
 			|| !isset($draft_data['to_date'])
-			|| (string)$draft_data['to_date'] !== (string)$period['to_date']
-			|| !isset($draft_data['total_gross'])
-			|| !isset($draft_data['total_deductions'])
+			|| (string)$draft_data['to_date'] !== sql2date($period['to_date'])
 			|| !isset($draft_data['total_net'])
+			|| abs((float)$draft_data['total_net'] - (float)$period['total_net']) > 0.000001
 		)
 	) {
 		cancel_transaction();
 		return false;
 	}
 
-	if (!update_payroll_period_totals($period_id)) {
-		cancel_transaction();
-		return false;
-	}
-
-	$period_reconciled = get_payroll_period_for_update($period_id);
-	if (!$period_reconciled
-		|| (int)$period_reconciled['status'] !== 1
-		|| ((int)$draft_id > 0
-			&& (
-				abs(
-					(float)$draft_data['total_gross']
-					- (float)$period_reconciled['total_gross']
-				) > 0.000001
-				|| abs(
-					(float)$draft_data['total_deductions']
-					- (float)$period_reconciled['total_deductions']
-				) > 0.000001
-				|| abs(
-					(float)$draft_data['total_net']
-					- (float)$period_reconciled['total_net']
-				) > 0.000001
-			)
-		)
+	if (!update_payroll_period_status($period_id, 2)
+		|| !update_payroll_period_totals($period_id)
 	) {
-		cancel_transaction();
-		return false;
-	}
-
-	if (!update_payroll_period_status($period_id, 2, 1)) {
 		cancel_transaction();
 		return false;
 	}
 
 	$period_after = get_payroll_period_for_update($period_id);
-	if (!$period_after || (int)$period_after['status'] !== 2) {
+	if (!$period_after
+		|| (int)$period_after['status'] !== 2
+	) {
 		cancel_transaction();
 		return false;
 	}
@@ -1112,6 +1086,131 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 
 	commit_transaction();
 	return $period_id;
+}
+
+/**
+ * Recover one calculated payroll period that has no approval draft.
+ *
+ * The existing period row is locked before exact draft lookup and
+ * submission, so retries return the same pending draft and concurrent
+ * recovery cannot create a duplicate. The recovery actor is recorded
+ * in approval history.
+ *
+ * @param int $period_id Payroll period ID
+ * @return array Recovery result with status and message
+ */
+function reconcile_pending_payroll_period_approval($period_id)
+{
+	if (!user_check_access('SA_PAYROLLAPPROVE')) {
+		return array(
+			'status' => 'error',
+			'message' => _('You do not have permission to recover payroll period approvals.'),
+		);
+	}
+
+	$period_id = (int)$period_id;
+	if ($period_id <= 0) {
+		return array(
+			'status' => 'error',
+			'message' => _('Payroll period was not found.'),
+		);
+	}
+
+	global $path_to_root;
+	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+
+	begin_transaction();
+	$period = get_payroll_period_for_update($period_id);
+	if (!$period || (int)$period['status'] !== 1) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only calculated payroll periods can be recovered.'),
+		);
+	}
+
+	$existing = find_approval_draft_for_hrm_request(
+		ST_PAYROLL_PERIOD,
+		$period_id
+	);
+	if ($existing) {
+		commit_transaction();
+		return array(
+			'status' => 'already_pending',
+			'draft_id' => (int)$existing['draft_id'],
+			'message' => _('The payroll period already has a pending approval draft.'),
+		);
+	}
+
+	if (trim((string)$period['period_name']) === ''
+		|| trim((string)$period['from_date']) === ''
+		|| trim((string)$period['to_date']) === ''
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The calculated payroll period must be corrected before recovery.'),
+		);
+	}
+
+	$payroll_amount = (float)$period['total_net'];
+	$draft_data = array(
+		'period_id'        => $period_id,
+		'period_name'      => $period['period_name'],
+		'from_date'        => $period['from_date'],
+		'to_date'          => $period['to_date'],
+		'total_gross'      => (float)$period['total_gross'],
+		'total_deductions' => (float)$period['total_deductions'],
+		'total_net'        => $payroll_amount,
+		'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
+	);
+
+	$approval = get_approval_workflow_service();
+	$result = $approval->submit(
+		ST_PAYROLL_PERIOD,
+		$draft_data,
+		$payroll_amount,
+		array(
+			'summary' => sprintf(
+				_('Recovered payroll period #%d: %s, Net: %s'),
+				$period_id,
+				$period['period_name'],
+				number_format($payroll_amount, 2)
+			),
+		)
+	);
+
+	if (!isset($result['status'])
+		|| !in_array($result['status'], array('pending', 'auto_approved'), true)
+		|| empty($result['draft_id'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The payroll period approval could not be recovered. No changes were committed.'),
+		);
+	}
+
+	$action_id = add_approval_action(
+		(int)$result['draft_id'],
+		'resubmit',
+		null,
+		0,
+		_('Recovered calculated payroll period without an approval draft.')
+	);
+	if (!$action_id) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The payroll period approval recovery audit could not be recorded. No changes were committed.'),
+		);
+	}
+
+	commit_transaction();
+	$result['message'] = ($result['status'] === 'auto_approved')
+		? _('The payroll period was recovered and automatically approved.')
+		: _('The payroll period was recovered and submitted for approval.');
+	return $result;
 }
 
 /**
