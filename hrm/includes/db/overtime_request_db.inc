@@ -130,7 +130,7 @@ function update_overtime_request($request_id, $overtime_id, $date, $hours, $reas
  * Set overtime request status.
  *
  * @param int $request_id
- * @param int $status 1=approved,2=rejected
+ * @param int $status 1=approved,2=rejected,3=cancelled
  * @param string $approved_by
  * @param int|null $expected_status Optional current status required for the update
  * @return bool
@@ -215,19 +215,59 @@ function approve_overtime_request($request_id, $approved_by='') {
  *
  * @param int $request_id
  * @param string $approved_by
- * @return void
+ * @param int|null $expected_status Optional current status required for the update
+ * @return bool
  */
-function reject_overtime_request($request_id, $approved_by='') {
-    return set_overtime_request_status($request_id, 2, $approved_by);
+function reject_overtime_request(
+    $request_id,
+    $approved_by='',
+    $expected_status=null
+) {
+    return set_overtime_request_status(
+        $request_id,
+        2,
+        $approved_by,
+        $expected_status
+    );
+}
+
+/**
+ * Cancel overtime request.
+ *
+ * @param int $request_id
+ * @param string $approved_by
+ * @param int|null $expected_status Optional current status required for the update
+ * @return bool
+ */
+function cancel_overtime_request(
+    $request_id,
+    $approved_by='',
+    $expected_status=null
+) {
+    return set_overtime_request_status(
+        $request_id,
+        3,
+        $approved_by,
+        $expected_status
+    );
 }
 
 /**
  * Delete overtime request.
  *
  * @param int $request_id
- * @return void
+ * @param int|null $expected_status Optional current status required for deletion
+ * @return bool
  */
-function delete_overtime_request($request_id) {
-    $sql = "DELETE FROM ".TB_PREF."overtime_requests WHERE request_id = ".db_escape((int)$request_id);
-    db_query($sql, 'could not delete overtime request');
+function delete_overtime_request($request_id, $expected_status=null) {
+    $sql = "DELETE FROM ".TB_PREF."overtime_requests
+        WHERE request_id = ".db_escape((int)$request_id);
+    if ($expected_status !== null)
+        $sql .= " AND status = ".db_escape((int)$expected_status);
+
+    $result = db_query($sql, 'could not delete overtime request');
+    if (!$result)
+        return false;
+
+    return $expected_status === null || db_num_affected_rows() === 1;
 }

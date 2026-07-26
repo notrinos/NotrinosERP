@@ -24,7 +24,12 @@ page(_($help_context = "Overtime Entry/Request"), false, false, '', $js);
 
 simple_page_mode(false);
 
-$status_labels = array(0 => _('Pending'), 1 => _('Approved'), 2 => _('Rejected'));
+$status_labels = array(
+    0 => _('Pending'),
+    1 => _('Approved'),
+    2 => _('Rejected'),
+    3 => _('Cancelled'),
+);
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     // Sanitize and validate input
@@ -121,12 +126,40 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
     $request = get_overtime_request($selected_id);
-    if ($request && (int)$request['status'] != 0)
-        display_error(_('Only pending requests can be deleted.'));
-    else {
-        delete_overtime_request($selected_id);
-        display_notification(_('Selected request has been deleted.'));
+    if ($request && (int)$request['status'] != 0) {
+        display_error(_('Only pending requests can be cancelled.'));
+    } elseif ($request) {
+        $core_draft = find_approval_draft_for_hrm_request(
+            ST_OVERTIME_REQUEST,
+            (int)$selected_id
+        );
+        if ($core_draft) {
+            $approval_service = get_approval_workflow_service();
+            $result = $approval_service->cancel(
+                (int)$core_draft['draft_id'],
+                _('Cancelled from the overtime request page.')
+            );
+            if (!isset($result['status']) || $result['status'] === 'error')
+                display_error(isset($result['message'])
+                    ? $result['message']
+                    : _('The overtime request could not be cancelled.'));
+            else
+                display_notification($result['message']);
+        } else {
+            if (delete_overtime_request((int)$selected_id, 0))
+                display_notification(
+                    _('Selected pending request without an approval draft has been deleted.')
+                );
+            else
+                display_error(
+                    _('The pending overtime request could not be deleted.')
+                );
+        }
+    } else {
+        display_error(_('Overtime request was not found.'));
     }
+    if (isset($Ajax))
+        $Ajax->activate('_page_body');
     $Mode = 'RESET';
 }
 
@@ -188,7 +221,7 @@ while ($row = db_fetch($result)) {
     label_cell(sql2date(substr($row['request_date'], 0, 10)));
     if ((int)$row['status'] == 0) {
         edit_button_cell('Edit' . $row['request_id'], _('Edit'));
-        delete_button_cell('Delete' . $row['request_id'], _('Delete'));
+        delete_button_cell('Delete' . $row['request_id'], _('Cancel'));
     } else {
         label_cell('');
         label_cell('');
@@ -200,4 +233,3 @@ end_table(1);
 end_form();
 
 end_page();
-

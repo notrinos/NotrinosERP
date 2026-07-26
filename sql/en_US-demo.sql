@@ -5379,7 +5379,7 @@ CREATE TABLE IF NOT EXISTS `0_overtime_requests` (
 	`date`          date NOT NULL,
 	`hours`         double NOT NULL DEFAULT '0',
 	`reason`        text,
-	`status`        tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=pending, 1=approved, 2=rejected',
+	`status`        tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=pending, 1=approved, 2=rejected, 3=cancelled',
 	`approved_by`   varchar(20) DEFAULT NULL,
 	`approval_date` datetime DEFAULT NULL,
 	`request_date`  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -19,7 +19,12 @@ page(_("Overtime Approval"));
 
 simple_page_mode(false);
 
-$status_labels = array(0 => _('Pending'), 1 => _('Approved'), 2 => _('Rejected'));
+$status_labels = array(
+    0 => _('Pending'),
+    1 => _('Approved'),
+    2 => _('Rejected'),
+    3 => _('Cancelled'),
+);
 
 if (isset($_POST['approve']) || isset($_POST['reject'])) {
     $request_id = (int)get_post('request_id');
@@ -65,7 +70,13 @@ $filter_status = get_post('filter_status', 0);
 
 start_form();
 start_table(TABLESTYLE2);
-$status_filter_opts = array('' => _('All Statuses'), 0 => _('Pending'), 1 => _('Approved'), 2 => _('Rejected'));
+$status_filter_opts = array(
+    '' => _('All Statuses'),
+    0 => _('Pending'),
+    1 => _('Approved'),
+    2 => _('Rejected'),
+    3 => _('Cancelled'),
+);
 array_selector_row(null, 'filter_status', $filter_status, $status_filter_opts, array('select_submit' => true));
 end_table(1);
 
@@ -117,4 +128,3 @@ if ($selected_request && (int)$selected_request['status'] == 0) {
 end_form();
 
 end_page();
-
