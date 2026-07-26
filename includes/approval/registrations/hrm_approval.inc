@@ -846,6 +846,139 @@ function cancel_overtime_request_draft($draft_data, $draft_id, $comments)
 }
 
 /**
+ * Recover one pending overtime request that has no approval draft.
+ *
+ * The existing overtime row is locked before exact draft lookup and
+ * submission, so retries return the same pending draft and concurrent
+ * recovery cannot create a duplicate. The recovery actor is recorded
+ * in approval history.
+ *
+ * @param int $request_id Overtime request ID
+ * @return array Recovery result with status and message
+ */
+function reconcile_pending_overtime_request_approval($request_id)
+{
+	if (!user_check_access('SA_OVERTIMEAPPROVE')) {
+		return array(
+			'status' => 'error',
+			'message' => _('You do not have permission to recover overtime approvals.'),
+		);
+	}
+
+	$request_id = (int)$request_id;
+	if ($request_id <= 0) {
+		return array(
+			'status' => 'error',
+			'message' => _('Overtime request was not found.'),
+		);
+	}
+
+	global $path_to_root;
+	include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
+
+	begin_transaction();
+	$request = get_overtime_request_for_update($request_id);
+	if (!$request || (int)$request['status'] !== 0) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only pending overtime requests can be recovered.'),
+		);
+	}
+
+	$existing = find_approval_draft_for_hrm_request(
+		ST_OVERTIME_REQUEST,
+		$request_id
+	);
+	if ($existing) {
+		commit_transaction();
+		return array(
+			'status' => 'already_pending',
+			'draft_id' => (int)$existing['draft_id'],
+			'message' => _('The overtime request already has a pending approval draft.'),
+		);
+	}
+
+	if (trim((string)$request['employee_id']) === ''
+		|| (int)$request['overtime_id'] <= 0
+		|| (float)$request['hours'] <= 0
+		|| (float)$request['hours'] > 24
+		|| trim((string)$request['date']) === ''
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The pending overtime request must be corrected before recovery.'),
+		);
+	}
+
+	$display_request = get_overtime_request($request_id);
+	if (!$display_request) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Overtime request was not found.'),
+		);
+	}
+
+	$draft_data = array(
+		'request_id'    => $request_id,
+		'employee_id'   => $request['employee_id'],
+		'overtime_id'   => (int)$request['overtime_id'],
+		'date'          => sql2date($request['date']),
+		'hours'         => (float)$request['hours'],
+		'reason'        => $request['reason'],
+		'employee_name' => $display_request['employee_name'],
+		'overtime_name' => $display_request['overtime_name'],
+	);
+	$approval = get_approval_workflow_service();
+	$result = $approval->submit(
+		ST_OVERTIME_REQUEST,
+		$draft_data,
+		(float)$request['hours'],
+		array(
+			'summary' => sprintf(
+				_('Recovered overtime request #%d: %.1f hours'),
+				$request_id,
+				(float)$request['hours']
+			),
+		)
+	);
+
+	if (!isset($result['status'])
+		|| !in_array($result['status'], array('pending', 'auto_approved'), true)
+		|| empty($result['draft_id'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The overtime approval could not be recovered. No changes were committed.'),
+		);
+	}
+
+	$action_id = add_approval_action(
+		(int)$result['draft_id'],
+		'resubmit',
+		null,
+		0,
+		_('Recovered pending overtime request without an approval draft.')
+	);
+	if (!$action_id) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The overtime approval recovery audit could not be recorded. No changes were committed.'),
+		);
+	}
+
+	commit_transaction();
+	$result['message'] = ($result['status'] === 'auto_approved')
+		? _('The overtime request was recovered and automatically approved.')
+		: _('The overtime request was recovered and submitted for approval.');
+	return $result;
+}
+
+/**
  * Execute an approved Payroll Period draft.
  *
  * Updates the payroll period status to Approved (2) and

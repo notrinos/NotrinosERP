@@ -15,6 +15,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
+include_once($path_to_root . '/includes/approval/registrations/hrm_approval.inc');
 page(_("Overtime Approval"));
 
 simple_page_mode(false);
@@ -25,6 +26,19 @@ $status_labels = array(
     2 => _('Rejected'),
     3 => _('Cancelled'),
 );
+
+$recover_request_id = find_submit('Recover');
+if ($recover_request_id > 0) {
+    $recovery = reconcile_pending_overtime_request_approval($recover_request_id);
+    if (!isset($recovery['status']) || $recovery['status'] === 'error')
+        display_error(isset($recovery['message'])
+            ? $recovery['message']
+            : _('The overtime approval could not be recovered.'));
+    else
+        display_notification($recovery['message']);
+    if (isset($Ajax))
+        $Ajax->activate('_page_body');
+}
 
 if (isset($_POST['approve']) || isset($_POST['reject'])) {
     $request_id = (int)get_post('request_id');
@@ -99,10 +113,13 @@ while ($row = db_fetch($result)) {
     label_cell($row['approved_by']);
     label_cell(empty($row['approval_date']) ? '' : sql2date(substr($row['approval_date'], 0, 10)));
     $has_pending_core_approval = ((int)$row['status'] == 0) ? find_approval_draft_for_hrm_request(ST_OVERTIME_REQUEST, (int)$row['request_id']) : false;
-    if ((int)$row['status'] == 0 && $has_pending_core_approval)
+    if ((int)$row['status'] == 0 && $has_pending_core_approval) {
         edit_button_cell('Edit' . $row['request_id'], _('Process'));
-    else
+    } elseif ((int)$row['status'] == 0 && !$has_pending_core_approval) {
+        submit_cells('Recover' . $row['request_id'], _('Recover'), true, '', '', true);
+    } else {
         label_cell('');
+    }
     end_row();
 }
 end_table(1);

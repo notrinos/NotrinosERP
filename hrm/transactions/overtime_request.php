@@ -83,6 +83,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 update_overtime_request($selected_id, $overtime_id, $date, $hours, $reason);
                 display_notification(_('Overtime request has been updated.'));
             } else {
+                begin_transaction();
                 $request_id = add_overtime_request($employee_id, $overtime_id, $date, $hours, $reason);
 
                 // Check if approval workflow is required for overtime requests
@@ -102,21 +103,41 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                     $overtime_draft_data['overtime_name'] = $overtime_request_row['overtime_name'];
                 }
 
-                $approval_result = approval_check_before_save(
+                $approval_service = get_approval_workflow_service();
+                $approval_result = $approval_service->isApprovalRequired(
+                    ST_OVERTIME_REQUEST,
+                    $hours
+                ) ? $approval_service->submit(
                     ST_OVERTIME_REQUEST,
                     $overtime_draft_data,
                     $hours,
                     array('summary' => sprintf(_('Overtime: %s, %.1f hours'), $date, $hours))
-                );
+                ) : false;
 
                 if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
+                    commit_transaction();
                     display_notification(_('Overtime request has been created and automatically approved.'));
                     $Mode = 'RESET';
                 } elseif ($approval_result !== false) {
-                    // Pending approval — page already stopped by display_footer_exit()
-                    return;
+                    if ($approval_result['status'] === 'pending') {
+                        commit_transaction();
+                        display_notification(sprintf(
+                            _('Overtime request has been submitted for approval. Draft #%d, Reference: %s'),
+                            $approval_result['draft_id'],
+                            $approval_result['reference']
+                        ));
+                    } else {
+                        cancel_transaction();
+                        display_error(_('Overtime approval submission failed. No overtime request was created.'));
+                    }
                 } else {
-                    display_notification(_('Overtime request has been created.'));
+                    if (execute_approved_overtime_request($overtime_draft_data, 0, 0) === false) {
+                        cancel_transaction();
+                        display_error(_('Overtime approval failed. No overtime request was created.'));
+                    } else {
+                        commit_transaction();
+                        display_notification(_('Overtime request has been created and auto-approved under the direct policy.'));
+                    }
                 }
             }
             $Mode = 'RESET';
