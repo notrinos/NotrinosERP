@@ -109,6 +109,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 display_notification(_('Loan request has been updated.'));
             }
         } else {
+            begin_transaction();
             $created_loan_id = add_employee_loan(
                 $_POST['employee_id'],
                 (int)$_POST['loan_type_id'],
@@ -121,18 +122,24 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 $_POST['notes']
             );
 
-            if (!$created_loan_id)
+            if (!$created_loan_id) {
+                cancel_transaction();
                 display_error(_('Loan request was created but could not be submitted to core approval.'));
-            else {
+            } else {
                 $approval_result = submit_employee_loan_for_core_approval($created_loan_id);
-                if (!$approval_result)
+                if (!$approval_result) {
+                    cancel_transaction();
                     display_error(_('Loan request could not be submitted to the core approval workflow.'));
-                elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending')
+                } elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending') {
+                    commit_transaction();
                     display_notification(_('Loan request has been submitted to the core approval workflow.'));
-                elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved')
+                } elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved') {
+                    commit_transaction();
                     display_notification(_('Loan request has been auto-approved by the core approval workflow.'));
-                else
-                    display_notification(_('Loan request has been created.'));
+                } else {
+                    cancel_transaction();
+                    display_error(_('Loan request approval returned an unexpected result. No loan request was created.'));
+                }
             }
         }
 
@@ -142,12 +149,23 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 }
 
 if ($Mode == 'Delete') {
-    if (has_pending_loan_request_approval((int)$selected_id)) {
-        display_error(_('This loan request is pending core approval and cannot be deleted.'));
-        $Mode = 'RESET';
-    }
-
-    if (!has_pending_loan_request_approval((int)$selected_id)) {
+    $core_draft = find_approval_draft_for_hrm_request(
+        ST_LOAN_REQUEST,
+        (int)$selected_id
+    );
+    if ($core_draft) {
+        $approval_service = get_approval_workflow_service();
+        $result = $approval_service->cancel(
+            (int)$core_draft['draft_id'],
+            _('Cancelled by the original loan requester.')
+        );
+        if (isset($result['status']) && $result['status'] === 'cancelled')
+            display_notification(_('The loan request and its approval draft were cancelled.'));
+        else
+            display_error(isset($result['message'])
+                ? $result['message']
+                : _('The loan request could not be cancelled.'));
+    } else {
         if (!delete_employee_loan($selected_id))
             display_error(_('Only pending loans can be deleted.'));
         else
@@ -161,13 +179,21 @@ foreach ($_POST as $name => $value) {
     if (strpos($name, 'Submit') === 0) {
         $loan_id = (int)substr($name, 6);
         if ($loan_id > 0) {
-            $approval_result = submit_employee_loan_for_core_approval($loan_id);
-            if (!$approval_result)
-                display_error(_('Loan request could not be submitted to core approval workflow.'));
-            elseif (isset($approval_result['status']) && $approval_result['status'] === 'pending')
-                display_notification(_('Loan request has been submitted to the core approval workflow.'));
-            elseif (isset($approval_result['status']) && $approval_result['status'] === 'auto_approved')
-                display_notification(_('Loan request has been auto-approved by the core approval workflow.'));
+            $approval_result = reconcile_pending_loan_request_approval($loan_id);
+            if (isset($approval_result['message'])
+                && isset($approval_result['status'])
+                && in_array(
+                    $approval_result['status'],
+                    array('pending', 'auto_approved', 'already_pending'),
+                    true
+                )
+            ) {
+                display_notification($approval_result['message']);
+            } else {
+                display_error(isset($approval_result['message'])
+                    ? $approval_result['message']
+                    : _('Loan request could not be submitted to core approval workflow.'));
+            }
 
             $Mode = 'RESET';
         }
@@ -263,4 +289,3 @@ end_table(1);
 
 end_form();
 end_page();
-

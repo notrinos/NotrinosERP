@@ -1007,7 +1007,7 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 
 	$period = get_payroll_period_for_update($period_id);
 	if (!$period
-		|| !in_array((int)$period['status'], array(0, 1), true)
+		|| (int)$period['status'] !== 1
 	) {
 		cancel_transaction();
 		return false;
@@ -1018,28 +1018,54 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 			!isset($draft_data['period_name'])
 			|| (string)$draft_data['period_name'] !== (string)$period['period_name']
 			|| !isset($draft_data['from_date'])
-			|| (string)$draft_data['from_date'] !== sql2date($period['from_date'])
+			|| (string)$draft_data['from_date'] !== (string)$period['from_date']
 			|| !isset($draft_data['to_date'])
-			|| (string)$draft_data['to_date'] !== sql2date($period['to_date'])
+			|| (string)$draft_data['to_date'] !== (string)$period['to_date']
+			|| !isset($draft_data['total_gross'])
+			|| !isset($draft_data['total_deductions'])
 			|| !isset($draft_data['total_net'])
-			|| abs((float)$draft_data['total_net'] - (float)$period['total_net']) > 0.000001
 		)
 	) {
 		cancel_transaction();
 		return false;
 	}
 
-	if (!update_payroll_period_status($period_id, 2)
-		|| !update_payroll_period_totals($period_id)
+	if (!update_payroll_period_totals($period_id)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$period_reconciled = get_payroll_period_for_update($period_id);
+	if (!$period_reconciled
+		|| (int)$period_reconciled['status'] !== 1
+		|| ((int)$draft_id > 0
+			&& (
+				abs(
+					(float)$draft_data['total_gross']
+					- (float)$period_reconciled['total_gross']
+				) > 0.000001
+				|| abs(
+					(float)$draft_data['total_deductions']
+					- (float)$period_reconciled['total_deductions']
+				) > 0.000001
+				|| abs(
+					(float)$draft_data['total_net']
+					- (float)$period_reconciled['total_net']
+				) > 0.000001
+			)
+		)
 	) {
 		cancel_transaction();
 		return false;
 	}
 
+	if (!update_payroll_period_status($period_id, 2, 1)) {
+		cancel_transaction();
+		return false;
+	}
+
 	$period_after = get_payroll_period_for_update($period_id);
-	if (!$period_after
-		|| (int)$period_after['status'] !== 2
-	) {
+	if (!$period_after || (int)$period_after['status'] !== 2) {
 		cancel_transaction();
 		return false;
 	}
@@ -1153,6 +1179,23 @@ function reconcile_pending_payroll_period_approval($period_id)
 		);
 	}
 
+	if (!update_payroll_period_totals($period_id)) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The payroll period totals could not be reconciled. No changes were committed.'),
+		);
+	}
+
+	$period = get_payroll_period_for_update($period_id);
+	if (!$period || (int)$period['status'] !== 1) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only calculated payroll periods can be recovered.'),
+		);
+	}
+
 	$payroll_amount = (float)$period['total_net'];
 	$draft_data = array(
 		'period_id'        => $period_id,
@@ -1214,7 +1257,131 @@ function reconcile_pending_payroll_period_approval($period_id)
 }
 
 /**
- * Execute an approved Loan Request draft.
+ * Apply one guarded loan rejection or cancellation with PAY-AUD evidence.
+ *
+ * Both rejection and cancellation set the loan to status 3 (Cancelled),
+ * matching the existing loan lifecycle where only the pending→cancelled
+ * path is supported.
+ *
+ * @param array  $draft_data Decoded approval draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Terminal-action comments
+ * @param string $action Domain-audit action
+ * @param string $reason_code Domain-audit reason code
+ * @param string $mutation_kind Restricted mutation classification
+ * @return bool
+ */
+function transition_loan_request_approval_terminal(
+	$draft_data,
+	$draft_id,
+	$comments,
+	$action,
+	$reason_code,
+	$mutation_kind
+) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
+
+	$loan_id = isset($draft_data['loan_id']) ? (int)$draft_data['loan_id'] : 0;
+	if ($loan_id <= 0
+		|| (int)$draft_id <= 0
+	) {
+		return false;
+	}
+
+	begin_transaction();
+
+	$loan = get_employee_loan_for_update($loan_id);
+	if (!$loan
+		|| (int)$loan['status'] !== 0
+		|| trim((string)$loan['employee_id']) === ''
+		|| (int)$loan['loan_type_id'] <= 0
+		|| (float)$loan['loan_amount'] <= 0
+		|| (int)$loan['installments'] <= 0
+		|| !isset($draft_data['employee_id'])
+		|| (string)$draft_data['employee_id'] !== (string)$loan['employee_id']
+		|| !isset($draft_data['loan_type_id'])
+		|| (int)$draft_data['loan_type_id'] !== (int)$loan['loan_type_id']
+		|| !isset($draft_data['loan_amount'])
+		|| abs((float)$draft_data['loan_amount'] - (float)$loan['loan_amount']) > 0.000001
+		|| !isset($draft_data['interest_rate'])
+		|| abs((float)$draft_data['interest_rate'] - (float)$loan['interest_rate']) > 0.000001
+		|| !isset($draft_data['installments'])
+		|| (int)$draft_data['installments'] !== (int)$loan['installments']
+		|| !isset($draft_data['installment_amount'])
+		|| abs(
+			(float)$draft_data['installment_amount']
+			- (float)$loan['installment_amount']
+		) > 0.000001
+		|| !isset($draft_data['loan_date'])
+		|| (string)$draft_data['loan_date'] !== (string)$loan['loan_date']
+		|| !isset($draft_data['first_repayment'])
+		|| (string)$draft_data['first_repayment']
+			!== (string)$loan['first_repayment']
+		|| !isset($draft_data['notes'])
+		|| (string)$draft_data['notes'] !== (string)$loan['notes']
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	if (!mark_employee_loan_cancelled_by_approval($loan_id)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$loan_after = get_employee_loan_for_update($loan_id);
+	if (!$loan_after || (int)$loan_after['status'] !== 3) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'loan_request',
+		'entity_key'      => array('loan_id' => $loan_id),
+		'action'          => $action,
+		'reason_code'     => $reason_code,
+		'legacy_source'   => 'approval_drafts',
+		'legacy_id'       => (int)$draft_id,
+		'before'          => $loan,
+		'after'           => $loan_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(
+				'status',
+			),
+			'mutation_kind' => $mutation_kind,
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Loan request %d %s audit append failed: %s',
+			$loan_id,
+			$mutation_kind,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return true;
+}
+
+/**
+ * Execute an approved Loan Request draft with PAY-AUD evidence.
+ *
+ * Locks the loan row, validates draft/loan agreement, approves,
+ * generates repayment schedule, reconciles outstanding amount,
+ * and appends a minimized audit event through the existing
+ * PAY-AUD gateway in one transaction. Failure rolls back
+ * approval, schedule, totals, and audit work.
  *
  * @param array $draft_data         Decoded JSON draft data
  * @param int   $reserved_trans_no  Reserved transaction number
@@ -1226,20 +1393,125 @@ function execute_approved_loan_request($draft_data, $reserved_trans_no, $draft_i
 	global $path_to_root;
 
 	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$loan_id = isset($draft_data['loan_id']) ? (int)$draft_data['loan_id'] : 0;
 	if ($loan_id <= 0)
 		return false;
 
-	$loan = get_employee_loan($loan_id);
-	if (!$loan || (int)$loan['status'] !== 0)
+	begin_transaction();
+
+	$loan = get_employee_loan_for_update($loan_id);
+	if (!$loan
+		|| (int)$loan['status'] !== 0
+		|| trim((string)$loan['employee_id']) === ''
+		|| (int)$loan['loan_type_id'] <= 0
+		|| (float)$loan['loan_amount'] <= 0
+		|| (float)$loan['installments'] <= 0
+	) {
+		cancel_transaction();
 		return false;
+	}
 
-	$approved_by = isset($_SESSION['wa_current_user']) && !empty($_SESSION['wa_current_user']->loginname)
-		? $_SESSION['wa_current_user']->loginname
-		: 'approval_system';
+	if ((int)$draft_id > 0
+		&& (
+			!isset($draft_data['employee_id'])
+			|| (string)$draft_data['employee_id'] !== (string)$loan['employee_id']
+			|| !isset($draft_data['loan_type_id'])
+			|| (int)$draft_data['loan_type_id'] !== (int)$loan['loan_type_id']
+			|| !isset($draft_data['loan_amount'])
+			|| abs((float)$draft_data['loan_amount'] - (float)$loan['loan_amount']) > 0.000001
+			|| !isset($draft_data['installments'])
+			|| (int)$draft_data['installments'] !== (int)$loan['installments']
+			|| !isset($draft_data['interest_rate'])
+			|| abs((float)$draft_data['interest_rate'] - (float)$loan['interest_rate']) > 0.000001
+			|| !isset($draft_data['loan_date'])
+			|| (string)$draft_data['loan_date'] !== (string)$loan['loan_date']
+			|| !isset($draft_data['first_repayment'])
+			|| (string)$draft_data['first_repayment']
+				!== (string)$loan['first_repayment']
+			|| !isset($draft_data['installment_amount'])
+			|| abs(
+				(float)$draft_data['installment_amount']
+				- (float)$loan['installment_amount']
+			) > 0.000001
+			|| !isset($draft_data['notes'])
+			|| (string)$draft_data['notes'] !== (string)$loan['notes']
+		)
+	) {
+		cancel_transaction();
+		return false;
+	}
 
-	return approve_employee_loan($loan_id, $approved_by) ? $loan_id : false;
+	$approved_by = isset($_SESSION['wa_current_user'])
+		&& !empty($_SESSION['wa_current_user']->loginname)
+			? $_SESSION['wa_current_user']->loginname
+			: 'approval_system';
+
+	if (!approve_employee_loan($loan_id, $approved_by)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$loan_after = get_employee_loan_for_update($loan_id);
+	if (!$loan_after || (int)$loan_after['status'] !== 1) {
+		cancel_transaction();
+		return false;
+	}
+
+	// Verify repayment schedule was created
+	$repayments = get_loan_repayments($loan_id);
+	$schedule_count = 0;
+	$schedule_total = 0.0;
+	while ($row = db_fetch_assoc($repayments)) {
+		$schedule_count++;
+		$schedule_total += (float)$row['total_amount'];
+	}
+	if ($schedule_count !== (int)$loan['installments']
+		|| abs($schedule_total - (float)$loan_after['outstanding_amount']) > 0.000001
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'loan_request',
+		'entity_key'      => array('loan_id' => $loan_id),
+		'action'          => 'loan_request.approved',
+		'reason_code'     => (int)$draft_id > 0
+			? 'approval_workflow_terminal'
+			: 'approval_direct_policy_terminal',
+		'legacy_source'   => (int)$draft_id > 0 ? 'approval_drafts' : null,
+		'legacy_id'       => (int)$draft_id > 0 ? (int)$draft_id : null,
+		'before'          => $loan,
+		'after'           => $loan_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(
+				'approval_date',
+				'approved_by',
+				'outstanding_amount',
+				'status',
+			),
+			'mutation_kind' => 'approved',
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Loan request %d approval audit append failed: %s',
+			$loan_id,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return $loan_id;
 }
 
 /**
@@ -1252,15 +1524,14 @@ function execute_approved_loan_request($draft_data, $reserved_trans_no, $draft_i
  */
 function reject_loan_request_draft($draft_data, $draft_id, $comments)
 {
-	global $path_to_root;
-
-	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
-
-	$loan_id = isset($draft_data['loan_id']) ? (int)$draft_data['loan_id'] : 0;
-	if ($loan_id <= 0)
-		return false;
-
-	return mark_employee_loan_cancelled_by_approval($loan_id);
+	return transition_loan_request_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'loan_request.rejected',
+		'approval_workflow_rejection_terminal',
+		'rejected'
+	);
 }
 
 /**
@@ -1273,7 +1544,150 @@ function reject_loan_request_draft($draft_data, $draft_id, $comments)
  */
 function cancel_loan_request_draft($draft_data, $draft_id, $comments)
 {
-	return reject_loan_request_draft($draft_data, $draft_id, $comments);
+	return transition_loan_request_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'loan_request.cancelled',
+		'approval_submitter_cancellation_terminal',
+		'cancelled'
+	);
+}
+
+/**
+ * Recover one pending loan request that has no approval draft.
+ *
+ * The existing loan row is locked before exact draft lookup and
+ * submission, so retries return the same pending draft and concurrent
+ * recovery cannot create a duplicate. The recovery actor is recorded
+ * in approval history.
+ *
+ * @param int $loan_id Loan ID
+ * @return array Recovery result with status and message
+ */
+function reconcile_pending_loan_request_approval($loan_id)
+{
+	if (!user_check_access('SA_LOAN')) {
+		return array(
+			'status' => 'error',
+			'message' => _('You do not have permission to recover loan approvals.'),
+		);
+	}
+
+	$loan_id = (int)$loan_id;
+	if ($loan_id <= 0) {
+		return array(
+			'status' => 'error',
+			'message' => _('Loan request was not found.'),
+		);
+	}
+
+	global $path_to_root;
+	include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+
+	begin_transaction();
+	$loan = get_employee_loan_for_update($loan_id);
+	if (!$loan || (int)$loan['status'] !== 0) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only pending loan requests can be recovered.'),
+		);
+	}
+
+	$existing = find_approval_draft_for_hrm_request(
+		ST_LOAN_REQUEST,
+		$loan_id
+	);
+	if ($existing) {
+		commit_transaction();
+		return array(
+			'status' => 'already_pending',
+			'draft_id' => (int)$existing['draft_id'],
+			'message' => _('The loan request already has a pending approval draft.'),
+		);
+	}
+
+	if (trim((string)$loan['employee_id']) === ''
+		|| (int)$loan['loan_type_id'] <= 0
+		|| (float)$loan['loan_amount'] <= 0
+		|| (int)$loan['installments'] <= 0
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The pending loan request must be corrected before recovery.'),
+		);
+	}
+
+	$display_loan = get_employee_loan($loan_id);
+	if (!$display_loan) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Loan request was not found.'),
+		);
+	}
+
+	$draft_data = array(
+		'loan_id' => $loan_id,
+		'employee_id' => $loan['employee_id'],
+		'employee_name' => $display_loan['employee_name'],
+		'loan_type_id' => (int)$loan['loan_type_id'],
+		'loan_type_name' => isset($display_loan['loan_type_name']) ? $display_loan['loan_type_name'] : '',
+		'loan_amount' => (float)$loan['loan_amount'],
+		'interest_rate' => (float)$loan['interest_rate'],
+		'installments' => (int)$loan['installments'],
+		'installment_amount' => (float)$loan['installment_amount'],
+		'loan_date' => $loan['loan_date'],
+		'first_repayment' => $loan['first_repayment'],
+		'notes' => isset($loan['notes']) ? $loan['notes'] : '',
+	);
+	$approval = get_approval_workflow_service();
+	$result = $approval->submit(
+		ST_LOAN_REQUEST,
+		$draft_data,
+		(float)$loan['loan_amount'],
+		array(
+			'summary' => sprintf(
+				_('Recovered loan request #%d: %s'),
+				$loan_id,
+				number_format((float)$loan['loan_amount'], 2)
+			),
+		)
+	);
+
+	if (!isset($result['status'])
+		|| !in_array($result['status'], array('pending', 'auto_approved'), true)
+		|| empty($result['draft_id'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The loan approval could not be recovered. No changes were committed.'),
+		);
+	}
+
+	$action_id = add_approval_action(
+		(int)$result['draft_id'],
+		'resubmit',
+		null,
+		0,
+		_('Recovered pending loan request without an approval draft.')
+	);
+	if (!$action_id) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The loan approval recovery audit could not be recorded. No changes were committed.'),
+		);
+	}
+
+	commit_transaction();
+	$result['message'] = ($result['status'] === 'auto_approved')
+		? _('The loan request was recovered and automatically approved.')
+		: _('The loan request was recovered and submitted for approval.');
+	return $result;
 }
 
 /**

@@ -149,6 +149,21 @@ function get_employee_loan($loan_id) {
 }
 
 /**
+ * Lock and return one employee loan row for a guarded terminal transition.
+ *
+ * @param int $loan_id
+ * @return array|false
+ */
+function get_employee_loan_for_update($loan_id) {
+    $sql = "SELECT * FROM ".TB_PREF."employee_loans
+        WHERE loan_id = ".db_escape((int)$loan_id)."
+        FOR UPDATE";
+    $result = db_query($sql, 'could not lock employee loan');
+
+    return $result ? db_fetch($result) : false;
+}
+
+/**
  * Get employee loans list.
  *
  * @param string $employee_id
@@ -285,21 +300,27 @@ function approve_employee_loan($loan_id, $approved_by='') {
         approval_date = CURDATE()
         WHERE loan_id = ".db_escape((int)$loan_id)." AND status = 0";
     db_query($sql, 'could not approve employee loan');
+    if (db_num_affected_rows() !== 1) {
+        cancel_transaction();
+        return false;
+    }
 
     $ok = generate_loan_repayment_schedule((int)$loan_id);
+    if (!$ok) {
+        cancel_transaction();
+        return false;
+    }
 
     // Sync outstanding_amount to the actual repayment schedule total (includes interest).
-    if ($ok) {
-        $total_sql = "SELECT IFNULL(SUM(total_amount),0) tot FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id);
-        $total_result = db_query($total_sql, 'could not sum repayment schedule');
-        $total_row = db_fetch_assoc($total_result);
-        db_query("UPDATE ".TB_PREF."employee_loans SET outstanding_amount = ".db_escape((float)$total_row['tot'])."
-            WHERE loan_id = ".db_escape((int)$loan_id), 'could not sync outstanding amount after approve');
-    }
+    $total_sql = "SELECT IFNULL(SUM(total_amount),0) tot FROM ".TB_PREF."loan_repayments WHERE loan_id = ".db_escape((int)$loan_id);
+    $total_result = db_query($total_sql, 'could not sum repayment schedule');
+    $total_row = db_fetch_assoc($total_result);
+    db_query("UPDATE ".TB_PREF."employee_loans SET outstanding_amount = ".db_escape((float)$total_row['tot'])."
+        WHERE loan_id = ".db_escape((int)$loan_id), 'could not sync outstanding amount after approve');
 
     commit_transaction();
 
-    return $ok;
+    return true;
 }
 
 /**
@@ -336,14 +357,33 @@ function mark_employee_loan_cancelled_by_approval($loan_id) {
  * @return bool
  */
 function has_pending_loan_request_approval($loan_id) {
-    $sql = "SELECT id FROM ".TB_PREF."approval_drafts
+    $loan_id = (int)$loan_id;
+    if ($loan_id <= 0)
+        return false;
+
+    $sql = "SELECT draft_data FROM ".TB_PREF."approval_drafts
         WHERE trans_type = ".ST_LOAN_REQUEST."
             AND status = ".APPROVAL_STATUS_PENDING."
-            AND draft_data LIKE ".db_escape('%\"loan_id\":'.(int)$loan_id.'%')."
-        ORDER BY id DESC LIMIT 1";
+        ORDER BY id DESC";
     $result = db_query($sql, 'could not check pending loan request approval draft');
+    while ($row = db_fetch($result)) {
+        $source = html_entity_decode(
+            (string)$row['draft_data'],
+            ENT_QUOTES,
+            isset($_SESSION['language']->encoding)
+                ? $_SESSION['language']->encoding
+                : 'UTF-8'
+        );
+        $draft_data = json_decode($source, true);
+        if (is_array($draft_data)
+            && isset($draft_data['loan_id'])
+            && (int)$draft_data['loan_id'] === $loan_id
+        ) {
+            return true;
+        }
+    }
 
-    return (bool)db_fetch($result);
+    return false;
 }
 
 /**
@@ -398,15 +438,21 @@ function submit_employee_loan_for_core_approval($loan_id) {
     $approval_amount = (float)$loan['loan_amount'];
 
     if (!$approval_registered)
-        return approve_employee_loan((int)$loan_id, 'approval_system') ? array('status' => 'auto_approved', 'loan_id' => (int)$loan_id) : false;
+        return false;
 
     $approval = get_approval_workflow_service();
-    if (!$approval->isApprovalRequired(ST_LOAN_REQUEST, $approval_amount))
-        return approve_employee_loan((int)$loan_id, 'approval_system') ? array('status' => 'auto_approved', 'loan_id' => (int)$loan_id) : false;
-
     $draft_data = get_loan_request_approval_data((int)$loan_id);
     if ($draft_data === false)
         return false;
+
+    if (!$approval->isApprovalRequired(ST_LOAN_REQUEST, $approval_amount)) {
+        return execute_approved_loan_request($draft_data, 0, 0) === false
+            ? false
+            : array(
+                'status' => 'auto_approved',
+                'loan_id' => (int)$loan_id,
+            );
+    }
 
     return $approval->submit(
         ST_LOAN_REQUEST,
@@ -586,4 +632,3 @@ function mark_loan_repayments_paid_by_payslip($employee_id, $from_date, $to_date
 
     return $total;
 }
-
