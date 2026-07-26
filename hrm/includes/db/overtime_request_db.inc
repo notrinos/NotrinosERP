@@ -29,6 +29,21 @@ function get_overtime_request($request_id) {
 }
 
 /**
+ * Get and lock one overtime request for a guarded terminal transition.
+ *
+ * @param int $request_id
+ * @return array|false
+ */
+function get_overtime_request_for_update($request_id) {
+    $sql = "SELECT * FROM ".TB_PREF."overtime_requests
+        WHERE request_id = ".db_escape((int)$request_id)."
+        FOR UPDATE";
+    $result = db_query($sql, 'could not lock overtime request');
+
+    return db_fetch($result);
+}
+
+/**
  * Get overtime requests by optional filters.
  *
  * @param int|null $status
@@ -117,9 +132,15 @@ function update_overtime_request($request_id, $overtime_id, $date, $hours, $reas
  * @param int $request_id
  * @param int $status 1=approved,2=rejected
  * @param string $approved_by
- * @return void
+ * @param int|null $expected_status Optional current status required for the update
+ * @return bool
  */
-function set_overtime_request_status($request_id, $status, $approved_by='') {
+function set_overtime_request_status(
+    $request_id,
+    $status,
+    $approved_by='',
+    $expected_status=null
+) {
     $approved_by = trim((string)$approved_by);
     $approved_by_sql = ($approved_by === '') ? 'NULL' : db_escape($approved_by);
 
@@ -128,8 +149,14 @@ function set_overtime_request_status($request_id, $status, $approved_by='') {
             approved_by = $approved_by_sql,
             approval_date = NOW()
         WHERE request_id = ".db_escape((int)$request_id);
+    if ($expected_status !== null)
+        $sql .= " AND status = ".db_escape((int)$expected_status);
 
-    db_query($sql, 'could not update overtime request status');
+    $result = db_query($sql, 'could not update overtime request status');
+    if (!$result)
+        return false;
+
+    return $expected_status === null || db_num_affected_rows() === 1;
 }
 
 /**
@@ -137,16 +164,50 @@ function set_overtime_request_status($request_id, $status, $approved_by='') {
  *
  * @param int $request_id
  * @param string $approved_by
- * @return void
+ * @return bool
  */
 function approve_overtime_request($request_id, $approved_by='') {
     global $path_to_root;
     include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 
-    set_overtime_request_status($request_id, 1, $approved_by);
-    $request = get_overtime_request($request_id);
-    if ($request)
-        write_attendance($request['employee_id'], (int)$request['overtime_id'], (float)$request['hours'], 1, sql2date($request['date']), false);
+    $request = get_overtime_request_for_update($request_id);
+    if (!$request
+        || (int)$request['status'] !== 0
+        || trim((string)$request['employee_id']) === ''
+        || (int)$request['overtime_id'] <= 0
+        || (float)$request['hours'] <= 0
+        || (float)$request['hours'] > 24
+        || trim((string)$request['date']) === ''
+    ) {
+        return false;
+    }
+
+    if (!set_overtime_request_status($request_id, 1, $approved_by, 0))
+        return false;
+
+    write_attendance(
+        $request['employee_id'],
+        (int)$request['overtime_id'],
+        (float)$request['hours'],
+        1,
+        sql2date($request['date']),
+        false
+    );
+
+    $attendance = get_attendance_entry(
+        $request['employee_id'],
+        sql2date($request['date'])
+    );
+    if (!$attendance
+        || (int)$attendance['overtime_type_id'] !== (int)$request['overtime_id']
+        || abs(
+            (float)$attendance['overtime_hours'] - (float)$request['hours']
+        ) > 0.000001
+    ) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -157,7 +218,7 @@ function approve_overtime_request($request_id, $approved_by='') {
  * @return void
  */
 function reject_overtime_request($request_id, $approved_by='') {
-    set_overtime_request_status($request_id, 2, $approved_by);
+    return set_overtime_request_status($request_id, 2, $approved_by);
 }
 
 /**
@@ -170,4 +231,3 @@ function delete_overtime_request($request_id) {
     $sql = "DELETE FROM ".TB_PREF."overtime_requests WHERE request_id = ".db_escape((int)$request_id);
     db_query($sql, 'could not delete overtime request');
 }
-
