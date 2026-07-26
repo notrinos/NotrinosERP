@@ -156,14 +156,35 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
     $request = get_leave_request($selected_id);
     if ($request && (int)$request['status'] != 0) {
-        display_error(_('Only pending requests can be deleted.'));
+        display_error(_('Only pending requests can be cancelled.'));
+    } elseif ($request) {
+        $core_draft = find_approval_draft_for_hrm_request(
+            ST_LEAVE_REQUEST,
+            (int)$selected_id
+        );
+        if ($core_draft) {
+            $approval_service = get_approval_workflow_service();
+            $result = $approval_service->cancel(
+                (int)$core_draft['draft_id'],
+                _('Cancelled from the leave request page.')
+            );
+            if (!isset($result['status']) || $result['status'] === 'error')
+                display_error(isset($result['message'])
+                    ? $result['message']
+                    : _('The leave request could not be cancelled.'));
+            else
+                display_notification($result['message']);
+        } else {
+            $sql = "DELETE FROM ".TB_PREF."leave_requests WHERE request_id = "
+                .db_escape((int)$selected_id)." AND status = 0";
+            db_query($sql, 'could not delete leave request');
+            display_notification(_('Selected pending request without an approval draft has been deleted.'));
+        }
     } else {
-        $sql = "DELETE FROM ".TB_PREF."leave_requests WHERE request_id = ".db_escape((int)$selected_id)." AND status = 0";
-        db_query($sql, 'could not delete leave request');
-        display_notification(_('Selected request has been deleted.'));
-        if (isset($Ajax))
-            $Ajax->activate('_page_body');
+        display_error(_('Leave request was not found.'));
     }
+    if (isset($Ajax))
+        $Ajax->activate('_page_body');
     $Mode = 'RESET';
 }
 
@@ -241,7 +262,7 @@ while ($row = db_fetch($result)) {
     label_cell(sql2date(substr($row['request_date'], 0, 10)));
     if ((int)$row['status'] == 0) {
         edit_button_cell('Edit' . $row['request_id'], _('Edit'));
-        delete_button_cell('Delete' . $row['request_id'], _('Delete'));
+        delete_button_cell('Delete' . $row['request_id'], _('Cancel'));
     } else {
         label_cell('');
         label_cell('');

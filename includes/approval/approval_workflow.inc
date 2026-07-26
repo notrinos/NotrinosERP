@@ -430,6 +430,18 @@ class ApprovalWorkflow {
 		// Update draft status
 		update_approval_draft_status($draft_id, APPROVAL_STATUS_REJECTED);
 
+		// The registered business transition is part of this approval transaction.
+		$config = self::getTypeConfig((int)$draft['trans_type']);
+		if ($config && !empty($config['rejector'])
+			&& $this->invokeDraftLifecycleHandler('rejector', $draft, $comments) === false
+		) {
+			cancel_transaction();
+			return array(
+				'status' => 'error',
+				'message' => _('The business transaction could not be rejected. No rejection changes were committed.'),
+			);
+		}
+
 		// Void the reserved transaction number permanently
 		void_reserved_trans_number($draft['trans_type'], $draft['reserved_trans_no'], 'Rejected');
 
@@ -438,8 +450,6 @@ class ApprovalWorkflow {
 
 		// Mark all notifications read
 		mark_all_draft_notifications_read($draft_id);
-
-		$this->invokeDraftLifecycleHandler('rejector', $draft, $comments);
 
 		commit_transaction();
 
@@ -471,9 +481,21 @@ class ApprovalWorkflow {
 
 		add_approval_action($draft_id, 'cancel', $this->user_id, (int)$draft['current_level'], $comments);
 		update_approval_draft_status($draft_id, APPROVAL_STATUS_CANCELLED);
+
+		// The registered business transition is part of this approval transaction.
+		$config = self::getTypeConfig((int)$draft['trans_type']);
+		if ($config && !empty($config['canceler'])
+			&& $this->invokeDraftLifecycleHandler('canceler', $draft, $comments) === false
+		) {
+			cancel_transaction();
+			return array(
+				'status' => 'error',
+				'message' => _('The business transaction could not be cancelled. No cancellation changes were committed.'),
+			);
+		}
+
 		void_reserved_trans_number($draft['trans_type'], $draft['reserved_trans_no'], 'Cancelled');
 		mark_all_draft_notifications_read($draft_id);
-		$this->invokeDraftLifecycleHandler('canceler', $draft, $comments);
 
 		commit_transaction();
 

@@ -92,6 +92,8 @@ ApprovalWorkflow::registerTransactionType(ST_LEAVE_REQUEST, array(
 	'label'          => _('Leave Request'),
 	'application'    => 'HRM',
 	'executor'       => 'execute_approved_leave_request',
+	'rejector'       => 'reject_leave_request_draft',
+	'canceler'       => 'cancel_leave_request_draft',
 	'amount_getter'  => 'get_leave_request_draft_amount',
 	'draft_renderer' => 'render_leave_request_draft',
 	'edit_url'       => 'hrm/transactions/leave_request.php',
@@ -261,6 +263,148 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 
 	commit_transaction();
 	return $request_id;
+}
+
+/**
+ * Apply one guarded leave rejection or cancellation with PAY-AUD evidence.
+ *
+ * @param array  $draft_data Decoded approval draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Terminal-action comments
+ * @param int    $target_status Leave request status
+ * @param string $action Domain-audit action
+ * @param string $reason_code Domain-audit reason code
+ * @param string $mutation_kind Restricted mutation classification
+ * @return bool
+ */
+function transition_leave_request_approval_terminal(
+	$draft_data,
+	$draft_id,
+	$comments,
+	$target_status,
+	$action,
+	$reason_code,
+	$mutation_kind
+) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
+
+	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
+	if ($request_id <= 0
+		|| (int)$draft_id <= 0
+		|| !in_array((int)$target_status, array(2, 3), true)
+	) {
+		return false;
+	}
+
+	begin_transaction();
+
+	$request = get_leave_request_for_update($request_id);
+	if (!$request || (int)$request['status'] !== 0) {
+		cancel_transaction();
+		return false;
+	}
+
+	$approved_by = isset($_SESSION['wa_current_user'])
+		&& !empty($_SESSION['wa_current_user']->loginname)
+			? $_SESSION['wa_current_user']->loginname
+			: 'approval_system';
+	$transitioned = ((int)$target_status === 2)
+		? reject_leave_request($request_id, $approved_by, $comments)
+		: cancel_leave_request($request_id, $approved_by, $comments);
+	if (!$transitioned) {
+		cancel_transaction();
+		return false;
+	}
+
+	$request_after = get_leave_request_for_update($request_id);
+	if (!$request_after || (int)$request_after['status'] !== (int)$target_status) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'leave_request',
+		'entity_key'      => array('request_id' => $request_id),
+		'action'          => $action,
+		'reason_code'     => $reason_code,
+		'legacy_source'   => 'approval_drafts',
+		'legacy_id'       => (int)$draft_id,
+		'before'          => $request,
+		'after'           => $request_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(
+				'approval_date',
+				'approval_remarks',
+				'approved_by',
+				'leave_details.approval_status',
+				'status',
+			),
+			'mutation_kind' => $mutation_kind,
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Leave request %d %s audit append failed: %s',
+			$request_id,
+			$mutation_kind,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return true;
+}
+
+/**
+ * Reject one pending leave request through its approval draft.
+ *
+ * @param array  $draft_data Decoded approval draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Rejection comments
+ * @return bool
+ */
+function reject_leave_request_draft($draft_data, $draft_id, $comments)
+{
+	return transition_leave_request_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		2,
+		'leave_request.rejected',
+		'approval_workflow_rejection_terminal',
+		'rejected'
+	);
+}
+
+/**
+ * Cancel one pending leave request through its approval draft.
+ *
+ * @param array  $draft_data Decoded approval draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Cancellation comments
+ * @return bool
+ */
+function cancel_leave_request_draft($draft_data, $draft_id, $comments)
+{
+	return transition_leave_request_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		3,
+		'leave_request.cancelled',
+		'approval_submitter_cancellation_terminal',
+		'cancelled'
+	);
 }
 
 /**

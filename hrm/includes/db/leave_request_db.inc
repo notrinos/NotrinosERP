@@ -203,7 +203,13 @@ function sync_leave_request_to_leave_details($request_id) {
     $result = db_query($sql, 'could not check leave_details row');
     $row = db_fetch($result);
 
-    $approval_status = ((int)$request['status'] === 1) ? 'approved' : (((int)$request['status'] === 2) ? 'rejected' : 'pending');
+    $approval_status = 'pending';
+    if ((int)$request['status'] === 1)
+        $approval_status = 'approved';
+    elseif ((int)$request['status'] === 2)
+        $approval_status = 'rejected';
+    elseif ((int)$request['status'] === 3)
+        $approval_status = 'cancelled';
     $approved_date = !empty($request['approval_date']) ? date('Y-m-d', strtotime($request['approval_date'])) : null;
     $approved_date_sql = ($approved_date === null) ? 'NULL' : db_escape($approved_date);
     $approved_by_sql = empty($request['approved_by']) ? 'NULL' : db_escape($request['approved_by']);
@@ -235,6 +241,32 @@ function sync_leave_request_to_leave_details($request_id) {
 }
 
 /**
+ * Verify the legacy leave projection matches one request's terminal status.
+ *
+ * @param int $request_id
+ * @param string $expected_status
+ * @return bool
+ */
+function leave_request_projection_status_matches($request_id, $expected_status) {
+    if (!function_exists('employee_table_exists') || !employee_table_exists('leave_details'))
+        return true;
+
+    $request = get_leave_request($request_id);
+    if (!$request)
+        return false;
+
+    $sql = "SELECT approval_status FROM ".TB_PREF."leave_details
+        WHERE employee_id = ".db_escape($request['employee_id'])."
+            AND from_date = ".db_escape($request['from_date'])."
+            AND to_date = ".db_escape($request['to_date'])."
+        LIMIT 1";
+    $result = db_query($sql, 'could not verify leave_details status');
+    $row = $result ? db_fetch($result) : false;
+
+    return $row && (string)$row['approval_status'] === (string)$expected_status;
+}
+
+/**
  * Approve leave request.
  *
  * @param int $request_id
@@ -255,11 +287,14 @@ function approve_leave_request($request_id, $approved_by, $remarks='') {
  * @param int $request_id
  * @param string $approved_by
  * @param string $remarks
- * @return void
+ * @return bool
  */
 function reject_leave_request($request_id, $approved_by, $remarks='') {
-    set_leave_request_status($request_id, 2, $approved_by, $remarks);
-    sync_leave_request_to_leave_details($request_id);
+    if (!set_leave_request_status($request_id, 2, $approved_by, $remarks, 0))
+        return false;
+
+    return sync_leave_request_to_leave_details($request_id)
+        && leave_request_projection_status_matches($request_id, 'rejected');
 }
 
 /**
@@ -268,9 +303,12 @@ function reject_leave_request($request_id, $approved_by, $remarks='') {
  * @param int $request_id
  * @param string $approved_by
  * @param string $remarks
- * @return void
+ * @return bool
  */
 function cancel_leave_request($request_id, $approved_by='', $remarks='') {
-    set_leave_request_status($request_id, 3, $approved_by, $remarks);
-    sync_leave_request_to_leave_details($request_id);
+    if (!set_leave_request_status($request_id, 3, $approved_by, $remarks, 0))
+        return false;
+
+    return sync_leave_request_to_leave_details($request_id)
+        && leave_request_projection_status_matches($request_id, 'cancelled');
 }
