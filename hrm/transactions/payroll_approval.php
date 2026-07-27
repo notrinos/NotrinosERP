@@ -51,6 +51,21 @@ foreach ($_POST as $name => $value) {
                 continue;
             }
 
+            if (!update_payroll_period_totals($period_id)) {
+                cancel_transaction();
+                display_error(
+                    _('Payroll period totals could not be reconciled. No approval draft was created.')
+                );
+                continue;
+            }
+
+            $period = get_payroll_period_for_update($period_id);
+            if (!$period || (int)$period['status'] !== 1) {
+                cancel_transaction();
+                display_error(_('Only calculated payroll periods can be approved.'));
+                continue;
+            }
+
             $payroll_amount = (float)$period['total_net'];
 
             // Check if core approval workflow is required
@@ -73,7 +88,7 @@ foreach ($_POST as $name => $value) {
                     'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
                 );
 
-                $approval_result = approval_check_before_save(
+                $approval_result = $approval_service->submit(
                     ST_PAYROLL_PERIOD,
                     $payroll_draft_data,
                     $payroll_amount,
@@ -83,15 +98,23 @@ foreach ($_POST as $name => $value) {
                 if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
                     commit_transaction();
                     display_notification(_('Payroll period has been approved (auto-approved).'));
-                } elseif ($approval_result !== false) {
-                    if ($approval_result['status'] === 'pending') {
-                        commit_transaction();
-                    } else {
-                        cancel_transaction();
-                    }
-                    return;
+                } elseif ($approval_result !== false
+                    && $approval_result['status'] === 'pending'
+                ) {
+                    commit_transaction();
+                    display_notification(sprintf(
+                        _(
+                            'Payroll period has been submitted for approval. '
+                            .'Draft #%d, Reference: %s'
+                        ),
+                        $approval_result['draft_id'],
+                        $approval_result['reference']
+                    ));
                 } else {
                     cancel_transaction();
+                    display_error(
+                        _('Payroll approval submission failed. No approval draft was created.')
+                    );
                 }
             } else {
                 cancel_transaction();
@@ -141,7 +164,7 @@ while ($row = db_fetch($result)) {
     if ((int)$row['status'] == 1) {
         $has_pending_core_approval = find_approval_draft_for_hrm_request(ST_PAYROLL_PERIOD, (int)$row['period_id']);
         if ($has_pending_core_approval && (int)$has_pending_core_approval['status'] === APPROVAL_STATUS_PENDING)
-            submit_cells('Approve'.$row['period_id'], _('Approve'));
+            label_cell(_('Pending Approval'));
         else
             submit_cells(
                 'Recover' . $row['period_id'],
