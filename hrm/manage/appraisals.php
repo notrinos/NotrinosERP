@@ -22,6 +22,9 @@ page(_("Employee Appraisals"));
 /**
  * Get appraisal status labels.
  *
+ * Legacy status 3 is shared by workflow rejection and submitter cancellation;
+ * approval history and PAY-AUD evidence preserve the exact terminal action.
+ *
  * @return array
  */
 function appraisal_statuses() {
@@ -29,7 +32,7 @@ function appraisal_statuses() {
         0 => _('Draft'),
         1 => _('Submitted'),
         2 => _('Approved'),
-        3 => _('Rejected')
+        3 => _('Rejected/Cancelled')
     );
 }
 
@@ -41,59 +44,114 @@ if (!isset($_POST['appraisal_date']))
     $_POST['appraisal_date'] = Today();
 
 if (isset($_POST['add_appraisal'])) {
-    if (trim(get_post('employee_id')) == '' || get_post('employee_id') == ALL_TEXT)
+    $overall_score = input_num('overall_score', 0);
+    $rating_scale = (int)input_num('rating_scale', 5);
+
+    if (trim(get_post('employee_id')) == '' || get_post('employee_id') == ALL_TEXT) {
         display_error(_('Please select an employee.'));
-    elseif (!is_date(get_post('period_from')) || !is_date(get_post('period_to')) || !is_date(get_post('appraisal_date')))
+        set_focus('employee_id');
+    } elseif (!employee_exists_by_code(get_post('employee_id'))) {
+        display_error(_('Selected employee was not found.'));
+        set_focus('employee_id');
+    } elseif (trim(get_post('reviewer_id', '')) !== ''
+        && !employee_exists_by_code(get_post('reviewer_id'))
+    ) {
+        display_error(_('Selected reviewer was not found.'));
+        set_focus('reviewer_id');
+    } elseif (!is_date(get_post('period_from'))
+        || !is_date(get_post('period_to'))
+        || !is_date(get_post('appraisal_date'))
+    ) {
         display_error(_('Please provide valid dates.'));
-    else {
+    } elseif (date1_greater_date2(get_post('period_from'), get_post('period_to'))) {
+        display_error(_('Period From must be on or before Period To.'));
+        set_focus('period_to');
+    } elseif ($rating_scale <= 0) {
+        display_error(_('Rating Scale must be greater than zero.'));
+        set_focus('rating_scale');
+    } elseif ($overall_score < 0 || $overall_score > $rating_scale) {
+        display_error(_('Overall Score must be between zero and the Rating Scale.'));
+        set_focus('overall_score');
+    } else {
+        begin_transaction();
         $appraisal_id = add_employee_appraisal(array(
             'employee_id' => get_post('employee_id'),
             'reviewer_id' => get_post('reviewer_id', ''),
             'period_from' => get_post('period_from'),
             'period_to' => get_post('period_to'),
             'appraisal_date' => get_post('appraisal_date'),
-            'overall_score' => input_num('overall_score', 0),
-            'rating_scale' => input_num('rating_scale', 5),
+            'overall_score' => $overall_score,
+            'rating_scale' => $rating_scale,
             'status' => 1,
             'strengths' => get_post('strengths', ''),
             'improvements' => get_post('improvements', ''),
             'recommendation' => get_post('recommendation', '')
         ));
 
-        $appraisal = get_employee_appraisal($appraisal_id);
-        if (!$appraisal) {
-            display_error(_('Appraisal was created but could not be loaded for approval submission.'));
+        if (!$appraisal_id) {
+            cancel_transaction();
+            display_error(_('Appraisal could not be created. No changes were committed.'));
         } else {
-            $draft_data = array(
-                'appraisal_id'   => (int)$appraisal['appraisal_id'],
-                'employee_id'    => $appraisal['employee_id'],
-                'employee_name'  => trim($appraisal['employee_name']),
-                'reviewer_id'    => $appraisal['reviewer_id'],
-                'reviewer_name'  => trim($appraisal['reviewer_name']),
-                'period_from'    => sql2date($appraisal['period_from']),
-                'period_to'      => sql2date($appraisal['period_to']),
-                'appraisal_date' => sql2date($appraisal['appraisal_date']),
-                'overall_score'  => (float)$appraisal['overall_score'],
-                'rating_scale'   => (int)$appraisal['rating_scale'],
-                'strengths'      => $appraisal['strengths'],
-                'improvements'   => $appraisal['improvements'],
-                'recommendation' => $appraisal['recommendation'],
-            );
-
-            $approval_result = approval_check_before_save(
-                ST_EMPLOYEE_APPRAISAL,
-                $draft_data,
-                (float)$appraisal['overall_score'],
-                array('summary' => sprintf(_('Employee Appraisal: %s (%s)'), $appraisal['employee_id'], sql2date($appraisal['appraisal_date'])))
-            );
-
-            if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
-                display_notification(_('Appraisal has been added and automatically approved.'));
-            } elseif ($approval_result !== false) {
-                return;
+            $approval_result = submit_employee_appraisal_for_core_approval($appraisal_id);
+            if (isset($approval_result['status'])
+                && $approval_result['status'] === 'pending'
+            ) {
+                commit_transaction();
+                display_notification(_('Appraisal has been submitted to the core approval workflow.'));
+            } elseif (isset($approval_result['status'])
+                && $approval_result['status'] === 'auto_approved'
+            ) {
+                commit_transaction();
+                display_notification(_('Appraisal has been automatically approved by the core approval policy.'));
             } else {
-                update_employee_appraisal_status((int)$appraisal['appraisal_id'], 2);
-                display_notification(_('Appraisal has been added and auto-approved (no active core workflow).'));
+                cancel_transaction();
+                display_error(_('Appraisal approval returned an unexpected result. No appraisal was created.'));
+            }
+        }
+    }
+}
+
+foreach ($_POST as $name => $value) {
+    if (strpos($name, 'Submit') === 0) {
+        $appraisal_id = (int)substr($name, 6);
+        if ($appraisal_id > 0) {
+            $result = reconcile_pending_employee_appraisal_approval($appraisal_id);
+            if (isset($result['message'])
+                && isset($result['status'])
+                && in_array(
+                    $result['status'],
+                    array('pending', 'auto_approved', 'already_pending'),
+                    true
+                )
+            ) {
+                display_notification($result['message']);
+            } else {
+                display_error(isset($result['message'])
+                    ? $result['message']
+                    : _('Appraisal could not be submitted to core approval workflow.'));
+            }
+        }
+    }
+
+    if (strpos($name, 'Cancel') === 0) {
+        $appraisal_id = (int)substr($name, 6);
+        if ($appraisal_id > 0) {
+            $draft = find_approval_draft_for_employee_appraisal($appraisal_id);
+            if (!$draft) {
+                display_error(_('No pending core approval draft was found for this appraisal.'));
+            } else {
+                $approval_service = get_approval_workflow_service();
+                $result = $approval_service->cancel(
+                    (int)$draft['draft_id'],
+                    _('Cancelled by the original appraisal submitter.')
+                );
+                if (isset($result['status']) && $result['status'] === 'cancelled') {
+                    display_notification(_('The appraisal and its approval draft were cancelled.'));
+                } else {
+                    display_error(isset($result['message'])
+                        ? $result['message']
+                        : _('The appraisal approval could not be cancelled.'));
+                }
             }
         }
     }
@@ -121,7 +179,10 @@ submit_center('add_appraisal', _('Add Appraisal'));
 
 br();
 start_table(TABLESTYLE, "width='100%'");
-table_header(array(_('ID'), _('Employee'), _('Reviewer'), _('Period'), _('Date'), _('Score'), _('Status')));
+table_header(array(
+    _('ID'), _('Employee'), _('Reviewer'), _('Period'), _('Date'),
+    _('Score'), _('Status'), _('Approval Action')
+));
 $status_labels = appraisal_statuses();
 $rows = get_employee_appraisals();
 $k = 0;
@@ -133,7 +194,32 @@ while ($row = db_fetch($rows)) {
     label_cell(sql2date($row['period_from']).' - '.sql2date($row['period_to']));
     label_cell(sql2date($row['appraisal_date']));
     qty_cell($row['overall_score']);
-    label_cell(isset($status_labels[(int)$row['status']]) ? $status_labels[(int)$row['status']] : $row['status']);
+
+    $status = (int)$row['status'];
+    $pending_draft = in_array($status, array(0, 1), true)
+        ? find_approval_draft_for_employee_appraisal((int)$row['appraisal_id'])
+        : false;
+    $status_text = isset($status_labels[$status])
+        ? $status_labels[$status]
+        : $row['status'];
+    if ($pending_draft)
+        $status_text .= ' ('._('Pending Core Approval').')';
+    label_cell($status_text);
+
+    if ($status === 1 && !$pending_draft) {
+        submit_cells(
+            'Submit'.$row['appraisal_id'],
+            _('Submit For Core Approval')
+        );
+    } elseif ($pending_draft) {
+        submit_cells(
+            'Cancel'.$row['appraisal_id'],
+            _('Cancel Pending Approval')
+        );
+    } else {
+        label_cell('');
+    }
+
     end_row();
 }
 end_table(1);

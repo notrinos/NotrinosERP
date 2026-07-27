@@ -1691,7 +1691,158 @@ function reconcile_pending_loan_request_approval($loan_id)
 }
 
 /**
- * Execute an approved Employee Appraisal draft.
+ * Return true when an appraisal draft exactly matches the locked source row.
+ *
+ * Older pending drafts may contain localized dates; appraisal_to_sql_date()
+ * normalizes those without weakening the remaining exact field comparisons.
+ *
+ * @param array $draft_data
+ * @param array $appraisal
+ * @return bool
+ */
+function employee_appraisal_draft_matches_row($draft_data, $appraisal)
+{
+	$required = array(
+		'appraisal_id',
+		'employee_id',
+		'reviewer_id',
+		'period_from',
+		'period_to',
+		'appraisal_date',
+		'overall_score',
+		'rating_scale',
+		'strengths',
+		'improvements',
+		'recommendation',
+	);
+	foreach ($required as $field) {
+		if (!array_key_exists($field, $draft_data))
+			return false;
+	}
+
+	$draft_reviewer = $draft_data['reviewer_id'] === null
+		? '' : (string)$draft_data['reviewer_id'];
+	$row_reviewer = !isset($appraisal['reviewer_id'])
+		|| $appraisal['reviewer_id'] === null
+		? '' : (string)$appraisal['reviewer_id'];
+
+	return (int)$draft_data['appraisal_id'] === (int)$appraisal['appraisal_id']
+		&& (string)$draft_data['employee_id'] === (string)$appraisal['employee_id']
+		&& $draft_reviewer === $row_reviewer
+		&& appraisal_to_sql_date($draft_data['period_from'])
+			=== (string)$appraisal['period_from']
+		&& appraisal_to_sql_date($draft_data['period_to'])
+			=== (string)$appraisal['period_to']
+		&& appraisal_to_sql_date($draft_data['appraisal_date'])
+			=== (string)$appraisal['appraisal_date']
+		&& abs(
+			(float)$draft_data['overall_score']
+			- (float)$appraisal['overall_score']
+		) <= 0.000001
+		&& (int)$draft_data['rating_scale'] === (int)$appraisal['rating_scale']
+		&& (string)$draft_data['strengths'] === (string)$appraisal['strengths']
+		&& (string)$draft_data['improvements']
+			=== (string)$appraisal['improvements']
+		&& (string)$draft_data['recommendation']
+			=== (string)$appraisal['recommendation'];
+}
+
+/**
+ * Apply one guarded appraisal rejection or cancellation with PAY-AUD evidence.
+ *
+ * Both terminal outcomes use legacy status 3. The central approval action and
+ * distinct PAY-AUD action preserve whether the outcome was rejection or
+ * submitter cancellation without inventing another business status.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @param string $action
+ * @param string $reason_code
+ * @param string $mutation_kind
+ * @return bool
+ */
+function transition_employee_appraisal_approval_terminal(
+	$draft_data,
+	$draft_id,
+	$comments,
+	$action,
+	$reason_code,
+	$mutation_kind
+) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
+
+	$appraisal_id = isset($draft_data['appraisal_id'])
+		? (int)$draft_data['appraisal_id'] : 0;
+	if ($appraisal_id <= 0 || (int)$draft_id <= 0)
+		return false;
+
+	begin_transaction();
+
+	$appraisal = get_employee_appraisal_for_update($appraisal_id);
+	if (!$appraisal
+		|| !in_array((int)$appraisal['status'], array(0, 1), true)
+		|| !employee_appraisal_row_is_valid($appraisal)
+		|| !employee_appraisal_draft_matches_row($draft_data, $appraisal)
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	if (!transition_employee_appraisal_status(
+		$appraisal_id,
+		array(0, 1),
+		3
+	)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$appraisal_after = get_employee_appraisal_for_update($appraisal_id);
+	if (!$appraisal_after || (int)$appraisal_after['status'] !== 3) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'employee_appraisal',
+		'entity_key'      => array('appraisal_id' => $appraisal_id),
+		'action'          => $action,
+		'reason_code'     => $reason_code,
+		'legacy_source'   => 'approval_drafts',
+		'legacy_id'       => (int)$draft_id,
+		'before'          => $appraisal,
+		'after'           => $appraisal_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array('status'),
+			'mutation_kind' => $mutation_kind,
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Employee appraisal %d %s audit append failed: %s',
+			$appraisal_id,
+			$mutation_kind,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return true;
+}
+
+/**
+ * Execute an approved Employee Appraisal draft with PAY-AUD evidence.
  *
  * @param array $draft_data
  * @param int   $reserved_trans_no
@@ -1703,26 +1854,77 @@ function execute_approved_employee_appraisal($draft_data, $reserved_trans_no, $d
 	global $path_to_root;
 
 	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
-	$appraisal_id = isset($draft_data['appraisal_id']) ? (int)$draft_data['appraisal_id'] : 0;
+	$appraisal_id = isset($draft_data['appraisal_id'])
+		? (int)$draft_data['appraisal_id'] : 0;
 	if ($appraisal_id <= 0)
 		return false;
 
-	$appraisal = get_employee_appraisal($appraisal_id);
-	if (!$appraisal)
+	begin_transaction();
+
+	$appraisal = get_employee_appraisal_for_update($appraisal_id);
+	if (!$appraisal
+		|| !in_array((int)$appraisal['status'], array(0, 1), true)
+		|| !employee_appraisal_row_is_valid($appraisal)
+		|| !employee_appraisal_draft_matches_row($draft_data, $appraisal)
+	) {
+		cancel_transaction();
 		return false;
+	}
 
-	if ((int)$appraisal['status'] === 2)
-		return $appraisal_id;
-
-	if (!in_array((int)$appraisal['status'], array(0, 1), true))
+	if (!transition_employee_appraisal_status(
+		$appraisal_id,
+		array(0, 1),
+		2
+	)) {
+		cancel_transaction();
 		return false;
+	}
 
-	return update_employee_appraisal_status($appraisal_id, 2) ? $appraisal_id : false;
+	$appraisal_after = get_employee_appraisal_for_update($appraisal_id);
+	if (!$appraisal_after || (int)$appraisal_after['status'] !== 2) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'employee_appraisal',
+		'entity_key'      => array('appraisal_id' => $appraisal_id),
+		'action'          => 'employee_appraisal.approved',
+		'reason_code'     => (int)$draft_id > 0
+			? 'approval_workflow_terminal'
+			: 'approval_direct_policy_terminal',
+		'legacy_source'   => (int)$draft_id > 0 ? 'approval_drafts' : null,
+		'legacy_id'       => (int)$draft_id > 0 ? (int)$draft_id : null,
+		'before'          => $appraisal,
+		'after'           => $appraisal_after,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array('status'),
+			'mutation_kind' => 'approved',
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Employee appraisal %d approval audit append failed: %s',
+			$appraisal_id,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return $appraisal_id;
 }
 
 /**
- * Sync rejected appraisal draft back to business status.
+ * Sync a rejected appraisal draft back to business status.
  *
  * @param array  $draft_data
  * @param int    $draft_id
@@ -1731,19 +1933,18 @@ function execute_approved_employee_appraisal($draft_data, $reserved_trans_no, $d
  */
 function reject_employee_appraisal_draft($draft_data, $draft_id, $comments)
 {
-	global $path_to_root;
-
-	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
-
-	$appraisal_id = isset($draft_data['appraisal_id']) ? (int)$draft_data['appraisal_id'] : 0;
-	if ($appraisal_id <= 0)
-		return false;
-
-	return update_employee_appraisal_status($appraisal_id, 3);
+	return transition_employee_appraisal_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'employee_appraisal.rejected',
+		'approval_workflow_rejection_terminal',
+		'rejected'
+	);
 }
 
 /**
- * Sync cancelled appraisal draft back to business status.
+ * Sync a cancelled appraisal draft back to business status.
  *
  * @param array  $draft_data
  * @param int    $draft_id
@@ -1752,7 +1953,127 @@ function reject_employee_appraisal_draft($draft_data, $draft_id, $comments)
  */
 function cancel_employee_appraisal_draft($draft_data, $draft_id, $comments)
 {
-	return reject_employee_appraisal_draft($draft_data, $draft_id, $comments);
+	return transition_employee_appraisal_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'employee_appraisal.cancelled',
+		'approval_submitter_cancellation_terminal',
+		'cancelled'
+	);
+}
+
+/**
+ * Recover one submitted appraisal that has no approval draft.
+ *
+ * @param int $appraisal_id
+ * @return array
+ */
+function reconcile_pending_employee_appraisal_approval($appraisal_id)
+{
+	if (!user_check_access('SA_EMPLOYEE')) {
+		return array(
+			'status' => 'error',
+			'message' => _('You do not have permission to recover appraisal approvals.'),
+		);
+	}
+
+	$appraisal_id = (int)$appraisal_id;
+	if ($appraisal_id <= 0) {
+		return array(
+			'status' => 'error',
+			'message' => _('Employee appraisal was not found.'),
+		);
+	}
+
+	global $path_to_root;
+	include_once($path_to_root . '/hrm/includes/db/appraisal_db.inc');
+
+	begin_transaction();
+	$appraisal = get_employee_appraisal_for_update($appraisal_id);
+	if (!$appraisal || (int)$appraisal['status'] !== 1) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Only submitted appraisals can be recovered.'),
+		);
+	}
+
+	$existing = find_approval_draft_for_employee_appraisal($appraisal_id);
+	if ($existing) {
+		commit_transaction();
+		return array(
+			'status' => 'already_pending',
+			'draft_id' => (int)$existing['draft_id'],
+			'message' => _('The appraisal already has a pending approval draft.'),
+		);
+	}
+
+	if (!employee_appraisal_row_is_valid($appraisal)) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The submitted appraisal must be corrected before recovery.'),
+		);
+	}
+
+	$draft_data = get_employee_appraisal_approval_data($appraisal_id);
+	if ($draft_data === false) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('Employee appraisal was not found.'),
+		);
+	}
+
+	$approval = get_approval_workflow_service();
+	$result = $approval->submit(
+		ST_EMPLOYEE_APPRAISAL,
+		$draft_data,
+		(float)$appraisal['overall_score'],
+		array(
+			'summary' => sprintf(
+				_('Recovered employee appraisal #%d: %s'),
+				$appraisal_id,
+				$appraisal['employee_id']
+			),
+			'person_type' => PT_EMPLOYEE,
+			'person_id' => $appraisal['employee_id'],
+			'loc_code' => '',
+		)
+	);
+
+	if (!isset($result['status'])
+		|| !in_array($result['status'], array('pending', 'auto_approved'), true)
+		|| empty($result['draft_id'])
+	) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The appraisal approval could not be recovered. No changes were committed.'),
+		);
+	}
+
+	$action_id = add_approval_action(
+		(int)$result['draft_id'],
+		'resubmit',
+		null,
+		0,
+		_('Recovered submitted appraisal without an approval draft.')
+	);
+	if (!$action_id) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The appraisal recovery audit could not be recorded. No changes were committed.'),
+		);
+	}
+
+	commit_transaction();
+	$result['message'] = ($result['status'] === 'auto_approved')
+		? _('The appraisal was recovered and automatically approved.')
+		: _('The appraisal was recovered and submitted for approval.');
+	return $result;
 }
 
 // =====================================================
