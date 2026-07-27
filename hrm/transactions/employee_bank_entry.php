@@ -53,6 +53,12 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
     $amount_col = payslip_has_column($table, 'net_salary') ? 'net_salary' : 'payable_amount';
     $status_col = payslip_has_column($table, 'status') ? 'status' : null;
     $payment_col = payslip_has_column($table, 'payment_trans_no') ? 'payment_trans_no' : null;
+    $period_col = payslip_has_column($table, 'payroll_period_id') ? 'payroll_period_id' : null;
+    $gl_col = payslip_has_column($table, 'gl_trans_no')
+        ? 'gl_trans_no'
+        : (payslip_has_column($table, 'trans_no') ? 'trans_no' : null);
+    $has_period_table = function_exists('payroll_table_exists')
+        && payroll_table_exists('payroll_periods');
 
     $sql = "SELECT p.".$id_col." as payslip_id,
             p.".$employee_col." as employee_id,
@@ -64,9 +70,25 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
         $sql .= ", p.".$status_col." as status";
     if ($payment_col)
         $sql .= ", p.".$payment_col." as payment_trans_no";
+    if ($period_col)
+        $sql .= ", p.".$period_col." as payroll_period_id";
+    else
+        $sql .= ", NULL as payroll_period_id";
+    if ($gl_col)
+        $sql .= ", p.".$gl_col." as payroll_gl_trans_no";
+    else
+        $sql .= ", NULL as payroll_gl_trans_no";
+    if ($period_col && $has_period_table)
+        $sql .= ", pp.status as payroll_period_status";
+    else
+        $sql .= ", NULL as payroll_period_status";
 
     $sql .= " FROM ".TB_PREF.$table." p
-        LEFT JOIN ".TB_PREF."employees e ON e.employee_id = p.".$employee_col." WHERE 1=1";
+        LEFT JOIN ".TB_PREF."employees e ON e.employee_id = p.".$employee_col;
+    if ($period_col && $has_period_table)
+        $sql .= " LEFT JOIN ".TB_PREF."payroll_periods pp"
+            ." ON pp.period_id = p.".$period_col;
+    $sql .= " WHERE 1=1";
 
     if ($status_col)
         $sql .= " AND COALESCE(p.".$status_col.", 0) <> ".db_escape(payslip_voided_status_value());
@@ -90,6 +112,30 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
         return false;
         
     return $result;
+}
+
+/**
+ * Check whether a payment-advice row has the minimum approved/posting markers.
+ *
+ * This is only a UI suppression helper. The server-side payment command repeats
+ * the authoritative period and balanced-GL checks under row locks.
+ *
+ * @param array $row
+ * @return bool
+ */
+function payment_advice_row_has_approved_posted_set($row) {
+    if (!is_array($row))
+        return false;
+
+    $period_id = isset($row['payroll_period_id']) ? (int)$row['payroll_period_id'] : 0;
+    $period_status = isset($row['payroll_period_status'])
+        ? (int)$row['payroll_period_status'] : -1;
+    $gl_trans_no = isset($row['payroll_gl_trans_no'])
+        ? (int)$row['payroll_gl_trans_no'] : 0;
+
+    return $period_id > 0
+        && in_array($period_status, array(2, 3), true)
+        && $gl_trans_no > 0;
 }
 
 if (($payslip_id = find_submit('MarkPaid')) != -1) {
@@ -206,7 +252,11 @@ if (!$rows) {
         $status_txt = payslip_payment_status_label($row);
         label_cell($status_txt);
 
-        if (payslip_is_paid($row) || payslip_is_voided($row) || !payslip_requires_payment($row))
+        if (payslip_is_paid($row)
+            || payslip_is_voided($row)
+            || !payslip_requires_payment($row)
+            || !payment_advice_row_has_approved_posted_set($row)
+        )
             label_cell('-');
         else
             submit_cells('MarkPaid'.$payslip_id_safe, _('Process Payment'), false, '', '', false);

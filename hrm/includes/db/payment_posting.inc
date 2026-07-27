@@ -180,12 +180,15 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 	if (!$payslip)
 		return false;
 
+	$locked_period_id = isset($payslip['payroll_period_id'])
+		? (int)$payslip['payroll_period_id'] : 0;
+
 	if ($use_transaction)
 		begin_transaction();
 
-	if ($use_transaction && !empty($payslip['payroll_period_id'])) {
+	if ($use_transaction && $locked_period_id > 0) {
 		$period_lock_sql = "SELECT period_id FROM ".TB_PREF."payroll_periods"
-			." WHERE period_id = ".db_escape((int)$payslip['payroll_period_id'])." FOR UPDATE";
+			." WHERE period_id = ".db_escape($locked_period_id)." FOR UPDATE";
 		if (!db_query($period_lock_sql, 'could not lock payroll period for payslip payment')) {
 			cancel_transaction();
 			return false;
@@ -203,6 +206,14 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 	}
 
 	$payslip = get_payslip($payslip_id);
+	$current_period_id = $payslip && isset($payslip['payroll_period_id'])
+		? (int)$payslip['payroll_period_id'] : 0;
+	if (!$payslip || ($use_transaction && $current_period_id !== $locked_period_id)) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
+
 	$validation = validate_payslip_payment($payslip, $bank_account_code);
 	if (!$validation['valid']) {
 		if ($use_transaction)
@@ -380,6 +391,161 @@ function post_payment_gl_entries($payslip_id, $payment_trans_no, $bank_account_c
 }
 
 /**
+ * Resolve the current actor id for PII-free payment-control logging.
+ *
+ * @return int
+ */
+function payroll_payment_control_actor_id() {
+	if (!isset($_SESSION['wa_current_user']))
+		return 0;
+
+	$user = $_SESSION['wa_current_user'];
+	if (isset($user->user) && is_numeric($user->user))
+		return (int)$user->user;
+	if (isset($user->id) && is_numeric($user->id))
+		return (int)$user->id;
+
+	return 0;
+}
+
+/**
+ * Record a minimized denial event for the individual-payment boundary.
+ *
+ * No employee identity, amount, bank data, reference, memo, date, or GL value
+ * is written to the log. PAY-AUD immutable evidence remains reserved for
+ * committed domain mutations; this is a fail-closed containment signal.
+ *
+ * @param string $code
+ * @param array $payslip
+ * @return void
+ */
+function payroll_payment_control_log_denial($code, $payslip) {
+	$payload = array(
+		'contract' => 'notrinoserp.hrm.payroll.payment-control',
+		'version' => '1.0.0',
+		'action' => 'individual_payment_denied',
+		'code' => preg_replace('/[^a-z0-9_\-]/', '', strtolower((string)$code)),
+		'company_id' => function_exists('user_company') ? (int)user_company() : 0,
+		'actor_id' => payroll_payment_control_actor_id(),
+		'payslip_id' => isset($payslip['payslip_id']) ? (int)$payslip['payslip_id'] : 0,
+		'payroll_period_id' => isset($payslip['payroll_period_id']) ? (int)$payslip['payroll_period_id'] : 0,
+		'channel' => 'employee_bank_entry',
+	);
+
+	error_log('PAY-CORE-011 '.json_encode($payload));
+}
+
+/**
+ * Verify that a payslip belongs to an approved payable set whose legacy GL
+ * posting exists and balances to zero.
+ *
+ * Legacy payroll currently posts GL during calculation. Until PAY-CORE-011
+ * separates calculation from posting, status 2 (Approved) or 3 (Posted) plus
+ * a balanced ST_PAYSLIP transaction is the minimum compatible proof that an
+ * individual payment is not consuming an unapproved or unposted result.
+ *
+ * @param array $payslip
+ * @param bool $audit_denial
+ * @return array Array with valid, code, and message keys
+ */
+function validate_payslip_approved_posted_set($payslip, $audit_denial=true) {
+	$result = array(
+		'valid' => false,
+		'code' => 'invalid_payslip',
+		'message' => 'Payslip payment requires a linked approved payroll period with balanced payroll GL posting'
+	);
+
+	if (!is_array($payslip) || empty($payslip['payslip_id'])) {
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], is_array($payslip) ? $payslip : array());
+		return $result;
+	}
+
+	$period_id = isset($payslip['payroll_period_id']) ? (int)$payslip['payroll_period_id'] : 0;
+	if ($period_id <= 0) {
+		$result['code'] = 'payroll_period_missing';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+
+	if (!function_exists('get_payroll_period')) {
+		$result['code'] = 'payroll_period_repository_unavailable';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+
+	$period = get_payroll_period($period_id);
+	$period_status = $period && isset($period['status']) ? (int)$period['status'] : -1;
+	if (!$period || !in_array($period_status, array(2, 3), true)) {
+		$result['code'] = 'payroll_period_not_approved';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+
+	$gl_trans_no = 0;
+	if (isset($payslip['gl_trans_no']))
+		$gl_trans_no = (int)$payslip['gl_trans_no'];
+	elseif (isset($payslip['trans_no']))
+		$gl_trans_no = (int)$payslip['trans_no'];
+	if ($gl_trans_no <= 0) {
+		$result['code'] = 'payroll_gl_link_missing';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+
+	$sql = "SELECT amount FROM ".TB_PREF."gl_trans"
+		." WHERE type = ".db_escape(ST_PAYSLIP)
+		." AND type_no = ".db_escape($gl_trans_no)
+		." FOR UPDATE";
+	$query = db_query($sql, 'could not verify payroll payable-set GL posting');
+	$line_count = 0;
+	$balance = 0.0;
+	$gross_amount = 0.0;
+	if ($query) {
+		while ($row = db_fetch_assoc($query)) {
+			$amount = isset($row['amount']) ? (float)$row['amount'] : 0.0;
+			$line_count++;
+			$balance += $amount;
+			$gross_amount += abs($amount);
+		}
+	}
+
+	$voided_sql = "SELECT type, id FROM ".TB_PREF."voided"
+		." WHERE type = ".db_escape(ST_PAYSLIP)
+		." AND id = ".db_escape($gl_trans_no)
+		." FOR UPDATE";
+	$voided_query = db_query($voided_sql, 'could not verify payroll payable-set void status');
+	$voided = $voided_query ? db_fetch_assoc($voided_query) : false;
+	$tolerance = defined('FLOAT_COMP_DELTA') ? (float)FLOAT_COMP_DELTA : 0.00001;
+	if ($voided) {
+		$result['code'] = 'payroll_gl_posting_voided';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+	if ($line_count < 2 || abs($gross_amount) <= $tolerance) {
+		$result['code'] = $line_count < 2
+			? 'payroll_gl_posting_missing'
+			: 'payroll_gl_posting_empty';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+	if (abs($balance) > $tolerance) {
+		$result['code'] = 'payroll_gl_posting_unbalanced';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
+
+	return array('valid' => true, 'code' => 'approved_posted_set', 'message' => '');
+}
+
+/**
  * Validate payment prerequisites for a payslip
  *
  * @param array $payslip Payslip record
@@ -413,6 +579,14 @@ function validate_payslip_payment($payslip, $bank_account_code='') {
 	if (!payslip_requires_payment($payslip)) {
 		$result['valid'] = false;
 		$result['message'] = 'Only payslips with positive payable amount can be paid';
+		return $result;
+	}
+
+	$payable_set = validate_payslip_approved_posted_set($payslip, true);
+	if (!$payable_set['valid']) {
+		$result['valid'] = false;
+		$result['message'] = $payable_set['message'];
+		$result['code'] = $payable_set['code'];
 		return $result;
 	}
 
