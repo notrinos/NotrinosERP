@@ -108,6 +108,49 @@ function get_approval_draft($draft_id)
 }
 
 /**
+ * Retrieve and lock one approval draft for a guarded state transition.
+ *
+ * The draft row is locked separately from its workflow definition so terminal
+ * actions on unrelated drafts that share a workflow are not serialized.
+ *
+ * @param int $draft_id Draft ID
+ * @return array|false Draft row with workflow settings, or false
+ */
+function get_approval_draft_for_update($draft_id)
+{
+	$sql = "SELECT * FROM " . TB_PREF . "approval_drafts
+		WHERE id = " . db_escape($draft_id) . " FOR UPDATE";
+	$result = db_query($sql, 'could not lock approval draft');
+	$draft = db_fetch($result);
+	if (!$draft)
+		return false;
+
+	$workflow_sql = "SELECT name AS workflow_name, require_comments_on_reject,
+			require_comments_on_approve, allow_edit_on_approve, allow_self_approve
+		FROM " . TB_PREF . "approval_workflows
+		WHERE id = " . db_escape($draft['workflow_id']);
+	$workflow_result = db_query(
+		$workflow_sql,
+		'could not retrieve approval workflow settings'
+	);
+	$workflow = db_fetch($workflow_result);
+
+	$workflow_defaults = array(
+		'workflow_name' => null,
+		'require_comments_on_reject' => 0,
+		'require_comments_on_approve' => 0,
+		'allow_edit_on_approve' => 0,
+		'allow_self_approve' => 0,
+	);
+
+	return array_merge(
+		$workflow_defaults,
+		$draft,
+		$workflow ? $workflow : array()
+	);
+}
+
+/**
  * Retrieve a draft by its reserved transaction number and type
  *
  * @param int $trans_type Transaction type
@@ -130,11 +173,16 @@ function get_approval_draft_by_trans($trans_type, $trans_no)
 /**
  * Update draft status
  *
- * @param int $draft_id Draft ID
- * @param int $status   New status (use APPROVAL_STATUS_* constants)
- * @return void
+ * @param int      $draft_id       Draft ID
+ * @param int      $status         New status (use APPROVAL_STATUS_* constants)
+ * @param int|null $expected_status Optional current status required for update
+ * @return bool True when the update succeeded and matched the expected status
  */
-function update_approval_draft_status($draft_id, $status)
+function update_approval_draft_status(
+	$draft_id,
+	$status,
+	$expected_status = null
+)
 {
 	$completed_date = in_array($status, array(
 		APPROVAL_STATUS_APPROVED, APPROVAL_STATUS_REJECTED,
@@ -144,8 +192,14 @@ function update_approval_draft_status($draft_id, $status)
 	$sql = "UPDATE " . TB_PREF . "approval_drafts
 		SET status = " . db_escape($status) . $completed_date . "
 		WHERE id = " . db_escape($draft_id);
+	if ($expected_status !== null)
+		$sql .= " AND status = " . db_escape($expected_status);
 
-	db_query($sql, 'could not update approval draft status');
+	$result = db_query($sql, 'could not update approval draft status');
+	if (!$result)
+		return false;
+
+	return $expected_status === null || db_num_affected_rows() === 1;
 }
 
 /**

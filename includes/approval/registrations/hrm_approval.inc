@@ -262,6 +262,8 @@ ApprovalWorkflow::registerTransactionType(ST_PAYROLL_PERIOD, array(
 	'label'          => _('Payroll Period'),
 	'application'    => 'HRM',
 	'executor'       => 'execute_approved_payroll_period',
+	'rejector'       => 'reject_payroll_period_draft',
+	'canceler'       => 'cancel_payroll_period_draft',
 	'amount_getter'  => 'get_payroll_period_draft_amount',
 	'draft_renderer' => 'render_payroll_period_draft',
 	'edit_url'       => 'hrm/transactions/payroll_approval.php',
@@ -979,6 +981,104 @@ function reconcile_pending_overtime_request_approval($request_id)
 }
 
 /**
+ * Return true when a payroll-period draft exactly matches the locked source row.
+ *
+ * Rejection and submitter cancellation intentionally retain the period in
+ * Calculated status. Exact matching prevents a stale approval draft from
+ * terminating against a materially changed payroll period.
+ *
+ * @param array $draft_data
+ * @param array $period
+ * @return bool
+ */
+function payroll_period_draft_matches_row($draft_data, $period)
+{
+	$required = array(
+		'period_id',
+		'period_name',
+		'from_date',
+		'to_date',
+		'total_gross',
+		'total_deductions',
+		'total_net',
+		'department_id',
+	);
+	foreach ($required as $field) {
+		if (!array_key_exists($field, $draft_data))
+			return false;
+	}
+
+	$period_id_value = $draft_data['period_id'];
+	if (!is_int($period_id_value)
+		&& (!is_string($period_id_value)
+			|| preg_match('/^[0-9]+$/D', $period_id_value) !== 1)
+	) {
+		return false;
+	}
+	foreach (array('period_name', 'from_date', 'to_date') as $text_field) {
+		if (!is_string($draft_data[$text_field]))
+			return false;
+	}
+
+	foreach (array(
+		'total_gross',
+		'total_deductions',
+		'total_net',
+	) as $amount_field) {
+		$amount_value = $draft_data[$amount_field];
+		if ((!is_int($amount_value)
+				&& !is_float($amount_value)
+				&& (!is_string($amount_value)
+					|| trim($amount_value) !== $amount_value
+					|| !is_numeric($amount_value)))
+			|| is_nan((float)$amount_value)
+			|| is_infinite((float)$amount_value)
+		) {
+			return false;
+		}
+	}
+
+	$department_value = $draft_data['department_id'];
+	if ($department_value !== null
+		&& $department_value !== ''
+		&& !is_int($department_value)
+		&& (!is_string($department_value)
+			|| preg_match('/^[0-9]+$/D', $department_value) !== 1)
+	) {
+		return false;
+	}
+
+	$draft_department = $draft_data['department_id'] === null
+		|| $draft_data['department_id'] === ''
+			? null : (int)$draft_data['department_id'];
+	$row_department = !isset($period['department_id'])
+		|| $period['department_id'] === ''
+			? null : (int)$period['department_id'];
+
+	return (int)$draft_data['period_id'] === (int)$period['period_id']
+		&& trim((string)$period['period_name']) !== ''
+		&& (string)$period['from_date'] !== ''
+		&& (string)$period['to_date'] !== ''
+		&& (string)$period['from_date'] <= (string)$period['to_date']
+		&& (string)$draft_data['period_name'] === (string)$period['period_name']
+		&& (string)$draft_data['from_date'] === (string)$period['from_date']
+		&& (string)$draft_data['to_date'] === (string)$period['to_date']
+		&& abs(
+			(float)$draft_data['total_gross']
+			- (float)$period['total_gross']
+		) <= 0.000001
+		&& abs(
+			(float)$draft_data['total_deductions']
+			- (float)$period['total_deductions']
+		) <= 0.000001
+		&& abs(
+			(float)$draft_data['total_net']
+			- (float)$period['total_net']
+		) <= 0.000001
+		&& $draft_department === $row_department;
+}
+
+/**
  * Execute an approved Payroll Period draft with PAY-AUD evidence.
  *
  * Locks the payroll period row, validates draft/period agreement,
@@ -1112,6 +1212,126 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 
 	commit_transaction();
 	return $period_id;
+}
+
+/**
+ * Record a rejected or submitter-cancelled payroll-period approval terminal.
+ *
+ * The source period remains Calculated (status 1). Rejection/cancellation is
+ * an approval-draft outcome, not a payroll void or recalculation command. The
+ * locked source and exact submitted payload must still agree, and PAY-AUD
+ * evidence is appended in the same transaction as the workflow terminal.
+ *
+ * @param array  $draft_data Decoded approval draft data
+ * @param int    $draft_id Approval draft ID
+ * @param string $comments Terminal comments (kept in approval history)
+ * @param string $action Domain-audit action
+ * @param string $reason_code Domain-audit reason code
+ * @param string $mutation_kind Restricted mutation classification
+ * @return bool
+ */
+function transition_payroll_period_approval_terminal(
+	$draft_data,
+	$draft_id,
+	$comments,
+	$action,
+	$reason_code,
+	$mutation_kind
+) {
+	global $path_to_root;
+
+	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
+
+	$period_id = isset($draft_data['period_id'])
+		? (int)$draft_data['period_id'] : 0;
+	if ($period_id <= 0 || (int)$draft_id <= 0)
+		return false;
+
+	begin_transaction();
+
+	$period = get_payroll_period_for_update($period_id);
+	if (!$period
+		|| (int)$period['status'] !== 1
+		|| !payroll_period_draft_matches_row($draft_data, $period)
+	) {
+		cancel_transaction();
+		return false;
+	}
+
+	$audit_result = append_domain_audit_event(array(
+		'legal_entity_id' => 0,
+		'entity_type'     => 'payroll_period',
+		'entity_key'      => array('period_id' => $period_id),
+		'action'          => $action,
+		'reason_code'     => $reason_code,
+		'legacy_source'   => 'approval_drafts',
+		'legacy_id'       => (int)$draft_id,
+		'before'          => $period,
+		'after'           => $period,
+		'restricted_diff' => array(
+			'approval_draft_id' => (int)$draft_id,
+			'changed_fields' => array(),
+			'mutation_kind' => $mutation_kind,
+			'source_status_retained' => 1,
+			'restricted_values_stored' => false,
+		),
+	));
+	if ($audit_result === false) {
+		error_log(sprintf(
+			'PAY-AUD-001: Payroll period %d %s audit append failed: %s',
+			$period_id,
+			$mutation_kind,
+			isset($GLOBALS['domain_audit_append_result'])
+				? $GLOBALS['domain_audit_append_result']
+				: 'unknown'
+		));
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	return true;
+}
+
+/**
+ * Reject one calculated payroll period through its pending approval draft.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function reject_payroll_period_draft($draft_data, $draft_id, $comments)
+{
+	return transition_payroll_period_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'payroll_period.rejected',
+		'approval_workflow_rejection_terminal',
+		'rejected'
+	);
+}
+
+/**
+ * Cancel one calculated payroll period through its submitter-owned draft.
+ *
+ * @param array  $draft_data
+ * @param int    $draft_id
+ * @param string $comments
+ * @return bool
+ */
+function cancel_payroll_period_draft($draft_data, $draft_id, $comments)
+{
+	return transition_payroll_period_approval_terminal(
+		$draft_data,
+		$draft_id,
+		$comments,
+		'payroll_period.cancelled',
+		'approval_submitter_cancellation_terminal',
+		'cancelled'
+	);
 }
 
 /**

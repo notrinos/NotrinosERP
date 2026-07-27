@@ -263,32 +263,43 @@ class ApprovalWorkflow {
 	 */
 	public function approve($draft_id, $comments = '', $edited = false)
 	{
-		$draft = get_approval_draft($draft_id);
+		begin_transaction();
+		$draft = get_approval_draft_for_update($draft_id);
 
-		if (!$draft)
+		if (!$draft) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('Draft not found.'));
+		}
 
-		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING)
+		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('Draft is not pending approval.'));
+		}
 
 		// Verify user can approve at this level
-		if (!$this->canActOnDraft($draft_id))
+		if (!$this->canActOnDraft($draft_id)) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You do not have permission to approve this draft.'));
+		}
 
 		// Check self-approval restriction
-		if (!$draft['allow_self_approve'] && (int)$draft['submitted_by'] === $this->user_id)
+		if (!$draft['allow_self_approve'] && (int)$draft['submitted_by'] === $this->user_id) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You cannot approve your own submission.'));
+		}
 
 		// Check if user already approved at this level
 		$current_level = (int)$draft['current_level'];
-		if (has_user_approved_draft($draft_id, $this->user_id, $current_level))
+		if (has_user_approved_draft($draft_id, $this->user_id, $current_level)) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You have already approved this draft at this level.'));
+		}
 
 		// Require comments if configured
-		if ($draft['require_comments_on_approve'] && empty(trim($comments)))
+		if ($draft['require_comments_on_approve'] && empty(trim($comments))) {
+			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('Comments are required for approval.'));
-
-		begin_transaction();
+		}
 
 		// Record the approval action
 		add_approval_action($draft_id, 'approve', $this->user_id, $current_level, $comments);
@@ -302,7 +313,18 @@ class ApprovalWorkflow {
 			// Current level is complete
 			if ($current_level >= $max_level) {
 				// All levels approved — execute the draft
-				update_approval_draft_status($draft_id, APPROVAL_STATUS_APPROVED);
+				if (!update_approval_draft_status(
+					$draft_id,
+					APPROVAL_STATUS_APPROVED,
+					APPROVAL_STATUS_PENDING
+				)) {
+					cancel_transaction();
+					return array(
+						'status'   => 'error',
+						'trans_no' => null,
+						'message'  => _('Draft state changed before approval. No approval changes were committed.'),
+					);
+				}
 				$exec_result = $this->executeApprovedDraft($draft_id);
 				if (!$exec_result) {
 					cancel_transaction();
@@ -338,7 +360,18 @@ class ApprovalWorkflow {
 				);
 
 				if ($auto_approved) {
-					update_approval_draft_status($draft_id, APPROVAL_STATUS_APPROVED);
+					if (!update_approval_draft_status(
+						$draft_id,
+						APPROVAL_STATUS_APPROVED,
+						APPROVAL_STATUS_PENDING
+					)) {
+						cancel_transaction();
+						return array(
+							'status'   => 'error',
+							'trans_no' => null,
+							'message'  => _('Draft state changed before approval. No approval changes were committed.'),
+						);
+					}
 					$exec_result = $this->executeApprovedDraft($draft_id);
 					if (!$exec_result) {
 						cancel_transaction();
@@ -405,22 +438,29 @@ class ApprovalWorkflow {
 	 */
 	public function reject($draft_id, $comments)
 	{
-		$draft = get_approval_draft($draft_id);
+		begin_transaction();
+		$draft = get_approval_draft_for_update($draft_id);
 
-		if (!$draft)
+		if (!$draft) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Draft not found.'));
+		}
 
-		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING)
+		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Draft is not pending approval.'));
+		}
 
-		if (!$this->canActOnDraft($draft_id))
+		if (!$this->canActOnDraft($draft_id)) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('You do not have permission to reject this draft.'));
+		}
 
 		// Require comments if configured
-		if ($draft['require_comments_on_reject'] && empty(trim($comments)))
+		if ($draft['require_comments_on_reject'] && empty(trim($comments))) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Comments are required for rejection.'));
-
-		begin_transaction();
+		}
 
 		$current_level = (int)$draft['current_level'];
 
@@ -428,7 +468,17 @@ class ApprovalWorkflow {
 		add_approval_action($draft_id, 'reject', $this->user_id, $current_level, $comments);
 
 		// Update draft status
-		update_approval_draft_status($draft_id, APPROVAL_STATUS_REJECTED);
+		if (!update_approval_draft_status(
+			$draft_id,
+			APPROVAL_STATUS_REJECTED,
+			APPROVAL_STATUS_PENDING
+		)) {
+			cancel_transaction();
+			return array(
+				'status' => 'error',
+				'message' => _('Draft state changed before rejection. No rejection changes were committed.'),
+			);
+		}
 
 		// The registered business transition is part of this approval transaction.
 		$config = self::getTypeConfig((int)$draft['trans_type']);
@@ -465,22 +515,37 @@ class ApprovalWorkflow {
 	 */
 	public function cancel($draft_id, $comments = '')
 	{
-		$draft = get_approval_draft($draft_id);
+		begin_transaction();
+		$draft = get_approval_draft_for_update($draft_id);
 
-		if (!$draft)
+		if (!$draft) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Draft not found.'));
+		}
 
-		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING)
+		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Draft is not pending.'));
+		}
 
 		// Only submitter can cancel
-		if ((int)$draft['submitted_by'] !== $this->user_id)
+		if ((int)$draft['submitted_by'] !== $this->user_id) {
+			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Only the submitter can cancel this draft.'));
-
-		begin_transaction();
+		}
 
 		add_approval_action($draft_id, 'cancel', $this->user_id, (int)$draft['current_level'], $comments);
-		update_approval_draft_status($draft_id, APPROVAL_STATUS_CANCELLED);
+		if (!update_approval_draft_status(
+			$draft_id,
+			APPROVAL_STATUS_CANCELLED,
+			APPROVAL_STATUS_PENDING
+		)) {
+			cancel_transaction();
+			return array(
+				'status' => 'error',
+				'message' => _('Draft state changed before cancellation. No cancellation changes were committed.'),
+			);
+		}
 
 		// The registered business transition is part of this approval transaction.
 		$config = self::getTypeConfig((int)$draft['trans_type']);
