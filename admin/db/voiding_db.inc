@@ -39,7 +39,7 @@ function validate_void_stock($type, $type_no, $date) {
 }
 
 function void_transaction($type, $type_no, $date_, $memo_) {
-	global $Refs;
+	global $Refs, $path_to_root;
 	$void_entry = get_voided_entry($type, $type_no);
 
 	if ($void_entry != null)
@@ -50,6 +50,18 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 		return $stock_error;
 
 	switch ($type) {
+		case ST_PAYSLIP :
+			include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
+			if (function_exists('payroll_side_effect_control_log_denial'))
+				payroll_side_effect_control_log_denial(
+					'payslip_generic_void',
+					'linked_reversal_required',
+					0,
+					(int)$type_no,
+					'admin_void_transaction'
+				);
+			return _('Payroll payslips cannot be voided through the generic transaction screen. Use a linked payroll reversal when that workflow is available.');
+
 		case ST_JOURNAL : // it's a journal entry
 			if (!exists_gl_trans($type, $type_no))
 				return _('Selected transaction does not exists.');

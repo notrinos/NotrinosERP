@@ -147,7 +147,7 @@ function is_selected($row) {
 function voiding_controls() {
 	global $selected_id;
 
-	$not_implemented = array(ST_PURCHORDER, ST_SALESORDER, ST_SALESQUOTE, ST_COSTUPDATE, ST_CUSTOMER, ST_SUPPLIER);
+	$not_implemented = array(ST_PURCHORDER, ST_SALESORDER, ST_SALESQUOTE, ST_COSTUPDATE, ST_CUSTOMER, ST_SUPPLIER, ST_PAYSLIP);
 
 	start_form();
 

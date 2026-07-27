@@ -127,8 +127,11 @@ foreach ($_POST as $name => $value) {
     if (strpos($name, 'Reopen') === 0) {
         $period_id = (int)substr($name, 6);
         if ($period_id > 0) {
-            update_payroll_period_status($period_id, 0);
-            display_notification(_('Payroll period has been reopened as Draft.'));
+            $reopen = reopen_payroll_period_without_financial_side_effects($period_id);
+            if (!empty($reopen['ok']))
+                display_notification($reopen['message']);
+            else
+                display_error($reopen['message']);
         }
     }
 }

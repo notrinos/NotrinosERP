@@ -203,6 +203,21 @@ function payslip_is_paid($payslip_or_status) {
  * @return bool
  */
 function payslip_is_voided($payslip_or_status) {
+	if (is_array($payslip_or_status)) {
+		foreach (array('voided', 'is_voided', 'inactive') as $void_field) {
+			if (array_key_exists($void_field, $payslip_or_status)
+				&& (int)$payslip_or_status[$void_field] === 1
+			)
+				return true;
+		}
+
+		if (array_key_exists('voided_date', $payslip_or_status)) {
+			$voided_date = trim((string)$payslip_or_status['voided_date']);
+			if ($voided_date !== '' && $voided_date !== '0000-00-00')
+				return true;
+		}
+	}
+
 	return payslip_status_value($payslip_or_status) === payslip_voided_status_value();
 }
 
@@ -597,6 +612,14 @@ function update_payslip($payslip_id, $data) {
 	if (!$table_name || !is_array($data) || empty($data))
 		return false;
 
+	// Voiding is a controlled command. Generic header updates must not provide
+	// a flag-only bypass around linked GL/bank evidence checks and audit append.
+	$void_fields = array('voided', 'is_voided', 'inactive', 'voided_date');
+	if ((isset($data['status']) && (int)$data['status'] === payslip_voided_status_value())
+		|| count(array_intersect(array_keys($data), $void_fields)) > 0
+	)
+		return false;
+
 	$columns = payslip_table_columns($table_name);
 	$sets = array();
 	$date_fields = array('from_date', 'to_date', 'tran_date', 'generated_date', 'voided_date');
@@ -750,33 +773,111 @@ function get_payslips_for_employee($employee_id, $from=null, $to=null) {
  * @return bool
  */
 function void_payslip($payslip_id) {
+	global $path_to_root;
+
+	$payslip_id = (int)$payslip_id;
 	$table_name = payslip_header_table();
-	if (!$table_name)
+	if ($payslip_id <= 0 || !$table_name)
 		return false;
+
+	include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
+	$initial = get_payslip($payslip_id);
+	if (!$initial)
+		return false;
+	$initial_period_id = isset($initial['payroll_period_id'])
+		? (int)$initial['payroll_period_id'] : 0;
+
+	begin_transaction();
+	if ($initial_period_id > 0 && !get_payroll_period_for_update($initial_period_id)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$lock_sql = "SELECT * FROM ".TB_PREF.$table_name
+		." WHERE payslip_id = ".db_escape($payslip_id)." FOR UPDATE";
+	$lock_result = db_query($lock_sql, 'could not lock payslip for void control');
+	$payslip = $lock_result ? db_fetch_assoc($lock_result) : false;
+	$current_period_id = $payslip && isset($payslip['payroll_period_id'])
+		? (int)$payslip['payroll_period_id'] : 0;
+	if (!$payslip || $current_period_id !== $initial_period_id) {
+		cancel_transaction();
+		return false;
+	}
+	if (payslip_is_voided($payslip)) {
+		commit_transaction();
+		return true;
+	}
+
+	$side_effects = payroll_payslip_financial_side_effects($payslip, true);
+	if (!$side_effects['safe']) {
+		payroll_side_effect_control_log_denial(
+			'payslip_void',
+			$side_effects['code'],
+			$current_period_id,
+			$payslip_id,
+			'payslip_db'
+		);
+		cancel_transaction();
+		return false;
+	}
 
 	$sets = array();
-
-	if (payslip_has_column($table_name, 'status'))
+	$changed_fields = array();
+	if (payslip_has_column($table_name, 'status')) {
 		$sets[] = "status = 6";
-	if (payslip_has_column($table_name, 'voided'))
+		$changed_fields[] = 'status';
+	}
+	if (payslip_has_column($table_name, 'voided')) {
 		$sets[] = "voided = 1";
-	if (payslip_has_column($table_name, 'is_voided'))
+		$changed_fields[] = 'voided';
+	}
+	if (payslip_has_column($table_name, 'is_voided')) {
 		$sets[] = "is_voided = 1";
-	if (payslip_has_column($table_name, 'inactive'))
+		$changed_fields[] = 'is_voided';
+	}
+	if (payslip_has_column($table_name, 'inactive')) {
 		$sets[] = "inactive = 1";
-	if (payslip_has_column($table_name, 'voided_date'))
+		$changed_fields[] = 'inactive';
+	}
+	if (payslip_has_column($table_name, 'voided_date')) {
 		$sets[] = "voided_date = ".db_escape(date2sql(Today()));
-
-	if (empty($sets))
+		$changed_fields[] = 'voided_date';
+	}
+	if (empty($sets)) {
+		cancel_transaction();
 		return false;
+	}
 
-	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)." WHERE payslip_id = ".db_escape((int)$payslip_id);
-	$ok = (bool)db_query($sql, 'could not void payslip');
+	$sql = "UPDATE ".TB_PREF.$table_name." SET ".implode(', ', $sets)
+		." WHERE payslip_id = ".db_escape($payslip_id);
+	if (!(bool)db_query($sql, 'could not void side-effect-free payslip')) {
+		cancel_transaction();
+		return false;
+	}
 
-	if ($ok && function_exists('hrm_has_hook') && hrm_has_hook('on_void_payslip'))
+	$after = get_payslip($payslip_id);
+	if (!$after || !payslip_is_voided($after)
+		|| !payroll_append_side_effect_free_transition_audit(
+			'payslip',
+			array('payslip_id' => $payslip_id),
+			'payslip.voided',
+			'legacy_side_effect_free_void',
+			$payslip,
+			$after,
+			$changed_fields,
+			'voided'
+		)
+	) {
+		error_log('PAY-AUD-001: side-effect-free payslip void audit append failed');
+		cancel_transaction();
+		return false;
+	}
+
+	commit_transaction();
+	if (function_exists('hrm_has_hook') && hrm_has_hook('on_void_payslip'))
 		hrm_fire_hook('on_void_payslip', $payslip_id);
 
-	return $ok;
+	return true;
 }
 
 /**
