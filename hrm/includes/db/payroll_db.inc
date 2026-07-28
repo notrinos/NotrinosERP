@@ -233,11 +233,27 @@ function get_payroll_period($period_id) {
  *
  * @return array
  */
-function payroll_period_approval_binding_contract() {
+function payroll_period_approval_binding_contract($version=null) {
+    $supported = array('1.0.0', '1.1.0');
+    if ($version === null || $version === '')
+        $version = '1.1.0';
+    if (!in_array((string)$version, $supported, true))
+        return false;
+
     return array(
         'id' => 'notrinoserp.hrm.payroll.approval-binding',
-        'version' => '1.0.0',
+        'version' => (string)$version,
     );
+}
+
+/**
+ * Check whether an approval-binding version remains supported.
+ *
+ * @param string $version
+ * @return bool
+ */
+function payroll_period_approval_binding_version_supported($version) {
+    return payroll_period_approval_binding_contract($version) !== false;
 }
 
 /**
@@ -401,7 +417,7 @@ function payroll_approval_binding_fetch_rows($sql, $error) {
  * @param bool $lock
  * @return array
  */
-function build_payroll_period_approval_binding($period, $lock=true) {
+function build_payroll_period_approval_binding($period, $lock=true, $contract_version='auto') {
     $failed = array(
         'ok' => false,
         'code' => 'invalid_period',
@@ -464,6 +480,7 @@ function build_payroll_period_approval_binding($period, $lock=true) {
     $payslip_ids = array();
     $trans_nos = array();
     $seen_trans_nos = array();
+    $references_by_trans_no = array();
     $employee_ids = array();
     $sum_gross = 0.0;
     $sum_deductions = 0.0;
@@ -488,6 +505,7 @@ function build_payroll_period_approval_binding($period, $lock=true) {
             return $failed;
         }
         $seen_trans_nos[$projected['trans_no']] = true;
+        $references_by_trans_no[$projected['trans_no']] = $projected['reference'];
         $payslips[] = $projected;
         $payslip_ids[] = $projected['payslip_id'];
         $trans_nos[] = $projected['trans_no'];
@@ -559,6 +577,7 @@ function build_payroll_period_approval_binding($period, $lock=true) {
     }
 
     $gl_rows_projected = array();
+    $gl_row_count = 0;
     $void_rows_projected = array();
     if (!empty($trans_nos)) {
         $trans_sql = implode(',', array_map('intval', $trans_nos));
@@ -574,6 +593,7 @@ function build_payroll_period_approval_binding($period, $lock=true) {
             $failed['code'] = 'gl_read_failed';
             return $failed;
         }
+        $gl_row_count = count($gl_rows);
         $gl_types = array(
             'counter' => 'int', 'type' => 'int', 'type_no' => 'int',
             'tran_date' => 'string', 'account' => 'string', 'memo_' => 'string',
@@ -599,16 +619,6 @@ function build_payroll_period_approval_binding($period, $lock=true) {
             $gl_counts[$projected['type_no']]++;
             $gl_balances[$projected['type_no']] += (float)$row['amount'];
         }
-        foreach ($trans_nos as $trans_no) {
-            if (empty($gl_counts[$trans_no])
-                || $gl_counts[$trans_no] < 2
-                || abs($gl_balances[$trans_no]) > 0.000001
-            ) {
-                $failed['code'] = 'unreconciled_gl_control';
-                return $failed;
-            }
-        }
-
         $void_sql = "SELECT type,id,date_,memo_ FROM ".TB_PREF."voided"
             ." WHERE type = ".db_escape(ST_PAYSLIP)
             ." AND id IN (".$trans_sql.") ORDER BY id".$suffix;
@@ -636,33 +646,176 @@ function build_payroll_period_approval_binding($period, $lock=true) {
         }
     }
 
-    $loan_rows_projected = array();
-    if (!empty($payslip_ids) && payroll_table_exists('loan_repayments')) {
-        $id_sql = implode(',', array_map('intval', $payslip_ids));
-        $loan_sql = "SELECT repayment_id,loan_id,installment_no,due_date,"
-            ."principal_amount,interest_amount,total_amount,paid_amount,paid_date,"
-            ."payslip_id,status FROM ".TB_PREF."loan_repayments"
-            ." WHERE payslip_id IN (".$id_sql.") ORDER BY payslip_id,repayment_id".$suffix;
-        $loan_rows = payroll_approval_binding_fetch_rows(
-            $loan_sql,
-            'could not lock payroll-period loan rows for approval binding'
-        );
-        if ($loan_rows === false) {
-            $failed['code'] = 'loan_read_failed';
+    if ($contract_version === null || $contract_version === '' || $contract_version === 'auto')
+        $contract_version = $gl_row_count === 0 ? '1.1.0' : '1.0.0';
+    $contract = payroll_period_approval_binding_contract($contract_version);
+    if ($contract === false) {
+        $failed['code'] = 'unsupported_binding_version';
+        return $failed;
+    }
+
+    if ($contract['version'] === '1.0.0') {
+        foreach ($trans_nos as $trans_no) {
+            if (empty($gl_counts[$trans_no])
+                || $gl_counts[$trans_no] < 2
+                || abs($gl_balances[$trans_no]) > 0.000001
+            ) {
+                $failed['code'] = 'unreconciled_gl_control';
+                return $failed;
+            }
+        }
+        foreach ($payslips as $payslip) {
+            if ((int)$payslip['status'] > 2) {
+                $failed['code'] = 'invalid_payslip_control_state';
+                return $failed;
+            }
+        }
+    } else {
+        if ($gl_row_count !== 0) {
+            $failed['code'] = 'unexpected_preapproval_gl';
             return $failed;
         }
+        foreach ($payslips as $payslip) {
+            if ((int)$payslip['status'] !== 0
+                || trim((string)$payslip['reference']) === ''
+            ) {
+                $failed['code'] = 'invalid_prepared_payslip_state';
+                return $failed;
+            }
+        }
+    }
+
+    $reference_rows_projected = array();
+    if ($contract['version'] === '1.1.0') {
+        if (!payroll_table_exists('refs')) {
+            $failed['code'] = 'required_table_missing';
+            return $failed;
+        }
+        $reference_rows = payroll_approval_binding_fetch_rows(
+            "SELECT type,id,reference FROM ".TB_PREF."refs"
+                ." WHERE type = ".db_escape(ST_PAYSLIP)
+                ." AND id IN (".implode(',', array_map('intval', $trans_nos)).")"
+                ." ORDER BY id".$suffix,
+            'could not lock payroll-period reference identity for approval binding'
+        );
+        if ($reference_rows === false) {
+            $failed['code'] = 'reference_read_failed';
+            return $failed;
+        }
+        $seen_reference_ids = array();
+        foreach ($reference_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, array(
+                'type' => 'int', 'id' => 'int', 'reference' => 'string',
+            ));
+            if ($projected === false
+                || $projected['type'] !== (int)ST_PAYSLIP
+                || !isset($references_by_trans_no[$projected['id']])
+                || isset($seen_reference_ids[$projected['id']])
+                || !hash_equals(
+                    (string)$references_by_trans_no[$projected['id']],
+                    (string)$projected['reference']
+                )
+            ) {
+                $failed['code'] = 'reference_identity_drift';
+                return $failed;
+            }
+            $seen_reference_ids[$projected['id']] = true;
+            $reference_rows_projected[] = $projected;
+        }
+        if (count($seen_reference_ids) !== count($trans_nos)) {
+            $failed['code'] = 'reference_identity_missing';
+            return $failed;
+        }
+    }
+
+    $posting_configuration = array();
+    if ($contract['version'] === '1.1.0') {
+        if (!payroll_table_exists('sys_prefs')) {
+            $failed['code'] = 'required_table_missing';
+            return $failed;
+        }
+        $preference_rows = payroll_approval_binding_fetch_rows(
+            "SELECT name,value FROM ".TB_PREF."sys_prefs"
+                ." WHERE name = 'payroll_payable_act'".$suffix,
+            'could not lock payroll posting configuration for approval binding'
+        );
+        if ($preference_rows === false || count($preference_rows) !== 1) {
+            $failed['code'] = 'posting_configuration_missing';
+            return $failed;
+        }
+        $posting_configuration = payroll_approval_binding_project_row(
+            $preference_rows[0],
+            array('name' => 'string', 'value' => 'string')
+        );
+        if ($posting_configuration === false
+            || $posting_configuration['name'] !== 'payroll_payable_act'
+            || trim($posting_configuration['value']) === ''
+        ) {
+            $failed['code'] = 'posting_configuration_invalid';
+            return $failed;
+        }
+    }
+
+    $loan_rows_projected = array();
+    if (!empty($payslip_ids) && payroll_table_exists('loan_repayments')) {
         $loan_types = array(
             'repayment_id' => 'int', 'loan_id' => 'int', 'installment_no' => 'int',
             'due_date' => 'string', 'principal_amount' => 'decimal',
             'interest_amount' => 'decimal', 'total_amount' => 'decimal',
             'paid_amount' => 'decimal', 'paid_date' => 'nullable_string',
-            'payslip_id' => 'int', 'status' => 'int',
+            'payslip_id' => 'nullable_int', 'status' => 'int',
         );
+        if ($contract['version'] === '1.0.0') {
+            $id_sql = implode(',', array_map('intval', $payslip_ids));
+            $loan_sql = "SELECT repayment_id,loan_id,installment_no,due_date,"
+                ."principal_amount,interest_amount,total_amount,paid_amount,paid_date,"
+                ."payslip_id,status FROM ".TB_PREF."loan_repayments"
+                ." WHERE payslip_id IN (".$id_sql.") ORDER BY payslip_id,repayment_id".$suffix;
+        } else {
+            if (!payroll_table_exists('employee_loans')) {
+                $failed['code'] = 'required_table_missing';
+                return $failed;
+            }
+            $employee_sql = array();
+            foreach (array_keys($employee_ids) as $employee_id)
+                $employee_sql[] = db_escape($employee_id);
+            $id_sql = implode(',', array_map('intval', $payslip_ids));
+            $loan_sql = "SELECT r.repayment_id,r.loan_id,r.installment_no,r.due_date,"
+                ."r.principal_amount,r.interest_amount,r.total_amount,r.paid_amount,"
+                ."r.paid_date,r.payslip_id,r.status,l.employee_id,l.status loan_status"
+                ." FROM ".TB_PREF."loan_repayments r"
+                ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
+                ." WHERE ((l.employee_id IN (".implode(',', $employee_sql).")"
+                ." AND l.status = 1 AND r.status IN (0,2)"
+                ." AND r.due_date >= ".db_escape((string)$period['from_date'])
+                ." AND r.due_date <= ".db_escape((string)$period['to_date']).")"
+                ." OR r.payslip_id IN (".$id_sql."))"
+                ." ORDER BY l.employee_id,r.due_date,r.installment_no,r.repayment_id".$suffix;
+            $loan_types['employee_id'] = 'string';
+            $loan_types['loan_status'] = 'int';
+        }
+        $loan_rows = payroll_approval_binding_fetch_rows(
+            $loan_sql,
+            'could not lock payroll-period loan controls for approval binding'
+        );
+        if ($loan_rows === false) {
+            $failed['code'] = 'loan_read_failed';
+            return $failed;
+        }
         foreach ($loan_rows as $row) {
             $projected = payroll_approval_binding_project_row($row, $loan_types);
             if ($projected === false) {
                 $failed['code'] = 'invalid_loan_state';
                 return $failed;
+            }
+            if ($contract['version'] === '1.1.0') {
+                if (!in_array($projected['employee_id'], array_keys($employee_ids), true)
+                    || (int)$projected['loan_status'] !== 1
+                    || $projected['payslip_id'] !== null
+                ) {
+                    $failed['code'] = 'unexpected_preapproval_loan_effect';
+                    return $failed;
+                }
             }
             $loan_rows_projected[] = $projected;
         }
@@ -701,6 +854,45 @@ function build_payroll_period_approval_binding($period, $lock=true) {
         }
     }
 
+    $leave_request_rows_projected = array();
+    if ($contract['version'] === '1.1.0'
+        && !empty($employee_ids)
+        && payroll_table_exists('leave_requests')
+    ) {
+        $employee_sql = array();
+        foreach (array_keys($employee_ids) as $employee_id)
+            $employee_sql[] = db_escape($employee_id);
+        $leave_request_sql = "SELECT request_id,employee_id,leave_id,from_date,to_date,"
+            ."days,half_day,status FROM ".TB_PREF."leave_requests"
+            ." WHERE employee_id IN (".implode(',', $employee_sql).")"
+            ." AND status IN (0,1)"
+            ." ORDER BY employee_id,from_date,to_date,leave_id,request_id".$suffix;
+        $leave_request_rows = payroll_approval_binding_fetch_rows(
+            $leave_request_sql,
+            'could not lock payroll-period leave request controls for approval binding'
+        );
+        if ($leave_request_rows === false) {
+            $failed['code'] = 'leave_request_read_failed';
+            return $failed;
+        }
+        $leave_request_types = array(
+            'request_id' => 'int', 'employee_id' => 'string', 'leave_id' => 'int',
+            'from_date' => 'string', 'to_date' => 'string', 'days' => 'decimal',
+            'half_day' => 'int', 'status' => 'int',
+        );
+        foreach ($leave_request_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, $leave_request_types);
+            if ($projected === false
+                || !in_array($projected['employee_id'], array_keys($employee_ids), true)
+                || !in_array((int)$projected['status'], array(0, 1), true)
+            ) {
+                $failed['code'] = 'invalid_leave_request_state';
+                return $failed;
+            }
+            $leave_request_rows_projected[] = $projected;
+        }
+    }
+
     $period_projection = payroll_approval_binding_project_row($period, array(
         'period_id' => 'int', 'period_name' => 'string', 'from_date' => 'string',
         'to_date' => 'string', 'pay_date' => 'nullable_string',
@@ -713,7 +905,6 @@ function build_payroll_period_approval_binding($period, $lock=true) {
         return $failed;
     }
 
-    $contract = payroll_period_approval_binding_contract();
     $result_payload = array(
         'contract' => $contract,
         'period' => $period_projection,
@@ -741,6 +932,13 @@ function build_payroll_period_approval_binding($period, $lock=true) {
         'loan_repayments' => $loan_rows_projected,
         'leave_balances' => $leave_rows_projected,
     );
+    if ($contract['version'] === '1.1.0') {
+        $control_payload['counts']['references'] = count($reference_rows_projected);
+        $control_payload['counts']['leave_requests'] = count($leave_request_rows_projected);
+        $control_payload['reference_rows'] = $reference_rows_projected;
+        $control_payload['leave_requests'] = $leave_request_rows_projected;
+        $control_payload['posting_configuration'] = $posting_configuration;
+    }
     $result_json = payroll_approval_binding_json($result_payload);
     $control_json = payroll_approval_binding_json($control_payload);
     if ($result_json === false || $control_json === false) {
@@ -858,8 +1056,12 @@ function payroll_period_approval_binding_draft_state($draft_data) {
     if ($present !== count($fields))
         return 'malformed';
 
-    $contract = payroll_period_approval_binding_contract();
-    if (!is_string($draft_data['approval_binding_contract'])
+    $contract = payroll_period_approval_binding_contract(
+        is_string($draft_data['approval_binding_version'])
+            ? $draft_data['approval_binding_version'] : null
+    );
+    if ($contract === false
+        || !is_string($draft_data['approval_binding_contract'])
         || !is_string($draft_data['approval_binding_version'])
         || !hash_equals($contract['id'], $draft_data['approval_binding_contract'])
         || !hash_equals($contract['version'], $draft_data['approval_binding_version'])
@@ -893,6 +1095,100 @@ function payroll_period_approval_binding_draft_state($draft_data) {
     }
 
     return 'well_formed';
+}
+
+/**
+ * Resolve the latest approval draft for one payroll period and status.
+ *
+ * @param int $period_id
+ * @param int $status Approval status; approved is 1.
+ * @param bool $lock
+ * Missing or multiple matching approved drafts fail closed.
+ *
+ * @return array|false Unique row with decoded_data.
+ */
+function get_payroll_period_approval_draft($period_id, $status=1, $lock=true) {
+    $period_id = (int)$period_id;
+    if ($period_id <= 0 || !payroll_table_exists('approval_drafts'))
+        return false;
+
+    $sql = "SELECT * FROM ".TB_PREF."approval_drafts"
+        ." WHERE trans_type = ".db_escape(ST_PAYROLL_PERIOD)
+        ." AND status = ".db_escape((int)$status)
+        ." AND approved_trans_no = ".db_escape($period_id)
+        ." ORDER BY id DESC".($lock ? ' FOR UPDATE' : '');
+    $result = db_query($sql, 'could not get payroll-period approval evidence');
+    if (!$result)
+        return false;
+
+    $matched = false;
+    while ($row = db_fetch_assoc($result)) {
+        $source = html_entity_decode(
+            (string)$row['draft_data'],
+            ENT_QUOTES,
+            isset($_SESSION['language']->encoding)
+                ? $_SESSION['language']->encoding : 'UTF-8'
+        );
+        $decoded = json_decode($source, true);
+        if (is_array($decoded)
+            && isset($decoded['period_id'])
+            && (int)$decoded['period_id'] === $period_id
+        ) {
+            if ($matched !== false)
+                return false;
+            $row['decoded_data'] = $decoded;
+            $matched = $row;
+        }
+    }
+
+    return $matched;
+}
+
+/**
+ * Compare-and-set one prepared payslip to Posted.
+ *
+ * @param int $payslip_id
+ * @param int $expected_status
+ * @param int $new_status
+ * @return bool
+ */
+function update_payslip_status_compare_and_set($payslip_id, $expected_status, $new_status) {
+    $table = payroll_payslip_header_table();
+    if (!$table || (int)$payslip_id <= 0)
+        return false;
+
+    $sql = "UPDATE ".TB_PREF.$table
+        ." SET status = ".db_escape((int)$new_status)
+        ." WHERE payslip_id = ".db_escape((int)$payslip_id)
+        ." AND status = ".db_escape((int)$expected_status);
+    $ok = db_query($sql, 'could not update prepared payslip status');
+    return $ok && db_num_affected_rows() === 1;
+}
+
+/**
+ * Remove only a newly created empty Draft period after preparation rollback.
+ *
+ * @param int $period_id
+ * @return bool
+ */
+function discard_empty_payroll_period_draft($period_id) {
+    $period_id = (int)$period_id;
+    $actor_id = payroll_side_effect_control_actor_id();
+    if ($period_id <= 0
+        || $actor_id <= 0
+        || (function_exists('user_check_access') && !user_check_access('SA_PAYROLL'))
+    ) {
+        return false;
+    }
+
+    $sql = "DELETE p FROM ".TB_PREF."payroll_periods p"
+        ." WHERE p.period_id = ".db_escape($period_id)
+        ." AND p.status = 0"
+        ." AND p.created_by = ".db_escape($actor_id)
+        ." AND NOT EXISTS (SELECT 1 FROM ".TB_PREF."payslips s"
+        ." WHERE s.payroll_period_id = p.period_id)";
+    $ok = db_query($sql, 'could not discard empty payroll period draft');
+    return $ok && db_num_affected_rows() === 1;
 }
 
 /**

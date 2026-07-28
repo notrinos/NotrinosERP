@@ -308,30 +308,63 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
                 : array()
         );
 
+        $prepared_documents = array();
+        $calculation_failed_count = 0;
         foreach ($employees as $employee) {
-            $payslip_doc = calculate_employee_payslip_read_only($employee, $from_date, $to_date, $period_id, $runtime_context);
+            $payslip_doc = calculate_employee_payslip_read_only(
+                $employee,
+                $from_date,
+                $to_date,
+                $period_id,
+                $runtime_context
+            );
             if (!$payslip_doc) {
                 $failed_count++;
+                $calculation_failed_count++;
                 continue;
             }
 
-            $trans_no = post_payslip_to_gl($payslip_doc);
-            if (!$trans_no)
-                $failed_count++;
-            else
-                $success_count++;
+            $prepared_documents[] = $payslip_doc;
         }
 
-        update_payroll_period_totals($period_id);
-        if ($success_count > 0)
-            update_payroll_period_status($period_id, 1);
+        if ($calculation_failed_count > 0) {
+            $preparation = array(
+                'ok' => false,
+                'code' => 'incomplete_calculation_set',
+                'message' => _(
+                    'Payroll calculation failed for one or more eligible employees. '
+                    .'No partial payroll result was prepared.'
+                ),
+            );
+        } else {
+            $preparation = !empty($prepared_documents)
+                ? prepare_payroll_period_results_for_approval($period_id, $prepared_documents)
+                : array('ok' => false, 'code' => 'empty_payroll_result');
+        }
 
-		display_notification(sprintf(
-			_('Payroll processing completed. Success: %d employee(s), Failed: %d employee(s), Period ID: %d'),
-			$success_count,
-			$failed_count,
-			$period_id
-		));
+        if (!empty($preparation['ok'])) {
+            $success_count = (int)$preparation['payslip_count'];
+            display_notification(sprintf(
+                _('Payroll results prepared for approval. Success: %d employee(s), Failed: %d employee(s), Period ID: %d'),
+                $success_count,
+                $failed_count,
+                $period_id
+            ));
+        } else {
+            $failed_count += count($prepared_documents);
+            $discarded = discard_empty_payroll_period_draft($period_id);
+            if (isset($preparation['message']) && trim((string)$preparation['message']) !== '')
+                display_error($preparation['message']);
+            else
+                display_error(_('Payroll results could not be prepared for approval.'));
+
+            if (!$discarded) {
+                display_warning(sprintf(
+                    _('Draft payroll period #%d was retained for controlled recovery because it was not safe to remove automatically.'),
+                    $period_id
+                ));
+            }
+        }
     }
 }
 

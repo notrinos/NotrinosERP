@@ -1183,9 +1183,17 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 		return false;
 	}
 
+	$binding_version = isset($draft_data['approval_binding_version'])
+		? (string)$draft_data['approval_binding_version'] : '';
+	if (!payroll_period_approval_binding_version_supported($binding_version)) {
+		cancel_transaction();
+		return false;
+	}
+
 	$approval_binding = build_payroll_period_approval_binding(
 		$period_reconciled,
-		true
+		true,
+		$binding_version
 	);
 	if (!payroll_period_approval_binding_matches_draft(
 		$draft_data,

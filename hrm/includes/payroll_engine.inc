@@ -24,6 +24,7 @@ include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
+include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
@@ -33,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.4');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.5');
 
 /**
  * Payroll Formula Engine.
@@ -539,14 +540,16 @@ function payroll_build_legacy_posting_plan(&$payslip_doc) {
  * Persist the legacy payslip result and allocate its posting identity.
  *
  * The caller must already own the surrounding transaction. This stage writes
- * only the payslip header/details and generated identity; it writes no GL,
- * reference, comment, loan, or leave row.
+ * only the payslip header/details and generated identity. The transaction
+ * reference is reserved in the same transaction so concurrent preparation
+ * cannot reuse approval-bound evidence; no GL, comment, core audit-trail,
+ * loan, or leave row is written.
  *
  * @param payslip_doc $payslip_doc
  * @return array|false
  */
 function payroll_persist_legacy_payslip_result(&$payslip_doc) {
-    global $transaction_level;
+    global $Refs, $transaction_level;
 
     if (empty($transaction_level)
         || !is_object($payslip_doc)
@@ -591,6 +594,15 @@ function payroll_persist_legacy_payslip_result(&$payslip_doc) {
         return false;
 
     $payslip_doc->payslip_id = $payslip_id;
+    if ($reference === ''
+        || !isset($Refs)
+        || !is_object($Refs)
+        || !method_exists($Refs, 'save')
+    ) {
+        return false;
+    }
+    $Refs->save(ST_PAYSLIP, $trans_no, $reference);
+
     return array(
         'payslip_id' => (int)$payslip_id,
         'trans_no' => (int)$trans_no,
@@ -600,7 +612,7 @@ function payroll_persist_legacy_payslip_result(&$payslip_doc) {
 }
 
 /**
- * Apply the legacy GL/reference/comment/audit-trail posting stage.
+ * Apply the legacy GL/comment/audit-trail posting stage.
  *
  * The caller must already own the surrounding transaction and must have
  * persisted the result through payroll_persist_legacy_payslip_result().
@@ -611,7 +623,7 @@ function payroll_persist_legacy_payslip_result(&$payslip_doc) {
  * @return bool
  */
 function payroll_apply_legacy_gl_side_effects(&$payslip_doc, $plan, $result_context) {
-    global $Refs, $transaction_level;
+    global $transaction_level;
 
     if (empty($transaction_level)
         || empty($plan['ok'])
@@ -660,11 +672,6 @@ function payroll_apply_legacy_gl_side_effects(&$payslip_doc, $plan, $result_cont
     }
 
     $cart->write_gl(true);
-    if (isset($Refs) && is_object($Refs)
-        && method_exists($Refs, 'save') && $cart->reference !== ''
-    ) {
-        $Refs->save(ST_PAYSLIP, $trans_no, $cart->reference);
-    }
 
     $comment = trim(isset($payslip_doc->comments) ? $payslip_doc->comments : '');
     if ($comment === '')
@@ -681,8 +688,9 @@ function payroll_apply_legacy_gl_side_effects(&$payslip_doc, $plan, $result_cont
  * Apply the legacy loan and leave balance side-effect stage.
  *
  * The caller must already own the surrounding transaction. The functions are
- * retained exactly as legacy compatibility effects; moving them behind
- * approval/reconciliation belongs to the next PAY-CORE-011 slices.
+ * retained exactly as legacy compatibility effects. Batch payroll invokes
+ * them only from the verified post-after-approval command; manual payslips
+ * keep the established atomic adapter.
  *
  * @param payslip_doc $payslip_doc
  * @return bool
@@ -718,12 +726,623 @@ function payroll_apply_legacy_balance_side_effects(&$payslip_doc) {
 }
 
 /**
+ * Persist a complete payroll-period result set for approval without effects.
+ *
+ * Every calculated document is validated before the transaction starts. The
+ * transaction then locks the Draft period, persists every payslip/detail and
+ * reserves its reference identity, reconciles totals, promotes the period to
+ * Calculated, and appends minimized PAY-AUD evidence. No GL, comment, core
+ * audit-trail, loan, or leave mutation is permitted in this command.
+ *
+ * @param int $period_id
+ * @param array $payslip_documents
+ * @return array
+ */
+function prepare_payroll_period_results_for_approval($period_id, $payslip_documents) {
+    global $path_to_root;
+
+    $result = array(
+        'ok' => false,
+        'code' => 'invalid_preparation_request',
+        'message' => _('Payroll results could not be prepared for approval.'),
+        'payslip_count' => 0,
+    );
+    $period_id = (int)$period_id;
+    if ($period_id <= 0 || !is_array($payslip_documents) || empty($payslip_documents))
+        return $result;
+    if (function_exists('user_check_access') && !user_check_access('SA_PAYROLL')) {
+        $result['code'] = 'unauthorized';
+        $result['message'] = _('You do not have permission to prepare payroll results.');
+        return $result;
+    }
+    if (payroll_calculation_read_only_active()) {
+        $result['code'] = 'read_only_boundary_active';
+        return $result;
+    }
+
+    // Validate the complete result set before any persistence begins.
+    $expected_detail_count = 0;
+    foreach ($payslip_documents as $payslip_doc) {
+        if (!is_object($payslip_doc)
+            || (int)$payslip_doc->payroll_period_id !== $period_id
+            || empty($payslip_doc->employee_id)
+        ) {
+            $result['code'] = 'invalid_payslip_result';
+            return $result;
+        }
+        $plan = payroll_build_legacy_posting_plan($payslip_doc);
+        if (empty($plan['ok'])) {
+            $result['code'] = isset($plan['reason']) ? $plan['reason'] : 'invalid_posting_plan';
+            $result['message'] = isset($plan['message']) ? $plan['message'] : $result['message'];
+            return $result;
+        }
+        $expected_detail_count += count($payslip_doc->lines);
+    }
+
+    include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+    begin_transaction();
+    try {
+        $period_before = get_payroll_period_for_update($period_id);
+        if (!$period_before || (int)$period_before['status'] !== 0) {
+            cancel_transaction();
+            $result['code'] = 'period_not_draft';
+            $result['message'] = _('Only a Draft payroll period can receive prepared results.');
+            return $result;
+        }
+
+        $actor_id = function_exists('payroll_side_effect_control_actor_id')
+            ? payroll_side_effect_control_actor_id() : 0;
+        if ($actor_id <= 0
+            || !isset($period_before['created_by'])
+            || (int)$period_before['created_by'] !== $actor_id
+        ) {
+            cancel_transaction();
+            $result['code'] = 'period_owner_mismatch';
+            $result['message'] = _('The Draft payroll period is not owned by the current operator.');
+            return $result;
+        }
+
+        $existing = payroll_approval_binding_fetch_rows(
+            "SELECT payslip_id FROM ".TB_PREF."payslips"
+                ." WHERE payroll_period_id = ".db_escape($period_id)
+                ." ORDER BY payslip_id FOR UPDATE",
+            'could not lock existing payroll-period results'
+        );
+        if ($existing === false) {
+            cancel_transaction();
+            $result['code'] = 'existing_result_check_failed';
+            return $result;
+        }
+        if (!empty($existing)) {
+            cancel_transaction();
+            $result['code'] = 'period_results_already_exist';
+            $result['message'] = _('The payroll period already contains persisted results.');
+            return $result;
+        }
+
+        $persisted = array();
+        foreach ($payslip_documents as $payslip_doc) {
+            $identity = payroll_persist_legacy_payslip_result($payslip_doc);
+            if ($identity === false) {
+                cancel_transaction();
+                $result['code'] = 'payslip_persistence_failed';
+                return $result;
+            }
+            $persisted[] = $identity;
+        }
+
+        if (!update_payroll_period_totals($period_id)
+            || !update_payroll_period_status($period_id, 1, 0)
+        ) {
+            cancel_transaction();
+            $result['code'] = 'period_reconciliation_failed';
+            return $result;
+        }
+
+        $period_after = get_payroll_period_for_update($period_id);
+        if (!$period_after
+            || (int)$period_after['status'] !== 1
+            || count($persisted) !== count($payslip_documents)
+        ) {
+            cancel_transaction();
+            $result['code'] = 'prepared_state_verification_failed';
+            return $result;
+        }
+
+        $prepared_binding = build_payroll_period_approval_binding(
+            $period_after,
+            true,
+            '1.1.0'
+        );
+        if (empty($prepared_binding['ok'])
+            || (int)$prepared_binding['payslip_count'] !== count($persisted)
+            || (int)$prepared_binding['detail_count'] !== $expected_detail_count
+        ) {
+            cancel_transaction();
+            $result['code'] = empty($prepared_binding['code'])
+                ? 'prepared_result_set_mismatch' : $prepared_binding['code'];
+            $result['message'] = _(
+                'The persisted payroll result set could not be verified. '
+                .'No partial payroll result was committed.'
+            );
+            return $result;
+        }
+
+        $audit_result = function_exists('append_domain_audit_event')
+            ? append_domain_audit_event(array(
+                'legal_entity_id' => 0,
+                'entity_type' => 'payroll_period',
+                'entity_key' => array('period_id' => $period_id),
+                'action' => 'payroll_period.calculated',
+                'reason_code' => 'prepared_result_persistence',
+                'before' => array(
+                    'period_id' => $period_id,
+                    'status' => isset($period_before['status']) ? (int)$period_before['status'] : null,
+                ),
+                'after' => array(
+                    'period_id' => $period_id,
+                    'status' => (int)$period_after['status'],
+                ),
+                'restricted_diff' => array(
+                    'changed_fields' => array(
+                        'status', 'total_gross', 'total_deductions',
+                        'total_net', 'total_employer_cost', 'payslip_results',
+                    ),
+                    'mutation_kind' => 'calculated',
+                    'payslip_count' => count($persisted),
+                    'financial_side_effects_created' => false,
+                    'restricted_values_stored' => false,
+                ),
+            )) : false;
+        if ($audit_result === false) {
+            cancel_transaction();
+            $result['code'] = 'audit_append_failed';
+            $result['message'] = _('Payroll preparation audit could not be recorded. No results were committed.');
+            return $result;
+        }
+
+        commit_transaction();
+        return array(
+            'ok' => true,
+            'code' => 'prepared',
+            'message' => _('Payroll results were prepared for approval.'),
+            'payslip_count' => count($persisted),
+        );
+    } catch (Exception $e) {
+        cancel_transaction();
+        $result['code'] = 'preparation_exception';
+        return $result;
+    }
+}
+
+/**
+ * Rehydrate one immutable prepared payslip result for legacy effect posting.
+ *
+ * @param array $row Locked payslip header row
+ * @return payslip_doc|false
+ */
+function payroll_rehydrate_prepared_payslip($row) {
+    if (!is_array($row)
+        || empty($row['payslip_id'])
+        || empty($row['employee_id'])
+        || empty($row['trans_no'])
+        || (int)$row['status'] !== 0
+    ) {
+        return false;
+    }
+
+    $doc = new payslip_doc();
+    $doc->payslip_id = (int)$row['payslip_id'];
+    $doc->payroll_period_id = isset($row['payroll_period_id']) ? (int)$row['payroll_period_id'] : 0;
+    $doc->employee_id = $row['employee_id'];
+    $doc->employee = _payroll_get_employee_full_row($row['employee_id'], array(
+        'employee_id' => $row['employee_id'],
+        'department_id' => isset($row['department_id']) ? $row['department_id'] : null,
+        'position_id' => isset($row['position_id']) ? $row['position_id'] : null,
+        'grade_id' => isset($row['grade_id']) ? $row['grade_id'] : null,
+    ));
+    $doc->from_date = isset($row['from_date']) ? $row['from_date'] : '';
+    $doc->to_date = isset($row['to_date']) ? $row['to_date'] : '';
+    $doc->tran_date = isset($row['tran_date']) ? $row['tran_date'] : '';
+    $doc->reference = isset($row['reference']) ? $row['reference'] : '';
+    $doc->gl_trans_no = (int)$row['trans_no'];
+    $doc->comments = isset($row['notes']) ? $row['notes'] : '';
+
+    foreach (array(
+        'basic_salary', 'total_earnings', 'gross_salary', 'total_deductions',
+        'net_salary', 'employer_contributions', 'total_cost', 'working_days',
+        'worked_days', 'overtime_hours', 'leave_days', 'absent_days',
+        'loan_deduction', 'exchange_rate', 'net_salary_home',
+    ) as $field) {
+        if (array_key_exists($field, $row))
+            $doc->$field = (float)$row[$field];
+    }
+    if (isset($row['currency_code']))
+        $doc->currency_code = $row['currency_code'];
+
+    $details = get_payslip_details($doc->payslip_id);
+    if (!$details)
+        return false;
+    while ($line = db_fetch_assoc($details)) {
+        $doc->add_line(
+            isset($line['element_id']) ? (int)$line['element_id'] : 0,
+            isset($line['element_name']) ? $line['element_name'] : '',
+            isset($line['element_category']) ? (int)$line['element_category'] : 0,
+            !empty($line['is_deduction']),
+            isset($line['amount_type']) ? (int)$line['amount_type'] : 0,
+            isset($line['base_amount']) ? (float)$line['base_amount'] : 0,
+            isset($line['rate']) ? (float)$line['rate'] : 0,
+            isset($line['calculated_amount']) ? (float)$line['calculated_amount'] : 0,
+            isset($line['final_amount']) ? (float)$line['final_amount'] : 0,
+            isset($line['account_code']) ? $line['account_code'] : '',
+            isset($line['formula_used']) ? $line['formula_used'] : null,
+            !isset($line['is_taxable']) || !empty($line['is_taxable']),
+            isset($line['display_order']) ? (int)$line['display_order'] : 0
+        );
+    }
+
+    return !empty($doc->lines) && trim((string)$doc->reference) !== '' ? $doc : false;
+}
+
+/**
+ * Verify durable evidence for a Posted payroll period without writing rows.
+ *
+ * @param array $period
+ * @param array $draft_data Approved binding metadata
+ * @param bool $lock
+ * @return array
+ */
+function verify_posted_payroll_period_evidence($period, $draft_data, $lock=true) {
+    $failed = array('ok' => false, 'code' => 'invalid_posted_period');
+    if (!is_array($period)
+        || empty($period['period_id'])
+        || (int)$period['status'] !== 3
+        || !is_array($draft_data)
+        || payroll_period_approval_binding_draft_state($draft_data) !== 'well_formed'
+        || !isset($draft_data['period_id'])
+        || (int)$draft_data['period_id'] !== (int)$period['period_id']
+    ) {
+        return $failed;
+    }
+
+    $period_id = (int)$period['period_id'];
+    $suffix = $lock ? ' FOR UPDATE' : '';
+    $rows = payroll_approval_binding_fetch_rows(
+        "SELECT payslip_id,payroll_period_id,trans_no,reference,status,payment_trans_no"
+            ." FROM ".TB_PREF."payslips WHERE payroll_period_id = ".db_escape($period_id)
+            ." ORDER BY payslip_id".$suffix,
+        'could not verify posted payroll-period payslips'
+    );
+    if ($rows === false
+        || count($rows) !== (int)$draft_data['approval_payslip_count']
+        || empty($rows)
+    ) {
+        $failed['code'] = 'posted_payslip_count_mismatch';
+        return $failed;
+    }
+
+    $trans_nos = array();
+    $references = array();
+    foreach ($rows as $row) {
+        $trans_no = isset($row['trans_no']) ? (int)$row['trans_no'] : 0;
+        if ((int)$row['payroll_period_id'] !== $period_id
+            || (int)$row['status'] !== 2
+            || !empty($row['payment_trans_no'])
+            || $trans_no <= 0
+            || trim((string)$row['reference']) === ''
+            || isset($references[$trans_no])
+        ) {
+            $failed['code'] = 'invalid_posted_payslip_state';
+            return $failed;
+        }
+        $trans_nos[] = $trans_no;
+        $references[$trans_no] = (string)$row['reference'];
+    }
+
+    $trans_sql = implode(',', array_map('intval', $trans_nos));
+    $ref_rows = payroll_approval_binding_fetch_rows(
+        "SELECT type,id,reference FROM ".TB_PREF."refs"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND id IN (".$trans_sql.") ORDER BY id".$suffix,
+        'could not verify posted payroll-period references'
+    );
+    if ($ref_rows === false || count($ref_rows) !== count($trans_nos)) {
+        $failed['code'] = 'posted_reference_count_mismatch';
+        return $failed;
+    }
+    $seen_refs = array();
+    foreach ($ref_rows as $row) {
+        $id = isset($row['id']) ? (int)$row['id'] : 0;
+        if (!isset($references[$id])
+            || isset($seen_refs[$id])
+            || !hash_equals($references[$id], (string)$row['reference'])
+        ) {
+            $failed['code'] = 'posted_reference_drift';
+            return $failed;
+        }
+        $seen_refs[$id] = true;
+    }
+
+    $void_rows = payroll_approval_binding_fetch_rows(
+        "SELECT type,id FROM ".TB_PREF."voided"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND id IN (".$trans_sql.") ORDER BY id".$suffix,
+        'could not verify posted payroll-period void evidence'
+    );
+    if ($void_rows === false || !empty($void_rows)) {
+        $failed['code'] = 'posted_result_voided';
+        return $failed;
+    }
+
+    $gl_rows = payroll_approval_binding_fetch_rows(
+        "SELECT type_no,amount FROM ".TB_PREF."gl_trans"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND type_no IN (".$trans_sql.") ORDER BY type_no,counter".$suffix,
+        'could not verify posted payroll-period GL evidence'
+    );
+    if ($gl_rows === false) {
+        $failed['code'] = 'posted_gl_read_failed';
+        return $failed;
+    }
+    $counts = array();
+    $balances = array();
+    foreach ($gl_rows as $row) {
+        $trans_no = isset($row['type_no']) ? (int)$row['type_no'] : 0;
+        if (!isset($references[$trans_no]) || !isset($row['amount']) || !is_numeric($row['amount'])) {
+            $failed['code'] = 'invalid_posted_gl_state';
+            return $failed;
+        }
+        if (abs((float)$row['amount']) <= 0.000001)
+            continue;
+        if (!isset($counts[$trans_no])) {
+            $counts[$trans_no] = 0;
+            $balances[$trans_no] = 0.0;
+        }
+        $counts[$trans_no]++;
+        $balances[$trans_no] += (float)$row['amount'];
+    }
+    foreach ($trans_nos as $trans_no) {
+        if (empty($counts[$trans_no])
+            || $counts[$trans_no] < 2
+            || abs($balances[$trans_no]) > 0.000001
+        ) {
+            $failed['code'] = 'unreconciled_posted_gl';
+            return $failed;
+        }
+    }
+
+    return array(
+        'ok' => true,
+        'code' => 'posted_evidence_verified',
+        'payslip_count' => count($rows),
+        'reference_count' => count($ref_rows),
+        'gl_line_count' => array_sum($counts),
+    );
+}
+
+/**
+ * Post one approved payroll period exactly once.
+ *
+ * Contract 1.1.0 consumes prepared, side-effect-free results. Historical
+ * contract 1.0.0 is compatibility-only: its already committed GL/balance
+ * effects are never duplicated. A successful retry verifies durable evidence
+ * and performs no write or audit append.
+ *
+ * @param int $period_id
+ * @return array
+ */
+function post_approved_payroll_period($period_id) {
+    global $path_to_root;
+
+    $result = array(
+        'ok' => false,
+        'code' => 'invalid_post_request',
+        'message' => _('The approved payroll period could not be posted.'),
+    );
+    $period_id = (int)$period_id;
+    if ($period_id <= 0)
+        return $result;
+    if (function_exists('user_check_access') && !user_check_access('SA_PAYROLLPOST')) {
+        $result['code'] = 'unauthorized';
+        $result['message'] = _('You do not have permission to post approved payroll.');
+        return $result;
+    }
+    if (payroll_calculation_read_only_active()) {
+        $result['code'] = 'read_only_boundary_active';
+        return $result;
+    }
+    if ((function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
+        || (function_exists('hrm_has_hook') && hrm_has_hook('after_post_payslip'))
+    ) {
+        $result['code'] = 'unreviewed_posting_hook';
+        $result['message'] = _('Payroll posting is blocked until registered posting extensions are recertified.');
+        return $result;
+    }
+
+    include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+    begin_transaction();
+    try {
+        $period = get_payroll_period_for_update($period_id);
+        if (!$period) {
+            cancel_transaction();
+            $result['code'] = 'period_not_found';
+            return $result;
+        }
+
+        $approved_draft = get_payroll_period_approval_draft($period_id, 1, true);
+        if (!$approved_draft || empty($approved_draft['decoded_data'])) {
+            cancel_transaction();
+            $result['code'] = 'approved_binding_missing';
+            return $result;
+        }
+        $draft_data = $approved_draft['decoded_data'];
+
+        // Idempotent replay: verification only, no mutation and no new audit.
+        if ((int)$period['status'] === 3) {
+            $verification = verify_posted_payroll_period_evidence($period, $draft_data, true);
+            if (empty($verification['ok'])) {
+                cancel_transaction();
+                $result['code'] = $verification['code'];
+                return $result;
+            }
+            commit_transaction();
+            return array(
+                'ok' => true,
+                'code' => 'already_posted_verified',
+                'message' => _('The payroll period was already posted and its evidence was verified.'),
+                'payslip_count' => $verification['payslip_count'],
+            );
+        }
+
+        if ((int)$period['status'] !== 2) {
+            cancel_transaction();
+            $result['code'] = 'period_not_approved';
+            $result['message'] = _('Only an Approved payroll period can be posted.');
+            return $result;
+        }
+
+        $binding_version = isset($draft_data['approval_binding_version'])
+            ? (string)$draft_data['approval_binding_version'] : '';
+        if (!payroll_period_approval_binding_version_supported($binding_version)) {
+            cancel_transaction();
+            $result['code'] = 'unsupported_binding_version';
+            return $result;
+        }
+        $binding_period = $period;
+        $binding_period['status'] = 1;
+        $binding = build_payroll_period_approval_binding(
+            $binding_period,
+            true,
+            $binding_version
+        );
+        if (!payroll_period_approval_binding_matches_draft($draft_data, $binding)) {
+            cancel_transaction();
+            $result['code'] = isset($binding['code']) ? $binding['code'] : 'approval_binding_drift';
+            $result['message'] = _('The approved payroll evidence has changed. Nothing was posted.');
+            return $result;
+        }
+
+        $payslip_rows = payroll_approval_binding_fetch_rows(
+            "SELECT * FROM ".TB_PREF."payslips"
+                ." WHERE payroll_period_id = ".db_escape($period_id)
+                ." ORDER BY payslip_id FOR UPDATE",
+            'could not lock approved payroll results for posting'
+        );
+        if ($payslip_rows === false
+            || count($payslip_rows) !== (int)$draft_data['approval_payslip_count']
+            || empty($payslip_rows)
+        ) {
+            cancel_transaction();
+            $result['code'] = 'approved_result_count_mismatch';
+            return $result;
+        }
+
+        foreach ($payslip_rows as $row) {
+            if ((int)$row['status'] !== 0) {
+                cancel_transaction();
+                $result['code'] = 'prepared_payslip_status_drift';
+                return $result;
+            }
+
+            if ($binding_version === '1.1.0') {
+                $payslip_doc = payroll_rehydrate_prepared_payslip($row);
+                if ($payslip_doc === false) {
+                    cancel_transaction();
+                    $result['code'] = 'prepared_payslip_rehydration_failed';
+                    return $result;
+                }
+                $plan = payroll_build_legacy_posting_plan($payslip_doc);
+                if (empty($plan['ok'])) {
+                    cancel_transaction();
+                    $result['code'] = isset($plan['reason']) ? $plan['reason'] : 'posting_plan_failed';
+                    return $result;
+                }
+                $identity = array(
+                    'payslip_id' => (int)$row['payslip_id'],
+                    'trans_no' => (int)$row['trans_no'],
+                    'tran_date' => $row['tran_date'],
+                    'reference' => $row['reference'],
+                );
+                if (!payroll_apply_legacy_gl_side_effects($payslip_doc, $plan, $identity)
+                    || !payroll_apply_legacy_balance_side_effects($payslip_doc)
+                ) {
+                    cancel_transaction();
+                    $result['code'] = 'financial_effect_stage_failed';
+                    return $result;
+                }
+            }
+
+            if (!update_payslip_status_compare_and_set((int)$row['payslip_id'], 0, 2)) {
+                cancel_transaction();
+                $result['code'] = 'payslip_status_compare_and_set_failed';
+                return $result;
+            }
+        }
+
+        if (!update_payroll_period_status($period_id, 3, 2)) {
+            cancel_transaction();
+            $result['code'] = 'period_status_compare_and_set_failed';
+            return $result;
+        }
+        $period_after = get_payroll_period_for_update($period_id);
+        $verification = verify_posted_payroll_period_evidence($period_after, $draft_data, true);
+        if (empty($verification['ok'])) {
+            cancel_transaction();
+            $result['code'] = $verification['code'];
+            return $result;
+        }
+
+        $audit_result = function_exists('append_domain_audit_event')
+            ? append_domain_audit_event(array(
+                'legal_entity_id' => 0,
+                'entity_type' => 'payroll_period',
+                'entity_key' => array('period_id' => $period_id),
+                'action' => 'payroll_period.posted',
+                'reason_code' => 'approved_post_command',
+                'legacy_source' => 'approval_drafts',
+                'legacy_id' => isset($approved_draft['id']) ? (int)$approved_draft['id'] : null,
+                'before' => array('period_id' => $period_id, 'status' => 2),
+                'after' => array('period_id' => $period_id, 'status' => 3),
+                'restricted_diff' => array(
+                    'changed_fields' => array('status', 'payslip_status', 'financial_effects'),
+                    'mutation_kind' => 'posted',
+                    'approval_binding_contract' => $binding['contract'],
+                    'approval_binding_version' => $binding['version'],
+                    'approval_hash_verified' => true,
+                    'payslip_count' => $verification['payslip_count'],
+                    'reference_count' => $verification['reference_count'],
+                    'gl_line_count' => $verification['gl_line_count'],
+                    'financial_side_effects_created' => $binding_version === '1.1.0',
+                    'restricted_values_stored' => false,
+                ),
+            )) : false;
+        if ($audit_result === false) {
+            cancel_transaction();
+            $result['code'] = 'audit_append_failed';
+            return $result;
+        }
+
+        commit_transaction();
+        return array(
+            'ok' => true,
+            'code' => 'posted',
+            'message' => _('The approved payroll period was posted successfully.'),
+            'payslip_count' => $verification['payslip_count'],
+        );
+    } catch (Exception $e) {
+        cancel_transaction();
+        $result['code'] = 'posting_exception';
+        return $result;
+    }
+}
+
+/**
  * Post a calculated payslip through the separated legacy posting stages.
  *
  * The public adapter remains backward compatible and atomic. It intentionally
- * still executes result persistence, GL, loan, and leave stages in one
- * transaction until approval-hash binding and an explicit post command are
- * implemented by later PAY-CORE-011 slices.
+ * still executes result persistence, reference reservation, GL, loan, and
+ * leave stages in one transaction for manual payslips outside payroll-period
+ * approval sets. Batch payroll uses the separate approved post command.
  *
  * @param payslip_doc $payslip_doc
  * @return int|false GL transaction number on success, false on failure
