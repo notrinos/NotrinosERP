@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.5');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.6');
 
 /**
  * Payroll Formula Engine.
@@ -726,6 +726,965 @@ function payroll_apply_legacy_balance_side_effects(&$payslip_doc) {
 }
 
 /**
+ * Return the bounded reason-code vocabulary for linked payroll reversal.
+ *
+ * @return array
+ */
+function payroll_linked_reversal_reason_codes() {
+    return array(
+        'POSTING_ERROR' => _('Posting error'),
+        'CONFIGURATION_ERROR' => _('Configuration error'),
+        'APPROVAL_ERROR' => _('Approval error'),
+        'DUPLICATE_RUN' => _('Duplicate payroll run'),
+        'OTHER_CONTROLLED' => _('Other controlled reason'),
+    );
+}
+
+/**
+ * Validate one minimized linked-reversal reason code.
+ *
+ * @param string $reason_code
+ * @return bool
+ */
+function payroll_linked_reversal_reason_valid($reason_code) {
+    $codes = payroll_linked_reversal_reason_codes();
+    return isset($codes[strtoupper(trim((string)$reason_code))]);
+}
+
+/**
+ * Canonicalize nested evidence values for deterministic JSON hashing.
+ *
+ * @param mixed $value
+ * @return mixed
+ */
+function payroll_reversal_canonical_value($value) {
+    if (!is_array($value))
+        return $value;
+
+    $is_list = array_keys($value) === range(0, count($value) - 1);
+    if ($is_list) {
+        $result = array();
+        foreach ($value as $item)
+            $result[] = payroll_reversal_canonical_value($item);
+        return $result;
+    }
+
+    ksort($value, SORT_STRING);
+    foreach ($value as $key => $item)
+        $value[$key] = payroll_reversal_canonical_value($item);
+    return $value;
+}
+
+/**
+ * Encode one reversible state in canonical JSON.
+ *
+ * @param array $state
+ * @return string|false
+ */
+function payroll_reversal_encode_state($state) {
+    if (!is_array($state))
+        return false;
+    return json_encode(
+        payroll_reversal_canonical_value($state),
+        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
+}
+
+/**
+ * Decode one stored reversible state.
+ *
+ * @param string $encoded
+ * @return array|false
+ */
+function payroll_reversal_decode_state($encoded) {
+    if (!is_string($encoded) || $encoded === '')
+        return false;
+    $decoded = json_decode($encoded, true);
+    return is_array($decoded) ? $decoded : false;
+}
+
+/**
+ * Hash one canonical reversible state.
+ *
+ * @param array $state
+ * @return string|false
+ */
+function payroll_reversal_state_hash($state) {
+    $encoded = payroll_reversal_encode_state($state);
+    return $encoded === false ? false : hash('sha256', $encoded);
+}
+
+/**
+ * Normalize a legacy double for stable evidence and exact restoration.
+ *
+ * @param mixed $value
+ * @return string
+ */
+function payroll_reversal_decimal($value) {
+    return number_format((float)$value, 6, '.', '');
+}
+
+/**
+ * Project one loan-repayment row to the exact mutable state used by posting.
+ *
+ * @param array $row
+ * @return array
+ */
+function payroll_reversal_project_repayment($row) {
+    return array(
+        'repayment_id' => (int)$row['repayment_id'],
+        'loan_id' => (int)$row['loan_id'],
+        'paid_amount' => payroll_reversal_decimal($row['paid_amount']),
+        'paid_date' => empty($row['paid_date']) ? null : (string)$row['paid_date'],
+        'payslip_id' => empty($row['payslip_id']) ? null : (int)$row['payslip_id'],
+        'status' => (int)$row['status'],
+    );
+}
+
+/**
+ * Project one employee-loan summary row to the exact mutable state.
+ *
+ * @param array $row
+ * @return array
+ */
+function payroll_reversal_project_employee_loan($row) {
+    return array(
+        'loan_id' => (int)$row['loan_id'],
+        'outstanding_amount' => payroll_reversal_decimal($row['outstanding_amount']),
+        'status' => (int)$row['status'],
+    );
+}
+
+/**
+ * Project one leave-balance row, including the pre-post absence case.
+ *
+ * @param array|false $row
+ * @param int $leave_id
+ * @param int $fiscal_year
+ * @return array
+ */
+function payroll_reversal_project_leave_balance($row, $leave_id, $fiscal_year) {
+    if (!$row) {
+        return array(
+            'exists' => false,
+            'balance_id' => null,
+            'leave_id' => (int)$leave_id,
+            'fiscal_year' => (int)$fiscal_year,
+        );
+    }
+
+    return array(
+        'exists' => true,
+        'balance_id' => (int)$row['balance_id'],
+        'leave_id' => (int)$row['leave_id'],
+        'fiscal_year' => (int)$row['fiscal_year'],
+        'entitled' => payroll_reversal_decimal($row['entitled']),
+        'carried_forward' => payroll_reversal_decimal($row['carried_forward']),
+        'taken' => payroll_reversal_decimal($row['taken']),
+        'pending' => payroll_reversal_decimal($row['pending']),
+        'adjusted' => payroll_reversal_decimal($row['adjusted']),
+    );
+}
+
+/**
+ * Fetch one repayment row with a row lock.
+ *
+ * @param int $repayment_id
+ * @return array|false
+ */
+function payroll_reversal_get_repayment_for_update($repayment_id) {
+    $sql = "SELECT repayment_id,loan_id,paid_amount,paid_date,payslip_id,status"
+        ." FROM ".TB_PREF."loan_repayments"
+        ." WHERE repayment_id = ".db_escape((int)$repayment_id)." FOR UPDATE";
+    $result = db_query($sql, 'could not lock loan repayment reversal state');
+    return $result ? db_fetch_assoc($result) : false;
+}
+
+/**
+ * Fetch one employee-loan row with a row lock.
+ *
+ * @param int $loan_id
+ * @return array|false
+ */
+function payroll_reversal_get_employee_loan_for_update($loan_id) {
+    $sql = "SELECT loan_id,outstanding_amount,status FROM ".TB_PREF."employee_loans"
+        ." WHERE loan_id = ".db_escape((int)$loan_id)." FOR UPDATE";
+    $result = db_query($sql, 'could not lock employee loan reversal state');
+    return $result ? db_fetch_assoc($result) : false;
+}
+
+/**
+ * Fetch one leave-balance row with a row lock.
+ *
+ * @param string $employee_id
+ * @param int $leave_id
+ * @param int $fiscal_year
+ * @return array|false
+ */
+function payroll_reversal_get_leave_balance_for_update($employee_id, $leave_id, $fiscal_year) {
+    $sql = "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
+        ."carried_forward,taken,pending,adjusted"
+        ." FROM ".TB_PREF."leave_balances"
+        ." WHERE employee_id = ".db_escape((string)$employee_id)
+        ." AND leave_id = ".db_escape((int)$leave_id)
+        ." AND fiscal_year = ".db_escape((int)$fiscal_year)
+        ." FOR UPDATE";
+    $result = db_query($sql, 'could not lock leave balance reversal state');
+    if (!$result)
+        return null;
+    $row = db_fetch_assoc($result);
+    return $row ? $row : false;
+}
+
+/**
+ * Capture all exact loan and leave pre-state touched by legacy batch posting.
+ *
+ * @param payslip_doc $payslip_doc
+ * @return array|false
+ */
+function payroll_capture_posting_reversal_snapshot(&$payslip_doc) {
+    if (!payroll_reversal_evidence_table_ready()
+        || !employee_table_exists('loan_repayments')
+        || !employee_table_exists('employee_loans')
+        || !employee_table_exists('leave_balances')
+        || !employee_table_exists('leave_requests')
+    ) {
+        return false;
+    }
+
+    $employee_id = (string)$payslip_doc->employee_id;
+    $from_sql = date2sql($payslip_doc->from_date);
+    $to_sql = date2sql($payslip_doc->to_date);
+    $loan_sql = "SELECT r.repayment_id,r.loan_id,r.paid_amount,r.paid_date,"
+        ."r.payslip_id,r.status,l.outstanding_amount,l.status AS loan_status"
+        ." FROM ".TB_PREF."loan_repayments r"
+        ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
+        ." WHERE l.employee_id = ".db_escape($employee_id)
+        ." AND l.status = 1 AND r.status IN (0,2)"
+        ." AND r.due_date >= ".db_escape($from_sql)
+        ." AND r.due_date <= ".db_escape($to_sql)
+        ." ORDER BY r.repayment_id FOR UPDATE";
+    $loan_rows = payroll_approval_binding_fetch_rows(
+        $loan_sql,
+        'could not capture loan repayment reversal pre-state'
+    );
+    if ($loan_rows === false)
+        return false;
+
+    $repayments = array();
+    $employee_loans = array();
+    foreach ($loan_rows as $row) {
+        $repayments[(int)$row['repayment_id']] = payroll_reversal_project_repayment($row);
+        $loan_id = (int)$row['loan_id'];
+        if (!isset($employee_loans[$loan_id])) {
+            $employee_loans[$loan_id] = array(
+                'loan_id' => $loan_id,
+                'outstanding_amount' => payroll_reversal_decimal($row['outstanding_amount']),
+                'status' => (int)$row['loan_status'],
+            );
+        }
+    }
+
+    $fiscal_year = get_leave_balance_fiscal_year_for_date($to_sql);
+    list($year_start, $year_end) = _payroll_get_year_bounds($fiscal_year);
+    $request_sql = "SELECT request_id,leave_id FROM ".TB_PREF."leave_requests"
+        ." WHERE employee_id = ".db_escape($employee_id)
+        ." AND status IN (0,1)"
+        ." AND from_date >= ".db_escape($year_start)
+        ." AND from_date <= ".db_escape($year_end)
+        ." ORDER BY request_id FOR UPDATE";
+    $request_rows = payroll_approval_binding_fetch_rows(
+        $request_sql,
+        'could not capture leave-request reversal controls'
+    );
+    if ($request_rows === false)
+        return false;
+
+    $leave_ids = array();
+    foreach ($request_rows as $row)
+        $leave_ids[(int)$row['leave_id']] = true;
+    ksort($leave_ids, SORT_NUMERIC);
+
+    $leave_balances = array();
+    foreach (array_keys($leave_ids) as $leave_id) {
+        $row = payroll_reversal_get_leave_balance_for_update(
+            $employee_id,
+            $leave_id,
+            $fiscal_year
+        );
+        if ($row === null)
+            return false;
+        $leave_balances[$leave_id] = payroll_reversal_project_leave_balance(
+            $row,
+            $leave_id,
+            $fiscal_year
+        );
+    }
+
+    return array(
+        'repayments' => $repayments,
+        'employee_loans' => $employee_loans,
+        'leave_balances' => $leave_balances,
+    );
+}
+
+/**
+ * Apply legacy balance effects and append exact immutable reversal snapshots.
+ *
+ * @param payslip_doc $payslip_doc
+ * @param int $period_id
+ * @param array $identity
+ * @return array|false
+ */
+function payroll_apply_balance_effects_with_reversal_evidence(
+    &$payslip_doc,
+    $period_id,
+    $identity
+) {
+    $snapshot = payroll_capture_posting_reversal_snapshot($payslip_doc);
+    if ($snapshot === false
+        || !payroll_apply_legacy_balance_side_effects($payslip_doc)
+    ) {
+        return false;
+    }
+
+    $period_id = (int)$period_id;
+    $payslip_id = (int)$identity['payslip_id'];
+    $original_trans_no = (int)$identity['trans_no'];
+    $effective_date = (string)$identity['tran_date'];
+    $actor_id = payroll_side_effect_control_actor_id();
+
+    foreach ($snapshot['repayments'] as $repayment_id => $before) {
+        $current = payroll_reversal_get_repayment_for_update($repayment_id);
+        if (!$current
+            || (int)$current['payslip_id'] !== $payslip_id
+            || (int)$current['status'] !== 1
+        ) {
+            return false;
+        }
+        $after = payroll_reversal_project_repayment($current);
+        if (!insert_payroll_reversal_evidence(array(
+            'payroll_period_id' => $period_id,
+            'payslip_id' => $payslip_id,
+            'original_trans_no' => $original_trans_no,
+            'evidence_type' => 'loan_repayment',
+            'target_id' => (int)$repayment_id,
+            'before_state' => payroll_reversal_encode_state($before),
+            'after_state_hash' => payroll_reversal_state_hash($after),
+            'actor_id' => $actor_id,
+            'effective_date' => $effective_date,
+        ))) {
+            return false;
+        }
+    }
+
+    foreach ($snapshot['employee_loans'] as $loan_id => $before) {
+        $current = payroll_reversal_get_employee_loan_for_update($loan_id);
+        if (!$current
+            || !insert_payroll_reversal_evidence(array(
+                'payroll_period_id' => $period_id,
+                'payslip_id' => $payslip_id,
+                'original_trans_no' => $original_trans_no,
+                'evidence_type' => 'employee_loan',
+                'target_id' => (int)$loan_id,
+                'before_state' => payroll_reversal_encode_state($before),
+                'after_state_hash' => payroll_reversal_state_hash(
+                    payroll_reversal_project_employee_loan($current)
+                ),
+                'actor_id' => $actor_id,
+                'effective_date' => $effective_date,
+            ))
+        ) {
+            return false;
+        }
+    }
+
+    foreach ($snapshot['leave_balances'] as $leave_id => $before) {
+        $current = payroll_reversal_get_leave_balance_for_update(
+            $payslip_doc->employee_id,
+            $leave_id,
+            $before['fiscal_year']
+        );
+        if (!$current
+            || !insert_payroll_reversal_evidence(array(
+                'payroll_period_id' => $period_id,
+                'payslip_id' => $payslip_id,
+                'original_trans_no' => $original_trans_no,
+                'evidence_type' => 'leave_balance',
+                'target_id' => (int)$leave_id,
+                'before_state' => payroll_reversal_encode_state($before),
+                'after_state_hash' => payroll_reversal_state_hash(
+                    payroll_reversal_project_leave_balance(
+                        $current,
+                        $leave_id,
+                        $before['fiscal_year']
+                    )
+                ),
+                'actor_id' => $actor_id,
+                'effective_date' => $effective_date,
+            ))
+        ) {
+            return false;
+        }
+    }
+
+    $counts = array(
+        'loan_repayment_count' => count($snapshot['repayments']),
+        'employee_loan_count' => count($snapshot['employee_loans']),
+        'leave_balance_count' => count($snapshot['leave_balances']),
+    );
+    $marker = array(
+        'period_id' => $period_id,
+        'payslip_id' => $payslip_id,
+        'original_trans_no' => $original_trans_no,
+        'loan_repayment_count' => $counts['loan_repayment_count'],
+        'employee_loan_count' => $counts['employee_loan_count'],
+        'leave_balance_count' => $counts['leave_balance_count'],
+    );
+    if (!insert_payroll_reversal_evidence(array(
+        'payroll_period_id' => $period_id,
+        'payslip_id' => $payslip_id,
+        'original_trans_no' => $original_trans_no,
+        'evidence_type' => 'posting',
+        'target_id' => 0,
+        'before_state' => null,
+        'after_state_hash' => payroll_reversal_state_hash($marker),
+        'actor_id' => $actor_id,
+        'effective_date' => $effective_date,
+    ))) {
+        return false;
+    }
+
+    return $counts;
+}
+
+/**
+ * Verify the immutable posting snapshot against the current post-state.
+ *
+ * @param int $period_id
+ * @param array $payslip
+ * @param bool $lock
+ * @param bool $allow_gl_reversal
+ * @return array
+ */
+function payroll_verify_posting_reversal_snapshot(
+    $period_id,
+    $payslip,
+    $lock=true,
+    $allow_gl_reversal=false
+) {
+    $failed = array('ok' => false, 'code' => 'reversal_evidence_missing');
+    if (!is_array($payslip)
+        || empty($payslip['payslip_id'])
+        || empty($payslip['trans_no'])
+        || !payroll_reversal_evidence_table_ready()
+    ) {
+        return $failed;
+    }
+
+    $rows = get_payroll_reversal_evidence_rows(
+        (int)$period_id,
+        (int)$payslip['payslip_id'],
+        '',
+        $lock
+    );
+    if ($rows === false || empty($rows))
+        return $failed;
+
+    $groups = array();
+    foreach ($rows as $row) {
+        if ((int)$row['original_trans_no'] !== (int)$payslip['trans_no']) {
+            $failed['code'] = 'reversal_evidence_identity_drift';
+            return $failed;
+        }
+        $type = (string)$row['evidence_type'];
+        if (!isset($groups[$type]))
+            $groups[$type] = array();
+        $groups[$type][] = $row;
+    }
+    if (empty($groups['posting']) || count($groups['posting']) !== 1) {
+        $failed['code'] = 'posting_marker_missing';
+        return $failed;
+    }
+    if (!$allow_gl_reversal && !empty($groups['gl_reversal'])) {
+        $failed['code'] = 'unexpected_existing_reversal';
+        return $failed;
+    }
+
+    foreach (isset($groups['loan_repayment']) ? $groups['loan_repayment'] : array() as $row) {
+        $current = payroll_reversal_get_repayment_for_update((int)$row['target_id']);
+        $state = $current ? payroll_reversal_project_repayment($current) : false;
+        if (!$state || !hash_equals((string)$row['after_state_hash'], payroll_reversal_state_hash($state))) {
+            $failed['code'] = 'loan_repayment_post_state_drift';
+            return $failed;
+        }
+    }
+    foreach (isset($groups['employee_loan']) ? $groups['employee_loan'] : array() as $row) {
+        $current = payroll_reversal_get_employee_loan_for_update((int)$row['target_id']);
+        $state = $current ? payroll_reversal_project_employee_loan($current) : false;
+        if (!$state || !hash_equals((string)$row['after_state_hash'], payroll_reversal_state_hash($state))) {
+            $failed['code'] = 'employee_loan_post_state_drift';
+            return $failed;
+        }
+    }
+    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        if (!$before || !isset($before['fiscal_year'])) {
+            $failed['code'] = 'leave_reversal_evidence_malformed';
+            return $failed;
+        }
+        $current = payroll_reversal_get_leave_balance_for_update(
+            $payslip['employee_id'],
+            (int)$row['target_id'],
+            (int)$before['fiscal_year']
+        );
+        if ($current === null) {
+            $failed['code'] = 'leave_balance_post_state_read_failed';
+            return $failed;
+        }
+        $state = payroll_reversal_project_leave_balance(
+            $current,
+            (int)$row['target_id'],
+            (int)$before['fiscal_year']
+        );
+        if (!hash_equals((string)$row['after_state_hash'], payroll_reversal_state_hash($state))) {
+            $failed['code'] = 'leave_balance_post_state_drift';
+            return $failed;
+        }
+    }
+
+    $counts = array(
+        'loan_repayment_count' => isset($groups['loan_repayment'])
+            ? count($groups['loan_repayment']) : 0,
+        'employee_loan_count' => isset($groups['employee_loan'])
+            ? count($groups['employee_loan']) : 0,
+        'leave_balance_count' => isset($groups['leave_balance'])
+            ? count($groups['leave_balance']) : 0,
+    );
+    $marker = array(
+        'period_id' => (int)$period_id,
+        'payslip_id' => (int)$payslip['payslip_id'],
+        'original_trans_no' => (int)$payslip['trans_no'],
+        'loan_repayment_count' => $counts['loan_repayment_count'],
+        'employee_loan_count' => $counts['employee_loan_count'],
+        'leave_balance_count' => $counts['leave_balance_count'],
+    );
+    if (!hash_equals(
+        (string)$groups['posting'][0]['after_state_hash'],
+        payroll_reversal_state_hash($marker)
+    )) {
+        $failed['code'] = 'posting_marker_count_drift';
+        return $failed;
+    }
+
+    return array(
+        'ok' => true,
+        'code' => 'reversal_snapshot_verified',
+        'groups' => $groups,
+        'counts' => $counts,
+    );
+}
+
+/**
+ * Restore loan and leave state after current-state evidence was verified.
+ *
+ * @param array $payslip
+ * @param array $snapshot_verification
+ * @return bool
+ */
+function payroll_restore_posting_reversal_snapshot($payslip, $snapshot_verification) {
+    if (empty($snapshot_verification['ok']) || empty($snapshot_verification['groups']))
+        return false;
+    $groups = $snapshot_verification['groups'];
+
+    foreach (isset($groups['loan_repayment']) ? $groups['loan_repayment'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        if (!$before || (int)$before['repayment_id'] !== (int)$row['target_id'])
+            return false;
+        $sql = "UPDATE ".TB_PREF."loan_repayments SET"
+            ." paid_amount = ".db_escape($before['paid_amount'])
+            .", paid_date = ".($before['paid_date'] === null ? 'NULL' : db_escape($before['paid_date']))
+            .", payslip_id = ".($before['payslip_id'] === null ? 'NULL' : db_escape((int)$before['payslip_id']))
+            .", status = ".db_escape((int)$before['status'])
+            ." WHERE repayment_id = ".db_escape((int)$row['target_id']);
+        if (!db_query($sql, 'could not restore loan repayment pre-state'))
+            return false;
+        $current = payroll_reversal_get_repayment_for_update((int)$row['target_id']);
+        if (!$current
+            || payroll_reversal_state_hash(payroll_reversal_project_repayment($current))
+                !== payroll_reversal_state_hash($before)
+        ) {
+            return false;
+        }
+    }
+
+    foreach (isset($groups['employee_loan']) ? $groups['employee_loan'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        if (!$before || (int)$before['loan_id'] !== (int)$row['target_id'])
+            return false;
+        $sql = "UPDATE ".TB_PREF."employee_loans SET"
+            ." outstanding_amount = ".db_escape($before['outstanding_amount'])
+            .", status = ".db_escape((int)$before['status'])
+            ." WHERE loan_id = ".db_escape((int)$row['target_id']);
+        if (!db_query($sql, 'could not restore employee loan pre-state'))
+            return false;
+        $current = payroll_reversal_get_employee_loan_for_update((int)$row['target_id']);
+        if (!$current
+            || payroll_reversal_state_hash(payroll_reversal_project_employee_loan($current))
+                !== payroll_reversal_state_hash($before)
+        ) {
+            return false;
+        }
+    }
+
+    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        if (!$before
+            || (int)$before['leave_id'] !== (int)$row['target_id']
+            || !isset($before['exists'])
+        ) {
+            return false;
+        }
+        if (!empty($before['exists'])) {
+            $sql = "UPDATE ".TB_PREF."leave_balances SET"
+                ." entitled = ".db_escape($before['entitled'])
+                .", carried_forward = ".db_escape($before['carried_forward'])
+                .", taken = ".db_escape($before['taken'])
+                .", pending = ".db_escape($before['pending'])
+                .", adjusted = ".db_escape($before['adjusted'])
+                ." WHERE balance_id = ".db_escape((int)$before['balance_id'])
+                ." AND employee_id = ".db_escape((string)$payslip['employee_id'])
+                ." AND leave_id = ".db_escape((int)$before['leave_id'])
+                ." AND fiscal_year = ".db_escape((int)$before['fiscal_year']);
+            if (!db_query($sql, 'could not restore leave balance pre-state'))
+                return false;
+        } else {
+            $sql = "DELETE FROM ".TB_PREF."leave_balances"
+                ." WHERE employee_id = ".db_escape((string)$payslip['employee_id'])
+                ." AND leave_id = ".db_escape((int)$before['leave_id'])
+                ." AND fiscal_year = ".db_escape((int)$before['fiscal_year']);
+            if (!db_query($sql, 'could not remove posting-created leave balance'))
+                return false;
+        }
+        $current = payroll_reversal_get_leave_balance_for_update(
+            $payslip['employee_id'],
+            (int)$before['leave_id'],
+            (int)$before['fiscal_year']
+        );
+        if ($current === null)
+            return false;
+        $projected = payroll_reversal_project_leave_balance(
+            $current,
+            (int)$before['leave_id'],
+            (int)$before['fiscal_year']
+        );
+        if (payroll_reversal_state_hash($projected) !== payroll_reversal_state_hash($before))
+            return false;
+    }
+
+    return true;
+}
+
+/**
+ * Fetch canonical GL line projections for one ST_PAYSLIP transaction.
+ *
+ * @param int $trans_no
+ * @param bool $lock
+ * @return array|false
+ */
+function payroll_reversal_gl_lines($trans_no, $lock=true) {
+    $sql = "SELECT counter,tran_date,account,memo_,amount,dimension_id,dimension2_id,"
+        ."person_type_id,HEX(person_id) AS person_id_hex,"
+        ."CAST(custom_data AS CHAR) AS custom_data"
+        ." FROM ".TB_PREF."gl_trans"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND type_no = ".db_escape((int)$trans_no)
+        ." AND ABS(amount) > 0.000001"
+        ." ORDER BY counter".($lock ? ' FOR UPDATE' : '');
+    $rows = payroll_approval_binding_fetch_rows(
+        $sql,
+        'could not read payroll GL reversal evidence'
+    );
+    if ($rows === false)
+        return false;
+
+    $projected = array();
+    foreach ($rows as $row) {
+        $projected[] = array(
+            'tran_date' => (string)$row['tran_date'],
+            'account' => (string)$row['account'],
+            'memo' => (string)$row['memo_'],
+            'amount' => payroll_reversal_decimal($row['amount']),
+            'dimension_id' => (int)$row['dimension_id'],
+            'dimension2_id' => (int)$row['dimension2_id'],
+            'person_type_id' => $row['person_type_id'] === null
+                ? null : (int)$row['person_type_id'],
+            'person_id_hex' => strtoupper((string)$row['person_id_hex']),
+            'custom_data' => (string)$row['custom_data'],
+        );
+    }
+    return $projected;
+}
+
+/**
+ * Verify one reversing GL transaction is the exact opposite of the original.
+ *
+ * @param array $original
+ * @param array $reversal
+ * @return bool
+ */
+function payroll_reversal_gl_is_exact_opposite($original, $reversal) {
+    if (!is_array($original)
+        || !is_array($reversal)
+        || count($original) < 2
+        || count($original) !== count($reversal)
+    ) {
+        return false;
+    }
+
+    $original_balance = 0.0;
+    $reversal_balance = 0.0;
+    $expected = array();
+    $actual = array();
+    foreach ($original as $line) {
+        $original_balance += (float)$line['amount'];
+        $signature = payroll_reversal_encode_state(array(
+            'account' => $line['account'],
+            'memo' => $line['memo'],
+            'amount' => payroll_reversal_decimal(-(float)$line['amount']),
+            'dimension_id' => $line['dimension_id'],
+            'dimension2_id' => $line['dimension2_id'],
+            'person_type_id' => $line['person_type_id'],
+            'person_id_hex' => $line['person_id_hex'],
+            'custom_data' => $line['custom_data'],
+        ));
+        if ($signature === false)
+            return false;
+        $expected[$signature] = isset($expected[$signature]) ? $expected[$signature] + 1 : 1;
+    }
+    foreach ($reversal as $line) {
+        $reversal_balance += (float)$line['amount'];
+        $signature = payroll_reversal_encode_state(array(
+            'account' => $line['account'],
+            'memo' => $line['memo'],
+            'amount' => payroll_reversal_decimal($line['amount']),
+            'dimension_id' => $line['dimension_id'],
+            'dimension2_id' => $line['dimension2_id'],
+            'person_type_id' => $line['person_type_id'],
+            'person_id_hex' => $line['person_id_hex'],
+            'custom_data' => $line['custom_data'],
+        ));
+        if ($signature === false)
+            return false;
+        $actual[$signature] = isset($actual[$signature]) ? $actual[$signature] + 1 : 1;
+    }
+    ksort($expected, SORT_STRING);
+    ksort($actual, SORT_STRING);
+
+    return $expected === $actual
+        && abs($original_balance) <= 0.000001
+        && abs($reversal_balance) <= 0.000001;
+}
+
+/**
+ * Create and evidence one exact opposite GL transaction.
+ *
+ * @param int $period_id
+ * @param array $payslip
+ * @param string $reason_code
+ * @param string $reversal_date User date
+ * @return array|false
+ */
+function payroll_create_linked_gl_reversal(
+    $period_id,
+    $payslip,
+    $reason_code,
+    $reversal_date
+) {
+    global $Refs;
+
+    $original_trans_no = (int)$payslip['trans_no'];
+    $original = payroll_reversal_gl_lines($original_trans_no, true);
+    if ($original === false || count($original) < 2)
+        return false;
+    $original_hash = payroll_reversal_state_hash(array('lines' => $original));
+    if ($original_hash === false)
+        return false;
+
+    $reversal_trans_no = payroll_get_next_payslip_trans_no();
+    $reversal_sql_date = date2sql($reversal_date);
+    $reference = _payroll_get_reference(ST_PAYSLIP, $reversal_date);
+    if ($reversal_trans_no <= 0
+        || $reference === ''
+        || !isset($Refs)
+        || !is_object($Refs)
+        || !method_exists($Refs, 'save')
+    ) {
+        return false;
+    }
+
+    $sql = "INSERT INTO ".TB_PREF."gl_trans"
+        ." (type,type_no,tran_date,account,memo_,amount,dimension_id,dimension2_id,"
+        ."person_type_id,person_id,custom_data)"
+        ." SELECT type,".db_escape($reversal_trans_no).",".db_escape($reversal_sql_date)
+        .",account,memo_,-amount,dimension_id,dimension2_id,person_type_id,person_id,custom_data"
+        ." FROM ".TB_PREF."gl_trans"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND type_no = ".db_escape($original_trans_no)
+        ." AND ABS(amount) > 0.000001 ORDER BY counter";
+    if (!db_query($sql, 'could not create exact payroll reversing GL')
+        || db_num_affected_rows() !== count($original)
+    ) {
+        return false;
+    }
+    $Refs->save(ST_PAYSLIP, $reversal_trans_no, $reference);
+    add_comments(
+        ST_PAYSLIP,
+        $reversal_trans_no,
+        $reversal_date,
+        sprintf(_('Linked payroll reversal of transaction %d (%s)'), $original_trans_no, $reason_code)
+    );
+    add_audit_trail(
+        ST_PAYSLIP,
+        $reversal_trans_no,
+        $reversal_date,
+        sprintf(_('Reversal of payroll transaction %d'), $original_trans_no)
+    );
+
+    $reversal = payroll_reversal_gl_lines($reversal_trans_no, true);
+    if ($reversal === false || !payroll_reversal_gl_is_exact_opposite($original, $reversal))
+        return false;
+
+    $after = array(
+        'original_trans_no' => $original_trans_no,
+        'reversal_trans_no' => $reversal_trans_no,
+        'effective_date' => $reversal_sql_date,
+        'original_gl_hash' => $original_hash,
+        'reversal_gl_hash' => payroll_reversal_state_hash(array('lines' => $reversal)),
+    );
+    if (!insert_payroll_reversal_evidence(array(
+        'payroll_period_id' => (int)$period_id,
+        'payslip_id' => (int)$payslip['payslip_id'],
+        'original_trans_no' => $original_trans_no,
+        'evidence_type' => 'gl_reversal',
+        'target_id' => $original_trans_no,
+        'linked_trans_no' => $reversal_trans_no,
+        'before_state' => payroll_reversal_encode_state(array(
+            'original_gl_hash' => $original_hash,
+        )),
+        'after_state_hash' => payroll_reversal_state_hash($after),
+        'reason_code' => $reason_code,
+        'actor_id' => payroll_side_effect_control_actor_id(),
+        'effective_date' => $reversal_sql_date,
+    ))) {
+        return false;
+    }
+
+    return array(
+        'reversal_trans_no' => $reversal_trans_no,
+        'gl_line_count' => count($reversal),
+    );
+}
+
+/**
+ * Verify one stored GL reversal row and immutable original GL.
+ *
+ * @param array $evidence
+ * @param bool $lock
+ * @return bool
+ */
+function payroll_verify_linked_gl_reversal_evidence($evidence, $lock=true) {
+    if (!is_array($evidence)
+        || (string)$evidence['evidence_type'] !== 'gl_reversal'
+        || empty($evidence['linked_trans_no'])
+    ) {
+        return false;
+    }
+    $before = payroll_reversal_decode_state($evidence['before_state']);
+    if (!$before || empty($before['original_gl_hash']))
+        return false;
+
+    $original = payroll_reversal_gl_lines((int)$evidence['original_trans_no'], $lock);
+    $reversal = payroll_reversal_gl_lines((int)$evidence['linked_trans_no'], $lock);
+    if ($original === false
+        || $reversal === false
+        || !payroll_reversal_gl_is_exact_opposite($original, $reversal)
+    ) {
+        return false;
+    }
+    foreach ($reversal as $line) {
+        if ((string)$line['tran_date'] !== (string)$evidence['effective_date'])
+            return false;
+    }
+    $original_hash = payroll_reversal_state_hash(array('lines' => $original));
+    if (!hash_equals((string)$before['original_gl_hash'], $original_hash))
+        return false;
+
+    $after = array(
+        'original_trans_no' => (int)$evidence['original_trans_no'],
+        'reversal_trans_no' => (int)$evidence['linked_trans_no'],
+        'effective_date' => (string)$evidence['effective_date'],
+        'original_gl_hash' => $original_hash,
+        'reversal_gl_hash' => payroll_reversal_state_hash(array('lines' => $reversal)),
+    );
+    return hash_equals(
+        (string)$evidence['after_state_hash'],
+        payroll_reversal_state_hash($after)
+    );
+}
+
+/**
+ * Verify all loan/leave states have been restored to their recorded pre-state.
+ *
+ * @param array $payslip
+ * @param array $groups
+ * @return bool
+ */
+function payroll_verify_restored_snapshot_states($payslip, $groups) {
+    foreach (isset($groups['loan_repayment']) ? $groups['loan_repayment'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        $current = payroll_reversal_get_repayment_for_update((int)$row['target_id']);
+        if (!$before || !$current
+            || payroll_reversal_state_hash($before)
+                !== payroll_reversal_state_hash(payroll_reversal_project_repayment($current))
+        ) {
+            return false;
+        }
+    }
+    foreach (isset($groups['employee_loan']) ? $groups['employee_loan'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        $current = payroll_reversal_get_employee_loan_for_update((int)$row['target_id']);
+        if (!$before || !$current
+            || payroll_reversal_state_hash($before)
+                !== payroll_reversal_state_hash(payroll_reversal_project_employee_loan($current))
+        ) {
+            return false;
+        }
+    }
+    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+        $before = payroll_reversal_decode_state($row['before_state']);
+        if (!$before)
+            return false;
+        $current = payroll_reversal_get_leave_balance_for_update(
+            $payslip['employee_id'],
+            (int)$before['leave_id'],
+            (int)$before['fiscal_year']
+        );
+        if ($current === null
+            || payroll_reversal_state_hash($before)
+            !== payroll_reversal_state_hash(payroll_reversal_project_leave_balance(
+                $current,
+                (int)$before['leave_id'],
+                (int)$before['fiscal_year']
+            ))
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Persist a complete payroll-period result set for approval without effects.
  *
  * Every calculated document is validated before the transaction starts. The
@@ -941,9 +1900,9 @@ function payroll_rehydrate_prepared_payslip($row) {
         'position_id' => isset($row['position_id']) ? $row['position_id'] : null,
         'grade_id' => isset($row['grade_id']) ? $row['grade_id'] : null,
     ));
-    $doc->from_date = isset($row['from_date']) ? $row['from_date'] : '';
-    $doc->to_date = isset($row['to_date']) ? $row['to_date'] : '';
-    $doc->tran_date = isset($row['tran_date']) ? $row['tran_date'] : '';
+    $doc->from_date = isset($row['from_date']) ? sql2date($row['from_date']) : '';
+    $doc->to_date = isset($row['to_date']) ? sql2date($row['to_date']) : '';
+    $doc->tran_date = isset($row['tran_date']) ? sql2date($row['tran_date']) : '';
     $doc->reference = isset($row['reference']) ? $row['reference'] : '';
     $doc->gl_trans_no = (int)$row['trans_no'];
     $doc->comments = isset($row['notes']) ? $row['notes'] : '';
@@ -1237,6 +2196,12 @@ function post_approved_payroll_period($period_id) {
             return $result;
         }
 
+        $reversal_evidence_counts = array(
+            'posting_marker_count' => 0,
+            'loan_repayment_count' => 0,
+            'employee_loan_count' => 0,
+            'leave_balance_count' => 0,
+        );
         foreach ($payslip_rows as $row) {
             if ((int)$row['status'] !== 0) {
                 cancel_transaction();
@@ -1260,16 +2225,25 @@ function post_approved_payroll_period($period_id) {
                 $identity = array(
                     'payslip_id' => (int)$row['payslip_id'],
                     'trans_no' => (int)$row['trans_no'],
-                    'tran_date' => $row['tran_date'],
+                    'tran_date' => sql2date($row['tran_date']),
                     'reference' => $row['reference'],
                 );
-                if (!payroll_apply_legacy_gl_side_effects($payslip_doc, $plan, $identity)
-                    || !payroll_apply_legacy_balance_side_effects($payslip_doc)
-                ) {
+                $balance_evidence = false;
+                if (payroll_apply_legacy_gl_side_effects($payslip_doc, $plan, $identity)) {
+                    $balance_evidence = payroll_apply_balance_effects_with_reversal_evidence(
+                        $payslip_doc,
+                        $period_id,
+                        $identity
+                    );
+                }
+                if ($balance_evidence === false) {
                     cancel_transaction();
-                    $result['code'] = 'financial_effect_stage_failed';
+                    $result['code'] = 'financial_effect_or_reversal_evidence_stage_failed';
                     return $result;
                 }
+                $reversal_evidence_counts['posting_marker_count']++;
+                foreach (array('loan_repayment_count', 'employee_loan_count', 'leave_balance_count') as $count_key)
+                    $reversal_evidence_counts[$count_key] += (int)$balance_evidence[$count_key];
             }
 
             if (!update_payslip_status_compare_and_set((int)$row['payslip_id'], 0, 2)) {
@@ -1290,6 +2264,21 @@ function post_approved_payroll_period($period_id) {
             cancel_transaction();
             $result['code'] = $verification['code'];
             return $result;
+        }
+        if ($binding_version === '1.1.0') {
+            foreach ($payslip_rows as $row) {
+                $snapshot_verification = payroll_verify_posting_reversal_snapshot(
+                    $period_id,
+                    $row,
+                    true,
+                    false
+                );
+                if (empty($snapshot_verification['ok'])) {
+                    cancel_transaction();
+                    $result['code'] = $snapshot_verification['code'];
+                    return $result;
+                }
+            }
         }
 
         $audit_result = function_exists('append_domain_audit_event')
@@ -1313,6 +2302,11 @@ function post_approved_payroll_period($period_id) {
                     'reference_count' => $verification['reference_count'],
                     'gl_line_count' => $verification['gl_line_count'],
                     'financial_side_effects_created' => $binding_version === '1.1.0',
+                    'linked_reversal_evidence_created' => $binding_version === '1.1.0',
+                    'posting_marker_count' => $reversal_evidence_counts['posting_marker_count'],
+                    'loan_repayment_evidence_count' => $reversal_evidence_counts['loan_repayment_count'],
+                    'employee_loan_evidence_count' => $reversal_evidence_counts['employee_loan_count'],
+                    'leave_balance_evidence_count' => $reversal_evidence_counts['leave_balance_count'],
                     'restricted_values_stored' => false,
                 ),
             )) : false;
@@ -1332,6 +2326,433 @@ function post_approved_payroll_period($period_id) {
     } catch (Exception $e) {
         cancel_transaction();
         $result['code'] = 'posting_exception';
+        return $result;
+    }
+}
+
+
+/**
+ * Load and validate the immutable evidence envelope for a reversed payslip.
+ *
+ * @param int $period_id
+ * @param array $payslip
+ * @param bool $lock
+ * @return array
+ */
+function payroll_load_reversed_snapshot_evidence($period_id, $payslip, $lock=true) {
+    $failed = array('ok' => false, 'code' => 'reversal_evidence_missing');
+    $rows = get_payroll_reversal_evidence_rows(
+        (int)$period_id,
+        (int)$payslip['payslip_id'],
+        '',
+        $lock
+    );
+    if ($rows === false || empty($rows))
+        return $failed;
+
+    $groups = array();
+    foreach ($rows as $row) {
+        if ((int)$row['original_trans_no'] !== (int)$payslip['trans_no']) {
+            $failed['code'] = 'reversal_evidence_identity_drift';
+            return $failed;
+        }
+        $type = (string)$row['evidence_type'];
+        if (!isset($groups[$type]))
+            $groups[$type] = array();
+        $groups[$type][] = $row;
+    }
+    if (empty($groups['posting'])
+        || count($groups['posting']) !== 1
+        || empty($groups['gl_reversal'])
+        || count($groups['gl_reversal']) !== 1
+    ) {
+        $failed['code'] = 'linked_reversal_envelope_incomplete';
+        return $failed;
+    }
+
+    $counts = array(
+        'loan_repayment_count' => isset($groups['loan_repayment'])
+            ? count($groups['loan_repayment']) : 0,
+        'employee_loan_count' => isset($groups['employee_loan'])
+            ? count($groups['employee_loan']) : 0,
+        'leave_balance_count' => isset($groups['leave_balance'])
+            ? count($groups['leave_balance']) : 0,
+    );
+    $marker = array(
+        'period_id' => (int)$period_id,
+        'payslip_id' => (int)$payslip['payslip_id'],
+        'original_trans_no' => (int)$payslip['trans_no'],
+        'loan_repayment_count' => $counts['loan_repayment_count'],
+        'employee_loan_count' => $counts['employee_loan_count'],
+        'leave_balance_count' => $counts['leave_balance_count'],
+    );
+    if (!hash_equals(
+        (string)$groups['posting'][0]['after_state_hash'],
+        payroll_reversal_state_hash($marker)
+    )) {
+        $failed['code'] = 'posting_marker_count_drift';
+        return $failed;
+    }
+
+    return array(
+        'ok' => true,
+        'code' => 'reversed_snapshot_loaded',
+        'groups' => $groups,
+        'counts' => $counts,
+    );
+}
+
+/**
+ * Verify durable evidence for a linked reversed payroll period without writes.
+ *
+ * @param array $period
+ * @param array $draft_data
+ * @param bool $lock
+ * @return array
+ */
+function verify_reversed_payroll_period_evidence($period, $draft_data, $lock=true) {
+    $failed = array('ok' => false, 'code' => 'invalid_reversed_period');
+    if (!is_array($period)
+        || empty($period['period_id'])
+        || (int)$period['status'] !== 6
+        || !is_array($draft_data)
+        || payroll_period_approval_binding_draft_state($draft_data) !== 'well_formed'
+        || (int)$draft_data['period_id'] !== (int)$period['period_id']
+        || !payroll_reversal_evidence_table_ready()
+    ) {
+        return $failed;
+    }
+
+    $period_id = (int)$period['period_id'];
+    $suffix = $lock ? ' FOR UPDATE' : '';
+    $payslips = payroll_approval_binding_fetch_rows(
+        "SELECT payslip_id,payroll_period_id,trans_no,reference,employee_id,status,payment_trans_no"
+            ." FROM ".TB_PREF."payslips"
+            ." WHERE payroll_period_id = ".db_escape($period_id)
+            ." ORDER BY payslip_id".$suffix,
+        'could not verify reversed payroll-period payslips'
+    );
+    if ($payslips === false
+        || empty($payslips)
+        || count($payslips) !== (int)$draft_data['approval_payslip_count']
+    ) {
+        $failed['code'] = 'reversed_payslip_count_mismatch';
+        return $failed;
+    }
+
+    $reversal_count = 0;
+    $gl_line_count = 0;
+    $balance_evidence_count = 0;
+    foreach ($payslips as $payslip) {
+        if ((int)$payslip['payroll_period_id'] !== $period_id
+            || (int)$payslip['status'] !== 6
+            || !empty($payslip['payment_trans_no'])
+            || (int)$payslip['trans_no'] <= 0
+            || trim((string)$payslip['reference']) === ''
+        ) {
+            $failed['code'] = 'invalid_reversed_payslip_state';
+            return $failed;
+        }
+
+        $ref_sql = "SELECT reference FROM ".TB_PREF."refs"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND id = ".db_escape((int)$payslip['trans_no']).$suffix;
+        $ref_result = db_query($ref_sql, 'could not verify original payroll reference after reversal');
+        $ref_row = $ref_result ? db_fetch_assoc($ref_result) : false;
+        if (!$ref_row || !hash_equals((string)$payslip['reference'], (string)$ref_row['reference'])) {
+            $failed['code'] = 'original_reference_drift_after_reversal';
+            return $failed;
+        }
+
+        $snapshot = payroll_load_reversed_snapshot_evidence($period_id, $payslip, $lock);
+        if (empty($snapshot['ok']))
+            return $snapshot;
+        if (!payroll_verify_restored_snapshot_states($payslip, $snapshot['groups'])) {
+            $failed['code'] = 'restored_balance_state_drift';
+            return $failed;
+        }
+        $gl_evidence = $snapshot['groups']['gl_reversal'][0];
+        if (!payroll_verify_linked_gl_reversal_evidence($gl_evidence, $lock)) {
+            $failed['code'] = 'linked_reversing_gl_drift';
+            return $failed;
+        }
+
+        $reverse_ref_sql = "SELECT reference FROM ".TB_PREF."refs"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND id = ".db_escape((int)$gl_evidence['linked_trans_no']).$suffix;
+        $reverse_ref_result = db_query(
+            $reverse_ref_sql,
+            'could not verify linked payroll reversal reference'
+        );
+        $reverse_ref = $reverse_ref_result ? db_fetch_assoc($reverse_ref_result) : false;
+        if (!$reverse_ref || trim((string)$reverse_ref['reference']) === '') {
+            $failed['code'] = 'linked_reversal_reference_missing';
+            return $failed;
+        }
+
+        $reversal_lines = payroll_reversal_gl_lines(
+            (int)$gl_evidence['linked_trans_no'],
+            $lock
+        );
+        if ($reversal_lines === false) {
+            $failed['code'] = 'linked_reversal_gl_read_failed';
+            return $failed;
+        }
+        $reversal_count++;
+        $gl_line_count += count($reversal_lines);
+        $balance_evidence_count += (int)$snapshot['counts']['loan_repayment_count']
+            + (int)$snapshot['counts']['employee_loan_count']
+            + (int)$snapshot['counts']['leave_balance_count'];
+    }
+
+    return array(
+        'ok' => true,
+        'code' => 'reversed_evidence_verified',
+        'payslip_count' => count($payslips),
+        'reversal_count' => $reversal_count,
+        'reversal_gl_line_count' => $gl_line_count,
+        'balance_evidence_count' => $balance_evidence_count,
+    );
+}
+
+/**
+ * Reverse one Posted payroll period exactly once through linked evidence.
+ *
+ * Original GL, references, comments, audit trail, payslips, details, approval,
+ * and domain-audit evidence remain immutable. The command appends exact
+ * opposite GL transactions, restores only snapshot-proven loan/leave state,
+ * and terminates the linked payroll rows in status 6. Paid/Closed payroll and
+ * historical Posted payroll without 1.0.43 posting snapshots fail closed.
+ *
+ * @param int $period_id
+ * @param string $reason_code
+ * @return array
+ */
+function reverse_posted_payroll_period($period_id, $reason_code) {
+    global $path_to_root;
+
+    $result = array(
+        'ok' => false,
+        'code' => 'invalid_reversal_request',
+        'message' => _('The posted payroll period could not be reversed.'),
+    );
+    $period_id = (int)$period_id;
+    $reason_code = strtoupper(trim((string)$reason_code));
+    if ($period_id <= 0 || !payroll_linked_reversal_reason_valid($reason_code)) {
+        $result['code'] = 'invalid_reason_code';
+        $result['message'] = _('Select a valid controlled reversal reason.');
+        return $result;
+    }
+    if (!function_exists('user_check_access') || !user_check_access('SA_PAYROLLREVERSE')) {
+        $result['code'] = 'unauthorized';
+        $result['message'] = _('You do not have permission to reverse posted payroll.');
+        return $result;
+    }
+    if (payroll_calculation_read_only_active()) {
+        $result['code'] = 'read_only_boundary_active';
+        return $result;
+    }
+    if (!payroll_reversal_evidence_table_ready()) {
+        $result['code'] = 'reversal_evidence_repository_missing';
+        return $result;
+    }
+
+    $reversal_date = Today();
+    if (!is_date_in_fiscalyear($reversal_date)) {
+        $result['code'] = 'reversal_date_closed_or_outside_fiscal_year';
+        $result['message'] = _('Payroll reversal requires an open date in the active fiscal year.');
+        return $result;
+    }
+
+    include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+    begin_transaction();
+    try {
+        $period = get_payroll_period_for_update($period_id);
+        if (!$period) {
+            cancel_transaction();
+            $result['code'] = 'period_not_found';
+            return $result;
+        }
+        $approved_draft = get_payroll_period_approval_draft($period_id, 1, true);
+        if (!$approved_draft || empty($approved_draft['decoded_data'])) {
+            cancel_transaction();
+            $result['code'] = 'approved_binding_missing';
+            return $result;
+        }
+        $draft_data = $approved_draft['decoded_data'];
+
+        if ((int)$period['status'] === 6) {
+            $verification = verify_reversed_payroll_period_evidence(
+                $period,
+                $draft_data,
+                true
+            );
+            if (empty($verification['ok'])) {
+                cancel_transaction();
+                $result['code'] = $verification['code'];
+                return $result;
+            }
+            commit_transaction();
+            return array(
+                'ok' => true,
+                'code' => 'already_reversed_verified',
+                'message' => _('The payroll period was already reversed and its linked evidence was verified.'),
+                'payslip_count' => $verification['payslip_count'],
+            );
+        }
+        if ((int)$period['status'] !== 3) {
+            cancel_transaction();
+            $result['code'] = 'period_not_posted';
+            $result['message'] = _('Only a Posted and unpaid payroll period can be reversed.');
+            return $result;
+        }
+
+        $posted_verification = verify_posted_payroll_period_evidence(
+            $period,
+            $draft_data,
+            true
+        );
+        if (empty($posted_verification['ok'])) {
+            cancel_transaction();
+            $result['code'] = $posted_verification['code'];
+            return $result;
+        }
+
+        $payslips = payroll_approval_binding_fetch_rows(
+            "SELECT * FROM ".TB_PREF."payslips"
+                ." WHERE payroll_period_id = ".db_escape($period_id)
+                ." ORDER BY payslip_id FOR UPDATE",
+            'could not lock posted payroll results for linked reversal'
+        );
+        if ($payslips === false
+            || empty($payslips)
+            || count($payslips) !== (int)$draft_data['approval_payslip_count']
+        ) {
+            cancel_transaction();
+            $result['code'] = 'posted_result_count_mismatch';
+            return $result;
+        }
+
+        $snapshots = array();
+        foreach ($payslips as $payslip) {
+            if ((int)$payslip['status'] !== 2 || !empty($payslip['payment_trans_no'])) {
+                cancel_transaction();
+                $result['code'] = 'posted_payslip_not_reversible';
+                return $result;
+            }
+            $snapshot = payroll_verify_posting_reversal_snapshot(
+                $period_id,
+                $payslip,
+                true,
+                false
+            );
+            if (empty($snapshot['ok'])) {
+                cancel_transaction();
+                $result['code'] = $snapshot['code'];
+                return $result;
+            }
+            $snapshots[(int)$payslip['payslip_id']] = $snapshot;
+        }
+
+        $allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
+            ." WHERE name = 'coy_name' FOR UPDATE";
+        if (!db_query($allocation_lock_sql, 'could not lock payroll reversal transaction allocation')) {
+            cancel_transaction();
+            $result['code'] = 'reversal_allocation_lock_failed';
+            return $result;
+        }
+
+        $reversal_gl_line_count = 0;
+        $restored_balance_evidence_count = 0;
+        foreach ($payslips as $payslip) {
+            $payslip_id = (int)$payslip['payslip_id'];
+            $gl_result = payroll_create_linked_gl_reversal(
+                $period_id,
+                $payslip,
+                $reason_code,
+                $reversal_date
+            );
+            if ($gl_result === false
+                || !payroll_restore_posting_reversal_snapshot(
+                    $payslip,
+                    $snapshots[$payslip_id]
+                )
+                || !update_payslip_status_for_linked_reversal($payslip_id)
+            ) {
+                cancel_transaction();
+                $result['code'] = 'linked_reversal_stage_failed';
+                return $result;
+            }
+            $reversal_gl_line_count += (int)$gl_result['gl_line_count'];
+            $counts = $snapshots[$payslip_id]['counts'];
+            $restored_balance_evidence_count += (int)$counts['loan_repayment_count']
+                + (int)$counts['employee_loan_count']
+                + (int)$counts['leave_balance_count'];
+        }
+
+        if (!update_payroll_period_status_for_linked_reversal($period_id)) {
+            cancel_transaction();
+            $result['code'] = 'period_reversal_compare_and_set_failed';
+            return $result;
+        }
+        $period_after = get_payroll_period_for_update($period_id);
+        $verification = verify_reversed_payroll_period_evidence(
+            $period_after,
+            $draft_data,
+            true
+        );
+        if (empty($verification['ok'])) {
+            cancel_transaction();
+            $result['code'] = $verification['code'];
+            return $result;
+        }
+
+        $audit_result = function_exists('append_domain_audit_event')
+            ? append_domain_audit_event(array(
+                'legal_entity_id' => 0,
+                'entity_type' => 'payroll_period',
+                'entity_key' => array('period_id' => $period_id),
+                'action' => 'payroll_period.reversed',
+                'reason_code' => $reason_code,
+                'legacy_source' => 'approval_drafts',
+                'legacy_id' => isset($approved_draft['id'])
+                    ? (int)$approved_draft['id'] : null,
+                'before' => array('period_id' => $period_id, 'status' => 3),
+                'after' => array('period_id' => $period_id, 'status' => 6),
+                'restricted_diff' => array(
+                    'changed_fields' => array(
+                        'status',
+                        'payslip_status',
+                        'linked_reversing_gl',
+                        'loan_leave_restoration',
+                    ),
+                    'mutation_kind' => 'linked_financial_reversal',
+                    'approval_binding_version' => (string)$draft_data['approval_binding_version'],
+                    'posted_evidence_verified' => true,
+                    'payslip_count' => $verification['payslip_count'],
+                    'reversal_transaction_count' => $verification['reversal_count'],
+                    'reversal_gl_line_count' => $reversal_gl_line_count,
+                    'restored_balance_evidence_count' => $restored_balance_evidence_count,
+                    'historical_rows_rewritten' => false,
+                    'restricted_values_stored' => false,
+                ),
+            )) : false;
+        if ($audit_result === false) {
+            cancel_transaction();
+            $result['code'] = 'audit_append_failed';
+            return $result;
+        }
+
+        commit_transaction();
+        return array(
+            'ok' => true,
+            'code' => 'reversed',
+            'message' => _('The Posted payroll period was reversed through linked financial evidence.'),
+            'payslip_count' => $verification['payslip_count'],
+        );
+    } catch (Throwable $e) {
+        cancel_transaction();
+        $result['code'] = 'reversal_exception';
         return $result;
     }
 }

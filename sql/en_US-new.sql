@@ -1480,7 +1480,7 @@ CREATE TABLE IF NOT EXISTS `0_payslips` (
 	`loan_deduction`          double       NOT NULL DEFAULT '0',
 	`payable_amount`          double       NOT NULL DEFAULT '0',
 	`salary_amount`           double       NOT NULL DEFAULT '0',
-	`status`                  tinyint(1)   NOT NULL DEFAULT '0' COMMENT '0=draft, 1=confirmed, 2=posted, 3=paid, 4-5=legacy financial, 6=voided',
+	`status`                  tinyint(1)   NOT NULL DEFAULT '0' COMMENT '0=draft, 1=confirmed, 2=posted, 3=paid, 4-5=legacy financial, 6=voided/reversed',
 	`payment_trans_no`        int(11)      DEFAULT NULL,
 	`notes`                   text,
 	`custom_data`             json         DEFAULT NULL,
@@ -5045,7 +5045,7 @@ CREATE TABLE IF NOT EXISTS `0_payroll_periods` (
 	`to_date`             date NOT NULL,
 	`pay_date`            date DEFAULT NULL,
 	`department_id`       int(11) DEFAULT NULL COMMENT 'NULL=all departments',
-	`status`              tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=draft, 1=calculated, 2=approved, 3=posted, 4=paid, 5=closed, 6=voided',
+	`status`              tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=draft, 1=calculated, 2=approved, 3=posted, 4=paid, 5=closed, 6=voided/reversed',
 	`total_gross`         double NOT NULL DEFAULT '0',
 	`total_deductions`    double NOT NULL DEFAULT '0',
 	`total_net`           double NOT NULL DEFAULT '0',
@@ -5062,6 +5062,45 @@ CREATE TABLE IF NOT EXISTS `0_payroll_periods` (
 ) ENGINE=InnoDB;
 
 -- Data of table `0_payroll_periods` --
+
+-- ============================================================
+-- PAYROLL LINKED REVERSAL EVIDENCE (append-only)
+-- ============================================================
+
+-- Structure of table `0_payroll_reversal_evidence` --
+
+DROP TABLE IF EXISTS `0_payroll_reversal_evidence`;
+
+CREATE TABLE IF NOT EXISTS `0_payroll_reversal_evidence` (
+	`evidence_id`         bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`payroll_period_id`   int(11) NOT NULL,
+	`payslip_id`          int(11) NOT NULL,
+	`original_trans_no`   int(11) NOT NULL,
+	`evidence_type`       varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`target_id`           int(11) NOT NULL DEFAULT '0',
+	`linked_trans_no`     int(11) DEFAULT NULL,
+	`before_state`        longtext DEFAULT NULL,
+	`after_state_hash`    char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`reason_code`         varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`actor_id`            smallint(6) DEFAULT NULL,
+	`effective_date`      date NOT NULL,
+	`created_at`          timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`evidence_id`),
+	UNIQUE KEY `payroll_reversal_evidence_identity` (`payroll_period_id`,`payslip_id`,`evidence_type`,`target_id`),
+	UNIQUE KEY `payroll_reversal_linked_trans` (`linked_trans_no`),
+	KEY `payroll_reversal_period_type` (`payroll_period_id`,`evidence_type`),
+	KEY `payroll_reversal_original_trans` (`original_trans_no`)
+) ENGINE=InnoDB;
+
+CREATE TRIGGER `0_payroll_reversal_evidence_no_update`
+BEFORE UPDATE ON `0_payroll_reversal_evidence`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-011 payroll reversal evidence is append-only';
+
+CREATE TRIGGER `0_payroll_reversal_evidence_no_delete`
+BEFORE DELETE ON `0_payroll_reversal_evidence`
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-011 payroll reversal evidence is append-only';
+
+-- Data of table `0_payroll_reversal_evidence` --
 
 -- ============================================================
 -- PAYSLIP DETAILS (line items per payslip)

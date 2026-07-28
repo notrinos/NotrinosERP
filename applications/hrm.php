@@ -29,6 +29,7 @@ class HrmApp extends application {
 		$this->add_rapp_function(0, _('Pa&yroll Processing'),       'hrm/transactions/payroll_process.php?',               'SA_PAYROLL',          MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Payroll Appr&oval'),         'hrm/transactions/payroll_approval.php?',              'SA_PAYROLLAPPROVE',   MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Payroll P&osting'),          'hrm/transactions/payroll_post.php?',                  'SA_PAYROLLPOST',      MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Payroll Re&versal'),         'hrm/transactions/payroll_reversal.php?',              'SA_PAYROLLREVERSE',   MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Payment Advice'),           'hrm/transactions/employee_bank_entry.php?NewPayment=Yes', 'SA_EMPLOYEEPAYMENT', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Payment &Batch'),            'hrm/transactions/payment_batch.php?',                 'SA_PAYMENTBATCH',     MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Loa&n Request'),             'hrm/transactions/loan_request.php?',                  'SA_LOAN',             MENU_TRANSACTION);

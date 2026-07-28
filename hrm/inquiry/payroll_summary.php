@@ -29,7 +29,7 @@ $status_labels = array(
     3 => _('Posted'),
     4 => _('Paid'),
     5 => _('Closed'),
-    6 => _('Voided')
+    6 => _('Voided / Reversed')
 );
 
 /**
@@ -88,4 +88,3 @@ display_db_pager($table);
 end_form();
 
 end_page();
-

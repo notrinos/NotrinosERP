@@ -385,6 +385,7 @@ $security_areas =array(
 	'SA_EMPSEPARATION'    => array(SS_HRM|14, _('Employee separation/EOS')),
 	'SA_VOIDPAYSLIP'      => array(SS_HRM|15, _('Void/cancel payslips')),
 	'SA_PAYROLLPOST'      => array(SS_HRM|16, _('Post approved payroll batches')),
+	'SA_PAYROLLREVERSE'   => array(SS_HRM|17, _('Reverse posted payroll batches')),
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

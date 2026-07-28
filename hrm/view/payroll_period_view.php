@@ -33,7 +33,7 @@ function payroll_period_status_label($status) {
         3 => _('Posted'),
         4 => _('Paid'),
         5 => _('Closed'),
-        6 => _('Voided')
+        6 => _('Voided / Reversed')
     );
 
     return isset($labels[(int)$status]) ? $labels[(int)$status] : (string)$status;
@@ -50,7 +50,7 @@ $status_options = array(
     3 => _('Posted'),
     4 => _('Paid'),
     5 => _('Closed'),
-    6 => _('Voided')
+    6 => _('Voided / Reversed')
 );
 label_row(_('Status:'), array_selector('status_filter', get_post('status_filter', -1), $status_options));
 end_table(1);
@@ -93,4 +93,3 @@ if ($periods && db_num_rows($periods) > 0) {
 end_form();
 
 end_page();
-

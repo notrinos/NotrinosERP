@@ -1929,3 +1929,203 @@ function void_payroll_period($period_id) {
     commit_transaction();
     return true;
 }
+
+/**
+ * Check whether the immutable linked-reversal evidence repository is present.
+ *
+ * @return bool
+ */
+function payroll_reversal_evidence_table_ready() {
+    return payroll_table_exists('payroll_reversal_evidence');
+}
+
+/**
+ * Insert one immutable posting/reversal evidence row.
+ *
+ * The database table denies UPDATE and DELETE through triggers. This helper
+ * additionally validates the bounded evidence vocabulary and all identifiers
+ * before writing. It must be called from the surrounding payroll transaction.
+ *
+ * @param array $evidence
+ * @return bool
+ */
+function insert_payroll_reversal_evidence($evidence) {
+    global $transaction_level;
+
+    $types = array(
+        'posting',
+        'loan_repayment',
+        'employee_loan',
+        'leave_balance',
+        'gl_reversal',
+    );
+    if (empty($transaction_level)
+        || !payroll_reversal_evidence_table_ready()
+        || !is_array($evidence)
+    ) {
+        return false;
+    }
+
+    $period_id = isset($evidence['payroll_period_id'])
+        ? (int)$evidence['payroll_period_id'] : 0;
+    $payslip_id = isset($evidence['payslip_id'])
+        ? (int)$evidence['payslip_id'] : 0;
+    $original_trans_no = isset($evidence['original_trans_no'])
+        ? (int)$evidence['original_trans_no'] : 0;
+    $type = isset($evidence['evidence_type'])
+        ? (string)$evidence['evidence_type'] : '';
+    $target_id = isset($evidence['target_id'])
+        ? (int)$evidence['target_id'] : 0;
+    $linked_trans_no = isset($evidence['linked_trans_no'])
+        && $evidence['linked_trans_no'] !== null
+        ? (int)$evidence['linked_trans_no'] : null;
+    $before_state = isset($evidence['before_state'])
+        && $evidence['before_state'] !== null
+        ? (string)$evidence['before_state'] : null;
+    $after_state_hash = isset($evidence['after_state_hash'])
+        ? strtolower((string)$evidence['after_state_hash']) : '';
+    $reason_code = isset($evidence['reason_code'])
+        && $evidence['reason_code'] !== null
+        ? strtoupper((string)$evidence['reason_code']) : null;
+    $actor_id = isset($evidence['actor_id'])
+        ? (int)$evidence['actor_id'] : payroll_side_effect_control_actor_id();
+    $effective_date = isset($evidence['effective_date'])
+        ? (string)$evidence['effective_date'] : '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $effective_date))
+        $effective_date = date2sql($effective_date);
+
+    $decoded_before = $before_state === null ? null : json_decode($before_state, true);
+    $controlled_reasons = array(
+        'POSTING_ERROR',
+        'CONFIGURATION_ERROR',
+        'APPROVAL_ERROR',
+        'DUPLICATE_RUN',
+        'OTHER_CONTROLLED',
+    );
+    $shape_valid = false;
+    if ($type === 'posting') {
+        $shape_valid = $target_id === 0
+            && $linked_trans_no === null
+            && $before_state === null
+            && $reason_code === null;
+    } elseif ($type === 'gl_reversal') {
+        $shape_valid = $target_id > 0
+            && $linked_trans_no !== null
+            && is_array($decoded_before)
+            && in_array($reason_code, $controlled_reasons, true);
+    } elseif (in_array($type, array('loan_repayment', 'employee_loan', 'leave_balance'), true)) {
+        $shape_valid = $target_id > 0
+            && $linked_trans_no === null
+            && is_array($decoded_before)
+            && $reason_code === null;
+    }
+
+    if ($period_id <= 0
+        || $payslip_id <= 0
+        || $original_trans_no <= 0
+        || !in_array($type, $types, true)
+        || $target_id < 0
+        || ($linked_trans_no !== null && $linked_trans_no <= 0)
+        || !preg_match('/^[a-f0-9]{64}$/', $after_state_hash)
+        || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $effective_date)
+        || ($reason_code !== null && !preg_match('/^[A-Z0-9_-]{3,40}$/', $reason_code))
+        || !$shape_valid
+    ) {
+        return false;
+    }
+
+    $sql = "INSERT INTO ".TB_PREF."payroll_reversal_evidence ("
+        ."payroll_period_id,payslip_id,original_trans_no,evidence_type,target_id,"
+        ."linked_trans_no,before_state,after_state_hash,reason_code,actor_id,effective_date"
+        .") VALUES ("
+        .db_escape($period_id).","
+        .db_escape($payslip_id).","
+        .db_escape($original_trans_no).","
+        .db_escape($type).","
+        .db_escape($target_id).","
+        .($linked_trans_no === null ? 'NULL' : db_escape($linked_trans_no)).","
+        .($before_state === null ? 'NULL' : db_escape($before_state)).","
+        .db_escape($after_state_hash).","
+        .($reason_code === null ? 'NULL' : db_escape($reason_code)).","
+        .($actor_id > 0 ? db_escape($actor_id) : 'NULL').","
+        .db_escape($effective_date).")";
+    $ok = db_query($sql, 'could not append immutable payroll reversal evidence');
+    return $ok && db_num_affected_rows() === 1;
+}
+
+/**
+ * Read immutable reversal evidence in deterministic order.
+ *
+ * @param int $period_id
+ * @param int $payslip_id Optional payslip filter
+ * @param string $evidence_type Optional type filter
+ * @param bool $lock
+ * @return array|false
+ */
+function get_payroll_reversal_evidence_rows(
+    $period_id,
+    $payslip_id=0,
+    $evidence_type='',
+    $lock=false
+) {
+    $period_id = (int)$period_id;
+    $payslip_id = (int)$payslip_id;
+    if ($period_id <= 0 || !payroll_reversal_evidence_table_ready())
+        return false;
+
+    $sql = "SELECT evidence_id,payroll_period_id,payslip_id,original_trans_no,"
+        ."evidence_type,target_id,linked_trans_no,before_state,after_state_hash,"
+        ."reason_code,actor_id,effective_date,created_at"
+        ." FROM ".TB_PREF."payroll_reversal_evidence"
+        ." WHERE payroll_period_id = ".db_escape($period_id);
+    if ($payslip_id > 0)
+        $sql .= " AND payslip_id = ".db_escape($payslip_id);
+    if ($evidence_type !== '')
+        $sql .= " AND evidence_type = ".db_escape((string)$evidence_type);
+    $sql .= " ORDER BY payslip_id,evidence_type,target_id,evidence_id";
+    if ($lock)
+        $sql .= " FOR UPDATE";
+
+    return payroll_approval_binding_fetch_rows(
+        $sql,
+        'could not read immutable payroll reversal evidence'
+    );
+}
+
+/**
+ * Compare-and-set one Posted payslip to the terminal reversed state.
+ *
+ * @param int $payslip_id
+ * @return bool
+ */
+function update_payslip_status_for_linked_reversal($payslip_id) {
+    $table = payroll_payslip_header_table();
+    if (!$table || (int)$payslip_id <= 0)
+        return false;
+
+    $sql = "UPDATE ".TB_PREF.$table." SET status = 6"
+        ." WHERE payslip_id = ".db_escape((int)$payslip_id)
+        ." AND status = 2 AND payment_trans_no IS NULL";
+    $ok = db_query($sql, 'could not mark posted payslip as reversed');
+    return $ok && db_num_affected_rows() === 1;
+}
+
+/**
+ * Compare-and-set one Posted period to the terminal reversed state.
+ *
+ * Generic status helpers intentionally deny status 6. Only the linked
+ * financial-reversal command may call this bounded transition.
+ *
+ * @param int $period_id
+ * @return bool
+ */
+function update_payroll_period_status_for_linked_reversal($period_id) {
+    if ((int)$period_id <= 0 || !payroll_table_exists('payroll_periods'))
+        return false;
+
+    $sql = "UPDATE ".TB_PREF."payroll_periods SET status = 6"
+        ." WHERE period_id = ".db_escape((int)$period_id)
+        ." AND status = 3";
+    $ok = db_query($sql, 'could not mark posted payroll period as reversed');
+    return $ok && db_num_affected_rows() === 1;
+}
