@@ -62,7 +62,7 @@ function build_payslip_preview($order, $employee_id, $from_date, $to_date) {
 	if (empty($salary_components))
 		return array(null, _('No salary components were found for the selected employee and period. Configure a salary structure or personal salary first.'));
 
-	$preview_doc = calculate_employee_payslip(
+	$preview_doc = calculate_employee_payslip_read_only(
 		$employee,
 		$from_date,
 		$to_date,

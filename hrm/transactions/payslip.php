@@ -225,7 +225,7 @@ if(isset($_POST['Process'])) {
 					get_post('employee_id') => get_employee_salary_components(get_post('employee_id'), date2sql(get_post('to_date')))
 				)
 			);
-			$payslip_doc = calculate_employee_payslip($employee, get_post('from_date'), get_post('to_date'), 0, $preview_context);
+			$payslip_doc = calculate_employee_payslip_read_only($employee, get_post('from_date'), get_post('to_date'), 0, $preview_context);
 			if (!$payslip_doc) {
 				display_error(_('Could not calculate payslip.'));
 			} else {

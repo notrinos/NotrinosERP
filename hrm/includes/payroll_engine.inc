@@ -33,7 +33,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.2');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.3');
 
 /**
  * Payroll Formula Engine.
@@ -151,6 +151,69 @@ function hrm_legacy_payroll_contract_metadata() {
  */
 function calculate_employee_payslip($employee, $from_date, $to_date, $period_id=0, $context=array()) {
     return calculate_employee_payslip_legacy_v1($employee, $from_date, $to_date, $period_id, $context);
+}
+
+
+/**
+ * Check whether the legacy calculator is inside its rollback-only boundary.
+ *
+ * The flag is intentionally process-local. It prevents the known posting
+ * adapter from being invoked by a calculation hook while the calculation
+ * transaction is active. Database writes attempted by legacy hooks are rolled
+ * back when the boundary closes.
+ *
+ * @return bool
+ */
+function payroll_calculation_read_only_active() {
+    return !empty($GLOBALS['hrm_payroll_calculation_read_only_depth']);
+}
+
+/**
+ * Calculate one payslip inside a rollback-only database boundary.
+ *
+ * This is the production entrypoint for manual and batch payroll preparation.
+ * It preserves the frozen calculator result and hook order, but always rolls
+ * back the database transaction before returning the in-memory payslip result.
+ * The caller may subsequently invoke the separately controlled legacy posting
+ * adapter. An existing outer transaction is rejected because rollback would
+ * otherwise cancel unrelated work.
+ *
+ * @param array  $employee Employee row (or minimum with employee_id)
+ * @param string $from_date User date format
+ * @param string $to_date User date format
+ * @param int    $period_id Payroll period id
+ * @param array  $context Optional preloaded runtime context
+ * @return payslip_doc|false
+ */
+function calculate_employee_payslip_read_only($employee, $from_date, $to_date, $period_id=0, $context=array()) {
+    global $transaction_level;
+
+    if (!empty($transaction_level)) {
+        if (function_exists('display_error'))
+            display_error(_('Payroll calculation cannot run inside another database transaction.'));
+        return false;
+    }
+
+    if (!isset($GLOBALS['hrm_payroll_calculation_read_only_depth']))
+        $GLOBALS['hrm_payroll_calculation_read_only_depth'] = 0;
+
+    $GLOBALS['hrm_payroll_calculation_read_only_depth']++;
+    begin_transaction();
+
+    try {
+        $result = calculate_employee_payslip(
+            $employee,
+            $from_date,
+            $to_date,
+            $period_id,
+            $context
+        );
+    } finally {
+        cancel_transaction();
+        $GLOBALS['hrm_payroll_calculation_read_only_depth']--;
+    }
+
+    return $result;
 }
 
 /**
@@ -365,24 +428,48 @@ function payroll_get_next_payslip_trans_no() {
 }
 
 /**
- * Post payslip to GL using hrm_cart.
+ * Build the validated legacy GL posting plan without writing business rows.
  *
  * @param payslip_doc $payslip_doc
- * @return int|false GL transaction number on success, false on failure
+ * @return array
  */
-function post_payslip_to_gl(&$payslip_doc) {
-	global $Refs;
+function payroll_build_legacy_posting_plan(&$payslip_doc) {
+    $plan = array(
+        'ok' => false,
+        'reason' => 'invalid_payslip',
+        'message' => _('Cannot post an invalid payslip result.'),
+        'gl_totals' => array(),
+        'total' => 0.0,
+        'payable_account' => '',
+    );
 
     if (!is_object($payslip_doc) || empty($payslip_doc->employee_id))
-        return false;
+        return $plan;
 
-    if (function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
-        hrm_fire_hook('before_post_payslip', $payslip_doc);
+    if (!isset($payslip_doc->lines) || !is_array($payslip_doc->lines)) {
+        $plan['reason'] = 'invalid_payslip_lines';
+        $plan['message'] = _('Cannot post payslip. The calculated pay element result is invalid.');
+        return $plan;
+    }
 
     $total = 0.0;
     $gl_totals = array();
     $invalid_accounts = array();
     foreach ($payslip_doc->lines as $line) {
+        if (!is_object($line)
+            || !isset($line->final_amount)
+            || !is_numeric($line->final_amount)
+            || !property_exists($line, 'account_code')
+            || (!is_string($line->account_code) && !is_numeric($line->account_code))
+            || !isset($line->element_name)
+            || (!is_string($line->element_name) && !is_numeric($line->element_name))
+            || !property_exists($line, 'is_deduction')
+        ) {
+            $plan['reason'] = 'invalid_payslip_lines';
+            $plan['message'] = _('Cannot post payslip. The calculated pay element result is invalid.');
+            return $plan;
+        }
+
         if (floatcmp($line->final_amount, 0) == 0)
             continue;
 
@@ -392,7 +479,7 @@ function post_payslip_to_gl(&$payslip_doc) {
         }
 
         if (!_payroll_is_valid_gl_account($line->account_code)) {
-            $invalid_accounts[] = $line->element_name . ' (' . $line->account_code . ')';
+            $invalid_accounts[] = $line->element_name.' ('.$line->account_code.')';
             continue;
         }
 
@@ -408,96 +495,176 @@ function post_payslip_to_gl(&$payslip_doc) {
         $gl_totals[$line->account_code] += $amount;
     }
 
-    // Reject posting if any pay elements have invalid GL accounts, rather
-    // than silently omitting them from the GL entry. This prevents
-    // unbalanced GL transactions (BUG-HRM-PAY-6-07, BUG-HRM-PAY-6-08).
     if (!empty($invalid_accounts)) {
-        display_error(sprintf(
+        $plan['reason'] = 'invalid_element_accounts';
+        $plan['message'] = sprintf(
             _('Cannot post payslip. The following pay elements have missing or invalid GL accounts: %s. Please correct them in Pay Elements setup.'),
             implode(', ', $invalid_accounts)
-        ));
-        return false;
+        );
+        return $plan;
     }
 
-    // Require at least one valid GL line before posting.
     if (empty($gl_totals) || floatcmp($total, 0) == 0) {
-        display_error(_('Cannot post payslip. No valid GL account lines were found.'));
-        return false;
+        $plan['reason'] = 'empty_gl_plan';
+        $plan['message'] = _('Cannot post payslip. No valid GL account lines were found.');
+        return $plan;
     }
 
     $payable_account = get_company_pref('payroll_payable_act');
     if (empty($payable_account)) {
-        display_error(_('Payroll Payable GL account is not configured. Please set it in System Preferences.'));
-        return false;
+        $plan['reason'] = 'missing_payable_account';
+        $plan['message'] = _('Payroll Payable GL account is not configured. Please set it in System Preferences.');
+        return $plan;
     }
 
     if (!_payroll_is_valid_gl_account($payable_account)) {
-        display_error(sprintf(
+        $plan['reason'] = 'invalid_payable_account';
+        $plan['message'] = sprintf(
             _('Payroll Payable GL account (%s) is invalid. Please correct it in System Preferences.'),
             $payable_account
-        ));
+        );
+        return $plan;
+    }
+
+    $plan['ok'] = true;
+    $plan['reason'] = '';
+    $plan['message'] = '';
+    $plan['gl_totals'] = $gl_totals;
+    $plan['total'] = $total;
+    $plan['payable_account'] = $payable_account;
+    return $plan;
+}
+
+/**
+ * Persist the legacy payslip result and allocate its posting identity.
+ *
+ * The caller must already own the surrounding transaction. This stage writes
+ * only the payslip header/details and generated identity; it writes no GL,
+ * reference, comment, loan, or leave row.
+ *
+ * @param payslip_doc $payslip_doc
+ * @return array|false
+ */
+function payroll_persist_legacy_payslip_result(&$payslip_doc) {
+    global $transaction_level;
+
+    if (empty($transaction_level)
+        || !is_object($payslip_doc)
+        || empty($payslip_doc->employee_id)
+    ) {
         return false;
     }
 
-    // Save the payslip header and details FIRST, before writing GL entries.
-    // This prevents orphaned GL transactions when the payslip save fails.
-    // (Fixes BUG-HRM-PAY-6-05: GL posted before payslip saved)
-	begin_transaction();
-	// Transaction numbers and generated references are shared by every
-	// employee. Lock an always-present company row before allocating them so
-	// concurrent payroll runs for different employees cannot reuse a number.
-	$allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
-		." WHERE name = 'coy_name' FOR UPDATE";
-	if (!db_query($allocation_lock_sql, 'could not lock payslip transaction allocation')) {
-		cancel_transaction();
-		return false;
-	}
-	$employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
-		." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
-	if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting')) {
-		cancel_transaction();
-		return false;
-	}
-	if (payslip_exists_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date)) {
-		cancel_transaction();
-		display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
-		return false;
-	}
+    $allocation_lock_sql = "SELECT name FROM ".TB_PREF."sys_prefs"
+        ." WHERE name = 'coy_name' FOR UPDATE";
+    if (!db_query($allocation_lock_sql, 'could not lock payslip transaction allocation'))
+        return false;
 
-	$trans_no = payroll_get_next_payslip_trans_no();
-	$cart = new hrm_cart(ST_PAYSLIP, $trans_no);
-	$cart->trans_no = $trans_no;
-	$cart->order_id = $trans_no;
-	$cart->tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
-	$cart->reference = empty($payslip_doc->reference)
-		? _payroll_get_reference(ST_PAYSLIP, $cart->tran_date)
-		: $payslip_doc->reference;
-	$cart->set_employee($payslip_doc->employee_id, _payroll_get_employee_name($payslip_doc->employee));
+    $employee_lock_sql = "SELECT employee_id FROM ".TB_PREF."employees"
+        ." WHERE employee_id = ".db_escape($payslip_doc->employee_id)." FOR UPDATE";
+    if (!db_query($employee_lock_sql, 'could not lock employee for payslip posting'))
+        return false;
 
-    $payslip_doc->reference = $cart->reference;
-    $payslip_doc->gl_trans_no = $trans_no;
-    if (function_exists('add_payslip')) {
-        $payslip_id = add_payslip($payslip_doc);
-        if (!$payslip_id) {
-			cancel_transaction();
-            return false;
-		}
-
-        $payslip_doc->payslip_id = $payslip_id;
+    if (payslip_exists_for_period(
+        $payslip_doc->employee_id,
+        $payslip_doc->from_date,
+        $payslip_doc->to_date
+    )) {
+        if (function_exists('display_error'))
+            display_error(_('A non-voided payslip already overlaps the selected employee and period.'));
+        return false;
     }
 
-    foreach ($gl_totals as $account_code => $amount) {
+    $trans_no = payroll_get_next_payslip_trans_no();
+    $tran_date = empty($payslip_doc->tran_date) ? Today() : $payslip_doc->tran_date;
+    $reference = empty($payslip_doc->reference)
+        ? _payroll_get_reference(ST_PAYSLIP, $tran_date)
+        : $payslip_doc->reference;
+
+    $payslip_doc->reference = $reference;
+    $payslip_doc->gl_trans_no = $trans_no;
+    if (!function_exists('add_payslip'))
+        return false;
+
+    $payslip_id = add_payslip($payslip_doc);
+    if (!$payslip_id)
+        return false;
+
+    $payslip_doc->payslip_id = $payslip_id;
+    return array(
+        'payslip_id' => (int)$payslip_id,
+        'trans_no' => (int)$trans_no,
+        'tran_date' => $tran_date,
+        'reference' => $reference,
+    );
+}
+
+/**
+ * Apply the legacy GL/reference/comment/audit-trail posting stage.
+ *
+ * The caller must already own the surrounding transaction and must have
+ * persisted the result through payroll_persist_legacy_payslip_result().
+ *
+ * @param payslip_doc $payslip_doc
+ * @param array $plan Validated posting plan
+ * @param array $result_context Persisted result identity
+ * @return bool
+ */
+function payroll_apply_legacy_gl_side_effects(&$payslip_doc, $plan, $result_context) {
+    global $Refs, $transaction_level;
+
+    if (empty($transaction_level)
+        || empty($plan['ok'])
+        || empty($result_context['trans_no'])
+    ) {
+        return false;
+    }
+
+    $trans_no = (int)$result_context['trans_no'];
+    $cart = new hrm_cart(ST_PAYSLIP, $trans_no);
+    $cart->trans_no = $trans_no;
+    $cart->order_id = $trans_no;
+    $cart->tran_date = $result_context['tran_date'];
+    $cart->reference = $result_context['reference'];
+    $cart->set_employee(
+        $payslip_doc->employee_id,
+        _payroll_get_employee_name($payslip_doc->employee)
+    );
+
+    foreach ($plan['gl_totals'] as $account_code => $amount) {
         if (floatcmp($amount, 0) == 0)
             continue;
-		$cart->add_gl_item($account_code, 0, 0, $amount, _('Payroll Element'), null, null, $cart->tran_date);
+        $cart->add_gl_item(
+            $account_code,
+            0,
+            0,
+            $amount,
+            _('Payroll Element'),
+            null,
+            null,
+            $cart->tran_date
+        );
     }
 
-    if (floatcmp($total, 0) != 0)
-        $cart->add_gl_item($payable_account, 0, 0, -$total, _('Payroll Payable'), null, null, $cart->tran_date);
+    if (floatcmp($plan['total'], 0) != 0) {
+        $cart->add_gl_item(
+            $plan['payable_account'],
+            0,
+            0,
+            -$plan['total'],
+            _('Payroll Payable'),
+            null,
+            null,
+            $cart->tran_date
+        );
+    }
 
     $cart->write_gl(true);
-    if (isset($Refs) && is_object($Refs) && method_exists($Refs, 'save') && $cart->reference !== '')
+    if (isset($Refs) && is_object($Refs)
+        && method_exists($Refs, 'save') && $cart->reference !== ''
+    ) {
         $Refs->save(ST_PAYSLIP, $trans_no, $cart->reference);
+    }
 
     $comment = trim(isset($payslip_doc->comments) ? $payslip_doc->comments : '');
     if ($comment === '')
@@ -507,17 +674,116 @@ function post_payslip_to_gl(&$payslip_doc) {
         delete_comments(ST_PAYSLIP, $trans_no);
     add_comments(ST_PAYSLIP, $trans_no, $cart->tran_date, $comment);
     add_audit_trail(ST_PAYSLIP, $trans_no, $cart->tran_date);
+    return true;
+}
 
-	if (function_exists('mark_loan_repayments_paid_by_payslip') && !empty($payslip_doc->payslip_id))
-		mark_loan_repayments_paid_by_payslip($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date, $payslip_doc->payslip_id);
+/**
+ * Apply the legacy loan and leave balance side-effect stage.
+ *
+ * The caller must already own the surrounding transaction. The functions are
+ * retained exactly as legacy compatibility effects; moving them behind
+ * approval/reconciliation belongs to the next PAY-CORE-011 slices.
+ *
+ * @param payslip_doc $payslip_doc
+ * @return bool
+ */
+function payroll_apply_legacy_balance_side_effects(&$payslip_doc) {
+    global $transaction_level;
 
-	payroll_sync_leave_balances_for_period($payslip_doc->employee_id, $payslip_doc->from_date, $payslip_doc->to_date);
+    if (empty($transaction_level)
+        || !is_object($payslip_doc)
+        || empty($payslip_doc->employee_id)
+        || empty($payslip_doc->payslip_id)
+    ) {
+        return false;
+    }
 
-    if (function_exists('hrm_has_hook') && hrm_has_hook('after_post_payslip'))
-        hrm_fire_hook('after_post_payslip', $payslip_doc->payslip_id, $trans_no);
+    if (function_exists('mark_loan_repayments_paid_by_payslip')
+        && !empty($payslip_doc->payslip_id)
+    ) {
+        mark_loan_repayments_paid_by_payslip(
+            $payslip_doc->employee_id,
+            $payslip_doc->from_date,
+            $payslip_doc->to_date,
+            $payslip_doc->payslip_id
+        );
+    }
 
-	commit_transaction();
-    return $trans_no;
+    payroll_sync_leave_balances_for_period(
+        $payslip_doc->employee_id,
+        $payslip_doc->from_date,
+        $payslip_doc->to_date
+    );
+    return true;
+}
+
+/**
+ * Post a calculated payslip through the separated legacy posting stages.
+ *
+ * The public adapter remains backward compatible and atomic. It intentionally
+ * still executes result persistence, GL, loan, and leave stages in one
+ * transaction until approval-hash binding and an explicit post command are
+ * implemented by later PAY-CORE-011 slices.
+ *
+ * @param payslip_doc $payslip_doc
+ * @return int|false GL transaction number on success, false on failure
+ */
+function post_payslip_to_gl(&$payslip_doc) {
+    if (!is_object($payslip_doc) || empty($payslip_doc->employee_id))
+        return false;
+
+    if (payroll_calculation_read_only_active()) {
+        if (function_exists('display_error'))
+            display_error(_('Payroll posting is not permitted inside the read-only calculation boundary.'));
+        return false;
+    }
+
+    begin_transaction();
+    try {
+        if (function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
+            hrm_fire_hook('before_post_payslip', $payslip_doc);
+
+        $plan = payroll_build_legacy_posting_plan($payslip_doc);
+        if (empty($plan['ok'])) {
+            if (function_exists('display_error'))
+                display_error($plan['message']);
+            cancel_transaction();
+            return false;
+        }
+
+        $result_context = payroll_persist_legacy_payslip_result($payslip_doc);
+        if ($result_context === false) {
+            cancel_transaction();
+            return false;
+        }
+
+        if (!payroll_apply_legacy_gl_side_effects(
+            $payslip_doc,
+            $plan,
+            $result_context
+        )) {
+            cancel_transaction();
+            return false;
+        }
+
+        if (!payroll_apply_legacy_balance_side_effects($payslip_doc)) {
+            cancel_transaction();
+            return false;
+        }
+
+        if (function_exists('hrm_has_hook') && hrm_has_hook('after_post_payslip'))
+            hrm_fire_hook(
+                'after_post_payslip',
+                $payslip_doc->payslip_id,
+                $result_context['trans_no']
+            );
+
+        commit_transaction();
+        return (int)$result_context['trans_no'];
+    } catch (Exception $e) {
+        cancel_transaction();
+        throw $e;
+    }
 }
 
 /**

@@ -309,7 +309,7 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
         );
 
         foreach ($employees as $employee) {
-            $payslip_doc = calculate_employee_payslip($employee, $from_date, $to_date, $period_id, $runtime_context);
+            $payslip_doc = calculate_employee_payslip_read_only($employee, $from_date, $to_date, $period_id, $runtime_context);
             if (!$payslip_doc) {
                 $failed_count++;
                 continue;
