@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.8');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.9');
 
 /**
  * Payroll Formula Engine.
@@ -120,6 +120,20 @@ class payroll_formula_engine {
 
         return $result;
     }
+}
+
+/**
+ * Evaluate one formula through the frozen legacy engine for migration-only
+ * differential evidence. This wrapper has no database or payroll side effect.
+ *
+ * @param string $formula
+ * @param array $variables
+ * @return float
+ */
+function hrm_legacy_formula_evaluate_for_differential($formula, array $variables) {
+    $engine = new payroll_formula_engine();
+    $engine->set_context($variables);
+    return $engine->evaluate($formula);
 }
 
 /**

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "notrinoserp.hrm.payroll.legacy_formula_differential",
+    "version": "1.0.0"
+  },
+  "data_policy": {
+    "classification": "restricted-redacted-governance",
+    "contains_formula_text": false,
+    "contains_payroll_context": false
+  },
+  "governance": {
+    "owner_role": "payroll-data-owner",
+    "reviewer_role": "payroll-security-reviewer",
+    "approval_required": true,
+    "formula_text_forbidden": true,
+    "default_disposition": "legacy_only_until_manual_rewrite"
+  },
+  "corpus_sha256": "8a244acfce07ff4adbb763644457c0da516352c674327432ff5eb5b76310c5d5",
+  "entries": []
+}

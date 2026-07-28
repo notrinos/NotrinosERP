@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "notrinoserp.hrm.payroll.legacy_formula_differential",
+    "version": "1.0.0"
+  },
+  "data_policy": {
+    "classification": "synthetic-no-production-pii",
+    "contains_production_data": false,
+    "production_derived_profiles_permitted": false
+  },
+  "contexts": [
+    {
+      "id": "standard",
+      "variables": {
+        "BASIC": 1000,
+        "GROSS": 1400,
+        "DAYS_WORKED": 20,
+        "PAYABLE_DAYS": 22,
+        "WORKING_DAYS": 22,
+        "DAYS_IN_MONTH": 30,
+        "LEAVE_DAYS": 2,
+        "PAID_LEAVE_DAYS": 1,
+        "ABSENT_DAYS": 1,
+        "OVERTIME_HOURS": 8,
+        "UNPAID_LEAVE_DAYS": 1,
+        "HOURLY_RATE": 10
+      }
+    },
+    {
+      "id": "fractional",
+      "variables": {
+        "BASIC": 1234.56,
+        "GROSS": 1500.75,
+        "DAYS_WORKED": 19.5,
+        "PAYABLE_DAYS": 21.5,
+        "WORKING_DAYS": 22,
+        "DAYS_IN_MONTH": 30,
+        "LEAVE_DAYS": 2.5,
+        "PAID_LEAVE_DAYS": 1.5,
+        "ABSENT_DAYS": 0.5,
+        "OVERTIME_HOURS": 7.25,
+        "UNPAID_LEAVE_DAYS": 0.5,
+        "HOURLY_RATE": 12.75
+      }
+    },
+    {
+      "id": "zero-boundary",
+      "variables": {
+        "BASIC": 0,
+        "GROSS": 0,
+        "DAYS_WORKED": 0,
+        "PAYABLE_DAYS": 0,
+        "WORKING_DAYS": 0,
+        "DAYS_IN_MONTH": 30,
+        "LEAVE_DAYS": 0,
+        "PAID_LEAVE_DAYS": 0,
+        "ABSENT_DAYS": 0,
+        "OVERTIME_HOURS": 0,
+        "UNPAID_LEAVE_DAYS": 0,
+        "HOURLY_RATE": 0
+      }
+    },
+    {
+      "id": "correction",
+      "variables": {
+        "BASIC": -250.25,
+        "GROSS": -100.5,
+        "DAYS_WORKED": 2,
+        "PAYABLE_DAYS": 2,
+        "WORKING_DAYS": 22,
+        "DAYS_IN_MONTH": 31,
+        "LEAVE_DAYS": 0,
+        "PAID_LEAVE_DAYS": 0,
+        "ABSENT_DAYS": 20,
+        "OVERTIME_HOURS": 1,
+        "UNPAID_LEAVE_DAYS": 0,
+        "HOURLY_RATE": 15.5
+      }
+    }
+  ],
+  "migration_context_ids": [
+    "standard",
+    "fractional",
+    "zero-boundary",
+    "correction"
+  ],
+  "cases": [
+    {
+      "id": "exact-basic-percent",
+      "source": "pay_elements.formula",
+      "formula": "BASIC * 0.10",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "exact",
+      "expected_reason": "equivalent_without_translation"
+    },
+    {
+      "id": "exact-average",
+      "source": "salary_structure.formula",
+      "formula": "(BASIC + GROSS) / 2",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "exact",
+      "expected_reason": "equivalent_without_translation"
+    },
+    {
+      "id": "exact-overtime",
+      "source": "employee_salary.formula",
+      "formula": "OVERTIME_HOURS * HOURLY_RATE",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "exact",
+      "expected_reason": "equivalent_without_translation"
+    },
+    {
+      "id": "exact-lowercase",
+      "source": "pay_elements.formula",
+      "formula": "basic + gross",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "exact",
+      "expected_reason": "equivalent_without_translation"
+    },
+    {
+      "id": "translated-leading-decimal",
+      "source": "pay_elements.formula",
+      "formula": "BASIC + .5",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "translated",
+      "expected_reason": "decimal_literal_normalized"
+    },
+    {
+      "id": "translated-trailing-decimal",
+      "source": "salary_structure.formula",
+      "formula": "GROSS * 1.",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary",
+        "correction"
+      ],
+      "expected_classification": "translated",
+      "expected_reason": "decimal_literal_normalized"
+    },
+    {
+      "id": "unsupported-fractional-modulo",
+      "source": "pay_elements.formula",
+      "formula": "BASIC % 7",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "correction"
+      ],
+      "expected_classification": "unsupported",
+      "expected_reason": "semantic_mismatch"
+    },
+    {
+      "id": "unsupported-zero-divisor",
+      "source": "employee_salary.formula",
+      "formula": "BASIC / DAYS_WORKED",
+      "context_ids": [
+        "standard",
+        "fractional",
+        "zero-boundary"
+      ],
+      "expected_classification": "unsupported",
+      "expected_reason": "facade_compile_or_execution_error"
+    },
+    {
+      "id": "unsupported-unknown-variable",
+      "source": "salary_structure.formula",
+      "formula": "UNKNOWN + 1",
+      "context_ids": [
+        "standard"
+      ],
+      "expected_classification": "unsupported",
+      "expected_reason": "legacy_source_unsupported"
+    },
+    {
+      "id": "unsupported-adjacent-unary",
+      "source": "pay_elements.formula",
+      "formula": "BASIC--2",
+      "context_ids": [
+        "standard",
+        "fractional"
+      ],
+      "expected_classification": "unsupported",
+      "expected_reason": "facade_compile_or_execution_error"
+    },
+    {
+      "id": "unsupported-hostile-token",
+      "source": "employee_salary.formula",
+      "formula": "BASIC;phpinfo()",
+      "context_ids": [
+        "standard"
+      ],
+      "expected_classification": "unsupported",
+      "expected_reason": "legacy_source_unsupported"
+    }
+  ]
+}
