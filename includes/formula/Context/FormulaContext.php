@@ -62,8 +62,8 @@ class Formula_Context_FormulaContext
      */
     public function __construct(
         array $variables = array(),
-        ?Formula_Context_CompanyContext $companyContext = null,
-        ?Formula_Context_SecurityContext $securityContext = null,
+        $companyContext = null,
+        $securityContext = null,
         array $businessData = array(),
         $compatibilityMode = false
     ) {

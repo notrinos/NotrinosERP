@@ -117,7 +117,7 @@ function hrm_legacy_formula_review_roles_separated($company) {
  */
 function hrm_legacy_formula_review_company_version_is_reviewable($version) {
     return is_string($version)
-        && in_array($version, array('1.0.46', '1.0.47'), true);
+        && in_array($version, array('1.0.46', '1.0.47', '1.0.48'), true);
 }
 
 /**

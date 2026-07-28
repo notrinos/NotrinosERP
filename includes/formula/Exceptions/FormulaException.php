@@ -59,7 +59,7 @@ class Formula_Exceptions_FormulaException extends Exception
      * @param string      $expectedToken  What was expected
      * @param string      $suggestion     Optional fix suggestion
      * @param int         $code           Exception code
-     * @param Throwable   $previous       Previous exception for chaining
+     * @param Exception   $previous       Previous exception for chaining
      */
     public function __construct(
         $message = '',
@@ -69,7 +69,7 @@ class Formula_Exceptions_FormulaException extends Exception
         $expectedToken = '',
         $suggestion = '',
         $code = 0,
-        Throwable $previous = null
+        $previous = null
     ) {
         parent::__construct($message, (int)$code, $previous);
 

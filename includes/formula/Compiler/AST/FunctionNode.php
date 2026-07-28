@@ -44,7 +44,7 @@ class Formula_Compiler_AST_FunctionNode extends Formula_Compiler_AST_Node
     /** @return string */
     public function getNodeType()
     {
-        return Formula_Compiler_AST_NodeType::FUNCTION;
+        return Formula_Compiler_AST_NodeType::FUNCTION_CALL;
     }
 
     /**

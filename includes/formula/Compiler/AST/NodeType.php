@@ -35,7 +35,7 @@ class Formula_Compiler_AST_NodeType
     const VARIABLE    = 'variable';
 
     /** Function call with argument list */
-    const FUNCTION    = 'function';
+    const FUNCTION_CALL = 'function';
 
     /** Binary operator: +, -, *, /, %, ^, ?? */
     const BINARY_OP   = 'binary';
@@ -78,7 +78,7 @@ class Formula_Compiler_AST_NodeType
             self::$allTypes = array(
                 self::LITERAL,
                 self::VARIABLE,
-                self::FUNCTION,
+                self::FUNCTION_CALL,
                 self::BINARY_OP,
                 self::UNARY_OP,
                 self::CONDITIONAL,
@@ -113,7 +113,7 @@ class Formula_Compiler_AST_NodeType
         $labels = array(
             self::LITERAL     => 'Literal',
             self::VARIABLE    => 'Variable',
-            self::FUNCTION    => 'Function',
+            self::FUNCTION_CALL => 'Function',
             self::BINARY_OP   => 'Binary Operator',
             self::UNARY_OP    => 'Unary Operator',
             self::CONDITIONAL => 'Conditional',

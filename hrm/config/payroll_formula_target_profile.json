@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "notrinoserp.hrm.payroll.legacy_formula_target_profile",
+    "version": "1.0.0"
+  },
+  "purpose": "migration-only-non-production-shadow",
+  "execution": {
+    "engine": "FormulaFacade-isolated-runtime",
+    "production_routing": false,
+    "compatibility_mode": false,
+    "function_allowlist": [],
+    "namespace_allowlist": [],
+    "operator_allowlist": ["+", "-", "*", "/", "%", "unary+", "unary-"],
+    "resource_limits": {
+      "max_source_length": 1000,
+      "max_tokens": 256,
+      "max_parenthesis_depth": 32
+    },
+    "variable_allowlist": [
+      "BASIC",
+      "GROSS",
+      "DAYS_WORKED",
+      "PAYABLE_DAYS",
+      "WORKING_DAYS",
+      "DAYS_IN_MONTH",
+      "LEAVE_DAYS",
+      "PAID_LEAVE_DAYS",
+      "ABSENT_DAYS",
+      "OVERTIME_HOURS",
+      "UNPAID_LEAVE_DAYS",
+      "HOURLY_RATE"
+    ]
+  },
+  "context_policy": {
+    "require_exact_variables": true,
+    "finite_numeric_only": true,
+    "numeric_strings_permitted": false,
+    "company_context_permitted": false,
+    "security_context_permitted": false,
+    "business_data_permitted": false
+  },
+  "publication": {
+    "registry_contract_id": "notrinoserp.hrm.payroll.legacy_formula_target_publication",
+    "registry_contract_version": "1.0.0",
+    "required_status": "approved_for_non_production_shadow",
+    "formula_text_forbidden": true,
+    "payroll_context_forbidden": true,
+    "distinct_principals": ["author", "reviewer", "publisher", "test_executor"]
+  }
+}

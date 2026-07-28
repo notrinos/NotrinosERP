@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "notrinoserp.hrm.payroll.legacy_formula_target_publication",
+    "version": "1.0.0"
+  },
+  "data_policy": {
+    "classification": "restricted-redacted-governance",
+    "contains_formula_text": false,
+    "contains_payroll_context": false,
+    "contains_production_data": false
+  },
+  "governance": {
+    "environment": "non-production-shadow-only",
+    "default_deny": true,
+    "required_status": "approved_for_non_production_shadow",
+    "formula_text_forbidden": true,
+    "payroll_context_forbidden": true,
+    "distinct_principals": true,
+    "production_execution_forbidden": true
+  },
+  "profile_sha256": "2dd1514de30502fb3f250c027e209d079cb630e0bd5596704c30b06b1d4fd637",
+  "corpus_sha256": "8a244acfce07ff4adbb763644457c0da516352c674327432ff5eb5b76310c5d5",
+  "exception_register_sha256": "5744c595e412e60793305a1b736a66f93dbe642608b03afb9c4bf034d434bfc0",
+  "entries": []
+}
