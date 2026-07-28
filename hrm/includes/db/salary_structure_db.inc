@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
+
 /**
  * Convert date to SQL format.
  *
@@ -140,6 +142,15 @@ function add_salary_structure_element($position_id, $grade_id, $element_id, $amo
 	if (!is_array($data))
 		$data = array();
 
+	if (array_key_exists('formula', $data)
+		&& !hrm_legacy_formula_guard_change(
+			'salary_structure.formula',
+			(int)$position_id.':'.(int)$grade_id.':'.(int)$element_id,
+			'',
+			$data['formula']
+		))
+		return false;
+
 	$fields = array('position_id', 'grade_id', 'element_id', 'pay_amount');
 	$values = array(
 		db_escape((int)$position_id),
@@ -196,6 +207,38 @@ function add_salary_structure_element($position_id, $grade_id, $element_id, $amo
 function update_salary_structure($position_id, $grade_id, $element_id, $pay_amount, $data=array()) {
 	if (!is_array($data))
 		$data = array();
+
+	if (array_key_exists('formula', $data)) {
+		$formula_sql = "SELECT formula FROM ".TB_PREF."salary_structure WHERE position_id = ".db_escape((int)$position_id)
+			." AND grade_id = ".db_escape((int)$grade_id)
+			." AND element_id = ".db_escape((int)$element_id);
+		if (salary_structure_has_column('effective_from') && array_key_exists('effective_from', $data)) {
+			$guard_effective_from = salary_structure_to_sql_date($data['effective_from']);
+			if ($guard_effective_from !== '')
+				$formula_sql .= " AND effective_from = ".db_escape($guard_effective_from);
+		}
+		$formula_rows = db_query($formula_sql, 'could not read salary structure formula for policy');
+		$found_formula_row = false;
+		while ($formula_rows && ($formula_row = db_fetch_assoc($formula_rows))) {
+			$found_formula_row = true;
+			if (!hrm_legacy_formula_guard_change(
+				'salary_structure.formula',
+				(int)$position_id.':'.(int)$grade_id.':'.(int)$element_id,
+				isset($formula_row['formula']) ? $formula_row['formula'] : '',
+				$data['formula']
+			))
+				return false;
+		}
+		if (!$found_formula_row && hrm_legacy_formula_normalize($data['formula']) !== '') {
+			hrm_legacy_formula_guard_change(
+				'salary_structure.formula',
+				(int)$position_id.':'.(int)$grade_id.':'.(int)$element_id,
+				'',
+				$data['formula']
+			);
+			return false;
+		}
+	}
 
 	$set = array("pay_amount = ".db_escape((float)$pay_amount));
 	if (salary_structure_has_column('formula') && array_key_exists('formula', $data))

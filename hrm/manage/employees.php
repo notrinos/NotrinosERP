@@ -669,7 +669,8 @@ function tab_salary($employee_id) {
 						display_notification(_('Salary element updated.'));
 					} else {
 						cancel_transaction();
-						display_error(_('Could not update salary element with complete audit evidence.'));
+						$policy_error = hrm_legacy_formula_last_error();
+						display_error($policy_error !== '' ? _($policy_error) : _('Could not update salary element with complete audit evidence.'));
 					}
 				} else {
 					begin_transaction();
@@ -707,7 +708,8 @@ function tab_salary($employee_id) {
 						display_notification(_('Salary element added.'));
 					} else {
 						cancel_transaction();
-						display_error(_('Could not add salary element with complete audit evidence. Check effective dates, duplicates, and audit-key storage.'));
+						$policy_error = hrm_legacy_formula_last_error();
+						display_error($policy_error !== '' ? _($policy_error) : _('Could not add salary element with complete audit evidence. Check effective dates, duplicates, and audit-key storage.'));
 					}
 				}
 				unset($_POST['editing_salary_id'], $_POST['sal_element_id'], $_POST['sal_amount'], $_POST['sal_formula'], $_POST['sal_reference'], $_POST['sal_effective_from'], $_POST['sal_effective_to']);

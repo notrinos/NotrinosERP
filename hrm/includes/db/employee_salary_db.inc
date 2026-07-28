@@ -10,6 +10,8 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
+
 /**
  * Employee personal salary override CRUD
  * Used when employee.personal_salary = 1 (individual salary structure).
@@ -48,6 +50,9 @@ function employee_salary_to_sql_date($date_value) {
  * @return int|false
  */
 function add_employee_salary($employee_id, $element_id, $amount, $effective_from, $effective_to='', $formula='', $reference='') {
+	if (!hrm_legacy_formula_guard_change('employee_salary.formula', 0, '', $formula))
+		return false;
+
 	$effective_from_sql = employee_salary_to_sql_date($effective_from);
 	$effective_to_sql = employee_salary_to_sql_date($effective_to);
 	if ($effective_from_sql === '')
@@ -88,6 +93,19 @@ function add_employee_salary($employee_id, $element_id, $amount, $effective_from
  * @return bool
  */
 function update_employee_salary($salary_id, $amount, $effective_from, $effective_to='', $formula='', $reference='', $is_active=1) {
+	$current_result = db_query(
+		"SELECT formula FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape((int)$salary_id)." LIMIT 1",
+		'could not read employee salary formula for policy'
+	);
+	$current = $current_result ? db_fetch_assoc($current_result) : false;
+	if (!$current || !hrm_legacy_formula_guard_change(
+		'employee_salary.formula',
+		(int)$salary_id,
+		isset($current['formula']) ? $current['formula'] : '',
+		$formula
+	))
+		return false;
+
 	$effective_from_sql = employee_salary_to_sql_date($effective_from);
 	$effective_to_sql = employee_salary_to_sql_date($effective_to);
 	if ($effective_from_sql === '')

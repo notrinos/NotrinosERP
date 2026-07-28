@@ -85,16 +85,19 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 			'description' => get_post('description', '')
 		);
 
-		if($selected_id == '') {
-			add_pay_element($_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
-			display_notification(_('Pay element has been added.'));
+		if($selected_id == '')
+			$saved = add_pay_element($_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
+		else
+			$saved = update_pay_element($selected_id, $_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
+
+		if ($saved) {
+			display_notification($selected_id == '' ? _('Pay element has been added.') : _('The selected pay element has been updated.'));
+			$Mode = 'RESET';
+		} else {
+			$policy_error = hrm_legacy_formula_last_error();
+			display_error($policy_error !== '' ? _($policy_error) : _('Could not save the pay element.'));
 		}
-		else {
-			update_pay_element($selected_id, $_POST['element_name'], $_POST['account_code'], $_POST['is_deduction'], $_POST['amount_type'], $extra);
-			display_notification(_('The selected pay element has been updated.'));
-		}
-		
-		$Mode = 'RESET';
+
 	}
 }
 

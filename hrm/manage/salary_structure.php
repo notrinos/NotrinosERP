@@ -175,7 +175,8 @@ if ($Mode=='UPDATE_ITEM') {
 			display_notification(_('The selected pay element has been updated.'));
 			$Mode = 'RESET';
 		} else {
-			display_error(_('Could not save the selected pay element.'));
+			$policy_error = hrm_legacy_formula_last_error();
+			display_error($policy_error !== '' ? _($policy_error) : _('Could not save the selected pay element.'));
 		}
 	}
 }

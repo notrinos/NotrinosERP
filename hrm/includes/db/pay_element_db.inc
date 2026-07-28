@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
+
 /**
  * Get pay_elements table columns map.
  *
@@ -57,6 +59,10 @@ function pay_element_has_column($column_name) {
 function add_pay_element($element_name, $account_code, $is_deduction=0, $amount_type=0, $data=array()) {
 	if (!is_array($data))
 		$data = array();
+
+	if (array_key_exists('formula', $data)
+		&& !hrm_legacy_formula_guard_change('pay_elements.formula', 0, '', $data['formula']))
+		return false;
 
 	$fields = array('element_name', 'account_code', 'is_deduction', 'amount_type');
 	$values = array(
@@ -192,6 +198,17 @@ function get_pay_elements($all=true) {
 function update_pay_element($element_id, $element_name, $account_code, $is_deduction, $amount_type, $data=array()) {
 	if (!is_array($data))
 		$data = array();
+
+	if (array_key_exists('formula', $data)) {
+		$current = get_pay_element((int)$element_id);
+		if (!$current || !hrm_legacy_formula_guard_change(
+			'pay_elements.formula',
+			(int)$element_id,
+			isset($current['formula']) ? $current['formula'] : '',
+			$data['formula']
+		))
+			return false;
+	}
 
 	$set = array(
 		"element_name = ".db_escape($element_name),
