@@ -256,92 +256,138 @@ function create_payment_transactions_for_period($period_id, $bank_account_code='
 	$period_id = (int)$period_id;
 	if ($period_id <= 0)
 		return false;
+	$batch_authorized = function_exists('user_check_access')
+		&& isset($_SESSION['wa_current_user'])
+		&& user_check_access('SA_PAYMENTBATCH');
+	if (!$batch_authorized) {
+		payroll_payment_control_log_denial(
+			'batch_payment_unauthorized',
+			array('payroll_period_id' => $period_id),
+			'payment_batch',
+			$period_id
+		);
+		return false;
+	}
+
+	global $transaction_level;
+	if (!$use_transaction && empty($transaction_level)) {
+		payroll_payment_control_log_denial(
+			'batch_payment_transaction_required',
+			array('payroll_period_id' => $period_id),
+			'payment_batch',
+			$period_id
+		);
+		return false;
+	}
 
 	if ($use_transaction)
 		begin_transaction();
 
-	if ($use_transaction) {
-		$period_lock_sql = "SELECT period_id FROM ".TB_PREF."payroll_periods"
-			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE";
-		if (!db_query($period_lock_sql, 'could not lock payroll period for payment batch')) {
-			cancel_transaction();
-			return false;
-		}
-	}
-
-	$period = get_payroll_period($period_id);
-	if (!$period) {
-		if ($use_transaction)
-			cancel_transaction();
+	$locked_set = get_locked_payroll_period_payment_set($period_id);
+	if ($locked_set === false) {
+		cancel_transaction();
 		return false;
 	}
+	$period = $locked_set['period'];
+	$payslips = $locked_set['payslips'];
+	$current_status = isset($period['status']) ? (int)$period['status'] : -1;
 
-	$current_status = isset($period['status']) ? (int)$period['status'] : 0;
-	if (!in_array($current_status, array(2, 3), true)) {
-		if ($use_transaction)
-			cancel_transaction();
+	$set_validation = validate_payroll_period_payment_set(
+		$period_id,
+		$period,
+		$payslips,
+		true
+	);
+	if (empty($set_validation['valid'])) {
+		cancel_transaction();
 		return false;
 	}
 
 	$bank_account = get_payroll_payment_bank_account($bank_account_code);
 	if (!$bank_account) {
-		if ($use_transaction)
-			cancel_transaction();
+		cancel_transaction();
 		return false;
 	}
 
 	$payment_date = get_payroll_payment_date($payment_date);
-	if ($use_transaction) {
-		$table_name = payslip_header_table();
-		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
-			." WHERE payroll_period_id = ".db_escape($period_id)." FOR UPDATE";
-		if (!$table_name || !db_query($lock_sql, 'could not lock payroll period payslips')) {
-			cancel_transaction();
-			return false;
+	$transactions = array();
+	$expected_paid_set = array();
+	foreach ($payslips as $payslip) {
+		$payslip_id = (int)$payslip['payslip_id'];
+		$payment_trans_no = null;
+		if (!payslip_requires_payment($payslip)) {
+			if (!mark_payslip_paid_for_batch_compare_and_set($payslip, null)) {
+				cancel_transaction();
+				return false;
+			}
+		} else {
+			$payment_reference = '';
+			if ($reference !== '' && empty($transactions))
+				$payment_reference = $reference;
+
+			$payment_trans_no = write_payslip_payment_transaction(
+				$payslip,
+				$bank_account['id'],
+				$payment_date,
+				$payment_reference,
+				$memo,
+				false
+			);
+			if (!$payment_trans_no
+				|| !mark_payslip_paid_for_batch_compare_and_set($payslip, $payment_trans_no)
+			) {
+				cancel_transaction();
+				return false;
+			}
+
+			$transactions[$payslip_id] = (int)$payment_trans_no;
 		}
+
+		$expected_paid_set[$payslip_id] = array(
+			'payroll_period_id' => $period_id,
+			'payroll_gl_trans_no' => payroll_payment_payslip_gl_trans_no($payslip),
+			'payment_trans_no' => $payment_trans_no === null ? 0 : (int)$payment_trans_no,
+		);
 	}
-	$payslip_rows = get_payslips_for_period($period_id);
-	if (!$payslip_rows) {
-		if ($use_transaction)
-			cancel_transaction();
+
+	$post_write_verification = verify_payroll_period_payment_set_after_write(
+		$period_id,
+		$expected_paid_set
+	);
+	if (empty($post_write_verification['valid'])
+		|| !mark_payroll_period_paid_for_batch_compare_and_set(
+			$period_id,
+			$current_status,
+			$payment_date
+		)
+	) {
+		cancel_transaction();
 		return false;
 	}
 
-	$transactions = array();
-	while ($payslip = db_fetch_assoc($payslip_rows)) {
-		if (payslip_is_voided($payslip) || payslip_is_paid($payslip))
-			continue;
-
-		if (!payslip_requires_payment($payslip)) {
-			if (!mark_payslip_paid($payslip['payslip_id'], null, false)) {
-				if ($use_transaction)
-					cancel_transaction();
-				return false;
-			}
-			continue;
-		}
-
-		$payment_reference = '';
-		if ($reference !== '' && empty($transactions))
-			$payment_reference = $reference;
-
-		$trans_no = write_payslip_payment_transaction($payslip, $bank_account['id'], $payment_date, $payment_reference, $memo, false);
-		if (!$trans_no || !mark_payslip_paid($payslip['payslip_id'], $trans_no, false)) {
-			if ($use_transaction)
-				cancel_transaction();
-			return false;
-		}
-
-		$transactions[(int)$payslip['payslip_id']] = (int)$trans_no;
-	}
-
-	$set = array(
-		"status = ".db_escape(4),
-		"pay_date = ".db_escape(date2sql($payment_date))
-	);
-	if (!db_query("UPDATE ".TB_PREF."payroll_periods SET ".implode(', ', $set)." WHERE period_id = ".db_escape($period_id), 'could not update payroll period payment details')) {
-		if ($use_transaction)
-			cancel_transaction();
+	global $path_to_root;
+	include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+	$audit_result = function_exists('append_domain_audit_event')
+		? append_domain_audit_event(array(
+			'legal_entity_id' => 0,
+			'entity_type' => 'payroll_period',
+			'entity_key' => array('period_id' => $period_id),
+			'action' => 'payroll_period.payment_batch_completed',
+			'reason_code' => 'approved_posted_set_payment',
+			'before' => array('period_id' => $period_id, 'status' => $current_status),
+			'after' => array('period_id' => $period_id, 'status' => 4),
+			'restricted_diff' => array(
+				'changed_fields' => array('status', 'pay_date', 'payslip_status', 'payment_trans_no'),
+				'mutation_kind' => 'payment_batch_completed',
+				'approved_posted_set_verified' => true,
+				'payslip_count' => count($expected_paid_set),
+				'bank_transaction_count' => count($transactions),
+				'nonpositive_payable_count' => count($expected_paid_set) - count($transactions),
+				'restricted_values_stored' => false,
+			),
+		)) : false;
+	if ($audit_result === false) {
+		cancel_transaction();
 		return false;
 	}
 
@@ -409,7 +455,7 @@ function payroll_payment_control_actor_id() {
 }
 
 /**
- * Record a minimized denial event for the individual-payment boundary.
+ * Record a minimized denial event for an individual or batch-payment boundary.
  *
  * No employee identity, amount, bank data, reference, memo, date, or GL value
  * is written to the log. PAY-AUD immutable evidence remains reserved for
@@ -417,22 +463,328 @@ function payroll_payment_control_actor_id() {
  *
  * @param string $code
  * @param array $payslip
+ * @param string $channel
+ * @param int $period_id
  * @return void
  */
-function payroll_payment_control_log_denial($code, $payslip) {
+function payroll_payment_control_log_denial($code, $payslip, $channel='employee_bank_entry', $period_id=0) {
+	$channel = $channel === 'payment_batch' ? 'payment_batch' : 'employee_bank_entry';
+	$period_id = (int)$period_id;
+	if ($period_id <= 0 && isset($payslip['payroll_period_id']))
+		$period_id = (int)$payslip['payroll_period_id'];
+
 	$payload = array(
 		'contract' => 'notrinoserp.hrm.payroll.payment-control',
 		'version' => '1.0.0',
-		'action' => 'individual_payment_denied',
+		'action' => $channel === 'payment_batch'
+			? 'batch_payment_denied' : 'individual_payment_denied',
 		'code' => preg_replace('/[^a-z0-9_\-]/', '', strtolower((string)$code)),
 		'company_id' => function_exists('user_company') ? (int)user_company() : 0,
 		'actor_id' => payroll_payment_control_actor_id(),
 		'payslip_id' => isset($payslip['payslip_id']) ? (int)$payslip['payslip_id'] : 0,
-		'payroll_period_id' => isset($payslip['payroll_period_id']) ? (int)$payslip['payroll_period_id'] : 0,
-		'channel' => 'employee_bank_entry',
+		'payroll_period_id' => $period_id,
+		'channel' => $channel,
 	);
 
 	error_log('PAY-CORE-011 '.json_encode($payload));
+}
+
+/**
+ * Return the payroll transaction identity linked to one payslip.
+ *
+ * @param array $payslip
+ * @return int
+ */
+function payroll_payment_payslip_gl_trans_no($payslip) {
+	if (!is_array($payslip))
+		return 0;
+	if (isset($payslip['gl_trans_no']))
+		return (int)$payslip['gl_trans_no'];
+	if (isset($payslip['trans_no']))
+		return (int)$payslip['trans_no'];
+	return 0;
+}
+
+/**
+ * Lock one payroll period and its complete payslip relationship.
+ *
+ * The payslip query uses the existing period-leading unique index. Under the
+ * platform's transaction boundary, the locking range prevents a concurrent
+ * insert, removal, or reassignment from changing the payment set before the
+ * command commits.
+ *
+ * @param int $period_id
+ * @return array|false
+ */
+function get_locked_payroll_period_payment_set($period_id) {
+	$period_id = (int)$period_id;
+	$table_name = function_exists('payslip_header_table') ? payslip_header_table() : false;
+	if ($period_id <= 0 || !$table_name)
+		return false;
+
+	$period_query = db_query(
+		"SELECT * FROM ".TB_PREF."payroll_periods"
+			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE",
+		'could not lock payroll period for payment batch'
+	);
+	$period = $period_query ? db_fetch_assoc($period_query) : false;
+	if (!$period)
+		return false;
+
+	$payslip_query = db_query(
+		"SELECT * FROM ".TB_PREF.$table_name
+			." WHERE payroll_period_id = ".db_escape($period_id)
+			." ORDER BY payslip_id FOR UPDATE",
+		'could not lock payroll period payslips for payment batch'
+	);
+	if (!$payslip_query)
+		return false;
+
+	$payslips = array();
+	while ($row = db_fetch_assoc($payslip_query))
+		$payslips[] = $row;
+
+	return array('period' => $period, 'payslips' => $payslips);
+}
+
+/**
+ * Validate the complete locked batch-payment set before any bank write.
+ *
+ * Every row must remain linked to the selected Approved/Posted period, be an
+ * unpaid non-voided Posted payslip, and have a unique, non-voided, balanced,
+ * nonzero ST_PAYSLIP transaction. A single invalid row rejects the whole set.
+ *
+ * @param int $period_id
+ * @param array $period
+ * @param array $payslips
+ * @param bool $audit_denial
+ * @return array
+ */
+function validate_payroll_period_payment_set($period_id, $period, $payslips, $audit_denial=true) {
+	$period_id = (int)$period_id;
+	$result = array(
+		'valid' => false,
+		'code' => 'invalid_payment_set',
+		'message' => 'Payroll batch payment requires one complete approved or posted payslip set'
+	);
+	$denial_row = array('payroll_period_id' => $period_id);
+
+	if ($period_id <= 0 || !is_array($period)
+		|| !isset($period['period_id']) || (int)$period['period_id'] !== $period_id
+	) {
+		$result['code'] = 'payroll_period_relationship_drift';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $denial_row, 'payment_batch', $period_id);
+		return $result;
+	}
+
+	$period_status = isset($period['status']) ? (int)$period['status'] : -1;
+	if (!in_array($period_status, array(2, 3), true)) {
+		$result['code'] = 'payroll_period_not_approved';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $denial_row, 'payment_batch', $period_id);
+		return $result;
+	}
+
+	if (!is_array($payslips) || empty($payslips)) {
+		$result['code'] = 'payroll_payment_set_empty';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $denial_row, 'payment_batch', $period_id);
+		return $result;
+	}
+
+	$seen_payslips = array();
+	$seen_trans_nos = array();
+	foreach ($payslips as $payslip) {
+		if (!is_array($payslip) || empty($payslip['payslip_id'])) {
+			$result['code'] = 'invalid_payslip';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $denial_row, 'payment_batch', $period_id);
+			return $result;
+		}
+
+		$payslip_id = (int)$payslip['payslip_id'];
+		$payslip_period_id = isset($payslip['payroll_period_id'])
+			? (int)$payslip['payroll_period_id'] : 0;
+		if ($payslip_period_id !== $period_id || isset($seen_payslips[$payslip_id])) {
+			$result['code'] = $payslip_period_id !== $period_id
+				? 'payroll_period_relationship_drift' : 'duplicate_payslip_identity';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+		$seen_payslips[$payslip_id] = true;
+
+		if (payslip_is_voided($payslip)) {
+			$result['code'] = 'voided_payslip_in_payment_set';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+		if (payslip_is_paid($payslip)
+			|| (isset($payslip['payment_trans_no']) && (int)$payslip['payment_trans_no'] > 0)
+		) {
+			$result['code'] = 'partially_paid_payment_set';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+		if (!isset($payslip['status']) || (int)$payslip['status'] !== 2) {
+			$result['code'] = 'payslip_not_posted';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+
+		$gl_trans_no = payroll_payment_payslip_gl_trans_no($payslip);
+		if ($gl_trans_no <= 0 || isset($seen_trans_nos[$gl_trans_no])) {
+			$result['code'] = $gl_trans_no <= 0
+				? 'payroll_gl_link_missing' : 'duplicate_payroll_gl_link';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+		$seen_trans_nos[$gl_trans_no] = true;
+
+		$posted_set = validate_payslip_approved_posted_set($payslip, false);
+		if (empty($posted_set['valid'])) {
+			$result['code'] = isset($posted_set['code'])
+				? $posted_set['code'] : 'invalid_payroll_gl_posting';
+			if ($audit_denial)
+				payroll_payment_control_log_denial($result['code'], $payslip, 'payment_batch', $period_id);
+			return $result;
+		}
+	}
+
+	return array(
+		'valid' => true,
+		'code' => 'approved_posted_payment_set',
+		'message' => '',
+		'payslip_count' => count($payslips),
+	);
+}
+
+/**
+ * Compare-and-set one locked payslip to Paid for the batch command.
+ *
+ * @param array $payslip
+ * @param int|null $payment_trans_no
+ * @return bool
+ */
+function mark_payslip_paid_for_batch_compare_and_set($payslip, $payment_trans_no=null) {
+	$table_name = function_exists('payslip_header_table') ? payslip_header_table() : false;
+	if (!$table_name || !is_array($payslip)
+		|| empty($payslip['payslip_id']) || empty($payslip['payroll_period_id'])
+		|| !function_exists('payslip_has_column')
+		|| !payslip_has_column($table_name, 'status')
+		|| !payslip_has_column($table_name, 'payment_trans_no')
+	) {
+		return false;
+	}
+
+	$payslip_id = (int)$payslip['payslip_id'];
+	$period_id = (int)$payslip['payroll_period_id'];
+	$gl_trans_no = payroll_payment_payslip_gl_trans_no($payslip);
+	$payment_trans_no = $payment_trans_no === null ? 0 : (int)$payment_trans_no;
+	if ($payslip_id <= 0 || $period_id <= 0 || $gl_trans_no <= 0
+		|| (int)$payslip['status'] !== 2
+		|| (isset($payslip['payment_trans_no']) && (int)$payslip['payment_trans_no'] > 0)
+		|| ($payment_trans_no <= 0 && payslip_requires_payment($payslip))
+		|| ($payment_trans_no > 0 && !payslip_requires_payment($payslip))
+	) {
+		return false;
+	}
+
+	$gl_column = payslip_has_column($table_name, 'gl_trans_no')
+		? 'gl_trans_no' : (payslip_has_column($table_name, 'trans_no') ? 'trans_no' : '');
+	if ($gl_column === '')
+		return false;
+
+	$sql = "UPDATE ".TB_PREF.$table_name." SET status = ".db_escape(payslip_paid_status_value())
+		.", payment_trans_no = ".($payment_trans_no > 0 ? db_escape($payment_trans_no) : 'NULL')
+		." WHERE payslip_id = ".db_escape($payslip_id)
+		." AND payroll_period_id = ".db_escape($period_id)
+		." AND status = ".db_escape(2)
+		." AND (payment_trans_no IS NULL OR payment_trans_no = 0)"
+		." AND ".$gl_column." = ".db_escape($gl_trans_no);
+	$ok = db_query($sql, 'could not compare-and-set payroll batch payslip payment');
+	return $ok && db_num_affected_rows() === 1;
+}
+
+/**
+ * Re-read and verify the exact paid set before promoting the period.
+ *
+ * @param int $period_id
+ * @param array $expected_paid_set
+ * @return array
+ */
+function verify_payroll_period_payment_set_after_write($period_id, $expected_paid_set) {
+	$result = array('valid' => false, 'code' => 'post_write_payment_set_drift');
+	$locked = get_locked_payroll_period_payment_set($period_id);
+	if ($locked === false || !is_array($expected_paid_set)
+		|| count($locked['payslips']) !== count($expected_paid_set)
+	) {
+		return $result;
+	}
+
+	foreach ($locked['payslips'] as $payslip) {
+		$payslip_id = isset($payslip['payslip_id']) ? (int)$payslip['payslip_id'] : 0;
+		if ($payslip_id <= 0 || !isset($expected_paid_set[$payslip_id]))
+			return $result;
+
+		$expected = $expected_paid_set[$payslip_id];
+		$current_payment_trans_no = isset($payslip['payment_trans_no'])
+			? (int)$payslip['payment_trans_no'] : 0;
+		if ((int)$payslip['payroll_period_id'] !== (int)$expected['payroll_period_id']
+			|| payslip_is_voided($payslip)
+			|| (int)$payslip['status'] !== payslip_paid_status_value()
+			|| payroll_payment_payslip_gl_trans_no($payslip) !== (int)$expected['payroll_gl_trans_no']
+			|| $current_payment_trans_no !== (int)$expected['payment_trans_no']
+		) {
+			return $result;
+		}
+
+		$posted_set = validate_payslip_approved_posted_set($payslip, false);
+		if (empty($posted_set['valid']))
+			return $result;
+	}
+
+	return array('valid' => true, 'code' => 'paid_set_verified');
+}
+
+/**
+ * Compare-and-set the locked payroll period to Paid.
+ *
+ * @param int $period_id
+ * @param int $expected_status
+ * @param string $payment_date
+ * @return bool
+ */
+function mark_payroll_period_paid_for_batch_compare_and_set($period_id, $expected_status, $payment_date) {
+	$period_id = (int)$period_id;
+	$expected_status = (int)$expected_status;
+	if ($period_id <= 0 || !in_array($expected_status, array(2, 3), true))
+		return false;
+
+	$sql_date = date2sql(get_payroll_payment_date($payment_date));
+	$sql = "UPDATE ".TB_PREF."payroll_periods SET status = ".db_escape(4)
+		.", pay_date = ".db_escape($sql_date)
+		." WHERE period_id = ".db_escape($period_id)
+		." AND status = ".db_escape($expected_status);
+	$ok = db_query($sql, 'could not compare-and-set payroll period payment details');
+	if (!$ok || db_num_affected_rows() !== 1)
+		return false;
+
+	$verify = db_query(
+		"SELECT period_id,status,pay_date FROM ".TB_PREF."payroll_periods"
+			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE",
+		'could not verify payroll period payment details'
+	);
+	$row = $verify ? db_fetch_assoc($verify) : false;
+	return $row
+		&& (int)$row['period_id'] === $period_id
+		&& (int)$row['status'] === 4
+		&& (string)$row['pay_date'] === (string)$sql_date;
 }
 
 /**
