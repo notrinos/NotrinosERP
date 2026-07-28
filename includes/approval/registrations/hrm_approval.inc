@@ -1079,6 +1079,30 @@ function payroll_period_draft_matches_row($draft_data, $period)
 }
 
 /**
+ * Return true when immutable payroll-period draft identity matches the row.
+ *
+ * Bound drafts may be rejected/cancelled after result/control drift so an
+ * authorized actor can close the stale workflow item and resubmit. This helper
+ * deliberately ignores monetary totals but retains strict period identity,
+ * dates, and nullable department validation.
+ *
+ * @param array $draft_data
+ * @param array $period
+ * @return bool
+ */
+function payroll_period_draft_identity_matches_row($draft_data, $period)
+{
+	if (!is_array($draft_data) || !is_array($period))
+		return false;
+
+	$identity_draft = $draft_data;
+	foreach (array('total_gross', 'total_deductions', 'total_net') as $field)
+		$identity_draft[$field] = isset($period[$field]) ? $period[$field] : 0;
+
+	return payroll_period_draft_matches_row($identity_draft, $period);
+}
+
+/**
  * Execute an approved Payroll Period draft with PAY-AUD evidence.
  *
  * Locks the payroll period row, validates draft/period agreement,
@@ -1159,6 +1183,18 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 		return false;
 	}
 
+	$approval_binding = build_payroll_period_approval_binding(
+		$period_reconciled,
+		true
+	);
+	if (!payroll_period_approval_binding_matches_draft(
+		$draft_data,
+		$approval_binding
+	)) {
+		cancel_transaction();
+		return false;
+	}
+
 	if (!update_payroll_period_status($period_id, 2, 1)) {
 		cancel_transaction();
 		return false;
@@ -1194,6 +1230,9 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 				'total_employer_cost',
 			),
 			'mutation_kind' => 'approved',
+			'approval_binding_contract' => $approval_binding['contract'],
+			'approval_binding_version' => $approval_binding['version'],
+			'approval_hash_verified' => true,
 			'restricted_values_stored' => false,
 		),
 	));
@@ -1219,8 +1258,10 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
  *
  * The source period remains Calculated (status 1). Rejection/cancellation is
  * an approval-draft outcome, not a payroll void or recalculation command. The
- * locked source and exact submitted payload must still agree, and PAY-AUD
- * evidence is appended in the same transaction as the workflow terminal.
+ * immutable source identity must agree. Legacy unbound drafts still require an
+ * exact payload match; bound drafts may terminate after drift or malformed
+ * binding evidence so they can never be approved yet do not become stranded.
+ * PAY-AUD evidence is appended in the same transaction as the workflow terminal.
  *
  * @param array  $draft_data Decoded approval draft data
  * @param int    $draft_id Approval draft ID
@@ -1251,12 +1292,49 @@ function transition_payroll_period_approval_terminal(
 	begin_transaction();
 
 	$period = get_payroll_period_for_update($period_id);
-	if (!$period
-		|| (int)$period['status'] !== 1
-		|| !payroll_period_draft_matches_row($draft_data, $period)
-	) {
+	if (!$period || (int)$period['status'] !== 1) {
 		cancel_transaction();
 		return false;
+	}
+
+	$source_totals_match = payroll_period_draft_matches_row(
+		$draft_data,
+		$period
+	);
+	$identity_matches = payroll_period_draft_identity_matches_row(
+		$draft_data,
+		$period
+	);
+	$binding_draft_state = payroll_period_approval_binding_draft_state(
+		$draft_data
+	);
+
+	if ($binding_draft_state === 'absent') {
+		if (!$source_totals_match) {
+			cancel_transaction();
+			return false;
+		}
+		$approval_binding_state = 'legacy_unbound_terminal_recovery';
+	} else {
+		if (!$identity_matches) {
+			cancel_transaction();
+			return false;
+		}
+
+		$approval_binding = build_payroll_period_approval_binding($period, true);
+		if ($binding_draft_state === 'well_formed'
+			&& $source_totals_match
+			&& payroll_period_approval_binding_matches_draft(
+				$draft_data,
+				$approval_binding
+			)
+		) {
+			$approval_binding_state = 'verified';
+		} elseif ($binding_draft_state === 'well_formed') {
+			$approval_binding_state = 'drifted_bound_terminal_recovery';
+		} else {
+			$approval_binding_state = 'malformed_bound_terminal_recovery';
+		}
 	}
 
 	$audit_result = append_domain_audit_event(array(
@@ -1274,6 +1352,8 @@ function transition_payroll_period_approval_terminal(
 			'changed_fields' => array(),
 			'mutation_kind' => $mutation_kind,
 			'source_status_retained' => 1,
+			'source_totals_match' => (bool)$source_totals_match,
+			'approval_binding_state' => $approval_binding_state,
 			'restricted_values_stored' => false,
 		),
 	));
@@ -1416,8 +1496,20 @@ function reconcile_pending_payroll_period_approval($period_id)
 		);
 	}
 
+	$approval_binding = build_payroll_period_approval_binding($period, true);
+	$binding_fields = payroll_period_approval_binding_draft_fields(
+		$approval_binding
+	);
+	if ($binding_fields === false) {
+		cancel_transaction();
+		return array(
+			'status' => 'error',
+			'message' => _('The payroll result/control evidence could not be reconciled. No changes were committed.'),
+		);
+	}
+
 	$payroll_amount = (float)$period['total_net'];
-	$draft_data = array(
+	$draft_data = array_merge(array(
 		'period_id'        => $period_id,
 		'period_name'      => $period['period_name'],
 		'from_date'        => $period['from_date'],
@@ -1426,7 +1518,7 @@ function reconcile_pending_payroll_period_approval($period_id)
 		'total_deductions' => (float)$period['total_deductions'],
 		'total_net'        => $payroll_amount,
 		'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
-	);
+	), $binding_fields);
 
 	$approval = get_approval_workflow_service();
 	$result = $approval->submit(

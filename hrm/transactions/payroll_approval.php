@@ -66,6 +66,15 @@ foreach ($_POST as $name => $value) {
                 continue;
             }
 
+            $binding = build_payroll_period_approval_binding($period, true);
+            if (empty($binding['ok'])) {
+                cancel_transaction();
+                display_error(
+                    _('Payroll result/control evidence could not be reconciled. No approval draft was created.')
+                );
+                continue;
+            }
+
             $payroll_amount = (float)$period['total_net'];
 
             // Check if core approval workflow is required
@@ -77,7 +86,7 @@ foreach ($_POST as $name => $value) {
                     continue;
                 }
 
-                $payroll_draft_data = array(
+                $payroll_draft_data = array_merge(array(
                     'period_id'        => $period_id,
                     'period_name'      => $period['period_name'],
                     'from_date'        => $period['from_date'],
@@ -86,7 +95,7 @@ foreach ($_POST as $name => $value) {
                     'total_deductions' => (float)$period['total_deductions'],
                     'total_net'        => $payroll_amount,
                     'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
-                );
+                ), payroll_period_approval_binding_draft_fields($binding));
 
                 $approval_result = $approval_service->submit(
                     ST_PAYROLL_PERIOD,

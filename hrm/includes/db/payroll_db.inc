@@ -227,6 +227,674 @@ function get_payroll_period($period_id) {
     return db_fetch($result);
 }
 
+
+/**
+ * Canonical contract identifier for payroll-period approval binding.
+ *
+ * @return array
+ */
+function payroll_period_approval_binding_contract() {
+    return array(
+        'id' => 'notrinoserp.hrm.payroll.approval-binding',
+        'version' => '1.0.0',
+    );
+}
+
+/**
+ * Normalize one decimal for stable cross-request hashing.
+ *
+ * Six fractional digits match the existing payroll-period drift tolerance and
+ * avoid locale-dependent formatting or negative zero in the approval payload.
+ *
+ * @param mixed $value
+ * @return string|false
+ */
+function payroll_approval_binding_decimal($value) {
+    if (!is_numeric($value))
+        return false;
+
+    $number = (float)$value;
+    if (is_nan($number) || is_infinite($number))
+        return false;
+    if (abs($number) < 0.0000005)
+        $number = 0.0;
+
+    return sprintf('%.6F', $number);
+}
+
+/**
+ * Normalize one integer without accepting fractional or exponent notation.
+ *
+ * Database integer columns are returned as native integers or canonical base-10
+ * strings. Rejecting broader is_numeric() forms prevents distinct malformed
+ * source values from collapsing to the same approval evidence.
+ *
+ * @param mixed $value
+ * @return int|false
+ */
+function payroll_approval_binding_integer($value) {
+    if (is_int($value))
+        return $value;
+    if (!is_string($value)
+        || preg_match('/^-?(0|[1-9][0-9]*)$/D', $value) !== 1
+    ) {
+        return false;
+    }
+
+    $integer = (int)$value;
+    return (string)$integer === $value ? $integer : false;
+}
+
+/**
+ * Recursively normalize associative keys before JSON hashing.
+ *
+ * @param mixed $value
+ * @return mixed
+ */
+function payroll_approval_binding_canonicalize($value) {
+    if (!is_array($value))
+        return $value;
+
+    $keys = array_keys($value);
+    $is_list = $keys === range(0, count($value) - 1);
+    if (!$is_list)
+        ksort($value, SORT_STRING);
+
+    foreach ($value as $key => $item)
+        $value[$key] = payroll_approval_binding_canonicalize($item);
+
+    return $value;
+}
+
+/**
+ * Encode a deterministic JSON representation for one approval hash payload.
+ *
+ * @param array $payload
+ * @return string|false
+ */
+function payroll_approval_binding_json($payload) {
+    $json = json_encode(payroll_approval_binding_canonicalize($payload));
+    return is_string($json) ? $json : false;
+}
+
+/**
+ * Project one database row into explicitly typed canonical fields.
+ *
+ * @param array $row
+ * @param array $types field => string|int|nullable_int|decimal|nullable_decimal
+ * @return array|false
+ */
+function payroll_approval_binding_project_row($row, $types) {
+    if (!is_array($row))
+        return false;
+
+    $projected = array();
+    foreach ($types as $field => $type) {
+        $value = array_key_exists($field, $row) ? $row[$field] : null;
+        if ($type === 'string') {
+            $projected[$field] = (string)$value;
+        } elseif ($type === 'nullable_string') {
+            $projected[$field] = $value === null ? null : (string)$value;
+        } elseif ($type === 'int') {
+            $integer = payroll_approval_binding_integer($value);
+            if ($integer === false)
+                return false;
+            $projected[$field] = $integer;
+        } elseif ($type === 'nullable_int') {
+            if ($value === null || $value === '')
+                $projected[$field] = null;
+            else {
+                $integer = payroll_approval_binding_integer($value);
+                if ($integer === false)
+                    return false;
+                $projected[$field] = $integer;
+            }
+        } elseif ($type === 'decimal' || $type === 'nullable_decimal') {
+            if ($type === 'nullable_decimal' && ($value === null || $value === '')) {
+                $projected[$field] = null;
+            } else {
+                $decimal = payroll_approval_binding_decimal($value);
+                if ($decimal === false)
+                    return false;
+                $projected[$field] = $decimal;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    return $projected;
+}
+
+/**
+ * Fetch all rows for one deterministic approval-binding query.
+ *
+ * @param string $sql
+ * @param string $error
+ * @return array|false
+ */
+function payroll_approval_binding_fetch_rows($sql, $error) {
+    $result = db_query($sql, $error);
+    if (!$result)
+        return false;
+
+    $rows = array();
+    while ($row = db_fetch_assoc($result))
+        $rows[] = $row;
+    return $rows;
+}
+
+/**
+ * Build a deterministic reconciled result/control hash for a locked period.
+ *
+ * The result hash covers the period envelope, every active payslip header and
+ * every persisted line. The control hash covers exact payroll GL rows, absence
+ * of core void/payment state, linked loan repayment state, and leave-balance
+ * state for employees in the period. All mutable rows are read FOR UPDATE when
+ * requested so the approval draft and terminal executor serialize with legacy
+ * posting/payment/void and balance writers.
+ *
+ * No raw employee, formula, memo, amount, account, or balance value leaves this
+ * helper; callers receive only opaque hashes, counts, and a stable failure code.
+ *
+ * @param array $period Locked payroll-period row
+ * @param bool $lock
+ * @return array
+ */
+function build_payroll_period_approval_binding($period, $lock=true) {
+    $failed = array(
+        'ok' => false,
+        'code' => 'invalid_period',
+    );
+    if (!is_array($period) || empty($period['period_id']))
+        return $failed;
+
+    $period_id = (int)$period['period_id'];
+    if ($period_id <= 0 || !isset($period['status']) || (int)$period['status'] !== 1)
+        return $failed;
+
+    foreach (array('payslips', 'payslip_details', 'gl_trans', 'voided') as $table) {
+        if (!payroll_table_exists($table)) {
+            $failed['code'] = 'required_table_missing';
+            return $failed;
+        }
+    }
+
+    $suffix = $lock ? ' FOR UPDATE' : '';
+    $payslip_sql = "SELECT payslip_id,payroll_period_id,trans_no,reference,employee_id,"
+        ."tran_date,from_date,to_date,department_id,position_id,grade_id,basic_salary,"
+        ."total_earnings,gross_salary,total_deductions,net_salary,employer_contributions,"
+        ."total_cost,working_days,worked_days,overtime_hours,leave_days,absent_days,"
+        ."leaves,deductable_leaves,loan_deduction,payable_amount,salary_amount,status,"
+        ."payment_trans_no,notes,custom_data FROM ".TB_PREF."payslips"
+        ." WHERE payroll_period_id = ".db_escape($period_id)
+        ." ORDER BY payslip_id".$suffix;
+    $payslip_rows = payroll_approval_binding_fetch_rows(
+        $payslip_sql,
+        'could not lock payroll-period payslips for approval binding'
+    );
+    if ($payslip_rows === false) {
+        $failed['code'] = 'payslip_read_failed';
+        return $failed;
+    }
+    if (empty($payslip_rows)) {
+        $failed['code'] = 'empty_payroll_result';
+        return $failed;
+    }
+
+    $payslip_types = array(
+        'payslip_id' => 'int', 'payroll_period_id' => 'int',
+        'trans_no' => 'int', 'reference' => 'string', 'employee_id' => 'string',
+        'tran_date' => 'string', 'from_date' => 'string', 'to_date' => 'string',
+        'department_id' => 'nullable_int', 'position_id' => 'nullable_int',
+        'grade_id' => 'nullable_int', 'basic_salary' => 'decimal',
+        'total_earnings' => 'decimal', 'gross_salary' => 'decimal',
+        'total_deductions' => 'decimal', 'net_salary' => 'decimal',
+        'employer_contributions' => 'decimal', 'total_cost' => 'decimal',
+        'working_days' => 'decimal', 'worked_days' => 'decimal',
+        'overtime_hours' => 'decimal', 'leave_days' => 'decimal',
+        'absent_days' => 'decimal', 'leaves' => 'int',
+        'deductable_leaves' => 'int', 'loan_deduction' => 'decimal',
+        'payable_amount' => 'decimal', 'salary_amount' => 'decimal',
+        'status' => 'int', 'payment_trans_no' => 'nullable_int',
+        'notes' => 'nullable_string', 'custom_data' => 'nullable_string',
+    );
+
+    $payslips = array();
+    $payslip_ids = array();
+    $trans_nos = array();
+    $seen_trans_nos = array();
+    $employee_ids = array();
+    $sum_gross = 0.0;
+    $sum_deductions = 0.0;
+    $sum_net = 0.0;
+    $sum_employer_cost = 0.0;
+    foreach ($payslip_rows as $row) {
+        $projected = payroll_approval_binding_project_row($row, $payslip_types);
+        if ($projected === false
+            || $projected['payroll_period_id'] !== $period_id
+            || $projected['payslip_id'] <= 0
+            || $projected['trans_no'] <= 0
+            || trim($projected['employee_id']) === ''
+            || $projected['status'] === 6
+            || $projected['status'] >= 3
+            || !empty($projected['payment_trans_no'])
+        ) {
+            $failed['code'] = 'invalid_payslip_control_state';
+            return $failed;
+        }
+        if (isset($seen_trans_nos[$projected['trans_no']])) {
+            $failed['code'] = 'duplicate_payroll_transaction';
+            return $failed;
+        }
+        $seen_trans_nos[$projected['trans_no']] = true;
+        $payslips[] = $projected;
+        $payslip_ids[] = $projected['payslip_id'];
+        $trans_nos[] = $projected['trans_no'];
+        $employee_ids[$projected['employee_id']] = true;
+        $sum_gross += (float)$row['gross_salary'];
+        $sum_deductions += (float)$row['total_deductions'];
+        $sum_net += (float)$row['net_salary'];
+        $sum_employer_cost += (float)$row['total_cost'];
+    }
+
+    foreach (array(
+        'total_gross' => $sum_gross,
+        'total_deductions' => $sum_deductions,
+        'total_net' => $sum_net,
+        'total_employer_cost' => $sum_employer_cost,
+    ) as $field => $calculated) {
+        if (!isset($period[$field])
+            || abs((float)$period[$field] - $calculated) > 0.000001
+        ) {
+            $failed['code'] = 'period_totals_drift';
+            return $failed;
+        }
+    }
+
+    $details = array();
+    $detail_counts = array();
+    if (!empty($payslip_ids)) {
+        $id_sql = implode(',', array_map('intval', $payslip_ids));
+        $detail_sql = "SELECT detail_id,payslip_id,element_id,element_name,element_category,"
+            ."is_deduction,amount_type,base_amount,rate,calculated_amount,adjusted_amount,"
+            ."final_amount,account_code,formula_used,is_taxable,display_order,memo FROM "
+            .TB_PREF."payslip_details WHERE payslip_id IN (".$id_sql.")"
+            ." ORDER BY payslip_id,display_order,detail_id".$suffix;
+        $detail_rows = payroll_approval_binding_fetch_rows(
+            $detail_sql,
+            'could not lock payroll-period details for approval binding'
+        );
+        if ($detail_rows === false) {
+            $failed['code'] = 'detail_read_failed';
+            return $failed;
+        }
+        $detail_types = array(
+            'detail_id' => 'int', 'payslip_id' => 'int', 'element_id' => 'int',
+            'element_name' => 'string', 'element_category' => 'int',
+            'is_deduction' => 'int', 'amount_type' => 'int',
+            'base_amount' => 'decimal', 'rate' => 'decimal',
+            'calculated_amount' => 'decimal', 'adjusted_amount' => 'nullable_decimal',
+            'final_amount' => 'decimal', 'account_code' => 'string',
+            'formula_used' => 'nullable_string', 'is_taxable' => 'int',
+            'display_order' => 'int', 'memo' => 'nullable_string',
+        );
+        foreach ($detail_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, $detail_types);
+            if ($projected === false || !in_array($projected['payslip_id'], $payslip_ids, true)) {
+                $failed['code'] = 'invalid_detail_state';
+                return $failed;
+            }
+            $details[] = $projected;
+            if (!isset($detail_counts[$projected['payslip_id']]))
+                $detail_counts[$projected['payslip_id']] = 0;
+            $detail_counts[$projected['payslip_id']]++;
+        }
+        foreach ($payslip_ids as $payslip_id) {
+            if (empty($detail_counts[$payslip_id])) {
+                $failed['code'] = 'missing_payslip_details';
+                return $failed;
+            }
+        }
+    }
+
+    $gl_rows_projected = array();
+    $void_rows_projected = array();
+    if (!empty($trans_nos)) {
+        $trans_sql = implode(',', array_map('intval', $trans_nos));
+        $gl_sql = "SELECT counter,type,type_no,tran_date,account,memo_,amount,"
+            ."dimension_id,dimension2_id,person_type_id,HEX(person_id) person_id_hex"
+            ." FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND type_no IN (".$trans_sql.") ORDER BY type_no,counter".$suffix;
+        $gl_rows = payroll_approval_binding_fetch_rows(
+            $gl_sql,
+            'could not lock payroll-period GL rows for approval binding'
+        );
+        if ($gl_rows === false) {
+            $failed['code'] = 'gl_read_failed';
+            return $failed;
+        }
+        $gl_types = array(
+            'counter' => 'int', 'type' => 'int', 'type_no' => 'int',
+            'tran_date' => 'string', 'account' => 'string', 'memo_' => 'string',
+            'amount' => 'decimal', 'dimension_id' => 'int',
+            'dimension2_id' => 'int', 'person_type_id' => 'nullable_int',
+            'person_id_hex' => 'nullable_string',
+        );
+        $gl_counts = array();
+        $gl_balances = array();
+        foreach ($gl_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, $gl_types);
+            if ($projected === false || !in_array($projected['type_no'], $trans_nos, true)) {
+                $failed['code'] = 'invalid_gl_state';
+                return $failed;
+            }
+            if (abs((float)$row['amount']) <= 0.000001)
+                continue;
+            $gl_rows_projected[] = $projected;
+            if (!isset($gl_counts[$projected['type_no']])) {
+                $gl_counts[$projected['type_no']] = 0;
+                $gl_balances[$projected['type_no']] = 0.0;
+            }
+            $gl_counts[$projected['type_no']]++;
+            $gl_balances[$projected['type_no']] += (float)$row['amount'];
+        }
+        foreach ($trans_nos as $trans_no) {
+            if (empty($gl_counts[$trans_no])
+                || $gl_counts[$trans_no] < 2
+                || abs($gl_balances[$trans_no]) > 0.000001
+            ) {
+                $failed['code'] = 'unreconciled_gl_control';
+                return $failed;
+            }
+        }
+
+        $void_sql = "SELECT type,id,date_,memo_ FROM ".TB_PREF."voided"
+            ." WHERE type = ".db_escape(ST_PAYSLIP)
+            ." AND id IN (".$trans_sql.") ORDER BY id".$suffix;
+        $void_rows = payroll_approval_binding_fetch_rows(
+            $void_sql,
+            'could not lock payroll-period void rows for approval binding'
+        );
+        if ($void_rows === false) {
+            $failed['code'] = 'void_read_failed';
+            return $failed;
+        }
+        foreach ($void_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, array(
+                'type' => 'int', 'id' => 'int', 'date_' => 'string', 'memo_' => 'string',
+            ));
+            if ($projected === false) {
+                $failed['code'] = 'invalid_void_state';
+                return $failed;
+            }
+            $void_rows_projected[] = $projected;
+        }
+        if (!empty($void_rows_projected)) {
+            $failed['code'] = 'voided_payroll_result';
+            return $failed;
+        }
+    }
+
+    $loan_rows_projected = array();
+    if (!empty($payslip_ids) && payroll_table_exists('loan_repayments')) {
+        $id_sql = implode(',', array_map('intval', $payslip_ids));
+        $loan_sql = "SELECT repayment_id,loan_id,installment_no,due_date,"
+            ."principal_amount,interest_amount,total_amount,paid_amount,paid_date,"
+            ."payslip_id,status FROM ".TB_PREF."loan_repayments"
+            ." WHERE payslip_id IN (".$id_sql.") ORDER BY payslip_id,repayment_id".$suffix;
+        $loan_rows = payroll_approval_binding_fetch_rows(
+            $loan_sql,
+            'could not lock payroll-period loan rows for approval binding'
+        );
+        if ($loan_rows === false) {
+            $failed['code'] = 'loan_read_failed';
+            return $failed;
+        }
+        $loan_types = array(
+            'repayment_id' => 'int', 'loan_id' => 'int', 'installment_no' => 'int',
+            'due_date' => 'string', 'principal_amount' => 'decimal',
+            'interest_amount' => 'decimal', 'total_amount' => 'decimal',
+            'paid_amount' => 'decimal', 'paid_date' => 'nullable_string',
+            'payslip_id' => 'int', 'status' => 'int',
+        );
+        foreach ($loan_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, $loan_types);
+            if ($projected === false) {
+                $failed['code'] = 'invalid_loan_state';
+                return $failed;
+            }
+            $loan_rows_projected[] = $projected;
+        }
+    }
+
+    $leave_rows_projected = array();
+    if (!empty($employee_ids) && payroll_table_exists('leave_balances')) {
+        $employee_sql = array();
+        foreach (array_keys($employee_ids) as $employee_id)
+            $employee_sql[] = db_escape($employee_id);
+        $leave_sql = "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
+            ."carried_forward,taken,pending,adjusted FROM ".TB_PREF."leave_balances"
+            ." WHERE employee_id IN (".implode(',', $employee_sql).")"
+            ." ORDER BY employee_id,fiscal_year,leave_id,balance_id".$suffix;
+        $leave_rows = payroll_approval_binding_fetch_rows(
+            $leave_sql,
+            'could not lock payroll-period leave balances for approval binding'
+        );
+        if ($leave_rows === false) {
+            $failed['code'] = 'leave_read_failed';
+            return $failed;
+        }
+        $leave_types = array(
+            'balance_id' => 'int', 'employee_id' => 'string', 'leave_id' => 'int',
+            'fiscal_year' => 'int', 'entitled' => 'decimal',
+            'carried_forward' => 'decimal', 'taken' => 'decimal',
+            'pending' => 'decimal', 'adjusted' => 'decimal',
+        );
+        foreach ($leave_rows as $row) {
+            $projected = payroll_approval_binding_project_row($row, $leave_types);
+            if ($projected === false) {
+                $failed['code'] = 'invalid_leave_state';
+                return $failed;
+            }
+            $leave_rows_projected[] = $projected;
+        }
+    }
+
+    $period_projection = payroll_approval_binding_project_row($period, array(
+        'period_id' => 'int', 'period_name' => 'string', 'from_date' => 'string',
+        'to_date' => 'string', 'pay_date' => 'nullable_string',
+        'department_id' => 'nullable_int', 'status' => 'int',
+        'total_gross' => 'decimal', 'total_deductions' => 'decimal',
+        'total_net' => 'decimal', 'total_employer_cost' => 'decimal',
+    ));
+    if ($period_projection === false) {
+        $failed['code'] = 'invalid_period_projection';
+        return $failed;
+    }
+
+    $contract = payroll_period_approval_binding_contract();
+    $result_payload = array(
+        'contract' => $contract,
+        'period' => $period_projection,
+        'payslips' => $payslips,
+        'details' => $details,
+    );
+    $control_payload = array(
+        'contract' => $contract,
+        'period_id' => $period_id,
+        'counts' => array(
+            'payslips' => count($payslips),
+            'details' => count($details),
+            'gl_lines' => count($gl_rows_projected),
+            'loan_repayments' => count($loan_rows_projected),
+            'leave_balances' => count($leave_rows_projected),
+        ),
+        'reconciled_totals' => array(
+            'gross' => payroll_approval_binding_decimal($sum_gross),
+            'deductions' => payroll_approval_binding_decimal($sum_deductions),
+            'net' => payroll_approval_binding_decimal($sum_net),
+            'employer_cost' => payroll_approval_binding_decimal($sum_employer_cost),
+        ),
+        'gl_rows' => $gl_rows_projected,
+        'void_rows' => $void_rows_projected,
+        'loan_repayments' => $loan_rows_projected,
+        'leave_balances' => $leave_rows_projected,
+    );
+    $result_json = payroll_approval_binding_json($result_payload);
+    $control_json = payroll_approval_binding_json($control_payload);
+    if ($result_json === false || $control_json === false) {
+        $failed['code'] = 'hash_encoding_failed';
+        return $failed;
+    }
+
+    $result_hash = hash('sha256', $contract['id'].'|'.$contract['version'].'|result|'.$result_json);
+    $control_hash = hash('sha256', $contract['id'].'|'.$contract['version'].'|control|'.$control_json);
+    $approval_hash = hash('sha256', $contract['id'].'|'.$contract['version'].'|'.$result_hash.'|'.$control_hash);
+
+    return array(
+        'ok' => true,
+        'code' => 'verified',
+        'contract' => $contract['id'],
+        'version' => $contract['version'],
+        'result_hash' => $result_hash,
+        'control_hash' => $control_hash,
+        'approval_hash' => $approval_hash,
+        'payslip_count' => count($payslips),
+        'detail_count' => count($details),
+        'gl_line_count' => count($gl_rows_projected),
+        'loan_repayment_count' => count($loan_rows_projected),
+        'leave_balance_count' => count($leave_rows_projected),
+    );
+}
+
+/**
+ * Project one verified binding into the persisted approval draft.
+ *
+ * @param array $binding
+ * @return array|false
+ */
+function payroll_period_approval_binding_draft_fields($binding) {
+    if (empty($binding['ok']))
+        return false;
+
+    return array(
+        'approval_binding_contract' => $binding['contract'],
+        'approval_binding_version' => $binding['version'],
+        'approval_result_hash' => $binding['result_hash'],
+        'approval_control_hash' => $binding['control_hash'],
+        'approval_hash' => $binding['approval_hash'],
+        'approval_payslip_count' => (int)$binding['payslip_count'],
+        'approval_detail_count' => (int)$binding['detail_count'],
+        'approval_gl_line_count' => (int)$binding['gl_line_count'],
+        'approval_loan_repayment_count' => (int)$binding['loan_repayment_count'],
+        'approval_leave_balance_count' => (int)$binding['leave_balance_count'],
+    );
+}
+
+/**
+ * Verify that an approval draft is bound to the current locked result/control.
+ *
+ * @param array $draft_data
+ * @param array $binding
+ * @return bool
+ */
+function payroll_period_approval_binding_matches_draft($draft_data, $binding) {
+    if (!is_array($draft_data)
+        || empty($binding['ok'])
+        || payroll_period_approval_binding_draft_state($draft_data) !== 'well_formed'
+    ) {
+        return false;
+    }
+
+    $expected = payroll_period_approval_binding_draft_fields($binding);
+    if ($expected === false)
+        return false;
+
+    foreach ($expected as $field => $value) {
+        if (!array_key_exists($field, $draft_data))
+            return false;
+        if (strpos($field, '_count') !== false) {
+            if ((int)$draft_data[$field] !== (int)$value)
+                return false;
+        } elseif (!is_string($draft_data[$field])
+            || !hash_equals((string)$value, $draft_data[$field])
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Classify persisted approval-binding metadata without recomputing payroll.
+ *
+ * Rejection/cancellation may use this classification to close a stale or
+ * malformed bound draft without ever approving it. Approval execution still
+ * requires an exact recomputed match.
+ *
+ * @param array $draft_data
+ * @return string absent|well_formed|malformed
+ */
+function payroll_period_approval_binding_draft_state($draft_data) {
+    if (!is_array($draft_data))
+        return 'absent';
+
+    $fields = array(
+        'approval_binding_contract', 'approval_binding_version',
+        'approval_result_hash', 'approval_control_hash', 'approval_hash',
+        'approval_payslip_count', 'approval_detail_count',
+        'approval_gl_line_count', 'approval_loan_repayment_count',
+        'approval_leave_balance_count',
+    );
+    $present = 0;
+    foreach ($fields as $field) {
+        if (array_key_exists($field, $draft_data))
+            $present++;
+    }
+    if ($present === 0)
+        return 'absent';
+    if ($present !== count($fields))
+        return 'malformed';
+
+    $contract = payroll_period_approval_binding_contract();
+    if (!is_string($draft_data['approval_binding_contract'])
+        || !is_string($draft_data['approval_binding_version'])
+        || !hash_equals($contract['id'], $draft_data['approval_binding_contract'])
+        || !hash_equals($contract['version'], $draft_data['approval_binding_version'])
+    ) {
+        return 'malformed';
+    }
+
+    foreach (array(
+        'approval_result_hash', 'approval_control_hash', 'approval_hash',
+    ) as $field) {
+        if (!is_string($draft_data[$field])
+            || preg_match('/^[a-f0-9]{64}$/D', $draft_data[$field]) !== 1
+        ) {
+            return 'malformed';
+        }
+    }
+
+    foreach (array(
+        'approval_payslip_count', 'approval_detail_count',
+        'approval_gl_line_count', 'approval_loan_repayment_count',
+        'approval_leave_balance_count',
+    ) as $field) {
+        $value = $draft_data[$field];
+        if ((!is_int($value)
+                && (!is_string($value)
+                    || preg_match('/^[0-9]+$/D', $value) !== 1))
+            || (int)$value < 0
+        ) {
+            return 'malformed';
+        }
+    }
+
+    return 'well_formed';
+}
+
 /**
  * Resolve the current numeric actor for PAY-CORE-011 containment logging.
  *
