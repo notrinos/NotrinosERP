@@ -253,21 +253,21 @@ function get_employee_by_code($employee_id) {
 }
 
 /**
- * Get the least-data employee projection used by profile/card outputs.
+ * Build the least-data employee profile projection query.
  *
  * The explicit column list intentionally excludes restricted compensation,
  * bank, identity, and tax data so secondary output channels cannot inherit a
  * complete employee row from the legacy helper.
  *
  * @param string $employee_id Employee code (for example, EMP001).
- * @return array|false
+ * @return string|false
  */
-function get_employee_profile_projection($employee_id) {
+function get_employee_profile_projection_sql($employee_id) {
 	$employee_id = trim((string)$employee_id);
 	if ($employee_id === '')
 		return false;
 
-	$sql = "SELECT e.employee_id, e.first_name, e.last_name, e.email, e.mobile,
+	return "SELECT e.employee_id, e.first_name, e.last_name, e.email, e.mobile,
 				e.hire_date, e.department_id, e.position_id, e.grade_id, e.inactive,
 				d.department_name, p.position_name, g.grade_name
 			FROM ".TB_PREF."employees e
@@ -275,8 +275,20 @@ function get_employee_profile_projection($employee_id) {
 			LEFT JOIN ".TB_PREF."positions p ON e.position_id = p.position_id
 			LEFT JOIN ".TB_PREF."pay_grades g ON e.grade_id = g.grade_id
 			WHERE e.employee_id = ".db_escape($employee_id);
-	$result = db_query($sql, 'could not get employee profile projection');
+}
 
+/**
+ * Get the least-data employee projection used by profile/card outputs.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_profile_projection($employee_id) {
+	$sql = get_employee_profile_projection_sql($employee_id);
+	if ($sql === false)
+		return false;
+
+	$result = db_query($sql, 'could not get employee profile projection');
 	return db_fetch_assoc($result);
 }
 
