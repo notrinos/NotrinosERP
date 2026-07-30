@@ -495,16 +495,18 @@ function delete_attendance_record($employee_id, $date_sql) {
 }
 
 /**
- * Get active employees for the attendance sheet, optionally filtered.
- * Returns a db result with employee_id, employee_name (for grid)
- * or employee_id only when $ids_only = true (for bulk operations).
+ * Build the least-data active-employee query used by the attendance sheet.
+ *
+ * The exact projection contains the employee code and, for the rendered grid,
+ * the display name only. Compensation, contact, identity, tax, bank, login,
+ * notes, and every unrelated employee field remain excluded.
  *
  * @param int    $department_id  0 = all departments.
  * @param string $employee_id    '' = all employees.
  * @param bool   $ids_only       When true, select only employee_id.
- * @return resource DB result
+ * @return string
  */
-function get_attendance_sheet_employees($department_id = 0, $employee_id = '', $ids_only = false) {
+function get_attendance_sheet_employee_projection_sql($department_id = 0, $employee_id = '', $ids_only = false) {
 	if ($ids_only) {
 		$select = "e.employee_id";
 	} else {
@@ -517,12 +519,32 @@ function get_attendance_sheet_employees($department_id = 0, $employee_id = '', $
 
 	if (!empty($department_id))
 		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
+	$employee_id = trim((string)$employee_id);
 	if ($employee_id !== '')
 		$sql .= " AND e.employee_id = ".db_escape($employee_id);
 
 	if (!$ids_only)
 		$sql .= " ORDER BY e.first_name, e.last_name";
 
+	return $sql;
+}
+
+/**
+ * Get active employees for the attendance sheet, optionally filtered.
+ * Returns a db result with employee_id, employee_name (for grid)
+ * or employee_id only when $ids_only = true (for bulk operations).
+ *
+ * @param int    $department_id  0 = all departments.
+ * @param string $employee_id    '' = all employees.
+ * @param bool   $ids_only       When true, select only employee_id.
+ * @return resource DB result
+ */
+function get_attendance_sheet_employees($department_id = 0, $employee_id = '', $ids_only = false) {
+	$sql = get_attendance_sheet_employee_projection_sql(
+		$department_id,
+		$employee_id,
+		$ids_only
+	);
 	return db_query($sql, 'could not get attendance sheet employees');
 }
 

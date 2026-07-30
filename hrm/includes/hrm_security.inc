@@ -178,6 +178,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'leave_entitlement_context',
 		'employee_summary',
 		'attendance_roster',
+		'payslip_employee_context',
 	), true))
 		$safe_channel = 'unknown';
 

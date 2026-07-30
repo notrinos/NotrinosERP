@@ -20,6 +20,8 @@ function get_employee_details_to_payslip($order, $employee_id) {
 	if (!$employee_row)
 		return _('The selected employee was not found.');
 
+	hrm_log_restricted_employee_projection('payslip_employee_context');
+
 	if($employee_row['position_id'] == 0)
 		$error = _('The selected employee does not have a job position, please select another employee or set job position for the selected employee.');
 

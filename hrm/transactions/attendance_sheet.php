@@ -315,6 +315,8 @@ $emp_result = get_attendance_sheet_employees($dept_id, $emp_id);
 $employees = array();
 while ($row = db_fetch($emp_result))
     $employees[] = $row;
+if (!empty($employees))
+    hrm_log_restricted_employee_projection('attendance_roster');
 
 $overtime_result = get_all_overtime();
 $overtime_options = array(0 => _('-- None --'));

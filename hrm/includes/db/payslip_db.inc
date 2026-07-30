@@ -962,18 +962,39 @@ function payslip_generated_for_period($from_date, $to_date, $employee) {
 }
 
 /**
+ * Build the exact least-data employee context query used by payslip entry.
+ *
+ * The projection is intentionally limited to the employee code, display name,
+ * assignment identifiers, and service dates required by existing payslip
+ * validation. Compensation, contact, identity, tax, bank, login, notes, and
+ * every unrelated employee field remain excluded.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_payslip_employee_context_projection_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT employee_id, CONCAT(first_name, ' ', last_name) AS name,"
+		." position_id, grade_id, hire_date, released_date"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+}
+
+/**
  * Get employee data required for payslip generation.
  *
  * @param string $employee_id
  * @return array|false
  */
 function get_employee_to_payslip($employee_id) {
-	$sql = "SELECT employee_id, CONCAT(first_name, ' ', last_name) as name,
-		position_id, grade_id, hire_date, released_date
-		FROM ".TB_PREF."employees
-		WHERE employee_id = ".db_escape($employee_id);
-	$result = db_query($sql, 'could not retrieve employee record');
+	$sql = get_payslip_employee_context_projection_sql($employee_id);
+	if ($sql === false)
+		return false;
 
+	$result = db_query($sql, 'could not retrieve employee record');
 	return db_fetch($result);
 }
 
