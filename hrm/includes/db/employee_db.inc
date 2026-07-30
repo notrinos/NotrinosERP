@@ -323,17 +323,21 @@ function employee_summary_projection($employee) {
 }
 
 /**
- * Get the least-data employee projection rendered by the compact summary card.
+ * Build the exact least-data employee summary-card query.
+ *
+ * The explicit projection contains only fields rendered by the compact summary
+ * card. Restricted compensation, bank, identity, tax, personal-contact, notes,
+ * login, custom-data, and unrelated employee fields remain excluded.
  *
  * @param string $employee_id Employee code (for example, EMP001).
- * @return array|false
+ * @return string|false
  */
-function get_employee_summary_projection($employee_id) {
+function get_employee_summary_projection_sql($employee_id) {
 	$employee_id = trim((string)$employee_id);
 	if ($employee_id === '')
 		return false;
 
-	$sql = "SELECT e.employee_id, e.first_name, e.middle_name, e.last_name,
+	return "SELECT e.employee_id, e.first_name, e.middle_name, e.last_name,
 			d.department_name, p.position_name, g.grade_name, e.hire_date,
 			e.employment_type, e.released_date, e.inactive
 		FROM ".TB_PREF."employees e
@@ -341,8 +345,20 @@ function get_employee_summary_projection($employee_id) {
 		LEFT JOIN ".TB_PREF."positions p ON e.position_id = p.position_id
 		LEFT JOIN ".TB_PREF."pay_grades g ON e.grade_id = g.grade_id
 		WHERE e.employee_id = ".db_escape($employee_id);
-	$result = db_query($sql, 'could not get employee summary projection');
+}
 
+/**
+ * Get the least-data employee projection rendered by the compact summary card.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return array|false
+ */
+function get_employee_summary_projection($employee_id) {
+	$sql = get_employee_summary_projection_sql($employee_id);
+	if ($sql === false)
+		return false;
+
+	$result = db_query($sql, 'could not get employee summary projection');
 	return employee_summary_projection(db_fetch_assoc($result));
 }
 
