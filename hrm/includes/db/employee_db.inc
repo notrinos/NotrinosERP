@@ -428,25 +428,37 @@ function employee_salary_context_projection($employee) {
 }
 
 /**
- * Get the least-data employee context required to route salary components.
+ * Build the least-data employee salary-routing context query.
  *
- * The projection contains configuration-routing identifiers only. Salary
- * amounts remain in the existing effective-dated salary repositories, and no
+ * The explicit projection contains configuration-routing identifiers only.
+ * Salary amounts remain in the effective-dated salary repositories, and no
  * restricted employee bank, identity, tax, or profile value is selected.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_employee_salary_context_projection_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT employee_id, personal_salary, position_id, grade_id"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+}
+
+/**
+ * Get the least-data employee context required to route salary components.
  *
  * @param string $employee_id Employee code (for example, EMP001).
  * @return array|false
  */
 function get_employee_salary_context_projection($employee_id) {
-	$employee_id = trim((string)$employee_id);
-	if ($employee_id === '')
+	$sql = get_employee_salary_context_projection_sql($employee_id);
+	if ($sql === false)
 		return false;
 
-	$sql = "SELECT employee_id, personal_salary, position_id, grade_id"
-		." FROM ".TB_PREF."employees"
-		." WHERE employee_id = ".db_escape($employee_id);
 	$result = db_query($sql, 'could not get employee salary context');
-
 	return employee_salary_context_projection(db_fetch_assoc($result));
 }
 
