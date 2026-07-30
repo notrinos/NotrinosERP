@@ -1038,18 +1038,32 @@ function get_payslip_history_employee_name($employee_id) {
 }
 
 /**
- * Check employee is hired on or before date and not released before date.
+ * Build the exact employee hire-eligibility decision query used by payslip and
+ * payroll processing.
  *
- * @param string $employee_id
- * @param string $date
- * @return bool
+ * The query returns only one aggregate decision. It does not project hire or
+ * release dates, employee identity, compensation, bank, tax, contact, or any
+ * other employee field into the caller.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @param string $date Eligibility date in a supported application date format.
+ * @return string|false
  */
-function check_employee_hired($employee_id, $date) {
-	$sql_date = payslip_to_sql_date($date);
-	if ($sql_date === '')
+function get_payslip_hire_eligibility_sql($employee_id, $date) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
 		return false;
 
-	$sql = "SELECT COUNT(*) FROM ".TB_PREF."employees
+	$sql_date = payslip_to_sql_date($date);
+	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D', $sql_date))
+		return false;
+
+	$date_parts = explode('-', $sql_date);
+	if (count($date_parts) !== 3
+		|| !checkdate((int)$date_parts[1], (int)$date_parts[2], (int)$date_parts[0]))
+		return false;
+
+	return "SELECT COUNT(*) AS eligible_count FROM ".TB_PREF."employees
 		WHERE employee_id = ".db_escape($employee_id)."
 		AND (hire_date IS NULL OR hire_date = '0000-00-00' OR hire_date <= ".db_escape($sql_date).")
 		AND (
@@ -1058,6 +1072,19 @@ function check_employee_hired($employee_id, $date) {
 			OR released_date = '0000-00-00'
 			OR released_date >= ".db_escape($sql_date)."
 		)";
+}
+
+/**
+ * Check employee is hired on or before date and not released before date.
+ *
+ * @param string $employee_id
+ * @param string $date
+ * @return bool
+ */
+function check_employee_hired($employee_id, $date) {
+	$sql = get_payslip_hire_eligibility_sql($employee_id, $date);
+	if ($sql === false)
+		return false;
 
 	return check_empty_result($sql);
 }
