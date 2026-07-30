@@ -532,21 +532,33 @@ function employee_separation_context_projection($employee) {
 }
 
 /**
+ * Build the exact employee assignment and service-date query for separation.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_employee_separation_context_projection_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT employee_id, department_id, position_id, grade_id, hire_date"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+}
+
+/**
  * Get the least-data assignment and service-date context for separation.
  *
  * @param string $employee_id Employee code (for example, EMP001).
  * @return array|false
  */
 function get_employee_separation_context_projection($employee_id) {
-	$employee_id = trim((string)$employee_id);
-	if ($employee_id === '')
+	$sql = get_employee_separation_context_projection_sql($employee_id);
+	if ($sql === false)
 		return false;
 
-	$sql = "SELECT employee_id, department_id, position_id, grade_id, hire_date"
-		." FROM ".TB_PREF."employees"
-		." WHERE employee_id = ".db_escape($employee_id);
 	$result = db_query($sql, 'could not get employee separation context');
-
 	return employee_separation_context_projection(db_fetch_assoc($result));
 }
 
