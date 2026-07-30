@@ -999,6 +999,45 @@ function get_employee_to_payslip($employee_id) {
 }
 
 /**
+ * Build the exact least-data employee-name query used by payslip history.
+ *
+ * The projection is intentionally limited to the rendered display name. It
+ * excludes compensation, contact, identity, tax, bank, assignment, service,
+ * login, notes, and every unrelated employee field before the result reaches
+ * the inquiry page.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_payslip_history_employee_name_projection_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) AS employee_name"
+		." FROM ".TB_PREF."employees"
+		." WHERE employee_id = ".db_escape($employee_id);
+}
+
+/**
+ * Get the display employee name required by the payslip-history inquiry.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string
+ */
+function get_payslip_history_employee_name($employee_id) {
+	$sql = get_payslip_history_employee_name_projection_sql($employee_id);
+	if ($sql === false)
+		return '';
+
+	$result = db_query($sql, 'could not get payslip-history employee name');
+	$row = db_fetch($result);
+
+	return $row && isset($row['employee_name'])
+		? trim((string)$row['employee_name']) : '';
+}
+
+/**
  * Check employee is hired on or before date and not released before date.
  *
  * @param string $employee_id

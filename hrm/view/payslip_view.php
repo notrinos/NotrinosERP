@@ -14,6 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 
 page(_("Payslip View"));
 
@@ -72,13 +73,7 @@ function get_payslip_view_employee_name($employee_code) {
     if ($employee_code === '' || !employee_table_exists('employees'))
         return '';
 
-    $sql = "SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) AS employee_name
-        FROM ".TB_PREF."employees
-        WHERE employee_id = ".db_escape($employee_code);
-    $result = db_query($sql, 'could not get employee name');
-    $row = db_fetch($result);
-
-    return $row && !empty($row['employee_name']) ? trim($row['employee_name']) : '';
+    return get_payslip_history_employee_name($employee_code);
 }
 
 if (isset($_GET['payslip_id']))
@@ -112,6 +107,8 @@ if ($selected_id > 0) {
         $emp_col = isset($header['employee_id']) ? 'employee_id' : 'emp_id';
         $employee_code = isset($header[$emp_col]) ? $header[$emp_col] : '';
         $employee_name = get_payslip_view_employee_name((string)$employee_code);
+        if ($employee_name !== '')
+            hrm_log_restricted_employee_projection('payslip_history_employee_name');
         $gross_amount = isset($header['gross_salary']) ? $header['gross_salary'] : (isset($header['salary_amount']) ? $header['salary_amount'] : null);
         $net_amount = payslip_payable_amount($header);
 
