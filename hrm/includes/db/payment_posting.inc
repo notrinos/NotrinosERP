@@ -543,6 +543,41 @@ function payroll_payment_payslip_gl_trans_no($payslip) {
 }
 
 /**
+ * Build the exact locked payroll-period payment-set projections.
+ *
+ * Negative identifiers are reserved for rollback-only fixture execution. The
+ * public repository helper below accepts only persisted positive identifiers.
+ * The payslip projection retains the complete current compatibility row because
+ * validation, compare-and-set, payment, and post-write verification consume
+ * different fields from the same locked set. The table name is deliberately
+ * restricted to the one current payslip header repository.
+ *
+ * @param mixed $period_id
+ * @param string $table_name
+ * @return array|false
+ */
+function get_locked_payroll_period_payment_set_sql($period_id, $table_name) {
+	$period_id = (int)$period_id;
+	$table_name = (string)$table_name;
+	if ($period_id === 0 || $table_name !== 'payslips'
+		|| !function_exists('get_payroll_period_for_update_sql'))
+		return false;
+
+	return array(
+		'period' => get_payroll_period_for_update_sql($period_id),
+		'payslips' => "SELECT payslip_id, payroll_period_id, trans_no, reference, "
+			."employee_id, tran_date, from_date, to_date, department_id, position_id, "
+			."grade_id, basic_salary, total_earnings, gross_salary, total_deductions, "
+			."net_salary, employer_contributions, total_cost, working_days, worked_days, "
+			."overtime_hours, leave_days, absent_days, leaves, deductable_leaves, "
+			."loan_deduction, payable_amount, salary_amount, status, payment_trans_no, "
+			."notes, custom_data FROM ".TB_PREF.$table_name
+			." WHERE payroll_period_id = ".db_escape($period_id)
+			." ORDER BY payslip_id FOR UPDATE"
+	);
+}
+
+/**
  * Lock one payroll period and its complete payslip relationship.
  *
  * The payslip query uses the existing period-leading unique index. Under the
@@ -559,9 +594,12 @@ function get_locked_payroll_period_payment_set($period_id) {
 	if ($period_id <= 0 || !$table_name)
 		return false;
 
+	$sql = get_locked_payroll_period_payment_set_sql($period_id, $table_name);
+	if ($sql === false)
+		return false;
+
 	$period_query = db_query(
-		"SELECT * FROM ".TB_PREF."payroll_periods"
-			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE",
+		$sql['period'],
 		'could not lock payroll period for payment batch'
 	);
 	$period = $period_query ? db_fetch_assoc($period_query) : false;
@@ -569,9 +607,7 @@ function get_locked_payroll_period_payment_set($period_id) {
 		return false;
 
 	$payslip_query = db_query(
-		"SELECT * FROM ".TB_PREF.$table_name
-			." WHERE payroll_period_id = ".db_escape($period_id)
-			." ORDER BY payslip_id FOR UPDATE",
+		$sql['payslips'],
 		'could not lock payroll period payslips for payment batch'
 	);
 	if (!$payslip_query)
