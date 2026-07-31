@@ -212,16 +212,40 @@ function get_payroll_period_for_update($period_id) {
 }
 
 /**
- * Get one payroll period by id.
+ * Build the exact payroll-period read projection.
+ *
+ * Negative identifiers are reserved for transaction-scoped test fixtures; the
+ * public repository helper below accepts only persisted positive identifiers.
+ *
+ * @param int $period_id
+ * @return string|false
+ */
+function get_payroll_period_sql($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id === 0)
+        return false;
+
+    return "SELECT period_id, period_name, from_date, to_date, pay_date, "
+        ."department_id, status, total_gross, total_deductions, total_net, "
+        ."total_employer_cost, approved_by, approval_date, gl_trans_no, "
+        ."created_by, created_date, notes "
+        ."FROM ".TB_PREF."payroll_periods WHERE period_id = ".db_escape($period_id);
+}
+
+/**
+ * Get one persisted payroll period by id.
  *
  * @param int $period_id
  * @return array|false
  */
 function get_payroll_period($period_id) {
-    if (!payroll_table_exists('payroll_periods'))
+    $period_id = (int)$period_id;
+    if ($period_id <= 0 || !payroll_table_exists('payroll_periods'))
         return false;
 
-    $sql = "SELECT * FROM ".TB_PREF."payroll_periods WHERE period_id = ".db_escape((int)$period_id);
+    $sql = get_payroll_period_sql($period_id);
+    if ($sql === false)
+        return false;
     $result = db_query($sql, 'could not get payroll period');
 
     return db_fetch($result);
