@@ -1617,6 +1617,19 @@ function reopen_payroll_period_without_financial_side_effects($period_id) {
 }
 
 /**
+ * Build the backward-compatible payroll-period count query.
+ *
+ * @param int|null $status
+ * @return string
+ */
+function count_payroll_periods_sql($status=null) {
+    $sql = "SELECT COUNT(*) FROM ".TB_PREF."payroll_periods";
+    if ($status !== null && $status !== '')
+        $sql .= " WHERE status = ".db_escape((int)$status);
+    return $sql;
+}
+
+/**
  * Count payroll periods optionally filtered by status.
  *
  * @param int|null $status
@@ -1626,11 +1639,10 @@ function count_payroll_periods($status=null) {
     if (!payroll_table_exists('payroll_periods'))
         return 0;
 
-    $sql = "SELECT COUNT(*) FROM ".TB_PREF."payroll_periods";
-    if ($status !== null && $status !== '')
-        $sql .= " WHERE status = ".db_escape((int)$status);
-
-    $result = db_query($sql, 'could not count payroll periods');
+    $result = db_query(
+        count_payroll_periods_sql($status),
+        'could not count payroll periods'
+    );
     $row = db_fetch_row($result);
     return $row ? (int)$row[0] : 0;
 }
