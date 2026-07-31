@@ -1090,16 +1090,37 @@ function check_employee_hired($employee_id, $date) {
 }
 
 /**
+ * Build the exact employee-position eligibility decision query used by
+ * payslip entry and payroll processing.
+ *
+ * The query returns only one aggregate decision. It does not expose the
+ * position identifier or any employee identity, compensation, bank, tax,
+ * contact, service, or unrelated field to the caller.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_payslip_position_eligibility_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT COUNT(*) AS eligible_count FROM ".TB_PREF."employees
+		WHERE employee_id = ".db_escape($employee_id)."
+		AND position_id IS NOT NULL
+		AND position_id > 0";
+}
+
+/**
  * Check whether employee has a valid job position.
  *
  * @param string $employee_id
  * @return bool
  */
 function employee_has_position($employee_id) {
-	$sql = "SELECT COUNT(*) FROM ".TB_PREF."employees
-		WHERE employee_id = ".db_escape($employee_id)."
-		AND position_id IS NOT NULL
-		AND position_id > 0";
+	$sql = get_payslip_position_eligibility_sql($employee_id);
+	if ($sql === false)
+		return false;
 
 	return check_empty_result($sql);
 }
