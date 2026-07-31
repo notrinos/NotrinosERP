@@ -1140,6 +1140,35 @@ function payroll_period_approval_binding_draft_state($draft_data) {
 }
 
 /**
+ * Build the exact approval-draft projection for one payroll period and status.
+ *
+ * The complete legacy approval_drafts row is retained because posting and
+ * reversal consume decoded binding evidence while duplicate matching rows must
+ * still fail closed. Negative identifiers are reserved for rollback-only test
+ * fixtures; the public repository helper accepts only persisted positive ids.
+ *
+ * @param int $period_id
+ * @param int $status Approval status; approved is 1.
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_draft_sql($period_id, $status=1, $lock=true) {
+    $period_id = (int)$period_id;
+    if ($period_id === 0)
+        return false;
+
+    return "SELECT id, workflow_id, trans_type, reserved_trans_no, draft_data, "
+        ."amount, currency, person_type_id, person_id, current_level, status, "
+        ."submitted_by, submitted_date, approved_trans_no, completed_date, "
+        ."workflow_version, reference, summary, loc_code "
+        ."FROM ".TB_PREF."approval_drafts"
+        ." WHERE trans_type = ".db_escape(ST_PAYROLL_PERIOD)
+        ." AND status = ".db_escape((int)$status)
+        ." AND approved_trans_no = ".db_escape($period_id)
+        ." ORDER BY id DESC".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Resolve the latest approval draft for one payroll period and status.
  *
  * @param int $period_id
@@ -1154,11 +1183,9 @@ function get_payroll_period_approval_draft($period_id, $status=1, $lock=true) {
     if ($period_id <= 0 || !payroll_table_exists('approval_drafts'))
         return false;
 
-    $sql = "SELECT * FROM ".TB_PREF."approval_drafts"
-        ." WHERE trans_type = ".db_escape(ST_PAYROLL_PERIOD)
-        ." AND status = ".db_escape((int)$status)
-        ." AND approved_trans_no = ".db_escape($period_id)
-        ." ORDER BY id DESC".($lock ? ' FOR UPDATE' : '');
+    $sql = get_payroll_period_approval_draft_sql($period_id, $status, $lock);
+    if ($sql === false)
+        return false;
     $result = db_query($sql, 'could not get payroll-period approval evidence');
     if (!$result)
         return false;
