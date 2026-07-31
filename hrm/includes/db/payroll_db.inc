@@ -1636,6 +1636,35 @@ function count_payroll_periods($status=null) {
 }
 
 /**
+ * Build the backward-compatible payroll-period list projection.
+ *
+ * The explicit column list preserves the complete legacy row shape while
+ * preventing wildcard expansion if the table gains new fields. Filtering,
+ * ordering, pagination and integer coercion intentionally retain the existing
+ * public helper semantics.
+ *
+ * @param int|null $status
+ * @param int|null $limit
+ * @param int $offset
+ * @return string
+ */
+function get_payroll_periods_sql($status=null, $limit=null, $offset=0) {
+    $sql = "SELECT period_id, period_name, from_date, to_date, pay_date, "
+        ."department_id, status, total_gross, total_deductions, total_net, "
+        ."total_employer_cost, approved_by, approval_date, gl_trans_no, "
+        ."created_by, created_date, notes FROM ".TB_PREF."payroll_periods";
+    if ($status !== null && $status !== '')
+        $sql .= " WHERE status = ".db_escape((int)$status);
+    $sql .= " ORDER BY from_date DESC, period_id DESC";
+
+    $offset = max((int)$offset, 0);
+    if ($limit !== null && (int)$limit > 0)
+        $sql .= " LIMIT ".(int)$limit." OFFSET ".$offset;
+
+    return $sql;
+}
+
+/**
  * Get payroll periods optionally filtered by status.
  *
  * @param int|null $status
@@ -1647,16 +1676,10 @@ function get_payroll_periods($status=null, $limit=null, $offset=0) {
     if (!payroll_table_exists('payroll_periods'))
         return false;
 
-    $sql = "SELECT * FROM ".TB_PREF."payroll_periods";
-    if ($status !== null && $status !== '')
-        $sql .= " WHERE status = ".db_escape((int)$status);
-    $sql .= " ORDER BY from_date DESC, period_id DESC";
-
-    $offset = max((int)$offset, 0);
-    if ($limit !== null && (int)$limit > 0)
-        $sql .= " LIMIT ".(int)$limit." OFFSET ".$offset;
-
-    return db_query($sql, 'could not get payroll periods');
+    return db_query(
+        get_payroll_periods_sql($status, $limit, $offset),
+        'could not get payroll periods'
+    );
 }
 
 /**
