@@ -195,6 +195,25 @@ function add_payroll_period($period_name, $from_date, $to_date, $department_id=n
 }
 
 /**
+ * Build the exact payroll-period locking read projection.
+ *
+ * The complete legacy row shape is retained because approval, posting,
+ * reversal, reopen, and void commands consume different fields from the same
+ * locked row. The caller must own the surrounding transaction.
+ *
+ * @param int $period_id
+ * @return string
+ */
+function get_payroll_period_for_update_sql($period_id) {
+    return "SELECT period_id, period_name, from_date, to_date, pay_date, "
+        ."department_id, status, total_gross, total_deductions, total_net, "
+        ."total_employer_cost, approved_by, approval_date, gl_trans_no, "
+        ."created_by, created_date, notes "
+        ."FROM ".TB_PREF."payroll_periods WHERE period_id = "
+        .db_escape((int)$period_id)." FOR UPDATE";
+}
+
+/**
  * Get one payroll period by id FOR UPDATE (row lock).
  *
  * @param int $period_id
@@ -204,8 +223,7 @@ function get_payroll_period_for_update($period_id) {
     if (!payroll_table_exists('payroll_periods'))
         return false;
 
-    $sql = "SELECT * FROM ".TB_PREF."payroll_periods
-        WHERE period_id = ".db_escape((int)$period_id)." FOR UPDATE";
+    $sql = get_payroll_period_for_update_sql($period_id);
     $result = db_query($sql, 'could not get payroll period for update');
 
     return db_fetch($result);
