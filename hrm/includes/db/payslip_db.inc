@@ -1126,16 +1126,38 @@ function employee_has_position($employee_id) {
 }
 
 /**
+ * Build the exact salary-structure eligibility decision query used by the
+ * legacy payslip helper.
+ *
+ * The query preserves the existing decision semantics: any salary_structure
+ * row matching the employee's current position is sufficient. It returns only
+ * one aggregate decision and exposes no employee, salary, formula, identity,
+ * bank, tax, contact, payroll-result, or salary-structure field.
+ *
+ * @param string $employee_id Employee code (for example, EMP001).
+ * @return string|false
+ */
+function get_payslip_salary_structure_eligibility_sql($employee_id) {
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '')
+		return false;
+
+	return "SELECT COUNT(*) AS eligible_count
+		FROM ".TB_PREF."employees e
+		INNER JOIN ".TB_PREF."salary_structure ss ON ss.position_id = e.position_id
+		WHERE e.employee_id = ".db_escape($employee_id);
+}
+
+/**
  * Check whether employee position has at least one salary structure row.
  *
  * @param string $employee_id
  * @return bool
  */
 function emp_position_has_structure($employee_id) {
-	$sql = "SELECT COUNT(*)
-		FROM ".TB_PREF."employees e
-		INNER JOIN ".TB_PREF."salary_structure ss ON ss.position_id = e.position_id
-		WHERE e.employee_id = ".db_escape($employee_id);
+	$sql = get_payslip_salary_structure_eligibility_sql($employee_id);
+	if ($sql === false)
+		return false;
 
 	return check_empty_result($sql);
 }
