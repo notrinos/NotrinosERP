@@ -53,18 +53,35 @@ function get_payroll_payment_bank_account($bank_account_id) {
 }
 
 /**
+ * Build the exact payroll payable-account projection.
+ *
+ * The query returns only the configured GL account code. It deliberately
+ * excludes preference metadata and all chart-master descriptive fields.
+ *
+ * @return string
+ */
+function get_payroll_payment_payable_account_sql() {
+	return "SELECT coa.account_code FROM ".TB_PREF."sys_prefs prefs"
+		." INNER JOIN ".TB_PREF."chart_master coa ON coa.account_code = TRIM(prefs.value)"
+		." WHERE prefs.name = 'payroll_payable_act'";
+}
+
+/**
  * Resolve the payroll payable GL account configured in HR settings.
  *
  * @return string|false
  */
 function get_payroll_payment_payable_account() {
-	$payable_account = trim((string)get_company_pref('payroll_payable_act'));
-	if ($payable_account === '')
-		return false;
-	if (class_exists('chart_master_entity') && chart_master_entity::find($payable_account) === null)
+	$result = db_query(
+		get_payroll_payment_payable_account_sql(),
+		'could not fetch payroll payable account'
+	);
+	$row = db_fetch($result);
+	if (!$row || !isset($row['account_code']))
 		return false;
 
-	return $payable_account;
+	$payable_account = trim((string)$row['account_code']);
+	return $payable_account === '' ? false : $payable_account;
 }
 
 /**
