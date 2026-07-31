@@ -14,6 +14,25 @@ include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
 
 /**
+ * Build the exact payroll payment bank-account projection.
+ *
+ * Negative identifiers are reserved for rollback-only test fixtures. The
+ * public repository helper below accepts only persisted positive identifiers.
+ * The projection deliberately excludes bank name, address and account number.
+ *
+ * @param mixed $bank_account_id
+ * @return string|false
+ */
+function get_payroll_payment_bank_account_sql($bank_account_id) {
+	$bank_account_id = (int)$bank_account_id;
+	if ($bank_account_id === 0)
+		return false;
+
+	return "SELECT id, account_code, bank_curr_code FROM ".TB_PREF."bank_accounts"
+		." WHERE id = ".db_escape($bank_account_id);
+}
+
+/**
  * Fetch a valid source bank account row.
  *
  * @param mixed $bank_account_id
@@ -24,8 +43,9 @@ function get_payroll_payment_bank_account($bank_account_id) {
 	if ($bank_account_id <= 0)
 		return false;
 
-	$sql = "SELECT id, account_code, bank_curr_code FROM ".TB_PREF."bank_accounts"
-		." WHERE id = ".db_escape($bank_account_id);
+	$sql = get_payroll_payment_bank_account_sql($bank_account_id);
+	if ($sql === false)
+		return false;
 	$result = db_query($sql, 'could not fetch payroll payment bank account');
 	$row = db_fetch($result);
 
