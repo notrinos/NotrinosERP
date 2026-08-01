@@ -1784,6 +1784,31 @@ function get_payroll_periods($status=null, $limit=null, $offset=0) {
 }
 
 /**
+ * Build the exact payroll-period payment-status summary projection.
+ *
+ * Persisted callers provide positive period identifiers. Negative identifiers
+ * remain reserved for rollback-only fixtures. The aggregate preserves the
+ * existing paid/void status rules and returns only the two values consumed by
+ * payment-status synchronization.
+ *
+ * @param mixed $period_id
+ * @param string $table_name
+ * @return string|false
+ */
+function get_payroll_period_payment_status_summary_sql($period_id, $table_name) {
+    $period_id = (int)$period_id;
+    $table_name = (string)$table_name;
+    if ($period_id === 0 || $table_name !== 'payslips')
+        return false;
+
+    return "SELECT COUNT(*) AS total_count, "
+        ."SUM(CASE WHEN COALESCE(status, 0) >= 3 AND COALESCE(status, 0) < 6 "
+        ."THEN 1 ELSE 0 END) AS paid_count FROM ".TB_PREF.$table_name
+        ." WHERE payroll_period_id = ".db_escape($period_id)
+        ." AND COALESCE(status, 0) <> 6";
+}
+
+/**
  * Update payroll period status.
  *
  * @param int $period_id
@@ -1863,10 +1888,12 @@ function sync_payroll_period_payment_status($period_id) {
     if (!$payslip_table)
         return true;
 
-    $sql = "SELECT COUNT(*) AS total_count,
-        SUM(CASE WHEN COALESCE(status, 0) >= 3 AND COALESCE(status, 0) < 6 THEN 1 ELSE 0 END) AS paid_count
-        FROM ".TB_PREF.$payslip_table.
-        " WHERE payroll_period_id = ".db_escape($period_id)." AND COALESCE(status, 0) <> 6";
+    $sql = get_payroll_period_payment_status_summary_sql(
+        $period_id,
+        $payslip_table
+    );
+    if ($sql === false)
+        return false;
     $result = db_query($sql, 'could not summarize payroll period payment status');
     $row = db_fetch_assoc($result);
 
