@@ -1465,6 +1465,31 @@ function get_payroll_payment_gl_side_effect_exists_sql($payment_trans_no, $lock=
 }
 
 /**
+ * Build the exact payroll payment-void side-effect existence projection.
+ *
+ * The void/reopen guard consumes only the immutable transaction identifier
+ * from the core void register for an already-linked bank payment. Persisted
+ * callers supply positive transaction numbers; fixed-negative identifiers
+ * remain available to rollback-only fixtures. Locking remains caller-selectable
+ * so command-owned serialization and read-only inspection preserve their
+ * current behavior. Identifier zero fails closed before database access.
+ *
+ * @param mixed $payment_trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_payment_void_side_effect_exists_sql($payment_trans_no, $lock=true) {
+    $payment_trans_no = (int)$payment_trans_no;
+    if ($payment_trans_no === 0)
+        return false;
+
+    return "SELECT id FROM ".TB_PREF."voided"
+        ." WHERE type = ".db_escape(ST_BANKPAYMENT)
+        ." AND id = ".db_escape($payment_trans_no)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payslip for any payroll-GL or payment side-effect link.
  *
  * Positive legacy transaction links are themselves treated as protected
@@ -1491,7 +1516,6 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
     $result['payslip_id'] = (int)$payslip['payslip_id'];
     $result['payroll_period_id'] = isset($payslip['payroll_period_id'])
         ? (int)$payslip['payroll_period_id'] : 0;
-    $lock_sql = $lock ? ' FOR UPDATE' : '';
 
     $payslip_status = isset($payslip['status']) ? (int)$payslip['status'] : 0;
     if ($payslip_status >= 2 && $payslip_status < 6)
@@ -1562,6 +1586,14 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
             $result['code'] = 'payment_evidence_unavailable';
             return $result;
         }
+        $payment_void_exists_sql = get_payroll_payment_void_side_effect_exists_sql(
+            $payment_trans_no,
+            $lock
+        );
+        if ($payment_void_exists_sql === false) {
+            $result['code'] = 'payment_evidence_unavailable';
+            return $result;
+        }
         $queries = array(
             array(
                 $payment_bank_exists_sql,
@@ -1574,8 +1606,7 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
                 'payment_gl_rows'
             ),
             array(
-                "SELECT type, id FROM ".TB_PREF."voided WHERE type = ".db_escape(ST_BANKPAYMENT)
-                    ." AND id = ".db_escape($payment_trans_no).$lock_sql,
+                $payment_void_exists_sql,
                 'could not inspect linked payroll payment void evidence',
                 'payment_void_record'
             ),
