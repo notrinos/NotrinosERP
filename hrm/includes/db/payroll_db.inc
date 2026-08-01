@@ -2427,6 +2427,50 @@ function insert_payroll_reversal_evidence($evidence) {
 }
 
 /**
+ * Build the exact immutable payroll-reversal evidence projection.
+ *
+ * Persisted callers provide positive period identifiers. Fixed-negative
+ * identifiers remain available to rollback-only fixtures through this builder,
+ * while the public reader retains its positive-ID guard. The optional payslip
+ * and evidence-type filters preserve existing semantics, deterministic ordering
+ * is unchanged, and command-owned callers may request a terminal row lock.
+ * Identifier zero fails closed before database access.
+ *
+ * @param mixed $period_id
+ * @param mixed $payslip_id Optional payslip filter
+ * @param string $evidence_type Optional type filter
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_reversal_evidence_rows_sql(
+    $period_id,
+    $payslip_id=0,
+    $evidence_type='',
+    $lock=false
+) {
+    $period_id = (int)$period_id;
+    $payslip_id = (int)$payslip_id;
+    $evidence_type = (string)$evidence_type;
+    if ($period_id === 0)
+        return false;
+
+    $sql = "SELECT evidence_id,payroll_period_id,payslip_id,original_trans_no,"
+        ."evidence_type,target_id,linked_trans_no,before_state,after_state_hash,"
+        ."reason_code,actor_id,effective_date,created_at"
+        ." FROM ".TB_PREF."payroll_reversal_evidence"
+        ." WHERE payroll_period_id = ".db_escape($period_id);
+    if ($payslip_id !== 0)
+        $sql .= " AND payslip_id = ".db_escape($payslip_id);
+    if ($evidence_type !== '')
+        $sql .= " AND evidence_type = ".db_escape($evidence_type);
+    $sql .= " ORDER BY payslip_id,evidence_type,target_id,evidence_id";
+    if ($lock)
+        $sql .= " FOR UPDATE";
+
+    return $sql;
+}
+
+/**
  * Read immutable reversal evidence in deterministic order.
  *
  * @param int $period_id
@@ -2446,18 +2490,14 @@ function get_payroll_reversal_evidence_rows(
     if ($period_id <= 0 || !payroll_reversal_evidence_table_ready())
         return false;
 
-    $sql = "SELECT evidence_id,payroll_period_id,payslip_id,original_trans_no,"
-        ."evidence_type,target_id,linked_trans_no,before_state,after_state_hash,"
-        ."reason_code,actor_id,effective_date,created_at"
-        ." FROM ".TB_PREF."payroll_reversal_evidence"
-        ." WHERE payroll_period_id = ".db_escape($period_id);
-    if ($payslip_id > 0)
-        $sql .= " AND payslip_id = ".db_escape($payslip_id);
-    if ($evidence_type !== '')
-        $sql .= " AND evidence_type = ".db_escape((string)$evidence_type);
-    $sql .= " ORDER BY payslip_id,evidence_type,target_id,evidence_id";
-    if ($lock)
-        $sql .= " FOR UPDATE";
+    $sql = get_payroll_reversal_evidence_rows_sql(
+        $period_id,
+        $payslip_id,
+        $evidence_type,
+        $lock
+    );
+    if ($sql === false)
+        return false;
 
     return payroll_approval_binding_fetch_rows(
         $sql,
