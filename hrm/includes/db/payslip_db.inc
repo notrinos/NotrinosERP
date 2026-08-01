@@ -644,6 +644,28 @@ function update_payslip($payslip_id, $data) {
 }
 
 /**
+ * Build the exact compatibility projection for one payslip header.
+ *
+ * Persisted callers accept only positive identifiers. Negative identifiers are
+ * reserved for rollback-only fixtures. The table name is restricted to the
+ * single supported payslip header table so callers cannot expand read scope.
+ *
+ * @param mixed $payslip_id
+ * @param string $table_name
+ * @return string|false
+ */
+function get_payslip_projection_sql($payslip_id, $table_name) {
+	$payslip_id = (int)$payslip_id;
+	$table_name = (string)$table_name;
+	if ($payslip_id === 0 || $table_name !== 'payslips')
+		return false;
+
+	$fields = implode(', ', array_keys(payslip_default_header_columns()));
+	return "SELECT ".$fields." FROM ".TB_PREF.$table_name
+		." WHERE payslip_id = ".db_escape($payslip_id);
+}
+
+/**
  * Get one payslip header record.
  *
  * @param int $payslip_id
@@ -654,7 +676,9 @@ function get_payslip($payslip_id) {
 	if (!$table_name)
 		return false;
 
-	$sql = "SELECT * FROM ".TB_PREF.$table_name." WHERE payslip_id = ".db_escape((int)$payslip_id);
+	$sql = get_payslip_projection_sql($payslip_id, $table_name);
+	if ($sql === false)
+		return false;
 	$result = db_query($sql, 'could not get payslip');
 
 	return db_fetch($result);
