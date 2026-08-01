@@ -1440,6 +1440,31 @@ function get_payroll_payment_bank_side_effect_exists_sql($payment_trans_no, $loc
 }
 
 /**
+ * Build the exact payroll payment-GL side-effect existence projection.
+ *
+ * The void/reopen guard consumes only the immutable GL row identity for an
+ * already-linked bank payment. Persisted callers supply positive transaction
+ * numbers; fixed-negative identifiers remain available to rollback-only
+ * fixtures. Locking remains caller-selectable so command-owned serialization
+ * and read-only inspection retain their existing behavior. Identifier zero
+ * fails closed before database access.
+ *
+ * @param mixed $payment_trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_payment_gl_side_effect_exists_sql($payment_trans_no, $lock=true) {
+    $payment_trans_no = (int)$payment_trans_no;
+    if ($payment_trans_no === 0)
+        return false;
+
+    return "SELECT counter FROM ".TB_PREF."gl_trans"
+        ." WHERE type = ".db_escape(ST_BANKPAYMENT)
+        ." AND type_no = ".db_escape($payment_trans_no)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payslip for any payroll-GL or payment side-effect link.
  *
  * Positive legacy transaction links are themselves treated as protected
@@ -1529,6 +1554,14 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
             $result['code'] = 'payment_evidence_unavailable';
             return $result;
         }
+        $payment_gl_exists_sql = get_payroll_payment_gl_side_effect_exists_sql(
+            $payment_trans_no,
+            $lock
+        );
+        if ($payment_gl_exists_sql === false) {
+            $result['code'] = 'payment_evidence_unavailable';
+            return $result;
+        }
         $queries = array(
             array(
                 $payment_bank_exists_sql,
@@ -1536,8 +1569,7 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
                 'payment_bank_rows'
             ),
             array(
-                "SELECT counter FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_BANKPAYMENT)
-                    ." AND type_no = ".db_escape($payment_trans_no).$lock_sql,
+                $payment_gl_exists_sql,
                 'could not inspect linked payroll payment GL rows',
                 'payment_gl_rows'
             ),
