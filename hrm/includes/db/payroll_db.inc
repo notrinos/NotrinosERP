@@ -1415,6 +1415,31 @@ function get_payroll_void_side_effect_exists_sql($gl_trans_no, $lock=true) {
 }
 
 /**
+ * Build the exact payroll payment-bank side-effect existence projection.
+ *
+ * The void/reopen guard consumes only the immutable bank transaction identity
+ * for an already-linked payment. Persisted callers supply positive transaction
+ * numbers; fixed-negative identifiers remain available to rollback-only
+ * fixtures. Locking remains caller-selectable so command-owned serialization
+ * and read-only inspection retain their existing behavior. Identifier zero
+ * fails closed before database access.
+ *
+ * @param mixed $payment_trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_payment_bank_side_effect_exists_sql($payment_trans_no, $lock=true) {
+    $payment_trans_no = (int)$payment_trans_no;
+    if ($payment_trans_no === 0)
+        return false;
+
+    return "SELECT id FROM ".TB_PREF."bank_trans"
+        ." WHERE type = ".db_escape(ST_BANKPAYMENT)
+        ." AND trans_no = ".db_escape($payment_trans_no)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payslip for any payroll-GL or payment side-effect link.
  *
  * Positive legacy transaction links are themselves treated as protected
@@ -1496,10 +1521,17 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
         ? (int)$payslip['payment_trans_no'] : 0;
     if ($payment_trans_no > 0) {
         $result['evidence'][] = 'payment_link';
+        $payment_bank_exists_sql = get_payroll_payment_bank_side_effect_exists_sql(
+            $payment_trans_no,
+            $lock
+        );
+        if ($payment_bank_exists_sql === false) {
+            $result['code'] = 'payment_evidence_unavailable';
+            return $result;
+        }
         $queries = array(
             array(
-                "SELECT id FROM ".TB_PREF."bank_trans WHERE type = ".db_escape(ST_BANKPAYMENT)
-                    ." AND trans_no = ".db_escape($payment_trans_no).$lock_sql,
+                $payment_bank_exists_sql,
                 'could not inspect linked payroll bank rows',
                 'payment_bank_rows'
             ),
