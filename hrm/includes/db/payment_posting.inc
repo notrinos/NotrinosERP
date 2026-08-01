@@ -860,6 +860,26 @@ function verify_payroll_period_payment_set_after_write($period_id, $expected_pai
 }
 
 /**
+ * Build the exact locked payment-details verification projection.
+ *
+ * Persisted callers provide positive payroll-period identifiers. Negative
+ * identifiers remain reserved for rollback-only fixtures. The three-field
+ * projection is the complete post-write verification shape consumed by the
+ * batch-payment compare-and-set command.
+ *
+ * @param mixed $period_id
+ * @return string|false
+ */
+function get_payroll_period_payment_details_verification_sql($period_id) {
+	$period_id = (int)$period_id;
+	if ($period_id === 0)
+		return false;
+
+	return "SELECT period_id, status, pay_date FROM ".TB_PREF."payroll_periods"
+		." WHERE period_id = ".db_escape($period_id)." FOR UPDATE";
+}
+
+/**
  * Compare-and-set the locked payroll period to Paid.
  *
  * @param int $period_id
@@ -882,9 +902,11 @@ function mark_payroll_period_paid_for_batch_compare_and_set($period_id, $expecte
 	if (!$ok || db_num_affected_rows() !== 1)
 		return false;
 
+	$verify_sql = get_payroll_period_payment_details_verification_sql($period_id);
+	if ($verify_sql === false)
+		return false;
 	$verify = db_query(
-		"SELECT period_id,status,pay_date FROM ".TB_PREF."payroll_periods"
-			." WHERE period_id = ".db_escape($period_id)." FOR UPDATE",
+		$verify_sql,
 		'could not verify payroll period payment details'
 	);
 	$row = $verify ? db_fetch_assoc($verify) : false;
