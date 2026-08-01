@@ -939,6 +939,29 @@ function get_payroll_gl_posting_amounts_sql($gl_trans_no) {
 }
 
 /**
+ * Build the exact locked payroll GL-posting void-status projection.
+ *
+ * The existence-only identity projection preserves the legacy voided-table
+ * check without exposing the void date or memo. Persisted callers provide
+ * positive GL transaction identifiers; negative identifiers remain available
+ * to rollback-only fixtures. Identifier zero fails closed before database
+ * access.
+ *
+ * @param mixed $gl_trans_no
+ * @return string|false
+ */
+function get_payroll_gl_posting_void_status_sql($gl_trans_no) {
+	$gl_trans_no = (int)$gl_trans_no;
+	if ($gl_trans_no === 0)
+		return false;
+
+	return "SELECT id FROM ".TB_PREF."voided"
+		." WHERE type = ".db_escape(ST_PAYSLIP)
+		." AND id = ".db_escape($gl_trans_no)
+		." FOR UPDATE";
+}
+
+/**
  * Verify that a payslip belongs to an approved payable set whose legacy GL
  * posting exists and balances to zero.
  *
@@ -1020,10 +1043,13 @@ function validate_payslip_approved_posted_set($payslip, $audit_denial=true) {
 		}
 	}
 
-	$voided_sql = "SELECT type, id FROM ".TB_PREF."voided"
-		." WHERE type = ".db_escape(ST_PAYSLIP)
-		." AND id = ".db_escape($gl_trans_no)
-		." FOR UPDATE";
+	$voided_sql = get_payroll_gl_posting_void_status_sql($gl_trans_no);
+	if ($voided_sql === false) {
+		$result['code'] = 'payroll_gl_link_missing';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
 	$voided_query = db_query($voided_sql, 'could not verify payroll payable-set void status');
 	$voided = $voided_query ? db_fetch_assoc($voided_query) : false;
 	$tolerance = defined('FLOAT_COMP_DELTA') ? (float)FLOAT_COMP_DELTA : 0.00001;
