@@ -995,14 +995,14 @@ function validate_payslip_approved_posted_set($payslip, $audit_denial=true) {
 		return $result;
 	}
 
-	if (!function_exists('get_payroll_period')) {
+	if (!function_exists('get_payroll_period_approval_status')) {
 		$result['code'] = 'payroll_period_repository_unavailable';
 		if ($audit_denial)
 			payroll_payment_control_log_denial($result['code'], $payslip);
 		return $result;
 	}
 
-	$period = get_payroll_period($period_id);
+	$period = get_payroll_period_approval_status($period_id);
 	$period_status = $period && isset($period['status']) ? (int)$period['status'] : -1;
 	if (!$period || !in_array($period_status, array(2, 3), true)) {
 		$result['code'] = 'payroll_period_not_approved';

@@ -230,6 +230,46 @@ function get_payroll_period_for_update($period_id) {
 }
 
 /**
+ * Build the exact payroll-period approval-status projection.
+ *
+ * The payment approval guard consumes only identity and status. Negative
+ * identifiers remain available to rollback-only fixtures; persisted callers
+ * continue to use the positive-id repository helper below. Lock semantics are
+ * intentionally unchanged because command callers already own their existing
+ * payroll-period locks and the payment page also performs a read-only preflight.
+ *
+ * @param mixed $period_id
+ * @return string|false
+ */
+function get_payroll_period_approval_status_sql($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id === 0)
+        return false;
+
+    return "SELECT period_id, status FROM ".TB_PREF."payroll_periods"
+        ." WHERE period_id = ".db_escape($period_id);
+}
+
+/**
+ * Get the exact payroll-period identity and approval status.
+ *
+ * @param mixed $period_id
+ * @return array|false
+ */
+function get_payroll_period_approval_status($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id <= 0 || !payroll_table_exists('payroll_periods'))
+        return false;
+
+    $sql = get_payroll_period_approval_status_sql($period_id);
+    if ($sql === false)
+        return false;
+    $result = db_query($sql, 'could not get payroll period approval status');
+
+    return db_fetch($result);
+}
+
+/**
  * Build the exact payroll-period read projection.
  *
  * Negative identifiers are reserved for transaction-scoped test fixtures; the
