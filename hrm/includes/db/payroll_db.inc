@@ -1366,6 +1366,30 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact payroll-GL side-effect existence projection.
+ *
+ * The void/reopen guard consumes only one immutable GL row identity. Persisted
+ * callers supply positive transaction numbers; negative numbers remain
+ * available to rollback-only fixtures. Locking remains caller-selectable so
+ * read-only inspection and command-owned serialization preserve their current
+ * behavior. Identifier zero fails closed before database access.
+ *
+ * @param mixed $gl_trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_gl_side_effect_exists_sql($gl_trans_no, $lock=true) {
+    $gl_trans_no = (int)$gl_trans_no;
+    if ($gl_trans_no === 0)
+        return false;
+
+    return "SELECT counter FROM ".TB_PREF."gl_trans"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND type_no = ".db_escape($gl_trans_no)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payslip for any payroll-GL or payment side-effect link.
  *
  * Positive legacy transaction links are themselves treated as protected
@@ -1405,10 +1429,17 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
 
     if ($payroll_trans_no > 0) {
         $result['evidence'][] = 'payroll_gl_link';
+        $gl_exists_sql = get_payroll_gl_side_effect_exists_sql(
+            $payroll_trans_no,
+            $lock
+        );
+        if ($gl_exists_sql === false) {
+            $result['code'] = 'payroll_gl_evidence_unavailable';
+            return $result;
+        }
         $queries = array(
             array(
-                "SELECT counter FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP)
-                    ." AND type_no = ".db_escape($payroll_trans_no).$lock_sql,
+                $gl_exists_sql,
                 'could not inspect linked payroll GL rows'
             ),
             array(
