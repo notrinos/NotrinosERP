@@ -197,6 +197,37 @@ function write_payslip_payment_transaction($payslip, $bank_account_id, $payment_
 	return (int)$trans[1];
 }
 
+
+/**
+ * Build the exact individual-payslip payment lock projections.
+ *
+ * The persisted command accepts only positive payslip identifiers. Negative
+ * identifiers are reserved for rollback-only fixtures. A payslip without a
+ * linked payroll period preserves the legacy behavior: only the payslip row is
+ * locked and later validation rejects the missing approved period. Lock order
+ * remains payroll period first, then payslip, to match batch payment ordering.
+ *
+ * @param mixed $payslip_id
+ * @param mixed $period_id
+ * @param string $table_name
+ * @return array|false
+ */
+function get_locked_payslip_payment_scope_sql($payslip_id, $period_id, $table_name) {
+	$payslip_id = (int)$payslip_id;
+	$period_id = (int)$period_id;
+	$table_name = (string)$table_name;
+	if ($payslip_id === 0 || $table_name !== 'payslips')
+		return false;
+
+	return array(
+		'period' => $period_id === 0 ? false
+			: "SELECT period_id FROM ".TB_PREF."payroll_periods"
+				." WHERE period_id = ".db_escape($period_id)." FOR UPDATE",
+		'payslip' => "SELECT payslip_id FROM ".TB_PREF.$table_name
+			." WHERE payslip_id = ".db_escape($payslip_id)." FOR UPDATE"
+	);
+}
+
 /**
  * Create a bank payment transaction for payslip payment
  *
@@ -223,20 +254,23 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 	if ($use_transaction)
 		begin_transaction();
 
-	if ($use_transaction && $locked_period_id > 0) {
-		$period_lock_sql = "SELECT period_id FROM ".TB_PREF."payroll_periods"
-			." WHERE period_id = ".db_escape($locked_period_id)." FOR UPDATE";
-		if (!db_query($period_lock_sql, 'could not lock payroll period for payslip payment')) {
+	if ($use_transaction) {
+		$table_name = function_exists('payslip_header_table') ? payslip_header_table() : false;
+		$lock_sql = get_locked_payslip_payment_scope_sql(
+			$payslip_id,
+			$locked_period_id,
+			$table_name
+		);
+		if ($lock_sql === false) {
 			cancel_transaction();
 			return false;
 		}
-	}
-
-	if ($use_transaction) {
-		$table_name = payslip_header_table();
-		$lock_sql = "SELECT payslip_id FROM ".TB_PREF.$table_name
-			." WHERE payslip_id = ".db_escape($payslip_id)." FOR UPDATE";
-		if (!$table_name || !db_query($lock_sql, 'could not lock payslip for payment')) {
+		if ($lock_sql['period'] !== false
+			&& !db_query($lock_sql['period'], 'could not lock payroll period for payslip payment')) {
+			cancel_transaction();
+			return false;
+		}
+		if (!db_query($lock_sql['payslip'], 'could not lock payslip for payment')) {
 			cancel_transaction();
 			return false;
 		}
