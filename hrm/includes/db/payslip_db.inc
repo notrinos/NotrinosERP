@@ -736,16 +736,41 @@ function mark_payslip_paid($payslip_id, $payment_trans_no=null, $use_transaction
 }
 
 /**
+ * Build the exact compatibility projection for one payslip's line details.
+ *
+ * Persisted callers accept only positive identifiers. Negative identifiers are
+ * reserved for rollback-only fixtures. The table name is restricted to the
+ * single supported detail table so callers cannot expand read scope.
+ *
+ * @param mixed $payslip_id
+ * @param string $table_name
+ * @return string|false
+ */
+function get_payslip_detail_projection_sql($payslip_id, $table_name) {
+	$payslip_id = (int)$payslip_id;
+	$table_name = (string)$table_name;
+	if ($payslip_id === 0 || $table_name !== 'payslip_details')
+		return false;
+
+	$fields = implode(', ', array_keys(payslip_default_detail_columns()));
+	return "SELECT ".$fields." FROM ".TB_PREF.$table_name
+		." WHERE payslip_id = ".db_escape($payslip_id)." ORDER BY display_order, detail_id";
+}
+
+/**
  * Get line details for a payslip.
  *
  * @param int $payslip_id
  * @return resource|false
  */
 function get_payslip_details($payslip_id) {
-	if (!payslip_table_exists('payslip_details'))
+	$table_name = 'payslip_details';
+	if (!payslip_table_exists($table_name))
 		return false;
 
-	$sql = "SELECT * FROM ".TB_PREF."payslip_details WHERE payslip_id = ".db_escape((int)$payslip_id)." ORDER BY display_order, detail_id";
+	$sql = get_payslip_detail_projection_sql($payslip_id, $table_name);
+	if ($sql === false)
+		return false;
 	return db_query($sql, 'could not get payslip details');
 }
 
