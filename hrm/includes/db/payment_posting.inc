@@ -917,6 +917,28 @@ function mark_payroll_period_paid_for_batch_compare_and_set($period_id, $expecte
 }
 
 /**
+ * Build the exact locked payroll GL-posting amount projection.
+ *
+ * Persisted callers provide positive GL transaction identifiers. Negative
+ * identifiers remain available to rollback-only fixtures. The amount-only
+ * projection preserves the existing payable-set balance verification without
+ * exposing account, person, memo, dimension, date, or custom-data fields.
+ *
+ * @param mixed $gl_trans_no
+ * @return string|false
+ */
+function get_payroll_gl_posting_amounts_sql($gl_trans_no) {
+	$gl_trans_no = (int)$gl_trans_no;
+	if ($gl_trans_no === 0)
+		return false;
+
+	return "SELECT amount FROM ".TB_PREF."gl_trans"
+		." WHERE type = ".db_escape(ST_PAYSLIP)
+		." AND type_no = ".db_escape($gl_trans_no)
+		." FOR UPDATE";
+}
+
+/**
  * Verify that a payslip belongs to an approved payable set whose legacy GL
  * posting exists and balances to zero.
  *
@@ -978,10 +1000,13 @@ function validate_payslip_approved_posted_set($payslip, $audit_denial=true) {
 		return $result;
 	}
 
-	$sql = "SELECT amount FROM ".TB_PREF."gl_trans"
-		." WHERE type = ".db_escape(ST_PAYSLIP)
-		." AND type_no = ".db_escape($gl_trans_no)
-		." FOR UPDATE";
+	$sql = get_payroll_gl_posting_amounts_sql($gl_trans_no);
+	if ($sql === false) {
+		$result['code'] = 'payroll_gl_link_missing';
+		if ($audit_denial)
+			payroll_payment_control_log_denial($result['code'], $payslip);
+		return $result;
+	}
 	$query = db_query($sql, 'could not verify payroll payable-set GL posting');
 	$line_count = 0;
 	$balance = 0.0;
