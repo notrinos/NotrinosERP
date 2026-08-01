@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.40');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.41');
 
 /**
  * Payroll Formula Engine.
@@ -1407,14 +1407,13 @@ function payroll_restore_posting_reversal_snapshot($payslip, $snapshot_verificat
  * @return array|false
  */
 function payroll_reversal_gl_lines($trans_no, $lock=true) {
-    $sql = "SELECT counter,tran_date,account,memo_,amount,dimension_id,dimension2_id,"
-        ."person_type_id,HEX(person_id) AS person_id_hex,"
-        ."CAST(custom_data AS CHAR) AS custom_data"
-        ." FROM ".TB_PREF."gl_trans"
-        ." WHERE type = ".db_escape(ST_PAYSLIP)
-        ." AND type_no = ".db_escape((int)$trans_no)
-        ." AND ABS(amount) > 0.000001"
-        ." ORDER BY counter".($lock ? ' FOR UPDATE' : '');
+    $trans_no = (int)$trans_no;
+    if ($trans_no <= 0)
+        return false;
+
+    $sql = get_payroll_reversal_gl_lines_sql($trans_no, $lock);
+    if ($sql === false)
+        return false;
     $rows = payroll_approval_binding_fetch_rows(
         $sql,
         'could not read payroll GL reversal evidence'

@@ -1366,6 +1366,34 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the canonical payroll reversal GL-line projection.
+ *
+ * Persisted callers supply positive ST_PAYSLIP transaction numbers. Fixed
+ * negative identifiers remain available only to rollback-scoped fixtures.
+ * The projection is intentionally exact because linked reversal creation and
+ * verification hash these values. Identifier zero fails closed before any
+ * database access, and locking remains caller-selectable.
+ *
+ * @param mixed $trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_reversal_gl_lines_sql($trans_no, $lock=true) {
+    $trans_no = (int)$trans_no;
+    if ($trans_no === 0)
+        return false;
+
+    return "SELECT counter,tran_date,account,memo_,amount,dimension_id,dimension2_id,"
+        ."person_type_id,HEX(person_id) AS person_id_hex,"
+        ."CAST(custom_data AS CHAR) AS custom_data"
+        ." FROM ".TB_PREF."gl_trans"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND type_no = ".db_escape($trans_no)
+        ." AND ABS(amount) > 0.000001"
+        ." ORDER BY counter".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Build the exact payroll-GL side-effect existence projection.
  *
  * The void/reopen guard consumes only one immutable GL row identity. Persisted
