@@ -1390,6 +1390,31 @@ function get_payroll_gl_side_effect_exists_sql($gl_trans_no, $lock=true) {
 }
 
 /**
+ * Build the exact payroll void-evidence existence projection.
+ *
+ * The void/reopen guard needs only the immutable transaction identifier from
+ * the core void register. Persisted callers supply positive transaction
+ * numbers; fixed-negative identifiers remain available to rollback-only
+ * fixtures. Locking remains caller-selectable so command-owned serialization
+ * and read-only inspection retain their existing behavior. Identifier zero
+ * fails closed before database access.
+ *
+ * @param mixed $gl_trans_no
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_void_side_effect_exists_sql($gl_trans_no, $lock=true) {
+    $gl_trans_no = (int)$gl_trans_no;
+    if ($gl_trans_no === 0)
+        return false;
+
+    return "SELECT id FROM ".TB_PREF."voided"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND id = ".db_escape($gl_trans_no)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payslip for any payroll-GL or payment side-effect link.
  *
  * Positive legacy transaction links are themselves treated as protected
@@ -1437,14 +1462,21 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
             $result['code'] = 'payroll_gl_evidence_unavailable';
             return $result;
         }
+        $void_exists_sql = get_payroll_void_side_effect_exists_sql(
+            $payroll_trans_no,
+            $lock
+        );
+        if ($void_exists_sql === false) {
+            $result['code'] = 'payroll_gl_evidence_unavailable';
+            return $result;
+        }
         $queries = array(
             array(
                 $gl_exists_sql,
                 'could not inspect linked payroll GL rows'
             ),
             array(
-                "SELECT type, id FROM ".TB_PREF."voided WHERE type = ".db_escape(ST_PAYSLIP)
-                    ." AND id = ".db_escape($payroll_trans_no).$lock_sql,
+                $void_exists_sql,
                 'could not inspect linked payroll void evidence'
             ),
         );
