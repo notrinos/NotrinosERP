@@ -1440,6 +1440,43 @@ function payroll_payslip_financial_side_effects($payslip, $lock=true) {
 }
 
 /**
+ * Build the exact linked-payslip projection used by period side-effect guards.
+ *
+ * Persisted callers provide positive period identifiers. Negative identifiers
+ * remain reserved for rollback-only fixtures. The optional legacy
+ * `gl_trans_no` field is included only when the deployed payslip schema exposes
+ * it, preserving existing financial-evidence detection without wildcard reads.
+ *
+ * @param mixed $period_id
+ * @param string $table_name
+ * @param bool $lock
+ * @param bool $has_gl_trans_no
+ * @return string|false
+ */
+function get_payroll_period_side_effect_payslips_sql(
+    $period_id,
+    $table_name,
+    $lock=true,
+    $has_gl_trans_no=false
+) {
+    $period_id = (int)$period_id;
+    $table_name = (string)$table_name;
+    if ($period_id === 0 || $table_name !== 'payslips')
+        return false;
+
+    $fields = array(
+        'payslip_id', 'payroll_period_id', 'trans_no', 'status',
+        'payment_trans_no'
+    );
+    if ($has_gl_trans_no)
+        $fields[] = 'gl_trans_no';
+
+    return "SELECT ".implode(', ', $fields)." FROM ".TB_PREF.$table_name
+        ." WHERE payroll_period_id = ".db_escape($period_id)
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
  * Inspect one locked payroll period and every linked payslip for effects.
  *
  * @param array $period
@@ -1478,9 +1515,16 @@ function payroll_period_financial_side_effects($period, $lock=true) {
         return $result;
     }
 
-    $sql = "SELECT * FROM ".TB_PREF.$payslip_table
-        ." WHERE payroll_period_id = ".db_escape($period_id)
-        .($lock ? ' FOR UPDATE' : '');
+    $sql = get_payroll_period_side_effect_payslips_sql(
+        $period_id,
+        $payslip_table,
+        $lock,
+        payroll_payslip_has_column($payslip_table, 'gl_trans_no')
+    );
+    if ($sql === false) {
+        $result['code'] = 'payslip_evidence_unavailable';
+        return $result;
+    }
     $payslips = db_query($sql, 'could not inspect linked payroll-period payslips');
     if (!$payslips) {
         $result['code'] = 'payslip_evidence_unavailable';
