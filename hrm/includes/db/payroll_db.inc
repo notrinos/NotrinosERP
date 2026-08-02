@@ -612,12 +612,11 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
     $details = array();
     $detail_counts = array();
     if (!empty($payslip_ids)) {
-        $id_sql = implode(',', array_map('intval', $payslip_ids));
-        $detail_sql = "SELECT detail_id,payslip_id,element_id,element_name,element_category,"
-            ."is_deduction,amount_type,base_amount,rate,calculated_amount,adjusted_amount,"
-            ."final_amount,account_code,formula_used,is_taxable,display_order,memo FROM "
-            .TB_PREF."payslip_details WHERE payslip_id IN (".$id_sql.")"
-            ." ORDER BY payslip_id,display_order,detail_id".$suffix;
+        $detail_sql = get_payroll_period_approval_payslip_details_sql($payslip_ids, $lock);
+        if ($detail_sql === false) {
+            $failed['code'] = 'detail_read_failed';
+            return $failed;
+        }
         $detail_rows = payroll_approval_binding_fetch_rows(
             $detail_sql,
             'could not lock payroll-period details for approval binding'
@@ -1389,6 +1388,39 @@ function get_payroll_period_approval_payslips_sql($period_id, $lock=true) {
         ."payment_trans_no,notes,custom_data FROM ".TB_PREF."payslips"
         ." WHERE payroll_period_id = ".db_escape($period_id)
         ." ORDER BY payslip_id".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact persisted payslip-detail projection for approval binding.
+ *
+ * The caller supplies the non-empty payslip identity set obtained from the
+ * locked persisted-header projection. Fixed negative identifiers remain
+ * available only to rollback-scoped fixtures. The complete legacy 17-field
+ * detail shape and deterministic payslip/display/detail order are preserved.
+ * Empty, non-array, or zero-containing scopes fail closed before database
+ * access; callers choose whether to append the existing approval row lock.
+ *
+ * @param array $payslip_ids
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_payslip_details_sql($payslip_ids, $lock=true) {
+    if (!is_array($payslip_ids) || empty($payslip_ids))
+        return false;
+
+    $ids = array();
+    foreach ($payslip_ids as $payslip_id) {
+        $payslip_id = (int)$payslip_id;
+        if ($payslip_id === 0)
+            return false;
+        $ids[] = $payslip_id;
+    }
+
+    return "SELECT detail_id,payslip_id,element_id,element_name,element_category,"
+        ."is_deduction,amount_type,base_amount,rate,calculated_amount,adjusted_amount,"
+        ."final_amount,account_code,formula_used,is_taxable,display_order,memo FROM "
+        .TB_PREF."payslip_details WHERE payslip_id IN (".implode(',', $ids).")"
+        ." ORDER BY payslip_id,display_order,detail_id".($lock ? ' FOR UPDATE' : '');
 }
 
 /**
