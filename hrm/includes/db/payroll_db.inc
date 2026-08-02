@@ -519,14 +519,11 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
     }
 
     $suffix = $lock ? ' FOR UPDATE' : '';
-    $payslip_sql = "SELECT payslip_id,payroll_period_id,trans_no,reference,employee_id,"
-        ."tran_date,from_date,to_date,department_id,position_id,grade_id,basic_salary,"
-        ."total_earnings,gross_salary,total_deductions,net_salary,employer_contributions,"
-        ."total_cost,working_days,worked_days,overtime_hours,leave_days,absent_days,"
-        ."leaves,deductable_leaves,loan_deduction,payable_amount,salary_amount,status,"
-        ."payment_trans_no,notes,custom_data FROM ".TB_PREF."payslips"
-        ." WHERE payroll_period_id = ".db_escape($period_id)
-        ." ORDER BY payslip_id".$suffix;
+    $payslip_sql = get_payroll_period_approval_payslips_sql($period_id, $lock);
+    if ($payslip_sql === false) {
+        $failed['code'] = 'payslip_read_failed';
+        return $failed;
+    }
     $payslip_rows = payroll_approval_binding_fetch_rows(
         $payslip_sql,
         'could not lock payroll-period payslips for approval binding'
@@ -1363,6 +1360,35 @@ function payroll_side_effect_row_exists($sql, $error) {
         return null;
 
     return db_fetch_assoc($result) ? true : false;
+}
+
+/**
+ * Build the exact persisted payslip projection for approval binding.
+ *
+ * The caller supplies a non-zero payroll-period identifier after locking the
+ * authoritative period row. Fixed negative identifiers remain available only
+ * to rollback-scoped fixtures. The complete legacy 32-field result shape and
+ * deterministic payslip identity order are preserved. Identifier zero fails
+ * closed before database access; callers choose whether to append the existing
+ * row lock used by approval preparation and terminal execution.
+ *
+ * @param mixed $period_id
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_payslips_sql($period_id, $lock=true) {
+    $period_id = (int)$period_id;
+    if ($period_id === 0)
+        return false;
+
+    return "SELECT payslip_id,payroll_period_id,trans_no,reference,employee_id,"
+        ."tran_date,from_date,to_date,department_id,position_id,grade_id,basic_salary,"
+        ."total_earnings,gross_salary,total_deductions,net_salary,employer_contributions,"
+        ."total_cost,working_days,worked_days,overtime_hours,leave_days,absent_days,"
+        ."leaves,deductable_leaves,loan_deduction,payable_amount,salary_amount,status,"
+        ."payment_trans_no,notes,custom_data FROM ".TB_PREF."payslips"
+        ." WHERE payroll_period_id = ".db_escape($period_id)
+        ." ORDER BY payslip_id".($lock ? ' FOR UPDATE' : '');
 }
 
 /**
