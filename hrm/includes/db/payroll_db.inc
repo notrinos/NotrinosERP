@@ -1366,6 +1366,29 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked existing-payslip identity projection for preparation.
+ *
+ * The caller supplies a non-zero payroll-period identifier after locking and
+ * verifying the Draft period and current operator ownership. Fixed negative
+ * identifiers remain available only to rollback-scoped fixtures. The result is
+ * deliberately limited to payslip identity, ordered deterministically, and
+ * always locked so a concurrent result writer cannot bypass the empty-period
+ * precondition. Identifier zero fails closed before database access.
+ *
+ * @param mixed $period_id
+ * @return string|false
+ */
+function get_payroll_period_existing_payslip_ids_sql($period_id) {
+    $period_id = (int)$period_id;
+    if ($period_id === 0)
+        return false;
+
+    return "SELECT payslip_id FROM ".TB_PREF."payslips"
+        ." WHERE payroll_period_id = ".db_escape($period_id)
+        ." ORDER BY payslip_id FOR UPDATE";
+}
+
+/**
  * Build the exact locked loan-repayment posting-snapshot projection.
  *
  * Persisted callers supply a non-empty employee identifier and bounded payroll

@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.46');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.47');
 
 /**
  * Payroll Formula Engine.
@@ -1784,10 +1784,14 @@ function prepare_payroll_period_results_for_approval($period_id, $payslip_docume
             return $result;
         }
 
+        $existing_sql = get_payroll_period_existing_payslip_ids_sql($period_id);
+        if ($existing_sql === false) {
+            cancel_transaction();
+            $result['code'] = 'existing_result_check_failed';
+            return $result;
+        }
         $existing = payroll_approval_binding_fetch_rows(
-            "SELECT payslip_id FROM ".TB_PREF."payslips"
-                ." WHERE payroll_period_id = ".db_escape($period_id)
-                ." ORDER BY payslip_id FOR UPDATE",
+            $existing_sql,
             'could not lock existing payroll-period results'
         );
         if ($existing === false) {
