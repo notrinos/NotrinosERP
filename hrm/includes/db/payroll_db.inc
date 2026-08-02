@@ -1366,6 +1366,29 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked loan-repayment reversal-state projection.
+ *
+ * Persisted callers supply positive repayment identifiers from immutable
+ * reversal evidence. Fixed negative identifiers remain available only to
+ * rollback-scoped fixtures. The exact six-field row is hashed before and after
+ * posting/reversal operations, so wildcard expansion is prohibited. Identifier
+ * zero fails closed before database access and the row lock is mandatory.
+ *
+ * @param mixed $repayment_id
+ * @return string|false
+ */
+function get_payroll_reversal_repayment_state_sql($repayment_id) {
+    $repayment_id = (int)$repayment_id;
+    if ($repayment_id === 0)
+        return false;
+
+    return "SELECT repayment_id,loan_id,paid_amount,paid_date,payslip_id,status"
+        ." FROM ".TB_PREF."loan_repayments"
+        ." WHERE repayment_id = ".db_escape($repayment_id)
+        ." FOR UPDATE";
+}
+
+/**
  * Build the canonical payroll reversal GL-line projection.
  *
  * Persisted callers supply positive ST_PAYSLIP transaction numbers. Fixed

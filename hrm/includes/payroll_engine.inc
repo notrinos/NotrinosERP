@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.41');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.42');
 
 /**
  * Payroll Formula Engine.
@@ -907,9 +907,13 @@ function payroll_reversal_project_leave_balance($row, $leave_id, $fiscal_year) {
  * @return array|false
  */
 function payroll_reversal_get_repayment_for_update($repayment_id) {
-    $sql = "SELECT repayment_id,loan_id,paid_amount,paid_date,payslip_id,status"
-        ." FROM ".TB_PREF."loan_repayments"
-        ." WHERE repayment_id = ".db_escape((int)$repayment_id)." FOR UPDATE";
+    $repayment_id = (int)$repayment_id;
+    if ($repayment_id <= 0)
+        return false;
+
+    $sql = get_payroll_reversal_repayment_state_sql($repayment_id);
+    if ($sql === false)
+        return false;
     $result = db_query($sql, 'could not lock loan repayment reversal state');
     return $result ? db_fetch_assoc($result) : false;
 }
