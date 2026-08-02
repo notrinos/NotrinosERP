@@ -659,10 +659,11 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
     $void_rows_projected = array();
     if (!empty($trans_nos)) {
         $trans_sql = implode(',', array_map('intval', $trans_nos));
-        $gl_sql = "SELECT counter,type,type_no,tran_date,account,memo_,amount,"
-            ."dimension_id,dimension2_id,person_type_id,HEX(person_id) person_id_hex"
-            ." FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP)
-            ." AND type_no IN (".$trans_sql.") ORDER BY type_no,counter".$suffix;
+        $gl_sql = get_payroll_period_approval_gl_rows_sql($trans_nos, $lock);
+        if ($gl_sql === false) {
+            $failed['code'] = 'gl_read_failed';
+            return $failed;
+        }
         $gl_rows = payroll_approval_binding_fetch_rows(
             $gl_sql,
             'could not lock payroll-period GL rows for approval binding'
@@ -1421,6 +1422,39 @@ function get_payroll_period_approval_payslip_details_sql($payslip_ids, $lock=tru
         ."final_amount,account_code,formula_used,is_taxable,display_order,memo FROM "
         .TB_PREF."payslip_details WHERE payslip_id IN (".implode(',', $ids).")"
         ." ORDER BY payslip_id,display_order,detail_id".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact persisted payroll GL projection for approval binding.
+ *
+ * The caller supplies the non-empty payroll transaction-number set obtained
+ * from the locked persisted-payslip projection. Fixed negative identifiers
+ * remain available only to rollback-scoped fixtures. The complete legacy
+ * 11-field GL shape and deterministic transaction/counter order are preserved.
+ * Empty, non-array, or zero-containing scopes fail closed before database
+ * access; callers choose whether to append the existing approval row lock.
+ *
+ * @param array $trans_nos
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_gl_rows_sql($trans_nos, $lock=true) {
+    if (!is_array($trans_nos) || empty($trans_nos))
+        return false;
+
+    $ids = array();
+    foreach ($trans_nos as $trans_no) {
+        $trans_no = (int)$trans_no;
+        if ($trans_no === 0)
+            return false;
+        $ids[] = $trans_no;
+    }
+
+    return "SELECT counter,type,type_no,tran_date,account,memo_,amount,"
+        ."dimension_id,dimension2_id,person_type_id,HEX(person_id) person_id_hex"
+        ." FROM ".TB_PREF."gl_trans WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND type_no IN (".implode(',', $ids).")"
+        ." ORDER BY type_no,counter".($lock ? ' FOR UPDATE' : '');
 }
 
 /**
