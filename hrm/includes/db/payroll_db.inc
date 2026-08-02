@@ -1366,6 +1366,37 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked leave-balance reversal-state projection.
+ *
+ * Persisted callers supply a non-empty employee identifier and positive leave
+ * and fiscal-year identifiers. Fixed negative leave identifiers remain
+ * available only to rollback-scoped fixtures. The exact nine-field row is
+ * hashed before and after posting/reversal operations, so wildcard expansion
+ * is prohibited. Empty employee identifiers and zero numeric identifiers fail
+ * closed before database access, and the composite-key row lock is mandatory.
+ *
+ * @param mixed $employee_id
+ * @param mixed $leave_id
+ * @param mixed $fiscal_year
+ * @return string|false
+ */
+function get_payroll_reversal_leave_balance_state_sql($employee_id, $leave_id, $fiscal_year) {
+    $employee_id = (string)$employee_id;
+    $leave_id = (int)$leave_id;
+    $fiscal_year = (int)$fiscal_year;
+    if ($employee_id === '' || $leave_id === 0 || $fiscal_year === 0)
+        return false;
+
+    return "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
+        ."carried_forward,taken,pending,adjusted"
+        ." FROM ".TB_PREF."leave_balances"
+        ." WHERE employee_id = ".db_escape($employee_id)
+        ." AND leave_id = ".db_escape($leave_id)
+        ." AND fiscal_year = ".db_escape($fiscal_year)
+        ." FOR UPDATE";
+}
+
+/**
  * Build the exact locked employee-loan reversal-state projection.
  *
  * Persisted callers supply positive loan identifiers from immutable reversal

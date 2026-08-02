@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.43');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.44');
 
 /**
  * Payroll Formula Engine.
@@ -945,13 +945,15 @@ function payroll_reversal_get_employee_loan_for_update($loan_id) {
  * @return array|false
  */
 function payroll_reversal_get_leave_balance_for_update($employee_id, $leave_id, $fiscal_year) {
-    $sql = "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
-        ."carried_forward,taken,pending,adjusted"
-        ." FROM ".TB_PREF."leave_balances"
-        ." WHERE employee_id = ".db_escape((string)$employee_id)
-        ." AND leave_id = ".db_escape((int)$leave_id)
-        ." AND fiscal_year = ".db_escape((int)$fiscal_year)
-        ." FOR UPDATE";
+    $employee_id = (string)$employee_id;
+    $leave_id = (int)$leave_id;
+    $fiscal_year = (int)$fiscal_year;
+    if ($employee_id === '' || $leave_id <= 0 || $fiscal_year <= 0)
+        return false;
+
+    $sql = get_payroll_reversal_leave_balance_state_sql($employee_id, $leave_id, $fiscal_year);
+    if ($sql === false)
+        return false;
     $result = db_query($sql, 'could not lock leave balance reversal state');
     if (!$result)
         return null;
