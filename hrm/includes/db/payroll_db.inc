@@ -1366,6 +1366,37 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked leave-request posting-snapshot projection.
+ *
+ * Persisted callers supply a non-empty employee identifier and bounded fiscal
+ * year dates. Fixed negative request identifiers remain available only to
+ * rollback-scoped fixtures. The exact two-field result is used only to derive
+ * the distinct leave-balance identities captured before posting. Empty scope
+ * values fail closed before database access, request identity order is
+ * deterministic, and the row lock is mandatory.
+ *
+ * @param mixed $employee_id
+ * @param mixed $year_start
+ * @param mixed $year_end
+ * @return string|false
+ */
+function get_payroll_reversal_leave_request_state_sql($employee_id, $year_start, $year_end) {
+    $employee_id = (string)$employee_id;
+    $year_start = (string)$year_start;
+    $year_end = (string)$year_end;
+    if ($employee_id === '' || $year_start === '' || $year_end === '')
+        return false;
+
+    return "SELECT request_id,leave_id"
+        ." FROM ".TB_PREF."leave_requests"
+        ." WHERE employee_id = ".db_escape($employee_id)
+        ." AND status IN (0,1)"
+        ." AND from_date >= ".db_escape($year_start)
+        ." AND from_date <= ".db_escape($year_end)
+        ." ORDER BY request_id FOR UPDATE";
+}
+
+/**
  * Build the exact locked leave-balance reversal-state projection.
  *
  * Persisted callers supply a non-empty employee identifier and positive leave

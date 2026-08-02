@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.44');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.45');
 
 /**
  * Payroll Formula Engine.
@@ -1012,12 +1012,13 @@ function payroll_capture_posting_reversal_snapshot(&$payslip_doc) {
 
     $fiscal_year = get_leave_balance_fiscal_year_for_date($to_sql);
     list($year_start, $year_end) = _payroll_get_year_bounds($fiscal_year);
-    $request_sql = "SELECT request_id,leave_id FROM ".TB_PREF."leave_requests"
-        ." WHERE employee_id = ".db_escape($employee_id)
-        ." AND status IN (0,1)"
-        ." AND from_date >= ".db_escape($year_start)
-        ." AND from_date <= ".db_escape($year_end)
-        ." ORDER BY request_id FOR UPDATE";
+    $request_sql = get_payroll_reversal_leave_request_state_sql(
+        $employee_id,
+        $year_start,
+        $year_end
+    );
+    if ($request_sql === false)
+        return false;
     $request_rows = payroll_approval_binding_fetch_rows(
         $request_sql,
         'could not capture leave-request reversal controls'
