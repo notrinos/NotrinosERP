@@ -1366,6 +1366,39 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked loan-repayment posting-snapshot projection.
+ *
+ * Persisted callers supply a non-empty employee identifier and bounded payroll
+ * dates. Fixed negative repayment and loan identifiers remain available only
+ * to rollback-scoped fixtures. The exact joined eight-field result captures
+ * repayment and active employee-loan pre-state before posting. Empty scope
+ * values fail closed before database access, repayment identity order is
+ * deterministic, and the joined row lock is mandatory.
+ *
+ * @param mixed $employee_id
+ * @param mixed $from_date
+ * @param mixed $to_date
+ * @return string|false
+ */
+function get_payroll_reversal_loan_repayment_snapshot_sql($employee_id, $from_date, $to_date) {
+    $employee_id = (string)$employee_id;
+    $from_date = (string)$from_date;
+    $to_date = (string)$to_date;
+    if ($employee_id === '' || $from_date === '' || $to_date === '')
+        return false;
+
+    return "SELECT r.repayment_id,r.loan_id,r.paid_amount,r.paid_date,"
+        ."r.payslip_id,r.status,l.outstanding_amount,l.status AS loan_status"
+        ." FROM ".TB_PREF."loan_repayments r"
+        ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
+        ." WHERE l.employee_id = ".db_escape($employee_id)
+        ." AND l.status = 1 AND r.status IN (0,2)"
+        ." AND r.due_date >= ".db_escape($from_date)
+        ." AND r.due_date <= ".db_escape($to_date)
+        ." ORDER BY r.repayment_id FOR UPDATE";
+}
+
+/**
  * Build the exact locked leave-request posting-snapshot projection.
  *
  * Persisted callers supply a non-empty employee identifier and bounded fiscal

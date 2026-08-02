@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.45');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.46');
 
 /**
  * Payroll Formula Engine.
@@ -980,15 +980,13 @@ function payroll_capture_posting_reversal_snapshot(&$payslip_doc) {
     $employee_id = (string)$payslip_doc->employee_id;
     $from_sql = date2sql($payslip_doc->from_date);
     $to_sql = date2sql($payslip_doc->to_date);
-    $loan_sql = "SELECT r.repayment_id,r.loan_id,r.paid_amount,r.paid_date,"
-        ."r.payslip_id,r.status,l.outstanding_amount,l.status AS loan_status"
-        ." FROM ".TB_PREF."loan_repayments r"
-        ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
-        ." WHERE l.employee_id = ".db_escape($employee_id)
-        ." AND l.status = 1 AND r.status IN (0,2)"
-        ." AND r.due_date >= ".db_escape($from_sql)
-        ." AND r.due_date <= ".db_escape($to_sql)
-        ." ORDER BY r.repayment_id FOR UPDATE";
+    $loan_sql = get_payroll_reversal_loan_repayment_snapshot_sql(
+        $employee_id,
+        $from_sql,
+        $to_sql
+    );
+    if ($loan_sql === false)
+        return false;
     $loan_rows = payroll_approval_binding_fetch_rows(
         $loan_sql,
         'could not capture loan repayment reversal pre-state'
