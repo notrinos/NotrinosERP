@@ -1366,6 +1366,29 @@ function payroll_side_effect_row_exists($sql, $error) {
 }
 
 /**
+ * Build the exact locked employee-loan reversal-state projection.
+ *
+ * Persisted callers supply positive loan identifiers from immutable reversal
+ * evidence. Fixed negative identifiers remain available only to rollback-
+ * scoped fixtures. The exact three-field row is hashed before and after
+ * posting/reversal operations, so wildcard expansion is prohibited. Identifier
+ * zero fails closed before database access and the row lock is mandatory.
+ *
+ * @param mixed $loan_id
+ * @return string|false
+ */
+function get_payroll_reversal_employee_loan_state_sql($loan_id) {
+    $loan_id = (int)$loan_id;
+    if ($loan_id === 0)
+        return false;
+
+    return "SELECT loan_id,outstanding_amount,status"
+        ." FROM ".TB_PREF."employee_loans"
+        ." WHERE loan_id = ".db_escape($loan_id)
+        ." FOR UPDATE";
+}
+
+/**
  * Build the exact locked loan-repayment reversal-state projection.
  *
  * Persisted callers supply positive repayment identifiers from immutable
