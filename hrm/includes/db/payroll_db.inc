@@ -771,11 +771,13 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
             $failed['code'] = 'required_table_missing';
             return $failed;
         }
+        $reference_sql = get_payroll_period_approval_reference_rows_sql($trans_nos, $lock);
+        if ($reference_sql === false) {
+            $failed['code'] = 'reference_read_failed';
+            return $failed;
+        }
         $reference_rows = payroll_approval_binding_fetch_rows(
-            "SELECT type,id,reference FROM ".TB_PREF."refs"
-                ." WHERE type = ".db_escape(ST_PAYSLIP)
-                ." AND id IN (".implode(',', array_map('intval', $trans_nos)).")"
-                ." ORDER BY id".$suffix,
+            $reference_sql,
             'could not lock payroll-period reference identity for approval binding'
         );
         if ($reference_rows === false) {
@@ -1486,6 +1488,39 @@ function get_payroll_period_approval_void_rows_sql($trans_nos, $lock=true) {
     }
 
     return "SELECT type,id,date_,memo_ FROM ".TB_PREF."voided"
+        ." WHERE type = ".db_escape(ST_PAYSLIP)
+        ." AND id IN (".implode(',', $ids).")"
+        ." ORDER BY id".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact persisted payroll reference projection for approval binding.
+ *
+ * The caller supplies the non-empty payroll transaction-number set obtained
+ * from the locked persisted-payslip projection. Fixed negative identifiers
+ * remain available only to rollback-scoped fixtures. The exact three-field
+ * reference identity shape and deterministic transaction identity order are
+ * preserved. Empty, non-array, or zero-containing scopes fail closed before
+ * database access; callers choose whether to append the existing approval row
+ * lock.
+ *
+ * @param array $trans_nos
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_reference_rows_sql($trans_nos, $lock=true) {
+    if (!is_array($trans_nos) || empty($trans_nos))
+        return false;
+
+    $ids = array();
+    foreach ($trans_nos as $trans_no) {
+        $trans_no = (int)$trans_no;
+        if ($trans_no === 0)
+            return false;
+        $ids[] = $trans_no;
+    }
+
+    return "SELECT type,id,reference FROM ".TB_PREF."refs"
         ." WHERE type = ".db_escape(ST_PAYSLIP)
         ." AND id IN (".implode(',', $ids).")"
         ." ORDER BY id".($lock ? ' FOR UPDATE' : '');
