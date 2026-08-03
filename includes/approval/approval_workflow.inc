@@ -159,7 +159,10 @@ class ApprovalWorkflow {
 	 *   'summary'     => string Human-readable summary
 	 *   'currency'    => string Currency code
 	 *   'loc_code'    => string Location code
-	 * @return array ['draft_id' => int, 'trans_no' => int, 'reference' => string, 'status' => string]
+	 * @return array ['draft_id' => int, 'trans_no' => int, 'reference' => string,
+	 *   'status' => string] Status is no_workflow, reservation_failed,
+	 *   serialization_failed, storage_failed, audit_failed, execution_failed,
+	 *   auto_approved, or pending.
 	 */
 	public function submit($trans_type, $data, $amount = 0, $context = array())
 	{
@@ -175,9 +178,30 @@ class ApprovalWorkflow {
 			? self::$registered_types[$trans_type]['number_context']
 			: array();
 		$reserved = reserve_approval_trans_number($trans_type, array_merge($number_context, $context));
+		if (!is_array($reserved)
+			|| !isset($reserved['trans_no'], $reserved['reference'])
+			|| (int)$reserved['trans_no'] <= 0
+		) {
+			cancel_transaction();
+			return array(
+				'draft_id'  => 0,
+				'trans_no'  => 0,
+				'reference' => '',
+				'status'    => 'reservation_failed',
+			);
+		}
 
 		// JSON-encode the transaction data
 		$draft_data = json_encode($data);
+		if (!is_string($draft_data) || json_last_error() !== JSON_ERROR_NONE) {
+			cancel_transaction();
+			return array(
+				'draft_id'  => 0,
+				'trans_no'  => 0,
+				'reference' => '',
+				'status'    => 'serialization_failed',
+			);
+		}
 
 		// Store the draft
 		$draft_id = add_approval_draft(
@@ -195,9 +219,27 @@ class ApprovalWorkflow {
 			isset($context['summary']) ? $context['summary'] : null,
 			isset($context['loc_code']) ? $context['loc_code'] : null
 		);
+		if ((int)$draft_id <= 0) {
+			cancel_transaction();
+			return array(
+				'draft_id'  => 0,
+				'trans_no'  => 0,
+				'reference' => '',
+				'status'    => 'storage_failed',
+			);
+		}
 
 		// Record the submit action in audit trail
-		add_approval_action($draft_id, 'submit', $this->user_id, 0, '');
+		$action_id = add_approval_action($draft_id, 'submit', $this->user_id, 0, '');
+		if ((int)$action_id <= 0) {
+			cancel_transaction();
+			return array(
+				'draft_id'  => 0,
+				'trans_no'  => 0,
+				'reference' => '',
+				'status'    => 'audit_failed',
+			);
+		}
 
 		// Check auto-approval: if amount is within threshold of level 1
 		$auto_approved = $this->checkAutoApproval($draft_id, $workflow, $amount, $data, $context);
@@ -764,6 +806,60 @@ class ApprovalWorkflow {
 	}
 
 	/**
+	 * Decode one current or historical approval draft JSON payload.
+	 *
+	 * Approval draft text is stored through the legacy db_escape() boundary,
+	 * which HTML-encodes quote and ampersand characters. Older deployments may
+	 * also contain add-slashed payloads. Decode candidates are deliberately
+	 * bounded and ordered so new raw JSON is preferred while historical stored
+	 * forms remain executable without rewriting committed draft rows.
+	 *
+	 * @param mixed $draft_data Stored draft payload
+	 * @param bool  $decode_ok  Set to true only for syntactically valid JSON
+	 * @return mixed Decoded JSON value, or null when no candidate is valid
+	 */
+	private function decodeDraftData($draft_data, &$decode_ok = null)
+	{
+		$decode_ok = false;
+		if (!is_string($draft_data) && !is_numeric($draft_data))
+			return null;
+
+		$source = (string)$draft_data;
+		$encoding = 'UTF-8';
+		if (isset($_SESSION['language'])
+			&& is_object($_SESSION['language'])
+			&& !empty($_SESSION['language']->encoding)
+		) {
+			$encoding = $_SESSION['language']->encoding === 'iso-8859-2'
+				? 'ISO-8859-1'
+				: $_SESSION['language']->encoding;
+		}
+
+		$html_decoded = html_entity_decode($source, ENT_QUOTES, $encoding);
+		$candidates = array(
+			$source,
+			$html_decoded,
+			stripslashes($source),
+			stripslashes($html_decoded),
+		);
+		$checked = array();
+		foreach ($candidates as $candidate) {
+			$fingerprint = strlen($candidate).':'.$candidate;
+			if (isset($checked[$fingerprint]))
+				continue;
+			$checked[$fingerprint] = true;
+
+			$decoded = json_decode($candidate, true);
+			if (json_last_error() === JSON_ERROR_NONE) {
+				$decode_ok = true;
+				return $decoded;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Check if a draft qualifies for auto-approval based on amount thresholds.
 	 *
 	 * Checks all levels from 1 to max. If the amount is within the
@@ -834,7 +930,11 @@ class ApprovalWorkflow {
 		$draft = get_approval_draft($draft_id);
 		$draft_data_decoded = array();
 		if ($draft && !empty($draft['draft_data'])) {
-			$draft_data_decoded = json_decode($draft['draft_data'], true);
+			$decode_ok = false;
+			$draft_data_decoded = $this->decodeDraftData(
+				$draft['draft_data'],
+				$decode_ok
+			);
 			if (!is_array($draft_data_decoded)) {
 				$draft_data_decoded = array();
 			}
@@ -887,15 +987,9 @@ class ApprovalWorkflow {
 		if (!$config || !$config['executor'])
 			return false;
 
-		// Decode the JSON draft data
-		$draft_data = json_decode($draft['draft_data'], true);
-
-		// Fallback: try stripslashes if direct decode fails
-		if ($draft_data === null && $draft['draft_data']) {
-			$draft_data = json_decode(stripslashes($draft['draft_data']), true);
-		}
-
-		if ($draft_data === null)
+		$decode_ok = false;
+		$draft_data = $this->decodeDraftData($draft['draft_data'], $decode_ok);
+		if (!$decode_ok || $draft_data === null)
 			return false;
 
 		// Release the reserved number so the executor can use it
@@ -940,9 +1034,11 @@ class ApprovalWorkflow {
 
 		$draft_data = array();
 		if (!empty($draft['draft_data'])) {
-			$draft_data = json_decode($draft['draft_data'], true);
-			if (!is_array($draft_data))
-				$draft_data = json_decode(stripslashes($draft['draft_data']), true);
+			$decode_ok = false;
+			$draft_data = $this->decodeDraftData(
+				$draft['draft_data'],
+				$decode_ok
+			);
 		}
 
 		if (!is_array($draft_data))

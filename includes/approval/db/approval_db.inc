@@ -61,6 +61,11 @@ function add_approval_draft($workflow_id, $trans_type, $reserved_trans_no, $draf
 	if ($submitted_by === null)
 		$submitted_by = $_SESSION['wa_current_user']->user;
 
+	// db_escape() decodes HTML entities before applying the platform output
+	// encoding. Pre-encode JSON once so literal entity-like business text (for
+	// example, "&quot;") survives that legacy boundary byte-for-byte.
+	$draft_data = html_specials_encode((string)$draft_data);
+
 	$sql = "INSERT INTO " . TB_PREF . "approval_drafts
 		(workflow_id, trans_type, reserved_trans_no, draft_data, amount, currency,
 		 person_type_id, person_id, current_level, status, submitted_by, submitted_date,
