@@ -816,9 +816,9 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
             $failed['code'] = 'required_table_missing';
             return $failed;
         }
+        $posting_configuration_sql = get_payroll_period_approval_posting_configuration_sql($lock);
         $preference_rows = payroll_approval_binding_fetch_rows(
-            "SELECT name,value FROM ".TB_PREF."sys_prefs"
-                ." WHERE name = 'payroll_payable_act'".$suffix,
+            $posting_configuration_sql,
             'could not lock payroll posting configuration for approval binding'
         );
         if ($preference_rows === false || count($preference_rows) !== 1) {
@@ -1524,6 +1524,22 @@ function get_payroll_period_approval_reference_rows_sql($trans_nos, $lock=true) 
         ." WHERE type = ".db_escape(ST_PAYSLIP)
         ." AND id IN (".implode(',', $ids).")"
         ." ORDER BY id".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact payroll posting-configuration projection for approval binding.
+ *
+ * The existing v1.1 approval contract binds the configured payroll payable
+ * account by preference identity and value. The primary-key scoped read returns
+ * only those two fields, excludes preference metadata and unrelated settings,
+ * and preserves caller-selected row locking.
+ *
+ * @param bool $lock
+ * @return string
+ */
+function get_payroll_period_approval_posting_configuration_sql($lock=true) {
+    return "SELECT name,value FROM ".TB_PREF."sys_prefs"
+        ." WHERE name = 'payroll_payable_act'".($lock ? ' FOR UPDATE' : '');
 }
 
 /**
