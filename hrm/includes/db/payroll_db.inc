@@ -933,14 +933,15 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
         && !empty($employee_ids)
         && payroll_table_exists('leave_requests')
     ) {
-        $employee_sql = array();
-        foreach (array_keys($employee_ids) as $employee_id)
-            $employee_sql[] = db_escape($employee_id);
-        $leave_request_sql = "SELECT request_id,employee_id,leave_id,from_date,to_date,"
-            ."days,half_day,status FROM ".TB_PREF."leave_requests"
-            ." WHERE employee_id IN (".implode(',', $employee_sql).")"
-            ." AND status IN (0,1)"
-            ." ORDER BY employee_id,from_date,to_date,leave_id,request_id".$suffix;
+        $leave_request_sql = get_payroll_period_approval_leave_requests_sql(
+            $contract['version'],
+            array_keys($employee_ids),
+            $lock
+        );
+        if ($leave_request_sql === false) {
+            $failed['code'] = 'leave_request_read_failed';
+            return $failed;
+        }
         $leave_request_rows = payroll_approval_binding_fetch_rows(
             $leave_request_sql,
             'could not lock payroll-period leave request controls for approval binding'
@@ -1633,6 +1634,46 @@ function get_payroll_period_approval_leave_balances_sql($employee_ids, $lock=tru
         ."carried_forward,taken,pending,adjusted FROM ".TB_PREF."leave_balances"
         ." WHERE employee_id IN (".implode(',', $employee_sql).")"
         ." ORDER BY employee_id,fiscal_year,leave_id,balance_id"
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the active-contract payroll approval leave-request projection.
+ *
+ * Contract 1.1.0 binds pending and approved leave requests for the non-empty
+ * employee set derived from locked persisted payslips. The exact eight-field
+ * projection excludes reasons, approval remarks, attachments, approver data,
+ * and timestamps. Employee and status scope, deterministic employee/date/
+ * leave/request ordering, and caller-selected terminal row locking are
+ * preserved. Unsupported contracts, non-array or empty scopes, and blank
+ * employee identifiers fail closed before database access.
+ *
+ * @param mixed $contract_version
+ * @param mixed $employee_ids
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_leave_requests_sql($contract_version, $employee_ids, $lock=true) {
+    if ((string)$contract_version !== '1.1.0'
+        || !is_array($employee_ids)
+        || empty($employee_ids)
+    ) {
+        return false;
+    }
+
+    $employee_sql = array();
+    foreach ($employee_ids as $employee_id) {
+        $employee_id = (string)$employee_id;
+        if (trim($employee_id) === '')
+            return false;
+        $employee_sql[] = db_escape($employee_id);
+    }
+
+    return "SELECT request_id,employee_id,leave_id,from_date,to_date,days,half_day,status"
+        ." FROM ".TB_PREF."leave_requests"
+        ." WHERE employee_id IN (".implode(',', $employee_sql).")"
+        ." AND status IN (0,1)"
+        ." ORDER BY employee_id,from_date,to_date,leave_id,request_id"
         .($lock ? ' FOR UPDATE' : '');
 }
 
