@@ -847,34 +847,25 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
             'paid_amount' => 'decimal', 'paid_date' => 'nullable_string',
             'payslip_id' => 'nullable_int', 'status' => 'int',
         );
-        if ($contract['version'] === '1.0.0') {
-            $id_sql = implode(',', array_map('intval', $payslip_ids));
-            $loan_sql = "SELECT repayment_id,loan_id,installment_no,due_date,"
-                ."principal_amount,interest_amount,total_amount,paid_amount,paid_date,"
-                ."payslip_id,status FROM ".TB_PREF."loan_repayments"
-                ." WHERE payslip_id IN (".$id_sql.") ORDER BY payslip_id,repayment_id".$suffix;
-        } else {
+        if ($contract['version'] !== '1.0.0') {
             if (!payroll_table_exists('employee_loans')) {
                 $failed['code'] = 'required_table_missing';
                 return $failed;
             }
-            $employee_sql = array();
-            foreach (array_keys($employee_ids) as $employee_id)
-                $employee_sql[] = db_escape($employee_id);
-            $id_sql = implode(',', array_map('intval', $payslip_ids));
-            $loan_sql = "SELECT r.repayment_id,r.loan_id,r.installment_no,r.due_date,"
-                ."r.principal_amount,r.interest_amount,r.total_amount,r.paid_amount,"
-                ."r.paid_date,r.payslip_id,r.status,l.employee_id,l.status loan_status"
-                ." FROM ".TB_PREF."loan_repayments r"
-                ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
-                ." WHERE ((l.employee_id IN (".implode(',', $employee_sql).")"
-                ." AND l.status = 1 AND r.status IN (0,2)"
-                ." AND r.due_date >= ".db_escape((string)$period['from_date'])
-                ." AND r.due_date <= ".db_escape((string)$period['to_date']).")"
-                ." OR r.payslip_id IN (".$id_sql."))"
-                ." ORDER BY l.employee_id,r.due_date,r.installment_no,r.repayment_id".$suffix;
             $loan_types['employee_id'] = 'string';
             $loan_types['loan_status'] = 'int';
+        }
+        $loan_sql = get_payroll_period_approval_loan_controls_sql(
+            $contract['version'],
+            $payslip_ids,
+            array_keys($employee_ids),
+            (string)$period['from_date'],
+            (string)$period['to_date'],
+            $lock
+        );
+        if ($loan_sql === false) {
+            $failed['code'] = 'loan_read_failed';
+            return $failed;
         }
         $loan_rows = payroll_approval_binding_fetch_rows(
             $loan_sql,
@@ -1540,6 +1531,76 @@ function get_payroll_period_approval_reference_rows_sql($trans_nos, $lock=true) 
 function get_payroll_period_approval_posting_configuration_sql($lock=true) {
     return "SELECT name,value FROM ".TB_PREF."sys_prefs"
         ." WHERE name = 'payroll_payable_act'".($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact payroll approval loan-control projection.
+ *
+ * The legacy 1.0.0 approval contract binds only repayment rows already linked
+ * to persisted payslips. The active 1.1.0 contract additionally binds active
+ * employee-loan repayments due inside the payroll period, while retaining the
+ * persisted-payslip scope used to detect unexpected pre-approval side effects.
+ * Both paths preserve their approved exact fields, deterministic ordering, and
+ * caller-selected terminal row lock. Unsupported versions, empty/non-array
+ * identity scopes, zero payslip identifiers, blank employee identifiers, or
+ * blank active-contract dates fail closed before database access.
+ *
+ * @param mixed $contract_version
+ * @param mixed $payslip_ids
+ * @param mixed $employee_ids
+ * @param mixed $from_date
+ * @param mixed $to_date
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_loan_controls_sql($contract_version, $payslip_ids, $employee_ids, $from_date, $to_date, $lock=true) {
+    $contract_version = (string)$contract_version;
+    if (($contract_version !== '1.0.0' && $contract_version !== '1.1.0')
+        || !is_array($payslip_ids) || empty($payslip_ids))
+        return false;
+
+    $ids = array();
+    foreach ($payslip_ids as $payslip_id) {
+        $payslip_id = (int)$payslip_id;
+        if ($payslip_id === 0)
+            return false;
+        $ids[] = $payslip_id;
+    }
+    $id_sql = implode(',', $ids);
+    if ($contract_version === '1.0.0') {
+        return "SELECT repayment_id,loan_id,installment_no,due_date,"
+            ."principal_amount,interest_amount,total_amount,paid_amount,paid_date,"
+            ."payslip_id,status FROM ".TB_PREF."loan_repayments"
+            ." WHERE payslip_id IN (".$id_sql.")"
+            ." ORDER BY payslip_id,repayment_id".($lock ? ' FOR UPDATE' : '');
+    }
+
+    if (!is_array($employee_ids) || empty($employee_ids))
+        return false;
+    $employee_sql = array();
+    foreach ($employee_ids as $employee_id) {
+        $employee_id = (string)$employee_id;
+        if (trim($employee_id) === '')
+            return false;
+        $employee_sql[] = db_escape($employee_id);
+    }
+    $from_date = (string)$from_date;
+    $to_date = (string)$to_date;
+    if (trim($from_date) === '' || trim($to_date) === '')
+        return false;
+
+    return "SELECT r.repayment_id,r.loan_id,r.installment_no,r.due_date,"
+        ."r.principal_amount,r.interest_amount,r.total_amount,r.paid_amount,"
+        ."r.paid_date,r.payslip_id,r.status,l.employee_id,l.status loan_status"
+        ." FROM ".TB_PREF."loan_repayments r"
+        ." JOIN ".TB_PREF."employee_loans l ON l.loan_id = r.loan_id"
+        ." WHERE ((l.employee_id IN (".implode(',', $employee_sql).")"
+        ." AND l.status = 1 AND r.status IN (0,2)"
+        ." AND r.due_date >= ".db_escape($from_date)
+        ." AND r.due_date <= ".db_escape($to_date).")"
+        ." OR r.payslip_id IN (".$id_sql."))"
+        ." ORDER BY l.employee_id,r.due_date,r.installment_no,r.repayment_id"
+        .($lock ? ' FOR UPDATE' : '');
 }
 
 /**
