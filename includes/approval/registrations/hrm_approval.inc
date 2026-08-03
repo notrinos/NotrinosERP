@@ -2619,6 +2619,30 @@ function render_payroll_period_draft($draft_data)
 		. number_format((float)(isset($draft_data['total_net']) ? $draft_data['total_net'] : 0), 2)
 		. '</td></tr>';
 
+	if (isset($draft_data['approval_binding_version'])) {
+		$html .= '<tr><td class="label">' . _('Approval Evidence Contract') . ':</td><td>'
+			. htmlspecialchars((string)$draft_data['approval_binding_version'])
+			. '</td></tr>';
+		$evidence_counts = array(
+			'approval_payslip_count' => _('Payslips'),
+			'approval_detail_count' => _('Payslip Details'),
+			'approval_gl_line_count' => _('GL Lines'),
+			'approval_loan_repayment_count' => _('Loan Repayments'),
+			'approval_leave_balance_count' => _('Leave Balances'),
+			'approval_reference_count' => _('Reference Identities'),
+			'approval_leave_request_count' => _('Leave Requests'),
+		);
+		foreach ($evidence_counts as $field => $label) {
+			if (array_key_exists($field, $draft_data)
+				&& is_int($draft_data[$field])
+				&& $draft_data[$field] >= 0
+			) {
+				$html .= '<tr><td class="label">' . $label . ':</td><td>'
+					. $draft_data[$field] . '</td></tr>';
+			}
+		}
+	}
+
 	if (isset($draft_data['department_name']) && $draft_data['department_name'] !== '') {
 		$html .= '<tr><td class="label">' . _('Department') . ':</td><td>'
 			. htmlspecialchars($draft_data['department_name'])

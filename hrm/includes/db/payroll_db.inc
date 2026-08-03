@@ -1025,7 +1025,7 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
     $control_hash = hash('sha256', $contract['id'].'|'.$contract['version'].'|control|'.$control_json);
     $approval_hash = hash('sha256', $contract['id'].'|'.$contract['version'].'|'.$result_hash.'|'.$control_hash);
 
-    return array(
+    $binding = array(
         'ok' => true,
         'code' => 'verified',
         'contract' => $contract['id'],
@@ -1039,6 +1039,12 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
         'loan_repayment_count' => count($loan_rows_projected),
         'leave_balance_count' => count($leave_rows_projected),
     );
+    if ($contract['version'] === '1.1.0') {
+        $binding['reference_count'] = count($reference_rows_projected);
+        $binding['leave_request_count'] = count($leave_request_rows_projected);
+    }
+
+    return $binding;
 }
 
 /**
@@ -1051,7 +1057,7 @@ function payroll_period_approval_binding_draft_fields($binding) {
     if (empty($binding['ok']))
         return false;
 
-    return array(
+    $fields = array(
         'approval_binding_contract' => $binding['contract'],
         'approval_binding_version' => $binding['version'],
         'approval_result_hash' => $binding['result_hash'],
@@ -1063,6 +1069,14 @@ function payroll_period_approval_binding_draft_fields($binding) {
         'approval_loan_repayment_count' => (int)$binding['loan_repayment_count'],
         'approval_leave_balance_count' => (int)$binding['leave_balance_count'],
     );
+    if (isset($binding['version']) && (string)$binding['version'] === '1.1.0') {
+        if (!isset($binding['reference_count'], $binding['leave_request_count']))
+            return false;
+        $fields['approval_reference_count'] = (int)$binding['reference_count'];
+        $fields['approval_leave_request_count'] = (int)$binding['leave_request_count'];
+    }
+
+    return $fields;
 }
 
 /**
@@ -1084,9 +1098,29 @@ function payroll_period_approval_binding_matches_draft($draft_data, $binding) {
     if ($expected === false)
         return false;
 
+    $optional_active_counts = array(
+        'approval_reference_count', 'approval_leave_request_count',
+    );
+    $active_count_fields_present = 0;
+    foreach ($optional_active_counts as $field) {
+        if (array_key_exists($field, $draft_data))
+            $active_count_fields_present++;
+    }
+    if ($active_count_fields_present !== 0
+        && $active_count_fields_present !== count($optional_active_counts)
+    ) {
+        return false;
+    }
+
     foreach ($expected as $field => $value) {
-        if (!array_key_exists($field, $draft_data))
+        if (!array_key_exists($field, $draft_data)) {
+            if (in_array($field, $optional_active_counts, true)
+                && $active_count_fields_present === 0
+            ) {
+                continue;
+            }
             return false;
+        }
         if (strpos($field, '_count') !== false) {
             if ((int)$draft_data[$field] !== (int)$value)
                 return false;
@@ -1114,22 +1148,40 @@ function payroll_period_approval_binding_draft_state($draft_data) {
     if (!is_array($draft_data))
         return 'absent';
 
-    $fields = array(
+    $base_fields = array(
         'approval_binding_contract', 'approval_binding_version',
         'approval_result_hash', 'approval_control_hash', 'approval_hash',
         'approval_payslip_count', 'approval_detail_count',
         'approval_gl_line_count', 'approval_loan_repayment_count',
         'approval_leave_balance_count',
     );
+    $active_count_fields = array(
+        'approval_reference_count', 'approval_leave_request_count',
+    );
+    $recognized = array_merge($base_fields, $active_count_fields);
     $present = 0;
-    foreach ($fields as $field) {
+    foreach ($recognized as $field) {
         if (array_key_exists($field, $draft_data))
             $present++;
     }
     if ($present === 0)
         return 'absent';
-    if ($present !== count($fields))
+
+    foreach ($base_fields as $field) {
+        if (!array_key_exists($field, $draft_data))
+            return 'malformed';
+    }
+
+    $active_count_fields_present = 0;
+    foreach ($active_count_fields as $field) {
+        if (array_key_exists($field, $draft_data))
+            $active_count_fields_present++;
+    }
+    if ($active_count_fields_present !== 0
+        && $active_count_fields_present !== count($active_count_fields)
+    ) {
         return 'malformed';
+    }
 
     $contract = payroll_period_approval_binding_contract(
         is_string($draft_data['approval_binding_version'])
@@ -1140,6 +1192,7 @@ function payroll_period_approval_binding_draft_state($draft_data) {
         || !is_string($draft_data['approval_binding_version'])
         || !hash_equals($contract['id'], $draft_data['approval_binding_contract'])
         || !hash_equals($contract['version'], $draft_data['approval_binding_version'])
+        || ($contract['version'] !== '1.1.0' && $active_count_fields_present !== 0)
     ) {
         return 'malformed';
     }
@@ -1154,16 +1207,24 @@ function payroll_period_approval_binding_draft_state($draft_data) {
         }
     }
 
-    foreach (array(
+    $count_fields = array(
         'approval_payslip_count', 'approval_detail_count',
         'approval_gl_line_count', 'approval_loan_repayment_count',
         'approval_leave_balance_count',
-    ) as $field) {
+    );
+    if ($active_count_fields_present === count($active_count_fields))
+        $count_fields = array_merge($count_fields, $active_count_fields);
+    foreach ($count_fields as $field) {
         $value = $draft_data[$field];
         if ((!is_int($value)
                 && (!is_string($value)
                     || preg_match('/^[0-9]+$/D', $value) !== 1))
             || (int)$value < 0
+        ) {
+            return 'malformed';
+        }
+        if (in_array($field, $active_count_fields, true)
+            && !is_int($value)
         ) {
             return 'malformed';
         }
