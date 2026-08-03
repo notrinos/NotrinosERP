@@ -896,13 +896,14 @@ function build_payroll_period_approval_binding($period, $lock=true, $contract_ve
 
     $leave_rows_projected = array();
     if (!empty($employee_ids) && payroll_table_exists('leave_balances')) {
-        $employee_sql = array();
-        foreach (array_keys($employee_ids) as $employee_id)
-            $employee_sql[] = db_escape($employee_id);
-        $leave_sql = "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
-            ."carried_forward,taken,pending,adjusted FROM ".TB_PREF."leave_balances"
-            ." WHERE employee_id IN (".implode(',', $employee_sql).")"
-            ." ORDER BY employee_id,fiscal_year,leave_id,balance_id".$suffix;
+        $leave_sql = get_payroll_period_approval_leave_balances_sql(
+            array_keys($employee_ids),
+            $lock
+        );
+        if ($leave_sql === false) {
+            $failed['code'] = 'leave_read_failed';
+            return $failed;
+        }
         $leave_rows = payroll_approval_binding_fetch_rows(
             $leave_sql,
             'could not lock payroll-period leave balances for approval binding'
@@ -1600,6 +1601,38 @@ function get_payroll_period_approval_loan_controls_sql($contract_version, $paysl
         ." AND r.due_date <= ".db_escape($to_date).")"
         ." OR r.payslip_id IN (".$id_sql."))"
         ." ORDER BY l.employee_id,r.due_date,r.installment_no,r.repayment_id"
+        .($lock ? ' FOR UPDATE' : '');
+}
+
+/**
+ * Build the exact payroll approval leave-balance projection.
+ *
+ * The approval binding supplies the non-empty employee set derived from the
+ * locked persisted payslips. The builder retains the approved exact nine-field
+ * projection, employee-only scope, deterministic employee/fiscal-year/leave/
+ * balance ordering, and caller-selected terminal row lock. Empty or non-array
+ * scopes and blank employee identifiers fail closed before database access.
+ *
+ * @param mixed $employee_ids
+ * @param bool $lock
+ * @return string|false
+ */
+function get_payroll_period_approval_leave_balances_sql($employee_ids, $lock=true) {
+    if (!is_array($employee_ids) || empty($employee_ids))
+        return false;
+
+    $employee_sql = array();
+    foreach ($employee_ids as $employee_id) {
+        $employee_id = (string)$employee_id;
+        if (trim($employee_id) === '')
+            return false;
+        $employee_sql[] = db_escape($employee_id);
+    }
+
+    return "SELECT balance_id,employee_id,leave_id,fiscal_year,entitled,"
+        ."carried_forward,taken,pending,adjusted FROM ".TB_PREF."leave_balances"
+        ." WHERE employee_id IN (".implode(',', $employee_sql).")"
+        ." ORDER BY employee_id,fiscal_year,leave_id,balance_id"
         .($lock ? ' FOR UPDATE' : '');
 }
 
