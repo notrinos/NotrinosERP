@@ -263,18 +263,31 @@ function mark_approval_notification_read($notification_id)
 }
 
 /**
- * Mark a notification as email-sent
+ * Mark one pending notification as email-sent.
+ *
+ * The conditional predicate prevents a stale worker from treating an already
+ * completed row as its own successful state transition.
  *
  * @param int $notification_id Notification record ID
- * @return void
+ * @return bool True only when exactly one pending row becomes sent
  */
 function mark_approval_notification_sent($notification_id)
 {
+	$notification_id = (int)$notification_id;
+	if ($notification_id <= 0)
+		return false;
+
 	$sql = "UPDATE " . TB_PREF . "approval_notifications
 		SET is_sent = 1
-		WHERE id = " . db_escape($notification_id);
+		WHERE id = " . db_escape($notification_id) . "
+		AND is_sent = 0";
 
-	db_query($sql, 'could not mark notification as sent');
+	$result = db_query($sql, 'could not mark notification as sent');
+	if ($result === false)
+		return false;
+
+	return function_exists('db_num_affected_rows')
+		&& (int)db_num_affected_rows() === 1;
 }
 
 /**
@@ -333,8 +346,8 @@ function get_unsent_approval_notifications($limit = 50)
 		LEFT JOIN " . TB_PREF . "approval_workflows w ON w.id = d.workflow_id
 		LEFT JOIN " . TB_PREF . "users u ON u.id = n.user_id
 		WHERE n.is_sent = 0
-		ORDER BY n.created_date ASC
-		LIMIT " . (int)$limit;
+		ORDER BY n.created_date ASC, n.id ASC
+		LIMIT " . max(0, (int)$limit);
 
 	return db_query($sql, 'could not retrieve unsent notifications');
 }

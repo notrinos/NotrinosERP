@@ -132,16 +132,19 @@ class ApprovalQueueManager
     {
         $this->logMessage('Starting notification processing.');
 
-        $sent = process_approval_email_notifications((int)$batchSize);
+        $summary = process_approval_email_notifications_detailed((int)$batchSize);
 
         $this->logMessage(sprintf(
-            'Notification processing complete: %d email(s) sent.',
-            $sent
+            'Notification processing complete: %d selected, %d sent, %d delivery failed, %d missing email, %d invalid row, %d state update failed.',
+            $summary['selected'],
+            $summary['sent'],
+            $summary['delivery_failed'],
+            $summary['missing_email'],
+            $summary['invalid_notification'],
+            $summary['state_failed']
         ));
 
-        return array(
-            'sent' => $sent,
-        );
+        return $summary;
     }
 
     /**

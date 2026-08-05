@@ -139,41 +139,91 @@ function get_users_with_role($role_id)
 /**
  * Process and send pending email notifications.
  *
- * Reads unsent notification records and sends emails to the
- * target users. Marks notifications as sent after processing.
+ * Backward-compatible wrapper returning only the confirmed sent count. Failed,
+ * blank-recipient, invalid-row, or sent-state-update cases remain unsent for a
+ * later retry or operator repair.
  *
  * @param int $batch_size Maximum notifications to process per call
- * @return int            Number of emails sent
+ * @return int            Number of emails sent and durably marked sent
  */
 function process_approval_email_notifications($batch_size = 50)
 {
-	global $path_to_root, $SysPrefs;
+	$summary = process_approval_email_notifications_detailed($batch_size);
+	return (int)$summary['sent'];
+}
+
+/**
+ * Process pending approval emails with detailed, PII-free outcomes.
+ *
+ * Email delivery is external and therefore is not wrapped in a database
+ * transaction. A row is marked sent only after the sender reports success and
+ * the conditional database update confirms exactly one pending row. Delivery,
+ * recipient, or state-update failures leave the row unsent for a later retry.
+ * A successful delivery followed by a failed state update is reported
+ * separately because a later retry may produce duplicate delivery.
+ *
+ * @param int $batch_size Maximum notifications to process per call
+ * @return array          selected, sent, delivery_failed, missing_email,
+ *                        invalid_notification, and state_failed counts
+ */
+function process_approval_email_notifications_detailed($batch_size = 50)
+{
+	$summary = array(
+		'selected' => 0,
+		'sent' => 0,
+		'delivery_failed' => 0,
+		'missing_email' => 0,
+		'invalid_notification' => 0,
+		'state_failed' => 0,
+	);
+
+	$batch_size = (int)$batch_size;
+	if ($batch_size <= 0)
+		return $summary;
 
 	$result = get_unsent_approval_notifications($batch_size);
-	$sent_count = 0;
 
 	while ($notification = db_fetch($result)) {
-		if (empty($notification['user_email'])) {
-			mark_approval_notification_sent($notification['id']);
+		$summary['selected']++;
+
+		$notification_id = isset($notification['id'])
+			? (int)$notification['id'] : 0;
+		if ($notification_id <= 0) {
+			$summary['invalid_notification']++;
+			continue;
+		}
+
+		$recipient_email = isset($notification['user_email'])
+			? trim((string)$notification['user_email']) : '';
+		if ($recipient_email === '') {
+			$summary['missing_email']++;
 			continue;
 		}
 
 		$subject = build_approval_email_subject($notification);
 		$body = build_approval_email_body($notification);
 
-		if (send_approval_email(
-			$notification['user_name'],
-			$notification['user_email'],
+		$delivered = send_approval_email(
+			isset($notification['user_name'])
+				? $notification['user_name'] : '',
+			$recipient_email,
 			$subject,
 			$body
-		)) {
-			$sent_count++;
+		);
+		if (!$delivered) {
+			$summary['delivery_failed']++;
+			continue;
 		}
 
-		mark_approval_notification_sent($notification['id']);
+		if (!mark_approval_notification_sent($notification_id)) {
+			$summary['state_failed']++;
+			continue;
+		}
+
+		$summary['sent']++;
 	}
 
-	return $sent_count;
+	return $summary;
 }
 
 /**
@@ -299,5 +349,5 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 	$mail->subject($subject);
 	$mail->text($body);
 
-	return $mail->send();
+	return (bool)$mail->send();
 }

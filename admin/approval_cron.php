@@ -60,6 +60,7 @@ $run_escalation = $is_cli || isset($_POST['RunEscalation']) || isset($_GET['auto
 $run_emails = $is_cli || isset($_POST['RunEmails']) || isset($_GET['auto']);
 
 $escalation_summary = null;
+$email_summary = null;
 $email_count = 0;
 
 if ($run_escalation) {
@@ -67,7 +68,8 @@ if ($run_escalation) {
 }
 
 if ($run_emails) {
-	$email_count = process_approval_email_notifications(100);
+	$email_summary = process_approval_email_notifications_detailed(100);
+	$email_count = $email_summary['sent'];
 }
 
 // =====================================================
@@ -91,7 +93,14 @@ if ($is_cli) {
 	}
 
 	echo "\nEmail Results:\n";
-	echo "  Sent: " . $email_count . "\n";
+	if ($email_summary !== null) {
+		echo "  Selected: " . $email_summary['selected'] . "\n";
+		echo "  Sent: " . $email_summary['sent'] . "\n";
+		echo "  Delivery Failed (Retry Pending): " . $email_summary['delivery_failed'] . "\n";
+		echo "  Missing Email (Repair Pending): " . $email_summary['missing_email'] . "\n";
+		echo "  Invalid Notification Rows: " . $email_summary['invalid_notification'] . "\n";
+		echo "  Sent-State Update Failed: " . $email_summary['state_failed'] . "\n";
+	}
 
 	exit(0);
 }
@@ -138,8 +147,9 @@ if (isset($_POST['RunBoth'])) {
 	if ($escalation_summary === null) {
 		$escalation_summary = process_approval_escalations();
 	}
-	if ($email_count === 0) {
-		$email_count = process_approval_email_notifications(100);
+	if ($email_summary === null) {
+		$email_summary = process_approval_email_notifications_detailed(100);
+		$email_count = $email_summary['sent'];
 	}
 }
 
@@ -199,7 +209,14 @@ if ($run_emails || isset($_POST['RunBoth'])) {
 	$th = array(_('Metric'), _('Count'));
 	table_header($th);
 
-	label_row(_('Emails Sent'), $email_count);
+	if ($email_summary !== null) {
+		label_row(_('Notifications Selected'), $email_summary['selected']);
+		label_row(_('Emails Sent'), $email_summary['sent']);
+		label_row(_('Delivery Failed (Retry Pending)'), $email_summary['delivery_failed']);
+		label_row(_('Missing Email (Repair Pending)'), $email_summary['missing_email']);
+		label_row(_('Invalid Notification Rows'), $email_summary['invalid_notification']);
+		label_row(_('Sent-State Update Failed'), $email_summary['state_failed']);
+	}
 
 	end_table();
 }
