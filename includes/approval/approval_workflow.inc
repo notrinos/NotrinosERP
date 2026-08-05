@@ -161,8 +161,8 @@ class ApprovalWorkflow {
 	 *   'loc_code'    => string Location code
 	 * @return array ['draft_id' => int, 'trans_no' => int, 'reference' => string,
 	 *   'status' => string] Status is no_workflow, reservation_failed,
-	 *   serialization_failed, storage_failed, audit_failed, execution_failed,
-	 *   auto_approved, or pending.
+	 *   serialization_failed, storage_failed, audit_failed, no_approvers,
+	 *   notification_failed, execution_failed, auto_approved, or pending.
 	 */
 	public function submit($trans_type, $data, $amount = 0, $context = array())
 	{
@@ -272,14 +272,32 @@ class ApprovalWorkflow {
 			);
 		}
 
-		// Notify level-1 approvers
-		notify_approval_level_approvers(
+		// Persist level-1 notifications inside the submission transaction.
+		$notification_result = create_approval_level_notifications(
 			$draft_id,
 			$workflow['id'],
 			1,
 			'pending',
 			isset($context['loc_code']) ? $context['loc_code'] : null
 		);
+		if (!is_array($notification_result)
+			|| !isset($notification_result['status'], $notification_result['count'])
+			|| $notification_result['status'] !== 'created'
+			|| (int)$notification_result['count'] <= 0
+		) {
+			$status = is_array($notification_result)
+				&& isset($notification_result['status'])
+				&& $notification_result['status'] === 'no_recipients'
+				? 'no_approvers'
+				: 'notification_failed';
+			cancel_transaction();
+			return array(
+				'draft_id'  => 0,
+				'trans_no'  => 0,
+				'reference' => '',
+				'status'    => $status,
+			);
+		}
 
 		commit_transaction();
 

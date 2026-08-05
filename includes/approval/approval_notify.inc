@@ -36,10 +36,42 @@ include_once(dirname(__FILE__) . '/db/approval_history_db.inc');
 function notify_approval_level_approvers($draft_id, $workflow_id, $level,
 	$notification_type = 'pending', $loc_code = null)
 {
+	$result = create_approval_level_notifications(
+		$draft_id,
+		$workflow_id,
+		$level,
+		$notification_type,
+		$loc_code
+	);
+
+	return isset($result['count']) ? (int)$result['count'] : 0;
+}
+
+/**
+ * Persist notifications for all distinct active users at an approval level.
+ *
+ * Recipient discovery intentionally retains the existing workflow role,
+ * location, active-user, and duplicate-user rules. The detailed result lets
+ * the transaction owner distinguish an empty recipient set from a persistence
+ * failure without changing the legacy integer-returning wrapper above.
+ *
+ * This helper does not begin, commit, or roll back a transaction. Callers that
+ * require atomic draft/notification persistence must own that boundary.
+ *
+ * @param int    $draft_id          Draft ID
+ * @param int    $workflow_id       Workflow ID
+ * @param int    $level             Approval level to notify
+ * @param string $notification_type Notification type
+ * @param string $loc_code          Optional location filter
+ * @return array ['status' => created|no_recipients|storage_failed, 'count' => int]
+ */
+function create_approval_level_notifications($draft_id, $workflow_id, $level,
+	$notification_type = 'pending', $loc_code = null)
+{
 	$roles = get_approver_roles_at_level($workflow_id, $level, $loc_code);
 
 	if (empty($roles))
-		return 0;
+		return array('status' => 'no_recipients', 'count' => 0);
 
 	$notification_count = 0;
 	$notified_users = array();
@@ -48,17 +80,31 @@ function notify_approval_level_approvers($draft_id, $workflow_id, $level,
 		$users = get_users_with_role($role_id);
 
 		while ($user = db_fetch($users)) {
-			// Avoid duplicate notifications to the same user
-			if (in_array($user['id'], $notified_users))
+			$user_id = isset($user['id']) ? (int)$user['id'] : 0;
+			if ($user_id <= 0 || isset($notified_users[$user_id]))
 				continue;
 
-			add_approval_notification($draft_id, $user['id'], $notification_type);
-			$notified_users[] = $user['id'];
+			$notification_id = add_approval_notification(
+				$draft_id,
+				$user_id,
+				$notification_type
+			);
+			if ((int)$notification_id <= 0) {
+				return array(
+					'status' => 'storage_failed',
+					'count' => $notification_count,
+				);
+			}
+
+			$notified_users[$user_id] = true;
 			$notification_count++;
 		}
 	}
 
-	return $notification_count;
+	if ($notification_count === 0)
+		return array('status' => 'no_recipients', 'count' => 0);
+
+	return array('status' => 'created', 'count' => $notification_count);
 }
 
 /**

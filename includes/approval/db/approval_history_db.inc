@@ -239,9 +239,12 @@ function add_approval_notification($draft_id, $user_id, $notification_type)
 		. db_escape($notification_type) . ", "
 		. "0, 0, NOW())";
 
-	db_query($sql, 'could not add approval notification');
+	$result = db_query($sql, 'could not add approval notification');
+	if ($result === false)
+		return 0;
 
-	return db_insert_id();
+	$notification_id = (int)db_insert_id();
+	return $notification_id > 0 ? $notification_id : 0;
 }
 
 /**
