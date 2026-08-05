@@ -156,40 +156,66 @@ function process_approval_email_notifications($batch_size = 50)
  * Process pending approval emails with detailed, PII-free outcomes.
  *
  * Email delivery is external and therefore is not wrapped in a database
- * transaction. A row is marked sent only after the sender reports success and
- * the conditional database update confirms exactly one pending row. Delivery,
- * recipient, or state-update failures leave the row unsent for a later retry.
- * A successful delivery followed by a failed state update is reported
- * separately because a later retry may produce duplicate delivery.
+ * transaction. Each row is first atomically claimed with a bounded lease and
+ * cumulative attempt metadata. A row is marked sent only after the sender
+ * reports success and the lease-owning database update confirms exactly one
+ * pending row. Failures receive deterministic capped backoff and eventually
+ * dead-letter for authorized repair. A worker crash after external delivery but
+ * before state confirmation can still duplicate delivery after lease expiry;
+ * the lease suppresses concurrent sends but is not an exactly-once outbox.
  *
  * @param int $batch_size Maximum notifications to process per call
- * @return array          selected, sent, delivery_failed, missing_email,
- *                        invalid_notification, and state_failed counts
+ * @return array          PII-free claim, delivery, retry, dead-letter and
+ *                        state-transition counts
  */
 function process_approval_email_notifications_detailed($batch_size = 50)
 {
 	$summary = array(
 		'selected' => 0,
+		'claimed' => 0,
 		'sent' => 0,
 		'delivery_failed' => 0,
 		'missing_email' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
+		'retry_scheduled' => 0,
+		'dead_lettered' => 0,
+		'claim_failed' => 0,
 	);
 
-	$batch_size = (int)$batch_size;
-	if ($batch_size <= 0)
+	$batch_size = max(0, min(500, (int)$batch_size));
+	if ($batch_size === 0)
 		return $summary;
 
-	$result = get_unsent_approval_notifications($batch_size);
+	for ($processed = 0; $processed < $batch_size; $processed++) {
+		$claim = claim_next_approval_email_notification(300);
+		if (!isset($claim['status']) || $claim['status'] === 'storage_failed') {
+			$summary['claim_failed']++;
+			break;
+		}
+		if ($claim['status'] === 'empty')
+			break;
 
-	while ($notification = db_fetch($result)) {
+		$notification = isset($claim['row']) && is_array($claim['row'])
+			? $claim['row'] : array();
+		$lease_token = isset($claim['token']) ? (string)$claim['token'] : '';
 		$summary['selected']++;
+		$summary['claimed']++;
 
 		$notification_id = isset($notification['id'])
 			? (int)$notification['id'] : 0;
-		if ($notification_id <= 0) {
+		$attempts = isset($notification['delivery_attempts'])
+			? max(1, (int)$notification['delivery_attempts']) : 1;
+		$attempt_limit = isset($notification['attempt_limit'])
+			? max(1, (int)$notification['attempt_limit']) : 5;
+		$dead_letter = $attempts >= $attempt_limit;
+		$retry_delay = approval_notification_retry_delay_seconds($attempts);
+
+		if ($notification_id <= 0
+			|| !preg_match('/^[a-f0-9]{64}$/', $lease_token)
+		) {
 			$summary['invalid_notification']++;
+			$summary['state_failed']++;
 			continue;
 		}
 
@@ -197,12 +223,24 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 			? trim((string)$notification['user_email']) : '';
 		if ($recipient_email === '') {
 			$summary['missing_email']++;
+			if (!fail_approval_notification_delivery(
+				$notification_id,
+				$lease_token,
+				'missing_email',
+				$retry_delay,
+				$dead_letter
+			)) {
+				$summary['state_failed']++;
+			} elseif ($dead_letter) {
+				$summary['dead_lettered']++;
+			} else {
+				$summary['retry_scheduled']++;
+			}
 			continue;
 		}
 
 		$subject = build_approval_email_subject($notification);
 		$body = build_approval_email_body($notification);
-
 		$delivered = send_approval_email(
 			isset($notification['user_name'])
 				? $notification['user_name'] : '',
@@ -212,10 +250,26 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		);
 		if (!$delivered) {
 			$summary['delivery_failed']++;
+			if (!fail_approval_notification_delivery(
+				$notification_id,
+				$lease_token,
+				'delivery_failed',
+				$retry_delay,
+				$dead_letter
+			)) {
+				$summary['state_failed']++;
+			} elseif ($dead_letter) {
+				$summary['dead_lettered']++;
+			} else {
+				$summary['retry_scheduled']++;
+			}
 			continue;
 		}
 
-		if (!mark_approval_notification_sent($notification_id)) {
+		if (!complete_approval_notification_delivery(
+			$notification_id,
+			$lease_token
+		)) {
 			$summary['state_failed']++;
 			continue;
 		}
@@ -224,6 +278,19 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 	}
 
 	return $summary;
+}
+
+/**
+ * Calculate deterministic bounded retry delay from cumulative attempt count.
+ *
+ * @param int $attempts
+ * @return int Delay in seconds, capped at one day
+ */
+function approval_notification_retry_delay_seconds($attempts)
+{
+	$delays = array(60, 300, 1800, 7200, 86400);
+	$index = max(0, min(count($delays) - 1, (int)$attempts - 1));
+	return $delays[$index];
 }
 
 /**
