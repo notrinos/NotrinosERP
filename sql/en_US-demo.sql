@@ -5895,18 +5895,33 @@ CREATE TABLE IF NOT EXISTS `0_approval_delegations` (
 DROP TABLE IF EXISTS `0_approval_notifications`;
 
 CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
-	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
-	`draft_id`        INT(11)      NOT NULL,
-	`user_id`         SMALLINT(6)  NOT NULL,
-	`notification_type` VARCHAR(30) NOT NULL COMMENT 'pending,approved,rejected,escalated,delegated',
-	`is_read`         TINYINT(1)   NOT NULL DEFAULT 0,
-	`is_sent`         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Email sent flag',
-	`created_date`    DATETIME     NOT NULL,
-	`read_date`       DATETIME     DEFAULT NULL,
-	PRIMARY KEY (`id`),
-	KEY `idx_user_unread` (`user_id`, `is_read`),
-	KEY `idx_unsent` (`is_sent`),
-	KEY `idx_draft` (`draft_id`)
+  `id`              INT(11)      NOT NULL AUTO_INCREMENT,
+  `draft_id`        INT(11)      NOT NULL,
+  `user_id`         SMALLINT(6)  NOT NULL,
+  `notification_type` VARCHAR(30) NOT NULL COMMENT 'pending,approved,rejected,escalated,delegated',
+  `is_read`         TINYINT(1)   NOT NULL DEFAULT 0,
+  `is_sent`         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Email sent flag',
+  `delivery_attempts` INT(10) UNSIGNED NOT NULL DEFAULT 0,
+  `attempt_limit`   SMALLINT(5) UNSIGNED NOT NULL DEFAULT 5,
+  `repair_count`    INT(10) UNSIGNED NOT NULL DEFAULT 0,
+  `last_repaired_by` INT(11) DEFAULT NULL,
+  `last_repaired_at` DATETIME DEFAULT NULL,
+  `next_attempt_at` DATETIME     DEFAULT NULL,
+  `lease_token`     CHAR(64)     DEFAULT NULL,
+  `lease_expires_at` DATETIME    DEFAULT NULL,
+  `last_attempt_at` DATETIME     DEFAULT NULL,
+  `last_error_code` VARCHAR(32)  NOT NULL DEFAULT '',
+  `dead_lettered_at` DATETIME    DEFAULT NULL,
+  `sent_date`       DATETIME     DEFAULT NULL,
+  `created_date`    DATETIME     NOT NULL,
+  `read_date`       DATETIME     DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_unread` (`user_id`, `is_read`),
+  KEY `idx_unsent` (`is_sent`),
+  UNIQUE KEY `approval_notification_lease_uq` (`lease_token`),
+  KEY `approval_notification_delivery_ready` (`is_sent`, `dead_lettered_at`, `next_attempt_at`, `lease_expires_at`, `created_date`, `id`),
+  KEY `approval_notification_dead_letter` (`dead_lettered_at`, `id`),
+  KEY `idx_draft` (`draft_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ================================================================
