@@ -180,6 +180,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'missing_sender' => 0,
 		'invalid_sender' => 0,
 		'invalid_bcc' => 0,
+		'transport_unavailable' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -273,6 +274,25 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 				$notification_id,
 				$lease_token,
 				$bcc_status,
+				$retry_delay,
+				$dead_letter
+			)) {
+				$summary['state_failed']++;
+			} elseif ($dead_letter) {
+				$summary['dead_lettered']++;
+			} else {
+				$summary['retry_scheduled']++;
+			}
+			continue;
+		}
+
+		$transport_status = approval_notification_mail_transport_status();
+		if ($transport_status !== 'valid') {
+			$summary[$transport_status]++;
+			if (!fail_approval_notification_delivery(
+				$notification_id,
+				$lease_token,
+				$transport_status,
 				$retry_delay,
 				$dead_letter
 			)) {
@@ -410,6 +430,23 @@ function approval_notification_bcc_address_status($bcc_email)
 }
 
 /**
+ * Classify native PHP mail transport availability before provider invocation.
+ *
+ * Some hardened PHP deployments disable mail() through disable_functions. In
+ * that state, invoking the legacy mail class would terminate the worker with an
+ * undefined-function error after a row has been claimed. The queue records only
+ * this bounded deployment-state token and keeps the existing retry/dead-letter
+ * and authorized-repair behavior. SMTP/provider acceptance remains outside this
+ * local capability check.
+ *
+ * @return string valid or transport_unavailable
+ */
+function approval_notification_mail_transport_status()
+{
+	return function_exists('mail') ? 'valid' : 'transport_unavailable';
+}
+
+/**
  * Calculate deterministic bounded retry delay from cumulative attempt count.
  *
  * @param int $attempts
@@ -532,8 +569,6 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 {
 	global $path_to_root;
 
-	require_once($path_to_root . '/reporting/includes/class.mail.inc');
-
 	$company_name = get_company_pref('coy_name');
 	$company_email = trim((string)get_company_pref('email'));
 	$company_bcc = get_company_pref('bcc_email');
@@ -541,9 +576,12 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 	if (approval_notification_email_address_status($recipient_email) !== 'valid'
 		|| approval_notification_sender_address_status($company_email) !== 'valid'
 		|| approval_notification_bcc_address_status($company_bcc) !== 'valid'
+		|| approval_notification_mail_transport_status() !== 'valid'
 	) {
 		return false;
 	}
+
+	require_once($path_to_root . '/reporting/includes/class.mail.inc');
 
 	$mail = new email($company_name, $company_email);
 	$mail->to($recipient_name, $recipient_email);
