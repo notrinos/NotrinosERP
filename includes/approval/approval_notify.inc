@@ -179,6 +179,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'invalid_email' => 0,
 		'missing_sender' => 0,
 		'invalid_sender' => 0,
+		'invalid_bcc' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -251,6 +252,27 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 				$notification_id,
 				$lease_token,
 				$sender_status,
+				$retry_delay,
+				$dead_letter
+			)) {
+				$summary['state_failed']++;
+			} elseif ($dead_letter) {
+				$summary['dead_lettered']++;
+			} else {
+				$summary['retry_scheduled']++;
+			}
+			continue;
+		}
+
+		$bcc_status = approval_notification_bcc_address_status(
+			get_company_pref('bcc_email')
+		);
+		if ($bcc_status !== 'valid') {
+			$summary[$bcc_status]++;
+			if (!fail_approval_notification_delivery(
+				$notification_id,
+				$lease_token,
+				$bcc_status,
 				$retry_delay,
 				$dead_letter
 			)) {
@@ -354,6 +376,34 @@ function approval_notification_sender_address_status($sender_email)
 		|| filter_var($sender_email, FILTER_VALIDATE_EMAIL) === false
 	) {
 		return 'invalid_sender';
+	}
+
+	return 'valid';
+}
+
+/**
+ * Classify the optional company-wide BCC before provider invocation.
+ *
+ * Blank configuration disables BCC and remains valid. A configured value must
+ * be one mailbox only; malformed syntax, control characters, and over-length
+ * values fail closed before the mail object can copy the value into a header.
+ * The durable queue stores only the PII-free invalid_bcc outcome so an
+ * authorized operator can repair configuration and use the existing retry.
+ *
+ * @param string $bcc_email
+ * @return string valid or invalid_bcc
+ */
+function approval_notification_bcc_address_status($bcc_email)
+{
+	$bcc_email = trim((string)$bcc_email);
+	if ($bcc_email === '')
+		return 'valid';
+
+	if (strlen($bcc_email) > 254
+		|| preg_match('/[\x00\r\n]/', $bcc_email)
+		|| filter_var($bcc_email, FILTER_VALIDATE_EMAIL) === false
+	) {
+		return 'invalid_bcc';
 	}
 
 	return 'valid';
@@ -486,9 +536,11 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 
 	$company_name = get_company_pref('coy_name');
 	$company_email = trim((string)get_company_pref('email'));
+	$company_bcc = get_company_pref('bcc_email');
 
 	if (approval_notification_email_address_status($recipient_email) !== 'valid'
 		|| approval_notification_sender_address_status($company_email) !== 'valid'
+		|| approval_notification_bcc_address_status($company_bcc) !== 'valid'
 	) {
 		return false;
 	}

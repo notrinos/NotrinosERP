@@ -104,6 +104,7 @@ if ($is_cli) {
         echo "  Invalid Email: " . $email_summary['invalid_email'] . "\n";
         echo "  Missing Sender: " . $email_summary['missing_sender'] . "\n";
         echo "  Invalid Sender: " . $email_summary['invalid_sender'] . "\n";
+        echo "  Invalid BCC: " . $email_summary['invalid_bcc'] . "\n";
         echo "  Invalid Notification Rows: " . $email_summary['invalid_notification'] . "\n";
         echo "  State Transition Failed: " . $email_summary['state_failed'] . "\n";
         echo "  Claim Failed: " . $email_summary['claim_failed'] . "\n";
@@ -199,6 +200,7 @@ if ($run_emails || isset($_POST['RunBoth'])) {
         label_row(_('Invalid Email'), $email_summary['invalid_email']);
         label_row(_('Missing Sender'), $email_summary['missing_sender']);
         label_row(_('Invalid Sender'), $email_summary['invalid_sender']);
+        label_row(_('Invalid BCC'), $email_summary['invalid_bcc']);
         label_row(_('Invalid Notification Rows'), $email_summary['invalid_notification']);
         label_row(_('State Transition Failed'), $email_summary['state_failed']);
         label_row(_('Claim Failed'), $email_summary['claim_failed']);
