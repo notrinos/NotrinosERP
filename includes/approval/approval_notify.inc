@@ -176,6 +176,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'sent' => 0,
 		'delivery_failed' => 0,
 		'missing_email' => 0,
+		'invalid_email' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -221,12 +222,13 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 
 		$recipient_email = isset($notification['user_email'])
 			? trim((string)$notification['user_email']) : '';
-		if ($recipient_email === '') {
-			$summary['missing_email']++;
+		$email_status = approval_notification_email_address_status($recipient_email);
+		if ($email_status !== 'valid') {
+			$summary[$email_status]++;
 			if (!fail_approval_notification_delivery(
 				$notification_id,
 				$lease_token,
-				'missing_email',
+				$email_status,
 				$retry_delay,
 				$dead_letter
 			)) {
@@ -278,6 +280,34 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 	}
 
 	return $summary;
+}
+
+/**
+ * Classify one approval-notification recipient before provider invocation.
+ *
+ * Empty addresses remain separately repairable from malformed addresses. The
+ * validation rejects control characters and the RFC mailbox-length ceiling
+ * before using PHP's email syntax validator. This keeps header-injection and
+ * other malformed poison rows out of the external mail transport while
+ * retaining the existing bounded retry/dead-letter repair workflow.
+ *
+ * @param string $recipient_email
+ * @return string valid, missing_email, or invalid_email
+ */
+function approval_notification_email_address_status($recipient_email)
+{
+	$recipient_email = trim((string)$recipient_email);
+	if ($recipient_email === '')
+		return 'missing_email';
+
+	if (strlen($recipient_email) > 254
+		|| preg_match('/[\x00\r\n]/', $recipient_email)
+		|| filter_var($recipient_email, FILTER_VALIDATE_EMAIL) === false
+	) {
+		return 'invalid_email';
+	}
+
+	return 'valid';
 }
 
 /**

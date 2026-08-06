@@ -135,13 +135,14 @@ class ApprovalQueueManager
         $summary = process_approval_email_notifications_detailed((int)$batchSize);
 
         $this->logMessage(sprintf(
-            'Notification processing complete: %d claimed, %d sent, %d retry scheduled, %d dead-lettered, %d delivery failed, %d missing email, %d invalid row, %d state failed, %d claim failed.',
+            'Notification processing complete: %d claimed, %d sent, %d retry scheduled, %d dead-lettered, %d delivery failed, %d missing email, %d invalid email, %d invalid row, %d state failed, %d claim failed.',
             $summary['claimed'],
             $summary['sent'],
             $summary['retry_scheduled'],
             $summary['dead_lettered'],
             $summary['delivery_failed'],
             $summary['missing_email'],
+            $summary['invalid_email'],
             $summary['invalid_notification'],
             $summary['state_failed'],
             $summary['claim_failed']
