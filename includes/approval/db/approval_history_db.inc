@@ -418,7 +418,7 @@ function fail_approval_notification_delivery($notification_id, $lease_token,
 	$error_code, $delay_seconds, $dead_letter = false)
 {
 	$allowed_errors = array(
-		'delivery_failed', 'missing_email', 'invalid_email', 'invalid_notification',
+		'delivery_failed', 'missing_email', 'invalid_email', 'missing_sender', 'invalid_sender', 'invalid_notification',
 		'state_failed', 'operator_repair_required'
 	);
 	$notification_id = (int)$notification_id;

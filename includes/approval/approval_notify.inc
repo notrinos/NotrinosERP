@@ -177,6 +177,8 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'delivery_failed' => 0,
 		'missing_email' => 0,
 		'invalid_email' => 0,
+		'missing_sender' => 0,
+		'invalid_sender' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -229,6 +231,26 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 				$notification_id,
 				$lease_token,
 				$email_status,
+				$retry_delay,
+				$dead_letter
+			)) {
+				$summary['state_failed']++;
+			} elseif ($dead_letter) {
+				$summary['dead_lettered']++;
+			} else {
+				$summary['retry_scheduled']++;
+			}
+			continue;
+		}
+
+		$sender_email = trim((string)get_company_pref('email'));
+		$sender_status = approval_notification_sender_address_status($sender_email);
+		if ($sender_status !== 'valid') {
+			$summary[$sender_status]++;
+			if (!fail_approval_notification_delivery(
+				$notification_id,
+				$lease_token,
+				$sender_status,
 				$retry_delay,
 				$dead_letter
 			)) {
@@ -305,6 +327,33 @@ function approval_notification_email_address_status($recipient_email)
 		|| filter_var($recipient_email, FILTER_VALIDATE_EMAIL) === false
 	) {
 		return 'invalid_email';
+	}
+
+	return 'valid';
+}
+
+/**
+ * Classify the configured approval-email sender before provider invocation.
+ *
+ * Missing configuration remains separately repairable from malformed sender
+ * data. No HTTP Host fallback is used because request headers are not trusted
+ * mail identity. The same mailbox ceiling, control-character rejection, and
+ * PHP syntax validation used for recipients applies to the company sender.
+ *
+ * @param string $sender_email
+ * @return string valid, missing_sender, or invalid_sender
+ */
+function approval_notification_sender_address_status($sender_email)
+{
+	$sender_email = trim((string)$sender_email);
+	if ($sender_email === '')
+		return 'missing_sender';
+
+	if (strlen($sender_email) > 254
+		|| preg_match('/[\x00\r\n]/', $sender_email)
+		|| filter_var($sender_email, FILTER_VALIDATE_EMAIL) === false
+	) {
+		return 'invalid_sender';
 	}
 
 	return 'valid';
@@ -436,10 +485,13 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 	require_once($path_to_root . '/reporting/includes/class.mail.inc');
 
 	$company_name = get_company_pref('coy_name');
-	$company_email = get_company_pref('email');
+	$company_email = trim((string)get_company_pref('email'));
 
-	if (empty($company_email))
-		$company_email = 'noreply@' . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost');
+	if (approval_notification_email_address_status($recipient_email) !== 'valid'
+		|| approval_notification_sender_address_status($company_email) !== 'valid'
+	) {
+		return false;
+	}
 
 	$mail = new email($company_name, $company_email);
 	$mail->to($recipient_name, $recipient_email);
