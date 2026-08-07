@@ -182,6 +182,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'invalid_bcc' => 0,
 		'transport_unavailable' => 0,
 		'transport_executable_unavailable' => 0,
+		'transport_encoding_unavailable' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -441,13 +442,20 @@ function approval_notification_bcc_address_status($bcc_email)
  * existing retry/dead-letter and authorized-repair behavior. No command is
  * executed by this preflight, and SMTP/provider acceptance remains outside it.
  *
- * @return string valid, transport_unavailable, or
+ * @return string valid, transport_unavailable,
+ *                transport_encoding_unavailable, or
  *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
 {
 	if (!function_exists('mail'))
 		return 'transport_unavailable';
+
+	// The legacy mail class MIME-encodes sender/recipient names and subjects
+	// during construction/use. Detect a missing or disabled iconv capability
+	// before loading the class so a claimed queue row cannot fatal mid-attempt.
+	if (!function_exists('iconv_mime_encode'))
+		return 'transport_encoding_unavailable';
 
 	if (strncasecmp(PHP_OS, 'WIN', 3) === 0)
 		return 'valid';

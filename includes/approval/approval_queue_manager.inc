@@ -135,7 +135,7 @@ class ApprovalQueueManager
         $summary = process_approval_email_notifications_detailed((int)$batchSize);
 
         $this->logMessage(sprintf(
-            'Notification processing complete: %d claimed, %d sent, %d retry scheduled, %d dead-lettered, %d delivery failed, %d missing email, %d invalid email, %d missing sender, %d invalid sender, %d invalid BCC, %d transport unavailable, %d transport executable unavailable, %d invalid row, %d state failed, %d claim failed.',
+            'Notification processing complete: %d claimed, %d sent, %d retry scheduled, %d dead-lettered, %d delivery failed, %d missing email, %d invalid email, %d missing sender, %d invalid sender, %d invalid BCC, %d transport unavailable, %d transport executable unavailable, %d transport encoding unavailable, %d invalid row, %d state failed, %d claim failed.',
             $summary['claimed'],
             $summary['sent'],
             $summary['retry_scheduled'],
@@ -148,6 +148,7 @@ class ApprovalQueueManager
             $summary['invalid_bcc'],
             $summary['transport_unavailable'],
             $summary['transport_executable_unavailable'],
+            $summary['transport_encoding_unavailable'],
             $summary['invalid_notification'],
             $summary['state_failed'],
             $summary['claim_failed']
