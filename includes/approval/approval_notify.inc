@@ -436,10 +436,11 @@ function approval_notification_bcc_address_status($bcc_email)
 /**
  * Classify native PHP mail transport availability before provider invocation.
  *
- * Some hardened PHP deployments disable mail() through disable_functions. On
- * non-Windows runtimes PHP can also expose mail() while its configured native
- * sendmail command points to an executable that is absent or not executable.
- * Either state would otherwise fail after a durable queue row has been claimed.
+ * Some hardened PHP deployments disable mail() through disable_functions. PHP
+ * can also expose mail() while its configured command transport points to an
+ * executable that is absent or not executable. Unix-like runtimes use that
+ * command path; Windows does too when sendmail_path is configured. Either state
+ * would otherwise fail after a durable queue row has been claimed.
  * The queue records only bounded deployment-state tokens and retains the
  * existing retry/dead-letter and authorized-repair behavior. No command is
  * executed by this preflight, and SMTP/provider acceptance remains outside it.
@@ -467,17 +468,17 @@ function approval_notification_mail_transport_status()
 	if (!function_exists('escapeshellarg'))
 		return 'transport_arg_escape_unavailable';
 
-	if (strncasecmp(PHP_OS, 'WIN', 3) === 0)
+	$sendmail_path = trim((string)ini_get('sendmail_path'));
+	if (!approval_notification_mail_uses_command_transport(PHP_OS, $sendmail_path))
 		return 'valid';
 
-	// PHP's mail.force_extra_parameters replaces mail()'s fifth argument.
-	// Any non-empty forced value can therefore bypass the per-company -f
-	// envelope sender constructed by the approved legacy mail class. Fail
-	// before class construction rather than silently weakening that control.
+	// PHP's mail.force_extra_parameters replaces mail()'s fifth argument when
+	// the configured sendmail command transport is active. sendmail_path can
+	// activate that command transport on Windows too, so this protection is
+	// mode-based rather than a blanket operating-system exemption.
 	if (trim((string)ini_get('mail.force_extra_parameters')) !== '')
 		return 'transport_forced_params_override';
 
-	$sendmail_path = trim((string)ini_get('sendmail_path'));
 	$executable = approval_notification_mail_transport_executable($sendmail_path);
 	if ($executable === ''
 		|| !approval_notification_mail_transport_executable_available($executable)
@@ -486,6 +487,27 @@ function approval_notification_mail_transport_status()
 	}
 
 	return 'valid';
+}
+
+/**
+ * Determine whether PHP mail() is using the configured command transport.
+ *
+ * Unix-like runtimes use sendmail_path for native mail delivery. Windows uses
+ * its built-in SMTP transport only while sendmail_path is blank; PHP supports
+ * sendmail_path on Windows and executes that configured command when present.
+ * Keeping this decision in one pure helper prevents command-only safeguards
+ * from being skipped solely because the operating system is Windows.
+ *
+ * @param string $os            PHP_OS-compatible operating-system token
+ * @param string $sendmail_path Configured sendmail_path value
+ * @return bool
+ */
+function approval_notification_mail_uses_command_transport($os, $sendmail_path)
+{
+	if (strncasecmp((string)$os, 'WIN', 3) !== 0)
+		return true;
+
+	return trim((string)$sendmail_path) !== '';
 }
 
 /**
