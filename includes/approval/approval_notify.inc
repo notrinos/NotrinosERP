@@ -185,6 +185,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_encoding_unavailable' => 0,
 		'transport_arg_escape_unavailable' => 0,
 		'transport_forced_params_override' => 0,
+		'transport_args_incompatible' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -448,7 +449,8 @@ function approval_notification_bcc_address_status($bcc_email)
  * @return string valid, transport_unavailable,
  *                transport_encoding_unavailable,
  *                transport_arg_escape_unavailable,
- *                transport_forced_params_override, or
+ *                transport_forced_params_override,
+ *                transport_args_incompatible, or
  *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
@@ -485,6 +487,9 @@ function approval_notification_mail_transport_status()
 	) {
 		return 'transport_executable_unavailable';
 	}
+
+	if (approval_notification_mail_transport_arguments_status($sendmail_path) !== 'valid')
+		return 'transport_args_incompatible';
 
 	return 'valid';
 }
@@ -569,6 +574,52 @@ function approval_notification_mail_transport_executable_available($executable)
 	}
 
 	return false;
+}
+
+
+/**
+ * Verify the minimum sendmail-compatible arguments required by PHP mail().
+ *
+ * Command transport receives the message through standard input. The legacy
+ * mail class supplies the recipient to mail(), so the command must extract
+ * recipients from message headers (-t). It must also ignore a line containing
+ * only a dot (-i or the compatible -oi form) so body content cannot terminate
+ * the message before PHP finishes writing it. Only exact standalone option
+ * tokens are accepted; ambiguous quoted/combined forms fail closed.
+ *
+ * @param string $command Configured sendmail_path value
+ * @return string valid or transport_args_incompatible
+ */
+function approval_notification_mail_transport_arguments_status($command)
+{
+	$command = ltrim((string)$command);
+	if ($command === '' || preg_match('/[\x00\r\n]/', $command))
+		return 'transport_args_incompatible';
+
+	if (!preg_match('/^(?:"[^"]+"|\'[^\']+\'|[^\s]+)(?:\s+(.*))?$/', $command, $matches))
+		return 'transport_args_incompatible';
+
+	$argument_text = isset($matches[1]) ? trim($matches[1]) : '';
+	if ($argument_text === ''
+		|| strpos($argument_text, '"') !== false
+		|| strpos($argument_text, "'") !== false
+		|| strpos($argument_text, '\\') !== false
+	) {
+		return 'transport_args_incompatible';
+	}
+
+	$arguments = preg_split('/\s+/', $argument_text);
+	$extracts_recipients = false;
+	$dot_safe = false;
+	foreach ($arguments as $argument) {
+		if ($argument === '-t')
+			$extracts_recipients = true;
+		elseif ($argument === '-i' || $argument === '-oi')
+			$dot_safe = true;
+	}
+
+	return $extracts_recipients && $dot_safe
+		? 'valid' : 'transport_args_incompatible';
 }
 
 /**
