@@ -181,6 +181,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'invalid_sender' => 0,
 		'invalid_bcc' => 0,
 		'transport_unavailable' => 0,
+		'transport_executable_unavailable' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -432,18 +433,95 @@ function approval_notification_bcc_address_status($bcc_email)
 /**
  * Classify native PHP mail transport availability before provider invocation.
  *
- * Some hardened PHP deployments disable mail() through disable_functions. In
- * that state, invoking the legacy mail class would terminate the worker with an
- * undefined-function error after a row has been claimed. The queue records only
- * this bounded deployment-state token and keeps the existing retry/dead-letter
- * and authorized-repair behavior. SMTP/provider acceptance remains outside this
- * local capability check.
+ * Some hardened PHP deployments disable mail() through disable_functions. On
+ * non-Windows runtimes PHP can also expose mail() while its configured native
+ * sendmail command points to an executable that is absent or not executable.
+ * Either state would otherwise fail after a durable queue row has been claimed.
+ * The queue records only bounded deployment-state tokens and retains the
+ * existing retry/dead-letter and authorized-repair behavior. No command is
+ * executed by this preflight, and SMTP/provider acceptance remains outside it.
  *
- * @return string valid or transport_unavailable
+ * @return string valid, transport_unavailable, or
+ *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
 {
-	return function_exists('mail') ? 'valid' : 'transport_unavailable';
+	if (!function_exists('mail'))
+		return 'transport_unavailable';
+
+	if (strncasecmp(PHP_OS, 'WIN', 3) === 0)
+		return 'valid';
+
+	$sendmail_path = trim((string)ini_get('sendmail_path'));
+	$executable = approval_notification_mail_transport_executable($sendmail_path);
+	if ($executable === ''
+		|| !approval_notification_mail_transport_executable_available($executable)
+	) {
+		return 'transport_executable_unavailable';
+	}
+
+	return 'valid';
+}
+
+/**
+ * Extract the directly invoked executable token from sendmail_path.
+ *
+ * This deliberately does not evaluate shell syntax. It accepts the common
+ * direct-command forms (absolute/bare executable, optionally single- or
+ * double-quoted) and fails closed for blank, control-character, or malformed
+ * configuration. Arguments remain outside the returned token.
+ *
+ * @param string $command
+ * @return string
+ */
+function approval_notification_mail_transport_executable($command)
+{
+	$command = ltrim((string)$command);
+	if ($command === '' || preg_match('/[\x00\r\n]/', $command))
+		return '';
+
+	if (!preg_match('/^(?:"([^"]+)"|\'([^\']+)\'|([^\s]+))/', $command, $matches))
+		return '';
+
+	if (isset($matches[1]) && $matches[1] !== '')
+		return $matches[1];
+	if (isset($matches[2]) && $matches[2] !== '')
+		return $matches[2];
+	return isset($matches[3]) ? $matches[3] : '';
+}
+
+/**
+ * Verify one executable token without invoking it.
+ *
+ * Absolute and relative paths containing a directory separator are checked
+ * directly. Bare commands are resolved against PATH. The checks are suppressed
+ * because open_basedir may itself deny inspection; denial remains fail-closed.
+ *
+ * @param string $executable
+ * @return bool
+ */
+function approval_notification_mail_transport_executable_available($executable)
+{
+	$executable = (string)$executable;
+	if ($executable === '')
+		return false;
+
+	if (strpos($executable, '/') !== false || strpos($executable, '\\') !== false)
+		return @is_file($executable) && @is_executable($executable);
+
+	$path = getenv('PATH');
+	if ($path === false || $path === '')
+		return false;
+
+	foreach (explode(PATH_SEPARATOR, $path) as $directory) {
+		if ($directory === '')
+			continue;
+		$candidate = rtrim($directory, '/\\').DIRECTORY_SEPARATOR.$executable;
+		if (@is_file($candidate) && @is_executable($candidate))
+			return true;
+	}
+
+	return false;
 }
 
 /**
