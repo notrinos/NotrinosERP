@@ -184,6 +184,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_executable_unavailable' => 0,
 		'transport_encoding_unavailable' => 0,
 		'transport_arg_escape_unavailable' => 0,
+		'transport_forced_params_override' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -445,7 +446,8 @@ function approval_notification_bcc_address_status($bcc_email)
  *
  * @return string valid, transport_unavailable,
  *                transport_encoding_unavailable,
- *                transport_arg_escape_unavailable, or
+ *                transport_arg_escape_unavailable,
+ *                transport_forced_params_override, or
  *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
@@ -467,6 +469,13 @@ function approval_notification_mail_transport_status()
 
 	if (strncasecmp(PHP_OS, 'WIN', 3) === 0)
 		return 'valid';
+
+	// PHP's mail.force_extra_parameters replaces mail()'s fifth argument.
+	// Any non-empty forced value can therefore bypass the per-company -f
+	// envelope sender constructed by the approved legacy mail class. Fail
+	// before class construction rather than silently weakening that control.
+	if (trim((string)ini_get('mail.force_extra_parameters')) !== '')
+		return 'transport_forced_params_override';
 
 	$sendmail_path = trim((string)ini_get('sendmail_path'));
 	$executable = approval_notification_mail_transport_executable($sendmail_path);
