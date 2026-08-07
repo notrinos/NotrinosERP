@@ -186,6 +186,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_arg_escape_unavailable' => 0,
 		'transport_forced_params_override' => 0,
 		'transport_args_incompatible' => 0,
+		'transport_smtp_config_invalid' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -450,7 +451,8 @@ function approval_notification_bcc_address_status($bcc_email)
  *                transport_encoding_unavailable,
  *                transport_arg_escape_unavailable,
  *                transport_forced_params_override,
- *                transport_args_incompatible, or
+ *                transport_args_incompatible,
+ *                transport_smtp_config_invalid, or
  *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
@@ -471,8 +473,12 @@ function approval_notification_mail_transport_status()
 		return 'transport_arg_escape_unavailable';
 
 	$sendmail_path = trim((string)ini_get('sendmail_path'));
-	if (!approval_notification_mail_uses_command_transport(PHP_OS, $sendmail_path))
-		return 'valid';
+	if (!approval_notification_mail_uses_command_transport(PHP_OS, $sendmail_path)) {
+		return approval_notification_mail_native_smtp_status(
+			ini_get('SMTP'),
+			ini_get('smtp_port')
+		);
+	}
 
 	// PHP's mail.force_extra_parameters replaces mail()'s fifth argument when
 	// the configured sendmail command transport is active. sendmail_path can
@@ -492,6 +498,35 @@ function approval_notification_mail_transport_status()
 		return 'transport_args_incompatible';
 
 	return 'valid';
+}
+
+/**
+ * Validate PHP's native Windows SMTP endpoint configuration without connecting.
+ *
+ * PHP's built-in SMTP transport is used only on Windows when sendmail_path is
+ * blank. The transport requires a non-empty SMTP host/IP and a numeric TCP port
+ * in the valid 1..65535 range. This check deliberately performs no DNS lookup,
+ * socket connection, authentication, TLS negotiation, or provider invocation,
+ * and it never returns or persists the configured host or port.
+ *
+ * @param string $smtp_host Configured PHP SMTP host/IP
+ * @param mixed  $smtp_port Configured PHP smtp_port
+ * @return string valid or transport_smtp_config_invalid
+ */
+function approval_notification_mail_native_smtp_status($smtp_host, $smtp_port)
+{
+	$smtp_host = trim((string)$smtp_host);
+	$smtp_port = trim((string)$smtp_port);
+
+	if ($smtp_host === '' || preg_match('/[\x00-\x20\x7f]/', $smtp_host))
+		return 'transport_smtp_config_invalid';
+
+	if (!preg_match('/^[0-9]{1,5}$/', $smtp_port))
+		return 'transport_smtp_config_invalid';
+
+	$port = (int)$smtp_port;
+	return $port >= 1 && $port <= 65535
+		? 'valid' : 'transport_smtp_config_invalid';
 }
 
 /**
