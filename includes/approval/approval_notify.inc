@@ -183,6 +183,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_unavailable' => 0,
 		'transport_executable_unavailable' => 0,
 		'transport_encoding_unavailable' => 0,
+		'transport_arg_escape_unavailable' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -443,7 +444,8 @@ function approval_notification_bcc_address_status($bcc_email)
  * executed by this preflight, and SMTP/provider acceptance remains outside it.
  *
  * @return string valid, transport_unavailable,
- *                transport_encoding_unavailable, or
+ *                transport_encoding_unavailable,
+ *                transport_arg_escape_unavailable, or
  *                transport_executable_unavailable
  */
 function approval_notification_mail_transport_status()
@@ -456,6 +458,12 @@ function approval_notification_mail_transport_status()
 	// before loading the class so a claimed queue row cannot fatal mid-attempt.
 	if (!function_exists('iconv_mime_encode'))
 		return 'transport_encoding_unavailable';
+
+	// The legacy mail class shell-escapes the envelope sender before passing
+	// the -f argument to mail(). Hardened runtimes can disable escapeshellarg;
+	// fail before class construction rather than risking a fatal after claim.
+	if (!function_exists('escapeshellarg'))
+		return 'transport_arg_escape_unavailable';
 
 	if (strncasecmp(PHP_OS, 'WIN', 3) === 0)
 		return 'valid';
