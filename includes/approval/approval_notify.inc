@@ -498,6 +498,19 @@ function approval_notification_mail_transport_status()
 		if ($local_host_status !== 'valid')
 			return $local_host_status;
 
+		// TSendMail resolves the configured SMTP endpoint through the same IPv4
+		// resolver immediately before connect(). Classify an unresolved provider
+		// endpoint before legacy mail-class construction while preserving the
+		// provider-free boundary: this performs DNS only, never a socket/provider call.
+		$smtp_host = trim((string)ini_get('SMTP'));
+		$resolved_smtp_host = gethostbyname($smtp_host);
+		$smtp_resolution_status = approval_notification_mail_native_smtp_resolution_status(
+			$smtp_host,
+			$resolved_smtp_host
+		);
+		if ($smtp_resolution_status !== 'valid')
+			return $smtp_resolution_status;
+
 		return approval_notification_mail_native_smtp_sender_status(
 			ini_get('sendmail_from'),
 			get_company_pref('email')
@@ -601,6 +614,41 @@ function approval_notification_mail_native_smtp_local_host_status($local_host,
 
 	return filter_var(
 		$resolved_local_host,
+		FILTER_VALIDATE_IP,
+		FILTER_FLAG_IPV4
+	) !== false ? 'valid' : 'transport_smtp_config_invalid';
+}
+
+/**
+ * Validate PHP native Windows SMTP configured-provider IPv4 resolution.
+ *
+ * TSendMail's GetAddr() first accepts a dotted IPv4 literal and otherwise uses
+ * gethostbyname() immediately before connect(). PHP's gethostbyname() returns
+ * the input hostname unchanged when resolution fails. This pure classifier
+ * accepts the already-observed endpoint and resolver result so failure behavior
+ * is deterministic in tests. Runtime performs only the same configured-host DNS
+ * lookup PHP will perform later; no socket, TLS, authentication, credential, or
+ * SMTP/provider call is made and neither value is persisted in durable evidence.
+ *
+ * @param string $smtp_host          Configured PHP SMTP host/IP
+ * @param string $resolved_smtp_host Result from gethostbyname()
+ * @return string valid or transport_smtp_config_invalid
+ */
+function approval_notification_mail_native_smtp_resolution_status($smtp_host,
+	$resolved_smtp_host)
+{
+	$smtp_host = trim((string)$smtp_host);
+	$resolved_smtp_host = trim((string)$resolved_smtp_host);
+
+	if ($smtp_host === '' || $resolved_smtp_host === '')
+		return 'transport_smtp_config_invalid';
+
+	if ($resolved_smtp_host === $smtp_host
+		&& filter_var($smtp_host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false)
+		return 'transport_smtp_config_invalid';
+
+	return filter_var(
+		$resolved_smtp_host,
 		FILTER_VALIDATE_IP,
 		FILTER_FLAG_IPV4
 	) !== false ? 'valid' : 'transport_smtp_config_invalid';
