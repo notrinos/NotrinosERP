@@ -481,6 +481,23 @@ function approval_notification_mail_transport_status()
 		if ($native_status !== 'valid')
 			return $native_status;
 
+		// PHP's native Windows TSendMail resolves the local machine name before
+		// it resolves or connects to the configured SMTP endpoint. Surface that
+		// deterministic local prerequisite through the existing bounded transport
+		// outcomes instead of letting a claimed row fall into generic delivery
+		// failure after the legacy mail class is constructed.
+		if (!function_exists('gethostname') || !function_exists('gethostbyname'))
+			return 'transport_unavailable';
+		$local_host = gethostname();
+		$resolved_local_host = $local_host === false
+			? '' : gethostbyname((string)$local_host);
+		$local_host_status = approval_notification_mail_native_smtp_local_host_status(
+			$local_host,
+			$resolved_local_host
+		);
+		if ($local_host_status !== 'valid')
+			return $local_host_status;
+
 		return approval_notification_mail_native_smtp_sender_status(
 			ini_get('sendmail_from'),
 			get_company_pref('email')
@@ -544,6 +561,49 @@ function approval_notification_mail_native_smtp_status($smtp_host, $smtp_port)
 
 	return $port >= 1 && $port <= 65535
 		? 'valid' : 'transport_smtp_config_invalid';
+}
+
+/**
+ * Validate PHP native Windows SMTP's local-host identity prerequisite.
+ *
+ * TSendMail obtains the local machine name and resolves it through the IPv4
+ * host resolver before it resolves or connects to the configured SMTP server.
+ * A missing/unresolvable local host therefore cannot reach provider delivery.
+ * This pure classifier accepts the already-observed local host and resolver
+ * result so the boundary can be tested without DNS or socket activity. The
+ * runtime caller performs only the same local hostname lookup PHP will perform
+ * later; it does not resolve the configured SMTP provider or open a socket.
+ *
+ * gethostbyname() returns its input unchanged when a non-IP hostname cannot be
+ * resolved. An IPv4 literal may legitimately remain unchanged and is accepted.
+ * No host value is persisted or returned in durable queue evidence.
+ *
+ * @param mixed  $local_host          Result from gethostname()
+ * @param string $resolved_local_host Result from gethostbyname()
+ * @return string valid or transport_smtp_config_invalid
+ */
+function approval_notification_mail_native_smtp_local_host_status($local_host,
+	$resolved_local_host)
+{
+	$local_host = trim((string)$local_host);
+	$resolved_local_host = trim((string)$resolved_local_host);
+
+	if ($local_host === '' || strlen($local_host) >= 256
+		|| preg_match('/[\x00-\x20\x7f]/', $local_host))
+		return 'transport_smtp_config_invalid';
+
+	if ($resolved_local_host === '')
+		return 'transport_smtp_config_invalid';
+
+	if ($resolved_local_host === $local_host
+		&& filter_var($local_host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false)
+		return 'transport_smtp_config_invalid';
+
+	return filter_var(
+		$resolved_local_host,
+		FILTER_VALIDATE_IP,
+		FILTER_FLAG_IPV4
+	) !== false ? 'valid' : 'transport_smtp_config_invalid';
 }
 
 /**
