@@ -187,6 +187,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_forced_params_override' => 0,
 		'transport_args_incompatible' => 0,
 		'transport_smtp_config_invalid' => 0,
+		'transport_smtp_connect_failed' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -313,19 +314,23 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 
 		$subject = build_approval_email_subject($notification);
 		$body = build_approval_email_body($notification);
+		$delivery_failure_status = 'delivery_failed';
 		$delivered = send_approval_email(
 			isset($notification['user_name'])
 				? $notification['user_name'] : '',
 			$recipient_email,
 			$subject,
-			$body
+			$body,
+			$delivery_failure_status
 		);
 		if (!$delivered) {
-			$summary['delivery_failed']++;
+			if (!isset($summary[$delivery_failure_status]))
+				$delivery_failure_status = 'delivery_failed';
+			$summary[$delivery_failure_status]++;
 			if (!fail_approval_notification_delivery(
 				$notification_id,
 				$lease_token,
-				'delivery_failed',
+				$delivery_failure_status,
 				$retry_delay,
 				$dead_letter
 			)) {
@@ -655,6 +660,35 @@ function approval_notification_mail_native_smtp_resolution_status($smtp_host,
 }
 
 /**
+ * Classify PHP native Windows SMTP connect() failure without a second probe.
+ *
+ * PHP's Windows mail() path converts MailConnect() failure into a warning whose
+ * stable prefix identifies the failed provider TCP connection. The runtime
+ * caller captures that warning only around the existing mail attempt, suppresses
+ * the endpoint-bearing warning from generic PHP error output, and persists only
+ * this bounded PII-free token. No duplicate socket probe or parallel transport is
+ * introduced. Other mail failures retain the generic delivery_failed outcome.
+ *
+ * @param string $warning_message Captured PHP mail warning
+ * @param bool   $uses_native_smtp True only for Windows native SMTP mode
+ * @return string transport_smtp_connect_failed or delivery_failed
+ */
+function approval_notification_mail_native_smtp_failure_status($warning_message,
+	$uses_native_smtp)
+{
+	$warning_message = (string)$warning_message;
+	if (!$uses_native_smtp)
+		return 'delivery_failed';
+
+	return strpos($warning_message, 'Failed to connect to mailserver at "') !== false
+		&& strpos(
+			$warning_message,
+			'verify your "SMTP" and "smtp_port" setting in php.ini'
+		) !== false
+		? 'transport_smtp_connect_failed' : 'delivery_failed';
+}
+
+/**
  * Preserve the approved envelope sender on PHP's native Windows SMTP path.
  *
  * When Windows uses its built-in SMTP transport, PHP ignores mail()'s fifth
@@ -926,9 +960,11 @@ function build_approval_email_body($notification)
  * @param string $recipient_email Recipient email address
  * @param string $subject         Email subject
  * @param string $body            Email body
+ * @param string $failure_status  PII-free failure classification on false return
  * @return bool                   True on success
  */
-function send_approval_email($recipient_name, $recipient_email, $subject, $body)
+function send_approval_email($recipient_name, $recipient_email, $subject, $body,
+	&$failure_status = null)
 {
 	global $path_to_root;
 
@@ -951,5 +987,43 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body)
 	$mail->subject($subject);
 	$mail->text($body);
 
-	return (bool)$mail->send();
+	$failure_status = 'delivery_failed';
+	$sendmail_path = trim((string)ini_get('sendmail_path'));
+	$uses_native_smtp = !approval_notification_mail_uses_command_transport(
+		PHP_OS,
+		$sendmail_path
+	);
+	$captured_warning = '';
+	$warning_handler_installed = false;
+	if ($uses_native_smtp && function_exists('set_error_handler')
+		&& function_exists('restore_error_handler')) {
+		set_error_handler(function ($errno, $errstr) use (&$captured_warning) {
+			if ($errno === E_WARNING
+				&& approval_notification_mail_native_smtp_failure_status(
+					$errstr,
+					true
+				) === 'transport_smtp_connect_failed') {
+				$captured_warning = (string)$errstr;
+				return true;
+			}
+			return false;
+		}, E_WARNING);
+		$warning_handler_installed = true;
+	}
+
+	$delivered = false;
+	try {
+		$delivered = (bool)$mail->send();
+	} finally {
+		if ($warning_handler_installed)
+			restore_error_handler();
+	}
+
+	if (!$delivered)
+		$failure_status = approval_notification_mail_native_smtp_failure_status(
+			$captured_warning,
+			$uses_native_smtp
+		);
+
+	return $delivered;
 }
