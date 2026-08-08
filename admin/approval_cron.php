@@ -114,6 +114,7 @@ if ($is_cli) {
         echo "  Legacy Transport SMTP Connect Failed: " . $email_summary['transport_smtp_connect_failed'] . "\n";
         echo "  Transport SMTP Session Start Failed: " . $email_summary['transport_smtp_start_failed'] . "\n";
         echo "  Transport SMTP Response Failed: " . $email_summary['transport_smtp_response_failed'] . "\n";
+        echo "  Transport SMTP Receive Failed: " . $email_summary['transport_smtp_receive_failed'] . "\n";
         echo "  Invalid Notification Rows: " . $email_summary['invalid_notification'] . "\n";
         echo "  State Transition Failed: " . $email_summary['state_failed'] . "\n";
         echo "  Claim Failed: " . $email_summary['claim_failed'] . "\n";
@@ -220,6 +221,7 @@ if ($run_emails || isset($_POST['RunBoth'])) {
         label_row(_('Legacy Transport SMTP Connect Failed'), $email_summary['transport_smtp_connect_failed']);
         label_row(_('Transport SMTP Session Start Failed'), $email_summary['transport_smtp_start_failed']);
         label_row(_('Transport SMTP Response Failed'), $email_summary['transport_smtp_response_failed']);
+        label_row(_('Transport SMTP Receive Failed'), $email_summary['transport_smtp_receive_failed']);
         label_row(_('Invalid Notification Rows'), $email_summary['invalid_notification']);
         label_row(_('State Transition Failed'), $email_summary['state_failed']);
         label_row(_('Claim Failed'), $email_summary['claim_failed']);
