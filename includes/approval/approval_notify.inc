@@ -189,6 +189,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_smtp_config_invalid' => 0,
 		'transport_smtp_connect_failed' => 0,
 		'transport_smtp_start_failed' => 0,
+		'transport_smtp_response_failed' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -661,24 +662,26 @@ function approval_notification_mail_native_smtp_resolution_status($smtp_host,
 }
 
 /**
- * Classify PHP native Windows SMTP session-start failure without a second probe.
+ * Classify observable PHP native Windows SMTP failures without a second probe.
  *
  * PHP 8.4's Windows TSendMail reports every non-success return from MailConnect()
  * through the same endpoint-bearing "Failed to connect to mailserver" warning.
  * MailConnect() includes both the TCP connect() call and the initial SMTP greeting
- * read/validation via Ack(NULL), so the warning cannot prove which of those two
- * stages failed. The runtime caller captures that warning only around the existing
- * mail attempt, suppresses the endpoint-bearing warning from generic PHP error
- * output, and persists the bounded PII-free transport_smtp_start_failed token.
- * No duplicate socket probe, SMTP dialogue implementation, or parallel transport
- * is introduced. The older transport_smtp_connect_failed token remains accepted
- * only for already-persisted historical queue evidence; new attempts use the
- * accurate session-start classification. Other mail failures remain
- * delivery_failed.
+ * read/validation via Ack(NULL), so that warning is only a session-start boundary.
+ * After MailConnect() succeeds, SendText() begins the SMTP dialogue with HELO. PHP
+ * surfaces provider acknowledgement failures from HELO and later SMTP commands
+ * through the same "SMTP server response:" warning, so public warning text cannot
+ * prove that HELO itself was the failing command. That observable post-session
+ * boundary is therefore reduced to transport_smtp_response_failed without storing
+ * the provider response. Generic "Failed to Send" remains delivery_failed because
+ * PHP reuses it for HELO and later write failures. No duplicate socket probe, SMTP
+ * dialogue implementation, or parallel transport is introduced. Historical
+ * transport_smtp_connect_failed evidence remains accepted without reclassification.
  *
  * @param string $warning_message Captured PHP mail warning
  * @param bool   $uses_native_smtp True only for Windows native SMTP mode
- * @return string transport_smtp_start_failed or delivery_failed
+ * @return string transport_smtp_start_failed, transport_smtp_response_failed,
+ *                or delivery_failed
  */
 function approval_notification_mail_native_smtp_failure_status($warning_message,
 	$uses_native_smtp)
@@ -687,12 +690,18 @@ function approval_notification_mail_native_smtp_failure_status($warning_message,
 	if (!$uses_native_smtp)
 		return 'delivery_failed';
 
-	return strpos($warning_message, 'Failed to connect to mailserver at "') !== false
+	if (strpos($warning_message, 'Failed to connect to mailserver at "') !== false
 		&& strpos(
 			$warning_message,
 			'verify your "SMTP" and "smtp_port" setting in php.ini'
-		) !== false
-		? 'transport_smtp_start_failed' : 'delivery_failed';
+		) !== false) {
+		return 'transport_smtp_start_failed';
+	}
+
+	if (strpos($warning_message, 'SMTP server response:') !== false)
+		return 'transport_smtp_response_failed';
+
+	return 'delivery_failed';
 }
 
 /**
@@ -1000,20 +1009,23 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body,
 		PHP_OS,
 		$sendmail_path
 	);
-	$captured_warning = '';
+	$captured_failure_status = 'delivery_failed';
 	$warning_handler_installed = false;
 	if ($uses_native_smtp && function_exists('set_error_handler')
 		&& function_exists('restore_error_handler')) {
-		set_error_handler(function ($errno, $errstr) use (&$captured_warning) {
-			if ($errno === E_WARNING
-				&& approval_notification_mail_native_smtp_failure_status(
-					$errstr,
-					true
-				) === 'transport_smtp_start_failed') {
-				$captured_warning = (string)$errstr;
-				return true;
-			}
-			return false;
+		set_error_handler(function ($errno, $errstr) use (&$captured_failure_status) {
+			if ($errno !== E_WARNING)
+				return false;
+
+			$status = approval_notification_mail_native_smtp_failure_status(
+				$errstr,
+				true
+			);
+			if ($status === 'delivery_failed')
+				return false;
+
+			$captured_failure_status = $status;
+			return true;
 		}, E_WARNING);
 		$warning_handler_installed = true;
 	}
@@ -1027,10 +1039,7 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body,
 	}
 
 	if (!$delivered)
-		$failure_status = approval_notification_mail_native_smtp_failure_status(
-			$captured_warning,
-			$uses_native_smtp
-		);
+		$failure_status = $captured_failure_status;
 
 	return $delivered;
 }

@@ -418,7 +418,7 @@ function fail_approval_notification_delivery($notification_id, $lease_token,
 	$error_code, $delay_seconds, $dead_letter = false)
 {
 	$allowed_errors = array(
-		'delivery_failed', 'missing_email', 'invalid_email', 'missing_sender', 'invalid_sender', 'invalid_bcc', 'transport_unavailable', 'transport_executable_unavailable', 'transport_encoding_unavailable', 'transport_arg_escape_unavailable', 'transport_forced_params_override', 'transport_args_incompatible', 'transport_smtp_config_invalid', 'transport_smtp_connect_failed', 'transport_smtp_start_failed', 'invalid_notification',
+		'delivery_failed', 'missing_email', 'invalid_email', 'missing_sender', 'invalid_sender', 'invalid_bcc', 'transport_unavailable', 'transport_executable_unavailable', 'transport_encoding_unavailable', 'transport_arg_escape_unavailable', 'transport_forced_params_override', 'transport_args_incompatible', 'transport_smtp_config_invalid', 'transport_smtp_connect_failed', 'transport_smtp_start_failed', 'transport_smtp_response_failed', 'invalid_notification',
 		'state_failed', 'operator_repair_required'
 	);
 	$notification_id = (int)$notification_id;
