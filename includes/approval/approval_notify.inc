@@ -474,9 +474,16 @@ function approval_notification_mail_transport_status()
 
 	$sendmail_path = trim((string)ini_get('sendmail_path'));
 	if (!approval_notification_mail_uses_command_transport(PHP_OS, $sendmail_path)) {
-		return approval_notification_mail_native_smtp_status(
+		$native_status = approval_notification_mail_native_smtp_status(
 			ini_get('SMTP'),
 			ini_get('smtp_port')
+		);
+		if ($native_status !== 'valid')
+			return $native_status;
+
+		return approval_notification_mail_native_smtp_sender_status(
+			ini_get('sendmail_from'),
+			get_company_pref('email')
 		);
 	}
 
@@ -533,6 +540,33 @@ function approval_notification_mail_native_smtp_status($smtp_host, $smtp_port)
 	$port = (int)$smtp_port;
 	return $port >= 1 && $port <= 65535
 		? 'valid' : 'transport_smtp_config_invalid';
+}
+
+/**
+ * Preserve the approved envelope sender on PHP's native Windows SMTP path.
+ *
+ * When Windows uses its built-in SMTP transport, PHP ignores mail()'s fifth
+ * command argument. A non-empty global sendmail_from value is then preferred
+ * over the message From header as the SMTP reverse-path. Blank configuration
+ * therefore remains compatible with the legacy company's validated From
+ * header, while a configured value must exactly match that approved sender.
+ * The comparison is local only: it performs no DNS, socket, credential, or
+ * provider operation and never persists either mailbox value.
+ *
+ * @param string $sendmail_from  Configured PHP sendmail_from value
+ * @param string $approved_sender Validated company sender mailbox
+ * @return string valid or transport_forced_params_override
+ */
+function approval_notification_mail_native_smtp_sender_status($sendmail_from,
+	$approved_sender)
+{
+	$sendmail_from = trim((string)$sendmail_from);
+	$approved_sender = trim((string)$approved_sender);
+
+	if ($sendmail_from === '' || $sendmail_from === $approved_sender)
+		return 'valid';
+
+	return 'transport_forced_params_override';
 }
 
 /**
