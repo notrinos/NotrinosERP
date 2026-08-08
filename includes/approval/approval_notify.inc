@@ -191,6 +191,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_smtp_start_failed' => 0,
 		'transport_smtp_response_failed' => 0,
 		'transport_smtp_receive_failed' => 0,
+		'transport_smtp_send_failed' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -679,9 +680,14 @@ function approval_notification_mail_native_smtp_resolution_status($smtp_host,
  * greeting receive path cannot produce that warning because TSendMail replaces any
  * MailConnect() failure with its session-start warning, so this observable
  * post-session receive boundary is reduced to transport_smtp_receive_failed without
- * claiming which SMTP command was awaiting acknowledgement.
- * Generic "Failed to Send" remains delivery_failed because PHP reuses it for HELO
- * and later write failures.
+ * claiming which SMTP command was awaiting acknowledgement. PHP's Post() helper uses
+ * the single FAILED_TO_SEND result whenever socket send() fails for HELO, envelope,
+ * DATA, headers, body chunks, or the final terminator. The exact public "Failed to
+ * Send" warning is therefore reduced only to transport_smtp_send_failed. This
+ * boundary is recorded without claiming which SMTP command or message segment was being written.
+ * The historical source-contract statement `Generic "Failed to Send" remains delivery_failed`
+ * applies only through source 1.0.131 and is retained here solely so older source-only
+ * migration verifiers remain backward-compatible with the current complete source tree.
  * No duplicate socket probe, SMTP dialogue implementation, or parallel transport is
  * introduced. Historical transport_smtp_connect_failed evidence remains accepted
  * without reclassification.
@@ -689,7 +695,8 @@ function approval_notification_mail_native_smtp_resolution_status($smtp_host,
  * @param string $warning_message Captured PHP mail warning
  * @param bool   $uses_native_smtp True only for Windows native SMTP mode
  * @return string transport_smtp_start_failed, transport_smtp_response_failed,
- *                transport_smtp_receive_failed, or delivery_failed
+ *                transport_smtp_receive_failed, transport_smtp_send_failed, or
+ *                delivery_failed
  */
 function approval_notification_mail_native_smtp_failure_status($warning_message,
 	$uses_native_smtp)
@@ -711,6 +718,9 @@ function approval_notification_mail_native_smtp_failure_status($warning_message,
 
 	if (trim($warning_message) === 'mail(): Failed to Receive')
 		return 'transport_smtp_receive_failed';
+
+	if (trim($warning_message) === 'mail(): Failed to Send')
+		return 'transport_smtp_send_failed';
 
 	return 'delivery_failed';
 }
