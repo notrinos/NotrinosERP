@@ -188,6 +188,7 @@ function process_approval_email_notifications_detailed($batch_size = 50)
 		'transport_args_incompatible' => 0,
 		'transport_smtp_config_invalid' => 0,
 		'transport_smtp_connect_failed' => 0,
+		'transport_smtp_start_failed' => 0,
 		'invalid_notification' => 0,
 		'state_failed' => 0,
 		'retry_scheduled' => 0,
@@ -660,18 +661,24 @@ function approval_notification_mail_native_smtp_resolution_status($smtp_host,
 }
 
 /**
- * Classify PHP native Windows SMTP connect() failure without a second probe.
+ * Classify PHP native Windows SMTP session-start failure without a second probe.
  *
- * PHP's Windows mail() path converts MailConnect() failure into a warning whose
- * stable prefix identifies the failed provider TCP connection. The runtime
- * caller captures that warning only around the existing mail attempt, suppresses
- * the endpoint-bearing warning from generic PHP error output, and persists only
- * this bounded PII-free token. No duplicate socket probe or parallel transport is
- * introduced. Other mail failures retain the generic delivery_failed outcome.
+ * PHP 8.4's Windows TSendMail reports every non-success return from MailConnect()
+ * through the same endpoint-bearing "Failed to connect to mailserver" warning.
+ * MailConnect() includes both the TCP connect() call and the initial SMTP greeting
+ * read/validation via Ack(NULL), so the warning cannot prove which of those two
+ * stages failed. The runtime caller captures that warning only around the existing
+ * mail attempt, suppresses the endpoint-bearing warning from generic PHP error
+ * output, and persists the bounded PII-free transport_smtp_start_failed token.
+ * No duplicate socket probe, SMTP dialogue implementation, or parallel transport
+ * is introduced. The older transport_smtp_connect_failed token remains accepted
+ * only for already-persisted historical queue evidence; new attempts use the
+ * accurate session-start classification. Other mail failures remain
+ * delivery_failed.
  *
  * @param string $warning_message Captured PHP mail warning
  * @param bool   $uses_native_smtp True only for Windows native SMTP mode
- * @return string transport_smtp_connect_failed or delivery_failed
+ * @return string transport_smtp_start_failed or delivery_failed
  */
 function approval_notification_mail_native_smtp_failure_status($warning_message,
 	$uses_native_smtp)
@@ -685,7 +692,7 @@ function approval_notification_mail_native_smtp_failure_status($warning_message,
 			$warning_message,
 			'verify your "SMTP" and "smtp_port" setting in php.ini'
 		) !== false
-		? 'transport_smtp_connect_failed' : 'delivery_failed';
+		? 'transport_smtp_start_failed' : 'delivery_failed';
 }
 
 /**
@@ -1002,7 +1009,7 @@ function send_approval_email($recipient_name, $recipient_email, $subject, $body,
 				&& approval_notification_mail_native_smtp_failure_status(
 					$errstr,
 					true
-				) === 'transport_smtp_connect_failed') {
+				) === 'transport_smtp_start_failed') {
 				$captured_warning = (string)$errstr;
 				return true;
 			}
