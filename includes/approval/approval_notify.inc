@@ -504,8 +504,10 @@ function approval_notification_mail_transport_status()
  * Validate PHP's native Windows SMTP endpoint configuration without connecting.
  *
  * PHP's built-in SMTP transport is used only on Windows when sendmail_path is
- * blank. The transport requires a non-empty SMTP host/IP and a numeric TCP port
- * in the valid 1..65535 range. This check deliberately performs no DNS lookup,
+ * blank. PHP's native TSendMail path rejects SMTP host values of 256 bytes or
+ * more before connecting, so this preflight accepts at most 255 bytes in addition
+ * to requiring a non-empty host/IP and a numeric TCP port in the valid 1..65535
+ * range. This check deliberately performs no DNS lookup,
  * socket connection, authentication, TLS negotiation, or provider invocation,
  * and it never returns or persists the configured host or port.
  *
@@ -518,7 +520,8 @@ function approval_notification_mail_native_smtp_status($smtp_host, $smtp_port)
 	$smtp_host = trim((string)$smtp_host);
 	$smtp_port = trim((string)$smtp_port);
 
-	if ($smtp_host === '' || preg_match('/[\x00-\x20\x7f]/', $smtp_host))
+	if ($smtp_host === '' || strlen($smtp_host) >= 256
+		|| preg_match('/[\x00-\x20\x7f]/', $smtp_host))
 		return 'transport_smtp_config_invalid';
 
 	if (!preg_match('/^[0-9]{1,5}$/', $smtp_port))
