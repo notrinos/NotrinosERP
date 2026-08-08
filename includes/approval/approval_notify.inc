@@ -514,9 +514,10 @@ function approval_notification_mail_transport_status()
  * blank. PHP's native TSendMail path uses an IPv4 socket/address structure and
  * rejects SMTP host values of 256 bytes or more before connecting. This preflight
  * therefore accepts only a non-empty DNS/IPv4 host without a colon, at most 255
- * bytes, plus a numeric TCP port in the valid 1..65535 range. The colon check also
- * rejects accidental host:port input because smtp_port is configured separately.
- * This check deliberately performs no DNS lookup,
+ * bytes, plus a numeric TCP port in the valid 1..65535 range except 465. Port 465
+ * is implicit-TLS message submission, while this native PHP path does not perform
+ * a TLS handshake. The colon check also rejects accidental host:port input because
+ * smtp_port is configured separately. This check deliberately performs no DNS lookup,
  * socket connection, authentication, TLS negotiation, or provider invocation,
  * and it never returns or persists the configured host or port.
  *
@@ -538,6 +539,9 @@ function approval_notification_mail_native_smtp_status($smtp_host, $smtp_port)
 		return 'transport_smtp_config_invalid';
 
 	$port = (int)$smtp_port;
+	if ($port === 465)
+		return 'transport_smtp_config_invalid';
+
 	return $port >= 1 && $port <= 65535
 		? 'valid' : 'transport_smtp_config_invalid';
 }
