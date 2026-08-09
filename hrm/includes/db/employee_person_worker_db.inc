@@ -7,7 +7,8 @@
  * graph without merging duplicate candidates or exposing a new route.
  */
 
-include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+if (!function_exists('append_domain_audit_event'))
+	include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 
 /**
  * Return the numeric actor identifier without exposing login information.
@@ -24,6 +25,20 @@ function hrm_person_worker_actor_id()
 }
 
 /**
+ * Return whether one company-scoped foundation table exists.
+ *
+ * Kept local so migration seeding does not load the complete employee writer.
+ *
+ * @param string $table
+ * @return bool
+ */
+function hrm_person_worker_table_exists($table)
+{
+	$result = db_query("SHOW TABLES LIKE ".db_escape(TB_PREF.$table));
+	return $result && db_num_rows($result) === 1;
+}
+
+/**
  * Return true only when every foundation table exists for this company.
  *
  * @return bool
@@ -32,7 +47,7 @@ function hrm_person_worker_tables_ready()
 {
 	foreach (array('hrm_persons', 'hrm_person_names', 'hrm_workers',
 		'hrm_employee_worker_map') as $table) {
-		if (!employee_table_exists($table))
+		if (!hrm_person_worker_table_exists($table))
 			return false;
 	}
 	return true;
@@ -368,12 +383,13 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 		return false;
 	$as_of_sql = db_escape($as_of);
 	return "SELECT m.employee_number,m.employee_id,w.worker_id,w.person_id,"
-		."w.worker_number,w.worker_status,w.active_from,w.active_to,"
+		."w.worker_number,w.active_from,w.active_to,"
 		."n.first_name,n.middle_name,n.last_name,n.verification_status "
 		."FROM ".TB_PREF."hrm_employee_worker_map m "
 		."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
 		."INNER JOIN ".TB_PREF."hrm_person_names n ON n.person_id=w.person_id "
 		."WHERE m.".$column."=".db_escape($value)
+		." AND (m.retired_at IS NULL OR m.retired_at>".$as_of_sql.")"
 		." AND (w.active_from IS NULL OR w.active_from<=DATE(".$as_of_sql."))"
 		." AND (w.active_to IS NULL OR w.active_to>=DATE(".$as_of_sql."))"
 		." AND (n.effective_from IS NULL OR n.effective_from<=".$as_of_sql.")"
