@@ -17,6 +17,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/admin/db/company_db.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
 include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_sensitive_db.inc');
 
 page(_($help_context = 'Create/Update Company'));
 
@@ -118,9 +119,18 @@ function handle_submit($selected_id) {
 				$error = true;
 			} 
 			else {
-				if (!isset($_POST['admpassword']) || $_POST['admpassword'] == '')
-					$_POST['admpassword'] = 'password';
-				update_admin_password($conn, password_hash($_POST['admpassword']), PASSWORD_DEFAULT);
+				hrm_person_sensitive_clear_created_key_marker($selected_id);
+				if (hrm_person_sensitive_active_key($selected_id, true) === false) {
+					display_error(_('Cannot create the protected HRM person key for the new company.'));
+					if (!remove_hrm_person_sensitive_request_created_keyring($selected_id))
+						display_error(_('The failed company key requires manual private-storage cleanup.'));
+					$error = true;
+				} else {
+					error_log('[HRM_SECURITY] person_sensitive_key_provisioned company='.(int)$selected_id);
+					if (!isset($_POST['admpassword']) || $_POST['admpassword'] == '')
+						$_POST['admpassword'] = 'password';
+					update_admin_password($conn, password_hash($_POST['admpassword']), PASSWORD_DEFAULT);
+				}
 			}
 		}
 		if ($error) {

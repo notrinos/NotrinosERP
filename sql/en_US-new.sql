@@ -1016,6 +1016,8 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 -- Structure of HRM-FND-001 person/worker compatibility foundation --
 
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
+DROP TABLE IF EXISTS `0_hrm_person_contacts`;
+DROP TABLE IF EXISTS `0_hrm_person_identifiers`;
 DROP TABLE IF EXISTS `0_hrm_person_names`;
 DROP TABLE IF EXISTS `0_hrm_workers`;
 DROP TABLE IF EXISTS `0_hrm_persons`;
@@ -1044,6 +1046,49 @@ CREATE TABLE `0_hrm_person_names` (
 	PRIMARY KEY (`name_id`),
 	KEY `hrm_person_name_asof_idx` (`person_id`,`effective_from`,`effective_to`,`name_id`),
 	CONSTRAINT `0_hrm_person_names_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_contacts` (
+	`contact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`contact_type` varchar(32) NOT NULL,
+	`value_ciphertext` varbinary(384) NOT NULL,
+	`masked_value` varchar(64) NOT NULL,
+	`lookup_token` char(64) NOT NULL,
+	`key_id` char(16) NOT NULL,
+	`is_primary` tinyint(1) NOT NULL DEFAULT '0',
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`contact_id`),
+	KEY `hrm_person_contact_asof_idx` (`person_id`,`contact_type`,`effective_from`,`effective_to`,`contact_id`),
+	KEY `hrm_person_contact_token_idx` (`contact_type`,`lookup_token`,`contact_id`),
+	CONSTRAINT `0_hrm_person_contacts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_identifiers` (
+	`identifier_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`identifier_type` varchar(32) NOT NULL,
+	`issuing_jurisdiction` varchar(16) NOT NULL DEFAULT '',
+	`value_ciphertext` varbinary(384) NOT NULL,
+	`masked_value` varchar(64) NOT NULL,
+	`lookup_token` char(64) NOT NULL,
+	`key_id` char(16) NOT NULL,
+	`valid_to` date DEFAULT NULL,
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`identifier_id`),
+	KEY `hrm_person_identifier_asof_idx` (`person_id`,`identifier_type`,`effective_from`,`effective_to`,`identifier_id`),
+	KEY `hrm_person_identifier_token_idx` (`identifier_type`,`lookup_token`,`identifier_id`),
+	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_workers` (
@@ -4068,7 +4113,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('default_inv_sales_act', 'glsetup.items', 'varchar', '15', '4010'),
 ('default_wip_act', 'glsetup.items', 'varchar', '15', '1530'),
 ('default_workorder_required', 'glsetup.manuf', 'int', '11', '20'),
-('version_id', 'system', 'varchar', '11', '1.0.133'),
+('version_id', 'system', 'varchar', '11', '1.0'),
 ('auto_curr_reval', 'setup.company', 'smallint', '6', '1'),
 ('grn_clearing_act', 'glsetup.purchase', 'varchar', '15', '1550'),
 ('bcc_email', 'setup.company', 'varchar', '100', ''),
