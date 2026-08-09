@@ -1013,6 +1013,71 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 
 -- Data of table `0_employees` --
 
+-- Structure of HRM-FND-001 person/worker compatibility foundation --
+
+DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
+DROP TABLE IF EXISTS `0_hrm_person_names`;
+DROP TABLE IF EXISTS `0_hrm_workers`;
+DROP TABLE IF EXISTS `0_hrm_persons`;
+
+CREATE TABLE `0_hrm_persons` (
+	`person_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_status` varchar(16) NOT NULL DEFAULT 'active',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`person_id`),
+	KEY `hrm_person_status_idx` (`person_status`,`person_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_names` (
+	`name_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`first_name` varchar(100) NOT NULL,
+	`middle_name` varchar(100) NOT NULL DEFAULT '',
+	`last_name` varchar(100) NOT NULL,
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`name_id`),
+	KEY `hrm_person_name_asof_idx` (`person_id`,`effective_from`,`effective_to`,`name_id`),
+	CONSTRAINT `0_hrm_person_names_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_workers` (
+	`worker_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`worker_number` varchar(20) NOT NULL,
+	`active_from` date DEFAULT NULL,
+	`active_to` date DEFAULT NULL,
+	`worker_status` varchar(16) NOT NULL DEFAULT 'active',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`worker_id`),
+	UNIQUE KEY `hrm_worker_number_uq` (`worker_number`),
+	KEY `hrm_worker_person_asof_idx` (`person_id`,`active_from`,`active_to`),
+	CONSTRAINT `0_hrm_workers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_employee_worker_map` (
+	`mapping_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`employee_number` int(11) NOT NULL,
+	`employee_id` varchar(20) NOT NULL,
+	`worker_id` bigint(20) unsigned NOT NULL,
+	`migration_source` varchar(32) NOT NULL,
+	`linked_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`retired_at` datetime DEFAULT NULL,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`mapping_id`),
+	UNIQUE KEY `hrm_employee_worker_number_uq` (`employee_number`),
+	UNIQUE KEY `hrm_employee_worker_code_uq` (`employee_id`),
+	UNIQUE KEY `hrm_employee_worker_worker_uq` (`worker_id`),
+	KEY `hrm_employee_worker_retired_idx` (`retired_at`,`mapping_id`),
+	CONSTRAINT `0_hrm_employee_worker_map_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 -- Structure of table `0_exchange_rates` --
 
 DROP TABLE IF EXISTS `0_exchange_rates`;
@@ -4003,7 +4068,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('default_inv_sales_act', 'glsetup.items', 'varchar', '15', '4010'),
 ('default_wip_act', 'glsetup.items', 'varchar', '15', '1530'),
 ('default_workorder_required', 'glsetup.manuf', 'int', '11', '20'),
-('version_id', 'system', 'varchar', '11', '1.0'),
+('version_id', 'system', 'varchar', '11', '1.0.133'),
 ('auto_curr_reval', 'setup.company', 'smallint', '6', '1'),
 ('grn_clearing_act', 'glsetup.purchase', 'varchar', '15', '1550'),
 ('bcc_email', 'setup.company', 'varchar', '100', ''),
@@ -5535,33 +5600,33 @@ CREATE TABLE IF NOT EXISTS `0_approval_delegations` (
 DROP TABLE IF EXISTS `0_approval_notifications`;
 
 CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
-  `id`              INT(11)      NOT NULL AUTO_INCREMENT,
-  `draft_id`        INT(11)      NOT NULL,
-  `user_id`         SMALLINT(6)  NOT NULL,
-  `notification_type` VARCHAR(30) NOT NULL COMMENT 'pending,approved,rejected,escalated,delegated',
-  `is_read`         TINYINT(1)   NOT NULL DEFAULT 0,
-  `is_sent`         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Email sent flag',
-  `delivery_attempts` INT(10) UNSIGNED NOT NULL DEFAULT 0,
-  `attempt_limit`   SMALLINT(5) UNSIGNED NOT NULL DEFAULT 5,
-  `repair_count`    INT(10) UNSIGNED NOT NULL DEFAULT 0,
-  `last_repaired_by` INT(11) DEFAULT NULL,
-  `last_repaired_at` DATETIME DEFAULT NULL,
-  `next_attempt_at` DATETIME     DEFAULT NULL,
-  `lease_token`     CHAR(64)     DEFAULT NULL,
-  `lease_expires_at` DATETIME    DEFAULT NULL,
-  `last_attempt_at` DATETIME     DEFAULT NULL,
-  `last_error_code` VARCHAR(32)  NOT NULL DEFAULT '',
-  `dead_lettered_at` DATETIME    DEFAULT NULL,
-  `sent_date`       DATETIME     DEFAULT NULL,
-  `created_date`    DATETIME     NOT NULL,
-  `read_date`       DATETIME     DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_user_unread` (`user_id`, `is_read`),
-  KEY `idx_unsent` (`is_sent`),
-  UNIQUE KEY `approval_notification_lease_uq` (`lease_token`),
-  KEY `approval_notification_delivery_ready` (`is_sent`, `dead_lettered_at`, `next_attempt_at`, `lease_expires_at`, `created_date`, `id`),
-  KEY `approval_notification_dead_letter` (`dead_lettered_at`, `id`),
-  KEY `idx_draft` (`draft_id`)
+	`id`              INT(11)      NOT NULL AUTO_INCREMENT,
+	`draft_id`        INT(11)      NOT NULL,
+	`user_id`         SMALLINT(6)  NOT NULL,
+	`notification_type` VARCHAR(30) NOT NULL COMMENT 'pending,approved,rejected,escalated,delegated',
+	`is_read`         TINYINT(1)   NOT NULL DEFAULT 0,
+	`is_sent`         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'Email sent flag',
+	`delivery_attempts` INT(10) UNSIGNED NOT NULL DEFAULT 0,
+	`attempt_limit`   SMALLINT(5) UNSIGNED NOT NULL DEFAULT 5,
+	`repair_count`    INT(10) UNSIGNED NOT NULL DEFAULT 0,
+	`last_repaired_by` INT(11) DEFAULT NULL,
+	`last_repaired_at` DATETIME DEFAULT NULL,
+	`next_attempt_at` DATETIME     DEFAULT NULL,
+	`lease_token`     CHAR(64)     DEFAULT NULL,
+	`lease_expires_at` DATETIME    DEFAULT NULL,
+	`last_attempt_at` DATETIME     DEFAULT NULL,
+	`last_error_code` VARCHAR(32)  NOT NULL DEFAULT '',
+	`dead_lettered_at` DATETIME    DEFAULT NULL,
+	`sent_date`       DATETIME     DEFAULT NULL,
+	`created_date`    DATETIME     NOT NULL,
+	`read_date`       DATETIME     DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	KEY `idx_user_unread` (`user_id`, `is_read`),
+	KEY `idx_unsent` (`is_sent`),
+	UNIQUE KEY `approval_notification_lease_uq` (`lease_token`),
+	KEY `approval_notification_delivery_ready` (`is_sent`, `dead_lettered_at`, `next_attempt_at`, `lease_expires_at`, `created_date`, `id`),
+	KEY `approval_notification_dead_letter` (`dead_lettered_at`, `id`),
+	KEY `idx_draft` (`draft_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ================================================================

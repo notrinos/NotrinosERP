@@ -14,6 +14,7 @@ include_once($path_to_root . '/admin/db/attachments_db.inc');
 include_once($path_to_root . '/includes/attachment_service.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
  * Enhanced Employee CRUD
@@ -133,10 +134,11 @@ function add_employee($data) {
 	$inserted = db_query($sql, 'could not add employee record');
 	$employee_number = $inserted ? db_insert_id() : false;
 	$after = $employee_number ? hrm_employee_domain_audit_row($employee_id) : false;
-	$audit = $after ? append_employee_profile_domain_audit(
+	$foundation = $after ? create_hrm_person_worker_from_employee($after) : false;
+	$audit = $foundation ? append_employee_profile_domain_audit(
 		'created', $employee_id, null, $after
 	) : false;
-	if (!$inserted || !$employee_number || !$audit) {
+	if (!$inserted || !$employee_number || !$foundation || !$audit) {
 		cancel_transaction();
 		return false;
 	}
@@ -209,10 +211,11 @@ function update_employee($employee_id, $data) {
 
 	$updated = db_query($sql, 'could not update employee');
 	$after = $updated ? hrm_employee_domain_audit_row($employee_id) : false;
-	$audit = $after ? append_employee_profile_domain_audit(
+	$foundation = $after ? synchronize_hrm_person_worker_from_employee($after) : false;
+	$audit = $foundation ? append_employee_profile_domain_audit(
 		'updated', $employee_id, $before, $after
 	) : false;
-	if (!$updated || !$audit) {
+	if (!$updated || !$foundation || !$audit) {
 		cancel_transaction();
 		return false;
 	}
@@ -746,10 +749,11 @@ function delete_employee($employee_id) {
 	}
 
 	$sql = "DELETE FROM ".TB_PREF."employees WHERE ".$employee_where;
-	$deleted = db_query($sql, 'could not delete employee');
+	$foundation = retire_hrm_person_worker_binding($employee_id);
+	$deleted = $foundation ? db_query($sql, 'could not delete employee') : false;
 	$audit = $deleted
 		? append_employee_deletion_domain_audit($employee_id, $snapshot) : false;
-	if (!$deleted || !$audit) {
+	if (!$foundation || !$deleted || !$audit) {
 		cancel_transaction();
 		return false;
 	}
