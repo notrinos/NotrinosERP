@@ -438,6 +438,58 @@ function hrm_person_sensitive_mask($value)
 }
 
 /**
+ * Validate the current encrypted row and compare its exact plaintext value.
+ *
+ * Lookup tokens are intentionally normalized for duplicate review, so they
+ * cannot prove that the authoritative legacy value is byte-for-byte unchanged.
+ *
+ * @param array $current
+ * @param int $person_id
+ * @param string $record_class
+ * @param string $type
+ * @param string $value
+ * @param string|null $valid_to
+ * @param array $active_key
+ * @return int|false One for exact match, zero for a valid changed row, false on integrity failure.
+ */
+function hrm_person_sensitive_current_value_state(
+	$current,
+	$person_id,
+	$record_class,
+	$type,
+	$value,
+	$valid_to,
+	$active_key
+) {
+	if (!is_array($current) || !isset($current['value_ciphertext'],
+		$current['lookup_token'], $current['key_id'], $current['masked_value'])
+		|| !is_array($active_key) || !isset($active_key['key_id'], $active_key['key']))
+		return false;
+	$context = hrm_person_sensitive_context($person_id, $record_class, $type);
+	if ($context === false)
+		return false;
+	$current_key = (string)$current['key_id'] === (string)$active_key['key_id']
+		? $active_key['key'] : hrm_person_sensitive_key((string)$current['key_id']);
+	if ($current_key === false)
+		return false;
+	$plaintext = hrm_person_sensitive_decrypt(
+		$current['value_ciphertext'], $context, $current_key
+	);
+	$stored_token = $plaintext === false ? false
+		: hrm_person_sensitive_lookup_token($type, $plaintext, $current_key);
+	if ($plaintext === false || $stored_token === false
+		|| !domain_audit_hash_equals((string)$current['lookup_token'], $stored_token)
+		|| (string)$current['masked_value'] !== hrm_person_sensitive_mask($plaintext))
+		return false;
+	if ((string)$current['key_id'] !== (string)$active_key['key_id']
+		|| !domain_audit_hash_equals($plaintext, $value))
+		return 0;
+	if ($record_class === 'identifier' && $current['valid_to'] !== $valid_to)
+		return 0;
+	return 1;
+}
+
+/**
  * Return true only when both encrypted shadow tables exist.
  *
  * @return bool
@@ -545,7 +597,7 @@ function synchronize_hrm_person_sensitive_value(
 		$record_class === 'contact' ? 255 : 255);
 	if ($value === false)
 		return false;
-	$sql = "SELECT ".$id_column.",lookup_token,key_id,masked_value,effective_from,"
+	$sql = "SELECT ".$id_column.",value_ciphertext,lookup_token,key_id,masked_value,effective_from,"
 		."effective_to".($record_class === 'identifier' ? ',valid_to' : '')
 		." FROM ".TB_PREF.$table." WHERE person_id=".(int)$person_id
 		." AND ".$type_column."=".db_escape($type)
@@ -566,16 +618,22 @@ function synchronize_hrm_person_sensitive_value(
 	$token = hrm_person_sensitive_lookup_token($type, $value, $active_key['key']);
 	$masked = hrm_person_sensitive_mask($value);
 	$normalized_valid_to = $valid_to === null || $valid_to === '' ? null : (string)$valid_to;
-	if ($normalized_valid_to !== null) {
-		$date = DateTime::createFromFormat('!Y-m-d', $normalized_valid_to);
-		if (!$date || $date->format('Y-m-d') !== $normalized_valid_to)
+	if ($token === false || $normalized_valid_to !== null) {
+		$date = $normalized_valid_to === null ? false
+			: DateTime::createFromFormat('!Y-m-d', $normalized_valid_to);
+		if ($token === false || !$date || $date->format('Y-m-d') !== $normalized_valid_to)
 			return false;
 	}
-	if ($current && domain_audit_hash_equals((string)$current['lookup_token'], (string)$token)
-		&& (string)$current['key_id'] === (string)$active_key['key_id']
-		&& (string)$current['masked_value'] === $masked
-		&& ($record_class !== 'identifier' || $current['valid_to'] === $normalized_valid_to))
-		return 0;
+	if ($current) {
+		$current_state = hrm_person_sensitive_current_value_state(
+			$current, $person_id, $record_class, $type, $value,
+			$normalized_valid_to, $active_key
+		);
+		if ($current_state === false)
+			return false;
+		if ($current_state === 1)
+			return 0;
+	}
 	if ($current && $source === 'legacy_employee_seed')
 		return false;
 	$now = $source === 'legacy_employee_seed' ? null : hrm_person_worker_utc_now();
