@@ -21,6 +21,7 @@ define('HRM_FIELD_RESTRICTED_DOCUMENT', 'restricted_document');
 define('HRM_FIELD_PRIVATE_PERSON', 'private_person');
 define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
+define('HRM_FIELD_ACTION_VERIFY_LINK', 'verify_link');
 
 /**
  * Return the approved permission matrix for implemented sensitive fields.
@@ -56,8 +57,13 @@ function hrm_sensitive_field_permission_matrix() {
 				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_IDENTITY_DETAILS'),
 				'any' => array(),
 			),
-			// Full reveal and mutation intentionally have no policy entry. They
-			// remain denied until verification and maker/checker controls exist.
+			HRM_FIELD_ACTION_VERIFY_LINK => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_IDENTITY_DETAILS',
+					'SA_HRM_VERIFY_IDENTITY_LINK'),
+				'any' => array(),
+			),
+			// Full reveal and general identity mutation intentionally have no
+			// policy entry. The narrow verify-link action is maker/checker-only.
 		),
 		HRM_FIELD_RESTRICTED_DOCUMENT => array(
 			HRM_FIELD_ACTION_VIEW => array(

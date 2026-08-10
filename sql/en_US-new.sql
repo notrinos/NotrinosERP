@@ -1015,6 +1015,8 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 
 -- Structure of HRM-FND-001 person/worker compatibility foundation --
 
+DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
+DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
 DROP TABLE IF EXISTS `0_hrm_person_link_proposals`;
 DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
@@ -1210,6 +1212,45 @@ CREATE TABLE `0_hrm_employee_worker_map` (
 	UNIQUE KEY `hrm_employee_worker_worker_uq` (`worker_id`),
 	KEY `hrm_employee_worker_retired_idx` (`retired_at`,`mapping_id`),
 	CONSTRAINT `0_hrm_employee_worker_map_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_canonical_links` (
+	`link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`proposal_id` bigint(20) unsigned NOT NULL,
+	`canonical_person_id` bigint(20) unsigned NOT NULL,
+	`alias_person_id` bigint(20) unsigned NOT NULL,
+	`worker_count` int(10) unsigned NOT NULL,
+	`linked_at` datetime NOT NULL,
+	`linked_by` smallint(6) unsigned NOT NULL,
+	`link_key` char(64) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`link_id`),
+	UNIQUE KEY `hrm_person_canonical_link_proposal_uq` (`proposal_id`),
+	UNIQUE KEY `hrm_person_canonical_link_alias_uq` (`alias_person_id`),
+	UNIQUE KEY `hrm_person_canonical_link_key_uq` (`link_key`),
+	KEY `hrm_person_canonical_link_person_idx` (`canonical_person_id`,`link_id`),
+	CONSTRAINT `0_hrm_person_canonical_link_proposal_fk` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_person_link_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_alias_fk` FOREIGN KEY (`alias_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_canonical_link_workers` (
+	`link_worker_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`link_id` bigint(20) unsigned NOT NULL,
+	`worker_id` bigint(20) unsigned NOT NULL,
+	`mapping_id` bigint(20) unsigned NOT NULL,
+	`previous_person_id` bigint(20) unsigned NOT NULL,
+	`canonical_person_id` bigint(20) unsigned NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`link_worker_id`),
+	UNIQUE KEY `hrm_person_canonical_link_worker_uq` (`link_id`,`worker_id`),
+	KEY `hrm_person_canonical_link_worker_map_idx` (`mapping_id`,`worker_id`),
+	KEY `hrm_person_canonical_link_worker_person_idx` (`canonical_person_id`,`worker_id`),
+	CONSTRAINT `0_hrm_person_canonical_link_worker_link_fk` FOREIGN KEY (`link_id`) REFERENCES `0_hrm_person_canonical_links` (`link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_worker_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_worker_map_fk` FOREIGN KEY (`mapping_id`) REFERENCES `0_hrm_employee_worker_map` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_worker_previous_fk` FOREIGN KEY (`previous_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_canonical_link_worker_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_exchange_rates` --
