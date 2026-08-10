@@ -129,17 +129,6 @@ class Formula_Context_FormulaContextBuilder
     }
 
     /**
-     * Set the security context for permission checks (alias).
-     *
-     * @param Formula_Context_SecurityContext $securityContext
-     * @return $this
-     */
-    public function withSecurityContext(Formula_Context_SecurityContext $securityContext)
-    {
-        return $this->withSecurity($securityContext);
-    }
-
-    /**
      * Set the security context from raw values.
      *
      * @param int      $userId           Current user database ID

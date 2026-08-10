@@ -1139,6 +1139,8 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 -- Structure of HRM-FND-001 person/worker compatibility foundation --
 
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
+DROP TABLE IF EXISTS `0_hrm_person_link_proposals`;
+DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
 DROP TABLE IF EXISTS `0_hrm_person_contacts`;
 DROP TABLE IF EXISTS `0_hrm_person_identifiers`;
 DROP TABLE IF EXISTS `0_hrm_person_names`;
@@ -1212,6 +1214,49 @@ CREATE TABLE `0_hrm_person_identifiers` (
 	KEY `hrm_person_identifier_asof_idx` (`person_id`,`identifier_type`,`effective_from`,`effective_to`,`identifier_id`),
 	KEY `hrm_person_identifier_token_idx` (`identifier_type`,`lookup_token`,`identifier_id`),
 	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_duplicate_reviews` (
+	`review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id_low` bigint(20) unsigned NOT NULL,
+	`person_id_high` bigint(20) unsigned NOT NULL,
+	`candidate_fingerprint` char(64) NOT NULL,
+	`disposition` varchar(32) NOT NULL,
+	`reason_code` varchar(64) NOT NULL,
+	`reviewed_at` datetime NOT NULL,
+	`reviewed_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`predecessor_review_id` bigint(20) unsigned DEFAULT NULL,
+	`decision_key` char(64) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`review_id`),
+	KEY `hrm_person_dup_review_lookup_idx` (`person_id_low`,`person_id_high`,`candidate_fingerprint`,`review_id`),
+	KEY `hrm_person_dup_review_disposition_idx` (`disposition`,`reviewed_at`,`review_id`),
+	UNIQUE KEY `hrm_person_dup_review_decision_uq` (`decision_key`),
+	KEY `hrm_person_dup_review_predecessor_idx` (`predecessor_review_id`),
+	CONSTRAINT `0_hrm_person_dup_review_low_fk` FOREIGN KEY (`person_id_low`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_dup_review_high_fk` FOREIGN KEY (`person_id_high`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_dup_review_predecessor_fk` FOREIGN KEY (`predecessor_review_id`) REFERENCES `0_hrm_person_duplicate_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
+CREATE TABLE `0_hrm_person_link_proposals` (
+	`proposal_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`review_id` bigint(20) unsigned NOT NULL,
+	`person_id_low` bigint(20) unsigned NOT NULL,
+	`person_id_high` bigint(20) unsigned NOT NULL,
+	`proposal_type` varchar(32) NOT NULL,
+	`proposed_at` datetime NOT NULL,
+	`proposed_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`proposal_key` char(64) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`proposal_id`),
+	UNIQUE KEY `hrm_person_link_prop_review_uq` (`review_id`,`proposal_type`),
+	KEY `hrm_person_link_prop_pair_idx` (`person_id_low`,`person_id_high`,`proposal_id`),
+	KEY `hrm_person_link_prop_type_idx` (`proposal_type`,`proposed_at`,`proposal_id`),
+	UNIQUE KEY `hrm_person_link_prop_key_uq` (`proposal_key`),
+	CONSTRAINT `0_hrm_person_link_prop_review_fk` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_person_duplicate_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_link_prop_low_fk` FOREIGN KEY (`person_id_low`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_link_prop_high_fk` FOREIGN KEY (`person_id_high`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_workers` (
