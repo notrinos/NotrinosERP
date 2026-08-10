@@ -16,6 +16,7 @@ include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_sensitive_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_private_profile_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_duplicate_review_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_link_proposal_db.inc');
 
@@ -140,10 +141,12 @@ function add_employee($data) {
 	$foundation = $after ? create_hrm_person_worker_from_employee($after) : false;
 	$sensitive = $foundation
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
-	$audit = $sensitive ? append_employee_profile_domain_audit(
+	$private_profile = $sensitive
+		? synchronize_hrm_person_private_profile_from_employee($after) : false;
+	$audit = $private_profile ? append_employee_profile_domain_audit(
 		'created', $employee_id, null, $after
 	) : false;
-	if (!$inserted || !$employee_number || !$foundation || !$sensitive || !$audit) {
+	if (!$inserted || !$employee_number || !$foundation || !$sensitive || !$private_profile || !$audit) {
 		cancel_transaction();
 		return false;
 	}
@@ -219,10 +222,12 @@ function update_employee($employee_id, $data) {
 	$foundation = $after ? synchronize_hrm_person_worker_from_employee($after) : false;
 	$sensitive = $foundation
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
-	$audit = $sensitive ? append_employee_profile_domain_audit(
+	$private_profile = $sensitive
+		? synchronize_hrm_person_private_profile_from_employee($after) : false;
+	$audit = $private_profile ? append_employee_profile_domain_audit(
 		'updated', $employee_id, $before, $after
 	) : false;
-	if (!$updated || !$foundation || !$sensitive || !$audit) {
+	if (!$updated || !$foundation || !$sensitive || !$private_profile || !$audit) {
 		cancel_transaction();
 		return false;
 	}

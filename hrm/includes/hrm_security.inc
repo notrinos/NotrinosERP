@@ -18,6 +18,7 @@ define('HRM_FIELD_RESTRICTED_COMPENSATION', 'restricted_compensation');
 define('HRM_FIELD_RESTRICTED_FINANCIAL', 'restricted_financial');
 define('HRM_FIELD_RESTRICTED_IDENTITY', 'restricted_identity');
 define('HRM_FIELD_RESTRICTED_DOCUMENT', 'restricted_document');
+define('HRM_FIELD_PRIVATE_PERSON', 'private_person');
 define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
 
@@ -66,6 +67,14 @@ function hrm_sensitive_field_permission_matrix() {
 			// All current employee-document categories are treated as restricted.
 			// Category-specific grants remain denied until the data model records
 			// a governed visibility classification.
+		),
+		HRM_FIELD_PRIVATE_PERSON => array(
+			HRM_FIELD_ACTION_VIEW => array(
+				'all' => array('SA_EMPLOYEE'),
+				'any' => array(),
+			),
+			// Direct shadow mutation is intentionally absent. Legacy employee
+			// maintenance remains authoritative during HRM-FND-001 compatibility.
 		),
 	);
 }

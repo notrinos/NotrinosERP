@@ -64,16 +64,14 @@ echo "\n--- Testing version() ---\n";
 $ver = FormulaFacade::version();
 echo json_encode($ver, JSON_PRETTY_PRINT) . "\n";
 
-echo "\n--- Testing registerVariable() ---\n";
+echo "\n--- Testing ProviderMetadata ---\n";
 try {
-    $provider = new Formula_Registry_ProviderMetadata(
-        'test',
-        'TestProvider',
-        'Test provider for integration test'
-    );
+    $provider = new Formula_Registry_ProviderMetadata(array(
+        'namespaces' => array('test'),
+        'version' => '1.0',
+        'description' => 'Test provider for integration test',
+    ));
     echo "  ProviderMetadata created OK\n";
-    
-    echo "  registerVariable() succeeded (provider registered)\n";
 } catch (Exception $e) {
     echo "  ERROR: " . $e->getMessage() . "\n";
 }
@@ -97,9 +95,10 @@ try {
 
 echo "\n--- Testing FormulaContext ---\n";
 try {
-    $ctx = new Formula_Context_FormulaContext(array('BASIC' => 5000), 'EMP001');
+    $ctx = Formula_Context_FormulaContextBuilder::create()
+        ->withVariable('BASIC', 5000)
+        ->build();
     echo "  BASIC = " . $ctx->getVariable('BASIC') . "\n";
-    echo "  employee_id = " . $ctx->getEmployeeId() . "\n";
     echo "  toArray() keys: " . implode(', ', array_keys($ctx->toArray())) . "\n";
 } catch (Exception $e) {
     echo "  ERROR: " . $e->getMessage() . "\n";
@@ -107,9 +106,12 @@ try {
 
 echo "\n--- Testing CompiledFormula serialize ---\n";
 try {
-    $node = new Formula_Compiler_AST_LiteralNode(42, 1, 1);
-    $meta = new Formula_Compiler_FormulaMetadata('BASIC + 500', '2026-07-09', 'sha256_xxx');
-    $compiled = new Formula_Compiler_CompiledFormula($node, $meta);
+    $checksum = hash('sha256', 'BASIC + 500');
+    $node = new Formula_Compiler_AST_LiteralNode(42, 'integer', 1, 1);
+    $meta = new Formula_Compiler_FormulaMetadata(array(
+        'sourceChecksum' => $checksum,
+    ));
+    $compiled = new Formula_Compiler_CompiledFormula($node, $meta, $checksum);
     $serialized = serialize($compiled);
     echo "  serialize() worked, length: " . strlen($serialized) . "\n";
     
@@ -124,7 +126,7 @@ $vr = new Formula_Compiler_ValidationResult();
 $vr->addError('Test error at line 1');
 $vr->addWarning('Test warning');
 echo "  isValid: " . ($vr->isValid() ? 'true' : 'false') . "\n";
-echo "  hasWarnings: " . ($vr->hasWarnings() ? 'true' : 'false') . "\n";
+echo "  hasWarnings: " . ($vr->warningCount() > 0 ? 'true' : 'false') . "\n";
 echo "  errorCount: " . $vr->errorCount() . "\n";
 
 echo "\n=== INTEGRATION TEST COMPLETE ===\n";

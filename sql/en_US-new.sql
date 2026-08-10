@@ -1018,6 +1018,8 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
 DROP TABLE IF EXISTS `0_hrm_person_link_proposals`;
 DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
+DROP TABLE IF EXISTS `0_hrm_person_emergency_contacts`;
+DROP TABLE IF EXISTS `0_hrm_person_addresses`;
 DROP TABLE IF EXISTS `0_hrm_person_contacts`;
 DROP TABLE IF EXISTS `0_hrm_person_identifiers`;
 DROP TABLE IF EXISTS `0_hrm_person_names`;
@@ -1091,6 +1093,48 @@ CREATE TABLE `0_hrm_person_identifiers` (
 	KEY `hrm_person_identifier_asof_idx` (`person_id`,`identifier_type`,`effective_from`,`effective_to`,`identifier_id`),
 	KEY `hrm_person_identifier_token_idx` (`identifier_type`,`lookup_token`,`identifier_id`),
 	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_addresses` (
+	`address_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`address_type` varchar(24) NOT NULL DEFAULT 'residential',
+	`address_line` varchar(255) NOT NULL DEFAULT '',
+	`city` varchar(60) NOT NULL DEFAULT '',
+	`region` varchar(60) NOT NULL DEFAULT '',
+	`country` varchar(60) NOT NULL DEFAULT '',
+	`postal_code` varchar(32) NOT NULL DEFAULT '',
+	`is_residence` tinyint(1) NOT NULL DEFAULT '1',
+	`is_tax_residence` tinyint(1) NOT NULL DEFAULT '0',
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`address_id`),
+	KEY `hrm_person_address_asof_idx` (`person_id`,`address_type`,`effective_from`,`effective_to`,`address_id`),
+	KEY `hrm_person_address_jurisdiction_idx` (`country`,`region`,`person_id`,`address_id`),
+	CONSTRAINT `0_hrm_person_addresses_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_emergency_contacts` (
+	`emergency_contact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`contact_name` varchar(100) NOT NULL DEFAULT '',
+	`relationship` varchar(60) NOT NULL DEFAULT '',
+	`phone` varchar(30) NOT NULL DEFAULT '',
+	`is_primary` tinyint(1) NOT NULL DEFAULT '1',
+	`consent_status` varchar(16) NOT NULL DEFAULT 'unknown',
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`emergency_contact_id`),
+	KEY `hrm_person_emergency_asof_idx` (`person_id`,`is_primary`,`effective_from`,`effective_to`,`emergency_contact_id`),
+	CONSTRAINT `0_hrm_person_emergency_contacts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_duplicate_reviews` (
