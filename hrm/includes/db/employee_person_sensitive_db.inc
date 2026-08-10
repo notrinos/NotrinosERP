@@ -89,6 +89,8 @@ function hrm_person_sensitive_keyring_paths($company = null)
 		'keys' => $root.DIRECTORY_SEPARATOR.'keys',
 		'manifest' => $root.DIRECTORY_SEPARATOR.'keys'
 			.DIRECTORY_SEPARATOR.'person-sensitive-keyring-v1.json',
+		'pending' => $root.DIRECTORY_SEPARATOR.'keys'
+			.DIRECTORY_SEPARATOR.'person-sensitive-key-rotation-v1.pending.json',
 	);
 }
 
@@ -192,8 +194,11 @@ function hrm_person_sensitive_keyring($company = null, $allow_create = false)
 	$paths = hrm_person_sensitive_keyring_paths($company);
 	if ($paths === false)
 		return false;
+	$rotation_internal = isset($GLOBALS['hrm_person_sensitive_key_rotation_company'])
+		&& (int)$GLOBALS['hrm_person_sensitive_key_rotation_company'] === (int)$company;
 	if (is_link($paths['root']) || is_link($paths['keys'])
-		|| is_link($paths['manifest']))
+		|| is_link($paths['manifest']) || is_link($paths['pending'])
+		|| (is_file($paths['pending']) && !$rotation_internal))
 		return false;
 	if (!is_file($paths['manifest'])) {
 		if (!$allow_create || !function_exists('openssl_random_pseudo_bytes')
@@ -236,36 +241,52 @@ function hrm_person_sensitive_keyring($company = null, $allow_create = false)
 	@chmod($paths['manifest'], 0600);
 	$json = @file_get_contents($paths['manifest']);
 	$manifest = is_string($json) ? json_decode($json, true) : null;
-	if (!is_array($manifest)
+	$expected_manifest_fields = array('active_key_id', 'company_id', 'generation', 'keys', 'schema_version');
+	$actual_manifest_fields = is_array($manifest) ? array_keys($manifest) : array();
+	sort($expected_manifest_fields);
+	sort($actual_manifest_fields);
+	if (!is_array($manifest) || $actual_manifest_fields !== $expected_manifest_fields
 		|| $manifest['schema_version'] !== 'notrinoserp.hrm-person-sensitive-keyring.v1'
-		|| (int)$manifest['company_id'] !== (int)$company
+		|| !is_int($manifest['company_id']) || $manifest['company_id'] !== (int)$company
 		|| !is_int($manifest['generation']) || $manifest['generation'] < 1
 		|| preg_match('/^[a-f0-9]{16}$/D', (string)$manifest['active_key_id']) !== 1
-		|| !isset($manifest['keys']) || !is_array($manifest['keys'])
+		|| !is_array($manifest['keys'])
 		|| count($manifest['keys']) !== (int)$manifest['generation'])
 		return false;
-	$active_found = false;
+	$seen = array();
 	$previous_generation = 0;
-	foreach ($manifest['keys'] as $entry) {
-		if (!is_array($entry) || !isset($entry['key_id'], $entry['generation'],
-			$entry['filename'], $entry['activated_at'], $entry['retired_at'])
+	$previous_retired_at = null;
+	foreach ($manifest['keys'] as $index => $entry) {
+		$expected_entry_fields = array('activated_at', 'filename', 'generation', 'key_id', 'retired_at');
+		$actual_entry_fields = is_array($entry) ? array_keys($entry) : array();
+		sort($expected_entry_fields);
+		sort($actual_entry_fields);
+		if (!is_array($entry) || $actual_entry_fields !== $expected_entry_fields
 			|| !is_int($entry['generation'])
 			|| $entry['generation'] !== $previous_generation + 1
 			|| preg_match('/^[a-f0-9]{16}$/D', (string)$entry['key_id']) !== 1
+			|| isset($seen[$entry['key_id']])
 			|| $entry['filename'] !== 'person-sensitive-v1-'.$entry['key_id'].'.key'
+			|| preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',
+				(string)$entry['activated_at']) !== 1
+			|| ($entry['retired_at'] !== ''
+				&& preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',
+					(string)$entry['retired_at']) !== 1)
+			|| ($index < count($manifest['keys']) - 1 && $entry['retired_at'] === '')
+			|| ($index === count($manifest['keys']) - 1 && $entry['retired_at'] !== '')
+			|| ($previous_retired_at !== null
+				&& $previous_retired_at !== (string)$entry['activated_at'])
 			|| hrm_person_sensitive_load_key_file(
 				$paths['keys'].DIRECTORY_SEPARATOR.$entry['filename'], $entry['key_id']
 			) === false)
 			return false;
+		$seen[$entry['key_id']] = true;
 		$previous_generation = $entry['generation'];
-		if ($entry['key_id'] === $manifest['active_key_id']) {
-			if ($entry['generation'] !== $manifest['generation']
-				|| $entry['retired_at'] !== '')
-				return false;
-			$active_found = true;
-		}
+		$previous_retired_at = (string)$entry['retired_at'];
 	}
-	return $active_found ? $manifest : false;
+	$last = $manifest['keys'][count($manifest['keys']) - 1];
+	return $last['key_id'] === $manifest['active_key_id']
+		&& $last['generation'] === $manifest['generation'] ? $manifest : false;
 }
 
 /**
