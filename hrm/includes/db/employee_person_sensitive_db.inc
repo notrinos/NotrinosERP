@@ -470,6 +470,7 @@ function hrm_person_sensitive_mask($value)
  * @param string $type
  * @param string $value
  * @param string|null $valid_to
+ * @param string|null $issuing_jurisdiction
  * @param array $active_key
  * @return int|false One for exact match, zero for a valid changed row, false on integrity failure.
  */
@@ -480,6 +481,7 @@ function hrm_person_sensitive_current_value_state(
 	$type,
 	$value,
 	$valid_to,
+	$issuing_jurisdiction,
 	$active_key
 ) {
 	if (!is_array($current) || !isset($current['value_ciphertext'],
@@ -505,8 +507,14 @@ function hrm_person_sensitive_current_value_state(
 	if ((string)$current['key_id'] !== (string)$active_key['key_id']
 		|| !domain_audit_hash_equals($plaintext, $value))
 		return 0;
-	if ($record_class === 'identifier' && $current['valid_to'] !== $valid_to)
-		return 0;
+	if ($record_class === 'identifier') {
+		if ($current['valid_to'] !== $valid_to)
+			return 0;
+		if ($issuing_jurisdiction !== null
+			&& (!isset($current['issuing_jurisdiction'])
+				|| (string)$current['issuing_jurisdiction'] !== $issuing_jurisdiction))
+			return 0;
+	}
 	return 1;
 }
 
@@ -541,6 +549,110 @@ function hrm_person_identifier_field_map()
 {
 	return array('national_id' => 'national_id', 'passport' => 'passport',
 		'tax_number' => 'tax_number', 'social_security' => 'social_security_no');
+}
+
+/**
+ * Normalize an explicitly supplied issuer jurisdiction without inference.
+ *
+ * The bounded core accepts an ISO-3166-style country code with one optional
+ * subdivision token. Country packs remain responsible for authoritative
+ * jurisdiction registries and identifier-specific statutory rules.
+ *
+ * @param mixed $jurisdiction
+ * @param bool $allow_blank
+ * @return string|false
+ */
+function hrm_person_sensitive_issuing_jurisdiction($jurisdiction, $allow_blank = false)
+{
+	$jurisdiction = strtoupper(trim((string)$jurisdiction));
+	if ($jurisdiction === '')
+		return $allow_blank ? '' : false;
+	if (strlen($jurisdiction) > 16
+		|| preg_match('/^[A-Z]{2}(?:-[A-Z0-9]{1,8})?$/D', $jurisdiction) !== 1)
+		return false;
+	return $jurisdiction;
+}
+
+/**
+ * Validate only portable semantic shape, never jurisdiction-specific validity.
+ *
+ * Legacy seed rows are retained as unverified evidence. New/changed contacts
+ * must be plausible phone/email values. New/changed identifiers require an
+ * explicit issuer jurisdiction and a bounded non-empty identifier shape.
+ *
+ * @param string $record_class
+ * @param string $type
+ * @param string $value
+ * @param mixed $issuing_jurisdiction
+ * @return bool
+ */
+function hrm_person_sensitive_semantic_value_is_valid(
+	$record_class,
+	$type,
+	$value,
+	$issuing_jurisdiction = ''
+) {
+	$value = hrm_person_sensitive_value($value);
+	if ($value === false)
+		return false;
+	if ($value === '')
+		return true;
+
+	if ($record_class === 'contact') {
+		if (!array_key_exists($type, hrm_person_contact_field_map()))
+			return false;
+		if ($type === 'work_email' || $type === 'personal_email')
+			return strlen($value) <= 254
+				&& filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
+
+		if ($type !== 'phone' && $type !== 'mobile'
+			|| preg_match('/^[+0-9().\-\/ ]+$/D', $value) !== 1
+			|| substr_count($value, '+') > 1
+			|| (strpos($value, '+') !== false && strpos($value, '+') !== 0))
+			return false;
+		$digits = preg_replace('/\D+/', '', $value);
+		return strlen($digits) >= 7 && strlen($digits) <= 15;
+	}
+
+	if ($record_class !== 'identifier'
+		|| !array_key_exists($type, hrm_person_identifier_field_map())
+		|| hrm_person_sensitive_issuing_jurisdiction($issuing_jurisdiction, false) === false
+		|| strlen($value) > 100)
+		return false;
+	$alphanumeric = preg_replace('/[^A-Za-z0-9]/', '', $value);
+	return strlen($alphanumeric) >= 3;
+}
+
+/**
+ * Verify stored issuer metadata without promoting legacy identity verification.
+ *
+ * Blank values remain valid for historical legacy-seed rows because the source
+ * did not record an issuer. Non-blank values must already be normalized exact.
+ *
+ * @return array|false
+ */
+function verify_hrm_person_sensitive_semantic_metadata()
+{
+	if (!hrm_person_sensitive_tables_ready())
+		return false;
+	$result = db_query("SELECT identifier_id,issuing_jurisdiction FROM "
+		.TB_PREF."hrm_person_identifiers ORDER BY identifier_id",
+		'could not verify HRM person identifier jurisdiction metadata');
+	if (!$result)
+		return false;
+	$rows = 0;
+	$captured = 0;
+	while ($row = db_fetch_assoc($result)) {
+		$rows++;
+		$value = (string)$row['issuing_jurisdiction'];
+		if ($value === '')
+			continue;
+		$normalized = hrm_person_sensitive_issuing_jurisdiction($value, false);
+		if ($normalized === false || $normalized !== $value)
+			return false;
+		$captured++;
+	}
+	return array('identifier_rows' => $rows, 'issuer_jurisdictions_captured' => $captured);
 }
 
 /**
@@ -595,6 +707,7 @@ function append_hrm_person_sensitive_domain_audit(
  * @param string|null $valid_to
  * @param string $source
  * @param array $active_key
+ * @param string|null $issuing_jurisdiction Explicit only; never inferred.
  * @return int|false Zero means no change; one means a new effective version.
  */
 function synchronize_hrm_person_sensitive_value(
@@ -604,7 +717,8 @@ function synchronize_hrm_person_sensitive_value(
 	$value,
 	$valid_to,
 	$source,
-	$active_key
+	$active_key,
+	$issuing_jurisdiction = null
 ) {
 	$table = $record_class === 'contact'
 		? 'hrm_person_contacts' : ($record_class === 'identifier'
@@ -619,7 +733,7 @@ function synchronize_hrm_person_sensitive_value(
 	if ($value === false)
 		return false;
 	$sql = "SELECT ".$id_column.",value_ciphertext,lookup_token,key_id,masked_value,effective_from,"
-		."effective_to".($record_class === 'identifier' ? ',valid_to' : '')
+		."effective_to".($record_class === 'identifier' ? ',valid_to,issuing_jurisdiction' : '')
 		." FROM ".TB_PREF.$table." WHERE person_id=".(int)$person_id
 		." AND ".$type_column."=".db_escape($type)
 		." AND effective_to IS NULL ORDER BY ".$id_column." DESC LIMIT 2 FOR UPDATE";
@@ -639,6 +753,14 @@ function synchronize_hrm_person_sensitive_value(
 	$token = hrm_person_sensitive_lookup_token($type, $value, $active_key['key']);
 	$masked = hrm_person_sensitive_mask($value);
 	$normalized_valid_to = $valid_to === null || $valid_to === '' ? null : (string)$valid_to;
+	$normalized_jurisdiction = null;
+	if ($record_class === 'identifier' && $issuing_jurisdiction !== null) {
+		$normalized_jurisdiction = hrm_person_sensitive_issuing_jurisdiction(
+			$issuing_jurisdiction, $value === ''
+		);
+		if ($normalized_jurisdiction === false)
+			return false;
+	}
 	if ($token === false || $normalized_valid_to !== null) {
 		$date = $normalized_valid_to === null ? false
 			: DateTime::createFromFormat('!Y-m-d', $normalized_valid_to);
@@ -648,7 +770,7 @@ function synchronize_hrm_person_sensitive_value(
 	if ($current) {
 		$current_state = hrm_person_sensitive_current_value_state(
 			$current, $person_id, $record_class, $type, $value,
-			$normalized_valid_to, $active_key
+			$normalized_valid_to, $normalized_jurisdiction, $active_key
 		);
 		if ($current_state === false)
 			return false;
@@ -657,6 +779,15 @@ function synchronize_hrm_person_sensitive_value(
 	}
 	if ($current && $source === 'legacy_employee_seed')
 		return false;
+	if ($source !== 'legacy_employee_seed') {
+		if ($record_class === 'identifier' && $normalized_jurisdiction === null)
+			return false;
+		if (!hrm_person_sensitive_semantic_value_is_valid(
+			$record_class, $type, $value,
+			$record_class === 'identifier' ? $normalized_jurisdiction : ''
+		))
+			return false;
+	}
 	$now = $source === 'legacy_employee_seed' ? null : hrm_person_worker_utc_now();
 	if ($source !== 'legacy_employee_seed' && $now === false)
 		return false;
@@ -679,7 +810,8 @@ function synchronize_hrm_person_sensitive_value(
 		$values .= ',1';
 	} else {
 		$columns .= ',issuing_jurisdiction,valid_to';
-		$values .= ",'',".($normalized_valid_to === null
+		$values .= ','.db_escape($normalized_jurisdiction === null ? '' : $normalized_jurisdiction)
+			.','.($normalized_valid_to === null
 			? 'NULL' : db_escape($normalized_valid_to));
 	}
 	return db_query("INSERT INTO ".TB_PREF.$table." (".$columns.") VALUES ("
@@ -724,10 +856,13 @@ function synchronize_hrm_person_sensitive_from_employee(
 	foreach (hrm_person_identifier_field_map() as $type => $field) {
 		$valid_to = $type === 'passport' && !empty($employee['passport_expiry'])
 			? (string)$employee['passport_expiry'] : null;
+		$jurisdiction_field = $field.'_issuing_jurisdiction';
+		$issuing_jurisdiction = array_key_exists($jurisdiction_field, $employee)
+			? $employee[$jurisdiction_field] : null;
 		$changed = synchronize_hrm_person_sensitive_value(
 			'identifier', (int)$binding['person_id'], $type,
 			isset($employee[$field]) ? $employee[$field] : '', $valid_to,
-			$source, $active_key
+			$source, $active_key, $issuing_jurisdiction
 		);
 		if ($changed === false)
 			return false;
