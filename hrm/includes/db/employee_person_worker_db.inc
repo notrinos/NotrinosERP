@@ -364,7 +364,31 @@ function retire_hrm_person_worker_binding($employee_ref)
 }
 
 /**
+ * Build the canonical-link-aware Person expression for one as-of read.
+ *
+ * Before a reviewed canonical link becomes effective, the Worker resolves to
+ * the immutable pre-link Person snapshot. At the exact link timestamp and
+ * afterward it resolves to the current canonical Person. Unlinked Workers keep
+ * their current Person binding, preserving the predecessor cohort semantics.
+ *
+ * @param string $as_of_sql Already escaped SQL datetime literal.
+ * @return string
+ */
+function hrm_person_worker_resolved_person_as_of_sql($as_of_sql)
+{
+	return "CASE WHEN clw.link_worker_id IS NOT NULL AND cl.linked_at>".$as_of_sql
+		." THEN clw.previous_person_id ELSE w.person_id END";
+}
+
+/**
  * Build the authorized as-of person/worker projection SQL.
+ *
+ * The source/database boundary that introduces this query requires the
+ * canonical-link evidence tables. A snapshot must either be absent (legacy
+ * cohort) or be singular and semantically consistent with the retained link,
+ * current Worker ownership and unchanged employee/Worker mapping. Ambiguous or
+ * tampered link evidence therefore returns no row instead of silently choosing
+ * an identity.
  *
  * @param int|string $employee_ref
  * @param string $as_of
@@ -382,16 +406,27 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 		|| ($column === 'employee_id' && $value === ''))
 		return false;
 	$as_of_sql = db_escape($as_of);
-	return "SELECT m.employee_number,m.employee_id,w.worker_id,w.person_id,"
+	$resolved_person_sql = hrm_person_worker_resolved_person_as_of_sql($as_of_sql);
+	return "SELECT m.employee_number,m.employee_id,w.worker_id,"
+		.$resolved_person_sql." person_id,"
 		."w.worker_number,w.active_from,w.active_to,"
 		."n.first_name,n.middle_name,n.last_name,n.verification_status "
 		."FROM ".TB_PREF."hrm_employee_worker_map m "
 		."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
-		."INNER JOIN ".TB_PREF."hrm_person_names n ON n.person_id=w.person_id "
+		."LEFT JOIN ".TB_PREF."hrm_person_canonical_link_workers clw "
+		."ON clw.worker_id=w.worker_id AND clw.mapping_id=m.mapping_id "
+		."LEFT JOIN ".TB_PREF."hrm_person_canonical_links cl ON cl.link_id=clw.link_id "
+		."INNER JOIN ".TB_PREF."hrm_person_names n ON n.person_id=(".$resolved_person_sql.") "
 		."WHERE m.".$column."=".db_escape($value)
 		." AND (m.retired_at IS NULL OR m.retired_at>".$as_of_sql.")"
 		." AND (w.active_from IS NULL OR w.active_from<=DATE(".$as_of_sql."))"
 		." AND (w.active_to IS NULL OR w.active_to>=DATE(".$as_of_sql."))"
+		." AND (clw.link_worker_id IS NULL OR (cl.link_id IS NOT NULL"
+		." AND clw.previous_person_id=cl.alias_person_id"
+		." AND clw.canonical_person_id=cl.canonical_person_id"
+		." AND w.person_id=cl.canonical_person_id))"
+		." AND (SELECT COUNT(*) FROM ".TB_PREF."hrm_person_canonical_link_workers clw_count"
+		." WHERE clw_count.worker_id=w.worker_id AND clw_count.mapping_id=m.mapping_id)<=1"
 		." AND (n.effective_from IS NULL OR n.effective_from<=".$as_of_sql.")"
 		." AND (n.effective_to IS NULL OR n.effective_to>".$as_of_sql.")"
 		." ORDER BY n.effective_from DESC,n.name_id DESC LIMIT 1";
