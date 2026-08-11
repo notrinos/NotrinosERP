@@ -517,3 +517,33 @@ function get_hrm_person_worker_as_of($employee_ref, $as_of)
 		$company_id, $employee_ref, $as_of
 	);
 }
+
+/**
+ * Resolve the canonical-link-aware as-of display name for one employee.
+ *
+ * This is the bounded adoption helper used by authoritative read surfaces such
+ * as the employee-profile report. It returns an array with exactly the
+ * normalized name parts the report renders, or false when no Person/Worker
+ * binding is available so the caller keeps its legacy projection name
+ * (legacy-cohort parity and fail-closed availability).
+ *
+ * The read is authorized and least-data. It performs no identity write, emits
+ * no audit event, and never projects restricted identity/contact/private or
+ * payroll values.
+ *
+ * @param int|string $employee_ref
+ * @param string $as_of
+ * @return array|false Normalized name parts or false on missing binding.
+ */
+function get_hrm_person_worker_report_name_as_of($employee_ref, $as_of)
+{
+	$row = get_hrm_person_worker_as_of($employee_ref, $as_of);
+	if (!is_array($row))
+		return false;
+	$first = isset($row['first_name']) ? trim((string)$row['first_name']) : '';
+	$middle = isset($row['middle_name']) ? trim((string)$row['middle_name']) : '';
+	$last = isset($row['last_name']) ? trim((string)$row['last_name']) : '';
+	if ($first === '' && $last === '')
+		return false;
+	return array('first_name' => $first, 'middle_name' => $middle, 'last_name' => $last);
+}

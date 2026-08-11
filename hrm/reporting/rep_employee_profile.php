@@ -22,6 +22,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
  * Print employee profile report.
@@ -62,9 +63,29 @@ function print_employee_profile_report() {
     }
     hrm_log_restricted_employee_projection('employee_profile_report');
 
+    // Authoritative canonical-link-aware as-of identity for the report date,
+    // falling back to the synchronized legacy name when no Person/Worker
+    // binding is available (legacy-cohort parity and fail-closed availability).
+    $as_of = hrm_person_worker_utc_now();
+    $identity = $as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of($employee_id, $as_of);
+    if (is_array($identity)) {
+        $first_name = $identity['first_name'];
+        $middle_name = $identity['middle_name'];
+        $last_name = $identity['last_name'];
+    } else {
+        $first_name = isset($row['first_name']) ? trim((string)$row['first_name']) : '';
+        $middle_name = '';
+        $last_name = isset($row['last_name']) ? trim((string)$row['last_name']) : '';
+    }
+    $report_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($report_name === '')
+        $report_name = trim((string)(isset($row['first_name']) ? $row['first_name'] : '').' '.(isset($row['last_name']) ? $row['last_name'] : ''));
+
     $fields = array(
         _('Employee ID') => $row['employee_id'],
-        _('Name') => trim($row['first_name'].' '.$row['last_name']),
+        _('Name') => $report_name,
         _('Email') => $row['email'],
         _('Mobile') => $row['mobile'],
         _('Hire Date') => empty($row['hire_date']) ? '' : sql2date($row['hire_date']),
