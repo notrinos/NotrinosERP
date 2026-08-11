@@ -104,6 +104,51 @@ function hrm_person_worker_user_can_read()
 }
 
 /**
+ * Return the exact active company identifier for an identity operation.
+ *
+ * Person and Worker identifiers are database-local. Absence of an authenticated
+ * company context therefore fails closed instead of falling back to a shared or
+ * inferred identity namespace.
+ *
+ * @return int|false
+ */
+function hrm_person_worker_current_company_id()
+{
+	if (!function_exists('user_company'))
+		return false;
+	$company = user_company();
+	if (is_int($company))
+		return $company >= 0 ? $company : false;
+	if (!is_string($company) || preg_match('/^(?:0|[1-9][0-9]*)$/D', $company) !== 1)
+		return false;
+	return (int)$company;
+}
+
+/**
+ * Confirm that an explicit company scope is exactly the active company.
+ *
+ * No cross-company database switching, Person lookup, linking or global
+ * identity write is performed by HRM-FND-001.
+ *
+ * @param int|string $company_id
+ * @return bool
+ */
+function hrm_person_worker_company_scope_is_current($company_id)
+{
+	$current = hrm_person_worker_current_company_id();
+	if ($current === false)
+		return false;
+	if (is_int($company_id))
+		$requested = $company_id;
+	elseif (is_string($company_id)
+		&& preg_match('/^(?:0|[1-9][0-9]*)$/D', $company_id) === 1)
+		$requested = (int)$company_id;
+	else
+		return false;
+	return $requested === $current;
+}
+
+/**
  * Append a PII-free person/worker binding event in the caller transaction.
  *
  * @param string $action
@@ -435,17 +480,40 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 /**
  * Return one authorized company-scoped person/worker state as of a date/time.
  *
+ * @param int|string $company_id
  * @param int|string $employee_ref
  * @param string $as_of
  * @return array|false
  */
-function get_hrm_person_worker_as_of($employee_ref, $as_of)
+function get_hrm_person_worker_as_of_for_company($company_id, $employee_ref, $as_of)
 {
-	if (!hrm_person_worker_user_can_read() || !hrm_person_worker_tables_ready())
+	if (!hrm_person_worker_company_scope_is_current($company_id)
+		|| !hrm_person_worker_user_can_read() || !hrm_person_worker_tables_ready())
 		return false;
 	$sql = get_hrm_person_worker_as_of_sql($employee_ref, $as_of);
 	if ($sql === false)
 		return false;
 	$result = db_query($sql, 'could not read HRM person/worker as-of state');
 	return $result ? db_fetch_assoc($result) : false;
+}
+
+/**
+ * Return one authorized Person/Worker state in the authenticated company.
+ *
+ * This compatibility wrapper deliberately derives only the current company; it
+ * never accepts or switches to a foreign company database. Callers that carry
+ * an explicit company identifier should use get_hrm_person_worker_as_of_for_company().
+ *
+ * @param int|string $employee_ref
+ * @param string $as_of
+ * @return array|false
+ */
+function get_hrm_person_worker_as_of($employee_ref, $as_of)
+{
+	$company_id = hrm_person_worker_current_company_id();
+	if ($company_id === false)
+		return false;
+	return get_hrm_person_worker_as_of_for_company(
+		$company_id, $employee_ref, $as_of
+	);
 }
