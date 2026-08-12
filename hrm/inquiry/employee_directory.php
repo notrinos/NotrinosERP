@@ -16,6 +16,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 page(_("Employee Directory"));
 
@@ -28,6 +29,39 @@ page(_("Employee Directory"));
  */
 function employee_directory_inactive_label($row, $cell) {
     return ((int)$cell) ? _('Yes') : _('No');
+}
+
+/**
+ * Resolve the authoritative current display name for one directory row.
+ *
+ * The pager SQL remains the established least-data legacy projection. Missing,
+ * denied, unavailable, ambiguous, tampered, or unlinked Person/Worker evidence
+ * returns the exact legacy name cell. Only accepted canonical-link evidence may
+ * replace that cell with the canonical Person name.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function employee_directory_authoritative_name($row, $cell) {
+    $legacy_name = (string)$cell;
+    if (!is_array($row) || !isset($row['employee_id'])
+        || trim((string)$row['employee_id']) === '')
+        return $legacy_name;
+
+    $as_of = hrm_person_worker_utc_now();
+    $identity = $as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
 }
 
 if (!isset($_POST['show_inactive']))
@@ -49,7 +83,7 @@ hrm_log_restricted_employee_projection('employee_directory');
 
 $cols = array(
     _('Employee ID') => array('name' => 'employee_id', 'ord' => 'asc'),
-    _('Employee Name') => array('name' => 'employee_name', 'ord' => ''),
+    _('Employee Name') => array('name' => 'employee_name', 'fun' => 'employee_directory_authoritative_name', 'ord' => ''),
     _('Department') => array('name' => 'department_name', 'ord' => ''),
     _('Position') => array('name' => 'position_name', 'ord' => ''),
     _('Grade') => array('name' => 'grade_name', 'ord' => ''),
