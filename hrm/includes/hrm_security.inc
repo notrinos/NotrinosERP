@@ -188,6 +188,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_directory',
 		'employee_list_report',
 		'attendance_report',
+		'overtime_report',
 		'salary_component_routing',
 		'salary_revision_context',
 		'employee_transfer_context',
