@@ -24,6 +24,40 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+
+
+/**
+ * Resolve one Salary Sheet employee display at the report's fixed as-of instant.
+ *
+ * The legacy salary-sheet SQL remains authoritative for cohort, filters,
+ * payroll values, reference and ordering and supplies the exact legacy
+ * employee_name fallback. Only an accepted canonical link may replace that
+ * display value with the canonical Person name.
+ *
+ * @param array $row
+ * @param string|false $as_of
+ * @return string
+ */
+function salary_sheet_report_authoritative_name($row, $as_of) {
+    $legacy_name = is_array($row) && isset($row['employee_name'])
+        ? (string)$row['employee_name'] : '';
+    if (!is_array($row) || !isset($row['employee_id'])
+        || trim((string)$row['employee_id']) === '' || $as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
 
 /**
  * Print salary sheet report.
@@ -102,9 +136,16 @@ function print_salary_sheet_report() {
         return;
     }
 
+    hrm_log_sensitive_field_access(
+        HRM_FIELD_RESTRICTED_COMPENSATION,
+        HRM_FIELD_ACTION_VIEW,
+        'salary_sheet_report'
+    );
+    $as_of = hrm_person_worker_utc_now();
+
     while ($row = db_fetch($res)) {
         $rep->TextCol(0, 1, $row['employee_id']);
-        $rep->TextCol(1, 2, $row['employee_name']);
+        $rep->TextCol(1, 2, salary_sheet_report_authoritative_name($row, $as_of));
         $rep->AmountCol(2, 3, $row['gross_salary'], $dec);
         $rep->AmountCol(3, 4, $row['total_deductions'], $dec);
         $rep->AmountCol(4, 5, $row['net_salary'], $dec);
