@@ -24,6 +24,38 @@ include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+
+/**
+ * Resolve one Payslip Print employee display at the report's fixed as-of instant.
+ *
+ * The legacy payslip query remains authoritative for cohort, filters, values,
+ * detail lines and ordering and supplies the exact employee_name fallback. Only
+ * accepted canonical-link evidence may replace that display value.
+ *
+ * @param array $row
+ * @param string|false $as_of
+ * @return string
+ */
+function payslip_print_report_authoritative_name($row, $as_of) {
+    $legacy_name = is_array($row) && isset($row['employee_name'])
+        ? (string)$row['employee_name'] : '';
+    if (!is_array($row) || !isset($row['employee_code'])
+        || trim((string)$row['employee_code']) === '' || $as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_code'], $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
 
 /**
  * Build payslip report row source by selected filters.
@@ -151,6 +183,19 @@ function print_payslip_report($email_mode=false) {
         return;
     }
 
+    $identity_adoption = !$email_mode
+        && defined('HRM_REPORT_CONTROLLER_ID')
+        && (int)HRM_REPORT_CONTROLLER_ID === 880;
+    $as_of = false;
+    if ($identity_adoption) {
+        hrm_log_sensitive_field_access(
+            HRM_FIELD_RESTRICTED_COMPENSATION,
+            HRM_FIELD_ACTION_VIEW,
+            'payslip_print_report'
+        );
+        $as_of = hrm_person_worker_utc_now();
+    }
+
     while ($row = db_fetch($rows)) {
         $gross_amount = isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : null);
         $net_amount = payslip_payable_amount($row);
@@ -160,7 +205,10 @@ function print_payslip_report($email_mode=false) {
         $rep->NewPage();
 
         $rep->TextCol(0, 2, _('Payslip #').': '.$row['payslip_row_id']);
-        $rep->TextCol(2, 5, _('Employee').': '.$row['employee_code'].' '.$row['employee_name']);
+        $display_name = $identity_adoption
+            ? payslip_print_report_authoritative_name($row, $as_of)
+            : $row['employee_name'];
+        $rep->TextCol(2, 5, _('Employee').': '.$row['employee_code'].' '.$display_name);
         $rep->NewLine();
         if (!empty($row['department_name'])) {
             $rep->TextCol(0, 2, _('Department').': '.$row['department_name']);
