@@ -454,6 +454,7 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 	$resolved_person_sql = hrm_person_worker_resolved_person_as_of_sql($as_of_sql);
 	return "SELECT m.employee_number,m.employee_id,w.worker_id,"
 		.$resolved_person_sql." person_id,"
+		."CASE WHEN clw.link_worker_id IS NULL THEN 0 ELSE 1 END canonical_linked,"
 		."w.worker_number,w.active_from,w.active_to,"
 		."n.first_name,n.middle_name,n.last_name,n.verification_status "
 		."FROM ".TB_PREF."hrm_employee_worker_map m "
@@ -523,8 +524,9 @@ function get_hrm_person_worker_as_of($employee_ref, $as_of)
  *
  * This is the bounded adoption helper used by authoritative read surfaces such
  * as the employee-profile report. It returns an array with exactly the
- * normalized name parts the report renders, or false when no Person/Worker
- * binding is available so the caller keeps its legacy projection name
+ * normalized name parts plus the bounded canonical-link state the report needs
+ * to preserve byte-for-byte legacy-cohort parity, or false when no
+ * Person/Worker binding is available so the caller keeps its legacy name
  * (legacy-cohort parity and fail-closed availability).
  *
  * The read is authorized and least-data. It performs no identity write, emits
@@ -545,5 +547,10 @@ function get_hrm_person_worker_report_name_as_of($employee_ref, $as_of)
 	$last = isset($row['last_name']) ? trim((string)$row['last_name']) : '';
 	if ($first === '' && $last === '')
 		return false;
-	return array('first_name' => $first, 'middle_name' => $middle, 'last_name' => $last);
+	return array(
+		'first_name' => $first,
+		'middle_name' => $middle,
+		'last_name' => $last,
+		'canonical_linked' => !empty($row['canonical_linked']) ? 1 : 0
+	);
 }

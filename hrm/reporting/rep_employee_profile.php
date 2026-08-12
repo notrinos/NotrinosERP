@@ -70,7 +70,7 @@ function print_employee_profile_report() {
     $identity = $as_of === false
         ? false
         : get_hrm_person_worker_report_name_as_of($employee_id, $as_of);
-    if (is_array($identity)) {
+    if (is_array($identity) && !empty($identity['canonical_linked'])) {
         $first_name = $identity['first_name'];
         $middle_name = $identity['middle_name'];
         $last_name = $identity['last_name'];
