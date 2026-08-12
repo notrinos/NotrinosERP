@@ -191,6 +191,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'overtime_report',
 		'document_expiry_report',
 		'loan_outstanding_report',
+		'leave_balance_report',
 		'salary_component_routing',
 		'salary_revision_context',
 		'employee_transfer_context',
