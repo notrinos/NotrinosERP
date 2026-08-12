@@ -16,6 +16,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 page(_("Employee Card"));
 
 /**
@@ -26,6 +27,34 @@ page(_("Employee Card"));
  */
 function employee_card_full_name($row) {
     return trim((isset($row['first_name']) ? $row['first_name'] : '').' '.(isset($row['last_name']) ? $row['last_name'] : ''));
+}
+
+/**
+ * Resolve the authoritative current display name for the employee card.
+ *
+ * Unlinked, unavailable, denied, ambiguous, or tampered Person/Worker evidence
+ * keeps the exact legacy first+last display used by this page. Only an accepted
+ * canonical link permits the card to adopt the canonical Person name.
+ *
+ * @param string $employee_id
+ * @param array $row
+ * @return string
+ */
+function employee_card_authoritative_name($employee_id, $row) {
+    $legacy_name = employee_card_full_name($row);
+    $as_of = hrm_person_worker_utc_now();
+    $identity = $as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of($employee_id, $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
 }
 
 /**
@@ -73,7 +102,7 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT) {
 
         start_table(TABLESTYLE2, "width='65%'");
         label_row(_('Employee ID:'), $employee['employee_id']);
-        label_row(_('Name:'), employee_card_full_name($employee));
+        label_row(_('Name:'), employee_card_authoritative_name($employee_id, $employee));
         label_row(_('Department:'), $department_name);
         label_row(_('Position:'), $position_name);
         if (isset($employee['grade_id']))
