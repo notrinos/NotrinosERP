@@ -79,13 +79,17 @@ if ($view_id != -1) {
 				display_error(_('Invalid attachment path.'));
 				exit();
 			}
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
+			$inline_types = array('jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
+				'gif' => 'image/gif', 'pdf' => 'application/pdf');
+			$extension = strtolower(pathinfo($row['filename'], PATHINFO_EXTENSION));
+			$type = isset($inline_types[$extension]) ? $inline_types[$extension] : 'application/octet-stream';
 			// Clean output buffer to prevent output_html callback from corrupting binary data
 			while (ob_get_level())
 				ob_end_clean();
 			header('Content-type: '.$type);
+			header('X-Content-Type-Options: nosniff');
 			header('Content-Length: '.$row['filesize']);
-			header('Content-Disposition: inline');
+			header('Content-Disposition: '.(isset($inline_types[$extension]) ? 'inline' : 'attachment'));
 			echo file_get_contents($safe_path);
 			exit();
 		}
