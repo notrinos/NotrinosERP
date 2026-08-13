@@ -15,6 +15,8 @@ include_once($path_to_root . '/includes/db_pager.inc');
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 
 $js = '';
@@ -27,6 +29,43 @@ if (!isset($_POST['from_date']))
     $_POST['from_date'] = begin_month(Today());
 if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
+
+/**
+ * Resolve one Payslip History inquiry Employee label at the page-level instant.
+ *
+ * The exact legacy pager cell remains the fallback. Only accepted canonical-link
+ * evidence may replace its name suffix, while the legacy employee identifier
+ * prefix remains unchanged.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function payslip_inquiry_authoritative_employee($row, $cell) {
+    global $payslip_inquiry_as_of;
+
+    $legacy_label = (string)$cell;
+    if (!is_array($row) || !isset($row['employee_id'])
+        || trim((string)$row['employee_id']) === '')
+        return $legacy_label;
+
+    $identity = $payslip_inquiry_as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of(
+            $row['employee_id'], $payslip_inquiry_as_of
+        );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (string)$row['employee_id'].' '.$canonical_name;
+}
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
@@ -71,6 +110,7 @@ $where[] = payslip_period_overlap_condition($table_name, $_POST['from_date'], $_
 
 $sql = "SELECT p.$id_col AS payslip_no,
         CONCAT(p.$employee_col, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+        p.$employee_col AS employee_id,
         $from_expr AS from_date,
         $to_expr AS to_date,
         $gross_expr AS gross_amount,
@@ -86,9 +126,12 @@ if (payslip_has_column($table_name, 'from_date'))
 else
     $sql .= " ORDER BY p.$id_col DESC";
 
+$payslip_inquiry_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('payslip_inquiry');
+
 $cols = array(
     _('Payslip #') => array('name' => 'payslip_no', 'ord' => 'desc'),
-    _('Employee') => array('name' => 'employee_label', 'ord' => ''),
+    _('Employee') => array('name' => 'employee_label', 'fun' => 'payslip_inquiry_authoritative_employee', 'ord' => ''),
     _('From') => array('name' => 'from_date', 'type' => 'date', 'ord' => ''),
     _('To') => array('name' => 'to_date', 'type' => 'date', 'ord' => ''),
     _('Gross') => array('name' => 'gross_amount', 'type' => 'amount'),
