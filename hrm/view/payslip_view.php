@@ -15,6 +15,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
 
 page(_("Payslip View"));
 
@@ -64,16 +65,38 @@ function get_payslip_view_list($limit=200) {
 }
 
 /**
- * Get display employee name by employee_id code.
+ * Get the selected payslip's display employee name at one fixed as-of instant.
+ *
+ * The existing payslip-history employee-name projection remains the exact
+ * fallback. Canonical Person/Worker identity may replace only that visible
+ * name after accepted link evidence and existing identity-read authorization.
  *
  * @param string $employee_code
+ * @param string|false $as_of
  * @return string
  */
-function get_payslip_view_employee_name($employee_code) {
+function get_payslip_view_employee_name($employee_code, $as_of=false) {
     if ($employee_code === '' || !employee_table_exists('employees'))
         return '';
 
-    return get_payslip_history_employee_name($employee_code);
+    // Preserve the pre-adoption wrapper contract for existing one-argument use.
+    if ($as_of === false)
+        return get_payslip_history_employee_name($employee_code);
+
+    $legacy_name = get_payslip_history_employee_name($employee_code);
+    if ($legacy_name === '')
+        return '';
+
+    $identity = get_hrm_person_worker_report_name_as_of($employee_code, $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
 }
 
 if (isset($_GET['payslip_id']))
@@ -106,7 +129,8 @@ if ($selected_id > 0) {
         $id_col = payslip_view_id_column();
         $emp_col = isset($header['employee_id']) ? 'employee_id' : 'emp_id';
         $employee_code = isset($header[$emp_col]) ? $header[$emp_col] : '';
-        $employee_name = get_payslip_view_employee_name((string)$employee_code);
+        $payslip_view_as_of = hrm_person_worker_utc_now();
+        $employee_name = get_payslip_view_employee_name((string)$employee_code, $payslip_view_as_of);
         if ($employee_name !== '')
             hrm_log_restricted_employee_projection('payslip_history_employee_name');
         $gross_amount = isset($header['gross_salary']) ? $header['gross_salary'] : (isset($header['salary_amount']) ? $header['salary_amount'] : null);
@@ -153,7 +177,7 @@ if ($selected_id > 0) {
             label_row(_('Overtime Hours:'), price_format($header['overtime_hours']));
         if (isset($header['loan_deduction']))
             label_row(_('Loan Deduction:'), price_format($header['loan_deduction']));
-        
+
         end_outer_table(1);
 
         $details = get_payslip_details($selected_id);
