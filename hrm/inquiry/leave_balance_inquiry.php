@@ -15,9 +15,48 @@ include_once($path_to_root . '/includes/db_pager.inc');
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
 
 page(_("Leave Balance"));
+
+/**
+ * Resolve one Leave Balance Inquiry Employee label at the page-level instant.
+ *
+ * The exact legacy pager cell remains the fallback. Only accepted canonical-link
+ * evidence may replace its name suffix, while the legacy employee identifier
+ * prefix remains unchanged.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function leave_balance_inquiry_authoritative_employee($row, $cell) {
+    global $leave_balance_inquiry_as_of;
+
+    $legacy_label = (string)$cell;
+    if (!is_array($row) || !isset($row['employee_id'])
+        || trim((string)$row['employee_id']) === '')
+        return $legacy_label;
+
+    $identity = $leave_balance_inquiry_as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of(
+            $row['employee_id'], $leave_balance_inquiry_as_of
+        );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (string)$row['employee_id'].' '.$canonical_name;
+}
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
@@ -47,7 +86,8 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT)
 if ($leave_id > 0)
     $where[] = 'lb.leave_id = '.db_escape($leave_id);
 
-$sql = "SELECT CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+$sql = "SELECT lb.employee_id,
+        CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
         lt.leave_name,
         lb.fiscal_year,
         lb.entitled,
@@ -62,8 +102,12 @@ $sql = "SELECT CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,'')
     WHERE ".implode(' AND ', $where)."
     ORDER BY lb.employee_id, lb.fiscal_year DESC, lb.leave_id";
 
+
+$leave_balance_inquiry_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('leave_balance_inquiry');
+
 $cols = array(
-    _('Employee') => array('name' => 'employee_label', 'ord' => 'asc'),
+    _('Employee') => array('name' => 'employee_label', 'fun' => 'leave_balance_inquiry_authoritative_employee', 'ord' => 'asc'),
     _('Leave Type') => array('name' => 'leave_name', 'ord' => ''),
     _('Year') => array('name' => 'fiscal_year', 'ord' => ''),
     _('Entitled') => array('name' => 'entitled', 'type' => 'qty'),
