@@ -91,6 +91,17 @@ function get_payslip_view_employee_name($employee_code, $as_of=false) {
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
+    // A retained link snapshot exists before its linked_at boundary too. Only
+    // adopt its canonical name when the as-of Person is the Worker's current
+    // canonical Person; pre-link snapshots must keep the exact legacy name.
+    $as_of_identity = get_hrm_person_worker_as_of($employee_code, $as_of);
+    $current_binding = get_hrm_person_worker_binding($employee_code);
+    if (!is_array($as_of_identity) || !is_array($current_binding)
+        || !isset($as_of_identity['person_id'], $current_binding['person_id'])
+        || (int)$as_of_identity['person_id'] <= 0
+        || (int)$as_of_identity['person_id'] !== (int)$current_binding['person_id'])
+        return $legacy_name;
+
     $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
     $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
     $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
@@ -217,4 +228,3 @@ if ($selected_id > 0) {
 end_form();
 
 end_page();
-
