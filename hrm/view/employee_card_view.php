@@ -57,6 +57,41 @@ function employee_card_authoritative_name($employee_id, $row) {
     return $canonical_name !== '' ? $canonical_name : $legacy_name;
 }
 
+
+/**
+ * Resolve one Employee Card selector label at the page-level instant.
+ *
+ * The shared employee-list SQL, cohort, search fields and ordering remain
+ * untouched. The exact shared legacy formatter is the fail-closed fallback;
+ * only reviewed canonical-link evidence may replace the visible selector name.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_card_authoritative_employee_list($row) {
+    global $employee_card_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $employee_card_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $employee_card_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
 /**
  * Get a single display name from a master table.
  *
@@ -80,11 +115,15 @@ function employee_card_lookup_name($table, $id_col, $id_val, $name_col) {
 if (isset($_GET['employee_id']))
     $_POST['employee_id'] = $_GET['employee_id'];
 
+$employee_card_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_card_selector');
+
 start_form();
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', get_post('employee_id', ''), false, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', get_post('employee_id', ''), false, false, false, false,
+    array('format' => 'employee_card_authoritative_employee_list'));
 submit_cells('Show', _('Show'), '', _('Show employee card'), 'default');
 end_row();
 end_table(1);
