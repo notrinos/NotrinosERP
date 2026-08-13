@@ -15,12 +15,49 @@ include_once($path_to_root . '/includes/db_pager.inc');
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
 page(_("Attendance Report"), false, false, '', $js);
+
+/**
+ * Resolve one inquiry row's authoritative display name at the page-level instant.
+ *
+ * Missing, denied, unavailable, ambiguous, tampered, or unlinked Person/Worker
+ * evidence returns the exact legacy name cell. Only accepted canonical-link
+ * evidence may replace that cell with the canonical Person name.
+ *
+ * @param array $row
+ * @param string $cell
+ * @return string
+ */
+function attendance_inquiry_authoritative_name($row, $cell) {
+    global $attendance_inquiry_as_of;
+
+    $legacy_name = (string)$cell;
+    if (!is_array($row) || !isset($row['employee_id'])
+        || trim((string)$row['employee_id']) === '')
+        return $legacy_name;
+
+    $identity = $attendance_inquiry_as_of === false
+        ? false
+        : get_hrm_person_worker_report_name_as_of(
+            $row['employee_id'], $attendance_inquiry_as_of
+        );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
 
 if (!isset($_POST['from_date']))
     $_POST['from_date'] = begin_month(Today());
@@ -52,10 +89,12 @@ if (get_post('employee_id') != '' && get_post('employee_id') != ALL_TEXT)
     $sql .= " AND a.employee_id = ".db_escape(get_post('employee_id'));
 
 $sql .= " GROUP BY a.employee_id, employee_name ORDER BY a.employee_id";
+$attendance_inquiry_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('attendance_inquiry');
 
 $cols = array(
     _('Employee ID') => array('name' => 'employee_id', 'ord' => 'asc'),
-    _('Employee Name') => array('name' => 'employee_name', 'ord' => ''),
+    _('Employee Name') => array('name' => 'employee_name', 'fun' => 'attendance_inquiry_authoritative_name', 'ord' => ''),
     _('Records') => array('name' => 'records_count', 'ord' => ''),
     _('Regular Hours') => array('name' => 'regular_hours', 'type' => 'qty'),
     _('Overtime Hours') => array('name' => 'overtime_hours', 'type' => 'qty'),
@@ -68,4 +107,3 @@ display_db_pager($table);
 end_form();
 
 end_page();
-
