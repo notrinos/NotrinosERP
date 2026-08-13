@@ -86,8 +86,7 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT)
 if ($leave_id > 0)
     $where[] = 'lb.leave_id = '.db_escape($leave_id);
 
-$sql = "SELECT lb.employee_id,
-        CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
+$sql = "SELECT CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,''), ' ', COALESCE(e.last_name,'')))) employee_label,
         lt.leave_name,
         lb.fiscal_year,
         lb.entitled,
@@ -95,7 +94,8 @@ $sql = "SELECT lb.employee_id,
         lb.adjusted,
         lb.taken,
         lb.pending,
-        (IFNULL(lb.entitled,0) + IFNULL(lb.carried_forward,0) + IFNULL(lb.adjusted,0) - IFNULL(lb.taken,0) - IFNULL(lb.pending,0)) available
+        (IFNULL(lb.entitled,0) + IFNULL(lb.carried_forward,0) + IFNULL(lb.adjusted,0) - IFNULL(lb.taken,0) - IFNULL(lb.pending,0)) available,
+        lb.employee_id
     FROM ".TB_PREF."leave_balances lb
     LEFT JOIN ".TB_PREF."leave_types lt ON lt.leave_id = lb.leave_id
     LEFT JOIN ".TB_PREF."employees e ON e.employee_id = lb.employee_id
