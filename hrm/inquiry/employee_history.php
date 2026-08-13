@@ -15,9 +15,48 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_constants.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_history_db.inc');
 
 page(_("Employee History"));
+
+/**
+ * Resolve one Employee History selector label at the page-level instant.
+ *
+ * The shared employee-list SQL, cohort, search fields and ordering remain
+ * untouched. The exact shared legacy formatter is the fail-closed fallback;
+ * only reviewed canonical-link evidence may replace the visible name.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_history_authoritative_employee_list($row) {
+    global $employee_history_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $employee_history_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $employee_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
+$employee_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_history_selector');
 
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';
@@ -39,7 +78,8 @@ $change_types = array(
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false,
+    array('format' => 'employee_history_authoritative_employee_list'));
 filter_cell_open(_('Change Type:'));
 echo array_selector('change_type', null, $change_types);
 filter_cell_close();

@@ -206,6 +206,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'attendance_roster',
 		'payslip_employee_context',
 		'payslip_history_employee_name',
+		'employee_history_selector',
 	), true))
 		$safe_channel = 'unknown';
 
