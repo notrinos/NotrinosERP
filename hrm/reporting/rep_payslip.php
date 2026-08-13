@@ -28,7 +28,7 @@ include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
- * Resolve one Payslip Print employee display at the report's fixed as-of instant.
+ * Resolve one payslip employee display at the report's fixed as-of instant.
  *
  * The legacy payslip query remains authoritative for cohort, filters, values,
  * detail lines and ordering and supplies the exact employee_name fallback. Only
@@ -183,15 +183,16 @@ function print_payslip_report($email_mode=false) {
         return;
     }
 
-    $identity_adoption = !$email_mode
-        && defined('HRM_REPORT_CONTROLLER_ID')
-        && (int)HRM_REPORT_CONTROLLER_ID === 880;
+    $report_controller_id = defined('HRM_REPORT_CONTROLLER_ID')
+        ? (int)HRM_REPORT_CONTROLLER_ID : 0;
+    $identity_adoption = (!$email_mode && $report_controller_id === 880)
+        || ($email_mode && $report_controller_id === 893);
     $as_of = false;
     if ($identity_adoption) {
         hrm_log_sensitive_field_access(
             HRM_FIELD_RESTRICTED_COMPENSATION,
             HRM_FIELD_ACTION_VIEW,
-            'payslip_print_report'
+            $email_mode ? 'email_payslip_report' : 'payslip_print_report'
         );
         $as_of = hrm_person_worker_utc_now();
     }
