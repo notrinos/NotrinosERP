@@ -16,6 +16,8 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 page(_("Employee Appraisals"));
 
@@ -34,6 +36,41 @@ function appraisal_statuses() {
         2 => _('Approved'),
         3 => _('Rejected/Cancelled')
     );
+}
+
+/**
+ * Resolve one Employee Appraisals selector label at the page-level instant.
+ *
+ * Both Employee and Reviewer selectors keep the shared legacy SQL/cohort and
+ * exact submitted employee references. This formatter changes presentation
+ * only and fails closed to the shared legacy formatter unless canonical-link
+ * evidence is accepted.
+ *
+ * @param array $row
+ * @return string
+ */
+function appraisal_authoritative_employee_list($row) {
+    global $appraisal_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $appraisal_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $appraisal_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
 if (!isset($_POST['period_from']))
@@ -157,13 +194,18 @@ foreach ($_POST as $name => $value) {
     }
 }
 
+$appraisal_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_appraisal_selectors');
+
 start_form();
 
 start_outer_table();
 
 table_section(1);
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
-employees_list_row(_('Reviewer:'), 'reviewer_id', null, true, false, false);
+employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
+    array('format' => 'appraisal_authoritative_employee_list'));
+employees_list_row(_('Reviewer:'), 'reviewer_id', null, true, false, false, false,
+    array('format' => 'appraisal_authoritative_employee_list'));
 date_row(_('Period From:'), 'period_from');
 date_row(_('Period To:'), 'period_to');
 date_row(_('Appraisal Date:'), 'appraisal_date');
