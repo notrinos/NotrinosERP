@@ -16,6 +16,8 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
  * Calculate leave day count from date range.
@@ -54,6 +56,40 @@ function leave_request_has_valid_date_range($from_date, $to_date, $half_day)
     }
 
     return true;
+}
+
+/**
+ * Resolve one Leave Request history Employee name at the page-level instant.
+ *
+ * Leave Request remains authorized by SA_LEAVEREQUEST, which is deliberately
+ * not a Person/Worker identity-read capability. Canonical naming is therefore
+ * additive only when the same principal independently holds an existing
+ * approved identity-read area. The approval draft and all write paths continue
+ * using the exact legacy employee_name and employee_id values.
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function leave_request_authoritative_history_name($employee_ref, $legacy_name) {
+    global $leave_request_history_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $leave_request_history_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $leave_request_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
 }
 
 $js = '';
@@ -217,6 +253,9 @@ if ($Mode == 'RESET') {
     $_POST['reason'] = '';
 }
 
+$leave_request_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_leave_request_history');
+
 start_form();
 
 start_outer_table();
@@ -269,7 +308,9 @@ $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
-    label_cell($row['employee_id'] . ' ' . $row['employee_name']);
+    label_cell($row['employee_id'] . ' ' . leave_request_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
     label_cell($row['leave_name']);
     label_cell(sql2date($row['from_date']));
     label_cell(sql2date($row['to_date']));
