@@ -15,6 +15,8 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 page(_("Employee Asset Allocation"));
 
@@ -25,6 +27,40 @@ page(_("Employee Asset Allocation"));
  */
 function asset_statuses() {
     return array(0 => _('Allocated'), 1 => _('Returned'), 2 => _('Lost'), 3 => _('Damaged'));
+}
+
+/**
+ * Resolve one Asset Allocation selector label at the page-level instant.
+ *
+ * The shared employee-list SQL, cohort, search fields and ordering remain
+ * untouched. The exact shared legacy formatter is the fail-closed fallback;
+ * only reviewed canonical-link evidence may replace the visible selector name.
+ *
+ * @param array $row
+ * @return string
+ */
+function asset_allocation_authoritative_employee_list($row) {
+    global $asset_allocation_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $asset_allocation_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $asset_allocation_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
 if (!isset($_POST['allocation_date']))
@@ -53,11 +89,15 @@ if (isset($_POST['add_allocation'])) {
     }
 }
 
+$asset_allocation_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_asset_allocation_selector');
+
 start_form();
 
 start_outer_table();
 table_section(1);
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
+    array('format' => 'asset_allocation_authoritative_employee_list'));
 text_row_ex(_('Asset Name:'), 'asset_name', 40, 140);
 text_row_ex(_('Asset Code:'), 'asset_code', 30, 60);
 text_row_ex(_('Serial No:'), 'serial_no', 30, 80);
