@@ -16,6 +16,8 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
  * Normalize the leave approval status filter value.
@@ -29,6 +31,41 @@ function get_leave_approval_filter_status($filter_status)
         return null;
 
     return (int)$filter_status;
+}
+
+/**
+ * Resolve one Leave Approval Employee name at the page-level instant.
+ *
+ * Leave Approval remains authorized by SA_LEAVEAPPROVE, which is deliberately
+ * not a Person/Worker identity-read capability. Canonical naming is additive
+ * only when the same principal independently holds an existing approved
+ * identity-read area. Approval lookup, decisions, remarks and workflow payloads
+ * continue using the exact legacy Leave Request identity values.
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function leave_approval_authoritative_history_name($employee_ref, $legacy_name)
+{
+    global $leave_approval_history_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $leave_approval_history_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $leave_approval_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
 }
 
 /**
@@ -119,6 +156,9 @@ if ($Mode == 'Edit') {
 
 $filter_status = get_post('filter_status', '0');
 
+$leave_approval_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_leave_approval_history');
+
 start_form();
 
 start_table(TABLESTYLE2);
@@ -143,7 +183,9 @@ $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
-    label_cell($row['employee_id'] . ' ' . $row['employee_name']);
+    label_cell($row['employee_id'] . ' ' . leave_approval_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
     label_cell($row['leave_name']);
     label_cell(sql2date($row['from_date']));
     label_cell(sql2date($row['to_date']));
@@ -175,7 +217,9 @@ if (!empty($_POST['request_id']))
 if ($selected_request && (int)$selected_request['status'] == 0) {
     start_table(TABLESTYLE2);
     label_row(_('Request ID:'), $selected_request['request_id']);
-    label_row(_('Employee:'), $selected_request['employee_id'] . ' ' . $selected_request['employee_name']);
+    label_row(_('Employee:'), $selected_request['employee_id'] . ' ' . leave_approval_authoritative_history_name(
+        $selected_request['employee_id'], $selected_request['employee_name']
+    ));
     label_row(_('Leave Type:'), $selected_request['leave_name']);
     label_row(_('Period:'), sql2date($selected_request['from_date']) . ' - ' . sql2date($selected_request['to_date']));
     label_row(_('Days:'), qty_format($selected_request['days']));
