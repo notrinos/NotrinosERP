@@ -65,6 +65,40 @@ $new_employee = get_post('employee_id') == '' || get_post('cancel');
 // UTILITY FUNCTIONS
 //======================================================================
 
+/**
+ * Resolve one Manage Employees selector label at the page-level instant.
+ *
+ * The shared employee-list SQL and the maintenance write target remain
+ * unchanged. The exact shared legacy formatter is the fail-closed fallback;
+ * only reviewed canonical-link evidence may replace the visible name.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_maintenance_authoritative_employee_list($row) {
+	global $employee_maintenance_selector_as_of;
+
+	$legacy_label = _format_employee_list($row);
+	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+		|| $employee_maintenance_selector_as_of === false)
+		return $legacy_label;
+
+	$identity = get_hrm_person_worker_report_name_as_of(
+		$row[0], $employee_maintenance_selector_as_of
+	);
+	if (!is_array($identity) || empty($identity['canonical_linked']))
+		return $legacy_label;
+
+	$first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+	$middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+	$last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+	$canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+	if ($canonical_name === '')
+		return $legacy_label;
+
+	return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
 function set_edit($employee_id) {
 	$row = get_employee_by_code($employee_id);
 	if (!$row) return;
@@ -1468,6 +1502,9 @@ if (isset($_POST['delete'])) {
 // PAGE RENDERING
 //======================================================================
 
+$employee_maintenance_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_maintenance_selector');
+
 start_form(true);
 
 // ── Employee selector ──────────────────────────────────────
@@ -1475,7 +1512,10 @@ if (db_has_employees()) {
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
 	employees_list_cells(_('Select an employee:'), 'employee_id', null, _('New employee'), true,
-		check_value('show_inactive'), false, array('search_submit' => true));
+		check_value('show_inactive'), false, array(
+			'search_submit' => true,
+			'format' => 'employee_maintenance_authoritative_employee_list'
+		));
 	$new_employee = get_post('employee_id') == '';
 	check_cells(_('Show inactive:'), 'show_inactive', null, true);
 	end_row();

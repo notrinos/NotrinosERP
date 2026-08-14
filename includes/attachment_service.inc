@@ -215,8 +215,8 @@ function hrm_document_scanner_command($path) {
         }
         foreach ($candidates as $candidate) {
             if (is_file($candidate)) {
-                return escapeshellarg($candidate).' -Scan -ScanType 3 -File '
-                    .escapeshellarg($path).' -DisableRemediation';
+                return array($candidate, '-Scan', '-ScanType', '3', '-File',
+                    $path, '-DisableRemediation');
             }
         }
     } else {
@@ -242,7 +242,10 @@ function scan_hrm_employee_document($path, $timeout_seconds = 30, $command_overr
     $command = $command_override !== null
         ? str_replace('{file}', escapeshellarg($path), (string)$command_override)
         : hrm_document_scanner_command($path);
-    if ($command === false || trim($command) === '' || !function_exists('proc_open')) {
+    if ($command === false
+        || (is_string($command) && trim($command) === '')
+        || (!is_string($command) && !is_array($command))
+        || !function_exists('proc_open')) {
         return array('ok' => false, 'status' => 'scanner_unavailable', 'error_code' => 'scanner_unavailable');
     }
 

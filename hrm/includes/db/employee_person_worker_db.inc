@@ -34,7 +34,7 @@ function hrm_person_worker_actor_id()
  */
 function hrm_person_worker_table_exists($table)
 {
-	$result = db_query("SHOW TABLES LIKE ".db_escape(TB_PREF.$table));
+	$result = db_query("SHOW TABLES LIKE '".TB_PREF.db_escape_function($table)."'");
 	return $result && db_num_rows($result) === 1;
 }
 

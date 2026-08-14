@@ -208,6 +208,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'payslip_history_employee_name',
 		'employee_history_selector',
 		'employee_card_selector',
+		'employee_maintenance_selector',
 	), true))
 		$safe_channel = 'unknown';
 
