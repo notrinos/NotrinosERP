@@ -15,6 +15,8 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 page(_("Training Management"));
 
@@ -25,6 +27,40 @@ page(_("Training Management"));
  */
 function training_statuses() {
     return array(0 => _('Planned'), 1 => _('In Progress'), 2 => _('Completed'), 3 => _('Cancelled'));
+}
+
+/**
+ * Resolve one Training history Employee name at the page-level instant.
+ *
+ * Training remains authorized by SA_HRSETTINGS, which is deliberately not a
+ * Person/Worker identity-read capability. The accepted identity helper is
+ * therefore additive only for principals that independently hold an existing
+ * approved identity-read area; settings-only users retain the exact legacy
+ * employee_name returned by get_employee_training_records().
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function training_authoritative_history_name($employee_ref, $legacy_name) {
+    global $training_history_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $training_history_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $training_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
 }
 
 if (!isset($_POST['training_date']))
@@ -72,6 +108,9 @@ if (isset($_POST['assign_training'])) {
         display_notification(_('Employee training record has been added.'));
     }
 }
+
+$training_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_training_history');
 
 start_form();
 
@@ -123,7 +162,9 @@ $k = 0;
 while ($row = db_fetch($records)) {
     alt_table_row_color($k);
     label_cell($row['training_id']);
-    label_cell($row['employee_name']);
+    label_cell(training_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
     label_cell($row['course_name']);
     label_cell(sql2date($row['training_date']));
     label_cell(isset($labels[(int)$row['status']]) ? $labels[(int)$row['status']] : $row['status']);
