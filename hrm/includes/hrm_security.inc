@@ -210,6 +210,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_card_selector',
 		'employee_maintenance_selector',
 		'employee_asset_allocation_selector',
+		'employee_asset_allocation_history',
 		'employee_appraisal_selectors',
 		'employee_appraisal_history',
 	), true))
