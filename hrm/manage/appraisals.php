@@ -73,6 +73,39 @@ function appraisal_authoritative_employee_list($row) {
     return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
+/**
+ * Resolve one Employee Appraisals history-list name at the page-level instant.
+ *
+ * The legacy appraisal query remains authoritative for cohort/order and the
+ * exact employee/reviewer fallback values. Only accepted canonical-link
+ * evidence may replace a rendered name; appraisal keys and approval payloads
+ * are not changed by this presentation helper.
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function appraisal_authoritative_history_name($employee_ref, $legacy_name) {
+    global $appraisal_selector_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $appraisal_selector_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $appraisal_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
+}
+
 if (!isset($_POST['period_from']))
     $_POST['period_from'] = begin_month(Today());
 if (!isset($_POST['period_to']))
@@ -196,6 +229,7 @@ foreach ($_POST as $name => $value) {
 
 $appraisal_selector_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_appraisal_selectors');
+hrm_log_restricted_employee_projection('employee_appraisal_history');
 
 start_form();
 
@@ -231,8 +265,12 @@ $k = 0;
 while ($row = db_fetch($rows)) {
     alt_table_row_color($k);
     label_cell($row['appraisal_id']);
-    label_cell($row['employee_name']);
-    label_cell($row['reviewer_name']);
+    label_cell(appraisal_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
+    label_cell(appraisal_authoritative_history_name(
+        $row['reviewer_id'], $row['reviewer_name']
+    ));
     label_cell(sql2date($row['period_from']).' - '.sql2date($row['period_to']));
     label_cell(sql2date($row['appraisal_date']));
     qty_cell($row['overall_score']);

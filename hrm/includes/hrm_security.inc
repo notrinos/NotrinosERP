@@ -211,6 +211,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_maintenance_selector',
 		'employee_asset_allocation_selector',
 		'employee_appraisal_selectors',
+		'employee_appraisal_history',
 	), true))
 		$safe_channel = 'unknown';
 
