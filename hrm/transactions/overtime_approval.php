@@ -16,6 +16,45 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 include_once($path_to_root . '/includes/approval/registrations/hrm_approval.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+
+/**
+ * Resolve one Overtime Approval Employee name at the page-level instant.
+ *
+ * Overtime Approval remains authorized by SA_OVERTIMEAPPROVE, which is
+ * deliberately not a Person/Worker identity-read capability. Canonical naming
+ * is additive only when the same principal independently holds an existing
+ * approved identity-read area. Approval lookup, decisions, remarks, recovery
+ * and workflow payloads continue using the exact legacy Overtime Request
+ * identity values.
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function overtime_approval_authoritative_history_name($employee_ref, $legacy_name)
+{
+    global $overtime_approval_history_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $overtime_approval_history_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $overtime_approval_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
+}
+
 page(_("Overtime Approval"));
 
 simple_page_mode(false);
@@ -82,6 +121,9 @@ if ($Mode == 'Edit') {
 
 $filter_status = get_post('filter_status', 0);
 
+$overtime_approval_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_overtime_approval_history');
+
 start_form();
 start_table(TABLESTYLE2);
 $status_filter_opts = array(
@@ -104,7 +146,9 @@ $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
-    label_cell($row['employee_id'] . ' ' . $row['employee_name']);
+    label_cell($row['employee_id'] . ' ' . overtime_approval_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
     label_cell($row['overtime_name']);
     label_cell(sql2date($row['date']));
     qty_cell($row['hours']);
@@ -131,7 +175,9 @@ if (!empty($_POST['request_id']))
 if ($selected_request && (int)$selected_request['status'] == 0) {
     start_table(TABLESTYLE2);
     label_row(_('Request ID:'), $selected_request['request_id']);
-    label_row(_('Employee:'), $selected_request['employee_id'] . ' ' . $selected_request['employee_name']);
+    label_row(_('Employee:'), $selected_request['employee_id'] . ' ' . overtime_approval_authoritative_history_name(
+        $selected_request['employee_id'], $selected_request['employee_name']
+    ));
     label_row(_('Overtime Type:'), $selected_request['overtime_name']);
     label_row(_('Date:'), sql2date($selected_request['date']));
     label_row(_('Hours:'), qty_format($selected_request['hours']));
