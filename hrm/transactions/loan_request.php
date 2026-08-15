@@ -16,6 +16,42 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_type_db.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+
+/**
+ * Resolve one Loan Request history Employee name at the page-level instant.
+ *
+ * Loan Request remains authorized by SA_LOAN, which is deliberately not a
+ * Person/Worker identity-read capability. Canonical naming is additive only
+ * when the same principal independently holds an existing approved identity
+ * read area. Approval draft, loan persistence and terminal workflow paths keep
+ * using exact legacy identity values.
+ *
+ * @param string $employee_ref
+ * @param string $legacy_name
+ * @return string
+ */
+function loan_request_authoritative_history_name($employee_ref, $legacy_name) {
+    global $loan_request_history_as_of;
+
+    $legacy_name = (string)$legacy_name;
+    if (trim((string)$employee_ref) === '' || $loan_request_history_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_ref, $loan_request_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name === '' ? $legacy_name : $canonical_name;
+}
 
 /**
  * Resolve current username/login for audit fields.
@@ -215,6 +251,9 @@ if ($Mode == 'RESET') {
 
 $status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'), 3 => _('Cancelled'));
 
+$loan_request_history_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_loan_request_history');
+
 start_form();
 
 start_outer_table(TABLESTYLE2);
@@ -261,7 +300,9 @@ $k = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
     label_cell($row['loan_id']);
-    label_cell($row['employee_id'].' '.$row['employee_name']);
+    label_cell($row['employee_id'].' '.loan_request_authoritative_history_name(
+        $row['employee_id'], $row['employee_name']
+    ));
     label_cell($row['loan_type_name']);
     amount_cell($row['loan_amount']);
     amount_cell($row['outstanding_amount']);
