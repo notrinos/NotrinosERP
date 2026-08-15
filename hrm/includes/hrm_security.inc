@@ -218,6 +218,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_overtime_approval_history',
 		'employee_loan_request_history',
 		'employee_loan_repayment_selector',
+		'employee_transactions_selector',
 		'employee_appraisal_selectors',
 		'employee_appraisal_history',
 	), true))

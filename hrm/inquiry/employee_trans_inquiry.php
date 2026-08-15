@@ -17,12 +17,50 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root . '/hrm/includes/db/loan_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
 page(_("Employee Transactions"), false, false, '', $js);
+
+/**
+ * Resolve one Employee Transactions selector label at the page-level instant.
+ *
+ * Employee Transactions remains authorized by SA_EMPLOYEETRANSVIEW, which does
+ * not grant Person/Worker identity-read access. Canonical naming is additive
+ * only when the same principal independently holds an approved identity-read
+ * capability. The submitted employee_id and every inquiry filter remain exact
+ * legacy values; this helper changes presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_trans_authoritative_employee_list($row) {
+    global $employee_trans_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $employee_trans_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $employee_trans_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
 
 /**
  * Build payslip inquiry SQL for the selected employee and date range.
@@ -321,10 +359,15 @@ if (!isset($_POST['from_date']))
 if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
 
+$employee_trans_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_transactions_selector');
+
 start_form(true);
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', null, false, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', null, false, false, false, false, array(
+    'format' => 'employee_trans_authoritative_employee_list'
+));
 date_cells(_('From Date:'), 'from_date');
 date_cells(_('To Date:'), 'to_date');
 submit_cells('Search', _('Apply Filter'));
