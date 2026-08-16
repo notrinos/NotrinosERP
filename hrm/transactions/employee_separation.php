@@ -19,6 +19,8 @@ include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_salary_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_history_db.inc');
 include_once($path_to_root . '/hrm/includes/db/eos_db.inc');
+include_once($path_to_root . '/hrm/includes/hrm_security.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
 /**
  * Calculate years of service from two dates.
@@ -35,6 +37,42 @@ function employee_service_years($from_date, $to_date) {
         $days = 0;
 
     return round2($days / 365, 4);
+}
+
+/**
+ * Resolve one Employee Separation selector label at the page-level instant.
+ *
+ * Employee Separation remains authorized by SA_EMPSEPARATION, which does not
+ * grant Person/Worker identity-read access. Canonical naming is additive only
+ * when the same principal independently holds an approved identity-read
+ * capability. The submitted employee_id and all EOS/write values remain exact
+ * legacy values; this helper changes presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_separation_authoritative_employee_list($row) {
+    global $employee_separation_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $employee_separation_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $employee_separation_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
 $js = '';
@@ -120,10 +158,16 @@ if (isset($_POST['Process'])) {
     }
 }
 
+$employee_separation_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_separation_selector');
+
 start_form();
 start_table(TABLESTYLE2);
 label_cell(_('Employee:'));
-employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class' => 'combo-layout-equal'));
+employees_list_cells(null, 'employee_id', null, true, true, false, false, array(
+    'layout_class' => 'combo-layout-equal',
+    'format' => 'employee_separation_authoritative_employee_list'
+));
 end_row();
 date_row(_('Separation Date:'), 'separation_date');
 check_row(_('Is Resignation:'), 'is_resignation');
