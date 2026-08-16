@@ -204,6 +204,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'leave_entitlement_context',
 		'employee_summary',
 		'attendance_roster',
+		'attendance_selector',
 		'payslip_employee_context',
 		'payslip_history_employee_name',
 		'employee_history_selector',

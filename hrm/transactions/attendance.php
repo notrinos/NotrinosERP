@@ -22,6 +22,44 @@ if (user_use_date_picker())
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+
+/**
+ * Resolve one Attendance Entry Employee selector label at the page-level instant.
+ *
+ * Attendance Entry remains authorized by SA_ATTENDANCE, which does not grant
+ * Person/Worker identity-read access. Canonical naming is additive only when
+ * the same principal independently holds an approved identity-read capability.
+ * The submitted employee_id, department filter and all attendance write values
+ * remain exact legacy values; this helper changes selector presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function attendance_authoritative_employee_list($row) {
+    global $attendance_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $attendance_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $attendance_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
 
 /**
  * Get attendance status options keyed by DB integer code.
@@ -306,6 +344,9 @@ if (isset($_POST['save_attendance'])) {
     }
 }
 
+$attendance_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('attendance_selector');
+
 start_form();
 
 start_table(TABLESTYLE_NOBORDER);
@@ -317,7 +358,10 @@ departments_list_cells(_('Department:'), 'department_id', get_post('department_i
 // Build employee dropdown options: always async=false so selecting an employee
 // triggers a full _page_body refresh (same behaviour as department filter).
 // When a department is active, restrict the dropdown to that department's employees.
-$emp_list_opts = array('async' => false);
+$emp_list_opts = array(
+    'async' => false,
+    'format' => 'attendance_authoritative_employee_list'
+);
 if ($dept_id > 0)
     $emp_list_opts['where'] = array("e.department_id = ".db_escape($dept_id));
 
