@@ -188,6 +188,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_directory',
 		'employee_list_report',
 		'attendance_inquiry',
+		'attendance_inquiry_selector',
 		'leave_balance_inquiry',
 		'loan_report_inquiry',
 		'payslip_inquiry',
