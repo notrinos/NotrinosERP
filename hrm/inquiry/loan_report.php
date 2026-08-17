@@ -76,10 +76,50 @@ function loan_report_authoritative_employee($row, $cell) {
     return (string)$row['employee_id'].' '.$canonical_name;
 }
 
+/**
+ * Resolve one Loan Outstanding Employee selector label at the page instant.
+ *
+ * The shared employee-list formatter remains the exact fail-closed fallback.
+ * SA_LOANREPORT itself is not identity-read authority; canonical identity is
+ * presentation-only for principals that independently hold an approved
+ * Person/Worker read capability.
+ *
+ * @param array $row
+ * @return string
+ */
+function loan_report_authoritative_employee_list($row) {
+    global $loan_report_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $loan_report_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $loan_report_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
+$loan_report_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('loan_report_inquiry_selector');
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
+    'format' => 'loan_report_authoritative_employee_list'
+));
 submit_cells('Search', _('Apply Filter'));
 end_row();
 end_table(1);
@@ -105,7 +145,6 @@ if ($employee_id !== '' && $employee_id !== ALL_TEXT)
 
 $sql .= " ORDER BY l.loan_date DESC, l.loan_id DESC";
 
-$loan_report_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('loan_report_inquiry');
 
 $cols = array(
