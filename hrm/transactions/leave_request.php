@@ -357,7 +357,7 @@ while ($row = db_fetch($result)) {
     label_cell(sql2date($row['to_date']));
     qty_cell($row['days']);
     // XSS protection for Reason field
-    label_cell(htmlspecialchars($row['reason'], ENT_QUOTES, 'UTF-8'));
+    label_cell(htmlspecialchars(isset($row['reason']) ? (string)$row['reason'] : '', ENT_QUOTES, 'UTF-8'));
     label_cell($status_labels[(int)$row['status']]);
     label_cell(sql2date(substr($row['request_date'], 0, 10)));
     if ((int)$row['status'] == 0) {
