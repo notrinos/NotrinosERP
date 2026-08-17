@@ -67,10 +67,51 @@ function payslip_inquiry_authoritative_employee($row, $cell) {
     return (string)$row['employee_id'].' '.$canonical_name;
 }
 
+/**
+ * Resolve one Payslip Inquiry Employee filter label at the page instant.
+ *
+ * SA_PAYSLIPINQUIRY remains intentionally outside Person/Worker identity-read
+ * authority. The exact shared employee-list label is the fail-closed fallback;
+ * accepted canonical identity may change presentation only when the same
+ * principal independently holds an approved identity-read capability. Shared
+ * selector cohort/search/order and submitted employee_id remain unchanged.
+ *
+ * @param array $row
+ * @return string
+ */
+function payslip_inquiry_authoritative_employee_list($row) {
+    global $payslip_inquiry_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $payslip_inquiry_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $payslip_inquiry_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
+$payslip_inquiry_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('payslip_inquiry_selector');
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
+    'format' => 'payslip_inquiry_authoritative_employee_list'
+));
 date_cells(_('From Date:'), 'from_date');
 date_cells(_('To Date:'), 'to_date');
 submit_cells('Search', _('Apply Filter'));
@@ -126,7 +167,6 @@ if (payslip_has_column($table_name, 'from_date'))
 else
     $sql .= " ORDER BY p.$id_col DESC";
 
-$payslip_inquiry_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('payslip_inquiry');
 
 $cols = array(
