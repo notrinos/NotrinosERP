@@ -58,18 +58,40 @@ function leave_balance_inquiry_authoritative_employee($row, $cell) {
     return (string)$row['employee_id'].' '.$canonical_name;
 }
 
-start_form();
-start_table(TABLESTYLE_NOBORDER);
-start_row();
+/**
+ * Resolve one Leave Balance Inquiry Employee selector label at the page instant.
+ *
+ * The shared employee-list formatter remains the exact fail-closed fallback.
+ * SA_LEAVEINQUIRY itself is not identity-read authority; canonical identity is
+ * presentation-only for principals that independently hold an approved
+ * Person/Worker read capability.
+ *
+ * @param array $row
+ * @return string
+ */
+function leave_balance_inquiry_authoritative_employee_list($row) {
+    global $leave_balance_inquiry_as_of;
 
-years_list_cells(_('Fiscal Year:'), 'fiscal_year', null);
-employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
-filter_cell_open(_('Leave Type:'));
-echo leave_types_list('leave_id', null, true, false);
-filter_cell_close();
-submit_cells('Search', _('Apply Filter'));
-end_row();
-end_table(1);
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $leave_balance_inquiry_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $leave_balance_inquiry_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
 
 $default_fiscal_year = get_leave_balance_fiscal_year_for_date(date('Y-m-d'));
 $fiscal_year = (int)get_post('fiscal_year', $default_fiscal_year);
@@ -77,6 +99,24 @@ $employee_id = get_post('employee_id', '');
 $leave_id = (int)get_post('leave_id', 0);
 
 ensure_leave_balance_entitlements_for_filters($fiscal_year, $employee_id, $leave_id);
+
+$leave_balance_inquiry_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('leave_balance_inquiry_selector');
+
+start_form();
+start_table(TABLESTYLE_NOBORDER);
+start_row();
+
+years_list_cells(_('Fiscal Year:'), 'fiscal_year', null);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
+    'format' => 'leave_balance_inquiry_authoritative_employee_list'
+));
+filter_cell_open(_('Leave Type:'));
+echo leave_types_list('leave_id', null, true, false);
+filter_cell_close();
+submit_cells('Search', _('Apply Filter'));
+end_row();
+end_table(1);
 
 $where = array('1=1');
 if ($fiscal_year > 0)
@@ -102,8 +142,6 @@ $sql = "SELECT CONCAT(lb.employee_id, ' ', TRIM(CONCAT(COALESCE(e.first_name,'')
     WHERE ".implode(' AND ', $where)."
     ORDER BY lb.employee_id, lb.fiscal_year DESC, lb.leave_id";
 
-
-$leave_balance_inquiry_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('leave_balance_inquiry');
 
 $cols = array(
