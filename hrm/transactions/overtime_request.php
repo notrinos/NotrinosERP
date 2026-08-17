@@ -51,6 +51,43 @@ function overtime_request_authoritative_history_name($employee_ref, $legacy_name
     return $canonical_name === '' ? $legacy_name : $canonical_name;
 }
 
+/**
+ * Resolve one Overtime Request Employee selector label at the page-level instant.
+ *
+ * Overtime Request remains authorized by SA_OVERTIMEREQUEST, which deliberately
+ * does not grant Person/Worker identity-read access. Canonical naming is
+ * additive only when the same principal independently holds an approved
+ * identity-read capability. The shared selector cohort/search/order, submitted
+ * employee_id, approval draft and all overtime/workflow mutation keys remain
+ * exact legacy values; this helper changes selector presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function overtime_request_authoritative_employee_list($row) {
+    global $overtime_request_history_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $overtime_request_history_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $overtime_request_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
 $js = '';
 
 if (user_use_date_picker())
@@ -232,6 +269,7 @@ if ($Mode == 'RESET') {
 
 $overtime_request_history_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_overtime_request_history');
+hrm_log_restricted_employee_projection('employee_overtime_request_selector');
 
 start_form();
 
@@ -249,7 +287,9 @@ if ($selected_id != '' && $Mode == 'Edit') {
 }
 
 table_section(1);
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false, array(
+    'format' => 'overtime_request_authoritative_employee_list'
+));
 
 $sql = "SELECT overtime_id, overtime_name FROM ".TB_PREF."overtime WHERE !inactive";
 label_row(_('Overtime Type:'), combo_input('overtime_id', get_post('overtime_id', 0), $sql, 'overtime_id', 'overtime_name', array('spec_option' => _('Select overtime'), 'spec_id' => 0)));
