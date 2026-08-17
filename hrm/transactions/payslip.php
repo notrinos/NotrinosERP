@@ -328,6 +328,9 @@ function handle_new_item() {
 
 //--------------------------------------------------------------------------
 
+$payslip_entry_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('payslip_entry_selector');
+
 start_form();
 
 echo "<div class='payslip-entry-page'>";

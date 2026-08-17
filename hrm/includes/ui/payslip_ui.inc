@@ -10,6 +10,43 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+/**
+ * Resolve one Payslip Entry Employee selector label at the page-level instant.
+ *
+ * Payslip Entry remains authorized by SA_PAYSLIP, which deliberately does not
+ * grant Person/Worker identity-read access. Canonical naming is additive only
+ * when the same principal independently holds an approved identity-read
+ * capability. The shared selector cohort/search/order, submitted employee_id,
+ * salary context, payroll calculation, result persistence and posting keys
+ * remain exact legacy values; this helper changes selector presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function payslip_entry_authoritative_employee_list($row) {
+	global $payslip_entry_selector_as_of;
+
+	$legacy_label = _format_employee_list($row);
+	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+		|| $payslip_entry_selector_as_of === false)
+		return $legacy_label;
+
+	$identity = get_hrm_person_worker_report_name_as_of(
+		$row[0], $payslip_entry_selector_as_of
+	);
+	if (!is_array($identity) || empty($identity['canonical_linked']))
+		return $legacy_label;
+
+	$first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+	$middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+	$last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+	$canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+	if ($canonical_name === '')
+		return $legacy_label;
+
+	return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
 function get_employee_details_to_payslip($order, $employee_id) {
 
 	$error = '';
@@ -749,7 +786,10 @@ function display_payslip_header($Order) {
 	if($new) {
 		start_row();
 		label_cell(_('Employee:'));
-		employees_list_cells(null, 'employee_id', null, _('Select employee'), true, false, true, array('layout_class' => 'combo-layout-equal'));
+		employees_list_cells(null, 'employee_id', null, _('Select employee'), true, false, true, array(
+			'layout_class' => 'combo-layout-equal',
+			'format' => 'payslip_entry_authoritative_employee_list'
+		));
 		end_row();
 	}
 	else {
