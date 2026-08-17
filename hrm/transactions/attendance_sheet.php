@@ -22,6 +22,45 @@ if (user_use_date_picker())
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
+include_once($path_to_root.'/hrm/includes/hrm_security.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+
+/**
+ * Resolve one Attendance Sheet Employee selector label at the page-level instant.
+ *
+ * Attendance Sheet remains authorized by SA_ATTENDANCE, which does not grant
+ * Person/Worker identity-read access. Canonical naming is additive only when
+ * the same principal independently holds an approved identity-read capability.
+ * The submitted employee_id, department filter, roster employee_name and all
+ * attendance write values remain exact legacy values; this helper changes
+ * selector presentation only.
+ *
+ * @param array $row
+ * @return string
+ */
+function attendance_sheet_authoritative_employee_list($row) {
+    global $attendance_sheet_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $attendance_sheet_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $attendance_sheet_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
 
 add_js_ufile($path_to_root.'/hrm/js/attendance_sheet.js');
 
@@ -302,6 +341,13 @@ if (isset($_POST['bulk_delete'])) {
 }
 
 //----------------------------------------------------------------------
+// Capture one post-command identity instant for selector presentation only.
+//----------------------------------------------------------------------
+
+$attendance_sheet_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('attendance_sheet_selector');
+
+//----------------------------------------------------------------------
 // Load data for the grid
 //----------------------------------------------------------------------
 
@@ -335,7 +381,10 @@ months_list_cells(_('Month:'), 'sheet_month', $sel_month, true);
 years_list_cells(_('Fiscal Year:'), 'sheet_year', null);
 departments_list_cells(_('Department:'), 'department_id', get_post('department_id'), _('All departments'), true);
 
-$emp_list_opts = array('async' => false);
+$emp_list_opts = array(
+    'async' => false,
+    'format' => 'attendance_sheet_authoritative_employee_list'
+);
 if ($dept_id > 0)
     $emp_list_opts['where'] = array("e.department_id = ".db_escape($dept_id));
 employees_list_cells(_('Employee:'), 'employee_id', $emp_id, _('All employees'), true, false, false, $emp_list_opts);
