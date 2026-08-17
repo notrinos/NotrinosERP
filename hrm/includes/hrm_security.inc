@@ -215,6 +215,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_asset_allocation_history',
 		'employee_training_history',
 		'employee_leave_request_history',
+		'employee_leave_request_selector',
 		'employee_leave_approval_history',
 		'employee_overtime_request_history',
 		'employee_overtime_approval_history',
