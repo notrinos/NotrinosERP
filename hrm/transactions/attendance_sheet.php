@@ -62,6 +62,46 @@ function attendance_sheet_authoritative_employee_list($row) {
     return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
+
+/**
+ * Resolve one Attendance Sheet roster Employee presentation name.
+ *
+ * The exact employee_name returned by get_attendance_sheet_employees() remains
+ * the fail-closed fallback and the legacy roster SQL/cohort/order plus every
+ * submitted employee/date attendance key remain authoritative. Canonical naming
+ * is presentation-only and additive only when the SA_ATTENDANCE principal
+ * independently holds approved Person/Worker read access. The page-level
+ * selector as-of instant is reused so the selector, roster cell and modal name
+ * cannot observe different identity times within one rendered request.
+ *
+ * @param array $row
+ * @return string
+ */
+function attendance_sheet_authoritative_roster_employee_name($row) {
+    global $attendance_sheet_selector_as_of;
+
+    $employee_id = is_array($row) && isset($row['employee_id'])
+        ? trim((string)$row['employee_id']) : '';
+    $legacy_name = is_array($row) && isset($row['employee_name'])
+        ? (string)$row['employee_name'] : '';
+
+    if ($employee_id === '' || $attendance_sheet_selector_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_id, $attendance_sheet_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
+
 add_js_ufile($path_to_root.'/hrm/js/attendance_sheet.js');
 
 page(_($help_context = 'Attendance Sheet'), false, false, '', $js);
@@ -341,7 +381,7 @@ if (isset($_POST['bulk_delete'])) {
 }
 
 //----------------------------------------------------------------------
-// Capture one post-command identity instant for selector presentation only.
+// Capture one post-command identity instant for selector and roster presentation only.
 //----------------------------------------------------------------------
 
 $attendance_sheet_selector_as_of = hrm_person_worker_utc_now();
@@ -463,6 +503,7 @@ echo '</thead><tbody>';
 $k = 0;
 foreach ($employees as $emp) {
     $eid = $emp['employee_id'];
+    $employee_display_name = attendance_sheet_authoritative_roster_employee_name($emp);
     $emp_att   = isset($att_data[$eid]) ? $att_data[$eid] : array();
     $emp_leave = isset($leave_data[$eid]) ? $leave_data[$eid] : array();
 
@@ -472,7 +513,7 @@ foreach ($employees as $emp) {
     $row_class = ($k % 2 == 0) ? 'att-row-even' : 'att-row-odd';
     echo '<tr class="'.$row_class.'">';
     echo '<td class="att-emp-id att-sticky-col"><input type="checkbox" name="emp_check[]" value="'.htmlspecialchars($eid, ENT_QUOTES).'" class="emp-check"> '.htmlspecialchars($eid).'</td>';
-    echo '<td class="att-emp-name att-sticky-col att-sticky-name">'.htmlspecialchars($emp['employee_name']).'</td>';
+    echo '<td class="att-emp-name att-sticky-col att-sticky-name">'.htmlspecialchars($employee_display_name).'</td>';
 
     for ($d = 1; $d <= $days_in_month; $d++) {
         $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
@@ -512,7 +553,7 @@ foreach ($employees as $emp) {
             echo '<td class="'.$cell_classes.' att-clickable" title="'.htmlspecialchars($cell_title, ENT_QUOTES).'"';
             echo ' data-emp="'.htmlspecialchars($eid, ENT_QUOTES).'"';
             echo ' data-date="'.$date_sql.'"';
-            echo ' data-name="'.htmlspecialchars($emp['employee_name'], ENT_QUOTES).'"';
+            echo ' data-name="'.htmlspecialchars($employee_display_name, ENT_QUOTES).'"';
             // Pre-load existing data for the modal
             if (isset($emp_att[$d])) {
                 $r = $emp_att[$d];
