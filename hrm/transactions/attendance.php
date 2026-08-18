@@ -61,6 +61,44 @@ function attendance_authoritative_employee_list($row) {
     return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
+
+/**
+ * Resolve one Attendance Entry roster Employee Name cell at the page-level instant.
+ *
+ * The roster SQL/cohort, Employee ID column, submitted employee_id/department_id,
+ * attendance validation and every write key remain authoritative. The exact
+ * employee_name returned by hrm_get_filtered_employees() is the fail-closed
+ * fallback. Canonical naming is presentation-only and additive only when the
+ * SA_ATTENDANCE principal independently holds approved Person/Worker read access.
+ *
+ * @param array $row
+ * @return string
+ */
+function attendance_authoritative_roster_employee_name($row) {
+    global $attendance_selector_as_of;
+
+    $employee_id = is_array($row) && isset($row['employee_id'])
+        ? trim((string)$row['employee_id']) : '';
+    $legacy_name = is_array($row) && isset($row['employee_name'])
+        ? (string)$row['employee_name'] : '';
+
+    if ($employee_id === '' || $attendance_selector_as_of === false)
+        return $legacy_name;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_id, $attendance_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_name;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
+
 /**
  * Get attendance status options keyed by DB integer code.
  *
@@ -414,7 +452,7 @@ foreach ($employees as $employee) {
     start_row();
     check_cells('', 'selected_'.$employee_id, $_POST['selected_'.$employee_id]);
     label_cell($employee_id);
-    label_cell($employee['employee_name']);
+    label_cell(attendance_authoritative_roster_employee_name($employee));
 
     if (function_exists('work_shifts_list')) {
         echo "<td>";
