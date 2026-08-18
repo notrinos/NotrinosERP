@@ -63,6 +63,43 @@ function training_authoritative_history_name($employee_ref, $legacy_name) {
     return $canonical_name === '' ? $legacy_name : $canonical_name;
 }
 
+
+/**
+ * Resolve one Training Employee selector label at the page-level instant.
+ *
+ * The shared employees_list() query, submitted employee_id and Training write
+ * path remain authoritative. SA_HRSETTINGS is deliberately not a Person/Worker
+ * identity-read capability, so this route-local formatter adopts canonical
+ * identity only for principals that independently hold an approved read area
+ * and otherwise returns the exact shared legacy selector label.
+ *
+ * @param array $row
+ * @return string
+ */
+function training_authoritative_employee_list($row) {
+    global $training_history_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $training_history_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $training_history_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
 if (!isset($_POST['training_date']))
     $_POST['training_date'] = Today();
 
@@ -111,6 +148,7 @@ if (isset($_POST['assign_training'])) {
 
 $training_history_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_training_history');
+hrm_log_restricted_employee_projection('employee_training_selector');
 
 start_form();
 
@@ -142,7 +180,8 @@ end_table(2);
 
 display_heading(_('Employee Training'));
 start_table(TABLESTYLE2, "width='80%'");
-employees_list_row(_('Employee:'), 'employee_id', null, false, false, false);
+employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
+    array('format' => 'training_authoritative_employee_list'));
 $course_sql = "SELECT course_id, course_name FROM ".TB_PREF."training_courses WHERE inactive = 0";
 label_row(_('Course:'), combo_input('course_id', get_post('course_id', 0), $course_sql, 'course_id', 'course_name', array('spec_option' => _('Select course'), 'spec_id' => 0)));
 date_row(_('Training Date:'), 'training_date');
