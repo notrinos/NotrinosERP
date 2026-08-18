@@ -227,6 +227,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_loan_request_history',
 		'employee_loan_request_selector',
 		'payslip_entry_selector',
+		'employee_bank_entry_selector',
 		'employee_loan_repayment_selector',
 		'employee_transactions_selector',
 		'employee_separation_selector',

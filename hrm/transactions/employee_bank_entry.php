@@ -115,6 +115,42 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
 }
 
 /**
+ * Resolve one Employee Payment Advice selector label at the page-level instant.
+ *
+ * SA_EMPLOYEEPAYMENT remains payment authorization only. Canonical naming is
+ * presentation-only and is available only when the same principal independently
+ * holds an approved Person/Worker read capability. The shared selector cohort,
+ * submitted employee_id, payment query, validation, posting and accounting keys
+ * remain exact legacy values.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_bank_entry_authoritative_employee_list($row) {
+    global $employee_bank_entry_selector_as_of;
+
+    $legacy_label = _format_employee_list($row);
+    if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+        || $employee_bank_entry_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $row[0], $employee_bank_entry_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+    if ($canonical_name === '')
+        return $legacy_label;
+
+    return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
+}
+
+/**
  * Check whether a payment-advice row has the minimum approved/posting markers.
  *
  * This is only a UI suppression helper. The server-side payment command repeats
@@ -199,12 +235,17 @@ if ($selected_employee !== '') {
 }
 $show_paid = check_value('show_paid');
 
+$employee_bank_entry_selector_as_of = hrm_person_worker_utc_now();
+hrm_log_restricted_employee_projection('employee_bank_entry_selector');
+
 start_form();
 
 start_table(TABLESTYLE_NOBORDER);
 
 start_row();
-employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false);
+employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
+    'format' => 'employee_bank_entry_authoritative_employee_list'
+));
 check_cells(_('Show Already Paid'), 'show_paid', $show_paid);
 submit_cells('refresh_list', _('Refresh'));
 end_row();
