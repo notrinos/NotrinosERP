@@ -204,6 +204,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'salary_component_routing',
 		'salary_revision_context',
 		'employee_transfer_context',
+		'employee_transfer_selector',
 		'employee_separation_context',
 		'leave_entitlement_context',
 		'employee_summary',
