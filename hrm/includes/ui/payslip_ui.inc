@@ -47,6 +47,39 @@ function payslip_entry_authoritative_employee_list($row) {
 	return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
+/**
+ * Resolve one live Payslip Entry preview name at the page-level instant.
+ *
+ * The preview/cart/calculation employee rows remain legacy authoritative data.
+ * This helper changes visible live-preview presentation only and preserves the
+ * exact supplied legacy name whenever identity read is unavailable, denied,
+ * unlinked, ambiguous/tampered, or empty.
+ *
+ * @param string $employee_id
+ * @param string $legacy_name
+ * @return string
+ */
+function payslip_entry_authoritative_preview_name($employee_id, $legacy_name) {
+	global $payslip_entry_selector_as_of;
+
+	$employee_id = trim((string)$employee_id);
+	$legacy_name = (string)$legacy_name;
+	if ($employee_id === '' || $payslip_entry_selector_as_of === false)
+		return $legacy_name;
+
+	$identity = get_hrm_person_worker_report_name_as_of(
+		$employee_id, $payslip_entry_selector_as_of
+	);
+	if (!is_array($identity) || empty($identity['canonical_linked']))
+		return $legacy_name;
+
+	$first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+	$middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+	$last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+	$canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+	return $canonical_name !== '' ? $canonical_name : $legacy_name;
+}
+
 function get_employee_details_to_payslip($order, $employee_id) {
 
 	$error = '';
@@ -526,6 +559,10 @@ function display_payslip_context_panel($doc) {
 	else
 		$employee_name = trim($doc->employee_id);
 
+	$employee_name = payslip_entry_authoritative_preview_name(
+		$doc->employee_id, $employee_name
+	);
+
 	$context_rows = array(
 		array(_('Employee ID'), $doc->employee_id),
 		array(_('Period'), trim($doc->from_date.' - '.$doc->to_date)),
@@ -761,7 +798,14 @@ function display_payslip_header($Order) {
 	}
 
 	$Order->payslip_preview = $preview_doc ? $preview_doc : null;
-	$hero_title = $preview_doc ? (isset($preview_doc->employee['employee_name']) ? $preview_doc->employee['employee_name'] : $preview_doc->employee_id) : _('Prepare Payslip Preview');
+	$hero_title = _('Prepare Payslip Preview');
+	if ($preview_doc) {
+		$legacy_preview_name = isset($preview_doc->employee['employee_name'])
+			? $preview_doc->employee['employee_name'] : $preview_doc->employee_id;
+		$hero_title = payslip_entry_authoritative_preview_name(
+			$preview_doc->employee_id, $legacy_preview_name
+		);
+	}
 	$hero_description = $preview_doc
 		? _('Review salary, attendance, leave, and overtime before posting the payslip to the ledger.')
 		: _('Select an employee and period to generate a live payslip preview with salary, attendance, leave, and overtime details.');
