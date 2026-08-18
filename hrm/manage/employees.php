@@ -99,6 +99,40 @@ function employee_maintenance_authoritative_employee_list($row) {
 	return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
+/**
+ * Resolve one Manage Employees Reports To selector label at the page instant.
+ *
+ * The reporting_to employee key, active-only cohort and exact legacy
+ * "name [employee_id]" fallback remain authoritative. Canonical identity is
+ * presentation-only and may replace only the visible name component.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_reporting_to_authoritative_employee_list($row) {
+	global $employee_maintenance_selector_as_of;
+
+	$legacy_label = is_array($row) && isset($row[1]) ? (string)$row[1] : '';
+	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
+		|| $employee_maintenance_selector_as_of === false)
+		return $legacy_label;
+
+	$identity = get_hrm_person_worker_report_name_as_of(
+		$row[0], $employee_maintenance_selector_as_of
+	);
+	if (!is_array($identity) || empty($identity['canonical_linked']))
+		return $legacy_label;
+
+	$first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+	$middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+	$last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+	$canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+	if ($canonical_name === '')
+		return $legacy_label;
+
+	return $canonical_name.' ['.(string)$row[0].']';
+}
+
 function set_edit($employee_id) {
 	$row = get_employee_by_code($employee_id);
 	if (!$row) return;
@@ -521,7 +555,9 @@ function tab_employment($employee_id, $new_employee) {
 	table_section_title(_('Assignment'));
 
 	work_shifts_list_row(_('Work Shift:'), 'shift_id', null, true);
-	reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'));
+	reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'), false, array(
+		'format' => 'employee_reporting_to_authoritative_employee_list'
+	));
 	users_list_row(_('System Login:'), 'login_id', null, false, _('Select user'));
 	dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
 

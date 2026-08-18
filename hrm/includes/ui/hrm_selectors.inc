@@ -156,22 +156,22 @@ function relationship_list_row($label, $name, $selected=null) {
 //------------------------------------------------------------------
 // Employee Reporting-to selector (active employees)
 //------------------------------------------------------------------
-function reporting_to_list($name, $selected=null, $exclude_employee='', $submit_on_change=false) {
+function reporting_to_list($name, $selected=null, $exclude_employee='', $submit_on_change=false, $opts=array()) {
 	$sql = "SELECT employee_id, CONCAT(first_name, ' ', last_name, ' [', employee_id, ']') as name
 			FROM ".TB_PREF."employees WHERE !inactive";
 	if (!empty($exclude_employee))
 		$sql .= " AND employee_id != ".db_escape($exclude_employee);
 
-	return combo_input($name, $selected, $sql, 'employee_id', 'name', array(
+	return combo_input($name, $selected, $sql, 'employee_id', 'name', array_merge(array(
 		'select_submit' => $submit_on_change,
 		'spec_option' => _('-- None --'),
 		'spec_id' => '',
-	));
+	), $opts));
 }
 
-function reporting_to_list_row($label, $name, $selected=null, $exclude_employee='', $submit_on_change=false) {
+function reporting_to_list_row($label, $name, $selected=null, $exclude_employee='', $submit_on_change=false, $opts=array()) {
 	echo "<tr><td class='label'>$label</td><td>";
-	echo reporting_to_list($name, $selected, $exclude_employee, $submit_on_change);
+	echo reporting_to_list($name, $selected, $exclude_employee, $submit_on_change, $opts);
 	echo "</td></tr>\n";
 }
 
