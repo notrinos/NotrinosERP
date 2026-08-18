@@ -151,6 +151,43 @@ function employee_bank_entry_authoritative_employee_list($row) {
 }
 
 /**
+ * Resolve one Employee Payment Advice result-row Employee label.
+ *
+ * The payment-advice query, employee filter, payslip/payment keys and accounting
+ * flow remain authoritative. The exact legacy "employee_id - employee_name"
+ * cell is preserved unless accepted canonical-link evidence is available to a
+ * principal that independently holds approved Person/Worker read authority.
+ *
+ * @param array $row
+ * @return string
+ */
+function employee_bank_entry_authoritative_payment_advice_employee($row) {
+    global $employee_bank_entry_selector_as_of;
+
+    $employee_id = is_array($row) && isset($row['employee_id'])
+        ? trim((string)$row['employee_id']) : '';
+    $legacy_name = is_array($row) && isset($row['employee_name'])
+        ? (string)$row['employee_name'] : '';
+    $legacy_label = $employee_id !== '' ? $employee_id.' - '.$legacy_name : '-';
+
+    if ($employee_id === '' || $employee_bank_entry_selector_as_of === false)
+        return $legacy_label;
+
+    $identity = get_hrm_person_worker_report_name_as_of(
+        $employee_id, $employee_bank_entry_selector_as_of
+    );
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy_label;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    $canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+
+    return $canonical_name !== '' ? $employee_id.' - '.$canonical_name : $legacy_label;
+}
+
+/**
  * Check whether a payment-advice row has the minimum approved/posting markers.
  *
  * This is only a UI suppression helper. The server-side payment command repeats
@@ -262,6 +299,7 @@ textarea_row(_('Memo:'), 'payment_memo', null, 35, 2);
 end_outer_table(1);
 
 $rows = get_payment_advice_rows($selected_employee, $show_paid);
+hrm_log_restricted_employee_projection('employee_payment_advice');
 if (!$rows) {
     display_warning(_('Payslip header table is not available.'));
 } else {
@@ -277,10 +315,8 @@ if (!$rows) {
         $payslip_id_safe = isset($row['payslip_id']) ? (int)$row['payslip_id'] : '';
         label_cell(!empty($payslip_id_safe) ? $payslip_id_safe : '-');
         
-        // Safely display employee
-        $employee_safe = isset($row['employee_id']) ? $row['employee_id'] : '';
-        $employee_name_safe = isset($row['employee_name']) ? $row['employee_name'] : '';
-        label_cell(!empty($employee_safe) ? $employee_safe.' - '.$employee_name_safe : '-');
+        // Safely display employee using the exact legacy cell as fail-closed fallback.
+        label_cell(employee_bank_entry_authoritative_payment_advice_employee($row));
         
         // Safely display dates with null checking
         label_cell(isset($row['from_date']) && !empty($row['from_date']) ? sql2date($row['from_date']) : '-');
