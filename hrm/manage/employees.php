@@ -133,6 +133,44 @@ function employee_reporting_to_authoritative_employee_list($row) {
 	return $canonical_name.' ['.(string)$row[0].']';
 }
 
+/**
+ * Resolve the Manage Employees Salary-tab Employee header at the page instant.
+ *
+ * The selected employee key, salary projection/writers and exact legacy
+ * "first last [employee_id]" header remain authoritative. Canonical identity
+ * is presentation-only and may replace only the visible name component.
+ *
+ * @param string $employee_id
+ * @param array $emp
+ * @return string
+ */
+function employee_salary_authoritative_employee_label($employee_id, $emp) {
+	global $employee_maintenance_selector_as_of;
+
+	$legacy_name = is_array($emp)
+		? trim((isset($emp['first_name']) ? (string)$emp['first_name'] : '').' '.(isset($emp['last_name']) ? (string)$emp['last_name'] : ''))
+		: '';
+	$legacy_label = $legacy_name.' ['.(string)$employee_id.']';
+	if (trim((string)$employee_id) === '' || $employee_maintenance_selector_as_of === false)
+		return $legacy_label;
+
+	$identity = get_hrm_person_worker_report_name_as_of(
+		$employee_id, $employee_maintenance_selector_as_of
+	);
+	if (!is_array($identity) || empty($identity['canonical_linked']))
+		return $legacy_label;
+
+	$first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+	$middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+	$last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+	$canonical_name = trim($first_name.' '.($middle_name !== '' ? $middle_name.' ' : '').$last_name);
+	if ($canonical_name === '')
+		return $legacy_label;
+
+	return $canonical_name.' ['.(string)$employee_id.']';
+}
+
+
 function set_edit($employee_id) {
 	$row = get_employee_by_code($employee_id);
 	if (!$row) return;
@@ -790,7 +828,7 @@ function tab_salary($employee_id) {
 
 	// Header info
 	start_table(TABLESTYLE2);
-	label_row(_('Employee:'), $emp['first_name'].' '.$emp['last_name'].' ['.$employee_id.']');
+	label_row(_('Employee:'), employee_salary_authoritative_employee_label($employee_id, $emp));
 	label_row(_('Position:'), $emp['position_name'] ?: _('Not assigned'));
 	label_row(_('Grade:'), $emp['grade_name'] ?: _('Not assigned'));
 	label_row(_('Salary Mode:'), $emp['personal_salary'] ? _('Personal (Individual Override)') : _('Position-based (Salary Structure)'));
