@@ -285,6 +285,9 @@ function synchronize_hrm_employment_from_employee($employee)
     }
     if (empty($changed))
         return true;
+    if (function_exists('hrm_employment_rehire_projection_change_allowed')
+        && !hrm_employment_rehire_projection_change_allowed((int)$current['employment_id'], $projection))
+        return false;
 
     $actor = hrm_employment_actor_id();
     $sql = "UPDATE ".TB_PREF."hrm_employments SET "

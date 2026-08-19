@@ -23,6 +23,7 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_private_profile_d
 include_once($path_to_root . '/hrm/includes/db/employee_person_duplicate_review_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_link_proposal_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_canonical_link_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_employment_rehire_db.inc');
 
 /**
  * Enhanced Employee CRUD

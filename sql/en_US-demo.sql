@@ -1138,6 +1138,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 
 -- Structure of HRM-FND-001 person/worker compatibility foundation --
 
+DROP TABLE IF EXISTS `0_hrm_employment_rehires`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
@@ -1460,6 +1461,39 @@ CREATE TABLE `0_hrm_person_canonical_link_workers` (
 	CONSTRAINT `0_hrm_person_canonical_link_worker_map_fk` FOREIGN KEY (`mapping_id`) REFERENCES `0_hrm_employee_worker_map` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_worker_previous_fk` FOREIGN KEY (`previous_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_worker_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+-- Structure of table `0_hrm_employment_rehires` --
+
+DROP TABLE IF EXISTS `0_hrm_employment_rehires`;
+
+CREATE TABLE `0_hrm_employment_rehires` (
+	`rehire_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`proposal_id` bigint(20) unsigned NOT NULL,
+	`canonical_link_id` bigint(20) unsigned NOT NULL,
+	`predecessor_employment_id` bigint(20) unsigned NOT NULL,
+	`successor_employment_id` bigint(20) unsigned NOT NULL,
+	`canonical_person_id` bigint(20) unsigned NOT NULL,
+	`alias_person_id` bigint(20) unsigned NOT NULL,
+	`predecessor_end_date` date NOT NULL,
+	`successor_start_date` date NOT NULL,
+	`executed_at` datetime NOT NULL,
+	`executed_by` smallint(6) unsigned NOT NULL,
+	`rehire_key` char(64) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`rehire_id`),
+	UNIQUE KEY `hrm_employment_rehire_proposal_uq` (`proposal_id`),
+	UNIQUE KEY `hrm_employment_rehire_link_uq` (`canonical_link_id`),
+	UNIQUE KEY `hrm_employment_rehire_successor_uq` (`successor_employment_id`),
+	UNIQUE KEY `hrm_employment_rehire_key_uq` (`rehire_key`),
+	KEY `hrm_employment_rehire_predecessor_idx` (`predecessor_employment_id`,`rehire_id`),
+	KEY `hrm_employment_rehire_person_idx` (`canonical_person_id`,`alias_person_id`,`rehire_id`),
+	CONSTRAINT `0_hrm_employment_rehire_proposal_fk` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_person_link_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employment_rehire_link_fk` FOREIGN KEY (`canonical_link_id`) REFERENCES `0_hrm_person_canonical_links` (`link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employment_rehire_predecessor_fk` FOREIGN KEY (`predecessor_employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employment_rehire_successor_fk` FOREIGN KEY (`successor_employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employment_rehire_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employment_rehire_alias_fk` FOREIGN KEY (`alias_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_exchange_rates` --
