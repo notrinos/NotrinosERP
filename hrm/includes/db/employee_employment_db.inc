@@ -60,6 +60,200 @@ function hrm_employment_normalize_date($value)
     return $value;
 }
 
+
+/**
+ * Inclusive date-interval overlap predicate used by the bounded concurrency
+ * policy. A NULL start is explicit unknown/past-unbounded history and a NULL
+ * end is open-ended. Invalid dates fail closed as overlapping.
+ *
+ * @param mixed $left_start
+ * @param mixed $left_end
+ * @param mixed $right_start
+ * @param mixed $right_end
+ * @return bool
+ */
+function hrm_employment_intervals_overlap($left_start, $left_end, $right_start, $right_end)
+{
+    $left_start = hrm_employment_normalize_date($left_start);
+    $left_end = hrm_employment_normalize_date($left_end);
+    $right_start = hrm_employment_normalize_date($right_start);
+    $right_end = hrm_employment_normalize_date($right_end);
+    if ($left_start === false || $left_end === false || $right_start === false || $right_end === false)
+        return true;
+    return ($left_end === null || $right_start === null || strcmp($right_start, $left_end) <= 0)
+        && ($right_end === null || $left_start === null || strcmp($left_start, $right_end) <= 0);
+}
+
+/**
+ * Serialize Employment chronology on the shared Person row. This is the
+ * common lock for multiple Worker/legacy employee bindings that may already
+ * have been canonically linked to one Person.
+ *
+ * @param int $person_id
+ * @return bool
+ */
+function hrm_employment_lock_person_for_interval_policy($person_id)
+{
+    $person_id = (int)$person_id;
+    if ($person_id <= 0 || !function_exists('db_query'))
+        return false;
+    $result = db_query("SELECT person_id FROM ".TB_PREF."hrm_persons WHERE person_id=".$person_id." FOR UPDATE",
+        'could not serialize HRM Employment chronology on Person');
+    return $result && db_num_rows($result) === 1;
+}
+
+/**
+ * Load one binding using Person -> Worker/map lock order. The initial unlocked
+ * read resolves the common Person; after that Person row is locked, the
+ * binding is re-read FOR UPDATE and must still point to the same Person/Worker.
+ *
+ * @param int $employee_number
+ * @return array|false
+ */
+function hrm_employment_lock_binding_for_interval_policy($employee_number)
+{
+    if (!function_exists('get_hrm_person_worker_binding') || (int)$employee_number <= 0)
+        return false;
+    $observed = get_hrm_person_worker_binding((int)$employee_number, false);
+    if (!$observed || $observed['retired_at'] !== null || (int)$observed['person_id'] <= 0
+        || (int)$observed['worker_id'] <= 0
+        || !hrm_employment_lock_person_for_interval_policy((int)$observed['person_id']))
+        return false;
+    $locked = get_hrm_person_worker_binding((int)$employee_number, true);
+    if (!$locked || $locked['retired_at'] !== null
+        || (int)$locked['person_id'] !== (int)$observed['person_id']
+        || (int)$locked['worker_id'] !== (int)$observed['worker_id'])
+        return false;
+    return $locked;
+}
+
+/** @return bool */
+function hrm_employment_interval_rows_are_non_overlapping($rows)
+{
+    if (!is_array($rows))
+        return false;
+    $count = count($rows);
+    for ($i = 0; $i < $count; $i++) {
+        if (!is_array($rows[$i]) || empty($rows[$i]['employment_id']))
+            return false;
+        $start = hrm_employment_normalize_date(isset($rows[$i]['start_date']) ? $rows[$i]['start_date'] : null);
+        $end = hrm_employment_normalize_date(isset($rows[$i]['end_date']) ? $rows[$i]['end_date'] : null);
+        if ($start === false || $end === false)
+            return false;
+        // Preserve one accepted legacy-invalid episode, but never let it
+        // participate in a multi-Employment canonical chronology.
+        if ($count > 1 && $start !== null && $end !== null && strcmp($end, $start) < 0)
+            return false;
+        for ($j = $i + 1; $j < $count; $j++) {
+            if (!is_array($rows[$j]) || empty($rows[$j]['employment_id']))
+                return false;
+            if (hrm_employment_intervals_overlap(
+                isset($rows[$i]['start_date']) ? $rows[$i]['start_date'] : null,
+                isset($rows[$i]['end_date']) ? $rows[$i]['end_date'] : null,
+                isset($rows[$j]['start_date']) ? $rows[$j]['start_date'] : null,
+                isset($rows[$j]['end_date']) ? $rows[$j]['end_date'] : null
+            ))
+                return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Enforce the current compatibility policy: a canonical Person may retain
+ * sequential Employment episodes (including accepted rehire history), but
+ * overlapping/concurrent Employment episodes are denied until legal-employer
+ * and payroll-relationship routing are explicitly introduced later.
+ *
+ * The caller must already hold the Person lock through
+ * hrm_employment_lock_binding_for_interval_policy().
+ *
+ * @param array $binding
+ * @param int $replacement_employment_id 0 for a new candidate row.
+ * @param mixed $candidate_start
+ * @param mixed $candidate_end
+ * @return bool
+ */
+function hrm_employment_person_interval_policy_allows($binding, $replacement_employment_id,
+    $candidate_start, $candidate_end)
+{
+    if (!is_array($binding) || (int)$binding['person_id'] <= 0 || (int)$binding['worker_id'] <= 0)
+        return false;
+    $candidate_start = hrm_employment_normalize_date($candidate_start);
+    $candidate_end = hrm_employment_normalize_date($candidate_end);
+    if ($candidate_start === false || $candidate_end === false)
+        return false;
+
+    $sql = "SELECT h.employment_id,h.worker_id,h.start_date,h.end_date FROM ".TB_PREF."hrm_employments h "
+        ."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=h.worker_id "
+        ."WHERE w.person_id=".(int)$binding['person_id']." ORDER BY h.employment_id FOR UPDATE";
+    $result = db_query($sql, 'could not verify canonical Person Employment intervals');
+    if (!$result)
+        return false;
+    $rows = array();
+    $replaced = false;
+    while ($row = db_fetch_assoc($result)) {
+        if ((int)$replacement_employment_id > 0
+            && (int)$row['employment_id'] === (int)$replacement_employment_id) {
+            $row['worker_id'] = (int)$binding['worker_id'];
+            $row['start_date'] = $candidate_start;
+            $row['end_date'] = $candidate_end;
+            $replaced = true;
+        }
+        $rows[] = $row;
+    }
+    if ((int)$replacement_employment_id > 0 && !$replaced)
+        return false;
+    if ((int)$replacement_employment_id === 0) {
+        $rows[] = array(
+            'employment_id' => -1,
+            'worker_id' => (int)$binding['worker_id'],
+            'start_date' => $candidate_start,
+            'end_date' => $candidate_end,
+        );
+    }
+    return hrm_employment_interval_rows_are_non_overlapping($rows);
+}
+
+/**
+ * Validate the hypothetical Worker rebind performed by canonical Person-link
+ * and reviewed rehire execution. Before HRM-FND-002 is installed this returns
+ * true, preserving the predecessor deployment bridge. Once Employment exists,
+ * every Employment owned by the canonical Person plus the alias Workers must
+ * remain pairwise non-overlapping after the rebind.
+ *
+ * @param int $canonical_person_id
+ * @param array $alias_workers
+ * @return bool
+ */
+function hrm_employment_canonical_link_interval_policy_allows($canonical_person_id, $alias_workers)
+{
+    if (!hrm_employment_table_ready())
+        return true;
+    $canonical_person_id = (int)$canonical_person_id;
+    if ($canonical_person_id <= 0 || !is_array($alias_workers) || empty($alias_workers)
+        || !hrm_employment_lock_person_for_interval_policy($canonical_person_id))
+        return false;
+    $worker_ids = array();
+    foreach ($alias_workers as $worker) {
+        if (!is_array($worker) || (int)$worker['worker_id'] <= 0)
+            return false;
+        $worker_ids[(int)$worker['worker_id']] = (int)$worker['worker_id'];
+    }
+    if (empty($worker_ids))
+        return false;
+    $sql = "SELECT h.employment_id,h.worker_id,h.start_date,h.end_date FROM ".TB_PREF."hrm_employments h "
+        ."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=h.worker_id WHERE w.person_id=".$canonical_person_id
+        ." OR h.worker_id IN (".implode(',', $worker_ids).") ORDER BY h.employment_id FOR UPDATE";
+    $result = db_query($sql, 'could not verify canonical Person-link Employment intervals');
+    if (!$result)
+        return false;
+    $rows = array();
+    while ($row = db_fetch_assoc($result))
+        $rows[] = $row;
+    return hrm_employment_interval_rows_are_non_overlapping($rows);
+}
+
 /**
  * Convert one legacy employee row into the bounded Employment projection.
  * Existing invalid historical intervals may be retained only during migration
@@ -209,10 +403,14 @@ function create_hrm_employment_from_employee($employee, $audit = true,
     if (!$projection)
         return false;
     $employee_number = (int)$projection['legacy_employee_number'];
-    $binding = get_hrm_person_worker_binding($employee_number, true);
+    $binding = hrm_employment_lock_binding_for_interval_policy($employee_number);
     if (!$binding || $binding['retired_at'] !== null)
         return false;
     if (get_hrm_legacy_current_employment($employee_number, true))
+        return false;
+    if (!hrm_employment_person_interval_policy_allows(
+        $binding, 0, $projection['start_date'], $projection['end_date']
+    ))
         return false;
 
     $actor = hrm_employment_actor_id();
@@ -258,6 +456,9 @@ function synchronize_hrm_employment_from_employee($employee)
         || !hrm_employment_table_ready())
         return false;
     $employee_number = (int)$employee['employee_number'];
+    $binding = hrm_employment_lock_binding_for_interval_policy($employee_number);
+    if (!$binding)
+        return false;
     $current = get_hrm_legacy_current_employment($employee_number, true);
     if (!$current)
         return create_hrm_employment_from_employee($employee, true, 'runtime_employee') !== false;
@@ -292,6 +493,11 @@ function synchronize_hrm_employment_from_employee($employee)
         return true;
     if (function_exists('hrm_employment_rehire_projection_change_allowed')
         && !hrm_employment_rehire_projection_change_allowed((int)$current['employment_id'], $projection))
+        return false;
+    if ((int)$current['worker_id'] !== (int)$binding['worker_id']
+        || !hrm_employment_person_interval_policy_allows(
+            $binding, (int)$current['employment_id'], $projection['start_date'], $projection['end_date']
+        ))
         return false;
 
     $actor = hrm_employment_actor_id();
@@ -337,6 +543,9 @@ function execute_hrm_employment_termination($employee, $effective_date)
         return false;
 
     $employee_number = (int)$employee['employee_number'];
+    $binding = hrm_employment_lock_binding_for_interval_policy($employee_number);
+    if (!$binding)
+        return false;
     $current = get_hrm_legacy_current_employment($employee_number, true);
     if (!$current || (int)$current['employment_sequence'] !== 1
         || $current['legal_entity_id'] !== null
@@ -368,6 +577,11 @@ function execute_hrm_employment_termination($employee, $effective_date)
 
     if ($current['end_date'] !== null && $current['end_date'] !== ''
         && !hrm_employment_nullable_equal($current['end_date'], $effective_date))
+        return false;
+    if ((int)$current['worker_id'] !== (int)$binding['worker_id']
+        || !hrm_employment_person_interval_policy_allows(
+            $binding, (int)$current['employment_id'], $projection['start_date'], $projection['end_date']
+        ))
         return false;
 
     $actor = hrm_employment_actor_id();

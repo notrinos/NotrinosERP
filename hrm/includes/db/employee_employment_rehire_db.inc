@@ -354,6 +354,11 @@ function execute_hrm_employment_rehire($proposal_id)
         cancel_transaction();
         return false;
     }
+    if (!function_exists('hrm_employment_canonical_link_interval_policy_allows')
+        || !hrm_employment_canonical_link_interval_policy_allows($canonical_person_id, $workers)) {
+        cancel_transaction();
+        return false;
+    }
 
     $link_key = hash('sha256', implode("\0", array(
         'person-canonical-link-v1', $proposal_id, $canonical_person_id, $alias_person_id,

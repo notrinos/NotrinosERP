@@ -326,6 +326,12 @@ function execute_hrm_person_canonical_link($proposal_id, $canonical_person_id)
 		cancel_transaction();
 		return false;
 	}
+	if (function_exists('hrm_employment_table_ready') && hrm_employment_table_ready()
+		&& (!function_exists('hrm_employment_canonical_link_interval_policy_allows')
+			|| !hrm_employment_canonical_link_interval_policy_allows($canonical_person_id, $workers))) {
+		cancel_transaction();
+		return false;
+	}
 
 	$link_key = hash('sha256', implode("\0", array(
 		'person-canonical-link-v1', $proposal_id, $canonical_person_id, $alias_person_id,

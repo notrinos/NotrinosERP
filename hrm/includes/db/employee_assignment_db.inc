@@ -171,6 +171,73 @@ function hrm_assignment_day_before($value)
     return $date->format('Y-m-d');
 }
 
+
+/**
+ * Inclusive Assignment interval overlap. NULL starts are explicit unknown
+ * history (past-unbounded) and NULL ends are open current intervals. Invalid
+ * dates fail closed as overlapping.
+ */
+function hrm_assignment_intervals_overlap($left_from, $left_to, $right_from, $right_to)
+{
+    $left_from = ($left_from === null || $left_from === '') ? null : hrm_assignment_normalize_effective_date($left_from);
+    $left_to = ($left_to === null || $left_to === '') ? null : hrm_assignment_normalize_effective_date($left_to);
+    $right_from = ($right_from === null || $right_from === '') ? null : hrm_assignment_normalize_effective_date($right_from);
+    $right_to = ($right_to === null || $right_to === '') ? null : hrm_assignment_normalize_effective_date($right_to);
+    if ($left_from === false || $left_to === false || $right_from === false || $right_to === false)
+        return true;
+    return ($left_to === null || $right_from === null || strcmp($right_from, $left_to) <= 0)
+        && ($right_to === null || $left_from === null || strcmp($left_from, $right_to) <= 0);
+}
+
+/**
+ * Lock all Assignment rows for one Employment and prove pairwise chronology.
+ * An optional replacement validates a pending update before it is written.
+ */
+function hrm_assignment_employment_interval_policy_allows($employment_id,
+    $replacement_assignment_id = 0, $replacement_from = null, $replacement_to = null)
+{
+    $employment_id = (int)$employment_id;
+    $replacement_assignment_id = (int)$replacement_assignment_id;
+    if ($employment_id <= 0)
+        return false;
+    $result = db_query("SELECT assignment_id,effective_from,effective_to FROM ".TB_PREF."hrm_assignments "
+        ."WHERE employment_id=".$employment_id." ORDER BY assignment_id FOR UPDATE",
+        'could not verify HRM Assignment interval chronology');
+    if (!$result)
+        return false;
+    $rows = array();
+    $replaced = false;
+    while ($row = db_fetch_assoc($result)) {
+        if ($replacement_assignment_id > 0 && (int)$row['assignment_id'] === $replacement_assignment_id) {
+            $row['effective_from'] = $replacement_from;
+            $row['effective_to'] = $replacement_to;
+            $replaced = true;
+        }
+        $rows[] = $row;
+    }
+    if ($replacement_assignment_id > 0 && !$replaced)
+        return false;
+    $count = count($rows);
+    for ($i = 0; $i < $count; $i++) {
+        $from = hrm_assignment_normalize_effective_date(isset($rows[$i]['effective_from']) ? $rows[$i]['effective_from'] : null);
+        $to = hrm_assignment_normalize_effective_date(isset($rows[$i]['effective_to']) ? $rows[$i]['effective_to'] : null);
+        if ($from === false || $to === false)
+            return false;
+        // Preserve one accepted legacy-invalid shadow interval, but deny it
+        // once multiple Assignment episodes would share the Employment.
+        if ($count > 1 && $from !== null && $to !== null && strcmp($to, $from) < 0)
+            return false;
+        for ($j = $i + 1; $j < $count; $j++) {
+            if (hrm_assignment_intervals_overlap(
+                $rows[$i]['effective_from'], $rows[$i]['effective_to'],
+                $rows[$j]['effective_from'], $rows[$j]['effective_to']
+            ))
+                return false;
+        }
+    }
+    return true;
+}
+
 function hrm_assignment_effective_change_type($value)
 {
     $value = trim((string)$value);
@@ -222,6 +289,8 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
         || (int)$current['legacy_employee_number'] !== $employee_number
         || (int)$current['legacy_current'] !== 1 || (int)$current['assignment_sequence'] < 1
         || (string)$current['assignment_type_code'] !== 'legacy_primary' || (int)$current['primary_flag'] !== 1)
+        return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
         return false;
 
     $start = hrm_employment_normalize_date(isset($employment['start_date']) ? $employment['start_date'] : null);
@@ -298,6 +367,8 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
     $assignment_id = (int)db_insert_id();
     if ($assignment_id <= 0)
         return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
+        return false;
     $changed[] = 'effective_interval';
     return append_hrm_assignment_domain_audit(
         'hrm.assignment.effective_change_created', $assignment_id, (int)$employment['employment_id'],
@@ -333,6 +404,8 @@ function execute_hrm_assignment_termination($employee, $effective_date)
         || (string)$employment['employment_status'] !== 'terminated'
         || !hrm_assignment_nullable_equal($employment['end_date'], $effective_date))
         return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
+        return false;
 
     $allow_legacy_irregular = (string)$current['reference_quality'] === 'legacy_irregular';
     $projection = hrm_assignment_projection_from_employee($employee, $employment, $allow_legacy_irregular);
@@ -360,6 +433,11 @@ function execute_hrm_assignment_termination($employee, $effective_date)
     if (hrm_assignment_nullable_equal($current['effective_to'], $effective_date))
         return true;
     if ($current['effective_to'] !== null && $current['effective_to'] !== '')
+        return false;
+    if (!hrm_assignment_employment_interval_policy_allows(
+        (int)$employment['employment_id'], (int)$current['assignment_id'],
+        $projection['effective_from'], $effective_date
+    ))
         return false;
 
     $actor = hrm_assignment_actor_id();
@@ -418,6 +496,8 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
     $projection = hrm_assignment_projection_from_employee($employee, $employment, $allow_legacy_irregular);
     if (!$projection || get_hrm_legacy_current_assignment($employee_number, true))
         return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
+        return false;
 
     $actor = hrm_assignment_actor_id();
     $sql = "INSERT INTO ".TB_PREF."hrm_assignments (employment_id,assignment_sequence,legacy_employee_number,"
@@ -437,6 +517,8 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
         return false;
     $assignment_id = (int)db_insert_id();
     if ($assignment_id <= 0)
+        return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
         return false;
     if ($audit && !append_hrm_assignment_domain_audit(
         'hrm.assignment.created', $assignment_id, (int)$projection['employment_id'], $employee_number,
@@ -462,6 +544,8 @@ function synchronize_hrm_assignment_from_employee($employee)
         || (int)$current['assignment_sequence'] < 1 || (int)$current['legacy_current'] !== 1
         || (int)$current['legacy_employee_number'] !== $employee_number
         || (string)$current['assignment_type_code'] !== 'legacy_primary' || (int)$current['primary_flag'] !== 1)
+        return false;
+    if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
         return false;
 
     $allow_legacy_irregular = (string)$current['reference_quality'] === 'legacy_irregular';
@@ -496,6 +580,11 @@ function synchronize_hrm_assignment_from_employee($employee)
     }
     if (empty($changed))
         return true;
+    if (!hrm_assignment_employment_interval_policy_allows(
+        (int)$employment['employment_id'], (int)$current['assignment_id'],
+        $projection['effective_from'], $projection['effective_to']
+    ))
+        return false;
 
     $actor = hrm_assignment_actor_id();
     $sql = "UPDATE ".TB_PREF."hrm_assignments SET legacy_department_id=".(int)$projection['legacy_department_id']
