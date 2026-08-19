@@ -18,9 +18,14 @@
 /** @return bool */
 function hrm_contract_table_ready()
 {
-    if (!function_exists('db_query') || !defined('TB_PREF'))
+    if (!function_exists('db_query') || !function_exists('db_escape_function')
+        || !defined('TB_PREF'))
         return false;
-    $result = db_query("SHOW TABLES LIKE ".db_escape(TB_PREF.'hrm_contracts'));
+    // Keep the runtime TB_PREF placeholder outside value escaping. In browser
+    // sessions TB_PREF is '&TB_PREF&' and db_query() replaces that token with
+    // the selected company prefix. Escaping the full prefixed name first would
+    // encode the placeholder and make an installed foundation table appear absent.
+    $result = db_query("SHOW TABLES LIKE '".TB_PREF.db_escape_function('hrm_contracts')."'");
     return $result && db_num_rows($result) === 1;
 }
 

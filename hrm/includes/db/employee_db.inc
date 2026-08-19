@@ -171,7 +171,7 @@ function add_employee($data) {
  * @param array $data Associative array of fields to update
  * @return bool
  */
-function update_employee($employee_id, $data) {
+function update_employee($employee_id, $data, $assignment_effective_change=null) {
 	if (!is_array($data))
 		return false;
 
@@ -236,7 +236,7 @@ function update_employee($employee_id, $data) {
 	$contract = $employment
 		? synchronize_hrm_contract_from_employee_if_ready($after) : false;
 	$assignment = $contract
-		? synchronize_hrm_assignment_from_employee_if_ready($after) : false;
+		? synchronize_hrm_assignment_from_employee_if_ready($after, false, $assignment_effective_change) : false;
 	$sensitive = $assignment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$private_profile = $sensitive

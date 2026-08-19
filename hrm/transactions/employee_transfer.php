@@ -83,6 +83,9 @@ if (isset($_POST['Process'])) {
     } elseif (!is_date($_POST['effective_date'])) {
         display_error(_('Effective date is invalid.'));
         set_focus('effective_date');
+    } elseif (strcmp(date2sql($_POST['effective_date']), date2sql(Today())) > 0) {
+        display_error(_('Future-dated transfers are not supported until scheduled lifecycle execution is enabled.'));
+        set_focus('effective_date');
     } elseif ((int)$_POST['new_department_id'] == 0) {
         display_error(_('New Department is required and must be selected.'));
         set_focus('new_department_id');
@@ -100,16 +103,21 @@ if (isset($_POST['Process'])) {
             $new_position = (int)$_POST['new_position_id'];
             $new_grade = (int)$_POST['new_grade_id'];
 
+            begin_transaction();
             $employee_updated = update_employee($_POST['employee_id'], array(
                 'department_id' => $new_department,
                 'position_id' => $new_position,
                 'grade_id' => $new_grade
+            ), array(
+                'effective_date' => date2sql($_POST['effective_date']),
+                'change_type' => HRM_HIST_TRANSFER
             ));
 
             if (!$employee_updated) {
-                display_error(_('Could not update the employee or append required audit evidence.'));
+                cancel_transaction();
+                display_error(_('Could not apply the effective-dated assignment change or append required audit evidence.'));
             } else {
-                add_employee_history(
+                $history_id = add_employee_history(
                     $_POST['employee_id'],
                     HRM_HIST_TRANSFER,
                     $_POST['effective_date'],
@@ -124,8 +132,13 @@ if (isset($_POST['Process'])) {
                     $_POST['reason'],
                     isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
                 );
-
-                display_notification(_('Employee transfer has been processed.'));
+                if ($history_id <= 0) {
+                    cancel_transaction();
+                    display_error(_('Could not append employee transfer history; the transfer was rolled back.'));
+                } else {
+                    commit_transaction();
+                    display_notification(_('Employee transfer has been processed.'));
+                }
             }
         }
     }
