@@ -61,7 +61,8 @@ function add_employee_history($employee_id, $change_type, $effective_date, $old_
 			".db_escape($created_by)."
 		)";
 
-	db_query($sql, 'could not add employee history');
+	if (!db_query($sql, 'could not add employee history'))
+		return 0;
 	return (int)db_insert_id();
 }
 

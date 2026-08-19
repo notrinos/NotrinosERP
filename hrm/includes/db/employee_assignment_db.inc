@@ -305,6 +305,77 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
     ) !== false;
 }
 
+/**
+ * End the accepted current primary Assignment at an Employee Separation date.
+ * No successor Assignment is created. Work-reference fields must remain exact;
+ * a combined transfer/promotion plus termination attempt therefore fails closed.
+ *
+ * @param array $employee
+ * @param string $effective_date SQL date (Y-m-d)
+ * @return bool
+ */
+function execute_hrm_assignment_termination($employee, $effective_date)
+{
+    if (!is_array($employee) || empty($employee['employee_number'])
+        || !hrm_assignment_table_ready() || !function_exists('get_hrm_legacy_current_employment'))
+        return false;
+    $effective_date = hrm_assignment_normalize_effective_date($effective_date);
+    if ($effective_date === false)
+        return false;
+
+    $employee_number = (int)$employee['employee_number'];
+    $employment = get_hrm_legacy_current_employment($employee_number, true);
+    $current = get_hrm_legacy_current_assignment($employee_number, true);
+    if (!$employment || !$current || (int)$current['employment_id'] !== (int)$employment['employment_id']
+        || (int)$current['legacy_employee_number'] !== $employee_number
+        || (int)$current['legacy_current'] !== 1 || (int)$current['assignment_sequence'] < 1
+        || (string)$current['assignment_type_code'] !== 'legacy_primary' || (int)$current['primary_flag'] !== 1
+        || (string)$employment['employment_status'] !== 'terminated'
+        || !hrm_assignment_nullable_equal($employment['end_date'], $effective_date))
+        return false;
+
+    $allow_legacy_irregular = (string)$current['reference_quality'] === 'legacy_irregular';
+    $projection = hrm_assignment_projection_from_employee($employee, $employment, $allow_legacy_irregular);
+    if (!$projection)
+        return false;
+    $projection['effective_from'] = ($current['effective_from'] === null || $current['effective_from'] === '')
+        ? null : (string)$current['effective_from'];
+    $projection['effective_to'] = $effective_date;
+
+    if ($projection['effective_from'] !== null
+        && strcmp($effective_date, (string)$projection['effective_from']) < 0)
+        return false;
+
+    $integer_fields = array('legacy_department_id','legacy_position_id','legacy_grade_id','legacy_shift_id',
+        'legacy_cost_center_id','legacy_dimension2_id');
+    foreach ($integer_fields as $field) {
+        if (!hrm_assignment_nullable_int_equal($current[$field], $projection[$field]))
+            return false;
+    }
+    foreach (array('legacy_reporting_to','reference_quality') as $field) {
+        if (!hrm_assignment_nullable_equal($current[$field], $projection[$field]))
+            return false;
+    }
+
+    if (hrm_assignment_nullable_equal($current['effective_to'], $effective_date))
+        return true;
+    if ($current['effective_to'] !== null && $current['effective_to'] !== '')
+        return false;
+
+    $actor = hrm_assignment_actor_id();
+    $sql = "UPDATE ".TB_PREF."hrm_assignments SET effective_to=".db_escape($effective_date)
+        .",interval_quality=".db_escape($projection['interval_quality'])
+        .",source='runtime_separation',updated_at=NOW(),updated_by=".(int)$actor
+        ." WHERE assignment_id=".(int)$current['assignment_id']." AND legacy_current=1";
+    if (!db_query($sql, 'could not end HRM assignment for separation'))
+        return false;
+    return append_hrm_assignment_domain_audit(
+        'hrm.assignment.ended_for_separation', (int)$current['assignment_id'],
+        (int)$employment['employment_id'], $employee_number, array('effective_interval'),
+        'hrm_fnd_002_employee_separation'
+    ) !== false;
+}
+
 function append_hrm_assignment_domain_audit($action, $assignment_id, $employment_id,
     $employee_number, $changed_fields, $reason_code)
 {
@@ -455,6 +526,8 @@ function synchronize_hrm_assignment_from_employee_if_ready($employee, $create = 
     if (is_array($effective_change)) {
         $effective_date = isset($effective_change['effective_date']) ? $effective_change['effective_date'] : null;
         $change_type = isset($effective_change['change_type']) ? $effective_change['change_type'] : null;
+        if ((string)$change_type === 'separation')
+            return execute_hrm_assignment_termination($employee, $effective_date);
         return execute_hrm_assignment_effective_change($employee, $effective_date, $change_type);
     }
     return synchronize_hrm_assignment_from_employee($employee);

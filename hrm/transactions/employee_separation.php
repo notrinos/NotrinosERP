@@ -119,6 +119,9 @@ if (isset($_POST['Process'])) {
     } elseif (!is_date($_POST['separation_date'])) {
         display_error(_('Separation date is invalid.'));
         set_focus('separation_date');
+    } elseif (date_comp($_POST['separation_date'], Today()) > 0) {
+        display_error(_('Future-dated separations are not supported until scheduled lifecycle execution is enabled.'));
+        set_focus('separation_date');
     } else {
         $employee = get_employee_separation_context_projection($_POST['employee_id']);
         if (!$employee) {
@@ -128,15 +131,20 @@ if (isset($_POST['Process'])) {
             set_focus('separation_date');
         } else {
             hrm_log_restricted_employee_projection('employee_separation_context');
+            begin_transaction();
             $employee_updated = update_employee($_POST['employee_id'], array(
                 'inactive' => 1,
                 'released_date' => $_POST['separation_date']
+            ), array(
+                'effective_date' => date2sql($_POST['separation_date']),
+                'change_type' => HRM_HIST_SEPARATION
             ));
 
             if (!$employee_updated) {
-                display_error(_('Could not update the employee or append required audit evidence.'));
+                cancel_transaction();
+                display_error(_('Could not apply the effective-dated separation or append required audit evidence.'));
             } else {
-                add_employee_history(
+                $history_id = add_employee_history(
                     $_POST['employee_id'],
                     HRM_HIST_SEPARATION,
                     $_POST['separation_date'],
@@ -151,8 +159,13 @@ if (isset($_POST['Process'])) {
                     $_POST['reason'].'; EOS='.(string)$eos_amount,
                     isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
                 );
-
-                display_notification(_('Employee separation has been processed. Calculated EOS: ').price_format($eos_amount));
+                if ($history_id <= 0) {
+                    cancel_transaction();
+                    display_error(_('Could not append employee separation history; the separation was rolled back.'));
+                } else {
+                    commit_transaction();
+                    display_notification(_('Employee separation has been processed. Calculated EOS: ').price_format($eos_amount));
+                }
             }
         }
     }

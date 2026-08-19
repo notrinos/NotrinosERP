@@ -232,7 +232,11 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 	$after = $updated ? hrm_employee_domain_audit_row($employee_id) : false;
 	$foundation = $after ? synchronize_hrm_person_worker_from_employee($after) : false;
 	$employment = $foundation
-		? synchronize_hrm_employment_from_employee_if_ready($after) : false;
+		? (is_array($assignment_effective_change)
+			&& isset($assignment_effective_change['change_type'])
+			&& (string)$assignment_effective_change['change_type'] === 'separation'
+				? synchronize_hrm_employment_from_employee_if_ready($after, false, $assignment_effective_change)
+				: synchronize_hrm_employment_from_employee_if_ready($after)) : false;
 	$contract = $employment
 		? synchronize_hrm_contract_from_employee_if_ready($after) : false;
 	$assignment = $contract

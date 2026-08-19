@@ -316,19 +316,101 @@ function synchronize_hrm_employment_from_employee($employee)
 }
 
 /**
+ * Execute the bounded Employment side of one legacy Employee Separation.
+ *
+ * The legacy employee row has already been updated inside the caller's open
+ * transaction. This function locks the accepted current Employment, requires
+ * the same released date/status projection, and writes only the terminal
+ * interval/status fields plus restricted-value-free PAY-AUD evidence.
+ *
+ * @param array $employee
+ * @param string $effective_date SQL date (Y-m-d)
+ * @return bool
+ */
+function execute_hrm_employment_termination($employee, $effective_date)
+{
+    if (!is_array($employee) || empty($employee['employee_number'])
+        || !hrm_employment_table_ready())
+        return false;
+    $effective_date = hrm_employment_normalize_date($effective_date);
+    if ($effective_date === false || $effective_date === null)
+        return false;
+
+    $employee_number = (int)$employee['employee_number'];
+    $current = get_hrm_legacy_current_employment($employee_number, true);
+    if (!$current || (int)$current['employment_sequence'] !== 1
+        || $current['legal_entity_id'] !== null
+        || (int)$current['legacy_current'] !== 1
+        || (int)$current['legacy_employee_number'] !== $employee_number)
+        return false;
+
+    $projection = hrm_employment_projection_from_employee($employee, false);
+    if (!$projection || empty($employee['inactive'])
+        || (string)$projection['employment_status'] !== 'terminated'
+        || !hrm_employment_nullable_equal($projection['end_date'], $effective_date)
+        || !hrm_employment_nullable_equal($projection['start_date'], $current['start_date']))
+        return false;
+    $start = hrm_employment_normalize_date($current['start_date']);
+    if ($start === false || ($start !== null && strcmp($effective_date, $start) < 0))
+        return false;
+
+    if (function_exists('hrm_employment_rehire_projection_change_allowed')
+        && !hrm_employment_rehire_projection_change_allowed((int)$current['employment_id'], $projection))
+        return false;
+
+    $same = hrm_employment_nullable_equal($current['start_date'], $projection['start_date'])
+        && hrm_employment_nullable_equal($current['end_date'], $projection['end_date'])
+        && hrm_employment_nullable_equal($current['termination_reason_code'], $projection['termination_reason_code'])
+        && (string)$current['employment_status'] === (string)$projection['employment_status']
+        && (string)$current['interval_quality'] === (string)$projection['interval_quality'];
+    if ($same)
+        return true;
+
+    if ($current['end_date'] !== null && $current['end_date'] !== ''
+        && !hrm_employment_nullable_equal($current['end_date'], $effective_date))
+        return false;
+
+    $actor = hrm_employment_actor_id();
+    $sql = "UPDATE ".TB_PREF."hrm_employments SET "
+        ."end_date=".db_escape($projection['end_date']).","
+        ."employment_status='terminated',"
+        ."termination_reason_code=".($projection['termination_reason_code'] === null
+            ? 'NULL' : db_escape($projection['termination_reason_code'])).","
+        ."interval_quality=".db_escape($projection['interval_quality']).","
+        ."source='runtime_separation',updated_at=UTC_TIMESTAMP(),updated_by=".(int)$actor
+        ." WHERE employment_id=".(int)$current['employment_id']." AND legacy_current=1";
+    if (!db_query($sql, 'could not terminate HRM employment shadow'))
+        return false;
+    return append_hrm_employment_domain_audit(
+        'hrm.employment.terminated', (int)$current['employment_id'],
+        (int)$current['worker_id'], $employee_number,
+        array('end_date', 'employment_status', 'termination_reason_code'),
+        'hrm_fnd_002_employee_separation'
+    ) !== false;
+}
+
+/**
  * Compatibility deployment wrapper. Before the additive migration creates the
  * table, legacy writes remain usable and the migration will deterministically
  * seed them. Once the table exists, synchronization becomes mandatory.
  *
  * @param array $employee
  * @param bool $create
+ * @param array|null $effective_change
  * @return bool
  */
-function synchronize_hrm_employment_from_employee_if_ready($employee, $create = false)
+function synchronize_hrm_employment_from_employee_if_ready($employee, $create = false, $effective_change = null)
 {
     if (!hrm_employment_table_ready())
         return true;
     if ($create)
         return create_hrm_employment_from_employee($employee, true, 'runtime_employee') !== false;
+    if (is_array($effective_change)
+        && isset($effective_change['change_type'])
+        && (string)$effective_change['change_type'] === 'separation') {
+        $effective_date = isset($effective_change['effective_date'])
+            ? $effective_change['effective_date'] : null;
+        return execute_hrm_employment_termination($employee, $effective_date);
+    }
     return synchronize_hrm_employment_from_employee($employee);
 }
