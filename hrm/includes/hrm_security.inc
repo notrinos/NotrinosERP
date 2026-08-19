@@ -209,6 +209,7 @@ function hrm_log_restricted_employee_projection($channel) {
 		'employee_separation_context',
 		'leave_entitlement_context',
 		'employee_summary',
+		'employee_csv_export',
 		'attendance_roster',
 		'attendance_selector',
 		'attendance_sheet_selector',

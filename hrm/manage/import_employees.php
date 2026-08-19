@@ -16,6 +16,41 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
 
 /**
+ * Resolve export-only authoritative Person/Worker name fields while preserving
+ * the exact legacy CSV row when canonical identity cannot be accepted.
+ *
+ * @param array $row
+ * @param string|false $as_of
+ * @return array
+ */
+function employee_csv_export_authoritative_name_fields($row, $as_of=false) {
+    $legacy = array(
+        'first_name' => isset($row['first_name']) ? (string)$row['first_name'] : '',
+        'middle_name' => isset($row['middle_name']) ? (string)$row['middle_name'] : '',
+        'last_name' => isset($row['last_name']) ? (string)$row['last_name'] : ''
+    );
+
+    if (!isset($row['employee_id']) || trim((string)$row['employee_id']) === '' || $as_of === false || $as_of === '')
+        return $legacy;
+
+    $identity = get_hrm_person_worker_report_name_as_of((string)$row['employee_id'], $as_of);
+    if (!is_array($identity) || empty($identity['canonical_linked']))
+        return $legacy;
+
+    $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
+    $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
+    $last_name = isset($identity['last_name']) ? trim((string)$identity['last_name']) : '';
+    if ($first_name === '' && $last_name === '')
+        return $legacy;
+
+    return array(
+        'first_name' => $first_name,
+        'middle_name' => $middle_name,
+        'last_name' => $last_name
+    );
+}
+
+/**
  * Parse CSV employee row into employee data array.
  *
  * @param array $row
@@ -52,17 +87,21 @@ if (isset($_POST['export_employees'])) {
     header('Content-Disposition: attachment; filename="employees_export_'.date('Ymd_His').'.csv"');
     echo "employee_id,first_name,last_name,middle_name,email,mobile,department_id,position_id,grade_id,hire_date,inactive\n";
 
+    $employee_csv_export_as_of = hrm_person_worker_utc_now();
+    hrm_log_restricted_employee_projection('employee_csv_export');
+
     $sql = "SELECT employee_id, first_name, last_name, middle_name, email, mobile,
         department_id, position_id, grade_id, hire_date, inactive
         FROM ".TB_PREF."employees
         ORDER BY employee_id";
     $result = db_query($sql, 'could not export employees');
     while ($row = db_fetch($result)) {
+        $export_name = employee_csv_export_authoritative_name_fields($row, $employee_csv_export_as_of);
         echo implode(',', array(
             $row['employee_id'],
-            str_replace(',', ' ', $row['first_name']),
-            str_replace(',', ' ', $row['last_name']),
-            str_replace(',', ' ', $row['middle_name']),
+            str_replace(',', ' ', $export_name['first_name']),
+            str_replace(',', ' ', $export_name['last_name']),
+            str_replace(',', ' ', $export_name['middle_name']),
             str_replace(',', ' ', $row['email']),
             str_replace(',', ' ', $row['mobile']),
             (int)$row['department_id'],
