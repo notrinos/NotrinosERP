@@ -15,6 +15,7 @@ include_once($path_to_root . '/includes/attachment_service.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_employment_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_sensitive_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_private_profile_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_duplicate_review_db.inc');
@@ -140,7 +141,9 @@ function add_employee($data) {
 	$employee_number = $inserted ? db_insert_id() : false;
 	$after = $employee_number ? hrm_employee_domain_audit_row($employee_id) : false;
 	$foundation = $after ? create_hrm_person_worker_from_employee($after) : false;
-	$sensitive = $foundation
+	$employment = $foundation
+		? synchronize_hrm_employment_from_employee_if_ready($after, true) : false;
+	$sensitive = $employment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$private_profile = $sensitive
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
@@ -221,7 +224,9 @@ function update_employee($employee_id, $data) {
 	$updated = db_query($sql, 'could not update employee');
 	$after = $updated ? hrm_employee_domain_audit_row($employee_id) : false;
 	$foundation = $after ? synchronize_hrm_person_worker_from_employee($after) : false;
-	$sensitive = $foundation
+	$employment = $foundation
+		? synchronize_hrm_employment_from_employee_if_ready($after) : false;
+	$sensitive = $employment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$private_profile = $sensitive
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;

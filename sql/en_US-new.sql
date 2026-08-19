@@ -1017,6 +1017,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
+DROP TABLE IF EXISTS `0_hrm_employments`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
 DROP TABLE IF EXISTS `0_hrm_person_link_proposals`;
 DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
@@ -1212,6 +1213,32 @@ CREATE TABLE `0_hrm_employee_worker_map` (
 	UNIQUE KEY `hrm_employee_worker_worker_uq` (`worker_id`),
 	KEY `hrm_employee_worker_retired_idx` (`retired_at`,`mapping_id`),
 	CONSTRAINT `0_hrm_employee_worker_map_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
+CREATE TABLE `0_hrm_employments` (
+	`employment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`worker_id` bigint(20) unsigned NOT NULL,
+	`employment_sequence` int(10) unsigned NOT NULL,
+	`legal_entity_id` bigint(20) unsigned DEFAULT NULL,
+	`legacy_employee_number` int(11) NOT NULL,
+	`legacy_current` tinyint(1) DEFAULT '1',
+	`start_date` date DEFAULT NULL,
+	`end_date` date DEFAULT NULL,
+	`employment_status` varchar(16) NOT NULL DEFAULT 'active',
+	`termination_reason_code` varchar(32) DEFAULT NULL,
+	`interval_quality` varchar(24) NOT NULL DEFAULT 'exact',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(6) unsigned DEFAULT NULL,
+	PRIMARY KEY (`employment_id`),
+	UNIQUE KEY `hrm_employment_worker_sequence_uq` (`worker_id`,`employment_sequence`),
+	UNIQUE KEY `hrm_employment_legacy_current_uq` (`legacy_employee_number`,`legacy_current`),
+	KEY `hrm_employment_worker_asof_idx` (`worker_id`,`start_date`,`end_date`,`employment_id`),
+	KEY `hrm_employment_status_idx` (`employment_status`,`end_date`,`employment_id`),
+	CONSTRAINT `0_hrm_employments_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_canonical_links` (
