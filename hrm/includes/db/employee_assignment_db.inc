@@ -126,6 +126,19 @@ function hrm_assignment_nullable_equal($a, $b)
     return $a === $b;
 }
 
+function hrm_assignment_nullable_int_equal($a, $b)
+{
+    if ($a === null || $a === '') $a = null;
+    if ($b === null || $b === '') $b = null;
+    if ($a === null || $b === null)
+        return $a === $b;
+    if (!is_numeric($a) || !is_numeric($b)
+        || (string)(int)$a !== trim((string)$a)
+        || (string)(int)$b !== trim((string)$b))
+        return false;
+    return (int)$a === (int)$b;
+}
+
 function append_hrm_assignment_domain_audit($action, $assignment_id, $employment_id,
     $employee_number, $changed_fields, $reason_code)
 {
@@ -218,9 +231,11 @@ function synchronize_hrm_assignment_from_employee($employee)
     $projection = hrm_assignment_projection_from_employee($employee, $employment, $allow_legacy_irregular);
     if (!$projection)
         return false;
+    $integer_fields = array('legacy_department_id','legacy_position_id','legacy_grade_id','legacy_shift_id',
+        'legacy_cost_center_id','legacy_dimension2_id');
     if ($allow_legacy_irregular) {
-        foreach (array('legacy_department_id','legacy_position_id','legacy_grade_id','legacy_shift_id','legacy_cost_center_id','legacy_dimension2_id') as $field) {
-            if (!hrm_assignment_nullable_equal($current[$field], $projection[$field]))
+        foreach ($integer_fields as $field) {
+            if (!hrm_assignment_nullable_int_equal($current[$field], $projection[$field]))
                 return false;
         }
     }
@@ -233,7 +248,10 @@ function synchronize_hrm_assignment_from_employee($employee)
         'effective_from' => 'effective_interval', 'effective_to' => 'effective_interval', 'interval_quality' => 'effective_interval',
     );
     foreach ($map as $field => $label) {
-        if (!hrm_assignment_nullable_equal($current[$field], $projection[$field]))
+        $equal = in_array($field, $integer_fields, true)
+            ? hrm_assignment_nullable_int_equal($current[$field], $projection[$field])
+            : hrm_assignment_nullable_equal($current[$field], $projection[$field]);
+        if (!$equal)
             $changed[] = $label;
     }
     if (empty($changed))
