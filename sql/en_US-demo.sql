@@ -1140,6 +1140,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
+DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
 DROP TABLE IF EXISTS `0_hrm_employments`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
@@ -1388,6 +1389,38 @@ CREATE TABLE `0_hrm_contracts` (
 	KEY `hrm_contract_employment_asof_idx` (`employment_id`,`effective_from`,`effective_to`,`contract_id`),
 	KEY `hrm_contract_type_idx` (`contract_type_code`,`effective_to`,`contract_id`),
 	CONSTRAINT `0_hrm_contracts_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_assignments` (
+	`assignment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`employment_id` bigint(20) unsigned NOT NULL,
+	`assignment_sequence` int(10) unsigned NOT NULL,
+	`legacy_employee_number` int(11) NOT NULL,
+	`legacy_current` tinyint(1) DEFAULT '1',
+	`assignment_type_code` varchar(24) NOT NULL DEFAULT 'legacy_primary',
+	`primary_flag` tinyint(1) NOT NULL DEFAULT '1',
+	`legacy_department_id` int(11) NOT NULL DEFAULT '0',
+	`legacy_position_id` int(11) NOT NULL DEFAULT '0',
+	`legacy_grade_id` int(11) NOT NULL DEFAULT '0',
+	`legacy_shift_id` int(11) DEFAULT NULL,
+	`legacy_reporting_to` varchar(20) DEFAULT NULL,
+	`legacy_cost_center_id` int(11) DEFAULT NULL,
+	`legacy_dimension2_id` int(11) NOT NULL DEFAULT '0',
+	`reference_quality` varchar(24) NOT NULL DEFAULT 'legacy_unverified',
+	`effective_from` date DEFAULT NULL,
+	`effective_to` date DEFAULT NULL,
+	`interval_quality` varchar(24) NOT NULL DEFAULT 'exact',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(6) unsigned DEFAULT NULL,
+	PRIMARY KEY (`assignment_id`),
+	UNIQUE KEY `hrm_assignment_employment_sequence_uq` (`employment_id`,`assignment_sequence`),
+	UNIQUE KEY `hrm_assignment_legacy_current_uq` (`legacy_employee_number`,`legacy_current`),
+	KEY `hrm_assignment_employment_asof_idx` (`employment_id`,`effective_from`,`effective_to`,`assignment_id`),
+	KEY `hrm_assignment_legacy_work_idx` (`legacy_department_id`,`legacy_position_id`,`legacy_grade_id`,`assignment_id`),
+	CONSTRAINT `0_hrm_assignments_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_canonical_links` (

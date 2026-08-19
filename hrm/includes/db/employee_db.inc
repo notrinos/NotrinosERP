@@ -17,6 +17,7 @@ include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_employment_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_contract_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_assignment_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_sensitive_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_private_profile_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_duplicate_review_db.inc');
@@ -146,7 +147,9 @@ function add_employee($data) {
 		? synchronize_hrm_employment_from_employee_if_ready($after, true) : false;
 	$contract = $employment
 		? synchronize_hrm_contract_from_employee_if_ready($after, true) : false;
-	$sensitive = $contract
+	$assignment = $contract
+		? synchronize_hrm_assignment_from_employee_if_ready($after, true) : false;
+	$sensitive = $assignment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$private_profile = $sensitive
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
@@ -231,7 +234,9 @@ function update_employee($employee_id, $data) {
 		? synchronize_hrm_employment_from_employee_if_ready($after) : false;
 	$contract = $employment
 		? synchronize_hrm_contract_from_employee_if_ready($after) : false;
-	$sensitive = $contract
+	$assignment = $contract
+		? synchronize_hrm_assignment_from_employee_if_ready($after) : false;
+	$sensitive = $assignment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$private_profile = $sensitive
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
