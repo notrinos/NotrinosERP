@@ -83,7 +83,7 @@ function hrm_employment_rehire_lock_pair($left_person_id, $right_person_id)
     $right_person_id = (int)$right_person_id;
     if ($left_person_id <= 0 || $right_person_id <= 0 || $left_person_id >= $right_person_id)
         return false;
-    $sql = "SELECT w.person_id,w.worker_id,m.mapping_id,m.employee_number,h.employment_id,"
+    $sql = "SELECT w.person_id,w.worker_id,m.mapping_id,m.employee_number AS legacy_employee_number,h.employment_id,"
         ."h.employment_sequence,h.legacy_current,h.start_date,h.end_date,h.employment_status,"
         ."h.interval_quality FROM ".TB_PREF."hrm_workers w "
         ."INNER JOIN ".TB_PREF."hrm_employee_worker_map m ON m.worker_id=w.worker_id AND m.retired_at IS NULL "
