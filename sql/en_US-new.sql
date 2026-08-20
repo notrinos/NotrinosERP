@@ -1020,6 +1020,7 @@ DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
+DROP TABLE IF EXISTS `0_hrm_legal_entities`;
 DROP TABLE IF EXISTS `0_hrm_employments`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
 DROP TABLE IF EXISTS `0_hrm_person_link_proposals`;
@@ -1218,6 +1219,27 @@ CREATE TABLE `0_hrm_employee_worker_map` (
 	CONSTRAINT `0_hrm_employee_worker_map_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+
+CREATE TABLE `0_hrm_legal_entities` (
+	`legal_entity_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`entity_code` varchar(32) NOT NULL,
+	`registered_name` varchar(100) NOT NULL,
+	`registration_number` varchar(55) DEFAULT NULL,
+	`tax_registration_number` varchar(55) DEFAULT NULL,
+	`country_code` char(2) DEFAULT NULL,
+	`base_currency` char(3) NOT NULL,
+	`entity_status` varchar(16) NOT NULL DEFAULT 'active',
+	`legacy_default` tinyint(1) DEFAULT '1',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`legal_entity_id`),
+	UNIQUE KEY `hrm_legal_entity_code_uq` (`entity_code`),
+	UNIQUE KEY `hrm_legal_entity_legacy_default_uq` (`legacy_default`),
+	KEY `hrm_legal_entity_status_idx` (`entity_status`,`legal_entity_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_employments` (
 	`employment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
