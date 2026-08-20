@@ -145,6 +145,12 @@ function do_install() {
 		$_SESSION['wa_current_user']->cur_con = 0;
 		
 		update_company_prefs(array('coy_name'=>$con['name']));
+		include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
+		if (!function_exists('initialize_hrm_fresh_default_legal_entity')
+			|| initialize_hrm_fresh_default_legal_entity() === false) {
+			display_error(_('Cannot initialize the default HRM Legal Entity for this new company.'));
+			return false;
+		}
 		$admin = get_user_by_login('admin');
 		update_user_prefs($admin['id'], array(
 			'language' => $con['lang'], 

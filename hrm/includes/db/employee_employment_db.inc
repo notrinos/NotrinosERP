@@ -11,8 +11,10 @@
  *
  * Legacy employees remain authoritative for current UI/payroll behavior. This
  * shadow stores only the current legal-employment interval required to begin
- * effective-dated Employment history. Contract, Assignment, normalized Legal
- * Entity and rehire execution remain later HRM-FND-002/003 slices.
+ * effective-dated Employment history. Contract and Assignment remain separate
+ * bounded projections; HRM-FND-003 now binds legacy-compatible Employment to
+ * the exact company-default Legal Entity without introducing organization,
+ * location or payroll-relationship semantics.
  */
 
 /** @return bool */
@@ -363,11 +365,22 @@ function append_hrm_employment_domain_audit($action, $employment_id, $worker_id,
         || !is_array($changed_fields) || trim((string)$action) === ''
         || trim((string)$reason_code) === '')
         return false;
+    // Scope is derived from the persisted Employment row, never caller input.
+    // This prevents an audit event from being attached to the wrong employer
+    // chain if a future caller or future multi-entity path is introduced.
+    $scope = db_query("SELECT legal_entity_id,worker_id,legacy_employee_number FROM ".TB_PREF."hrm_employments "
+        ."WHERE employment_id=".(int)$employment_id." LIMIT 1",
+        'could not resolve HRM Employment Legal Entity audit scope');
+    $scope = $scope ? db_fetch_assoc($scope) : false;
+    if (!$scope || (int)$scope['legal_entity_id'] <= 0
+        || (int)$scope['worker_id'] !== (int)$worker_id
+        || (int)$scope['legacy_employee_number'] !== (int)$employee_number)
+        return false;
     $changed_fields = array_values(array_unique($changed_fields));
     sort($changed_fields);
     return append_domain_audit_event(array(
         'company_id' => function_exists('user_company') ? (int)user_company() : 0,
-        'legal_entity_id' => 0,
+        'legal_entity_id' => (int)$scope['legal_entity_id'],
         'entity_type' => 'hrm_employment_shadow',
         'entity_key' => array(
             'employment_id' => (int)$employment_id,
@@ -397,7 +410,11 @@ function append_hrm_employment_domain_audit($action, $employment_id, $worker_id,
 function create_hrm_employment_from_employee($employee, $audit = true,
     $source = 'runtime_employee', $allow_legacy_invalid = false)
 {
-    if (!hrm_employment_table_ready() || !function_exists('get_hrm_person_worker_binding'))
+    if (!hrm_employment_table_ready() || !function_exists('get_hrm_person_worker_binding')
+        || !function_exists('get_hrm_default_legal_entity_binding_id'))
+        return false;
+    $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
+    if ($legal_entity_id === false)
         return false;
     $projection = hrm_employment_projection_from_employee($employee, $allow_legacy_invalid);
     if (!$projection)
@@ -417,7 +434,7 @@ function create_hrm_employment_from_employee($employee, $audit = true,
     $sql = "INSERT INTO ".TB_PREF."hrm_employments (worker_id,employment_sequence,"
         ."legal_entity_id,legacy_employee_number,legacy_current,start_date,end_date,"
         ."employment_status,termination_reason_code,interval_quality,source,created_by) VALUES ("
-        .(int)$binding['worker_id'].",1,NULL,".$employee_number.",1,"
+        .(int)$binding['worker_id'].",1,".(int)$legal_entity_id.",".$employee_number.",1,"
         .($projection['start_date'] === null ? 'NULL' : db_escape($projection['start_date'])).","
         .($projection['end_date'] === null ? 'NULL' : db_escape($projection['end_date'])).","
         .db_escape($projection['employment_status']).","
@@ -462,8 +479,11 @@ function synchronize_hrm_employment_from_employee($employee)
     $current = get_hrm_legacy_current_employment($employee_number, true);
     if (!$current)
         return create_hrm_employment_from_employee($employee, true, 'runtime_employee') !== false;
-    if ((int)$current['employment_sequence'] !== 1
-        || $current['legal_entity_id'] !== null
+    if (!function_exists('get_hrm_default_legal_entity_binding_id'))
+        return false;
+    $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
+    if ($legal_entity_id === false || (int)$current['employment_sequence'] !== 1
+        || (int)$current['legal_entity_id'] !== (int)$legal_entity_id
         || (int)$current['legacy_current'] !== 1
         || (int)$current['legacy_employee_number'] !== $employee_number)
         return false;
@@ -547,8 +567,11 @@ function execute_hrm_employment_termination($employee, $effective_date)
     if (!$binding)
         return false;
     $current = get_hrm_legacy_current_employment($employee_number, true);
-    if (!$current || (int)$current['employment_sequence'] !== 1
-        || $current['legal_entity_id'] !== null
+    if (!function_exists('get_hrm_default_legal_entity_binding_id'))
+        return false;
+    $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
+    if (!$current || $legal_entity_id === false || (int)$current['employment_sequence'] !== 1
+        || (int)$current['legal_entity_id'] !== (int)$legal_entity_id
         || (int)$current['legacy_current'] !== 1
         || (int)$current['legacy_employee_number'] !== $employee_number)
         return false;

@@ -1245,7 +1245,7 @@ CREATE TABLE `0_hrm_employments` (
 	`employment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`worker_id` bigint(20) unsigned NOT NULL,
 	`employment_sequence` int(10) unsigned NOT NULL,
-	`legal_entity_id` bigint(20) unsigned DEFAULT NULL,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
 	`legacy_employee_number` int(11) NOT NULL,
 	`legacy_current` tinyint(1) DEFAULT '1',
 	`start_date` date DEFAULT NULL,
@@ -1263,7 +1263,9 @@ CREATE TABLE `0_hrm_employments` (
 	UNIQUE KEY `hrm_employment_legacy_current_uq` (`legacy_employee_number`,`legacy_current`),
 	KEY `hrm_employment_worker_asof_idx` (`worker_id`,`start_date`,`end_date`,`employment_id`),
 	KEY `hrm_employment_status_idx` (`employment_status`,`end_date`,`employment_id`),
-	CONSTRAINT `0_hrm_employments_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	KEY `hrm_employment_legal_entity_idx` (`legal_entity_id`,`employment_id`),
+	CONSTRAINT `0_hrm_employments_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_employments_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_contracts` (
