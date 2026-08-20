@@ -1020,6 +1020,7 @@ DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
+DROP TABLE IF EXISTS `0_hrm_organization_units`;
 DROP TABLE IF EXISTS `0_hrm_legal_entities`;
 DROP TABLE IF EXISTS `0_hrm_employments`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
@@ -1240,6 +1241,33 @@ CREATE TABLE `0_hrm_legal_entities` (
 	UNIQUE KEY `hrm_legal_entity_legacy_default_uq` (`legacy_default`),
 	KEY `hrm_legal_entity_status_idx` (`entity_status`,`legal_entity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_organization_units` (
+	`organization_unit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`legacy_department_id` int(11) NOT NULL,
+	`unit_code` varchar(32) NOT NULL,
+	`legacy_department_code` varchar(20) DEFAULT NULL,
+	`unit_name` text NOT NULL,
+	`parent_organization_unit_id` bigint(20) unsigned DEFAULT NULL,
+	`legacy_manager_employee_id` varchar(20) DEFAULT NULL,
+	`legacy_cost_center_id` int(11) NOT NULL DEFAULT '0',
+	`unit_status` varchar(16) NOT NULL DEFAULT 'active',
+	`reference_quality` varchar(32) NOT NULL DEFAULT 'legacy_department_only',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`organization_unit_id`),
+	UNIQUE KEY `hrm_org_unit_legacy_department_uq` (`legacy_department_id`),
+	UNIQUE KEY `hrm_org_unit_entity_code_uq` (`legal_entity_id`,`unit_code`),
+	KEY `hrm_org_unit_parent_idx` (`parent_organization_unit_id`,`organization_unit_id`),
+	KEY `hrm_org_unit_status_idx` (`legal_entity_id`,`unit_status`,`organization_unit_id`),
+	CONSTRAINT `0_hrm_org_units_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_org_units_parent_fk` FOREIGN KEY (`parent_organization_unit_id`) REFERENCES `0_hrm_organization_units` (`organization_unit_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 
 CREATE TABLE `0_hrm_employments` (
 	`employment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
