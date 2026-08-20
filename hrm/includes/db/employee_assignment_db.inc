@@ -189,6 +189,39 @@ function hrm_assignment_intervals_overlap($left_from, $left_to, $right_from, $ri
         && ($right_to === null || $left_from === null || strcmp($left_from, $right_to) <= 0);
 }
 
+/** @return bool */
+function hrm_assignment_interval_rows_are_non_overlapping($rows)
+{
+    if (!is_array($rows))
+        return false;
+    $count = count($rows);
+    for ($i = 0; $i < $count; $i++) {
+        if (!is_array($rows[$i]) || empty($rows[$i]['assignment_id']))
+            return false;
+        $raw_from = isset($rows[$i]['effective_from']) ? $rows[$i]['effective_from'] : null;
+        $raw_to = isset($rows[$i]['effective_to']) ? $rows[$i]['effective_to'] : null;
+        $from = ($raw_from === null || $raw_from === '') ? null : hrm_assignment_normalize_effective_date($raw_from);
+        $to = ($raw_to === null || $raw_to === '') ? null : hrm_assignment_normalize_effective_date($raw_to);
+        if ($from === false || $to === false)
+            return false;
+        // Preserve one accepted legacy-invalid shadow interval, but deny it
+        // once multiple Assignment episodes would share the Employment.
+        if ($count > 1 && $from !== null && $to !== null && strcmp($to, $from) < 0)
+            return false;
+        for ($j = $i + 1; $j < $count; $j++) {
+            if (!is_array($rows[$j]) || empty($rows[$j]['assignment_id']))
+                return false;
+            if (hrm_assignment_intervals_overlap(
+                $raw_from, $raw_to,
+                isset($rows[$j]['effective_from']) ? $rows[$j]['effective_from'] : null,
+                isset($rows[$j]['effective_to']) ? $rows[$j]['effective_to'] : null
+            ))
+                return false;
+        }
+    }
+    return true;
+}
+
 /**
  * Lock all Assignment rows for one Employment and prove pairwise chronology.
  * An optional replacement validates a pending update before it is written.
@@ -217,25 +250,7 @@ function hrm_assignment_employment_interval_policy_allows($employment_id,
     }
     if ($replacement_assignment_id > 0 && !$replaced)
         return false;
-    $count = count($rows);
-    for ($i = 0; $i < $count; $i++) {
-        $from = hrm_assignment_normalize_effective_date(isset($rows[$i]['effective_from']) ? $rows[$i]['effective_from'] : null);
-        $to = hrm_assignment_normalize_effective_date(isset($rows[$i]['effective_to']) ? $rows[$i]['effective_to'] : null);
-        if ($from === false || $to === false)
-            return false;
-        // Preserve one accepted legacy-invalid shadow interval, but deny it
-        // once multiple Assignment episodes would share the Employment.
-        if ($count > 1 && $from !== null && $to !== null && strcmp($to, $from) < 0)
-            return false;
-        for ($j = $i + 1; $j < $count; $j++) {
-            if (hrm_assignment_intervals_overlap(
-                $rows[$i]['effective_from'], $rows[$i]['effective_to'],
-                $rows[$j]['effective_from'], $rows[$j]['effective_to']
-            ))
-                return false;
-        }
-    }
-    return true;
+    return hrm_assignment_interval_rows_are_non_overlapping($rows);
 }
 
 function hrm_assignment_effective_change_type($value)
