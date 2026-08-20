@@ -15,6 +15,8 @@ include_once($path_to_root . '/includes/attachment_service.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_domain_audit.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root . '/hrm/includes/db/legal_entity_db.inc');
+include_once($path_to_root . '/hrm/includes/db/organization_unit_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_employment_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_contract_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_assignment_db.inc');

@@ -55,12 +55,16 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		);
 
 		if ($selected_id != '') {
-			departments_entity::modify($selected_id, $data);
-			display_notification(_('Selected department has been updated'));
+			if (departments_entity::modify($selected_id, $data))
+				display_notification(_('Selected department has been updated'));
+			else
+				display_error(_('The Department and Organization Unit could not be synchronized.'));
 		}
 		else {
-			departments_entity::create($data);
-			display_notification(_('New department has been added'));
+			if (departments_entity::create($data))
+				display_notification(_('New department has been added'));
+			else
+				display_error(_('The Department and Organization Unit could not be created.'));
 		}
 		
 		$Mode = 'RESET';
@@ -74,7 +78,7 @@ if ($Mode == 'Delete') {
 	else if (departments_entity::has_children($selected_id))
 		display_error(_('The Department cannot be deleted.'));
 	else if (!departments_entity::remove($selected_id))
-		display_error(_('The Department cannot be deleted.'));
+		display_error(_('The Department cannot be deleted after organization normalization. Mark it inactive instead.'));
 	else
 		display_notification(_('Selected department has been deleted'));
 	$Mode = 'RESET';
@@ -132,7 +136,7 @@ while ($myrow = db_fetch($result)) {
 		label_cell($liability_acc.' - '.get_gl_account_name($liability_acc));
 	else
 		label_cell('');
-	inactive_control_cell($myrow['department_id'], $myrow['inactive'], 'departments', 'department_id');
+	hrm_department_inactive_control_cell($myrow['department_id'], $myrow['inactive']);
 	edit_button_cell('Edit'.$myrow['department_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['department_id'], _('Delete'));
 	end_row();
