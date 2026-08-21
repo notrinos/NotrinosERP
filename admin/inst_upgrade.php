@@ -62,14 +62,15 @@ $k = 0; //row colour counter
 
 $uptodate = true;
 foreach($site_status as $i => $comp) {
-	$status = $comp['version']==$db_version;
+	$status = $comp['status'] && $comp['version']==$db_version;
 
 	alt_table_row_color($k);
 
 	label_cell($comp['name']);
 	label_cell($comp['table_set']);
 
-	label_cell($comp['version'], 'align=center' .($status ? '':' class=redfg')/*, 'class='.( $status ? 'ok' : 'error')*/);
+	label_cell($comp['status'] ? $comp['version'] : _('Unavailable'),
+		'align=center' .($status ? '':' class=redfg')/*, 'class='.( $status ? 'ok' : 'error')*/);
 
 	$log = VARLOG_PATH.'/upgrade.'.$i.'.log';
 	if (file_exists($log)) {
@@ -79,7 +80,9 @@ foreach($site_status as $i => $comp) {
 	else
 		label_cell('-', 'align=center');
 
-	if (!$status) {
+	if (!$comp['status'])
+		label_cell(_('Unavailable'));
+	else if (!$status) {
 		label_cell(radio(null, 'select_comp', $i, null, true), 'align=center');
 		$uptodate = false;
 	}
