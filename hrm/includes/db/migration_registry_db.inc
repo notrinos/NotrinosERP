@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.214',
-        'active_legacy_payroll_contract'=>'1.0.168',
-        'next_backlog_item'=>'independently review Job and Position source semantics before any normalized Job or Position foundation',
+        'active_database_version'=>'1.0.215',
+        'active_legacy_payroll_contract'=>'1.0.169',
+        'next_backlog_item'=>'independently review legacy Position writer synchronization and exact Assignment-to-Position binding before any cutover',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'read-only Job/Position semantic inventory; no production, schema, database, or custody file changes',
+        'next_slice_scope'=>'read-only Position writer/binding dependency review before synchronization or Assignment binding; Job remains deferred',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -45,6 +45,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_grade_foundation.php'),
             'hrm_fnd_003_assignment_grade_binding'=>array('previous'=>'1.0.213','version'=>'1.0.214',
                 'file'=>'sql/upgrade_hrm_fnd_003_assignment_grade_binding.php'),
+            'hrm_fnd_003_position_foundation'=>array('previous'=>'1.0.214','version'=>'1.0.215',
+                'file'=>'sql/upgrade_hrm_fnd_003_position_foundation.php'),
         ),
     );
 }

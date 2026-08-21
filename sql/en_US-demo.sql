@@ -1387,6 +1387,27 @@ CREATE TABLE `0_hrm_grades` (
 	CONSTRAINT `0_hrm_grades_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+CREATE TABLE `0_hrm_positions` (
+	`position_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`legacy_position_id` int(11) NOT NULL,
+	`position_code` varchar(32) NOT NULL,
+	`legacy_position_code` varchar(20) DEFAULT NULL,
+	`position_name` text NOT NULL,
+	`position_status` varchar(16) NOT NULL DEFAULT 'active',
+	`reference_quality` varchar(32) NOT NULL DEFAULT 'legacy_position_identity_only',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`position_id`),
+	UNIQUE KEY `hrm_position_legacy_uq` (`legacy_position_id`),
+	UNIQUE KEY `hrm_position_entity_code_uq` (`legal_entity_id`,`position_code`),
+	KEY `hrm_position_status_idx` (`legal_entity_id`,`position_status`,`position_id`),
+	CONSTRAINT `0_hrm_positions_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_organization_units` (
 	`organization_unit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
