@@ -1021,6 +1021,7 @@ DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
 DROP TABLE IF EXISTS `0_hrm_organization_units`;
+DROP TABLE IF EXISTS `0_hrm_grades`;
 DROP TABLE IF EXISTS `0_hrm_legal_entities`;
 DROP TABLE IF EXISTS `0_hrm_employments`;
 DROP TABLE IF EXISTS `0_hrm_employee_worker_map`;
@@ -1241,6 +1242,29 @@ CREATE TABLE `0_hrm_legal_entities` (
 	UNIQUE KEY `hrm_legal_entity_legacy_default_uq` (`legacy_default`),
 	KEY `hrm_legal_entity_status_idx` (`entity_status`,`legal_entity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_grades` (
+	`grade_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`legacy_grade_id` int(11) NOT NULL,
+	`grade_code` varchar(32) NOT NULL,
+	`legacy_grade_code` varchar(20) DEFAULT NULL,
+	`grade_name` varchar(60) NOT NULL,
+	`grade_level` int(11) NOT NULL DEFAULT '0',
+	`grade_status` varchar(16) NOT NULL DEFAULT 'active',
+	`reference_quality` varchar(32) NOT NULL DEFAULT 'legacy_pay_grade_only',
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`grade_id`),
+	UNIQUE KEY `hrm_grade_legacy_uq` (`legacy_grade_id`),
+	UNIQUE KEY `hrm_grade_entity_code_uq` (`legal_entity_id`,`grade_code`),
+	KEY `hrm_grade_status_level_idx` (`legal_entity_id`,`grade_status`,`grade_level`,`grade_id`),
+	CONSTRAINT `0_hrm_grades_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_organization_units` (
 	`organization_unit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
