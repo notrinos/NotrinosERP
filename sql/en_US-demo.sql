@@ -1365,7 +1365,6 @@ CREATE TABLE `0_hrm_legal_entities` (
 	UNIQUE KEY `hrm_legal_entity_legacy_default_uq` (`legacy_default`),
 	KEY `hrm_legal_entity_status_idx` (`entity_status`,`legal_entity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
-
 CREATE TABLE `0_hrm_grades` (
 	`grade_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
@@ -1479,6 +1478,7 @@ CREATE TABLE `0_hrm_assignments` (
 	`organization_unit_id` bigint(20) unsigned DEFAULT NULL,
 	`legacy_position_id` int(11) NOT NULL DEFAULT '0',
 	`legacy_grade_id` int(11) NOT NULL DEFAULT '0',
+	`grade_id` bigint(20) unsigned DEFAULT NULL,
 	`legacy_shift_id` int(11) DEFAULT NULL,
 	`legacy_reporting_to` varchar(20) DEFAULT NULL,
 	`legacy_cost_center_id` int(11) DEFAULT NULL,
@@ -1498,8 +1498,10 @@ CREATE TABLE `0_hrm_assignments` (
 	KEY `hrm_assignment_employment_asof_idx` (`employment_id`,`effective_from`,`effective_to`,`assignment_id`),
 	KEY `hrm_assignment_legacy_work_idx` (`legacy_department_id`,`legacy_position_id`,`legacy_grade_id`,`assignment_id`),
 	KEY `hrm_assignment_org_unit_asof_idx` (`organization_unit_id`,`effective_from`,`effective_to`,`assignment_id`),
+	KEY `hrm_assignment_grade_asof_idx` (`grade_id`,`effective_from`,`effective_to`,`assignment_id`),
 	CONSTRAINT `0_hrm_assignments_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
-	CONSTRAINT `0_hrm_assignments_org_unit_fk` FOREIGN KEY (`organization_unit_id`) REFERENCES `0_hrm_organization_units` (`organization_unit_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	CONSTRAINT `0_hrm_assignments_org_unit_fk` FOREIGN KEY (`organization_unit_id`) REFERENCES `0_hrm_organization_units` (`organization_unit_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_assignments_grade_fk` FOREIGN KEY (`grade_id`) REFERENCES `0_hrm_grades` (`grade_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_canonical_links` (

@@ -58,12 +58,16 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
             );
 
             if ($selected_id != '') {
-                grades_entity::modify($selected_id, $data);
-                display_notification(_('Selected pay grade has been updated.'));
+                if (grades_entity::modify($selected_id, $data))
+                    display_notification(_('Selected pay grade has been updated.'));
+                else
+                    display_error(_('The Pay Grade could not be synchronized. No changes were committed.'));
             }
             else {
-                grades_entity::create($data);
-                display_notification(_('New pay grade has been added.'));
+                if (grades_entity::create($data))
+                    display_notification(_('New pay grade has been added.'));
+                else
+                    display_error(_('The Pay Grade could not be synchronized. No changes were committed.'));
             }
 
             $Mode = 'RESET';
@@ -90,12 +94,16 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
         ), $extra);
 
         if ($selected_id != '') {
-            grades_entity::modify($selected_id, $data);
-            display_notification(_('Selected pay grade has been updated.'));
+            if (grades_entity::modify($selected_id, $data))
+                display_notification(_('Selected pay grade has been updated.'));
+            else
+                display_error(_('The Pay Grade could not be synchronized. No changes were committed.'));
         }
         else {
-            grades_entity::create($data);
-            display_notification(_('New pay grade has been added.'));
+            if (grades_entity::create($data))
+                display_notification(_('New pay grade has been added.'));
+            else
+                display_error(_('The Pay Grade could not be synchronized. No changes were committed.'));
         }
 
         $Mode = 'RESET';
@@ -107,8 +115,10 @@ if ($Mode == 'Delete') {
         display_error(_('The selected pay grade cannot be deleted because it is in use by employees.'));
     }
     else {
-        grades_entity::remove($selected_id);
-        display_notification(_('Selected pay grade has been deleted.'));
+        if (grades_entity::remove($selected_id))
+            display_notification(_('Selected pay grade has been deleted.'));
+        else
+            display_error(_('Normalized Pay Grades cannot be physically deleted. Inactivate the Pay Grade instead.'));
     }
     $Mode = 'RESET';
 }
@@ -146,7 +156,7 @@ while ($myrow = db_fetch($result)) {
     amount_cell($myrow['mid_salary']);
     amount_cell($myrow['max_salary']);
 
-    inactive_control_cell($myrow['grade_id'], $myrow['inactive'], 'pay_grades', 'grade_id');
+    hrm_pay_grade_inactive_control_cell($myrow['grade_id'], $myrow['inactive']);
     edit_button_cell('Edit'.$myrow['grade_id'], _('Edit'));
     delete_button_cell('Delete'.$myrow['grade_id'], _('Delete'));
     end_row();
