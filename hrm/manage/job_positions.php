@@ -43,20 +43,24 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	else {
 
 		if ($selected_id != '') {
-			job_positions_entity::modify($selected_id, array(
+			if (job_positions_entity::modify($selected_id, array(
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			));
-			display_notification(_('Selected job position has been updated'));
+			)))
+				display_notification(_('Selected job position has been updated'));
+			else
+				display_error(_('The Position could not be synchronized. No changes were committed.'));
 		}
 		else {
-			job_positions_entity::create(array(
+			if (job_positions_entity::create(array(
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			));
-			display_notification(_('New job position has been added'));
+			)))
+				display_notification(_('New job position has been added'));
+			else
+				display_error(_('The Position could not be synchronized. No changes were committed.'));
 		}
 		
 		$Mode = 'RESET';
@@ -68,8 +72,10 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'employees', 'position_id'))
 		display_error(_('The Position cannot be deleted.'));
 	else {
-		job_positions_entity::remove($selected_id);
-		display_notification(_('Selected job position has been deleted'));
+		if (job_positions_entity::remove($selected_id))
+			display_notification(_('Selected job position has been deleted'));
+		else
+			display_error(_('Normalized Positions cannot be physically deleted. Inactivate the Position instead.'));
 	}
 	$Mode = 'RESET';
 }
@@ -103,7 +109,7 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['position_name']);
 	amount_cell($myrow['basic_amount']);
 	label_cell($class_name);
-	inactive_control_cell($myrow['position_id'], $myrow['inactive'], 'positions', 'position_id');
+	hrm_job_position_inactive_control_cell($myrow['position_id'], $myrow['inactive']);
 	edit_button_cell('Edit'.$myrow['position_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['position_id'], _('Delete'));
 	end_row();
