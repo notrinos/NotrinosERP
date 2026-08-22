@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.218',
-        'active_legacy_payroll_contract'=>'1.0.172',
-        'next_backlog_item'=>'read-only Work Location source/mapping and Assignment binding dependency review only',
+        'active_database_version'=>'1.0.219',
+        'active_legacy_payroll_contract'=>'1.0.173',
+        'next_backlog_item'=>'read-only Work Location writer/attributes and Assignment-location binding dependency review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review Work Location greenfield identity and authoritative mapping boundary after empty Establishment foundation; no location inference or Assignment binding implementation',
+        'next_slice_scope'=>'review greenfield Work Location writer/attributes plus Assignment-location binding after zero-row foundation; no inferred legacy mapping or payroll-tax routing',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -53,6 +53,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_job_foundation.php'),
             'hrm_fnd_003_establishment_foundation'=>array('previous'=>'1.0.217','version'=>'1.0.218',
                 'file'=>'sql/upgrade_hrm_fnd_003_establishment_foundation.php'),
+            'hrm_fnd_003_work_location_foundation'=>array('previous'=>'1.0.218','version'=>'1.0.219',
+                'file'=>'sql/upgrade_hrm_fnd_003_work_location_foundation.php'),
         ),
     );
 }

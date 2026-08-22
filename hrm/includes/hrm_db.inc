@@ -28,6 +28,7 @@ include_once($path_to_root.'/hrm/includes/db/grade_db.inc');
 include_once($path_to_root.'/hrm/includes/db/position_db.inc');
 include_once($path_to_root.'/hrm/includes/db/job_db.inc');
 include_once($path_to_root.'/hrm/includes/db/establishment_db.inc');
+include_once($path_to_root.'/hrm/includes/db/work_location_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_history_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_document_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_dependent_db.inc');
