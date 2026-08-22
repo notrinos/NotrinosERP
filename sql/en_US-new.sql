@@ -1264,6 +1264,24 @@ CREATE TABLE `0_hrm_grades` (
 	CONSTRAINT `0_hrm_grades_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+CREATE TABLE `0_hrm_jobs` (
+	`job_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`job_code` varchar(32) NOT NULL,
+	`job_name` varchar(120) NOT NULL,
+	`job_status` varchar(16) NOT NULL DEFAULT 'active',
+	`reference_quality` varchar(32) NOT NULL DEFAULT 'greenfield_normalized_only',
+	`source` varchar(32) NOT NULL DEFAULT 'greenfield_normalized',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`job_id`),
+	UNIQUE KEY `hrm_job_entity_code_uq` (`legal_entity_id`,`job_code`),
+	KEY `hrm_job_status_idx` (`legal_entity_id`,`job_status`,`job_id`),
+	CONSTRAINT `0_hrm_jobs_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_positions` (
 	`position_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
