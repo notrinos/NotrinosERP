@@ -367,6 +367,7 @@ $security_areas =array(
 	'SA_EOSCALC'          => array(SS_HRM_C|22, _('End of service calculation tiers')),
 	'SA_IMPORTEMP'        => array(SS_HRM_C|23, _('Import/export employees')),
 	'SA_IMPORTATT'        => array(SS_HRM_C|24, _('Import/export attendance')),
+	'SA_WORKLOCATION'      => array(SS_HRM_C|25, _('Manage HR work locations')),
 
 	// Payroll & Human Resources — Transactions (SS_HRM)
 	'SA_ATTENDANCE'       => array(SS_HRM|1,  _('Attendance entry')),
