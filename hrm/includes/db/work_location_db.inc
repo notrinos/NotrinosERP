@@ -122,6 +122,29 @@ function hrm_work_location_row_owned_by_admin_writer($row, $legal_entity_id)
         && (string)$row['source'] === 'hrm_work_location_admin';
 }
 
+/**
+ * Resolve one Assignment writer target without inferring location semantics.
+ * Only explicit administrator-owned Work Locations in the Employment Legal
+ * Entity are eligible. New bindings require an active target; preservation of
+ * an existing historical binding may opt out of the active-state requirement.
+ *
+ * @return int|false
+ */
+function get_hrm_verified_assignment_work_location_binding($work_location_id, $legal_entity_id,
+    $for_update = false, $require_active = true)
+{
+    if (!is_numeric($work_location_id)
+        || (string)(int)$work_location_id !== trim((string)$work_location_id)
+        || (int)$work_location_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $row = get_hrm_work_location((int)$work_location_id, $for_update);
+    if (!hrm_work_location_row_owned_by_admin_writer($row, (int)$legal_entity_id))
+        return false;
+    if ($require_active && (string)$row['work_location_status'] !== 'active')
+        return false;
+    return (int)$row['work_location_id'];
+}
+
 function append_hrm_work_location_writer_audit($action, $work_location_id, $legal_entity_id,
     $changed_fields, $reason_code)
 {

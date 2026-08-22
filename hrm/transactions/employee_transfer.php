@@ -71,6 +71,8 @@ if (!isset($_POST['new_position_id']))
     $_POST['new_position_id'] = 0;
 if (!isset($_POST['new_grade_id']))
     $_POST['new_grade_id'] = 0;
+if (!isset($_POST['new_work_location_id']))
+    $_POST['new_work_location_id'] = 0;
 if (!isset($_POST['effective_date']))
     $_POST['effective_date'] = Today();
 if (!isset($_POST['reason']))
@@ -89,6 +91,10 @@ if (isset($_POST['Process'])) {
     } elseif ((int)$_POST['new_department_id'] == 0) {
         display_error(_('New Department is required and must be selected.'));
         set_focus('new_department_id');
+    } elseif (trim((string)$_POST['new_work_location_id']) !== '0'
+        && (preg_match('/^[1-9][0-9]*$/D', trim((string)$_POST['new_work_location_id'])) !== 1)) {
+        display_error(_('New Work Location selection is invalid.'));
+        set_focus('new_work_location_id');
     } else {
         $employee = get_employee_assignment_context_projection($_POST['employee_id']);
         if (!$employee) {
@@ -102,16 +108,19 @@ if (isset($_POST['Process'])) {
             $new_department = (int)$_POST['new_department_id'];
             $new_position = (int)$_POST['new_position_id'];
             $new_grade = (int)$_POST['new_grade_id'];
+            $assignment_effective_change = array(
+                'effective_date' => date2sql($_POST['effective_date']),
+                'change_type' => HRM_HIST_TRANSFER
+            );
+            if (trim((string)$_POST['new_work_location_id']) !== '0')
+                $assignment_effective_change['work_location_id'] = trim((string)$_POST['new_work_location_id']);
 
             begin_transaction();
             $employee_updated = update_employee($_POST['employee_id'], array(
                 'department_id' => $new_department,
                 'position_id' => $new_position,
                 'grade_id' => $new_grade
-            ), array(
-                'effective_date' => date2sql($_POST['effective_date']),
-                'change_type' => HRM_HIST_TRANSFER
-            ));
+            ), $assignment_effective_change);
 
             if (!$employee_updated) {
                 cancel_transaction();
@@ -154,6 +163,7 @@ employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, fal
 departments_list_row(_('New Department:'), 'new_department_id');
 positions_list_row(_('New Position:'), 'new_position_id');
 grades_list_row(_('New Grade:'), 'new_grade_id');
+assignment_work_locations_list_row(_('New Work Location:'), 'new_work_location_id');
 date_row(_('Effective Date:'), 'effective_date');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);
 end_table(1);

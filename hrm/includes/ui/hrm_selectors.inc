@@ -108,6 +108,35 @@ function work_shifts_list_row($label, $name, $selected=null, $none_option=true, 
 }
 
 //------------------------------------------------------------------
+// Assignment Work Location selector (active explicit HRM identities only)
+//------------------------------------------------------------------
+function assignment_work_locations_list($name, $selected=0, $submit_on_change=false) {
+    global $path_to_root;
+    include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
+    $legal_entity_id = function_exists('get_hrm_default_legal_entity_binding_id')
+        ? get_hrm_default_legal_entity_binding_id(false) : false;
+    if ($legal_entity_id === false || (int)$legal_entity_id <= 0)
+        $sql = "SELECT work_location_id,work_location_name FROM ".TB_PREF."hrm_work_locations WHERE 1=0";
+    else
+        $sql = "SELECT work_location_id,CONCAT(work_location_code, ' - ', work_location_name) work_location_name "
+            ."FROM ".TB_PREF."hrm_work_locations WHERE legal_entity_id=".(int)$legal_entity_id
+            ." AND work_location_status='active' AND reference_quality='greenfield_explicit_admin_input' "
+            ."AND source='hrm_work_location_admin' ORDER BY work_location_code,work_location_id";
+    return combo_input($name, $selected, $sql, 'work_location_id', 'work_location_name', array(
+        'order' => false, // SQL already carries deterministic work_location_code,work_location_id ordering.
+        'select_submit' => $submit_on_change,
+        'spec_option' => _('-- Keep current Work Location --'),
+        'spec_id' => 0,
+    ));
+}
+
+function assignment_work_locations_list_row($label, $name, $selected=0, $submit_on_change=false) {
+    echo "<tr><td class='label'>$label</td><td>";
+    echo assignment_work_locations_list($name, $selected, $submit_on_change);
+    echo "</td></tr>\n";
+}
+
+//------------------------------------------------------------------
 // Document Type selector
 //------------------------------------------------------------------
 function document_types_list($name, $selected=null, $none_option=false, $submit_on_change=false) {
