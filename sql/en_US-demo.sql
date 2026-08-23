@@ -1447,6 +1447,7 @@ CREATE TABLE `0_hrm_work_locations` (
 CREATE TABLE `0_hrm_positions` (
 	`position_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`job_id` bigint(20) unsigned DEFAULT NULL,
 	`legacy_position_id` int(11) NOT NULL,
 	`position_code` varchar(32) NOT NULL,
 	`legacy_position_code` varchar(20) DEFAULT NULL,
@@ -1462,7 +1463,9 @@ CREATE TABLE `0_hrm_positions` (
 	UNIQUE KEY `hrm_position_legacy_uq` (`legacy_position_id`),
 	UNIQUE KEY `hrm_position_entity_code_uq` (`legal_entity_id`,`position_code`),
 	KEY `hrm_position_status_idx` (`legal_entity_id`,`position_status`,`position_id`),
-	CONSTRAINT `0_hrm_positions_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	KEY `hrm_position_job_idx` (`job_id`,`position_status`,`position_id`),
+	CONSTRAINT `0_hrm_positions_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_positions_job_fk` FOREIGN KEY (`job_id`) REFERENCES `0_hrm_jobs` (`job_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_organization_units` (
