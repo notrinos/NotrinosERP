@@ -59,6 +59,7 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('&Departments'),              'hrm/manage/departments.php?',                         'SA_DEPARTMENT',        MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Classification'),       'hrm/manage/job_classes.php?',                         'SA_JOBCLASS',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Positions'),            'hrm/manage/job_positions.php?',                       'SA_POSITION',          MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('&Establishments'),            'hrm/manage/establishments.php?',                        'SA_ESTABLISHMENT',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Work &Locations'),           'hrm/manage/work_locations.php?',                       'SA_WORKLOCATION',      MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Pay &Grades'),               'hrm/manage/pay_grades.php?',                          'SA_PAYGRADE',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Document T&ypes'),           'hrm/manage/doc_types.php?',                           'SA_DOCTYPE',           MENU_MAINTENANCE);
