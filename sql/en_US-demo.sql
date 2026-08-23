@@ -1425,6 +1425,7 @@ CREATE TABLE `0_hrm_establishments` (
 CREATE TABLE `0_hrm_work_locations` (
 	`work_location_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`establishment_id` bigint(20) unsigned DEFAULT NULL,
 	`work_location_code` varchar(32) NOT NULL,
 	`work_location_name` varchar(120) NOT NULL,
 	`work_location_status` varchar(16) NOT NULL DEFAULT 'active',
@@ -1437,7 +1438,9 @@ CREATE TABLE `0_hrm_work_locations` (
 	PRIMARY KEY (`work_location_id`),
 	UNIQUE KEY `hrm_work_location_entity_code_uq` (`legal_entity_id`,`work_location_code`),
 	KEY `hrm_work_location_status_idx` (`legal_entity_id`,`work_location_status`,`work_location_id`),
-	CONSTRAINT `0_hrm_work_locations_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	KEY `hrm_work_location_establishment_idx` (`establishment_id`,`work_location_status`,`work_location_id`),
+	CONSTRAINT `0_hrm_work_locations_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_work_locations_establishment_fk` FOREIGN KEY (`establishment_id`) REFERENCES `0_hrm_establishments` (`establishment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
