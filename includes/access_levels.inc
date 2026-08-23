@@ -369,6 +369,7 @@ $security_areas =array(
 	'SA_IMPORTATT'        => array(SS_HRM_C|24, _('Import/export attendance')),
 	'SA_WORKLOCATION'      => array(SS_HRM_C|25, _('Manage HR work locations')),
 	'SA_ESTABLISHMENT'     => array(SS_HRM_C|26, _('Manage HR establishments')),
+	'SA_JOB'               => array(SS_HRM_C|27, _('Manage HR jobs')),
 
 	// Payroll & Human Resources — Transactions (SS_HRM)
 	'SA_ATTENDANCE'       => array(SS_HRM|1,  _('Attendance entry')),
