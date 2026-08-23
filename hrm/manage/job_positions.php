@@ -18,6 +18,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/job_classes_entity.inc');
+include_once($path_to_root.'/hrm/includes/db/job_db.inc');
 
 //--------------------------------------------------------------------------
 
@@ -27,15 +28,44 @@ if(!job_classes_entity::has_records()) {
 	display_error(_('No Job Class found in the system, please define Job Classes first.'));
 	display_footer_exit();
 }
+if (!hrm_position_job_column_ready() || !hrm_job_table_ready()) {
+    display_error(_('The normalized Position Job relationship writer is not installed. Run the normal software upgrade first.'));
+    display_footer_exit();
+}
+$legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
+if ($legal_entity_id === false) {
+    display_error(_('The default HRM Legal Entity is missing or inconsistent. Position maintenance is blocked.'));
+    display_footer_exit();
+}
+$job_options = array(0=>_('Unassigned'));
+$job_labels = array(0=>_('Unassigned'));
+$jobs = get_hrm_jobs_for_legal_entity((int)$legal_entity_id, false);
+if ($jobs) {
+    while ($job = db_fetch_assoc($jobs)) {
+        if (!hrm_job_row_owned_by_admin_writer($job, (int)$legal_entity_id))
+            continue;
+        $label = $job['job_code'].' - '.$job['job_name'];
+        if ($job['job_status'] !== 'active')
+            $label .= ' '._('(Inactive)');
+        $job_labels[(int)$job['job_id']] = $label;
+        if ($job['job_status'] === 'active')
+            $job_options[(int)$job['job_id']] = $label;
+    }
+}
 
 simple_page_mode(false);
 
 if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
+    $job_id = normalize_hrm_position_job_target(get_post('job_id', '0'));
 	if(empty(trim($_POST['position_name']))) {
 		display_error(_('Position name cannot be empty.'));
 		set_focus('position_name');
 	}
+    elseif($job_id === false) {
+        display_error(_('The selected Job is invalid.'));
+        set_focus('job_id');
+    }
 	elseif(!check_num('basic_amount', 0)) {
 		display_error(_('Amount field value must be a positive number.'));
 		set_focus('basic_amount');
@@ -47,7 +77,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			)))
+			), $job_id, true))
 				display_notification(_('Selected job position has been updated'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -57,7 +87,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			)))
+			), $job_id, true))
 				display_notification(_('New job position has been added'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -85,6 +115,7 @@ if($Mode == 'RESET') {
 	$_POST['selected_id'] = '';
 	$_POST['position_name'] = '';
 	$_POST['basic_amount'] = '';
+    $_POST['job_id'] = '0';
 }
 
 //--------------------------------------------------------------------------
@@ -93,7 +124,7 @@ start_form();
 
 start_table(TABLESTYLE);
 
-$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), '', '');
+$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), _('Job'), '', '');
 
 inactive_control_column($th);
 table_header($th);
@@ -109,6 +140,10 @@ while ($myrow = db_fetch($result)) {
 	label_cell($myrow['position_name']);
 	amount_cell($myrow['basic_amount']);
 	label_cell($class_name);
+    $normalized_position = get_hrm_position_by_legacy_position((int)$myrow['position_id'], false);
+    $bound_job_id = is_array($normalized_position) && isset($normalized_position['job_id']) && $normalized_position['job_id'] !== null
+        ? (int)$normalized_position['job_id'] : 0;
+    label_cell(isset($job_labels[$bound_job_id]) ? $job_labels[$bound_job_id] : _('Invalid/out-of-scope'));
 	hrm_job_position_inactive_control_cell($myrow['position_id'], $myrow['inactive']);
 	edit_button_cell('Edit'.$myrow['position_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['position_id'], _('Delete'));
@@ -127,6 +162,12 @@ if($selected_id != '') {
 		$_POST['position_name']  = $myrow['position_name'];
 		$_POST['basic_amount'] = price_format($myrow['basic_amount']);
 		$_POST['job_class_id'] = $myrow['job_class_id'];
+        $normalized_position = get_hrm_position_by_legacy_position((int)$selected_id, false);
+        $_POST['job_id'] = is_array($normalized_position) && isset($normalized_position['job_id']) && $normalized_position['job_id'] !== null
+            ? (string)(int)$normalized_position['job_id'] : '0';
+        $current_job_id = (int)$_POST['job_id'];
+        if ($current_job_id > 0 && isset($job_labels[$current_job_id]) && !isset($job_options[$current_job_id]))
+            $job_options[$current_job_id] = $job_labels[$current_job_id];
 	}
 	hidden('selected_id', $selected_id);
 }
@@ -134,6 +175,7 @@ if($selected_id != '') {
 text_row_ex(_('Position Name:'), 'position_name', 50, 60);
 amount_row(_('Salary Basic Amount:'), 'basic_amount', null, null, null, null, true);
 job_classes_list_row(_('Job Class:'), 'job_class_id');
+label_row(_('Job:'), array_selector('job_id', get_post('job_id', '0'), $job_options));
 
 end_table(1);
 

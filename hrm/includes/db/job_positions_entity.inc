@@ -91,9 +91,14 @@ class job_positions_entity extends Entity {
         return $changed;
     }
 
-    public static function create($data)
+    public static function create($data, $job_id = null, $job_explicit = false)
     {
         if (!hrm_job_position_writer_authorized())
+            return false;
+        if ($job_explicit && !hrm_position_job_column_ready())
+            return false;
+        $target_job_id = $job_explicit ? normalize_hrm_position_job_target($job_id) : null;
+        if ($job_explicit && $target_job_id === false)
             return false;
         begin_transaction();
         $e = new static();
@@ -106,6 +111,8 @@ class job_positions_entity extends Entity {
                 array('legacy_position_code','position_name','position_status'),
                 'create'
             );
+        if ($result && $job_explicit)
+            $result = set_hrm_position_job_binding($legacy_position_id, $target_job_id);
         if ($result)
             commit_transaction();
         else
@@ -113,9 +120,14 @@ class job_positions_entity extends Entity {
         return (bool)$result;
     }
 
-    public static function modify($key, $data)
+    public static function modify($key, $data, $job_id = null, $job_explicit = false)
     {
         if (!hrm_job_position_writer_authorized() || (int)$key <= 0)
+            return false;
+        if ($job_explicit && !hrm_position_job_column_ready())
+            return false;
+        $target_job_id = $job_explicit ? normalize_hrm_position_job_target($job_id) : null;
+        if ($job_explicit && $target_job_id === false)
             return false;
         begin_transaction();
         $e = new static();
@@ -125,6 +137,8 @@ class job_positions_entity extends Entity {
         $result = $before !== false && $e->update($key, $data);
         if ($result && hrm_position_table_ready() && !empty($changed))
             $result = synchronize_hrm_position_from_legacy_position((int)$key, $changed, 'update');
+        if ($result && $job_explicit)
+            $result = set_hrm_position_job_binding((int)$key, $target_job_id);
         if ($result && hrm_position_table_ready())
             $result = is_array(static::lock_projection_state(true));
         if ($result)

@@ -24,6 +24,24 @@ function hrm_position_table_ready()
     return $result && db_num_rows($result) === 1;
 }
 
+/** @return bool */
+function hrm_position_job_column_ready()
+{
+    if (!hrm_position_table_ready())
+        return false;
+    $result = db_query("SHOW COLUMNS FROM ".TB_PREF."hrm_positions LIKE 'job_id'");
+    return $result && db_num_rows($result) === 1;
+}
+
+/** @return bool */
+function hrm_position_job_writer_authorized()
+{
+    return isset($_SESSION['wa_current_user'])
+        && is_object($_SESSION['wa_current_user'])
+        && method_exists($_SESSION['wa_current_user'], 'can_access')
+        && $_SESSION['wa_current_user']->can_access('SA_POSITION');
+}
+
 /**
  * Normalize one legacy positions row into identity/status only.
  *
@@ -73,7 +91,8 @@ function get_hrm_position_by_legacy_position($legacy_position_id, $for_update = 
 {
     if (!hrm_position_table_ready() || (int)$legacy_position_id <= 0)
         return false;
-    $sql = "SELECT position_id,legal_entity_id,legacy_position_id,position_code,legacy_position_code,"
+    $job = hrm_position_job_column_ready() ? 'job_id' : 'NULL AS job_id';
+    $sql = "SELECT position_id,legal_entity_id,".$job.",legacy_position_id,position_code,legacy_position_code,"
         ."position_name,position_status,reference_quality,source,created_at,created_by,updated_at,updated_by "
         ."FROM ".TB_PREF."hrm_positions WHERE legacy_position_id=".(int)$legacy_position_id;
     if ($for_update)
@@ -165,6 +184,126 @@ function get_hrm_verified_position_binding($legacy_position_id, $legal_entity_id
     if (!$projection || !hrm_position_row_matches_projection($position, $projection))
         return false;
     return (int)$position['position_id'] > 0 ? (int)$position['position_id'] : false;
+}
+
+/**
+ * Normalize one explicit Position -> Job relationship request. Empty/zero is
+ * intentional unassignment; positive identifiers must be exact integers.
+ *
+ * @return int|null|false
+ */
+function normalize_hrm_position_job_target($job_id)
+{
+    if ($job_id === null || trim((string)$job_id) === '' || trim((string)$job_id) === '0')
+        return null;
+    if (!is_numeric($job_id)
+        || (string)(int)$job_id !== trim((string)$job_id)
+        || (int)$job_id <= 0)
+        return false;
+    return (int)$job_id;
+}
+
+/** Append restricted-value-free Position -> Job relationship evidence. */
+function append_hrm_position_job_binding_audit($position_id, $legacy_position_id,
+    $legal_entity_id, $before_job_id, $after_job_id)
+{
+    global $path_to_root;
+    if (!function_exists('append_domain_audit_event'))
+        include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+    if (!function_exists('append_domain_audit_event') || (int)$position_id <= 0
+        || (int)$legacy_position_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $scope = get_hrm_position_by_legacy_position((int)$legacy_position_id, true);
+    if (!is_array($scope) || (int)$scope['position_id'] !== (int)$position_id
+        || (int)$scope['legal_entity_id'] !== (int)$legal_entity_id
+        || (string)$scope['reference_quality'] !== 'legacy_position_identity_only'
+        || (string)$scope['source'] !== 'legacy_position_seed')
+        return false;
+    $before_job_id = ($before_job_id === null || $before_job_id === '') ? null : (int)$before_job_id;
+    $after_job_id = ($after_job_id === null || $after_job_id === '') ? null : (int)$after_job_id;
+    return append_domain_audit_event(array(
+        'company_id'=>function_exists('user_company') ? (int)user_company() : 0,
+        'legal_entity_id'=>(int)$legal_entity_id,
+        'entity_type'=>'hrm_position',
+        'entity_key'=>array(
+            'position_id'=>(int)$position_id,
+            'legacy_position_id'=>(int)$legacy_position_id,
+        ),
+        'action'=>'hrm.position.job_binding_changed',
+        'reason_code'=>'hrm_fnd_003_position_job_writer',
+        'before'=>array('job_id'=>$before_job_id),
+        'after'=>array('job_id'=>$after_job_id),
+        'restricted_diff'=>array(
+            'changed_fields'=>array('job_id'),
+            'position_job_binding_changed'=>true,
+            'assignment_job_binding_changed'=>false,
+            'job_class_inference_used'=>false,
+            'recruitment_title_inference_used'=>false,
+            'reporting_hierarchy_changed'=>false,
+            'manager_semantics_changed'=>false,
+            'occupancy_headcount_changed'=>false,
+            'salary_authority_changed'=>false,
+            'work_location_binding_changed'=>false,
+            'costing_changed'=>false,
+            'concurrent_payroll_changed'=>false,
+            'payroll_routes_changed'=>false,
+            'accounting_rows_changed'=>false,
+            'restricted_values_stored'=>false,
+        ),
+    ));
+}
+
+/**
+ * Mutate only the normalized Position -> Job relationship under SA_POSITION.
+ * Caller may already own a surrounding transaction; no transaction is opened
+ * here so legacy Position identity sync plus relationship audit remain atomic.
+ */
+function set_hrm_position_job_binding($legacy_position_id, $job_id)
+{
+    global $path_to_root;
+    if (!hrm_position_job_writer_authorized() || !hrm_position_job_column_ready()
+        || (int)$legacy_position_id <= 0)
+        return false;
+    $target_job_id = normalize_hrm_position_job_target($job_id);
+    if ($target_job_id === false)
+        return false;
+    if (!function_exists('get_hrm_default_legal_entity_binding_id'))
+        include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
+    if (!function_exists('get_hrm_verified_position_job_binding'))
+        include_once($path_to_root.'/hrm/includes/db/job_db.inc');
+    $legal_entity_id = get_hrm_default_legal_entity_binding_id(true);
+    if ($legal_entity_id === false)
+        return false;
+    $current = get_hrm_position_by_legacy_position((int)$legacy_position_id, true);
+    if (!is_array($current) || (int)$current['position_id'] <= 0
+        || (int)$current['legal_entity_id'] !== (int)$legal_entity_id
+        || (string)$current['reference_quality'] !== 'legacy_position_identity_only'
+        || (string)$current['source'] !== 'legacy_position_seed')
+        return false;
+    $current_job_id = isset($current['job_id']) && $current['job_id'] !== null && $current['job_id'] !== ''
+        ? (int)$current['job_id'] : null;
+    if ($target_job_id !== null) {
+        $require_active = $target_job_id !== $current_job_id;
+        if (!function_exists('get_hrm_verified_position_job_binding')
+            || get_hrm_verified_position_job_binding(
+                $target_job_id, (int)$legal_entity_id, true, $require_active
+            ) === false)
+            return false;
+    }
+    if ($target_job_id === $current_job_id)
+        return true;
+    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $sql = "UPDATE ".TB_PREF."hrm_positions SET job_id="
+        .($target_job_id === null ? 'NULL' : (int)$target_job_id)
+        .",updated_at=NOW(),updated_by=".(int)$actor
+        ." WHERE position_id=".(int)$current['position_id']
+        ." AND legal_entity_id=".(int)$legal_entity_id;
+    if (!db_query($sql, 'could not update normalized Position Job relationship'))
+        return false;
+    return append_hrm_position_job_binding_audit(
+        (int)$current['position_id'], (int)$legacy_position_id, (int)$legal_entity_id,
+        $current_job_id, $target_job_id
+    ) !== false;
 }
 
 /**

@@ -112,6 +112,28 @@ function hrm_job_row_owned_by_admin_writer($row, $legal_entity_id)
         && (string)$row['source'] === 'hrm_job_admin';
 }
 
+/**
+ * Verify one explicit Position relationship target. New bindings require an
+ * active same-Legal-Entity Job owned by the normalized Job administrator
+ * writer; an exact existing binding may opt out of the active-state check.
+ *
+ * @return int|false
+ */
+function get_hrm_verified_position_job_binding($job_id, $legal_entity_id,
+    $for_update = false, $require_active = true)
+{
+    if (!is_numeric($job_id)
+        || (string)(int)$job_id !== trim((string)$job_id)
+        || (int)$job_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $row = get_hrm_job((int)$job_id, $for_update);
+    if (!hrm_job_row_owned_by_admin_writer($row, (int)$legal_entity_id))
+        return false;
+    if ($require_active && (string)$row['job_status'] !== 'active')
+        return false;
+    return (int)$row['job_id'];
+}
+
 function append_hrm_job_writer_audit($action, $job_id, $legal_entity_id, $changed_fields, $reason_code)
 {
     global $path_to_root;
