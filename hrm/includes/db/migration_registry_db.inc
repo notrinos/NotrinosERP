@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.228',
-        'active_legacy_payroll_contract'=>'1.0.182',
-        'next_backlog_item'=>'read-only Assignment-to-Job binding dependency review only',
+        'active_database_version'=>'1.0.229',
+        'active_legacy_payroll_contract'=>'1.0.183',
+        'next_backlog_item'=>'read-only Assignment-to-Job writer/effective-change dependency review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review whether Assignment Job requires explicit effective-dated storage after Position-to-Job relationship writer activation; hierarchy, manager, occupancy/headcount, salary authority, address/timezone/jurisdiction/site, payroll-tax routing, costing and concurrent-payroll semantics remain deferred',
+        'next_slice_scope'=>'review Assignment Job writer authority, explicit target policy, effective-change propagation/preservation and new-hire default only; hierarchy, manager, occupancy/headcount, salary authority, address/timezone/jurisdiction/site, payroll-tax routing, costing and concurrent-payroll semantics remain deferred',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -73,6 +73,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_position_job_binding.php'),
             'hrm_fnd_003_position_job_writer'=>array('previous'=>'1.0.227','version'=>'1.0.228',
                 'file'=>'sql/upgrade_hrm_fnd_003_position_job_writer.php'),
+            'hrm_fnd_003_assignment_job_binding'=>array('previous'=>'1.0.228','version'=>'1.0.229',
+                'file'=>'sql/upgrade_hrm_fnd_003_assignment_job_binding.php'),
         ),
     );
 }
