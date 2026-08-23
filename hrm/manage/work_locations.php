@@ -8,11 +8,12 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
 include_once($path_to_root.'/hrm/includes/db/work_location_db.inc');
+include_once($path_to_root.'/hrm/includes/db/establishment_db.inc');
 
 page(_($help_context = 'Manage Work Locations'));
 
-if (!hrm_work_location_table_ready()) {
-    display_error(_('The normalized Work Location foundation is not installed. Run the normal software upgrade first.'));
+if (!hrm_work_location_table_ready() || !hrm_work_location_establishment_column_ready()) {
+    display_error(_('The normalized Work Location Establishment relationship writer is not installed. Run the normal software upgrade first.'));
     display_footer_exit();
 }
 $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
@@ -21,28 +22,48 @@ if ($legal_entity_id === false) {
     display_footer_exit();
 }
 
+$establishment_options = array(0=>_('Unassigned'));
+$establishment_labels = array(0=>_('Unassigned'));
+$establishments = get_hrm_establishments_for_legal_entity((int)$legal_entity_id, false);
+if ($establishments) {
+    while ($establishment = db_fetch_assoc($establishments)) {
+        if (!hrm_establishment_row_owned_by_admin_writer($establishment, (int)$legal_entity_id))
+            continue;
+        $label = $establishment['establishment_code'].' - '.$establishment['establishment_name'];
+        if ($establishment['establishment_status'] !== 'active')
+            $label .= ' '._('(Inactive)');
+        $establishment_labels[(int)$establishment['establishment_id']] = $label;
+        if ($establishment['establishment_status'] === 'active')
+            $establishment_options[(int)$establishment['establishment_id']] = $label;
+    }
+}
+
 simple_page_mode(false);
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
     $identity = normalize_hrm_work_location_identity(
         get_post('work_location_code'), get_post('work_location_name'), get_post('work_location_status', 'active')
     );
+    $establishment_id = normalize_hrm_work_location_establishment_target(get_post('establishment_id', '0'));
     if ($identity === false) {
         display_error(_('Work Location code/name/status is invalid. Code must be 1-32 letters, digits, dot, underscore or hyphen and name must be 1-120 characters.'));
         set_focus('work_location_code');
+    } elseif ($establishment_id === false) {
+        display_error(_('The selected Establishment is invalid.'));
+        set_focus('establishment_id');
     } elseif ($selected_id != '') {
         if (update_hrm_work_location((int)$selected_id, $identity['work_location_code'],
-            $identity['work_location_name'], $identity['work_location_status']))
+            $identity['work_location_name'], $identity['work_location_status'], $establishment_id, true))
             display_notification(_('Selected Work Location has been updated.'));
         else
-            display_error(_('The Work Location update was denied or could not be audited. No changes were committed.'));
+            display_error(_('The Work Location update or Establishment relationship was denied or could not be audited. No changes were committed.'));
         $Mode = 'RESET';
     } else {
-        $created = add_hrm_work_location($identity['work_location_code'], $identity['work_location_name']);
+        $created = add_hrm_work_location($identity['work_location_code'], $identity['work_location_name'], $establishment_id, true);
         if ($created !== false)
             display_notification(_('New Work Location has been added.'));
         else
-            display_error(_('The Work Location could not be created. Check authority, uniqueness and audit availability. No changes were committed.'));
+            display_error(_('The Work Location could not be created. Check authority, uniqueness, Establishment scope/state and audit availability. No changes were committed.'));
         $Mode = 'RESET';
     }
 }
@@ -58,11 +79,12 @@ if ($Mode == 'RESET') {
     $_POST['work_location_code'] = '';
     $_POST['work_location_name'] = '';
     $_POST['work_location_status'] = 'active';
+    $_POST['establishment_id'] = '0';
 }
 
 start_form();
 start_table(TABLESTYLE);
-$th = array(_('Id'), _('Code'), _('Work Location'), _('Status'), '');
+$th = array(_('Id'), _('Code'), _('Work Location'), _('Establishment'), _('Status'), '');
 table_header($th);
 $result = get_hrm_work_locations_for_legal_entity((int)$legal_entity_id, false);
 $k = 0;
@@ -72,6 +94,9 @@ if ($result) {
         label_cell((int)$row['work_location_id']);
         label_cell($row['work_location_code']);
         label_cell($row['work_location_name']);
+        $establishment_id = isset($row['establishment_id']) && $row['establishment_id'] !== null && $row['establishment_id'] !== ''
+            ? (int)$row['establishment_id'] : 0;
+        label_cell(isset($establishment_labels[$establishment_id]) ? $establishment_labels[$establishment_id] : _('Invalid/out-of-scope'));
         label_cell($row['work_location_status'] === 'active' ? _('Active') : _('Inactive'));
         edit_button_cell('Edit'.$row['work_location_id'], _('Edit'));
         end_row();
@@ -90,6 +115,12 @@ if ($selected_id != '' && $Mode == 'Edit') {
         $_POST['work_location_code'] = $row['work_location_code'];
         $_POST['work_location_name'] = $row['work_location_name'];
         $_POST['work_location_status'] = $row['work_location_status'];
+        $_POST['establishment_id'] = isset($row['establishment_id']) && $row['establishment_id'] !== null
+            ? (string)(int)$row['establishment_id'] : '0';
+        $current_establishment_id = (int)$_POST['establishment_id'];
+        if ($current_establishment_id > 0 && isset($establishment_labels[$current_establishment_id])
+            && !isset($establishment_options[$current_establishment_id]))
+            $establishment_options[$current_establishment_id] = $establishment_labels[$current_establishment_id];
         hidden('selected_id', $selected_id);
     }
 }
@@ -97,6 +128,7 @@ text_row_ex(_('Code:'), 'work_location_code', 32, 32);
 text_row_ex(_('Work Location:'), 'work_location_name', 60, 120);
 label_row(_('Status:'), array_selector('work_location_status', get_post('work_location_status', 'active'),
     array('active'=>_('Active'), 'inactive'=>_('Inactive'))));
+label_row(_('Establishment:'), array_selector('establishment_id', get_post('establishment_id', '0'), $establishment_options));
 end_table(1);
 submit_add_or_update_center($selected_id == '', '', 'both');
 end_form();

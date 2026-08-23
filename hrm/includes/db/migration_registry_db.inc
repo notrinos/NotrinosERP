@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.224',
-        'active_legacy_payroll_contract'=>'1.0.178',
-        'next_backlog_item'=>'read-only Work Location-to-Establishment relationship writer and semantic dependency review only',
+        'active_database_version'=>'1.0.225',
+        'active_legacy_payroll_contract'=>'1.0.179',
+        'next_backlog_item'=>'read-only remaining HRM-FND-003 Job/Position hierarchy and occupancy completion dependency inventory only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review explicit Work Location-to-Establishment relationship writer authority only after nullable schema activation; address/timezone/jurisdiction/site, payroll-tax routing, hierarchy and occupancy remain deferred',
+        'next_slice_scope'=>'inventory remaining Job/Position relationship, hierarchy and occupancy/headcount boundaries only; address/timezone/jurisdiction/site, payroll-tax routing, costing and concurrent-payroll semantics remain deferred',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -65,6 +65,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_establishment_writer.php'),
             'hrm_fnd_003_work_location_establishment_binding'=>array('previous'=>'1.0.223','version'=>'1.0.224',
                 'file'=>'sql/upgrade_hrm_fnd_003_work_location_establishment_binding.php'),
+            'hrm_fnd_003_work_location_establishment_writer'=>array('previous'=>'1.0.224','version'=>'1.0.225',
+                'file'=>'sql/upgrade_hrm_fnd_003_work_location_establishment_writer.php'),
         ),
     );
 }

@@ -122,6 +122,30 @@ function hrm_establishment_row_owned_by_admin_writer($row, $legal_entity_id)
         && (string)$row['source'] === 'hrm_establishment_admin';
 }
 
+/**
+ * Resolve one explicit Work Location relationship target. Relationship writes
+ * are authorized by the Work Location writer, not by SA_ESTABLISHMENT; this
+ * helper validates only target identity/provenance/scope/state. New bindings
+ * require active targets, while an existing binding may be preserved after
+ * later Establishment inactivation.
+ *
+ * @return int|false
+ */
+function get_hrm_verified_work_location_establishment_binding($establishment_id, $legal_entity_id,
+    $for_update = false, $require_active = true)
+{
+    if (!is_numeric($establishment_id)
+        || (string)(int)$establishment_id !== trim((string)$establishment_id)
+        || (int)$establishment_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $row = get_hrm_establishment((int)$establishment_id, $for_update);
+    if (!hrm_establishment_row_owned_by_admin_writer($row, (int)$legal_entity_id))
+        return false;
+    if ($require_active && (string)$row['establishment_status'] !== 'active')
+        return false;
+    return (int)$row['establishment_id'];
+}
+
 function append_hrm_establishment_writer_audit($action, $establishment_id, $legal_entity_id,
     $changed_fields, $reason_code)
 {
