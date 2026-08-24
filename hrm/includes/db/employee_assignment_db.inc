@@ -76,6 +76,15 @@ function hrm_assignment_work_location_column_ready()
     return $result && db_num_rows($result) === 1;
 }
 
+/** @return bool */
+function hrm_assignment_manager_column_ready()
+{
+    if (!hrm_assignment_table_ready())
+        return false;
+    $result = db_query("SHOW COLUMNS FROM ".TB_PREF."hrm_assignments LIKE 'manager_assignment_id'");
+    return $result && db_num_rows($result) === 1;
+}
+
 function hrm_assignment_actor_id()
 {
     if (function_exists('user_id'))
@@ -144,6 +153,7 @@ function hrm_assignment_projection_from_employee($employee, $employment, $allow_
         'position_id' => null,
         'job_id' => null,
         'work_location_id' => null,
+        'manager_assignment_id' => null,
         'legacy_grade_id' => $grade,
         'grade_id' => null,
         'legacy_shift_id' => $shift,
@@ -323,6 +333,157 @@ function hrm_assignment_bind_work_location($projection, $employment, $work_locat
     return $projection;
 }
 
+/**
+ * Prove that one existing manager Assignment belongs to the same Legal Entity.
+ * This preservation path deliberately does not require current active status:
+ * a relationship already written by the reviewed effective-dated writer must
+ * survive later manager inactivation/termination and ordinary Employee edits.
+ *
+ * @param array $projection
+ * @param array $employment
+ * @param mixed $manager_assignment_id
+ * @param bool $for_update
+ * @return array|false
+ */
+function hrm_assignment_preserve_manager_binding($projection, $employment,
+    $manager_assignment_id, $for_update = false)
+{
+    if (!is_array($projection) || !is_array($employment))
+        return false;
+    if (!hrm_assignment_manager_column_ready())
+        return ($manager_assignment_id === null || $manager_assignment_id === '') ? $projection : false;
+    if ($manager_assignment_id === null || $manager_assignment_id === '') {
+        $projection['manager_assignment_id'] = null;
+        return $projection;
+    }
+    $manager_assignment_id = trim((string)$manager_assignment_id);
+    if (preg_match('/^[1-9][0-9]*$/D', $manager_assignment_id) !== 1
+        || empty($employment['legal_entity_id']))
+        return false;
+    $sql = "SELECT a.assignment_id,a.employment_id,h.legal_entity_id FROM ".TB_PREF."hrm_assignments a "
+        ."INNER JOIN ".TB_PREF."hrm_employments h ON h.employment_id=a.employment_id "
+        ."WHERE a.assignment_id=".(int)$manager_assignment_id." LIMIT 1";
+    if ($for_update)
+        $sql .= " FOR UPDATE";
+    $result = db_query($sql, 'could not preserve Assignment manager binding');
+    $row = $result ? db_fetch_assoc($result) : false;
+    if (!$row || (int)$row['legal_entity_id'] !== (int)$employment['legal_entity_id']
+        || (int)$row['employment_id'] === (int)$employment['employment_id'])
+        return false;
+    $projection['manager_assignment_id'] = (int)$row['assignment_id'];
+    return $projection;
+}
+
+/**
+ * Follow an existing manager chain under row locks. Reaching any Assignment
+ * owned by the subordinate Employment would create a direct/indirect cycle.
+ * Cross-Legal-Entity or already-cyclic/tampered chains fail closed.
+ */
+function hrm_assignment_manager_chain_is_safe($manager_assignment_id,
+    $subordinate_employment_id, $legal_entity_id, $for_update = false)
+{
+    $manager_assignment_id = (int)$manager_assignment_id;
+    $subordinate_employment_id = (int)$subordinate_employment_id;
+    $legal_entity_id = (int)$legal_entity_id;
+    if ($manager_assignment_id <= 0 || $subordinate_employment_id <= 0 || $legal_entity_id <= 0)
+        return false;
+    $visited = array();
+    while ($manager_assignment_id > 0) {
+        if (isset($visited[$manager_assignment_id]) || count($visited) >= 1000)
+            return false;
+        $visited[$manager_assignment_id] = true;
+        $sql = "SELECT a.assignment_id,a.employment_id,a.manager_assignment_id,h.legal_entity_id "
+            ."FROM ".TB_PREF."hrm_assignments a INNER JOIN ".TB_PREF."hrm_employments h "
+            ."ON h.employment_id=a.employment_id WHERE a.assignment_id=".$manager_assignment_id." LIMIT 1";
+        if ($for_update)
+            $sql .= " FOR UPDATE";
+        $result = db_query($sql, 'could not verify Assignment manager chain');
+        $row = $result ? db_fetch_assoc($result) : false;
+        if (!$row || (int)$row['legal_entity_id'] !== $legal_entity_id
+            || (int)$row['employment_id'] === $subordinate_employment_id)
+            return false;
+        if ($row['manager_assignment_id'] === null || $row['manager_assignment_id'] === '')
+            return true;
+        if (!is_numeric($row['manager_assignment_id']) || (int)$row['manager_assignment_id'] <= 0)
+            return false;
+        $manager_assignment_id = (int)$row['manager_assignment_id'];
+    }
+    return false;
+}
+
+/**
+ * Resolve an explicitly selected legacy reporting_to employee key to exactly
+ * one primary manager Assignment interval at the requested effective date.
+ * New targets must be currently active, same-Legal-Entity, non-self and free
+ * of direct/indirect cycles. No Position hierarchy is consulted.
+ *
+ * @return int|false
+ */
+function get_hrm_verified_assignment_manager_target($manager_employee_id,
+    $effective_date, $employment, $for_update = false)
+{
+    if (!hrm_assignment_manager_column_ready() || !is_array($employment)
+        || empty($employment['employment_id']) || empty($employment['legal_entity_id']))
+        return false;
+    $manager_employee_id = trim((string)$manager_employee_id);
+    $effective_date = hrm_assignment_normalize_effective_date($effective_date);
+    if ($manager_employee_id === '' || strlen($manager_employee_id) > 20
+        || $effective_date === false)
+        return false;
+    $legal_entity_id = (int)$employment['legal_entity_id'];
+    $subordinate_employment_id = (int)$employment['employment_id'];
+    $sql = "SELECT a.assignment_id,a.employment_id,a.legacy_employee_number,a.manager_assignment_id,"
+        ."a.effective_from,a.effective_to,h.legal_entity_id,h.employment_status,h.start_date,h.end_date,"
+        ."e.employee_number,e.employee_id,e.inactive FROM ".TB_PREF."employees e "
+        ."INNER JOIN ".TB_PREF."hrm_employments h ON h.legacy_employee_number=e.employee_number AND h.legacy_current=1 "
+        ."INNER JOIN ".TB_PREF."hrm_assignments a ON a.employment_id=h.employment_id "
+        ."WHERE e.employee_id=".db_escape($manager_employee_id)." AND e.inactive=0 "
+        ."AND h.legal_entity_id=".$legal_entity_id." AND h.employment_status='active' AND h.end_date IS NULL "
+        ."AND (h.start_date IS NULL OR h.start_date<=".db_escape($effective_date).") "
+        ."AND a.legacy_employee_number=e.employee_number AND a.assignment_type_code='legacy_primary' AND a.primary_flag=1 "
+        ."AND (a.effective_from IS NULL OR a.effective_from<=".db_escape($effective_date).") "
+        ."AND (a.effective_to IS NULL OR a.effective_to>=".db_escape($effective_date).") "
+        ."ORDER BY a.assignment_id";
+    if ($for_update)
+        $sql .= " FOR UPDATE";
+    $result = db_query($sql, 'could not resolve explicit Assignment manager target');
+    if (!$result || db_num_rows($result) !== 1)
+        return false;
+    $row = db_fetch_assoc($result);
+    if (!$row || (int)$row['employment_id'] === $subordinate_employment_id
+        || (string)$row['employee_id'] !== $manager_employee_id
+        || (int)$row['legal_entity_id'] !== $legal_entity_id)
+        return false;
+    $manager_assignment_id = (int)$row['assignment_id'];
+    if ($manager_assignment_id <= 0 || !hrm_assignment_manager_chain_is_safe(
+        $manager_assignment_id, $subordinate_employment_id, $legal_entity_id, $for_update
+    ))
+        return false;
+    return $manager_assignment_id;
+}
+
+/**
+ * Bind one explicit legacy reporting_to key to its reviewed manager Assignment
+ * interval. Explicit unassignment is intentionally not introduced.
+ */
+function hrm_assignment_bind_manager($projection, $employment, $manager_employee_id,
+    $effective_date, $for_update = false)
+{
+    if (!is_array($projection) || !is_array($employment))
+        return false;
+    $manager_employee_id = trim((string)$manager_employee_id);
+    if ($manager_employee_id === '' || !isset($projection['legacy_reporting_to'])
+        || (string)$projection['legacy_reporting_to'] !== $manager_employee_id)
+        return false;
+    $manager_assignment_id = get_hrm_verified_assignment_manager_target(
+        $manager_employee_id, $effective_date, $employment, $for_update
+    );
+    if ($manager_assignment_id === false)
+        return false;
+    $projection['manager_assignment_id'] = (int)$manager_assignment_id;
+    return $projection;
+}
+
 function get_hrm_legacy_current_assignment($employee_number, $for_update = false)
 {
     if (!hrm_assignment_table_ready() || (int)$employee_number <= 0)
@@ -337,10 +498,12 @@ function get_hrm_legacy_current_assignment($employee_number, $for_update = false
         ? 'a.grade_id' : 'NULL AS grade_id';
     $work_location = hrm_assignment_work_location_column_ready()
         ? 'a.work_location_id' : 'NULL AS work_location_id';
+    $manager_assignment = hrm_assignment_manager_column_ready()
+        ? 'a.manager_assignment_id' : 'NULL AS manager_assignment_id';
     $sql = "SELECT a.assignment_id,a.employment_id,a.assignment_sequence,a.legacy_employee_number,"
         ."a.legacy_current,a.assignment_type_code,a.primary_flag,a.legacy_department_id,"
         .$organization_unit.","
-        ."a.legacy_position_id,".$position.",".$job.",".$work_location.",a.legacy_grade_id,".$grade.",a.legacy_shift_id,a.legacy_reporting_to,"
+        ."a.legacy_position_id,".$position.",".$job.",".$work_location.",".$manager_assignment.",a.legacy_grade_id,".$grade.",a.legacy_shift_id,a.legacy_reporting_to,"
         ."a.legacy_cost_center_id,a.legacy_dimension2_id,a.reference_quality,a.effective_from,"
         ."a.effective_to,a.interval_quality,a.source,a.created_by,a.updated_by "
         ."FROM ".TB_PREF."hrm_assignments a INNER JOIN ".TB_PREF."hrm_employments h "
@@ -491,7 +654,7 @@ function hrm_assignment_projection_matches_row($row, $projection, $include_inter
     if (!is_array($row) || !is_array($projection))
         return false;
     $integer_fields = array('employment_id','legacy_employee_number','legacy_department_id','organization_unit_id',
-        'legacy_position_id','position_id','job_id','work_location_id','legacy_grade_id','grade_id','legacy_shift_id','legacy_cost_center_id','legacy_dimension2_id');
+        'legacy_position_id','position_id','job_id','work_location_id','manager_assignment_id','legacy_grade_id','grade_id','legacy_shift_id','legacy_cost_center_id','legacy_dimension2_id');
     foreach ($integer_fields as $field) {
         if (!array_key_exists($field, $row) || !array_key_exists($field, $projection)
             || !hrm_assignment_nullable_int_equal($row[$field], $projection[$field]))
@@ -514,7 +677,7 @@ function hrm_assignment_projection_matches_row($row, $projection, $include_inter
     return true;
 }
 
-function execute_hrm_assignment_effective_change($employee, $effective_date, $change_type, $requested_work_location_id = null, $work_location_explicit = false, $requested_job_id = null, $job_explicit = false)
+function execute_hrm_assignment_effective_change($employee, $effective_date, $change_type, $requested_work_location_id = null, $work_location_explicit = false, $requested_job_id = null, $job_explicit = false, $requested_manager_employee_id = null, $manager_explicit = false)
 {
     if (!is_array($employee) || empty($employee['employee_number']) || !hrm_assignment_table_ready()
         || !function_exists('get_hrm_legacy_current_employment'))
@@ -568,6 +731,14 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
         $projection = hrm_assignment_bind_work_location(
             $projection, $employment, isset($current['work_location_id']) ? $current['work_location_id'] : null, true, false
         );
+    if ($manager_explicit)
+        $projection = hrm_assignment_bind_manager(
+            $projection, $employment, $requested_manager_employee_id, $effective_date, true
+        );
+    else
+        $projection = hrm_assignment_preserve_manager_binding(
+            $projection, $employment, isset($current['manager_assignment_id']) ? $current['manager_assignment_id'] : null, true
+        );
     if (!$projection)
         return false;
     $projection['effective_from'] = $effective_date;
@@ -591,12 +762,12 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
     $map = array(
         'legacy_department_id'=>'department','organization_unit_id'=>'organization_unit',
         'legacy_position_id'=>'position','position_id'=>'normalized_position','job_id'=>'job','work_location_id'=>'work_location',
-        'legacy_grade_id'=>'grade','grade_id'=>'normalized_grade',
+        'manager_assignment_id'=>'manager_assignment','legacy_grade_id'=>'grade','grade_id'=>'normalized_grade',
         'legacy_shift_id'=>'shift','legacy_reporting_to'=>'reporting','legacy_cost_center_id'=>'cost_center',
         'legacy_dimension2_id'=>'dimension2','reference_quality'=>'reference_quality'
     );
     foreach ($map as $field=>$label) {
-        $equal = in_array($field, array('legacy_department_id','organization_unit_id','legacy_position_id','position_id','job_id','work_location_id','legacy_grade_id','grade_id',
+        $equal = in_array($field, array('legacy_department_id','organization_unit_id','legacy_position_id','position_id','job_id','work_location_id','manager_assignment_id','legacy_grade_id','grade_id',
             'legacy_shift_id','legacy_cost_center_id','legacy_dimension2_id'), true)
             ? hrm_assignment_nullable_int_equal($current[$field], $projection[$field])
             : hrm_assignment_nullable_equal($current[$field], $projection[$field]);
@@ -632,15 +803,18 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
     $work_location_column = hrm_assignment_work_location_column_ready() ? ',work_location_id' : '';
     $work_location_value = hrm_assignment_work_location_column_ready()
         ? ','.($projection['work_location_id'] === null ? 'NULL' : (int)$projection['work_location_id']) : '';
+    $manager_column = hrm_assignment_manager_column_ready() ? ',manager_assignment_id' : '';
+    $manager_value = hrm_assignment_manager_column_ready()
+        ? ','.($projection['manager_assignment_id'] === null ? 'NULL' : (int)$projection['manager_assignment_id']) : '';
     $grade_column = hrm_assignment_grade_column_ready() ? ',grade_id' : '';
     $grade_value = hrm_assignment_grade_column_ready()
         ? ','.($projection['grade_id'] === null ? 'NULL' : (int)$projection['grade_id']) : '';
     $sql = "INSERT INTO ".TB_PREF."hrm_assignments (employment_id,assignment_sequence,legacy_employee_number,"
-        ."legacy_current,assignment_type_code,primary_flag,legacy_department_id".$organization_column.",legacy_position_id".$position_column.$job_column.$work_location_column.",legacy_grade_id".$grade_column.","
+        ."legacy_current,assignment_type_code,primary_flag,legacy_department_id".$organization_column.",legacy_position_id".$position_column.$job_column.$work_location_column.$manager_column.",legacy_grade_id".$grade_column.","
         ."legacy_shift_id,legacy_reporting_to,legacy_cost_center_id,legacy_dimension2_id,reference_quality,"
         ."effective_from,effective_to,interval_quality,source,created_by) VALUES ("
         .(int)$projection['employment_id'].",".$next_sequence.",".$employee_number.",1,'legacy_primary',1,"
-        .(int)$projection['legacy_department_id'].$organization_value.",".(int)$projection['legacy_position_id'].$position_value.$job_value.$work_location_value.",".(int)$projection['legacy_grade_id'].$grade_value.","
+        .(int)$projection['legacy_department_id'].$organization_value.",".(int)$projection['legacy_position_id'].$position_value.$job_value.$work_location_value.$manager_value.",".(int)$projection['legacy_grade_id'].$grade_value.","
         .($projection['legacy_shift_id'] === null ? 'NULL' : (int)$projection['legacy_shift_id']).","
         .($projection['legacy_reporting_to'] === null ? 'NULL' : db_escape($projection['legacy_reporting_to'])).","
         .($projection['legacy_cost_center_id'] === null ? 'NULL' : (int)$projection['legacy_cost_center_id']).",".(int)$projection['legacy_dimension2_id'].","
@@ -809,9 +983,11 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
     $projection = hrm_assignment_bind_grade(
         $projection, $employment, true, $allow_legacy_irregular
     );
-    // No trusted hire-time Job source exists; current Position Job state is not historical truth.
+    // No trusted hire-time Job or manager-Assignment source exists. Current
+    // Position Job state and legacy reporting_to are not automatic history.
     $projection = hrm_assignment_bind_job($projection, $employment, null, true, false);
     $projection = hrm_assignment_bind_work_location($projection, $employment, null, true, false);
+    $projection = hrm_assignment_preserve_manager_binding($projection, $employment, null, true);
     if (!$projection || get_hrm_legacy_current_assignment($employee_number, true))
         return false;
     if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
@@ -831,15 +1007,18 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
     $work_location_column = hrm_assignment_work_location_column_ready() ? ',work_location_id' : '';
     $work_location_value = hrm_assignment_work_location_column_ready()
         ? ','.($projection['work_location_id'] === null ? 'NULL' : (int)$projection['work_location_id']) : '';
+    $manager_column = hrm_assignment_manager_column_ready() ? ',manager_assignment_id' : '';
+    $manager_value = hrm_assignment_manager_column_ready()
+        ? ','.($projection['manager_assignment_id'] === null ? 'NULL' : (int)$projection['manager_assignment_id']) : '';
     $grade_column = hrm_assignment_grade_column_ready() ? ',grade_id' : '';
     $grade_value = hrm_assignment_grade_column_ready()
         ? ','.($projection['grade_id'] === null ? 'NULL' : (int)$projection['grade_id']) : '';
     $sql = "INSERT INTO ".TB_PREF."hrm_assignments (employment_id,assignment_sequence,legacy_employee_number,"
-        ."legacy_current,assignment_type_code,primary_flag,legacy_department_id".$organization_column.",legacy_position_id".$position_column.$job_column.$work_location_column.",legacy_grade_id".$grade_column.","
+        ."legacy_current,assignment_type_code,primary_flag,legacy_department_id".$organization_column.",legacy_position_id".$position_column.$job_column.$work_location_column.$manager_column.",legacy_grade_id".$grade_column.","
         ."legacy_shift_id,legacy_reporting_to,legacy_cost_center_id,legacy_dimension2_id,reference_quality,"
         ."effective_from,effective_to,interval_quality,source,created_by) VALUES ("
         .(int)$projection['employment_id'].",1,".$employee_number.",1,'legacy_primary',1,"
-        .(int)$projection['legacy_department_id'].$organization_value.",".(int)$projection['legacy_position_id'].$position_value.$job_value.$work_location_value.",".(int)$projection['legacy_grade_id'].$grade_value.","
+        .(int)$projection['legacy_department_id'].$organization_value.",".(int)$projection['legacy_position_id'].$position_value.$job_value.$work_location_value.$manager_value.",".(int)$projection['legacy_grade_id'].$grade_value.","
         .($projection['legacy_shift_id'] === null ? 'NULL' : (int)$projection['legacy_shift_id']).","
         .($projection['legacy_reporting_to'] === null ? 'NULL' : db_escape($projection['legacy_reporting_to'])).","
         .($projection['legacy_cost_center_id'] === null ? 'NULL' : (int)$projection['legacy_cost_center_id']).",".(int)$projection['legacy_dimension2_id'].","
@@ -899,12 +1078,15 @@ function synchronize_hrm_assignment_from_employee($employee)
     $projection = hrm_assignment_bind_work_location(
         $projection, $employment, isset($current['work_location_id']) ? $current['work_location_id'] : null, true, false
     );
+    $projection = hrm_assignment_preserve_manager_binding(
+        $projection, $employment, isset($current['manager_assignment_id']) ? $current['manager_assignment_id'] : null, true
+    );
     if (!$projection)
         return false;
     if ((int)$current['assignment_sequence'] > 1)
         $projection['effective_from'] = ($current['effective_from'] === null || $current['effective_from'] === '')
             ? null : (string)$current['effective_from'];
-    $integer_fields = array('legacy_department_id','organization_unit_id','legacy_position_id','position_id','job_id','work_location_id','legacy_grade_id','grade_id','legacy_shift_id',
+    $integer_fields = array('legacy_department_id','organization_unit_id','legacy_position_id','position_id','job_id','work_location_id','manager_assignment_id','legacy_grade_id','grade_id','legacy_shift_id',
         'legacy_cost_center_id','legacy_dimension2_id');
     if ($allow_legacy_irregular) {
         foreach ($integer_fields as $field) {
@@ -917,7 +1099,7 @@ function synchronize_hrm_assignment_from_employee($employee)
     $map = array(
         'legacy_department_id' => 'department', 'organization_unit_id' => 'organization_unit',
         'legacy_position_id' => 'position', 'position_id' => 'normalized_position', 'job_id' => 'job', 'work_location_id' => 'work_location',
-        'legacy_grade_id' => 'grade', 'grade_id' => 'normalized_grade',
+        'manager_assignment_id' => 'manager_assignment', 'legacy_grade_id' => 'grade', 'grade_id' => 'normalized_grade',
         'legacy_shift_id' => 'shift', 'legacy_reporting_to' => 'reporting', 'legacy_cost_center_id' => 'cost_center',
         'legacy_dimension2_id' => 'dimension2', 'reference_quality' => 'reference_quality',
         'effective_from' => 'effective_interval', 'effective_to' => 'effective_interval', 'interval_quality' => 'effective_interval',
@@ -947,6 +1129,8 @@ function synchronize_hrm_assignment_from_employee($employee)
         ? ",job_id=".($projection['job_id'] === null ? 'NULL' : (int)$projection['job_id']) : '';
     $work_location_update = hrm_assignment_work_location_column_ready()
         ? ",work_location_id=".($projection['work_location_id'] === null ? 'NULL' : (int)$projection['work_location_id']) : '';
+    $manager_update = hrm_assignment_manager_column_ready()
+        ? ",manager_assignment_id=".($projection['manager_assignment_id'] === null ? 'NULL' : (int)$projection['manager_assignment_id']) : '';
     $grade_update = hrm_assignment_grade_column_ready()
         ? ",grade_id=".($projection['grade_id'] === null ? 'NULL' : (int)$projection['grade_id']) : '';
     $sql = "UPDATE ".TB_PREF."hrm_assignments SET legacy_department_id=".(int)$projection['legacy_department_id']
@@ -955,6 +1139,7 @@ function synchronize_hrm_assignment_from_employee($employee)
         .$position_update
         .$job_update
         .$work_location_update
+        .$manager_update
         .",legacy_grade_id=".(int)$projection['legacy_grade_id']
         .$grade_update
         .",legacy_shift_id=".($projection['legacy_shift_id'] === null ? 'NULL' : (int)$projection['legacy_shift_id'])
@@ -989,9 +1174,11 @@ function synchronize_hrm_assignment_from_employee_if_ready($employee, $create = 
         $work_location_id = $work_location_explicit ? $effective_change['work_location_id'] : null;
         $job_explicit = array_key_exists('job_id', $effective_change);
         $job_id = $job_explicit ? $effective_change['job_id'] : null;
+        $manager_explicit = array_key_exists('manager_employee_id', $effective_change);
+        $manager_employee_id = $manager_explicit ? $effective_change['manager_employee_id'] : null;
         return execute_hrm_assignment_effective_change(
             $employee, $effective_date, $change_type, $work_location_id, $work_location_explicit,
-            $job_id, $job_explicit
+            $job_id, $job_explicit, $manager_employee_id, $manager_explicit
         );
     }
     return synchronize_hrm_assignment_from_employee($employee);

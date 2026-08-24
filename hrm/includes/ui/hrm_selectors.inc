@@ -166,6 +166,22 @@ function assignment_work_locations_list_row($label, $name, $selected=0, $submit_
 }
 
 //------------------------------------------------------------------
+// Assignment Manager selector (active legacy employee identities only)
+//------------------------------------------------------------------
+function assignment_managers_list($name, $selected='', $exclude_employee='', $submit_on_change=false) {
+    return reporting_to_list($name, $selected, $exclude_employee, $submit_on_change, array(
+        'spec_option' => _('-- Keep current Manager --'),
+        'spec_id' => '',
+    ));
+}
+
+function assignment_managers_list_row($label, $name, $selected='', $exclude_employee='', $submit_on_change=false) {
+    echo "<tr><td class='label'>$label</td><td>";
+    echo assignment_managers_list($name, $selected, $exclude_employee, $submit_on_change);
+    echo "</td></tr>\n";
+}
+
+//------------------------------------------------------------------
 // Document Type selector
 //------------------------------------------------------------------
 function document_types_list($name, $selected=null, $none_option=false, $submit_on_change=false) {

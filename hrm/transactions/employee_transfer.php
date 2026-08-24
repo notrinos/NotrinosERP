@@ -75,6 +75,8 @@ if (!isset($_POST['new_job_id']))
     $_POST['new_job_id'] = 0;
 if (!isset($_POST['new_work_location_id']))
     $_POST['new_work_location_id'] = 0;
+if (!isset($_POST['new_manager_employee_id']))
+    $_POST['new_manager_employee_id'] = '';
 if (!isset($_POST['effective_date']))
     $_POST['effective_date'] = Today();
 if (!isset($_POST['reason']))
@@ -101,6 +103,13 @@ if (isset($_POST['Process'])) {
         && (preg_match('/^[1-9][0-9]*$/D', trim((string)$_POST['new_work_location_id'])) !== 1)) {
         display_error(_('New Work Location selection is invalid.'));
         set_focus('new_work_location_id');
+    } elseif (strlen(trim((string)$_POST['new_manager_employee_id'])) > 20) {
+        display_error(_('New Manager selection is invalid.'));
+        set_focus('new_manager_employee_id');
+    } elseif (trim((string)$_POST['new_manager_employee_id']) !== ''
+        && trim((string)$_POST['new_manager_employee_id']) === trim((string)$_POST['employee_id'])) {
+        display_error(_('An employee cannot be their own manager.'));
+        set_focus('new_manager_employee_id');
     } else {
         $employee = get_employee_assignment_context_projection($_POST['employee_id']);
         if (!$employee) {
@@ -122,13 +131,22 @@ if (isset($_POST['Process'])) {
                 $assignment_effective_change['job_id'] = trim((string)$_POST['new_job_id']);
             if (trim((string)$_POST['new_work_location_id']) !== '0')
                 $assignment_effective_change['work_location_id'] = trim((string)$_POST['new_work_location_id']);
+            $manager_employee_id = trim((string)$_POST['new_manager_employee_id']);
+            if ($manager_employee_id !== '')
+                $assignment_effective_change['manager_employee_id'] = $manager_employee_id;
 
-            begin_transaction();
-            $employee_updated = update_employee($_POST['employee_id'], array(
+            $employee_update = array(
                 'department_id' => $new_department,
                 'position_id' => $new_position,
                 'grade_id' => $new_grade
-            ), $assignment_effective_change);
+            );
+            // Keep the maintained legacy reporting_to signal and the normalized
+            // manager Assignment relationship atomic under the same effective-dated transfer.
+            if ($manager_employee_id !== '')
+                $employee_update['reporting_to'] = $manager_employee_id;
+
+            begin_transaction();
+            $employee_updated = update_employee($_POST['employee_id'], $employee_update, $assignment_effective_change);
 
             if (!$employee_updated) {
                 cancel_transaction();
@@ -173,6 +191,7 @@ positions_list_row(_('New Position:'), 'new_position_id');
 grades_list_row(_('New Grade:'), 'new_grade_id');
 assignment_jobs_list_row(_('New Assignment Job:'), 'new_job_id');
 assignment_work_locations_list_row(_('New Work Location:'), 'new_work_location_id');
+assignment_managers_list_row(_('New Manager:'), 'new_manager_employee_id', '', get_post('employee_id', ''));
 date_row(_('Effective Date:'), 'effective_date');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);
 end_table(1);
