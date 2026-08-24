@@ -144,7 +144,7 @@ function display_employee_documents($employee_id, $options = array()) {
 
 		label_cell($row_num);
 		label_cell($doc['type_name']);
-		label_cell($doc['doc_name']);
+		label_cell(htmlspecialchars((string)$doc['doc_name'], ENT_QUOTES, 'UTF-8'));
 		label_cell(!empty($doc['issue_date']) ? sql2date($doc['issue_date']) : '-');
 
 		if (!empty($doc['expiry_date'])) {
@@ -166,7 +166,7 @@ function display_employee_documents($employee_id, $options = array()) {
 			label_cell(_('N/A'));
 		}
 
-		label_cell($doc['notes']);
+		label_cell(htmlspecialchars((string)$doc['notes'], ENT_QUOTES, 'UTF-8'));
 
 		// Action buttons
 		$actions = array();
