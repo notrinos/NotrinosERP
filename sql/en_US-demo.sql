@@ -1468,6 +1468,29 @@ CREATE TABLE `0_hrm_positions` (
 	CONSTRAINT `0_hrm_positions_job_fk` FOREIGN KEY (`job_id`) REFERENCES `0_hrm_jobs` (`job_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+CREATE TABLE `0_hrm_position_hierarchy` (
+	`hierarchy_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`legal_entity_id` bigint(20) unsigned NOT NULL,
+	`position_id` bigint(20) unsigned NOT NULL,
+	`reports_to_position_id` bigint(20) unsigned NOT NULL,
+	`effective_from` date NOT NULL,
+	`effective_to` date DEFAULT NULL,
+	`reference_quality` varchar(32) NOT NULL DEFAULT 'greenfield_explicit_only',
+	`source` varchar(64) NOT NULL DEFAULT 'hrm_position_hierarchy_foundation',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime DEFAULT NULL,
+	`updated_by` smallint(5) unsigned DEFAULT NULL,
+	PRIMARY KEY (`hierarchy_id`),
+	UNIQUE KEY `hrm_position_hierarchy_start_uq` (`position_id`,`effective_from`),
+	KEY `hrm_position_hierarchy_child_asof_idx` (`position_id`,`effective_from`,`effective_to`,`hierarchy_id`),
+	KEY `hrm_position_hierarchy_parent_asof_idx` (`reports_to_position_id`,`effective_from`,`effective_to`,`hierarchy_id`),
+	KEY `hrm_position_hierarchy_entity_idx` (`legal_entity_id`,`effective_from`,`effective_to`,`hierarchy_id`),
+	CONSTRAINT `0_hrm_position_hierarchy_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_position_hierarchy_position_fk` FOREIGN KEY (`position_id`) REFERENCES `0_hrm_positions` (`position_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_position_hierarchy_reports_to_fk` FOREIGN KEY (`reports_to_position_id`) REFERENCES `0_hrm_positions` (`position_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_organization_units` (
 	`organization_unit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,

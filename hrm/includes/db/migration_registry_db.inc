@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.232',
-        'active_legacy_payroll_contract'=>'1.0.186',
-        'next_backlog_item'=>'read-only Position reporting-hierarchy dependency review only',
+        'active_database_version'=>'1.0.233',
+        'active_legacy_payroll_contract'=>'1.0.187',
+        'next_backlog_item'=>'read-only explicit Position hierarchy writer/reorganization dependency review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review Position reports_to_position_id/is_manager provenance, effective-history requirements, hierarchy cycle policy and separation from Assignment-manager truth only; do not write Position hierarchy, occupancy/headcount, salary authority, payroll-tax routing, costing or concurrent-payroll behavior until that review is accepted',
+        'next_slice_scope'=>'review singular Position hierarchy mutation authority, exact interval overlap/reorganization rules, self/indirect cycle rejection, inactive Position preservation and separation from Assignment-manager truth only; do not write non-zero Position hierarchy, derive occupancy/headcount, change salary authority, payroll-tax routing, costing or concurrent-payroll behavior until that review is accepted',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -81,6 +81,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_assignment_manager_binding.php'),
             'hrm_fnd_003_assignment_manager_writer'=>array('previous'=>'1.0.231','version'=>'1.0.232',
                 'file'=>'sql/upgrade_hrm_fnd_003_assignment_manager_writer.php'),
+            'hrm_fnd_003_position_hierarchy_foundation'=>array('previous'=>'1.0.232','version'=>'1.0.233',
+                'file'=>'sql/upgrade_hrm_fnd_003_position_hierarchy_foundation.php'),
         ),
     );
 }
