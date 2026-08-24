@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.230',
-        'active_legacy_payroll_contract'=>'1.0.184',
-        'next_backlog_item'=>'read-only reporting hierarchy/manager Assignment dependency review only',
+        'active_database_version'=>'1.0.231',
+        'active_legacy_payroll_contract'=>'1.0.185',
+        'next_backlog_item'=>'read-only explicit Assignment-manager mapping/writer dependency review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review reporting hierarchy and manager authority against effective-dated Assignment/Position/Job history only; budgeted headcount/FTE, derived occupancy, salary authority, address/timezone/jurisdiction/site, payroll-tax routing, costing and concurrent-payroll semantics remain deferred',
+        'next_slice_scope'=>'review exact legacy_reporting_to to manager-Assignment interval resolution, same-Legal-Entity custody, self/cycle rejection, inactive/terminated preservation and singular mutation authority only; Position hierarchy, budgeted headcount/FTE, derived occupancy, salary authority, address/timezone/jurisdiction/site, payroll-tax routing, costing and concurrent-payroll semantics remain deferred',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -77,6 +77,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_assignment_job_binding.php'),
             'hrm_fnd_003_assignment_job_writer'=>array('previous'=>'1.0.229','version'=>'1.0.230',
                 'file'=>'sql/upgrade_hrm_fnd_003_assignment_job_writer.php'),
+            'hrm_fnd_003_assignment_manager_binding'=>array('previous'=>'1.0.230','version'=>'1.0.231',
+                'file'=>'sql/upgrade_hrm_fnd_003_assignment_manager_binding.php'),
         ),
     );
 }
