@@ -29,8 +29,9 @@ if(!job_classes_entity::has_records()) {
 	display_footer_exit();
 }
 if (!hrm_position_job_column_ready() || !hrm_job_table_ready()
-    || !hrm_position_hierarchy_table_ready() || get_hrm_position_hierarchy_writer_activation_date() === false) {
-    display_error(_('The normalized Position Job/hierarchy writers are not installed. Run the normal software upgrade first.'));
+    || !hrm_position_hierarchy_table_ready() || get_hrm_position_hierarchy_writer_activation_date() === false
+    || !hrm_position_headcount_table_ready() || get_hrm_position_headcount_writer_activation_date() === false) {
+    display_error(_('The normalized Position Job/hierarchy/headcount writers are not installed. Run the normal software upgrade first.'));
     display_footer_exit();
 }
 $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
@@ -68,6 +69,7 @@ if ($hierarchy_positions) {
     }
 }
 $hierarchy_today_sql = date2sql(Today());
+$headcount_today_sql = $hierarchy_today_sql;
 
 simple_page_mode(false);
 
@@ -81,6 +83,15 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
     $hierarchy_explicit = $selected_id == ''
         ? $reports_to_position_id !== null
         : ($original_parent !== false && $reports_to_position_id !== $original_parent);
+    $headcount_raw = trim((string)get_post('position_budgeted_headcount', ''));
+    $budgeted_headcount = normalize_hrm_position_headcount_target($headcount_raw);
+    $headcount_effective_from = get_post('headcount_effective_from', Today());
+    $headcount_date_sql = is_date($headcount_effective_from) ? date2sql($headcount_effective_from) : false;
+    $original_headcount_raw = trim((string)get_post('headcount_original_budget', ''));
+    $original_headcount = normalize_hrm_position_headcount_target($original_headcount_raw);
+    $headcount_explicit = $headcount_raw !== '' && ($selected_id == ''
+        || $original_headcount === null || $original_headcount === false
+        || $budgeted_headcount !== $original_headcount);
 	if(empty(trim($_POST['position_name']))) {
 		display_error(_('Position name cannot be empty.'));
 		set_focus('position_name');
@@ -97,6 +108,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
         display_error(_('The hierarchy effective date is invalid.'));
         set_focus('hierarchy_effective_from');
     }
+    elseif($headcount_raw !== '' && $budgeted_headcount === false) {
+        display_error(_('Budgeted headcount must be a whole number of seats greater than or equal to zero.'));
+        set_focus('position_budgeted_headcount');
+    }
+    elseif($headcount_explicit && $headcount_date_sql === false) {
+        display_error(_('The headcount effective date is invalid.'));
+        set_focus('headcount_effective_from');
+    }
 	elseif(!check_num('basic_amount', 0)) {
 		display_error(_('Amount field value must be a positive number.'));
 		set_focus('basic_amount');
@@ -108,7 +127,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit))
+			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit,
+                $budgeted_headcount, $headcount_date_sql, $headcount_explicit))
 				display_notification(_('Selected job position has been updated'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -118,7 +138,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit))
+			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit,
+                $budgeted_headcount, $headcount_date_sql, $headcount_explicit))
 				display_notification(_('New job position has been added'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -150,6 +171,9 @@ if($Mode == 'RESET') {
     $_POST['reports_to_position_id'] = '0';
     $_POST['hierarchy_original_parent_id'] = '0';
     $_POST['hierarchy_effective_from'] = Today();
+    $_POST['position_budgeted_headcount'] = '';
+    $_POST['headcount_original_budget'] = '';
+    $_POST['headcount_effective_from'] = Today();
 }
 
 //--------------------------------------------------------------------------
@@ -158,7 +182,7 @@ start_form();
 
 start_table(TABLESTYLE);
 
-$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), _('Job'), _('Reports To'), '', '');
+$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), _('Job'), _('Reports To'), _('Budgeted Seats'), _('Occupied Seats'), '', '');
 
 inactive_control_column($th);
 table_header($th);
@@ -182,6 +206,12 @@ while ($myrow = db_fetch($result)) {
         ? get_hrm_position_hierarchy_as_of((int)$normalized_position['position_id'], $hierarchy_today_sql, false) : false;
     $parent_id = is_array($hierarchy) ? (int)$hierarchy['reports_to_position_id'] : 0;
     label_cell(isset($hierarchy_labels[$parent_id]) ? $hierarchy_labels[$parent_id] : _('Invalid/out-of-scope'));
+    $headcount_snapshot = is_array($normalized_position)
+        ? get_hrm_position_headcount_snapshot_as_of((int)$normalized_position['position_id'], $headcount_today_sql) : false;
+    label_cell(is_array($headcount_snapshot) && $headcount_snapshot['budgeted_headcount'] !== null
+        ? (string)(int)$headcount_snapshot['budgeted_headcount'] : _('Unknown'));
+    label_cell(is_array($headcount_snapshot) && $headcount_snapshot['occupied_seats'] !== null
+        ? (string)(int)$headcount_snapshot['occupied_seats'] : _('Unknown'));
 	hrm_job_position_inactive_control_cell($myrow['position_id'], $myrow['inactive']);
 	edit_button_cell('Edit'.$myrow['position_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['position_id'], _('Delete'));
@@ -216,15 +246,26 @@ if($selected_id != '') {
             $hierarchy_options[$current_parent_id] = $hierarchy_labels[$current_parent_id];
         if (is_array($normalized_position))
             unset($hierarchy_options[(int)$normalized_position['position_id']]);
+        $headcount = is_array($normalized_position)
+            ? get_hrm_position_headcount_budget_as_of((int)$normalized_position['position_id'], $headcount_today_sql, false) : false;
+        $current_headcount = is_array($headcount) ? (string)(int)$headcount['budgeted_headcount'] : '';
+        $_POST['position_budgeted_headcount'] = $current_headcount;
+        $_POST['headcount_original_budget'] = $current_headcount;
+        $_POST['headcount_effective_from'] = Today();
 	}
 	hidden('selected_id', $selected_id);
     hidden('hierarchy_original_parent_id', get_post('hierarchy_original_parent_id', '0'));
+    hidden('headcount_original_budget', get_post('headcount_original_budget', ''));
 }
 
 if (!isset($_POST['reports_to_position_id']))
     $_POST['reports_to_position_id'] = '0';
 if (!isset($_POST['hierarchy_effective_from']))
     $_POST['hierarchy_effective_from'] = Today();
+if (!isset($_POST['position_budgeted_headcount']))
+    $_POST['position_budgeted_headcount'] = '';
+if (!isset($_POST['headcount_effective_from']))
+    $_POST['headcount_effective_from'] = Today();
 
 text_row_ex(_('Position Name:'), 'position_name', 50, 60);
 amount_row(_('Salary Basic Amount:'), 'basic_amount', null, null, null, null, true);
@@ -232,6 +273,9 @@ job_classes_list_row(_('Job Class:'), 'job_class_id');
 label_row(_('Job:'), array_selector('job_id', get_post('job_id', '0'), $job_options));
 label_row(_('Reports To:'), array_selector('reports_to_position_id', get_post('reports_to_position_id', '0'), $hierarchy_options));
 date_row(_('Hierarchy Effective From:'), 'hierarchy_effective_from');
+text_row_ex(_('Budgeted Headcount:'), 'position_budgeted_headcount', 10, 10);
+date_row(_('Headcount Effective From:'), 'headcount_effective_from');
+label_row(_('Occupancy / FTE:'), _('Occupied Seats is derived read-only from exact Assignment intervals; FTE is unknown/not modeled.'));
 
 end_table(1);
 

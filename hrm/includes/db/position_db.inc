@@ -472,6 +472,14 @@ function set_hrm_position_hierarchy($legacy_position_id, $reports_to_position_id
     if ($asof === false)
         return false;
     $current_parent_id = is_array($asof) ? (int)$asof['reports_to_position_id'] : null;
+
+    $latest_result = db_query("SELECT hierarchy_id,reports_to_position_id,effective_from,effective_to FROM "
+        .TB_PREF."hrm_position_hierarchy WHERE position_id=".$child_id
+        ." ORDER BY effective_from DESC,hierarchy_id DESC LIMIT 1 FOR UPDATE",
+        'could not lock latest Position hierarchy interval');
+    $latest = $latest_result ? db_fetch_assoc($latest_result) : false;
+    if ($latest && strcmp($effective_from, (string)$latest['effective_from']) < 0)
+        return false;
     if ($current_parent_id === $target_parent_id)
         return true;
     if ((string)$child['position_status'] !== 'active')
@@ -490,11 +498,6 @@ function set_hrm_position_hierarchy($legacy_position_id, $reports_to_position_id
             return false;
     }
 
-    $latest_result = db_query("SELECT hierarchy_id,reports_to_position_id,effective_from,effective_to FROM "
-        .TB_PREF."hrm_position_hierarchy WHERE position_id=".$child_id
-        ." ORDER BY effective_from DESC,hierarchy_id DESC LIMIT 1 FOR UPDATE",
-        'could not lock latest Position hierarchy interval');
-    $latest = $latest_result ? db_fetch_assoc($latest_result) : false;
     if ($latest && strcmp($effective_from, (string)$latest['effective_from']) <= 0)
         return false;
 
@@ -522,6 +525,317 @@ function set_hrm_position_hierarchy($legacy_position_id, $reports_to_position_id
     return append_hrm_position_hierarchy_audit(
         $child_id, (int)$legacy_position_id, (int)$legal_entity_id,
         $current_parent_id, $target_parent_id, $effective_from, $operation
+    ) !== false;
+}
+
+/** @return bool */
+function hrm_position_headcount_table_ready()
+{
+    if (!function_exists('db_query') || !function_exists('db_escape_function') || !defined('TB_PREF'))
+        return false;
+    $result = db_query("SHOW TABLES LIKE '".TB_PREF.db_escape_function('hrm_position_headcount_budgets')."'");
+    return $result && db_num_rows($result) === 1;
+}
+
+/** @return bool */
+function hrm_position_headcount_writer_authorized()
+{
+    return isset($_SESSION['wa_current_user'])
+        && is_object($_SESSION['wa_current_user'])
+        && method_exists($_SESSION['wa_current_user'], 'can_access')
+        && $_SESSION['wa_current_user']->can_access('SA_POSITION');
+}
+
+/** Normalize an explicit headcount effective date without locale inference. */
+function hrm_position_headcount_normalize_date($value)
+{
+    $value = trim((string)$value);
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $m) !== 1
+        || !checkdate((int)$m[2], (int)$m[3], (int)$m[1]))
+        return false;
+    return sprintf('%04d-%02d-%02d', (int)$m[1], (int)$m[2], (int)$m[3]);
+}
+
+/** @return string|false */
+function hrm_position_headcount_day_before($date)
+{
+    $date = hrm_position_headcount_normalize_date($date);
+    if ($date === false)
+        return false;
+    $time = strtotime($date.' 00:00:00 UTC');
+    return $time === false ? false : gmdate('Y-m-d', $time - 86400);
+}
+
+/**
+ * Normalize explicit seat budget input. Blank means no explicit decision;
+ * zero is a valid explicit seat budget. Negative/fractional values are denied.
+ *
+ * @return int|null|false
+ */
+function normalize_hrm_position_headcount_target($value)
+{
+    if ($value === null || trim((string)$value) === '')
+        return null;
+    $value = trim((string)$value);
+    if (preg_match('/^(0|[1-9][0-9]*)$/D', $value) !== 1)
+        return false;
+    $number = (float)$value;
+    if ($number > 4294967295)
+        return false;
+    return (int)$value;
+}
+
+/** Return the date on which explicit Position headcount writing was activated. */
+function get_hrm_position_headcount_writer_activation_date()
+{
+    if (!hrm_position_headcount_table_ready())
+        return false;
+    $sql = "SELECT DATE(created_at) activation_date FROM ".TB_PREF."domain_audit_events "
+        ."WHERE entity_type='hrm_position_migration' "
+        ."AND action='hrm.position.headcount_writer_activated' "
+        ."AND reason_code='hrm_fnd_003_position_headcount_writer' ORDER BY event_id";
+    $result = db_query($sql, 'could not read Position headcount writer activation evidence');
+    if (!$result || db_num_rows($result) !== 1)
+        return false;
+    $row = db_fetch_assoc($result);
+    return $row ? hrm_position_headcount_normalize_date($row['activation_date']) : false;
+}
+
+/** Return exactly one explicit Position budget interval as of a date, or null if unknown. */
+function get_hrm_position_headcount_budget_as_of($position_id, $effective_date, $for_update = false)
+{
+    if (!hrm_position_headcount_table_ready() || (int)$position_id <= 0)
+        return false;
+    $effective_date = hrm_position_headcount_normalize_date($effective_date);
+    if ($effective_date === false)
+        return false;
+    $sql = "SELECT budget_id,legal_entity_id,position_id,budgeted_headcount,effective_from,effective_to,"
+        ."reference_quality,source,created_at,created_by,updated_at,updated_by FROM ".TB_PREF."hrm_position_headcount_budgets "
+        ."WHERE position_id=".(int)$position_id." AND effective_from<=".db_escape($effective_date)
+        ." AND (effective_to IS NULL OR effective_to>=".db_escape($effective_date).") ORDER BY effective_from,budget_id";
+    if ($for_update)
+        $sql .= ' FOR UPDATE';
+    $result = db_query($sql, 'could not read Position headcount budget as-of interval');
+    if (!$result || db_num_rows($result) > 1)
+        return false;
+    $row = db_fetch_assoc($result);
+    return $row ? $row : null;
+}
+
+/** Validate one Position's budget history as non-overlapping explicit-admin intervals. */
+function hrm_position_headcount_intervals_valid($position_id, $legal_entity_id, $for_update = false)
+{
+    if (!hrm_position_headcount_table_ready() || (int)$position_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $sql = "SELECT budget_id,legal_entity_id,budgeted_headcount,effective_from,effective_to,reference_quality,source "
+        ."FROM ".TB_PREF."hrm_position_headcount_budgets WHERE position_id=".(int)$position_id
+        ." ORDER BY effective_from,budget_id";
+    if ($for_update)
+        $sql .= ' FOR UPDATE';
+    $result = db_query($sql, 'could not validate Position headcount history');
+    if (!$result)
+        return false;
+    $previous_end = null;
+    $seen_interval = false;
+    while ($row = db_fetch_assoc($result)) {
+        $from = hrm_position_headcount_normalize_date($row['effective_from']);
+        $to = $row['effective_to'] === null || $row['effective_to'] === ''
+            ? null : hrm_position_headcount_normalize_date($row['effective_to']);
+        if ($from === false || ($to !== null && ($to === false || strcmp($to, $from) < 0))
+            || (int)$row['legal_entity_id'] !== (int)$legal_entity_id
+            || (int)$row['budgeted_headcount'] < 0
+            || (string)$row['reference_quality'] !== 'greenfield_explicit_admin_input'
+            || (string)$row['source'] !== 'hrm_position_headcount_admin')
+            return false;
+        if ($previous_end === null && $seen_interval)
+            return false;
+        if ($previous_end !== null && strcmp($from, $previous_end) <= 0)
+            return false;
+        $previous_end = $to;
+        $seen_interval = true;
+    }
+    return true;
+}
+
+/**
+ * Derive occupied seats from exact normalized Assignment intervals only.
+ * FTE deliberately remains unknown because no normalized allocation field exists.
+ *
+ * @return array|false
+ */
+function get_hrm_position_occupancy_as_of($position_id, $effective_date, $for_update = false)
+{
+    if (!hrm_position_table_ready() || (int)$position_id <= 0)
+        return false;
+    $effective_date = hrm_position_headcount_normalize_date($effective_date);
+    if ($effective_date === false)
+        return false;
+    $position = get_hrm_position_by_id((int)$position_id, $for_update);
+    if (!is_array($position) || (int)$position['legal_entity_id'] <= 0)
+        return false;
+    $unknown = db_query("SELECT COUNT(*) row_count FROM ".TB_PREF."hrm_assignments "
+        ."WHERE position_id=".(int)$position_id." AND (effective_from IS NULL OR interval_quality<>'exact')",
+        'could not verify Position occupancy interval quality');
+    $unknown = $unknown ? db_fetch_assoc($unknown) : false;
+    if (!$unknown)
+        return false;
+    $scope = db_query("SELECT COUNT(*) row_count FROM ".TB_PREF."hrm_assignments a INNER JOIN ".TB_PREF."hrm_employments e "
+        ."ON e.employment_id=a.employment_id WHERE a.position_id=".(int)$position_id
+        ." AND e.legal_entity_id<>".(int)$position['legal_entity_id'], 'could not verify Position occupancy Legal Entity scope');
+    $scope = $scope ? db_fetch_assoc($scope) : false;
+    if (!$scope || (int)$scope['row_count'] !== 0)
+        return false;
+    if ((int)$unknown['row_count'] !== 0)
+        return array('status'=>'unknown_interval','occupied_seats'=>null,'fte'=>null,'fte_status'=>'unknown_not_modeled');
+    $sql = "SELECT COUNT(*) occupied_seats FROM ".TB_PREF."hrm_assignments WHERE position_id=".(int)$position_id
+        ." AND effective_from<=".db_escape($effective_date)
+        ." AND (effective_to IS NULL OR effective_to>=".db_escape($effective_date).")";
+    if ($for_update)
+        $sql .= ' FOR UPDATE';
+    $result = db_query($sql, 'could not derive Position occupied seats');
+    $row = $result ? db_fetch_assoc($result) : false;
+    if (!$row)
+        return false;
+    return array('status'=>'known','occupied_seats'=>(int)$row['occupied_seats'],'fte'=>null,'fte_status'=>'unknown_not_modeled');
+}
+
+/** Return a contained as-of admin snapshot; no payroll/reporting cutover occurs. */
+function get_hrm_position_headcount_snapshot_as_of($position_id, $effective_date)
+{
+    $budget = get_hrm_position_headcount_budget_as_of((int)$position_id, $effective_date, false);
+    $occupancy = get_hrm_position_occupancy_as_of((int)$position_id, $effective_date, false);
+    if ($budget === false || $occupancy === false)
+        return false;
+    $budget_value = is_array($budget) ? (int)$budget['budgeted_headcount'] : null;
+    $occupied = isset($occupancy['occupied_seats']) ? $occupancy['occupied_seats'] : null;
+    return array(
+        'budgeted_headcount'=>$budget_value,
+        'budget_status'=>$budget_value === null ? 'unknown_not_set' : 'known',
+        'occupied_seats'=>$occupied,
+        'occupancy_status'=>(string)$occupancy['status'],
+        'fte'=>null,
+        'fte_status'=>'unknown_not_modeled',
+        'vacant_seats'=>($budget_value !== null && $occupied !== null) ? $budget_value - (int)$occupied : null,
+        'vacancy_status'=>($budget_value !== null && $occupied !== null) ? 'derived_admin_only' : 'unknown',
+        'reporting_authority_changed'=>false,
+        'payroll_authority_changed'=>false,
+    );
+}
+
+/** Append restricted-value-free evidence for one explicit Position seat-budget decision. */
+function append_hrm_position_headcount_audit($position_id, $legacy_position_id, $legal_entity_id,
+    $before_budget, $after_budget, $effective_from, $operation)
+{
+    global $path_to_root;
+    if (!function_exists('append_domain_audit_event'))
+        include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+    if (!function_exists('append_domain_audit_event') || (int)$position_id <= 0
+        || (int)$legacy_position_id <= 0 || (int)$legal_entity_id <= 0)
+        return false;
+    $effective_from = hrm_position_headcount_normalize_date($effective_from);
+    if ($effective_from === false || (int)$after_budget < 0)
+        return false;
+    $scope = get_hrm_position_by_legacy_position((int)$legacy_position_id, true);
+    if (!is_array($scope) || (int)$scope['position_id'] !== (int)$position_id
+        || (int)$scope['legal_entity_id'] !== (int)$legal_entity_id
+        || (string)$scope['reference_quality'] !== 'legacy_position_identity_only'
+        || (string)$scope['source'] !== 'legacy_position_seed')
+        return false;
+    $before_budget = ($before_budget === null || $before_budget === '') ? null : (int)$before_budget;
+    return append_domain_audit_event(array(
+        'company_id'=>function_exists('user_company') ? (int)user_company() : 0,
+        'legal_entity_id'=>(int)$legal_entity_id,
+        'entity_type'=>'hrm_position',
+        'entity_key'=>array('position_id'=>(int)$position_id,'legacy_position_id'=>(int)$legacy_position_id),
+        'action'=>'hrm.position.headcount_budget_changed',
+        'reason_code'=>'hrm_fnd_003_position_headcount_writer',
+        'before'=>array('budgeted_headcount'=>$before_budget),
+        'after'=>array('budgeted_headcount'=>(int)$after_budget,'effective_from'=>$effective_from,'operation'=>(string)$operation),
+        'restricted_diff'=>array(
+            'changed_fields'=>array('budgeted_headcount','effective_interval'),
+            'position_headcount_budget_changed'=>true,
+            'legacy_budgeted_headcount_rewritten'=>false,
+            'occupancy_materialized'=>false,
+            'fte_inferred'=>false,
+            'vacancy_reporting_changed'=>false,
+            'assignment_intervals_rewritten'=>false,
+            'salary_authority_changed'=>false,
+            'payroll_tax_routing_changed'=>false,
+            'costing_changed'=>false,
+            'concurrent_payroll_changed'=>false,
+            'payroll_routes_changed'=>false,
+            'accounting_rows_changed'=>false,
+            'restricted_values_stored'=>false,
+        ),
+    ));
+}
+
+/**
+ * Append one explicit effective-dated Position seat-budget decision under SA_POSITION.
+ * Existing history is never backfilled or rewritten before its latest effective start.
+ */
+function set_hrm_position_headcount_budget($legacy_position_id, $budgeted_headcount, $effective_from)
+{
+    if (!hrm_position_headcount_writer_authorized() || !hrm_position_headcount_table_ready()
+        || (int)$legacy_position_id <= 0)
+        return false;
+    $target = normalize_hrm_position_headcount_target($budgeted_headcount);
+    $effective_from = hrm_position_headcount_normalize_date($effective_from);
+    $activation_date = get_hrm_position_headcount_writer_activation_date();
+    if ($target === false || $target === null || $effective_from === false || $activation_date === false
+        || strcmp($effective_from, $activation_date) < 0)
+        return false;
+    global $path_to_root;
+    if (!function_exists('get_hrm_default_legal_entity_binding_id'))
+        include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
+    $legal_entity_id = get_hrm_default_legal_entity_binding_id(true);
+    if ($legal_entity_id === false)
+        return false;
+    $position = get_hrm_position_by_legacy_position((int)$legacy_position_id, true);
+    if (!is_array($position) || (int)$position['position_id'] <= 0
+        || (int)$position['legal_entity_id'] !== (int)$legal_entity_id
+        || (string)$position['reference_quality'] !== 'legacy_position_identity_only'
+        || (string)$position['source'] !== 'legacy_position_seed')
+        return false;
+    $position_id = (int)$position['position_id'];
+    $asof = get_hrm_position_headcount_budget_as_of($position_id, $effective_from, true);
+    if ($asof === false)
+        return false;
+    $current = is_array($asof) ? (int)$asof['budgeted_headcount'] : null;
+    $latest_result = db_query("SELECT budget_id,budgeted_headcount,effective_from,effective_to FROM "
+        .TB_PREF."hrm_position_headcount_budgets WHERE position_id=".$position_id
+        ." ORDER BY effective_from DESC,budget_id DESC LIMIT 1 FOR UPDATE", 'could not lock latest Position headcount budget');
+    $latest = $latest_result ? db_fetch_assoc($latest_result) : false;
+    if ($latest && strcmp($effective_from, (string)$latest['effective_from']) < 0)
+        return false;
+    if ($current !== null && $current === $target)
+        return true;
+    if ((string)$position['position_status'] !== 'active')
+        return false;
+    if ($latest && strcmp($effective_from, (string)$latest['effective_from']) <= 0)
+        return false;
+    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    if (is_array($asof)) {
+        $previous_end = hrm_position_headcount_day_before($effective_from);
+        if ($previous_end === false || strcmp($previous_end, (string)$asof['effective_from']) < 0)
+            return false;
+        if (!db_query("UPDATE ".TB_PREF."hrm_position_headcount_budgets SET effective_to=".db_escape($previous_end)
+            .",updated_at=NOW(),updated_by=".$actor." WHERE budget_id=".(int)$asof['budget_id'],
+            'could not close prior Position headcount budget interval'))
+            return false;
+    }
+    $sql = "INSERT INTO ".TB_PREF."hrm_position_headcount_budgets (legal_entity_id,position_id,budgeted_headcount,"
+        ."effective_from,effective_to,reference_quality,source,created_by) VALUES ("
+        .(int)$legal_entity_id.",".$position_id.",".(int)$target.",".db_escape($effective_from)
+        .",NULL,'greenfield_explicit_admin_input','hrm_position_headcount_admin',".$actor.")";
+    if (!db_query($sql, 'could not create Position headcount budget interval'))
+        return false;
+    if (!hrm_position_headcount_intervals_valid($position_id, (int)$legal_entity_id, true))
+        return false;
+    $operation = $current === null ? 'set' : 'change';
+    return append_hrm_position_headcount_audit(
+        $position_id, (int)$legacy_position_id, (int)$legal_entity_id,
+        $current, (int)$target, $effective_from, $operation
     ) !== false;
 }
 

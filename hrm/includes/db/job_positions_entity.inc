@@ -4,8 +4,8 @@
  *
  * The maintained SA_POSITION writer keeps only Position identity/status in
  * sync with hrm_positions. Job class, Department, reporting hierarchy,
- * compensation, headcount, manager and description fields remain legacy-only
- * metadata. Physical deletion is denied once normalized Position custody exists.
+ * compensation, legacy headcount, manager and description fields remain legacy-only
+ * metadata. Explicit normalized headcount budgets are maintained separately. Physical deletion is denied once normalized Position custody exists.
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
 if (!function_exists('append_domain_audit_event'))
@@ -91,7 +91,7 @@ class job_positions_entity extends Entity {
         return $changed;
     }
 
-    public static function create($data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false)
+    public static function create($data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false, $budgeted_headcount = null, $headcount_effective_from = null, $headcount_explicit = false)
     {
         if (!hrm_job_position_writer_authorized())
             return false;
@@ -103,6 +103,11 @@ class job_positions_entity extends Entity {
         $target_parent_id = $hierarchy_explicit ? normalize_hrm_position_hierarchy_target($reports_to_position_id) : null;
         $hierarchy_date = $hierarchy_explicit ? hrm_position_hierarchy_normalize_date($hierarchy_effective_from) : null;
         if ($hierarchy_explicit && ($target_parent_id === false || $hierarchy_date === false || !hrm_position_hierarchy_table_ready()))
+            return false;
+        $target_headcount = $headcount_explicit ? normalize_hrm_position_headcount_target($budgeted_headcount) : null;
+        $headcount_date = $headcount_explicit ? hrm_position_headcount_normalize_date($headcount_effective_from) : null;
+        if ($headcount_explicit && ($target_headcount === false || $target_headcount === null || $headcount_date === false
+            || !hrm_position_headcount_table_ready()))
             return false;
         begin_transaction();
         $e = new static();
@@ -119,6 +124,8 @@ class job_positions_entity extends Entity {
             $result = set_hrm_position_job_binding($legacy_position_id, $target_job_id);
         if ($result && $hierarchy_explicit)
             $result = set_hrm_position_hierarchy($legacy_position_id, $target_parent_id, $hierarchy_date);
+        if ($result && $headcount_explicit)
+            $result = set_hrm_position_headcount_budget($legacy_position_id, $target_headcount, $headcount_date);
         if ($result)
             commit_transaction();
         else
@@ -126,7 +133,7 @@ class job_positions_entity extends Entity {
         return (bool)$result;
     }
 
-    public static function modify($key, $data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false)
+    public static function modify($key, $data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false, $budgeted_headcount = null, $headcount_effective_from = null, $headcount_explicit = false)
     {
         if (!hrm_job_position_writer_authorized() || (int)$key <= 0)
             return false;
@@ -138,6 +145,11 @@ class job_positions_entity extends Entity {
         $target_parent_id = $hierarchy_explicit ? normalize_hrm_position_hierarchy_target($reports_to_position_id) : null;
         $hierarchy_date = $hierarchy_explicit ? hrm_position_hierarchy_normalize_date($hierarchy_effective_from) : null;
         if ($hierarchy_explicit && ($target_parent_id === false || $hierarchy_date === false || !hrm_position_hierarchy_table_ready()))
+            return false;
+        $target_headcount = $headcount_explicit ? normalize_hrm_position_headcount_target($budgeted_headcount) : null;
+        $headcount_date = $headcount_explicit ? hrm_position_headcount_normalize_date($headcount_effective_from) : null;
+        if ($headcount_explicit && ($target_headcount === false || $target_headcount === null || $headcount_date === false
+            || !hrm_position_headcount_table_ready()))
             return false;
         begin_transaction();
         $e = new static();
@@ -151,6 +163,8 @@ class job_positions_entity extends Entity {
             $result = set_hrm_position_job_binding((int)$key, $target_job_id);
         if ($result && $hierarchy_explicit)
             $result = set_hrm_position_hierarchy((int)$key, $target_parent_id, $hierarchy_date);
+        if ($result && $headcount_explicit)
+            $result = set_hrm_position_headcount_budget((int)$key, $target_headcount, $headcount_date);
         if ($result && hrm_position_table_ready())
             $result = is_array(static::lock_projection_state(true));
         if ($result)

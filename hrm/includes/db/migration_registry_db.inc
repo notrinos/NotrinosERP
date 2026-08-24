@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.235',
-        'active_legacy_payroll_contract'=>'1.0.189',
-        'next_backlog_item'=>'read-only explicit Position headcount writer and derived occupancy dependency review only',
+        'active_database_version'=>'1.0.236',
+        'active_legacy_payroll_contract'=>'1.0.190',
+        'next_backlog_item'=>'read-only HRM-FND-003 completion and deferred-domain ownership review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review exact effective-dated Position budget/headcount authority through singular SA_POSITION writer semantics, exact interval rewrite rules, Assignment-derived occupancy/FTE rules with FTE remaining explicit unknown state, and vacancy/reporting containment only; do not make legacy budgeted_headcount authoritative or change salary, payroll-tax, costing or concurrent-payroll authority until that review is accepted',
+        'next_slice_scope'=>'inventory accepted HRM-FND-003 legal-entity, organization, grade, position, job, establishment, work-location, hierarchy, manager and occupancy/headcount boundaries and prove all deferred salary, payroll-tax, costing and concurrent-payroll ownership remains outside this package before declaring terminal completion or releasing HRM-FND-004; make no business-data or runtime authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -87,6 +87,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_position_hierarchy_writer.php'),
             'hrm_fnd_003_position_headcount_foundation'=>array('previous'=>'1.0.234','version'=>'1.0.235',
                 'file'=>'sql/upgrade_hrm_fnd_003_position_headcount_foundation.php'),
+            'hrm_fnd_003_position_headcount_writer'=>array('previous'=>'1.0.235','version'=>'1.0.236',
+                'file'=>'sql/upgrade_hrm_fnd_003_position_headcount_writer.php'),
         ),
     );
 }
