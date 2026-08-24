@@ -134,6 +134,21 @@ function get_hrm_verified_position_job_binding($job_id, $legal_entity_id,
     return (int)$row['job_id'];
 }
 
+/**
+ * Verify one explicit effective-dated Assignment Job target. Assignment and
+ * Position relationships intentionally share the same administrator-owned Job
+ * identity/provenance policy while retaining separate relationship histories.
+ *
+ * @return int|false
+ */
+function get_hrm_verified_assignment_job_binding($job_id, $legal_entity_id,
+    $for_update = false, $require_active = true)
+{
+    return get_hrm_verified_position_job_binding(
+        $job_id, $legal_entity_id, $for_update, $require_active
+    );
+}
+
 function append_hrm_job_writer_audit($action, $job_id, $legal_entity_id, $changed_fields, $reason_code)
 {
     global $path_to_root;

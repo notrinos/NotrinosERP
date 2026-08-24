@@ -108,6 +108,35 @@ function work_shifts_list_row($label, $name, $selected=null, $none_option=true, 
 }
 
 //------------------------------------------------------------------
+// Assignment Job selector (active explicit HRM identities only)
+//------------------------------------------------------------------
+function assignment_jobs_list($name, $selected=0, $submit_on_change=false) {
+    global $path_to_root;
+    include_once($path_to_root.'/hrm/includes/db/legal_entity_db.inc');
+    $legal_entity_id = function_exists('get_hrm_default_legal_entity_binding_id')
+        ? get_hrm_default_legal_entity_binding_id(false) : false;
+    if ($legal_entity_id === false || (int)$legal_entity_id <= 0)
+        $sql = "SELECT job_id,job_name FROM ".TB_PREF."hrm_jobs WHERE 1=0";
+    else
+        $sql = "SELECT job_id,CONCAT(job_code, ' - ', job_name) job_name "
+            ."FROM ".TB_PREF."hrm_jobs WHERE legal_entity_id=".(int)$legal_entity_id
+            ." AND job_status='active' AND reference_quality='greenfield_explicit_admin_input' "
+            ."AND source='hrm_job_admin' ORDER BY job_code,job_id";
+    return combo_input($name, $selected, $sql, 'job_id', 'job_name', array(
+        'order' => false,
+        'select_submit' => $submit_on_change,
+        'spec_option' => _('-- Keep current Assignment Job --'),
+        'spec_id' => 0,
+    ));
+}
+
+function assignment_jobs_list_row($label, $name, $selected=0, $submit_on_change=false) {
+    echo "<tr><td class='label'>$label</td><td>";
+    echo assignment_jobs_list($name, $selected, $submit_on_change);
+    echo "</td></tr>\n";
+}
+
+//------------------------------------------------------------------
 // Assignment Work Location selector (active explicit HRM identities only)
 //------------------------------------------------------------------
 function assignment_work_locations_list($name, $selected=0, $submit_on_change=false) {
