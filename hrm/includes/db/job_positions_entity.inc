@@ -91,7 +91,7 @@ class job_positions_entity extends Entity {
         return $changed;
     }
 
-    public static function create($data, $job_id = null, $job_explicit = false)
+    public static function create($data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false)
     {
         if (!hrm_job_position_writer_authorized())
             return false;
@@ -99,6 +99,10 @@ class job_positions_entity extends Entity {
             return false;
         $target_job_id = $job_explicit ? normalize_hrm_position_job_target($job_id) : null;
         if ($job_explicit && $target_job_id === false)
+            return false;
+        $target_parent_id = $hierarchy_explicit ? normalize_hrm_position_hierarchy_target($reports_to_position_id) : null;
+        $hierarchy_date = $hierarchy_explicit ? hrm_position_hierarchy_normalize_date($hierarchy_effective_from) : null;
+        if ($hierarchy_explicit && ($target_parent_id === false || $hierarchy_date === false || !hrm_position_hierarchy_table_ready()))
             return false;
         begin_transaction();
         $e = new static();
@@ -113,6 +117,8 @@ class job_positions_entity extends Entity {
             );
         if ($result && $job_explicit)
             $result = set_hrm_position_job_binding($legacy_position_id, $target_job_id);
+        if ($result && $hierarchy_explicit)
+            $result = set_hrm_position_hierarchy($legacy_position_id, $target_parent_id, $hierarchy_date);
         if ($result)
             commit_transaction();
         else
@@ -120,7 +126,7 @@ class job_positions_entity extends Entity {
         return (bool)$result;
     }
 
-    public static function modify($key, $data, $job_id = null, $job_explicit = false)
+    public static function modify($key, $data, $job_id = null, $job_explicit = false, $reports_to_position_id = null, $hierarchy_effective_from = null, $hierarchy_explicit = false)
     {
         if (!hrm_job_position_writer_authorized() || (int)$key <= 0)
             return false;
@@ -128,6 +134,10 @@ class job_positions_entity extends Entity {
             return false;
         $target_job_id = $job_explicit ? normalize_hrm_position_job_target($job_id) : null;
         if ($job_explicit && $target_job_id === false)
+            return false;
+        $target_parent_id = $hierarchy_explicit ? normalize_hrm_position_hierarchy_target($reports_to_position_id) : null;
+        $hierarchy_date = $hierarchy_explicit ? hrm_position_hierarchy_normalize_date($hierarchy_effective_from) : null;
+        if ($hierarchy_explicit && ($target_parent_id === false || $hierarchy_date === false || !hrm_position_hierarchy_table_ready()))
             return false;
         begin_transaction();
         $e = new static();
@@ -139,6 +149,8 @@ class job_positions_entity extends Entity {
             $result = synchronize_hrm_position_from_legacy_position((int)$key, $changed, 'update');
         if ($result && $job_explicit)
             $result = set_hrm_position_job_binding((int)$key, $target_job_id);
+        if ($result && $hierarchy_explicit)
+            $result = set_hrm_position_hierarchy((int)$key, $target_parent_id, $hierarchy_date);
         if ($result && hrm_position_table_ready())
             $result = is_array(static::lock_projection_state(true));
         if ($result)

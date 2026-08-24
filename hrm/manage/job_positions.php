@@ -28,8 +28,9 @@ if(!job_classes_entity::has_records()) {
 	display_error(_('No Job Class found in the system, please define Job Classes first.'));
 	display_footer_exit();
 }
-if (!hrm_position_job_column_ready() || !hrm_job_table_ready()) {
-    display_error(_('The normalized Position Job relationship writer is not installed. Run the normal software upgrade first.'));
+if (!hrm_position_job_column_ready() || !hrm_job_table_ready()
+    || !hrm_position_hierarchy_table_ready() || get_hrm_position_hierarchy_writer_activation_date() === false) {
+    display_error(_('The normalized Position Job/hierarchy writers are not installed. Run the normal software upgrade first.'));
     display_footer_exit();
 }
 $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
@@ -53,11 +54,33 @@ if ($jobs) {
     }
 }
 
+$hierarchy_options = array(0=>_('Top level / Unassigned'));
+$hierarchy_labels = array(0=>_('Top level / Unassigned'));
+$hierarchy_positions = get_hrm_positions_for_hierarchy_selector((int)$legal_entity_id, 0);
+if ($hierarchy_positions) {
+    while ($position = db_fetch_assoc($hierarchy_positions)) {
+        $label = $position['position_code'].' - '.$position['position_name'];
+        if ($position['position_status'] !== 'active')
+            $label .= ' '._('(Inactive)');
+        $hierarchy_labels[(int)$position['position_id']] = $label;
+        if ($position['position_status'] === 'active')
+            $hierarchy_options[(int)$position['position_id']] = $label;
+    }
+}
+$hierarchy_today_sql = date2sql(Today());
+
 simple_page_mode(false);
 
 if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
     $job_id = normalize_hrm_position_job_target(get_post('job_id', '0'));
+    $reports_to_position_id = normalize_hrm_position_hierarchy_target(get_post('reports_to_position_id', '0'));
+    $hierarchy_effective_from = get_post('hierarchy_effective_from', Today());
+    $hierarchy_date_sql = is_date($hierarchy_effective_from) ? date2sql($hierarchy_effective_from) : false;
+    $original_parent = normalize_hrm_position_hierarchy_target(get_post('hierarchy_original_parent_id', '0'));
+    $hierarchy_explicit = $selected_id == ''
+        ? $reports_to_position_id !== null
+        : ($original_parent !== false && $reports_to_position_id !== $original_parent);
 	if(empty(trim($_POST['position_name']))) {
 		display_error(_('Position name cannot be empty.'));
 		set_focus('position_name');
@@ -65,6 +88,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
     elseif($job_id === false) {
         display_error(_('The selected Job is invalid.'));
         set_focus('job_id');
+    }
+    elseif($reports_to_position_id === false) {
+        display_error(_('The selected reporting Position is invalid.'));
+        set_focus('reports_to_position_id');
+    }
+    elseif($hierarchy_explicit && $hierarchy_date_sql === false) {
+        display_error(_('The hierarchy effective date is invalid.'));
+        set_focus('hierarchy_effective_from');
     }
 	elseif(!check_num('basic_amount', 0)) {
 		display_error(_('Amount field value must be a positive number.'));
@@ -77,7 +108,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			), $job_id, true))
+			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit))
 				display_notification(_('Selected job position has been updated'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -87,7 +118,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'position_name' => $_POST['position_name'],
 				'basic_amount' => input_num('basic_amount'),
 				'job_class_id' => $_POST['job_class_id']
-			), $job_id, true))
+			), $job_id, true, $reports_to_position_id, $hierarchy_date_sql, $hierarchy_explicit))
 				display_notification(_('New job position has been added'));
 			else
 				display_error(_('The Position could not be synchronized. No changes were committed.'));
@@ -116,6 +147,9 @@ if($Mode == 'RESET') {
 	$_POST['position_name'] = '';
 	$_POST['basic_amount'] = '';
     $_POST['job_id'] = '0';
+    $_POST['reports_to_position_id'] = '0';
+    $_POST['hierarchy_original_parent_id'] = '0';
+    $_POST['hierarchy_effective_from'] = Today();
 }
 
 //--------------------------------------------------------------------------
@@ -124,7 +158,7 @@ start_form();
 
 start_table(TABLESTYLE);
 
-$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), _('Job'), '', '');
+$th = array(_('Id'), _('Position Name'), _('Salary Basic Amount'), _('Class'), _('Job'), _('Reports To'), '', '');
 
 inactive_control_column($th);
 table_header($th);
@@ -144,6 +178,10 @@ while ($myrow = db_fetch($result)) {
     $bound_job_id = is_array($normalized_position) && isset($normalized_position['job_id']) && $normalized_position['job_id'] !== null
         ? (int)$normalized_position['job_id'] : 0;
     label_cell(isset($job_labels[$bound_job_id]) ? $job_labels[$bound_job_id] : _('Invalid/out-of-scope'));
+    $hierarchy = is_array($normalized_position)
+        ? get_hrm_position_hierarchy_as_of((int)$normalized_position['position_id'], $hierarchy_today_sql, false) : false;
+    $parent_id = is_array($hierarchy) ? (int)$hierarchy['reports_to_position_id'] : 0;
+    label_cell(isset($hierarchy_labels[$parent_id]) ? $hierarchy_labels[$parent_id] : _('Invalid/out-of-scope'));
 	hrm_job_position_inactive_control_cell($myrow['position_id'], $myrow['inactive']);
 	edit_button_cell('Edit'.$myrow['position_id'], _('Edit'));
 	delete_button_cell('Delete'.$myrow['position_id'], _('Delete'));
@@ -168,14 +206,32 @@ if($selected_id != '') {
         $current_job_id = (int)$_POST['job_id'];
         if ($current_job_id > 0 && isset($job_labels[$current_job_id]) && !isset($job_options[$current_job_id]))
             $job_options[$current_job_id] = $job_labels[$current_job_id];
+        $hierarchy = is_array($normalized_position)
+            ? get_hrm_position_hierarchy_as_of((int)$normalized_position['position_id'], $hierarchy_today_sql, false) : false;
+        $current_parent_id = is_array($hierarchy) ? (int)$hierarchy['reports_to_position_id'] : 0;
+        $_POST['reports_to_position_id'] = (string)$current_parent_id;
+        $_POST['hierarchy_original_parent_id'] = (string)$current_parent_id;
+        $_POST['hierarchy_effective_from'] = Today();
+        if ($current_parent_id > 0 && isset($hierarchy_labels[$current_parent_id]) && !isset($hierarchy_options[$current_parent_id]))
+            $hierarchy_options[$current_parent_id] = $hierarchy_labels[$current_parent_id];
+        if (is_array($normalized_position))
+            unset($hierarchy_options[(int)$normalized_position['position_id']]);
 	}
 	hidden('selected_id', $selected_id);
+    hidden('hierarchy_original_parent_id', get_post('hierarchy_original_parent_id', '0'));
 }
+
+if (!isset($_POST['reports_to_position_id']))
+    $_POST['reports_to_position_id'] = '0';
+if (!isset($_POST['hierarchy_effective_from']))
+    $_POST['hierarchy_effective_from'] = Today();
 
 text_row_ex(_('Position Name:'), 'position_name', 50, 60);
 amount_row(_('Salary Basic Amount:'), 'basic_amount', null, null, null, null, true);
 job_classes_list_row(_('Job Class:'), 'job_class_id');
 label_row(_('Job:'), array_selector('job_id', get_post('job_id', '0'), $job_options));
+label_row(_('Reports To:'), array_selector('reports_to_position_id', get_post('reports_to_position_id', '0'), $hierarchy_options));
+date_row(_('Hierarchy Effective From:'), 'hierarchy_effective_from');
 
 end_table(1);
 
