@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.239',
-        'active_legacy_payroll_contract'=>'1.0.193',
-        'next_backlog_item'=>'read-only PAY-SEC-004 step-up/assurance issuance review for sensitive HRM governance commands',
+        'active_database_version'=>'1.0.240',
+        'active_legacy_payroll_contract'=>'1.0.194',
+        'next_backlog_item'=>'read-only PAY-SEC-004 elevated-assurance issuer/factor review for privileged HRM governance commands',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile how fresh elevated session assurance is issued and consumed before any Person identifier verification-request writer or governance state transition; make no identifier request write, verification promotion, approval/rejection, full reveal, payment-election/allocation or payment-authority change during that review',
+        'next_slice_scope'=>'reconcile a real verified factor or federated assurance source, expiry/replay/recovery semantics and high-risk-command consumption before any elevated-assurance issuer or Person identifier verification-request writer; make no assurance issuance, identifier request write, verification promotion, approval/rejection, full reveal, payment-authority or accounting-authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -95,6 +95,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_identifier_governance_foundation.php'),
             'hrm_fnd_004_person_identifier_verification_request_foundation'=>array('previous'=>'1.0.238','version'=>'1.0.239',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_identifier_verification_request_foundation.php'),
+            'pay_sec_004_elevated_assurance_metadata_foundation'=>array('previous'=>'1.0.239','version'=>'1.0.240',
+                'file'=>'sql/upgrade_pay_sec_004_elevated_assurance_metadata_foundation.php'),
         ),
     );
 }
