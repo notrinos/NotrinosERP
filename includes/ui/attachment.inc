@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once($path_to_root. '/includes/ui/simple_crud_class.inc');
+include_once($path_to_root. '/includes/attachment_service.inc');
+include_once($path_to_root. '/admin/db/attachments_db.inc');
 
 /*
 	View/Edit class for attachments
@@ -211,91 +213,39 @@ class attachments extends simple_crud {
 	}
 	
 	function db_insert() {
-		$dat = $this->data;		
-		if(!isset($max_image_size))
-		$max_image_size = 5000;
-		$upload_file = '';
-		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] <> '') {
-			
-			$result = $_FILES['file_attachment_name']['error'];
-			$upload_file = 'Yes'; 
-			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir))		
-				mkdir($attr_dir);
-			$attach_dir = realpath($attr_dir);
-			if ($attach_dir === false || !file_exists($attach_dir))
-				mkdir($attr_dir);
-			
-			// ALWAYS generate a server-side random filename.
-			// NEVER trust client-supplied unique_name values — they can contain
-			// path traversal sequences (../) leading to arbitrary file write and
-			// PHP code execution.
-			$attachment_file_name = uniqid(); 
-				
-			$filesize = $_FILES['file_attachment_name']['size'];
-			$filetype = $_FILES['file_attachment_name']['type'];
-
-			$filename = $attach_dir.'/'.$attachment_file_name; 
-			
-			if (file_exists($filename)){
-				$result = unlink($filename);
-				if (!$result) {
-					display_error(_('The existing Docs could not be removed'));
-					$upload_file = 'No';
-				}
-			}	
-			if ($upload_file == 'Yes'){
-				$actual_file_nam = $_FILES['file_attachment_name']['name'];
-				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
-				$sql = "INSERT INTO ".TB_PREF."attachments (trans_no, type_no, `description`, `filename`, unique_name, tran_date, `filesize`, `filetype`) VALUES ("
-					. db_escape($this->entity) . ','
-					. db_escape($dat['type_no']) . ','
-					. db_escape($_POST['description']) . ','
-					. db_escape($actual_file_nam) . ','
-					. db_escape($attachment_file_name) . ','
-					. db_escape(date2sql($_POST['tran_date'])) . ','
-					. db_escape($filesize) . ','
-					. db_escape($filetype) . ')';
-				if(db_query($sql, 'Could not add Attachment'))
-					display_notification(_('A New Attachment Added Successfully'));
-			}
+		$dat = $this->data;
+		if (!isset($_FILES['file_attachment_name']) || $_FILES['file_attachment_name']['name'] === '') {
+			display_error(_('Select attachment file.'));
+			return false;
 		}
+		$validated = validate_general_attachment_upload($_FILES['file_attachment_name']);
+		if (empty($validated['ok'])) {
+			display_error($validated['error']);
+			return false;
+		}
+		$attachment_id = create_attachment(
+			$dat['type_no'], $this->entity, $_POST['description'], $validated,
+			date2sql($_POST['tran_date'])
+		);
+		if ($attachment_id === false) {
+			display_error(_('The attachment could not be stored.'));
+			return false;
+		}
+		display_notification(_('A New Attachment Added Successfully'));
+		return true;
 	}
 
 	function db_update() {
 		$dat = $this->data;
-		if(!isset($max_image_size))
-			$max_image_size = 5000;
-		$upload_file = '';
 		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] != '') {
-			
-			$result = $_FILES['file_attachment_name']['error'];
-			$upload_file = 'Yes'; 
-			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir))
-				mkdir($attr_dir);
-			$attach_dir = realpath($attr_dir);
-			if ($attach_dir === false || !file_exists($attach_dir))
-				mkdir($attr_dir);
-			
-			// ALWAYS generate a server-side random filename on update too.
-			// Never trust client-supplied unique_name — path traversal risk.
-			$attachment_file_name = uniqid(); 
-				
-			$filesize = $_FILES['file_attachment_name']['size'];
-			$filetype = $_FILES['file_attachment_name']['type'];
-
-			$filename = $attach_dir.'/'.$attachment_file_name; 
-			if (file_exists($filename)){
-				$result = unlink($filename);
-				if (!$result) {
-					display_error(_('The existing Docs could not be removed'));
-					$upload_file = 'No';
-				}
+			$validated = validate_general_attachment_upload($_FILES['file_attachment_name']);
+			if (empty($validated['ok'])) {
+				display_error($validated['error']);
+				return false;
 			}
-			if ($upload_file == 'Yes'){
-				$actual_file_nam = $_FILES['file_attachment_name']['name'];
-				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
+			if (!replace_attachment_file($this->selected_id, $validated)) {
+				display_error(_('The attachment could not be replaced.'));
+				return false;
 			}
 		}
 		$sql = "UPDATE ".TB_PREF."attachments SET "
@@ -303,14 +253,12 @@ class attachments extends simple_crud {
 			. "type_no = " . db_escape($dat['type_no']) . ","
 			. "`description` = " . db_escape($_POST['description']) . ","
 			. "tran_date = " . db_escape(date2sql($_POST['tran_date']));
-		if ($upload_file == 'Yes')
-			$sql .=  ", unique_name = " . db_escape($attachment_file_name) . ","
-				. "`filename` = " . db_escape($actual_file_nam) . ","
-				. "`filesize` = " . db_escape($filesize) . ","
-				. "`filetype` = " . db_escape($filetype);
 		$sql .=  " WHERE id = " . db_escape($this->selected_id);
-		if(db_query($sql, "Could not Update Attachment $this->selected_id"))
+		if(db_query($sql, "Could not Update Attachment $this->selected_id")) {
 			display_notification(_("The Selected Attachment $this->selected_id Updated Successfully"));
+			return true;
+		}
+		return false;
 	}
 
 	function insert_check() {

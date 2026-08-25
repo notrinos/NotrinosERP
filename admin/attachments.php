@@ -79,17 +79,21 @@ if ($view_id != -1) {
 				display_error(_('Invalid attachment path.'));
 				exit();
 			}
-			$inline_types = array('jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
-				'gif' => 'image/gif', 'pdf' => 'application/pdf');
-			$extension = strtolower(pathinfo($row['filename'], PATHINFO_EXTENSION));
-			$type = isset($inline_types[$extension]) ? $inline_types[$extension] : 'application/octet-stream';
+			$type = general_attachment_inline_mime($safe_path, $row['filename']);
+			$inline = $type !== false;
+			if (!$inline)
+				$type = 'application/octet-stream';
 			// Clean output buffer to prevent output_html callback from corrupting binary data
 			while (ob_get_level())
 				ob_end_clean();
 			header('Content-type: '.$type);
 			header('X-Content-Type-Options: nosniff');
-			header('Content-Length: '.$row['filesize']);
-			header('Content-Disposition: '.(isset($inline_types[$extension]) ? 'inline' : 'attachment'));
+			header('Cache-Control: private, no-store, max-age=0');
+			header('Pragma: no-cache');
+			header("Content-Security-Policy: sandbox; default-src 'none'");
+			header('Content-Length: '.filesize($safe_path));
+			$safe_filename = str_replace(array('"', '\\', "\n", "\r"), '_', $row['filename']);
+			header('Content-Disposition: '.($inline ? 'inline' : 'attachment; filename="'.$safe_filename.'"'));
 			echo file_get_contents($safe_path);
 			exit();
 		}
@@ -118,13 +122,20 @@ if ($download_id != -1) {
 				display_error(_('Invalid attachment path.'));
 				exit();
 			}
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
+			$type = detect_attachment_mime_strict($safe_path);
+			if ($type === false)
+				$type = 'application/octet-stream';
 			// Clean output buffer to prevent output_html callback from corrupting binary data
 			while (ob_get_level())
 				ob_end_clean();
 			header('Content-type: '.$type);
-			header('Content-Length: '.$row['filesize']);
-			header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
+			header('X-Content-Type-Options: nosniff');
+			header('Cache-Control: private, no-store, max-age=0');
+			header('Pragma: no-cache');
+			header("Content-Security-Policy: sandbox; default-src 'none'");
+			header('Content-Length: '.filesize($safe_path));
+			$safe_filename = str_replace(array('"', '\\', "\n", "\r"), '_', $row['filename']);
+			header('Content-Disposition: attachment; filename="'.$safe_filename.'"');
 			echo file_get_contents($safe_path);
 			exit();
 		}
@@ -147,72 +158,54 @@ if (isset($_GET['trans_no']))
 	$_POST['trans_no'] = $_GET['trans_no'];
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
-	
-	$filename = basename($_FILES['filename']['name']);
-	
+	$has_upload = isset($_FILES['filename']) && $_FILES['filename']['name'] !== '';
+	$validated_upload = false;
+	$upload_error = '';
+
 	// Block generic add/update for ST_EMPLOYEE type.
 	if ((int)get_post('filterType') === ST_EMPLOYEE) {
-		display_error(_('Employee documents must be managed through the HR module.'));
-		reset_form();
-		$Mode = 'RESET';
+		$upload_error = _('Employee documents must be managed through the HR module.');
 	} elseif (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
 		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
 	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
-		display_error(_('Selected transaction does not exists.'));
-	elseif ($Mode == 'ADD_ITEM' && !in_array(strtoupper(substr($filename, strlen($filename) - 3)), array('JPG', 'PNG', 'GIF', 'PDF', 'DOC', 'ODT'))) {
-		display_error(_('Only graphics, pdf, doc and odt files are supported.'));
+		$upload_error = _('Selected transaction does not exists.');
+	elseif ($Mode == 'ADD_ITEM' && !$has_upload)
+		$upload_error = _('Select attachment file.');
+	elseif ($has_upload) {
+		$validated_upload = validate_general_attachment_upload($_FILES['filename']);
+		if (empty($validated_upload['ok']))
+			$upload_error = $validated_upload['error'];
+		elseif (strlen($validated_upload['filename']) > 60)
+			$upload_error = _('File name exceeds maximum of 60 chars. Please change filename and try again.');
 	}
-	elseif ($Mode == 'ADD_ITEM' && !isset($_FILES['filename']))
-		display_error(_('Select attachment file.'));
-	elseif ($Mode == 'ADD_ITEM' && ($_FILES['filename']['error'] > 0)) {
-		if ($_FILES['filename']['error'] == UPLOAD_ERR_INI_SIZE) 
-			display_error(_('The file size is over the maximum allowed.'));
-		else
-			display_error(_('Select attachment file.'));
-	}
-	elseif ( strlen($filename) > 60)
-		display_error(_('File name exceeds maximum of 60 chars. Please change filename and try again.'));
-	else {
 
-		$tmpname = $_FILES['filename']['tmp_name'];
-		$dir = company_path().'/attachments';
-
-		if (!file_exists($dir)) {
-			mkdir ($dir,0777);
-			$index_file = "<?php\nheader(\"Location: ../index.php\");\n";
-			$fp = fopen($dir.'/index.php', 'w');
-			fwrite($fp, $index_file);
-			fclose($fp);
-		}
-
-		$filesize = $_FILES['filename']['size'];
-		$filetype = $_FILES['filename']['type'];
-
-		// file name compatible with POSIX
-		// protect against directory traversal
-		if ($Mode == 'UPDATE_ITEM') {
-			$row = get_attachment($selected_id);
-			if ($row['filename'] == '')
-				exit();
-			$unique_name = $row['unique_name'];
-			if ($filename && file_exists($dir.'/'.$unique_name))
-				unlink($dir.'/'.$unique_name);
-		}
-		else
-			$unique_name = random_id();
-
-		//save the file
-		move_uploaded_file($tmpname, $dir.'/'.$unique_name);
-
-		if ($Mode == 'ADD_ITEM') {
-			add_attachment($_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype);
-			display_notification(_('Attachment has been inserted.'));
-		}
+	if ($upload_error !== '') {
+		display_error($upload_error);
+	} elseif ($Mode == 'ADD_ITEM') {
+		$attachment_id = create_attachment(
+			$_POST['filterType'], $_POST['trans_no'], $_POST['description'],
+			$validated_upload, date2sql(Today())
+		);
+		if ($attachment_id === false)
+			display_error(_('The attachment could not be stored.'));
 		else {
-			update_attachment($selected_id, $_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype); 
-			display_notification(_('Attachment has been updated.'));
+			display_notification(_('Attachment has been inserted.'));
+			reset_form();
 		}
+	} else {
+		$file_replaced = !$has_upload || replace_attachment_file($selected_id, $validated_upload);
+		if (!$file_replaced)
+			display_error(_('The attachment could not be replaced.'));
+		else {
+			update_attachment($selected_id, $_POST['filterType'], $_POST['trans_no'],
+				$_POST['description'], '', '', 0, '');
+			display_notification(_('Attachment has been updated.'));
+			reset_form();
+		}
+	}
+	if ((int)get_post('filterType') === ST_EMPLOYEE) {
 		reset_form();
+		$Mode = 'RESET';
 	}
 	refresh_pager('trans_tbl');
 	$Ajax->activate('_page_body');
