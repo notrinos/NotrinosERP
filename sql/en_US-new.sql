@@ -1109,6 +1109,21 @@ CREATE TABLE `0_hrm_person_identifiers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
+CREATE TABLE `0_hrm_person_identifier_verification_requests` (
+	`verification_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`identifier_id` bigint(20) unsigned NOT NULL,
+	`identifier_row_version` int(10) unsigned NOT NULL,
+	`verification_method` varchar(32) NOT NULL,
+	`request_status` varchar(16) NOT NULL DEFAULT 'pending',
+	`request_row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`requested_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`requested_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`verification_request_id`),
+	KEY `hrm_person_identifier_verification_identifier_idx` (`identifier_id`,`identifier_row_version`,`verification_request_id`),
+	KEY `hrm_person_identifier_verification_status_idx` (`request_status`,`verification_request_id`),
+	CONSTRAINT `0_hrm_person_identifier_verification_identifier_fk` FOREIGN KEY (`identifier_id`) REFERENCES `0_hrm_person_identifiers` (`identifier_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_person_bank_accounts` (
 	`person_bank_account_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`person_id` bigint(20) unsigned NOT NULL,

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.238',
-        'active_legacy_payroll_contract'=>'1.0.192',
-        'next_backlog_item'=>'read-only HRM-FND-004 identifier verification/approval authority review only',
+        'active_database_version'=>'1.0.239',
+        'active_legacy_payroll_contract'=>'1.0.193',
+        'next_backlog_item'=>'read-only PAY-SEC-004 step-up/assurance issuance review for sensitive HRM governance commands',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile identifier verification-method ownership, maker-checker authority, assurance/step-up dependencies and audit requirements before any identifier governance state-transition writer; make no verification promotion, approval/rejection command, full reveal, payment-election/allocation or payment-authority change during that review',
+        'next_slice_scope'=>'reconcile how fresh elevated session assurance is issued and consumed before any Person identifier verification-request writer or governance state transition; make no identifier request write, verification promotion, approval/rejection, full reveal, payment-election/allocation or payment-authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -93,6 +93,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_foundation.php'),
             'hrm_fnd_004_person_identifier_governance_foundation'=>array('previous'=>'1.0.237','version'=>'1.0.238',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_identifier_governance_foundation.php'),
+            'hrm_fnd_004_person_identifier_verification_request_foundation'=>array('previous'=>'1.0.238','version'=>'1.0.239',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_identifier_verification_request_foundation.php'),
         ),
     );
 }
