@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.236',
-        'active_legacy_payroll_contract'=>'1.0.190',
-        'next_backlog_item'=>'read-only HRM-FND-003 completion and deferred-domain ownership review only',
+        'active_database_version'=>'1.0.237',
+        'active_legacy_payroll_contract'=>'1.0.191',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier/bank governance-metadata review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'inventory accepted HRM-FND-003 legal-entity, organization, grade, position, job, establishment, work-location, hierarchy, manager and occupancy/headcount boundaries and prove all deferred salary, payroll-tax, costing and concurrent-payroll ownership remains outside this package before declaring terminal completion or releasing HRM-FND-004; make no business-data or runtime authority change during that review',
+        'next_slice_scope'=>'reconcile accepted HRM-FND-001 identifier effective history and HRM-FND-004 encrypted bank foundation against approval/version requirements before choosing any additive mutation or payment-binding successor; make no verification promotion, maker-checker, full-reveal, payment-election/allocation or payment-authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -89,6 +89,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_position_headcount_foundation.php'),
             'hrm_fnd_003_position_headcount_writer'=>array('previous'=>'1.0.235','version'=>'1.0.236',
                 'file'=>'sql/upgrade_hrm_fnd_003_position_headcount_writer.php'),
+            'hrm_fnd_004_person_bank_account_foundation'=>array('previous'=>'1.0.236','version'=>'1.0.237',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_foundation.php'),
         ),
     );
 }

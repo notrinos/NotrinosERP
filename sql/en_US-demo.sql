@@ -1153,6 +1153,7 @@ DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
 DROP TABLE IF EXISTS `0_hrm_person_emergency_contacts`;
 DROP TABLE IF EXISTS `0_hrm_person_addresses`;
 DROP TABLE IF EXISTS `0_hrm_person_contacts`;
+DROP TABLE IF EXISTS `0_hrm_person_bank_accounts`;
 DROP TABLE IF EXISTS `0_hrm_person_identifiers`;
 DROP TABLE IF EXISTS `0_hrm_person_names`;
 DROP TABLE IF EXISTS `0_hrm_workers`;
@@ -1225,6 +1226,31 @@ CREATE TABLE `0_hrm_person_identifiers` (
 	KEY `hrm_person_identifier_asof_idx` (`person_id`,`identifier_type`,`effective_from`,`effective_to`,`identifier_id`),
 	KEY `hrm_person_identifier_token_idx` (`identifier_type`,`lookup_token`,`identifier_id`),
 	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
+CREATE TABLE `0_hrm_person_bank_accounts` (
+	`person_bank_account_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`details_ciphertext` varbinary(1280) NOT NULL,
+	`masked_account` varchar(64) NOT NULL DEFAULT '',
+	`masked_routing` varchar(64) NOT NULL DEFAULT '',
+	`account_lookup_token` char(64) NOT NULL DEFAULT '',
+	`key_id` char(16) NOT NULL,
+	`payment_method` tinyint(3) unsigned NOT NULL DEFAULT '0',
+	`verification_status` varchar(16) NOT NULL DEFAULT 'unverified',
+	`verification_method` varchar(32) NOT NULL DEFAULT '',
+	`approval_status` varchar(16) NOT NULL DEFAULT 'unapproved',
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`person_bank_account_id`),
+	KEY `hrm_person_bank_asof_idx` (`person_id`,`effective_from`,`effective_to`,`person_bank_account_id`),
+	KEY `hrm_person_bank_token_idx` (`account_lookup_token`,`person_bank_account_id`),
+	CONSTRAINT `0_hrm_person_bank_accounts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_addresses` (
