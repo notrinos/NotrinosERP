@@ -809,10 +809,11 @@ function synchronize_hrm_person_sensitive_value(
 		$columns .= ',is_primary';
 		$values .= ',1';
 	} else {
-		$columns .= ',issuing_jurisdiction,valid_to';
+		$columns .= ',issuing_jurisdiction,valid_to,verification_method,approval_status,row_version';
 		$values .= ','.db_escape($normalized_jurisdiction === null ? '' : $normalized_jurisdiction)
 			.','.($normalized_valid_to === null
-			? 'NULL' : db_escape($normalized_valid_to));
+			? 'NULL' : db_escape($normalized_valid_to))
+			.",''".",'unapproved',1";
 	}
 	return db_query("INSERT INTO ".TB_PREF.$table." (".$columns.") VALUES ("
 		.$values.")", 'could not create encrypted HRM person sensitive version') ? 1 : false;
@@ -899,7 +900,7 @@ function get_hrm_person_sensitive_masked_as_of_sql($record_class, $employee_ref,
 	$alias = $record_class === 'contact' ? 'c' : 'i';
 	$type_column = $record_class === 'contact' ? 'contact_type' : 'identifier_type';
 	$extra = $record_class === 'contact' ? ',c.is_primary'
-		: ',i.issuing_jurisdiction,i.valid_to';
+		: ',i.issuing_jurisdiction,i.valid_to,i.verification_method,i.approval_status,i.row_version';
 	$as_of_sql = db_escape($as_of);
 	return "SELECT ".$alias.".".$type_column.",".$alias.".masked_value,"
 		.$alias.".verification_status,".$alias.".effective_from,"

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.237',
-        'active_legacy_payroll_contract'=>'1.0.191',
-        'next_backlog_item'=>'read-only HRM-FND-004 identifier/bank governance-metadata review only',
+        'active_database_version'=>'1.0.238',
+        'active_legacy_payroll_contract'=>'1.0.192',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier verification/approval authority review only',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile accepted HRM-FND-001 identifier effective history and HRM-FND-004 encrypted bank foundation against approval/version requirements before choosing any additive mutation or payment-binding successor; make no verification promotion, maker-checker, full-reveal, payment-election/allocation or payment-authority change during that review',
+        'next_slice_scope'=>'reconcile identifier verification-method ownership, maker-checker authority, assurance/step-up dependencies and audit requirements before any identifier governance state-transition writer; make no verification promotion, approval/rejection command, full reveal, payment-election/allocation or payment-authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -91,6 +91,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_003_position_headcount_writer.php'),
             'hrm_fnd_004_person_bank_account_foundation'=>array('previous'=>'1.0.236','version'=>'1.0.237',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_foundation.php'),
+            'hrm_fnd_004_person_identifier_governance_foundation'=>array('previous'=>'1.0.237','version'=>'1.0.238',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_identifier_governance_foundation.php'),
         ),
     );
 }
