@@ -5497,6 +5497,31 @@ CREATE TABLE `0_user_federation_external_subject_links` (
 
 -- Data of table `0_user_federation_external_subject_links` --
 
+
+-- Structure of table `0_user_federation_verifier_decisions` --
+
+DROP TABLE IF EXISTS `0_user_federation_verifier_decisions`;
+
+CREATE TABLE `0_user_federation_verifier_decisions` (
+	`verifier_decision_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+	`verifier_transaction_id` bigint unsigned NOT NULL,
+	`replay_marker_id` bigint unsigned NOT NULL,
+	`external_subject_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`verified_assurance_level` tinyint unsigned NOT NULL DEFAULT '1',
+	`assurance_method` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`verified_at` datetime NOT NULL,
+	`valid_until` datetime NOT NULL,
+	PRIMARY KEY (`verifier_decision_id`),
+	UNIQUE KEY `federation_verifier_decision_transaction` (`verifier_transaction_id`),
+	UNIQUE KEY `federation_verifier_decision_replay` (`replay_marker_id`),
+	KEY `federation_verifier_decision_subject` (`external_subject_hash`,`valid_until`,`verifier_decision_id`),
+	CONSTRAINT `0_user_federation_verifier_decision_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_user_federation_verifier_decision_replay_fk` FOREIGN KEY (`replay_marker_id`) REFERENCES `0_user_federation_verifier_replay_markers` (`replay_marker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_verifier_decisions` --
+
+
 -- Data of table `0_users` --
 
 INSERT INTO `0_users` VALUES

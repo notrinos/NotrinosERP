@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.245',
-        'active_legacy_payroll_contract'=>'1.0.198',
-        'next_backlog_item'=>'read-only PAY-SEC-004 federated assertion-verifier/link-writer and assurance-consumption review',
+        'active_database_version'=>'1.0.246',
+        'active_legacy_payroll_contract'=>'1.0.199',
+        'next_backlog_item'=>'read-only PAY-SEC-004 private federation-control-material loader, verifier execution and decision-consumption authority review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact OIDC callback and SAML ACS verification, replay-marker insertion, consumed verifier-transaction proof, immutable external-subject-link creation/deprovision ordering, provider/configuration disable plus session-revocation fan-out, recovery/admin-reset behavior, assurance cap/mapping and restricted-value-free PAY-AUD evidence; make no runtime authority change during that read-only review',
+        'next_slice_scope'=>'reverify exact OIDC/SAML library and private trust loading, verifier transaction issuance/claiming/crash recovery, replay plus consume plus decision atomicity, first-link versus existing-link behavior, provider/configuration disable and deprovision fan-out, local-user eligibility, assurance/session issuance and privileged-command consumption; make no runtime federation authority change during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -107,6 +107,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_verifier_transaction_state_foundation.php'),
             'pay_sec_004_federation_external_subject_link_foundation'=>array('previous'=>'1.0.244','version'=>'1.0.245',
                 'file'=>'sql/upgrade_pay_sec_004_federation_external_subject_link_foundation.php'),
+            'pay_sec_004_federation_verifier_decision_foundation'=>array('previous'=>'1.0.245','version'=>'1.0.246',
+                'file'=>'sql/upgrade_pay_sec_004_federation_verifier_decision_foundation.php'),
         ),
     );
 }
