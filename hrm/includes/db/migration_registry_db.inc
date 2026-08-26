@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.247',
-        'active_legacy_payroll_contract'=>'1.0.200',
-        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC/SAML verifier dependency and transaction-command authority review',
+        'active_database_version'=>'1.0.248',
+        'active_legacy_payroll_contract'=>'1.0.201',
+        'next_backlog_item'=>'read-only PAY-SEC-004 supported-runtime modernization and verifier-installation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'select the exact maintained OIDC/SAML verification library and profile boundary; reverify private-bundle binding, transaction issuance/claiming/crash recovery, replay plus consume plus decision atomicity, first-link versus existing-link local-user eligibility, provider/configuration disable and deprovision revocation fan-out, session assurance issuance and privileged-command consumption; add no callback, ACS or federated authentication authority during that read-only review',
+        'next_slice_scope'=>'decide whether PAY-SEC-004 Phase-1 federation may require a newer PHP floor than the legacy application baseline; define Composer/vendor deployment, dependency integrity and SBOM evidence, required extensions, rollback and security patching; add no callback, ACS, transaction writer or federated authentication authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -111,6 +111,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_verifier_decision_foundation.php'),
             'pay_sec_004_federation_control_material_loader_foundation'=>array('previous'=>'1.0.246','version'=>'1.0.247',
                 'file'=>'sql/upgrade_pay_sec_004_federation_control_material_loader_foundation.php'),
+            'pay_sec_004_federation_verifier_runtime_capability_gate_foundation'=>array('previous'=>'1.0.247','version'=>'1.0.248',
+                'file'=>'sql/upgrade_pay_sec_004_federation_verifier_runtime_capability_gate_foundation.php'),
         ),
     );
 }
