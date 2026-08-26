@@ -5127,6 +5127,34 @@ CREATE TABLE `0_users` (
 	UNIQUE KEY `login_id` (`login_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
 
+
+-- Structure of table `0_user_federation_external_subject_links` --
+
+DROP TABLE IF EXISTS `0_user_federation_external_subject_links`;
+
+CREATE TABLE `0_user_federation_external_subject_links` (
+	`external_subject_link_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+	`provider_id` bigint unsigned NOT NULL,
+	`user_id` smallint(6) NOT NULL,
+	`external_subject_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`verifier_transaction_id` bigint unsigned NOT NULL,
+	`link_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'active',
+	`linked_at` datetime NOT NULL,
+	`deprovisioned_at` datetime DEFAULT NULL,
+	`deprovisioned_by` smallint(6) DEFAULT NULL,
+	`deprovision_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	PRIMARY KEY (`external_subject_link_id`),
+	UNIQUE KEY `federation_subject_provider_subject` (`provider_id`,`external_subject_hash`),
+	UNIQUE KEY `federation_subject_provider_user` (`provider_id`,`user_id`),
+	UNIQUE KEY `federation_subject_transaction` (`verifier_transaction_id`),
+	KEY `federation_subject_user_status` (`user_id`,`link_status`,`external_subject_link_id`),
+	CONSTRAINT `0_user_federation_subject_link_provider_fk` FOREIGN KEY (`provider_id`) REFERENCES `0_user_federation_providers` (`provider_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_user_federation_subject_link_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_user_federation_subject_link_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_external_subject_links` --
+
 -- Data of table `0_users` --
 
 INSERT INTO `0_users` VALUES
