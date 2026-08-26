@@ -4989,6 +4989,31 @@ CREATE TABLE `0_user_session_assurance_events` (
 -- Data of table `0_user_session_assurance_events` --
 
 
+
+-- Structure of table `0_user_federation_providers` --
+
+DROP TABLE IF EXISTS `0_user_federation_providers`;
+
+CREATE TABLE `0_user_federation_providers` (
+	`provider_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`provider_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`protocol` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`issuer_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`provider_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'disabled',
+	`provider_row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`created_at` datetime NOT NULL,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`updated_at` datetime NOT NULL,
+	`updated_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`provider_id`),
+	UNIQUE KEY `federation_provider_key` (`provider_key`),
+	UNIQUE KEY `federation_provider_issuer` (`protocol`,`issuer_hash`),
+	KEY `federation_provider_status` (`provider_status`,`provider_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_providers` --
+
+
 -- Structure of table `0_users` --
 
 DROP TABLE IF EXISTS `0_users`;
