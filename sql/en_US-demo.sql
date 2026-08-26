@@ -5306,6 +5306,31 @@ CREATE TABLE `0_user_sessions` (
 -- Data of table `0_user_sessions` --
 
 
+-- Structure of table `0_user_session_assurance_events` --
+
+DROP TABLE IF EXISTS `0_user_session_assurance_events`;
+
+CREATE TABLE `0_user_session_assurance_events` (
+	`assurance_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`session_id` bigint(20) unsigned NOT NULL,
+	`assurance_level` tinyint(3) unsigned NOT NULL,
+	`assurance_method` varchar(32) NOT NULL,
+	`action_class` varchar(64) NOT NULL,
+	`action_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`issued_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	`consumed_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`assurance_event_id`),
+	UNIQUE KEY `assurance_nonce_hash` (`nonce_hash`),
+	KEY `assurance_session_active` (`session_id`,`consumed_at`,`expires_at`),
+	KEY `assurance_action_scope` (`action_class`,`action_hash`,`expires_at`),
+	CONSTRAINT `0_user_session_assurance_event_session_fk` FOREIGN KEY (`session_id`) REFERENCES `0_user_sessions` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_session_assurance_events` --
+
+
 -- Structure of table `0_users` --
 
 DROP TABLE IF EXISTS `0_users`;
