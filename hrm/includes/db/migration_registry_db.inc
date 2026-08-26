@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.242',
-        'active_legacy_payroll_contract'=>'1.0.196',
-        'next_backlog_item'=>'read-only PAY-SEC-004 federation trust-verifier configuration and immutable external-subject-link authority review',
+        'active_database_version'=>'1.0.243',
+        'active_legacy_payroll_contract'=>'1.0.197',
+        'next_backlog_item'=>'read-only PAY-SEC-004 immutable external-subject-link schema and verifier-transaction/replay-state review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact trust/secret custody, supported OIDC/SAML profile, issuer/audience/signature/time/replay/state/nonce/PKCE validation, immutable external-subject-link uniqueness, deprovision/session-revocation behavior, recovery/admin-reset semantics and assurance mapping; make no provider enablement, assertion acceptance, identity link, assurance issuance/elevation, identifier request write, verification promotion, approval/rejection, full reveal, payment-authority or accounting-authority change during that review',
+        'next_slice_scope'=>'define immutable external-subject-link schema authority plus exact verifier transaction/replay-state custody and lifecycle; make no provider enablement, assertion acceptance, identity link, assurance issuance/elevation, identifier request write, verification promotion, approval/rejection, full reveal, payment-authority or accounting-authority change during that review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -101,6 +101,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_privileged_assurance_event_foundation.php'),
             'pay_sec_004_federation_provider_registration_foundation'=>array('previous'=>'1.0.241','version'=>'1.0.242',
                 'file'=>'sql/upgrade_pay_sec_004_federation_provider_registration_foundation.php'),
+            'pay_sec_004_federation_verifier_configuration_foundation'=>array('previous'=>'1.0.242','version'=>'1.0.243',
+                'file'=>'sql/upgrade_pay_sec_004_federation_verifier_configuration_foundation.php'),
         ),
     );
 }

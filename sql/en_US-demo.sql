@@ -5356,6 +5356,31 @@ CREATE TABLE `0_user_federation_providers` (
 -- Data of table `0_user_federation_providers` --
 
 
+
+-- Structure of table `0_user_federation_provider_verifier_configs` --
+
+DROP TABLE IF EXISTS `0_user_federation_provider_verifier_configs`;
+
+CREATE TABLE `0_user_federation_provider_verifier_configs` (
+	`verifier_config_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`provider_id` bigint(20) unsigned NOT NULL,
+	`config_version` int(10) unsigned NOT NULL,
+	`verifier_profile` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`audience_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`trust_material_ref_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`max_clock_skew_seconds` smallint(5) unsigned NOT NULL DEFAULT '60',
+	`assurance_level_cap` tinyint(3) unsigned NOT NULL DEFAULT '1',
+	`config_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'disabled',
+	`created_at` datetime NOT NULL,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`verifier_config_id`),
+	UNIQUE KEY `federation_verifier_provider_version` (`provider_id`,`config_version`),
+	KEY `federation_verifier_status` (`config_status`,`provider_id`,`config_version`),
+	CONSTRAINT `0_user_federation_provider_verifier_provider_fk` FOREIGN KEY (`provider_id`) REFERENCES `0_user_federation_providers` (`provider_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_provider_verifier_configs` --
+
 -- Structure of table `0_users` --
 
 DROP TABLE IF EXISTS `0_users`;
