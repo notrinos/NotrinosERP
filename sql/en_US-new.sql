@@ -5039,6 +5039,50 @@ CREATE TABLE `0_user_federation_provider_verifier_configs` (
 
 -- Data of table `0_user_federation_provider_verifier_configs` --
 
+-- Structure of table `0_user_federation_verifier_transactions` --
+
+DROP TABLE IF EXISTS `0_user_federation_verifier_transactions`;
+
+CREATE TABLE `0_user_federation_verifier_transactions` (
+	`verifier_transaction_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`verifier_config_id` bigint(20) unsigned NOT NULL,
+	`transaction_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`correlation_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`proof_ref_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`created_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	`consumed_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`verifier_transaction_id`),
+	UNIQUE KEY `federation_verifier_transaction_key` (`transaction_key_hash`),
+	UNIQUE KEY `federation_verifier_transaction_correlation` (`verifier_config_id`,`correlation_hash`),
+	KEY `federation_verifier_transaction_active` (`verifier_config_id`,`consumed_at`,`expires_at`),
+	CONSTRAINT `0_user_federation_verifier_transaction_config_fk` FOREIGN KEY (`verifier_config_id`) REFERENCES `0_user_federation_provider_verifier_configs` (`verifier_config_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_verifier_transactions` --
+
+
+-- Structure of table `0_user_federation_verifier_replay_markers` --
+
+DROP TABLE IF EXISTS `0_user_federation_verifier_replay_markers`;
+
+CREATE TABLE `0_user_federation_verifier_replay_markers` (
+	`replay_marker_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`verifier_config_id` bigint(20) unsigned NOT NULL,
+	`replay_kind` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`replay_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`observed_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	PRIMARY KEY (`replay_marker_id`),
+	UNIQUE KEY `federation_verifier_replay_value` (`verifier_config_id`,`replay_kind`,`replay_hash`),
+	KEY `federation_verifier_replay_expiry` (`expires_at`,`replay_marker_id`),
+	CONSTRAINT `0_user_federation_verifier_replay_config_fk` FOREIGN KEY (`verifier_config_id`) REFERENCES `0_user_federation_provider_verifier_configs` (`verifier_config_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_verifier_replay_markers` --
+
+
 -- Structure of table `0_users` --
 
 DROP TABLE IF EXISTS `0_users`;
