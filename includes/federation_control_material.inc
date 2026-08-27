@@ -182,7 +182,7 @@ function federation_control_manifest($company = null)
         foreach ($bundle['materials'] as $material) {
             if (!is_array($material)
                 || array_keys($material) !== array('kind','file','sha256')
-                || !in_array($material['kind'], array('oidc_jwks','oidc_client_secret','oidc_client_private_key','saml_idp_certificate'), true)
+                || !in_array($material['kind'], array('oidc_jwks','oidc_client_config','oidc_client_secret','oidc_client_private_key','saml_idp_certificate'), true)
                 || isset($seen_kinds[$material['kind']])
                 || !federation_control_valid_material_filename($material['file'])
                 || !federation_control_valid_sha256($material['sha256']))

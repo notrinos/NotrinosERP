@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.249',
-        'active_legacy_payroll_contract'=>'1.0.202',
-        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC verifier-adaptor and protocol-transaction issuance review',
+        'active_database_version'=>'1.0.250',
+        'active_legacy_payroll_contract'=>'1.0.203',
+        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC callback/token-verifier and atomic-consumption review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact OIDC provider/config/private-bundle binding, authorization request construction, redirect allowlist, state/nonce/PKCE custody, callback parsing, token/JWKS verification, issuer/audience/time checks, replay plus transaction consume plus verifier-decision atomicity, crash/retry semantics, local-user eligibility, immutable-subject linking, revocation fan-out and assurance caps; add no callback route, transaction mutation or federated authentication authority during that read-only review',
+        'next_slice_scope'=>'define callback request parsing, state-hash lookup, private PKCE proof retrieval, authorization-code exchange boundary, exact issuer/audience/signature/time/nonce verification, replay insertion plus transaction consume plus verifier-decision append atomicity, crash/retry semantics, first-link and existing-link local-user eligibility, immutable-subject matching, provider/configuration disable or deprovision revocation fan-out and assurance caps; add no callback route or federated authentication authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -115,6 +115,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_verifier_runtime_capability_gate_foundation.php'),
             'pay_sec_004_federation_verifier_dependency_deployment_foundation'=>array('previous'=>'1.0.248','version'=>'1.0.249',
                 'file'=>'sql/upgrade_pay_sec_004_federation_verifier_dependency_deployment_foundation.php'),
+            'pay_sec_004_oidc_transaction_issuance_foundation'=>array('previous'=>'1.0.249','version'=>'1.0.250',
+                'file'=>'sql/upgrade_pay_sec_004_oidc_transaction_issuance_foundation.php'),
         ),
     );
 }
