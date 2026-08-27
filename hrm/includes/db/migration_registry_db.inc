@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.251',
-        'active_legacy_payroll_contract'=>'1.0.204',
-        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC token-exchange/verifier-adaptor and callback-consumer review',
+        'active_database_version'=>'1.0.252',
+        'active_legacy_payroll_contract'=>'1.0.205',
+        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC callback-claim lease/token-exchange command and atomic-consumption review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define private OIDC client-config token-endpoint and client-authentication semantics, company-private external-subject HMAC material, bounded authorization-code exchange, pinned/private JWKS verification with exact issuer/audience/azp/signature/algorithm/exp/iat/nbf/nonce/sub requirements, callback-claim lease ownership plus crash/uncertain-response/retry rules, code replay insertion plus transaction consume plus verifier-decision append atomicity, first-link and existing-link local-user eligibility, provider/configuration/link disable or deprovision revocation fan-out and assurance caps; add no public callback route, identity link, federated login or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define callback-claim acquisition, expiry, terminal and uncertain-retry transitions; authorization-code replay hashing; bounded no-redirect token exchange transport and response classification; exact selected-verifier-library adaptor inputs and outputs over pinned private RS256 JWKS with issuer/audience/azp/exp/iat/nbf/nonce/sub checks; replay insertion plus transaction consume plus verifier-decision append atomicity; first-link and existing-link local-user eligibility; provider/configuration/link disable or deprovision session-revocation ordering; add no public callback route, token exchange, token/JWT acceptance, identity-link writer, federated login or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -119,6 +119,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_oidc_transaction_issuance_foundation.php'),
             'pay_sec_004_oidc_callback_claim_foundation'=>array('previous'=>'1.0.250','version'=>'1.0.251',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_callback_claim_foundation.php'),
+            'pay_sec_004_oidc_token_verifier_material_foundation'=>array('previous'=>'1.0.251','version'=>'1.0.252',
+                'file'=>'sql/upgrade_pay_sec_004_oidc_token_verifier_material_foundation.php'),
         ),
     );
 }
