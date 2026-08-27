@@ -5063,6 +5063,29 @@ CREATE TABLE `0_user_federation_verifier_transactions` (
 -- Data of table `0_user_federation_verifier_transactions` --
 
 
+-- Structure of table `0_user_federation_oidc_callback_claims` --
+
+DROP TABLE IF EXISTS `0_user_federation_oidc_callback_claims`;
+
+CREATE TABLE `0_user_federation_oidc_callback_claims` (
+	`callback_claim_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`verifier_transaction_id` bigint(20) unsigned NOT NULL,
+	`claim_token_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`claim_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'claimed',
+	`claimed_at` datetime NOT NULL,
+	`claim_expires_at` datetime NOT NULL,
+	`terminal_at` datetime DEFAULT NULL,
+	`terminal_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	PRIMARY KEY (`callback_claim_id`),
+	UNIQUE KEY `federation_oidc_callback_claim_transaction` (`verifier_transaction_id`),
+	UNIQUE KEY `federation_oidc_callback_claim_token` (`claim_token_hash`),
+	KEY `federation_oidc_callback_claim_expiry` (`claim_status`,`claim_expires_at`,`callback_claim_id`),
+	CONSTRAINT `0_user_federation_oidc_callback_claim_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_oidc_callback_claims` --
+
+
 -- Structure of table `0_user_federation_verifier_replay_markers` --
 
 DROP TABLE IF EXISTS `0_user_federation_verifier_replay_markers`;

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.250',
-        'active_legacy_payroll_contract'=>'1.0.203',
-        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC callback/token-verifier and atomic-consumption review',
+        'active_database_version'=>'1.0.251',
+        'active_legacy_payroll_contract'=>'1.0.204',
+        'next_backlog_item'=>'read-only PAY-SEC-004 OIDC token-exchange/verifier-adaptor and callback-consumer review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define callback request parsing, state-hash lookup, private PKCE proof retrieval, authorization-code exchange boundary, exact issuer/audience/signature/time/nonce verification, replay insertion plus transaction consume plus verifier-decision append atomicity, crash/retry semantics, first-link and existing-link local-user eligibility, immutable-subject matching, provider/configuration disable or deprovision revocation fan-out and assurance caps; add no callback route or federated authentication authority during that read-only review',
+        'next_slice_scope'=>'define private OIDC client-config token-endpoint and client-authentication semantics, company-private external-subject HMAC material, bounded authorization-code exchange, pinned/private JWKS verification with exact issuer/audience/azp/signature/algorithm/exp/iat/nbf/nonce/sub requirements, callback-claim lease ownership plus crash/uncertain-response/retry rules, code replay insertion plus transaction consume plus verifier-decision append atomicity, first-link and existing-link local-user eligibility, provider/configuration/link disable or deprovision revocation fan-out and assurance caps; add no public callback route, identity link, federated login or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -117,6 +117,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_verifier_dependency_deployment_foundation.php'),
             'pay_sec_004_oidc_transaction_issuance_foundation'=>array('previous'=>'1.0.249','version'=>'1.0.250',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_transaction_issuance_foundation.php'),
+            'pay_sec_004_oidc_callback_claim_foundation'=>array('previous'=>'1.0.250','version'=>'1.0.251',
+                'file'=>'sql/upgrade_pay_sec_004_oidc_callback_claim_foundation.php'),
         ),
     );
 }
