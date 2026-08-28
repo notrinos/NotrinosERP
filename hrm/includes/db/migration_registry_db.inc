@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.255',
-        'active_legacy_payroll_contract'=>'1.0.208',
-        'next_backlog_item'=>'read-only PAY-SEC-004 atomic replay-consume-decision command and proof-cleanup review',
+        'active_database_version'=>'1.0.256',
+        'active_legacy_payroll_contract'=>'1.0.209',
+        'next_backlog_item'=>'read-only PAY-SEC-004 existing-link federated login/session issuance and revocation-order review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact live callback-claim token, provider/configuration, unconsumed transaction, private PKCE proof and nonce eligibility; one MariaDB transaction ordering for oidc_authorization_code replay insertion, transaction consumed_at update and verifier-decision append; duplicate/crash/idempotent retry semantics; terminal callback-claim and private-proof cleanup ordering; read-only existing-link/local-user eligibility after committed decision; add no public callback route, identity-link writer, federated login, session revocation or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define exact committed verifier-decision consumption, active immutable external-subject link and active local-user eligibility; provider/configuration/link disable and deprovision session-revocation ordering; session-family issuance and assurance level-one cap/expiry; crash/idempotent behavior; add no first-link writer, public callback route, session issuance, revocation or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -127,6 +127,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_oidc_token_verifier_adapter_foundation.php'),
             'pay_sec_004_oidc_token_exchange_transport_foundation'=>array('previous'=>'1.0.254','version'=>'1.0.255',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_token_exchange_transport_foundation.php'),
+            'pay_sec_004_oidc_atomic_decision_foundation'=>array('previous'=>'1.0.255','version'=>'1.0.256',
+                'file'=>'sql/upgrade_pay_sec_004_oidc_atomic_decision_foundation.php'),
         ),
     );
 }
