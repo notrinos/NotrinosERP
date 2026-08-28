@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.258',
-        'active_legacy_payroll_contract'=>'1.0.211',
-        'next_backlog_item'=>'read-only PAY-SEC-004 provider/configuration/link disable-deprovision targeted session-revocation command review',
+        'active_database_version'=>'1.0.259',
+        'active_legacy_payroll_contract'=>'1.0.212',
+        'next_backlog_item'=>'read-only PAY-SEC-004 first-link creation authority and federated-login activation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact authorization and optimistic-lock inputs; select and lock only active durable sessions through user_federation_session_bindings plus committed decision/configuration/provider/link custody; revoke affected bound sessions before provider/configuration disable or link deprovision commits; append restricted PAY-AUD evidence in the same transaction; define exact idempotent retry and recovery/admin-reset interaction; prove unrelated local-password sessions and federation sessions from other providers/configurations/links remain untouched; add no public callback route, first-link writer, browser federated login, disable/deprovision writer, targeted revocation writer or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define consumed accepted-decision to first-link authority without email/display-name auto-linking; exact maker/checker or administrator authorization; immutable provider-subject/local-user collision and idempotency rules; session issuance ordering; disable/deprovision race handling; recovery/admin-reset interaction; restricted PAY-AUD evidence; add no public callback/login route, first-link writer, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -133,6 +133,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federated_session_provenance_foundation.php'),
             'pay_sec_004_federated_session_issuance_foundation'=>array('previous'=>'1.0.257','version'=>'1.0.258',
                 'file'=>'sql/upgrade_pay_sec_004_federated_session_issuance_foundation.php'),
+            'pay_sec_004_targeted_federation_session_revocation_foundation'=>array('previous'=>'1.0.258','version'=>'1.0.259',
+                'file'=>'sql/upgrade_pay_sec_004_targeted_federation_session_revocation_foundation.php'),
         ),
     );
 }
