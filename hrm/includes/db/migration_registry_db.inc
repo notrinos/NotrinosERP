@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.256',
-        'active_legacy_payroll_contract'=>'1.0.209',
-        'next_backlog_item'=>'read-only PAY-SEC-004 existing-link federated login/session issuance and revocation-order review',
+        'active_database_version'=>'1.0.257',
+        'active_legacy_payroll_contract'=>'1.0.210',
+        'next_backlog_item'=>'read-only PAY-SEC-004 existing-link federated session-issuance command and targeted disable/deprovision revocation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact committed verifier-decision consumption, active immutable external-subject link and active local-user eligibility; provider/configuration/link disable and deprovision session-revocation ordering; session-family issuance and assurance level-one cap/expiry; crash/idempotent behavior; add no first-link writer, public callback route, session issuance, revocation or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define exact verifier-decision one-session-family idempotency; durable session creation plus provenance binding plus restricted PAY-AUD atomicity; provider/configuration/link active-state locks and local-user/role eligibility; assurance level-one and absolute-expiry cap; exact retry behavior; targeted provider/configuration/link disable and deprovision revocation fan-out using only bound federated sessions; add no first-link writer, public callback route, federated login/session issuance, disable/deprovision writer, revocation writer or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -129,6 +129,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_oidc_token_exchange_transport_foundation.php'),
             'pay_sec_004_oidc_atomic_decision_foundation'=>array('previous'=>'1.0.255','version'=>'1.0.256',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_atomic_decision_foundation.php'),
+            'pay_sec_004_federated_session_provenance_foundation'=>array('previous'=>'1.0.256','version'=>'1.0.257',
+                'file'=>'sql/upgrade_pay_sec_004_federated_session_provenance_foundation.php'),
         ),
     );
 }

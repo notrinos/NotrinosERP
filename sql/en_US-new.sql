@@ -5203,6 +5203,28 @@ CREATE TABLE `0_user_federation_verifier_decisions` (
 -- Data of table `0_user_federation_verifier_decisions` --
 
 
+-- Structure of table `0_user_federation_session_bindings` --
+
+DROP TABLE IF EXISTS `0_user_federation_session_bindings`;
+
+CREATE TABLE `0_user_federation_session_bindings` (
+	`federation_session_binding_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+	`session_id` bigint unsigned NOT NULL,
+	`verifier_decision_id` bigint unsigned NOT NULL,
+	`external_subject_link_id` bigint unsigned NOT NULL,
+	`bound_at` datetime NOT NULL,
+	PRIMARY KEY (`federation_session_binding_id`),
+	UNIQUE KEY `federation_session_binding_session` (`session_id`),
+	UNIQUE KEY `federation_session_binding_decision` (`verifier_decision_id`),
+	KEY `federation_session_binding_link` (`external_subject_link_id`,`session_id`),
+	CONSTRAINT `0_user_federation_session_binding_session_fk` FOREIGN KEY (`session_id`) REFERENCES `0_user_sessions` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_user_federation_session_binding_decision_fk` FOREIGN KEY (`verifier_decision_id`) REFERENCES `0_user_federation_verifier_decisions` (`verifier_decision_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_user_federation_session_binding_link_fk` FOREIGN KEY (`external_subject_link_id`) REFERENCES `0_user_federation_external_subject_links` (`external_subject_link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_federation_session_bindings` --
+
+
 -- Data of table `0_users` --
 
 INSERT INTO `0_users` VALUES
