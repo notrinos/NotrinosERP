@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.254',
-        'active_legacy_payroll_contract'=>'1.0.207',
-        'next_backlog_item'=>'read-only PAY-SEC-004 bounded token-exchange transport and atomic replay-consume-decision command review',
+        'active_database_version'=>'1.0.255',
+        'active_legacy_payroll_contract'=>'1.0.208',
+        'next_backlog_item'=>'read-only PAY-SEC-004 atomic replay-consume-decision command and proof-cleanup review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact pre-send versus uncertain token-exchange transport classification; domain-separated authorization-code replay hashing; bounded no-redirect token request and response parsing; atomic replay insertion plus transaction consume plus verifier-decision append under the accepted live callback lease and the now-accepted pinned token-verifier adaptor; private PKCE proof cleanup only after committed success or terminal outcome; existing-link local-user eligibility boundary; add no public callback route, identity-link writer, federated login, session revocation or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define exact live callback-claim token, provider/configuration, unconsumed transaction, private PKCE proof and nonce eligibility; one MariaDB transaction ordering for oidc_authorization_code replay insertion, transaction consumed_at update and verifier-decision append; duplicate/crash/idempotent retry semantics; terminal callback-claim and private-proof cleanup ordering; read-only existing-link/local-user eligibility after committed decision; add no public callback route, identity-link writer, federated login, session revocation or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -125,6 +125,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_oidc_callback_claim_lease_foundation.php'),
             'pay_sec_004_oidc_token_verifier_adapter_foundation'=>array('previous'=>'1.0.253','version'=>'1.0.254',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_token_verifier_adapter_foundation.php'),
+            'pay_sec_004_oidc_token_exchange_transport_foundation'=>array('previous'=>'1.0.254','version'=>'1.0.255',
+                'file'=>'sql/upgrade_pay_sec_004_oidc_token_exchange_transport_foundation.php'),
         ),
     );
 }
