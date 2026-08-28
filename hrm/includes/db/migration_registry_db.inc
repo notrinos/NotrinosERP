@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.257',
-        'active_legacy_payroll_contract'=>'1.0.210',
-        'next_backlog_item'=>'read-only PAY-SEC-004 existing-link federated session-issuance command and targeted disable/deprovision revocation review',
+        'active_database_version'=>'1.0.258',
+        'active_legacy_payroll_contract'=>'1.0.211',
+        'next_backlog_item'=>'read-only PAY-SEC-004 provider/configuration/link disable-deprovision targeted session-revocation command review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact verifier-decision one-session-family idempotency; durable session creation plus provenance binding plus restricted PAY-AUD atomicity; provider/configuration/link active-state locks and local-user/role eligibility; assurance level-one and absolute-expiry cap; exact retry behavior; targeted provider/configuration/link disable and deprovision revocation fan-out using only bound federated sessions; add no first-link writer, public callback route, federated login/session issuance, disable/deprovision writer, revocation writer or assurance elevation during that read-only review',
+        'next_slice_scope'=>'define exact authorization and optimistic-lock inputs; select and lock only active durable sessions through user_federation_session_bindings plus committed decision/configuration/provider/link custody; revoke affected bound sessions before provider/configuration disable or link deprovision commits; append restricted PAY-AUD evidence in the same transaction; define exact idempotent retry and recovery/admin-reset interaction; prove unrelated local-password sessions and federation sessions from other providers/configurations/links remain untouched; add no public callback route, first-link writer, browser federated login, disable/deprovision writer, targeted revocation writer or assurance elevation during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -131,6 +131,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_oidc_atomic_decision_foundation.php'),
             'pay_sec_004_federated_session_provenance_foundation'=>array('previous'=>'1.0.256','version'=>'1.0.257',
                 'file'=>'sql/upgrade_pay_sec_004_federated_session_provenance_foundation.php'),
+            'pay_sec_004_federated_session_issuance_foundation'=>array('previous'=>'1.0.257','version'=>'1.0.258',
+                'file'=>'sql/upgrade_pay_sec_004_federated_session_issuance_foundation.php'),
         ),
     );
 }
