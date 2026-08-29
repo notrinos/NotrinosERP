@@ -49,7 +49,7 @@ function federation_browser_session_adoption_custody_for_update($session_id)
         ."INNER JOIN ".TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id "
         ."INNER JOIN ".TB_PREF."user_federation_external_subject_links l ON l.external_subject_link_id=b.external_subject_link_id "
         ." AND l.provider_id=c.provider_id AND l.external_subject_hash=d.external_subject_hash "
-        ."INNER JOIN ".TB_PREF."users u ON u.id=s.user_id AND u.id=l.user_id "
+        ."INNER JOIN ".TB_PREF."users u ON u.id=s.user_id AND u.id=l.user_id AND u.role_id=s.role_id "
         ."INNER JOIN ".TB_PREF."security_roles r ON r.id=u.role_id "
         ."WHERE s.id=$session_id LIMIT 2 FOR UPDATE";
     $result=db_query($sql,'could not lock PAY-SEC-004 browser-session adoption custody');
