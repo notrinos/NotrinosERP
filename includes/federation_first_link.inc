@@ -21,7 +21,7 @@ function federation_first_link_authorized($company)
 {
     if (!function_exists('user_check_access') || !user_check_access('SA_USERS'))
         return false;
-    if (function_exists('user_company') && (int)user_company() !== (int)$company)
+    if (!function_exists('user_company') || (int)user_company() !== (int)$company)
         return false;
     return federation_first_link_actor_id() > 0;
 }
@@ -47,7 +47,7 @@ function federation_first_link_custody_for_update($verifier_decision_id, $user_i
     if ($verifier_decision_id<=0 || $user_id<=0)
         return false;
     $sql="SELECT d.verifier_decision_id,d.verifier_transaction_id,d.external_subject_hash,d.verified_assurance_level,d.assurance_method,d.verified_at,d.valid_until,"
-        ."t.verifier_config_id,t.consumed_at,c.provider_id,c.max_clock_skew_seconds,c.assurance_level_cap,c.config_status,p.provider_status,"
+        ."t.verifier_config_id,t.consumed_at,c.provider_id,c.verifier_profile,c.max_clock_skew_seconds,c.assurance_level_cap,c.config_status,p.provider_status,"
         ."u.id user_id,u.role_id,u.inactive user_inactive,r.inactive role_inactive "
         ."FROM ".TB_PREF."user_federation_verifier_decisions d "
         ."INNER JOIN ".TB_PREF."user_federation_verifier_transactions t ON t.verifier_transaction_id=d.verifier_transaction_id "
@@ -142,8 +142,10 @@ function federation_create_first_external_subject_link($company, $verifier_decis
             return false;
         require_once($audit);
     }
-    if (!function_exists('append_domain_audit_event') || !db_query('BEGIN','could not start PAY-SEC-004 first-link transaction'))
+    if (!function_exists('append_domain_audit_event') || !function_exists('begin_transaction')
+        || !function_exists('commit_transaction') || !function_exists('cancel_transaction'))
         return false;
+    begin_transaction();
     $committed=false;$result_value=false;
     do {
         $row=federation_first_link_custody_for_update($request['verifier_decision_id'],$request['user_id']);
@@ -152,7 +154,7 @@ function federation_create_first_external_subject_link($company, $verifier_decis
         $now=(int)$request['now_epoch'];$valid_until=strtotime((string)$row['valid_until'].' UTC');$verified_at=strtotime((string)$row['verified_at'].' UTC');
         if ((string)$row['provider_status']!=='enabled' || (string)$row['config_status']!=='enabled'
             || $row['consumed_at']===null || (int)$row['user_inactive']!==0 || (int)$row['role_inactive']!==0
-            || (int)$row['verified_assurance_level']!==1 || (string)$row['assurance_method']!=='oidc_rs256'
+            || (string)$row['verifier_profile']!=='oidc_rs256' || (int)$row['verified_assurance_level']!==1 || (string)$row['assurance_method']!=='oidc_rs256'
             || (int)$row['assurance_level_cap']<1 || $valid_until===false || $verified_at===false
             || $now >= $valid_until || $verified_at > $now+(int)$row['max_clock_skew_seconds'])
             break;
@@ -163,8 +165,7 @@ function federation_create_first_external_subject_link($company, $verifier_decis
         if ($existing===false)
             break;
         if (is_array($existing)) {
-            if (!db_query('COMMIT','could not commit PAY-SEC-004 idempotent first-link verification'))
-                break;
+            commit_transaction();
             $committed=true;$result_value=array('external_subject_link_id'=>(int)$existing['external_subject_link_id'],
                 'provider_id'=>(int)$row['provider_id'],'user_id'=>(int)$row['user_id'],'verifier_decision_id'=>(int)$row['verifier_decision_id'],
                 'idempotent_retry'=>true,'session_issued'=>false,'browser_session_activated'=>false);break;
@@ -176,14 +177,13 @@ function federation_create_first_external_subject_link($company, $verifier_decis
         $link_id=function_exists('db_insert_id')?(int)db_insert_id():0;
         if ($link_id<=0 || !federation_first_link_audit($request['company'],$row,$link_id,federation_first_link_actor_id()))
             break;
-        if (!db_query('COMMIT','could not commit PAY-SEC-004 explicit first link'))
-            break;
+        commit_transaction();
         $committed=true;$result_value=array('external_subject_link_id'=>$link_id,'provider_id'=>(int)$row['provider_id'],
             'user_id'=>(int)$row['user_id'],'verifier_decision_id'=>(int)$row['verifier_decision_id'],
             'idempotent_retry'=>false,'session_issued'=>false,'browser_session_activated'=>false);
     } while(false);
     if (!$committed) {
-        @db_query('ROLLBACK','could not roll back PAY-SEC-004 first-link transaction');
+        cancel_transaction();
         return false;
     }
     return $result_value;
