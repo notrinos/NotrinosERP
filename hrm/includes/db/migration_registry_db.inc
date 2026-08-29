@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.259',
-        'active_legacy_payroll_contract'=>'1.0.212',
-        'next_backlog_item'=>'read-only PAY-SEC-004 first-link creation authority and federated-login activation review',
+        'active_database_version'=>'1.0.260',
+        'active_legacy_payroll_contract'=>'1.0.213',
+        'next_backlog_item'=>'read-only PAY-SEC-004 federated browser-login/session-adoption review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define consumed accepted-decision to first-link authority without email/display-name auto-linking; exact maker/checker or administrator authorization; immutable provider-subject/local-user collision and idempotency rules; session issuance ordering; disable/deprovision race handling; recovery/admin-reset interaction; restricted PAY-AUD evidence; add no public callback/login route, first-link writer, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
+        'next_slice_scope'=>'define composition of a committed explicit external-subject link with the existing-link durable-session issuer and PHP/browser session rotation/adoption; exact login failure rollback and idempotency; targeted provider/configuration/link revocation interaction; assurance-level containment; recovery/admin-reset behavior; restricted PAY-AUD evidence; reopen no email/display-name auto-linking and add no assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -135,6 +135,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federated_session_issuance_foundation.php'),
             'pay_sec_004_targeted_federation_session_revocation_foundation'=>array('previous'=>'1.0.258','version'=>'1.0.259',
                 'file'=>'sql/upgrade_pay_sec_004_targeted_federation_session_revocation_foundation.php'),
+            'pay_sec_004_federation_first_link_creation_foundation'=>array('previous'=>'1.0.259','version'=>'1.0.260',
+                'file'=>'sql/upgrade_pay_sec_004_federation_first_link_creation_foundation.php'),
         ),
     );
 }

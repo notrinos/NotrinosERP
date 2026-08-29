@@ -38,7 +38,7 @@ function federation_oidc_token_verifier_parse($jwt)
         return false;
     $parts = explode('.', $jwt);
     if (count($parts) !== 3 || $parts[0] === '' || $parts[1] === '' || $parts[2] === ''
-        || preg_match('/^[A-Za-z0-9_-]+$/D', $parts[2]) !== 1)
+        || federation_oidc_token_verifier_base64url_decode($parts[2]) === false)
         return false;
     $header_bytes = federation_oidc_token_verifier_base64url_decode($parts[0]);
     $claims_bytes = federation_oidc_token_verifier_base64url_decode($parts[1]);
