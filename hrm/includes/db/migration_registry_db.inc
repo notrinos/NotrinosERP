@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.261',
-        'active_legacy_payroll_contract'=>'1.0.214',
-        'next_backlog_item'=>'read-only PAY-SEC-004 existing-link OIDC callback/login orchestration review',
+        'active_database_version'=>'1.0.262',
+        'active_legacy_payroll_contract'=>'1.0.215',
+        'next_backlog_item'=>'read-only PAY-SEC-004 public existing-link OIDC callback route review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact composition of callback-claim lease/terminalization, bounded token exchange, pinned token verification, atomic replay-consume verifier decision, existing-link durable-session issuance and provenance-bound hard-rotated browser-session adoption; specify redirect/failure handling and server-confined session-secret lifetime; add no public route, first-link auto-linking, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
+        'next_slice_scope'=>'define exact public existing-link OIDC callback HTTP method/query parsing, company/session/configuration binding, fixed local redirect/error mapping, cache/referrer/security headers, restart semantics and route-level abuse bounds around the accepted internal orchestration command; add no first-link auto-provisioning, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -139,6 +139,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_first_link_creation_foundation.php'),
             'pay_sec_004_federated_browser_session_adoption_foundation'=>array('previous'=>'1.0.260','version'=>'1.0.261',
                 'file'=>'sql/upgrade_pay_sec_004_federated_browser_session_adoption_foundation.php'),
+            'pay_sec_004_existing_link_oidc_callback_orchestration_foundation'=>array('previous'=>'1.0.261','version'=>'1.0.262',
+                'file'=>'sql/upgrade_pay_sec_004_existing_link_oidc_callback_orchestration_foundation.php'),
         ),
     );
 }
