@@ -118,6 +118,7 @@ function federation_oidc_assurance_candidate_verify($jwt, $expectations, $materi
         'client_id_sha256'=>(string)$base['client_id_sha256'],
         'acr_sha256'=>hash('sha256', $claims['acr']),
         'amr_sha256'=>hash('sha256', implode("\0", $methods)),
+        'assurance_proof_sha256'=>hash('sha256', $jwt),
         'verified_assurance_level'=>2,
         'assurance_method'=>'oidc_acr_amr',
         'auth_time_epoch'=>$claims['auth_time'],

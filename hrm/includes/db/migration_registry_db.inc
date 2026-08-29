@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.266',
-        'active_legacy_payroll_contract'=>'1.0.219',
-        'next_backlog_item'=>'read-only PAY-SEC-004 federated-assurance issuer/action-consumer and recovery-reset invalidation review',
+        'active_database_version'=>'1.0.267',
+        'active_legacy_payroll_contract'=>'1.0.220',
+        'next_backlog_item'=>'read-only PAY-SEC-004 privileged-action consumer, expiry-reset and break-glass review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact durable-session binding, single-use privileged-action consumption, expiry and reauthentication, recovery-factor and administrator-reset invalidation, break-glass containment and the first eligible high-risk HR/payroll command; add no elevated-assurance issuer/consumer, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
+        'next_slice_scope'=>'select the first exact high-risk HR/payroll command and define canonical action-hash inputs, same-transaction single-use event consumption, post-consumption and expiry session-assurance reset, authorization ordering, recovery/admin-reset races, exact retry/crash behavior and break-glass containment; add no consumer, recovery-factor writer, break-glass grant, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -149,6 +149,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federation_first_link_administration_foundation.php'),
             'pay_sec_004_oidc_assurance_candidate_foundation'=>array('previous'=>'1.0.265','version'=>'1.0.266',
                 'file'=>'sql/upgrade_pay_sec_004_oidc_assurance_candidate_foundation.php'),
+            'pay_sec_004_federated_assurance_issuer_foundation'=>array('previous'=>'1.0.266','version'=>'1.0.267',
+                'file'=>'sql/upgrade_pay_sec_004_federated_assurance_issuer_foundation.php'),
         ),
     );
 }
