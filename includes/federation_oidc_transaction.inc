@@ -387,7 +387,14 @@ function federation_oidc_issue_transaction($company, $verifier_config_id, $redir
         $authorization_url=federation_oidc_build_authorization_url($client,$redirect_uri,$state,$nonce,$challenge);if($authorization_url===false)break;
         if(!db_query('COMMIT','could not commit PAY-SEC-004 OIDC issuance transaction'))break;
         $committed=true;
-        return array('verifier_transaction_id'=>$transaction_id,'authorization_url'=>$authorization_url,'state'=>$state,'expires_at_epoch'=>$expires);
+        $browser_callback_bound=false;
+        if (isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
+            && method_exists($_SESSION['wa_current_user'], 'logged_in') && !$_SESSION['wa_current_user']->logged_in()
+            && isset($_SESSION['wa_current_user']->company) && (int)$_SESSION['wa_current_user']->company===$company) {
+            require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_oidc_existing_link_callback_route.inc');
+            $browser_callback_bound=federation_oidc_callback_route_bind_pending($company,$verifier_config_id,$state,$redirect_uri,$expires);
+        }
+        return array('verifier_transaction_id'=>$transaction_id,'authorization_url'=>$authorization_url,'state'=>$state,'expires_at_epoch'=>$expires,'browser_callback_bound'=>$browser_callback_bound);
     } while(false);
     if(!$committed) @db_query('ROLLBACK','could not roll back PAY-SEC-004 OIDC issuance transaction');
     if($proof_hash!==false) federation_oidc_delete_proof($company,$proof_hash);

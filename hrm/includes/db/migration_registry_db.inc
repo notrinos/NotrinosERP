@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.262',
-        'active_legacy_payroll_contract'=>'1.0.215',
-        'next_backlog_item'=>'read-only PAY-SEC-004 public existing-link OIDC callback route review',
+        'active_database_version'=>'1.0.263',
+        'active_legacy_payroll_contract'=>'1.0.216',
+        'next_backlog_item'=>'read-only PAY-SEC-004 public existing-link OIDC authorization-start/login-entry review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact public existing-link OIDC callback HTTP method/query parsing, company/session/configuration binding, fixed local redirect/error mapping, cache/referrer/security headers, restart semantics and route-level abuse bounds around the accepted internal orchestration command; add no first-link auto-provisioning, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
+        'next_slice_scope'=>'define exact company/provider/configuration selection, CSRF/login-start initiation, anonymous-session binding, authorization redirect behavior, restart/error mapping and abuse bounds for a public existing-link OIDC authorization-start/login-entry boundary; add no first-link auto-provisioning, assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -141,6 +141,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federated_browser_session_adoption_foundation.php'),
             'pay_sec_004_existing_link_oidc_callback_orchestration_foundation'=>array('previous'=>'1.0.261','version'=>'1.0.262',
                 'file'=>'sql/upgrade_pay_sec_004_existing_link_oidc_callback_orchestration_foundation.php'),
+            'pay_sec_004_existing_link_oidc_callback_route_foundation'=>array('previous'=>'1.0.262','version'=>'1.0.263',
+                'file'=>'sql/upgrade_pay_sec_004_existing_link_oidc_callback_route_foundation.php'),
         ),
     );
 }
