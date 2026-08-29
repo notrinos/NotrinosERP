@@ -139,6 +139,27 @@ foreach($_SESSION['timeout']['post'] as $p => $val) {
 				echo "<input type='hidden' name='".htmlspecialchars($p)."[".htmlspecialchars($i)."]' value='".htmlspecialchars($v)."'>";
 }
 end_form(1);
+
+// PAY-SEC-004: explicit existing-link federation start. Provider/configuration are server-selected.
+if (!$login_timeout && isset($db_connections) && is_array($db_connections) && count($db_connections) > 0) {
+    include_once($path_to_root.'/includes/federation_oidc_existing_link_authorization_start_route.inc');
+    $federation_csrf = federation_oidc_authorization_start_issue_csrf();
+    if (is_string($federation_csrf)) {
+        echo "<form method='post' action='".$path_to_root."/access/oidc_login.php' autocomplete='off'>\n";
+        echo "<div class='login-field'><div class='input_container'>".default_theme_icon('building', '', _('Company'));
+        echo "<select name='company_login_name' required>\n";
+        foreach ($db_connections as $i => $connection) {
+            if (!is_int($i) && !ctype_digit((string)$i)) continue;
+            $name = isset($connection['name']) ? (string)$connection['name'] : (string)$i;
+            echo "<option value='".(int)$i."'>".htmlspecialchars($name)."</option>";
+        }
+        echo "</select></div></div>\n";
+        echo "<input type='hidden' name='federation_csrf' value='".htmlspecialchars($federation_csrf)."'>\n";
+        echo "<div class='login-submit'><input type='submit' value='"._('Federated login')." &#8250;'></div>\n";
+        echo "</form>\n";
+    }
+}
+
 echo "</div>\n"; // end login-card
 
 $Ajax->addScript(true, "if (document.forms.length) document.forms[0].password.focus();");

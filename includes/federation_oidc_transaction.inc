@@ -319,6 +319,48 @@ function federation_oidc_load_enabled_configuration($verifier_config_id)
     return $row;
 }
 
+/**
+ * Resolve one exact callback URI from the private client allowlist by route path.
+ * The browser/Host header cannot select scheme, host, port, query or fragment.
+ */
+function federation_oidc_resolve_configured_redirect_uri($company, $verifier_config_id, $required_path)
+{
+    $company = (int)$company; $verifier_config_id = (int)$verifier_config_id;
+    if ($company < 0 || $verifier_config_id <= 0 || !is_string($required_path)
+        || strlen($required_path) < 1 || strlen($required_path) > 1024 || $required_path[0] !== '/'
+        || strpos($required_path, '?') !== false || strpos($required_path, '#') !== false
+        || preg_match('/[\x00-\x20\x7f]/', $required_path))
+        return false;
+    if (!function_exists('federation_control_load_bundle'))
+        require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_control_material.inc');
+    if (!defined('TB_PREF')) return false;
+    $sql = "SELECT c.verifier_config_id,c.provider_id,c.verifier_profile,c.audience_hash,c.trust_material_ref_hash,c.assurance_level_cap,c.config_status,"
+        ."p.protocol,p.issuer_hash,p.provider_status FROM ".TB_PREF."user_federation_provider_verifier_configs c "
+        ."INNER JOIN ".TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id WHERE c.verifier_config_id=".$verifier_config_id." LIMIT 2";
+    $result = db_query($sql, 'could not resolve PAY-SEC-004 configured OIDC callback redirect');
+    $row = $result ? db_fetch_assoc($result) : false;
+    if (!$row || db_fetch_assoc($result) !== false || (string)$row['protocol'] !== 'oidc'
+        || (string)$row['verifier_profile'] !== 'oidc_code_pkce_v1' || (string)$row['provider_status'] !== 'enabled'
+        || (string)$row['config_status'] !== 'enabled' || (int)$row['assurance_level_cap'] !== 1
+        || !federation_control_valid_sha256((string)$row['issuer_hash'])
+        || !federation_control_valid_sha256((string)$row['audience_hash'])
+        || !federation_control_valid_sha256((string)$row['trust_material_ref_hash']))
+        return false;
+    $bundle = federation_control_load_bundle($company, (string)$row['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
+    if (!is_array($bundle) || !isset($bundle['materials']['oidc_client_config'])) return false;
+    $client = federation_oidc_client_config($bundle['materials']['oidc_client_config']);
+    if ($client === false || !federation_control_hash_equals(hash('sha256', $client['issuer']), (string)$row['issuer_hash'])
+        || !federation_control_hash_equals(hash('sha256', $client['client_id']), (string)$row['audience_hash']))
+        return false;
+    $matches = array();
+    foreach ($client['redirect_uris'] as $uri) {
+        $parts = @parse_url($uri);
+        $path = is_array($parts) && isset($parts['path']) ? (string)$parts['path'] : '/';
+        if ($path === $required_path && !isset($parts['query']) && !isset($parts['fragment'])) $matches[] = $uri;
+    }
+    return count($matches) === 1 ? $matches[0] : false;
+}
+
 function federation_oidc_issue_transaction($company, $verifier_config_id, $redirect_uri, $ttl_seconds)
 {
     global $path_to_root;
