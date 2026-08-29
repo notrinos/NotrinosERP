@@ -50,7 +50,7 @@ function federation_oidc_existing_link_orchestration_result($status, $reason, $e
     if (!in_array($status, $allowed_status, true) || !is_string($reason) || $reason === '' || !is_array($extra))
         return false;
     $result = array('status'=>$status,'reason'=>$reason,'retry_safe'=>$status === 'retry_later');
-    foreach (array('retry_after_epoch','session_id','user_id','role_id','assurance_level','session_cleanup_complete') as $key)
+    foreach (array('retry_after_epoch','session_id','user_id','role_id','assurance_level','session_cleanup_complete','verifier_decision_id') as $key)
         if (array_key_exists($key, $extra)) $result[$key] = $extra[$key];
     return $result;
 }
@@ -255,7 +255,7 @@ function federation_oidc_orchestrate_existing_link_callback($company, $state, $a
     if (!is_array($eligibility) || empty($eligibility['eligible'])) {
         $reason = is_array($eligibility) && isset($eligibility['reason']) ? (string)$eligibility['reason'] : 'existing_link_ineligible';
         if ($reason === 'existing_link_required')
-            return federation_oidc_existing_link_orchestration_result('link_required', 'existing_link_required');
+            return federation_oidc_existing_link_orchestration_result('link_required', 'existing_link_required', array('verifier_decision_id'=>(int)$decision['verifier_decision_id']));
         return federation_oidc_existing_link_orchestration_result('denied', $reason);
     }
 

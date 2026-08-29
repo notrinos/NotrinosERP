@@ -42,6 +42,29 @@ if (check_faillog()) {
 elseif ($show_invalid_login_message && $_SESSION['wa_current_user']->login_attempt > 1)
 	$demo_text = '<span class="redfg">'._('Invalid password or username. Please, try again.').'</span>';
 
+// PAY-SEC-004: fixed public federation completion messages; no callback/provider value is reflected.
+$federation_status_present = isset($_GET['federation']);
+$federation_status = $federation_status_present && is_string($_GET['federation'])
+	? (string)$_GET['federation'] : '';
+$recognized_federation_statuses = array('link_required', 'retry', 'restart', 'failed');
+$federation_status_is_recognized = in_array($federation_status, $recognized_federation_statuses, true);
+if (!isset($blocked) && !$show_invalid_login_message && $federation_status_is_recognized) {
+	include_once($path_to_root.'/includes/federation_first_link_administration.inc');
+	if ($federation_status === 'link_required') {
+		$request = federation_first_link_pending_request();
+		if (is_array($request) && isset($request['verifier_decision_id']))
+			$demo_text = '<span class="redfg">'._('Federated sign-in is verified but is not linked to a local user. Link request ID: ').(int)$request['verifier_decision_id'].'<br>'._('Ask an administrator to create the explicit federation link, then start Federated login again.').'</span>';
+		else
+			$demo_text = '<span class="redfg">'._('Federated sign-in requires an explicit administrator-created local-user link. Start Federated login again to obtain a fresh link request.').'</span>';
+	} elseif ($federation_status === 'retry') {
+		$demo_text = '<span class="redfg">'._('Federated sign-in could not complete safely. Please retry Federated login.').'</span>';
+	} elseif ($federation_status === 'restart') {
+		$demo_text = '<span class="redfg">'._('Federated sign-in must be restarted. Please start Federated login again.').'</span>';
+	} elseif ($federation_status === 'failed') {
+		$demo_text = '<span class="redfg">'._('Federated sign-in failed. No local account was linked or authenticated.').'</span>';
+	}
+}
+
 flush_dir(user_js_cache());
 if (!isset($def_coy))
 	$def_coy = 0;
@@ -75,7 +98,14 @@ echo "<body id='loginscreen' ".$onload.">\n";
 echo "<div class='login-title-bar'>" . htmlspecialchars($title) . "</div>\n";
 
 echo "<div class='login-card'>\n";
-start_form(false, $_SESSION['timeout']['uri'], 'loginform');
+$login_form_action = $_SESSION['timeout']['uri'];
+if ($federation_status_present) {
+	// Do not carry an arbitrary federation query into the generated form action.
+	$login_form_action = $path_to_root.'/index.php';
+	if ($federation_status_is_recognized)
+		$login_form_action .= '?federation='.urlencode($federation_status);
+}
+start_form(false, $login_form_action, 'loginform');
 
 // Logo
 echo "<div class='login-logo'>";

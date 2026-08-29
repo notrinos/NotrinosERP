@@ -9,6 +9,7 @@ $page_security = 'SA_OPEN';
 $path_to_root = '..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/federation_oidc_existing_link_callback_route.inc');
+include_once($path_to_root.'/includes/federation_first_link_administration.inc');
 
 federation_oidc_callback_route_security_headers();
 $request = federation_oidc_callback_route_parse_request($federation_oidc_raw_method, $federation_oidc_raw_query);
@@ -58,6 +59,7 @@ $result = federation_oidc_orchestrate_existing_link_callback(
 );
 $status = is_array($result) && isset($result['status']) ? (string)$result['status'] : 'denied';
 if ($status === 'authenticated') {
+    federation_first_link_pending_request_clear();
     federation_oidc_callback_route_clear_pending($request['state']);
     federation_oidc_callback_route_reset_attempts();
     federation_oidc_callback_route_redirect($federation_oidc_script_name, 'authenticated');
@@ -67,6 +69,13 @@ if ($status === 'retry_later') {
     federation_oidc_callback_route_redirect($federation_oidc_script_name, 'retry');
     exit;
 }
+if ($status === 'link_required' && isset($result['verifier_decision_id'])
+    && federation_first_link_pending_request_bind($company, (int)$result['verifier_decision_id'], time())) {
+    federation_oidc_callback_route_clear_pending($request['state']);
+    federation_oidc_callback_route_redirect($federation_oidc_script_name, 'link_required');
+    exit;
+}
+federation_first_link_pending_request_clear();
 federation_oidc_callback_route_clear_pending($request['state']);
-federation_oidc_callback_route_redirect($federation_oidc_script_name, $status === 'link_required' ? 'link_required' : 'failed');
+federation_oidc_callback_route_redirect($federation_oidc_script_name, 'failed');
 exit;

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.264',
-        'active_legacy_payroll_contract'=>'1.0.217',
-        'next_backlog_item'=>'read-only PAY-SEC-004 first-link administration/public-login completion review',
+        'active_database_version'=>'1.0.265',
+        'active_legacy_payroll_contract'=>'1.0.218',
+        'next_backlog_item'=>'read-only PAY-SEC-004 verified federated-assurance elevation and recovery-factor review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define explicit administrator authority for invoking the already-approved first-link command, post-link login restart/continuation, collision/deprovision races, recovery/admin-reset behavior and restricted PAY-AUD evidence without profile-claim auto-linking; add no assurance elevation, recovery-factor writer, payment, payroll or accounting authority during that read-only review',
+        'next_slice_scope'=>'define provider-verified federated-assurance elevation, expiry and reauthentication bounds, recovery-factor and administrator-reset invalidation, break-glass handling and restricted PAY-AUD evidence without trusting profile claims; add no recovery-factor writer, payment, payroll or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -145,6 +145,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_existing_link_oidc_callback_route_foundation.php'),
             'pay_sec_004_existing_link_oidc_authorization_start_foundation'=>array('previous'=>'1.0.263','version'=>'1.0.264',
                 'file'=>'sql/upgrade_pay_sec_004_existing_link_oidc_authorization_start_foundation.php'),
+            'pay_sec_004_federation_first_link_administration_foundation'=>array('previous'=>'1.0.264','version'=>'1.0.265',
+                'file'=>'sql/upgrade_pay_sec_004_federation_first_link_administration_foundation.php'),
         ),
     );
 }

@@ -11,6 +11,7 @@ $path_to_root = '..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/federation_oidc_existing_link_authorization_start_route.inc');
 include_once($path_to_root.'/includes/federation_oidc_transaction.inc');
+include_once($path_to_root.'/includes/federation_first_link_administration.inc');
 
 federation_oidc_authorization_start_security_headers();
 $request = federation_oidc_authorization_start_parse_request(
@@ -26,6 +27,7 @@ if (!session_transport_is_https() || !federation_oidc_authorization_start_is_ano
     exit;
 }
 
+federation_first_link_pending_request_clear();
 $company = (int)$request['company_id'];
 if (!isset($db_connections[$company])) {
     federation_oidc_authorization_start_redirect_local($federation_oidc_script_name, 'failed');
