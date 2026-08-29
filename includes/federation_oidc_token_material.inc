@@ -119,9 +119,18 @@ function federation_oidc_token_verifier_material_contract($materials)
 {
     if (!is_array($materials))
         return false;
-    $expected = array('oidc_jwks','oidc_client_config','oidc_token_client_config','oidc_client_secret','federation_subject_hmac_key');
-    $keys = array_keys($materials); sort($keys); $sorted_expected = $expected; sort($sorted_expected);
-    if ($keys !== $sorted_expected)
+    $required = array('oidc_jwks','oidc_client_config','oidc_token_client_config','oidc_client_secret','federation_subject_hmac_key');
+    $allowed = array_merge($required, array('oidc_assurance_policy'));
+    $keys = array_keys($materials);
+    foreach ($required as $name)
+        if (!array_key_exists($name, $materials))
+            return false;
+    foreach ($keys as $name)
+        if (!in_array($name, $allowed, true))
+            return false;
+    if (isset($materials['oidc_assurance_policy'])
+        && (!is_string($materials['oidc_assurance_policy']) || strlen($materials['oidc_assurance_policy']) < 2
+            || strlen($materials['oidc_assurance_policy']) > 16384 || strpos($materials['oidc_assurance_policy'], "\0") !== false))
         return false;
 
     $authorization = federation_oidc_token_authorization_client_identity($materials['oidc_client_config']);
@@ -149,7 +158,8 @@ function federation_oidc_token_verifier_material_contract($materials)
         'connect_timeout_seconds'=>$token['connect_timeout_seconds'],
         'total_timeout_seconds'=>$token['total_timeout_seconds'],
         'jwks_sha256'=>hash('sha256', $materials['oidc_jwks']),
-        'authorization_client_config_sha256'=>$token['authorization_client_config_sha256']
+        'authorization_client_config_sha256'=>$token['authorization_client_config_sha256'],
+        'assurance_policy_sha256'=>isset($materials['oidc_assurance_policy']) ? hash('sha256', $materials['oidc_assurance_policy']) : null
     );
 }
 
