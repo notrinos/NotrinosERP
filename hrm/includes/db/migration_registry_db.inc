@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.268',
-        'active_legacy_payroll_contract'=>'1.0.221',
-        'next_backlog_item'=>'read-only PAY-SEC-004 payroll-post step-up orchestration and consumer-integration review',
+        'active_database_version'=>'1.0.269',
+        'active_legacy_payroll_contract'=>'1.0.222',
+        'next_backlog_item'=>'read-only PAY-SEC-004 public payroll-post step-up route and live-consumer integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define exact authenticated-session step-up start/callback correlation, state/nonce/PKCE custody, canonical payroll-post action-hash binding, signed candidate plus assurance issuer invocation, CSRF/stale/concurrency handling and the exact post_approved_payroll_period integration point; add no live payroll-post consumer integration, recovery-factor writer, break-glass grant, payment or additional accounting authority during that read-only review',
+        'next_slice_scope'=>'freeze HTTPS-only authenticated POST start, one fixed callback path, CSRF/callback parameter bounds, fixed return/error mapping without arbitrary redirects, local-password/non-federated backward-compatibility activation and the exact post_approved_payroll_period consumer insertion after already-posted verification plus locked approval-binding revalidation; add no public step-up route, live consumer call, recovery-factor writer, break-glass grant, payment or additional accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -153,6 +153,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_federated_assurance_issuer_foundation.php'),
             'pay_sec_004_privileged_action_consumer_foundation'=>array('previous'=>'1.0.267','version'=>'1.0.268',
                 'file'=>'sql/upgrade_pay_sec_004_privileged_action_consumer_foundation.php'),
+            'pay_sec_004_payroll_post_step_up_orchestration_foundation'=>array('previous'=>'1.0.268','version'=>'1.0.269',
+                'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_orchestration_foundation.php'),
         ),
     );
 }
