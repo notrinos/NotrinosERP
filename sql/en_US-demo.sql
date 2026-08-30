@@ -5360,6 +5360,54 @@ CREATE TABLE `0_user_recovery_materials` (
 -- Data of table `0_user_recovery_materials` --
 
 
+
+-- Structure of table `0_user_recovery_redemption_requests` --
+
+DROP TABLE IF EXISTS `0_user_recovery_redemption_requests`;
+
+CREATE TABLE `0_user_recovery_redemption_requests` (
+	`recovery_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`request_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`user_id` smallint(6) NOT NULL,
+	`recovery_material_id` bigint(20) unsigned NOT NULL,
+	`source_bucket_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`request_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'pending',
+	`created_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	`terminal_at` datetime DEFAULT NULL,
+	`terminal_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`recovery_request_id`),
+	UNIQUE KEY `recovery_redemption_request_key` (`request_key_hash`),
+	KEY `recovery_redemption_account_material` (`user_id`,`recovery_material_id`,`request_status`,`expires_at`,`recovery_request_id`),
+	KEY `recovery_redemption_source` (`source_bucket_hash`,`request_status`,`expires_at`,`recovery_request_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_recovery_redemption_requests` --
+
+
+-- Structure of table `0_user_recovery_redemption_controls` --
+
+DROP TABLE IF EXISTS `0_user_recovery_redemption_controls`;
+
+CREATE TABLE `0_user_recovery_redemption_controls` (
+	`recovery_control_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`control_scope` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`control_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`failed_attempt_count` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`window_started_at` datetime DEFAULT NULL,
+	`last_failed_at` datetime DEFAULT NULL,
+	`locked_until` datetime DEFAULT NULL,
+	`last_cleared_at` datetime DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`recovery_control_id`),
+	UNIQUE KEY `recovery_redemption_control_key` (`control_scope`,`control_key_hash`),
+	KEY `recovery_redemption_control_lock` (`control_scope`,`locked_until`,`recovery_control_id`),
+	KEY `recovery_redemption_control_window` (`control_scope`,`window_started_at`,`recovery_control_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_recovery_redemption_controls` --
+
 -- Structure of table `0_user_federation_providers` --
 
 DROP TABLE IF EXISTS `0_user_federation_providers`;

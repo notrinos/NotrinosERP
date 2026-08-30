@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.274',
-        'active_legacy_payroll_contract'=>'1.0.227',
-        'next_backlog_item'=>'read-only PAY-SEC-004 durable recovery-redemption abuse-control custody and public-route integration review',
+        'active_database_version'=>'1.0.275',
+        'active_legacy_payroll_contract'=>'1.0.228',
+        'next_backlog_item'=>'read-only PAY-SEC-004 recovery-redemption abuse-control command and credential-reset coordinator integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review durable recovery-redemption failed-attempt, rate-limit and lockout custody plus the future public-route integration boundary before any anonymous recovery entrypoint is added; preserve the accepted SA_USERS administrator-reset transaction, exact recovery verification/consume primitive, federation links, immutable assurance history, inactive-account denial, payroll/payment/accounting authority and historical rows; add no public route, anonymous lookup/oracle, break-glass grant or recovery-redemption writer during this read-only review',
+        'next_slice_scope'=>'review the command/coordinator boundary over the accepted empty recovery-redemption request/control custody: exact opaque-request creation and terminalization, deterministic account_material then coarse_source locks, failed-attempt windows and bounded lockouts, generic external semantics, successful-reset account/material clearing, CSRF/session handling and one outer transaction composing recovery consume, remaining-material revocation, durable-session revocation, restricted audit and credential mutation; add no public route, anonymous credential mutation, break-glass grant, payment command or additional payroll/accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -165,6 +165,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_recovery_material_verification_consume_foundation.php'),
             'pay_sec_004_administrator_password_reset_transaction_foundation'=>array('previous'=>'1.0.273','version'=>'1.0.274',
                 'file'=>'sql/upgrade_pay_sec_004_administrator_password_reset_transaction_foundation.php'),
+            'pay_sec_004_recovery_redemption_abuse_control_custody_foundation'=>array('previous'=>'1.0.274','version'=>'1.0.275',
+                'file'=>'sql/upgrade_pay_sec_004_recovery_redemption_abuse_control_custody_foundation.php'),
         ),
     );
 }
