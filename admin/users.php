@@ -88,7 +88,7 @@ if (($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') && check_csrf_token()) {
 			$updated = update_user_prefs($selected_id, get_post(array('login_id', 'real_name', 'phone', 'email', 'role_id', 'language', 'print_profile', 'rep_popup' => 0, 'pos')));
 
 			if ($updated && $_POST['password'] != '')
-				$updated = update_user_password($selected_id, $_POST['login_id'], password_hash($_POST['password'], PASSWORD_DEFAULT));
+				$updated = administrator_reset_user_password(user_company(), $selected_id, $_POST['login_id'], $_POST['password']) !== false;
 
 			if ($updated) {
 				display_notification_centered(_('The selected user has been updated.'));
