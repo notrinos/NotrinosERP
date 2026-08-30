@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.271',
-        'active_legacy_payroll_contract'=>'1.0.224',
-        'next_backlog_item'=>'read-only PAY-SEC-004 recovery-material issuance/rotation/revocation and administrator-reset command review',
+        'active_database_version'=>'1.0.272',
+        'active_legacy_payroll_contract'=>'1.0.225',
+        'next_backlog_item'=>'read-only PAY-SEC-004 recovery-material verification/consume and administrator-reset integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze recovery issuance quantity/lifetime and slot rotation on the accepted hashed recovery-material custody, revoke-all-on-rotation and single-use eligibility, lockout-safe SA_USERS administrator-reset transaction ordering with lockout-safe administrator reset semantics, complete federated-session and privileged-assurance invalidation plus durable-session and privileged-assurance invalidation, preserve least-authority break-glass scope and restricted PAY-AUD semantics with restricted PAY-AUD fields, and freeze exact retry/concurrency failure semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during that read-only review; add no recovery issuance/redemption writer, administrator-reset mutation, break-glass grant, payment command or additional accounting authority',
+        'next_slice_scope'=>'review exact one-time recovery secret verification/consume locking on the accepted hashed recovery-material custody, expiry and terminal-consume semantics, preserve the accepted issuance/rotation/revocation policy, and freeze lockout-safe administrator reset ordering so a future SA_USERS command composes recovery revocation, durable-session and federated-session and privileged-assurance invalidation plus restricted PAY-AUD fields atomically before any credential mutation; preserve least-authority break-glass scope, restricted PAY-AUD semantics and exact retry/concurrency failure semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during the review, and specifically add no public recovery route, anonymous reset writer, administrator-reset mutation, break-glass grant, payment command or additional accounting authority, payroll command or accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -159,6 +159,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_route_consumer_integration_foundation.php'),
             'pay_sec_004_recovery_material_custody_foundation'=>array('previous'=>'1.0.270','version'=>'1.0.271',
                 'file'=>'sql/upgrade_pay_sec_004_recovery_material_custody_foundation.php'),
+            'pay_sec_004_recovery_material_command_foundation'=>array('previous'=>'1.0.271','version'=>'1.0.272',
+                'file'=>'sql/upgrade_pay_sec_004_recovery_material_command_foundation.php'),
         ),
     );
 }
