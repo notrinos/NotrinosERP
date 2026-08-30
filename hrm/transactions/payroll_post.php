@@ -9,8 +9,20 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root . '/hrm/includes/payroll_engine.inc');
+include_once($path_to_root . '/includes/federation_oidc_payroll_post_step_up.inc');
 
 page(_($help_context = 'Payroll Posting'));
+
+$payroll_step_up_required = false;
+$payroll_step_up_required_period = 0;
+$payroll_step_up_csrf = false;
+$payroll_step_up_notice = isset($_GET['step_up']) ? (string)$_GET['step_up'] : '';
+if ($payroll_step_up_notice === 'assured')
+    display_notification(_('Reauthentication completed. Submit Post again.'));
+elseif ($payroll_step_up_notice === 'retry')
+    display_warning(_('Reauthentication could not be completed yet. Start a new reauthentication attempt before posting.'));
+elseif ($payroll_step_up_notice === 'failed')
+    display_error(_('Reauthentication failed. No payroll posting action was performed.'));
 
 $period_id = find_submit('Post');
 if ($period_id <= 0)
@@ -20,7 +32,17 @@ if ($period_id > 0) {
     $posting = post_approved_payroll_period($period_id);
     if (!empty($posting['ok']))
         display_notification($posting['message']);
-    else
+    elseif (isset($posting['code']) && $posting['code'] === 'federated_assurance_required') {
+        $payroll_step_up_required = true;
+        $payroll_step_up_required_period = $period_id;
+        $company = function_exists('user_company') ? (int)user_company() : -1;
+        $payroll_step_up_csrf = $company >= 0
+            ? federation_oidc_payroll_step_up_issue_csrf($company, $period_id)
+            : false;
+        display_error(isset($posting['message'])
+            ? $posting['message']
+            : _('Fresh federated reauthentication is required before this approved payroll period can be posted.'));
+    } else
         display_error(isset($posting['message'])
             ? $posting['message']
             : _('The approved payroll period could not be posted.'));
@@ -33,6 +55,15 @@ $status_labels = array(
     2 => _('Approved'),
     3 => _('Posted'),
 );
+
+if ($payroll_step_up_required && is_string($payroll_step_up_csrf)) {
+    start_form(false, 'payroll_post_step_up.php');
+    hidden('period_id', $payroll_step_up_required_period);
+    hidden('step_up_csrf', $payroll_step_up_csrf);
+    submit_center('ReauthenticateToPost', _('Reauthenticate to Post'), true,
+        _('Complete federated reauthentication. Payroll will not be posted until you return and explicitly submit Post again.'), true);
+    end_form();
+}
 
 start_form();
 start_table(TABLESTYLE_DATA, 'class="extra-height-data-table"');

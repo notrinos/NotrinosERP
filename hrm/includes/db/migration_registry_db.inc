@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.269',
-        'active_legacy_payroll_contract'=>'1.0.222',
-        'next_backlog_item'=>'read-only PAY-SEC-004 public payroll-post step-up route and live-consumer integration review',
+        'active_database_version'=>'1.0.270',
+        'active_legacy_payroll_contract'=>'1.0.223',
+        'next_backlog_item'=>'read-only PAY-SEC-004 recovery/admin-reset and scoped break-glass completion review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze HTTPS-only authenticated POST start, one fixed callback path, CSRF/callback parameter bounds, fixed return/error mapping without arbitrary redirects, local-password/non-federated backward-compatibility activation and the exact post_approved_payroll_period consumer insertion after already-posted verification plus locked approval-binding revalidation; add no public step-up route, live consumer call, recovery-factor writer, break-glass grant, payment or additional accounting authority during that read-only review',
+        'next_slice_scope'=>'define hashed recovery-material custody, issuance/rotation/revocation, lockout-safe administrator reset, complete federated-session and privileged-assurance invalidation, rehearsed least-authority break-glass scope, expiry and restricted PAY-AUD semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during that read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -155,6 +155,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_privileged_action_consumer_foundation.php'),
             'pay_sec_004_payroll_post_step_up_orchestration_foundation'=>array('previous'=>'1.0.268','version'=>'1.0.269',
                 'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_orchestration_foundation.php'),
+            'pay_sec_004_payroll_post_step_up_route_consumer_integration_foundation'=>array('previous'=>'1.0.269','version'=>'1.0.270',
+                'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_route_consumer_integration_foundation.php'),
         ),
     );
 }

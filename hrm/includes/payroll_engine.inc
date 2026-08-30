@@ -34,7 +34,7 @@ include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.222');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.223');
 
 /**
  * Payroll Formula Engine.
@@ -2205,6 +2205,33 @@ function post_approved_payroll_period($period_id) {
             cancel_transaction();
             $result['code'] = isset($binding['code']) ? $binding['code'] : 'approval_binding_drift';
             $result['message'] = _('The approved payroll evidence has changed. Nothing was posted.');
+            return $result;
+        }
+
+        // PAY-SEC-004 live assurance integration. Local-password and accepted
+        // external-hook sessions preserve their existing posting behavior. A
+        // federated OIDC session must consume one fresh action-bound level-two
+        // assurance event inside this same posting transaction, after locked
+        // approval revalidation and before any financial effect is written.
+        $auth_method = isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
+            && isset($_SESSION['wa_current_user']->auth_method)
+            ? (string)$_SESSION['wa_current_user']->auth_method : '';
+        if ($auth_method === 'federated_oidc') {
+            include_once($path_to_root.'/includes/federation_assurance_consumer.inc');
+            $company = function_exists('user_company') ? (int)user_company() : -1;
+            $assurance = $company >= 0 && function_exists('federation_consume_payroll_post_assurance')
+                ? federation_consume_payroll_post_assurance($company, $period_id, (int)$approved_draft['id'], $binding)
+                : false;
+            if (!is_array($assurance)) {
+                cancel_transaction();
+                $result['code'] = 'federated_assurance_required';
+                $result['message'] = _('Fresh federated reauthentication is required before this approved payroll period can be posted.');
+                return $result;
+            }
+        } elseif (!in_array($auth_method, array('local_password', 'external_hook'), true)) {
+            cancel_transaction();
+            $result['code'] = 'authentication_context_invalid';
+            $result['message'] = _('The authenticated session could not be validated for payroll posting.');
             return $result;
         }
 
