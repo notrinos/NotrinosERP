@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.272',
-        'active_legacy_payroll_contract'=>'1.0.225',
-        'next_backlog_item'=>'read-only PAY-SEC-004 recovery-material verification/consume and administrator-reset integration review',
+        'active_database_version'=>'1.0.273',
+        'active_legacy_payroll_contract'=>'1.0.226',
+        'next_backlog_item'=>'read-only PAY-SEC-004 administrator-reset transaction and recovery-redemption abuse-control integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review exact one-time recovery secret verification/consume locking on the accepted hashed recovery-material custody, expiry and terminal-consume semantics, preserve the accepted issuance/rotation/revocation policy, and freeze lockout-safe administrator reset ordering so a future SA_USERS command composes recovery revocation, durable-session and federated-session and privileged-assurance invalidation plus restricted PAY-AUD fields atomically before any credential mutation; preserve least-authority break-glass scope, restricted PAY-AUD semantics and exact retry/concurrency failure semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during the review, and specifically add no public recovery route, anonymous reset writer, administrator-reset mutation, break-glass grant, payment command or additional accounting authority, payroll command or accounting authority during that read-only review',
+        'next_slice_scope'=>'review the existing administrator password-reset mutation boundary and the future recovery-redemption entrypoint for one caller-owned atomic transaction that composes exact recovery verification/consume, remaining recovery-material revocation, durable-session invalidation, required federated-session and privileged-assurance invalidation, credential mutation and restricted PAY-AUD evidence; freeze durable failed-attempt/rate/lockout ownership before any public recovery route; preserve existing SA_USERS authority, inactive-account denial, federation link custody, assurance history, payroll/payment/accounting authority and historical rows; add no writer or route during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -161,6 +161,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_recovery_material_custody_foundation.php'),
             'pay_sec_004_recovery_material_command_foundation'=>array('previous'=>'1.0.271','version'=>'1.0.272',
                 'file'=>'sql/upgrade_pay_sec_004_recovery_material_command_foundation.php'),
+            'pay_sec_004_recovery_material_verification_consume_foundation'=>array('previous'=>'1.0.272','version'=>'1.0.273',
+                'file'=>'sql/upgrade_pay_sec_004_recovery_material_verification_consume_foundation.php'),
         ),
     );
 }

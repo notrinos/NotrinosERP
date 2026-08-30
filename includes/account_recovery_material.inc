@@ -96,6 +96,88 @@ function account_recovery_material_hash_secret($secret)
     return is_string($hash) && $hash !== '' && strlen($hash) <= 255 ? $hash : false;
 }
 
+/** Strict positive numeric identifier parser for recovery custody references. */
+function account_recovery_material_positive_id($value)
+{
+    if (is_int($value))
+        return $value > 0 ? $value : false;
+    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
+        return false;
+    $integer = (int)$value;
+    return $integer > 0 && (string)$integer === $value ? $integer : false;
+}
+
+function account_recovery_material_secret_format_valid($secret)
+{
+    return is_string($secret) && preg_match('/^rc1_[a-f0-9]{64}$/D', $secret) === 1;
+}
+
+/**
+ * Require explicit caller-owned anti-abuse evidence before secret verification.
+ *
+ * No public route exists in this slice. A future recovery entrypoint must own
+ * durable failed-attempt/rate/lockout state and may construct this context only
+ * after that gate has allowed the exact user/material attempt.
+ */
+function account_recovery_material_attempt_gate_valid($context, $user_id, $material_id)
+{
+    $user_id = account_recovery_material_positive_id($user_id);
+    $material_id = account_recovery_material_positive_id($material_id);
+    if ($user_id === false || $material_id === false || !is_array($context))
+        return false;
+    return isset($context['scope'], $context['attempt_owner'], $context['user_id'], $context['recovery_material_id'])
+        && $context['scope'] === 'password_reset'
+        && $context['attempt_owner'] === 'caller'
+        && isset($context['rate_limit_checked'], $context['lockout_checked'])
+        && $context['rate_limit_checked'] === true
+        && $context['lockout_checked'] === true
+        && account_recovery_material_positive_id($context['user_id']) === $user_id
+        && account_recovery_material_positive_id($context['recovery_material_id']) === $material_id;
+}
+
+/** Lock one exact recovery-material row for verification/terminal consume. */
+function account_recovery_material_candidate_for_update($user_id, $material_id)
+{
+    $user_id = account_recovery_material_positive_id($user_id);
+    $material_id = account_recovery_material_positive_id($material_id);
+    if ($user_id === false || $material_id === false || !defined('TB_PREF'))
+        return false;
+    $result = db_query("SELECT recovery_material_id,user_id,material_type,generation,material_slot,secret_hash,issued_at,expires_at,consumed_at,revoked_at,row_version "
+        ."FROM ".TB_PREF."user_recovery_materials WHERE recovery_material_id=".$material_id
+        ." AND user_id=".$user_id." AND material_type=".db_escape(ACCOUNT_RECOVERY_MATERIAL_TYPE)
+        ." LIMIT 2 FOR UPDATE", 'could not lock PAY-SEC-004 recovery-material verification custody');
+    if (!$result)
+        return false;
+    $row = db_fetch_assoc($result);
+    if (!$row)
+        return null;
+    $extra = db_fetch_assoc($result);
+    if (is_array($extra))
+        return false;
+    return $row;
+}
+
+function account_recovery_material_candidate_valid($row, $user_id, $material_id, $secret, $now_epoch)
+{
+    $user_id = account_recovery_material_positive_id($user_id);
+    $material_id = account_recovery_material_positive_id($material_id);
+    if ($user_id === false || $material_id === false || !is_array($row)
+        || !account_recovery_material_secret_format_valid($secret)
+        || !is_int($now_epoch) || $now_epoch <= 0)
+        return false;
+    if ((int)$row['recovery_material_id'] !== $material_id || (int)$row['user_id'] !== $user_id
+        || (string)$row['material_type'] !== ACCOUNT_RECOVERY_MATERIAL_TYPE
+        || (int)$row['generation'] <= 0 || (int)$row['material_slot'] <= 0
+        || (int)$row['row_version'] <= 0 || $row['consumed_at'] !== null || $row['revoked_at'] !== null
+        || !is_string($row['secret_hash']) || $row['secret_hash'] === '')
+        return false;
+    $issued = strtotime((string)$row['issued_at'].' UTC');
+    $expires = strtotime((string)$row['expires_at'].' UTC');
+    if ($issued === false || $expires === false || $issued > $now_epoch || $now_epoch >= $expires)
+        return false;
+    return password_verify($secret, (string)$row['secret_hash']);
+}
+
 /** Lock the target account and role without exposing mutable profile claims. */
 function account_recovery_material_user_for_update($user_id)
 {
@@ -374,5 +456,96 @@ function account_recovery_material_revoke_for_user($company, $user_id, $reason =
         cancel_transaction();
         return false;
     }
+    return $result_value;
+}
+
+/** Restricted evidence for one transaction-bound recovery-material consume. */
+function account_recovery_material_consume_audit($company, $row, $consumed_at)
+{
+    return append_domain_audit_event(array(
+        'company_id'=>(int)$company,'legal_entity_id'=>0,
+        'entity_type'=>'security_account_recovery_material',
+        'entity_key'=>array('user_id'=>(int)$row['user_id'],'recovery_material_id'=>(int)$row['recovery_material_id']),
+        'action'=>'security.account_recovery.material.consumed_for_reset',
+        'reason_code'=>'pay_sec_004_recovery_material_verification_consume',
+        'before'=>array('consumed'=>false,'row_version'=>(int)$row['row_version']),
+        'after'=>array('consumed'=>true,'row_version'=>(int)$row['row_version']+1),
+        'restricted_diff'=>array(
+            'user_id'=>(int)$row['user_id'],'recovery_material_id'=>(int)$row['recovery_material_id'],
+            'generation'=>(int)$row['generation'],'material_slot'=>(int)$row['material_slot'],
+            'material_type'=>ACCOUNT_RECOVERY_MATERIAL_TYPE,'consumed_at'=>(string)$consumed_at,
+            'exact_numeric_id_and_secret_verified'=>true,'password_hash_verifier_used'=>true,
+            'attempt_rate_limit_owned_by_caller'=>true,'attempt_lockout_owned_by_caller'=>true,
+            'caller_transaction_required'=>true,'credential_reset_committed'=>false,
+            'remaining_recovery_material_revoked'=>false,'durable_sessions_revoked'=>false,
+            'federation_links_mutated'=>false,'assurance_history_rewritten'=>false,
+            'plaintext_recovery_material_stored'=>false,'secret_hash_audited'=>false,
+            'public_recovery_route_added'=>false,'administrator_reset_writer_added'=>false,
+            'break_glass_authority_added'=>false,'role_granted'=>false,
+            'payment_authority_changed'=>false,'payroll_authority_changed'=>false,
+            'accounting_authority_changed'=>false))) !== false;
+}
+
+/**
+ * Verify and terminally consume one exact recovery code inside caller transaction.
+ *
+ * This helper never starts or commits a transaction. A future reset coordinator
+ * must already own the outer transaction, must own durable failed-attempt/rate/
+ * lockout controls, and must roll the entire transaction back on false. The same
+ * outer transaction must later revoke remaining recovery material and durable
+ * sessions, append reset evidence and mutate the credential before commit.
+ */
+function account_recovery_material_consume_for_reset($company, $user_id, $material_id, $secret, $attempt_context, $now_epoch = null)
+{
+    global $transaction_level;
+    $company = (int)$company;
+    $user_id = account_recovery_material_positive_id($user_id);
+    $material_id = account_recovery_material_positive_id($material_id);
+    $now = $now_epoch === null ? time() : $now_epoch;
+    if ($company < 0 || $user_id === false || $material_id === false
+        || !is_int($now) || $now <= 0 || !account_recovery_material_secret_format_valid($secret)
+        || !account_recovery_material_attempt_gate_valid($attempt_context, $user_id, $material_id)
+        || empty($transaction_level) || !account_recovery_material_load_audit_gateway())
+        return false;
+    if (function_exists('user_company') && (int)user_company() !== $company)
+        return false;
+    if (!db_query('SAVEPOINT pay_sec_004_recovery_consume', 'could not create PAY-SEC-004 recovery consume savepoint'))
+        return false;
+
+    $success = false;
+    $result_value = false;
+    do {
+        $user = account_recovery_material_user_for_update($user_id);
+        if (!is_array($user) || (int)$user['user_inactive'] !== 0 || (int)$user['role_inactive'] !== 0)
+            break;
+        $row = account_recovery_material_candidate_for_update($user_id, $material_id);
+        if (!is_array($row) || !account_recovery_material_candidate_valid($row, $user_id, $material_id, $secret, $now))
+            break;
+        $consumed_at = gmdate('Y-m-d H:i:s', $now);
+        $sql = "UPDATE ".TB_PREF."user_recovery_materials SET consumed_at=".db_escape($consumed_at)
+            .",row_version=row_version+1 WHERE recovery_material_id=".$material_id." AND user_id=".$user_id
+            ." AND material_type=".db_escape(ACCOUNT_RECOVERY_MATERIAL_TYPE)." AND row_version=".(int)$row['row_version']
+            ." AND consumed_at IS NULL AND revoked_at IS NULL AND issued_at<=".db_escape($consumed_at)
+            ." AND expires_at>".db_escape($consumed_at);
+        if (!db_query($sql, 'could not consume PAY-SEC-004 recovery material')
+            || !function_exists('db_num_affected_rows') || (int)db_num_affected_rows() !== 1)
+            break;
+        if (!account_recovery_material_consume_audit($company, $row, $consumed_at))
+            break;
+        $success = true;
+        $result_value = array('user_id'=>$user_id,'recovery_material_id'=>$material_id,
+            'generation'=>(int)$row['generation'],'material_slot'=>(int)$row['material_slot'],
+            'consumed_at'=>$consumed_at,'row_version'=>(int)$row['row_version']+1,
+            'caller_transaction_required'=>true,'credential_reset_committed'=>false,
+            'remaining_recovery_material_revoked'=>false,'durable_sessions_revoked'=>false);
+    } while (false);
+
+    if (!$success) {
+        @db_query('ROLLBACK TO SAVEPOINT pay_sec_004_recovery_consume', 'could not roll back PAY-SEC-004 recovery consume savepoint');
+        @db_query('RELEASE SAVEPOINT pay_sec_004_recovery_consume', 'could not release failed PAY-SEC-004 recovery consume savepoint');
+        return false;
+    }
+    if (!db_query('RELEASE SAVEPOINT pay_sec_004_recovery_consume', 'could not release PAY-SEC-004 recovery consume savepoint'))
+        return false;
     return $result_value;
 }
