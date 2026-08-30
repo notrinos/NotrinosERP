@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.270',
-        'active_legacy_payroll_contract'=>'1.0.223',
-        'next_backlog_item'=>'read-only PAY-SEC-004 recovery/admin-reset and scoped break-glass completion review',
+        'active_database_version'=>'1.0.271',
+        'active_legacy_payroll_contract'=>'1.0.224',
+        'next_backlog_item'=>'read-only PAY-SEC-004 recovery-material issuance/rotation/revocation and administrator-reset command review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define hashed recovery-material custody, issuance/rotation/revocation, lockout-safe administrator reset, complete federated-session and privileged-assurance invalidation, rehearsed least-authority break-glass scope, expiry and restricted PAY-AUD semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during that read-only review',
+        'next_slice_scope'=>'freeze recovery issuance quantity/lifetime and slot rotation on the accepted hashed recovery-material custody, revoke-all-on-rotation and single-use eligibility, lockout-safe SA_USERS administrator-reset transaction ordering with lockout-safe administrator reset semantics, complete federated-session and privileged-assurance invalidation plus durable-session and privileged-assurance invalidation, preserve least-authority break-glass scope and restricted PAY-AUD semantics with restricted PAY-AUD fields, and freeze exact retry/concurrency failure semantics; add no recovery writer, break-glass grant, payment command or additional accounting authority during that read-only review; add no recovery issuance/redemption writer, administrator-reset mutation, break-glass grant, payment command or additional accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -157,6 +157,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_orchestration_foundation.php'),
             'pay_sec_004_payroll_post_step_up_route_consumer_integration_foundation'=>array('previous'=>'1.0.269','version'=>'1.0.270',
                 'file'=>'sql/upgrade_pay_sec_004_payroll_post_step_up_route_consumer_integration_foundation.php'),
+            'pay_sec_004_recovery_material_custody_foundation'=>array('previous'=>'1.0.270','version'=>'1.0.271',
+                'file'=>'sql/upgrade_pay_sec_004_recovery_material_custody_foundation.php'),
         ),
     );
 }

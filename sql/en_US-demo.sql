@@ -5332,6 +5332,34 @@ CREATE TABLE `0_user_session_assurance_events` (
 
 
 
+-- Structure of table `0_user_recovery_materials` --
+
+DROP TABLE IF EXISTS `0_user_recovery_materials`;
+
+CREATE TABLE `0_user_recovery_materials` (
+	`recovery_material_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`user_id` smallint(6) NOT NULL,
+	`material_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'recovery_code',
+	`generation` int(10) unsigned NOT NULL DEFAULT '1',
+	`material_slot` smallint(5) unsigned NOT NULL,
+	`secret_hash` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`issued_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	`consumed_at` datetime DEFAULT NULL,
+	`revoked_at` datetime DEFAULT NULL,
+	`revoked_by` smallint(6) DEFAULT NULL,
+	`revocation_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`created_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`recovery_material_id`),
+	UNIQUE KEY `recovery_material_generation_slot` (`user_id`,`material_type`,`generation`,`material_slot`),
+	KEY `recovery_material_user_active` (`user_id`,`material_type`,`consumed_at`,`revoked_at`,`expires_at`),
+	KEY `recovery_material_expiry` (`expires_at`,`recovery_material_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_recovery_materials` --
+
+
 -- Structure of table `0_user_federation_providers` --
 
 DROP TABLE IF EXISTS `0_user_federation_providers`;
