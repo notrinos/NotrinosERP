@@ -115,7 +115,25 @@ function break_glass_designation_load_audit_gateway()
     return function_exists('append_domain_audit_event');
 }
 
-function break_glass_designation_audit($company, $designation_id, $user_id, $actor_id, $action, $reason_code, $before, $after)
+/** Load the accepted activation cleanup command for ordered designation revocation. */
+function break_glass_designation_load_activation_gateway()
+{
+    global $path_to_root;
+    if (function_exists('break_glass_activation_active_lease_for_update')
+        && function_exists('break_glass_activation_terminalize_locked_lease'))
+        return true;
+    $root = isset($path_to_root) ? realpath($path_to_root) : false;
+    if ($root === false)
+        return false;
+    $file = $root.DIRECTORY_SEPARATOR.'includes'.DIRECTORY_SEPARATOR.'break_glass_activation.inc';
+    if (!is_file($file))
+        return false;
+    require_once($file);
+    return function_exists('break_glass_activation_active_lease_for_update')
+        && function_exists('break_glass_activation_terminalize_locked_lease');
+}
+
+function break_glass_designation_audit($company, $designation_id, $user_id, $actor_id, $action, $reason_code, $before, $after, $activation_cleanup=false)
 {
     return append_domain_audit_event(array(
         'company_id'=>(int)$company,'legal_entity_id'=>0,
@@ -132,7 +150,8 @@ function break_glass_designation_audit($company, $designation_id, $user_id, $act
             'active_role_required_for_designation'=>true,'activation_lease_created'=>false,
             'activation_challenge_performed'=>false,'provider_outage_bypass_added'=>false,
             'federation_bypass_added'=>false,'recovery_bypass_added'=>false,
-            'durable_sessions_mutated'=>false,'role_granted'=>false,'security_area_granted'=>false,
+            'durable_sessions_mutated'=>(bool)$activation_cleanup,'activation_lease_terminalized'=>(bool)$activation_cleanup,
+            'role_granted'=>false,'security_area_granted'=>false,
             'payroll_post_authority_changed'=>false,'payment_authority_changed'=>false,
             'accounting_authority_changed'=>false,'historical_rows_rewritten'=>false))) !== false;
 }
@@ -227,6 +246,15 @@ function break_glass_revoke_designation($company, $user_id, $reason='administrat
             $result_value=array('break_glass_designation_id'=>$id,'user_id'=>$user_id,
                 'revoked'=>true,'idempotent_retry'=>true,'live_activation_added'=>false);break;
         }
+        if (!break_glass_designation_load_activation_gateway())
+            break;
+        $active_lease=break_glass_activation_active_lease_for_update($id);
+        if ($active_lease===false)
+            break;
+        $activation_cleanup=is_array($active_lease);
+        if ($activation_cleanup && !break_glass_activation_terminalize_locked_lease(
+            $company,$active_lease,$actor_id,'designation_revoked',$now))
+            break;
         $version=(int)$row['row_version'];$revoked_at=gmdate('Y-m-d H:i:s',$now);
         $sql="UPDATE ".TB_PREF."user_break_glass_designations SET revoked_at=".db_escape($revoked_at)
             .",revoked_by=".$actor_id.",revocation_reason=".db_escape($reason).",row_version=row_version+1 "
@@ -236,11 +264,14 @@ function break_glass_revoke_designation($company, $user_id, $reason='administrat
             break;
         if (!break_glass_designation_audit($company,$id,$user_id,$actor_id,
             'security.break_glass.designation.revoked',$reason,
-            array('designated'=>true,'revoked'=>false),array('designated'=>true,'revoked'=>true)))
+            array('designated'=>true,'revoked'=>false),
+            array('designated'=>true,'revoked'=>true,'active_lease_terminalized'=>$activation_cleanup),
+            $activation_cleanup))
             break;
         commit_transaction();$committed=true;
         $result_value=array('break_glass_designation_id'=>$id,'user_id'=>$user_id,
-            'revoked'=>true,'idempotent_retry'=>false,'live_activation_added'=>false);
+            'revoked'=>true,'idempotent_retry'=>false,'live_activation_added'=>false,
+            'active_lease_terminalized'=>$activation_cleanup);
     } while(false);
     if (!$committed){cancel_transaction();return false;}
     return $result_value;

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.281',
-        'active_legacy_payroll_contract'=>'1.0.234',
-        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass activation command, local-password proof and terminal-session writer review',
+        'active_database_version'=>'1.0.282',
+        'active_legacy_payroll_contract'=>'1.0.235',
+        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass live-consumer/fallback-drill and return-to-normal integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze exact actor/target local-password proof, bounded reason codes and ticket hashing, activation-lease issuance transaction ordering, <=900-second expiry, concurrent activation denial, durable-session issuance/revocation, assurance level, terminal cleanup and drill return-to-normal evidence; add no public activation route, standing role grant, payment, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'freeze exact authenticated security-recovery consumer semantics, browser-session adoption/provenance if any, expiry sweep ownership, provider-outage rehearsal evidence and normal-service restoration; add no live route/consumer, standing role grant, payment, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -179,6 +179,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_designation_command_foundation.php'),
             'pay_sec_004_break_glass_activation_lease_custody_foundation'=>array('previous'=>'1.0.280','version'=>'1.0.281',
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_activation_lease_custody_foundation.php'),
+            'pay_sec_004_break_glass_activation_command_foundation'=>array('previous'=>'1.0.281','version'=>'1.0.282',
+                'file'=>'sql/upgrade_pay_sec_004_break_glass_activation_command_foundation.php'),
         ),
     );
 }
