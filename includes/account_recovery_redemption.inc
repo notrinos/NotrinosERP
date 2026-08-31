@@ -27,6 +27,10 @@ if (!defined('ACCOUNT_RECOVERY_REDEMPTION_SOURCE_LOCKOUT_SECONDS'))
     define('ACCOUNT_RECOVERY_REDEMPTION_SOURCE_LOCKOUT_SECONDS', 900);
 if (!defined('ACCOUNT_RECOVERY_REDEMPTION_GENERIC_FAILURE'))
     define('ACCOUNT_RECOVERY_REDEMPTION_GENERIC_FAILURE', 'recovery_request_not_accepted');
+if (!defined('ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_ACCOUNT_MATERIAL'))
+    define('ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_ACCOUNT_MATERIAL', 3);
+if (!defined('ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_SOURCE'))
+    define('ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_SOURCE', 12);
 
 function account_recovery_redemption_failure_result()
 {
@@ -301,6 +305,30 @@ function account_recovery_redemption_reset_audit($company, $user_id, $material_i
  * Create one opaque pending request under the accepted two-scope abuse gate.
  * No account existence check or browser claim lookup occurs here.
  */
+function account_recovery_redemption_pending_request_counts_for_update($user_id, $material_id, $source_bucket_hash, $now_epoch)
+{
+    $user_id = account_recovery_redemption_positive_id($user_id);
+    $material_id = account_recovery_redemption_positive_id($material_id);
+    if ($user_id === false || $material_id === false
+        || !account_recovery_redemption_source_bucket_hash_valid($source_bucket_hash)
+        || !is_int($now_epoch) || $now_epoch <= 0)
+        return false;
+    $now_at = gmdate('Y-m-d H:i:s', $now_epoch);
+    $account = db_query("SELECT recovery_request_id FROM ".TB_PREF."user_recovery_redemption_requests "
+        ."WHERE user_id=".$user_id." AND recovery_material_id=".$material_id
+        ." AND request_status='pending' AND expires_at>".db_escape($now_at)
+        ." ORDER BY recovery_request_id FOR UPDATE", 'could not bound PAY-SEC-004 recovery account/material pending requests');
+    if (!$account) return false;
+    $account_count = function_exists('db_num_rows') ? (int)db_num_rows($account) : 0;
+    $source = db_query("SELECT recovery_request_id FROM ".TB_PREF."user_recovery_redemption_requests "
+        ."WHERE source_bucket_hash=".db_escape($source_bucket_hash)
+        ." AND request_status='pending' AND expires_at>".db_escape($now_at)
+        ." ORDER BY recovery_request_id FOR UPDATE", 'could not bound PAY-SEC-004 recovery source pending requests');
+    if (!$source) return false;
+    $source_count = function_exists('db_num_rows') ? (int)db_num_rows($source) : 0;
+    return array('account_material'=>$account_count, 'coarse_source'=>$source_count);
+}
+
 function account_recovery_redemption_create_request($company, $user_id, $material_id, $source_bucket_hash, $now_epoch = null)
 {
     $company = (int)$company;
@@ -325,6 +353,10 @@ function account_recovery_redemption_create_request($company, $user_id, $materia
             break;
         if (account_recovery_redemption_control_is_locked($controls['account_material'], $now)
             || account_recovery_redemption_control_is_locked($controls['coarse_source'], $now))
+            break;
+        $pending = account_recovery_redemption_pending_request_counts_for_update($user_id, $material_id, $source_bucket_hash, $now);
+        if (!is_array($pending) || (int)$pending['account_material'] >= ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_ACCOUNT_MATERIAL
+            || (int)$pending['coarse_source'] >= ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_SOURCE)
             break;
         $created_at = gmdate('Y-m-d H:i:s', $now);
         $expires_at = gmdate('Y-m-d H:i:s', $now + ACCOUNT_RECOVERY_REDEMPTION_REQUEST_LIFETIME_SECONDS);
