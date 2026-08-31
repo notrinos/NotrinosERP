@@ -95,12 +95,12 @@ function break_glass_security_recovery_consumer_custody($session_id)
         ."l.terminalized_at,l.terminal_reason,l.row_version,"
         ."d.scope_code designation_scope_code,d.required_auth_method designation_auth_method,"
         ."d.max_activation_seconds,d.revoked_at designation_revoked_at,"
-        ."s.session_key_hash,s.role_id,s.auth_method,s.assurance_level,s.assurance_method,"
+        ."s.session_key_hash,s.user_id session_user_id,s.role_id,s.auth_method,s.assurance_level,s.assurance_method,"
         ."s.created_at,s.last_seen_at,s.idle_expires_at,s.absolute_expires_at,s.user_agent_hash,s.revoked_at session_revoked_at,"
         ."u.role_id current_role_id,u.inactive user_inactive,r.inactive role_inactive "
         ."FROM ".TB_PREF."user_break_glass_activation_leases l "
         ."INNER JOIN ".TB_PREF."user_break_glass_designations d ON d.break_glass_designation_id=l.break_glass_designation_id "
-        ."INNER JOIN ".TB_PREF."user_sessions s ON s.id=l.session_id "
+        ."INNER JOIN ".TB_PREF."user_sessions s ON s.id=l.session_id AND s.user_id=l.user_id "
         ."INNER JOIN ".TB_PREF."users u ON u.id=l.user_id AND u.id=d.user_id "
         ."INNER JOIN ".TB_PREF."security_roles r ON r.id=u.role_id "
         ."WHERE l.session_id=".$session_id." LIMIT 2";
@@ -118,6 +118,8 @@ function break_glass_security_recovery_consumer_custody_valid($row, $request)
 {
     if (!is_array($row) || !is_array($request))
         return false;
+    if (!isset($row['session_user_id']))
+        return false;
     $times = array();
     foreach (array('activated_at','expires_at','idle_expires_at','absolute_expires_at') as $field) {
         $epoch = strtotime((string)$row[$field].' UTC');
@@ -128,6 +130,7 @@ function break_glass_security_recovery_consumer_custody_valid($row, $request)
     $duration = $times['expires_at'] - $times['activated_at'];
     $max_seconds = min(BREAK_GLASS_SECURITY_RECOVERY_MAX_SECONDS, (int)$row['max_activation_seconds']);
     return (int)$row['session_id'] === (int)$request['session_id']
+        && (int)$row['session_user_id'] === (int)$request['user_id']
         && (int)$row['user_id'] === (int)$request['user_id']
         && (int)$row['role_id'] === (int)$request['role_id']
         && (int)$row['current_role_id'] === (int)$request['role_id']
