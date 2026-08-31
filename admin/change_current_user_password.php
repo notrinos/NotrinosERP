@@ -91,4 +91,5 @@ submit_center( 'UPDATE_ITEM', _('Change password'), true, '',  'default');
 end_form();
 
 display_note("<a href='account_recovery_materials.php'>"._('Manage recovery codes')."</a>", 0, 1);
+display_note("<a href='break_glass_security_recovery.php'>"._('Break-glass security recovery')."</a>", 0, 1);
 end_page();

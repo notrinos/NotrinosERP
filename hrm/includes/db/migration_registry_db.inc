@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.283',
-        'active_legacy_payroll_contract'=>'1.0.236',
-        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass browser-adoption/activation-route and fallback-drill integration review',
+        'active_database_version'=>'1.0.284',
+        'active_legacy_payroll_contract'=>'1.0.237',
+        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass expiry-sweep, fallback-drill alert/review and final completion review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze bounded break-glass browser-session binding without general-role widening, POST/CSRF/reauthentication boundary, return-to-normal UX, expiry cleanup ownership, provider-outage policy and rehearsal/alert/review evidence; add no public route, generic browser adoption, standing grant, payment, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'reverify orphan/expired lease cleanup ownership beyond route visits, drill alert/reviewer evidence, provider-restoration runbook and remaining PAY-SEC-004 acceptance gaps; add no background writer, standing grant, payment, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -183,6 +183,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_activation_command_foundation.php'),
             'pay_sec_004_break_glass_security_recovery_consumer_foundation'=>array('previous'=>'1.0.282','version'=>'1.0.283',
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_security_recovery_consumer_foundation.php'),
+            'pay_sec_004_break_glass_browser_route_foundation'=>array('previous'=>'1.0.283','version'=>'1.0.284',
+                'file'=>'sql/upgrade_pay_sec_004_break_glass_browser_route_foundation.php'),
         ),
     );
 }
