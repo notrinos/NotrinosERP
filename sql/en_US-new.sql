@@ -5066,6 +5066,36 @@ CREATE TABLE `0_user_recovery_redemption_controls` (
 
 -- Data of table `0_user_recovery_redemption_controls` --
 
+-- Structure of table `0_user_break_glass_activation_leases` --
+
+DROP TABLE IF EXISTS `0_user_break_glass_activation_leases`;
+
+CREATE TABLE `0_user_break_glass_activation_leases` (
+	`break_glass_activation_lease_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`break_glass_designation_id` bigint(20) unsigned NOT NULL,
+	`user_id` smallint(6) NOT NULL,
+	`scope_code` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'security_recovery',
+	`required_auth_method` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'local_password',
+	`reason_code` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`ticket_ref_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`activated_at` datetime NOT NULL,
+	`expires_at` datetime NOT NULL,
+	`session_id` bigint(20) unsigned DEFAULT NULL,
+	`active_slot` tinyint(3) unsigned DEFAULT '1',
+	`terminalized_at` datetime DEFAULT NULL,
+	`terminalized_by` smallint(6) DEFAULT NULL,
+	`terminal_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`break_glass_activation_lease_id`),
+	UNIQUE KEY `break_glass_active_designation` (`break_glass_designation_id`,`active_slot`),
+	KEY `break_glass_lease_user_active` (`user_id`,`scope_code`,`active_slot`,`expires_at`),
+	KEY `break_glass_lease_expiry` (`expires_at`,`active_slot`,`break_glass_activation_lease_id`),
+	KEY `break_glass_lease_session` (`session_id`,`terminalized_at`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_break_glass_activation_leases` --
+
+
 -- Structure of table `0_user_break_glass_designations` --
 
 DROP TABLE IF EXISTS `0_user_break_glass_designations`;

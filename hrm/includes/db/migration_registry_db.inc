@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.280',
-        'active_legacy_payroll_contract'=>'1.0.233',
-        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass activation-lease custody, local-password challenge and terminal-session integration review',
+        'active_database_version'=>'1.0.281',
+        'active_legacy_payroll_contract'=>'1.0.234',
+        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass activation command, local-password proof and terminal-session writer review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze exact activation-lease storage, explicit bounded reason/ticket custody, normal local-password verification, <=900-second lease expiry, provider-outage semantics, concurrent activation denial, durable-session/assurance behavior, restricted PAY-AUD evidence, expiry/revocation ordering and rehearsed return-to-normal evidence; add no live activation route, standing role grant, payment, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'freeze exact actor/target local-password proof, bounded reason codes and ticket hashing, activation-lease issuance transaction ordering, <=900-second expiry, concurrent activation denial, durable-session issuance/revocation, assurance level, terminal cleanup and drill return-to-normal evidence; add no public activation route, standing role grant, payment, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -177,6 +177,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_designation_custody_foundation.php'),
             'pay_sec_004_break_glass_designation_command_foundation'=>array('previous'=>'1.0.279','version'=>'1.0.280',
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_designation_command_foundation.php'),
+            'pay_sec_004_break_glass_activation_lease_custody_foundation'=>array('previous'=>'1.0.280','version'=>'1.0.281',
+                'file'=>'sql/upgrade_pay_sec_004_break_glass_activation_lease_custody_foundation.php'),
         ),
     );
 }
