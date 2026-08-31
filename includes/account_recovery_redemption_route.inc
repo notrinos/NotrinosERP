@@ -144,12 +144,12 @@ function account_recovery_route_parse_request($method, $content_type, $raw_body)
     if ($values['action'] === 'complete') {
         $required = array('action','company_login_name','request_handle','recovery_secret','new_password','new_password_confirm','recovery_csrf');
         if (count($values) !== count($required) || count(array_diff(array_keys($values), $required)) !== 0
-            || preg_match('/^[0-9]{1,4}$/D', (string)($values['company_login_name'] ?? '')) !== 1
-            || preg_match('/^rr1_[a-f0-9]{64}$/D', (string)($values['request_handle'] ?? '')) !== 1
-            || preg_match('/^rc1_[a-f0-9]{64}$/D', (string)($values['recovery_secret'] ?? '')) !== 1
-            || !is_string($values['new_password'] ?? null) || strlen($values['new_password']) < 4 || strlen($values['new_password']) > 512
-            || !is_string($values['new_password_confirm'] ?? null) || strlen($values['new_password_confirm']) < 4 || strlen($values['new_password_confirm']) > 512
-            || preg_match('/^[A-Za-z0-9_-]{43}$/D', (string)($values['recovery_csrf'] ?? '')) !== 1)
+            || preg_match('/^[0-9]{1,4}$/D', (string)(isset($values['company_login_name']) ? $values['company_login_name'] : '')) !== 1
+            || preg_match('/^rr1_[a-f0-9]{64}$/D', (string)(isset($values['request_handle']) ? $values['request_handle'] : '')) !== 1
+            || preg_match('/^rc1_[a-f0-9]{64}$/D', (string)(isset($values['recovery_secret']) ? $values['recovery_secret'] : '')) !== 1
+            || !is_string(isset($values['new_password']) ? $values['new_password'] : null) || strlen($values['new_password']) < 4 || strlen($values['new_password']) > 512
+            || !is_string(isset($values['new_password_confirm']) ? $values['new_password_confirm'] : null) || strlen($values['new_password_confirm']) < 4 || strlen($values['new_password_confirm']) > 512
+            || preg_match('/^[A-Za-z0-9_-]{43}$/D', (string)(isset($values['recovery_csrf']) ? $values['recovery_csrf'] : '')) !== 1)
             return false;
         return array('action'=>'complete','company_id'=>(int)$values['company_login_name'],
             'request_handle'=>(string)$values['request_handle'],'recovery_secret'=>(string)$values['recovery_secret'],

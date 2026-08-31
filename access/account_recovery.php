@@ -124,6 +124,7 @@ if ($request['action'] === 'begin') {
 if ($request['new_password'] !== $request['new_password_confirm']) { account_recovery_public_result(false); exit; }
 $result = account_recovery_redemption_reset_password($company, $request['request_handle'], $source_bucket_hash,
     $request['recovery_secret'], $request['new_password'], $now);
-$success = is_array($result) && !empty($result['ok']) && ($result['external_code'] ?? '') === 'credential_reset_completed';
+$success = is_array($result) && !empty($result['ok'])
+    && (isset($result['external_code']) ? $result['external_code'] : '') === 'credential_reset_completed';
 if ($success) account_recovery_route_reset_attempts();
 account_recovery_public_result($success);
