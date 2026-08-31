@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.278',
-        'active_legacy_payroll_contract'=>'1.0.231',
-        'next_backlog_item'=>'read-only PAY-SEC-004 recovery end-to-end completion and remaining-gap review',
+        'active_database_version'=>'1.0.279',
+        'active_legacy_payroll_contract'=>'1.0.232',
+        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass designation/activation, expiry/revocation and fallback-drill integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile the complete accepted PAY-SEC-004 recovery chain end to end against the roadmap and registry, identify only proven remaining gaps, and add no code, grant, payment, payroll-post, accounting or identity-provider authority during this read-only completion review',
+        'next_slice_scope'=>'reconcile break-glass designation authority, activation challenge, <=900-second lease, deterministic expiry/revocation, provider-outage semantics, restricted PAY-AUD ordering and fallback-drill return-to-normal evidence; add no live break-glass activation, role grant, payment, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -173,6 +173,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_recovery_redemption_public_route_foundation.php'),
             'pay_sec_004_recovery_material_reenrollment_route_foundation'=>array('previous'=>'1.0.277','version'=>'1.0.278',
                 'file'=>'sql/upgrade_pay_sec_004_recovery_material_reenrollment_route_foundation.php'),
+            'pay_sec_004_break_glass_designation_custody_foundation'=>array('previous'=>'1.0.278','version'=>'1.0.279',
+                'file'=>'sql/upgrade_pay_sec_004_break_glass_designation_custody_foundation.php'),
         ),
     );
 }

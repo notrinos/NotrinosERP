@@ -5066,6 +5066,30 @@ CREATE TABLE `0_user_recovery_redemption_controls` (
 
 -- Data of table `0_user_recovery_redemption_controls` --
 
+-- Structure of table `0_user_break_glass_designations` --
+
+DROP TABLE IF EXISTS `0_user_break_glass_designations`;
+
+CREATE TABLE `0_user_break_glass_designations` (
+	`break_glass_designation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`user_id` smallint(6) NOT NULL,
+	`scope_code` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'security_recovery',
+	`required_auth_method` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'local_password',
+	`max_activation_seconds` smallint(5) unsigned NOT NULL DEFAULT '900',
+	`designated_at` datetime NOT NULL,
+	`designated_by` smallint(5) unsigned NOT NULL DEFAULT '0',
+	`revoked_at` datetime DEFAULT NULL,
+	`revoked_by` smallint(6) DEFAULT NULL,
+	`revocation_reason` varchar(40) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`break_glass_designation_id`),
+	UNIQUE KEY `break_glass_user_scope` (`user_id`,`scope_code`),
+	KEY `break_glass_active_scope` (`scope_code`,`revoked_at`,`user_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_user_break_glass_designations` --
+
+
 -- Structure of table `0_user_federation_providers` --
 
 DROP TABLE IF EXISTS `0_user_federation_providers`;
