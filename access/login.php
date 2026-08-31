@@ -190,6 +190,10 @@ if (!$login_timeout && isset($db_connections) && is_array($db_connections) && co
     }
 }
 
+// PAY-SEC-004: public recovery-redemption route. Legacy email reset remains retired.
+if (!$login_timeout)
+    echo "<div class='login-message'><a href='".$path_to_root."/access/account_recovery.php'>"._('Recover account')."</a></div>\n";
+
 echo "</div>\n"; // end login-card
 
 $Ajax->addScript(true, "if (document.forms.length) document.forms[0].password.focus();");

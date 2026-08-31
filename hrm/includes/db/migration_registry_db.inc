@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.276',
-        'active_legacy_payroll_contract'=>'1.0.229',
-        'next_backlog_item'=>'read-only PAY-SEC-004 public recovery-redemption route integration review',
+        'active_database_version'=>'1.0.277',
+        'active_legacy_payroll_contract'=>'1.0.230',
+        'next_backlog_item'=>'read-only PAY-SEC-004 authenticated recovery-material re-enrollment/rotation route integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review public recovery-redemption exposure over the accepted internal coordinator: anti-enumerating account/material claim resolution, anonymous versus authenticated CSRF/session treatment, HTTPS-only POST and request/body bounds, source-bucket derivation/trust, opaque request-handle issuance, exact coordinator invocation, fixed response/replay semantics, post-reset re-enrollment and deployment activation; add no public route, break-glass grant, payment command, payroll-post command or additional accounting authority during this read-only review',
+        'next_slice_scope'=>'review authenticated recovery-material re-enrollment/rotation exposure after successful recovery: current-password reauthentication, authenticated CSRF/session treatment, display-once secret custody, rotation/revocation concurrency, post-reset login ordering and interrupted-display recovery; add no public enrollment route, new role grant, payment command, payroll-post command or additional accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -169,6 +169,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_recovery_redemption_abuse_control_custody_foundation.php'),
             'pay_sec_004_recovery_redemption_coordinator_foundation'=>array('previous'=>'1.0.275','version'=>'1.0.276',
                 'file'=>'sql/upgrade_pay_sec_004_recovery_redemption_coordinator_foundation.php'),
+            'pay_sec_004_recovery_redemption_public_route_foundation'=>array('previous'=>'1.0.276','version'=>'1.0.277',
+                'file'=>'sql/upgrade_pay_sec_004_recovery_redemption_public_route_foundation.php'),
         ),
     );
 }
