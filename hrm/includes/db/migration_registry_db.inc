@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.285',
-        'active_legacy_payroll_contract'=>'1.0.238',
-        'next_backlog_item'=>'read-only PAY-SEC-004 break-glass fallback-drill alert/reviewer, provider-restoration runbook and final completion review',
+        'active_database_version'=>'1.0.286',
+        'active_legacy_payroll_contract'=>'1.0.239',
+        'next_backlog_item'=>'read-only final PAY-SEC-004 completion closure review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze whether existing notification/reviewer/audit primitives can record bounded recovery-drill alert, reviewer acknowledgement and provider-restoration evidence without a parallel mutable incident system, then reconcile all remaining PAY-SEC-004 Phase-1 acceptance gaps; add no provider-state automation, standing grant, payment, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'reconcile every PAY-SEC-004 Phase-1 acceptance criterion against accepted migration, audit and runtime evidence; identify any residual gap without adding authority and create a terminal completion edge only if the full acceptance set is satisfied; add no new provider/recovery/federation writer, standing grant, payroll-post, payment or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -187,6 +187,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_browser_route_foundation.php'),
             'pay_sec_004_break_glass_expiry_sweep_foundation'=>array('previous'=>'1.0.284','version'=>'1.0.285',
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_expiry_sweep_foundation.php'),
+            'pay_sec_004_break_glass_drill_review_foundation'=>array('previous'=>'1.0.285','version'=>'1.0.286',
+                'file'=>'sql/upgrade_pay_sec_004_break_glass_drill_review_foundation.php'),
         ),
     );
 }
