@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.286',
-        'active_legacy_payroll_contract'=>'1.0.239',
-        'next_backlog_item'=>'read-only final PAY-SEC-004 completion closure review',
+        'active_database_version'=>'1.0.288',
+        'active_legacy_payroll_contract'=>'1.0.241',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier verification-promotion / evidence integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile every PAY-SEC-004 Phase-1 acceptance criterion against accepted migration, audit and runtime evidence; identify any residual gap without adding authority and create a terminal completion edge only if the full acceptance set is satisfied; add no new provider/recovery/federation writer, standing grant, payroll-post, payment or accounting authority during this read-only review',
+        'next_slice_scope'=>'reconcile one approved identifier verification request with externally verified evidence provenance, exact identifier/request row versions, fresh checker assurance requirements, central approval linkage and restricted PAY-AUD ordering before changing identifier verification/approval state; add no full reveal/decrypt, payment election/allocation/binding, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -189,6 +189,10 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_expiry_sweep_foundation.php'),
             'pay_sec_004_break_glass_drill_review_foundation'=>array('previous'=>'1.0.285','version'=>'1.0.286',
                 'file'=>'sql/upgrade_pay_sec_004_break_glass_drill_review_foundation.php'),
+            'pay_sec_004_phase_1_completion'=>array('previous'=>'1.0.286','version'=>'1.0.287',
+                'file'=>'sql/upgrade_pay_sec_004_phase_1_completion.php'),
+            'hrm_fnd_004_identifier_verification_request_command_foundation'=>array('previous'=>'1.0.287','version'=>'1.0.288',
+                'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_request_command_foundation.php'),
         ),
     );
 }

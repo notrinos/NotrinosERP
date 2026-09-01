@@ -11,6 +11,11 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
+$hrm_identifier_verification_request_source = $path_to_root . '/hrm/includes/db/person_identifier_verification_request_db.inc';
+if (!is_file($hrm_identifier_verification_request_source))
+	$hrm_identifier_verification_request_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/person_identifier_verification_request_db.inc';
+if (is_file($hrm_identifier_verification_request_source))
+	include_once($hrm_identifier_verification_request_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -39,6 +44,16 @@ function ensure_hrm_approval_transaction_registration()
 		'period_name',
 		'created_date'
 	));
+
+	if (defined('ST_HRM_IDENTIFIER_VERIFICATION')) {
+		register_systype_db_info(ST_HRM_IDENTIFIER_VERIFICATION, array(
+			TB_PREF . 'hrm_person_identifier_verification_requests',
+			null,
+			'verification_request_id',
+			'verification_request_id',
+			'requested_at'
+		));
+	}
 
 		register_systype_db_info(ST_EMPLOYEE_APPRAISAL, array(
 			TB_PREF . 'employee_appraisals',
@@ -290,6 +305,19 @@ ApprovalWorkflow::registerTransactionType(ST_EMPLOYEE_APPRAISAL, array(
 	'draft_renderer' => 'render_employee_appraisal_draft',
 	'edit_url'       => 'hrm/manage/appraisals.php',
 ));
+
+if (defined('ST_HRM_IDENTIFIER_VERIFICATION')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_IDENTIFIER_VERIFICATION, array(
+		'label'          => _('Identifier Verification Request'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_identifier_verification_request',
+		'rejector'       => 'reject_identifier_verification_request_draft',
+		'canceler'       => 'cancel_identifier_verification_request_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
 
 // =====================================================
 // EXECUTOR CALLBACKS
