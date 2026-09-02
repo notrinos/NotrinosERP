@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.291',
-        'active_legacy_payroll_contract'=>'1.0.244',
-        'next_backlog_item'=>'read-only HRM-FND-004 identifier version/supersession review',
+        'active_database_version'=>'1.0.292',
+        'active_legacy_payroll_contract'=>'1.0.245',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier supersession writer/workflow review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'define append-only replacement/effective-dating semantics for an already verified identifier, including stale request/evidence invalidation, immutable verified history and exact authorization/audit boundaries; add no full reveal/decrypt, bank/payment allocation/binding, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'freeze maker/checker and action-bound assurance ordering, effective-date and predecessor-closure semantics, successor unverified/unapproved state, retry/concurrency and legacy compatibility before adding any identifier version writer; add no full reveal/decrypt, bank/payment allocation/binding, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -199,6 +199,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_evidence_registration_command_foundation.php'),
             'hrm_fnd_004_identifier_verification_promotion_command_foundation'=>array('previous'=>'1.0.290','version'=>'1.0.291',
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_promotion_command_foundation.php'),
+            'hrm_fnd_004_identifier_supersession_lineage_foundation'=>array('previous'=>'1.0.291','version'=>'1.0.292',
+                'file'=>'sql/upgrade_hrm_fnd_004_identifier_supersession_lineage_foundation.php'),
         ),
     );
 }

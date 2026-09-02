@@ -1223,12 +1223,15 @@ CREATE TABLE `0_hrm_person_identifiers` (
 	`verification_method` varchar(32) NOT NULL DEFAULT '',
 	`approval_status` varchar(16) NOT NULL DEFAULT 'unapproved',
 	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`supersedes_identifier_id` bigint(20) unsigned DEFAULT NULL,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
 	PRIMARY KEY (`identifier_id`),
 	KEY `hrm_person_identifier_asof_idx` (`person_id`,`identifier_type`,`effective_from`,`effective_to`,`identifier_id`),
 	KEY `hrm_person_identifier_token_idx` (`identifier_type`,`lookup_token`,`identifier_id`),
-	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	UNIQUE KEY `hrm_person_identifier_supersedes_uq` (`supersedes_identifier_id`),
+	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_person_identifiers_supersedes_fk` FOREIGN KEY (`supersedes_identifier_id`) REFERENCES `0_hrm_person_identifiers` (`identifier_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
