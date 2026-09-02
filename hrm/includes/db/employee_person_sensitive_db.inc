@@ -2,8 +2,9 @@
 /**
  * HRM-FND-001 encrypted person contact and identifier shadow model.
  *
- * Legacy employee columns remain authoritative. This file only maintains
- * encrypted, effective-dated shadow rows and masked, permissioned projections.
+ * Legacy employee columns remain compatibility projections. Governed identifier
+ * replacements use explicit lineage; this file maintains encrypted, effective-dated
+ * custody plus masked, permissioned projections and fails closed on legacy mutation.
  */
 
 if (!function_exists('append_domain_audit_event'))
@@ -552,6 +553,42 @@ function hrm_person_identifier_field_map()
 }
 
 /**
+ * Deny legacy employee-row mutation of governed identifier values/metadata.
+ *
+ * Existing employee CRUD may continue to carry unchanged legacy fields for
+ * compatibility, but any identifier value deletion/replacement or passport
+ * expiry change must use the governed supersession workflow instead. No
+ * protected value is returned, logged, or audited by this guard.
+ *
+ * @param array $before Authoritative pre-update employee row.
+ * @param array $changes Requested legacy employee changes (SQL-normalized date when present).
+ * @return bool
+ */
+function hrm_person_identifier_legacy_update_guard($before, $changes)
+{
+	$GLOBALS['hrm_person_identifier_legacy_update_guard_result'] = 'invalid_input';
+	if (!is_array($before) || !is_array($changes))
+		return false;
+
+	$fields = array_values(hrm_person_identifier_field_map());
+	$fields[] = 'passport_expiry';
+	foreach ($fields as $field) {
+		if (!array_key_exists($field, $changes))
+			continue;
+		$prior = array_key_exists($field, $before) && $before[$field] !== null
+			? (string)$before[$field] : '';
+		$next = $changes[$field] !== null ? (string)$changes[$field] : '';
+		if (!hash_equals($prior, $next)) {
+			$GLOBALS['hrm_person_identifier_legacy_update_guard_result'] =
+				'legacy_employee_identifier_mutation_denied';
+			return false;
+		}
+	}
+	$GLOBALS['hrm_person_identifier_legacy_update_guard_result'] = 'unchanged_legacy_identifier_fields';
+	return true;
+}
+
+/**
  * Normalize an explicitly supplied issuer jurisdiction without inference.
  *
  * The bounded core accepts an ISO-3166-style country code with one optional
@@ -741,6 +778,8 @@ function synchronize_hrm_person_sensitive_value(
 	if (!$result || db_num_rows($result) > 1)
 		return false;
 	$current = db_num_rows($result) === 1 ? db_fetch_assoc($result) : false;
+	if ($record_class === 'identifier' && $source === 'runtime_employee' && $current && $value === '')
+		return false;
 	if ($value === '') {
 		if (!$current)
 			return 0;
@@ -776,6 +815,8 @@ function synchronize_hrm_person_sensitive_value(
 			return false;
 		if ($current_state === 1)
 			return 0;
+		if ($record_class === 'identifier' && $source === 'runtime_employee')
+			return false;
 	}
 	if ($current && $source === 'legacy_employee_seed')
 		return false;

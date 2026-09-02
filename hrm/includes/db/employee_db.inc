@@ -229,6 +229,12 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 	$before = hrm_employee_domain_audit_row($employee_id);
 	if (!$before)
 		return false;
+	$identifier_guard_changes = $data;
+	if (array_key_exists('passport_expiry', $identifier_guard_changes))
+		$identifier_guard_changes['passport_expiry'] = !empty($identifier_guard_changes['passport_expiry'])
+			? employee_to_sql_date($identifier_guard_changes['passport_expiry']) : '';
+	if (!hrm_person_identifier_legacy_update_guard($before, $identifier_guard_changes))
+		return false;
 	begin_transaction();
 	$sql = "UPDATE ".TB_PREF."employees SET ".implode(', ', $sets)
 		." WHERE ".employee_where_condition($employee_id);
