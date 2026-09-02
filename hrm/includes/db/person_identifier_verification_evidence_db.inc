@@ -401,3 +401,203 @@ function register_hrm_person_identifier_verification_evidence(
     if ($ok) commit_transaction(); else cancel_transaction();
     return $ok ? $result_value : false;
 }
+
+/** Lock one exact registered verification-evidence row for identifier promotion.
+ * @param int $evidence_id
+ * @return array|false
+ */
+function hrm_identifier_verification_promotion_evidence_for_update($evidence_id)
+{
+    $result = db_query("SELECT verification_evidence_id,verification_request_id,identifier_id,identifier_row_version,"
+        ."request_row_version,approval_draft_id,verification_method,evidence_source,evidence_reference_hash,"
+        ."evidence_payload_hash,checker_assurance_event_id,verified_at,evidence_row_version,recorded_at,recorded_by FROM "
+        .TB_PREF."hrm_person_identifier_verification_evidence WHERE verification_evidence_id=".(int)$evidence_id
+        ." LIMIT 2 FOR UPDATE", 'could not lock identifier verification evidence for promotion');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    return $row && db_fetch_assoc($result) === false ? $row : false;
+}
+
+/** Lock the already-consumed checker assurance event bound to registered evidence.
+ * @param int $assurance_event_id
+ * @return array|false
+ */
+function hrm_identifier_verification_promotion_assurance_for_update($assurance_event_id)
+{
+    $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,"
+        ."action_hash,issued_at,expires_at,consumed_at FROM ".TB_PREF."user_session_assurance_events "
+        ."WHERE assurance_event_id=".(int)$assurance_event_id." LIMIT 2 FOR UPDATE",
+        'could not lock consumed checker assurance for identifier promotion');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    return $row && db_fetch_assoc($result) === false ? $row : false;
+}
+
+/**
+ * Promote one exact current identifier from unverified/unapproved to verified/approved.
+ *
+ * The command adds no new assurance event. It proves that the exact level-two
+ * action-bound checker assurance captured by the registered evidence was
+ * already consumed transactionally by evidence registration, then performs
+ * the single identifier state transition and restricted PAY-AUD append.
+ *
+ * @return array|false
+ */
+function promote_hrm_person_identifier_verification(
+    $verification_evidence_id, $evidence_row_version, $request_row_version, $identifier_row_version
+) {
+    $verification_evidence_id = hrm_identifier_verification_request_positive_int($verification_evidence_id);
+    $evidence_row_version = hrm_identifier_verification_request_positive_int($evidence_row_version);
+    $request_row_version = hrm_identifier_verification_request_positive_int($request_row_version);
+    $identifier_row_version = hrm_identifier_verification_request_positive_int($identifier_row_version);
+    $actor = hrm_identifier_verification_request_actor_id();
+    $company = function_exists('user_company') ? (int)user_company() : 0;
+    if ($verification_evidence_id === false || $evidence_row_version === false
+        || $request_row_version === false || $identifier_row_version === false
+        || $actor <= 0 || !hrm_identifier_verification_request_permission())
+        return false;
+
+    begin_transaction();
+    $ok = false;
+    $result_value = false;
+    do {
+        $evidence = hrm_identifier_verification_promotion_evidence_for_update($verification_evidence_id);
+        if (!is_array($evidence)
+            || (int)$evidence['evidence_row_version'] !== $evidence_row_version
+            || (int)$evidence['request_row_version'] !== $request_row_version
+            || (int)$evidence['identifier_row_version'] !== $identifier_row_version
+            || (int)$evidence['recorded_by'] !== $actor)
+            break;
+
+        $request = hrm_identifier_verification_evidence_request_for_update((int)$evidence['verification_request_id']);
+        if (!is_array($request)
+            || (int)$request['request_row_version'] !== $request_row_version
+            || (string)$request['request_status'] !== 'approved'
+            || (int)$request['identifier_id'] !== (int)$evidence['identifier_id']
+            || (int)$request['identifier_row_version'] !== $identifier_row_version
+            || (string)$request['verification_method'] !== (string)$evidence['verification_method']
+            || (int)$request['requested_by'] === $actor)
+            break;
+
+        $draft = hrm_identifier_verification_evidence_draft_for_update((int)$evidence['approval_draft_id']);
+        if (!is_array($draft) || !defined('ST_HRM_IDENTIFIER_VERIFICATION')
+            || (int)$draft['trans_type'] !== (int)ST_HRM_IDENTIFIER_VERIFICATION
+            || (int)$draft['status'] !== 1
+            || (int)$draft['submitted_by'] !== (int)$request['requested_by']
+            || (int)$draft['approved_trans_no'] !== (int)$request['verification_request_id']
+            || $draft['completed_date'] === null)
+            break;
+        $draft_data = json_decode((string)$draft['draft_data'], true);
+        if (!is_array($draft_data)
+            || !isset($draft_data['verification_request_id'],$draft_data['identifier_id'],
+                $draft_data['identifier_row_version'],$draft_data['verification_method'])
+            || (int)$draft_data['verification_request_id'] !== (int)$request['verification_request_id']
+            || (int)$draft_data['identifier_id'] !== (int)$evidence['identifier_id']
+            || (int)$draft_data['identifier_row_version'] !== $identifier_row_version
+            || (string)$draft_data['verification_method'] !== (string)$evidence['verification_method'])
+            break;
+
+        $checker = hrm_identifier_verification_evidence_final_checker_for_update((int)$evidence['approval_draft_id']);
+        if (!is_array($checker) || (int)$checker['user_id'] !== $actor)
+            break;
+
+        $verified_at_epoch = strtotime((string)$evidence['verified_at'].' UTC');
+        if ($verified_at_epoch === false || $verified_at_epoch <= 0)
+            break;
+        $expected_action_hash = hrm_identifier_verification_evidence_action_hash(
+            $company, (int)$evidence['verification_request_id'], $request_row_version,
+            (int)$evidence['identifier_id'], $identifier_row_version, (int)$evidence['approval_draft_id'],
+            (string)$evidence['verification_method'], (string)$evidence['evidence_source'],
+            (string)$evidence['evidence_reference_hash'], (string)$evidence['evidence_payload_hash'],
+            $verified_at_epoch
+        );
+        $assurance = hrm_identifier_verification_promotion_assurance_for_update(
+            (int)$evidence['checker_assurance_event_id']
+        );
+        if ($expected_action_hash === false || !is_array($assurance)
+            || (int)$assurance['assurance_event_id'] !== (int)$evidence['checker_assurance_event_id']
+            || (int)$assurance['assurance_level'] !== 2
+            || (string)$assurance['assurance_method'] !== 'oidc_acr_amr'
+            || (string)$assurance['action_class'] !== HRM_IDENTIFIER_VERIFICATION_EVIDENCE_REGISTRATION_ACTION_CLASS
+            || !session_registry_hash_equals((string)$assurance['action_hash'], $expected_action_hash)
+            || $assurance['consumed_at'] === null)
+            break;
+
+        $identifier = hrm_identifier_verification_request_identifier_for_update((int)$evidence['identifier_id']);
+        if (!is_array($identifier) || $identifier['effective_to'] !== null)
+            break;
+
+        if ((int)$identifier['row_version'] === $identifier_row_version + 1
+            && (string)$identifier['verification_status'] === 'verified'
+            && (string)$identifier['approval_status'] === 'approved'
+            && (string)$identifier['verification_method'] === (string)$evidence['verification_method']) {
+            $ok = true;
+            $result_value = array(
+                'identifier_id'=>(int)$evidence['identifier_id'],
+                'verification_evidence_id'=>$verification_evidence_id,
+                'identifier_row_version'=>$identifier_row_version + 1,
+                'status'=>'already_promoted'
+            );
+            break;
+        }
+
+        if ((int)$identifier['row_version'] !== $identifier_row_version
+            || (string)$identifier['verification_status'] !== 'unverified'
+            || (string)$identifier['approval_status'] !== 'unapproved'
+            || (string)$identifier['verification_method'] !== '')
+            break;
+
+        if (!db_query("UPDATE ".TB_PREF."hrm_person_identifiers SET verification_status='verified',"
+            ."verification_method=".db_escape((string)$evidence['verification_method'])
+            .",approval_status='approved',row_version=row_version+1 WHERE identifier_id=".(int)$evidence['identifier_id']
+            ." AND row_version=".$identifier_row_version." AND effective_to IS NULL"
+            ." AND verification_status='unverified' AND approval_status='unapproved' AND verification_method=''",
+            'could not promote HRM Person identifier verification state')
+            || !function_exists('db_num_affected_rows') || (int)db_num_affected_rows() !== 1)
+            break;
+
+        if (append_domain_audit_event(array(
+            'company_id'=>$company,'legal_entity_id'=>0,
+            'entity_type'=>'hrm_person_identifier_verification',
+            'entity_key'=>array('identifier_id'=>(int)$evidence['identifier_id'],
+                'verification_evidence_id'=>$verification_evidence_id),
+            'action'=>'hrm.person.identifier.verification.promoted',
+            'reason_code'=>'hrm_fnd_004_identifier_verification_promotion',
+            'before'=>array('verification_status'=>'unverified','approval_status'=>'unapproved',
+                'row_version'=>$identifier_row_version),
+            'after'=>array('verification_status'=>'verified','approval_status'=>'approved',
+                'verification_method'=>(string)$evidence['verification_method'],
+                'row_version'=>$identifier_row_version+1),
+            'restricted_diff'=>array(
+                'verification_request_id'=>(int)$evidence['verification_request_id'],
+                'request_row_version'=>$request_row_version,
+                'verification_evidence_id'=>$verification_evidence_id,
+                'evidence_row_version'=>$evidence_row_version,
+                'approval_draft_id'=>(int)$evidence['approval_draft_id'],
+                'checker_assurance_event_id'=>(int)$evidence['checker_assurance_event_id'],
+                'checker_assurance_preconsumed'=>true,'final_checker_bound'=>true,
+                'verification_method'=>(string)$evidence['verification_method'],
+                'evidence_source'=>(string)$evidence['evidence_source'],
+                'evidence_reference_hash'=>(string)$evidence['evidence_reference_hash'],
+                'evidence_payload_hash'=>(string)$evidence['evidence_payload_hash'],
+                'identifier_value_stored'=>false,'identifier_value_revealed'=>false,
+                'request_state_changed'=>false,'approval_draft_state_changed'=>false,
+                'new_assurance_event_consumed'=>false,'payment_authority_changed'=>false,
+                'payroll_authority_changed'=>false,'accounting_authority_changed'=>false
+            )
+        )) === false)
+            break;
+
+        $ok = true;
+        $result_value = array(
+            'identifier_id'=>(int)$evidence['identifier_id'],
+            'verification_evidence_id'=>$verification_evidence_id,
+            'identifier_row_version'=>$identifier_row_version+1,
+            'verification_status'=>'verified','approval_status'=>'approved',
+            'status'=>'promoted'
+        );
+    } while (false);
+
+    if ($ok) commit_transaction(); else cancel_transaction();
+    return $ok ? $result_value : false;
+}

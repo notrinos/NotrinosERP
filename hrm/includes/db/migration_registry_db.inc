@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.290',
-        'active_legacy_payroll_contract'=>'1.0.243',
-        'next_backlog_item'=>'read-only HRM-FND-004 identifier promotion command review',
+        'active_database_version'=>'1.0.291',
+        'active_legacy_payroll_contract'=>'1.0.244',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier version/supersession review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile one registered opaque verification-evidence row with its exact approved request and completed central approval draft, exact identifier/request/evidence row versions, consumed final-checker action-bound assurance and restricted PAY-AUD ordering before choosing any identifier verification/approval promotion writer; add no full reveal/decrypt, payment election/allocation/binding, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'define append-only replacement/effective-dating semantics for an already verified identifier, including stale request/evidence invalidation, immutable verified history and exact authorization/audit boundaries; add no full reveal/decrypt, bank/payment allocation/binding, payroll-post or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -197,6 +197,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_evidence_foundation.php'),
             'hrm_fnd_004_identifier_verification_evidence_registration_command_foundation'=>array('previous'=>'1.0.289','version'=>'1.0.290',
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_evidence_registration_command_foundation.php'),
+            'hrm_fnd_004_identifier_verification_promotion_command_foundation'=>array('previous'=>'1.0.290','version'=>'1.0.291',
+                'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_promotion_command_foundation.php'),
         ),
     );
 }
