@@ -464,10 +464,20 @@ function tab_personal($employee_id, $new_employee) {
 	} else {
 		label_row(_('Identity / Tax Details:'), _('Restricted'));
 	}
-	label_row(
-		_('Identity / Tax Changes:'),
-		_('Unavailable until verification and independent approval controls are implemented.')
+	$can_manage_identity_supersession = !$new_employee && hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_IDENTITY,
+		HRM_FIELD_ACTION_VERIFY_LINK
 	);
+	if ($can_manage_identity_supersession) {
+		$identifier_change_url = 'identifier_supersession.php?employee_id='.rawurlencode((string)get_post('NewEmpID'));
+		label_row(
+			_('Identity / Tax Changes:'),
+			"<a href='".htmlspecialchars($identifier_change_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Governed identifier change'))."</a>"
+		);
+	} else {
+		label_row(_('Identity / Tax Changes:'), _('Restricted'));
+	}
 
 	// ── RIGHT COLUMN ─────────────────────────────────────
 	table_section(2);

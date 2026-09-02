@@ -197,3 +197,95 @@ function supersede_hrm_person_identifier($predecessor_id, $predecessor_row_versi
     if ($ok) commit_transaction(); else cancel_transaction();
     return $ok ? $result_value : false;
 }
+
+/**
+ * Resolve one current verified/approved predecessor through the selected employee mapping.
+ * Browser callers receive masked/governance metadata only; ciphertext, lookup token and key id never leave this helper.
+ */
+function hrm_identifier_supersession_browser_predecessor($employee_ref, $identifier_id, $row_version, $allow_superseded = false)
+{
+    if (!hrm_identifier_verification_request_permission() || !defined('TB_PREF')) return false;
+    $identifier_id = hrm_identifier_verification_request_positive_int($identifier_id);
+    $row_version = hrm_identifier_verification_request_positive_int($row_version);
+    $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
+    $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
+    if ($identifier_id === false || $row_version === false
+        || ($column === 'employee_number' && $employee <= 0)
+        || ($column === 'employee_id' && ($employee === '' || strlen($employee) > 64))) return false;
+    $sql = "SELECT i.identifier_id,i.person_id,i.identifier_type,i.masked_value,i.issuing_jurisdiction,i.valid_to,"
+        ."i.effective_from,i.effective_to,i.verification_status,i.verification_method,i.approval_status,i.row_version "
+        ."FROM ".TB_PREF."hrm_employee_worker_map m INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
+        ."INNER JOIN ".TB_PREF."hrm_person_identifiers i ON i.person_id=w.person_id "
+        ."WHERE m.".$column."=".db_escape($employee)." AND m.retired_at IS NULL AND i.identifier_id=".$identifier_id
+        ." AND i.row_version=".$row_version.($allow_superseded ? "" : " AND i.effective_to IS NULL")." AND i.verification_status='verified' "
+        ."AND i.approval_status='approved' AND i.verification_method<>'' LIMIT 2";
+    $result = db_query($sql, 'could not resolve governed identifier supersession predecessor');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    if (!$row || db_fetch_assoc($result) !== false) return false;
+    return array(
+        'identifier_id'=>(int)$row['identifier_id'], 'person_id'=>(int)$row['person_id'],
+        'identifier_type'=>(string)$row['identifier_type'], 'masked_value'=>(string)$row['masked_value'],
+        'issuing_jurisdiction'=>(string)$row['issuing_jurisdiction'],
+        'valid_to'=>$row['valid_to'] === null ? null : (string)$row['valid_to'],
+        'verification_status'=>(string)$row['verification_status'],
+        'verification_method'=>(string)$row['verification_method'],
+        'approval_status'=>(string)$row['approval_status'], 'row_version'=>(int)$row['row_version']
+    );
+}
+
+/** Return current governed-supersession candidates as masked metadata only. */
+function get_hrm_identifier_supersession_candidates_masked($employee_ref)
+{
+    if (!hrm_identifier_verification_request_permission() || !defined('TB_PREF')) return false;
+    $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
+    $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
+    if (($column === 'employee_number' && $employee <= 0)
+        || ($column === 'employee_id' && ($employee === '' || strlen($employee) > 64))) return false;
+    $sql = "SELECT i.identifier_id,i.identifier_type,i.masked_value,i.issuing_jurisdiction,i.valid_to,"
+        ."i.verification_status,i.verification_method,i.approval_status,i.row_version "
+        ."FROM ".TB_PREF."hrm_employee_worker_map m INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
+        ."INNER JOIN ".TB_PREF."hrm_person_identifiers i ON i.person_id=w.person_id "
+        ."WHERE m.".$column."=".db_escape($employee)." AND m.retired_at IS NULL AND i.effective_to IS NULL "
+        ."AND i.verification_status='verified' AND i.approval_status='approved' AND i.verification_method<>'' "
+        ."ORDER BY i.identifier_type,i.identifier_id";
+    $result = db_query($sql, 'could not list governed identifier supersession candidates');
+    if (!$result) return false;
+    $rows = array();
+    while ($row = db_fetch_assoc($result)) {
+        $rows[] = array('identifier_id'=>(int)$row['identifier_id'], 'identifier_type'=>(string)$row['identifier_type'],
+            'masked_value'=>(string)$row['masked_value'], 'issuing_jurisdiction'=>(string)$row['issuing_jurisdiction'],
+            'valid_to'=>$row['valid_to'] === null ? null : (string)$row['valid_to'],
+            'verification_status'=>(string)$row['verification_status'], 'verification_method'=>(string)$row['verification_method'],
+            'approval_status'=>(string)$row['approval_status'], 'row_version'=>(int)$row['row_version']);
+    }
+    return $rows;
+}
+
+/**
+ * Build the exact action hash for browser step-up without retaining raw identifier material.
+ * The returned object intentionally omits new_value, ciphertext, lookup_token and key material.
+ */
+function hrm_identifier_supersession_prepare_browser_action($employee_ref, $identifier_id, $row_version,
+    $new_value, $issuing_jurisdiction, $valid_to = null, $allow_superseded = false)
+{
+    $predecessor = hrm_identifier_supersession_browser_predecessor($employee_ref, $identifier_id, $row_version, $allow_superseded);
+    $new_value = hrm_person_sensitive_value($new_value, 255);
+    $jurisdiction = hrm_person_sensitive_issuing_jurisdiction($issuing_jurisdiction, false);
+    $normalized_valid_to = hrm_identifier_supersession_valid_date($valid_to, true);
+    if (!is_array($predecessor) || $new_value === false || $new_value === '' || $jurisdiction === false
+        || $normalized_valid_to === false || !hrm_person_sensitive_semantic_value_is_valid(
+            'identifier', (string)$predecessor['identifier_type'], $new_value, $jurisdiction)) return false;
+    $active_key = hrm_person_sensitive_active_key(null, false);
+    if (!is_array($active_key) || !isset($active_key['key'])) return false;
+    $token = hrm_person_sensitive_lookup_token((string)$predecessor['identifier_type'], $new_value, $active_key['key']);
+    if ($token === false) return false;
+    $company = function_exists('user_company') ? (int)user_company() : 0;
+    $action_hash = hrm_identifier_supersession_action_hash($company, (int)$predecessor['identifier_id'],
+        (int)$predecessor['row_version'], (string)$predecessor['identifier_type'], $jurisdiction, $token, $normalized_valid_to);
+    if ($action_hash === false) return false;
+    return array('company'=>$company, 'employee_ref'=>(string)$employee_ref,
+        'identifier_id'=>(int)$predecessor['identifier_id'], 'identifier_row_version'=>(int)$predecessor['row_version'],
+        'identifier_type'=>(string)$predecessor['identifier_type'], 'masked_predecessor'=>(string)$predecessor['masked_value'],
+        'action_class'=>HRM_IDENTIFIER_SUPERSESSION_ACTION_CLASS, 'action_hash'=>$action_hash);
+}
