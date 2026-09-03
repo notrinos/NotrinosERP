@@ -1317,6 +1317,30 @@ CREATE TABLE `0_hrm_person_bank_account_verification_requests` (
 	KEY `hrm_person_bank_verification_status_idx` (`request_status`,`verification_request_id`),
 	CONSTRAINT `0_hrm_person_bank_verification_account_fk` FOREIGN KEY (`person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_person_bank_account_verification_evidence` (
+	`verification_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`verification_request_id` bigint(20) unsigned NOT NULL,
+	`person_bank_account_id` bigint(20) unsigned NOT NULL,
+	`bank_account_row_version` int(10) unsigned NOT NULL,
+	`request_row_version` int(10) unsigned NOT NULL,
+	`approval_draft_id` int(11) NOT NULL,
+	`verification_method` varchar(32) NOT NULL,
+	`evidence_source` varchar(32) NOT NULL,
+	`evidence_reference_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`evidence_payload_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`checker_assurance_event_id` bigint(20) unsigned NOT NULL,
+	`verified_at` datetime NOT NULL,
+	`evidence_row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`recorded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`recorded_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`verification_evidence_id`),
+	UNIQUE KEY `hrm_person_bank_verification_evidence_request_uq` (`verification_request_id`),
+	KEY `hrm_person_bank_verification_evidence_account_idx` (`person_bank_account_id`,`bank_account_row_version`,`verification_evidence_id`),
+	KEY `hrm_person_bank_verification_evidence_verified_idx` (`verified_at`,`verification_evidence_id`),
+	KEY `hrm_person_bank_verification_evidence_approval_idx` (`approval_draft_id`,`verification_evidence_id`),
+	KEY `hrm_person_bank_verification_evidence_assurance_idx` (`checker_assurance_event_id`,`verification_evidence_id`),
+	CONSTRAINT `0_hrm_person_bank_verification_evidence_request_fk` FOREIGN KEY (`verification_request_id`) REFERENCES `0_hrm_person_bank_account_verification_requests` (`verification_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_addresses` (
 	`address_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
