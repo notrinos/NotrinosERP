@@ -454,6 +454,15 @@ function cancel_bank_account_verification_request_draft($draft_data, $draft_id, 
     if (!$request || $actor <= 0 || (int)$request['requested_by'] !== $actor
         || (string)$request['request_status'] !== 'pending')
         return false;
+    $bank = hrm_bank_account_verification_request_bank_for_update((int)$request['person_bank_account_id']);
+    if (!$bank || (int)$bank['row_version'] !== (int)$request['bank_account_row_version']
+        || $bank['effective_to'] !== null || (string)$bank['source'] !== 'governed_supersession'
+        || (int)$bank['supersedes_person_bank_account_id'] <= 0
+        || (int)$bank['created_by'] <= 0 || (int)$bank['created_by'] === $actor
+        || (string)$bank['verification_status'] !== 'unverified'
+        || (string)$bank['verification_method'] !== ''
+        || (string)$bank['approval_status'] !== 'unapproved')
+        return false;
     if (!db_query("UPDATE ".TB_PREF."hrm_person_bank_account_verification_requests SET request_status='cancelled',"
         ."request_row_version=request_row_version+1 WHERE verification_request_id=".(int)$request['verification_request_id']
         ." AND request_status='pending' AND request_row_version=".(int)$request['request_row_version'],
@@ -466,6 +475,8 @@ function cancel_bank_account_verification_request_draft($draft_data, $draft_id, 
         'hrm.person_bank_account.verification_request.cancelled',
         'hrm_fnd_004_person_bank_verification_request_cancellation',
         $request,
-        array('approval_draft_id'=>(int)$draft_id,'cancelled_by_requester'=>true,'comment_text_stored'=>false)
+        array('approval_draft_id'=>(int)$draft_id,'cancelled_by_requester'=>true,
+            'original_supersession_maker_user_id'=>(int)$bank['created_by'],
+            'requester_separated_from_original_maker'=>true,'comment_text_stored'=>false)
     );
 }
