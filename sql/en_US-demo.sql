@@ -1288,6 +1288,7 @@ CREATE TABLE `0_hrm_person_bank_accounts` (
 	`verification_method` varchar(32) NOT NULL DEFAULT '',
 	`approval_status` varchar(16) NOT NULL DEFAULT 'unapproved',
 	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`supersedes_person_bank_account_id` bigint(20) unsigned DEFAULT NULL,
 	`effective_from` datetime DEFAULT NULL,
 	`effective_to` datetime DEFAULT NULL,
 	`source` varchar(32) NOT NULL,
@@ -1296,6 +1297,8 @@ CREATE TABLE `0_hrm_person_bank_accounts` (
 	PRIMARY KEY (`person_bank_account_id`),
 	KEY `hrm_person_bank_asof_idx` (`person_id`,`effective_from`,`effective_to`,`person_bank_account_id`),
 	KEY `hrm_person_bank_token_idx` (`account_lookup_token`,`person_bank_account_id`),
+	UNIQUE KEY `hrm_person_bank_supersedes_uq` (`supersedes_person_bank_account_id`),
+	CONSTRAINT `0_hrm_person_bank_accounts_supersedes_fk` FOREIGN KEY (`supersedes_person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_bank_accounts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
