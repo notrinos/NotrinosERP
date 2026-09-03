@@ -235,6 +235,9 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 			? employee_to_sql_date($identifier_guard_changes['passport_expiry']) : '';
 	if (!hrm_person_identifier_legacy_update_guard($before, $identifier_guard_changes))
 		return false;
+	$bank_guard = hrm_person_bank_legacy_update_guard($before, $data);
+	if ($bank_guard === false)
+		return false;
 	begin_transaction();
 	$sql = "UPDATE ".TB_PREF."employees SET ".implode(', ', $sets)
 		." WHERE ".employee_where_condition($employee_id);
@@ -255,7 +258,8 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 	$sensitive = $assignment
 		? synchronize_hrm_person_sensitive_from_employee($after) : false;
 	$bank = $sensitive
-		? synchronize_hrm_person_bank_from_employee($after) : false;
+		? synchronize_hrm_person_bank_from_employee($after, true,
+			$bank_guard === 'preserve_governed' ? 'legacy_employee_compat_preserve' : 'runtime_employee') : false;
 	$private_profile = $bank
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
 	$audit = $private_profile ? append_employee_profile_domain_audit(

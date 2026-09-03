@@ -22,6 +22,7 @@ define('HRM_FIELD_PRIVATE_PERSON', 'private_person');
 define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
 define('HRM_FIELD_ACTION_VERIFY_LINK', 'verify_link');
+define('HRM_FIELD_ACTION_SUPERSEDE', 'supersede');
 
 /**
  * Return the approved permission matrix for implemented sensitive fields.
@@ -49,8 +50,14 @@ function hrm_sensitive_field_permission_matrix() {
 				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_BANK_DETAILS'),
 				'any' => array(),
 			),
-			// Full reveal and mutation intentionally have no policy entry. They
-			// remain denied until step-up and maker/checker controls exist.
+			HRM_FIELD_ACTION_SUPERSEDE => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_BANK_DETAILS',
+					'SA_HRM_CHANGE_BANK_DETAILS'),
+				'any' => array(),
+			),
+			// Full reveal and general financial mutation remain denied. The
+			// narrow supersede action only creates an unverified/unapproved
+			// governed successor and receives no automatic role grant.
 		),
 		HRM_FIELD_RESTRICTED_IDENTITY => array(
 			HRM_FIELD_ACTION_VIEW => array(

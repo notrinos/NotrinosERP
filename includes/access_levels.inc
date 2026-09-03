@@ -390,6 +390,7 @@ $security_areas =array(
 	'SA_PAYROLLPOST'      => array(SS_HRM|16, _('Post approved payroll batches')),
 	'SA_PAYROLLREVERSE'   => array(SS_HRM|17, _('Reverse posted payroll batches')),
 	'SA_HRM_VERIFY_IDENTITY_LINK' => array(SS_HRM|18, _('Approve reviewed employee identity links')),
+	'SA_HRM_CHANGE_BANK_DETAILS' => array(SS_HRM|19, _('Propose governed employee bank-detail supersession')),
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

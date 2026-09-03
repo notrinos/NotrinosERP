@@ -151,26 +151,114 @@ function hrm_person_bank_current_state($current, $person_id, $payload)
 }
 
 /**
+ * Classify the one current normalized bank row without exposing protected data.
+ *
+ * @return string|false governed, legacy, none, or false on malformed custody.
+ */
+function hrm_person_bank_current_custody_state($person_id, $for_update = false)
+{
+    if ((int)$person_id <= 0 || !hrm_person_bank_table_ready())
+        return false;
+    $result = db_query("SELECT person_bank_account_id,source,supersedes_person_bank_account_id FROM "
+        .TB_PREF."hrm_person_bank_accounts WHERE person_id=".(int)$person_id
+        ." AND effective_to IS NULL ORDER BY person_bank_account_id DESC LIMIT 2"
+        .($for_update ? " FOR UPDATE" : ""), 'could not classify current HRM Person bank account custody');
+    if (!$result || db_num_rows($result) > 1)
+        return false;
+    if (db_num_rows($result) === 0)
+        return 'none';
+    $row = db_fetch_assoc($result);
+    $source = isset($row['source']) ? (string)$row['source'] : '';
+    $supersedes = isset($row['supersedes_person_bank_account_id'])
+        && $row['supersedes_person_bank_account_id'] !== null
+        ? (int)$row['supersedes_person_bank_account_id'] : 0;
+    if ($source === 'governed_supersession')
+        return $supersedes > 0 ? 'governed' : false;
+    return $supersedes === 0 ? 'legacy' : false;
+}
+
+/**
+ * Guard legacy employee-row bank mutation after governed lineage takes custody.
+ *
+ * Before governed supersession, legacy bank columns remain compatibility
+ * authority. Once a governed current successor exists, unchanged employee
+ * updates may proceed but any legacy bank/payment-method mutation is denied.
+ * The returned preserve token is rechecked under the transaction lock by the
+ * synchronizer to close the preflight/commit race. No bank value is logged.
+ *
+ * @return string|false legacy_sync, preserve_governed, or false.
+ */
+function hrm_person_bank_legacy_update_guard($before, $changes)
+{
+    $GLOBALS['hrm_person_bank_legacy_update_guard_result'] = 'invalid_input';
+    if (!is_array($before) || !is_array($changes) || empty($before['employee_number']))
+        return false;
+    $binding = get_hrm_person_worker_binding((int)$before['employee_number'], false);
+    if (!is_array($binding) || $binding['retired_at'] !== null)
+        return false;
+    $custody = hrm_person_bank_current_custody_state((int)$binding['person_id'], false);
+    if ($custody === false)
+        return false;
+    $changed = false;
+    foreach (array('bank_name','bank_branch','bank_account','bank_routing','payment_method') as $field) {
+        if (!array_key_exists($field, $changes))
+            continue;
+        $prior = array_key_exists($field, $before) && $before[$field] !== null ? $before[$field] : '';
+        $next = $changes[$field] !== null ? $changes[$field] : '';
+        if ($field === 'payment_method') {
+            $prior = (string)(int)$prior;
+            $next = (string)(int)$next;
+        } else {
+            $prior = (string)$prior;
+            $next = (string)$next;
+        }
+        if (!hash_equals($prior, $next)) {
+            $changed = true;
+            break;
+        }
+    }
+    if ($custody === 'governed') {
+        if ($changed) {
+            $GLOBALS['hrm_person_bank_legacy_update_guard_result'] = 'governed_bank_legacy_mutation_denied';
+            return false;
+        }
+        $GLOBALS['hrm_person_bank_legacy_update_guard_result'] = 'preserve_governed';
+        return 'preserve_governed';
+    }
+    $GLOBALS['hrm_person_bank_legacy_update_guard_result'] = 'legacy_sync';
+    return 'legacy_sync';
+}
+
+/**
  * Synchronize the single legacy current bank projection into encrypted history.
  *
  * @return int|false Zero no change, one version opened/closed, false failure.
  */
 function synchronize_hrm_person_bank_account_value($person_id, $payload, $source, $active_key)
 {
-    if ((int)$person_id <= 0 || !hrm_person_bank_table_ready() || !is_array($active_key)
-        || empty($active_key['key_id']) || !isset($active_key['key']))
+    if ((int)$person_id <= 0 || !hrm_person_bank_table_ready())
         return false;
     $json = hrm_person_bank_payload_json($payload);
     if ($json === false || !preg_match('/^[a-z][a-z0-9_]{0,31}$/D', (string)$source))
         return false;
     $result = db_query("SELECT person_bank_account_id,details_ciphertext,masked_account,masked_routing,"
-        ."account_lookup_token,key_id,payment_method,verification_status,approval_status,row_version,effective_from,effective_to "
+        ."account_lookup_token,key_id,payment_method,verification_status,approval_status,row_version,effective_from,effective_to,source,supersedes_person_bank_account_id "
         ."FROM ".TB_PREF."hrm_person_bank_accounts WHERE person_id=".(int)$person_id
         ." AND effective_to IS NULL ORDER BY person_bank_account_id DESC LIMIT 2 FOR UPDATE",
         'could not read current HRM Person bank account shadow');
     if (!$result || db_num_rows($result) > 1)
         return false;
     $current = db_num_rows($result) === 1 ? db_fetch_assoc($result) : false;
+    $governed_current = $current
+        && (string)$current['source'] === 'governed_supersession'
+        && isset($current['supersedes_person_bank_account_id'])
+        && (int)$current['supersedes_person_bank_account_id'] > 0;
+    if ($source === 'legacy_employee_compat_preserve')
+        return $governed_current ? 0 : false;
+    if ($governed_current && $source === 'runtime_employee')
+        return false;
+    if (!is_array($active_key) || empty($active_key['key_id']) || !isset($active_key['key']))
+        return false;
     $has_details = hrm_person_bank_payload_has_details($payload);
     if (!$has_details) {
         if (!$current)
@@ -247,9 +335,11 @@ function synchronize_hrm_person_bank_from_employee($employee, $audit = true, $so
     if (!is_array($employee) || empty($employee['employee_number']) || !hrm_person_bank_table_ready())
         return false;
     $binding = get_hrm_person_worker_binding((int)$employee['employee_number'], true);
-    $active_key = hrm_person_sensitive_active_key(null, $allow_key_create);
     $payload = hrm_person_bank_payload_from_employee($employee);
-    if (!$binding || $binding['retired_at'] !== null || $active_key === false || $payload === false)
+    $active_key = $source === 'legacy_employee_compat_preserve'
+        ? array() : hrm_person_sensitive_active_key(null, $allow_key_create);
+    if (!$binding || $binding['retired_at'] !== null || $payload === false
+        || ($source !== 'legacy_employee_compat_preserve' && $active_key === false))
         return false;
     $changed = synchronize_hrm_person_bank_account_value((int)$binding['person_id'], $payload, $source, $active_key);
     if ($changed === false)

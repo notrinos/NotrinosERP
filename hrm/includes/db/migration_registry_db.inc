@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.299',
-        'active_legacy_payroll_contract'=>'1.0.252',
-        'next_backlog_item'=>'read-only HRM-FND-004 Person bank-account supersession writer/workflow and legacy-compatibility review',
+        'active_database_version'=>'1.0.300',
+        'active_legacy_payroll_contract'=>'1.0.253',
+        'next_backlog_item'=>'read-only HRM-FND-004 Person bank-account verification/approval workflow review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile the accepted bank supersession-lineage primitive with maker/checker, action-bound step-up, predecessor closure, successor state, retry/concurrency and legacy bank mutation compatibility before any normalized bank-account writer; keep payment election/allocation/binding, full reveal/decrypt, payroll-post, payment execution, GL and accounting authority out of scope during this read-only review',
+        'next_slice_scope'=>'reconcile the accepted governed bank successor with a bank-specific checker workflow, exact successor id/row-version binding, action-bound assurance, evidence custody and promotion semantics before any browser continuation or payment election/allocation/binding; keep full reveal/decrypt, payment execution, payroll-post, GL and accounting authority out of scope during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -215,6 +215,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_promotion_browser_route_foundation.php'),
             'hrm_fnd_004_person_bank_account_supersession_lineage_foundation'=>array('previous'=>'1.0.298','version'=>'1.0.299',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_supersession_lineage_foundation.php'),
+            'hrm_fnd_004_person_bank_account_supersession_command_foundation'=>array('previous'=>'1.0.299','version'=>'1.0.300',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_supersession_command_foundation.php'),
         ),
     );
 }
