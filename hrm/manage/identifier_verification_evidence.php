@@ -129,6 +129,7 @@ if(is_array($flash)){
     display_notification(_('Opaque identifier verification evidence registered.'));
     echo '<p>'.sprintf(_('Evidence #%d is now bound to the approved request and final checker.'),(int)$flash['verification_evidence_id']).'</p>';
     echo '<p>'._('The identifier remains unverified and unapproved until the accepted evidence-bound promotion command is invoked through its separately governed continuation. No promotion ran from this page.').'</p>';
+    echo '<p><a href="identifier_verification_promotion.php?employee_id='.rawurlencode($employee_ref).'">'._('Continue to Identifier Verification Promotion').'</a></p>';
 }
 if(isset($_GET['step_up'])&&$_GET['step_up']==='failed')display_error(_('Independent checker reauthentication failed or was cancelled. No evidence was registered.'));
 if(isset($_GET['step_up'])&&$_GET['step_up']==='retry')display_warning(_('Independent checker reauthentication must be restarted. No evidence was registered.'));

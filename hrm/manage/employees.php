@@ -473,6 +473,7 @@ function tab_personal($employee_id, $new_employee) {
 		$identifier_change_url = 'identifier_supersession.php?employee_id='.$employee_identity_ref;
 		$identifier_request_url = 'identifier_verification_request.php?employee_id='.$employee_identity_ref;
 		$identifier_evidence_url = 'identifier_verification_evidence.php?employee_id='.$employee_identity_ref;
+		$identifier_promotion_url = 'identifier_verification_promotion.php?employee_id='.$employee_identity_ref;
 		label_row(
 			_('Identity / Tax Changes:'),
 			"<a href='".htmlspecialchars($identifier_change_url, ENT_QUOTES, 'UTF-8')."'>"
@@ -480,7 +481,9 @@ function tab_personal($employee_id, $new_employee) {
 			."<a href='".htmlspecialchars($identifier_request_url, ENT_QUOTES, 'UTF-8')."'>"
 			.escape_employee_restricted_display(_('Submit identifier verification request'))."</a> | "
 			."<a href='".htmlspecialchars($identifier_evidence_url, ENT_QUOTES, 'UTF-8')."'>"
-			.escape_employee_restricted_display(_('Register verification evidence'))."</a>"
+			.escape_employee_restricted_display(_('Register verification evidence'))."</a> | "
+			."<a href='".htmlspecialchars($identifier_promotion_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Promote verified identifier'))."</a>"
 		);
 	} else {
 		label_row(_('Identity / Tax Changes:'), _('Restricted'));
