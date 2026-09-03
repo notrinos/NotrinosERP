@@ -117,6 +117,7 @@ $flash=hrm_identifier_supersession_route_take_flash($employee_ref);
 if(is_array($flash)){
     display_notification(_('Governed identifier successor created. The successor remains unverified and unapproved.'));
     echo '<p>'._('Continue with the existing identifier verification request, independent approval, opaque evidence registration, and verification-promotion workflow before the successor can be treated as verified.').'</p>';
+    echo '<p><a href="identifier_verification_request.php?employee_id='.rawurlencode($employee_ref).'">'._('Continue to Identifier Verification Request').'</a></p>';
 }
 if(isset($_GET['step_up'])&&$_GET['step_up']==='failed')display_error(_('Reauthentication failed or was cancelled. No identifier change was made.'));
 if(isset($_GET['step_up'])&&$_GET['step_up']==='retry')display_warning(_('Reauthentication must be restarted. No identifier change was made.'));

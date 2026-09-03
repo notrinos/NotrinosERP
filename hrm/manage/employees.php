@@ -469,11 +469,15 @@ function tab_personal($employee_id, $new_employee) {
 		HRM_FIELD_ACTION_VERIFY_LINK
 	);
 	if ($can_manage_identity_supersession) {
-		$identifier_change_url = 'identifier_supersession.php?employee_id='.rawurlencode((string)get_post('NewEmpID'));
+		$employee_identity_ref = rawurlencode((string)get_post('NewEmpID'));
+		$identifier_change_url = 'identifier_supersession.php?employee_id='.$employee_identity_ref;
+		$identifier_request_url = 'identifier_verification_request.php?employee_id='.$employee_identity_ref;
 		label_row(
 			_('Identity / Tax Changes:'),
 			"<a href='".htmlspecialchars($identifier_change_url, ENT_QUOTES, 'UTF-8')."'>"
-			.escape_employee_restricted_display(_('Governed identifier change'))."</a>"
+			.escape_employee_restricted_display(_('Governed identifier change'))."</a> | "
+			."<a href='".htmlspecialchars($identifier_request_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Submit identifier verification request'))."</a>"
 		);
 	} else {
 		label_row(_('Identity / Tax Changes:'), _('Restricted'));

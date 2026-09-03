@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.295',
-        'active_legacy_payroll_contract'=>'1.0.248',
-        'next_backlog_item'=>'read-only HRM-FND-004 superseded-identifier verification-request browser continuation review',
+        'active_database_version'=>'1.0.296',
+        'active_legacy_payroll_contract'=>'1.0.249',
+        'next_backlog_item'=>'read-only HRM-FND-004 identifier evidence/checker browser continuation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile exact unverified successor id/version selection, verification-method choice, a fresh independent action-bound assurance, maker/checker separation, bounded command result/error presentation and continuation through accepted evidence/promotion custody; add no full reveal/decrypt, bank/payment binding, payroll-post or accounting authority during this read-only review',
+        'next_slice_scope'=>'reconcile independent central approval completion, exact request/identifier/evidence versions, final-checker custody, fresh checker action-bound assurance, opaque evidence provenance, bounded command result/error presentation and promotion continuation; add no full reveal/decrypt, bank/payment binding, payroll-post, payment or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -207,6 +207,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_legacy_mutation_guard_foundation.php'),
             'hrm_fnd_004_identifier_supersession_browser_route_foundation'=>array('previous'=>'1.0.294','version'=>'1.0.295',
                 'file'=>'sql/upgrade_hrm_fnd_004_identifier_supersession_browser_route_foundation.php'),
+            'hrm_fnd_004_identifier_verification_request_browser_route_foundation'=>array('previous'=>'1.0.295','version'=>'1.0.296',
+                'file'=>'sql/upgrade_hrm_fnd_004_identifier_verification_request_browser_route_foundation.php'),
         ),
     );
 }

@@ -11,7 +11,7 @@ if (!defined('HRM_IDENTIFIER_SUPERSESSION_ROUTE_ASSURED_TTL')) define('HRM_IDENT
 function hrm_identifier_supersession_route_ready()
 {
     if (!function_exists('get_company_pref')) return false;
-    return (string)get_company_pref('version_id', true) === HRM_IDENTIFIER_SUPERSESSION_ROUTE_DB_VERSION;
+    return version_compare((string)get_company_pref('version_id', true), HRM_IDENTIFIER_SUPERSESSION_ROUTE_DB_VERSION, '>=');
 }
 
 function hrm_identifier_supersession_route_authenticated()

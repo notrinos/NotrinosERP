@@ -12,7 +12,7 @@ $src_version = '1.0.0';
 $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
 
 //======================================================================
-// Extension packages repository settings 
+// Extension packages repository settings
 //
 // Extensions repository. Can be overriden in config.php
 
