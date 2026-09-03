@@ -16,6 +16,11 @@ if (!is_file($hrm_identifier_verification_request_source))
 	$hrm_identifier_verification_request_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/person_identifier_verification_request_db.inc';
 if (is_file($hrm_identifier_verification_request_source))
 	include_once($hrm_identifier_verification_request_source);
+$hrm_bank_account_verification_request_source = $path_to_root . '/hrm/includes/db/person_bank_account_verification_request_db.inc';
+if (!is_file($hrm_bank_account_verification_request_source))
+	$hrm_bank_account_verification_request_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/person_bank_account_verification_request_db.inc';
+if (is_file($hrm_bank_account_verification_request_source))
+	include_once($hrm_bank_account_verification_request_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -48,6 +53,16 @@ function ensure_hrm_approval_transaction_registration()
 	if (defined('ST_HRM_IDENTIFIER_VERIFICATION')) {
 		register_systype_db_info(ST_HRM_IDENTIFIER_VERIFICATION, array(
 			TB_PREF . 'hrm_person_identifier_verification_requests',
+			null,
+			'verification_request_id',
+			'verification_request_id',
+			'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_BANK_ACCOUNT_VERIFICATION')) {
+		register_systype_db_info(ST_HRM_BANK_ACCOUNT_VERIFICATION, array(
+			TB_PREF . 'hrm_person_bank_account_verification_requests',
 			null,
 			'verification_request_id',
 			'verification_request_id',
@@ -313,6 +328,19 @@ if (defined('ST_HRM_IDENTIFIER_VERIFICATION')) {
 		'executor'       => 'execute_approved_identifier_verification_request',
 		'rejector'       => 'reject_identifier_verification_request_draft',
 		'canceler'       => 'cancel_identifier_verification_request_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_BANK_ACCOUNT_VERIFICATION')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_BANK_ACCOUNT_VERIFICATION, array(
+		'label'          => _('Bank Account Verification Request'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_bank_account_verification_request',
+		'rejector'       => 'reject_bank_account_verification_request_draft',
+		'canceler'       => 'cancel_bank_account_verification_request_draft',
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',

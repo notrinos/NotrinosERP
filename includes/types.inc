@@ -44,6 +44,7 @@ define('ST_PAYROLL_PERIOD', 84);
 define('ST_SALES_COMMISSION', 85);
 define('ST_EMPLOYEE_APPRAISAL', 86);
 define('ST_HRM_IDENTIFIER_VERIFICATION', 87);
+define('ST_HRM_BANK_ACCOUNT_VERIFICATION', 88);
 
 //
 //	Depreciation period types
