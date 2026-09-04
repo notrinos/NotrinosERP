@@ -313,3 +313,97 @@ function supersede_hrm_person_bank_account($predecessor_id, $predecessor_row_ver
         cancel_transaction();
     return $ok ? $return_value : false;
 }
+
+
+/**
+ * Resolve one exact verified/approved Person bank-account predecessor through
+ * the selected employee mapping. Browser callers receive masked/governance
+ * metadata only; protected bank ciphertext, lookup tokens and key ids never
+ * leave this helper.
+ */
+function hrm_person_bank_supersession_browser_predecessor($employee_ref, $person_bank_account_id, $row_version, $allow_superseded = false)
+{
+    if (!hrm_person_bank_supersession_permission() || !defined('TB_PREF')) return false;
+    $person_bank_account_id = hrm_person_bank_supersession_positive_int($person_bank_account_id);
+    $row_version = hrm_person_bank_supersession_positive_int($row_version);
+    $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
+    $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
+    if ($person_bank_account_id === false || $row_version === false
+        || ($column === 'employee_number' && $employee <= 0)
+        || ($column === 'employee_id' && ($employee === '' || strlen($employee) > 64))) return false;
+    $sql = "SELECT b.person_bank_account_id,b.person_id,b.masked_account,b.masked_routing,b.payment_method,"
+        ."b.effective_from,b.effective_to,b.verification_status,b.verification_method,b.approval_status,b.row_version,b.source "
+        ."FROM ".TB_PREF."hrm_employee_worker_map m INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
+        ."INNER JOIN ".TB_PREF."hrm_person_bank_accounts b ON b.person_id=w.person_id "
+        ."WHERE m.".$column."=".db_escape($employee)." AND m.retired_at IS NULL AND b.person_bank_account_id=".$person_bank_account_id
+        ." AND b.row_version=".$row_version.($allow_superseded ? "" : " AND b.effective_to IS NULL")
+        ." AND b.verification_status='verified' AND b.approval_status='approved' AND b.verification_method<>'' LIMIT 2";
+    $result = db_query($sql, 'could not resolve governed Person bank-account supersession predecessor');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    if (!$row || db_fetch_assoc($result) !== false) return false;
+    return array(
+        'person_bank_account_id'=>(int)$row['person_bank_account_id'], 'person_id'=>(int)$row['person_id'],
+        'masked_account'=>(string)$row['masked_account'], 'masked_routing'=>(string)$row['masked_routing'],
+        'payment_method'=>(int)$row['payment_method'], 'verification_status'=>(string)$row['verification_status'],
+        'verification_method'=>(string)$row['verification_method'], 'approval_status'=>(string)$row['approval_status'],
+        'row_version'=>(int)$row['row_version'], 'source'=>(string)$row['source']
+    );
+}
+
+/** Return current verified/approved bank supersession candidates as masked metadata only. */
+function get_hrm_person_bank_supersession_candidates_masked($employee_ref)
+{
+    if (!hrm_person_bank_supersession_permission() || !defined('TB_PREF')) return false;
+    $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
+    $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
+    if (($column === 'employee_number' && $employee <= 0)
+        || ($column === 'employee_id' && ($employee === '' || strlen($employee) > 64))) return false;
+    $sql = "SELECT b.person_bank_account_id,b.masked_account,b.masked_routing,b.payment_method,b.verification_status,"
+        ."b.verification_method,b.approval_status,b.row_version,b.source FROM ".TB_PREF."hrm_employee_worker_map m "
+        ."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
+        ."INNER JOIN ".TB_PREF."hrm_person_bank_accounts b ON b.person_id=w.person_id "
+        ."WHERE m.".$column."=".db_escape($employee)." AND m.retired_at IS NULL AND b.effective_to IS NULL "
+        ."AND b.verification_status='verified' AND b.approval_status='approved' AND b.verification_method<>'' "
+        ."ORDER BY b.person_bank_account_id";
+    $result = db_query($sql, 'could not list governed Person bank-account supersession candidates');
+    if (!$result) return false;
+    $rows = array();
+    while ($row = db_fetch_assoc($result)) {
+        $rows[] = array('person_bank_account_id'=>(int)$row['person_bank_account_id'],
+            'masked_account'=>(string)$row['masked_account'], 'masked_routing'=>(string)$row['masked_routing'],
+            'payment_method'=>(int)$row['payment_method'], 'verification_status'=>(string)$row['verification_status'],
+            'verification_method'=>(string)$row['verification_method'], 'approval_status'=>(string)$row['approval_status'],
+            'row_version'=>(int)$row['row_version'], 'source'=>(string)$row['source']);
+    }
+    return $rows;
+}
+
+/**
+ * Build the exact action hash for browser step-up without retaining raw bank
+ * details. The returned object intentionally omits plaintext bank fields,
+ * payload_token, ciphertext, lookup tokens and key material.
+ */
+function hrm_person_bank_supersession_prepare_browser_action($employee_ref, $person_bank_account_id, $row_version,
+    $new_payload, $allow_superseded = false)
+{
+    $predecessor = hrm_person_bank_supersession_browser_predecessor(
+        $employee_ref, $person_bank_account_id, $row_version, $allow_superseded
+    );
+    $canonical = hrm_person_bank_payload_json($new_payload);
+    if (!is_array($predecessor) || $canonical === false || !hrm_person_bank_payload_has_details($new_payload)) return false;
+    $active_key = hrm_person_sensitive_active_key(null, false);
+    if (!is_array($active_key) || !isset($active_key['key'])) return false;
+    $payload_token = hrm_person_bank_supersession_payload_token($new_payload, $active_key['key']);
+    $company = function_exists('user_company') ? (int)user_company() : 0;
+    $action_hash = $payload_token === false ? false : hrm_person_bank_supersession_action_hash(
+        $company, (int)$predecessor['person_bank_account_id'], (int)$predecessor['row_version'], $payload_token
+    );
+    if ($action_hash === false) return false;
+    return array('company'=>$company, 'employee_ref'=>(string)$employee_ref,
+        'person_bank_account_id'=>(int)$predecessor['person_bank_account_id'],
+        'bank_account_row_version'=>(int)$predecessor['row_version'],
+        'masked_account'=>(string)$predecessor['masked_account'], 'masked_routing'=>(string)$predecessor['masked_routing'],
+        'payment_method'=>(int)$predecessor['payment_method'],
+        'action_class'=>HRM_PERSON_BANK_SUPERSESSION_ACTION_CLASS, 'action_hash'=>$action_hash);
+}

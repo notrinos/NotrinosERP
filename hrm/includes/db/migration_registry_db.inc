@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.305',
-        'active_legacy_payroll_contract'=>'1.0.258',
-        'next_backlog_item'=>'read-only HRM-FND-004 Person bank-account verification browser-continuation / payment-election dependency review',
+        'active_database_version'=>'1.0.306',
+        'active_legacy_payroll_contract'=>'1.0.259',
+        'next_backlog_item'=>'read-only HRM-FND-004 Person bank-account verification-request browser continuation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'review whether the accepted verified/approved governed bank successor needs any browser continuation and identify the exact dependency boundary for later payment-election/allocation/binding work; preserve masked-only presentation, maker/requester/checker separation, explicit verified/approved current-row selection, PAY-AUD ordering and historical payroll/accounting integrity; add no route, reveal/decrypt, payment election/allocation/binding, payment execution, payroll-post, GL or accounting authority during this read-only review',
+        'next_slice_scope'=>'review requester/maker separation, exact unverified current governed successor id/row-version binding, masked-only presentation, central approval ownership and fresh step-up requirements before adding any verification-request browser route; keep evidence registration and promotion browser continuations downstream and add no full reveal/decrypt, payment election/allocation/binding, payment execution, payroll-post, GL or accounting authority during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -227,6 +227,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_verification_evidence_registration_command_foundation.php'),
             'hrm_fnd_004_person_bank_account_verification_promotion_command_foundation'=>array('previous'=>'1.0.304','version'=>'1.0.305',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_verification_promotion_command_foundation.php'),
+            'hrm_fnd_004_person_bank_account_supersession_browser_route_foundation'=>array('previous'=>'1.0.305','version'=>'1.0.306',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_supersession_browser_route_foundation.php'),
         ),
     );
 }

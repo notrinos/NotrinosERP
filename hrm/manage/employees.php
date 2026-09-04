@@ -535,10 +535,21 @@ function tab_personal($employee_id, $new_employee) {
 	} else {
 		label_row(_('Bank Details:'), _('Restricted'));
 	}
-	label_row(
-		_('Bank Detail Changes:'),
-		_('Unavailable until step-up and independent approval controls are implemented.')
+	$can_supersede_bank_details = !$new_employee && hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_FINANCIAL,
+		HRM_FIELD_ACTION_SUPERSEDE
 	);
+	if ($can_supersede_bank_details) {
+		$employee_bank_ref = rawurlencode((string)get_post('NewEmpID'));
+		$bank_change_url = 'person_bank_account_supersession.php?employee_id='.$employee_bank_ref;
+		label_row(
+			_('Bank Detail Changes:'),
+			"<a href='".htmlspecialchars($bank_change_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Governed bank-detail change'))."</a>"
+		);
+	} else {
+		label_row(_('Bank Detail Changes:'), _('Restricted'));
+	}
 
 	table_section_title(_('Emergency Contact'));
 
