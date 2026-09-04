@@ -409,3 +409,216 @@ function register_hrm_person_bank_account_verification_evidence(
     if ($ok) commit_transaction(); else cancel_transaction();
     return $ok ? $result_value : false;
 }
+
+/** Lock one exact registered verification-evidence row for bank-account promotion.
+ * @param int $evidence_id
+ * @return array|false
+ */
+function hrm_bank_account_verification_promotion_evidence_for_update($evidence_id)
+{
+    $result = db_query("SELECT verification_evidence_id,verification_request_id,person_bank_account_id,bank_account_row_version,"
+        ."request_row_version,approval_draft_id,verification_method,evidence_source,evidence_reference_hash,"
+        ."evidence_payload_hash,checker_assurance_event_id,verified_at,evidence_row_version,recorded_at,recorded_by FROM "
+        .TB_PREF."hrm_person_bank_account_verification_evidence WHERE verification_evidence_id=".(int)$evidence_id
+        ." LIMIT 2 FOR UPDATE", 'could not lock bank-account verification evidence for promotion');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    return $row && db_fetch_assoc($result) === false ? $row : false;
+}
+
+/** Lock the already-consumed checker assurance event bound to registered bank evidence.
+ * @param int $assurance_event_id
+ * @return array|false
+ */
+function hrm_bank_account_verification_promotion_assurance_for_update($assurance_event_id)
+{
+    $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,"
+        ."action_hash,issued_at,expires_at,consumed_at FROM ".TB_PREF."user_session_assurance_events "
+        ."WHERE assurance_event_id=".(int)$assurance_event_id." LIMIT 2 FOR UPDATE",
+        'could not lock consumed checker assurance for bank-account promotion');
+    if (!$result) return false;
+    $row = db_fetch_assoc($result);
+    return $row && db_fetch_assoc($result) === false ? $row : false;
+}
+
+/**
+ * Promote one exact current governed bank-account successor from
+ * unverified/unapproved to verified/approved.
+ *
+ * No second assurance event is consumed. The command proves custody of the
+ * exact already-consumed evidence-registration assurance event, then performs
+ * one compare-and-set metadata transition and one restricted PAY-AUD append.
+ * Protected bank material is neither decrypted nor copied.
+ *
+ * @return array|false
+ */
+function promote_hrm_person_bank_account_verification(
+    $verification_evidence_id, $evidence_row_version, $request_row_version, $bank_account_row_version
+) {
+    $verification_evidence_id = hrm_bank_account_verification_request_positive_int($verification_evidence_id);
+    $evidence_row_version = hrm_bank_account_verification_request_positive_int($evidence_row_version);
+    $request_row_version = hrm_bank_account_verification_request_positive_int($request_row_version);
+    $bank_account_row_version = hrm_bank_account_verification_request_positive_int($bank_account_row_version);
+    $actor = hrm_bank_account_verification_request_actor_id();
+    $company = function_exists('user_company') ? (int)user_company() : 0;
+    if ($verification_evidence_id === false || $evidence_row_version === false
+        || $request_row_version === false || $bank_account_row_version === false
+        || $actor <= 0 || !hrm_bank_account_verification_request_permission())
+        return false;
+
+    begin_transaction();
+    $ok = false;
+    $result_value = false;
+    do {
+        $evidence = hrm_bank_account_verification_promotion_evidence_for_update($verification_evidence_id);
+        if (!is_array($evidence)
+            || (int)$evidence['evidence_row_version'] !== $evidence_row_version
+            || (int)$evidence['request_row_version'] !== $request_row_version
+            || (int)$evidence['bank_account_row_version'] !== $bank_account_row_version
+            || (int)$evidence['recorded_by'] !== $actor)
+            break;
+
+        $request = hrm_bank_account_verification_evidence_request_for_update((int)$evidence['verification_request_id']);
+        if (!is_array($request)
+            || (int)$request['request_row_version'] !== $request_row_version
+            || (string)$request['request_status'] !== 'approved'
+            || (int)$request['person_bank_account_id'] !== (int)$evidence['person_bank_account_id']
+            || (int)$request['bank_account_row_version'] !== $bank_account_row_version
+            || (string)$request['verification_method'] !== (string)$evidence['verification_method']
+            || (int)$request['requested_by'] <= 0 || (int)$request['requested_by'] === $actor)
+            break;
+
+        $draft = hrm_bank_account_verification_evidence_draft_for_update((int)$evidence['approval_draft_id']);
+        if (!is_array($draft) || !defined('ST_HRM_BANK_ACCOUNT_VERIFICATION')
+            || (int)$draft['trans_type'] !== (int)ST_HRM_BANK_ACCOUNT_VERIFICATION
+            || (int)$draft['status'] !== 1
+            || (int)$draft['submitted_by'] !== (int)$request['requested_by']
+            || (int)$draft['approved_trans_no'] !== (int)$request['verification_request_id']
+            || $draft['completed_date'] === null)
+            break;
+        $draft_data = json_decode((string)$draft['draft_data'], true);
+        if (!is_array($draft_data)
+            || !isset($draft_data['verification_request_id'],$draft_data['person_bank_account_id'],
+                $draft_data['bank_account_row_version'],$draft_data['verification_method'])
+            || (int)$draft_data['verification_request_id'] !== (int)$request['verification_request_id']
+            || (int)$draft_data['person_bank_account_id'] !== (int)$evidence['person_bank_account_id']
+            || (int)$draft_data['bank_account_row_version'] !== $bank_account_row_version
+            || (string)$draft_data['verification_method'] !== (string)$evidence['verification_method'])
+            break;
+
+        $checker = hrm_bank_account_verification_evidence_final_checker_for_update((int)$evidence['approval_draft_id']);
+        if (!is_array($checker) || (int)$checker['user_id'] !== $actor)
+            break;
+
+        $verified_at_epoch = strtotime((string)$evidence['verified_at'].' UTC');
+        if ($verified_at_epoch === false || $verified_at_epoch <= 0)
+            break;
+        $expected_action_hash = hrm_bank_account_verification_evidence_action_hash(
+            $company, (int)$evidence['verification_request_id'], $request_row_version,
+            (int)$evidence['person_bank_account_id'], $bank_account_row_version, (int)$evidence['approval_draft_id'],
+            (string)$evidence['verification_method'], (string)$evidence['evidence_source'],
+            (string)$evidence['evidence_reference_hash'], (string)$evidence['evidence_payload_hash'],
+            $verified_at_epoch
+        );
+        $assurance = hrm_bank_account_verification_promotion_assurance_for_update(
+            (int)$evidence['checker_assurance_event_id']
+        );
+        if ($expected_action_hash === false || !is_array($assurance)
+            || (int)$assurance['assurance_event_id'] !== (int)$evidence['checker_assurance_event_id']
+            || (int)$assurance['assurance_level'] !== 2
+            || (string)$assurance['assurance_method'] !== 'oidc_acr_amr'
+            || (string)$assurance['action_class'] !== HRM_BANK_ACCOUNT_VERIFICATION_EVIDENCE_REGISTRATION_ACTION_CLASS
+            || !session_registry_hash_equals((string)$assurance['action_hash'], $expected_action_hash)
+            || $assurance['consumed_at'] === null)
+            break;
+
+        $bank = hrm_bank_account_verification_request_bank_for_update((int)$evidence['person_bank_account_id']);
+        if (!is_array($bank) || $bank['effective_to'] !== null
+            || (string)$bank['source'] !== 'governed_supersession'
+            || (int)$bank['supersedes_person_bank_account_id'] <= 0
+            || (int)$bank['created_by'] <= 0
+            || (int)$bank['created_by'] === (int)$request['requested_by']
+            || (int)$bank['created_by'] === $actor)
+            break;
+
+        if ((int)$bank['row_version'] === $bank_account_row_version + 1
+            && (string)$bank['verification_status'] === 'verified'
+            && (string)$bank['approval_status'] === 'approved'
+            && (string)$bank['verification_method'] === (string)$evidence['verification_method']) {
+            $ok = true;
+            $result_value = array(
+                'person_bank_account_id'=>(int)$evidence['person_bank_account_id'],
+                'verification_evidence_id'=>$verification_evidence_id,
+                'bank_account_row_version'=>$bank_account_row_version + 1,
+                'status'=>'already_promoted'
+            );
+            break;
+        }
+
+        if ((int)$bank['row_version'] !== $bank_account_row_version
+            || (string)$bank['verification_status'] !== 'unverified'
+            || (string)$bank['approval_status'] !== 'unapproved'
+            || (string)$bank['verification_method'] !== '')
+            break;
+
+        if (!db_query("UPDATE ".TB_PREF."hrm_person_bank_accounts SET verification_status='verified',"
+            ."verification_method=".db_escape((string)$evidence['verification_method'])
+            .",approval_status='approved',row_version=row_version+1 WHERE person_bank_account_id=".(int)$evidence['person_bank_account_id']
+            ." AND row_version=".$bank_account_row_version." AND effective_to IS NULL"
+            ." AND source='governed_supersession' AND supersedes_person_bank_account_id IS NOT NULL"
+            ." AND verification_status='unverified' AND approval_status='unapproved' AND verification_method=''",
+            'could not promote HRM Person bank-account verification state')
+            || !function_exists('db_num_affected_rows') || (int)db_num_affected_rows() !== 1)
+            break;
+
+        if (append_domain_audit_event(array(
+            'company_id'=>$company,'legal_entity_id'=>0,
+            'entity_type'=>'hrm_person_bank_account_verification',
+            'entity_key'=>array('person_bank_account_id'=>(int)$evidence['person_bank_account_id'],
+                'verification_evidence_id'=>$verification_evidence_id),
+            'action'=>'hrm.person_bank_account.verification.promoted',
+            'reason_code'=>'hrm_fnd_004_bank_verification_promotion',
+            'before'=>array('verification_status'=>'unverified','approval_status'=>'unapproved',
+                'row_version'=>$bank_account_row_version),
+            'after'=>array('verification_status'=>'verified','approval_status'=>'approved',
+                'verification_method'=>(string)$evidence['verification_method'],
+                'row_version'=>$bank_account_row_version+1),
+            'restricted_diff'=>array(
+                'verification_request_id'=>(int)$evidence['verification_request_id'],
+                'request_row_version'=>$request_row_version,
+                'verification_evidence_id'=>$verification_evidence_id,
+                'evidence_row_version'=>$evidence_row_version,
+                'approval_draft_id'=>(int)$evidence['approval_draft_id'],
+                'checker_assurance_event_id'=>(int)$evidence['checker_assurance_event_id'],
+                'requester_user_id'=>(int)$request['requested_by'],
+                'original_supersession_maker_user_id'=>(int)$bank['created_by'],
+                'final_checker_user_id'=>$actor,
+                'maker_requester_checker_separated'=>true,
+                'checker_assurance_preconsumed'=>true,'final_checker_bound'=>true,
+                'verification_method'=>(string)$evidence['verification_method'],
+                'evidence_source'=>(string)$evidence['evidence_source'],
+                'evidence_reference_hash'=>(string)$evidence['evidence_reference_hash'],
+                'evidence_payload_hash'=>(string)$evidence['evidence_payload_hash'],
+                'bank_value_stored'=>false,'bank_value_revealed'=>false,
+                'request_state_changed'=>false,'approval_draft_state_changed'=>false,
+                'new_assurance_event_consumed'=>false,'payment_election_changed'=>false,
+                'payment_allocation_changed'=>false,'payment_binding_authority_changed'=>false,
+                'payment_execution_authority_changed'=>false,'payroll_authority_changed'=>false,
+                'accounting_authority_changed'=>false
+            )
+        )) === false)
+            break;
+
+        $ok = true;
+        $result_value = array(
+            'person_bank_account_id'=>(int)$evidence['person_bank_account_id'],
+            'verification_evidence_id'=>$verification_evidence_id,
+            'bank_account_row_version'=>$bank_account_row_version+1,
+            'verification_status'=>'verified','approval_status'=>'approved',
+            'status'=>'promoted'
+        );
+    } while (false);
+
+    if ($ok) commit_transaction(); else cancel_transaction();
+    return $ok ? $result_value : false;
+}
