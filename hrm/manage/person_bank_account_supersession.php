@@ -137,6 +137,7 @@ $flash=hrm_person_bank_supersession_route_take_flash($employee_ref);
 if(is_array($flash)){
     display_notification(_('Governed bank-account successor created. The successor remains unverified and unapproved.'));
     echo '<p>'._('The successor must complete the accepted independent bank verification request, approval, opaque evidence registration, and verification-promotion workflow before it can be treated as verified. It is not a payment election or payment binding.').'</p>';
+    echo '<p><a href="person_bank_account_verification_request.php?employee_id='.rawurlencode($employee_ref).'">'._('Continue to Bank Verification Request').'</a></p>';
 }
 if(isset($_GET['step_up'])&&$_GET['step_up']==='failed')display_error(_('Reauthentication failed or was cancelled. No bank-detail change was made.'));
 if(isset($_GET['step_up'])&&$_GET['step_up']==='retry')display_warning(_('Reauthentication must be restarted. No bank-detail change was made.'));
