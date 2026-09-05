@@ -1030,6 +1030,8 @@ DROP TABLE IF EXISTS `0_hrm_person_duplicate_reviews`;
 DROP TABLE IF EXISTS `0_hrm_person_emergency_contacts`;
 DROP TABLE IF EXISTS `0_hrm_person_addresses`;
 DROP TABLE IF EXISTS `0_hrm_person_contacts`;
+DROP TABLE IF EXISTS `0_hrm_person_bank_payment_allocations`;
+DROP TABLE IF EXISTS `0_hrm_person_bank_payment_elections`;
 DROP TABLE IF EXISTS `0_hrm_person_bank_accounts`;
 DROP TABLE IF EXISTS `0_hrm_person_identifiers`;
 DROP TABLE IF EXISTS `0_hrm_person_names`;
@@ -1217,6 +1219,47 @@ CREATE TABLE `0_hrm_person_bank_account_verification_evidence` (
 	KEY `hrm_person_bank_verification_evidence_approval_idx` (`approval_draft_id`,`verification_evidence_id`),
 	KEY `hrm_person_bank_verification_evidence_assurance_idx` (`checker_assurance_event_id`,`verification_evidence_id`),
 	CONSTRAINT `0_hrm_person_bank_verification_evidence_request_fk` FOREIGN KEY (`verification_request_id`) REFERENCES `0_hrm_person_bank_account_verification_requests` (`verification_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_bank_payment_elections` (
+	`payment_election_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`person_id` bigint(20) unsigned NOT NULL,
+	`currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`election_status` varchar(16) NOT NULL DEFAULT 'draft',
+	`approval_status` varchar(16) NOT NULL DEFAULT 'unapproved',
+	`approval_draft_id` int(11) DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`supersedes_payment_election_id` bigint(20) unsigned DEFAULT NULL,
+	`effective_from` datetime DEFAULT NULL,
+	`effective_to` datetime DEFAULT NULL,
+	`source` varchar(32) NOT NULL,
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`payment_election_id`),
+	KEY `hrm_bank_payment_election_asof_idx` (`person_id`,`currency_code`,`effective_from`,`effective_to`,`payment_election_id`),
+	KEY `hrm_bank_payment_election_status_idx` (`election_status`,`approval_status`,`payment_election_id`),
+	KEY `hrm_bank_payment_election_approval_idx` (`approval_draft_id`,`payment_election_id`),
+	UNIQUE KEY `hrm_bank_payment_election_supersedes_uq` (`supersedes_payment_election_id`),
+	CONSTRAINT `0_hrm_bank_payment_election_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_bank_payment_election_supersedes_fk` FOREIGN KEY (`supersedes_payment_election_id`) REFERENCES `0_hrm_person_bank_payment_elections` (`payment_election_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_person_bank_payment_allocations` (
+	`payment_allocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`payment_election_id` bigint(20) unsigned NOT NULL,
+	`person_bank_account_id` bigint(20) unsigned NOT NULL,
+	`bank_account_row_version` int(10) unsigned NOT NULL,
+	`allocation_type` varchar(16) NOT NULL DEFAULT 'percentage',
+	`allocation_value` decimal(20,6) NOT NULL DEFAULT '0.000000',
+	`priority` smallint(5) unsigned NOT NULL DEFAULT '1',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`payment_allocation_id`),
+	UNIQUE KEY `hrm_bank_payment_allocation_priority_uq` (`payment_election_id`,`priority`),
+	UNIQUE KEY `hrm_bank_payment_allocation_account_uq` (`payment_election_id`,`person_bank_account_id`,`bank_account_row_version`),
+	KEY `hrm_bank_payment_allocation_bank_idx` (`person_bank_account_id`,`bank_account_row_version`,`payment_allocation_id`),
+	CONSTRAINT `0_hrm_bank_payment_allocation_election_fk` FOREIGN KEY (`payment_election_id`) REFERENCES `0_hrm_person_bank_payment_elections` (`payment_election_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_bank_payment_allocation_bank_fk` FOREIGN KEY (`person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_addresses` (
