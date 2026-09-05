@@ -559,6 +559,21 @@ function tab_personal($employee_id, $new_employee) {
 	} else {
 		label_row(_('Bank Detail Changes:'), _('Restricted'));
 	}
+	$can_manage_payment_election = !$new_employee && hrm_user_can_access_sensitive_field(
+		HRM_FIELD_RESTRICTED_FINANCIAL,
+		HRM_FIELD_ACTION_PAYMENT_ELECTION
+	);
+	if ($can_manage_payment_election) {
+		$employee_payment_election_ref = rawurlencode((string)get_post('NewEmpID'));
+		$payment_election_url = 'person_bank_payment_election.php?employee_id='.$employee_payment_election_ref;
+		label_row(
+			_('Payment Election:'),
+			"<a href='".htmlspecialchars($payment_election_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Manage governed bank payment election'))."</a>"
+		);
+	} else {
+		label_row(_('Payment Election:'), _('Restricted'));
+	}
 
 	table_section_title(_('Emergency Contact'));
 

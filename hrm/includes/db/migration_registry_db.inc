@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.311',
-        'active_legacy_payroll_contract'=>'1.0.266',
-        'next_backlog_item'=>'read-only HRM-FND-004 Person bank-account payment-election browser-route / checker-assurance presentation integration review',
+        'active_database_version'=>'1.0.312',
+        'active_legacy_payroll_contract'=>'1.0.267',
+        'next_backlog_item'=>'read-only HRM-FND-004 payment-instruction binding dependency review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile the accepted internal payment-election command with selected employee/Worker/Person containment, masked-only presentation, POST/CSRF plus single-use intents, maker assurance issuance, independent checker assurance continuation, bounded results and exact retry/recovery before exposing a browser route; keep payment instruction binding, payment execution, payroll-post, bank transaction, GL and accounting authority out of scope during this read-only review',
+        'next_slice_scope'=>'reconcile approved Person/currency payment-election custody with any future payroll payment-instruction binding without reading legacy employee bank plaintext, silently replacing legacy payment fields, widening execution authority, or rewriting historical payroll/payment/accounting evidence; add no payment execution, payroll-post, bank transaction, GL or accounting writer during this read-only review',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -239,6 +239,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_election_foundation.php'),
             'hrm_fnd_004_person_bank_account_payment_election_command_foundation'=>array('previous'=>'1.0.310','version'=>'1.0.311',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_election_command_foundation.php'),
+            'hrm_fnd_004_person_bank_account_payment_election_browser_route_foundation'=>array('previous'=>'1.0.311','version'=>'1.0.312',
+                'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_election_browser_route_foundation.php'),
         ),
     );
 }
