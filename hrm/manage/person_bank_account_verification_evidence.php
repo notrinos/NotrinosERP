@@ -128,7 +128,8 @@ $flash=hrm_bank_account_verification_evidence_route_take_flash($employee_ref);
 if(is_array($flash)){
     display_notification(_('Opaque bank-account verification evidence registered.'));
     echo '<p>'.sprintf(_('Evidence #%d is now bound to the approved request and final checker.'),(int)$flash['verification_evidence_id']).'</p>';
-    echo '<p>'._('The bank account remains unverified and unapproved. Verification promotion remains a separately governed downstream continuation and is not exposed by this page. No promotion ran from this page.').'</p>';
+    echo '<p>'._('The bank account remains unverified and unapproved. No promotion ran from this evidence-registration page.').'</p>';
+    echo '<p><a href="person_bank_account_verification_promotion.php?employee_id='.rawurlencode($employee_ref).'">'._('Continue to Bank Verification Promotion').'</a></p>';
 }
 if(isset($_GET['step_up'])&&$_GET['step_up']==='failed')display_error(_('Independent checker reauthentication failed or was cancelled. No evidence was registered.'));
 if(isset($_GET['step_up'])&&$_GET['step_up']==='retry')display_warning(_('Independent checker reauthentication must be restarted. No evidence was registered.'));

@@ -544,6 +544,7 @@ function tab_personal($employee_id, $new_employee) {
 		$bank_change_url = 'person_bank_account_supersession.php?employee_id='.$employee_bank_ref;
 		$bank_verification_request_url = 'person_bank_account_verification_request.php?employee_id='.$employee_bank_ref;
 		$bank_verification_evidence_url = 'person_bank_account_verification_evidence.php?employee_id='.$employee_bank_ref;
+		$bank_verification_promotion_url = 'person_bank_account_verification_promotion.php?employee_id='.$employee_bank_ref;
 		label_row(
 			_('Bank Detail Changes:'),
 			"<a href='".htmlspecialchars($bank_change_url, ENT_QUOTES, 'UTF-8')."'>"
@@ -551,7 +552,9 @@ function tab_personal($employee_id, $new_employee) {
 			."<a href='".htmlspecialchars($bank_verification_request_url, ENT_QUOTES, 'UTF-8')."'>"
 			.escape_employee_restricted_display(_('Submit bank verification request'))."</a> | "
 			."<a href='".htmlspecialchars($bank_verification_evidence_url, ENT_QUOTES, 'UTF-8')."'>"
-			.escape_employee_restricted_display(_('Register verification evidence'))."</a>"
+			.escape_employee_restricted_display(_('Register verification evidence'))."</a> | "
+			."<a href='".htmlspecialchars($bank_verification_promotion_url, ENT_QUOTES, 'UTF-8')."'>"
+			.escape_employee_restricted_display(_('Promote verified bank account'))."</a>"
 		);
 	} else {
 		label_row(_('Bank Detail Changes:'), _('Restricted'));
