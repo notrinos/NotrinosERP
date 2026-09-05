@@ -1018,6 +1018,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 DROP TABLE IF EXISTS `0_hrm_employment_rehires`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
+DROP TABLE IF EXISTS `0_hrm_lifecycle_commands`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
 DROP TABLE IF EXISTS `0_hrm_organization_units`;
@@ -1261,6 +1262,8 @@ CREATE TABLE `0_hrm_person_bank_payment_allocations` (
 	CONSTRAINT `0_hrm_bank_payment_allocation_election_fk` FOREIGN KEY (`payment_election_id`) REFERENCES `0_hrm_person_bank_payment_elections` (`payment_election_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_bank_payment_allocation_bank_fk` FOREIGN KEY (`person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
 
 CREATE TABLE `0_hrm_person_addresses` (
 	`address_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1675,6 +1678,33 @@ CREATE TABLE `0_hrm_assignments` (
 	CONSTRAINT `0_hrm_assignments_job_fk` FOREIGN KEY (`job_id`) REFERENCES `0_hrm_jobs` (`job_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_assignments_work_location_fk` FOREIGN KEY (`work_location_id`) REFERENCES `0_hrm_work_locations` (`work_location_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_assignments_manager_assignment_fk` FOREIGN KEY (`manager_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_lifecycle_commands` (
+	`lifecycle_command_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`worker_id` bigint(20) unsigned NOT NULL,
+	`employment_id` bigint(20) unsigned DEFAULT NULL,
+	`assignment_id` bigint(20) unsigned DEFAULT NULL,
+	`command_type` varchar(32) NOT NULL,
+	`command_status` varchar(16) NOT NULL DEFAULT 'pending',
+	`effective_at` datetime NOT NULL,
+	`idempotency_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`request_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`approval_draft_id` int(11) DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`requested_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`requested_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`completed_at` datetime DEFAULT NULL,
+	`completed_by` smallint(6) unsigned DEFAULT NULL,
+	PRIMARY KEY (`lifecycle_command_id`),
+	UNIQUE KEY `hrm_lifecycle_command_idempotency_uq` (`worker_id`,`command_type`,`idempotency_key_hash`),
+	KEY `hrm_lifecycle_command_status_idx` (`command_status`,`effective_at`,`lifecycle_command_id`),
+	KEY `hrm_lifecycle_command_employment_idx` (`employment_id`,`lifecycle_command_id`),
+	KEY `hrm_lifecycle_command_assignment_idx` (`assignment_id`,`lifecycle_command_id`),
+	KEY `hrm_lifecycle_command_approval_idx` (`approval_draft_id`,`lifecycle_command_id`),
+	CONSTRAINT `0_hrm_lifecycle_command_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_lifecycle_command_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_lifecycle_command_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_canonical_links` (

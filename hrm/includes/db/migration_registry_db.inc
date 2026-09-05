@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.313',
-        'active_legacy_payroll_contract'=>'1.0.268',
-        'next_backlog_item'=>'read-only HRM-FND-004 completion / deferred payment-orchestration ownership review',
+        'active_database_version'=>'1.0.314',
+        'active_legacy_payroll_contract'=>'1.0.269',
+        'next_backlog_item'=>'read-only HRM-FND-005 first fixed lifecycle-command writer / central approval integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile final HRM-FND-004 identifier/bank/payment-election acceptance and confirm actual payment-instruction building/persistence remains deferred to PAY-PMT; add no payment execution, payroll-post, bank transaction, GL or accounting authority during this read-only completion review',
+        'next_slice_scope'=>'select exactly one fixed lifecycle command after fresh semantic review and freeze action authorization, same Worker/Employment/Assignment subject and effective-date rules, central maker-checker ownership, PAY-AUD ordering, deterministic retry/recovery and checklist/document ownership before adding any runtime writer',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -243,6 +243,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_election_browser_route_foundation.php'),
             'hrm_fnd_004_person_bank_account_payment_instruction_binding_foundation'=>array('previous'=>'1.0.312','version'=>'1.0.313',
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_instruction_binding_foundation.php'),
+            'hrm_fnd_005_lifecycle_command_custody_foundation'=>array('previous'=>'1.0.313','version'=>'1.0.314',
+                'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_command_custody_foundation.php'),
         ),
     );
 }
