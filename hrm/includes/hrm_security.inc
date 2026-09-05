@@ -23,6 +23,7 @@ define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
 define('HRM_FIELD_ACTION_VERIFY_LINK', 'verify_link');
 define('HRM_FIELD_ACTION_SUPERSEDE', 'supersede');
+define('HRM_FIELD_ACTION_PAYMENT_ELECTION', 'payment_election');
 
 /**
  * Return the approved permission matrix for implemented sensitive fields.
@@ -55,9 +56,15 @@ function hrm_sensitive_field_permission_matrix() {
 					'SA_HRM_CHANGE_BANK_DETAILS'),
 				'any' => array(),
 			),
+			HRM_FIELD_ACTION_PAYMENT_ELECTION => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_BANK_DETAILS',
+					'SA_HRM_MANAGE_PAYMENT_ELECTION'),
+				'any' => array(),
+			),
 			// Full reveal and general financial mutation remain denied. The
-			// narrow supersede action only creates an unverified/unapproved
-			// governed successor and receives no automatic role grant.
+			// Narrow supersede and payment-election actions remain distinct.
+			// Neither receives an automatic role grant; bank-change authority
+			// alone must never imply payment-destination authority.
 		),
 		HRM_FIELD_RESTRICTED_IDENTITY => array(
 			HRM_FIELD_ACTION_VIEW => array(
