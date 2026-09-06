@@ -53,6 +53,7 @@ $systypes_array = array (
 	ST_SALES_COMMISSION => _('Sales Commission'),
 	ST_EMPLOYEE_APPRAISAL => _('Employee Appraisal'),
 	ST_HRM_LIFECYCLE_TRANSFER => _('Employee Transfer Lifecycle Command'),
+	ST_HRM_LIFECYCLE_SEPARATION => _('Employee Separation Lifecycle Command'),
 	ST_SALESRETURN => _('Sales RMA'),
 	ST_SALESAGREEMENT => _('Sales Agreement'),
 	ST_WH_TRANSFER_ORDER => _('Transfer Order'),

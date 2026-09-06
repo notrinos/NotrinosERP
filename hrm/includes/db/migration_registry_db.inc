@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.316',
-        'active_legacy_payroll_contract'=>'1.0.271',
-        'next_backlog_item'=>'read-only HRM-FND-005 post-cutover next fixed-command/checklist ownership review',
+        'active_database_version'=>'1.0.317',
+        'active_legacy_payroll_contract'=>'1.0.272',
+        'next_backlog_item'=>'read-only HRM-FND-005 Employee Separation browser cutover/recovery review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'reconcile whether the next smallest HRM-FND-005 dependency is a second fixed lifecycle command or the first checklist/document custody primitive without inferring onboarding/probation/offboarding semantics or widening compensation/payroll/accounting authority',
+        'next_slice_scope'=>'freeze Employee Separation calculate-versus-process EOS ownership, free-text reason custody, lifecycle submit/status UX, server-owned idempotency, pending/terminal recovery and elimination of direct mutation fallback without widening checklist, compensation, payroll or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -249,6 +249,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_command_foundation.php'),
             'hrm_fnd_005_employee_transfer_browser_cutover'=>array('previous'=>'1.0.315','version'=>'1.0.316',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_browser_cutover.php'),
+            'hrm_fnd_005_employee_separation_command_foundation'=>array('previous'=>'1.0.316','version'=>'1.0.317',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_command_foundation.php'),
         ),
     );
 }
