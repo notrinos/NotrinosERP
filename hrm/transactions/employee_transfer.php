@@ -15,19 +15,17 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_constants.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
-include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
-include_once($path_to_root . '/hrm/includes/db/employee_history_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_browser_db.inc');
 
 /**
  * Resolve one Employee Transfer selector label at the page-level instant.
  *
- * The shared employees_list() query, submitted employee_id and assignment
- * mutation/history path remain authoritative. SA_EMPTRANSFER is deliberately
- * not a Person/Worker identity-read capability, so this route-local formatter
- * adopts canonical identity only for principals that independently hold an
- * approved read area and otherwise returns the exact shared legacy label.
+ * SA_EMPTRANSFER is deliberately not a Person/Worker identity-read capability,
+ * so canonical identity is shown only when the current principal independently
+ * holds the accepted identity-read authority. Otherwise the shared legacy label
+ * remains unchanged.
  *
  * @param array $row
  * @return string
@@ -56,10 +54,59 @@ function employee_transfer_authoritative_employee_list($row) {
     return (user_show_codes() ? ((string)$row[0].' - ') : '').$canonical_name;
 }
 
-$js = '';
+/** @return array */
+function employee_transfer_browser_status($employee_id)
+{
+    if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
+        return array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
+    return get_hrm_lifecycle_employee_transfer_browser_status($employee_id);
+}
 
+/** @return void */
+function employee_transfer_display_recovery_status($employee_id, $status)
+{
+    if (!is_array($status) || !isset($status['status']))
+        return;
+    switch ((string)$status['status']) {
+        case 'pending':
+            display_notification(sprintf(
+                _('Your Employee Transfer request #%d is pending independent approval. No employee or assignment change is applied until approval completes.'),
+                (int)$status['lifecycle_command_id']
+            ));
+            break;
+        case 'blocked':
+            display_error(_('Another Employee Transfer request is already pending for this employee. A parallel transfer request cannot be submitted.'));
+            break;
+        case 'completed':
+            display_notification(sprintf(
+                _('Your Employee Transfer request #%d has completed.'),
+                (int)$status['lifecycle_command_id']
+            ));
+            hrm_lifecycle_transfer_browser_forget_idempotency_key($employee_id);
+            break;
+        case 'rejected':
+            display_notification(sprintf(
+                _('Your Employee Transfer request #%d was rejected. No rejected request payload or approval comment is copied into this page.'),
+                (int)$status['lifecycle_command_id']
+            ));
+            hrm_lifecycle_transfer_browser_forget_idempotency_key($employee_id);
+            break;
+        case 'cancelled':
+            display_notification(sprintf(
+                _('Your Employee Transfer request #%d was cancelled.'),
+                (int)$status['lifecycle_command_id']
+            ));
+            hrm_lifecycle_transfer_browser_forget_idempotency_key($employee_id);
+            break;
+        case 'inconsistent':
+            display_error(_('Employee Transfer command/approval state is inconsistent. Submission is blocked until the lifecycle/approval state is recovered.'));
+            break;
+    }
+}
+
+$js = '';
 if (user_use_date_picker())
-	$js .= get_js_date_picker();
+    $js .= get_js_date_picker();
 
 page(_($help_context = "Employee Transfer"), false, false, '', $js);
 
@@ -79,9 +126,8 @@ if (!isset($_POST['new_manager_employee_id']))
     $_POST['new_manager_employee_id'] = '';
 if (!isset($_POST['effective_date']))
     $_POST['effective_date'] = Today();
-if (!isset($_POST['reason']))
-    $_POST['reason'] = '';
 
+$employee_transfer_process_message = false;
 if (isset($_POST['Process'])) {
     if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) {
         display_error(_('Employee is required.'));
@@ -111,73 +157,56 @@ if (isset($_POST['Process'])) {
         display_error(_('An employee cannot be their own manager.'));
         set_focus('new_manager_employee_id');
     } else {
-        $employee = get_employee_assignment_context_projection($_POST['employee_id']);
-        if (!$employee) {
-            display_error(_('Selected employee was not found.'));
+        $before = employee_transfer_browser_status($_POST['employee_id']);
+        if ($before['status'] === 'pending') {
+            $employee_transfer_process_message = 'status_only';
+        } elseif ($before['status'] === 'blocked') {
+            display_error(_('Another Employee Transfer request is already pending for this employee. No parallel request was created.'));
+            $employee_transfer_process_message = 'status_only';
+        } elseif ($before['status'] === 'inconsistent') {
+            display_error(_('Employee Transfer command/approval state is inconsistent. No transfer was submitted or applied.'));
+            $employee_transfer_process_message = 'status_only';
+        } elseif (!hrm_lifecycle_transfer_workflow_is_maker_checker()) {
+            display_error(_('Employee Transfer approval workflow is not configured for independent maker/checker approval. No transfer was submitted or applied.'));
         } else {
-            hrm_log_restricted_employee_projection('employee_transfer_context');
-            $old_department = (int)$employee['department_id'];
-            $old_position = (int)$employee['position_id'];
-            $old_grade = (int)$employee['grade_id'];
-
-            $new_department = (int)$_POST['new_department_id'];
-            $new_position = (int)$_POST['new_position_id'];
-            $new_grade = (int)$_POST['new_grade_id'];
-            $assignment_effective_change = array(
-                'effective_date' => date2sql($_POST['effective_date']),
-                'change_type' => HRM_HIST_TRANSFER
-            );
-            if (trim((string)$_POST['new_job_id']) !== '0')
-                $assignment_effective_change['job_id'] = trim((string)$_POST['new_job_id']);
-            if (trim((string)$_POST['new_work_location_id']) !== '0')
-                $assignment_effective_change['work_location_id'] = trim((string)$_POST['new_work_location_id']);
-            $manager_employee_id = trim((string)$_POST['new_manager_employee_id']);
-            if ($manager_employee_id !== '')
-                $assignment_effective_change['manager_employee_id'] = $manager_employee_id;
-
-            $employee_update = array(
-                'department_id' => $new_department,
-                'position_id' => $new_position,
-                'grade_id' => $new_grade
-            );
-            // Keep the maintained legacy reporting_to signal and the normalized
-            // manager Assignment relationship atomic under the same effective-dated transfer.
-            if ($manager_employee_id !== '')
-                $employee_update['reporting_to'] = $manager_employee_id;
-
-            begin_transaction();
-            $employee_updated = update_employee($_POST['employee_id'], $employee_update, $assignment_effective_change);
-
-            if (!$employee_updated) {
-                cancel_transaction();
-                display_error(_('Could not apply the effective-dated assignment change or append required audit evidence.'));
+            $idempotency_key = hrm_lifecycle_transfer_browser_idempotency_key($_POST['employee_id']);
+            if ($idempotency_key === false) {
+                display_error(_('A secure server-owned Employee Transfer retry key could not be created. No transfer was submitted or applied.'));
             } else {
-                $history_id = add_employee_history(
+                $result = submit_hrm_lifecycle_employee_transfer(
                     $_POST['employee_id'],
-                    HRM_HIST_TRANSFER,
-                    $_POST['effective_date'],
-                    $old_department,
-                    $new_department,
-                    $old_position,
-                    $new_position,
-                    $old_grade,
-                    $new_grade,
-                    null,
-                    null,
-                    $_POST['reason'],
-                    isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : ''
+                    date2sql($_POST['effective_date']),
+                    (int)$_POST['new_department_id'],
+                    (int)$_POST['new_position_id'],
+                    (int)$_POST['new_grade_id'],
+                    (int)$_POST['new_job_id'],
+                    (int)$_POST['new_work_location_id'],
+                    trim((string)$_POST['new_manager_employee_id']),
+                    $idempotency_key
                 );
-                if ($history_id <= 0) {
-                    cancel_transaction();
-                    display_error(_('Could not append employee transfer history; the transfer was rolled back.'));
+                if (!is_array($result) || !isset($result['status']) || $result['status'] !== 'pending') {
+                    display_error(_('Could not submit the Employee Transfer lifecycle command. No direct transfer fallback exists; no employee or assignment change was applied.'));
+                } elseif (!empty($result['exact_retry'])) {
+                    display_notification(sprintf(
+                        _('Employee Transfer request #%d was already submitted and remains pending approval.'),
+                        (int)$result['lifecycle_command_id']
+                    ));
+                    $employee_transfer_process_message = 'submitted';
                 } else {
-                    commit_transaction();
-                    display_notification(_('Employee transfer has been processed.'));
+                    display_notification(sprintf(
+                        _('Employee Transfer request #%d was submitted for independent approval.'),
+                        (int)$result['lifecycle_command_id']
+                    ));
+                    $employee_transfer_process_message = 'submitted';
                 }
             }
         }
     }
 }
+
+$current_status = employee_transfer_browser_status($_POST['employee_id']);
+if ($employee_transfer_process_message !== 'submitted')
+    employee_transfer_display_recovery_status($_POST['employee_id'], $current_status);
 
 $employee_transfer_selector_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_transfer_selector');
@@ -193,9 +222,8 @@ assignment_jobs_list_row(_('New Assignment Job:'), 'new_job_id');
 assignment_work_locations_list_row(_('New Work Location:'), 'new_work_location_id');
 assignment_managers_list_row(_('New Manager:'), 'new_manager_employee_id', '', get_post('employee_id', ''));
 date_row(_('Effective Date:'), 'effective_date');
-textarea_row(_('Reason:'), 'reason', null, 50, 3);
 end_table(1);
-submit_center('Process', _('Process Transfer'));
+submit_center('Process', _('Submit Transfer for Approval'));
 end_form();
 
 end_page();
