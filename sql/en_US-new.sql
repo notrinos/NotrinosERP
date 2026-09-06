@@ -1018,6 +1018,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 DROP TABLE IF EXISTS `0_hrm_employment_rehires`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
+DROP TABLE IF EXISTS `0_hrm_lifecycle_tasks`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_commands`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
@@ -1706,6 +1707,26 @@ CREATE TABLE `0_hrm_lifecycle_commands` (
 	CONSTRAINT `0_hrm_lifecycle_command_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_command_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_lifecycle_tasks` (
+	`lifecycle_task_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`lifecycle_command_id` bigint(20) unsigned NOT NULL,
+	`task_code` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`task_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'pending',
+	`confidentiality_class` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'restricted',
+	`retention_locked` tinyint(1) NOT NULL DEFAULT '1',
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`completed_at` datetime DEFAULT NULL,
+	`completed_by` smallint(6) unsigned DEFAULT NULL,
+	PRIMARY KEY (`lifecycle_task_id`),
+	UNIQUE KEY `hrm_lifecycle_task_code_uq` (`lifecycle_command_id`,`task_code`),
+	KEY `hrm_lifecycle_task_status_idx` (`task_status`,`lifecycle_command_id`,`lifecycle_task_id`),
+	KEY `hrm_lifecycle_task_confidentiality_idx` (`confidentiality_class`,`task_status`,`lifecycle_task_id`),
+	CONSTRAINT `0_hrm_lifecycle_task_command_fk` FOREIGN KEY (`lifecycle_command_id`) REFERENCES `0_hrm_lifecycle_commands` (`lifecycle_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 
 CREATE TABLE `0_hrm_person_canonical_links` (
 	`link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,

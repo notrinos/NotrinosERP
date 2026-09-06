@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.318',
-        'active_legacy_payroll_contract'=>'1.0.273',
-        'next_backlog_item'=>'read-only HRM-FND-005 checklist/document custody ownership review',
+        'active_database_version'=>'1.0.319',
+        'active_legacy_payroll_contract'=>'1.0.274',
+        'next_backlog_item'=>'read-only HRM-FND-005 first lifecycle checklist-task writer / document-link integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze the smallest reusable HRM-FND-005 checklist/document confidentiality, lifecycle-state, approval, e-signature connector and retention boundary without inferring onboarding, offboarding or probation semantics and without widening compensation, payroll or accounting authority',
+        'next_slice_scope'=>'select one existing fixed lifecycle command and one bounded checklist-task behavior; freeze task state transitions, action authorization, same-subject document linkage, central approval ownership, retention/unlock authority, e-signature connector custody, retry/recovery and PAY-AUD ordering before adding any runtime task writer or document/e-signature bridge',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -253,6 +253,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_command_foundation.php'),
             'hrm_fnd_005_employee_separation_browser_cutover'=>array('previous'=>'1.0.317','version'=>'1.0.318',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_browser_cutover.php'),
+            'hrm_fnd_005_lifecycle_task_custody_foundation'=>array('previous'=>'1.0.318','version'=>'1.0.319',
+                'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_custody_foundation.php'),
         ),
     );
 }
