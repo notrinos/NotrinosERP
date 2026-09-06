@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.319',
-        'active_legacy_payroll_contract'=>'1.0.274',
-        'next_backlog_item'=>'read-only HRM-FND-005 first lifecycle checklist-task writer / document-link integration review',
+        'active_database_version'=>'1.0.320',
+        'active_legacy_payroll_contract'=>'1.0.275',
+        'next_backlog_item'=>'read-only HRM-FND-005 Employee Transfer checklist-task browser recovery/visibility review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'select one existing fixed lifecycle command and one bounded checklist-task behavior; freeze task state transitions, action authorization, same-subject document linkage, central approval ownership, retention/unlock authority, e-signature connector custody, retry/recovery and PAY-AUD ordering before adding any runtime task writer or document/e-signature bridge',
+        'next_slice_scope'=>'freeze Employee Transfer task route placement, create/complete invocation, restricted pending/completed visibility, server-owned retry/recovery and the still-deferred document-link boundary before changing any browser route or document custody',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -255,6 +255,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_browser_cutover.php'),
             'hrm_fnd_005_lifecycle_task_custody_foundation'=>array('previous'=>'1.0.318','version'=>'1.0.319',
                 'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_custody_foundation.php'),
+            'hrm_fnd_005_employee_transfer_task_writer_foundation'=>array('previous'=>'1.0.319','version'=>'1.0.320',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_writer_foundation.php'),
         ),
     );
 }
