@@ -46,6 +46,7 @@ define('ST_EMPLOYEE_APPRAISAL', 86);
 define('ST_HRM_IDENTIFIER_VERIFICATION', 87);
 define('ST_HRM_BANK_ACCOUNT_VERIFICATION', 88);
 define('ST_HRM_BANK_PAYMENT_ELECTION', 89);
+define('ST_HRM_LIFECYCLE_TRANSFER', 90);
 
 //
 //	Depreciation period types

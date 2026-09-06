@@ -26,6 +26,11 @@ if (!is_file($hrm_bank_payment_election_source))
 	$hrm_bank_payment_election_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/person_bank_account_payment_election_db.inc';
 if (is_file($hrm_bank_payment_election_source))
 	include_once($hrm_bank_payment_election_source);
+$hrm_lifecycle_transfer_source = $path_to_root . '/hrm/includes/db/lifecycle_transfer_command_db.inc';
+if (!is_file($hrm_lifecycle_transfer_source))
+	$hrm_lifecycle_transfer_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_transfer_command_db.inc';
+if (is_file($hrm_lifecycle_transfer_source))
+	include_once($hrm_lifecycle_transfer_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -82,6 +87,16 @@ function ensure_hrm_approval_transaction_registration()
 			'payment_election_id',
 			'payment_election_id',
 			'created_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_TRANSFER')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_TRANSFER, array(
+			TB_PREF . 'hrm_lifecycle_commands',
+			null,
+			'lifecycle_command_id',
+			'lifecycle_command_id',
+			'requested_at'
 		));
 	}
 
@@ -369,6 +384,19 @@ if (defined('ST_HRM_BANK_PAYMENT_ELECTION')) {
 		'executor'       => 'execute_approved_bank_payment_election',
 		'rejector'       => 'reject_bank_payment_election_draft',
 		'canceler'       => 'cancel_bank_payment_election_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_TRANSFER')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_TRANSFER, array(
+		'label'          => _('Employee Transfer Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_transfer',
+		'rejector'       => 'reject_hrm_lifecycle_transfer_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_transfer_draft',
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',

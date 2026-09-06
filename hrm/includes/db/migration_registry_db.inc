@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.314',
-        'active_legacy_payroll_contract'=>'1.0.269',
-        'next_backlog_item'=>'read-only HRM-FND-005 first fixed lifecycle-command writer / central approval integration review',
+        'active_database_version'=>'1.0.315',
+        'active_legacy_payroll_contract'=>'1.0.270',
+        'next_backlog_item'=>'read-only HRM-FND-005 Employee Transfer browser cutover/recovery review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'select exactly one fixed lifecycle command after fresh semantic review and freeze action authorization, same Worker/Employment/Assignment subject and effective-date rules, central maker-checker ownership, PAY-AUD ordering, deterministic retry/recovery and checklist/document ownership before adding any runtime writer',
+        'next_slice_scope'=>'freeze replacement of the existing direct Employee Transfer mutation with lifecycle submit/status behavior, configured-workflow failure UX, pending/terminal recovery, idempotency-key ownership and elimination of any parallel bypass before changing the browser route',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -245,6 +245,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_004_person_bank_account_payment_instruction_binding_foundation.php'),
             'hrm_fnd_005_lifecycle_command_custody_foundation'=>array('previous'=>'1.0.313','version'=>'1.0.314',
                 'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_command_custody_foundation.php'),
+            'hrm_fnd_005_employee_transfer_command_foundation'=>array('previous'=>'1.0.314','version'=>'1.0.315',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_command_foundation.php'),
         ),
     );
 }
