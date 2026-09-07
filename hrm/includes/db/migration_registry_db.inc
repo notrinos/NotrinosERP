@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.323',
-        'active_legacy_payroll_contract'=>'1.0.278',
-        'next_backlog_item'=>'read-only HRM-FND-005 lifecycle task/document same-subject version/retention custody review',
+        'active_database_version'=>'1.0.324',
+        'active_legacy_payroll_contract'=>'1.0.279',
+        'next_backlog_item'=>'read-only HRM-FND-005 Employee Transfer task-document link writer and retention activation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze exact Worker/document same-subject mapping, immutable document version and retention/unlock authority before any task-document link, e-signature connector, offboarding template, payroll settlement or generic lifecycle dispatcher',
+        'next_slice_scope'=>'freeze one fixed relationship, deterministic locks, exact same-subject proof, allowed document state, snapshot hash, retention transition, authorization, idempotency, audit rollback and recovery before any task-document writer',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -263,6 +263,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_writer_foundation.php'),
             'hrm_fnd_005_employee_separation_task_browser_cutover'=>array('previous'=>'1.0.322','version'=>'1.0.323',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_browser_cutover.php'),
+            'hrm_fnd_005_lifecycle_task_document_version_custody'=>array('previous'=>'1.0.323','version'=>'1.0.324',
+                'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_document_version_custody.php'),
         ),
     );
 }

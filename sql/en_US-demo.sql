@@ -1141,6 +1141,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 DROP TABLE IF EXISTS `0_hrm_employment_rehires`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
+DROP TABLE IF EXISTS `0_hrm_lifecycle_task_document_versions`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_tasks`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_commands`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
@@ -6152,6 +6153,28 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	UNIQUE KEY `employee_document_access_key_uq` (`access_key`),
 	UNIQUE KEY `employee_document_attachment_uq` (`attachment_id`)
 ) ENGINE=InnoDB;
+
+CREATE TABLE `0_hrm_lifecycle_task_document_versions` (
+	`task_document_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`lifecycle_task_id` bigint(20) unsigned NOT NULL,
+	`employee_document_id` int(11) NOT NULL,
+	`employee_worker_mapping_id` bigint(20) unsigned NOT NULL,
+	`document_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`relationship_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`confidentiality_class` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'restricted',
+	`document_snapshot_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`retention_locked` tinyint(1) NOT NULL DEFAULT '1',
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`linked_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`linked_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`task_document_version_id`),
+	UNIQUE KEY `hrm_lifecycle_task_document_version_uq` (`lifecycle_task_id`,`employee_document_id`,`document_version`),
+	KEY `hrm_lifecycle_task_document_mapping_idx` (`employee_worker_mapping_id`,`employee_document_id`,`task_document_version_id`),
+	KEY `hrm_lifecycle_task_document_retention_idx` (`retention_locked`,`confidentiality_class`,`task_document_version_id`),
+	CONSTRAINT `0_hrm_lifecycle_task_document_task_fk` FOREIGN KEY (`lifecycle_task_id`) REFERENCES `0_hrm_lifecycle_tasks` (`lifecycle_task_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_lifecycle_task_document_document_fk` FOREIGN KEY (`employee_document_id`) REFERENCES `0_employee_documents` (`doc_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `0_hrm_lifecycle_task_document_mapping_fk` FOREIGN KEY (`employee_worker_mapping_id`) REFERENCES `0_hrm_employee_worker_map` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_employee_document_migration_journal` --
 
