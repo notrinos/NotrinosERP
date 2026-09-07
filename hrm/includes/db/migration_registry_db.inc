@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.324',
-        'active_legacy_payroll_contract'=>'1.0.279',
-        'next_backlog_item'=>'read-only HRM-FND-005 Employee Transfer task-document link writer and retention activation review',
+        'active_database_version'=>'1.0.325',
+        'active_legacy_payroll_contract'=>'1.0.280',
+        'next_backlog_item'=>'HRM-FND-005 Employee Transfer task-document browser cutover',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze one fixed relationship, deterministic locks, exact same-subject proof, allowed document state, snapshot hash, retention transition, authorization, idempotency, audit rollback and recovery before any task-document writer',
+        'next_slice_scope'=>'wire one POST-only opaque-access-key action over server-resolved current-actor Transfer command/task custody; GET/status remains read-only and no unlink, replace, retention unlock, e-signature, payroll or accounting authority is added',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -265,6 +265,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_browser_cutover.php'),
             'hrm_fnd_005_lifecycle_task_document_version_custody'=>array('previous'=>'1.0.323','version'=>'1.0.324',
                 'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_document_version_custody.php'),
+            'hrm_fnd_005_employee_transfer_task_document_writer'=>array('previous'=>'1.0.324','version'=>'1.0.325',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_document_writer.php'),
         ),
     );
 }
