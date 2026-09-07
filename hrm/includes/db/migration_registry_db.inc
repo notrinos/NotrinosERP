@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.325',
-        'active_legacy_payroll_contract'=>'1.0.280',
-        'next_backlog_item'=>'HRM-FND-005 Employee Transfer task-document browser cutover',
+        'active_database_version'=>'1.0.326',
+        'active_legacy_payroll_contract'=>'1.0.282',
+        'next_backlog_item'=>'HRM-FND-005 Employee Separation task-document writer',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'wire one POST-only opaque-access-key action over server-resolved current-actor Transfer command/task custody; GET/status remains read-only and no unlink, replace, retention unlock, e-signature, payroll or accounting authority is added',
+        'next_slice_scope'=>'add one fixed separation_supporting_document writer behind SA_EMPSEPARATION + SA_EMPLOYEE using only an internal server-resolved completed Separation command id plus opaque document access key; same-subject active Worker mapping, available document, immutable version-1 HMAC snapshot, atomic retention 0-to-1 plus PAY-AUD, exact retry idempotency, and no unlink, replace, delete, retention unlock, e-signature, payroll settlement, payment, bank, GL or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -267,6 +267,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_document_version_custody.php'),
             'hrm_fnd_005_employee_transfer_task_document_writer'=>array('previous'=>'1.0.324','version'=>'1.0.325',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_document_writer.php'),
+            'hrm_fnd_005_employee_transfer_task_document_browser_cutover'=>array('previous'=>'1.0.325','version'=>'1.0.326',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_document_browser_cutover.php'),
         ),
     );
 }

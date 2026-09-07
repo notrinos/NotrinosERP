@@ -19,6 +19,7 @@ include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_browser_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_task_browser_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_task_document_browser_db.inc');
 
 /**
  * Resolve one Employee Transfer selector label at the page-level instant.
@@ -69,6 +70,25 @@ function employee_transfer_task_browser_status($employee_id)
     if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
         return array('status'=>'unavailable','own'=>false,'lifecycle_command_id'=>0,'task_status'=>'');
     return get_hrm_lifecycle_employee_transfer_task_browser_status($employee_id);
+}
+
+/** @return array */
+function employee_transfer_task_document_browser_status($employee_id)
+{
+    if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
+        return array('status'=>'unavailable');
+    return get_hrm_lifecycle_employee_transfer_task_document_browser_status($employee_id);
+}
+
+/** @return void */
+function employee_transfer_display_task_document_status($status)
+{
+    if (!is_array($status) || !isset($status['status']))
+        return;
+    if ((string)$status['status'] === 'linked')
+        display_notification(_('A restricted supporting document is linked to your completed Transfer acknowledgement task. Retention is locked.'));
+    elseif ((string)$status['status'] === 'inconsistent')
+        display_error(_('Employee Transfer supporting-document custody is inconsistent. Document action is blocked until recovery.'));
 }
 
 /** @return void */
@@ -173,6 +193,30 @@ if (isset($_POST['CreateTransferTask']) || isset($_POST['CompleteTransferTask'])
     }
 }
 
+$employee_transfer_document_message = false;
+if (isset($_POST['LinkTransferDocument'])) {
+    $document_access_key = isset($_POST['transfer_document_access_key'])
+        ? strtolower(trim((string)$_POST['transfer_document_access_key'])) : '';
+    if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) {
+        display_error(_('Employee is required.'));
+        set_focus('employee_id');
+    } elseif (preg_match('/^[a-f0-9]{64}$/D', $document_access_key) !== 1) {
+        display_error(_('Supporting Document Access Key is invalid.'));
+        set_focus('transfer_document_access_key');
+    } else {
+        $link_id = link_hrm_lifecycle_employee_transfer_task_document_from_browser(
+            $_POST['employee_id'], $document_access_key
+        );
+        $_POST['transfer_document_access_key'] = '';
+        if ($link_id === false)
+            display_error(_('Could not link the restricted Transfer supporting document. The completed task, actor ownership, document availability, same-subject mapping and retention custody must remain valid.'));
+        else {
+            display_notification(_('Transfer supporting document linked and retention locked.'));
+            $employee_transfer_document_message = 'linked';
+        }
+    }
+}
+
 $employee_transfer_process_message = false;
 if (isset($_POST['Process'])) {
     if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) {
@@ -258,6 +302,10 @@ $current_task_status = employee_transfer_task_browser_status($_POST['employee_id
 if ($employee_transfer_task_message === false)
     employee_transfer_display_task_status($current_task_status);
 
+$current_task_document_status = employee_transfer_task_document_browser_status($_POST['employee_id']);
+if ($employee_transfer_document_message === false)
+    employee_transfer_display_task_document_status($current_task_document_status);
+
 $employee_transfer_selector_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_transfer_selector');
 
@@ -278,6 +326,12 @@ if ((string)$current_task_status['status'] === 'not_created')
     submit_center('CreateTransferTask', _('Create Transfer Acknowledgement Task'));
 elseif ((string)$current_task_status['status'] === 'pending')
     submit_center('CompleteTransferTask', _('Complete Transfer Acknowledgement Task'));
+if ((string)$current_task_document_status['status'] === 'not_linked') {
+    start_table(TABLESTYLE2);
+    text_row(_('Supporting Document Access Key:'), 'transfer_document_access_key', null, 64, 64);
+    end_table(1);
+    submit_center('LinkTransferDocument', _('Link Transfer Supporting Document'));
+}
 end_form();
 
 end_page();
