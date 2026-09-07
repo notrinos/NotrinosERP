@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.326',
-        'active_legacy_payroll_contract'=>'1.0.282',
-        'next_backlog_item'=>'HRM-FND-005 Employee Separation task-document writer',
+        'active_database_version'=>'1.0.327',
+        'active_legacy_payroll_contract'=>'1.0.283',
+        'next_backlog_item'=>'HRM-FND-005 Employee Separation task-document browser cutover',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'add one fixed separation_supporting_document writer behind SA_EMPSEPARATION + SA_EMPLOYEE using only an internal server-resolved completed Separation command id plus opaque document access key; same-subject active Worker mapping, available document, immutable version-1 HMAC snapshot, atomic retention 0-to-1 plus PAY-AUD, exact retry idempotency, and no unlink, replace, delete, retention unlock, e-signature, payroll settlement, payment, bank, GL or accounting authority',
+        'next_slice_scope'=>'add one explicit POST-only Separation supporting-document browser action behind SA_EMPSEPARATION + SA_EMPLOYEE; accept only opaque document access key, resolve the current actor own completed Separation command/task server-side, keep GET/status read-only and coarse, delegate atomic link plus retention 0-to-1 plus PAY-AUD to the accepted writer, and add no unlink, replace, delete, retention unlock, e-signature, EOS/payroll settlement, payment, bank, GL or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -269,6 +269,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_document_writer.php'),
             'hrm_fnd_005_employee_transfer_task_document_browser_cutover'=>array('previous'=>'1.0.325','version'=>'1.0.326',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_document_browser_cutover.php'),
+            'hrm_fnd_005_employee_separation_task_document_writer'=>array('previous'=>'1.0.326','version'=>'1.0.327',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_document_writer.php'),
         ),
     );
 }
