@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.320',
-        'active_legacy_payroll_contract'=>'1.0.275',
-        'next_backlog_item'=>'read-only HRM-FND-005 Employee Transfer checklist-task browser recovery/visibility review',
+        'active_database_version'=>'1.0.323',
+        'active_legacy_payroll_contract'=>'1.0.278',
+        'next_backlog_item'=>'read-only HRM-FND-005 lifecycle task/document same-subject version/retention custody review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'freeze Employee Transfer task route placement, create/complete invocation, restricted pending/completed visibility, server-owned retry/recovery and the still-deferred document-link boundary before changing any browser route or document custody',
+        'next_slice_scope'=>'freeze exact Worker/document same-subject mapping, immutable document version and retention/unlock authority before any task-document link, e-signature connector, offboarding template, payroll settlement or generic lifecycle dispatcher',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -257,6 +257,12 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_lifecycle_task_custody_foundation.php'),
             'hrm_fnd_005_employee_transfer_task_writer_foundation'=>array('previous'=>'1.0.319','version'=>'1.0.320',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_writer_foundation.php'),
+            'hrm_fnd_005_employee_transfer_task_browser_cutover'=>array('previous'=>'1.0.320','version'=>'1.0.321',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_transfer_task_browser_cutover.php'),
+            'hrm_fnd_005_employee_separation_task_writer_foundation'=>array('previous'=>'1.0.321','version'=>'1.0.322',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_writer_foundation.php'),
+            'hrm_fnd_005_employee_separation_task_browser_cutover'=>array('previous'=>'1.0.322','version'=>'1.0.323',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_separation_task_browser_cutover.php'),
         ),
     );
 }

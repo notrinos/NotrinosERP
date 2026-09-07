@@ -17,6 +17,7 @@ include_once($path_to_root . '/hrm/includes/db/eos_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_separation_browser_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_separation_task_browser_db.inc');
 
 /**
  * Calculate years of service for read-only EOS preview only.
@@ -47,6 +48,17 @@ function employee_separation_browser_status($employee_id) {
     if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
         return array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
     return get_hrm_lifecycle_employee_separation_browser_status($employee_id);
+}
+function employee_separation_task_browser_status($employee_id) {
+    if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
+        return array('status'=>'unavailable','own'=>false,'lifecycle_command_id'=>0,'task_status'=>'');
+    return get_hrm_lifecycle_employee_separation_task_browser_status($employee_id);
+}
+function employee_separation_display_task_status($status) {
+    if (!is_array($status) || !isset($status['status'])) return;
+    if ((string)$status['status'] === 'pending') display_notification(_('Your restricted Separation acknowledgement task is pending completion.'));
+    elseif ((string)$status['status'] === 'completed') display_notification(_('Your restricted Separation acknowledgement task is completed.'));
+    elseif ((string)$status['status'] === 'inconsistent') display_error(_('Employee Separation checklist-task custody is inconsistent. Task action is blocked until recovery.'));
 }
 function employee_separation_display_recovery_status($employee_id, $status) {
     if (!is_array($status) || !isset($status['status'])) return;
@@ -85,6 +97,19 @@ if (isset($_POST['Calculate'])) {
         }
     }
 }
+$employee_separation_task_message = false;
+if (isset($_POST['CreateSeparationTask']) || isset($_POST['CompleteSeparationTask'])) {
+    if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) { display_error(_('Employee is required.')); set_focus('employee_id'); }
+    elseif (isset($_POST['CreateSeparationTask'])) {
+        $task_id = create_hrm_lifecycle_employee_separation_task_from_browser($_POST['employee_id']);
+        if ($task_id === false) display_error(_('Could not create the restricted Separation acknowledgement task. The completed command must belong to the current actor and remain in accepted custody.'));
+        else { display_notification(_('Separation acknowledgement task created.')); $employee_separation_task_message = 'created'; }
+    } else {
+        $task_id = complete_hrm_lifecycle_employee_separation_task_from_browser($_POST['employee_id']);
+        if ($task_id === false) display_error(_('Could not complete the restricted Separation acknowledgement task. Only the current actor pending fixed task can be completed.'));
+        else { display_notification(_('Separation acknowledgement task completed.')); $employee_separation_task_message = 'completed'; }
+    }
+}
 $employee_separation_process_message = false;
 if (isset($_POST['Process'])) {
     if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) { display_error(_('Employee is required.')); set_focus('employee_id'); }
@@ -110,9 +135,11 @@ if (isset($_POST['Process'])) {
 }
 $current_status = employee_separation_browser_status($_POST['employee_id']);
 if ($employee_separation_process_message !== 'submitted') employee_separation_display_recovery_status($_POST['employee_id'], $current_status);
+$current_task_status = employee_separation_task_browser_status($_POST['employee_id']);
+if ($employee_separation_task_message === false) employee_separation_display_task_status($current_task_status);
 $employee_separation_selector_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_separation_selector');
 start_form(); start_table(TABLESTYLE2); label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class'=>'combo-layout-equal','format'=>'employee_separation_authoritative_employee_list')); end_row();
 date_row(_('Separation Date:'), 'separation_date'); check_row(_('Is Resignation:'), 'is_resignation'); label_row(_('Calculated EOS Preview:'), $eos_preview_available ? price_format($eos_amount) : _('Not calculated')); end_table(1);
-submit_center('Calculate', _('Calculate EOS Preview')); submit_center('Process', _('Submit Separation for Approval')); end_form(); end_page();
+submit_center('Calculate', _('Calculate EOS Preview')); submit_center('Process', _('Submit Separation for Approval')); if ((string)$current_task_status['status'] === 'not_created') submit_center('CreateSeparationTask', _('Create Separation Acknowledgement Task')); elseif ((string)$current_task_status['status'] === 'pending') submit_center('CompleteSeparationTask', _('Complete Separation Acknowledgement Task')); end_form(); end_page();

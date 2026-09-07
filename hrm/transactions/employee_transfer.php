@@ -18,6 +18,7 @@ include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_browser_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_task_browser_db.inc');
 
 /**
  * Resolve one Employee Transfer selector label at the page-level instant.
@@ -60,6 +61,27 @@ function employee_transfer_browser_status($employee_id)
     if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
         return array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
     return get_hrm_lifecycle_employee_transfer_browser_status($employee_id);
+}
+
+/** @return array */
+function employee_transfer_task_browser_status($employee_id)
+{
+    if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
+        return array('status'=>'unavailable','own'=>false,'lifecycle_command_id'=>0,'task_status'=>'');
+    return get_hrm_lifecycle_employee_transfer_task_browser_status($employee_id);
+}
+
+/** @return void */
+function employee_transfer_display_task_status($status)
+{
+    if (!is_array($status) || !isset($status['status']))
+        return;
+    if ((string)$status['status'] === 'pending')
+        display_notification(_('Your restricted Transfer acknowledgement task is pending completion.'));
+    elseif ((string)$status['status'] === 'completed')
+        display_notification(_('Your restricted Transfer acknowledgement task is completed.'));
+    elseif ((string)$status['status'] === 'inconsistent')
+        display_error(_('Employee Transfer checklist-task custody is inconsistent. Task action is blocked until recovery.'));
 }
 
 /** @return void */
@@ -126,6 +148,30 @@ if (!isset($_POST['new_manager_employee_id']))
     $_POST['new_manager_employee_id'] = '';
 if (!isset($_POST['effective_date']))
     $_POST['effective_date'] = Today();
+
+$employee_transfer_task_message = false;
+if (isset($_POST['CreateTransferTask']) || isset($_POST['CompleteTransferTask'])) {
+    if ($_POST['employee_id'] == '' || $_POST['employee_id'] == ALL_TEXT) {
+        display_error(_('Employee is required.'));
+        set_focus('employee_id');
+    } elseif (isset($_POST['CreateTransferTask'])) {
+        $task_id = create_hrm_lifecycle_employee_transfer_task_from_browser($_POST['employee_id']);
+        if ($task_id === false)
+            display_error(_('Could not create the restricted Transfer acknowledgement task. The completed command must belong to the current actor and remain in accepted custody.'));
+        else {
+            display_notification(_('Transfer acknowledgement task created.'));
+            $employee_transfer_task_message = 'created';
+        }
+    } else {
+        $task_id = complete_hrm_lifecycle_employee_transfer_task_from_browser($_POST['employee_id']);
+        if ($task_id === false)
+            display_error(_('Could not complete the restricted Transfer acknowledgement task. Only the current actor pending fixed task can be completed.'));
+        else {
+            display_notification(_('Transfer acknowledgement task completed.'));
+            $employee_transfer_task_message = 'completed';
+        }
+    }
+}
 
 $employee_transfer_process_message = false;
 if (isset($_POST['Process'])) {
@@ -208,6 +254,10 @@ $current_status = employee_transfer_browser_status($_POST['employee_id']);
 if ($employee_transfer_process_message !== 'submitted')
     employee_transfer_display_recovery_status($_POST['employee_id'], $current_status);
 
+$current_task_status = employee_transfer_task_browser_status($_POST['employee_id']);
+if ($employee_transfer_task_message === false)
+    employee_transfer_display_task_status($current_task_status);
+
 $employee_transfer_selector_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_transfer_selector');
 
@@ -224,6 +274,10 @@ assignment_managers_list_row(_('New Manager:'), 'new_manager_employee_id', '', g
 date_row(_('Effective Date:'), 'effective_date');
 end_table(1);
 submit_center('Process', _('Submit Transfer for Approval'));
+if ((string)$current_task_status['status'] === 'not_created')
+    submit_center('CreateTransferTask', _('Create Transfer Acknowledgement Task'));
+elseif ((string)$current_task_status['status'] === 'pending')
+    submit_center('CompleteTransferTask', _('Complete Transfer Acknowledgement Task'));
 end_form();
 
 end_page();
