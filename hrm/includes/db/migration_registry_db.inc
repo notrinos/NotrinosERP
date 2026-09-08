@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.334',
-        'active_legacy_payroll_contract'=>'1.0.291',
-        'next_backlog_item'=>'HRM-FND-005 Employee maintenance fixed-command ownership review',
+        'active_database_version'=>'1.0.335',
+        'active_legacy_payroll_contract'=>'1.0.292',
+        'next_backlog_item'=>'HRM-FND-005 Employee Confirmation browser recovery/cutover review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'read-only ownership review only: distinguish Employee profile dates from hire/probation/confirmation/status commands and freeze one existing action permission, effective-date, maker/checker, audit and recovery contract before adding mutation authority',
+        'next_slice_scope'=>'read-only browser recovery/cutover review only: preserve SA_EMPLOYEE, accept employee/effective-date/bounded reason input, keep command and idempotency identity server-owned, expose coarse current-maker state, and remove only direct confirmation_date mutation without widening probation, employment-type, status, payroll or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -285,6 +285,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_task_writer.php'),
             'hrm_fnd_005_employee_training_assignment_task_browser_cutover'=>array('previous'=>'1.0.333','version'=>'1.0.334',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_task_browser_cutover.php'),
+            'hrm_fnd_005_employee_confirmation_command_foundation'=>array('previous'=>'1.0.334','version'=>'1.0.335',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_confirmation_command_foundation.php'),
         ),
     );
 }
