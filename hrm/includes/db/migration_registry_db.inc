@@ -12,10 +12,10 @@ function hrm_migration_head_registry()
 {
     return array(
         'active_database_version'=>'1.0.334',
-        'active_legacy_payroll_contract'=>'1.0.290',
-        'next_backlog_item'=>'HRM-FND-005 post-Training-Assignment task/document necessity and next fixed lifecycle ownership review',
+        'active_legacy_payroll_contract'=>'1.0.291',
+        'next_backlog_item'=>'HRM-FND-005 Employee maintenance fixed-command ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'read-only ownership review only: reverify whether Training Assignment needs any document/retention continuation and select the next fixed lifecycle boundary without inventing onboarding, probation, confirmation, promotion, suspension, rehire, employee-status, recruitment, appraisal, e-signature, payroll-post, payment, bank, GL or accounting authority',
+        'next_slice_scope'=>'read-only ownership review only: distinguish Employee profile dates from hire/probation/confirmation/status commands and freeze one existing action permission, effective-date, maker/checker, audit and recovery contract before adding mutation authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),

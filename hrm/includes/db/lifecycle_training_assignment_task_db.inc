@@ -54,9 +54,10 @@ function hrm_lifecycle_training_assignment_task_positive_int($value)
 
 /**
  * Lock and validate one accepted completed Training Assignment command and its
- * command-owned independent approval draft.
+ * command-owned independent approval draft. Pass false for a read-only lookup;
+ * mutation callers retain the default row lock inside their transaction.
  */
-function hrm_lifecycle_training_assignment_task_command_for_update($command_id, $actor = 0)
+function hrm_lifecycle_training_assignment_task_command_for_update($command_id, $actor = 0, $for_update = true)
 {
     $command_id = hrm_lifecycle_training_assignment_task_positive_int($command_id);
     $actor = (int)$actor;
@@ -67,13 +68,15 @@ function hrm_lifecycle_training_assignment_task_command_for_update($command_id, 
         ."c.command_status,c.approval_draft_id,c.row_version,c.requested_by,c.completed_at,c.completed_by,"
         ."d.id approval_row_id,d.trans_type,d.status approval_status,d.submitted_by "
         ."FROM ".TB_PREF."hrm_lifecycle_commands c LEFT JOIN ".TB_PREF."approval_drafts d "
-        ."ON d.id=c.approval_draft_id WHERE c.lifecycle_command_id=".$command_id." LIMIT 1 FOR UPDATE";
+        ."ON d.id=c.approval_draft_id WHERE c.lifecycle_command_id=".$command_id." LIMIT 1"
+        .($for_update ? " FOR UPDATE" : "");
     $result = db_query($sql, 'could not lock Employee Training Assignment lifecycle task command');
     $row = $result ? db_fetch_assoc($result) : false;
     if (!$row || (string)$row['command_type'] !== HRM_LIFECYCLE_TRAINING_ASSIGNMENT_COMMAND_TYPE
         || (string)$row['command_status'] !== 'completed' || (int)$row['row_version'] !== 2
         || (int)$row['worker_id'] <= 0 || (int)$row['employment_id'] <= 0 || (int)$row['assignment_id'] <= 0
         || (int)$row['requested_by'] <= 0 || (int)$row['completed_by'] <= 0
+        || (int)$row['completed_by'] === (int)$row['requested_by']
         || trim((string)$row['completed_at']) === '' || (int)$row['approval_draft_id'] <= 0
         || (int)$row['approval_row_id'] !== (int)$row['approval_draft_id']
         || (int)$row['trans_type'] !== (int)ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT
@@ -111,13 +114,18 @@ function hrm_lifecycle_training_assignment_task_contract_matches($task, $command
                 && empty($task['completed_at']) && empty($task['completed_by']))
             || ((string)$task['task_status'] === 'completed'
                 && (int)$task['row_version'] === 2 && (int)$task['created_by'] > 0
-                && trim((string)$task['completed_at']) !== '' && (int)$task['completed_by'] > 0));
+                && trim((string)$task['completed_at']) !== '' && (int)$task['completed_by'] > 0
+                && (int)$task['completed_by'] === (int)$task['created_by']));
 }
 
+/** Read restricted task metadata only for its accepted command's authenticated maker. */
 function get_hrm_lifecycle_employee_training_assignment_task($command_id)
 {
     $command_id = hrm_lifecycle_training_assignment_task_positive_int($command_id);
-    if ($command_id === false || !hrm_lifecycle_training_assignment_task_permission())
+    $actor = hrm_lifecycle_training_assignment_task_actor_id();
+    if ($command_id === false || $actor <= 0 || !hrm_lifecycle_training_assignment_task_permission())
+        return false;
+    if (!hrm_lifecycle_training_assignment_task_command_for_update($command_id, $actor, false))
         return false;
     $result = db_query("SELECT lifecycle_task_id,lifecycle_command_id,task_code,task_status,"
         ."confidentiality_class,retention_locked,row_version,created_at,created_by,completed_at,completed_by "
@@ -125,7 +133,8 @@ function get_hrm_lifecycle_employee_training_assignment_task($command_id)
         ." AND task_code=".db_escape(HRM_LIFECYCLE_TRAINING_ASSIGNMENT_TASK_CODE)." LIMIT 1",
         'could not read Employee Training Assignment lifecycle task');
     $row = $result ? db_fetch_assoc($result) : false;
-    return $row && hrm_lifecycle_training_assignment_task_contract_matches($row, $command_id) ? $row : false;
+    return $row && hrm_lifecycle_training_assignment_task_contract_matches($row, $command_id)
+        && (int)$row['created_by'] === $actor ? $row : false;
 }
 
 function hrm_lifecycle_training_assignment_task_audit($action, $task, $command)

@@ -59,6 +59,7 @@ function hrm_lifecycle_training_assignment_task_browser_context($employee_id)
         return $base;
     if ((int)$command['lifecycle_command_id'] <= 0 || (int)$command['row_version'] !== 2
         || (int)$command['requested_by'] !== $actor || (int)$command['completed_by'] <= 0
+        || (int)$command['completed_by'] === (int)$command['requested_by']
         || trim((string)$command['completed_at']) === '' || (int)$command['approval_draft_id'] <= 0
         || (int)$command['approval_row_id'] !== (int)$command['approval_draft_id']
         || !defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')
@@ -96,19 +97,23 @@ function get_hrm_lifecycle_employee_training_assignment_task_browser_status($emp
     );
 }
 
+/** Reconcile repeated create POSTs through the actor-bound idempotent writer. */
 function create_hrm_lifecycle_employee_training_assignment_task_from_browser($employee_id)
 {
     $context = hrm_lifecycle_training_assignment_task_browser_context($employee_id);
-    if (!is_array($context) || (string)$context['status'] !== 'not_created'
+    if (!is_array($context)
+        || !in_array((string)$context['status'], array('not_created','pending','completed'), true)
         || empty($context['own']) || (int)$context['lifecycle_command_id'] <= 0)
         return false;
     return create_hrm_lifecycle_employee_training_assignment_task((int)$context['lifecycle_command_id']);
 }
 
+/** Reconcile a lost completion response without repeating its task/audit mutation. */
 function complete_hrm_lifecycle_employee_training_assignment_task_from_browser($employee_id)
 {
     $context = hrm_lifecycle_training_assignment_task_browser_context($employee_id);
-    if (!is_array($context) || (string)$context['status'] !== 'pending'
+    if (!is_array($context)
+        || !in_array((string)$context['status'], array('pending','completed'), true)
         || empty($context['own']) || (int)$context['lifecycle_command_id'] <= 0)
         return false;
     return complete_hrm_lifecycle_employee_training_assignment_task((int)$context['lifecycle_command_id']);
