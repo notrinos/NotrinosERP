@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.330',
-        'active_legacy_payroll_contract'=>'1.0.286',
-        'next_backlog_item'=>'HRM-FND-005 post-Salary-Revision next fixed-command/checklist ownership review',
+        'active_database_version'=>'1.0.332',
+        'active_legacy_payroll_contract'=>'1.0.288',
+        'next_backlog_item'=>'HRM-FND-005 post-Training-Assignment checklist/completion ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'read-only ownership review only: reverify the next smallest fixed lifecycle/checklist dependency after Salary Revision without inventing onboarding/offboarding/probation/e-signature or widening compensation, payroll-post, payment, bank, GL or accounting authority',
+        'next_slice_scope'=>'read-only ownership review only: reverify remaining checklist/completion dependencies after Training Assignment without inventing onboarding, probation, confirmation, promotion, suspension, rehire, employee-status, recruitment, appraisal, e-signature, payroll-post, payment, bank, GL or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -277,6 +277,10 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_salary_revision_command_foundation.php'),
             'hrm_fnd_005_employee_salary_revision_browser_cutover'=>array('previous'=>'1.0.329','version'=>'1.0.330',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_salary_revision_browser_cutover.php'),
+            'hrm_fnd_005_employee_training_assignment_command_foundation'=>array('previous'=>'1.0.330','version'=>'1.0.331',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_command_foundation.php'),
+            'hrm_fnd_005_employee_training_assignment_browser_cutover'=>array('previous'=>'1.0.331','version'=>'1.0.332',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_browser_cutover.php'),
         ),
     );
 }

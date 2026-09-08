@@ -17,6 +17,8 @@ include_once($path_to_root . '/hrm/includes/hrm_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_training_assignment_browser_db.inc');
 
 page(_("Training Management"));
 
@@ -113,6 +115,8 @@ if (isset($_POST['add_course'])) {
 }
 
 if (isset($_POST['assign_training'])) {
+    $submitted_score = trim((string)get_post('score', '')) === '' ? '' : (string)input_num('score', 0);
+    $submitted_cost = (string)input_num('cost_amount', 0);
     if (trim(get_post('employee_id')) == '' || get_post('employee_id') == ALL_TEXT)
         display_error(_('Please select an employee.'));
     elseif (!employee_exists_by_code(get_post('employee_id')))
@@ -131,24 +135,74 @@ if (isset($_POST['assign_training'])) {
         display_error(_('Score must be numeric.'));
     elseif (trim(get_post('cost_amount', '')) !== '' && !is_numeric(get_post('cost_amount', '')))
         display_error(_('Cost amount must be numeric.'));
+    elseif (hrm_lifecycle_training_assignment_status(get_post('training_status', 0)) === false)
+        display_error(_('Training status is invalid.'));
+    elseif (hrm_lifecycle_training_assignment_decimal($submitted_score, true, false) === false)
+        display_error(_('Score must be numeric with at most 6 decimal places.'));
+    elseif (hrm_lifecycle_training_assignment_decimal($submitted_cost, false, true) === false)
+        display_error(_('Cost amount must be a non-negative number with at most 6 decimal places.'));
+    elseif (hrm_lifecycle_training_assignment_remarks(get_post('training_remarks', '')) === false)
+        display_error(_('Remarks must not exceed 1000 characters.'));
     else {
-        add_employee_training(array(
-            'employee_id' => get_post('employee_id'),
-            'course_id' => get_post('course_id', 0),
-            'training_date' => get_post('training_date'),
-            'completion_date' => get_post('completion_date', ''),
-            'status' => get_post('training_status', 0),
-            'score' => get_post('score', ''),
-            'cost_amount' => input_num('cost_amount', 0),
-            'remarks' => get_post('training_remarks', '')
-        ));
-        display_notification(_('Employee training record has been added.'));
+        $employee_id = trim((string)get_post('employee_id'));
+        $browser_status = get_hrm_lifecycle_employee_training_assignment_browser_status($employee_id);
+        if (!is_array($browser_status) || !isset($browser_status['status'])
+            || $browser_status['status'] === 'inconsistent')
+            display_error(_('Training assignment approval custody is inconsistent. No training record was added.'));
+        elseif ($browser_status['status'] === 'blocked')
+            display_error(_('Another employee lifecycle request is pending for this employee.'));
+        else {
+            if (in_array($browser_status['status'], array('completed','rejected','cancelled'), true))
+                hrm_lifecycle_training_assignment_browser_forget_idempotency_key($employee_id);
+            $idempotency_key = hrm_lifecycle_training_assignment_browser_idempotency_key($employee_id);
+            $result = $idempotency_key === false ? false
+                : submit_hrm_lifecycle_employee_training_assignment(
+                    $employee_id,
+                    get_post('course_id', 0),
+                    date2sql(get_post('training_date')),
+                    trim(get_post('completion_date')) === '' ? '' : date2sql(get_post('completion_date')),
+                    get_post('training_status', 0),
+                    $submitted_score,
+                    $submitted_cost,
+                    get_post('training_remarks', ''),
+                    $idempotency_key
+                );
+            if (!is_array($result) || !isset($result['status']) || $result['status'] !== 'pending')
+                display_error(_('Training assignment could not be submitted for approval. No direct training record was added.'));
+            else
+                display_notification(!empty($result['exact_retry'])
+                    ? _('Training assignment approval request is already pending.')
+                    : _('Training assignment has been submitted for approval.'));
+        }
     }
 }
 
 $training_history_as_of = hrm_person_worker_utc_now();
 hrm_log_restricted_employee_projection('employee_training_history');
 hrm_log_restricted_employee_projection('employee_training_selector');
+
+$training_assignment_status = false;
+if (trim((string)get_post('employee_id', '')) !== '' && get_post('employee_id') != ALL_TEXT) {
+    $training_assignment_status = get_hrm_lifecycle_employee_training_assignment_browser_status(get_post('employee_id'));
+    if (is_array($training_assignment_status) && isset($training_assignment_status['status'])) {
+        $coarse_status = (string)$training_assignment_status['status'];
+        if ($coarse_status === 'pending')
+            display_notification(_('A training assignment approval request is pending.'));
+        elseif ($coarse_status === 'blocked')
+            display_warning(_('Another employee lifecycle request is pending for this employee.'));
+        elseif ($coarse_status === 'completed') {
+            display_notification(_('The latest training assignment approval request is completed.'));
+            hrm_lifecycle_training_assignment_browser_forget_idempotency_key(get_post('employee_id'));
+        } elseif ($coarse_status === 'rejected') {
+            display_warning(_('The latest training assignment approval request was rejected.'));
+            hrm_lifecycle_training_assignment_browser_forget_idempotency_key(get_post('employee_id'));
+        } elseif ($coarse_status === 'cancelled') {
+            display_warning(_('The latest training assignment approval request was cancelled.'));
+            hrm_lifecycle_training_assignment_browser_forget_idempotency_key(get_post('employee_id'));
+        } elseif ($coarse_status === 'inconsistent')
+            display_error(_('Training assignment approval custody is inconsistent.'));
+    }
+}
 
 start_form();
 
@@ -191,7 +245,7 @@ amount_row(_('Cost Amount:'), 'cost_amount', get_post('cost_amount', 0));
 qty_row(_('Score:'), 'score', get_post('score', ''));
 textarea_row(_('Remarks:'), 'training_remarks', get_post('training_remarks', ''), 50, 2);
 end_table(1);
-submit_center('assign_training', _('Add Employee Training'));
+submit_center('assign_training', _('Submit Training Assignment for Approval'));
 
 start_table(TABLESTYLE, "width='95%'");
 table_header(array(_('ID'), _('Employee'), _('Course'), _('Date'), _('Status'), _('Score'), _('Cost')));

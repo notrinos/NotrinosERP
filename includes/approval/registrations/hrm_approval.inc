@@ -41,6 +41,11 @@ if (!is_file($hrm_lifecycle_salary_revision_source))
 	$hrm_lifecycle_salary_revision_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_salary_revision_command_db.inc';
 if (is_file($hrm_lifecycle_salary_revision_source))
 	include_once($hrm_lifecycle_salary_revision_source);
+$hrm_lifecycle_training_assignment_source = $path_to_root . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
+if (!is_file($hrm_lifecycle_training_assignment_source))
+	$hrm_lifecycle_training_assignment_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
+if (is_file($hrm_lifecycle_training_assignment_source))
+	include_once($hrm_lifecycle_training_assignment_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -122,6 +127,16 @@ function ensure_hrm_approval_transaction_registration()
 
 	if (defined('ST_HRM_LIFECYCLE_SALARY_REVISION')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_SALARY_REVISION, array(
+			TB_PREF . 'hrm_lifecycle_commands',
+			null,
+			'lifecycle_command_id',
+			'lifecycle_command_id',
+			'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
 			TB_PREF . 'hrm_lifecycle_commands',
 			null,
 			'lifecycle_command_id',
@@ -453,6 +468,19 @@ if (defined('ST_HRM_LIFECYCLE_SALARY_REVISION')) {
 		'executor'       => 'execute_approved_hrm_lifecycle_salary_revision',
 		'rejector'       => 'reject_hrm_lifecycle_salary_revision_draft',
 		'canceler'       => 'cancel_hrm_lifecycle_salary_revision_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
+		'label'          => _('Employee Training Assignment Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_training_assignment',
+		'rejector'       => 'reject_hrm_lifecycle_training_assignment_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_training_assignment_draft',
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',

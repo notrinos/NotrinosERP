@@ -101,8 +101,8 @@ function hrm_lifecycle_separation_browser_forget_idempotency_key($employee_id)
 
 /**
  * Validate one pending fixed lifecycle command without revealing its payload.
- * The current envelope contains only the accepted Transfer and Separation
- * command types. Any unknown pending type is treated as inconsistent custody.
+ * The current envelope contains the accepted Transfer, Separation, Salary
+ * Revision, and Training Assignment command types. Unknown types fail closed.
  *
  * @param array $row
  * @return bool
@@ -121,6 +121,10 @@ function hrm_lifecycle_separation_browser_pending_row_is_valid($row)
         return defined('ST_HRM_LIFECYCLE_SEPARATION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_SEPARATION;
     if ($type === 'employee_transfer')
         return defined('ST_HRM_LIFECYCLE_TRANSFER') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_TRANSFER;
+    if ($type === 'employee_salary_revision')
+        return defined('ST_HRM_LIFECYCLE_SALARY_REVISION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_SALARY_REVISION;
+    if ($type === 'employee_training_assignment')
+        return defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT;
     return false;
 }
 

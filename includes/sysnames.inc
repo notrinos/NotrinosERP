@@ -55,6 +55,7 @@ $systypes_array = array (
 	ST_HRM_LIFECYCLE_TRANSFER => _('Employee Transfer Lifecycle Command'),
 	ST_HRM_LIFECYCLE_SEPARATION => _('Employee Separation Lifecycle Command'),
 	ST_HRM_LIFECYCLE_SALARY_REVISION => _('Employee Salary Revision Lifecycle Command'),
+	ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT => _('Employee Training Assignment Lifecycle Command'),
 	ST_SALESRETURN => _('Sales RMA'),
 	ST_SALESAGREEMENT => _('Sales Agreement'),
 	ST_WH_TRANSFER_ORDER => _('Transfer Order'),
