@@ -51,6 +51,11 @@ if (!is_file($hrm_lifecycle_confirmation_source))
 	$hrm_lifecycle_confirmation_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_confirmation_command_db.inc';
 if (is_file($hrm_lifecycle_confirmation_source))
 	include_once($hrm_lifecycle_confirmation_source);
+$hrm_lifecycle_probation_schedule_source = $path_to_root . '/hrm/includes/db/lifecycle_probation_schedule_command_db.inc';
+if (!is_file($hrm_lifecycle_probation_schedule_source))
+	$hrm_lifecycle_probation_schedule_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_probation_schedule_command_db.inc';
+if (is_file($hrm_lifecycle_probation_schedule_source))
+	include_once($hrm_lifecycle_probation_schedule_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -152,6 +157,16 @@ function ensure_hrm_approval_transaction_registration()
 
 	if (defined('ST_HRM_LIFECYCLE_CONFIRMATION')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_CONFIRMATION, array(
+			TB_PREF . 'hrm_lifecycle_commands',
+			null,
+			'lifecycle_command_id',
+			'lifecycle_command_id',
+			'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_PROBATION_SCHEDULE, array(
 			TB_PREF . 'hrm_lifecycle_commands',
 			null,
 			'lifecycle_command_id',
@@ -509,6 +524,19 @@ if (defined('ST_HRM_LIFECYCLE_CONFIRMATION')) {
 		'executor'       => 'execute_approved_hrm_lifecycle_confirmation',
 		'rejector'       => 'reject_hrm_lifecycle_confirmation_draft',
 		'canceler'       => 'cancel_hrm_lifecycle_confirmation_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_PROBATION_SCHEDULE, array(
+		'label'          => _('Employee Probation Schedule Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_probation_schedule',
+		'rejector'       => 'reject_hrm_lifecycle_probation_schedule_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_probation_schedule_draft',
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',
