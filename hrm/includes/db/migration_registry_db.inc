@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.332',
-        'active_legacy_payroll_contract'=>'1.0.288',
-        'next_backlog_item'=>'HRM-FND-005 post-Training-Assignment checklist/completion ownership review',
+        'active_database_version'=>'1.0.334',
+        'active_legacy_payroll_contract'=>'1.0.290',
+        'next_backlog_item'=>'HRM-FND-005 post-Training-Assignment task/document necessity and next fixed lifecycle ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'read-only ownership review only: reverify remaining checklist/completion dependencies after Training Assignment without inventing onboarding, probation, confirmation, promotion, suspension, rehire, employee-status, recruitment, appraisal, e-signature, payroll-post, payment, bank, GL or accounting authority',
+        'next_slice_scope'=>'read-only ownership review only: reverify whether Training Assignment needs any document/retention continuation and select the next fixed lifecycle boundary without inventing onboarding, probation, confirmation, promotion, suspension, rehire, employee-status, recruitment, appraisal, e-signature, payroll-post, payment, bank, GL or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -281,6 +281,10 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_command_foundation.php'),
             'hrm_fnd_005_employee_training_assignment_browser_cutover'=>array('previous'=>'1.0.331','version'=>'1.0.332',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_browser_cutover.php'),
+            'hrm_fnd_005_employee_training_assignment_task_writer'=>array('previous'=>'1.0.332','version'=>'1.0.333',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_task_writer.php'),
+            'hrm_fnd_005_employee_training_assignment_task_browser_cutover'=>array('previous'=>'1.0.333','version'=>'1.0.334',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_training_assignment_task_browser_cutover.php'),
         ),
     );
 }

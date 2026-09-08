@@ -19,6 +19,7 @@ include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc');
 include_once($path_to_root . '/hrm/includes/db/lifecycle_training_assignment_browser_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_training_assignment_task_browser_db.inc');
 
 page(_("Training Management"));
 
@@ -114,6 +115,30 @@ if (isset($_POST['add_course'])) {
     }
 }
 
+$training_assignment_task_message = false;
+if (isset($_POST['CreateTrainingAssignmentTask']) || isset($_POST['CompleteTrainingAssignmentTask'])) {
+    $employee_id = trim((string)get_post('employee_id', ''));
+    if ($employee_id === '' || $employee_id == ALL_TEXT) {
+        display_error(_('Please select an employee.'));
+    } elseif (isset($_POST['CreateTrainingAssignmentTask'])) {
+        $task_id = create_hrm_lifecycle_employee_training_assignment_task_from_browser($employee_id);
+        if ($task_id === false)
+            display_error(_('Could not create the restricted Training acknowledgement task. The completed Training Assignment command must belong to the current actor and remain in accepted custody.'));
+        else {
+            display_notification(_('Training acknowledgement task created.'));
+            $training_assignment_task_message = 'created';
+        }
+    } else {
+        $task_id = complete_hrm_lifecycle_employee_training_assignment_task_from_browser($employee_id);
+        if ($task_id === false)
+            display_error(_('Could not complete the restricted Training acknowledgement task. Only the current actor pending fixed task can be completed.'));
+        else {
+            display_notification(_('Training acknowledgement task completed.'));
+            $training_assignment_task_message = 'completed';
+        }
+    }
+}
+
 if (isset($_POST['assign_training'])) {
     $submitted_score = trim((string)get_post('score', '')) === '' ? '' : (string)input_num('score', 0);
     $submitted_cost = (string)input_num('cost_amount', 0);
@@ -204,6 +229,21 @@ if (trim((string)get_post('employee_id', '')) !== '' && get_post('employee_id') 
     }
 }
 
+$training_assignment_task_status = array('status'=>'unavailable','own'=>false);
+if (trim((string)get_post('employee_id', '')) !== '' && get_post('employee_id') != ALL_TEXT) {
+    $training_assignment_task_status =
+        get_hrm_lifecycle_employee_training_assignment_task_browser_status(get_post('employee_id'));
+    if ($training_assignment_task_message === false
+        && is_array($training_assignment_task_status) && isset($training_assignment_task_status['status'])) {
+        if ((string)$training_assignment_task_status['status'] === 'pending')
+            display_notification(_('Your restricted Training acknowledgement task is pending completion.'));
+        elseif ((string)$training_assignment_task_status['status'] === 'completed')
+            display_notification(_('Your restricted Training acknowledgement task is completed.'));
+        elseif ((string)$training_assignment_task_status['status'] === 'inconsistent')
+            display_error(_('Training Assignment checklist-task custody is inconsistent. Task action is blocked until recovery.'));
+    }
+}
+
 start_form();
 
 display_heading(_('Courses'));
@@ -246,6 +286,10 @@ qty_row(_('Score:'), 'score', get_post('score', ''));
 textarea_row(_('Remarks:'), 'training_remarks', get_post('training_remarks', ''), 50, 2);
 end_table(1);
 submit_center('assign_training', _('Submit Training Assignment for Approval'));
+if ((string)$training_assignment_task_status['status'] === 'not_created')
+    submit_center('CreateTrainingAssignmentTask', _('Create Training Acknowledgement Task'));
+elseif ((string)$training_assignment_task_status['status'] === 'pending')
+    submit_center('CompleteTrainingAssignmentTask', _('Complete Training Acknowledgement Task'));
 
 start_table(TABLESTYLE, "width='95%'");
 table_header(array(_('ID'), _('Employee'), _('Course'), _('Date'), _('Status'), _('Score'), _('Cost')));
