@@ -57,6 +57,8 @@ include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/hrm_hooks.inc');
 include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_salary_audit.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_command_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
@@ -277,7 +279,7 @@ function collect_employee_data() {
 
 	// Employment
 	$data['hire_date']          = get_post('hire_date', '');
-	$data['confirmation_date']  = get_post('confirmation_date', '');
+	// HRM-FND-005: confirmation_date is lifecycle-command owned and never accepted by generic employee writes.
 	$data['probation_end_date'] = get_post('probation_end_date', '');
 	$data['released_date']      = get_post('released_date', '');
 	$data['employment_type']    = get_post('employment_type', 0);
@@ -619,7 +621,31 @@ function tab_employment($employee_id, $new_employee) {
 	table_section_title(_('Employment Details'));
 
 	date_row(_('Hire Date:'), 'hire_date', null, null, 0, 0, 1001);
-	date_row(_('Confirmation Date:'), 'confirmation_date', null, null, 0, 0, 1001);
+	if ($new_employee) {
+		label_row(_('Confirmation Date:'), _('Set after employee creation through approval'));
+	} else {
+		$current_confirmation = get_post('confirmation_date', '');
+		if ($current_confirmation !== '') {
+			label_row(_('Confirmation Date:'), htmlspecialchars($current_confirmation, ENT_QUOTES, 'UTF-8'));
+			hrm_lifecycle_confirmation_browser_forget_idempotency_key(get_post('NewEmpID'));
+		} else {
+			$confirmation_status = get_hrm_lifecycle_employee_confirmation_browser_status(get_post('NewEmpID'));
+			$status = isset($confirmation_status['status']) ? (string)$confirmation_status['status'] : 'inconsistent';
+			$status_labels = array(
+				'none'=>_('Not submitted'), 'pending'=>_('Pending approval'), 'blocked'=>_('Another lifecycle request is pending'),
+				'rejected'=>_('Latest request rejected'), 'cancelled'=>_('Latest request cancelled'),
+				'completed'=>_('Completed; refresh employee state'), 'inconsistent'=>_('Blocked: inconsistent approval custody'),
+			);
+			label_row(_('Confirmation Status:'), isset($status_labels[$status]) ? $status_labels[$status] : _('Blocked'));
+			if (in_array($status, array('none','rejected','cancelled'), true)) {
+				date_row(_('Confirmation Effective Date:'), 'confirmation_effective_date', null, null, 0, 0, 1001);
+				textarea_row(_('Confirmation Reason:'), 'confirmation_reason', null, 40, 3);
+				submit_cells('submit_confirmation', _('Submit Confirmation for Approval'));
+			} elseif ($status === 'pending') {
+				label_row(_('Confirmation Action:'), _('Awaiting independent approval'));
+			}
+		}
+	}
 	date_row(_('Probation End Date:'), 'probation_end_date', null, null, 0, 0, 1001);
 	employment_type_list_row(_('Employment Type:'), 'employment_type');
 
@@ -1369,6 +1395,50 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 // HANDLE ADD / UPDATE EMPLOYEE
 //======================================================================
 
+// HRM-FND-005 Employee Confirmation command-only browser submission.
+if (isset($_POST['submit_confirmation'])) {
+	$employee_code = trim((string)get_post('NewEmpID'));
+	$status = get_hrm_lifecycle_employee_confirmation_browser_status($employee_code);
+	$status_code = is_array($status) && isset($status['status']) ? (string)$status['status'] : 'inconsistent';
+	if ($employee_code === '' || !get_employee_by_code($employee_code)) {
+		display_error(_('Employee record could not be found. No confirmation request was created.'));
+	} elseif ($status_code === 'inconsistent') {
+		display_error(_('Employee Confirmation approval custody is inconsistent. No change was made.'));
+	} elseif ($status_code === 'blocked') {
+		display_error(_('Another employee lifecycle request is pending for this employee.'));
+	} elseif ($status_code === 'pending') {
+		display_notification(_('Employee Confirmation approval request is already pending.'));
+	} elseif ($status_code === 'completed') {
+		hrm_lifecycle_confirmation_browser_forget_idempotency_key($employee_code);
+		display_notification(_('Employee Confirmation is already completed.'));
+	} else {
+		$effective_user = trim((string)get_post('confirmation_effective_date'));
+		$reason = trim((string)get_post('confirmation_reason'));
+		if ($effective_user === '' || !is_date($effective_user)) {
+			display_error(_('Confirmation effective date is not in a valid format.'));
+			set_focus('confirmation_effective_date');
+		} elseif ($reason === '' || strlen(strip_tags($reason)) > 500) {
+			display_error(_('Confirmation reason is required and must not exceed 500 characters.'));
+			set_focus('confirmation_reason');
+		} else {
+			if (in_array($status_code, array('rejected','cancelled'), true))
+				hrm_lifecycle_confirmation_browser_forget_idempotency_key($employee_code);
+			$idempotency_key = hrm_lifecycle_confirmation_browser_idempotency_key($employee_code);
+			$result = $idempotency_key === false ? false : submit_hrm_lifecycle_employee_confirmation(
+				$employee_code, date2sql($effective_user), $reason, $idempotency_key
+			);
+			if ($result === false)
+				display_error(_('Employee Confirmation could not be submitted for approval. No direct confirmation change was made.'));
+			else
+				display_notification(_('Employee Confirmation has been submitted for approval.'));
+		}
+	}
+	$_POST['_tabs_sel'] = 'tab_employment';
+	$_POST['employee_id'] = $employee_code;
+	$_POST['NewEmpID'] = $employee_code;
+	$Ajax->activate('_page_body');
+}
+
 if (isset($_POST['addupdate'])) {
 	// If updating from a non-Personal tab, only a subset of fields
 	// will be posted. To avoid validation failing for required
@@ -1457,17 +1527,6 @@ if (isset($_POST['addupdate'])) {
 		$input_error = 1;
 		display_error(_('Hire date is not in a valid format.'));
 		set_focus('hire_date');
-	}
-
-	$confirmation_date = get_post('confirmation_date', '');
-	if (!empty($confirmation_date) && !is_date($confirmation_date)) {
-		$input_error = 1;
-		display_error(_('Confirmation date is not in a valid format.'));
-		set_focus('confirmation_date');
-	} elseif (!empty($confirmation_date) && !empty($hire_date) && is_date($hire_date) && date_comp($confirmation_date, $hire_date) < 0) {
-		$input_error = 1;
-		display_error(_('Confirmation date cannot be before hire date.'));
-		set_focus('confirmation_date');
 	}
 
 	$probation_end_date = get_post('probation_end_date', '');

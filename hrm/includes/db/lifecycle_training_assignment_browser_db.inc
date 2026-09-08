@@ -78,6 +78,7 @@ function hrm_lifecycle_training_assignment_browser_pending_row_is_valid($row)
         'employee_transfer'=>defined('ST_HRM_LIFECYCLE_TRANSFER') ? ST_HRM_LIFECYCLE_TRANSFER : -1,
         'employee_separation'=>defined('ST_HRM_LIFECYCLE_SEPARATION') ? ST_HRM_LIFECYCLE_SEPARATION : -1,
         'employee_salary_revision'=>defined('ST_HRM_LIFECYCLE_SALARY_REVISION') ? ST_HRM_LIFECYCLE_SALARY_REVISION : -1,
+        'employee_confirmation'=>defined('ST_HRM_LIFECYCLE_CONFIRMATION') ? ST_HRM_LIFECYCLE_CONFIRMATION : -1,
         HRM_LIFECYCLE_TRAINING_ASSIGNMENT_COMMAND_TYPE=>defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')
             ? ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT : -1,
     );
