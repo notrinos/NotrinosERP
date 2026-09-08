@@ -237,7 +237,7 @@ function clear_inputs() {
 		unset($_POST[$f]);
 }
 
-function collect_employee_data() {
+function collect_employee_data($new_employee=false) {
 	$data = array();
 
 	// Personal
@@ -281,18 +281,20 @@ function collect_employee_data() {
 
 	// Employment
 	$data['hire_date']          = get_post('hire_date', '');
-	// HRM-FND-005: confirmation_date and probation_end_date are lifecycle-command owned and never accepted by generic employee writes.
-	$data['released_date']      = get_post('released_date', '');
+	// HRM-FND-005: confirmation_date, probation_end_date, released_date and inactive are lifecycle-command owned for existing employees and are never accepted by generic maintenance writes.
 	$data['employment_type']    = get_post('employment_type', 0);
-	$data['department_id']      = get_post('department_id', 0);
-	$data['position_id']        = get_post('position_id', 0);
-	$data['grade_id']           = get_post('grade_id', 0);
+	// HRM-FND-005: accepted Employee Transfer owns organization/manager changes for existing employees.
+	// Initial organization/assignment values remain accepted only while creating a new employee.
+	if ($new_employee) {
+		$data['department_id'] = get_post('department_id', 0);
+		$data['position_id']   = get_post('position_id', 0);
+		$data['grade_id']      = get_post('grade_id', 0);
+		$data['reporting_to']  = get_post('reporting_to', '');
+	}
 	$data['shift_id']           = get_post('shift_id', 0);
-	$data['reporting_to']       = get_post('reporting_to', '');
 	$data['personal_salary']    = get_post('personal_salary', 0);
 	$data['cost_center_id']     = get_post('cost_center_id', 0);
 	$data['login_id']           = get_post('login_id', '');
-	$data['inactive']           = get_post('inactive', 0);
 
 	// Notes
 	$data['notes']              = get_post('notes', '');
@@ -688,10 +690,17 @@ function tab_employment($employee_id, $new_employee) {
 
 	table_section_title(_('Organization'));
 
-	departments_list_row(_('Department:'), 'department_id', null, false, _('Select department'));
-	positions_list_row(_('Job Position:'), 'position_id', null, true, _('Select position'));
+	if ($new_employee) {
+		departments_list_row(_('Department:'), 'department_id', null, false, _('Select department'));
+		positions_list_row(_('Job Position:'), 'position_id', null, true, _('Select position'));
+	} else {
+		$department_label = trim((string)get_post('department_name', ''));
+		$position_label = trim((string)get_post('position_name', ''));
+		label_row(_('Department:'), htmlspecialchars($department_label === '' ? _('Not assigned') : $department_label, ENT_QUOTES, 'UTF-8'));
+		label_row(_('Job Position:'), htmlspecialchars($position_label === '' ? _('Not assigned') : $position_label, ENT_QUOTES, 'UTF-8'));
+	}
 	
-	// Display Job Class as label (read-only) — fetched from the selected position
+	// Display Job Class as label (read-only) — fetched from the selected/stored position
 	$job_class_name = _('Not assigned');
 	$position_id = get_post('position_id');
 	if ($position_id) {
@@ -703,7 +712,12 @@ function tab_employment($employee_id, $new_employee) {
 	}
 	label_row(_('Job Class:'), $job_class_name);
 	
-	grades_list_row(_('Pay Grade:'), 'grade_id', null, _('Basic'));
+	if ($new_employee) {
+		grades_list_row(_('Pay Grade:'), 'grade_id', null, _('Basic'));
+	} else {
+		$grade_label = trim((string)get_post('grade_name', ''));
+		label_row(_('Pay Grade:'), htmlspecialchars($grade_label === '' ? _('Not assigned') : $grade_label, ENT_QUOTES, 'UTF-8'));
+	}
 
 	// ── RIGHT COLUMN ─────────────────────────────────────
 	table_section(2);
@@ -711,17 +725,33 @@ function tab_employment($employee_id, $new_employee) {
 	table_section_title(_('Assignment'));
 
 	work_shifts_list_row(_('Work Shift:'), 'shift_id', null, true);
-	reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'), false, array(
-		'format' => 'employee_reporting_to_authoritative_employee_list'
-	));
+	if ($new_employee) {
+		reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'), false, array(
+			'format' => 'employee_reporting_to_authoritative_employee_list'
+		));
+	} else {
+		$manager_code = trim((string)get_post('reporting_to', ''));
+		$manager_label = _('Not assigned');
+		if ($manager_code !== '') {
+			$manager = get_employee_by_code($manager_code);
+			$manager_label = $manager && !empty($manager['employee_name'])
+				? $manager['employee_name'].' ('.$manager_code.')' : $manager_code;
+		}
+		label_row(_('Reports To:'), htmlspecialchars($manager_label, ENT_QUOTES, 'UTF-8'));
+	}
 	users_list_row(_('System Login:'), 'login_id', null, false, _('Select user'));
 	dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
 
 	table_section_title(_('Salary & Status'));
 
 	yesno_list_row(_('Personal Salary Structure:'), 'personal_salary');
-	date_row(_('Release Date:'), 'released_date', null, null, 0, 0, 1001);
-	record_status_list_row(_('Employee Status:'), 'inactive');
+	if ($new_employee) {
+		label_row(_('Release Date:'), _('Not set'));
+		label_row(_('Employee Status:'), _('Active (default)'));
+	} else {
+		label_row(_('Release Date:'), trim((string)get_post('released_date')) === '' ? _('Not set') : get_post('released_date'));
+		label_row(_('Employee Status:'), get_post('inactive') ? _('Inactive') : _('Active'));
+	}
 
 	table_section_title(_('Notes'));
 
@@ -1618,17 +1648,6 @@ if (isset($_POST['addupdate'])) {
 		set_focus('hire_date');
 	}
 
-	$released_date = get_post('released_date', '');
-	if (!empty($released_date) && !is_date($released_date)) {
-		$input_error = 1;
-		display_error(_('Release date is not in a valid format.'));
-		set_focus('released_date');
-	} elseif (!empty($released_date) && !empty($hire_date) && is_date($hire_date) && date_comp($released_date, $hire_date) < 0) {
-		$input_error = 1;
-		display_error(_('Release date cannot be before hire date.'));
-		set_focus('released_date');
-	}
-
 	$passport_expiry = get_post('passport_expiry', '');
 	if (!empty($passport_expiry) && !is_date($passport_expiry)) {
 		$input_error = 1;
@@ -1639,7 +1658,7 @@ if (isset($_POST['addupdate'])) {
 	$data = array();
 	$old_emp = null;
 	if (!$input_error) {
-		$data = collect_employee_data();
+		$data = collect_employee_data($new_employee);
 		$old_emp = !$new_employee ? get_employee_by_code($_POST['NewEmpID']) : null;
 		if (!$new_employee && !$old_emp) {
 			$input_error = 1;
@@ -1662,44 +1681,14 @@ if (isset($_POST['addupdate'])) {
 
 	if (!$input_error) {
 		if (!$new_employee) {
-			// Track changes for history
-			$changes_detected = false;
-
-			if ($old_emp) {
-				if ($old_emp['department_id'] != $data['department_id']
-					|| $old_emp['position_id'] != $data['position_id']
-					|| $old_emp['grade_id'] != $data['grade_id']) {
-					$changes_detected = true;
-					$change_type = HRM_HIST_TRANSFER;
-					if ($old_emp['grade_id'] != $data['grade_id'])
-						$change_type = HRM_HIST_GRADE_CHANGE;
-				}
-			}
-
+			// HRM-FND-005: generic maintenance no longer owns Transfer-state changes or their history.
+			// The accepted Employee Transfer final checker writes the projection, Assignment and history atomically.
 			if (!update_employee($_POST['NewEmpID'], $data)) {
 				display_error(_('Could not update this employee or append required audit evidence.'));
 			} else {
 				if (check_value('del_image'))
 					del_image($_POST['NewEmpID']);
 
-				// Record history if significant changes
-				if ($changes_detected && $old_emp) {
-					record_employee_history($_POST['NewEmpID'], $change_type,
-						Today(),
-						array(
-							'department_id' => $old_emp['department_id'],
-							'position_id'   => $old_emp['position_id'],
-							'grade_id'      => $old_emp['grade_id'],
-							'salary'        => 0,
-						),
-						array(
-							'department_id' => $data['department_id'],
-							'position_id'   => $data['position_id'],
-							'grade_id'      => $data['grade_id'],
-							'salary'        => 0,
-						)
-					);
-				}
 
 				// Fire hook
 				hrm_fire_hook('on_employee_updated', $_POST['NewEmpID'], $old_emp, $data);
@@ -1711,6 +1700,9 @@ if (isset($_POST['addupdate'])) {
 		}
 		else {
 			$data['employee_id'] = $_POST['NewEmpID'];
+			// New employee creation retains only the safe active default; no release date is seeded.
+			$data['inactive'] = 0;
+			unset($data['released_date']);
 			$emp_number = add_employee($data);
 			if (!$emp_number) {
 				display_error(_('Could not add this employee or append required audit evidence.'));

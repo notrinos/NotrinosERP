@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.338',
-        'active_legacy_payroll_contract'=>'1.0.297',
-        'next_backlog_item'=>'HRM-FND-005 Employee maintenance Separation-state bypass closure',
+        'active_database_version'=>'1.0.340',
+        'active_legacy_payroll_contract'=>'1.0.299',
+        'next_backlog_item'=>'HRM-FND-005 post-Transfer-bypass lifecycle ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Employee maintenance Separation-state bypass closure only: remove existing-record generic released_date/inactive mutation while preserving new-employee active default; Separation final checker remains sole reviewed terminal writer; no reactivation/rehire, payroll or accounting authority',
+        'next_slice_scope'=>'Read-only post-Transfer-bypass lifecycle ownership review; reverify remaining generic Employee writers against accepted lifecycle authorities before releasing another mutation slice.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -293,6 +293,10 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_probation_schedule_command_foundation.php'),
             'hrm_fnd_005_employee_probation_schedule_browser_cutover'=>array('previous'=>'1.0.337','version'=>'1.0.338',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_probation_schedule_browser_cutover.php'),
+            'hrm_fnd_005_employee_maintenance_separation_state_bypass_closure'=>array('previous'=>'1.0.338','version'=>'1.0.339',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_separation_state_bypass_closure.php'),
+            'hrm_fnd_005_employee_maintenance_transfer_state_bypass_closure'=>array('previous'=>'1.0.339','version'=>'1.0.340',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_transfer_state_bypass_closure.php'),
         ),
     );
 }
