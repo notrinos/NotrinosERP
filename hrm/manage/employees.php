@@ -59,6 +59,8 @@ include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_salary_audit.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_command_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_browser_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_command_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
@@ -279,8 +281,7 @@ function collect_employee_data() {
 
 	// Employment
 	$data['hire_date']          = get_post('hire_date', '');
-	// HRM-FND-005: confirmation_date is lifecycle-command owned and never accepted by generic employee writes.
-	$data['probation_end_date'] = get_post('probation_end_date', '');
+	// HRM-FND-005: confirmation_date and probation_end_date are lifecycle-command owned and never accepted by generic employee writes.
 	$data['released_date']      = get_post('released_date', '');
 	$data['employment_type']    = get_post('employment_type', 0);
 	$data['department_id']      = get_post('department_id', 0);
@@ -646,7 +647,43 @@ function tab_employment($employee_id, $new_employee) {
 			}
 		}
 	}
-	date_row(_('Probation End Date:'), 'probation_end_date', null, null, 0, 0, 1001);
+	if ($new_employee) {
+		label_row(_('Probation End Date:'), _('Set after employee creation through approval'));
+	} else {
+		$current_probation = get_post('probation_end_date', '');
+		$current_confirmation = get_post('confirmation_date', '');
+		label_row(_('Probation End Date:'), $current_probation !== ''
+			? htmlspecialchars($current_probation, ENT_QUOTES, 'UTF-8') : _('Not scheduled'));
+		if ($current_confirmation !== '') {
+			hrm_lifecycle_probation_schedule_browser_forget_idempotency_key(get_post('NewEmpID'));
+			label_row(_('Probation Schedule Status:'), _('Unavailable after confirmation'));
+		} elseif ($current_probation !== '' && is_date($current_probation) && date_comp($current_probation, Today()) < 0) {
+			hrm_lifecycle_probation_schedule_browser_forget_idempotency_key(get_post('NewEmpID'));
+			label_row(_('Probation Schedule Status:'), _('Past schedule cannot be rewritten'));
+		} else {
+			$probation_status = get_hrm_lifecycle_employee_probation_schedule_browser_status(get_post('NewEmpID'));
+			$probation_status_code = isset($probation_status['status']) ? (string)$probation_status['status'] : 'inconsistent';
+			if ($probation_status_code === 'completed') {
+				hrm_lifecycle_probation_schedule_browser_forget_idempotency_key(get_post('NewEmpID'));
+				$probation_status_code = 'none'; // a later extension is a distinct fixed command
+			}
+			$probation_status_labels = array(
+				'none'=>_('Not submitted'), 'pending'=>_('Pending approval'), 'blocked'=>_('Another lifecycle request is pending'),
+				'rejected'=>_('Latest request rejected'), 'cancelled'=>_('Latest request cancelled'),
+				'completed'=>_('Completed; refresh employee state'), 'inconsistent'=>_('Blocked: inconsistent approval custody'),
+			);
+			label_row(_('Probation Schedule Status:'), isset($probation_status_labels[$probation_status_code])
+				? $probation_status_labels[$probation_status_code] : _('Blocked'));
+			if (in_array($probation_status_code, array('none','rejected','cancelled'), true)) {
+				date_row($current_probation === '' ? _('Probation End Date Request:') : _('Extended Probation End Date:'),
+					'probation_schedule_effective_date', null, null, 0, 0, 1001);
+				textarea_row(_('Probation Schedule Reason:'), 'probation_schedule_reason', null, 40, 3);
+				submit_cells('submit_probation_schedule', _('Submit Probation Schedule for Approval'));
+			} elseif ($probation_status_code === 'pending') {
+				label_row(_('Probation Schedule Action:'), _('Awaiting independent approval'));
+			}
+		}
+	}
 	employment_type_list_row(_('Employment Type:'), 'employment_type');
 
 	table_section_title(_('Organization'));
@@ -1439,6 +1476,58 @@ if (isset($_POST['submit_confirmation'])) {
 	$Ajax->activate('_page_body');
 }
 
+// HRM-FND-005 Employee Probation Schedule command-only browser submission.
+if (isset($_POST['submit_probation_schedule'])) {
+	$employee_code = trim((string)get_post('NewEmpID'));
+	$status = get_hrm_lifecycle_employee_probation_schedule_browser_status($employee_code);
+	$status_code = is_array($status) && isset($status['status']) ? (string)$status['status'] : 'inconsistent';
+	$employee = $employee_code === '' ? false : get_employee_by_code($employee_code);
+	if (!$employee) {
+		display_error(_('Employee record could not be found. No probation schedule request was created.'));
+	} elseif (!empty($employee['confirmation_date'])) {
+		hrm_lifecycle_probation_schedule_browser_forget_idempotency_key($employee_code);
+		display_error(_('Probation Schedule cannot be changed after Employee Confirmation.'));
+	} elseif ($status_code === 'inconsistent') {
+		display_error(_('Employee Probation Schedule approval custody is inconsistent. No change was made.'));
+	} elseif ($status_code === 'blocked') {
+		display_error(_('Another employee lifecycle request is pending for this employee.'));
+	} elseif ($status_code === 'pending') {
+		display_notification(_('Employee Probation Schedule approval request is already pending.'));
+	} else {
+		if ($status_code === 'completed') {
+			hrm_lifecycle_probation_schedule_browser_forget_idempotency_key($employee_code);
+			$status_code = 'none'; // completed schedule may be followed only by a later extension
+		}
+		$effective_user = trim((string)get_post('probation_schedule_effective_date'));
+		$reason = trim((string)get_post('probation_schedule_reason'));
+		if ($effective_user === '' || !is_date($effective_user)) {
+			display_error(_('Probation end date request is not in a valid format.'));
+			set_focus('probation_schedule_effective_date');
+		} elseif (date_comp($effective_user, Today()) <= 0) {
+			display_error(_('Probation end date request must be in the future.'));
+			set_focus('probation_schedule_effective_date');
+		} elseif ($reason === '' || strlen(strip_tags($reason)) > 500) {
+			display_error(_('Probation Schedule reason is required and must not exceed 500 characters.'));
+			set_focus('probation_schedule_reason');
+		} else {
+			if (in_array($status_code, array('rejected','cancelled'), true))
+				hrm_lifecycle_probation_schedule_browser_forget_idempotency_key($employee_code);
+			$idempotency_key = hrm_lifecycle_probation_schedule_browser_idempotency_key($employee_code);
+			$result = $idempotency_key === false ? false : submit_hrm_lifecycle_employee_probation_schedule(
+				$employee_code, date2sql($effective_user), $reason, $idempotency_key
+			);
+			if ($result === false)
+				display_error(_('Employee Probation Schedule could not be submitted for approval. No direct probation_end_date change was made.'));
+			else
+				display_notification(_('Employee Probation Schedule has been submitted for approval.'));
+		}
+	}
+	$_POST['_tabs_sel'] = 'tab_employment';
+	$_POST['employee_id'] = $employee_code;
+	$_POST['NewEmpID'] = $employee_code;
+	$Ajax->activate('_page_body');
+}
+
 if (isset($_POST['addupdate'])) {
 	// If updating from a non-Personal tab, only a subset of fields
 	// will be posted. To avoid validation failing for required
@@ -1527,17 +1616,6 @@ if (isset($_POST['addupdate'])) {
 		$input_error = 1;
 		display_error(_('Hire date is not in a valid format.'));
 		set_focus('hire_date');
-	}
-
-	$probation_end_date = get_post('probation_end_date', '');
-	if (!empty($probation_end_date) && !is_date($probation_end_date)) {
-		$input_error = 1;
-		display_error(_('Probation end date is not in a valid format.'));
-		set_focus('probation_end_date');
-	} elseif (!empty($probation_end_date) && !empty($hire_date) && is_date($hire_date) && date_comp($probation_end_date, $hire_date) < 0) {
-		$input_error = 1;
-		display_error(_('Probation end date cannot be before hire date.'));
-		set_focus('probation_end_date');
 	}
 
 	$released_date = get_post('released_date', '');

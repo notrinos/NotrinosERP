@@ -127,6 +127,8 @@ function hrm_lifecycle_salary_revision_browser_pending_row_is_valid($row)
         return defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT;
     if ($type === 'employee_confirmation')
         return defined('ST_HRM_LIFECYCLE_CONFIRMATION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_CONFIRMATION;
+    if ($type === 'employee_probation_schedule')
+        return defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_PROBATION_SCHEDULE;
     return false;
 }
 

@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.337',
-        'active_legacy_payroll_contract'=>'1.0.294',
-        'next_backlog_item'=>'HRM-FND-005 Employee Probation Schedule browser cutover',
+        'active_database_version'=>'1.0.338',
+        'active_legacy_payroll_contract'=>'1.0.297',
+        'next_backlog_item'=>'HRM-FND-005 Employee maintenance Separation-state bypass closure',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Employee Probation Schedule browser cutover only: remove direct probation_end_date mutation and route bounded schedule establish/extend requests through the fixed command; no probation outcome, payroll or accounting authority',
+        'next_slice_scope'=>'Employee maintenance Separation-state bypass closure only: remove existing-record generic released_date/inactive mutation while preserving new-employee active default; Separation final checker remains sole reviewed terminal writer; no reactivation/rehire, payroll or accounting authority',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -291,6 +291,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_confirmation_browser_cutover.php'),
             'hrm_fnd_005_employee_probation_schedule_command_foundation'=>array('previous'=>'1.0.336','version'=>'1.0.337',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_probation_schedule_command_foundation.php'),
+            'hrm_fnd_005_employee_probation_schedule_browser_cutover'=>array('previous'=>'1.0.337','version'=>'1.0.338',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_probation_schedule_browser_cutover.php'),
         ),
     );
 }
