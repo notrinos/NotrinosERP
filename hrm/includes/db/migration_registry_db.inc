@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.343',
-        'active_legacy_payroll_contract'=>'1.0.302',
-        'next_backlog_item'=>'HRM-FND-005 Employee maintenance Shift assignment bypass closure review',
+        'active_database_version'=>'1.0.344',
+        'active_legacy_payroll_contract'=>'1.0.303',
+        'next_backlog_item'=>'HRM-FND-005 Employee maintenance System-login identity binding bypass closure review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only Shift assignment bypass closure review; reconcile generic Employee shift_id mutation against normalized Assignment intervals, scheduling, attendance/overtime history, lifecycle custody and payroll-period boundaries before releasing any writer change.',
+        'next_slice_scope'=>'Read-only System-login identity binding bypass closure review; determine Employee login_id authority and reconcile user resolution, uniqueness, session/federation/account-recovery effects, security audit custody and recovery before releasing any writer change.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -303,6 +303,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_hire_date_bypass_closure.php'),
             'hrm_fnd_005_employee_maintenance_employment_type_bypass_closure'=>array('previous'=>'1.0.342','version'=>'1.0.343',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_employment_type_bypass_closure.php'),
+            'hrm_fnd_005_employee_maintenance_shift_assignment_bypass_closure'=>array('previous'=>'1.0.343','version'=>'1.0.344',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_shift_assignment_bypass_closure.php'),
         ),
     );
 }

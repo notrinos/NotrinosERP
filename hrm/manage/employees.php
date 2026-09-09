@@ -297,7 +297,10 @@ function collect_employee_data($new_employee=false) {
 		$data['grade_id']      = get_post('grade_id', 0);
 		$data['reporting_to']  = get_post('reporting_to', '');
 	}
-	$data['shift_id']           = get_post('shift_id', 0);
+	// HRM-FND-005: shift assignment is normalized Assignment/scheduling custody and is accepted only for initial Employee creation.
+	// Existing shift changes require separately reviewed effective-dated Assignment/history and attendance/payroll boundary semantics.
+	if ($new_employee)
+		$data['shift_id'] = get_post('shift_id', 0);
 	// HRM-FND-005: accepted Employee Salary Revision owns enabling personal-salary mode for existing employees.
 	// Initial salary-mode selection remains accepted only while creating a new employee.
 	if ($new_employee)
@@ -749,7 +752,18 @@ function tab_employment($employee_id, $new_employee) {
 
 	table_section_title(_('Assignment'));
 
-	work_shifts_list_row(_('Work Shift:'), 'shift_id', null, true);
+	if ($new_employee) {
+		work_shifts_list_row(_('Work Shift:'), 'shift_id', null, true);
+	} else {
+		$stored_shift_id = (int)get_post('shift_id', 0);
+		$stored_shift_label = _('Not assigned');
+		if ($stored_shift_id > 0) {
+			$shift = work_shifts_entity::find($stored_shift_id);
+			if ($shift && !empty($shift['shift_name']))
+				$stored_shift_label = (string)$shift['shift_name'];
+		}
+		label_row(_('Work Shift:'), htmlspecialchars($stored_shift_label, ENT_QUOTES, 'UTF-8'));
+	}
 	if ($new_employee) {
 		reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'), false, array(
 			'format' => 'employee_reporting_to_authoritative_employee_list'
