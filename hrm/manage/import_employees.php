@@ -143,7 +143,10 @@ if (isset($_POST['import_employees'])) {
                 }
 
                 if (employee_exists_by_code($data['employee_id'])) {
-                    if (update_employee($data['employee_id'], $data)) {
+                    // HRM-FND-005: existing Employee hire_date is chronology-owned and read-only here.
+                    $existing_data = $data;
+                    unset($existing_data['hire_date']);
+                    if (update_employee($data['employee_id'], $existing_data)) {
                         $updated++;
                     } else {
                         $failed++;
