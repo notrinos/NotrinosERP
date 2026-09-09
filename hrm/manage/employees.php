@@ -268,11 +268,16 @@ function collect_employee_data($new_employee=false) {
 	$data['social_security_no'] = get_post('social_security_no', '');
 
 	// Banking
-	$data['bank_name']     = get_post('bank_name', '');
-	$data['bank_branch']   = get_post('bank_branch', '');
-	$data['bank_account']  = get_post('bank_account', '');
-	$data['bank_routing']  = get_post('bank_routing', '');
-	$data['payment_method'] = get_post('payment_method', 0);
+	// HRM-FND-005/HRM-FND-004: generic Employee maintenance does not own existing bank/payment mutation.
+	// Existing request tampering is still detected by collect_submitted_employee_bank_details() and the governed bank guard.
+	// Initial Employee creation retains the legacy compatibility seed until a separately reviewed onboarding boundary replaces it.
+	if ($new_employee) {
+		$data['bank_name']      = get_post('bank_name', '');
+		$data['bank_branch']    = get_post('bank_branch', '');
+		$data['bank_account']   = get_post('bank_account', '');
+		$data['bank_routing']   = get_post('bank_routing', '');
+		$data['payment_method'] = get_post('payment_method', 0);
+	}
 
 	// Emergency
 	$data['emergency_name']     = get_post('emergency_name', '');

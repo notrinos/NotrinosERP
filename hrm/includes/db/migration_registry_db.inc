@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.346',
-        'active_legacy_payroll_contract'=>'1.0.305',
-        'next_backlog_item'=>'HRM-FND-005 residual Employee-maintenance writer ownership review',
+        'active_database_version'=>'1.0.347',
+        'active_legacy_payroll_contract'=>'1.0.306',
+        'next_backlog_item'=>'HRM-FND-005 Employee maintenance governed identity/tax collector ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only residual Employee-maintenance writer ownership review; reconcile existing-request bank/payment collector fields against HRM-FND-004 governed bank-account custody before releasing another generic writer change.',
+        'next_slice_scope'=>'Read-only governed identity/tax collector ownership review; reconcile existing-request identifier/tax fields against HRM-FND-004 identifier supersession/verification and legacy mutation-guard custody before releasing another generic writer change.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -309,6 +309,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_system_login_identity_binding_bypass_closure.php'),
             'hrm_fnd_005_employee_maintenance_cost_center_accounting_dimension_bypass_closure'=>array('previous'=>'1.0.345','version'=>'1.0.346',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_cost_center_accounting_dimension_bypass_closure.php'),
+            'hrm_fnd_005_employee_maintenance_bank_payment_collector_bypass_closure'=>array('previous'=>'1.0.346','version'=>'1.0.347',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_bank_payment_collector_bypass_closure.php'),
         ),
     );
 }
