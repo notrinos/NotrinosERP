@@ -292,7 +292,10 @@ function collect_employee_data($new_employee=false) {
 		$data['reporting_to']  = get_post('reporting_to', '');
 	}
 	$data['shift_id']           = get_post('shift_id', 0);
-	$data['personal_salary']    = get_post('personal_salary', 0);
+	// HRM-FND-005: accepted Employee Salary Revision owns enabling personal-salary mode for existing employees.
+	// Initial salary-mode selection remains accepted only while creating a new employee.
+	if ($new_employee)
+		$data['personal_salary'] = get_post('personal_salary', 0);
 	$data['cost_center_id']     = get_post('cost_center_id', 0);
 	$data['login_id']           = get_post('login_id', '');
 
@@ -744,7 +747,12 @@ function tab_employment($employee_id, $new_employee) {
 
 	table_section_title(_('Salary & Status'));
 
-	yesno_list_row(_('Personal Salary Structure:'), 'personal_salary');
+	if ($new_employee) {
+		yesno_list_row(_('Personal Salary Structure:'), 'personal_salary');
+	} else {
+		label_row(_('Personal Salary Structure:'), get_post('personal_salary')
+			? _('Personal (Individual Override)') : _('Position-based (Salary Structure)'));
+	}
 	if ($new_employee) {
 		label_row(_('Release Date:'), _('Not set'));
 		label_row(_('Employee Status:'), _('Active (default)'));

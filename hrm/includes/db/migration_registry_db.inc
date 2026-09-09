@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.340',
-        'active_legacy_payroll_contract'=>'1.0.299',
-        'next_backlog_item'=>'HRM-FND-005 post-Transfer-bypass lifecycle ownership review',
+        'active_database_version'=>'1.0.341',
+        'active_legacy_payroll_contract'=>'1.0.300',
+        'next_backlog_item'=>'HRM-FND-005 Employee maintenance Hire-date chronology bypass closure review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only post-Transfer-bypass lifecycle ownership review; reverify remaining generic Employee writers against accepted lifecycle authorities before releasing another mutation slice.',
+        'next_slice_scope'=>'Read-only Hire-date chronology bypass review; reconcile generic Employee hire_date mutation against normalized Employment/Assignment, rehire, probation, confirmation, separation, leave and payroll chronology before releasing any writer change.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -297,6 +297,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_separation_state_bypass_closure.php'),
             'hrm_fnd_005_employee_maintenance_transfer_state_bypass_closure'=>array('previous'=>'1.0.339','version'=>'1.0.340',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_transfer_state_bypass_closure.php'),
+            'hrm_fnd_005_employee_maintenance_salary_mode_bypass_closure'=>array('previous'=>'1.0.340','version'=>'1.0.341',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_salary_mode_bypass_closure.php'),
         ),
     );
 }
