@@ -285,7 +285,10 @@ function collect_employee_data($new_employee=false) {
 	if ($new_employee)
 		$data['hire_date'] = get_post('hire_date', '');
 	// HRM-FND-005: confirmation_date, probation_end_date, released_date and inactive are lifecycle-command owned for existing employees and are never accepted by generic maintenance writes.
-	$data['employment_type']    = get_post('employment_type', 0);
+	// HRM-FND-005: employment_type is Contract/leave-policy custody and is accepted only for initial Employee creation.
+	// Existing type changes require separately reviewed effective-dated Contract/history semantics.
+	if ($new_employee)
+		$data['employment_type'] = get_post('employment_type', 0);
 	// HRM-FND-005: accepted Employee Transfer owns organization/manager changes for existing employees.
 	// Initial organization/assignment values remain accepted only while creating a new employee.
 	if ($new_employee) {
@@ -700,7 +703,15 @@ function tab_employment($employee_id, $new_employee) {
 			}
 		}
 	}
-	employment_type_list_row(_('Employment Type:'), 'employment_type');
+	if ($new_employee) {
+		employment_type_list_row(_('Employment Type:'), 'employment_type');
+	} else {
+		$employment_types = hrm_get_employment_types();
+		$stored_employment_type = (int)get_post('employment_type', -1);
+		$employment_type_label = isset($employment_types[$stored_employment_type])
+			? $employment_types[$stored_employment_type] : _('Unknown');
+		label_row(_('Employment Type:'), htmlspecialchars((string)$employment_type_label, ENT_QUOTES, 'UTF-8'));
+	}
 
 	table_section_title(_('Organization'));
 
