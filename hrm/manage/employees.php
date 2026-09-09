@@ -261,11 +261,16 @@ function collect_employee_data($new_employee=false) {
 	$data['personal_email'] = get_post('personal_email', '');
 
 	// Identification
-	$data['national_id']       = get_post('national_id', '');
-	$data['passport']          = get_post('passport', '');
-	$data['passport_expiry']   = get_post('passport_expiry', '');
-	$data['tax_number']        = get_post('tax_number', '');
-	$data['social_security_no'] = get_post('social_security_no', '');
+	// HRM-FND-005/HRM-FND-004: generic Employee maintenance does not own existing identity/tax mutation.
+	// Existing request tampering is still detected by collect_submitted_employee_identity_details() and the restricted identity guard.
+	// HRM-FND-004 governed identifier supersession/verification and the low-level legacy mutation guard remain authoritative.
+	if ($new_employee) {
+		$data['national_id']        = get_post('national_id', '');
+		$data['passport']           = get_post('passport', '');
+		$data['passport_expiry']    = get_post('passport_expiry', '');
+		$data['tax_number']         = get_post('tax_number', '');
+		$data['social_security_no'] = get_post('social_security_no', '');
+	}
 
 	// Banking
 	// HRM-FND-005/HRM-FND-004: generic Employee maintenance does not own existing bank/payment mutation.
@@ -1724,11 +1729,13 @@ if (isset($_POST['addupdate'])) {
 		}
 	}
 
-	$passport_expiry = get_post('passport_expiry', '');
-	if (!empty($passport_expiry) && !is_date($passport_expiry)) {
-		$input_error = 1;
-		display_error(_('Passport expiry date is not in a valid format.'));
-		set_focus('passport_expiry');
+	if ($new_employee) {
+		$passport_expiry = get_post('passport_expiry', '');
+		if (!empty($passport_expiry) && !is_date($passport_expiry)) {
+			$input_error = 1;
+			display_error(_('Passport expiry date is not in a valid format.'));
+			set_focus('passport_expiry');
+		}
 	}
 
 	$data = array();
