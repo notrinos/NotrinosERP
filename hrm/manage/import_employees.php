@@ -143,9 +143,11 @@ if (isset($_POST['import_employees'])) {
                 }
 
                 if (employee_exists_by_code($data['employee_id'])) {
-                    // HRM-FND-005: existing Employee hire_date is chronology-owned and read-only here.
+                    // HRM-FND-005: existing Employee lifecycle/assignment custody is not owned by bulk profile import.
                     $existing_data = $data;
                     unset($existing_data['hire_date']);
+                    // Preserve accepted Separation/Transfer sole-writer boundaries on every existing-Employee path.
+                    unset($existing_data['department_id'], $existing_data['position_id'], $existing_data['grade_id'], $existing_data['inactive']);
                     if (update_employee($data['employee_id'], $existing_data)) {
                         $updated++;
                     } else {

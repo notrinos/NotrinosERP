@@ -306,7 +306,10 @@ function collect_employee_data($new_employee=false) {
 	if ($new_employee)
 		$data['personal_salary'] = get_post('personal_salary', 0);
 	$data['cost_center_id']     = get_post('cost_center_id', 0);
-	$data['login_id']           = get_post('login_id', '');
+	// HRM-FND-005: employees.login_id is a legacy, non-authoritative user reference and is accepted only for initial Employee creation.
+	// Existing rebinding requires separately reviewed canonical subject, uniqueness, session/federation/recovery and security-audit semantics.
+	if ($new_employee)
+		$data['login_id'] = get_post('login_id', '');
 
 	// Notes
 	$data['notes']              = get_post('notes', '');
@@ -778,7 +781,12 @@ function tab_employment($employee_id, $new_employee) {
 		}
 		label_row(_('Reports To:'), htmlspecialchars($manager_label, ENT_QUOTES, 'UTF-8'));
 	}
-	users_list_row(_('System Login:'), 'login_id', null, false, _('Select user'));
+	if ($new_employee) {
+		users_list_row(_('System Login:'), 'login_id', null, false, _('Select user'));
+	} else {
+		$stored_login_id = trim((string)get_post('login_id', ''));
+		label_row(_('System Login:'), htmlspecialchars($stored_login_id === '' ? _('Not assigned') : $stored_login_id, ENT_QUOTES, 'UTF-8'));
+	}
 	dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
 
 	table_section_title(_('Salary & Status'));
