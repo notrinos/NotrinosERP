@@ -280,7 +280,10 @@ function collect_employee_data($new_employee=false) {
 	$data['emergency_phone']    = get_post('emergency_phone', '');
 
 	// Employment
-	$data['hire_date']          = get_post('hire_date', '');
+	// HRM-FND-005: hire_date is a chronology anchor and is accepted only for initial Employee creation.
+	// Existing hire-date correction requires a separately reviewed lifecycle policy; generic maintenance must not mutate it.
+	if ($new_employee)
+		$data['hire_date'] = get_post('hire_date', '');
 	// HRM-FND-005: confirmation_date, probation_end_date, released_date and inactive are lifecycle-command owned for existing employees and are never accepted by generic maintenance writes.
 	$data['employment_type']    = get_post('employment_type', 0);
 	// HRM-FND-005: accepted Employee Transfer owns organization/manager changes for existing employees.
@@ -626,7 +629,15 @@ function tab_employment($employee_id, $new_employee) {
 
 	table_section_title(_('Employment Details'));
 
-	date_row(_('Hire Date:'), 'hire_date', null, null, 0, 0, 1001);
+	if ($new_employee) {
+		date_row(_('Hire Date:'), 'hire_date', null, null, 0, 0, 1001);
+	} else {
+		$stored_hire_date = '';
+		$hire_employee = get_employee_by_code(get_post('NewEmpID'));
+		if ($hire_employee && !empty($hire_employee['hire_date']))
+			$stored_hire_date = sql2date($hire_employee['hire_date']);
+		label_row(_('Hire Date:'), htmlspecialchars($stored_hire_date === '' ? _('Not set') : $stored_hire_date, ENT_QUOTES, 'UTF-8'));
+	}
 	if ($new_employee) {
 		label_row(_('Confirmation Date:'), _('Set after employee creation through approval'));
 	} else {
@@ -1649,11 +1660,13 @@ if (isset($_POST['addupdate'])) {
 		set_focus('birth_date');
 	}
 
-	$hire_date = get_post('hire_date', '');
-	if (!empty($hire_date) && !is_date($hire_date)) {
-		$input_error = 1;
-		display_error(_('Hire date is not in a valid format.'));
-		set_focus('hire_date');
+	if ($new_employee) {
+		$hire_date = get_post('hire_date', '');
+		if (!empty($hire_date) && !is_date($hire_date)) {
+			$input_error = 1;
+			display_error(_('Hire date is not in a valid format.'));
+			set_focus('hire_date');
+		}
 	}
 
 	$passport_expiry = get_post('passport_expiry', '');
