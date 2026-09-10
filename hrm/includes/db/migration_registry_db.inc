@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.356',
-        'active_legacy_payroll_contract'=>'1.0.315',
-        'next_backlog_item'=>'HRM-FND-005 Suspension attendance writer atomicity/caller integration review',
+        'active_database_version'=>'1.0.357',
+        'active_legacy_payroll_contract'=>'1.0.316',
+        'next_backlog_item'=>'HRM-FND-005 Attendance Entry Suspension mutation consumer cutover review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only Suspension attendance writer atomicity/caller integration review across Attendance Entry, Attendance Sheet, CSV import and overtime approval; no consumer cutover until failure propagation and transaction boundaries are frozen.',
+        'next_slice_scope'=>'Read-only Attendance Entry Suspension mutation consumer cutover review to freeze caller-owned transaction granularity, failure propagation, denial UI and legacy validation ordering; no production consumer cutover in the accepted guard foundation.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -329,6 +329,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_service_state_as_of_resolver_foundation.php'),
             'hrm_fnd_005_suspension_attendance_mutation_policy_evaluator_foundation'=>array('previous'=>'1.0.355','version'=>'1.0.356',
                 'file'=>'sql/upgrade_hrm_fnd_005_suspension_attendance_mutation_policy_evaluator_foundation.php'),
+            'hrm_fnd_005_suspension_attendance_mutation_guard_foundation'=>array('previous'=>'1.0.356','version'=>'1.0.357',
+                'file'=>'sql/upgrade_hrm_fnd_005_suspension_attendance_mutation_guard_foundation.php'),
         ),
     );
 }
