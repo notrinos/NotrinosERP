@@ -638,6 +638,7 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 
 	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 	include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+	include_once($path_to_root . '/hrm/includes/db/lifecycle_leave_request_suspension_consumer_db.inc');
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
@@ -653,6 +654,15 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 		|| (int)$request['leave_id'] <= 0
 		|| (float)$request['days'] <= 0
 	) {
+		cancel_transaction();
+		return false;
+	}
+
+	if (!hrm_fnd_005_guard_leave_request_approval_range_for_update(
+		$request['employee_id'],
+		$request['from_date'],
+		$request['to_date']
+	)) {
 		cancel_transaction();
 		return false;
 	}
