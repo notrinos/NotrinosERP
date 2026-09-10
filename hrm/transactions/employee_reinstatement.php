@@ -22,6 +22,12 @@ function employee_reinstatement_authoritative_employee_list($row) {
     $name = trim((isset($identity['first_name'])?(string)$identity['first_name']:'').' '.(isset($identity['middle_name'])&&trim((string)$identity['middle_name'])!==''?trim((string)$identity['middle_name']).' ':'').(isset($identity['last_name'])?(string)$identity['last_name']:''));
     return $name === '' ? $legacy_label : (user_show_codes() ? ((string)$row[0].' - ') : '').$name;
 }
+/** @return array */
+function employee_reinstatement_browser_status($employee_id) {
+    if (trim((string)$employee_id) === '' || (string)$employee_id === (string)ALL_TEXT)
+        return array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
+    return get_hrm_lifecycle_employee_reinstatement_browser_status($employee_id);
+}
 function employee_reinstatement_display_status($status) {
     if (!is_array($status) || !isset($status['status'])) return;
     switch((string)$status['status']) {
@@ -47,7 +53,7 @@ if(isset($_POST['Process'])){
         $snapshot=get_hrm_lifecycle_employee_reinstatement_browser_snapshot($_POST['employee_id']);
         if(!is_array($snapshot)) display_error(_('Exact current Worker/Employment/Assignment custody is unavailable or the employee is not currently suspended. No Reinstatement request was submitted.'));
         else{
-            $before=get_hrm_lifecycle_employee_reinstatement_browser_status($_POST['employee_id']);
+            $before=employee_reinstatement_browser_status($_POST['employee_id']);
             if($before['status']==='pending')$process='status_only';
             elseif($before['status']==='blocked'){display_error(_('Another fixed Employee lifecycle request is pending. No parallel Reinstatement request was created.'));$process='status_only';}
             elseif($before['status']==='inconsistent'){display_error(_('Employee Reinstatement command/approval custody is inconsistent. No request was submitted or applied.'));$process='status_only';}
@@ -64,7 +70,7 @@ if(isset($_POST['Process'])){
         }
     }
 }
-$current=get_hrm_lifecycle_employee_reinstatement_browser_status($_POST['employee_id']); if($process!=='submitted')employee_reinstatement_display_status($current);
+$current=employee_reinstatement_browser_status($_POST['employee_id']); if($process!=='submitted')employee_reinstatement_display_status($current);
 $employee_reinstatement_selector_as_of=hrm_person_worker_utc_now();hrm_log_restricted_employee_projection('employee_reinstatement_selector');
 start_form();start_table(TABLESTYLE2);
 employees_list_row(_('Employee:'),'employee_id',null,false,true,false,false,array('format'=>'employee_reinstatement_authoritative_employee_list'));
