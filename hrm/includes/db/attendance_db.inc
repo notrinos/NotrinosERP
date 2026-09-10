@@ -112,12 +112,15 @@ function check_leave($employee_id, $date) {
  *
  * @param string $employee_id Employee code.
  * @param string $date Date in user format.
+ * @param bool $for_update Read current locked evidence inside a caller transaction.
  * @return array|false
  */
-function get_attendance_entry($employee_id, $date) {
+function get_attendance_entry($employee_id, $date, $for_update=false) {
 	$sql = "SELECT * FROM ".TB_PREF."attendance
 		WHERE employee_id = ".db_escape($employee_id)."
 		AND date = '".date2sql($date)."'";
+	if ($for_update === true)
+		$sql .= ' FOR UPDATE';
 	$result = db_query($sql, 'could not get attendance entry');
 
 	return db_fetch($result);
@@ -191,7 +194,7 @@ function write_attendance($employee_id, $time_id, $hours_no, $rate, $date, $leav
 	$hours_no = (float)$hours_no;
 	$rate = (float)$rate;
 	$is_overtime = ((int)$time_id > 0);
-	$existing = get_attendance_entry($employee_id, $date);
+	$existing = get_attendance_entry($employee_id, $date, true);
 
 	if ($existing) {
 		$regular_hours = $is_overtime ? $existing['regular_hours'] : $hours_no;
@@ -391,7 +394,7 @@ function get_working_day_map() {
  */
 function hrm_upsert_attendance_meta($employee_id, $date, $status, $shift_id, $clock_in, $clock_out, $notes='') {
 	$sql_date = date2sql($date);
-	$entry = get_attendance_entry($employee_id, $date);
+	$entry = get_attendance_entry($employee_id, $date, true);
 
 	$shift_sql = empty($shift_id) ? 'NULL' : db_escape($shift_id);
 	$clock_in_sql = trim($clock_in) === '' ? 'NULL' : db_escape($clock_in);

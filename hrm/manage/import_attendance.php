@@ -14,6 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/attendance_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_attendance_import_consumer_db.inc');
 
 page(_("Import/Export Attendance"));
 
@@ -63,7 +64,7 @@ if (isset($_POST['import_attendance'])) {
             $line_no = 0;
             $imported = 0;
             $failed = 0;
-            begin_transaction();
+            $rows = array();
 
             while (($row = fgetcsv($handle, 0, ',')) !== false) {
                 $line_no++;
@@ -84,16 +85,16 @@ if (isset($_POST['import_attendance'])) {
                     continue;
                 }
 
-                $display_date = sql2date($date);
-                if ($regular_hours >= 0)
-                    write_attendance($employee_id, 0, $regular_hours, $rate, $display_date);
-                if ($overtime_hours > 0)
-                    write_attendance($employee_id, $overtime_type_id, $overtime_hours, $rate, $display_date);
-
-                $imported++;
+                $rows[] = array('employee_id'=>$employee_id, 'date'=>$date,
+                    'regular_hours'=>$regular_hours, 'overtime_hours'=>$overtime_hours,
+                    'overtime_type_id'=>$overtime_type_id, 'rate'=>$rate);
             }
 
-            commit_transaction();
+            $result = hrm_fnd_005_execute_attendance_import_rows($rows);
+            $imported = $result['imported'];
+            $failed += $result['failed'];
+            if ($result['failed'] > 0)
+                display_error(_('Some attendance rows could not be imported because lifecycle or payroll custody denied the mutation, or the batch could not be saved.'));
             fclose($handle);
             display_notification(sprintf(_('Import complete. Imported: %s, Failed: %s'), $imported, $failed));
         }

@@ -167,8 +167,12 @@ function set_overtime_request_status(
  * @return bool
  */
 function approve_overtime_request($request_id, $approved_by='') {
-    global $path_to_root;
+    global $path_to_root, $transaction_level;
+    if (empty($transaction_level))
+        return false;
     include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
+    if (!function_exists('get_hrm_lifecycle_attendance_mutation_guard_for_update'))
+        include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_mutation_guard_db.inc');
 
     $request = get_overtime_request_for_update($request_id);
     if (!$request
@@ -181,6 +185,12 @@ function approve_overtime_request($request_id, $approved_by='') {
     ) {
         return false;
     }
+
+    // The approved executor owns the transaction, including pending status and audit.
+    $guard = get_hrm_lifecycle_attendance_mutation_guard_for_update(
+        $request['employee_id'], $request['date'], 'attendance_write');
+    if (!is_array($guard) || !isset($guard['can_mutate']) || $guard['can_mutate'] !== true)
+        return false;
 
     if (!set_overtime_request_status($request_id, 1, $approved_by, 0))
         return false;

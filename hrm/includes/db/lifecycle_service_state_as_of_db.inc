@@ -112,8 +112,12 @@ function hrm_lifecycle_service_state_as_of_resolve_rows($employee_id, $as_of_dat
     );
 }
 
-/** Read one Employee's temporary Suspension/Reinstatement state as of a date. */
-function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_date)
+/**
+ * Read one Employee's temporary Suspension/Reinstatement state as of a date.
+ * Locking mode requires the caller's transaction and Employee projection lock;
+ * current reads avoid an older outer approval transaction's read snapshot.
+ */
+function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_date, $for_update=false)
 {
     $employee_id = trim((string)$employee_id);
     $as_of_date = hrm_lifecycle_service_state_as_of_date($as_of_date);
@@ -122,6 +126,7 @@ function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_dat
 
     $mapping_sql = "SELECT employee_id,worker_id,retired_at FROM ".TB_PREF."hrm_employee_worker_map "
         ."WHERE employee_id=".db_escape($employee_id)." LIMIT 2";
+    if ($for_update === true) $mapping_sql .= ' FOR UPDATE';
     $mapping_result = db_query($mapping_sql, 'could not resolve HRM lifecycle service-state Employee/Worker custody');
     if (!$mapping_result || (int)db_num_rows($mapping_result) !== 1)
         return false;
@@ -140,6 +145,7 @@ function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_dat
         .db_escape(HRM_HIST_SUSPENSION).",".db_escape(HRM_HIST_REINSTATE).") "
         ."AND h.effective_date<=".db_escape($as_of_date)." "
         ."ORDER BY h.effective_date ASC,h.history_id ASC";
+    if ($for_update === true) $history_sql .= ' FOR UPDATE';
     $history_result = db_query($history_sql, 'could not resolve HRM lifecycle service-state history custody');
     if (!$history_result)
         return false;

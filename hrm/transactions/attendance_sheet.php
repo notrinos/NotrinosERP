@@ -24,6 +24,7 @@ include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_sheet_consumer_db.inc');
 
 /**
  * Resolve one Attendance Sheet Employee selector label at the page-level instant.
@@ -269,23 +270,13 @@ if (isset($_POST['save_cell'])) {
         $input_error = true;
     }
     if (!$input_error) {
-        if ($cell_leave > 0) {
-            write_attendance($cell_emp, 0, 0, 1, $cell_date, $cell_leave);
-            hrm_upsert_attendance_meta($cell_emp, $cell_date, 3, $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes);
-        } else {
-            if ($leave_flags['has_single_day'])
-                hrm_delete_single_day_leave_records($cell_emp, $cell_date_sql);
-
-            if ($cell_regular !== '')
-                write_attendance($cell_emp, 0, time_to_float($cell_regular), 1, $cell_date);
-            if ($cell_ot_hours !== '' && $cell_ot_type > 0) {
-                $overtime = get_overtime($cell_ot_type);
-                $ot_rate = $overtime ? $overtime['pay_rate'] : 1;
-                write_attendance($cell_emp, $cell_ot_type, time_to_float($cell_ot_hours), $ot_rate, $cell_date);
-            }
-            hrm_upsert_attendance_meta($cell_emp, $cell_date, $cell_status, $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes);
-        }
-        display_notification(_('Attendance saved for ').$cell_emp.' — '.sql2date($cell_date_sql));
+        $result = hrm_fnd_005_execute_attendance_sheet_day($cell_emp, $cell_date_sql, 'save',
+            $cell_regular, $cell_ot_hours, $cell_ot_type, $cell_leave, $cell_status,
+            $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes);
+        if ($result['saved'])
+            display_notification(_('Attendance saved for ').$cell_emp.' — '.sql2date($cell_date_sql));
+        else
+            display_error(_('Attendance could not be saved because lifecycle, leave or payroll custody denied the mutation.'));
     }
     $Ajax->activate('_page_body');
 }
@@ -305,8 +296,11 @@ if (isset($_POST['delete_cell'])) {
     } elseif (check_date_paid($cell_emp, $cell_date)) {
         display_error(_('Cannot delete attendance for a payroll-locked date.'));
     } else {
-        delete_attendance_record($cell_emp, $cell_date_sql);
-        display_notification(_('Attendance deleted for ').$cell_emp.' — '.sql2date($cell_date_sql));
+        $result = hrm_fnd_005_execute_attendance_sheet_day($cell_emp, $cell_date_sql, 'delete');
+        if ($result['saved'])
+            display_notification(_('Attendance deleted for ').$cell_emp.' — '.sql2date($cell_date_sql));
+        else
+            display_error(_('Attendance could not be deleted because lifecycle, leave or payroll custody denied the mutation.'));
     }
     $Ajax->activate('_page_body');
 }
@@ -316,7 +310,8 @@ if (isset($_POST['delete_cell'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['bulk_fill'])) {
-    $emp_checks = isset($_POST['emp_check']) ? $_POST['emp_check'] : array();
+    $emp_checks = isset($_POST['emp_check']) && is_array($_POST['emp_check']) ? array_unique($_POST['emp_check']) : array();
+    sort($emp_checks, SORT_STRING);
     if (empty($emp_checks)) {
         display_error(_('No employees selected. Please check the rows to fill.'));
     } else {
@@ -326,6 +321,7 @@ if (isset($_POST['bulk_fill'])) {
     $leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id);
     $holidays = get_month_holidays($sel_year, $sel_month);
     $filled = 0;
+    $denied = 0;
 
     foreach ($emp_checks as $eid) {
         for ($d = 1; $d <= $days_in_month; $d++) {
@@ -342,16 +338,18 @@ if (isset($_POST['bulk_fill'])) {
             if (check_date_paid($eid, $user_date)) continue;
 
             $hours = isset($wd_map[$dow]) ? $wd_map[$dow]['work_hours'] : 8;
-            write_attendance($eid, 0, $hours, 1, $user_date);
-            hrm_upsert_attendance_meta($eid, $user_date, 0, 0, '', '', '');
-            $filled++;
+            $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'fill', $hours);
+            if ($result['saved']) $filled++;
+            elseif (!$result['skipped']) $denied++;
         }
     }
 
     if ($filled > 0)
         display_notification(sprintf(_('%d attendance records filled.'), $filled));
-    else
+    elseif ($denied === 0)
         display_notification(_('No records to fill — all working days already have entries or are in the future.'));
+    if ($denied > 0)
+        display_error(sprintf(_('%d attendance days denied by lifecycle or payroll custody.'), $denied));
     } // end else emp_checks
     $Ajax->activate('_page_body');
 }
@@ -361,10 +359,13 @@ if (isset($_POST['bulk_fill'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['bulk_delete'])) {
-    $emp_checks = isset($_POST['emp_check']) ? $_POST['emp_check'] : array();
+    $emp_checks = isset($_POST['emp_check']) && is_array($_POST['emp_check']) ? array_unique($_POST['emp_check']) : array();
+    sort($emp_checks, SORT_STRING);
     if (empty($emp_checks)) {
         display_error(_('No employees selected for bulk delete.'));
     } else {
+        $deleted = 0;
+        $denied = 0;
         $days_in_month_del = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
         foreach ($emp_checks as $eid) {
             for ($d = 1; $d <= $days_in_month_del; $d++) {
@@ -372,10 +373,15 @@ if (isset($_POST['bulk_delete'])) {
                 $date_sql = date('Y-m-d', $ts);
                 $user_date = sql2date($date_sql);
                 if (check_date_paid($eid, $user_date)) continue;
-                delete_attendance_record($eid, $date_sql);
+                $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'bulk_delete');
+                if ($result['saved']) $deleted++;
+                else $denied++;
             }
         }
-        display_notification(sprintf(_('Bulk delete completed for %d employee(s).'), count($emp_checks)));
+        if ($deleted > 0)
+            display_notification(sprintf(_('Bulk delete completed for %d attendance days.'), $deleted));
+        if ($denied > 0)
+            display_error(sprintf(_('%d attendance days denied by lifecycle or payroll custody.'), $denied));
     }
     $Ajax->activate('_page_body');
 }

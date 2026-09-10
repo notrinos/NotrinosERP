@@ -5,7 +5,7 @@
  * This helper is SELECT/lock-only. The caller MUST own a database transaction
  * before invoking get_hrm_lifecycle_attendance_mutation_guard_for_update().
  * It never starts/commits/rolls back a transaction and never mutates business
- * state. No production caller is wired to this foundation yet.
+ * state. Consumers retain transaction ownership and legacy authorization.
  */
 
 /** Fail-closed guard result usable even when dependencies/DB reads fail. */
@@ -101,7 +101,7 @@ function get_hrm_lifecycle_attendance_mutation_guard_for_update($employee_id, $m
             $employee_id, $mutation_date, $mutation_kind, 'deny_employee_projection_inactive_or_released'
         );
 
-    $service_state = get_hrm_lifecycle_employee_service_state_as_of($employee_id, $mutation_date);
+    $service_state = get_hrm_lifecycle_employee_service_state_as_of($employee_id, $mutation_date, true);
     if (!is_array($service_state))
         return hrm_lifecycle_attendance_mutation_guard_denied(
             $employee_id, $mutation_date, $mutation_kind, 'deny_invalid_or_ambiguous_service_state'
