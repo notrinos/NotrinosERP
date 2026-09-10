@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.354',
-        'active_legacy_payroll_contract'=>'1.0.313',
-        'next_backlog_item'=>'HRM-FND-005 suspended-service as-of consumer compatibility review',
+        'active_database_version'=>'1.0.355',
+        'active_legacy_payroll_contract'=>'1.0.314',
+        'next_backlog_item'=>'HRM-FND-005 Suspension attendance/scheduling mutation and historical-correction policy review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only suspended-service as-of consumer compatibility review across payroll, leave, attendance and scheduling; no consumer semantics change is authorized until explicit effective-date behavior is proven.',
+        'next_slice_scope'=>'Read-only Suspension attendance/scheduling mutation and historical-correction policy review; no consumer semantics change is authorized for attendance, scheduling, leave or payroll until backdated Suspension handling against existing operational and payroll evidence is frozen.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -325,6 +325,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_suspension_browser_route_foundation.php'),
             'hrm_fnd_005_employee_reinstatement_browser_route_foundation'=>array('previous'=>'1.0.353','version'=>'1.0.354',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_reinstatement_browser_route_foundation.php'),
+            'hrm_fnd_005_employee_service_state_as_of_resolver_foundation'=>array('previous'=>'1.0.354','version'=>'1.0.355',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_service_state_as_of_resolver_foundation.php'),
         ),
     );
 }
