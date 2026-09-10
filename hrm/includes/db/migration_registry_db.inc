@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.355',
-        'active_legacy_payroll_contract'=>'1.0.314',
-        'next_backlog_item'=>'HRM-FND-005 Suspension attendance/scheduling mutation and historical-correction policy review',
+        'active_database_version'=>'1.0.356',
+        'active_legacy_payroll_contract'=>'1.0.315',
+        'next_backlog_item'=>'HRM-FND-005 Suspension attendance writer atomicity/caller integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only Suspension attendance/scheduling mutation and historical-correction policy review; no consumer semantics change is authorized for attendance, scheduling, leave or payroll until backdated Suspension handling against existing operational and payroll evidence is frozen.',
+        'next_slice_scope'=>'Read-only Suspension attendance writer atomicity/caller integration review across Attendance Entry, Attendance Sheet, CSV import and overtime approval; no consumer cutover until failure propagation and transaction boundaries are frozen.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -327,6 +327,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_reinstatement_browser_route_foundation.php'),
             'hrm_fnd_005_employee_service_state_as_of_resolver_foundation'=>array('previous'=>'1.0.354','version'=>'1.0.355',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_service_state_as_of_resolver_foundation.php'),
+            'hrm_fnd_005_suspension_attendance_mutation_policy_evaluator_foundation'=>array('previous'=>'1.0.355','version'=>'1.0.356',
+                'file'=>'sql/upgrade_hrm_fnd_005_suspension_attendance_mutation_policy_evaluator_foundation.php'),
         ),
     );
 }
