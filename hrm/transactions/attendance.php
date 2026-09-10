@@ -24,6 +24,8 @@ include_once($path_to_root.'/hrm/includes/hrm_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_mutation_guard_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_entry_consumer_db.inc');
 
 /**
  * Resolve one Attendance Entry Employee selector label at the page-level instant.
@@ -324,6 +326,7 @@ if (isset($_POST['bulk_regular'])) {
 if (isset($_POST['save_attendance'])) {
     if (hrm_can_process_attendance($employees)) {
         $saved_rows = 0;
+        $denied_rows = 0;
         $statuses = hrm_attendance_status_options();
 
         foreach ($employees as $employee) {
@@ -349,33 +352,26 @@ if (isset($_POST['save_attendance'])) {
             foreach ($period as $dt) {
                 $entry_date = sql2date($dt->format('Y-m-d'));
 
-                if ($leave_id > 0) {
-                    write_attendance($employee_id, 0, 0, 1, $entry_date, $leave_id);
-                    hrm_upsert_attendance_meta($employee_id, $entry_date, 3, $shift_id, $clock_in, $clock_out, $notes);
-                    $saved_rows++;
-                    continue;
-                }
-
-                if ($regular !== '')
-                    write_attendance($employee_id, 0, time_to_float($regular), 1, $entry_date);
-
-                if ($ot_hours !== '' && $ot_type > 0) {
-                    $overtime = get_overtime($ot_type);
-                    $ot_rate = $overtime ? $overtime['pay_rate'] : 1;
-                    write_attendance($employee_id, $ot_type, time_to_float($ot_hours), $ot_rate, $entry_date);
-                }
-
                 if (!array_key_exists($status, $statuses))
                     $status = 0;
 
-                hrm_upsert_attendance_meta($employee_id, $entry_date, $status, $shift_id, $clock_in, $clock_out, $notes);
+                $result = hrm_fnd_005_execute_attendance_entry_day(
+                    $employee_id, $entry_date, $regular, $ot_hours, $ot_type,
+                    $leave_id, $status, $shift_id, $clock_in, $clock_out, $notes
+                );
+                if (!is_array($result) || empty($result['saved'])) {
+                    $denied_rows++;
+                    continue;
+                }
                 $saved_rows++;
             }
         }
 
         if ($saved_rows > 0)
-            display_notification(_('Attendance has been saved.'));
-        else
+            display_notification(sprintf(_('%d attendance day(s) have been saved.'), $saved_rows));
+        if ($denied_rows > 0)
+            display_error(sprintf(_('%d attendance day(s) were not changed because lifecycle or payroll custody denied the mutation.'), $denied_rows));
+        if ($saved_rows === 0 && $denied_rows === 0)
             display_notification(_('Nothing to save.'));
 
         $Ajax->activate('_page_body');
