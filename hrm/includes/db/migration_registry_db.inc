@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.348',
-        'active_legacy_payroll_contract'=>'1.0.307',
-        'next_backlog_item'=>'HRM-FND-005 residual Employee profile/Person compatibility writer ownership review',
+        'active_database_version'=>'1.0.349',
+        'active_legacy_payroll_contract'=>'1.0.308',
+        'next_backlog_item'=>'HRM-FND-005 post-Employee Promotion lifecycle ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only residual Employee profile/Person compatibility writer ownership review; reconcile remaining generic Employee profile/contact/emergency compatibility writers against HRM-FND-001 Person/Worker custody before releasing another generic writer change.',
+        'next_slice_scope'=>'Read-only post-Employee Promotion lifecycle ownership review; no Promotion browser mutation route is released by the command foundation.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -313,6 +313,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_bank_payment_collector_bypass_closure.php'),
             'hrm_fnd_005_employee_maintenance_identity_tax_collector_bypass_closure'=>array('previous'=>'1.0.347','version'=>'1.0.348',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_maintenance_identity_tax_collector_bypass_closure.php'),
+            'hrm_fnd_005_employee_promotion_command_foundation'=>array('previous'=>'1.0.348','version'=>'1.0.349',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_promotion_command_foundation.php'),
         ),
     );
 }

@@ -56,6 +56,11 @@ if (!is_file($hrm_lifecycle_probation_schedule_source))
 	$hrm_lifecycle_probation_schedule_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_probation_schedule_command_db.inc';
 if (is_file($hrm_lifecycle_probation_schedule_source))
 	include_once($hrm_lifecycle_probation_schedule_source);
+$hrm_lifecycle_promotion_source = $path_to_root . '/hrm/includes/db/lifecycle_promotion_command_db.inc';
+if (!is_file($hrm_lifecycle_promotion_source))
+	$hrm_lifecycle_promotion_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_promotion_command_db.inc';
+if (is_file($hrm_lifecycle_promotion_source))
+	include_once($hrm_lifecycle_promotion_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -167,6 +172,16 @@ function ensure_hrm_approval_transaction_registration()
 
 	if (defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_PROBATION_SCHEDULE, array(
+			TB_PREF . 'hrm_lifecycle_commands',
+			null,
+			'lifecycle_command_id',
+			'lifecycle_command_id',
+			'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_PROMOTION')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_PROMOTION, array(
 			TB_PREF . 'hrm_lifecycle_commands',
 			null,
 			'lifecycle_command_id',
@@ -537,6 +552,19 @@ if (defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE')) {
 		'executor'       => 'execute_approved_hrm_lifecycle_probation_schedule',
 		'rejector'       => 'reject_hrm_lifecycle_probation_schedule_draft',
 		'canceler'       => 'cancel_hrm_lifecycle_probation_schedule_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_PROMOTION')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_PROMOTION, array(
+		'label'          => _('Employee Promotion Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_promotion',
+		'rejector'       => 'reject_hrm_lifecycle_promotion_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_promotion_draft',
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',
