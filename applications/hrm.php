@@ -23,6 +23,7 @@ class HrmApp extends application {
 		$this->add_lapp_function(0, _('O&vertime Entry'),           'hrm/transactions/overtime_request.php?',              'SA_OVERTIMEREQUEST',  MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Overtime App&roval'),        'hrm/transactions/overtime_approval.php?',             'SA_OVERTIMEAPPROVE',  MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Employee &Transfer'),        'hrm/transactions/employee_transfer.php?',             'SA_EMPTRANSFER',      MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Employee Pro&motion'),       'hrm/transactions/employee_promotion.php?',            'SA_EMPTRANSFER',      MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Sa&lary Revision'),          'hrm/transactions/salary_revision.php?',               'SA_SALARYREVISION',   MENU_TRANSACTION);
 
 		$this->add_rapp_function(0, _('Pay&slip Entry'),            'hrm/transactions/payslip.php?NewPayslip=Yes',         'SA_PAYSLIP',          MENU_TRANSACTION);
