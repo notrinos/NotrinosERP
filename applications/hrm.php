@@ -36,6 +36,8 @@ class HrmApp extends application {
 		$this->add_rapp_function(0, _('Loa&n Request'),             'hrm/transactions/loan_request.php?',                  'SA_LOAN',             MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Loan Repa&yment'),           'hrm/transactions/loan_repayment.php?',                'SA_LOAN',             MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Employee &Separation'),      'hrm/transactions/employee_separation.php?',           'SA_EMPSEPARATION',    MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Employee S&uspension'),      'hrm/transactions/employee_suspension.php?',           'SA_EMPSEPARATION',    MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Employee &Reinstatement'),   'hrm/transactions/employee_reinstatement.php?',        'SA_EMPSEPARATION',    MENU_TRANSACTION);
 
 		// ═══════════════════════════════════════════════════════════
 		// Module 1: Inquiries and Reports

@@ -109,6 +109,8 @@ function hrm_lifecycle_probation_schedule_browser_pending_row_is_valid($row)
         'employee_salary_revision'=>defined('ST_HRM_LIFECYCLE_SALARY_REVISION') ? ST_HRM_LIFECYCLE_SALARY_REVISION : -1,
         'employee_training_assignment'=>defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT') ? ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT : -1,
         'employee_promotion'=>defined('ST_HRM_LIFECYCLE_PROMOTION') ? ST_HRM_LIFECYCLE_PROMOTION : -1,
+        'employee_suspension'=>defined('ST_HRM_LIFECYCLE_SUSPENSION') ? ST_HRM_LIFECYCLE_SUSPENSION : -1,
+        'employee_reinstatement'=>defined('ST_HRM_LIFECYCLE_REINSTATEMENT') ? ST_HRM_LIFECYCLE_REINSTATEMENT : -1,
         'employee_confirmation'=>defined('ST_HRM_LIFECYCLE_CONFIRMATION') ? ST_HRM_LIFECYCLE_CONFIRMATION : -1,
         HRM_LIFECYCLE_PROBATION_SCHEDULE_COMMAND_TYPE=>defined('ST_HRM_LIFECYCLE_PROBATION_SCHEDULE') ? ST_HRM_LIFECYCLE_PROBATION_SCHEDULE : -1,
     );

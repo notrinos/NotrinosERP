@@ -127,6 +127,10 @@ function hrm_lifecycle_salary_revision_browser_pending_row_is_valid($row)
         return defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT;
     if ($type === 'employee_promotion')
         return defined('ST_HRM_LIFECYCLE_PROMOTION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_PROMOTION;
+    if ($type === 'employee_suspension')
+        return defined('ST_HRM_LIFECYCLE_SUSPENSION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_SUSPENSION;
+    if ($type === 'employee_reinstatement')
+        return defined('ST_HRM_LIFECYCLE_REINSTATEMENT') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_REINSTATEMENT;
     if ($type === 'employee_confirmation')
         return defined('ST_HRM_LIFECYCLE_CONFIRMATION') && (int)$row['trans_type'] === (int)ST_HRM_LIFECYCLE_CONFIRMATION;
     if ($type === 'employee_probation_schedule')

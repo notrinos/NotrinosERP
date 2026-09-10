@@ -161,6 +161,8 @@ function hrm_lifecycle_promotion_browser_pending_row_is_valid($row)
         'employee_confirmation'=>'ST_HRM_LIFECYCLE_CONFIRMATION',
         'employee_probation_schedule'=>'ST_HRM_LIFECYCLE_PROBATION_SCHEDULE',
         HRM_LIFECYCLE_PROMOTION_COMMAND_TYPE=>'ST_HRM_LIFECYCLE_PROMOTION',
+        'employee_suspension'=>'ST_HRM_LIFECYCLE_SUSPENSION',
+        'employee_reinstatement'=>'ST_HRM_LIFECYCLE_REINSTATEMENT',
     );
     $type = (string)$row['command_type'];
     if (!isset($types[$type]) || !defined($types[$type]))
