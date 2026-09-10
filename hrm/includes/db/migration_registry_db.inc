@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.350',
-        'active_legacy_payroll_contract'=>'1.0.309',
-        'next_backlog_item'=>'HRM-FND-005 Employee Suspension lifecycle policy/command semantics review',
+        'active_database_version'=>'1.0.352',
+        'active_legacy_payroll_contract'=>'1.0.311',
+        'next_backlog_item'=>'HRM-FND-005 post-Suspension/Reinstatement active-service compatibility ownership review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only Employee Suspension lifecycle policy/command semantics review; no Suspension or Rehire mutation route is released by the Promotion browser foundation.',
+        'next_slice_scope'=>'Read-only post-Suspension/Reinstatement active-service compatibility ownership review; no browser route or payroll/leave/attendance/scheduling semantics change is released by this batch.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -317,6 +317,10 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_promotion_command_foundation.php'),
             'hrm_fnd_005_employee_promotion_browser_route_foundation'=>array('previous'=>'1.0.349','version'=>'1.0.350',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_promotion_browser_route_foundation.php'),
+            'hrm_fnd_005_employee_suspension_command_foundation'=>array('previous'=>'1.0.350','version'=>'1.0.351',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_suspension_command_foundation.php'),
+            'hrm_fnd_005_employee_reinstatement_command_foundation'=>array('previous'=>'1.0.351','version'=>'1.0.352',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_reinstatement_command_foundation.php'),
         ),
     );
 }

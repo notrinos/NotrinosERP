@@ -500,6 +500,17 @@ function synchronize_hrm_employment_from_employee($employee)
         $projection = $legacy_projection;
     }
 
+    // Temporary Suspension is normalized-Employment state, not the legacy
+    // employees.inactive flag. Ordinary Employee/profile synchronization must
+    // therefore not silently reactivate a suspended Employment while the
+    // legacy row still represents an otherwise-active worker. A real legacy
+    // terminal/inactive projection remains authoritative and is not masked.
+    if ((string)$current['employment_status'] === 'suspended'
+        && (string)$projection['employment_status'] === 'active'
+        && ($current['end_date'] === null || $current['end_date'] === '')
+        && $projection['end_date'] === null)
+        $projection['employment_status'] = 'suspended';
+
     $changed = array();
     foreach (array('start_date', 'end_date', 'termination_reason_code') as $field) {
         if (!hrm_employment_nullable_equal($current[$field], $projection[$field]))
@@ -538,6 +549,87 @@ function synchronize_hrm_employment_from_employee($employee)
         'hrm.employment.synchronized', (int)$current['employment_id'],
         (int)$current['worker_id'], $employee_number, $changed,
         'hrm_fnd_002_legacy_projection_sync'
+    ) !== false;
+}
+
+/**
+ * Execute the bounded normalized Employment transition for a temporary
+ * Suspension. This deliberately does not mutate the legacy Employee active /
+ * release projection, Assignment chronology, payroll, payslip, payment or GL.
+ *
+ * @param int $employee_number
+ * @param int $employment_id
+ * @param int $worker_id
+ * @param string $effective_date Canonical SQL Y-m-d.
+ * @return bool
+ */
+function execute_hrm_employment_suspension($employee_number, $employment_id, $worker_id, $effective_date)
+{
+    $employee_number = (int)$employee_number;
+    $employment_id = (int)$employment_id;
+    $worker_id = (int)$worker_id;
+    $effective_date = hrm_employment_normalize_date($effective_date);
+    if ($employee_number <= 0 || $employment_id <= 0 || $worker_id <= 0
+        || $effective_date === false || $effective_date === null || !hrm_employment_table_ready())
+        return false;
+    $current = get_hrm_legacy_current_employment($employee_number, true);
+    if (!$current || (int)$current['employment_id'] !== $employment_id
+        || (int)$current['worker_id'] !== $worker_id || (int)$current['legacy_current'] !== 1
+        || (string)$current['employment_status'] !== 'active'
+        || ($current['end_date'] !== null && $current['end_date'] !== '')
+        || ($current['start_date'] !== null && $current['start_date'] !== ''
+            && strcmp($effective_date, (string)$current['start_date']) < 0))
+        return false;
+    $actor = hrm_employment_actor_id();
+    if (!db_query("UPDATE ".TB_PREF."hrm_employments SET employment_status='suspended',"
+        ."source='runtime_suspension',updated_at=UTC_TIMESTAMP(),updated_by=".(int)$actor
+        ." WHERE employment_id=".$employment_id." AND worker_id=".$worker_id
+        ." AND legacy_current=1 AND employment_status='active' AND end_date IS NULL",
+        'could not suspend HRM employment shadow') || (int)db_num_affected_rows() !== 1)
+        return false;
+    return append_hrm_employment_domain_audit(
+        'hrm.employment.suspended', $employment_id, $worker_id, $employee_number,
+        array('employment_status'), 'hrm_fnd_005_employee_suspension_command'
+    ) !== false;
+}
+
+/**
+ * Execute the bounded normalized Employment return from Suspension. The
+ * legacy Employee and Assignment projections remain unchanged.
+ *
+ * @param int $employee_number
+ * @param int $employment_id
+ * @param int $worker_id
+ * @param string $effective_date Canonical SQL Y-m-d.
+ * @return bool
+ */
+function execute_hrm_employment_reinstatement($employee_number, $employment_id, $worker_id, $effective_date)
+{
+    $employee_number = (int)$employee_number;
+    $employment_id = (int)$employment_id;
+    $worker_id = (int)$worker_id;
+    $effective_date = hrm_employment_normalize_date($effective_date);
+    if ($employee_number <= 0 || $employment_id <= 0 || $worker_id <= 0
+        || $effective_date === false || $effective_date === null || !hrm_employment_table_ready())
+        return false;
+    $current = get_hrm_legacy_current_employment($employee_number, true);
+    if (!$current || (int)$current['employment_id'] !== $employment_id
+        || (int)$current['worker_id'] !== $worker_id || (int)$current['legacy_current'] !== 1
+        || (string)$current['employment_status'] !== 'suspended'
+        || ($current['end_date'] !== null && $current['end_date'] !== '')
+        || ($current['start_date'] !== null && $current['start_date'] !== ''
+            && strcmp($effective_date, (string)$current['start_date']) < 0))
+        return false;
+    $actor = hrm_employment_actor_id();
+    if (!db_query("UPDATE ".TB_PREF."hrm_employments SET employment_status='active',"
+        ."source='runtime_reinstatement',updated_at=UTC_TIMESTAMP(),updated_by=".(int)$actor
+        ." WHERE employment_id=".$employment_id." AND worker_id=".$worker_id
+        ." AND legacy_current=1 AND employment_status='suspended' AND end_date IS NULL",
+        'could not reinstate HRM employment shadow') || (int)db_num_affected_rows() !== 1)
+        return false;
+    return append_hrm_employment_domain_audit(
+        'hrm.employment.reinstated', $employment_id, $worker_id, $employee_number,
+        array('employment_status'), 'hrm_fnd_005_employee_reinstatement_command'
     ) !== false;
 }
 

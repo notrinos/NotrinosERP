@@ -314,7 +314,7 @@ function submit_hrm_lifecycle_employee_separation($employee_id, $effective_date,
             || (int)$assignment['legacy_current'] !== 1 || (int)$employment['legacy_current'] !== 1
             || (int)$assignment['primary_flag'] !== 1 || (string)$assignment['assignment_type_code'] !== 'legacy_primary'
             || (int)$employee['inactive'] !== 0 || ($employee['released_date'] !== null && $employee['released_date'] !== '')
-            || (string)$employment['employment_status'] !== 'active'
+            || !in_array((string)$employment['employment_status'], array('active','suspended'), true)
             || ($employment['end_date'] !== null && $employment['end_date'] !== '')
             || ($assignment['effective_to'] !== null && $assignment['effective_to'] !== '')
             || (int)$employee['department_id'] !== (int)$assignment['legacy_department_id']
@@ -454,7 +454,7 @@ function execute_approved_hrm_lifecycle_separation($draft_data, $reserved_trans_
         || (int)$assignment['assignment_id'] !== (int)$command['assignment_id']
         || (int)$assignment['employment_id'] !== (int)$command['employment_id']
         || (int)$assignment['legacy_current'] !== 1 || (int)$employment['legacy_current'] !== 1
-        || (string)$employment['employment_status'] !== 'active'
+        || !in_array((string)$employment['employment_status'], array('active','suspended'), true)
         || ($employment['end_date'] !== null && $employment['end_date'] !== '')
         || ($assignment['effective_to'] !== null && $assignment['effective_to'] !== ''))
         return false;

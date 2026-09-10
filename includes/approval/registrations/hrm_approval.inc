@@ -61,6 +61,16 @@ if (!is_file($hrm_lifecycle_promotion_source))
 	$hrm_lifecycle_promotion_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_promotion_command_db.inc';
 if (is_file($hrm_lifecycle_promotion_source))
 	include_once($hrm_lifecycle_promotion_source);
+$hrm_lifecycle_suspension_source = $path_to_root . '/hrm/includes/db/lifecycle_suspension_command_db.inc';
+if (!is_file($hrm_lifecycle_suspension_source))
+	$hrm_lifecycle_suspension_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_suspension_command_db.inc';
+if (is_file($hrm_lifecycle_suspension_source))
+	include_once($hrm_lifecycle_suspension_source);
+$hrm_lifecycle_reinstatement_source = $path_to_root . '/hrm/includes/db/lifecycle_reinstatement_command_db.inc';
+if (!is_file($hrm_lifecycle_reinstatement_source))
+	$hrm_lifecycle_reinstatement_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_reinstatement_command_db.inc';
+if (is_file($hrm_lifecycle_reinstatement_source))
+	include_once($hrm_lifecycle_reinstatement_source);
 
 /**
  * Ensure HRM core approval transaction types have numbering metadata.
@@ -187,6 +197,20 @@ function ensure_hrm_approval_transaction_registration()
 			'lifecycle_command_id',
 			'lifecycle_command_id',
 			'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_SUSPENSION')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_SUSPENSION, array(
+			TB_PREF . 'hrm_lifecycle_commands', null, 'lifecycle_command_id',
+			'lifecycle_command_id', 'requested_at'
+		));
+	}
+
+	if (defined('ST_HRM_LIFECYCLE_REINSTATEMENT')) {
+		register_systype_db_info(ST_HRM_LIFECYCLE_REINSTATEMENT, array(
+			TB_PREF . 'hrm_lifecycle_commands', null, 'lifecycle_command_id',
+			'lifecycle_command_id', 'requested_at'
 		));
 	}
 
@@ -568,6 +592,28 @@ if (defined('ST_HRM_LIFECYCLE_PROMOTION')) {
 		'amount_getter'  => null,
 		'draft_renderer' => null,
 		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_SUSPENSION')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_SUSPENSION, array(
+		'label'          => _('Employee Suspension Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_suspension',
+		'rejector'       => 'reject_hrm_lifecycle_suspension_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_suspension_draft',
+		'amount_getter'  => null, 'draft_renderer' => null, 'edit_url' => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_REINSTATEMENT')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_REINSTATEMENT, array(
+		'label'          => _('Employee Reinstatement Lifecycle Command'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_lifecycle_reinstatement',
+		'rejector'       => 'reject_hrm_lifecycle_reinstatement_draft',
+		'canceler'       => 'cancel_hrm_lifecycle_reinstatement_draft',
+		'amount_getter'  => null, 'draft_renderer' => null, 'edit_url' => '',
 	));
 }
 
