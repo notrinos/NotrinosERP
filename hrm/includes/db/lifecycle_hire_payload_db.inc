@@ -258,15 +258,29 @@ function hrm_hire_payload_keyring($company = null, $allow_create = false)
         && (int)$last['generation'] === (int)$manifest['generation'] ? $manifest : false;
 }
 
-/** @param string $key_id @param int|null $company @return string|false */
-function hrm_hire_payload_key($key_id, $company = null)
+/**
+ * Load one keyring key, optionally requiring its exact generation.
+ *
+ * @param string $key_id
+ * @param int|null $company
+ * @param int|null $expected_generation
+ * @return string|false
+ */
+function hrm_hire_payload_key($key_id, $company = null, $expected_generation = null)
 {
     $manifest = hrm_hire_payload_keyring($company, false);
     $paths = hrm_hire_payload_keyring_paths($company);
     if ($manifest === false || $paths === false)
         return false;
+    if ($expected_generation !== null) {
+        $expected_generation = hrm_lifecycle_hire_payload_positive_int($expected_generation);
+        if ($expected_generation === false)
+            return false;
+    }
     foreach ($manifest['keys'] as $entry)
-        if ((string)$entry['key_id'] === (string)$key_id)
+        if ((string)$entry['key_id'] === (string)$key_id
+            && ($expected_generation === null
+                || (int)$entry['generation'] === (int)$expected_generation))
             return hrm_hire_payload_load_key_file($paths['keys'].DIRECTORY_SEPARATOR.$entry['filename'], $key_id);
     return false;
 }
@@ -571,7 +585,8 @@ function stage_hrm_lifecycle_employee_hire_payload($payload, $effective_date, $i
                 || !domain_audit_hash_equals(hash('sha256', $existing_payload['payload_ciphertext']),
                     (string)$existing_payload['ciphertext_sha256']))
                 break;
-            $existing_key = hrm_hire_payload_key((string)$existing_payload['key_id'], $company);
+            $existing_key = hrm_hire_payload_key((string)$existing_payload['key_id'], $company,
+                (int)$existing_payload['key_generation']);
             $existing_context = hrm_lifecycle_hire_payload_context($company, $existing['hire_command_id'],
                 $request_hash, (int)$existing_payload['envelope_version']);
             $existing_json = $existing_key === false || $existing_context === false ? false
@@ -640,7 +655,8 @@ function load_hrm_lifecycle_employee_hire_payload_for_update($command_id)
         || !domain_audit_hash_equals((string)$command['request_hash'], (string)$payload['request_hash'])
         || !domain_audit_hash_equals(hash('sha256', $payload['payload_ciphertext']), (string)$payload['ciphertext_sha256']))
         return false;
-    $key = hrm_hire_payload_key((string)$payload['key_id'], $company);
+    $key = hrm_hire_payload_key((string)$payload['key_id'], $company,
+        (int)$payload['key_generation']);
     $context = hrm_lifecycle_hire_payload_context($company, $command['hire_command_id'], $command['request_hash'],
         (int)$payload['envelope_version']);
     $json = $key === false || $context === false ? false
