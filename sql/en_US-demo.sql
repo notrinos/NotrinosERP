@@ -1143,6 +1143,7 @@ DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_task_document_versions`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_tasks`;
+DROP TABLE IF EXISTS `0_hrm_lifecycle_hire_payloads`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_hire_commands`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_commands`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
@@ -1851,6 +1852,27 @@ CREATE TABLE `0_hrm_lifecycle_hire_commands` (
 	KEY `hrm_lifecycle_hire_command_status_idx` (`command_status`,`effective_at`,`hire_command_id`),
 	KEY `hrm_lifecycle_hire_command_approval_idx` (`approval_draft_id`,`hire_command_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_lifecycle_hire_payloads` (
+	`hire_command_id` bigint(20) unsigned NOT NULL,
+	`payload_state` varchar(16) NOT NULL DEFAULT 'staged',
+	`envelope_version` smallint(5) unsigned NOT NULL DEFAULT '1',
+	`payload_ciphertext` mediumblob DEFAULT NULL,
+	`ciphertext_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`request_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`key_id` char(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`key_generation` int(10) unsigned NOT NULL,
+	`purge_after` datetime NOT NULL,
+	`purged_at` datetime DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	PRIMARY KEY (`hire_command_id`),
+	KEY `hrm_lifecycle_hire_payload_purge_idx` (`payload_state`,`purge_after`,`hire_command_id`),
+	KEY `hrm_lifecycle_hire_payload_key_idx` (`key_generation`,`key_id`,`hire_command_id`),
+	CONSTRAINT `0_hrm_lifecycle_hire_payloads_command_fk` FOREIGN KEY (`hire_command_id`) REFERENCES `0_hrm_lifecycle_hire_commands` (`hire_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 
 CREATE TABLE `0_hrm_lifecycle_tasks` (
 	`lifecycle_task_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,

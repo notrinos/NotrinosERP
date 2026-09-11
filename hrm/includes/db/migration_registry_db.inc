@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.366',
-        'active_legacy_payroll_contract'=>'1.0.325',
-        'next_backlog_item'=>'HRM-FND-005 Employee Hire encrypted staged-payload custody design/foundation review',
+        'active_database_version'=>'1.0.367',
+        'active_legacy_payroll_contract'=>'1.0.326',
+        'next_backlog_item'=>'HRM-FND-005 Employee Hire encrypted staged-payload writer + central maker/checker approval integration review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review/design encrypted staged onboarding payload custody only; no Hire writer, approval registration, route/import cutover or rehire command is released yet.',
+        'next_slice_scope'=>'Review the encrypted Hire payload writer and central maker/checker approval integration together; no browser/import cutover, Hire execution writer, CSV bulk onboarding or same-code rehire is released yet.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -349,6 +349,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_suspension_payroll_calculation_consumer_cutover.php'),
             'hrm_fnd_005_employee_hire_command_custody_foundation'=>array('previous'=>'1.0.365','version'=>'1.0.366',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_command_custody_foundation.php'),
+            'hrm_fnd_005_employee_hire_encrypted_payload_custody_foundation'=>array('previous'=>'1.0.366','version'=>'1.0.367',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_encrypted_payload_custody_foundation.php'),
         ),
     );
 }
