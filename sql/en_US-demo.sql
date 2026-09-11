@@ -1143,6 +1143,7 @@ DROP TABLE IF EXISTS `0_hrm_person_canonical_link_workers`;
 DROP TABLE IF EXISTS `0_hrm_person_canonical_links`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_task_document_versions`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_tasks`;
+DROP TABLE IF EXISTS `0_hrm_lifecycle_hire_commands`;
 DROP TABLE IF EXISTS `0_hrm_lifecycle_commands`;
 DROP TABLE IF EXISTS `0_hrm_assignments`;
 DROP TABLE IF EXISTS `0_hrm_contracts`;
@@ -1830,6 +1831,25 @@ CREATE TABLE `0_hrm_lifecycle_commands` (
 	CONSTRAINT `0_hrm_lifecycle_command_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_command_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_command_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
+CREATE TABLE `0_hrm_lifecycle_hire_commands` (
+	`hire_command_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`command_status` varchar(16) NOT NULL DEFAULT 'pending',
+	`effective_at` datetime NOT NULL,
+	`idempotency_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`request_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`approval_draft_id` int(11) DEFAULT NULL,
+	`row_version` int(10) unsigned NOT NULL DEFAULT '1',
+	`requested_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`requested_by` smallint(6) unsigned NOT NULL DEFAULT '0',
+	`completed_at` datetime DEFAULT NULL,
+	`completed_by` smallint(6) unsigned DEFAULT NULL,
+	PRIMARY KEY (`hire_command_id`),
+	UNIQUE KEY `hrm_lifecycle_hire_command_idempotency_uq` (`idempotency_key_hash`),
+	KEY `hrm_lifecycle_hire_command_status_idx` (`command_status`,`effective_at`,`hire_command_id`),
+	KEY `hrm_lifecycle_hire_command_approval_idx` (`approval_draft_id`,`hire_command_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_lifecycle_tasks` (
