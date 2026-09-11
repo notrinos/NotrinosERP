@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.363',
-        'active_legacy_payroll_contract'=>'1.0.322',
-        'next_backlog_item'=>'HRM-FND-005 post Leave Request Suspension approval consumer ownership review',
+        'active_database_version'=>'1.0.364',
+        'active_legacy_payroll_contract'=>'1.0.323',
+        'next_backlog_item'=>'HRM-FND-005 Suspension payroll calculation consumer integration/atomicity review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only post-cutover ownership review; payroll treatment, entitlement and other lifecycle consumers remain separately deferred.',
+        'next_slice_scope'=>'Read-only payroll consumer integration/atomicity review; no paid/unpaid/proration semantics or calculator cutover are released yet.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -343,6 +343,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_attendance_import_audit_clarification.php'),
             'hrm_fnd_005_leave_request_suspension_approval_consumer_cutover'=>array('previous'=>'1.0.362','version'=>'1.0.363',
                 'file'=>'sql/upgrade_hrm_fnd_005_leave_request_suspension_approval_consumer_cutover.php'),
+            'hrm_fnd_005_suspension_payroll_calculation_readiness_guard_foundation'=>array('previous'=>'1.0.363','version'=>'1.0.364',
+                'file'=>'sql/upgrade_hrm_fnd_005_suspension_payroll_calculation_readiness_guard_foundation.php'),
         ),
     );
 }
