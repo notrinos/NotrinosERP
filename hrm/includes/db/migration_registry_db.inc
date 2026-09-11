@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.364',
-        'active_legacy_payroll_contract'=>'1.0.323',
-        'next_backlog_item'=>'HRM-FND-005 Suspension payroll calculation consumer integration/atomicity review',
+        'active_database_version'=>'1.0.365',
+        'active_legacy_payroll_contract'=>'1.0.324',
+        'next_backlog_item'=>'HRM-FND-005 Suspension payroll treatment policy/model review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Read-only payroll consumer integration/atomicity review; no paid/unpaid/proration semantics or calculator cutover are released yet.',
+        'next_slice_scope'=>'Read-only Suspension payroll treatment policy/model review; no paid/unpaid/proration implementation is released yet.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -345,6 +345,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_leave_request_suspension_approval_consumer_cutover.php'),
             'hrm_fnd_005_suspension_payroll_calculation_readiness_guard_foundation'=>array('previous'=>'1.0.363','version'=>'1.0.364',
                 'file'=>'sql/upgrade_hrm_fnd_005_suspension_payroll_calculation_readiness_guard_foundation.php'),
+            'hrm_fnd_005_suspension_payroll_calculation_consumer_cutover'=>array('previous'=>'1.0.364','version'=>'1.0.365',
+                'file'=>'sql/upgrade_hrm_fnd_005_suspension_payroll_calculation_consumer_cutover.php'),
         ),
     );
 }

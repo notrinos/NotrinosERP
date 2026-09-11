@@ -346,6 +346,7 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
 
         $prepared_documents = array();
         $calculation_failed_count = 0;
+        $calculation_readiness_denials = array();
         foreach ($employees as $employee) {
             $payslip_doc = calculate_employee_payslip_read_only(
                 $employee,
@@ -357,6 +358,10 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
             if (!$payslip_doc) {
                 $failed_count++;
                 $calculation_failed_count++;
+                $readiness_error = function_exists('payroll_suspension_readiness_denial_message')
+                    ? payroll_suspension_readiness_denial_message() : '';
+                if ($readiness_error !== '')
+                    $calculation_readiness_denials[$readiness_error] = true;
                 continue;
             }
 
@@ -364,13 +369,14 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
         }
 
         if ($calculation_failed_count > 0) {
+            $failure_message = !empty($calculation_readiness_denials)
+                ? implode(' ', array_keys($calculation_readiness_denials)).' '._('No partial payroll result was prepared.')
+                : _('Payroll calculation failed for one or more eligible employees. No partial payroll result was prepared.');
             $preparation = array(
                 'ok' => false,
-                'code' => 'incomplete_calculation_set',
-                'message' => _(
-                    'Payroll calculation failed for one or more eligible employees. '
-                    .'No partial payroll result was prepared.'
-                ),
+                'code' => !empty($calculation_readiness_denials)
+                    ? 'suspension_readiness_denied' : 'incomplete_calculation_set',
+                'message' => $failure_message,
             );
         } else {
             $preparation = !empty($prepared_documents)

@@ -142,8 +142,12 @@ function build_payslip_preview($order, $employee_id, $from_date, $to_date) {
 		array('salary_components' => array($employee_id => $salary_components))
 	);
 
-	if (!$preview_doc)
-		return array(null, _('Could not calculate payslip preview for the selected employee.'));
+	if (!$preview_doc) {
+		$readiness_error = function_exists('payroll_suspension_readiness_denial_message')
+			? payroll_suspension_readiness_denial_message() : '';
+		return array(null, $readiness_error !== ''
+			? $readiness_error : _('Could not calculate payslip preview for the selected employee.'));
+	}
 
 	$preview_doc->reference = get_post('reference');
 	$preview_doc->tran_date = get_post('tran_date', $to_date);

@@ -30,11 +30,12 @@ include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consumer_db.inc');
 
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.323');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.324');
 
 /**
  * Payroll Formula Engine.
@@ -183,6 +184,50 @@ function payroll_calculation_read_only_active() {
     return !empty($GLOBALS['hrm_payroll_calculation_read_only_depth']);
 }
 
+/** Return the most recent Suspension-readiness decision from this process. */
+function payroll_suspension_readiness_last_result() {
+    return isset($GLOBALS['hrm_payroll_suspension_readiness_last_result'])
+        && is_array($GLOBALS['hrm_payroll_suspension_readiness_last_result'])
+        ? $GLOBALS['hrm_payroll_suspension_readiness_last_result'] : null;
+}
+
+/** Stable non-sensitive presentation for a fail-closed Suspension decision. */
+function payroll_suspension_readiness_denial_message($result=null) {
+    if ($result === null)
+        $result = payroll_suspension_readiness_last_result();
+    if (!is_array($result) || !empty($result['can_use_legacy_calculation']))
+        return '';
+    if (isset($result['decision'])
+        && (string)$result['decision'] === 'deny_suspension_pay_treatment_unconfigured')
+        return _('Payroll calculation is blocked because Suspension pay treatment is not configured for the selected period.');
+    return _('Payroll calculation is blocked because Suspension service-state custody could not be verified for the selected period.');
+}
+
+/** Guard one valid calculation request inside the caller-owned transaction. */
+function payroll_suspension_readiness_for_update($employee, $from_date, $to_date) {
+    if (!is_array($employee) || empty($employee['employee_id'])
+        || !is_date($from_date) || !is_date($to_date)
+        || date1_greater_date2($from_date, $to_date))
+        return null;
+    if (!function_exists('get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update'))
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_service_state_dependency_unavailable');
+    return get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update(
+        $employee['employee_id'], date2sql($from_date), date2sql($to_date)
+    );
+}
+
+/** Revalidate one calculated document before any persistence mutation. */
+function payroll_suspension_revalidate_document_for_update($payslip_doc) {
+    if (!is_object($payslip_doc) || empty($payslip_doc->employee_id)
+        || empty($payslip_doc->from_date) || empty($payslip_doc->to_date))
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_invalid_readiness_request');
+    if (!function_exists('get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update'))
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_service_state_dependency_unavailable');
+    return get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update(
+        $payslip_doc->employee_id, date2sql($payslip_doc->from_date), date2sql($payslip_doc->to_date)
+    );
+}
+
 /**
  * Calculate one payslip inside a rollback-only database boundary.
  *
@@ -212,10 +257,17 @@ function calculate_employee_payslip_read_only($employee, $from_date, $to_date, $
     if (!isset($GLOBALS['hrm_payroll_calculation_read_only_depth']))
         $GLOBALS['hrm_payroll_calculation_read_only_depth'] = 0;
 
+    $GLOBALS['hrm_payroll_suspension_readiness_last_result'] = null;
     $GLOBALS['hrm_payroll_calculation_read_only_depth']++;
     begin_transaction();
 
     try {
+        $readiness = payroll_suspension_readiness_for_update($employee, $from_date, $to_date);
+        if (is_array($readiness)) {
+            $GLOBALS['hrm_payroll_suspension_readiness_last_result'] = $readiness;
+            if (empty($readiness['can_use_legacy_calculation']))
+                return false;
+        }
         $result = calculate_employee_payslip(
             $employee,
             $from_date,
@@ -1806,6 +1858,19 @@ function prepare_payroll_period_results_for_approval($period_id, $payslip_docume
             return $result;
         }
 
+        // Revalidate every calculated employee while this persistence transaction
+        // holds the lifecycle serialization locks and before the first result write.
+        foreach ($payslip_documents as $payslip_doc) {
+            $readiness = payroll_suspension_revalidate_document_for_update($payslip_doc);
+            if (!is_array($readiness) || empty($readiness['can_use_legacy_calculation'])) {
+                cancel_transaction();
+                $result['code'] = is_array($readiness) && isset($readiness['decision'])
+                    ? (string)$readiness['decision'] : 'deny_invalid_or_ambiguous_service_state';
+                $result['message'] = payroll_suspension_readiness_denial_message($readiness);
+                return $result;
+            }
+        }
+
         $persisted = array();
         foreach ($payslip_documents as $payslip_doc) {
             $identity = payroll_persist_legacy_payslip_result($payslip_doc);
@@ -2834,6 +2899,14 @@ function post_payslip_to_gl(&$payslip_doc) {
 
     begin_transaction();
     try {
+        $readiness = payroll_suspension_revalidate_document_for_update($payslip_doc);
+        if (!is_array($readiness) || empty($readiness['can_use_legacy_calculation'])) {
+            if (function_exists('display_error'))
+                display_error(payroll_suspension_readiness_denial_message($readiness));
+            cancel_transaction();
+            return false;
+        }
+
         if (function_exists('hrm_has_hook') && hrm_has_hook('before_post_payslip'))
             hrm_fire_hook('before_post_payslip', $payslip_doc);
 

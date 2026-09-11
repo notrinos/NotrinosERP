@@ -227,7 +227,9 @@ if(isset($_POST['Process'])) {
 			);
 			$payslip_doc = calculate_employee_payslip_read_only($employee, get_post('from_date'), get_post('to_date'), 0, $preview_context);
 			if (!$payslip_doc) {
-				display_error(_('Could not calculate payslip.'));
+				$readiness_error = function_exists('payroll_suspension_readiness_denial_message')
+					? payroll_suspension_readiness_denial_message() : '';
+				display_error($readiness_error !== '' ? $readiness_error : _('Could not calculate payslip.'));
 			} else {
 				$payslip_doc->tran_date = get_post('tran_date');
 				$payslip_doc->reference = trim((string)get_post('reference'));
