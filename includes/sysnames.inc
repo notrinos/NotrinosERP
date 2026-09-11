@@ -59,6 +59,7 @@ $systypes_array = array (
 	ST_HRM_LIFECYCLE_PROMOTION => _('Employee Promotion Lifecycle Command'),
 	ST_HRM_LIFECYCLE_SUSPENSION => _('Employee Suspension Lifecycle Command'),
 	ST_HRM_LIFECYCLE_REINSTATEMENT => _('Employee Reinstatement Lifecycle Command'),
+	ST_HRM_LIFECYCLE_HIRE => _('Employee Hire Lifecycle Command'),
 	ST_SALESRETURN => _('Sales RMA'),
 	ST_SALESAGREEMENT => _('Sales Agreement'),
 	ST_WH_TRANSFER_ORDER => _('Transfer Order'),

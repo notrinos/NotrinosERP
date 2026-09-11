@@ -645,12 +645,18 @@ function stage_hrm_lifecycle_employee_hire_payload($payload, $effective_date, $i
  *
  * @return array|false
  */
-function load_hrm_lifecycle_employee_hire_payload_for_update($command_id)
+function load_hrm_lifecycle_employee_hire_payload_for_update($command_id, $allowed_statuses=array('staged'))
 {
+    if (!is_array($allowed_statuses) || !$allowed_statuses)
+        return false;
+    $valid_statuses = array('staged','pending');
+    foreach ($allowed_statuses as $status)
+        if (!in_array((string)$status, $valid_statuses, true))
+            return false;
     $command = hrm_lifecycle_hire_command_for_update($command_id);
     $payload = $command ? hrm_lifecycle_hire_payload_for_update($command_id) : false;
     $company = function_exists('user_company') ? (int)user_company() : 0;
-    if (!$command || !$payload || (string)$command['command_status'] !== 'staged'
+    if (!$command || !$payload || !in_array((string)$command['command_status'], $allowed_statuses, true)
         || (string)$payload['payload_state'] !== 'staged' || empty($payload['payload_ciphertext'])
         || !domain_audit_hash_equals((string)$command['request_hash'], (string)$payload['request_hash'])
         || !domain_audit_hash_equals(hash('sha256', $payload['payload_ciphertext']), (string)$payload['ciphertext_sha256']))

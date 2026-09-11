@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.368',
-        'active_legacy_payroll_contract'=>'1.0.327',
-        'next_backlog_item'=>'HRM-FND-005 Employee Hire central maker/checker + atomic execution/key-rotation recovery review',
+        'active_database_version'=>'1.0.369',
+        'active_legacy_payroll_contract'=>'1.0.328',
+        'next_backlog_item'=>'HRM-FND-005 Employee Hire browser onboarding cutover review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Co-design central maker/checker approval registration with the terminal atomic Hire executor and dedicated key rotation/recovery; no browser/import cutover, CSV bulk onboarding or same-code rehire is released yet.',
+        'next_slice_scope'=>'Review the maintained Employee onboarding browser route for exclusive use of staged encrypted Hire plus central maker/checker execution; CSV bulk onboarding and same-code rehire remain separate dependencies.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -353,6 +353,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_encrypted_payload_custody_foundation.php'),
             'hrm_fnd_005_employee_hire_payload_writer_foundation'=>array('previous'=>'1.0.367','version'=>'1.0.368',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_payload_writer_foundation.php'),
+            'hrm_fnd_005_employee_hire_approval_execution_foundation'=>array('previous'=>'1.0.368','version'=>'1.0.369',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_approval_execution_foundation.php'),
         ),
     );
 }
