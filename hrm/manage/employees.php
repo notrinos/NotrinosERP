@@ -1488,55 +1488,61 @@ if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 		$upload_file = 'No';
 	} else {
 		$employee_id = $_POST['NewEmpID'];
-		$result = $_FILES['pic']['error'];
-		$upload_file = 'Yes';
-		$filename = company_path().'/images/employees';
-		if (!file_exists($filename))
-			mkdir($filename, 0777, true);
+		$photo_employee = get_employee_by_code($employee_id);
+		if (!$photo_employee) {
+			display_error(_('Employee record could not be found. No photo was stored.'));
+			$upload_file = 'No';
+		} else {
+			$result = $_FILES['pic']['error'];
+			$upload_file = 'Yes';
+			$filename = company_path().'/images/employees';
+			if (!file_exists($filename))
+				mkdir($filename, 0777, true);
 
-		$filename .= '/'.item_img_name($employee_id).(substr(trim($_FILES['pic']['name']), strrpos($_FILES['pic']['name'], '.')));
+			$filename .= '/'.item_img_name($employee_id).(substr(trim($_FILES['pic']['name']), strrpos($_FILES['pic']['name'], '.')));
 
-		if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
-			display_error(_('The file size is over the maximum allowed.'));
-			$upload_file = 'No';
-		}
-		elseif ($_FILES['pic']['error'] > 0) {
-			display_error(_('Error uploading file.'));
-			$upload_file = 'No';
-		}
-
-		if ((list($width, $height, $type, $attr) = getimagesize($_FILES['pic']['tmp_name'])) !== false)
-			$imagetype = $type;
-		else
-			$imagetype = false;
-
-		if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {
-			display_warning(_('Only graphics files can be uploaded.'));
-			$upload_file = 'No';
-		}
-		elseif (!in_array(strtoupper(substr(trim($_FILES['pic']['name']), strlen($_FILES['pic']['name']) - 3)), array('JPG','PNG','GIF'))) {
-			display_warning(_('Only graphics files are supported — a file extension of .jpg, .png or .gif is expected.'));
-			$upload_file = 'No';
-		}
-		elseif ($_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) {
-			display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
-			$upload_file = 'No';
-		}
-		elseif ($_FILES['pic']['type'] == 'text/plain') {
-			display_warning(_('Only graphics files can be uploaded.'));
-			$upload_file = 'No';
-		}
-		elseif (!del_image($employee_id)) {
-			display_error(_('The existing image could not be removed.'));
-			$upload_file = 'No';
-		}
-
-		if ($upload_file == 'Yes') {
-			$result = move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
-			if ($msg = check_image_file($filename)) {
-				display_error($msg);
-				unlink($filename);
+			if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
+				display_error(_('The file size is over the maximum allowed.'));
 				$upload_file = 'No';
+			}
+			elseif ($_FILES['pic']['error'] > 0) {
+				display_error(_('Error uploading file.'));
+				$upload_file = 'No';
+			}
+
+			if ((list($width, $height, $type, $attr) = getimagesize($_FILES['pic']['tmp_name'])) !== false)
+				$imagetype = $type;
+			else
+				$imagetype = false;
+
+			if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {
+				display_warning(_('Only graphics files can be uploaded.'));
+				$upload_file = 'No';
+			}
+			elseif (!in_array(strtoupper(substr(trim($_FILES['pic']['name']), strlen($_FILES['pic']['name']) - 3)), array('JPG','PNG','GIF'))) {
+				display_warning(_('Only graphics files are supported — a file extension of .jpg, .png or .gif is expected.'));
+				$upload_file = 'No';
+			}
+			elseif ($_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) {
+				display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
+				$upload_file = 'No';
+			}
+			elseif ($_FILES['pic']['type'] == 'text/plain') {
+				display_warning(_('Only graphics files can be uploaded.'));
+				$upload_file = 'No';
+			}
+			elseif (!del_image($employee_id)) {
+				display_error(_('The existing image could not be removed.'));
+				$upload_file = 'No';
+			}
+
+			if ($upload_file == 'Yes') {
+				$result = move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
+				if ($msg = check_image_file($filename)) {
+					display_error($msg);
+					unlink($filename);
+					$upload_file = 'No';
+				}
 			}
 		}
 		$Ajax->activate('details');
