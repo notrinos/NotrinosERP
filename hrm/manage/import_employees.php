@@ -14,6 +14,12 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_db.inc');
+include_once($path_to_root . '/hrm/includes/db/lifecycle_hire_csv_db.inc');
+
+if (!defined('HRM_EMPLOYEE_CSV_MAX_UPLOAD_BYTES'))
+    define('HRM_EMPLOYEE_CSV_MAX_UPLOAD_BYTES', 2 * 1024 * 1024);
+if (!defined('HRM_EMPLOYEE_CSV_MAX_DATA_ROWS'))
+    define('HRM_EMPLOYEE_CSV_MAX_DATA_ROWS', 500);
 
 /**
  * Resolve export-only authoritative Person/Worker name fields while preserving
@@ -72,6 +78,97 @@ function parse_employee_csv_row($row) {
     );
 }
 
+/**
+ * Existing Employee CSV ownership is intentionally limited to profile fields.
+ * Lifecycle/assignment/status fields remain governed by their accepted commands.
+ *
+ * @param array $data
+ * @return array
+ */
+function employee_csv_existing_profile_update_payload($data) {
+    return array(
+        'first_name' => isset($data['first_name']) ? (string)$data['first_name'] : '',
+        'last_name' => isset($data['last_name']) ? (string)$data['last_name'] : '',
+        'middle_name' => isset($data['middle_name']) ? (string)$data['middle_name'] : '',
+        'email' => isset($data['email']) ? (string)$data['email'] : '',
+        'mobile' => isset($data['mobile']) ? (string)$data['mobile'] : ''
+    );
+}
+
+/**
+ * Read and classify the complete upload before the first database mutation.
+ * Validation-skipped rows are counted and omitted. Duplicate Employee codes,
+ * oversized files/batches, and unsafe new-Hire rows fail the whole preflight.
+ *
+ * @param resource $handle
+ * @return array
+ */
+function employee_csv_import_preflight($handle) {
+    $line_no = 0;
+    $data_rows = 0;
+    $skipped = 0;
+    $seen = array();
+    $existing_updates = array();
+    $new_hires = array();
+
+    while (($row = fgetcsv($handle, 0, ',')) !== false) {
+        $line_no++;
+        if ($line_no == 1 && isset($row[0]) && strtolower(trim($row[0])) == 'employee_id')
+            continue;
+        $data_rows++;
+        if ($data_rows > HRM_EMPLOYEE_CSV_MAX_DATA_ROWS)
+            return array('ok'=>false, 'error'=>sprintf(_('CSV import exceeds the maximum of %s data rows.'), HRM_EMPLOYEE_CSV_MAX_DATA_ROWS));
+        if (count($row) < 3) {
+            $skipped++;
+            continue;
+        }
+
+        $data = parse_employee_csv_row($row);
+        if ($data['employee_id'] === '' || $data['first_name'] === '' || $data['last_name'] === '') {
+            $skipped++;
+            continue;
+        }
+
+        $slot = strtolower($data['employee_id']);
+        if (isset($seen[$slot]))
+            return array('ok'=>false, 'error'=>sprintf(_('Duplicate Employee code in uploaded file at line %s.'), $line_no));
+        $seen[$slot] = true;
+
+        if (employee_exists_by_code($data['employee_id'])) {
+            $existing_updates[] = array(
+                'employee_id'=>$data['employee_id'],
+                'profile'=>employee_csv_existing_profile_update_payload($data)
+            );
+            continue;
+        }
+
+        // New Employee creation is approval-only. CSV may not seed an inactive
+        // lifecycle state, and the complete Hire payload must canonicalize.
+        if ((int)$data['inactive'] !== 0) {
+            $skipped++;
+            continue;
+        }
+        $new_payload = $data;
+        unset($new_payload['inactive']);
+        $canonical = hrm_lifecycle_hire_payload_canonicalize($new_payload);
+        if ($canonical === false) {
+            $skipped++;
+            continue;
+        }
+        $new_hires[] = $canonical;
+        if (count($new_hires) > HRM_LIFECYCLE_HIRE_CSV_MAX_NEW_HIRE_ROWS)
+            return array('ok'=>false, 'error'=>sprintf(_('CSV import exceeds the maximum of %s new Employee Hire rows.'), HRM_LIFECYCLE_HIRE_CSV_MAX_NEW_HIRE_ROWS));
+    }
+
+    return array(
+        'ok'=>true,
+        'data_rows'=>$data_rows,
+        'skipped'=>$skipped,
+        'existing_updates'=>$existing_updates,
+        'new_hires'=>$new_hires
+    );
+}
+
 page(_("Import/Export Employees"));
 
 if (isset($_POST['download_template'])) {
@@ -118,67 +215,75 @@ if (isset($_POST['import_employees'])) {
     if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] != UPLOAD_ERR_OK) {
         display_error(_('Please choose a valid CSV file.'));
     } else {
-        $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
-        if (!$handle) {
-            display_error(_('Unable to read uploaded file.'));
+        $reported_size = isset($_FILES['csv_file']['size']) ? (int)$_FILES['csv_file']['size'] : 0;
+        $actual_size = @filesize($_FILES['csv_file']['tmp_name']);
+        $upload_size = $actual_size === false ? $reported_size : (int)$actual_size;
+        if ($upload_size <= 0 || $upload_size > HRM_EMPLOYEE_CSV_MAX_UPLOAD_BYTES) {
+            display_error(sprintf(_('CSV file must be between 1 byte and %s bytes.'), HRM_EMPLOYEE_CSV_MAX_UPLOAD_BYTES));
         } else {
-            $line_no = 0;
-            $inserted = 0;
-            $updated = 0;
-            $failed = 0;
-            $write_failed = false;
-
-            begin_transaction();
-            while (($row = fgetcsv($handle, 0, ',')) !== false) {
-                $line_no++;
-                if ($line_no == 1 && isset($row[0]) && strtolower(trim($row[0])) == 'employee_id')
-                    continue;
-                if (count($row) < 3)
-                    continue;
-
-                $data = parse_employee_csv_row($row);
-                if ($data['employee_id'] === '' || $data['first_name'] === '' || $data['last_name'] === '') {
-                    $failed++;
-                    continue;
-                }
-
-                if (employee_exists_by_code($data['employee_id'])) {
-                    // HRM-FND-005: existing Employee lifecycle/assignment custody is not owned by bulk profile import.
-                    $existing_data = $data;
-                    unset($existing_data['hire_date']);
-                    // Preserve accepted Separation/Transfer sole-writer boundaries on every existing-Employee path.
-                    unset($existing_data['department_id'], $existing_data['position_id'], $existing_data['grade_id'], $existing_data['inactive']);
-                    if (update_employee($data['employee_id'], $existing_data)) {
-                        $updated++;
-                    } else {
-                        $failed++;
-                        $write_failed = true;
-                        break;
-                    }
-                } else {
-                    $new_data = $data;
-                    unset($new_data['employee_id']);
-                    $new_data['employee_id'] = $data['employee_id'];
-                    $created = add_employee($new_data);
-                    if ($created)
-                        $inserted++;
-                    else {
-                        $failed++;
-                        $write_failed = true;
-                        break;
-                    }
-                }
-            }
-            if ($write_failed) {
-                cancel_transaction();
-                $inserted = 0;
-                $updated = 0;
-                display_error(_('Import was rolled back because an employee write or required audit append failed.'));
+            $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            if (!$handle) {
+                display_error(_('Unable to read uploaded file.'));
             } else {
-                commit_transaction();
+                // HRM-FND-005: production CSV Employee Hire is two-pass. The
+                // entire file is parsed/classified before the first mutation.
+                $plan = employee_csv_import_preflight($handle);
+                fclose($handle);
+
+                if (empty($plan['ok'])) {
+                    display_error(isset($plan['error']) ? $plan['error'] : _('CSV Employee import preflight failed.'));
+                } elseif (empty($plan['existing_updates']) && empty($plan['new_hires'])) {
+                    display_notification(sprintf(_('No valid Employee rows were accepted. Validation skipped: %s'), (int)$plan['skipped']));
+                } else {
+                    $updated = 0;
+                    $submitted = 0;
+                    $exact_retries = 0;
+                    $write_failed = false;
+
+                    begin_transaction();
+                    foreach ($plan['existing_updates'] as $item) {
+                        // Revalidate branch ownership inside the write transaction.
+                        if (!employee_exists_by_code($item['employee_id'])
+                            || !update_employee($item['employee_id'], $item['profile'])) {
+                            $write_failed = true;
+                            break;
+                        }
+                        $updated++;
+                    }
+
+                    if (!$write_failed && !empty($plan['new_hires'])) {
+                        // Same-code rehire remains a separate lifecycle command.
+                        foreach ($plan['new_hires'] as $hire_payload) {
+                            if (employee_exists_by_code($hire_payload['employee_id'])) {
+                                $write_failed = true;
+                                break;
+                            }
+                        }
+                        if (!$write_failed) {
+                            $batch = submit_hrm_lifecycle_employee_hire_csv_batch($plan['new_hires']);
+                            if (!is_array($batch) || !isset($batch['status']) || $batch['status'] !== 'pending') {
+                                $write_failed = true;
+                            } else {
+                                $submitted = isset($batch['new_hire_rows']) ? (int)$batch['new_hire_rows'] : 0;
+                                if (isset($batch['items']) && is_array($batch['items']))
+                                    foreach ($batch['items'] as $result)
+                                        if (!empty($result['exact_retry'])) $exact_retries++;
+                            }
+                        }
+                    }
+
+                    if ($write_failed) {
+                        cancel_transaction();
+                        display_error(_('Import was rolled back. No existing-profile update or new Employee Hire submission from this request was retained.'));
+                    } else {
+                        commit_transaction();
+                        display_notification(sprintf(
+                            _('Import complete. Hire approvals submitted: %s, Existing profiles updated: %s, Validation skipped: %s, Exact pending retries reused: %s'),
+                            $submitted, $updated, (int)$plan['skipped'], $exact_retries
+                        ));
+                    }
+                }
             }
-            fclose($handle);
-            display_notification(sprintf(_('Import complete. Added: %s, Updated: %s, Failed: %s'), $inserted, $updated, $failed));
         }
     }
 }

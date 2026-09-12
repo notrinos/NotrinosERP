@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.371',
-        'active_legacy_payroll_contract'=>'1.0.330',
-        'next_backlog_item'=>'HRM-FND-005 CSV Employee Hire production route cutover review',
+        'active_database_version'=>'1.0.372',
+        'active_legacy_payroll_contract'=>'1.0.331',
+        'next_backlog_item'=>'HRM-FND-005 same-code Employee Rehire lifecycle command semantics/custody review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review production CSV Employee Hire route cutover with two-pass preflight, safe separation of existing-profile updates and new-Hire submissions, bounded upload behavior, rollback/reporting and response-loss retry; same-code rehire remains separate.',
+        'next_slice_scope'=>'Review same-code Employee Rehire lifecycle command semantics/custody against normalized Employment rehire, legacy Employee identity/code uniqueness, historical Rehire evidence, approval authority and retry/recovery; do not reuse new-Hire or CSV authority.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -359,6 +359,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_browser_onboarding_cutover.php'),
             'hrm_fnd_005_employee_hire_csv_batch_adapter_foundation'=>array('previous'=>'1.0.370','version'=>'1.0.371',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_csv_batch_adapter_foundation.php'),
+            'hrm_fnd_005_employee_hire_csv_production_route_cutover'=>array('previous'=>'1.0.371','version'=>'1.0.372',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_csv_production_route_cutover.php'),
         ),
     );
 }
