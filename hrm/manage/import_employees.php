@@ -111,7 +111,7 @@ function employee_csv_import_preflight($handle) {
     $existing_updates = array();
     $new_hires = array();
 
-    while (($row = fgetcsv($handle, 0, ',')) !== false) {
+    while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
         $line_no++;
         if ($line_no == 1 && isset($row[0]) && strtolower(trim($row[0])) == 'employee_id')
             continue;
@@ -289,6 +289,8 @@ if (isset($_POST['import_employees'])) {
 }
 
 start_form(true);
+display_note(_('New Employee codes are staged for maker/checker Hire approval'));
+display_note(_('2097152 bytes maximum; 500 data rows maximum; 200 new Hire rows maximum.'));
 start_table(TABLESTYLE2);
 file_row(_('CSV File:'), 'csv_file', 'csv_file');
 label_row(_('Expected columns:'), _('employee_id, first_name, last_name, middle_name, email, mobile, department_id, position_id, grade_id, hire_date, inactive'));
