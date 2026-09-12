@@ -61,6 +61,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_command_db.i
 include_once($path_to_root.'/hrm/includes/db/lifecycle_confirmation_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_command_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_browser_db.inc');
+include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
@@ -1482,59 +1483,64 @@ if (!$new_employee && empty(get_post('NewEmpID')))
 
 $upload_file = '';
 if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
-	$employee_id = $_POST['NewEmpID'];
-	$result = $_FILES['pic']['error'];
-	$upload_file = 'Yes';
-	$filename = company_path().'/images/employees';
-	if (!file_exists($filename))
-		mkdir($filename, 0777, true);
+	if ($new_employee) {
+		display_error(_('A photo can be added only after Employee Hire approval completes. No pre-approval file was stored.'));
+		$upload_file = 'No';
+	} else {
+		$employee_id = $_POST['NewEmpID'];
+		$result = $_FILES['pic']['error'];
+		$upload_file = 'Yes';
+		$filename = company_path().'/images/employees';
+		if (!file_exists($filename))
+			mkdir($filename, 0777, true);
 
-	$filename .= '/'.item_img_name($employee_id).(substr(trim($_FILES['pic']['name']), strrpos($_FILES['pic']['name'], '.')));
+		$filename .= '/'.item_img_name($employee_id).(substr(trim($_FILES['pic']['name']), strrpos($_FILES['pic']['name'], '.')));
 
-	if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
-		display_error(_('The file size is over the maximum allowed.'));
-		$upload_file = 'No';
-	}
-	elseif ($_FILES['pic']['error'] > 0) {
-		display_error(_('Error uploading file.'));
-		$upload_file = 'No';
-	}
-
-	if ((list($width, $height, $type, $attr) = getimagesize($_FILES['pic']['tmp_name'])) !== false)
-		$imagetype = $type;
-	else
-		$imagetype = false;
-
-	if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {
-		display_warning(_('Only graphics files can be uploaded.'));
-		$upload_file = 'No';
-	}
-	elseif (!in_array(strtoupper(substr(trim($_FILES['pic']['name']), strlen($_FILES['pic']['name']) - 3)), array('JPG','PNG','GIF'))) {
-		display_warning(_('Only graphics files are supported — a file extension of .jpg, .png or .gif is expected.'));
-		$upload_file = 'No';
-	}
-	elseif ($_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) {
-		display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
-		$upload_file = 'No';
-	}
-	elseif ($_FILES['pic']['type'] == 'text/plain') {
-		display_warning(_('Only graphics files can be uploaded.'));
-		$upload_file = 'No';
-	}
-	elseif (!del_image($employee_id)) {
-		display_error(_('The existing image could not be removed.'));
-		$upload_file = 'No';
-	}
-
-	if ($upload_file == 'Yes') {
-		$result = move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
-		if ($msg = check_image_file($filename)) {
-			display_error($msg);
-			unlink($filename);
+		if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
+			display_error(_('The file size is over the maximum allowed.'));
 			$upload_file = 'No';
 		}
+		elseif ($_FILES['pic']['error'] > 0) {
+			display_error(_('Error uploading file.'));
+			$upload_file = 'No';
+		}
+
+		if ((list($width, $height, $type, $attr) = getimagesize($_FILES['pic']['tmp_name'])) !== false)
+			$imagetype = $type;
+		else
+			$imagetype = false;
+
+		if ($imagetype != IMAGETYPE_GIF && $imagetype != IMAGETYPE_JPEG && $imagetype != IMAGETYPE_PNG) {
+			display_warning(_('Only graphics files can be uploaded.'));
+			$upload_file = 'No';
+		}
+		elseif (!in_array(strtoupper(substr(trim($_FILES['pic']['name']), strlen($_FILES['pic']['name']) - 3)), array('JPG','PNG','GIF'))) {
+			display_warning(_('Only graphics files are supported — a file extension of .jpg, .png or .gif is expected.'));
+			$upload_file = 'No';
+		}
+		elseif ($_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) {
+			display_warning(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
+			$upload_file = 'No';
+		}
+		elseif ($_FILES['pic']['type'] == 'text/plain') {
+			display_warning(_('Only graphics files can be uploaded.'));
+			$upload_file = 'No';
+		}
+		elseif (!del_image($employee_id)) {
+			display_error(_('The existing image could not be removed.'));
+			$upload_file = 'No';
+		}
+
+		if ($upload_file == 'Yes') {
+			$result = move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
+			if ($msg = check_image_file($filename)) {
+				display_error($msg);
+				unlink($filename);
+				$upload_file = 'No';
+			}
+		}
+		$Ajax->activate('details');
 	}
-	$Ajax->activate('details');
 }
 
 //======================================================================
@@ -1782,31 +1788,21 @@ if (isset($_POST['addupdate'])) {
 			}
 		}
 		else {
+			// HRM-FND-005: the maintained browser is maker-only. It may stage
+			// encrypted onboarding data and request central maker/checker approval,
+			// but it must never create Employee/HR-master state directly.
 			$data['employee_id'] = $_POST['NewEmpID'];
-			// New employee creation retains only the safe active default; no release date is seeded.
-			$data['inactive'] = 0;
-			unset($data['released_date']);
-			$emp_number = add_employee($data);
-			if (!$emp_number) {
-				display_error(_('Could not add this employee or append required audit evidence.'));
+			$hire_payload = $data;
+			foreach (array('birth_date','passport_expiry','hire_date') as $hire_date_field) {
+				if (!empty($hire_payload[$hire_date_field]))
+					$hire_payload[$hire_date_field] = date2sql($hire_payload[$hire_date_field]);
+			}
+			$hire_effective_date = isset($hire_payload['hire_date']) ? (string)$hire_payload['hire_date'] : '';
+			$hire_result = submit_hrm_lifecycle_employee_hire_browser($hire_payload, $hire_effective_date);
+			if ($hire_result === false) {
+				display_error(_('Employee Hire could not be submitted for approval. No employee record or pre-approval photo was created.'));
 			} else {
-				// Record hire history
-				if (!empty($data['hire_date'])) {
-					record_employee_history($_POST['NewEmpID'], HRM_HIST_HIRE, $data['hire_date'],
-						array(),
-						array(
-							'department_id' => $data['department_id'],
-							'position_id'   => $data['position_id'],
-							'grade_id'      => $data['grade_id'],
-							'salary'        => 0,
-						)
-					);
-				}
-
-				// Fire hook
-				hrm_fire_hook('on_employee_created', $_POST['NewEmpID']);
-
-				display_notification(_('A new employee has been added.'));
+				display_notification(_('Employee Hire has been submitted for approval. The employee will be created only after final checker approval.'));
 				$_POST['employee_id'] = '';
 				$_POST['NewEmpID'] = '';
 				clear_inputs();
@@ -1922,7 +1918,7 @@ if (in_array($current_tab, array('tab_personal', 'tab_employment', ''))) {
 	if (@$_REQUEST['popup'])
 		hidden('popup', 1);
 	if (!isset($_POST['NewEmpID']) || $new_employee) {
-		submit_center('addupdate', _('Add New Employee'), true, '', 'default');
+		submit_center('addupdate', _('Submit Employee Hire for Approval'), true, '', 'default');
 	} else {
 		submit_center_first('addupdate', _('Update Employee'), '', @$page_nested ? true : 'default');
 		submit_return('select', get_post('employee_id'), _('Select this employee and return to document entry.'));

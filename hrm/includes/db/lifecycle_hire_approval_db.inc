@@ -10,6 +10,8 @@
  */
 
 include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_payload_db.inc');
+include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_history_db.inc');
 if (!function_exists('add_employee'))
     include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 
@@ -258,6 +260,17 @@ function execute_approved_hrm_lifecycle_hire($draft_data, $reserved_trans_no, $d
         || (int)$employment['legacy_current'] !== 1 || (int)$assignment['legacy_current'] !== 1)
         return false;
 
+    // Preserve the maintained browser route's legacy Hire history projection,
+    // but move ownership into the final checker transaction. There is no
+    // browser-side history fallback before approval.
+    $hire_history_id = add_employee_history(
+        (string)$payload['employee_id'], HRM_HIST_HIRE, (string)$payload['hire_date'],
+        null, (int)$payload['department_id'], null, (int)$payload['position_id'],
+        null, (int)$payload['grade_id'], null, 0, 'Employee Hire approval execution'
+    );
+    if ((int)$hire_history_id <= 0)
+        return false;
+
     if (!db_query("UPDATE ".TB_PREF."hrm_lifecycle_hire_commands SET command_status='completed',row_version=3,"
         ."completed_at=UTC_TIMESTAMP(),completed_by=".$actor." WHERE hire_command_id=".$command_id
         ." AND command_status='pending' AND row_version=2 AND approval_draft_id=".$draft_id,
@@ -275,7 +288,8 @@ function execute_approved_hrm_lifecycle_hire($draft_data, $reserved_trans_no, $d
         'approval_draft_id'=>$draft_id,'maker_user_id'=>(int)$command['requested_by'],'checker_user_id'=>$actor,
         'maker_checker_separated'=>true,'employee_number'=>(int)$employee_number,'worker_id'=>(int)$binding['worker_id'],
         'employment_id'=>(int)$employment['employment_id'],'assignment_id'=>(int)$assignment['assignment_id'],
-        'employee_rows_mutated'=>1,'person_worker_aggregate_created'=>true,'employment_rows_mutated'=>1,
+        'hire_history_id'=>(int)$hire_history_id,'employee_rows_mutated'=>1,'employee_history_rows_appended'=>1,
+        'person_worker_aggregate_created'=>true,'employment_rows_mutated'=>1,
         'contract_assignment_aggregate_created'=>true,'ciphertext_destroyed'=>true,'historical_rows_rewritten'=>0)))
         return false;
     return $command_id;
