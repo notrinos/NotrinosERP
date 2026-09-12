@@ -35,7 +35,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consum
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.329');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.330');
 
 /**
  * Payroll Formula Engine.

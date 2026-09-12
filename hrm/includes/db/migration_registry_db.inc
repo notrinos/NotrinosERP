@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.370',
-        'active_legacy_payroll_contract'=>'1.0.329',
-        'next_backlog_item'=>'HRM-FND-005 CSV Employee Hire bulk-onboarding semantics/custody review',
+        'active_database_version'=>'1.0.371',
+        'active_legacy_payroll_contract'=>'1.0.330',
+        'next_backlog_item'=>'HRM-FND-005 CSV Employee Hire production route cutover review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review CSV Employee Hire bulk onboarding as a distinct maker/checker ingestion boundary with explicit row/batch atomicity, encrypted staging, retry and duplicate-code semantics; same-code rehire remains separate.',
+        'next_slice_scope'=>'Review production CSV Employee Hire route cutover with two-pass preflight, safe separation of existing-profile updates and new-Hire submissions, bounded upload behavior, rollback/reporting and response-loss retry; same-code rehire remains separate.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -357,6 +357,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_approval_execution_foundation.php'),
             'hrm_fnd_005_employee_hire_browser_onboarding_cutover'=>array('previous'=>'1.0.369','version'=>'1.0.370',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_browser_onboarding_cutover.php'),
+            'hrm_fnd_005_employee_hire_csv_batch_adapter_foundation'=>array('previous'=>'1.0.370','version'=>'1.0.371',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_csv_batch_adapter_foundation.php'),
         ),
     );
 }
