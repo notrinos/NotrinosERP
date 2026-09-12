@@ -11,11 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.372',
-        'active_legacy_payroll_contract'=>'1.0.331',
-        'next_backlog_item'=>'HRM-FND-005 same-code Employee Rehire lifecycle command semantics/custody review',
+        'active_database_version'=>'1.0.373',
+        'active_legacy_payroll_contract'=>'1.0.332',
+        'next_backlog_item'=>'HRM-FND-005 same-code Employee Rehire normalized Employment/Contract/Assignment rollover design/atomicity review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review same-code Employee Rehire lifecycle command semantics/custody against normalized Employment rehire, legacy Employee identity/code uniqueness, historical Rehire evidence, approval authority and retry/recovery; do not reuse new-Hire or CSV authority.',
+        'next_slice_scope'=>'Review same-code Rehire normalized Employment/Contract/Assignment rollover and atomicity: retire predecessor current markers, create a successor episode safely, preserve legacy Employee identity/history/payroll custody, and freeze maker/checker final execution and retry before any writer is released.',
         'edges'=>array(
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
@@ -361,6 +361,8 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_csv_batch_adapter_foundation.php'),
             'hrm_fnd_005_employee_hire_csv_production_route_cutover'=>array('previous'=>'1.0.371','version'=>'1.0.372',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_hire_csv_production_route_cutover.php'),
+            'hrm_fnd_005_employee_rehire_command_custody_foundation'=>array('previous'=>'1.0.372','version'=>'1.0.373',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_rehire_command_custody_foundation.php'),
         ),
     );
 }
