@@ -136,14 +136,17 @@ function get_hrm_lifecycle_employee_rehire_custody_for_update($employee_number, 
     if (!$employee || !$binding || !$employment || !$contract || !$assignment
         || (int)$employee['inactive'] !== 1 || empty($employee['released_date'])
         || !empty($binding['retired_at'])
+        || (string)$binding['employee_id'] !== (string)$employee['employee_id']
         || (int)$employment['worker_id'] !== (int)$binding['worker_id']
         || (int)$employment['legacy_current'] !== 1 || (int)$employment['employment_sequence'] !== 1
-        || (string)$employment['employment_status'] !== 'terminated' || empty($employment['end_date'])
+        || (string)$employment['employment_status'] !== 'terminated'
+        || hrm_lifecycle_rehire_date($employment['end_date']) === false
         || (string)$employee['released_date'] !== (string)$employment['end_date']
         || (int)$contract['employment_id'] !== (int)$employment['employment_id']
         || (int)$contract['legacy_current'] !== 1 || (string)$contract['effective_to'] !== (string)$employment['end_date']
         || (int)$assignment['employment_id'] !== (int)$employment['employment_id']
-        || (int)$assignment['legacy_current'] !== 1 || (string)$assignment['effective_to'] !== (string)$employment['end_date']
+        || (int)$assignment['legacy_current'] !== 1 || (int)$assignment['primary_flag'] !== 1
+        || (string)$assignment['effective_to'] !== (string)$employment['end_date']
         || strcmp($effective_date, (string)$employment['end_date']) <= 0) return false;
 
     $history = hrm_lifecycle_rehire_last_separation_history_for_update($employee['employee_id']);
