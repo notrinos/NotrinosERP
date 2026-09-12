@@ -1,4 +1,5 @@
 <?php
+include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -482,13 +483,13 @@ function synchronize_hrm_employment_from_employee($employee)
     if (!function_exists('get_hrm_default_legal_entity_binding_id'))
         return false;
     $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
-    if ($legal_entity_id === false || (int)$current['employment_sequence'] !== 1
+    if ($legal_entity_id === false || !hrm_lifecycle_rehire_compatibility_allows($employee, $current)
         || (int)$current['legal_entity_id'] !== (int)$legal_entity_id
         || (int)$current['legacy_current'] !== 1
         || (int)$current['legacy_employee_number'] !== $employee_number)
         return false;
 
-    $projection = hrm_employment_projection_from_employee($employee, false);
+    $projection = hrm_lifecycle_rehire_employee_episode_projection($employee, $current);
     if (!$projection) {
         $legacy_projection = hrm_employment_projection_from_employee($employee, true);
         if (!$legacy_projection || $legacy_projection['interval_quality'] !== 'legacy_invalid_order')
@@ -662,13 +663,13 @@ function execute_hrm_employment_termination($employee, $effective_date)
     if (!function_exists('get_hrm_default_legal_entity_binding_id'))
         return false;
     $legal_entity_id = get_hrm_default_legal_entity_binding_id(false);
-    if (!$current || $legal_entity_id === false || (int)$current['employment_sequence'] !== 1
+    if (!$current || $legal_entity_id === false || !hrm_lifecycle_rehire_compatibility_allows($employee, $current)
         || (int)$current['legal_entity_id'] !== (int)$legal_entity_id
         || (int)$current['legacy_current'] !== 1
         || (int)$current['legacy_employee_number'] !== $employee_number)
         return false;
 
-    $projection = hrm_employment_projection_from_employee($employee, false);
+    $projection = hrm_lifecycle_rehire_employee_episode_projection($employee, $current);
     if (!$projection || empty($employee['inactive'])
         || (string)$projection['employment_status'] !== 'terminated'
         || !hrm_employment_nullable_equal($projection['end_date'], $effective_date)

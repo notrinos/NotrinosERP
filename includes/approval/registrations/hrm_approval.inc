@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
+include_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_rehire_approval_db.inc');
 $hrm_identifier_verification_request_source = $path_to_root . '/hrm/includes/db/person_identifier_verification_request_db.inc';
 if (!is_file($hrm_identifier_verification_request_source))
 	$hrm_identifier_verification_request_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/person_identifier_verification_request_db.inc';
@@ -225,6 +226,13 @@ function ensure_hrm_approval_transaction_registration()
 			'hire_command_id', 'requested_at'
 		));
 	}
+
+    if (defined('ST_HRM_LIFECYCLE_REHIRE')) {
+        register_systype_db_info(ST_HRM_LIFECYCLE_REHIRE, array(
+            TB_PREF . 'hrm_lifecycle_commands', null, 'lifecycle_command_id',
+            'lifecycle_command_id', 'requested_at'
+        ));
+    }
 
 		register_systype_db_info(ST_EMPLOYEE_APPRAISAL, array(
 			TB_PREF . 'employee_appraisals',
@@ -638,6 +646,17 @@ if (defined('ST_HRM_LIFECYCLE_HIRE')) {
 		'canceler'       => 'cancel_hrm_lifecycle_hire_draft',
 		'amount_getter'  => null, 'draft_renderer' => null, 'edit_url' => '',
 	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_REHIRE')) {
+    ApprovalWorkflow::registerTransactionType(ST_HRM_LIFECYCLE_REHIRE, array(
+        'label' => _('Employee Rehire Lifecycle Command'),
+        'application' => 'HRM',
+        'executor' => 'execute_approved_hrm_lifecycle_rehire',
+        'rejector' => 'reject_hrm_lifecycle_rehire_draft',
+        'canceler' => 'cancel_hrm_lifecycle_rehire_draft',
+        'amount_getter' => null, 'draft_renderer' => null, 'edit_url' => '',
+    ));
 }
 
 // =====================================================

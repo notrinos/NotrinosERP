@@ -65,7 +65,21 @@ function hrm_lifecycle_service_state_as_of_resolve_rows($employee_id, $as_of_dat
             || $command_effective_at !== $effective_date.' 00:00:00')
             return false;
 
-        if ($change_type === HRM_HIST_SUSPENSION) {
+        if ($change_type === 'rehire') {
+            // A completed Rehire begins a new episode; the old Suspension
+            // overlay remains historical and cannot suspend the successor.
+            if ($command_type !== 'employee_rehire' || empty($row['rehire_receipt_verified'])
+                || empty($row['successor_employment_id']) || empty($row['successor_assignment_id']))
+                return false;
+            $state = 'active';
+            $previous_type = '';
+            $previous_date = '';
+            $previous_employment_id = (int)$row['successor_employment_id'];
+            $previous_assignment_id = (int)$row['successor_assignment_id'];
+            $last_history_id = $history_id; $last_command_id = $command_id;
+            $last_employment_id = $previous_employment_id; $last_assignment_id = $previous_assignment_id;
+            continue;
+        } elseif ($change_type === HRM_HIST_SUSPENSION) {
             if ($command_type !== 'employee_suspension' || $previous_type === HRM_HIST_SUSPENSION)
                 return false;
             if ($previous_type !== '' && $previous_type !== HRM_HIST_REINSTATE)
@@ -135,6 +149,31 @@ function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_dat
         || ($mapping['retired_at'] !== null && trim((string)$mapping['retired_at']) !== ''))
         return false;
 
+    // With multiple same-code episodes, the flat Employee hire/release fields
+    // cannot express an intervening gap. Deny consumer eligibility in that gap
+    // rather than treating an empty Suspension overlay as active service.
+    $episodes = db_query("SELECT employment_id,worker_id,employment_sequence,legacy_employee_number,"
+        ."start_date,end_date FROM ".TB_PREF."hrm_employments WHERE worker_id=".(int)$mapping['worker_id']
+        ." ORDER BY employment_sequence".($for_update ? ' FOR UPDATE' : ''),
+        'could not verify Rehire service intervals');
+    if (!$episodes) return false;
+    $episode_rows = array(); $has_rehire = false;
+    while ($episode = db_fetch_assoc($episodes)) {
+        $episode_rows[] = $episode;
+        if ((int)$episode['employment_sequence'] > 1) $has_rehire = true;
+    }
+    if ($has_rehire) {
+        include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
+        $matches = 0;
+        foreach ($episode_rows as $episode) {
+            if ((int)$episode['employment_sequence'] > 1
+                && !get_hrm_lifecycle_rehire_employment_evidence($episode, $for_update)) return false;
+            if (!empty($episode['start_date']) && $episode['start_date'] <= $as_of_date
+                && (empty($episode['end_date']) || $episode['end_date'] >= $as_of_date)) $matches++;
+        }
+        if ($matches !== 1) return false;
+    }
+
     $history_sql = "SELECT h.history_id,h.change_type,h.effective_date,h.reason,"
         ."c.lifecycle_command_id,c.worker_id,c.employment_id,c.assignment_id,c.command_type,"
         ."c.command_status,c.effective_at,c.row_version "
@@ -142,7 +181,7 @@ function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_dat
         ."LEFT JOIN ".TB_PREF."hrm_lifecycle_commands c "
         ."ON c.lifecycle_command_id=CAST(SUBSTRING(h.reason,19) AS UNSIGNED) "
         ."WHERE h.employee_id=".db_escape($employee_id)." AND h.change_type IN ("
-        .db_escape(HRM_HIST_SUSPENSION).",".db_escape(HRM_HIST_REINSTATE).") "
+        .db_escape(HRM_HIST_SUSPENSION).",".db_escape(HRM_HIST_REINSTATE).",'rehire') "
         ."AND h.effective_date<=".db_escape($as_of_date)." "
         ."ORDER BY h.effective_date ASC,h.history_id ASC";
     if ($for_update === true) $history_sql .= ' FOR UPDATE';
@@ -151,8 +190,23 @@ function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_dat
         return false;
 
     $rows = array();
-    while ($row = db_fetch_assoc($history_result))
+    while ($row = db_fetch_assoc($history_result)) {
+        if ($row['change_type'] === 'rehire') {
+            include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
+            $sql = "SELECT e.* FROM ".TB_PREF."hrm_employments e INNER JOIN "
+                .TB_PREF."hrm_lifecycle_rehire_executions r ON r.successor_employment_id=e.employment_id "
+                ."WHERE r.lifecycle_command_id=".(int)$row['lifecycle_command_id'];
+            if ($for_update) $sql .= ' FOR UPDATE';
+            $result = db_query($sql, 'could not resolve Rehire service-state episode');
+            $employment = $result ? db_fetch_assoc($result) : false;
+            $receipt = $employment ? get_hrm_lifecycle_rehire_employment_evidence($employment, $for_update) : false;
+            if (!$receipt || (int)$receipt['history_id'] !== (int)$row['history_id']) return false;
+            $row['rehire_receipt_verified'] = true;
+            $row['successor_employment_id'] = (int)$receipt['successor_employment_id'];
+            $row['successor_assignment_id'] = (int)$receipt['successor_assignment_id'];
+        }
         $rows[] = $row;
+    }
 
     return hrm_lifecycle_service_state_as_of_resolve_rows(
         $employee_id, $as_of_date, (int)$mapping['worker_id'], $rows

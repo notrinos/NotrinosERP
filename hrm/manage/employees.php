@@ -693,6 +693,7 @@ function tab_employment($employee_id, $new_employee) {
 		$current_confirmation = get_post('confirmation_date', '');
 		label_row(_('Probation End Date:'), $current_probation !== ''
 			? htmlspecialchars($current_probation, ENT_QUOTES, 'UTF-8') : _('Not scheduled'));
+		label_row(_('Probation Outcomes:'), _('Use Confirmation for a successful review, Probation Schedule for an extension, or Employee Separation for a failed review. Each outcome requires approval.'));
 		if ($current_confirmation !== '') {
 			hrm_lifecycle_probation_schedule_browser_forget_idempotency_key(get_post('NewEmpID'));
 			label_row(_('Probation Schedule Status:'), _('Unavailable after confirmation'));

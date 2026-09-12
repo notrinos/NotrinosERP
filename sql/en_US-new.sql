@@ -7936,3 +7936,30 @@ WHERE `id` IN (2, 10)
   AND CONCAT(';', IFNULL(`areas`, ''), ';') NOT LIKE '%;3085;%';
 
 -- END CONSOLIDATED MIGRATIONS
+
+-- Additive Rehire execution receipt. No existing business/history row is changed.
+DROP TABLE IF EXISTS `0_hrm_lifecycle_rehire_executions`;
+
+CREATE TABLE `0_hrm_lifecycle_rehire_executions` (
+  `lifecycle_command_id` bigint(20) unsigned NOT NULL,
+  `predecessor_employment_id` bigint(20) unsigned NOT NULL,
+  `predecessor_contract_id` bigint(20) unsigned NOT NULL,
+  `predecessor_assignment_id` bigint(20) unsigned NOT NULL,
+  `successor_employment_id` bigint(20) unsigned NOT NULL,
+  `successor_contract_id` bigint(20) unsigned NOT NULL,
+  `successor_assignment_id` bigint(20) unsigned NOT NULL,
+  `history_id` int(11) NOT NULL,
+  `first_hire_date` date NOT NULL,
+  PRIMARY KEY (`lifecycle_command_id`),
+  UNIQUE KEY `hrm_rehire_predecessor_uq` (`predecessor_employment_id`),
+  UNIQUE KEY `hrm_rehire_successor_uq` (`successor_employment_id`),
+  UNIQUE KEY `hrm_rehire_history_uq` (`history_id`),
+  CONSTRAINT `0_hrm_rehire_command_fk` FOREIGN KEY (`lifecycle_command_id`) REFERENCES `0_hrm_lifecycle_commands` (`lifecycle_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_predecessor_fk` FOREIGN KEY (`predecessor_employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_old_contract_fk` FOREIGN KEY (`predecessor_contract_id`) REFERENCES `0_hrm_contracts` (`contract_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_old_assignment_fk` FOREIGN KEY (`predecessor_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_successor_fk` FOREIGN KEY (`successor_employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_new_contract_fk` FOREIGN KEY (`successor_contract_id`) REFERENCES `0_hrm_contracts` (`contract_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_new_assignment_fk` FOREIGN KEY (`successor_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_rehire_history_fk` FOREIGN KEY (`history_id`) REFERENCES `0_employee_history` (`history_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;

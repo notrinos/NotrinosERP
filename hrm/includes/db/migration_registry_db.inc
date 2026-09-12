@@ -11,12 +11,14 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.374',
-        'active_legacy_payroll_contract'=>'1.0.333',
-        'next_backlog_item'=>'HRM-FND-005 same-code Employee Rehire maker/checker command and terminal execution design review',
+        'active_database_version'=>'1.0.375',
+        'active_legacy_payroll_contract'=>'1.0.334',
+        'next_backlog_item'=>'HRM-FND-006 legacy employee compatibility projector review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review same-code Rehire maker/checker command and terminal execution: register bounded central approval identity, enforce distinct checker and exact predecessor/successor compare-and-set, roll back audit failure, and define browser/recovery ownership before any production writer is released.',
+        'next_slice_scope'=>'Review HRM-FND-006 authoritative compatibility projection, divergence detection, per-company shadow comparison and fallback; do not widen protected field or command authority.',
         'edges'=>array(
+            'hrm_fnd_005_employee_rehire_execution'=>array('previous'=>'1.0.374','version'=>'1.0.375',
+                'file'=>'sql/upgrade_hrm_fnd_005_employee_rehire_execution.php'),
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',
                 'file'=>'sql/upgrade_hrm_fnd_002_employment_foundation.php'),
             'hrm_fnd_002_contract_foundation'=>array('previous'=>'1.0.201','version'=>'1.0.202',

@@ -138,7 +138,10 @@ function get_hrm_lifecycle_employee_rehire_custody_for_update($employee_number, 
         || !empty($binding['retired_at'])
         || (string)$binding['employee_id'] !== (string)$employee['employee_id']
         || (int)$employment['worker_id'] !== (int)$binding['worker_id']
-        || (int)$employment['legacy_current'] !== 1 || (int)$employment['employment_sequence'] !== 1
+        || (int)$employment['legacy_current'] !== 1 || (int)$employment['employment_sequence'] < 1
+        || ((int)$employment['employment_sequence'] > 1
+            && (!function_exists('hrm_lifecycle_rehire_compatibility_allows')
+                || !hrm_lifecycle_rehire_compatibility_allows($employee, $employment)))
         || (string)$employment['employment_status'] !== 'terminated'
         || hrm_lifecycle_rehire_date($employment['end_date']) === false
         || (string)$employee['released_date'] !== (string)$employment['end_date']

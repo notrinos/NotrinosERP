@@ -1,4 +1,5 @@
 <?php
+include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -94,7 +95,7 @@ function hrm_contract_projection_from_employee($employee, $employment, $allow_le
     $employee_number = (int)$employee['employee_number'];
     if ((int)$employment['legacy_employee_number'] !== $employee_number
         || (int)$employment['legacy_current'] !== 1
-        || (int)$employment['employment_sequence'] !== 1)
+        || !hrm_lifecycle_rehire_compatibility_allows($employee, $employment))
         return false;
     $type = hrm_contract_type_projection(
         isset($employee['employment_type']) ? $employee['employment_type'] : null,
