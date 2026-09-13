@@ -494,7 +494,7 @@ function execute_approved_hrm_lifecycle_probation_schedule($draft_data, $reserve
     if (!empty($assignment['effective_to']) && strcmp($effective_date, (string)$assignment['effective_to']) > 0)
         return false;
 
-    if (!update_employee($employee_id, array('probation_end_date'=>$effective_date)))
+    if (!update_employee($employee_id, array('probation_end_date'=>$effective_date), null, (int)$command['lifecycle_command_id']))
         return false;
     $written = hrm_lifecycle_probation_schedule_employee_for_update(
         (int)$draft_data['employee_number'], $employee_id);

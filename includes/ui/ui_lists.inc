@@ -2631,6 +2631,9 @@ function departments_list_row($label, $name, $selected_id=null, $submit_on_chang
 }
 
 function employees_list($name, $selected_id=null, $all_option=false, $submit_on_change=false, $opts=array(), $editkey=false, $type='employee') {
+	global $path_to_root;
+	include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+	hrm_employee_projection_require_readable();
 	$sql = "SELECT employee_id, CONCAT(first_name, ' ', last_name) name, d.department_name, e.inactive FROM ".TB_PREF."employees e LEFT JOIN ".TB_PREF."departments d ON e.department_id = d.department_id";
 
 	if ($editkey)

@@ -8323,3 +8323,28 @@ CREATE TABLE `0_hrm_lifecycle_rehire_executions` (
   CONSTRAINT `0_hrm_rehire_new_assignment_fk` FOREIGN KEY (`successor_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_rehire_history_fk` FOREIGN KEY (`history_id`) REFERENCES `0_employee_history` (`history_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_worker_profile_versions` (
+  `profile_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `effective_from` datetime NOT NULL,
+  `key_id` char(16) NOT NULL,
+  `payload_ciphertext` mediumblob NOT NULL,
+  `source` varchar(16) NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`profile_version_id`),
+  UNIQUE KEY `hrm_worker_profile_version_uq` (`worker_id`,`version_no`),
+  UNIQUE KEY `hrm_worker_profile_predecessor_uq` (`predecessor_id`),
+  CONSTRAINT `0_hrm_worker_profile_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `0_hrm_worker_profile_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_employee_projection_policy` (
+  `policy_id` tinyint(3) unsigned NOT NULL,
+  `company_id` int(10) unsigned NOT NULL,
+  `mode` varchar(16) NOT NULL DEFAULT 'shadow',
+  `revision` int(10) unsigned NOT NULL DEFAULT '1',
+  PRIMARY KEY (`policy_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;

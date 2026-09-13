@@ -16,6 +16,8 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+hrm_employee_projection_require_readable();
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/payroll_engine.inc');
 

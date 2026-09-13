@@ -151,6 +151,11 @@ function do_install() {
 			display_error(_('Cannot initialize the default HRM Legal Entity for this new company.'));
 			return false;
 		}
+		include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+		if (!initialize_hrm_fresh_employee_projection()) {
+			display_error(_('Cannot initialize Employee compatibility for this new company.'));
+			return false;
+		}
 		$admin = get_user_by_login('admin');
 		update_user_prefs($admin['id'], array(
 			'language' => $con['lang'], 

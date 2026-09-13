@@ -35,7 +35,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consum
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.334');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.339');
 
 /**
  * Payroll Formula Engine.
@@ -209,6 +209,9 @@ function payroll_suspension_readiness_for_update($employee, $from_date, $to_date
         || !is_date($from_date) || !is_date($to_date)
         || date1_greater_date2($from_date, $to_date))
         return null;
+    include_once(dirname(__FILE__).'/db/employee_projection_control_db.inc');
+    if (!hrm_employee_projection_payroll_ready($employee['employee_id']))
+        return array('can_use_legacy_calculation'=>false,'decision'=>'deny_employee_projection_drift');
     if (!function_exists('get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update'))
         return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_service_state_dependency_unavailable');
     return get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update(

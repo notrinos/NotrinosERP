@@ -482,7 +482,7 @@ function execute_approved_hrm_lifecycle_separation($draft_data, $reserved_trans_
     $eos_amount = calculate_eos_amount($monthly_salary, $years, (int)$draft_data['is_resignation']);
 
     if (!update_employee($employee_id, array('inactive'=>1,'released_date'=>$effective_date), array(
-        'effective_date'=>$effective_date,'change_type'=>HRM_HIST_SEPARATION)))
+        'effective_date'=>$effective_date,'change_type'=>HRM_HIST_SEPARATION), (int)$command['lifecycle_command_id']))
         return false;
     $approved_by = isset($_SESSION['wa_current_user']->loginname) ? (string)$_SESSION['wa_current_user']->loginname : '';
     $history_id = add_employee_history($employee_id, HRM_HIST_SEPARATION, $effective_date,

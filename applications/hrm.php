@@ -91,6 +91,7 @@ class HrmApp extends application {
 		$this->add_rapp_function(2, _('Appraisa&ls'),               'hrm/manage/appraisals.php?',                          'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Asset Allo&cation'),         'hrm/manage/asset_allocation.php?',                    'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('HR Settin&gs'),              'hrm/manage/hr_settings.php?',                         'SA_HRSETTINGS',        MENU_SETTINGS);
+		$this->add_rapp_function(2, _('Employee Compatibility'), 'hrm/manage/employee_compatibility.php?', 'SA_HRSETTINGS', MENU_SETTINGS);
 
 		$this->add_extensions();
 	}

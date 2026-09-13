@@ -27,6 +27,8 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_duplicate_review_
 include_once($path_to_root . '/hrm/includes/db/employee_person_link_proposal_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_canonical_link_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_employment_rehire_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_projection_command_db.inc');
+include_once($path_to_root . '/hrm/includes/db/employee_projection_control_db.inc');
 
 /**
  * Enhanced Employee CRUD
@@ -84,8 +86,10 @@ function db_has_employees() {
  * @param array $data Associative array of employee fields
  * @return int|false The new employee_number or false on error
  */
-function add_employee($data) {
+function add_employee($data, $hire_command_id = 0) {
 	if (!is_array($data))
+		return false;
+	if (!hrm_employee_projection_hire_authority($data, $hire_command_id))
 		return false;
 
 	// Required fields
@@ -142,6 +146,9 @@ function add_employee($data) {
 	$vals = implode(', ', array_values($fields));
 
 	begin_transaction();
+	if (!hrm_employee_projection_policy()) { cancel_transaction(); return false; }
+	// Reserve the immutable legacy numeric identity inside the uncommitted Hire.
+	// It becomes visible only after owners, projection and command audit succeed.
 	$sql = "INSERT INTO ".TB_PREF."employees ($cols) VALUES ($vals)";
 	$inserted = db_query($sql, 'could not add employee record');
 	$employee_number = $inserted ? db_insert_id() : false;
@@ -159,6 +166,8 @@ function add_employee($data) {
 		? synchronize_hrm_person_bank_from_employee($after) : false;
 	$private_profile = $bank
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
+	$private_profile = $private_profile && hrm_compatibility_profile_append($after)
+		&& hrm_employee_projection_materialize_person($employee_number);
 	$audit = $private_profile ? append_employee_profile_domain_audit(
 		'created', $employee_id, null, $after
 	) : false;
@@ -176,7 +185,7 @@ function add_employee($data) {
  * @param array $data Associative array of fields to update
  * @return bool
  */
-function update_employee($employee_id, $data, $assignment_effective_change=null) {
+function update_employee($employee_id, $data, $assignment_effective_change=null, $lifecycle_command_id=0) {
 	if (!is_array($data))
 		return false;
 
@@ -226,24 +235,36 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 	if (empty($sets))
 		return false;
 
-	$before = hrm_employee_domain_audit_row($employee_id);
-	if (!$before)
-		return false;
+	begin_transaction();
+	$policy = hrm_employee_projection_policy();
+	$binding = $policy ? get_hrm_person_worker_binding($employee_id) : false;
+	$binding = $binding ? hrm_employment_lock_binding_for_interval_policy((int)$binding['employee_number']) : false;
+	$before = $binding ? hrm_employee_projection_one('SELECT * FROM '.TB_PREF.'employees WHERE employee_number='.(int)$binding['employee_number'].' FOR UPDATE') : false;
+	if (!$before) { cancel_transaction(); return false; }
+	$expected_before = hrm_employee_projection_build((int)$before['employee_number']);
+	if (!$expected_before || hrm_employee_projection_difference($before, $expected_before)) {
+		cancel_transaction(); return false; // Reconcile drift; never import it as new authority.
+	}
+	$expressions = array();
+	foreach ($sets as $set) {
+		$parts = explode(' = ', $set, 2);
+		$expressions[] = $parts[1].' AS '.$parts[0];
+	}
+	$changed_values = hrm_employee_projection_one('SELECT '.implode(',', $expressions));
+	$after = $changed_values ? array_merge($before, $changed_values) : false;
+	if (!$after || !hrm_employee_projection_update_authority($before, $after, $lifecycle_command_id, $assignment_effective_change)) {
+		cancel_transaction(); return false;
+	}
 	$identifier_guard_changes = $data;
 	if (array_key_exists('passport_expiry', $identifier_guard_changes))
 		$identifier_guard_changes['passport_expiry'] = !empty($identifier_guard_changes['passport_expiry'])
 			? employee_to_sql_date($identifier_guard_changes['passport_expiry']) : '';
 	if (!hrm_person_identifier_legacy_update_guard($before, $identifier_guard_changes))
-		return false;
+		{ cancel_transaction(); return false; }
 	$bank_guard = hrm_person_bank_legacy_update_guard($before, $data);
 	if ($bank_guard === false)
-		return false;
-	begin_transaction();
-	$sql = "UPDATE ".TB_PREF."employees SET ".implode(', ', $sets)
-		." WHERE ".employee_where_condition($employee_id);
-
-	$updated = db_query($sql, 'could not update employee');
-	$after = $updated ? hrm_employee_domain_audit_row($employee_id) : false;
+		{ cancel_transaction(); return false; }
+	$updated = true;
 	$foundation = $after ? synchronize_hrm_person_worker_from_employee($after) : false;
 	$employment = $foundation
 		? (is_array($assignment_effective_change)
@@ -262,6 +283,8 @@ function update_employee($employee_id, $data, $assignment_effective_change=null)
 			$bank_guard === 'preserve_governed' ? 'legacy_employee_compat_preserve' : 'runtime_employee') : false;
 	$private_profile = $bank
 		? synchronize_hrm_person_private_profile_from_employee($after) : false;
+	$private_profile = $private_profile && hrm_compatibility_profile_append($after)
+		&& hrm_employee_projection_materialize_person((int)$before['employee_number']);
 	$audit = $private_profile ? append_employee_profile_domain_audit(
 		'updated', $employee_id, $before, $after
 	) : false;
@@ -757,71 +780,14 @@ function get_active_employees($department_id=0) {
 /**
  * Delete employee and related records. Returns false if employee has transactions.
  */
+/** Employee erasure has no approved command; preserve normalized and payroll custody. */
 function delete_employee($employee_id) {
-	if (!employee_table_exists('employees'))
-		return false;
-
-	$employee_where = employee_where_condition($employee_id);
-
-	// Check if employee has payslips
-	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
-		return false;
-	// Document bytes cannot participate in this database transaction. Deny the
-	// cascade while any document exists so rollback can never orphan or erase it.
-	if (employee_table_exists('employee_documents') && check_empty_result(
-		"SELECT COUNT(*) FROM ".TB_PREF."employee_documents
-		 WHERE employee_id = ".db_escape($employee_id)
-	))
-		return false;
-	$snapshot = hrm_employee_deletion_audit_snapshot($employee_id);
-	if ($snapshot === false)
-		return false;
-
-	begin_transaction();
-
-	// Delete only database rows whose removal can share this transaction.
-	if (employee_table_exists('employee_dependents')) {
-		$sql = "DELETE FROM ".TB_PREF."employee_dependents WHERE employee_id = ".db_escape($employee_id);
-		db_query($sql, 'could not delete employee dependents');
-	}
-
-	// Historical employee changes are accounting/audit evidence and survive
-	// deletion of the current employee profile.
-
-	if (employee_table_exists('employee_salary')) {
-		$sql = "DELETE FROM ".TB_PREF."employee_salary WHERE employee_id = ".db_escape($employee_id);
-		db_query($sql, 'could not delete employee salary');
-	}
-
-	if (employee_table_exists('leave_balances')) {
-		$sql = "DELETE FROM ".TB_PREF."leave_balances WHERE employee_id = ".db_escape($employee_id);
-		db_query($sql, 'could not delete employee leave balances');
-	}
-
-	$sql = "DELETE FROM ".TB_PREF."employees WHERE ".$employee_where;
-	$foundation = retire_hrm_person_worker_binding($employee_id);
-	$deleted = $foundation ? db_query($sql, 'could not delete employee') : false;
-	$audit = $deleted
-		? append_employee_deletion_domain_audit($employee_id, $snapshot) : false;
-	if (!$foundation || !$deleted || !$audit) {
-		cancel_transaction();
-		return false;
-	}
-
-	commit_transaction();
-
-	return true;
+	return false;
 }
 
-/**
- * Check if employee can be deleted (no transactions).
- */
+/** Retained Employee records cannot be deleted through generic maintenance. */
 function employee_can_delete($employee_id) {
-	if (employee_table_exists('payslips') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."payslips WHERE employee_id = ".db_escape($employee_id)))
-		return false;
-	if (employee_table_exists('attendance') && check_empty_result("SELECT COUNT(*) FROM ".TB_PREF."attendance WHERE employee_id = ".db_escape($employee_id)))
-		return false;
-	return true;
+	return false;
 }
 
 /**

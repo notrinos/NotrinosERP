@@ -281,12 +281,17 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
     if ($command['command_status'] !== 'pending' || (int)$command['row_version'] !== 1
         || $data['effective_date'] > hrm_lifecycle_separation_today_sql()) return false;
     $number = (int)$data['employee_number'];
+    if (!function_exists('hrm_employee_projection_build'))
+        include_once(dirname(__FILE__).'/employee_projection_command_db.inc');
     $binding = hrm_employment_lock_binding_for_interval_policy($number);
     $plan = $binding ? get_hrm_lifecycle_employee_rehire_rollover_plan_for_update($number, $data['effective_date']) : false;
     if (!$plan || !hash_equals($command['request_hash'], hrm_lifecycle_rehire_execution_request_hash($plan))
         || !hrm_employment_person_interval_policy_allows($binding, 0, $data['effective_date'], null))
         return false;
     $employee = hrm_lifecycle_rehire_employee_for_update($number);
+    $compatibility = hrm_employee_projection_build($number);
+    $stored_compatibility = hrm_employee_projection_one('SELECT * FROM '.TB_PREF.'employees WHERE employee_number='.$number.' FOR UPDATE');
+    if (!$compatibility || !$stored_compatibility || hrm_employee_projection_difference($stored_compatibility, $compatibility)) return false;
     $contract = $plan['successor_contract_projection'];
     $assignment = $plan['successor_assignment_projection'];
     if (!$employee || (int)$employee['employment_type'] !== (int)$contract['legacy_employment_type'])
@@ -368,10 +373,8 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
         ." WHERE worker_id=".(int)$plan['worker_id']." AND person_id=".(int)$plan['person_id']
         ." AND worker_status='inactive' AND active_to=".db_escape($employee['released_date']),
         'could not reactivate Rehire Worker projection') || db_num_affected_rows() !== 1) return false;
-    if (!db_query("UPDATE ".TB_PREF."employees SET inactive=0,released_date=NULL"
-        ." WHERE employee_number=".$number." AND employee_id=".db_escape($employee['employee_id'])
-        ." AND inactive=1 AND hire_date=".db_escape($plan['first_hire_date'])
-        ." AND released_date=".db_escape($employee['released_date']),
-        'could not reactivate Rehire Employee projection') || db_num_affected_rows() !== 1) return false;
+    if (!function_exists('hrm_employee_projection_materialize_person'))
+        include_once(dirname(__FILE__).'/employee_projection_command_db.inc');
+    if (!hrm_employee_projection_materialize_person($number)) return false;
     return (int)$command['lifecycle_command_id'];
 }

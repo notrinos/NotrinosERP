@@ -265,12 +265,14 @@ class fa_patch {
 					$this->set_recovery_state('INSTALL_FAILED_AFTER_BACKUP');
 				else if ($this->recovery_state === null)
 					$this->set_recovery_state('PREPARE_FAILED_BEFORE_MUTATION');
+				if (count($this->errors) == 0)
+					$this->log_error(_('Upgrade step failed without a diagnostic; the database version was not advanced.'));
 			}
 		}
 
-		$this->post_install($result);
+		$result = $this->post_install($result);
 
-		return count($this->errors) == 0;
+		return $result === true && count($this->errors) == 0;
 	}
 
 	/*

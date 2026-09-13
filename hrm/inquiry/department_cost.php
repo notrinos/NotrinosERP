@@ -13,6 +13,8 @@ $page_security = 'SA_DEPTCOST';
 $path_to_root = "../..";
 include_once($path_to_root . '/includes/db_pager.inc');
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+hrm_employee_projection_require_readable();
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payslip_db.inc');
 

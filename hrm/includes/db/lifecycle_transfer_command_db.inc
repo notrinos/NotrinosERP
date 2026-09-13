@@ -504,7 +504,7 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
     if ($manager_employee_id !== '')
         $employee_update['reporting_to'] = $manager_employee_id;
 
-    if (!update_employee($employee_id, $employee_update, $assignment_effective_change))
+    if (!update_employee($employee_id, $employee_update, $assignment_effective_change, (int)$command['lifecycle_command_id']))
         return false;
     $approved_by = isset($_SESSION['wa_current_user']->loginname) ? (string)$_SESSION['wa_current_user']->loginname : '';
     $history_id = add_employee_history($employee_id, HRM_HIST_TRANSFER, $effective_date,

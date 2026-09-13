@@ -567,7 +567,7 @@ function execute_approved_hrm_lifecycle_promotion($draft_data, $reserved_trans_n
         'grade_id'=>(int)$draft_data['new_grade_id']);
     if ($manager_employee_id !== '')
         $employee_update['reporting_to'] = $manager_employee_id;
-    if (!update_employee($employee_id, $employee_update, $assignment_effective_change))
+    if (!update_employee($employee_id, $employee_update, $assignment_effective_change, (int)$command['lifecycle_command_id']))
         return false;
     $approved_by = isset($_SESSION['wa_current_user']->loginname)
         ? (string)$_SESSION['wa_current_user']->loginname : '';

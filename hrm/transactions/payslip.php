@@ -26,6 +26,8 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/ui/payslip_ui.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
+include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+hrm_employee_projection_require_readable();
 include_once($path_to_root.'/hrm/includes/payroll_engine.inc');
 
 if (isset($_GET['ModifyPaySlip'])) {

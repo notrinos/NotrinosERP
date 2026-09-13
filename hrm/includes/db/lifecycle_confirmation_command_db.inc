@@ -445,7 +445,7 @@ function execute_approved_hrm_lifecycle_confirmation($draft_data, $reserved_tran
     if (!empty($assignment['effective_to']) && strcmp($effective_date, (string)$assignment['effective_to']) > 0)
         return false;
 
-    if (!update_employee($employee_id, array('confirmation_date'=>$effective_date)))
+    if (!update_employee($employee_id, array('confirmation_date'=>$effective_date), null, (int)$command['lifecycle_command_id']))
         return false;
     $written = hrm_lifecycle_confirmation_employee_for_update(
         (int)$draft_data['employee_number'], $employee_id);

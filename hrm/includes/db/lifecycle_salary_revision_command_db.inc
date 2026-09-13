@@ -589,7 +589,7 @@ function execute_approved_hrm_lifecycle_salary_revision($draft_data, $reserved_t
         return false;
 
     $old_salary = get_employee_total_salary($employee_id, $effective_date);
-    if ((int)$employee['personal_salary'] !== 1 && !update_employee($employee_id, array('personal_salary'=>1)))
+    if ((int)$employee['personal_salary'] !== 1 && !update_employee($employee_id, array('personal_salary'=>1), null, (int)$command['lifecycle_command_id']))
         return false;
     $new_salary = hrm_lifecycle_salary_revision_amount($draft_data['new_salary']);
     if ($new_salary === false)

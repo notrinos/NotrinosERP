@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.375',
-        'active_legacy_payroll_contract'=>'1.0.334',
-        'next_backlog_item'=>'HRM-FND-006 legacy employee compatibility projector review',
+        'active_database_version'=>'1.0.380',
+        'active_legacy_payroll_contract'=>'1.0.339',
+        'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Review HRM-FND-006 authoritative compatibility projection, divergence detection, per-company shadow comparison and fallback; do not widen protected field or command authority.',
+        'next_slice_scope'=>'Begin HRM-FND-007 only after fresh dependency review; do not infer work authorization from nationality/passport and do not widen FND-006 compatibility ownership.',
         'edges'=>array(
+            'hrm_fnd_006_completion'=>array('previous'=>'1.0.379','version'=>'1.0.380',
+                'file'=>'sql/upgrade_hrm_fnd_006_completion.php'),
+            'hrm_fnd_006_company_control'=>array('previous'=>'1.0.378','version'=>'1.0.379',
+                'file'=>'sql/upgrade_hrm_fnd_006_company_control.php'),
+            'hrm_fnd_006_writer_cutover'=>array('previous'=>'1.0.377','version'=>'1.0.378',
+                'file'=>'sql/upgrade_hrm_fnd_006_writer_cutover.php'),
+            'hrm_fnd_006_projector'=>array('previous'=>'1.0.376','version'=>'1.0.377',
+                'file'=>'sql/upgrade_hrm_fnd_006_projector.php'),
+            'hrm_fnd_006_profile_ownership'=>array('previous'=>'1.0.375','version'=>'1.0.376',
+                'file'=>'sql/upgrade_hrm_fnd_006_profile_ownership.php'),
             'hrm_fnd_005_employee_rehire_execution'=>array('previous'=>'1.0.374','version'=>'1.0.375',
                 'file'=>'sql/upgrade_hrm_fnd_005_employee_rehire_execution.php'),
             'hrm_fnd_002_employment_foundation'=>array('previous'=>'1.0.200','version'=>'1.0.201',

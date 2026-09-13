@@ -25,3 +25,6 @@ include_once($path_to_root.'/hrm/includes/ui/overtime_ui.inc');
 include_once($path_to_root.'/hrm/includes/ui/department_ui.inc');
 include_once($path_to_root.'/hrm/includes/ui/payroll_ui.inc');
 include_once($path_to_root.'/hrm/includes/ui/salary_structure_ui.inc');
+
+include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+hrm_employee_projection_require_readable();

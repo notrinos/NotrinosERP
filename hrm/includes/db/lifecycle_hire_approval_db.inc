@@ -244,7 +244,7 @@ function execute_approved_hrm_lifecycle_hire($draft_data, $reserved_trans_no, $d
     if (!hrm_lifecycle_hire_employee_code_available_for_execution($payload['employee_id']))
         return false;
 
-    $employee_number = add_employee($payload);
+    $employee_number = add_employee($payload, $command_id);
     if ((int)$employee_number <= 0)
         return false;
     $binding = function_exists('get_hrm_person_worker_binding')

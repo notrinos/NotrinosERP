@@ -11,6 +11,9 @@
 function hrm_require_report_controller($expected_report_id) {
 	if (defined('HRM_REPORT_CONTROLLER_ID')
 		&& (int)HRM_REPORT_CONTROLLER_ID === (int)$expected_report_id) {
+		global $path_to_root;
+		include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+		hrm_employee_projection_require_readable();
 		return;
 	}
 
