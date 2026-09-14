@@ -22,6 +22,7 @@ define('HRM_FIELD_RESTRICTED_DOCUMENT', 'restricted_document');
 define('HRM_FIELD_PRIVATE_PERSON', 'private_person');
 define('HRM_FIELD_ACTION_VIEW', 'view');
 define('HRM_FIELD_ACTION_MANAGE', 'manage');
+define('HRM_FIELD_ACTION_VERIFY', 'verify');
 define('HRM_FIELD_ACTION_VERIFY_LINK', 'verify_link');
 define('HRM_FIELD_ACTION_SUPERSEDE', 'supersede');
 define('HRM_FIELD_ACTION_PAYMENT_ELECTION', 'payment_election');
@@ -89,8 +90,14 @@ function hrm_sensitive_field_permission_matrix() {
 				'all' => array('SA_EMPLOYEE', 'SA_HRM_MANAGE_WORK_AUTHORIZATION'),
 				'any' => array(),
 			),
-			// Manage authority is deliberately separate from masked identity view.
-			// No role receives SA_HRM_MANAGE_WORK_AUTHORIZATION automatically.
+			HRM_FIELD_ACTION_VERIFY => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_IDENTITY_DETAILS',
+					'SA_HRM_VERIFY_WORK_AUTHORIZATION'),
+				'any' => array(),
+			),
+			// Manage and checker authority are deliberately distinct. Masked view
+			// remains permissioned through the existing restricted-identity view.
+			// No role receives either Work Authorization mutation grant automatically.
 		),
 		HRM_FIELD_RESTRICTED_DOCUMENT => array(
 			HRM_FIELD_ACTION_VIEW => array(

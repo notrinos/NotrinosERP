@@ -393,6 +393,7 @@ $security_areas =array(
 	'SA_HRM_CHANGE_BANK_DETAILS' => array(SS_HRM|19, _('Propose governed employee bank-detail supersession')),
 	'SA_HRM_MANAGE_PAYMENT_ELECTION' => array(SS_HRM|20, _('Manage governed employee bank payment elections')), // no automatic role grant
 	'SA_HRM_MANAGE_WORK_AUTHORIZATION' => array(SS_HRM|21, _('Manage governed employee work authorization')), // no automatic role grant
+	'SA_HRM_VERIFY_WORK_AUTHORIZATION' => array(SS_HRM|22, _('Verify governed employee work authorization')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

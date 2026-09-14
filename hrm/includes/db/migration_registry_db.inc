@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.384',
-        'active_legacy_payroll_contract'=>'1.0.341',
+        'active_database_version'=>'1.0.386',
+        'active_legacy_payroll_contract'=>'1.0.342',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Continue HRM-FND-007 only with Work Authorization verification/checker and masked-read review after local 1.0.384 acceptance; do not release readiness/alerts or typed-Attribute writers yet.',
+        'next_slice_scope'=>'Continue HRM-FND-007 with Work Authorization expiry/readiness policy review after local 1.0.386 acceptance; do not activate assignment/payroll eligibility consumers, alerts, browser/import routes, bulk export, or typed-Attribute writers yet.',
         'edges'=>array(
+            'hrm_fnd_007_work_authorization_masked_reader'=>array('previous'=>'1.0.385','version'=>'1.0.386',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_masked_reader.php'),
+            'hrm_fnd_007_work_authorization_verification'=>array('previous'=>'1.0.384','version'=>'1.0.385',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_verification.php'),
             'hrm_fnd_007_work_authorization_writer'=>array('previous'=>'1.0.383','version'=>'1.0.384',
                 'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_writer.php'),
             'hrm_fnd_007_work_authorization_command_custody'=>array('previous'=>'1.0.382','version'=>'1.0.383',
