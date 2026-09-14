@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.388',
-        'active_legacy_payroll_contract'=>'1.0.343',
+        'active_database_version'=>'1.0.390',
+        'active_legacy_payroll_contract'=>'1.0.344',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Continue HRM-FND-007 after local 1.0.388 acceptance with expiry-attention/consumer-boundary review; do not activate assignment/payroll consumers or notifications until their explicit fail-closed integration is separately reviewed, and keep Typed Attribute production writing deferred.',
+        'next_slice_scope'=>'Continue HRM-FND-007 after local 1.0.390 acceptance with governed jurisdiction-source review and explicit Employee Transfer consumer cutover; do not infer jurisdiction, activate payroll consumers, or send expiry notifications, and keep Typed Attribute production writing deferred until that boundary is accepted.',
         'edges'=>array(
+            'hrm_fnd_007_work_authorization_assignment_readiness_boundary'=>array('previous'=>'1.0.389','version'=>'1.0.390',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_assignment_readiness_boundary.php'),
+            'hrm_fnd_007_work_authorization_expiry_attention_projection'=>array('previous'=>'1.0.388','version'=>'1.0.389',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_expiry_attention_projection.php'),
             'hrm_fnd_007_work_authorization_readiness_evaluator'=>array('previous'=>'1.0.387','version'=>'1.0.388',
                 'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_readiness_evaluator.php'),
             'hrm_fnd_007_work_authorization_policy_foundation'=>array('previous'=>'1.0.386','version'=>'1.0.387',
