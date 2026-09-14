@@ -91,23 +91,26 @@ function hrm_typed_attribute_value_subject_exists($subject_type, $subject_id, $f
     return $r && db_num_rows($r) === 1;
 }
 
-/** Resolve the latest published definition effective on the command date. */
-function hrm_typed_attribute_value_resolve_definition($attribute_code, $effective_at, $for_update = false)
+/**
+ * Resolve the latest finalized definition lifecycle state as of one command date.
+ * Pending maker/checker rows are deliberately ignored until checker application.
+ */
+function hrm_typed_attribute_definition_resolve_state($attribute_code, $effective_at, $for_update = false)
 {
     $attribute_code = hrm_typed_attribute_value_attribute_code($attribute_code);
     $effective_at = hrm_typed_attribute_value_datetime($effective_at, false);
-    if ($attribute_code === false || $effective_at === false) return false;
+    if ($attribute_code === false || $effective_at === false || !is_bool($for_update)) return false;
     $date = substr($effective_at, 0, 10);
     $sql = 'SELECT d.definition_id,d.attribute_code,v.definition_version_id,v.version_no,v.value_type,'
         .'v.allowed_subject,v.sensitivity,v.owner_scope,v.validation_json,v.definition_status,'
         .'v.effective_from,v.effective_to FROM '.TB_PREF.'hrm_attribute_definitions d '
         .'INNER JOIN '.TB_PREF.'hrm_attribute_definition_versions v ON v.definition_id=d.definition_id '
-        .'WHERE d.attribute_code='.db_escape($attribute_code)." AND v.definition_status='active'"
+        .'WHERE d.attribute_code='.db_escape($attribute_code)
+        ." AND v.definition_status IN ('active','deprecated','retired')"
         .' AND v.effective_from<='.db_escape($date)
-        .' AND (v.effective_to IS NULL OR v.effective_to>='.db_escape($date).') '
-        .'ORDER BY v.effective_from DESC,v.version_no DESC,v.definition_version_id DESC LIMIT 2'
+        .' ORDER BY v.effective_from DESC,v.version_no DESC,v.definition_version_id DESC LIMIT 2'
         .($for_update ? ' FOR UPDATE' : '');
-    $r = db_query($sql, 'could not resolve effective Typed Attribute definition');
+    $r = db_query($sql, 'could not resolve Typed Attribute definition lifecycle state');
     if (!$r || db_num_rows($r) < 1) return false;
     $row = db_fetch_assoc($r);
     $metadata = array(
@@ -122,6 +125,22 @@ function hrm_typed_attribute_value_resolve_definition($attribute_code, $effectiv
         (string)$row['value_type'], (string)$row['validation_json']);
     if (!hrm_typed_attribute_validate_definition_metadata($metadata)
         || $validation === false || $validation !== (string)$row['validation_json']) return false;
+    return $row;
+}
+
+/**
+ * Resolve a definition for one usage. New writes require active state; current
+ * reads may use active or deprecated state. Retired state always fails closed.
+ */
+function hrm_typed_attribute_value_resolve_definition($attribute_code, $effective_at, $for_update = false, $usage = 'write')
+{
+    if (!in_array($usage,array('write','read'),true)) return false;
+    $row=hrm_typed_attribute_definition_resolve_state($attribute_code,$effective_at,$for_update);
+    if (!is_array($row)) return false;
+    $status=(string)$row['definition_status'];
+    if ($usage==='write' && $status!=='active') return false;
+    if ($usage==='read' && !in_array($status,array('active','deprecated'),true)) return false;
+    if ($row['effective_to']!==null && substr((string)$effective_at,0,10)>(string)$row['effective_to']) return false;
     return $row;
 }
 

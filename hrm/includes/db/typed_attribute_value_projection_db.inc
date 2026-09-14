@@ -33,11 +33,11 @@ function hrm_typed_attribute_value_projection_candidates($subject_type, $subject
 
     $date = substr($as_of, 0, 10);
     $sql = 'SELECT d.attribute_code FROM '.TB_PREF.'hrm_attribute_definitions d '
-        .'INNER JOIN '.TB_PREF.'hrm_attribute_definition_versions v ON v.definition_id=d.definition_id '
-        ."WHERE v.definition_status='active' AND v.allowed_subject=".db_escape($subject_type)
-        .' AND v.effective_from<='.db_escape($date)
-        .' AND (v.effective_to IS NULL OR v.effective_to>='.db_escape($date).') '
-        .'ORDER BY d.attribute_code,v.effective_from DESC,v.version_no DESC,v.definition_version_id DESC LIMIT 201';
+        .'WHERE EXISTS (SELECT 1 FROM '.TB_PREF.'hrm_attribute_definition_versions v '
+        .'WHERE v.definition_id=d.definition_id AND v.allowed_subject='.db_escape($subject_type)
+        ." AND v.definition_status IN ('active','deprecated','retired')"
+        .' AND v.effective_from<='.db_escape($date).') '
+        .'ORDER BY d.attribute_code LIMIT 201';
     $r = db_query($sql, 'could not inventory current Typed Attribute definitions');
     if (!$r || db_num_rows($r) > 200) return false;
 
@@ -46,9 +46,14 @@ function hrm_typed_attribute_value_projection_candidates($subject_type, $subject
         $code = isset($row['attribute_code']) ? (string)$row['attribute_code'] : '';
         if ($code === '' || isset($seen[$code])) continue;
         $seen[$code] = true;
-        $definition = hrm_typed_attribute_value_resolve_definition($code, $as_of, false);
+        $definition = hrm_typed_attribute_definition_resolve_state($code, $as_of, false);
         if (!is_array($definition) || (string)$definition['allowed_subject'] !== $subject_type)
             return false;
+        $status=(string)$definition['definition_status'];
+        if ($status==='retired') continue;
+        if ($for_manage && $status!=='active') continue;
+        if (!$for_manage && !in_array($status,array('active','deprecated'),true)) return false;
+        if ($definition['effective_to']!==null && $date>(string)$definition['effective_to']) continue;
         $authorized = $for_manage
             ? hrm_typed_attribute_value_user_can_manage((string)$definition['sensitivity'])
             : hrm_typed_attribute_value_user_can_view((string)$definition['sensitivity']);
