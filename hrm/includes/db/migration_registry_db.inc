@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.380',
-        'active_legacy_payroll_contract'=>'1.0.339',
+        'active_database_version'=>'1.0.382',
+        'active_legacy_payroll_contract'=>'1.0.340',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Begin HRM-FND-007 only after fresh dependency review; do not infer work authorization from nationality/passport and do not widen FND-006 compatibility ownership.',
+        'next_slice_scope'=>'Continue HRM-FND-007 only with governed command/writer slices after local 1.0.382 foundation acceptance; keep legacy work-eligibility inference and unapproved custom-data mapping forbidden.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_foundation'=>array('previous'=>'1.0.381','version'=>'1.0.382',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_foundation.php'),
+            'hrm_fnd_007_work_authorization_foundation'=>array('previous'=>'1.0.380','version'=>'1.0.381',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_foundation.php'),
             'hrm_fnd_006_completion'=>array('previous'=>'1.0.379','version'=>'1.0.380',
                 'file'=>'sql/upgrade_hrm_fnd_006_completion.php'),
             'hrm_fnd_006_company_control'=>array('previous'=>'1.0.378','version'=>'1.0.379',

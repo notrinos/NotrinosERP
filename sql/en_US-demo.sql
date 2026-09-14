@@ -8348,3 +8348,90 @@ CREATE TABLE `0_hrm_employee_projection_policy` (
   `revision` int(10) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`policy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+-- HRM-FND-007 foundation: work authorization and typed custom attributes --
+
+CREATE TABLE `0_hrm_work_authorizations` (
+  `authorization_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `authorization_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `authorization_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'pending',
+  `valid_from` date NOT NULL,
+  `valid_to` date DEFAULT NULL,
+  `masked_identifier` varchar(32) NOT NULL DEFAULT '',
+  `key_id` char(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `details_ciphertext` mediumblob NOT NULL,
+  `verification_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'unverified',
+  `verified_at` datetime DEFAULT NULL,
+  `verified_by` smallint(6) unsigned DEFAULT NULL,
+  `employee_document_id` int(11) DEFAULT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`authorization_id`),
+  UNIQUE KEY `hrm_work_authorization_version_uq` (`worker_id`,`version_no`),
+  UNIQUE KEY `hrm_work_authorization_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_work_authorization_expiry_idx` (`authorization_status`,`valid_to`,`worker_id`),
+  KEY `hrm_work_authorization_document_idx` (`employee_document_id`),
+  CONSTRAINT `0_hrm_work_authorization_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_work_authorization_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorizations` (`authorization_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_work_authorization_document_fk` FOREIGN KEY (`employee_document_id`) REFERENCES `0_employee_documents` (`doc_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_definitions` (
+  `definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `attribute_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`definition_id`),
+  UNIQUE KEY `hrm_attribute_definition_code_uq` (`attribute_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_definition_versions` (
+  `definition_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `definition_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `value_type` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `allowed_subject` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `sensitivity` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `owner_scope` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `validation_json` text NOT NULL,
+  `definition_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`definition_version_id`),
+  UNIQUE KEY `hrm_attribute_definition_version_uq` (`definition_id`,`version_no`),
+  UNIQUE KEY `hrm_attribute_definition_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_attribute_definition_effective_idx` (`definition_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_attribute_definition_version_definition_fk` FOREIGN KEY (`definition_id`) REFERENCES `0_hrm_attribute_definitions` (`definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_definition_version_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_values` (
+  `attribute_value_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `definition_version_id` bigint(20) unsigned NOT NULL,
+  `subject_type` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `subject_id` bigint(20) unsigned NOT NULL,
+  `value_version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `effective_from` datetime NOT NULL,
+  `effective_to` datetime DEFAULT NULL,
+  `key_id` char(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `value_ciphertext` mediumblob NOT NULL,
+  `ciphertext_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`attribute_value_id`),
+  UNIQUE KEY `hrm_attribute_value_version_uq` (`definition_version_id`,`subject_type`,`subject_id`,`value_version_no`),
+  UNIQUE KEY `hrm_attribute_value_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_attribute_value_subject_idx` (`subject_type`,`subject_id`,`definition_version_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_attribute_value_definition_version_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_value_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
