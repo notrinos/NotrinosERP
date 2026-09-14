@@ -8381,6 +8381,29 @@ CREATE TABLE `0_hrm_work_authorizations` (
   CONSTRAINT `0_hrm_work_authorization_document_fk` FOREIGN KEY (`employee_document_id`) REFERENCES `0_employee_documents` (`doc_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+CREATE TABLE `0_hrm_work_authorization_policy_versions` (
+  `policy_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `policy_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `authorization_types_json` text NOT NULL,
+  `expiry_warning_days` smallint(5) unsigned NOT NULL DEFAULT '30',
+  `policy_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `qualified_review_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `approved_at` datetime DEFAULT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`policy_version_id`),
+  UNIQUE KEY `hrm_work_authorization_policy_version_uq` (`policy_code`,`version_no`),
+  UNIQUE KEY `hrm_work_authorization_policy_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_work_authorization_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_work_authorization_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_policy_versions` (`policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_attribute_definitions` (
   `definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `attribute_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
