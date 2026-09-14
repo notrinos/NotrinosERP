@@ -8045,6 +8045,54 @@ CREATE TABLE `0_hrm_work_authorization_policy_versions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
+CREATE TABLE `0_hrm_work_authorization_retention_policy_versions` (
+  `retention_policy_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `policy_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `retention_days` smallint(5) unsigned NOT NULL,
+  `anchor_event` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'authorization_valid_to',
+  `policy_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `qualified_review_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `approved_at` datetime DEFAULT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`retention_policy_version_id`),
+  UNIQUE KEY `hrm_work_authorization_retention_policy_version_uq` (`policy_code`,`version_no`),
+  UNIQUE KEY `hrm_work_authorization_retention_policy_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_work_authorization_retention_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_work_authorization_retention_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_retention_policy_versions` (`retention_policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_work_authorization_delivery_policy_versions` (
+  `delivery_policy_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `policy_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `delivery_requirement` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'stateless_only',
+  `recipient_rule_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `channel_rule_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `recovery_rule_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `policy_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `qualified_review_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `approved_at` datetime DEFAULT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`delivery_policy_version_id`),
+  UNIQUE KEY `hrm_work_authorization_delivery_policy_version_uq` (`policy_code`,`version_no`),
+  UNIQUE KEY `hrm_work_authorization_delivery_policy_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_work_authorization_delivery_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_work_authorization_delivery_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_delivery_policy_versions` (`delivery_policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_assignment_work_authorization_jurisdictions` (
   `assignment_id` bigint(20) unsigned NOT NULL,
   `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
