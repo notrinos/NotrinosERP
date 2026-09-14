@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.397',
-        'active_legacy_payroll_contract'=>'1.0.347',
+        'active_database_version'=>'1.0.400',
+        'active_legacy_payroll_contract'=>'1.0.348',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.397 acceptance, review Typed Attribute definition/version writer governance next; durable Work Authorization email/queue/acknowledgement implementation remains blocked until an approved delivery policy supplies explicit recipient/channel/recovery rules, and payroll readiness consumers remain disconnected.',
+        'next_slice_scope'=>'After local 1.0.400 acceptance, review Typed Attribute value-writer authorization, subject-existence/effective-definition resolution, validation enforcement and sensitive read/write policy next; legacy custom_data remains opaque, bulk import/export and payroll consumers remain disconnected, and durable Work Authorization delivery execution remains policy-blocked.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_definition_publish'=>array('previous'=>'1.0.399','version'=>'1.0.400',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_definition_publish.php'),
+            'hrm_fnd_007_typed_attribute_definition_writer'=>array('previous'=>'1.0.398','version'=>'1.0.399',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_definition_writer.php'),
+            'hrm_fnd_007_typed_attribute_definition_command_custody'=>array('previous'=>'1.0.397','version'=>'1.0.398',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_definition_command_custody.php'),
             'hrm_fnd_007_work_authorization_delivery_policy_foundation'=>array('previous'=>'1.0.396','version'=>'1.0.397',
                 'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_delivery_policy_foundation.php'),
             'hrm_fnd_007_work_authorization_retention_review'=>array('previous'=>'1.0.395','version'=>'1.0.396',

@@ -394,6 +394,8 @@ $security_areas =array(
 	'SA_HRM_MANAGE_PAYMENT_ELECTION' => array(SS_HRM|20, _('Manage governed employee bank payment elections')), // no automatic role grant
 	'SA_HRM_MANAGE_WORK_AUTHORIZATION' => array(SS_HRM|21, _('Manage governed employee work authorization')), // no automatic role grant
 	'SA_HRM_VERIFY_WORK_AUTHORIZATION' => array(SS_HRM|22, _('Verify governed employee work authorization')), // no automatic role grant
+	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_DEFINITION' => array(SS_HRM|23, _('Manage governed typed attribute definitions')), // no automatic role grant
+	'SA_HRM_APPROVE_TYPED_ATTRIBUTE_DEFINITION' => array(SS_HRM|24, _('Approve governed typed attribute definitions')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
