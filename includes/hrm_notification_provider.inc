@@ -134,6 +134,7 @@ class HrmNotificationProvider implements NotificationProvider
 			'documents_expiring' => array('id' => 'hrm-documents-expiring', 'area' => 'SA_EMPLOYEE', 'title' => _('Expiring Employee Documents'), 'summary' => _('%d employee documents expire in next 30 days'), 'url' => $path_to_root.'/hrm/manage/employees.php?_tabs_sel=tab_documents&sel_app=hrm', 'type' => 'warning'),
 			'probation_ending' => array('id' => 'hrm-probation-ending', 'area' => 'SA_EMPLOYEEREP', 'title' => _('Probation Periods Ending'), 'summary' => _('%d employees reach end of probation in next 30 days'), 'url' => $path_to_root.'/hrm/inquiry/employee_directory.php?sel_app=hrm', 'type' => 'warning'),
 			'pending_appraisals' => array('id' => 'hrm-appraisal-pending', 'area' => 'SA_EMPLOYEE', 'title' => _('Pending Appraisals'), 'summary' => _('%d employee appraisals awaiting approval'), 'url' => $path_to_root.'/hrm/manage/appraisals.php?sel_app=hrm', 'type' => 'pending'),
+			'work_authorization_expiry' => array('id' => 'hrm-work-authorization-expiry', 'area' => 'SA_EMPLOYEE', 'sensitive_field' => 'restricted_work_authorization', 'sensitive_action' => 'view', 'title' => _('Work Authorization Expiry Attention'), 'summary' => _('%d governed work authorizations require expiry attention'), 'url' => $path_to_root.'/hrm/inquiry/work_authorization_expiry_attention.php?sel_app=hrm', 'type' => 'warning'),
 		);
 	}
 
@@ -160,10 +161,45 @@ class HrmNotificationProvider implements NotificationProvider
 	{
 		$allowed = array();
 		foreach ($this->get_category_definitions() as $key => $definition) {
-			if ($this->can_access_area($definition['area']))
+			if ($this->can_access_definition($definition))
 				$allowed[$key] = $definition;
 		}
 		return $allowed;
+	}
+
+	/**
+	 * Enforce both page capability and any sensitive-field policy declared by
+	 * an alert category before its count query can run.
+	 *
+	 * @param array $definition
+	 * @return bool
+	 */
+	private function can_access_definition($definition)
+	{
+		if (!is_array($definition) || empty($definition['area'])
+			|| !$this->can_access_area($definition['area']))
+			return false;
+		if (empty($definition['sensitive_field']) && empty($definition['sensitive_action']))
+			return true;
+		if (empty($definition['sensitive_field']) || empty($definition['sensitive_action']))
+			return false;
+		global $path_to_root;
+		if (!function_exists('hrm_user_can_access_sensitive_field'))
+			require_once($path_to_root.'/hrm/includes/hrm_security.inc');
+		return function_exists('hrm_user_can_access_sensitive_field')
+			&& hrm_user_can_access_sensitive_field(
+				(string)$definition['sensitive_field'],
+				(string)$definition['sensitive_action']
+			);
+	}
+
+	/** Load the restricted, read-only Work Authorization expiry feed lazily. */
+	private function load_work_authorization_expiry_attention()
+	{
+		global $path_to_root;
+		if (!function_exists('count_hrm_work_authorization_expiry_attention'))
+			require_once($path_to_root.'/hrm/includes/db/work_authorization_expiry_attention_db.inc');
+		return function_exists('count_hrm_work_authorization_expiry_attention');
 	}
 
 	/**
@@ -232,6 +268,7 @@ class HrmNotificationProvider implements NotificationProvider
 			'documents_expiring'         => 0,
 			'probation_ending'           => 0,
 			'pending_appraisals'         => 0,
+			'work_authorization_expiry'  => 0,
 		);
 
 		// ---- Pending Leave Requests ----
@@ -350,6 +387,17 @@ class HrmNotificationProvider implements NotificationProvider
 					AND probation_end_date >= " . db_escape($today) . "
 					AND probation_end_date <= " . db_escape($thirty_days);
 			$counts['probation_ending'] = (int)$this->scalar($sql, 'could not count probation endings');
+		}
+
+		// ---- Governed Work Authorization Expiry Attention ----
+		// Stateless/recomputed delivery: no queue, email, acknowledgement, or
+		// recipient row is created by the topbar provider.
+		if (isset($allowed['work_authorization_expiry'])
+			&& $this->table_exists(TB_PREF . 'hrm_work_authorizations')
+			&& $this->table_exists(TB_PREF . 'hrm_work_authorization_policy_versions')
+			&& $this->load_work_authorization_expiry_attention()) {
+			$count = count_hrm_work_authorization_expiry_attention($today);
+			$counts['work_authorization_expiry'] = $count === false ? 0 : (int)$count;
 		}
 
 		// ---- Pending Appraisals ----

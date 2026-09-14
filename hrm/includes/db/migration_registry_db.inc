@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.392',
-        'active_legacy_payroll_contract'=>'1.0.345',
+        'active_database_version'=>'1.0.394',
+        'active_legacy_payroll_contract'=>'1.0.346',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.392 acceptance, review the Work Authorization expiry-attention delivery boundary and its authorization/recovery contract; keep payroll readiness consumers disconnected, do not infer jurisdiction, and do not start Typed Attribute production writing in the same slice.',
+        'next_slice_scope'=>'After local 1.0.394 acceptance, review Work Authorization retention/legal-hold and durable-delivery requirements before adding any email/queue/acknowledgement channel; keep payroll readiness consumers disconnected and Typed Attribute production writing deferred.',
         'edges'=>array(
+            'hrm_fnd_007_work_authorization_expiry_topbar'=>array('previous'=>'1.0.393','version'=>'1.0.394',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_expiry_topbar.php'),
+            'hrm_fnd_007_work_authorization_expiry_inquiry'=>array('previous'=>'1.0.392','version'=>'1.0.393',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_expiry_inquiry.php'),
             'hrm_fnd_007_employee_transfer_work_authorization_cutover'=>array('previous'=>'1.0.391','version'=>'1.0.392',
                 'file'=>'sql/upgrade_hrm_fnd_007_employee_transfer_work_authorization_cutover.php'),
             'hrm_fnd_007_assignment_work_authorization_jurisdiction_custody'=>array('previous'=>'1.0.390','version'=>'1.0.391',
