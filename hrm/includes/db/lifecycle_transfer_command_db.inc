@@ -21,6 +21,8 @@ $hrm_lifecycle_transfer_dependencies = array(
     array('/hrm/includes/db/employee_person_worker_db.inc', 'function', 'get_hrm_person_worker_binding'),
     array('/hrm/includes/db/employee_employment_db.inc', 'function', 'get_hrm_legacy_current_employment'),
     array('/hrm/includes/db/employee_assignment_db.inc', 'function', 'get_hrm_legacy_current_assignment'),
+    array('/hrm/includes/db/work_authorization_assignment_readiness_db.inc', 'function', 'get_hrm_work_authorization_assignment_readiness_for_update'),
+    array('/hrm/includes/db/assignment_work_authorization_jurisdiction_db.inc', 'function', 'bind_hrm_assignment_work_authorization_jurisdiction'),
     array('/hrm/includes/hrm_constants.inc', 'constant', 'HRM_HIST_TRANSFER'),
 );
 foreach ($hrm_lifecycle_transfer_dependencies as $dependency) {
@@ -43,7 +45,7 @@ if (!defined('HRM_LIFECYCLE_TRANSFER_COMMAND_TYPE'))
 if (!defined('HRM_LIFECYCLE_TRANSFER_HASH_CONTRACT'))
     define('HRM_LIFECYCLE_TRANSFER_HASH_CONTRACT', 'notrinoserp.hrm-fnd-005.employee-transfer');
 if (!defined('HRM_LIFECYCLE_TRANSFER_HASH_VERSION'))
-    define('HRM_LIFECYCLE_TRANSFER_HASH_VERSION', '1');
+    define('HRM_LIFECYCLE_TRANSFER_HASH_VERSION', '2');
 if (!defined('HRM_LIFECYCLE_TRANSFER_REASON'))
     define('HRM_LIFECYCLE_TRANSFER_REASON', 'hrm_fnd_005_employee_transfer_command');
 
@@ -159,7 +161,7 @@ function hrm_lifecycle_transfer_manager_number($manager_employee_id, $subject_em
     return (int)$binding['employee_number'];
 }
 
-function hrm_lifecycle_transfer_request_hash($company, $worker_id, $employment_id, $assignment_id,
+function hrm_lifecycle_transfer_request_hash_v1($company, $worker_id, $employment_id, $assignment_id,
     $employee_number, $effective_date, $department_id, $position_id, $grade_id,
     $job_id, $work_location_id, $manager_employee_number)
 {
@@ -172,12 +174,33 @@ function hrm_lifecycle_transfer_request_hash($company, $worker_id, $employment_i
         || (int)$employee_number <= 0 || (int)$department_id <= 0
         || hrm_lifecycle_transfer_date($effective_date) === false)
         return false;
-    return hash('sha256', HRM_LIFECYCLE_TRANSFER_HASH_CONTRACT.'|v='.HRM_LIFECYCLE_TRANSFER_HASH_VERSION
+    return hash('sha256', HRM_LIFECYCLE_TRANSFER_HASH_CONTRACT.'|v=1'
         .'|company='.(int)$company.'|worker_id='.(int)$worker_id.'|employment_id='.(int)$employment_id
         .'|assignment_id='.(int)$assignment_id.'|employee_number='.(int)$employee_number
         .'|effective_date='.$effective_date.'|department_id='.(int)$department_id
         .'|position_id='.(int)$position_id.'|grade_id='.(int)$grade_id.'|job_id='.(int)$job_id
         .'|work_location_id='.(int)$work_location_id.'|manager_employee_number='.(int)$manager_employee_number);
+}
+
+function hrm_lifecycle_transfer_request_hash($company, $worker_id, $employment_id, $assignment_id,
+    $employee_number, $effective_date, $department_id, $position_id, $grade_id,
+    $job_id, $work_location_id, $manager_employee_number, $work_authorization_jurisdiction)
+{
+    if (!function_exists('hrm_work_authorization_validate_jurisdiction')
+        || !hrm_work_authorization_validate_jurisdiction($work_authorization_jurisdiction))
+        return false;
+    $base = hrm_lifecycle_transfer_request_hash_v1($company, $worker_id, $employment_id, $assignment_id,
+        $employee_number, $effective_date, $department_id, $position_id, $grade_id,
+        $job_id, $work_location_id, $manager_employee_number);
+    if ($base === false)
+        return false;
+    return hash('sha256', HRM_LIFECYCLE_TRANSFER_HASH_CONTRACT.'|v='.HRM_LIFECYCLE_TRANSFER_HASH_VERSION
+        .'|company='.(int)$company.'|worker_id='.(int)$worker_id.'|employment_id='.(int)$employment_id
+        .'|assignment_id='.(int)$assignment_id.'|employee_number='.(int)$employee_number
+        .'|effective_date='.$effective_date.'|department_id='.(int)$department_id
+        .'|position_id='.(int)$position_id.'|grade_id='.(int)$grade_id.'|job_id='.(int)$job_id
+        .'|work_location_id='.(int)$work_location_id.'|manager_employee_number='.(int)$manager_employee_number
+        .'|work_authorization_jurisdiction='.(string)$work_authorization_jurisdiction);
 }
 
 function hrm_lifecycle_transfer_command_for_update($command_id)
@@ -256,9 +279,13 @@ function hrm_lifecycle_transfer_draft_matches($draft_data, $command, $allow_term
 {
     if (!is_array($draft_data) || !is_array($command))
         return false;
+    $legacy_v1 = !array_key_exists('work_authorization_jurisdiction', $draft_data);
     $expected_keys = array('assignment_id','command_row_version','effective_date','employee_number','employment_id',
         'lifecycle_command_id','manager_employee_number','new_department_id','new_grade_id','new_job_id',
         'new_position_id','new_work_location_id','request_hash','worker_id');
+    if (!$legacy_v1)
+        $expected_keys[] = 'work_authorization_jurisdiction';
+    sort($expected_keys, SORT_STRING);
     $keys = array_keys($draft_data);
     sort($keys, SORT_STRING);
     if ($keys !== $expected_keys)
@@ -269,6 +296,9 @@ function hrm_lifecycle_transfer_draft_matches($draft_data, $command, $allow_term
     foreach (array('new_position_id','new_grade_id','new_job_id','new_work_location_id','manager_employee_number') as $key)
         if (hrm_lifecycle_transfer_nonnegative_int($draft_data[$key]) === false)
             return false;
+    if (!$legacy_v1 && (!function_exists('hrm_work_authorization_validate_jurisdiction')
+        || !hrm_work_authorization_validate_jurisdiction($draft_data['work_authorization_jurisdiction'])))
+        return false;
     $draft_version = hrm_lifecycle_transfer_positive_int($draft_data['command_row_version']);
     $terminal_successor = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal_successor)
@@ -282,13 +312,24 @@ function hrm_lifecycle_transfer_draft_matches($draft_data, $command, $allow_term
         || (string)$draft_data['effective_date'].' 00:00:00' !== (string)$command['effective_at']
         || (string)$draft_data['request_hash'] !== (string)$command['request_hash'])
         return false;
-    $recomputed = hrm_lifecycle_transfer_request_hash(
-        function_exists('user_company') ? (int)user_company() : 0,
-        (int)$draft_data['worker_id'], (int)$draft_data['employment_id'], (int)$draft_data['assignment_id'],
-        (int)$draft_data['employee_number'], (string)$draft_data['effective_date'],
-        (int)$draft_data['new_department_id'], (int)$draft_data['new_position_id'], (int)$draft_data['new_grade_id'],
-        (int)$draft_data['new_job_id'], (int)$draft_data['new_work_location_id'], (int)$draft_data['manager_employee_number']
-    );
+    if ($legacy_v1) {
+        $recomputed = hrm_lifecycle_transfer_request_hash_v1(
+            function_exists('user_company') ? (int)user_company() : 0,
+            (int)$draft_data['worker_id'], (int)$draft_data['employment_id'], (int)$draft_data['assignment_id'],
+            (int)$draft_data['employee_number'], (string)$draft_data['effective_date'],
+            (int)$draft_data['new_department_id'], (int)$draft_data['new_position_id'], (int)$draft_data['new_grade_id'],
+            (int)$draft_data['new_job_id'], (int)$draft_data['new_work_location_id'], (int)$draft_data['manager_employee_number']
+        );
+    } else {
+        $recomputed = hrm_lifecycle_transfer_request_hash(
+            function_exists('user_company') ? (int)user_company() : 0,
+            (int)$draft_data['worker_id'], (int)$draft_data['employment_id'], (int)$draft_data['assignment_id'],
+            (int)$draft_data['employee_number'], (string)$draft_data['effective_date'],
+            (int)$draft_data['new_department_id'], (int)$draft_data['new_position_id'], (int)$draft_data['new_grade_id'],
+            (int)$draft_data['new_job_id'], (int)$draft_data['new_work_location_id'], (int)$draft_data['manager_employee_number'],
+            (string)$draft_data['work_authorization_jurisdiction']
+        );
+    }
     return is_string($recomputed) && $recomputed === (string)$command['request_hash'];
 }
 
@@ -296,11 +337,11 @@ function hrm_lifecycle_transfer_draft_matches($draft_data, $command, $allow_term
  * Submit one fixed Employee Transfer lifecycle command.
  *
  * Effective date is canonical SQL Y-m-d and must not be future-dated. The
- * existing browser transfer route is intentionally not redirected by this slice.
+ * production browser route requires an explicit Work Authorization jurisdiction.
  */
 function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $new_department_id,
     $new_position_id, $new_grade_id, $new_job_id, $new_work_location_id,
-    $new_manager_employee_id, $idempotency_key)
+    $new_manager_employee_id, $idempotency_key, $work_authorization_jurisdiction = '')
 {
     $employee_id = trim((string)$employee_id);
     $effective_date = hrm_lifecycle_transfer_date($effective_date);
@@ -309,16 +350,21 @@ function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $
     $new_grade_id = hrm_lifecycle_transfer_nonnegative_int($new_grade_id);
     $new_job_id = hrm_lifecycle_transfer_nonnegative_int($new_job_id);
     $new_work_location_id = hrm_lifecycle_transfer_nonnegative_int($new_work_location_id);
+    $work_authorization_jurisdiction = strtoupper(trim((string)$work_authorization_jurisdiction));
     $idempotency_hash = hrm_lifecycle_transfer_idempotency_hash($idempotency_key);
     $actor = hrm_lifecycle_transfer_actor_id();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $effective_date === false
         || $new_department_id === false || $new_position_id === false || $new_grade_id === false
         || $new_job_id === false || $new_work_location_id === false || $idempotency_hash === false
+        || !function_exists('hrm_work_authorization_validate_jurisdiction')
+        || !hrm_work_authorization_validate_jurisdiction($work_authorization_jurisdiction)
         || strcmp($effective_date, hrm_lifecycle_transfer_today_sql()) > 0 || $actor <= 0 || $company < 0
         || !hrm_lifecycle_transfer_permission() || !hrm_lifecycle_transfer_workflow_is_maker_checker()
         || !function_exists('get_hrm_person_worker_binding') || !function_exists('get_hrm_legacy_current_employment')
-        || !function_exists('get_hrm_legacy_current_assignment') || !function_exists('get_approval_workflow_service'))
+        || !function_exists('get_hrm_legacy_current_assignment') || !function_exists('get_approval_workflow_service')
+        || !function_exists('get_hrm_work_authorization_assignment_readiness_for_update')
+        || !function_exists('bind_hrm_assignment_work_authorization_jurisdiction'))
         return false;
 
     $ok = false;
@@ -360,10 +406,21 @@ function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $
             && $new_job_id === 0 && $new_work_location_id === 0 && $manager_employee_number === 0)
             break;
 
+        $readiness = get_hrm_work_authorization_assignment_readiness_for_update($employee_number,
+            (int)$assignment['assignment_id'], $work_authorization_jurisdiction, $effective_date);
+        if (!is_array($readiness) || empty($readiness['assignment_ready'])
+            || (int)$readiness['worker_id'] !== (int)$binding['worker_id']
+            || (int)$readiness['employment_id'] !== (int)$employment['employment_id']
+            || (int)$readiness['assignment_id'] !== (int)$assignment['assignment_id']
+            || (string)$readiness['jurisdiction'] !== $work_authorization_jurisdiction
+            || (string)$readiness['effective_date'] !== $effective_date
+            || (int)$readiness['policy_version_id'] <= 0 || (int)$readiness['authorization_id'] <= 0)
+            break;
+
         $request_hash = hrm_lifecycle_transfer_request_hash($company, (int)$binding['worker_id'],
             (int)$employment['employment_id'], (int)$assignment['assignment_id'], $employee_number,
             $effective_date, $new_department_id, $new_position_id, $new_grade_id,
-            $new_job_id, $new_work_location_id, $manager_employee_number);
+            $new_job_id, $new_work_location_id, $manager_employee_number, $work_authorization_jurisdiction);
         if ($request_hash === false)
             break;
         $existing = hrm_lifecycle_transfer_by_idempotency_for_update((int)$binding['worker_id'], $idempotency_hash);
@@ -399,7 +456,7 @@ function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $
             'effective_date'=>$effective_date,'new_department_id'=>$new_department_id,
             'new_position_id'=>$new_position_id,'new_grade_id'=>$new_grade_id,'new_job_id'=>$new_job_id,
             'new_work_location_id'=>$new_work_location_id,'manager_employee_number'=>$manager_employee_number,
-            'request_hash'=>$request_hash,
+            'work_authorization_jurisdiction'=>$work_authorization_jurisdiction,'request_hash'=>$request_hash,
         );
         $approval = get_approval_workflow_service();
         $approval_result = $approval->submit(ST_HRM_LIFECYCLE_TRANSFER, $draft_data, 0,
@@ -421,7 +478,10 @@ function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $
                 'approval_draft_id'=>$draft_id,'maker_user_id'=>$actor,'request_hash'=>$request_hash,
                 'idempotency_key_plaintext_stored'=>false,'effective_date_bound'=>true,
                 'worker_employment_assignment_bound'=>true,'same_subject_conflict_guard'=>true,
-                'existing_transfer_route_redirected'=>false)))
+                'work_authorization_consumer_cutover'=>true,'work_authorization_submission_preflight'=>true,
+                'work_authorization_jurisdiction_explicit'=>true,'jurisdiction_inferred_from_legacy_identity'=>false,
+                'work_authorization_policy_version_id'=>(int)$readiness['policy_version_id'],
+                'work_authorization_id'=>(int)$readiness['authorization_id'])))
             break;
         $ok = true;
         $return_value = array('lifecycle_command_id'=>$command_id,'approval_draft_id'=>$draft_id,
@@ -460,6 +520,11 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
     if ((string)$command['command_status'] !== 'pending' || (int)$command['row_version'] !== 1
         || (int)$command['requested_by'] <= 0 || (int)$command['requested_by'] === $actor)
         return false;
+    if (!array_key_exists('work_authorization_jurisdiction', $draft_data)
+        || !function_exists('hrm_work_authorization_validate_jurisdiction')
+        || !hrm_work_authorization_validate_jurisdiction($draft_data['work_authorization_jurisdiction']))
+        return false;
+    $work_authorization_jurisdiction = (string)$draft_data['work_authorization_jurisdiction'];
     $effective_date = (string)$draft_data['effective_date'];
     if (strcmp($effective_date, hrm_lifecycle_transfer_today_sql()) > 0)
         return false;
@@ -492,6 +557,17 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
         $manager_employee_id = (string)$manager['employee_id'];
     }
 
+    $readiness = get_hrm_work_authorization_assignment_readiness_for_update($employee_number,
+        (int)$assignment['assignment_id'], $work_authorization_jurisdiction, $effective_date);
+    if (!is_array($readiness) || empty($readiness['assignment_ready'])
+        || (int)$readiness['worker_id'] !== (int)$command['worker_id']
+        || (int)$readiness['employment_id'] !== (int)$command['employment_id']
+        || (int)$readiness['assignment_id'] !== (int)$command['assignment_id']
+        || (string)$readiness['jurisdiction'] !== $work_authorization_jurisdiction
+        || (string)$readiness['effective_date'] !== $effective_date
+        || (int)$readiness['policy_version_id'] <= 0 || (int)$readiness['authorization_id'] <= 0)
+        return false;
+
     $assignment_effective_change = array('effective_date'=>$effective_date,'change_type'=>HRM_HIST_TRANSFER);
     if ((int)$draft_data['new_job_id'] > 0)
         $assignment_effective_change['job_id'] = (string)(int)$draft_data['new_job_id'];
@@ -505,6 +581,18 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
         $employee_update['reporting_to'] = $manager_employee_id;
 
     if (!update_employee($employee_id, $employee_update, $assignment_effective_change, (int)$command['lifecycle_command_id']))
+        return false;
+    $successor_assignment = get_hrm_legacy_current_assignment($employee_number, true);
+    if (!$successor_assignment || (int)$successor_assignment['assignment_id'] <= 0
+        || (int)$successor_assignment['assignment_id'] === (int)$command['assignment_id']
+        || (int)$successor_assignment['employment_id'] !== (int)$command['employment_id']
+        || (int)$successor_assignment['legacy_employee_number'] !== $employee_number
+        || (int)$successor_assignment['legacy_current'] !== 1 || (int)$successor_assignment['primary_flag'] !== 1
+        || (string)$successor_assignment['assignment_type_code'] !== 'legacy_primary'
+        || (string)$successor_assignment['effective_from'] !== $effective_date)
+        return false;
+    if (!bind_hrm_assignment_work_authorization_jurisdiction((int)$successor_assignment['assignment_id'],
+        $work_authorization_jurisdiction, HRM_ASSIGNMENT_WA_JURISDICTION_SOURCE_TRANSFER))
         return false;
     $approved_by = isset($_SESSION['wa_current_user']->loginname) ? (string)$_SESSION['wa_current_user']->loginname : '';
     $history_id = add_employee_history($employee_id, HRM_HIST_TRANSFER, $effective_date,
@@ -525,7 +613,13 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
         $command, (int)$employment['legal_entity_id'], array(
             'approval_draft_id'=>(int)$draft_id,'maker_user_id'=>(int)$command['requested_by'],
             'checker_user_id'=>$actor,'maker_checker_separated'=>true,'employee_history_id'=>(int)$history_id,
-            'predecessor_assignment_id'=>(int)$command['assignment_id'],'assignment_effective_change_delegated'=>true,
+            'predecessor_assignment_id'=>(int)$command['assignment_id'],
+            'successor_assignment_id'=>(int)$successor_assignment['assignment_id'],
+            'assignment_effective_change_delegated'=>true,'work_authorization_final_revalidation'=>true,
+            'work_authorization_successor_jurisdiction_bound'=>true,'work_authorization_jurisdiction_explicit'=>true,
+            'jurisdiction_inferred_from_legacy_identity'=>false,
+            'work_authorization_policy_version_id'=>(int)$readiness['policy_version_id'],
+            'work_authorization_id'=>(int)$readiness['authorization_id'],
             'request_hash'=>(string)$command['request_hash'])))
         return false;
     return (int)$command['lifecycle_command_id'];

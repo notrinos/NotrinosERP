@@ -166,6 +166,8 @@ if (!isset($_POST['new_work_location_id']))
     $_POST['new_work_location_id'] = 0;
 if (!isset($_POST['new_manager_employee_id']))
     $_POST['new_manager_employee_id'] = '';
+if (!isset($_POST['work_authorization_jurisdiction']))
+    $_POST['work_authorization_jurisdiction'] = '';
 if (!isset($_POST['effective_date']))
     $_POST['effective_date'] = Today();
 
@@ -239,6 +241,10 @@ if (isset($_POST['Process'])) {
         && (preg_match('/^[1-9][0-9]*$/D', trim((string)$_POST['new_work_location_id'])) !== 1)) {
         display_error(_('New Work Location selection is invalid.'));
         set_focus('new_work_location_id');
+    } elseif (!function_exists('hrm_work_authorization_validate_jurisdiction')
+        || !hrm_work_authorization_validate_jurisdiction(strtoupper(trim((string)$_POST['work_authorization_jurisdiction'])))) {
+        display_error(_('Work Authorization Jurisdiction is required and must be an explicit governed jurisdiction code.'));
+        set_focus('work_authorization_jurisdiction');
     } elseif (strlen(trim((string)$_POST['new_manager_employee_id'])) > 20) {
         display_error(_('New Manager selection is invalid.'));
         set_focus('new_manager_employee_id');
@@ -272,10 +278,11 @@ if (isset($_POST['Process'])) {
                     (int)$_POST['new_job_id'],
                     (int)$_POST['new_work_location_id'],
                     trim((string)$_POST['new_manager_employee_id']),
-                    $idempotency_key
+                    $idempotency_key,
+                    strtoupper(trim((string)$_POST['work_authorization_jurisdiction']))
                 );
                 if (!is_array($result) || !isset($result['status']) || $result['status'] !== 'pending') {
-                    display_error(_('Could not submit the Employee Transfer lifecycle command. No direct transfer fallback exists; no employee or assignment change was applied.'));
+                    display_error(_('Could not submit the Employee Transfer lifecycle command. Work Authorization readiness, governed jurisdiction custody, and maker/checker prerequisites must all pass. No direct transfer fallback exists; no employee or assignment change was applied.'));
                 } elseif (!empty($result['exact_retry'])) {
                     display_notification(sprintf(
                         _('Employee Transfer request #%d was already submitted and remains pending approval.'),
@@ -319,6 +326,7 @@ grades_list_row(_('New Grade:'), 'new_grade_id');
 assignment_jobs_list_row(_('New Assignment Job:'), 'new_job_id');
 assignment_work_locations_list_row(_('New Work Location:'), 'new_work_location_id');
 assignment_managers_list_row(_('New Manager:'), 'new_manager_employee_id', '', get_post('employee_id', ''));
+text_row(_('Work Authorization Jurisdiction (explicit):'), 'work_authorization_jurisdiction', null, 16, 64);
 date_row(_('Effective Date:'), 'effective_date');
 end_table(1);
 submit_center('Process', _('Submit Transfer for Approval'));

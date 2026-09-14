@@ -8404,6 +8404,19 @@ CREATE TABLE `0_hrm_work_authorization_policy_versions` (
   CONSTRAINT `0_hrm_work_authorization_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_policy_versions` (`policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
+
+CREATE TABLE `0_hrm_assignment_work_authorization_jurisdictions` (
+  `assignment_id` bigint(20) unsigned NOT NULL,
+  `issuing_jurisdiction` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `binding_source` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`assignment_id`),
+  KEY `hrm_assignment_wa_jurisdiction_idx` (`issuing_jurisdiction`,`assignment_id`),
+  CONSTRAINT `0_hrm_assignment_wa_jurisdiction_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_hrm_attribute_definitions` (
   `definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `attribute_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

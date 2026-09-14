@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.390',
-        'active_legacy_payroll_contract'=>'1.0.344',
+        'active_database_version'=>'1.0.392',
+        'active_legacy_payroll_contract'=>'1.0.345',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Continue HRM-FND-007 after local 1.0.390 acceptance with governed jurisdiction-source review and explicit Employee Transfer consumer cutover; do not infer jurisdiction, activate payroll consumers, or send expiry notifications, and keep Typed Attribute production writing deferred until that boundary is accepted.',
+        'next_slice_scope'=>'After local 1.0.392 acceptance, review the Work Authorization expiry-attention delivery boundary and its authorization/recovery contract; keep payroll readiness consumers disconnected, do not infer jurisdiction, and do not start Typed Attribute production writing in the same slice.',
         'edges'=>array(
+            'hrm_fnd_007_employee_transfer_work_authorization_cutover'=>array('previous'=>'1.0.391','version'=>'1.0.392',
+                'file'=>'sql/upgrade_hrm_fnd_007_employee_transfer_work_authorization_cutover.php'),
+            'hrm_fnd_007_assignment_work_authorization_jurisdiction_custody'=>array('previous'=>'1.0.390','version'=>'1.0.391',
+                'file'=>'sql/upgrade_hrm_fnd_007_assignment_work_authorization_jurisdiction_custody.php'),
             'hrm_fnd_007_work_authorization_assignment_readiness_boundary'=>array('previous'=>'1.0.389','version'=>'1.0.390',
                 'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_assignment_readiness_boundary.php'),
             'hrm_fnd_007_work_authorization_expiry_attention_projection'=>array('previous'=>'1.0.388','version'=>'1.0.389',
