@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.382',
-        'active_legacy_payroll_contract'=>'1.0.340',
+        'active_database_version'=>'1.0.384',
+        'active_legacy_payroll_contract'=>'1.0.341',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Continue HRM-FND-007 only with governed command/writer slices after local 1.0.382 foundation acceptance; keep legacy work-eligibility inference and unapproved custom-data mapping forbidden.',
+        'next_slice_scope'=>'Continue HRM-FND-007 only with Work Authorization verification/checker and masked-read review after local 1.0.384 acceptance; do not release readiness/alerts or typed-Attribute writers yet.',
         'edges'=>array(
+            'hrm_fnd_007_work_authorization_writer'=>array('previous'=>'1.0.383','version'=>'1.0.384',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_writer.php'),
+            'hrm_fnd_007_work_authorization_command_custody'=>array('previous'=>'1.0.382','version'=>'1.0.383',
+                'file'=>'sql/upgrade_hrm_fnd_007_work_authorization_command_custody.php'),
             'hrm_fnd_007_typed_attribute_foundation'=>array('previous'=>'1.0.381','version'=>'1.0.382',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_foundation.php'),
             'hrm_fnd_007_work_authorization_foundation'=>array('previous'=>'1.0.380','version'=>'1.0.381',

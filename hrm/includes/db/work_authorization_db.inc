@@ -74,12 +74,15 @@ function hrm_work_authorization_canonical_details($details)
         return false;
     $out = array();
     foreach (hrm_work_authorization_detail_fields() as $field) {
-        $value = isset($details[$field]) ? trim((string)$details[$field]) : '';
-        if (strlen($value) > 500)
+        if (array_key_exists($field, $details) && !is_string($details[$field]))
+            return false;
+        $value = isset($details[$field]) ? trim($details[$field]) : '';
+        if (strlen($value) > 500 || preg_match('/[\x00-\x1F\x7F]/', $value))
             return false;
         $out[$field] = $value;
     }
-    return $out;
+    $json = json_encode($out);
+    return $json !== false && strlen($json) <= 1024 ? $out : false;
 }
 
 function hrm_work_authorization_mask_identifier($value)

@@ -17,6 +17,7 @@
 define('HRM_FIELD_RESTRICTED_COMPENSATION', 'restricted_compensation');
 define('HRM_FIELD_RESTRICTED_FINANCIAL', 'restricted_financial');
 define('HRM_FIELD_RESTRICTED_IDENTITY', 'restricted_identity');
+define('HRM_FIELD_RESTRICTED_WORK_AUTHORIZATION', 'restricted_work_authorization');
 define('HRM_FIELD_RESTRICTED_DOCUMENT', 'restricted_document');
 define('HRM_FIELD_PRIVATE_PERSON', 'private_person');
 define('HRM_FIELD_ACTION_VIEW', 'view');
@@ -78,6 +79,18 @@ function hrm_sensitive_field_permission_matrix() {
 			),
 			// Full reveal and general identity mutation intentionally have no
 			// policy entry. The narrow verify-link action is maker/checker-only.
+		),
+		HRM_FIELD_RESTRICTED_WORK_AUTHORIZATION => array(
+			HRM_FIELD_ACTION_VIEW => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_VIEW_IDENTITY_DETAILS'),
+				'any' => array(),
+			),
+			HRM_FIELD_ACTION_MANAGE => array(
+				'all' => array('SA_EMPLOYEE', 'SA_HRM_MANAGE_WORK_AUTHORIZATION'),
+				'any' => array(),
+			),
+			// Manage authority is deliberately separate from masked identity view.
+			// No role receives SA_HRM_MANAGE_WORK_AUTHORIZATION automatically.
 		),
 		HRM_FIELD_RESTRICTED_DOCUMENT => array(
 			HRM_FIELD_ACTION_VIEW => array(
