@@ -396,6 +396,9 @@ $security_areas =array(
 	'SA_HRM_VERIFY_WORK_AUTHORIZATION' => array(SS_HRM|22, _('Verify governed employee work authorization')), // no automatic role grant
 	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_DEFINITION' => array(SS_HRM|23, _('Manage governed typed attribute definitions')), // no automatic role grant
 	'SA_HRM_APPROVE_TYPED_ATTRIBUTE_DEFINITION' => array(SS_HRM|24, _('Approve governed typed attribute definitions')), // no automatic role grant
+	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|25, _('Manage governed typed attribute values')), // no automatic role grant
+	'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|26, _('View governed typed attribute values')), // no automatic role grant
+	'SA_HRM_ACCESS_SENSITIVE_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|27, _('Access confidential/restricted typed attribute values')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

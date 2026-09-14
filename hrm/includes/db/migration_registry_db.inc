@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.400',
-        'active_legacy_payroll_contract'=>'1.0.348',
+        'active_database_version'=>'1.0.403',
+        'active_legacy_payroll_contract'=>'1.0.349',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.400 acceptance, review Typed Attribute value-writer authorization, subject-existence/effective-definition resolution, validation enforcement and sensitive read/write policy next; legacy custom_data remains opaque, bulk import/export and payroll consumers remain disconnected, and durable Work Authorization delivery execution remains policy-blocked.',
+        'next_slice_scope'=>'After local 1.0.403 acceptance, review Typed Attribute production-route/object-scope and current-value projection plus definition retirement/deprecation semantics; keep legacy custom_data opaque until a separately approved mapping inventory, keep bulk import/export and payroll consumers disconnected, and keep durable Work Authorization delivery execution policy-blocked.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_value_reader'=>array('previous'=>'1.0.402','version'=>'1.0.403',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_value_reader.php'),
+            'hrm_fnd_007_typed_attribute_value_writer'=>array('previous'=>'1.0.401','version'=>'1.0.402',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_value_writer.php'),
+            'hrm_fnd_007_typed_attribute_value_command_policy'=>array('previous'=>'1.0.400','version'=>'1.0.401',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_value_command_policy.php'),
             'hrm_fnd_007_typed_attribute_definition_publish'=>array('previous'=>'1.0.399','version'=>'1.0.400',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_definition_publish.php'),
             'hrm_fnd_007_typed_attribute_definition_writer'=>array('previous'=>'1.0.398','version'=>'1.0.399',
