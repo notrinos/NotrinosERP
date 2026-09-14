@@ -399,6 +399,10 @@ $security_areas =array(
 	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|25, _('Manage governed typed attribute values')), // no automatic role grant
 	'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|26, _('View governed typed attribute values')), // no automatic role grant
 	'SA_HRM_ACCESS_SENSITIVE_TYPED_ATTRIBUTE_VALUE' => array(SS_HRM|27, _('Access confidential/restricted typed attribute values')), // no automatic role grant
+	'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_HR' => array(SS_HRM|28, _('Access HR-owned typed attribute values')), // no automatic role grant
+	'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_PAYROLL' => array(SS_HRM|29, _('Access payroll-owned typed attribute values')), // no automatic role grant
+	'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_SECURITY' => array(SS_HRM|30, _('Access security-owned typed attribute values')), // no automatic role grant
+	'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_LOCALIZATION' => array(SS_HRM|31, _('Access localization-owned typed attribute values')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

@@ -77,6 +77,7 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Training'),                 'hrm/manage/training.php?',                            'SA_HRSETTINGS',        MENU_MAINTENANCE);
 
+		$this->add_rapp_function(2, _('Typed Attribute &Values'),     'hrm/manage/typed_attribute_values.php?',                 'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('&Holiday Calendar'),         'hrm/manage/holidays.php?',                            'SA_HOLIDAY',           MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Wor&k Shifts'),              'hrm/manage/work_shifts.php?',                         'SA_WORKSHIFT',         MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('End of Ser&vice Tiers'),     'hrm/manage/eos_calculation.php?',                     'SA_EOSCALC',           MENU_MAINTENANCE);

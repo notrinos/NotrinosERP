@@ -28,6 +28,23 @@ function hrm_typed_attribute_value_user_can_view($sensitivity)
         || user_check_access('SA_HRM_ACCESS_SENSITIVE_TYPED_ATTRIBUTE_VALUE');
 }
 
+function hrm_typed_attribute_value_object_scope_security_area($owner_scope)
+{
+    $map = array(
+        'hr'=>'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_HR',
+        'payroll'=>'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_PAYROLL',
+        'security'=>'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_SECURITY',
+        'localization'=>'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_LOCALIZATION',
+    );
+    return isset($map[$owner_scope]) ? $map[$owner_scope] : false;
+}
+
+function hrm_typed_attribute_value_user_can_access_object_scope($owner_scope)
+{
+    $area = hrm_typed_attribute_value_object_scope_security_area($owner_scope);
+    return $area !== false && function_exists('user_check_access') && user_check_access($area);
+}
+
 function hrm_typed_attribute_value_positive_id($value, $nullable = false)
 {
     if (($value === null || $value === '') && $nullable) return null;
@@ -157,7 +174,9 @@ function hrm_typed_attribute_value_canonical_command($input, $definition)
     if ($date < (string)$definition['effective_from']
         || ($definition['effective_to'] !== null && $date > (string)$definition['effective_to'])) return false;
     $canonical_value = hrm_typed_attribute_value_apply_validation($definition, $input['value']);
-    if ($canonical_value === false || !hrm_typed_attribute_value_user_can_manage((string)$definition['sensitivity'])) return false;
+    if ($canonical_value === false
+        || !hrm_typed_attribute_value_user_can_manage((string)$definition['sensitivity'])
+        || !hrm_typed_attribute_value_user_can_access_object_scope((string)$definition['owner_scope'])) return false;
     return array(
         'attribute_code'=>$code,
         'definition_id'=>(int)$definition['definition_id'],

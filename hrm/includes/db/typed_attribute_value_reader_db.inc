@@ -14,7 +14,8 @@ function hrm_typed_attribute_value_read_as_of($attribute_code,$subject_type,$sub
     $definition=hrm_typed_attribute_value_resolve_definition($attribute_code,$as_of,false);
     if($definition===false)return null;
     if((string)$definition['allowed_subject']!==$subject_type
-        ||!hrm_typed_attribute_value_user_can_view((string)$definition['sensitivity']))return false;
+        ||!hrm_typed_attribute_value_user_can_view((string)$definition['sensitivity'])
+        ||!hrm_typed_attribute_value_user_can_access_object_scope((string)$definition['owner_scope']))return false;
     $sql='SELECT d.definition_id,d.attribute_code,v.definition_version_id,v.value_type,v.allowed_subject,v.sensitivity,'
         .'v.owner_scope,v.validation_json,v.definition_status,v.effective_from definition_effective_from,'
         .'v.effective_to definition_effective_to,a.attribute_value_id,a.value_version_no,a.predecessor_id,'

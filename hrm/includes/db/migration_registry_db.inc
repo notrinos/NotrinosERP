@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.403',
-        'active_legacy_payroll_contract'=>'1.0.349',
+        'active_database_version'=>'1.0.406',
+        'active_legacy_payroll_contract'=>'1.0.350',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.403 acceptance, review Typed Attribute production-route/object-scope and current-value projection plus definition retirement/deprecation semantics; keep legacy custom_data opaque until a separately approved mapping inventory, keep bulk import/export and payroll consumers disconnected, and keep durable Work Authorization delivery execution policy-blocked.',
+        'next_slice_scope'=>'After local 1.0.406 acceptance, review Typed Attribute definition retirement/deprecation semantics and recovery without enabling legacy custom_data mapping, bulk import/export, payroll consumers, or durable Work Authorization delivery execution.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_current_values_route'=>array('previous'=>'1.0.405','version'=>'1.0.406',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_current_values_route.php'),
+            'hrm_fnd_007_typed_attribute_current_value_projection'=>array('previous'=>'1.0.404','version'=>'1.0.405',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_current_value_projection.php'),
+            'hrm_fnd_007_typed_attribute_value_object_scope_policy'=>array('previous'=>'1.0.403','version'=>'1.0.404',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_value_object_scope_policy.php'),
             'hrm_fnd_007_typed_attribute_value_reader'=>array('previous'=>'1.0.402','version'=>'1.0.403',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_value_reader.php'),
             'hrm_fnd_007_typed_attribute_value_writer'=>array('previous'=>'1.0.401','version'=>'1.0.402',
