@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.423',
-        'active_legacy_payroll_contract'=>'1.0.363',
+        'active_database_version'=>'1.0.425',
+        'active_legacy_payroll_contract'=>'1.0.366',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.423 acceptance, review bulk conversion reconciliation/completion evidence and the next retained-key disposition boundary before any legacy-key deletion/rewrite; keep payroll consumers and Work Authorization durable delivery disconnected.',
+        'next_slice_scope'=>'After local 1.0.425 acceptance, review any future destructive legacy-key lifecycle as a separately approved recovery-backed boundary; retain legacy keys by default and keep payroll consumers and Work Authorization durable delivery disconnected.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_legacy_bulk_key_disposition'=>array('previous'=>'1.0.424','version'=>'1.0.425',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_bulk_key_disposition.php'),
+            'hrm_fnd_007_typed_attribute_legacy_bulk_reconciliation'=>array('previous'=>'1.0.423','version'=>'1.0.424',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_bulk_reconciliation.php'),
             'hrm_fnd_007_typed_attribute_legacy_bulk_recovery'=>array('previous'=>'1.0.422','version'=>'1.0.423',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_bulk_recovery.php'),
             'hrm_fnd_007_typed_attribute_legacy_bulk_executor'=>array('previous'=>'1.0.421','version'=>'1.0.422',
