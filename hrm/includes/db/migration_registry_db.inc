@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.421',
-        'active_legacy_payroll_contract'=>'1.0.362',
+        'active_database_version'=>'1.0.423',
+        'active_legacy_payroll_contract'=>'1.0.363',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.421 acceptance, review the all-or-nothing bulk executor and forward-recovery command boundary against the approved frozen batch; keep retained-key deletion/rewrite, payroll consumers and Work Authorization durable delivery disconnected.',
+        'next_slice_scope'=>'After local 1.0.423 acceptance, review bulk conversion reconciliation/completion evidence and the next retained-key disposition boundary before any legacy-key deletion/rewrite; keep payroll consumers and Work Authorization durable delivery disconnected.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_legacy_bulk_recovery'=>array('previous'=>'1.0.422','version'=>'1.0.423',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_bulk_recovery.php'),
+            'hrm_fnd_007_typed_attribute_legacy_bulk_executor'=>array('previous'=>'1.0.421','version'=>'1.0.422',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_bulk_executor.php'),
             'hrm_fnd_007_typed_attribute_legacy_batch_approval_command'=>array('previous'=>'1.0.420','version'=>'1.0.421',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_batch_approval_command.php'),
             'hrm_fnd_007_typed_attribute_legacy_batch_draft_command'=>array('previous'=>'1.0.419','version'=>'1.0.420',

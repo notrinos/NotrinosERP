@@ -413,6 +413,8 @@ $security_areas =array(
 	'SA_HRM_VIEW_TYPED_ATTRIBUTE_LEGACY_BULK_CANDIDATES' => array(SS_HRM|39, _('View bounded legacy typed attribute bulk-conversion candidates')), // no automatic role grant
 	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_LEGACY_BATCH' => array(SS_HRM|40, _('Create bounded legacy typed attribute conversion batch drafts')), // no automatic role grant
 	'SA_HRM_APPROVE_TYPED_ATTRIBUTE_LEGACY_BATCH' => array(SS_HRM|41, _('Approve bounded legacy typed attribute conversion batches')), // no automatic role grant
+	'SA_HRM_EXECUTE_TYPED_ATTRIBUTE_LEGACY_BATCH' => array(SS_HRM|42, _('Execute approved bounded legacy typed attribute conversion batches')), // no automatic role grant
+	'SA_HRM_RECOVER_TYPED_ATTRIBUTE_LEGACY_BATCH' => array(SS_HRM|43, _('Forward-reauthorize expired unexecuted legacy typed attribute conversion batches')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

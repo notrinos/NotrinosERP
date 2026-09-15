@@ -142,7 +142,7 @@ function hrm_typed_attribute_legacy_bulk_batch_revalidate_candidates($command)
             (int)$candidate['profile_version_id'],(int)$candidate['definition_version_id']);
         if ($digest===false || !hash_equals($digest,(string)$candidate['candidate_digest'])) return false;
     }
-    return array('mapping'=>$mapping,'definition'=>$definition);
+    return array('mapping'=>$mapping,'definition'=>$definition,'locked'=>$locked);
 }
 
 function hrm_typed_attribute_legacy_bulk_batch_existing_matches($batch,$command,$maker_id)
