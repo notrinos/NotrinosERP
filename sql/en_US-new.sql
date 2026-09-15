@@ -8208,3 +8208,50 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_receipts` (
   CONSTRAINT `0_hrm_attribute_legacy_conversion_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_conversion_value_fk` FOREIGN KEY (`attribute_value_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_conversion_batches` (
+  `batch_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `mapping_version_id` bigint(20) unsigned NOT NULL,
+  `request_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `candidate_set_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `candidate_as_of` date NOT NULL,
+  `candidate_count` smallint(5) unsigned NOT NULL,
+  `batch_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `maker_id` smallint(6) unsigned NOT NULL,
+  `checker_id` smallint(6) unsigned DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`batch_id`),
+  UNIQUE KEY `hrm_attribute_legacy_batch_nonce_uq` (`request_nonce_hash`),
+  UNIQUE KEY `hrm_attribute_legacy_batch_candidate_set_uq` (`mapping_version_id`,`candidate_set_digest`),
+  KEY `hrm_attribute_legacy_batch_status_idx` (`batch_status`,`expires_at`,`batch_id`),
+  CONSTRAINT `0_hrm_attribute_legacy_batch_mapping_fk` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_conversion_batch_items` (
+  `batch_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `batch_id` bigint(20) unsigned NOT NULL,
+  `employee_number` int(11) NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `profile_version_id` bigint(20) unsigned NOT NULL,
+  `definition_version_id` bigint(20) unsigned NOT NULL,
+  `candidate_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `item_state` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'pending',
+  `conversion_id` bigint(20) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`batch_item_id`),
+  UNIQUE KEY `hrm_attribute_legacy_batch_item_employee_uq` (`batch_id`,`employee_number`),
+  UNIQUE KEY `hrm_attribute_legacy_batch_item_worker_uq` (`batch_id`,`worker_id`),
+  UNIQUE KEY `hrm_attribute_legacy_batch_item_digest_uq` (`batch_id`,`candidate_digest`),
+  KEY `hrm_attribute_legacy_batch_item_worker_idx` (`worker_id`,`batch_item_id`),
+  KEY `hrm_attribute_legacy_batch_item_profile_idx` (`profile_version_id`),
+  KEY `hrm_attribute_legacy_batch_item_definition_idx` (`definition_version_id`),
+  KEY `hrm_attribute_legacy_batch_item_conversion_idx` (`conversion_id`),
+  CONSTRAINT `0_hrm_attribute_legacy_batch_item_batch_fk` FOREIGN KEY (`batch_id`) REFERENCES `0_hrm_attribute_legacy_conversion_batches` (`batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_batch_item_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_batch_item_profile_fk` FOREIGN KEY (`profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_batch_item_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_batch_item_conversion_fk` FOREIGN KEY (`conversion_id`) REFERENCES `0_hrm_attribute_legacy_conversion_receipts` (`conversion_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
