@@ -405,6 +405,7 @@ $security_areas =array(
 	'SA_HRM_ACCESS_TYPED_ATTRIBUTE_SCOPE_LOCALIZATION' => array(SS_HRM|31, _('Access localization-owned typed attribute values')), // no automatic role grant
 	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_DEFINITION_LIFECYCLE' => array(SS_HRM|32, _('Manage typed attribute definition lifecycle')), // no automatic role grant
 	'SA_HRM_APPROVE_TYPED_ATTRIBUTE_DEFINITION_LIFECYCLE' => array(SS_HRM|33, _('Approve typed attribute definition lifecycle')), // no automatic role grant
+	'SA_HRM_VIEW_TYPED_ATTRIBUTE_LEGACY_MAPPING' => array(SS_HRM|34, _('View restricted legacy typed attribute mapping inventory')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

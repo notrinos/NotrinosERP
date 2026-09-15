@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.409',
-        'active_legacy_payroll_contract'=>'1.0.351',
+        'active_database_version'=>'1.0.411',
+        'active_legacy_payroll_contract'=>'1.0.353',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.409 acceptance, review legacy custom_data mapping inventory/compatibility and any separately approved Work Authorization durable-delivery execution; keep bulk import/export and payroll consumers disconnected.',
+        'next_slice_scope'=>'After local 1.0.411 acceptance, review explicit maker/checker approval and separately authorized execution for legacy custom_data mappings; retain unknown JSON restricted and keep bulk import/export, payroll consumers, and Work Authorization durable delivery disconnected.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_legacy_custom_data_inventory'=>array('previous'=>'1.0.410','version'=>'1.0.411',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_custom_data_inventory.php'),
+            'hrm_fnd_007_typed_attribute_legacy_mapping_policy'=>array('previous'=>'1.0.409','version'=>'1.0.410',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_mapping_policy.php'),
             'hrm_fnd_007_typed_attribute_definition_lifecycle_apply'=>array('previous'=>'1.0.408','version'=>'1.0.409',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_definition_lifecycle_apply.php'),
             'hrm_fnd_007_typed_attribute_definition_lifecycle_writer'=>array('previous'=>'1.0.407','version'=>'1.0.408',

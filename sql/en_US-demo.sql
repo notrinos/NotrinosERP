@@ -8519,3 +8519,27 @@ CREATE TABLE `0_hrm_attribute_values` (
   CONSTRAINT `0_hrm_attribute_value_definition_version_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_value_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_mapping_versions` (
+  `mapping_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `legacy_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `attribute_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `subject_type` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'worker',
+  `mapping_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `qualified_review_ref` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  `approved_at` datetime DEFAULT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`mapping_version_id`),
+  UNIQUE KEY `hrm_attribute_legacy_mapping_version_uq` (`legacy_key`,`version_no`),
+  UNIQUE KEY `hrm_attribute_legacy_mapping_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_attribute_legacy_mapping_effective_idx` (`legacy_key`,`mapping_status`,`effective_from`,`effective_to`),
+  KEY `hrm_attribute_legacy_mapping_attribute_idx` (`attribute_code`,`mapping_status`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_attribute_legacy_mapping_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_mapping_attribute_fk` FOREIGN KEY (`attribute_code`) REFERENCES `0_hrm_attribute_definitions` (`attribute_code`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
