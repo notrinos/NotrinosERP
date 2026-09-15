@@ -8560,6 +8560,8 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_receipts` (
   UNIQUE KEY `hrm_attribute_legacy_conversion_value_uq` (`attribute_value_id`),
   UNIQUE KEY `hrm_attribute_legacy_conversion_digest_uq` (`execution_digest`),
   KEY `hrm_attribute_legacy_conversion_worker_idx` (`worker_id`,`conversion_id`),
+  KEY `hrm_attribute_legacy_conversion_profile_idx` (`profile_version_id`),
+  KEY `hrm_attribute_legacy_conversion_definition_idx` (`definition_version_id`),
   CONSTRAINT `0_hrm_attribute_legacy_conversion_mapping_fk` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_conversion_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_conversion_profile_fk` FOREIGN KEY (`profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,

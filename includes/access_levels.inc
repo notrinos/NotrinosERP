@@ -409,6 +409,7 @@ $security_areas =array(
 	'SA_HRM_MANAGE_TYPED_ATTRIBUTE_LEGACY_MAPPING' => array(SS_HRM|35, _('Manage explicit legacy typed attribute mappings')), // no automatic role grant
 	'SA_HRM_APPROVE_TYPED_ATTRIBUTE_LEGACY_MAPPING' => array(SS_HRM|36, _('Approve explicit legacy typed attribute mappings')), // no automatic role grant
 	'SA_HRM_EXECUTE_TYPED_ATTRIBUTE_LEGACY_CONVERSION' => array(SS_HRM|37, _('Execute approved legacy typed attribute conversion')), // no automatic role grant
+	'SA_HRM_VIEW_TYPED_ATTRIBUTE_LEGACY_CONVERSION_STATUS' => array(SS_HRM|38, _('View legacy typed attribute conversion reconciliation status')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
