@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.413',
-        'active_legacy_payroll_contract'=>'1.0.354',
+        'active_database_version'=>'1.0.415',
+        'active_legacy_payroll_contract'=>'1.0.356',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.413 acceptance, review a separately authorized one-mapping conversion executor with exact FND-006 parity, approved mapping, active definition, encrypted value custody, idempotency and recovery; keep bulk import/export, payroll consumers, and Work Authorization durable delivery disconnected.',
+        'next_slice_scope'=>'After local 1.0.415 acceptance, review read-only conversion status/reconciliation and explicit retained-key disposition policy before any bulk conversion/import/export; keep payroll consumers and Work Authorization durable delivery disconnected.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_legacy_conversion_executor'=>array('previous'=>'1.0.414','version'=>'1.0.415',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_conversion_executor.php'),
+            'hrm_fnd_007_typed_attribute_legacy_conversion_custody'=>array('previous'=>'1.0.413','version'=>'1.0.414',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_conversion_custody.php'),
             'hrm_fnd_007_typed_attribute_legacy_mapping_approval'=>array('previous'=>'1.0.412','version'=>'1.0.413',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_mapping_approval.php'),
             'hrm_fnd_007_typed_attribute_legacy_mapping_draft'=>array('previous'=>'1.0.411','version'=>'1.0.412',

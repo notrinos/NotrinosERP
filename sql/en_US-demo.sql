@@ -8543,3 +8543,26 @@ CREATE TABLE `0_hrm_attribute_legacy_mapping_versions` (
   CONSTRAINT `0_hrm_attribute_legacy_mapping_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_mapping_attribute_fk` FOREIGN KEY (`attribute_code`) REFERENCES `0_hrm_attribute_definitions` (`attribute_code`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_conversion_receipts` (
+  `conversion_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `mapping_version_id` bigint(20) unsigned NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `profile_version_id` bigint(20) unsigned NOT NULL,
+  `definition_version_id` bigint(20) unsigned NOT NULL,
+  `attribute_value_id` bigint(20) unsigned NOT NULL,
+  `legacy_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `execution_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `converted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `converted_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`conversion_id`),
+  UNIQUE KEY `hrm_attribute_legacy_conversion_mapping_worker_uq` (`mapping_version_id`,`worker_id`),
+  UNIQUE KEY `hrm_attribute_legacy_conversion_value_uq` (`attribute_value_id`),
+  UNIQUE KEY `hrm_attribute_legacy_conversion_digest_uq` (`execution_digest`),
+  KEY `hrm_attribute_legacy_conversion_worker_idx` (`worker_id`,`conversion_id`),
+  CONSTRAINT `0_hrm_attribute_legacy_conversion_mapping_fk` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_conversion_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_conversion_profile_fk` FOREIGN KEY (`profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_conversion_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_conversion_value_fk` FOREIGN KEY (`attribute_value_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
