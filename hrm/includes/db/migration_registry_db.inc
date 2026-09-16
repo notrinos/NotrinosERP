@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.431',
-        'active_legacy_payroll_contract'=>'1.0.368',
-        'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
+        'active_database_version'=>'1.0.433',
+        'active_legacy_payroll_contract'=>'1.0.372',
+        'next_backlog_item'=>'HRM-ESS-001 foundational ESS/MSS authorization and changes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.431 acceptance, review post-cleanup completion evidence and FND-007 closure before any additional legacy retirement, payroll consumer, or durable Work Authorization delivery activation.',
+        'next_slice_scope'=>'No additional legacy retirement, payroll readiness consumer, bulk export, or durable Work Authorization delivery is activated by FND-007 closure. HRM-ESS-001 begins only after local 1.0.433 acceptance.',
         'edges'=>array(
+            'hrm_fnd_007_completion'=>array('previous'=>'1.0.432','version'=>'1.0.433',
+                'file'=>'sql/upgrade_hrm_fnd_007_completion.php'),
+            'hrm_fnd_007_typed_attribute_legacy_cleanup_completion'=>array('previous'=>'1.0.431','version'=>'1.0.432',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_completion.php'),
             'hrm_fnd_007_typed_attribute_legacy_cleanup_recovery'=>array('previous'=>'1.0.430','version'=>'1.0.431',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_recovery.php'),
             'hrm_fnd_007_typed_attribute_legacy_cleanup_executor'=>array('previous'=>'1.0.429','version'=>'1.0.430',
