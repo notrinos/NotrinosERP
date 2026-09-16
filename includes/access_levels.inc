@@ -426,6 +426,8 @@ $security_areas =array(
 	'SA_HRM_ESS_VIEW_TEAM' => array(SS_HRM|52, _('View assignment-scoped ESS manager team')), // no automatic role grant
 	'SA_HRM_MANAGE_ESS_MANAGER_DELEGATION' => array(SS_HRM|53, _('Create dated ESS manager delegation requests')), // no automatic role grant
 	'SA_HRM_APPROVE_ESS_MANAGER_DELEGATION' => array(SS_HRM|54, _('Approve dated ESS manager delegations')), // no automatic role grant
+	'SA_HRM_ESS_REQUEST_SELF_PROFILE_CHANGE' => array(SS_HRM|55, _('Request bounded self-service profile changes')), // no automatic role grant
+	'SA_HRM_APPROVE_ESS_SELF_PROFILE_CHANGE' => array(SS_HRM|56, _('Approve bounded ESS self-profile change requests')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

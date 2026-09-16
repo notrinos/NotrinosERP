@@ -5928,6 +5928,37 @@ CREATE TABLE `0_hrm_ess_manager_delegation_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
+-- Structure of HRM-ESS-001 bounded self-profile change request custody --
+
+CREATE TABLE `0_hrm_ess_self_change_requests` (
+  `request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` smallint(6) NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `field_set_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'contact_private_v1',
+  `payload_ciphertext` varbinary(4096) NOT NULL,
+  `payload_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `payload_key_id` char(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `baseline_auth_tag` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `requested_by` smallint(6) unsigned NOT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `approval_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`request_id`),
+  UNIQUE KEY `hrm_ess_self_change_request_digest_uq` (`request_digest`),
+  UNIQUE KEY `hrm_ess_self_change_request_nonce_uq` (`request_nonce_hash`),
+  KEY `hrm_ess_self_change_request_subject_idx` (`worker_id`,`request_status`,`expires_at`,`request_id`),
+  KEY `hrm_ess_self_change_request_user_idx` (`user_id`,`request_status`,`request_id`),
+  CONSTRAINT `0_hrm_ess_self_change_request_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_self_change_request_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
 -- Structure of table `0_user_federation_external_subject_links` --
 
 DROP TABLE IF EXISTS `0_user_federation_external_subject_links`;

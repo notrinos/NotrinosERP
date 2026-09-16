@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.442',
-        'active_legacy_payroll_contract'=>'1.0.375',
-        'next_backlog_item'=>'HRM-ESS-001 self-service change-request custody and command review',
+        'active_database_version'=>'1.0.445',
+        'active_legacy_payroll_contract'=>'1.0.376',
+        'next_backlog_item'=>'HRM-ESS-001 approved self-change application/executor and recovery review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Identity/self scope and assignment-scoped manager access are active through 1.0.442. Manager delegation now uses zero-seed pending request custody, a maker-only digest-bound request command, and distinct-checker finalization into the pre-existing approved-delegation table. No ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is bounded self-service change-request custody.',
+        'next_slice_scope'=>'Identity/self scope and assignment-scoped manager access are active through 1.0.445. Bounded self-profile changes now have zero-seed encrypted custody, current-session maker submission, and distinct-checker approval for the contact_private_v1 allowlist. Approval does not mutate Person/Worker/legacy profile state. No ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is approved-request application/executor and recovery semantics.',
         'edges'=>array(
+            'hrm_ess_001_self_change_approval_command'=>array('previous'=>'1.0.444','version'=>'1.0.445',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_approval_command.php'),
+            'hrm_ess_001_self_change_request_command'=>array('previous'=>'1.0.443','version'=>'1.0.444',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_request_command.php'),
+            'hrm_ess_001_self_change_request_custody'=>array('previous'=>'1.0.442','version'=>'1.0.443',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_request_custody.php'),
             'hrm_ess_001_manager_delegation_approval_command'=>array('previous'=>'1.0.441','version'=>'1.0.442',
                 'file'=>'sql/upgrade_hrm_ess_001_manager_delegation_approval_command.php'),
             'hrm_ess_001_manager_delegation_request_command'=>array('previous'=>'1.0.440','version'=>'1.0.441',
