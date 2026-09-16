@@ -423,6 +423,9 @@ $security_areas =array(
 	'SA_HRM_VIEW_TYPED_ATTRIBUTE_LEGACY_CLEANUP_COMPLETION' => array(SS_HRM|49, _('View post-cleanup legacy Typed Attribute completion evidence')), // no automatic role grant
 	'SA_HRM_MANAGE_ESS_IDENTITY_LINK' => array(SS_HRM|50, _('Create reviewed ESS account-to-Worker identity link requests')), // no automatic role grant
 	'SA_HRM_APPROVE_ESS_IDENTITY_LINK' => array(SS_HRM|51, _('Approve reviewed ESS account-to-Worker identity links')), // no automatic role grant
+	'SA_HRM_ESS_VIEW_TEAM' => array(SS_HRM|52, _('View assignment-scoped ESS manager team')), // no automatic role grant
+	'SA_HRM_MANAGE_ESS_MANAGER_DELEGATION' => array(SS_HRM|53, _('Create dated ESS manager delegation requests')), // no automatic role grant
+	'SA_HRM_APPROVE_ESS_MANAGER_DELEGATION' => array(SS_HRM|54, _('Approve dated ESS manager delegations')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

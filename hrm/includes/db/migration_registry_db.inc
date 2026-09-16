@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.436',
-        'active_legacy_payroll_contract'=>'1.0.373',
-        'next_backlog_item'=>'HRM-ESS-001 manager assignment scope and dated delegation review',
+        'active_database_version'=>'1.0.439',
+        'active_legacy_payroll_contract'=>'1.0.374',
+        'next_backlog_item'=>'HRM-ESS-001 manager delegation maker/checker command review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Identity custody, maker/checker linking, and current-session self scope are active through 1.0.436. No ESS page/API route, manager scope, delegation, salary access, bank/tax mutation, or automatic role grant is activated; next review is assignment-scoped manager/delegation policy.',
+        'next_slice_scope'=>'Identity, self scope, explicit assignment-scoped direct-manager access, dated delegation custody, and a read-only direct/delegated team resolver are active through 1.0.439. No delegation writer, ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is the distinct maker/checker delegation command.',
         'edges'=>array(
+            'hrm_ess_001_manager_scope_resolver'=>array('previous'=>'1.0.438','version'=>'1.0.439',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_scope_resolver.php'),
+            'hrm_ess_001_manager_delegation_custody'=>array('previous'=>'1.0.437','version'=>'1.0.438',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_delegation_custody.php'),
+            'hrm_ess_001_manager_scope_policy'=>array('previous'=>'1.0.436','version'=>'1.0.437',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_scope_policy.php'),
             'hrm_ess_001_self_scope'=>array('previous'=>'1.0.435','version'=>'1.0.436',
                 'file'=>'sql/upgrade_hrm_ess_001_self_scope.php'),
             'hrm_ess_001_identity_link_command'=>array('previous'=>'1.0.434','version'=>'1.0.435',
