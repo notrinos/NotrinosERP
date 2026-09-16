@@ -8255,3 +8255,24 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_batch_items` (
   CONSTRAINT `0_hrm_attribute_legacy_batch_item_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_batch_item_conversion_fk` FOREIGN KEY (`conversion_id`) REFERENCES `0_hrm_attribute_legacy_conversion_receipts` (`conversion_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_cleanup_requests` (
+  `cleanup_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `batch_id` bigint(20) unsigned NOT NULL,
+  `request_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reconciliation_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `recovery_set_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `key_count` smallint(5) unsigned NOT NULL,
+  `request_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `maker_id` smallint(6) unsigned NOT NULL,
+  `checker_id` smallint(6) unsigned DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cleanup_request_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_batch_uq` (`batch_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_nonce_uq` (`request_nonce_hash`),
+  KEY `hrm_attribute_legacy_cleanup_status_idx` (`request_status`,`expires_at`,`cleanup_request_id`),
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_batch_fk` FOREIGN KEY (`batch_id`) REFERENCES `0_hrm_attribute_legacy_conversion_batches` (`batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
