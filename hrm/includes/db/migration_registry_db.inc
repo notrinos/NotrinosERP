@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.439',
-        'active_legacy_payroll_contract'=>'1.0.374',
-        'next_backlog_item'=>'HRM-ESS-001 manager delegation maker/checker command review',
+        'active_database_version'=>'1.0.442',
+        'active_legacy_payroll_contract'=>'1.0.375',
+        'next_backlog_item'=>'HRM-ESS-001 self-service change-request custody and command review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Identity, self scope, explicit assignment-scoped direct-manager access, dated delegation custody, and a read-only direct/delegated team resolver are active through 1.0.439. No delegation writer, ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is the distinct maker/checker delegation command.',
+        'next_slice_scope'=>'Identity/self scope and assignment-scoped manager access are active through 1.0.442. Manager delegation now uses zero-seed pending request custody, a maker-only digest-bound request command, and distinct-checker finalization into the pre-existing approved-delegation table. No ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is bounded self-service change-request custody.',
         'edges'=>array(
+            'hrm_ess_001_manager_delegation_approval_command'=>array('previous'=>'1.0.441','version'=>'1.0.442',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_delegation_approval_command.php'),
+            'hrm_ess_001_manager_delegation_request_command'=>array('previous'=>'1.0.440','version'=>'1.0.441',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_delegation_request_command.php'),
+            'hrm_ess_001_manager_delegation_request_custody'=>array('previous'=>'1.0.439','version'=>'1.0.440',
+                'file'=>'sql/upgrade_hrm_ess_001_manager_delegation_request_custody.php'),
             'hrm_ess_001_manager_scope_resolver'=>array('previous'=>'1.0.438','version'=>'1.0.439',
                 'file'=>'sql/upgrade_hrm_ess_001_manager_scope_resolver.php'),
             'hrm_ess_001_manager_delegation_custody'=>array('previous'=>'1.0.437','version'=>'1.0.438',

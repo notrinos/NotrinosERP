@@ -5552,6 +5552,40 @@ CREATE TABLE `0_hrm_ess_manager_delegations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 
+-- Structure of HRM-ESS-001 pending manager delegation request custody --
+
+CREATE TABLE `0_hrm_ess_manager_delegation_requests` (
+  `request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `delegator_worker_id` bigint(20) unsigned NOT NULL,
+  `delegate_worker_id` bigint(20) unsigned NOT NULL,
+  `scope_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'direct_team',
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `evidence_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'draft',
+  `requested_by` smallint(6) unsigned NOT NULL,
+  `approved_by` smallint(6) unsigned DEFAULT NULL,
+  `approval_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `final_delegation_id` bigint(20) unsigned DEFAULT NULL,
+  `row_version` int(10) unsigned NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`request_id`),
+  UNIQUE KEY `hrm_ess_manager_delegation_request_digest_uq` (`request_digest`),
+  UNIQUE KEY `hrm_ess_manager_delegation_request_nonce_uq` (`request_nonce_hash`),
+  UNIQUE KEY `hrm_ess_manager_delegation_request_final_uq` (`final_delegation_id`),
+  KEY `hrm_ess_manager_delegation_request_status_idx` (`request_status`,`expires_at`,`request_id`),
+  KEY `hrm_ess_manager_delegation_request_delegator_idx` (`delegator_worker_id`,`effective_from`,`effective_to`,`request_id`),
+  KEY `hrm_ess_manager_delegation_request_delegate_idx` (`delegate_worker_id`,`effective_from`,`effective_to`,`request_id`),
+  CONSTRAINT `0_hrm_ess_manager_delegation_request_delegator_fk` FOREIGN KEY (`delegator_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_manager_delegation_request_delegate_fk` FOREIGN KEY (`delegate_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_manager_delegation_request_final_fk` FOREIGN KEY (`final_delegation_id`) REFERENCES `0_hrm_ess_manager_delegations` (`delegation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
 -- Structure of table `0_user_federation_external_subject_links` --
 
 DROP TABLE IF EXISTS `0_user_federation_external_subject_links`;
