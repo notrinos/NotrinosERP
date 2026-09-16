@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.428',
-        'active_legacy_payroll_contract'=>'1.0.367',
+        'active_database_version'=>'1.0.431',
+        'active_legacy_payroll_contract'=>'1.0.368',
         'next_backlog_item'=>'HRM-FND-007 work authorization and typed custom attributes',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'After local 1.0.428 acceptance, review the separately authorized destructive legacy-key cleanup executor and explicit forward-recovery boundary; do not delete or rewrite legacy keys until executor-time reconciliation, recovery proof and atomic rollback semantics are accepted.',
+        'next_slice_scope'=>'After local 1.0.431 acceptance, review post-cleanup completion evidence and FND-007 closure before any additional legacy retirement, payroll consumer, or durable Work Authorization delivery activation.',
         'edges'=>array(
+            'hrm_fnd_007_typed_attribute_legacy_cleanup_recovery'=>array('previous'=>'1.0.430','version'=>'1.0.431',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_recovery.php'),
+            'hrm_fnd_007_typed_attribute_legacy_cleanup_executor'=>array('previous'=>'1.0.429','version'=>'1.0.430',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_executor.php'),
+            'hrm_fnd_007_typed_attribute_legacy_cleanup_execution_custody'=>array('previous'=>'1.0.428','version'=>'1.0.429',
+                'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_execution_custody.php'),
             'hrm_fnd_007_typed_attribute_legacy_cleanup_approval'=>array('previous'=>'1.0.427','version'=>'1.0.428',
                 'file'=>'sql/upgrade_hrm_fnd_007_typed_attribute_legacy_cleanup_approval.php'),
             'hrm_fnd_007_typed_attribute_legacy_cleanup_draft'=>array('previous'=>'1.0.426','version'=>'1.0.427',
