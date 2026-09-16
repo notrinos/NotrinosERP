@@ -8276,3 +8276,34 @@ CREATE TABLE `0_hrm_attribute_legacy_cleanup_requests` (
   KEY `hrm_attribute_legacy_cleanup_status_idx` (`request_status`,`expires_at`,`cleanup_request_id`),
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_batch_fk` FOREIGN KEY (`batch_id`) REFERENCES `0_hrm_attribute_legacy_conversion_batches` (`batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_attribute_legacy_cleanup_receipts` (
+  `cleanup_receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `cleanup_request_id` bigint(20) unsigned NOT NULL,
+  `batch_item_id` bigint(20) unsigned NOT NULL,
+  `employee_number` int(11) NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `mapping_version_id` bigint(20) unsigned NOT NULL,
+  `conversion_id` bigint(20) unsigned NOT NULL,
+  `pre_cleanup_profile_version_id` bigint(20) unsigned NOT NULL,
+  `post_cleanup_profile_version_id` bigint(20) unsigned NOT NULL,
+  `execution_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `executed_by` smallint(6) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cleanup_receipt_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_receipt_item_uq` (`cleanup_request_id`,`batch_item_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_receipt_batch_item_uq` (`batch_item_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_receipt_post_profile_uq` (`post_cleanup_profile_version_id`),
+  UNIQUE KEY `hrm_attribute_legacy_cleanup_receipt_digest_uq` (`execution_digest`),
+  KEY `hrm_attribute_legacy_cleanup_receipt_worker_idx` (`worker_id`),
+  KEY `hrm_attribute_legacy_cleanup_receipt_mapping_idx` (`mapping_version_id`),
+  KEY `hrm_attribute_legacy_cleanup_receipt_conversion_idx` (`conversion_id`),
+  KEY `hrm_attribute_legacy_cleanup_receipt_pre_profile_idx` (`pre_cleanup_profile_version_id`),
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_request_fk` FOREIGN KEY (`cleanup_request_id`) REFERENCES `0_hrm_attribute_legacy_cleanup_requests` (`cleanup_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_item_fk` FOREIGN KEY (`batch_item_id`) REFERENCES `0_hrm_attribute_legacy_conversion_batch_items` (`batch_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_mapping_fk` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_conversion_fk` FOREIGN KEY (`conversion_id`) REFERENCES `0_hrm_attribute_legacy_conversion_receipts` (`conversion_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_pre_profile_fk` FOREIGN KEY (`pre_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_post_profile_fk` FOREIGN KEY (`post_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
