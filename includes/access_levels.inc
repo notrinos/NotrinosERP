@@ -421,6 +421,8 @@ $security_areas =array(
 	'SA_HRM_EXECUTE_TYPED_ATTRIBUTE_LEGACY_CLEANUP' => array(SS_HRM|47, _('Execute approved reconciled legacy Typed Attribute cleanup requests')), // no automatic role grant
 	'SA_HRM_RECOVER_TYPED_ATTRIBUTE_LEGACY_CLEANUP' => array(SS_HRM|48, _('Forward-reauthorize expired unexecuted legacy Typed Attribute cleanup requests')), // no automatic role grant
 	'SA_HRM_VIEW_TYPED_ATTRIBUTE_LEGACY_CLEANUP_COMPLETION' => array(SS_HRM|49, _('View post-cleanup legacy Typed Attribute completion evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_ESS_IDENTITY_LINK' => array(SS_HRM|50, _('Create reviewed ESS account-to-Worker identity link requests')), // no automatic role grant
+	'SA_HRM_APPROVE_ESS_IDENTITY_LINK' => array(SS_HRM|51, _('Approve reviewed ESS account-to-Worker identity links')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

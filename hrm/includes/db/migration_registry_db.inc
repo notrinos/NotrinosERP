@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.433',
-        'active_legacy_payroll_contract'=>'1.0.372',
-        'next_backlog_item'=>'HRM-ESS-001 foundational ESS/MSS authorization and changes',
+        'active_database_version'=>'1.0.436',
+        'active_legacy_payroll_contract'=>'1.0.373',
+        'next_backlog_item'=>'HRM-ESS-001 manager assignment scope and dated delegation review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'No additional legacy retirement, payroll readiness consumer, bulk export, or durable Work Authorization delivery is activated by FND-007 closure. HRM-ESS-001 begins only after local 1.0.433 acceptance.',
+        'next_slice_scope'=>'Identity custody, maker/checker linking, and current-session self scope are active through 1.0.436. No ESS page/API route, manager scope, delegation, salary access, bank/tax mutation, or automatic role grant is activated; next review is assignment-scoped manager/delegation policy.',
         'edges'=>array(
+            'hrm_ess_001_self_scope'=>array('previous'=>'1.0.435','version'=>'1.0.436',
+                'file'=>'sql/upgrade_hrm_ess_001_self_scope.php'),
+            'hrm_ess_001_identity_link_command'=>array('previous'=>'1.0.434','version'=>'1.0.435',
+                'file'=>'sql/upgrade_hrm_ess_001_identity_link_command.php'),
+            'hrm_ess_001_identity_link_custody'=>array('previous'=>'1.0.433','version'=>'1.0.434',
+                'file'=>'sql/upgrade_hrm_ess_001_identity_link_custody.php'),
             'hrm_fnd_007_completion'=>array('previous'=>'1.0.432','version'=>'1.0.433',
                 'file'=>'sql/upgrade_hrm_fnd_007_completion.php'),
             'hrm_fnd_007_typed_attribute_legacy_cleanup_completion'=>array('previous'=>'1.0.431','version'=>'1.0.432',

@@ -5831,6 +5831,46 @@ CREATE TABLE `0_users` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 ;
 
 
+-- Structure of HRM-ESS-001 explicit account/Worker identity-link custody --
+
+CREATE TABLE `0_hrm_ess_identity_link_requests` (
+  `request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` smallint(6) NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `evidence_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `requested_at` datetime NOT NULL,
+  `requested_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`request_id`),
+  UNIQUE KEY `hrm_ess_identity_request_digest_uq` (`request_digest`),
+  KEY `hrm_ess_identity_request_user_idx` (`user_id`,`request_id`),
+  KEY `hrm_ess_identity_request_worker_idx` (`worker_id`,`request_id`),
+  CONSTRAINT `0_hrm_ess_identity_request_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_identity_request_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_ess_identity_links` (
+  `link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `request_id` bigint(20) unsigned NOT NULL,
+  `user_id` smallint(6) NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `approval_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `link_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `linked_at` datetime NOT NULL,
+  `linked_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`link_id`),
+  UNIQUE KEY `hrm_ess_identity_link_request_uq` (`request_id`),
+  UNIQUE KEY `hrm_ess_identity_link_user_uq` (`user_id`),
+  UNIQUE KEY `hrm_ess_identity_link_worker_uq` (`worker_id`),
+  UNIQUE KEY `hrm_ess_identity_link_digest_uq` (`link_digest`),
+  CONSTRAINT `0_hrm_ess_identity_link_request_fk` FOREIGN KEY (`request_id`) REFERENCES `0_hrm_ess_identity_link_requests` (`request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_identity_link_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_identity_link_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+
+
 -- Structure of table `0_user_federation_external_subject_links` --
 
 DROP TABLE IF EXISTS `0_user_federation_external_subject_links`;
