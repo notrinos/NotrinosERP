@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.448',
-        'active_legacy_payroll_contract'=>'1.0.379',
-        'next_backlog_item'=>'HRM-ESS-001 reauthenticated CSRF-protected self-change route review',
+        'active_database_version'=>'1.0.451',
+        'active_legacy_payroll_contract'=>'1.0.380',
+        'next_backlog_item'=>'HRM-ESS-001 federated-session reauthentication / checker-executor route review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ESS-001 bounded self-profile changes are active through 1.0.448 with immutable execution receipts, stale-baseline-safe normalized Person application followed by exact legacy projection, and terminal reject/cancel/expiry recovery. No ESS/MSS page/API route, automatic role grant, bank/tax/identifier/compensation mutation, payroll consumer, or accounting authority is activated; next review is the reauthenticated CSRF/BOLA-safe self-service route boundary.',
+        'next_slice_scope'=>'HRM-ESS-001 current-user bounded contact/private self-profile request and owner-cancel are exposed through 1.0.451 only on HTTPS with explicit CSRF, dedicated permission, server-derived self scope, bounded local-password reauthentication and rate limiting. Federated-session reauthentication, checker/executor public routes, automatic grants, bank/tax/identifier/compensation mutation, payroll consumers and accounting authority remain deferred.',
         'edges'=>array(
+            'hrm_ess_001_self_change_navigation'=>array('previous'=>'1.0.450','version'=>'1.0.451',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_navigation.php'),
+            'hrm_ess_001_self_change_browser_route'=>array('previous'=>'1.0.449','version'=>'1.0.450',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_browser_route.php'),
+            'hrm_ess_001_self_change_route_policy'=>array('previous'=>'1.0.448','version'=>'1.0.449',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_route_policy.php'),
             'hrm_ess_001_self_change_recovery'=>array('previous'=>'1.0.447','version'=>'1.0.448',
                 'file'=>'sql/upgrade_hrm_ess_001_self_change_recovery.php'),
             'hrm_ess_001_self_change_executor'=>array('previous'=>'1.0.446','version'=>'1.0.447',
