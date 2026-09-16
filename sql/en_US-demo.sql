@@ -5963,6 +5963,24 @@ CREATE TABLE `0_hrm_ess_self_change_requests` (
 
 DROP TABLE IF EXISTS `0_user_federation_external_subject_links`;
 
+CREATE TABLE `0_hrm_ess_self_change_execution_receipts` (
+  `receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `request_id` bigint(20) unsigned NOT NULL,
+  `request_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `approval_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `execution_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `execution_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `executor_id` smallint(6) NOT NULL,
+  `field_names_json` varchar(512) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `executed_at` datetime NOT NULL,
+  PRIMARY KEY (`receipt_id`),
+  UNIQUE KEY `hrm_ess_self_change_execution_request_uq` (`request_id`),
+  UNIQUE KEY `hrm_ess_self_change_execution_nonce_uq` (`execution_nonce_hash`),
+  UNIQUE KEY `hrm_ess_self_change_execution_digest_uq` (`execution_digest`),
+  CONSTRAINT `0_hrm_ess_self_change_execution_request_fk` FOREIGN KEY (`request_id`) REFERENCES `0_hrm_ess_self_change_requests` (`request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_ess_self_change_execution_executor_fk` FOREIGN KEY (`executor_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
 CREATE TABLE `0_user_federation_external_subject_links` (
 	`external_subject_link_id` bigint unsigned NOT NULL AUTO_INCREMENT,
 	`provider_id` bigint unsigned NOT NULL,

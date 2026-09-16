@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.445',
-        'active_legacy_payroll_contract'=>'1.0.376',
-        'next_backlog_item'=>'HRM-ESS-001 approved self-change application/executor and recovery review',
+        'active_database_version'=>'1.0.448',
+        'active_legacy_payroll_contract'=>'1.0.379',
+        'next_backlog_item'=>'HRM-ESS-001 reauthenticated CSRF-protected self-change route review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'Identity/self scope and assignment-scoped manager access are active through 1.0.445. Bounded self-profile changes now have zero-seed encrypted custody, current-session maker submission, and distinct-checker approval for the contact_private_v1 allowlist. Approval does not mutate Person/Worker/legacy profile state. No ESS/MSS page/API route, compensation access, bank/tax mutation, payroll consumer, or automatic role grant is activated; next review is approved-request application/executor and recovery semantics.',
+        'next_slice_scope'=>'HRM-ESS-001 bounded self-profile changes are active through 1.0.448 with immutable execution receipts, stale-baseline-safe normalized Person application followed by exact legacy projection, and terminal reject/cancel/expiry recovery. No ESS/MSS page/API route, automatic role grant, bank/tax/identifier/compensation mutation, payroll consumer, or accounting authority is activated; next review is the reauthenticated CSRF/BOLA-safe self-service route boundary.',
         'edges'=>array(
+            'hrm_ess_001_self_change_recovery'=>array('previous'=>'1.0.447','version'=>'1.0.448',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_recovery.php'),
+            'hrm_ess_001_self_change_executor'=>array('previous'=>'1.0.446','version'=>'1.0.447',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_executor.php'),
+            'hrm_ess_001_self_change_execution_receipt_custody'=>array('previous'=>'1.0.445','version'=>'1.0.446',
+                'file'=>'sql/upgrade_hrm_ess_001_self_change_execution_receipt_custody.php'),
             'hrm_ess_001_self_change_approval_command'=>array('previous'=>'1.0.444','version'=>'1.0.445',
                 'file'=>'sql/upgrade_hrm_ess_001_self_change_approval_command.php'),
             'hrm_ess_001_self_change_request_command'=>array('previous'=>'1.0.443','version'=>'1.0.444',
