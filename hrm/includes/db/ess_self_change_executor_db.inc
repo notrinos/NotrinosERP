@@ -122,6 +122,7 @@ function execute_hrm_ess_self_profile_change($request_id, $execution_nonce)
     $request = get_hrm_ess_self_change_request($request_id, true);
     if (!is_array($request) || (string)$request['field_set_code'] !== 'contact_private_v1'
         || (int)$request['requested_by'] <= 0 || (int)$request['requested_by'] === $actor
+        || (int)$request['approved_by'] <= 0 || (int)$request['approved_by'] === $actor
         || !hrm_ess_self_change_digest_is_valid((string)$request['request_digest'])
         || !hrm_ess_self_change_digest_is_valid((string)$request['approval_digest'])) {
         cancel_transaction(); return false;
@@ -208,6 +209,7 @@ function execute_hrm_ess_self_profile_change($request_id, $execution_nonce)
         'before'=>array('request_status'=>'approved'),'after'=>array('request_status'=>'applied','receipt_id'=>$receipt_id,'field_names'=>$payload_fields),
         'restricted_diff'=>array('values_logged'=>false,'stale_baseline_revalidated'=>true,'identity_link_revalidated'=>true,
             'normalized_person_updated_before_legacy_projection'=>true,'execution_nonce_stored_raw'=>false,
+            'checker_distinct_from_executor'=>true,
             'bank_tax_fields_allowed'=>false,'identifier_fields_allowed'=>false,'compensation_fields_allowed'=>false,
             'public_routes_added'=>0,'historical_payroll_accounting_rows_rewritten'=>0)
     ));
