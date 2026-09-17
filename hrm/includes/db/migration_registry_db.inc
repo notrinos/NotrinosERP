@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.473',
-        'active_legacy_payroll_contract'=>'1.0.390',
-        'next_backlog_item'=>'PAY-RULE-003 rate-table contract foundation',
-        'next_slice_changed_files'=>array('hrm/includes/payroll/rate_table_contract.inc','tests/php/test_pay_rule_003_rate_table_contract.php'),
-        'next_slice_scope'=>'PAY-RULE-003 pure typed decision-table contract is source-founded at 1.0.473 under legacy payroll custody 1.0.390. No persistence, importer, publication lifecycle, evaluator/simulator or production payroll consumer is active. Next dependency is the separate rate-table contract foundation for canonical decimals, units/currency and explicit bracket boundary/overlap/gap policy.',
+        'active_database_version'=>'1.0.476',
+        'active_legacy_payroll_contract'=>'1.0.393',
+        'next_backlog_item'=>'PAY-RULE-003 persistence/import/publication dependency review only',
+        'next_slice_changed_files'=>array('Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/IMPLEMENTATION_BACKLOG.md'),
+        'next_slice_scope'=>'PAY-RULE-003 decision/rate contracts plus deterministic compile/simulate/explain are source-founded at 1.0.476 under legacy payroll custody 1.0.393. Next dependency is architecture/dependency review only before any persistence, legacy import, publication lifecycle or production payroll consumer is permitted.',
         'edges'=>array(
+            'pay_rule_003_decision_rate_simulation'=>array('previous'=>'1.0.475','version'=>'1.0.476',
+                'file'=>'sql/upgrade_pay_rule_003_decision_rate_simulation.php'),
+            'pay_rule_003_decision_rate_plan'=>array('previous'=>'1.0.474','version'=>'1.0.475',
+                'file'=>'sql/upgrade_pay_rule_003_decision_rate_plan.php'),
+            'pay_rule_003_rate_table_contract'=>array('previous'=>'1.0.473','version'=>'1.0.474',
+                'file'=>'sql/upgrade_pay_rule_003_rate_table_contract.php'),
             'pay_rule_003_decision_table_contract'=>array('previous'=>'1.0.472','version'=>'1.0.473',
                 'file'=>'sql/upgrade_pay_rule_003_decision_table_contract.php'),
             'pay_rule_003_dependency_review'=>array('previous'=>'1.0.471','version'=>'1.0.472',
