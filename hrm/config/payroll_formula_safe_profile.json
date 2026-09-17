@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "notrinoserp.hrm.payroll.formula_safe_profile",
+    "version": "1.0.0",
+    "introduced_source_version": "1.0.460"
+  },
+  "execution": {
+    "engine": "FormulaFramework-isolated-payroll-runtime",
+    "production_routing": false,
+    "compatibility_mode": false,
+    "namespace_allowlist": [],
+    "function_allowlist": ["ABS", "ROUND", "DATE", "DAYS", "YEAR", "MONTH", "DAY"],
+    "operator_allowlist": ["+", "-", "*", "/", "%", "unary+", "unary-", ">", "<", ">=", "<=", "==", "!=", "AND", "OR", "NOT", "IF"],
+    "resource_limits": {
+      "max_source_length": 1000,
+      "max_tokens": 256,
+      "max_ast_depth": 32,
+      "max_node_evaluations": 256,
+      "max_function_calls": 32,
+      "max_execution_time_ms": 50,
+      "max_memory_bytes": 1048576,
+      "max_batch_size": 1000
+    }
+  },
+  "decimal_policy": {
+    "scale": 6,
+    "rounding": "half_away_from_zero",
+    "input": "canonical_decimal_string_or_integer",
+    "division_by_zero": "error",
+    "non_finite": "forbidden",
+    "implicit_float_input": false
+  },
+  "date_policy": {
+    "representation": "YYYY-MM-DD",
+    "calendar": "proleptic_gregorian",
+    "timezone": "UTC",
+    "today_now_functions": false,
+    "invalid_date": "error"
+  },
+  "context_policy": {
+    "immutable": true,
+    "require_exact_variables": true,
+    "company_context_permitted": false,
+    "security_context_permitted": false,
+    "business_data_permitted": false,
+    "php_globals_permitted": false,
+    "database_access_permitted": false,
+    "file_access_permitted": false,
+    "network_access_permitted": false
+  },
+  "variables": [
+    {"name":"BASIC","type":"decimal","unit":"currency"},
+    {"name":"GROSS","type":"decimal","unit":"currency"},
+    {"name":"DAYS_WORKED","type":"decimal","unit":"day"},
+    {"name":"PAYABLE_DAYS","type":"decimal","unit":"day"},
+    {"name":"WORKING_DAYS","type":"decimal","unit":"day"},
+    {"name":"DAYS_IN_MONTH","type":"decimal","unit":"day"},
+    {"name":"LEAVE_DAYS","type":"decimal","unit":"day"},
+    {"name":"PAID_LEAVE_DAYS","type":"decimal","unit":"day"},
+    {"name":"ABSENT_DAYS","type":"decimal","unit":"day"},
+    {"name":"OVERTIME_HOURS","type":"decimal","unit":"hour"},
+    {"name":"UNPAID_LEAVE_DAYS","type":"decimal","unit":"day"},
+    {"name":"HOURLY_RATE","type":"decimal","unit":"currency/hour"},
+    {"name":"PERIOD_START","type":"date","unit":"date"},
+    {"name":"PERIOD_END","type":"date","unit":"date"}
+  ],
+  "governance": {
+    "author_reviewer_publisher_distinct": true,
+    "default_deny_publication": true,
+    "shadow_required_before_cutover": true,
+    "production_cutover_permitted": false,
+    "formula_text_in_governance_artifacts": false,
+    "payroll_context_in_governance_artifacts": false
+  }
+}

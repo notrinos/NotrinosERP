@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.459',
-        'active_legacy_payroll_contract'=>'1.0.382',
-        'next_backlog_item'=>'HRM-ESS-001 Phase-2 backlog review',
-        'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ESS-001 Phase-1 complete at source/database 1.0.459: local-password and action-bound federated reauthentication, separate checker/executor routes, direct-URL authorization closure, accessibility/localization hardening and end-to-end authorization/recovery evidence are activated. No automatic grants or bank/tax/identifier/compensation/payroll/accounting authority were added. Phase-2 remains unactivated pending separate backlog review.',
+        'active_database_version'=>'1.0.462',
+        'active_legacy_payroll_contract'=>'1.0.383',
+        'next_backlog_item'=>'PAY-RULE-002 configured-company shadow acceptance and immutable publication custody',
+        'next_slice_changed_files'=>array('hrm/config/payroll_formula_safe_publication_registry.json','hrm/includes/payroll_formula_safe_shadow.inc','tests/php/run_pay_rule_002_safe_profile_mandatory_blockers_browser.php'),
+        'next_slice_scope'=>'PAY-RULE-002 foundation through source/database 1.0.462: typed immutable payroll context, fixed-decimal/date/unit semantics, approved function profile, isolated deterministic runtime, and default-deny non-production shadow governance are source-activated. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.383; production FormulaFacade routing remains prohibited until configured-company shadow/differential acceptance and immutable publication custody are separately completed.',
         'edges'=>array(
+            'pay_rule_002_shadow_governance'=>array('previous'=>'1.0.461','version'=>'1.0.462',
+                'file'=>'sql/upgrade_pay_rule_002_shadow_governance.php'),
+            'pay_rule_002_runtime_foundation'=>array('previous'=>'1.0.460','version'=>'1.0.461',
+                'file'=>'sql/upgrade_pay_rule_002_runtime_foundation.php'),
+            'pay_rule_002_profile_contract'=>array('previous'=>'1.0.459','version'=>'1.0.460',
+                'file'=>'sql/upgrade_pay_rule_002_profile_contract.php'),
             'hrm_ess_001_phase_1_completion'=>array('previous'=>'1.0.458','version'=>'1.0.459',
                 'file'=>'sql/upgrade_hrm_ess_001_phase_1_completion.php'),
             'hrm_ess_001_authorization_recovery_regression'=>array('previous'=>'1.0.457','version'=>'1.0.458',
