@@ -11,12 +11,20 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.462',
-        'active_legacy_payroll_contract'=>'1.0.383',
-        'next_backlog_item'=>'PAY-RULE-002 configured-company shadow acceptance and immutable publication custody',
-        'next_slice_changed_files'=>array('hrm/config/payroll_formula_safe_publication_registry.json','hrm/includes/payroll_formula_safe_shadow.inc','tests/php/run_pay_rule_002_safe_profile_mandatory_blockers_browser.php'),
-        'next_slice_scope'=>'PAY-RULE-002 foundation through source/database 1.0.462: typed immutable payroll context, fixed-decimal/date/unit semantics, approved function profile, isolated deterministic runtime, and default-deny non-production shadow governance are source-activated. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.383; production FormulaFacade routing remains prohibited until configured-company shadow/differential acceptance and immutable publication custody are separately completed.',
+        'active_database_version'=>'1.0.466',
+        'active_legacy_payroll_contract'=>'1.0.385',
+        'next_backlog_item'=>'PAY-RULE-002 configured-company four-principal shadow ceremony after runtime-reachable acceptance passes',
+        'next_slice_changed_files'=>array('hrm/includes/payroll_formula_safe_acceptance.inc','admin/payroll_formula_safe_acceptance.php','tests/php/run_pay_rule_002_configured_shadow_acceptance_mandatory_blockers_browser.php'),
+        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.466: the redacted inventory is limited to formulas currently reachable by frozen legacy salary-component routing (employee_salary/salary_structure, amount_type=3, active/effective); pay_elements formula metadata and expired/inert rows remain preserved but are not publication blockers. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.385; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
         'edges'=>array(
+            'pay_rule_002_acceptance_reachability'=>array('previous'=>'1.0.465','version'=>'1.0.466',
+                'file'=>'sql/upgrade_pay_rule_002_acceptance_reachability.php'),
+            'pay_rule_002_publication_custody'=>array('previous'=>'1.0.464','version'=>'1.0.465',
+                'file'=>'sql/upgrade_pay_rule_002_publication_custody.php'),
+            'pay_rule_002_acceptance_review'=>array('previous'=>'1.0.463','version'=>'1.0.464',
+                'file'=>'sql/upgrade_pay_rule_002_acceptance_review.php'),
+            'pay_rule_002_configured_shadow_acceptance'=>array('previous'=>'1.0.462','version'=>'1.0.463',
+                'file'=>'sql/upgrade_pay_rule_002_configured_shadow_acceptance.php'),
             'pay_rule_002_shadow_governance'=>array('previous'=>'1.0.461','version'=>'1.0.462',
                 'file'=>'sql/upgrade_pay_rule_002_shadow_governance.php'),
             'pay_rule_002_runtime_foundation'=>array('previous'=>'1.0.460','version'=>'1.0.461',
