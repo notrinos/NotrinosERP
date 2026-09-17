@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.466',
-        'active_legacy_payroll_contract'=>'1.0.385',
-        'next_backlog_item'=>'PAY-RULE-002 configured-company four-principal shadow ceremony after runtime-reachable acceptance passes',
+        'active_database_version'=>'1.0.468',
+        'active_legacy_payroll_contract'=>'1.0.386',
+        'next_backlog_item'=>'PAY-RULE-002 configured-company four-principal shadow ceremony after hardened artifact validation passes',
         'next_slice_changed_files'=>array('hrm/includes/payroll_formula_safe_acceptance.inc','admin/payroll_formula_safe_acceptance.php','tests/php/run_pay_rule_002_configured_shadow_acceptance_mandatory_blockers_browser.php'),
-        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.466: the redacted inventory is limited to formulas currently reachable by frozen legacy salary-component routing (employee_salary/salary_structure, amount_type=3, active/effective); pay_elements formula metadata and expired/inert rows remain preserved but are not publication blockers. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.385; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
+        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.468: runtime-reachable inventory remains redacted; ceremony validators fail closed on blocked reports, configured-role substitution, private-registry principal/evidence substitution, non-monotonic chronology, and expired review windows. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.386; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
         'edges'=>array(
+            'pay_rule_002_ceremony_chronology_hardening'=>array('previous'=>'1.0.467','version'=>'1.0.468',
+                'file'=>'sql/upgrade_pay_rule_002_ceremony_chronology_hardening.php'),
+            'pay_rule_002_ceremony_binding_hardening'=>array('previous'=>'1.0.466','version'=>'1.0.467',
+                'file'=>'sql/upgrade_pay_rule_002_ceremony_binding_hardening.php'),
             'pay_rule_002_acceptance_reachability'=>array('previous'=>'1.0.465','version'=>'1.0.466',
                 'file'=>'sql/upgrade_pay_rule_002_acceptance_reachability.php'),
             'pay_rule_002_publication_custody'=>array('previous'=>'1.0.464','version'=>'1.0.465',

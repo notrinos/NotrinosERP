@@ -87,15 +87,15 @@ $_SESSION['SysPrefs'] =& $SysPrefs;
 include_once $path_to_root.'/includes/main.inc';
 include_once $path_to_root.'/hrm/includes/payroll_formula_safe_acceptance.inc';
 
-if (!isset($db_version) || (string)$db_version !== '1.0.466')
-    pr2_accept_cli_exit(false, 'source_version_not_1_0_466');
+if (!isset($db_version) || (string)$db_version !== '1.0.468')
+    pr2_accept_cli_exit(false, 'source_version_not_1_0_468');
 if (!hrm_payroll_formula_safe_acceptance_roles_separated($company))
     pr2_accept_cli_exit(false, 'four_role_separation_not_configured');
 if (!set_global_connection($company))
     pr2_accept_cli_exit(false, 'database_connection_failed');
 $company_version = isset($SysPrefs->prefs['version_id']) ? (string)$SysPrefs->prefs['version_id'] : '';
-if ($company_version !== '1.0.466')
-    pr2_accept_cli_exit(false, 'company_version_not_1_0_466', array('company_version'=>$company_version));
+if ($company_version !== '1.0.468')
+    pr2_accept_cli_exit(false, 'company_version_not_1_0_468', array('company_version'=>$company_version));
 
 $corpus = json_decode(@file_get_contents($path_to_root.'/hrm/config/payroll_formula_differential_corpus.json'), true);
 if (!is_array($corpus))
