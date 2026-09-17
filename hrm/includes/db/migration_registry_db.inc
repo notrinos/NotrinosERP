@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.485',
-        'active_legacy_payroll_contract'=>'1.0.403',
-        'next_backlog_item'=>'PAY-RULE-004 rule lifecycle/regulatory evidence dependency review only',
-        'next_slice_changed_files'=>array('Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/IMPLEMENTATION_BACKLOG.md'),
-        'next_slice_scope'=>'PAY-RULE-003 is source-closed at 1.0.485 under legacy payroll custody 1.0.403. Immutable simulation-only artifact custody and quarantined legacy import/review/execution evidence are available, publication remains default-deny, and production payroll routing remains legacy-only. Next dependency is PAY-RULE-004 rule lifecycle/regulatory evidence review; PAY-RULE-006 owns any later production cutover.',
+        'active_database_version'=>'1.0.488',
+        'active_legacy_payroll_contract'=>'1.0.404',
+        'next_backlog_item'=>'PAY-RULE-004 controlled draft Rule/Version writer',
+        'next_slice_changed_files'=>array('hrm/includes/payroll/rule_lifecycle_store.inc','sql/upgrade_pay_rule_004_draft_writer.php','tests/php/test_pay_rule_004_draft_writer.php'),
+        'next_slice_scope'=>'PAY-RULE-004 foundation is source-complete through 1.0.488 under legacy payroll custody 1.0.404 (immutable predecessor 1.0.403 preserved). Stable Rule/version, regulatory evidence, review and publication custody schema is empty/immutable and the pure lifecycle contract preserves three-person SoD. Next dependency is the controlled draft Rule/Version writer with audit coupling and exact-retry semantics; production activation remains forbidden and PAY-RULE-006 owns later cutover.',
         'edges'=>array(
+            'pay_rule_004_custody_foundation'=>array('previous'=>'1.0.487','version'=>'1.0.488',
+                'file'=>'sql/upgrade_pay_rule_004_custody_foundation.php'),
+            'pay_rule_004_lifecycle_contract'=>array('previous'=>'1.0.486','version'=>'1.0.487',
+                'file'=>'sql/upgrade_pay_rule_004_lifecycle_contract.php'),
+            'pay_rule_004_dependency_review'=>array('previous'=>'1.0.485','version'=>'1.0.486',
+                'file'=>'sql/upgrade_pay_rule_004_dependency_review.php'),
             'pay_rule_003_completion'=>array('previous'=>'1.0.484','version'=>'1.0.485',
                 'file'=>'sql/upgrade_pay_rule_003_completion.php'),
             'pay_rule_003_publication_boundary'=>array('previous'=>'1.0.483','version'=>'1.0.484',

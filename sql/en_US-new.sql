@@ -8554,3 +8554,97 @@ CREATE TRIGGER `0_hrm_pay_rule_import_reviews_immutable_update` BEFORE UPDATE ON
 CREATE TRIGGER `0_hrm_pay_rule_import_reviews_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_import_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_import_reviews';
 CREATE TRIGGER `0_hrm_pay_rule_import_receipts_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_import_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_import_receipts';
 CREATE TRIGGER `0_hrm_pay_rule_import_receipts_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_import_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_import_receipts';
+
+CREATE TABLE `0_hrm_pay_rule_rules` (
+  `rule_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_key` varchar(160) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `rule_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`rule_id`),
+  UNIQUE KEY `hrm_pay_rule_rule_key_uq` (`rule_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_rule_versions` (
+  `rule_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_version_id` bigint(20) unsigned DEFAULT NULL,
+  `version_label` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_version_id` bigint(20) unsigned NOT NULL,
+  `artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `plan_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `author_id` smallint(6) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`rule_version_id`),
+  UNIQUE KEY `hrm_pay_rule_rule_version_uq` (`rule_id`,`version_no`),
+  UNIQUE KEY `hrm_pay_rule_rule_version_label_uq` (`rule_id`,`version_label`),
+  UNIQUE KEY `hrm_pay_rule_rule_predecessor_uq` (`predecessor_version_id`),
+  UNIQUE KEY `hrm_pay_rule_rule_artifact_version_uq` (`artifact_version_id`),
+  CONSTRAINT `0_hrm_pay_rule_rule_version_rule_fk` FOREIGN KEY (`rule_id`) REFERENCES `0_hrm_pay_rule_rules` (`rule_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_rule_version_predecessor_fk` FOREIGN KEY (`predecessor_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_rule_version_artifact_fk` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_regulatory_evidence` (
+  `regulatory_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `jurisdiction_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `legal_reference` varchar(512) NOT NULL,
+  `source_evidence_ref` varchar(256) NOT NULL,
+  `source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `captured_at` datetime NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`regulatory_evidence_id`),
+  UNIQUE KEY `hrm_pay_rule_regulatory_version_uq` (`rule_version_id`),
+  UNIQUE KEY `hrm_pay_rule_regulatory_hash_uq` (`evidence_sha256`),
+  KEY `hrm_pay_rule_regulatory_jurisdiction_idx` (`jurisdiction_token`,`effective_from`,`effective_to`),
+  CONSTRAINT `0_hrm_pay_rule_regulatory_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_lifecycle_reviews` (
+  `lifecycle_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `review_decision` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reviewer_id` smallint(6) unsigned NOT NULL,
+  `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reviewed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`lifecycle_review_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_review_hash_uq` (`review_sha256`),
+  KEY `hrm_pay_rule_lifecycle_review_version_idx` (`rule_version_id`,`review_decision`,`lifecycle_review_id`),
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_review_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_lifecycle_publications` (
+  `publication_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `lifecycle_review_id` bigint(20) unsigned NOT NULL,
+  `publisher_id` smallint(6) unsigned NOT NULL,
+  `impact_scope_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `impact_preview_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `publication_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `published_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`publication_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_publication_version_uq` (`rule_version_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_publication_review_uq` (`lifecycle_review_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_publication_hash_uq` (`publication_sha256`),
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_publication_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_publication_review_fk` FOREIGN KEY (`lifecycle_review_id`) REFERENCES `0_hrm_pay_rule_lifecycle_reviews` (`lifecycle_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_hrm_pay_rule_rules_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_rules';
+CREATE TRIGGER `0_hrm_pay_rule_rules_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_rules';
+CREATE TRIGGER `0_hrm_pay_rule_rule_versions_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_rule_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_rule_versions';
+CREATE TRIGGER `0_hrm_pay_rule_rule_versions_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_rule_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_rule_versions';
+CREATE TRIGGER `0_hrm_pay_rule_regulatory_evidence_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_regulatory_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_regulatory_evidence';
+CREATE TRIGGER `0_hrm_pay_rule_regulatory_evidence_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_regulatory_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_regulatory_evidence';
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_reviews_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_lifecycle_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_lifecycle_reviews';
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_reviews_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_reviews';
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_publications_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_lifecycle_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_lifecycle_publications';
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_publications_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_publications';
