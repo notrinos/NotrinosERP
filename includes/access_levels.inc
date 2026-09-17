@@ -429,6 +429,9 @@ $security_areas =array(
 	'SA_HRM_ESS_REQUEST_SELF_PROFILE_CHANGE' => array(SS_HRM|55, _('Request bounded self-service profile changes')), // no automatic role grant
 	'SA_HRM_APPROVE_ESS_SELF_PROFILE_CHANGE' => array(SS_HRM|56, _('Approve bounded ESS self-profile change requests')), // no automatic role grant
 	'SA_HRM_EXECUTE_ESS_SELF_PROFILE_CHANGE' => array(SS_HRM|57, _('Execute approved bounded ESS self-profile changes')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_RULE_ARTIFACT' => array(SS_HRM|58, _('Manage PAY-RULE decision/rate artifact and import candidates')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_RULE_IMPORT' => array(SS_HRM|59, _('Independently review PAY-RULE legacy import packages')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_RULE_IMPORT' => array(SS_HRM|60, _('Execute approved PAY-RULE imports for simulation custody')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -444,6 +447,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_SALARY'   => array(SS_HRM_A|11, _('View restricted employee compensation')),
 	'SA_HRM_VIEW_BANK_DETAILS' => array(SS_HRM_A|12, _('View masked employee bank details')),
 	'SA_HRM_VIEW_IDENTITY_DETAILS' => array(SS_HRM_A|13, _('View masked employee identity and tax details')),
+	'SA_HRM_VIEW_PAY_RULE_ARTIFACT' => array(SS_HRM_A|14, _('View PAY-RULE artifact/import custody evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

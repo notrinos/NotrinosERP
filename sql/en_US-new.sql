@@ -8453,3 +8453,104 @@ CREATE TABLE `0_hrm_attribute_legacy_cleanup_receipts` (
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_pre_profile_fk` FOREIGN KEY (`pre_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_post_profile_fk` FOREIGN KEY (`post_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+-- PAY-RULE-003 simulation-only immutable artifact/import custody (1.0.478-1.0.485).
+CREATE TABLE `0_hrm_pay_rule_artifacts` (
+  `artifact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `artifact_key` varchar(160) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`artifact_id`),
+  UNIQUE KEY `hrm_pay_rule_artifact_key_uq` (`artifact_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_artifact_versions` (
+  `artifact_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `artifact_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_id` bigint(20) unsigned DEFAULT NULL,
+  `artifact_semver` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `custody_status` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_class` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_json` mediumtext NOT NULL,
+  `artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `plan_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `validator_contract` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `plan_contract` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_json` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`artifact_version_id`),
+  UNIQUE KEY `hrm_pay_rule_artifact_version_uq` (`artifact_id`,`version_no`),
+  UNIQUE KEY `hrm_pay_rule_artifact_semver_uq` (`artifact_id`,`artifact_semver`),
+  UNIQUE KEY `hrm_pay_rule_artifact_predecessor_uq` (`predecessor_id`),
+  KEY `hrm_pay_rule_artifact_status_idx` (`artifact_id`,`custody_status`,`version_no`),
+  CONSTRAINT `0_hrm_pay_rule_artifact_version_artifact_fk` FOREIGN KEY (`artifact_id`) REFERENCES `0_hrm_pay_rule_artifacts` (`artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_artifact_version_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_import_candidates` (
+  `candidate_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `source_kind` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_row_id` bigint(20) unsigned NOT NULL,
+  `source_snapshot_json` text NOT NULL,
+  `source_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `diagnostics_json` text NOT NULL,
+  `candidate_status` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`candidate_id`),
+  UNIQUE KEY `hrm_pay_rule_import_source_snapshot_uq` (`source_kind`,`source_row_id`,`source_snapshot_sha256`),
+  KEY `hrm_pay_rule_import_candidate_status_idx` (`candidate_status`,`source_kind`,`candidate_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_import_reviews` (
+  `review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `candidate_manifest_json` text NOT NULL,
+  `candidate_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `plan_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_class` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_json` mediumtext NOT NULL,
+  `evidence_id` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `review_status` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `maker_id` smallint(6) unsigned NOT NULL,
+  `reviewer_id` smallint(6) unsigned NOT NULL,
+  `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reviewed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`review_id`),
+  UNIQUE KEY `hrm_pay_rule_import_review_hash_uq` (`review_sha256`),
+  KEY `hrm_pay_rule_import_review_status_idx` (`review_status`,`review_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_import_receipts` (
+  `receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `review_id` bigint(20) unsigned NOT NULL,
+  `artifact_version_id` bigint(20) unsigned NOT NULL,
+  `candidate_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `plan_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `executor_id` smallint(6) unsigned NOT NULL,
+  `receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reconciliation_status` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`receipt_id`),
+  UNIQUE KEY `hrm_pay_rule_import_receipt_review_uq` (`review_id`),
+  UNIQUE KEY `hrm_pay_rule_import_receipt_artifact_uq` (`artifact_version_id`),
+  UNIQUE KEY `hrm_pay_rule_import_receipt_hash_uq` (`receipt_sha256`),
+  CONSTRAINT `0_hrm_pay_rule_import_receipt_review_fk` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_pay_rule_import_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_import_receipt_artifact_fk` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_hrm_pay_rule_artifacts_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_artifacts';
+CREATE TRIGGER `0_hrm_pay_rule_artifacts_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_artifacts';
+CREATE TRIGGER `0_hrm_pay_rule_artifact_versions_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_artifact_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_artifact_versions';
+CREATE TRIGGER `0_hrm_pay_rule_artifact_versions_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_artifact_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_artifact_versions';
+CREATE TRIGGER `0_hrm_pay_rule_import_candidates_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_import_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_import_candidates';
+CREATE TRIGGER `0_hrm_pay_rule_import_candidates_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_import_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_import_candidates';
+CREATE TRIGGER `0_hrm_pay_rule_import_reviews_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_import_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_import_reviews';
+CREATE TRIGGER `0_hrm_pay_rule_import_reviews_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_import_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_import_reviews';
+CREATE TRIGGER `0_hrm_pay_rule_import_receipts_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_import_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_import_receipts';
+CREATE TRIGGER `0_hrm_pay_rule_import_receipts_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_import_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_import_receipts';
