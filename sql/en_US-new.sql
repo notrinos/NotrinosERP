@@ -8648,3 +8648,42 @@ CREATE TRIGGER `0_hrm_pay_rule_lifecycle_reviews_immutable_update` BEFORE UPDATE
 CREATE TRIGGER `0_hrm_pay_rule_lifecycle_reviews_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_reviews';
 CREATE TRIGGER `0_hrm_pay_rule_lifecycle_publications_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_lifecycle_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_lifecycle_publications';
 CREATE TRIGGER `0_hrm_pay_rule_lifecycle_publications_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_publications';
+
+CREATE TABLE `0_hrm_pay_rule_lifecycle_events` (
+  `event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `publication_id` bigint(20) unsigned NOT NULL,
+  `event_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `successor_rule_version_id` bigint(20) unsigned DEFAULT NULL,
+  `actor_id` smallint(6) unsigned NOT NULL,
+  `reason_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `event_at` datetime NOT NULL,
+  `event_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`event_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_event_publication_uq` (`publication_id`),
+  UNIQUE KEY `hrm_pay_rule_lifecycle_event_hash_uq` (`event_sha256`),
+  KEY `hrm_pay_rule_lifecycle_event_successor_idx` (`successor_rule_version_id`),
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_event_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_event_publication_fk` FOREIGN KEY (`publication_id`) REFERENCES `0_hrm_pay_rule_lifecycle_publications` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_hrm_pay_rule_lifecycle_event_successor_fk` FOREIGN KEY (`successor_rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_events_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_lifecycle_events';
+CREATE TRIGGER `0_hrm_pay_rule_lifecycle_events_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_events';
+
+CREATE TABLE `0_hrm_pay_rule_emergency_changes` (
+  `emergency_change_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `requester_id` smallint(6) unsigned NOT NULL,
+  `incident_reference` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `declared_at` datetime NOT NULL,
+  `emergency_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`emergency_change_id`),
+  UNIQUE KEY `hrm_pay_rule_emergency_version_uq` (`rule_version_id`),
+  UNIQUE KEY `hrm_pay_rule_emergency_hash_uq` (`emergency_sha256`),
+  CONSTRAINT `0_hrm_pay_rule_emergency_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_emergency_changes';
+CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_emergency_changes';

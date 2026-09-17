@@ -432,6 +432,11 @@ $security_areas =array(
 	'SA_HRM_MANAGE_PAY_RULE_ARTIFACT' => array(SS_HRM|58, _('Manage PAY-RULE decision/rate artifact and import candidates')), // no automatic role grant
 	'SA_HRM_REVIEW_PAY_RULE_IMPORT' => array(SS_HRM|59, _('Independently review PAY-RULE legacy import packages')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_RULE_IMPORT' => array(SS_HRM|60, _('Execute approved PAY-RULE imports for simulation custody')), // no automatic role grant
+	'SA_HRM_AUTHOR_PAY_RULE' => array(SS_HRM|61, _('Author governed PAY-RULE lifecycle drafts')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_RULE' => array(SS_HRM|62, _('Independently review governed PAY-RULE lifecycle drafts')), // no automatic role grant
+	'SA_HRM_PUBLISH_PAY_RULE' => array(SS_HRM|63, _('Publish reviewed PAY-RULE lifecycle versions as governance evidence')), // no automatic role grant
+	'SA_HRM_WITHDRAW_PAY_RULE' => array(SS_HRM|64, _('Withdraw or supersede published PAY-RULE lifecycle versions')), // no automatic role grant
+	'SA_HRM_DECLARE_PAY_RULE_EMERGENCY' => array(SS_HRM|65, _('Declare restricted emergency PAY-RULE version changes')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -448,6 +453,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_BANK_DETAILS' => array(SS_HRM_A|12, _('View masked employee bank details')),
 	'SA_HRM_VIEW_IDENTITY_DETAILS' => array(SS_HRM_A|13, _('View masked employee identity and tax details')),
 	'SA_HRM_VIEW_PAY_RULE_ARTIFACT' => array(SS_HRM_A|14, _('View PAY-RULE artifact/import custody evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_RULE_LIFECYCLE' => array(SS_HRM_A|15, _('View PAY-RULE lifecycle and regulatory evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
