@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.470',
-        'active_legacy_payroll_contract'=>'1.0.387',
-        'next_backlog_item'=>'PAY-RULE-002 configured-company four-principal shadow ceremony after hardened artifact validation passes',
-        'next_slice_changed_files'=>array('admin/payroll_formula_safe_acceptance.php','tests/php/run_pay_rule_002_configured_shadow_acceptance_mandatory_blockers_browser.php'),
-        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.470: runtime-reachable inventory remains redacted; artifact validators independently reconstruct source summaries, classification invariants, recovery policy, and execution-set custody. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.387; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
+        'active_database_version'=>'1.0.473',
+        'active_legacy_payroll_contract'=>'1.0.390',
+        'next_backlog_item'=>'PAY-RULE-003 rate-table contract foundation',
+        'next_slice_changed_files'=>array('hrm/includes/payroll/rate_table_contract.inc','tests/php/test_pay_rule_003_rate_table_contract.php'),
+        'next_slice_scope'=>'PAY-RULE-003 pure typed decision-table contract is source-founded at 1.0.473 under legacy payroll custody 1.0.390. No persistence, importer, publication lifecycle, evaluator/simulator or production payroll consumer is active. Next dependency is the separate rate-table contract foundation for canonical decimals, units/currency and explicit bracket boundary/overlap/gap policy.',
         'edges'=>array(
+            'pay_rule_003_decision_table_contract'=>array('previous'=>'1.0.472','version'=>'1.0.473',
+                'file'=>'sql/upgrade_pay_rule_003_decision_table_contract.php'),
+            'pay_rule_003_dependency_review'=>array('previous'=>'1.0.471','version'=>'1.0.472',
+                'file'=>'sql/upgrade_pay_rule_003_dependency_review.php'),
+            'pay_rule_002_completion'=>array('previous'=>'1.0.470','version'=>'1.0.471',
+                'file'=>'sql/upgrade_pay_rule_002_completion.php'),
             'pay_rule_002_execution_set_custody_hardening'=>array('previous'=>'1.0.469','version'=>'1.0.470',
                 'file'=>'sql/upgrade_pay_rule_002_execution_set_custody_hardening.php'),
             'pay_rule_002_artifact_invariant_hardening'=>array('previous'=>'1.0.468','version'=>'1.0.469',
