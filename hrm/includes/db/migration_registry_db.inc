@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.468',
-        'active_legacy_payroll_contract'=>'1.0.386',
+        'active_database_version'=>'1.0.470',
+        'active_legacy_payroll_contract'=>'1.0.387',
         'next_backlog_item'=>'PAY-RULE-002 configured-company four-principal shadow ceremony after hardened artifact validation passes',
-        'next_slice_changed_files'=>array('hrm/includes/payroll_formula_safe_acceptance.inc','admin/payroll_formula_safe_acceptance.php','tests/php/run_pay_rule_002_configured_shadow_acceptance_mandatory_blockers_browser.php'),
-        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.468: runtime-reachable inventory remains redacted; ceremony validators fail closed on blocked reports, configured-role substitution, private-registry principal/evidence substitution, non-monotonic chronology, and expired review windows. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.386; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
+        'next_slice_changed_files'=>array('admin/payroll_formula_safe_acceptance.php','tests/php/run_pay_rule_002_configured_shadow_acceptance_mandatory_blockers_browser.php'),
+        'next_slice_scope'=>'PAY-RULE-002 configured-company shadow acceptance through source/database 1.0.470: runtime-reachable inventory remains redacted; artifact validators independently reconstruct source summaries, classification invariants, recovery policy, and execution-set custody. HRM-ESS-001 Phase-2 remains deferred. Legacy payroll execution remains authoritative under custody 1.0.387; production FormulaFacade routing and real-formula migration remain prohibited until the local configured-company mandatory gate and separated four-principal shadow ceremony pass.',
         'edges'=>array(
+            'pay_rule_002_execution_set_custody_hardening'=>array('previous'=>'1.0.469','version'=>'1.0.470',
+                'file'=>'sql/upgrade_pay_rule_002_execution_set_custody_hardening.php'),
+            'pay_rule_002_artifact_invariant_hardening'=>array('previous'=>'1.0.468','version'=>'1.0.469',
+                'file'=>'sql/upgrade_pay_rule_002_artifact_invariant_hardening.php'),
             'pay_rule_002_ceremony_chronology_hardening'=>array('previous'=>'1.0.467','version'=>'1.0.468',
                 'file'=>'sql/upgrade_pay_rule_002_ceremony_chronology_hardening.php'),
             'pay_rule_002_ceremony_binding_hardening'=>array('previous'=>'1.0.466','version'=>'1.0.467',

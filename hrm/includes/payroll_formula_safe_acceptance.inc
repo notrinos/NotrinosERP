@@ -11,7 +11,7 @@ if (!defined('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_ID'))
 if (!defined('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_VERSION'))
     define('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_VERSION', '1.0.0');
 if (!defined('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_SOURCE_VERSION'))
-    define('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_SOURCE_VERSION', '1.0.468');
+    define('HRM_PAYROLL_FORMULA_SAFE_ACCEPTANCE_SOURCE_VERSION', '1.0.470');
 if (!defined('HRM_PAYROLL_FORMULA_SAFE_REVIEW_ID'))
     define('HRM_PAYROLL_FORMULA_SAFE_REVIEW_ID', 'notrinoserp.hrm.payroll.formula_safe_acceptance_review');
 if (!defined('HRM_PAYROLL_FORMULA_SAFE_REVIEW_VERSION'))
@@ -25,6 +25,8 @@ if (!defined('HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_ID'))
     define('HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_ID', 'notrinoserp.hrm.payroll.formula_safe_shadow_execution_receipt');
 if (!defined('HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_VERSION'))
     define('HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_VERSION', '1.0.0');
+if (!defined('HRM_PAYROLL_FORMULA_SAFE_RECOVERY_POLICY'))
+    define('HRM_PAYROLL_FORMULA_SAFE_RECOVERY_POLICY', 'forward-correct/reissue new artifacts; never overwrite accepted artifacts; paired pre-upgrade application/database backup restore for source rollback');
 
 /** Return a canonical SHA-256 for a redacted PAY-RULE-002 governance payload. */
 function hrm_payroll_formula_safe_acceptance_hash($value)
@@ -247,6 +249,43 @@ function hrm_payroll_formula_safe_acceptance_build_report($company,$author_id,$a
     $hash=hrm_payroll_formula_safe_acceptance_hash($report);if($hash===false){$error='safe_acceptance_report_hash_failed';return false;}$report['report_sha256']=$hash;return $report;
 }
 
+/** Validate redacted inventory semantics independently of its self-hash. */
+function hrm_payroll_formula_safe_acceptance_validate_inventory(array $inv,&$error=null)
+{
+    $error=null;$top=array('sources','accepted','blocked','inventory_sha256');
+    if(!hrm_payroll_formula_safe_has_only_keys($inv,$top)){$error='safe_acceptance_report_inventory_invalid';return false;}
+    foreach($top as $field)if(!array_key_exists($field,$inv)){$error='safe_acceptance_report_inventory_invalid';return false;}
+    if(!is_array($inv['sources'])||!is_array($inv['accepted'])||!is_array($inv['blocked'])||!hrm_payroll_formula_safe_hash_is_valid($inv['inventory_sha256'])){$error='safe_acceptance_report_inventory_invalid';return false;}
+    $catalog=hrm_legacy_formula_source_catalog();if(array_keys($inv['sources'])!==array_keys($catalog)){$error='safe_acceptance_source_summary_invalid';return false;}
+    $summary=array();$parts=array();foreach($catalog as $scope=>$unused){$summary[$scope]=array('row_count'=>0,'distinct_formula_count'=>0,'accepted_row_count'=>0,'accepted_distinct_count'=>0,'blocked_row_count'=>0,'blocked_distinct_count'=>0,'classification_set_sha256'=>'');$parts[$scope]=array();}
+    $seen=array();$last='';
+    foreach($inv['accepted'] as $e){
+        $allowed=array('source_formula_sha256','target_formula_sha256','source_scope','classification','differential_reason','result_set_sha256','row_count');
+        if(!is_array($e)||!hrm_payroll_formula_safe_has_only_keys($e,$allowed)){ $error='safe_acceptance_entry_invalid';return false;}foreach($allowed as $f)if(!array_key_exists($f,$e)){ $error='safe_acceptance_entry_invalid';return false;}
+        if(!hrm_payroll_formula_safe_hash_is_valid($e['source_formula_sha256'])||!hrm_payroll_formula_safe_hash_is_valid($e['target_formula_sha256'])||!hrm_payroll_formula_safe_hash_is_valid($e['result_set_sha256'])||!isset($catalog[$e['source_scope']])||!is_int($e['row_count'])||$e['row_count']<1){$error='safe_acceptance_entry_invalid';return false;}
+        if(($e['classification']==='exact'&&$e['differential_reason']!=='equivalent_without_translation')||($e['classification']==='translated'&&$e['differential_reason']!=='decimal_literal_normalized')||!in_array($e['classification'],array('exact','translated'),true)){$error='safe_acceptance_entry_classification_invalid';return false;}
+        $key=$e['source_scope'].'|'.$e['source_formula_sha256'];if(isset($seen[$key])||($last!==''&&strcmp($last,$key)>=0)){$error='safe_acceptance_inventory_order_or_duplicate_invalid';return false;}$seen[$key]=true;$last=$key;
+        $scope=$e['source_scope'];$count=$e['row_count'];$summary[$scope]['row_count']+=$count;$summary[$scope]['distinct_formula_count']++;$summary[$scope]['accepted_row_count']+=$count;$summary[$scope]['accepted_distinct_count']++;$parts[$scope][]=$e['source_formula_sha256'].':'.$e['classification'].':'.$e['differential_reason'].':'.$count;
+    }
+    $last='';$blockedReasons=array('legacy_source_unsupported','legacy_execution_error','facade_compile_or_execution_error','semantic_mismatch','translation_unavailable');
+    foreach($inv['blocked'] as $e){
+        $allowed=array('source_formula_sha256','source_scope','differential_reason','row_count');
+        if(!is_array($e)||!hrm_payroll_formula_safe_has_only_keys($e,$allowed)){ $error='safe_acceptance_blocked_entry_invalid';return false;}foreach($allowed as $f)if(!array_key_exists($f,$e)){ $error='safe_acceptance_blocked_entry_invalid';return false;}
+        if(!hrm_payroll_formula_safe_hash_is_valid($e['source_formula_sha256'])||!isset($catalog[$e['source_scope']])||!in_array($e['differential_reason'],$blockedReasons,true)||!is_int($e['row_count'])||$e['row_count']<1){$error='safe_acceptance_blocked_entry_invalid';return false;}
+        $key=$e['source_scope'].'|'.$e['source_formula_sha256'];if(isset($seen[$key])||($last!==''&&strcmp($last,$key)>=0)){$error='safe_acceptance_inventory_order_or_duplicate_invalid';return false;}$seen[$key]=true;$last=$key;
+        $scope=$e['source_scope'];$count=$e['row_count'];$summary[$scope]['row_count']+=$count;$summary[$scope]['distinct_formula_count']++;$summary[$scope]['blocked_row_count']+=$count;$summary[$scope]['blocked_distinct_count']++;$parts[$scope][]=$e['source_formula_sha256'].':unsupported:'.$e['differential_reason'].':'.$count;
+    }
+    $sourceFields=array('row_count','distinct_formula_count','accepted_row_count','accepted_distinct_count','blocked_row_count','blocked_distinct_count','classification_set_sha256');
+    foreach($catalog as $scope=>$unused){
+        sort($parts[$scope],SORT_STRING);$summary[$scope]['classification_set_sha256']=hash('sha256',implode('|',$parts[$scope]));$actual=$inv['sources'][$scope];
+        if(!is_array($actual)||!hrm_payroll_formula_safe_has_only_keys($actual,$sourceFields)){ $error='safe_acceptance_source_summary_invalid';return false;}foreach($sourceFields as $field)if(!array_key_exists($field,$actual)){$error='safe_acceptance_source_summary_invalid';return false;}
+        foreach(array_slice($sourceFields,0,6) as $field)if(!is_int($actual[$field])||$actual[$field]<0){$error='safe_acceptance_source_summary_invalid';return false;}
+        if(!hrm_payroll_formula_safe_hash_is_valid($actual['classification_set_sha256'])||$actual!==$summary[$scope]){$error='safe_acceptance_source_summary_mismatch';return false;}
+    }
+    $payload=$inv;unset($payload['inventory_sha256']);$hash=hrm_payroll_formula_safe_acceptance_hash($payload);if($hash===false||!hash_equals($inv['inventory_sha256'],$hash)){$error='safe_acceptance_inventory_hash_mismatch';return false;}
+    return true;
+}
+
 /** Validate a configured-company shadow acceptance report and all immutable source bindings. */
 function hrm_payroll_formula_safe_acceptance_validate_report(array $report,&$error=null)
 {
@@ -256,11 +295,8 @@ function hrm_payroll_formula_safe_acceptance_validate_report(array $report,&$err
     if($report['data_policy']!==array('classification'=>'restricted-redacted-governance','contains_formula_text'=>false,'contains_payroll_context'=>false,'contains_production_values'=>false)||preg_match('/^sha256:[a-f0-9]{64}$/D',(string)$report['generated_by_os_fingerprint'])!==1){$error='safe_acceptance_report_data_policy_invalid';return false;}
     if(!hrm_payroll_formula_safe_acceptance_roles_separated($report['company_id'])||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'author',$report['generated_by_os_fingerprint'])){$error='safe_acceptance_role_binding_invalid';return false;}
     $bindings=hrm_payroll_formula_safe_acceptance_bindings();if($report['bindings']!==$bindings){$error='safe_acceptance_report_binding_mismatch';return false;}
-    $inv=$report['inventory'];if(!is_array($inv)||!isset($inv['sources'],$inv['accepted'],$inv['blocked'],$inv['inventory_sha256'])||!is_array($inv['sources'])||!is_array($inv['accepted'])||!is_array($inv['blocked'])||!hrm_payroll_formula_safe_hash_is_valid($inv['inventory_sha256'])){$error='safe_acceptance_report_inventory_invalid';return false;}
-    $payload=$inv;unset($payload['inventory_sha256']);if(!hash_equals($inv['inventory_sha256'],hrm_payroll_formula_safe_acceptance_hash($payload))){$error='safe_acceptance_inventory_hash_mismatch';return false;}
+    $inv=$report['inventory'];if(!is_array($inv)||!hrm_payroll_formula_safe_acceptance_validate_inventory($inv,$error))return false;
     if((($report['acceptance_status']==='ready_for_review') !== (count($inv['blocked'])===0))){$error='safe_acceptance_status_mismatch';return false;}
-    foreach($inv['accepted'] as $e){$allowed=array('source_formula_sha256','target_formula_sha256','source_scope','classification','differential_reason','result_set_sha256','row_count');if(!is_array($e)||!hrm_payroll_formula_safe_has_only_keys($e,$allowed)){ $error='safe_acceptance_entry_invalid';return false;}foreach($allowed as $f)if(!array_key_exists($f,$e)){ $error='safe_acceptance_entry_invalid';return false;}if(!hrm_payroll_formula_safe_hash_is_valid($e['source_formula_sha256'])||!hrm_payroll_formula_safe_hash_is_valid($e['target_formula_sha256'])||!hrm_payroll_formula_safe_hash_is_valid($e['result_set_sha256'])||!isset(hrm_legacy_formula_source_catalog()[$e['source_scope']])||!in_array($e['classification'],array('exact','translated'),true)||(int)$e['row_count']<1){$error='safe_acceptance_entry_invalid';return false;}}
-    foreach($inv['blocked'] as $e){if(!is_array($e)||array_keys($e)!==array('source_formula_sha256','source_scope','differential_reason','row_count')||!hrm_payroll_formula_safe_hash_is_valid($e['source_formula_sha256'])||!isset(hrm_legacy_formula_source_catalog()[$e['source_scope']])||(int)$e['row_count']<1){$error='safe_acceptance_blocked_entry_invalid';return false;}}
     $payload=$report;unset($payload['report_sha256']);$hash=hrm_payroll_formula_safe_acceptance_hash($payload);if($hash===false||!hash_equals($report['report_sha256'],$hash)){$error='safe_acceptance_report_hash_mismatch';return false;}return true;
 }
 
@@ -333,7 +369,7 @@ function hrm_payroll_formula_safe_acceptance_build_publication_receipt(array $re
     $pfp=hrm_payroll_formula_safe_acceptance_fingerprint($publisher_os_identity);$efp=hrm_payroll_formula_safe_acceptance_fingerprint($executor_os_identity);$payloadHash=hrm_payroll_formula_safe_acceptance_hash($registry);
     if(!hrm_payroll_formula_safe_acceptance_validate_review($review,$report,$error)||!hrm_payroll_formula_safe_hash_is_valid($registry_file_sha256)||!hrm_payroll_formula_safe_hash_is_valid($payloadHash)||!hrm_payroll_formula_safe_token_is_valid($publisher_id,100)||!hrm_payroll_formula_safe_token_is_valid($executor_id,100)||!hrm_payroll_formula_safe_token_is_valid($evidence_id,120)||$pfp===false||$efp===false||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'publisher',$pfp)||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'shadow_executor',$efp)||!hrm_legacy_formula_review_is_utc_timestamp($published_at)||!hrm_payroll_formula_safe_acceptance_utc_not_before($published_at,$review['reviewed_at_utc'])||substr($published_at,0,10)>$review['review_due_on']){$error='safe_publication_receipt_metadata_invalid';return false;}
     if(!hrm_payroll_formula_safe_acceptance_validate_registry_bindings($registry,$report,$review,$publisher_id,$executor_id,$evidence_id,$published_at,$error))return false;
-    $receipt=array('schema_version'=>1,'contract'=>array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_VERSION),'artifact_type'=>'immutable_nonproduction_shadow_publication_receipt','company_id'=>$report['company_id'],'report_sha256'=>$report['report_sha256'],'review_receipt_sha256'=>$review['receipt_sha256'],'registry_payload_sha256'=>$payloadHash,'registry_file_sha256'=>$registry_file_sha256,'entry_count'=>count($registry['entries']),'publisher_id'=>$publisher_id,'publisher_os_fingerprint'=>$pfp,'shadow_executor_id'=>$executor_id,'shadow_executor_os_fingerprint'=>$efp,'evidence_id'=>$evidence_id,'published_at_utc'=>$published_at,'recovery'=>'forward-correct/reissue new artifacts; never overwrite accepted artifacts; paired pre-upgrade application/database backup restore for source rollback');
+    $receipt=array('schema_version'=>1,'contract'=>array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_VERSION),'artifact_type'=>'immutable_nonproduction_shadow_publication_receipt','company_id'=>$report['company_id'],'report_sha256'=>$report['report_sha256'],'review_receipt_sha256'=>$review['receipt_sha256'],'registry_payload_sha256'=>$payloadHash,'registry_file_sha256'=>$registry_file_sha256,'entry_count'=>count($registry['entries']),'publisher_id'=>$publisher_id,'publisher_os_fingerprint'=>$pfp,'shadow_executor_id'=>$executor_id,'shadow_executor_os_fingerprint'=>$efp,'evidence_id'=>$evidence_id,'published_at_utc'=>$published_at,'recovery'=>HRM_PAYROLL_FORMULA_SAFE_RECOVERY_POLICY);
     $hash=hrm_payroll_formula_safe_acceptance_hash($receipt);if($hash===false){$error='safe_publication_receipt_hash_failed';return false;}$receipt['receipt_sha256']=$hash;return $receipt;
 }
 
@@ -342,7 +378,7 @@ function hrm_payroll_formula_safe_acceptance_validate_publication_receipt(array 
 {
     $error=null;$fields=array('schema_version','contract','artifact_type','company_id','report_sha256','review_receipt_sha256','registry_payload_sha256','registry_file_sha256','entry_count','publisher_id','publisher_os_fingerprint','shadow_executor_id','shadow_executor_os_fingerprint','evidence_id','published_at_utc','recovery','receipt_sha256');if(!hrm_payroll_formula_safe_has_only_keys($receipt,$fields)){$error='safe_publication_receipt_schema_invalid';return false;}foreach($fields as $f)if(!array_key_exists($f,$receipt)){$error='safe_publication_receipt_schema_invalid';return false;}
     if(!hrm_payroll_formula_safe_acceptance_validate_review($review,$report,$error))return false;$idx=hrm_payroll_formula_safe_validate_publication_registry($registry,hrm_payroll_formula_safe_publication_bindings(),$error);if($idx===false)return false;
-    $payloadHash=hrm_payroll_formula_safe_acceptance_hash($registry);if($receipt['schema_version']!==1||$receipt['contract']!==array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_VERSION)||$receipt['artifact_type']!=='immutable_nonproduction_shadow_publication_receipt'||$receipt['company_id']!==$report['company_id']||!hash_equals($receipt['report_sha256'],$report['report_sha256'])||!hash_equals($receipt['review_receipt_sha256'],$review['receipt_sha256'])||!hash_equals($receipt['registry_payload_sha256'],$payloadHash)||!hash_equals($receipt['registry_file_sha256'],$registry_file_sha256)||$receipt['entry_count']!==count($registry['entries'])||!hrm_payroll_formula_safe_token_is_valid($receipt['publisher_id'],100)||!hrm_payroll_formula_safe_token_is_valid($receipt['shadow_executor_id'],100)||!hrm_payroll_formula_safe_token_is_valid($receipt['evidence_id'],120)||preg_match('/^sha256:[a-f0-9]{64}$/D',(string)$receipt['publisher_os_fingerprint'])!==1||preg_match('/^sha256:[a-f0-9]{64}$/D',(string)$receipt['shadow_executor_os_fingerprint'])!==1||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'publisher',$receipt['publisher_os_fingerprint'])||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'shadow_executor',$receipt['shadow_executor_os_fingerprint'])||!hrm_legacy_formula_review_is_utc_timestamp($receipt['published_at_utc'])||!hrm_payroll_formula_safe_acceptance_utc_not_before($receipt['published_at_utc'],$review['reviewed_at_utc'])||substr($receipt['published_at_utc'],0,10)>$review['review_due_on']){$error='safe_publication_receipt_metadata_invalid';return false;}
+    $payloadHash=hrm_payroll_formula_safe_acceptance_hash($registry);if($receipt['schema_version']!==1||$receipt['contract']!==array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_RECEIPT_VERSION)||$receipt['artifact_type']!=='immutable_nonproduction_shadow_publication_receipt'||$receipt['company_id']!==$report['company_id']||!hash_equals($receipt['report_sha256'],$report['report_sha256'])||!hash_equals($receipt['review_receipt_sha256'],$review['receipt_sha256'])||!hash_equals($receipt['registry_payload_sha256'],$payloadHash)||!hash_equals($receipt['registry_file_sha256'],$registry_file_sha256)||$receipt['entry_count']!==count($registry['entries'])||!hrm_payroll_formula_safe_token_is_valid($receipt['publisher_id'],100)||!hrm_payroll_formula_safe_token_is_valid($receipt['shadow_executor_id'],100)||!hrm_payroll_formula_safe_token_is_valid($receipt['evidence_id'],120)||preg_match('/^sha256:[a-f0-9]{64}$/D',(string)$receipt['publisher_os_fingerprint'])!==1||preg_match('/^sha256:[a-f0-9]{64}$/D',(string)$receipt['shadow_executor_os_fingerprint'])!==1||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'publisher',$receipt['publisher_os_fingerprint'])||!hrm_payroll_formula_safe_acceptance_role_fingerprint_matches($report['company_id'],'shadow_executor',$receipt['shadow_executor_os_fingerprint'])||!hrm_legacy_formula_review_is_utc_timestamp($receipt['published_at_utc'])||!hrm_payroll_formula_safe_acceptance_utc_not_before($receipt['published_at_utc'],$review['reviewed_at_utc'])||substr($receipt['published_at_utc'],0,10)>$review['review_due_on']||$receipt['recovery']!==HRM_PAYROLL_FORMULA_SAFE_RECOVERY_POLICY){$error='safe_publication_receipt_metadata_invalid';return false;}
     $ids=array($report['generated_by'],$review['reviewer_id'],$receipt['publisher_id'],$receipt['shadow_executor_id']);$fps=array($report['generated_by_os_fingerprint'],$review['reviewer_os_fingerprint'],$receipt['publisher_os_fingerprint'],$receipt['shadow_executor_os_fingerprint']);if(count(array_unique($ids,SORT_STRING))!==4||count(array_unique($fps,SORT_STRING))!==4){$error='safe_publication_receipt_separation_invalid';return false;}
     if(!hrm_payroll_formula_safe_acceptance_validate_registry_bindings($registry,$report,$review,$receipt['publisher_id'],$receipt['shadow_executor_id'],$receipt['evidence_id'],$receipt['published_at_utc'],$error))return false;
     $payload=$receipt;unset($payload['receipt_sha256']);$hash=hrm_payroll_formula_safe_acceptance_hash($payload);if($hash===false||!hash_equals($receipt['receipt_sha256'],$hash)){$error='safe_publication_receipt_hash_mismatch';return false;}return true;
@@ -409,7 +445,7 @@ function hrm_payroll_formula_safe_acceptance_execute(
         'ABSENT_DAYS'=>'0','OVERTIME_HOURS'=>'5.5','UNPAID_LEAVE_DAYS'=>'1','HOURLY_RATE'=>'50',
         'PERIOD_START'=>'2026-09-01','PERIOD_END'=>'2026-09-30'
     );
-    $parts=array();$count=0;$as_of=substr($executed_at,0,10);
+    $parts=array();$execution_items=array();$count=0;$as_of=substr($executed_at,0,10);
     foreach($report['inventory']['accepted'] as $candidate){
         $scope=$candidate['source_scope'];$hash=$candidate['source_formula_sha256'];
         if(!isset($map[$scope][$hash])){$error='safe_execution_formula_source_stale';return false;}
@@ -417,9 +453,9 @@ function hrm_payroll_formula_safe_acceptance_execute(
         $value=hrm_payroll_formula_safe_shadow_evaluate($map[$scope][$hash],$scope,$context,$executor_id,$registry,$corpus,$shadow_receipt,$shadow_error,$as_of);
         if($value===false||!is_array($shadow_receipt)){$error=$shadow_error===null?'safe_execution_shadow_failed':$shadow_error;return false;}
         $shadow_hash=hrm_payroll_formula_safe_acceptance_hash($shadow_receipt);if($shadow_hash===false){$error='safe_execution_shadow_receipt_hash_failed';return false;}
-        $parts[]=$scope.':'.$hash.':'.$shadow_hash;$count++;
+        $parts[]=$scope.':'.$hash.':'.$shadow_hash;$execution_items[]=array('source_scope'=>$scope,'source_formula_sha256'=>$hash,'shadow_receipt'=>$shadow_receipt,'shadow_receipt_sha256'=>$shadow_hash);$count++;
     }
-    sort($parts,SORT_STRING);
+    sort($parts,SORT_STRING);usort($execution_items,function($a,$b){return strcmp($a['source_scope'].'|'.$a['source_formula_sha256'],$b['source_scope'].'|'.$b['source_formula_sha256']);});
     $registry_payload_hash=hrm_payroll_formula_safe_acceptance_hash($registry);
     $receipt=array(
         'schema_version'=>1,
@@ -437,6 +473,7 @@ function hrm_payroll_formula_safe_acceptance_execute(
         'executor_os_fingerprint'=>$executor_fp,
         'executed_at_utc'=>$executed_at,
         'executed_distinct_formula_count'=>$count,
+        'execution_items'=>$execution_items,
         'execution_set_sha256'=>hash('sha256',implode('|',$parts)),
         'production_execution_authorized'=>false
     );
@@ -456,7 +493,7 @@ function hrm_payroll_formula_safe_acceptance_validate_execution_receipt(
 ) {
     $error=null;
     if(!hrm_payroll_formula_safe_acceptance_validate_publication_receipt($publication_receipt,$report,$review,$registry,$registry_file_sha256,$error))return false;
-    $fields=array('schema_version','contract','artifact_type','data_policy','company_id','report_sha256','review_receipt_sha256','publication_receipt_sha256','registry_payload_sha256','registry_file_sha256','inventory_sha256','executor_id','executor_os_fingerprint','executed_at_utc','executed_distinct_formula_count','execution_set_sha256','production_execution_authorized','receipt_sha256');
+    $fields=array('schema_version','contract','artifact_type','data_policy','company_id','report_sha256','review_receipt_sha256','publication_receipt_sha256','registry_payload_sha256','registry_file_sha256','inventory_sha256','executor_id','executor_os_fingerprint','executed_at_utc','executed_distinct_formula_count','execution_items','execution_set_sha256','production_execution_authorized','receipt_sha256');
     if(!hrm_payroll_formula_safe_has_only_keys($receipt,$fields)){$error='safe_execution_receipt_schema_invalid';return false;}foreach($fields as $f)if(!array_key_exists($f,$receipt)){$error='safe_execution_receipt_schema_invalid';return false;}
     $registry_payload_hash=hrm_payroll_formula_safe_acceptance_hash($registry);
     if($receipt['schema_version']!==1||$receipt['contract']!==array('id'=>HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_EXECUTION_RECEIPT_VERSION)
@@ -468,10 +505,25 @@ function hrm_payroll_formula_safe_acceptance_validate_execution_receipt(
         ||!hash_equals($receipt['inventory_sha256'],$report['inventory']['inventory_sha256'])||!hash_equals((string)$receipt['executor_id'],(string)$publication_receipt['shadow_executor_id'])
         ||!hash_equals((string)$receipt['executor_os_fingerprint'],(string)$publication_receipt['shadow_executor_os_fingerprint'])
         ||!hrm_legacy_formula_review_is_utc_timestamp($receipt['executed_at_utc'])||!hrm_payroll_formula_safe_acceptance_utc_not_before($receipt['executed_at_utc'],$publication_receipt['published_at_utc'])||substr($receipt['executed_at_utc'],0,10)>$review['review_due_on']||!is_int($receipt['executed_distinct_formula_count'])
-        ||$receipt['executed_distinct_formula_count']!==count($report['inventory']['accepted'])||!hrm_payroll_formula_safe_hash_is_valid($receipt['execution_set_sha256'])
+        ||$receipt['executed_distinct_formula_count']!==count($report['inventory']['accepted'])||!is_array($receipt['execution_items'])||!hrm_payroll_formula_safe_hash_is_valid($receipt['execution_set_sha256'])
         ||$receipt['production_execution_authorized']!==false||!hrm_payroll_formula_safe_hash_is_valid($receipt['receipt_sha256'])){
         $error='safe_execution_receipt_metadata_invalid';return false;
     }
+    $expected=array();foreach($report['inventory']['accepted'] as $candidate)$expected[$candidate['source_scope'].'|'.$candidate['source_formula_sha256']]=true;
+    $seen=array();$parts=array();$last='';foreach($receipt['execution_items'] as $item){
+        $itemFields=array('source_scope','source_formula_sha256','shadow_receipt','shadow_receipt_sha256');if(!is_array($item)||!hrm_payroll_formula_safe_has_only_keys($item,$itemFields)){ $error='safe_execution_item_invalid';return false;}foreach($itemFields as $field)if(!array_key_exists($field,$item)){ $error='safe_execution_item_invalid';return false;}
+        if(!isset(hrm_legacy_formula_source_catalog()[$item['source_scope']])||!hrm_payroll_formula_safe_hash_is_valid($item['source_formula_sha256'])||!is_array($item['shadow_receipt'])||!hrm_payroll_formula_safe_hash_is_valid($item['shadow_receipt_sha256'])){$error='safe_execution_item_invalid';return false;}
+        $key=$item['source_scope'].'|'.$item['source_formula_sha256'];if(!isset($expected[$key])||isset($seen[$key])||($last!==''&&strcmp($last,$key)>=0)){$error='safe_execution_item_set_mismatch';return false;}
+        $shadowFields=array('contract','mode','source_scope','source_formula_sha256','target_formula_sha256','classification','differential_reason','result_set_sha256','safe_profile_sha256','evidence_id','executor_fingerprint','executed_on','result_type','result_unit');$shadow=$item['shadow_receipt'];
+        if(!hrm_payroll_formula_safe_has_only_keys($shadow,$shadowFields)){ $error='safe_execution_shadow_receipt_invalid';return false;}foreach($shadowFields as $field)if(!array_key_exists($field,$shadow)){ $error='safe_execution_shadow_receipt_invalid';return false;}
+        $candidate=null;foreach($report['inventory']['accepted'] as $accepted)if($accepted['source_scope']===$item['source_scope']&&hash_equals($accepted['source_formula_sha256'],$item['source_formula_sha256'])){$candidate=$accepted;break;}
+        $registryIndex=hrm_payroll_formula_safe_validate_publication_registry($registry,hrm_payroll_formula_safe_publication_bindings(),$registryError);if($registryIndex===false){$error=$registryError;return false;}$entry=$registryIndex[$item['source_formula_sha256']][$item['source_scope']];$bindings=hrm_payroll_formula_safe_publication_bindings();
+        if($candidate===null||$shadow['contract']!==array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_VERSION)||$shadow['mode']!=='non-production-shadow'||$shadow['source_scope']!==$item['source_scope']||!hash_equals($shadow['source_formula_sha256'],$item['source_formula_sha256'])||!hash_equals($shadow['target_formula_sha256'],$candidate['target_formula_sha256'])||$shadow['classification']!==$candidate['classification']||$shadow['differential_reason']!==$candidate['differential_reason']||!hash_equals($shadow['result_set_sha256'],$candidate['result_set_sha256'])||!hash_equals($shadow['safe_profile_sha256'],$bindings['safe_profile_sha256'])||!hash_equals((string)$shadow['evidence_id'],(string)$entry['evidence_id'])||!hash_equals($shadow['executor_fingerprint'],hash('sha256','pay-rule-002-shadow:'.$receipt['executor_id']))||$shadow['executed_on']!==substr($receipt['executed_at_utc'],0,10)||!in_array($shadow['result_type'],array('decimal','integer','date'),true)||!in_array($shadow['result_unit'],array('currency','scalar','day','hour'),true)){$error='safe_execution_shadow_receipt_binding_mismatch';return false;}
+        $shadowHash=hrm_payroll_formula_safe_acceptance_hash($shadow);if($shadowHash===false||!hash_equals($item['shadow_receipt_sha256'],$shadowHash)){$error='safe_execution_shadow_receipt_hash_mismatch';return false;}
+        $seen[$key]=true;$last=$key;$parts[]=$item['source_scope'].':'.$item['source_formula_sha256'].':'.$item['shadow_receipt_sha256'];
+    }
+    if(count($seen)!==count($expected)||count($receipt['execution_items'])!==$receipt['executed_distinct_formula_count']){$error='safe_execution_item_set_mismatch';return false;}
+    sort($parts,SORT_STRING);$setHash=hash('sha256',implode('|',$parts));if(!hash_equals($receipt['execution_set_sha256'],$setHash)){$error='safe_execution_set_hash_mismatch';return false;}
     $payload=$receipt;unset($payload['receipt_sha256']);$hash=hrm_payroll_formula_safe_acceptance_hash($payload);if($hash===false||!hash_equals($receipt['receipt_sha256'],$hash)){$error='safe_execution_receipt_hash_mismatch';return false;}
     return true;
 }
