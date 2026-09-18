@@ -1,0 +1,8 @@
+<?php
+/** Pure PAY-CORE-002 relationship policy. No DB access and no inference. */
+include_once(dirname(__FILE__).'/pay_core_002_contract.inc');
+function hrm_pay_core_002_interval_valid($from,$to=null){return hrm_pay_core_002_validate_iso_date($from)&&($to===null||$to===''||(hrm_pay_core_002_validate_iso_date($to)&&$from<=$to));}
+function hrm_pay_core_002_intervals_overlap($a_from,$a_to,$b_from,$b_to){if(!hrm_pay_core_002_interval_valid($a_from,$a_to)||!hrm_pay_core_002_interval_valid($b_from,$b_to))return false;$ae=$a_to?:'9999-12-31';$be=$b_to?:'9999-12-31';return $a_from<=$be&&$b_from<=$ae;}
+function hrm_pay_core_002_relationship_key($worker_id,$employment_id,$legal_entity_id){if((int)$worker_id<=0||(int)$employment_id<=0||(int)$legal_entity_id<=0)return false;return 'W'.(int)$worker_id.':E'.(int)$employment_id.':L'.(int)$legal_entity_id;}
+function hrm_pay_core_002_relationship_contract(array $x){foreach(array('worker_id','employment_id','legal_entity_id','effective_from') as $k)if(!array_key_exists($k,$x))return false;if(hrm_pay_core_002_relationship_key($x['worker_id'],$x['employment_id'],$x['legal_entity_id'])===false)return false;return hrm_pay_core_002_interval_valid($x['effective_from'],$x['effective_to']??null);}
+function hrm_pay_core_002_enrollment_contract(array $x){foreach(array('payroll_relationship_id','group_version_id','relationship_legal_entity_id','group_legal_entity_id','effective_from') as $k)if(!array_key_exists($k,$x))return false;if((int)$x['payroll_relationship_id']<=0||(int)$x['group_version_id']<=0||(int)$x['relationship_legal_entity_id']<=0||(int)$x['relationship_legal_entity_id']!==(int)$x['group_legal_entity_id'])return false;return hrm_pay_core_002_interval_valid($x['effective_from'],$x['effective_to']??null);}

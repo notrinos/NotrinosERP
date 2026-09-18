@@ -9192,3 +9192,94 @@ CREATE TABLE `0_hrm_payroll_legacy_period_mapping_reviews` (
 
 CREATE TRIGGER `0_pc2m_lpmr_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies update';
 CREATE TRIGGER `0_pc2m_lpmr_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies delete';
+
+-- PAY-CORE-002 governed successor custody (1.0.530-1.0.546); zero seeded business rows --
+CREATE TABLE `0_hrm_payroll_seed_proposals` (
+  `proposal_id` bigint unsigned NOT NULL AUTO_INCREMENT, `proposal_key` varchar(96) NOT NULL, `legal_entity_id` bigint unsigned NOT NULL, `currency_code` char(3) NOT NULL,
+  `calendar_code` varchar(64) NOT NULL, `calendar_name` varchar(160) NOT NULL, `group_code` varchar(64) NOT NULL, `group_name` varchar(160) NOT NULL,
+  `frequency_token` varchar(32) NOT NULL, `timezone_name` varchar(64) NOT NULL, `effective_from` date NOT NULL, `period_plan_json` text NOT NULL, `period_plan_sha256` char(64) NOT NULL, `proposal_sha256` char(64) NOT NULL,
+  `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`proposal_id`), UNIQUE KEY `uq_pc2_seed_prop_key` (`proposal_key`), UNIQUE KEY `uq_pc2_seed_prop_sha` (`proposal_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_seed_approvals` (
+  `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `proposal_id` bigint unsigned NOT NULL, `proposal_sha256` char(64) NOT NULL, `decision_token` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approval_id`), UNIQUE KEY `uq_pc2_seed_approval_prop` (`proposal_id`), UNIQUE KEY `uq_pc2_seed_approval_sha` (`approval_sha256`),
+  CONSTRAINT `fk_pc2_seed_approval_prop` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_payroll_seed_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_seed_executions` (
+  `execution_id` bigint unsigned NOT NULL AUTO_INCREMENT, `proposal_id` bigint unsigned NOT NULL, `approval_id` bigint unsigned NOT NULL, `calendar_id` bigint unsigned NOT NULL,
+  `calendar_version_id` bigint unsigned NOT NULL, `payroll_group_id` bigint unsigned NOT NULL, `group_version_id` bigint unsigned NOT NULL, `currency_code` char(3) NOT NULL, `period_count` int unsigned NOT NULL, `period_set_sha256` char(64) NOT NULL, `execution_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL, `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`execution_id`), UNIQUE KEY `uq_pc2_seed_execution_prop` (`proposal_id`), UNIQUE KEY `uq_pc2_seed_execution_sha` (`execution_sha256`),
+  CONSTRAINT `fk_pc2_seed_exec_prop` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_payroll_seed_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc2_seed_exec_approval` FOREIGN KEY (`approval_id`) REFERENCES `0_hrm_payroll_seed_approvals` (`approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_legacy_period_mapping_plans` (
+  `mapping_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL, `calendar_version_id` bigint unsigned NOT NULL,
+  `group_version_id` bigint unsigned NOT NULL, `legal_entity_id` bigint unsigned NOT NULL, `currency_code` char(3) NOT NULL, `period_key` varchar(80) NOT NULL,
+  `period_start` date NOT NULL, `period_end` date NOT NULL, `cutoff_date` date NOT NULL, `pay_date` date NOT NULL, `post_date` date NOT NULL, `file_date` date NOT NULL,
+  `mapping_plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_plan_id`), UNIQUE KEY `uq_pc2_map_plan_legacy` (`legacy_period_id`), UNIQUE KEY `uq_pc2_map_plan_sha` (`mapping_plan_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_legacy_period_mapping_approvals` (
+  `mapping_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `mapping_plan_id` bigint unsigned NOT NULL, `mapping_plan_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL,
+  `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_approval_id`), UNIQUE KEY `uq_pc2_map_approval_plan` (`mapping_plan_id`), UNIQUE KEY `uq_pc2_map_approval_sha` (`approval_sha256`),
+  CONSTRAINT `fk_pc2_map_approval_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_legacy_period_conversion_receipts` (
+  `conversion_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `mapping_plan_id` bigint unsigned NOT NULL, `mapping_approval_id` bigint unsigned NOT NULL,
+  `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `conversion_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL, `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`conversion_receipt_id`), UNIQUE KEY `uq_pc2_conv_plan` (`mapping_plan_id`), UNIQUE KEY `uq_pc2_conv_legacy` (`legacy_period_id`), UNIQUE KEY `uq_pc2_conv_sha` (`conversion_sha256`),
+  CONSTRAINT `fk_pc2_conv_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc2_conv_approval` FOREIGN KEY (`mapping_approval_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_approvals` (`mapping_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_legacy_period_reconciliations` (
+  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `conversion_receipt_id` bigint unsigned NOT NULL, `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL,
+  `target_period_sha256` char(64) NOT NULL, `status_token` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pc2_recon_receipt` (`conversion_receipt_id`), UNIQUE KEY `uq_pc2_recon_sha` (`reconciliation_sha256`),
+  CONSTRAINT `fk_pc2_recon_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_payroll_legacy_period_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_relationship_migration_plans` (
+  `relationship_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL, `group_version_id` bigint unsigned NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL,
+  `source_identity_sha256` char(64) NOT NULL, `relationship_plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_plan_sha` (`relationship_plan_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_relationship_migration_approvals` (
+  `relationship_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `relationship_plan_id` bigint unsigned NOT NULL, `relationship_plan_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`relationship_approval_id`), UNIQUE KEY `uq_pc2_rel_approval_plan` (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_approval_sha` (`approval_sha256`),
+  CONSTRAINT `fk_pc2_relmig_approval_plan` FOREIGN KEY (`relationship_plan_id`) REFERENCES `0_hrm_payroll_relationship_migration_plans` (`relationship_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_payroll_relationship_migration_receipts` (
+  `relationship_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `relationship_plan_id` bigint unsigned NOT NULL, `relationship_approval_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL, `relationship_member_id` bigint unsigned NOT NULL, `enrollment_id` bigint unsigned NOT NULL, `receipt_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL, `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`relationship_receipt_id`), UNIQUE KEY `uq_pc2_rel_receipt_plan` (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_receipt_sha` (`receipt_sha256`),
+  CONSTRAINT `fk_pc2_relmig_receipt_plan` FOREIGN KEY (`relationship_plan_id`) REFERENCES `0_hrm_payroll_relationship_migration_plans` (`relationship_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc2_relmig_receipt_approval` FOREIGN KEY (`relationship_approval_id`) REFERENCES `0_hrm_payroll_relationship_migration_approvals` (`relationship_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc2_sdp_u` BEFORE UPDATE ON `0_hrm_payroll_seed_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_seed_proposals';
+CREATE TRIGGER `0_pc2_sdp_d` BEFORE DELETE ON `0_hrm_payroll_seed_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_seed_proposals';
+CREATE TRIGGER `0_pc2_sda_u` BEFORE UPDATE ON `0_hrm_payroll_seed_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_seed_approvals';
+CREATE TRIGGER `0_pc2_sda_d` BEFORE DELETE ON `0_hrm_payroll_seed_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_seed_approvals';
+CREATE TRIGGER `0_pc2_sdx_u` BEFORE UPDATE ON `0_hrm_payroll_seed_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_seed_executions';
+CREATE TRIGGER `0_pc2_sdx_d` BEFORE DELETE ON `0_hrm_payroll_seed_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_seed_executions';
+CREATE TRIGGER `0_pc2_mpl_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_legacy_period_mapping_plans';
+CREATE TRIGGER `0_pc2_mpl_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_legacy_period_mapping_plans';
+CREATE TRIGGER `0_pc2_map_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_mapping_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_legacy_period_mapping_approvals';
+CREATE TRIGGER `0_pc2_map_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_mapping_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_legacy_period_mapping_approvals';
+CREATE TRIGGER `0_pc2_cvr_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_legacy_period_conversion_receipts';
+CREATE TRIGGER `0_pc2_cvr_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_legacy_period_conversion_receipts';
+CREATE TRIGGER `0_pc2_rcn_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_legacy_period_reconciliations';
+CREATE TRIGGER `0_pc2_rcn_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_legacy_period_reconciliations';
+CREATE TRIGGER `0_pc2_rmp_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_migration_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationship_migration_plans';
+CREATE TRIGGER `0_pc2_rmp_d` BEFORE DELETE ON `0_hrm_payroll_relationship_migration_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_migration_plans';
+CREATE TRIGGER `0_pc2_rma_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_migration_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationship_migration_approvals';
+CREATE TRIGGER `0_pc2_rma_d` BEFORE DELETE ON `0_hrm_payroll_relationship_migration_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_migration_approvals';
+CREATE TRIGGER `0_pc2_rmx_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_migration_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationship_migration_receipts';
+CREATE TRIGGER `0_pc2_rmx_d` BEFORE DELETE ON `0_hrm_payroll_relationship_migration_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_migration_receipts';

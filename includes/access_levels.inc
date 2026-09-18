@@ -445,6 +445,9 @@ $security_areas =array(
 	'SA_HRM_APPROVE_PAY_RULE_ACTIVATION' => array(SS_HRM|71, _('Approve evidence-complete PAY-RULE activation eligibility')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_RULE_ACTIVATION' => array(SS_HRM|72, _('Execute approved scoped PAY-RULE activation commands')), // no automatic role grant
 	'SA_HRM_FAILBACK_PAY_RULE' => array(SS_HRM|73, _('Execute authorized PAY-RULE failback to the legacy rule path')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CORE' => array(SS_HRM|74, _('Propose governed PAY-CORE calendar, group and migration changes')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CORE' => array(SS_HRM|75, _('Independently review governed PAY-CORE proposals and migrations')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE' => array(SS_HRM|76, _('Execute approved bounded PAY-CORE seed and migration commands')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -464,6 +467,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_RULE_LIFECYCLE' => array(SS_HRM_A|15, _('View PAY-RULE lifecycle and regulatory evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_RULE_RESOLUTION' => array(SS_HRM_A|16, _('View PAY-RULE jurisdiction and resolution evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_RULE_MIGRATION' => array(SS_HRM_A|17, _('View PAY-RULE migration, shadow and cutover evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE' => array(SS_HRM_A|18, _('View PAY-CORE calendar, group, relationship and migration evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
