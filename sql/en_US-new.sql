@@ -9417,3 +9417,115 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_reviews` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TRIGGER `0_pc3m_lsmr_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies update';
 CREATE TRIGGER `0_pc3m_lsmr_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies delete';
+
+-- PAY-CORE-003 governed successor custody through 1.0.562; zero seeded business rows --
+
+-- PAY-CORE-003 custody edge 1.0.553 --
+CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_plans` (
+  `mapping_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source_kind` varchar(32) NOT NULL,
+  `source_row_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `target_kind` varchar(32) NOT NULL,
+  `target_payload_json` longtext NOT NULL,
+  `target_payload_sha256` char(64) NOT NULL,
+  `supersedes_mapping_plan_id` bigint unsigned DEFAULT NULL,
+  `mapping_plan_sha256` char(64) NOT NULL,
+  `maker_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_plan_id`),
+  UNIQUE KEY `uq_pc3_mapping_plan_sha` (`mapping_plan_sha256`),
+  KEY `idx_pc3_mapping_source` (`source_kind`,`source_row_id`,`source_sha256`),
+  UNIQUE KEY `uq_pc3_mapping_supersedes` (`supersedes_mapping_plan_id`),
+  CONSTRAINT `fk_pc3_mapping_supersedes` FOREIGN KEY (`supersedes_mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_approvals` (
+  `mapping_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `mapping_plan_id` bigint unsigned NOT NULL,
+  `mapping_plan_sha256` char(64) NOT NULL,
+  `decision_token` varchar(16) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `approval_sha256` char(64) NOT NULL,
+  `checker_id` int unsigned NOT NULL,
+  `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_approval_id`),
+  UNIQUE KEY `uq_pc3_mapping_approval_plan` (`mapping_plan_id`),
+  UNIQUE KEY `uq_pc3_mapping_approval_sha` (`approval_sha256`),
+  CONSTRAINT `fk_pc3_mapping_approval_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc3_mpl_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_mapping_plans';
+CREATE TRIGGER `0_pc3_mpl_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_mapping_plans';
+CREATE TRIGGER `0_pc3_map_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_mapping_approvals';
+CREATE TRIGGER `0_pc3_map_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_mapping_approvals';
+
+-- PAY-CORE-003 custody edge 1.0.555 --
+CREATE TABLE `0_hrm_pay_core_003_legacy_conversion_receipts` (
+  `conversion_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `mapping_plan_id` bigint unsigned NOT NULL,
+  `mapping_approval_id` bigint unsigned NOT NULL,
+  `source_kind` varchar(32) NOT NULL,
+  `source_row_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `target_kind` varchar(32) NOT NULL,
+  `target_set_json` longtext NOT NULL,
+  `target_set_sha256` char(64) NOT NULL,
+  `conversion_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL,
+  `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`conversion_receipt_id`),
+  UNIQUE KEY `uq_pc3_conversion_plan` (`mapping_plan_id`),
+  UNIQUE KEY `uq_pc3_conversion_sha` (`conversion_sha256`),
+  UNIQUE KEY `uq_pc3_conversion_source` (`source_kind`,`source_row_id`,`source_sha256`),
+  CONSTRAINT `fk_pc3_conversion_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc3_conversion_approval` FOREIGN KEY (`mapping_approval_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_approvals` (`mapping_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc3_cvr_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_conversion_receipts';
+CREATE TRIGGER `0_pc3_cvr_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_conversion_receipts';
+
+-- PAY-CORE-003 custody edge 1.0.557 --
+CREATE TABLE `0_hrm_pay_core_003_legacy_conversion_reconciliations` (
+  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `conversion_receipt_id` bigint unsigned NOT NULL,
+  `source_kind` varchar(32) NOT NULL,
+  `source_row_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `target_set_sha256` char(64) NOT NULL,
+  `status_token` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `recovery_action` varchar(48) NOT NULL,
+  `supersedes_reconciliation_id` bigint unsigned DEFAULT NULL,
+  `reconciliation_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reconciliation_id`),
+  UNIQUE KEY `uq_pc3_reconciliation_sha` (`reconciliation_sha256`),
+  KEY `idx_pc3_reconciliation_receipt` (`conversion_receipt_id`,`created_at`),
+  UNIQUE KEY `uq_pc3_reconciliation_supersedes` (`supersedes_reconciliation_id`),
+  CONSTRAINT `fk_pc3_reconciliation_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc3_reconciliation_supersedes` FOREIGN KEY (`supersedes_reconciliation_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc3_rcn_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_conversion_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_conversion_reconciliations';
+CREATE TRIGGER `0_pc3_rcn_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_conversion_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_conversion_reconciliations';
+
+-- PAY-CORE-003 custody edge 1.0.562 --
+CREATE TABLE `0_hrm_pay_core_003_compatibility_parity_evidence` (
+  `parity_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `conversion_receipt_id` bigint unsigned NOT NULL,
+  `source_kind` varchar(32) NOT NULL,
+  `source_row_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `target_set_sha256` char(64) NOT NULL,
+  `projection_sha256` char(64) NOT NULL,
+  `status_token` varchar(16) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `verified_by` int unsigned NOT NULL,
+  `verified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `parity_sha256` char(64) NOT NULL,
+  PRIMARY KEY (`parity_evidence_id`),
+  UNIQUE KEY `uq_pc3_parity_sha` (`parity_sha256`),
+  KEY `idx_pc3_parity_receipt` (`conversion_receipt_id`,`status_token`),
+  CONSTRAINT `fk_pc3_parity_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc3_pry_u` BEFORE UPDATE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_compatibility_parity_evidence';
+CREATE TRIGGER `0_pc3_pry_d` BEFORE DELETE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_compatibility_parity_evidence';

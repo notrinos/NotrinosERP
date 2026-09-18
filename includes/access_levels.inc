@@ -448,6 +448,8 @@ $security_areas =array(
 	'SA_HRM_MANAGE_PAY_CORE' => array(SS_HRM|74, _('Propose governed PAY-CORE calendar, group and migration changes')), // no automatic role grant
 	'SA_HRM_REVIEW_PAY_CORE' => array(SS_HRM|75, _('Independently review governed PAY-CORE proposals and migrations')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CORE' => array(SS_HRM|76, _('Execute approved bounded PAY-CORE seed and migration commands')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_INPUT' => array(SS_HRM|77, _('Write approved PAY-CORE payroll inputs under explicit evidence custody')), // no automatic role grant
+	'SA_HRM_OVERRIDE_PAY_CORE_INPUT' => array(SS_HRM|78, _('Write reason-bound governed PAY-CORE approved-input overrides')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
