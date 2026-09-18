@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.526',
-        'active_legacy_payroll_contract'=>'1.0.410',
-        'next_backlog_item'=>'PAY-CORE-002 legacy period/calendar/group mapping review',
+        'active_database_version'=>'1.0.529',
+        'active_legacy_payroll_contract'=>'1.0.411',
+        'next_backlog_item'=>'PAY-CORE-002 default calendar/group seed governance and mapping approval design',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CORE-002 foundation is source-complete through migration head 1.0.526 under legacy payroll source custody 1.0.410. The 1.0.523->1.0.524 dependency review reconciles the orphan PAY-RULE-007 label to the canonical Phase 3 PAY-CORE-002 backlog row; 1.0.524->1.0.525 freezes a pure non-authoritative calendar/group/relationship contract; 1.0.525->1.0.526 installs eight zero-seed immutable InnoDB custody tables with sixteen UPDATE/DELETE denial triggers. Existing payroll_periods, calculate_employee_payslip_legacy_v1, posting, payment, accounting, tax and historical payroll remain authoritative. Mandatory local WAMP/MariaDB acceptance remains required at DB 1.0.526. The next strict dependency is a read-only legacy payroll_periods/calendar/group mapping review; no seed, conversion or runtime cutover is authorized.',
+        'next_slice_scope'=>'PAY-CORE-002 is source-complete through migration head 1.0.529 under legacy payroll source custody 1.0.411. Local acceptance evidence for the 1.0.526 foundation is recorded in its execution report. The 1.0.526->1.0.527 edge freezes a pure manual-review-only legacy payroll-period mapping contract; 1.0.527->1.0.528 installs one zero-seed immutable mapping-review evidence table with two UPDATE/DELETE denial triggers; 1.0.528->1.0.529 activates only a bounded read-only inventory adapter over the exact 17-column legacy payroll_periods projection. Existing payroll_periods, calculate_employee_payslip_legacy_v1, posting, payment, accounting, tax and historical payroll remain authoritative. No calendar/group/relationship/period business rows are seeded or converted. Mandatory local WAMP/MariaDB acceptance remains required at DB 1.0.529. The next strict dependency is explicit default calendar/group seed governance plus mapping approval design; no automatic seed or conversion is authorized.',
         'edges'=>array(
+            'pay_core_002_legacy_period_inventory'=>array('previous'=>'1.0.528','version'=>'1.0.529',
+                'file'=>'sql/upgrade_pay_core_002_legacy_period_inventory.php'),
+            'pay_core_002_legacy_mapping_custody'=>array('previous'=>'1.0.527','version'=>'1.0.528',
+                'file'=>'sql/upgrade_pay_core_002_legacy_mapping_custody.php'),
+            'pay_core_002_legacy_mapping_review'=>array('previous'=>'1.0.526','version'=>'1.0.527',
+                'file'=>'sql/upgrade_pay_core_002_legacy_mapping_review.php'),
             'pay_core_002_custody_foundation'=>array('previous'=>'1.0.525','version'=>'1.0.526',
                 'file'=>'sql/upgrade_pay_core_002_custody_foundation.php'),
             'pay_core_002_contract_foundation'=>array('previous'=>'1.0.524','version'=>'1.0.525',

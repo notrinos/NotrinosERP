@@ -9530,3 +9530,25 @@ CREATE TRIGGER `0_pc2_relm_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_membe
 CREATE TRIGGER `0_pc2_relm_d` BEFORE DELETE ON `0_hrm_payroll_relationship_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_members';
 CREATE TRIGGER `0_pc2_enr_u` BEFORE UPDATE ON `0_hrm_payroll_group_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_group_enrollments';
 CREATE TRIGGER `0_pc2_enr_d` BEFORE DELETE ON `0_hrm_payroll_group_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_group_enrollments';
+
+CREATE TABLE `0_hrm_payroll_legacy_period_mapping_reviews` (
+  `mapping_review_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legacy_period_id` int NOT NULL,
+  `source_period_sha256` char(64) NOT NULL,
+  `review_status` varchar(24) NOT NULL,
+  `ambiguity_codes` varchar(512) NOT NULL,
+  `calendar_resolution` varchar(96) DEFAULT NULL,
+  `group_resolution` varchar(96) DEFAULT NULL,
+  `legal_entity_resolution` varchar(96) DEFAULT NULL,
+  `currency_resolution` varchar(16) DEFAULT NULL,
+  `reviewed_by` int unsigned DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `review_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_review_id`),
+  UNIQUE KEY `uq_pc2m_legacy_period_review_sha` (`review_sha256`),
+  KEY `idx_pc2m_legacy_period` (`legacy_period_id`,`review_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc2m_lpmr_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies update';
+CREATE TRIGGER `0_pc2m_lpmr_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies delete';
