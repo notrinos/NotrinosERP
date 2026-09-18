@@ -9047,3 +9047,194 @@ CREATE TABLE `0_hrm_pay_rule_emergency_changes` (
 
 CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_emergency_changes';
 CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_emergency_changes';
+
+-- PAY-RULE-005 jurisdiction and precedence immutable custody (1.0.499-1.0.508)
+CREATE TABLE `0_hrm_pay_rule_jurisdictions` (
+  `jurisdiction_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `jurisdiction_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`jurisdiction_id`),
+  UNIQUE KEY `hrm_pay_rule_jurisdiction_key_uq` (`jurisdiction_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_jurisdiction_versions` (
+  `jurisdiction_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `jurisdiction_id` bigint(20) unsigned NOT NULL,
+  `version_no` int(10) unsigned NOT NULL,
+  `predecessor_version_id` bigint(20) unsigned DEFAULT NULL,
+  `jurisdiction_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `parent_jurisdiction_id` bigint(20) unsigned DEFAULT NULL,
+  `hierarchy_depth` smallint(5) unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `authority_source_ref` varchar(256) NOT NULL,
+  `version_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`jurisdiction_version_id`),
+  UNIQUE KEY `hrm_pay_rule_jurisdiction_version_no_uq` (`jurisdiction_id`,`version_no`),
+  UNIQUE KEY `hrm_pay_rule_jurisdiction_version_start_uq` (`jurisdiction_id`,`effective_from`),
+  UNIQUE KEY `hrm_pay_rule_jurisdiction_version_hash_uq` (`version_sha256`),
+  UNIQUE KEY `hrm_pay_rule_jurisdiction_predecessor_uq` (`predecessor_version_id`),
+  KEY `hrm_pay_rule_jurisdiction_asof_idx` (`jurisdiction_id`,`effective_from`,`effective_to`,`jurisdiction_version_id`),
+  KEY `hrm_pay_rule_jurisdiction_parent_idx` (`parent_jurisdiction_id`,`effective_from`,`effective_to`,`jurisdiction_version_id`),
+  CONSTRAINT `0_pr5_jv_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_jv_predecessor_fk` FOREIGN KEY (`predecessor_version_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_versions` (`jurisdiction_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_jv_parent_fk` FOREIGN KEY (`parent_jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_pay_rule_subject_jurisdiction_bindings` (
+  `binding_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `subject_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `subject_id` bigint(20) unsigned NOT NULL,
+  `subject_legal_entity_id` bigint(20) unsigned NOT NULL,
+  `fact_role` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `jurisdiction_id` bigint(20) unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `source_token` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `binding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`binding_id`),
+  UNIQUE KEY `hrm_pay_rule_subject_binding_hash_uq` (`binding_sha256`),
+  UNIQUE KEY `hrm_pay_rule_subject_binding_start_uq` (`subject_type`,`subject_id`,`fact_role`,`effective_from`),
+  KEY `hrm_pay_rule_subject_binding_asof_idx` (`subject_type`,`subject_id`,`fact_role`,`effective_from`,`effective_to`,`binding_id`),
+  KEY `hrm_pay_rule_subject_binding_jurisdiction_idx` (`jurisdiction_id`,`effective_from`,`effective_to`,`binding_id`),
+  KEY `hrm_pay_rule_subject_binding_entity_idx` (`subject_legal_entity_id`,`effective_from`,`effective_to`,`binding_id`),
+  CONSTRAINT `0_pr5_sjb_entity_fk` FOREIGN KEY (`subject_legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_sjb_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_sets` (
+  `fact_set_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `employment_id` bigint(20) unsigned NOT NULL,
+  `assignment_id` bigint(20) unsigned NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NOT NULL,
+  `work_location_id` bigint(20) unsigned DEFAULT NULL,
+  `as_of_date` date NOT NULL,
+  `source_state_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `fact_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `sealed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`fact_set_id`),
+  UNIQUE KEY `hrm_pay_rule_fact_set_hash_uq` (`fact_set_sha256`),
+  KEY `hrm_pay_rule_fact_set_scope_idx` (`employment_id`,`assignment_id`,`as_of_date`,`fact_set_id`),
+  CONSTRAINT `0_pr5_fs_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fs_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fs_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fs_location_fk` FOREIGN KEY (`work_location_id`) REFERENCES `0_hrm_work_locations` (`work_location_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_items` (
+  `fact_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `fact_set_id` bigint(20) unsigned NOT NULL,
+  `binding_id` bigint(20) unsigned NOT NULL,
+  `jurisdiction_version_id` bigint(20) unsigned NOT NULL,
+  `fact_role` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `subject_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `subject_id` bigint(20) unsigned NOT NULL,
+  `jurisdiction_id` bigint(20) unsigned NOT NULL,
+  `item_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`fact_item_id`),
+  UNIQUE KEY `hrm_pay_rule_fact_item_binding_uq` (`fact_set_id`,`binding_id`),
+  UNIQUE KEY `hrm_pay_rule_fact_item_hash_uq` (`item_sha256`),
+  KEY `hrm_pay_rule_fact_item_role_idx` (`fact_set_id`,`fact_role`,`jurisdiction_id`,`fact_item_id`),
+  CONSTRAINT `0_pr5_fi_set_fk` FOREIGN KEY (`fact_set_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_fact_sets` (`fact_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fi_binding_fk` FOREIGN KEY (`binding_id`) REFERENCES `0_hrm_pay_rule_subject_jurisdiction_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fi_version_fk` FOREIGN KEY (`jurisdiction_version_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_versions` (`jurisdiction_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_fi_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_pay_rule_version_applicability` (
+  `applicability_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `publication_id` bigint(20) unsigned NOT NULL,
+  `jurisdiction_id` bigint(20) unsigned NOT NULL,
+  `fact_role` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `resolution_group_key` varchar(160) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `applicability_mode` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `precedence_rank` smallint(5) unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `applicability_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`applicability_id`),
+  UNIQUE KEY `hrm_pay_rule_applicability_hash_uq` (`applicability_sha256`),
+  UNIQUE KEY `hrm_pay_rule_applicability_start_uq` (`rule_version_id`,`jurisdiction_id`,`fact_role`,`resolution_group_key`,`effective_from`),
+  KEY `hrm_pay_rule_applicability_lookup_idx` (`resolution_group_key`,`fact_role`,`effective_from`,`effective_to`,`precedence_rank`,`applicability_id`),
+  KEY `hrm_pay_rule_applicability_jurisdiction_idx` (`jurisdiction_id`,`effective_from`,`effective_to`,`applicability_id`),
+  CONSTRAINT `0_pr5_ra_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_ra_publication_fk` FOREIGN KEY (`publication_id`) REFERENCES `0_hrm_pay_rule_lifecycle_publications` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_ra_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_pay_rule_resolution_requests` (
+  `resolution_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `employment_id` bigint(20) unsigned NOT NULL,
+  `assignment_id` bigint(20) unsigned NOT NULL,
+  `fact_set_id` bigint(20) unsigned NOT NULL,
+  `as_of_date` date NOT NULL,
+  `idempotency_key_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `applicability_state_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `requested_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `requested_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`resolution_id`),
+  UNIQUE KEY `hrm_pay_rule_resolution_idempotency_uq` (`employment_id`,`assignment_id`,`idempotency_key_hash`),
+  UNIQUE KEY `hrm_pay_rule_resolution_request_hash_uq` (`request_sha256`),
+  KEY `hrm_pay_rule_resolution_scope_idx` (`employment_id`,`assignment_id`,`as_of_date`,`resolution_id`),
+  CONSTRAINT `0_pr5_rr_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_rr_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_rr_fact_set_fk` FOREIGN KEY (`fact_set_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_fact_sets` (`fact_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_resolution_candidates` (
+  `candidate_trace_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `resolution_id` bigint(20) unsigned NOT NULL,
+  `applicability_id` bigint(20) unsigned NOT NULL,
+  `rule_version_id` bigint(20) unsigned NOT NULL,
+  `precedence_rank` smallint(5) unsigned NOT NULL,
+  `specificity_depth` smallint(5) unsigned NOT NULL,
+  `applicability_mode` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `candidate_state` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `candidate_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`candidate_trace_id`),
+  UNIQUE KEY `hrm_pay_rule_resolution_candidate_uq` (`resolution_id`,`applicability_id`),
+  UNIQUE KEY `hrm_pay_rule_resolution_candidate_hash_uq` (`candidate_sha256`),
+  CONSTRAINT `0_pr5_rc_request_fk` FOREIGN KEY (`resolution_id`) REFERENCES `0_hrm_pay_rule_resolution_requests` (`resolution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_rc_applicability_fk` FOREIGN KEY (`applicability_id`) REFERENCES `0_hrm_pay_rule_version_applicability` (`applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `0_pr5_rc_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE `0_hrm_pay_rule_resolution_decisions` (
+  `resolution_id` bigint(20) unsigned NOT NULL,
+  `outcome_token` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `selected_summary_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `resolution_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `explanation_token` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `decided_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `decided_by` smallint(6) unsigned NOT NULL,
+  PRIMARY KEY (`resolution_id`),
+  UNIQUE KEY `hrm_pay_rule_resolution_decision_hash_uq` (`resolution_sha256`),
+  KEY `hrm_pay_rule_resolution_outcome_idx` (`outcome_token`,`resolution_id`),
+  CONSTRAINT `0_pr5_rd_request_fk` FOREIGN KEY (`resolution_id`) REFERENCES `0_hrm_pay_rule_resolution_requests` (`resolution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_pr5_j_u` BEFORE UPDATE ON `0_hrm_pay_rule_jurisdictions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_jurisdictions';
+CREATE TRIGGER `0_pr5_j_d` BEFORE DELETE ON `0_hrm_pay_rule_jurisdictions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_jurisdictions';
+CREATE TRIGGER `0_pr5_jv_u` BEFORE UPDATE ON `0_hrm_pay_rule_jurisdiction_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_jurisdiction_versions';
+CREATE TRIGGER `0_pr5_jv_d` BEFORE DELETE ON `0_hrm_pay_rule_jurisdiction_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_jurisdiction_versions';
+CREATE TRIGGER `0_pr5_b_u` BEFORE UPDATE ON `0_hrm_pay_rule_subject_jurisdiction_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_subject_jurisdiction_bindings';
+CREATE TRIGGER `0_pr5_b_d` BEFORE DELETE ON `0_hrm_pay_rule_subject_jurisdiction_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_subject_jurisdiction_bindings';
+CREATE TRIGGER `0_pr5_fs_u` BEFORE UPDATE ON `0_hrm_pay_rule_jurisdiction_fact_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_jurisdiction_fact_sets';
+CREATE TRIGGER `0_pr5_fs_d` BEFORE DELETE ON `0_hrm_pay_rule_jurisdiction_fact_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_jurisdiction_fact_sets';
+CREATE TRIGGER `0_pr5_fi_u` BEFORE UPDATE ON `0_hrm_pay_rule_jurisdiction_fact_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_jurisdiction_fact_items';
+CREATE TRIGGER `0_pr5_fi_d` BEFORE DELETE ON `0_hrm_pay_rule_jurisdiction_fact_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_jurisdiction_fact_items';
+CREATE TRIGGER `0_pr5_a_u` BEFORE UPDATE ON `0_hrm_pay_rule_version_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_version_applicability';
+CREATE TRIGGER `0_pr5_a_d` BEFORE DELETE ON `0_hrm_pay_rule_version_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_version_applicability';
+CREATE TRIGGER `0_pr5_rr_u` BEFORE UPDATE ON `0_hrm_pay_rule_resolution_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_resolution_requests';
+CREATE TRIGGER `0_pr5_rr_d` BEFORE DELETE ON `0_hrm_pay_rule_resolution_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_resolution_requests';
+CREATE TRIGGER `0_pr5_rc_u` BEFORE UPDATE ON `0_hrm_pay_rule_resolution_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_resolution_candidates';
+CREATE TRIGGER `0_pr5_rc_d` BEFORE DELETE ON `0_hrm_pay_rule_resolution_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_resolution_candidates';
+CREATE TRIGGER `0_pr5_rd_u` BEFORE UPDATE ON `0_hrm_pay_rule_resolution_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_resolution_decisions';
+CREATE TRIGGER `0_pr5_rd_d` BEFORE DELETE ON `0_hrm_pay_rule_resolution_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_resolution_decisions';
