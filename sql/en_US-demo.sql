@@ -9238,3 +9238,167 @@ CREATE TRIGGER `0_pr5_rc_u` BEFORE UPDATE ON `0_hrm_pay_rule_resolution_candidat
 CREATE TRIGGER `0_pr5_rc_d` BEFORE DELETE ON `0_hrm_pay_rule_resolution_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_resolution_candidates';
 CREATE TRIGGER `0_pr5_rd_u` BEFORE UPDATE ON `0_hrm_pay_rule_resolution_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_resolution_decisions';
 CREATE TRIGGER `0_pr5_rd_d` BEFORE DELETE ON `0_hrm_pay_rule_resolution_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_resolution_decisions';
+
+-- PAY-RULE-006 immutable migration/shadow/cutover custody
+CREATE TABLE `0_hrm_pay_rule_migration_candidates` (
+  `candidate_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source_kind` varchar(64) NOT NULL,
+  `source_identity` varchar(160) NOT NULL,
+  `source_payload_sha256` char(64) NOT NULL,
+  `classification_token` varchar(32) NOT NULL,
+  `classification_reason` varchar(120) NOT NULL,
+  `translated_sha256` char(64) DEFAULT NULL,
+  `result_set_sha256` char(64) DEFAULT NULL,
+  `row_count` int unsigned NOT NULL,
+  `candidate_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`candidate_id`), UNIQUE KEY `uq_pr6_candidate_sha` (`candidate_sha256`),
+  KEY `idx_pr6_source_payload` (`source_payload_sha256`), KEY `idx_pr6_class` (`classification_token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_migration_exceptions` (
+  `exception_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `candidate_id` bigint unsigned NOT NULL,
+  `disposition` varchar(40) NOT NULL,
+  `reason_token` varchar(120) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `exception_sha256` char(64) NOT NULL,
+  `reviewed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`exception_id`), UNIQUE KEY `uq_pr6_exception_candidate` (`candidate_id`), UNIQUE KEY `uq_pr6_exception_sha` (`exception_sha256`),
+  CONSTRAINT `fk_pr6_exc_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_translation_bindings` (
+  `binding_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `candidate_id` bigint unsigned NOT NULL,
+  `rule_version_id` bigint unsigned NOT NULL,
+  `artifact_version_id` bigint unsigned NOT NULL,
+  `target_sha256` char(64) NOT NULL,
+  `publication_sha256` char(64) NOT NULL,
+  `binding_sha256` char(64) NOT NULL,
+  `bound_by` int unsigned NOT NULL,
+  `bound_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`binding_id`), UNIQUE KEY `uq_pr6_binding_candidate` (`candidate_id`), UNIQUE KEY `uq_pr6_binding_sha` (`binding_sha256`),
+  KEY `idx_pr6_binding_rule` (`rule_version_id`),
+  CONSTRAINT `fk_pr6_bind_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`),
+  CONSTRAINT `fk_pr6_bind_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`),
+  CONSTRAINT `fk_pr6_bind_artifact_version` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_tolerance_policies` (
+  `tolerance_policy_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `rule_version_id` bigint unsigned DEFAULT NULL,
+  `result_type` varchar(32) NOT NULL,
+  `absolute_tolerance` decimal(24,8) NOT NULL,
+  `materiality_token` varchar(120) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `maker_id` int unsigned NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `policy_version` varchar(40) NOT NULL,
+  `policy_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`tolerance_policy_id`), UNIQUE KEY `uq_pr6_tolerance_sha` (`policy_sha256`),
+  KEY `idx_pr6_tolerance_rule` (`rule_version_id`),
+  CONSTRAINT `fk_pr6_tol_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_shadow_runs` (
+  `run_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `company_id` int unsigned NOT NULL,
+  `payroll_period_id` int unsigned NOT NULL,
+  `department_id` int unsigned NOT NULL,
+  `source_state_sha256` char(64) NOT NULL,
+  `jurisdiction_evidence_sha256` char(64) NOT NULL,
+  `comparison_policy_version` varchar(40) NOT NULL,
+  `idempotency_sha256` char(64) NOT NULL,
+  `run_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`run_id`), UNIQUE KEY `uq_pr6_shadow_idem` (`idempotency_sha256`), UNIQUE KEY `uq_pr6_shadow_sha` (`run_sha256`),
+  KEY `idx_pr6_shadow_scope` (`company_id`,`department_id`,`payroll_period_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_shadow_comparisons` (
+  `comparison_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `run_id` bigint unsigned NOT NULL,
+  `employee_id` varchar(64) NOT NULL,
+  `candidate_id` bigint unsigned NOT NULL,
+  `rule_version_id` bigint unsigned NOT NULL,
+  `legacy_result_sha256` char(64) NOT NULL,
+  `governed_result_sha256` char(64) NOT NULL,
+  `outcome_token` varchar(24) NOT NULL,
+  `tolerance_policy_id` bigint unsigned DEFAULT NULL,
+  `comparison_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`comparison_id`), UNIQUE KEY `uq_pr6_comparison_sha` (`comparison_sha256`),
+  KEY `idx_pr6_compare_run` (`run_id`), KEY `idx_pr6_compare_outcome` (`outcome_token`),
+  CONSTRAINT `fk_pr6_cmp_run` FOREIGN KEY (`run_id`) REFERENCES `0_hrm_pay_rule_shadow_runs` (`run_id`),
+  CONSTRAINT `fk_pr6_cmp_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`),
+  CONSTRAINT `fk_pr6_cmp_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`),
+  CONSTRAINT `fk_pr6_cmp_tolerance` FOREIGN KEY (`tolerance_policy_id`) REFERENCES `0_hrm_pay_rule_tolerance_policies` (`tolerance_policy_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_activation_eligibility` (
+  `eligibility_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `company_id` int unsigned NOT NULL,
+  `department_id` int unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `source_state_sha256` char(64) NOT NULL,
+  `migration_set_sha256` char(64) NOT NULL,
+  `shadow_evidence_sha256` char(64) NOT NULL,
+  `jurisdiction_evidence_sha256` char(64) NOT NULL,
+  `candidate_count` int unsigned NOT NULL,
+  `published_binding_count` int unsigned NOT NULL,
+  `compared_candidate_count` int unsigned NOT NULL,
+  `comparison_count` int unsigned NOT NULL,
+  `unresolved_count` int unsigned NOT NULL,
+  `unsupported_count` int unsigned NOT NULL,
+  `rollback_ready` tinyint(1) NOT NULL DEFAULT 0,
+  `maker_id` int unsigned NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `approver_id` int unsigned NOT NULL,
+  `executor_id` int unsigned NOT NULL,
+  `eligibility_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`eligibility_id`), UNIQUE KEY `uq_pr6_eligibility_sha` (`eligibility_sha256`),
+  KEY `idx_pr6_eligibility_scope` (`company_id`,`department_id`,`effective_from`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_rule_activation_commands` (
+  `command_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `company_id` int unsigned NOT NULL,
+  `department_id` int unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `sequence_no` int unsigned NOT NULL,
+  `predecessor_command_id` bigint unsigned DEFAULT NULL,
+  `command_type` varchar(16) NOT NULL,
+  `eligibility_id` bigint unsigned NOT NULL,
+  `source_state_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL,
+  `reason_token` varchar(120) NOT NULL,
+  `command_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`command_id`), UNIQUE KEY `uq_pr6_command_sha` (`command_sha256`), UNIQUE KEY `uq_pr6_scope_seq` (`company_id`,`department_id`,`sequence_no`),
+  KEY `idx_pr6_command_pred` (`predecessor_command_id`), KEY `idx_pr6_command_eligibility` (`eligibility_id`),
+  CONSTRAINT `fk_pr6_cmd_pred` FOREIGN KEY (`predecessor_command_id`) REFERENCES `0_hrm_pay_rule_activation_commands` (`command_id`),
+  CONSTRAINT `fk_pr6_cmd_eligibility` FOREIGN KEY (`eligibility_id`) REFERENCES `0_hrm_pay_rule_activation_eligibility` (`eligibility_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pr6_cand_u` BEFORE UPDATE ON `0_hrm_pay_rule_migration_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_migration_candidates';
+CREATE TRIGGER `0_pr6_cand_d` BEFORE DELETE ON `0_hrm_pay_rule_migration_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_migration_candidates';
+CREATE TRIGGER `0_pr6_except_u` BEFORE UPDATE ON `0_hrm_pay_rule_migration_exceptions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_migration_exceptions';
+CREATE TRIGGER `0_pr6_except_d` BEFORE DELETE ON `0_hrm_pay_rule_migration_exceptions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_migration_exceptions';
+CREATE TRIGGER `0_pr6_bind_u` BEFORE UPDATE ON `0_hrm_pay_rule_translation_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_translation_bindings';
+CREATE TRIGGER `0_pr6_bind_d` BEFORE DELETE ON `0_hrm_pay_rule_translation_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_translation_bindings';
+CREATE TRIGGER `0_pr6_tol_u` BEFORE UPDATE ON `0_hrm_pay_rule_tolerance_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_tolerance_policies';
+CREATE TRIGGER `0_pr6_tol_d` BEFORE DELETE ON `0_hrm_pay_rule_tolerance_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_tolerance_policies';
+CREATE TRIGGER `0_pr6_shrun_u` BEFORE UPDATE ON `0_hrm_pay_rule_shadow_runs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_shadow_runs';
+CREATE TRIGGER `0_pr6_shrun_d` BEFORE DELETE ON `0_hrm_pay_rule_shadow_runs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_shadow_runs';
+CREATE TRIGGER `0_pr6_shcmp_u` BEFORE UPDATE ON `0_hrm_pay_rule_shadow_comparisons` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_shadow_comparisons';
+CREATE TRIGGER `0_pr6_shcmp_d` BEFORE DELETE ON `0_hrm_pay_rule_shadow_comparisons` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_shadow_comparisons';
+CREATE TRIGGER `0_pr6_elig_u` BEFORE UPDATE ON `0_hrm_pay_rule_activation_eligibility` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_activation_eligibility';
+CREATE TRIGGER `0_pr6_elig_d` BEFORE DELETE ON `0_hrm_pay_rule_activation_eligibility` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_activation_eligibility';
+CREATE TRIGGER `0_pr6_cmd_u` BEFORE UPDATE ON `0_hrm_pay_rule_activation_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_activation_commands';
+CREATE TRIGGER `0_pr6_cmd_d` BEFORE DELETE ON `0_hrm_pay_rule_activation_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_activation_commands';

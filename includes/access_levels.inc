@@ -439,6 +439,12 @@ $security_areas =array(
 	'SA_HRM_DECLARE_PAY_RULE_EMERGENCY' => array(SS_HRM|65, _('Declare restricted emergency PAY-RULE version changes')), // no automatic role grant
 	'SA_HRM_MANAGE_PAY_RULE_JURISDICTION' => array(SS_HRM|66, _('Manage governed PAY-RULE jurisdiction facts and applicability metadata')), // no automatic role grant
 	'SA_HRM_RESOLVE_PAY_RULE_JURISDICTION' => array(SS_HRM|67, _('Execute governed PAY-RULE jurisdiction and precedence resolution')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_RULE_MIGRATION' => array(SS_HRM|68, _('Inventory and custody PAY-RULE legacy migration candidates')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_RULE_MIGRATION' => array(SS_HRM|69, _('Independently review PAY-RULE migration exceptions and bindings')), // no automatic role grant
+	'SA_HRM_RUN_PAY_RULE_SHADOW' => array(SS_HRM|70, _('Execute non-authoritative PAY-RULE shadow comparisons')), // no automatic role grant
+	'SA_HRM_APPROVE_PAY_RULE_ACTIVATION' => array(SS_HRM|71, _('Approve evidence-complete PAY-RULE activation eligibility')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_RULE_ACTIVATION' => array(SS_HRM|72, _('Execute approved scoped PAY-RULE activation commands')), // no automatic role grant
+	'SA_HRM_FAILBACK_PAY_RULE' => array(SS_HRM|73, _('Execute authorized PAY-RULE failback to the legacy rule path')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -457,6 +463,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_RULE_ARTIFACT' => array(SS_HRM_A|14, _('View PAY-RULE artifact/import custody evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_RULE_LIFECYCLE' => array(SS_HRM_A|15, _('View PAY-RULE lifecycle and regulatory evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_RULE_RESOLUTION' => array(SS_HRM_A|16, _('View PAY-RULE jurisdiction and resolution evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_RULE_MIGRATION' => array(SS_HRM_A|17, _('View PAY-RULE migration, shadow and cutover evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

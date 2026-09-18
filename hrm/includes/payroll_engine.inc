@@ -31,11 +31,12 @@ include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consumer_db.inc');
+include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.406');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.408');
 
 /**
  * Payroll Formula Engine.
@@ -71,6 +72,9 @@ class payroll_formula_engine {
     function set_variable($name, $value) {
         $this->variables[strtoupper(trim($name))] = (float)$value;
     }
+
+    /** Return a copy of the current numeric context for governed-rule comparison/cutover. */
+    function context_snapshot() { return $this->variables; }
 
     /**
      * Evaluate a formula string.
@@ -3582,7 +3586,22 @@ function _payroll_calculate_component_amount($component, $formula, $basic, $doc)
             break;
         case HRM_AMTTYPE_FORMULA:
             $formula_text = empty($component['formula']) ? '' : $component['formula'];
-            $amount = $formula->evaluate($formula_text);
+            $amount = null;
+            if (function_exists('hrm_pay_rule_006_period_scope') && function_exists('hrm_pay_rule_006_evaluate_production_formula') && !empty($doc->payroll_period_id)) {
+                $scope = hrm_pay_rule_006_period_scope($doc->payroll_period_id);
+                if (is_array($scope)) {
+                    $mode = null; $cutover_error = null;
+                    $candidate = hrm_pay_rule_006_evaluate_production_formula(
+                        $scope['company_id'], $scope['department_id'], $formula_text, $scope['to_date'],
+                        $formula->context_snapshot(), $scope['from_date'], $scope['to_date'], $formula, $mode, $cutover_error
+                    );
+                    if ($candidate === false && $cutover_error !== null)
+                        throw new RuntimeException('PAY-RULE-006 governed formula cutover failed closed: '.$cutover_error);
+                    $amount = $candidate;
+                }
+            }
+            if ($amount === null)
+                $amount = $formula->evaluate($formula_text);
             break;
         case HRM_AMTTYPE_ATTENDANCE:
             $working = max((float)$doc->working_days, 1.0);
