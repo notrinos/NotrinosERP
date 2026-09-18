@@ -9393,3 +9393,27 @@ CREATE TRIGGER `0_pc3_eligv_u` BEFORE UPDATE ON `0_hrm_pay_eligibility_versions`
 CREATE TRIGGER `0_pc3_eligv_d` BEFORE DELETE ON `0_hrm_pay_eligibility_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_eligibility_versions';
 CREATE TRIGGER `0_pc3_apin_u` BEFORE UPDATE ON `0_hrm_payroll_approved_inputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_payroll_approved_inputs';
 CREATE TRIGGER `0_pc3_apin_d` BEFORE DELETE ON `0_hrm_payroll_approved_inputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_payroll_approved_inputs';
+
+-- PAY-CORE-003 legacy mapping-review custody (1.0.551); zero seeded review rows --
+CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_reviews` (
+  `mapping_review_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source_kind` varchar(32) NOT NULL,
+  `source_row_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `review_status` varchar(24) NOT NULL,
+  `ambiguity_codes` varchar(1024) NOT NULL,
+  `element_code_resolution` varchar(64) DEFAULT NULL,
+  `element_version_resolution` varchar(96) DEFAULT NULL,
+  `eligibility_resolution` varchar(96) DEFAULT NULL,
+  `input_resolution` varchar(96) DEFAULT NULL,
+  `provenance_resolution` varchar(96) DEFAULT NULL,
+  `reviewed_by` int unsigned DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  `review_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_review_id`),
+  UNIQUE KEY `uq_pc3m_review_sha` (`review_sha256`),
+  KEY `idx_pc3m_source` (`source_kind`,`source_row_id`,`review_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc3m_lsmr_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies update';
+CREATE TRIGGER `0_pc3m_lsmr_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies delete';

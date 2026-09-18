@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.549',
-        'active_legacy_payroll_contract'=>'1.0.413',
+        'active_database_version'=>'1.0.552',
+        'active_legacy_payroll_contract'=>'1.0.414',
         'next_backlog_item'=>'PAY-CORE-003',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CORE-003 foundation is source-complete through migration head 1.0.549 under legacy payroll source custody 1.0.413. Stable element identity, immutable version/input/eligibility custody and approved-input provenance tables are zero-seed and non-authoritative; legacy pay_elements, salary_structure, employee_salary and calculate_employee_payslip_legacy_v1 remain authoritative. Local WAMP/MariaDB/browser acceptance remains mandatory.',
+        'next_slice_scope'=>'PAY-CORE-003 legacy mapping review and bounded inventory are source-complete through migration head 1.0.552 under legacy payroll source custody 1.0.414. Mapping review is manual-only, custody is zero-seed/immutable, inventory is bounded/read-only/value-free, and legacy pay_elements, salary_structure, employee_salary and calculate_employee_payslip_legacy_v1 remain authoritative. No conversion writer or runtime consumer is activated; local WAMP/MariaDB/browser acceptance remains mandatory.',
         'edges'=>array(
+            'pay_core_003_legacy_source_inventory'=>array('previous'=>'1.0.551','version'=>'1.0.552',
+                'file'=>'sql/upgrade_pay_core_003_legacy_source_inventory.php'),
+            'pay_core_003_legacy_mapping_custody'=>array('previous'=>'1.0.550','version'=>'1.0.551',
+                'file'=>'sql/upgrade_pay_core_003_legacy_mapping_custody.php'),
+            'pay_core_003_legacy_mapping_review'=>array('previous'=>'1.0.549','version'=>'1.0.550',
+                'file'=>'sql/upgrade_pay_core_003_legacy_mapping_review.php'),
             'pay_core_003_custody_foundation'=>array('previous'=>'1.0.548','version'=>'1.0.549',
                 'file'=>'sql/upgrade_pay_core_003_custody_foundation.php'),
             'pay_core_003_contract_foundation'=>array('previous'=>'1.0.547','version'=>'1.0.548',
