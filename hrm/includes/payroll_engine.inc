@@ -36,7 +36,7 @@ include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.408');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.410');
 
 /**
  * Payroll Formula Engine.

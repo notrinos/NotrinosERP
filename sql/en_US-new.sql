@@ -9042,3 +9042,131 @@ CREATE TRIGGER `0_pr6_elig_u` BEFORE UPDATE ON `0_hrm_pay_rule_activation_eligib
 CREATE TRIGGER `0_pr6_elig_d` BEFORE DELETE ON `0_hrm_pay_rule_activation_eligibility` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_activation_eligibility';
 CREATE TRIGGER `0_pr6_cmd_u` BEFORE UPDATE ON `0_hrm_pay_rule_activation_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_activation_commands';
 CREATE TRIGGER `0_pr6_cmd_d` BEFORE DELETE ON `0_hrm_pay_rule_activation_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_activation_commands';
+
+CREATE TABLE `0_hrm_payroll_calendars` (
+  `calendar_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `calendar_code` varchar(64) NOT NULL,
+  `calendar_name` varchar(160) NOT NULL,
+  `legal_entity_id` bigint unsigned DEFAULT NULL,
+  `calendar_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`calendar_id`), UNIQUE KEY `uq_pc2_calendar_code` (`calendar_code`), UNIQUE KEY `uq_pc2_calendar_sha` (`calendar_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_calendar_versions` (
+  `calendar_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `calendar_id` bigint unsigned NOT NULL,
+  `version_no` int unsigned NOT NULL,
+  `frequency_token` varchar(32) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `timezone_name` varchar(64) NOT NULL,
+  `version_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`calendar_version_id`), UNIQUE KEY `uq_pc2_calendar_version` (`calendar_id`,`version_no`), UNIQUE KEY `uq_pc2_calver_sha` (`version_sha256`),
+  CONSTRAINT `fk_pc2_calver_calendar` FOREIGN KEY (`calendar_id`) REFERENCES `0_hrm_payroll_calendars` (`calendar_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_calendar_periods` (
+  `calendar_period_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `calendar_version_id` bigint unsigned NOT NULL,
+  `period_key` varchar(80) NOT NULL,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `cutoff_date` date NOT NULL,
+  `pay_date` date NOT NULL,
+  `post_date` date NOT NULL,
+  `file_date` date NOT NULL,
+  `run_type` varchar(24) NOT NULL,
+  `period_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`calendar_period_id`), UNIQUE KEY `uq_pc2_period_key` (`calendar_version_id`,`period_key`), UNIQUE KEY `uq_pc2_period_sha` (`period_sha256`),
+  CONSTRAINT `fk_pc2_period_calver` FOREIGN KEY (`calendar_version_id`) REFERENCES `0_hrm_payroll_calendar_versions` (`calendar_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_groups` (
+  `payroll_group_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `group_code` varchar(64) NOT NULL,
+  `group_name` varchar(160) NOT NULL,
+  `legal_entity_id` bigint unsigned DEFAULT NULL,
+  `group_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payroll_group_id`), UNIQUE KEY `uq_pc2_group_code` (`group_code`), UNIQUE KEY `uq_pc2_group_sha` (`group_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_group_versions` (
+  `group_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `version_no` int unsigned NOT NULL,
+  `calendar_version_id` bigint unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `version_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`group_version_id`), UNIQUE KEY `uq_pc2_group_version` (`payroll_group_id`,`version_no`), UNIQUE KEY `uq_pc2_grpver_sha` (`version_sha256`),
+  CONSTRAINT `fk_pc2_grpver_group` FOREIGN KEY (`payroll_group_id`) REFERENCES `0_hrm_payroll_groups` (`payroll_group_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc2_grpver_calver` FOREIGN KEY (`calendar_version_id`) REFERENCES `0_hrm_payroll_calendar_versions` (`calendar_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_relationships` (
+  `payroll_relationship_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned DEFAULT NULL,
+  `legal_entity_id` bigint unsigned DEFAULT NULL,
+  `relationship_key` varchar(96) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `relationship_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payroll_relationship_id`), UNIQUE KEY `uq_pc2_relationship_key` (`relationship_key`), UNIQUE KEY `uq_pc2_relationship_sha` (`relationship_sha256`), KEY `idx_pc2_relationship_worker` (`worker_id`,`effective_from`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_relationship_members` (
+  `relationship_member_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `member_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`relationship_member_id`), UNIQUE KEY `uq_pc2_relationship_member` (`payroll_relationship_id`,`assignment_id`,`effective_from`), UNIQUE KEY `uq_pc2_relmem_sha` (`member_sha256`),
+  CONSTRAINT `fk_pc2_relmem_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_group_enrollments` (
+  `enrollment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `group_version_id` bigint unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `enrollment_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`enrollment_id`), UNIQUE KEY `uq_pc2_enrollment` (`payroll_relationship_id`,`group_version_id`,`effective_from`), UNIQUE KEY `uq_pc2_enrollment_sha` (`enrollment_sha256`),
+  CONSTRAINT `fk_pc2_enr_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc2_enr_group_version` FOREIGN KEY (`group_version_id`) REFERENCES `0_hrm_payroll_group_versions` (`group_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc2_cal_u` BEFORE UPDATE ON `0_hrm_payroll_calendars` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_calendars';
+CREATE TRIGGER `0_pc2_cal_d` BEFORE DELETE ON `0_hrm_payroll_calendars` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_calendars';
+CREATE TRIGGER `0_pc2_calv_u` BEFORE UPDATE ON `0_hrm_payroll_calendar_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_calendar_versions';
+CREATE TRIGGER `0_pc2_calv_d` BEFORE DELETE ON `0_hrm_payroll_calendar_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_calendar_versions';
+CREATE TRIGGER `0_pc2_per_u` BEFORE UPDATE ON `0_hrm_payroll_calendar_periods` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_calendar_periods';
+CREATE TRIGGER `0_pc2_per_d` BEFORE DELETE ON `0_hrm_payroll_calendar_periods` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_calendar_periods';
+CREATE TRIGGER `0_pc2_grp_u` BEFORE UPDATE ON `0_hrm_payroll_groups` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_groups';
+CREATE TRIGGER `0_pc2_grp_d` BEFORE DELETE ON `0_hrm_payroll_groups` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_groups';
+CREATE TRIGGER `0_pc2_grpv_u` BEFORE UPDATE ON `0_hrm_payroll_group_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_group_versions';
+CREATE TRIGGER `0_pc2_grpv_d` BEFORE DELETE ON `0_hrm_payroll_group_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_group_versions';
+CREATE TRIGGER `0_pc2_rel_u` BEFORE UPDATE ON `0_hrm_payroll_relationships` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationships';
+CREATE TRIGGER `0_pc2_rel_d` BEFORE DELETE ON `0_hrm_payroll_relationships` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationships';
+CREATE TRIGGER `0_pc2_relm_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationship_members';
+CREATE TRIGGER `0_pc2_relm_d` BEFORE DELETE ON `0_hrm_payroll_relationship_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_members';
+CREATE TRIGGER `0_pc2_enr_u` BEFORE UPDATE ON `0_hrm_payroll_group_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_group_enrollments';
+CREATE TRIGGER `0_pc2_enr_d` BEFORE DELETE ON `0_hrm_payroll_group_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_group_enrollments';

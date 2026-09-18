@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.523',
-        'active_legacy_payroll_contract'=>'1.0.408',
-        'next_backlog_item'=>'PAY-RULE-007 payroll runtime/posting modernization dependency review',
+        'active_database_version'=>'1.0.526',
+        'active_legacy_payroll_contract'=>'1.0.410',
+        'next_backlog_item'=>'PAY-CORE-002 legacy period/calendar/group mapping review',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-RULE-006 source scope is complete through migration head 1.0.523 under legacy payroll source custody 1.0.408. Legacy formulas are fixed-source classified; unsupported/manual/prohibited behavior remains exception-custodied; governed bindings require published PAY-RULE-004 Rule Versions; shadow comparisons are non-authoritative; controlled production formula cutover is exact company+department scoped through immutable activation commands; explicit failback returns that formula scope to legacy evaluation. Payslip orchestration, posting, accounting, tax submission, banking and historical payroll remain under the legacy PAY-CORE path. Final local PAY-RULE-006 database/browser acceptance remains required before declaring full local acceptance.',
+        'next_slice_scope'=>'PAY-CORE-002 foundation is source-complete through migration head 1.0.526 under legacy payroll source custody 1.0.410. The 1.0.523->1.0.524 dependency review reconciles the orphan PAY-RULE-007 label to the canonical Phase 3 PAY-CORE-002 backlog row; 1.0.524->1.0.525 freezes a pure non-authoritative calendar/group/relationship contract; 1.0.525->1.0.526 installs eight zero-seed immutable InnoDB custody tables with sixteen UPDATE/DELETE denial triggers. Existing payroll_periods, calculate_employee_payslip_legacy_v1, posting, payment, accounting, tax and historical payroll remain authoritative. Mandatory local WAMP/MariaDB acceptance remains required at DB 1.0.526. The next strict dependency is a read-only legacy payroll_periods/calendar/group mapping review; no seed, conversion or runtime cutover is authorized.',
         'edges'=>array(
+            'pay_core_002_custody_foundation'=>array('previous'=>'1.0.525','version'=>'1.0.526',
+                'file'=>'sql/upgrade_pay_core_002_custody_foundation.php'),
+            'pay_core_002_contract_foundation'=>array('previous'=>'1.0.524','version'=>'1.0.525',
+                'file'=>'sql/upgrade_pay_core_002_contract_foundation.php'),
+            'pay_core_002_dependency_review'=>array('previous'=>'1.0.523','version'=>'1.0.524',
+                'file'=>'sql/upgrade_pay_core_002_dependency_review.php'),
             'pay_rule_006_completion'=>array('previous'=>'1.0.522','version'=>'1.0.523',
                 'file'=>'sql/upgrade_pay_rule_006_completion.php'),
             'pay_rule_006_cumulative_hardening'=>array('previous'=>'1.0.521','version'=>'1.0.522',
