@@ -9643,3 +9643,113 @@ CREATE TRIGGER `0_pc2_rma_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_migrat
 CREATE TRIGGER `0_pc2_rma_d` BEFORE DELETE ON `0_hrm_payroll_relationship_migration_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_migration_approvals';
 CREATE TRIGGER `0_pc2_rmx_u` BEFORE UPDATE ON `0_hrm_payroll_relationship_migration_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_relationship_migration_receipts';
 CREATE TRIGGER `0_pc2_rmx_d` BEFORE DELETE ON `0_hrm_payroll_relationship_migration_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_relationship_migration_receipts';
+
+-- PAY-CORE-003 immutable foundation custody (1.0.549); zero seeded business rows --
+CREATE TABLE `0_hrm_pay_elements` (
+  `pay_element_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `element_code` varchar(64) NOT NULL,
+  `identity_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`pay_element_id`),
+  UNIQUE KEY `uq_pc3_element_code` (`element_code`),
+  UNIQUE KEY `uq_pc3_element_sha` (`identity_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_element_versions` (
+  `element_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pay_element_id` bigint unsigned NOT NULL,
+  `version_no` int unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `element_type` varchar(32) NOT NULL,
+  `calculation_mode` varchar(32) NOT NULL,
+  `rule_artifact_sha256` char(64) DEFAULT NULL,
+  `version_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`element_version_id`),
+  UNIQUE KEY `uq_pc3_element_version` (`pay_element_id`,`version_no`),
+  UNIQUE KEY `uq_pc3_element_version_sha` (`version_sha256`),
+  KEY `idx_pc3_element_effective` (`pay_element_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_pc3_elemv_element` FOREIGN KEY (`pay_element_id`) REFERENCES `0_hrm_pay_elements` (`pay_element_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_input_definitions` (
+  `input_definition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `element_version_id` bigint unsigned NOT NULL,
+  `input_code` varchar(64) NOT NULL,
+  `value_type` varchar(16) NOT NULL,
+  `unit_token` varchar(32) NOT NULL,
+  `required_flag` tinyint unsigned NOT NULL DEFAULT 0,
+  `definition_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`input_definition_id`),
+  UNIQUE KEY `uq_pc3_input_definition` (`element_version_id`,`input_code`),
+  UNIQUE KEY `uq_pc3_input_definition_sha` (`definition_sha256`),
+  UNIQUE KEY `uq_pc3_indef_binding` (`input_definition_id`,`element_version_id`,`value_type`),
+  CONSTRAINT `fk_pc3_indef_element_version` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_eligibility_versions` (
+  `eligibility_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `element_version_id` bigint unsigned NOT NULL,
+  `version_no` int unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `eligibility_kind` varchar(32) NOT NULL,
+  `rule_artifact_sha256` char(64) DEFAULT NULL,
+  `eligibility_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`eligibility_version_id`),
+  UNIQUE KEY `uq_pc3_eligibility_version` (`element_version_id`,`version_no`),
+  UNIQUE KEY `uq_pc3_eligibility_sha` (`eligibility_sha256`),
+  KEY `idx_pc3_eligibility_effective` (`element_version_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_pc3_eligv_element_version` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_payroll_approved_inputs` (
+  `approved_input_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `element_version_id` bigint unsigned NOT NULL,
+  `input_definition_id` bigint unsigned NOT NULL,
+  `effective_date` date NOT NULL,
+  `value_type` varchar(16) NOT NULL,
+  `value_decimal` decimal(24,8) DEFAULT NULL,
+  `value_date` date DEFAULT NULL,
+  `value_code` varchar(128) DEFAULT NULL,
+  `value_boolean` tinyint unsigned DEFAULT NULL,
+  `source_kind` varchar(32) NOT NULL,
+  `source_event_id` varchar(128) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `approval_evidence_sha256` char(64) NOT NULL,
+  `approved_by` int unsigned NOT NULL,
+  `approved_at` datetime NOT NULL,
+  `override_reason` varchar(255) DEFAULT NULL,
+  `supersedes_input_id` bigint unsigned DEFAULT NULL,
+  `input_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approved_input_id`),
+  UNIQUE KEY `uq_pc3_input_sha` (`input_sha256`),
+  UNIQUE KEY `uq_pc3_source_event` (`input_definition_id`,`source_kind`,`source_event_id`),
+  KEY `idx_pc3_input_relationship` (`payroll_relationship_id`,`effective_date`),
+  KEY `idx_pc3_input_assignment` (`assignment_id`,`effective_date`),
+  KEY `idx_pc3_input_element_version` (`element_version_id`,`effective_date`),
+  CONSTRAINT `fk_pc3_input_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc3_input_definition_binding` FOREIGN KEY (`input_definition_id`,`element_version_id`,`value_type`) REFERENCES `0_hrm_pay_input_definitions` (`input_definition_id`,`element_version_id`,`value_type`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc3_input_supersedes` FOREIGN KEY (`supersedes_input_id`) REFERENCES `0_hrm_payroll_approved_inputs` (`approved_input_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc3_elem_u` BEFORE UPDATE ON `0_hrm_pay_elements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_elements';
+CREATE TRIGGER `0_pc3_elem_d` BEFORE DELETE ON `0_hrm_pay_elements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_elements';
+CREATE TRIGGER `0_pc3_elemv_u` BEFORE UPDATE ON `0_hrm_pay_element_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_element_versions';
+CREATE TRIGGER `0_pc3_elemv_d` BEFORE DELETE ON `0_hrm_pay_element_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_element_versions';
+CREATE TRIGGER `0_pc3_indef_u` BEFORE UPDATE ON `0_hrm_pay_input_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_input_definitions';
+CREATE TRIGGER `0_pc3_indef_d` BEFORE DELETE ON `0_hrm_pay_input_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_input_definitions';
+CREATE TRIGGER `0_pc3_eligv_u` BEFORE UPDATE ON `0_hrm_pay_eligibility_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_eligibility_versions';
+CREATE TRIGGER `0_pc3_eligv_d` BEFORE DELETE ON `0_hrm_pay_eligibility_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_eligibility_versions';
+CREATE TRIGGER `0_pc3_apin_u` BEFORE UPDATE ON `0_hrm_payroll_approved_inputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_payroll_approved_inputs';
+CREATE TRIGGER `0_pc3_apin_d` BEFORE DELETE ON `0_hrm_payroll_approved_inputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_payroll_approved_inputs';

@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.546',
-        'active_legacy_payroll_contract'=>'1.0.412',
+        'active_database_version'=>'1.0.549',
+        'active_legacy_payroll_contract'=>'1.0.413',
         'next_backlog_item'=>'PAY-CORE-003',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CORE-002 implementation is complete through migration head 1.0.546 under legacy payroll source custody 1.0.412. Legacy payroll_periods and calculate_employee_payslip_legacy_v1 remain authoritative; no production calculation/posting/payment/accounting cutover is activated. Final local WAMP/MariaDB/browser acceptance remains mandatory.',
+        'next_slice_scope'=>'PAY-CORE-003 foundation is source-complete through migration head 1.0.549 under legacy payroll source custody 1.0.413. Stable element identity, immutable version/input/eligibility custody and approved-input provenance tables are zero-seed and non-authoritative; legacy pay_elements, salary_structure, employee_salary and calculate_employee_payslip_legacy_v1 remain authoritative. Local WAMP/MariaDB/browser acceptance remains mandatory.',
         'edges'=>array(
+            'pay_core_003_custody_foundation'=>array('previous'=>'1.0.548','version'=>'1.0.549',
+                'file'=>'sql/upgrade_pay_core_003_custody_foundation.php'),
+            'pay_core_003_contract_foundation'=>array('previous'=>'1.0.547','version'=>'1.0.548',
+                'file'=>'sql/upgrade_pay_core_003_contract_foundation.php'),
+            'pay_core_003_dependency_review'=>array('previous'=>'1.0.546','version'=>'1.0.547',
+                'file'=>'sql/upgrade_pay_core_003_dependency_review.php'),
             'pay_core_002_completion'=>array('previous'=>'1.0.545','version'=>'1.0.546',
                 'file'=>'sql/upgrade_pay_core_002_completion.php'),
             'pay_core_002_cumulative_acceptance'=>array('previous'=>'1.0.544','version'=>'1.0.545',
