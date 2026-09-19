@@ -10079,3 +10079,176 @@ CREATE TRIGGER `0_pc4_recv_u` BEFORE UPDATE ON `0_hrm_pay_core_004_recovery_evid
 CREATE TRIGGER `0_pc4_recv_d` BEFORE DELETE ON `0_hrm_pay_core_004_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_recovery_evidence';
 CREATE TRIGGER `0_pc4_arch_u` BEFORE UPDATE ON `0_hrm_pay_core_004_archive_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_archive_evidence';
 CREATE TRIGGER `0_pc4_arch_d` BEFORE DELETE ON `0_hrm_pay_core_004_archive_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_archive_evidence';
+
+-- PAY-CORE-006 balance and accumulator ledger (1.0.599-1.0.613); zero seeded business rows --
+CREATE TABLE `0_hrm_pay_balance_definitions` (
+  `balance_definition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `balance_code` varchar(64) NOT NULL,
+  `version_no` int unsigned NOT NULL,
+  `unit_code` varchar(16) NOT NULL,
+  `currency_code` char(3) DEFAULT NULL,
+  `dimension_mask` varchar(255) NOT NULL,
+  `accumulator_mask` varchar(128) NOT NULL,
+  `reset_policy` varchar(24) NOT NULL,
+  `reset_month` tinyint unsigned DEFAULT NULL,
+  `reset_day` tinyint unsigned DEFAULT NULL,
+  `expiry_policy` varchar(24) NOT NULL,
+  `expiry_date` date DEFAULT NULL,
+  `expiry_days` int unsigned DEFAULT NULL,
+  `carry_forward_allowed` tinyint(1) NOT NULL DEFAULT 0,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `definition_sha256` char(64) NOT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'active',
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`balance_definition_id`),
+  UNIQUE KEY `uq_pc6_balance_version` (`balance_code`,`version_no`),
+  UNIQUE KEY `uq_pc6_balance_def_sha` (`definition_sha256`),
+  KEY `idx_pc6_balance_effective` (`balance_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_balance_movements` (
+  `movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `balance_definition_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `person_id` bigint unsigned DEFAULT NULL,
+  `worker_id` bigint unsigned DEFAULT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `calendar_period_id` bigint unsigned DEFAULT NULL,
+  `jurisdiction_code` varchar(64) DEFAULT NULL,
+  `leave_type_id` bigint unsigned DEFAULT NULL,
+  `loan_id` bigint unsigned DEFAULT NULL,
+  `source_system` varchar(32) NOT NULL,
+  `source_type` varchar(32) NOT NULL,
+  `source_event_key` varchar(128) NOT NULL,
+  `source_event_sha256` char(64) NOT NULL,
+  `movement_kind` varchar(24) NOT NULL,
+  `effective_date` date NOT NULL,
+  `recognition_date` date NOT NULL,
+  `currency_code` char(3) DEFAULT NULL,
+  `unit_code` varchar(16) NOT NULL,
+  `amount` decimal(30,8) NOT NULL,
+  `definition_sha256` char(64) NOT NULL,
+  `predecessor_movement_id` bigint unsigned DEFAULT NULL,
+  `lineage_sha256` char(64) DEFAULT NULL,
+  `movement_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`movement_id`),
+  UNIQUE KEY `uq_pc6_movement_sha` (`movement_sha256`),
+  UNIQUE KEY `uq_pc6_source_event` (`balance_definition_id`,`payroll_relationship_id`,`source_system`,`source_event_key`),
+  KEY `idx_pc6_movement_scope_date` (`balance_definition_id`,`payroll_relationship_id`,`effective_date`,`recognition_date`),
+  KEY `idx_pc6_movement_predecessor` (`predecessor_movement_id`),
+  CONSTRAINT `fk_pc6_movement_definition` FOREIGN KEY (`balance_definition_id`) REFERENCES `0_hrm_pay_balance_definitions` (`balance_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc6_movement_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc6_movement_period` FOREIGN KEY (`calendar_period_id`) REFERENCES `0_hrm_payroll_calendar_periods` (`calendar_period_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc6_movement_predecessor` FOREIGN KEY (`predecessor_movement_id`) REFERENCES `0_hrm_pay_balance_movements` (`movement_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_balance_opening_inventory` (
+  `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `balance_definition_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `person_id` bigint unsigned DEFAULT NULL,
+  `worker_id` bigint unsigned DEFAULT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `calendar_period_id` bigint unsigned DEFAULT NULL,
+  `jurisdiction_code` varchar(64) DEFAULT NULL,
+  `leave_type_id` bigint unsigned DEFAULT NULL,
+  `loan_id` bigint unsigned DEFAULT NULL,
+  `legacy_source_type` varchar(32) NOT NULL,
+  `legacy_source_id` varchar(128) NOT NULL,
+  `legacy_source_sha256` char(64) NOT NULL,
+  `as_of_date` date NOT NULL,
+  `currency_code` char(3) DEFAULT NULL,
+  `unit_code` varchar(16) NOT NULL,
+  `amount` decimal(30,8) NOT NULL,
+  `provenance_state` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `inventory_sha256` char(64) NOT NULL,
+  `inventoried_by` int unsigned NOT NULL,
+  `reviewed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`opening_inventory_id`),
+  UNIQUE KEY `uq_pc6_opening_sha` (`inventory_sha256`),
+  UNIQUE KEY `uq_pc6_opening_source` (`balance_definition_id`,`payroll_relationship_id`,`legacy_source_type`,`legacy_source_id`,`legacy_source_sha256`),
+  CONSTRAINT `fk_pc6_opening_definition` FOREIGN KEY (`balance_definition_id`) REFERENCES `0_hrm_pay_balance_definitions` (`balance_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc6_opening_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_balance_snapshots` (
+  `balance_snapshot_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `balance_definition_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `person_id` bigint unsigned DEFAULT NULL,
+  `worker_id` bigint unsigned DEFAULT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `calendar_period_id` bigint unsigned DEFAULT NULL,
+  `jurisdiction_code` varchar(64) DEFAULT NULL,
+  `leave_type_id` bigint unsigned DEFAULT NULL,
+  `loan_id` bigint unsigned DEFAULT NULL,
+  `as_of_date` date NOT NULL,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `ptd_amount` decimal(30,8) NOT NULL,
+  `mtd_amount` decimal(30,8) NOT NULL,
+  `qtd_amount` decimal(30,8) NOT NULL,
+  `ytd_amount` decimal(30,8) NOT NULL,
+  `lifetime_amount` decimal(30,8) NOT NULL,
+  `movement_set_sha256` char(64) NOT NULL,
+  `scope_sha256` char(64) NOT NULL,
+  `definition_sha256` char(64) NOT NULL,
+  `snapshot_sha256` char(64) NOT NULL,
+  `built_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`balance_snapshot_id`),
+  UNIQUE KEY `uq_pc6_snapshot_sha` (`snapshot_sha256`),
+  UNIQUE KEY `uq_pc6_snapshot_scope` (`balance_definition_id`,`scope_sha256`,`as_of_date`,`movement_set_sha256`),
+  CONSTRAINT `fk_pc6_snapshot_definition` FOREIGN KEY (`balance_definition_id`) REFERENCES `0_hrm_pay_balance_definitions` (`balance_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc6_snapshot_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_balance_reconciliations` (
+  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `balance_snapshot_id` bigint unsigned NOT NULL,
+  `accumulator_kind` varchar(16) NOT NULL,
+  `source_type` varchar(32) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `expected_amount` decimal(30,8) NOT NULL,
+  `actual_amount` decimal(30,8) NOT NULL,
+  `difference_amount` decimal(30,8) NOT NULL,
+  `reconciliation_state` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `reconciliation_sha256` char(64) NOT NULL,
+  `reviewed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reconciliation_id`),
+  UNIQUE KEY `uq_pc6_reconciliation_sha` (`reconciliation_sha256`),
+  CONSTRAINT `fk_pc6_recon_snapshot` FOREIGN KEY (`balance_snapshot_id`) REFERENCES `0_hrm_pay_balance_snapshots` (`balance_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_balance_recovery_evidence` (
+  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `reconciliation_id` bigint unsigned NOT NULL,
+  `action_token` varchar(64) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `recovery_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recovery_evidence_id`),
+  UNIQUE KEY `uq_pc6_recovery_sha` (`recovery_sha256`),
+  CONSTRAINT `fk_pc6_recovery_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_balance_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc6_def_u` BEFORE UPDATE ON `0_hrm_pay_balance_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_definitions';
+CREATE TRIGGER `0_pc6_def_d` BEFORE DELETE ON `0_hrm_pay_balance_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_definitions';
+CREATE TRIGGER `0_pc6_mov_u` BEFORE UPDATE ON `0_hrm_pay_balance_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_movements';
+CREATE TRIGGER `0_pc6_mov_d` BEFORE DELETE ON `0_hrm_pay_balance_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_movements';
+CREATE TRIGGER `0_pc6_open_u` BEFORE UPDATE ON `0_hrm_pay_balance_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_opening_inventory';
+CREATE TRIGGER `0_pc6_open_d` BEFORE DELETE ON `0_hrm_pay_balance_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_opening_inventory';
+CREATE TRIGGER `0_pc6_snap_u` BEFORE UPDATE ON `0_hrm_pay_balance_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_snapshots';
+CREATE TRIGGER `0_pc6_snap_d` BEFORE DELETE ON `0_hrm_pay_balance_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_snapshots';
+CREATE TRIGGER `0_pc6_recon_u` BEFORE UPDATE ON `0_hrm_pay_balance_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_reconciliations';
+CREATE TRIGGER `0_pc6_recon_d` BEFORE DELETE ON `0_hrm_pay_balance_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_reconciliations';
+CREATE TRIGGER `0_pc6_recv_u` BEFORE UPDATE ON `0_hrm_pay_balance_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_recovery_evidence';
+CREATE TRIGGER `0_pc6_recv_d` BEFORE DELETE ON `0_hrm_pay_balance_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_recovery_evidence';

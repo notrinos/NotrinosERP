@@ -456,6 +456,10 @@ $security_areas =array(
 	'SA_HRM_RECOVER_PAY_CORE_RESULT' => array(SS_HRM|82, _('Record governed PAY-CORE reconciliation and recovery evidence')), // no automatic role grant
 	'SA_HRM_ARCHIVE_PAY_CORE_RESULT' => array(SS_HRM|83, _('Record non-destructive PAY-CORE archive and restore evidence')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CORE_CALC' => array(SS_HRM|84, _('Execute deterministic PAY-CORE calculation plans against sealed snapshots')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CORE_BALANCE' => array(SS_HRM|85, _('Define governed PAY-CORE balance and accumulator definitions')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CORE_BALANCE' => array(SS_HRM|86, _('Independently review PAY-CORE balance opening and reconciliation evidence')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_BALANCE' => array(SS_HRM|87, _('Append governed PAY-CORE balance movements and opening conversions')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE_BALANCE' => array(SS_HRM|88, _('View scoped governed PAY-CORE balance projections')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
