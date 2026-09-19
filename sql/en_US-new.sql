@@ -9892,3 +9892,271 @@ CREATE TRIGGER `0_pc6_recon_u` BEFORE UPDATE ON `0_hrm_pay_balance_reconciliatio
 CREATE TRIGGER `0_pc6_recon_d` BEFORE DELETE ON `0_hrm_pay_balance_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_reconciliations';
 CREATE TRIGGER `0_pc6_recv_u` BEFORE UPDATE ON `0_hrm_pay_balance_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_recovery_evidence';
 CREATE TRIGGER `0_pc6_recv_d` BEFORE DELETE ON `0_hrm_pay_balance_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_recovery_evidence';
+
+-- PAY-CORE-007 retro/correction append-only custody --
+CREATE TABLE `0_hrm_pay_retro_events` (
+  `retro_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `worker_id` bigint unsigned DEFAULT NULL,
+  `person_id` bigint unsigned DEFAULT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `source_family` varchar(64) NOT NULL,
+  `source_system` varchar(64) NOT NULL,
+  `source_type` varchar(64) NOT NULL,
+  `source_key` varchar(160) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `event_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`retro_event_id`),
+  UNIQUE KEY `uq_pc7_event_sha` (`event_sha256`),
+  UNIQUE KEY `uq_pc7_event_source` (`payroll_relationship_id`,`source_family`,`source_system`,`source_key`),
+  KEY `idx_pc7_event_effective` (`payroll_relationship_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_pc7_event_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_affected_results` (
+  `affected_result_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `retro_event_id` bigint unsigned NOT NULL,
+  `original_result_id` bigint unsigned NOT NULL,
+  `original_result_sha256` char(64) NOT NULL,
+  `original_snapshot_sha256` char(64) NOT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `discovery_sha256` char(64) NOT NULL,
+  `discovered_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`affected_result_id`),
+  UNIQUE KEY `uq_pc7_affected_event_result` (`retro_event_id`,`original_result_id`),
+  UNIQUE KEY `uq_pc7_discovery_sha` (`discovery_sha256`),
+  CONSTRAINT `fk_pc7_affected_event` FOREIGN KEY (`retro_event_id`) REFERENCES `0_hrm_pay_retro_events` (`retro_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_affected_result` FOREIGN KEY (`original_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_contexts` (
+  `context_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `affected_result_id` bigint unsigned NOT NULL,
+  `original_result_id` bigint unsigned NOT NULL,
+  `original_result_sha256` char(64) NOT NULL,
+  `original_snapshot_sha256` char(64) NOT NULL,
+  `approved_inputs_sha256` char(64) NOT NULL,
+  `element_versions_sha256` char(64) NOT NULL,
+  `eligibility_sha256` char(64) NOT NULL,
+  `rule_artifacts_sha256` char(64) NOT NULL,
+  `jurisdiction_resolution_sha256` char(64) NOT NULL,
+  `source_events_sha256` char(64) NOT NULL,
+  `configuration_sha256` char(64) NOT NULL,
+  `recompute_snapshot_sha256` char(64) DEFAULT NULL,
+  `context_payload_json` longtext NOT NULL,
+  `provenance_state` varchar(16) NOT NULL,
+  `gap_codes_json` text NOT NULL,
+  `context_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`context_id`),
+  UNIQUE KEY `uq_pc7_context_sha` (`context_sha256`),
+  UNIQUE KEY `uq_pc7_context_affected` (`affected_result_id`,`context_sha256`),
+  CONSTRAINT `fk_pc7_context_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_context_result` FOREIGN KEY (`original_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_deltas` (
+  `delta_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `affected_result_id` bigint unsigned NOT NULL,
+  `context_id` bigint unsigned NOT NULL,
+  `delta_key` varchar(128) NOT NULL,
+  `element_version_id` bigint unsigned NOT NULL,
+  `line_kind` varchar(32) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `original_amount` decimal(30,8) NOT NULL,
+  `recomputed_amount` decimal(30,8) NOT NULL,
+  `delta_amount` decimal(30,8) NOT NULL,
+  `delta_sha256` char(64) NOT NULL,
+  `computed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`delta_id`),
+  UNIQUE KEY `uq_pc7_delta_sha` (`delta_sha256`),
+  UNIQUE KEY `uq_pc7_delta_context_key` (`context_id`,`delta_key`),
+  CONSTRAINT `fk_pc7_delta_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_delta_context` FOREIGN KEY (`context_id`) REFERENCES `0_hrm_pay_retro_contexts` (`context_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_arrears` (
+  `arrears_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `affected_result_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `currency` char(3) NOT NULL,
+  `direction` varchar(32) NOT NULL,
+  `originating_delta_set_sha256` char(64) NOT NULL,
+  `policy_evidence_sha256` char(64) NOT NULL,
+  `initial_amount` decimal(30,8) NOT NULL,
+  `arrears_sha256` char(64) NOT NULL,
+  `opened_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`arrears_id`),
+  UNIQUE KEY `uq_pc7_arrears_sha` (`arrears_sha256`),
+  KEY `idx_pc7_arrears_scope` (`payroll_relationship_id`,`currency`),
+  CONSTRAINT `fk_pc7_arrears_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_arrears_movements` (
+  `arrears_movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `arrears_id` bigint unsigned NOT NULL,
+  `movement_kind` varchar(32) NOT NULL,
+  `amount` decimal(30,8) NOT NULL,
+  `remaining_amount` decimal(30,8) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `policy_evidence_sha256` char(64) NOT NULL,
+  `movement_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`arrears_movement_id`),
+  UNIQUE KEY `uq_pc7_arrears_movement_sha` (`movement_sha256`),
+  CONSTRAINT `fk_pc7_arrears_movement` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_pay_retro_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_plans` (
+  `retro_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `affected_result_id` bigint unsigned NOT NULL,
+  `context_id` bigint unsigned NOT NULL,
+  `plan_type` varchar(16) NOT NULL,
+  `idempotency_key` varchar(128) NOT NULL,
+  `reason_code` varchar(64) NOT NULL,
+  `reason_evidence_sha256` char(64) NOT NULL,
+  `historical_plan_sha256` char(64) NOT NULL,
+  `delta_set_sha256` char(64) NOT NULL,
+  `bring_forward_date` date DEFAULT NULL,
+  `target_calendar_period_id` bigint unsigned DEFAULT NULL,
+  `predecessor_result_sha256` char(64) DEFAULT NULL,
+  `plan_sha256` char(64) NOT NULL,
+  `maker_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`retro_plan_id`),
+  UNIQUE KEY `uq_pc7_plan_sha` (`plan_sha256`),
+  UNIQUE KEY `uq_pc7_plan_idem` (`affected_result_id`,`idempotency_key`),
+  CONSTRAINT `fk_pc7_plan_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_plan_context` FOREIGN KEY (`context_id`) REFERENCES `0_hrm_pay_retro_contexts` (`context_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_approvals` (
+  `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `retro_plan_id` bigint unsigned NOT NULL,
+  `plan_sha256` char(64) NOT NULL,
+  `approval_evidence_sha256` char(64) NOT NULL,
+  `approval_sha256` char(64) NOT NULL,
+  `checker_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approval_id`),
+  UNIQUE KEY `uq_pc7_approval_plan` (`retro_plan_id`),
+  UNIQUE KEY `uq_pc7_approval_sha` (`approval_sha256`),
+  CONSTRAINT `fk_pc7_approval_plan` FOREIGN KEY (`retro_plan_id`) REFERENCES `0_hrm_pay_retro_plans` (`retro_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_executions` (
+  `execution_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `retro_plan_id` bigint unsigned NOT NULL,
+  `approval_id` bigint unsigned NOT NULL,
+  `original_result_id` bigint unsigned NOT NULL,
+  `successor_snapshot_id` bigint unsigned NOT NULL,
+  `successor_result_id` bigint unsigned NOT NULL,
+  `execution_kind` varchar(16) NOT NULL,
+  `successor_result_sha256` char(64) NOT NULL,
+  `delta_set_sha256` char(64) NOT NULL,
+  `balance_movement_set_sha256` char(64) DEFAULT NULL,
+  `core004_lineage_id` bigint unsigned NOT NULL,
+  `execution_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`execution_id`),
+  UNIQUE KEY `uq_pc7_execution_plan` (`retro_plan_id`),
+  UNIQUE KEY `uq_pc7_execution_successor` (`successor_result_id`),
+  UNIQUE KEY `uq_pc7_execution_sha` (`execution_sha256`),
+  UNIQUE KEY `uq_pc7_execution_original_kind` (`original_result_id`,`execution_kind`),
+  CONSTRAINT `fk_pc7_execution_plan` FOREIGN KEY (`retro_plan_id`) REFERENCES `0_hrm_pay_retro_plans` (`retro_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_execution_approval` FOREIGN KEY (`approval_id`) REFERENCES `0_hrm_pay_retro_approvals` (`approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_execution_original` FOREIGN KEY (`original_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_execution_successor` FOREIGN KEY (`successor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_execution_snapshot` FOREIGN KEY (`successor_snapshot_id`) REFERENCES `0_hrm_pay_core_004_snapshots` (`snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_execution_lineage` FOREIGN KEY (`core004_lineage_id`) REFERENCES `0_hrm_pay_core_004_correction_lineage` (`lineage_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_downstream_obligations` (
+  `obligation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `execution_id` bigint unsigned NOT NULL,
+  `domain` varchar(16) NOT NULL,
+  `obligation_kind` varchar(48) NOT NULL,
+  `original_evidence_sha256` char(64) NOT NULL,
+  `predecessor_obligation_id` bigint unsigned DEFAULT NULL,
+  `obligation_state` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `obligation_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`obligation_id`),
+  UNIQUE KEY `uq_pc7_obligation_sha` (`obligation_sha256`),
+  UNIQUE KEY `uq_pc7_obligation_exec_domain` (`execution_id`,`domain`,`obligation_kind`,`original_evidence_sha256`),
+  CONSTRAINT `fk_pc7_obligation_execution` FOREIGN KEY (`execution_id`) REFERENCES `0_hrm_pay_retro_executions` (`execution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc7_obligation_predecessor` FOREIGN KEY (`predecessor_obligation_id`) REFERENCES `0_hrm_pay_retro_downstream_obligations` (`obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_reconciliations` (
+  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `execution_id` bigint unsigned NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `expected_delta_amount` decimal(30,8) NOT NULL,
+  `actual_delta_amount` decimal(30,8) NOT NULL,
+  `difference_amount` decimal(30,8) NOT NULL,
+  `reconciliation_state` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `reconciliation_sha256` char(64) NOT NULL,
+  `reviewed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reconciliation_id`),
+  UNIQUE KEY `uq_pc7_reconciliation_sha` (`reconciliation_sha256`),
+  CONSTRAINT `fk_pc7_recon_execution` FOREIGN KEY (`execution_id`) REFERENCES `0_hrm_pay_retro_executions` (`execution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_retro_recovery_evidence` (
+  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `reconciliation_id` bigint unsigned NOT NULL,
+  `action_token` varchar(64) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `recovery_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recovery_evidence_id`),
+  UNIQUE KEY `uq_pc7_recovery_sha` (`recovery_sha256`),
+  CONSTRAINT `fk_pc7_recovery_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_retro_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc7_evt_u` BEFORE UPDATE ON `0_hrm_pay_retro_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_events';
+CREATE TRIGGER `0_pc7_evt_d` BEFORE DELETE ON `0_hrm_pay_retro_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_events';
+CREATE TRIGGER `0_pc7_aff_u` BEFORE UPDATE ON `0_hrm_pay_retro_affected_results` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_affected_results';
+CREATE TRIGGER `0_pc7_aff_d` BEFORE DELETE ON `0_hrm_pay_retro_affected_results` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_affected_results';
+CREATE TRIGGER `0_pc7_ctx_u` BEFORE UPDATE ON `0_hrm_pay_retro_contexts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_contexts';
+CREATE TRIGGER `0_pc7_ctx_d` BEFORE DELETE ON `0_hrm_pay_retro_contexts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_contexts';
+CREATE TRIGGER `0_pc7_del_u` BEFORE UPDATE ON `0_hrm_pay_retro_deltas` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_deltas';
+CREATE TRIGGER `0_pc7_del_d` BEFORE DELETE ON `0_hrm_pay_retro_deltas` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_deltas';
+CREATE TRIGGER `0_pc7_arr_u` BEFORE UPDATE ON `0_hrm_pay_retro_arrears` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_arrears';
+CREATE TRIGGER `0_pc7_arr_d` BEFORE DELETE ON `0_hrm_pay_retro_arrears` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_arrears';
+CREATE TRIGGER `0_pc7_arm_u` BEFORE UPDATE ON `0_hrm_pay_retro_arrears_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_arrears_movements';
+CREATE TRIGGER `0_pc7_arm_d` BEFORE DELETE ON `0_hrm_pay_retro_arrears_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_arrears_movements';
+CREATE TRIGGER `0_pc7_pln_u` BEFORE UPDATE ON `0_hrm_pay_retro_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_plans';
+CREATE TRIGGER `0_pc7_pln_d` BEFORE DELETE ON `0_hrm_pay_retro_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_plans';
+CREATE TRIGGER `0_pc7_app_u` BEFORE UPDATE ON `0_hrm_pay_retro_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_approvals';
+CREATE TRIGGER `0_pc7_app_d` BEFORE DELETE ON `0_hrm_pay_retro_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_approvals';
+CREATE TRIGGER `0_pc7_exe_u` BEFORE UPDATE ON `0_hrm_pay_retro_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_executions';
+CREATE TRIGGER `0_pc7_exe_d` BEFORE DELETE ON `0_hrm_pay_retro_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_executions';
+CREATE TRIGGER `0_pc7_obl_u` BEFORE UPDATE ON `0_hrm_pay_retro_downstream_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_downstream_obligations';
+CREATE TRIGGER `0_pc7_obl_d` BEFORE DELETE ON `0_hrm_pay_retro_downstream_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_downstream_obligations';
+CREATE TRIGGER `0_pc7_rec_u` BEFORE UPDATE ON `0_hrm_pay_retro_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_reconciliations';
+CREATE TRIGGER `0_pc7_rec_d` BEFORE DELETE ON `0_hrm_pay_retro_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_reconciliations';
+CREATE TRIGGER `0_pc7_rcv_u` BEFORE UPDATE ON `0_hrm_pay_retro_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_recovery_evidence';
+CREATE TRIGGER `0_pc7_rcv_d` BEFORE DELETE ON `0_hrm_pay_retro_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_recovery_evidence';
