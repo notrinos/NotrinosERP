@@ -455,6 +455,7 @@ $security_areas =array(
 	'SA_HRM_VERIFY_PAY_CORE_RESULT' => array(SS_HRM|81, _('Independently verify PAY-CORE immutable result integrity')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_CORE_RESULT' => array(SS_HRM|82, _('Record governed PAY-CORE reconciliation and recovery evidence')), // no automatic role grant
 	'SA_HRM_ARCHIVE_PAY_CORE_RESULT' => array(SS_HRM|83, _('Record non-destructive PAY-CORE archive and restore evidence')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_CALC' => array(SS_HRM|84, _('Execute deterministic PAY-CORE calculation plans against sealed snapshots')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
