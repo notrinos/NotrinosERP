@@ -10520,3 +10520,79 @@ CREATE TRIGGER `0_pc7_rec_u` BEFORE UPDATE ON `0_hrm_pay_retro_reconciliations` 
 CREATE TRIGGER `0_pc7_rec_d` BEFORE DELETE ON `0_hrm_pay_retro_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_reconciliations';
 CREATE TRIGGER `0_pc7_rcv_u` BEFORE UPDATE ON `0_hrm_pay_retro_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_recovery_evidence';
 CREATE TRIGGER `0_pc7_rcv_d` BEFORE DELETE ON `0_hrm_pay_retro_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_recovery_evidence';
+
+
+-- PAY-CORE-008 append-only validation, variance and reconciliation custody
+CREATE TABLE `0_hrm_pay_validation_validator_defs` (
+  `validator_definition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `validator_key` varchar(96) NOT NULL, `validator_version` varchar(64) NOT NULL, `domain` varchar(64) NOT NULL, `severity` varchar(16) NOT NULL, `origin` varchar(16) NOT NULL, `capability` varchar(64) NOT NULL, `purpose` varchar(255) NOT NULL,
+  `input_contract_sha256` char(64) NOT NULL, `output_contract_sha256` char(64) NOT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `applicability_json` longtext NOT NULL, `definition_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`validator_definition_id`), UNIQUE KEY `uq_pc8_validator_sha` (`definition_sha256`), UNIQUE KEY `uq_pc8_validator_version` (`validator_key`,`validator_version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_threshold_policies` (
+ `threshold_policy_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_key` varchar(96) NOT NULL, `version_no` int unsigned NOT NULL, `measure` varchar(64) NOT NULL, `unit_code` varchar(32) NOT NULL, `currency_code` char(3) DEFAULT NULL, `mode` varchar(16) NOT NULL, `tolerance` decimal(30,8) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `policy_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`threshold_policy_id`), UNIQUE KEY `uq_pc8_threshold_sha` (`policy_sha256`), UNIQUE KEY `uq_pc8_threshold_version` (`policy_key`,`version_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_pack_bindings` (
+ `pack_binding_id` bigint unsigned NOT NULL AUTO_INCREMENT, `pack_key` varchar(96) NOT NULL, `pack_version` varchar(64) NOT NULL, `validator_definition_id` bigint unsigned NOT NULL, `capability` varchar(64) NOT NULL, `artifact_sha256` char(64) NOT NULL, `binding_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`pack_binding_id`), UNIQUE KEY `uq_pc8_pack_sha` (`binding_sha256`), UNIQUE KEY `uq_pc8_pack_version` (`pack_key`,`pack_version`,`validator_definition_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_runs` (
+ `validation_run_id` bigint unsigned NOT NULL AUTO_INCREMENT, `validator_definition_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned DEFAULT NULL, `person_id` bigint unsigned DEFAULT NULL, `assignment_id` bigint unsigned DEFAULT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_id` bigint unsigned NOT NULL, `result_sha256` char(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_set_sha256` char(64) NOT NULL, `idempotency_key` varchar(128) NOT NULL, `outcome` varchar(16) NOT NULL, `finding_set_sha256` char(64) NOT NULL, `execution_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`validation_run_id`), UNIQUE KEY `uq_pc8_run_command` (`validator_definition_id`,`payroll_relationship_id`,`idempotency_key`), UNIQUE KEY `uq_pc8_run_sha` (`execution_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_validation_findings` (
+ `finding_id` bigint unsigned NOT NULL AUTO_INCREMENT, `validation_run_id` bigint unsigned NOT NULL, `finding_key` varchar(96) NOT NULL, `code` varchar(96) NOT NULL, `severity` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `finding_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`finding_id`), UNIQUE KEY `uq_pc8_finding_run_key` (`validation_run_id`,`finding_key`), UNIQUE KEY `uq_pc8_finding_sha` (`finding_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_resolutions` (
+ `resolution_id` bigint unsigned NOT NULL AUTO_INCREMENT, `finding_id` bigint unsigned NOT NULL, `reason_code` varchar(96) NOT NULL, `support_sha256` char(64) NOT NULL, `resulting_state` varchar(24) NOT NULL, `command_key` varchar(128) NOT NULL, `resolution_sha256` char(64) NOT NULL, `resolver_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`resolution_id`), UNIQUE KEY `uq_pc8_resolution_command` (`finding_id`,`command_key`), UNIQUE KEY `uq_pc8_resolution_sha` (`resolution_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_signoffs` (
+ `signoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_set_sha256` char(64) NOT NULL, `validation_set_sha256` char(64) NOT NULL, `resolution_set_sha256` char(64) NOT NULL, `signoff_state` varchar(16) NOT NULL, `command_key` varchar(128) NOT NULL, `signoff_sha256` char(64) NOT NULL, `signer_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`signoff_id`), UNIQUE KEY `uq_pc8_signoff_command` (`payroll_relationship_id`,`command_key`), UNIQUE KEY `uq_pc8_signoff_sha` (`signoff_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_variances` (
+ `variance_id` bigint unsigned NOT NULL AUTO_INCREMENT, `variance_kind` varchar(24) NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `current_result_id` bigint unsigned NOT NULL, `comparison_result_id` bigint unsigned NOT NULL, `current_result_sha256` char(64) NOT NULL, `comparison_result_sha256` char(64) NOT NULL, `currency` char(3) NOT NULL, `measure_set_json` longtext NOT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `variance_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`variance_id`), UNIQUE KEY `uq_pc8_variance_sha` (`variance_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_reconciliations` (
+ `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_kind` varchar(24) NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_set_sha256` char(64) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `expected_value` decimal(30,8) NOT NULL, `actual_value` decimal(30,8) NOT NULL, `difference_value` decimal(30,8) NOT NULL, `unit_code` varchar(32) NOT NULL, `currency_code` char(3) DEFAULT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `reconciliation_state` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pc8_reconciliation_sha` (`reconciliation_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_pay_validation_recovery_evidence` (
+ `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `subject_type` varchar(64) NOT NULL, `subject_sha256` char(64) NOT NULL, `action_token` varchar(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_pc8_recovery_sha` (`recovery_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc8_vdf_u` BEFORE UPDATE ON `0_hrm_pay_validation_validator_defs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_validator_defs';
+CREATE TRIGGER `0_pc8_vdf_d` BEFORE DELETE ON `0_hrm_pay_validation_validator_defs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_validator_defs';
+
+CREATE TRIGGER `0_pc8_thr_u` BEFORE UPDATE ON `0_hrm_pay_validation_threshold_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_threshold_policies';
+CREATE TRIGGER `0_pc8_thr_d` BEFORE DELETE ON `0_hrm_pay_validation_threshold_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_threshold_policies';
+
+CREATE TRIGGER `0_pc8_pak_u` BEFORE UPDATE ON `0_hrm_pay_validation_pack_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_pack_bindings';
+CREATE TRIGGER `0_pc8_pak_d` BEFORE DELETE ON `0_hrm_pay_validation_pack_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_pack_bindings';
+
+CREATE TRIGGER `0_pc8_run_u` BEFORE UPDATE ON `0_hrm_pay_validation_runs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_runs';
+CREATE TRIGGER `0_pc8_run_d` BEFORE DELETE ON `0_hrm_pay_validation_runs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_runs';
+
+CREATE TRIGGER `0_pc8_fnd_u` BEFORE UPDATE ON `0_hrm_pay_validation_findings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_findings';
+CREATE TRIGGER `0_pc8_fnd_d` BEFORE DELETE ON `0_hrm_pay_validation_findings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_findings';
+
+CREATE TRIGGER `0_pc8_res_u` BEFORE UPDATE ON `0_hrm_pay_validation_resolutions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_resolutions';
+CREATE TRIGGER `0_pc8_res_d` BEFORE DELETE ON `0_hrm_pay_validation_resolutions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_resolutions';
+
+CREATE TRIGGER `0_pc8_sig_u` BEFORE UPDATE ON `0_hrm_pay_validation_signoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_signoffs';
+CREATE TRIGGER `0_pc8_sig_d` BEFORE DELETE ON `0_hrm_pay_validation_signoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_signoffs';
+
+CREATE TRIGGER `0_pc8_var_u` BEFORE UPDATE ON `0_hrm_pay_validation_variances` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_variances';
+CREATE TRIGGER `0_pc8_var_d` BEFORE DELETE ON `0_hrm_pay_validation_variances` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_variances';
+
+CREATE TRIGGER `0_pc8_rec_u` BEFORE UPDATE ON `0_hrm_pay_validation_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_reconciliations';
+CREATE TRIGGER `0_pc8_rec_d` BEFORE DELETE ON `0_hrm_pay_validation_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_reconciliations';
+
+CREATE TRIGGER `0_pc8_rcv_u` BEFORE UPDATE ON `0_hrm_pay_validation_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_recovery_evidence';
+CREATE TRIGGER `0_pc8_rcv_d` BEFORE DELETE ON `0_hrm_pay_validation_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_recovery_evidence';

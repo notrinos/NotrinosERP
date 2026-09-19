@@ -464,6 +464,11 @@ $security_areas =array(
 	'SA_HRM_REVIEW_PAY_CORE_RETRO' => array(SS_HRM|90, _('Independently review PAY-CORE retro evidence and correction plans')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CORE_RETRO' => array(SS_HRM|91, _('Execute approved bounded PAY-CORE retro correction and recovery commands')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_RETRO' => array(SS_HRM|92, _('View scoped PAY-CORE retro lineage and obligation evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CORE_VALIDATION' => array(SS_HRM|93, _('Manage governed PAY-CORE validation definitions and threshold policies')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_VALIDATION' => array(SS_HRM|94, _('Execute scoped PAY-CORE validators and variance commands')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CORE_VALIDATION' => array(SS_HRM|95, _('Independently review PAY-CORE validation and reconciliation evidence')), // no automatic role grant
+	'SA_HRM_RESOLVE_PAY_CORE_VALIDATION' => array(SS_HRM|96, _('Resolve governed PAY-CORE validation findings')), // no automatic role grant
+	'SA_HRM_SIGNOFF_PAY_CORE_VALIDATION' => array(SS_HRM|97, _('Sign off exact immutable PAY-CORE readiness evidence')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -485,6 +490,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_RULE_MIGRATION' => array(SS_HRM_A|17, _('View PAY-RULE migration, shadow and cutover evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE' => array(SS_HRM_A|18, _('View PAY-CORE calendar, group, relationship and migration evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_TRACE_DIGEST' => array(SS_HRM_A|19, _('View restricted PAY-CORE trace digests under compensation scope')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE_VALIDATION' => array(SS_HRM_A|20, _('View scoped PAY-CORE validation, variance and signoff evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
