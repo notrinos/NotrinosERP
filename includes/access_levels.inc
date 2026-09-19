@@ -450,6 +450,11 @@ $security_areas =array(
 	'SA_HRM_EXECUTE_PAY_CORE' => array(SS_HRM|76, _('Execute approved bounded PAY-CORE seed and migration commands')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CORE_INPUT' => array(SS_HRM|77, _('Write approved PAY-CORE payroll inputs under explicit evidence custody')), // no automatic role grant
 	'SA_HRM_OVERRIDE_PAY_CORE_INPUT' => array(SS_HRM|78, _('Write reason-bound governed PAY-CORE approved-input overrides')), // no automatic role grant
+	'SA_HRM_SEAL_PAY_CORE_RESULT' => array(SS_HRM|79, _('Seal immutable PAY-CORE execution input snapshots')), // no automatic role grant
+	'SA_HRM_WRITE_PAY_CORE_RESULT' => array(SS_HRM|80, _('Write immutable PAY-CORE execution results, lines and minimized traces')), // no automatic role grant
+	'SA_HRM_VERIFY_PAY_CORE_RESULT' => array(SS_HRM|81, _('Independently verify PAY-CORE immutable result integrity')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_CORE_RESULT' => array(SS_HRM|82, _('Record governed PAY-CORE reconciliation and recovery evidence')), // no automatic role grant
+	'SA_HRM_ARCHIVE_PAY_CORE_RESULT' => array(SS_HRM|83, _('Record non-destructive PAY-CORE archive and restore evidence')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -470,6 +475,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_RULE_RESOLUTION' => array(SS_HRM_A|16, _('View PAY-RULE jurisdiction and resolution evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_RULE_MIGRATION' => array(SS_HRM_A|17, _('View PAY-RULE migration, shadow and cutover evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE' => array(SS_HRM_A|18, _('View PAY-CORE calendar, group, relationship and migration evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE_TRACE_DIGEST' => array(SS_HRM_A|19, _('View restricted PAY-CORE trace digests under compensation scope')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

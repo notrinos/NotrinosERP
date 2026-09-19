@@ -9529,3 +9529,193 @@ CREATE TABLE `0_hrm_pay_core_003_compatibility_parity_evidence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TRIGGER `0_pc3_pry_u` BEFORE UPDATE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_compatibility_parity_evidence';
 CREATE TRIGGER `0_pc3_pry_d` BEFORE DELETE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_compatibility_parity_evidence';
+
+-- PAY-CORE-004 immutable execution-record custody (1.0.567-1.0.575); zero seeded business rows --
+CREATE TABLE `0_hrm_pay_core_004_snapshots` (
+  `snapshot_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned DEFAULT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `run_identity` varchar(128) NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `currency` char(3) NOT NULL,
+  `approved_inputs_sha256` char(64) NOT NULL,
+  `element_versions_sha256` char(64) NOT NULL,
+  `eligibility_sha256` char(64) NOT NULL,
+  `rule_artifacts_sha256` char(64) NOT NULL,
+  `source_events_sha256` char(64) NOT NULL,
+  `configuration_sha256` char(64) NOT NULL,
+  `snapshot_payload_json` longtext NOT NULL,
+  `snapshot_sha256` char(64) NOT NULL,
+  `sealed_by` int unsigned NOT NULL,
+  `sealed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`snapshot_id`),
+  UNIQUE KEY `uq_pc4_snapshot_sha` (`snapshot_sha256`),
+  UNIQUE KEY `uq_pc4_snapshot_run` (`payroll_relationship_id`,`calendar_period_id`,`run_identity`,`snapshot_sha256`),
+  KEY `idx_pc4_snapshot_scope` (`payroll_relationship_id`,`calendar_period_id`),
+  CONSTRAINT `fk_pc4_snapshot_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc4_snapshot_period` FOREIGN KEY (`calendar_period_id`) REFERENCES `0_hrm_payroll_calendar_periods` (`calendar_period_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_004_results` (
+  `result_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `snapshot_id` bigint unsigned NOT NULL,
+  `snapshot_sha256` char(64) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `gross_amount` decimal(24,8) NOT NULL,
+  `deduction_amount` decimal(24,8) NOT NULL,
+  `net_amount` decimal(24,8) NOT NULL,
+  `line_set_sha256` char(64) NOT NULL,
+  `trace_set_sha256` char(64) NOT NULL,
+  `result_sha256` char(64) NOT NULL,
+  `executor_id` int unsigned NOT NULL,
+  `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`result_id`),
+  UNIQUE KEY `uq_pc4_result_sha` (`result_sha256`),
+  KEY `idx_pc4_result_snapshot` (`snapshot_id`),
+  CONSTRAINT `fk_pc4_result_snapshot` FOREIGN KEY (`snapshot_id`) REFERENCES `0_hrm_pay_core_004_snapshots` (`snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_004_result_lines` (
+  `result_line_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `result_id` bigint unsigned NOT NULL,
+  `line_no` int unsigned NOT NULL,
+  `element_version_id` bigint unsigned NOT NULL,
+  `line_kind` varchar(32) NOT NULL,
+  `currency` char(3) NOT NULL,
+  `amount` decimal(24,8) NOT NULL,
+  `quantity` decimal(24,8) NOT NULL,
+  `rate` decimal(24,8) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `line_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`result_line_id`),
+  UNIQUE KEY `uq_pc4_result_line_no` (`result_id`,`line_no`),
+  UNIQUE KEY `uq_pc4_result_line_sha` (`result_id`,`line_sha256`),
+  KEY `idx_pc4_result_line_element` (`element_version_id`),
+  CONSTRAINT `fk_pc4_line_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc4_line_element` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_004_traces` (
+  `trace_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `result_id` bigint unsigned NOT NULL,
+  `trace_seq` int unsigned NOT NULL,
+  `trace_kind` varchar(64) NOT NULL,
+  `artifact_sha256` char(64) NOT NULL,
+  `input_sha256` char(64) NOT NULL,
+  `output_sha256` char(64) NOT NULL,
+  `value_mode` varchar(16) NOT NULL,
+  `value_digest` char(64) DEFAULT NULL,
+  `trace_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`trace_id`),
+  UNIQUE KEY `uq_pc4_trace_seq` (`result_id`,`trace_seq`),
+  UNIQUE KEY `uq_pc4_trace_sha` (`result_id`,`trace_sha256`),
+  CONSTRAINT `fk_pc4_trace_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc4_snap_u` BEFORE UPDATE ON `0_hrm_pay_core_004_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_snapshots';
+CREATE TRIGGER `0_pc4_snap_d` BEFORE DELETE ON `0_hrm_pay_core_004_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_snapshots';
+CREATE TRIGGER `0_pc4_res_u` BEFORE UPDATE ON `0_hrm_pay_core_004_results` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_results';
+CREATE TRIGGER `0_pc4_res_d` BEFORE DELETE ON `0_hrm_pay_core_004_results` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_results';
+CREATE TRIGGER `0_pc4_line_u` BEFORE UPDATE ON `0_hrm_pay_core_004_result_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_result_lines';
+CREATE TRIGGER `0_pc4_line_d` BEFORE DELETE ON `0_hrm_pay_core_004_result_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_result_lines';
+CREATE TRIGGER `0_pc4_trace_u` BEFORE UPDATE ON `0_hrm_pay_core_004_traces` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_traces';
+CREATE TRIGGER `0_pc4_trace_d` BEFORE DELETE ON `0_hrm_pay_core_004_traces` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_traces';
+
+CREATE TABLE `0_hrm_pay_core_004_integrity_evidence` (
+  `integrity_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `result_id` bigint unsigned NOT NULL,
+  `snapshot_sha256` char(64) NOT NULL,
+  `result_sha256` char(64) NOT NULL,
+  `line_set_sha256` char(64) NOT NULL,
+  `trace_set_sha256` char(64) NOT NULL,
+  `verification_status` varchar(16) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `integrity_sha256` char(64) NOT NULL,
+  `verified_by` int unsigned NOT NULL,
+  `verified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`integrity_evidence_id`),
+  UNIQUE KEY `uq_pc4_integrity_sha` (`integrity_sha256`),
+  KEY `idx_pc4_integrity_result` (`result_id`,`verification_status`),
+  CONSTRAINT `fk_pc4_integrity_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc4_integ_u` BEFORE UPDATE ON `0_hrm_pay_core_004_integrity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_integrity_evidence';
+CREATE TRIGGER `0_pc4_integ_d` BEFORE DELETE ON `0_hrm_pay_core_004_integrity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_integrity_evidence';
+
+CREATE TABLE `0_hrm_pay_core_004_correction_lineage` (
+  `lineage_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `predecessor_result_id` bigint unsigned NOT NULL,
+  `successor_result_id` bigint unsigned NOT NULL,
+  `lineage_kind` varchar(16) NOT NULL,
+  `reason_code` varchar(64) NOT NULL,
+  `approval_evidence_sha256` char(64) NOT NULL,
+  `lineage_sha256` char(64) NOT NULL,
+  `checker_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`lineage_id`),
+  UNIQUE KEY `uq_pc4_lineage_successor` (`successor_result_id`),
+  UNIQUE KEY `uq_pc4_lineage_sha` (`lineage_sha256`),
+  KEY `idx_pc4_lineage_predecessor` (`predecessor_result_id`),
+  CONSTRAINT `fk_pc4_lineage_predecessor` FOREIGN KEY (`predecessor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc4_lineage_successor` FOREIGN KEY (`successor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc4_lin_u` BEFORE UPDATE ON `0_hrm_pay_core_004_correction_lineage` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_correction_lineage';
+CREATE TRIGGER `0_pc4_lin_d` BEFORE DELETE ON `0_hrm_pay_core_004_correction_lineage` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_correction_lineage';
+
+CREATE TABLE `0_hrm_pay_core_004_legacy_provenance_gaps` (
+  `legacy_provenance_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legacy_source_kind` varchar(32) NOT NULL,
+  `legacy_source_id` bigint unsigned NOT NULL,
+  `legacy_source_sha256` char(64) NOT NULL,
+  `provenance_state` varchar(16) NOT NULL,
+  `gap_codes` varchar(1024) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `provenance_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `recorded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`legacy_provenance_id`),
+  UNIQUE KEY `uq_pc4_legacy_provenance_sha` (`provenance_sha256`),
+  UNIQUE KEY `uq_pc4_legacy_source_state` (`legacy_source_kind`,`legacy_source_id`,`legacy_source_sha256`,`provenance_state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc4_lprov_u` BEFORE UPDATE ON `0_hrm_pay_core_004_legacy_provenance_gaps` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_legacy_provenance_gaps';
+CREATE TRIGGER `0_pc4_lprov_d` BEFORE DELETE ON `0_hrm_pay_core_004_legacy_provenance_gaps` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_legacy_provenance_gaps';
+
+CREATE TABLE `0_hrm_pay_core_004_recovery_evidence` (
+  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `result_id` bigint unsigned NOT NULL,
+  `integrity_evidence_id` bigint unsigned NOT NULL,
+  `recovery_state` varchar(24) NOT NULL,
+  `action_token` varchar(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `recovery_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recovery_evidence_id`),
+  UNIQUE KEY `uq_pc4_recovery_sha` (`recovery_sha256`),
+  KEY `idx_pc4_recovery_result` (`result_id`,`created_at`),
+  CONSTRAINT `fk_pc4_recovery_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc4_recovery_integrity` FOREIGN KEY (`integrity_evidence_id`) REFERENCES `0_hrm_pay_core_004_integrity_evidence` (`integrity_evidence_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_004_archive_evidence` (
+  `archive_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `result_id` bigint unsigned NOT NULL,
+  `integrity_evidence_id` bigint unsigned NOT NULL,
+  `archive_state` varchar(24) NOT NULL,
+  `archive_locator_sha256` char(64) NOT NULL,
+  `archive_payload_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `archive_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`archive_evidence_id`),
+  UNIQUE KEY `uq_pc4_archive_sha` (`archive_sha256`),
+  KEY `idx_pc4_archive_result` (`result_id`,`created_at`),
+  CONSTRAINT `fk_pc4_archive_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pc4_archive_integrity` FOREIGN KEY (`integrity_evidence_id`) REFERENCES `0_hrm_pay_core_004_integrity_evidence` (`integrity_evidence_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc4_recv_u` BEFORE UPDATE ON `0_hrm_pay_core_004_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_recovery_evidence';
+CREATE TRIGGER `0_pc4_recv_d` BEFORE DELETE ON `0_hrm_pay_core_004_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_recovery_evidence';
+CREATE TRIGGER `0_pc4_arch_u` BEFORE UPDATE ON `0_hrm_pay_core_004_archive_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_archive_evidence';
+CREATE TRIGGER `0_pc4_arch_d` BEFORE DELETE ON `0_hrm_pay_core_004_archive_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_archive_evidence';
