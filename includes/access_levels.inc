@@ -486,6 +486,11 @@ $security_areas =array(
 	'SA_HRM_MIGRATE_TIME' => array(SS_HRM|112, _('Migrate legacy attendance into governed time custody')), // no automatic role grant
 	'SA_HRM_MAP_TIME_PAYROLL' => array(SS_HRM|113, _('Manage explicit approved-time to PAY-CORE-003 mappings')), // no automatic role grant
 	'SA_HRM_EXECUTE_TIME_PAYROLL' => array(SS_HRM|114, _('Execute approved-time PAY-CORE-003 input adapters')), // no automatic role grant
+	'SA_HRM_MANAGE_OVERTIME_POLICY' => array(SS_HRM|115, _('Manage governed overtime qualification policy evidence')), // no automatic role grant
+	'SA_HRM_QUALIFY_OVERTIME' => array(SS_HRM|116, _('Qualify approved time under governed overtime policy')), // no automatic role grant
+	'SA_HRM_INGEST_TIME_IMPORT' => array(SS_HRM|117, _('Ingest governed external time batches into raw-event custody')), // no automatic role grant
+	'SA_HRM_MANAGE_TIME_CONNECTOR' => array(SS_HRM|118, _('Manage governed external time connector contracts')), // no automatic role grant
+	'SA_HRM_EXECUTE_OVERTIME_PAYROLL' => array(SS_HRM|119, _('Execute qualified-overtime PAY-CORE-003 adapters')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -511,6 +516,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_CORE_RUN' => array(SS_HRM_A|21, _('View safe scoped PAY-CORE run state and checkpoint summaries')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_PROJECTION' => array(SS_HRM_A|22, _('View scoped PAY-CORE approval, projection, parity and cutover evidence')), // no automatic role grant
 	'SA_HRM_VIEW_TIME' => array(SS_HRM_A|23, _('View scoped governed work-pattern and approved-time evidence')), // no automatic role grant
+	'SA_HRM_VIEW_TIME_IMPORT' => array(SS_HRM_A|24, _('View scoped overtime qualification and import custody evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

@@ -940,114 +940,61 @@ function cancel_leave_request_draft($draft_data, $draft_id, $comments)
 /**
  * Execute an approved Overtime Request draft.
  *
- * Approves the overtime_request record and writes attendance record.
- *
- * @param array $draft_data         Decoded JSON draft data
- * @param int   $reserved_trans_no  Reserved transaction number
- * @param int   $draft_id           Approval draft ID
- * @return int|false Request ID or false on failure
+ * HRM-TIM-002 records immutable request-approval custody. Request approval no
+ * longer writes attendance; worked/approved time must arrive independently
+ * through HRM-TIM-001 before overtime qualification can occur.
  */
 function execute_approved_overtime_request($draft_data, $reserved_trans_no, $draft_id)
 {
-	global $path_to_root;
-
-	include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
-	include_once($path_to_root . '/hrm/includes/db/attendance_db.inc');
-	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
-
-	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
-	if ($request_id <= 0)
-		return false;
-
-	begin_transaction();
-
-	$request = get_overtime_request_for_update($request_id);
-	$draft_date = isset($draft_data['date'])
-		? date2sql($draft_data['date'])
-		: '';
-	if (!$request
-		|| (int)$request['status'] !== 0
-		|| trim((string)$request['employee_id']) === ''
-		|| (int)$request['overtime_id'] <= 0
-		|| (float)$request['hours'] <= 0
-		|| (float)$request['hours'] > 24
-		|| !isset($draft_data['employee_id'])
-		|| (string)$draft_data['employee_id'] !== (string)$request['employee_id']
-		|| !isset($draft_data['overtime_id'])
-		|| (int)$draft_data['overtime_id'] !== (int)$request['overtime_id']
-		|| $draft_date !== (string)$request['date']
-		|| !isset($draft_data['hours'])
-		|| abs((float)$draft_data['hours'] - (float)$request['hours']) > 0.000001
-		|| !isset($draft_data['reason'])
-		|| (string)$draft_data['reason'] !== (string)$request['reason']
-	) {
-		cancel_transaction();
-		return false;
-	}
-
-	if (!approve_overtime_request($request_id, 'approval_system')) {
-		cancel_transaction();
-		return false;
-	}
-
-	$request_after = get_overtime_request_for_update($request_id);
-	$attendance_after = get_attendance_entry(
-		$request['employee_id'],
-		sql2date($request['date'])
-	);
-	if (!$request_after
-		|| (int)$request_after['status'] !== 1
-		|| !$attendance_after
-		|| (int)$attendance_after['overtime_type_id']
-			!== (int)$request['overtime_id']
-		|| abs(
-			(float)$attendance_after['overtime_hours']
-				- (float)$request['hours']
-		) > 0.000001
-	) {
-		cancel_transaction();
-		return false;
-	}
-
-	$audit_result = append_domain_audit_event(array(
-		'legal_entity_id' => 0,
-		'entity_type'     => 'overtime_request',
-		'entity_key'      => array('request_id' => $request_id),
-		'action'          => 'overtime_request.approved',
-		'reason_code'     => (int)$draft_id > 0
-			? 'approval_workflow_terminal'
-			: 'approval_direct_policy_terminal',
-		'legacy_source'   => (int)$draft_id > 0 ? 'approval_drafts' : null,
-		'legacy_id'       => (int)$draft_id > 0 ? (int)$draft_id : null,
-		'before'          => $request,
-		'after'           => $request_after,
-		'restricted_diff' => array(
-			'approval_draft_id' => (int)$draft_id,
-			'changed_fields' => array(
-				'approval_date',
-				'approved_by',
-				'attendance.overtime_hours',
-				'attendance.overtime_type_id',
-				'status',
-			),
-			'mutation_kind' => 'approved',
-			'restricted_values_stored' => false,
-		),
-	));
-	if ($audit_result === false) {
-		error_log(sprintf(
-			'PAY-AUD-001: Overtime request %d approval audit append failed: %s',
-			$request_id,
-			isset($GLOBALS['domain_audit_append_result'])
-				? $GLOBALS['domain_audit_append_result']
-				: 'unknown'
-		));
-		cancel_transaction();
-		return false;
-	}
-
-	commit_transaction();
-	return $request_id;
+    global $path_to_root;
+    include_once($path_to_root . '/hrm/includes/db/overtime_request_db.inc');
+    include_once($path_to_root . '/hrm/includes/db/hrm_tim_002_governance_db.inc');
+    include_once($path_to_root . '/includes/db/domain_audit_db.inc');
+    $request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
+    if ($request_id <= 0) return false;
+    begin_transaction();
+    $request = get_overtime_request_for_update($request_id);
+    $draft_date = isset($draft_data['date']) ? date2sql($draft_data['date']) : '';
+    if (!$request || (int)$request['status'] !== 0 || trim((string)$request['employee_id']) === ''
+        || (int)$request['overtime_id'] <= 0 || (float)$request['hours'] <= 0 || (float)$request['hours'] > 24
+        || !isset($draft_data['employee_id']) || (string)$draft_data['employee_id'] !== (string)$request['employee_id']
+        || !isset($draft_data['overtime_id']) || (int)$draft_data['overtime_id'] !== (int)$request['overtime_id']
+        || $draft_date !== (string)$request['date'] || !isset($draft_data['hours'])
+        || abs((float)$draft_data['hours'] - (float)$request['hours']) > 0.000001
+        || !isset($draft_data['reason']) || (string)$draft_data['reason'] !== (string)$request['reason']) {
+        cancel_transaction(); return false;
+    }
+    $GLOBALS['hrm_tim_002_overtime_approval_draft_id'] = (int)$draft_id;
+    $ok = approve_overtime_request($request_id, 'approval_system');
+    unset($GLOBALS['hrm_tim_002_overtime_approval_draft_id']);
+    if (!$ok) { cancel_transaction(); return false; }
+    $request_after = get_overtime_request_for_update($request_id);
+    $receipt_after = hrm_tim_002_get_overtime_request_receipt($request_id, true);
+    if (!$request_after || (int)$request_after['status'] !== 1 || !$receipt_after
+        || (int)$receipt_after['request_id'] !== $request_id
+        || (int)$receipt_after['approval_draft_id'] !== (int)$draft_id) {
+        cancel_transaction(); return false;
+    }
+    $audit_result = append_domain_audit_event(array(
+        'legal_entity_id' => (int)$receipt_after['legal_entity_id'],
+        'entity_type' => 'overtime_request', 'entity_key' => array('request_id' => $request_id),
+        'action' => 'overtime_request.approved',
+        'reason_code' => (int)$draft_id > 0 ? 'approval_workflow_terminal' : 'approval_direct_policy_terminal',
+        'legacy_source' => (int)$draft_id > 0 ? 'approval_drafts' : null,
+        'legacy_id' => (int)$draft_id > 0 ? (int)$draft_id : null,
+        'before' => $request, 'after' => $request_after,
+        'restricted_diff' => array(
+            'approval_draft_id' => (int)$draft_id,
+            'changed_fields' => array('approval_date','approved_by','hrm_time_overtime_request_receipt','status'),
+            'mutation_kind' => 'approved', 'restricted_values_stored' => false,
+        ),
+    ));
+    if ($audit_result === false) {
+        error_log(sprintf('PAY-AUD-001: Overtime request %d approval audit append failed: %s',
+            $request_id, isset($GLOBALS['domain_audit_append_result']) ? $GLOBALS['domain_audit_append_result'] : 'unknown'));
+        cancel_transaction(); return false;
+    }
+    commit_transaction(); return $request_id;
 }
 
 /**

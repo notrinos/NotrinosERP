@@ -160,19 +160,21 @@ function set_overtime_request_status(
 }
 
 /**
- * Approve overtime request and write attendance overtime hours.
+ * Approve an overtime request under HRM-TIM-002 custody.
  *
- * @param int $request_id
- * @param string $approved_by
- * @return bool
+ * Request approval is authorization evidence only. It MUST NOT create worked
+ * time, approved-time, overtime totals, rate/multiplier evidence, or payroll
+ * input. Actual worked/approved time remains HRM-TIM-001 custody and is
+ * qualified separately under an explicit governed policy.
+ *
  */
 function approve_overtime_request($request_id, $approved_by='') {
     global $path_to_root, $transaction_level;
     if (empty($transaction_level))
         return false;
-    include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
     if (!function_exists('get_hrm_lifecycle_attendance_mutation_guard_for_update'))
         include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_mutation_guard_db.inc');
+    include_once($path_to_root.'/hrm/includes/db/hrm_tim_002_governance_db.inc');
 
     $request = get_overtime_request_for_update($request_id);
     if (!$request
@@ -182,42 +184,28 @@ function approve_overtime_request($request_id, $approved_by='') {
         || (float)$request['hours'] <= 0
         || (float)$request['hours'] > 24
         || trim((string)$request['date']) === ''
-    ) {
-        return false;
-    }
+    ) return false;
 
-    // The approved executor owns the transaction, including pending status and audit.
+    // Preserve predecessor lifecycle/payroll immutability checks even though
+    // TIM-002 no longer mutates attendance as a side effect of request approval.
     $guard = get_hrm_lifecycle_attendance_mutation_guard_for_update(
         $request['employee_id'], $request['date'], 'attendance_write');
     if (!is_array($guard) || !isset($guard['can_mutate']) || $guard['can_mutate'] !== true)
         return false;
 
-    if (!set_overtime_request_status($request_id, 1, $approved_by, 0))
+    $draft_id = isset($GLOBALS['hrm_tim_002_overtime_approval_draft_id'])
+        ? (int)$GLOBALS['hrm_tim_002_overtime_approval_draft_id'] : null;
+    $tim2_error = null;
+    $receipt = hrm_tim_002_record_overtime_request_approval(
+        $request_id,
+        trim((string)$approved_by) === '' ? 'approval_system' : $approved_by,
+        $draft_id,
+        $tim2_error
+    );
+    if ($receipt === false)
         return false;
 
-    write_attendance(
-        $request['employee_id'],
-        (int)$request['overtime_id'],
-        (float)$request['hours'],
-        1,
-        sql2date($request['date']),
-        false
-    );
-
-    $attendance = get_attendance_entry(
-        $request['employee_id'],
-        sql2date($request['date'])
-    );
-    if (!$attendance
-        || (int)$attendance['overtime_type_id'] !== (int)$request['overtime_id']
-        || abs(
-            (float)$attendance['overtime_hours'] - (float)$request['hours']
-        ) > 0.000001
-    ) {
-        return false;
-    }
-
-    return true;
+    return set_overtime_request_status($request_id, 1, $approved_by, 0);
 }
 
 /**
