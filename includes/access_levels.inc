@@ -479,6 +479,13 @@ $security_areas =array(
 	'SA_HRM_ACTIVATE_PAY_CORE_PROJECTION' => array(SS_HRM|105, _('Activate evidence-complete PAY-CORE projection authority')), // no automatic role grant
 	'SA_HRM_FALLBACK_PAY_CORE_PROJECTION' => array(SS_HRM|106, _('Execute governed PAY-CORE projection fallback')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_CORE_PROJECTION' => array(SS_HRM|107, _('Record forward-only PAY-CORE projection recovery evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_TIME' => array(SS_HRM|108, _('Manage governed effective-dated work patterns')), // no automatic role grant
+	'SA_HRM_INGEST_TIME' => array(SS_HRM|109, _('Ingest governed raw time events')), // no automatic role grant
+	'SA_HRM_REVIEW_TIME' => array(SS_HRM|110, _('Review assignment-scoped interpreted time evidence')), // no automatic role grant
+	'SA_HRM_APPROVE_TIME' => array(SS_HRM|111, _('Approve reviewed time under independent evidence custody')), // no automatic role grant
+	'SA_HRM_MIGRATE_TIME' => array(SS_HRM|112, _('Migrate legacy attendance into governed time custody')), // no automatic role grant
+	'SA_HRM_MAP_TIME_PAYROLL' => array(SS_HRM|113, _('Manage explicit approved-time to PAY-CORE-003 mappings')), // no automatic role grant
+	'SA_HRM_EXECUTE_TIME_PAYROLL' => array(SS_HRM|114, _('Execute approved-time PAY-CORE-003 input adapters')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -503,6 +510,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_CORE_VALIDATION' => array(SS_HRM_A|20, _('View scoped PAY-CORE validation, variance and signoff evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_RUN' => array(SS_HRM_A|21, _('View safe scoped PAY-CORE run state and checkpoint summaries')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_PROJECTION' => array(SS_HRM_A|22, _('View scoped PAY-CORE approval, projection, parity and cutover evidence')), // no automatic role grant
+	'SA_HRM_VIEW_TIME' => array(SS_HRM_A|23, _('View scoped governed work-pattern and approved-time evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

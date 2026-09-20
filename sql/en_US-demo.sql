@@ -10894,3 +10894,248 @@ CREATE TRIGGER `0_pc10_rcv_u` BEFORE UPDATE ON `0_hrm_pay_core_010_recovery_evid
 CREATE TRIGGER `0_pc10_rcv_d` BEFORE DELETE ON `0_hrm_pay_core_010_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_recovery_evidence';
 CREATE TRIGGER `0_pc10_use_u` BEFORE UPDATE ON `0_hrm_pay_core_010_usage_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_usage_events';
 CREATE TRIGGER `0_pc10_use_d` BEFORE DELETE ON `0_hrm_pay_core_010_usage_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_usage_events';
+
+-- HRM-TIM-001 governed approved-time custody
+CREATE TABLE `0_hrm_time_work_patterns` (
+  `work_pattern_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `timezone_name` varchar(64) NOT NULL,
+  `cycle_days` smallint unsigned NOT NULL,
+  `pattern_code` varchar(64) NOT NULL,
+  `source_kind` varchar(32) NOT NULL,
+  `predecessor_pattern_id` bigint unsigned DEFAULT NULL,
+  `pattern_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`work_pattern_id`),
+  UNIQUE KEY `uq_tim1_pattern_sha` (`pattern_sha256`),
+  UNIQUE KEY `uq_tim1_pattern_from` (`assignment_id`,`effective_from`),
+  KEY `ix_tim1_pattern_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`effective_from`),
+  UNIQUE KEY `uq_tim1_pattern_pred` (`predecessor_pattern_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_work_pattern_segments` (
+  `segment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `work_pattern_id` bigint unsigned NOT NULL,
+  `cycle_day` smallint unsigned NOT NULL,
+  `segment_sequence` smallint unsigned NOT NULL,
+  `local_start_time` time NOT NULL,
+  `local_end_time` time NOT NULL,
+  `crosses_midnight` tinyint unsigned NOT NULL,
+  `paid_minutes` int unsigned NOT NULL,
+  `break_minutes` int unsigned NOT NULL,
+  `rest_minutes` int unsigned NOT NULL,
+  `segment_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`segment_id`),
+  UNIQUE KEY `uq_tim1_segment_sha` (`segment_sha256`),
+  UNIQUE KEY `uq_tim1_segment_seq` (`work_pattern_id`,`cycle_day`,`segment_sequence`),
+  KEY `ix_tim1_segment_pattern` (`work_pattern_id`,`cycle_day`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_raw_events` (
+  `raw_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `source_channel` varchar(32) NOT NULL,
+  `source_event_key` varchar(128) NOT NULL,
+  `recorded_at_utc` datetime NOT NULL,
+  `effective_local_at` datetime NOT NULL,
+  `timezone_name` varchar(64) NOT NULL,
+  `effective_utc_at` datetime NOT NULL,
+  `utc_offset_minutes` smallint NOT NULL,
+  `event_type` varchar(32) NOT NULL,
+  `source_payload_sha256` char(64) NOT NULL,
+  `predecessor_event_id` bigint unsigned DEFAULT NULL,
+  `ingest_command_key` varchar(128) NOT NULL,
+  `event_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`raw_event_id`),
+  UNIQUE KEY `uq_tim1_raw_source` (`source_channel`,`source_event_key`),
+  UNIQUE KEY `uq_tim1_raw_sha` (`event_sha256`),
+  UNIQUE KEY `uq_tim1_raw_cmd` (`ingest_command_key`),
+  KEY `ix_tim1_raw_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`effective_utc_at`),
+  UNIQUE KEY `uq_tim1_raw_pred` (`predecessor_event_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_raw_event_conflicts` (
+  `conflict_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source_channel` varchar(32) NOT NULL,
+  `source_event_key` varchar(128) NOT NULL,
+  `existing_raw_event_id` bigint unsigned NOT NULL,
+  `existing_event_sha256` char(64) NOT NULL,
+  `attempted_event_sha256` char(64) NOT NULL,
+  `attempted_payload_sha256` char(64) NOT NULL,
+  `ingest_command_key` varchar(128) NOT NULL,
+  `conflict_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`conflict_id`),
+  UNIQUE KEY `uq_tim1_conflict_sha` (`conflict_sha256`),
+  KEY `ix_tim1_conflict_source` (`source_channel`,`source_event_key`,`conflict_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_reviewed_entries` (
+  `reviewed_entry_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `work_date` date NOT NULL,
+  `period_start_utc` datetime NOT NULL,
+  `period_end_utc` datetime NOT NULL,
+  `duration_minutes` int unsigned NOT NULL,
+  `source_event_set_sha256` char(64) NOT NULL,
+  `source_event_count` int unsigned NOT NULL,
+  `work_pattern_sha256` char(64) NOT NULL,
+  `review_command_key` varchar(128) NOT NULL,
+  `predecessor_entry_id` bigint unsigned DEFAULT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `review_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reviewed_entry_id`),
+  UNIQUE KEY `uq_tim1_review_sha` (`review_sha256`),
+  UNIQUE KEY `uq_tim1_review_cmd` (`review_command_key`),
+  KEY `ix_tim1_review_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`work_date`),
+  UNIQUE KEY `uq_tim1_review_pred` (`predecessor_entry_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_reviewed_event_links` (
+  `reviewed_event_link_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `reviewed_entry_id` bigint unsigned NOT NULL,
+  `raw_event_id` bigint unsigned NOT NULL,
+  `event_sha256` char(64) NOT NULL,
+  `link_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reviewed_event_link_id`),
+  UNIQUE KEY `uq_tim1_rel_sha` (`link_sha256`),
+  UNIQUE KEY `uq_tim1_rel_pair` (`reviewed_entry_id`,`raw_event_id`),
+  KEY `ix_tim1_rel_event` (`raw_event_id`,`reviewed_entry_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_reviewed_allocations` (
+  `allocation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `reviewed_entry_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `allocation_category` varchar(32) NOT NULL,
+  `quantity_minutes` int unsigned NOT NULL,
+  `allocation_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`allocation_id`),
+  UNIQUE KEY `uq_tim1_alloc_sha` (`allocation_sha256`),
+  KEY `ix_tim1_alloc_review` (`reviewed_entry_id`,`allocation_id`),
+  KEY `ix_tim1_alloc_rel` (`payroll_relationship_id`,`assignment_id`,`reviewed_entry_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_approvals` (
+  `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `reviewed_entry_id` bigint unsigned NOT NULL,
+  `review_sha256` char(64) NOT NULL,
+  `allocation_set_sha256` char(64) NOT NULL,
+  `approval_evidence_sha256` char(64) NOT NULL,
+  `approval_command_key` varchar(128) NOT NULL,
+  `approver_id` int unsigned NOT NULL,
+  `approval_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approval_id`),
+  UNIQUE KEY `uq_tim1_approval_sha` (`approval_sha256`),
+  UNIQUE KEY `uq_tim1_approval_cmd` (`approval_command_key`),
+  UNIQUE KEY `uq_tim1_approval_review` (`reviewed_entry_id`,`review_sha256`),
+  KEY `ix_tim1_approval_entry` (`reviewed_entry_id`,`approval_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_payroll_input_mappings` (
+  `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legal_entity_id` int unsigned NOT NULL,
+  `allocation_category` varchar(32) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date DEFAULT NULL,
+  `element_version_id` bigint unsigned NOT NULL,
+  `input_definition_id` bigint unsigned NOT NULL,
+  `unit_token` varchar(24) NOT NULL,
+  `predecessor_mapping_id` bigint unsigned DEFAULT NULL,
+  `mapping_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_id`),
+  UNIQUE KEY `uq_tim1_mapping_sha` (`mapping_sha256`),
+  UNIQUE KEY `uq_tim1_mapping_from` (`legal_entity_id`,`allocation_category`,`effective_from`),
+  KEY `ix_tim1_mapping_scope` (`legal_entity_id`,`allocation_category`,`effective_from`,`effective_to`),
+  UNIQUE KEY `uq_tim1_mapping_pred` (`predecessor_mapping_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_payroll_input_receipts` (
+  `receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `approval_id` bigint unsigned NOT NULL,
+  `allocation_id` bigint unsigned NOT NULL,
+  `mapping_id` bigint unsigned NOT NULL,
+  `payroll_period_id` int unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `approved_input_id` bigint unsigned NOT NULL,
+  `approved_input_sha256` char(64) NOT NULL,
+  `adapter_version` varchar(48) NOT NULL,
+  `command_key` varchar(128) NOT NULL,
+  `receipt_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`receipt_id`),
+  UNIQUE KEY `uq_tim1_receipt_sha` (`receipt_sha256`),
+  UNIQUE KEY `uq_tim1_receipt_cmd` (`command_key`),
+  UNIQUE KEY `uq_tim1_receipt_alloc` (`approval_id`,`allocation_id`),
+  KEY `ix_tim1_receipt_period` (`payroll_period_id`,`calendar_period_id`,`payroll_relationship_id`,`assignment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_time_legacy_attendance_receipts` (
+  `legacy_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `attendance_id` bigint unsigned NOT NULL,
+  `attendance_sha256` char(64) NOT NULL,
+  `migration_status` varchar(24) NOT NULL,
+  `regular_minutes` int unsigned DEFAULT NULL,
+  `overtime_minutes` int unsigned DEFAULT NULL,
+  `legacy_approved` tinyint unsigned NOT NULL,
+  `raw_event_id` bigint unsigned DEFAULT NULL,
+  `reviewed_entry_id` bigint unsigned DEFAULT NULL,
+  `approval_id` bigint unsigned DEFAULT NULL,
+  `reason_token` varchar(64) DEFAULT NULL,
+  `receipt_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`legacy_receipt_id`),
+  UNIQUE KEY `uq_tim1_legacy_attendance` (`attendance_id`),
+  UNIQUE KEY `uq_tim1_legacy_sha` (`receipt_sha256`),
+  KEY `ix_tim1_legacy_status` (`migration_status`,`legacy_receipt_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_tim1_pat_u` BEFORE UPDATE ON `0_hrm_time_work_patterns` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_work_patterns';
+CREATE TRIGGER `0_tim1_pat_d` BEFORE DELETE ON `0_hrm_time_work_patterns` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_work_patterns';
+CREATE TRIGGER `0_tim1_seg_u` BEFORE UPDATE ON `0_hrm_time_work_pattern_segments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_work_pattern_segments';
+CREATE TRIGGER `0_tim1_seg_d` BEFORE DELETE ON `0_hrm_time_work_pattern_segments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_work_pattern_segments';
+CREATE TRIGGER `0_tim1_raw_u` BEFORE UPDATE ON `0_hrm_time_raw_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_raw_events';
+CREATE TRIGGER `0_tim1_raw_d` BEFORE DELETE ON `0_hrm_time_raw_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_raw_events';
+CREATE TRIGGER `0_tim1_cnf_u` BEFORE UPDATE ON `0_hrm_time_raw_event_conflicts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_raw_event_conflicts';
+CREATE TRIGGER `0_tim1_cnf_d` BEFORE DELETE ON `0_hrm_time_raw_event_conflicts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_raw_event_conflicts';
+CREATE TRIGGER `0_tim1_rev_u` BEFORE UPDATE ON `0_hrm_time_reviewed_entries` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_reviewed_entries';
+CREATE TRIGGER `0_tim1_rev_d` BEFORE DELETE ON `0_hrm_time_reviewed_entries` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_reviewed_entries';
+CREATE TRIGGER `0_tim1_lnk_u` BEFORE UPDATE ON `0_hrm_time_reviewed_event_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_reviewed_event_links';
+CREATE TRIGGER `0_tim1_lnk_d` BEFORE DELETE ON `0_hrm_time_reviewed_event_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_reviewed_event_links';
+CREATE TRIGGER `0_tim1_alc_u` BEFORE UPDATE ON `0_hrm_time_reviewed_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_reviewed_allocations';
+CREATE TRIGGER `0_tim1_alc_d` BEFORE DELETE ON `0_hrm_time_reviewed_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_reviewed_allocations';
+CREATE TRIGGER `0_tim1_app_u` BEFORE UPDATE ON `0_hrm_time_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_approvals';
+CREATE TRIGGER `0_tim1_app_d` BEFORE DELETE ON `0_hrm_time_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_approvals';
+CREATE TRIGGER `0_tim1_map_u` BEFORE UPDATE ON `0_hrm_time_payroll_input_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_payroll_input_mappings';
+CREATE TRIGGER `0_tim1_map_d` BEFORE DELETE ON `0_hrm_time_payroll_input_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_payroll_input_mappings';
+CREATE TRIGGER `0_tim1_rcp_u` BEFORE UPDATE ON `0_hrm_time_payroll_input_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_payroll_input_receipts';
+CREATE TRIGGER `0_tim1_rcp_d` BEFORE DELETE ON `0_hrm_time_payroll_input_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_payroll_input_receipts';
+CREATE TRIGGER `0_tim1_leg_u` BEFORE UPDATE ON `0_hrm_time_legacy_attendance_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_legacy_attendance_receipts';
+CREATE TRIGGER `0_tim1_leg_d` BEFORE DELETE ON `0_hrm_time_legacy_attendance_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_legacy_attendance_receipts';
