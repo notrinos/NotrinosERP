@@ -1499,6 +1499,7 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 	global $path_to_root;
 
 	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+	include_once($path_to_root . '/hrm/includes/db/pay_core_010_governance_db.inc');
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$period_id = isset($draft_data['period_id']) ? (int)$draft_data['period_id'] : 0;
@@ -1577,6 +1578,18 @@ function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft
 		$draft_data,
 		$approval_binding
 	)) {
+		cancel_transaction();
+		return false;
+	}
+
+	$pay_core_010_approval = hrm_pay_core_010_verify_and_record_approval(
+		$period_id,
+		$draft_data,
+		$draft_id,
+		$pay_core_010_approval_error
+	);
+	if ($pay_core_010_approval === false) {
+		error_log('PAY-CORE-010 approval verification failed: ' . (string)$pay_core_010_approval_error);
 		cancel_transaction();
 		return false;
 	}
@@ -1830,6 +1843,7 @@ function reconcile_pending_payroll_period_approval($period_id)
 
 	global $path_to_root;
 	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+	include_once($path_to_root . '/hrm/includes/db/pay_core_010_governance_db.inc');
 
 	begin_transaction();
 	$period = get_payroll_period_for_update($period_id);
@@ -1905,6 +1919,20 @@ function reconcile_pending_payroll_period_approval($period_id)
 		'total_net'        => $payroll_amount,
 		'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
 	), $binding_fields);
+	$pay_core_010_state = hrm_pay_core_010_state_for_period($period_id, true, $pay_core_010_state_error);
+	if ($pay_core_010_state === false) {
+		cancel_transaction();
+		return array('status'=>'error','message'=>sprintf(_('PAY-CORE-010 approval scope could not be verified (%s).'), $pay_core_010_state_error));
+	}
+	if ($pay_core_010_state['state'] === 'active_new') {
+		$intent_key = 'approval-recovery-' . $period_id . '-' . substr($pay_core_010_state['transition_sha256'], 0, 24);
+		$pay_core_010_intent = hrm_pay_core_010_prepare_approval_intent($period_id, $intent_key, $pay_core_010_intent_error);
+		if ($pay_core_010_intent === false) {
+			cancel_transaction();
+			return array('status'=>'error','message'=>sprintf(_('PAY-CORE-010 approval intent could not be recovered (%s).'), $pay_core_010_intent_error));
+		}
+		$draft_data = array_merge($draft_data, hrm_pay_core_010_approval_draft_fields($pay_core_010_intent));
+	}
 
 	$approval = get_approval_workflow_service();
 	$result = $approval->submit(

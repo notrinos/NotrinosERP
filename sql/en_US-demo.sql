@@ -10730,3 +10730,167 @@ CREATE TRIGGER `0_pc9_qua_u` BEFORE UPDATE ON `0_hrm_pay_core_009_quarantine` FO
 CREATE TRIGGER `0_pc9_qua_d` BEFORE DELETE ON `0_hrm_pay_core_009_quarantine` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_quarantine';
 CREATE TRIGGER `0_pc9_rcv_u` BEFORE UPDATE ON `0_hrm_pay_core_009_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_recovery_evidence';
 CREATE TRIGGER `0_pc9_rcv_d` BEFORE DELETE ON `0_hrm_pay_core_009_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_recovery_evidence';
+
+-- PAY-CORE-010 approval and legacy projection cutover custody
+CREATE TABLE `0_hrm_pay_core_010_approval_intents` (
+  `approval_intent_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_period_id` int unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `group_version_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `result_set_sha256` char(64) NOT NULL,
+  `result_count` int unsigned NOT NULL,
+  `gross_amount` decimal(20,6) NOT NULL,
+  `deduction_amount` decimal(20,6) NOT NULL,
+  `net_amount` decimal(20,6) NOT NULL,
+  `projection_contract_version` varchar(48) NOT NULL,
+  `projection_set_sha256` char(64) NOT NULL,
+  `cutover_transition_sha256` char(64) NOT NULL,
+  `command_key` varchar(128) NOT NULL,
+  `command_sha256` char(64) NOT NULL,
+  `maker_id` int unsigned NOT NULL,
+  `intent_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approval_intent_id`),
+  UNIQUE KEY `uq_pc10_intent_sha` (`intent_sha256`),
+  UNIQUE KEY `uq_pc10_intent_cmd` (`payroll_group_id`,`command_key`),
+  KEY `ix_pc10_intent_period` (`payroll_period_id`,`result_set_sha256`),
+  KEY `ix_pc10_intent_scope` (`legal_entity_id`,`payroll_group_id`,`calendar_period_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_approvals` (
+  `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `approval_intent_id` bigint unsigned NOT NULL,
+  `payroll_period_id` int unsigned NOT NULL,
+  `result_set_sha256` char(64) NOT NULL,
+  `projection_set_sha256` char(64) NOT NULL,
+  `intent_sha256` char(64) NOT NULL,
+  `approval_draft_id` int unsigned NOT NULL,
+  `decision_token` varchar(24) NOT NULL,
+  `approver_id` int unsigned NOT NULL,
+  `approval_sha256` char(64) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`approval_id`),
+  UNIQUE KEY `uq_pc10_approval_sha` (`approval_sha256`),
+  UNIQUE KEY `uq_pc10_approval_draft` (`approval_draft_id`),
+  KEY `ix_pc10_approval_period` (`payroll_period_id`,`result_set_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_projections` (
+  `projection_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_period_id` int unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `group_version_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `employee_id_sha256` char(64) NOT NULL,
+  `result_id` bigint unsigned NOT NULL,
+  `result_sha256` char(64) NOT NULL,
+  `projection_contract_version` varchar(48) NOT NULL,
+  `legacy_payslip_id` int unsigned DEFAULT NULL,
+  `header_sha256` char(64) NOT NULL,
+  `detail_set_sha256` char(64) NOT NULL,
+  `command_key` varchar(128) NOT NULL,
+  `command_sha256` char(64) NOT NULL,
+  `projection_sha256` char(64) NOT NULL,
+  `projected_by` int unsigned NOT NULL,
+  `projected_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`projection_id`),
+  UNIQUE KEY `uq_pc10_projection_sha` (`projection_sha256`),
+  UNIQUE KEY `uq_pc10_projection_cmd` (`payroll_period_id`,`command_key`,`result_id`),
+  UNIQUE KEY `uq_pc10_projection_result` (`result_id`,`projection_contract_version`),
+  KEY `ix_pc10_projection_period` (`payroll_period_id`,`result_id`),
+  KEY `ix_pc10_projection_scope` (`legal_entity_id`,`payroll_group_id`,`payroll_relationship_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_parity_evidence` (
+  `parity_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_period_id` int unsigned NOT NULL,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `group_version_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `result_set_sha256` char(64) NOT NULL,
+  `candidate_projection_set_sha256` char(64) NOT NULL,
+  `legacy_projection_set_sha256` char(64) NOT NULL,
+  `parity_status` varchar(16) NOT NULL,
+  `mismatch_count` int unsigned NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `parity_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`parity_id`),
+  UNIQUE KEY `uq_pc10_parity_sha` (`parity_sha256`),
+  KEY `ix_pc10_parity_scope` (`payroll_group_id`,`payroll_period_id`,`parity_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_cutover_transitions` (
+  `transition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `sequence_no` bigint unsigned NOT NULL,
+  `from_state` varchar(24) NOT NULL,
+  `to_state` varchar(24) NOT NULL,
+  `expected_sequence_no` bigint unsigned NOT NULL,
+  `result_contract_version` varchar(32) NOT NULL,
+  `parity_id` bigint unsigned DEFAULT NULL,
+  `command_key` varchar(128) NOT NULL,
+  `command_sha256` char(64) NOT NULL,
+  `predecessor_transition_sha256` char(64) DEFAULT NULL,
+  `transition_sha256` char(64) NOT NULL,
+  `actor_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`transition_id`),
+  UNIQUE KEY `uq_pc10_transition_sha` (`transition_sha256`),
+  UNIQUE KEY `uq_pc10_transition_seq` (`payroll_group_id`,`sequence_no`),
+  UNIQUE KEY `uq_pc10_transition_cmd` (`payroll_group_id`,`command_key`),
+  KEY `ix_pc10_transition_scope` (`legal_entity_id`,`payroll_group_id`,`transition_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_recovery_evidence` (
+  `recovery_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `payroll_period_id` int unsigned DEFAULT NULL,
+  `transition_id` bigint unsigned DEFAULT NULL,
+  `recovery_action` varchar(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `recovery_sha256` char(64) NOT NULL,
+  `reviewer_id` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recovery_id`),
+  UNIQUE KEY `uq_pc10_recovery_sha` (`recovery_sha256`),
+  KEY `ix_pc10_recovery_scope` (`payroll_group_id`,`payroll_period_id`,`recovery_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_010_usage_events` (
+  `usage_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `payroll_group_id` bigint unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `payroll_period_id` int unsigned DEFAULT NULL,
+  `consumer_token` varchar(64) NOT NULL,
+  `authority_mode` varchar(24) NOT NULL,
+  `source_token` varchar(48) NOT NULL,
+  `event_sha256` char(64) NOT NULL,
+  `recorded_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`usage_event_id`),
+  UNIQUE KEY `uq_pc10_usage_sha` (`event_sha256`),
+  KEY `ix_pc10_usage_scope` (`payroll_group_id`,`payroll_period_id`,`consumer_token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_pc10_int_u` BEFORE UPDATE ON `0_hrm_pay_core_010_approval_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_approval_intents';
+CREATE TRIGGER `0_pc10_int_d` BEFORE DELETE ON `0_hrm_pay_core_010_approval_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_approval_intents';
+CREATE TRIGGER `0_pc10_app_u` BEFORE UPDATE ON `0_hrm_pay_core_010_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_approvals';
+CREATE TRIGGER `0_pc10_app_d` BEFORE DELETE ON `0_hrm_pay_core_010_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_approvals';
+CREATE TRIGGER `0_pc10_prj_u` BEFORE UPDATE ON `0_hrm_pay_core_010_projections` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_projections';
+CREATE TRIGGER `0_pc10_prj_d` BEFORE DELETE ON `0_hrm_pay_core_010_projections` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_projections';
+CREATE TRIGGER `0_pc10_par_u` BEFORE UPDATE ON `0_hrm_pay_core_010_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_parity_evidence';
+CREATE TRIGGER `0_pc10_par_d` BEFORE DELETE ON `0_hrm_pay_core_010_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_parity_evidence';
+CREATE TRIGGER `0_pc10_trs_u` BEFORE UPDATE ON `0_hrm_pay_core_010_cutover_transitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_cutover_transitions';
+CREATE TRIGGER `0_pc10_trs_d` BEFORE DELETE ON `0_hrm_pay_core_010_cutover_transitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_cutover_transitions';
+CREATE TRIGGER `0_pc10_rcv_u` BEFORE UPDATE ON `0_hrm_pay_core_010_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_recovery_evidence';
+CREATE TRIGGER `0_pc10_rcv_d` BEFORE DELETE ON `0_hrm_pay_core_010_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_recovery_evidence';
+CREATE TRIGGER `0_pc10_use_u` BEFORE UPDATE ON `0_hrm_pay_core_010_usage_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_usage_events';
+CREATE TRIGGER `0_pc10_use_d` BEFORE DELETE ON `0_hrm_pay_core_010_usage_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_usage_events';

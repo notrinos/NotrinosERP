@@ -472,6 +472,13 @@ $security_areas =array(
 	'SA_HRM_MANAGE_PAY_CORE_RUN' => array(SS_HRM|98, _('Start governed restartable PAY-CORE payroll runs')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CORE_RUN' => array(SS_HRM|99, _('Execute bounded PAY-CORE payroll run chunks and finalization')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_CORE_RUN' => array(SS_HRM|100, _('Execute forward-only PAY-CORE run recovery and reconciliation')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CORE_PROJECTION' => array(SS_HRM|101, _('Prepare governed PAY-CORE approval and legacy projection evidence')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CORE_PROJECTION' => array(SS_HRM|102, _('Independently review PAY-CORE shadow parity and cutover readiness')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_PROJECTION' => array(SS_HRM|103, _('Execute active PAY-CORE legacy payslip projection writes')), // no automatic role grant
+	'SA_HRM_APPROVE_PAY_CORE_RESULT' => array(SS_HRM|104, _('Approve exact immutable PAY-CORE result sets through the central workflow')), // no automatic role grant
+	'SA_HRM_ACTIVATE_PAY_CORE_PROJECTION' => array(SS_HRM|105, _('Activate evidence-complete PAY-CORE projection authority')), // no automatic role grant
+	'SA_HRM_FALLBACK_PAY_CORE_PROJECTION' => array(SS_HRM|106, _('Execute governed PAY-CORE projection fallback')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_CORE_PROJECTION' => array(SS_HRM|107, _('Record forward-only PAY-CORE projection recovery evidence')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -495,6 +502,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_CORE_TRACE_DIGEST' => array(SS_HRM_A|19, _('View restricted PAY-CORE trace digests under compensation scope')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_VALIDATION' => array(SS_HRM_A|20, _('View scoped PAY-CORE validation, variance and signoff evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_RUN' => array(SS_HRM_A|21, _('View safe scoped PAY-CORE run state and checkpoint summaries')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE_PROJECTION' => array(SS_HRM_A|22, _('View scoped PAY-CORE approval, projection, parity and cutover evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

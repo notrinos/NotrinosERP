@@ -15,6 +15,7 @@ include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root . '/hrm/includes/db/pay_core_009_governance_db.inc');
+include_once($path_to_root . '/hrm/includes/db/pay_core_010_governance_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 
 page(_("Payroll Approval"));
@@ -107,6 +108,22 @@ foreach ($_POST as $name => $value) {
                     'total_net'        => $payroll_amount,
                     'department_id'    => isset($period['department_id']) ? $period['department_id'] : null,
                 ), payroll_period_approval_binding_draft_fields($binding));
+                $pay_core_010_state = hrm_pay_core_010_state_for_period($period_id, true, $pay_core_010_state_error);
+                if ($pay_core_010_state === false) {
+                    cancel_transaction();
+                    display_error(sprintf(_('PAY-CORE-010 approval scope could not be verified (%s).'), $pay_core_010_state_error));
+                    continue;
+                }
+                if ($pay_core_010_state['state'] === 'active_new') {
+                    $intent_key = 'approval-submit-' . $period_id . '-' . substr($pay_core_010_state['transition_sha256'], 0, 24);
+                    $pay_core_010_intent = hrm_pay_core_010_prepare_approval_intent($period_id, $intent_key, $pay_core_010_intent_error);
+                    if ($pay_core_010_intent === false) {
+                        cancel_transaction();
+                        display_error(sprintf(_('PAY-CORE-010 approval intent could not be created (%s).'), $pay_core_010_intent_error));
+                        continue;
+                    }
+                    $payroll_draft_data = array_merge($payroll_draft_data, hrm_pay_core_010_approval_draft_fields($pay_core_010_intent));
+                }
 
                 $approval_result = $approval_service->submit(
                     ST_PAYROLL_PERIOD,

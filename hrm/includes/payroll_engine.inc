@@ -25,6 +25,7 @@ include_once($path_to_root.'/hrm/includes/db/job_positions_entity.inc');
 include_once($path_to_root.'/hrm/includes/db/attendance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_core_010_governance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
@@ -36,7 +37,7 @@ include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.428');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.430');
 
 /**
  * Payroll Formula Engine.
@@ -1800,6 +1801,14 @@ function prepare_payroll_period_results_for_approval($period_id, $payslip_docume
         $result['code'] = 'read_only_boundary_active';
         return $result;
     }
+    $pay_core_010_error = null;
+    if (function_exists('hrm_pay_core_010_legacy_writer_allowed')
+        && !hrm_pay_core_010_legacy_writer_allowed($period_id, $pay_core_010_error)
+    ) {
+        $result['code'] = $pay_core_010_error ?: 'pay_core_010_legacy_writer_denied';
+        $result['message'] = _('The legacy payroll result writer is not authoritative for this payroll group.');
+        return $result;
+    }
 
     // Validate the complete result set before any persistence begins.
     $expected_detail_count = 0;
@@ -1956,6 +1965,14 @@ function prepare_payroll_period_results_for_approval($period_id, $payslip_docume
             cancel_transaction();
             $result['code'] = 'audit_append_failed';
             $result['message'] = _('Payroll preparation audit could not be recorded. No results were committed.');
+            return $result;
+        }
+        if (function_exists('hrm_pay_core_010_record_legacy_writer_usage')
+            && !hrm_pay_core_010_record_legacy_writer_usage($period_id, 'legacy_prepare_results', $pay_core_010_usage_error)
+        ) {
+            cancel_transaction();
+            $result['code'] = $pay_core_010_usage_error ?: 'pay_core_010_legacy_usage_evidence_failed';
+            $result['message'] = _('Payroll preparation usage evidence could not be recorded. No results were committed.');
             return $result;
         }
 
@@ -2906,6 +2923,20 @@ function post_payslip_to_gl(&$payslip_doc) {
 
     begin_transaction();
     try {
+        $pay_core_010_usage_error = null;
+        if (function_exists('hrm_pay_core_010_record_legacy_writer_usage')
+            && !hrm_pay_core_010_record_legacy_writer_usage(
+                (int)$payslip_doc->payroll_period_id,
+                'manual_post_payslip',
+                $pay_core_010_usage_error
+            )
+        ) {
+            if (function_exists('display_error'))
+                display_error(_('The legacy payslip writer is not authoritative for this payroll group.'));
+            cancel_transaction();
+            return false;
+        }
+
         $readiness = payroll_suspension_revalidate_document_for_update($payslip_doc);
         if (!is_array($readiness) || empty($readiness['can_use_legacy_calculation'])) {
             if (function_exists('display_error'))
