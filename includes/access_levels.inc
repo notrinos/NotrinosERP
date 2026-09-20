@@ -469,6 +469,9 @@ $security_areas =array(
 	'SA_HRM_REVIEW_PAY_CORE_VALIDATION' => array(SS_HRM|95, _('Independently review PAY-CORE validation and reconciliation evidence')), // no automatic role grant
 	'SA_HRM_RESOLVE_PAY_CORE_VALIDATION' => array(SS_HRM|96, _('Resolve governed PAY-CORE validation findings')), // no automatic role grant
 	'SA_HRM_SIGNOFF_PAY_CORE_VALIDATION' => array(SS_HRM|97, _('Sign off exact immutable PAY-CORE readiness evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CORE_RUN' => array(SS_HRM|98, _('Start governed restartable PAY-CORE payroll runs')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CORE_RUN' => array(SS_HRM|99, _('Execute bounded PAY-CORE payroll run chunks and finalization')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_CORE_RUN' => array(SS_HRM|100, _('Execute forward-only PAY-CORE run recovery and reconciliation')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -491,6 +494,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_CORE' => array(SS_HRM_A|18, _('View PAY-CORE calendar, group, relationship and migration evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_TRACE_DIGEST' => array(SS_HRM_A|19, _('View restricted PAY-CORE trace digests under compensation scope')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CORE_VALIDATION' => array(SS_HRM_A|20, _('View scoped PAY-CORE validation, variance and signoff evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CORE_RUN' => array(SS_HRM_A|21, _('View safe scoped PAY-CORE run state and checkpoint summaries')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

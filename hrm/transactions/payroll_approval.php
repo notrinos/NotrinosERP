@@ -14,6 +14,7 @@ $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
+include_once($path_to_root . '/hrm/includes/db/pay_core_009_governance_db.inc');
 include_once($path_to_root . '/includes/approval/db/approval_db.inc');
 
 page(_("Payroll Approval"));
@@ -22,6 +23,9 @@ $approval_service = get_approval_workflow_service();
 
 $recover_period_id = find_submit('Recover');
 if ($recover_period_id > 0) {
+    if (!hrm_pay_core_009_period_ready_for_approval($recover_period_id, $runner_error)) {
+        display_error(sprintf(_('Payroll run state does not permit approval recovery (%s).'), $runner_error));
+    } else {
 	$recovery = reconcile_pending_payroll_period_approval($recover_period_id);
 	if (!isset($recovery['status']) || $recovery['status'] === 'error')
 		display_error(isset($recovery['message'])
@@ -29,6 +33,7 @@ if ($recover_period_id > 0) {
 			: _('The payroll period approval could not be recovered.'));
 	else
 		display_notification($recovery['message']);
+    }
 	if (isset($Ajax))
 		$Ajax->activate('_page_body');
 }
@@ -48,6 +53,12 @@ foreach ($_POST as $name => $value) {
             if ((int)$period['status'] !== 1) {
                 cancel_transaction();
                 display_error(_('Only calculated payroll periods can be approved.'));
+                continue;
+            }
+
+            if (!hrm_pay_core_009_period_ready_for_approval($period_id, $runner_error)) {
+                cancel_transaction();
+                display_error(sprintf(_('Payroll run state does not permit approval (%s).'), $runner_error));
                 continue;
             }
 

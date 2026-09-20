@@ -10596,3 +10596,137 @@ CREATE TRIGGER `0_pc8_rec_d` BEFORE DELETE ON `0_hrm_pay_validation_reconciliati
 
 CREATE TRIGGER `0_pc8_rcv_u` BEFORE UPDATE ON `0_hrm_pay_validation_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_recovery_evidence';
 CREATE TRIGGER `0_pc8_rcv_d` BEFORE DELETE ON `0_hrm_pay_validation_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_recovery_evidence';
+
+-- PAY-CORE-009 restartable chunk runner and authoritative state service
+CREATE TABLE `0_hrm_pay_core_009_runs` (
+  `run_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `run_key` varchar(96) NOT NULL,
+  `run_type` varchar(32) NOT NULL,
+  `payroll_period_id` int unsigned NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned DEFAULT NULL,
+  `period_name` varchar(80) NOT NULL,
+  `from_date` date NOT NULL,
+  `to_date` date NOT NULL,
+  `chunk_size` int unsigned NOT NULL,
+  `request_sha256` char(64) NOT NULL,
+  `state` varchar(24) NOT NULL,
+  `state_version` bigint unsigned NOT NULL,
+  `state_sha256` char(64) NOT NULL,
+  `checkpoint_no` int unsigned NOT NULL DEFAULT 0,
+  `lease_worker_sha256` char(64) DEFAULT NULL,
+  `lease_token_sha256` char(64) DEFAULT NULL,
+  `lease_expires_at` datetime DEFAULT NULL,
+  `heartbeat_at` datetime DEFAULT NULL,
+  `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`run_id`),
+  UNIQUE KEY `uq_pc9_run_key` (`run_key`),
+  UNIQUE KEY `uq_pc9_request` (`request_sha256`),
+  UNIQUE KEY `uq_pc9_payroll_period` (`payroll_period_id`),
+  KEY `ix_pc9_run_state_lease` (`state`,`lease_expires_at`),
+  KEY `ix_pc9_run_scope` (`legal_entity_id`,`calendar_period_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_items` (
+  `run_item_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `run_id` bigint unsigned NOT NULL,
+  `ordinal_no` int unsigned NOT NULL,
+  `employee_id` varchar(64) NOT NULL,
+  `employee_id_sha256` char(64) NOT NULL,
+  `legal_entity_id` int unsigned NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `worker_id` bigint unsigned NOT NULL,
+  `person_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned DEFAULT NULL,
+  `object_scope_sha256` char(64) NOT NULL,
+  `input_sha256` char(64) NOT NULL,
+  `item_state` varchar(24) NOT NULL,
+  `state_version` bigint unsigned NOT NULL,
+  `item_state_sha256` char(64) NOT NULL,
+  `attempt_no` int unsigned NOT NULL DEFAULT 0,
+  `result_sha256` char(64) DEFAULT NULL,
+  `result_payload_json` longtext DEFAULT NULL,
+  `lease_token_sha256` char(64) DEFAULT NULL,
+  `last_error_code` varchar(96) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`run_item_id`),
+  UNIQUE KEY `uq_pc9_item_ordinal` (`run_id`,`ordinal_no`),
+  UNIQUE KEY `uq_pc9_item_employee` (`run_id`,`employee_id_sha256`),
+  KEY `ix_pc9_item_state` (`run_id`,`item_state`,`ordinal_no`),
+  KEY `ix_pc9_item_scope` (`legal_entity_id`,`payroll_relationship_id`,`assignment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_lease_events` (
+  `lease_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `run_id` bigint unsigned NOT NULL, `event_kind` varchar(24) NOT NULL,
+  `worker_sha256` char(64) NOT NULL, `lease_token_sha256` char(64) NOT NULL,
+  `acquired_at` datetime NOT NULL, `expires_at` datetime NOT NULL,
+  `lease_event_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`lease_event_id`), UNIQUE KEY `uq_pc9_lease_sha` (`lease_event_sha256`), KEY `ix_pc9_lease_run` (`run_id`,`lease_event_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_attempts` (
+  `attempt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
+  `run_item_id` bigint unsigned NOT NULL, `attempt_no` int unsigned NOT NULL,
+  `command_key` varchar(128) NOT NULL, `worker_sha256` char(64) NOT NULL,
+  `predecessor_state_sha256` char(64) NOT NULL, `outcome` varchar(24) NOT NULL,
+  `result_sha256` char(64) DEFAULT NULL, `error_code` varchar(96) DEFAULT NULL,
+  `evidence_sha256` char(64) NOT NULL, `attempt_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`attempt_id`), UNIQUE KEY `uq_pc9_attempt_sha` (`attempt_sha256`), UNIQUE KEY `uq_pc9_attempt_no` (`run_item_id`,`attempt_no`), KEY `ix_pc9_attempt_run` (`run_id`,`attempt_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_checkpoints` (
+  `checkpoint_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
+  `checkpoint_no` int unsigned NOT NULL, `completed_items` int unsigned NOT NULL,
+  `failed_items` int unsigned NOT NULL, `quarantined_items` int unsigned NOT NULL,
+  `item_set_sha256` char(64) NOT NULL, `state_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL, `checkpoint_sha256` char(64) NOT NULL,
+  `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`checkpoint_id`), UNIQUE KEY `uq_pc9_checkpoint_sha` (`checkpoint_sha256`), UNIQUE KEY `uq_pc9_checkpoint_no` (`run_id`,`checkpoint_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_transitions` (
+  `transition_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
+  `from_state` varchar(24) NOT NULL, `to_state` varchar(24) NOT NULL,
+  `expected_version` bigint unsigned NOT NULL, `resulting_version` bigint unsigned NOT NULL,
+  `command_key` varchar(128) NOT NULL, `predecessor_state_sha256` char(64) NOT NULL,
+  `resulting_state_sha256` char(64) NOT NULL, `transition_sha256` char(64) NOT NULL,
+  `actor_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`transition_id`), UNIQUE KEY `uq_pc9_transition_sha` (`transition_sha256`), UNIQUE KEY `uq_pc9_transition_version` (`run_id`,`resulting_version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_quarantine` (
+  `quarantine_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
+  `run_item_id` bigint unsigned NOT NULL, `attempt_sha256` char(64) NOT NULL,
+  `reason_code` varchar(96) NOT NULL, `evidence_sha256` char(64) NOT NULL,
+  `quarantine_sha256` char(64) NOT NULL, `quarantined_by` int unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`quarantine_id`), UNIQUE KEY `uq_pc9_quarantine_sha` (`quarantine_sha256`), UNIQUE KEY `uq_pc9_quarantine_attempt` (`attempt_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_pay_core_009_recovery_evidence` (
+  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
+  `action_token` varchar(64) NOT NULL, `predecessor_state_sha256` char(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL,
+  `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_pc9_recovery_sha` (`recovery_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_pc9_lea_u` BEFORE UPDATE ON `0_hrm_pay_core_009_lease_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_lease_events';
+CREATE TRIGGER `0_pc9_lea_d` BEFORE DELETE ON `0_hrm_pay_core_009_lease_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_lease_events';
+CREATE TRIGGER `0_pc9_att_u` BEFORE UPDATE ON `0_hrm_pay_core_009_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_attempts';
+CREATE TRIGGER `0_pc9_att_d` BEFORE DELETE ON `0_hrm_pay_core_009_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_attempts';
+CREATE TRIGGER `0_pc9_chk_u` BEFORE UPDATE ON `0_hrm_pay_core_009_checkpoints` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_checkpoints';
+CREATE TRIGGER `0_pc9_chk_d` BEFORE DELETE ON `0_hrm_pay_core_009_checkpoints` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_checkpoints';
+CREATE TRIGGER `0_pc9_trs_u` BEFORE UPDATE ON `0_hrm_pay_core_009_transitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_transitions';
+CREATE TRIGGER `0_pc9_trs_d` BEFORE DELETE ON `0_hrm_pay_core_009_transitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_transitions';
+CREATE TRIGGER `0_pc9_qua_u` BEFORE UPDATE ON `0_hrm_pay_core_009_quarantine` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_quarantine';
+CREATE TRIGGER `0_pc9_qua_d` BEFORE DELETE ON `0_hrm_pay_core_009_quarantine` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_quarantine';
+CREATE TRIGGER `0_pc9_rcv_u` BEFORE UPDATE ON `0_hrm_pay_core_009_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_recovery_evidence';
+CREATE TRIGGER `0_pc9_rcv_d` BEFORE DELETE ON `0_hrm_pay_core_009_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_recovery_evidence';

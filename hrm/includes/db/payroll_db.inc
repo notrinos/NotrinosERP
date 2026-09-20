@@ -2588,6 +2588,12 @@ function update_payroll_period_status(
         return false;
 
     $status = (int)$status;
+    if ($expected_status === null)
+        return false;
+    $expected_status = (int)$expected_status;
+
+    // PAY-CORE-009: every numeric transition is compare-and-swap. Callers may
+    // not perform blind status mutation; controlled reopen/void remain separate.
 
     // Reopen and void are controlled commands, not generic status updates.
     // This blocks extension/direct-helper flag-only bypasses. The guarded
@@ -2616,8 +2622,7 @@ function update_payroll_period_status(
 
     $sql = "UPDATE ".TB_PREF."payroll_periods SET ".implode(', ', $set).
         " WHERE period_id = ".db_escape((int)$period_id);
-    if ($expected_status !== null)
-        $sql .= " AND status = ".db_escape((int)$expected_status);
+    $sql .= " AND status = ".db_escape($expected_status);
     if ($status < 2)
         $sql .= " AND status < 2";
 
@@ -2625,7 +2630,7 @@ function update_payroll_period_status(
     if (!$result)
         return false;
 
-    return $expected_status === null || db_num_affected_rows() === 1;
+    return db_num_affected_rows() === 1;
 }
 
 /**
@@ -2664,7 +2669,7 @@ function sync_payroll_period_payment_status($period_id) {
     $paid_count = $row ? (int)$row['paid_count'] : 0;
 
     if ($total_count > 0 && $paid_count >= $total_count && $current_status !== 4)
-        return update_payroll_period_status($period_id, 4);
+        return update_payroll_period_status($period_id, 4, $current_status);
 
     return true;
 }
@@ -2692,7 +2697,7 @@ function mark_payroll_period_paid($period_id) {
 
     begin_transaction();
 
-    $ok = update_payroll_period_status($period_id, 4);
+    $ok = update_payroll_period_status($period_id, 4, $current_status);
     $payslip_table = payroll_payslip_header_table();
     if ($ok && $payslip_table) {
         $sql = "UPDATE ".TB_PREF.$payslip_table." SET status = 3"

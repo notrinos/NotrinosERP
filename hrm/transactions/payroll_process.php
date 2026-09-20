@@ -20,6 +20,8 @@ include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc'
 hrm_employee_projection_require_readable();
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/payroll_engine.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_core_009_governance_db.inc');
+include_once($path_to_root.'/hrm/includes/payroll/pay_core_009_runner.inc');
 
 $js = '';
 
@@ -276,6 +278,53 @@ function display_payroll_skip_messages($skip_reasons) {
     }
 }
 
+/** Render one safe PAY-CORE-009 progress summary. */
+function display_pay_core_009_progress($status) {
+    if (!is_array($status))
+        return;
+    $counts = isset($status['counts']) && is_array($status['counts']) ? $status['counts'] : array();
+    display_note(sprintf(
+        _('Restartable payroll run #%d / Period #%d — state: %s; completed: %d; pending: %d; failed: %d; quarantined: %d; checkpoint: %d.'),
+        (int)$status['run_id'],
+        (int)$status['payroll_period_id'],
+        (string)$status['state'],
+        (int)($counts['completed'] ?? 0),
+        (int)($counts['pending'] ?? 0),
+        (int)($counts['failed'] ?? 0),
+        (int)($counts['quarantined'] ?? 0),
+        (int)$status['checkpoint_no']
+    ));
+}
+
+$pay_core_009_last_status = null;
+$resume_run_id = find_submit('ResumeRun');
+if ($resume_run_id > 0) {
+    $chunk = hrm_pay_core_009_run_chunk($resume_run_id, 'browser', null, $run_error);
+    if ($chunk === false)
+        display_error(sprintf(_('Payroll run could not resume (%s).'), $run_error));
+    else
+        display_notification($chunk['finalized']
+            ? _('Payroll run completed and results were prepared for approval.')
+            : _('Payroll run chunk completed. Use Resume to continue if work remains.'));
+    $pay_core_009_last_status = hrm_pay_core_009_status($resume_run_id, $status_error);
+}
+
+$recover_run_id = find_submit('RecoverRun');
+if ($recover_run_id > 0) {
+    $before = hrm_pay_core_009_status($recover_run_id, $status_error);
+    $action = is_array($before) && $before['state'] === 'quarantined'
+        ? 'resume_quarantined' : 'resume_failed';
+    if (!hrm_pay_core_009_recover_run($recover_run_id, $action, $recover_error))
+        display_error(sprintf(_('Payroll run recovery was denied (%s).'), $recover_error));
+    else {
+        display_notification(_('Payroll run recovery evidence was recorded. The run can resume.'));
+        $chunk = hrm_pay_core_009_run_chunk($recover_run_id, 'browser', null, $run_error);
+        if ($chunk === false)
+            display_error(sprintf(_('Recovered payroll run could not resume (%s).'), $run_error));
+    }
+    $pay_core_009_last_status = hrm_pay_core_009_status($recover_run_id, $status_error);
+}
+
 if (isset($_POST['process_payroll']) && validate_payroll_request()) {
     $period_name = trim((string)get_post('period_name'));
     $from_date = get_post('from_date');
@@ -294,120 +343,59 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
         set_focus('employee_id');
     } elseif (empty($employees)) {
         if (!empty($skip_reasons['existing_payslips'])
-			&& empty($skip_reasons['not_hired'])
+            && empty($skip_reasons['not_hired'])
             && empty($skip_reasons['missing_position'])
             && empty($skip_reasons['missing_salary_components']))
             display_error(_('Selected employees already have payslips for the requested period.'));
         elseif (!empty($skip_reasons['missing_position'])
-			&& empty($skip_reasons['not_hired'])
+            && empty($skip_reasons['not_hired'])
             && empty($skip_reasons['existing_payslips'])
             && empty($skip_reasons['missing_salary_components']))
             display_error(_('Selected employees are missing job positions.'));
         elseif (!empty($skip_reasons['missing_salary_components'])
-			&& empty($skip_reasons['not_hired'])
+            && empty($skip_reasons['not_hired'])
             && empty($skip_reasons['existing_payslips'])
             && empty($skip_reasons['missing_position']))
             display_error(_('Selected employees do not have salary components for the requested period.'));
-		elseif (!empty($skip_reasons['not_hired'])
-			&& empty($skip_reasons['existing_payslips'])
-			&& empty($skip_reasons['missing_position'])
-			&& empty($skip_reasons['missing_salary_components']))
-			display_error(_('Selected employees were not yet hired for the requested period.'));
-		elseif (!empty($skip_reasons['existing_payslips'])
-			|| !empty($skip_reasons['not_hired'])
+        elseif (!empty($skip_reasons['not_hired'])
+            && empty($skip_reasons['existing_payslips'])
+            && empty($skip_reasons['missing_position'])
+            && empty($skip_reasons['missing_salary_components']))
+            display_error(_('Selected employees were not yet hired for the requested period.'));
+        elseif (!empty($skip_reasons['existing_payslips'])
+            || !empty($skip_reasons['not_hired'])
             || !empty($skip_reasons['missing_position'])
             || !empty($skip_reasons['missing_salary_components']))
             display_error(_('No eligible employees were found for payroll processing.'));
         else
             display_warning(_('No active employees found for selected filters.'));
-
         display_payroll_skip_messages($skip_reasons);
     } else {
-        $period_id = add_payroll_period($period_name, $from_date, $to_date, $department_id ? $department_id : null);
-        if (!$period_id) {
-            if (!payroll_table_exists('payroll_periods'))
-                display_error(_('Could not create payroll period because payroll_periods table is missing in the current company database.'));
-            else
-                display_error(_('Could not create payroll period.'));
-            return;
-        }
-
-        $success_count = 0;
-        $failed_count = count($skip_reasons['existing_payslips'])
-			+ count($skip_reasons['not_hired'])
-            + count($skip_reasons['missing_position'])
-            + count($skip_reasons['missing_salary_components']);
-
         display_payroll_skip_messages($skip_reasons);
-
-        $runtime_context = array(
-            'salary_components' => function_exists('get_salary_components_for_employees')
-                ? get_salary_components_for_employees($employees, $to_date)
-                : array()
+        $start = hrm_pay_core_009_start_run(
+            $period_name, $from_date, $to_date, $department_id, $employees,
+            HRM_PAY_CORE_009_DEFAULT_CHUNK_SIZE, $start_error
         );
-
-        $prepared_documents = array();
-        $calculation_failed_count = 0;
-        $calculation_readiness_denials = array();
-        foreach ($employees as $employee) {
-            $payslip_doc = calculate_employee_payslip_read_only(
-                $employee,
-                $from_date,
-                $to_date,
-                $period_id,
-                $runtime_context
-            );
-            if (!$payslip_doc) {
-                $failed_count++;
-                $calculation_failed_count++;
-                $readiness_error = function_exists('payroll_suspension_readiness_denial_message')
-                    ? payroll_suspension_readiness_denial_message() : '';
-                if ($readiness_error !== '')
-                    $calculation_readiness_denials[$readiness_error] = true;
-                continue;
-            }
-
-            $prepared_documents[] = $payslip_doc;
-        }
-
-        if ($calculation_failed_count > 0) {
-            $failure_message = !empty($calculation_readiness_denials)
-                ? implode(' ', array_keys($calculation_readiness_denials)).' '._('No partial payroll result was prepared.')
-                : _('Payroll calculation failed for one or more eligible employees. No partial payroll result was prepared.');
-            $preparation = array(
-                'ok' => false,
-                'code' => !empty($calculation_readiness_denials)
-                    ? 'suspension_readiness_denied' : 'incomplete_calculation_set',
-                'message' => $failure_message,
-            );
-        } else {
-            $preparation = !empty($prepared_documents)
-                ? prepare_payroll_period_results_for_approval($period_id, $prepared_documents)
-                : array('ok' => false, 'code' => 'empty_payroll_result');
-        }
-
-        if (!empty($preparation['ok'])) {
-            $success_count = (int)$preparation['payslip_count'];
-            display_notification(sprintf(
-                _('Payroll results prepared for approval. Success: %d employee(s), Failed: %d employee(s), Period ID: %d'),
-                $success_count,
-                $failed_count,
-                $period_id
+        if ($start === false) {
+            display_error(sprintf(
+                _('Restartable payroll run could not be started (%s). No partial payroll result was prepared.'),
+                $start_error
             ));
         } else {
-            $failed_count += count($prepared_documents);
-            $discarded = discard_empty_payroll_period_draft($period_id);
-            if (isset($preparation['message']) && trim((string)$preparation['message']) !== '')
-                display_error($preparation['message']);
-            else
-                display_error(_('Payroll results could not be prepared for approval.'));
-
-            if (!$discarded) {
-                display_warning(sprintf(
-                    _('Draft payroll period #%d was retained for controlled recovery because it was not safe to remove automatically.'),
-                    $period_id
+            $chunk = hrm_pay_core_009_run_chunk($start['run_id'], 'browser', null, $run_error);
+            if ($chunk === false)
+                display_error(sprintf(_('Payroll run stopped safely (%s).'), $run_error));
+            elseif ($chunk['finalized'])
+                display_notification(sprintf(
+                    _('Payroll results prepared for approval. Run #%d, Period #%d.'),
+                    (int)$start['run_id'], (int)$start['payroll_period_id']
                 ));
-            }
+            else
+                display_notification(sprintf(
+                    _('Payroll run #%d saved a durable checkpoint. Use Resume to continue.'),
+                    (int)$start['run_id']
+                ));
+            $pay_core_009_last_status = hrm_pay_core_009_status($start['run_id'], $status_error);
         }
     }
 }
@@ -433,6 +421,33 @@ end_row();
 end_table(1);
 
 submit_center('process_payroll', _('Process Payroll'), true, '', 'default');
+
+if (is_array($pay_core_009_last_status))
+    display_pay_core_009_progress($pay_core_009_last_status);
+
+$open_runs = hrm_pay_core_009_open_runs_for_actor($open_error);
+if (is_array($open_runs) && !empty($open_runs)) {
+    start_table(TABLESTYLE_DATA);
+    table_header(array(_('Run'), _('Period'), _('State'), _('Checkpoint'), _('Progress'), ''));
+    foreach ($open_runs as $run) {
+        $counts = $run['counts'];
+        start_row();
+        label_cell((int)$run['run_id']);
+        label_cell((int)$run['payroll_period_id']);
+        label_cell((string)$run['state']);
+        label_cell((int)$run['checkpoint_no']);
+        label_cell(sprintf(_('Completed %d / Pending %d / Failed %d / Quarantined %d'),
+            (int)$counts['completed'], (int)$counts['pending'], (int)$counts['failed'], (int)$counts['quarantined']));
+        if (!empty($run['can_resume']))
+            submit_cells('ResumeRun'.$run['run_id'], _('Resume'), _('Execute one bounded payroll chunk.'), true);
+        elseif (!empty($run['needs_recovery']))
+            submit_cells('RecoverRun'.$run['run_id'], _('Recover'), _('Record forward recovery evidence and resume the run.'), true);
+        else
+            label_cell('');
+        end_row();
+    }
+    end_table(1);
+}
 
 end_form();
 
