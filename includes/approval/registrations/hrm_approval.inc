@@ -680,6 +680,7 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 
 	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 	include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+	include_once($path_to_root . '/hrm/includes/db/hrm_lve_001_governance_db.inc');
 	include_once($path_to_root . '/hrm/includes/db/lifecycle_leave_request_suspension_consumer_db.inc');
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
@@ -712,49 +713,31 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 	// Get the final approver remarks from approval actions
 	$remarks = isset($draft_data['approval_remarks']) ? $draft_data['approval_remarks'] : '';
 
-	$fiscal_year = get_leave_balance_fiscal_year_for_date($request['from_date']);
-	$balance_before = get_leave_balance_for_update(
-		$request['employee_id'],
-		(int)$request['leave_id'],
-		$fiscal_year
-	);
-	$taken_before = $balance_before ? (float)$balance_before['taken'] : 0.0;
-
-	if (!approve_leave_request($request_id, 'approval_system', $remarks)
-		|| !apply_leave_balance_movement(
-			$request['employee_id'],
-			(int)$request['leave_id'],
-			$fiscal_year,
-			(float)$request['days'],
-			0,
-			0
-		)
+	$lve_error = null;
+	$lve_receipt = hrm_lve_001_reserve_request($request_id, $lve_error);
+	if ($lve_receipt === false
+		|| !hrm_lve_001_approve_request($request_id, (int)$draft_id, 'approval_system', $lve_error)
+		|| !hrm_lve_001_with_terminal_status_write(function() use ($request_id, $remarks) {
+			return approve_leave_request($request_id, 'approval_system', $remarks);
+		})
 	) {
 		cancel_transaction();
 		return false;
 	}
-
 	$request_after = get_leave_request($request_id);
-	$balance_after = get_leave_balance(
-		$request['employee_id'],
-		(int)$request['leave_id'],
-		$fiscal_year
-	);
-	if (!$request_after
-		|| (int)$request_after['status'] !== 1
-		|| !$balance_after
-		|| abs(
-			(float)$balance_after['taken']
-				- ($taken_before + (float)$request['days'])
-		) > 0.000001
-	) {
+	if (!$request_after || (int)$request_after['status'] !== 1) {
+		cancel_transaction();
+		return false;
+	}
+	$fiscal_year = get_leave_balance_fiscal_year_for_date($request['from_date']);
+	if (!hrm_lve_001_sync_legacy_projection($request['employee_id'], (int)$request['leave_id'], $fiscal_year, $request['to_date'], $lve_error)) {
 		cancel_transaction();
 		return false;
 	}
 
 	// Record the verified terminal state before the same outer transaction commits.
 	$audit_result = append_domain_audit_event(array(
-		'legal_entity_id' => 0,
+		'legal_entity_id' => (int)$lve_receipt['legal_entity_id'],
 		'entity_type'     => 'leave_request',
 		'entity_key'      => array('request_id' => $request_id),
 		'action'          => 'leave_request.approved',
@@ -771,7 +754,8 @@ function execute_approved_leave_request($draft_data, $reserved_trans_no, $draft_
 				'approval_date',
 				'approval_remarks',
 				'approved_by',
-				'leave_balance.taken',
+				'hrm_leave_movements.consumption',
+				'leave_balances.compatibility_projection',
 				'status',
 			),
 			'mutation_kind' => 'approved',
@@ -819,6 +803,7 @@ function transition_leave_request_approval_terminal(
 	global $path_to_root;
 
 	include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
+	include_once($path_to_root . '/hrm/includes/db/hrm_lve_001_governance_db.inc');
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 
 	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
@@ -837,13 +822,20 @@ function transition_leave_request_approval_terminal(
 		return false;
 	}
 
+	$lve_error = null;
+	if (!hrm_lve_001_release_request_if_reserved($request_id, (int)$target_status === 2 ? 'approval_rejected' : 'approval_cancelled', $lve_error)) {
+		cancel_transaction();
+		return false;
+	}
 	$approved_by = isset($_SESSION['wa_current_user'])
 		&& !empty($_SESSION['wa_current_user']->loginname)
 			? $_SESSION['wa_current_user']->loginname
 			: 'approval_system';
-	$transitioned = ((int)$target_status === 2)
-		? reject_leave_request($request_id, $approved_by, $comments)
-		: cancel_leave_request($request_id, $approved_by, $comments);
+	$transitioned = hrm_lve_001_with_terminal_status_write(function() use ($target_status, $request_id, $approved_by, $comments) {
+		return ((int)$target_status === 2)
+			? reject_leave_request($request_id, $approved_by, $comments)
+			: cancel_leave_request($request_id, $approved_by, $comments);
+	});
 	if (!$transitioned) {
 		cancel_transaction();
 		return false;

@@ -1,4 +1,6 @@
 <?php
+include_once(dirname(__FILE__).'/hrm_lve_001_governance_db.inc');
+
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -127,6 +129,10 @@ function add_leave_request($employee_id, $leave_id, $from_date, $to_date, $days,
  * @return void
  */
 function update_leave_request($request_id, $leave_id, $from_date, $to_date, $days, $half_day=0, $reason='', $doc_attachment='') {
+    if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready() && hrm_lve_001_request_receipt($request_id)) {
+        error_log('HRM-LVE-001 governed pending request is immutable; cancel and create a successor request');
+        return false;
+    }
     $doc_attachment = trim((string)$doc_attachment);
     $doc_sql = ($doc_attachment === '') ? 'NULL' : db_escape($doc_attachment);
 
@@ -161,6 +167,10 @@ function set_leave_request_status(
     $remarks='',
     $expected_status=null
 ) {
+    if (function_exists('hrm_lve_001_terminal_status_write_allowed') && !hrm_lve_001_terminal_status_write_allowed() && hrm_lve_001_request_receipt($request_id)) {
+        error_log('HRM-LVE-001 denied direct leave request terminal mutation without governed ledger evidence');
+        return false;
+    }
     $approval_user = trim((string)$approved_by);
     $approval_user_sql = ($approval_user === '') ? 'NULL' : db_escape($approval_user);
     $approval_date_sql = ((int)$status === 0) ? 'NULL' : 'NOW()';

@@ -10842,3 +10842,84 @@ CREATE TRIGGER `0_tim2_map_u` BEFORE UPDATE ON `0_hrm_time_overtime_payroll_mapp
 CREATE TRIGGER `0_tim2_map_d` BEFORE DELETE ON `0_hrm_time_overtime_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies delete on hrm_time_overtime_payroll_mappings';
 CREATE TRIGGER `0_tim2_pay_u` BEFORE UPDATE ON `0_hrm_time_overtime_payroll_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies update on hrm_time_overtime_payroll_receipts';
 CREATE TRIGGER `0_tim2_pay_d` BEFORE DELETE ON `0_hrm_time_overtime_payroll_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies delete on hrm_time_overtime_payroll_receipts';
+
+-- HRM-LVE-001 governed leave policy and immutable movement custody (1.0.707+)
+CREATE TABLE `0_hrm_leave_policy_versions` (
+ `policy_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `policy_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `leave_id` int unsigned NOT NULL, `source_kind` varchar(32) NOT NULL, `source_ref` varchar(160) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `employment_type` int DEFAULT NULL, `grade_id` int unsigned DEFAULT NULL, `assignment_id` bigint unsigned DEFAULT NULL, `work_location_id` bigint unsigned DEFAULT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `priority_rank` int NOT NULL, `unit_code` varchar(16) NOT NULL, `cycle_basis` varchar(24) NOT NULL, `entitlement_mode` varchar(24) NOT NULL, `entitlement_units` decimal(20,6) DEFAULT NULL, `accrual_period` varchar(24) DEFAULT NULL, `waiting_days` int unsigned NOT NULL, `proration_mode` varchar(32) NOT NULL, `reference_cycle_minutes` int unsigned DEFAULT NULL, `carryover_enabled` tinyint(1) NOT NULL, `carryover_cap_units` decimal(20,6) DEFAULT NULL, `expiry_days` int unsigned DEFAULT NULL, `carryover_consumption_order` varchar(24) DEFAULT NULL, `negative_balance_limit_units` decimal(20,6) NOT NULL, `donation_allowed` tinyint(1) NOT NULL, `cashout_allowed` tinyint(1) NOT NULL, `min_request_units` decimal(20,6) DEFAULT NULL, `rounding_scale` tinyint unsigned NOT NULL, `predecessor_policy_version_id` bigint unsigned DEFAULT NULL, `policy_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`policy_version_id`), UNIQUE KEY `uq_lve1_pol_sha` (`policy_sha256`), UNIQUE KEY `uq_lve1_pol_ver` (`legal_entity_id`,`policy_code`,`version_token`), UNIQUE KEY `uq_lve1_pol_pred` (`predecessor_policy_version_id`), KEY `ix_lve1_pol_match` (`legal_entity_id`,`leave_id`,`effective_from`,`effective_to`,`priority_rank`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_entitlements` (
+ `entitlement_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_version_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `cycle_start` date NOT NULL, `cycle_end` date NOT NULL, `unit_code` varchar(16) NOT NULL, `entitlement_units` decimal(20,6) NOT NULL, `policy_sha256` char(64) NOT NULL, `schedule_sha256` char(64) NOT NULL, `command_key` varchar(128) NOT NULL, `entitlement_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`entitlement_id`), UNIQUE KEY `uq_lve1_ent_cmd` (`command_key`), UNIQUE KEY `uq_lve1_ent_sha` (`entitlement_sha256`), UNIQUE KEY `uq_lve1_ent_cycle` (`policy_version_id`,`worker_id`,`assignment_id`,`cycle_start`), KEY `ix_lve1_ent_scope` (`worker_id`,`employment_id`,`assignment_id`,`legal_entity_id`,`leave_id`,`cycle_start`,`cycle_end`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_movements` (
+ `movement_id` bigint unsigned NOT NULL AUTO_INCREMENT, `entitlement_id` bigint unsigned NOT NULL, `policy_version_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `effective_date` date NOT NULL, `unit_code` varchar(16) NOT NULL, `movement_kind` varchar(24) NOT NULL, `units` decimal(20,6) NOT NULL, `source_type` varchar(48) NOT NULL, `source_key` varchar(128) NOT NULL, `source_sha256` char(64) NOT NULL, `request_id` bigint unsigned DEFAULT NULL, `predecessor_movement_id` bigint unsigned DEFAULT NULL, `command_key` varchar(160) NOT NULL, `lineage_sha256` char(64) NOT NULL, `movement_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`movement_id`), UNIQUE KEY `uq_lve1_mov_cmd` (`command_key`), UNIQUE KEY `uq_lve1_mov_sha` (`movement_sha256`), UNIQUE KEY `uq_lve1_mov_pred` (`predecessor_movement_id`), KEY `ix_lve1_mov_ent` (`entitlement_id`,`effective_date`,`movement_id`), KEY `ix_lve1_mov_req` (`request_id`,`movement_kind`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_request_receipts` (
+ `request_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `request_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `requested_from` date NOT NULL, `requested_to` date NOT NULL, `requested_units` decimal(20,6) NOT NULL, `unit_code` varchar(16) NOT NULL, `policy_set_sha256` char(64) NOT NULL, `schedule_sha256` char(64) NOT NULL, `request_snapshot_sha256` char(64) NOT NULL, `reservation_command_key` varchar(160) NOT NULL, `receipt_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`request_receipt_id`), UNIQUE KEY `uq_lve1_req_id` (`request_id`), UNIQUE KEY `uq_lve1_req_cmd` (`reservation_command_key`), UNIQUE KEY `uq_lve1_req_sha` (`receipt_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_opening_inventory` (
+ `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `fiscal_year` int NOT NULL, `legacy_balance_id` bigint unsigned NOT NULL, `legacy_balance_sha256` char(64) NOT NULL, `as_of_date` date NOT NULL, `unit_code` varchar(16) NOT NULL, `entitled_units` decimal(20,6) NOT NULL, `carried_units` decimal(20,6) NOT NULL, `taken_units` decimal(20,6) NOT NULL, `pending_units` decimal(20,6) NOT NULL, `adjusted_units` decimal(20,6) NOT NULL, `provenance_state` varchar(32) NOT NULL, `evidence_sha256` char(64) NOT NULL, `inventory_sha256` char(64) NOT NULL, `inventoried_by` int unsigned NOT NULL, `reviewed_by` int unsigned DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`opening_inventory_id`), UNIQUE KEY `uq_lve1_opn_legacy` (`legacy_balance_id`), UNIQUE KEY `uq_lve1_opn_sha` (`inventory_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_projection_snapshots` (
+ `projection_id` bigint unsigned NOT NULL AUTO_INCREMENT, `entitlement_id` bigint unsigned NOT NULL, `as_of_date` date NOT NULL, `available_units` decimal(20,6) NOT NULL, `reserved_units` decimal(20,6) NOT NULL, `consumed_units` decimal(20,6) NOT NULL, `accrued_units` decimal(20,6) NOT NULL, `carried_units` decimal(20,6) NOT NULL, `expired_units` decimal(20,6) NOT NULL, `donated_units` decimal(20,6) NOT NULL, `cashed_out_units` decimal(20,6) NOT NULL, `movement_set_sha256` char(64) NOT NULL, `projection_sha256` char(64) NOT NULL, `built_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`projection_id`), UNIQUE KEY `uq_lve1_prj_sha` (`projection_sha256`), KEY `ix_lve1_prj_ent` (`entitlement_id`,`as_of_date`,`projection_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_reconciliations` (
+ `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `projection_id` bigint unsigned NOT NULL, `legacy_balance_id` bigint unsigned DEFAULT NULL, `legacy_balance_sha256` char(64) DEFAULT NULL, `difference_units` decimal(20,6) NOT NULL, `reconciliation_state` varchar(32) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_lve1_rec_sha` (`reconciliation_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_recovery_evidence` (
+ `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_id` bigint unsigned NOT NULL, `action_token` varchar(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_lve1_rcv_sha` (`recovery_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_payroll_mappings` (
+ `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `element_version_id` bigint unsigned NOT NULL, `input_definition_id` bigint unsigned NOT NULL, `unit_code` varchar(16) NOT NULL, `predecessor_mapping_id` bigint unsigned DEFAULT NULL, `mapping_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`mapping_id`), UNIQUE KEY `uq_lve1_map_sha` (`mapping_sha256`), UNIQUE KEY `uq_lve1_map_from` (`legal_entity_id`,`leave_id`,`effective_from`), UNIQUE KEY `uq_lve1_map_pred` (`predecessor_mapping_id`), KEY `ix_lve1_map_scope` (`legal_entity_id`,`leave_id`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_leave_payroll_handoffs` (
+ `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `movement_id` bigint unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `payroll_period_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `unit_code` varchar(16) NOT NULL, `approved_input_id` bigint unsigned NOT NULL, `approved_input_sha256` char(64) NOT NULL, `adapter_version` varchar(48) NOT NULL, `command_key` varchar(160) NOT NULL, `handoff_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`handoff_id`), UNIQUE KEY `uq_lve1_pay_mov` (`movement_id`), UNIQUE KEY `uq_lve1_pay_cmd` (`command_key`), UNIQUE KEY `uq_lve1_pay_sha` (`handoff_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_lve1_pol_u` BEFORE UPDATE ON `0_hrm_leave_policy_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_pol_d` BEFORE DELETE ON `0_hrm_leave_policy_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_ent_u` BEFORE UPDATE ON `0_hrm_leave_entitlements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_ent_d` BEFORE DELETE ON `0_hrm_leave_entitlements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_mov_u` BEFORE UPDATE ON `0_hrm_leave_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_mov_d` BEFORE DELETE ON `0_hrm_leave_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_req_u` BEFORE UPDATE ON `0_hrm_leave_request_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_req_d` BEFORE DELETE ON `0_hrm_leave_request_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_opn_u` BEFORE UPDATE ON `0_hrm_leave_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_opn_d` BEFORE DELETE ON `0_hrm_leave_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_prj_u` BEFORE UPDATE ON `0_hrm_leave_projection_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_prj_d` BEFORE DELETE ON `0_hrm_leave_projection_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_rec_u` BEFORE UPDATE ON `0_hrm_leave_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_rec_d` BEFORE DELETE ON `0_hrm_leave_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_rcv_u` BEFORE UPDATE ON `0_hrm_leave_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_rcv_d` BEFORE DELETE ON `0_hrm_leave_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_map_u` BEFORE UPDATE ON `0_hrm_leave_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_map_d` BEFORE DELETE ON `0_hrm_leave_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+CREATE TRIGGER `0_lve1_pay_u` BEFORE UPDATE ON `0_hrm_leave_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
+
+CREATE TRIGGER `0_lve1_pay_d` BEFORE DELETE ON `0_hrm_leave_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';

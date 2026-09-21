@@ -491,6 +491,15 @@ $security_areas =array(
 	'SA_HRM_INGEST_TIME_IMPORT' => array(SS_HRM|117, _('Ingest governed external time batches into raw-event custody')), // no automatic role grant
 	'SA_HRM_MANAGE_TIME_CONNECTOR' => array(SS_HRM|118, _('Manage governed external time connector contracts')), // no automatic role grant
 	'SA_HRM_EXECUTE_OVERTIME_PAYROLL' => array(SS_HRM|119, _('Execute qualified-overtime PAY-CORE-003 adapters')), // no automatic role grant
+	'SA_HRM_MANAGE_LEAVE_POLICY' => array(SS_HRM|120, _('Manage governed effective-dated leave policy successors')), // no automatic role grant
+	'SA_HRM_MIGRATE_LEAVE' => array(SS_HRM|121, _('Inventory legacy leave evidence for governed opening migration')), // no automatic role grant
+	'SA_HRM_REVIEW_LEAVE_OPENING' => array(SS_HRM|122, _('Independently review leave opening migration evidence')), // no automatic role grant
+	'SA_HRM_EXECUTE_LEAVE_LEDGER' => array(SS_HRM|123, _('Execute governed leave ledger reservations, consumption and lifecycle movements')), // no automatic role grant
+	'SA_HRM_RECOVER_LEAVE' => array(SS_HRM|124, _('Append governed leave reconciliation and recovery evidence')), // no automatic role grant
+	'SA_HRM_DONATE_LEAVE' => array(SS_HRM|125, _('Execute explicitly authorized leave donation quantity transfers')), // no automatic role grant
+	'SA_HRM_CASHOUT_LEAVE' => array(SS_HRM|126, _('Record authorized leave cash-out quantity custody without payment authority')), // no automatic role grant
+	'SA_HRM_MAP_LEAVE_PAYROLL' => array(SS_HRM|127, _('Manage explicit leave-to-PAY-CORE-003 mappings')), // no automatic role grant
+	'SA_HRM_EXECUTE_LEAVE_PAYROLL' => array(SS_HRM|128, _('Execute approved-leave PAY-CORE-003 input adapters')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -517,6 +526,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_PAY_CORE_PROJECTION' => array(SS_HRM_A|22, _('View scoped PAY-CORE approval, projection, parity and cutover evidence')), // no automatic role grant
 	'SA_HRM_VIEW_TIME' => array(SS_HRM_A|23, _('View scoped governed work-pattern and approved-time evidence')), // no automatic role grant
 	'SA_HRM_VIEW_TIME_IMPORT' => array(SS_HRM_A|24, _('View scoped overtime qualification and import custody evidence')), // no automatic role grant
+	'SA_HRM_VIEW_LEAVE_GOVERNANCE' => array(SS_HRM_A|25, _('View scoped governed leave policy, ledger and reconciliation evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

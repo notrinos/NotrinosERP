@@ -27,6 +27,7 @@ include_once($path_to_root.'/hrm/includes/db/payslip_db.inc');
 include_once($path_to_root.'/hrm/includes/db/payroll_db.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_core_010_governance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_balance_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_lve_001_governance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
@@ -37,7 +38,7 @@ include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.436');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.437');
 
 /**
  * Payroll Formula Engine.
@@ -1090,6 +1091,8 @@ function payroll_capture_posting_reversal_snapshot(&$payslip_doc) {
     ksort($leave_ids, SORT_NUMERIC);
 
     $leave_balances = array();
+    // HRM-LVE-001: governed leave custody is append-only; payroll reversal may not capture it for mutable restoration.
+    $capture_legacy_leave_balances = !function_exists('hrm_lve_001_tables_ready') || !hrm_lve_001_tables_ready();
     foreach (array_keys($leave_ids) as $leave_id) {
         $row = payroll_reversal_get_leave_balance_for_update(
             $employee_id,
@@ -1311,7 +1314,7 @@ function payroll_verify_posting_reversal_snapshot(
             return $failed;
         }
     }
-    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+    if (!function_exists('hrm_lve_001_tables_ready') || !hrm_lve_001_tables_ready()) foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
         $before = payroll_reversal_decode_state($row['before_state']);
         if (!$before || !isset($before['fiscal_year'])) {
             $failed['code'] = 'leave_reversal_evidence_malformed';
@@ -1421,7 +1424,7 @@ function payroll_restore_posting_reversal_snapshot($payslip, $snapshot_verificat
         }
     }
 
-    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+    if (!function_exists('hrm_lve_001_tables_ready') || !hrm_lve_001_tables_ready()) foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
         $before = payroll_reversal_decode_state($row['before_state']);
         if (!$before
             || (int)$before['leave_id'] !== (int)$row['target_id']
@@ -1744,7 +1747,7 @@ function payroll_verify_restored_snapshot_states($payslip, $groups) {
             return false;
         }
     }
-    foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
+    if (!function_exists('hrm_lve_001_tables_ready') || !hrm_lve_001_tables_ready()) foreach (isset($groups['leave_balance']) ? $groups['leave_balance'] : array() as $row) {
         $before = payroll_reversal_decode_state($row['before_state']);
         if (!$before)
             return false;
@@ -3002,59 +3005,29 @@ function post_payslip_to_gl(&$payslip_doc) {
  * @return void
  */
 function payroll_sync_leave_balances_for_period($employee_id, $from_date, $to_date) {
-    if (!function_exists('employee_table_exists'))
-        return;
-
-    if (!employee_table_exists('leave_balances') || !employee_table_exists('leave_requests'))
-        return;
-
+    if (!function_exists('employee_table_exists') || !employee_table_exists('leave_balances')) return;
     $to_sql = date2sql($to_date);
     $fiscal_year = get_leave_balance_fiscal_year_for_date($to_sql);
+    if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready()) {
+        $lve_error = null;
+        $scope = hrm_lve_001_resolve_employee_scope($employee_id, $to_sql, false, $lve_error);
+        if ($scope === false) { error_log('HRM-LVE-001 payroll projection scope failed: '.$lve_error); return; }
+        $q = db_query('SELECT DISTINCT leave_id FROM '.TB_PREF.'hrm_leave_entitlements WHERE worker_id='.(int)$scope['worker_id'].' AND cycle_start<='.db_escape($to_sql).' AND cycle_end>='.db_escape($to_sql));
+        while ($q && $row = db_fetch_assoc($q)) {
+            if (!hrm_lve_001_sync_legacy_projection($employee_id, (int)$row['leave_id'], $fiscal_year, $to_sql, $lve_error)) error_log('HRM-LVE-001 payroll leave projection failed: '.$lve_error);
+        }
+        return;
+    }
+    if (!employee_table_exists('leave_requests')) return;
     list($year_start, $year_end) = _payroll_get_year_bounds($fiscal_year);
-
-    $approved = array();
-    $pending = array();
-
-    $approved_sql = "SELECT leave_id, SUM(days) total_days
-        FROM ".TB_PREF."leave_requests
-        WHERE employee_id = ".db_escape($employee_id)."
-            AND status = 1
-            AND from_date >= ".db_escape($year_start)."
-            AND from_date <= ".db_escape($year_end)."
-        GROUP BY leave_id";
-    $approved_res = db_query($approved_sql, 'Could not summarize approved leave requests');
-    while ($row = db_fetch_assoc($approved_res))
-        $approved[(int)$row['leave_id']] = (float)$row['total_days'];
-
-    $pending_sql = "SELECT leave_id, SUM(days) total_days
-        FROM ".TB_PREF."leave_requests
-        WHERE employee_id = ".db_escape($employee_id)."
-            AND status = 0
-            AND from_date >= ".db_escape($year_start)."
-            AND from_date <= ".db_escape($year_end)."
-        GROUP BY leave_id";
-    $pending_res = db_query($pending_sql, 'Could not summarize pending leave requests');
-    while ($row = db_fetch_assoc($pending_res))
-        $pending[(int)$row['leave_id']] = (float)$row['total_days'];
-
-    $leave_ids = array_unique(array_merge(array_keys($approved), array_keys($pending)));
-    foreach ($leave_ids as $leave_id) {
-		ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $to_date);
-        $existing = get_leave_balance($employee_id, $leave_id, $fiscal_year);
-        $entitled = $existing ? (float)$existing['entitled'] : 0;
-        $carried = $existing ? (float)$existing['carried_forward'] : 0;
-        $adjusted = $existing ? (float)$existing['adjusted'] : 0;
-
-        save_leave_balance(
-            $employee_id,
-            $leave_id,
-            $fiscal_year,
-            $entitled,
-            $carried,
-            isset($approved[$leave_id]) ? (float)$approved[$leave_id] : 0,
-            isset($pending[$leave_id]) ? (float)$pending[$leave_id] : 0,
-            $adjusted
-        );
+    $approved = array(); $pending = array();
+    $approved_res = db_query("SELECT leave_id, SUM(days) total_days FROM ".TB_PREF."leave_requests WHERE employee_id = ".db_escape($employee_id)." AND status = 1 AND from_date >= ".db_escape($year_start)." AND from_date <= ".db_escape($year_end)." GROUP BY leave_id", 'Could not summarize approved leave requests');
+    while ($row = db_fetch_assoc($approved_res)) $approved[(int)$row['leave_id']] = (float)$row['total_days'];
+    $pending_res = db_query("SELECT leave_id, SUM(days) total_days FROM ".TB_PREF."leave_requests WHERE employee_id = ".db_escape($employee_id)." AND status = 0 AND from_date >= ".db_escape($year_start)." AND from_date <= ".db_escape($year_end)." GROUP BY leave_id", 'Could not summarize pending leave requests');
+    while ($row = db_fetch_assoc($pending_res)) $pending[(int)$row['leave_id']] = (float)$row['total_days'];
+    foreach (array_unique(array_merge(array_keys($approved), array_keys($pending))) as $leave_id) {
+        ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $to_date); $existing=get_leave_balance($employee_id,$leave_id,$fiscal_year);
+        save_leave_balance($employee_id,$leave_id,$fiscal_year,$existing?(float)$existing['entitled']:0,$existing?(float)$existing['carried_forward']:0,isset($approved[$leave_id])?(float)$approved[$leave_id]:0,isset($pending[$leave_id])?(float)$pending[$leave_id]:0,$existing?(float)$existing['adjusted']:0);
     }
 }
 

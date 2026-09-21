@@ -74,7 +74,7 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Document T&ypes'),           'hrm/manage/doc_types.php?',                           'SA_DOCTYPE',           MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Overtime Types'),           'hrm/manage/overtime_types.php?',                      'SA_OVERTIME',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Lea&ve Types'),              'hrm/manage/leave_types.php?',                         'SA_LEAVETYPE',         MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_LEAVEPOLICY',       MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_HRM_MANAGE_LEAVE_POLICY',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Deduction Co&des'),          'hrm/manage/deduction_codes.php?',                     'SA_DEDUCTIONCODE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Attendance Deduction R&ules'),'hrm/manage/attendance_deduction_rules.php?',          'SA_ATTDEDUCTRULE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);

@@ -16,6 +16,7 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/hrm/includes/hrm_ui.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_request_db.inc');
 include_once($path_to_root . '/hrm/includes/db/leave_balance_db.inc');
+include_once($path_to_root . '/hrm/includes/db/hrm_lve_001_governance_db.inc');
 include_once($path_to_root . '/hrm/includes/hrm_security.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 
@@ -158,6 +159,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             display_error(_('Leave days must be greater than zero.'));
             set_focus('from_date');
         } elseif ($selected_id != '') {
+            if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready()) {
+                display_error(_('Governed pending leave requests are immutable after reservation. Cancel this request and create a successor request.'));
+                $Mode = 'RESET';
+            } else {
             update_leave_request(
                 $selected_id,
                 (int)$_POST['leave_id'],
@@ -170,6 +175,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             display_notification(_('Leave request has been updated.'));
             if (isset($Ajax))
                 $Ajax->activate('_page_body');
+            }
         } else {
             begin_transaction();
             $request_id = add_leave_request(
@@ -181,6 +187,14 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
                 (int)$_POST['half_day'],
                 $_POST['reason']
             );
+            $lve_error = null;
+            $lve_receipt = hrm_lve_001_reserve_request($request_id, $lve_error);
+            if ($lve_receipt === false) {
+                cancel_transaction();
+                display_error(sprintf(_('Leave request was not created because governed leave validation failed: %s'), $lve_error));
+                $Mode = 'RESET';
+                if (isset($Ajax)) $Ajax->activate('_page_body');
+            } else {
 
             // Check if approval workflow is required for leave requests
             $leave_draft_data = array(
@@ -239,6 +253,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
             }
             if (isset($Ajax))
                 $Ajax->activate('_page_body');
+            }
         }
         $Mode = 'RESET';
     }
@@ -266,10 +281,19 @@ if ($Mode == 'Delete') {
             else
                 display_notification($result['message']);
         } else {
-            $sql = "DELETE FROM ".TB_PREF."leave_requests WHERE request_id = "
-                .db_escape((int)$selected_id)." AND status = 0";
-            db_query($sql, 'could not delete leave request');
-            display_notification(_('Selected pending request without an approval draft has been deleted.'));
+            begin_transaction();
+            $lve_error = null;
+            if (!hrm_lve_001_release_request_if_reserved((int)$selected_id, 'submitter_cancelled', $lve_error)
+                || !hrm_lve_001_with_terminal_status_write(function() use ($selected_id) {
+                    return cancel_leave_request((int)$selected_id, isset($_SESSION['wa_current_user']->loginname) ? $_SESSION['wa_current_user']->loginname : 'request_submitter', _('Cancelled from the leave request page.'));
+                })
+            ) {
+                cancel_transaction();
+                display_error(sprintf(_('The governed leave request could not be cancelled: %s'), $lve_error));
+            } else {
+                commit_transaction();
+                display_notification(_('Selected pending request has been cancelled with governed reservation release evidence.'));
+            }
         }
     } else {
         display_error(_('Leave request was not found.'));

@@ -73,6 +73,10 @@ function get_leave_policies($show_inactive=false, $leave_id=0, $grade_id=null) {
  * @return int
  */
 function add_leave_policy($policy_name, $leave_id, $grade_id, $employment_type, $annual_entitlement, $accrual_method, $probation_applicable, $min_service_months, $effective_from, $effective_to=null) {
+    if (function_exists('employee_table_exists') && employee_table_exists('hrm_leave_policy_versions')) {
+        error_log('HRM-LVE-001 denied legacy mutable leave policy writer; create an immutable policy successor instead');
+        return false;
+    }
     $effective_to_sql = ($effective_to === null || trim((string)$effective_to) === '')
         ? 'NULL'
         : db_escape(date2sql($effective_to));
@@ -118,6 +122,10 @@ function add_leave_policy($policy_name, $leave_id, $grade_id, $employment_type, 
  * @return void
  */
 function update_leave_policy($policy_id, $policy_name, $leave_id, $grade_id, $employment_type, $annual_entitlement, $accrual_method, $probation_applicable, $min_service_months, $effective_from, $effective_to=null, $inactive=0) {
+    if (function_exists('employee_table_exists') && employee_table_exists('hrm_leave_policy_versions')) {
+        error_log('HRM-LVE-001 denied legacy mutable leave policy writer; create an immutable policy successor instead');
+        return false;
+    }
     $effective_to_sql = ($effective_to === null || trim((string)$effective_to) === '')
         ? 'NULL'
         : db_escape(date2sql($effective_to));
@@ -149,6 +157,10 @@ function update_leave_policy($policy_id, $policy_name, $leave_id, $grade_id, $em
  * @return void
  */
 function delete_leave_policy($policy_id) {
+    if (function_exists('employee_table_exists') && employee_table_exists('hrm_leave_policy_versions')) {
+        error_log('HRM-LVE-001 denied legacy mutable leave policy writer; create an immutable policy successor instead');
+        return false;
+    }
     $sql = "DELETE FROM ".TB_PREF."leave_policies WHERE policy_id = ".db_escape((int)$policy_id);
     db_query($sql, 'could not delete leave policy');
 }

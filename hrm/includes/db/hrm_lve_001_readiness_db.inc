@@ -1,0 +1,8 @@
+<?php
+/** Fail-closed source/predecessor readiness for HRM-LVE-001. */
+include_once(dirname(__FILE__).'/migration_readiness_db.inc');
+include_once(dirname(__FILE__).'/hrm_lve_001_schema_db.inc');
+function hrm_lve_001_require_source_tokens($patch,$relative,array $tokens,$label){global $path_to_root;$s=@file_get_contents($path_to_root.'/'.$relative);if(!is_string($s))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,$label.' source is missing.');foreach($tokens as $t)if(strpos($s,$t)===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,$label.' source/custody contract is incomplete.');return true;}
+function hrm_lve_001_require_predecessor($patch){global $path_to_root;$file=$path_to_root.'/tests/fixtures/payroll/legacy_v1/manifest_v1.0.436.json';$expected='dfed694510d622f35121cd843666b2da8d12cbd208a4b1c0c4383f9bb0eba89e';if(!is_file($file)||!is_string($h=@hash_file('sha256',$file))||!hash_equals($expected,$h))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'HRM-LVE-001 immutable HRM-TIM-002 accepted custody source/custody contract is incomplete.');$m=json_decode((string)@file_get_contents($file),true);$e=is_array($m)?($m['hrm_tim_002_evidence']??null):null;if(!is_array($e)||($m['contract']['version']??null)!=='1.0.436'||($e['status']??null)!=='CLOSED / LOCAL ACCEPTANCE PASS'||($e['database_version']??null)!=='1.0.704'||($e['mandatory_local_gate_status']??null)!=='PASS'||($e['next_dependency_after_acceptance']??null)!=='HRM-LVE-001')return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'HRM-LVE-001 semantic HRM-TIM-002 predecessor contract is incomplete.');return true;}
+function hrm_lve_001_require_full_schema($patch,$triggers=true){return hrm_lve_001_require_schema($patch,$triggers);}
+?>

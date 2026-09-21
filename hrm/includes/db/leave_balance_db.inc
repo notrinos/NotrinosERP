@@ -12,6 +12,7 @@
 
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_policy_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_lve_001_governance_db.inc');
 
 /**
  * Get the configured fiscal-period bounds for a leave-balance year.
@@ -225,6 +226,11 @@ function ensure_leave_balance_entitlements_for_filters($fiscal_year=0, $employee
  * @return void
  */
 function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $carried_forward=0, $taken=0, $pending=0, $adjusted=0) {
+    // HRM-LVE-001: leave_balances is compatibility projection only after cutover.
+    if (function_exists('hrm_lve_001_direct_balance_write_allowed') && !hrm_lve_001_direct_balance_write_allowed()) {
+        error_log('HRM-LVE-001 denied direct authoritative leave balance write');
+        return false;
+    }
     $existing = get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
     if ($existing) {
@@ -263,6 +269,12 @@ function save_leave_balance($employee_id, $leave_id, $fiscal_year, $entitled, $c
  * @return array|false
  */
 function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $as_of_date='') {
+    if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready()) {
+        if (trim((string)$as_of_date) === '') { list(, $as_of_date) = get_leave_balance_fiscal_year_bounds($fiscal_year); }
+        $lve_error = null;
+        hrm_lve_001_sync_legacy_projection($employee_id, $leave_id, $fiscal_year, leave_policy_to_sql_date($as_of_date), $lve_error);
+        return get_leave_balance($employee_id, $leave_id, $fiscal_year);
+    }
     if (!function_exists('get_employee_leave_policy_context_projection') || !function_exists('get_leave_policy_for_employee'))
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
@@ -310,6 +322,10 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
  * @return bool
  */
 function apply_leave_balance_movement($employee_id, $leave_id, $fiscal_year, $taken_delta=0, $pending_delta=0, $adjusted_delta=0) {
+    if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready()) {
+        error_log('HRM-LVE-001 denied direct legacy leave balance movement');
+        return false;
+    }
     list(, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
     $balance = ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year, $fiscal_year_end);
     if (!$balance) {
