@@ -33,6 +33,10 @@ class HrmApp extends application {
 		$this->add_lapp_function(0, _('Compensation &Award'),       'hrm/transactions/compensation_award.php?',             'SA_HRM_MANAGE_COMPENSATION', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Execute Compensation A&ward'),'hrm/transactions/compensation_award_execute.php?',     'SA_HRM_EXECUTE_COMPENSATION', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Compensation Payroll &Handoff'),'hrm/transactions/compensation_payroll_handoff.php?', 'SA_HRM_EXECUTE_COMPENSATION_PAYROLL', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Benefit &Enrollment'),          'hrm/transactions/benefit_enrollment.php?',             'SA_HRM_ENROLL_BENEFITS', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Benefit Life E&vent'),          'hrm/transactions/benefit_life_event.php?',             'SA_HRM_ENROLL_BENEFITS', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Execute Benefit Life E&vent'),  'hrm/transactions/benefit_life_event_execute.php?',     'SA_HRM_EXECUTE_BENEFITS', MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Benefit Payroll &Handoff'),     'hrm/transactions/benefit_payroll_handoff.php?',        'SA_HRM_EXECUTE_BENEFIT_PAYROLL', MENU_TRANSACTION);
 
 		$this->add_rapp_function(0, _('Pay&slip Entry'),            'hrm/transactions/payslip.php?NewPayslip=Yes',         'SA_PAYSLIP',          MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Pa&yroll Processing'),       'hrm/transactions/payroll_process.php?',               'SA_PAYROLL',          MENU_TRANSACTION);
@@ -84,6 +88,12 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Compensation Cutover E&xecute'),'hrm/manage/compensation_cutover_execute.php?',      'SA_HRM_EXECUTE_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation Payroll &Mapping'),'hrm/manage/compensation_payroll_mapping.php?',      'SA_HRM_MAP_COMPENSATION_PAYROLL', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation &Recovery'),'hrm/manage/compensation_recovery.php?',                    'SA_HRM_RECOVER_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit &Governance'),       'hrm/manage/benefit_governance.php?',                   'SA_HRM_MANAGE_BENEFITS', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit &Adapters'),           'hrm/manage/benefit_adapters.php?',                     'SA_HRM_MANAGE_BENEFIT_PACK', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit &Contributions'),      'hrm/manage/benefit_contributions.php?',                'SA_HRM_EXECUTE_BENEFIT_COSTING', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit Life Event &Review'),  'hrm/manage/benefit_life_event_review.php?',            'SA_HRM_REVIEW_BENEFITS', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit Payroll &Mapping'),    'hrm/manage/benefit_payroll_mapping.php?',              'SA_HRM_MAP_BENEFIT_PAYROLL', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Benefit Provider &Recovery'),  'hrm/manage/benefit_provider_reconciliation.php?',      'SA_HRM_RECONCILE_BENEFIT_PROVIDER', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Deduction Co&des'),          'hrm/manage/deduction_codes.php?',                     'SA_DEDUCTIONCODE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Attendance Deduction R&ules'),'hrm/manage/attendance_deduction_rules.php?',          'SA_ATTDEDUCTRULE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);

@@ -507,6 +507,18 @@ $security_areas =array(
 	'SA_HRM_RECOVER_COMPENSATION' => array(SS_HRM|133, _('Reconcile and recover governed compensation projections')), // no automatic role grant
 	'SA_HRM_MAP_COMPENSATION_PAYROLL' => array(SS_HRM|134, _('Manage explicit compensation-to-PAY-CORE-003 mappings')), // no automatic role grant
 	'SA_HRM_EXECUTE_COMPENSATION_PAYROLL' => array(SS_HRM|135, _('Execute compensation PAY-CORE-003 approved-input adapters')), // no automatic role grant
+	'SA_HRM_MANAGE_BENEFITS' => array(SS_HRM|136, _('Manage governed optional benefit plans, versions and enrollment windows')), // no automatic role grant
+	'SA_HRM_ENROLL_BENEFITS' => array(SS_HRM|137, _('Create governed optional benefit elections and waivers')), // no automatic role grant
+	'SA_HRM_REVIEW_BENEFITS' => array(SS_HRM|138, _('Independently review governed benefit life events')), // no automatic role grant
+	'SA_HRM_EXECUTE_BENEFITS' => array(SS_HRM|139, _('Execute independently reviewed benefit life events')), // no automatic role grant
+	'SA_HRM_MANAGE_BENEFIT_PRIVATE' => array(SS_HRM|140, _('Manage restricted dependant consent and benefit-private evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_BENEFIT_PACK' => array(SS_HRM|141, _('Manage versioned country/benefit pack adapter contracts')), // no automatic role grant
+	'SA_HRM_MANAGE_BENEFIT_PROVIDER' => array(SS_HRM|142, _('Manage minimized provider adapter contracts')), // no automatic role grant
+	'SA_HRM_EXECUTE_BENEFIT_COSTING' => array(SS_HRM|143, _('Execute governed benefit contribution costing and arrears custody')), // no automatic role grant
+	'SA_HRM_EXECUTE_BENEFIT_PROVIDER' => array(SS_HRM|144, _('Execute minimized benefit provider operations')), // no automatic role grant
+	'SA_HRM_RECONCILE_BENEFIT_PROVIDER' => array(SS_HRM|145, _('Independently reconcile benefit provider operations')), // no automatic role grant
+	'SA_HRM_MAP_BENEFIT_PAYROLL' => array(SS_HRM|146, _('Manage explicit benefit-to-payroll and balance mappings')), // no automatic role grant
+	'SA_HRM_EXECUTE_BENEFIT_PAYROLL' => array(SS_HRM|147, _('Execute governed benefit PAY-CORE handoffs')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

@@ -11029,3 +11029,553 @@ CREATE TRIGGER `0_cmp1_rec_u` BEFORE UPDATE ON `0_hrm_comp_reconciliations` FOR 
 CREATE TRIGGER `0_cmp1_rec_d` BEFORE DELETE ON `0_hrm_comp_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
 CREATE TRIGGER `0_cmp1_rcv_u` BEFORE UPDATE ON `0_hrm_comp_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
 CREATE TRIGGER `0_cmp1_rcv_d` BEFORE DELETE ON `0_hrm_comp_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+
+-- HRM-BEN-001 optional benefits core (source 1.0.740)
+-- HRM-BEN-001 optional benefits core. Empty, policy-neutral, append-only custody.;
+CREATE TABLE `0_hrm_ben_pack_adapter_versions` (
+  `pack_adapter_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `adapter_code` varchar(64) NOT NULL,
+  `version_token` varchar(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `capability_json` longtext NOT NULL,
+  `data_contract_sha256` char(64) NOT NULL,
+  `mapping_sha256` char(64) NOT NULL,
+  `predecessor_adapter_version_id` bigint unsigned NULL,
+  `adapter_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`pack_adapter_version_id`),
+  UNIQUE KEY `uq_ben1_pad_sha` (`adapter_sha256`),
+  UNIQUE KEY `uq_ben1_pad_ver` (`adapter_code`,`version_token`),
+  UNIQUE KEY `uq_ben1_pad_pred` (`predecessor_adapter_version_id`),
+  KEY `ix_ben1_pad_eff` (`adapter_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_provider_adapter_versions` (
+  `provider_adapter_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `adapter_code` varchar(64) NOT NULL,
+  `version_token` varchar(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `capability_json` longtext NOT NULL,
+  `data_contract_sha256` char(64) NOT NULL,
+  `mapping_sha256` char(64) NOT NULL,
+  `minimization_sha256` char(64) NOT NULL,
+  `predecessor_adapter_version_id` bigint unsigned NULL,
+  `adapter_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`provider_adapter_version_id`),
+  UNIQUE KEY `uq_ben1_prv_sha` (`adapter_sha256`),
+  UNIQUE KEY `uq_ben1_prv_ver` (`adapter_code`,`version_token`),
+  UNIQUE KEY `uq_ben1_prv_pred` (`predecessor_adapter_version_id`),
+  KEY `ix_ben1_prv_eff` (`adapter_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_plans` (
+  `plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `plan_code` varchar(64) NOT NULL,
+  `identity_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`plan_id`),
+  UNIQUE KEY `uq_ben1_plan_code` (`legal_entity_id`,`plan_code`),
+  UNIQUE KEY `uq_ben1_plan_sha` (`identity_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_plan_versions` (
+  `plan_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `plan_id` bigint unsigned NOT NULL,
+  `version_token` varchar(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `status_token` varchar(24) NOT NULL,
+  `coverage_basis_code` varchar(64) NOT NULL,
+  `contribution_basis_code` varchar(64) NOT NULL,
+  `pack_adapter_version_id` bigint unsigned NULL,
+  `provider_adapter_version_id` bigint unsigned NULL,
+  `source_evidence_sha256` char(64) NOT NULL,
+  `predecessor_plan_version_id` bigint unsigned NULL,
+  `version_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`plan_version_id`),
+  UNIQUE KEY `uq_ben1_pv_sha` (`version_sha256`),
+  UNIQUE KEY `uq_ben1_pv_ver` (`plan_id`,`version_token`),
+  UNIQUE KEY `uq_ben1_pv_pred` (`predecessor_plan_version_id`),
+  KEY `ix_ben1_pv_eff` (`plan_id`,`effective_from`,`effective_to`,`status_token`),
+  CONSTRAINT `fk_ben1_pvr_1` FOREIGN KEY (`plan_id`) REFERENCES `0_hrm_ben_plans` (`plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pvr_2` FOREIGN KEY (`pack_adapter_version_id`) REFERENCES `0_hrm_ben_pack_adapter_versions` (`pack_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pvr_3` FOREIGN KEY (`provider_adapter_version_id`) REFERENCES `0_hrm_ben_provider_adapter_versions` (`provider_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pvr_4` FOREIGN KEY (`predecessor_plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_eligibility_versions` (
+  `eligibility_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `resolver_code` varchar(32) NOT NULL,
+  `rule_payload_json` longtext NOT NULL,
+  `rule_artifact_sha256` char(64) NOT NULL,
+  `predecessor_eligibility_version_id` bigint unsigned NULL,
+  `eligibility_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`eligibility_version_id`),
+  UNIQUE KEY `uq_ben1_elig_sha` (`eligibility_sha256`),
+  UNIQUE KEY `uq_ben1_elig_pred` (`predecessor_eligibility_version_id`),
+  KEY `ix_ben1_elig_eff` (`plan_version_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_eli_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_eli_2` FOREIGN KEY (`predecessor_eligibility_version_id`) REFERENCES `0_hrm_ben_eligibility_versions` (`eligibility_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_enrollment_windows` (
+  `window_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `window_code` varchar(64) NOT NULL,
+  `window_start` date NOT NULL,
+  `window_end` date NOT NULL,
+  `qualifying_basis_code` varchar(64) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `predecessor_window_id` bigint unsigned NULL,
+  `window_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`window_id`),
+  UNIQUE KEY `uq_ben1_win_sha` (`window_sha256`),
+  UNIQUE KEY `uq_ben1_win_code` (`plan_version_id`,`window_code`),
+  UNIQUE KEY `uq_ben1_win_pred` (`predecessor_window_id`),
+  KEY `ix_ben1_win_date` (`plan_version_id`,`window_start`,`window_end`),
+  CONSTRAINT `fk_ben1_win_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_win_2` FOREIGN KEY (`predecessor_window_id`) REFERENCES `0_hrm_ben_enrollment_windows` (`window_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_consents` (
+  `consent_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `dependent_id` bigint unsigned NULL,
+  `purpose_code` varchar(64) NOT NULL,
+  `decision_token` varchar(24) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `predecessor_consent_id` bigint unsigned NULL,
+  `consent_sha256` char(64) NOT NULL,
+  `recorded_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`consent_id`),
+  UNIQUE KEY `uq_ben1_con_sha` (`consent_sha256`),
+  UNIQUE KEY `uq_ben1_con_pred` (`predecessor_consent_id`),
+  KEY `ix_ben1_con_scope` (`worker_id`,`dependent_id`,`purpose_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_enrollments` (
+  `enrollment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `plan_id` bigint unsigned NOT NULL,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `eligibility_version_id` bigint unsigned NOT NULL,
+  `window_id` bigint unsigned NOT NULL,
+  `enrollment_state` varchar(24) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `qualifying_basis_code` varchar(64) NOT NULL,
+  `election_evidence_sha256` char(64) NOT NULL,
+  `predecessor_enrollment_id` bigint unsigned NULL,
+  `idempotency_hash` char(64) NOT NULL,
+  `enrollment_sha256` char(64) NOT NULL,
+  `recorded_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`enrollment_id`),
+  UNIQUE KEY `uq_ben1_enr_sha` (`enrollment_sha256`),
+  UNIQUE KEY `uq_ben1_enr_idem` (`idempotency_hash`),
+  UNIQUE KEY `uq_ben1_enr_pred` (`predecessor_enrollment_id`),
+  KEY `ix_ben1_enr_scope` (`worker_id`,`plan_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_enr_1` FOREIGN KEY (`plan_id`) REFERENCES `0_hrm_ben_plans` (`plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_enr_2` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_enr_3` FOREIGN KEY (`eligibility_version_id`) REFERENCES `0_hrm_ben_eligibility_versions` (`eligibility_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_enr_4` FOREIGN KEY (`window_id`) REFERENCES `0_hrm_ben_enrollment_windows` (`window_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_enr_5` FOREIGN KEY (`predecessor_enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_enrollment_dependants` (
+  `enrollment_dependant_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `enrollment_id` bigint unsigned NOT NULL,
+  `dependent_id` bigint unsigned NULL,
+  `consent_id` bigint unsigned NOT NULL,
+  `coverage_relation_code` varchar(64) NOT NULL,
+  `privacy_classification` varchar(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `relationship_evidence_sha256` char(64) NOT NULL,
+  `binding_sha256` char(64) NOT NULL,
+  `recorded_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`enrollment_dependant_id`),
+  UNIQUE KEY `uq_ben1_dep_sha` (`binding_sha256`),
+  UNIQUE KEY `uq_ben1_dep_scope` (`enrollment_id`,`dependent_id`,`effective_from`),
+  KEY `ix_ben1_dep_priv` (`dependent_id`,`privacy_classification`),
+  CONSTRAINT `fk_ben1_dep_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_dep_2` FOREIGN KEY (`consent_id`) REFERENCES `0_hrm_ben_consents` (`consent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_life_event_type_versions` (
+  `life_event_type_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `event_type_code` varchar(64) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `approval_required` tinyint(1) NOT NULL,
+  `configuration_sha256` char(64) NOT NULL,
+  `predecessor_event_type_version_id` bigint unsigned NOT NULL,
+  `event_type_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`life_event_type_version_id`),
+  UNIQUE KEY `uq_ben1_let_sha` (`event_type_sha256`),
+  UNIQUE KEY `uq_ben1_let_pred` (`predecessor_event_type_version_id`),
+  KEY `ix_ben1_let_eff` (`plan_version_id`,`event_type_code`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_let_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_let_2` FOREIGN KEY (`predecessor_event_type_version_id`) REFERENCES `0_hrm_ben_life_event_type_versions` (`life_event_type_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_life_event_requests` (
+  `life_event_request_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `life_event_type_version_id` bigint unsigned NOT NULL,
+  `enrollment_before_id` bigint unsigned NULL,
+  `enrollment_after_id` bigint unsigned NULL,
+  `occurrence_date` date NOT NULL,
+  `effective_date` date NOT NULL,
+  `event_evidence_sha256` char(64) NOT NULL,
+  `idempotency_hash` char(64) NOT NULL,
+  `request_sha256` char(64) NOT NULL,
+  `requested_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`life_event_request_id`),
+  UNIQUE KEY `uq_ben1_ler_sha` (`request_sha256`),
+  UNIQUE KEY `uq_ben1_ler_idem` (`idempotency_hash`),
+  KEY `ix_ben1_ler_scope` (`worker_id`,`effective_date`,`life_event_type_version_id`),
+  CONSTRAINT `fk_ben1_ler_1` FOREIGN KEY (`life_event_type_version_id`) REFERENCES `0_hrm_ben_life_event_type_versions` (`life_event_type_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_ler_2` FOREIGN KEY (`enrollment_before_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_ler_3` FOREIGN KEY (`enrollment_after_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_life_event_reviews` (
+  `life_event_review_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `life_event_request_id` bigint unsigned NOT NULL,
+  `request_sha256` char(64) NOT NULL,
+  `decision_token` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `review_sha256` char(64) NULL,
+  `reviewed_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`life_event_review_id`),
+  UNIQUE KEY `uq_ben1_lrv_sha` (`review_sha256`),
+  UNIQUE KEY `uq_ben1_lrv_req` (`life_event_request_id`),
+  CONSTRAINT `fk_ben1_lrv_1` FOREIGN KEY (`life_event_request_id`) REFERENCES `0_hrm_ben_life_event_requests` (`life_event_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_life_events` (
+  `life_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `life_event_request_id` bigint unsigned NOT NULL,
+  `life_event_review_id` bigint unsigned NULL,
+  `worker_id` bigint unsigned NOT NULL,
+  `employment_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `life_event_type_version_id` bigint unsigned NOT NULL,
+  `enrollment_before_id` bigint unsigned NULL,
+  `enrollment_after_id` bigint unsigned NULL,
+  `occurrence_date` date NOT NULL,
+  `effective_date` date NOT NULL,
+  `event_evidence_sha256` char(64) NOT NULL,
+  `request_sha256` char(64) NOT NULL,
+  `review_sha256` char(64) NULL,
+  `life_event_sha256` char(64) NOT NULL,
+  `executed_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`life_event_id`),
+  UNIQUE KEY `uq_ben1_evt_sha` (`life_event_sha256`),
+  UNIQUE KEY `uq_ben1_evt_req` (`life_event_request_id`),
+  KEY `ix_ben1_evt_scope` (`worker_id`,`effective_date`,`life_event_type_version_id`),
+  CONSTRAINT `fk_ben1_evt_1` FOREIGN KEY (`life_event_request_id`) REFERENCES `0_hrm_ben_life_event_requests` (`life_event_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_evt_2` FOREIGN KEY (`life_event_review_id`) REFERENCES `0_hrm_ben_life_event_reviews` (`life_event_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_contribution_versions` (
+  `contribution_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `currency_code` char(3) NOT NULL,
+  `unit_code` varchar(32) NOT NULL,
+  `calculation_kind` varchar(32) NOT NULL,
+  `employee_fixed_amount` decimal(20,6) NOT NULL,
+  `employer_fixed_amount` decimal(20,6) NOT NULL,
+  `costing_adapter_version_id` bigint unsigned NULL,
+  `rounding_contract_sha256` char(64) NOT NULL,
+  `source_evidence_sha256` char(64) NOT NULL,
+  `predecessor_contribution_version_id` bigint unsigned NULL,
+  `contribution_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`contribution_version_id`),
+  UNIQUE KEY `uq_ben1_cver_sha` (`contribution_sha256`),
+  UNIQUE KEY `uq_ben1_cver_pred` (`predecessor_contribution_version_id`),
+  KEY `ix_ben1_cver_eff` (`plan_version_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_cvr_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_cvr_2` FOREIGN KEY (`predecessor_contribution_version_id`) REFERENCES `0_hrm_ben_contribution_versions` (`contribution_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_contribution_receipts` (
+  `contribution_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `enrollment_id` bigint unsigned NOT NULL,
+  `contribution_version_id` bigint unsigned NOT NULL,
+  `coverage_period_start` date NOT NULL,
+  `coverage_period_end` date NOT NULL,
+  `effective_date` date NOT NULL,
+  `employee_amount` decimal(20,6) NOT NULL,
+  `employer_amount` decimal(20,6) NOT NULL,
+  `currency_code` char(3) NOT NULL,
+  `unit_code` varchar(32) NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `idempotency_hash` char(64) NOT NULL,
+  `receipt_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`contribution_receipt_id`),
+  UNIQUE KEY `uq_ben1_crc_sha` (`receipt_sha256`),
+  UNIQUE KEY `uq_ben1_crc_idem` (`idempotency_hash`),
+  KEY `ix_ben1_crc_scope` (`enrollment_id`,`coverage_period_start`,`coverage_period_end`),
+  CONSTRAINT `fk_ben1_crc_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_crc_2` FOREIGN KEY (`contribution_version_id`) REFERENCES `0_hrm_ben_contribution_versions` (`contribution_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_arrears` (
+  `arrears_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `contribution_receipt_id` bigint unsigned NOT NULL,
+  `portion_code` varchar(16) NOT NULL,
+  `period_start` varchar(96) NOT NULL,
+  `period_end` varchar(96) NOT NULL,
+  `amount` decimal(20,6) NOT NULL,
+  `currency_code` char(3) NOT NULL,
+  `unit_code` varchar(32) NOT NULL,
+  `reason_code` varchar(64) NOT NULL,
+  `source_obligation_sha256` char(64) NOT NULL,
+  `obligation_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`arrears_id`),
+  UNIQUE KEY `uq_ben1_arr_sha` (`obligation_sha256`),
+  KEY `ix_ben1_arr_receipt` (`contribution_receipt_id`,`portion_code`),
+  CONSTRAINT `fk_ben1_arr_1` FOREIGN KEY (`contribution_receipt_id`) REFERENCES `0_hrm_ben_contribution_receipts` (`contribution_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_arrears_movements` (
+  `arrears_movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `arrears_id` bigint unsigned NOT NULL,
+  `movement_kind` varchar(32) NOT NULL,
+  `amount` decimal(20,6) NOT NULL,
+  `effective_date` date NOT NULL,
+  `source_sha256` char(64) NOT NULL,
+  `payroll_handoff_id` bigint unsigned NULL,
+  `predecessor_movement_id` bigint unsigned NULL,
+  `movement_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`arrears_movement_id`),
+  UNIQUE KEY `uq_ben1_amv_sha` (`movement_sha256`),
+  UNIQUE KEY `uq_ben1_amv_pred` (`predecessor_movement_id`),
+  KEY `ix_ben1_amv_scope` (`arrears_id`,`effective_date`),
+  CONSTRAINT `fk_ben1_amv_1` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_ben_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_amv_2` FOREIGN KEY (`predecessor_movement_id`) REFERENCES `0_hrm_ben_arrears_movements` (`arrears_movement_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_continuations` (
+  `continuation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `enrollment_id` bigint unsigned NOT NULL,
+  `pack_adapter_version_id` bigint unsigned NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `status_change_evidence_sha256` char(64) NOT NULL,
+  `entitlement_evidence_sha256` char(64) NOT NULL,
+  `predecessor_continuation_id` bigint unsigned NULL,
+  `continuation_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`continuation_id`),
+  UNIQUE KEY `uq_ben1_cnt_sha` (`continuation_sha256`),
+  UNIQUE KEY `uq_ben1_cnt_pred` (`predecessor_continuation_id`),
+  KEY `ix_ben1_cnt_scope` (`enrollment_id`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_cnt_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_cnt_2` FOREIGN KEY (`pack_adapter_version_id`) REFERENCES `0_hrm_ben_pack_adapter_versions` (`pack_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_cnt_3` FOREIGN KEY (`predecessor_continuation_id`) REFERENCES `0_hrm_ben_continuations` (`continuation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_payroll_mappings` (
+  `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `portion_code` varchar(16) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `element_version_id` bigint unsigned NOT NULL,
+  `input_definition_id` bigint unsigned NOT NULL,
+  `unit_code` varchar(32) NOT NULL,
+  `predecessor_mapping_id` bigint unsigned NULL,
+  `mapping_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapping_id`),
+  UNIQUE KEY `uq_ben1_pmap_sha` (`mapping_sha256`),
+  UNIQUE KEY `uq_ben1_pmap_pred` (`predecessor_mapping_id`),
+  KEY `ix_ben1_pmap_eff` (`legal_entity_id`,`plan_version_id`,`portion_code`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_pmp_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pmp_2` FOREIGN KEY (`predecessor_mapping_id`) REFERENCES `0_hrm_ben_payroll_mappings` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_payroll_handoffs` (
+  `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `contribution_receipt_id` bigint unsigned NOT NULL,
+  `mapping_id` bigint unsigned NOT NULL,
+  `portion_code` varchar(16) NOT NULL,
+  `payroll_relationship_id` bigint unsigned NOT NULL,
+  `payroll_period_id` bigint unsigned NOT NULL,
+  `calendar_period_id` bigint unsigned NOT NULL,
+  `assignment_id` bigint unsigned NOT NULL,
+  `amount` decimal(20,6) NOT NULL,
+  `approved_input_id` bigint unsigned NOT NULL,
+  `approved_input_sha256` char(64) NOT NULL,
+  `adapter_version` varchar(64) NOT NULL,
+  `command_key` varchar(160) NOT NULL,
+  `handoff_sha256` char(64) NOT NULL,
+  `executed_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`handoff_id`),
+  UNIQUE KEY `uq_ben1_pho_sha` (`handoff_sha256`),
+  UNIQUE KEY `uq_ben1_pho_cmd` (`command_key`),
+  UNIQUE KEY `uq_ben1_pho_receipt_portion` (`contribution_receipt_id`,`portion_code`),
+  CONSTRAINT `fk_ben1_pho_1` FOREIGN KEY (`contribution_receipt_id`) REFERENCES `0_hrm_ben_contribution_receipts` (`contribution_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pho_2` FOREIGN KEY (`mapping_id`) REFERENCES `0_hrm_ben_payroll_mappings` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_balance_mappings` (
+  `balance_mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `legal_entity_id` bigint unsigned NOT NULL,
+  `plan_version_id` bigint unsigned NOT NULL,
+  `portion_code` varchar(16) NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `balance_definition_id` bigint unsigned NOT NULL,
+  `predecessor_balance_mapping_id` bigint unsigned NULL,
+  `mapping_sha256` char(64) NOT NULL,
+  `created_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`balance_mapping_id`),
+  UNIQUE KEY `uq_ben1_bmap_sha` (`mapping_sha256`),
+  UNIQUE KEY `uq_ben1_bmap_pred` (`predecessor_balance_mapping_id`),
+  KEY `ix_ben1_bmap_eff` (`legal_entity_id`,`plan_version_id`,`portion_code`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ben1_bmp_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_bmp_2` FOREIGN KEY (`predecessor_balance_mapping_id`) REFERENCES `0_hrm_ben_balance_mappings` (`balance_mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_balance_handoffs` (
+  `balance_handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `arrears_id` bigint unsigned NOT NULL,
+  `balance_mapping_id` bigint unsigned NOT NULL,
+  `pay_core_movement_id` bigint unsigned NOT NULL,
+  `pay_core_movement_sha256` char(64) NOT NULL,
+  `boundary_version` varchar(64) NOT NULL,
+  `command_key` varchar(160) NOT NULL,
+  `handoff_sha256` char(64) NOT NULL,
+  `recorded_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`balance_handoff_id`),
+  UNIQUE KEY `uq_ben1_bho_sha` (`handoff_sha256`),
+  UNIQUE KEY `uq_ben1_bho_cmd` (`command_key`),
+  UNIQUE KEY `uq_ben1_bho_arrears` (`arrears_id`),
+  CONSTRAINT `fk_ben1_bho_1` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_ben_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_bho_2` FOREIGN KEY (`balance_mapping_id`) REFERENCES `0_hrm_ben_balance_mappings` (`balance_mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_provider_operations` (
+  `provider_operation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `enrollment_id` bigint unsigned NOT NULL,
+  `provider_adapter_version_id` bigint unsigned NULL,
+  `operation_code` varchar(64) NOT NULL,
+  `participant_reference_sha256` char(64) NOT NULL,
+  `dependant_scope_sha256` char(64) NOT NULL,
+  `request_payload_json` longtext NOT NULL,
+  `request_sha256` char(64) NOT NULL,
+  `idempotency_hash` char(64) NOT NULL,
+  `attempt_no` int unsigned NOT NULL,
+  `response_status` varchar(24) NOT NULL,
+  `response_sha256` char(64) NULL,
+  `acknowledgement_ref_sha256` char(64) NULL,
+  `reconciliation_state` varchar(24) NOT NULL,
+  `retry_state` varchar(24) NOT NULL,
+  `recovery_state` varchar(24) NOT NULL,
+  `operation_sha256` char(64) NOT NULL,
+  `recorded_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`provider_operation_id`),
+  UNIQUE KEY `uq_ben1_pop_sha` (`operation_sha256`),
+  UNIQUE KEY `uq_ben1_pop_attempt` (`idempotency_hash`,`attempt_no`),
+  KEY `ix_ben1_pop_state` (`provider_adapter_version_id`,`reconciliation_state`,`retry_state`,`recovery_state`),
+  CONSTRAINT `fk_ben1_pop_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_pop_2` FOREIGN KEY (`provider_adapter_version_id`) REFERENCES `0_hrm_ben_provider_adapter_versions` (`provider_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `0_hrm_ben_provider_reconciliations` (
+  `provider_reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `provider_operation_id` bigint unsigned NOT NULL,
+  `expected_sha256` char(64) NOT NULL,
+  `observed_sha256` char(64) NULL,
+  `status_token` varchar(24) NOT NULL,
+  `evidence_sha256` char(64) NOT NULL,
+  `predecessor_reconciliation_id` bigint unsigned NULL,
+  `reconciliation_sha256` char(64) NOT NULL,
+  `reviewed_by` bigint unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`provider_reconciliation_id`),
+  UNIQUE KEY `uq_ben1_prec_sha` (`reconciliation_sha256`),
+  UNIQUE KEY `uq_ben1_prec_pred` (`predecessor_reconciliation_id`),
+  KEY `ix_ben1_prec_op` (`provider_operation_id`,`status_token`),
+  CONSTRAINT `fk_ben1_prc_1` FOREIGN KEY (`provider_operation_id`) REFERENCES `0_hrm_ben_provider_operations` (`provider_operation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ben1_prc_2` FOREIGN KEY (`predecessor_reconciliation_id`) REFERENCES `0_hrm_ben_provider_reconciliations` (`provider_reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TRIGGER `0_ben1_pad_u` BEFORE UPDATE ON `0_hrm_ben_pack_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pad_d` BEFORE DELETE ON `0_hrm_ben_pack_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_prv_u` BEFORE UPDATE ON `0_hrm_ben_provider_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_prv_d` BEFORE DELETE ON `0_hrm_ben_provider_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_pln_u` BEFORE UPDATE ON `0_hrm_ben_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pln_d` BEFORE DELETE ON `0_hrm_ben_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_pvr_u` BEFORE UPDATE ON `0_hrm_ben_plan_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pvr_d` BEFORE DELETE ON `0_hrm_ben_plan_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_eli_u` BEFORE UPDATE ON `0_hrm_ben_eligibility_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_eli_d` BEFORE DELETE ON `0_hrm_ben_eligibility_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_win_u` BEFORE UPDATE ON `0_hrm_ben_enrollment_windows` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_win_d` BEFORE DELETE ON `0_hrm_ben_enrollment_windows` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_con_u` BEFORE UPDATE ON `0_hrm_ben_consents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_con_d` BEFORE DELETE ON `0_hrm_ben_consents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_enr_u` BEFORE UPDATE ON `0_hrm_ben_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_enr_d` BEFORE DELETE ON `0_hrm_ben_enrollments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_dep_u` BEFORE UPDATE ON `0_hrm_ben_enrollment_dependants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_dep_d` BEFORE DELETE ON `0_hrm_ben_enrollment_dependants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_let_u` BEFORE UPDATE ON `0_hrm_ben_life_event_type_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_let_d` BEFORE DELETE ON `0_hrm_ben_life_event_type_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_ler_u` BEFORE UPDATE ON `0_hrm_ben_life_event_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_ler_d` BEFORE DELETE ON `0_hrm_ben_life_event_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_lrv_u` BEFORE UPDATE ON `0_hrm_ben_life_event_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_lrv_d` BEFORE DELETE ON `0_hrm_ben_life_event_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_evt_u` BEFORE UPDATE ON `0_hrm_ben_life_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_evt_d` BEFORE DELETE ON `0_hrm_ben_life_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_cvr_u` BEFORE UPDATE ON `0_hrm_ben_contribution_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_cvr_d` BEFORE DELETE ON `0_hrm_ben_contribution_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_crc_u` BEFORE UPDATE ON `0_hrm_ben_contribution_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_crc_d` BEFORE DELETE ON `0_hrm_ben_contribution_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_arr_u` BEFORE UPDATE ON `0_hrm_ben_arrears` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_arr_d` BEFORE DELETE ON `0_hrm_ben_arrears` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_amv_u` BEFORE UPDATE ON `0_hrm_ben_arrears_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_amv_d` BEFORE DELETE ON `0_hrm_ben_arrears_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_cnt_u` BEFORE UPDATE ON `0_hrm_ben_continuations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_cnt_d` BEFORE DELETE ON `0_hrm_ben_continuations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_pmp_u` BEFORE UPDATE ON `0_hrm_ben_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pmp_d` BEFORE DELETE ON `0_hrm_ben_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_pho_u` BEFORE UPDATE ON `0_hrm_ben_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pho_d` BEFORE DELETE ON `0_hrm_ben_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_bmp_u` BEFORE UPDATE ON `0_hrm_ben_balance_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_bmp_d` BEFORE DELETE ON `0_hrm_ben_balance_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_bho_u` BEFORE UPDATE ON `0_hrm_ben_balance_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_bho_d` BEFORE DELETE ON `0_hrm_ben_balance_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_pop_u` BEFORE UPDATE ON `0_hrm_ben_provider_operations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_pop_d` BEFORE DELETE ON `0_hrm_ben_provider_operations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+CREATE TRIGGER `0_ben1_prc_u` BEFORE UPDATE ON `0_hrm_ben_provider_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
+CREATE TRIGGER `0_ben1_prc_d` BEFORE DELETE ON `0_hrm_ben_provider_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';

@@ -1,0 +1,13 @@
+<?php
+/** HRM-BEN-001 common authority boundary helpers. */
+include_once(dirname(__FILE__).'/../benefits/hrm_ben_001_contract.inc');
+include_once(dirname(__FILE__).'/hrm_ben_001_legacy_guard_db.inc');
+include_once(dirname(__FILE__).'/hrm_tim_001_governance_db.inc');
+include_once(dirname(__FILE__).'/pay_core_003_governance_db.inc');
+function hrm_ben_001_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
+function hrm_ben_001_access($a){return function_exists('user_check_access')&&user_check_access($a);}
+function hrm_ben_001_insert_idempotent($table,$id,$sha_col,$sha,$sql,&$error){$q=db_query('SELECT '.$id.','.$sha_col.' FROM '.TB_PREF.$table.' WHERE '.$sha_col.'='.db_escape($sha).' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){$error='idempotency_state_invalid';return false;}if(db_num_rows($q)===1){$r=db_fetch_assoc($q);return (int)$r[$id];}if(!db_query($sql)){$error='insert_failed';return false;}return (int)db_insert_id();}
+function hrm_ben_001_resolve_assignment_scope($assignment_id,$as_of,$for_update=false,&$error=null){$s=hrm_tim_001_resolve_assignment_scope($assignment_id,$as_of,$for_update,$error);if($s===false)return false;$q=db_query('SELECT grade_id,job_id,assignment_type_code FROM '.TB_PREF.'hrm_assignments WHERE assignment_id='.(int)$assignment_id.' LIMIT 2'.($for_update?' FOR UPDATE':''));$x=$q&&db_num_rows($q)===1?db_fetch_assoc($q):array();$s['grade_id']=isset($x['grade_id'])?(int)$x['grade_id']:null;$s['job_id']=isset($x['job_id'])?(int)$x['job_id']:null;$s['assignment_type_code']=$x['assignment_type_code']??null;$q=db_query('SELECT employment_status FROM '.TB_PREF.'hrm_employments WHERE employment_id='.(int)$s['employment_id'].' LIMIT 2'.($for_update?' FOR UPDATE':''));$x=$q&&db_num_rows($q)===1?db_fetch_assoc($q):array();$s['employment_status']=$x['employment_status']??null;return $s;}
+function hrm_ben_001_resolve_payroll_relationship($assignment_id,$as_of,$for_update=false,&$error=null){return hrm_tim_001_resolve_payroll_relationship($assignment_id,$as_of,$for_update,$error);}
+function hrm_ben_001_resolve_dependent($dependent_id,array $scope,$for_update=false,&$error=null){$error=null;$q=db_query('SELECT d.dependent_id,m.worker_id FROM '.TB_PREF.'employee_dependents d INNER JOIN '.TB_PREF.'hrm_employee_worker_map m ON m.employee_id=d.employee_id AND m.retired_at IS NULL WHERE d.dependent_id='.(int)$dependent_id.' LIMIT 2'.($for_update?' FOR UPDATE':''));$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$r||(int)$r['worker_id']!==(int)$scope['worker_id']){$error='dependent_scope_denied';return false;}return array('dependent_id'=>(int)$r['dependent_id'],'worker_id'=>(int)$r['worker_id']);}
+?>
