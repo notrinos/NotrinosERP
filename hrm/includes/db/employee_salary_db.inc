@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
+include_once(dirname(__FILE__).'/hrm_cmp_001_legacy_guard_db.inc');
 
 /**
  * Employee personal salary override CRUD
@@ -50,6 +51,7 @@ function employee_salary_to_sql_date($date_value) {
  * @return int|false
  */
 function add_employee_salary($employee_id, $element_id, $amount, $effective_from, $effective_to='', $formula='', $reference='') {
+	if (!hrm_cmp_001_legacy_salary_write_allowed($employee_id)) return false;
 	if (!hrm_legacy_formula_guard_change('employee_salary.formula', 0, '', $formula))
 		return false;
 
@@ -93,6 +95,9 @@ function add_employee_salary($employee_id, $element_id, $amount, $effective_from
  * @return bool
  */
 function update_employee_salary($salary_id, $amount, $effective_from, $effective_to='', $formula='', $reference='', $is_active=1) {
+	$cmp_guard = db_query("SELECT employee_id FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape((int)$salary_id)." LIMIT 2", 'could not read employee salary owner');
+	$cmp_row = $cmp_guard && db_num_rows($cmp_guard) === 1 ? db_fetch_assoc($cmp_guard) : false;
+	if (!$cmp_row || !hrm_cmp_001_legacy_salary_write_allowed($cmp_row['employee_id'])) return false;
 	$current_result = db_query(
 		"SELECT formula FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape((int)$salary_id)." LIMIT 1",
 		'could not read employee salary formula for policy'
@@ -204,6 +209,9 @@ function get_employee_salaries($employee_id, $active_only=true, $as_of_date=null
  * @return bool
  */
 function delete_employee_salary($salary_id) {
+	$cmp_guard = db_query("SELECT employee_id FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape((int)$salary_id)." LIMIT 2", 'could not read employee salary owner');
+	$cmp_row = $cmp_guard && db_num_rows($cmp_guard) === 1 ? db_fetch_assoc($cmp_guard) : false;
+	if (!$cmp_row || !hrm_cmp_001_legacy_salary_write_allowed($cmp_row['employee_id'])) return false;
 	$sql = "DELETE FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape($salary_id);
 	return (bool)db_query($sql, 'could not delete employee salary');
 }
@@ -215,6 +223,9 @@ function delete_employee_salary($salary_id) {
  * @return bool
  */
 function deactivate_employee_salary($salary_id) {
+	$cmp_guard = db_query("SELECT employee_id FROM ".TB_PREF."employee_salary WHERE salary_id = ".db_escape((int)$salary_id)." LIMIT 2", 'could not read employee salary owner');
+	$cmp_row = $cmp_guard && db_num_rows($cmp_guard) === 1 ? db_fetch_assoc($cmp_guard) : false;
+	if (!$cmp_row || !hrm_cmp_001_legacy_salary_write_allowed($cmp_row['employee_id'])) return false;
 	$sql = "UPDATE ".TB_PREF."employee_salary SET is_active = 0 WHERE salary_id = ".db_escape($salary_id);
 	return (bool)db_query($sql, 'could not deactivate employee salary');
 }

@@ -500,6 +500,13 @@ $security_areas =array(
 	'SA_HRM_CASHOUT_LEAVE' => array(SS_HRM|126, _('Record authorized leave cash-out quantity custody without payment authority')), // no automatic role grant
 	'SA_HRM_MAP_LEAVE_PAYROLL' => array(SS_HRM|127, _('Manage explicit leave-to-PAY-CORE-003 mappings')), // no automatic role grant
 	'SA_HRM_EXECUTE_LEAVE_PAYROLL' => array(SS_HRM|128, _('Execute approved-leave PAY-CORE-003 input adapters')), // no automatic role grant
+	'SA_HRM_MANAGE_COMPENSATION' => array(SS_HRM|129, _('Manage governed compensation ranges, cycles, budgets and award requests')), // no automatic role grant
+	'SA_HRM_REVIEW_COMPENSATION' => array(SS_HRM|130, _('Independently review governed compensation custody and awards')), // no automatic role grant
+	'SA_HRM_EXECUTE_COMPENSATION' => array(SS_HRM|131, _('Execute independently approved compensation cutovers and awards')), // no automatic role grant
+	'SA_HRM_MIGRATE_COMPENSATION' => array(SS_HRM|132, _('Inventory and plan governed legacy compensation cutover')), // no automatic role grant
+	'SA_HRM_RECOVER_COMPENSATION' => array(SS_HRM|133, _('Reconcile and recover governed compensation projections')), // no automatic role grant
+	'SA_HRM_MAP_COMPENSATION_PAYROLL' => array(SS_HRM|134, _('Manage explicit compensation-to-PAY-CORE-003 mappings')), // no automatic role grant
+	'SA_HRM_EXECUTE_COMPENSATION_PAYROLL' => array(SS_HRM|135, _('Execute compensation PAY-CORE-003 approved-input adapters')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -527,6 +534,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_TIME' => array(SS_HRM_A|23, _('View scoped governed work-pattern and approved-time evidence')), // no automatic role grant
 	'SA_HRM_VIEW_TIME_IMPORT' => array(SS_HRM_A|24, _('View scoped overtime qualification and import custody evidence')), // no automatic role grant
 	'SA_HRM_VIEW_LEAVE_GOVERNANCE' => array(SS_HRM_A|25, _('View scoped governed leave policy, ledger and reconciliation evidence')), // no automatic role grant
+	'SA_HRM_VIEW_COMPENSATION_GOVERNANCE' => array(SS_HRM_A|26, _('View scoped governed compensation ranges, awards and reconciliation evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),

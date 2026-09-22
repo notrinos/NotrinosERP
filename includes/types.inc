@@ -57,6 +57,7 @@ define('ST_HRM_LIFECYCLE_SUSPENSION', 99);
 define('ST_HRM_LIFECYCLE_REINSTATEMENT', 100);
 define('ST_HRM_LIFECYCLE_HIRE', 101);
 define('ST_HRM_LIFECYCLE_REHIRE', 102);
+define('ST_HRM_COMPENSATION_AWARD', 103);
 
 //
 //	Depreciation period types

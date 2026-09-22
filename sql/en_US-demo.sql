@@ -11283,3 +11283,109 @@ CREATE TRIGGER `0_lve1_map_d` BEFORE DELETE ON `0_hrm_leave_payroll_mappings` FO
 CREATE TRIGGER `0_lve1_pay_u` BEFORE UPDATE ON `0_hrm_leave_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
 
 CREATE TRIGGER `0_lve1_pay_d` BEFORE DELETE ON `0_hrm_leave_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies delete';
+
+-- HRM-CMP-001 governed base compensation custody
+CREATE TABLE `0_hrm_comp_salary_ranges` (
+ `range_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `grade_id` int unsigned NOT NULL, `range_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `minimum_amount` decimal(24,6) NOT NULL, `midpoint_amount` decimal(24,6) NOT NULL, `maximum_amount` decimal(24,6) NOT NULL, `source_kind` varchar(32) NOT NULL, `source_ref` varchar(160) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `predecessor_range_version_id` bigint unsigned DEFAULT NULL, `range_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`range_version_id`), UNIQUE KEY `uq_cmp1_rng_sha` (`range_sha256`), UNIQUE KEY `uq_cmp1_rng_ver` (`legal_entity_id`,`range_code`,`version_token`), UNIQUE KEY `uq_cmp1_rng_pred` (`predecessor_range_version_id`), KEY `ix_cmp1_rng_match` (`legal_entity_id`,`grade_id`,`currency_code`,`pay_basis`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_review_cycles` (
+ `review_cycle_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `cycle_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `open_date` date NOT NULL, `close_date` date NOT NULL, `award_effective_from` date NOT NULL, `award_effective_to` date NOT NULL, `status_token` varchar(16) NOT NULL, `purpose_code` varchar(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_review_cycle_id` bigint unsigned DEFAULT NULL, `cycle_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`review_cycle_id`), UNIQUE KEY `uq_cmp1_cyc_sha` (`cycle_sha256`), UNIQUE KEY `uq_cmp1_cyc_ver` (`legal_entity_id`,`cycle_code`,`version_token`), UNIQUE KEY `uq_cmp1_cyc_pred` (`predecessor_review_cycle_id`), KEY `ix_cmp1_cyc_scope` (`legal_entity_id`,`status_token`,`open_date`,`close_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_budgets` (
+ `budget_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `review_cycle_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `currency_code` char(3) NOT NULL, `budget_amount` decimal(24,6) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_budget_version_id` bigint unsigned DEFAULT NULL, `budget_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`budget_version_id`), UNIQUE KEY `uq_cmp1_bud_sha` (`budget_sha256`), UNIQUE KEY `uq_cmp1_bud_pred` (`predecessor_budget_version_id`), KEY `ix_cmp1_bud_scope` (`review_cycle_id`,`legal_entity_id`,`currency_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_opening_inventory` (
+ `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `as_of_date` date NOT NULL, `legacy_source_kind` varchar(32) NOT NULL, `legacy_source_row_id` bigint unsigned NOT NULL, `legacy_source_sha256` char(64) NOT NULL, `base_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `basic_element_id` int unsigned NOT NULL, `evidence_sha256` char(64) NOT NULL, `inventory_sha256` char(64) NOT NULL, `inventoried_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`opening_inventory_id`), UNIQUE KEY `uq_cmp1_opn_sha` (`inventory_sha256`), UNIQUE KEY `uq_cmp1_opn_scope` (`assignment_id`,`as_of_date`), KEY `ix_cmp1_opn_employee` (`employee_id`,`as_of_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_opening_reviews` (
+ `opening_review_id` bigint unsigned NOT NULL AUTO_INCREMENT, `opening_inventory_id` bigint unsigned NOT NULL, `inventory_sha256` char(64) NOT NULL, `decision_token` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `review_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`opening_review_id`), UNIQUE KEY `uq_cmp1_opr_sha` (`review_sha256`), UNIQUE KEY `uq_cmp1_opr_inv` (`opening_inventory_id`), KEY `ix_cmp1_opr_dec` (`decision_token`,`opening_inventory_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_cutover_plans` (
+ `cutover_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `opening_review_id` bigint unsigned NOT NULL, `opening_inventory_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `effective_date` date NOT NULL, `request_key` varchar(128) NOT NULL, `opening_review_sha256` char(64) NOT NULL, `plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`cutover_plan_id`), UNIQUE KEY `uq_cmp1_cut_plan_sha` (`plan_sha256`), UNIQUE KEY `uq_cmp1_cut_key` (`request_key`), UNIQUE KEY `uq_cmp1_cut_assignment` (`assignment_id`), KEY `ix_cmp1_cut_employee` (`employee_id`,`effective_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_cutover_approvals` (
+ `cutover_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `cutover_plan_id` bigint unsigned NOT NULL, `plan_sha256` char(64) NOT NULL, `decision_token` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`cutover_approval_id`), UNIQUE KEY `uq_cmp1_cut_app_sha` (`approval_sha256`), UNIQUE KEY `uq_cmp1_cut_app_plan` (`cutover_plan_id`), KEY `ix_cmp1_cut_app_dec` (`decision_token`,`cutover_plan_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_cutover_receipts` (
+ `cutover_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `cutover_plan_id` bigint unsigned NOT NULL, `cutover_approval_id` bigint unsigned NOT NULL, `opening_inventory_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `effective_date` date NOT NULL, `projection_salary_id` bigint unsigned DEFAULT NULL, `cutover_sha256` char(64) NOT NULL, `executor_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`cutover_receipt_id`), UNIQUE KEY `uq_cmp1_cut_rcp_sha` (`cutover_sha256`), UNIQUE KEY `uq_cmp1_cut_rcp_plan` (`cutover_plan_id`), UNIQUE KEY `uq_cmp1_cut_rcp_assignment` (`assignment_id`), KEY `ix_cmp1_cut_rcp_employee` (`employee_id`,`effective_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_award_commands` (
+ `award_command_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `review_cycle_id` bigint unsigned NOT NULL, `range_version_id` bigint unsigned NOT NULL, `budget_version_id` bigint unsigned NOT NULL, `award_kind` varchar(24) NOT NULL, `effective_date` date NOT NULL, `old_amount` decimal(24,6) NOT NULL, `new_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `budget_impact` decimal(24,6) NOT NULL, `purpose_code` varchar(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `idempotency_hash` char(64) NOT NULL, `request_sha256` char(64) NOT NULL, `command_status` varchar(16) NOT NULL, `row_version` int unsigned NOT NULL, `approval_draft_id` bigint unsigned DEFAULT NULL, `requested_by` int unsigned NOT NULL, `approved_by` int unsigned DEFAULT NULL, `approved_at` datetime DEFAULT NULL, `executed_by` int unsigned DEFAULT NULL, `completed_at` datetime DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`award_command_id`), UNIQUE KEY `uq_cmp1_cmd_idem` (`idempotency_hash`), UNIQUE KEY `uq_cmp1_cmd_req` (`request_sha256`), KEY `ix_cmp1_cmd_scope` (`assignment_id`,`effective_date`,`command_status`), KEY `ix_cmp1_cmd_draft` (`approval_draft_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_award_receipts` (
+ `award_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_command_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `review_cycle_id` bigint unsigned NOT NULL, `range_version_id` bigint unsigned NOT NULL, `budget_version_id` bigint unsigned NOT NULL, `award_kind` varchar(24) NOT NULL, `effective_date` date NOT NULL, `old_amount` decimal(24,6) NOT NULL, `new_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `budget_impact` decimal(24,6) NOT NULL, `purpose_code` varchar(64) NOT NULL, `request_sha256` char(64) NOT NULL, `predecessor_award_receipt_id` bigint unsigned DEFAULT NULL, `execution_key_hash` char(64) NOT NULL, `receipt_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`award_receipt_id`), UNIQUE KEY `uq_cmp1_awd_sha` (`receipt_sha256`), UNIQUE KEY `uq_cmp1_awd_cmd` (`award_command_id`), UNIQUE KEY `uq_cmp1_awd_pred` (`predecessor_award_receipt_id`), KEY `ix_cmp1_awd_scope` (`assignment_id`,`effective_date`,`award_receipt_id`), KEY `ix_cmp1_awd_budget` (`budget_version_id`,`currency_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_legacy_projection_receipts` (
+ `projection_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_receipt_id` bigint unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `basic_element_id` int unsigned NOT NULL, `employee_salary_id` bigint unsigned NOT NULL, `effective_date` date NOT NULL, `amount` decimal(24,6) NOT NULL, `source_sha256` char(64) NOT NULL, `projection_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`projection_receipt_id`), UNIQUE KEY `uq_cmp1_prj_sha` (`projection_sha256`), UNIQUE KEY `uq_cmp1_prj_award` (`award_receipt_id`), UNIQUE KEY `uq_cmp1_prj_salary` (`employee_salary_id`), KEY `ix_cmp1_prj_employee` (`employee_id`,`effective_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_payroll_mappings` (
+ `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `element_version_id` bigint unsigned NOT NULL, `input_definition_id` bigint unsigned NOT NULL, `predecessor_mapping_id` bigint unsigned DEFAULT NULL, `mapping_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`mapping_id`), UNIQUE KEY `uq_cmp1_map_sha` (`mapping_sha256`), UNIQUE KEY `uq_cmp1_map_pred` (`predecessor_mapping_id`), KEY `ix_cmp1_map_scope` (`legal_entity_id`,`currency_code`,`pay_basis`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_payroll_handoffs` (
+ `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_receipt_id` bigint unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `payroll_period_id` int unsigned NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `approved_input_id` bigint unsigned NOT NULL, `approved_input_sha256` char(64) NOT NULL, `adapter_version` varchar(64) NOT NULL, `command_key` varchar(128) NOT NULL, `handoff_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`handoff_id`), UNIQUE KEY `uq_cmp1_pay_sha` (`handoff_sha256`), UNIQUE KEY `uq_cmp1_pay_cmd` (`command_key`), UNIQUE KEY `uq_cmp1_pay_award` (`award_receipt_id`), KEY `ix_cmp1_pay_rel` (`payroll_relationship_id`,`payroll_period_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_reconciliations` (
+ `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `assignment_id` bigint unsigned NOT NULL, `as_of_date` date NOT NULL, `governed_amount` decimal(24,6) NOT NULL, `legacy_amount` decimal(24,6) NOT NULL, `difference_amount` decimal(24,6) NOT NULL, `status_token` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_reconciliation_id` bigint unsigned DEFAULT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_cmp1_rec_sha` (`reconciliation_sha256`), UNIQUE KEY `uq_cmp1_rec_pred` (`predecessor_reconciliation_id`), KEY `ix_cmp1_rec_scope` (`assignment_id`,`as_of_date`,`status_token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `0_hrm_comp_recovery_evidence` (
+ `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_id` bigint unsigned NOT NULL, `action_token` varchar(48) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_cmp1_rcv_sha` (`recovery_sha256`), KEY `ix_cmp1_rcv_rec` (`reconciliation_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TRIGGER `0_cmp1_rng_u` BEFORE UPDATE ON `0_hrm_comp_salary_ranges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_rng_d` BEFORE DELETE ON `0_hrm_comp_salary_ranges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_cyc_u` BEFORE UPDATE ON `0_hrm_comp_review_cycles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_cyc_d` BEFORE DELETE ON `0_hrm_comp_review_cycles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_bud_u` BEFORE UPDATE ON `0_hrm_comp_budgets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_bud_d` BEFORE DELETE ON `0_hrm_comp_budgets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_opn_u` BEFORE UPDATE ON `0_hrm_comp_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_opn_d` BEFORE DELETE ON `0_hrm_comp_opening_inventory` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_opr_u` BEFORE UPDATE ON `0_hrm_comp_opening_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_opr_d` BEFORE DELETE ON `0_hrm_comp_opening_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_cpl_u` BEFORE UPDATE ON `0_hrm_comp_cutover_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_cpl_d` BEFORE DELETE ON `0_hrm_comp_cutover_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_cap_u` BEFORE UPDATE ON `0_hrm_comp_cutover_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_cap_d` BEFORE DELETE ON `0_hrm_comp_cutover_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_crc_u` BEFORE UPDATE ON `0_hrm_comp_cutover_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_crc_d` BEFORE DELETE ON `0_hrm_comp_cutover_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_cmd_d` BEFORE DELETE ON `0_hrm_comp_award_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 command custody denies delete';
+CREATE TRIGGER `0_cmp1_awd_u` BEFORE UPDATE ON `0_hrm_comp_award_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_awd_d` BEFORE DELETE ON `0_hrm_comp_award_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_prj_u` BEFORE UPDATE ON `0_hrm_comp_legacy_projection_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_prj_d` BEFORE DELETE ON `0_hrm_comp_legacy_projection_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_map_u` BEFORE UPDATE ON `0_hrm_comp_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_map_d` BEFORE DELETE ON `0_hrm_comp_payroll_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_pay_u` BEFORE UPDATE ON `0_hrm_comp_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_pay_d` BEFORE DELETE ON `0_hrm_comp_payroll_handoffs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_rec_u` BEFORE UPDATE ON `0_hrm_comp_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_rec_d` BEFORE DELETE ON `0_hrm_comp_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
+CREATE TRIGGER `0_cmp1_rcv_u` BEFORE UPDATE ON `0_hrm_comp_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
+CREATE TRIGGER `0_cmp1_rcv_d` BEFORE DELETE ON `0_hrm_comp_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';

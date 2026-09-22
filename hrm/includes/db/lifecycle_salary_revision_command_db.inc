@@ -385,6 +385,7 @@ function submit_hrm_lifecycle_employee_salary_revision($employee_id, $new_salary
         || $reason === false || $idempotency_hash === false || strcmp($effective_date, hrm_lifecycle_salary_revision_today_sql()) > 0
         || $actor <= 0 || $company < 0 || !hrm_lifecycle_salary_revision_permission()
         || !hrm_lifecycle_salary_revision_workflow_is_maker_checker()
+        || !hrm_cmp_001_legacy_salary_revision_allowed($employee_id)
         || !function_exists('get_hrm_person_worker_binding') || !function_exists('get_hrm_legacy_current_employment')
         || !function_exists('get_hrm_legacy_current_assignment') || !function_exists('get_approval_workflow_service'))
         return false;
@@ -527,6 +528,7 @@ function hrm_lifecycle_salary_revision_bound_draft($draft_data, $draft_id, $allo
 
 function execute_approved_hrm_lifecycle_salary_revision($draft_data, $reserved_trans_no, $draft_id)
 {
+    if (is_array($draft_data) && isset($draft_data['employee_id']) && !hrm_cmp_001_legacy_salary_revision_allowed($draft_data['employee_id'])) return false;
     if (!hrm_lifecycle_salary_revision_permission())
         return false;
     $actor = hrm_lifecycle_salary_revision_actor_id();

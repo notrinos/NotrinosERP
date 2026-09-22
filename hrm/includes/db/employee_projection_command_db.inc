@@ -1,6 +1,7 @@
 <?php
 /** FND-006 authorization and command-to-owner bridge; no additional public route. */
 include_once(dirname(__FILE__).'/employee_compatibility_projector_db.inc');
+include_once(dirname(__FILE__).'/hrm_cmp_001_legacy_guard_db.inc');
 
 /** Restrict generic profile changes and require typed independent lifecycle authority. */
 function hrm_employee_projection_update_authority($before, $candidate, $command_id = 0, $assignment_change = null)
@@ -8,6 +9,7 @@ function hrm_employee_projection_update_authority($before, $candidate, $command_
     if (!function_exists('user_check_access') || hrm_person_worker_actor_id() <= 0) return false;
     $changed = hrm_employee_projection_difference($before, $candidate);
     if ($changed === false) return false;
+    if (hrm_cmp_001_employee_projection_authority($before, $candidate, $assignment_change)) return true;
     $profile = array('first_name','middle_name','last_name','gender','birth_date','nationality','marital_status',
         'dependents_no','address','city','state','country','phone','mobile','email','personal_email',
         'emergency_name','emergency_relation','emergency_phone','notes');

@@ -30,6 +30,9 @@ class HrmApp extends application {
         $this->add_lapp_function(0, _('Employee Rehire'), 'hrm/transactions/employee_rehire.php?', 'SA_EMPLOYEE', MENU_TRANSACTION);
         $this->add_lapp_function(0, _('Employee Offboarding'), 'hrm/transactions/employee_offboarding.php?', 'SA_EMPSEPARATION', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Sa&lary Revision'),          'hrm/transactions/salary_revision.php?',               'SA_SALARYREVISION',   MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Compensation &Award'),       'hrm/transactions/compensation_award.php?',             'SA_HRM_MANAGE_COMPENSATION', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Execute Compensation A&ward'),'hrm/transactions/compensation_award_execute.php?',     'SA_HRM_EXECUTE_COMPENSATION', MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Compensation Payroll &Handoff'),'hrm/transactions/compensation_payroll_handoff.php?', 'SA_HRM_EXECUTE_COMPENSATION_PAYROLL', MENU_TRANSACTION);
 
 		$this->add_rapp_function(0, _('Pay&slip Entry'),            'hrm/transactions/payslip.php?NewPayslip=Yes',         'SA_PAYSLIP',          MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Pa&yroll Processing'),       'hrm/transactions/payroll_process.php?',               'SA_PAYROLL',          MENU_TRANSACTION);
@@ -75,6 +78,12 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('&Overtime Types'),           'hrm/manage/overtime_types.php?',                      'SA_OVERTIME',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Lea&ve Types'),              'hrm/manage/leave_types.php?',                         'SA_LEAVETYPE',         MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_HRM_MANAGE_LEAVE_POLICY',       MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation &Governance'),'hrm/manage/compensation_governance.php?',             'SA_HRM_MANAGE_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation C&utover Plan'),'hrm/manage/compensation_cutover.php?',                 'SA_HRM_MIGRATE_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Cutover &Review'),'hrm/manage/compensation_cutover_review.php?',        'SA_HRM_REVIEW_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Cutover E&xecute'),'hrm/manage/compensation_cutover_execute.php?',      'SA_HRM_EXECUTE_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Payroll &Mapping'),'hrm/manage/compensation_payroll_mapping.php?',      'SA_HRM_MAP_COMPENSATION_PAYROLL', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation &Recovery'),'hrm/manage/compensation_recovery.php?',                    'SA_HRM_RECOVER_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Deduction Co&des'),          'hrm/manage/deduction_codes.php?',                     'SA_DEDUCTIONCODE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Attendance Deduction R&ules'),'hrm/manage/attendance_deduction_rules.php?',          'SA_ATTDEDUCTRULE',     MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);

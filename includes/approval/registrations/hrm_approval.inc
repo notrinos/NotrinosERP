@@ -42,6 +42,11 @@ if (!is_file($hrm_lifecycle_salary_revision_source))
 	$hrm_lifecycle_salary_revision_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_salary_revision_command_db.inc';
 if (is_file($hrm_lifecycle_salary_revision_source))
 	include_once($hrm_lifecycle_salary_revision_source);
+$hrm_cmp_001_source = $path_to_root . '/hrm/includes/db/hrm_cmp_001_governance_db.inc';
+if (!is_file($hrm_cmp_001_source))
+	$hrm_cmp_001_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/hrm_cmp_001_governance_db.inc';
+if (is_file($hrm_cmp_001_source))
+	include_once($hrm_cmp_001_source);
 $hrm_lifecycle_training_assignment_source = $path_to_root . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
 if (!is_file($hrm_lifecycle_training_assignment_source))
 	$hrm_lifecycle_training_assignment_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
@@ -166,7 +171,20 @@ function ensure_hrm_approval_transaction_registration()
 		));
 	}
 
-	if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
+	if (defined('ST_HRM_COMPENSATION_AWARD')) {
+	ApprovalWorkflow::registerTransactionType(ST_HRM_COMPENSATION_AWARD, array(
+		'label'          => _('Governed Base Compensation Award'),
+		'application'    => 'HRM',
+		'executor'       => 'execute_approved_hrm_cmp_001_award',
+		'rejector'       => 'reject_hrm_cmp_001_award_draft',
+		'canceler'       => 'cancel_hrm_cmp_001_award_draft',
+		'amount_getter'  => null,
+		'draft_renderer' => null,
+		'edit_url'       => '',
+	));
+}
+
+if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
 			TB_PREF . 'hrm_lifecycle_commands',
 			null,

@@ -1,0 +1,4 @@
+<?php
+/** HRM-CMP-001 distinct cutover executor route. */
+$page_security='SA_HRM_EXECUTE_COMPENSATION';$path_to_root='../..';include($path_to_root.'/includes/session.inc');include_once($path_to_root.'/includes/ui.inc');include_once($path_to_root.'/hrm/includes/db/employee_db.inc');include_once($path_to_root.'/hrm/includes/db/hrm_cmp_001_governance_db.inc');page(_('Execute Compensation Cutover'));if(isset($_POST['execute_cutover'])){if(!check_csrf_token())display_error(_('Invalid CSRF token.'));else{$e=null;$r=hrm_cmp_001_execute_cutover((int)$_POST['cutover_plan_id'],$e);$r===false?display_error(_('Cutover execution rejected: ').$e):display_notification(_('Cutover completed: ').$r['cutover_sha256']);}}start_form();hidden('_token',ensure_csrf_token());start_table(TABLESTYLE2);text_row_ex(_('Approved Cutover Plan ID:'),'cutover_plan_id',12,12);end_table(1);submit_center('execute_cutover',_('Execute Governed Cutover'));end_form();end_page();
+?>
