@@ -519,6 +519,14 @@ $security_areas =array(
 	'SA_HRM_RECONCILE_BENEFIT_PROVIDER' => array(SS_HRM|145, _('Independently reconcile benefit provider operations')), // no automatic role grant
 	'SA_HRM_MAP_BENEFIT_PAYROLL' => array(SS_HRM|146, _('Manage explicit benefit-to-payroll and balance mappings')), // no automatic role grant
 	'SA_HRM_EXECUTE_BENEFIT_PAYROLL' => array(SS_HRM|147, _('Execute governed benefit PAY-CORE handoffs')), // no automatic role grant
+	'SA_HRM_ESS_VIEW_SELF' => array(SS_HRM|148, _('View server-scoped employee self service')), // no automatic role grant
+	'SA_HRM_ESS_REQUEST_TIME' => array(SS_HRM|149, _('Submit server-scoped ESS time and overtime requests')), // no automatic role grant
+	'SA_HRM_ESS_REQUEST_LEAVE' => array(SS_HRM|150, _('Submit server-scoped ESS leave requests')), // no automatic role grant
+	'SA_HRM_ESS_ENROLL_BENEFITS' => array(SS_HRM|151, _('Initiate server-scoped governed benefit elections')), // no automatic role grant
+	'SA_HRM_ESS_VIEW_PAY' => array(SS_HRM|152, _('View server-scoped sensitive pay and payslip data')), // no automatic role grant
+	'SA_HRM_ESS_VIEW_DOCUMENTS' => array(SS_HRM|153, _('View and download server-scoped workforce documents')), // no automatic role grant
+	'SA_HRM_ESS_APPROVE_TEAM' => array(SS_HRM|154, _('Act on approval items within current ESS team scope')), // no automatic role grant
+	'SA_HRM_ESS_MANAGE_PROXY' => array(SS_HRM|155, _('Narrow and revoke effective-dated ESS delegation capabilities')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

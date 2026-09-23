@@ -1,0 +1,9 @@
+<?php
+include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/includes/hrm_ess_002_route.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_ess_002_experience_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_ess_002_proxy_db.inc');
+include_once($path_to_root.'/hrm/includes/ui/hrm_ess_002_ui.inc');
+hrm_ess_002_route_headers();
+add_css_file($path_to_root.'/hrm/css/ess002.css');
+?>

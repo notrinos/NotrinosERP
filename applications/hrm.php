@@ -17,6 +17,10 @@ class HrmApp extends application {
 		// Module 0: Transactions
 		// ═══════════════════════════════════════════════════════════
 		$this->add_module(_('Transactions'));
+		$this->add_lapp_function(0, _('Employee Self &Service'), 'hrm/ess/dashboard.php?', 'SA_HRM_ESS_VIEW_SELF', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Manager Self Ser&vice'), 'hrm/ess/team.php?', 'SA_HRM_ESS_VIEW_TEAM', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('Team &Approvals'), 'hrm/ess/team_approvals.php?', 'SA_HRM_ESS_APPROVE_TEAM', MENU_TRANSACTION);
+		$this->add_lapp_function(0, _('ESS Dele&gation'), 'hrm/ess/delegation.php?', 'SA_HRM_ESS_MANAGE_PROXY', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('My &Profile Change'),      'hrm/ess/self_profile_change.php?',                 'SA_HRM_ESS_REQUEST_SELF_PROFILE_CHANGE', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Review Profile &Changes'), 'hrm/ess/self_profile_change_review.php?',          'SA_HRM_APPROVE_ESS_SELF_PROFILE_CHANGE', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Apply Profile C&hanges'),  'hrm/ess/self_profile_change_apply.php?',           'SA_HRM_EXECUTE_ESS_SELF_PROFILE_CHANGE', MENU_TRANSACTION);

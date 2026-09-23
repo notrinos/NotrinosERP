@@ -11939,3 +11939,62 @@ CREATE TRIGGER `0_ben1_pop_u` BEFORE UPDATE ON `0_hrm_ben_provider_operations` F
 CREATE TRIGGER `0_ben1_pop_d` BEFORE DELETE ON `0_hrm_ben_provider_operations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
 CREATE TRIGGER `0_ben1_prc_u` BEFORE UPDATE ON `0_hrm_ben_provider_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
 CREATE TRIGGER `0_ben1_prc_d` BEFORE DELETE ON `0_hrm_ben_provider_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
+
+-- HRM-ESS-002 full ESS/MSS workforce experience (source 1.0.758)
+CREATE TABLE `0_hrm_ess_002_delegation_capabilities` (
+  `capability_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `delegation_id` bigint(20) unsigned NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NOT NULL,
+  `capability_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NOT NULL,
+  `grant_reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `capability_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `granted_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`capability_id`),
+  UNIQUE KEY `uq_ess2_cap_sha` (`capability_sha256`),
+  UNIQUE KEY `uq_ess2_cap_scope` (`delegation_id`,`legal_entity_id`,`capability_code`,`effective_from`),
+  KEY `ix_ess2_cap_asof` (`delegation_id`,`capability_code`,`effective_from`,`effective_to`),
+  CONSTRAINT `fk_ess2_cap_delegation` FOREIGN KEY (`delegation_id`) REFERENCES `0_hrm_ess_manager_delegations` (`delegation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_ess_002_delegation_revocations` (
+  `revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `capability_id` bigint(20) unsigned NOT NULL,
+  `revoked_at` datetime NOT NULL,
+  `reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revoked_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`revocation_id`),
+  UNIQUE KEY `uq_ess2_rev_sha` (`revocation_sha256`),
+  UNIQUE KEY `uq_ess2_rev_cap` (`capability_id`),
+  KEY `ix_ess2_rev_time` (`capability_id`,`revoked_at`),
+  CONSTRAINT `fk_ess2_rev_capability` FOREIGN KEY (`capability_id`) REFERENCES `0_hrm_ess_002_delegation_capabilities` (`capability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE `0_hrm_ess_002_command_receipts` (
+  `receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `actor_user_id` smallint(6) unsigned NOT NULL,
+  `worker_id` bigint(20) unsigned NOT NULL,
+  `assignment_id` bigint(20) unsigned NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NOT NULL,
+  `command_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `idempotency_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result_json` text NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`receipt_id`),
+  UNIQUE KEY `uq_ess2_cmd_idem` (`idempotency_hash`),
+  KEY `ix_ess2_cmd_worker` (`worker_id`,`command_type`,`created_at`),
+  KEY `ix_ess2_cmd_assignment` (`assignment_id`),
+  KEY `ix_ess2_cmd_legal_entity` (`legal_entity_id`),
+  CONSTRAINT `fk_ess2_cmd_worker` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ess2_cmd_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_ess2_cmd_legal_entity` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ess2_cap_u` BEFORE UPDATE ON `0_hrm_ess_002_delegation_capabilities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation capability cannot be updated';
+CREATE TRIGGER `0_ess2_cap_d` BEFORE DELETE ON `0_hrm_ess_002_delegation_capabilities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation capability cannot be deleted';
+CREATE TRIGGER `0_ess2_rev_u` BEFORE UPDATE ON `0_hrm_ess_002_delegation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation revocation cannot be updated';
+CREATE TRIGGER `0_ess2_rev_d` BEFORE DELETE ON `0_hrm_ess_002_delegation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation revocation cannot be deleted';
+CREATE TRIGGER `0_ess2_cmd_u` BEFORE UPDATE ON `0_hrm_ess_002_command_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable command receipt cannot be updated';
+CREATE TRIGGER `0_ess2_cmd_d` BEFORE DELETE ON `0_hrm_ess_002_command_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable command receipt cannot be deleted';

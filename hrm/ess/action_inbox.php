@@ -1,0 +1,3 @@
+<?php
+$page_security='SA_HRM_ESS_VIEW_SELF';$path_to_root='../..';include($path_to_root.'/includes/session.inc');include_once(__DIR__.'/_common.inc');page(_('Action Inbox'));$c=hrm_ess_002_require_self();if(!$c){display_error(_('Self scope unavailable.'));end_page();exit;}$rows=hrm_ess_002_self_notifications();hrm_ess_002_emit_shell_start(_('Action Inbox'),'inbox');echo '<p>'._('Notifications are informational only. Opening an action does not confer approval authority; current authorization is always rechecked.').'</p>';hrm_ess_002_ui_table(_('Approval notifications'),array(_('Reference'),_('Type'),_('Read'),_('Created')),is_array($rows)?$rows:array(),array('reference','notification_type','is_read','created_date'));hrm_ess_002_emit_shell_end();end_page();
+?>
