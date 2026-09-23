@@ -114,6 +114,8 @@ $security_areas =array(
 	'SA_CREATELANGUAGE' => array(SS_SADMIN|2, _('Install/update languages')),
 	'SA_CREATEMODULES' => array(SS_SADMIN|3, _('Install/upgrade modules')),
 	'SA_SOFTWAREUPGRADE' => array(SS_SADMIN|4, _('Software upgrades')),
+	'SA_PAY_CTRY_INSTALL' => array(SS_SADMIN|5, _('Verify/register signed country packs')),
+	'SA_PAY_CTRY_TRUST' => array(SS_SADMIN|6, _('Country-pack publisher and trust administration')),
 
 	//	Company setup
 	'SA_SETUPCOMPANY' => array(SS_SETUP|1, _('Company parameters')),

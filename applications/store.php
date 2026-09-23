@@ -13,11 +13,13 @@ class StoreApp extends application {
 		$this->add_module(_('Catalog'));
 		$this->add_lapp_function(0, _('Browse &Packages'), 'admin/notrinos_store.php?', 'SA_CREATEMODULES', MENU_INQUIRY);
 		$this->add_rapp_function(0, _('Manage &Languages'), 'admin/notrinos_store.php?type=language', 'SA_CREATELANGUAGE', MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Signed Country &Packs'), 'admin/pay_ctry_packs.php?', 'SA_PAY_CTRY_INSTALL', MENU_UPDATE);
+		$this->add_rapp_function(1, _('Publisher &Trust'), 'admin/pay_ctry_trust.php?', 'SA_PAY_CTRY_TRUST', MENU_UPDATE);
 
 		$this->add_module(_('Local Management'));
-		$this->add_lapp_function(1, _('Local &Extensions'), 'admin/inst_module.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_lapp_function(1, _('Local &Themes'), 'admin/inst_theme.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_rapp_function(1, _('Local &Charts of Accounts'), 'admin/inst_chart.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
-		$this->add_rapp_function(1, _('Manual &Languages'), 'admin/inst_lang.php?legacy=manage', 'SA_CREATELANGUAGE', MENU_UPDATE);
+		$this->add_lapp_function(2, _('Local &Extensions'), 'admin/inst_module.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_lapp_function(2, _('Local &Themes'), 'admin/inst_theme.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(2, _('Local &Charts of Accounts'), 'admin/inst_chart.php?legacy=manage', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(2, _('Manual &Languages'), 'admin/inst_lang.php?legacy=manage', 'SA_CREATELANGUAGE', MENU_UPDATE);
 	}
 }

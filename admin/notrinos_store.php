@@ -24,8 +24,9 @@ include_once($path_to_root.'/includes/ui.inc');
 
 $can_manage_packages = $_SESSION['wa_current_user']->can_access('SA_CREATEMODULES');
 $can_manage_languages = $_SESSION['wa_current_user']->can_access('SA_CREATELANGUAGE');
+$can_manage_country_packs = (int)user_company() === 0 && $_SESSION['wa_current_user']->can_access('SA_PAY_CTRY_INSTALL');
 
-if (!$can_manage_packages && !$can_manage_languages) {
+if (!$can_manage_packages && !$can_manage_languages && !$can_manage_country_packs) {
 	display_error(_('The security settings on your account do not permit you to access this function.'));
 	end_page();
 	return;
@@ -74,6 +75,9 @@ notrinos_store_render_summary_card($summary['free'], _('Free packages'));
 echo "</div>";
 
 echo "<div class='notrinos-store-links'>";
+if ($can_manage_country_packs) {
+	echo "<a href='pay_ctry_packs.php'>"._('Verify signed country packs')."</a>";
+}
 // foreach (notrinos_store_type_definitions() as $type => $definition) {
 // 	if ($type == 'all')
 // 		continue;

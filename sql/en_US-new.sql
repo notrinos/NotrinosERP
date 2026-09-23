@@ -7381,6 +7381,13 @@ SET @old_foreign_key_checks = @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;
 
 
+-- Indexes for new stock_moves columns (use CREATE INDEX IF NOT EXISTS alternative)
+-- MariaDB 10.5+ supports this syntax
+CREATE INDEX IF NOT EXISTS `idx_sm_serial_id`   ON `0_stock_moves` (`serial_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_batch_id`    ON `0_stock_moves` (`batch_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_from_bin_id` ON `0_stock_moves` (`from_bin_id`);
+CREATE INDEX IF NOT EXISTS `idx_sm_to_bin_id`   ON `0_stock_moves` (`to_bin_id`);
+
 -- -------------------------------------------------------------------------------------
 -- Restore foreign key checks
 -- -------------------------------------------------------------------------------------
@@ -11631,3 +11638,322 @@ CREATE TRIGGER `0_ess2_rev_u` BEFORE UPDATE ON `0_hrm_ess_002_delegation_revocat
 CREATE TRIGGER `0_ess2_rev_d` BEFORE DELETE ON `0_hrm_ess_002_delegation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation revocation cannot be deleted';
 CREATE TRIGGER `0_ess2_cmd_u` BEFORE UPDATE ON `0_hrm_ess_002_command_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable command receipt cannot be updated';
 CREATE TRIGGER `0_ess2_cmd_d` BEFORE DELETE ON `0_hrm_ess_002_command_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable command receipt cannot be deleted';
+
+
+-- PAY-CTRY-001 constrained country-pack trust schema (source head 1.0.776)
+-- PAY-CTRY-001 GROUP raw
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_raw_blobs` (
+  `raw_blob_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `raw_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `byte_length` bigint(20) unsigned NOT NULL,
+  `media_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `content` longblob NOT NULL,
+  `received_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`raw_blob_id`),
+  UNIQUE KEY `uq_pctry_rb_sha` (`raw_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_rb_u` BEFORE UPDATE ON `0_pay_ctry_raw_blobs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_raw_blobs row cannot be updated';
+CREATE TRIGGER `0_ct1_rb_d` BEFORE DELETE ON `0_pay_ctry_raw_blobs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_raw_blobs row cannot be deleted';
+-- PAY-CTRY-001 END GROUP raw
+
+-- PAY-CTRY-001 GROUP identity
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_packs` (
+  `pack_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pack_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`pack_id`),
+  UNIQUE KEY `uq_pctry_pack_code` (`pack_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_pk_u` BEFORE UPDATE ON `0_pay_ctry_packs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_packs row cannot be updated';
+CREATE TRIGGER `0_ct1_pk_d` BEFORE DELETE ON `0_pay_ctry_packs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_packs row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_pack_versions` (
+  `pack_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pack_id` bigint(20) unsigned NOT NULL,
+  `version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `manifest_schema_version` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `raw_blob_id` bigint(20) unsigned NOT NULL,
+  `manifest_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `publisher_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signer_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `key_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signed_at` datetime NOT NULL,
+  `capability_registry_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `capabilities_json` text NOT NULL,
+  `host_min_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `host_max_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `registered_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`pack_version_id`),
+  UNIQUE KEY `uq_pctry_pv_identity` (`pack_id`,`version`),
+  UNIQUE KEY `uq_pctry_pv_semantic` (`pack_id`,`version`,`semantic_root`),
+  KEY `ix_pctry_pv_raw` (`raw_blob_id`),
+  CONSTRAINT `fk_pctry_pv_pack` FOREIGN KEY (`pack_id`) REFERENCES `0_pay_ctry_packs` (`pack_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_pv_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_pv_u` BEFORE UPDATE ON `0_pay_ctry_pack_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_pack_versions row cannot be updated';
+CREATE TRIGGER `0_ct1_pv_d` BEFORE DELETE ON `0_pay_ctry_pack_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_pack_versions row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_artifacts` (
+  `artifact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `ordinal_no` smallint(5) unsigned NOT NULL,
+  `normalized_path` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_type` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `media_type` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `byte_length` bigint(20) unsigned NOT NULL,
+  `sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `is_evidence` tinyint(1) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`artifact_id`),
+  UNIQUE KEY `uq_pctry_art_path` (`pack_version_id`,`normalized_path`),
+  UNIQUE KEY `uq_pctry_art_ord` (`pack_version_id`,`ordinal_no`),
+  KEY `ix_pctry_art_sha` (`sha256`),
+  CONSTRAINT `fk_pctry_art_pv` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_ar_u` BEFORE UPDATE ON `0_pay_ctry_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_artifacts row cannot be updated';
+CREATE TRIGGER `0_ct1_ar_d` BEFORE DELETE ON `0_pay_ctry_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_artifacts row cannot be deleted';
+-- PAY-CTRY-001 END GROUP identity
+
+-- PAY-CTRY-001 GROUP publisher
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_publishers` (
+  `publisher_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `publisher_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `display_name` varchar(160) NOT NULL,
+  `valid_from` datetime NOT NULL,
+  `valid_to` datetime NULL,
+  `identity_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`publisher_id`),
+  UNIQUE KEY `uq_pctry_pub_code` (`publisher_code`),
+  UNIQUE KEY `uq_pctry_pub_sha` (`identity_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_pu_u` BEFORE UPDATE ON `0_pay_ctry_publishers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publishers row cannot be updated';
+CREATE TRIGGER `0_ct1_pu_d` BEFORE DELETE ON `0_pay_ctry_publishers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publishers row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_publisher_revocations` (
+  `publisher_revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `publisher_id` bigint(20) unsigned NOT NULL,
+  `effective_at` datetime NOT NULL,
+  `reason_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revoked_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`publisher_revocation_id`),
+  UNIQUE KEY `uq_pctry_pub_rev_pub` (`publisher_id`),
+  UNIQUE KEY `uq_pctry_pub_rev_sha` (`revocation_sha256`),
+  CONSTRAINT `fk_pctry_pub_rev_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_pr_u` BEFORE UPDATE ON `0_pay_ctry_publisher_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publisher_revocations row cannot be updated';
+CREATE TRIGGER `0_ct1_pr_d` BEFORE DELETE ON `0_pay_ctry_publisher_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publisher_revocations row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_signers` (
+  `signer_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `publisher_id` bigint(20) unsigned NOT NULL,
+  `signer_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `display_name` varchar(160) NOT NULL,
+  `identity_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`signer_id`),
+  UNIQUE KEY `uq_pctry_signer_code` (`signer_code`),
+  UNIQUE KEY `uq_pctry_signer_sha` (`identity_sha256`),
+  KEY `ix_pctry_signer_pub` (`publisher_id`),
+  CONSTRAINT `fk_pctry_signer_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_si_u` BEFORE UPDATE ON `0_pay_ctry_signers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_signers row cannot be updated';
+CREATE TRIGGER `0_ct1_si_d` BEFORE DELETE ON `0_pay_ctry_signers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_signers row cannot be deleted';
+-- PAY-CTRY-001 END GROUP publisher
+
+-- PAY-CTRY-001 GROUP trust
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_keys` (
+  `trust_key_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `signer_id` bigint(20) unsigned NOT NULL,
+  `key_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `algorithm` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `public_key_pem` text NOT NULL,
+  `public_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `valid_from` datetime NOT NULL,
+  `valid_to` datetime NULL,
+  `trusted_at` datetime NOT NULL,
+  `key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `imported_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`trust_key_id`),
+  UNIQUE KEY `uq_pctry_key_id` (`key_id`),
+  UNIQUE KEY `uq_pctry_key_material` (`public_key_sha256`),
+  UNIQUE KEY `uq_pctry_key_sha` (`key_sha256`),
+  KEY `ix_pctry_key_signer` (`signer_id`),
+  CONSTRAINT `fk_pctry_key_signer` FOREIGN KEY (`signer_id`) REFERENCES `0_pay_ctry_signers` (`signer_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_tk_u` BEFORE UPDATE ON `0_pay_ctry_trust_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_keys row cannot be updated';
+CREATE TRIGGER `0_ct1_tk_d` BEFORE DELETE ON `0_pay_ctry_trust_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_keys row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_revocations` (
+  `key_revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `trust_key_id` bigint(20) unsigned NOT NULL,
+  `effective_at` datetime NOT NULL,
+  `reason_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `compromised` tinyint(1) unsigned NOT NULL,
+  `revocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revoked_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`key_revocation_id`),
+  UNIQUE KEY `uq_pctry_key_rev_key` (`trust_key_id`),
+  UNIQUE KEY `uq_pctry_key_rev_sha` (`revocation_sha256`),
+  CONSTRAINT `fk_pctry_key_rev_key` FOREIGN KEY (`trust_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_kr_u` BEFORE UPDATE ON `0_pay_ctry_trust_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_revocations row cannot be updated';
+CREATE TRIGGER `0_ct1_kr_d` BEFORE DELETE ON `0_pay_ctry_trust_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_revocations row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_supersessions` (
+  `key_supersession_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `predecessor_key_id` bigint(20) unsigned NOT NULL,
+  `successor_key_id` bigint(20) unsigned NOT NULL,
+  `effective_at` datetime NOT NULL,
+  `supersession_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`key_supersession_id`),
+  UNIQUE KEY `uq_pctry_key_sup_pred` (`predecessor_key_id`),
+  UNIQUE KEY `uq_pctry_key_sup_sha` (`supersession_sha256`),
+  KEY `ix_pctry_key_sup_succ` (`successor_key_id`),
+  CONSTRAINT `fk_pctry_key_sup_pred` FOREIGN KEY (`predecessor_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_key_sup_succ` FOREIGN KEY (`successor_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_ks_u` BEFORE UPDATE ON `0_pay_ctry_trust_key_supersessions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_supersessions row cannot be updated';
+CREATE TRIGGER `0_ct1_ks_d` BEFORE DELETE ON `0_pay_ctry_trust_key_supersessions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_supersessions row cannot be deleted';
+-- PAY-CTRY-001 END GROUP trust
+
+-- PAY-CTRY-001 GROUP report
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_verification_reports` (
+  `verification_report_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `raw_blob_id` bigint(20) unsigned NOT NULL,
+  `pack_version_id` bigint(20) unsigned NULL,
+  `candidate_pack_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `candidate_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `manifest_schema_version` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `manifest_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `publisher_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `signer_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `key_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `trust_decision` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `trusted_time_decision` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revocation_decision` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `forbidden_content_result` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `capability_result` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dependency_result` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `final_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `failure_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `verifier_version` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `details_json` text NOT NULL,
+  `report_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `verified_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`verification_report_id`),
+  UNIQUE KEY `uq_pctry_vr_sha` (`report_sha256`),
+  KEY `ix_pctry_vr_raw` (`raw_blob_id`),
+  KEY `ix_pctry_vr_pack` (`pack_version_id`),
+  KEY `ix_pctry_vr_status` (`final_status`,`created_at`),
+  CONSTRAINT `fk_pctry_vr_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_vr_pv` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_vr_u` BEFORE UPDATE ON `0_pay_ctry_verification_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_verification_reports row cannot be updated';
+CREATE TRIGGER `0_ct1_vr_d` BEFORE DELETE ON `0_pay_ctry_verification_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_verification_reports row cannot be deleted';
+-- PAY-CTRY-001 END GROUP report
+
+-- PAY-CTRY-001 GROUP capability
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_registry_versions` (
+  `registry_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `registry_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `registry_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`registry_version_id`),
+  UNIQUE KEY `uq_pctry_cap_ver` (`registry_version`),
+  UNIQUE KEY `uq_pctry_cap_ver_sha` (`registry_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_cv_u` BEFORE UPDATE ON `0_pay_ctry_capability_registry_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_registry_versions row cannot be updated';
+CREATE TRIGGER `0_ct1_cv_d` BEFORE DELETE ON `0_pay_ctry_capability_registry_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_registry_versions row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_definitions` (
+  `capability_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `registry_version_id` bigint(20) unsigned NOT NULL,
+  `capability_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `required_constraints_json` text NOT NULL,
+  `allowed_constraints_json` text NOT NULL,
+  `exclusive_group` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `allowed_artifact_types_json` text NOT NULL,
+  `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`capability_definition_id`),
+  UNIQUE KEY `uq_pctry_cap_def_code` (`registry_version_id`,`capability_code`),
+  UNIQUE KEY `uq_pctry_cap_def_sha` (`definition_sha256`),
+  CONSTRAINT `fk_pctry_cap_def_ver` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_registry_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_cd_u` BEFORE UPDATE ON `0_pay_ctry_capability_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_definitions row cannot be updated';
+CREATE TRIGGER `0_ct1_cd_d` BEFORE DELETE ON `0_pay_ctry_capability_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_definitions row cannot be deleted';
+INSERT INTO `0_pay_ctry_capability_registry_versions` (`registry_version`,`registry_sha256`,`created_by`,`created_at`) SELECT 'pay-ctry-capabilities-v1','95d41321a98412df4df289b0ac4df9dcabed417d618bbdb77086ea0fba7237bc',0,'2026-09-23 00:00:00' WHERE NOT EXISTS (SELECT 1 FROM `0_pay_ctry_capability_registry_versions` WHERE `registry_version`='pay-ctry-capabilities-v1');
+INSERT INTO `0_pay_ctry_capability_definitions` (`registry_version_id`,`capability_code`,`required_constraints_json`,`allowed_constraints_json`,`exclusive_group`,`allowed_artifact_types_json`,`definition_sha256`,`created_at`) SELECT v.registry_version_id,'core.country_pack.metadata','[]','["schema"]',NULL,'["declarative-json"]','0155864a5ee53ee39a2b33c6242c208ef66857e5dd224d314469d41563fb0305','2026-09-23 00:00:00' FROM `0_pay_ctry_capability_registry_versions` v WHERE v.registry_version='pay-ctry-capabilities-v1' AND NOT EXISTS (SELECT 1 FROM `0_pay_ctry_capability_definitions` d WHERE d.registry_version_id=v.registry_version_id AND d.capability_code='core.country_pack.metadata');
+INSERT INTO `0_pay_ctry_capability_definitions` (`registry_version_id`,`capability_code`,`required_constraints_json`,`allowed_constraints_json`,`exclusive_group`,`allowed_artifact_types_json`,`definition_sha256`,`created_at`) SELECT v.registry_version_id,'core.country_pack.evidence','[]','["kind"]',NULL,'["evidence-json","test-fixture-json"]','78965aaf820f59e47d2103be76206968d64efa27f0f4eefd640b1ab08ec6b150','2026-09-23 00:00:00' FROM `0_pay_ctry_capability_registry_versions` v WHERE v.registry_version='pay-ctry-capabilities-v1' AND NOT EXISTS (SELECT 1 FROM `0_pay_ctry_capability_definitions` d WHERE d.registry_version_id=v.registry_version_id AND d.capability_code='core.country_pack.evidence');
+-- PAY-CTRY-001 END GROUP capability
+
+-- PAY-CTRY-001 GROUP dependency
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_dependency_locks` (
+  `dependency_lock_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `lock_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`dependency_lock_id`),
+  UNIQUE KEY `uq_pctry_dep_pack` (`pack_version_id`),
+  UNIQUE KEY `uq_pctry_dep_sha` (`lock_sha256`),
+  CONSTRAINT `fk_pctry_dep_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_dl_u` BEFORE UPDATE ON `0_pay_ctry_dependency_locks` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_locks row cannot be updated';
+CREATE TRIGGER `0_ct1_dl_d` BEFORE DELETE ON `0_pay_ctry_dependency_locks` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_locks row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_dependency_lock_members` (
+  `dependency_lock_member_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `dependency_lock_id` bigint(20) unsigned NOT NULL,
+  `ordinal_no` smallint(5) unsigned NOT NULL,
+  `dependency_pack_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `required_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `resolved_pack_version_id` bigint(20) unsigned NOT NULL,
+  `member_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`dependency_lock_member_id`),
+  UNIQUE KEY `uq_pctry_dep_member_ord` (`dependency_lock_id`,`ordinal_no`),
+  UNIQUE KEY `uq_pctry_dep_member_pack` (`dependency_lock_id`,`dependency_pack_code`),
+  UNIQUE KEY `uq_pctry_dep_member_sha` (`member_sha256`),
+  KEY `ix_pctry_dep_resolved` (`resolved_pack_version_id`),
+  CONSTRAINT `fk_pctry_dep_member_lock` FOREIGN KEY (`dependency_lock_id`) REFERENCES `0_pay_ctry_dependency_locks` (`dependency_lock_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_dep_member_resolved` FOREIGN KEY (`resolved_pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_dm_u` BEFORE UPDATE ON `0_pay_ctry_dependency_lock_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_lock_members row cannot be updated';
+CREATE TRIGGER `0_ct1_dm_d` BEFORE DELETE ON `0_pay_ctry_dependency_lock_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_lock_members row cannot be deleted';
+-- PAY-CTRY-001 END GROUP dependency
+
+-- PAY-CTRY-001 GROUP integration
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_install_receipts` (
+  `install_receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idempotency_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `raw_blob_id` bigint(20) unsigned NOT NULL,
+  `verification_report_id` bigint(20) unsigned NOT NULL,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `installed_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`install_receipt_id`),
+  UNIQUE KEY `uq_pctry_ir_idem` (`idempotency_sha256`),
+  UNIQUE KEY `uq_pctry_ir_sha` (`receipt_sha256`),
+  KEY `ix_pctry_ir_raw` (`raw_blob_id`),
+  KEY `ix_pctry_ir_report` (`verification_report_id`),
+  KEY `ix_pctry_ir_pack` (`pack_version_id`),
+  CONSTRAINT `fk_pctry_ir_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_ir_report` FOREIGN KEY (`verification_report_id`) REFERENCES `0_pay_ctry_verification_reports` (`verification_report_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pctry_ir_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct1_ir_u` BEFORE UPDATE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be updated';
+CREATE TRIGGER `0_ct1_ir_d` BEFORE DELETE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be deleted';
+-- PAY-CTRY-001 END GROUP integration

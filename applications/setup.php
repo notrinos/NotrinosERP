@@ -55,6 +55,8 @@ class SetupApp extends application {
 		$this->add_rapp_function(3, _('Install/Activate &Extensions'), 'admin/inst_module.php?', 'SA_CREATEMODULES', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Install/Activate &Themes'), 'admin/inst_theme.php?', 'SA_CREATEMODULES', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Install/Activate &Chart of Accounts'), 'admin/inst_chart.php?', 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_lapp_function(4, _('Country Pack &Verification'), 'admin/pay_ctry_packs.php?', 'SA_PAY_CTRY_INSTALL', MENU_UPDATE);
+		$this->add_rapp_function(4, _('Country Pack &Trust'), 'admin/pay_ctry_trust.php?', 'SA_PAY_CTRY_TRUST', MENU_UPDATE);
 		$this->add_rapp_function(3, _('Software &Upgrade'), 'admin/inst_upgrade.php?', 'SA_SOFTWAREUPGRADE', MENU_UPDATE);
 
 		$this->add_extensions();
