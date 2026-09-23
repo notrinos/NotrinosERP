@@ -488,15 +488,22 @@ function db_query($sql, $err_msg = null) {
 	} else do {
 
 		try {
-			$statement = $db->query($sql);
-			if ($statement instanceof PDOStatement && $statement->columnCount() > 0) {
-				$result = db_pdo_buffer_result($statement);
-				$db_last_affected_rows = 0;
+			if (preg_match('/^(?:CREATE|DROP)\s+(?:OR\s+REPLACE\s+)?(?:(?:DEFINER\s*=\s*\S+)\s+)?(?:TRIGGER|PROCEDURE|FUNCTION|EVENT)\b/', $normalized_sql)) {
+				// MySQL PDO can leave a result active when stored-program DDL is sent through query().
+				$affected_rows = $db->exec($sql);
+				$result = ($affected_rows !== false);
+				$db_last_affected_rows = $result ? $affected_rows : 0;
 			} else {
-				$result = true;
-				$db_last_affected_rows = ($statement instanceof PDOStatement) ? $statement->rowCount() : 0;
-				if ($statement instanceof PDOStatement)
-					$statement->closeCursor();
+				$statement = $db->query($sql);
+				if ($statement instanceof PDOStatement && $statement->columnCount() > 0) {
+					$result = db_pdo_buffer_result($statement);
+					$db_last_affected_rows = 0;
+				} else {
+					$result = true;
+					$db_last_affected_rows = ($statement instanceof PDOStatement) ? $statement->rowCount() : 0;
+					if ($statement instanceof PDOStatement)
+						$statement->closeCursor();
+				}
 			}
 			$statement = null;
 			$retry = 0;

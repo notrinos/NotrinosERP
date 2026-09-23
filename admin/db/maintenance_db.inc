@@ -440,6 +440,11 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	$sql_errors = array();
 
 	$old_encoding = db_get_charset($db);
+	// MySQL 5.7 rejects JSON defaults; import them as insert triggers instead.
+	$server_version = db_get_version();
+	$mysql57_json_default_compat = stripos($server_version, 'MariaDB') === false
+		&& preg_match('/^5\.7\./', $server_version)
+		&& version_compare($server_version, '5.7.8', '>=');
 
 	ini_set('max_execution_time', max('180', ini_get('max_execution_time')));
 	db_query('SET foreign_key_checks=0');
@@ -509,6 +514,8 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 
 	if (is_array($table_queries)) {
 		$normalized_table_queries = array();
+		$json_default_trigger_drops = array();
+		$imported_trigger_drops = array();
 
 		foreach ($table_queries as $table_query) {
 			if (db_is_import_constraint_query($table_query[0])) {
@@ -517,8 +524,40 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 			}
 
 			list($normalized_query, $inline_constraint_queries) = db_strip_create_table_constraints($table_query[0]);
-			$table_query[0] = $normalized_query;
-			$normalized_table_queries[] = $table_query;
+			if (preg_match('/^\s*CREATE\s+(?:DEFINER\s*=\s*\S+\s+)?TRIGGER\s+`([^`]+)`/i', $normalized_query, $trigger_match)) {
+				$trigger_name = '`'.str_replace('`', '``', $trigger_match[1]).'`';
+				$imported_trigger_drops[] = array('DROP TRIGGER IF EXISTS '.$trigger_name, $table_query[1]);
+			}
+
+			if ($mysql57_json_default_compat
+				&& preg_match('/^\s*CREATE\s+TABLE\b/i', $normalized_query)
+				&& preg_match_all("/`([^`]+)`\\s+JSON\\s+NOT\\s+NULL\\s+DEFAULT\\s*\\(\\s*'\\{\\}'\\s*\\)/i", $normalized_query, $json_columns)
+				&& preg_match('/^\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(`[^`]+`|[^\s(]+)\s*\(/i', $normalized_query, $table_match)) {
+				$table_name = trim($table_match[1], '`');
+				$quoted_table = '`'.str_replace('`', '``', $table_name).'`';
+				$trigger_name = 'nerp_json_default_'.substr(sha1($table_name), 0, 20);
+				$quoted_trigger = '`'.$trigger_name.'`';
+				$default_assignments = array();
+
+				foreach ($json_columns[1] as $column_name) {
+					$quoted_column = '`'.str_replace('`', '``', $column_name).'`';
+					$default_assignments[] = 'IF NEW.'.$quoted_column.' IS NULL THEN SET NEW.'.$quoted_column.' = JSON_OBJECT(); END IF;';
+				}
+
+				$normalized_query = preg_replace(
+					"/(`[^`]+`\\s+JSON\\s+NOT\\s+NULL)\\s+DEFAULT\\s*\\(\\s*'\\{\\}'\\s*\\)/i",
+					'$1',
+					$normalized_query
+				);
+				$normalized_table_queries[] = array($normalized_query, $table_query[1]);
+				$normalized_table_queries[] = array(
+					'CREATE TRIGGER '.$quoted_trigger.' BEFORE INSERT ON '.$quoted_table.' FOR EACH ROW BEGIN '.implode(' ', $default_assignments).' END',
+					$table_query[1]
+				);
+				$json_default_trigger_drops[] = array('DROP TRIGGER IF EXISTS '.$quoted_trigger, $table_query[1]);
+			} else {
+				$normalized_table_queries[] = array($normalized_query, $table_query[1]);
+			}
 
 			if (count($inline_constraint_queries)) {
 				foreach ($inline_constraint_queries as $inline_constraint_query)
@@ -527,6 +566,8 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		}
 
 		$table_queries = $normalized_table_queries;
+		if (count($json_default_trigger_drops) || count($imported_trigger_drops))
+			$drop_queries = array_merge($json_default_trigger_drops, $imported_trigger_drops, $drop_queries);
 	}
 	
 	$encoding = $old_encoding; // UI encoding for default site language is the default

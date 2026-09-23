@@ -7741,13 +7741,6 @@ SET @old_foreign_key_checks = @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;
 
 
--- Indexes for new stock_moves columns (use CREATE INDEX IF NOT EXISTS alternative)
--- MariaDB 10.5+ supports this syntax
-CREATE INDEX IF NOT EXISTS `idx_sm_serial_id`   ON `0_stock_moves` (`serial_id`);
-CREATE INDEX IF NOT EXISTS `idx_sm_batch_id`    ON `0_stock_moves` (`batch_id`);
-CREATE INDEX IF NOT EXISTS `idx_sm_from_bin_id` ON `0_stock_moves` (`from_bin_id`);
-CREATE INDEX IF NOT EXISTS `idx_sm_to_bin_id`   ON `0_stock_moves` (`to_bin_id`);
-
 -- -------------------------------------------------------------------------------------
 -- Restore foreign key checks
 -- -------------------------------------------------------------------------------------
