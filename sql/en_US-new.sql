@@ -11957,3 +11957,53 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_install_receipts` (
 CREATE TRIGGER `0_ct1_ir_u` BEFORE UPDATE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be updated';
 CREATE TRIGGER `0_ct1_ir_d` BEFORE DELETE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be deleted';
 -- PAY-CTRY-001 END GROUP integration
+
+-- PAY-CTRY-002 GROUP site_lifecycle
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_site_operation_journal` (
+  `operation_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `operation_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `event_no` smallint(5) unsigned NOT NULL,
+  `operation_type` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `event_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `predecessor_pack_version_id` bigint(20) unsigned NULL,
+  `verification_report_id` bigint(20) unsigned NOT NULL,
+  `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `actor_id` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`operation_event_id`),
+  UNIQUE KEY `uq_pct2_op_event` (`operation_key`,`event_no`),
+  UNIQUE KEY `uq_pct2_op_evidence` (`evidence_sha256`),
+  KEY `ix_pct2_op_pack` (`pack_version_id`,`event_type`,`created_at`),
+  KEY `ix_pct2_op_pred` (`predecessor_pack_version_id`),
+  KEY `ix_pct2_op_report` (`verification_report_id`),
+  CONSTRAINT `fk_pct2_op_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct2_op_pred` FOREIGN KEY (`predecessor_pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct2_op_report` FOREIGN KEY (`verification_report_id`) REFERENCES `0_pay_ctry_verification_reports` (`verification_report_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct2_oj_u` BEFORE UPDATE ON `0_pay_ctry_site_operation_journal` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_operation_journal row cannot be updated';
+CREATE TRIGGER `0_ct2_oj_d` BEFORE DELETE ON `0_pay_ctry_site_operation_journal` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_operation_journal row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_site_installations` (
+  `site_installation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `predecessor_site_installation_id` bigint(20) unsigned NULL,
+  `operation_event_id` bigint(20) unsigned NOT NULL,
+  `installation_kind` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `installed_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`site_installation_id`),
+  UNIQUE KEY `uq_pct2_si_event` (`operation_event_id`),
+  UNIQUE KEY `uq_pct2_si_receipt` (`receipt_sha256`),
+  KEY `ix_pct2_si_pack` (`pack_version_id`,`created_at`),
+  KEY `ix_pct2_si_pred` (`predecessor_site_installation_id`),
+  CONSTRAINT `fk_pct2_si_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct2_si_pred` FOREIGN KEY (`predecessor_site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct2_si_event` FOREIGN KEY (`operation_event_id`) REFERENCES `0_pay_ctry_site_operation_journal` (`operation_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct2_si_u` BEFORE UPDATE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be updated';
+CREATE TRIGGER `0_ct2_si_d` BEFORE DELETE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be deleted';
+-- PAY-CTRY-002 END GROUP site_lifecycle

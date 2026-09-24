@@ -24,7 +24,11 @@ function pay_ctry_001_require_predecessor($patch)
 function pay_ctry_001_require_active_source_custody($patch)
 {
     global $path_to_root;$file=$path_to_root.'/tests/fixtures/payroll/legacy_v1/manifest.json';$m=json_decode((string)@file_get_contents($file),true);
-    if(!is_array($m)||!isset($m['contract']['version'])||$m['contract']['version']!=='1.0.453'||!isset($m['pay_ctry_001_evidence']['status'])||$m['pay_ctry_001_evidence']['status']!=='SOURCE-CLOSED / LOCAL-GATE-PENDING')
+    $version=is_array($m)?($m['contract']['version']??''):'';$e=is_array($m)?($m['pay_ctry_001_evidence']??array()):array();$status=$e['status']??'';
+    $source_closed=$version==='1.0.453'&&$status==='SOURCE-CLOSED / LOCAL-GATE-PENDING';
+    $accepted=$version==='1.0.454'&&$status==='CLOSED / LOCAL ACCEPTANCE PASS'&&($e['mandatory_local_gate_status']??'')==='PASS';
+    if($accepted){$closure=$e['source_closure_manifest']??array();$closure_path=is_array($closure)?($closure['path']??''):'';$closure_hash=is_array($closure)?($closure['sha256']??''):'';$expected_path='tests/fixtures/payroll/legacy_v1/manifest_v1.0.453.json';$closure_file=$path_to_root.'/'.$expected_path;$closure_manifest=is_array($closure)&&$closure_path===$expected_path&&is_file($closure_file)?json_decode((string)@file_get_contents($closure_file),true):null;$accepted=is_array($closure_manifest)&&($closure_manifest['contract']['version']??'')==='1.0.453'&&is_string($closure_hash)&&preg_match('/^[a-f0-9]{64}$/D',$closure_hash)===1&&hash_equals($closure_hash,(string)@hash_file('sha256',$closure_file));}
+    if(!$source_closed&&!$accepted)
         return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CTRY-001 active source custody is incomplete.');
     return true;
 }

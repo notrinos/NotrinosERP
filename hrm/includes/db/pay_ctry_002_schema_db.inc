@@ -1,0 +1,55 @@
+<?php
+/** PAY-CTRY-002 exact site-lifecycle schema installer/validator. */
+include_once(dirname(__FILE__).'/migration_readiness_db.inc');
+function pay_ctry_002_schema_groups(){return array('site_lifecycle'=>array('pay_ctry_site_operation_journal','pay_ctry_site_installations'));}
+function pay_ctry_002_schema_columns(){return array(
+ 'pay_ctry_site_operation_journal'=>array('operation_event_id','operation_key','event_no','operation_type','event_type','pack_version_id','predecessor_pack_version_id','verification_report_id','evidence_sha256','actor_id','created_at'),
+ 'pay_ctry_site_installations'=>array('site_installation_id','pack_version_id','predecessor_site_installation_id','operation_event_id','installation_kind','semantic_root','evidence_root','receipt_sha256','installed_by','created_at')
+);}
+function pay_ctry_002_primary_keys(){return array(
+ 'pay_ctry_site_operation_journal'=>array('operation_event_id'),
+ 'pay_ctry_site_installations'=>array('site_installation_id')
+);}
+function pay_ctry_002_required_indexes(){return array(
+ 'pay_ctry_site_operation_journal'=>array(
+  'uq_pct2_op_event'=>array(1,array('operation_key','event_no')),
+  'uq_pct2_op_evidence'=>array(1,array('evidence_sha256')),
+  'ix_pct2_op_pack'=>array(0,array('pack_version_id','event_type','created_at')),
+  'ix_pct2_op_pred'=>array(0,array('predecessor_pack_version_id')),
+  'ix_pct2_op_report'=>array(0,array('verification_report_id'))
+ ),
+ 'pay_ctry_site_installations'=>array(
+  'uq_pct2_si_event'=>array(1,array('operation_event_id')),
+  'uq_pct2_si_receipt'=>array(1,array('receipt_sha256')),
+  'ix_pct2_si_pack'=>array(0,array('pack_version_id','created_at')),
+  'ix_pct2_si_pred'=>array(0,array('predecessor_site_installation_id'))
+ )
+);}
+function pay_ctry_002_required_foreign_keys(){return array(
+ 'pay_ctry_site_operation_journal'=>array(
+  'fk_pct2_op_pack'=>array('pack_version_id','pay_ctry_pack_versions','pack_version_id'),
+  'fk_pct2_op_pred'=>array('predecessor_pack_version_id','pay_ctry_pack_versions','pack_version_id'),
+  'fk_pct2_op_report'=>array('verification_report_id','pay_ctry_verification_reports','verification_report_id')
+ ),
+ 'pay_ctry_site_installations'=>array(
+  'fk_pct2_si_pack'=>array('pack_version_id','pay_ctry_pack_versions','pack_version_id'),
+  'fk_pct2_si_pred'=>array('predecessor_site_installation_id','pay_ctry_site_installations','site_installation_id'),
+  'fk_pct2_si_event'=>array('operation_event_id','pay_ctry_site_operation_journal','operation_event_id')
+ )
+);}
+function pay_ctry_002_trigger_codes(){return array('pay_ctry_site_operation_journal'=>'oj','pay_ctry_site_installations'=>'si');}
+function pay_ctry_002_table_columns($table){if(!hrm_migration_table_exists($table))return false;$q=db_query('SHOW COLUMNS FROM '.TB_PREF.$table);if(!$q)return false;$o=array();while($r=db_fetch_assoc($q))$o[]=(string)$r['Field'];return $o;}
+function pay_ctry_002_table_primary_key($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' AND INDEX_NAME=\'PRIMARY\' ORDER BY SEQ_IN_INDEX');if(!$q)return false;$o=array();while($r=db_fetch_assoc($q))$o[]=(string)$r['COLUMN_NAME'];return $o;}
+function pay_ctry_002_table_engine($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' LIMIT 1');if(!$q||db_num_rows($q)!==1)return false;$r=db_fetch_assoc($q);return $r?(string)$r['ENGINE']:false;}
+function pay_ctry_002_table_indexes($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' ORDER BY INDEX_NAME,SEQ_IN_INDEX');if(!$q)return false;$o=array();while($r=db_fetch_assoc($q)){if($r['INDEX_NAME']==='PRIMARY')continue;$n=(string)$r['INDEX_NAME'];if(!isset($o[$n]))$o[$n]=array((int)$r['NON_UNIQUE']===0?1:0,array());$o[$n][1][]=(string)$r['COLUMN_NAME'];}ksort($o);return $o;}
+function pay_ctry_002_table_foreign_keys($table){$p=hrm_migration_physical_table_name($table);$prefix=hrm_migration_active_table_prefix();if($p===false||$prefix===false)return false;$q=db_query('SELECT CONSTRAINT_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY CONSTRAINT_NAME,ORDINAL_POSITION');if(!$q)return false;$o=array();while($r=db_fetch_assoc($q)){$ref=(string)$r['REFERENCED_TABLE_NAME'];if(strpos($ref,$prefix)===0)$ref=substr($ref,strlen($prefix));$o[(string)$r['CONSTRAINT_NAME']]=array((string)$r['COLUMN_NAME'],$ref,(string)$r['REFERENCED_COLUMN_NAME']);}ksort($o);return $o;}
+function pay_ctry_002_trigger_name($table,$op){$codes=pay_ctry_002_trigger_codes();$prefix=hrm_migration_active_table_prefix();return isset($codes[$table])&&$prefix!==false?$prefix.'ct2_'.$codes[$table].'_'.(strtoupper($op)==='UPDATE'?'u':'d'):false;}
+function pay_ctry_002_trigger_message($table,$op){return 'PAY-CTRY-002 immutable '.$table.' row cannot be '.(strtoupper($op)==='UPDATE'?'updated':'deleted');}
+function pay_ctry_002_trigger_state($table,$op){$physical=hrm_migration_physical_table_name($table);$name=pay_ctry_002_trigger_name($table,$op);if($physical===false||$name===false)return false;$q=db_query('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING,ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='.db_escape($name).' LIMIT 2');if(!$q)return false;if(db_num_rows($q)===0)return 'absent';if(db_num_rows($q)!==1)return 'conflict';$r=db_fetch_assoc($q);$actual=strtoupper(rtrim(preg_replace('/\s+/',' ',trim((string)$r['ACTION_STATEMENT'])),';'));$expected=strtoupper("SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='".pay_ctry_002_trigger_message($table,$op)."'");return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($op)&&(string)$r['EVENT_OBJECT_TABLE']===$physical&&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'&&$actual===$expected?'valid':'conflict';}
+function pay_ctry_002_create_trigger($patch,$table,$op){$state=pay_ctry_002_trigger_state($table,$op);if($state==='valid')return true;if($state!=='absent')return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CTRY-002 immutable trigger conflict: '.$table.'.'.$op);$physical=hrm_migration_physical_table_name($table);$name=pay_ctry_002_trigger_name($table,$op);$sql="CREATE TRIGGER `".$name."` BEFORE ".strtoupper($op)." ON `".$physical."` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT=".db_escape(pay_ctry_002_trigger_message($table,$op));if(!db_query($sql))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 immutable trigger creation failed: '.$table.'.'.$op);return pay_ctry_002_trigger_state($table,$op)==='valid';}
+function pay_ctry_002_schema_group_block($group){global $path_to_root;$raw=@file_get_contents($path_to_root.'/sql/upgrade_pay_ctry_002_schema.sql');if(!is_string($raw)||$raw==='')return false;$start='-- PAY-CTRY-002 GROUP '.$group;$end='-- PAY-CTRY-002 END GROUP '.$group;$a=strpos($raw,$start);$b=strpos($raw,$end);if($a===false||$b===false||$b<=$a)return false;return substr($raw,$a+strlen($start),$b-($a+strlen($start)));}
+function pay_ctry_002_require_table_shape($patch,$table){$cols=pay_ctry_002_schema_columns();$pks=pay_ctry_002_primary_keys();$indexes=pay_ctry_002_required_indexes();$fks=pay_ctry_002_required_foreign_keys();if(pay_ctry_002_table_columns($table)!==$cols[$table]||pay_ctry_002_table_primary_key($table)!==$pks[$table]||strcasecmp((string)pay_ctry_002_table_engine($table),'InnoDB')!==0)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 table projection mismatch: '.$table);$got=pay_ctry_002_table_indexes($table);$want=$indexes[$table];ksort($got);ksort($want);if($got!==$want)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 exact index projection mismatch: '.$table);$gf=pay_ctry_002_table_foreign_keys($table);$wantf=$fks[$table];ksort($gf);ksort($wantf);if($gf!==$wantf)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 exact foreign-key projection mismatch: '.$table);return true;}
+function pay_ctry_002_require_zero_seed($patch,$group){$groups=pay_ctry_002_schema_groups();if(!isset($groups[$group]))return false;foreach($groups[$group] as $table){if(hrm_migration_table_exists($table)){ $q=db_query('SELECT COUNT(*) c FROM '.TB_PREF.$table);$r=$q?db_fetch_assoc($q):false;if(!$r||(int)$r['c']!==0)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CTRY-002 lifecycle schema must be zero-seed: '.$table);}}return true;}
+function pay_ctry_002_install_schema_group($patch,$group){$groups=pay_ctry_002_schema_groups();if(!isset($groups[$group]))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 schema group unknown: '.$group);if(!pay_ctry_002_require_zero_seed($patch,$group))return false;$block=pay_ctry_002_schema_group_block($group);if($block===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CTRY-002 schema source missing: '.$group);$prefix=hrm_migration_active_table_prefix();if($prefix===false)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 table prefix invalid.');$statements=preg_split('/;\s*(?:\r?\n|$)/',$block);foreach($statements as $stmt){$stmt=trim($stmt);if($stmt===''||strpos($stmt,'CREATE TRIGGER')===0)continue;$stmt=str_replace('`0_','`'.$prefix,$stmt);if(!db_query($stmt))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CTRY-002 schema statement failed for group '.$group.'.');}foreach($groups[$group] as $table){if(!pay_ctry_002_require_table_shape($patch,$table))return false;foreach(array('UPDATE','DELETE') as $op)if(!pay_ctry_002_create_trigger($patch,$table,$op))return false;}return pay_ctry_002_require_zero_seed($patch,$group);}
+function pay_ctry_002_require_schema_group($patch,$group){$groups=pay_ctry_002_schema_groups();if(!isset($groups[$group]))return false;foreach($groups[$group] as $table){if(!pay_ctry_002_require_table_shape($patch,$table))return false;foreach(array('UPDATE','DELETE') as $op)if(pay_ctry_002_trigger_state($table,$op)!=='valid')return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CTRY-002 immutable trigger mismatch: '.$table.'.'.$op);}return true;}
+?>

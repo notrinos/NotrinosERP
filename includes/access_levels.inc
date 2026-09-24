@@ -529,6 +529,10 @@ $security_areas =array(
 	'SA_HRM_ESS_VIEW_DOCUMENTS' => array(SS_HRM|153, _('View and download server-scoped workforce documents')), // no automatic role grant
 	'SA_HRM_ESS_APPROVE_TEAM' => array(SS_HRM|154, _('Act on approval items within current ESS team scope')), // no automatic role grant
 	'SA_HRM_ESS_MANAGE_PROXY' => array(SS_HRM|155, _('Narrow and revoke effective-dated ESS delegation capabilities')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CTRY_ACTIVATION' => array(SS_HRM|156, _('Create governed country-pack activation lifecycle proposals')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CTRY_ACTIVATION' => array(SS_HRM|157, _('Independently review country-pack activation impact and proposals')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_CTRY_ACTIVATION' => array(SS_HRM|158, _('Execute independently approved country-pack activation lifecycle changes')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_CTRY_ACTIVATION' => array(SS_HRM|159, _('Recover or suspend governed country-pack activation lifecycle state')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.776',
-        'active_legacy_payroll_contract'=>'1.0.453',
+        'active_database_version'=>'1.0.779',
+        'active_legacy_payroll_contract'=>'1.0.455',
         'next_backlog_item'=>'PAY-CTRY-002',
-        'next_slice_changed_files'=>array(),
-            'next_slice_scope'=>'PAY-CTRY-001 source implementation is closed at software head 1.0.776 with active source custody 1.0.453; genuine owner-machine WAMP/MariaDB/browser acceptance remains pending. PAY-CTRY-002 is the strict next dependency and was not started.',
+        'next_slice_changed_files'=>array(
+            'includes/pay_ctry_002_contract.inc',
+            'hrm/includes/db/pay_ctry_002_readiness_db.inc',
+            'hrm/includes/db/pay_ctry_002_schema_db.inc',
+            'sql/upgrade_pay_ctry_002_schema.sql'),
+            'next_slice_scope'=>'PAY-CTRY-002 is IN PROGRESS at source head 1.0.779 with frozen accepted PAY-CTRY-001 source custody 1.0.454 preserved byte-exact and active PAY-CTRY-002 source custody 1.0.455. Dependency review, lifecycle authority contract and zero-seed site operation/installation custody are source-implemented; impact simulation and per-company activation proposal/execution remain unstarted.',
         'edges'=>array(
+            'pay_ctry_002_dependency_review'=>array('previous'=>'1.0.776','version'=>'1.0.777',
+                'file'=>'sql/upgrade_pay_ctry_002_dependency_review.php'),
+            'pay_ctry_002_contract_foundation'=>array('previous'=>'1.0.777','version'=>'1.0.778',
+                'file'=>'sql/upgrade_pay_ctry_002_contract_foundation.php'),
+            'pay_ctry_002_site_lifecycle_foundation'=>array('previous'=>'1.0.778','version'=>'1.0.779',
+                'file'=>'sql/upgrade_pay_ctry_002_site_lifecycle_foundation.php'),
             'pay_ctry_001_dependency_review'=>array('previous'=>'1.0.758','version'=>'1.0.759',
                 'file'=>'sql/upgrade_pay_ctry_001_dependency_review.php'),
             'pay_ctry_001_contract_foundation'=>array('previous'=>'1.0.759','version'=>'1.0.760',
