@@ -11,15 +11,15 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.779',
-        'active_legacy_payroll_contract'=>'1.0.455',
+        'active_database_version'=>'1.0.782',
+        'active_legacy_payroll_contract'=>'1.0.456',
         'next_backlog_item'=>'PAY-CTRY-002',
         'next_slice_changed_files'=>array(
             'includes/pay_ctry_002_contract.inc',
             'hrm/includes/db/pay_ctry_002_readiness_db.inc',
             'hrm/includes/db/pay_ctry_002_schema_db.inc',
             'sql/upgrade_pay_ctry_002_schema.sql'),
-            'next_slice_scope'=>'PAY-CTRY-002 is IN PROGRESS at source head 1.0.779 with frozen accepted PAY-CTRY-001 source custody 1.0.454 preserved byte-exact and active PAY-CTRY-002 source custody 1.0.455. Dependency review, lifecycle authority contract and zero-seed site operation/installation custody are source-implemented; impact simulation and per-company activation proposal/execution remain unstarted.',
+            'next_slice_scope'=>'PAY-CTRY-002 is IN PROGRESS at source head 1.0.782 with frozen accepted PAY-CTRY-001 source custody 1.0.454 and frozen PAY-CTRY-002 predecessor custody 1.0.455 preserved byte-exact; active PAY-CTRY-002 source custody is 1.0.456. Impact simulation, immutable activation proposal and independent approval staging custody are source-implemented and non-authoritative; activation execution, binding, suspension, outbox, open-run guard and hard-revocation propagation remain unstarted.',
         'edges'=>array(
             'pay_ctry_002_dependency_review'=>array('previous'=>'1.0.776','version'=>'1.0.777',
                 'file'=>'sql/upgrade_pay_ctry_002_dependency_review.php'),
@@ -27,6 +27,12 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_ctry_002_contract_foundation.php'),
             'pay_ctry_002_site_lifecycle_foundation'=>array('previous'=>'1.0.778','version'=>'1.0.779',
                 'file'=>'sql/upgrade_pay_ctry_002_site_lifecycle_foundation.php'),
+            'pay_ctry_002_impact_simulation_foundation'=>array('previous'=>'1.0.779','version'=>'1.0.780',
+                'file'=>'sql/upgrade_pay_ctry_002_impact_simulation_foundation.php'),
+            'pay_ctry_002_activation_proposal_foundation'=>array('previous'=>'1.0.780','version'=>'1.0.781',
+                'file'=>'sql/upgrade_pay_ctry_002_activation_proposal_foundation.php'),
+            'pay_ctry_002_activation_approval_foundation'=>array('previous'=>'1.0.781','version'=>'1.0.782',
+                'file'=>'sql/upgrade_pay_ctry_002_activation_approval_foundation.php'),
             'pay_ctry_001_dependency_review'=>array('previous'=>'1.0.758','version'=>'1.0.759',
                 'file'=>'sql/upgrade_pay_ctry_001_dependency_review.php'),
             'pay_ctry_001_contract_foundation'=>array('previous'=>'1.0.759','version'=>'1.0.760',

@@ -12367,3 +12367,87 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_site_installations` (
 CREATE TRIGGER `0_ct2_si_u` BEFORE UPDATE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be updated';
 CREATE TRIGGER `0_ct2_si_d` BEFORE DELETE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be deleted';
 -- PAY-CTRY-002 END GROUP site_lifecycle
+-- PAY-CTRY-002 GROUP impact_simulation
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_impact_simulations` (
+  `impact_simulation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `impact_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `site_installation_id` bigint(20) unsigned NOT NULL,
+  `company_id` smallint(5) unsigned NOT NULL,
+  `scope_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NULL,
+  `payroll_scope_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `action_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `dependency_lock_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `binding_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `open_run_count` int(10) unsigned NOT NULL,
+  `open_approval_count` int(10) unsigned NOT NULL,
+  `downstream_intent_count` int(10) unsigned NOT NULL,
+  `blocking_finding_count` int(10) unsigned NOT NULL,
+  `impact_payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `impact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `simulated_by` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`impact_simulation_id`),
+  UNIQUE KEY `uq_pct2_im_key` (`impact_key`),
+  UNIQUE KEY `uq_pct2_im_hash` (`impact_sha256`),
+  KEY `ix_pct2_im_install` (`site_installation_id`,`created_at`),
+  KEY `ix_pct2_im_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_from`),
+  CONSTRAINT `fk_pct2_im_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct2_im_u` BEFORE UPDATE ON `0_pay_ctry_activation_impact_simulations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_impact_simulations row cannot be updated';
+CREATE TRIGGER `0_ct2_im_d` BEFORE DELETE ON `0_pay_ctry_activation_impact_simulations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_impact_simulations row cannot be deleted';
+-- PAY-CTRY-002 END GROUP impact_simulation
+
+-- PAY-CTRY-002 GROUP activation_proposal
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_proposals` (
+  `activation_proposal_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `proposal_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `site_installation_id` bigint(20) unsigned NOT NULL,
+  `impact_simulation_id` bigint(20) unsigned NOT NULL,
+  `company_id` smallint(5) unsigned NOT NULL,
+  `scope_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NULL,
+  `payroll_scope_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `action_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `dependency_lock_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `binding_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `impact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `proposal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `maker_id` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`activation_proposal_id`),
+  UNIQUE KEY `uq_pct2_ap_key` (`proposal_key`),
+  UNIQUE KEY `uq_pct2_ap_hash` (`proposal_sha256`),
+  KEY `ix_pct2_ap_install` (`site_installation_id`,`created_at`),
+  KEY `ix_pct2_ap_impact` (`impact_simulation_id`),
+  KEY `ix_pct2_ap_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_from`),
+  CONSTRAINT `fk_pct2_ap_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct2_ap_impact` FOREIGN KEY (`impact_simulation_id`) REFERENCES `0_pay_ctry_activation_impact_simulations` (`impact_simulation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct2_ap_u` BEFORE UPDATE ON `0_pay_ctry_activation_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_proposals row cannot be updated';
+CREATE TRIGGER `0_ct2_ap_d` BEFORE DELETE ON `0_pay_ctry_activation_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_proposals row cannot be deleted';
+-- PAY-CTRY-002 END GROUP activation_proposal
+
+-- PAY-CTRY-002 GROUP activation_approval
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_approvals` (
+  `activation_approval_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `activation_proposal_id` bigint(20) unsigned NOT NULL,
+  `proposal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `decision_token` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `approval_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `checker_id` smallint(6) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`activation_approval_id`),
+  UNIQUE KEY `uq_pct2_aa_proposal` (`activation_proposal_id`),
+  UNIQUE KEY `uq_pct2_aa_hash` (`approval_sha256`),
+  KEY `ix_pct2_aa_checker` (`checker_id`,`created_at`),
+  CONSTRAINT `fk_pct2_aa_proposal` FOREIGN KEY (`activation_proposal_id`) REFERENCES `0_pay_ctry_activation_proposals` (`activation_proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct2_aa_u` BEFORE UPDATE ON `0_pay_ctry_activation_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_approvals row cannot be updated';
+CREATE TRIGGER `0_ct2_aa_d` BEFORE DELETE ON `0_pay_ctry_activation_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_approvals row cannot be deleted';
+-- PAY-CTRY-002 END GROUP activation_approval
