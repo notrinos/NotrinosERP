@@ -5,16 +5,21 @@
  * PAY-CTRY-001 owns site trust and immutable verified pack artifacts.
  * PAY-CTRY-002 keeps installation distinct from governed company/legal-entity/
  * payroll-scope activation. Staging and approval evidence remain non-authoritative
- * until a later activation executor commits a reviewed activation record.
+ * until the reviewed activation executor commits a binding. Runtime consumers
+ * resolve only the immutable binding metadata; country-pack code never receives
+ * ERP posting, accounting, employee, bank, tax, security, or unrestricted SQL
+ * authority through this contract.
  */
-if (!defined('PAY_CTRY_002_CONTRACT_VERSION')) define('PAY_CTRY_002_CONTRACT_VERSION', '1.0.1');
-if (!defined('PAY_CTRY_002_BATCH_DB_VERSION')) define('PAY_CTRY_002_BATCH_DB_VERSION', '1.0.782');
-if (!defined('PAY_CTRY_002_SOURCE_CUSTODY_VERSION')) define('PAY_CTRY_002_SOURCE_CUSTODY_VERSION', '1.0.456');
+if (!defined('PAY_CTRY_002_CONTRACT_VERSION')) define('PAY_CTRY_002_CONTRACT_VERSION', '1.2.0');
+if (!defined('PAY_CTRY_002_BATCH_DB_VERSION')) define('PAY_CTRY_002_BATCH_DB_VERSION', '1.0.789');
+if (!defined('PAY_CTRY_002_SOURCE_CUSTODY_VERSION')) define('PAY_CTRY_002_SOURCE_CUSTODY_VERSION', '1.0.458');
 
 if (!defined('PAY_CTRY_002_MAKER_PERMISSION')) define('PAY_CTRY_002_MAKER_PERMISSION', 'SA_HRM_MANAGE_PAY_CTRY_ACTIVATION');
 if (!defined('PAY_CTRY_002_CHECKER_PERMISSION')) define('PAY_CTRY_002_CHECKER_PERMISSION', 'SA_HRM_REVIEW_PAY_CTRY_ACTIVATION');
 if (!defined('PAY_CTRY_002_EXECUTOR_PERMISSION')) define('PAY_CTRY_002_EXECUTOR_PERMISSION', 'SA_HRM_EXECUTE_PAY_CTRY_ACTIVATION');
 if (!defined('PAY_CTRY_002_RECOVERY_PERMISSION')) define('PAY_CTRY_002_RECOVERY_PERMISSION', 'SA_HRM_RECOVER_PAY_CTRY_ACTIVATION');
+if (!defined('PAY_CTRY_002_EXECUTION_ACTION_CLASS')) define('PAY_CTRY_002_EXECUTION_ACTION_CLASS', 'pay.ctry.activation.execute');
+if (!defined('PAY_CTRY_002_LIFECYCLE_ACTION_CLASS')) define('PAY_CTRY_002_LIFECYCLE_ACTION_CLASS', 'pay.ctry.activation.lifecycle');
 
 function pay_ctry_002_site_operation_types()
 {
@@ -31,6 +36,18 @@ function pay_ctry_002_activation_actions()
 function pay_ctry_002_scope_types()
 {
     return array('company','legal_entity','payroll_scope');
+}
+function pay_ctry_002_executable_binding_actions()
+{
+    return array('activate','upgrade','rollback','deactivate');
+}
+function pay_ctry_002_lifecycle_actions()
+{
+    return array('suspend','resume','hard_revoke');
+}
+function pay_ctry_002_runtime_resolution_states()
+{
+    return array('legacy','governed','suspended','revoked','unavailable');
 }
 /** Return the only decisions allowed in an activation approval record. */
 function pay_ctry_002_approval_decisions()
@@ -56,6 +73,17 @@ function pay_ctry_002_contract_invariants()
         'impact_summary_is_server_derived'=>true,
         'staging_changes_runtime_resolution'=>false,
         'approval_changes_runtime_resolution'=>false,
+        'activation_execution_changes_runtime_resolution'=>true,
+        'binding_changes_runtime_resolution'=>true,
+        'suspension_changes_runtime_resolution'=>true,
+        'hard_revocation_changes_runtime_resolution'=>true,
+        'runtime_resolution_requires_current_site_trust'=>true,
+        'runtime_resolution_fails_closed_on_missing_adapter'=>true,
+        'open_run_requires_binding_snapshot'=>true,
+        'outbox_delivery_is_append_only'=>true,
+        'country_pack_has_erp_authority'=>false,
+        'execution_requires_fresh_step_up'=>true,
+        'execution_requires_three_party_separation'=>true,
         'emergency_suspension_preserves_evidence'=>true
     );
 }
@@ -157,6 +185,72 @@ function pay_ctry_002_distinct_maker_checker($maker,$checker)
     $m=pay_ctry_002_uint($maker,false);$c=pay_ctry_002_uint($checker,false);return $m!==false&&$c!==false&&$m!==$c;
 }
 /** Validate an independent approval descriptor bound to its proposal digest. */
+
+/** Require maker, checker and executor to be three distinct positive identities. */
+function pay_ctry_002_distinct_maker_checker_executor($maker,$checker,$executor)
+{
+    $m=pay_ctry_002_uint($maker,false);$c=pay_ctry_002_uint($checker,false);$x=pay_ctry_002_uint($executor,false);
+    return $m!==false&&$c!==false&&$x!==false&&$m!==$c&&$m!==$x&&$c!==$x;
+}
+/** Closed binding transition relation for activation receipts. */
+function pay_ctry_002_binding_transition_allowed($action,$predecessor_action)
+{
+    $action=(string)$action;$pred=$predecessor_action===null?null:(string)$predecessor_action;
+    if(!in_array($action,pay_ctry_002_executable_binding_actions(),true))return false;
+    if($pred===null)return $action==='activate';
+    if($pred==='deactivate')return $action==='activate';
+    return in_array($action,array('upgrade','rollback','deactivate'),true);
+}
+
+/** Validate a suspension/resume/revocation event before it is appended. */
+function pay_ctry_002_validate_lifecycle_descriptor(array $v,&$error=null)
+{
+    $error=null;
+    foreach(array('lifecycle_key','activation_id','binding_id','company_id','scope_type','action_type','effective_at','reason_code','reason_sha256','action_sha256','lifecycle_sha256','acted_by') as $k)
+        if(!array_key_exists($k,$v)){$error='missing_'.$k;return false;}
+    if(pay_ctry_002_token($v['lifecycle_key'],96)===false||pay_ctry_002_uint($v['activation_id'],false)===false||pay_ctry_002_uint($v['binding_id'],false)===false||pay_ctry_002_uint($v['acted_by'],false)===false){$error='lifecycle_identity_invalid';return false;}
+    if(!pay_ctry_002_validate_scope($v,$error)||!in_array((string)$v['action_type'],pay_ctry_002_lifecycle_actions(),true)){if($error===null)$error='lifecycle_scope_or_action_invalid';return false;}
+    if(!is_string($v['effective_at'])||preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',(string)$v['effective_at'])!==1){$error='lifecycle_time_invalid';return false;}
+    if(pay_ctry_002_token($v['reason_code'],96)===false){$error='lifecycle_reason_invalid';return false;}
+    foreach(array('reason_sha256','action_sha256','lifecycle_sha256') as $k)if(pay_ctry_002_sha256($v[$k])===false){$error=$k.'_invalid';return false;}
+    return true;
+}
+
+/** Validate the immutable run snapshot used by PAY-CORE-009. */
+function pay_ctry_002_validate_runtime_snapshot(array $v,&$error=null)
+{
+    $error=null;
+    foreach(array('run_id','company_id','scope_type','from_date','to_date','resolution_state','snapshot_sha256','captured_by') as $k)
+        if(!array_key_exists($k,$v)){$error='missing_'.$k;return false;}
+    if(pay_ctry_002_uint($v['run_id'],false)===false||pay_ctry_002_uint($v['captured_by'],false)===false||!pay_ctry_002_validate_scope($v,$error)||!pay_ctry_002_validate_interval($v['from_date'],$v['to_date'],$error)||!in_array((string)$v['resolution_state'],pay_ctry_002_runtime_resolution_states(),true)||pay_ctry_002_sha256($v['snapshot_sha256'])===false){if($error===null)$error='runtime_snapshot_invalid';return false;}
+    if((string)$v['resolution_state']==='governed'&&(!isset($v['binding_id'])||pay_ctry_002_uint($v['binding_id'],false)===false||!isset($v['binding_sha256'])||pay_ctry_002_sha256($v['binding_sha256'])===false)){$error='governed_snapshot_binding_missing';return false;}
+    return true;
+}
+/** Validate an approved activation execution receipt descriptor. */
+function pay_ctry_002_validate_execution_descriptor(array $v,$maker_id,$checker_id,&$error=null)
+{
+    $error=null;
+    foreach(array('activation_key','activation_proposal_id','activation_approval_id','site_installation_id','company_id','scope_type','action_type','effective_from','dependency_lock_sha256','binding_snapshot_sha256','proposal_sha256','approval_sha256','execution_action_sha256','activation_sha256','assurance_event_id','executor_id') as $k)
+        if(!array_key_exists($k,$v)){$error='missing_'.$k;return false;}
+    if(pay_ctry_002_token($v['activation_key'],96)===false||pay_ctry_002_uint($v['activation_proposal_id'],false)===false||pay_ctry_002_uint($v['activation_approval_id'],false)===false||pay_ctry_002_uint($v['site_installation_id'],false)===false||pay_ctry_002_uint($v['assurance_event_id'],false)===false){$error='execution_identity_invalid';return false;}
+    if(!pay_ctry_002_validate_scope($v,$error)||!in_array((string)$v['action_type'],pay_ctry_002_executable_binding_actions(),true)||!pay_ctry_002_validate_interval($v['effective_from'],isset($v['effective_to'])?$v['effective_to']:null,$error)){if($error===null)$error='execution_scope_or_action_invalid';return false;}
+    foreach(array('dependency_lock_sha256','binding_snapshot_sha256','proposal_sha256','approval_sha256','execution_action_sha256','activation_sha256') as $k)if(pay_ctry_002_sha256($v[$k])===false){$error=$k.'_invalid';return false;}
+    if(!pay_ctry_002_distinct_maker_checker_executor($maker_id,$checker_id,$v['executor_id'])){$error='three_party_separation_required';return false;}
+    return true;
+}
+/** Validate one append-only binding event produced atomically with an activation execution. */
+function pay_ctry_002_validate_binding_descriptor(array $v,$predecessor_action,&$error=null)
+{
+    $error=null;
+    foreach(array('activation_id','site_installation_id','company_id','scope_type','action_type','effective_from','activation_sha256','binding_sha256','bound_by') as $k)
+        if(!array_key_exists($k,$v)){$error='missing_'.$k;return false;}
+    if(pay_ctry_002_uint($v['activation_id'],false)===false||pay_ctry_002_uint($v['site_installation_id'],false)===false||pay_ctry_002_uint($v['bound_by'],false)===false){$error='binding_identity_invalid';return false;}
+    if(isset($v['predecessor_binding_id'])&&$v['predecessor_binding_id']!==null&&pay_ctry_002_uint($v['predecessor_binding_id'],false)===false){$error='binding_predecessor_invalid';return false;}
+    if(!pay_ctry_002_validate_scope($v,$error)||!pay_ctry_002_binding_transition_allowed($v['action_type'],$predecessor_action)||!pay_ctry_002_validate_interval($v['effective_from'],isset($v['effective_to'])?$v['effective_to']:null,$error)){if($error===null)$error='binding_transition_invalid';return false;}
+    foreach(array('activation_sha256','binding_sha256') as $k)if(pay_ctry_002_sha256($v[$k])===false){$error=$k.'_invalid';return false;}
+    return true;
+}
+
 function pay_ctry_002_validate_approval_descriptor(array $v,$maker_id,&$error=null)
 {
     $error=null;

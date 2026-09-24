@@ -33,12 +33,13 @@ include_once($path_to_root.'/hrm/includes/db/overtime_type_db.inc');
 include_once($path_to_root.'/hrm/includes/db/loan_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hr_settings_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consumer_db.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_ctry_002_runtime_db.inc');
 include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.456');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.458');
 
 /**
  * Payroll Formula Engine.
@@ -206,7 +207,28 @@ function payroll_suspension_readiness_denial_message($result=null) {
     if (isset($result['decision'])
         && (string)$result['decision'] === 'deny_suspension_pay_treatment_unconfigured')
         return _('Payroll calculation is blocked because Suspension pay treatment is not configured for the selected period.');
+    if (isset($result['decision'])
+        && strpos((string)$result['decision'], 'deny_country_pack_runtime') === 0)
+        return _('Payroll calculation is blocked because the selected country-pack runtime binding is not currently executable.');
     return _('Payroll calculation is blocked because Suspension service-state custody could not be verified for the selected period.');
+}
+
+/** Resolve PAY-CTRY-002 before the legacy calculator is allowed to run. */
+function payroll_country_runtime_readiness_for_update($employee, $from_date, $to_date) {
+    $company = function_exists('user_company') ? (int)user_company() : -1;
+    $legal = is_array($employee) && isset($employee['legal_entity_id']) && $employee['legal_entity_id'] !== ''
+        ? (int)$employee['legal_entity_id'] : null;
+    if ($company < 0)
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_country_pack_runtime_company_scope');
+    $from = function_exists('date2sql') ? date2sql($from_date) : (string)$from_date;
+    $to = function_exists('date2sql') ? date2sql($to_date) : (string)$to_date;
+    $error = null;
+    $resolved = pay_ctry_002_runtime_resolution_for_update($company, $legal, null, $from, time(), true, $error);
+    if ($resolved === false)
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_country_pack_runtime_'.($error ?: 'unavailable'));
+    if ((string)$resolved['status'] === 'governed')
+        return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_country_pack_runtime_adapter_unavailable', 'binding_id'=>(int)$resolved['binding_id']);
+    return array('can_use_legacy_calculation'=>true, 'decision'=>'allow_legacy_country_pack_runtime', 'runtime_state'=>(string)$resolved['status']);
 }
 
 /** Guard one valid calculation request inside the caller-owned transaction. */
@@ -218,6 +240,9 @@ function payroll_suspension_readiness_for_update($employee, $from_date, $to_date
     include_once(dirname(__FILE__).'/db/employee_projection_control_db.inc');
     if (!hrm_employee_projection_payroll_ready($employee['employee_id']))
         return array('can_use_legacy_calculation'=>false,'decision'=>'deny_employee_projection_drift');
+    $country_runtime = payroll_country_runtime_readiness_for_update($employee, $from_date, $to_date);
+    if (empty($country_runtime['can_use_legacy_calculation']))
+        return $country_runtime;
     if (!function_exists('get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update'))
         return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_service_state_dependency_unavailable');
     return get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update(
@@ -230,6 +255,9 @@ function payroll_suspension_revalidate_document_for_update($payslip_doc) {
     if (!is_object($payslip_doc) || empty($payslip_doc->employee_id)
         || empty($payslip_doc->from_date) || empty($payslip_doc->to_date))
         return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_invalid_readiness_request');
+    $country_runtime = payroll_country_runtime_readiness_for_update($payslip_doc->employee, $payslip_doc->from_date, $payslip_doc->to_date);
+    if (empty($country_runtime['can_use_legacy_calculation']))
+        return $country_runtime;
     if (!function_exists('get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update'))
         return array('can_use_legacy_calculation'=>false, 'decision'=>'deny_service_state_dependency_unavailable');
     return get_hrm_fnd_005_suspension_payroll_calculation_readiness_for_update(

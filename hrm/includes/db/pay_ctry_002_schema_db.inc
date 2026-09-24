@@ -5,21 +5,41 @@ function pay_ctry_002_schema_groups(){return array(
  'site_lifecycle'=>array('pay_ctry_site_operation_journal','pay_ctry_site_installations'),
  'impact_simulation'=>array('pay_ctry_activation_impact_simulations'),
  'activation_proposal'=>array('pay_ctry_activation_proposals'),
- 'activation_approval'=>array('pay_ctry_activation_approvals')
+ 'activation_approval'=>array('pay_ctry_activation_approvals'),
+ 'activation_execution'=>array('pay_ctry_activations'),
+ 'activation_binding'=>array('pay_ctry_activation_bindings'),
+ 'activation_suspension'=>array('pay_ctry_activation_suspensions'),
+ 'activation_outbox'=>array('pay_ctry_activation_outbox','pay_ctry_activation_delivery_attempts'),
+ 'activation_run_guard'=>array('pay_ctry_activation_run_bindings'),
+ 'activation_revocation'=>array('pay_ctry_activation_revocations')
 );}
 function pay_ctry_002_schema_columns(){return array(
  'pay_ctry_site_operation_journal'=>array('operation_event_id','operation_key','event_no','operation_type','event_type','pack_version_id','predecessor_pack_version_id','verification_report_id','evidence_sha256','actor_id','created_at'),
  'pay_ctry_site_installations'=>array('site_installation_id','pack_version_id','predecessor_site_installation_id','operation_event_id','installation_kind','semantic_root','evidence_root','receipt_sha256','installed_by','created_at'),
  'pay_ctry_activation_impact_simulations'=>array('impact_simulation_id','impact_key','site_installation_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_from','effective_to','dependency_lock_sha256','binding_snapshot_sha256','open_run_count','open_approval_count','downstream_intent_count','blocking_finding_count','impact_payload_sha256','impact_sha256','simulated_by','created_at'),
  'pay_ctry_activation_proposals'=>array('activation_proposal_id','proposal_key','site_installation_id','impact_simulation_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_from','effective_to','dependency_lock_sha256','binding_snapshot_sha256','impact_sha256','proposal_sha256','maker_id','created_at'),
- 'pay_ctry_activation_approvals'=>array('activation_approval_id','activation_proposal_id','proposal_sha256','decision_token','evidence_sha256','approval_sha256','checker_id','created_at')
+ 'pay_ctry_activation_approvals'=>array('activation_approval_id','activation_proposal_id','proposal_sha256','decision_token','evidence_sha256','approval_sha256','checker_id','created_at'),
+ 'pay_ctry_activations'=>array('activation_id','activation_key','activation_proposal_id','activation_approval_id','site_installation_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_from','effective_to','dependency_lock_sha256','binding_snapshot_sha256','proposal_sha256','approval_sha256','assurance_event_id','execution_action_sha256','activation_sha256','executor_id','created_at'),
+ 'pay_ctry_activation_bindings'=>array('binding_id','activation_id','predecessor_binding_id','site_installation_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_from','effective_to','activation_sha256','binding_sha256','bound_by','created_at'),
+ 'pay_ctry_activation_suspensions'=>array('suspension_id','suspension_key','activation_id','binding_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_at','reason_code','reason_sha256','assurance_event_id','action_sha256','suspension_sha256','acted_by','created_at'),
+ 'pay_ctry_activation_outbox'=>array('outbox_id','outbox_key','event_type','source_type','source_id','activation_id','suspension_id','company_id','scope_type','legal_entity_id','payroll_scope_key','effective_at','payload_sha256','outbox_sha256','created_by','created_at'),
+ 'pay_ctry_activation_delivery_attempts'=>array('delivery_attempt_id','outbox_id','attempt_no','target_code','delivery_status','result_sha256','error_code','evidence_sha256','attempted_by','created_at'),
+ 'pay_ctry_activation_run_bindings'=>array('run_binding_id','run_id','binding_id','activation_id','company_id','scope_type','legal_entity_id','payroll_scope_key','from_date','to_date','resolution_state','binding_sha256','snapshot_sha256','captured_by','created_at'),
+ 'pay_ctry_activation_revocations'=>array('revocation_id','revocation_key','activation_id','binding_id','company_id','scope_type','legal_entity_id','payroll_scope_key','action_type','effective_at','reason_code','reason_sha256','assurance_event_id','revocation_sha256','revoked_by','created_at')
 );}
 function pay_ctry_002_primary_keys(){return array(
  'pay_ctry_site_operation_journal'=>array('operation_event_id'),
  'pay_ctry_site_installations'=>array('site_installation_id'),
  'pay_ctry_activation_impact_simulations'=>array('impact_simulation_id'),
  'pay_ctry_activation_proposals'=>array('activation_proposal_id'),
- 'pay_ctry_activation_approvals'=>array('activation_approval_id')
+ 'pay_ctry_activation_approvals'=>array('activation_approval_id'),
+ 'pay_ctry_activations'=>array('activation_id'),
+ 'pay_ctry_activation_bindings'=>array('binding_id'),
+ 'pay_ctry_activation_suspensions'=>array('suspension_id'),
+ 'pay_ctry_activation_outbox'=>array('outbox_id'),
+ 'pay_ctry_activation_delivery_attempts'=>array('delivery_attempt_id'),
+ 'pay_ctry_activation_run_bindings'=>array('run_binding_id'),
+ 'pay_ctry_activation_revocations'=>array('revocation_id')
 );}
 function pay_ctry_002_required_indexes(){return array(
  'pay_ctry_site_operation_journal'=>array(
@@ -52,6 +72,55 @@ function pay_ctry_002_required_indexes(){return array(
   'uq_pct2_aa_proposal'=>array(1,array('activation_proposal_id')),
   'uq_pct2_aa_hash'=>array(1,array('approval_sha256')),
   'ix_pct2_aa_checker'=>array(0,array('checker_id','created_at'))
+ ),
+ 'pay_ctry_activations'=>array(
+  'uq_pct2_ac_key'=>array(1,array('activation_key')),
+  'uq_pct2_ac_proposal'=>array(1,array('activation_proposal_id')),
+  'uq_pct2_ac_approval'=>array(1,array('activation_approval_id')),
+  'uq_pct2_ac_hash'=>array(1,array('activation_sha256')),
+  'ix_pct2_ac_install'=>array(0,array('site_installation_id','created_at')),
+  'ix_pct2_ac_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','effective_from'))
+ ),
+ 'pay_ctry_activation_bindings'=>array(
+  'uq_pct2_bd_activation'=>array(1,array('activation_id')),
+  'uq_pct2_bd_hash'=>array(1,array('binding_sha256')),
+  'ix_pct2_bd_pred'=>array(0,array('predecessor_binding_id')),
+  'ix_pct2_bd_install'=>array(0,array('site_installation_id','created_at')),
+  'ix_pct2_bd_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','effective_from'))
+ ),
+ 'pay_ctry_activation_suspensions'=>array(
+  'uq_pct2_ss_key'=>array(1,array('suspension_key')),
+  'uq_pct2_ss_hash'=>array(1,array('suspension_sha256')),
+  'ix_pct2_ss_activation'=>array(0,array('activation_id','effective_at')),
+  'ix_pct2_ss_binding'=>array(0,array('binding_id','effective_at')),
+  'ix_pct2_ss_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','effective_at'))
+ ),
+ 'pay_ctry_activation_outbox'=>array(
+  'uq_pct2_ob_key'=>array(1,array('outbox_key')),
+  'uq_pct2_ob_hash'=>array(1,array('outbox_sha256')),
+  'ix_pct2_ob_source'=>array(0,array('source_type','source_id','created_at')),
+  'ix_pct2_ob_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','effective_at')),
+  'fk_pct2_ob_activation'=>array(0,array('activation_id')),
+  'fk_pct2_ob_suspension'=>array(0,array('suspension_id'))
+ ),
+ 'pay_ctry_activation_delivery_attempts'=>array(
+  'uq_pct2_da_attempt'=>array(1,array('outbox_id','attempt_no')),
+  'uq_pct2_da_evidence'=>array(1,array('evidence_sha256')),
+  'ix_pct2_da_status'=>array(0,array('outbox_id','delivery_status','created_at'))
+ ),
+ 'pay_ctry_activation_run_bindings'=>array(
+  'uq_pct2_rg_run'=>array(1,array('run_id')),
+  'uq_pct2_rg_hash'=>array(1,array('snapshot_sha256')),
+  'ix_pct2_rg_binding'=>array(0,array('binding_id','created_at')),
+  'ix_pct2_rg_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','from_date')),
+  'fk_pct2_rg_activation'=>array(0,array('activation_id'))
+ ),
+ 'pay_ctry_activation_revocations'=>array(
+  'uq_pct2_rv_key'=>array(1,array('revocation_key')),
+  'uq_pct2_rv_hash'=>array(1,array('revocation_sha256')),
+  'ix_pct2_rv_activation'=>array(0,array('activation_id','effective_at')),
+  'ix_pct2_rv_binding'=>array(0,array('binding_id','effective_at')),
+  'ix_pct2_rv_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key','effective_at'))
  )
 );}
 function pay_ctry_002_required_foreign_keys(){return array(
@@ -74,11 +143,45 @@ function pay_ctry_002_required_foreign_keys(){return array(
  ),
  'pay_ctry_activation_approvals'=>array(
   'fk_pct2_aa_proposal'=>array('activation_proposal_id','pay_ctry_activation_proposals','activation_proposal_id')
+ ),
+ 'pay_ctry_activations'=>array(
+  'fk_pct2_ac_proposal'=>array('activation_proposal_id','pay_ctry_activation_proposals','activation_proposal_id'),
+  'fk_pct2_ac_approval'=>array('activation_approval_id','pay_ctry_activation_approvals','activation_approval_id'),
+  'fk_pct2_ac_install'=>array('site_installation_id','pay_ctry_site_installations','site_installation_id')
+ ),
+ 'pay_ctry_activation_bindings'=>array(
+  'fk_pct2_bd_activation'=>array('activation_id','pay_ctry_activations','activation_id'),
+  'fk_pct2_bd_pred'=>array('predecessor_binding_id','pay_ctry_activation_bindings','binding_id'),
+  'fk_pct2_bd_install'=>array('site_installation_id','pay_ctry_site_installations','site_installation_id')
+ ),
+ 'pay_ctry_activation_suspensions'=>array(
+  'fk_pct2_ss_activation'=>array('activation_id','pay_ctry_activations','activation_id'),
+  'fk_pct2_ss_binding'=>array('binding_id','pay_ctry_activation_bindings','binding_id')
+ ),
+ 'pay_ctry_activation_outbox'=>array(
+  'fk_pct2_ob_activation'=>array('activation_id','pay_ctry_activations','activation_id'),
+  'fk_pct2_ob_suspension'=>array('suspension_id','pay_ctry_activation_suspensions','suspension_id')
+ ),
+ 'pay_ctry_activation_delivery_attempts'=>array(
+  'fk_pct2_da_outbox'=>array('outbox_id','pay_ctry_activation_outbox','outbox_id')
+ ),
+ 'pay_ctry_activation_run_bindings'=>array(
+  'fk_pct2_rg_run'=>array('run_id','hrm_pay_core_009_runs','run_id'),
+  'fk_pct2_rg_binding'=>array('binding_id','pay_ctry_activation_bindings','binding_id'),
+  'fk_pct2_rg_activation'=>array('activation_id','pay_ctry_activations','activation_id')
+ ),
+ 'pay_ctry_activation_revocations'=>array(
+  'fk_pct2_rv_activation'=>array('activation_id','pay_ctry_activations','activation_id'),
+  'fk_pct2_rv_binding'=>array('binding_id','pay_ctry_activation_bindings','binding_id')
  )
 );}
 function pay_ctry_002_trigger_codes(){return array(
  'pay_ctry_site_operation_journal'=>'oj','pay_ctry_site_installations'=>'si',
- 'pay_ctry_activation_impact_simulations'=>'im','pay_ctry_activation_proposals'=>'ap','pay_ctry_activation_approvals'=>'aa');}
+ 'pay_ctry_activation_impact_simulations'=>'im','pay_ctry_activation_proposals'=>'ap','pay_ctry_activation_approvals'=>'aa',
+ 'pay_ctry_activations'=>'ac','pay_ctry_activation_bindings'=>'bd',
+ 'pay_ctry_activation_suspensions'=>'ss','pay_ctry_activation_outbox'=>'ob',
+ 'pay_ctry_activation_delivery_attempts'=>'da','pay_ctry_activation_run_bindings'=>'rg',
+ 'pay_ctry_activation_revocations'=>'rv');}
 function pay_ctry_002_table_columns($table){if(!hrm_migration_table_exists($table))return false;$q=db_query('SHOW COLUMNS FROM '.TB_PREF.$table);if(!$q)return false;$o=array();while($r=db_fetch_assoc($q))$o[]=(string)$r['Field'];return $o;}
 function pay_ctry_002_table_primary_key($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' AND INDEX_NAME=\'PRIMARY\' ORDER BY SEQ_IN_INDEX');if(!$q)return false;$o=array();while($r=db_fetch_assoc($q))$o[]=(string)$r['COLUMN_NAME'];return $o;}
 function pay_ctry_002_table_engine($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p).' LIMIT 1');if(!$q||db_num_rows($q)!==1)return false;$r=db_fetch_assoc($q);return $r?(string)$r['ENGINE']:false;}
