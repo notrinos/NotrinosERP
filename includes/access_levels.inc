@@ -533,6 +533,13 @@ $security_areas =array(
 	'SA_HRM_REVIEW_PAY_CTRY_ACTIVATION' => array(SS_HRM|157, _('Independently review country-pack activation impact and proposals')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_CTRY_ACTIVATION' => array(SS_HRM|158, _('Execute independently approved country-pack activation lifecycle changes')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_CTRY_ACTIVATION' => array(SS_HRM|159, _('Recover or suspend governed country-pack activation lifecycle state')), // no automatic role grant
+	'SA_HRM_VALIDATE_PAY_CTRY_CERTIFICATION' => array(SS_HRM|160, _('Technically validate governed country-pack certification evidence')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CTRY_PAYROLL' => array(SS_HRM|161, _('Independently review country-pack payroll certification evidence')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_CTRY_LEGAL' => array(SS_HRM|162, _('Independently review country-pack legal certification evidence')), // no automatic role grant
+	'SA_HRM_CERTIFY_PAY_CTRY' => array(SS_HRM|163, _('Issue scoped country-pack certification decisions after required reviews')), // no automatic role grant
+	'SA_HRM_PUBLISH_PAY_CTRY' => array(SS_HRM|164, _('Publish valid scoped country-pack certification claims')), // no automatic role grant
+	'SA_HRM_SUSPEND_PAY_CTRY_CERTIFICATION' => array(SS_HRM|165, _('Emergency suspend or revoke country-pack certification claims')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_CTRY_CERTIFICATION' => array(SS_HRM|166, _('Reconcile and recover governed country-pack certification state')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
