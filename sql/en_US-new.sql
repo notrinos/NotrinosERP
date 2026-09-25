@@ -12815,3 +12815,115 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_recovery_records` (
 CREATE TRIGGER `0_ct4_rr_u` BEFORE UPDATE ON `0_pay_ctry_certification_recovery_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_recovery_records row cannot be updated';
 CREATE TRIGGER `0_ct4_rr_d` BEFORE DELETE ON `0_pay_ctry_certification_recovery_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_recovery_records row cannot be deleted';
 -- PAY-CTRY-004 END GROUP recovery
+
+-- PAY-CTRY-007 GROUP catalog_notice
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_catalog_releases` (
+  `catalog_release_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `release_no` int(10) unsigned NOT NULL,
+  `predecessor_catalog_release_id` bigint(20) unsigned NULL,
+  `predecessor_release_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `catalog_root_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `released_at` datetime NOT NULL,
+  `publisher_id` bigint(20) unsigned NOT NULL,
+  `signer_id` bigint(20) unsigned NOT NULL,
+  `trust_key_id` bigint(20) unsigned NOT NULL,
+  `signature_algorithm` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signature_payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signature_base64` text NOT NULL,
+  `release_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `received_by` bigint(20) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_release_id`),
+  UNIQUE KEY `uq_pct7_cr_release` (`catalog_code`,`release_no`),
+  UNIQUE KEY `uq_pct7_cr_sha` (`release_sha256`),
+  UNIQUE KEY `uq_pct7_cr_pred` (`predecessor_catalog_release_id`),
+  KEY `ix_pct7_cr_root` (`catalog_root_sha256`,`released_at`),
+  KEY `fk_pct7_cr_publisher` (`publisher_id`),
+  KEY `fk_pct7_cr_signer` (`signer_id`),
+  KEY `fk_pct7_cr_key` (`trust_key_id`),
+  CONSTRAINT `fk_pct7_cr_pred` FOREIGN KEY (`predecessor_catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct7_cr_publisher` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct7_cr_signer` FOREIGN KEY (`signer_id`) REFERENCES `0_pay_ctry_signers` (`signer_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct7_cr_key` FOREIGN KEY (`trust_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_cr_u` BEFORE UPDATE ON `0_pay_ctry_catalog_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_releases row cannot be updated';
+CREATE TRIGGER `0_ct7_cr_d` BEFORE DELETE ON `0_pay_ctry_catalog_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_releases row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_catalog_release_admissions` (
+  `catalog_admission_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_release_id` bigint(20) unsigned NOT NULL,
+  `decision` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signature_verified` tinyint(1) unsigned NOT NULL,
+  `trust_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `maker_id` bigint(20) unsigned NOT NULL,
+  `checker_id` bigint(20) unsigned NOT NULL,
+  `decided_at` datetime NOT NULL,
+  `admission_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_admission_id`),
+  UNIQUE KEY `uq_pct7_ca_release` (`catalog_release_id`),
+  UNIQUE KEY `uq_pct7_ca_sha` (`admission_sha256`),
+  KEY `ix_pct7_ca_checker` (`checker_id`,`decided_at`),
+  CONSTRAINT `fk_pct7_ca_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_ca_u` BEFORE UPDATE ON `0_pay_ctry_catalog_release_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_release_admissions row cannot be updated';
+CREATE TRIGGER `0_ct7_ca_d` BEFORE DELETE ON `0_pay_ctry_catalog_release_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_release_admissions row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notices` (
+  `update_notice_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `notice_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `catalog_release_id` bigint(20) unsigned NOT NULL,
+  `pack_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `current_pack_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `current_semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `current_evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `successor_pack_version` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `successor_semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `successor_evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `severity` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `deadline_at` datetime NOT NULL,
+  `required_action` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `applicability_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `impact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dedupe_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `notice_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `issued_at` datetime NOT NULL,
+  `created_by` bigint(20) unsigned NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`update_notice_id`),
+  UNIQUE KEY `uq_pct7_un_key` (`notice_key`),
+  UNIQUE KEY `uq_pct7_un_dedupe` (`dedupe_key`),
+  UNIQUE KEY `uq_pct7_un_sha` (`notice_sha256`),
+  KEY `ix_pct7_un_pack` (`pack_code`,`current_pack_version`,`successor_pack_version`),
+  KEY `ix_pct7_un_deadline` (`severity`,`deadline_at`),
+  KEY `fk_pct7_un_release` (`catalog_release_id`),
+  CONSTRAINT `fk_pct7_un_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_un_u` BEFORE UPDATE ON `0_pay_ctry_update_notices` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notices row cannot be updated';
+CREATE TRIGGER `0_ct7_un_d` BEFORE DELETE ON `0_pay_ctry_update_notices` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notices row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_applicability` (
+  `notice_applicability_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `update_notice_id` bigint(20) unsigned NOT NULL,
+  `company_id` bigint(20) unsigned NOT NULL,
+  `scope_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NULL,
+  `payroll_scope_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `current_binding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `run_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `affected_open_run_count` int(10) unsigned NOT NULL,
+  `affected_future_run_count` int(10) unsigned NOT NULL,
+  `impact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `applicability_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`notice_applicability_id`),
+  UNIQUE KEY `uq_pct7_na_sha` (`applicability_sha256`),
+  KEY `ix_pct7_na_notice` (`update_notice_id`,`company_id`),
+  KEY `ix_pct7_na_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`),
+  CONSTRAINT `fk_pct7_na_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_na_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_applicability row cannot be updated';
+CREATE TRIGGER `0_ct7_na_d` BEFORE DELETE ON `0_pay_ctry_update_notice_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_applicability row cannot be deleted';
+-- PAY-CTRY-007 END GROUP catalog_notice
