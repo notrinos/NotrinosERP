@@ -1,0 +1,44 @@
+{
+  "schema": "notrinos.vn.legacy-mapping.v1",
+  "mode": "comparison-and-reviewed-migration-input-only",
+  "automatic_conversion_allowed": false,
+  "sources": [
+    {
+      "legacy_object": "tax_brackets",
+      "classification": "requires expert interpretation",
+      "reason": "effective-dated rates exist but no jurisdiction/source/evidence provenance or legal classification binding"
+    },
+    {
+      "legacy_object": "statutory_deductions",
+      "classification": "requires expert interpretation",
+      "reason": "rates/base/floor/cap exist but no jurisdiction/source/population provenance"
+    },
+    {
+      "legacy_object": "eos_calculation",
+      "classification": "unsupported/customer-specific",
+      "reason": "not legal authority for Vietnam; severance/EOS is outside declared pack scope"
+    },
+    {
+      "legacy_object": "hr_settings.tax_calculation_method",
+      "classification": "ambiguous",
+      "reason": "legacy annual_projected/month_standalone preference cannot select a legal rule set"
+    },
+    {
+      "legacy_object": "hr_settings.tax_payable_account",
+      "classification": "customer-specific",
+      "reason": "account mapping is not jurisdiction legal truth and does not grant GL authority"
+    },
+    {
+      "legacy_object": "hr_settings.eos_calculation_factor",
+      "classification": "unsupported/customer-specific",
+      "reason": "not imported into Vietnam legal rule artifacts"
+    },
+    {
+      "legacy_object": "hr_settings.eos_gratuity_account",
+      "classification": "customer-specific",
+      "reason": "account mapping remains customer accounting configuration"
+    }
+  ],
+  "review_workflow": "PAY-RULE-003 simulation-only legacy import/review custody may be used to inventory candidates; no ambiguous candidate becomes authoritative without evidence and reviewer approval.",
+  "historical_integrity": "No historical payroll/accounting result is rewritten."
+}

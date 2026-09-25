@@ -1,0 +1,39 @@
+{
+  "schema": "notrinos.vn.certification-state.v1",
+  "pack_version": "1.0.0-source-candidate",
+  "technical_source_review": {
+    "state": "performed-by-implementation-agent",
+    "scope": "schema/contract/source consistency only",
+    "human_independence": false
+  },
+  "qualified_vietnamese_payroll_expert_review": {
+    "state": "missing"
+  },
+  "legal_compliance_review": {
+    "state": "missing"
+  },
+  "parallel_payroll_cycles": {
+    "state": "missing",
+    "required_before-real-reference-publication": true
+  },
+  "customer_pilot": {
+    "state": "missing"
+  },
+  "publisher_signature": {
+    "state": "missing",
+    "reason": "no authorized publisher private key supplied"
+  },
+  "pay_ctry_004_certification": {
+    "state": "not-created"
+  },
+  "publication": {
+    "state": "not-published"
+  },
+  "allowed_status": "SOURCE COMPLETE / CERTIFICATION-EVIDENCE-PENDING",
+  "prohibited_claims": [
+    "legally certified",
+    "officially approved",
+    "production proven",
+    "government filing accepted"
+  ]
+}

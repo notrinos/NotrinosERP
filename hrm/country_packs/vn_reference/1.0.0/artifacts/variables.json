@@ -1,0 +1,133 @@
+{
+  "schema": "notrinos.vn.variables.v1",
+  "host_adapter": "formula.variables.v1",
+  "variables": [
+    {
+      "code": "vn.effective_date",
+      "type": "date",
+      "required": true,
+      "restricted": false
+    },
+    {
+      "code": "vn.tax_year",
+      "type": "integer",
+      "required": true,
+      "restricted": false
+    },
+    {
+      "code": "vn.tax_residency",
+      "type": "enum",
+      "values": [
+        "resident",
+        "nonresident"
+      ],
+      "required": true,
+      "restricted": true
+    },
+    {
+      "code": "vn.taxable_income_after_deductions_vnd",
+      "type": "money-integer",
+      "required_for": [
+        "resident_pit"
+      ],
+      "restricted": true
+    },
+    {
+      "code": "vn.dependent_count",
+      "type": "integer",
+      "min": 0,
+      "required_for": [
+        "family_deduction"
+      ],
+      "restricted": true
+    },
+    {
+      "code": "vn.compulsory_insurance_base_vnd",
+      "type": "money-integer",
+      "required_for": [
+        "standard_contributions"
+      ],
+      "restricted": true,
+      "precondition": "already validated against applicable floor/cap by a reviewed source/rule set"
+    },
+    {
+      "code": "vn.minimum_wage_region",
+      "type": "enum",
+      "values": [
+        "I",
+        "II",
+        "III",
+        "IV"
+      ],
+      "required_for": [
+        "minimum_wage_validation"
+      ],
+      "restricted": false
+    },
+    {
+      "code": "vn.contractual_monthly_wage_vnd",
+      "type": "money-integer",
+      "required_for": [
+        "minimum_wage_validation"
+      ],
+      "restricted": true
+    },
+    {
+      "code": "vn.unpaid_working_days",
+      "type": "integer",
+      "min": 0,
+      "required_for": [
+        "contribution_participation"
+      ],
+      "restricted": true
+    },
+    {
+      "code": "vn.rounding_profile_id",
+      "type": "token",
+      "required_for": [
+        "calculation-finalization"
+      ],
+      "restricted": false
+    },
+    {
+      "code": "vn.payroll_relationship_id",
+      "type": "opaque-id",
+      "required": true,
+      "restricted": true
+    },
+    {
+      "code": "vn.legal_employer_id",
+      "type": "opaque-id",
+      "required": true,
+      "restricted": true
+    },
+    {
+      "code": "vn.establishment_id",
+      "type": "opaque-id",
+      "required": true,
+      "restricted": true
+    },
+    {
+      "code": "vn.primary_work_location_id",
+      "type": "opaque-id",
+      "required": true,
+      "restricted": true
+    },
+    {
+      "code": "vn.source_set_id",
+      "type": "token",
+      "required": true,
+      "restricted": false
+    },
+    {
+      "code": "vn.predecessor_ytd_digest",
+      "type": "sha256",
+      "required_for": [
+        "retro",
+        "correction",
+        "annual_reconciliation"
+      ],
+      "restricted": false
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "notrinos.vn.filing-boundary.v1",
+  "host_adapter": "filings.declarative.v1",
+  "official_supported_schemas": [],
+  "tax_filing": {
+    "component_id": "org.notrinos.payroll.vn.filing.tax",
+    "state": "unsupported-until-named-official-schema-reviewed",
+    "generation_allowed": false,
+    "transmission_allowed": false
+  },
+  "social_insurance_filing": {
+    "component_id": "org.notrinos.payroll.vn.filing.social-insurance",
+    "state": "unsupported-until-named-official-schema-reviewed",
+    "generation_allowed": false,
+    "transmission_allowed": false
+  },
+  "internal_reconciliation_envelope": {
+    "version": "vn-filing-reconciliation-v1",
+    "fields": [
+      "obligation_type",
+      "period",
+      "original_or_correction",
+      "predecessor_reference",
+      "approved_result_digest",
+      "control_total_vnd",
+      "semantic_root",
+      "evidence_root"
+    ],
+    "official_form": false
+  },
+  "correction_policy": "Any future named filing artifact must preserve original/correction/replacement lineage and reconcile to approved result; transmission remains outside pack.",
+  "dependency": "PAY-FIL-001 or equivalent governed submission connector is required for real authority submission."
+}

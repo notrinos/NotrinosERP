@@ -1,0 +1,922 @@
+{
+  "schema": "notrinos.vn.conformance-fixtures.v1",
+  "synthetic_only": true,
+  "not_legal_certification": true,
+  "fixtures": [
+    {
+      "id": "pit-monthly-0",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 0
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 0
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-10000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 10000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-20000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 20000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 1500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-30000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 30000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 2500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-45000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 45000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 5500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-60000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 60000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 8500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-80000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 80000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 14500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-100000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 100000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 20500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "pit-monthly-120000000",
+      "kind": "pit-resident-monthly",
+      "synthetic": true,
+      "input": {
+        "taxable_income_after_deductions_vnd": 120000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 27500000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "mw-I-below",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "I",
+        "wage_vnd": 5309999
+      },
+      "expected": {
+        "valid": false
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-I-exact",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "I",
+        "wage_vnd": 5310000
+      },
+      "expected": {
+        "valid": true
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-II-below",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "II",
+        "wage_vnd": 4729999
+      },
+      "expected": {
+        "valid": false
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-II-exact",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "II",
+        "wage_vnd": 4730000
+      },
+      "expected": {
+        "valid": true
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-III-below",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "III",
+        "wage_vnd": 4139999
+      },
+      "expected": {
+        "valid": false
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-III-exact",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "III",
+        "wage_vnd": 4140000
+      },
+      "expected": {
+        "valid": true
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-IV-below",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "IV",
+        "wage_vnd": 3699999
+      },
+      "expected": {
+        "valid": false
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "mw-IV-exact",
+      "kind": "minimum-wage",
+      "synthetic": true,
+      "input": {
+        "region": "IV",
+        "wage_vnd": 3700000
+      },
+      "expected": {
+        "valid": true
+      },
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "contrib-standard-20m",
+      "kind": "contributions-standard",
+      "synthetic": true,
+      "input": {
+        "governed_base_vnd": 20000000
+      },
+      "expected": {
+        "si_employee": 1600000,
+        "si_employer_retirement": 2800000,
+        "si_employer_sickness_maternity": 600000,
+        "si_employer_oad_normal": 100000,
+        "health_employee": 300000,
+        "health_employer": 600000,
+        "unemployment_employee": 200000,
+        "unemployment_employer": 200000
+      },
+      "source_ids": [
+        "VN-SRC-SI-041",
+        "VN-SRC-SI-158",
+        "VN-SRC-HI-188",
+        "VN-SRC-UI-374"
+      ]
+    },
+    {
+      "id": "unsupported-nonresident",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {
+        "tax_residency": "nonresident"
+      },
+      "expected": {
+        "failure": "unsupported_population"
+      }
+    },
+    {
+      "id": "unsupported-foreign-worker",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {
+        "worker_class": "foreign"
+      },
+      "expected": {
+        "failure": "unsupported_population"
+      }
+    },
+    {
+      "id": "unsupported-tax-treaty",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {
+        "service": "tax-treaty"
+      },
+      "expected": {
+        "failure": "unsupported_service"
+      }
+    },
+    {
+      "id": "missing-region",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {},
+      "expected": {
+        "failure": "region_not_reviewed"
+      }
+    },
+    {
+      "id": "unknown-payment-layout",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {
+        "layout": "bank-x"
+      },
+      "expected": {
+        "failure": "unsupported_layout"
+      }
+    },
+    {
+      "id": "authority-submission-denied",
+      "kind": "coverage-denial",
+      "synthetic": true,
+      "input": {
+        "service": "government-submit"
+      },
+      "expected": {
+        "failure": "connector_required"
+      }
+    },
+    {
+      "id": "boundary-2025-06-30",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2025-06-30"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2025-07-01",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2025-07-01"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2025-07-02",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2025-07-02"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2025-12-31",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2025-12-31"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2026-01-01",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-01-01"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2026-01-02",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-01-02"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2026-06-30",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-06-30"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2026-07-01",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-07-01"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "boundary-2026-07-02",
+      "kind": "effective-boundary",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-07-02"
+      },
+      "expected": {
+        "source_resolution_required": true
+      }
+    },
+    {
+      "id": "dependent-start-one",
+      "kind": "dependent-election",
+      "synthetic": true,
+      "input": {
+        "eligible_dependents": 1,
+        "effective_month": "2026-01"
+      },
+      "expected": {
+        "monthly_dependent_deduction_vnd": 6200000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-110"
+      ]
+    },
+    {
+      "id": "dependent-correction-two",
+      "kind": "dependent-election-correction",
+      "synthetic": true,
+      "input": {
+        "corrected_eligible_dependents": 2,
+        "target_month": "2026-03"
+      },
+      "expected": {
+        "monthly_dependent_deduction_vnd": 12400000,
+        "correction_lineage_required": true
+      },
+      "source_ids": [
+        "VN-SRC-PIT-110"
+      ]
+    },
+    {
+      "id": "annual-pit-120m",
+      "kind": "pit-resident-annual",
+      "synthetic": true,
+      "input": {
+        "annual_taxable_income_after_deductions_vnd": 120000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 6000000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "annual-pit-360m",
+      "kind": "pit-resident-annual",
+      "synthetic": true,
+      "input": {
+        "annual_taxable_income_after_deductions_vnd": 360000000
+      },
+      "expected": {
+        "pit_before_final_rounding_vnd": 30000000
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "id": "contribution-base-missing",
+      "kind": "contribution-base-governance",
+      "synthetic": true,
+      "input": {
+        "governed_base_vnd": null
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "contribution_base_not_governed"
+      }
+    },
+    {
+      "id": "contribution-floor-cap-unverified",
+      "kind": "contribution-floor-cap-boundary",
+      "synthetic": true,
+      "input": {
+        "requested_automatic_floor_cap_derivation": true
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "floor_cap_source_not_declared"
+      }
+    },
+    {
+      "id": "mid-month-hire-explicit-proration-required",
+      "kind": "hire-partial-period",
+      "synthetic": true,
+      "input": {
+        "hire_date": "2026-04-16",
+        "automatic_proration_requested": true
+      },
+      "expected": {
+        "outcome": "deny_implicit_proration",
+        "requires_explicit_reviewed_partial_period_facts": true
+      }
+    },
+    {
+      "id": "mid-month-termination-explicit-proration-required",
+      "kind": "termination-partial-period",
+      "synthetic": true,
+      "input": {
+        "termination_date": "2026-05-15",
+        "automatic_proration_requested": true
+      },
+      "expected": {
+        "outcome": "deny_implicit_proration",
+        "requires_explicit_reviewed_partial_period_facts": true
+      }
+    },
+    {
+      "id": "unpaid-leave-14-days-review-required",
+      "kind": "unpaid-leave",
+      "synthetic": true,
+      "input": {
+        "unpaid_leave_working_days": 14
+      },
+      "expected": {
+        "outcome": "review_required",
+        "automatic_contribution_interpretation": false
+      }
+    },
+    {
+      "id": "partial-pay-explicit-input",
+      "kind": "partial-pay",
+      "synthetic": true,
+      "input": {
+        "partial_month": true
+      },
+      "expected": {
+        "implicit_proration": false,
+        "explicit_fact_snapshot_required": true
+      }
+    },
+    {
+      "id": "bonus-tet-classification",
+      "kind": "bonus-tet",
+      "synthetic": true,
+      "input": {
+        "earning_classification": "taxable",
+        "amount_vnd": 10000000
+      },
+      "expected": {
+        "special_hard_coded_treatment": false,
+        "classification_input_required": true
+      }
+    },
+    {
+      "id": "overtime-classification-input",
+      "kind": "overtime-classification",
+      "synthetic": true,
+      "input": {
+        "overtime_amount_vnd": 3000000
+      },
+      "expected": {
+        "labor_overtime_calculation_by_pack": false,
+        "tax_classification_input_required": true
+      }
+    },
+    {
+      "id": "retro-target-period-source-binding",
+      "kind": "retro",
+      "synthetic": true,
+      "input": {
+        "target_period": "2025-12",
+        "calculation_date": "2026-02-01"
+      },
+      "expected": {
+        "use_target_period_source_set": true,
+        "use_mutable_current_rate": false
+      }
+    },
+    {
+      "id": "correction-immutable-lineage",
+      "kind": "correction",
+      "synthetic": true,
+      "input": {
+        "predecessor_result_digest": "synthetic-predecessor"
+      },
+      "expected": {
+        "new_movement_required": true,
+        "historical_row_rewrite": false
+      }
+    },
+    {
+      "id": "reversal-predecessor-required",
+      "kind": "reversal",
+      "synthetic": true,
+      "input": {
+        "predecessor_result_digest": null
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "predecessor_required"
+      }
+    },
+    {
+      "id": "offcycle-effective-date",
+      "kind": "off-cycle",
+      "synthetic": true,
+      "input": {
+        "effective_date": "2026-03-20"
+      },
+      "expected": {
+        "source_resolution_by_effective_date": true
+      }
+    },
+    {
+      "id": "multiple-employment-aggregation-denied",
+      "kind": "multiple-employment",
+      "synthetic": true,
+      "input": {
+        "payroll_relationship_count": 2,
+        "aggregation_rule_id": null
+      },
+      "expected": {
+        "outcome": "deny_aggregation",
+        "separate_relationship_ledgers": true
+      }
+    },
+    {
+      "id": "ytd-import-provenance-required",
+      "kind": "ytd-import",
+      "synthetic": true,
+      "input": {
+        "opening_ytd_vnd": 50000000,
+        "provenance_digest": null
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "provenance_required"
+      }
+    },
+    {
+      "id": "negative-net-no-payment-authority",
+      "kind": "negative-net",
+      "synthetic": true,
+      "input": {
+        "net_vnd": -1000000
+      },
+      "expected": {
+        "payment_execution": false,
+        "result_preserved_for_reconciliation": true
+      }
+    },
+    {
+      "id": "arrears-correction-lineage",
+      "kind": "arrears",
+      "synthetic": true,
+      "input": {
+        "target_period": "2026-02",
+        "adjustment_vnd": 2000000
+      },
+      "expected": {
+        "new_correction_movement": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "year-end-reconciliation-resident",
+      "kind": "year-end-reconciliation",
+      "synthetic": true,
+      "input": {
+        "tax_year": 2026
+      },
+      "expected": {
+        "ytd_balances_required": true,
+        "authority_submission": false
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-110"
+      ]
+    },
+    {
+      "id": "payslip-vi-safe-projection",
+      "kind": "payslip-render",
+      "synthetic": true,
+      "input": {
+        "locale": "vi-VN"
+      },
+      "expected": {
+        "safe_registered_projection_only": true,
+        "network_calls": false
+      }
+    },
+    {
+      "id": "payslip-en-safe-projection",
+      "kind": "payslip-render",
+      "synthetic": true,
+      "input": {
+        "locale": "en"
+      },
+      "expected": {
+        "safe_registered_projection_only": true,
+        "network_calls": false
+      }
+    },
+    {
+      "id": "payslip-mask-tax-id",
+      "kind": "payslip-masking",
+      "synthetic": true,
+      "input": {
+        "tax_identifier": "0123456789"
+      },
+      "expected": {
+        "masking": "show-last-4-only",
+        "full_identifier_exposed": false
+      }
+    },
+    {
+      "id": "rounding-profile-missing",
+      "kind": "rounding",
+      "synthetic": true,
+      "input": {
+        "rounding_profile_id": null
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "rounding_profile_not_certified"
+      }
+    },
+    {
+      "id": "filing-original-schema-missing",
+      "kind": "filing-original",
+      "synthetic": true,
+      "input": {
+        "official_schema_id": null
+      },
+      "expected": {
+        "generation_allowed": false,
+        "transmission_allowed": false
+      }
+    },
+    {
+      "id": "filing-correction-schema-missing",
+      "kind": "filing-correction",
+      "synthetic": true,
+      "input": {
+        "official_schema_id": null,
+        "predecessor_filing_digest": "synthetic-filing"
+      },
+      "expected": {
+        "generation_allowed": false,
+        "correction_lineage_preserved": true,
+        "transmission_allowed": false
+      }
+    },
+    {
+      "id": "accounting-reconciliation-no-gl-authority",
+      "kind": "accounting-reconciliation",
+      "synthetic": true,
+      "input": {
+        "approved_result_total_vnd": 10000000
+      },
+      "expected": {
+        "mapping_intent_allowed": true,
+        "gl_posting_allowed": false
+      }
+    },
+    {
+      "id": "payment-layout-unknown",
+      "kind": "payment-layout",
+      "synthetic": true,
+      "input": {
+        "layout_id": "UNREVIEWED"
+      },
+      "expected": {
+        "outcome": "deny",
+        "payment_execution_allowed": false
+      }
+    },
+    {
+      "id": "approved-result-parallel-evidence-missing",
+      "kind": "parallel-reconciliation",
+      "synthetic": true,
+      "input": {
+        "real_parallel_result": null
+      },
+      "expected": {
+        "certification_allowed": false,
+        "framework_only": true
+      }
+    },
+    {
+      "id": "boundary-cross-period-2026-01-01",
+      "kind": "effective-boundary-cross-period",
+      "synthetic": true,
+      "input": {
+        "period_start": "2025-12-20",
+        "period_end": "2026-01-19"
+      },
+      "expected": {
+        "single_mutable_current_rate_allowed": false,
+        "effective_segments_required": true
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-110",
+        "VN-SRC-UI-374",
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "id": "retro-across-2026-01-01",
+      "kind": "effective-boundary-retro",
+      "synthetic": true,
+      "input": {
+        "target_date": "2025-12-31",
+        "recalculation_date": "2026-02-01"
+      },
+      "expected": {
+        "target_date_source_binding_required": true,
+        "later_source_may_not_replace_target_source": true
+      }
+    },
+    {
+      "id": "correction-after-2026-07-01",
+      "kind": "effective-boundary-correction",
+      "synthetic": true,
+      "input": {
+        "target_date": "2026-06-30",
+        "correction_date": "2026-07-02"
+      },
+      "expected": {
+        "original_target_source_set_required": true,
+        "newer_rule_does_not_mutate_history": true
+      },
+      "source_ids": [
+        "VN-SRC-PIT-109"
+      ]
+    },
+    {
+      "id": "historical-reproduction-after-upgrade",
+      "kind": "historical-reproduction",
+      "synthetic": true,
+      "input": {
+        "original_pack_version": "1.0.0",
+        "later_host_version": "1.0.816+"
+      },
+      "expected": {
+        "original_pack_digest_required": true,
+        "original_semantic_root_required": true,
+        "original_evidence_root_required": true
+      }
+    }
+  ],
+  "scenario_inventory": [
+    "resident PIT boundaries",
+    "dependent facts contract",
+    "annual/YTD lineage",
+    "standard contribution population",
+    "contribution base boundary contract",
+    "employer/employee split",
+    "hire/termination facts",
+    "unpaid leave threshold",
+    "partial-pay fail-closed proration",
+    "bonus/Tet classification input",
+    "corrections",
+    "foreign-worker denial",
+    "multiple-employment isolation",
+    "YTD import digest",
+    "negative-net transport",
+    "arrears/retro lineage",
+    "off-cycle",
+    "reversal",
+    "bilingual payslip projection",
+    "masking",
+    "rounding-profile denial",
+    "original/corrected reconciliation envelope",
+    "approved-result reconciliation"
+  ],
+  "coverage_statement": "Synthetic engineering fixtures cover every declared calculation/validation boundary and represent unsupported or externally-evidenced services as explicit denial/review-required outcomes; they are not legal certification evidence."
+}

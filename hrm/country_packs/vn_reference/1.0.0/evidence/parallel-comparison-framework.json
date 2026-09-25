@@ -1,0 +1,25 @@
+{
+  "schema": "notrinos.vn.parallel-comparison.v1",
+  "state": "framework-only-no-real-results",
+  "required_minimum_cycles_before_publication": 2,
+  "comparison_keys": [
+    "worker_token",
+    "pay_period",
+    "gross",
+    "taxable_base",
+    "pit",
+    "employee_contributions",
+    "employer_contributions",
+    "net",
+    "approved_result_digest"
+  ],
+  "evidence_requirements": [
+    "provider_or_legacy_result provenance",
+    "input snapshot digest",
+    "pack roots",
+    "reviewer identity",
+    "difference classification",
+    "approval/rejection"
+  ],
+  "current_results": []
+}

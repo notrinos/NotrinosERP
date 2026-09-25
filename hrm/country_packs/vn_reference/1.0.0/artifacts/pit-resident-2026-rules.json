@@ -1,0 +1,51 @@
+{
+  "schema": "notrinos.vn.rules.v1",
+  "rule_set_id": "vn.pit.resident.salary.2026",
+  "host_adapter": "rules.declarative.v1",
+  "effective_tax_period": "2026",
+  "source_ids": [
+    "VN-SRC-PIT-109",
+    "VN-SRC-PIT-110",
+    "VN-SRC-PIT-OFFICIAL-GUIDE"
+  ],
+  "steps": [
+    {
+      "op": "require-equals",
+      "fact": "vn.tax_residency",
+      "value": "resident",
+      "on_mismatch": "unsupported_population"
+    },
+    {
+      "op": "require-range",
+      "fact": "vn.tax_year",
+      "min": 2026,
+      "max": 2026,
+      "on_mismatch": "unsupported_effective_period"
+    },
+    {
+      "op": "require-money-integer",
+      "fact": "vn.taxable_income_after_deductions_vnd"
+    },
+    {
+      "op": "progressive-brackets",
+      "input": "vn.taxable_income_after_deductions_vnd",
+      "table": "vn.pit.resident.salary.2026.monthly_progressive_brackets",
+      "output": "vn.pit_liability_before_final_rounding_vnd"
+    },
+    {
+      "op": "require-rounding-profile",
+      "fact": "vn.rounding_profile_id",
+      "on_missing": "rounding_profile_not_certified"
+    }
+  ],
+  "historical_reproduction": [
+    "exact pack version",
+    "semantic root",
+    "evidence root",
+    "source set",
+    "tax period",
+    "fact snapshot",
+    "rounding profile",
+    "predecessor/YTD digest where applicable"
+  ]
+}

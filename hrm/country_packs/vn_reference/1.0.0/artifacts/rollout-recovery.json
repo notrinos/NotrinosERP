@@ -1,0 +1,23 @@
+{
+  "schema": "notrinos.vn.rollout-recovery.v1",
+  "activation_authority": "PAY-CTRY-002",
+  "certification_authority": "PAY-CTRY-004",
+  "states": [
+    "installed-untrusted-denied",
+    "verified-unactivated",
+    "activated-but-uncertified-denied-for-governed-use",
+    "certified-and-activated",
+    "suspended",
+    "revoked"
+  ],
+  "rollback": "site activation rollback/deactivation uses PAY-CTRY-002; package bytes and historical result provenance remain immutable",
+  "recovery": "quarantine/reconcile observed versus expected roots and source set; never rewrite historical payroll/accounting",
+  "publication_preconditions": [
+    "authorized publisher signature",
+    "matching semantic/evidence roots",
+    "required independent reviews",
+    "required parallel evidence",
+    "scoped PAY-CTRY-004 certification",
+    "current source review"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "notrinos.vn.recertification-triggers.v1",
+  "triggers": [
+    "calculation artifact byte changed",
+    "report artifact byte changed",
+    "filing artifact byte changed",
+    "payment-layout artifact byte changed",
+    "dependency/core API outside certified range",
+    "FormulaFacade/compiler/profile changed",
+    "source withdrawn or corrected",
+    "coverage expanded",
+    "legal interpretation challenged",
+    "severe defect discovered",
+    "review due date passed",
+    "migration/connector contract changed"
+  ],
+  "action": "new immutable evidence inventory, technical review, payroll-expert review, legal review where required, parallel evidence where required, and new signed PAY-CTRY-004 certification decision; never retarget predecessor certification"
+}

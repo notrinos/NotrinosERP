@@ -1,0 +1,35 @@
+{
+  "schema": "notrinos.vn.payslip-projection.v1",
+  "host_adapter": "payslips.projection.v1",
+  "locales": [
+    "vi-VN",
+    "en"
+  ],
+  "safe_fields": [
+    "pay_period",
+    "employee_display_name",
+    "masked_tax_identifier",
+    "gross_pay",
+    "taxable_income",
+    "pit_withheld",
+    "employee_social_insurance",
+    "employee_health_insurance",
+    "employee_unemployment_insurance",
+    "net_pay",
+    "pack_version",
+    "semantic_root",
+    "source_set_id"
+  ],
+  "forbidden_fields": [
+    "full_bank_account",
+    "full_tax_identifier",
+    "unmasked_national_identifier",
+    "private_evidence_payload"
+  ],
+  "masking": {
+    "tax_identifier": "show-last-4-only",
+    "bank_account": "not-rendered-by-pack"
+  },
+  "rendering": "safe registered projection only; no pack templates, SQL, PHP or network calls",
+  "human_terminology_review": "pending"
+}

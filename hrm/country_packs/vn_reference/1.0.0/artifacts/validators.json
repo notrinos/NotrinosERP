@@ -1,0 +1,66 @@
+{
+  "schema": "notrinos.vn.validators.v1",
+  "host_adapter": "validators.declarative.v1",
+  "validators": [
+    {
+      "id": "vn.coverage.tax-residency",
+      "rule": "tax_residency must equal resident for PIT",
+      "failure": "unsupported_population"
+    },
+    {
+      "id": "vn.coverage.tax-year",
+      "rule": "tax_year must equal 2026 for resident salary PIT candidate",
+      "failure": "unsupported_effective_period"
+    },
+    {
+      "id": "vn.coverage.foreign-worker",
+      "rule": "foreign-worker classification is unsupported",
+      "failure": "unsupported_population"
+    },
+    {
+      "id": "vn.coverage.treaty",
+      "rule": "tax treaty determination is unsupported",
+      "failure": "unsupported_service"
+    },
+    {
+      "id": "vn.coverage.trade-union",
+      "rule": "trade-union obligations are unsupported",
+      "failure": "unsupported_service"
+    },
+    {
+      "id": "vn.coverage.shadow-payroll",
+      "rule": "expatriate shadow payroll is unsupported",
+      "failure": "unsupported_service"
+    },
+    {
+      "id": "vn.coverage.authority-submission",
+      "rule": "government submission/transmission is connector-required",
+      "failure": "connector_required"
+    },
+    {
+      "id": "vn.minimum-wage.region",
+      "rule": "region must be I, II, III or IV and explicitly reviewed",
+      "failure": "region_not_reviewed"
+    },
+    {
+      "id": "vn.minimum-wage.amount",
+      "rule": "contractual_monthly_wage_vnd must meet effective regional threshold",
+      "failure": "regional_minimum_wage_breach"
+    },
+    {
+      "id": "vn.contribution.base",
+      "rule": "contribution base must be prevalidated by reviewed effective-dated floor/cap source set",
+      "failure": "contribution_base_not_governed"
+    },
+    {
+      "id": "vn.rounding.profile",
+      "rule": "rounding profile must be explicit and reviewed",
+      "failure": "rounding_profile_not_certified"
+    },
+    {
+      "id": "vn.source.binding",
+      "rule": "every legally material decision must bind a known source_id and effective interval",
+      "failure": "source_binding_missing"
+    }
+  ]
+}

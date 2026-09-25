@@ -1,0 +1,18 @@
+{
+  "schema": "notrinos.vn.decisions-rates.v1",
+  "table_id": "vn.regional-minimum-wage.293-2025",
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "source_ids": [
+    "VN-SRC-MW-293"
+  ],
+  "monthly_vnd": {
+    "I": 5310000,
+    "II": 4730000,
+    "III": 4140000,
+    "IV": 3700000
+  },
+  "region_input_policy": "Explicit reviewed region code required. The pack does not infer region from free-form address and does not embed the decree appendix mapping in this candidate.",
+  "validation": "contractual_monthly_wage_vnd >= monthly_vnd[minimum_wage_region]",
+  "on_missing_or_unknown_region": "fail-closed"
+}

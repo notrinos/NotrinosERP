@@ -1,0 +1,56 @@
+{
+  "schema": "notrinos.vn.balances.v1",
+  "host_adapter": "balances.ledger.v1",
+  "balances": [
+    {
+      "code": "VN_PIT_TAXABLE_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_PIT_WITHHELD_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_SI_EMPLOYEE_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_SI_EMPLOYER_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_HI_EMPLOYEE_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_HI_EMPLOYER_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_UI_EMPLOYEE_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    },
+    {
+      "code": "VN_UI_EMPLOYER_YTD",
+      "unit": "VND",
+      "period": "calendar-year",
+      "immutable_movement": true
+    }
+  ],
+  "retro_policy": "Corrections create new movements bound to original target effective period/source set and predecessor digest; no historical row rewrite.",
+  "multiple_relationship_policy": "Separate payroll-relationship ledgers; aggregation/precedence is denied unless a dedicated reviewed rule explicitly authorizes it."
+}

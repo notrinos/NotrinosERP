@@ -1,0 +1,123 @@
+{
+  "schema": "notrinos.vn.source-custody.v1",
+  "pack_candidate_sha256": "71d7ae81625a17ad39e865ec4f1f09aeca27cf4a5418e41a03924240c0684412",
+  "semantic_root": "fc20d9550b20b915c4b4e34ef139caf133edb961a8c29661743da881249af7ec",
+  "evidence_root": "ee0145671bc5119ccf8e219dcdd7fc92f14db463ee31b01ecedd4b37fed68611",
+  "files": [
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/balances.json",
+      "sha256": "b70531ec915498c9006ad630eb5d19e80c1bfc7eae489cc799ed771777299fb5",
+      "bytes": 1517
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/capability-map.json",
+      "sha256": "a0d6455cf76682ad1c58a4e69b375f9b22de7dd38e4aa8e279a1f539db8afc19",
+      "bytes": 3988
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/compulsory-contributions.json",
+      "sha256": "6f61ee9437069002890c9804589ecc602a14ca8bb63145711008837619763f05",
+      "bytes": 2524
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/coverage.json",
+      "sha256": "31a6630934c8ed31d352574c708e174af223891092b9fe40ed1d91509c876cf7",
+      "bytes": 4497
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/effective-boundaries.json",
+      "sha256": "422927695cacdaf9b5dbfd3d8d2d98f6c22a3871ab818bb60737ec8a4a9f94b3",
+      "bytes": 1101
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/filing-boundaries.json",
+      "sha256": "388d8a6d459afc4d4ddab9515fda510dfa23d46a99fee8890be035fce19b50ee",
+      "bytes": 1230
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/legacy-mapping.json",
+      "sha256": "6592caec7ff3dd0953426e5ae6cb196476515c1ffa74cda94754d7d2dd90625c",
+      "bytes": 1923
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/metadata.json",
+      "sha256": "6ba7d7b16f7c4d551418fbb93a752743fe7d6e792d16d759c9cea3a26b066256",
+      "bytes": 1947
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/ownership-and-recertification.json",
+      "sha256": "e39d25ace57150f6f80d0160fd8ce211d81f715d926dab19efd919b79f50ef1d",
+      "bytes": 894
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/payment-boundaries.json",
+      "sha256": "38b8889c90f4408107ce489c3f34dd27483877b0e87825cd6061b3d625aa469e",
+      "bytes": 690
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/payslip-projection.json",
+      "sha256": "198a3fbe7de7b23c7bc670189a825418abf70f7c03bdccdfc3632c1149c709e7",
+      "bytes": 868
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/pit-resident-2026-rates.json",
+      "sha256": "a6e810d6bc663813da9701e50f315913b1e460f78ea92782d82d671c2c1d2c22",
+      "bytes": 1735
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/pit-resident-2026-rules.json",
+      "sha256": "d6ba7cbba50fa39396352640e355ab0b91bbdddc78305d107ce2c8f732d061a8",
+      "bytes": 1314
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/recertification-triggers.json",
+      "sha256": "e06fc0fbe751a8a004369c8bd9ec22022b10f27db791bb4f555a9e62d2405927",
+      "bytes": 785
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/regional-minimum-wage-2026.json",
+      "sha256": "684b3e60efd0b6d448c2b1b53bb4d1a8fd24f21b6122229acf3cba330fc35344",
+      "bytes": 621
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/rollout-recovery.json",
+      "sha256": "816ec656c232da6bcda20d6d619a46e9d2a952d203973892622929f2e063f8a3",
+      "bytes": 859
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/validators.json",
+      "sha256": "22ea70259270f33d17bec65816df6bc28c873da0c44414dec1a789be002fac15",
+      "bytes": 2117
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/variables.json",
+      "sha256": "e00c0f9ca7c610c51e17250f3261140a22f8b96a94e8f0d2a1c69d5ae3e0c6d1",
+      "bytes": 2817
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/artifacts/vi-en.xlf",
+      "sha256": "06777966de6a6ccc767fa2776c6c67e23eb4358277ce95aa8358a4e2948cc15f",
+      "bytes": 1042
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/evidence/certification-state.json",
+      "sha256": "59ca068f82637be5e41b4294a21f4f5cd79d9d8d8a67de5e2ab1b8a9689c2dac",
+      "bytes": 1021
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/evidence/conformance-fixtures.json",
+      "sha256": "d69cfdef1ac96e112229f2d1a71a2e4fa3b0a90f35fb4f80c59208c24e019e12",
+      "bytes": 22080
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/evidence/parallel-comparison-framework.json",
+      "sha256": "e313d1508af1c23ddf3647de60816b3a2324ca2bb3a5ced7f4af3cef2bd05b89",
+      "bytes": 592
+    },
+    {
+      "path": "hrm/country_packs/vn_reference/1.0.0/evidence/source-register.json",
+      "sha256": "1072bda949ff6e4d14ca6ab5d2ebaa14541ad6270fabd2ec6344ad91420a206e",
+      "bytes": 9363
+    }
+  ]
+}

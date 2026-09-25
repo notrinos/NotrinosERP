@@ -11,16 +11,24 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.812',
+        'active_database_version'=>'1.0.816',
         'active_legacy_payroll_contract'=>'1.0.458',
-        'next_backlog_item'=>'PAY-CTRY-005',
+        'next_backlog_item'=>'PAY-CTRY-006',
         'next_slice_changed_files'=>array(
-            'includes/pay_ctry_004_contract.inc',
-            'hrm/includes/db/pay_ctry_004_readiness_db.inc',
-            'hrm/includes/db/pay_ctry_004_schema_db.inc',
-            'sql/upgrade_pay_ctry_004_schema.sql'),
-        'next_slice_scope'=>'PAY-CTRY-004 is CLOSED / LOCAL ACCEPTANCE PASS at head 1.0.812 after fifteen dependency-ordered certification-governance edges. Certification remains human/evidence governed and never inferred from tests, installation or activation; real jurisdiction certification records remain zero-seed. PAY-CTRY-005 Vietnam reference pack is the strict next dependency.',
+            'hrm/country_packs/vn_reference/1.0.0/package-candidate.json',
+            'hrm/country_packs/vn_reference/1.0.0/custody.json',
+            'hrm/includes/db/pay_ctry_005_readiness_db.inc',
+            'sql/upgrade_pay_ctry_005_vn_3_completion.php'),
+        'next_slice_scope'=>'PAY-CTRY-005 Vietnam reference-pack engineering source is complete at head 1.0.816 as an unsigned/unpublished declarative source candidate. Genuine publisher signing, independent Vietnamese payroll/legal review, parallel-payroll evidence and PAY-CTRY-004 scoped certification remain unseeded and mandatory before legal certification/publication. PAY-CTRY-006 structurally different proof pack is the strict next backlog item.',
         'edges'=>array(
+            'pay_ctry_005_vn_0_authority_coverage'=>array('previous'=>'1.0.812','version'=>'1.0.813',
+                'file'=>'sql/upgrade_pay_ctry_005_vn_0_authority_coverage.php'),
+            'pay_ctry_005_vn_1_calculation_explanation'=>array('previous'=>'1.0.813','version'=>'1.0.814',
+                'file'=>'sql/upgrade_pay_ctry_005_vn_1_calculation_explanation.php'),
+            'pay_ctry_005_vn_2_reporting_filing_payment'=>array('previous'=>'1.0.814','version'=>'1.0.815',
+                'file'=>'sql/upgrade_pay_ctry_005_vn_2_reporting_filing_payment.php'),
+            'pay_ctry_005_vn_3_completion'=>array('previous'=>'1.0.815','version'=>'1.0.816',
+                'file'=>'sql/upgrade_pay_ctry_005_vn_3_completion.php'),
             'pay_ctry_004_dependency_review'=>array('previous'=>'1.0.797','version'=>'1.0.798',
                 'file'=>'sql/upgrade_pay_ctry_004_dependency_review.php'),
             'pay_ctry_004_contract_foundation'=>array('previous'=>'1.0.798','version'=>'1.0.799',

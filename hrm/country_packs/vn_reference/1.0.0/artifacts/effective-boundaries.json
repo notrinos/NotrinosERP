@@ -1,0 +1,41 @@
+{
+  "schema": "notrinos.vn.effective-boundaries.v1",
+  "boundaries": [
+    {
+      "date": "2025-07-01",
+      "reason": "Social Insurance Law 41/2024/QH15 effective",
+      "tests": [
+        "day-before",
+        "effective-date",
+        "day-after",
+        "cross-period",
+        "retro",
+        "historical-reproduction"
+      ]
+    },
+    {
+      "date": "2026-01-01",
+      "reason": "2026 PIT tax-period deductions/brackets, unemployment decree and regional minimum wage",
+      "tests": [
+        "day-before",
+        "effective-date",
+        "day-after",
+        "cross-period",
+        "retro",
+        "historical-reproduction"
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "reason": "PIT Law general effective date while resident salary/wage rules apply to tax period 2026",
+      "tests": [
+        "day-before",
+        "effective-date",
+        "day-after",
+        "correction-after-later-rule",
+        "historical-reproduction"
+      ]
+    }
+  ],
+  "rule": "effective-date resolution is source-bound; no mutable current-rate alias may reproduce historical payroll."
+}

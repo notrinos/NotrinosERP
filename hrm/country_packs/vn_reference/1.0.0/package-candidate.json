@@ -1,0 +1,187 @@
+{
+  "schema": "notrinos.vn.package-candidate.v1",
+  "manifest_version_target": "pay-ctry-manifest-v1",
+  "pack": {
+    "id": "org.notrinos.payroll.vn.base",
+    "version": "1.0.0",
+    "publisher_id": "notrinos-governed-publisher"
+  },
+  "host": {
+    "min_db_version": "1.0.816"
+  },
+  "capability_registry_version": "pay-ctry-capabilities-v2",
+  "artifacts": [
+    {
+      "path": "artifacts/balances.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "b70531ec915498c9006ad630eb5d19e80c1bfc7eae489cc799ed771777299fb5",
+      "bytes": 1517
+    },
+    {
+      "path": "artifacts/capability-map.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "a0d6455cf76682ad1c58a4e69b375f9b22de7dd38e4aa8e279a1f539db8afc19",
+      "bytes": 3988
+    },
+    {
+      "path": "artifacts/compulsory-contributions.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "6f61ee9437069002890c9804589ecc602a14ca8bb63145711008837619763f05",
+      "bytes": 2524
+    },
+    {
+      "path": "artifacts/coverage.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "31a6630934c8ed31d352574c708e174af223891092b9fe40ed1d91509c876cf7",
+      "bytes": 4497
+    },
+    {
+      "path": "artifacts/effective-boundaries.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "422927695cacdaf9b5dbfd3d8d2d98f6c22a3871ab818bb60737ec8a4a9f94b3",
+      "bytes": 1101
+    },
+    {
+      "path": "artifacts/filing-boundaries.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "388d8a6d459afc4d4ddab9515fda510dfa23d46a99fee8890be035fce19b50ee",
+      "bytes": 1230
+    },
+    {
+      "path": "artifacts/legacy-mapping.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "6592caec7ff3dd0953426e5ae6cb196476515c1ffa74cda94754d7d2dd90625c",
+      "bytes": 1923
+    },
+    {
+      "path": "artifacts/metadata.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "6ba7d7b16f7c4d551418fbb93a752743fe7d6e792d16d759c9cea3a26b066256",
+      "bytes": 1947
+    },
+    {
+      "path": "artifacts/ownership-and-recertification.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "e39d25ace57150f6f80d0160fd8ce211d81f715d926dab19efd919b79f50ef1d",
+      "bytes": 894
+    },
+    {
+      "path": "artifacts/payment-boundaries.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "38b8889c90f4408107ce489c3f34dd27483877b0e87825cd6061b3d625aa469e",
+      "bytes": 690
+    },
+    {
+      "path": "artifacts/payslip-projection.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "198a3fbe7de7b23c7bc670189a825418abf70f7c03bdccdfc3632c1149c709e7",
+      "bytes": 868
+    },
+    {
+      "path": "artifacts/pit-resident-2026-rates.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "a6e810d6bc663813da9701e50f315913b1e460f78ea92782d82d671c2c1d2c22",
+      "bytes": 1735
+    },
+    {
+      "path": "artifacts/pit-resident-2026-rules.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "d6ba7cbba50fa39396352640e355ab0b91bbdddc78305d107ce2c8f732d061a8",
+      "bytes": 1314
+    },
+    {
+      "path": "artifacts/recertification-triggers.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "e06fc0fbe751a8a004369c8bd9ec22022b10f27db791bb4f555a9e62d2405927",
+      "bytes": 785
+    },
+    {
+      "path": "artifacts/regional-minimum-wage-2026.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "684b3e60efd0b6d448c2b1b53bb4d1a8fd24f21b6122229acf3cba330fc35344",
+      "bytes": 621
+    },
+    {
+      "path": "artifacts/rollout-recovery.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "816ec656c232da6bcda20d6d619a46e9d2a952d203973892622929f2e063f8a3",
+      "bytes": 859
+    },
+    {
+      "path": "artifacts/validators.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "22ea70259270f33d17bec65816df6bc28c873da0c44414dec1a789be002fac15",
+      "bytes": 2117
+    },
+    {
+      "path": "artifacts/variables.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "e00c0f9ca7c610c51e17250f3261140a22f8b96a94e8f0d2a1c69d5ae3e0c6d1",
+      "bytes": 2817
+    },
+    {
+      "path": "artifacts/vi-en.xlf",
+      "type": "translation-xliff",
+      "media_type": "application/xliff+xml",
+      "sha256": "06777966de6a6ccc767fa2776c6c67e23eb4358277ce95aa8358a4e2948cc15f",
+      "bytes": 1042
+    },
+    {
+      "path": "evidence/certification-state.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "59ca068f82637be5e41b4294a21f4f5cd79d9d8d8a67de5e2ab1b8a9689c2dac",
+      "bytes": 1021
+    },
+    {
+      "path": "evidence/conformance-fixtures.json",
+      "type": "test-fixture-json",
+      "media_type": "application/json",
+      "sha256": "d69cfdef1ac96e112229f2d1a71a2e4fa3b0a90f35fb4f80c59208c24e019e12",
+      "bytes": 22080
+    },
+    {
+      "path": "evidence/parallel-comparison-framework.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "e313d1508af1c23ddf3647de60816b3a2324ca2bb3a5ced7f4af3cef2bd05b89",
+      "bytes": 592
+    },
+    {
+      "path": "evidence/source-register.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "1072bda949ff6e4d14ca6ab5d2ebaa14541ad6270fabd2ec6344ad91420a206e",
+      "bytes": 9363
+    }
+  ],
+  "semantic_root": "fc20d9550b20b915c4b4e34ef139caf133edb961a8c29661743da881249af7ec",
+  "evidence_root": "ee0145671bc5119ccf8e219dcdd7fc92f14db463ee31b01ecedd4b37fed68611",
+  "signing": {
+    "state": "pending-authorized-publisher",
+    "algorithm": "rsa-sha256",
+    "signature_base64": null,
+    "signed_at": null,
+    "key_id": null
+  },
+  "installability": "DENIED until a valid PAY-CTRY-001 manifest signature and trusted publisher/key context are supplied; signature does not imply legal certification.",
+  "certification": "pending PAY-CTRY-004 evidence/reviews/parallel run and exact root binding"
+}

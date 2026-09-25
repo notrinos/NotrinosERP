@@ -1,0 +1,62 @@
+{
+  "schema": "notrinos.country-pack.metadata.v1",
+  "pack_id": "org.notrinos.payroll.vn.base",
+  "pack_version": "1.0.0-source-candidate",
+  "jurisdiction": {
+    "iso2": "VN",
+    "name_en": "Vietnam",
+    "name_vi": "Việt Nam"
+  },
+  "engineering_status": "source-complete-candidate",
+  "legal_certification_status": "not-certified",
+  "publication_status": "not-published",
+  "capability_registry_version": "pay-ctry-capabilities-v2",
+  "minimum_host_db_version": "1.0.816",
+  "authority_boundaries": {
+    "declarative_only": true,
+    "payroll_posting": false,
+    "gl_posting": false,
+    "payment_execution": false,
+    "authority_submission": false,
+    "employee_master_mutation": false,
+    "bank_account_mutation": false,
+    "identity_security_mutation": false,
+    "historical_result_rewrite": false
+  },
+  "components": [
+    {
+      "id": "org.notrinos.payroll.vn.base",
+      "role": "calculation-and-validation",
+      "state": "source-candidate"
+    },
+    {
+      "id": "org.notrinos.payroll.vn.filing.tax",
+      "role": "tax-filing-definition",
+      "state": "unsupported-until-named-official-schema-reviewed"
+    },
+    {
+      "id": "org.notrinos.payroll.vn.filing.social-insurance",
+      "role": "social-insurance-filing-definition",
+      "state": "unsupported-until-named-official-schema-reviewed"
+    },
+    {
+      "id": "org.notrinos.payroll.vn.payment",
+      "role": "payment-layout",
+      "state": "unsupported-until-named-scheme-reviewed"
+    },
+    {
+      "id": "org.notrinos.payroll.vn.translation.vi-en",
+      "role": "bilingual-terminology-and-projection",
+      "state": "source-candidate"
+    },
+    {
+      "id": "org.customer.<name>.payroll.vn.overlay",
+      "role": "customer-overlay",
+      "state": "reserved-not-bundled"
+    }
+  ],
+  "notes": [
+    "Signature establishes origin/integrity only and is not legal certification.",
+    "No bundled/trusted-because-core bypass is permitted."
+  ]
+}

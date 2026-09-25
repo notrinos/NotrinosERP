@@ -1,0 +1,22 @@
+{
+  "schema": "notrinos.vn.payment-boundary.v1",
+  "host_adapter": "bank-files.renderer.v1",
+  "supported_bank_or_scheme_layouts": [],
+  "state": "unsupported-until-named-scheme-or-bank-layout-reviewed",
+  "render_allowed": false,
+  "payment_execution_allowed": false,
+  "internal_payment_intent_contract": {
+    "version": "vn-payment-intent-v1",
+    "official_bank_file": false,
+    "fields": [
+      "payment_reference",
+      "beneficiary_token",
+      "amount_vnd_integer",
+      "currency",
+      "approved_result_digest",
+      "replay_key"
+    ]
+  },
+  "replay_policy": "surrounding platform must reject duplicate replay_key",
+  "failure_for_unknown_layout": "unsupported_layout"
+}

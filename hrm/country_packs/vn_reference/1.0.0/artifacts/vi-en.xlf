@@ -1,0 +1,10 @@
+<xliff version="1.2"><file source-language="vi-VN" target-language="en" datatype="plaintext" original="vn-payroll-terms"><body>
+<trans-unit id="pit"><source>Thuế thu nhập cá nhân</source><target>Personal income tax</target></trans-unit>
+<trans-unit id="social"><source>Bảo hiểm xã hội</source><target>Social insurance</target></trans-unit>
+<trans-unit id="health"><source>Bảo hiểm y tế</source><target>Health insurance</target></trans-unit>
+<trans-unit id="unemployment"><source>Bảo hiểm thất nghiệp</source><target>Unemployment insurance</target></trans-unit>
+<trans-unit id="taxable"><source>Thu nhập tính thuế</source><target>Taxable income</target></trans-unit>
+<trans-unit id="dependent"><source>Người phụ thuộc</source><target>Dependent</target></trans-unit>
+<trans-unit id="net"><source>Thực lĩnh</source><target>Net pay</target></trans-unit>
+<trans-unit id="minimum"><source>Mức lương tối thiểu vùng</source><target>Regional minimum wage</target></trans-unit>
+</body></file></xliff>

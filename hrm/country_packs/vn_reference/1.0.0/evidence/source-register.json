@@ -1,0 +1,176 @@
+{
+  "schema": "notrinos.vn.source-register.v1",
+  "jurisdiction": "VN",
+  "recorded_on": "2026-09-25",
+  "binary_capture_note": "The sandbox could not resolve datafiles.chinhphu.vn, so official PDF binary SHA-256 values are intentionally null. Official record and attachment URLs plus acquisition-record digests are retained; owner-machine evidence capture must fill document_sha256 before certification.",
+  "sources": [
+    {
+      "source_id": "VN-SRC-PIT-109",
+      "issuer": "Quốc hội",
+      "title": "Luật Thuế thu nhập cá nhân",
+      "document_number": "109/2025/QH15",
+      "publication_date": "2025-12-10",
+      "effective_from": "2026-07-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?docid=216495&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/01/luat109-2025.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "5-bracket progressive resident salary/wage PIT applies for tax period 2026",
+        "resident salary/wage taxable-income rules and family deductions are governed by the 2026 law set"
+      ],
+      "acquisition_record_sha256": "cb35171bc2848364ba342ff0a3ad8bf620d3ba82e7a00f5ea13ffb139f8f5698"
+    },
+    {
+      "source_id": "VN-SRC-PIT-110",
+      "issuer": "Ủy ban Thường vụ Quốc hội",
+      "title": "Nghị quyết về điều chỉnh mức giảm trừ gia cảnh của thuế thu nhập cá nhân",
+      "document_number": "110/2025/UBTVQH15",
+      "publication_date": "2025-10-17",
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?docid=215927&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/11/nq110cuaubtvqh.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "personal deduction 15,500,000 VND/month",
+        "dependent deduction 6,200,000 VND/month",
+        "applies for tax year 2026"
+      ],
+      "acquisition_record_sha256": "a0d4d6817eeedf6b92362293cb25de4186d1c008ea385cd0251ef828a44df5b4"
+    },
+    {
+      "source_id": "VN-SRC-SI-041",
+      "issuer": "Quốc hội",
+      "title": "Luật Bảo hiểm xã hội",
+      "document_number": "41/2024/QH15",
+      "publication_date": "2024-06-29",
+      "effective_from": "2025-07-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?classid=1&docid=211199&orggroupid=1&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/41-2024-qh15.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "covered Vietnamese employee monthly retirement/survivor contribution 8%",
+        "covered employer sickness/maternity contribution 3%",
+        "covered employer retirement/survivor contribution 14%"
+      ],
+      "acquisition_record_sha256": "2d3182cd08cb7d949cf03e780f65c694f4d1349583d03a859a34523afdaede31"
+    },
+    {
+      "source_id": "VN-SRC-SI-158",
+      "issuer": "Chính phủ",
+      "title": "Nghị định quy định chi tiết bảo hiểm xã hội bắt buộc",
+      "document_number": "158/2025/NĐ-CP",
+      "publication_date": "2025-06-25",
+      "effective_from": "2025-07-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?classid=1&docid=214189&orggroupid=2&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/6/158-ndcp.signed.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "implementation rules for compulsory social insurance",
+        "normal occupational-accident/disease employer rate 0.5%; qualified reduced rate is outside declared scope"
+      ],
+      "acquisition_record_sha256": "c6ce6b4c71f599dccdfe5102bbd73907135a5788d43ec15c871775255c64975f"
+    },
+    {
+      "source_id": "VN-SRC-HI-188",
+      "issuer": "Chính phủ",
+      "title": "Nghị định quy định chi tiết bảo hiểm y tế",
+      "document_number": "188/2025/NĐ-CP",
+      "publication_date": "2025-07-01",
+      "effective_from": "2025-08-15",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?classid=1&docid=214515&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/7/188-ndcp.signed.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "covered standard employee health-insurance rate 4.5% of governed base",
+        "standard split is 3% employer and 1.5% employee"
+      ],
+      "acquisition_record_sha256": "e84f633075cd952ae74d70b209d7008b55392353c64dc6fc0dc630bfa15295e4"
+    },
+    {
+      "source_id": "VN-SRC-UI-374",
+      "issuer": "Chính phủ",
+      "title": "Nghị định quy định chi tiết một số điều của Luật Việc làm về bảo hiểm thất nghiệp",
+      "document_number": "374/2025/NĐ-CP",
+      "publication_date": "2025-12-31",
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?classid=1&docid=216493&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/01/374-1.signed.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "standard unemployment-insurance rate 1% employee and 1% employer",
+        "special reductions and special populations require separate coverage evidence"
+      ],
+      "acquisition_record_sha256": "8bb103a8caffb489e1d51d342da33b1ed8930cba933dd143caf5d62066b92ea3"
+    },
+    {
+      "source_id": "VN-SRC-MW-293",
+      "issuer": "Chính phủ",
+      "title": "Nghị định quy định mức lương tối thiểu đối với người lao động làm việc theo hợp đồng lao động",
+      "document_number": "293/2025/NĐ-CP",
+      "publication_date": "2025-11-10",
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "official_record_url": "https://vanban.chinhphu.vn/?docid=215832&pageid=27160",
+      "official_attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/11/293-cp.signed.pdf",
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "regional monthly minimum wage: I 5,310,000; II 4,730,000; III 4,140,000; IV 3,700,000 VND",
+        "geographic region assignment must come from reviewed official appendix/customer location mapping"
+      ],
+      "acquisition_record_sha256": "fdaf7bd2a50f15060319462344f05a506bf5615ed2fb868aa233252bef4f5a0d"
+    },
+    {
+      "source_id": "VN-SRC-PIT-OFFICIAL-GUIDE",
+      "issuer": "Cục Thông tin và Truyền thông Chính phủ",
+      "title": "Chi tiết Biểu thuế thu nhập cá nhân lũy tiến từng phần",
+      "document_number": "official policy explanation",
+      "publication_date": "2026-03-29",
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "official_record_url": "https://xaydungchinhsach.chinhphu.vn/chi-tiet-bieu-thue-thu-nhap-ca-nhan-luy-tien-tung-phan-119260327091407544.htm",
+      "official_attachment_url": null,
+      "document_sha256": null,
+      "document_digest_state": "pending_binary_capture_on_owner_machine",
+      "acquired_at": "2026-09-25T02:40:00Z",
+      "interpretation_state": "source-verified-engineering / payroll-expert-and-legal-review-pending",
+      "claims": [
+        "monthly brackets: <=10m 5%; >10-30m 10%; >30-60m 20%; >60-100m 30%; >100m 35%",
+        "resident salary/wage provisions apply from tax period 2026"
+      ],
+      "acquisition_record_sha256": "3d13ae3b74db2cfcf27567cb0a6d3947d6e9b19128eb5385fb02af9e8a330157"
+    }
+  ],
+  "supersession_monitoring": {
+    "status": "required",
+    "owner_role": "vn-pack-source-monitor",
+    "minimum_frequency": "monthly and event-driven",
+    "last_checked_on": "2026-09-25"
+  }
+}

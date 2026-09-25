@@ -1,0 +1,90 @@
+{
+  "schema": "notrinos.vn.decisions-rates.v1",
+  "table_id": "vn.compulsory.standard-employee",
+  "currency": "VND",
+  "declared_population": "Vietnamese employee in standard covered population; no special reduction, treaty, foreign-worker or special occupational category",
+  "requires_prevalidated_base": true,
+  "periods": [
+    {
+      "from": "2025-07-01",
+      "to": null,
+      "items": [
+        {
+          "code": "SI_RETIREMENT_SURVIVOR_EMPLOYEE",
+          "employee_percent": "8.00",
+          "employer_percent": "0.00",
+          "source_ids": [
+            "VN-SRC-SI-041"
+          ]
+        },
+        {
+          "code": "SI_RETIREMENT_SURVIVOR_EMPLOYER",
+          "employee_percent": "0.00",
+          "employer_percent": "14.00",
+          "source_ids": [
+            "VN-SRC-SI-041"
+          ]
+        },
+        {
+          "code": "SI_SICKNESS_MATERNITY_EMPLOYER",
+          "employee_percent": "0.00",
+          "employer_percent": "3.00",
+          "source_ids": [
+            "VN-SRC-SI-041"
+          ]
+        },
+        {
+          "code": "SI_OCCUPATIONAL_ACCIDENT_DISEASE_EMPLOYER_NORMAL",
+          "employee_percent": "0.00",
+          "employer_percent": "0.50",
+          "source_ids": [
+            "VN-SRC-SI-158"
+          ],
+          "limitations": [
+            "0.3% qualified reduced-rate regime not declared"
+          ]
+        }
+      ]
+    },
+    {
+      "from": "2025-08-15",
+      "to": null,
+      "items": [
+        {
+          "code": "HEALTH_INSURANCE_STANDARD",
+          "employee_percent": "1.50",
+          "employer_percent": "3.00",
+          "source_ids": [
+            "VN-SRC-HI-188"
+          ]
+        }
+      ]
+    },
+    {
+      "from": "2026-01-01",
+      "to": null,
+      "items": [
+        {
+          "code": "UNEMPLOYMENT_INSURANCE_STANDARD",
+          "employee_percent": "1.00",
+          "employer_percent": "1.00",
+          "source_ids": [
+            "VN-SRC-UI-374"
+          ],
+          "limitations": [
+            "disability-employer reduction and other special cases not declared"
+          ]
+        }
+      ]
+    }
+  ],
+  "base_floor_cap_policy": "Automatic floor/cap/reference-amount derivation is not declared in this source candidate; missing prevalidated governed base fails closed.",
+  "leave_policy": {
+    "working_days_without_salary_threshold": 14,
+    "effect": "no standard contribution for governed month subject to reviewed population rule",
+    "source_ids": [
+      "VN-SRC-SI-041",
+      "VN-SRC-UI-374"
+    ]
+  }
+}

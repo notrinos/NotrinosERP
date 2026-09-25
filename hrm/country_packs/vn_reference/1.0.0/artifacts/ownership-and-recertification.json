@@ -1,0 +1,14 @@
+{
+  "schema": "notrinos.vn.ownership.v1",
+  "rule_source_owner_role": "vn-pack-source-owner",
+  "pack_maintainer_role": "country-pack-maintainer",
+  "source_monitor_role": "vn-pack-source-monitor",
+  "named_human_assignments": [],
+  "maintenance_state": "roles-defined-people-unassigned",
+  "review_due_policy": "before publication and at least every 90 days while source candidate is maintained; immediately on source change alert",
+  "next_source_review_due": "2026-12-24",
+  "supported_period_policy": "new governed successor for changed law/rate/source; never mutate historical bytes",
+  "emergency_suspension_path": "PAY-CTRY-004 governed suspension/revocation",
+  "supersession_path": "new pack version + new roots + new certification lineage",
+  "support_deprecation_policy": "unsupported or stale periods fail closed; published versions require explicit support/deprecation metadata"
+}

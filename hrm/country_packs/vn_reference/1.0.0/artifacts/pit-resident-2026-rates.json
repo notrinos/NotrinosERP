@@ -1,0 +1,71 @@
+{
+  "schema": "notrinos.vn.decisions-rates.v1",
+  "decision_table_id": "vn.pit.resident.salary.2026",
+  "population": "resident individual salary/wage income",
+  "tax_period_from": "2026-01-01",
+  "tax_period_to": "2026-12-31",
+  "source_ids": [
+    "VN-SRC-PIT-109",
+    "VN-SRC-PIT-110",
+    "VN-SRC-PIT-OFFICIAL-GUIDE"
+  ],
+  "family_deductions_vnd_per_month": {
+    "taxpayer": 15500000,
+    "dependent": 6200000
+  },
+  "monthly_progressive_brackets": [
+    {
+      "from_exclusive": null,
+      "to_inclusive": 10000000,
+      "rate_percent": "5.00"
+    },
+    {
+      "from_exclusive": 10000000,
+      "to_inclusive": 30000000,
+      "rate_percent": "10.00"
+    },
+    {
+      "from_exclusive": 30000000,
+      "to_inclusive": 60000000,
+      "rate_percent": "20.00"
+    },
+    {
+      "from_exclusive": 60000000,
+      "to_inclusive": 100000000,
+      "rate_percent": "30.00"
+    },
+    {
+      "from_exclusive": 100000000,
+      "to_inclusive": null,
+      "rate_percent": "35.00"
+    }
+  ],
+  "annual_brackets_vnd": [
+    {
+      "from_exclusive": null,
+      "to_inclusive": 120000000,
+      "rate_percent": "5.00"
+    },
+    {
+      "from_exclusive": 120000000,
+      "to_inclusive": 360000000,
+      "rate_percent": "10.00"
+    },
+    {
+      "from_exclusive": 360000000,
+      "to_inclusive": 720000000,
+      "rate_percent": "20.00"
+    },
+    {
+      "from_exclusive": 720000000,
+      "to_inclusive": 1200000000,
+      "rate_percent": "30.00"
+    },
+    {
+      "from_exclusive": 1200000000,
+      "to_inclusive": null,
+      "rate_percent": "35.00"
+    }
+  ],
+  "rounding": "No implicit rounding rule is asserted by this artifact; finalization requires vn.rounding_profile_id bound to separately reviewed evidence."
+}

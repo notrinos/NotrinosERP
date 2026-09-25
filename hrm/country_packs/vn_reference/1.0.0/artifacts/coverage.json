@@ -1,0 +1,95 @@
+{
+  "schema": "notrinos.vn.coverage.v1",
+  "declared_scope_id": "vn-reference-2026-source-candidate",
+  "supported_effective_periods": [
+    {
+      "scope": "compulsory-social-insurance-standard-subset",
+      "from": "2025-07-01",
+      "to": null,
+      "source_ids": [
+        "VN-SRC-SI-041",
+        "VN-SRC-SI-158"
+      ]
+    },
+    {
+      "scope": "regional-minimum-wage-validation",
+      "from": "2026-01-01",
+      "to": null,
+      "source_ids": [
+        "VN-SRC-MW-293"
+      ]
+    },
+    {
+      "scope": "resident-salary-pit-tax-year-2026",
+      "from": "2026-01-01",
+      "to": "2026-12-31",
+      "source_ids": [
+        "VN-SRC-PIT-109",
+        "VN-SRC-PIT-110",
+        "VN-SRC-PIT-OFFICIAL-GUIDE"
+      ]
+    },
+    {
+      "scope": "unemployment-insurance-standard-subset",
+      "from": "2026-01-01",
+      "to": null,
+      "source_ids": [
+        "VN-SRC-UI-374"
+      ]
+    },
+    {
+      "scope": "health-insurance-standard-subset",
+      "from": "2025-08-15",
+      "to": null,
+      "source_ids": [
+        "VN-SRC-HI-188"
+      ]
+    }
+  ],
+  "coverage": {
+    "payroll_relationship": "modeled-input",
+    "legal_employer": "modeled-input",
+    "establishment": "modeled-input",
+    "primary_work_location": "modeled-input",
+    "tax_residency": "resident-supported; nonresident-fail-closed",
+    "employment_contract_category": "standard-covered-employee subset; other categories fail-closed",
+    "taxable_earnings": "classification-input-required",
+    "exempt_earnings": "classification-input-required",
+    "deductible_items": "supported for governed compulsory-insurance and family-deduction facts only; other deductions fail-closed",
+    "separately_treated_earnings": "fail-closed unless separately evidenced",
+    "dependant_election_facts": "modeled monthly facts",
+    "taxable_base": "resident salary/wage 2026 supported from reviewed taxable-income facts",
+    "contributory_base": "prevalidated governed base required; automatic floor/cap derivation is not claimed",
+    "floors_caps_reference_amounts": "fail-closed unless supplied under separately reviewed effective-dated source artifact",
+    "employee_employer_contribution_shares": "standard Vietnamese covered employee subset supported",
+    "worker_category_inclusion_exclusion": "explicit standard subset only",
+    "social_health_unemployment": "standard SI/HI/UI percentages modeled; special populations/reductions fail-closed",
+    "regional_minimum_wage_validation": "2026 four-region amounts supported when reviewed region code is supplied",
+    "unpaid_leave": "14-working-day contribution interruption modeled as fact/validator; payroll-expert interpretation pending certification",
+    "partial_month": "fact model and conformance only; no unsupported proration default",
+    "hire_termination": "fact model and period-boundary conformance",
+    "bonus_tet": "taxable-classification input only; no hard-coded special treatment",
+    "off_cycle": "effective-date/replay lineage modeled",
+    "overtime": "classification input only; labor-law overtime calculation outside pack",
+    "retro_correction": "target-period source/rule binding and immutable correction lineage modeled",
+    "foreign_workers": "fail-closed pending dedicated coverage evidence",
+    "multiple_employment": "fact model only; contribution/tax precedence requires explicit reviewed rule",
+    "YTD": "immutable YTD balance inputs/outputs modeled",
+    "annual_reconciliation": "resident PIT 2026 reconciliation model; official submission outside pack",
+    "VND_precision_rounding": "integer VND storage; explicit rounding-profile input required, no implicit legal rounding default",
+    "bilingual_wording": "source-candidate Vietnamese/English terminology, human terminology review pending",
+    "report_filing_corrections": "internal correction lineage supported; official form/schema generation not claimed"
+  },
+  "explicit_exclusions": [
+    "trade-union obligations",
+    "tax-treaty determination",
+    "equity/complex benefits",
+    "expatriate shadow payroll",
+    "managed remittance",
+    "authority submission",
+    "automatic official geographic region classification",
+    "foreign-worker rules without dedicated evidence",
+    "customer-specific EOS/severance interpretation"
+  ],
+  "fail_closed_policy": "Unsupported, ambiguous, uncovered population/effective period, missing source binding, missing explicit rounding profile, or missing reviewed region is denied rather than approximated."
+}
