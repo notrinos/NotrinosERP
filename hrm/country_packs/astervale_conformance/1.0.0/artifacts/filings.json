@@ -1,0 +1,47 @@
+{
+  "schema": "notrinos.synthetic.filings.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "obligation": {
+    "id": "AVX-PAY-EVENT-NOTICE",
+    "trigger": "approved payroll pay-event",
+    "periodic_monthly": false,
+    "render_format": "canonical-json-v1",
+    "transport_authority": false
+  },
+  "relationships": {
+    "ORIGINAL": {
+      "predecessor_required": false
+    },
+    "CORRECTION": {
+      "predecessor_required": true,
+      "predecessor_types": [
+        "ORIGINAL",
+        "CORRECTION"
+      ]
+    },
+    "REPLACEMENT": {
+      "predecessor_required": true,
+      "predecessor_types": [
+        "ORIGINAL",
+        "CORRECTION",
+        "REPLACEMENT"
+      ]
+    }
+  },
+  "canonical_render_order": [
+    "jurisdiction_id",
+    "pay_event_id",
+    "relationship",
+    "predecessor_artifact_sha256",
+    "employee_count",
+    "assessable_total",
+    "tax_total",
+    "contribution_total"
+  ],
+  "reconciliation": "Rendered totals must equal exact approved result totals; mismatch DENY.",
+  "authority_submission_allowed": false
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "notrinos.synthetic.bank-files.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "renderer": "bank-files.renderer.v1",
+  "supported_layouts": [],
+  "payment_execution_allowed": false,
+  "unknown_layout_action": "DENY"
+}

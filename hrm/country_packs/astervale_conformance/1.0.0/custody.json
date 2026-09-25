@@ -1,0 +1,19 @@
+{
+  "schema": "notrinos.synthetic.custody.v1",
+  "pack_id": "org.notrinos.conformance.astervale",
+  "pack_version": "1.0.0",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "semantic_root": "4996a93803599459df37958674873402e001d4cd0afeba561d6a7760066c7a62",
+  "evidence_root": "415473aca56b34a879910431c0d40b0c28e6cc85e81765a2bdb547a2aa0a8adf",
+  "capability_registry_version": "pay-ctry-capabilities-v2",
+  "source_database_version": "1.0.820",
+  "certification_ceiling": "TechnicallyValidated",
+  "production_activation_allowed": false,
+  "marketplace_publication_allowed": false,
+  "artifact_count": 19,
+  "recovery": "Restore paired predecessor backup; no selective historical artifact rewrite."
+}

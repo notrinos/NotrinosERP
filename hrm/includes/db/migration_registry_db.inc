@@ -11,16 +11,24 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.816',
+        'active_database_version'=>'1.0.820',
         'active_legacy_payroll_contract'=>'1.0.458',
-        'next_backlog_item'=>'PAY-CTRY-006',
+        'next_backlog_item'=>'PAY-CTRY-007',
         'next_slice_changed_files'=>array(
-            'hrm/country_packs/vn_reference/1.0.0/package-candidate.json',
-            'hrm/country_packs/vn_reference/1.0.0/custody.json',
-            'hrm/includes/db/pay_ctry_005_readiness_db.inc',
-            'sql/upgrade_pay_ctry_005_vn_3_completion.php'),
-        'next_slice_scope'=>'PAY-CTRY-005 Vietnam reference-pack engineering source is complete at head 1.0.816 as an unsigned/unpublished declarative source candidate. Genuine publisher signing, independent Vietnamese payroll/legal review, parallel-payroll evidence and PAY-CTRY-004 scoped certification remain unseeded and mandatory before legal certification/publication. PAY-CTRY-006 structurally different proof pack is the strict next backlog item.',
+            'hrm/country_packs/astervale_conformance/1.0.0/package-candidate.json',
+            'hrm/country_packs/astervale_conformance/1.0.0/custody.json',
+            'hrm/includes/db/pay_ctry_006_readiness_db.inc',
+            'sql/upgrade_pay_ctry_006_proof_3_portability_completion.php'),
+        'next_slice_scope'=>'PAY-CTRY-006 synthetic structural proof is complete at head 1.0.820 with the Aster Vale conformance pack capped at TechnicallyValidated and denied production/marketplace legal coverage. Vietnam PAY-CTRY-005 custody remains byte-exact. PAY-CTRY-007 signed pack and regulatory update notifications is the strict next backlog item.',
         'edges'=>array(
+            'pay_ctry_006_proof_0_identity_custody'=>array('previous'=>'1.0.816','version'=>'1.0.817',
+                'file'=>'sql/upgrade_pay_ctry_006_proof_0_identity_custody.php'),
+            'pay_ctry_006_proof_1_calendar_calculation'=>array('previous'=>'1.0.817','version'=>'1.0.818',
+                'file'=>'sql/upgrade_pay_ctry_006_proof_1_calendar_calculation.php'),
+            'pay_ctry_006_proof_2_filing_lifecycle'=>array('previous'=>'1.0.818','version'=>'1.0.819',
+                'file'=>'sql/upgrade_pay_ctry_006_proof_2_filing_lifecycle.php'),
+            'pay_ctry_006_proof_3_portability_completion'=>array('previous'=>'1.0.819','version'=>'1.0.820',
+                'file'=>'sql/upgrade_pay_ctry_006_proof_3_portability_completion.php'),
             'pay_ctry_005_vn_0_authority_coverage'=>array('previous'=>'1.0.812','version'=>'1.0.813',
                 'file'=>'sql/upgrade_pay_ctry_005_vn_0_authority_coverage.php'),
             'pay_ctry_005_vn_1_calculation_explanation'=>array('previous'=>'1.0.813','version'=>'1.0.814',

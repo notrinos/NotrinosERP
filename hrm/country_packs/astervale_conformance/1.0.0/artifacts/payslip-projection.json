@@ -1,0 +1,23 @@
+{
+  "schema": "notrinos.synthetic.payslip-projection.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "renderer": "payslips.projection.v1",
+  "fields": [
+    "pay_event_id",
+    "period_label",
+    "gross",
+    "fictional_tax",
+    "fictional_region_contribution",
+    "net"
+  ],
+  "forbidden_fields": [
+    "bank_account",
+    "national_identifier",
+    "evidence_payload"
+  ],
+  "deterministic_order": true
+}

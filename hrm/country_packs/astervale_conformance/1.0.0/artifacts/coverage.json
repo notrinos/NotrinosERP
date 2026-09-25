@@ -1,0 +1,40 @@
+{
+  "schema": "notrinos.synthetic.coverage.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "jurisdiction_id": "AVX-FICTIONAL",
+  "included": [
+    "fictional weekly payroll calculation semantics",
+    "non-calendar legal year",
+    "cumulative and non-cumulative withholding modes",
+    "region-selected contribution",
+    "event-triggered filing intent",
+    "hire/leaver/retro/correction structural scenarios"
+  ],
+  "explicit_exclusions": [
+    "real-country law",
+    "real statutory rates",
+    "government submission",
+    "bank/payment execution",
+    "production payroll activation",
+    "marketplace legal coverage"
+  ],
+  "population_rules": {
+    "supported_worker_classes": [
+      "ORBIT",
+      "COMET"
+    ],
+    "supported_regions": [
+      "RIVER",
+      "MESA"
+    ],
+    "unsupported_population_action": "DENY",
+    "nearest_rule_fallback": false
+  },
+  "fail_closed_policy": "Missing, ambiguous, excluded or unsupported classifications are denied; never select a nearest rule.",
+  "production_activation_allowed": false,
+  "marketplace_publication_allowed": false
+}

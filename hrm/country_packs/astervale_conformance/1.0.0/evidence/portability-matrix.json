@@ -1,0 +1,72 @@
+{
+  "schema": "notrinos.synthetic.portability-matrix.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "dimensions": [
+    {
+      "id": "non-calendar-year",
+      "proof": "17 March–16 March"
+    },
+    {
+      "id": "non-monthly-frequency",
+      "proof": "weekly"
+    },
+    {
+      "id": "extra-period",
+      "proof": "period 53 anomaly days"
+    },
+    {
+      "id": "cumulative-state",
+      "proof": "prior assessable/YTD withheld facts"
+    },
+    {
+      "id": "period-local",
+      "proof": "period-only mode"
+    },
+    {
+      "id": "mid-period-change",
+      "proof": "explicit pre/post split"
+    },
+    {
+      "id": "independent-classifications",
+      "proof": "worker tax class + region contribution class"
+    },
+    {
+      "id": "event-filing",
+      "proof": "pay-event trigger"
+    },
+    {
+      "id": "filing-lineage",
+      "proof": "original/correction/replacement"
+    },
+    {
+      "id": "lifecycle",
+      "proof": "hire/leaver/retro/correction"
+    },
+    {
+      "id": "fail-closed",
+      "proof": "missing/ambiguous/excluded denial"
+    },
+    {
+      "id": "rounding",
+      "proof": "0.05 half-up"
+    },
+    {
+      "id": "reproducibility",
+      "proof": "canonical render and semantic/evidence roots"
+    }
+  ],
+  "shared_with_vietnam": [
+    "pay-ctry-capabilities-v2",
+    "PAY-CTRY-001 trust model",
+    "PAY-CTRY-002 lifecycle boundary",
+    "PAY-CTRY-003 host adapters",
+    "PAY-CTRY-004 certification gates",
+    "FormulaFacade payroll-pack profile",
+    "semantic-root-v1",
+    "evidence-root-v1"
+  ]
+}

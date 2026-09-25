@@ -1,0 +1,30 @@
+{
+  "schema": "notrinos.synthetic.metadata.v1",
+  "pack_id": "org.notrinos.conformance.astervale",
+  "pack_version": "1.0.0",
+  "jurisdiction_id": "AVX-FICTIONAL",
+  "display_name": "Aster Vale Structural Conformance Pack",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "synthetic": true,
+  "conformance_only": true,
+  "production": false,
+  "legal_coverage_claim": false,
+  "marketplace_eligible": false,
+  "purpose": "Jurisdiction-neutral architecture proof only. All names, identifiers, rates, thresholds, dates and values are fictional engineering data.",
+  "certification_ceiling": "TechnicallyValidated",
+  "capability_registry_version": "pay-ctry-capabilities-v2",
+  "formula_profile": "payroll-pack",
+  "evidence_root_algorithm": "evidence-root-v1",
+  "prohibitions": [
+    "production activation",
+    "legal compliance claim",
+    "marketplace publication as country coverage",
+    "authority submission",
+    "payment execution",
+    "arbitrary executable code"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "notrinos.synthetic.rates.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "fictional_engineering_values": true,
+  "tax_dimension": {
+    "selector": "worker.tax_class",
+    "versions": {
+      "AVX-RULESET-A": {
+        "ORBIT": "7.25",
+        "COMET": "11.50"
+      },
+      "AVX-RULESET-B": {
+        "ORBIT": "7.75",
+        "COMET": "12.00"
+      }
+    }
+  },
+  "contribution_dimension": {
+    "selector": "worker.region_class",
+    "versions": {
+      "AVX-RULESET-A": {
+        "RIVER": "2.10",
+        "MESA": "3.35"
+      },
+      "AVX-RULESET-B": {
+        "RIVER": "2.25",
+        "MESA": "3.50"
+      }
+    }
+  },
+  "dimensions_independent": true,
+  "currency": "QNT",
+  "decimal_places": 2,
+  "rounding_increment": "0.05",
+  "rounding_mode": "half-up"
+}

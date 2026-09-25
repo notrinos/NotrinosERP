@@ -1,0 +1,759 @@
+{
+  "schema": "notrinos.synthetic.conformance-fixtures.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "all_values_fictional_engineering_data": true,
+  "fixtures": [
+    {
+      "id": "legal-year-start",
+      "kind": "calendar",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "date": "2027-03-17"
+      },
+      "expected": {
+        "legal_year": "AVY-2027",
+        "period": 1
+      }
+    },
+    {
+      "id": "legal-year-end",
+      "kind": "calendar",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "date": "2028-03-16"
+      },
+      "expected": {
+        "legal_year": "AVY-2027",
+        "period": 53
+      }
+    },
+    {
+      "id": "period-two-start",
+      "kind": "calendar",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "date": "2027-03-24"
+      },
+      "expected": {
+        "legal_year": "AVY-2027",
+        "period": 2
+      }
+    },
+    {
+      "id": "period-52-start",
+      "kind": "calendar",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "date": "2028-03-08"
+      },
+      "expected": {
+        "legal_year": "AVY-2027",
+        "period": 52
+      }
+    },
+    {
+      "id": "period-53-start",
+      "kind": "calendar",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "date": "2028-03-15"
+      },
+      "expected": {
+        "legal_year": "AVY-2027",
+        "period": 53
+      }
+    },
+    {
+      "id": "period-local-orbit-river",
+      "kind": "period-local-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "1234.56",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "PERIOD_LOCAL"
+      },
+      "expected": {
+        "tax": "89.50",
+        "region_contribution": "25.95",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "period-local-comet-mesa",
+      "kind": "period-local-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "9876.54",
+        "worker_tax_class": "COMET",
+        "region_class": "MESA",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "PERIOD_LOCAL"
+      },
+      "expected": {
+        "tax": "1135.80",
+        "region_contribution": "330.85",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "post-change-orbit-river",
+      "kind": "period-local-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "2500.03",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-B",
+        "mode": "PERIOD_LOCAL"
+      },
+      "expected": {
+        "tax": "193.75",
+        "region_contribution": "56.25",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "rounding-low-boundary",
+      "kind": "period-local-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "10.01",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "PERIOD_LOCAL"
+      },
+      "expected": {
+        "tax": "0.75",
+        "region_contribution": "0.20",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "rounding-half-boundary",
+      "kind": "period-local-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "10.00",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "PERIOD_LOCAL"
+      },
+      "expected": {
+        "tax": "0.75",
+        "region_contribution": "0.20",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "cumulative-with-prior",
+      "kind": "cumulative-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "1500.00",
+        "prior_assessable_ytd": "9000.00",
+        "prior_withheld_ytd": "652.50",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "CUMULATIVE"
+      },
+      "expected": {
+        "cumulative_tax_liability": "761.25",
+        "period_tax": "108.75",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "cumulative-comet",
+      "kind": "cumulative-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "2200.00",
+        "prior_assessable_ytd": "12000.00",
+        "prior_withheld_ytd": "1380.00",
+        "worker_tax_class": "COMET",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-A",
+        "mode": "CUMULATIVE"
+      },
+      "expected": {
+        "cumulative_tax_liability": "1633.00",
+        "period_tax": "253.00",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "cumulative-post-change",
+      "kind": "cumulative-calculation",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_assessable": "1800.00",
+        "prior_assessable_ytd": "7000.00",
+        "prior_withheld_ytd": "542.50",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER",
+        "ruleset": "AVX-RULESET-B",
+        "mode": "CUMULATIVE"
+      },
+      "expected": {
+        "cumulative_tax_liability": "682.00",
+        "period_tax": "139.50",
+        "currency": "QNT"
+      }
+    },
+    {
+      "id": "mid-period-effective-change",
+      "kind": "mid-period-change",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_start": "2027-10-20",
+        "period_end": "2027-10-26",
+        "change_date": "2027-10-23",
+        "assessable_before_change": "400.00",
+        "assessable_after_change": "600.00",
+        "worker_tax_class": "ORBIT",
+        "region_class": "RIVER"
+      },
+      "expected": {
+        "tax": "75.50",
+        "region_contribution": "21.90",
+        "rule_sequence": [
+          "AVX-RULESET-A",
+          "AVX-RULESET-B"
+        ]
+      }
+    },
+    {
+      "id": "lifecycle-hire",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "HIRE",
+        "pay_event_id": "AVX-EVT-HIRE",
+        "predecessor_required": false
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "lifecycle-leaver",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "LEAVER",
+        "pay_event_id": "AVX-EVT-LEAVER",
+        "predecessor_required": false
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "lifecycle-retro",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "RETRO",
+        "pay_event_id": "AVX-EVT-RETRO",
+        "predecessor_required": false
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "lifecycle-correction",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "CORRECTION",
+        "pay_event_id": "AVX-EVT-CORRECTION",
+        "predecessor_required": true
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "lifecycle-reversal",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "REVERSAL",
+        "pay_event_id": "AVX-EVT-REVERSAL",
+        "predecessor_required": true
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "lifecycle-off-cycle",
+      "kind": "lifecycle",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "event": "OFF_CYCLE",
+        "pay_event_id": "AVX-EVT-OFF_CYCLE",
+        "predecessor_required": false
+      },
+      "expected": {
+        "accepted_structural_event": true,
+        "historical_rewrite": false
+      }
+    },
+    {
+      "id": "filing-original",
+      "kind": "filing",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "relationship": "ORIGINAL",
+        "pay_event_id": "AVX-PAY-001",
+        "employee_count": 2,
+        "assessable_total": "3000.00",
+        "tax_total": "217.50",
+        "contribution_total": "63.00"
+      },
+      "expected": {
+        "predecessor_required": false,
+        "canonical_sha256": "computed-by-test",
+        "reconciles": true
+      }
+    },
+    {
+      "id": "filing-correction",
+      "kind": "filing",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "relationship": "CORRECTION",
+        "pay_event_id": "AVX-PAY-001-C1",
+        "predecessor": "AVX-PAY-001",
+        "employee_count": 2,
+        "assessable_total": "3010.00",
+        "tax_total": "218.25",
+        "contribution_total": "63.20"
+      },
+      "expected": {
+        "predecessor_required": true,
+        "reconciles": true
+      }
+    },
+    {
+      "id": "filing-replacement",
+      "kind": "filing",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "relationship": "REPLACEMENT",
+        "pay_event_id": "AVX-PAY-001-R1",
+        "predecessor": "AVX-PAY-001-C1",
+        "employee_count": 2,
+        "assessable_total": "3010.00",
+        "tax_total": "218.25",
+        "contribution_total": "63.20"
+      },
+      "expected": {
+        "predecessor_required": true,
+        "reconciles": true
+      }
+    },
+    {
+      "id": "deterministic-render-a",
+      "kind": "render",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "jurisdiction_id": "AVX-FICTIONAL",
+        "pay_event_id": "AVX-PAY-DET",
+        "relationship": "ORIGINAL",
+        "predecessor_artifact_sha256": null,
+        "employee_count": 1,
+        "assessable_total": "1234.56",
+        "tax_total": "89.50",
+        "contribution_total": "25.95"
+      },
+      "expected": {
+        "canonical": "{\"assessable_total\":\"1234.56\",\"contribution_total\":\"25.95\",\"employee_count\":1,\"jurisdiction_id\":\"AVX-FICTIONAL\",\"pay_event_id\":\"AVX-PAY-DET\",\"predecessor_artifact_sha256\":null,\"relationship\":\"ORIGINAL\",\"tax_total\":\"89.50\"}",
+        "sha256": "57d79932e8b24ea3e923d65bc4007ea124f6d97a652c724538033eb708a8e8d4"
+      }
+    },
+    {
+      "id": "deterministic-render-b",
+      "kind": "render",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "contribution_total": "25.95",
+        "tax_total": "89.50",
+        "assessable_total": "1234.56",
+        "employee_count": 1,
+        "predecessor_artifact_sha256": null,
+        "relationship": "ORIGINAL",
+        "pay_event_id": "AVX-PAY-DET",
+        "jurisdiction_id": "AVX-FICTIONAL"
+      },
+      "expected": {
+        "canonical": "{\"assessable_total\":\"1234.56\",\"contribution_total\":\"25.95\",\"employee_count\":1,\"jurisdiction_id\":\"AVX-FICTIONAL\",\"pay_event_id\":\"AVX-PAY-DET\",\"predecessor_artifact_sha256\":null,\"relationship\":\"ORIGINAL\",\"tax_total\":\"89.50\"}",
+        "sha256": "57d79932e8b24ea3e923d65bc4007ea124f6d97a652c724538033eb708a8e8d4"
+      }
+    },
+    {
+      "id": "historical-reproduction-after-later-rule",
+      "kind": "historical-replay",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "pay_event_date": "2027-06-02",
+        "pinned_ruleset": "AVX-RULESET-A",
+        "later_ruleset_exists": "AVX-RULESET-B",
+        "period_assessable": "1000.00",
+        "worker_tax_class": "ORBIT"
+      },
+      "expected": {
+        "tax": "72.50",
+        "uses_ruleset": "AVX-RULESET-A"
+      }
+    },
+    {
+      "id": "missing-worker-class",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": null,
+        "region_class": "RIVER"
+      },
+      "expected_denial": "MISSING_WORKER_TAX_CLASS"
+    },
+    {
+      "id": "ambiguous-worker-class",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": [
+          "ORBIT",
+          "COMET"
+        ],
+        "region_class": "RIVER"
+      },
+      "expected_denial": "AMBIGUOUS_WORKER_TAX_CLASS"
+    },
+    {
+      "id": "missing-region",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": "ORBIT",
+        "region_class": null
+      },
+      "expected_denial": "MISSING_REGION_CLASS"
+    },
+    {
+      "id": "ambiguous-region",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": "ORBIT",
+        "region_class": [
+          "RIVER",
+          "MESA"
+        ]
+      },
+      "expected_denial": "AMBIGUOUS_REGION_CLASS"
+    },
+    {
+      "id": "unsupported-worker-class",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": "NOVA",
+        "region_class": "RIVER"
+      },
+      "expected_denial": "UNSUPPORTED_WORKER_TAX_CLASS"
+    },
+    {
+      "id": "unsupported-region",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "worker_tax_class": "ORBIT",
+        "region_class": "DELTA"
+      },
+      "expected_denial": "UNSUPPORTED_REGION_CLASS"
+    },
+    {
+      "id": "unsupported-population",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "population": "REAL_COUNTRY_LEGAL"
+      },
+      "expected_denial": "COVERAGE_EXCLUDED"
+    },
+    {
+      "id": "cumulative-missing-prior-assessable",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "mode": "CUMULATIVE",
+        "prior_assessable_ytd": null,
+        "prior_withheld_ytd": "0.00"
+      },
+      "expected_denial": "PRIOR_STATE_REQUIRED"
+    },
+    {
+      "id": "cumulative-missing-prior-withheld",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "mode": "CUMULATIVE",
+        "prior_assessable_ytd": "0.00",
+        "prior_withheld_ytd": null
+      },
+      "expected_denial": "PRIOR_STATE_REQUIRED"
+    },
+    {
+      "id": "mid-period-missing-split",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "period_start": "2027-10-20",
+        "period_end": "2027-10-26",
+        "period_assessable": "1000.00"
+      },
+      "expected_denial": "MID_PERIOD_SPLIT_REQUIRED"
+    },
+    {
+      "id": "filing-correction-missing-predecessor",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "relationship": "CORRECTION",
+        "predecessor": null
+      },
+      "expected_denial": "FILING_PREDECESSOR_REQUIRED"
+    },
+    {
+      "id": "filing-replacement-missing-predecessor",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "relationship": "REPLACEMENT",
+        "predecessor": null
+      },
+      "expected_denial": "FILING_PREDECESSOR_REQUIRED"
+    },
+    {
+      "id": "unknown-bank-layout",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "layout": "AVX-BANK-999"
+      },
+      "expected_denial": "UNSUPPORTED_LAYOUT"
+    },
+    {
+      "id": "production-activation-denied",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "scope": "production"
+      },
+      "expected_denial": "SYNTHETIC_PRODUCTION_DENIED"
+    },
+    {
+      "id": "marketplace-publication-denied",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "claim": "legal-country-coverage"
+      },
+      "expected_denial": "SYNTHETIC_MARKETPLACE_DENIED"
+    },
+    {
+      "id": "certification-above-ceiling-denied",
+      "kind": "negative",
+      "labels": [
+        "synthetic",
+        "conformance-only",
+        "not production"
+      ],
+      "input": {
+        "requested_state": "PayrollExpertReviewed"
+      },
+      "expected_denial": "CERTIFICATION_CEILING_EXCEEDED"
+    }
+  ]
+}

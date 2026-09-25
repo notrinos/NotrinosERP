@@ -1,0 +1,159 @@
+{
+  "schema": "notrinos.synthetic.package-candidate.v1",
+  "manifest_version_target": "pay-ctry-manifest-v1",
+  "pack": {
+    "id": "org.notrinos.conformance.astervale",
+    "version": "1.0.0",
+    "publisher_id": "notrinos-conformance-only"
+  },
+  "host": {
+    "min_db_version": "1.0.820"
+  },
+  "capability_registry_version": "pay-ctry-capabilities-v2",
+  "artifacts": [
+    {
+      "path": "artifacts/balances.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "d18391bafc75b4517609adfb3d50e0bcd619c94d8da236828e80df32103009a6",
+      "bytes": 662
+    },
+    {
+      "path": "artifacts/bank-files.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "53b0d023b2226d2f599432ecfadad79305dc64d6bbb26990ad49e3d0689a70a2",
+      "bytes": 272
+    },
+    {
+      "path": "artifacts/calendar.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "8b86db1d7d8c1496393dfb86068e020e73ae4f3d3da08bc2ca5de7c23ff02d4d",
+      "bytes": 883
+    },
+    {
+      "path": "artifacts/capability-map.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "645190dfe4b2b5b8fd16789e7c871913cf576eec9a12588b68262ce2237e70cb",
+      "bytes": 3923
+    },
+    {
+      "path": "artifacts/coverage.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "d61363cfcaeebde5dbfde69f7fe3f9c52ca1c7c3e75064faa105cf647b4e258b",
+      "bytes": 1126
+    },
+    {
+      "path": "artifacts/en-avx.xlf",
+      "type": "translation-xliff",
+      "media_type": "application/xliff+xml",
+      "sha256": "ca2ed588ec63941ca7fa800423ccc69461f0dddee57ddce1b81575fa745c6fc0",
+      "bytes": 378
+    },
+    {
+      "path": "artifacts/filings.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "aa795057e9723bdc5ea0909649f91a202f1dec2dcef792971034b9ac1811fc20",
+      "bytes": 1086
+    },
+    {
+      "path": "artifacts/metadata.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "dda3fbc8ad42b502bbe86ce61da1802b1456c8679231fe8942a6bbddbaf9c943",
+      "bytes": 1016
+    },
+    {
+      "path": "artifacts/migration-review.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "10f7ecb9ebff843379e09eaa9a90e47b09dcc9e17ea1cc09395ac25f16d90996",
+      "bytes": 272
+    },
+    {
+      "path": "artifacts/payslip-projection.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "e4b1c92b73ce037465223ee9b748ce0f86e5693d7a3f4eb3d5aa58a49ca66f3e",
+      "bytes": 450
+    },
+    {
+      "path": "artifacts/rates.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "fb0e30c028e7b14bc48481d798c9cfd3ad84d70e536b37426ae70bbbf1acce30",
+      "bytes": 821
+    },
+    {
+      "path": "artifacts/rules.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "5274eb043fba0c6257184b23a4bcd46f7b799410602663f71f66d500a4141853",
+      "bytes": 1305
+    },
+    {
+      "path": "artifacts/structural-comparison.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "b41cd53819d6156164ebb267dcf0639192b55a03663748189f271e38ed19658b",
+      "bytes": 1710
+    },
+    {
+      "path": "artifacts/validators.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "4580a620e3b9dcbd8226520a3c42fd48a8e1db386fa624aa517445f5e0f55478",
+      "bytes": 1290
+    },
+    {
+      "path": "artifacts/variables.json",
+      "type": "declarative-json",
+      "media_type": "application/json",
+      "sha256": "f2dccaa31bb76a51e6a1dff8bbab1f5e8ad232a08e79283bc6907bc34f11a756",
+      "bytes": 1525
+    },
+    {
+      "path": "evidence/certification-state.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "7ed5a96a3efe192ce42a2262ce71fdc343c938b8508aa1796267fecc9488b008",
+      "bytes": 753
+    },
+    {
+      "path": "evidence/conformance-fixtures.json",
+      "type": "test-fixture-json",
+      "media_type": "application/json",
+      "sha256": "00b94405ffc8623a95defa0b82c1ae5231621f9f6c0a87d1fe05a8ac4d251aeb",
+      "bytes": 18568
+    },
+    {
+      "path": "evidence/portability-matrix.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "64e4c1ffaf874cdb1b29325b0edc5bd548f3498c3a2f172f29e5293c358228f1",
+      "bytes": 1592
+    },
+    {
+      "path": "evidence/source-register.json",
+      "type": "evidence-json",
+      "media_type": "application/json",
+      "sha256": "9b096a27dc46709ecfb8573ef8240be98f463edd59287e8765118224e1f872c8",
+      "bytes": 1121
+    }
+  ],
+  "semantic_root": "4996a93803599459df37958674873402e001d4cd0afeba561d6a7760066c7a62",
+  "evidence_root": "415473aca56b34a879910431c0d40b0c28e6cc85e81765a2bdb547a2aa0a8adf",
+  "signing": {
+    "state": "not-signed-conformance-only",
+    "algorithm": "rsa-sha256",
+    "signature_base64": null,
+    "signed_at": null,
+    "key_id": null
+  },
+  "installability": "DENIED for production. Synthetic conformance-only source may be inspected and technically validated but never activated as legal payroll coverage.",
+  "certification": "TechnicallyValidated ceiling; Certified/Published are forbidden for this synthetic proof pack."
+}

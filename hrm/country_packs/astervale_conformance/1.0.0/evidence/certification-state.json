@@ -1,0 +1,22 @@
+{
+  "schema": "notrinos.synthetic.certification-state.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "current_state": "TechnicallyValidated",
+  "maximum_state": "TechnicallyValidated",
+  "technical_validation": {
+    "basis": "repository conformance suite and deterministic source roots",
+    "external_reviewer_signature": false
+  },
+  "pay_ctry_004_record_state": "not-created",
+  "payroll_expert_review": "not-applicable-for-synthetic-proof",
+  "legal_review": "not-applicable-for-synthetic-proof",
+  "parallel_run_evidence": "not-required-for-synthetic-architecture-proof",
+  "certified": false,
+  "published": false,
+  "production_activation_allowed": false,
+  "marketplace_legal_coverage_allowed": false
+}

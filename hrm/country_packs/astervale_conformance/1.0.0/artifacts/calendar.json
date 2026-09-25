@@ -1,0 +1,33 @@
+{
+  "schema": "notrinos.synthetic.calendar.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "legal_year": {
+    "start_month_day": "03-17",
+    "end_month_day": "03-16",
+    "calendar_year_based": false,
+    "period_frequency": "weekly",
+    "period_length_days": 7,
+    "period_1_anchor": "legal-year-start",
+    "normal_period_count": 52,
+    "extra_period_rule": "Days after the first 364 days are period 53; no month mapping is used.",
+    "example_year": {
+      "id": "AVY-2027",
+      "start": "2027-03-17",
+      "end": "2028-03-16",
+      "days": 366,
+      "extra_period": 53,
+      "extra_period_days": 2
+    }
+  },
+  "mid_period_change": {
+    "effective_date": "2027-10-23",
+    "affected_week_start": "2027-10-20",
+    "affected_week_end": "2027-10-26",
+    "split_fact_required": true
+  },
+  "calendar_month_assumption": false
+}

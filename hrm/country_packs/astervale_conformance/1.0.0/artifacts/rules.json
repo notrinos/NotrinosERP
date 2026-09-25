@@ -1,0 +1,47 @@
+{
+  "schema": "notrinos.synthetic.rules.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "rounding_profile": "ROUND-005-HALF-UP",
+  "rule_sets": [
+    {
+      "id": "AVX-RULESET-A",
+      "effective_from": "2027-03-17",
+      "effective_to": "2027-10-22",
+      "tax_rates_bps_by_worker_class": {
+        "ORBIT": 725,
+        "COMET": 1150
+      },
+      "region_contribution_bps": {
+        "RIVER": 210,
+        "MESA": 335
+      }
+    },
+    {
+      "id": "AVX-RULESET-B",
+      "effective_from": "2027-10-23",
+      "effective_to": null,
+      "tax_rates_bps_by_worker_class": {
+        "ORBIT": 775,
+        "COMET": 1200
+      },
+      "region_contribution_bps": {
+        "RIVER": 225,
+        "MESA": 350
+      }
+    }
+  ],
+  "cumulative_semantics": {
+    "tax": "round_increment(cumulative_assessable * class_rate) - prior_withheld_ytd",
+    "prior_state_required": true
+  },
+  "period_local_semantics": {
+    "tax": "round_increment(period_assessable * class_rate)",
+    "prior_state_ignored": true
+  },
+  "mid_period_transition": "Caller must provide explicit pre/post effective assessable split. Implicit daily or monthly proration is denied.",
+  "historical_reproduction": "Pinned ruleset and roots control replay even after a later ruleset exists."
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "notrinos.synthetic.balances.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "balances": [
+    {
+      "id": "AVX.ASSESSABLE.YTD",
+      "mode": "cumulative",
+      "reset": "legal-year-start"
+    },
+    {
+      "id": "AVX.TAX.WITHHELD.YTD",
+      "mode": "cumulative",
+      "reset": "legal-year-start"
+    },
+    {
+      "id": "AVX.REGION.CONTRIB.PERIOD",
+      "mode": "period-local",
+      "reset": "each-pay-event"
+    }
+  ],
+  "prior_state_contract": {
+    "required": [
+      "AVX.ASSESSABLE.YTD",
+      "AVX.TAX.WITHHELD.YTD"
+    ],
+    "missing_action": "DENY"
+  },
+  "calendar_year_reset": false
+}

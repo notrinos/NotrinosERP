@@ -1,0 +1,141 @@
+{
+  "schema": "notrinos.synthetic.capability-map.v1",
+  "registry_version": "pay-ctry-capabilities-v2",
+  "claims": [
+    {
+      "capability_code": "jurisdiction.metadata",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "core.metadata.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/metadata.json",
+        "artifacts/coverage.json",
+        "artifacts/calendar.json",
+        "artifacts/structural-comparison.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.variables",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "formula.variables.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/variables.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.rules",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "rules.declarative.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/rules.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.decisions_rates",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "decisions.rates.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/rates.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.balances",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "balances.ledger.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/balances.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.validators",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "validators.declarative.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/validators.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.payslips",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "payslips.projection.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/payslip-projection.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.filings",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "filings.declarative.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/filings.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.bank_files",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "bank-files.renderer.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/bank-files.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.translations",
+      "artifact_type": "translation-xliff",
+      "media_type": "application/xliff+xml",
+      "host_adapter": "translations.xliff.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/en-avx.xlf"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.migrations",
+      "artifact_type": "declarative-json",
+      "media_type": "application/json",
+      "host_adapter": "migrations.review.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "artifacts/migration-review.json"
+      ]
+    },
+    {
+      "capability_code": "jurisdiction.tests",
+      "artifact_type": "test-fixture-json",
+      "media_type": "application/json",
+      "host_adapter": "tests.conformance.v1",
+      "host_version": "1.0",
+      "ordinal_no": 1,
+      "paths": [
+        "evidence/conformance-fixtures.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "notrinos.synthetic.source-register.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "sources": [
+    {
+      "source_id": "SYNTH-AVX-CALENDAR-001",
+      "kind": "fictional-engineering-definition",
+      "authority": false,
+      "description": "Invented 17 March legal-year and weekly period model for portability tests.",
+      "sha256": "ffe20e0d6c194fe2bb3a6ae95b19d14680527743016ddb35dff00c8592cfaeed"
+    },
+    {
+      "source_id": "SYNTH-AVX-RATES-001",
+      "kind": "fictional-engineering-definition",
+      "authority": false,
+      "description": "Invented worker-class and region rate tables.",
+      "sha256": "e6bf8e7498c1dcaa7668062c9cf216f20c539cc8085bbf2cd4c2147ef5c0d1ed"
+    },
+    {
+      "source_id": "SYNTH-AVX-FILING-001",
+      "kind": "fictional-engineering-definition",
+      "authority": false,
+      "description": "Invented pay-event notice relationships.",
+      "sha256": "e29629c0b7ebc50e5bbaad288c230cb070f2bd18e4fba42bbd2374750d787ec5"
+    }
+  ],
+  "real_world_source_material_used": false,
+  "publisher_signature_present": false
+}

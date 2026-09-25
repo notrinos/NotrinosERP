@@ -1,0 +1,62 @@
+{
+  "schema": "notrinos.synthetic.validators.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "validators": [
+    {
+      "id": "worker-class-required",
+      "field": "worker.tax_class",
+      "allowed": [
+        "ORBIT",
+        "COMET"
+      ],
+      "missing": "DENY",
+      "ambiguous": "DENY",
+      "unknown": "DENY"
+    },
+    {
+      "id": "region-required",
+      "field": "worker.region_class",
+      "allowed": [
+        "RIVER",
+        "MESA"
+      ],
+      "missing": "DENY",
+      "ambiguous": "DENY",
+      "unknown": "DENY"
+    },
+    {
+      "id": "coverage-exclusion",
+      "field": "population.coverage",
+      "excluded": [
+        "REAL_COUNTRY_LEGAL",
+        "OUTSIDE_DECLARED_POPULATION"
+      ],
+      "on_match": "DENY"
+    },
+    {
+      "id": "prior-state-cumulative",
+      "when": {
+        "calculation.mode": "CUMULATIVE"
+      },
+      "required": [
+        "prior_state.assessable_ytd",
+        "prior_state.withheld_ytd"
+      ],
+      "missing": "DENY"
+    },
+    {
+      "id": "mid-period-split",
+      "when_period_contains": "2027-10-23",
+      "required": [
+        "assessable_before_change",
+        "assessable_after_change"
+      ],
+      "missing": "DENY"
+    }
+  ],
+  "nearest_rule_fallback": false
+}

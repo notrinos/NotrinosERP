@@ -1,0 +1,86 @@
+{
+  "schema": "notrinos.synthetic.variables.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "variables": [
+    {
+      "id": "period.assessable_pay",
+      "type": "decimal-2",
+      "required": true
+    },
+    {
+      "id": "prior_state.assessable_ytd",
+      "type": "decimal-2",
+      "required_for": [
+        "CUMULATIVE"
+      ]
+    },
+    {
+      "id": "prior_state.withheld_ytd",
+      "type": "decimal-2",
+      "required_for": [
+        "CUMULATIVE"
+      ]
+    },
+    {
+      "id": "worker.tax_class",
+      "type": "enum",
+      "values": [
+        "ORBIT",
+        "COMET"
+      ],
+      "required": true
+    },
+    {
+      "id": "worker.region_class",
+      "type": "enum",
+      "values": [
+        "RIVER",
+        "MESA"
+      ],
+      "required": true
+    },
+    {
+      "id": "calculation.mode",
+      "type": "enum",
+      "values": [
+        "CUMULATIVE",
+        "PERIOD_LOCAL"
+      ],
+      "required": true
+    },
+    {
+      "id": "employment.event",
+      "type": "enum",
+      "values": [
+        "NONE",
+        "HIRE",
+        "LEAVER",
+        "RETRO",
+        "CORRECTION",
+        "REVERSAL",
+        "OFF_CYCLE"
+      ],
+      "required": true
+    },
+    {
+      "id": "period.start",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "period.end",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "pay.event_date",
+      "type": "date",
+      "required": true
+    }
+  ],
+  "unknown_variable_action": "DENY"
+}

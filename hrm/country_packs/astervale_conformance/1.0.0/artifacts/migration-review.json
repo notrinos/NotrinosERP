@@ -1,0 +1,12 @@
+{
+  "schema": "notrinos.synthetic.migration-review.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "legacy_mapping": [],
+  "automatic_conversion_allowed": false,
+  "historical_result_rewrite_allowed": false,
+  "review_only": true
+}

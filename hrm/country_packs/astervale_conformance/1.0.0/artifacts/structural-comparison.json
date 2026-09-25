@@ -1,0 +1,54 @@
+{
+  "schema": "notrinos.synthetic.structural-comparison.v1",
+  "labels": [
+    "synthetic",
+    "conformance-only",
+    "not production"
+  ],
+  "reference_pack": "org.notrinos.payroll.vn.base@1.0.0",
+  "proof_pack": "org.notrinos.conformance.astervale@1.0.0",
+  "same_contracts": {
+    "capability_registry": "pay-ctry-capabilities-v2",
+    "trust": "PAY-CTRY-001",
+    "lifecycle": "PAY-CTRY-002",
+    "host_adapters": "PAY-CTRY-003",
+    "certification": "PAY-CTRY-004",
+    "formula_profile": "payroll-pack",
+    "evidence_root": "evidence-root-v1"
+  },
+  "contrasts": [
+    {
+      "dimension": "legal-year",
+      "vietnam_shape": "calendar/effective-date",
+      "synthetic_shape": "17 March to 16 March"
+    },
+    {
+      "dimension": "frequency",
+      "vietnam_shape": "monthly-focused fixtures",
+      "synthetic_shape": "weekly with period 53 anomaly"
+    },
+    {
+      "dimension": "calculation-state",
+      "vietnam_shape": "resident PIT/contribution fixtures",
+      "synthetic_shape": "explicit cumulative and period-local modes"
+    },
+    {
+      "dimension": "classification",
+      "vietnam_shape": "residency/region/contribution classes",
+      "synthetic_shape": "independent worker tax class and region contribution class"
+    },
+    {
+      "dimension": "filing",
+      "vietnam_shape": "obligation boundary with official submission denied",
+      "synthetic_shape": "pay-event-triggered original/correction/replacement canonical notices"
+    }
+  ],
+  "forbidden_shortcuts_absent": [
+    "country-specific core branch",
+    "proof-pack-specific engine",
+    "installation-order precedence",
+    "calendar-month default",
+    "calendar-year default",
+    "nearest-rule fallback"
+  ]
+}
