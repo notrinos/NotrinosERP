@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.829',
+        'active_database_version'=>'1.0.832',
         'active_legacy_payroll_contract'=>'1.0.458',
         'next_backlog_item'=>'PAY-GL-001',
-        'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CTRY-007 is source-complete at head 1.0.829 with signed catalog/update-notice custody, scoped recipient lifecycle, zero-seed immutable delivery outbox/attempt custody and current-user in-app NotificationManager integration. External email/SMS/webhook transport, automatic country-pack activation, payroll execution/posting/payment/GL/statutory-filing authority and employee-fact payloads remain denied. The strict next backlog item is PAY-GL-001; re-inventory its accounting dependencies before selecting files.',
+        'next_slice_changed_files'=>array('includes/pay_gl_001_contract.inc','hrm/includes/db/pay_gl_001_readiness_db.inc','hrm/includes/db/pay_gl_001_schema_db.inc','sql/upgrade_pay_gl_001_dependency_review.php','sql/upgrade_pay_gl_001_authority_contract.php','sql/upgrade_pay_gl_001_journal_intent_schema.php','sql/upgrade_pay_gl_001_journal_intent_schema.sql'),
+        'next_slice_scope'=>'PAY-GL-001 foundation is source-implemented through head 1.0.832: predecessor/accounting dependency review, fail-closed payroll-versus-finance authority contract, and zero-seed immutable journal-intent/canonical-line/lossless N-axis allocation custody. Direct GL posting, mapping writers, two-slot projection/bridge, suspense, reversal/repost, payment/bank/statutory authority and historical mutation remain denied. PAY-GL-001 remains the active backlog item; the strict next slice is governed mapping and journal-intent writer/reconciliation evidence after owner-machine local acceptance.',
         'edges'=>array(
+            'pay_gl_001_dependency_review'=>array('previous'=>'1.0.829','version'=>'1.0.830',
+                'file'=>'sql/upgrade_pay_gl_001_dependency_review.php'),
+            'pay_gl_001_authority_contract'=>array('previous'=>'1.0.830','version'=>'1.0.831',
+                'file'=>'sql/upgrade_pay_gl_001_authority_contract.php'),
+            'pay_gl_001_journal_intent_schema'=>array('previous'=>'1.0.831','version'=>'1.0.832',
+                'file'=>'sql/upgrade_pay_gl_001_journal_intent_schema.php'),
             'pay_ctry_007_dependency_review'=>array('previous'=>'1.0.820','version'=>'1.0.821',
                 'file'=>'sql/upgrade_pay_ctry_007_dependency_review.php'),
             'pay_ctry_007_contract_foundation'=>array('previous'=>'1.0.821','version'=>'1.0.822',
