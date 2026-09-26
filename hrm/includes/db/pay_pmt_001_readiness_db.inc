@@ -1,0 +1,22 @@
+<?php
+/** PAY-PMT-001 predecessor, dependency and least-privilege readiness. */
+include_once(dirname(__FILE__).'/migration_readiness_db.inc');
+include_once($path_to_root.'/includes/pay_pmt_001_contract.inc');
+function pay_pmt_001_fail_patch($patch,$m){return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,$m);}
+function pay_pmt_001_require_predecessor($patch){global $path_to_root;$files=array(
+ 'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_GL_001_COMPLETION_2026-09-26.md'=>'2d311409a2857f9fb7dcbf3b9cf17bb765f0a284325661e0cfa442abde564ae7',
+ 'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_GL_001_REPOSITORY_INTEGRITY_REPAIR_2026-09-27.md'=>'88b718d28a48d2c052a259a23d6c862aa13ad0a2d34a79aa1a36473d69601942',
+ 'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_CTRY_003_COMPLETION_2026-09-25.md'=>'53efee4f677f10e5fa11364bc605912db1dafba1926eca98923723c4d32db127',
+ 'tests/fixtures/payroll/legacy_v1/manifest_v1.0.430.json'=>'bcb1f3223a83075240e6e0082c285a90059ecad4cd96b4cec1afc58a7d1d3815',
+ 'tests/fixtures/payroll/legacy_v1/manifest_v1.0.458.json'=>'bde54de4e5611c025b539e292dd10f65cd03eec3c073c4ed5d0bad16462df0cf');
+ foreach($files as $rel=>$sha)if(!is_file($path_to_root.'/'.$rel)||!hash_equals($sha,hash_file('sha256',$path_to_root.'/'.$rel)))return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 immutable predecessor custody mismatch: '.$rel.'.');return true;}
+function pay_pmt_001_require_dependencies($patch){global $path_to_root;$checks=array(
+ 'hrm/includes/payroll/pay_core_010_contract.inc'=>array('HRM_PAY_CORE_010_PAYMENT_AUTHORITY_ALLOWED','function hrm_pay_core_010_approval','result_set_sha256'),
+ 'includes/pay_gl_001_contract.inc'=>array('function pay_gl_001_authority_contract','payment_authority','journal_sha256'),
+ 'hrm/includes/db/payment_posting.inc'=>array('function create_payment_transactions_for_period','function validate_payroll_period_payment_set','function write_payslip_payment_transaction'),
+ 'hrm/includes/db/person_bank_account_payment_instruction_binding_db.inc'=>array('function get_hrm_person_bank_payment_instruction_binding','bank_account_row_version','allocation_hash'),
+ 'includes/pay_ctry_003_contract.inc'=>array('bank-files.renderer.v1','jurisdiction.bank_files','payment_execution'));
+ foreach($checks as $rel=>$tokens){$raw=@file_get_contents($path_to_root.'/'.$rel);if(!is_string($raw)||$raw==='')return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 dependency source missing: '.$rel.'.');foreach($tokens as $t)if(strpos($raw,$t)===false)return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 dependency source/custody contract incomplete: '.$rel.' missing '.$t.'.');}return true;}
+function pay_pmt_001_require_contract($patch){$a=pay_pmt_001_authority_contract();foreach(array('approved_result_hash_binding','pay_gl_reconciliation_binding','immutable_payment_intent','immutable_batch_item_custody','effective_bank_version_binding','split_account_preservation','maker_checker_release_required','provider_renderer_contract_required','file_checksum_required','transmission_event_chain_required','return_reissue_chain_required','independent_reconciliation_required','provider_secret_external_custody_required') as $k)if(!isset($a[$k])||$a[$k]!==true)return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 required contract capability missing: '.$k.'.');foreach(array('direct_bank_transaction_execution','direct_bank_file_transmission','automatic_batch_release','automatic_beneficiary_selection','raw_bank_account_material_in_general_custody','payment_replay','historical_payment_mutation','gl_authority','statutory_filing_authority','cross_company_payment','network_authority','selective_downgrade') as $k)if(!array_key_exists($k,$a)||$a[$k]!==false)return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 authority ceiling violated: '.$k.'.');return true;}
+function pay_pmt_001_require_permissions($patch){global $path_to_root;$raw=@file_get_contents($path_to_root.'/includes/access_levels.inc');if(!is_string($raw))return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 permission source missing.');foreach(array(PAY_PMT_001_PREPARE_PERMISSION,PAY_PMT_001_REVIEW_PERMISSION,PAY_PMT_001_RELEASE_PERMISSION,PAY_PMT_001_TRANSMIT_PERMISSION,PAY_PMT_001_RECOVER_PERMISSION,PAY_PMT_001_VIEW_PERMISSION,'no automatic role grant') as $t)if(strpos($raw,$t)===false)return pay_pmt_001_fail_patch($patch,'PAY-PMT-001 least-privilege permission source incomplete: '.$t.'.');return true;}
+?>

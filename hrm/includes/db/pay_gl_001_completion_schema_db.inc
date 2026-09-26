@@ -27,14 +27,25 @@ function pay_gl_001_completion_base_columns(){return array(
 'hrm_pay_gl_001_allocations'=>array('allocation_id','journal_line_id','allocation_no','allocated_amount_minor','allocation_weight_ppm','allocation_sha256','created_at'),
 'hrm_pay_gl_001_allocation_axes'=>array('allocation_axis_id','allocation_id','axis_no','axis_code','axis_value_key','axis_value_sha256','core_slot_hint','axis_sha256','created_at'));}
 
-function pay_gl_001_completion_require_foundation_or_extended_base($patch){$cols=pay_gl_001_table_columns('hrm_pay_gl_001_journal_lines');$final=pay_gl_001_completion_base_columns();if(is_array($cols)&&$cols===$final['hrm_pay_gl_001_journal_lines'])return pay_gl_001_completion_require_base($patch);return pay_gl_001_require_schema($patch);}
+function pay_gl_001_completion_require_foundation_or_extended_base($patch){$t='hrm_pay_gl_001_journal_lines';$cols=pay_gl_001_table_columns($t);$final=pay_gl_001_completion_base_columns();$expected=$final[$t];if(is_array($cols)&&$cols===$expected)return pay_gl_001_completion_require_base($patch);$misordered=$expected;$a=array_search('exception_approved_by',$misordered,true);$b=array_search('mapping_rule_sha256',$misordered,true);$misordered[$a]='mapping_rule_sha256';$misordered[$b]='exception_approved_by';if(is_array($cols)&&$cols===$misordered){if(!pay_gl_001_completion_repair_mapping_line_order($patch))return false;return pay_gl_001_completion_require_base($patch);}return pay_gl_001_require_schema($patch);}
 function pay_gl_001_completion_trigger_code($t){$m=array(
  'hrm_pay_gl_001_mapping_versions'=>'mv','hrm_pay_gl_001_mapping_rules'=>'mr','hrm_pay_gl_001_reconciliations'=>'rc','hrm_pay_gl_001_reviews'=>'rv',
  'hrm_pay_gl_001_posting_authorities'=>'pa','hrm_pay_gl_001_gl_postings'=>'gp','hrm_pay_gl_001_gl_posting_lines'=>'gpl',
- 'hrm_pay_gl_001_recovery_commands'=>'gc','hrm_pay_gl_001_reversal_repost_links'=>'gr','hrm_pay_gl_001_cutovers'=>'co');return $m[$t]??false;}
+ 'hrm_pay_gl_001_recovery_commands'=>'gc','hrm_pay_gl_001_reversal_repost_links'=>'gr','hrm_pay_gl_001_cutovers'=>'co');return isset($m[$t])?$m[$t]:false;}
 function pay_gl_001_completion_trigger_valid($t,$op){$p=hrm_migration_active_table_prefix();$c=pay_gl_001_completion_trigger_code($t);$phys=hrm_migration_physical_table_name($t);if($p===false||$c===false||$phys===false)return false;$name=$p.'pgl1_'.$c.'_'.(strtoupper($op)==='UPDATE'?'u':'d');$q=db_query('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING,ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='.db_escape($name).' LIMIT 2');if(!$q||db_num_rows($q)!==1)return false;$r=db_fetch_assoc($q);return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($op)&&(string)$r['EVENT_OBJECT_TABLE']===$phys&&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'&&strpos((string)$r['ACTION_STATEMENT'],'PAY-GL-001 immutable')!==false;}
 function pay_gl_001_completion_require_base($patch){foreach(pay_gl_001_completion_base_columns() as $t=>$cols){if(pay_gl_001_table_columns($t)!==$cols||!pay_gl_001_table_innodb($t))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 final base projection mismatch: '.$t);foreach(array('UPDATE','DELETE') as $op)if(!pay_gl_001_trigger_valid($t,$op))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-GL-001 base immutable trigger mismatch: '.$t.'.'.$op);}return true;}
 function pay_gl_001_completion_require_groups($patch,array $names){$groups=pay_gl_001_completion_groups();if(!pay_gl_001_completion_require_base($patch))return false;foreach($names as $name){if(!isset($groups[$name]))return false;foreach($groups[$name]['tables'] as $t=>$cols){if(pay_gl_001_table_columns($t)!==$cols||!pay_gl_001_table_innodb($t))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 completion table projection mismatch: '.$t);foreach(array('UPDATE','DELETE') as $op)if(!pay_gl_001_completion_trigger_valid($t,$op))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-GL-001 completion immutable trigger mismatch: '.$t.'.'.$op);}}return true;}
+
+function pay_gl_001_completion_repair_mapping_line_order($patch){
+ $t='hrm_pay_gl_001_journal_lines';$cols=pay_gl_001_table_columns($t);$expected=pay_gl_001_completion_base_columns();$expected=$expected[$t];
+ if($cols===$expected)return true;
+ $misordered=$expected;$a=array_search('exception_approved_by',$misordered,true);$b=array_search('mapping_rule_sha256',$misordered,true);$misordered[$a]='mapping_rule_sha256';$misordered[$b]='exception_approved_by';
+ if($cols!==$misordered)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 mapping journal-line projection is neither expected nor the known recoverable column order.');
+ $physical=hrm_migration_physical_table_name($t);if($physical===false)return false;
+ if(!db_query('ALTER TABLE `'.$physical.'` MODIFY COLUMN `mapping_rule_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL AFTER `exception_approved_by`'))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 mapping journal-line column-order recovery failed.');
+ if(pay_gl_001_table_columns($t)!==$expected)return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 mapping journal-line projection remains invalid after column-order recovery.');
+ return true;
+}
 
 function pay_gl_001_completion_install_group($patch,$name){
  global $path_to_root;$groups=pay_gl_001_completion_groups();if(!isset($groups[$name]))return false;
@@ -42,7 +53,7 @@ function pay_gl_001_completion_install_group($patch,$name){
  $p=hrm_migration_active_table_prefix();if($p===false)return false;
  $raw=preg_replace('/^--.*$/m','',$raw);$stmts=preg_split('/;\s*(?:\r?\n|$)/',$raw);
  foreach($stmts as $s){$s=trim($s);if($s===''||strpos($s,'CREATE TRIGGER')===0)continue;
-  if($name==='mapping_governance'&&stripos($s,'ALTER TABLE')===0){$cols=pay_gl_001_table_columns('hrm_pay_gl_001_journal_lines');if(is_array($cols)&&in_array('source_result_sha256',$cols,true))continue;}
+  if($name==='mapping_governance'&&stripos($s,'ALTER TABLE')===0){$cols=pay_gl_001_table_columns('hrm_pay_gl_001_journal_lines');if(is_array($cols)&&in_array('source_result_sha256',$cols,true)){if(!pay_gl_001_completion_repair_mapping_line_order($patch))return false;continue;}}
   $s=str_replace('`0_','`'.$p,$s);if(!db_query($s))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-GL-001 completion schema statement failed: '.$name);
  }
  foreach($groups[$name]['tables'] as $t=>$cols)foreach(array('UPDATE','DELETE') as $op){if(pay_gl_001_completion_trigger_valid($t,$op))continue;$code=pay_gl_001_completion_trigger_code($t);$tn=$p.'pgl1_'.$code.'_'.($op==='UPDATE'?'u':'d');$phys=hrm_migration_physical_table_name($t);$msg='PAY-GL-001 immutable '.$t.' row cannot be '.strtolower($op).'d';$sql='CREATE TRIGGER `'.$tn.'` BEFORE '.$op.' ON `'.$phys.'` FOR EACH ROW SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT='.db_escape($msg);if(!db_query($sql))return false;}

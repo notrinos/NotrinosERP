@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.837',
-        'active_legacy_payroll_contract'=>'1.0.458',
+        'active_database_version'=>'1.0.840',
+        'active_legacy_payroll_contract'=>'1.0.460',
         'next_backlog_item'=>'PAY-PMT-001',
-        'next_slice_changed_files'=>array('includes/pay_gl_001_contract.inc','hrm/includes/db/pay_gl_001_readiness_db.inc','hrm/includes/db/pay_gl_001_completion_schema_db.inc','hrm/includes/db/pay_gl_001_runtime_db.inc','hrm/includes/payroll_engine.inc','sql/upgrade_pay_gl_001_mapping_governance.php','sql/upgrade_pay_gl_001_journal_writer_reconciliation.php','sql/upgrade_pay_gl_001_posting_bridge_authority.php','sql/upgrade_pay_gl_001_reversal_repost_recovery.php','sql/upgrade_pay_gl_001_legacy_cutover_completion.php'),
-        'next_slice_scope'=>'PAY-GL-001 source implementation is complete through head 1.0.837. Governed mapping, journal intent, reconciliation, controlled GL bridge, semantic-effect idempotency, reversal/repost recovery, privacy drill-down and scoped legacy dual-authority cutover are source-implemented. Owner-machine PAY-GL-001 completion mandatory gate remains final acceptance authority. PAY-PMT-001 is next but is not started by this change.',
+        'next_slice_changed_files'=>array('includes/pay_pmt_001_contract.inc','hrm/includes/db/pay_pmt_001_readiness_db.inc','hrm/includes/db/pay_pmt_001_schema_db.inc','sql/upgrade_pay_pmt_001_dependency_review.php','sql/upgrade_pay_pmt_001_authority_contract.php','sql/upgrade_pay_pmt_001_custody_schema.php','sql/upgrade_pay_pmt_001_custody_schema.sql'),
+        'next_slice_scope'=>'PAY-PMT-001 foundation is source-implemented through head 1.0.840: dependency/predecessor custody, fail-closed least-privilege authority, and zero-seed immutable payment intent/item/allocation/batch custody. No payment writer, release executor, bank transaction, renderer, provider transmission, settlement, return/reissue or historical payment mutation is enabled. Owner-machine PAY-PMT-001 foundation mandatory gate remains final acceptance authority before the next payment slice.',
         'edges'=>array(
+            'pay_pmt_001_dependency_review'=>array('previous'=>'1.0.837','version'=>'1.0.838',
+                'file'=>'sql/upgrade_pay_pmt_001_dependency_review.php'),
+            'pay_pmt_001_authority_contract'=>array('previous'=>'1.0.838','version'=>'1.0.839',
+                'file'=>'sql/upgrade_pay_pmt_001_authority_contract.php'),
+            'pay_pmt_001_custody_schema'=>array('previous'=>'1.0.839','version'=>'1.0.840',
+                'file'=>'sql/upgrade_pay_pmt_001_custody_schema.php'),
             'pay_gl_001_mapping_governance'=>array('previous'=>'1.0.832','version'=>'1.0.833',
                 'file'=>'sql/upgrade_pay_gl_001_mapping_governance.php'),
             'pay_gl_001_journal_writer_reconciliation'=>array('previous'=>'1.0.833','version'=>'1.0.834',

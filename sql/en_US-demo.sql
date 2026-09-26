@@ -13669,3 +13669,95 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_cutovers` (
 CREATE TRIGGER `0_pgl1_co_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be updated';
 CREATE TRIGGER `0_pgl1_co_d` BEFORE DELETE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be deleted';
 -- PAY-GL-001 END GROUP legacy_cutover
+
+
+-- PAY-PMT-001 foundation 1.0.837 -> 1.0.840.
+-- PAY-PMT-001 GROUP payment_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_payment_intents` (
+ `payment_intent_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `payroll_group_id` bigint(20) unsigned NOT NULL, `payroll_period_id` bigint(20) unsigned NOT NULL,
+ `result_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approval_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `pay_gl_journal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `total_minor` bigint(20) unsigned NOT NULL,
+ `item_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `allocation_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `intent_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL, `prepared_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`payment_intent_id`),
+ UNIQUE KEY `uq_ppm1_pi_sha` (`intent_sha256`),
+ UNIQUE KEY `uq_ppm1_pi_result` (`result_set_sha256`,`approval_sha256`,`currency_code`),
+ KEY `ix_ppm1_pi_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`payroll_period_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ppm1_pi_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_payment_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_intents row cannot be updated';
+CREATE TRIGGER `0_ppm1_pi_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_payment_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_intents row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_payment_items` (
+ `payment_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `payment_intent_id` bigint(20) unsigned NOT NULL, `item_no` int(10) unsigned NOT NULL,
+ `beneficiary_subject_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_result_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_line_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `amount_minor` bigint(20) unsigned NOT NULL,
+ `payment_election_id` bigint(20) unsigned NOT NULL,
+ `payment_election_row_version` bigint(20) unsigned NOT NULL,
+ `bank_allocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `item_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`payment_item_id`), UNIQUE KEY `uq_ppm1_it_no` (`payment_intent_id`,`item_no`),
+ UNIQUE KEY `uq_ppm1_it_sha` (`item_sha256`), KEY `ix_ppm1_it_benef` (`beneficiary_subject_sha256`,`currency_code`),
+ KEY `fk_ppm1_it_intent` (`payment_intent_id`),
+ CONSTRAINT `fk_ppm1_it_intent` FOREIGN KEY (`payment_intent_id`) REFERENCES `0_hrm_pay_pmt_001_payment_intents` (`payment_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ppm1_it_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_payment_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_items row cannot be updated';
+CREATE TRIGGER `0_ppm1_it_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_payment_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_items row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_item_allocations` (
+ `payment_allocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `payment_item_id` bigint(20) unsigned NOT NULL, `allocation_no` int(10) unsigned NOT NULL,
+ `person_bank_account_id` bigint(20) unsigned NOT NULL, `bank_account_row_version` bigint(20) unsigned NOT NULL,
+ `allocation_weight_ppm` int(10) unsigned NOT NULL, `allocated_amount_minor` bigint(20) unsigned NOT NULL,
+ `beneficiary_token_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `allocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`payment_allocation_id`), UNIQUE KEY `uq_ppm1_al_no` (`payment_item_id`,`allocation_no`),
+ UNIQUE KEY `uq_ppm1_al_sha` (`allocation_sha256`), KEY `ix_ppm1_al_bank` (`person_bank_account_id`,`bank_account_row_version`),
+ KEY `fk_ppm1_al_item` (`payment_item_id`),
+ CONSTRAINT `fk_ppm1_al_item` FOREIGN KEY (`payment_item_id`) REFERENCES `0_hrm_pay_pmt_001_payment_items` (`payment_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ppm1_al_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_item_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_item_allocations row cannot be updated';
+CREATE TRIGGER `0_ppm1_al_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_item_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_item_allocations row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_batches` (
+ `payment_batch_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `payroll_group_id` bigint(20) unsigned NOT NULL, `payroll_period_id` bigint(20) unsigned NOT NULL,
+ `payment_date` date NOT NULL, `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `intent_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `item_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `total_minor` bigint(20) unsigned NOT NULL,
+ `batch_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL, `prepared_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`payment_batch_id`), UNIQUE KEY `uq_ppm1_ba_sha` (`batch_sha256`),
+ KEY `ix_ppm1_ba_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`payroll_period_id`),
+ KEY `ix_ppm1_ba_date` (`payment_date`,`currency_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ppm1_ba_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_batches` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batches row cannot be updated';
+CREATE TRIGGER `0_ppm1_ba_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_batches` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batches row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_batch_items` (
+ `batch_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `payment_batch_id` bigint(20) unsigned NOT NULL, `payment_item_id` bigint(20) unsigned NOT NULL,
+ `batch_item_no` int(10) unsigned NOT NULL,
+ `payment_item_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `batch_item_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`batch_item_id`), UNIQUE KEY `uq_ppm1_bi_no` (`payment_batch_id`,`batch_item_no`),
+ UNIQUE KEY `uq_ppm1_bi_item` (`payment_batch_id`,`payment_item_id`), UNIQUE KEY `uq_ppm1_bi_sha` (`batch_item_sha256`),
+ KEY `fk_ppm1_bi_batch` (`payment_batch_id`), KEY `fk_ppm1_bi_item` (`payment_item_id`),
+ CONSTRAINT `fk_ppm1_bi_batch` FOREIGN KEY (`payment_batch_id`) REFERENCES `0_hrm_pay_pmt_001_batches` (`payment_batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_ppm1_bi_item` FOREIGN KEY (`payment_item_id`) REFERENCES `0_hrm_pay_pmt_001_payment_items` (`payment_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ppm1_bi_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_batch_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_items row cannot be updated';
+CREATE TRIGGER `0_ppm1_bi_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_batch_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_items row cannot be deleted';
+-- PAY-PMT-001 END GROUP payment_custody

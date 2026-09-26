@@ -549,6 +549,11 @@ $security_areas =array(
 	'SA_HRM_RESOLVE_PAY_CTRY_UPDATE' => array(SS_HRM|170, _('Resolve scoped regulatory country-pack update notices with evidence')), // no automatic role grant
 	'SA_HRM_DELIVER_PAY_CTRY_UPDATE' => array(SS_HRM|171, _('Dispatch scoped regulatory country-pack update notifications to approved in-app provider')), // no automatic role grant
 	'SA_HRM_MANAGE_PAY_GL_INTENT' => array(SS_HRM|172, _('Prepare approved-result-bound governed payroll journal intent')), // no automatic role grant
+	'SA_HRM_PREPARE_PAY_PMT' => array(SS_HRM|173, _('Prepare governed payroll payment intents and batches')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_PMT' => array(SS_HRM|174, _('Independently review governed payroll payment intents and batches')), // no automatic role grant
+	'SA_HRM_RELEASE_PAY_PMT' => array(SS_HRM|175, _('Release independently approved payroll payment batches')), // no automatic role grant
+	'SA_HRM_TRANSMIT_PAY_PMT' => array(SS_HRM|176, _('Transmit approved payroll payment artifacts through governed providers')), // no automatic role grant
+	'SA_HRM_RECOVER_PAY_PMT' => array(SS_HRM|177, _('Recover, return, reissue and reconcile governed payroll payments')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -579,6 +584,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_COMPENSATION_GOVERNANCE' => array(SS_HRM_A|26, _('View scoped governed compensation ranges, awards and reconciliation evidence')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_CTRY_UPDATE' => array(SS_HRM_A|27, _('View assigned scoped regulatory country-pack update notices')), // no automatic role grant
 	'SA_HRM_VIEW_PAY_GL' => array(SS_HRM_A|28, _('View scoped governed payroll journal and allocation evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_PMT' => array(SS_HRM_A|29, _('View scoped governed payroll payment intent and batch evidence')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
