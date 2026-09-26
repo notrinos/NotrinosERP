@@ -728,6 +728,27 @@ function payroll_persist_legacy_payslip_result(&$payslip_doc) {
 function payroll_apply_legacy_gl_side_effects(&$payslip_doc, $plan, $result_context) {
     global $transaction_level;
 
+    // PAY-GL-001 is the sole posting authority after an explicitly approved
+    // scoped cutover. Compatibility calculation/read paths remain available,
+    // but a second ST_PAYSLIP GL side effect must fail closed.
+    $pay_gl_runtime = dirname(__FILE__).'/db/pay_gl_001_runtime_db.inc';
+    if (is_file($pay_gl_runtime))
+        include_once($pay_gl_runtime);
+    $pay_gl_legal = is_object($payslip_doc) && isset($payslip_doc->employee)
+        && is_array($payslip_doc->employee) && !empty($payslip_doc->employee['legal_entity_id'])
+        ? (int)$payslip_doc->employee['legal_entity_id'] : 0;
+    $pay_gl_group = is_object($payslip_doc) && isset($payslip_doc->payroll_group_id)
+        ? (int)$payslip_doc->payroll_group_id : 0;
+    $pay_gl_date = isset($result_context['tran_date']) && function_exists('date2sql')
+        ? date2sql($result_context['tran_date']) : date('Y-m-d');
+    if ($pay_gl_legal > 0
+        && function_exists('pay_gl_001_legacy_posting_authority_active')
+        && pay_gl_001_legacy_posting_authority_active($pay_gl_legal, $pay_gl_group, $pay_gl_date)
+    ) {
+        display_error(_('PAY-GL-001 dual posting authority denied: governed payroll must post through the reconciled journal-intent bridge.'));
+        return false;
+    }
+
     if (empty($transaction_level)
         || empty($plan['ok'])
         || empty($result_context['trans_no'])

@@ -13471,12 +13471,18 @@ CREATE TRIGGER `0_pgl1_ji_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_journal_intents`
 CREATE TRIGGER `0_pgl1_ji_d` BEFORE DELETE ON `0_hrm_pay_gl_001_journal_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_intents row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_journal_lines` (
  `journal_line_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `journal_intent_id` bigint(20) unsigned NOT NULL,
+ `source_result_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_line_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
  `line_no` int(10) unsigned NOT NULL, `account_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
  `entry_side` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `amount_minor` bigint(20) unsigned NOT NULL,
  `memo_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `exception_reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+ `exception_approved_by` bigint(20) unsigned NULL,
+ `mapping_rule_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
  `canonical_line_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
  PRIMARY KEY (`journal_line_id`), UNIQUE KEY `uq_pgl1_jl_no` (`journal_intent_id`,`line_no`), UNIQUE KEY `uq_pgl1_jl_sha` (`canonical_line_sha256`),
- KEY `ix_pgl1_jl_account` (`account_code`,`entry_side`), KEY `fk_pgl1_jl_intent` (`journal_intent_id`),
+ KEY `ix_pgl1_jl_account` (`account_code`,`entry_side`), KEY `ix_pgl1_jl_source` (`source_result_sha256`,`source_line_key`),
+ KEY `ix_pgl1_jl_mapping` (`mapping_rule_sha256`), KEY `fk_pgl1_jl_intent` (`journal_intent_id`),
  CONSTRAINT `fk_pgl1_jl_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_jl_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_journal_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_lines row cannot be updated';
@@ -13502,3 +13508,164 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_allocation_axes` (
 CREATE TRIGGER `0_pgl1_ax_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_allocation_axes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocation_axes row cannot be updated';
 CREATE TRIGGER `0_pgl1_ax_d` BEFORE DELETE ON `0_hrm_pay_gl_001_allocation_axes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocation_axes row cannot be deleted';
 -- PAY-GL-001 END GROUP journal_intent
+
+-- PAY-GL-001 completion 1.0.832 -> 1.0.837.
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_mapping_versions` (
+ `mapping_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `mapping_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `effective_from` date NOT NULL, `effective_to` date NULL,
+ `maker_id` bigint(20) unsigned NOT NULL, `checker_id` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL, `mapping_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`mapping_version_id`), UNIQUE KEY `uq_pgl1_mv_scope` (`company_id`,`legal_entity_id`,`mapping_key`,`effective_from`),
+ UNIQUE KEY `uq_pgl1_mv_sha` (`mapping_snapshot_sha256`), KEY `ix_pgl1_mv_effective` (`company_id`,`legal_entity_id`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_mv_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_versions row cannot be updated';
+CREATE TRIGGER `0_pgl1_mv_d` BEFORE DELETE ON `0_hrm_pay_gl_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_versions row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_mapping_rules` (
+ `mapping_rule_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `mapping_version_id` bigint(20) unsigned NOT NULL,
+ `rule_no` int(10) unsigned NOT NULL, `source_kind` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `entry_side` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `account_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `dimension1_axis_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+ `dimension2_axis_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+ `suspense_allowed` tinyint(1) unsigned NOT NULL DEFAULT 0, `rule_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`mapping_rule_id`), UNIQUE KEY `uq_pgl1_mr_no` (`mapping_version_id`,`rule_no`),
+ UNIQUE KEY `uq_pgl1_mr_sha` (`rule_sha256`), KEY `ix_pgl1_mr_source` (`source_kind`,`source_key`,`entry_side`),
+ KEY `fk_pgl1_mr_version` (`mapping_version_id`),
+ CONSTRAINT `fk_pgl1_mr_version` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_pay_gl_001_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_mr_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_mapping_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_rules row cannot be updated';
+CREATE TRIGGER `0_pgl1_mr_d` BEFORE DELETE ON `0_hrm_pay_gl_001_mapping_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_rules row cannot be deleted';
+-- PAY-GL-001 END GROUP mapping_governance
+
+-- PAY-GL-001 GROUP writer_reconciliation
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reconciliations` (
+ `reconciliation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `journal_intent_id` bigint(20) unsigned NOT NULL,
+ `journal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `line_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `allocation_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `native_projection_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `debit_minor` bigint(20) unsigned NOT NULL, `credit_minor` bigint(20) unsigned NOT NULL,
+ `status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reconciliation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by` bigint(20) unsigned NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pgl1_rc_intent` (`journal_intent_id`),
+ UNIQUE KEY `uq_pgl1_rc_sha` (`reconciliation_sha256`), KEY `fk_pgl1_rc_intent` (`journal_intent_id`),
+ CONSTRAINT `fk_pgl1_rc_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_rc_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reconciliations row cannot be updated';
+CREATE TRIGGER `0_pgl1_rc_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reconciliations row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reviews` (
+ `review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `reconciliation_id` bigint(20) unsigned NOT NULL,
+ `decision` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reviewer_id` bigint(20) unsigned NOT NULL,
+ `reviewed_at` datetime NOT NULL, `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`review_id`), UNIQUE KEY `uq_pgl1_rv_recon` (`reconciliation_id`),
+ UNIQUE KEY `uq_pgl1_rv_sha` (`review_sha256`), KEY `fk_pgl1_rv_recon` (`reconciliation_id`),
+ CONSTRAINT `fk_pgl1_rv_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_gl_001_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_rv_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reviews row cannot be updated';
+CREATE TRIGGER `0_pgl1_rv_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reviews row cannot be deleted';
+-- PAY-GL-001 END GROUP writer_reconciliation
+
+-- PAY-GL-001 GROUP posting_bridge
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_posting_authorities` (
+ `authority_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `journal_intent_id` bigint(20) unsigned NOT NULL,
+ `reconciliation_id` bigint(20) unsigned NOT NULL, `review_id` bigint(20) unsigned NOT NULL,
+ `command_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `executor_id` bigint(20) unsigned NOT NULL,
+ `authorized_at` datetime NOT NULL, `authority_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`authority_id`), UNIQUE KEY `uq_pgl1_pa_cmd` (`command_key_sha256`), UNIQUE KEY `uq_pgl1_pa_sha` (`authority_sha256`),
+ UNIQUE KEY `uq_pgl1_pa_intent` (`journal_intent_id`), KEY `fk_pgl1_pa_recon` (`reconciliation_id`), KEY `fk_pgl1_pa_review` (`review_id`),
+ CONSTRAINT `fk_pgl1_pa_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_pa_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_gl_001_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_pa_review` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_pay_gl_001_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_pa_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_posting_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_posting_authorities row cannot be updated';
+CREATE TRIGGER `0_pgl1_pa_d` BEFORE DELETE ON `0_hrm_pay_gl_001_posting_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_posting_authorities row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_postings` (
+ `posting_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `journal_intent_id` bigint(20) unsigned NOT NULL,
+ `authority_id` bigint(20) unsigned NOT NULL, `posting_kind` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `predecessor_posting_id` bigint(20) unsigned NULL, `effect_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `gl_type` int(11) NOT NULL, `gl_trans_no` bigint(20) unsigned NOT NULL, `journal_date` date NOT NULL,
+ `posting_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `posted_by` bigint(20) unsigned NOT NULL,
+ `posted_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`posting_id`), UNIQUE KEY `uq_pgl1_gp_effect` (`effect_key`), UNIQUE KEY `uq_pgl1_gp_sha` (`posting_sha256`),
+ UNIQUE KEY `uq_pgl1_gp_gl` (`gl_type`,`gl_trans_no`), KEY `ix_pgl1_gp_intent` (`journal_intent_id`,`posting_kind`),
+ KEY `fk_pgl1_gp_auth` (`authority_id`), KEY `fk_pgl1_gp_pred` (`predecessor_posting_id`),
+ CONSTRAINT `fk_pgl1_gp_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gp_auth` FOREIGN KEY (`authority_id`) REFERENCES `0_hrm_pay_gl_001_posting_authorities` (`authority_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gp_pred` FOREIGN KEY (`predecessor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_gp_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_gl_postings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_postings row cannot be updated';
+CREATE TRIGGER `0_pgl1_gp_d` BEFORE DELETE ON `0_hrm_pay_gl_001_gl_postings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_postings row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_posting_lines` (
+ `posting_line_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `posting_id` bigint(20) unsigned NOT NULL,
+ `journal_line_id` bigint(20) unsigned NOT NULL, `allocation_id` bigint(20) unsigned NOT NULL,
+ `core_dimension_id` bigint(20) unsigned NOT NULL DEFAULT 0, `core_dimension2_id` bigint(20) unsigned NOT NULL DEFAULT 0,
+ `gl_counter` bigint(20) unsigned NOT NULL, `source_amount_minor` bigint(20) unsigned NOT NULL,
+ `home_amount_minor` bigint(20) NOT NULL, `projection_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`posting_line_id`), UNIQUE KEY `uq_pgl1_gpl_alloc` (`posting_id`,`allocation_id`),
+ UNIQUE KEY `uq_pgl1_gpl_counter` (`gl_counter`), UNIQUE KEY `uq_pgl1_gpl_sha` (`projection_sha256`),
+ KEY `fk_pgl1_gpl_post` (`posting_id`), KEY `fk_pgl1_gpl_line` (`journal_line_id`), KEY `fk_pgl1_gpl_alloc` (`allocation_id`),
+ CONSTRAINT `fk_pgl1_gpl_post` FOREIGN KEY (`posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gpl_line` FOREIGN KEY (`journal_line_id`) REFERENCES `0_hrm_pay_gl_001_journal_lines` (`journal_line_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gpl_alloc` FOREIGN KEY (`allocation_id`) REFERENCES `0_hrm_pay_gl_001_allocations` (`allocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_gpl_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_gl_posting_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_posting_lines row cannot be updated';
+CREATE TRIGGER `0_pgl1_gpl_d` BEFORE DELETE ON `0_hrm_pay_gl_001_gl_posting_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_posting_lines row cannot be deleted';
+-- PAY-GL-001 END GROUP posting_bridge
+
+-- PAY-GL-001 GROUP reversal_recovery
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_recovery_commands` (
+ `recovery_command_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `company_id` bigint(20) unsigned NOT NULL,
+ `journal_intent_id` bigint(20) unsigned NOT NULL, `target_posting_id` bigint(20) unsigned NOT NULL,
+ `command_kind` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recovery_date` date NOT NULL, `command_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `maker_id` bigint(20) unsigned NOT NULL, `reviewer_id` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL,
+ `command_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`recovery_command_id`), UNIQUE KEY `uq_pgl1_gc_cmd` (`command_key_sha256`), UNIQUE KEY `uq_pgl1_gc_sha` (`command_sha256`),
+ KEY `ix_pgl1_gc_target` (`target_posting_id`,`command_kind`), KEY `fk_pgl1_gc_intent` (`journal_intent_id`),
+ CONSTRAINT `fk_pgl1_gc_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gc_target` FOREIGN KEY (`target_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_gc_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_recovery_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_recovery_commands row cannot be updated';
+CREATE TRIGGER `0_pgl1_gc_d` BEFORE DELETE ON `0_hrm_pay_gl_001_recovery_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_recovery_commands row cannot be deleted';
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reversal_repost_links` (
+ `recovery_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `recovery_command_id` bigint(20) unsigned NOT NULL,
+ `predecessor_posting_id` bigint(20) unsigned NOT NULL, `successor_posting_id` bigint(20) unsigned NOT NULL,
+ `link_kind` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `effect_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`recovery_link_id`), UNIQUE KEY `uq_pgl1_gr_cmd` (`recovery_command_id`),
+ UNIQUE KEY `uq_pgl1_gr_effect` (`effect_key`), UNIQUE KEY `uq_pgl1_gr_succ` (`successor_posting_id`),
+ KEY `fk_pgl1_gr_pred` (`predecessor_posting_id`), KEY `fk_pgl1_gr_succ` (`successor_posting_id`),
+ CONSTRAINT `fk_pgl1_gr_cmd` FOREIGN KEY (`recovery_command_id`) REFERENCES `0_hrm_pay_gl_001_recovery_commands` (`recovery_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gr_pred` FOREIGN KEY (`predecessor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pgl1_gr_succ` FOREIGN KEY (`successor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_gr_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reversal_repost_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reversal_repost_links row cannot be updated';
+CREATE TRIGGER `0_pgl1_gr_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reversal_repost_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reversal_repost_links row cannot be deleted';
+-- PAY-GL-001 END GROUP reversal_recovery
+
+-- PAY-GL-001 GROUP legacy_cutover
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_cutovers` (
+ `cutover_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `payroll_group_id` bigint(20) unsigned NOT NULL,
+ `effective_from` date NOT NULL,
+ `mapping_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL, `reviewer_id` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL, `cutover_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`cutover_id`),
+ UNIQUE KEY `uq_pgl1_co_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`),
+ UNIQUE KEY `uq_pgl1_co_sha` (`cutover_sha256`),
+ KEY `ix_pgl1_co_effective` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pgl1_co_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be updated';
+CREATE TRIGGER `0_pgl1_co_d` BEFORE DELETE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be deleted';
+-- PAY-GL-001 END GROUP legacy_cutover

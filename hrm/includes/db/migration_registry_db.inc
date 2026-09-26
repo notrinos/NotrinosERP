@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.832',
+        'active_database_version'=>'1.0.837',
         'active_legacy_payroll_contract'=>'1.0.458',
-        'next_backlog_item'=>'PAY-GL-001',
-        'next_slice_changed_files'=>array('includes/pay_gl_001_contract.inc','hrm/includes/db/pay_gl_001_readiness_db.inc','hrm/includes/db/pay_gl_001_schema_db.inc','sql/upgrade_pay_gl_001_dependency_review.php','sql/upgrade_pay_gl_001_authority_contract.php','sql/upgrade_pay_gl_001_journal_intent_schema.php','sql/upgrade_pay_gl_001_journal_intent_schema.sql'),
-        'next_slice_scope'=>'PAY-GL-001 foundation is source-implemented through head 1.0.832: predecessor/accounting dependency review, fail-closed payroll-versus-finance authority contract, and zero-seed immutable journal-intent/canonical-line/lossless N-axis allocation custody. Direct GL posting, mapping writers, two-slot projection/bridge, suspense, reversal/repost, payment/bank/statutory authority and historical mutation remain denied. PAY-GL-001 remains the active backlog item; the strict next slice is governed mapping and journal-intent writer/reconciliation evidence after owner-machine local acceptance.',
+        'next_backlog_item'=>'PAY-PMT-001',
+        'next_slice_changed_files'=>array('includes/pay_gl_001_contract.inc','hrm/includes/db/pay_gl_001_readiness_db.inc','hrm/includes/db/pay_gl_001_completion_schema_db.inc','hrm/includes/db/pay_gl_001_runtime_db.inc','hrm/includes/payroll_engine.inc','sql/upgrade_pay_gl_001_mapping_governance.php','sql/upgrade_pay_gl_001_journal_writer_reconciliation.php','sql/upgrade_pay_gl_001_posting_bridge_authority.php','sql/upgrade_pay_gl_001_reversal_repost_recovery.php','sql/upgrade_pay_gl_001_legacy_cutover_completion.php'),
+        'next_slice_scope'=>'PAY-GL-001 source implementation is complete through head 1.0.837. Governed mapping, journal intent, reconciliation, controlled GL bridge, semantic-effect idempotency, reversal/repost recovery, privacy drill-down and scoped legacy dual-authority cutover are source-implemented. Owner-machine PAY-GL-001 completion mandatory gate remains final acceptance authority. PAY-PMT-001 is next but is not started by this change.',
         'edges'=>array(
+            'pay_gl_001_mapping_governance'=>array('previous'=>'1.0.832','version'=>'1.0.833',
+                'file'=>'sql/upgrade_pay_gl_001_mapping_governance.php'),
+            'pay_gl_001_journal_writer_reconciliation'=>array('previous'=>'1.0.833','version'=>'1.0.834',
+                'file'=>'sql/upgrade_pay_gl_001_journal_writer_reconciliation.php'),
+            'pay_gl_001_posting_bridge_authority'=>array('previous'=>'1.0.834','version'=>'1.0.835',
+                'file'=>'sql/upgrade_pay_gl_001_posting_bridge_authority.php'),
+            'pay_gl_001_reversal_repost_recovery'=>array('previous'=>'1.0.835','version'=>'1.0.836',
+                'file'=>'sql/upgrade_pay_gl_001_reversal_repost_recovery.php'),
+            'pay_gl_001_legacy_cutover_completion'=>array('previous'=>'1.0.836','version'=>'1.0.837',
+                'file'=>'sql/upgrade_pay_gl_001_legacy_cutover_completion.php'),
             'pay_gl_001_dependency_review'=>array('previous'=>'1.0.829','version'=>'1.0.830',
                 'file'=>'sql/upgrade_pay_gl_001_dependency_review.php'),
             'pay_gl_001_authority_contract'=>array('previous'=>'1.0.830','version'=>'1.0.831',
