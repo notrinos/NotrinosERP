@@ -11,16 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.823',
+        'active_database_version'=>'1.0.826',
         'active_legacy_payroll_contract'=>'1.0.458',
         'next_backlog_item'=>'PAY-CTRY-007',
         'next_slice_changed_files'=>array(
             'includes/pay_ctry_007_contract.inc',
             'hrm/includes/db/pay_ctry_007_readiness_db.inc',
             'hrm/includes/db/pay_ctry_007_schema_db.inc',
+            'hrm/includes/db/pay_ctry_007_notification_db.inc',
             'sql/upgrade_pay_ctry_007_schema.sql',
-            'sql/upgrade_pay_ctry_007_catalog_notice_schema_foundation.php'),
-        'next_slice_scope'=>'PAY-CTRY-007 signed catalog admission and regulatory update-notice foundation is established at head 1.0.823 with immutable zero-seed catalog, admission, notice and applicability custody. Automatic pack activation, external notification delivery, recipient acknowledgement, reminder/escalation/resolution, payroll execution, posting, payment, GL and statutory filing authority remain denied. The strict next PAY-CTRY-007 dependency is scoped recipient/audience lifecycle followed by outbox delivery integration.',
+            'sql/upgrade_pay_ctry_007_recipient_authority_contract.php',
+            'sql/upgrade_pay_ctry_007_recipient_lifecycle_schema.php',
+            'sql/upgrade_pay_ctry_007_recipient_lifecycle_writer.php'),
+        'next_slice_scope'=>'PAY-CTRY-007 scoped recipient/audience lifecycle is established at head 1.0.826 with least-privilege permissions, zero-seed immutable audience/recipient/acknowledgement/lifecycle custody, self-acknowledgement, explicit idempotency and governed reminder/escalation/resolution writers. External notification/outbox delivery, automatic pack activation, payroll execution, posting, payment, GL and statutory filing authority remain denied. The strict next PAY-CTRY-007 dependency is notification/outbox delivery integration and completion acceptance.',
         'edges'=>array(
             'pay_ctry_007_dependency_review'=>array('previous'=>'1.0.820','version'=>'1.0.821',
                 'file'=>'sql/upgrade_pay_ctry_007_dependency_review.php'),
@@ -28,6 +31,12 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_ctry_007_contract_foundation.php'),
             'pay_ctry_007_catalog_notice_schema_foundation'=>array('previous'=>'1.0.822','version'=>'1.0.823',
                 'file'=>'sql/upgrade_pay_ctry_007_catalog_notice_schema_foundation.php'),
+            'pay_ctry_007_recipient_authority_contract'=>array('previous'=>'1.0.823','version'=>'1.0.824',
+                'file'=>'sql/upgrade_pay_ctry_007_recipient_authority_contract.php'),
+            'pay_ctry_007_recipient_lifecycle_schema'=>array('previous'=>'1.0.824','version'=>'1.0.825',
+                'file'=>'sql/upgrade_pay_ctry_007_recipient_lifecycle_schema.php'),
+            'pay_ctry_007_recipient_lifecycle_writer'=>array('previous'=>'1.0.825','version'=>'1.0.826',
+                'file'=>'sql/upgrade_pay_ctry_007_recipient_lifecycle_writer.php'),
             'pay_ctry_006_proof_0_identity_custody'=>array('previous'=>'1.0.816','version'=>'1.0.817',
                 'file'=>'sql/upgrade_pay_ctry_006_proof_0_identity_custody.php'),
             'pay_ctry_006_proof_1_calendar_calculation'=>array('previous'=>'1.0.817','version'=>'1.0.818',

@@ -540,6 +540,10 @@ $security_areas =array(
 	'SA_HRM_PUBLISH_PAY_CTRY' => array(SS_HRM|164, _('Publish valid scoped country-pack certification claims')), // no automatic role grant
 	'SA_HRM_SUSPEND_PAY_CTRY_CERTIFICATION' => array(SS_HRM|165, _('Emergency suspend or revoke country-pack certification claims')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_CTRY_CERTIFICATION' => array(SS_HRM|166, _('Reconcile and recover governed country-pack certification state')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_CTRY_UPDATE' => array(SS_HRM|167, _('Manage scoped regulatory country-pack update audiences and recipients')), // no automatic role grant
+	'SA_HRM_ACK_PAY_CTRY_UPDATE' => array(SS_HRM|168, _('Acknowledge assigned scoped regulatory country-pack updates')), // no automatic role grant
+	'SA_HRM_ESCALATE_PAY_CTRY_UPDATE' => array(SS_HRM|169, _('Record governed reminders and escalations for scoped country-pack updates')), // no automatic role grant
+	'SA_HRM_RESOLVE_PAY_CTRY_UPDATE' => array(SS_HRM|170, _('Resolve scoped regulatory country-pack update notices with evidence')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),
@@ -568,6 +572,7 @@ $security_areas =array(
 	'SA_HRM_VIEW_TIME_IMPORT' => array(SS_HRM_A|24, _('View scoped overtime qualification and import custody evidence')), // no automatic role grant
 	'SA_HRM_VIEW_LEAVE_GOVERNANCE' => array(SS_HRM_A|25, _('View scoped governed leave policy, ledger and reconciliation evidence')), // no automatic role grant
 	'SA_HRM_VIEW_COMPENSATION_GOVERNANCE' => array(SS_HRM_A|26, _('View scoped governed compensation ranges, awards and reconciliation evidence')), // no automatic role grant
+	'SA_HRM_VIEW_PAY_CTRY_UPDATE' => array(SS_HRM_A|27, _('View assigned scoped regulatory country-pack update notices')), // no automatic role grant
 
 	// CRM — Configuration (SS_CRM_C)
 	'SA_CRM_SETTINGS'      => array(SS_CRM_C|1,  _('CRM module settings')),
