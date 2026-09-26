@@ -2,7 +2,7 @@
 /**
  * PAY-CTRY-007 governed scoped audience, recipient, acknowledgement and lifecycle writer.
  *
- * This writer is intentionally internal-only; external delivery remains denied. It does not send external notifications,
+ * This writer is intentionally bounded to the in-app notification center; external network delivery remains denied. It does not send email/SMS/webhooks,
  * activate country packs, execute payroll, post accounting, submit filings or expose
  * employee facts in regulatory notice payloads.
  */
@@ -741,4 +741,149 @@ function pay_ctry_007_append_notice_lifecycle_event($notice_applicability_id, $e
     }
     return $ok ? $result : false;
 }
+
+
+function pay_ctry_007_delivery_tables_ready()
+{
+    if (!pay_ctry_007_recipient_tables_ready()) return false;
+    foreach (array('pay_ctry_update_notice_delivery_outbox','pay_ctry_update_notice_delivery_attempts') as $table) {
+        if (!hrm_migration_table_exists($table)) return false;
+    }
+    return true;
+}
+
+function pay_ctry_007_delivery_recipient_for_update($recipient_event_id)
+{
+    $company_id=pay_ctry_007_company_id();
+    if($company_id<0)return false;
+    return pay_ctry_007_one(
+        'SELECT r.*,a.company_id,a.scope_type,a.legal_entity_id,a.payroll_scope_key,a.applicability_sha256,'
+        .'n.notice_sha256,n.pack_code,n.current_pack_version,n.successor_pack_version,n.severity,n.deadline_at,n.required_action'
+        .' FROM '.TB_PREF.'pay_ctry_update_notice_recipient_events r'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notice_applicability a ON a.notice_applicability_id=r.notice_applicability_id'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notices n ON n.update_notice_id=r.update_notice_id'
+        .' WHERE r.recipient_event_id='.(int)$recipient_event_id.' AND a.company_id='.$company_id.' LIMIT 2 FOR UPDATE'
+    );
+}
+
+function pay_ctry_007_delivery_recipient_is_current(array $row)
+{
+    $latest=pay_ctry_007_one('SELECT recipient_event_id,event_type FROM '.TB_PREF.'pay_ctry_update_notice_recipient_events'
+        .' WHERE notice_audience_id='.(int)$row['notice_audience_id'].' AND recipient_user_id='.(int)$row['recipient_user_id']
+        .' ORDER BY event_no DESC LIMIT 1 FOR UPDATE');
+    if(!is_array($latest)||(int)$latest['recipient_event_id']!==(int)$row['recipient_event_id']||(string)$latest['event_type']!=='assigned')return false;
+    $ack=pay_ctry_007_one('SELECT notice_acknowledgement_id FROM '.TB_PREF.'pay_ctry_update_notice_acknowledgements WHERE recipient_event_id='.(int)$row['recipient_event_id'].' LIMIT 2');
+    if(is_array($ack))return false;
+    $resolved=pay_ctry_007_one('SELECT notice_lifecycle_event_id FROM '.TB_PREF.'pay_ctry_update_notice_lifecycle_events WHERE notice_applicability_id='.(int)$row['notice_applicability_id']." AND event_type='resolved' LIMIT 1");
+    return !is_array($resolved);
+}
+
+/** Queue one immutable, metadata-only in-app delivery intent for a currently assigned recipient. */
+function pay_ctry_007_enqueue_notice_delivery($recipient_event_id,$channel='in_app',$now_epoch=null,&$error=null)
+{
+    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)||!in_array($channel,pay_ctry_007_delivery_channels(),true)){$error='delivery_enqueue_unauthorized_or_invalid';return false;}
+    if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}
+    if(!empty($GLOBALS['transaction_level'])){$error='delivery_enqueue_requires_owned_transaction';return false;}
+    begin_transaction();$ok=false;$result=false;
+    do{
+        $recipient=pay_ctry_007_delivery_recipient_for_update($recipient_event_id);if(!is_array($recipient)){$error='delivery_recipient_scope_denied';break;}
+        if(!pay_ctry_007_delivery_recipient_is_current($recipient)){$error='delivery_recipient_not_current';break;}
+        $payload_sha256=pay_ctry_007_hash(array(
+            'recipient_event_sha256'=>(string)$recipient['recipient_event_sha256'],'notice_sha256'=>(string)$recipient['notice_sha256'],
+            'applicability_sha256'=>(string)$recipient['applicability_sha256'],'recipient_user_id'=>(int)$recipient['recipient_user_id'],
+            'pack_code'=>(string)$recipient['pack_code'],'current_pack_version'=>(string)$recipient['current_pack_version'],
+            'successor_pack_version'=>(string)$recipient['successor_pack_version'],'severity'=>(string)$recipient['severity'],
+            'deadline_at'=>(string)$recipient['deadline_at'],'required_action'=>(string)$recipient['required_action'],'employee_fact_payload'=>false));
+        $outbox_key='ctry7.outbox.'.substr(pay_ctry_007_hash(array('recipient'=>(string)$recipient['recipient_event_sha256'],'channel'=>$channel,'payload'=>$payload_sha256)),0,48);
+        $existing=pay_ctry_007_one('SELECT delivery_outbox_id,outbox_sha256,payload_sha256,recipient_event_id,recipient_user_id,channel FROM '.TB_PREF.'pay_ctry_update_notice_delivery_outbox WHERE outbox_key='.db_escape($outbox_key).' LIMIT 2 FOR UPDATE');
+        if(is_array($existing)){
+            if((int)$existing['recipient_event_id']!==(int)$recipient_event_id||(int)$existing['recipient_user_id']!==(int)$recipient['recipient_user_id']||(string)$existing['channel']!==$channel||!hash_equals((string)$existing['payload_sha256'],$payload_sha256)){$error='delivery_outbox_replay_mismatch';break;}
+            $ok=true;$result=array('delivery_outbox_id'=>(int)$existing['delivery_outbox_id'],'outbox_sha256'=>(string)$existing['outbox_sha256'],'replayed'=>true);break;
+        }
+        $queued_at=pay_ctry_007_iso_now($now_epoch);$sql_at=pay_ctry_007_sql_now($now_epoch);
+        $outbox=array('outbox_key'=>$outbox_key,'recipient_event_sha256'=>(string)$recipient['recipient_event_sha256'],'update_notice_sha256'=>(string)$recipient['notice_sha256'],'applicability_sha256'=>(string)$recipient['applicability_sha256'],'recipient_user_id'=>(int)$recipient['recipient_user_id'],'channel'=>$channel,'payload_sha256'=>$payload_sha256,'queued_by'=>$actor_id,'queued_at'=>$queued_at,'outbox_sha256'=>'');
+        $outbox['outbox_sha256']=pay_ctry_007_outbox_sha256($outbox);if(!pay_ctry_007_validate_delivery_outbox($outbox,$error))break;
+        $sql='INSERT INTO '.TB_PREF.'pay_ctry_update_notice_delivery_outbox (recipient_event_id,update_notice_id,notice_applicability_id,recipient_user_id,outbox_key,channel,payload_sha256,outbox_sha256,queued_by,queued_at,created_at) VALUES ('
+            .(int)$recipient_event_id.','.(int)$recipient['update_notice_id'].','.(int)$recipient['notice_applicability_id'].','.(int)$recipient['recipient_user_id'].','
+            .db_escape($outbox_key).','.db_escape($channel).','.db_escape($payload_sha256).','.db_escape($outbox['outbox_sha256']).','.$actor_id.','.db_escape($sql_at).','.db_escape($sql_at).')';
+        if(!db_query($sql,'could not append PAY-CTRY-007 delivery outbox')){$error='delivery_outbox_insert_failed';break;}
+        $outbox_id=pay_ctry_007_insert_id();if($outbox_id<=0){$error='delivery_outbox_identity_missing';break;}
+        if(!pay_ctry_007_audit(array('company_id'=>(int)$recipient['company_id'],'legal_entity_id'=>$recipient['legal_entity_id']===null?0:(int)$recipient['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_outbox','entity_key'=>array('delivery_outbox_id'=>$outbox_id),'action'=>'pay.ctry.update.delivery.queued','reason_code'=>'governed_in_app_delivery','before'=>array(),'after'=>array('outbox_sha256'=>$outbox['outbox_sha256'],'channel'=>$channel),'restricted_diff'=>array('employee_fact_payload'=>false,'external_network_delivery'=>false,'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
+        $ok=true;$result=array('delivery_outbox_id'=>$outbox_id,'outbox_sha256'=>$outbox['outbox_sha256'],'replayed'=>false);
+    }while(false);
+    if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
+}
+
+function pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id)
+{
+    $company_id=pay_ctry_007_company_id();if($company_id<0)return false;
+    return pay_ctry_007_one('SELECT o.*,r.notice_audience_id,r.recipient_event_sha256,r.event_type,a.company_id,a.legal_entity_id,a.applicability_sha256,n.notice_sha256'
+        .' FROM '.TB_PREF.'pay_ctry_update_notice_delivery_outbox o'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notice_recipient_events r ON r.recipient_event_id=o.recipient_event_id'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notice_applicability a ON a.notice_applicability_id=o.notice_applicability_id'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notices n ON n.update_notice_id=o.update_notice_id'
+        .' WHERE o.delivery_outbox_id='.(int)$delivery_outbox_id.' AND a.company_id='.$company_id.' LIMIT 2 FOR UPDATE');
+}
+
+function pay_ctry_007_append_delivery_attempt_locked(array $outbox,$status,$error_code,$now_epoch,$actor_id,&$error)
+{
+    $q=db_query('SELECT attempt_no,delivery_status,delivery_attempt_sha256 FROM '.TB_PREF.'pay_ctry_update_notice_delivery_attempts WHERE delivery_outbox_id='.(int)$outbox['delivery_outbox_id'].' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE');
+    if(!$q){$error='delivery_attempt_lookup_failed';return false;}
+    $attempt_no=1;$last=false;if(db_num_rows($q)===1){$last=db_fetch_assoc($q);$attempt_no=(int)$last['attempt_no']+1;if((string)$last['delivery_status']==='delivered'){if($status==='delivered')return array('delivery_attempt_id'=>0,'attempt_no'=>(int)$last['attempt_no'],'delivery_status'=>'delivered','delivery_attempt_sha256'=>(string)$last['delivery_attempt_sha256'],'replayed'=>true);$error='delivery_already_delivered';return false;}if((string)$last['delivery_status']==='dead_lettered'){$error='delivery_dead_letter_terminal';return false;}}
+    $provider_code='notrinos.notification_manager';$attempted_at=pay_ctry_007_iso_now($now_epoch);$result_sha256=pay_ctry_007_hash(array('outbox_sha256'=>(string)$outbox['outbox_sha256'],'provider_code'=>$provider_code,'attempt_no'=>$attempt_no,'status'=>$status,'error_code'=>$error_code,'external_network_delivery'=>false));
+    $attempt=array('outbox_sha256'=>(string)$outbox['outbox_sha256'],'attempt_no'=>$attempt_no,'provider_code'=>$provider_code,'delivery_status'=>$status,'result_sha256'=>$result_sha256,'error_code'=>$error_code,'attempted_by'=>$actor_id,'attempted_at'=>$attempted_at,'delivery_attempt_sha256'=>'');
+    $attempt['delivery_attempt_sha256']=pay_ctry_007_delivery_attempt_sha256($attempt);if(!pay_ctry_007_validate_delivery_attempt($attempt,$error))return false;
+    $sql_at=pay_ctry_007_sql_now($now_epoch);$sql='INSERT INTO '.TB_PREF.'pay_ctry_update_notice_delivery_attempts (delivery_outbox_id,attempt_no,provider_code,delivery_status,result_sha256,error_code,delivery_attempt_sha256,attempted_by,attempted_at,created_at) VALUES ('
+        .(int)$outbox['delivery_outbox_id'].','.$attempt_no.','.db_escape($provider_code).','.db_escape($status).','.db_escape($result_sha256).','.($error_code===null?'NULL':db_escape($error_code)).','.db_escape($attempt['delivery_attempt_sha256']).','.$actor_id.','.db_escape($sql_at).','.db_escape($sql_at).')';
+    if(!db_query($sql,'could not append PAY-CTRY-007 delivery attempt')){$error='delivery_attempt_insert_failed';return false;}
+    return array('delivery_attempt_id'=>pay_ctry_007_insert_id(),'attempt_no'=>$attempt_no,'delivery_status'=>$status,'delivery_attempt_sha256'=>$attempt['delivery_attempt_sha256'],'replayed'=>false);
+}
+
+/** Dispatch an outbox intent to the in-app notification provider; no network transport is performed. */
+function pay_ctry_007_dispatch_notice_delivery($delivery_outbox_id,$now_epoch=null,&$error=null)
+{
+    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)){$error='delivery_dispatch_unauthorized';return false;}
+    if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}
+    if(!empty($GLOBALS['transaction_level'])){$error='delivery_dispatch_requires_owned_transaction';return false;}
+    begin_transaction();$ok=false;$result=false;
+    do{$outbox=pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id);if(!is_array($outbox)){$error='delivery_outbox_scope_denied';break;}
+        $recipient=$outbox;if(!pay_ctry_007_delivery_recipient_is_current($recipient)){$error='delivery_recipient_not_current';break;}
+        if((string)$outbox['channel']!=='in_app'){$error='delivery_channel_denied';break;}
+        $result=pay_ctry_007_append_delivery_attempt_locked($outbox,'delivered',null,$now_epoch,$actor_id,$error);if($result===false)break;
+        if(!$result['replayed']&&!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.dispatched','reason_code'=>'in_app_notification_center','before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>'delivered'),'restricted_diff'=>array('provider_code'=>'notrinos.notification_manager','external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
+        $ok=true;
+    }while(false);if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
+}
+
+/** Record a bounded retryable/dead-letter attempt without performing a network send. */
+function pay_ctry_007_record_delivery_failure($delivery_outbox_id,$dead_letter,$error_code,$now_epoch=null,&$error=null)
+{
+    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)||!pay_ctry_007_reason($error_code)){$error='delivery_failure_unauthorized_or_invalid';return false;}
+    if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}if(!empty($GLOBALS['transaction_level'])){$error='delivery_failure_requires_owned_transaction';return false;}
+    begin_transaction();$ok=false;$result=false;do{$outbox=pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id);if(!is_array($outbox)){$error='delivery_outbox_scope_denied';break;}if(!pay_ctry_007_delivery_recipient_is_current($outbox)){$error='delivery_recipient_not_current';break;}$status=$dead_letter?'dead_lettered':'retryable_failure';$result=pay_ctry_007_append_delivery_attempt_locked($outbox,$status,$error_code,$now_epoch,$actor_id,$error);if($result===false)break;if(!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.'.$status,'reason_code'=>$error_code,'before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>$status),'restricted_diff'=>array('external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false)),$error))break;$ok=true;}while(false);if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
+}
+
+/** Read only delivered, current, unacknowledged notices for the current user's own company scope. */
+function pay_ctry_007_get_visible_deliveries($user_id,$limit=100)
+{
+    $user_id=(int)$user_id;$actor_id=pay_ctry_007_actor_id();$limit=(int)$limit;if($limit<1)$limit=1;if($limit>100)$limit=100;
+    if($user_id<=0||$actor_id!==$user_id||!pay_ctry_007_has_access(PAY_CTRY_007_VIEW_PERMISSION)||!pay_ctry_007_delivery_tables_ready())return array();
+    $company_id=pay_ctry_007_company_id();if($company_id<0)return array();
+    $sql='SELECT o.delivery_outbox_id,o.queued_at,n.pack_code,n.current_pack_version,n.successor_pack_version,n.severity,n.deadline_at,n.required_action,n.notice_sha256,a.applicability_sha256'
+        .' FROM '.TB_PREF.'pay_ctry_update_notice_delivery_outbox o'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notice_recipient_events r ON r.recipient_event_id=o.recipient_event_id'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notice_applicability a ON a.notice_applicability_id=o.notice_applicability_id'
+        .' INNER JOIN '.TB_PREF.'pay_ctry_update_notices n ON n.update_notice_id=o.update_notice_id'
+        .' WHERE o.recipient_user_id='.$user_id.' AND a.company_id='.$company_id." AND o.channel='in_app' AND r.event_type='assigned'"
+        .' AND EXISTS (SELECT 1 FROM '.TB_PREF."pay_ctry_update_notice_delivery_attempts d WHERE d.delivery_outbox_id=o.delivery_outbox_id AND d.delivery_status='delivered')"
+        .' AND NOT EXISTS (SELECT 1 FROM '.TB_PREF.'pay_ctry_update_notice_recipient_events s WHERE s.predecessor_recipient_event_id=r.recipient_event_id)'
+        .' AND NOT EXISTS (SELECT 1 FROM '.TB_PREF.'pay_ctry_update_notice_acknowledgements k WHERE k.recipient_event_id=r.recipient_event_id)'
+        .' AND NOT EXISTS (SELECT 1 FROM '.TB_PREF."pay_ctry_update_notice_lifecycle_events l WHERE l.notice_applicability_id=o.notice_applicability_id AND l.event_type='resolved')"
+        .' ORDER BY n.deadline_at ASC,o.queued_at ASC,o.delivery_outbox_id ASC LIMIT '.$limit;
+    $q=db_query($sql,'could not read PAY-CTRY-007 delivered notifications');if(!$q)return array();$rows=array();while($row=db_fetch_assoc($q))$rows[]=$row;return $rows;
+}
+
 ?>

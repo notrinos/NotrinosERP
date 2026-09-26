@@ -12947,6 +12947,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_audiences` (
   KEY `ix_pct7_au_notice` (`update_notice_id`,`notice_applicability_id`),
   KEY `ix_pct7_au_type` (`audience_type`,`selected_at`),
   CONSTRAINT `fk_pct7_au_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  KEY `fk_pct7_au_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_au_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_au_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_audiences` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_audiences row cannot be updated';
@@ -12977,6 +12978,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_recipient_events` (
   KEY `ix_pct7_re_notice` (`update_notice_id`,`notice_applicability_id`),
   CONSTRAINT `fk_pct7_re_audience` FOREIGN KEY (`notice_audience_id`) REFERENCES `0_pay_ctry_update_notice_audiences` (`notice_audience_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_re_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  KEY `fk_pct7_re_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_re_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_re_pred` FOREIGN KEY (`predecessor_recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
@@ -13001,6 +13003,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_acknowledgements` (
   KEY `ix_pct7_ack_notice` (`update_notice_id`,`notice_applicability_id`),
   CONSTRAINT `fk_pct7_ack_recipient` FOREIGN KEY (`recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_ack_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  KEY `fk_pct7_ack_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_ack_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_ak_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_acknowledgements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_acknowledgements row cannot be updated';
@@ -13026,9 +13029,61 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_lifecycle_events` (
   KEY `ix_pct7_le_notice` (`update_notice_id`,`notice_applicability_id`,`occurred_at`),
   KEY `ix_pct7_le_recipient` (`recipient_event_id`,`event_type`,`occurred_at`),
   CONSTRAINT `fk_pct7_le_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  KEY `fk_pct7_le_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_le_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_le_recipient` FOREIGN KEY (`recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_le_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_lifecycle_events row cannot be updated';
 CREATE TRIGGER `0_ct7_le_d` BEFORE DELETE ON `0_pay_ctry_update_notice_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_lifecycle_events row cannot be deleted';
 -- PAY-CTRY-007 END GROUP recipient_lifecycle
+
+-- PAY-CTRY-007 schema edge 1.0.827 -> 1.0.828.
+-- PAY-CTRY-007 GROUP delivery_outbox
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_delivery_outbox` (
+  `delivery_outbox_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `recipient_event_id` bigint(20) unsigned NOT NULL,
+  `update_notice_id` bigint(20) unsigned NOT NULL,
+  `notice_applicability_id` bigint(20) unsigned NOT NULL,
+  `recipient_user_id` bigint(20) unsigned NOT NULL,
+  `outbox_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `channel` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `outbox_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `queued_by` bigint(20) unsigned NOT NULL,
+  `queued_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`delivery_outbox_id`),
+  UNIQUE KEY `uq_pct7_ob_key` (`outbox_key`),
+  UNIQUE KEY `uq_pct7_ob_recipient_channel` (`recipient_event_id`,`channel`),
+  UNIQUE KEY `uq_pct7_ob_sha` (`outbox_sha256`),
+  KEY `ix_pct7_ob_user` (`recipient_user_id`,`channel`,`queued_at`),
+  KEY `ix_pct7_ob_notice` (`update_notice_id`,`notice_applicability_id`),
+  CONSTRAINT `fk_pct7_ob_recipient` FOREIGN KEY (`recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_pct7_ob_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  KEY `fk_pct7_ob_app` (`notice_applicability_id`),
+  CONSTRAINT `fk_pct7_ob_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_ob_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_delivery_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_outbox row cannot be updated';
+CREATE TRIGGER `0_ct7_ob_d` BEFORE DELETE ON `0_pay_ctry_update_notice_delivery_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_outbox row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_delivery_attempts` (
+  `delivery_attempt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `delivery_outbox_id` bigint(20) unsigned NOT NULL,
+  `attempt_no` int(10) unsigned NOT NULL,
+  `provider_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `delivery_status` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `error_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `delivery_attempt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `attempted_by` bigint(20) unsigned NOT NULL,
+  `attempted_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`delivery_attempt_id`),
+  UNIQUE KEY `uq_pct7_da_attempt` (`delivery_outbox_id`,`attempt_no`),
+  UNIQUE KEY `uq_pct7_da_sha` (`delivery_attempt_sha256`),
+  KEY `ix_pct7_da_status` (`delivery_outbox_id`,`delivery_status`,`attempted_at`),
+  CONSTRAINT `fk_pct7_da_outbox` FOREIGN KEY (`delivery_outbox_id`) REFERENCES `0_pay_ctry_update_notice_delivery_outbox` (`delivery_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_ct7_da_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_attempts row cannot be updated';
+CREATE TRIGGER `0_ct7_da_d` BEFORE DELETE ON `0_pay_ctry_update_notice_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_attempts row cannot be deleted';
+-- PAY-CTRY-007 END GROUP delivery_outbox

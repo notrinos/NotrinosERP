@@ -544,6 +544,7 @@ $security_areas =array(
 	'SA_HRM_ACK_PAY_CTRY_UPDATE' => array(SS_HRM|168, _('Acknowledge assigned scoped regulatory country-pack updates')), // no automatic role grant
 	'SA_HRM_ESCALATE_PAY_CTRY_UPDATE' => array(SS_HRM|169, _('Record governed reminders and escalations for scoped country-pack updates')), // no automatic role grant
 	'SA_HRM_RESOLVE_PAY_CTRY_UPDATE' => array(SS_HRM|170, _('Resolve scoped regulatory country-pack update notices with evidence')), // no automatic role grant
+	'SA_HRM_DELIVER_PAY_CTRY_UPDATE' => array(SS_HRM|171, _('Dispatch scoped regulatory country-pack update notifications to approved in-app provider')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

@@ -455,6 +455,7 @@ include_once($path_to_root.'/includes/approval_notification_provider.inc');
 include_once($path_to_root.'/includes/purchase_notification_provider.inc');
 include_once($path_to_root.'/includes/sales_notification_provider.inc');
 include_once($path_to_root.'/includes/hrm_notification_provider.inc');
+include_once($path_to_root.'/includes/pay_ctry_007_notification_provider.inc');
 
 // Ajax communication object
 $Ajax = new Ajax();
@@ -655,6 +656,12 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 					(int)$_SESSION['wa_current_user']->user,
 					(int)$_SESSION['wa_current_user']->access
 				)
+			);
+		}
+
+		if (!$notification_manager->hasProvider('pay_ctry_update')) {
+			$notification_manager->registerProvider(
+				new PayCtry007NotificationProvider((int)$_SESSION['wa_current_user']->user)
 			);
 		}
 	}

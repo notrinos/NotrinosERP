@@ -11,19 +11,11 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.826',
+        'active_database_version'=>'1.0.829',
         'active_legacy_payroll_contract'=>'1.0.458',
-        'next_backlog_item'=>'PAY-CTRY-007',
-        'next_slice_changed_files'=>array(
-            'includes/pay_ctry_007_contract.inc',
-            'hrm/includes/db/pay_ctry_007_readiness_db.inc',
-            'hrm/includes/db/pay_ctry_007_schema_db.inc',
-            'hrm/includes/db/pay_ctry_007_notification_db.inc',
-            'sql/upgrade_pay_ctry_007_schema.sql',
-            'sql/upgrade_pay_ctry_007_recipient_authority_contract.php',
-            'sql/upgrade_pay_ctry_007_recipient_lifecycle_schema.php',
-            'sql/upgrade_pay_ctry_007_recipient_lifecycle_writer.php'),
-        'next_slice_scope'=>'PAY-CTRY-007 scoped recipient/audience lifecycle is established at head 1.0.826 with least-privilege permissions, zero-seed immutable audience/recipient/acknowledgement/lifecycle custody, self-acknowledgement, explicit idempotency and governed reminder/escalation/resolution writers. External notification/outbox delivery, automatic pack activation, payroll execution, posting, payment, GL and statutory filing authority remain denied. The strict next PAY-CTRY-007 dependency is notification/outbox delivery integration and completion acceptance.',
+        'next_backlog_item'=>'PAY-GL-001',
+        'next_slice_changed_files'=>array(),
+        'next_slice_scope'=>'PAY-CTRY-007 is source-complete at head 1.0.829 with signed catalog/update-notice custody, scoped recipient lifecycle, zero-seed immutable delivery outbox/attempt custody and current-user in-app NotificationManager integration. External email/SMS/webhook transport, automatic country-pack activation, payroll execution/posting/payment/GL/statutory-filing authority and employee-fact payloads remain denied. The strict next backlog item is PAY-GL-001; re-inventory its accounting dependencies before selecting files.',
         'edges'=>array(
             'pay_ctry_007_dependency_review'=>array('previous'=>'1.0.820','version'=>'1.0.821',
                 'file'=>'sql/upgrade_pay_ctry_007_dependency_review.php'),
@@ -37,6 +29,12 @@ function hrm_migration_head_registry()
                 'file'=>'sql/upgrade_pay_ctry_007_recipient_lifecycle_schema.php'),
             'pay_ctry_007_recipient_lifecycle_writer'=>array('previous'=>'1.0.825','version'=>'1.0.826',
                 'file'=>'sql/upgrade_pay_ctry_007_recipient_lifecycle_writer.php'),
+            'pay_ctry_007_delivery_authority_contract'=>array('previous'=>'1.0.826','version'=>'1.0.827',
+                'file'=>'sql/upgrade_pay_ctry_007_delivery_authority_contract.php'),
+            'pay_ctry_007_delivery_outbox_schema'=>array('previous'=>'1.0.827','version'=>'1.0.828',
+                'file'=>'sql/upgrade_pay_ctry_007_delivery_outbox_schema.php'),
+            'pay_ctry_007_delivery_completion'=>array('previous'=>'1.0.828','version'=>'1.0.829',
+                'file'=>'sql/upgrade_pay_ctry_007_delivery_completion.php'),
             'pay_ctry_006_proof_0_identity_custody'=>array('previous'=>'1.0.816','version'=>'1.0.817',
                 'file'=>'sql/upgrade_pay_ctry_006_proof_0_identity_custody.php'),
             'pay_ctry_006_proof_1_calendar_calculation'=>array('previous'=>'1.0.817','version'=>'1.0.818',
