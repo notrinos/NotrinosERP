@@ -13956,3 +13956,64 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_cutovers` (
 CREATE TRIGGER `0_ppm1_co_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_cutovers row cannot be updated';
 CREATE TRIGGER `0_ppm1_co_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_cutovers row cannot be deleted';
 -- PAY-PMT-001 END GROUP legacy_cutover_completion
+
+
+-- PAY-FIL-001 GROUP obligation_source_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_obligations` (
+ `filing_obligation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `jurisdiction_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `obligation_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `period_start` date NOT NULL, `period_end` date NOT NULL, `due_date` date NOT NULL,
+ `filing_frequency` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `country_pack_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `country_pack_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `schema_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `schema_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `connector_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `connector_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `obligation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL, `prepared_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`filing_obligation_id`), UNIQUE KEY `uq_pfl1_ob_sha` (`obligation_sha256`),
+ UNIQUE KEY `uq_pfl1_ob_sem` (`company_id`,`legal_entity_id`,`jurisdiction_code`,`obligation_type`,`period_end`,`country_pack_version`,`schema_version`),
+ KEY `ix_pfl1_ob_due` (`company_id`,`legal_entity_id`,`due_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_ob_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_obligations row cannot be updated';
+CREATE TRIGGER `0_pfl1_ob_d` BEFORE DELETE ON `0_hrm_pay_fil_001_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_obligations row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_source_sets` (
+ `filing_source_set_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `source_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `run_count` int(10) unsigned NOT NULL, `result_count` int(10) unsigned NOT NULL,
+ `line_count` int(10) unsigned NOT NULL, `balance_count` int(10) unsigned NOT NULL, `liability_count` int(10) unsigned NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `liability_total_minor` bigint(20) NOT NULL,
+ `bound_by` bigint(20) unsigned NOT NULL, `bound_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`filing_source_set_id`), UNIQUE KEY `uq_pfl1_ss_sha` (`source_set_sha256`),
+ UNIQUE KEY `uq_pfl1_ss_ob` (`filing_obligation_id`,`source_set_sha256`),
+ KEY `fk_pfl1_ss_ob` (`filing_obligation_id`),
+ CONSTRAINT `fk_pfl1_ss_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_ss_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_source_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_sets row cannot be updated';
+CREATE TRIGGER `0_pfl1_ss_d` BEFORE DELETE ON `0_hrm_pay_fil_001_source_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_sets row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_source_links` (
+ `filing_source_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_source_set_id` bigint(20) unsigned NOT NULL, `link_no` int(10) unsigned NOT NULL,
+ `source_kind` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `predecessor_source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `run_kind` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `amount_minor` bigint(20) NOT NULL,
+ `source_link_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`filing_source_link_id`), UNIQUE KEY `uq_pfl1_sl_no` (`filing_source_set_id`,`link_no`),
+ UNIQUE KEY `uq_pfl1_sl_sha` (`source_link_sha256`), KEY `ix_pfl1_sl_src` (`source_kind`,`source_sha256`),
+ KEY `fk_pfl1_sl_set` (`filing_source_set_id`),
+ CONSTRAINT `fk_pfl1_sl_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_sl_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_source_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_links row cannot be updated';
+CREATE TRIGGER `0_pfl1_sl_d` BEFORE DELETE ON `0_hrm_pay_fil_001_source_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_links row cannot be deleted';
+-- PAY-FIL-001 END GROUP obligation_source_custody

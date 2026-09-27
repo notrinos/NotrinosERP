@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.847',
-        'active_legacy_payroll_contract'=>'1.0.461',
+        'active_database_version'=>'1.0.850',
+        'active_legacy_payroll_contract'=>'1.0.462',
         'next_backlog_item'=>'PAY-FIL-001',
-        'next_slice_changed_files'=>array('includes/pay_pmt_001_contract.inc','hrm/includes/db/pay_pmt_001_runtime_db.inc','hrm/includes/db/pay_pmt_001_completion_schema_db.inc','hrm/includes/db/payment_posting.inc','sql/upgrade_pay_pmt_001_payment_intent_writer.php','sql/upgrade_pay_pmt_001_batch_release.php','sql/upgrade_pay_pmt_001_renderer_artifact.php','sql/upgrade_pay_pmt_001_transmission_outbox.php','sql/upgrade_pay_pmt_001_return_reissue.php','sql/upgrade_pay_pmt_001_settlement_reconciliation.php','sql/upgrade_pay_pmt_001_legacy_cutover_completion.php'),
-        'next_slice_scope'=>'PAY-PMT-001 source closure is implemented through head 1.0.847: governed payment-intent writer, maker/checker release, declarative country/provider artifact custody, durable transmission evidence, forward-only failure/reissue, independent settlement reconciliation and legacy dual-authority cutover guard. No raw bank secret, unrestricted network, direct GL posting, historical payment mutation or automatic release authority is granted. PAY-FIL-001 is the next backlog item only after the PAY-PMT completion mandatory gate is accepted.',
+        'next_slice_changed_files'=>array('includes/pay_fil_001_contract.inc','hrm/includes/db/pay_fil_001_readiness_db.inc','hrm/includes/db/pay_fil_001_schema_db.inc','sql/upgrade_pay_fil_001_dependency_review.php','sql/upgrade_pay_fil_001_authority_contract.php','sql/upgrade_pay_fil_001_custody_schema.php','sql/upgrade_pay_fil_001_custody_schema.sql'),
+        'next_slice_scope'=>'PAY-FIL-001 bounded foundation is source-implemented through head 1.0.850: predecessor/dependency custody, fail-closed least-privilege filing authority and zero-seed immutable obligation/source-set/source-link custody. Official statutory form generation, validation/authorization execution, connector submission/network access, acknowledgements, corrections/amendments, secret custody and historical payroll/filing mutation remain disabled pending later PAY-FIL-001 slices and owner-machine acceptance.',
         'edges'=>array(
+            'pay_fil_001_dependency_review'=>array('previous'=>'1.0.847','version'=>'1.0.848',
+                'file'=>'sql/upgrade_pay_fil_001_dependency_review.php'),
+            'pay_fil_001_authority_contract'=>array('previous'=>'1.0.848','version'=>'1.0.849',
+                'file'=>'sql/upgrade_pay_fil_001_authority_contract.php'),
+            'pay_fil_001_custody_schema'=>array('previous'=>'1.0.849','version'=>'1.0.850',
+                'file'=>'sql/upgrade_pay_fil_001_custody_schema.php'),
             'pay_pmt_001_dependency_review'=>array('previous'=>'1.0.837','version'=>'1.0.838',
                 'file'=>'sql/upgrade_pay_pmt_001_dependency_review.php'),
             'pay_pmt_001_authority_contract'=>array('previous'=>'1.0.838','version'=>'1.0.839',
