@@ -13693,3 +13693,50 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_validations` (
 CREATE TRIGGER `0_pfl1_va_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_validations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_validations row cannot be updated';
 CREATE TRIGGER `0_pfl1_va_d` BEFORE DELETE ON `0_hrm_pay_fil_001_validations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_validations row cannot be deleted';
 -- PAY-FIL-001 END GROUP validation_evidence
+
+
+-- PAY-FIL-001 GROUP official_schema_authority
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_schema_authorities` (
+ `filing_schema_authority_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL, `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `jurisdiction_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `obligation_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `country_pack_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `country_pack_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `schema_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `schema_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `schema_artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `legal_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `technical_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `certification_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `generation_allowed` tinyint(1) unsigned NOT NULL, `transmission_allowed` tinyint(1) unsigned NOT NULL,
+ `connector_id` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `connector_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `effective_from` date NOT NULL, `effective_to` date NOT NULL, `authority_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`filing_schema_authority_id`), UNIQUE KEY `uq_pfl1_sa_sha` (`authority_sha256`),
+ UNIQUE KEY `uq_pfl1_sa_scope` (`company_id`,`legal_entity_id`,`jurisdiction_code`,`obligation_type`,`country_pack_id`,`country_pack_version`,`schema_id`,`schema_version`,`effective_from`),
+ KEY `ix_pfl1_sa_effective` (`company_id`,`legal_entity_id`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_sa_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_schema_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_schema_authorities row cannot be updated';
+CREATE TRIGGER `0_pfl1_sa_d` BEFORE DELETE ON `0_hrm_pay_fil_001_schema_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_schema_authorities row cannot be deleted';
+-- PAY-FIL-001 END GROUP official_schema_authority
+
+-- PAY-FIL-001 GROUP authorization_intent
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_authorization_intents` (
+ `filing_authorization_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL, `filing_artifact_id` bigint(20) unsigned NOT NULL,
+ `filing_validation_id` bigint(20) unsigned NOT NULL, `filing_schema_authority_id` bigint(20) unsigned NOT NULL,
+ `obligation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `artifact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `validation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `authority_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `authorization_kind` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `predecessor_authorization_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `authorization_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL, `reviewed_by` bigint(20) unsigned NOT NULL, `authorized_by` bigint(20) unsigned NOT NULL,
+ `authorized_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`filing_authorization_id`), UNIQUE KEY `uq_pfl1_au_sha` (`authorization_sha256`),
+ UNIQUE KEY `uq_pfl1_au_art` (`filing_artifact_id`,`authorization_sha256`),
+ KEY `fk_pfl1_au_ob` (`filing_obligation_id`), KEY `fk_pfl1_au_art` (`filing_artifact_id`), KEY `fk_pfl1_au_val` (`filing_validation_id`), KEY `fk_pfl1_au_sa` (`filing_schema_authority_id`),
+ CONSTRAINT `fk_pfl1_au_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_au_art` FOREIGN KEY (`filing_artifact_id`) REFERENCES `0_hrm_pay_fil_001_artifacts` (`filing_artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_au_val` FOREIGN KEY (`filing_validation_id`) REFERENCES `0_hrm_pay_fil_001_validations` (`filing_validation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_au_sa` FOREIGN KEY (`filing_schema_authority_id`) REFERENCES `0_hrm_pay_fil_001_schema_authorities` (`filing_schema_authority_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_au_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_authorization_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_authorization_intents row cannot be updated';
+CREATE TRIGGER `0_pfl1_au_d` BEFORE DELETE ON `0_hrm_pay_fil_001_authorization_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_authorization_intents row cannot be deleted';
+-- PAY-FIL-001 END GROUP authorization_intent

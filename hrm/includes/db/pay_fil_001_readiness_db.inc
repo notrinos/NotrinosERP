@@ -2,6 +2,7 @@
 /** PAY-FIL-001 predecessor, dependency and least-privilege readiness. */
 include_once(dirname(__FILE__).'/migration_readiness_db.inc');
 include_once($path_to_root.'/includes/pay_fil_001_contract.inc');
+include_once($path_to_root.'/includes/pay_fil_001_official_schema_contract.inc');
 function pay_fil_001_fail_patch($patch,$m){return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,$m);}
 function pay_fil_001_require_predecessor($patch){global $path_to_root;$files=array(
  'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_PMT_001_COMPLETION_2026-09-27.md'=>'dc4df2b1cdeb967e4c6f0c0bbc1c136b14eb2bc97f77bda54c0b62fa9534d65d',
@@ -22,5 +23,15 @@ function pay_fil_001_require_foundation_acceptance($patch){global $path_to_root;
  'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_FIL_001_FOUNDATION_BATCH_2026-09-27.md'=>'2c9b639f4fea26042805277cc2aa2c1aca1930bdb5e6c0ecf2b50ee2c010b8ef',
  'tests/fixtures/payroll/legacy_v1/manifest_v1.0.462.json'=>'edfafe6d1bcaf568b1b585eb07435e736fb7e12bdc095ae78fca8829ec8245cc');
  foreach($files as $rel=>$sha)if(!is_file($path_to_root.'/'.$rel)||!hash_equals($sha,hash_file('sha256',$path_to_root.'/'.$rel)))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 accepted foundation custody mismatch: '.$rel.'.');return true;}
+
+/** Require the accepted 1.0.853 pre-submission source/owner-machine custody before authorization foundations. */
+function pay_fil_001_require_presubmission_acceptance($patch){global $path_to_root;$files=array(
+ 'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_FIL_001_PRESUBMISSION_BATCH_2026-09-27.md'=>'317437810cc5f959bac1c3d48277029deb45a57cc2d739799e605095810efb67',
+ 'tests/fixtures/payroll/legacy_v1/manifest_v1.0.463.json'=>'64eee9925346ad321c6e1f3ae6e094fea8978c7656001cf04fd93561f097c01b');
+ foreach($files as $rel=>$sha)if(!is_file($path_to_root.'/'.$rel)||!hash_equals($sha,hash_file('sha256',$path_to_root.'/'.$rel)))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 accepted pre-submission custody mismatch: '.$rel.'.');return true;}
+
+/** Keep the current VN reference boundary explicitly fail-closed until a named official schema is reviewed. */
+function pay_fil_001_require_current_official_schema_boundary($patch){global $path_to_root;$rel='hrm/country_packs/vn_reference/1.0.0/artifacts/filing-boundaries.json';$raw=@file_get_contents($path_to_root.'/'.$rel);if(!is_string($raw)||hash('sha256',$raw)!=='388d8a6d459afc4d4ddab9515fda510dfa23d46a99fee8890be035fce19b50ee')return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary custody mismatch.');$b=json_decode($raw,true);if(!is_array($b)||!isset($b['official_supported_schemas'])||!is_array($b['official_supported_schemas'])||count($b['official_supported_schemas'])!==0)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary unexpectedly names an official schema.');foreach(array('tax_filing','social_insurance_filing') as $k)if(!isset($b[$k])||!array_key_exists('generation_allowed',$b[$k])||$b[$k]['generation_allowed']!==false||!array_key_exists('transmission_allowed',$b[$k])||$b[$k]['transmission_allowed']!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary no longer fails closed: '.$k.'.');return true;}
+
 function pay_fil_001_require_permissions($patch){global $path_to_root;$raw=@file_get_contents($path_to_root.'/includes/access_levels.inc');if(!is_string($raw))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 permission source missing.');foreach(array(PAY_FIL_001_PREPARE_PERMISSION,PAY_FIL_001_REVIEW_PERMISSION,PAY_FIL_001_AUTHORIZE_PERMISSION,PAY_FIL_001_SUBMIT_PERMISSION,PAY_FIL_001_RECOVER_PERMISSION,PAY_FIL_001_VIEW_PERMISSION,'no automatic role grant') as $t)if(strpos($raw,$t)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 least-privilege permission source incomplete: '.$t.'.');return true;}
 ?>

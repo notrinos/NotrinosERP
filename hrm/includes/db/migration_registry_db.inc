@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.853',
-        'active_legacy_payroll_contract'=>'1.0.463',
+        'active_database_version'=>'1.0.856',
+        'active_legacy_payroll_contract'=>'1.0.464',
         'next_backlog_item'=>'PAY-FIL-001',
-        'next_slice_changed_files'=>array('hrm/includes/db/pay_fil_001_runtime_db.inc','hrm/includes/db/pay_fil_001_completion_schema_db.inc','sql/upgrade_pay_fil_001_obligation_source_writer.php','sql/upgrade_pay_fil_001_internal_render_artifact.php','sql/upgrade_pay_fil_001_internal_render_artifact.sql','sql/upgrade_pay_fil_001_validation_evidence.php','sql/upgrade_pay_fil_001_validation_evidence.sql'),
-        'next_slice_scope'=>'PAY-FIL-001 pre-submission source implementation is advanced through head 1.0.853: governed obligation/source binding is restricted to current approved PAY-CORE-010 run/result custody; rendering is limited to a data-minimized internal reconciliation envelope; validation appends non-authorizing evidence. Official statutory form generation, filing authorization, connector submission/network access, acknowledgements, corrections/amendments, connector secret custody and historical payroll/accounting/filing mutation remain disabled pending later PAY-FIL-001 slices and owner-machine acceptance.',
+        'next_slice_changed_files'=>array('includes/pay_fil_001_official_schema_contract.inc','hrm/includes/db/pay_fil_001_readiness_db.inc','hrm/includes/db/pay_fil_001_completion_schema_db.inc','sql/upgrade_pay_fil_001_official_schema_boundary.php','sql/upgrade_pay_fil_001_official_schema_authority_custody.php','sql/upgrade_pay_fil_001_official_schema_authority_custody.sql','sql/upgrade_pay_fil_001_authorization_intent_custody.php','sql/upgrade_pay_fil_001_authorization_intent_custody.sql'),
+        'next_slice_scope'=>'PAY-FIL-001 authorization foundation is advanced through source head 1.0.856: current VN filing boundaries are frozen fail-closed with no named supported official schema; zero-seed immutable official-schema authority and authorization-intent custody are added without writers or executors. Official statutory form generation, filing authorization execution, connector submission/network access, acknowledgements, corrections/amendments, connector secret custody and historical payroll/accounting/filing mutation remain disabled pending named country/legal schema evidence and owner-machine acceptance.',
         'edges'=>array(
+            'pay_fil_001_official_schema_boundary'=>array('previous'=>'1.0.853','version'=>'1.0.854',
+                'file'=>'sql/upgrade_pay_fil_001_official_schema_boundary.php'),
+            'pay_fil_001_official_schema_authority_custody'=>array('previous'=>'1.0.854','version'=>'1.0.855',
+                'file'=>'sql/upgrade_pay_fil_001_official_schema_authority_custody.php'),
+            'pay_fil_001_authorization_intent_custody'=>array('previous'=>'1.0.855','version'=>'1.0.856',
+                'file'=>'sql/upgrade_pay_fil_001_authorization_intent_custody.php'),
             'pay_fil_001_obligation_source_writer'=>array('previous'=>'1.0.850','version'=>'1.0.851',
                 'file'=>'sql/upgrade_pay_fil_001_obligation_source_writer.php'),
             'pay_fil_001_internal_render_artifact'=>array('previous'=>'1.0.851','version'=>'1.0.852',
