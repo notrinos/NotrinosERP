@@ -1,6 +1,6 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.862');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.865');
 function pay_api_001_authority_contract()
 {
     return array(
@@ -23,10 +23,19 @@ function pay_api_001_authority_contract()
         'authentication_decision_audit'=>true,
         'read_only_request_gate'=>true,
         'tls_required_for_external_route'=>true,
+        'provision_request_custody'=>true,
+        'independent_provision_review_custody'=>true,
+        'independent_provision_approval_custody'=>true,
+        'provisioning_sod_gate'=>true,
+        'rate_limit_policy_custody'=>true,
+        'rate_limit_decision_custody'=>true,
+        'rate_limit_decision_gate'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
         'credential_or_secret_custody'=>false,
+        'credential_provisioning_writer_allowed'=>false,
+        'provisioning_execution_writer_allowed'=>false,
         'external_http_route'=>false,
         'webhook_delivery'=>false,
         'webhook_receive'=>false,

@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.862',
-        'active_legacy_payroll_contract'=>'1.0.466',
+        'active_database_version'=>'1.0.865',
+        'active_legacy_payroll_contract'=>'1.0.467',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_authn.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_security_contract_hardening.php','sql/upgrade_pay_api_001_credential_verifier_custody.php','sql/upgrade_pay_api_001_credential_verifier_custody.sql','sql/upgrade_pay_api_001_authn_readonly_gate.php','sql/upgrade_pay_api_001_authn_decision_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.862 with threat-model hardening, zero-seed one-way credential-verifier/revocation custody, zero-seed authentication-decision custody and a pure internal GET-only request gate. No credential provisioning writer, cleartext secret storage, public HTTP controller, rate-limit ledger, webhook, payroll/payment/GL/filing command, network, cross-company or historical mutation authority is enabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_provisioning.inc','includes/pay_api_001_rate_limit.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_provision_request_custody.php','sql/upgrade_pay_api_001_provision_request_custody.sql','sql/upgrade_pay_api_001_provision_review_approval_custody.php','sql/upgrade_pay_api_001_provision_review_approval_custody.sql','sql/upgrade_pay_api_001_rate_limit_custody.php','sql/upgrade_pay_api_001_rate_limit_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.865 with zero-seed immutable provisioning request/review/approval custody, a pure fail-closed maker/reviewer/approver separation gate, and zero-seed immutable rate-limit policy/decision custody with pure decision logic. No provisioning execution writer, credential provisioning writer, public HTTP controller, webhook, payroll/payment/GL/filing command, network, cross-company or historical mutation authority is enabled.',
         'edges'=>array(
+            'pay_api_001_provision_request_custody'=>array('previous'=>'1.0.862','version'=>'1.0.863',
+                'file'=>'sql/upgrade_pay_api_001_provision_request_custody.php'),
+            'pay_api_001_provision_review_approval_custody'=>array('previous'=>'1.0.863','version'=>'1.0.864',
+                'file'=>'sql/upgrade_pay_api_001_provision_review_approval_custody.php'),
+            'pay_api_001_rate_limit_custody'=>array('previous'=>'1.0.864','version'=>'1.0.865',
+                'file'=>'sql/upgrade_pay_api_001_rate_limit_custody.php'),
             'pay_api_001_security_contract_hardening'=>array('previous'=>'1.0.859','version'=>'1.0.860',
                 'file'=>'sql/upgrade_pay_api_001_security_contract_hardening.php'),
             'pay_api_001_credential_verifier_custody'=>array('previous'=>'1.0.860','version'=>'1.0.861',
