@@ -13,6 +13,21 @@
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
 
+/** Fail closed on the legacy direct-bank writer after accepted PAY-PMT cutover. */
+function payroll_payment_pay_pmt_001_legacy_allowed($period_id) {
+	global $path_to_root;
+	$period_id = (int)$period_id;
+	if ($period_id <= 0)
+		return false;
+	$runtime = $path_to_root.'/hrm/includes/db/pay_pmt_001_runtime_db.inc';
+	if (is_file($runtime))
+		include_once($runtime);
+	if (!function_exists('pay_pmt_001_legacy_payment_allowed'))
+		return true; // pre-PAY-PMT source compatibility only
+	$error = null;
+	return pay_pmt_001_legacy_payment_allowed($period_id, $error) === true;
+}
+
 /**
  * Build the exact payroll payment bank-account projection.
  *
@@ -157,6 +172,9 @@ function get_payroll_payment_memo($payslip, $memo='') {
 function write_payslip_payment_transaction($payslip, $bank_account_id, $payment_date='', $reference='', $memo='', $use_transaction=true) {
 	if (!is_array($payslip) || empty($payslip['employee_id']) || empty($payslip['payable_amount']))
 		return false;
+	if (isset($payslip['payroll_period_id']) && (int)$payslip['payroll_period_id'] > 0
+		&& !payroll_payment_pay_pmt_001_legacy_allowed((int)$payslip['payroll_period_id']))
+		return false;
 
 	$payable_amount = (float)$payslip['payable_amount'];
 	if ($payable_amount <= 0)
@@ -284,6 +302,11 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
 			cancel_transaction();
 		return false;
 	}
+	if ($current_period_id <= 0 || !payroll_payment_pay_pmt_001_legacy_allowed($current_period_id)) {
+		if ($use_transaction)
+			cancel_transaction();
+		return false;
+	}
 
 	$validation = validate_payslip_payment($payslip, $bank_account_code);
 	if (!$validation['valid']) {
@@ -325,7 +348,7 @@ function create_payment_transaction_for_payslip($payslip_id, $bank_account_code=
  */
 function create_payment_transactions_for_period($period_id, $bank_account_code='', $payment_date='', $reference='', $memo='', $use_transaction=true) {
 	$period_id = (int)$period_id;
-	if ($period_id <= 0)
+	if ($period_id <= 0 || !payroll_payment_pay_pmt_001_legacy_allowed($period_id))
 		return false;
 	$batch_authorized = function_exists('user_check_access')
 		&& isset($_SESSION['wa_current_user'])
@@ -492,6 +515,9 @@ function post_payment_gl_entries($payslip_id, $payment_trans_no, $bank_account_c
 		return true;
 
 	$payslip = get_payslip($payslip_id);
+	if (!$payslip || empty($payslip['payroll_period_id'])
+		|| !payroll_payment_pay_pmt_001_legacy_allowed((int)$payslip['payroll_period_id']))
+		return false;
 	$bank_account = get_payroll_payment_bank_account($bank_account_code);
 	$payable_account = get_payroll_payment_payable_account();
 	if (!$payslip || !$bank_account || $payable_account === false || !payslip_requires_payment($payslip))
