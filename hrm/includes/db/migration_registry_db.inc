@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.856',
-        'active_legacy_payroll_contract'=>'1.0.464',
-        'next_backlog_item'=>'PAY-FIL-001',
-        'next_slice_changed_files'=>array('includes/pay_fil_001_official_schema_contract.inc','hrm/includes/db/pay_fil_001_readiness_db.inc','hrm/includes/db/pay_fil_001_completion_schema_db.inc','sql/upgrade_pay_fil_001_official_schema_boundary.php','sql/upgrade_pay_fil_001_official_schema_authority_custody.php','sql/upgrade_pay_fil_001_official_schema_authority_custody.sql','sql/upgrade_pay_fil_001_authorization_intent_custody.php','sql/upgrade_pay_fil_001_authorization_intent_custody.sql'),
-        'next_slice_scope'=>'PAY-FIL-001 authorization foundation is advanced through source head 1.0.856: current VN filing boundaries are frozen fail-closed with no named supported official schema; zero-seed immutable official-schema authority and authorization-intent custody are added without writers or executors. Official statutory form generation, filing authorization execution, connector submission/network access, acknowledgements, corrections/amendments, connector secret custody and historical payroll/accounting/filing mutation remain disabled pending named country/legal schema evidence and owner-machine acceptance.',
+        'active_database_version'=>'1.0.859',
+        'active_legacy_payroll_contract'=>'1.0.465',
+        'next_backlog_item'=>'PAY-API-001',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_contract_foundation.php','sql/upgrade_pay_api_001_resource_registry.php','sql/upgrade_pay_api_001_resource_registry.sql','sql/upgrade_pay_api_001_machine_principal_scope_custody.php','sql/upgrade_pay_api_001_machine_principal_scope_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 foundation is advanced through source head 1.0.859 with a deny-by-default pure contract, zero-seed immutable resource registry, and zero-seed immutable machine-principal/resource-scope custody. No credential or secret custody, external HTTP route, webhook delivery/receive, payroll command, payment, GL, filing, network, cross-company or historical mutation authority is enabled.',
         'edges'=>array(
+            'pay_api_001_contract_foundation'=>array('previous'=>'1.0.856','version'=>'1.0.857',
+                'file'=>'sql/upgrade_pay_api_001_contract_foundation.php'),
+            'pay_api_001_resource_registry'=>array('previous'=>'1.0.857','version'=>'1.0.858',
+                'file'=>'sql/upgrade_pay_api_001_resource_registry.php'),
+            'pay_api_001_machine_principal_scope_custody'=>array('previous'=>'1.0.858','version'=>'1.0.859',
+                'file'=>'sql/upgrade_pay_api_001_machine_principal_scope_custody.php'),
             'pay_fil_001_official_schema_boundary'=>array('previous'=>'1.0.853','version'=>'1.0.854',
                 'file'=>'sql/upgrade_pay_fil_001_official_schema_boundary.php'),
             'pay_fil_001_official_schema_authority_custody'=>array('previous'=>'1.0.854','version'=>'1.0.855',
