@@ -14102,7 +14102,7 @@ CREATE TRIGGER `0_pfl1_au_d` BEFORE DELETE ON `0_hrm_pay_fil_001_authorization_i
 -- PAY-FIL-001 END GROUP authorization_intent
 
 
--- PAY-API-001 zero-seed foundation through 1.0.859.
+-- PAY-API-001 zero-seed security/authentication foundation through 1.0.862.
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_resources` (
  `api_resource_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `resource_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `contract_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `resource_kind` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `company_scope_required` tinyint(1) unsigned NOT NULL, `object_scope_required` tinyint(1) unsigned NOT NULL, `read_capable` tinyint(1) unsigned NOT NULL, `command_capable` tinyint(1) unsigned NOT NULL, `resource_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL, PRIMARY KEY (`api_resource_id`), UNIQUE KEY `uq_papi1_rs_key_ver` (`resource_key`,`contract_version`), UNIQUE KEY `uq_papi1_rs_sha` (`resource_sha256`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
@@ -14118,3 +14118,55 @@ CREATE TRIGGER `0_papi1_mp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_machine_princi
 CREATE TRIGGER `0_papi1_mp_d` BEFORE DELETE ON `0_hrm_pay_api_001_machine_principals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_machine_principals row cannot be deleted';
 CREATE TRIGGER `0_papi1_ps_u` BEFORE UPDATE ON `0_hrm_pay_api_001_principal_scopes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_principal_scopes row cannot be updated';
 CREATE TRIGGER `0_papi1_ps_d` BEFORE DELETE ON `0_hrm_pay_api_001_principal_scopes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_principal_scopes row cannot be deleted';
+
+-- PAY-API-001 GROUP credential_verifier_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_credentials` (
+ `api_credential_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `api_principal_id` bigint(20) unsigned NOT NULL,
+ `credential_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `verifier_scheme` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `secret_verifier_hash` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `valid_from` datetime NOT NULL, `expires_at` datetime NOT NULL,
+ `credential_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`api_credential_id`), UNIQUE KEY `uq_papi1_cr_key` (`credential_key`), UNIQUE KEY `uq_papi1_cr_sha` (`credential_sha256`),
+ KEY `fk_papi1_cr_principal` (`api_principal_id`),
+ CONSTRAINT `fk_papi1_cr_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_credential_revocations` (
+ `credential_revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `api_credential_id` bigint(20) unsigned NOT NULL,
+ `reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `revocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `revoked_by` bigint(20) unsigned NOT NULL, `revoked_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`credential_revocation_id`), UNIQUE KEY `uq_papi1_cv_credential` (`api_credential_id`), UNIQUE KEY `uq_papi1_cv_sha` (`revocation_sha256`),
+ KEY `fk_papi1_cv_credential` (`api_credential_id`),
+ CONSTRAINT `fk_papi1_cv_credential` FOREIGN KEY (`api_credential_id`) REFERENCES `0_hrm_pay_api_001_credentials` (`api_credential_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_cr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_credentials` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credentials row cannot be updated';
+CREATE TRIGGER `0_papi1_cr_d` BEFORE DELETE ON `0_hrm_pay_api_001_credentials` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credentials row cannot be deleted';
+CREATE TRIGGER `0_papi1_cv_u` BEFORE UPDATE ON `0_hrm_pay_api_001_credential_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credential_revocations row cannot be updated';
+CREATE TRIGGER `0_papi1_cv_d` BEFORE DELETE ON `0_hrm_pay_api_001_credential_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credential_revocations row cannot be deleted';
+-- PAY-API-001 END GROUP credential_verifier_custody
+
+-- PAY-API-001 GROUP authn_decision_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_authn_decisions` (
+ `api_authn_decision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL,
+ `api_principal_id` bigint(20) unsigned DEFAULT NULL,
+ `api_credential_id` bigint(20) unsigned DEFAULT NULL,
+ `credential_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `outcome_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `correlation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `decision_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `occurred_at` datetime NOT NULL, `created_at` datetime NOT NULL,
+ PRIMARY KEY (`api_authn_decision_id`), UNIQUE KEY `uq_papi1_ad_sha` (`decision_sha256`),
+ KEY `ix_papi1_ad_company_time` (`company_id`,`occurred_at`),
+ KEY `fk_papi1_ad_principal` (`api_principal_id`), KEY `fk_papi1_ad_credential` (`api_credential_id`),
+ CONSTRAINT `fk_papi1_ad_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_ad_credential` FOREIGN KEY (`api_credential_id`) REFERENCES `0_hrm_pay_api_001_credentials` (`api_credential_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_ad_u` BEFORE UPDATE ON `0_hrm_pay_api_001_authn_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_authn_decisions row cannot be updated';
+CREATE TRIGGER `0_papi1_ad_d` BEFORE DELETE ON `0_hrm_pay_api_001_authn_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_authn_decisions row cannot be deleted';
+-- PAY-API-001 END GROUP authn_decision_custody

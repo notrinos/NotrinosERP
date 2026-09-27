@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.859',
-        'active_legacy_payroll_contract'=>'1.0.465',
+        'active_database_version'=>'1.0.862',
+        'active_legacy_payroll_contract'=>'1.0.466',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_contract_foundation.php','sql/upgrade_pay_api_001_resource_registry.php','sql/upgrade_pay_api_001_resource_registry.sql','sql/upgrade_pay_api_001_machine_principal_scope_custody.php','sql/upgrade_pay_api_001_machine_principal_scope_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 foundation is advanced through source head 1.0.859 with a deny-by-default pure contract, zero-seed immutable resource registry, and zero-seed immutable machine-principal/resource-scope custody. No credential or secret custody, external HTTP route, webhook delivery/receive, payroll command, payment, GL, filing, network, cross-company or historical mutation authority is enabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_authn.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_security_contract_hardening.php','sql/upgrade_pay_api_001_credential_verifier_custody.php','sql/upgrade_pay_api_001_credential_verifier_custody.sql','sql/upgrade_pay_api_001_authn_readonly_gate.php','sql/upgrade_pay_api_001_authn_decision_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.862 with threat-model hardening, zero-seed one-way credential-verifier/revocation custody, zero-seed authentication-decision custody and a pure internal GET-only request gate. No credential provisioning writer, cleartext secret storage, public HTTP controller, rate-limit ledger, webhook, payroll/payment/GL/filing command, network, cross-company or historical mutation authority is enabled.',
         'edges'=>array(
+            'pay_api_001_security_contract_hardening'=>array('previous'=>'1.0.859','version'=>'1.0.860',
+                'file'=>'sql/upgrade_pay_api_001_security_contract_hardening.php'),
+            'pay_api_001_credential_verifier_custody'=>array('previous'=>'1.0.860','version'=>'1.0.861',
+                'file'=>'sql/upgrade_pay_api_001_credential_verifier_custody.php'),
+            'pay_api_001_authn_readonly_gate'=>array('previous'=>'1.0.861','version'=>'1.0.862',
+                'file'=>'sql/upgrade_pay_api_001_authn_readonly_gate.php'),
             'pay_api_001_contract_foundation'=>array('previous'=>'1.0.856','version'=>'1.0.857',
                 'file'=>'sql/upgrade_pay_api_001_contract_foundation.php'),
             'pay_api_001_resource_registry'=>array('previous'=>'1.0.857','version'=>'1.0.858',
