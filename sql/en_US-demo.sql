@@ -14273,3 +14273,26 @@ CREATE TRIGGER `0_papi1_rlp_d` BEFORE DELETE ON `0_hrm_pay_api_001_rate_limit_po
 CREATE TRIGGER `0_papi1_rld_u` BEFORE UPDATE ON `0_hrm_pay_api_001_rate_limit_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_rate_limit_decisions row cannot be updated';
 CREATE TRIGGER `0_papi1_rld_d` BEFORE DELETE ON `0_hrm_pay_api_001_rate_limit_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_rate_limit_decisions row cannot be deleted';
 -- PAY-API-001 END GROUP rate_limit_custody
+
+-- PAY-API-001 GROUP provision_execution_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_executions` (
+ `provision_execution_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `provision_request_id` bigint(20) unsigned NOT NULL,
+ `provision_approval_id` bigint(20) unsigned NOT NULL,
+ `target_kind` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `target_record_id` bigint(20) unsigned NOT NULL,
+ `target_payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `executor_id` bigint(20) unsigned NOT NULL,
+ `execution_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `executed_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`provision_execution_id`),
+ UNIQUE KEY `uq_papi1_pe_request` (`provision_request_id`),
+ UNIQUE KEY `uq_papi1_pe_approval` (`provision_approval_id`),
+ UNIQUE KEY `uq_papi1_pe_sha` (`execution_sha256`),
+ CONSTRAINT `fk_papi1_pe_request` FOREIGN KEY (`provision_request_id`) REFERENCES `0_hrm_pay_api_001_provision_requests` (`provision_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_pe_approval` FOREIGN KEY (`provision_approval_id`) REFERENCES `0_hrm_pay_api_001_provision_approvals` (`provision_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_pe_u` BEFORE UPDATE ON `0_hrm_pay_api_001_provision_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_executions row cannot be updated';
+CREATE TRIGGER `0_papi1_pe_d` BEFORE DELETE ON `0_hrm_pay_api_001_provision_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_executions row cannot be deleted';
+-- PAY-API-001 END GROUP provision_execution_custody

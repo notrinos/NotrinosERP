@@ -1,6 +1,6 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.865');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.868');
 function pay_api_001_authority_contract()
 {
     return array(
@@ -27,15 +27,20 @@ function pay_api_001_authority_contract()
         'independent_provision_review_custody'=>true,
         'independent_provision_approval_custody'=>true,
         'provisioning_sod_gate'=>true,
+        'provision_execution_receipt_custody'=>true,
+        'provisioning_execution_writer'=>true,
+        'credential_provisioning_writer'=>true,
         'rate_limit_policy_custody'=>true,
         'rate_limit_decision_custody'=>true,
         'rate_limit_decision_gate'=>true,
+        'atomic_rate_limit_enforcement'=>true,
+        'read_only_adapter_contract'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
         'credential_or_secret_custody'=>false,
-        'credential_provisioning_writer_allowed'=>false,
-        'provisioning_execution_writer_allowed'=>false,
+        'credential_provisioning_writer_allowed'=>true,
+        'provisioning_execution_writer_allowed'=>true,
         'external_http_route'=>false,
         'webhook_delivery'=>false,
         'webhook_receive'=>false,

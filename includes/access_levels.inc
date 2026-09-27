@@ -559,6 +559,10 @@ $security_areas =array(
 	'SA_HRM_AUTHORIZE_PAY_FIL' => array(SS_HRM|180, _('Authorize governed statutory filing artifacts after independent review')), // no automatic role grant
 	'SA_HRM_SUBMIT_PAY_FIL' => array(SS_HRM|181, _('Submit authorized statutory filing artifacts through governed connectors')), // no automatic role grant
 	'SA_HRM_RECOVER_PAY_FIL' => array(SS_HRM|182, _('Recover, correct and amend governed statutory filing evidence')), // no automatic role grant
+	'SA_HRM_MANAGE_PAY_API' => array(SS_HRM|183, _('Create governed PAY-API provisioning requests')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_API' => array(SS_HRM|184, _('Independently review governed PAY-API provisioning requests')), // no automatic role grant
+	'SA_HRM_APPROVE_PAY_API' => array(SS_HRM|185, _('Independently approve reviewed PAY-API provisioning requests')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_API' => array(SS_HRM|186, _('Execute approved PAY-API provisioning requests')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

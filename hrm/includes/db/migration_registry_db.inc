@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.865',
-        'active_legacy_payroll_contract'=>'1.0.467',
+        'active_database_version'=>'1.0.868',
+        'active_legacy_payroll_contract'=>'1.0.468',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_provisioning.inc','includes/pay_api_001_rate_limit.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_provision_request_custody.php','sql/upgrade_pay_api_001_provision_request_custody.sql','sql/upgrade_pay_api_001_provision_review_approval_custody.php','sql/upgrade_pay_api_001_provision_review_approval_custody.sql','sql/upgrade_pay_api_001_rate_limit_custody.php','sql/upgrade_pay_api_001_rate_limit_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.865 with zero-seed immutable provisioning request/review/approval custody, a pure fail-closed maker/reviewer/approver separation gate, and zero-seed immutable rate-limit policy/decision custody with pure decision logic. No provisioning execution writer, credential provisioning writer, public HTTP controller, webhook, payroll/payment/GL/filing command, network, cross-company or historical mutation authority is enabled.',
+        'next_slice_changed_files'=>array('includes/access_levels.inc','includes/pay_api_001_authn.inc','includes/pay_api_001_contract.inc','includes/pay_api_001_provisioning.inc','includes/pay_api_001_rate_limit.inc','includes/pay_api_001_readonly_adapter.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_runtime_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_provision_execution_custody.php','sql/upgrade_pay_api_001_provision_execution_custody.sql','sql/upgrade_pay_api_001_atomic_rate_limit_enforcement.php','sql/upgrade_pay_api_001_readonly_adapter_preroute.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.868 with dedicated four-party governed provisioning execution, immutable execution receipts, transaction-serialized rate-limit decision append/enforcement, and a bounded pre-route GET/TLS/authn/authz/rate/pagination adapter contract. Public HTTP route files, webhook/provider/network transport and payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_provision_execution_custody'=>array('previous'=>'1.0.865','version'=>'1.0.866',
+                'file'=>'sql/upgrade_pay_api_001_provision_execution_custody.php'),
+            'pay_api_001_atomic_rate_limit_enforcement'=>array('previous'=>'1.0.866','version'=>'1.0.867',
+                'file'=>'sql/upgrade_pay_api_001_atomic_rate_limit_enforcement.php'),
+            'pay_api_001_readonly_adapter_preroute'=>array('previous'=>'1.0.867','version'=>'1.0.868',
+                'file'=>'sql/upgrade_pay_api_001_readonly_adapter_preroute.php'),
             'pay_api_001_provision_request_custody'=>array('previous'=>'1.0.862','version'=>'1.0.863',
                 'file'=>'sql/upgrade_pay_api_001_provision_request_custody.php'),
             'pay_api_001_provision_review_approval_custody'=>array('previous'=>'1.0.863','version'=>'1.0.864',
