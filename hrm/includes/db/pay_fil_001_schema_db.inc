@@ -111,36 +111,62 @@ function pay_fil_001_schema_foreign_keys()
     );
 }
 
-/** Read complete foreign-key column and referential-action metadata. */
+/** Read foreign-key metadata separately; MariaDB 10.5 can full-scan on an information-schema join. */
 function pay_fil_001_table_foreign_key_projection($table)
 {
     $physical = hrm_migration_physical_table_name($table);
     if ($physical === false)
         return false;
-    $result = db_query("SELECT k.CONSTRAINT_NAME, k.ORDINAL_POSITION, k.COLUMN_NAME, k.REFERENCED_TABLE_NAME, "
-        ."k.REFERENCED_COLUMN_NAME, r.UPDATE_RULE, r.DELETE_RULE FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE k "
-        ."INNER JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS r ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA "
-        ."AND r.TABLE_NAME=k.TABLE_NAME AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME "
-        ."WHERE k.CONSTRAINT_SCHEMA=DATABASE() AND k.TABLE_NAME=".db_escape($physical)
-        .' AND k.REFERENCED_TABLE_NAME IS NOT NULL ORDER BY k.CONSTRAINT_NAME, k.ORDINAL_POSITION');
-    if (!$result)
+    $key_result = db_query("SELECT CONSTRAINT_NAME, ORDINAL_POSITION, COLUMN_NAME, REFERENCED_TABLE_NAME, "
+        ."REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+        ."WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical)
+        .' AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY CONSTRAINT_NAME, ORDINAL_POSITION');
+    if (!$key_result)
         return false;
     $projection = array();
-    while ($row = db_fetch_assoc($result)) {
+    while ($row = db_fetch_assoc($key_result)) {
         $name = (string)$row['CONSTRAINT_NAME'];
         if (!isset($projection[$name])) {
             $projection[$name] = array(
                 'referenced_table' => (string)$row['REFERENCED_TABLE_NAME'],
-                'update_rule' => strtoupper((string)$row['UPDATE_RULE']),
-                'delete_rule' => strtoupper((string)$row['DELETE_RULE']),
+                'update_rule' => '',
+                'delete_rule' => '',
                 'columns' => array()
             );
+        } elseif ($projection[$name]['referenced_table'] !== (string)$row['REFERENCED_TABLE_NAME']) {
+            return false;
         }
         $projection[$name]['columns'][] = array(
             'sequence' => (int)$row['ORDINAL_POSITION'],
             'column_name' => (string)$row['COLUMN_NAME'],
             'referenced_column_name' => (string)$row['REFERENCED_COLUMN_NAME']
         );
+    }
+
+    $rule_result = db_query("SELECT CONSTRAINT_NAME, UPDATE_RULE, DELETE_RULE "
+        ."FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS "
+        ."WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical)
+        .' ORDER BY CONSTRAINT_NAME');
+    if (!$rule_result)
+        return false;
+    $rules = array();
+    while ($row = db_fetch_assoc($rule_result)) {
+        $name = (string)$row['CONSTRAINT_NAME'];
+        if (isset($rules[$name]))
+            return false;
+        $rules[$name] = array(
+            'update_rule' => strtoupper((string)$row['UPDATE_RULE']),
+            'delete_rule' => strtoupper((string)$row['DELETE_RULE'])
+        );
+    }
+
+    if (count($rules) !== count($projection))
+        return false;
+    foreach ($projection as $name => $foreign_key) {
+        if (!isset($rules[$name]))
+            return false;
+        $projection[$name]['update_rule'] = $rules[$name]['update_rule'];
+        $projection[$name]['delete_rule'] = $rules[$name]['delete_rule'];
     }
     ksort($projection, SORT_STRING);
     return $projection;

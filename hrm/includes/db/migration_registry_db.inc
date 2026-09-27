@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.850',
-        'active_legacy_payroll_contract'=>'1.0.462',
+        'active_database_version'=>'1.0.853',
+        'active_legacy_payroll_contract'=>'1.0.463',
         'next_backlog_item'=>'PAY-FIL-001',
-        'next_slice_changed_files'=>array('includes/pay_fil_001_contract.inc','hrm/includes/db/pay_fil_001_readiness_db.inc','hrm/includes/db/pay_fil_001_schema_db.inc','sql/upgrade_pay_fil_001_dependency_review.php','sql/upgrade_pay_fil_001_authority_contract.php','sql/upgrade_pay_fil_001_custody_schema.php','sql/upgrade_pay_fil_001_custody_schema.sql'),
-        'next_slice_scope'=>'PAY-FIL-001 bounded foundation is source-implemented through head 1.0.850: predecessor/dependency custody, fail-closed least-privilege filing authority and zero-seed immutable obligation/source-set/source-link custody. Official statutory form generation, validation/authorization execution, connector submission/network access, acknowledgements, corrections/amendments, secret custody and historical payroll/filing mutation remain disabled pending later PAY-FIL-001 slices and owner-machine acceptance.',
+        'next_slice_changed_files'=>array('hrm/includes/db/pay_fil_001_runtime_db.inc','hrm/includes/db/pay_fil_001_completion_schema_db.inc','sql/upgrade_pay_fil_001_obligation_source_writer.php','sql/upgrade_pay_fil_001_internal_render_artifact.php','sql/upgrade_pay_fil_001_internal_render_artifact.sql','sql/upgrade_pay_fil_001_validation_evidence.php','sql/upgrade_pay_fil_001_validation_evidence.sql'),
+        'next_slice_scope'=>'PAY-FIL-001 pre-submission source implementation is advanced through head 1.0.853: governed obligation/source binding is restricted to current approved PAY-CORE-010 run/result custody; rendering is limited to a data-minimized internal reconciliation envelope; validation appends non-authorizing evidence. Official statutory form generation, filing authorization, connector submission/network access, acknowledgements, corrections/amendments, connector secret custody and historical payroll/accounting/filing mutation remain disabled pending later PAY-FIL-001 slices and owner-machine acceptance.',
         'edges'=>array(
+            'pay_fil_001_obligation_source_writer'=>array('previous'=>'1.0.850','version'=>'1.0.851',
+                'file'=>'sql/upgrade_pay_fil_001_obligation_source_writer.php'),
+            'pay_fil_001_internal_render_artifact'=>array('previous'=>'1.0.851','version'=>'1.0.852',
+                'file'=>'sql/upgrade_pay_fil_001_internal_render_artifact.php'),
+            'pay_fil_001_validation_evidence'=>array('previous'=>'1.0.852','version'=>'1.0.853',
+                'file'=>'sql/upgrade_pay_fil_001_validation_evidence.php'),
             'pay_fil_001_dependency_review'=>array('previous'=>'1.0.847','version'=>'1.0.848',
                 'file'=>'sql/upgrade_pay_fil_001_dependency_review.php'),
             'pay_fil_001_authority_contract'=>array('previous'=>'1.0.848','version'=>'1.0.849',
