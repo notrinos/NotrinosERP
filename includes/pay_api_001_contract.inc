@@ -1,8 +1,10 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.876');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.879');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION', '1.0.873');
 if (!defined('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION')) define('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION', '1.0.876');
+if (!defined('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION')) define('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION', '1.0.878');
+if (!defined('PAY_API_001_WEBHOOK_DELIVERY_AUDIT_CUSTODY_DB_VERSION')) define('PAY_API_001_WEBHOOK_DELIVERY_AUDIT_CUSTODY_DB_VERSION', '1.0.879');
 
 /** Return whether the bounded public read-only route is allowed at one exact database version. */
 function pay_api_001_public_readonly_route_allowed_for_database_version($database_version)
@@ -18,12 +20,28 @@ function pay_api_001_business_data_dispatch_allowed_for_database_version($databa
     return version_compare($database_version, PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION, '>=');
 }
 
+/** Return whether immutable outbound webhook target/event/outbox custody must exist. */
+function pay_api_001_webhook_outbox_custody_required_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION, '>=');
+}
+
+/** Return whether immutable delivery-attempt and dead-letter audit custody must exist. */
+function pay_api_001_webhook_delivery_audit_custody_required_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_DELIVERY_AUDIT_CUSTODY_DB_VERSION, '>=');
+}
+
 /** Return the authority contract as it applies to the supplied database version. */
 function pay_api_001_authority_contract($database_version=null)
 {
     $effective_version = $database_version === null ? PAY_API_001_CONTRACT_VERSION : (string)$database_version;
     $route_allowed = pay_api_001_public_readonly_route_allowed_for_database_version($effective_version);
     $business_dispatch_allowed = pay_api_001_business_data_dispatch_allowed_for_database_version($effective_version);
+    $webhook_outbox_custody = pay_api_001_webhook_outbox_custody_required_for_database_version($effective_version);
+    $webhook_delivery_audit_custody = pay_api_001_webhook_delivery_audit_custody_required_for_database_version($effective_version);
     return array(
         'versioned_resource_contract'=>true,
         'deny_by_default'=>true,
@@ -66,6 +84,12 @@ function pay_api_001_authority_contract($database_version=null)
         'read_response_audit_custody'=>true,
         'payroll_period_summary_contract'=>true,
         'business_data_dispatcher_contract'=>true,
+        'outbound_webhook_contract'=>true,
+        'webhook_target_contract'=>true,
+        'webhook_event_contract'=>true,
+        'webhook_outbox_contract'=>true,
+        'webhook_delivery_attempt_contract'=>true,
+        'webhook_dead_letter_contract'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
@@ -75,6 +99,9 @@ function pay_api_001_authority_contract($database_version=null)
         'external_http_route'=>$route_allowed,
         'business_data_dispatcher_allowed'=>$business_dispatch_allowed,
         'authorized_business_payload_allowed'=>$business_dispatch_allowed,
+        'webhook_outbox_custody_required'=>$webhook_outbox_custody,
+        'webhook_delivery_audit_custody_required'=>$webhook_delivery_audit_custody,
+        'webhook_enqueue_writer_allowed'=>false,
         'webhook_delivery'=>false,
         'webhook_receive'=>false,
         'payroll_command_authority'=>false,

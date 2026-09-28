@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.876',
-        'active_legacy_payroll_contract'=>'1.0.471',
+        'active_database_version'=>'1.0.879',
+        'active_legacy_payroll_contract'=>'1.0.472',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_business_read.inc','includes/pay_api_001_public_readonly_route.inc','hrm/includes/db/pay_api_001_business_read_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','payroll_api.php','sql/upgrade_pay_api_001_read_response_audit_custody.php','sql/upgrade_pay_api_001_payroll_period_summary_dispatcher_compatibility.php','sql/upgrade_pay_api_001_payroll_period_summary_activation.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.876 with append-only read-response audit custody and one minimized payroll.period.summary v1 object read for approved-or-later periods. Webhooks, provider/network transport, employee-level payroll detail and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_contract_compatibility.php','sql/upgrade_pay_api_001_webhook_outbox_custody.php','sql/upgrade_pay_api_001_webhook_outbox_custody.sql','sql/upgrade_pay_api_001_webhook_delivery_audit_custody.php','sql/upgrade_pay_api_001_webhook_delivery_audit_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.879 with a reviewed non-delivering outbound webhook contract plus zero-seed immutable target/event/outbox, delivery-attempt and dead-letter custody. Enqueue writers, retry execution, inbound webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_delivery_audit_custody'=>array('previous'=>'1.0.878','version'=>'1.0.879',
+                'file'=>'sql/upgrade_pay_api_001_webhook_delivery_audit_custody.php'),
+            'pay_api_001_webhook_outbox_custody'=>array('previous'=>'1.0.877','version'=>'1.0.878',
+                'file'=>'sql/upgrade_pay_api_001_webhook_outbox_custody.php'),
+            'pay_api_001_webhook_contract_compatibility'=>array('previous'=>'1.0.876','version'=>'1.0.877',
+                'file'=>'sql/upgrade_pay_api_001_webhook_contract_compatibility.php'),
             'pay_api_001_payroll_period_summary_activation'=>array('previous'=>'1.0.875','version'=>'1.0.876',
                 'file'=>'sql/upgrade_pay_api_001_payroll_period_summary_activation.php'),
             'pay_api_001_payroll_period_summary_dispatcher_compatibility'=>array('previous'=>'1.0.874','version'=>'1.0.875',

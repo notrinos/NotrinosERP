@@ -14351,3 +14351,112 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_read_responses` (
 CREATE TRIGGER `0_papi1_rres_u` BEFORE UPDATE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be updated';
 CREATE TRIGGER `0_papi1_rres_d` BEFORE DELETE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be deleted';
 -- PAY-API-001 END GROUP read_response_audit_custody
+
+-- PAY-API-001 GROUP webhook_delivery_audit_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_delivery_attempts` (
+ `webhook_delivery_attempt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_outbox_id` bigint(20) unsigned NOT NULL,
+ `attempt_no` int(10) unsigned NOT NULL,
+ `outcome_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `http_status_code` int(10) unsigned DEFAULT NULL,
+ `provider_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `response_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `error_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `attempt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `attempted_by` bigint(20) unsigned NOT NULL,
+ `attempted_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_delivery_attempt_id`),
+ UNIQUE KEY `uq_papi1_wa_attempt` (`webhook_outbox_id`,`attempt_no`),
+ UNIQUE KEY `uq_papi1_wa_lineage` (`webhook_outbox_id`,`webhook_delivery_attempt_id`),
+ UNIQUE KEY `uq_papi1_wa_sha` (`attempt_sha256`),
+ CONSTRAINT `fk_papi1_wa_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wa_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_attempts row cannot be updated';
+CREATE TRIGGER `0_papi1_wa_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_attempts row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_dead_letters` (
+ `webhook_dead_letter_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_outbox_id` bigint(20) unsigned NOT NULL,
+ `last_attempt_id` bigint(20) unsigned NOT NULL,
+ `reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `dead_letter_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_by` bigint(20) unsigned NOT NULL,
+ `recorded_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_dead_letter_id`),
+ UNIQUE KEY `uq_papi1_wd_outbox` (`webhook_outbox_id`),
+ UNIQUE KEY `uq_papi1_wd_sha` (`dead_letter_sha256`),
+ CONSTRAINT `fk_papi1_wd_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wd_attempt` FOREIGN KEY (`webhook_outbox_id`,`last_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wd_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_dead_letters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_dead_letters row cannot be updated';
+CREATE TRIGGER `0_papi1_wd_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_dead_letters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_dead_letters row cannot be deleted';
+-- PAY-API-001 END GROUP webhook_delivery_audit_custody
+
+-- PAY-API-001 GROUP webhook_outbox_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_targets` (
+ `webhook_target_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL,
+ `target_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_type` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `contract_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `resource_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `endpoint_config_ref_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `signing_key_ref_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `target_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_target_id`),
+ UNIQUE KEY `uq_papi1_wt_key` (`company_id`,`target_key`),
+ UNIQUE KEY `uq_papi1_wt_sha` (`target_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wt_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_targets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_targets row cannot be updated';
+CREATE TRIGGER `0_papi1_wt_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_targets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_targets row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_events` (
+ `webhook_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL,
+ `event_type` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `contract_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `resource_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_type` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_json` mediumtext NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `dedupe_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `occurred_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_event_id`),
+ UNIQUE KEY `uq_papi1_we_dedupe` (`company_id`,`dedupe_key_sha256`),
+ UNIQUE KEY `uq_papi1_we_sha` (`event_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_we_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_events row cannot be updated';
+CREATE TRIGGER `0_papi1_we_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_events row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_outbox` (
+ `webhook_outbox_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_event_id` bigint(20) unsigned NOT NULL,
+ `webhook_target_id` bigint(20) unsigned NOT NULL,
+ `queue_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `outbox_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `queued_by` bigint(20) unsigned NOT NULL,
+ `queued_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_outbox_id`),
+ UNIQUE KEY `uq_papi1_wo_pair` (`webhook_event_id`,`webhook_target_id`),
+ UNIQUE KEY `uq_papi1_wo_queue` (`queue_key_sha256`),
+ UNIQUE KEY `uq_papi1_wo_sha` (`outbox_sha256`),
+ CONSTRAINT `fk_papi1_wo_event` FOREIGN KEY (`webhook_event_id`) REFERENCES `0_hrm_pay_api_001_webhook_events` (`webhook_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wo_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wo_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_outbox row cannot be updated';
+CREATE TRIGGER `0_papi1_wo_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_outbox row cannot be deleted';
+-- PAY-API-001 END GROUP webhook_outbox_custody
