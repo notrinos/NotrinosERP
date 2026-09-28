@@ -11,11 +11,14 @@ function pay_api_001_record_read_response_audit(array $event,&$error=null)
     $rows=isset($event['row_count'])?pay_api_001_uint_value($event['row_count'],true,100):false;
     foreach(array('resource_key_sha256','object_scope_sha256') as $k)if(!isset($event[$k])||!pay_api_001_is_sha256($event[$k])){$error='read_response_audit_hash_invalid';return false;}
     $payload=array_key_exists('payload_sha256',$event)&&$event['payload_sha256']!==null?(pay_api_001_is_sha256($event['payload_sha256'])?(string)$event['payload_sha256']:false):null;
-    if($request===false||$company===false||$outcome===false||$rows===false||$payload===false){$error='read_response_audit_input_invalid';return false;}
+    if($request===false||$company===false||$outcome===false||$rows===false||$payload===false||!in_array($outcome,array('returned','not_found'),true)){$error='read_response_audit_input_invalid';return false;}
     if(($rows===0)!==($payload===null)){$error='read_response_audit_payload_cardinality_invalid';return false;}
+    if(($outcome==='returned'&&$rows!==1)||($outcome==='not_found'&&$rows!==0)){$error='read_response_audit_outcome_cardinality_invalid';return false;}
     $now=isset($event['occurred_at'])&&is_string($event['occurred_at'])?pay_api_001_provisioning_datetime($event['occurred_at']):pay_api_001_runtime_now();if($now===false){$error='read_response_audit_time_invalid';return false;}
     $sha=pay_api_001_provisioning_hash(array('api_read_request_id'=>$request,'company_id'=>$company,'resource_key_sha256'=>$event['resource_key_sha256'],'object_scope_sha256'=>$event['object_scope_sha256'],'outcome_code'=>$outcome,'payload_sha256'=>$payload,'row_count'=>$rows));
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
+    $parent=db_query('SELECT api_read_request_id FROM '.TB_PREF.'hrm_pay_api_001_read_requests WHERE api_read_request_id='.$request.' AND company_id='.$company.' AND method=\'GET\' AND resource_key_sha256='.db_escape($event['resource_key_sha256']).' AND outcome_code=\'readonly_preroute_allowed\' AND api_authn_decision_id IS NOT NULL AND api_principal_id IS NOT NULL AND api_resource_id IS NOT NULL AND api_rate_limit_decision_id IS NOT NULL LIMIT 2 FOR UPDATE');
+    if(!$parent||db_num_rows($parent)!==1){if($manage)cancel_transaction();$error='read_response_audit_parent_not_authorized';return false;}
     $q=db_query('SELECT api_read_response_id,response_sha256,outcome_code,payload_sha256,row_count FROM '.TB_PREF.'hrm_pay_api_001_read_responses WHERE api_read_request_id='.$request.' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>1){if($manage)cancel_transaction();$error='read_response_audit_replay_state_invalid';return false;}
     if(db_num_rows($q)===1){$old=db_fetch_assoc($q);if(!hash_equals((string)$old['response_sha256'],$sha)){if($manage)cancel_transaction();$error='read_response_audit_replay_mismatch';return false;}if($manage)commit_transaction();return array('api_read_response_id'=>(int)$old['api_read_response_id'],'response_sha256'=>$sha,'replayed'=>true);}

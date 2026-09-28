@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.879',
-        'active_legacy_payroll_contract'=>'1.0.472',
+        'active_database_version'=>'1.0.882',
+        'active_legacy_payroll_contract'=>'1.0.473',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_contract_compatibility.php','sql/upgrade_pay_api_001_webhook_outbox_custody.php','sql/upgrade_pay_api_001_webhook_outbox_custody.sql','sql/upgrade_pay_api_001_webhook_delivery_audit_custody.php','sql/upgrade_pay_api_001_webhook_delivery_audit_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.879 with a reviewed non-delivering outbound webhook contract plus zero-seed immutable target/event/outbox, delivery-attempt and dead-letter custody. Enqueue writers, retry execution, inbound webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_target_lifecycle_custody.php','sql/upgrade_pay_api_001_webhook_target_lifecycle_custody.sql','sql/upgrade_pay_api_001_webhook_secret_reference_custody.php','sql/upgrade_pay_api_001_webhook_secret_reference_custody.sql','sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.php','sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.882 with zero-seed immutable target lifecycle/supersession, opaque secret-reference/rotation, and delivery-policy/claim-lease custody. Enqueue, secret resolution, claim/retry execution, inbound webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_delivery_policy_lease_custody'=>array('previous'=>'1.0.881','version'=>'1.0.882',
+                'file'=>'sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.php'),
+            'pay_api_001_webhook_secret_reference_custody'=>array('previous'=>'1.0.880','version'=>'1.0.881',
+                'file'=>'sql/upgrade_pay_api_001_webhook_secret_reference_custody.php'),
+            'pay_api_001_webhook_target_lifecycle_custody'=>array('previous'=>'1.0.879','version'=>'1.0.880',
+                'file'=>'sql/upgrade_pay_api_001_webhook_target_lifecycle_custody.php'),
             'pay_api_001_webhook_delivery_audit_custody'=>array('previous'=>'1.0.878','version'=>'1.0.879',
                 'file'=>'sql/upgrade_pay_api_001_webhook_delivery_audit_custody.php'),
             'pay_api_001_webhook_outbox_custody'=>array('previous'=>'1.0.877','version'=>'1.0.878',
