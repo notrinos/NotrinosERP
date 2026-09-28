@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.882',
-        'active_legacy_payroll_contract'=>'1.0.473',
+        'active_database_version'=>'1.0.885',
+        'active_legacy_payroll_contract'=>'1.0.474',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_target_lifecycle_custody.php','sql/upgrade_pay_api_001_webhook_target_lifecycle_custody.sql','sql/upgrade_pay_api_001_webhook_secret_reference_custody.php','sql/upgrade_pay_api_001_webhook_secret_reference_custody.sql','sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.php','sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.882 with zero-seed immutable target lifecycle/supersession, opaque secret-reference/rotation, and delivery-policy/claim-lease custody. Enqueue, secret resolution, claim/retry execution, inbound webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_egress_tls_policy_custody.php','sql/upgrade_pay_api_001_webhook_egress_tls_policy_custody.sql','sql/upgrade_pay_api_001_webhook_signing_profile_custody.php','sql/upgrade_pay_api_001_webhook_signing_profile_custody.sql','sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.php','sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.sql'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.885 with zero-seed immutable egress/TLS policy, canonical payload/signing-profile, minimized provider-response, replay-defense and operator-reprocess authorization custody. Network delivery, secret resolution, claim/retry/reprocess execution, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_response_replay_reprocess_custody'=>array('previous'=>'1.0.884','version'=>'1.0.885',
+                'file'=>'sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.php'),
+            'pay_api_001_webhook_signing_profile_custody'=>array('previous'=>'1.0.883','version'=>'1.0.884',
+                'file'=>'sql/upgrade_pay_api_001_webhook_signing_profile_custody.php'),
+            'pay_api_001_webhook_egress_tls_policy_custody'=>array('previous'=>'1.0.882','version'=>'1.0.883',
+                'file'=>'sql/upgrade_pay_api_001_webhook_egress_tls_policy_custody.php'),
             'pay_api_001_webhook_delivery_policy_lease_custody'=>array('previous'=>'1.0.881','version'=>'1.0.882',
                 'file'=>'sql/upgrade_pay_api_001_webhook_delivery_policy_lease_custody.php'),
             'pay_api_001_webhook_secret_reference_custody'=>array('previous'=>'1.0.880','version'=>'1.0.881',
