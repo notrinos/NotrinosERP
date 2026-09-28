@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.871',
-        'active_legacy_payroll_contract'=>'1.0.469',
+        'active_database_version'=>'1.0.873',
+        'active_legacy_payroll_contract'=>'1.0.470',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_readonly_adapter.inc','includes/pay_api_001_http_readonly.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_runtime_db.inc','hrm/includes/db/pay_api_001_http_runtime_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_machine_authn_runtime.php','sql/upgrade_pay_api_001_machine_read_authority.php','sql/upgrade_pay_api_001_read_request_audit_preroute.php','sql/upgrade_pay_api_001_read_request_audit_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.871 with machine credential authentication and immutable authn replay protection, exact company/resource/object-scope read authority plus machine-bound rate enforcement, and zero-seed immutable read-request audit/pre-controller custody. Public HTTP route files, business-data dispatch, webhook/provider/network transport and payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_readonly_adapter.inc','includes/pay_api_001_http_readonly.inc','includes/pay_api_001_public_readonly_route.inc','hrm/includes/db/pay_api_001_readiness_db.inc','payroll_api.php','sql/upgrade_pay_api_001_public_route_compatibility.php','sql/upgrade_pay_api_001_public_readonly_route.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.873 with an accepted-1.0.868-compatible database-version gate and a public GET/TLS/Basic-machine-auth read-only boundary. Authorized requests return 204 with no business payload; payroll data dispatch, webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_public_readonly_route'=>array('previous'=>'1.0.872','version'=>'1.0.873',
+                'file'=>'sql/upgrade_pay_api_001_public_readonly_route.php'),
+            'pay_api_001_public_route_compatibility'=>array('previous'=>'1.0.871','version'=>'1.0.872',
+                'file'=>'sql/upgrade_pay_api_001_public_route_compatibility.php'),
             'pay_api_001_machine_authn_runtime'=>array('previous'=>'1.0.868','version'=>'1.0.869',
                 'file'=>'sql/upgrade_pay_api_001_machine_authn_runtime.php'),
             'pay_api_001_machine_read_authority'=>array('previous'=>'1.0.869','version'=>'1.0.870',

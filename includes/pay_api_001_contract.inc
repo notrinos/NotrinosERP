@@ -1,8 +1,21 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.871');
-function pay_api_001_authority_contract()
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.873');
+if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION', '1.0.873');
+
+/** Return whether the bounded public read-only route is allowed at one exact database version. */
+function pay_api_001_public_readonly_route_allowed_for_database_version($database_version)
 {
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION, '>=');
+}
+
+/** Return the authority contract as it applies to the supplied database version. */
+function pay_api_001_authority_contract($database_version=null)
+{
+    $route_allowed = $database_version === null
+        ? pay_api_001_public_readonly_route_allowed_for_database_version(PAY_API_001_CONTRACT_VERSION)
+        : pay_api_001_public_readonly_route_allowed_for_database_version((string)$database_version);
     return array(
         'versioned_resource_contract'=>true,
         'deny_by_default'=>true,
@@ -39,13 +52,16 @@ function pay_api_001_authority_contract()
         'machine_read_authority_resolution'=>true,
         'read_request_audit_custody'=>true,
         'http_readonly_precontroller_contract'=>true,
+        'public_readonly_http_route_contract'=>true,
+        'public_route_database_version_gate'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
         'credential_or_secret_custody'=>false,
         'credential_provisioning_writer_allowed'=>true,
         'provisioning_execution_writer_allowed'=>true,
-        'external_http_route'=>false,
+        'external_http_route'=>$route_allowed,
+        'business_data_dispatcher_allowed'=>false,
         'webhook_delivery'=>false,
         'webhook_receive'=>false,
         'payroll_command_authority'=>false,

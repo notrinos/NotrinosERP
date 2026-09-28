@@ -1,7 +1,7 @@
 <?php
 /** PAY-API-001 pure HTTP pre-controller contract. No public route is exposed by this file. */
 include_once(dirname(__FILE__).'/pay_api_001_readonly_adapter.inc');
-if (!defined('PAY_API_001_HTTP_READONLY_CONTRACT_VERSION')) define('PAY_API_001_HTTP_READONLY_CONTRACT_VERSION', '1.0.871');
+if (!defined('PAY_API_001_HTTP_READONLY_CONTRACT_VERSION')) define('PAY_API_001_HTTP_READONLY_CONTRACT_VERSION', '1.0.873');
 
 function pay_api_001_http_header_value($headers, $name)
 {
