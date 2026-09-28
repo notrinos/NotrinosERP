@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.888',
-        'active_legacy_payroll_contract'=>'1.0.475',
+        'active_database_version'=>'1.0.891',
+        'active_legacy_payroll_contract'=>'1.0.477',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_provisioning.inc','includes/pay_api_001_webhook.inc','hrm/includes/db/pay_api_001_runtime_db.inc','hrm/includes/db/pay_api_001_webhook_runtime_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_configuration_writer.php','sql/upgrade_pay_api_001_webhook_enqueue_writer.php','sql/upgrade_pay_api_001_webhook_claim_writer.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.888 with four-party governed webhook configuration, replay-safe payroll-period-summary enqueue and atomic bounded claim/lease writers. Secret resolution, retry/reprocess execution, outbound network delivery, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_webhook_transport.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_secret_resolver.php','sql/upgrade_pay_api_001_webhook_signed_request.php','sql/upgrade_pay_api_001_webhook_transport_adapter.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.891 with process-local opaque signing-secret resolution, deterministic canonical HMAC-SHA256 request construction and a bounded no-redirect TLS-verified outbound HTTPS transport adapter. Delivery-attempt/provider-response persistence, retry/reprocess execution, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_transport_adapter'=>array('previous'=>'1.0.890','version'=>'1.0.891',
+                'file'=>'sql/upgrade_pay_api_001_webhook_transport_adapter.php'),
+            'pay_api_001_webhook_signed_request'=>array('previous'=>'1.0.889','version'=>'1.0.890',
+                'file'=>'sql/upgrade_pay_api_001_webhook_signed_request.php'),
+            'pay_api_001_webhook_secret_resolver'=>array('previous'=>'1.0.888','version'=>'1.0.889',
+                'file'=>'sql/upgrade_pay_api_001_webhook_secret_resolver.php'),
             'pay_api_001_webhook_claim_writer'=>array('previous'=>'1.0.887','version'=>'1.0.888',
                 'file'=>'sql/upgrade_pay_api_001_webhook_claim_writer.php'),
             'pay_api_001_webhook_enqueue_writer'=>array('previous'=>'1.0.886','version'=>'1.0.887',

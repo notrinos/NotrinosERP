@@ -1,6 +1,6 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.888');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.891');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION', '1.0.873');
 if (!defined('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION')) define('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION', '1.0.876');
 if (!defined('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION')) define('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION', '1.0.878');
@@ -14,6 +14,9 @@ if (!defined('PAY_API_001_WEBHOOK_RESPONSE_REPLAY_REPROCESS_CUSTODY_DB_VERSION')
 if (!defined('PAY_API_001_WEBHOOK_CONFIGURATION_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_CONFIGURATION_WRITER_DB_VERSION', '1.0.886');
 if (!defined('PAY_API_001_WEBHOOK_ENQUEUE_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_ENQUEUE_WRITER_DB_VERSION', '1.0.887');
 if (!defined('PAY_API_001_WEBHOOK_CLAIM_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_CLAIM_WRITER_DB_VERSION', '1.0.888');
+if (!defined('PAY_API_001_WEBHOOK_SECRET_RESOLVER_DB_VERSION')) define('PAY_API_001_WEBHOOK_SECRET_RESOLVER_DB_VERSION', '1.0.889');
+if (!defined('PAY_API_001_WEBHOOK_SIGNED_REQUEST_DB_VERSION')) define('PAY_API_001_WEBHOOK_SIGNED_REQUEST_DB_VERSION', '1.0.890');
+if (!defined('PAY_API_001_WEBHOOK_TRANSPORT_ADAPTER_DB_VERSION')) define('PAY_API_001_WEBHOOK_TRANSPORT_ADAPTER_DB_VERSION', '1.0.891');
 
 /** Return whether the bounded public read-only route is allowed at one exact database version. */
 function pay_api_001_public_readonly_route_allowed_for_database_version($database_version)
@@ -106,6 +109,27 @@ function pay_api_001_webhook_claim_writer_allowed_for_database_version($database
     return version_compare($database_version, PAY_API_001_WEBHOOK_CLAIM_WRITER_DB_VERSION, '>=');
 }
 
+/** Return whether the opaque external webhook signing-secret resolver boundary is allowed. */
+function pay_api_001_webhook_secret_resolver_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_SECRET_RESOLVER_DB_VERSION, '>=');
+}
+
+/** Return whether canonical signed webhook request construction is allowed. */
+function pay_api_001_webhook_signed_request_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_SIGNED_REQUEST_DB_VERSION, '>=');
+}
+
+/** Return whether the bounded no-redirect HTTPS webhook transport adapter is allowed. */
+function pay_api_001_webhook_transport_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_TRANSPORT_ADAPTER_DB_VERSION, '>=');
+}
+
 /** Return the authority contract as it applies to the supplied database version. */
 function pay_api_001_authority_contract($database_version=null)
 {
@@ -123,6 +147,9 @@ function pay_api_001_authority_contract($database_version=null)
     $webhook_configuration_writer_allowed = pay_api_001_webhook_configuration_writer_allowed_for_database_version($effective_version);
     $webhook_enqueue_writer_allowed = pay_api_001_webhook_enqueue_writer_allowed_for_database_version($effective_version);
     $webhook_claim_writer_allowed = pay_api_001_webhook_claim_writer_allowed_for_database_version($effective_version);
+    $webhook_secret_resolver_allowed = pay_api_001_webhook_secret_resolver_allowed_for_database_version($effective_version);
+    $webhook_signed_request_allowed = pay_api_001_webhook_signed_request_allowed_for_database_version($effective_version);
+    $webhook_transport_allowed = pay_api_001_webhook_transport_allowed_for_database_version($effective_version);
     return array(
         'versioned_resource_contract'=>true,
         'deny_by_default'=>true,
@@ -185,6 +212,9 @@ function pay_api_001_authority_contract($database_version=null)
         'webhook_configuration_writer_contract'=>true,
         'webhook_enqueue_writer_contract'=>true,
         'webhook_claim_writer_contract'=>true,
+        'webhook_secret_resolver_contract'=>true,
+        'webhook_signed_request_contract'=>true,
+        'webhook_transport_adapter_contract'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
@@ -205,7 +235,9 @@ function pay_api_001_authority_contract($database_version=null)
         'webhook_configuration_writer_allowed'=>$webhook_configuration_writer_allowed,
         'webhook_enqueue_writer_allowed'=>$webhook_enqueue_writer_allowed,
         'webhook_target_lifecycle_writer_allowed'=>$webhook_configuration_writer_allowed,
-        'webhook_secret_resolver_allowed'=>false,
+        'webhook_secret_resolver_allowed'=>$webhook_secret_resolver_allowed,
+        'webhook_signed_request_allowed'=>$webhook_signed_request_allowed,
+        'webhook_transport_allowed'=>$webhook_transport_allowed,
         'webhook_claim_writer_allowed'=>$webhook_claim_writer_allowed,
         'webhook_retry_executor_allowed'=>false,
         'webhook_reprocess_executor_allowed'=>false,
@@ -215,7 +247,7 @@ function pay_api_001_authority_contract($database_version=null)
         'payment_authority'=>false,
         'gl_authority'=>false,
         'statutory_filing_authority'=>false,
-        'network_authority'=>false,
+        'network_authority'=>$webhook_transport_allowed,
         'cross_company_authority'=>false,
         'historical_payroll_or_accounting_mutation'=>false,
         'generic_extension_dispatch'=>false,
