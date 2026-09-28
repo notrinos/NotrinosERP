@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.885',
-        'active_legacy_payroll_contract'=>'1.0.474',
+        'active_database_version'=>'1.0.888',
+        'active_legacy_payroll_contract'=>'1.0.475',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_egress_tls_policy_custody.php','sql/upgrade_pay_api_001_webhook_egress_tls_policy_custody.sql','sql/upgrade_pay_api_001_webhook_signing_profile_custody.php','sql/upgrade_pay_api_001_webhook_signing_profile_custody.sql','sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.php','sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.sql'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.885 with zero-seed immutable egress/TLS policy, canonical payload/signing-profile, minimized provider-response, replay-defense and operator-reprocess authorization custody. Network delivery, secret resolution, claim/retry/reprocess execution, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_provisioning.inc','includes/pay_api_001_webhook.inc','hrm/includes/db/pay_api_001_runtime_db.inc','hrm/includes/db/pay_api_001_webhook_runtime_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_configuration_writer.php','sql/upgrade_pay_api_001_webhook_enqueue_writer.php','sql/upgrade_pay_api_001_webhook_claim_writer.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.888 with four-party governed webhook configuration, replay-safe payroll-period-summary enqueue and atomic bounded claim/lease writers. Secret resolution, retry/reprocess execution, outbound network delivery, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_claim_writer'=>array('previous'=>'1.0.887','version'=>'1.0.888',
+                'file'=>'sql/upgrade_pay_api_001_webhook_claim_writer.php'),
+            'pay_api_001_webhook_enqueue_writer'=>array('previous'=>'1.0.886','version'=>'1.0.887',
+                'file'=>'sql/upgrade_pay_api_001_webhook_enqueue_writer.php'),
+            'pay_api_001_webhook_configuration_writer'=>array('previous'=>'1.0.885','version'=>'1.0.886',
+                'file'=>'sql/upgrade_pay_api_001_webhook_configuration_writer.php'),
             'pay_api_001_webhook_response_replay_reprocess_custody'=>array('previous'=>'1.0.884','version'=>'1.0.885',
                 'file'=>'sql/upgrade_pay_api_001_webhook_response_replay_reprocess_custody.php'),
             'pay_api_001_webhook_signing_profile_custody'=>array('previous'=>'1.0.883','version'=>'1.0.884',
