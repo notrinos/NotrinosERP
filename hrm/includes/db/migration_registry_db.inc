@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.873',
-        'active_legacy_payroll_contract'=>'1.0.470',
+        'active_database_version'=>'1.0.876',
+        'active_legacy_payroll_contract'=>'1.0.471',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_readonly_adapter.inc','includes/pay_api_001_http_readonly.inc','includes/pay_api_001_public_readonly_route.inc','hrm/includes/db/pay_api_001_readiness_db.inc','payroll_api.php','sql/upgrade_pay_api_001_public_route_compatibility.php','sql/upgrade_pay_api_001_public_readonly_route.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.873 with an accepted-1.0.868-compatible database-version gate and a public GET/TLS/Basic-machine-auth read-only boundary. Authorized requests return 204 with no business payload; payroll data dispatch, webhooks, provider/network transport and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_business_read.inc','includes/pay_api_001_public_readonly_route.inc','hrm/includes/db/pay_api_001_business_read_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','payroll_api.php','sql/upgrade_pay_api_001_read_response_audit_custody.php','sql/upgrade_pay_api_001_payroll_period_summary_dispatcher_compatibility.php','sql/upgrade_pay_api_001_payroll_period_summary_activation.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.876 with append-only read-response audit custody and one minimized payroll.period.summary v1 object read for approved-or-later periods. Webhooks, provider/network transport, employee-level payroll detail and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_payroll_period_summary_activation'=>array('previous'=>'1.0.875','version'=>'1.0.876',
+                'file'=>'sql/upgrade_pay_api_001_payroll_period_summary_activation.php'),
+            'pay_api_001_payroll_period_summary_dispatcher_compatibility'=>array('previous'=>'1.0.874','version'=>'1.0.875',
+                'file'=>'sql/upgrade_pay_api_001_payroll_period_summary_dispatcher_compatibility.php'),
+            'pay_api_001_read_response_audit_custody'=>array('previous'=>'1.0.873','version'=>'1.0.874',
+                'file'=>'sql/upgrade_pay_api_001_read_response_audit_custody.php'),
             'pay_api_001_public_readonly_route'=>array('previous'=>'1.0.872','version'=>'1.0.873',
                 'file'=>'sql/upgrade_pay_api_001_public_readonly_route.php'),
             'pay_api_001_public_route_compatibility'=>array('previous'=>'1.0.871','version'=>'1.0.872',

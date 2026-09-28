@@ -1,7 +1,7 @@
 <?php
-/** PAY-API-001 public read-only HTTP route boundary. No payroll business-data dispatcher is present. */
+/** PAY-API-001 public read-only HTTP route boundary with DB-gated bounded business-data response support. */
 include_once(dirname(__FILE__).'/pay_api_001_http_readonly.inc');
-if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION', '1.0.873');
+if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION', '1.0.876');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_PATH')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_PATH', '/payroll_api.php');
 
 /** Parse the exact bounded public query without accepting PHP array/query ambiguity. */
@@ -58,6 +58,7 @@ function pay_api_001_public_route_http_status($result, $runtime_error=null)
     if ($code === 'authentication_required') return 401;
     if ($code === 'authorization_required' || $code === 'company_scope_mismatch') return 403;
     if ($code === 'rate_limit_exceeded') return 429;
+    if ($code === 'business_data_not_found') return 404;
     if (in_array($code,array('query_credential_forbidden','request_correlation_required','resource_contract_invalid','object_scope_invalid','pagination_invalid','request_target_invalid'),true)) return 400;
     return 403;
 }
@@ -71,6 +72,7 @@ function pay_api_001_public_route_error_body($status)
     if ($status===403) return array('ok'=>false,'error'=>'access_denied');
     if ($status===405) return array('ok'=>false,'error'=>'method_not_allowed');
     if ($status===426) return array('ok'=>false,'error'=>'secure_transport_required');
+    if ($status===404) return array('ok'=>false,'error'=>'not_found');
     if ($status===429) return array('ok'=>false,'error'=>'rate_limit_exceeded');
     return array('ok'=>false,'error'=>'service_unavailable');
 }
@@ -87,15 +89,18 @@ function pay_api_001_public_route_security_headers()
 }
 
 /** Emit one minimized response and terminate the request. */
-function pay_api_001_public_route_respond($status)
+function pay_api_001_public_route_respond_payload($status,$payload=null)
 {
     $status=(int)$status;
     if ($status===405) header('Allow: GET');
     if ($status===401) header('WWW-Authenticate: Basic realm="NotrinosERP Payroll API", charset="UTF-8"');
     http_response_code($status);
-    if ($status!==204) echo json_encode(pay_api_001_public_route_error_body($status));
+    if ($status===204) exit;
+    $body=$status===200&&is_array($payload)?$payload:pay_api_001_public_route_error_body($status);
+    echo json_encode($body,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     exit;
 }
+function pay_api_001_public_route_respond($status){pay_api_001_public_route_respond_payload($status,null);}
 
 function pay_api_001_public_readonly_route_source_ready(){return true;}
 ?>

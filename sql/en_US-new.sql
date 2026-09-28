@@ -13969,3 +13969,25 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_read_requests` (
 CREATE TRIGGER `0_papi1_rr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_read_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_requests row cannot be updated';
 CREATE TRIGGER `0_papi1_rr_d` BEFORE DELETE ON `0_hrm_pay_api_001_read_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_requests row cannot be deleted';
 -- PAY-API-001 END GROUP read_request_audit_custody
+
+-- PAY-API-001 GROUP read_response_audit_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_read_responses` (
+ `api_read_response_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `api_read_request_id` bigint(20) unsigned NOT NULL,
+ `company_id` int(11) unsigned NOT NULL,
+ `resource_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `outcome_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `row_count` int(11) unsigned NOT NULL,
+ `response_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `occurred_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`api_read_response_id`),
+ UNIQUE KEY `uq_papi1_rres_request` (`api_read_request_id`),
+ UNIQUE KEY `uq_papi1_rres_sha` (`response_sha256`),
+ CONSTRAINT `fk_papi1_rres_request` FOREIGN KEY (`api_read_request_id`) REFERENCES `0_hrm_pay_api_001_read_requests` (`api_read_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_rres_u` BEFORE UPDATE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be updated';
+CREATE TRIGGER `0_papi1_rres_d` BEFORE DELETE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be deleted';
+-- PAY-API-001 END GROUP read_response_audit_custody

@@ -1,7 +1,8 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.873');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.876');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION', '1.0.873');
+if (!defined('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION')) define('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION', '1.0.876');
 
 /** Return whether the bounded public read-only route is allowed at one exact database version. */
 function pay_api_001_public_readonly_route_allowed_for_database_version($database_version)
@@ -10,12 +11,19 @@ function pay_api_001_public_readonly_route_allowed_for_database_version($databas
     return version_compare($database_version, PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION, '>=');
 }
 
+/** Return whether one bounded business-data dispatcher is allowed at the database version. */
+function pay_api_001_business_data_dispatch_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION, '>=');
+}
+
 /** Return the authority contract as it applies to the supplied database version. */
 function pay_api_001_authority_contract($database_version=null)
 {
-    $route_allowed = $database_version === null
-        ? pay_api_001_public_readonly_route_allowed_for_database_version(PAY_API_001_CONTRACT_VERSION)
-        : pay_api_001_public_readonly_route_allowed_for_database_version((string)$database_version);
+    $effective_version = $database_version === null ? PAY_API_001_CONTRACT_VERSION : (string)$database_version;
+    $route_allowed = pay_api_001_public_readonly_route_allowed_for_database_version($effective_version);
+    $business_dispatch_allowed = pay_api_001_business_data_dispatch_allowed_for_database_version($effective_version);
     return array(
         'versioned_resource_contract'=>true,
         'deny_by_default'=>true,
@@ -54,6 +62,10 @@ function pay_api_001_authority_contract($database_version=null)
         'http_readonly_precontroller_contract'=>true,
         'public_readonly_http_route_contract'=>true,
         'public_route_database_version_gate'=>true,
+        'business_data_minimization_contract'=>true,
+        'read_response_audit_custody'=>true,
+        'payroll_period_summary_contract'=>true,
+        'business_data_dispatcher_contract'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
@@ -61,7 +73,8 @@ function pay_api_001_authority_contract($database_version=null)
         'credential_provisioning_writer_allowed'=>true,
         'provisioning_execution_writer_allowed'=>true,
         'external_http_route'=>$route_allowed,
-        'business_data_dispatcher_allowed'=>false,
+        'business_data_dispatcher_allowed'=>$business_dispatch_allowed,
+        'authorized_business_payload_allowed'=>$business_dispatch_allowed,
         'webhook_delivery'=>false,
         'webhook_receive'=>false,
         'payroll_command_authority'=>false,
