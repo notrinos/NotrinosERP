@@ -11,12 +11,20 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.915',
-        'active_legacy_payroll_contract'=>'1.0.485',
+        'active_database_version'=>'1.0.919',
+        'active_legacy_payroll_contract'=>'1.0.487',
         'next_backlog_item'=>'HRM-ANL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ANL-001 bounded headcount UI/navigation source is active through 1.0.915: CSRF-protected two-person catalog governance, one screen-only authenticated-company headcount inquiry, and SA_HRMREPORTS-gated navigation. Generic metric-query and generic snapshot-writer authority remain disabled; export, drill-down, department detail and employee identifiers remain denied. LOCAL ACCEPTANCE PASS at exact source/DB 1.0.915 from the owner-machine localhost WAMP/MariaDB/browser runner result supplied with this review; this source review did not rerun that runner. HRM-ANL-001 remains open for separately reviewed successor metrics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-ANL-001 bounded department headcount aggregate source is active through 1.0.919: report-892-compatible grouped department counts, exact source-total reconciliation, primary small-cohort suppression plus complementary secondary suppression, a screen-only SA_HRMREPORTS inquiry, and gated navigation. Generic metric-query and generic snapshot-writer authority remain disabled; export, employee drill-down, arbitrary filters, HR/payroll mutation and historical payroll/accounting mutation remain denied. SOURCE-VERIFIED / LOCAL-GATE-PENDING at exact source head 1.0.919; owner-machine localhost WAMP/MariaDB/browser acceptance remains required before commit. HRM-ANL-001 remains open for separately reviewed successor analytics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_anl_001_department_headcount_navigation'=>array('previous'=>'1.0.918','version'=>'1.0.919',
+                'file'=>'sql/upgrade_hrm_anl_001_department_headcount_navigation.php'),
+            'hrm_anl_001_department_headcount_inquiry_ui'=>array('previous'=>'1.0.917','version'=>'1.0.918',
+                'file'=>'sql/upgrade_hrm_anl_001_department_headcount_inquiry_ui.php'),
+            'hrm_anl_001_department_headcount_runtime'=>array('previous'=>'1.0.916','version'=>'1.0.917',
+                'file'=>'sql/upgrade_hrm_anl_001_department_headcount_runtime.php'),
+            'hrm_anl_001_department_headcount_contract'=>array('previous'=>'1.0.915','version'=>'1.0.916',
+                'file'=>'sql/upgrade_hrm_anl_001_department_headcount_contract.php'),
             'hrm_anl_001_headcount_navigation'=>array('previous'=>'1.0.914','version'=>'1.0.915',
                 'file'=>'sql/upgrade_hrm_anl_001_headcount_navigation.php'),
             'hrm_anl_001_headcount_inquiry_ui'=>array('previous'=>'1.0.913','version'=>'1.0.914',

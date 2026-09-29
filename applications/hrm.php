@@ -65,6 +65,8 @@ class HrmApp extends application {
 		$this->add_lapp_function(1, _('Payroll &Summary'),          'hrm/inquiry/payroll_summary.php?',                    'SA_PAYROLLSUMMARY',   MENU_INQUIRY);
 		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
 			$this->add_lapp_function(1, _('Governed &Headcount'),       'hrm/inquiry/governed_headcount.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
+		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.919', '>='))
+			$this->add_lapp_function(1, _('Governed Headcount by &Department'),'hrm/inquiry/governed_department_headcount.php?',        'SA_HRMREPORTS',       MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Employee &Directory'),       'hrm/inquiry/employee_directory.php?',                 'SA_EMPLOYEEREP',      MENU_INQUIRY);
 		$this->add_rapp_function(1, _('Employee &History'),         'hrm/inquiry/employee_history.php?',                   'SA_EMPHISTORY',       MENU_INQUIRY);

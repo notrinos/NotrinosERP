@@ -6,7 +6,7 @@
  * or payroll-write authority. Database versions only unlock immutable custody
  * needed by later separately reviewed runtime slices.
  */
-if (!defined('HRM_ANL_001_CONTRACT_VERSION')) define('HRM_ANL_001_CONTRACT_VERSION', '1.0.915');
+if (!defined('HRM_ANL_001_CONTRACT_VERSION')) define('HRM_ANL_001_CONTRACT_VERSION', '1.0.919');
 
 /** @return bool */
 function hrm_anl_001_version_at_least($database_version, $minimum)
@@ -30,6 +30,10 @@ function hrm_anl_001_authority_contract($database_version)
         'catalog_governance_ui_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.913'),
         'bounded_headcount_inquiry_ui_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.914'),
         'bounded_headcount_navigation_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.915'),
+        'department_headcount_source_ready' => hrm_anl_001_version_at_least($database_version, '1.0.916'),
+        'bounded_department_headcount_runtime_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.917'),
+        'bounded_department_headcount_inquiry_ui_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.918'),
+        'bounded_department_headcount_navigation_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.919'),
         'company_scope_server_derived' => true,
         'as_of_required' => true,
         'currency_context_required' => true,
@@ -107,6 +111,53 @@ function hrm_anl_001_bounded_headcount_navigation_allowed_for_database_version($
     return $c['bounded_headcount_navigation_allowed'] === true
         && hrm_anl_001_catalog_governance_ui_allowed_for_database_version($database_version)
         && hrm_anl_001_bounded_headcount_inquiry_ui_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['snapshot_writer_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+
+/** @return bool */
+function hrm_anl_001_department_headcount_source_ready_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['department_headcount_source_ready'] === true
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_headcount_runtime_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_headcount_runtime_allowed'] === true
+        && $c['department_headcount_source_ready'] === true
+        && hrm_anl_001_bounded_headcount_runtime_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['snapshot_writer_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_headcount_inquiry_ui_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_headcount_inquiry_ui_allowed'] === true
+        && hrm_anl_001_bounded_department_headcount_runtime_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_headcount_navigation_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_headcount_navigation_allowed'] === true
+        && hrm_anl_001_bounded_department_headcount_inquiry_ui_allowed_for_database_version($database_version)
         && $c['metric_query_runtime_allowed'] === false
         && $c['snapshot_writer_runtime_allowed'] === false
         && $c['export_runtime_allowed'] === false
