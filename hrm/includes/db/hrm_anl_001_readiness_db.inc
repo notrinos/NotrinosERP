@@ -332,9 +332,67 @@ function hrm_anl_001_require_department_headcount_navigation_review($patch)
 }
 
 /** @return bool */
+function hrm_anl_001_require_employment_type_headcount_contract_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'includes/hrm_anl_001_employment_type_headcount_contract.inc', array(
+        "HRM_ANL_001_EMPLOYMENT_TYPE_HEADCOUNT_PURPOSE', 'hrm_report_892_employment_type_headcount'",
+        "'known_employment_type_codes' => array(0,1,2,3,4)",
+        "'unknown_code_bucket' => 'other'",
+        "'complementary_suppression_required' => true",
+        'function hrm_anl_001_employment_type_headcount_reconcile(',
+        'secondary_complementary',
+        'complementary_suppression_unavailable',
+        "'employee_drilldown_allowed' => false"
+    ), 'HRM-ANL-001 bounded employment-type headcount contract');
+}
+
+/** @return bool */
+function hrm_anl_001_require_employment_type_headcount_runtime_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/includes/db/hrm_anl_001_employment_type_headcount_db.inc', array(
+        'function hrm_anl_001_execute_employment_type_headcount(',
+        "CASE e.employment_type WHEN 0 THEN 'permanent'",
+        'hrm_anl_001_employment_type_headcount_reconcile(',
+        'export_runtime_denied',
+        'drilldown_runtime_denied',
+        'hrm_anl_001_snapshot_requests',
+        'hrm_anl_001_snapshots',
+        'hrm_anl_001_query_audits',
+        'suppressed_row_count',
+        'HRM_ANL_001_EMPLOYMENT_TYPE_HEADCOUNT_PURPOSE'
+    ), 'HRM-ANL-001 bounded employment-type headcount runtime');
+}
+
+/** @return bool */
+function hrm_anl_001_require_employment_type_headcount_inquiry_ui_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/inquiry/governed_employment_type_headcount.php', array(
+        "\$page_security = 'SA_HRMREPORTS'",
+        'check_csrf_token()',
+        'hrm_anl_001_execute_employment_type_headcount(',
+        'HRM_ANL_001_EMPLOYMENT_TYPE_HEADCOUNT_PURPOSE, false, false',
+        "label_cell(_('Suppressed'))",
+        'complementary suppression',
+        'Employee detail, arbitrary filters, export and drill-down remain unavailable',
+        'No source-total hash'
+    ), 'HRM-ANL-001 employment-type headcount inquiry UI');
+}
+
+/** @return bool */
+function hrm_anl_001_require_employment_type_headcount_navigation_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'applications/hrm.php', array(
+        'Governed Headcount by Employment &Type',
+        'hrm/inquiry/governed_employment_type_headcount.php?',
+        "'1.0.923', '>='",
+        "'SA_HRMREPORTS'"
+    ), 'HRM-ANL-001 employment-type headcount navigation');
+}
+
+/** @return bool */
 function hrm_anl_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908','1.0.909','1.0.910','1.0.911','1.0.912','1.0.913','1.0.914','1.0.915','1.0.916','1.0.917','1.0.918');
+    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908','1.0.909','1.0.910','1.0.911','1.0.912','1.0.913','1.0.914','1.0.915','1.0.916','1.0.917','1.0.918','1.0.919','1.0.920','1.0.921','1.0.922');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-ANL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_api_001_webhook_inbound_route','1.0.904','1.0.905'))
