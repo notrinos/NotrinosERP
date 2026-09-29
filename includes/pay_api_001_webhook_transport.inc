@@ -12,6 +12,7 @@ include_once(dirname(__FILE__).'/pay_api_001_webhook.inc');
 if (!defined('PAY_API_001_WEBHOOK_MAX_SECRET_BYTES')) define('PAY_API_001_WEBHOOK_MAX_SECRET_BYTES', 4096);
 if (!defined('PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES')) define('PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES', 262144);
 if (!defined('PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES')) define('PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES', 8192);
+if (!defined('PAY_API_001_WEBHOOK_MAX_RESPONSE_HEADER_BYTES')) define('PAY_API_001_WEBHOOK_MAX_RESPONSE_HEADER_BYTES', 16384);
 if (!defined('PAY_API_001_WEBHOOK_MAX_DNS_ADDRESSES')) define('PAY_API_001_WEBHOOK_MAX_DNS_ADDRESSES', 32);
 if (!defined('PAY_API_001_WEBHOOK_CONNECT_TIMEOUT_SECONDS')) define('PAY_API_001_WEBHOOK_CONNECT_TIMEOUT_SECONDS', 5);
 if (!defined('PAY_API_001_WEBHOOK_TOTAL_TIMEOUT_SECONDS')) define('PAY_API_001_WEBHOOK_TOTAL_TIMEOUT_SECONDS', 15);
@@ -183,10 +184,10 @@ function pay_api_001_webhook_resolve_public_ipv4($host,$resolver=null,&$error=nu
 /** Reduce one bounded transport result to non-secret delivery evidence only. */
 function pay_api_001_webhook_transport_classify($transport,$max_response_bytes=PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES)
 {
-    $keys=array('request_sent','transport_ok','http_status','content_type','body','error_code');if(!is_array($transport)||array_keys($transport)!==$keys)return false;
-    if(!is_bool($transport['request_sent'])||!is_bool($transport['transport_ok'])||!is_int($transport['http_status'])||!is_string($transport['content_type'])||!is_string($transport['body'])||!is_string($transport['error_code']))return false;
-    $body=$transport['body'];if(strlen($body)>(int)$max_response_bytes)return array('classification'=>'delivery_uncertain','retry_safe'=>false,'http_status'=>0,'response_body_sha256'=>hash('sha256',$body),'response_body_bytes'=>strlen($body));
-    $evidence=array('http_status'=>$transport['http_status'],'response_body_sha256'=>hash('sha256',$body),'response_body_bytes'=>strlen($body),'response_content_type_sha256'=>hash('sha256',strtolower(trim($transport['content_type']))));
+    $keys=array('request_sent','transport_ok','http_status','content_type','body','response_headers_sha256','error_code');if(!is_array($transport)||array_keys($transport)!==$keys)return false;
+    if(!is_bool($transport['request_sent'])||!is_bool($transport['transport_ok'])||!is_int($transport['http_status'])||!is_string($transport['content_type'])||!is_string($transport['body'])||!pay_api_001_is_sha256($transport['response_headers_sha256'])||!is_string($transport['error_code']))return false;
+    $body=$transport['body'];$evidence=array('http_status'=>$transport['http_status'],'response_headers_sha256'=>$transport['response_headers_sha256'],'response_body_sha256'=>hash('sha256',$body),'response_body_bytes'=>strlen($body),'response_content_type_sha256'=>hash('sha256',strtolower(trim($transport['content_type']))));
+    if(strlen($body)>(int)$max_response_bytes)return array_merge(array('classification'=>'delivery_uncertain','retry_safe'=>false),$evidence);
     if(!$transport['request_sent'])return array_merge(array('classification'=>'pre_send_failure','retry_safe'=>true),$evidence);
     if(!$transport['transport_ok'])return array_merge(array('classification'=>'delivery_uncertain','retry_safe'=>false),$evidence);
     $status=$transport['http_status'];if($status>=200&&$status<300)return array_merge(array('classification'=>'delivered','retry_safe'=>false),$evidence);
@@ -207,7 +208,7 @@ function pay_api_001_webhook_transport_minimized_result($transport,$max_response
 /** Build a pre-send failure result without exposing raw response material. */
 function pay_api_001_webhook_transport_pre_send_failure($error_code)
 {
-    return array('classification'=>'pre_send_failure','retry_safe'=>true,'http_status'=>0,'response_body_sha256'=>hash('sha256',''),
+    return array('classification'=>'pre_send_failure','retry_safe'=>true,'http_status'=>0,'response_headers_sha256'=>hash('sha256',''),'response_body_sha256'=>hash('sha256',''),
         'response_body_bytes'=>0,'response_content_type_sha256'=>hash('sha256',''),'error_code'=>(string)$error_code);
 }
 
@@ -219,17 +220,18 @@ function pay_api_001_webhook_curl_transport(array $request)
     if(!defined('CURLOPT_RESOLVE')||!defined('CURLOPT_PROTOCOLS')||!defined('CURLPROTO_HTTPS')||!defined('CURLOPT_SSLVERSION')||!defined('CURL_SSLVERSION_TLSv1_2'))return pay_api_001_webhook_transport_pre_send_failure('curl_transport_controls_unavailable');
     if($request['minimum_tls_version']==='TLS1.3'&&!defined('CURL_SSLVERSION_TLSv1_3'))return pay_api_001_webhook_transport_pre_send_failure('curl_tls13_control_unavailable');
     $dns_error=null;$public_ips=pay_api_001_webhook_resolve_public_ipv4($request['host'],null,$dns_error);if($public_ips===false)return pay_api_001_webhook_transport_pre_send_failure($dns_error);
-    $response='';$response_limit_exceeded=false;$limit=$request['max_response_bytes'];$h=curl_init();if($h===false)return pay_api_001_webhook_transport_pre_send_failure('curl_init_failed');
+    $response='';$response_headers='';$response_limit_exceeded=false;$response_header_limit_exceeded=false;$limit=$request['max_response_bytes'];$h=curl_init();if($h===false)return pay_api_001_webhook_transport_pre_send_failure('curl_init_failed');
     $ssl_minimum=$request['minimum_tls_version']==='TLS1.3'?constant('CURL_SSLVERSION_TLSv1_3'):constant('CURL_SSLVERSION_TLSv1_2');
     $options=array(CURLOPT_URL=>$request['url'],CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$request['body'],CURLOPT_HTTPHEADER=>$request['headers'],CURLOPT_FOLLOWLOCATION=>false,
         CURLOPT_MAXREDIRS=>0,CURLOPT_RETURNTRANSFER=>false,CURLOPT_HEADER=>false,CURLOPT_CONNECTTIMEOUT=>(int)$request['connect_timeout_seconds'],CURLOPT_TIMEOUT=>(int)$request['total_timeout_seconds'],
         CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_SSLVERSION=>$ssl_minimum,CURLOPT_PROXY=>'',CURLOPT_RESOLVE=>array($request['host'].':443:'.$public_ips[0]),
+        CURLOPT_HEADERFUNCTION=>function($handle,$line)use(&$response_headers,&$response_header_limit_exceeded){if(strlen($response_headers)+strlen($line)>PAY_API_001_WEBHOOK_MAX_RESPONSE_HEADER_BYTES){$response_header_limit_exceeded=true;return 0;}$response_headers.=$line;return strlen($line);},
         CURLOPT_WRITEFUNCTION=>function($handle,$chunk)use(&$response,&$response_limit_exceeded,$limit){if(strlen($response)+strlen($chunk)>$limit){$response_limit_exceeded=true;return 0;}$response.=$chunk;return strlen($chunk);});
     $options[CURLOPT_PROTOCOLS]=CURLPROTO_HTTPS;if(defined('CURLOPT_REDIR_PROTOCOLS'))$options[CURLOPT_REDIR_PROTOCOLS]=CURLPROTO_HTTPS;
     if(!curl_setopt_array($h,$options)){curl_close($h);return pay_api_001_webhook_transport_pre_send_failure('curl_option_failed');}
     $ok=curl_exec($h);$errno=(int)curl_errno($h);$status=(int)curl_getinfo($h,CURLINFO_HTTP_CODE);$ctype=(string)curl_getinfo($h,CURLINFO_CONTENT_TYPE);$request_size=(int)curl_getinfo($h,CURLINFO_REQUEST_SIZE);curl_close($h);
-    $transport=array('request_sent'=>$request_size>0,'transport_ok'=>$ok===true&&$errno===0&&!$response_limit_exceeded,'http_status'=>$status,'content_type'=>$ctype,
-        'body'=>$response,'error_code'=>$response_limit_exceeded?'response_body_limit_exceeded':($errno===0?'':('curl_'.$errno)));
+    $transport=array('request_sent'=>$request_size>0,'transport_ok'=>$ok===true&&$errno===0&&!$response_limit_exceeded&&!$response_header_limit_exceeded,'http_status'=>$status,'content_type'=>$ctype,
+        'body'=>$response,'response_headers_sha256'=>hash('sha256',$response_headers),'error_code'=>$response_header_limit_exceeded?'response_header_limit_exceeded':($response_limit_exceeded?'response_body_limit_exceeded':($errno===0?'':('curl_'.$errno))));
     return pay_api_001_webhook_transport_minimized_result($transport,$limit);
 }
 ?>
