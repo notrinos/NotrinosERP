@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.894',
-        'active_legacy_payroll_contract'=>'1.0.478',
+        'active_database_version'=>'1.0.897',
+        'active_legacy_payroll_contract'=>'1.0.479',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/pay_api_001_webhook_transport.inc','hrm/includes/db/pay_api_001_webhook_delivery_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_delivery_attempt_writer.php','sql/upgrade_pay_api_001_webhook_provider_response_writer.php','sql/upgrade_pay_api_001_webhook_delivery_executor.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.894 with immutable initial delivery-attempt persistence, minimized definite provider-response persistence and exactly one claim-bound initial outbound webhook delivery protected by a pre-send replay-defense reservation. Automatic retry/replay/dead-letter reprocess execution, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_webhook_delivery_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_retry_reservation_custody.sql','sql/upgrade_pay_api_001_webhook_retry_reservation_custody.php','sql/upgrade_pay_api_001_webhook_retry_decision_writer.php','sql/upgrade_pay_api_001_webhook_retry_executor.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.897 with immutable per-retry dispatch reservations, deterministic bounded backoff/terminal dead-letter decisions, and exactly one due claim-bound retry execution per invocation. Dead-letter reprocess execution, inbound webhooks and all payroll/payment/GL/filing command authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_retry_executor'=>array('previous'=>'1.0.896','version'=>'1.0.897',
+                'file'=>'sql/upgrade_pay_api_001_webhook_retry_executor.php'),
+            'pay_api_001_webhook_retry_decision_writer'=>array('previous'=>'1.0.895','version'=>'1.0.896',
+                'file'=>'sql/upgrade_pay_api_001_webhook_retry_decision_writer.php'),
+            'pay_api_001_webhook_retry_reservation_custody'=>array('previous'=>'1.0.894','version'=>'1.0.895',
+                'file'=>'sql/upgrade_pay_api_001_webhook_retry_reservation_custody.php'),
             'pay_api_001_webhook_delivery_executor'=>array('previous'=>'1.0.893','version'=>'1.0.894',
                 'file'=>'sql/upgrade_pay_api_001_webhook_delivery_executor.php'),
             'pay_api_001_webhook_provider_response_writer'=>array('previous'=>'1.0.892','version'=>'1.0.893',

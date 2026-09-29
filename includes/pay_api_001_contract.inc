@@ -1,6 +1,6 @@
 <?php
 /** PAY-API-001 bounded payroll-integration authority contract. */
-if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.894');
+if (!defined('PAY_API_001_CONTRACT_VERSION')) define('PAY_API_001_CONTRACT_VERSION', '1.0.897');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_DB_VERSION', '1.0.873');
 if (!defined('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION')) define('PAY_API_001_BUSINESS_DATA_DISPATCH_DB_VERSION', '1.0.876');
 if (!defined('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION')) define('PAY_API_001_WEBHOOK_OUTBOX_CUSTODY_DB_VERSION', '1.0.878');
@@ -20,6 +20,9 @@ if (!defined('PAY_API_001_WEBHOOK_TRANSPORT_ADAPTER_DB_VERSION')) define('PAY_AP
 if (!defined('PAY_API_001_WEBHOOK_DELIVERY_ATTEMPT_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_DELIVERY_ATTEMPT_WRITER_DB_VERSION', '1.0.892');
 if (!defined('PAY_API_001_WEBHOOK_PROVIDER_RESPONSE_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_PROVIDER_RESPONSE_WRITER_DB_VERSION', '1.0.893');
 if (!defined('PAY_API_001_WEBHOOK_DELIVERY_EXECUTOR_DB_VERSION')) define('PAY_API_001_WEBHOOK_DELIVERY_EXECUTOR_DB_VERSION', '1.0.894');
+if (!defined('PAY_API_001_WEBHOOK_RETRY_RESERVATION_CUSTODY_DB_VERSION')) define('PAY_API_001_WEBHOOK_RETRY_RESERVATION_CUSTODY_DB_VERSION', '1.0.895');
+if (!defined('PAY_API_001_WEBHOOK_RETRY_DECISION_WRITER_DB_VERSION')) define('PAY_API_001_WEBHOOK_RETRY_DECISION_WRITER_DB_VERSION', '1.0.896');
+if (!defined('PAY_API_001_WEBHOOK_RETRY_EXECUTOR_DB_VERSION')) define('PAY_API_001_WEBHOOK_RETRY_EXECUTOR_DB_VERSION', '1.0.897');
 
 /** Return whether the bounded public read-only route is allowed at one exact database version. */
 function pay_api_001_public_readonly_route_allowed_for_database_version($database_version)
@@ -154,6 +157,27 @@ function pay_api_001_webhook_delivery_executor_allowed_for_database_version($dat
     return version_compare($database_version, PAY_API_001_WEBHOOK_DELIVERY_EXECUTOR_DB_VERSION, '>=');
 }
 
+/** Return whether immutable per-retry dispatch reservation custody must exist. */
+function pay_api_001_webhook_retry_reservation_custody_required_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_RETRY_RESERVATION_CUSTODY_DB_VERSION, '>=');
+}
+
+/** Return whether deterministic retry/dead-letter decision persistence is allowed. */
+function pay_api_001_webhook_retry_decision_writer_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_RETRY_DECISION_WRITER_DB_VERSION, '>=');
+}
+
+/** Return whether one due claim-bound webhook retry execution is allowed. */
+function pay_api_001_webhook_retry_executor_allowed_for_database_version($database_version)
+{
+    if (!is_string($database_version) || preg_match('/^\d+\.\d+\.\d+$/D', $database_version) !== 1) return false;
+    return version_compare($database_version, PAY_API_001_WEBHOOK_RETRY_EXECUTOR_DB_VERSION, '>=');
+}
+
 /** Return the authority contract as it applies to the supplied database version. */
 function pay_api_001_authority_contract($database_version=null)
 {
@@ -177,6 +201,9 @@ function pay_api_001_authority_contract($database_version=null)
     $webhook_delivery_attempt_writer_allowed = pay_api_001_webhook_delivery_attempt_writer_allowed_for_database_version($effective_version);
     $webhook_provider_response_writer_allowed = pay_api_001_webhook_provider_response_writer_allowed_for_database_version($effective_version);
     $webhook_delivery_executor_allowed = pay_api_001_webhook_delivery_executor_allowed_for_database_version($effective_version);
+    $webhook_retry_reservation_custody = pay_api_001_webhook_retry_reservation_custody_required_for_database_version($effective_version);
+    $webhook_retry_decision_writer_allowed = pay_api_001_webhook_retry_decision_writer_allowed_for_database_version($effective_version);
+    $webhook_retry_executor_allowed = pay_api_001_webhook_retry_executor_allowed_for_database_version($effective_version);
     return array(
         'versioned_resource_contract'=>true,
         'deny_by_default'=>true,
@@ -245,6 +272,9 @@ function pay_api_001_authority_contract($database_version=null)
         'webhook_delivery_attempt_writer_contract'=>true,
         'webhook_provider_response_writer_contract'=>true,
         'webhook_delivery_executor_contract'=>true,
+        'webhook_retry_dispatch_reservation_contract'=>true,
+        'webhook_retry_decision_contract'=>true,
+        'webhook_retry_executor_contract'=>true,
         'query_string_credentials_allowed'=>false,
         'browser_session_as_api_credential'=>false,
         'cleartext_secret_storage'=>false,
@@ -272,7 +302,9 @@ function pay_api_001_authority_contract($database_version=null)
         'webhook_delivery_attempt_writer_allowed'=>$webhook_delivery_attempt_writer_allowed,
         'webhook_provider_response_writer_allowed'=>$webhook_provider_response_writer_allowed,
         'webhook_delivery_executor_allowed'=>$webhook_delivery_executor_allowed,
-        'webhook_retry_executor_allowed'=>false,
+        'webhook_retry_reservation_custody_required'=>$webhook_retry_reservation_custody,
+        'webhook_retry_decision_writer_allowed'=>$webhook_retry_decision_writer_allowed,
+        'webhook_retry_executor_allowed'=>$webhook_retry_executor_allowed,
         'webhook_reprocess_executor_allowed'=>false,
         'webhook_delivery'=>$webhook_delivery_executor_allowed,
         'webhook_receive'=>false,
