@@ -11,12 +11,16 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.900',
-        'active_legacy_payroll_contract'=>'1.0.480',
+        'active_database_version'=>'1.0.902',
+        'active_legacy_payroll_contract'=>'1.0.481',
         'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','includes/access_levels.inc','hrm/includes/db/pay_api_001_webhook_reprocess_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','hrm/includes/db/pay_api_001_schema_db.inc','sql/upgrade_pay_api_001_webhook_reprocess_governance_custody.sql','sql/upgrade_pay_api_001_webhook_reprocess_governance_custody.php','sql/upgrade_pay_api_001_webhook_reprocess_authorization_writer.php','sql/upgrade_pay_api_001_webhook_reprocess_dispatch_reservation_custody.sql','sql/upgrade_pay_api_001_webhook_reprocess_dispatch_reservation_custody.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.900 with immutable maker/reviewer/approver dead-letter reprocess governance, governed authorization activation, and immutable future-dispatch reservation custody. Reprocess network execution and inbound webhook receipt remain disabled.',
+        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_webhook_reprocess_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_reprocess_reservation_writer.php','sql/upgrade_pay_api_001_webhook_reprocess_executor.php'),
+        'next_slice_scope'=>'PAY-API-001 advances through 1.0.902 with an immutable one-authorization reprocess dispatch reservation writer and exactly one independently authorized dead-letter resend with append-only minimized evidence. Inbound webhook receipt/signature verification and payroll/payment/GL/filing authority remain disabled.',
         'edges'=>array(
+            'pay_api_001_webhook_reprocess_executor'=>array('previous'=>'1.0.901','version'=>'1.0.902',
+                'file'=>'sql/upgrade_pay_api_001_webhook_reprocess_executor.php'),
+            'pay_api_001_webhook_reprocess_reservation_writer'=>array('previous'=>'1.0.900','version'=>'1.0.901',
+                'file'=>'sql/upgrade_pay_api_001_webhook_reprocess_reservation_writer.php'),
             'pay_api_001_webhook_reprocess_dispatch_reservation_custody'=>array('previous'=>'1.0.899','version'=>'1.0.900',
                 'file'=>'sql/upgrade_pay_api_001_webhook_reprocess_dispatch_reservation_custody.php'),
             'pay_api_001_webhook_reprocess_authorization_writer'=>array('previous'=>'1.0.898','version'=>'1.0.899',

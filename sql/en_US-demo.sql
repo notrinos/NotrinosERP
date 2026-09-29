@@ -14786,8 +14786,8 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_dispatch_reserva
  UNIQUE KEY `uq_papi1_wdr_deadletter` (`webhook_dead_letter_id`),
  UNIQUE KEY `uq_papi1_wdr_replay` (`replay_key_sha256`),
  UNIQUE KEY `uq_papi1_wdr_sha` (`reservation_sha256`),
- CONSTRAINT `fk_papi1_wdr_auth` FOREIGN KEY (`webhook_reprocess_authorization_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_authorizations` (`webhook_reprocess_authorization_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
- CONSTRAINT `fk_papi1_wdr_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wdr_auth` FOREIGN KEY (`webhook_reprocess_authorization_id`,`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_authorizations` (`webhook_reprocess_authorization_id`,`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wdr_deadletter` FOREIGN KEY (`webhook_dead_letter_id`,`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`,`webhook_outbox_id`,`last_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wdr_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wdr_attempt` FOREIGN KEY (`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
