@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.902',
-        'active_legacy_payroll_contract'=>'1.0.481',
-        'next_backlog_item'=>'PAY-API-001',
-        'next_slice_changed_files'=>array('includes/pay_api_001_contract.inc','hrm/includes/db/pay_api_001_webhook_reprocess_db.inc','hrm/includes/db/pay_api_001_readiness_db.inc','sql/upgrade_pay_api_001_webhook_reprocess_reservation_writer.php','sql/upgrade_pay_api_001_webhook_reprocess_executor.php'),
-        'next_slice_scope'=>'PAY-API-001 advances through 1.0.902 with an immutable one-authorization reprocess dispatch reservation writer and exactly one independently authorized dead-letter resend with append-only minimized evidence. Inbound webhook receipt/signature verification and payroll/payment/GL/filing authority remain disabled.',
+        'active_database_version'=>'1.0.905',
+        'active_legacy_payroll_contract'=>'1.0.482',
+        'next_backlog_item'=>'PAY-FIL-001',
+        'next_slice_changed_files'=>array(),
+        'next_slice_scope'=>'PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending a named official schema and country/legal/technical/certification evidence. No official-schema registration writer, official renderer, filing executor, submission/network path or connector-secret custody is enabled. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'pay_api_001_webhook_inbound_route'=>array('previous'=>'1.0.904','version'=>'1.0.905',
+                'file'=>'sql/upgrade_pay_api_001_webhook_inbound_route.php'),
+            'pay_api_001_webhook_inbound_verifier'=>array('previous'=>'1.0.903','version'=>'1.0.904',
+                'file'=>'sql/upgrade_pay_api_001_webhook_inbound_verifier.php'),
+            'pay_api_001_webhook_inbound_custody'=>array('previous'=>'1.0.902','version'=>'1.0.903',
+                'file'=>'sql/upgrade_pay_api_001_webhook_inbound_custody.php'),
             'pay_api_001_webhook_reprocess_executor'=>array('previous'=>'1.0.901','version'=>'1.0.902',
                 'file'=>'sql/upgrade_pay_api_001_webhook_reprocess_executor.php'),
             'pay_api_001_webhook_reprocess_reservation_writer'=>array('previous'=>'1.0.900','version'=>'1.0.901',

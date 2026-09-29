@@ -14794,3 +14794,77 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_dispatch_reserva
 CREATE TRIGGER `0_papi1_wdr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be updated';
 CREATE TRIGGER `0_papi1_wdr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_reprocess_dispatch_reservation_custody
+
+-- PAY-API-001 GROUP webhook_inbound_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_sources` (
+ `webhook_inbound_source_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `source_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `profile_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_type` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `webhook_secret_ref_id` bigint(20) unsigned NOT NULL,
+ `canonicalization_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `signature_algorithm` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `signature_header_name` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `timestamp_header_name` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `max_clock_skew_seconds` int(10) unsigned NOT NULL,
+ `replay_ttl_seconds` int(10) unsigned NOT NULL,
+ `valid_from` datetime NOT NULL,
+ `expires_at` datetime NOT NULL,
+ `source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_inbound_source_id`),
+ UNIQUE KEY `uq_papi1_wis_keyver` (`company_id`,`source_key`,`profile_version`),
+ UNIQUE KEY `uq_papi1_wis_sha` (`source_sha256`),
+ CONSTRAINT `fk_papi1_wis_secret` FOREIGN KEY (`webhook_secret_ref_id`) REFERENCES `0_hrm_pay_api_001_webhook_secret_refs` (`webhook_secret_ref_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wis_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_sources row cannot be updated';
+CREATE TRIGGER `0_papi1_wis_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_sources row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_receipts` (
+ `webhook_inbound_receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_inbound_source_id` bigint(20) unsigned NOT NULL,
+ `company_id` int(11) NOT NULL,
+ `delivery_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `request_target_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_type_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `signature_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `timestamp_value` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `verification_outcome_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `replay_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `correlation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `received_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_inbound_receipt_id`),
+ UNIQUE KEY `uq_papi1_wir_lineage` (`webhook_inbound_receipt_id`,`webhook_inbound_source_id`),
+ UNIQUE KEY `uq_papi1_wir_corr` (`company_id`,`correlation_sha256`),
+ UNIQUE KEY `uq_papi1_wir_sha` (`receipt_sha256`),
+ CONSTRAINT `fk_papi1_wir_source` FOREIGN KEY (`webhook_inbound_source_id`) REFERENCES `0_hrm_pay_api_001_webhook_inbound_sources` (`webhook_inbound_source_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wir_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_receipts row cannot be updated';
+CREATE TRIGGER `0_papi1_wir_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_receipts row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_replay_defenses` (
+ `webhook_inbound_replay_defense_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_inbound_source_id` bigint(20) unsigned NOT NULL,
+ `webhook_inbound_receipt_id` bigint(20) unsigned NOT NULL,
+ `replay_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `valid_until` datetime NOT NULL,
+ `defense_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_inbound_replay_defense_id`),
+ UNIQUE KEY `uq_papi1_wid_receipt` (`webhook_inbound_receipt_id`),
+ UNIQUE KEY `uq_papi1_wid_replay` (`webhook_inbound_source_id`,`replay_key_sha256`),
+ UNIQUE KEY `uq_papi1_wid_sha` (`defense_sha256`),
+ CONSTRAINT `fk_papi1_wid_receipt` FOREIGN KEY (`webhook_inbound_receipt_id`,`webhook_inbound_source_id`) REFERENCES `0_hrm_pay_api_001_webhook_inbound_receipts` (`webhook_inbound_receipt_id`,`webhook_inbound_source_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wid_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be updated';
+CREATE TRIGGER `0_papi1_wid_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be deleted';
+-- PAY-API-001 END GROUP webhook_inbound_custody

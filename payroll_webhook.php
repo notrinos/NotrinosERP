@@ -1,0 +1,44 @@
+<?php
+/** PAY-API-001 bounded public inbound webhook receipt route: verify, replay-protect, record; never dispatch payroll commands. */
+$pay_api_001_inbound_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
+$pay_api_001_inbound_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
+$pay_api_001_inbound_raw_server=$_SERVER;
+define('FA_LOGOUT_PHP_FILE','');
+$page_security='SA_OPEN';
+$path_to_root='.';
+include_once($path_to_root.'/includes/session_security.inc');
+include_once($path_to_root.'/includes/pay_api_001_webhook_inbound.inc');
+$pay_api_001_inbound_raw_body=file_get_contents('php://input',false,null,0,PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES+1);
+
+pay_api_001_webhook_inbound_security_headers();
+$pay_api_001_inbound_script_path=isset($pay_api_001_inbound_raw_server['SCRIPT_NAME'])?(string)$pay_api_001_inbound_raw_server['SCRIPT_NAME']:'';
+$pay_api_001_inbound_request_uri=isset($pay_api_001_inbound_raw_server['REQUEST_URI'])?(string)$pay_api_001_inbound_raw_server['REQUEST_URI']:'';
+$pay_api_001_inbound_request_path=parse_url($pay_api_001_inbound_request_uri,PHP_URL_PATH);
+$pay_api_001_inbound_script_directory=rtrim(str_replace('\\','/',$pay_api_001_inbound_script_path?dirname($pay_api_001_inbound_script_path):''),'/');
+$pay_api_001_inbound_expected_path=$pay_api_001_inbound_script_directory.PAY_API_001_WEBHOOK_INBOUND_PATH;
+if($pay_api_001_inbound_script_path!==$pay_api_001_inbound_expected_path||$pay_api_001_inbound_request_path!==$pay_api_001_inbound_expected_path)pay_api_001_webhook_inbound_respond(404,array('accepted'=>false));
+$secure=session_transport_is_https();
+if($secure!==true)pay_api_001_webhook_inbound_respond(426,array('accepted'=>false));
+if(strtoupper($pay_api_001_inbound_raw_method)!=='POST')pay_api_001_webhook_inbound_respond(405,array('accepted'=>false));
+if(!is_string($pay_api_001_inbound_raw_body)||strlen($pay_api_001_inbound_raw_body)<2||strlen($pay_api_001_inbound_raw_body)>PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES)pay_api_001_webhook_inbound_respond(413,array('accepted'=>false));
+if(isset($pay_api_001_inbound_raw_server['CONTENT_LENGTH'])&&((int)$pay_api_001_inbound_raw_server['CONTENT_LENGTH']!==strlen($pay_api_001_inbound_raw_body)||(int)$pay_api_001_inbound_raw_server['CONTENT_LENGTH']>PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES))pay_api_001_webhook_inbound_respond(400,array('accepted'=>false));
+$request=pay_api_001_webhook_inbound_parse_query($pay_api_001_inbound_raw_query);
+$headers=pay_api_001_webhook_inbound_headers_from_server($pay_api_001_inbound_raw_server);
+if($request===false||$headers===false)pay_api_001_webhook_inbound_respond(400,array('accepted'=>false));
+
+include_once($path_to_root.'/includes/session.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_api_001_webhook_inbound_db.inc');
+if(!isset($db_connections[$request['company_id']])||!set_global_connection($request['company_id']))pay_api_001_webhook_inbound_respond(401,array('accepted'=>false));
+if(isset($_SESSION['language'])&&is_object($_SESSION['language']))db_set_encoding($_SESSION['language']->encoding);
+if(!pay_api_001_webhook_inbound_route_enabled())pay_api_001_webhook_inbound_respond(503,array('accepted'=>false));
+$resolver=isset($GLOBALS['pay_api_001_webhook_secret_resolver'])?$GLOBALS['pay_api_001_webhook_secret_resolver']:null;
+if(!is_callable($resolver))pay_api_001_webhook_inbound_respond(503,array('accepted'=>false));
+$error=null;$result=pay_api_001_receive_inbound_webhook($request['company_id'],$request['source_key'],$headers,$pay_api_001_inbound_raw_body,$resolver,null,$error);
+if($result===false){
+    if($error==='inbound_replay_denied'||$error==='inbound_receipt_insert_failed_or_replayed'||$error==='inbound_replay_defense_insert_failed_or_replayed')pay_api_001_webhook_inbound_respond(409,array('accepted'=>false));
+    if(in_array($error,array('inbound_signature_invalid','inbound_timestamp_outside_window','inbound_event_denied','inbound_source_unavailable_or_ambiguous','inbound_source_scope_invalid'),true))pay_api_001_webhook_inbound_respond(401,array('accepted'=>false));
+    if(in_array($error,array('inbound_payload_invalid','inbound_headers_invalid','inbound_source_input_invalid'),true))pay_api_001_webhook_inbound_respond(400,array('accepted'=>false));
+    pay_api_001_webhook_inbound_respond(503,array('accepted'=>false));
+}
+pay_api_001_webhook_inbound_respond(202,array('accepted'=>true));
+?>
