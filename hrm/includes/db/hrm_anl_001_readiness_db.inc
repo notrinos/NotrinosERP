@@ -175,9 +175,65 @@ function hrm_anl_001_require_source_tokens($patch, $relative, array $tokens, $la
 }
 
 /** @return bool */
+function hrm_anl_001_require_catalog_registration_review($patch)
+{
+    if (!hrm_anl_001_require_source_tokens($patch, 'includes/hrm_anl_001_headcount_contract.inc', array(
+        "HRM_ANL_001_HEADCOUNT_METRIC_KEY', 'workforce.active_headcount.total'",
+        "HRM_ANL_001_HEADCOUNT_MINIMUM_COHORT', 5",
+        "'export_allowed' => false",
+        "'drilldown_allowed' => false",
+        'function hrm_anl_001_headcount_metric_definition(',
+        'function hrm_anl_001_headcount_suppression_policy(',
+        'function hrm_anl_001_headcount_metric_definition_for_company(',
+        'function hrm_anl_001_headcount_suppression_policy_for_company('
+    ), 'HRM-ANL-001 headcount metric contract')) return false;
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/includes/db/hrm_anl_001_catalog_db.inc', array(
+        "user_check_access('SA_HRMREPORTS')",
+        'function hrm_anl_001_review_headcount_catalog(',
+        'function hrm_anl_001_approve_headcount_catalog(',
+        'catalog_review_owned_transaction_required',
+        'catalog_reviewer_approver_separation_required',
+        "entity_type' => 'hrm-anl-001-catalog'",
+        'INSERT INTO '."'.TB_PREF.'".'hrm_anl_001_metric_definitions',
+        'INSERT INTO '."'.TB_PREF.'".'hrm_anl_001_suppression_policies'
+    ), 'HRM-ANL-001 catalog registration writer');
+}
+
+/** @return bool */
+function hrm_anl_001_require_headcount_metric_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'includes/hrm_anl_001_headcount_contract.inc', array(
+        "'report_id' => 892",
+        "'primary_aggregation' => 'count_rows'",
+        "'independent_reconciliation' => 'sum_department_counts'",
+        'function hrm_anl_001_headcount_reconcile(',
+        'exact_source_total_mismatch',
+        "'cohort_size_band_code'"
+    ), 'HRM-ANL-001 headcount metric reconciliation');
+}
+
+/** @return bool */
+function hrm_anl_001_require_headcount_runtime_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/includes/db/hrm_anl_001_headcount_db.inc', array(
+        'hrm_anl_001_runtime_has_report_access()',
+        'function hrm_anl_001_execute_headcount_metric(',
+        'SELECT COUNT(*) active_count FROM ',
+        'GROUP BY e.department_id ORDER BY e.department_id',
+        'export_runtime_denied',
+        'drilldown_runtime_denied',
+        'hrm_anl_001_snapshot_requests',
+        'hrm_anl_001_snapshots',
+        'hrm_anl_001_query_audits',
+        "HRM_ANL_001_HEADCOUNT_CURRENCY",
+        'hrm_anl_001_headcount_reconcile'
+    ), 'HRM-ANL-001 bounded headcount runtime');
+}
+
+/** @return bool */
 function hrm_anl_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908');
+    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908','1.0.909','1.0.910','1.0.911');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-ANL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_api_001_webhook_inbound_route','1.0.904','1.0.905'))

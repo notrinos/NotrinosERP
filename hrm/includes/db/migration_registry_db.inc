@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.909',
-        'active_legacy_payroll_contract'=>'1.0.483',
+        'active_database_version'=>'1.0.912',
+        'active_legacy_payroll_contract'=>'1.0.484',
         'next_backlog_item'=>'HRM-ANL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ANL-001 foundation is active at 1.0.909 with semantic catalog, suppression-policy, snapshot, query-audit and drill-down authorization custody only. Live metric query, snapshot writer, drill-down and export runtime remain disabled. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending a named official schema and country/legal/technical/certification evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-ANL-001 bounded active-headcount runtime source is active at 1.0.912: two-person catalog registration, report-892-compatible aggregate execution, exact dual-query reconciliation, small-cohort suppression and immutable bounded snapshot/query evidence only. Generic metric-query and generic snapshot-writer authority remain disabled; drill-down and export remain denied. LOCAL MANDATORY GATE PASS at exact source/DB 1.0.912. HRM-ANL-001 remains open for separately reviewed successor work. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_anl_001_headcount_runtime'=>array('previous'=>'1.0.911','version'=>'1.0.912',
+                'file'=>'sql/upgrade_hrm_anl_001_headcount_runtime.php'),
+            'hrm_anl_001_headcount_metric_contract'=>array('previous'=>'1.0.910','version'=>'1.0.911',
+                'file'=>'sql/upgrade_hrm_anl_001_headcount_metric_contract.php'),
+            'hrm_anl_001_catalog_registration_writer'=>array('previous'=>'1.0.909','version'=>'1.0.910',
+                'file'=>'sql/upgrade_hrm_anl_001_catalog_registration_writer.php'),
             'hrm_anl_001_query_governance_custody'=>array('previous'=>'1.0.908','version'=>'1.0.909',
                 'file'=>'sql/upgrade_hrm_anl_001_query_governance_custody.php'),
             'hrm_anl_001_snapshot_custody'=>array('previous'=>'1.0.907','version'=>'1.0.908',
