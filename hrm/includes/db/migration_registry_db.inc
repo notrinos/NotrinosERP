@@ -11,12 +11,20 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.905',
-        'active_legacy_payroll_contract'=>'1.0.482',
-        'next_backlog_item'=>'PAY-FIL-001',
+        'active_database_version'=>'1.0.909',
+        'active_legacy_payroll_contract'=>'1.0.483',
+        'next_backlog_item'=>'HRM-ANL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending a named official schema and country/legal/technical/certification evidence. No official-schema registration writer, official renderer, filing executor, submission/network path or connector-secret custody is enabled. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-ANL-001 foundation is active at 1.0.909 with semantic catalog, suppression-policy, snapshot, query-audit and drill-down authorization custody only. Live metric query, snapshot writer, drill-down and export runtime remain disabled. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending a named official schema and country/legal/technical/certification evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_anl_001_query_governance_custody'=>array('previous'=>'1.0.908','version'=>'1.0.909',
+                'file'=>'sql/upgrade_hrm_anl_001_query_governance_custody.php'),
+            'hrm_anl_001_snapshot_custody'=>array('previous'=>'1.0.907','version'=>'1.0.908',
+                'file'=>'sql/upgrade_hrm_anl_001_snapshot_custody.php'),
+            'hrm_anl_001_metric_catalog_custody'=>array('previous'=>'1.0.906','version'=>'1.0.907',
+                'file'=>'sql/upgrade_hrm_anl_001_metric_catalog_custody.php'),
+            'hrm_anl_001_contract_foundation'=>array('previous'=>'1.0.905','version'=>'1.0.906',
+                'file'=>'sql/upgrade_hrm_anl_001_contract_foundation.php'),
             'pay_api_001_webhook_inbound_route'=>array('previous'=>'1.0.904','version'=>'1.0.905',
                 'file'=>'sql/upgrade_pay_api_001_webhook_inbound_route.php'),
             'pay_api_001_webhook_inbound_verifier'=>array('previous'=>'1.0.903','version'=>'1.0.904',

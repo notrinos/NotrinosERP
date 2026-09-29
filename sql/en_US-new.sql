@@ -14508,3 +14508,162 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_replay_defenses` (
 CREATE TRIGGER `0_papi1_wid_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be updated';
 CREATE TRIGGER `0_papi1_wid_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_inbound_custody
+
+-- HRM-ANL-001 GROUP metric_catalog
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_metric_definitions` (
+ `metric_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `metric_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `definition_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_model_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `value_type_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `unit_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `currency_semantics_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `as_of_semantics_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `aggregation_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_contract_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `field_policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `valid_from` datetime NOT NULL,
+ `expires_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`metric_definition_id`),
+ UNIQUE KEY `uq_hanl1_md_lineage` (`metric_definition_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_md_keyver` (`company_id`,`metric_key`,`definition_version`),
+ UNIQUE KEY `uq_hanl1_md_sha` (`definition_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_md_u` BEFORE UPDATE ON `0_hrm_anl_001_metric_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_metric_definitions row cannot be updated';
+CREATE TRIGGER `0_hanl1_md_d` BEFORE DELETE ON `0_hrm_anl_001_metric_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_metric_definitions row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_suppression_policies` (
+ `suppression_policy_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `policy_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `policy_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `minimum_cohort_size` int(10) unsigned NOT NULL,
+ `suppress_exact_counts` tinyint(1) NOT NULL,
+ `export_allowed` tinyint(1) NOT NULL,
+ `policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `valid_from` datetime NOT NULL,
+ `expires_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`suppression_policy_id`),
+ UNIQUE KEY `uq_hanl1_sp_lineage` (`suppression_policy_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_sp_keyver` (`company_id`,`policy_key`,`policy_version`),
+ UNIQUE KEY `uq_hanl1_sp_sha` (`policy_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_sp_u` BEFORE UPDATE ON `0_hrm_anl_001_suppression_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_suppression_policies row cannot be updated';
+CREATE TRIGGER `0_hanl1_sp_d` BEFORE DELETE ON `0_hrm_anl_001_suppression_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_suppression_policies row cannot be deleted';
+-- HRM-ANL-001 END GROUP metric_catalog
+
+-- HRM-ANL-001 GROUP snapshot_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_snapshot_requests` (
+ `snapshot_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `metric_definition_id` bigint(20) unsigned NOT NULL,
+ `suppression_policy_id` bigint(20) unsigned NOT NULL,
+ `as_of_utc` datetime NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `filter_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `field_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_watermark_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_by` bigint(20) unsigned NOT NULL,
+ `purpose_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`snapshot_request_id`),
+ UNIQUE KEY `uq_hanl1_sr_lineage` (`snapshot_request_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_sr_sha` (`request_sha256`),
+ KEY `ix_hanl1_sr_metric_asof` (`company_id`,`metric_definition_id`,`as_of_utc`),
+ CONSTRAINT `fk_hanl1_sr_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_hanl1_sr_policy` FOREIGN KEY (`suppression_policy_id`,`company_id`) REFERENCES `0_hrm_anl_001_suppression_policies` (`suppression_policy_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_sr_u` BEFORE UPDATE ON `0_hrm_anl_001_snapshot_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshot_requests row cannot be updated';
+CREATE TRIGGER `0_hanl1_sr_d` BEFORE DELETE ON `0_hrm_anl_001_snapshot_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshot_requests row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_snapshots` (
+ `snapshot_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `snapshot_request_id` bigint(20) unsigned NOT NULL,
+ `row_count` bigint(20) unsigned NOT NULL,
+ `suppressed_row_count` bigint(20) unsigned NOT NULL,
+ `source_total_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `result_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `status_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `captured_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`snapshot_id`),
+ UNIQUE KEY `uq_hanl1_ss_lineage` (`snapshot_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_ss_request` (`snapshot_request_id`),
+ UNIQUE KEY `uq_hanl1_ss_sha` (`snapshot_sha256`),
+ CONSTRAINT `fk_hanl1_ss_request` FOREIGN KEY (`snapshot_request_id`,`company_id`) REFERENCES `0_hrm_anl_001_snapshot_requests` (`snapshot_request_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_ss_u` BEFORE UPDATE ON `0_hrm_anl_001_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshots row cannot be updated';
+CREATE TRIGGER `0_hanl1_ss_d` BEFORE DELETE ON `0_hrm_anl_001_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshots row cannot be deleted';
+-- HRM-ANL-001 END GROUP snapshot_custody
+
+-- HRM-ANL-001 GROUP query_governance
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_query_audits` (
+ `query_audit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `metric_definition_id` bigint(20) unsigned NOT NULL,
+ `snapshot_id` bigint(20) unsigned NOT NULL,
+ `actor_user_id` bigint(20) unsigned NOT NULL,
+ `query_purpose_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `filter_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `field_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `as_of_utc` datetime NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `decision_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `suppression_applied` tinyint(1) NOT NULL,
+ `cohort_size_band_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `export_requested` tinyint(1) NOT NULL,
+ `export_allowed` tinyint(1) NOT NULL,
+ `drilldown_requested` tinyint(1) NOT NULL,
+ `query_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `occurred_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`query_audit_id`),
+ UNIQUE KEY `uq_hanl1_qa_lineage` (`query_audit_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_qa_sha` (`query_sha256`),
+ KEY `ix_hanl1_qa_actor_time` (`company_id`,`actor_user_id`,`occurred_at`),
+ CONSTRAINT `fk_hanl1_qa_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_hanl1_qa_snapshot` FOREIGN KEY (`snapshot_id`,`company_id`) REFERENCES `0_hrm_anl_001_snapshots` (`snapshot_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_qa_u` BEFORE UPDATE ON `0_hrm_anl_001_query_audits` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_query_audits row cannot be updated';
+CREATE TRIGGER `0_hanl1_qa_d` BEFORE DELETE ON `0_hrm_anl_001_query_audits` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_query_audits row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_drilldown_authorizations` (
+ `drilldown_authorization_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `query_audit_id` bigint(20) unsigned NOT NULL,
+ `metric_definition_id` bigint(20) unsigned NOT NULL,
+ `purpose_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `field_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewer_user_id` bigint(20) unsigned NOT NULL,
+ `approver_user_id` bigint(20) unsigned NOT NULL,
+ `decision_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `expires_at` datetime NOT NULL,
+ `authorization_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `authorized_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`drilldown_authorization_id`),
+ UNIQUE KEY `uq_hanl1_da_lineage` (`drilldown_authorization_id`,`company_id`),
+ UNIQUE KEY `uq_hanl1_da_sha` (`authorization_sha256`),
+ KEY `ix_hanl1_da_query` (`company_id`,`query_audit_id`,`expires_at`),
+ CONSTRAINT `fk_hanl1_da_query` FOREIGN KEY (`query_audit_id`,`company_id`) REFERENCES `0_hrm_anl_001_query_audits` (`query_audit_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_hanl1_da_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_hanl1_da_u` BEFORE UPDATE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be updated';
+CREATE TRIGGER `0_hanl1_da_d` BEFORE DELETE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be deleted';
+-- HRM-ANL-001 END GROUP query_governance
