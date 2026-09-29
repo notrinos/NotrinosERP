@@ -63,6 +63,8 @@ class HrmApp extends application {
 		$this->add_lapp_function(1, _('Leave &Balance'),            'hrm/inquiry/leave_balance_inquiry.php?',              'SA_LEAVEINQUIRY',     MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Pa&yslip History'),          'hrm/inquiry/payslip_inquiry.php?',                    'SA_PAYSLIPINQUIRY',   MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Payroll &Summary'),          'hrm/inquiry/payroll_summary.php?',                    'SA_PAYROLLSUMMARY',   MENU_INQUIRY);
+		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
+			$this->add_lapp_function(1, _('Governed &Headcount'),       'hrm/inquiry/governed_headcount.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Employee &Directory'),       'hrm/inquiry/employee_directory.php?',                 'SA_EMPLOYEEREP',      MENU_INQUIRY);
 		$this->add_rapp_function(1, _('Employee &History'),         'hrm/inquiry/employee_history.php?',                   'SA_EMPHISTORY',       MENU_INQUIRY);
@@ -75,6 +77,8 @@ class HrmApp extends application {
 		// ═══════════════════════════════════════════════════════════
 		$this->add_module(_('Maintenance'));
 		$this->add_lapp_function(2, _('Manage &Employees'),         'hrm/manage/employees.php?',                           'SA_EMPLOYEE',         MENU_ENTRY);
+		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
+			$this->add_lapp_function(2, _('Headcount Analytics &Catalog'),'hrm/manage/analytics_headcount_catalog.php?',          'SA_HRMREPORTS',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Departments'),              'hrm/manage/departments.php?',                         'SA_DEPARTMENT',        MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Classification'),       'hrm/manage/job_classes.php?',                         'SA_JOBCLASS',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Positions'),            'hrm/manage/job_positions.php?',                       'SA_POSITION',          MENU_MAINTENANCE);

@@ -230,10 +230,53 @@ function hrm_anl_001_require_headcount_runtime_review($patch)
     ), 'HRM-ANL-001 bounded headcount runtime');
 }
 
+
+/** @return bool */
+function hrm_anl_001_require_catalog_governance_ui_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/manage/analytics_headcount_catalog.php', array(
+        "\$page_security = 'SA_HRMREPORTS'",
+        "check_csrf_token()",
+        "hrm_anl_001_review_headcount_catalog(",
+        "hrm_anl_001_approve_headcount_catalog(",
+        "htmlspecialchars((string)\$result['review_event_sha256']",
+        "different authenticated users",
+        "cannot create arbitrary metrics",
+        "enable export or drill-down"
+    ), 'HRM-ANL-001 catalog governance UI');
+}
+
+/** @return bool */
+function hrm_anl_001_require_headcount_inquiry_ui_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'hrm/inquiry/governed_headcount.php', array(
+        "\$page_security = 'SA_HRMREPORTS'",
+        "check_csrf_token()",
+        "hrm_anl_001_execute_headcount_metric(",
+        "HRM_ANL_001_HEADCOUNT_PURPOSE, false, false",
+        "Suppressed",
+        "htmlspecialchars((string)\$result['metric_key']",
+        "No source-total hash",
+        "Export, drill-down, department detail and employee identifiers remain unavailable"
+    ), 'HRM-ANL-001 bounded headcount inquiry UI');
+}
+
+/** @return bool */
+function hrm_anl_001_require_headcount_navigation_review($patch)
+{
+    return hrm_anl_001_require_source_tokens($patch, 'applications/hrm.php', array(
+        "Governed &Headcount",
+        "hrm/inquiry/governed_headcount.php?",
+        "Headcount Analytics &Catalog",
+        "hrm/manage/analytics_headcount_catalog.php?",
+        "'SA_HRMREPORTS'"
+    ), 'HRM-ANL-001 bounded headcount navigation');
+}
+
 /** @return bool */
 function hrm_anl_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908','1.0.909','1.0.910','1.0.911');
+    $allowed = array('1.0.905','1.0.906','1.0.907','1.0.908','1.0.909','1.0.910','1.0.911','1.0.912','1.0.913','1.0.914');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-ANL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_api_001_webhook_inbound_route','1.0.904','1.0.905'))

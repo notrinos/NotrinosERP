@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.912',
-        'active_legacy_payroll_contract'=>'1.0.484',
+        'active_database_version'=>'1.0.915',
+        'active_legacy_payroll_contract'=>'1.0.485',
         'next_backlog_item'=>'HRM-ANL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ANL-001 bounded active-headcount runtime source is active at 1.0.912: two-person catalog registration, report-892-compatible aggregate execution, exact dual-query reconciliation, small-cohort suppression and immutable bounded snapshot/query evidence only. Generic metric-query and generic snapshot-writer authority remain disabled; drill-down and export remain denied. LOCAL MANDATORY GATE PASS at exact source/DB 1.0.912. HRM-ANL-001 remains open for separately reviewed successor work. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-ANL-001 bounded headcount UI/navigation source is active through 1.0.915: CSRF-protected two-person catalog governance, one screen-only authenticated-company headcount inquiry, and SA_HRMREPORTS-gated navigation. Generic metric-query and generic snapshot-writer authority remain disabled; export, drill-down, department detail and employee identifiers remain denied. LOCAL ACCEPTANCE PASS at exact source/DB 1.0.915 from the owner-machine localhost WAMP/MariaDB/browser runner result supplied with this review; this source review did not rerun that runner. HRM-ANL-001 remains open for separately reviewed successor metrics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_anl_001_headcount_navigation'=>array('previous'=>'1.0.914','version'=>'1.0.915',
+                'file'=>'sql/upgrade_hrm_anl_001_headcount_navigation.php'),
+            'hrm_anl_001_headcount_inquiry_ui'=>array('previous'=>'1.0.913','version'=>'1.0.914',
+                'file'=>'sql/upgrade_hrm_anl_001_headcount_inquiry_ui.php'),
+            'hrm_anl_001_catalog_governance_ui'=>array('previous'=>'1.0.912','version'=>'1.0.913',
+                'file'=>'sql/upgrade_hrm_anl_001_catalog_governance_ui.php'),
             'hrm_anl_001_headcount_runtime'=>array('previous'=>'1.0.911','version'=>'1.0.912',
                 'file'=>'sql/upgrade_hrm_anl_001_headcount_runtime.php'),
             'hrm_anl_001_headcount_metric_contract'=>array('previous'=>'1.0.910','version'=>'1.0.911',
