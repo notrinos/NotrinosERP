@@ -563,6 +563,10 @@ $security_areas =array(
 	'SA_HRM_REVIEW_PAY_API' => array(SS_HRM|184, _('Independently review governed PAY-API provisioning requests')), // no automatic role grant
 	'SA_HRM_APPROVE_PAY_API' => array(SS_HRM|185, _('Independently approve reviewed PAY-API provisioning requests')), // no automatic role grant
 	'SA_HRM_EXECUTE_PAY_API' => array(SS_HRM|186, _('Execute approved PAY-API provisioning requests')), // no automatic role grant
+	'SA_HRM_REQUEST_PAY_API_REPROCESS' => array(SS_HRM|187, _('Request governed PAY-API dead-letter reprocess authorization')), // no automatic role grant
+	'SA_HRM_REVIEW_PAY_API_REPROCESS' => array(SS_HRM|188, _('Independently review PAY-API dead-letter reprocess requests')), // no automatic role grant
+	'SA_HRM_APPROVE_PAY_API_REPROCESS' => array(SS_HRM|189, _('Independently approve reviewed PAY-API dead-letter reprocess requests')), // no automatic role grant
+	'SA_HRM_EXECUTE_PAY_API_REPROCESS' => array(SS_HRM|190, _('Execute separately authorized PAY-API dead-letter reprocess dispatch')), // no automatic role grant
 
 	// Payroll & Human Resources — Analytics (SS_HRM_A)
 	'SA_EMPLOYEETRANSVIEW' => array(SS_HRM_A|1,  _('Employee transactions view')),

@@ -14453,6 +14453,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_dead_letters` (
  `created_at` datetime NOT NULL,
  PRIMARY KEY (`webhook_dead_letter_id`),
  UNIQUE KEY `uq_papi1_wd_outbox` (`webhook_outbox_id`),
+ UNIQUE KEY `uq_papi1_wd_lineage` (`webhook_dead_letter_id`,`webhook_outbox_id`,`last_attempt_id`),
  UNIQUE KEY `uq_papi1_wd_sha` (`dead_letter_sha256`),
  CONSTRAINT `fk_papi1_wd_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wd_attempt` FOREIGN KEY (`webhook_outbox_id`,`last_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
@@ -14675,6 +14676,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_authorizations` 
  `created_at` datetime NOT NULL,
  PRIMARY KEY (`webhook_reprocess_authorization_id`),
  UNIQUE KEY `uq_papi1_wra_deadletter` (`webhook_dead_letter_id`),
+ UNIQUE KEY `uq_papi1_wra_lineage` (`webhook_reprocess_authorization_id`,`webhook_dead_letter_id`),
  UNIQUE KEY `uq_papi1_wra_request` (`request_sha256`),
  UNIQUE KEY `uq_papi1_wra_sha` (`authorization_sha256`),
  CONSTRAINT `fk_papi1_wra_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
@@ -14709,3 +14711,86 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_retry_dispatch_reservation
 CREATE TRIGGER `0_papi1_wrr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_retry_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_retry_dispatch_reservations row cannot be updated';
 CREATE TRIGGER `0_papi1_wrr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_retry_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_retry_dispatch_reservations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_retry_reservation_custody
+
+-- PAY-API-001 GROUP webhook_reprocess_governance_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_requests` (
+ `webhook_reprocess_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_dead_letter_id` bigint(20) unsigned NOT NULL,
+ `reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_by` bigint(20) unsigned NOT NULL,
+ `requested_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_reprocess_request_id`),
+ UNIQUE KEY `uq_papi1_wrq_sha` (`request_sha256`),
+ KEY `ix_papi1_wrq_deadletter` (`webhook_dead_letter_id`),
+ CONSTRAINT `fk_papi1_wrq_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wrq_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_requests row cannot be updated';
+CREATE TRIGGER `0_papi1_wrq_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_requests row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_reviews` (
+ `webhook_reprocess_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_reprocess_request_id` bigint(20) unsigned NOT NULL,
+ `decision_code` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `reviewed_at` datetime NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_reprocess_review_id`),
+ UNIQUE KEY `uq_papi1_wrv_request` (`webhook_reprocess_request_id`),
+ UNIQUE KEY `uq_papi1_wrv_pair` (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`),
+ UNIQUE KEY `uq_papi1_wrv_sha` (`review_sha256`),
+ CONSTRAINT `fk_papi1_wrv_request` FOREIGN KEY (`webhook_reprocess_request_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_requests` (`webhook_reprocess_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wrv_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_reviews row cannot be updated';
+CREATE TRIGGER `0_papi1_wrv_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_reviews row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_approvals` (
+ `webhook_reprocess_approval_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_reprocess_request_id` bigint(20) unsigned NOT NULL,
+ `webhook_reprocess_review_id` bigint(20) unsigned NOT NULL,
+ `decision_code` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `approval_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_reprocess_approval_id`),
+ UNIQUE KEY `uq_papi1_wrp_request` (`webhook_reprocess_request_id`),
+ UNIQUE KEY `uq_papi1_wrp_review` (`webhook_reprocess_review_id`),
+ UNIQUE KEY `uq_papi1_wrp_sha` (`approval_sha256`),
+ CONSTRAINT `fk_papi1_wrp_review` FOREIGN KEY (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_reviews` (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wrp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_approvals row cannot be updated';
+CREATE TRIGGER `0_papi1_wrp_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_approvals row cannot be deleted';
+-- PAY-API-001 END GROUP webhook_reprocess_governance_custody
+
+-- PAY-API-001 GROUP webhook_reprocess_dispatch_reservation_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` (
+ `webhook_reprocess_dispatch_reservation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `webhook_reprocess_authorization_id` bigint(20) unsigned NOT NULL,
+ `webhook_dead_letter_id` bigint(20) unsigned NOT NULL,
+ `webhook_outbox_id` bigint(20) unsigned NOT NULL,
+ `previous_attempt_id` bigint(20) unsigned NOT NULL,
+ `dispatch_request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `replay_key_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reservation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reserved_by` bigint(20) unsigned NOT NULL,
+ `reserved_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`webhook_reprocess_dispatch_reservation_id`),
+ UNIQUE KEY `uq_papi1_wdr_auth` (`webhook_reprocess_authorization_id`),
+ UNIQUE KEY `uq_papi1_wdr_deadletter` (`webhook_dead_letter_id`),
+ UNIQUE KEY `uq_papi1_wdr_replay` (`replay_key_sha256`),
+ UNIQUE KEY `uq_papi1_wdr_sha` (`reservation_sha256`),
+ CONSTRAINT `fk_papi1_wdr_auth` FOREIGN KEY (`webhook_reprocess_authorization_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_authorizations` (`webhook_reprocess_authorization_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wdr_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wdr_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_papi1_wdr_attempt` FOREIGN KEY (`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_papi1_wdr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be updated';
+CREATE TRIGGER `0_papi1_wdr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be deleted';
+-- PAY-API-001 END GROUP webhook_reprocess_dispatch_reservation_custody
