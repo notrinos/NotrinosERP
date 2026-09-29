@@ -6,7 +6,7 @@
  * or payroll-write authority. Database versions only unlock immutable custody
  * needed by later separately reviewed runtime slices.
  */
-if (!defined('HRM_ANL_001_CONTRACT_VERSION')) define('HRM_ANL_001_CONTRACT_VERSION', '1.0.923');
+if (!defined('HRM_ANL_001_CONTRACT_VERSION')) define('HRM_ANL_001_CONTRACT_VERSION', '1.0.927');
 
 /** @return bool */
 function hrm_anl_001_version_at_least($database_version, $minimum)
@@ -38,6 +38,10 @@ function hrm_anl_001_authority_contract($database_version)
         'bounded_employment_type_headcount_runtime_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.921'),
         'bounded_employment_type_headcount_inquiry_ui_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.922'),
         'bounded_employment_type_headcount_navigation_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.923'),
+        'department_employment_type_headcount_source_ready' => hrm_anl_001_version_at_least($database_version, '1.0.924'),
+        'bounded_department_employment_type_headcount_runtime_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.925'),
+        'bounded_department_employment_type_headcount_inquiry_ui_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.926'),
+        'bounded_department_employment_type_headcount_navigation_allowed' => hrm_anl_001_version_at_least($database_version, '1.0.927'),
         'company_scope_server_derived' => true,
         'as_of_required' => true,
         'currency_context_required' => true,
@@ -208,6 +212,53 @@ function hrm_anl_001_bounded_employment_type_headcount_navigation_allowed_for_da
     $c = hrm_anl_001_authority_contract($database_version);
     return $c['bounded_employment_type_headcount_navigation_allowed'] === true
         && hrm_anl_001_bounded_employment_type_headcount_inquiry_ui_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['snapshot_writer_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_department_employment_type_headcount_source_ready_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['department_employment_type_headcount_source_ready'] === true
+        && hrm_anl_001_bounded_employment_type_headcount_navigation_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_employment_type_headcount_runtime_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_employment_type_headcount_runtime_allowed'] === true
+        && $c['department_employment_type_headcount_source_ready'] === true
+        && hrm_anl_001_bounded_headcount_runtime_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['snapshot_writer_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_employment_type_headcount_inquiry_ui_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_employment_type_headcount_inquiry_ui_allowed'] === true
+        && hrm_anl_001_bounded_department_employment_type_headcount_runtime_allowed_for_database_version($database_version)
+        && $c['metric_query_runtime_allowed'] === false
+        && $c['export_runtime_allowed'] === false
+        && $c['drilldown_runtime_allowed'] === false;
+}
+
+/** @return bool */
+function hrm_anl_001_bounded_department_employment_type_headcount_navigation_allowed_for_database_version($database_version)
+{
+    $c = hrm_anl_001_authority_contract($database_version);
+    return $c['bounded_department_employment_type_headcount_navigation_allowed'] === true
+        && hrm_anl_001_bounded_department_employment_type_headcount_inquiry_ui_allowed_for_database_version($database_version)
         && $c['metric_query_runtime_allowed'] === false
         && $c['snapshot_writer_runtime_allowed'] === false
         && $c['export_runtime_allowed'] === false

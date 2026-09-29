@@ -11,12 +11,20 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.923',
-        'active_legacy_payroll_contract'=>'1.0.488',
+        'active_database_version'=>'1.0.927',
+        'active_legacy_payroll_contract'=>'1.0.489',
         'next_backlog_item'=>'HRM-ANL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ANL-001 bounded employment-type headcount aggregate source is active through 1.0.923: report-892-compatible fixed employment-type buckets, exact source-total reconciliation, primary small-cohort suppression plus complementary secondary suppression, a screen-only SA_HRMREPORTS inquiry, and gated navigation. Generic metric-query and generic snapshot-writer authority remain disabled; export, employee drill-down, arbitrary filters, HR/payroll mutation and historical payroll/accounting mutation remain denied. SOURCE-VERIFIED / LOCAL-GATE-PENDING at exact source head 1.0.923; owner-machine localhost WAMP/MariaDB/browser acceptance remains required before commit. HRM-ANL-001 remains open for separately reviewed successor analytics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-ANL-001 bounded department x employment-type headcount matrix source is active through 1.0.927: report-892-compatible fixed employment-type buckets grouped by department, exact source-total reconciliation, and conservative matrix-wide suppression of every non-zero cell whenever any non-zero cell is below the minimum cohort threshold. The SA_HRMREPORTS screen exposes no row/column marginals. Generic metric-query and generic snapshot-writer authority remain disabled; export, employee drill-down, arbitrary filters, HR/payroll mutation and historical payroll/accounting mutation remain denied. SOURCE-VERIFIED / LOCAL-GATE-PENDING at exact source head 1.0.927; owner-machine localhost WAMP/MariaDB/browser acceptance remains required before commit. HRM-ANL-001 remains open for separately reviewed successor analytics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_anl_001_department_employment_type_headcount_navigation'=>array('previous'=>'1.0.926','version'=>'1.0.927',
+                'file'=>'sql/upgrade_hrm_anl_001_department_employment_type_headcount_navigation.php'),
+            'hrm_anl_001_department_employment_type_headcount_inquiry_ui'=>array('previous'=>'1.0.925','version'=>'1.0.926',
+                'file'=>'sql/upgrade_hrm_anl_001_department_employment_type_headcount_inquiry_ui.php'),
+            'hrm_anl_001_department_employment_type_headcount_runtime'=>array('previous'=>'1.0.924','version'=>'1.0.925',
+                'file'=>'sql/upgrade_hrm_anl_001_department_employment_type_headcount_runtime.php'),
+            'hrm_anl_001_department_employment_type_headcount_contract'=>array('previous'=>'1.0.923','version'=>'1.0.924',
+                'file'=>'sql/upgrade_hrm_anl_001_department_employment_type_headcount_contract.php'),
             'hrm_anl_001_employment_type_headcount_navigation'=>array('previous'=>'1.0.922','version'=>'1.0.923',
                 'file'=>'sql/upgrade_hrm_anl_001_employment_type_headcount_navigation.php'),
             'hrm_anl_001_employment_type_headcount_inquiry_ui'=>array('previous'=>'1.0.921','version'=>'1.0.922',
