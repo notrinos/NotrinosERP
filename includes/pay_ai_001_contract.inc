@@ -67,6 +67,24 @@ function pay_ai_001_review_custody_required_for_database_version($database_versi
 }
 
 /** @param string $database_version @return bool */
+function pay_ai_001_grounding_contract_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.931', '>=');
+}
+
+/** @param string $database_version @return bool */
+function pay_ai_001_deterministic_baseline_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.932', '>=');
+}
+
+/** @param string $database_version @return bool */
+function pay_ai_001_deterministic_assistive_runtime_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.933', '>=');
+}
+
+/** @param string $database_version @return bool */
 function pay_ai_001_provider_runtime_allowed_for_database_version($database_version)
 {
     return false;

@@ -150,7 +150,7 @@ function pay_ai_001_require_source_tokens($patch, $relative, array $tokens, $lab
 /** @param object $patch @return bool */
 function pay_ai_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.927','1.0.928','1.0.929');
+    $allowed = array('1.0.927','1.0.928','1.0.929','1.0.930','1.0.931','1.0.932');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'PAY-AI-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('hrm_anl_001_department_employment_type_headcount_navigation','1.0.926','1.0.927'))
@@ -201,4 +201,32 @@ function pay_ai_001_require_review_review($patch)
         "'formula_or_rule_publish_authority_allowed' => false", "'approval_authority_allowed' => false"
     ), 'PAY-AI-001 human-review authority ceiling');
 }
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_grounding_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'includes/pay_ai_001_grounding_contract.inc', array(
+        'pay_ai_001_build_grounded_input', 'grounding_reference_unauthorized', 'grounding_reference_opted_out',
+        'grounding_field_denied', 'contains_raw_prompt', 'contains_employee_identity', 'contains_bank_or_tax_detail'
+    ), 'PAY-AI-001 permission-filtered grounding contract');
+}
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_baseline_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'includes/pay_ai_001_baseline_contract.inc', array(
+        'pay_ai_001_build_deterministic_baseline', 'deterministic-aggregate-delta-v1', 'requires_human_review',
+        'suppressed', 'missing', 'anomaly_score', 'magnitude_band'
+    ), 'PAY-AI-001 deterministic anomaly baseline contract');
+}
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_runtime_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'includes/pay_ai_001_runtime_adapter.inc', array(
+        'pay_ai_001_execute_deterministic_assistance', 'assistive-deterministic-not-authoritative',
+        "'human_review_required'=>true", "'provider_invoked'=>false", "'network_used'=>false", "'authoritative_write_allowed'=>false"
+    ), 'PAY-AI-001 deterministic assistive runtime');
+}
+
 ?>

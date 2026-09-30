@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.930',
-        'active_legacy_payroll_contract'=>'1.0.490',
+        'active_database_version'=>'1.0.933',
+        'active_legacy_payroll_contract'=>'1.0.491',
         'next_backlog_item'=>'PAY-AI-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-AI-001 remains OPEN after acceptance of the assistive AI custody foundation at exact source/DB 1.0.930; LOCAL ACCEPTANCE PASS. The three accepted foundation slices add minimized request hashes, provider/model/output/grounding/confidence hashes, and human review/disposition evidence only. AI remains optional; provider invocation and network authority remain disabled; raw prompt/output storage is prohibited; AI cannot mutate payroll/rules/approvals/payment/GL/filing, provide legal advice, or make autonomous employment decisions. Later PAY-AI-001 runtime, grounding, workflow/UI, privacy/bias operations, provider-failure/recovery and disable-control slices remain separately reviewed and unaccepted. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-AI-001 remains OPEN after source and local Software Upgrade acceptance at exact source/DB 1.0.933; LOCAL ACCEPTANCE PASS. Grounding accepts only authorized aggregate/status facts with opt-out enforcement and rejects arbitrary/free-text/identity/bank/tax fields. Deterministic anomaly/variance/missing-data assistance is structured, local, non-authoritative and human-review-required. Provider invocation, external network authority, free-text generation, raw prompt/output storage and payroll/rule/approval/payment/GL/filing/employment-decision authority remain disabled. Next PAY-AI-001 work is provider governance/execution (if enabled), workflow/UI review custody, privacy/bias operations, provider-failure behavior and global disable/recovery controls. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'pay_ai_001_assistive_runtime'=>array('previous'=>'1.0.932','version'=>'1.0.933',
+                'file'=>'sql/upgrade_pay_ai_001_assistive_runtime.php'),
+            'pay_ai_001_deterministic_baseline'=>array('previous'=>'1.0.931','version'=>'1.0.932',
+                'file'=>'sql/upgrade_pay_ai_001_deterministic_baseline.php'),
+            'pay_ai_001_grounding_contract'=>array('previous'=>'1.0.930','version'=>'1.0.931',
+                'file'=>'sql/upgrade_pay_ai_001_grounding_contract.php'),
             'pay_ai_001_review_custody'=>array('previous'=>'1.0.929','version'=>'1.0.930',
                 'file'=>'sql/upgrade_pay_ai_001_review_custody.php'),
             'pay_ai_001_output_custody'=>array('previous'=>'1.0.928','version'=>'1.0.929',
