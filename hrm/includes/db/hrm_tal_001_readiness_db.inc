@@ -201,7 +201,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -258,6 +258,58 @@ function hrm_tal_001_require_read_only_view_source($patch)
         'ORDER BY e.evidence_date DESC',
         'ORDER BY e.issued_on DESC'
     ), 'HRM-TAL-001 read-only view');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_governed_admin_ui_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        "\$page_security = 'SA_HRSETTINGS'",
+        'check_csrf_token()',
+        'hrm_tal_001_governed_admin_ui_allowed_for_database_version',
+        'hrm_tal_001_register_skill_definition',
+        'hrm_tal_001_register_certification_definition',
+        'hrm_tal_001_record_skill_evidence',
+        'hrm_tal_001_record_certification_evidence',
+        'hrm_tal_001_read_skill_evidence_for_employee',
+        'hrm_tal_001_read_certification_evidence_for_employee',
+        'It cannot update/delete evidence, export talent data'
+    ), 'HRM-TAL-001 governed admin browser UI');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_browser_navigation_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'applications/hrm.php', array(
+        "version_compare((string)get_company_pref('version_id', true), '1.0.946', '>=')",
+        "_('Talent Skills & Certifications')",
+        "'hrm/manage/talent_skills_certifications.php?'",
+        "'SA_HRSETTINGS'"
+    ), 'HRM-TAL-001 browser navigation');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_self_service_view_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_self_view_db.inc', array(
+        "user_check_access('SA_HRM_ESS_VIEW_SELF')",
+        'get_hrm_ess_current_self_scope()',
+        'hrm_tal_001_self_service_view_allowed_for_database_version',
+        'hrm_tal_001_read_skill_evidence_for_self',
+        'hrm_tal_001_read_certification_evidence_for_self',
+        'WHERE e.company_id=',
+        'AND e.employee_id='
+    ), 'HRM-TAL-001 ESS self read service')) return false;
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/ess/talent.php', array(
+        "\$page_security='SA_HRM_ESS_VIEW_SELF'",
+        'hrm_tal_001_read_skill_evidence_for_self',
+        'hrm_tal_001_read_certification_evidence_for_self',
+        'accepts no employee identifier from the browser'
+    ), 'HRM-TAL-001 ESS self route')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/ess/dashboard.php', array(
+        "version_compare((string)get_company_pref('version_id',true),'1.0.947','>=')",
+        "hrm_ess_002_ui_card_link('talent.php'"
+    ), 'HRM-TAL-001 ESS navigation');
 }
 
 /** @param object $patch @return bool */

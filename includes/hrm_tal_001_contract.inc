@@ -97,6 +97,24 @@ function hrm_tal_001_read_only_view_allowed_for_database_version($database_versi
     return version_compare((string)$database_version, '1.0.944', '>=');
 }
 
+/** @param string $database_version @return bool */
+function hrm_tal_001_governed_admin_ui_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.945', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_browser_navigation_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.946', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_self_service_view_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.947', '>=');
+}
+
 /** @return bool */
 function hrm_tal_001_writer_runtime_allowed()
 {
