@@ -15027,3 +15027,76 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_drilldown_authorizations` (
 CREATE TRIGGER `0_hanl1_da_u` BEFORE UPDATE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be updated';
 CREATE TRIGGER `0_hanl1_da_d` BEFORE DELETE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be deleted';
 -- HRM-ANL-001 END GROUP query_governance
+
+-- PAY-AI-001 GROUP request_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_requests` (
+ `ai_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `capability_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `purpose_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `actor_user_id` bigint(20) unsigned NOT NULL,
+ `authorized_input_refs_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `object_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `field_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `data_minimization_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `provider_policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `opt_out_checked` tinyint(1) NOT NULL,
+ `request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`ai_request_id`),
+ UNIQUE KEY `uq_pai1_rq_lineage` (`ai_request_id`,`company_id`),
+ UNIQUE KEY `uq_pai1_rq_sha` (`request_sha256`),
+ KEY `ix_pai1_rq_actor_time` (`company_id`,`actor_user_id`,`requested_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pai1_rq_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_requests row cannot be updated';
+CREATE TRIGGER `0_pai1_rq_d` BEFORE DELETE ON `0_hrm_pay_ai_001_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_requests row cannot be deleted';
+-- PAY-AI-001 END GROUP request_custody
+
+-- PAY-AI-001 GROUP output_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_outputs` (
+ `ai_output_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `ai_request_id` bigint(20) unsigned NOT NULL,
+ `provider_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `model_version` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `generated_content_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `grounding_refs_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `confidence_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `abstained` tinyint(1) NOT NULL,
+ `provider_failure` tinyint(1) NOT NULL,
+ `output_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `generated_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`ai_output_id`),
+ UNIQUE KEY `uq_pai1_ou_lineage` (`ai_output_id`,`company_id`),
+ UNIQUE KEY `uq_pai1_ou_sha` (`output_sha256`),
+ KEY `ix_pai1_ou_request` (`company_id`,`ai_request_id`,`generated_at`),
+ CONSTRAINT `fk_pai1_ou_request` FOREIGN KEY (`ai_request_id`,`company_id`) REFERENCES `0_hrm_pay_ai_001_requests` (`ai_request_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pai1_ou_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_outputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_outputs row cannot be updated';
+CREATE TRIGGER `0_pai1_ou_d` BEFORE DELETE ON `0_hrm_pay_ai_001_outputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_outputs row cannot be deleted';
+-- PAY-AI-001 END GROUP output_custody
+
+-- PAY-AI-001 GROUP review_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_reviews` (
+ `ai_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `ai_output_id` bigint(20) unsigned NOT NULL,
+ `reviewer_user_id` bigint(20) unsigned NOT NULL,
+ `disposition_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `false_positive` tinyint(1) NOT NULL,
+ `appeal_requested` tinyint(1) NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`ai_review_id`),
+ UNIQUE KEY `uq_pai1_rv_lineage` (`ai_review_id`,`company_id`),
+ UNIQUE KEY `uq_pai1_rv_sha` (`review_sha256`),
+ KEY `ix_pai1_rv_output` (`company_id`,`ai_output_id`,`reviewed_at`),
+ CONSTRAINT `fk_pai1_rv_output` FOREIGN KEY (`ai_output_id`,`company_id`) REFERENCES `0_hrm_pay_ai_001_outputs` (`ai_output_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pai1_rv_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be updated';
+CREATE TRIGGER `0_pai1_rv_d` BEFORE DELETE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be deleted';
+-- PAY-AI-001 END GROUP review_custody

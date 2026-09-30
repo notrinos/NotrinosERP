@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.927',
-        'active_legacy_payroll_contract'=>'1.0.489',
-        'next_backlog_item'=>'HRM-ANL-001',
+        'active_database_version'=>'1.0.930',
+        'active_legacy_payroll_contract'=>'1.0.490',
+        'next_backlog_item'=>'PAY-AI-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-ANL-001 bounded department x employment-type headcount matrix source is active through 1.0.927: report-892-compatible fixed employment-type buckets grouped by department, exact source-total reconciliation, and conservative matrix-wide suppression of every non-zero cell whenever any non-zero cell is below the minimum cohort threshold. The SA_HRMREPORTS screen exposes no row/column marginals. Generic metric-query and generic snapshot-writer authority remain disabled; export, employee drill-down, arbitrary filters, HR/payroll mutation and historical payroll/accounting mutation remain denied. SOURCE-VERIFIED / LOCAL-GATE-PENDING at exact source head 1.0.927; owner-machine localhost WAMP/MariaDB/browser acceptance remains required before commit. HRM-ANL-001 remains open for separately reviewed successor analytics and any future export/drill-down authority. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED pending authoritative external evidence; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-AI-001 remains OPEN after acceptance of the assistive AI custody foundation at exact source/DB 1.0.930; LOCAL ACCEPTANCE PASS. The three accepted foundation slices add minimized request hashes, provider/model/output/grounding/confidence hashes, and human review/disposition evidence only. AI remains optional; provider invocation and network authority remain disabled; raw prompt/output storage is prohibited; AI cannot mutate payroll/rules/approvals/payment/GL/filing, provide legal advice, or make autonomous employment decisions. Later PAY-AI-001 runtime, grounding, workflow/UI, privacy/bias operations, provider-failure/recovery and disable-control slices remain separately reviewed and unaccepted. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'pay_ai_001_review_custody'=>array('previous'=>'1.0.929','version'=>'1.0.930',
+                'file'=>'sql/upgrade_pay_ai_001_review_custody.php'),
+            'pay_ai_001_output_custody'=>array('previous'=>'1.0.928','version'=>'1.0.929',
+                'file'=>'sql/upgrade_pay_ai_001_output_custody.php'),
+            'pay_ai_001_request_custody'=>array('previous'=>'1.0.927','version'=>'1.0.928',
+                'file'=>'sql/upgrade_pay_ai_001_request_custody.php'),
             'hrm_anl_001_department_employment_type_headcount_navigation'=>array('previous'=>'1.0.926','version'=>'1.0.927',
                 'file'=>'sql/upgrade_hrm_anl_001_department_employment_type_headcount_navigation.php'),
             'hrm_anl_001_department_employment_type_headcount_inquiry_ui'=>array('previous'=>'1.0.925','version'=>'1.0.926',
