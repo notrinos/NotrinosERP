@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.936',
-        'active_legacy_payroll_contract'=>'1.0.493',
-        'next_backlog_item'=>'PAY-AI-001',
+        'active_database_version'=>'1.0.941',
+        'active_legacy_payroll_contract'=>'1.0.495',
+        'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-AI-001 implementation remains SOURCE-CLOSED / LOCAL-GATE-PENDING at source head 1.0.936 (DB remains 1.0.936) after a behavior-preserving PHP 5.6 syntax correction to the new runtime/UI. Source custody is 1.0.493; the previously supplied mandatory PASS applies to pre-correction custody 1.0.492 and must be rerun against this exact source. Provider governance, immutable deterministic request/output/review custody and the CSRF-protected SA_HRMREPORTS screen remain bounded as accepted. External provider/model invocation, network transport, raw prompt/output persistence, arbitrary free text, employee identity/bank/tax detail, export/drill-down, payroll/rule/approval/payment/GL/filing/employment-decision authority and historical payroll/accounting mutation remain disabled. Emergency global disable and company opt-out hooks fail closed; provider failure abstains without fallback. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 skills/certifications foundation batch is FOUNDATION BATCH CLOSED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.941. This closes only the bounded governance contract and four zero-seed immutable custody tables with two restrictive same-company lineage foreign keys. It does not authorize later catalog/evidence writers or read-only views. Writer/runtime/browser authority remains disabled; existing recruitment, training and appraisal surfaces are not mutated or re-authorized; payroll, compensation and employment-decision authority remain denied. Performance, learning and confidential-case capabilities remain separately gated. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_certification_evidence_custody'=>array('previous'=>'1.0.940','version'=>'1.0.941',
+                'file'=>'sql/upgrade_hrm_tal_001_certification_evidence_custody.php'),
+            'hrm_tal_001_certification_definition_custody'=>array('previous'=>'1.0.939','version'=>'1.0.940',
+                'file'=>'sql/upgrade_hrm_tal_001_certification_definition_custody.php'),
+            'hrm_tal_001_skill_evidence_custody'=>array('previous'=>'1.0.938','version'=>'1.0.939',
+                'file'=>'sql/upgrade_hrm_tal_001_skill_evidence_custody.php'),
+            'hrm_tal_001_skill_definition_custody'=>array('previous'=>'1.0.937','version'=>'1.0.938',
+                'file'=>'sql/upgrade_hrm_tal_001_skill_definition_custody.php'),
+            'hrm_tal_001_contract_foundation'=>array('previous'=>'1.0.936','version'=>'1.0.937',
+                'file'=>'sql/upgrade_hrm_tal_001_contract_foundation.php'),
             'pay_ai_001_assistive_ui'=>array('previous'=>'1.0.935','version'=>'1.0.936',
                 'file'=>'sql/upgrade_pay_ai_001_assistive_ui.php'),
             'pay_ai_001_review_workflow'=>array('previous'=>'1.0.934','version'=>'1.0.935',

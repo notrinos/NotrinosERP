@@ -15100,3 +15100,102 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_reviews` (
 CREATE TRIGGER `0_pai1_rv_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be updated';
 CREATE TRIGGER `0_pai1_rv_d` BEFORE DELETE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be deleted';
 -- PAY-AI-001 END GROUP review_custody
+-- HRM-TAL-001 GROUP skill_definition_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_skill_definitions` (
+ `skill_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `skill_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `skill_name` varchar(140) NOT NULL,
+ `category_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `description` text,
+ `proficiency_scale_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `effective_from` date NOT NULL,
+ `effective_to` date DEFAULT NULL,
+ `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`skill_definition_id`),
+ UNIQUE KEY `uq_htal1_sd_lineage` (`skill_definition_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_sd_version` (`company_id`,`skill_code`,`effective_from`),
+ UNIQUE KEY `uq_htal1_sd_sha` (`definition_sha256`),
+ KEY `ix_htal1_sd_effective` (`company_id`,`skill_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_sd_u` BEFORE UPDATE ON `0_hrm_tal_001_skill_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_skill_definitions row cannot be updated';
+CREATE TRIGGER `0_htal1_sd_d` BEFORE DELETE ON `0_hrm_tal_001_skill_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_skill_definitions row cannot be deleted';
+-- HRM-TAL-001 END GROUP skill_definition_custody
+
+-- HRM-TAL-001 GROUP skill_evidence_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_employee_skill_evidence` (
+ `employee_skill_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `skill_definition_id` bigint(20) unsigned NOT NULL,
+ `employee_id` varchar(20) NOT NULL,
+ `evidence_type_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `proficiency_value` decimal(9,4) DEFAULT NULL,
+ `evidence_date` date NOT NULL,
+ `valid_from` date NOT NULL,
+ `valid_to` date DEFAULT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`employee_skill_evidence_id`),
+ UNIQUE KEY `uq_htal1_se_lineage` (`employee_skill_evidence_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_se_sha` (`evidence_sha256`),
+ KEY `ix_htal1_se_employee` (`company_id`,`employee_id`,`valid_from`,`valid_to`),
+ KEY `ix_htal1_se_skill` (`company_id`,`skill_definition_id`,`evidence_date`),
+ CONSTRAINT `fk_htal1_se_skill` FOREIGN KEY (`skill_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_skill_definitions` (`skill_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_se_u` BEFORE UPDATE ON `0_hrm_tal_001_employee_skill_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_skill_evidence row cannot be updated';
+CREATE TRIGGER `0_htal1_se_d` BEFORE DELETE ON `0_hrm_tal_001_employee_skill_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_skill_evidence row cannot be deleted';
+-- HRM-TAL-001 END GROUP skill_evidence_custody
+
+-- HRM-TAL-001 GROUP certification_definition_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_certification_definitions` (
+ `certification_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `certification_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `certification_name` varchar(180) NOT NULL,
+ `issuer_name` varchar(180) NOT NULL,
+ `category_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `expiry_policy_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `default_validity_days` int(10) unsigned DEFAULT NULL,
+ `effective_from` date NOT NULL,
+ `effective_to` date DEFAULT NULL,
+ `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`certification_definition_id`),
+ UNIQUE KEY `uq_htal1_cd_lineage` (`certification_definition_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_cd_version` (`company_id`,`certification_code`,`effective_from`),
+ UNIQUE KEY `uq_htal1_cd_sha` (`definition_sha256`),
+ KEY `ix_htal1_cd_effective` (`company_id`,`certification_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_cd_u` BEFORE UPDATE ON `0_hrm_tal_001_certification_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_certification_definitions row cannot be updated';
+CREATE TRIGGER `0_htal1_cd_d` BEFORE DELETE ON `0_hrm_tal_001_certification_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_certification_definitions row cannot be deleted';
+-- HRM-TAL-001 END GROUP certification_definition_custody
+
+-- HRM-TAL-001 GROUP certification_evidence_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_employee_certification_evidence` (
+ `employee_certification_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `certification_definition_id` bigint(20) unsigned NOT NULL,
+ `employee_id` varchar(20) NOT NULL,
+ `credential_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `issued_on` date NOT NULL,
+ `expires_on` date DEFAULT NULL,
+ `verification_status_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `verification_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`employee_certification_evidence_id`),
+ UNIQUE KEY `uq_htal1_ce_lineage` (`employee_certification_evidence_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_ce_sha` (`evidence_sha256`),
+ KEY `ix_htal1_ce_employee` (`company_id`,`employee_id`,`issued_on`,`expires_on`),
+ KEY `ix_htal1_ce_cert` (`company_id`,`certification_definition_id`,`issued_on`),
+ CONSTRAINT `fk_htal1_ce_cert` FOREIGN KEY (`certification_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_certification_definitions` (`certification_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_ce_u` BEFORE UPDATE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be updated';
+CREATE TRIGGER `0_htal1_ce_d` BEFORE DELETE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be deleted';
+-- HRM-TAL-001 END GROUP certification_evidence_custody

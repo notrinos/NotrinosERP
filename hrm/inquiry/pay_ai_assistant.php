@@ -33,7 +33,10 @@ if ($action !== '' && !check_csrf_token()) {
         if ($analysis === false) display_error(_('Assistive analysis rejected: ').$error);
     }
 } elseif ($action === 'review') {
-    $review = pay_ai_001_record_output_review($_POST['ai_output_id'] ?? null, $_POST['disposition_code'] ?? '', $_POST['reason_code'] ?? '', $error);
+    $ai_output_id = isset($_POST['ai_output_id']) ? $_POST['ai_output_id'] : null;
+    $disposition_code = isset($_POST['disposition_code']) ? $_POST['disposition_code'] : '';
+    $reason_code = isset($_POST['reason_code']) ? $_POST['reason_code'] : '';
+    $review = pay_ai_001_record_output_review($ai_output_id, $disposition_code, $reason_code, $error);
     if ($review === false) display_error(_('Assistive review rejected: ').$error);
     else display_notification(_('Human review recorded as immutable hash evidence. Review ID: ').(int)$review['ai_review_id']);
 }
@@ -56,10 +59,12 @@ if (is_array($analysis)) {
     foreach ($result['items'] as $item) {
         start_row();
         label_cell(htmlspecialchars((string)$item['metric_key'], ENT_QUOTES, 'UTF-8'));
-        $score = isset($item['anomaly_score']) ? (string)(int)$item['anomaly_score'] : (string)($item['direction'] ?? '');
+        $score = isset($item['anomaly_score']) ? (string)(int)$item['anomaly_score'] : (isset($item['direction']) ? (string)$item['direction'] : '');
         label_cell(htmlspecialchars($score, ENT_QUOTES, 'UTF-8'));
-        label_cell(htmlspecialchars((string)($item['magnitude_band'] ?? ''), ENT_QUOTES, 'UTF-8'));
-        label_cell(htmlspecialchars((string)($item['explanation_code'] ?? $item['suggestion_code'] ?? 'structured_evidence_only'), ENT_QUOTES, 'UTF-8'));
+        $magnitude_band = isset($item['magnitude_band']) ? (string)$item['magnitude_band'] : '';
+        $explanation_code = isset($item['explanation_code']) ? (string)$item['explanation_code'] : (isset($item['suggestion_code']) ? (string)$item['suggestion_code'] : 'structured_evidence_only');
+        label_cell(htmlspecialchars($magnitude_band, ENT_QUOTES, 'UTF-8'));
+        label_cell(htmlspecialchars($explanation_code, ENT_QUOTES, 'UTF-8'));
         end_row();
     }
     if (!$result['items']) display_note(_('No bounded anomaly/variance item was produced for this comparison. This is not an approval or payroll decision.'));
