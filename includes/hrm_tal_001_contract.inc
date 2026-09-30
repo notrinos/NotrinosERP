@@ -78,6 +78,25 @@ function hrm_tal_001_certification_evidence_custody_required_for_database_versio
     return version_compare((string)$database_version, '1.0.941', '>=');
 }
 
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_catalog_writer_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.942', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_evidence_writer_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.943', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_read_only_view_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.944', '>=');
+}
+
 /** @return bool */
 function hrm_tal_001_writer_runtime_allowed()
 {

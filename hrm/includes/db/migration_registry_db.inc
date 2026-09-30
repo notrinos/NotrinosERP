@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.941',
-        'active_legacy_payroll_contract'=>'1.0.495',
+        'active_database_version'=>'1.0.944',
+        'active_legacy_payroll_contract'=>'1.0.497',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 skills/certifications foundation batch is FOUNDATION BATCH CLOSED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.941. This closes only the bounded governance contract and four zero-seed immutable custody tables with two restrictive same-company lineage foreign keys. It does not authorize later catalog/evidence writers or read-only views. Writer/runtime/browser authority remains disabled; existing recruitment, training and appraisal surfaces are not mutated or re-authorized; payroll, compensation and employment-decision authority remain denied. Performance, learning and confidential-case capabilities remain separately gated. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 skills/certifications writer/read-service batch is SOURCE-VERIFIED / OWNER-RERUN-REQUIRED at exact source head 1.0.944 after three source-only edges: append-only SA_HRSETTINGS definition registration, immutable same-company employee evidence recording, and authenticated per-employee read-only query services. Review fixed serialized effective-window enforcement and strict optional-date validation in source custody 1.0.497 after the supplied pre-correction runner PASS; rerun the owner WAMP/MariaDB/browser gate before acceptance. The four accepted custody tables, eight immutable denial triggers and two restrictive same-company lineage foreign keys are unchanged; migrations seed no talent rows. Browser UI, manager/self-service scope, export, performance, learning and confidential-case runtimes remain disabled. Existing recruitment, training and appraisal surfaces are not mutated or re-authorized; payroll, compensation, autonomous employment-decision and cross-company authority remain denied. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_read_only_view'=>array('previous'=>'1.0.943','version'=>'1.0.944',
+                'file'=>'sql/upgrade_hrm_tal_001_read_only_view.php'),
+            'hrm_tal_001_evidence_writer'=>array('previous'=>'1.0.942','version'=>'1.0.943',
+                'file'=>'sql/upgrade_hrm_tal_001_evidence_writer.php'),
+            'hrm_tal_001_catalog_writer'=>array('previous'=>'1.0.941','version'=>'1.0.942',
+                'file'=>'sql/upgrade_hrm_tal_001_catalog_writer.php'),
             'hrm_tal_001_certification_evidence_custody'=>array('previous'=>'1.0.940','version'=>'1.0.941',
                 'file'=>'sql/upgrade_hrm_tal_001_certification_evidence_custody.php'),
             'hrm_tal_001_certification_definition_custody'=>array('previous'=>'1.0.939','version'=>'1.0.940',

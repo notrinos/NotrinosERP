@@ -201,7 +201,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -212,6 +212,52 @@ function hrm_tal_001_require_predecessor($patch)
         'no remaining PAY-AI-001 implementation slices',
         'PAY-FIL-001 remains **OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED**'
     ), 'HRM-TAL-001 dependency/backlog');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_catalog_writer_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_catalog_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_catalog_writer_allowed_for_database_version',
+        'hrm_tal_001_catalog_begin_serialized_transaction',
+        'FOR UPDATE',
+        'hrm_tal_001_register_skill_definition',
+        'hrm_tal_001_register_certification_definition',
+        'catalog_effective_window_overlaps',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_skill_definitions",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_certification_definitions"
+    ), 'HRM-TAL-001 catalog writer');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_evidence_writer_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_evidence_db.inc', array(
+        'hrm_tal_001_evidence_writer_allowed_for_database_version',
+        'hrm_tal_001_employee_exists',
+        'hrm_tal_001_record_skill_evidence',
+        'hrm_tal_001_record_certification_evidence',
+        'skill_definition_missing_or_cross_company',
+        'certification_definition_missing_or_cross_company',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_employee_skill_evidence",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_employee_certification_evidence"
+    ), 'HRM-TAL-001 evidence writer');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_read_only_view_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_view_db.inc', array(
+        'hrm_tal_001_read_only_view_allowed_for_database_version',
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_read_skill_evidence_for_employee',
+        'hrm_tal_001_read_certification_evidence_for_employee',
+        'WHERE e.company_id=',
+        'AND e.employee_id=',
+        'ORDER BY e.evidence_date DESC',
+        'ORDER BY e.issued_on DESC'
+    ), 'HRM-TAL-001 read-only view');
 }
 
 /** @param object $patch @return bool */
