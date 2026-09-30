@@ -150,7 +150,7 @@ function pay_ai_001_require_source_tokens($patch, $relative, array $tokens, $lab
 /** @param object $patch @return bool */
 function pay_ai_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.927','1.0.928','1.0.929','1.0.930','1.0.931','1.0.932');
+    $allowed = array('1.0.927','1.0.928','1.0.929','1.0.930','1.0.931','1.0.932','1.0.933','1.0.934','1.0.935');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'PAY-AI-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('hrm_anl_001_department_employment_type_headcount_navigation','1.0.926','1.0.927'))
@@ -227,6 +227,40 @@ function pay_ai_001_require_runtime_review($patch)
         'pay_ai_001_execute_deterministic_assistance', 'assistive-deterministic-not-authoritative',
         "'human_review_required'=>true", "'provider_invoked'=>false", "'network_used'=>false", "'authoritative_write_allowed'=>false"
     ), 'PAY-AI-001 deterministic assistive runtime');
+}
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_operational_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'includes/pay_ai_001_operational_contract.inc', array(
+        'pay_ai_001_external_provider_execution_allowed', 'pay_ai_001_force_disabled', 'pay_ai_001_company_opted_out',
+        'pay_ai_001_provider_failure_abstention', "'provider_failure_must_abstain'=>true",
+        "'external_provider_execution_allowed'=>false", "'network_transport_allowed'=>false",
+        'pay_ai_001_data_minimization_policy_sha256', 'pay_ai_001_bias_review_policy_sha256'
+    ), 'PAY-AI-001 operational/provider governance');
+}
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_workflow_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'hrm/includes/db/pay_ai_001_runtime_db.inc', array(
+        'pay_ai_001_record_deterministic_output', 'pay_ai_001_run_headcount_assistance', 'pay_ai_001_record_output_review',
+        "'local_deterministic'", "'hrm_anl_headcount_compare'", 'ai_output_already_reviewed',
+        "user_check_access('SA_HRMREPORTS')", 'opt_out_checked', 'reason_sha256'
+    ), 'PAY-AI-001 immutable review workflow');
+}
+
+/** @param object $patch @return bool */
+function pay_ai_001_require_ui_review($patch)
+{
+    return pay_ai_001_require_source_tokens($patch, 'hrm/inquiry/pay_ai_assistant.php', array(
+        "\$page_security = 'SA_HRMREPORTS'", 'check_csrf_token()', 'pay_ai_001_run_headcount_assistance',
+        'pay_ai_001_record_output_review', 'No external provider or network call is made', 'Run Assistive Analysis'
+    ), 'PAY-AI-001 assistive review UI')
+        && pay_ai_001_require_source_tokens($patch, 'applications/hrm.php', array(
+            "version_compare((string)get_company_pref('version_id', true), '1.0.936', '>=')",
+            "'hrm/inquiry/pay_ai_assistant.php?'", "'SA_HRMREPORTS'"
+        ), 'PAY-AI-001 navigation');
 }
 
 ?>

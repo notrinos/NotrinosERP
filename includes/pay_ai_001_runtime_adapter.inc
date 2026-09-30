@@ -6,6 +6,8 @@
  * external model/provider, does not perform network I/O and grants no write
  * authority. Every result remains advisory and requires human review.
  */
+include_once(dirname(__FILE__).'/pay_ai_001_operational_contract.inc');
+
 if (!defined('PAY_AI_001_RUNTIME_ADAPTER_VERSION'))
     define('PAY_AI_001_RUNTIME_ADAPTER_VERSION', '1.0.0');
 
@@ -80,7 +82,11 @@ function pay_ai_001_execute_deterministic_assistance($database_version, $capabil
 {
     $error = null;
     if (!pay_ai_001_deterministic_runtime_allowed_for_database_version($database_version)) { $error = 'assistive_runtime_not_accepted'; return false; }
-    if (pay_ai_001_provider_runtime_allowed_for_database_version($database_version)) { $error = 'assistive_provider_boundary_invalid'; return false; }
+    if (version_compare((string)$database_version, '1.0.934', '>=') && !pay_ai_001_operational_runtime_allowed_for_database_version($database_version)) {
+        $error = pay_ai_001_company_opted_out() ? 'assistive_company_opted_out' : 'assistive_runtime_globally_disabled';
+        return false;
+    }
+    if (pay_ai_001_provider_runtime_allowed_for_database_version($database_version) || pay_ai_001_external_provider_execution_allowed()) { $error = 'assistive_provider_boundary_invalid'; return false; }
     $grounded = pay_ai_001_build_grounded_input($capability, $facts, $error);
     if ($grounded === false) return false;
     $baseline = pay_ai_001_build_deterministic_baseline($grounded, $error);

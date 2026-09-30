@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.933',
-        'active_legacy_payroll_contract'=>'1.0.491',
+        'active_database_version'=>'1.0.936',
+        'active_legacy_payroll_contract'=>'1.0.493',
         'next_backlog_item'=>'PAY-AI-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-AI-001 remains OPEN after source and local Software Upgrade acceptance at exact source/DB 1.0.933; LOCAL ACCEPTANCE PASS. Grounding accepts only authorized aggregate/status facts with opt-out enforcement and rejects arbitrary/free-text/identity/bank/tax fields. Deterministic anomaly/variance/missing-data assistance is structured, local, non-authoritative and human-review-required. Provider invocation, external network authority, free-text generation, raw prompt/output storage and payroll/rule/approval/payment/GL/filing/employment-decision authority remain disabled. Next PAY-AI-001 work is provider governance/execution (if enabled), workflow/UI review custody, privacy/bias operations, provider-failure behavior and global disable/recovery controls. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-AI-001 implementation remains SOURCE-CLOSED / LOCAL-GATE-PENDING at source head 1.0.936 (DB remains 1.0.936) after a behavior-preserving PHP 5.6 syntax correction to the new runtime/UI. Source custody is 1.0.493; the previously supplied mandatory PASS applies to pre-correction custody 1.0.492 and must be rerun against this exact source. Provider governance, immutable deterministic request/output/review custody and the CSRF-protected SA_HRMREPORTS screen remain bounded as accepted. External provider/model invocation, network transport, raw prompt/output persistence, arbitrary free text, employee identity/bank/tax detail, export/drill-down, payroll/rule/approval/payment/GL/filing/employment-decision authority and historical payroll/accounting mutation remain disabled. Emergency global disable and company opt-out hooks fail closed; provider failure abstains without fallback. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'pay_ai_001_assistive_ui'=>array('previous'=>'1.0.935','version'=>'1.0.936',
+                'file'=>'sql/upgrade_pay_ai_001_assistive_ui.php'),
+            'pay_ai_001_review_workflow'=>array('previous'=>'1.0.934','version'=>'1.0.935',
+                'file'=>'sql/upgrade_pay_ai_001_review_workflow.php'),
+            'pay_ai_001_provider_governance'=>array('previous'=>'1.0.933','version'=>'1.0.934',
+                'file'=>'sql/upgrade_pay_ai_001_provider_governance.php'),
             'pay_ai_001_assistive_runtime'=>array('previous'=>'1.0.932','version'=>'1.0.933',
                 'file'=>'sql/upgrade_pay_ai_001_assistive_runtime.php'),
             'pay_ai_001_deterministic_baseline'=>array('previous'=>'1.0.931','version'=>'1.0.932',
