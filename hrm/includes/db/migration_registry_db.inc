@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.947',
-        'active_legacy_payroll_contract'=>'1.0.498',
+        'active_database_version'=>'1.0.950',
+        'active_legacy_payroll_contract'=>'1.0.499',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 governed browser/self-service batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.947 after three source-only edges: CSRF-protected SA_HRSETTINGS skills/certifications governance UI, version-gated SA_HRSETTINGS navigation, and session-derived SA_HRM_ESS_VIEW_SELF minimized read-only skills/certifications view. The user-supplied owner-machine runner hrm-tal-001-browser-self-v1-20260930 confirmed the accepted four custody tables, eight immutable denial triggers and two restrictive foreign keys. No talent rows or permissions are seeded. Manager/team scope, export, performance, learning and confidential-case runtimes remain disabled. Existing recruitment, training and appraisal surfaces are not mutated or re-authorized; payroll, compensation, autonomous employment-decision and cross-company authority remain denied. HRM-TAL-001 remains OPEN for separately reviewed manager/team scope, export, performance, learning and confidential-case capabilities. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 manager/team access batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.950 after three source-only edges: session-derived current-effective HRM-ESS-002 team_view direct/delegated scope over the accepted HRM-ESS-001 Assignment resolver, including delegated capability/revocation validation; minimized read-only skills/certifications queries for only those scoped subjects; and a version-gated team browser route that accepts no employee selector or historical as-of input. Local owner-machine runner tests/php/run_hrm_tal_001_manager_team_mandatory_blockers_browser.php build hrm-tal-001-manager-team-v1-20260930 passed after the manager-scope correction at exact source/DB 1.0.950 and confirmed the accepted four custody tables, eight immutable denial triggers and two restrictive foreign keys remain unchanged. Zero new talent rows or permission grants are seeded. HRM-TAL-001 export is the next separately reviewed dependency-safe capability and is not implemented or authorized by this batch; performance, learning and confidential-case runtimes remain disabled. Existing recruitment, training and appraisal mutation, payroll/compensation mutation, autonomous employment decisions and cross-company authority remain denied. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_manager_browser'=>array('previous'=>'1.0.949','version'=>'1.0.950',
+                'file'=>'sql/upgrade_hrm_tal_001_manager_browser.php'),
+            'hrm_tal_001_manager_team_view'=>array('previous'=>'1.0.948','version'=>'1.0.949',
+                'file'=>'sql/upgrade_hrm_tal_001_manager_team_view.php'),
+            'hrm_tal_001_manager_scope'=>array('previous'=>'1.0.947','version'=>'1.0.948',
+                'file'=>'sql/upgrade_hrm_tal_001_manager_scope.php'),
             'hrm_tal_001_self_service_view'=>array('previous'=>'1.0.946','version'=>'1.0.947',
                 'file'=>'sql/upgrade_hrm_tal_001_self_service_view.php'),
             'hrm_tal_001_browser_navigation'=>array('previous'=>'1.0.945','version'=>'1.0.946',
