@@ -94,7 +94,7 @@ if ($action !== '' && !check_csrf_token()) {
     if ($cert_rows === false) display_error(_('Certification evidence query rejected: ').$error);
 }
 
-display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. It cannot update/delete evidence, export talent data, mutate recruitment/training/appraisal, change payroll/compensation, or make employment decisions.'), 0, 1);
+display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. It cannot update/delete evidence, perform bulk/team/self export, mutate recruitment/training/appraisal, change payroll/compensation, or make employment decisions. From database version 1.0.953, SA_HRSETTINGS may export one exact employee at a time through the separately audited bounded CSV route.'), 0, 1);
 
 start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'skill_definition');
 start_table(TABLESTYLE2); table_section_title(_('Register skill definition'));
@@ -127,6 +127,15 @@ end_table(1); submit_center('record_certification_evidence', _('Record Certifica
 start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'read_employee');
 start_table(TABLESTYLE2); table_section_title(_('Restricted employee evidence view')); text_row_ex(_('Exact Employee ID:'), 'read_employee_id', 24, 20); end_table(1);
 submit_center('read_employee_talent', _('View Governed Talent Evidence')); end_form();
+
+
+if (function_exists('get_company_pref') && hrm_tal_001_export_browser_allowed_for_database_version((string)get_company_pref('version_id', true))) {
+    echo "<form method='post' action='talent_export.php'>";
+    hidden('_token', ensure_csrf_token());
+    echo "<table class='".TABLESTYLE2."'><tr><td>"._('Exact Employee ID for bounded export:')."</td><td><input type='text' name='employee_id' maxlength='20'></td></tr></table>";
+    echo "<div class='submit'><input type='submit' value='"._('Export Governed Talent CSV')."'></div>";
+    echo "</form>";
+}
 
 if (is_array($skill_rows)) {
     start_table(TABLESTYLE, "width='95%'"); table_header(array(_('Skill'), _('Category'), _('Evidence type'), _('Proficiency'), _('Evidence date'), _('Valid from'), _('Valid to')));

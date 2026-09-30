@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.950',
-        'active_legacy_payroll_contract'=>'1.0.499',
+        'active_database_version'=>'1.0.953',
+        'active_legacy_payroll_contract'=>'1.0.500',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 manager/team access batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.950 after three source-only edges: session-derived current-effective HRM-ESS-002 team_view direct/delegated scope over the accepted HRM-ESS-001 Assignment resolver, including delegated capability/revocation validation; minimized read-only skills/certifications queries for only those scoped subjects; and a version-gated team browser route that accepts no employee selector or historical as-of input. Local owner-machine runner tests/php/run_hrm_tal_001_manager_team_mandatory_blockers_browser.php build hrm-tal-001-manager-team-v1-20260930 passed after the manager-scope correction at exact source/DB 1.0.950 and confirmed the accepted four custody tables, eight immutable denial triggers and two restrictive foreign keys remain unchanged. Zero new talent rows or permission grants are seeded. HRM-TAL-001 export is the next separately reviewed dependency-safe capability and is not implemented or authorized by this batch; performance, learning and confidential-case runtimes remain disabled. Existing recruitment, training and appraisal mutation, payroll/compensation mutation, autonomous employment decisions and cross-company authority remain denied. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 governed admin export batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.953 after three dependency-ordered edges: zero-seed immutable minimized export-audit custody; SA_HRSETTINGS exact-employee CSV generation with strict 1000-row/2-MiB caps, spreadsheet-formula neutralization and hash-only subject/export audit evidence; and a POST+CSRF-gated browser download route. User-supplied owner-machine runner tests/php/run_hrm_tal_001_export_mandatory_blockers_browser.php build hrm-tal-001-export-v1-20260930 passed at exact source/DB 1.0.953, verifying five HRM-TAL-001 InnoDB custody tables, ten exact immutable UPDATE/DELETE denial triggers, two restrictive foreign keys and zero-seed export-audit custody. HRM-ANL migration passed 119/119, PAY-API migration 350/350, PAY-FIL successor compatibility 14/14, migration registry 2266/2266 and legacy payroll contract v1 passed. No permission grant, bulk export, manager/team export, ESS self export, sensitive reference hash export, payroll/compensation data, legacy recruitment/training/appraisal mutation, autonomous employment-decision authority or cross-company authority is added. HRM-TAL-001 overall remains open because performance, learning, confidential-case and broader lifecycle/access/accessibility/migration/payroll-isolation acceptance scope remain unfinished; the next dependency-safe capability within HRM-TAL-001 is the separately reviewed performance foundation. Learning and confidential-case runtimes remain disabled. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_export_browser'=>array('previous'=>'1.0.952','version'=>'1.0.953',
+                'file'=>'sql/upgrade_hrm_tal_001_export_browser.php'),
+            'hrm_tal_001_export_service'=>array('previous'=>'1.0.951','version'=>'1.0.952',
+                'file'=>'sql/upgrade_hrm_tal_001_export_service.php'),
+            'hrm_tal_001_export_audit_custody'=>array('previous'=>'1.0.950','version'=>'1.0.951',
+                'file'=>'sql/upgrade_hrm_tal_001_export_audit_custody.php'),
             'hrm_tal_001_manager_browser'=>array('previous'=>'1.0.949','version'=>'1.0.950',
                 'file'=>'sql/upgrade_hrm_tal_001_manager_browser.php'),
             'hrm_tal_001_manager_team_view'=>array('previous'=>'1.0.948','version'=>'1.0.949',

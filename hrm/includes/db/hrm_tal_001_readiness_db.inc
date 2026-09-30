@@ -10,6 +10,7 @@ function hrm_tal_001_schema_groups()
         'skill_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_skill_evidence_custody.sql','tables'=>array('hrm_tal_001_employee_skill_evidence')),
         'certification_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_certification_definition_custody.sql','tables'=>array('hrm_tal_001_certification_definitions')),
         'certification_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_certification_evidence_custody.sql','tables'=>array('hrm_tal_001_employee_certification_evidence')),
+        'export_audit_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_export_audit_custody.sql','tables'=>array('hrm_tal_001_export_audit')),
     );
 }
 
@@ -21,6 +22,7 @@ function hrm_tal_001_expected_columns()
         'hrm_tal_001_employee_skill_evidence'=>array('employee_skill_evidence_id','company_id','skill_definition_id','employee_id','evidence_type_code','source_reference_sha256','proficiency_value','evidence_date','valid_from','valid_to','evidence_sha256','recorded_by_user_id','created_at'),
         'hrm_tal_001_certification_definitions'=>array('certification_definition_id','company_id','certification_code','certification_name','issuer_name','category_code','expiry_policy_code','default_validity_days','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_employee_certification_evidence'=>array('employee_certification_evidence_id','company_id','certification_definition_id','employee_id','credential_reference_sha256','issued_on','expires_on','verification_status_code','verification_evidence_sha256','evidence_sha256','recorded_by_user_id','created_at'),
+        'hrm_tal_001_export_audit'=>array('export_audit_id','company_id','actor_user_id','scope_code','subject_reference_sha256','format_code','row_count','export_sha256','created_at'),
     );
 }
 
@@ -32,6 +34,7 @@ function hrm_tal_001_trigger_codes()
         'hrm_tal_001_employee_skill_evidence'=>'se',
         'hrm_tal_001_certification_definitions'=>'cd',
         'hrm_tal_001_employee_certification_evidence'=>'ce',
+        'hrm_tal_001_export_audit'=>'xa',
     );
 }
 
@@ -201,7 +204,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -361,6 +364,48 @@ function hrm_tal_001_require_manager_browser_source($patch)
         "hrm_ess_002_access('SA_HRM_ESS_VIEW_TEAM')",
         'team_talent.php'
     ), 'HRM-TAL-001 manager browser navigation');
+}
+
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_export_service_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_export_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_export_service_allowed_for_database_version',
+        'HRM_TAL_001_EXPORT_MAX_ROWS',
+        'HRM_TAL_001_EXPORT_MAX_BYTES',
+        'hrm_tal_001_export_exact_employee_csv',
+        "e.employee_id='.db_escape(\$employee_id)",
+        "LIMIT '.\$limit",
+        'hrm_tal_001_export_csv_cell',
+        "preg_match('/^[\\x00-\\x20]*[=+\\-@]/', \$value)",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_export_audit",
+        "'admin_exact_employee'",
+        "'scope_code'=>'admin_exact_employee'"
+    ), 'HRM-TAL-001 bounded export service');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_export_browser_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_export.php', array(
+        "\$page_security='SA_HRSETTINGS'",
+        'hrm_tal_001_export_browser_allowed_for_database_version',
+        'REQUEST_METHOD',
+        'check_csrf_token()',
+        'hrm_tal_001_export_exact_employee_csv',
+        'while (ob_get_level()) ob_end_clean();',
+        'X-Content-Type-Options: nosniff',
+        'Cache-Control: no-store, private',
+        'Content-Disposition: attachment'
+    ), 'HRM-TAL-001 export browser route')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        "action='talent_export.php'",
+        "hidden('_token', ensure_csrf_token())",
+        "name='employee_id'",
+        'Export Governed Talent CSV'
+    ), 'HRM-TAL-001 export browser navigation');
 }
 
 /** @param object $patch @return bool */

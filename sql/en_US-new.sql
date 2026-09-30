@@ -14839,3 +14839,22 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_employee_certification_evidence` (
 CREATE TRIGGER `0_htal1_ce_u` BEFORE UPDATE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_ce_d` BEFORE DELETE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP certification_evidence_custody
+
+-- HRM-TAL-001 GROUP export_audit_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_export_audit` (
+ `export_audit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `actor_user_id` bigint(20) unsigned NOT NULL,
+ `scope_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `subject_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `format_code` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `row_count` int(11) unsigned NOT NULL,
+ `export_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`export_audit_id`),
+ KEY `ix_htal1_xa_company_actor_time` (`company_id`,`actor_user_id`,`created_at`),
+ KEY `ix_htal1_xa_subject` (`company_id`,`subject_reference_sha256`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_xa_u` BEFORE UPDATE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be updated';
+CREATE TRIGGER `0_htal1_xa_d` BEFORE DELETE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be deleted';
+-- HRM-TAL-001 END GROUP export_audit_custody
