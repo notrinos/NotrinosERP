@@ -14,6 +14,7 @@ function hrm_tal_001_schema_groups()
         'performance_cycle_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_cycle_definition_custody.sql','tables'=>array('hrm_tal_001_performance_cycle_definitions')),
         'performance_review_subject_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_review_subject_custody.sql','tables'=>array('hrm_tal_001_performance_review_subjects')),
         'performance_assessment_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_assessment_evidence_custody.sql','tables'=>array('hrm_tal_001_performance_assessment_evidence')),
+        'performance_workflow_event_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_workflow_event_custody.sql','tables'=>array('hrm_tal_001_performance_workflow_events')),
     );
 }
 
@@ -29,6 +30,7 @@ function hrm_tal_001_expected_columns()
         'hrm_tal_001_performance_cycle_definitions'=>array('performance_cycle_definition_id','company_id','cycle_code','cycle_name','purpose_code','period_start','period_end','rating_scale_code','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_performance_review_subjects'=>array('performance_review_subject_id','company_id','performance_cycle_definition_id','employee_id','review_type_code','review_window_start','review_window_end','subject_reference_sha256','subject_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_performance_assessment_evidence'=>array('performance_assessment_evidence_id','company_id','performance_review_subject_id','assessment_role_code','dimension_code','rating_value','comment_reference_sha256','evidence_date','evidence_sha256','recorded_by_user_id','created_at'),
+        'hrm_tal_001_performance_workflow_events'=>array('performance_workflow_event_id','company_id','performance_review_subject_id','from_state_code','to_state_code','aggregate_rating_value','rating_basis_sha256','reason_reference_sha256','transition_sha256','actor_user_id','occurred_at','created_at'),
     );
 }
 
@@ -44,6 +46,7 @@ function hrm_tal_001_trigger_codes()
         'hrm_tal_001_performance_cycle_definitions'=>'pc',
         'hrm_tal_001_performance_review_subjects'=>'pr',
         'hrm_tal_001_performance_assessment_evidence'=>'pa',
+        'hrm_tal_001_performance_workflow_events'=>'pw',
     );
 }
 
@@ -71,6 +74,12 @@ function hrm_tal_001_expected_foreign_keys()
         ),
         'hrm_tal_001_performance_assessment_evidence'=>array(
             'name'=>'fk_htal1_pa_subject',
+            'parent'=>'hrm_tal_001_performance_review_subjects',
+            'columns'=>array('performance_review_subject_id','company_id'),
+            'parent_columns'=>array('performance_review_subject_id','company_id'),
+        ),
+        'hrm_tal_001_performance_workflow_events'=>array(
+            'name'=>'fk_htal1_pw_subject',
             'parent'=>'hrm_tal_001_performance_review_subjects',
             'columns'=>array('performance_review_subject_id','company_id'),
             'parent_columns'=>array('performance_review_subject_id','company_id'),
@@ -225,7 +234,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -527,6 +536,46 @@ function hrm_tal_001_require_performance_manager_team_source($patch)
         'hrm_tal_001_read_performance_for_manager_team',
         'accepts no employee selector or historical as-of date'
     ), 'HRM-TAL-001 manager/team performance route');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_workflow_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_workflow_db.inc', array(
+        'hrm_tal_001_performance_workflow_writer_allowed_for_database_version',
+        'hrm_tal_001_record_performance_workflow_transition',
+        "array('open'=>array('submitted'), 'submitted'=>array('reviewed'), 'reviewed'=>array('finalized')",
+        'performance_reviewer_evidence_required',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_performance_workflow_events",
+        'employment-decision authority'
+    ), 'HRM-TAL-001 bounded performance workflow service')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        'performance_workflow_transition',
+        'hrm_tal_001_record_performance_workflow_transition',
+        "hidden('tal_action', 'performance_workflow_transition')",
+        'performance_workflow_reason_sha256'
+    ), 'HRM-TAL-001 bounded performance workflow browser');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_score_finalization_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_workflow_db.inc', array(
+        'hrm_tal_001_performance_score_finalization_allowed_for_database_version',
+        'hrm_tal_001_finalize_performance_review',
+        'performance_finalization_requires_reviewed_state',
+        'performance_reviewer_numeric_evidence_required',
+        'hrm_tal_001_rating_to_units',
+        'hrm_tal_001_units_to_rating',
+        'rating_basis_sha256',
+        'aggregate_rating_value'
+    ), 'HRM-TAL-001 deterministic performance finalization service')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        'performance_finalize',
+        'hrm_tal_001_finalize_performance_review',
+        "hidden('tal_action', 'performance_finalize')",
+        'performance_finalize_reason_sha256'
+    ), 'HRM-TAL-001 deterministic performance finalization browser');
 }
 
 /** @param object $patch @return bool */

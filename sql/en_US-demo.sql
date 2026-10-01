@@ -15292,3 +15292,27 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_assessment_evidence` (
 CREATE TRIGGER `0_htal1_pa_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_pa_d` BEFORE DELETE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_assessment_evidence_custody
+
+-- HRM-TAL-001 GROUP performance_workflow_event_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_workflow_events` (
+ `performance_workflow_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `performance_review_subject_id` bigint(20) unsigned NOT NULL,
+ `from_state_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `to_state_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `aggregate_rating_value` decimal(9,4) DEFAULT NULL,
+ `rating_basis_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `reason_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `transition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `actor_user_id` bigint(20) unsigned NOT NULL,
+ `occurred_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`performance_workflow_event_id`),
+ UNIQUE KEY `uq_htal1_pw_lineage` (`performance_workflow_event_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_pw_sha` (`transition_sha256`),
+ KEY `ix_htal1_pw_subject` (`company_id`,`performance_review_subject_id`,`performance_workflow_event_id`),
+ CONSTRAINT `fk_htal1_pw_subject` FOREIGN KEY (`performance_review_subject_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_review_subjects` (`performance_review_subject_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_pw_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be updated';
+CREATE TRIGGER `0_htal1_pw_d` BEFORE DELETE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be deleted';
+-- HRM-TAL-001 END GROUP performance_workflow_event_custody

@@ -8,6 +8,7 @@ include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_evidence_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_view_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_workflow_db.inc');
 
 page(_('Talent Skills & Certifications'));
 if (!function_exists('get_company_pref') || !hrm_tal_001_governed_admin_ui_allowed_for_database_version((string)get_company_pref('version_id', true))) {
@@ -30,6 +31,8 @@ $skill_rows = false;
 $cert_rows = false;
 $performance_rows = false;
 $performance_browser_enabled = function_exists('get_company_pref') && hrm_tal_001_performance_admin_browser_allowed_for_database_version((string)get_company_pref('version_id', true));
+$performance_workflow_enabled = function_exists('get_company_pref') && hrm_tal_001_performance_workflow_writer_allowed_for_database_version((string)get_company_pref('version_id', true));
+$performance_finalization_enabled = function_exists('get_company_pref') && hrm_tal_001_performance_score_finalization_allowed_for_database_version((string)get_company_pref('version_id', true));
 $action = isset($_POST['tal_action']) ? (string)$_POST['tal_action'] : '';
 if ($action !== '' && !check_csrf_token()) {
     display_error(_('Invalid CSRF token.'));
@@ -139,9 +142,32 @@ if ($action !== '' && !check_csrf_token()) {
     $error = null;
     $performance_rows = hrm_tal_001_read_performance_for_employee(htal1_ui_value('performance_read_employee_id'), $error);
     if ($performance_rows === false) display_error(_('Performance query rejected: ').$error);
+} elseif ($action === 'performance_workflow_transition' && !$performance_workflow_enabled) {
+    display_error(_('Governed performance workflow transitions are not enabled until database version 1.0.964.'));
+} elseif ($action === 'performance_workflow_transition') {
+    $error = null;
+    $result = hrm_tal_001_record_performance_workflow_transition(
+        htal1_ui_value('performance_workflow_subject_id'),
+        htal1_ui_value('performance_workflow_target_state'),
+        htal1_ui_value('performance_workflow_reason_sha256'),
+        $error
+    );
+    if ($result === false) display_error(_('Performance workflow transition rejected: ').$error);
+    else htal1_ui_notice(_('Performance workflow event recorded with immutable ID'), $result, 'performance_workflow_event_id');
+} elseif ($action === 'performance_finalize' && !$performance_finalization_enabled) {
+    display_error(_('Deterministic performance finalization is not enabled until database version 1.0.965.'));
+} elseif ($action === 'performance_finalize') {
+    $error = null;
+    $result = hrm_tal_001_finalize_performance_review(
+        htal1_ui_value('performance_finalize_subject_id'),
+        htal1_ui_value('performance_finalize_reason_sha256'),
+        $error
+    );
+    if ($result === false) display_error(_('Performance finalization rejected: ').$error);
+    else display_notification(_('Performance finalized with immutable event ID ').(int)$result['performance_workflow_event_id']._(' and deterministic aggregate rating ').htmlspecialchars((string)$result['aggregate_rating_value'], ENT_QUOTES, 'UTF-8'));
 }
 
-display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. From database version 1.0.960 the same bounded surface may register performance cycles, review subjects and minimized assessment evidence and read one exact employee. It cannot update/delete evidence, change performance lifecycle state, perform bulk/team/self export, mutate recruitment/training/appraisal, change payroll/compensation, or make employment decisions. From database version 1.0.953, SA_HRSETTINGS may export one exact employee skills/certifications set through the separately audited bounded CSV route; performance export remains disabled.'), 0, 1);
+display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. From database version 1.0.960 the bounded performance surface may register cycles, review subjects and minimized assessment evidence. From 1.0.964 it may append only open-to-submitted and submitted-to-reviewed workflow events; from 1.0.965 reviewed subjects may be finalized using a deterministic mean of immutable manager/reviewer numeric ratings. These workflow/score artifacts are descriptive evidence only: they cannot mutate legacy appraisal, compensation, payroll/accounting, or make employment decisions. performance export remains disabled.'), 0, 1);
 
 start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'skill_definition');
 start_table(TABLESTYLE2); table_section_title(_('Register skill definition'));
@@ -205,6 +231,22 @@ if ($performance_browser_enabled) {
     start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_read');
     start_table(TABLESTYLE2); table_section_title(_('Restricted performance view')); text_row_ex(_('Exact Employee ID:'), 'performance_read_employee_id', 24, 20); end_table(1);
     submit_center('read_employee_performance', _('View Governed Performance Evidence')); end_form();
+
+    if ($performance_workflow_enabled) {
+        start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_workflow_transition');
+        start_table(TABLESTYLE2); table_section_title(_('Append performance workflow event'));
+        text_row_ex(_('Performance review subject ID:'), 'performance_workflow_subject_id', 12, 20);
+        text_row_ex(_('Target state (submitted / reviewed):'), 'performance_workflow_target_state', 20, 24);
+        text_row_ex(_('Reason reference SHA-256:'), 'performance_workflow_reason_sha256', 68, 64);
+        end_table(1); submit_center('record_performance_workflow_transition', _('Record Performance Workflow Event')); end_form();
+    }
+    if ($performance_finalization_enabled) {
+        start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_finalize');
+        start_table(TABLESTYLE2); table_section_title(_('Deterministically finalize reviewed performance'));
+        text_row_ex(_('Performance review subject ID:'), 'performance_finalize_subject_id', 12, 20);
+        text_row_ex(_('Reason reference SHA-256:'), 'performance_finalize_reason_sha256', 68, 64);
+        end_table(1); submit_center('finalize_performance_review', _('Finalize Performance Review')); end_form();
+    }
 }
 
 if (function_exists('get_company_pref') && hrm_tal_001_export_browser_allowed_for_database_version((string)get_company_pref('version_id', true))) {
