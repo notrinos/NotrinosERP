@@ -15025,3 +15025,50 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_completion_evidence` (
 CREATE TRIGGER `0_htal1_lc_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_lc_d` BEFORE DELETE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP learning_completion_custody
+
+-- HRM-TAL-001 GROUP confidential_case_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_confidential_cases` (
+ `confidential_case_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `subject_employee_id` varchar(20) NOT NULL,
+ `case_type_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `purpose_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `opened_on` date NOT NULL,
+ `retention_until` date NOT NULL,
+ `sensitivity_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `title_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `case_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`confidential_case_id`),
+ UNIQUE KEY `uq_htal1_cc_lineage` (`confidential_case_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_cc_ref` (`case_reference_sha256`),
+ KEY `ix_htal1_cc_subject` (`company_id`,`subject_employee_id`,`opened_on`),
+ KEY `ix_htal1_cc_retention` (`company_id`,`retention_until`,`confidential_case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_cc_u` BEFORE UPDATE ON `0_hrm_tal_001_confidential_cases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_cases row cannot be updated';
+CREATE TRIGGER `0_htal1_cc_d` BEFORE DELETE ON `0_hrm_tal_001_confidential_cases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_cases row cannot be deleted';
+-- HRM-TAL-001 END GROUP confidential_case_custody
+
+-- HRM-TAL-001 GROUP confidential_case_access_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_confidential_case_access_grants` (
+ `confidential_case_access_grant_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `confidential_case_id` bigint(20) unsigned NOT NULL,
+ `grantee_user_id` bigint(20) unsigned NOT NULL,
+ `access_role_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `purpose_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `valid_from` date NOT NULL,
+ `valid_to` date DEFAULT NULL,
+ `grant_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `granted_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`confidential_case_access_grant_id`),
+ UNIQUE KEY `uq_htal1_cg_lineage` (`confidential_case_access_grant_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_cg_ref` (`grant_reference_sha256`),
+ KEY `ix_htal1_cg_case_user` (`company_id`,`confidential_case_id`,`grantee_user_id`,`valid_from`,`valid_to`),
+ CONSTRAINT `fk_htal1_cg_case` FOREIGN KEY (`confidential_case_id`,`company_id`) REFERENCES `0_hrm_tal_001_confidential_cases` (`confidential_case_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_cg_u` BEFORE UPDATE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be updated';
+CREATE TRIGGER `0_htal1_cg_d` BEFORE DELETE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be deleted';
+-- HRM-TAL-001 END GROUP confidential_case_access_custody

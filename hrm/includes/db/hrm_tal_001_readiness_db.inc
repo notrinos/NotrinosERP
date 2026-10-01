@@ -18,6 +18,8 @@ function hrm_tal_001_schema_groups()
         'learning_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_definition_custody.sql','tables'=>array('hrm_tal_001_learning_definitions')),
         'learning_assignment_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_assignment_custody.sql','tables'=>array('hrm_tal_001_learning_assignments')),
         'learning_completion_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_completion_custody.sql','tables'=>array('hrm_tal_001_learning_completion_evidence')),
+        'confidential_case_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_confidential_case_custody.sql','tables'=>array('hrm_tal_001_confidential_cases')),
+        'confidential_case_access_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_confidential_case_access_custody.sql','tables'=>array('hrm_tal_001_confidential_case_access_grants')),
     );
 }
 
@@ -37,6 +39,8 @@ function hrm_tal_001_expected_columns()
         'hrm_tal_001_learning_definitions'=>array('learning_definition_id','company_id','learning_code','learning_name','delivery_mode_code','provider_name','duration_minutes','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_learning_assignments'=>array('learning_assignment_id','company_id','learning_definition_id','employee_id','assigned_on','due_on','assignment_status_code','source_reference_sha256','assignment_sha256','assigned_by_user_id','created_at'),
         'hrm_tal_001_learning_completion_evidence'=>array('learning_completion_evidence_id','company_id','learning_assignment_id','completion_status_code','completed_on','score_value','evidence_reference_sha256','evidence_sha256','recorded_by_user_id','created_at'),
+        'hrm_tal_001_confidential_cases'=>array('confidential_case_id','company_id','subject_employee_id','case_type_code','purpose_code','opened_on','retention_until','sensitivity_code','title_reference_sha256','case_reference_sha256','created_by_user_id','created_at'),
+        'hrm_tal_001_confidential_case_access_grants'=>array('confidential_case_access_grant_id','company_id','confidential_case_id','grantee_user_id','access_role_code','purpose_code','valid_from','valid_to','grant_reference_sha256','granted_by_user_id','created_at'),
     );
 }
 
@@ -56,6 +60,8 @@ function hrm_tal_001_trigger_codes()
         'hrm_tal_001_learning_definitions'=>'ld',
         'hrm_tal_001_learning_assignments'=>'la',
         'hrm_tal_001_learning_completion_evidence'=>'lc',
+        'hrm_tal_001_confidential_cases'=>'cc',
+        'hrm_tal_001_confidential_case_access_grants'=>'cg',
     );
 }
 
@@ -104,6 +110,12 @@ function hrm_tal_001_expected_foreign_keys()
             'parent'=>'hrm_tal_001_learning_assignments',
             'columns'=>array('learning_assignment_id','company_id'),
             'parent_columns'=>array('learning_assignment_id','company_id'),
+        ),
+        'hrm_tal_001_confidential_case_access_grants'=>array(
+            'name'=>'fk_htal1_cg_case',
+            'parent'=>'hrm_tal_001_confidential_cases',
+            'columns'=>array('confidential_case_id','company_id'),
+            'parent_columns'=>array('confidential_case_id','company_id'),
         ),
     );
 }
@@ -255,7 +267,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972','1.0.973','1.0.974','1.0.975');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -715,6 +727,26 @@ function hrm_tal_001_require_learning_runtime_source($patch)
 }
 
 /** @param object $patch @return bool */
+function hrm_tal_001_require_confidential_case_contract_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
+        "'confidential_case_foundation_enabled' => true",
+        "'confidential_case_runtime_enabled' => false",
+        "'confidential_case_writer_source_available' => false",
+        "'confidential_case_read_only_source_available' => false",
+        "'confidential_case_browser_ui_enabled' => false",
+        "'confidential_case_manager_view_enabled' => false",
+        "'confidential_case_export_enabled' => false",
+        "'confidential_case_automatic_manager_access_allowed' => false",
+        'hrm_tal_001_confidential_case_authority_contract_required_for_database_version',
+        "'1.0.974'",
+        'hrm_tal_001_confidential_case_custody_required_for_database_version',
+        "'1.0.975'",
+        'hrm_tal_001_confidential_case_access_custody_required_for_database_version',
+        "'1.0.976'"
+    ), 'HRM-TAL-001 confidential-case authority contract');
+}
+
 function hrm_tal_001_require_governance_contract($patch)
 {
     $contract = hrm_tal_001_governance_contract();

@@ -50,7 +50,14 @@ function hrm_tal_001_governance_contract()
         'learning_manager_view_enabled' => false,
         'learning_export_enabled' => false,
         'learning_legacy_training_bridge_allowed' => false,
+        'confidential_case_foundation_enabled' => true,
         'confidential_case_runtime_enabled' => false,
+        'confidential_case_writer_source_available' => false,
+        'confidential_case_read_only_source_available' => false,
+        'confidential_case_browser_ui_enabled' => false,
+        'confidential_case_manager_view_enabled' => false,
+        'confidential_case_export_enabled' => false,
+        'confidential_case_automatic_manager_access_allowed' => false,
         'recruitment_mutation_allowed' => false,
         'training_mutation_allowed' => false,
         'appraisal_mutation_allowed' => false,
@@ -291,6 +298,25 @@ function hrm_tal_001_learning_completion_custody_required_for_database_version($
 function hrm_tal_001_learning_runtime_service_allowed_for_database_version($database_version)
 {
     return version_compare((string)$database_version, '1.0.973', '>=');
+}
+
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_confidential_case_authority_contract_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.974', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_confidential_case_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.975', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_confidential_case_access_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.976', '>=');
 }
 
 /** @return bool */
