@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.968',
-        'active_legacy_payroll_contract'=>'1.0.505',
+        'active_database_version'=>'1.0.973',
+        'active_legacy_payroll_contract'=>'1.0.507',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 bounded performance export batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.968 across three dependency-ordered source-only edges: performance-export authority contract 1.0.965 -> 1.0.966; SA_HRSETTINGS exact-employee minimized CSV service 1.0.966 -> 1.0.967; and POST+CSRF admin browser download 1.0.967 -> 1.0.968. Existing immutable export-audit custody is reused, so the accepted database projection remains nine HRM-TAL-001 InnoDB custody tables, eighteen exact immutable UPDATE/DELETE denial triggers and five restrictive same-company foreign keys. Performance export is capped at 1000 rows / 2 MiB, neutralizes spreadsheet-formula prefixes, audits only hashed subject/output references, and excludes raw comment/reason/reference hashes, identity/bank/tax, compensation and payroll/accounting data. Manager/team export, ESS self export, bulk export, legacy appraisal mutation, compensation/payroll/accounting mutation, autonomous employment-decision authority and cross-company authority remain denied. The user-supplied owner-machine WAMP/MariaDB mandatory runner tests/php/run_hrm_tal_001_performance_export_mandatory_blockers_browser.php build hrm-tal-001-performance-export-v1-20261001 passed at exact source/DB 1.0.968, confirming 62/0 performance-export source, 196/0 migration chain, 185/0 successor migration source, 2311/0 central migration registry and legacy-payroll contract v1 PASS. HRM-TAL-001 remains OPEN; learning and confidential-case capabilities plus remaining lifecycle/accessibility/migration/payroll-isolation acceptance criteria remain separately gated. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 bounded learning foundation/runtime-service batch is ACCEPTED / LOCAL ACCEPTANCE PASS at exact source/DB 1.0.973 and active legacy-payroll source custody 1.0.507 across five dependency-ordered edges: authority contract 1.0.968 -> 1.0.969; zero-seed immutable learning definitions 1.0.969 -> 1.0.970; zero-seed immutable same-company learning assignments 1.0.970 -> 1.0.971; zero-seed immutable same-company completion evidence 1.0.971 -> 1.0.972; and bounded SA_HRSETTINGS append/read service 1.0.972 -> 1.0.973. Expected DB projection is twelve HRM-TAL-001 InnoDB custody tables, twenty-four immutable denial triggers and seven restrictive same-company foreign keys. Legacy training_courses/employee_training writers are not migrated or mutated; browser/self/manager/export, payroll/compensation/accounting and autonomous employment-decision authority remain denied. Owner-machine WAMP/MariaDB final acceptance passed through tests/php/run_hrm_tal_001_learning_mandatory_blockers_browser.php at exact source/DB 1.0.973. Confidential-case capability remains separately gated and was not started. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_learning_runtime_service'=>array('previous'=>'1.0.972','version'=>'1.0.973',
+                'file'=>'sql/upgrade_hrm_tal_001_learning_runtime_service.php'),
+            'hrm_tal_001_learning_completion_custody'=>array('previous'=>'1.0.971','version'=>'1.0.972',
+                'file'=>'sql/upgrade_hrm_tal_001_learning_completion_custody.php'),
+            'hrm_tal_001_learning_assignment_custody'=>array('previous'=>'1.0.970','version'=>'1.0.971',
+                'file'=>'sql/upgrade_hrm_tal_001_learning_assignment_custody.php'),
+            'hrm_tal_001_learning_definition_custody'=>array('previous'=>'1.0.969','version'=>'1.0.970',
+                'file'=>'sql/upgrade_hrm_tal_001_learning_definition_custody.php'),
+            'hrm_tal_001_learning_authority_contract'=>array('previous'=>'1.0.968','version'=>'1.0.969',
+                'file'=>'sql/upgrade_hrm_tal_001_learning_authority_contract.php'),
             'hrm_tal_001_performance_export_browser'=>array('previous'=>'1.0.967','version'=>'1.0.968',
                 'file'=>'sql/upgrade_hrm_tal_001_performance_export_browser.php'),
             'hrm_tal_001_performance_export_service'=>array('previous'=>'1.0.966','version'=>'1.0.967',

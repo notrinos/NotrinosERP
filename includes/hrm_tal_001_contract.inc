@@ -41,7 +41,15 @@ function hrm_tal_001_governance_contract()
         'performance_deterministic_scoring_source_available' => true,
         'performance_export_enabled' => true,
         'performance_compensation_linkage_allowed' => false,
-        'learning_runtime_enabled' => false,
+        'learning_foundation_enabled' => true,
+        'learning_runtime_enabled' => true,
+        'learning_writer_source_available' => true,
+        'learning_read_only_source_available' => true,
+        'learning_browser_ui_enabled' => false,
+        'learning_self_service_view_enabled' => false,
+        'learning_manager_view_enabled' => false,
+        'learning_export_enabled' => false,
+        'learning_legacy_training_bridge_allowed' => false,
         'confidential_case_runtime_enabled' => false,
         'recruitment_mutation_allowed' => false,
         'training_mutation_allowed' => false,
@@ -252,6 +260,37 @@ function hrm_tal_001_performance_export_service_allowed_for_database_version($da
 function hrm_tal_001_performance_export_browser_allowed_for_database_version($database_version)
 {
     return version_compare((string)$database_version, '1.0.968', '>=');
+}
+
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_learning_authority_contract_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.969', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_learning_definition_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.970', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_learning_assignment_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.971', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_learning_completion_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.972', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_learning_runtime_service_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.973', '>=');
 }
 
 /** @return bool */

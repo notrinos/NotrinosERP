@@ -15,6 +15,9 @@ function hrm_tal_001_schema_groups()
         'performance_review_subject_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_review_subject_custody.sql','tables'=>array('hrm_tal_001_performance_review_subjects')),
         'performance_assessment_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_assessment_evidence_custody.sql','tables'=>array('hrm_tal_001_performance_assessment_evidence')),
         'performance_workflow_event_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_workflow_event_custody.sql','tables'=>array('hrm_tal_001_performance_workflow_events')),
+        'learning_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_definition_custody.sql','tables'=>array('hrm_tal_001_learning_definitions')),
+        'learning_assignment_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_assignment_custody.sql','tables'=>array('hrm_tal_001_learning_assignments')),
+        'learning_completion_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_learning_completion_custody.sql','tables'=>array('hrm_tal_001_learning_completion_evidence')),
     );
 }
 
@@ -31,6 +34,9 @@ function hrm_tal_001_expected_columns()
         'hrm_tal_001_performance_review_subjects'=>array('performance_review_subject_id','company_id','performance_cycle_definition_id','employee_id','review_type_code','review_window_start','review_window_end','subject_reference_sha256','subject_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_performance_assessment_evidence'=>array('performance_assessment_evidence_id','company_id','performance_review_subject_id','assessment_role_code','dimension_code','rating_value','comment_reference_sha256','evidence_date','evidence_sha256','recorded_by_user_id','created_at'),
         'hrm_tal_001_performance_workflow_events'=>array('performance_workflow_event_id','company_id','performance_review_subject_id','from_state_code','to_state_code','aggregate_rating_value','rating_basis_sha256','reason_reference_sha256','transition_sha256','actor_user_id','occurred_at','created_at'),
+        'hrm_tal_001_learning_definitions'=>array('learning_definition_id','company_id','learning_code','learning_name','delivery_mode_code','provider_name','duration_minutes','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
+        'hrm_tal_001_learning_assignments'=>array('learning_assignment_id','company_id','learning_definition_id','employee_id','assigned_on','due_on','assignment_status_code','source_reference_sha256','assignment_sha256','assigned_by_user_id','created_at'),
+        'hrm_tal_001_learning_completion_evidence'=>array('learning_completion_evidence_id','company_id','learning_assignment_id','completion_status_code','completed_on','score_value','evidence_reference_sha256','evidence_sha256','recorded_by_user_id','created_at'),
     );
 }
 
@@ -47,6 +53,9 @@ function hrm_tal_001_trigger_codes()
         'hrm_tal_001_performance_review_subjects'=>'pr',
         'hrm_tal_001_performance_assessment_evidence'=>'pa',
         'hrm_tal_001_performance_workflow_events'=>'pw',
+        'hrm_tal_001_learning_definitions'=>'ld',
+        'hrm_tal_001_learning_assignments'=>'la',
+        'hrm_tal_001_learning_completion_evidence'=>'lc',
     );
 }
 
@@ -83,6 +92,18 @@ function hrm_tal_001_expected_foreign_keys()
             'parent'=>'hrm_tal_001_performance_review_subjects',
             'columns'=>array('performance_review_subject_id','company_id'),
             'parent_columns'=>array('performance_review_subject_id','company_id'),
+        ),
+        'hrm_tal_001_learning_assignments'=>array(
+            'name'=>'fk_htal1_la_def',
+            'parent'=>'hrm_tal_001_learning_definitions',
+            'columns'=>array('learning_definition_id','company_id'),
+            'parent_columns'=>array('learning_definition_id','company_id'),
+        ),
+        'hrm_tal_001_learning_completion_evidence'=>array(
+            'name'=>'fk_htal1_lc_assignment',
+            'parent'=>'hrm_tal_001_learning_assignments',
+            'columns'=>array('learning_assignment_id','company_id'),
+            'parent_columns'=>array('learning_assignment_id','company_id'),
         ),
     );
 }
@@ -234,7 +255,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -638,6 +659,62 @@ function hrm_tal_001_require_performance_export_browser_source($patch)
 }
 
 /** @param object $patch @return bool */
+function hrm_tal_001_require_learning_contract_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
+        "'learning_foundation_enabled' => true",
+        "'learning_runtime_enabled' => true",
+        "'learning_browser_ui_enabled' => false",
+        "'learning_legacy_training_bridge_allowed' => false",
+        'hrm_tal_001_learning_authority_contract_required_for_database_version',
+        "'1.0.969'",
+        'hrm_tal_001_learning_definition_custody_required_for_database_version',
+        "'1.0.970'",
+        'hrm_tal_001_learning_assignment_custody_required_for_database_version',
+        "'1.0.971'",
+        'hrm_tal_001_learning_completion_custody_required_for_database_version',
+        "'1.0.972'",
+        'hrm_tal_001_learning_runtime_service_allowed_for_database_version',
+        "'1.0.973'"
+    ), 'HRM-TAL-001 bounded learning authority contract');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_learning_runtime_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_learning_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_learning_runtime_service_allowed_for_database_version',
+        'hrm_tal_001_learning_begin_transaction',
+        'FOR UPDATE',
+        'hrm_tal_001_runtime_company_id()',
+        'hrm_tal_001_runtime_actor_id()',
+        'hrm_tal_001_employee_exists',
+        'hrm_tal_001_register_learning_definition',
+        'hrm_tal_001_assign_learning_to_employee',
+        'hrm_tal_001_record_learning_completion',
+        'hrm_tal_001_read_learning_for_employee',
+        'INSERT INTO ".TB_PREF."hrm_tal_001_learning_definitions',
+        'INSERT INTO ".TB_PREF."hrm_tal_001_learning_assignments',
+        'INSERT INTO ".TB_PREF."hrm_tal_001_learning_completion_evidence',
+        'created_by_user_id',
+        'assigned_by_user_id',
+        'recorded_by_user_id',
+        'UTC_TIMESTAMP()',
+        'learning_assignment_outside_definition_window',
+        'learning_completion_before_assignment',
+        'learning_definition_missing_or_cross_company',
+        'learning_assignment_missing_or_cross_company',
+        'SELECT a.learning_assignment_id,d.learning_code,d.learning_name',
+        'WHERE a.company_id=',
+        'AND a.employee_id=',
+        'ON d.learning_definition_id=a.learning_definition_id AND d.company_id=a.company_id',
+        'ON c.learning_assignment_id=a.learning_assignment_id AND c.company_id=a.company_id',
+        'legacy training mutation is not authorized'
+    ), 'HRM-TAL-001 bounded learning runtime service');
+}
+
+/** @param object $patch @return bool */
 function hrm_tal_001_require_governance_contract($patch)
 {
     $contract = hrm_tal_001_governance_contract();
@@ -648,6 +725,10 @@ function hrm_tal_001_require_governance_contract($patch)
         && $contract['certifications_foundation_enabled'] === true
         && $contract['performance_foundation_enabled'] === true
         && $contract['performance_runtime_enabled'] === false
+        && $contract['learning_foundation_enabled'] === true
+        && $contract['learning_runtime_enabled'] === true
+        && $contract['learning_browser_ui_enabled'] === false
+        && $contract['learning_legacy_training_bridge_allowed'] === false
         && $contract['recruitment_mutation_allowed'] === false
         && $contract['training_mutation_allowed'] === false
         && $contract['appraisal_mutation_allowed'] === false

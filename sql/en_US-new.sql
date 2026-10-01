@@ -14956,3 +14956,72 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_workflow_events` (
 CREATE TRIGGER `0_htal1_pw_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be updated';
 CREATE TRIGGER `0_htal1_pw_d` BEFORE DELETE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_workflow_event_custody
+
+-- HRM-TAL-001 GROUP learning_definition_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_definitions` (
+ `learning_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `learning_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `learning_name` varchar(140) NOT NULL,
+ `delivery_mode_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `provider_name` varchar(140) NOT NULL DEFAULT '',
+ `duration_minutes` int(11) unsigned NOT NULL DEFAULT 0,
+ `effective_from` date NOT NULL,
+ `effective_to` date DEFAULT NULL,
+ `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`learning_definition_id`),
+ UNIQUE KEY `uq_htal1_ld_lineage` (`learning_definition_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_ld_version` (`company_id`,`learning_code`,`effective_from`),
+ UNIQUE KEY `uq_htal1_ld_sha` (`definition_sha256`),
+ KEY `ix_htal1_ld_effective` (`company_id`,`learning_code`,`effective_from`,`effective_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_ld_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_definitions row cannot be updated';
+CREATE TRIGGER `0_htal1_ld_d` BEFORE DELETE ON `0_hrm_tal_001_learning_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_definitions row cannot be deleted';
+-- HRM-TAL-001 END GROUP learning_definition_custody
+
+-- HRM-TAL-001 GROUP learning_assignment_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_assignments` (
+ `learning_assignment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `learning_definition_id` bigint(20) unsigned NOT NULL,
+ `employee_id` varchar(20) NOT NULL,
+ `assigned_on` date NOT NULL,
+ `due_on` date DEFAULT NULL,
+ `assignment_status_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `assignment_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `assigned_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`learning_assignment_id`),
+ UNIQUE KEY `uq_htal1_la_lineage` (`learning_assignment_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_la_sha` (`assignment_sha256`),
+ KEY `ix_htal1_la_employee` (`company_id`,`employee_id`,`assigned_on`,`due_on`),
+ CONSTRAINT `fk_htal1_la_def` FOREIGN KEY (`learning_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_learning_definitions` (`learning_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_la_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_assignments row cannot be updated';
+CREATE TRIGGER `0_htal1_la_d` BEFORE DELETE ON `0_hrm_tal_001_learning_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_assignments row cannot be deleted';
+-- HRM-TAL-001 END GROUP learning_assignment_custody
+
+-- HRM-TAL-001 GROUP learning_completion_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_completion_evidence` (
+ `learning_completion_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `learning_assignment_id` bigint(20) unsigned NOT NULL,
+ `completion_status_code` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `completed_on` date NOT NULL,
+ `score_value` decimal(9,4) DEFAULT NULL,
+ `evidence_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`learning_completion_evidence_id`),
+ UNIQUE KEY `uq_htal1_lc_lineage` (`learning_completion_evidence_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_lc_sha` (`evidence_sha256`),
+ KEY `ix_htal1_lc_assignment` (`company_id`,`learning_assignment_id`,`completed_on`),
+ CONSTRAINT `fk_htal1_lc_assignment` FOREIGN KEY (`learning_assignment_id`,`company_id`) REFERENCES `0_hrm_tal_001_learning_assignments` (`learning_assignment_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_lc_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be updated';
+CREATE TRIGGER `0_htal1_lc_d` BEFORE DELETE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be deleted';
+-- HRM-TAL-001 END GROUP learning_completion_custody
