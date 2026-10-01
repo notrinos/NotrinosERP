@@ -225,7 +225,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -325,7 +325,7 @@ function hrm_tal_001_require_self_service_view_source($patch)
         'AND e.employee_id='
     ), 'HRM-TAL-001 ESS self read service')) return false;
     if (!hrm_tal_001_require_source_tokens($patch, 'hrm/ess/talent.php', array(
-        "\$page_security='SA_HRM_ESS_VIEW_SELF'",
+        "\$page_security = 'SA_HRM_ESS_VIEW_SELF'",
         'hrm_tal_001_read_skill_evidence_for_self',
         'hrm_tal_001_read_certification_evidence_for_self',
         'accepts no employee identifier from the browser'
@@ -373,7 +373,7 @@ function hrm_tal_001_require_manager_team_view_source($patch)
 function hrm_tal_001_require_manager_browser_source($patch)
 {
     if (!hrm_tal_001_require_source_tokens($patch, 'hrm/ess/team_talent.php', array(
-        "\$page_security='SA_HRM_ESS_VIEW_TEAM'",
+        "\$page_security = 'SA_HRM_ESS_VIEW_TEAM'",
         'hrm_tal_001_manager_browser_allowed_for_database_version',
         'hrm_ess_002_today()',
         'hrm_tal_001_read_skill_evidence_for_manager_team',
@@ -470,6 +470,63 @@ function hrm_tal_001_require_performance_read_only_source($patch)
         'LEFT JOIN',
         'hrm_tal_001_performance_assessment_evidence'
     ), 'HRM-TAL-001 performance read-only view');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_admin_browser_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        "\$page_security = 'SA_HRSETTINGS'",
+        'check_csrf_token()',
+        'hrm_tal_001_performance_admin_browser_allowed_for_database_version',
+        'performance_cycle',
+        'performance_subject',
+        'performance_assessment',
+        'performance_read',
+        'hrm_tal_001_register_performance_cycle_definition',
+        'hrm_tal_001_register_performance_review_subject',
+        'hrm_tal_001_record_performance_assessment_evidence',
+        'hrm_tal_001_read_performance_for_employee'
+    ), 'HRM-TAL-001 performance admin browser');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_self_service_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_self_view_db.inc', array(
+        'hrm_tal_001_performance_self_service_view_allowed_for_database_version',
+        'hrm_tal_001_read_performance_for_self',
+        "user_check_access('SA_HRM_ESS_VIEW_SELF')",
+        'get_hrm_ess_current_self_scope()',
+        'WHERE s.company_id=',
+        'AND s.employee_id='
+    ), 'HRM-TAL-001 ESS self performance service')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/ess/talent.php', array(
+        "\$page_security = 'SA_HRM_ESS_VIEW_SELF'",
+        'hrm_tal_001_performance_self_service_view_allowed_for_database_version',
+        'hrm_tal_001_read_performance_for_self',
+        'accepts no employee identifier from the browser'
+    ), 'HRM-TAL-001 ESS self performance route');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_manager_team_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_manager_view_db.inc', array(
+        'hrm_tal_001_performance_manager_team_view_allowed_for_database_version',
+        'hrm_tal_001_manager_scope_subjects',
+        'hrm_tal_001_read_performance_for_manager_team',
+        'WHERE s.company_id=',
+        's.employee_id IN (',
+        "'scope_origin'"
+    ), 'HRM-TAL-001 manager/team performance service')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/ess/team_talent.php', array(
+        "\$page_security = 'SA_HRM_ESS_VIEW_TEAM'",
+        'hrm_tal_001_performance_manager_team_view_allowed_for_database_version',
+        'hrm_ess_002_today()',
+        'hrm_tal_001_read_performance_for_manager_team',
+        'accepts no employee selector or historical as-of date'
+    ), 'HRM-TAL-001 manager/team performance route');
 }
 
 /** @param object $patch @return bool */

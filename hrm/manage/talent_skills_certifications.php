@@ -7,6 +7,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_evidence_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_view_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_db.inc');
 
 page(_('Talent Skills & Certifications'));
 if (!function_exists('get_company_pref') || !hrm_tal_001_governed_admin_ui_allowed_for_database_version((string)get_company_pref('version_id', true))) {
@@ -27,6 +28,8 @@ function htal1_ui_notice($label, $result, $id_key)
 
 $skill_rows = false;
 $cert_rows = false;
+$performance_rows = false;
+$performance_browser_enabled = function_exists('get_company_pref') && hrm_tal_001_performance_admin_browser_allowed_for_database_version((string)get_company_pref('version_id', true));
 $action = isset($_POST['tal_action']) ? (string)$_POST['tal_action'] : '';
 if ($action !== '' && !check_csrf_token()) {
     display_error(_('Invalid CSRF token.'));
@@ -92,9 +95,53 @@ if ($action !== '' && !check_csrf_token()) {
     $error = null;
     $cert_rows = hrm_tal_001_read_certification_evidence_for_employee($employee_id, $error);
     if ($cert_rows === false) display_error(_('Certification evidence query rejected: ').$error);
+} elseif (in_array($action, array('performance_cycle','performance_subject','performance_assessment','performance_read'), true) && !$performance_browser_enabled) {
+    display_error(_('Governed performance browser access is not enabled until database version 1.0.960.'));
+} elseif ($action === 'performance_cycle') {
+    $error = null;
+    $result = hrm_tal_001_register_performance_cycle_definition(array(
+        'cycle_code'=>htal1_ui_value('performance_cycle_code'),
+        'cycle_name'=>htal1_ui_value('performance_cycle_name'),
+        'purpose_code'=>htal1_ui_value('performance_purpose_code'),
+        'period_start'=>htal1_ui_value('performance_period_start'),
+        'period_end'=>htal1_ui_value('performance_period_end'),
+        'rating_scale_code'=>htal1_ui_value('performance_rating_scale_code'),
+        'effective_from'=>htal1_ui_value('performance_effective_from'),
+        'effective_to'=>htal1_ui_value('performance_effective_to'),
+    ), $error);
+    if ($result === false) display_error(_('Performance cycle rejected: ').$error);
+    else htal1_ui_notice(_('Performance cycle recorded with immutable ID'), $result, 'performance_cycle_definition_id');
+} elseif ($action === 'performance_subject') {
+    $error = null;
+    $result = hrm_tal_001_register_performance_review_subject(array(
+        'performance_cycle_definition_id'=>htal1_ui_value('performance_subject_cycle_id'),
+        'employee_id'=>htal1_ui_value('performance_subject_employee_id'),
+        'review_type_code'=>htal1_ui_value('performance_review_type_code'),
+        'review_window_start'=>htal1_ui_value('performance_review_window_start'),
+        'review_window_end'=>htal1_ui_value('performance_review_window_end'),
+        'subject_reference_sha256'=>htal1_ui_value('performance_subject_reference_sha256'),
+    ), $error);
+    if ($result === false) display_error(_('Performance review subject rejected: ').$error);
+    else htal1_ui_notice(_('Performance review subject recorded with immutable ID'), $result, 'performance_review_subject_id');
+} elseif ($action === 'performance_assessment') {
+    $error = null;
+    $result = hrm_tal_001_record_performance_assessment_evidence(array(
+        'performance_review_subject_id'=>htal1_ui_value('performance_assessment_subject_id'),
+        'assessment_role_code'=>htal1_ui_value('performance_assessment_role_code'),
+        'dimension_code'=>htal1_ui_value('performance_dimension_code'),
+        'rating_value'=>htal1_ui_value('performance_rating_value'),
+        'comment_reference_sha256'=>htal1_ui_value('performance_comment_reference_sha256'),
+        'evidence_date'=>htal1_ui_value('performance_evidence_date'),
+    ), $error);
+    if ($result === false) display_error(_('Performance assessment evidence rejected: ').$error);
+    else htal1_ui_notice(_('Performance assessment evidence recorded with immutable ID'), $result, 'performance_assessment_evidence_id');
+} elseif ($action === 'performance_read') {
+    $error = null;
+    $performance_rows = hrm_tal_001_read_performance_for_employee(htal1_ui_value('performance_read_employee_id'), $error);
+    if ($performance_rows === false) display_error(_('Performance query rejected: ').$error);
 }
 
-display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. It cannot update/delete evidence, perform bulk/team/self export, mutate recruitment/training/appraisal, change payroll/compensation, or make employment decisions. From database version 1.0.953, SA_HRSETTINGS may export one exact employee at a time through the separately audited bounded CSV route.'), 0, 1);
+display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. From database version 1.0.960 the same bounded surface may register performance cycles, review subjects and minimized assessment evidence and read one exact employee. It cannot update/delete evidence, change performance lifecycle state, perform bulk/team/self export, mutate recruitment/training/appraisal, change payroll/compensation, or make employment decisions. From database version 1.0.953, SA_HRSETTINGS may export one exact employee skills/certifications set through the separately audited bounded CSV route; performance export remains disabled.'), 0, 1);
 
 start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'skill_definition');
 start_table(TABLESTYLE2); table_section_title(_('Register skill definition'));
@@ -128,6 +175,37 @@ start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'read_
 start_table(TABLESTYLE2); table_section_title(_('Restricted employee evidence view')); text_row_ex(_('Exact Employee ID:'), 'read_employee_id', 24, 20); end_table(1);
 submit_center('read_employee_talent', _('View Governed Talent Evidence')); end_form();
 
+if ($performance_browser_enabled) {
+    start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_cycle');
+    start_table(TABLESTYLE2); table_section_title(_('Register performance cycle'));
+    text_row_ex(_('Cycle code:'), 'performance_cycle_code', 36, 64); text_row_ex(_('Cycle name:'), 'performance_cycle_name', 52, 140);
+    text_row_ex(_('Purpose (development / performance_review / goal_review):'), 'performance_purpose_code', 28, 32);
+    text_row_ex(_('Period start (YYYY-MM-DD):'), 'performance_period_start', 16, 10); text_row_ex(_('Period end (YYYY-MM-DD):'), 'performance_period_end', 16, 10);
+    text_row_ex(_('Rating scale (none / level_1_5 / percent_0_100):'), 'performance_rating_scale_code', 28, 32);
+    text_row_ex(_('Effective from (YYYY-MM-DD):'), 'performance_effective_from', 16, 10); text_row_ex(_('Effective to (optional YYYY-MM-DD):'), 'performance_effective_to', 16, 10);
+    end_table(1); submit_center('record_performance_cycle', _('Record Performance Cycle')); end_form();
+
+    start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_subject');
+    start_table(TABLESTYLE2); table_section_title(_('Register performance review subject'));
+    text_row_ex(_('Performance cycle ID:'), 'performance_subject_cycle_id', 12, 20); text_row_ex(_('Exact Employee ID:'), 'performance_subject_employee_id', 24, 20);
+    text_row_ex(_('Review type (annual / midyear / probation / project):'), 'performance_review_type_code', 20, 32);
+    text_row_ex(_('Review window start (YYYY-MM-DD):'), 'performance_review_window_start', 16, 10); text_row_ex(_('Review window end (YYYY-MM-DD):'), 'performance_review_window_end', 16, 10);
+    text_row_ex(_('Subject reference SHA-256:'), 'performance_subject_reference_sha256', 68, 64);
+    end_table(1); submit_center('record_performance_subject', _('Record Performance Review Subject')); end_form();
+
+    start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_assessment');
+    start_table(TABLESTYLE2); table_section_title(_('Record minimized performance assessment evidence'));
+    text_row_ex(_('Performance review subject ID:'), 'performance_assessment_subject_id', 12, 20);
+    text_row_ex(_('Assessment role (self / manager / reviewer):'), 'performance_assessment_role_code', 20, 32);
+    text_row_ex(_('Dimension code:'), 'performance_dimension_code', 36, 64); text_row_ex(_('Rating value:'), 'performance_rating_value', 16, 32);
+    text_row_ex(_('Comment reference SHA-256 (optional; raw comment text is not accepted):'), 'performance_comment_reference_sha256', 68, 64);
+    text_row_ex(_('Evidence date (YYYY-MM-DD):'), 'performance_evidence_date', 16, 10);
+    end_table(1); submit_center('record_performance_assessment', _('Record Performance Assessment Evidence')); end_form();
+
+    start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'performance_read');
+    start_table(TABLESTYLE2); table_section_title(_('Restricted performance view')); text_row_ex(_('Exact Employee ID:'), 'performance_read_employee_id', 24, 20); end_table(1);
+    submit_center('read_employee_performance', _('View Governed Performance Evidence')); end_form();
+}
 
 if (function_exists('get_company_pref') && hrm_tal_001_export_browser_allowed_for_database_version((string)get_company_pref('version_id', true))) {
     echo "<form method='post' action='talent_export.php'>";
@@ -145,6 +223,11 @@ if (is_array($skill_rows)) {
 if (is_array($cert_rows)) {
     start_table(TABLESTYLE, "width='95%'"); table_header(array(_('Certification'), _('Issuer'), _('Category'), _('Issued'), _('Expires'), _('Verification')));
     foreach ($cert_rows as $row) { start_row(); label_cell(htmlspecialchars((string)$row['certification_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['issuer_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['category_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['issued_on'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['expires_on'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['verification_status_code'], ENT_QUOTES, 'UTF-8')); end_row(); }
+    end_table(1);
+}
+if (is_array($performance_rows)) {
+    start_table(TABLESTYLE, "width='98%'"); table_header(array(_('Cycle'), _('Purpose'), _('Review type'), _('Review window'), _('Assessment role'), _('Dimension'), _('Rating'), _('Evidence date')));
+    foreach ($performance_rows as $row) { start_row(); label_cell(htmlspecialchars((string)$row['cycle_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['purpose_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['review_type_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['review_window_start'].' - '.(string)$row['review_window_end'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['assessment_role_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['dimension_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['rating_value'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['evidence_date'], ENT_QUOTES, 'UTF-8')); end_row(); }
     end_table(1);
 }
 end_page();
