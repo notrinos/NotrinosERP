@@ -234,7 +234,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -576,6 +576,65 @@ function hrm_tal_001_require_performance_score_finalization_source($patch)
         "hidden('tal_action', 'performance_finalize')",
         'performance_finalize_reason_sha256'
     ), 'HRM-TAL-001 deterministic performance finalization browser');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_export_contract_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
+        "'performance_export_enabled' => true",
+        'hrm_tal_001_performance_export_contract_required_for_database_version',
+        "'1.0.966'",
+        'hrm_tal_001_performance_export_service_allowed_for_database_version',
+        "'1.0.967'",
+        'hrm_tal_001_performance_export_browser_allowed_for_database_version',
+        "'1.0.968'"
+    ), 'HRM-TAL-001 performance export contract')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_export_db.inc', array(
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_export_audit",
+        'subject_reference_sha256',
+        'export_sha256'
+    ), 'HRM-TAL-001 immutable export audit custody reuse');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_export_service_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_export_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_performance_export_service_allowed_for_database_version',
+        'HRM_TAL_001_PERFORMANCE_EXPORT_MAX_ROWS',
+        'HRM_TAL_001_PERFORMANCE_EXPORT_MAX_BYTES',
+        'hrm_tal_001_export_exact_employee_performance_csv',
+        "s.employee_id='.db_escape(\$employee_id)",
+        "LIMIT '.\$limit",
+        'hrm_tal_001_export_write_row',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_export_audit",
+        "'admin_performance_exact_employee'",
+        "'scope_code'=>'admin_performance_exact_employee'"
+    ), 'HRM-TAL-001 bounded performance export service');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_export_browser_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_performance_export.php', array(
+        "\$page_security='SA_HRSETTINGS'",
+        'hrm_tal_001_performance_export_browser_allowed_for_database_version',
+        'REQUEST_METHOD',
+        'check_csrf_token()',
+        'hrm_tal_001_export_exact_employee_performance_csv',
+        'while (ob_get_level()) ob_end_clean();',
+        'X-Content-Type-Options: nosniff',
+        'Cache-Control: no-store, private',
+        'Content-Disposition: attachment'
+    ), 'HRM-TAL-001 performance export browser route')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_skills_certifications.php', array(
+        "action='talent_performance_export.php'",
+        "hidden('_token', ensure_csrf_token())",
+        "name='employee_id'",
+        'Export Governed Performance CSV'
+    ), 'HRM-TAL-001 performance export browser navigation');
 }
 
 /** @param object $patch @return bool */

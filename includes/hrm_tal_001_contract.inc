@@ -39,7 +39,7 @@ function hrm_tal_001_governance_contract()
         'performance_self_service_view_enabled' => true,
         'performance_workflow_source_available' => true,
         'performance_deterministic_scoring_source_available' => true,
-        'performance_export_enabled' => false,
+        'performance_export_enabled' => true,
         'performance_compensation_linkage_allowed' => false,
         'learning_runtime_enabled' => false,
         'confidential_case_runtime_enabled' => false,
@@ -234,6 +234,24 @@ function hrm_tal_001_performance_workflow_writer_allowed_for_database_version($d
 function hrm_tal_001_performance_score_finalization_allowed_for_database_version($database_version)
 {
     return version_compare((string)$database_version, '1.0.965', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_export_contract_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.966', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_export_service_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.967', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_export_browser_allowed_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.968', '>=');
 }
 
 /** @return bool */

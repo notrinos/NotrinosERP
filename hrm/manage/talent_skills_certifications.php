@@ -249,6 +249,14 @@ if ($performance_browser_enabled) {
     }
 }
 
+if (function_exists('get_company_pref') && hrm_tal_001_performance_export_browser_allowed_for_database_version((string)get_company_pref('version_id', true))) {
+    echo "<form method='post' action='talent_performance_export.php'>";
+    hidden('_token', ensure_csrf_token());
+    echo "<table class='".TABLESTYLE2."'><tr><td>"._('Exact Employee ID for bounded performance export:')."</td><td><input type='text' name='employee_id' maxlength='20'></td></tr></table>";
+    echo "<div class='submit'><input type='submit' value='"._('Export Governed Performance CSV')."'></div>";
+    echo "</form>";
+}
+
 if (function_exists('get_company_pref') && hrm_tal_001_export_browser_allowed_for_database_version((string)get_company_pref('version_id', true))) {
     echo "<form method='post' action='talent_export.php'>";
     hidden('_token', ensure_csrf_token());
