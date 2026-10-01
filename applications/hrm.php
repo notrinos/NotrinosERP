@@ -87,6 +87,8 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Manage &Employees'),         'hrm/manage/employees.php?',                           'SA_EMPLOYEE',         MENU_ENTRY);
 		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.946', '>='))
 			$this->add_lapp_function(2, _('Talent Skills & Certifications'), 'hrm/manage/talent_skills_certifications.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
+		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.979', '>='))
+			$this->add_lapp_function(2, _('Confidential HR &Cases'), 'hrm/manage/talent_confidential_cases.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
 		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
 			$this->add_lapp_function(2, _('Headcount Analytics &Catalog'),'hrm/manage/analytics_headcount_catalog.php?',          'SA_HRMREPORTS',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Departments'),              'hrm/manage/departments.php?',                         'SA_DEPARTMENT',        MENU_MAINTENANCE);

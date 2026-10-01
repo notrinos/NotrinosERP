@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.976',
-        'active_legacy_payroll_contract'=>'1.0.508',
+        'active_database_version'=>'1.0.979',
+        'active_legacy_payroll_contract'=>'1.0.509',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 confidential-case foundation batch is SOURCE-VERIFIED / LOCAL-GATE-PENDING at source head 1.0.976 and active legacy-payroll source custody 1.0.508 across three high-risk dependency-ordered edges: confidential-case authority contract 1.0.973 -> 1.0.974; zero-seed immutable case custody with explicit purpose/retention 1.0.974 -> 1.0.975; and zero-seed immutable same-company object-access grant custody 1.0.975 -> 1.0.976. Expected DB projection is fourteen HRM-TAL-001 InnoDB custody tables, twenty-eight immutable denial triggers and eight restrictive same-company foreign keys. Confidential-case runtime/writer/read/browser/manager/export and automatic manager access remain denied. The accepted Learning predecessor at source/DB 1.0.973 remains preserved. Final acceptance requires tests/php/run_hrm_tal_001_confidential_case_foundation_mandatory_blockers_browser.php on local WAMP/MariaDB at exact DB 1.0.976. HRM-TAL-001 remains OPEN and overall closure/readiness is not started. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 confidential-case runtime/read/browser batch is SOURCE-VERIFIED / LOCAL-GATE-PENDING at source head 1.0.979 and active legacy-payroll source custody 1.0.509 across three high-risk dependency-ordered source-only edges: bounded append-only case/access writer lifecycle 1.0.976 -> 1.0.977; exact-object minimized read service 1.0.977 -> 1.0.978; and restricted SA_HRSETTINGS browser/navigation 1.0.978 -> 1.0.979. Physical TAL projection remains fourteen InnoDB custody tables, twenty-eight immutable denial triggers and eight restrictive same-company foreign keys. Case creation stores no raw title/narrative/content; access is explicit per user/object/purpose, revocation is append-only, retention expiry fails closed, and reads require one exact case ID. Manager/self-service inheritance, automatic manager access, list/search/export, payroll/compensation/accounting and employment-decision authority remain denied. Final owner-machine WAMP/MariaDB/browser acceptance remains required through tests/php/run_hrm_tal_001_confidential_case_runtime_mandatory_blockers_browser.php at exact source/DB 1.0.979. HRM-TAL-001 remains OPEN; overall lifecycle/accessibility/migration/payroll-isolation closure is not started. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_confidential_case_browser'=>array('previous'=>'1.0.978','version'=>'1.0.979',
+                'file'=>'sql/upgrade_hrm_tal_001_confidential_case_browser.php'),
+            'hrm_tal_001_confidential_case_read_only_view'=>array('previous'=>'1.0.977','version'=>'1.0.978',
+                'file'=>'sql/upgrade_hrm_tal_001_confidential_case_read_only_view.php'),
+            'hrm_tal_001_confidential_case_writer'=>array('previous'=>'1.0.976','version'=>'1.0.977',
+                'file'=>'sql/upgrade_hrm_tal_001_confidential_case_writer.php'),
             'hrm_tal_001_confidential_case_access_custody'=>array('previous'=>'1.0.975','version'=>'1.0.976',
                 'file'=>'sql/upgrade_hrm_tal_001_confidential_case_access_custody.php'),
             'hrm_tal_001_confidential_case_custody'=>array('previous'=>'1.0.974','version'=>'1.0.975',

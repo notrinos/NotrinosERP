@@ -267,7 +267,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972','1.0.973','1.0.974','1.0.975');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972','1.0.973','1.0.974','1.0.975','1.0.976','1.0.977','1.0.978');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -731,10 +731,10 @@ function hrm_tal_001_require_confidential_case_contract_source($patch)
 {
     return hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
         "'confidential_case_foundation_enabled' => true",
-        "'confidential_case_runtime_enabled' => false",
-        "'confidential_case_writer_source_available' => false",
-        "'confidential_case_read_only_source_available' => false",
-        "'confidential_case_browser_ui_enabled' => false",
+        "'confidential_case_runtime_enabled' => true",
+        "'confidential_case_writer_source_available' => true",
+        "'confidential_case_read_only_source_available' => true",
+        "'confidential_case_browser_ui_enabled' => true",
         "'confidential_case_manager_view_enabled' => false",
         "'confidential_case_export_enabled' => false",
         "'confidential_case_automatic_manager_access_allowed' => false",
@@ -743,8 +743,85 @@ function hrm_tal_001_require_confidential_case_contract_source($patch)
         'hrm_tal_001_confidential_case_custody_required_for_database_version',
         "'1.0.975'",
         'hrm_tal_001_confidential_case_access_custody_required_for_database_version',
-        "'1.0.976'"
+        "'1.0.976'",
+        'hrm_tal_001_confidential_case_writer_allowed_for_database_version',
+        "'1.0.977'",
+        'hrm_tal_001_confidential_case_read_only_view_allowed_for_database_version',
+        "'1.0.978'",
+        'hrm_tal_001_confidential_case_browser_allowed_for_database_version',
+        "'1.0.979'"
     ), 'HRM-TAL-001 confidential-case authority contract');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_confidential_case_writer_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_confidential_case_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_confidential_case_positive_id',
+        'hrm_tal_001_confidential_case_writer_allowed_for_database_version',
+        'hrm_tal_001_confidential_case_begin_transaction',
+        'FOR UPDATE',
+        'hrm_tal_001_runtime_company_id()',
+        'hrm_tal_001_runtime_actor_id()',
+        'hrm_tal_001_employee_exists',
+        'hrm_tal_001_open_confidential_case',
+        'hrm_tal_001_grant_confidential_case_access',
+        'hrm_tal_001_revoke_confidential_case_access',
+        'confidential_case_raw_payload_denied',
+        'case_owner',
+        'case_reviewer',
+        'case_reader',
+        'revoked',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_confidential_cases",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_confidential_case_access_grants",
+        'UTC_TIMESTAMP()',
+        'confidential_case_missing_or_cross_company',
+        'confidential_case_access_outside_case_scope'
+    ), 'HRM-TAL-001 bounded confidential-case writer/access lifecycle');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_confidential_case_read_only_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_confidential_case_db.inc', array(
+        'hrm_tal_001_confidential_case_read_only_view_allowed_for_database_version',
+        'hrm_tal_001_read_confidential_case',
+        'confidential_case_retention_elapsed',
+        'confidential_case_object_access_denied',
+        'grantee_user_id=',
+        'ORDER BY valid_from DESC,confidential_case_access_grant_id DESC LIMIT 2',
+        "'confidential_case_id'=>",
+        "'subject_employee_id'=>",
+        "'case_type_code'=>",
+        "'purpose_code'=>",
+        "'retention_until'=>",
+        "'sensitivity_code'=>",
+        "'access_role_code'=>"
+    ), 'HRM-TAL-001 exact-object confidential-case read service');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_confidential_case_browser_source($patch)
+{
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/manage/talent_confidential_cases.php', array(
+        "\$page_security='SA_HRSETTINGS'",
+        'hrm_tal_001_confidential_case_browser_allowed_for_database_version',
+        'check_csrf_token()',
+        'hrm_tal_001_open_confidential_case',
+        'hrm_tal_001_grant_confidential_case_access',
+        'hrm_tal_001_revoke_confidential_case_access',
+        'hrm_tal_001_read_confidential_case',
+        'Exact Confidential Case ID',
+        'raw title is not accepted',
+        'provides no case search/list/export'
+    ), 'HRM-TAL-001 confidential-case browser route')) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'applications/hrm.php', array(
+        "version_compare((string)get_company_pref('version_id', true), '1.0.979', '>=')",
+        "_('Confidential HR &Cases')",
+        "'hrm/manage/talent_confidential_cases.php?'",
+        "'SA_HRSETTINGS'"
+    ), 'HRM-TAL-001 confidential-case browser navigation');
 }
 
 function hrm_tal_001_require_governance_contract($patch)
@@ -761,6 +838,14 @@ function hrm_tal_001_require_governance_contract($patch)
         && $contract['learning_runtime_enabled'] === true
         && $contract['learning_browser_ui_enabled'] === false
         && $contract['learning_legacy_training_bridge_allowed'] === false
+        && $contract['confidential_case_foundation_enabled'] === true
+        && $contract['confidential_case_runtime_enabled'] === true
+        && $contract['confidential_case_writer_source_available'] === true
+        && $contract['confidential_case_read_only_source_available'] === true
+        && $contract['confidential_case_browser_ui_enabled'] === true
+        && $contract['confidential_case_manager_view_enabled'] === false
+        && $contract['confidential_case_export_enabled'] === false
+        && $contract['confidential_case_automatic_manager_access_allowed'] === false
         && $contract['recruitment_mutation_allowed'] === false
         && $contract['training_mutation_allowed'] === false
         && $contract['appraisal_mutation_allowed'] === false
