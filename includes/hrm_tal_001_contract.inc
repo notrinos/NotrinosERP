@@ -29,6 +29,7 @@ function hrm_tal_001_governance_contract()
         'data_minimization_required' => true,
         'skills_foundation_enabled' => true,
         'certifications_foundation_enabled' => true,
+        'performance_foundation_enabled' => true,
         'performance_runtime_enabled' => false,
         'learning_runtime_enabled' => false,
         'confidential_case_runtime_enabled' => false,
@@ -150,6 +151,25 @@ function hrm_tal_001_export_service_allowed_for_database_version($database_versi
 function hrm_tal_001_export_browser_allowed_for_database_version($database_version)
 {
     return version_compare((string)$database_version, '1.0.953', '>=');
+}
+
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_cycle_definition_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.954', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_review_subject_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.955', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_performance_assessment_evidence_custody_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.956', '>=');
 }
 
 /** @return bool */

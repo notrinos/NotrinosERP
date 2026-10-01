@@ -15218,3 +15218,77 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_export_audit` (
 CREATE TRIGGER `0_htal1_xa_u` BEFORE UPDATE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be updated';
 CREATE TRIGGER `0_htal1_xa_d` BEFORE DELETE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be deleted';
 -- HRM-TAL-001 END GROUP export_audit_custody
+
+-- HRM-TAL-001 GROUP performance_cycle_definition_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_cycle_definitions` (
+ `performance_cycle_definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `cycle_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `cycle_name` varchar(140) NOT NULL,
+ `purpose_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `period_start` date NOT NULL,
+ `period_end` date NOT NULL,
+ `rating_scale_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `effective_from` date NOT NULL,
+ `effective_to` date DEFAULT NULL,
+ `definition_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`performance_cycle_definition_id`),
+ UNIQUE KEY `uq_htal1_pc_lineage` (`performance_cycle_definition_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_pc_version` (`company_id`,`cycle_code`,`effective_from`),
+ UNIQUE KEY `uq_htal1_pc_sha` (`definition_sha256`),
+ KEY `ix_htal1_pc_effective` (`company_id`,`cycle_code`,`effective_from`,`effective_to`),
+ KEY `ix_htal1_pc_period` (`company_id`,`period_start`,`period_end`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_pc_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_cycle_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_cycle_definitions row cannot be updated';
+CREATE TRIGGER `0_htal1_pc_d` BEFORE DELETE ON `0_hrm_tal_001_performance_cycle_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_cycle_definitions row cannot be deleted';
+-- HRM-TAL-001 END GROUP performance_cycle_definition_custody
+
+-- HRM-TAL-001 GROUP performance_review_subject_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_review_subjects` (
+ `performance_review_subject_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `performance_cycle_definition_id` bigint(20) unsigned NOT NULL,
+ `employee_id` varchar(20) NOT NULL,
+ `review_type_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_window_start` date NOT NULL,
+ `review_window_end` date NOT NULL,
+ `subject_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `subject_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`performance_review_subject_id`),
+ UNIQUE KEY `uq_htal1_pr_lineage` (`performance_review_subject_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_pr_subject` (`company_id`,`performance_cycle_definition_id`,`employee_id`,`review_type_code`),
+ UNIQUE KEY `uq_htal1_pr_sha` (`subject_sha256`),
+ KEY `ix_htal1_pr_employee` (`company_id`,`employee_id`,`review_window_start`,`review_window_end`),
+ CONSTRAINT `fk_htal1_pr_cycle` FOREIGN KEY (`performance_cycle_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_cycle_definitions` (`performance_cycle_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_pr_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_review_subjects` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_review_subjects row cannot be updated';
+CREATE TRIGGER `0_htal1_pr_d` BEFORE DELETE ON `0_hrm_tal_001_performance_review_subjects` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_review_subjects row cannot be deleted';
+-- HRM-TAL-001 END GROUP performance_review_subject_custody
+
+-- HRM-TAL-001 GROUP performance_assessment_evidence_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_assessment_evidence` (
+ `performance_assessment_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) NOT NULL,
+ `performance_review_subject_id` bigint(20) unsigned NOT NULL,
+ `assessment_role_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `dimension_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `rating_value` decimal(9,4) DEFAULT NULL,
+ `comment_reference_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+ `evidence_date` date NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recorded_by_user_id` bigint(20) unsigned NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`performance_assessment_evidence_id`),
+ UNIQUE KEY `uq_htal1_pa_lineage` (`performance_assessment_evidence_id`,`company_id`),
+ UNIQUE KEY `uq_htal1_pa_sha` (`evidence_sha256`),
+ KEY `ix_htal1_pa_subject` (`company_id`,`performance_review_subject_id`,`evidence_date`),
+ KEY `ix_htal1_pa_dimension` (`company_id`,`dimension_code`,`evidence_date`),
+ CONSTRAINT `fk_htal1_pa_subject` FOREIGN KEY (`performance_review_subject_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_review_subjects` (`performance_review_subject_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_htal1_pa_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be updated';
+CREATE TRIGGER `0_htal1_pa_d` BEFORE DELETE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be deleted';
+-- HRM-TAL-001 END GROUP performance_assessment_evidence_custody

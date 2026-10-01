@@ -11,6 +11,9 @@ function hrm_tal_001_schema_groups()
         'certification_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_certification_definition_custody.sql','tables'=>array('hrm_tal_001_certification_definitions')),
         'certification_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_certification_evidence_custody.sql','tables'=>array('hrm_tal_001_employee_certification_evidence')),
         'export_audit_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_export_audit_custody.sql','tables'=>array('hrm_tal_001_export_audit')),
+        'performance_cycle_definition_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_cycle_definition_custody.sql','tables'=>array('hrm_tal_001_performance_cycle_definitions')),
+        'performance_review_subject_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_review_subject_custody.sql','tables'=>array('hrm_tal_001_performance_review_subjects')),
+        'performance_assessment_evidence_custody'=>array('sql'=>'sql/upgrade_hrm_tal_001_performance_assessment_evidence_custody.sql','tables'=>array('hrm_tal_001_performance_assessment_evidence')),
     );
 }
 
@@ -23,6 +26,9 @@ function hrm_tal_001_expected_columns()
         'hrm_tal_001_certification_definitions'=>array('certification_definition_id','company_id','certification_code','certification_name','issuer_name','category_code','expiry_policy_code','default_validity_days','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
         'hrm_tal_001_employee_certification_evidence'=>array('employee_certification_evidence_id','company_id','certification_definition_id','employee_id','credential_reference_sha256','issued_on','expires_on','verification_status_code','verification_evidence_sha256','evidence_sha256','recorded_by_user_id','created_at'),
         'hrm_tal_001_export_audit'=>array('export_audit_id','company_id','actor_user_id','scope_code','subject_reference_sha256','format_code','row_count','export_sha256','created_at'),
+        'hrm_tal_001_performance_cycle_definitions'=>array('performance_cycle_definition_id','company_id','cycle_code','cycle_name','purpose_code','period_start','period_end','rating_scale_code','effective_from','effective_to','definition_sha256','created_by_user_id','created_at'),
+        'hrm_tal_001_performance_review_subjects'=>array('performance_review_subject_id','company_id','performance_cycle_definition_id','employee_id','review_type_code','review_window_start','review_window_end','subject_reference_sha256','subject_sha256','created_by_user_id','created_at'),
+        'hrm_tal_001_performance_assessment_evidence'=>array('performance_assessment_evidence_id','company_id','performance_review_subject_id','assessment_role_code','dimension_code','rating_value','comment_reference_sha256','evidence_date','evidence_sha256','recorded_by_user_id','created_at'),
     );
 }
 
@@ -35,6 +41,9 @@ function hrm_tal_001_trigger_codes()
         'hrm_tal_001_certification_definitions'=>'cd',
         'hrm_tal_001_employee_certification_evidence'=>'ce',
         'hrm_tal_001_export_audit'=>'xa',
+        'hrm_tal_001_performance_cycle_definitions'=>'pc',
+        'hrm_tal_001_performance_review_subjects'=>'pr',
+        'hrm_tal_001_performance_assessment_evidence'=>'pa',
     );
 }
 
@@ -53,6 +62,18 @@ function hrm_tal_001_expected_foreign_keys()
             'parent'=>'hrm_tal_001_certification_definitions',
             'columns'=>array('certification_definition_id','company_id'),
             'parent_columns'=>array('certification_definition_id','company_id'),
+        ),
+        'hrm_tal_001_performance_review_subjects'=>array(
+            'name'=>'fk_htal1_pr_cycle',
+            'parent'=>'hrm_tal_001_performance_cycle_definitions',
+            'columns'=>array('performance_cycle_definition_id','company_id'),
+            'parent_columns'=>array('performance_cycle_definition_id','company_id'),
+        ),
+        'hrm_tal_001_performance_assessment_evidence'=>array(
+            'name'=>'fk_htal1_pa_subject',
+            'parent'=>'hrm_tal_001_performance_review_subjects',
+            'columns'=>array('performance_review_subject_id','company_id'),
+            'parent_columns'=>array('performance_review_subject_id','company_id'),
         ),
     );
 }
@@ -204,7 +225,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -417,6 +438,8 @@ function hrm_tal_001_require_governance_contract($patch)
         && $contract['object_security_required'] === true
         && $contract['skills_foundation_enabled'] === true
         && $contract['certifications_foundation_enabled'] === true
+        && $contract['performance_foundation_enabled'] === true
+        && $contract['performance_runtime_enabled'] === false
         && $contract['recruitment_mutation_allowed'] === false
         && $contract['training_mutation_allowed'] === false
         && $contract['appraisal_mutation_allowed'] === false
