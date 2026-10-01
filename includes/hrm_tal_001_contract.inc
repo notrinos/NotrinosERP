@@ -70,6 +70,11 @@ function hrm_tal_001_governance_contract()
         'raw_identity_document_storage_allowed' => false,
         'salary_bank_tax_detail_storage_allowed' => false,
         'writer_runtime_allowed' => false,
+        'lifecycle_acceptance_required' => true,
+        'access_acceptance_required' => true,
+        'accessibility_acceptance_required' => true,
+        'migration_acceptance_required' => true,
+        'payroll_isolation_acceptance_required' => true,
         'browser_ui_allowed' => false,
     );
 }
@@ -335,6 +340,36 @@ function hrm_tal_001_confidential_case_read_only_view_allowed_for_database_versi
 function hrm_tal_001_confidential_case_browser_allowed_for_database_version($database_version)
 {
     return version_compare((string)$database_version, '1.0.979', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_lifecycle_acceptance_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.980', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_access_acceptance_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.981', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_accessibility_acceptance_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.982', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_migration_acceptance_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.983', '>=');
+}
+
+/** @param string $database_version @return bool */
+function hrm_tal_001_payroll_isolation_acceptance_required_for_database_version($database_version)
+{
+    return version_compare((string)$database_version, '1.0.984', '>=');
 }
 
 /** @return bool */

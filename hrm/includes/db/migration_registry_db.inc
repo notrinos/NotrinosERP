@@ -11,12 +11,22 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.979',
-        'active_legacy_payroll_contract'=>'1.0.509',
+        'active_database_version'=>'1.0.984',
+        'active_legacy_payroll_contract'=>'1.0.511',
         'next_backlog_item'=>'HRM-TAL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 confidential-case runtime/read/browser batch is SOURCE-VERIFIED / LOCAL-GATE-PENDING at source head 1.0.979 and active legacy-payroll source custody 1.0.509 across three high-risk dependency-ordered source-only edges: bounded append-only case/access writer lifecycle 1.0.976 -> 1.0.977; exact-object minimized read service 1.0.977 -> 1.0.978; and restricted SA_HRSETTINGS browser/navigation 1.0.978 -> 1.0.979. Physical TAL projection remains fourteen InnoDB custody tables, twenty-eight immutable denial triggers and eight restrictive same-company foreign keys. Case creation stores no raw title/narrative/content; access is explicit per user/object/purpose, revocation is append-only, retention expiry fails closed, and reads require one exact case ID. Manager/self-service inheritance, automatic manager access, list/search/export, payroll/compensation/accounting and employment-decision authority remain denied. Final owner-machine WAMP/MariaDB/browser acceptance remains required through tests/php/run_hrm_tal_001_confidential_case_runtime_mandatory_blockers_browser.php at exact source/DB 1.0.979. HRM-TAL-001 remains OPEN; overall lifecycle/accessibility/migration/payroll-isolation closure is not started. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'HRM-TAL-001 overall closure/readiness source batch is SOURCE-CLOSED / LOCAL-GATE-PENDING at source head 1.0.984 and active legacy-payroll source custody 1.0.511 across five dependency-ordered source-only acceptance edges: lifecycle 1.0.979 -> 1.0.980; access/object-security 1.0.980 -> 1.0.981; accessibility 1.0.981 -> 1.0.982; migration-integrity 1.0.982 -> 1.0.983; and payroll-isolation/source-closure 1.0.983 -> 1.0.984. Physical TAL projection remains fourteen InnoDB custody tables, twenty-eight immutable denial triggers and eight restrictive same-company foreign keys; all five migrations add no schema or seed rows. Final closure requires owner-machine WAMP/MariaDB/browser acceptance through tests/php/run_hrm_tal_001_completion_mandatory_blockers_browser.php at exact source/DB 1.0.984. Until that PASS, HRM-TAL-001 is not CLOSED. Payroll calculation/posting/payment/GL, compensation, statutory filing, autonomous employment decisions, cross-company authority and historical payroll/accounting mutation remain denied. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'hrm_tal_001_payroll_isolation_completion'=>array('previous'=>'1.0.983','version'=>'1.0.984',
+                'file'=>'sql/upgrade_hrm_tal_001_payroll_isolation_completion.php'),
+            'hrm_tal_001_migration_acceptance'=>array('previous'=>'1.0.982','version'=>'1.0.983',
+                'file'=>'sql/upgrade_hrm_tal_001_migration_acceptance.php'),
+            'hrm_tal_001_accessibility_acceptance'=>array('previous'=>'1.0.981','version'=>'1.0.982',
+                'file'=>'sql/upgrade_hrm_tal_001_accessibility_acceptance.php'),
+            'hrm_tal_001_access_acceptance'=>array('previous'=>'1.0.980','version'=>'1.0.981',
+                'file'=>'sql/upgrade_hrm_tal_001_access_acceptance.php'),
+            'hrm_tal_001_lifecycle_acceptance'=>array('previous'=>'1.0.979','version'=>'1.0.980',
+                'file'=>'sql/upgrade_hrm_tal_001_lifecycle_acceptance.php'),
             'hrm_tal_001_confidential_case_browser'=>array('previous'=>'1.0.978','version'=>'1.0.979',
                 'file'=>'sql/upgrade_hrm_tal_001_confidential_case_browser.php'),
             'hrm_tal_001_confidential_case_read_only_view'=>array('previous'=>'1.0.977','version'=>'1.0.978',

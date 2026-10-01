@@ -9,6 +9,7 @@ include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_evidence_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_view_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_workflow_db.inc');
+include_once($path_to_root.'/hrm/includes/ui/hrm_tal_001_ui.inc');
 
 page(_('Talent Skills & Certifications'));
 if (!function_exists('get_company_pref') || !hrm_tal_001_governed_admin_ui_allowed_for_database_version((string)get_company_pref('version_id', true))) {
@@ -266,19 +267,18 @@ if (function_exists('get_company_pref') && hrm_tal_001_export_browser_allowed_fo
 }
 
 if (is_array($skill_rows)) {
-    start_table(TABLESTYLE, "width='95%'"); table_header(array(_('Skill'), _('Category'), _('Evidence type'), _('Proficiency'), _('Evidence date'), _('Valid from'), _('Valid to')));
-    foreach ($skill_rows as $row) { start_row(); label_cell(htmlspecialchars((string)$row['skill_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['category_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['evidence_type_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['proficiency_value'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['evidence_date'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['valid_from'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['valid_to'], ENT_QUOTES, 'UTF-8')); end_row(); }
-    end_table(1);
+    hrm_tal_001_ui_table(_('Employee skill evidence'), array(_('Skill'), _('Category'), _('Evidence type'), _('Proficiency'), _('Evidence date'), _('Valid from'), _('Valid to')), $skill_rows, array('skill_name', 'category_code', 'evidence_type_code', 'proficiency_value', 'evidence_date', 'valid_from', 'valid_to'));
 }
 if (is_array($cert_rows)) {
-    start_table(TABLESTYLE, "width='95%'"); table_header(array(_('Certification'), _('Issuer'), _('Category'), _('Issued'), _('Expires'), _('Verification')));
-    foreach ($cert_rows as $row) { start_row(); label_cell(htmlspecialchars((string)$row['certification_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['issuer_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['category_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['issued_on'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['expires_on'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['verification_status_code'], ENT_QUOTES, 'UTF-8')); end_row(); }
-    end_table(1);
+    hrm_tal_001_ui_table(_('Employee certification evidence'), array(_('Certification'), _('Issuer'), _('Category'), _('Issued'), _('Expires'), _('Verification')), $cert_rows, array('certification_name', 'issuer_name', 'category_code', 'issued_on', 'expires_on', 'verification_status_code'));
 }
 if (is_array($performance_rows)) {
-    start_table(TABLESTYLE, "width='98%'"); table_header(array(_('Cycle'), _('Purpose'), _('Review type'), _('Review window'), _('Assessment role'), _('Dimension'), _('Rating'), _('Evidence date')));
-    foreach ($performance_rows as $row) { start_row(); label_cell(htmlspecialchars((string)$row['cycle_name'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['purpose_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['review_type_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['review_window_start'].' - '.(string)$row['review_window_end'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['assessment_role_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['dimension_code'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['rating_value'], ENT_QUOTES, 'UTF-8')); label_cell(htmlspecialchars((string)$row['evidence_date'], ENT_QUOTES, 'UTF-8')); end_row(); }
-    end_table(1);
+    $performance_table_rows = array();
+    foreach ($performance_rows as $row) {
+        $row['review_window'] = (string)$row['review_window_start'].' - '.(string)$row['review_window_end'];
+        $performance_table_rows[] = $row;
+    }
+    hrm_tal_001_ui_table(_('Employee performance evidence'), array(_('Cycle'), _('Purpose'), _('Review type'), _('Review window'), _('Assessment role'), _('Dimension'), _('Rating'), _('Evidence date')), $performance_table_rows, array('cycle_name', 'purpose_code', 'review_type_code', 'review_window', 'assessment_role_code', 'dimension_code', 'rating_value', 'evidence_date'));
 }
 end_page();
 ?>

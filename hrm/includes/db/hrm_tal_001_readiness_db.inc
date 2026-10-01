@@ -267,7 +267,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972','1.0.973','1.0.974','1.0.975','1.0.976','1.0.977','1.0.978');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958','1.0.959','1.0.960','1.0.961','1.0.962','1.0.963','1.0.964','1.0.965','1.0.966','1.0.967','1.0.968','1.0.969','1.0.970','1.0.971','1.0.972','1.0.973','1.0.974','1.0.975','1.0.976','1.0.977','1.0.978','1.0.979','1.0.980','1.0.981','1.0.982','1.0.983');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -824,6 +824,111 @@ function hrm_tal_001_require_confidential_case_browser_source($patch)
     ), 'HRM-TAL-001 confidential-case browser navigation');
 }
 
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_lifecycle_acceptance_source($patch)
+{
+    if (!hrm_tal_001_require_confidential_case_writer_source($patch)
+        || !hrm_tal_001_require_confidential_case_read_only_source($patch)
+        || !hrm_tal_001_require_performance_workflow_source($patch)
+        || !hrm_tal_001_require_performance_score_finalization_source($patch)
+        || !hrm_tal_001_require_learning_runtime_source($patch)) return false;
+    return hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
+        "'effective_history_required' => true",
+        "'purpose_limitation_required' => true",
+        "'confidential_case_automatic_manager_access_allowed' => false",
+        "'autonomous_employment_decision_allowed' => false"
+    ), 'HRM-TAL-001 lifecycle acceptance');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_access_acceptance_source($patch)
+{
+    return hrm_tal_001_require_self_service_view_source($patch)
+        && hrm_tal_001_require_manager_scope_source($patch)
+        && hrm_tal_001_require_manager_team_view_source($patch)
+        && hrm_tal_001_require_confidential_case_read_only_source($patch)
+        && hrm_tal_001_require_source_tokens($patch, 'includes/hrm_tal_001_contract.inc', array(
+            "'object_security_required' => true",
+            "'cross_company_authority_allowed' => false",
+            "'confidential_case_manager_view_enabled' => false",
+            "'confidential_case_automatic_manager_access_allowed' => false"
+        ), 'HRM-TAL-001 access acceptance');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_accessibility_acceptance_source($patch)
+{
+    $routes = array(
+        'hrm/manage/talent_skills_certifications.php'=>array('start_form()', 'TABLESTYLE2', 'text_row_ex(', 'submit_center(', 'hrm_tal_001_ui_table('),
+        'hrm/ess/talent.php'=>array('hrm_ess_002_ui_table('),
+        'hrm/ess/team_talent.php'=>array('hrm_ess_002_ui_table('),
+        'hrm/manage/talent_confidential_cases.php'=>array('start_form()', 'TABLESTYLE2', 'table_section_title(', 'text_row_ex(', 'submit_center(', '<dl class="htal1-confidential-case">', '<dt>', '<dd>')
+    );
+    foreach ($routes as $relative=>$tokens) {
+        if (!hrm_tal_001_require_source_tokens($patch, $relative, $tokens, 'HRM-TAL-001 accessible server-rendered route')) return false;
+        global $path_to_root;
+        $source = @file_get_contents($path_to_root.'/'.$relative);
+        if (!is_string($source) || stripos($source, 'javascript:') !== false || stripos($source, 'onclick=') !== false)
+            return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT, 'HRM-TAL-001 accessibility route introduced script-only interaction: '.$relative);
+    }
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/ui/hrm_tal_001_ui.inc', array(
+        'function hrm_tal_001_ui_table(', '<caption id="', '<thead><tr>', '<th scope="col">', '</thead><tbody>', 'htmlspecialchars($value, ENT_QUOTES, \'UTF-8\')'
+    ), 'HRM-TAL-001 accessible table renderer')) return false;
+    if (!hrm_tal_001_require_source_tokens($patch, 'hrm/includes/ui/hrm_ess_002_ui.inc', array(
+        'function hrm_ess_002_ui_table(', '<caption id="', '<th scope="col">', 'role="region"', 'aria-labelledby="', 'hrm_ess_002_h($h)'
+    ), 'HRM-TAL-001 accessible ESS table renderer')) return false;
+    if (!hrm_tal_001_require_source_tokens($patch, 'includes/ui/ui_input.inc', array(
+        'function text_row_ex(', "<label class='form-label' for='", "id='"
+    ), 'HRM-TAL-001 accessible labeled form controls')) return false;
+    foreach (array('hrm/includes/ui/hrm_tal_001_ui.inc', 'hrm/includes/ui/hrm_ess_002_ui.inc') as $relative) {
+        global $path_to_root;
+        $source = @file_get_contents($path_to_root.'/'.$relative);
+        if (!is_string($source) || stripos($source, 'javascript:') !== false || stripos($source, 'onclick=') !== false)
+            return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT, 'HRM-TAL-001 accessibility renderer introduced script-only interaction: '.$relative);
+    }
+    return true;
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_migration_acceptance_source($patch)
+{
+    $edges = array(
+        array('hrm_tal_001_contract_foundation','1.0.936','1.0.937'),
+        array('hrm_tal_001_confidential_case_browser','1.0.978','1.0.979'),
+        array('hrm_tal_001_lifecycle_acceptance','1.0.979','1.0.980'),
+        array('hrm_tal_001_access_acceptance','1.0.980','1.0.981'),
+        array('hrm_tal_001_accessibility_acceptance','1.0.981','1.0.982'),
+        array('hrm_tal_001_migration_acceptance','1.0.982','1.0.983')
+    );
+    foreach ($edges as $edge)
+        if (!hrm_migration_registered_edge_matches($edge[0], $edge[1], $edge[2]))
+            return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 closure migration registry chain is incomplete.');
+    foreach (hrm_tal_001_schema_groups() as $group)
+        foreach ($group['tables'] as $table)
+            if (!hrm_tal_001_require_table($patch, $table)) return false;
+    return true;
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_payroll_isolation_acceptance_source($patch)
+{
+    $contract = hrm_tal_001_governance_contract();
+    foreach (array('payroll_mutation_allowed','payroll_calculation_authority_allowed','compensation_mutation_allowed','employment_decision_authority_allowed','autonomous_employment_decision_allowed') as $key)
+        if (!isset($contract[$key]) || $contract[$key] !== false)
+            return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT, 'HRM-TAL-001 payroll-isolation contract is incomplete: '.$key);
+    global $path_to_root;
+    $files = array('hrm/includes/db/hrm_tal_001_catalog_db.inc','hrm/includes/db/hrm_tal_001_evidence_db.inc','hrm/includes/db/hrm_tal_001_performance_db.inc','hrm/includes/db/hrm_tal_001_performance_workflow_db.inc','hrm/includes/db/hrm_tal_001_learning_db.inc','hrm/includes/db/hrm_tal_001_confidential_case_db.inc');
+    $denied = array('calculate_employee_payslip(', 'calculate_employee_payslip_read_only(', 'add_gl_trans(', 'write_payroll_results(', 'pay_core_010_');
+    foreach ($files as $relative) {
+        $source = @file_get_contents($path_to_root.'/'.$relative);
+        if (!is_string($source)) return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT, 'HRM-TAL-001 payroll-isolation source missing: '.$relative);
+        foreach ($denied as $token) if (strpos($source, $token) !== false)
+            return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT, 'HRM-TAL-001 payroll-isolation breach in '.$relative.': '.$token);
+    }
+    return true;
+}
+
 function hrm_tal_001_require_governance_contract($patch)
 {
     $contract = hrm_tal_001_governance_contract();
@@ -852,6 +957,11 @@ function hrm_tal_001_require_governance_contract($patch)
         && $contract['payroll_mutation_allowed'] === false
         && $contract['employment_decision_authority_allowed'] === false
         && $contract['cross_company_authority_allowed'] === false
+        && $contract['lifecycle_acceptance_required'] === true
+        && $contract['access_acceptance_required'] === true
+        && $contract['accessibility_acceptance_required'] === true
+        && $contract['migration_acceptance_required'] === true
+        && $contract['payroll_isolation_acceptance_required'] === true
         && $contract['writer_runtime_allowed'] === false
         && $contract['browser_ui_allowed'] === false;
 }
