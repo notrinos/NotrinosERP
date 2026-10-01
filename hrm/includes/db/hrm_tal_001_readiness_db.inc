@@ -225,7 +225,7 @@ function hrm_tal_001_require_source_tokens($patch, $relative, array $tokens, $la
 /** @param object $patch @return bool */
 function hrm_tal_001_require_predecessor($patch)
 {
-    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955');
+    $allowed = array('1.0.936','1.0.937','1.0.938','1.0.939','1.0.940','1.0.941','1.0.942','1.0.943','1.0.944','1.0.945','1.0.946','1.0.947','1.0.948','1.0.949','1.0.950','1.0.951','1.0.952','1.0.953','1.0.954','1.0.955','1.0.956','1.0.957','1.0.958');
     if (!is_object($patch) || !isset($patch->previous) || !in_array((string)$patch->previous, $allowed, true))
         return hrm_migration_fail($patch, HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT, 'HRM-TAL-001 predecessor version is not accepted.');
     if (!hrm_migration_registered_edge_matches('pay_ai_001_assistive_ui','1.0.935','1.0.936'))
@@ -427,6 +427,49 @@ function hrm_tal_001_require_export_browser_source($patch)
         "name='employee_id'",
         'Export Governed Talent CSV'
     ), 'HRM-TAL-001 export browser navigation');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_cycle_writer_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_db.inc', array(
+        "user_check_access('SA_HRSETTINGS')",
+        'hrm_tal_001_performance_cycle_writer_allowed_for_database_version',
+        'hrm_tal_001_register_performance_cycle_definition',
+        'performance_cycle_effective_window_overlaps',
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_performance_cycle_definitions",
+        "array('development','performance_review','goal_review')"
+    ), 'HRM-TAL-001 performance cycle writer');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_evidence_writer_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_db.inc', array(
+        'hrm_tal_001_performance_evidence_writer_allowed_for_database_version',
+        'hrm_tal_001_register_performance_review_subject',
+        'hrm_tal_001_record_performance_assessment_evidence',
+        'performance_cycle_missing_or_cross_company',
+        'performance_subject_missing_or_cross_company',
+        'performance_raw_comment_denied',
+        "array('self','manager','reviewer')",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_performance_review_subjects",
+        "INSERT INTO '.TB_PREF.'hrm_tal_001_performance_assessment_evidence"
+    ), 'HRM-TAL-001 performance evidence writer');
+}
+
+/** @param object $patch @return bool */
+function hrm_tal_001_require_performance_read_only_source($patch)
+{
+    return hrm_tal_001_require_source_tokens($patch, 'hrm/includes/db/hrm_tal_001_performance_db.inc', array(
+        'hrm_tal_001_performance_read_only_view_allowed_for_database_version',
+        'hrm_tal_001_read_performance_for_employee',
+        'WHERE s.company_id=',
+        'AND s.employee_id=',
+        'ORDER BY s.review_window_start DESC',
+        'LEFT JOIN',
+        'hrm_tal_001_performance_assessment_evidence'
+    ), 'HRM-TAL-001 performance read-only view');
 }
 
 /** @param object $patch @return bool */
