@@ -3,10 +3,11 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.990');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.513');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.993');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.515');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
+if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -22,8 +23,10 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_publisher_profile_custody'=>true,
  'immutable_pack_candidate_custody'=>true,
  'immutable_catalog_decision_custody'=>true,
+ 'immutable_sandbox_evaluation_custody'=>true,
  'publisher_profile_writer'=>true,
  'pack_candidate_writer'=>true,
+ 'sandbox_evaluation_writer'=>true,
  'catalog_decision_writer'=>false,
  'sandbox_execution'=>false,
  'dependency_vulnerability_scanning'=>false,
@@ -127,4 +130,55 @@ function pay_eco_001_build_pack_candidate($request,$actor_id,$submitted_at,&$err
  $candidate=$request;$candidate['submitted_by']=(int)$actor_id;$candidate['submitted_at']=(string)$submitted_at;$candidate['candidate_sha256']='';$candidate['candidate_sha256']=pay_eco_001_pack_candidate_sha256($candidate);
  return pay_eco_001_validate_pack_candidate($candidate,$error)?$candidate:false;
 }
+
+/** Declarative-only sandbox profile. It cannot execute partner code or access production/runtime services. */
+function pay_eco_001_sandbox_profile(){return array(
+ 'profile_code'=>'pay-eco-declarative-conformance-v1',
+ 'declarative_only'=>true,
+ 'partner_executable_code'=>false,
+ 'network_access'=>false,
+ 'filesystem_write'=>false,
+ 'database_write'=>false,
+ 'process_spawn'=>false,
+ 'core_source_write'=>false,
+ 'production_data_access'=>false,
+ 'external_delivery'=>false
+);}
+function pay_eco_001_sandbox_profile_sha256(){return pay_eco_001_hash(pay_eco_001_sandbox_profile());}
+/** Stable source-owned conformance suite descriptor for the first bounded evaluation profile. */
+function pay_eco_001_sandbox_suite_descriptor(){return array(
+ 'suite_code'=>'pay-eco-sandbox-conformance-v1',
+ 'profile_sha256'=>pay_eco_001_sandbox_profile_sha256(),
+ 'checks'=>array('accepted_verification_report','candidate_digest_integrity','candidate_profile_binding','artifact_inventory_integrity','artifact_count_ceiling','artifact_total_size_ceiling','artifact_ordinal_integrity','artifact_path_uniqueness','artifact_evidence_classification','artifact_type_media_allowlist','normalized_safe_paths','member_size_ceiling','declarative_only_boundary')
+);}
+function pay_eco_001_sandbox_suite_sha256(){return pay_eco_001_hash(pay_eco_001_sandbox_suite_descriptor());}
+function pay_eco_001_sandbox_results(){return array('passed','failed');}
+/** Build the immutable server-owned evaluation digest payload. */
+function pay_eco_001_sandbox_evaluation_payload(array $evaluation){return array(
+ 'catalog_candidate_id'=>(int)$evaluation['catalog_candidate_id'],
+ 'sandbox_profile_sha256'=>(string)$evaluation['sandbox_profile_sha256'],
+ 'conformance_suite_sha256'=>(string)$evaluation['conformance_suite_sha256'],
+ 'manifest_sha256'=>(string)$evaluation['manifest_sha256'],
+ 'semantic_root'=>(string)$evaluation['semantic_root'],
+ 'evidence_root'=>(string)$evaluation['evidence_root'],
+ 'artifact_inventory_sha256'=>(string)$evaluation['artifact_inventory_sha256'],
+ 'result'=>(string)$evaluation['result'],
+ 'findings_sha256'=>(string)$evaluation['findings_sha256'],
+ 'evaluated_by'=>(int)$evaluation['evaluated_by'],
+ 'evaluated_at'=>(string)$evaluation['evaluated_at']
+);}
+function pay_eco_001_sandbox_evaluation_sha256(array $evaluation){return pay_eco_001_hash(pay_eco_001_sandbox_evaluation_payload($evaluation));}
+function pay_eco_001_validate_sandbox_evaluation($evaluation,&$error){
+ $error=null;$fields=array('catalog_candidate_id','sandbox_profile_sha256','conformance_suite_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','result','findings_sha256','evaluated_by','evaluated_at','evaluation_sha256');
+ if(!pay_eco_001_exact_fields($evaluation,$fields))return pay_eco_001_fail($error,'sandbox_evaluation_fields_invalid');
+ if(!pay_eco_001_positive_id($evaluation['catalog_candidate_id'])||!pay_eco_001_positive_id($evaluation['evaluated_by']))return pay_eco_001_fail($error,'sandbox_evaluation_identity_invalid');
+ foreach(array('sandbox_profile_sha256','conformance_suite_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','findings_sha256','evaluation_sha256') as $field)if(!pay_eco_001_sha($evaluation[$field]))return pay_eco_001_fail($error,'sandbox_evaluation_hash_invalid');
+ if(!in_array($evaluation['result'],pay_eco_001_sandbox_results(),true))return pay_eco_001_fail($error,'sandbox_evaluation_result_invalid');
+ if(pay_eco_001_time($evaluation['evaluated_at'])===false)return pay_eco_001_fail($error,'sandbox_evaluation_time_invalid');
+ if(!hash_equals(pay_eco_001_sandbox_evaluation_sha256($evaluation),(string)$evaluation['evaluation_sha256']))return pay_eco_001_fail($error,'sandbox_evaluation_digest_mismatch');
+ return true;
+}
+/** The caller may identify only the immutable candidate; profile, suite, result, actor and time are server-derived. */
+function pay_eco_001_validate_sandbox_evaluation_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'sandbox_evaluation_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'sandbox_evaluation_request_identity_invalid');return true;}
+
 ?>

@@ -15144,3 +15144,29 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_decisions` (
 CREATE TRIGGER `0_peco1_cd_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be updated';
 CREATE TRIGGER `0_peco1_cd_d` BEFORE DELETE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be deleted';
 -- PAY-ECO-001 END GROUP foundation
+
+-- PAY-ECO-001 GROUP sandbox_evaluation
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_sandbox_evaluations` (
+  `sandbox_evaluation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL,
+  `sandbox_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `conformance_suite_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `manifest_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_inventory_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `findings_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evaluated_by` bigint(20) unsigned NOT NULL,
+  `evaluated_at` datetime NOT NULL,
+  `evaluation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`sandbox_evaluation_id`),
+  UNIQUE KEY `uq_peco1_se_candidate_profile` (`catalog_candidate_id`,`sandbox_profile_sha256`),
+  UNIQUE KEY `uq_peco1_se_sha` (`evaluation_sha256`),
+  KEY `ix_peco1_se_result` (`result`,`evaluated_at`),
+  CONSTRAINT `fk_peco1_se_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_se_u` BEFORE UPDATE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be updated';
+CREATE TRIGGER `0_peco1_se_d` BEFORE DELETE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be deleted';
+-- PAY-ECO-001 END GROUP sandbox_evaluation
