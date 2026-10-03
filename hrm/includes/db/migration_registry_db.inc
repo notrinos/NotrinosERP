@@ -11,12 +11,18 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.984',
-        'active_legacy_payroll_contract'=>'1.0.511',
-        'next_backlog_item'=>'HRM-TAL-001',
+        'active_database_version'=>'1.0.987',
+        'active_legacy_payroll_contract'=>'1.0.512',
+        'next_backlog_item'=>'PAY-ECO-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'HRM-TAL-001 overall closure/readiness source batch is SOURCE-CLOSED / LOCAL-GATE-PENDING at source head 1.0.984 and active legacy-payroll source custody 1.0.511 across five dependency-ordered source-only acceptance edges: lifecycle 1.0.979 -> 1.0.980; access/object-security 1.0.980 -> 1.0.981; accessibility 1.0.981 -> 1.0.982; migration-integrity 1.0.982 -> 1.0.983; and payroll-isolation/source-closure 1.0.983 -> 1.0.984. Physical TAL projection remains fourteen InnoDB custody tables, twenty-eight immutable denial triggers and eight restrictive same-company foreign keys; all five migrations add no schema or seed rows. Final closure requires owner-machine WAMP/MariaDB/browser acceptance through tests/php/run_hrm_tal_001_completion_mandatory_blockers_browser.php at exact source/DB 1.0.984. Until that PASS, HRM-TAL-001 is not CLOSED. Payroll calculation/posting/payment/GL, compensation, statutory filing, autonomous employment decisions, cross-company authority and historical payroll/accounting mutation remain denied. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-ECO-001 foundation batch is SOURCE-VERIFIED / LOCAL ACCEPTANCE PASS (FOUNDATION ONLY) at source head 1.0.987 and active legacy-payroll source custody 1.0.512. Owner-machine localhost WAMP/MariaDB/browser runner tests/php/run_pay_eco_001_foundation_mandatory_blockers_browser.php, build pay-eco-001-foundation-v1-20261003, passed at exact source/DB 1.0.987. It confirmed three zero-seed InnoDB custody tables, six immutable denial triggers, four restrictive foreign keys, PAY-ECO predecessor custody 15/0, contract 27/0, schema 42/0, security 27/0, migration chain 18/0, PAY-CTRY-005 217/0, PAY-CTRY-006 192/0, PAY-CTRY-007 contract 26/0, PAY-CTRY-007 migration chain 64/0, central registry 2368/0 and legacy-payroll contract PASS. The dependency-ordered foundation edges bind the two proof-pack candidates plus existing country-pack certification/catalog lifecycle controls, establish a fail-closed ecosystem authority ceiling, and add three zero-seed immutable custody tables with six denial triggers and four restrictive foreign keys. Marketplace publication, automatic catalog admission, pack installation/company activation, external network delivery, publisher self-verification, certification self-claim, payroll/posting/payment/GL/statutory filing authority, core source writes and historical payroll/accounting mutation remain denied. PAY-ECO-001 remains OPEN for successor capability work: partner onboarding writer, sandbox execution/evaluation, dependency/vulnerability scanning, signed/reproducible artifact admission, catalog publication/runtime and suspension/revocation propagation remain future slices. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
         'edges'=>array(
+            'pay_eco_001_schema_foundation'=>array('previous'=>'1.0.986','version'=>'1.0.987',
+                'file'=>'sql/upgrade_pay_eco_001_schema_foundation.php'),
+            'pay_eco_001_authority_contract'=>array('previous'=>'1.0.985','version'=>'1.0.986',
+                'file'=>'sql/upgrade_pay_eco_001_authority_contract.php'),
+            'pay_eco_001_dependency_review'=>array('previous'=>'1.0.984','version'=>'1.0.985',
+                'file'=>'sql/upgrade_pay_eco_001_dependency_review.php'),
             'hrm_tal_001_payroll_isolation_completion'=>array('previous'=>'1.0.983','version'=>'1.0.984',
                 'file'=>'sql/upgrade_hrm_tal_001_payroll_isolation_completion.php'),
             'hrm_tal_001_migration_acceptance'=>array('previous'=>'1.0.982','version'=>'1.0.983',

@@ -15432,3 +15432,75 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_confidential_case_access_grants` (
 CREATE TRIGGER `0_htal1_cg_u` BEFORE UPDATE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be updated';
 CREATE TRIGGER `0_htal1_cg_d` BEFORE DELETE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be deleted';
 -- HRM-TAL-001 END GROUP confidential_case_access_custody
+
+-- PAY-ECO-001 GROUP foundation
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_publisher_profiles` (
+  `publisher_profile_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `publisher_id` bigint(20) unsigned NOT NULL,
+  `profile_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `identity_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `support_policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `security_contact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `terms_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `requested_by` bigint(20) unsigned NOT NULL,
+  `requested_at` datetime NOT NULL,
+  `profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`publisher_profile_id`),
+  UNIQUE KEY `uq_peco1_pp_code` (`profile_code`),
+  UNIQUE KEY `uq_peco1_pp_sha` (`profile_sha256`),
+  KEY `ix_peco1_pp_pub` (`publisher_id`,`requested_at`),
+  CONSTRAINT `fk_peco1_pp_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_pp_u` BEFORE UPDATE ON `0_pay_eco_001_publisher_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_publisher_profiles row cannot be updated';
+CREATE TRIGGER `0_peco1_pp_d` BEFORE DELETE ON `0_pay_eco_001_publisher_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_publisher_profiles row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_pack_candidates` (
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `publisher_profile_id` bigint(20) unsigned NOT NULL,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `candidate_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `compatibility_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `certification_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `support_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `vulnerability_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `revocation_state_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `sandbox_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `submitted_by` bigint(20) unsigned NOT NULL,
+  `submitted_at` datetime NOT NULL,
+  `candidate_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_candidate_id`),
+  UNIQUE KEY `uq_peco1_pc_code` (`candidate_code`),
+  UNIQUE KEY `uq_peco1_pc_sha` (`candidate_sha256`),
+  UNIQUE KEY `uq_peco1_pc_profile_pack` (`publisher_profile_id`,`pack_version_id`),
+  KEY `ix_peco1_pc_pack` (`pack_version_id`,`submitted_at`),
+  CONSTRAINT `fk_peco1_pc_profile` FOREIGN KEY (`publisher_profile_id`) REFERENCES `0_pay_eco_001_publisher_profiles` (`publisher_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_pc_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_pc_u` BEFORE UPDATE ON `0_pay_eco_001_pack_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_pack_candidates row cannot be updated';
+CREATE TRIGGER `0_peco1_pc_d` BEFORE DELETE ON `0_pay_eco_001_pack_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_pack_candidates row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_decisions` (
+  `catalog_decision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL,
+  `decision` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `trust_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `certification_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `compatibility_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `vulnerability_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `decision_reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `maker_id` bigint(20) unsigned NOT NULL,
+  `checker_id` bigint(20) unsigned NOT NULL,
+  `decided_at` datetime NOT NULL,
+  `decision_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_decision_id`),
+  UNIQUE KEY `uq_peco1_cd_candidate` (`catalog_candidate_id`),
+  UNIQUE KEY `uq_peco1_cd_sha` (`decision_sha256`),
+  KEY `ix_peco1_cd_checker` (`checker_id`,`decided_at`),
+  CONSTRAINT `fk_peco1_cd_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_cd_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be updated';
+CREATE TRIGGER `0_peco1_cd_d` BEFORE DELETE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be deleted';
+-- PAY-ECO-001 END GROUP foundation
