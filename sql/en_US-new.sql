@@ -15272,3 +15272,42 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_correlations` (
 CREATE TRIGGER `0_peco1_vc_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be updated';
 CREATE TRIGGER `0_peco1_vc_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be deleted';
 -- PAY-ECO-001 END GROUP vulnerability_intelligence
+-- PAY-ECO-001 GROUP artifact_admission
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_artifact_admissions` (
+  `artifact_admission_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL,
+  `verification_report_id` bigint(20) unsigned NOT NULL,
+  `sandbox_evaluation_id` bigint(20) unsigned NOT NULL,
+  `dependency_scan_id` bigint(20) unsigned NOT NULL,
+  `vulnerability_correlation_id` bigint(20) unsigned NOT NULL,
+  `admission_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `manifest_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `artifact_inventory_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reproducibility_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `signature_attestation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `trust_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `admission_findings_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `admitted_by` smallint(6) unsigned NOT NULL,
+  `admitted_at` datetime NOT NULL,
+  `admission_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`artifact_admission_id`),
+  UNIQUE KEY `uq_peco1_aa_candidate_evidence` (`catalog_candidate_id`,`verification_report_id`,`vulnerability_correlation_id`),
+  UNIQUE KEY `uq_peco1_aa_sha` (`admission_sha256`),
+  KEY `ix_peco1_aa_result` (`result`,`admitted_at`),
+  KEY `ix_peco1_aa_report` (`verification_report_id`),
+  KEY `ix_peco1_aa_sandbox` (`sandbox_evaluation_id`),
+  KEY `ix_peco1_aa_scan` (`dependency_scan_id`),
+  KEY `ix_peco1_aa_correlation` (`vulnerability_correlation_id`),
+  CONSTRAINT `fk_peco1_aa_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_aa_report` FOREIGN KEY (`verification_report_id`) REFERENCES `0_pay_ctry_verification_reports` (`verification_report_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_aa_sandbox` FOREIGN KEY (`sandbox_evaluation_id`) REFERENCES `0_pay_eco_001_sandbox_evaluations` (`sandbox_evaluation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_aa_scan` FOREIGN KEY (`dependency_scan_id`) REFERENCES `0_pay_eco_001_dependency_scans` (`dependency_scan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_aa_correlation` FOREIGN KEY (`vulnerability_correlation_id`) REFERENCES `0_pay_eco_001_vulnerability_correlations` (`vulnerability_correlation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_aa_u` BEFORE UPDATE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be updated';
+CREATE TRIGGER `0_peco1_aa_d` BEFORE DELETE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be deleted';
+-- PAY-ECO-001 END GROUP artifact_admission

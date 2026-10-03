@@ -3,13 +3,14 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.999');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.517');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1002');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.518');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION')) define('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION')) define('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION')) define('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -43,9 +44,10 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_vulnerability_correlation_custody'=>true,
  'vulnerability_intelligence_ingest_writer'=>true,
  'dependency_vulnerability_scanning'=>true,
+ 'immutable_artifact_admission_custody'=>true,
+ 'signed_reproducible_artifact_admission'=>true,
  'catalog_decision_writer'=>false,
  'sandbox_execution'=>false,
- 'signed_reproducible_artifact_admission'=>false,
  'marketplace_publication'=>false,
  'automatic_catalog_admission'=>false,
  'pack_installation'=>false,
@@ -314,6 +316,61 @@ function pay_eco_001_vulnerability_correlation_payload(array $c){return array(
 function pay_eco_001_vulnerability_correlation_sha256(array $c){return pay_eco_001_hash(pay_eco_001_vulnerability_correlation_payload($c));}
 function pay_eco_001_validate_vulnerability_correlation($c,&$error){$error=null;$fields=array('dependency_scan_id','vulnerability_snapshot_id','subject_inventory_sha256','matched_advisories_sha256','result','max_severity','findings_sha256','correlated_by','correlated_at','correlation_sha256');if(!pay_eco_001_exact_fields($c,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_fields_invalid');foreach(array('dependency_scan_id','vulnerability_snapshot_id','correlated_by') as $field)if(!pay_eco_001_positive_id($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_identity_invalid');foreach(array('subject_inventory_sha256','matched_advisories_sha256','findings_sha256','correlation_sha256') as $field)if(!pay_eco_001_sha($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_hash_invalid');if(!in_array($c['result'],pay_eco_001_vulnerability_correlation_results(),true))return pay_eco_001_fail($error,'vulnerability_correlation_result_invalid');if($c['result']==='passed'&&$c['max_severity']!=='none')return pay_eco_001_fail($error,'vulnerability_correlation_pass_severity_invalid');if($c['result']==='failed'&&!in_array($c['max_severity'],pay_eco_001_vulnerability_severities(),true))return pay_eco_001_fail($error,'vulnerability_correlation_fail_severity_invalid');if(pay_eco_001_time($c['correlated_at'])===false)return pay_eco_001_fail($error,'vulnerability_correlation_time_invalid');if(!hash_equals(pay_eco_001_vulnerability_correlation_sha256($c),(string)$c['correlation_sha256']))return pay_eco_001_fail($error,'vulnerability_correlation_digest_mismatch');return true;}
 function pay_eco_001_validate_vulnerability_correlation_request($request,&$error){$error=null;$fields=array('dependency_scan_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_request_fields_invalid');if(!pay_eco_001_positive_id($request['dependency_scan_id']))return pay_eco_001_fail($error,'vulnerability_correlation_request_identity_invalid');return true;}
+
+
+/** Signed/reproducible artifact-admission policy. Admission is evidence-only and never publishes or installs a pack. */
+function pay_eco_001_artifact_admission_profile(){return array(
+ 'profile_code'=>'pay-eco-artifact-admission-v1',
+ 'trusted_operator_permission'=>PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION,
+ 'accepted_verification_required'=>true,
+ 'signature_lineage_required'=>true,
+ 'passed_sandbox_required'=>true,
+ 'dependency_integrity_required'=>true,
+ 'passed_authoritative_vulnerability_correlation_required'=>true,
+ 'current_nonexpired_vulnerability_snapshot_required'=>true,
+ 'exact_manifest_roots_required'=>true,
+ 'exact_artifact_inventory_required'=>true,
+ 'reproducibility_digest_required'=>true,
+ 'effective_publisher_required'=>true,
+ 'publisher_not_revoked_required'=>true,
+ 'catalog_publication_authority'=>false,
+ 'installation_authority'=>false,
+ 'company_activation_authority'=>false,
+ 'network_authority'=>false
+);}
+function pay_eco_001_artifact_admission_profile_sha256(){return pay_eco_001_hash(pay_eco_001_artifact_admission_profile());}
+function pay_eco_001_artifact_admission_results(){return array('admitted');}
+function pay_eco_001_artifact_admission_payload(array $a){return array(
+ 'catalog_candidate_id'=>(int)$a['catalog_candidate_id'],
+ 'verification_report_id'=>(int)$a['verification_report_id'],
+ 'sandbox_evaluation_id'=>(int)$a['sandbox_evaluation_id'],
+ 'dependency_scan_id'=>(int)$a['dependency_scan_id'],
+ 'vulnerability_correlation_id'=>(int)$a['vulnerability_correlation_id'],
+ 'admission_profile_sha256'=>(string)$a['admission_profile_sha256'],
+ 'manifest_sha256'=>(string)$a['manifest_sha256'],
+ 'semantic_root'=>(string)$a['semantic_root'],
+ 'evidence_root'=>(string)$a['evidence_root'],
+ 'artifact_inventory_sha256'=>(string)$a['artifact_inventory_sha256'],
+ 'reproducibility_sha256'=>(string)$a['reproducibility_sha256'],
+ 'signature_attestation_sha256'=>(string)$a['signature_attestation_sha256'],
+ 'trust_snapshot_sha256'=>(string)$a['trust_snapshot_sha256'],
+ 'result'=>(string)$a['result'],
+ 'admission_findings_sha256'=>(string)$a['admission_findings_sha256'],
+ 'admitted_by'=>(int)$a['admitted_by'],
+ 'admitted_at'=>(string)$a['admitted_at']
+);}
+function pay_eco_001_artifact_admission_sha256(array $a){return pay_eco_001_hash(pay_eco_001_artifact_admission_payload($a));}
+function pay_eco_001_validate_artifact_admission($a,&$error){
+ $error=null;$fields=array('catalog_candidate_id','verification_report_id','sandbox_evaluation_id','dependency_scan_id','vulnerability_correlation_id','admission_profile_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','reproducibility_sha256','signature_attestation_sha256','trust_snapshot_sha256','result','admission_findings_sha256','admitted_by','admitted_at','admission_sha256');
+ if(!pay_eco_001_exact_fields($a,$fields))return pay_eco_001_fail($error,'artifact_admission_fields_invalid');
+ foreach(array('catalog_candidate_id','verification_report_id','sandbox_evaluation_id','dependency_scan_id','vulnerability_correlation_id','admitted_by') as $field)if(!pay_eco_001_positive_id($a[$field]))return pay_eco_001_fail($error,'artifact_admission_identity_invalid');
+ foreach(array('admission_profile_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','reproducibility_sha256','signature_attestation_sha256','trust_snapshot_sha256','admission_findings_sha256','admission_sha256') as $field)if(!pay_eco_001_sha($a[$field]))return pay_eco_001_fail($error,'artifact_admission_hash_invalid');
+ if(!hash_equals(pay_eco_001_artifact_admission_profile_sha256(),(string)$a['admission_profile_sha256']))return pay_eco_001_fail($error,'artifact_admission_profile_invalid');
+ if(!in_array($a['result'],pay_eco_001_artifact_admission_results(),true))return pay_eco_001_fail($error,'artifact_admission_result_invalid');
+ if(pay_eco_001_time($a['admitted_at'])===false)return pay_eco_001_fail($error,'artifact_admission_time_invalid');
+ if(!hash_equals(pay_eco_001_artifact_admission_sha256($a),(string)$a['admission_sha256']))return pay_eco_001_fail($error,'artifact_admission_digest_mismatch');return true;
+}
+function pay_eco_001_validate_artifact_admission_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'artifact_admission_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'artifact_admission_request_identity_invalid');return true;}
 
 
 ?>
