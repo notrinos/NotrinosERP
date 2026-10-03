@@ -3,16 +3,24 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.993');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.515');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.996');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.516');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION')) define('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
 function pay_eco_001_sha($value){return pay_ctry_001_sha($value);}
 function pay_eco_001_hash($value){return hash('sha256',pay_eco_001_canonical_json($value));}
+/** Return the publisher validity state at a server-derived scan time. */
+function pay_eco_001_dependency_publisher_validity_state($valid_from,$valid_to,$now_epoch){
+ if(!is_string($valid_from)||$valid_from===''||($valid_to!==null&&!is_string($valid_to))||!is_numeric($now_epoch)||(int)$now_epoch<=0)return 'invalid';
+ $from=strtotime($valid_from.' UTC');$to=$valid_to===null?null:strtotime($valid_to.' UTC');$now=(int)$now_epoch;
+ if($from===false||($valid_to!==null&&$to===false))return 'invalid';
+ return $from<=$now&&($to===null||$to>=$now)?'effective':'not_effective';
+}
 function pay_eco_001_time($value){return pay_ctry_001_iso_utc_epoch($value);}
 function pay_eco_001_token($value,$max=96){return is_string($value)&&strlen($value)>0&&strlen($value)<=$max&&preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]*$/D',$value)===1;}
 function pay_eco_001_exact_fields($value,$fields){if(!is_array($value)||count($value)!==count($fields))return false;foreach($fields as $field)if(!array_key_exists($field,$value))return false;return true;}
@@ -27,6 +35,8 @@ function pay_eco_001_authority_contract(){return array(
  'publisher_profile_writer'=>true,
  'pack_candidate_writer'=>true,
  'sandbox_evaluation_writer'=>true,
+ 'immutable_dependency_scan_custody'=>true,
+ 'dependency_integrity_scanner'=>true,
  'catalog_decision_writer'=>false,
  'sandbox_execution'=>false,
  'dependency_vulnerability_scanning'=>false,
@@ -180,5 +190,59 @@ function pay_eco_001_validate_sandbox_evaluation($evaluation,&$error){
 }
 /** The caller may identify only the immutable candidate; profile, suite, result, actor and time are server-derived. */
 function pay_eco_001_validate_sandbox_evaluation_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'sandbox_evaluation_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'sandbox_evaluation_request_identity_invalid');return true;}
+
+/** Dependency-integrity scan profile. Vulnerability intelligence correlation remains explicitly unconfigured. */
+function pay_eco_001_dependency_scan_profile(){return array(
+ 'profile_code'=>'pay-eco-dependency-integrity-v1',
+ 'accepted_verification_required'=>true,
+ 'passed_sandbox_required'=>true,
+ 'dependency_lock_required'=>true,
+ 'resolved_dependency_verification_required'=>true,
+ 'resolved_dependency_revocation_check'=>true,
+ 'network_advisory_lookup'=>false,
+ 'publisher_vulnerability_claim_authoritative'=>false,
+ 'vulnerability_intelligence_configured'=>false,
+ 'artifact_admission_authority'=>false
+);}
+function pay_eco_001_dependency_scan_profile_sha256(){return pay_eco_001_hash(pay_eco_001_dependency_scan_profile());}
+function pay_eco_001_dependency_scan_suite_descriptor(){return array(
+ 'suite_code'=>'pay-eco-dependency-integrity-v1',
+ 'profile_sha256'=>pay_eco_001_dependency_scan_profile_sha256(),
+ 'checks'=>array('accepted_candidate_integrity','accepted_verification_report','passed_sandbox_evaluation','dependency_lock_integrity','dependency_member_ordinal_integrity','resolved_pack_identity','resolved_pack_accepted_verification','resolved_publisher_effective','resolved_publisher_not_revoked','publisher_vulnerability_evidence_bound','vulnerability_intelligence_unconfigured_fail_closed')
+);}
+function pay_eco_001_dependency_scan_suite_sha256(){return pay_eco_001_hash(pay_eco_001_dependency_scan_suite_descriptor());}
+function pay_eco_001_dependency_results(){return array('passed','failed');}
+function pay_eco_001_vulnerability_results(){return array('incomplete');}
+function pay_eco_001_dependency_scan_results(){return array('incomplete','failed');}
+function pay_eco_001_dependency_scan_payload(array $scan){return array(
+ 'catalog_candidate_id'=>(int)$scan['catalog_candidate_id'],
+ 'sandbox_evaluation_id'=>(int)$scan['sandbox_evaluation_id'],
+ 'dependency_lock_id'=>(int)$scan['dependency_lock_id'],
+ 'scan_profile_sha256'=>(string)$scan['scan_profile_sha256'],
+ 'scan_suite_sha256'=>(string)$scan['scan_suite_sha256'],
+ 'dependency_lock_sha256'=>(string)$scan['dependency_lock_sha256'],
+ 'dependency_inventory_sha256'=>(string)$scan['dependency_inventory_sha256'],
+ 'dependency_trust_snapshot_sha256'=>(string)$scan['dependency_trust_snapshot_sha256'],
+ 'publisher_vulnerability_evidence_sha256'=>(string)$scan['publisher_vulnerability_evidence_sha256'],
+ 'dependency_result'=>(string)$scan['dependency_result'],
+ 'vulnerability_result'=>(string)$scan['vulnerability_result'],
+ 'result'=>(string)$scan['result'],
+ 'findings_sha256'=>(string)$scan['findings_sha256'],
+ 'scanned_by'=>(int)$scan['scanned_by'],
+ 'scanned_at'=>(string)$scan['scanned_at']
+);}
+function pay_eco_001_dependency_scan_sha256(array $scan){return pay_eco_001_hash(pay_eco_001_dependency_scan_payload($scan));}
+function pay_eco_001_validate_dependency_scan($scan,&$error){
+ $error=null;$fields=array('catalog_candidate_id','sandbox_evaluation_id','dependency_lock_id','scan_profile_sha256','scan_suite_sha256','dependency_lock_sha256','dependency_inventory_sha256','dependency_trust_snapshot_sha256','publisher_vulnerability_evidence_sha256','dependency_result','vulnerability_result','result','findings_sha256','scanned_by','scanned_at','scan_sha256');
+ if(!pay_eco_001_exact_fields($scan,$fields))return pay_eco_001_fail($error,'dependency_scan_fields_invalid');
+ foreach(array('catalog_candidate_id','sandbox_evaluation_id','dependency_lock_id','scanned_by') as $field)if(!pay_eco_001_positive_id($scan[$field]))return pay_eco_001_fail($error,'dependency_scan_identity_invalid');
+ foreach(array('scan_profile_sha256','scan_suite_sha256','dependency_lock_sha256','dependency_inventory_sha256','dependency_trust_snapshot_sha256','publisher_vulnerability_evidence_sha256','findings_sha256','scan_sha256') as $field)if(!pay_eco_001_sha($scan[$field]))return pay_eco_001_fail($error,'dependency_scan_hash_invalid');
+ if(!in_array($scan['dependency_result'],pay_eco_001_dependency_results(),true)||!in_array($scan['vulnerability_result'],pay_eco_001_vulnerability_results(),true)||!in_array($scan['result'],pay_eco_001_dependency_scan_results(),true))return pay_eco_001_fail($error,'dependency_scan_result_invalid');
+ if($scan['dependency_result']==='passed'&&$scan['result']!=='incomplete')return pay_eco_001_fail($error,'dependency_scan_vulnerability_fail_closed');
+ if($scan['dependency_result']==='failed'&&$scan['result']!=='failed')return pay_eco_001_fail($error,'dependency_scan_failure_state_invalid');
+ if(pay_eco_001_time($scan['scanned_at'])===false)return pay_eco_001_fail($error,'dependency_scan_time_invalid');
+ if(!hash_equals(pay_eco_001_dependency_scan_sha256($scan),(string)$scan['scan_sha256']))return pay_eco_001_fail($error,'dependency_scan_digest_mismatch');return true;
+}
+function pay_eco_001_validate_dependency_scan_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'dependency_scan_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'dependency_scan_request_identity_invalid');return true;}
 
 ?>

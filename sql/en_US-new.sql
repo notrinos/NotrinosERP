@@ -15170,3 +15170,36 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_sandbox_evaluations` (
 CREATE TRIGGER `0_peco1_se_u` BEFORE UPDATE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be updated';
 CREATE TRIGGER `0_peco1_se_d` BEFORE DELETE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be deleted';
 -- PAY-ECO-001 END GROUP sandbox_evaluation
+-- PAY-ECO-001 GROUP dependency_scan
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_dependency_scans` (
+  `dependency_scan_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL,
+  `sandbox_evaluation_id` bigint(20) unsigned NOT NULL,
+  `dependency_lock_id` bigint(20) unsigned NOT NULL,
+  `scan_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `scan_suite_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dependency_lock_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dependency_inventory_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dependency_trust_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `publisher_vulnerability_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `dependency_result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `vulnerability_result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `findings_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `scanned_by` smallint(6) unsigned NOT NULL,
+  `scanned_at` datetime NOT NULL,
+  `scan_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`dependency_scan_id`),
+  UNIQUE KEY `uq_peco1_ds_candidate_snapshot` (`catalog_candidate_id`,`scan_profile_sha256`,`dependency_trust_snapshot_sha256`),
+  UNIQUE KEY `uq_peco1_ds_sha` (`scan_sha256`),
+  KEY `ix_peco1_ds_result` (`result`,`scanned_at`),
+  KEY `ix_peco1_ds_sandbox` (`sandbox_evaluation_id`),
+  KEY `ix_peco1_ds_lock` (`dependency_lock_id`),
+  CONSTRAINT `fk_peco1_ds_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_ds_sandbox` FOREIGN KEY (`sandbox_evaluation_id`) REFERENCES `0_pay_eco_001_sandbox_evaluations` (`sandbox_evaluation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_ds_lock` FOREIGN KEY (`dependency_lock_id`) REFERENCES `0_pay_ctry_dependency_locks` (`dependency_lock_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_ds_u` BEFORE UPDATE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be updated';
+CREATE TRIGGER `0_peco1_ds_d` BEFORE DELETE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be deleted';
+-- PAY-ECO-001 END GROUP dependency_scan
