@@ -3,12 +3,13 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.996');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.516');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.999');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.517');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION')) define('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION')) define('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -37,9 +38,13 @@ function pay_eco_001_authority_contract(){return array(
  'sandbox_evaluation_writer'=>true,
  'immutable_dependency_scan_custody'=>true,
  'dependency_integrity_scanner'=>true,
+ 'immutable_vulnerability_snapshot_custody'=>true,
+ 'immutable_vulnerability_advisory_custody'=>true,
+ 'immutable_vulnerability_correlation_custody'=>true,
+ 'vulnerability_intelligence_ingest_writer'=>true,
+ 'dependency_vulnerability_scanning'=>true,
  'catalog_decision_writer'=>false,
  'sandbox_execution'=>false,
- 'dependency_vulnerability_scanning'=>false,
  'signed_reproducible_artifact_admission'=>false,
  'marketplace_publication'=>false,
  'automatic_catalog_admission'=>false,
@@ -244,5 +249,71 @@ function pay_eco_001_validate_dependency_scan($scan,&$error){
  if(!hash_equals(pay_eco_001_dependency_scan_sha256($scan),(string)$scan['scan_sha256']))return pay_eco_001_fail($error,'dependency_scan_digest_mismatch');return true;
 }
 function pay_eco_001_validate_dependency_scan_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'dependency_scan_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'dependency_scan_request_identity_invalid');return true;}
+
+
+/** Offline authoritative vulnerability-intelligence profile. No network or artifact-admission authority is granted. */
+function pay_eco_001_vulnerability_intelligence_profile(){return array(
+ 'profile_code'=>'pay-eco-vulnerability-intelligence-v1',
+ 'trusted_operator_permission'=>PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION,
+ 'accepted_source_authority_sha256'=>pay_eco_001_hash(array('authority_code'=>'pay-eco-vulnerability-authority-v1','custody'=>'operator-validated-offline-snapshot')),
+ 'offline_snapshot_ingestion'=>true,
+ 'network_advisory_lookup'=>false,
+ 'publisher_claim_authoritative'=>false,
+ 'exact_package_version_correlation'=>true,
+ 'max_advisories'=>256,
+ 'snapshot_expiry_required'=>true,
+ 'artifact_admission_authority'=>false,
+ 'publication_authority'=>false,
+ 'installation_authority'=>false
+);}
+function pay_eco_001_vulnerability_intelligence_profile_sha256(){return pay_eco_001_hash(pay_eco_001_vulnerability_intelligence_profile());}
+function pay_eco_001_vulnerability_severities(){return array('low','medium','high','critical');}
+function pay_eco_001_vulnerability_advisory_payload(array $a){return array(
+ 'advisory_code'=>(string)$a['advisory_code'],'package_code'=>(string)$a['package_code'],'affected_version'=>(string)$a['affected_version'],
+ 'severity'=>(string)$a['severity'],'advisory_evidence_sha256'=>(string)$a['advisory_evidence_sha256']
+);}
+function pay_eco_001_vulnerability_advisory_sha256(array $a){return pay_eco_001_hash(pay_eco_001_vulnerability_advisory_payload($a));}
+function pay_eco_001_validate_vulnerability_advisory($a,&$error){
+ $error=null;$fields=array('advisory_code','package_code','affected_version','severity','advisory_evidence_sha256','advisory_sha256');
+ if(!pay_eco_001_exact_fields($a,$fields))return pay_eco_001_fail($error,'vulnerability_advisory_fields_invalid');
+ foreach(array('advisory_code','package_code','affected_version') as $field)if(!pay_eco_001_token($a[$field],96))return pay_eco_001_fail($error,'vulnerability_advisory_identity_invalid');
+ if(!in_array($a['severity'],pay_eco_001_vulnerability_severities(),true))return pay_eco_001_fail($error,'vulnerability_advisory_severity_invalid');
+ foreach(array('advisory_evidence_sha256','advisory_sha256') as $field)if(!pay_eco_001_sha($a[$field]))return pay_eco_001_fail($error,'vulnerability_advisory_hash_invalid');
+ if(!hash_equals(pay_eco_001_vulnerability_advisory_sha256($a),(string)$a['advisory_sha256']))return pay_eco_001_fail($error,'vulnerability_advisory_digest_mismatch');return true;
+}
+function pay_eco_001_vulnerability_snapshot_payload(array $s){return array(
+ 'source_code'=>(string)$s['source_code'],'snapshot_code'=>(string)$s['snapshot_code'],'source_authority_sha256'=>(string)$s['source_authority_sha256'],
+ 'profile_sha256'=>(string)$s['profile_sha256'],'issued_at'=>(string)$s['issued_at'],'expires_at'=>(string)$s['expires_at'],
+ 'advisory_count'=>(int)$s['advisory_count'],'advisories_root'=>(string)$s['advisories_root']
+);}
+function pay_eco_001_vulnerability_snapshot_sha256(array $s){return pay_eco_001_hash(pay_eco_001_vulnerability_snapshot_payload($s));}
+function pay_eco_001_validate_vulnerability_snapshot($s,&$error){
+ $error=null;$fields=array('source_code','snapshot_code','source_authority_sha256','profile_sha256','issued_at','expires_at','advisory_count','advisories_root','snapshot_sha256','ingested_by','ingested_at');
+ if(!pay_eco_001_exact_fields($s,$fields))return pay_eco_001_fail($error,'vulnerability_snapshot_fields_invalid');
+ if(!pay_eco_001_token($s['source_code'],64)||!pay_eco_001_token($s['snapshot_code'],96)||!pay_eco_001_positive_id($s['ingested_by']))return pay_eco_001_fail($error,'vulnerability_snapshot_identity_invalid');
+ foreach(array('source_authority_sha256','profile_sha256','advisories_root','snapshot_sha256') as $field)if(!pay_eco_001_sha($s[$field]))return pay_eco_001_fail($error,'vulnerability_snapshot_hash_invalid');
+ $profile=pay_eco_001_vulnerability_intelligence_profile();if(!hash_equals($profile['accepted_source_authority_sha256'],(string)$s['source_authority_sha256'])||!hash_equals(pay_eco_001_vulnerability_intelligence_profile_sha256(),(string)$s['profile_sha256']))return pay_eco_001_fail($error,'vulnerability_snapshot_authority_invalid');
+ $issued=pay_eco_001_time($s['issued_at']);$expires=pay_eco_001_time($s['expires_at']);$ingested=pay_eco_001_time($s['ingested_at']);if($issued===false||$expires===false||$ingested===false||$expires<=$issued||$ingested<$issued)return pay_eco_001_fail($error,'vulnerability_snapshot_time_invalid');
+ if(!is_int($s['advisory_count'])&& !ctype_digit((string)$s['advisory_count']))return pay_eco_001_fail($error,'vulnerability_snapshot_count_invalid');$count=(int)$s['advisory_count'];if($count<0||$count>(int)$profile['max_advisories'])return pay_eco_001_fail($error,'vulnerability_snapshot_count_invalid');
+ if(!hash_equals(pay_eco_001_vulnerability_snapshot_sha256($s),(string)$s['snapshot_sha256']))return pay_eco_001_fail($error,'vulnerability_snapshot_digest_mismatch');return true;
+}
+function pay_eco_001_validate_vulnerability_snapshot_request($request,&$error){
+ $error=null;$fields=array('source_code','snapshot_code','source_authority_sha256','issued_at','expires_at','advisories');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'vulnerability_snapshot_request_fields_invalid');
+ if(!pay_eco_001_token($request['source_code'],64)||!pay_eco_001_token($request['snapshot_code'],96)||!pay_eco_001_sha($request['source_authority_sha256'])||!is_array($request['advisories']))return pay_eco_001_fail($error,'vulnerability_snapshot_request_invalid');
+ $profile=pay_eco_001_vulnerability_intelligence_profile();if(!hash_equals($profile['accepted_source_authority_sha256'],(string)$request['source_authority_sha256']))return pay_eco_001_fail($error,'vulnerability_snapshot_source_untrusted');
+ $issued=pay_eco_001_time($request['issued_at']);$expires=pay_eco_001_time($request['expires_at']);if($issued===false||$expires===false||$expires<=$issued)return pay_eco_001_fail($error,'vulnerability_snapshot_request_time_invalid');
+ if(count($request['advisories'])>(int)$profile['max_advisories'])return pay_eco_001_fail($error,'vulnerability_snapshot_request_count_invalid');$previous='';$seen=array();
+ foreach($request['advisories'] as $a){if(!pay_eco_001_validate_vulnerability_advisory($a,$error))return false;$key=$a['advisory_code'].'|'.$a['package_code'].'|'.$a['affected_version'];if(isset($seen[$key])||($previous!==''&&strcmp($key,$previous)<=0))return pay_eco_001_fail($error,'vulnerability_snapshot_advisory_order_invalid');$seen[$key]=true;$previous=$key;}return true;
+}
+function pay_eco_001_vulnerability_correlation_results(){return array('passed','failed');}
+function pay_eco_001_vulnerability_correlation_payload(array $c){return array(
+ 'dependency_scan_id'=>(int)$c['dependency_scan_id'],'vulnerability_snapshot_id'=>(int)$c['vulnerability_snapshot_id'],'subject_inventory_sha256'=>(string)$c['subject_inventory_sha256'],
+ 'matched_advisories_sha256'=>(string)$c['matched_advisories_sha256'],'result'=>(string)$c['result'],'max_severity'=>(string)$c['max_severity'],'findings_sha256'=>(string)$c['findings_sha256'],
+ 'correlated_by'=>(int)$c['correlated_by'],'correlated_at'=>(string)$c['correlated_at']
+);}
+function pay_eco_001_vulnerability_correlation_sha256(array $c){return pay_eco_001_hash(pay_eco_001_vulnerability_correlation_payload($c));}
+function pay_eco_001_validate_vulnerability_correlation($c,&$error){$error=null;$fields=array('dependency_scan_id','vulnerability_snapshot_id','subject_inventory_sha256','matched_advisories_sha256','result','max_severity','findings_sha256','correlated_by','correlated_at','correlation_sha256');if(!pay_eco_001_exact_fields($c,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_fields_invalid');foreach(array('dependency_scan_id','vulnerability_snapshot_id','correlated_by') as $field)if(!pay_eco_001_positive_id($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_identity_invalid');foreach(array('subject_inventory_sha256','matched_advisories_sha256','findings_sha256','correlation_sha256') as $field)if(!pay_eco_001_sha($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_hash_invalid');if(!in_array($c['result'],pay_eco_001_vulnerability_correlation_results(),true))return pay_eco_001_fail($error,'vulnerability_correlation_result_invalid');if($c['result']==='passed'&&$c['max_severity']!=='none')return pay_eco_001_fail($error,'vulnerability_correlation_pass_severity_invalid');if($c['result']==='failed'&&!in_array($c['max_severity'],pay_eco_001_vulnerability_severities(),true))return pay_eco_001_fail($error,'vulnerability_correlation_fail_severity_invalid');if(pay_eco_001_time($c['correlated_at'])===false)return pay_eco_001_fail($error,'vulnerability_correlation_time_invalid');if(!hash_equals(pay_eco_001_vulnerability_correlation_sha256($c),(string)$c['correlation_sha256']))return pay_eco_001_fail($error,'vulnerability_correlation_digest_mismatch');return true;}
+function pay_eco_001_validate_vulnerability_correlation_request($request,&$error){$error=null;$fields=array('dependency_scan_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_request_fields_invalid');if(!pay_eco_001_positive_id($request['dependency_scan_id']))return pay_eco_001_fail($error,'vulnerability_correlation_request_identity_invalid');return true;}
+
 
 ?>

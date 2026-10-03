@@ -15563,3 +15563,72 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_dependency_scans` (
 CREATE TRIGGER `0_peco1_ds_u` BEFORE UPDATE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be updated';
 CREATE TRIGGER `0_peco1_ds_d` BEFORE DELETE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be deleted';
 -- PAY-ECO-001 END GROUP dependency_scan
+
+-- PAY-ECO-001 GROUP vulnerability_intelligence
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_snapshots` (
+  `vulnerability_snapshot_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `source_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `snapshot_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_authority_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `issued_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `advisory_count` smallint(5) unsigned NOT NULL,
+  `advisories_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `ingested_by` smallint(6) unsigned NOT NULL,
+  `ingested_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`vulnerability_snapshot_id`),
+  UNIQUE KEY `uq_peco1_vs_code` (`source_code`,`snapshot_code`),
+  UNIQUE KEY `uq_peco1_vs_sha` (`snapshot_sha256`),
+  KEY `ix_peco1_vs_effective` (`issued_at`,`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_vs_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_snapshots row cannot be updated';
+CREATE TRIGGER `0_peco1_vs_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_snapshots row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_advisories` (
+  `vulnerability_advisory_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `vulnerability_snapshot_id` bigint(20) unsigned NOT NULL,
+  `ordinal_no` smallint(5) unsigned NOT NULL,
+  `advisory_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `package_code` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `affected_version` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `severity` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `advisory_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `advisory_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`vulnerability_advisory_id`),
+  UNIQUE KEY `uq_peco1_va_snapshot_ordinal` (`vulnerability_snapshot_id`,`ordinal_no`),
+  UNIQUE KEY `uq_peco1_va_snapshot_advisory` (`vulnerability_snapshot_id`,`advisory_code`,`package_code`,`affected_version`),
+  UNIQUE KEY `uq_peco1_va_snapshot_sha` (`vulnerability_snapshot_id`,`advisory_sha256`),
+  KEY `ix_peco1_va_subject` (`package_code`,`affected_version`),
+  CONSTRAINT `fk_peco1_va_snapshot` FOREIGN KEY (`vulnerability_snapshot_id`) REFERENCES `0_pay_eco_001_vulnerability_snapshots` (`vulnerability_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_va_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_advisories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_advisories row cannot be updated';
+CREATE TRIGGER `0_peco1_va_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_advisories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_advisories row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_correlations` (
+  `vulnerability_correlation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `dependency_scan_id` bigint(20) unsigned NOT NULL,
+  `vulnerability_snapshot_id` bigint(20) unsigned NOT NULL,
+  `subject_inventory_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `matched_advisories_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `result` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `max_severity` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `findings_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `correlated_by` smallint(6) unsigned NOT NULL,
+  `correlated_at` datetime NOT NULL,
+  `correlation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`vulnerability_correlation_id`),
+  UNIQUE KEY `uq_peco1_vc_scan_snapshot` (`dependency_scan_id`,`vulnerability_snapshot_id`),
+  UNIQUE KEY `uq_peco1_vc_sha` (`correlation_sha256`),
+  KEY `ix_peco1_vc_result` (`result`,`correlated_at`),
+  KEY `fk_peco1_vc_snapshot` (`vulnerability_snapshot_id`),
+  CONSTRAINT `fk_peco1_vc_scan` FOREIGN KEY (`dependency_scan_id`) REFERENCES `0_pay_eco_001_dependency_scans` (`dependency_scan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_vc_snapshot` FOREIGN KEY (`vulnerability_snapshot_id`) REFERENCES `0_pay_eco_001_vulnerability_snapshots` (`vulnerability_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_vc_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be updated';
+CREATE TRIGGER `0_peco1_vc_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be deleted';
+-- PAY-ECO-001 END GROUP vulnerability_intelligence
