@@ -3,8 +3,10 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.987');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.512');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.990');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.513');
+if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -20,6 +22,12 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_publisher_profile_custody'=>true,
  'immutable_pack_candidate_custody'=>true,
  'immutable_catalog_decision_custody'=>true,
+ 'publisher_profile_writer'=>true,
+ 'pack_candidate_writer'=>true,
+ 'catalog_decision_writer'=>false,
+ 'sandbox_execution'=>false,
+ 'dependency_vulnerability_scanning'=>false,
+ 'signed_reproducible_artifact_admission'=>false,
  'marketplace_publication'=>false,
  'automatic_catalog_admission'=>false,
  'pack_installation'=>false,
@@ -81,4 +89,42 @@ function pay_eco_001_catalog_decision_payload(array $decision){return array(
 );}
 function pay_eco_001_catalog_decision_sha256(array $decision){return pay_eco_001_hash(pay_eco_001_catalog_decision_payload($decision));}
 function pay_eco_001_validate_catalog_decision($decision,&$error){$error=null;$fields=array('catalog_candidate_id','decision','trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256','vulnerability_snapshot_sha256','decision_reason_sha256','maker_id','checker_id','decided_at','decision_sha256');if(!pay_eco_001_exact_fields($decision,$fields))return pay_eco_001_fail($error,'catalog_decision_fields_invalid');if(!pay_eco_001_positive_id($decision['catalog_candidate_id'])||!pay_eco_001_positive_id($decision['maker_id'])||!pay_eco_001_positive_id($decision['checker_id'])||(int)$decision['maker_id']===(int)$decision['checker_id'])return pay_eco_001_fail($error,'catalog_decision_separation_invalid');if(!in_array($decision['decision'],pay_eco_001_catalog_decisions(),true))return pay_eco_001_fail($error,'catalog_decision_value_invalid');foreach(array('trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256','vulnerability_snapshot_sha256','decision_reason_sha256','decision_sha256') as $field)if(!pay_eco_001_sha($decision[$field]))return pay_eco_001_fail($error,'catalog_decision_hash_invalid');if(pay_eco_001_time($decision['decided_at'])===false)return pay_eco_001_fail($error,'catalog_decision_time_invalid');if(!hash_equals(pay_eco_001_catalog_decision_sha256($decision),(string)$decision['decision_sha256']))return pay_eco_001_fail($error,'catalog_decision_digest_mismatch');return true;}
+
+
+/** Partner onboarding reuses the already accepted PAY-CTRY trust/install authorities; no role is auto-granted. */
+function pay_eco_001_onboarding_permissions(){return array(
+ 'publisher_profile'=>PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION,
+ 'pack_candidate'=>PAY_ECO_001_PACK_CANDIDATE_PERMISSION
+);}
+
+/** Validate the closed digest-only publisher-profile request envelope. */
+function pay_eco_001_validate_publisher_profile_request($request,&$error){
+ $error=null;$fields=array('publisher_id','profile_code','identity_evidence_sha256','support_policy_sha256','security_contact_sha256','terms_sha256');
+ if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'publisher_profile_request_fields_invalid');
+ if(!pay_eco_001_positive_id($request['publisher_id'])||!pay_eco_001_token($request['profile_code']))return pay_eco_001_fail($error,'publisher_profile_request_identity_invalid');
+ foreach(array('identity_evidence_sha256','support_policy_sha256','security_contact_sha256','terms_sha256') as $field)if(!pay_eco_001_sha($request[$field]))return pay_eco_001_fail($error,'publisher_profile_request_hash_invalid');
+ return true;
+}
+/** Build an immutable publisher profile using server-supplied actor and time. */
+function pay_eco_001_build_publisher_profile($request,$actor_id,$requested_at,&$error){
+ if(!pay_eco_001_validate_publisher_profile_request($request,$error))return false;
+ if(!pay_eco_001_positive_id($actor_id)||pay_eco_001_time($requested_at)===false)return pay_eco_001_fail($error,'publisher_profile_server_context_invalid');
+ $profile=$request;$profile['requested_by']=(int)$actor_id;$profile['requested_at']=(string)$requested_at;$profile['profile_sha256']='';$profile['profile_sha256']=pay_eco_001_publisher_profile_sha256($profile);
+ return pay_eco_001_validate_publisher_profile($profile,$error)?$profile:false;
+}
+/** Validate the closed digest-only pack-candidate request envelope. */
+function pay_eco_001_validate_pack_candidate_request($request,&$error){
+ $error=null;$fields=array('publisher_profile_id','pack_version_id','candidate_code','compatibility_sha256','certification_sha256','support_sha256','vulnerability_sha256','revocation_state_sha256','sandbox_profile_sha256');
+ if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'pack_candidate_request_fields_invalid');
+ if(!pay_eco_001_positive_id($request['publisher_profile_id'])||!pay_eco_001_positive_id($request['pack_version_id'])||!pay_eco_001_token($request['candidate_code']))return pay_eco_001_fail($error,'pack_candidate_request_identity_invalid');
+ foreach(array('compatibility_sha256','certification_sha256','support_sha256','vulnerability_sha256','revocation_state_sha256','sandbox_profile_sha256') as $field)if(!pay_eco_001_sha($request[$field]))return pay_eco_001_fail($error,'pack_candidate_request_hash_invalid');
+ return true;
+}
+/** Build an immutable pack candidate using server-supplied actor and time. */
+function pay_eco_001_build_pack_candidate($request,$actor_id,$submitted_at,&$error){
+ if(!pay_eco_001_validate_pack_candidate_request($request,$error))return false;
+ if(!pay_eco_001_positive_id($actor_id)||pay_eco_001_time($submitted_at)===false)return pay_eco_001_fail($error,'pack_candidate_server_context_invalid');
+ $candidate=$request;$candidate['submitted_by']=(int)$actor_id;$candidate['submitted_at']=(string)$submitted_at;$candidate['candidate_sha256']='';$candidate['candidate_sha256']=pay_eco_001_pack_candidate_sha256($candidate);
+ return pay_eco_001_validate_pack_candidate($candidate,$error)?$candidate:false;
+}
 ?>
