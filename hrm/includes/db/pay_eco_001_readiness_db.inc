@@ -33,10 +33,44 @@ function pay_eco_001_require_onboarding_contract($patch){
  return true;
 }
 /** Require the selected onboarding writer implementation to match its boundary. */
-function pay_eco_001_require_onboarding_writer_source($patch,$scope){global $path_to_root;$file=$path_to_root.'/hrm/includes/db/pay_eco_001_onboarding_db.inc';$raw=@file_get_contents($file);if(!is_string($raw)||$raw==='')return pay_eco_001_fail_patch($patch,'PAY-ECO-001 onboarding writer source missing.');$tokens=array(
- 'publisher'=>array('function pay_eco_001_write_publisher_profile(','PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','pay.eco.publisher_profile.appended','publisher_profile_replay_conflict','pay_ctry_001_publisher_revoked'),
- 'candidate'=>array('function pay_eco_001_write_pack_candidate(','PAY_ECO_001_PACK_CANDIDATE_PERMISSION',"final_status='accepted'",'pack_candidate_publisher_lineage_mismatch','pay.eco.pack_candidate.appended',"'marketplace_publication'=>false")
- );if(!isset($tokens[$scope]))return pay_eco_001_fail_patch($patch,'PAY-ECO-001 onboarding writer scope invalid.');foreach($tokens[$scope] as $token)if(strpos($raw,$token)===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 '.$scope.' writer source contract incomplete: '.$token.'.');return true;}
+function pay_eco_001_require_onboarding_writer_source($patch,$scope)
+{
+    global $path_to_root;
+    $file=$path_to_root.'/hrm/includes/db/pay_eco_001_onboarding_db.inc';
+    $raw=@file_get_contents($file);
+    if(!is_string($raw)||$raw==='')return pay_eco_001_fail_patch($patch,'PAY-ECO-001 onboarding writer source missing.');
+    $tokens=array(
+        'publisher'=>array('function pay_eco_001_write_publisher_profile(','PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','pay.eco.publisher_profile.appended','publisher_profile_replay_conflict'),
+        'candidate'=>array('function pay_eco_001_write_pack_candidate(','PAY_ECO_001_PACK_CANDIDATE_PERMISSION',"final_status='accepted'",'pack_candidate_publisher_lineage_mismatch','pay.eco.pack_candidate.appended',"'marketplace_publication'=>false")
+    );
+    if(!isset($tokens[$scope]))return pay_eco_001_fail_patch($patch,'PAY-ECO-001 onboarding writer scope invalid.');
+    foreach($tokens[$scope] as $token)if(strpos($raw,$token)===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 '.$scope.' writer source contract incomplete: '.$token.'.');
+    if($scope==='publisher'){
+        $writer_start=strpos($raw,'function pay_eco_001_write_publisher_profile(');
+        $writer_end=strpos($raw,'function pay_eco_001_write_pack_candidate(',$writer_start);
+        if($writer_start===false||$writer_end===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 publisher writer source range missing.');
+        $writer=substr($raw,$writer_start,$writer_end-$writer_start);
+        foreach(array(
+            "pay_eco_001_onboarding_exact_row('SELECT publisher_revocation_id",
+            'pay_ctry_publisher_revocations WHERE publisher_id=',
+            'LIMIT 2 FOR UPDATE',
+            'if($revocation===false)break;',
+            'if(is_array($revocation)){$error=\'publisher_profile_publisher_revoked\';break;}'
+        ) as $token)if(strpos($writer,$token)===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 publisher revocation writer source contract incomplete: '.$token.'.');
+
+        $reader_start=strpos($raw,'function pay_eco_001_onboarding_exact_row(');
+        $reader_end=strpos($raw,'function pay_eco_001_onboarding_now_iso(',$reader_start);
+        if($reader_start===false||$reader_end===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 bounded onboarding row reader source range missing.');
+        $reader=substr($raw,$reader_start,$reader_end-$reader_start);
+        foreach(array(
+            'function pay_eco_001_onboarding_exact_row(',
+            '$q=db_query($sql);',
+            'if(!$q)return pay_eco_001_fail($error,\'onboarding_query_failed\');',
+            'if($n>1)return pay_eco_001_fail($error,\'onboarding_state_ambiguous\');'
+        ) as $token)if(strpos($reader,$token)===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 publisher revocation row reader contract incomplete: '.$token.'.');
+    }
+    return true;
+}
 
 /** Require the bounded declarative sandbox/evaluation successor contract. */
 function pay_eco_001_require_sandbox_contract($patch){
@@ -136,5 +170,63 @@ function pay_eco_001_require_marketplace_contract($patch){
  return true;
 }
 function pay_eco_001_require_marketplace_writer_source($patch){global $path_to_root;$file=$path_to_root.'/hrm/includes/db/pay_eco_001_marketplace_activation_db.inc';$raw=@file_get_contents($file);if(!is_string($raw)||$raw==='')return pay_eco_001_fail_patch($patch,'PAY-ECO-001 marketplace bridge source missing.');foreach(array('function pay_eco_001_record_marketplace_installation(','function pay_eco_001_record_marketplace_company_activation(','PAY_ECO_001_MARKETPLACE_INSTALL_PERMISSION','PAY_ECO_001_MARKETPLACE_ACTIVATION_PERMISSION','pay_eco_001_catalog_lifecycle_guard','pay_ctry_002_runtime_resolution_for_update','pay_eco_001_marketplace_installations','pay_eco_001_marketplace_activations','pay_ctry_site_installations','pay_ctry_activations','pay_ctry_activation_bindings','marketplace_installation_pack_mismatch','marketplace_activation_runtime_binding_not_current','pay.eco.marketplace_installation.linked','pay.eco.marketplace_activation.linked',"'direct_installation_authority'=>false","'direct_company_activation_authority'=>false","'historical_payroll_accounting_rows_rewritten'=>0") as $token)if(strpos($raw,$token)===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 marketplace bridge source contract incomplete: '.$token.'.');foreach(array('exec(','shell_exec','system(','passthru(','proc_open','curl_','file_put_contents','fopen(','DROP TABLE','TRUNCATE') as $token)if(stripos($raw,$token)!==false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 marketplace bridge unsafe primitive present: '.$token.'.');return true;}
+
+
+/** Final closure edge predicates; these are source-only acceptance markers. */
+function pay_eco_001_ecosystem_lifecycle_acceptance_required_for_database_version($version){return version_compare((string)$version,'1.0.1014','>=');}
+function pay_eco_001_migration_recovery_acceptance_required_for_database_version($version){return version_compare((string)$version,'1.0.1015','>=');}
+function pay_eco_001_authority_isolation_completion_required_for_database_version($version){return version_compare((string)$version,'1.0.1016','>=');}
+
+/** Bind all accepted PAY-ECO governance capabilities to the final default-deny lifecycle contract. */
+function pay_eco_001_require_ecosystem_lifecycle_acceptance_source($patch){
+ if(!pay_eco_001_require_onboarding_contract($patch)||!pay_eco_001_require_onboarding_writer_source($patch,'publisher')||!pay_eco_001_require_onboarding_writer_source($patch,'candidate')
+  ||!pay_eco_001_require_sandbox_contract($patch)||!pay_eco_001_require_sandbox_writer_source($patch)
+  ||!pay_eco_001_require_dependency_scan_contract($patch)||!pay_eco_001_require_dependency_scan_writer_source($patch)
+  ||!pay_eco_001_require_vulnerability_intelligence_contract($patch)||!pay_eco_001_require_vulnerability_writer_source($patch)
+  ||!pay_eco_001_require_artifact_admission_contract($patch)||!pay_eco_001_require_artifact_admission_writer_source($patch)
+  ||!pay_eco_001_require_catalog_decision_contract($patch)||!pay_eco_001_require_catalog_decision_writer_source($patch)
+  ||!pay_eco_001_require_catalog_publication_contract($patch)||!pay_eco_001_require_catalog_publication_writer_source($patch)
+  ||!pay_eco_001_require_catalog_lifecycle_contract($patch)||!pay_eco_001_require_catalog_lifecycle_writer_source($patch)
+  ||!pay_eco_001_require_marketplace_contract($patch)||!pay_eco_001_require_marketplace_writer_source($patch))return false;
+ $c=pay_eco_001_completion_contract();
+ foreach(array('ecosystem_lifecycle_acceptance_required','publisher_verification_required','signed_reproducible_artifacts_required','dependency_scanning_required','offline_vulnerability_intelligence_required','suspension_revocation_fail_closed_required','existing_pay_ctry_install_activation_authority_required','default_deny_required') as $key)
+  if(!isset($c[$key])||$c[$key]!==true)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 lifecycle closure contract incomplete: '.$key.'.');
+ foreach(array('automatic_catalog_admission_allowed','direct_pack_installation_authority_allowed','direct_company_activation_authority_allowed','external_network_delivery_allowed','permission_grant_allowed','payroll_execution_authority_allowed','payroll_posting_authority_allowed','payment_authority_allowed','general_ledger_authority_allowed','statutory_filing_authority_allowed','historical_payroll_accounting_mutation_allowed','selective_destructive_downgrade_allowed') as $key)
+  if(!array_key_exists($key,$c)||$c[$key]!==false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 lifecycle closure default-deny boundary incomplete: '.$key.'.');
+ return true;
+}
+
+/** Bind the complete reviewed migration chain and source-only closure recovery boundary. */
+function pay_eco_001_require_migration_recovery_acceptance_source($patch){global $path_to_root;
+ $edges=array(
+  array('pay_eco_001_dependency_review','1.0.984','1.0.985'),
+  array('pay_eco_001_schema_foundation','1.0.986','1.0.987'),
+  array('pay_eco_001_sandbox_evaluator_writer','1.0.992','1.0.993'),
+  array('pay_eco_001_dependency_scan_writer','1.0.995','1.0.996'),
+  array('pay_eco_001_vulnerability_writer','1.0.998','1.0.999'),
+  array('pay_eco_001_artifact_admission_writer','1.0.1001','1.0.1002'),
+  array('pay_eco_001_catalog_decision_writer','1.0.1003','1.0.1004'),
+  array('pay_eco_001_catalog_publication_runtime','1.0.1006','1.0.1007'),
+  array('pay_eco_001_catalog_lifecycle_runtime','1.0.1009','1.0.1010'),
+  array('pay_eco_001_marketplace_runtime','1.0.1012','1.0.1013'),
+  array('pay_eco_001_ecosystem_lifecycle_acceptance','1.0.1013','1.0.1014'),
+  array('pay_eco_001_migration_recovery_acceptance','1.0.1014','1.0.1015'));
+ foreach($edges as $edge)if(!hrm_migration_registered_edge_matches($edge[0],$edge[1],$edge[2]))return hrm_migration_fail($patch,HRM_MIGRATION_PREDECESSOR_MIGRATION_ABSENT,'PAY-ECO-001 closure migration registry chain is incomplete: '.$edge[0].'.');
+ foreach(array('sql/upgrade_pay_eco_001_ecosystem_lifecycle_acceptance.php','sql/upgrade_pay_eco_001_migration_recovery_acceptance.php','sql/upgrade_pay_eco_001_authority_isolation_completion.php') as $relative){$raw=@file_get_contents($path_to_root.'/'.$relative);if(!is_string($raw)||strpos($raw,'public $sql = \'\';')===false||strpos($raw,'Selective PAY-ECO-001 downgrade denied')===false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 source-only closure/recovery contract incomplete: '.$relative.'.');}
+ return true;
+}
+
+/** Final authority ceiling: PAY-ECO remains governance/linkage only and cannot mutate payroll/accounting or deliver arbitrary code/network traffic. */
+function pay_eco_001_require_authority_isolation_completion_source($patch){global $path_to_root;
+ $authority=pay_eco_001_authority_contract();
+ foreach(array('automatic_catalog_admission','pack_installation','company_activation','payroll_execution','payroll_posting','payment_authority','general_ledger_authority','statutory_filing_authority','external_network_delivery','permission_grant','publisher_self_verification','certification_self_claim','historical_payroll_rewrite','core_source_write') as $key)
+  if(!array_key_exists($key,$authority)||$authority[$key]!==false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 final authority ceiling violated: '.$key.'.');
+ $completion=pay_eco_001_completion_contract();if(($completion['authority_payroll_isolation_acceptance_required']??false)!==true||($completion['migration_schema_recovery_acceptance_required']??false)!==true)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 final completion acceptance contract incomplete.');
+ $files=array('hrm/includes/db/pay_eco_001_onboarding_db.inc','hrm/includes/db/pay_eco_001_sandbox_db.inc','hrm/includes/db/pay_eco_001_dependency_scan_db.inc','hrm/includes/db/pay_eco_001_vulnerability_db.inc','hrm/includes/db/pay_eco_001_artifact_admission_db.inc','hrm/includes/db/pay_eco_001_catalog_decision_db.inc','hrm/includes/db/pay_eco_001_catalog_publication_db.inc','hrm/includes/db/pay_eco_001_catalog_lifecycle_db.inc','hrm/includes/db/pay_eco_001_marketplace_activation_db.inc');
+ $denied=array('calculate_employee_payslip(','calculate_employee_payslip_read_only(','write_payroll_results(','add_gl_trans(','pay_core_010_','curl_exec(','shell_exec(','proc_open(','passthru(');
+ foreach($files as $relative){$raw=@file_get_contents($path_to_root.'/'.$relative);if(!is_string($raw))return pay_eco_001_fail_patch($patch,'PAY-ECO-001 final authority source missing: '.$relative.'.');foreach($denied as $token)if(strpos($raw,$token)!==false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 final authority isolation breach in '.$relative.': '.$token);}
+ $access=@file_get_contents($path_to_root.'/includes/access_levels.inc');if(!is_string($access)||stripos($access,'PAY_ECO')!==false||stripos($access,'PAY-ECO')!==false)return pay_eco_001_fail_patch($patch,'PAY-ECO-001 final closure must not introduce an access-level grant.');
+ return true;
+}
 
 ?>

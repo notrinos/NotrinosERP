@@ -3,8 +3,8 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1013');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.522');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1016');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.523');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
@@ -81,6 +81,33 @@ function pay_eco_001_authority_contract(){return array(
  'historical_payroll_rewrite'=>false,
  'core_source_write'=>false
 );}
+
+/** Final PAY-ECO-001 closure contract. These are acceptance obligations only; they add no runtime authority. */
+function pay_eco_001_completion_contract(){return array(
+ 'ecosystem_lifecycle_acceptance_required'=>true,
+ 'migration_schema_recovery_acceptance_required'=>true,
+ 'authority_payroll_isolation_acceptance_required'=>true,
+ 'publisher_verification_required'=>true,
+ 'signed_reproducible_artifacts_required'=>true,
+ 'dependency_scanning_required'=>true,
+ 'offline_vulnerability_intelligence_required'=>true,
+ 'suspension_revocation_fail_closed_required'=>true,
+ 'existing_pay_ctry_install_activation_authority_required'=>true,
+ 'default_deny_required'=>true,
+ 'automatic_catalog_admission_allowed'=>false,
+ 'direct_pack_installation_authority_allowed'=>false,
+ 'direct_company_activation_authority_allowed'=>false,
+ 'external_network_delivery_allowed'=>false,
+ 'permission_grant_allowed'=>false,
+ 'payroll_execution_authority_allowed'=>false,
+ 'payroll_posting_authority_allowed'=>false,
+ 'payment_authority_allowed'=>false,
+ 'general_ledger_authority_allowed'=>false,
+ 'statutory_filing_authority_allowed'=>false,
+ 'historical_payroll_accounting_mutation_allowed'=>false,
+ 'selective_destructive_downgrade_allowed'=>false
+);}
+
 
 function pay_eco_001_publisher_profile_payload(array $profile){return array(
  'publisher_id'=>(int)$profile['publisher_id'],

@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1013',
-        'active_legacy_payroll_contract'=>'1.0.522',
-        'next_backlog_item'=>'PAY-ECO-001',
+        'active_database_version'=>'1.0.1016',
+        'active_legacy_payroll_contract'=>'1.0.523',
+        'next_backlog_item'=>'PAY-FIL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-ECO-001 governed marketplace installation/company-activation bridge is SOURCE-VERIFIED / LOCAL ACCEPTANCE PASS at accepted source/DB 1.0.1013 and active legacy-payroll source custody 1.0.522. Three supply-chain/security-sensitive dependency-ordered edges 1.0.1010 -> 1.0.1011 -> 1.0.1012 -> 1.0.1013 bind marketplace linkage to existing PAY-CTRY-002 installation/activation authority, add two zero-seed immutable linkage tables, then activate append-only link writers with a fail-closed runtime guard that require a live PAY-ECO catalog publication and exact existing PAY-CTRY-002 site installation/current activation binding. PAY-ECO does not execute installation or company activation itself and gains no new permission grant, network, payroll/posting/payment/GL/statutory filing, core-source write or historical payroll/accounting mutation authority. Expected PAY-ECO projection is thirteen InnoDB custody tables, twenty-six immutable denial triggers and thirty-two restrictive foreign keys; both new marketplace tables were confirmed zero-seed at acceptance. PAY-ECO-001 remains OPEN; final readiness/closure review is the strict next separately reviewed scope and was not started. LOCAL MANDATORY GATE: PASS: tests/php/run_pay_eco_001_marketplace_activation_mandatory_blockers_browser.php build pay-eco-001-marketplace-activation-v1-20261004 passed after sequential Software Upgrade 1.0.1010 -> 1.0.1011 -> 1.0.1012 -> 1.0.1013 on owner-machine localhost WAMP/MariaDB; acceptance confirms the exact 13/26/32 projection, zero-seed marketplace custody, and disposable lifecycle 34 passed, 0 failed with cleanup. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-ECO-001 final readiness/closure is SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1016 and active legacy-payroll source custody 1.0.523. Three security-sensitive source-only edges 1.0.1013 -> 1.0.1014 -> 1.0.1015 -> 1.0.1016 bind the accepted ecosystem lifecycle/default-deny evidence, exact migration/schema/fix-forward recovery projection, and final authority/payroll-isolation ceiling. The physical PAY-ECO projection remains thirteen InnoDB custody tables, twenty-six immutable denial triggers and thirty-two restrictive foreign keys; closure adds no table, trigger, foreign key, seed row, role/permission grant, direct install/activation authority, arbitrary network delivery, payroll/posting/payment/GL/statutory filing authority, core-source write or historical payroll/accounting mutation. PAY-ECO-001 is source-development complete, pending only the exact owner-machine LOCAL MANDATORY GATE tests/php/run_pay_eco_001_completion_mandatory_blockers_browser.php build pay-eco-001-completion-v1-20261004 after sequential Software Upgrade 1.0.1013 -> 1.0.1014 -> 1.0.1015 -> 1.0.1016. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
 
         'edges'=>array(
+            'pay_eco_001_authority_isolation_completion'=>array('previous'=>'1.0.1015','version'=>'1.0.1016',
+                'file'=>'sql/upgrade_pay_eco_001_authority_isolation_completion.php'),
+            'pay_eco_001_migration_recovery_acceptance'=>array('previous'=>'1.0.1014','version'=>'1.0.1015',
+                'file'=>'sql/upgrade_pay_eco_001_migration_recovery_acceptance.php'),
+            'pay_eco_001_ecosystem_lifecycle_acceptance'=>array('previous'=>'1.0.1013','version'=>'1.0.1014',
+                'file'=>'sql/upgrade_pay_eco_001_ecosystem_lifecycle_acceptance.php'),
             'pay_eco_001_marketplace_runtime'=>array('previous'=>'1.0.1012','version'=>'1.0.1013',
                 'file'=>'sql/upgrade_pay_eco_001_marketplace_runtime.php'),
             'pay_eco_001_marketplace_custody'=>array('previous'=>'1.0.1011','version'=>'1.0.1012',
