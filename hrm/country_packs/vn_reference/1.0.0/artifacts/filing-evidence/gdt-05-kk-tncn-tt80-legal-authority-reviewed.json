@@ -1,0 +1,57 @@
+{
+  "schema": "notrinos.pay-fil-001.public-legal-authority-review.v1",
+  "reviewed_on": "2026-10-05",
+  "jurisdiction_code": "VN",
+  "obligation_type": "personal-income-tax-withholding-declaration",
+  "form_code": "05/KK-TNCN",
+  "form_name": "Personal income tax declaration for organizations/individuals paying salary and wage income",
+  "legal_basis": {
+    "regulation": "80/2021/TT-BTC",
+    "issued_on": "2021-09-29",
+    "effective_from": "2022-01-01",
+    "form_basis_reviewed": true,
+    "effective_date_reviewed": true,
+    "official_document_url": "https://www.gdt.gov.vn/wps/portal/home/documents/detail?1dmy=&current=true&urile=wcm%3Apath%3AGDT+Content%2Fsa_gdt%2Fcctthc%2Ftthchh%2Fsa_tthc_vanban%2Fsa_tthc_vb_vbqd%2F03d0b378-d75f-428e-9461-e7272b424e25",
+    "official_procedure_url": "https://www.gdt.gov.vn/wps/portal/!ut/p/z1/tZNNc5swEIb_SnPwkdEiCSSOmKEYE9shBBzr4gGBDW3ATqsm7b-vqJ1JesDOTGIdEJJWj_bjXSTQPRJd_tRsc9XsuvxBr1fCXntx5GVRBhBMHAbhLLVuUuyCCxgtDwaBO6HsGoDTACCk48V84sUmhAQJfQzUCa95liymgWuDm8zju2hhmeDZx_swMFw4dz9DAgnZqb2q0Wpbqi9y16mqUyP4ma_1egRSKlXLEfTfuv633_-uZd3IX3ofgAFUVmmUOQeDlrQwCmfDDSkdaheY21Vu94_sZVOi1busj0ENey3eldRhA3E6Z8ve37cEfuPrYsxiZtvMxDw2XwxO1O3cIxNAK-0nG4wz0YE8NdUzSrvdj1aLKXlNY1XQ3NqYxKgqnTzKARsOJ9wwsVkAk6wkZHMOb14WTy6Kx_BB_BSJ7cOuOPRo8-3xUbi6EXrx_1bo_nKdcAhrSJvBiaJ8Bp58Mj6mGEI_mI7nt74ZzeGSeA_wB_HL_yU19iOqJfU1GbPMxhBQtG_TtOXkT2N8v-Uzn1jbdv0yKf58t2m94jgZsXt19Ren116x/dz/d5/L3dHQSEvUUtRZy9nQSEh/",
+    "reviewed_observations": [
+      "The GDT legal-document page identifies Circular 80/2021/TT-BTC, issue date 2021-09-29 and effective date 2022-01-01.",
+      "The GDT procedure page identifies form 05/KK-TNCN under Circular 80/2021/TT-BTC for salary/wage withholding declarations."
+    ]
+  },
+  "electronic_filing_framework": {
+    "base_regulation": "19/2021/TT-BTC",
+    "base_effective_from": "2021-05-03",
+    "amending_regulation": "46/2024/TT-BTC",
+    "framework_reviewed": true,
+    "official_document_url": "https://gdt.gov.vn/wps/portal/home/documents/detail?1dmy=&current=true&urile=wcm%3Apath%3AGDT+Content%2Fsa_gdt%2Fcctthc%2Ftthchh%2Fsa_tthc_vanban%2Fsa_tthc_vb_vbqd%2F85fdcbb0-5cbc-474d-a5af-14182128833f",
+    "official_procedure_url": "https://www.gdt.gov.vn/wps/portal/!ut/p/z1/tVNNc4IwEP0rvXhkskAMcETGouJHKYqSCwMBgVZA22jbf99g63SmHbWtYw5JNrP73stLFlG0QLSKdkUW8aKuopWIA0pCwEZ_qPveZGCbBExv7E6dSVsGi6D5PsGyzR7WhgA6tgH6uDMZ9yxXhr6K6G_q4cgw4Vy9jyiirOJrnqMgS_gNqyueVrwFz1Eo4hYwxnnOWtDMeb4_b7Yh2zKeb9Omfs2KBAWazAiOY12Kk9iQcARLKZZTIqlxkhi6Sgxos4Pe44Lo6evMG77GMdexfMcXjt11hU8jVyNEkxXdlQ8JJyw9RxIIkdqXyE7XwULkrdfRfKKAjdF8V6QvaFbVT6V4ZO-PHvR-MHyzwVMuZDgDL18XXr0qvAIXwg8QzVZ1_NGdxcNmQ03RAs23f-Vo8a8eWJezWamrb9Ljvf4yXeZZGY66avtzWWXvUHvxMQ!!/dz/d5/L2dBISEvZ0FBIS9nQSEh/?1dmy=&page=Z6_CQKCVKV00GH970IMU5PU2A0A02&urile=wcm%3Apath%3A%2Fgdt%2Bcontent%2Fsa_gdt%2Fcctthc%2Ftthchh%2Fsa_tthc_cucthue%2Fc04a70a8-8f56-47e2-812b-37b70a370d0c",
+    "reviewed_channels": [
+      "GDT electronic tax portal",
+      "connected competent-state public-service portal",
+      "T-VAN service provider"
+    ],
+    "connector_or_network_authority_derived": false
+  },
+  "review_scope": {
+    "legal_applicability_and_effective_date_reviewed": true,
+    "exact_machine_schema_provenance_reviewed": false,
+    "authoritative_technical_specification_reviewed": false,
+    "generated_payload_acceptance_reviewed": false,
+    "note": "This review satisfies only the legal-form/effective-date and electronic-filing legal-framework evidence gap. It does not establish that the locally installed HTKK XSD is independently GDT-published, nor does it establish a published XML technical specification or acceptance of independently generated XML."
+  },
+  "authority_boundary": {
+    "official_schema_claimed": false,
+    "production_runtime_consumption_allowed": false,
+    "official_generation_allowed": false,
+    "filing_authorization_execution_allowed": false,
+    "transmission_allowed": false,
+    "network_authority_allowed": false,
+    "connector_secret_custody_allowed": false,
+    "historical_payroll_accounting_filing_mutation_allowed": false
+  },
+  "remaining_official_evidence_gaps": [
+    "independent-gdt-provenance-for-exact-schema",
+    "independently-published-authoritative-technical-specification",
+    "certification-or-etax-gdt-acceptance-of-independently-generated-xml"
+  ]
+}
