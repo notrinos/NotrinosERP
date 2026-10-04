@@ -15311,3 +15311,40 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_artifact_admissions` (
 CREATE TRIGGER `0_peco1_aa_u` BEFORE UPDATE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be updated';
 CREATE TRIGGER `0_peco1_aa_d` BEFORE DELETE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be deleted';
 -- PAY-ECO-001 END GROUP artifact_admission
+-- PAY-ECO-001 GROUP catalog_publication
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_publications` (
+  `catalog_publication_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_candidate_id` bigint(20) unsigned NOT NULL,
+  `catalog_decision_id` bigint(20) unsigned NOT NULL,
+  `artifact_admission_id` bigint(20) unsigned NOT NULL,
+  `certification_publication_id` bigint(20) unsigned NOT NULL,
+  `catalog_release_id` bigint(20) unsigned NOT NULL,
+  `catalog_admission_id` bigint(20) unsigned NOT NULL,
+  `publication_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `catalog_root_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `manifest_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `semantic_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `evidence_root` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `support_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `vulnerability_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `trust_snapshot_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `published_by` bigint(20) unsigned NOT NULL,
+  `published_at` datetime NOT NULL,
+  `publication_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_publication_id`),
+  UNIQUE KEY `uq_peco1_cp_candidate` (`catalog_candidate_id`),
+  UNIQUE KEY `uq_peco1_cp_sha` (`publication_sha256`),
+  KEY `ix_peco1_cp_release` (`catalog_release_id`,`published_at`),
+  KEY `ix_peco1_cp_admission` (`catalog_admission_id`),
+  KEY `ix_peco1_cp_certpub` (`certification_publication_id`),
+  CONSTRAINT `fk_peco1_cp_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cp_decision` FOREIGN KEY (`catalog_decision_id`) REFERENCES `0_pay_eco_001_catalog_decisions` (`catalog_decision_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cp_artifact` FOREIGN KEY (`artifact_admission_id`) REFERENCES `0_pay_eco_001_artifact_admissions` (`artifact_admission_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cp_certpub` FOREIGN KEY (`certification_publication_id`) REFERENCES `0_pay_ctry_publication_records` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cp_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cp_catalog_admission` FOREIGN KEY (`catalog_admission_id`) REFERENCES `0_pay_ctry_catalog_release_admissions` (`catalog_admission_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_cp_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be updated';
+CREATE TRIGGER `0_peco1_cp_d` BEFORE DELETE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be deleted';
+-- PAY-ECO-001 END GROUP catalog_publication

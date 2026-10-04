@@ -3,8 +3,8 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1004');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.519');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1007');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.520');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
@@ -12,6 +12,8 @@ if (!defined('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION')) define('PAY_ECO_001_DEPE
 if (!defined('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION')) define('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION')) define('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_CATALOG_DECISION_PERMISSION')) define('PAY_ECO_001_CATALOG_DECISION_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION')) define('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION')) define('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION','SA_PAY_CTRY_INSTALL');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -48,8 +50,11 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_artifact_admission_custody'=>true,
  'signed_reproducible_artifact_admission'=>true,
  'catalog_decision_writer'=>true,
+ 'immutable_catalog_publication_custody'=>true,
+ 'catalog_publication_writer'=>true,
+ 'catalog_runtime_read'=>true,
  'sandbox_execution'=>false,
- 'marketplace_publication'=>false,
+ 'marketplace_publication'=>true,
  'automatic_catalog_admission'=>false,
  'pack_installation'=>false,
  'company_activation'=>false,
@@ -401,6 +406,84 @@ function pay_eco_001_validate_catalog_decision_request($request,&$error){
  if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'catalog_decision_request_identity_invalid');
  if(!in_array($request['decision'],pay_eco_001_catalog_decisions(),true))return pay_eco_001_fail($error,'catalog_decision_request_value_invalid');
  if(!pay_eco_001_sha($request['decision_reason_sha256']))return pay_eco_001_fail($error,'catalog_decision_request_reason_invalid');
+ return true;
+}
+
+
+/** Catalog publication/runtime governance. Publication is explicit immutable evidence only; runtime is read-only. */
+function pay_eco_001_catalog_publication_profile(){return array(
+ 'profile_code'=>'pay-eco-catalog-publication-v1',
+ 'trusted_publisher_permission'=>PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION,
+ 'runtime_read_permission'=>PAY_ECO_001_CATALOG_RUNTIME_PERMISSION,
+ 'admit_for_review_decision_required'=>true,
+ 'accepted_artifact_admission_required'=>true,
+ 'current_nonexpired_vulnerability_snapshot_required'=>true,
+ 'effective_nonrevoked_pack_publisher_required'=>true,
+ 'signing_key_not_revoked_required'=>true,
+ 'current_certified_publication_required'=>true,
+ 'signed_catalog_release_required'=>true,
+ 'accepted_catalog_release_admission_required'=>true,
+ 'catalog_signature_reverification_required'=>true,
+ 'single_candidate_catalog_release'=>true,
+ 'publisher_distinct_from_candidate_maker'=>true,
+ 'immutable_publication_custody'=>true,
+ 'runtime_read_only'=>true,
+ 'automatic_catalog_admission'=>false,
+ 'installation_authority'=>false,
+ 'company_activation_authority'=>false,
+ 'network_authority'=>false,
+ 'payroll_authority'=>false,
+ 'historical_rewrite_authority'=>false
+);}
+function pay_eco_001_catalog_publication_profile_sha256(){return pay_eco_001_hash(pay_eco_001_catalog_publication_profile());}
+function pay_eco_001_validate_catalog_publication_request($request,&$error){
+ $error=null;$fields=array('catalog_candidate_id','certification_publication_id','catalog_release_id','catalog_admission_id');
+ if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'catalog_publication_request_fields_invalid');
+ foreach($fields as $field)if(!pay_eco_001_positive_id($request[$field]))return pay_eco_001_fail($error,'catalog_publication_request_identity_invalid');
+ return true;
+}
+function pay_eco_001_catalog_publication_entry_payload(array $p){return array(
+ 'profile_sha256'=>(string)$p['publication_profile_sha256'],
+ 'candidate_code'=>(string)$p['candidate_code'],
+ 'pack_version'=>(string)$p['pack_version'],
+ 'manifest_sha256'=>(string)$p['manifest_sha256'],
+ 'semantic_root'=>(string)$p['semantic_root'],
+ 'evidence_root'=>(string)$p['evidence_root'],
+ 'support_sha256'=>(string)$p['support_sha256'],
+ 'artifact_admission_sha256'=>(string)$p['artifact_admission_sha256'],
+ 'catalog_decision_sha256'=>(string)$p['catalog_decision_sha256'],
+ 'certification_publication_sha256'=>(string)$p['certification_publication_sha256'],
+ 'vulnerability_snapshot_sha256'=>(string)$p['vulnerability_snapshot_sha256'],
+ 'trust_snapshot_sha256'=>(string)$p['trust_snapshot_sha256']
+);}
+function pay_eco_001_catalog_publication_entry_sha256(array $p){return pay_eco_001_hash(pay_eco_001_catalog_publication_entry_payload($p));}
+function pay_eco_001_catalog_publication_payload(array $p){return array(
+ 'catalog_candidate_id'=>(int)$p['catalog_candidate_id'],
+ 'catalog_decision_id'=>(int)$p['catalog_decision_id'],
+ 'artifact_admission_id'=>(int)$p['artifact_admission_id'],
+ 'certification_publication_id'=>(int)$p['certification_publication_id'],
+ 'catalog_release_id'=>(int)$p['catalog_release_id'],
+ 'catalog_admission_id'=>(int)$p['catalog_admission_id'],
+ 'publication_profile_sha256'=>(string)$p['publication_profile_sha256'],
+ 'catalog_root_sha256'=>(string)$p['catalog_root_sha256'],
+ 'manifest_sha256'=>(string)$p['manifest_sha256'],
+ 'semantic_root'=>(string)$p['semantic_root'],
+ 'evidence_root'=>(string)$p['evidence_root'],
+ 'support_sha256'=>(string)$p['support_sha256'],
+ 'vulnerability_snapshot_sha256'=>(string)$p['vulnerability_snapshot_sha256'],
+ 'trust_snapshot_sha256'=>(string)$p['trust_snapshot_sha256'],
+ 'published_by'=>(int)$p['published_by'],
+ 'published_at'=>(string)$p['published_at']
+);}
+function pay_eco_001_catalog_publication_sha256(array $p){return pay_eco_001_hash(pay_eco_001_catalog_publication_payload($p));}
+function pay_eco_001_validate_catalog_publication($p,&$error){
+ $error=null;$fields=array('catalog_candidate_id','catalog_decision_id','artifact_admission_id','certification_publication_id','catalog_release_id','catalog_admission_id','publication_profile_sha256','catalog_root_sha256','manifest_sha256','semantic_root','evidence_root','support_sha256','vulnerability_snapshot_sha256','trust_snapshot_sha256','published_by','published_at','publication_sha256');
+ if(!pay_eco_001_exact_fields($p,$fields))return pay_eco_001_fail($error,'catalog_publication_fields_invalid');
+ foreach(array('catalog_candidate_id','catalog_decision_id','artifact_admission_id','certification_publication_id','catalog_release_id','catalog_admission_id','published_by') as $field)if(!pay_eco_001_positive_id($p[$field]))return pay_eco_001_fail($error,'catalog_publication_identity_invalid');
+ foreach(array('publication_profile_sha256','catalog_root_sha256','manifest_sha256','semantic_root','evidence_root','support_sha256','vulnerability_snapshot_sha256','trust_snapshot_sha256','publication_sha256') as $field)if(!pay_eco_001_sha($p[$field]))return pay_eco_001_fail($error,'catalog_publication_hash_invalid');
+ if(!hash_equals(pay_eco_001_catalog_publication_profile_sha256(),(string)$p['publication_profile_sha256']))return pay_eco_001_fail($error,'catalog_publication_profile_invalid');
+ if(pay_eco_001_time($p['published_at'])===false)return pay_eco_001_fail($error,'catalog_publication_time_invalid');
+ if(!hash_equals(pay_eco_001_catalog_publication_sha256($p),(string)$p['publication_sha256']))return pay_eco_001_fail($error,'catalog_publication_digest_mismatch');
  return true;
 }
 
