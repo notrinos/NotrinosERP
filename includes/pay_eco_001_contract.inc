@@ -3,8 +3,8 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1010');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.521');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1013');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.522');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
@@ -15,6 +15,8 @@ if (!defined('PAY_ECO_001_CATALOG_DECISION_PERMISSION')) define('PAY_ECO_001_CAT
 if (!defined('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION')) define('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION')) define('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_CATALOG_LIFECYCLE_PERMISSION')) define('PAY_ECO_001_CATALOG_LIFECYCLE_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_MARKETPLACE_INSTALL_PERMISSION')) define('PAY_ECO_001_MARKETPLACE_INSTALL_PERMISSION','SA_PAY_CTRY_INSTALL');
+if (!defined('PAY_ECO_001_MARKETPLACE_ACTIVATION_PERMISSION')) define('PAY_ECO_001_MARKETPLACE_ACTIVATION_PERMISSION','SA_HRM_EXECUTE_PAY_CTRY_ACTIVATION');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -57,6 +59,11 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_catalog_lifecycle_custody'=>true,
  'catalog_lifecycle_propagation_writer'=>true,
  'catalog_runtime_revocation_guard'=>true,
+ 'immutable_marketplace_installation_custody'=>true,
+ 'marketplace_installation_link_writer'=>true,
+ 'immutable_marketplace_activation_custody'=>true,
+ 'marketplace_activation_link_writer'=>true,
+ 'marketplace_activation_runtime_guard'=>true,
  'sandbox_execution'=>false,
  'marketplace_publication'=>true,
  'automatic_catalog_admission'=>false,
@@ -533,5 +540,38 @@ function pay_eco_001_validate_catalog_lifecycle_event($e,&$error){
  if(pay_eco_001_time($e['effective_at'])===false||pay_eco_001_time($e['propagated_at'])===false)return pay_eco_001_fail($error,'catalog_lifecycle_time_invalid');
  if(!hash_equals(pay_eco_001_catalog_lifecycle_sha256($e),(string)$e['lifecycle_sha256']))return pay_eco_001_fail($error,'catalog_lifecycle_digest_mismatch');return true;
 }
+
+
+/** Marketplace integration records existing PAY-CTRY-002 installation/activation evidence; it never executes either operation. */
+function pay_eco_001_marketplace_profile(){return array(
+ 'profile_code'=>'pay-eco-marketplace-activation-bridge-v1',
+ 'site_install_permission'=>PAY_ECO_001_MARKETPLACE_INSTALL_PERMISSION,
+ 'company_activation_permission'=>PAY_ECO_001_MARKETPLACE_ACTIVATION_PERMISSION,
+ 'published_catalog_required'=>true,
+ 'catalog_lifecycle_guard_required'=>true,
+ 'site_installation_pack_match_required'=>true,
+ 'exact_semantic_root_required'=>true,
+ 'exact_evidence_root_required'=>true,
+ 'pay_ctry_002_activation_binding_required'=>true,
+ 'pay_ctry_002_runtime_resolution_required'=>true,
+ 'installation_implies_activation'=>false,
+ 'automatic_installation'=>false,
+ 'automatic_activation'=>false,
+ 'direct_installation_authority'=>false,
+ 'direct_company_activation_authority'=>false,
+ 'new_permission_grant'=>false,
+ 'external_network_authority'=>false,
+ 'payroll_authority'=>false,
+ 'historical_rewrite_authority'=>false
+);}
+function pay_eco_001_marketplace_profile_sha256(){return pay_eco_001_hash(pay_eco_001_marketplace_profile());}
+function pay_eco_001_validate_marketplace_installation_request($request,&$error){$error=null;$fields=array('catalog_publication_id','site_installation_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_installation_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_publication_id'])||!pay_eco_001_positive_id($request['site_installation_id']))return pay_eco_001_fail($error,'marketplace_installation_request_identity_invalid');return true;}
+function pay_eco_001_marketplace_installation_payload(array $e){return array('catalog_publication_id'=>(int)$e['catalog_publication_id'],'site_installation_id'=>(int)$e['site_installation_id'],'pack_version_id'=>(int)$e['pack_version_id'],'publication_sha256'=>(string)$e['publication_sha256'],'receipt_sha256'=>(string)$e['receipt_sha256'],'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);}
+function pay_eco_001_marketplace_installation_sha256(array $e){return pay_eco_001_hash(pay_eco_001_marketplace_installation_payload($e));}
+function pay_eco_001_validate_marketplace_installation_evidence($e,&$error){$error=null;$fields=array('catalog_publication_id','site_installation_id','pack_version_id','publication_sha256','receipt_sha256','recorded_by','recorded_at','marketplace_installation_sha256');if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_installation_fields_invalid');foreach(array('catalog_publication_id','site_installation_id','pack_version_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,'marketplace_installation_identity_invalid');foreach(array('publication_sha256','receipt_sha256','marketplace_installation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,'marketplace_installation_digest_invalid');if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_installation_time_invalid');if(!hash_equals(pay_eco_001_marketplace_installation_sha256($e),(string)$e['marketplace_installation_sha256']))return pay_eco_001_fail($error,'marketplace_installation_digest_mismatch');return true;}
+function pay_eco_001_validate_marketplace_activation_request($request,&$error){$error=null;$fields=array('marketplace_installation_id','activation_id','binding_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_activation_request_fields_invalid');foreach($fields as $f)if(!pay_eco_001_positive_id($request[$f]))return pay_eco_001_fail($error,'marketplace_activation_request_identity_invalid');return true;}
+function pay_eco_001_marketplace_activation_payload(array $e){return array('marketplace_installation_id'=>(int)$e['marketplace_installation_id'],'activation_id'=>(int)$e['activation_id'],'binding_id'=>(int)$e['binding_id'],'company_id'=>(int)$e['company_id'],'scope_type'=>(string)$e['scope_type'],'activation_sha256'=>(string)$e['activation_sha256'],'binding_sha256'=>(string)$e['binding_sha256'],'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);}
+function pay_eco_001_marketplace_activation_sha256(array $e){return pay_eco_001_hash(pay_eco_001_marketplace_activation_payload($e));}
+function pay_eco_001_validate_marketplace_activation_evidence($e,&$error){$error=null;$fields=array('marketplace_installation_id','activation_id','binding_id','company_id','scope_type','activation_sha256','binding_sha256','recorded_by','recorded_at','marketplace_activation_sha256');if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_activation_fields_invalid');foreach(array('marketplace_installation_id','activation_id','binding_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,'marketplace_activation_identity_invalid');if((int)$e['company_id']<0||!in_array($e['scope_type'],array('company','legal_entity','payroll_scope'),true))return pay_eco_001_fail($error,'marketplace_activation_scope_invalid');foreach(array('activation_sha256','binding_sha256','marketplace_activation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,'marketplace_activation_digest_invalid');if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_activation_time_invalid');if(!hash_equals(pay_eco_001_marketplace_activation_sha256($e),(string)$e['marketplace_activation_sha256']))return pay_eco_001_fail($error,'marketplace_activation_digest_mismatch');return true;}
 
 ?>

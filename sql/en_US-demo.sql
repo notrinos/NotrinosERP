@@ -15742,3 +15742,58 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_lifecycle_events` (
 CREATE TRIGGER `0_peco1_cl_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be updated';
 CREATE TRIGGER `0_peco1_cl_d` BEFORE DELETE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be deleted';
 -- PAY-ECO-001 END GROUP catalog_lifecycle
+-- PAY-ECO-001 GROUP marketplace_activation
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_marketplace_installations` (
+  `marketplace_installation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_publication_id` bigint(20) unsigned NOT NULL,
+  `site_installation_id` bigint(20) unsigned NOT NULL,
+  `pack_version_id` bigint(20) unsigned NOT NULL,
+  `publication_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `recorded_by` smallint(6) unsigned NOT NULL,
+  `recorded_at` datetime NOT NULL,
+  `marketplace_installation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`marketplace_installation_id`),
+  UNIQUE KEY `uq_peco1_mi_pub_install` (`catalog_publication_id`,`site_installation_id`),
+  UNIQUE KEY `uq_peco1_mi_sha` (`marketplace_installation_sha256`),
+  KEY `ix_peco1_mi_install` (`site_installation_id`,`recorded_at`),
+  KEY `ix_peco1_mi_pack` (`pack_version_id`),
+  CONSTRAINT `fk_peco1_mi_publication` FOREIGN KEY (`catalog_publication_id`) REFERENCES `0_pay_eco_001_catalog_publications` (`catalog_publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_mi_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_mi_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_mi_u` BEFORE UPDATE ON `0_pay_eco_001_marketplace_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_installations row cannot be updated';
+CREATE TRIGGER `0_peco1_mi_d` BEFORE DELETE ON `0_pay_eco_001_marketplace_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_installations row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_marketplace_activations` (
+  `marketplace_activation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `marketplace_installation_id` bigint(20) unsigned NOT NULL,
+  `activation_id` bigint(20) unsigned NOT NULL,
+  `binding_id` bigint(20) unsigned NOT NULL,
+  `company_id` smallint(5) unsigned NOT NULL,
+  `scope_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `legal_entity_id` bigint(20) unsigned NULL,
+  `payroll_scope_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  `action_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_to` date NULL,
+  `activation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `binding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `recorded_by` smallint(6) unsigned NOT NULL,
+  `recorded_at` datetime NOT NULL,
+  `marketplace_activation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`marketplace_activation_id`),
+  UNIQUE KEY `uq_peco1_ma_activation` (`activation_id`),
+  UNIQUE KEY `uq_peco1_ma_binding` (`binding_id`),
+  UNIQUE KEY `uq_peco1_ma_sha` (`marketplace_activation_sha256`),
+  KEY `ix_peco1_ma_install` (`marketplace_installation_id`,`recorded_at`),
+  KEY `ix_peco1_ma_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_from`),
+  CONSTRAINT `fk_peco1_ma_market_install` FOREIGN KEY (`marketplace_installation_id`) REFERENCES `0_pay_eco_001_marketplace_installations` (`marketplace_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_ma_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_ma_binding` FOREIGN KEY (`binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_ma_u` BEFORE UPDATE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be updated';
+CREATE TRIGGER `0_peco1_ma_d` BEFORE DELETE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be deleted';
+-- PAY-ECO-001 END GROUP marketplace_activation
