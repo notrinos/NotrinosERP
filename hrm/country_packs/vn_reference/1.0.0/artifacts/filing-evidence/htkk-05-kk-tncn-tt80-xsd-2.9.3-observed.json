@@ -1,0 +1,150 @@
+{
+  "schema": "notrinos.pay-fil-001.htkk-xsd-observation.v1",
+  "evidence_id": "vn-htkk-05-kk-tncn-tt80-xsd-2.9.3-observed-2026-10-05",
+  "scope": {
+    "jurisdiction_code": "VN",
+    "regulation": "Thông tư 80/2021/TT-BTC",
+    "form": "05/KK-TNCN",
+    "form_id": "05_KK_TNCN_TT80",
+    "declaration_code": "864",
+    "htkk_version": "5.7.8",
+    "xml_version": "2.9.3",
+    "menu_entry": {
+      "MaFile": "05_KK_TNCN_TT80",
+      "VersionXML": "2.9.3",
+      "VersionKHBS": "2.9.3",
+      "XsdSchema": "05_KK_TNCN_TT80",
+      "class": "TncnKk05TT80"
+    }
+  },
+  "custody": {
+    "mode": "hash-and-observation-only",
+    "source_evidence_folder": "C:\\Users\\trana\\.codex\\visualizations\\2026\\10\\04\\01a10832-0e73-7c71-919c-b8c70947f641\\pay-fil-evidence-htkk-578",
+    "evidence_manifest_sha256": "b92fc8de9b6111e1364e44ba269501c3b520099c1dd202e1121653a414b56163",
+    "inventory_sha256": "997fb5d4b24a89a6abed2211e5ec744bd76a41e13357c436daebda7e2c881fbd",
+    "original_taxpayer_xml_sha256": "83aee7ef1a591f3fc105c3fff6ac7650d2ec295c7f1bbf8b51bc9a4c93ba5b9d",
+    "original_taxpayer_xml_retained_in_repository": false,
+    "htkk_schema_files_copied_into_repository": false
+  },
+  "observations": {
+    "original_export_has_schemaLocation": false,
+    "original_export_embeds_form_version": false,
+    "original_export_embeds_template_version": false,
+    "original_export_embeds_application_version": true,
+    "original_export_validation_events_against_installed_2_9_3_schema": 0,
+    "result_provenance": "owner-supplied local HTKK observation; not independently reproduced against taxpayer-bearing XML",
+    "convert_version_records": "2.8.3 -> 2.9.3",
+    "original_export_identity": {
+      "root_element": "HSoThueDTu",
+      "namespace_uri": "http://kekhaithue.gdt.gov.vn/TKhaiThue",
+      "schema_location_attribute_present": false,
+      "application_product_code_element": "maDVu",
+      "application_product_code": "HTKK",
+      "application_version_element": "pbanDVu",
+      "application_version": "5.7.8",
+      "declaration_code_element": "maTKhai",
+      "declaration_code": "864",
+      "form_version_element_present": false,
+      "template_version_element_present": false
+    }
+  },
+  "resources": [
+    {
+      "role": "active-per-form-xsd-candidate",
+      "file": "05_KK_TNCN_TT80_293.xsd",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\Validate\\05_KK_TNCN_TT80_293.xsd",
+      "evidence_copy": "HTKK/InterfaceTemplates/Validate/05_KK_TNCN_TT80_293.xsd",
+      "bytes": 17770,
+      "sha256": "9cd4d367123ee0ac1f94fb043975738ac142420d558bb24969e4c0afe64ac846"
+    },
+    {
+      "role": "per-form-xsd-redefine-dependency",
+      "file": "TKhaiThue_DBHC.xsd",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\TKhaiThue_DBHC.xsd",
+      "evidence_copy": "HTKK/InterfaceTemplates/TKhaiThue_DBHC.xsd",
+      "bytes": 18036,
+      "sha256": "aba7f2acbc9332caaf3eb2da9a081a3d876ddc7813d6230921da48c775460011"
+    },
+    {
+      "role": "related-envelope-schema",
+      "file": "TKhaiThue.xsd",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\TKhaiThue.xsd",
+      "evidence_copy": "HTKK/InterfaceTemplates/TKhaiThue.xsd",
+      "bytes": 17741,
+      "sha256": "8f451719355b5a6247f65a34a37584b4a0c7f7cc81a568e1033d08b8fe9b8c1d"
+    },
+    {
+      "role": "related-xml-signature-schema-dependency",
+      "file": "xmldsig-core-schema.xsd",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\xmldsig-core-schema.xsd",
+      "evidence_copy": "HTKK/InterfaceTemplates/xmldsig-core-schema.xsd",
+      "bytes": 10264,
+      "sha256": "c3b5160be1852606d10f6928e0b214d418f8dd418667cb2fb88fec31e4e6f56d"
+    },
+    {
+      "role": "active-form-menu-registry",
+      "file": "Menu.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\Project\\Menu.xml",
+      "evidence_copy": "HTKK/Project/Menu.xml",
+      "bytes": 334792,
+      "sha256": "9a723950f17678edf983591d8a36ade266a823acc3a5d3d69af46c4c20d902a0"
+    },
+    {
+      "role": "period-and-declaration-mapping",
+      "file": "Map.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\Project\\Map.xml",
+      "evidence_copy": "HTKK/Project/Map.xml",
+      "bytes": 126425,
+      "sha256": "3f5095bc33322722c628fbd4c6428dc0dffd3492e8f61558715954b44d399215"
+    },
+    {
+      "role": "field-and-indicator-mapping",
+      "file": "MapMCT.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\Project\\MapMCT.xml",
+      "evidence_copy": "HTKK/Project/MapMCT.xml",
+      "bytes": 695283,
+      "sha256": "137b7752fce7ea42e142877dce9eb18cbf99189bf6cc27a418507608cd93e7b4"
+    },
+    {
+      "role": "version-transition-map",
+      "file": "ConvertVersion.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceIni\\ConvertVersion.xml",
+      "evidence_copy": "HTKK/InterfaceIni/ConvertVersion.xml",
+      "bytes": 35500,
+      "sha256": "eca3a24707fcbab8c420412f651e0a98775921915e25b79b073b433f090490e3"
+    },
+    {
+      "role": "active-form-definition",
+      "file": "05_KK_TNCN_TT80_293.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\xml\\05_KK_TNCN_TT80_293.xml",
+      "evidence_copy": "HTKK/InterfaceTemplates/xml/05_KK_TNCN_TT80_293.xml",
+      "bytes": 10866,
+      "sha256": "ac49d746988fa0e18fa4f41c839b02b87d2d612988a20fae93004c5a99ed1d6e"
+    },
+    {
+      "role": "active-xml-serialization-template",
+      "file": "05_KK_TNCN_TT80_xml_293.xml",
+      "source_path": "C:\\Program Files (x86)\\HTKK\\InterfaceTemplates\\xml\\05_KK_TNCN_TT80_xml_293.xml",
+      "evidence_copy": "HTKK/InterfaceTemplates/xml/05_KK_TNCN_TT80_xml_293.xml",
+      "bytes": 1721,
+      "sha256": "ff1e3b4b03194c165d4ab44bd34472df526977a470b002b16853e812c8aeae3d"
+    }
+  ],
+  "authority": {
+    "htkk_observed_local_match_only": true,
+    "independent_gdt_provenance_established": false,
+    "legal_applicability_reviewed": false,
+    "independent_authoritative_technical_specification_reviewed": false,
+    "generated_payload_certification_or_etax_acceptance_established": false,
+    "production_runtime_consumption_allowed": false,
+    "official_generation_allowed": false,
+    "filing_authorization_execution_allowed": false,
+    "transmission_allowed": false
+  },
+  "remaining_official_evidence_gaps": [
+    "independent-gdt-provenance-for-exact-schema",
+    "reviewed-legal-applicability-and-effective-date-evidence",
+    "independently-published-authoritative-technical-specification",
+    "certification-or-etax-gdt-acceptance-of-independently-generated-xml"
+  ]
+}
