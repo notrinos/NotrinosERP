@@ -3,8 +3,8 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1007');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.520');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1010');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.521');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
@@ -14,6 +14,7 @@ if (!defined('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION')) define('PAY_ECO_001_A
 if (!defined('PAY_ECO_001_CATALOG_DECISION_PERMISSION')) define('PAY_ECO_001_CATALOG_DECISION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION')) define('PAY_ECO_001_CATALOG_PUBLICATION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION')) define('PAY_ECO_001_CATALOG_RUNTIME_PERMISSION','SA_PAY_CTRY_INSTALL');
+if (!defined('PAY_ECO_001_CATALOG_LIFECYCLE_PERMISSION')) define('PAY_ECO_001_CATALOG_LIFECYCLE_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -53,6 +54,9 @@ function pay_eco_001_authority_contract(){return array(
  'immutable_catalog_publication_custody'=>true,
  'catalog_publication_writer'=>true,
  'catalog_runtime_read'=>true,
+ 'immutable_catalog_lifecycle_custody'=>true,
+ 'catalog_lifecycle_propagation_writer'=>true,
+ 'catalog_runtime_revocation_guard'=>true,
  'sandbox_execution'=>false,
  'marketplace_publication'=>true,
  'automatic_catalog_admission'=>false,
@@ -485,6 +489,49 @@ function pay_eco_001_validate_catalog_publication($p,&$error){
  if(pay_eco_001_time($p['published_at'])===false)return pay_eco_001_fail($error,'catalog_publication_time_invalid');
  if(!hash_equals(pay_eco_001_catalog_publication_sha256($p),(string)$p['publication_sha256']))return pay_eco_001_fail($error,'catalog_publication_digest_mismatch');
  return true;
+}
+
+
+/** Catalog revocation/suspension propagation consumes existing PAY-CTRY authority only. */
+function pay_eco_001_catalog_lifecycle_sources(){return array('certification_emergency_action','publisher_revocation','trust_key_revocation');}
+function pay_eco_001_catalog_lifecycle_profile(){return array(
+ 'profile_code'=>'pay-eco-catalog-lifecycle-v1',
+ 'trusted_operator_permission'=>PAY_ECO_001_CATALOG_LIFECYCLE_PERMISSION,
+ 'authoritative_sources'=>pay_eco_001_catalog_lifecycle_sources(),
+ 'server_derived_source_only'=>true,
+ 'immutable_propagation_custody'=>true,
+ 'runtime_denies_before_propagation_record'=>true,
+ 'suspension_fails_closed'=>true,
+ 'revocation_fails_closed'=>true,
+ 'historical_publication_preserved'=>true,
+ 'publication_evidence_rewrite'=>false,
+ 'installation_authority'=>false,
+ 'company_activation_authority'=>false,
+ 'external_network_authority'=>false,
+ 'payroll_authority'=>false,
+ 'historical_rewrite_authority'=>false
+);}
+function pay_eco_001_catalog_lifecycle_profile_sha256(){return pay_eco_001_hash(pay_eco_001_catalog_lifecycle_profile());}
+function pay_eco_001_validate_catalog_lifecycle_request($request,&$error){
+ $error=null;$fields=array('catalog_publication_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'catalog_lifecycle_request_fields_invalid');
+ if(!pay_eco_001_positive_id($request['catalog_publication_id']))return pay_eco_001_fail($error,'catalog_lifecycle_request_identity_invalid');return true;
+}
+function pay_eco_001_catalog_lifecycle_payload(array $e){return array(
+ 'catalog_publication_id'=>(int)$e['catalog_publication_id'],'source_type'=>(string)$e['source_type'],'source_id'=>(int)$e['source_id'],
+ 'action_type'=>(string)$e['action_type'],'effective_at'=>(string)$e['effective_at'],'reason_code'=>(string)$e['reason_code'],
+ 'reason_sha256'=>(string)$e['reason_sha256'],'source_sha256'=>(string)$e['source_sha256'],'propagated_by'=>(int)$e['propagated_by'],
+ 'propagated_at'=>(string)$e['propagated_at']);}
+function pay_eco_001_catalog_lifecycle_sha256(array $e){return pay_eco_001_hash(pay_eco_001_catalog_lifecycle_payload($e));}
+function pay_eco_001_validate_catalog_lifecycle_event($e,&$error){
+ $error=null;$fields=array('catalog_publication_id','source_type','source_id','action_type','effective_at','reason_code','reason_sha256','source_sha256','propagated_by','propagated_at','lifecycle_sha256');
+ if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'catalog_lifecycle_fields_invalid');
+ if(!pay_eco_001_positive_id($e['catalog_publication_id'])||!pay_eco_001_positive_id($e['source_id'])||!pay_eco_001_positive_id($e['propagated_by']))return pay_eco_001_fail($error,'catalog_lifecycle_identity_invalid');
+ if(!in_array($e['source_type'],pay_eco_001_catalog_lifecycle_sources(),true))return pay_eco_001_fail($error,'catalog_lifecycle_source_invalid');
+ if(!in_array($e['action_type'],array('suspend','revoke'),true))return pay_eco_001_fail($error,'catalog_lifecycle_action_invalid');
+ if($e['source_type']!=='certification_emergency_action'&&$e['action_type']!=='revoke')return pay_eco_001_fail($error,'catalog_lifecycle_source_action_invalid');
+ if(!pay_eco_001_token($e['reason_code'],64)||!pay_eco_001_sha($e['reason_sha256'])||!pay_eco_001_sha($e['source_sha256'])||!pay_eco_001_sha($e['lifecycle_sha256']))return pay_eco_001_fail($error,'catalog_lifecycle_digest_invalid');
+ if(pay_eco_001_time($e['effective_at'])===false||pay_eco_001_time($e['propagated_at'])===false)return pay_eco_001_fail($error,'catalog_lifecycle_time_invalid');
+ if(!hash_equals(pay_eco_001_catalog_lifecycle_sha256($e),(string)$e['lifecycle_sha256']))return pay_eco_001_fail($error,'catalog_lifecycle_digest_mismatch');return true;
 }
 
 ?>

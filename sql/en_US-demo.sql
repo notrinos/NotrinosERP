@@ -15708,3 +15708,37 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_publications` (
 CREATE TRIGGER `0_peco1_cp_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be updated';
 CREATE TRIGGER `0_peco1_cp_d` BEFORE DELETE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be deleted';
 -- PAY-ECO-001 END GROUP catalog_publication
+-- PAY-ECO-001 GROUP catalog_lifecycle
+CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_lifecycle_events` (
+  `catalog_lifecycle_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `catalog_publication_id` bigint(20) unsigned NOT NULL,
+  `source_type` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `certification_emergency_action_id` bigint(20) unsigned NULL,
+  `publisher_revocation_id` bigint(20) unsigned NULL,
+  `trust_key_revocation_id` bigint(20) unsigned NULL,
+  `action_type` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `effective_at` datetime NOT NULL,
+  `reason_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `propagated_by` smallint(6) unsigned NOT NULL,
+  `propagated_at` datetime NOT NULL,
+  `lifecycle_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`catalog_lifecycle_event_id`),
+  UNIQUE KEY `uq_peco1_cl_sha` (`lifecycle_sha256`),
+  UNIQUE KEY `uq_peco1_cl_cert_action` (`catalog_publication_id`,`certification_emergency_action_id`),
+  UNIQUE KEY `uq_peco1_cl_pub_rev` (`catalog_publication_id`,`publisher_revocation_id`),
+  UNIQUE KEY `uq_peco1_cl_key_rev` (`catalog_publication_id`,`trust_key_revocation_id`),
+  KEY `ix_peco1_cl_publication` (`catalog_publication_id`,`effective_at`),
+  KEY `ix_peco1_cl_cert_action` (`certification_emergency_action_id`),
+  KEY `ix_peco1_cl_pub_rev` (`publisher_revocation_id`),
+  KEY `ix_peco1_cl_key_rev` (`trust_key_revocation_id`),
+  CONSTRAINT `fk_peco1_cl_publication` FOREIGN KEY (`catalog_publication_id`) REFERENCES `0_pay_eco_001_catalog_publications` (`catalog_publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cl_cert_action` FOREIGN KEY (`certification_emergency_action_id`) REFERENCES `0_pay_ctry_certification_emergency_actions` (`emergency_action_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cl_pub_rev` FOREIGN KEY (`publisher_revocation_id`) REFERENCES `0_pay_ctry_publisher_revocations` (`publisher_revocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CONSTRAINT `fk_peco1_cl_key_rev` FOREIGN KEY (`trust_key_revocation_id`) REFERENCES `0_pay_ctry_trust_key_revocations` (`key_revocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_peco1_cl_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be updated';
+CREATE TRIGGER `0_peco1_cl_d` BEFORE DELETE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be deleted';
+-- PAY-ECO-001 END GROUP catalog_lifecycle

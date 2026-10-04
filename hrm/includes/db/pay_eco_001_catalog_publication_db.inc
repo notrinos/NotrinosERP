@@ -4,6 +4,7 @@ include_once($path_to_root.'/includes/pay_eco_001_contract.inc');
 include_once($path_to_root.'/includes/pay_ctry_004_contract.inc');
 include_once($path_to_root.'/includes/pay_ctry_007_contract.inc');
 include_once(dirname(__FILE__).'/pay_eco_001_onboarding_db.inc');
+include_once(dirname(__FILE__).'/pay_eco_001_catalog_lifecycle_db.inc');
 
 function pay_eco_001_catalog_publication_iso($sql_value,&$error)
 {
@@ -124,6 +125,7 @@ function pay_eco_001_get_catalog_publication($catalog_candidate_id,&$error,$now_
     if(!pay_eco_001_onboarding_access(PAY_ECO_001_CATALOG_RUNTIME_PERMISSION))return pay_eco_001_fail($error,'catalog_runtime_authority_denied');
     $row=pay_eco_001_catalog_publication_exact_row('SELECT cp.*,c.candidate_code,c.pack_version_id,v.version AS pack_version,d.decision,aa.result AS artifact_result,aa.admission_sha256,pr.publication_sha256 AS certification_publication_sha256,cr.release_sha256,ca.admission_sha256 AS catalog_admission_sha256 FROM '.TB_PREF.'pay_eco_001_catalog_publications cp INNER JOIN '.TB_PREF.'pay_eco_001_pack_candidates c ON c.catalog_candidate_id=cp.catalog_candidate_id INNER JOIN '.TB_PREF.'pay_ctry_pack_versions v ON v.pack_version_id=c.pack_version_id INNER JOIN '.TB_PREF.'pay_eco_001_catalog_decisions d ON d.catalog_decision_id=cp.catalog_decision_id INNER JOIN '.TB_PREF.'pay_eco_001_artifact_admissions aa ON aa.artifact_admission_id=cp.artifact_admission_id INNER JOIN '.TB_PREF.'pay_ctry_publication_records pr ON pr.publication_id=cp.certification_publication_id INNER JOIN '.TB_PREF.'pay_ctry_catalog_releases cr ON cr.catalog_release_id=cp.catalog_release_id INNER JOIN '.TB_PREF.'pay_ctry_catalog_release_admissions ca ON ca.catalog_admission_id=cp.catalog_admission_id WHERE cp.catalog_candidate_id='.(int)$catalog_candidate_id.' LIMIT 2',$error,false);if($row===false)return false;
     if((string)$row['decision']!=='admit_for_review'||(string)$row['artifact_result']!=='admitted')return pay_eco_001_fail($error,'catalog_runtime_publication_not_current');
+    if(!pay_eco_001_catalog_lifecycle_guard((int)$row['catalog_publication_id'],$error,$now_epoch,false))return false;
     $cert=pay_eco_001_catalog_publication_certification((int)$row['certification_publication_id'],(int)$row['pack_version_id'],(string)$row['semantic_root'],(string)$row['evidence_root'],$now_epoch,$error,false);if($cert===false)return false;
     $catalog=pay_eco_001_catalog_publication_verify_release((int)$row['catalog_release_id'],(int)$row['catalog_admission_id'],$now_epoch,$error,false);if($catalog===false)return false;
     if(!hash_equals((string)$catalog['release']['catalog_root_sha256'],(string)$row['catalog_root_sha256']))return pay_eco_001_fail($error,'catalog_runtime_catalog_root_drift');
