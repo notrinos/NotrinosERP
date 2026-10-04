@@ -3,14 +3,15 @@
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
-if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1002');
-if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.518');
+if (!defined('PAY_ECO_001_SOURCE_DATABASE_VERSION')) define('PAY_ECO_001_SOURCE_DATABASE_VERSION','1.0.1004');
+if (!defined('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_ECO_001_LEGACY_PAYROLL_CONTRACT_VERSION','1.0.519');
 if (!defined('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION')) define('PAY_ECO_001_PUBLISHER_PROFILE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_PACK_CANDIDATE_PERMISSION')) define('PAY_ECO_001_PACK_CANDIDATE_PERMISSION','SA_PAY_CTRY_INSTALL');
 if (!defined('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION')) define('PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION')) define('PAY_ECO_001_DEPENDENCY_SCAN_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION')) define('PAY_ECO_001_VULNERABILITY_INTELLIGENCE_PERMISSION','SA_PAY_CTRY_TRUST');
 if (!defined('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION')) define('PAY_ECO_001_ARTIFACT_ADMISSION_PERMISSION','SA_PAY_CTRY_TRUST');
+if (!defined('PAY_ECO_001_CATALOG_DECISION_PERMISSION')) define('PAY_ECO_001_CATALOG_DECISION_PERMISSION','SA_PAY_CTRY_TRUST');
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
@@ -46,7 +47,7 @@ function pay_eco_001_authority_contract(){return array(
  'dependency_vulnerability_scanning'=>true,
  'immutable_artifact_admission_custody'=>true,
  'signed_reproducible_artifact_admission'=>true,
- 'catalog_decision_writer'=>false,
+ 'catalog_decision_writer'=>true,
  'sandbox_execution'=>false,
  'marketplace_publication'=>false,
  'automatic_catalog_admission'=>false,
@@ -372,5 +373,35 @@ function pay_eco_001_validate_artifact_admission($a,&$error){
 }
 function pay_eco_001_validate_artifact_admission_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'artifact_admission_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'artifact_admission_request_identity_invalid');return true;}
 
+
+
+
+/** Catalog decision governance. Decisions are immutable review evidence only; they never publish or install a pack. */
+function pay_eco_001_catalog_decision_profile(){return array(
+ 'profile_code'=>'pay-eco-catalog-decision-v1',
+ 'trusted_checker_permission'=>PAY_ECO_001_CATALOG_DECISION_PERMISSION,
+ 'artifact_admission_required'=>true,
+ 'maker_from_candidate_submitter'=>true,
+ 'checker_is_current_actor'=>true,
+ 'checker_distinct_from_maker'=>true,
+ 'current_nonexpired_vulnerability_snapshot_required'=>true,
+ 'effective_nonrevoked_publisher_required'=>true,
+ 'admitted_trust_snapshot_revalidation_required'=>true,
+ 'signing_key_not_revoked_required'=>true,
+ 'single_terminal_decision_per_candidate'=>true,
+ 'publication_authority'=>false,
+ 'installation_authority'=>false,
+ 'company_activation_authority'=>false,
+ 'network_authority'=>false
+);}
+function pay_eco_001_catalog_decision_profile_sha256(){return pay_eco_001_hash(pay_eco_001_catalog_decision_profile());}
+function pay_eco_001_validate_catalog_decision_request($request,&$error){
+ $error=null;$fields=array('catalog_candidate_id','decision','decision_reason_sha256');
+ if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'catalog_decision_request_fields_invalid');
+ if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'catalog_decision_request_identity_invalid');
+ if(!in_array($request['decision'],pay_eco_001_catalog_decisions(),true))return pay_eco_001_fail($error,'catalog_decision_request_value_invalid');
+ if(!pay_eco_001_sha($request['decision_reason_sha256']))return pay_eco_001_fail($error,'catalog_decision_request_reason_invalid');
+ return true;
+}
 
 ?>
