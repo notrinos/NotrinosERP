@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1016',
-        'active_legacy_payroll_contract'=>'1.0.523',
+        'active_database_version'=>'1.0.1019',
+        'active_legacy_payroll_contract'=>'1.0.524',
         'next_backlog_item'=>'PAY-FIL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-ECO-001 final readiness/closure is SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1016 and active legacy-payroll source custody 1.0.523. Three security-sensitive source-only edges 1.0.1013 -> 1.0.1014 -> 1.0.1015 -> 1.0.1016 bind the accepted ecosystem lifecycle/default-deny evidence, exact migration/schema/fix-forward recovery projection, and final authority/payroll-isolation ceiling. The physical PAY-ECO projection remains thirteen InnoDB custody tables, twenty-six immutable denial triggers and thirty-two restrictive foreign keys; closure adds no table, trigger, foreign key, seed row, role/permission grant, direct install/activation authority, arbitrary network delivery, payroll/posting/payment/GL/statutory filing authority, core-source write or historical payroll/accounting mutation. PAY-ECO-001 is source-development complete, pending only the exact owner-machine LOCAL MANDATORY GATE tests/php/run_pay_eco_001_completion_mandatory_blockers_browser.php build pay-eco-001-completion-v1-20261004 after sequential Software Upgrade 1.0.1013 -> 1.0.1014 -> 1.0.1015 -> 1.0.1016. PAY-FIL-001 remains OPEN / DEPENDENCY-BLOCKED / HUMAN-EVIDENCE-DEFERRED; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-FIL-001 HTKK observed-evidence batch SOURCE-VERIFIED / LOCAL-GATE-PENDING at source head 1.0.1019 and active legacy-payroll source custody 1.0.524. Three filing-risk source-only edges 1.0.1016 -> 1.0.1017 -> 1.0.1018 -> 1.0.1019 bind a redacted hash receipt for the user-supplied HTKK 5.7.8 05/KK-TNCN XML 2.9.3 sample, accept its non-sensitive structural profile, and explicitly retain the remaining authoritative schema/XSD, legal applicability, technical specification and certification/acceptance evidence gaps. The raw taxpayer-bearing XML is not retained in repository source. Existing seven PAY-FIL InnoDB custody tables and fourteen immutable denial triggers are unchanged; the batch adds no schema, seed row, permission grant, official form generation, filing authorization execution, provider/government submission, network access, connector secret, acknowledgement, correction/amendment execution, payment/GL authority or historical payroll/accounting/filing mutation. LOCAL MANDATORY GATE required: tests/php/run_pay_fil_001_htkk_evidence_mandatory_blockers_browser.php build pay-fil-001-htkk-evidence-v1-20261005 after sequential Software Upgrade 1.0.1016 -> 1.0.1017 -> 1.0.1018 -> 1.0.1019. PAY-FIL-001 remains OPEN / PARTIAL-HUMAN-EVIDENCE-RECEIVED; named official-schema registration/generation remains blocked until the four authoritative evidence gaps are separately satisfied. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
 
         'edges'=>array(
+            'pay_fil_001_official_schema_evidence_gap_guard'=>array('previous'=>'1.0.1018','version'=>'1.0.1019',
+                'file'=>'sql/upgrade_pay_fil_001_official_schema_evidence_gap_guard.php'),
+            'pay_fil_001_htkk_structure_profile'=>array('previous'=>'1.0.1017','version'=>'1.0.1018',
+                'file'=>'sql/upgrade_pay_fil_001_htkk_structure_profile.php'),
+            'pay_fil_001_htkk_evidence_receipt'=>array('previous'=>'1.0.1016','version'=>'1.0.1017',
+                'file'=>'sql/upgrade_pay_fil_001_htkk_evidence_receipt.php'),
             'pay_eco_001_authority_isolation_completion'=>array('previous'=>'1.0.1015','version'=>'1.0.1016',
                 'file'=>'sql/upgrade_pay_eco_001_authority_isolation_completion.php'),
             'pay_eco_001_migration_recovery_acceptance'=>array('previous'=>'1.0.1014','version'=>'1.0.1015',

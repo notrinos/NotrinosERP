@@ -3,6 +3,7 @@
 include_once(dirname(__FILE__).'/migration_readiness_db.inc');
 include_once($path_to_root.'/includes/pay_fil_001_contract.inc');
 include_once($path_to_root.'/includes/pay_fil_001_official_schema_contract.inc');
+include_once($path_to_root.'/includes/pay_fil_001_htkk_evidence_contract.inc');
 function pay_fil_001_fail_patch($patch,$m){return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,$m);}
 function pay_fil_001_require_predecessor($patch){global $path_to_root;$files=array(
  'Testting-Planning-Migration/HRM_GLOBAL_PAYROLL_IMPROVEMENT/EXECUTION_REPORT_PAY_PMT_001_COMPLETION_2026-09-27.md'=>'dc4df2b1cdeb967e4c6f0c0bbc1c136b14eb2bc97f77bda54c0b62fa9534d65d',
@@ -32,6 +33,20 @@ function pay_fil_001_require_presubmission_acceptance($patch){global $path_to_ro
 
 /** Keep the current VN reference boundary explicitly fail-closed until a named official schema is reviewed. */
 function pay_fil_001_require_current_official_schema_boundary($patch){global $path_to_root;$rel='hrm/country_packs/vn_reference/1.0.0/artifacts/filing-boundaries.json';$raw=@file_get_contents($path_to_root.'/'.$rel);if(!is_string($raw)||hash('sha256',$raw)!=='388d8a6d459afc4d4ddab9515fda510dfa23d46a99fee8890be035fce19b50ee')return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary custody mismatch.');$b=json_decode($raw,true);if(!is_array($b)||!isset($b['official_supported_schemas'])||!is_array($b['official_supported_schemas'])||count($b['official_supported_schemas'])!==0)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary unexpectedly names an official schema.');foreach(array('tax_filing','social_insurance_filing') as $k)if(!isset($b[$k])||!array_key_exists('generation_allowed',$b[$k])||$b[$k]['generation_allowed']!==false||!array_key_exists('transmission_allowed',$b[$k])||$b[$k]['transmission_allowed']!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 current filing boundary no longer fails closed: '.$k.'.');return true;}
+
+
+/** Require the immutable redacted receipt for the supplied HTKK 05/KK-TNCN XML evidence. */
+function pay_fil_001_require_htkk_observed_evidence($patch){global $path_to_root;$rel='hrm/country_packs/vn_reference/1.0.0/artifacts/filing-evidence/htkk-05-kk-tncn-tt80-xml-2.9.3-observed.json';$raw=@file_get_contents($path_to_root.'/'.$rel);if(!is_string($raw)||hash('sha256',$raw)!=='4418e0bb2f02192cad040f969a47388c05b82a1f2acd1f614613ca40fe0446ba')return pay_fil_001_fail_patch($patch,'PAY-FIL-001 HTKK observed-evidence custody mismatch.');$m=json_decode($raw,true);$e=null;if(!is_array($m)||pay_fil_001_validate_htkk_observed_evidence_manifest($m,$e)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 HTKK observed-evidence contract invalid: '.(string)$e.'.');return true;}
+
+/** The observed sample is useful structural evidence but grants no official filing authority. */
+function pay_fil_001_require_htkk_structure_profile_source($patch){if(!pay_fil_001_require_htkk_observed_evidence($patch))return false;$id=pay_fil_001_htkk_observed_evidence_identity();if($id['service_id']!=='HTKK'||$id['service_version']!=='5.7.8'||$id['declaration_code']!=='864'||$id['declaration_xml_version']!=='2.9.3'||$id['period_kind']!=='Q'||$id['ordered_local_tag_count']!==66||!pay_fil_001_sha($id['source_sha256'])||!pay_fil_001_sha($id['ordered_local_tag_names_sha256'])||!pay_fil_001_sha($id['main_indicator_tags_sha256']))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 HTKK structural evidence profile incomplete.');return true;}
+
+/** Keep all authority fail-closed until the four separately reviewed evidence gaps are satisfied. */
+function pay_fil_001_require_official_schema_evidence_gap_guard_source($patch){if(!pay_fil_001_require_htkk_structure_profile_source($patch))return false;$a=pay_fil_001_htkk_authority_boundary();foreach(array('official_schema_claimed','official_form_generation_allowed','filing_authorization_execution_allowed','transmission_allowed','network_authority_allowed','connector_secret_custody_allowed','raw_user_evidence_retained_in_repository') as $k)if(!array_key_exists($k,$a)||$a[$k]!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 HTKK evidence authority ceiling violated: '.$k.'.');$g=pay_fil_001_htkk_remaining_evidence_gaps();if($g!==array('authoritative-machine-readable-schema-or-xsd-for-exact-form-version','reviewed-legal-applicability-and-effective-date-evidence','reviewed-authoritative-technical-specification-evidence','reviewed-certification-or-acceptance-evidence-for-generated-payloads'))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 HTKK evidence gap set changed unexpectedly.');return pay_fil_001_require_current_official_schema_boundary($patch);}
+
+function pay_fil_001_htkk_evidence_receipt_required_for_database_version($version){return version_compare((string)$version,'1.0.1017','>=');}
+function pay_fil_001_htkk_structure_profile_required_for_database_version($version){return version_compare((string)$version,'1.0.1018','>=');}
+function pay_fil_001_official_schema_evidence_gap_guard_required_for_database_version($version){return version_compare((string)$version,'1.0.1019','>=');}
 
 function pay_fil_001_require_permissions($patch){global $path_to_root;$raw=@file_get_contents($path_to_root.'/includes/access_levels.inc');if(!is_string($raw))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 permission source missing.');foreach(array(PAY_FIL_001_PREPARE_PERMISSION,PAY_FIL_001_REVIEW_PERMISSION,PAY_FIL_001_AUTHORIZE_PERMISSION,PAY_FIL_001_SUBMIT_PERMISSION,PAY_FIL_001_RECOVER_PERMISSION,PAY_FIL_001_VIEW_PERMISSION,'no automatic role grant') as $t)if(strpos($raw,$t)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 least-privilege permission source incomplete: '.$t.'.');return true;}
 ?>

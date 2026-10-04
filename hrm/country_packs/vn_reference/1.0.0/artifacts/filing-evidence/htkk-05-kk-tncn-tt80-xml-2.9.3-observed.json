@@ -1,0 +1,75 @@
+{
+  "schema": "notrinos.pay-fil-001.observed-filing-evidence.v1",
+  "evidence_id": "vn-htkk-05-kk-tncn-tt80-xml-2.9.3-observed-2026-10-03",
+  "jurisdiction_code": "VN",
+  "obligation_type": "personal-income-tax-withholding",
+  "source_kind": "user-supplied-htkk-export",
+  "source_retained_in_repository": false,
+  "source_contains_personal_or_taxpayer_data": true,
+  "source_sha256": "83aee7ef1a591f3fc105c3fff6ac7650d2ec295c7f1bbf8b51bc9a4c93ba5b9d",
+  "source_size_bytes": 2784,
+  "observed_service": {
+    "id": "HTKK",
+    "version": "5.7.8"
+  },
+  "observed_declaration": {
+    "code": "864",
+    "name": "TK kh\u1ea5u tr\u1eeb thu\u1ebf thu nh\u1eadp c\u00e1 nh\u00e2n M\u1eabu 05/KK-TNCN (TT80/2021)",
+    "form_reference": "Th\u00f4ng t\u01b0 80/2021/TT-BTC",
+    "xml_version": "2.9.3",
+    "period_kind": "Q"
+  },
+  "observed_xml": {
+    "namespace": "http://kekhaithue.gdt.gov.vn/TKhaiThue",
+    "root": "HSoThueDTu",
+    "ordered_local_tag_count": 66,
+    "ordered_local_tag_names_sha256": "00bab40d61c49a208a999b6dfd6ed0185b553ab28e0aab28aea848bc7cc63650",
+    "main_indicator_tags": [
+      "mst_cu",
+      "ct15",
+      "ct16",
+      "ct17",
+      "ct18",
+      "ct19",
+      "ct20",
+      "ct21",
+      "ct22",
+      "ct23",
+      "ct24",
+      "ct25",
+      "ct25_1",
+      "ct26",
+      "ct27",
+      "ct28",
+      "ct29",
+      "ct30",
+      "ct31",
+      "ct32"
+    ],
+    "main_indicator_tags_sha256": "c03bae621e70a579d6e2c78e34b6e9d973385c27b82fba3d79d4fbd1449d73a8"
+  },
+  "privacy": {
+    "raw_taxpayer_identity_retained": false,
+    "raw_address_retained": false,
+    "raw_phone_retained": false,
+    "raw_email_retained": false,
+    "raw_signature_name_retained": false,
+    "raw_filing_amounts_retained": false
+  },
+  "authority": {
+    "official_schema_claimed": false,
+    "official_form_generation_allowed": false,
+    "filing_authorization_execution_allowed": false,
+    "transmission_allowed": false,
+    "network_authority_allowed": false,
+    "connector_secret_custody_allowed": false,
+    "raw_user_evidence_retained_in_repository": false
+  },
+  "remaining_required_evidence": [
+    "authoritative-machine-readable-schema-or-xsd-for-exact-form-version",
+    "reviewed-legal-applicability-and-effective-date-evidence",
+    "reviewed-authoritative-technical-specification-evidence",
+    "reviewed-certification-or-acceptance-evidence-for-generated-payloads"
+  ],
+  "captured_on": "2026-10-05"
+}
