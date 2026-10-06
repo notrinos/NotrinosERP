@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1024',
-        'active_legacy_payroll_contract'=>'1.0.527',
+        'active_database_version'=>'1.0.1027',
+        'active_legacy_payroll_contract'=>'1.0.528',
         'next_backlog_item'=>'PAY-FIL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-FIL-001 local-validator compatibility SOURCE-VERIFIED at source/DB 1.0.1024 and source custody 1.0.527. One source-only 1.0.1023 -> 1.0.1024 correction binds a deterministic synthetic 05/KK-TNCN TT80 XML 2.9.3 fixture with Q/YYYY quarter serialization, repository XSD/version/envelope/period guards, and user-assisted iTaxViewer 2.8.3 positive/negative observations. Viewer rendering is permissive and never overrides a repository rejection. OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY is the development gate; independent statutory schema/specification provenance is not claimed. Production acceptance is PRODUCTION-ENVIRONMENT-PENDING / OUTSIDE CURRENT DEVELOPMENT PLAN. Seven zero-seed custody tables, fourteen immutable denial triggers and nine restrictive foreign keys remain unchanged. Production official generation, signing, credentials, submission, network authority and historical payroll/accounting/filing mutation remain disabled. PAY-FIL-001 remains OPEN; production authority stays fail-closed. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001. Strict next development work is the separately reviewed source-bound official-form renderer/readiness integration. Mandatory localhost WAMP/MariaDB migration/source/DB acceptance passed at 1.0.1024: 26 scripts, 3276 numeric assertions, zero failures, plus legacy-payroll PASS.',
+        'next_slice_scope'=>'PAY-FIL-001 TT80 source-bound renderer/readiness SOURCE-VERIFIED / LOCAL ACCEPTANCE PASS at source/DB 1.0.1027 and source custody 1.0.528. Three contiguous source-only migrations 1.0.1024 -> 1.0.1025 -> 1.0.1026 -> 1.0.1027 add an exact deterministic TT80 05/KK-TNCN 2.9.3 development renderer candidate, bind it read-only to accepted PAY-FIL obligation/source hashes, and expose readiness diagnostics without changing physical schema or seed data. The accepted 1.0.1024 local-validator evidence remains historical predecessor custody. The required statutory semantic mapping from reviewed taxpayer/legal-entity/payroll sources to TT80 indicators ct16..ct32 is UNPUBLISHED, so runtime generation fails closed with semantic_mapping_unpublished. OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY remains the development gate; independent official-schema authority is not claimed. Seven zero-seed custody tables, fourteen immutable denial triggers and nine restrictive foreign keys remain the expected physical projection. Production official generation, signing, credentials, artifact publication, submission, network authority and historical payroll/accounting/filing mutation remain disabled. PAY-FIL-001 remains OPEN; production authority stays fail-closed. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001. Strict next development work is separately reviewed publication of the exact statutory semantic mapping/source-of-truth contract, or an explicit architecture rejection. The owner-machine LOCAL MANDATORY GATE for this successor batch is PASS after normal sequential Software Upgrade through 1.0.1027 and the exact localhost mandatory runner passed at source/DB 1.0.1027 and custody 1.0.528.',
 
         'edges'=>array(
+            'pay_fil_001_tt80_renderer_readiness_runtime'=>array('previous'=>'1.0.1026','version'=>'1.0.1027',
+                'file'=>'sql/upgrade_pay_fil_001_tt80_renderer_readiness_runtime.php'),
+            'pay_fil_001_tt80_source_binding_readiness'=>array('previous'=>'1.0.1025','version'=>'1.0.1026',
+                'file'=>'sql/upgrade_pay_fil_001_tt80_source_binding_readiness.php'),
+            'pay_fil_001_tt80_renderer_contract'=>array('previous'=>'1.0.1024','version'=>'1.0.1025',
+                'file'=>'sql/upgrade_pay_fil_001_tt80_renderer_contract.php'),
             'pay_fil_001_local_validator_compatibility'=>array('previous'=>'1.0.1023','version'=>'1.0.1024',
                 'file'=>'sql/upgrade_pay_fil_001_local_validator_compatibility.php'),
             'pay_fil_001_electronic_filing_legal_boundary_review'=>array('previous'=>'1.0.1022','version'=>'1.0.1023',
