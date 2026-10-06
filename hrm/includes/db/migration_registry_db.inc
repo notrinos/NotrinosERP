@@ -11,13 +11,15 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1023',
-        'active_legacy_payroll_contract'=>'1.0.526',
+        'active_database_version'=>'1.0.1024',
+        'active_legacy_payroll_contract'=>'1.0.527',
         'next_backlog_item'=>'PAY-FIL-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-FIL-001 legal-authority review SOURCE-VERIFIED / LOCAL-GATE-PENDING at source 1.0.1023, expected DB 1.0.1023 and active legacy-payroll source custody 1.0.526. Exact source-only chain 1.0.1021 -> 1.0.1022 -> 1.0.1023 records reviewed public GDT legal-form/effective-date evidence for TT80 05/KK-TNCN, then the electronic-filing legal framework under TT19/2021 as amended by TT46/2024. The legal applicability/effective-date gap is satisfied only at the public legal-framework level. The locally installed HTKK XSD is still not claimed as independently GDT-published; no independently published authoritative XML technical specification and no certification/eTax acceptance of independently generated XML are established. Existing seven PAY-FIL InnoDB custody tables, fourteen immutable denial triggers and nine restrictive foreign keys remain unchanged; both migrations are source-only and add no schema or seed rows. No official schema registration, production validator, renderer/writer, filing authorization execution, connector/network authority, secret custody, submission, acknowledgement/correction execution, payment/GL authority or historical payroll/accounting/filing mutation is enabled. PAY-FIL-001 remains OPEN with three external official-authority evidence gaps; PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001.',
+        'next_slice_scope'=>'PAY-FIL-001 local-validator compatibility SOURCE-VERIFIED at source/DB 1.0.1024 and source custody 1.0.527. One source-only 1.0.1023 -> 1.0.1024 correction binds a deterministic synthetic 05/KK-TNCN TT80 XML 2.9.3 fixture with Q/YYYY quarter serialization, repository XSD/version/envelope/period guards, and user-assisted iTaxViewer 2.8.3 positive/negative observations. Viewer rendering is permissive and never overrides a repository rejection. OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY is the development gate; independent statutory schema/specification provenance is not claimed. Production acceptance is PRODUCTION-ENVIRONMENT-PENDING / OUTSIDE CURRENT DEVELOPMENT PLAN. Seven zero-seed custody tables, fourteen immutable denial triggers and nine restrictive foreign keys remain unchanged. Production official generation, signing, credentials, submission, network authority and historical payroll/accounting/filing mutation remain disabled. PAY-FIL-001 remains OPEN; production authority stays fail-closed. PAY-REC-001 and PAY-CON-001 remain blocked by PAY-FIL-001. Strict next development work is the separately reviewed source-bound official-form renderer/readiness integration. Mandatory localhost WAMP/MariaDB migration/source/DB acceptance passed at 1.0.1024: 26 scripts, 3276 numeric assertions, zero failures, plus legacy-payroll PASS.',
 
         'edges'=>array(
+            'pay_fil_001_local_validator_compatibility'=>array('previous'=>'1.0.1023','version'=>'1.0.1024',
+                'file'=>'sql/upgrade_pay_fil_001_local_validator_compatibility.php'),
             'pay_fil_001_electronic_filing_legal_boundary_review'=>array('previous'=>'1.0.1022','version'=>'1.0.1023',
                 'file'=>'sql/upgrade_pay_fil_001_electronic_filing_legal_boundary_review.php'),
             'pay_fil_001_tt80_form_legal_basis_review'=>array('previous'=>'1.0.1021','version'=>'1.0.1022',

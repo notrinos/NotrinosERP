@@ -1,0 +1,280 @@
+{
+  "schema": "notrinos.pay-fil-001.local-validator-runtime.v1",
+  "observed_on": "2026-10-06",
+  "identity": {
+    "form": "05/KK-TNCN",
+    "form_id": "05_KK_TNCN_TT80",
+    "code": "864",
+    "xml_version": "2.9.3"
+  },
+  "policy": {
+    "development_gate": "OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY",
+    "repository_xsd_and_identity_guards_required": true,
+    "viewer_opening_alone_is_validation": false,
+    "production_acceptance": "PRODUCTION-ENVIRONMENT-PENDING / OUTSIDE CURRENT DEVELOPMENT PLAN",
+    "production_generation_allowed": false,
+    "production_transmission_allowed": false,
+    "production_signing_allowed": false,
+    "production_credentials_allowed": false
+  },
+  "provenance": {
+    "application": "iTaxViewer",
+    "application_version": "2.8.3",
+    "publisher_display": "Cục Thuế - Bộ Tài Chính",
+    "executable_sha256": "b579e63b0d598f1228408fca36e20f51c3d0cad6451691f58ff553458d386b5f",
+    "application_jar_sha256": "916f86721567a36576e4730608de278e25da5a42fb84c04d7eff1e317643ddc8",
+    "installation_source": "USER-ATTESTED OFFICIAL GDT DOWNLOAD SOURCE",
+    "installation_source_url": "https://dichvucong.gdt.gov.vn/tthc/trogiup/views",
+    "installation_source_basis": "User supplied the download source on the official gdt.gov.vn domain; this is a user attestation, not independent cryptographic installer provenance or statutory GDT certification.",
+    "executable_authenticode_status": "UNSIGNED",
+    "installer_bytes_independently_redownloaded_and_compared": false,
+    "cryptographic_installer_provenance_established": false,
+    "statutory_gdt_certification_established": false,
+    "observation_method": "user-assisted local opening; supplied synthetic PDFs independently extracted and visually reviewed; warning/error cases directly reported by user",
+    "independent_statutory_schema_publication_established": false,
+    "independent_statutory_technical_specification_established": false,
+    "production_tax_authority_acceptance_established": false
+  },
+  "resources": [
+    {
+      "role": "active-per-form-xsd-candidate",
+      "file": "05_KK_TNCN_TT80_293.xsd",
+      "bytes": 17770,
+      "sha256": "9cd4d367123ee0ac1f94fb043975738ac142420d558bb24969e4c0afe64ac846"
+    },
+    {
+      "role": "per-form-xsd-redefine-dependency",
+      "file": "TKhaiThue_DBHC.xsd",
+      "bytes": 18036,
+      "sha256": "aba7f2acbc9332caaf3eb2da9a081a3d876ddc7813d6230921da48c775460011"
+    },
+    {
+      "role": "related-envelope-schema",
+      "file": "TKhaiThue.xsd",
+      "bytes": 17741,
+      "sha256": "8f451719355b5a6247f65a34a37584b4a0c7f7cc81a568e1033d08b8fe9b8c1d"
+    },
+    {
+      "role": "related-xml-signature-schema-dependency",
+      "file": "xmldsig-core-schema.xsd",
+      "bytes": 10264,
+      "sha256": "c3b5160be1852606d10f6928e0b214d418f8dd418667cb2fb88fec31e4e6f56d"
+    },
+    {
+      "role": "active-form-menu-registry",
+      "file": "Menu.xml",
+      "bytes": 334792,
+      "sha256": "9a723950f17678edf983591d8a36ade266a823acc3a5d3d69af46c4c20d902a0"
+    },
+    {
+      "role": "period-and-declaration-mapping",
+      "file": "Map.xml",
+      "bytes": 126425,
+      "sha256": "3f5095bc33322722c628fbd4c6428dc0dffd3492e8f61558715954b44d399215"
+    },
+    {
+      "role": "field-and-indicator-mapping",
+      "file": "MapMCT.xml",
+      "bytes": 695283,
+      "sha256": "137b7752fce7ea42e142877dce9eb18cbf99189bf6cc27a418507608cd93e7b4"
+    },
+    {
+      "role": "version-transition-map",
+      "file": "ConvertVersion.xml",
+      "bytes": 35500,
+      "sha256": "eca3a24707fcbab8c420412f651e0a98775921915e25b79b073b433f090490e3"
+    },
+    {
+      "role": "active-form-definition",
+      "file": "05_KK_TNCN_TT80_293.xml",
+      "bytes": 10866,
+      "sha256": "ac49d746988fa0e18fa4f41c839b02b87d2d612988a20fae93004c5a99ed1d6e"
+    },
+    {
+      "role": "active-xml-serialization-template",
+      "file": "05_KK_TNCN_TT80_xml_293.xml",
+      "bytes": 1721,
+      "sha256": "ff1e3b4b03194c165d4ab44bd34472df526977a470b002b16853e812c8aeae3d"
+    }
+  ],
+  "positive": {
+    "fixture": "tests/fixtures/pay_fil_001/itaxviewer-tt80-05-kk-tncn-2.9.3-synthetic.xml",
+    "xml_sha256": "b40ff029d9fa3a0ba40aff2c93af5a76b167357e8bfc65e45460139dae14a526",
+    "period": "3/2026",
+    "rendered_period": "Quý 3 năm 2026",
+    "pdf_sha256": "63da3bba56d91a65acf9f0482c123d5ec76591c08c15444af7bed0ed214b75b7",
+    "pages": 2,
+    "expected_dummy_fields": {
+      "form": "05/KK-TNCN (TT80/2021)",
+      "company": "Synthetic Test Company - DO NOT FILE",
+      "tax_id_marker": "9999999999",
+      "address": "SYNTHETIC ADDRESS ONLY",
+      "ward": "Synthetic Ward",
+      "province": "Synthetic Province",
+      "worker_count_ct16": "10",
+      "income_ct21": "100.000.000",
+      "withheld_tax_ct29": "6.500.000",
+      "ct25_1_rendered_indicator": "[25.1]",
+      "ct25_1_value": "123.456",
+      "signer": "SYNTHETIC SIGNER - NO CERTIFICATE"
+    },
+    "separate_application_warnings": "none; directly confirmed by user",
+    "original_input_rewritten": false,
+    "internal_viewer_normalization": "not established",
+    "additional_pdf_sha256": "300cbd868d7efafba77bcf3b6da0f65c9ef6ec84819bcef28fd202c69bccf769"
+  },
+  "correction": {
+    "defect": "Inherited synthetic kyKKhai=2026Q3 passes string-typed XSD but renders Quý 2026Q3 năm undefined",
+    "previous_input_sha256": "e53f90bfec948430f4b2a60d165fc6c1d2defc7a581e8d77ec71e4815cda5387",
+    "previous_pdf_sha256": "c1f3b23d56852e7f41c860305f8ac70b0fa5ff01426f82ab93df64dbbe56ed34",
+    "resolution": "Separate corrected synthetic fixture and CLI-only quarter-format guard; original historical fixture remains byte-exact"
+  },
+  "negative_cases": [
+    {
+      "fixture": "negative-version.xml",
+      "fixture_sha256": "e4010ac15cc4cedd523051b43db50fdd2fa93cd32f7b38781126732f9f34384b",
+      "provenance": "direct user report after manual iTaxViewer opening",
+      "outcome": "REJECTED_WITH_VERSION_WARNING",
+      "message": "Mã hồ sơ (864) hoặc phiên bản hồ sơ (0.0.0) không đúng",
+      "repository_guard": "schema_version_mismatch",
+      "raw_xsd": "PASS; version field is xs:string",
+      "agreement": "iTaxViewer and repository version guard both reject",
+      "raw_xsd_accepts": true
+    },
+    {
+      "fixture": "negative-required-element.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "b39756d22231376e9349f1f80c19297739c932e563433efda521a9de539a6098",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ 123.456",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ 0"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "32116142ee9dfdbd67a68e4ebf26e316f83636f394d7c71b525c34aa0d60df0b",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-numeric.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "c05d2abeedd96c5d6613ef498ec7d4f5bc1f6e431bd4b8a46c09c3f70da1b0aa",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người 10",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ 123.456",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ NaN"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "2dba42007e8d08485530e911f6b87b003c7a07ac99f62b1d38d1922b8a7517c3",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-unknown-element.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "9e017d832c258af2700809345e7dc5da2cf5d1ca5366a839866e2f05734b8e2d",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người 10",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ 123.456",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ 0"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "56c3dc2496bda5554410c2e8c3de32b462689559170e9c5c618ea6c01b5d7269",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-ct25_1.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "670e3ba2b872bb80466052b0647d0ecf35d5421daddd4f4f6869f7c231071cf0",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người 10",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ (1)",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ 0"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "f907d361b71ac71d6f0c96d5133a52995c02e5713a562569371da2f9817ec577",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-location-required.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "65ab7f5cc60399e43d05403934e29f5408649df46e9054705f2abef3f85ac820",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người 10",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ 123.456",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ 0"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "41051f3715a1b02f6d6c12ec538caee8169ff1c1496fcc19c5a89cf8d7a9f2ca",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-sequence.xml",
+      "provenance": "direct user-supplied local iTaxViewer PDF; text inspected; rendered pages available for visual QA",
+      "outcome": "RENDERED_DESPITE_XSD_VIOLATION",
+      "pdf_sha256": "b83e7aa469f3a9accacb2e6625f031eeb38e833fdffd8bc2fe677e096b2797c0",
+      "pages": 2,
+      "selected_render_text": [
+        "[01] Kỳ tính thuế: Quý 3 năm 2026",
+        "[07] Xã/phường/đặc khu: Synthetic Ward [08] Tỉnh/Thành phố: Synthetic Province",
+        "Tổng số người lao động: [16] Người",
+        "4.1 Thu nhập miễn thuế, thu nhập cá nhân theo nghị quyết [25.1] VNĐ 123.456",
+        "6.3 bảo hiểm không bắt buộc khác của doanh nghiệp bảo hiểm không thành lập tại Việt Nam cho [32] VNĐ 0"
+      ],
+      "separate_application_warnings": "NOT_ESTABLISHED",
+      "fixture_sha256": "ff422d4a85847af27e8642009c7059fccf61f3a1f71366133a05a4bd72fe795f",
+      "repository_guard": "xsd_validation_failed",
+      "raw_xsd_accepts": false
+    },
+    {
+      "fixture": "negative-namespace.xml",
+      "provenance": "direct user report after manual iTaxViewer opening",
+      "outcome": "JSCRIPT_RUNTIME_ERROR",
+      "message": "Microsoft JScript runtime error Object required line = 129, col = 3 (line is offset from the start of the script block). Error returned from property or method call.",
+      "repository_guard": "envelope_identity_mismatch",
+      "raw_xsd": "REJECT",
+      "agreement": "repository rejects cleanly; viewer fails at runtime rather than providing schema validation rejection",
+      "fixture_sha256": "0653138d8242cf2d0d047d06aed2cf06e8a37994ac344b7ed40232b927f494e7",
+      "raw_xsd_accepts": false
+    }
+  ],
+  "development_status": {
+    "gate_a": "DEVELOPMENT_SATISFIED_FOR_BOUND_SYNTHETIC_SCHEMA_IDENTITY",
+    "gate_b": "DEVELOPMENT_SATISFIED_FOR_TESTED_SYNTHETIC_RUNTIME_CONTRACT",
+    "gate_c": "OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY: positive rendering reproduced; strict negative rejection belongs to repository XSD/guards",
+    "generally_supported_production_form": false,
+    "pay_fil_001": "OPEN",
+    "next": "Separately reviewed development-only source-bound official-form renderer/readiness; production authorization and operations remain outside this development plan"
+  },
+  "custody": {
+    "predecessor_manifest": "tests/fixtures/payroll/legacy_v1/manifest_v1.0.526.json",
+    "predecessor_sha256": "92844195f339c13d7d692cb0cf322a5cc482b936a636244cfdfd43a5e4787c03",
+    "source_transition": "1.0.1023 -> 1.0.1024",
+    "source_custody_version": "1.0.527",
+    "contains_real_taxpayer_data": false,
+    "application_binaries_retained": false
+  }
+}
