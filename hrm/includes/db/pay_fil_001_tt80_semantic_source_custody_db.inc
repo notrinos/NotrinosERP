@@ -169,7 +169,7 @@ function pay_fil_001_tt80_semantic_source_custody_require_runtime_guard_source($
     global $path_to_root;
     if(!pay_fil_001_tt80_semantic_source_custody_require_contract_source($patch))return false;
     $raw=@file_get_contents($path_to_root.'/hrm/includes/db/pay_fil_001_tt80_renderer_runtime_db.inc');
-    foreach(array('semantic_source_incomplete','CUSTODY_DESIGN_ACCEPTED_ADMISSION_REVIEW_NOT_ENABLED','semantic_source_custody_contract_sha256','semantic_source_admission_unreviewed') as $token)
+    foreach(array('semantic_source_incomplete','semantic_source_custody_contract_sha256','semantic_source_admission_unreviewed','pay_fil_001_tt80_semantic_source_review_status') as $token)
         if(!is_string($raw)||strpos($raw,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic custody runtime guard incomplete: '.$token.'.');
     foreach(array('INSERT INTO','UPDATE ','DELETE FROM','begin_transaction(','commit_transaction(','file_put_contents(','curl_','fsockopen(','stream_socket_client(','openssl_sign(') as $token)
         if(stripos($raw,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic custody runtime guard is not read-only: '.$token.'.');

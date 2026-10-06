@@ -13819,6 +13819,44 @@ CREATE TRIGGER `0_pfl1_pl_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_person_fac
 CREATE TRIGGER `0_pfl1_pl_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_person_fact_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_fact_links row cannot be deleted';
 -- PAY-FIL-001 END GROUP tt80_semantic_source_custody
 
+-- PAY-FIL-001 GROUP tt80_semantic_source_review
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_semantic_reviews` (
+ `tt80_semantic_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `filing_source_set_id` bigint(20) unsigned NOT NULL,
+ `tt80_taxpayer_profile_id` bigint(20) unsigned NOT NULL,
+ `taxpayer_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `expected_subject_count` int(10) unsigned NOT NULL,
+ `expected_subject_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `subject_roster_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `person_fact_count` int(10) unsigned NOT NULL,
+ `person_fact_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `person_fact_link_count` int(10) unsigned NOT NULL,
+ `person_fact_link_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_evidence_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `maker_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `completeness_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `findings_json` varchar(1024) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `findings_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `reviewed_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`tt80_semantic_review_id`),
+ UNIQUE KEY `uq_pfl1_sr_sha` (`review_sha256`),
+ KEY `ix_pfl1_sr_set_status` (`filing_source_set_id`,`completeness_status`),
+ KEY `fk_pfl1_sr_ob` (`filing_obligation_id`),
+ KEY `fk_pfl1_sr_set` (`filing_source_set_id`),
+ KEY `fk_pfl1_sr_tp` (`tt80_taxpayer_profile_id`),
+ CONSTRAINT `fk_pfl1_sr_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_sr_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_sr_tp` FOREIGN KEY (`tt80_taxpayer_profile_id`) REFERENCES `0_hrm_pay_fil_001_tt80_taxpayer_profiles` (`tt80_taxpayer_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_sr_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_semantic_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_reviews row cannot be updated';
+CREATE TRIGGER `0_pfl1_sr_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_reviews row cannot be deleted';
+-- PAY-FIL-001 END GROUP tt80_semantic_source_review
+
+
 
 
 -- PAY-API-001 zero-seed security/authentication/governance foundation through 1.0.865.
