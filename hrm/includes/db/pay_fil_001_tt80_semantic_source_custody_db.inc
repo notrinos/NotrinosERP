@@ -89,7 +89,20 @@ function pay_fil_001_tt80_semantic_source_custody_trigger_valid($table,$operatio
     return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($operation)
         &&(string)$r['EVENT_OBJECT_TABLE']===$physical
         &&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'
-        &&strpos((string)$r['ACTION_STATEMENT'],'PAY-FIL-001 immutable')!==false;
+        &&pay_fil_001_tt80_semantic_source_trigger_action_matches($r['ACTION_STATEMENT'],$table,$operation);
+}
+
+/** Match only the exact PAY-FIL-001 unconditional immutable denial statement. */
+function pay_fil_001_tt80_semantic_source_trigger_action_matches($action_statement,$table,$operation)
+{
+    $operation=strtoupper((string)$operation);
+    if(!in_array($operation,array('UPDATE','DELETE'),true))return false;
+    $expected="SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable ".$table." row cannot be ".strtolower($operation)."d'";
+    $actual=preg_replace('/\\s+/',' ',trim((string)$action_statement));
+    $actual=preg_replace('/\\s*=\\s*/','=',$actual);
+    $expected=preg_replace('/\\s+/',' ',$expected);
+    $expected=preg_replace('/\\s*=\\s*/','=',$expected);
+    return strtolower($actual)===strtolower($expected);
 }
 function pay_fil_001_tt80_semantic_source_custody_require_contract_source($patch)
 {

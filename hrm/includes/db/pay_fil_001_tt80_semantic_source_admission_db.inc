@@ -45,7 +45,7 @@ function pay_fil_001_tt80_semantic_source_review_trigger_valid($operation)
     return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($operation)
         &&(string)$r['EVENT_OBJECT_TABLE']===$physical
         &&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'
-        &&strpos((string)$r['ACTION_STATEMENT'],'PAY-FIL-001 immutable')!==false;
+        &&pay_fil_001_tt80_semantic_source_trigger_action_matches($r['ACTION_STATEMENT'],'hrm_pay_fil_001_tt80_semantic_reviews',$operation);
 }
 
 function pay_fil_001_tt80_semantic_source_admission_require_authority_source($patch)

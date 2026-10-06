@@ -14216,6 +14216,36 @@ CREATE TRIGGER `0_pfl1_sr_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_semantic_r
 CREATE TRIGGER `0_pfl1_sr_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_reviews row cannot be deleted';
 -- PAY-FIL-001 END GROUP tt80_semantic_source_review
 
+-- PAY-FIL-001 GROUP tt80_semantic_mapping_publication
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_semantic_mappings` (
+ `tt80_semantic_mapping_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `tt80_semantic_review_id` bigint(20) unsigned NOT NULL,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `filing_source_set_id` bigint(20) unsigned NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `mapping_contract_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `taxpayer_profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `person_fact_set_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `indicator_values_json` varchar(2048) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `indicator_values_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `mapping_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `published_by` bigint(20) unsigned NOT NULL,
+ `published_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`tt80_semantic_mapping_id`),
+ UNIQUE KEY `uq_pfl1_sm_sha` (`mapping_sha256`),
+ UNIQUE KEY `uq_pfl1_sm_review` (`tt80_semantic_review_id`),
+ KEY `ix_pfl1_sm_set` (`filing_source_set_id`,`tt80_semantic_mapping_id`),
+ KEY `fk_pfl1_sm_ob` (`filing_obligation_id`),
+ CONSTRAINT `fk_pfl1_sm_review` FOREIGN KEY (`tt80_semantic_review_id`) REFERENCES `0_hrm_pay_fil_001_tt80_semantic_reviews` (`tt80_semantic_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_sm_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_sm_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_sm_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_semantic_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_mappings row cannot be updated';
+CREATE TRIGGER `0_pfl1_sm_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_mappings row cannot be deleted';
+-- PAY-FIL-001 END GROUP tt80_semantic_mapping_publication
+
+
 
 
 
