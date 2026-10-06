@@ -14101,6 +14101,85 @@ CREATE TRIGGER `0_pfl1_au_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_authorization_i
 CREATE TRIGGER `0_pfl1_au_d` BEFORE DELETE ON `0_hrm_pay_fil_001_authorization_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_authorization_intents row cannot be deleted';
 -- PAY-FIL-001 END GROUP authorization_intent
 
+-- PAY-FIL-001 GROUP tt80_semantic_source_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_taxpayer_profiles` (
+ `tt80_taxpayer_profile_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `taxpayer_tax_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `taxpayer_name` varchar(255) NOT NULL,
+ `taxpayer_address` varchar(512) NOT NULL,
+ `taxpayer_ward_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `taxpayer_ward_name` varchar(255) NOT NULL,
+ `taxpayer_province_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `taxpayer_province_name` varchar(255) NOT NULL,
+ `tax_office_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `tax_office_name` varchar(255) NOT NULL,
+ `source_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `captured_by` bigint(20) unsigned NOT NULL,
+ `captured_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`tt80_taxpayer_profile_id`),
+ UNIQUE KEY `uq_pfl1_tp_sha` (`profile_sha256`),
+ UNIQUE KEY `uq_pfl1_tp_ob_sha` (`filing_obligation_id`,`profile_sha256`),
+ KEY `fk_pfl1_tp_ob` (`filing_obligation_id`),
+ CONSTRAINT `fk_pfl1_tp_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_tp_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_taxpayer_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_taxpayer_profiles row cannot be updated';
+CREATE TRIGGER `0_pfl1_tp_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_taxpayer_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_taxpayer_profiles row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_person_facts` (
+ `tt80_person_fact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `filing_source_set_id` bigint(20) unsigned NOT NULL,
+ `subject_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `paid_worker` tinyint(1) unsigned NOT NULL,
+ `withheld_person` tinyint(1) unsigned NOT NULL,
+ `tax_residency` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `employment_contract_term_class` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `filing_taxable_income_minor` bigint(20) NOT NULL,
+ `withholding_subject_taxable_income_minor` bigint(20) NOT NULL,
+ `personal_income_tax_withheld_minor` bigint(20) NOT NULL,
+ `foreign_insurer_nonmandatory_insurance_taxable_minor` bigint(20) NOT NULL,
+ `foreign_insurer_nonmandatory_insurance_withheld_minor` bigint(20) NOT NULL,
+ `petroleum_contract_exempt_taxable_minor` bigint(20) NOT NULL,
+ `resolution_exempt_income_minor` bigint(20) NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `fact_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `captured_by` bigint(20) unsigned NOT NULL,
+ `captured_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`tt80_person_fact_id`),
+ UNIQUE KEY `uq_pfl1_pf_sha` (`fact_sha256`),
+ UNIQUE KEY `uq_pfl1_pf_set_sub_sha` (`filing_source_set_id`,`subject_key`,`fact_sha256`),
+ KEY `ix_pfl1_pf_set_sub` (`filing_source_set_id`,`subject_key`),
+ KEY `fk_pfl1_pf_set` (`filing_source_set_id`),
+ CONSTRAINT `fk_pfl1_pf_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_pf_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_person_facts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_facts row cannot be updated';
+CREATE TRIGGER `0_pfl1_pf_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_person_facts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_facts row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_person_fact_links` (
+ `tt80_person_fact_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `tt80_person_fact_id` bigint(20) unsigned NOT NULL,
+ `filing_source_link_id` bigint(20) unsigned NOT NULL,
+ `source_link_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `binding_role` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `binding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`tt80_person_fact_link_id`),
+ UNIQUE KEY `uq_pfl1_pl_sha` (`binding_sha256`),
+ UNIQUE KEY `uq_pfl1_pl_fact_link_role` (`tt80_person_fact_id`,`filing_source_link_id`,`binding_role`),
+ KEY `fk_pfl1_pl_fact` (`tt80_person_fact_id`),
+ KEY `fk_pfl1_pl_link` (`filing_source_link_id`),
+ CONSTRAINT `fk_pfl1_pl_fact` FOREIGN KEY (`tt80_person_fact_id`) REFERENCES `0_hrm_pay_fil_001_tt80_person_facts` (`tt80_person_fact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pfl1_pl_link` FOREIGN KEY (`filing_source_link_id`) REFERENCES `0_hrm_pay_fil_001_source_links` (`filing_source_link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pfl1_pl_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_person_fact_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_fact_links row cannot be updated';
+CREATE TRIGGER `0_pfl1_pl_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_person_fact_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_fact_links row cannot be deleted';
+-- PAY-FIL-001 END GROUP tt80_semantic_source_custody
+
+
 
 -- PAY-API-001 zero-seed security/authentication/governance foundation through 1.0.865.
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_resources` (
