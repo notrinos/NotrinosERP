@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1048',
-        'active_legacy_payroll_contract'=>'1.0.536',
+        'active_database_version'=>'1.0.1051',
+        'active_legacy_payroll_contract'=>'1.0.538',
         'next_backlog_item'=>'PAY-REC-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-REC-001 architecture prerequisites SOURCE-VERIFIED / LOCAL-GATE-PENDING at source 1.0.1048 and source custody 1.0.536. Three contiguous dependency-ordered high-risk source-only slices 1.0.1045 -> 1.0.1046 -> 1.0.1047 -> 1.0.1048 freeze: (1) exact classified PAY-CORE result-line to TT80 person-fact monetary lineage, (2) explicit LOCAL_DEVELOPMENT_RECONCILIATION filing completion bound to accepted PAY-FIL 1.0.1045/1.0.535 local validation without statutory or production acceptance, and (3) unified payroll/GL/payment/filing reconciliation and CloseReady architecture. No PAY-REC schema, seed row, runtime writer, state mutation, automatic role grant, production close, GL posting, payment execution, filing submission, network egress, payroll calculation or historical payroll/accounting/filing mutation authority is enabled. Physical PAY-FIL predecessor projection remains twelve InnoDB custody tables, twenty-four exact immutable UPDATE/DELETE denial triggers and nineteen restrictive foreign keys. The accepted PAY-FIL closure evidence remains immutable and PAY-FIL-001 CLOSED / LOCAL ACCEPTANCE PASS remains the accepted predecessor. Development runtime generation is allowed only for OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY; no generic payroll aggregate or custody hash is reinterpreted as a filing semantic. Artifact publication, signing, production credentials, network/submission authority remain denied. Strict next is additive immutable reconciliation/profile/checklist custody; PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
+        'next_slice_scope'=>'PAY-REC-001 immutable reconciliation/profile/checklist custody SOURCE-VERIFIED / LOCAL-GATE-PENDING at source 1.0.1051 and source custody 1.0.538. Three contiguous high-risk slices 1.0.1048 -> 1.0.1049 -> 1.0.1050 -> 1.0.1051 register least-privilege PAY-REC authority with no automatic role grants, install exactly three zero-seed immutable custody tables with six exact UPDATE/DELETE denial triggers and eight restrictive foreign keys, and activate exact projection/zero-seed guards. No reconciliation writer, review/approval runtime, close-state mutation, production close, GL posting, payment execution, filing submission, network egress, payroll calculation or historical payroll/accounting/filing mutation authority is enabled. Frozen source custody 1.0.537 preserves the payslip country-runtime scope correction and all prior PAY-FIL/PAY-REC evidence. accepted PAY-FIL closure evidence remains immutable. Exact PAY-REC filing monetary lineage remains required; no generic payroll aggregate or custody hash is reinterpreted as a filing semantic. PAY-FIL-001 CLOSED / LOCAL ACCEPTANCE PASS remains limited to development compatibility; Development runtime generation is allowed only for OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY. Artifact publication, signing, production credentials, network/submission authority remain denied. The accepted PAY-FIL physical projection remains twelve InnoDB custody tables, twenty-four exact immutable UPDATE/DELETE denial triggers and nineteen restrictive foreign keys. Strict next after local PASS is independently recomputed payroll/GL/payment/filing evidence-set writers with maker/reviewer separation; PAY-CON-001 remains blocked until PAY-REC-001 acceptance.',
 
         'edges'=>array(
+            'pay_rec_001_custody_guard'=>array('previous'=>'1.0.1050','version'=>'1.0.1051',
+                'file'=>'sql/upgrade_pay_rec_001_custody_guard.php'),
+            'pay_rec_001_custody_schema'=>array('previous'=>'1.0.1049','version'=>'1.0.1050',
+                'file'=>'sql/upgrade_pay_rec_001_custody_schema.php'),
+            'pay_rec_001_custody_contract'=>array('previous'=>'1.0.1048','version'=>'1.0.1049',
+                'file'=>'sql/upgrade_pay_rec_001_custody_contract.php'),
             'pay_rec_001_architecture_contract'=>array('previous'=>'1.0.1047','version'=>'1.0.1048',
                 'file'=>'sql/upgrade_pay_rec_001_architecture_contract.php'),
             'pay_rec_001_filing_completion_policy_contract'=>array('previous'=>'1.0.1046','version'=>'1.0.1047',

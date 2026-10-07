@@ -15944,3 +15944,88 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_marketplace_activations` (
 CREATE TRIGGER `0_peco1_ma_u` BEFORE UPDATE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be updated';
 CREATE TRIGGER `0_peco1_ma_d` BEFORE DELETE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be deleted';
 -- PAY-ECO-001 END GROUP marketplace_activation
+
+-- PAY-REC-001 GROUP reconciliation_profile_checklist_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_profiles` (
+ `reconciliation_profile_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` bigint(20) unsigned NOT NULL,
+ `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `payroll_period_id` int(10) unsigned NOT NULL,
+ `pay_core_run_id` bigint(20) unsigned NOT NULL,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `policy_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `tolerance_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `rounding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `filing_completion_policy_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payroll_scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL,
+ `prepared_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_profile_id`),
+ UNIQUE KEY `uq_pr1_pf_sha` (`profile_sha256`),
+ UNIQUE KEY `uq_pr1_pf_scope` (`company_id`,`legal_entity_id`,`payroll_period_id`,`pay_core_run_id`,`filing_obligation_id`,`policy_version`,`tolerance_sha256`,`rounding_sha256`),
+ KEY `ix_pr1_pf_scope` (`company_id`,`legal_entity_id`,`payroll_period_id`),
+ KEY `fk_pr1_pf_run` (`pay_core_run_id`),
+ KEY `fk_pr1_pf_ob` (`filing_obligation_id`),
+ CONSTRAINT `fk_pr1_pf_run` FOREIGN KEY (`pay_core_run_id`) REFERENCES `0_hrm_pay_core_009_runs` (`run_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_pf_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_pf_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_profiles row cannot be updated';
+CREATE TRIGGER `0_pr1_pf_d` BEFORE DELETE ON `0_hrm_pay_rec_001_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_profiles row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_evidence_sets` (
+ `reconciliation_evidence_set_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `reconciliation_profile_id` bigint(20) unsigned NOT NULL,
+ `evidence_kind` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `membership_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `item_count` int(10) unsigned NOT NULL,
+ `amount_minor` bigint(20) NOT NULL,
+ `status_token` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `current_evidence` tinyint(1) unsigned NOT NULL,
+ `source_contract_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `recomputed_by` bigint(20) unsigned NOT NULL,
+ `recomputed_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_evidence_set_id`),
+ UNIQUE KEY `uq_pr1_es_sha` (`evidence_sha256`),
+ UNIQUE KEY `uq_pr1_es_scope` (`reconciliation_profile_id`,`evidence_kind`,`membership_sha256`),
+ KEY `ix_pr1_es_current` (`reconciliation_profile_id`,`evidence_kind`,`current_evidence`),
+ KEY `fk_pr1_es_pf` (`reconciliation_profile_id`),
+ CONSTRAINT `fk_pr1_es_pf` FOREIGN KEY (`reconciliation_profile_id`) REFERENCES `0_hrm_pay_rec_001_profiles` (`reconciliation_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_es_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_evidence_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_evidence_sets row cannot be updated';
+CREATE TRIGGER `0_pr1_es_d` BEFORE DELETE ON `0_hrm_pay_rec_001_evidence_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_evidence_sets row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_checklists` (
+ `close_checklist_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `reconciliation_profile_id` bigint(20) unsigned NOT NULL,
+ `payroll_evidence_set_id` bigint(20) unsigned NOT NULL,
+ `gl_evidence_set_id` bigint(20) unsigned NOT NULL,
+ `payment_evidence_set_id` bigint(20) unsigned NOT NULL,
+ `filing_evidence_set_id` bigint(20) unsigned NOT NULL,
+ `filing_completion_receipt_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `readiness_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `checklist_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `prepared_by` bigint(20) unsigned NOT NULL,
+ `prepared_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`close_checklist_id`),
+ UNIQUE KEY `uq_pr1_cl_sha` (`checklist_sha256`),
+ UNIQUE KEY `uq_pr1_cl_ready` (`reconciliation_profile_id`,`readiness_sha256`),
+ KEY `fk_pr1_cl_pf` (`reconciliation_profile_id`),
+ KEY `fk_pr1_cl_pay` (`payroll_evidence_set_id`),
+ KEY `fk_pr1_cl_gl` (`gl_evidence_set_id`),
+ KEY `fk_pr1_cl_pmt` (`payment_evidence_set_id`),
+ KEY `fk_pr1_cl_fil` (`filing_evidence_set_id`),
+ CONSTRAINT `fk_pr1_cl_pf` FOREIGN KEY (`reconciliation_profile_id`) REFERENCES `0_hrm_pay_rec_001_profiles` (`reconciliation_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_cl_pay` FOREIGN KEY (`payroll_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_cl_gl` FOREIGN KEY (`gl_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_cl_pmt` FOREIGN KEY (`payment_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_cl_fil` FOREIGN KEY (`filing_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_cl_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be updated';
+CREATE TRIGGER `0_pr1_cl_d` BEFORE DELETE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be deleted';
+-- PAY-REC-001 END GROUP reconciliation_profile_checklist_custody
