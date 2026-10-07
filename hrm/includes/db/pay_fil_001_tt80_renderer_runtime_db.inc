@@ -7,6 +7,7 @@ include_once(dirname(__FILE__).'/pay_fil_001_tt80_semantic_readiness_db.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_semantic_source_custody_db.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_semantic_source_admission_db.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_semantic_mapping_db.inc');
+include_once(dirname(__FILE__).'/pay_fil_001_tt80_render_model_db.inc');
 
 /**
  * Read the source-bound TT80 readiness state for one filing source set.
