@@ -16029,3 +16029,48 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_checklists` (
 CREATE TRIGGER `0_pr1_cl_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be updated';
 CREATE TRIGGER `0_pr1_cl_d` BEFORE DELETE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be deleted';
 -- PAY-REC-001 END GROUP reconciliation_profile_checklist_custody
+
+-- PAY-REC-001 GROUP independent_review_approval_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_reviews` (
+ `reconciliation_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `close_checklist_id` bigint(20) unsigned NOT NULL,
+ `checklist_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `readiness_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `decision` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `reviewed_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_review_id`),
+ UNIQUE KEY `uq_pr1_rv_checklist` (`close_checklist_id`),
+ UNIQUE KEY `uq_pr1_rv_sha` (`review_sha256`),
+ KEY `fk_pr1_rv_checklist` (`close_checklist_id`),
+ CONSTRAINT `fk_pr1_rv_checklist` FOREIGN KEY (`close_checklist_id`) REFERENCES `0_hrm_pay_rec_001_checklists` (`close_checklist_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_rv_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_reviews row cannot be updated';
+CREATE TRIGGER `0_pr1_rv_d` BEFORE DELETE ON `0_hrm_pay_rec_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_reviews row cannot be deleted';
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_approvals` (
+ `reconciliation_approval_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `reconciliation_review_id` bigint(20) unsigned NOT NULL,
+ `close_checklist_id` bigint(20) unsigned NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `decision` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `assurance_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approval_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_approval_id`),
+ UNIQUE KEY `uq_pr1_ap_review` (`reconciliation_review_id`),
+ UNIQUE KEY `uq_pr1_ap_checklist` (`close_checklist_id`),
+ UNIQUE KEY `uq_pr1_ap_sha` (`approval_sha256`),
+ KEY `fk_pr1_ap_review` (`reconciliation_review_id`),
+ KEY `fk_pr1_ap_checklist` (`close_checklist_id`),
+ CONSTRAINT `fk_pr1_ap_review` FOREIGN KEY (`reconciliation_review_id`) REFERENCES `0_hrm_pay_rec_001_reviews` (`reconciliation_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_ap_checklist` FOREIGN KEY (`close_checklist_id`) REFERENCES `0_hrm_pay_rec_001_checklists` (`close_checklist_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_ap_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be updated';
+CREATE TRIGGER `0_pr1_ap_d` BEFORE DELETE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be deleted';
+-- PAY-REC-001 END GROUP independent_review_approval_custody
