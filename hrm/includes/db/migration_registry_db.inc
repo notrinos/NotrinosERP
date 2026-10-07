@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1057',
-        'active_legacy_payroll_contract'=>'1.0.541',
+        'active_database_version'=>'1.0.1060',
+        'active_legacy_payroll_contract'=>'1.0.542',
         'next_backlog_item'=>'PAY-REC-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-REC-001 close-state/concurrency/recovery batch SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1057 and active legacy-payroll source custody 1.0.541. Three high-risk contiguous slices are staged from the committed 1.0.1054 predecessor: 1.0.1054->1.0.1055 freezes append-only development close/recovery authority; 1.0.1055->1.0.1056 adds exactly one zero-seed immutable state-event table with two UPDATE/DELETE denial triggers and six restrictive foreign keys; 1.0.1056->1.0.1057 activates serialized append-only development close/reopen/reversal evidence. Close appends require an approved independent review/approval, a distinct closer, fresh recomputation/revalidation of payroll/GL/payment/filing evidence, and per PAY-CORE run + filing-obligation serialization. Re-close after recovery requires a new approval; recovery is append-only and only from the current development-closed event. Production close, payroll state mutation, GL posting, payment execution, filing submission, network authority, payroll calculation, historical payroll/accounting/filing mutation and automatic role grants remain denied. PAY-FIL-001 accepted development closure remains immutable. The predecessor 1.0.1054 owner-machine mandatory gate is not represented as passed by this source batch; local acceptance must preserve that evidence or rerun it on the predecessor before successor acceptance. PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
+        'next_slice_scope'=>'PAY-REC-001 privacy-aware evidence export/final closure-readiness SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1060 and active legacy-payroll source custody 1.0.542. The final high-risk source batch is exactly three contiguous source-only edges from committed 1.0.1057: 1.0.1057->1.0.1058 freezes aggregate-only hash-bound privacy-aware export authority; 1.0.1058->1.0.1059 activates company-scoped read-only export over existing immutable PAY-REC custody; 1.0.1059->1.0.1060 stages final completion/readiness. Physical PAY-REC projection remains exactly 6 InnoDB custody tables, 12 immutable UPDATE/DELETE denial triggers and 17 restrictive foreign keys; no schema or seed rows are added. Export reads only reconciliation scope, aggregate VND totals/counts, hashes, statuses, decisions, timestamps and state-chain evidence; actor identifiers, employee identifiers, bank details, taxpayer values, filing payloads, formula/salary detail, raw evidence payloads and credentials are not read/exported. File writes and network egress are denied. Production close, payroll state mutation, GL posting, payment execution, filing submission, payroll calculation, historical payroll/accounting/filing mutation and automatic role grants remain denied. PAY-FIL-001 accepted development closure remains immutable. PAY-REC-001 remains OPEN until the owner-machine completion gate passes and genuine predecessor acceptance evidence is retained; PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
 
         'edges'=>array(
+            'pay_rec_001_completion_readiness'=>array('previous'=>'1.0.1059','version'=>'1.0.1060',
+                'file'=>'sql/upgrade_pay_rec_001_completion_readiness.php'),
+            'pay_rec_001_evidence_export_runtime'=>array('previous'=>'1.0.1058','version'=>'1.0.1059',
+                'file'=>'sql/upgrade_pay_rec_001_evidence_export_runtime.php'),
+            'pay_rec_001_evidence_export_contract'=>array('previous'=>'1.0.1057','version'=>'1.0.1058',
+                'file'=>'sql/upgrade_pay_rec_001_evidence_export_contract.php'),
             'pay_rec_001_close_state_runtime'=>array('previous'=>'1.0.1056','version'=>'1.0.1057',
                 'file'=>'sql/upgrade_pay_rec_001_close_state_runtime.php'),
             'pay_rec_001_close_state_custody'=>array('previous'=>'1.0.1055','version'=>'1.0.1056',
