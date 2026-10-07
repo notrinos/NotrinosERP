@@ -67,6 +67,16 @@ function pay_rec_001_evidence_descriptor($kind,array $members,$status,$source_co
     $body['evidence_sha256']=pay_rec_001_hash($body);$body['members']=$membership['members'];return $body;
 }
 
+/** Bind one PAY-FIL source set and completion receipt as a single evidence member. */
+function pay_rec_001_filing_evidence_source($filing_source_set_id,$source_set_sha256,$completion_receipt_sha256,$amount_minor,$source_contract_sha256,&$error=null)
+{
+    $error=null;$id=pay_rec_001_uint($filing_source_set_id);$amount=pay_rec_001_uint($amount_minor);
+    if($id===false||$id<=0||$amount===false||!pay_rec_001_sha($source_set_sha256)||!pay_rec_001_sha($completion_receipt_sha256)||!pay_rec_001_sha($source_contract_sha256))return pay_rec_001_fail($error,'filing_evidence_source_invalid');
+    $member_sha=pay_rec_001_hash(array('source_set_sha256'=>(string)$source_set_sha256,'completion_receipt_sha256'=>(string)$completion_receipt_sha256));
+    if($member_sha===false)return pay_rec_001_fail($error,'filing_evidence_source_hash_failed');
+    return array('members'=>array(array('source_key'=>'pay-fil-source-set:'.$id,'source_sha256'=>$member_sha,'amount_minor'=>$amount)),'source_contract_sha256'=>(string)$source_contract_sha256);
+}
+
 /** Canonicalize an immutable reconciliation profile before storage. */
 function pay_rec_001_profile_descriptor(array $scope,array $policy,$payroll_scope_sha256,&$error=null)
 {

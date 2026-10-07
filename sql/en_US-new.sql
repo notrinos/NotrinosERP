@@ -15714,3 +15714,49 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_approvals` (
 CREATE TRIGGER `0_pr1_ap_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be updated';
 CREATE TRIGGER `0_pr1_ap_d` BEFORE DELETE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be deleted';
 -- PAY-REC-001 END GROUP independent_review_approval_custody
+
+-- PAY-REC-001 GROUP development_close_state_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_state_events` (
+ `reconciliation_state_event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `reconciliation_profile_id` bigint(20) unsigned NOT NULL,
+ `close_checklist_id` bigint(20) unsigned NOT NULL,
+ `reconciliation_review_id` bigint(20) unsigned NOT NULL,
+ `reconciliation_approval_id` bigint(20) unsigned NOT NULL,
+ `company_id` int(11) unsigned NOT NULL,
+ `legal_entity_id` bigint(20) unsigned NOT NULL,
+ `payroll_period_id` bigint(20) unsigned NOT NULL,
+ `pay_core_run_id` bigint(20) unsigned NOT NULL,
+ `filing_obligation_id` bigint(20) unsigned NOT NULL,
+ `event_sequence` int(11) unsigned NOT NULL,
+ `prior_event_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `resulting_state` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reason_code` varchar(48) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `checklist_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `approval_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `transition_evidence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `event_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `acted_by` bigint(20) unsigned NOT NULL,
+ `acted_at` datetime NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`reconciliation_state_event_id`),
+ UNIQUE KEY `uq_pr1_se_scope_seq` (`company_id`,`pay_core_run_id`,`filing_obligation_id`,`event_sequence`),
+ UNIQUE KEY `uq_pr1_se_sha` (`event_sha256`),
+ KEY `ix_pr1_se_scope_state` (`company_id`,`pay_core_run_id`,`filing_obligation_id`,`resulting_state`),
+ KEY `fk_pr1_se_profile` (`reconciliation_profile_id`),
+ KEY `fk_pr1_se_checklist` (`close_checklist_id`),
+ KEY `fk_pr1_se_review` (`reconciliation_review_id`),
+ KEY `fk_pr1_se_approval` (`reconciliation_approval_id`),
+ KEY `fk_pr1_se_run` (`pay_core_run_id`),
+ KEY `fk_pr1_se_obligation` (`filing_obligation_id`),
+ CONSTRAINT `fk_pr1_se_profile` FOREIGN KEY (`reconciliation_profile_id`) REFERENCES `0_hrm_pay_rec_001_profiles` (`reconciliation_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_se_checklist` FOREIGN KEY (`close_checklist_id`) REFERENCES `0_hrm_pay_rec_001_checklists` (`close_checklist_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_se_review` FOREIGN KEY (`reconciliation_review_id`) REFERENCES `0_hrm_pay_rec_001_reviews` (`reconciliation_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_se_approval` FOREIGN KEY (`reconciliation_approval_id`) REFERENCES `0_hrm_pay_rec_001_approvals` (`reconciliation_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_se_run` FOREIGN KEY (`pay_core_run_id`) REFERENCES `0_hrm_pay_core_009_runs` (`run_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+ CONSTRAINT `fk_pr1_se_obligation` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+CREATE TRIGGER `0_pr1_se_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be updated';
+CREATE TRIGGER `0_pr1_se_d` BEFORE DELETE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be deleted';
+-- PAY-REC-001 END GROUP development_close_state_custody

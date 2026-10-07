@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1054',
-        'active_legacy_payroll_contract'=>'1.0.540',
+        'active_database_version'=>'1.0.1057',
+        'active_legacy_payroll_contract'=>'1.0.541',
         'next_backlog_item'=>'PAY-REC-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-REC-001 independently recomputed evidence + separated review/approval batch SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1054 and active legacy-payroll source custody 1.0.540. Three high-risk contiguous slices are staged: 1.0.1051->1.0.1052 freezes append-only evidence/review authority; 1.0.1052->1.0.1053 adds exactly two zero-seed immutable review/approval tables with four UPDATE/DELETE denial triggers and three restrictive foreign keys; 1.0.1053->1.0.1054 activates only independently recomputed payroll/GL/payment/filing evidence-set append, CloseReady checklist append, and separated maker/reviewer/approver decisions. Runtime revalidates accepted PAY-CORE result/projection custody, PAY-GL reconciliation hashes, PAY-PMT settlement reconciliation hashes, exact PAY-FIL source-set membership and the accepted local-validation completion receipt. Payroll and settled-payment VND totals must match exactly. Close-state mutation, production close, GL posting, payment execution, filing submission, network authority, payroll calculation, historical payroll/accounting/filing mutation and automatic role grants remain denied. PAY-FIL-001 accepted development closure remains immutable. Strict next after owner-machine local acceptance is a separately reviewed PAY-REC-001 close-state/concurrency/recovery batch; PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
+        'next_slice_scope'=>'PAY-REC-001 close-state/concurrency/recovery batch SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1057 and active legacy-payroll source custody 1.0.541. Three high-risk contiguous slices are staged from the committed 1.0.1054 predecessor: 1.0.1054->1.0.1055 freezes append-only development close/recovery authority; 1.0.1055->1.0.1056 adds exactly one zero-seed immutable state-event table with two UPDATE/DELETE denial triggers and six restrictive foreign keys; 1.0.1056->1.0.1057 activates serialized append-only development close/reopen/reversal evidence. Close appends require an approved independent review/approval, a distinct closer, fresh recomputation/revalidation of payroll/GL/payment/filing evidence, and per PAY-CORE run + filing-obligation serialization. Re-close after recovery requires a new approval; recovery is append-only and only from the current development-closed event. Production close, payroll state mutation, GL posting, payment execution, filing submission, network authority, payroll calculation, historical payroll/accounting/filing mutation and automatic role grants remain denied. PAY-FIL-001 accepted development closure remains immutable. The predecessor 1.0.1054 owner-machine mandatory gate is not represented as passed by this source batch; local acceptance must preserve that evidence or rerun it on the predecessor before successor acceptance. PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
 
         'edges'=>array(
+            'pay_rec_001_close_state_runtime'=>array('previous'=>'1.0.1056','version'=>'1.0.1057',
+                'file'=>'sql/upgrade_pay_rec_001_close_state_runtime.php'),
+            'pay_rec_001_close_state_custody'=>array('previous'=>'1.0.1055','version'=>'1.0.1056',
+                'file'=>'sql/upgrade_pay_rec_001_close_state_custody.php'),
+            'pay_rec_001_close_state_contract'=>array('previous'=>'1.0.1054','version'=>'1.0.1055',
+                'file'=>'sql/upgrade_pay_rec_001_close_state_contract.php'),
             'pay_rec_001_evidence_review_runtime'=>array('previous'=>'1.0.1053','version'=>'1.0.1054',
                 'file'=>'sql/upgrade_pay_rec_001_evidence_review_runtime.php'),
             'pay_rec_001_review_approval_custody'=>array('previous'=>'1.0.1052','version'=>'1.0.1053',
