@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1045',
-        'active_legacy_payroll_contract'=>'1.0.534',
-        'next_backlog_item'=>'PAY-FIL-001',
+        'active_database_version'=>'1.0.1048',
+        'active_legacy_payroll_contract'=>'1.0.536',
+        'next_backlog_item'=>'PAY-REC-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-FIL-001 TT80 generated-payload validation and closure/readiness SOURCE-VERIFIED / LOCAL-GATE-PENDING at source 1.0.1045 and source custody 1.0.534. Three contiguous dependency-ordered high-risk source-only slices 1.0.1042 -> 1.0.1043 -> 1.0.1044 -> 1.0.1045 freeze a hash-bound generated-payload validation contract, enable in-memory/read-only validation-candidate preparation over the accepted source-bound generator, and stage closure/readiness. Physical PAY-FIL projection remains twelve InnoDB custody tables, twenty-four exact immutable UPDATE/DELETE denial triggers and nineteen restrictive foreign keys; no schema or seed rows are added. The exact owner-machine mandatory gate must validate the source-generated payload against the hash-bound 05_KK_TNCN_TT80_293.xsd and bind a PASS observation from iTaxViewer or an equivalent official/local validation application to the exact generated payload hash. Raw generated payload persistence in repository custody remains denied. Development runtime generation is allowed only for OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY; no generic payroll aggregate or custody hash is reinterpreted as a filing semantic. Artifact publication, signing, production credentials, network/submission authority, production generation, portal submission and historical payroll/accounting/filing mutation remain denied. PAY-FIL-001 remains OPEN until that local mandatory gate actually passes and its acceptance is recorded; PAY-REC-001 and PAY-CON-001 remain blocked. Production transmission or portal submission is not required for the current development closure and remains outside this development plan.',
+        'next_slice_scope'=>'PAY-REC-001 architecture prerequisites SOURCE-VERIFIED / LOCAL-GATE-PENDING at source 1.0.1048 and source custody 1.0.536. Three contiguous dependency-ordered high-risk source-only slices 1.0.1045 -> 1.0.1046 -> 1.0.1047 -> 1.0.1048 freeze: (1) exact classified PAY-CORE result-line to TT80 person-fact monetary lineage, (2) explicit LOCAL_DEVELOPMENT_RECONCILIATION filing completion bound to accepted PAY-FIL 1.0.1045/1.0.535 local validation without statutory or production acceptance, and (3) unified payroll/GL/payment/filing reconciliation and CloseReady architecture. No PAY-REC schema, seed row, runtime writer, state mutation, automatic role grant, production close, GL posting, payment execution, filing submission, network egress, payroll calculation or historical payroll/accounting/filing mutation authority is enabled. Physical PAY-FIL predecessor projection remains twelve InnoDB custody tables, twenty-four exact immutable UPDATE/DELETE denial triggers and nineteen restrictive foreign keys. The accepted PAY-FIL closure evidence remains immutable and PAY-FIL-001 CLOSED / LOCAL ACCEPTANCE PASS remains the accepted predecessor. Development runtime generation is allowed only for OFFICIAL_LOCAL_VALIDATOR_COMPATIBILITY; no generic payroll aggregate or custody hash is reinterpreted as a filing semantic. Artifact publication, signing, production credentials, network/submission authority remain denied. Strict next is additive immutable reconciliation/profile/checklist custody; PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
 
         'edges'=>array(
+            'pay_rec_001_architecture_contract'=>array('previous'=>'1.0.1047','version'=>'1.0.1048',
+                'file'=>'sql/upgrade_pay_rec_001_architecture_contract.php'),
+            'pay_rec_001_filing_completion_policy_contract'=>array('previous'=>'1.0.1046','version'=>'1.0.1047',
+                'file'=>'sql/upgrade_pay_rec_001_filing_completion_policy_contract.php'),
+            'pay_rec_001_filing_monetary_lineage_contract'=>array('previous'=>'1.0.1045','version'=>'1.0.1046',
+                'file'=>'sql/upgrade_pay_rec_001_filing_monetary_lineage_contract.php'),
             'pay_fil_001_tt80_closure_readiness'=>array('previous'=>'1.0.1044','version'=>'1.0.1045',
                 'file'=>'sql/upgrade_pay_fil_001_tt80_closure_readiness.php'),
             'pay_fil_001_tt80_generated_validation_runtime'=>array('previous'=>'1.0.1043','version'=>'1.0.1044',

@@ -54,7 +54,7 @@ function pay_fil_001_tt80_closure_require_source($patch)
     $test='tests/php/test_pay_fil_001_tt80_generated_payload_local_compatibility.php';
     foreach(array($runner,$test) as $relative)if(!is_file($path_to_root.'/'.$relative))return pay_fil_001_fail_patch($patch,'PAY-FIL-001 closure readiness source missing: '.$relative.'.');
     $raw=@file_get_contents($path_to_root.'/'.$runner);
-    foreach(array('pay-fil-001-tt80-generated-validation-closure-v1-20261007','1.0.1045','1.0.534','PAY-FIL-001 remains OPEN until this runner passes','PAY-REC-001 and PAY-CON-001 remain blocked') as $token)
+    foreach(array('pay-fil-001-tt80-generated-validation-closure-v2-20261007','1.0.1045','1.0.535','PAY-FIL-001 CLOSED / LOCAL ACCEPTANCE PASS','PAY-CON-001 remains blocked') as $token)
         if(!is_string($raw)||strpos($raw,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 closure runner source incomplete: '.$token.'.');
     return true;
 }

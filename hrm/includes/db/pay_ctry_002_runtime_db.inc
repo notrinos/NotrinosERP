@@ -28,11 +28,12 @@ function pay_ctry_002_runtime_nullable_text_sql($value)
 {
     return $value === null || $value === '' ? ' IS NULL' : '='.db_escape((string)$value);
 }
+/** Build an exact scope predicate for the binding table alias in runtime joins. */
 function pay_ctry_002_runtime_scope_where($company,$scope_type,$legal_entity_id,$payroll_scope_key)
 {
-    return 'company_id='.(int)$company.' AND scope_type='.db_escape((string)$scope_type)
-        .' AND legal_entity_id'.pay_ctry_002_runtime_nullable_scope_sql($legal_entity_id)
-        .' AND payroll_scope_key'.pay_ctry_002_runtime_nullable_text_sql($payroll_scope_key);
+    return 'b.company_id='.(int)$company.' AND b.scope_type='.db_escape((string)$scope_type)
+        .' AND b.legal_entity_id'.pay_ctry_002_runtime_nullable_scope_sql($legal_entity_id)
+        .' AND b.payroll_scope_key'.pay_ctry_002_runtime_nullable_text_sql($payroll_scope_key);
 }
 
 /** Resolve one exact scope leaf, with the row locked when requested. */
