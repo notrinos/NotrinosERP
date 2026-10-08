@@ -16174,3 +16174,35 @@ CREATE TRIGGER `0_pcon1_pp_d` BEFORE DELETE ON `0_hrm_pay_con_001_provider_profi
 CREATE TRIGGER `0_pcon1_mv_u` BEFORE UPDATE ON `0_hrm_pay_con_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_mapping_versions row cannot be updated';
 CREATE TRIGGER `0_pcon1_mv_d` BEFORE DELETE ON `0_hrm_pay_con_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_mapping_versions row cannot be deleted';
 -- PAY-CON-001 END GROUP provider_mapping_custody
+
+-- PAY-CON-001 GROUP provider_admission_review_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_provider_admission_reviews` (
+ `provider_admission_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL,
+ `provider_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `jurisdiction_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `delivery_model_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `residency_region_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `vendor_due_diligence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `legal_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `security_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `data_residency_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `delivery_model_disclosure_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `provider_contract_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_provenance_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_by` bigint(20) unsigned NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `decision_code` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `reviewed_at` datetime NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `admission_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`provider_admission_review_id`),
+ UNIQUE KEY `uq_pcon1_par_hash` (`admission_review_sha256`),
+ KEY `ix_pcon1_par_provider` (`company_id`,`provider_code`,`approved_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_pcon1_par_u` BEFORE UPDATE ON `0_hrm_pay_con_001_provider_admission_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_admission_reviews row cannot be updated';
+CREATE TRIGGER `0_pcon1_par_d` BEFORE DELETE ON `0_hrm_pay_con_001_provider_admission_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_admission_reviews row cannot be deleted';
+-- PAY-CON-001 END GROUP provider_admission_review_custody

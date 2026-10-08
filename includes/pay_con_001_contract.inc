@@ -2,8 +2,8 @@
 /** PAY-CON-001 provider-neutral external payroll connector foundation contract. */
 
 if (!defined('PAY_CON_001_CONTRACT_VERSION')) define('PAY_CON_001_CONTRACT_VERSION', '1.0.0');
-if (!defined('PAY_CON_001_SOURCE_DATABASE_VERSION')) define('PAY_CON_001_SOURCE_DATABASE_VERSION', '1.0.1063');
-if (!defined('PAY_CON_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_CON_001_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.543');
+if (!defined('PAY_CON_001_SOURCE_DATABASE_VERSION')) define('PAY_CON_001_SOURCE_DATABASE_VERSION', '1.0.1066');
+if (!defined('PAY_CON_001_LEGACY_PAYROLL_CONTRACT_VERSION')) define('PAY_CON_001_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.544');
 
 /**
  * First PAY-CON batch is intentionally non-delivering. It establishes only

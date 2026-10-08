@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1063',
-        'active_legacy_payroll_contract'=>'1.0.543',
+        'active_database_version'=>'1.0.1066',
+        'active_legacy_payroll_contract'=>'1.0.544',
         'next_backlog_item'=>'PAY-CON-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CON-001 provider-neutral foundation SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1063 and active legacy-payroll source custody 1.0.543. The first high-risk external-provider batch is exactly three contiguous edges from accepted 1.0.1060: 1.0.1060->1.0.1061 binds exact PAY-API-001/PAY-REC-001 accepted dependency custody; 1.0.1061->1.0.1062 freezes named-provider due-diligence, residency, delivery-model, mapping-version, shadow-exchange, idempotency and reconciliation prerequisites; 1.0.1062->1.0.1063 adds two zero-seed immutable provider-profile/mapping-version custody tables with four UPDATE/DELETE denial triggers and one restrictive foreign key. No provider or mapping writer, adapter runtime, external HTTP route, secret custody, network authority, shadow exchange, payroll result authority, payroll state mutation, GL posting, payment execution, filing submission, approval/audit bypass, cross-company authority, automatic role grant or historical payroll/accounting/filing mutation is enabled. A named provider plus reviewed vendor/legal/security/data-residency evidence is required before any writer or transport slice. Owner-machine WAMP/MariaDB Software Upgrade and localhost mandatory runner remain final acceptance before commit.',
+        'next_slice_scope'=>'PAY-CON-001 named-provider admission custody source batch is SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1066 and active legacy-payroll source custody 1.0.544. Exactly three high-risk edges extend the accepted 1.0.1063 provider-neutral foundation: 1.0.1063->1.0.1064 freezes named-provider vendor/legal/security/data-residency and delivery-model admission prerequisites; 1.0.1064->1.0.1065 adds one zero-seed immutable provider-admission-review custody table with two UPDATE/DELETE denial triggers; 1.0.1065->1.0.1066 revalidates the admission contract and zero-seed custody guard. No provider is selected or admitted, and provider-admission/profile/mapping writers, adapter runtime, external HTTP routes, secret custody, network exchange, shadow exchange, payroll-result authority, payroll mutation, GL posting, payment execution, filing submission, approval/audit bypass, cross-company authority or historical payroll/accounting/filing mutation is enabled. The strict next slice requires a real named provider plus retained reviewed evidence before any admission/profile writer can be enabled.',
 
         'edges'=>array(
+            'pay_con_001_provider_admission_guard'=>array('previous'=>'1.0.1065','version'=>'1.0.1066',
+                'file'=>'sql/upgrade_pay_con_001_provider_admission_guard.php'),
+            'pay_con_001_provider_admission_custody'=>array('previous'=>'1.0.1064','version'=>'1.0.1065',
+                'file'=>'sql/upgrade_pay_con_001_provider_admission_custody.php'),
+            'pay_con_001_provider_admission_authority'=>array('previous'=>'1.0.1063','version'=>'1.0.1064',
+                'file'=>'sql/upgrade_pay_con_001_provider_admission_authority.php'),
             'pay_con_001_provider_mapping_custody'=>array('previous'=>'1.0.1062','version'=>'1.0.1063',
                 'file'=>'sql/upgrade_pay_con_001_provider_mapping_custody.php'),
             'pay_con_001_authority_contract'=>array('previous'=>'1.0.1061','version'=>'1.0.1062',
