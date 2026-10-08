@@ -16120,3 +16120,57 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_state_events` (
 CREATE TRIGGER `0_pr1_se_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be updated';
 CREATE TRIGGER `0_pr1_se_d` BEFORE DELETE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be deleted';
 -- PAY-REC-001 END GROUP development_close_state_custody
+
+-- PAY-CON-001 GROUP provider_mapping_custody
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_provider_profiles` (
+ `provider_profile_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `company_id` int(11) unsigned NOT NULL,
+ `provider_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `delivery_model_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `jurisdiction_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `residency_region_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `adapter_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `due_diligence_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `data_residency_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `security_review_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `provider_contract_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `requested_by` bigint(20) unsigned NOT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `profile_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`provider_profile_id`),
+ UNIQUE KEY `uq_pcon1_pp_code` (`company_id`,`provider_code`),
+ UNIQUE KEY `uq_pcon1_pp_sha` (`profile_sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_mapping_versions` (
+ `mapping_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+ `provider_profile_id` bigint(20) unsigned NOT NULL,
+ `mapping_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `exchange_direction` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `payload_class` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `mapping_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `source_schema_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `target_schema_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `mapping_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `effective_from` date NOT NULL,
+ `effective_to` date DEFAULT NULL,
+ `reviewed_by` bigint(20) unsigned NOT NULL,
+ `approved_by` bigint(20) unsigned NOT NULL,
+ `approved_at` datetime NOT NULL,
+ `mapping_version_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`mapping_version_id`),
+ UNIQUE KEY `uq_pcon1_mv_keyver` (`provider_profile_id`,`mapping_key`,`mapping_version`),
+ UNIQUE KEY `uq_pcon1_mv_sha` (`mapping_version_sha256`),
+ KEY `fk_pcon1_mv_profile` (`provider_profile_id`),
+ CONSTRAINT `fk_pcon1_mv_profile` FOREIGN KEY (`provider_profile_id`) REFERENCES `0_hrm_pay_con_001_provider_profiles` (`provider_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+CREATE TRIGGER `0_pcon1_pp_u` BEFORE UPDATE ON `0_hrm_pay_con_001_provider_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_profiles row cannot be updated';
+CREATE TRIGGER `0_pcon1_pp_d` BEFORE DELETE ON `0_hrm_pay_con_001_provider_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_profiles row cannot be deleted';
+CREATE TRIGGER `0_pcon1_mv_u` BEFORE UPDATE ON `0_hrm_pay_con_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_mapping_versions row cannot be updated';
+CREATE TRIGGER `0_pcon1_mv_d` BEFORE DELETE ON `0_hrm_pay_con_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_mapping_versions row cannot be deleted';
+-- PAY-CON-001 END GROUP provider_mapping_custody

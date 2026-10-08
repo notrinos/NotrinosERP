@@ -11,13 +11,19 @@
 function hrm_migration_head_registry()
 {
     return array(
-        'active_database_version'=>'1.0.1060',
-        'active_legacy_payroll_contract'=>'1.0.542',
-        'next_backlog_item'=>'PAY-REC-001',
+        'active_database_version'=>'1.0.1063',
+        'active_legacy_payroll_contract'=>'1.0.543',
+        'next_backlog_item'=>'PAY-CON-001',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-REC-001 privacy-aware evidence export/final closure-readiness SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1060 and active legacy-payroll source custody 1.0.542. The final high-risk source batch is exactly three contiguous source-only edges from committed 1.0.1057: 1.0.1057->1.0.1058 freezes aggregate-only hash-bound privacy-aware export authority; 1.0.1058->1.0.1059 activates company-scoped read-only export over existing immutable PAY-REC custody; 1.0.1059->1.0.1060 stages final completion/readiness. Physical PAY-REC projection remains exactly 6 InnoDB custody tables, 12 immutable UPDATE/DELETE denial triggers and 17 restrictive foreign keys; no schema or seed rows are added. Export reads only reconciliation scope, aggregate VND totals/counts, hashes, statuses, decisions, timestamps and state-chain evidence; actor identifiers, employee identifiers, bank details, taxpayer values, filing payloads, formula/salary detail, raw evidence payloads and credentials are not read/exported. File writes and network egress are denied. Production close, payroll state mutation, GL posting, payment execution, filing submission, payroll calculation, historical payroll/accounting/filing mutation and automatic role grants remain denied. PAY-FIL-001 accepted development closure remains immutable. PAY-REC-001 remains OPEN until the owner-machine completion gate passes and genuine predecessor acceptance evidence is retained; PAY-CON-001 remains blocked until PAY-REC-001 is accepted.',
+        'next_slice_scope'=>'PAY-CON-001 provider-neutral foundation SOURCE-VERIFIED / LOCAL-GATE-PENDING at expected source/DB 1.0.1063 and active legacy-payroll source custody 1.0.543. The first high-risk external-provider batch is exactly three contiguous edges from accepted 1.0.1060: 1.0.1060->1.0.1061 binds exact PAY-API-001/PAY-REC-001 accepted dependency custody; 1.0.1061->1.0.1062 freezes named-provider due-diligence, residency, delivery-model, mapping-version, shadow-exchange, idempotency and reconciliation prerequisites; 1.0.1062->1.0.1063 adds two zero-seed immutable provider-profile/mapping-version custody tables with four UPDATE/DELETE denial triggers and one restrictive foreign key. No provider or mapping writer, adapter runtime, external HTTP route, secret custody, network authority, shadow exchange, payroll result authority, payroll state mutation, GL posting, payment execution, filing submission, approval/audit bypass, cross-company authority, automatic role grant or historical payroll/accounting/filing mutation is enabled. A named provider plus reviewed vendor/legal/security/data-residency evidence is required before any writer or transport slice. Owner-machine WAMP/MariaDB Software Upgrade and localhost mandatory runner remain final acceptance before commit.',
 
         'edges'=>array(
+            'pay_con_001_provider_mapping_custody'=>array('previous'=>'1.0.1062','version'=>'1.0.1063',
+                'file'=>'sql/upgrade_pay_con_001_provider_mapping_custody.php'),
+            'pay_con_001_authority_contract'=>array('previous'=>'1.0.1061','version'=>'1.0.1062',
+                'file'=>'sql/upgrade_pay_con_001_authority_contract.php'),
+            'pay_con_001_dependency_review'=>array('previous'=>'1.0.1060','version'=>'1.0.1061',
+                'file'=>'sql/upgrade_pay_con_001_dependency_review.php'),
             'pay_rec_001_completion_readiness'=>array('previous'=>'1.0.1059','version'=>'1.0.1060',
                 'file'=>'sql/upgrade_pay_rec_001_completion_readiness.php'),
             'pay_rec_001_evidence_export_runtime'=>array('previous'=>'1.0.1058','version'=>'1.0.1059',
