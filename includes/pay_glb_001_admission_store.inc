@@ -10,9 +10,10 @@ require_once __DIR__.'/pay_glb_001_legal_entity_bridge.inc';
 // Missing existing infrastructure denies; do not create signing keys on a read.
 
 /** Require the real durable session and freshly read role, never cached role alone. */
-function pay_glb_001_current_principal()
+function pay_glb_001_current_principal($purpose='read')
 {
     global $security_areas;
+    if (!in_array($purpose,array('read','native_reader','native_execute','native_select','native_replace','native_retro_review','native_business','native_project','native_intent','native_submit','native_approve','native_gl_prepare','native_gl_review','native_gl_post','native_gl_reverse'),true)) return false;
     if (!isset($_SESSION['wa_current_user']) ||
         !($_SESSION['wa_current_user'] instanceof current_user) ||
         !function_exists('session_registry_validate_current_session') ||
@@ -27,7 +28,23 @@ function pay_glb_001_current_principal()
     if (!is_array($role) || !isset($role['areas'],$role['sections']) ||
         !is_array($role['areas']) || !is_array($role['sections']) ||
         !empty($role['inactive'])) return false;
-    foreach (array('SA_HRMREPORTS','SA_HRM_VIEW_PAY_REC') as $area) {
+    $profiles=array('native_execute'=>array('SA_HRM_EXECUTE_PAY_CORE_CALC','SA_HRM_WRITE_PAY_CORE_RESULT'),
+        'native_replace'=>array('SA_HRM_EXECUTE_PAY_CORE_CALC','SA_HRM_WRITE_PAY_CORE_RESULT','SA_HRM_SEAL_PAY_CORE_RESULT','SA_HRM_EXECUTE_PAY_CORE_RETRO'),
+        'native_retro_review'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_REVIEW_PAY_CORE_RETRO'),
+        'native_business'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION'),
+        'native_reader'=>array('SA_HRMREPORTS','SA_HRM_VIEW_PAY_REC','SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION'),
+        'native_project'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_HRM_EXECUTE_PAY_CORE_PROJECTION'),
+        'native_intent'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_HRM_MANAGE_PAY_CORE_PROJECTION'),
+        'native_submit'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_HRM_MANAGE_PAY_CORE_PROJECTION','SA_PAYROLLAPPROVE'),
+        'native_approve'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_PAYROLLAPPROVE'),
+        'native_gl_prepare'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_HRM_MANAGE_PAY_GL_INTENT'),
+        'native_gl_review'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_PAY_GL_REVIEW'),
+        'native_gl_post'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_PAY_GL_POST'),
+        'native_gl_reverse'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT','SA_HRM_VIEW_PAY_CORE_PROJECTION','SA_PAY_GL_REVERSE'),
+        'native_select'=>array('SA_HRM_REVIEW_PAY_CORE','SA_HRM_VERIFY_PAY_CORE_RESULT'),
+        'read'=>array('SA_HRMREPORTS','SA_HRM_VIEW_PAY_REC'));
+    $required=$profiles[$purpose];
+    foreach ($required as $area) {
         if (!isset($security_areas[$area][0]) || !user_check_access($area) ||
             !in_array((string)$security_areas[$area][0], array_map('strval',$role['areas']),true) ||
             !in_array((string)($security_areas[$area][0] & ~0xff),
@@ -49,8 +66,8 @@ function pay_glb_001_path_within($path, $root)
 function pay_glb_001_read_admission_store($kind)
 {
     global $db_connections, $path_to_root;
-    if (!in_array($kind,array('acl','trust','mapping'),true)) return false;
-    $principal = pay_glb_001_current_principal();
+    if (!in_array($kind,array('acl','trust','mapping','native','selection','correction','business'),true)) return false;
+    $principal = pay_glb_001_current_principal($kind==='native'?'native_execute':($kind==='selection'?'native_select':($kind==='correction'?'native_retro_review':($kind==='business'?'native_business':'read'))));
     if ($principal === false) return false;
     $company = $principal['company_id'];
     $config = isset($db_connections[$company]['pay_glb_001_admission'])
