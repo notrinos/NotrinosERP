@@ -96,6 +96,10 @@ include_once($path_to_root.'/config.default.php');
 $_SESSION['SysPrefs'] = new sys_prefs();
 $SysPrefs = &$_SESSION['SysPrefs'];
 
+// The installer has no company profile yet; provide only its application title for the normal theme.
+// do_install() replaces this presentation context with the actual selected connection before company setup.
+$db_connections = array(0 => array('name' => $SysPrefs->app_title));
+
 $inst_langs = array(
 	'C' =>	   array (	   'name' => 'English',             'code' => 'C',		'encoding' => 'utf-8'),
 	'ar_EG' => array ( 'name' => 'Arabic',          	    'code' => 'ar_EG',	'encoding' => 'utf-8', 'rtl' => true),

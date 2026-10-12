@@ -69,6 +69,19 @@ if (!$draft) {
 $current_user_id = $_SESSION['wa_current_user']->user;
 $current_role_id = $_SESSION['wa_current_user']->access;
 
+// Native details use only the purpose-admitted registered review renderer, never generic raw draft fields.
+if (approval_draft_requires_native_reader($draft)) {
+	header('Cache-Control: no-store, private, max-age=0');
+	header('Pragma: no-cache');
+	header('X-Content-Type-Options: nosniff');
+	header('Referrer-Policy: no-referrer');
+	include_once($path_to_root.'/hrm/includes/db/pay_glb_001_native_reader_db.inc');
+	$native_error=null;$native_payload=pay_glb_001_native_approval_decode($draft,$native_error);
+	if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD']!=='GET' || $native_payload===false) display_notification(_('Native payroll review is unavailable for this request.'));
+	else render_payroll_period_draft($native_payload);
+	end_page();exit;
+}
+
 // =====================================================
 // Handle approval/rejection actions
 // =====================================================

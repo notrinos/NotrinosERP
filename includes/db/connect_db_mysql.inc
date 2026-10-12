@@ -59,10 +59,12 @@ function db_query($sql, $err_msg=null) {
 
 	db_profile(); // mysql profiling
 
-	$retry = MAX_DEADLOCK_RETRY;
+	// The outer transaction owns all validation/writes after a victim rollback.
+	$transaction_owned = !empty($GLOBALS['transaction_level']);
+	$retry = max(1, (int)MAX_DEADLOCK_RETRY);
 	do {
-		$result = mysql_query($db, $sql);
-		if (mysql_errno($db) == 1213) { // deadlock detected
+		$result = mysql_query($sql, $db);
+		if (mysql_errno($db) == 1213 && !$transaction_owned && $retry > 1) {
 			sleep(1);
 			$retry--;
 		}
@@ -73,7 +75,8 @@ function db_query($sql, $err_msg=null) {
 
 	db_profile($sql);
 
-	if($SysPrefs->sql_trail) {
+	// Retain the deadlock errno without a new autocommitted trail write.
+	if($SysPrefs->sql_trail && !($result === false && mysql_errno($db) == 1213)) {
 		$db_last_inserted_id = mysql_insert_id($db);	// preserve in case trail insert is done
 		if ($SysPrefs->select_trail || (strstr($sql, 'SELECT') === false)) {
 			mysql_query(

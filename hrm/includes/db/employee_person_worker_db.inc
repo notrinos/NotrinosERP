@@ -45,6 +45,8 @@ function hrm_person_worker_table_exists($table)
  */
 function hrm_person_worker_tables_ready()
 {
+    if(function_exists('pay_glb_001_native_reader_schema_cached')
+        && pay_glb_001_native_reader_schema_cached('person_worker'))return true;
 	foreach (array('hrm_persons', 'hrm_person_names', 'hrm_workers',
 		'hrm_employee_worker_map') as $table) {
 		if (!hrm_person_worker_table_exists($table))

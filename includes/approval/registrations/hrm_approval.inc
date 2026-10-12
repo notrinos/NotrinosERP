@@ -476,6 +476,8 @@ ApprovalWorkflow::registerTransactionType(ST_PAYROLL_PERIOD, array(
 	'executor'       => 'execute_approved_payroll_period',
 	'rejector'       => 'reject_payroll_period_draft',
 	'canceler'       => 'cancel_payroll_period_draft',
+	'action_validator' => 'validate_payroll_period_registered_action',
+	'submitted'      => 'record_payroll_period_registered_submission',
 	'amount_getter'  => 'get_payroll_period_draft_amount',
 	'draft_renderer' => 'render_payroll_period_draft',
 	'edit_url'       => 'hrm/transactions/payroll_approval.php',
@@ -1451,9 +1453,39 @@ function payroll_period_draft_identity_matches_row($draft_data, $period)
  * @param int   $draft_id           Approval draft ID
  * @return int|false Period ID or false on failure
  */
+/** Detect any native version marker so a partial native payload cannot fall through to legacy authority. */
+function payroll_period_is_native_approval_draft($data)
+{
+    return is_array($data) && (array_key_exists('pay_glb_001_native_approval_schema',$data)
+        || (isset($data['pay_core_010_projection_contract_version']) && $data['pay_core_010_projection_contract_version']==='native-result-v2'));
+}
+
+/** Delegate only native payloads to fresh source-purpose checks; keep legacy action rules. */
+function validate_payroll_period_registered_action($action,$data,$draft,$service,$comments='')
+{
+    if (!payroll_period_is_native_approval_draft($data)) return true;
+    global $path_to_root;
+    require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
+    return pay_glb_001_native_approval_validate($action,$data,$draft,$service,$comments);
+}
+
+/** Add native source custody only after actual central submission has succeeded in its transaction. */
+function record_payroll_period_registered_submission($data,$draft_id)
+{
+    if (!payroll_period_is_native_approval_draft($data)) return true;
+    global $path_to_root;
+    require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
+    return pay_glb_001_native_approval_submitted($data,$draft_id);
+}
+
+/** Execute the explicit native terminal or preserve the original legacy payroll terminal. */
 function execute_approved_payroll_period($draft_data, $reserved_trans_no, $draft_id)
 {
 	global $path_to_root;
+	if (payroll_period_is_native_approval_draft($draft_data)) {
+		require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
+		return pay_glb_001_native_approval_terminal($draft_data,$reserved_trans_no,$draft_id);
+	}
 
 	include_once($path_to_root . '/hrm/includes/db/payroll_db.inc');
 	include_once($path_to_root . '/hrm/includes/db/pay_core_010_governance_db.inc');
@@ -1740,6 +1772,11 @@ function transition_payroll_period_approval_terminal(
  */
 function reject_payroll_period_draft($draft_data, $draft_id, $comments)
 {
+	if (payroll_period_is_native_approval_draft($draft_data)) {
+		global $path_to_root;
+		require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
+		return pay_glb_001_native_approval_negative_terminal($draft_data,$draft_id,'reject',$comments);
+	}
 	return transition_payroll_period_approval_terminal(
 		$draft_data,
 		$draft_id,
@@ -1760,6 +1797,11 @@ function reject_payroll_period_draft($draft_data, $draft_id, $comments)
  */
 function cancel_payroll_period_draft($draft_data, $draft_id, $comments)
 {
+	if (payroll_period_is_native_approval_draft($draft_data)) {
+		global $path_to_root;
+		require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
+		return pay_glb_001_native_approval_negative_terminal($draft_data,$draft_id,'cancel',$comments);
+	}
 	return transition_payroll_period_approval_terminal(
 		$draft_data,
 		$draft_id,
@@ -2962,6 +3004,22 @@ function render_employee_appraisal_draft($draft_data)
  */
 function render_payroll_period_draft($draft_data)
 {
+	if (payroll_period_is_native_approval_draft($draft_data)) {
+		global $path_to_root;
+		require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_reader_db.inc';
+		$review_error=null;$review=pay_glb_001_native_reader_review($draft_data,$review_error);
+		if($review===false){
+			error_log('S39 native review unavailable: '.substr(preg_replace('/[^A-Za-z0-9_.-]/','_',($review_error===null?'unavailable':$review_error)),0,160));
+			display_notification(_('Governed native payroll review is unavailable.'));return;
+		}
+		$html='<table class="tablestyle2">';
+		foreach(array('period_start'=>_('From Date'),'period_end'=>_('To Date'),'currency'=>_('Currency'),
+			'gross'=>_('Gross'),'deductions'=>_('Deductions'),'net'=>_('Net')) as $field=>$label)
+			$html.='<tr><td class="label">'.htmlspecialchars($label,ENT_QUOTES,'UTF-8').'</td><td>'
+				.htmlspecialchars((string)$review[$field],ENT_QUOTES,'UTF-8').'</td></tr>';
+		echo $html.'</table>';
+		return;
+	}
 	$html = '<table class="tablestyle2">';
 	$html .= '<tr><td class="label">' . _('Period Name') . ':</td><td>'
 		. htmlspecialchars(isset($draft_data['period_name']) ? $draft_data['period_name'] : '')

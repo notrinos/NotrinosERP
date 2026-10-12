@@ -71,6 +71,8 @@ class ApprovalWorkflow {
 	 *   'draft_renderer' => callable Function to render draft for review UI
 	 *   'edit_url'       => string   URL for editing the draft
 	 *   'number_context' => array    Context for reference number generation (optional)
+	 *   'action_validator' => callable Optional source validation before actions/automatic approval
+	 *   'submitted'      => callable Optional atomic business custody after draft submission
 	 * @return void
 	 */
 	public static function registerTransactionType($trans_type, $config)
@@ -85,6 +87,8 @@ class ApprovalWorkflow {
 			'draft_renderer' => null,
 			'edit_url'       => '',
 			'number_context' => array(),
+			'action_validator' => null,
+			'submitted'      => null,
 		);
 
 		self::$registered_types[$trans_type] = array_merge($defaults, $config);
@@ -174,6 +178,10 @@ class ApprovalWorkflow {
 		begin_transaction();
 
 		// Reserve transaction number
+		if (!$this->validateRegisteredAction('submit', $trans_type, $data)) {
+			cancel_transaction();
+			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'validation_failed');
+		}
 		$number_context = isset(self::$registered_types[$trans_type]['number_context'])
 			? self::$registered_types[$trans_type]['number_context']
 			: array();
@@ -242,6 +250,13 @@ class ApprovalWorkflow {
 		}
 
 		// Check auto-approval: if amount is within threshold of level 1
+		$config = self::getTypeConfig($trans_type);
+		if ($config && !empty($config['submitted'])
+			&& (!is_callable($config['submitted'])
+				|| call_user_func($config['submitted'], $data, $draft_id) === false)) {
+			cancel_transaction();
+			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'business_custody_failed');
+		}
 		$auto_approved = $this->checkAutoApproval($draft_id, $workflow, $amount, $data, $context);
 
 		if ($auto_approved) {
@@ -337,6 +352,10 @@ class ApprovalWorkflow {
 		}
 
 		// Verify user can approve at this level
+		if (!$this->validateRegisteredAction('approve', $draft['trans_type'], null, $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The business approval source could not be verified.'));
+		}
 		if (!$this->canActOnDraft($draft_id)) {
 			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You do not have permission to approve this draft.'));
@@ -517,6 +536,11 @@ class ApprovalWorkflow {
 		}
 
 		// Require comments if configured
+		if (!$this->validateRegisteredAction('reject', $draft['trans_type'], null, $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'message'=>_('The business rejection source could not be verified.'));
+		}
+
 		if ($draft['require_comments_on_reject'] && empty(trim($comments))) {
 			cancel_transaction();
 			return array('status' => 'error', 'message' => _('Comments are required for rejection.'));
@@ -594,6 +618,11 @@ class ApprovalWorkflow {
 			return array('status' => 'error', 'message' => _('Only the submitter can cancel this draft.'));
 		}
 
+		// Native and other opted-in types must validate before any business action survives.
+		if (!$this->validateRegisteredAction('cancel', $draft['trans_type'], null, $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'message'=>_('The business cancellation source could not be verified.'));
+		}
 		add_approval_action($draft_id, 'cancel', $this->user_id, (int)$draft['current_level'], $comments);
 		if (!update_approval_draft_status(
 			$draft_id,
@@ -644,6 +673,8 @@ class ApprovalWorkflow {
 
 		if ((int)$draft['status'] !== APPROVAL_STATUS_PENDING)
 			return array('status' => 'error', 'message' => _('Draft is not pending approval.'));
+		if (!$this->validateRegisteredAction('delegate', $draft['trans_type'], null, $draft, $reason))
+			return array('status'=>'error', 'message'=>_('The business delegation source could not be verified.'));
 
 		if (!$this->canActOnDraft($draft_id))
 			return array('status' => 'error', 'message' => _('You do not have permission to delegate this draft.'));
@@ -893,6 +924,8 @@ class ApprovalWorkflow {
 	 */
 	private function checkAutoApproval($draft_id, $workflow, $amount, $draft_data_decoded = array(), $context = array())
 	{
+		if (!$this->validateRegisteredAction('auto_approve', $workflow['trans_type'], $draft_data_decoded))
+			return false;
 		$levels = get_approval_levels($workflow['id'], true);
 		$all_auto = true;
 
@@ -958,6 +991,8 @@ class ApprovalWorkflow {
 			}
 		}
 		$condition_context = array('amount' => $amount);
+		if (!$this->validateRegisteredAction('auto_approve', $draft['trans_type'], $draft_data_decoded))
+			return false;
 
 		while ($level = db_fetch($levels)) {
 			if ((int)$level['level'] < $from_level)
@@ -1069,6 +1104,20 @@ class ApprovalWorkflow {
 			$comments
 		);
 	}
+
+    /** Validate only opted-in transaction types using the real service identity and decoded data. */
+    private function validateRegisteredAction($action, $trans_type, $data, $draft=null, $comments='')
+    {
+        $config=self::getTypeConfig((int)$trans_type);
+        if (!$config || empty($config['action_validator'])) return true;
+        if (!is_callable($config['action_validator'])) return false;
+        if ($data===null && is_array($draft)) {
+            $ok=false;$data=$this->decodeDraftData($draft['draft_data'],$ok);
+            if (!$ok) return false;
+        }
+        return call_user_func($config['action_validator'],$action,$data,$draft,
+            array('user_id'=>$this->user_id,'role_id'=>$this->role_id),$comments)===true;
+    }
 
 	/**
 	 * Get the security role ID for a delegating user.

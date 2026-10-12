@@ -250,17 +250,31 @@ function pay_glb_001_native_schema_table_valid($model,&$error=null)
     foreach ($model['indexes'] as $index) $expected_indexes[$index['name']]=$index;
     ksort($actual_indexes); ksort($expected_indexes);
     if ($actual_indexes!==$expected_indexes) { $error='schema_index_projection'; return false; }
-    $rows=pay_glb_001_native_schema_rows("SELECT k.CONSTRAINT_NAME,k.COLUMN_NAME,k.REFERENCED_TABLE_NAME,k.REFERENCED_COLUMN_NAME,r.UPDATE_RULE,r.DELETE_RULE FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE k JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS r ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA AND r.TABLE_NAME=k.TABLE_NAME AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME WHERE k.TABLE_SCHEMA=DATABASE() AND k.TABLE_NAME=".db_escape($physical)." AND k.REFERENCED_TABLE_NAME IS NOT NULL ORDER BY k.CONSTRAINT_NAME,k.ORDINAL_POSITION");
+    // MariaDB materializes a costly metadata join even with exact table filters.
+    // Read each table's columns/rules separately and reconcile the same projection.
+    $rows=pay_glb_001_native_schema_rows("SELECT CONSTRAINT_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical)." AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY CONSTRAINT_NAME,ORDINAL_POSITION");
     if ($rows===false || count($rows)!==count($model['fks'])) { $error='schema_fk_count'; return false; }
+    $rules=pay_glb_001_native_schema_rows("SELECT CONSTRAINT_NAME,UPDATE_RULE,DELETE_RULE FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical));
+    if ($rules===false || count($rules)!==count($model['fks'])) { $error='schema_fk_count'; return false; }
+    $constraint_rules=array();
+    foreach ($rules as $rule) {
+        if (isset($constraint_rules[$rule['CONSTRAINT_NAME']])) { $error='schema_fk_projection'; return false; }
+        $constraint_rules[$rule['CONSTRAINT_NAME']]=$rule;
+    }
     $expected=array();
     foreach ($model['fks'] as $fk)
         $expected[$prefix.$fk['name']]=array('CONSTRAINT_NAME'=>$prefix.$fk['name'],'COLUMN_NAME'=>$fk['column'],
             'REFERENCED_TABLE_NAME'=>$prefix.$fk['table'],'REFERENCED_COLUMN_NAME'=>$fk['target'],
             'UPDATE_RULE'=>'RESTRICT','DELETE_RULE'=>'RESTRICT');
-    foreach ($rows as $row)
-        if (!isset($expected[$row['CONSTRAINT_NAME']]) || $row!==$expected[$row['CONSTRAINT_NAME']]) {
+    foreach ($rows as $row) {
+        $name=$row['CONSTRAINT_NAME'];
+        if (!isset($constraint_rules[$name])) { $error='schema_fk_projection'; return false; }
+        $row['UPDATE_RULE']=$constraint_rules[$name]['UPDATE_RULE'];
+        $row['DELETE_RULE']=$constraint_rules[$name]['DELETE_RULE'];
+        if (!isset($expected[$name]) || $row!==$expected[$name]) {
             $error='schema_fk_projection'; return false;
         }
+    }
     $rows=pay_glb_001_native_schema_rows("SELECT CONSTRAINT_NAME,CHECK_CLAUSE FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical));
     if ($rows===false || count($rows)!==count($model['checks'])) { $error='schema_check_count'; return false; }
     $expected=array();
@@ -342,7 +356,9 @@ function pay_glb_001_native_install_schema($patch)
     if (count($triggers)!==12)
         return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_trigger_source_count');
     foreach ($triggers as $trigger) {
-        $rows=pay_glb_001_native_schema_rows("SELECT TRIGGER_NAME FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=".db_escape($prefix.$trigger[1]));
+        if (!preg_match('/BEFORE (?:UPDATE|DELETE) ON \x600_([^\x60]+)\x60/',$trigger[0],$target))
+            return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_trigger_source_table');
+        $rows=pay_glb_001_native_schema_rows("SELECT TRIGGER_NAME FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE=".db_escape($prefix.$target[1])." AND TRIGGER_NAME=".db_escape($prefix.$trigger[1]));
         if ($rows===false) return false;
         if (count($rows)===0 && !db_query(str_replace(chr(96).'0_',chr(96).$prefix,$trigger[0]))) return false;
     }

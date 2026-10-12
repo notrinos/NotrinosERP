@@ -386,6 +386,10 @@ if (get_post('action_draft_id') > 0 && get_post('action_type') != '') {
 	$action_draft_id = (int)get_post('action_draft_id');
 	$action_type = get_post('action_type');
 	$action_draft = get_approval_draft($action_draft_id);
+	if (approval_draft_requires_native_reader($action_draft)) {
+		$action_draft=false;
+		display_note(_('Native payroll details require the admitted payroll review.'));
+	}
 
 	if ($action_draft) {
 		$action_label = $action_type === 'approve' ? _('Approve')

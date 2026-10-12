@@ -284,6 +284,8 @@ function get_pending_approval_drafts_for_user($user_id, $role_id, $filters = arr
 			AND al.role_id = " . db_escape($role_id) . "
 			AND al.is_active = 1
 		WHERE d.status = " . APPROVAL_STATUS_PENDING;
+	// Native metadata and amounts require the admitted native reader, including notification consumers.
+	$sql .= " AND COALESCE(d.draft_data,'') NOT LIKE '%pay_glb_001_native_approval_schema%' AND COALESCE(d.draft_data,'') NOT LIKE '%native-result-v2%'";
 
 	if (!empty($filters['trans_type']))
 		$sql .= " AND d.trans_type = " . db_escape($filters['trans_type']);
@@ -312,6 +314,7 @@ function get_approval_drafts_by_submitter($user_id, $filters = array())
 		FROM " . TB_PREF . "approval_drafts d
 		LEFT JOIN " . TB_PREF . "approval_workflows w ON w.id = d.workflow_id
 		WHERE d.submitted_by = " . db_escape($user_id);
+	$sql .= " AND COALESCE(d.draft_data,'') NOT LIKE '%pay_glb_001_native_approval_schema%' AND COALESCE(d.draft_data,'') NOT LIKE '%native-result-v2%'";
 
 	if (isset($filters['status']) && $filters['status'] !== '')
 		$sql .= " AND d.status = " . db_escape($filters['status']);
@@ -346,6 +349,7 @@ function count_pending_approval_drafts($role_id)
 			AND al.role_id = " . db_escape($role_id) . "
 			AND al.is_active = 1
 		WHERE d.status = " . APPROVAL_STATUS_PENDING;
+	$sql .= " AND COALESCE(d.draft_data,'') NOT LIKE '%pay_glb_001_native_approval_schema%' AND COALESCE(d.draft_data,'') NOT LIKE '%native-result-v2%'";
 
 	$result = db_query($sql, 'could not count pending approval drafts');
 	$row = db_fetch_row($result);

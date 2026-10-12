@@ -14,6 +14,15 @@ function hrm_pay_core_004_access($permission){return function_exists('user_check
 function hrm_pay_core_004_token($value,$max=64){$value=trim((string)$value);return $value!==''&&strlen($value)<=$max&&preg_match('/^[A-Za-z0-9_.:-]+$/D',$value)===1?$value:false;}
 function hrm_pay_core_004_manage_transaction(){return empty($GLOBALS['transaction_level']);}
 
+/** Preserve validated custody JSON bytes without the display-oriented db_escape encoding. */
+function hrm_pay_core_004_json_sql_literal($json)
+{
+    if (!is_string($json) || strlen($json)>16785408) return false;
+    json_decode($json,true,128);
+    if (json_last_error()!==JSON_ERROR_NONE) return false;
+    return "CONVERT(X'".bin2hex($json)."' USING utf8mb4)";
+}
+
 function hrm_pay_core_004_normalize_hash_list($values,&$error=null)
 {
     $error=null;
@@ -61,6 +70,7 @@ function hrm_pay_core_004_seal_snapshot($scope,$identity_sets,&$error=null)
     $error=null;$actor=hrm_pay_core_004_actor();
     if($actor<=0||!hrm_pay_core_004_access('SA_HRM_SEAL_PAY_CORE_RESULT')){$error='access_denied';return false;}
     $material=hrm_pay_core_004_snapshot_material($scope,$identity_sets,$error);if($material===false)return false;
+    $literal=hrm_pay_core_004_json_sql_literal($material['payload_json']);if($literal===false){$error='snapshot_json_storage_invalid';return false;}
     $d=$material['descriptor'];$manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();
     $rel=hrm_pay_core_004_read_one('SELECT payroll_relationship_id,legal_entity_id FROM '.TB_PREF.'hrm_payroll_relationships WHERE payroll_relationship_id='.(int)$d['payroll_relationship_id'].' LIMIT 2 FOR UPDATE');
     $per=hrm_pay_core_004_read_one('SELECT calendar_period_id FROM '.TB_PREF.'hrm_payroll_calendar_periods WHERE calendar_period_id='.(int)$d['calendar_period_id'].' LIMIT 2');
@@ -71,7 +81,7 @@ function hrm_pay_core_004_seal_snapshot($scope,$identity_sets,&$error=null)
     if($existing){if(!hash_equals((string)$existing['snapshot_payload_json'],$material['payload_json'])){if($manage)cancel_transaction();$error='snapshot_hash_collision';return false;}$id=(int)$existing['snapshot_id'];if($manage)commit_transaction();return $id;}
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_004_snapshots (payroll_relationship_id,assignment_id,calendar_period_id,run_identity,legal_entity_id,currency,approved_inputs_sha256,element_versions_sha256,eligibility_sha256,rule_artifacts_sha256,source_events_sha256,configuration_sha256,snapshot_payload_json,snapshot_sha256,sealed_by) VALUES ('
         .(int)$d['payroll_relationship_id'].','.($d['assignment_id']===null?'NULL':(int)$d['assignment_id']).','.(int)$d['calendar_period_id'].','.db_escape($d['run_identity']).','.(int)$d['legal_entity_id'].','.db_escape($d['currency']).','
-        .db_escape($d['approved_inputs_sha256']).','.db_escape($d['element_versions_sha256']).','.db_escape($d['eligibility_sha256']).','.db_escape($d['rule_artifacts_sha256']).','.db_escape($d['source_events_sha256']).','.db_escape($d['configuration_sha256']).','.db_escape($material['payload_json']).','.db_escape($material['snapshot_sha256']).','.$actor.')';
+        .db_escape($d['approved_inputs_sha256']).','.db_escape($d['element_versions_sha256']).','.db_escape($d['eligibility_sha256']).','.db_escape($d['rule_artifacts_sha256']).','.db_escape($d['source_events_sha256']).','.db_escape($d['configuration_sha256']).','.$literal.','.db_escape($material['snapshot_sha256']).','.$actor.')';
     if(!db_query($sql)){if($manage)cancel_transaction();$error='snapshot_insert_failed';return false;}$id=(int)db_insert_id();if($manage)commit_transaction();return $id;
 }
 

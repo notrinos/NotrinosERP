@@ -207,6 +207,10 @@ function db_pdo_execute_transaction_sql($db_connection, $sql) {
 			case 'COMMIT':
 				return $db_connection->commit();
 			case 'ROLLBACK':
+				// Engine deadlock rollback may already have ended the PDO transaction.
+				// Confirm SQL cancellation so the outer owner can release its resources.
+				if (!$db_connection->inTransaction())
+					return $db_connection->exec('ROLLBACK') !== false;
 				return $db_connection->rollBack();
 		}
 	} catch (PDOException $exception) {
@@ -474,7 +478,9 @@ function db_query($sql, $err_msg = null) {
 	db_pdo_reset_error_state();
 	$db_last_affected_rows = 0;
 	$result = false;
-	$retry = MAX_DEADLOCK_RETRY;
+	// Capture ownership before execution: the victim rollback can clear inTransaction().
+	$transaction_owned = !empty($GLOBALS['transaction_level']) || $db->inTransaction();
+	$retry = max(1, (int)MAX_DEADLOCK_RETRY);
 	if ($normalized_sql === 'BEGIN' || $normalized_sql === 'COMMIT' || $normalized_sql === 'ROLLBACK') {
 		$result = db_pdo_execute_transaction_sql($db, $normalized_sql);
 
@@ -506,11 +512,12 @@ function db_query($sql, $err_msg = null) {
 				}
 			}
 			$statement = null;
+			db_pdo_reset_error_state();
 			$retry = 0;
 		} catch (PDOException $exception) {
 			$error_state = db_pdo_extract_error_state($exception);
 			db_pdo_store_error_state($error_state[0], $error_state[1], $error_state[2]);
-			if (db_pdo_is_deadlock($error_state[1]) && $retry > 1) {
+			if (db_pdo_is_deadlock($error_state[1]) && !$transaction_owned && $retry > 1) {
 				sleep(1);
 				$retry--;
 			} else {
@@ -522,7 +529,7 @@ function db_query($sql, $err_msg = null) {
 
 	db_profile($sql);
 
-	if ($SysPrefs->sql_trail) {
+	if ($SysPrefs->sql_trail && !($result === false && db_pdo_is_deadlock(db_error_no()))) {
 		$db_last_inserted_id = db_pdo_last_insert_id($db);
 		if ($SysPrefs->select_trail || (strstr($sql, 'SELECT') === false)) {
 			try {
@@ -965,7 +972,8 @@ function db_query_params($sql, $params = array(), $err_msg = null) {
 	db_pdo_reset_error_state();
 	$db_last_affected_rows = 0;
 	$result = false;
-	$retry = MAX_DEADLOCK_RETRY;
+	$transaction_owned = !empty($GLOBALS['transaction_level']) || $db->inTransaction();
+	$retry = max(1, (int)MAX_DEADLOCK_RETRY);
 
 	do {
 		try {
@@ -980,11 +988,12 @@ function db_query_params($sql, $params = array(), $err_msg = null) {
 				$statement->closeCursor();
 			}
 			$statement = null;
+			db_pdo_reset_error_state();
 			$retry = 0;
 		} catch (PDOException $exception) {
 			$error_state = db_pdo_extract_error_state($exception);
 			db_pdo_store_error_state($error_state[0], $error_state[1], $error_state[2]);
-			if (db_pdo_is_deadlock($error_state[1]) && $retry > 1) {
+			if (db_pdo_is_deadlock($error_state[1]) && !$transaction_owned && $retry > 1) {
 				sleep(1);
 				$retry--;
 			} else {
@@ -996,7 +1005,7 @@ function db_query_params($sql, $params = array(), $err_msg = null) {
 
 	db_profile($sql);
 
-	if ($SysPrefs->sql_trail) {
+	if ($SysPrefs->sql_trail && !($result === false && db_pdo_is_deadlock(db_error_no()))) {
 		$db_last_inserted_id = db_pdo_last_insert_id($db);
 		if ($SysPrefs->select_trail || (strstr($sql, 'SELECT') === false)) {
 			try {

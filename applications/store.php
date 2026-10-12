@@ -13,6 +13,8 @@ class StoreApp extends application {
 		$this->add_module(_('Catalog'));
 		$this->add_lapp_function(0, _('Browse &Packages'), 'admin/notrinos_store.php?', 'SA_CREATEMODULES', MENU_INQUIRY);
 		$this->add_rapp_function(0, _('Manage &Languages'), 'admin/notrinos_store.php?type=language', 'SA_CREATELANGUAGE', MENU_INQUIRY);
+
+		$this->add_module(_('Country Packs'));
 		$this->add_lapp_function(1, _('Signed Country &Packs'), 'admin/pay_ctry_packs.php?', 'SA_PAY_CTRY_INSTALL', MENU_UPDATE);
 		$this->add_rapp_function(1, _('Publisher &Trust'), 'admin/pay_ctry_trust.php?', 'SA_PAY_CTRY_TRUST', MENU_UPDATE);
 

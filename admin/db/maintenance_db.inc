@@ -314,8 +314,8 @@ function db_is_import_constraint_query($query) {
 /**
  * Removes inline CREATE TABLE constraints that should not run during the main
  * schema import phase. Foreign keys are converted into deferred ALTER TABLE
- * statements, while inline JSON validity checks are stripped to keep legacy
- * backups restorable.
+ * statements. Original CHECK bodies are retained; named checks are deferred
+ * with the other constraints while historical rows are restored.
  *
  * @param string $query CREATE TABLE SQL query.
  * @return array
@@ -325,7 +325,6 @@ function db_strip_create_table_constraints($query) {
 		return array($query, array());
 
 	$table_name = $matches[1];
-	$query = preg_replace('/\s+CHECK\s*\(\s*json_valid\s*\([^\)]*\)\s*\)/i', '', $query);
 	$lines = preg_split('/\r\n|\r|\n/', trim($query));
 	$clean_lines = array();
 	$constraint_queries = array();
@@ -403,10 +402,14 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	$allowed_commands = array(
 		'create'  => 'table_queries', 
 		'delimiter' => 'table_queries',
-		'alter table' => 'table_queries', 
+		'alter table' => 'table_queries',
+		'alter database' => 'object_queries',
 		'insert' => 'data_queries', 
 		'update' => 'data_queries', 
 		'set names' => 'set_names',
+		'set sql_mode' => 'object_queries',
+		'set character_set_client' => 'object_queries',
+		'set collation_connection' => 'object_queries',
 		'drop table if exists' => 'drop_queries',
 		'drop function if exists' => 'drop_queries',
 		'drop procedure if exists' => 'drop_queries',
@@ -436,6 +439,7 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	$drop_queries = array();
 	$table_queries = array();
 	$constraint_queries = array();
+	$object_queries = array();
 	$existing_constraints = array();
 	$sql_errors = array();
 
@@ -446,7 +450,10 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		&& preg_match('/^5\.7\./', $server_version)
 		&& version_compare($server_version, '5.7.8', '>=');
 
-	ini_set('max_execution_time', max('180', ini_get('max_execution_time')));
+	// Zero means unlimited (not a smaller limit); preserve CLI and longer caller limits.
+	$import_time_limit = (int)ini_get('max_execution_time');
+	if ($import_time_limit > 0 && $import_time_limit < 180)
+		ini_set('max_execution_time', 180);
 	db_query('SET foreign_key_checks=0');
 	db_execute_optional_import_query('SET check_constraint_checks=0');
 	db_query("SET sql_mode=''");
@@ -475,7 +482,9 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 	foreach($lines as $line_no => $line) {
 		$gzfile_bug = $check_line_len && (strlen($line) == 8190); // there is a bug in php (at least 4.1.1-5.5.9) gzfile which limits line length to 8190 bytes!
 
-		$line = trim($line);
+		$line = rtrim($line, "\r\n");
+		if ($query_table == '')
+			$line = ltrim($line);
 		if ($init)
 			$line = str_replace('0_', $connection['tbpref'], $line);
 
@@ -503,8 +512,9 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		}
 		if($query_table != '') {// inside allowed query
 			$table = $query_table;
-			if (!$gzfile_bug && substr($line, -strlen($delimiter)) == $delimiter) {// end of query found 
-				$line = substr($line, 0, strlen($line) - strlen($delimiter)); // strip delimiter
+			$query_end = rtrim($line, " \t");
+			if (!$gzfile_bug && substr($query_end, -strlen($delimiter)) == $delimiter) {// end of query found
+				$line = substr($query_end, 0, strlen($query_end) - strlen($delimiter)); // strip delimiter
 				$query_table = '';
 			}
 			if (!$skip)
@@ -527,6 +537,14 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 			if (preg_match('/^\s*CREATE\s+(?:DEFINER\s*=\s*\S+\s+)?TRIGGER\s+`([^`]+)`/i', $normalized_query, $trigger_match)) {
 				$trigger_name = '`'.str_replace('`', '``', $trigger_match[1]).'`';
 				$imported_trigger_drops[] = array('DROP TRIGGER IF EXISTS '.$trigger_name, $table_query[1]);
+			}
+			if (preg_match('/^\s*CREATE\s+(?:DEFINER\s*=\s*\S+\s+)?(?:TRIGGER|PROCEDURE|FUNCTION)\b/i', $normalized_query)) {
+				$object_queries[] = array($normalized_query, $table_query[1]);
+				continue;
+			}
+			if (preg_match('/^\s*CREATE\s+(?:(?:ALGORITHM\s*=\s*\S+|DEFINER\s*=\s*\S+|SQL\s+SECURITY\s+(?:DEFINER|INVOKER))\s+)*VIEW\b/i', $normalized_query)) {
+				$object_queries[] = array($normalized_query, $table_query[1]);
+				continue;
 			}
 
 			if ($mysql57_json_default_compat
@@ -627,8 +645,6 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 		}
 	}
 
-	db_execute_optional_import_query('SET check_constraint_checks=1');
-	db_query("SET foreign_key_checks=1");
 	$existing_constraints = db_get_existing_import_constraints($connection['dbname']);
 
 	if (is_array($constraint_queries)) {
@@ -636,6 +652,13 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 			$constraint_name = db_get_import_constraint_name($constraint_query[0]);
 			if ($constraint_name != '' && in_array($constraint_name, $existing_constraints))
 				continue;
+
+			// MariaDB's in-place ALTER with checks disabled rewrites explicit RESTRICT
+			// metadata to NO ACTION. COPY preserves the original rule and legacy rows.
+			if (stripos($server_version, 'MariaDB') !== false
+				&& preg_match('/\bFOREIGN\s+KEY\b/i', $constraint_query[0])
+				&& !preg_match('/\bALGORITHM\s*=/i', $constraint_query[0]))
+				$constraint_query[0] = rtrim(trim($constraint_query[0]), ';').', ALGORITHM=COPY';
 
 			if (!db_query($constraint_query[0])) {
 				if (!in_array(db_error_no(), $ignored_mysql_errors) || !$force)
@@ -645,6 +668,18 @@ function db_import($filename, $connection, $force=true, $init=true, $protect=fal
 				$existing_constraints[] = $constraint_name;
 		}
 	}
+
+	// Restore executable/denial objects only after historical rows and restrictive keys are present.
+	usort($object_queries, /** Keep each object's saved SQL/charset context in original file order. */
+		function($a, $b) { return $a[1] == $b[1] ? 0 : ($a[1] < $b[1] ? -1 : 1); });
+	foreach ($object_queries as $object_query) {
+		if (!db_query($object_query[0]))
+			$sql_errors[] = array(db_error_msg($db), $object_query[1]);
+	}
+	// Preserve historical bytes, including pre-existing legacy orphans, without allowing new unchecked writes after restore.
+	db_execute_optional_import_query('SET check_constraint_checks=1');
+	if (!db_query('SET foreign_key_checks=1'))
+		$sql_errors[] = array(db_error_msg($db), 0);
 
 	if ($return_errors)
 		$SysPrefs->go_debug = $save_debug;
@@ -732,6 +767,35 @@ function db_backup($conn, $ext='no', $comm='', $path='') {
 /*
 *	Generates a dump of $db database
 */
+/** Export one exact server SQL object with its definer, execution mode and creation charset. */
+function db_export_sql_object($kind, $name) {
+	$fields = array('FUNCTION'=>'Create Function', 'PROCEDURE'=>'Create Procedure',
+		'TRIGGER'=>'SQL Original Statement', 'VIEW'=>'Create View');
+	if (!isset($fields[$kind]))
+		return false;
+	$quoted = '`'.str_replace('`', '``', $name).'`';
+	$result = db_query('SHOW CREATE '.$kind.' '.$quoted);
+	$row = $result ? db_fetch_assoc($result) : false;
+	if (!$row || !isset($row[$fields[$kind]]) || $row[$fields[$kind]] === '')
+		return false;
+	$sql = $row[$fields[$kind]];
+	$delimiter = 'NERP_BACKUP_END_'.substr(hash('sha256', $kind.$name.$sql), 0, 24);
+	if (strpos($sql, $delimiter) !== false)
+		return false;
+	$out = "\nDROP ".$kind.' IF EXISTS '.$quoted.";\n";
+	if (isset($row['Database Collation'])) {
+		if (!preg_match('/^[A-Za-z0-9_]+$/D', $row['Database Collation']))
+			return false;
+		$out .= 'ALTER DATABASE COLLATE '.$row['Database Collation'].";\n";
+	}
+	foreach (array('sql_mode','character_set_client','collation_connection') as $setting) {
+		if (isset($row[$setting]))
+			$out .= 'SET '.$setting.'='.db_export_escape_value($row[$setting]).";\n";
+	}
+	return $out.'DELIMITER '.$delimiter."\n".$sql."\n".$delimiter."\nDELIMITER ;\n";
+}
+
+/** Export company tables, rows, restrictive keys, executable/denial objects and exact views. */
 function db_export($conn, $filename, $zip='no', $comment='') {
 
 	global $SysPrefs, $version;
@@ -751,6 +815,11 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 	else
 		$backupfile = $filename;
 	$company = $conn['name']; // get_company_pref('coy_name');
+	$defaults_result = db_query('SELECT @@character_set_database charset_name,@@collation_database collation_name');
+	$database_defaults = $defaults_result ? db_fetch_assoc($defaults_result) : false;
+	if (!$database_defaults || !preg_match('/^[A-Za-z0-9_]+$/D', $database_defaults['charset_name'])
+		|| !preg_match('/^[A-Za-z0-9_]+$/D', $database_defaults['collation_name']))
+		return false;
 
 	if (file_exists($backupfile))	// prevent appends
 		unlink($backupfile);
@@ -789,7 +858,7 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 	// get table structures
 	foreach ($all_tables as $table) {
 		if (empty($table['Engine'])) {
-			continue; // Views are exported after base tables through db_get_view_schema().
+			continue; // Exact SHOW CREATE VIEW definitions are exported after base tables and routines.
 		}
 		$res1 = db_query("SHOW CREATE TABLE `" . $table['Name'] . "`");
 		$tmp = db_fetch($res1);
@@ -842,7 +911,7 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 					$field_null = array();
 					for ($j = 0; $j < db_num_rows($res3); $j++) {
 						$row3 = db_fetch($res3);
-						$field_null[] = $row3[2]=='YES' && $row3[4]===null;
+						$field_null[] = $row3[2]=='YES';
 					}
 	
 					$res2 = db_query("SELECT * FROM `" . $tablename . "`");
@@ -922,13 +991,36 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 			}
 		}
 
+		// Routines must exist before dependent triggers and views. Never silently emit an incomplete backup.
+		$routines = db_query('SELECT ROUTINE_NAME,ROUTINE_TYPE FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA=DATABASE() ORDER BY ROUTINE_TYPE,ROUTINE_NAME');
+		$triggers = db_query('SELECT TRIGGER_NAME,EVENT_OBJECT_TABLE FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() ORDER BY TRIGGER_NAME');
+		if (!$routines || !$triggers) {
+			@unlink($backupfile);
+			return false;
+		}
+		$objects = array();
+		while ($object = db_fetch_assoc($routines)) {
+			if ($conn['tbpref'] == '' || strpos($object['ROUTINE_NAME'], $conn['tbpref']) === 0)
+				$objects[] = array($object['ROUTINE_TYPE'], $object['ROUTINE_NAME']);
+		}
+		while ($object = db_fetch_assoc($triggers)) {
+			if ($conn['tbpref'] == '' || strpos($object['EVENT_OBJECT_TABLE'], $conn['tbpref']) === 0)
+				$objects[] = array('TRIGGER', $object['TRIGGER_NAME']);
+		}
+		foreach ($objects as $object) {
+			$definition = db_export_sql_object($object[0], $object[1]);
+			if ($definition === false || !save_to_file($backupfile, $zip, $out.$definition)) {
+				@unlink($backupfile);
+				return false;
+			}
+			$out = '';
+		}
 		foreach ($all_tables as $row) {
 			if (empty($row['Engine'])) {
 				$viewname = $row['Name'];
 				$out .= "\n\nDROP VIEW IF EXISTS `".$viewname."`;\n";
-				//db_get_view_schema() is in /includes/db/connect_db_mysqli.inc because it is mysql specific
-				if (NULL !== ($schema = db_get_view_schema($viewname))) {
-					$out .= "CREATE VIEW `".$viewname."` AS ".$schema.";\n\n";
+				if (false !== ($schema = db_export_sql_object('VIEW', $viewname))) {
+					$out .= $schema;
 					if (!save_to_file($backupfile, $zip, $out)) $error = true;
 					else $out = '';
 				}
@@ -948,6 +1040,7 @@ function db_export($conn, $filename, $zip='no', $comment='') {
 		return false;
 	}
 
+	$out .= 'ALTER DATABASE CHARACTER SET '.$database_defaults['charset_name'].' COLLATE '.$database_defaults['collation_name'].";\n";
 	if (save_to_file($backupfile, $zip, $out))
 		$out = '';
 	else {

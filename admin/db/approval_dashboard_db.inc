@@ -31,7 +31,7 @@ function get_approval_status_counts($filters = array())
 		COUNT(*) AS total
 		FROM " . TB_PREF . "approval_drafts d";
 
-	$where = array();
+	$where = array(approval_generic_draft_visibility_sql());
 
 	if (!empty($filters['trans_type']))
 		$where[] = "d.trans_type = " . db_escape($filters['trans_type']);
@@ -84,7 +84,7 @@ function get_sql_for_approval_dashboard($user_id, $role_id, $filters = array())
 			AND al.level = d.current_level
 			AND al.role_id = " . db_escape($role_id) . "
 			AND al.is_active = 1
-		WHERE d.status = " . APPROVAL_STATUS_PENDING;
+		WHERE d.status = " . APPROVAL_STATUS_PENDING . ' AND '.approval_generic_draft_visibility_sql();
 
 	if (!empty($filters['trans_type']))
 		$sql .= " AND d.trans_type = " . db_escape($filters['trans_type']);
@@ -121,7 +121,7 @@ function get_sql_for_approval_inquiry($filters = array())
 		FROM " . TB_PREF . "approval_drafts d
 		LEFT JOIN " . TB_PREF . "approval_workflows w ON w.id = d.workflow_id
 		LEFT JOIN " . TB_PREF . "users u ON u.id = d.submitted_by
-		WHERE 1=1";
+		WHERE " . approval_generic_draft_visibility_sql();
 
 	if (isset($filters['status']) && $filters['status'] !== '' && $filters['status'] !== '-1')
 		$sql .= " AND d.status = " . db_escape($filters['status']);
@@ -168,7 +168,7 @@ function get_sql_for_my_submissions($user_id, $filters = array())
 		FROM " . TB_PREF . "approval_drafts d
 		LEFT JOIN " . TB_PREF . "approval_workflows w ON w.id = d.workflow_id
 		LEFT JOIN " . TB_PREF . "users u ON u.id = d.submitted_by
-		WHERE d.submitted_by = " . db_escape($user_id);
+		WHERE d.submitted_by = " . db_escape($user_id) . ' AND '.approval_generic_draft_visibility_sql();
 
 	if (isset($filters['status']) && $filters['status'] !== '' && $filters['status'] !== '-1')
 		$sql .= " AND d.status = " . db_escape($filters['status']);
@@ -251,8 +251,22 @@ function get_recent_approval_activity($limit = 20)
 		LEFT JOIN " . TB_PREF . "approval_drafts d ON d.id = a.draft_id
 		LEFT JOIN " . TB_PREF . "approval_workflows w ON w.id = d.workflow_id
 		LEFT JOIN " . TB_PREF . "users u ON u.id = a.user_id
+		WHERE " . approval_generic_draft_visibility_sql() . "
 		ORDER BY a.action_date DESC
 		LIMIT $limit";
 
 	return db_query($sql, 'could not get recent approval activity');
+}
+
+/** Keep native payload and amounts out of generic lists, counts and activity without provisioning read authority. */
+function approval_generic_draft_visibility_sql()
+{
+	return "COALESCE(d.draft_data,'') NOT LIKE '%pay_glb_001_native_approval_schema%' AND COALESCE(d.draft_data,'') NOT LIKE '%native-result-v2%'";
+}
+
+/** Detect native custody markers before any generic draft summary, payload or action dialog is rendered. */
+function approval_draft_requires_native_reader($draft)
+{
+	return is_array($draft) && isset($draft['draft_data']) && is_string($draft['draft_data'])
+		&& (strpos($draft['draft_data'],'pay_glb_001_native_approval_schema')!==false || strpos($draft['draft_data'],'native-result-v2')!==false);
 }

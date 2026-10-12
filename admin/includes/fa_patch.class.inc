@@ -253,6 +253,11 @@ class fa_patch {
 		Main routine for single company upgrade.
 	*/
 	function upgrade_company($comp, $force=false) {
+		// Budget preflight, backup and installation as well as failure recovery.
+		$execution_time_limit = (int)ini_get('max_execution_time');
+		if ($execution_time_limit > 0 && $execution_time_limit < $this->max_upgrade_time)
+			set_time_limit($this->max_upgrade_time);
+
 		$result = $this->pre_install($comp);
 		if ($result) {
 			$sql_result = $this->sql_install($comp, $force);
