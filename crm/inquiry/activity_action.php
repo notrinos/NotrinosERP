@@ -22,39 +22,43 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 $page_security = 'SA_CRM_ACTIVITY';
 $path_to_root  = '../..';
 
+ob_start();
 include_once($path_to_root . '/includes/session.inc');
+include_once($path_to_root . '/crm/includes/crm_ajax.inc');
+crm_ajax_require_access($page_security);
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_entity.inc');
 
-header('Content-Type: application/json');
-
 $action      = isset($_POST['action'])      ? $_POST['action']            : '';
 $activity_id = isset($_POST['activity_id']) ? (int)$_POST['activity_id'] : 0;
 
 if ($activity_id <= 0) {
-    echo json_encode(array('error' => 'Invalid activity ID'));
-    exit;
+    crm_ajax_response(array('error' => 'Invalid activity ID'), 400);
+}
+if ($action !== 'complete' && $action !== 'cancel') {
+    crm_ajax_response(array('error' => 'Unknown action'), 400);
 }
 
 $activity = get_crm_activity($activity_id);
 if (!$activity) {
-    echo json_encode(array('error' => 'Activity not found'));
-    exit;
+    crm_ajax_response(array('error' => 'Activity not found'), 404);
 }
 
-begin_transaction();
+if (!begin_transaction()) {
+    crm_ajax_response(array('error' => 'Could not start activity update'), 500);
+}
 
 if ($action === 'complete') {
-    complete_crm_activity($activity_id);
-} elseif ($action === 'cancel') {
-    crm_activities_entity::modify($activity_id, array('status' => CRM_ACTIVITY_CANCELLED));
+    $updated = complete_crm_activity($activity_id);
 } else {
-    echo json_encode(array('error' => 'Unknown action'));
-    exit;
+    $updated = crm_activities_entity::modify($activity_id, array('status' => CRM_ACTIVITY_CANCELLED));
 }
 
-commit_transaction();
+if (!$updated || !commit_transaction()) {
+    cancel_transaction();
+    crm_ajax_response(array('error' => 'Could not update activity'), 500);
+}
 
-echo json_encode(array('success' => true, 'activity_id' => $activity_id, 'action' => $action));
+crm_ajax_response(array('success' => true, 'activity_id' => $activity_id, 'action' => $action), 200);

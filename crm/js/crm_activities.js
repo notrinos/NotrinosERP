@@ -68,8 +68,18 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
             xhr.open('POST', 'activity_action.php', true);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    window.location.reload();
+                if (xhr.readyState === 4) {
+                    var resp = null;
+                    try {
+                        resp = JSON.parse(xhr.responseText);
+                    } catch(ex) {
+                        // Session expiry may return a login page.
+                    }
+                    if (xhr.status === 200 && resp && resp.success) {
+                        window.location.reload();
+                    } else {
+                        alert(resp && resp.error ? resp.error : 'Could not complete activity.');
+                    }
                 }
             };
             xhr.send('action=complete&activity_id=' + encodeURIComponent(activityId) + '&_token=' + encodeURIComponent(csrfToken));
