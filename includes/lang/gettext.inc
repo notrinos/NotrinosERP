@@ -465,9 +465,9 @@ class gettext_php_support_compiler {
 		fwrite($fp, '<?php' . "\n");
 		fwrite($fp, 'return array(' . "\n");
 		foreach ($hash as $key => $value) {
-			$key   = str_replace("'", "\\'", $key);
-			$value = str_replace("'", "\\'", $value);
-			fwrite($fp, '    \'' . $key . '\' => \'' . $value . "',\n");
+			// Export complete literals so translation backslashes cannot escape quotes.
+			fwrite($fp, '    ' . var_export($key, true) . ' => '
+				. var_export($value, true) . ",\n");
 		}
 		fwrite($fp, ');' . "\n");
 		fclose($fp);
