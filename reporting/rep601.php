@@ -47,7 +47,15 @@ function get_bank_transactions($from, $to, $account) {
 function print_bank_transactions() {
 	global $path_to_root, $systypes_array;
 
-	$acc = $_POST['PARAM_0'];
+	$acc = get_post('PARAM_0', null);
+	if ($acc !== ALL_TEXT) {
+		if ((!is_string($acc) && !is_int($acc)) || !ctype_digit((string)$acc)
+			|| filter_var($acc, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1))) === false) {
+			display_error(_('Invalid bank account.'));
+			return;
+		}
+		$acc = (int)$acc;
+	}
 	$from = $_POST['PARAM_1'];
 	$to = $_POST['PARAM_2'];
 	$zero = $_POST['PARAM_3'];
@@ -74,8 +82,8 @@ function print_bank_transactions() {
 	if ($orientation == 'L')
 		recalculate_cols($cols);
 	$sql = "SELECT id, bank_account_name, bank_curr_code, bank_account_number FROM ".TB_PREF."bank_accounts";
-	if ($acc != ALL_TEXT)
-		$sql .= " WHERE id = $acc";
+	if ($acc !== ALL_TEXT)
+		$sql .= " WHERE id = ".db_escape($acc);
 	$result = db_query($sql, 'could not retreive bank accounts');
 	while ($account=db_fetch($result)) {
 		$act = $account['bank_account_name'].' - '.$account['bank_curr_code'].' - '.$account['bank_account_number'];
