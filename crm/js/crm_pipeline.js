@@ -149,17 +149,15 @@ See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        // Optionally refresh totals
-                        try {
-                            var resp = JSON.parse(xhr.responseText);
-                            if (resp.error) {
-                                alert(resp.error);
-                                window.location.reload();
-                            }
-                        } catch(ex) {
-                            // silent
-                        }
+                    var resp = null;
+                    try {
+                        resp = JSON.parse(xhr.responseText);
+                    } catch(ex) {
+                        // A login page or interrupted response is not a saved move.
+                    }
+                    if (xhr.status !== 200 || !resp || !resp.success) {
+                        alert(resp && resp.error ? resp.error : 'Could not update pipeline stage.');
+                        window.location.reload();
                     }
                 }
             };
