@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once($path_to_root. '/includes/ui/simple_crud_class.inc');
+include_once($path_to_root.'/includes/attachment_security.inc');
 
 /*
 	View/Edit class for attachments
@@ -42,11 +43,7 @@ class attachments extends simple_crud {
 				if(in_ajax())
 					$Ajax->redirect($path_to_root.'/admin/attachments.php?dl='.$keys[0]);
 				else {					
-					Header("Content-type: 'application/octet-stream' ");
-					//header('Content-Length: '.$row['filesize']);
-					header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
-					echo file_get_contents(company_path()."/attachments/".$row['unique_name']);
-					exit();
+					stream_general_attachment_file($row);
 				}
 			}
 		}
@@ -58,15 +55,7 @@ class attachments extends simple_crud {
 			if ($row['unique_name'] != ''){
 
 				$Ajax->redirect($path_to_root.'/admin/attachments.php?vw='.$keys[0]);	
-				/*if(in_ajax()) {
-					
-				} else {					
-					$type_no = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';	
-					header("Content-type: ".$type_no);
-					header("Content-Disposition: inline");
-					echo file_get_contents(company_path(). "/attachments/".$row['unique_name']);
-					exit();
-				}*/
+				
 			}
 		}
 		$filters = array('trans_no' => $this->entity, 'type_no' => (isset($_GET['type_no']) ? $_GET['type_no'] : ST_CUSTOMER)); // default ST_CUSTOMER
@@ -178,108 +167,69 @@ class attachments extends simple_crud {
 		echo '</center>';
 	}
 	
-	function db_insert() {
-		$dat = $this->data;		
-		if(!isset($max_image_size))
-		$max_image_size = 5000;
-		$upload_file = '';
-		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] <> '') {
-			
-			$result = $_FILES['file_attachment_name']['error'];
-			$upload_file = 'Yes'; 
-			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir))		
-				mkdir($attr_dir);
-			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir))
-				mkdir($attach_dir);
-			
-			if(isset($_POST['unique_name']) && $_POST['unique_name'] <> '')
-				$attachment_file_name = $_POST['unique_name'];			
-			else
-				$attachment_file_name = uniqid(); 
-				
-			$filesize = $_FILES['file_attachment_name']['size'];
-			$filetype = $_FILES['file_attachment_name']['type'];
+    /** Validate and store an insert before persisting server-detected metadata. */
+    function db_insert() {
+        if (!isset($_FILES['file_attachment_name'])) {
+            display_error(_('Select attachment file.'));
+            return false;
+        }
+        $validated = validate_general_attachment_upload($_FILES['file_attachment_name']);
+        if (!$validated['ok']) {
+            display_error($validated['error']);
+            return false;
+        }
+        $unique_name = store_general_attachment_upload($validated);
+        if ($unique_name === false) {
+            display_error(_('The attachment could not be stored.'));
+            return false;
+        }
+        $sql = "INSERT INTO ".TB_PREF."attachments (trans_no, type_no, description, filename, unique_name, tran_date, filesize, filetype) VALUES ("
+            .db_escape($this->entity).','.db_escape($this->data['type_no']).','
+            .db_escape($_POST['description']).','.db_escape($validated['filename']).','
+            .db_escape($unique_name).','.db_escape(date2sql($_POST['tran_date'])).','
+            .db_escape($validated['size']).','.db_escape($validated['mime']).')';
+        if (!db_query($sql, 'Could not add Attachment')) return false;
+        display_notification(_('A New Attachment Added Successfully'));
+        return true;
+    }
 
-			$filename = $attach_dir.'/'.$attachment_file_name; 
-			
-			if (file_exists($filename)){
-				$result = unlink($filename);
-				if (!$result) {
-					display_error(_('The existing Docs could not be removed'));
-					$upload_file = 'No';
-				}
-			}	
-			if ($upload_file == 'Yes'){
-				$actual_file_nam = $_FILES['file_attachment_name']['name'];
-				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
-				$sql = "INSERT INTO ".TB_PREF."attachments (trans_no, type_no, `description`, `filename`, unique_name, tran_date, `filesize`, `filetype`) VALUES ("
-					. db_escape($this->entity) . ','
-					. db_escape($dat['type_no']) . ','
-					. db_escape($_POST['description']) . ','
-					. db_escape($actual_file_nam) . ','
-					. db_escape($attachment_file_name) . ','
-					. db_escape(date2sql($_POST['tran_date'])) . ','
-					. db_escape($filesize) . ','
-					. db_escape($filetype) . ')';
-				if(db_query($sql, 'Could not add Attachment'))
-					display_notification(_('A New Attachment Added Successfully'));
-			}
-		}
-	}
-
-	function db_update() {
-		$dat = $this->data;
-		if(!isset($max_image_size))
-			$max_image_size = 5000;
-		$upload_file = '';
-		if (isset($_FILES['file_attachment_name']) && $_FILES['file_attachment_name']['name'] != '') {
-			
-			$result = $_FILES['file_attachment_name']['error'];
-			$upload_file = 'Yes'; 
-			$attr_dir = company_path().'/attachments' ; 
-			if (!file_exists($attr_dir))
-				mkdir($attr_dir);
-			$attach_dir = $attr_dir;
-			if (!file_exists($attach_dir))
-				mkdir($attach_dir);
-			
-			if(isset($_POST['unique_name']) && $_POST['unique_name'] == '')
-				$attachment_file_name = uniqid();
-			else
-				$attachment_file_name = $_POST['unique_name']; 
-				
-			$filesize = $_FILES['file_attachment_name']['size'];
-			$filetype = $_FILES['file_attachment_name']['type'];
-
-			$filename = $attach_dir.'/'.$attachment_file_name; 
-			if (file_exists($filename)){
-				$result = unlink($filename);
-				if (!$result) {
-					display_error(_('The existing Docs could not be removed'));
-					$upload_file = 'No';
-				}
-			}
-			if ($upload_file == 'Yes'){
-				$actual_file_nam = $_FILES['file_attachment_name']['name'];
-				$result  =  move_uploaded_file($_FILES['file_attachment_name']['tmp_name'], $filename);
-			}
-		}
-		$sql = "UPDATE ".TB_PREF."attachments SET "
-			. "trans_no = " . db_escape($this->entity) . ","
-			. "type_no = " . db_escape($dat['type_no']) . ","
-			. "`description` = " . db_escape($_POST['description']) . ","
-			. "tran_date = " . db_escape(date2sql($_POST['tran_date']));
-		if ($upload_file == 'Yes')
-			$sql .=  ", unique_name = " . db_escape($attachment_file_name) . ","
-				. "`filename` = " . db_escape($actual_file_nam) . ","
-				. "`filesize` = " . db_escape($filesize) . ","
-				. "`filetype` = " . db_escape($filetype);
-		$sql .=  " WHERE id = " . db_escape($this->selected_id);
-		if(db_query($sql, "Could not Update Attachment $this->selected_id"))
-			display_notification(_("The Selected Attachment $this->selected_id Updated Successfully"));
-	}
+    /** Validate replacement files; metadata-only edits preserve file metadata. */
+    function db_update() {
+        $has_upload = isset($_FILES['file_attachment_name'])
+            && (!isset($_FILES['file_attachment_name']['error'])
+                || $_FILES['file_attachment_name']['error'] !== UPLOAD_ERR_NO_FILE);
+        $unique_name = '';
+        if ($has_upload) {
+            $validated = validate_general_attachment_upload($_FILES['file_attachment_name']);
+            if (!$validated['ok']) {
+                display_error($validated['error']);
+                return false;
+            }
+            $sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
+            $row = db_fetch(db_query($sql), 'Could not retrieve attachment');
+            if (!$row || !isset($row['unique_name'])) return false;
+            $unique_name = store_general_attachment_upload($validated, $row['unique_name']);
+            if ($unique_name === false) {
+                display_error(_('The attachment could not be stored.'));
+                return false;
+            }
+        }
+        $sql = "UPDATE ".TB_PREF."attachments SET "
+            ."trans_no = ".db_escape($this->entity).","
+            ."type_no = ".db_escape($this->data['type_no']).","
+            ."description = ".db_escape($_POST['description']).","
+            ."tran_date = ".db_escape(date2sql($_POST['tran_date']));
+        if ($has_upload) {
+            $sql .= ", unique_name = ".db_escape($unique_name)
+                .", filename = ".db_escape($validated['filename'])
+                .", filesize = ".db_escape($validated['size'])
+                .", filetype = ".db_escape($validated['mime']);
+        }
+        $sql .= " WHERE id = ".db_escape($this->selected_id);
+        if (!db_query($sql, 'Could not Update Attachment')) return false;
+        display_notification(_('The Selected Attachment Updated Successfully'));
+        return true;
+    }
 
 	function insert_check() {
 		if (strlen($_POST['description']) == 0) {

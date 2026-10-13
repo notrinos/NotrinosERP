@@ -21,6 +21,10 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
 include_once($path_to_root.'/inventory/includes/db/items_db.inc');
+include_once($path_to_root.'/includes/attachment_security.inc');
+
+// Authorize before any attachment lookup or binary response.
+check_page_security($page_security);
 
 if (isset($_GET['vw']))
 	$view_id = $_GET['vw'];
@@ -35,12 +39,7 @@ if ($view_id != -1) {
 		if(in_ajax())
 			$Ajax->popup($_SERVER['PHP_SELF'].'?vw='.$view_id);
 		else {
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
-			header('Content-type: '.$type);
-			header('Content-Length: '.$row['filesize']);
-			header('Content-Disposition: inline');
-			echo file_get_contents(company_path().'/attachments/'.$row['unique_name']);
-			exit();
+			stream_general_attachment_file($row, true);
 		}
 	}	
 }
@@ -55,12 +54,7 @@ if ($download_id != -1) {
 		if(in_ajax())
 			$Ajax->redirect($_SERVER['PHP_SELF'].'?dl='.$download_id);
 		else {
-			$type = ($row['filetype']) ? $row['filetype'] : 'application/octet-stream';
-			header('Content-type: '.$type);
-			header('Content-Length: '.$row['filesize']);
-			header('Content-Disposition: attachment; filename="'.$row['filename'].'"');
-			echo file_get_contents(company_path().'/attachments/'.$row['unique_name']);
-			exit();
+			stream_general_attachment_file($row);
 		}
 	}	
 }
@@ -80,69 +74,48 @@ if (isset($_GET['trans_no']))
 	$_POST['trans_no'] = $_GET['trans_no'];
 
 if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
-	
-	$filename = basename($_FILES['filename']['name']);
-	if (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
-		$_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
-	if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
-		display_error(_('Selected transaction does not exists.'));
-	elseif ($Mode == 'ADD_ITEM' && !in_array(strtoupper(substr($filename, strlen($filename) - 3)), array('JPG', 'PNG', 'GIF', 'PDF', 'DOC', 'ODT'))) {
-		display_error(_('Only graphics, pdf, doc and odt files are supported.'));
-	}
-	elseif ($Mode == 'ADD_ITEM' && !isset($_FILES['filename']))
-		display_error(_('Select attachment file.'));
-	elseif ($Mode == 'ADD_ITEM' && ($_FILES['filename']['error'] > 0)) {
-		if ($_FILES['filename']['error'] == UPLOAD_ERR_INI_SIZE) 
-			display_error(_('The file size is over the maximum allowed.'));
-		else
-			display_error(_('Select attachment file.'));
-	}
-	elseif ( strlen($filename) > 60)
-		display_error(_('File name exceeds maximum of 60 chars. Please change filename and try again.'));
-	else {
-
-		$tmpname = $_FILES['filename']['tmp_name'];
-		$dir = company_path().'/attachments';
-
-		if (!file_exists($dir)) {
-			mkdir ($dir,0777);
-			$index_file = "<?php\nheader(\"Location: ../index.php\");\n";
-			$fp = fopen($dir.'/index.php', 'w');
-			fwrite($fp, $index_file);
-			fclose($fp);
-		}
-
-		$filesize = $_FILES['filename']['size'];
-		$filetype = $_FILES['filename']['type'];
-
-		// file name compatible with POSIX
-		// protect against directory traversal
-		if ($Mode == 'UPDATE_ITEM') {
-			$row = get_attachment($selected_id);
-			if ($row['filename'] == '')
-				exit();
-			$unique_name = $row['unique_name'];
-			if ($filename && file_exists($dir.'/'.$unique_name))
-				unlink($dir.'/'.$unique_name);
-		}
-		else
-			$unique_name = random_id();
-
-		//save the file
-		move_uploaded_file($tmpname, $dir.'/'.$unique_name);
-
-		if ($Mode == 'ADD_ITEM') {
-			add_attachment($_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype);
-			display_notification(_('Attachment has been inserted.'));
-		}
-		else {
-			update_attachment($selected_id, $_POST['filterType'], $_POST['trans_no'], $_POST['description'], $filename, $unique_name, $filesize, $filetype); 
-			display_notification(_('Attachment has been updated.'));
-		}
-		reset_form();
-	}
-	refresh_pager('trans_tbl');
-	$Ajax->activate('_page_body');
+    $has_upload = isset($_FILES['filename'])
+        && (!isset($_FILES['filename']['error']) || $_FILES['filename']['error'] !== UPLOAD_ERR_NO_FILE);
+    $validated_upload = false;
+    $upload_error = '';
+    if (($_POST['filterType'] == ST_ITEM || $_POST['filterType'] == ST_FIXEDASSET) && $Mode == 'ADD_ITEM')
+        $_POST['trans_no'] = get_item_code_id($_POST['trans_no']);
+    if (!transaction_exists($_POST['filterType'], $_POST['trans_no']) || !ctype_digit($_POST['trans_no']))
+        $upload_error = _('Selected transaction does not exists.');
+    elseif ($Mode == 'ADD_ITEM' && !$has_upload)
+        $upload_error = _('Select attachment file.');
+    elseif ($has_upload) {
+        $validated_upload = validate_general_attachment_upload($_FILES['filename']);
+        if (!$validated_upload['ok']) $upload_error = $validated_upload['error'];
+    }
+    $unique_name = '';
+    if ($upload_error === '' && $has_upload) {
+        if ($Mode == 'UPDATE_ITEM') {
+            $row = get_attachment($selected_id);
+            if (!$row || $row['filename'] === '') $upload_error = _('Attachment not found.');
+            else $unique_name = $row['unique_name'];
+        }
+        if ($upload_error === '') {
+            $unique_name = store_general_attachment_upload($validated_upload, $unique_name);
+            if ($unique_name === false) $upload_error = _('The attachment could not be stored.');
+        }
+    }
+    if ($upload_error !== '') display_error($upload_error);
+    else {
+        if ($Mode == 'ADD_ITEM') {
+            add_attachment($_POST['filterType'], $_POST['trans_no'], $_POST['description'],
+                $validated_upload['filename'], $unique_name, $validated_upload['size'], $validated_upload['mime']);
+            display_notification(_('Attachment has been inserted.'));
+        } else {
+            update_attachment($selected_id, $_POST['filterType'], $_POST['trans_no'], $_POST['description'],
+                $has_upload ? $validated_upload['filename'] : '', $unique_name,
+                $has_upload ? $validated_upload['size'] : 0, $has_upload ? $validated_upload['mime'] : '');
+            display_notification(_('Attachment has been updated.'));
+        }
+        reset_form();
+    }
+    refresh_pager('trans_tbl');
+    $Ajax->activate('_page_body');
 }
 
 if ($Mode == 'Delete') {
