@@ -18,18 +18,31 @@ page(_($help_context = 'Log View'), true);
 
 include_once($path_to_root.'/includes/ui.inc');
 
-if (!isset($_GET['id'])) {
+// Software upgrade access is site-admin only; IDs must name a configured company.
+if (!isset($_GET['id']) || !is_string($_GET['id'])
+	|| !preg_match('/\A(?:0|[1-9][0-9]*)\z/', $_GET['id'])
+	|| !isset($db_connections[$_GET['id']])) {
 	/*Script was not passed the correct parameters */
 	display_note(_('The script must be called with a valid company number.'));
-	end_page();
+	end_page(true);
+	exit;
 }
 
-display_heading(sprintf(_("Upgrade log for company '%s'"), $_GET['id']));
+$company_id = (int)$_GET['id'];
+$log_path = VARLOG_PATH.'/upgrade.'.$company_id.'.log';
+$log = is_file($log_path) && is_readable($log_path) ? @file_get_contents($log_path) : false;
+if ($log === false) {
+	display_note(_('No readable upgrade log is available for this company.'));
+	end_page(true);
+	exit;
+}
+
+display_heading(sprintf(_("Upgrade log for company '%s'"), $company_id));
 br();
 start_table();
 start_row();
 
-$log = strtr(file_get_contents(VARLOG_PATH.'/upgrade.'.$_GET['id'].'.log'), array('Fatal error' => 'Fatal  error')); // prevent misinterpretation in output_handler
+$log = strtr($log, array('Fatal error' => 'Fatal  error')); // prevent misinterpretation in output_handler
 label_cells(null, nl2br(html_specials_encode($log)));
 end_row();
 end_table(1);
