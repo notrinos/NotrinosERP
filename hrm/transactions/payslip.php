@@ -333,6 +333,7 @@ function handle_new_item() {
 //--------------------------------------------------------------------------
 
 $payslip_entry_selector_as_of = hrm_person_worker_utc_now();
+$payslip_entry_name_batch = $_SESSION['hrm_items']->trans_no == 0 ? false : null;
 hrm_log_restricted_employee_projection('payslip_entry_selector');
 
 start_form();

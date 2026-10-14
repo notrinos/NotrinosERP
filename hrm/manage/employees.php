@@ -82,6 +82,7 @@ $new_employee = get_post('employee_id') == '' || get_post('cancel');
  */
 function employee_maintenance_authoritative_employee_list($row) {
 	global $employee_maintenance_selector_as_of;
+	global $employee_maintenance_name_batch;
 
 	$legacy_label = _format_employee_list($row);
 	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -89,7 +90,7 @@ function employee_maintenance_authoritative_employee_list($row) {
 		return $legacy_label;
 
 	$identity = get_hrm_person_worker_report_name_as_of(
-		$row[0], $employee_maintenance_selector_as_of
+		$row[0], $employee_maintenance_selector_as_of, $employee_maintenance_name_batch
 	);
 	if (!is_array($identity) || empty($identity['canonical_linked']))
 		return $legacy_label;
@@ -116,6 +117,7 @@ function employee_maintenance_authoritative_employee_list($row) {
  */
 function employee_reporting_to_authoritative_employee_list($row) {
 	global $employee_maintenance_selector_as_of;
+	global $employee_maintenance_name_batch;
 
 	$legacy_label = is_array($row) && isset($row[1]) ? (string)$row[1] : '';
 	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -123,7 +125,7 @@ function employee_reporting_to_authoritative_employee_list($row) {
 		return $legacy_label;
 
 	$identity = get_hrm_person_worker_report_name_as_of(
-		$row[0], $employee_maintenance_selector_as_of
+		$row[0], $employee_maintenance_selector_as_of, $employee_maintenance_name_batch
 	);
 	if (!is_array($identity) || empty($identity['canonical_linked']))
 		return $legacy_label;
@@ -151,6 +153,7 @@ function employee_reporting_to_authoritative_employee_list($row) {
  */
 function employee_salary_authoritative_employee_label($employee_id, $emp) {
 	global $employee_maintenance_selector_as_of;
+	global $employee_maintenance_name_batch;
 
 	$legacy_name = is_array($emp)
 		? trim((isset($emp['first_name']) ? (string)$emp['first_name'] : '').' '.(isset($emp['last_name']) ? (string)$emp['last_name'] : ''))
@@ -160,7 +163,7 @@ function employee_salary_authoritative_employee_label($employee_id, $emp) {
 		return $legacy_label;
 
 	$identity = get_hrm_person_worker_report_name_as_of(
-		$employee_id, $employee_maintenance_selector_as_of
+		$employee_id, $employee_maintenance_selector_as_of, $employee_maintenance_name_batch
 	);
 	if (!is_array($identity) || empty($identity['canonical_linked']))
 		return $legacy_label;
@@ -784,6 +787,8 @@ function tab_employment($employee_id, $new_employee) {
 	}
 	if ($new_employee) {
 		reporting_to_list_row(_('Reports To:'), 'reporting_to', null, get_post('NewEmpID'), false, array(
+			'employee_name_batch' => array('target' => 'employee_maintenance_name_batch',
+				'as_of' => $GLOBALS['employee_maintenance_selector_as_of']),
 			'format' => 'employee_reporting_to_authoritative_employee_list'
 		));
 	} else {
@@ -1847,6 +1852,7 @@ if (isset($_POST['delete'])) {
 //======================================================================
 
 $employee_maintenance_selector_as_of = hrm_person_worker_utc_now();
+$employee_maintenance_name_batch = false;
 hrm_log_restricted_employee_projection('employee_maintenance_selector');
 
 start_form(true);
@@ -1857,6 +1863,8 @@ if (db_has_employees()) {
 	start_row();
 	employees_list_cells(_('Select an employee:'), 'employee_id', null, _('New employee'), true,
 		check_value('show_inactive'), false, array(
+			'employee_name_batch' => array('target' => 'employee_maintenance_name_batch',
+				'as_of' => $employee_maintenance_selector_as_of),
 			'search_submit' => true,
 			'format' => 'employee_maintenance_authoritative_employee_list'
 		));

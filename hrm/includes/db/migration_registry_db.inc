@@ -12,10 +12,10 @@ function hrm_migration_head_registry()
 {
     return array(
         'active_database_version'=>'1.0.1080',
-        'active_legacy_payroll_contract'=>'1.0.562',
-        'next_backlog_item'=>'PAY-CON-001',
+        'active_legacy_payroll_contract'=>'1.0.564',
+        'next_backlog_item'=>'HRM-FND-007',
         'next_slice_changed_files'=>array(),
-        'next_slice_scope'=>'PAY-CON-001 named-provider admission custody source batch is SOURCE-VERIFIED / LOCAL ACCEPTANCE PASS at expected source/DB 1.0.1066 and active legacy-payroll source custody 1.0.544. Exactly three high-risk edges extend the accepted 1.0.1063 provider-neutral foundation: 1.0.1063->1.0.1064 freezes named-provider vendor/legal/security/data-residency and delivery-model admission prerequisites; 1.0.1064->1.0.1065 adds one zero-seed immutable provider-admission-review custody table with two UPDATE/DELETE denial triggers; 1.0.1065->1.0.1066 revalidates the admission contract and zero-seed custody guard. No provider is selected or admitted, and provider-admission/profile/mapping writers, adapter runtime, external HTTP routes, secret custody, network exchange, shadow exchange, payroll-result authority, payroll mutation, GL posting, payment execution, filing submission, approval/audit bypass, cross-company authority or historical payroll/accounting/filing mutation is enabled. The strict next slice requires a real named provider plus retained reviewed evidence before any admission/profile writer can be enabled.',
+        'next_slice_scope'=>'HRM-FND-007 integrated local acceptance is the first pending development verification in the reconciled 60-workstream matrix at current source/DB target 1.0.1080 and custody 1.0.564. Five integrated acceptance records remain pending: HRM-FND-007 (1.0.433), HRM-ESS-001 (1.0.459), PAY-RULE-003 (1.0.485), PAY-RULE-004 (1.0.496), PAY-CORE-002 (1.0.546). Current source closure checks pass, but exact historical source/DB/activation prerequisites must be genuinely verified on disposable pairs before recording integrated acceptance. PAY-CON-001 documentation/mock acceptance remains CLOSED; PAY-REC-001, PAY-FIL-001 TT80 development acceptance and PAY-GLB-001 native-v1 pre-production closure remain accepted. Production activation remains denied; live provider admission, credentials, statutory submission and PAY-GLB-002 rollout remain separate.',
 
         'edges'=>array(
             'pay_glb_001_native_deadlock_driver_guard'=>array('previous'=>'1.0.1079','version'=>'1.0.1080',

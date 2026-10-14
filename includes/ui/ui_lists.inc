@@ -176,8 +176,24 @@ function combo_input($name, $selected_id, $sql, $valfield, $namefield, $options=
 		$pname = true;
 
 	if($result = db_query($sql)) {
-		while ($contact_row = db_fetch($result)) {
+		$employee_batch_rows = null;
+		if (isset($opts['employee_name_batch'])) {
+			$employee_batch_rows = array();
+			while ($contact_row = db_fetch($result))
+				$employee_batch_rows[] = $contact_row;
+			hrm_person_worker_prepare_employee_name_batch($employee_batch_rows,
+				$selected_id, $opts, isset($_POST[$search_button]));
+		}
+		$employee_batch_index = 0;
+		while ($employee_batch_rows !== null
+			? isset($employee_batch_rows[$employee_batch_index]) && ($contact_row = $employee_batch_rows[$employee_batch_index++])
+			: ($contact_row = db_fetch($result))) {
 			$value = $contact_row[0];
+			// Opted-in employee controls only: keep search-selected inactive rows.
+			if ($employee_batch_rows !== null && !isset($_POST[$search_button])
+				&& !$opts['show_inactive'] && !empty($contact_row['inactive'])
+				&& !in_array((string)$value, $selected_id, true))
+				continue;
 			$descr = $opts['format']==null ?  $contact_row[1] : call_user_func($opts['format'], $contact_row, $pname);
 			$data_descr = $opts['data_format'] !== null
 				? call_user_func($opts['data_format'], $contact_row, true)

@@ -25,6 +25,7 @@
  */
 function payslip_entry_authoritative_employee_list($row) {
 	global $payslip_entry_selector_as_of;
+	global $payslip_entry_name_batch;
 
 	$legacy_label = _format_employee_list($row);
 	if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -32,7 +33,7 @@ function payslip_entry_authoritative_employee_list($row) {
 		return $legacy_label;
 
 	$identity = get_hrm_person_worker_report_name_as_of(
-		$row[0], $payslip_entry_selector_as_of
+		$row[0], $payslip_entry_selector_as_of, $payslip_entry_name_batch
 	);
 	if (!is_array($identity) || empty($identity['canonical_linked']))
 		return $legacy_label;
@@ -61,6 +62,7 @@ function payslip_entry_authoritative_employee_list($row) {
  */
 function payslip_entry_authoritative_preview_name($employee_id, $legacy_name) {
 	global $payslip_entry_selector_as_of;
+	global $payslip_entry_name_batch;
 
 	$employee_id = trim((string)$employee_id);
 	$legacy_name = (string)$legacy_name;
@@ -68,7 +70,7 @@ function payslip_entry_authoritative_preview_name($employee_id, $legacy_name) {
 		return $legacy_name;
 
 	$identity = get_hrm_person_worker_report_name_as_of(
-		$employee_id, $payslip_entry_selector_as_of
+		$employee_id, $payslip_entry_selector_as_of, $payslip_entry_name_batch
 	);
 	if (!is_array($identity) || empty($identity['canonical_linked']))
 		return $legacy_name;
@@ -772,7 +774,7 @@ function get_payslip_display_lines($doc) {
 }
 
 function display_payslip_header($Order) {
-	global $Ajax;
+	global $Ajax, $payslip_entry_name_batch, $payslip_entry_selector_as_of;
 
 	$new = $Order->trans_no == 0;
 	$emp_error = '';
@@ -804,6 +806,10 @@ function display_payslip_header($Order) {
 	$Order->payslip_preview = $preview_doc ? $preview_doc : null;
 	$hero_title = _('Prepare Payslip Preview');
 	if ($preview_doc) {
+		if ($new)
+			$payslip_entry_name_batch = get_hrm_person_worker_report_names_batch_as_of(
+				array($preview_doc->employee_id), $payslip_entry_selector_as_of
+			);
 		$legacy_preview_name = isset($preview_doc->employee['employee_name'])
 			? $preview_doc->employee['employee_name'] : $preview_doc->employee_id;
 		$hero_title = payslip_entry_authoritative_preview_name(
@@ -835,6 +841,8 @@ function display_payslip_header($Order) {
 		start_row();
 		label_cell(_('Employee:'));
 		employees_list_cells(null, 'employee_id', null, _('Select employee'), true, false, true, array(
+			'employee_name_batch' => array('target' => 'payslip_entry_name_batch',
+				'as_of' => $GLOBALS['payslip_entry_selector_as_of']),
 			'layout_class' => 'combo-layout-equal',
 			'format' => 'payslip_entry_authoritative_employee_list'
 		));

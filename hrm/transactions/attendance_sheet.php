@@ -41,6 +41,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_sheet_consumer
  */
 function attendance_sheet_authoritative_employee_list($row) {
     global $attendance_sheet_selector_as_of;
+    global $attendance_sheet_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -48,7 +49,7 @@ function attendance_sheet_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $attendance_sheet_selector_as_of
+        $row[0], $attendance_sheet_selector_as_of, $attendance_sheet_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -80,6 +81,7 @@ function attendance_sheet_authoritative_employee_list($row) {
  */
 function attendance_sheet_authoritative_roster_employee_name($row) {
     global $attendance_sheet_selector_as_of;
+    global $attendance_sheet_name_batch;
 
     $employee_id = is_array($row) && isset($row['employee_id'])
         ? trim((string)$row['employee_id']) : '';
@@ -90,7 +92,7 @@ function attendance_sheet_authoritative_roster_employee_name($row) {
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_id, $attendance_sheet_selector_as_of
+        $employee_id, $attendance_sheet_selector_as_of, $attendance_sheet_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -391,6 +393,7 @@ if (isset($_POST['bulk_delete'])) {
 //----------------------------------------------------------------------
 
 $attendance_sheet_selector_as_of = hrm_person_worker_utc_now();
+$attendance_sheet_name_batch = false;
 hrm_log_restricted_employee_projection('attendance_sheet_selector');
 
 //----------------------------------------------------------------------
@@ -428,6 +431,9 @@ years_list_cells(_('Fiscal Year:'), 'sheet_year', null);
 departments_list_cells(_('Department:'), 'department_id', get_post('department_id'), _('All departments'), true);
 
 $emp_list_opts = array(
+    'employee_name_batch' => array('target' => 'attendance_sheet_name_batch',
+        'as_of' => $attendance_sheet_selector_as_of,
+        'extra_refs' => array_column($employees, 'employee_id')),
     'async' => false,
     'format' => 'attendance_sheet_authoritative_employee_list'
 );

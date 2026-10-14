@@ -453,19 +453,38 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 		|| ($column === 'employee_id' && $value === ''))
 		return false;
 	$as_of_sql = db_escape($as_of);
+	return hrm_person_worker_as_of_projection_sql(
+		$as_of_sql, "m.".$column."=".db_escape($value)
+	)." ORDER BY n.effective_from DESC,n.name_id DESC LIMIT 1";
+}
+
+/**
+ * Share the exact identity evidence and interval predicates with batch reads.
+ *
+ * Arguments are internal SQL fragments, never request values.
+ * @param string $as_of_sql
+ * @param string $predicate
+ * @param string $reference_join
+ * @param string $reference_projection
+ * @return string
+ */
+function hrm_person_worker_as_of_projection_sql($as_of_sql, $predicate,
+	$reference_join = '', $reference_projection = '')
+{
 	$resolved_person_sql = hrm_person_worker_resolved_person_as_of_sql($as_of_sql);
-	return "SELECT m.employee_number,m.employee_id,w.worker_id,"
+	return "SELECT ".$reference_projection."m.employee_number,m.employee_id,w.worker_id,"
 		.$resolved_person_sql." person_id,"
 		."CASE WHEN clw.link_worker_id IS NULL THEN 0 ELSE 1 END canonical_linked,"
 		."w.worker_number,w.active_from,w.active_to,"
 		."n.first_name,n.middle_name,n.last_name,n.verification_status "
 		."FROM ".TB_PREF."hrm_employee_worker_map m "
+		.$reference_join
 		."INNER JOIN ".TB_PREF."hrm_workers w ON w.worker_id=m.worker_id "
 		."LEFT JOIN ".TB_PREF."hrm_person_canonical_link_workers clw "
 		."ON clw.worker_id=w.worker_id AND clw.mapping_id=m.mapping_id "
 		."LEFT JOIN ".TB_PREF."hrm_person_canonical_links cl ON cl.link_id=clw.link_id "
 		."INNER JOIN ".TB_PREF."hrm_person_names n ON n.person_id=(".$resolved_person_sql.") "
-		."WHERE m.".$column."=".db_escape($value)
+		."WHERE ".$predicate
 		." AND (m.retired_at IS NULL OR m.retired_at>".$as_of_sql.")"
 		." AND (w.active_from IS NULL OR w.active_from<=DATE(".$as_of_sql."))"
 		." AND (w.active_to IS NULL OR w.active_to>=DATE(".$as_of_sql."))"
@@ -476,8 +495,172 @@ function get_hrm_person_worker_as_of_sql($employee_ref, $as_of)
 		." AND (SELECT COUNT(*) FROM ".TB_PREF."hrm_person_canonical_link_workers clw_count"
 		." WHERE clw_count.worker_id=w.worker_id AND clw_count.mapping_id=m.mapping_id)<=1"
 		." AND (n.effective_from IS NULL OR n.effective_from<=".$as_of_sql.")"
-		." AND (n.effective_to IS NULL OR n.effective_to>".$as_of_sql.")"
-		." ORDER BY n.effective_from DESC,n.name_id DESC LIMIT 1";
+		." AND (n.effective_to IS NULL OR n.effective_to>".$as_of_sql.")";
+}
+
+/**
+ * Resolve a presentation cohort with one readiness check and 200-ref chunks.
+ *
+ * This completed value is local to a post-command rendering operation. It is
+ * not a schema proof, session cache or authority for subsequent reads/writes.
+ * The database verifies its own connection/database against the authenticated
+ * configuration. Each new operation repeats that verification and readiness.
+ * Numeric references retain the single-reader's is_numeric/int semantics.
+ *
+ * @param array $employee_refs
+ * @param string $as_of
+ * @return array|false
+ */
+function get_hrm_person_worker_report_names_batch_as_of($employee_refs, $as_of)
+{
+	global $db, $db_connections;
+	$company = hrm_person_worker_current_company_id();
+	$as_of = hrm_person_worker_normalize_as_of($as_of);
+	if (!is_array($employee_refs) || $company === false || $as_of === false
+		|| !hrm_person_worker_user_can_read() || !isset($db)
+		|| !isset($db_connections[$company]['dbname'], $db_connections[$company]['tbpref']))
+		return false;
+	$result = db_query('SELECT CONNECTION_ID() connection_id,DATABASE() database_name',
+		'could not verify HRM name batch scope');
+	$scope = $result ? db_fetch_assoc($result) : false;
+	if (!$scope || $scope['database_name'] !== $db_connections[$company]['dbname'])
+		return false;
+	$batch = array('company' => $company, 'connection' => $db,
+		'database' => $scope['database_name'], 'connection_id' => $scope['connection_id'],
+		'prefix' => $db_connections[$company]['tbpref'], 'as_of' => $as_of, 'names' => array());
+	$refs = array();
+	foreach ($employee_refs as $ref) {
+		if (!is_int($ref) && !is_string($ref))
+			continue;
+		$key = 'ref:'.(string)$ref;
+		$batch['names'][$key] = false;
+		$value = is_numeric($ref) ? (int)$ref : trim((string)$ref);
+		if ((is_numeric($ref) && $value > 0) || (!is_numeric($ref) && $value !== ''))
+			$refs[$key] = array('numeric' => is_numeric($ref), 'value' => $value);
+	}
+	if (empty($refs))
+		return $batch;
+	// Deliberately do not publish/reuse the locked native-reader schema proof.
+	if (!hrm_person_worker_tables_ready())
+		return false;
+	foreach (array('hrm_person_canonical_links', 'hrm_person_canonical_link_workers') as $table) {
+		if (!hrm_person_worker_table_exists($table))
+			return false;
+	}
+	$groups = array('employee_number' => array(), 'employee_id' => array());
+	foreach ($refs as $key => $ref)
+		$groups[$ref['numeric'] ? 'employee_number' : 'employee_id'][$key] = $ref;
+	foreach ($groups as $column => $group) {
+		foreach (array_chunk($group, 200, true) as $chunk) {
+			$reference_rows = array();
+			$keys = array_keys($chunk);
+			foreach (array_values($chunk) as $index => $ref) {
+				$reference_rows[] = 'SELECT '.$index.' reference_index,'
+					.db_escape($ref['value']).' employee_ref';
+			}
+			$join = 'INNER JOIN ('.implode(' UNION ALL ', $reference_rows).') batch_refs ON '
+				.'m.'.$column.'=batch_refs.employee_ref ';
+			$sql = hrm_person_worker_as_of_projection_sql(db_escape($as_of), '1=1',
+				$join, 'batch_refs.reference_index,')
+				.' AND n.name_id=(SELECT batch_name.name_id FROM '.TB_PREF.'hrm_person_names batch_name'
+				.' WHERE batch_name.person_id=n.person_id'
+				.' AND (batch_name.effective_from IS NULL OR batch_name.effective_from<='.db_escape($as_of).')'
+				.' AND (batch_name.effective_to IS NULL OR batch_name.effective_to>'.db_escape($as_of).')'
+				.' ORDER BY batch_name.effective_from DESC,batch_name.name_id DESC LIMIT 1)'
+				.' ORDER BY batch_refs.reference_index,n.effective_from DESC,n.name_id DESC';
+			$result = db_query($sql, 'could not read HRM report name batch');
+			if (!$result)
+				return false;
+			$seen = array();
+			while ($row = db_fetch_assoc($result)) {
+				$index = (int)$row['reference_index'];
+				if (isset($seen[$index]))
+					continue;
+				$seen[$index] = true;
+				$batch['names'][$keys[$index]] = hrm_person_worker_report_name_from_row($row);
+			}
+			db_free_result($result);
+		}
+	}
+	return $batch;
+}
+
+/**
+ * Read only a completed batch value during its uninterrupted render operation.
+ *
+ * Scope/authorization changes fail closed; no lazy per-option query is issued.
+ * Callers must create a new batch after commands or connection/database changes.
+ * @param array|false $batch
+ * @param int|string $employee_ref
+ * @param string $as_of
+ * @return array|false
+ */
+function hrm_person_worker_report_name_from_batch($batch, $employee_ref, $as_of)
+{
+	global $db, $db_connections;
+	if (!is_array($batch) || !hrm_person_worker_user_can_read()
+		|| !hrm_person_worker_company_scope_is_current($batch['company'])
+		|| $batch['connection'] !== $db
+		|| !isset($db_connections[$batch['company']]['dbname'], $db_connections[$batch['company']]['tbpref'])
+		|| $batch['prefix'] !== $db_connections[$batch['company']]['tbpref']
+		|| $batch['database'] !== $db_connections[$batch['company']]['dbname']
+		|| $batch['as_of'] !== hrm_person_worker_normalize_as_of($as_of))
+		return false;
+	$key = 'ref:'.(string)$employee_ref;
+	return isset($batch['names'][$key]) ? $batch['names'][$key] : false;
+}
+
+/**
+ * Prepare names before formatting an explicitly opted-in employee control.
+ *
+ * Hidden inactive rows are excluded unless a search submission can select them.
+ * Extra roster refs join the same operation. Overlapping controls may reuse
+ * completed names after rechecking actual connection/database at their boundary;
+ * missing refs get a new bounded operation, never a per-option lazy read.
+ * @param array $rows
+ * @param array $selected_ids
+ * @param array $options
+ * @param bool $searching
+ * @return void
+ */
+function hrm_person_worker_prepare_employee_name_batch($rows, $selected_ids, $options, $searching)
+{
+	$settings = $options['employee_name_batch'];
+	$refs = isset($settings['extra_refs']) ? $settings['extra_refs'] : array();
+	foreach ($rows as $row) {
+		if (!$searching && !$options['show_inactive'] && !empty($row['inactive'])
+			&& !in_array((string)$row[0], $selected_ids, true))
+			continue;
+		$refs[] = $row[0];
+	}
+	$target = $settings['target'];
+	$prior = isset($GLOBALS[$target]) ? $GLOBALS[$target] : false;
+	$reuse = is_array($prior) && hrm_person_worker_user_can_read()
+		&& hrm_person_worker_company_scope_is_current($prior['company'])
+		&& $prior['connection'] === $GLOBALS['db']
+		&& isset($GLOBALS['db_connections'][$prior['company']]['tbpref'])
+		&& $prior['prefix'] === $GLOBALS['db_connections'][$prior['company']]['tbpref']
+		&& $prior['as_of'] === $settings['as_of']
+		&& isset($GLOBALS['db_connections'][$prior['company']]['dbname'])
+		&& $prior['database'] === $GLOBALS['db_connections'][$prior['company']]['dbname'];
+	if ($reuse) {
+		$result = db_query('SELECT CONNECTION_ID() connection_id,DATABASE() database_name',
+			'could not verify reused HRM names scope');
+		$scope = $result ? db_fetch_assoc($result) : false;
+		$reuse = $scope && $scope['database_name'] === $prior['database']
+			&& (string)$scope['connection_id'] === (string)$prior['connection_id'];
+	}
+	$missing = array();
+	foreach ($refs as $ref) {
+		if (!$reuse || !array_key_exists('ref:'.(string)$ref, $prior['names']))
+			$missing[] = $ref;
+	}
+	if ($reuse && empty($missing))
+		return;
+	$batch = get_hrm_person_worker_report_names_batch_as_of($missing, $settings['as_of']);
+	if ($reuse && is_array($batch))
+		$batch['names'] = array_merge($prior['names'], $batch['names']);
+	$GLOBALS[$target] = $batch;
 }
 
 /**
@@ -537,11 +720,20 @@ function get_hrm_person_worker_as_of($employee_ref, $as_of)
  *
  * @param int|string $employee_ref
  * @param string $as_of
+ * @param array|false|null $batch Completed render value, or null for the single reader.
  * @return array|false Normalized name parts or false on missing binding.
  */
-function get_hrm_person_worker_report_name_as_of($employee_ref, $as_of)
+function get_hrm_person_worker_report_name_as_of($employee_ref, $as_of, $batch = null)
 {
+	if ($batch !== null)
+		return hrm_person_worker_report_name_from_batch($batch, $employee_ref, $as_of);
 	$row = get_hrm_person_worker_as_of($employee_ref, $as_of);
+	return hrm_person_worker_report_name_from_row($row);
+}
+
+/** @param array|false $row @return array|false Normalized least-data name. */
+function hrm_person_worker_report_name_from_row($row)
+{
 	if (!is_array($row))
 		return false;
 	$first = isset($row['first_name']) ? trim((string)$row['first_name']) : '';
