@@ -17,6 +17,7 @@ page(_($help_context = 'Company Setup'));
 
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/ui.inc');
+include_once($path_to_root.'/includes/company_logo_upload.inc');
 
 include_once($path_to_root.'/admin/db/company_db.inc');
 include_once($path_to_root.'/reporting/includes/tcpdf.php');
@@ -190,6 +191,8 @@ $current_company_preferences = ensure_advanced_company_preferences_exist($advanc
 
 if (isset($_POST['update']) && $_POST['update'] != '') {
 	$input_error = 0;
+	// The stored logo preference is authoritative, never the hidden form field.
+	$_POST['coy_logo'] = get_company_pref('coy_logo');
 	$optional_modules_changed =
 		(int)$current_company_preferences['use_manufacturing'] !== (int)check_value('use_manufacturing')
 		|| (int)$current_company_preferences['use_fixed_assets'] !== (int)check_value('use_fixed_assets')
@@ -269,61 +272,20 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		set_focus('add_pct');
 		$input_error = 1;
 	}	
-	if (isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
-		if ($_FILES['pic']['error'] == UPLOAD_ERR_INI_SIZE) {
-			display_error(_('The file size is over the maximum allowed.'));
+	if ($input_error != 1 && !check_value('del_coy_logo')
+		&& isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
+		$logo_error = '';
+		$logo_basename = save_company_logo_upload(
+			$_FILES['pic'], company_path().'/images', $SysPrefs->max_image_size, $logo_error
+		);
+		if ($logo_basename === false) {
+			display_error($logo_error);
 			$input_error = 1;
-		}
-		elseif ($_FILES['pic']['error'] > 0) {
-			display_error(_('Error uploading logo file.'));
-			$input_error = 1;
-		}
-		$result = $_FILES['pic']['error'];
-		$filename = company_path().'/images';
-		if (!file_exists($filename))
-			mkdir($filename);
-
-		$filename .= '/'.clean_file_name($_FILES['pic']['name']);
-
-		 //But check for the worst
-		if (!in_array( substr($filename,-4), array('.jpg', '.JPG', '.png', '.PNG'))) {
-			display_error(_('Only jpg and png files are supported - a file extension of .jpg or .png is expected'));
-			$input_error = 1;
-		}
-		elseif ( $_FILES['pic']['size'] > ($SysPrefs->max_image_size * 1024)) { //File Size Check
-			display_error(_('The file size is over the maximum allowed. The maximum size allowed in KB is').' '.$SysPrefs->max_image_size);
-			$input_error = 1;
-		}
-		elseif ( $_FILES['pic']['type'] == 'text/plain' ) {  //File type Check
-			display_error( _('Only graphics files can be uploaded'));
-			$input_error = 1;
-		}
-		elseif (file_exists($filename)) {
-			$result = unlink($filename);
-			if (!$result) {
-				display_error(_('The existing image could not be removed'));
-				$input_error = 1;
-			}
-		}
-
-		if ($input_error != 1) {
-			$result  =  move_uploaded_file($_FILES['pic']['tmp_name'], $filename);
-			$_POST['coy_logo'] = clean_file_name($_FILES['pic']['name']);
-			if(!$result) {
-				display_error(_('Error uploading logo file'));
-				$input_error = 1;
-			}
-			else {
-				$msg = check_image_file($filename);
-				if ( $msg) {
-					display_error( $msg);
-					unlink($filename);
-					$input_error = 1;
-				}
-			}
+		} else {
+			$_POST['coy_logo'] = $logo_basename;
 		}
 	}
-	if (check_value('del_coy_logo')) {
+	if ($input_error != 1 && check_value('del_coy_logo')) {
 		$filename = company_path().'/images/'.clean_file_name($_POST['coy_logo']);
 		if (file_exists($filename)) {
 			$result = unlink($filename);
