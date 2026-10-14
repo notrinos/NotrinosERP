@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************
-	Copyright (C) FrontAccounting, LLC.
+	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
 	as published by the Free Software Foundation, either version 3 
 	of the License, or (at your option) any later version.
@@ -10,12 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 $page_security = 'SA_GLANALYTIC';
-// ----------------------------------------------------------------
-// $ Revision:	2.0 $
-// Creator:	Joe Hunt
-// date_:	2005-05-19
-// Title:	List of Journal Entries
-// ----------------------------------------------------------------
+
 $path_to_root='..';
 
 include_once($path_to_root . '/includes/session.inc');
@@ -35,7 +30,13 @@ function print_list_of_journal_entries() {
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
-	$systype = $_POST['PARAM_2'];
+	$systype = get_post('PARAM_2', null);
+	if ((!is_string($systype) && !is_int($systype))
+		|| ((string)$systype !== '-1' && (!ctype_digit((string)$systype) || !isset($systypes_array[$systype])))) {
+		display_error(_('Invalid transaction type.'));
+		return;
+	}
+	$systype = (int)$systype;
 	$comments = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
