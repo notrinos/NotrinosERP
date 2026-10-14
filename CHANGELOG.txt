@@ -1,3 +1,114 @@
+commit 97e027fb6fe11936f94505d4e22e6e80afd96d25
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 10:55:02 2026 +0700
+
+    Fixed authenticated SQL injection via the PARAM_2 parameter of the General Ledger journal-entries report
+
+M	gl/includes/db/gl_db_trans.inc
+M	reporting/rep702.php
+
+commit b631f9d217d3ae38bb7b67f0a27a4a7adc035be9
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 09:59:54 2026 +0700
+
+    Authenticated Arbitrary File Write via Company Logo Upload (missing image validation + undefined post-upload check). Added mising file.
+
+A	includes/company_logo_upload.inc
+
+commit 8b46e8aca053bf806ae887c6f8834c2839bb816c
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 09:56:44 2026 +0700
+
+    Authenticated Arbitrary File Write via Company Logo Upload (missing image validation + undefined post-upload check). Fixed.
+
+M	admin/company_preferences.php
+
+commit bc08ad2b0e4699d890d3377b8ff120a3e9f90aa9
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 09:22:44 2026 +0700
+
+    Fix PHP code injection in gettext translation cache
+
+M	includes/lang/gettext.inc
+
+commit 1580751d682f27930ee07a18b7f3d3880b5c51f8
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 01:18:54 2026 +0700
+
+    harden general attachment uploads
+
+M	SECURITY.md
+M	admin/attachments.php
+A	includes/attachment_security.inc
+M	includes/ui/attachment.inc
+
+commit 8a0ce25c3a333c30d7d92c89760bd08b7b1f4f4d
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Oct 14 00:44:54 2026 +0700
+
+    rejects malformed and unconfigured IDs, stops invalid requests, and handles missing logs safely.
+
+M	admin/view/view_upgrade_log.php
+
+commit d77d0a35b0d913f23b167ff7d6f99798883a4147
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Oct 13 19:32:29 2026 +0700
+
+    Fix SQL injection in Bank Statement report
+
+M	reporting/rep601.php
+
+commit b3eb23c16bf3777ddff000f7be73459b8dafdf9d
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Jul 15 11:20:09 2026 +0700
+
+    infinite loop in bom edit, fixed
+
+M	includes/db/manufacturing_db.inc
+
+commit 7f72b9d492bc36f230402c7fe9b15063191b2af0
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Jul 15 11:04:32 2026 +0700
+
+    fixed ajax request timeout in bom_edit.php
+
+M	manufacturing/manage/bom_edit.php
+
+commit eb8aaf54227c663520848c6f021cdb703d32babf
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Tue Jul 14 23:09:34 2026 +0700
+
+    Issue #37, voiding GRN in Void Transaction Entry bypassing "Allow Negative Inventory" preference. Fixed for all transaction types.
+
+M	admin/db/voiding_db.inc
+M	admin/void_transaction.php
+M	includes/db/inventory_db.inc
+
+commit 39375b9c624ab590e79c3d683a390c80b648577b
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Sat Jul 4 00:49:53 2026 +0700
+
+    issue #27, Mail missing envelope sender / Return-Path. Added.
+
+M	reporting/includes/class.mail.inc
+
+commit bbb4954f9638cee027f00fe094ba1b1ba46bee13
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Wed Jun 24 12:20:57 2026 +0700
+
+    added error handler when adding duplicated user id (issue #25).
+
+M	admin/users.php
+
+commit 8e531b8764cbbee3619d87aaddaf2ba53ab0a750
+Author: notrinos <trananhphuong83@gmail.com>
+Date:   Mon May 25 10:28:24 2026 +0700
+
+    Release 0.9
+
+M	CHANGELOG.txt
+M	version.php
+
 commit 78b4fb5a7b71eb166994add0eb0d2109076d56a0
 Author: notrinos <trananhphuong83@gmail.com>
 Date:   Mon May 25 10:25:51 2026 +0700
