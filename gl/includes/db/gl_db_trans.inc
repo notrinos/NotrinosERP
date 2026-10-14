@@ -143,8 +143,16 @@ function get_gl_transactions($from_date, $to_date, $trans_no=0, $account=null, $
 		$sql .= " AND gl.dimension_id = ".($dimension<0 ? 0 : db_escape($dimension));
 	if ($dimension2 != 0)
 		$sql .= " AND gl.dimension2_id = ".($dimension2<0 ? 0 : db_escape($dimension2));
-	if ($filter_type != null)
-		$sql .= " AND gl.type IN (" . $filter_type .")";
+	if ($filter_type !== null) {
+		// Only numeric type lists are allowed; malformed filters must not widen the result.
+		if ((!is_string($filter_type) && !is_int($filter_type))
+			|| !preg_match('/\A[0-9]+(?:\s*,\s*[0-9]+)*\z/', trim((string)$filter_type, " \t\r\n")))
+			$sql .= " AND 1=0";
+		else {
+			$filter_types = array_map('trim', explode(',', (string)$filter_type));
+			$sql .= " AND gl.type IN (".implode(',', array_map('db_escape', $filter_types)).")";
+		}
+	}
 	if ($amount_min != null)
 		$sql .= " AND ABS(gl.amount) >= ABS(".db_escape($amount_min).")";
 	if ($amount_max != null)

@@ -29,7 +29,13 @@ function print_list_of_journal_entries() {
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
-	$systype = $_POST['PARAM_2'];
+	$systype = get_post('PARAM_2', null);
+	if ((!is_string($systype) && !is_int($systype))
+		|| ((string)$systype !== '-1' && (!ctype_digit((string)$systype) || !isset($systypes_array[$systype])))) {
+		display_error(_('Invalid transaction type.'));
+		return;
+	}
+	$systype = (int)$systype;
 	$comments = $_POST['PARAM_3'];
 	$orientation = $_POST['PARAM_4'];
 	$destination = $_POST['PARAM_5'];
