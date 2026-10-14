@@ -37,6 +37,7 @@ include_once($path_to_root . '/hrm/includes/db/lifecycle_salary_revision_browser
  */
 function salary_revision_authoritative_employee_list($row) {
     global $salary_revision_selector_as_of;
+    global $salary_revision_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -44,7 +45,7 @@ function salary_revision_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $salary_revision_selector_as_of
+        $row[0], $salary_revision_selector_as_of, $salary_revision_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -150,6 +151,7 @@ if (isset($_POST['Process'])) {
 }
 
 $salary_revision_selector_as_of = hrm_person_worker_utc_now();
+$salary_revision_selector_name_batch = false;
 hrm_log_restricted_employee_projection('salary_revision_selector');
 
 $salary_revision_browser_status = false;
@@ -179,7 +181,8 @@ if (isset($_POST['employee_id']) && trim((string)$_POST['employee_id']) !== ''
 start_form();
 start_table(TABLESTYLE2);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
-    array('format' => 'salary_revision_authoritative_employee_list'));
+    array('format' => 'salary_revision_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $salary_revision_selector_as_of, 'target' => 'salary_revision_selector_name_batch')));
 amount_row(_('New Salary:'), 'new_salary');
 date_row(_('Effective Date:'), 'effective_date');
 textarea_row(_('Reason:'), 'reason', null, 50, 3);

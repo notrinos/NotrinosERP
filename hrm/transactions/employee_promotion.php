@@ -17,11 +17,12 @@ include_once($path_to_root . '/hrm/includes/db/lifecycle_promotion_browser_db.in
 
 function employee_promotion_authoritative_employee_list($row) {
     global $employee_promotion_selector_as_of;
+    global $employee_promotion_selector_name_batch;
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
         || $employee_promotion_selector_as_of === false)
         return $legacy_label;
-    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_promotion_selector_as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_promotion_selector_as_of, $employee_promotion_selector_name_batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
     $name = trim((isset($identity['first_name']) ? (string)$identity['first_name'] : '').' '
@@ -151,11 +152,13 @@ if ($employee_promotion_process_message !== 'submitted')
     employee_promotion_display_recovery_status($_POST['employee_id'], $current_status);
 
 $employee_promotion_selector_as_of = hrm_person_worker_utc_now();
+$employee_promotion_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_promotion_selector');
 start_form();
 start_table(TABLESTYLE2);
 employees_list_row(_('Employee:'), 'employee_id', null, false, true, false, false,
-    array('format' => 'employee_promotion_authoritative_employee_list'));
+    array('format' => 'employee_promotion_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_promotion_selector_as_of, 'target' => 'employee_promotion_selector_name_batch')));
 if (is_array($snapshot))
     label_row(_('Current Assignment:'), sprintf(_('Department %d / Position %d / Grade %d'), (int)$snapshot['department_id'], (int)$snapshot['position_id'], (int)$snapshot['grade_id']));
 positions_list_row(_('Target Position:'), 'new_position_id', get_post('new_position_id'));

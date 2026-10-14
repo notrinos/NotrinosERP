@@ -27,9 +27,10 @@ if (!defined('HRM_EMPLOYEE_CSV_MAX_DATA_ROWS'))
  *
  * @param array $row
  * @param string|false $as_of
+ * @param array|false|null $batch Completed chunk names; null retains singleton compatibility.
  * @return array
  */
-function employee_csv_export_authoritative_name_fields($row, $as_of=false) {
+function employee_csv_export_authoritative_name_fields($row, $as_of=false, $batch=null) {
     $legacy = array(
         'first_name' => isset($row['first_name']) ? (string)$row['first_name'] : '',
         'middle_name' => isset($row['middle_name']) ? (string)$row['middle_name'] : '',
@@ -39,7 +40,7 @@ function employee_csv_export_authoritative_name_fields($row, $as_of=false) {
     if (!isset($row['employee_id']) || trim((string)$row['employee_id']) === '' || $as_of === false || $as_of === '')
         return $legacy;
 
-    $identity = get_hrm_person_worker_report_name_as_of((string)$row['employee_id'], $as_of);
+    $identity = get_hrm_person_worker_report_name_as_of((string)$row['employee_id'], $as_of, $batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy;
 
@@ -192,8 +193,8 @@ if (isset($_POST['export_employees'])) {
         FROM ".TB_PREF."employees
         ORDER BY employee_id";
     $result = db_query($sql, 'could not export employees');
-    while ($row = db_fetch($result)) {
-        $export_name = employee_csv_export_authoritative_name_fields($row, $employee_csv_export_as_of);
+    foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $employee_csv_export_as_of, 'employee_csv_export_authoritative_name_fields_batch') as $row) {
+        $export_name = employee_csv_export_authoritative_name_fields($row, $employee_csv_export_as_of, $GLOBALS['employee_csv_export_authoritative_name_fields_batch']);
         echo implode(',', array(
             $row['employee_id'],
             str_replace(',', ' ', $export_name['first_name']),

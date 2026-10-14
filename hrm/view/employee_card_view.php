@@ -70,6 +70,7 @@ function employee_card_authoritative_name($employee_id, $row) {
  */
 function employee_card_authoritative_employee_list($row) {
     global $employee_card_selector_as_of;
+    global $employee_card_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -77,7 +78,7 @@ function employee_card_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $employee_card_selector_as_of
+        $row[0], $employee_card_selector_as_of, $employee_card_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -116,6 +117,7 @@ if (isset($_GET['employee_id']))
     $_POST['employee_id'] = $_GET['employee_id'];
 
 $employee_card_selector_as_of = hrm_person_worker_utc_now();
+$employee_card_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_card_selector');
 
 start_form();
@@ -123,7 +125,8 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', get_post('employee_id', ''), false, false, false, false,
-    array('format' => 'employee_card_authoritative_employee_list'));
+    array('format' => 'employee_card_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_card_selector_as_of, 'target' => 'employee_card_selector_name_batch')));
 submit_cells('Show', _('Show'), '', _('Show employee card'), 'default');
 end_row();
 end_table(1);

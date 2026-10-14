@@ -44,6 +44,7 @@ page(_($help_context = "Payroll Processing"), false, false, '', $js);
  */
 function payroll_process_authoritative_employee_list($row) {
     global $payroll_process_selector_as_of;
+    global $payroll_process_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -51,7 +52,7 @@ function payroll_process_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $payroll_process_selector_as_of
+        $row[0], $payroll_process_selector_as_of, $payroll_process_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -401,6 +402,7 @@ if (isset($_POST['process_payroll']) && validate_payroll_request()) {
 }
 
 $payroll_process_selector_as_of = hrm_person_worker_utc_now();
+$payroll_process_selector_name_batch = false;
 hrm_log_restricted_employee_projection('payroll_process_selector');
 
 start_form();
@@ -415,7 +417,8 @@ start_row();
 label_cell(_('Employee (Optional):'));
 employees_list_cells(null, 'employee_id', null, _('-- All Employees --'), true, false, true, array(
     'layout_class' => 'combo-layout-equal',
-    'format' => 'payroll_process_authoritative_employee_list'
+    'format' => 'payroll_process_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $payroll_process_selector_as_of, 'target' => 'payroll_process_selector_name_batch')
 ));
 end_row();
 end_table(1);

@@ -664,6 +664,63 @@ function hrm_person_worker_prepare_employee_name_batch($rows, $selected_ids, $op
 }
 
 /**
+ * Prepare completed names for an already selected visible row cohort.
+ *
+ * No detail reader or additional cohort query is used. Fields may include both
+ * employee and reviewer references. The caller owns the post-command instant.
+ * @param array $rows
+ * @param array $fields
+ * @param string|false $as_of
+ * @param string $target
+ * @return void
+ */
+function hrm_person_worker_prepare_row_name_batch($rows, $fields, $as_of, $target)
+{
+	$refs = array();
+	foreach ($rows as $row)
+		foreach ($fields as $field)
+			if (isset($row[$field]))
+				$refs[] = $row[$field];
+	hrm_person_worker_prepare_employee_name_batch(array(), array(), array(
+		'employee_name_batch' => array('as_of' => $as_of, 'target' => $target,
+			'extra_refs' => $refs)), false);
+}
+
+/**
+ * Stream presentation rows in bounded, independently verified render operations.
+ *
+ * Buffer at most 200 rows, preserving the original result order and row shape.
+ * Each chunk gets fresh scope/readiness and completed names before yielding;
+ * no readiness proof or growing name map survives a chunk. SQL result buffering
+ * remains the driver's existing behavior. Rendering must not mutate identity.
+ * @param resource|object|false $result
+ * @param array $fields
+ * @param string|false $as_of
+ * @param string $target
+ * @return Generator
+ */
+function hrm_person_worker_name_batch_rows($result, $fields, $as_of, $target)
+{
+	if (!$result)
+		return;
+	try {
+		while (true) {
+			$rows = array();
+			while (count($rows) < 200 && ($row = db_fetch($result)))
+				$rows[] = $row;
+			if (empty($rows))
+				break;
+			$GLOBALS[$target] = false;
+			hrm_person_worker_prepare_row_name_batch($rows, $fields, $as_of, $target);
+			foreach ($rows as $row)
+				yield $row;
+		}
+	} finally {
+		$GLOBALS[$target] = false;
+	}
+}
+
+/**
  * Return one authorized company-scoped person/worker state as of a date/time.
  *
  * @param int|string $company_id

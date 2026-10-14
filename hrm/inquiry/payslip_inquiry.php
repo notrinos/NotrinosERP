@@ -45,6 +45,7 @@ if (!isset($_POST['to_date']))
  */
 function payslip_inquiry_authoritative_employee($row, $cell) {
     global $payslip_inquiry_as_of;
+    global $payslip_inquiry_name_batch;
 
     $legacy_label = (string)$cell;
     if (!is_array($row) || !isset($row['employee_id'])
@@ -54,7 +55,7 @@ function payslip_inquiry_authoritative_employee($row, $cell) {
     $identity = $payslip_inquiry_as_of === false
         ? false
         : get_hrm_person_worker_report_name_as_of(
-            $row['employee_id'], $payslip_inquiry_as_of
+            $row['employee_id'], $payslip_inquiry_as_of, $payslip_inquiry_name_batch
         );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -83,6 +84,7 @@ function payslip_inquiry_authoritative_employee($row, $cell) {
  */
 function payslip_inquiry_authoritative_employee_list($row) {
     global $payslip_inquiry_as_of;
+    global $payslip_inquiry_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -90,7 +92,7 @@ function payslip_inquiry_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $payslip_inquiry_as_of
+        $row[0], $payslip_inquiry_as_of, $payslip_inquiry_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -106,13 +108,15 @@ function payslip_inquiry_authoritative_employee_list($row) {
 }
 
 $payslip_inquiry_as_of = hrm_person_worker_utc_now();
+$payslip_inquiry_name_batch = false;
 hrm_log_restricted_employee_projection('payslip_inquiry_selector');
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
-    'format' => 'payslip_inquiry_authoritative_employee_list'
+    'format' => 'payslip_inquiry_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $payslip_inquiry_as_of, 'target' => 'payslip_inquiry_name_batch')
 ));
 date_cells(_('From Date:'), 'from_date');
 date_cells(_('To Date:'), 'to_date');
@@ -184,7 +188,7 @@ $cols = array(
 
 $table =& new_db_pager('payslip_inquiry_tbl', $sql, $cols);
 $table->width = '100%';
-display_db_pager($table);
+display_db_pager($table, array('fields' => array('employee_id'), 'as_of' => $payslip_inquiry_as_of, 'target' => 'payslip_inquiry_name_batch'));
 end_form();
 
 end_page();

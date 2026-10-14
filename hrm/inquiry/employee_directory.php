@@ -46,15 +46,17 @@ function employee_directory_inactive_label($row, $cell) {
  * @return string
  */
 function employee_directory_authoritative_name($row, $cell) {
+    global $employee_directory_as_of;
+    global $employee_directory_name_batch;
     $legacy_name = (string)$cell;
     if (!is_array($row) || !isset($row['employee_id'])
         || trim((string)$row['employee_id']) === '')
         return $legacy_name;
 
-    $as_of = hrm_person_worker_utc_now();
+    $as_of = $employee_directory_as_of;
     $identity = $as_of === false
         ? false
-        : get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+        : get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of, $employee_directory_name_batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
@@ -94,9 +96,11 @@ $cols = array(
     _('Inactive') => array('name' => 'inactive', 'fun' => 'employee_directory_inactive_label', 'ord' => '')
 );
 
+$employee_directory_as_of = hrm_person_worker_utc_now();
+$employee_directory_name_batch = false;
 $table =& new_db_pager('employee_directory_tbl', $sql, $cols);
 $table->width = '100%';
-display_db_pager($table);
+display_db_pager($table, array('fields' => array('employee_id'), 'as_of' => $employee_directory_as_of, 'target' => 'employee_directory_name_batch'));
 end_form();
 
 end_page();

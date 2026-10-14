@@ -13,7 +13,10 @@ $page_security = 'SA_HRMREPORTS';
 if (!isset($path_to_root) || $path_to_root == '')
     $path_to_root  = '../..';
 include_once($path_to_root.'/hrm/reporting/report_controller_security.inc');
-hrm_require_report_controller(880);
+if (defined('HRM_PAYSLIP_EMAIL_REPORT') && HRM_PAYSLIP_EMAIL_REPORT === true)
+    hrm_require_report_controller(893);
+else
+    hrm_require_report_controller(880);
 // NOTE: This file is included by reporting/rep880.php
 // $path_to_root and session are already initialized when called via report framework.
 // Direct access uses the above declarations.
@@ -36,16 +39,17 @@ include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
  *
  * @param array $row
  * @param string|false $as_of
+ * @param array|false|null $batch Completed chunk names; null retains singleton compatibility.
  * @return string
  */
-function payslip_print_report_authoritative_name($row, $as_of) {
+function payslip_print_report_authoritative_name($row, $as_of, $batch=null) {
     $legacy_name = is_array($row) && isset($row['employee_name'])
         ? (string)$row['employee_name'] : '';
     if (!is_array($row) || !isset($row['employee_code'])
         || trim((string)$row['employee_code']) === '' || $as_of === false)
         return $legacy_name;
 
-    $identity = get_hrm_person_worker_report_name_as_of($row['employee_code'], $as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_code'], $as_of, $batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
@@ -197,7 +201,7 @@ function print_payslip_report($email_mode=false) {
         $as_of = hrm_person_worker_utc_now();
     }
 
-    while ($row = db_fetch($rows)) {
+    foreach (hrm_person_worker_name_batch_rows($rows, array('employee_code'), $as_of, 'payslip_print_report_authoritative_name_batch') as $row) {
         $gross_amount = isset($row['gross_salary']) ? $row['gross_salary'] : (isset($row['salary_amount']) ? $row['salary_amount'] : null);
         $net_amount = payslip_payable_amount($row);
 
@@ -207,7 +211,7 @@ function print_payslip_report($email_mode=false) {
 
         $rep->TextCol(0, 2, _('Payslip #').': '.$row['payslip_row_id']);
         $display_name = $identity_adoption
-            ? payslip_print_report_authoritative_name($row, $as_of)
+            ? payslip_print_report_authoritative_name($row, $as_of, $GLOBALS['payslip_print_report_authoritative_name_batch'])
             : $row['employee_name'];
         $rep->TextCol(2, 5, _('Employee').': '.$row['employee_code'].' '.$display_name);
         $rep->NewLine();

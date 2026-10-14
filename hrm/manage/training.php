@@ -47,13 +47,14 @@ function training_statuses() {
  */
 function training_authoritative_history_name($employee_ref, $legacy_name) {
     global $training_history_as_of;
+    global $training_history_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $training_history_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $training_history_as_of
+        $employee_ref, $training_history_as_of, $training_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -81,6 +82,7 @@ function training_authoritative_history_name($employee_ref, $legacy_name) {
  */
 function training_authoritative_employee_list($row) {
     global $training_history_as_of;
+    global $training_history_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -88,7 +90,7 @@ function training_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $training_history_as_of
+        $row[0], $training_history_as_of, $training_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -203,6 +205,7 @@ if (isset($_POST['assign_training'])) {
 }
 
 $training_history_as_of = hrm_person_worker_utc_now();
+$training_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_training_history');
 hrm_log_restricted_employee_projection('employee_training_selector');
 
@@ -275,7 +278,8 @@ end_table(2);
 display_heading(_('Employee Training'));
 start_table(TABLESTYLE2, "width='80%'");
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
-    array('format' => 'training_authoritative_employee_list'));
+    array('format' => 'training_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $training_history_as_of, 'target' => 'training_history_name_batch')));
 $course_sql = "SELECT course_id, course_name FROM ".TB_PREF."training_courses WHERE inactive = 0";
 label_row(_('Course:'), combo_input('course_id', get_post('course_id', 0), $course_sql, 'course_id', 'course_name', array('spec_option' => _('Select course'), 'spec_id' => 0)));
 date_row(_('Training Date:'), 'training_date');
@@ -296,7 +300,7 @@ table_header(array(_('ID'), _('Employee'), _('Course'), _('Date'), _('Status'), 
 $labels = training_statuses();
 $records = get_employee_training_records();
 $k = 0;
-while ($row = db_fetch($records)) {
+foreach (hrm_person_worker_name_batch_rows($records, array('employee_id'), $training_history_as_of, 'training_history_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['training_id']);
     label_cell(training_authoritative_history_name(

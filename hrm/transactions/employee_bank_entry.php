@@ -130,6 +130,7 @@ function get_payment_advice_rows($employee_id='', $include_paid=false) {
  */
 function employee_bank_entry_authoritative_employee_list($row) {
     global $employee_bank_entry_selector_as_of;
+    global $employee_bank_entry_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -137,7 +138,7 @@ function employee_bank_entry_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $employee_bank_entry_selector_as_of
+        $row[0], $employee_bank_entry_selector_as_of, $employee_bank_entry_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -165,6 +166,7 @@ function employee_bank_entry_authoritative_employee_list($row) {
  */
 function employee_bank_entry_authoritative_payment_advice_employee($row) {
     global $employee_bank_entry_selector_as_of;
+    global $employee_bank_entry_selector_name_batch;
 
     $employee_id = is_array($row) && isset($row['employee_id'])
         ? trim((string)$row['employee_id']) : '';
@@ -176,7 +178,7 @@ function employee_bank_entry_authoritative_payment_advice_employee($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_id, $employee_bank_entry_selector_as_of
+        $employee_id, $employee_bank_entry_selector_as_of, $employee_bank_entry_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -275,6 +277,7 @@ if ($selected_employee !== '') {
 $show_paid = check_value('show_paid');
 
 $employee_bank_entry_selector_as_of = hrm_person_worker_utc_now();
+$employee_bank_entry_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_bank_entry_selector');
 
 start_form();
@@ -283,7 +286,8 @@ start_table(TABLESTYLE_NOBORDER);
 
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
-    'format' => 'employee_bank_entry_authoritative_employee_list'
+    'format' => 'employee_bank_entry_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_bank_entry_selector_as_of, 'target' => 'employee_bank_entry_selector_name_batch')
 ));
 check_cells(_('Show Already Paid'), 'show_paid', $show_paid);
 submit_cells('refresh_list', _('Refresh'));
@@ -310,7 +314,7 @@ if (!$rows) {
     table_header($th);
 
     $k = 0;
-    while ($row = db_fetch_assoc($rows)) {
+    foreach (hrm_person_worker_name_batch_rows($rows, array('employee_id'), $employee_bank_entry_selector_as_of, 'employee_bank_entry_selector_name_batch') as $row) {
         alt_table_row_color($k);
 
         // Safely display payslip ID

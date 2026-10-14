@@ -39,10 +39,21 @@ function navi_button_cell($name, $value, $enabled=true, $align='left') {
 //
 //    Sql paged table view. Call this function inside form.
 //
-function display_db_pager(&$pager) {
+/**
+ * Render a selected page, optionally preparing completed employee names first.
+ * @param db_pager $pager
+ * @param array|null $employee_name_batch Fields, fixed instant and local target.
+ * @return void
+ */
+function display_db_pager(&$pager, $employee_name_batch=null) {
 	global	$path_to_root;
 
 	$pager->select_records();
+	// Opt-in presentation preparation uses only the actual selected page.
+	if (is_array($employee_name_batch))
+		hrm_person_worker_prepare_row_name_batch($pager->data,
+			$employee_name_batch['fields'], $employee_name_batch['as_of'],
+			$employee_name_batch['target']);
 
 	div_start("_{$pager->name}_span");
 	$headers = array();

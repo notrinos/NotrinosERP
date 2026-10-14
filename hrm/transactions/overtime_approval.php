@@ -36,13 +36,14 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
 function overtime_approval_authoritative_history_name($employee_ref, $legacy_name)
 {
     global $overtime_approval_history_as_of;
+    global $overtime_approval_history_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $overtime_approval_history_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $overtime_approval_history_as_of
+        $employee_ref, $overtime_approval_history_as_of, $overtime_approval_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -122,6 +123,7 @@ if ($Mode == 'Edit') {
 $filter_status = get_post('filter_status', 0);
 
 $overtime_approval_history_as_of = hrm_person_worker_utc_now();
+$overtime_approval_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_overtime_approval_history');
 
 start_form();
@@ -143,7 +145,7 @@ table_header($th);
 $status_arg = ($filter_status === '' || $filter_status === ALL_TEXT) ? null : (int)$filter_status;
 $result = get_overtime_requests($status_arg, '', '', '');
 $k = 0;
-while ($row = db_fetch($result)) {
+foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $overtime_approval_history_as_of, 'overtime_approval_history_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
     label_cell($row['employee_id'] . ' ' . overtime_approval_authoritative_history_name(
@@ -173,6 +175,7 @@ if (!empty($_POST['request_id']))
     $selected_request = get_overtime_request((int)$_POST['request_id']);
 
 if ($selected_request && (int)$selected_request['status'] == 0) {
+    hrm_person_worker_prepare_row_name_batch(array($selected_request), array('employee_id'), $overtime_approval_history_as_of, 'overtime_approval_history_name_batch');
     start_table(TABLESTYLE2);
     label_row(_('Request ID:'), $selected_request['request_id']);
     label_row(_('Employee:'), $selected_request['employee_id'] . ' ' . overtime_approval_authoritative_history_name(

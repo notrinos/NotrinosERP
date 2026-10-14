@@ -33,10 +33,11 @@ function employee_service_years($from_date, $to_date) {
 }
 function employee_separation_authoritative_employee_list($row) {
     global $employee_separation_selector_as_of;
+    global $employee_separation_selector_name_batch;
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
         || $employee_separation_selector_as_of === false) return $legacy_label;
-    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_separation_selector_as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_separation_selector_as_of, $employee_separation_selector_name_batch);
     if (!is_array($identity) || empty($identity['canonical_linked'])) return $legacy_label;
     $first_name = isset($identity['first_name']) ? trim((string)$identity['first_name']) : '';
     $middle_name = isset($identity['middle_name']) ? trim((string)$identity['middle_name']) : '';
@@ -162,9 +163,11 @@ if ($employee_separation_task_message === false) employee_separation_display_tas
 $current_task_document_status = employee_separation_task_document_browser_status($_POST['employee_id']);
 if ($employee_separation_document_message === false) employee_separation_display_task_document_status($current_task_document_status);
 $employee_separation_selector_as_of = hrm_person_worker_utc_now();
+$employee_separation_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_separation_selector');
 start_form(); start_table(TABLESTYLE2); label_cell(_('Employee:'));
-employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class'=>'combo-layout-equal','format'=>'employee_separation_authoritative_employee_list')); end_row();
+employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class'=>'combo-layout-equal','format'=>'employee_separation_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_separation_selector_as_of, 'target' => 'employee_separation_selector_name_batch'))); end_row();
 date_row(_('Separation Date:'), 'separation_date'); check_row(_('Is Resignation:'), 'is_resignation'); label_row(_('Calculated EOS Preview:'), $eos_preview_available ? price_format($eos_amount) : _('Not calculated')); end_table(1);
 submit_center('Calculate', _('Calculate EOS Preview')); submit_center('Process', _('Submit Separation for Approval')); if ((string)$current_task_status['status'] === 'not_created') submit_center('CreateSeparationTask', _('Create Separation Acknowledgement Task')); elseif ((string)$current_task_status['status'] === 'pending') submit_center('CompleteSeparationTask', _('Complete Separation Acknowledgement Task'));
 if ((string)$current_task_document_status['status'] === 'not_linked') { start_table(TABLESTYLE2); text_row(_('Supporting Document Access Key:'), 'separation_document_access_key', null, 64, 64); end_table(1); submit_center('LinkSeparationDocument', _('Link Separation Supporting Document')); }

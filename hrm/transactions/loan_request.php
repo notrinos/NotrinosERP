@@ -34,13 +34,14 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
  */
 function loan_request_authoritative_history_name($employee_ref, $legacy_name) {
     global $loan_request_history_as_of;
+    global $loan_request_history_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $loan_request_history_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $loan_request_history_as_of
+        $employee_ref, $loan_request_history_as_of, $loan_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -68,6 +69,7 @@ function loan_request_authoritative_history_name($employee_ref, $legacy_name) {
  */
 function loan_request_authoritative_employee_list($row) {
     global $loan_request_history_as_of;
+    global $loan_request_history_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -75,7 +77,7 @@ function loan_request_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $loan_request_history_as_of
+        $row[0], $loan_request_history_as_of, $loan_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -289,6 +291,7 @@ if ($Mode == 'RESET') {
 $status_labels = array(0 => _('Pending'), 1 => _('Active'), 2 => _('Completed'), 3 => _('Cancelled'));
 
 $loan_request_history_as_of = hrm_person_worker_utc_now();
+$loan_request_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_loan_request_history');
 hrm_log_restricted_employee_projection('employee_loan_request_selector');
 
@@ -314,7 +317,8 @@ start_row();
 label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, false, false, false, false, array(
     'layout_class' => 'combo-layout-equal',
-    'format' => 'loan_request_authoritative_employee_list'
+    'format' => 'loan_request_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $loan_request_history_as_of, 'target' => 'loan_request_history_name_batch')
 ));
 end_row();
 loan_types_list_row(_('Loan Type:'), 'loan_type_id');
@@ -338,7 +342,7 @@ table_header($th);
 
 $result = get_employee_loans();
 $k = 0;
-while ($row = db_fetch($result)) {
+foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $loan_request_history_as_of, 'loan_request_history_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['loan_id']);
     label_cell($row['employee_id'].' '.loan_request_authoritative_history_name(

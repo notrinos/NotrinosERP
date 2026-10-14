@@ -34,16 +34,17 @@ include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
  *
  * @param array $row
  * @param string|false $as_of
+ * @param array|false|null $batch Completed chunk names; null retains singleton compatibility.
  * @return string
  */
-function leave_computation_report_authoritative_name($row, $as_of) {
+function leave_computation_report_authoritative_name($row, $as_of, $batch=null) {
     $legacy_name = is_array($row) && isset($row['employee_name'])
         ? (string)$row['employee_name'] : '';
     if (!is_array($row) || !isset($row['employee_id'])
         || trim((string)$row['employee_id']) === '' || $as_of === false)
         return $legacy_name;
 
-    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of, $batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
@@ -114,10 +115,10 @@ function print_leave_computation_report() {
     hrm_log_restricted_employee_projection('leave_computation_report');
     $as_of = hrm_person_worker_utc_now();
 
-    while ($row = db_fetch($res)) {
+    foreach (hrm_person_worker_name_batch_rows($res, array('employee_id'), $as_of, 'leave_computation_report_authoritative_name_batch') as $row) {
         $available = (float)$row['entitled'] + (float)$row['carried_forward'] + (float)$row['adjusted'] - (float)$row['taken'] - (float)$row['pending'];
         $rep->TextCol(0, 1, $row['employee_id']);
-        $rep->TextCol(1, 2, leave_computation_report_authoritative_name($row, $as_of));
+        $rep->TextCol(1, 2, leave_computation_report_authoritative_name($row, $as_of, $GLOBALS['leave_computation_report_authoritative_name_batch']));
         $rep->TextCol(2, 3, $row['leave_name']);
         $rep->AmountCol(3, 4, $row['entitled'], $dec);
         $rep->AmountCol(4, 5, $row['taken'], $dec);

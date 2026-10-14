@@ -54,6 +54,7 @@ function loan_report_status_label($row, $cell) {
  */
 function loan_report_authoritative_employee($row, $cell) {
     global $loan_report_as_of;
+    global $loan_report_name_batch;
 
     $legacy_label = (string)$cell;
     if (!is_array($row) || !isset($row['employee_id'])
@@ -63,7 +64,7 @@ function loan_report_authoritative_employee($row, $cell) {
     $identity = $loan_report_as_of === false
         ? false
         : get_hrm_person_worker_report_name_as_of(
-            $row['employee_id'], $loan_report_as_of
+            $row['employee_id'], $loan_report_as_of, $loan_report_name_batch
         );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -91,6 +92,7 @@ function loan_report_authoritative_employee($row, $cell) {
  */
 function loan_report_authoritative_employee_list($row) {
     global $loan_report_as_of;
+    global $loan_report_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -98,7 +100,7 @@ function loan_report_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $loan_report_as_of
+        $row[0], $loan_report_as_of, $loan_report_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -114,13 +116,15 @@ function loan_report_authoritative_employee_list($row) {
 }
 
 $loan_report_as_of = hrm_person_worker_utc_now();
+$loan_report_name_batch = false;
 hrm_log_restricted_employee_projection('loan_report_inquiry_selector');
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
-    'format' => 'loan_report_authoritative_employee_list'
+    'format' => 'loan_report_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $loan_report_as_of, 'target' => 'loan_report_name_batch')
 ));
 submit_cells('Search', _('Apply Filter'));
 end_row();
@@ -162,7 +166,7 @@ $cols = array(
 
 $table =& new_db_pager('loan_report_tbl', $sql, $cols);
 $table->width = '100%';
-display_db_pager($table);
+display_db_pager($table, array('fields' => array('employee_id'), 'as_of' => $loan_report_as_of, 'target' => 'loan_report_name_batch'));
 
 end_form();
 

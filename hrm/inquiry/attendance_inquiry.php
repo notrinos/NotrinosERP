@@ -39,6 +39,7 @@ page(_("Attendance Report"), false, false, '', $js);
  */
 function attendance_inquiry_authoritative_name($row, $cell) {
     global $attendance_inquiry_as_of;
+    global $attendance_inquiry_name_batch;
 
     $legacy_name = (string)$cell;
     if (!is_array($row) || !isset($row['employee_id'])
@@ -48,7 +49,7 @@ function attendance_inquiry_authoritative_name($row, $cell) {
     $identity = $attendance_inquiry_as_of === false
         ? false
         : get_hrm_person_worker_report_name_as_of(
-            $row['employee_id'], $attendance_inquiry_as_of
+            $row['employee_id'], $attendance_inquiry_as_of, $attendance_inquiry_name_batch
         );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -75,6 +76,7 @@ function attendance_inquiry_authoritative_name($row, $cell) {
  */
 function attendance_inquiry_authoritative_employee_list($row) {
     global $attendance_inquiry_as_of;
+    global $attendance_inquiry_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -82,7 +84,7 @@ function attendance_inquiry_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $attendance_inquiry_as_of
+        $row[0], $attendance_inquiry_as_of, $attendance_inquiry_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -103,6 +105,7 @@ if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
 
 $attendance_inquiry_as_of = hrm_person_worker_utc_now();
+$attendance_inquiry_name_batch = false;
 hrm_log_restricted_employee_projection('attendance_inquiry_selector');
 
 start_form();
@@ -111,7 +114,8 @@ start_row();
 date_cells(_('From Date:'), 'from_date');
 date_cells(_('To Date:'), 'to_date');
 employees_list_cells(null, 'employee_id', null, true, false, false, false, array(
-    'format' => 'attendance_inquiry_authoritative_employee_list'
+    'format' => 'attendance_inquiry_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $attendance_inquiry_as_of, 'target' => 'attendance_inquiry_name_batch')
 ));
 submit_cells('Search', _('Apply Filter'));
 end_row();
@@ -145,7 +149,7 @@ $cols = array(
 
 $table =& new_db_pager('attendance_inquiry_tbl', $sql, $cols);
 $table->width = '100%';
-display_db_pager($table);
+display_db_pager($table, array('fields' => array('employee_id'), 'as_of' => $attendance_inquiry_as_of, 'target' => 'attendance_inquiry_name_batch'));
 end_form();
 
 end_page();

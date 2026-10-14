@@ -41,6 +41,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_entry_consumer
  */
 function attendance_authoritative_employee_list($row) {
     global $attendance_selector_as_of;
+    global $attendance_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -48,7 +49,7 @@ function attendance_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $attendance_selector_as_of
+        $row[0], $attendance_selector_as_of, $attendance_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -78,6 +79,7 @@ function attendance_authoritative_employee_list($row) {
  */
 function attendance_authoritative_roster_employee_name($row) {
     global $attendance_selector_as_of;
+    global $attendance_selector_name_batch;
 
     $employee_id = is_array($row) && isset($row['employee_id'])
         ? trim((string)$row['employee_id']) : '';
@@ -88,7 +90,7 @@ function attendance_authoritative_roster_employee_name($row) {
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_id, $attendance_selector_as_of
+        $employee_id, $attendance_selector_as_of, $attendance_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -379,6 +381,7 @@ if (isset($_POST['save_attendance'])) {
 }
 
 $attendance_selector_as_of = hrm_person_worker_utc_now();
+$attendance_selector_name_batch = false;
 hrm_log_restricted_employee_projection('attendance_selector');
 
 start_form();
@@ -392,9 +395,13 @@ departments_list_cells(_('Department:'), 'department_id', get_post('department_i
 // Build employee dropdown options: always async=false so selecting an employee
 // triggers a full _page_body refresh (same behaviour as department filter).
 // When a department is active, restrict the dropdown to that department's employees.
+$attendance_roster_refs = array();
+foreach ($employees as $employee)
+    $attendance_roster_refs[] = $employee['employee_id'];
 $emp_list_opts = array(
     'async' => false,
-    'format' => 'attendance_authoritative_employee_list'
+    'format' => 'attendance_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $attendance_selector_as_of, 'target' => 'attendance_selector_name_batch', 'extra_refs' => $attendance_roster_refs)
 );
 if ($dept_id > 0)
     $emp_list_opts['where'] = array("e.department_id = ".db_escape($dept_id));

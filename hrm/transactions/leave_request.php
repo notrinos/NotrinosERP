@@ -74,13 +74,14 @@ function leave_request_has_valid_date_range($from_date, $to_date, $half_day)
  */
 function leave_request_authoritative_history_name($employee_ref, $legacy_name) {
     global $leave_request_history_as_of;
+    global $leave_request_history_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $leave_request_history_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $leave_request_history_as_of
+        $employee_ref, $leave_request_history_as_of, $leave_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -108,6 +109,7 @@ function leave_request_authoritative_history_name($employee_ref, $legacy_name) {
  */
 function leave_request_authoritative_employee_list($row) {
     global $leave_request_history_as_of;
+    global $leave_request_history_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -115,7 +117,7 @@ function leave_request_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $leave_request_history_as_of
+        $row[0], $leave_request_history_as_of, $leave_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -315,6 +317,7 @@ if ($Mode == 'RESET') {
 }
 
 $leave_request_history_as_of = hrm_person_worker_utc_now();
+$leave_request_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_leave_request_history');
 hrm_log_restricted_employee_projection('employee_leave_request_selector');
 
@@ -343,7 +346,8 @@ start_row();
 label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, false, false, false, false, array(
     'layout_class' => 'combo-layout-equal',
-    'format' => 'leave_request_authoritative_employee_list'
+    'format' => 'leave_request_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $leave_request_history_as_of, 'target' => 'leave_request_history_name_batch')
 ));
 end_row();
 leave_types_list_row(_('Leave Type:'), 'leave_id');
@@ -370,7 +374,7 @@ table_header($th);
 
 $result = get_leave_requests(null, '', '', '');
 $k = 0;
-while ($row = db_fetch($result)) {
+foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $leave_request_history_as_of, 'leave_request_history_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
     label_cell($row['employee_id'] . ' ' . leave_request_authoritative_history_name(

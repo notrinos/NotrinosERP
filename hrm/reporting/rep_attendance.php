@@ -33,16 +33,17 @@ include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
  *
  * @param array $row
  * @param string|false $as_of
+ * @param array|false|null $batch Completed chunk names; null retains singleton compatibility.
  * @return string
  */
-function attendance_report_authoritative_name($row, $as_of) {
+function attendance_report_authoritative_name($row, $as_of, $batch=null) {
     $legacy_name = is_array($row) && isset($row['employee_name'])
         ? (string)$row['employee_name'] : '';
     if (!is_array($row) || !isset($row['employee_id'])
         || trim((string)$row['employee_id']) === '' || $as_of === false)
         return $legacy_name;
 
-    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of, $batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
@@ -143,9 +144,9 @@ function print_attendance_report() {
     hrm_log_restricted_employee_projection('attendance_report');
     $as_of = hrm_person_worker_utc_now();
     $dec = user_qty_dec();
-    while ($row = db_fetch($result)) {
+    foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $as_of, 'attendance_report_authoritative_name_batch') as $row) {
         $rep->TextCol(0, 1, $row['employee_id']);
-        $rep->TextCol(1, 2, attendance_report_authoritative_name($row, $as_of));
+        $rep->TextCol(1, 2, attendance_report_authoritative_name($row, $as_of, $GLOBALS['attendance_report_authoritative_name_batch']));
         $rep->TextCol(2, 3, $row['department_name']);
         $rep->AmountCol(3, 4, (float)$row['worked_days'], $dec);
         $rep->AmountCol(4, 5, (float)$row['absent_days'], $dec);

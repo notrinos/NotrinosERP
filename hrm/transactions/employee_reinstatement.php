@@ -15,9 +15,10 @@ include_once($path_to_root . '/hrm/includes/db/lifecycle_service_state_browser_d
 
 function employee_reinstatement_authoritative_employee_list($row) {
     global $employee_reinstatement_selector_as_of;
+    global $employee_reinstatement_selector_name_batch;
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === '' || $employee_reinstatement_selector_as_of === false) return $legacy_label;
-    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_reinstatement_selector_as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row[0], $employee_reinstatement_selector_as_of, $employee_reinstatement_selector_name_batch);
     if (!is_array($identity) || empty($identity['canonical_linked'])) return $legacy_label;
     $name = trim((isset($identity['first_name'])?(string)$identity['first_name']:'').' '.(isset($identity['middle_name'])&&trim((string)$identity['middle_name'])!==''?trim((string)$identity['middle_name']).' ':'').(isset($identity['last_name'])?(string)$identity['last_name']:''));
     return $name === '' ? $legacy_label : (user_show_codes() ? ((string)$row[0].' - ') : '').$name;
@@ -71,9 +72,11 @@ if(isset($_POST['Process'])){
     }
 }
 $current=employee_reinstatement_browser_status($_POST['employee_id']); if($process!=='submitted')employee_reinstatement_display_status($current);
-$employee_reinstatement_selector_as_of=hrm_person_worker_utc_now();hrm_log_restricted_employee_projection('employee_reinstatement_selector');
+$employee_reinstatement_selector_as_of=hrm_person_worker_utc_now();
+$employee_reinstatement_selector_name_batch = false;hrm_log_restricted_employee_projection('employee_reinstatement_selector');
 start_form();start_table(TABLESTYLE2);
-employees_list_row(_('Employee:'),'employee_id',null,false,true,false,false,array('format'=>'employee_reinstatement_authoritative_employee_list'));
+employees_list_row(_('Employee:'),'employee_id',null,false,true,false,false,array('format'=>'employee_reinstatement_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_reinstatement_selector_as_of, 'target' => 'employee_reinstatement_selector_name_batch')));
 if(is_array($snapshot))label_row(_('Current Service State:'),htmlspecialchars((string)$snapshot['employment_status'],ENT_QUOTES,'UTF-8'));
 date_row(_('Effective Date:'),'effective_date');end_table(1);
 submit_center('Process',_('Submit Reinstatement for Approval'));end_form();end_page();

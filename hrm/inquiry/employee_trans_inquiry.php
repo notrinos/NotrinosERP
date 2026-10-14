@@ -42,6 +42,7 @@ page(_("Employee Transactions"), false, false, '', $js);
  */
 function employee_trans_authoritative_employee_list($row) {
     global $employee_trans_selector_as_of;
+    global $employee_trans_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -49,7 +50,7 @@ function employee_trans_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $employee_trans_selector_as_of
+        $row[0], $employee_trans_selector_as_of, $employee_trans_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -362,13 +363,15 @@ if (!isset($_POST['to_date']))
     $_POST['to_date'] = end_month(Today());
 
 $employee_trans_selector_as_of = hrm_person_worker_utc_now();
+$employee_trans_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_transactions_selector');
 
 start_form(true);
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', null, false, false, false, false, array(
-    'format' => 'employee_trans_authoritative_employee_list'
+    'format' => 'employee_trans_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_trans_selector_as_of, 'target' => 'employee_trans_selector_name_batch')
 ));
 date_cells(_('From Date:'), 'from_date');
 date_cells(_('To Date:'), 'to_date');

@@ -34,6 +34,7 @@ include_once($path_to_root . '/hrm/includes/db/lifecycle_transfer_task_document_
  */
 function employee_transfer_authoritative_employee_list($row) {
     global $employee_transfer_selector_as_of;
+    global $employee_transfer_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -41,7 +42,7 @@ function employee_transfer_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $employee_transfer_selector_as_of
+        $row[0], $employee_transfer_selector_as_of, $employee_transfer_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -314,12 +315,14 @@ if ($employee_transfer_document_message === false)
     employee_transfer_display_task_document_status($current_task_document_status);
 
 $employee_transfer_selector_as_of = hrm_person_worker_utc_now();
+$employee_transfer_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_transfer_selector');
 
 start_form();
 start_table(TABLESTYLE2);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
-    array('format' => 'employee_transfer_authoritative_employee_list'));
+    array('format' => 'employee_transfer_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_transfer_selector_as_of, 'target' => 'employee_transfer_selector_name_batch')));
 departments_list_row(_('New Department:'), 'new_department_id');
 positions_list_row(_('New Position:'), 'new_position_id');
 grades_list_row(_('New Grade:'), 'new_grade_id');

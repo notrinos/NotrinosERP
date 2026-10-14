@@ -36,6 +36,7 @@ page(_("Leave Balance"));
  */
 function leave_balance_inquiry_authoritative_employee($row, $cell) {
     global $leave_balance_inquiry_as_of;
+    global $leave_balance_inquiry_name_batch;
 
     $legacy_label = (string)$cell;
     if (!is_array($row) || !isset($row['employee_id'])
@@ -45,7 +46,7 @@ function leave_balance_inquiry_authoritative_employee($row, $cell) {
     $identity = $leave_balance_inquiry_as_of === false
         ? false
         : get_hrm_person_worker_report_name_as_of(
-            $row['employee_id'], $leave_balance_inquiry_as_of
+            $row['employee_id'], $leave_balance_inquiry_as_of, $leave_balance_inquiry_name_batch
         );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -73,6 +74,7 @@ function leave_balance_inquiry_authoritative_employee($row, $cell) {
  */
 function leave_balance_inquiry_authoritative_employee_list($row) {
     global $leave_balance_inquiry_as_of;
+    global $leave_balance_inquiry_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -80,7 +82,7 @@ function leave_balance_inquiry_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $leave_balance_inquiry_as_of
+        $row[0], $leave_balance_inquiry_as_of, $leave_balance_inquiry_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -103,6 +105,7 @@ $leave_id = (int)get_post('leave_id', 0);
 ensure_leave_balance_entitlements_for_filters($fiscal_year, $employee_id, $leave_id);
 
 $leave_balance_inquiry_as_of = hrm_person_worker_utc_now();
+$leave_balance_inquiry_name_batch = false;
 hrm_log_restricted_employee_projection('leave_balance_inquiry_selector');
 
 start_form();
@@ -111,7 +114,8 @@ start_row();
 
 years_list_cells(_('Fiscal Year:'), 'fiscal_year', null);
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false, array(
-    'format' => 'leave_balance_inquiry_authoritative_employee_list'
+    'format' => 'leave_balance_inquiry_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $leave_balance_inquiry_as_of, 'target' => 'leave_balance_inquiry_name_batch')
 ));
 filter_cell_open(_('Leave Type:'));
 echo leave_types_list('leave_id', null, true, false);
@@ -160,7 +164,7 @@ $cols = array(
 
 $table =& new_db_pager('leave_balance_inquiry_tbl', $sql, $cols);
 $table->width = '100%';
-display_db_pager($table);
+display_db_pager($table, array('fields' => array('employee_id'), 'as_of' => $leave_balance_inquiry_as_of, 'target' => 'leave_balance_inquiry_name_batch'));
 end_form();
 
 end_page();

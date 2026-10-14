@@ -38,16 +38,17 @@ include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
  *
  * @param array $row
  * @param string|false $as_of
+ * @param array|false|null $batch Completed chunk names; null retains singleton compatibility.
  * @return string
  */
-function salary_sheet_report_authoritative_name($row, $as_of) {
+function salary_sheet_report_authoritative_name($row, $as_of, $batch=null) {
     $legacy_name = is_array($row) && isset($row['employee_name'])
         ? (string)$row['employee_name'] : '';
     if (!is_array($row) || !isset($row['employee_id'])
         || trim((string)$row['employee_id']) === '' || $as_of === false)
         return $legacy_name;
 
-    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of);
+    $identity = get_hrm_person_worker_report_name_as_of($row['employee_id'], $as_of, $batch);
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
 
@@ -143,9 +144,9 @@ function print_salary_sheet_report() {
     );
     $as_of = hrm_person_worker_utc_now();
 
-    while ($row = db_fetch($res)) {
+    foreach (hrm_person_worker_name_batch_rows($res, array('employee_id'), $as_of, 'salary_sheet_report_authoritative_name_batch') as $row) {
         $rep->TextCol(0, 1, $row['employee_id']);
-        $rep->TextCol(1, 2, salary_sheet_report_authoritative_name($row, $as_of));
+        $rep->TextCol(1, 2, salary_sheet_report_authoritative_name($row, $as_of, $GLOBALS['salary_sheet_report_authoritative_name_batch']));
         $rep->AmountCol(2, 3, $row['gross_salary'], $dec);
         $rep->AmountCol(3, 4, $row['total_deductions'], $dec);
         $rep->AmountCol(4, 5, $row['net_salary'], $dec);

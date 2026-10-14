@@ -32,13 +32,14 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
  */
 function overtime_request_authoritative_history_name($employee_ref, $legacy_name) {
     global $overtime_request_history_as_of;
+    global $overtime_request_history_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $overtime_request_history_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $overtime_request_history_as_of
+        $employee_ref, $overtime_request_history_as_of, $overtime_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -66,6 +67,7 @@ function overtime_request_authoritative_history_name($employee_ref, $legacy_name
  */
 function overtime_request_authoritative_employee_list($row) {
     global $overtime_request_history_as_of;
+    global $overtime_request_history_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -73,7 +75,7 @@ function overtime_request_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $overtime_request_history_as_of
+        $row[0], $overtime_request_history_as_of, $overtime_request_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -268,6 +270,7 @@ if ($Mode == 'RESET') {
 }
 
 $overtime_request_history_as_of = hrm_person_worker_utc_now();
+$overtime_request_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_overtime_request_history');
 hrm_log_restricted_employee_projection('employee_overtime_request_selector');
 
@@ -288,7 +291,8 @@ if ($selected_id != '' && $Mode == 'Edit') {
 
 table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false, array(
-    'format' => 'overtime_request_authoritative_employee_list'
+    'format' => 'overtime_request_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $overtime_request_history_as_of, 'target' => 'overtime_request_history_name_batch')
 ));
 
 $sql = "SELECT overtime_id, overtime_name FROM ".TB_PREF."overtime WHERE !inactive";
@@ -309,7 +313,7 @@ table_header($th);
 
 $result = get_overtime_requests(null, '', '', '');
 $k = 0;
-while ($row = db_fetch($result)) {
+foreach (hrm_person_worker_name_batch_rows($result, array('employee_id'), $overtime_request_history_as_of, 'overtime_request_history_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['request_id']);
     label_cell($row['employee_id'] . ' ' . overtime_request_authoritative_history_name(

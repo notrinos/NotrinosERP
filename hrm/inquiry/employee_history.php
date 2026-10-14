@@ -35,6 +35,7 @@ page(_("Employee History"));
  */
 function employee_history_authoritative_employee_list($row) {
     global $employee_history_as_of;
+    global $employee_history_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -42,7 +43,7 @@ function employee_history_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $employee_history_as_of
+        $row[0], $employee_history_as_of, $employee_history_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -58,6 +59,7 @@ function employee_history_authoritative_employee_list($row) {
 }
 
 $employee_history_as_of = hrm_person_worker_utc_now();
+$employee_history_name_batch = false;
 hrm_log_restricted_employee_projection('employee_history_selector');
 
 if (!isset($_POST['employee_id']))
@@ -81,7 +83,8 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 employees_list_cells(_('Employee:'), 'employee_id', null, true, false, false, false,
-    array('format' => 'employee_history_authoritative_employee_list'));
+    array('format' => 'employee_history_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $employee_history_as_of, 'target' => 'employee_history_name_batch')));
 filter_cell_open(_('Change Type:'));
 echo array_selector('change_type', null, $change_types);
 filter_cell_close();

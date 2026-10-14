@@ -41,6 +41,7 @@ function asset_statuses() {
  */
 function asset_allocation_authoritative_employee_list($row) {
     global $asset_allocation_selector_as_of;
+    global $asset_allocation_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -48,7 +49,7 @@ function asset_allocation_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $asset_allocation_selector_as_of
+        $row[0], $asset_allocation_selector_as_of, $asset_allocation_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -76,13 +77,14 @@ function asset_allocation_authoritative_employee_list($row) {
  */
 function asset_allocation_authoritative_history_name($employee_ref, $legacy_name) {
     global $asset_allocation_selector_as_of;
+    global $asset_allocation_selector_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $asset_allocation_selector_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $asset_allocation_selector_as_of
+        $employee_ref, $asset_allocation_selector_as_of, $asset_allocation_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -122,6 +124,7 @@ if (isset($_POST['add_allocation'])) {
 }
 
 $asset_allocation_selector_as_of = hrm_person_worker_utc_now();
+$asset_allocation_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_asset_allocation_selector');
 hrm_log_restricted_employee_projection('employee_asset_allocation_history');
 
@@ -130,7 +133,8 @@ start_form();
 start_outer_table();
 table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
-    array('format' => 'asset_allocation_authoritative_employee_list'));
+    array('format' => 'asset_allocation_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $asset_allocation_selector_as_of, 'target' => 'asset_allocation_selector_name_batch')));
 text_row_ex(_('Asset Name:'), 'asset_name', 40, 140);
 text_row_ex(_('Asset Code:'), 'asset_code', 30, 60);
 text_row_ex(_('Serial No:'), 'serial_no', 30, 80);
@@ -149,7 +153,7 @@ table_header(array(_('ID'), _('Employee'), _('Asset'), _('Code'), _('Serial'), _
 $labels = asset_statuses();
 $rows = get_employee_asset_allocations();
 $k = 0;
-while ($row = db_fetch($rows)) {
+foreach (hrm_person_worker_name_batch_rows($rows, array('employee_id'), $asset_allocation_selector_as_of, 'asset_allocation_selector_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['allocation_id']);
     label_cell(asset_allocation_authoritative_history_name(

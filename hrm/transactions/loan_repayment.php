@@ -32,6 +32,7 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_worker_db.inc');
  */
 function loan_repayment_authoritative_employee_list($row) {
     global $loan_repayment_selector_as_of;
+    global $loan_repayment_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -39,7 +40,7 @@ function loan_repayment_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $loan_repayment_selector_as_of
+        $row[0], $loan_repayment_selector_as_of, $loan_repayment_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -87,6 +88,7 @@ foreach ($_POST as $name => $value) {
 }
 
 $loan_repayment_selector_as_of = hrm_person_worker_utc_now();
+$loan_repayment_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_loan_repayment_selector');
 
 start_form();
@@ -96,7 +98,8 @@ start_row();
 label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, true, true, false, false, array(
     'layout_class' => 'combo-layout-equal',
-    'format' => 'loan_repayment_authoritative_employee_list'
+    'format' => 'loan_repayment_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $loan_repayment_selector_as_of, 'target' => 'loan_repayment_selector_name_batch')
 ));
 end_row();
 date_row(_('From Date:'), 'from_date');

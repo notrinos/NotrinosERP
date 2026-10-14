@@ -51,6 +51,7 @@ function appraisal_statuses() {
  */
 function appraisal_authoritative_employee_list($row) {
     global $appraisal_selector_as_of;
+    global $appraisal_selector_name_batch;
 
     $legacy_label = _format_employee_list($row);
     if (!is_array($row) || !isset($row[0]) || trim((string)$row[0]) === ''
@@ -58,7 +59,7 @@ function appraisal_authoritative_employee_list($row) {
         return $legacy_label;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $row[0], $appraisal_selector_as_of
+        $row[0], $appraisal_selector_as_of, $appraisal_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_label;
@@ -87,13 +88,14 @@ function appraisal_authoritative_employee_list($row) {
  */
 function appraisal_authoritative_history_name($employee_ref, $legacy_name) {
     global $appraisal_selector_as_of;
+    global $appraisal_selector_name_batch;
 
     $legacy_name = (string)$legacy_name;
     if (trim((string)$employee_ref) === '' || $appraisal_selector_as_of === false)
         return $legacy_name;
 
     $identity = get_hrm_person_worker_report_name_as_of(
-        $employee_ref, $appraisal_selector_as_of
+        $employee_ref, $appraisal_selector_as_of, $appraisal_selector_name_batch
     );
     if (!is_array($identity) || empty($identity['canonical_linked']))
         return $legacy_name;
@@ -228,6 +230,7 @@ foreach ($_POST as $name => $value) {
 }
 
 $appraisal_selector_as_of = hrm_person_worker_utc_now();
+$appraisal_selector_name_batch = false;
 hrm_log_restricted_employee_projection('employee_appraisal_selectors');
 hrm_log_restricted_employee_projection('employee_appraisal_history');
 
@@ -237,9 +240,11 @@ start_outer_table();
 
 table_section(1);
 employees_list_row(_('Employee:'), 'employee_id', null, false, false, false, false,
-    array('format' => 'appraisal_authoritative_employee_list'));
+    array('format' => 'appraisal_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $appraisal_selector_as_of, 'target' => 'appraisal_selector_name_batch')));
 employees_list_row(_('Reviewer:'), 'reviewer_id', null, true, false, false, false,
-    array('format' => 'appraisal_authoritative_employee_list'));
+    array('format' => 'appraisal_authoritative_employee_list',
+    'employee_name_batch' => array('as_of' => $appraisal_selector_as_of, 'target' => 'appraisal_selector_name_batch')));
 date_row(_('Period From:'), 'period_from');
 date_row(_('Period To:'), 'period_to');
 date_row(_('Appraisal Date:'), 'appraisal_date');
@@ -262,7 +267,7 @@ table_header(array(
 $status_labels = appraisal_statuses();
 $rows = get_employee_appraisals();
 $k = 0;
-while ($row = db_fetch($rows)) {
+foreach (hrm_person_worker_name_batch_rows($rows, array('employee_id', 'reviewer_id'), $appraisal_selector_as_of, 'appraisal_selector_name_batch') as $row) {
     alt_table_row_color($k);
     label_cell($row['appraisal_id']);
     label_cell(appraisal_authoritative_history_name(
