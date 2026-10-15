@@ -1,0 +1,6743 @@
+{
+  "release": "1.1.0",
+  "database_version": "1.1.0",
+  "previous_database_version": "1.0",
+  "baseline_commit": "3ce219018583085f401faa9d77bdaf78d9b6b075",
+  "source_commit": "afb872fa9b0391d0374119c9d241020393d5de30",
+  "sql_sha256": "c7631b4df270608e051c5319eaca9783391985253756bae1e6d832cd65e338c4",
+  "baseline_columns": {
+    "areas": [
+      "area_code",
+      "description",
+      "inactive",
+      "custom_data"
+    ],
+    "attachments": [
+      "id",
+      "description",
+      "type_no",
+      "trans_no",
+      "unique_name",
+      "tran_date",
+      "filename",
+      "filesize",
+      "filetype",
+      "custom_data"
+    ],
+    "attendance": [
+      "attendance_id",
+      "employee_id",
+      "date",
+      "shift_id",
+      "clock_in",
+      "clock_out",
+      "regular_hours",
+      "overtime_hours",
+      "overtime_type_id",
+      "late_minutes",
+      "early_leave_min",
+      "status",
+      "source",
+      "rate",
+      "dimension_id",
+      "dimension2_id",
+      "notes",
+      "approved",
+      "approved_by"
+    ],
+    "audit_trail": [
+      "id",
+      "type",
+      "trans_no",
+      "user",
+      "stamp",
+      "description",
+      "fiscal_year",
+      "gl_date",
+      "gl_seq",
+      "custom_data"
+    ],
+    "bank_accounts": [
+      "account_code",
+      "account_type",
+      "bank_account_name",
+      "bank_account_number",
+      "bank_name",
+      "bank_address",
+      "bank_curr_code",
+      "dflt_curr_act",
+      "id",
+      "bank_charge_act",
+      "last_reconciled_date",
+      "ending_reconcile_balance",
+      "inactive",
+      "custom_data"
+    ],
+    "bank_trans": [
+      "id",
+      "type",
+      "trans_no",
+      "bank_act",
+      "ref",
+      "trans_date",
+      "amount",
+      "dimension_id",
+      "dimension2_id",
+      "person_type_id",
+      "person_id",
+      "reconciled",
+      "custom_data"
+    ],
+    "bom": [
+      "id",
+      "parent",
+      "component",
+      "workcentre_added",
+      "loc_code",
+      "quantity",
+      "custom_data"
+    ],
+    "budget_trans": [
+      "id",
+      "tran_date",
+      "account",
+      "memo_",
+      "amount",
+      "dimension_id",
+      "dimension2_id",
+      "custom_data"
+    ],
+    "chart_class": [
+      "cid",
+      "class_name",
+      "ctype",
+      "inactive",
+      "custom_data"
+    ],
+    "chart_master": [
+      "account_code",
+      "account_code2",
+      "account_name",
+      "account_type",
+      "inactive",
+      "custom_data"
+    ],
+    "chart_types": [
+      "id",
+      "name",
+      "class_id",
+      "parent",
+      "inactive",
+      "custom_data"
+    ],
+    "comments": [
+      "type",
+      "id",
+      "date_",
+      "memo_"
+    ],
+    "credit_status": [
+      "id",
+      "reason_description",
+      "dissallow_invoices",
+      "inactive"
+    ],
+    "crm_categories": [
+      "id",
+      "type",
+      "action",
+      "name",
+      "description",
+      "system",
+      "inactive"
+    ],
+    "crm_contacts": [
+      "id",
+      "person_id",
+      "type",
+      "action",
+      "entity_id"
+    ],
+    "crm_persons": [
+      "id",
+      "ref",
+      "name",
+      "name2",
+      "address",
+      "phone",
+      "phone2",
+      "fax",
+      "email",
+      "lang",
+      "notes",
+      "inactive"
+    ],
+    "currencies": [
+      "currency",
+      "curr_abrev",
+      "curr_symbol",
+      "country",
+      "hundreds_name",
+      "auto_update",
+      "inactive"
+    ],
+    "cust_allocations": [
+      "id",
+      "person_id",
+      "amt",
+      "date_alloc",
+      "trans_no_from",
+      "trans_type_from",
+      "trans_no_to",
+      "trans_type_to"
+    ],
+    "cust_branch": [
+      "branch_code",
+      "debtor_no",
+      "br_name",
+      "branch_ref",
+      "br_address",
+      "area",
+      "salesman",
+      "default_location",
+      "tax_group_id",
+      "sales_account",
+      "sales_discount_account",
+      "receivables_account",
+      "payment_discount_account",
+      "default_ship_via",
+      "br_post_address",
+      "group_no",
+      "notes",
+      "bank_account",
+      "inactive"
+    ],
+    "debtor_trans": [
+      "trans_no",
+      "type",
+      "version",
+      "debtor_no",
+      "branch_code",
+      "tran_date",
+      "due_date",
+      "reference",
+      "tpe",
+      "order_",
+      "ov_amount",
+      "ov_gst",
+      "ov_freight",
+      "ov_freight_tax",
+      "ov_discount",
+      "alloc",
+      "prep_amount",
+      "rate",
+      "ship_via",
+      "dimension_id",
+      "dimension2_id",
+      "payment_terms",
+      "tax_included",
+      "pos_id",
+      "custom_data"
+    ],
+    "debtor_trans_details": [
+      "id",
+      "debtor_trans_no",
+      "debtor_trans_type",
+      "stock_id",
+      "description",
+      "unit_price",
+      "unit_tax",
+      "quantity",
+      "discount_percent",
+      "standard_cost",
+      "qty_done",
+      "src_id",
+      "custom_data"
+    ],
+    "debtors_master": [
+      "debtor_no",
+      "name",
+      "debtor_ref",
+      "address",
+      "tax_id",
+      "curr_code",
+      "sales_type",
+      "dimension_id",
+      "dimension2_id",
+      "credit_status",
+      "payment_terms",
+      "discount",
+      "pymt_discount",
+      "credit_limit",
+      "notes",
+      "inactive",
+      "custom_data",
+      "credit_insurance_limit",
+      "credit_review_date",
+      "credit_risk_score",
+      "payment_behavior_score",
+      "customer_tier",
+      "preferred_communication",
+      "industry",
+      "company_size"
+    ],
+    "departments": [
+      "department_id",
+      "department_code",
+      "department_name",
+      "parent_department_id",
+      "manager_employee_id",
+      "cost_center_id",
+      "payroll_expense_account",
+      "payroll_liability_account",
+      "description",
+      "inactive"
+    ],
+    "dimensions": [
+      "id",
+      "reference",
+      "name",
+      "type_",
+      "closed",
+      "date_",
+      "due_date",
+      "custom_data"
+    ],
+    "employees": [
+      "employee_number",
+      "employee_id",
+      "first_name",
+      "last_name",
+      "middle_name",
+      "gender",
+      "birth_date",
+      "nationality",
+      "marital_status",
+      "dependents_no",
+      "address",
+      "city",
+      "state",
+      "country",
+      "phone",
+      "mobile",
+      "email",
+      "personal_email",
+      "national_id",
+      "passport",
+      "passport_expiry",
+      "tax_number",
+      "social_security_no",
+      "bank_name",
+      "bank_branch",
+      "bank_account",
+      "bank_routing",
+      "payment_method",
+      "hire_date",
+      "confirmation_date",
+      "probation_end_date",
+      "released_date",
+      "separation_reason",
+      "employment_type",
+      "department_id",
+      "position_id",
+      "grade_id",
+      "shift_id",
+      "reporting_to",
+      "personal_salary",
+      "cost_center_id",
+      "dimension2_id",
+      "emergency_name",
+      "emergency_relation",
+      "emergency_phone",
+      "login_id",
+      "notes",
+      "inactive",
+      "custom_data"
+    ],
+    "exchange_rates": [
+      "id",
+      "curr_code",
+      "rate_buy",
+      "rate_sell",
+      "date_"
+    ],
+    "fiscal_year": [
+      "id",
+      "begin",
+      "end",
+      "closed"
+    ],
+    "gl_trans": [
+      "counter",
+      "type",
+      "type_no",
+      "tran_date",
+      "account",
+      "memo_",
+      "amount",
+      "dimension_id",
+      "dimension2_id",
+      "person_type_id",
+      "person_id",
+      "custom_data"
+    ],
+    "grn_batch": [
+      "id",
+      "supplier_id",
+      "purch_order_no",
+      "reference",
+      "delivery_date",
+      "loc_code",
+      "rate",
+      "custom_data"
+    ],
+    "grn_items": [
+      "id",
+      "grn_batch_id",
+      "po_detail_item",
+      "item_code",
+      "description",
+      "qty_recd",
+      "quantity_inv",
+      "custom_data",
+      "batch_id",
+      "serial_numbers_json",
+      "expiry_date",
+      "manufacturing_date",
+      "inspection_status"
+    ],
+    "groups": [
+      "id",
+      "description",
+      "inactive"
+    ],
+    "item_codes": [
+      "id",
+      "item_code",
+      "stock_id",
+      "description",
+      "category_id",
+      "quantity",
+      "is_foreign",
+      "inactive",
+      "custom_data"
+    ],
+    "item_tax_type_exemptions": [
+      "item_tax_type_id",
+      "tax_type_id"
+    ],
+    "item_tax_types": [
+      "id",
+      "name",
+      "exempt",
+      "inactive"
+    ],
+    "item_units": [
+      "abbr",
+      "name",
+      "decimals",
+      "inactive"
+    ],
+    "job_classes": [
+      "job_class_id",
+      "class_code",
+      "class_name",
+      "pay_basis",
+      "description",
+      "inactive"
+    ],
+    "journal": [
+      "type",
+      "trans_no",
+      "tran_date",
+      "reference",
+      "source_ref",
+      "event_date",
+      "doc_date",
+      "currency",
+      "amount",
+      "rate"
+    ],
+    "leave_details": [
+      "id",
+      "employee_id",
+      "leave_type_id",
+      "from_date",
+      "to_date",
+      "days",
+      "approval_status",
+      "approved_by",
+      "approved_date",
+      "reason"
+    ],
+    "leave_types": [
+      "leave_id",
+      "leave_code",
+      "leave_name",
+      "pay_rate",
+      "is_paid",
+      "is_carry_forward",
+      "max_carry_forward",
+      "is_encashable",
+      "requires_document",
+      "max_consecutive_days",
+      "applicable_gender",
+      "deductable",
+      "color_code",
+      "description",
+      "inactive"
+    ],
+    "loc_stock": [
+      "loc_code",
+      "stock_id",
+      "reorder_level"
+    ],
+    "locations": [
+      "loc_code",
+      "location_name",
+      "delivery_address",
+      "phone",
+      "phone2",
+      "fax",
+      "email",
+      "contact",
+      "fixed_asset",
+      "inactive",
+      "custom_data",
+      "wh_enabled",
+      "inbound_steps",
+      "outbound_steps",
+      "default_route_in",
+      "default_route_out",
+      "removal_strategy",
+      "picking_method",
+      "barcode_prefix",
+      "use_packages",
+      "use_cycle_counts",
+      "cross_dock_enabled"
+    ],
+    "overtime": [
+      "overtime_id",
+      "overtime_code",
+      "overtime_name",
+      "pay_rate",
+      "max_hours_day",
+      "max_hours_month",
+      "account_code",
+      "dimension_id",
+      "dimension2_id",
+      "requires_approval",
+      "inactive"
+    ],
+    "pay_elements": [
+      "element_id",
+      "element_code",
+      "element_name",
+      "element_category",
+      "is_deduction",
+      "amount_type",
+      "default_amount",
+      "formula",
+      "account_code",
+      "employer_account",
+      "is_taxable",
+      "affects_gross",
+      "is_statutory",
+      "max_amount",
+      "min_amount",
+      "display_order",
+      "description",
+      "inactive"
+    ],
+    "pay_grades": [
+      "grade_id",
+      "grade_code",
+      "grade_name",
+      "grade_level",
+      "min_salary",
+      "mid_salary",
+      "max_salary",
+      "description",
+      "inactive"
+    ],
+    "payment_terms": [
+      "terms_indicator",
+      "terms",
+      "days_before_due",
+      "day_in_following_month",
+      "inactive"
+    ],
+    "positions": [
+      "position_id",
+      "position_code",
+      "position_name",
+      "job_class_id",
+      "department_id",
+      "reports_to_position_id",
+      "basic_amount",
+      "min_salary",
+      "max_salary",
+      "budgeted_headcount",
+      "is_manager",
+      "description",
+      "inactive"
+    ],
+    "payslips": [
+      "payslip_id",
+      "payroll_period_id",
+      "trans_no",
+      "reference",
+      "employee_id",
+      "tran_date",
+      "from_date",
+      "to_date",
+      "department_id",
+      "position_id",
+      "grade_id",
+      "basic_salary",
+      "total_earnings",
+      "gross_salary",
+      "total_deductions",
+      "net_salary",
+      "employer_contributions",
+      "total_cost",
+      "working_days",
+      "worked_days",
+      "overtime_hours",
+      "leave_days",
+      "absent_days",
+      "leaves",
+      "deductable_leaves",
+      "loan_deduction",
+      "payable_amount",
+      "salary_amount",
+      "status",
+      "payment_trans_no",
+      "notes",
+      "custom_data"
+    ],
+    "prices": [
+      "id",
+      "stock_id",
+      "sales_type_id",
+      "curr_abrev",
+      "price",
+      "custom_data"
+    ],
+    "print_profiles": [
+      "id",
+      "profile",
+      "report",
+      "printer"
+    ],
+    "printers": [
+      "id",
+      "name",
+      "description",
+      "queue",
+      "host",
+      "port",
+      "timeout"
+    ],
+    "purch_data": [
+      "supplier_id",
+      "stock_id",
+      "price",
+      "suppliers_uom",
+      "conversion_factor",
+      "supplier_description",
+      "custom_data"
+    ],
+    "purch_order_details": [
+      "po_detail_item",
+      "order_no",
+      "item_code",
+      "description",
+      "delivery_date",
+      "qty_invoiced",
+      "unit_price",
+      "act_price",
+      "std_cost_unit",
+      "quantity_ordered",
+      "quantity_received",
+      "custom_data",
+      "cross_dock_so_no",
+      "cross_dock_so_line"
+    ],
+    "purch_orders": [
+      "order_no",
+      "supplier_id",
+      "comments",
+      "ord_date",
+      "reference",
+      "supp_reference",
+      "into_stock_location",
+      "delivery_address",
+      "total",
+      "prep_amount",
+      "alloc",
+      "tax_included",
+      "custom_data",
+      "drop_ship",
+      "drop_ship_so_no",
+      "agreement_id",
+      "requisition_id",
+      "rfq_id"
+    ],
+    "quick_entries": [
+      "id",
+      "type",
+      "description",
+      "usage",
+      "base_amount",
+      "base_desc",
+      "bal_type"
+    ],
+    "quick_entry_lines": [
+      "id",
+      "qid",
+      "amount",
+      "memo",
+      "action",
+      "dest_id",
+      "dimension_id",
+      "dimension2_id"
+    ],
+    "recurrent_invoices": [
+      "id",
+      "description",
+      "order_no",
+      "debtor_no",
+      "group_no",
+      "days",
+      "monthly",
+      "begin",
+      "end",
+      "last_sent"
+    ],
+    "reflines": [
+      "id",
+      "trans_type",
+      "prefix",
+      "pattern",
+      "description",
+      "default",
+      "inactive",
+      "custom_data"
+    ],
+    "refs": [
+      "id",
+      "type",
+      "reference"
+    ],
+    "salary_structure": [
+      "structure_id",
+      "position_id",
+      "grade_id",
+      "element_id",
+      "pay_amount",
+      "formula",
+      "effective_from",
+      "effective_to",
+      "is_active"
+    ],
+    "sales_order_details": [
+      "id",
+      "order_no",
+      "trans_type",
+      "stk_code",
+      "description",
+      "qty_sent",
+      "unit_price",
+      "quantity",
+      "invoiced",
+      "discount_percent",
+      "custom_data",
+      "drop_ship",
+      "drop_ship_supplier_id",
+      "drop_ship_po_no"
+    ],
+    "sales_orders": [
+      "order_no",
+      "trans_type",
+      "version",
+      "type",
+      "debtor_no",
+      "branch_code",
+      "salesman_code",
+      "reference",
+      "customer_ref",
+      "comments",
+      "ord_date",
+      "order_type",
+      "ship_via",
+      "delivery_address",
+      "contact_phone",
+      "contact_email",
+      "deliver_to",
+      "freight_cost",
+      "from_stk_loc",
+      "delivery_date",
+      "payment_terms",
+      "total",
+      "prep_amount",
+      "alloc",
+      "template_id",
+      "validity_date",
+      "opportunity_id",
+      "terms_and_conditions",
+      "margin_total",
+      "cost_total",
+      "agreement_id",
+      "custom_data"
+    ],
+    "sales_pricelists": [
+      "id",
+      "name",
+      "description",
+      "currency",
+      "is_default",
+      "date_start",
+      "date_end",
+      "priority",
+      "min_order_amount",
+      "applicable_to",
+      "applicable_id",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_pricelist_rules": [
+      "id",
+      "pricelist_id",
+      "stock_id",
+      "stock_category_id",
+      "min_quantity",
+      "computation_type",
+      "fixed_price",
+      "percentage",
+      "base_price_type",
+      "base_pricelist_id",
+      "surcharge",
+      "rounding",
+      "priority",
+      "date_start",
+      "date_end",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_quotation_templates": [
+      "id",
+      "name",
+      "description",
+      "validity_days",
+      "terms_and_conditions",
+      "notes",
+      "sales_type",
+      "default_payment_terms",
+      "default_ship_via",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_quotation_template_lines": [
+      "id",
+      "template_id",
+      "line_type",
+      "stock_id",
+      "description",
+      "quantity",
+      "discount_percent",
+      "is_optional",
+      "sort_order",
+      "custom_data"
+    ],
+    "sales_agreements": [
+      "id",
+      "reference",
+      "agreement_type",
+      "debtor_no",
+      "branch_code",
+      "salesman_id",
+      "status",
+      "date_start",
+      "date_end",
+      "currency",
+      "payment_terms",
+      "total_committed",
+      "total_ordered",
+      "total_delivered",
+      "total_invoiced",
+      "auto_renew",
+      "renewal_period_months",
+      "terms_and_conditions",
+      "notes",
+      "dimension_id",
+      "dimension2_id",
+      "created_by",
+      "created_date",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_agreement_lines": [
+      "id",
+      "agreement_id",
+      "stock_id",
+      "description",
+      "committed_qty",
+      "ordered_qty",
+      "delivered_qty",
+      "invoiced_qty",
+      "unit_price",
+      "discount_percent",
+      "price_valid_until",
+      "custom_data"
+    ],
+    "sales_discount_programs": [
+      "id",
+      "name",
+      "program_type",
+      "status",
+      "date_start",
+      "date_end",
+      "min_order_amount",
+      "min_quantity",
+      "applicable_items",
+      "applicable_categories",
+      "applicable_customers",
+      "applicable_sales_types",
+      "reward_type",
+      "reward_value",
+      "reward_product_id",
+      "reward_max_amount",
+      "usage_limit",
+      "usage_count",
+      "per_customer_limit",
+      "stackable",
+      "priority",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_coupons": [
+      "id",
+      "code",
+      "program_id",
+      "debtor_no",
+      "valid_from",
+      "valid_until",
+      "usage_limit",
+      "usage_count",
+      "is_active",
+      "custom_data"
+    ],
+    "sales_discount_usage": [
+      "id",
+      "program_id",
+      "coupon_id",
+      "debtor_no",
+      "trans_type",
+      "trans_no",
+      "discount_amount",
+      "applied_date"
+    ],
+    "sales_kpi_cache": [
+      "id",
+      "kpi_type",
+      "period_key",
+      "dimension_key",
+      "value_1",
+      "value_2",
+      "value_3",
+      "detail_json",
+      "updated_at"
+    ],
+    "sales_rma_reasons": [
+      "id",
+      "description",
+      "requires_inspection",
+      "default_disposition",
+      "inactive"
+    ],
+    "sales_rma": [
+      "id",
+      "reference",
+      "debtor_no",
+      "branch_code",
+      "request_date",
+      "status",
+      "source_type",
+      "source_no",
+      "return_reason_id",
+      "return_method",
+      "customer_notes",
+      "internal_notes",
+      "authorized_by",
+      "authorized_date",
+      "rejected_by",
+      "rejected_date",
+      "rejection_reason",
+      "total_amount",
+      "refund_amount",
+      "restocking_fee_percent",
+      "restocking_fee_amount",
+      "wh_return_order_id",
+      "credit_note_no",
+      "replacement_order_no",
+      "created_by",
+      "created_at",
+      "custom_data"
+    ],
+    "sales_rma_lines": [
+      "id",
+      "rma_id",
+      "stock_id",
+      "description",
+      "quantity_requested",
+      "quantity_authorized",
+      "unit_price",
+      "return_condition",
+      "serial_number",
+      "batch_number",
+      "notes",
+      "custom_data"
+    ],
+    "sales_commission_plans": [
+      "id",
+      "name",
+      "plan_type",
+      "calculation_base",
+      "period_type",
+      "status",
+      "date_start",
+      "date_end",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_commission_tiers": [
+      "id",
+      "plan_id",
+      "threshold_from",
+      "threshold_to",
+      "commission_rate",
+      "fixed_bonus",
+      "sort_order"
+    ],
+    "sales_commission_assignments": [
+      "id",
+      "plan_id",
+      "salesman_id",
+      "date_start",
+      "date_end",
+      "target_amount"
+    ],
+    "sales_commission_entries": [
+      "id",
+      "salesman_id",
+      "plan_id",
+      "trans_type",
+      "trans_no",
+      "debtor_no",
+      "trans_date",
+      "base_amount",
+      "commission_rate",
+      "commission_amount",
+      "status",
+      "payment_date",
+      "payment_reference",
+      "custom_data"
+    ],
+    "sales_pos": [
+      "id",
+      "pos_name",
+      "cash_sale",
+      "credit_sale",
+      "pos_location",
+      "pos_account",
+      "inactive",
+      "custom_data"
+    ],
+    "sales_types": [
+      "id",
+      "sales_type",
+      "tax_included",
+      "factor",
+      "inactive",
+      "custom_data"
+    ],
+    "salesman": [
+      "salesman_code",
+      "salesman_name",
+      "salesman_phone",
+      "salesman_fax",
+      "salesman_email",
+      "provision",
+      "break_pt",
+      "provision2",
+      "inactive",
+      "custom_data"
+    ],
+    "security_roles": [
+      "id",
+      "role",
+      "description",
+      "sections",
+      "areas",
+      "inactive"
+    ],
+    "shippers": [
+      "shipper_id",
+      "shipper_name",
+      "phone",
+      "phone2",
+      "contact",
+      "address",
+      "inactive"
+    ],
+    "sql_trail": [
+      "id",
+      "sql",
+      "result",
+      "msg"
+    ],
+    "stock_category": [
+      "category_id",
+      "description",
+      "dflt_tax_type",
+      "dflt_units",
+      "dflt_mb_flag",
+      "dflt_sales_act",
+      "dflt_cogs_act",
+      "dflt_inventory_act",
+      "dflt_adjustment_act",
+      "dflt_wip_act",
+      "dflt_dim1",
+      "dflt_dim2",
+      "inactive",
+      "dflt_no_sale",
+      "dflt_no_purchase",
+      "custom_data"
+    ],
+    "stock_fa_class": [
+      "fa_class_id",
+      "parent_id",
+      "description",
+      "long_description",
+      "depreciation_rate",
+      "inactive"
+    ],
+    "stock_master": [
+      "stock_id",
+      "category_id",
+      "tax_type_id",
+      "description",
+      "long_description",
+      "units",
+      "mb_flag",
+      "sales_account",
+      "cogs_account",
+      "inventory_account",
+      "adjustment_account",
+      "wip_account",
+      "dimension_id",
+      "dimension2_id",
+      "purchase_cost",
+      "material_cost",
+      "labour_cost",
+      "overhead_cost",
+      "inactive",
+      "no_sale",
+      "no_purchase",
+      "editable",
+      "depreciation_method",
+      "depreciation_rate",
+      "depreciation_factor",
+      "depreciation_start",
+      "depreciation_date",
+      "fa_class_id",
+      "custom_data",
+      "track_by",
+      "has_serial_no",
+      "has_batch_no",
+      "has_expiry_date",
+      "serial_no_prefix",
+      "batch_no_prefix",
+      "warranty_days",
+      "quality_inspection_required",
+      "min_order_qty",
+      "lead_time_days",
+      "shelf_life_days",
+      "item_weight",
+      "item_volume",
+      "putaway_rule_id",
+      "removal_strategy",
+      "default_bin_id",
+      "storage_category_id",
+      "abc_class",
+      "drop_ship_eligible",
+      "cross_dock_eligible"
+    ],
+    "stock_material": [
+      "id",
+      "name",
+      "description",
+      "inactive"
+    ],
+    "stock_moves": [
+      "trans_id",
+      "trans_no",
+      "stock_id",
+      "type",
+      "loc_code",
+      "tran_date",
+      "price",
+      "reference",
+      "qty",
+      "standard_cost",
+      "custom_data",
+      "serial_id",
+      "batch_id",
+      "expiry_date",
+      "quality_status",
+      "from_bin_id",
+      "to_bin_id",
+      "wh_operation_id",
+      "package_id",
+      "stock_status"
+    ],
+    "wh_location_types": [
+      "id",
+      "type_code",
+      "type_name",
+      "is_physical",
+      "can_store",
+      "sort_order",
+      "inactive"
+    ],
+    "wh_storage_categories": [
+      "id",
+      "category_name",
+      "max_weight",
+      "max_volume",
+      "max_units",
+      "allow_mixed_items",
+      "allow_mixed_lots",
+      "temperature_min",
+      "temperature_max",
+      "humidity_max",
+      "is_hazmat",
+      "inactive",
+      "custom_data"
+    ],
+    "wh_locations": [
+      "loc_id",
+      "loc_code",
+      "loc_name",
+      "parent_loc_id",
+      "warehouse_loc_code",
+      "location_type_id",
+      "location_path",
+      "full_name",
+      "max_weight",
+      "max_volume",
+      "max_units",
+      "current_weight",
+      "current_volume",
+      "current_units",
+      "storage_category_id",
+      "zone_type",
+      "abc_class",
+      "pick_sequence",
+      "barcode",
+      "is_active",
+      "is_default_receipt",
+      "is_default_ship",
+      "is_default_scrap",
+      "is_default_production",
+      "custom_data",
+      "created_at",
+      "updated_at"
+    ],
+    "serial_numbers": [
+      "id",
+      "serial_no",
+      "stock_id",
+      "batch_id",
+      "status",
+      "loc_code",
+      "wh_loc_id",
+      "supplier_id",
+      "customer_id",
+      "purchase_date",
+      "delivery_date",
+      "warranty_start",
+      "warranty_end",
+      "warranty_type",
+      "manufacturing_date",
+      "expiry_date",
+      "grn_id",
+      "delivery_id",
+      "work_order_id",
+      "purchase_cost",
+      "actual_cost",
+      "notes",
+      "custom_data",
+      "created_by",
+      "created_at",
+      "updated_at",
+      "inactive"
+    ],
+    "stock_batches": [
+      "id",
+      "batch_no",
+      "stock_id",
+      "status",
+      "manufacturing_date",
+      "expiry_date",
+      "best_before_date",
+      "retest_date",
+      "shelf_life_days",
+      "supplier_id",
+      "supplier_batch_no",
+      "grn_id",
+      "work_order_id",
+      "initial_qty",
+      "batch_cost",
+      "country_of_origin",
+      "certification",
+      "notes",
+      "custom_data",
+      "created_by",
+      "created_at",
+      "updated_at",
+      "inactive"
+    ],
+    "serial_movements": [
+      "id",
+      "serial_id",
+      "stock_move_id",
+      "trans_type",
+      "trans_no",
+      "from_loc",
+      "to_loc",
+      "from_status",
+      "to_status",
+      "tran_date",
+      "reference",
+      "notes",
+      "created_by",
+      "created_at"
+    ],
+    "batch_movements": [
+      "id",
+      "batch_id",
+      "stock_move_id",
+      "trans_type",
+      "trans_no",
+      "loc_code",
+      "wh_loc_id",
+      "quantity",
+      "tran_date",
+      "reference",
+      "notes",
+      "created_by",
+      "created_at"
+    ],
+    "quality_parameters": [
+      "id",
+      "name",
+      "description",
+      "parameter_type",
+      "unit",
+      "min_value",
+      "max_value",
+      "acceptable_values",
+      "stock_id",
+      "category_id",
+      "mandatory",
+      "sort_order",
+      "inactive"
+    ],
+    "quality_inspections": [
+      "id",
+      "reference",
+      "stock_id",
+      "inspection_type",
+      "trans_type",
+      "trans_no",
+      "batch_id",
+      "serial_id",
+      "loc_code",
+      "inspected_qty",
+      "accepted_qty",
+      "rejected_qty",
+      "result",
+      "inspector_id",
+      "inspection_date",
+      "completion_date",
+      "notes",
+      "custom_data",
+      "created_by",
+      "created_at",
+      "updated_at"
+    ],
+    "quality_inspection_readings": [
+      "id",
+      "inspection_id",
+      "parameter_id",
+      "reading_value",
+      "result",
+      "notes"
+    ],
+    "warranty_claims": [
+      "id",
+      "reference",
+      "serial_id",
+      "batch_id",
+      "stock_id",
+      "customer_id",
+      "claim_date",
+      "warranty_valid",
+      "status",
+      "issue_type",
+      "issue_description",
+      "resolution_description",
+      "resolution_date",
+      "replacement_serial_id",
+      "repair_cost",
+      "is_chargeable",
+      "assigned_to",
+      "crm_lead_id",
+      "notes",
+      "custom_data",
+      "created_by",
+      "created_at",
+      "updated_at"
+    ],
+    "warranty_claim_parts": [
+      "id",
+      "claim_id",
+      "stock_id",
+      "serial_id",
+      "quantity",
+      "unit_cost"
+    ],
+    "recall_campaigns": [
+      "id",
+      "reference",
+      "title",
+      "description",
+      "stock_id",
+      "recall_type",
+      "severity",
+      "status",
+      "start_date",
+      "end_date",
+      "affected_batch_ids",
+      "affected_serial_from",
+      "affected_serial_to",
+      "affected_date_from",
+      "affected_date_to",
+      "regulatory_reference",
+      "total_affected_units",
+      "total_recovered_units",
+      "resolution",
+      "notes",
+      "custom_data",
+      "created_by",
+      "created_at",
+      "updated_at"
+    ],
+    "recall_items": [
+      "id",
+      "recall_id",
+      "serial_id",
+      "batch_id",
+      "customer_id",
+      "status",
+      "notification_date",
+      "return_date",
+      "resolution_date",
+      "notes"
+    ],
+    "production_traceability": [
+      "id",
+      "work_order_id",
+      "finished_serial_id",
+      "finished_batch_id",
+      "component_stock_id",
+      "component_serial_id",
+      "component_batch_id",
+      "component_qty",
+      "created_at"
+    ],
+    "wh_operations": [
+      "op_id",
+      "op_type",
+      "op_status",
+      "source_doc_type",
+      "source_doc_no",
+      "parent_op_id",
+      "next_op_id",
+      "route_id",
+      "from_loc_id",
+      "to_loc_id",
+      "scheduled_date",
+      "started_at",
+      "completed_at",
+      "assigned_to",
+      "priority",
+      "wave_id",
+      "memo",
+      "custom_data",
+      "created_at",
+      "updated_at"
+    ],
+    "wh_operation_lines": [
+      "line_id",
+      "op_id",
+      "stock_id",
+      "qty_planned",
+      "qty_done",
+      "from_loc_id",
+      "to_loc_id",
+      "batch_id",
+      "serial_id",
+      "package_id",
+      "unit_cost",
+      "custom_data"
+    ],
+    "wh_routes": [
+      "route_id",
+      "route_name",
+      "route_type",
+      "warehouse_loc_code",
+      "is_default",
+      "sequence",
+      "active",
+      "description",
+      "custom_data"
+    ],
+    "wh_route_rules": [
+      "rule_id",
+      "route_id",
+      "rule_type",
+      "sequence",
+      "from_loc_id",
+      "to_loc_id",
+      "operation_type",
+      "trigger_method",
+      "delay_days",
+      "active",
+      "custom_data"
+    ],
+    "wh_putaway_rules": [
+      "rule_id",
+      "rule_name",
+      "warehouse_loc_code",
+      "sequence",
+      "stock_id",
+      "category_id",
+      "storage_category_id",
+      "target_loc_id",
+      "target_zone_id",
+      "strategy",
+      "active",
+      "custom_data"
+    ],
+    "wh_removal_strategies": [
+      "id",
+      "warehouse_loc_code",
+      "stock_id",
+      "category_id",
+      "strategy",
+      "sequence",
+      "active"
+    ],
+    "wh_transfer_orders": [
+      "transfer_id",
+      "transfer_no",
+      "transfer_type",
+      "status",
+      "from_loc_code",
+      "to_loc_code",
+      "transit_loc_id",
+      "request_date",
+      "expected_ship_date",
+      "actual_ship_date",
+      "expected_recv_date",
+      "actual_recv_date",
+      "requested_by",
+      "approved_by",
+      "shipped_by",
+      "received_by",
+      "approval_date",
+      "reference",
+      "memo",
+      "custom_data",
+      "created_at",
+      "updated_at"
+    ],
+    "wh_transfer_order_lines": [
+      "line_id",
+      "transfer_id",
+      "stock_id",
+      "qty_requested",
+      "qty_shipped",
+      "qty_received",
+      "from_bin_id",
+      "to_bin_id",
+      "batch_id",
+      "serial_id",
+      "unit_cost",
+      "memo",
+      "custom_data"
+    ],
+    "wh_material_requests": [
+      "request_id",
+      "request_no",
+      "request_type",
+      "status",
+      "warehouse_loc_code",
+      "requested_by",
+      "approved_by",
+      "request_date",
+      "required_date",
+      "reference",
+      "memo",
+      "linked_doc_type",
+      "linked_doc_no",
+      "custom_data",
+      "created_at",
+      "updated_at"
+    ],
+    "wh_material_request_lines": [
+      "line_id",
+      "request_id",
+      "stock_id",
+      "qty_requested",
+      "qty_fulfilled",
+      "required_date",
+      "memo",
+      "custom_data"
+    ],
+    "wh_picking_waves": [
+      "wave_id",
+      "wave_name",
+      "wave_type",
+      "status",
+      "warehouse_loc_code",
+      "picking_method",
+      "created_date",
+      "released_date",
+      "completed_date",
+      "assigned_to",
+      "total_orders",
+      "total_lines",
+      "memo",
+      "custom_data"
+    ],
+    "wh_packages": [
+      "package_id",
+      "package_code",
+      "package_type",
+      "status",
+      "current_loc_id",
+      "weight",
+      "length",
+      "width",
+      "height",
+      "shipping_label",
+      "tracking_number",
+      "carrier",
+      "custom_data",
+      "created_at"
+    ],
+    "wh_package_contents": [
+      "id",
+      "package_id",
+      "stock_id",
+      "qty",
+      "batch_id",
+      "serial_id"
+    ],
+    "wh_cycle_count_plans": [
+      "plan_id",
+      "plan_name",
+      "count_method",
+      "warehouse_loc_code",
+      "frequency_days",
+      "abc_class",
+      "last_count_date",
+      "next_count_date",
+      "active",
+      "custom_data"
+    ],
+    "wh_cycle_counts": [
+      "count_id",
+      "plan_id",
+      "count_date",
+      "status",
+      "warehouse_loc_code",
+      "counted_by",
+      "approved_by",
+      "posted_date",
+      "memo",
+      "custom_data",
+      "created_at"
+    ],
+    "wh_cycle_count_lines": [
+      "line_id",
+      "count_id",
+      "wh_loc_id",
+      "stock_id",
+      "system_qty",
+      "counted_qty",
+      "variance_qty",
+      "batch_id",
+      "serial_id",
+      "adjustment_posted",
+      "memo"
+    ],
+    "wh_scrap": [
+      "scrap_id",
+      "scrap_date",
+      "stock_id",
+      "qty",
+      "from_loc_id",
+      "scrap_loc_id",
+      "reason_code",
+      "reason_detail",
+      "serial_id",
+      "batch_id",
+      "unit_cost",
+      "total_cost",
+      "stock_move_id",
+      "approved_by",
+      "memo",
+      "custom_data",
+      "created_at"
+    ],
+    "wh_return_orders": [
+      "return_id",
+      "return_no",
+      "return_type",
+      "status",
+      "source_doc_type",
+      "source_doc_no",
+      "customer_id",
+      "supplier_id",
+      "warehouse_loc_code",
+      "return_date",
+      "received_date",
+      "disposition_code",
+      "reference",
+      "memo",
+      "custom_data",
+      "created_at",
+      "updated_at"
+    ],
+    "wh_return_order_lines": [
+      "line_id",
+      "return_id",
+      "stock_id",
+      "qty_expected",
+      "qty_received",
+      "qty_good",
+      "qty_damaged",
+      "qty_scrap",
+      "disposition_code",
+      "to_bin_id",
+      "batch_id",
+      "serial_id",
+      "reason_code",
+      "memo",
+      "custom_data"
+    ],
+    "wh_consignment_stock": [
+      "id",
+      "stock_id",
+      "supplier_id",
+      "wh_loc_id",
+      "qty_on_hand",
+      "qty_consumed",
+      "unit_cost",
+      "receipt_date",
+      "batch_id",
+      "status",
+      "memo",
+      "loc_code",
+      "custom_data"
+    ],
+    "wh_consignment_movements": [
+      "id",
+      "consignment_id",
+      "movement_type",
+      "qty",
+      "movement_date",
+      "description",
+      "reference_no",
+      "memo",
+      "invoiced",
+      "invoice_trans_no",
+      "created_by",
+      "created_at"
+    ],
+    "wh_vmi_levels": [
+      "id",
+      "stock_id",
+      "supplier_id",
+      "min_level",
+      "max_level",
+      "reorder_qty",
+      "loc_code",
+      "created_at",
+      "updated_at"
+    ],
+    "wh_replenishment_rules": [
+      "rule_id",
+      "rule_name",
+      "rule_type",
+      "stock_id",
+      "category_id",
+      "warehouse_loc_code",
+      "bin_loc_id",
+      "min_qty",
+      "max_qty",
+      "reorder_qty",
+      "safety_stock",
+      "lead_time_days",
+      "supply_warehouse",
+      "supply_method",
+      "preferred_supplier",
+      "active",
+      "auto_execute",
+      "custom_data",
+      "preferred_supplier_id",
+      "auto_create_rfq",
+      "auto_create_po"
+    ],
+    "wh_bin_stock": [
+      "id",
+      "wh_loc_id",
+      "stock_id",
+      "qty_on_hand",
+      "qty_reserved",
+      "qty_available",
+      "reorder_level",
+      "max_level",
+      "batch_id",
+      "serial_id",
+      "expiry_date",
+      "stock_status",
+      "last_count_date",
+      "custom_data",
+      "updated_at"
+    ],
+    "warranty_provision_log": [
+      "id",
+      "trans_type",
+      "trans_no",
+      "stock_id",
+      "serial_id",
+      "batch_id",
+      "customer_id",
+      "provision_type",
+      "amount",
+      "warranty_end",
+      "tran_date",
+      "gl_trans_id",
+      "dimension_id",
+      "dimension2_id",
+      "notes",
+      "created_by",
+      "created_at"
+    ],
+    "regulatory_profiles": [
+      "id",
+      "stock_id",
+      "category_id",
+      "framework",
+      "enabled",
+      "settings",
+      "notes",
+      "created_by",
+      "created_date",
+      "updated_date"
+    ],
+    "dscsa_transactions": [
+      "id",
+      "transaction_type",
+      "delivery_id",
+      "grn_id",
+      "stock_id",
+      "serial_id",
+      "batch_id",
+      "ndc",
+      "gtin",
+      "serial_no",
+      "lot_number",
+      "expiry_date",
+      "sender_id",
+      "sender_name",
+      "sender_license",
+      "receiver_id",
+      "receiver_name",
+      "receiver_license",
+      "transaction_date",
+      "verification_status",
+      "verification_date",
+      "verified_by",
+      "gs1_barcode",
+      "transaction_history",
+      "suspect_reason",
+      "suspect_reported_date",
+      "quarantine_action",
+      "notes",
+      "custom_data"
+    ],
+    "fsma_tracking_events": [
+      "id",
+      "event_type",
+      "stock_id",
+      "batch_id",
+      "lot_code",
+      "location_description",
+      "loc_code",
+      "event_date",
+      "quantity",
+      "unit_of_measure",
+      "reference_type",
+      "reference_id",
+      "trading_partner_type",
+      "trading_partner_id",
+      "trading_partner_name",
+      "country_of_origin",
+      "harvest_date",
+      "cooling_date",
+      "pack_date",
+      "ship_date",
+      "temperature_data",
+      "notes",
+      "created_by",
+      "created_date",
+      "custom_data"
+    ],
+    "udi_registrations": [
+      "id",
+      "stock_id",
+      "udi_di",
+      "udi_pi",
+      "issuing_agency",
+      "device_description",
+      "brand_name",
+      "version_model",
+      "company_name",
+      "mri_safety",
+      "device_sterile",
+      "single_use",
+      "implantable",
+      "rx_only",
+      "otc",
+      "fda_listing_number",
+      "fda_premarket_number",
+      "gtin",
+      "serial_id",
+      "batch_id",
+      "manufacturing_date",
+      "expiry_date",
+      "gudid_submitted",
+      "gudid_submission_date",
+      "notes",
+      "created_by",
+      "created_date",
+      "updated_date",
+      "custom_data"
+    ],
+    "supp_allocations": [
+      "id",
+      "person_id",
+      "amt",
+      "date_alloc",
+      "trans_no_from",
+      "trans_type_from",
+      "trans_no_to",
+      "trans_type_to"
+    ],
+    "supp_invoice_items": [
+      "id",
+      "supp_trans_no",
+      "supp_trans_type",
+      "gl_code",
+      "grn_item_id",
+      "po_detail_item_id",
+      "stock_id",
+      "description",
+      "quantity",
+      "unit_price",
+      "unit_tax",
+      "memo_",
+      "dimension_id",
+      "dimension2_id",
+      "custom_data"
+    ],
+    "supp_trans": [
+      "trans_no",
+      "type",
+      "supplier_id",
+      "reference",
+      "supp_reference",
+      "tran_date",
+      "due_date",
+      "ov_amount",
+      "ov_discount",
+      "ov_gst",
+      "rate",
+      "alloc",
+      "tax_included",
+      "custom_data"
+    ],
+    "suppliers": [
+      "supplier_id",
+      "supp_name",
+      "supp_ref",
+      "address",
+      "supp_address",
+      "gst_no",
+      "contact",
+      "supp_account_no",
+      "website",
+      "bank_account",
+      "curr_code",
+      "payment_terms",
+      "tax_included",
+      "dimension_id",
+      "dimension2_id",
+      "tax_group_id",
+      "credit_limit",
+      "purchase_account",
+      "payable_account",
+      "payment_discount_account",
+      "notes",
+      "inactive",
+      "custom_data",
+      "vendor_tier",
+      "vendor_category",
+      "overall_score",
+      "quality_score",
+      "delivery_score",
+      "price_score",
+      "service_score",
+      "last_evaluation_date",
+      "next_evaluation_date",
+      "evaluation_frequency_months",
+      "certifications",
+      "approved_categories",
+      "lead_time_average",
+      "on_time_delivery_pct",
+      "defect_rate_pct",
+      "payment_reliability_score"
+    ],
+    "sys_prefs": [
+      "name",
+      "category",
+      "type",
+      "length",
+      "value"
+    ],
+    "tag_associations": [
+      "record_id",
+      "tag_id"
+    ],
+    "tags": [
+      "id",
+      "type",
+      "name",
+      "description",
+      "color",
+      "inactive",
+      "custom_data"
+    ],
+    "tax_group_items": [
+      "tax_group_id",
+      "tax_type_id",
+      "tax_shipping"
+    ],
+    "tax_groups": [
+      "id",
+      "name",
+      "inactive"
+    ],
+    "tax_types": [
+      "id",
+      "rate",
+      "sales_gl_code",
+      "purchasing_gl_code",
+      "name",
+      "inactive",
+      "custom_data"
+    ],
+    "trans_tax_details": [
+      "id",
+      "trans_type",
+      "trans_no",
+      "tran_date",
+      "tax_type_id",
+      "rate",
+      "ex_rate",
+      "included_in_price",
+      "net_amount",
+      "amount",
+      "memo",
+      "reg_type"
+    ],
+    "useronline": [
+      "id",
+      "timestamp",
+      "ip",
+      "file"
+    ],
+    "users": [
+      "id",
+      "login_id",
+      "password",
+      "real_name",
+      "role_id",
+      "phone",
+      "email",
+      "language",
+      "date_format",
+      "date_sep",
+      "tho_sep",
+      "dec_sep",
+      "theme",
+      "page_size",
+      "prices_dec",
+      "qty_dec",
+      "rates_dec",
+      "percent_dec",
+      "show_gl",
+      "show_codes",
+      "show_hints",
+      "last_visit_date",
+      "query_size",
+      "graphic_links",
+      "pos",
+      "print_profile",
+      "rep_popup",
+      "sticky_doc_date",
+      "startup_tab",
+      "transaction_days",
+      "save_report_selections",
+      "use_date_picker",
+      "def_print_destination",
+      "def_print_orientation",
+      "inactive"
+    ],
+    "voided": [
+      "type",
+      "id",
+      "date_",
+      "memo_"
+    ],
+    "wo_costing": [
+      "id",
+      "workorder_id",
+      "cost_type",
+      "trans_type",
+      "trans_no",
+      "factor"
+    ],
+    "wo_issue_items": [
+      "id",
+      "stock_id",
+      "issue_id",
+      "qty_issued",
+      "unit_cost",
+      "custom_data"
+    ],
+    "wo_issues": [
+      "issue_no",
+      "workorder_id",
+      "reference",
+      "issue_date",
+      "loc_code",
+      "workcentre_id"
+    ],
+    "wo_manufacture": [
+      "id",
+      "reference",
+      "workorder_id",
+      "quantity",
+      "date_"
+    ],
+    "wo_requirements": [
+      "id",
+      "workorder_id",
+      "stock_id",
+      "workcentre",
+      "units_req",
+      "unit_cost",
+      "loc_code",
+      "units_issued"
+    ],
+    "workcentres": [
+      "id",
+      "name",
+      "description",
+      "inactive"
+    ],
+    "workorders": [
+      "id",
+      "wo_ref",
+      "loc_code",
+      "units_reqd",
+      "stock_id",
+      "date_",
+      "type",
+      "required_by",
+      "released_date",
+      "units_issued",
+      "closed",
+      "released",
+      "additional_costs",
+      "custom_data"
+    ],
+    "attendance_deduction_rules": [
+      "rule_id",
+      "rule_type",
+      "from_value",
+      "to_value",
+      "deduction_rate",
+      "day_of_week",
+      "work_hours",
+      "inactive"
+    ],
+    "deduction_codes": [
+      "deduction_id",
+      "deduction_name",
+      "account_code",
+      "inactive"
+    ],
+    "document_types": [
+      "doc_type_id",
+      "type_name",
+      "notify_before",
+      "is_required",
+      "inactive"
+    ],
+    "employee_dependents": [
+      "dependent_id",
+      "employee_id",
+      "name",
+      "relationship",
+      "birth_date",
+      "gender",
+      "national_id",
+      "is_beneficiary"
+    ],
+    "employee_documents": [
+      "doc_id",
+      "employee_id",
+      "doc_type_id",
+      "doc_name",
+      "file_path",
+      "attachment_id",
+      "issue_date",
+      "expiry_date",
+      "notes",
+      "uploaded_date",
+      "uploaded_by"
+    ],
+    "employee_history": [
+      "history_id",
+      "employee_id",
+      "change_type",
+      "effective_date",
+      "old_department_id",
+      "new_department_id",
+      "old_position_id",
+      "new_position_id",
+      "old_grade_id",
+      "new_grade_id",
+      "old_salary",
+      "new_salary",
+      "reason",
+      "approved_by",
+      "created_date",
+      "created_by"
+    ],
+    "employee_loans": [
+      "loan_id",
+      "employee_id",
+      "loan_type_id",
+      "loan_amount",
+      "interest_rate",
+      "installments",
+      "installment_amount",
+      "outstanding_amount",
+      "loan_date",
+      "first_repayment",
+      "status",
+      "approved_by",
+      "approval_date",
+      "gl_trans_no",
+      "notes"
+    ],
+    "employee_salary": [
+      "salary_id",
+      "employee_id",
+      "element_id",
+      "amount",
+      "formula",
+      "effective_from",
+      "effective_to",
+      "is_active",
+      "reference"
+    ],
+    "eos_calculation": [
+      "eos_id",
+      "from_years",
+      "to_years",
+      "termination_rate",
+      "resignation_rate",
+      "description"
+    ],
+    "holidays": [
+      "holiday_id",
+      "holiday_name",
+      "holiday_date",
+      "to_date",
+      "recurring",
+      "is_paid",
+      "description"
+    ],
+    "hr_settings": [
+      "setting_id",
+      "setting_key",
+      "setting_value",
+      "description"
+    ],
+    "leave_balances": [
+      "balance_id",
+      "employee_id",
+      "leave_id",
+      "fiscal_year",
+      "entitled",
+      "carried_forward",
+      "taken",
+      "pending",
+      "adjusted"
+    ],
+    "leave_policies": [
+      "policy_id",
+      "policy_name",
+      "leave_id",
+      "grade_id",
+      "employment_type",
+      "annual_entitlement",
+      "accrual_method",
+      "probation_applicable",
+      "min_service_months",
+      "effective_from",
+      "effective_to",
+      "inactive"
+    ],
+    "leave_requests": [
+      "request_id",
+      "employee_id",
+      "leave_id",
+      "from_date",
+      "to_date",
+      "days",
+      "half_day",
+      "reason",
+      "status",
+      "approved_by",
+      "approval_date",
+      "approval_remarks",
+      "doc_attachment",
+      "request_date"
+    ],
+    "loan_repayments": [
+      "repayment_id",
+      "loan_id",
+      "installment_no",
+      "due_date",
+      "principal_amount",
+      "interest_amount",
+      "total_amount",
+      "paid_amount",
+      "paid_date",
+      "payslip_id",
+      "status"
+    ],
+    "loan_types": [
+      "loan_type_id",
+      "loan_type_name",
+      "loan_type_code",
+      "interest_rate",
+      "max_amount",
+      "max_installments",
+      "max_active_loans",
+      "account_code",
+      "interest_account",
+      "inactive"
+    ],
+    "overtime_budget": [
+      "budget_id",
+      "fiscal_year",
+      "month",
+      "budget_hours",
+      "budget_amount"
+    ],
+    "overtime_requests": [
+      "request_id",
+      "employee_id",
+      "overtime_id",
+      "date",
+      "hours",
+      "reason",
+      "status",
+      "approved_by",
+      "approval_date",
+      "request_date"
+    ],
+    "payroll_periods": [
+      "period_id",
+      "period_name",
+      "from_date",
+      "to_date",
+      "pay_date",
+      "department_id",
+      "status",
+      "total_gross",
+      "total_deductions",
+      "total_net",
+      "total_employer_cost",
+      "approved_by",
+      "approval_date",
+      "gl_trans_no",
+      "created_by",
+      "created_date",
+      "notes"
+    ],
+    "payslip_details": [
+      "detail_id",
+      "payslip_id",
+      "element_id",
+      "element_name",
+      "element_category",
+      "is_deduction",
+      "amount_type",
+      "base_amount",
+      "rate",
+      "calculated_amount",
+      "adjusted_amount",
+      "final_amount",
+      "account_code",
+      "formula_used",
+      "is_taxable",
+      "display_order",
+      "memo"
+    ],
+    "statutory_deductions": [
+      "statutory_id",
+      "statutory_name",
+      "statutory_code",
+      "employee_rate",
+      "employer_rate",
+      "employee_fixed",
+      "employer_fixed",
+      "ceiling_amount",
+      "floor_amount",
+      "calculation_base",
+      "employee_account",
+      "employer_account",
+      "effective_from",
+      "effective_to",
+      "inactive"
+    ],
+    "tax_brackets": [
+      "bracket_id",
+      "bracket_name",
+      "from_amount",
+      "to_amount",
+      "rate",
+      "fixed_amount",
+      "effective_from",
+      "effective_to"
+    ],
+    "work_shifts": [
+      "shift_id",
+      "shift_name",
+      "start_time",
+      "end_time",
+      "break_duration",
+      "work_hours",
+      "is_night_shift",
+      "inactive"
+    ],
+    "working_days": [
+      "id",
+      "day_of_week",
+      "is_working",
+      "work_hours"
+    ],
+    "recruitment_openings": [
+      "opening_id",
+      "job_title",
+      "department_id",
+      "position_id",
+      "headcount",
+      "opening_date",
+      "closing_date",
+      "status",
+      "description",
+      "created_by",
+      "created_date"
+    ],
+    "recruitment_applicants": [
+      "applicant_id",
+      "opening_id",
+      "full_name",
+      "email",
+      "mobile",
+      "source",
+      "applied_date",
+      "status",
+      "expected_salary",
+      "remarks"
+    ],
+    "training_courses": [
+      "course_id",
+      "course_code",
+      "course_name",
+      "provider",
+      "default_hours",
+      "default_cost",
+      "inactive"
+    ],
+    "employee_training": [
+      "training_id",
+      "employee_id",
+      "course_id",
+      "training_date",
+      "completion_date",
+      "status",
+      "score",
+      "cost_amount",
+      "remarks"
+    ],
+    "employee_appraisals": [
+      "appraisal_id",
+      "employee_id",
+      "reviewer_id",
+      "period_from",
+      "period_to",
+      "appraisal_date",
+      "overall_score",
+      "rating_scale",
+      "status",
+      "strengths",
+      "improvements",
+      "recommendation"
+    ],
+    "employee_asset_allocation": [
+      "allocation_id",
+      "employee_id",
+      "asset_name",
+      "asset_code",
+      "serial_no",
+      "allocation_date",
+      "expected_return",
+      "return_date",
+      "status",
+      "notes"
+    ],
+    "approval_workflows": [
+      "id",
+      "trans_type",
+      "name",
+      "description",
+      "is_active",
+      "require_comments_on_reject",
+      "require_comments_on_approve",
+      "allow_edit_on_approve",
+      "allow_self_approve",
+      "created_by",
+      "created_date",
+      "modified_by",
+      "modified_date",
+      "version"
+    ],
+    "approval_levels": [
+      "id",
+      "workflow_id",
+      "level",
+      "role_id",
+      "min_approvers",
+      "amount_threshold",
+      "amount_upper",
+      "escalation_days",
+      "escalation_to_level",
+      "loc_code",
+      "conditions",
+      "is_active"
+    ],
+    "approval_drafts": [
+      "id",
+      "workflow_id",
+      "trans_type",
+      "reserved_trans_no",
+      "draft_data",
+      "amount",
+      "currency",
+      "person_type_id",
+      "person_id",
+      "current_level",
+      "status",
+      "submitted_by",
+      "submitted_date",
+      "approved_trans_no",
+      "completed_date",
+      "workflow_version",
+      "reference",
+      "summary",
+      "loc_code"
+    ],
+    "approval_actions": [
+      "id",
+      "draft_id",
+      "action_type",
+      "user_id",
+      "level",
+      "comments",
+      "draft_data_snapshot",
+      "action_date",
+      "ip_address"
+    ],
+    "approval_delegations": [
+      "id",
+      "from_user_id",
+      "to_user_id",
+      "trans_type",
+      "from_date",
+      "to_date",
+      "reason",
+      "is_active",
+      "created_date"
+    ],
+    "approval_notifications": [
+      "id",
+      "draft_id",
+      "user_id",
+      "notification_type",
+      "is_read",
+      "is_sent",
+      "created_date",
+      "read_date"
+    ],
+    "crm_lead_sources": [
+      "id",
+      "name",
+      "description",
+      "active"
+    ],
+    "crm_sales_stages": [
+      "id",
+      "name",
+      "sequence",
+      "probability",
+      "description",
+      "active"
+    ],
+    "crm_lost_reasons": [
+      "id",
+      "description",
+      "active"
+    ],
+    "crm_activity_types": [
+      "id",
+      "name",
+      "category",
+      "icon",
+      "default_user_id",
+      "default_summary",
+      "chaining_type",
+      "chained_activity_type_id",
+      "schedule_days",
+      "schedule_type",
+      "active"
+    ],
+    "crm_appointment_types": [
+      "id",
+      "name",
+      "default_duration",
+      "location",
+      "video_link",
+      "active"
+    ],
+    "crm_sales_teams": [
+      "id",
+      "name",
+      "team_leader_id",
+      "email_alias",
+      "invoicing_target",
+      "use_leads",
+      "active"
+    ],
+    "crm_sales_team_members": [
+      "id",
+      "team_id",
+      "user_id",
+      "max_leads_30days",
+      "skip_auto_assign",
+      "domain_filter"
+    ],
+    "crm_leads": [
+      "id",
+      "lead_ref",
+      "title",
+      "company_name",
+      "contact_name",
+      "email",
+      "phone",
+      "mobile",
+      "website",
+      "address",
+      "city",
+      "state",
+      "country",
+      "postal_code",
+      "lead_source_id",
+      "lead_status",
+      "priority",
+      "is_opportunity",
+      "stage_id",
+      "assigned_to",
+      "sales_team_id",
+      "expected_revenue",
+      "probability",
+      "expected_close_date",
+      "date_created",
+      "date_qualified",
+      "date_converted",
+      "date_won",
+      "date_lost",
+      "lost_reason_id",
+      "lost_notes",
+      "linked_customer_id",
+      "linked_person_id",
+      "created_by",
+      "notes",
+      "inactive"
+    ],
+    "crm_activities": [
+      "id",
+      "entity_type",
+      "entity_id",
+      "activity_type_id",
+      "summary",
+      "description",
+      "date_scheduled",
+      "date_completed",
+      "assigned_to",
+      "created_by",
+      "created_date",
+      "status",
+      "outcome",
+      "duration_minutes",
+      "next_activity_id"
+    ],
+    "crm_activity_plans": [
+      "id",
+      "plan_name",
+      "description",
+      "active"
+    ],
+    "crm_activity_plan_lines": [
+      "id",
+      "plan_id",
+      "activity_type_id",
+      "summary",
+      "assignment",
+      "assigned_to",
+      "interval_value",
+      "interval_unit",
+      "trigger_timing",
+      "sequence"
+    ],
+    "crm_communication_log": [
+      "id",
+      "entity_type",
+      "entity_id",
+      "comm_type",
+      "subject",
+      "body",
+      "direction",
+      "from_address",
+      "to_address",
+      "date_time",
+      "created_by",
+      "duration_minutes"
+    ],
+    "crm_campaigns": [
+      "id",
+      "name",
+      "campaign_type",
+      "start_date",
+      "end_date",
+      "status",
+      "budget",
+      "assigned_to",
+      "lead_source_id",
+      "description",
+      "created_by",
+      "created_date"
+    ],
+    "crm_email_templates": [
+      "id",
+      "name",
+      "subject",
+      "body_html",
+      "category",
+      "variables_json",
+      "active"
+    ],
+    "crm_campaign_emails": [
+      "id",
+      "campaign_id",
+      "email_template_id",
+      "day_offset",
+      "subject",
+      "body",
+      "sequence"
+    ],
+    "crm_campaign_leads": [
+      "id",
+      "campaign_id",
+      "lead_id",
+      "enrolled_date",
+      "status",
+      "last_email_sent"
+    ],
+    "crm_contracts": [
+      "id",
+      "contract_ref",
+      "customer_id",
+      "lead_id",
+      "title",
+      "description",
+      "contract_value",
+      "start_date",
+      "end_date",
+      "renewal_alert_days",
+      "status",
+      "signed_by",
+      "signed_date",
+      "created_by",
+      "created_date"
+    ],
+    "crm_appointments": [
+      "id",
+      "title",
+      "appointment_type_id",
+      "lead_id",
+      "customer_id",
+      "contact_person_id",
+      "date_time",
+      "duration_minutes",
+      "location",
+      "video_link",
+      "attendees_json",
+      "notes",
+      "status",
+      "reminder_sent",
+      "created_by",
+      "created_date"
+    ],
+    "crm_scoring_config": [
+      "id",
+      "variable_name",
+      "weight",
+      "active"
+    ],
+    "crm_module_settings": [
+      "setting_key",
+      "setting_value",
+      "description"
+    ],
+    "purch_requisitions": [
+      "id",
+      "reference",
+      "material_request_id",
+      "requester_id",
+      "department_id",
+      "request_date",
+      "required_date",
+      "status",
+      "priority",
+      "purpose",
+      "notes",
+      "total_estimated",
+      "approved_by",
+      "approved_date",
+      "rejected_by",
+      "rejected_date",
+      "rejection_reason",
+      "location",
+      "dimension_id",
+      "dimension2_id",
+      "custom_data"
+    ],
+    "purch_requisition_lines": [
+      "id",
+      "requisition_id",
+      "material_request_line_id",
+      "stock_id",
+      "description",
+      "quantity",
+      "unit_of_measure",
+      "estimated_unit_price",
+      "preferred_supplier_id",
+      "notes",
+      "qty_ordered",
+      "po_number",
+      "status",
+      "custom_data"
+    ],
+    "purch_rfq": [
+      "id",
+      "reference",
+      "rfq_type",
+      "status",
+      "created_by",
+      "created_date",
+      "deadline_date",
+      "validity_date",
+      "requisition_id",
+      "description",
+      "notes",
+      "terms_and_conditions",
+      "delivery_location",
+      "required_delivery_date",
+      "evaluation_criteria",
+      "dimension_id",
+      "dimension2_id",
+      "custom_data"
+    ],
+    "purch_rfq_items": [
+      "id",
+      "rfq_id",
+      "stock_id",
+      "description",
+      "quantity",
+      "unit_of_measure",
+      "target_price",
+      "specifications",
+      "sort_order",
+      "custom_data"
+    ],
+    "purch_rfq_vendors": [
+      "id",
+      "rfq_id",
+      "supplier_id",
+      "status",
+      "sent_date",
+      "response_date",
+      "total_quoted",
+      "delivery_lead_days",
+      "payment_terms",
+      "vendor_notes",
+      "evaluator_score",
+      "evaluator_notes",
+      "is_winner",
+      "custom_data"
+    ],
+    "purch_rfq_vendor_lines": [
+      "id",
+      "rfq_vendor_id",
+      "rfq_item_id",
+      "quoted_price",
+      "quoted_quantity",
+      "delivery_lead_days",
+      "notes",
+      "custom_data"
+    ],
+    "purch_agreements": [
+      "id",
+      "reference",
+      "agreement_type",
+      "supplier_id",
+      "buyer_id",
+      "status",
+      "date_start",
+      "date_end",
+      "currency",
+      "payment_terms",
+      "total_committed",
+      "total_ordered",
+      "total_received",
+      "total_invoiced",
+      "delivery_location",
+      "auto_renew",
+      "renewal_period_months",
+      "terms_and_conditions",
+      "notes",
+      "rfq_id",
+      "dimension_id",
+      "dimension2_id",
+      "created_by",
+      "created_date",
+      "inactive",
+      "custom_data"
+    ],
+    "purch_agreement_lines": [
+      "id",
+      "agreement_id",
+      "stock_id",
+      "description",
+      "committed_qty",
+      "min_qty_per_order",
+      "ordered_qty",
+      "received_qty",
+      "invoiced_qty",
+      "unit_price",
+      "discount_percent",
+      "price_valid_until",
+      "custom_data"
+    ],
+    "vendor_evaluation_criteria": [
+      "id",
+      "name",
+      "category",
+      "weight",
+      "description",
+      "scoring_method",
+      "calculation_formula",
+      "inactive"
+    ],
+    "vendor_evaluations": [
+      "id",
+      "supplier_id",
+      "evaluation_date",
+      "evaluator_id",
+      "period_from",
+      "period_to",
+      "status",
+      "overall_score",
+      "quality_score",
+      "delivery_score",
+      "price_score",
+      "service_score",
+      "recommendation",
+      "action_plan",
+      "notes",
+      "custom_data"
+    ],
+    "vendor_evaluation_scores": [
+      "id",
+      "evaluation_id",
+      "criteria_id",
+      "score",
+      "evidence",
+      "notes"
+    ],
+    "vendor_performance_log": [
+      "id",
+      "supplier_id",
+      "event_type",
+      "event_date",
+      "reference_type",
+      "reference_no",
+      "details",
+      "impact_score",
+      "recorded_by",
+      "custom_data"
+    ],
+    "vendor_pricelists": [
+      "id",
+      "supplier_id",
+      "stock_id",
+      "vendor_product_code",
+      "vendor_product_name",
+      "vendor_uom",
+      "conversion_factor",
+      "currency",
+      "min_order_qty",
+      "price_break_qty_1",
+      "price_1",
+      "price_break_qty_2",
+      "price_2",
+      "price_break_qty_3",
+      "price_3",
+      "price_break_qty_4",
+      "price_4",
+      "lead_time_days",
+      "valid_from",
+      "valid_until",
+      "discount_percent",
+      "last_purchase_date",
+      "last_purchase_price",
+      "notes",
+      "is_preferred",
+      "inactive",
+      "custom_data"
+    ],
+    "purch_order_templates": [
+      "id",
+      "name",
+      "description",
+      "supplier_id",
+      "delivery_location",
+      "default_payment_terms",
+      "notes",
+      "inactive",
+      "custom_data"
+    ],
+    "purch_order_template_lines": [
+      "id",
+      "template_id",
+      "stock_id",
+      "description",
+      "default_quantity",
+      "sort_order",
+      "custom_data"
+    ],
+    "purch_matching_config": [
+      "id",
+      "match_type",
+      "supplier_id",
+      "tolerance_type",
+      "tolerance_value",
+      "action_on_exceed",
+      "custom_data",
+      "inactive"
+    ],
+    "purch_matching_exceptions": [
+      "id",
+      "exception_type",
+      "trans_type",
+      "trans_no",
+      "supplier_id",
+      "po_number",
+      "grn_batch_id",
+      "stock_id",
+      "expected_value",
+      "actual_value",
+      "variance_amount",
+      "variance_percent",
+      "status",
+      "resolution_notes",
+      "resolved_by",
+      "resolved_date",
+      "created_date",
+      "custom_data"
+    ],
+    "purch_bill_control_policy": [
+      "id",
+      "name",
+      "bill_basis",
+      "require_grn_before_invoice",
+      "require_po_for_invoice",
+      "allow_over_invoice",
+      "auto_match_on_grn",
+      "is_default",
+      "inactive",
+      "custom_data"
+    ],
+    "procurement_plan": [
+      "id",
+      "reference",
+      "plan_date",
+      "plan_type",
+      "status",
+      "created_by",
+      "notes",
+      "custom_data"
+    ],
+    "procurement_plan_lines": [
+      "id",
+      "plan_id",
+      "stock_id",
+      "location",
+      "replenishment_rule_id",
+      "current_stock",
+      "required_qty",
+      "suggested_order_qty",
+      "supplier_id",
+      "estimated_price",
+      "estimated_lead_time",
+      "priority",
+      "status",
+      "po_number",
+      "custom_data"
+    ],
+    "purch_kpi_cache": [
+      "id",
+      "kpi_type",
+      "period_key",
+      "dimension_key",
+      "value_1",
+      "value_2",
+      "value_3",
+      "detail_json",
+      "updated_at"
+    ],
+    "sales_credit_reviews": [
+      "id",
+      "debtor_no",
+      "review_date",
+      "reviewer_id",
+      "old_credit_limit",
+      "new_credit_limit",
+      "old_credit_status",
+      "new_credit_status",
+      "risk_score",
+      "notes"
+    ],
+    "sales_credit_holds": [
+      "id",
+      "debtor_no",
+      "hold_type",
+      "hold_date",
+      "release_date",
+      "held_by",
+      "released_by",
+      "reason",
+      "affects_orders",
+      "affects_deliveries",
+      "affects_invoices"
+    ]
+  },
+  "new_tables": [
+    "domain_audit_chain_state",
+    "domain_audit_events",
+    "domain_audit_outbox",
+    "domain_audit_checkpoints",
+    "domain_audit_export_receipts",
+    "hrm_persons",
+    "hrm_person_names",
+    "hrm_person_contacts",
+    "hrm_person_identifiers",
+    "hrm_person_identifier_verification_requests",
+    "hrm_person_identifier_verification_evidence",
+    "hrm_person_bank_accounts",
+    "hrm_person_bank_account_verification_requests",
+    "hrm_person_bank_account_verification_evidence",
+    "hrm_person_bank_payment_elections",
+    "hrm_person_bank_payment_allocations",
+    "hrm_person_addresses",
+    "hrm_person_emergency_contacts",
+    "hrm_person_duplicate_reviews",
+    "hrm_person_link_proposals",
+    "hrm_workers",
+    "hrm_employee_worker_map",
+    "hrm_legal_entities",
+    "hrm_grades",
+    "hrm_jobs",
+    "hrm_establishments",
+    "hrm_work_locations",
+    "hrm_positions",
+    "hrm_position_hierarchy",
+    "hrm_position_headcount_budgets",
+    "hrm_organization_units",
+    "hrm_employments",
+    "hrm_contracts",
+    "hrm_assignments",
+    "hrm_lifecycle_commands",
+    "hrm_lifecycle_hire_commands",
+    "hrm_lifecycle_hire_payloads",
+    "hrm_lifecycle_tasks",
+    "hrm_person_canonical_links",
+    "hrm_person_canonical_link_workers",
+    "hrm_employment_rehires",
+    "user_sessions",
+    "user_session_assurance_events",
+    "user_recovery_materials",
+    "user_recovery_redemption_requests",
+    "user_recovery_redemption_controls",
+    "user_break_glass_activation_leases",
+    "user_break_glass_designations",
+    "user_federation_providers",
+    "user_federation_provider_verifier_configs",
+    "user_federation_verifier_transactions",
+    "user_federation_oidc_callback_claims",
+    "user_federation_verifier_replay_markers",
+    "hrm_ess_identity_link_requests",
+    "hrm_ess_identity_links",
+    "hrm_ess_manager_delegations",
+    "hrm_ess_manager_delegation_requests",
+    "hrm_ess_self_change_requests",
+    "hrm_ess_self_change_execution_receipts",
+    "user_federation_external_subject_links",
+    "user_federation_verifier_decisions",
+    "user_federation_session_bindings",
+    "hrm_lifecycle_task_document_versions",
+    "employee_document_migration_journal",
+    "payroll_reversal_evidence",
+    "hrm_lifecycle_rehire_executions",
+    "hrm_worker_profile_versions",
+    "hrm_employee_projection_policy",
+    "hrm_work_authorizations",
+    "hrm_work_authorization_policy_versions",
+    "hrm_work_authorization_retention_policy_versions",
+    "hrm_work_authorization_delivery_policy_versions",
+    "hrm_assignment_work_authorization_jurisdictions",
+    "hrm_attribute_definitions",
+    "hrm_attribute_definition_versions",
+    "hrm_attribute_values",
+    "hrm_attribute_legacy_mapping_versions",
+    "hrm_attribute_legacy_conversion_receipts",
+    "hrm_attribute_legacy_conversion_batches",
+    "hrm_attribute_legacy_conversion_batch_items",
+    "hrm_attribute_legacy_cleanup_requests",
+    "hrm_attribute_legacy_cleanup_receipts",
+    "hrm_pay_rule_artifacts",
+    "hrm_pay_rule_artifact_versions",
+    "hrm_pay_rule_import_candidates",
+    "hrm_pay_rule_import_reviews",
+    "hrm_pay_rule_import_receipts",
+    "hrm_pay_rule_rules",
+    "hrm_pay_rule_rule_versions",
+    "hrm_pay_rule_regulatory_evidence",
+    "hrm_pay_rule_lifecycle_reviews",
+    "hrm_pay_rule_lifecycle_publications",
+    "hrm_pay_rule_lifecycle_events",
+    "hrm_pay_rule_emergency_changes",
+    "hrm_pay_rule_jurisdictions",
+    "hrm_pay_rule_jurisdiction_versions",
+    "hrm_pay_rule_subject_jurisdiction_bindings",
+    "hrm_pay_rule_jurisdiction_fact_sets",
+    "hrm_pay_rule_jurisdiction_fact_items",
+    "hrm_pay_rule_version_applicability",
+    "hrm_pay_rule_resolution_requests",
+    "hrm_pay_rule_resolution_candidates",
+    "hrm_pay_rule_resolution_decisions",
+    "hrm_pay_rule_migration_candidates",
+    "hrm_pay_rule_migration_exceptions",
+    "hrm_pay_rule_translation_bindings",
+    "hrm_pay_rule_tolerance_policies",
+    "hrm_pay_rule_shadow_runs",
+    "hrm_pay_rule_shadow_comparisons",
+    "hrm_pay_rule_activation_eligibility",
+    "hrm_pay_rule_activation_commands",
+    "hrm_payroll_calendars",
+    "hrm_payroll_calendar_versions",
+    "hrm_payroll_calendar_periods",
+    "hrm_payroll_groups",
+    "hrm_payroll_group_versions",
+    "hrm_payroll_relationships",
+    "hrm_payroll_relationship_members",
+    "hrm_payroll_group_enrollments",
+    "hrm_payroll_legacy_period_mapping_reviews",
+    "hrm_payroll_seed_proposals",
+    "hrm_payroll_seed_approvals",
+    "hrm_payroll_seed_executions",
+    "hrm_payroll_legacy_period_mapping_plans",
+    "hrm_payroll_legacy_period_mapping_approvals",
+    "hrm_payroll_legacy_period_conversion_receipts",
+    "hrm_payroll_legacy_period_reconciliations",
+    "hrm_payroll_relationship_migration_plans",
+    "hrm_payroll_relationship_migration_approvals",
+    "hrm_payroll_relationship_migration_receipts",
+    "hrm_pay_elements",
+    "hrm_pay_element_versions",
+    "hrm_pay_input_definitions",
+    "hrm_pay_eligibility_versions",
+    "hrm_payroll_approved_inputs",
+    "hrm_pay_core_003_legacy_mapping_reviews",
+    "hrm_pay_core_003_legacy_mapping_plans",
+    "hrm_pay_core_003_legacy_mapping_approvals",
+    "hrm_pay_core_003_legacy_conversion_receipts",
+    "hrm_pay_core_003_legacy_conversion_reconciliations",
+    "hrm_pay_core_003_compatibility_parity_evidence",
+    "hrm_pay_core_004_snapshots",
+    "hrm_pay_core_004_results",
+    "hrm_pay_core_004_result_lines",
+    "hrm_pay_core_004_traces",
+    "hrm_pay_core_004_integrity_evidence",
+    "hrm_pay_core_004_correction_lineage",
+    "hrm_pay_core_004_legacy_provenance_gaps",
+    "hrm_pay_core_004_recovery_evidence",
+    "hrm_pay_core_004_archive_evidence",
+    "hrm_pay_balance_definitions",
+    "hrm_pay_balance_movements",
+    "hrm_pay_balance_opening_inventory",
+    "hrm_pay_balance_snapshots",
+    "hrm_pay_balance_reconciliations",
+    "hrm_pay_balance_recovery_evidence",
+    "hrm_pay_retro_events",
+    "hrm_pay_retro_affected_results",
+    "hrm_pay_retro_contexts",
+    "hrm_pay_retro_deltas",
+    "hrm_pay_retro_arrears",
+    "hrm_pay_retro_arrears_movements",
+    "hrm_pay_retro_plans",
+    "hrm_pay_retro_approvals",
+    "hrm_pay_retro_executions",
+    "hrm_pay_retro_downstream_obligations",
+    "hrm_pay_retro_reconciliations",
+    "hrm_pay_retro_recovery_evidence",
+    "hrm_pay_validation_validator_defs",
+    "hrm_pay_validation_threshold_policies",
+    "hrm_pay_validation_pack_bindings",
+    "hrm_pay_validation_runs",
+    "hrm_pay_validation_findings",
+    "hrm_pay_validation_resolutions",
+    "hrm_pay_validation_signoffs",
+    "hrm_pay_validation_variances",
+    "hrm_pay_validation_reconciliations",
+    "hrm_pay_validation_recovery_evidence",
+    "hrm_pay_core_009_runs",
+    "hrm_pay_core_009_items",
+    "hrm_pay_core_009_lease_events",
+    "hrm_pay_core_009_attempts",
+    "hrm_pay_core_009_checkpoints",
+    "hrm_pay_core_009_transitions",
+    "hrm_pay_core_009_quarantine",
+    "hrm_pay_core_009_recovery_evidence",
+    "hrm_pay_core_010_approval_intents",
+    "hrm_pay_core_010_approvals",
+    "hrm_pay_core_010_projections",
+    "hrm_pay_core_010_parity_evidence",
+    "hrm_pay_core_010_cutover_transitions",
+    "hrm_pay_core_010_recovery_evidence",
+    "hrm_pay_core_010_usage_events",
+    "hrm_time_work_patterns",
+    "hrm_time_work_pattern_segments",
+    "hrm_time_raw_events",
+    "hrm_time_raw_event_conflicts",
+    "hrm_time_reviewed_entries",
+    "hrm_time_reviewed_event_links",
+    "hrm_time_reviewed_allocations",
+    "hrm_time_approvals",
+    "hrm_time_payroll_input_mappings",
+    "hrm_time_payroll_input_receipts",
+    "hrm_time_legacy_attendance_receipts",
+    "hrm_time_overtime_policies",
+    "hrm_time_overtime_policy_rules",
+    "hrm_time_overtime_request_receipts",
+    "hrm_time_import_connectors",
+    "hrm_time_import_batches",
+    "hrm_time_import_items",
+    "hrm_time_import_errors",
+    "hrm_time_overtime_qualifications",
+    "hrm_time_overtime_payroll_mappings",
+    "hrm_time_overtime_payroll_receipts",
+    "hrm_leave_policy_versions",
+    "hrm_leave_entitlements",
+    "hrm_leave_movements",
+    "hrm_leave_request_receipts",
+    "hrm_leave_opening_inventory",
+    "hrm_leave_projection_snapshots",
+    "hrm_leave_reconciliations",
+    "hrm_leave_recovery_evidence",
+    "hrm_leave_payroll_mappings",
+    "hrm_leave_payroll_handoffs",
+    "hrm_comp_salary_ranges",
+    "hrm_comp_review_cycles",
+    "hrm_comp_budgets",
+    "hrm_comp_opening_inventory",
+    "hrm_comp_opening_reviews",
+    "hrm_comp_cutover_plans",
+    "hrm_comp_cutover_approvals",
+    "hrm_comp_cutover_receipts",
+    "hrm_comp_award_commands",
+    "hrm_comp_award_receipts",
+    "hrm_comp_legacy_projection_receipts",
+    "hrm_comp_payroll_mappings",
+    "hrm_comp_payroll_handoffs",
+    "hrm_comp_reconciliations",
+    "hrm_comp_recovery_evidence",
+    "hrm_ben_pack_adapter_versions",
+    "hrm_ben_provider_adapter_versions",
+    "hrm_ben_plans",
+    "hrm_ben_plan_versions",
+    "hrm_ben_eligibility_versions",
+    "hrm_ben_enrollment_windows",
+    "hrm_ben_consents",
+    "hrm_ben_enrollments",
+    "hrm_ben_enrollment_dependants",
+    "hrm_ben_life_event_type_versions",
+    "hrm_ben_life_event_requests",
+    "hrm_ben_life_event_reviews",
+    "hrm_ben_life_events",
+    "hrm_ben_contribution_versions",
+    "hrm_ben_contribution_receipts",
+    "hrm_ben_arrears",
+    "hrm_ben_arrears_movements",
+    "hrm_ben_continuations",
+    "hrm_ben_payroll_mappings",
+    "hrm_ben_payroll_handoffs",
+    "hrm_ben_balance_mappings",
+    "hrm_ben_balance_handoffs",
+    "hrm_ben_provider_operations",
+    "hrm_ben_provider_reconciliations",
+    "hrm_ess_002_delegation_capabilities",
+    "hrm_ess_002_delegation_revocations",
+    "hrm_ess_002_command_receipts",
+    "pay_ctry_raw_blobs",
+    "pay_ctry_packs",
+    "pay_ctry_pack_versions",
+    "pay_ctry_artifacts",
+    "pay_ctry_publishers",
+    "pay_ctry_publisher_revocations",
+    "pay_ctry_signers",
+    "pay_ctry_trust_keys",
+    "pay_ctry_trust_key_revocations",
+    "pay_ctry_trust_key_supersessions",
+    "pay_ctry_verification_reports",
+    "pay_ctry_capability_registry_versions",
+    "pay_ctry_capability_definitions",
+    "pay_ctry_dependency_locks",
+    "pay_ctry_dependency_lock_members",
+    "pay_ctry_install_receipts",
+    "pay_ctry_site_operation_journal",
+    "pay_ctry_site_installations",
+    "pay_ctry_activation_impact_simulations",
+    "pay_ctry_activation_proposals",
+    "pay_ctry_activation_approvals",
+    "pay_ctry_activations",
+    "pay_ctry_activation_bindings",
+    "pay_ctry_activation_suspensions",
+    "pay_ctry_activation_outbox",
+    "pay_ctry_activation_delivery_attempts",
+    "pay_ctry_activation_run_bindings",
+    "pay_ctry_activation_revocations",
+    "pay_ctry_capability_contract_versions",
+    "pay_ctry_capability_contract_definitions",
+    "pay_ctry_host_adapters",
+    "pay_ctry_pack_artifact_contracts",
+    "pay_ctry_contract_validation_reports",
+    "pay_ctry_contract_migration_edges",
+    "pay_ctry_evidence_sources",
+    "pay_ctry_evidence_items",
+    "pay_ctry_evidence_inventories",
+    "pay_ctry_evidence_inventory_members",
+    "pay_ctry_review_decisions",
+    "pay_ctry_parallel_run_evidence",
+    "pay_ctry_certification_signing_keys",
+    "pay_ctry_certification_key_revocations",
+    "pay_ctry_certification_events",
+    "pay_ctry_certification_claims",
+    "pay_ctry_publication_records",
+    "pay_ctry_certification_emergency_actions",
+    "pay_ctry_certification_raci_assignments",
+    "pay_ctry_certification_recovery_records",
+    "pay_ctry_catalog_releases",
+    "pay_ctry_catalog_release_admissions",
+    "pay_ctry_update_notices",
+    "pay_ctry_update_notice_applicability",
+    "pay_ctry_update_notice_audiences",
+    "pay_ctry_update_notice_recipient_events",
+    "pay_ctry_update_notice_acknowledgements",
+    "pay_ctry_update_notice_lifecycle_events",
+    "pay_ctry_update_notice_delivery_outbox",
+    "pay_ctry_update_notice_delivery_attempts",
+    "hrm_pay_gl_001_journal_intents",
+    "hrm_pay_gl_001_journal_lines",
+    "hrm_pay_gl_001_allocations",
+    "hrm_pay_gl_001_allocation_axes",
+    "hrm_pay_gl_001_mapping_versions",
+    "hrm_pay_gl_001_mapping_rules",
+    "hrm_pay_gl_001_reconciliations",
+    "hrm_pay_gl_001_reviews",
+    "hrm_pay_gl_001_posting_authorities",
+    "hrm_pay_gl_001_gl_postings",
+    "hrm_pay_gl_001_gl_posting_lines",
+    "hrm_pay_gl_001_recovery_commands",
+    "hrm_pay_gl_001_reversal_repost_links",
+    "hrm_pay_gl_001_cutovers",
+    "hrm_pay_pmt_001_payment_intents",
+    "hrm_pay_pmt_001_payment_items",
+    "hrm_pay_pmt_001_item_allocations",
+    "hrm_pay_pmt_001_batches",
+    "hrm_pay_pmt_001_batch_items",
+    "hrm_pay_pmt_001_batch_releases",
+    "hrm_pay_pmt_001_artifacts",
+    "hrm_pay_pmt_001_outbox",
+    "hrm_pay_pmt_001_transmission_attempts",
+    "hrm_pay_pmt_001_failures",
+    "hrm_pay_pmt_001_reissues",
+    "hrm_pay_pmt_001_settlements",
+    "hrm_pay_pmt_001_reconciliations",
+    "hrm_pay_pmt_001_cutovers",
+    "hrm_pay_fil_001_obligations",
+    "hrm_pay_fil_001_source_sets",
+    "hrm_pay_fil_001_source_links",
+    "hrm_pay_fil_001_artifacts",
+    "hrm_pay_fil_001_validations",
+    "hrm_pay_fil_001_schema_authorities",
+    "hrm_pay_fil_001_authorization_intents",
+    "hrm_pay_fil_001_tt80_taxpayer_profiles",
+    "hrm_pay_fil_001_tt80_person_facts",
+    "hrm_pay_fil_001_tt80_person_fact_links",
+    "hrm_pay_fil_001_tt80_semantic_reviews",
+    "hrm_pay_fil_001_tt80_semantic_mappings",
+    "hrm_pay_api_001_resources",
+    "hrm_pay_api_001_machine_principals",
+    "hrm_pay_api_001_principal_scopes",
+    "hrm_pay_api_001_credentials",
+    "hrm_pay_api_001_credential_revocations",
+    "hrm_pay_api_001_authn_decisions",
+    "hrm_pay_api_001_provision_requests",
+    "hrm_pay_api_001_provision_reviews",
+    "hrm_pay_api_001_provision_approvals",
+    "hrm_pay_api_001_rate_limit_policies",
+    "hrm_pay_api_001_rate_limit_decisions",
+    "hrm_pay_api_001_provision_executions",
+    "hrm_pay_api_001_read_requests",
+    "hrm_pay_api_001_read_responses",
+    "hrm_pay_api_001_webhook_targets",
+    "hrm_pay_api_001_webhook_events",
+    "hrm_pay_api_001_webhook_outbox",
+    "hrm_pay_api_001_webhook_delivery_attempts",
+    "hrm_pay_api_001_webhook_dead_letters",
+    "hrm_pay_api_001_webhook_target_lifecycle",
+    "hrm_pay_api_001_webhook_secret_refs",
+    "hrm_pay_api_001_webhook_secret_rotations",
+    "hrm_pay_api_001_webhook_delivery_policies",
+    "hrm_pay_api_001_webhook_claim_leases",
+    "hrm_pay_api_001_webhook_egress_tls_policies",
+    "hrm_pay_api_001_webhook_signing_profiles",
+    "hrm_pay_api_001_webhook_provider_responses",
+    "hrm_pay_api_001_webhook_replay_defenses",
+    "hrm_pay_api_001_webhook_reprocess_authorizations",
+    "hrm_pay_api_001_webhook_retry_dispatch_reservations",
+    "hrm_pay_api_001_webhook_reprocess_requests",
+    "hrm_pay_api_001_webhook_reprocess_reviews",
+    "hrm_pay_api_001_webhook_reprocess_approvals",
+    "hrm_pay_api_001_webhook_reprocess_dispatch_reservations",
+    "hrm_pay_api_001_webhook_inbound_sources",
+    "hrm_pay_api_001_webhook_inbound_receipts",
+    "hrm_pay_api_001_webhook_inbound_replay_defenses",
+    "hrm_anl_001_metric_definitions",
+    "hrm_anl_001_suppression_policies",
+    "hrm_anl_001_snapshot_requests",
+    "hrm_anl_001_snapshots",
+    "hrm_anl_001_query_audits",
+    "hrm_anl_001_drilldown_authorizations",
+    "hrm_pay_ai_001_requests",
+    "hrm_pay_ai_001_outputs",
+    "hrm_pay_ai_001_reviews",
+    "hrm_tal_001_skill_definitions",
+    "hrm_tal_001_employee_skill_evidence",
+    "hrm_tal_001_certification_definitions",
+    "hrm_tal_001_employee_certification_evidence",
+    "hrm_tal_001_export_audit",
+    "hrm_tal_001_performance_cycle_definitions",
+    "hrm_tal_001_performance_review_subjects",
+    "hrm_tal_001_performance_assessment_evidence",
+    "hrm_tal_001_performance_workflow_events",
+    "hrm_tal_001_learning_definitions",
+    "hrm_tal_001_learning_assignments",
+    "hrm_tal_001_learning_completion_evidence",
+    "hrm_tal_001_confidential_cases",
+    "hrm_tal_001_confidential_case_access_grants",
+    "pay_eco_001_publisher_profiles",
+    "pay_eco_001_pack_candidates",
+    "pay_eco_001_catalog_decisions",
+    "pay_eco_001_sandbox_evaluations",
+    "pay_eco_001_dependency_scans",
+    "pay_eco_001_vulnerability_snapshots",
+    "pay_eco_001_vulnerability_advisories",
+    "pay_eco_001_vulnerability_correlations",
+    "pay_eco_001_artifact_admissions",
+    "pay_eco_001_catalog_publications",
+    "pay_eco_001_catalog_lifecycle_events",
+    "pay_eco_001_marketplace_installations",
+    "pay_eco_001_marketplace_activations",
+    "hrm_pay_rec_001_profiles",
+    "hrm_pay_rec_001_evidence_sets",
+    "hrm_pay_rec_001_checklists",
+    "hrm_pay_rec_001_reviews",
+    "hrm_pay_rec_001_approvals",
+    "hrm_pay_rec_001_state_events",
+    "hrm_pay_con_001_provider_profiles",
+    "hrm_pay_con_001_mapping_versions",
+    "hrm_pay_con_001_provider_admission_reviews",
+    "hrm_pay_glb_001_native_executions",
+    "hrm_pay_glb_001_native_members",
+    "hrm_pay_glb_001_native_selection_events",
+    "hrm_pay_glb_001_native_approval_bindings",
+    "hrm_pay_glb_001_native_gl_bindings",
+    "hrm_pay_glb_001_native_command_receipts"
+  ],
+  "new_objects": [
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_events_no_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_events_no_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_outbox_no_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_outbox_no_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_checkpoints_no_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_checkpoints_no_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_export_receipts_no_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "domain_audit_export_receipts_no_delete"
+    },
+    {
+      "type": "VIEW",
+      "name": "domain_audit_chain_state_read_v1"
+    },
+    {
+      "type": "VIEW",
+      "name": "domain_audit_genesis_checkpoint_read_v1"
+    },
+    {
+      "type": "VIEW",
+      "name": "domain_audit_review_v1"
+    },
+    {
+      "type": "PROCEDURE",
+      "name": "domain_audit_chain_initialize_v1"
+    },
+    {
+      "type": "PROCEDURE",
+      "name": "domain_audit_event_insert_v1"
+    },
+    {
+      "type": "PROCEDURE",
+      "name": "domain_audit_outbox_insert_v1"
+    },
+    {
+      "type": "PROCEDURE",
+      "name": "domain_audit_checkpoint_insert_v1"
+    },
+    {
+      "type": "PROCEDURE",
+      "name": "domain_audit_chain_advance_v1"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "payroll_reversal_evidence_no_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "payroll_reversal_evidence_no_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_artifacts_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_artifacts_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_artifact_versions_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_artifact_versions_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_candidates_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_candidates_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_reviews_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_reviews_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_receipts_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_import_receipts_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_rules_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_rules_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_rule_versions_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_rule_versions_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_regulatory_evidence_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_regulatory_evidence_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_reviews_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_reviews_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_publications_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_publications_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_events_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_lifecycle_events_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_emergency_changes_immutable_update"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hrm_pay_rule_emergency_changes_immutable_delete"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_j_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_j_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_jv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_jv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_b_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_b_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_fs_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_fs_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_fi_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_fi_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_a_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_a_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr5_rd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_cand_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_cand_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_except_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_except_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_bind_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_bind_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_tol_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_tol_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_shrun_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_shrun_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_shcmp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_shcmp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_elig_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_elig_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_cmd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr6_cmd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_cal_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_cal_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_calv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_calv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_per_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_per_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_grp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_grp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_grpv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_grpv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rel_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rel_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_relm_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_relm_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_enr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_enr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2m_lpmr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2m_lpmr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sdp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sdp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sda_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sda_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sdx_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_sdx_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_mpl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_mpl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_cvr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_cvr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rcn_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rcn_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rmp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rmp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rma_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rma_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rmx_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc2_rmx_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_elem_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_elem_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_elemv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_elemv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_indef_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_indef_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_eligv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_eligv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_apin_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_apin_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3m_lsmr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3m_lsmr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_mpl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_mpl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_cvr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_cvr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_rcn_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_rcn_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_pry_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc3_pry_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_snap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_snap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_res_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_res_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_line_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_line_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_trace_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_trace_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_integ_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_integ_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_lin_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_lin_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_lprov_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_lprov_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_recv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_recv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_arch_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc4_arch_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_def_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_def_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_mov_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_mov_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_open_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_open_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_snap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_snap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_recon_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_recon_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_recv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc6_recv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_evt_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_evt_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_aff_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_aff_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_ctx_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_ctx_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_del_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_del_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_arr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_arr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_arm_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_arm_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_pln_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_pln_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_app_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_app_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_exe_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_exe_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_obl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_obl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_rec_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_rec_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc7_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_vdf_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_vdf_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_thr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_thr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_pak_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_pak_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_run_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_run_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_fnd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_fnd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_res_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_res_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_sig_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_sig_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_var_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_var_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_rec_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_rec_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc8_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_lea_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_lea_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_att_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_att_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_chk_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_chk_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_trs_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_trs_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_qua_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_qua_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc9_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_int_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_int_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_app_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_app_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_prj_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_prj_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_par_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_par_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_trs_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_trs_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_use_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pc10_use_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_pat_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_pat_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_seg_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_seg_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_raw_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_raw_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_cnf_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_cnf_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_rev_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_rev_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_lnk_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_lnk_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_alc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_alc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_app_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_app_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_rcp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_rcp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_leg_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim1_leg_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_pol_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_pol_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_rul_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_rul_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_req_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_req_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_con_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_con_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_bat_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_bat_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_itm_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_itm_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_err_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_err_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_qua_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_qua_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_pay_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "tim2_pay_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_pol_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_pol_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_ent_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_ent_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_mov_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_mov_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_req_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_req_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_opn_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_opn_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_prj_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_prj_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_rec_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_rec_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_pay_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "lve1_pay_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rng_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rng_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cyc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cyc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_bud_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_bud_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_opn_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_opn_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_opr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_opr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cpl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cpl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_crc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_crc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_cmd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_awd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_awd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_prj_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_prj_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_map_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_map_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_pay_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_pay_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rec_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rec_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rcv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "cmp1_rcv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pad_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pad_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_prv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_prv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pln_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pln_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pvr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pvr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_eli_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_eli_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_win_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_win_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_con_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_con_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_enr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_enr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_dep_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_dep_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_let_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_let_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_ler_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_ler_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_lrv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_lrv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_evt_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_evt_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_cvr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_cvr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_crc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_crc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_arr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_arr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_amv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_amv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_cnt_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_cnt_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pmp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pmp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pho_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pho_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_bmp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_bmp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_bho_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_bho_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pop_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_pop_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_prc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ben1_prc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_cap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_cap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_rev_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_rev_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_cmd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ess2_cmd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_rb_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_rb_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pk_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pk_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ar_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ar_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pu_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pu_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_pr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_si_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_si_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_tk_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_tk_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_kr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_kr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ks_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ks_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_vr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_vr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_cv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_cv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_cd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_cd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_dl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_dl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_dm_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_dm_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ir_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct1_ir_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_oj_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_oj_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_si_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_si_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_im_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_im_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_aa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_aa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ac_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ac_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_bd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_bd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ss_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ss_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ob_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_ob_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_da_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_da_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_rg_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_rg_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_rv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct2_rv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_cv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_cv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_cd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_cd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_ha_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_ha_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_ac_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_ac_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_vr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_vr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_me_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct3_me_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_es_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_es_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ei_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ei_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ev_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ev_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_em_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_em_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_rd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_rd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_pr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_pr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_sk_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_sk_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_kr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_kr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ce_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ce_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_cc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_cc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_pb_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_pb_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ea_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ea_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ra_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_ra_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_rr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct4_rr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_cr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_cr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ca_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ca_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_un_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_un_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_na_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_na_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_au_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_au_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_re_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_re_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ak_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ak_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_le_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_le_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ob_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_ob_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_da_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ct7_da_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_ji_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_ji_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_jl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_jl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_al_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_al_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_ax_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_ax_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_mv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_mv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_mr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_mr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_rc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_rc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_rv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_rv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_pa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_pa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gpl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gpl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_gr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_co_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgl1_co_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_pi_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_pi_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_it_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_it_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_al_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_al_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ba_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ba_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_bi_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_bi_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_br_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_br_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ar_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ar_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ob_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ob_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ta_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ta_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_fl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_fl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ri_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_ri_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_st_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_st_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_rc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_rc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_co_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "ppm1_co_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ob_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ob_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ss_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ss_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ar_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_ar_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_va_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_va_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_au_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_au_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_tp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_tp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_pf_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_pf_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_pl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_pl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sm_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pfl1_sm_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rs_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rs_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_mp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_mp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_ps_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_ps_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_cr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_cr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_cv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_cv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_ad_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_ad_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rlp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rlp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rld_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rld_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pe_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_pe_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rres_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_rres_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wt_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wt_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_we_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_we_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wo_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wo_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wtl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wtl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsrn_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsrn_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wdp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wdp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wcl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wcl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wetp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wetp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wsp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wpr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wpr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wra_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wra_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrq_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrq_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wrp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wdr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wdr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wis_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wis_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wir_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wir_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wid_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "papi1_wid_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_md_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_md_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_sp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_sp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_sr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_sr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_ss_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_ss_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_qa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_qa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_da_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "hanl1_da_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_rq_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_rq_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_ou_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_ou_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_rv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pai1_rv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_sd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_sd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_se_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_se_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_ce_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_ce_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_xa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_xa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pr_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pr_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pw_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_pw_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_ld_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_ld_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_la_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_la_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_lc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_lc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cg_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "htal1_cg_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_pp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_pp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_pc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_pc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cd_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cd_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_se_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_se_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_ds_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_ds_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_vs_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_vs_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_va_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_va_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_vc_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_vc_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_aa_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_aa_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_cl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_mi_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_mi_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_ma_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "peco1_ma_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_pf_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_pf_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_es_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_es_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_cl_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_cl_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_rv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_rv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_ap_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_ap_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_se_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pr1_se_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_pp_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_pp_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_mv_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_mv_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_par_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pcon1_par_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_e_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_e_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_m_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_m_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_s_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_s_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_a_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_a_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_g_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_g_d"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_c_u"
+    },
+    {
+      "type": "TRIGGER",
+      "name": "pgn_c_d"
+    }
+  ],
+  "added_columns": {
+    "document_types": [
+      "security_class"
+    ],
+    "employee_documents": [
+      "access_key",
+      "content_state",
+      "content_sha256",
+      "content_size",
+      "content_mime",
+      "retention_locked"
+    ],
+    "approval_notifications": [
+      "delivery_attempts",
+      "attempt_limit",
+      "repair_count",
+      "last_repaired_by",
+      "last_repaired_at",
+      "next_attempt_at",
+      "lease_token",
+      "lease_expires_at",
+      "last_attempt_at",
+      "last_error_code",
+      "dead_lettered_at",
+      "sent_date"
+    ]
+  },
+  "added_indexes": {
+    "leave_details": [
+      "leave_employee_history_idx"
+    ],
+    "employee_documents": [
+      "content_state",
+      "employee_document_access_key_uq"
+    ],
+    "approval_notifications": [
+      "approval_notification_lease_uq",
+      "approval_notification_delivery_ready",
+      "approval_notification_dead_letter"
+    ]
+  },
+  "source_sha256": {
+    "hrm/includes/db/employee_db.inc": "c11f1e27d524a510f86b6ba5c24a0cbe238f50953d00bd296536826940455f17",
+    "hrm/includes/db/employee_person_worker_db.inc": "b6fdbb1bd1ec001e5e1bc00c6635d8b7f2a87d8cacb9950f97849156b1d937c3",
+    "hrm/includes/db/legal_entity_db.inc": "91ea3bcf10feb5377a2666d92870d98536621f67ffe016d1da3d57b827db146e",
+    "hrm/includes/db/organization_unit_db.inc": "dffaf1f53db79b7b38e2070fca6909bd5987021df9382d00b221e4a004bde958",
+    "hrm/includes/db/grade_db.inc": "5f8e7c3976f8506f309116da1f7e18331c11209eb6ec2b7cd93bbbb960ad1cf3",
+    "hrm/includes/db/position_db.inc": "716777b8217c61b5e5b97f095f855a14d4b04624f210013683efb95e041fc3f1",
+    "hrm/includes/db/employee_employment_db.inc": "4ac88817dd62e564c0e5b199fa5164b3f5c0a597f87840d319fac72719853642",
+    "hrm/includes/db/employee_contract_db.inc": "cb5cc2cdf388da9efa8631c823a259dc5129e4b2a751e7c0ab3ff1611cf8616c",
+    "hrm/includes/db/employee_assignment_db.inc": "e5588751e8ff7989049879f3dde324f94c8911680a4418bf2e2fd9641953520f",
+    "hrm/includes/db/employee_person_sensitive_db.inc": "9746730e7f8a37447c29db742abca93466bf1afa6df1ac98c59ed2892e307b17",
+    "hrm/includes/db/employee_person_bank_db.inc": "b98dcb1031abb0a1534acffb1c7eaa90e5c92d04df9693563d6f91bac37a25c4",
+    "hrm/includes/db/employee_person_private_profile_db.inc": "16bb78b9cc632e5aae0b3c48dca4a7b4b32455cb9a6504db6e1263cb22c0abac",
+    "hrm/includes/db/employee_compatibility_profile_db.inc": "b0419d1d680dd3f27009d38b0c1eed7474e27005ea7b99033d2c4b63f9e0c718",
+    "hrm/includes/db/employee_projection_control_db.inc": "aa8cec07560365f98d2d3c4f1d1b6df4ea940f07309c51bdfc202e2bfcaffcf7",
+    "hrm/includes/db/employee_compatibility_projector_db.inc": "1a6178bbb06db128fe9b900a9b09191bcd2fed062a81f78c902d2a5e93a0146f",
+    "hrm/includes/db/employee_document_migration.inc": "04b2c0204914dc09d40bfe2a34211649e2bee66b0881fdde1727ce0eadd40cad",
+    "hrm/includes/db/employee_document_db.inc": "33466416c38945767245cff45b017bacad80ef25f2a6d92032da67bf13cd9bb3",
+    "includes/db/domain_audit_db.inc": "23cfa94113526c155c12b1ae4b0f5bbb48b5d5448c50bbc3601a2496417a52cb",
+    "admin/includes/fa_patch.class.inc": "1cc839eced8a46d2414f56d0b3932d911e5d953097b8a86f27a53cb4ec9373d1",
+    "admin/db/maintenance_db.inc": "46414013f21050b4f09f86f1a133111d75d47a6bc37da22f4b1cfd0f61ee9981",
+    "includes/attachment_service.inc": "8d2e4d1c432a3fc15d06d4bce0a57229520c351fe1ce7f2eba826b3649e08de0"
+  }
+}

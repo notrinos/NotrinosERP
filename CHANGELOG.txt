@@ -1,0 +1,847 @@
+NotrinosERP CHANGELOG
+=====================
+
+History is limited to commits AFTER the 1.0.0-alpha boundary:
+f92c5a2c428f2de62f0748151d109f79f96342cf (exclusive).
+Dates below are commit dates. This preparation does not publish a release.
+
+1.1.0 - Unreleased
+------------------
+Source snapshot: afb872fa9b0391d0374119c9d241020393d5de30
+Upgrade baseline: 1.0.0, 3ce219018583085f401faa9d77bdaf78d9b6b075
+Database version: 1.0 -> 1.1.0
+
+Release preparation
+- Add a consolidated installer discovered by Setup > Software Upgrade.
+- Apply the official schema delta in one Upgrade action for the logged-in company.
+- Verify release-file hashes and the supported starting schema before DDL.
+- Retain the standard security backup and failure-recovery boundary.
+- Repair documented legacy warranty dimensions and employee-document attachment
+  linkage/column widths after backup when earlier manual ALTERs were not applied.
+- Seed the normalized HRM owners using existing production conversion helpers;
+  require Employee compatibility parity before publishing the new version.
+- Migrate employee-document content through the existing private-storage and
+  quarantine workflow, retaining historical source bytes and recovery material.
+- Align application, database and fresh/demo-install version metadata at 1.1.0.
+
+Highlights from the source history
+- Strengthen login/session controls, payroll authorization and audit custody.
+- Add normalized HRM identities, employment, organization and employee lifecycle.
+- Add governed payroll-core, country-pack and global-payroll foundations.
+- Add employee/manager self-service and controlled HRM workflow surfaces.
+- Fix CRM authorization, gettext cache injection, company-logo upload and SQL
+  injection in bank-statement and General Ledger journal-entry reports.
+- Repair installation SQL/default-theme assets and improve HRM employee-list,
+  attendance-sheet and leave-history loading.
+
+The commit history is the complete source record; foundation work does not
+by itself assert production readiness or external-provider activation.
+
+Complete commit history (baseline exclusive, source snapshot inclusive)
+Date       | Commit   | Change
+2026-10-16 | afb872fa | Continue HRM loading perfomance optimization: - Attendance sheet pagination - Tune employee-cohort leave history access
+2026-10-15 | 9a1b97ca | Optimize fresh leave readiness metadata checks
+2026-10-15 | 8a385aa6 | Continue of employees loading perfomance issue
+2026-10-15 | cf352b94 | Continue HRM employee loading perfomance: add verified employee search backend slice
+2026-10-14 | 6fb607ea | Merge branch 'main' of github.com:notrinos/NotrinosERP
+2026-10-14 | 38bbffa0 | Merge commit from fork
+2026-10-14 | 337bdca6 | Fixed authenticated SQL injection via the PARAM_2 parameter of the General Ledger journal-entries report
+2026-10-14 | edb7a0f5 | Improve emloyees loading performance in Employees Entry, Payslip Entry, Attendance Sheet.
+2026-10-14 | da16afc3 | Merge commit from fork
+2026-10-14 | 2b42f5d2 | Authenticated Arbitrary File Write via Company Logo Upload (missing image validation + undefined post-upload check). Fixed.
+2026-10-13 | b20dc527 | Fix installation SQL syntax error, fix default theme broken images
+2026-10-13 | a55c7660 | Merge commit from fork
+2026-10-13 | 3a263024 | Fix SQL injection in Bank Statement report
+2026-10-13 | c4cbf6a0 | Merge commit from fork
+2026-10-13 | c8fcf916 | Fix PHP code injection in gettext translation cache
+2026-10-13 | 2a05b77a | Merge commit from fork
+2026-10-13 | 42a85905 | Fix authorization checks for CRM AJAX actions
+2026-10-12 | 64906c3c | Complete Payrol Global scope: - Global payroll coordination — Track payroll runs across countries and legal entities. - Payroll result verification — Establish which payroll results are approved and authoritative. - Accounting integration — Verify payroll-to-General Ledger (GL) relationships. - Global reporting — Provide consolidated payroll visibility. - Security and auditability — Maintain authorization, revision history, and immutable evidence. - Reconciliation — Detect mismatches between payroll results and accounting records.
+2026-10-11 | e8b670d5 | architecture decisions and receipt contracts
+2026-10-10 | 44edd310 | staged producer and recovery. Initial independent selection and negative events. Storage/delta boundary.
+2026-10-09 | b029af03 | add run-result candidate validation and acceptance gates
+2026-10-09 | 1358825b | verify approval lineage diagnostics and local acceptance
+2026-10-09 | 2e7fa1cc | add native lineage diagnostics and acceptance gates
+2026-10-09 | 2b6fb4b4 | add native observation foundation and verification
+2026-10-09 | 607bfa27 | add server admission foundations
+2026-10-09 | d030e763 | validate admission candidates
+2026-10-09 | cfee5d9a | add closure evidence and review handoff
+2026-10-09 | f00accc2 | add entity verification and signed-evidence preflight
+2026-10-09 | 59393db7 | dd admission and provenance contracts
+2026-10-09 | cbcf1bfe | add guarded source admission and scope boundaries
+2026-10-09 | bb927f36 | add offline exception aggregates and dashboard preview
+2026-10-09 | 5c494625 | establish read-only multi-country authority and calendar foundation
+2026-10-08 | b5f83e21 | add Deel offline webhook and reconciliation rehearsal
+2026-10-08 | 9a8dc08c | accept documentation-based Deel mock development
+2026-10-08 | 7860a31d | add provider admission authority and custody
+2026-10-08 | a886232c | integration layer for external payroll providers: add provider-neutral connectivity custody foundation
+2026-10-08 | 7e9c5cba | complete privacy-aware recovery evidence
+2026-10-07 | 1ee6e881 | add serialized development close/recovery
+2026-10-07 | 13b894a7 | payrol country pack continue: add independent evidence review runtime
+2026-10-07 | b6113b91 | add immutable reconciliation custody foundation
+2026-10-07 | 5be28bd3 | add reconciliation architecture contracts
+2026-10-07 | c692b402 | stage generated validation and closure readiness
+2026-10-07 | c69a7575 | Vietnam payrol country pack: add TT80 source-bound local-validator generation
+2026-10-07 | 4ce7b7a9 | add TT80 semantic mapping custody and readiness
+2026-10-07 | 0e45a88d | add governed TT80 semantic source admission custody (Vietnam payroll country pack)
+2026-10-06 | 573f3fe0 | add TT80 semantic source custody
+2026-10-06 | 549c73df | guard TT80 semantic source gaps
+2026-10-06 | 3abdc4a0 | add TT80 renderer readiness
+2026-10-06 | 0e52200d | validate TT80 XML with local official viewer (iTaxViewer)
+2026-10-05 | 8ecb7e83 | review legal authority boundaries
+2026-10-05 | 572c5a31 | accept HTKK TT80 XSD compatibility (Vietnam envidence)
+2026-10-05 | 3ad581b5 | accept bounded HTKK filing evidence (Vietnam)
+2026-10-04 | e4343f8e | complete publisher revocation writer contract
+2026-10-04 | 987f1dc9 | accept marketplace installation activation bridge
+2026-10-04 | 29d216d3 | Lifecycle authority/profile. Immutable lifecycle propagation custody. Propagation writer + direct fail-closed runtime guard.
+2026-10-04 | d84f113e | align catalog publication index projection
+2026-10-04 | 6880d77d | enforce catalog decision authority ceiling
+2026-10-04 | 2a151ec6 | Complete signed artifact admission
+2026-10-04 | 58289452 | Vulnerability authority/profile. Immutable vulnerability custody. Snapshot ingestion + exact correlation writer.
+2026-10-04 | 656b2434 | Complete dependency integrity scan foundation
+2026-10-04 | b14526d3 | add governed sandbox evaluation
+2026-10-03 | 0c7c766d | Partner-onboarding authority. Publisher-profile writer. Verified pack-candidate writer.
+2026-10-03 | e299bfd1 | Payroll Ecosystem / Marketplace governance foundation
+2026-10-02 | c0dbcebc | accessible server-rendered route source contract
+2026-10-01 | 07832a76 | add confidential case runtime and restricted access
+2026-10-01 | a3083e85 | confidential-case predecessor migration acceptance
+2026-10-01 | eb33b6a0 | bounded learning runtime contract
+2026-10-01 | 6fcd11fd | add governed performance export
+2026-10-01 | 39536075 | Complete performance workflow and scoring
+2026-10-01 | eefd3deb | Complete performance browser/access
+2026-10-01 | 71478477 | Complete performance writer/read-view
+2026-10-01 | 5e0d9d6e | add performance custody foundation
+2026-10-01 | 92157b18 | Complete governed talent foundation
+2026-09-30 | f70a7aa9 | complete manager team authorization
+2026-09-30 | 3c483292 | governed browser and ESS self-service
+2026-09-30 | 39d743bc | add governed talent writers and restricted reads
+2026-09-30 | cc77c273 | Complete skills and certifications custody foundation
+2026-09-30 | 8aa2d41b | Complete assistive AI governance and review custody
+2026-09-30 | 5aa46faf | complete deterministic anomaly baseline acceptance
+2026-09-30 | 432b4273 | add governed assistive AI custody foundation
+2026-09-30 | 75d2fb31 | add governed department employment-type headcount analytics
+2026-09-30 | dfe1f9b0 | add governed employment-type headcount analytics
+2026-09-29 | d9362e8e | add governed department headcount analytics
+2026-09-29 | 0160fff8 | add governed headcount UI and navigation
+2026-09-29 | be4f09a2 | add governed headcount analytics runtime
+2026-09-29 | 8e8f4c89 | close governed analytics foundation
+2026-09-29 | 50dd8ba1 | Close inbound webhook verification
+2026-09-29 | 49f4328d | Advance governed webhook reprocess execution
+2026-09-29 | 646d172f | Reprocess governance custody. Governed authorization activation. Reprocess dispatch-reservation custody
+2026-09-29 | b18b2a22 | bounded webhook retry execution
+2026-09-29 | 3198d536 | claim-bound delivery execution
+2026-09-29 | dea83105 | signed transport foundation
+2026-09-29 | eda3277f | Complete webhook runtime writers
+2026-09-28 | 17e5996e | Immutable outbound egress/TLS policy custody. Canonical payload/signing-profile custody. Provider-response evidence, replay defense and independently reviewed reprocess authorization custody
+2026-09-28 | 3a41d0e2 | Complete webhook transport prep
+2026-09-28 | 52144a9d | webhook outbox foundation
+2026-09-28 | 0e148375 | Immutable read-response audit custody. Activate only approved-or-later payroll-period summary reads
+2026-09-28 | 7ce94527 | public readonly route compatibility
+2026-09-28 | 4b4bbbc6 | machine authn/read authority/audit prerequisites
+2026-09-28 | 18256834 | provisioning and rate enforcement
+2026-09-28 | 55db961e | Governed provisioning-request custody; zero-seed, immutable; no execution writer, Independent review/approval custody plus fail-closed maker/reviewer/approver SoD gate, Rate-limit policy/decision custody plus deterministic pure decision gate
+2026-09-27 | b47c348d | threat model/security contract hardening. Zero-seed immutable credential-verifier + revocation custody. Zero-seed authentication-decision custody + internal GET-only request gate
+2026-09-27 | e53cd682 | deny-by-default contract. No route, credential/secret, webhook, payroll, payment, GL, filing, network, or cross-company authority.
+2026-09-27 | f6956f4c | authorization foundation
+2026-09-27 | 0c1e425f | Governed obligation/source writer bound only to current approved run/result custody. Immutable non-authoritative internal reconciliation artifact. Immutable validation evidence; explicitly non-authorizing
+2026-09-27 | 7f858809 | reconcile source-set index projection
+2026-09-27 | 45b2019c | complete payment lifecycle
+2026-09-27 | b23224ed | establish payment custody foundation
+2026-09-26 | 183e26a4 | governed account/dimension mapping, journal-intent writer and reconciliation, controlled GL posting authority/bridge, reversal/repost/recovery, scoped legacy cutover guard, privacy/drill-down and closure
+2026-09-26 | 8f0ca6ae | add new payroll journal foundation
+2026-09-26 | 4620ccb7 | complete delivery permission custody
+2026-09-26 | 95600fa4 | Recipient authority/validation. Immutable recipient lifecycle schema. Governed recipient lifecycle writer.
+2026-09-25 | 356c81af | signed catalog-release verification, trust/revocation/replay controls, maker/checker admission, regulatory update-notice contract, aggregate applicability, stable dedupe, and explicit authority denial.
+2026-09-25 | a232d561 | Structurally different proof pack (It proves that the country-pack architecture is genuinely country/jurisdiction-neutral.)
+2026-09-25 | 55524f7e | Added Vietnam reference pack
+2026-09-25 | 9acc3dd3 | added certification/governance layer for country payroll packs
+2026-09-25 | 75891aa5 | close country pack lifecycle
+2026-09-25 | 0ae76fec | add country pack activation staging custody
+2026-09-25 | bf89780c | Payroll Country Pack Foundation - predecessor/dependency/readiness foundation. - lifecycle contract and authority-boundary foundation. - append-only lifecycle/site-installation custody foundation.
+2026-09-23 | 1b021eb7 | security and trust foundation that lets system safely accept country-specific payroll packs.
+2026-09-23 | f545d411 | Fixed installer’s SQL execution errors (issue #39, issue #40)
+2026-09-23 | 052abac9 | the complete employee + manager self-service experience built on top of all the governed HR/payroll domains.
+2026-09-23 | f6c23c3e | Employee benefits management foundation (rather than leaving benefits as scattered payroll deductions or ad-hoc employee fields.)
+2026-09-22 | b4fc252f | governed employee compensation and pay-rate history foundation for payroll.
+2026-09-21 | 6a0a4db2 | added foundation that makes employee leave balances, leave policies, requests, approvals, and payroll/time integration governed, traceable, and historically safe.
+2026-09-21 | d8cb7627 | makes overtime qualification and imported time trustworthy, traceable, duplicate-safe, policy-driven, and safe for downstream payroll.
+2026-09-20 | 9f444ea9 | makes employee working-time data trustworthy enough to become payroll input.
+2026-09-20 | d049496b | Payroll Approval + Legacy Payslip Projection Cutover
+2026-09-20 | 51906f38 | restartable payroll processing runner and authoritative run-state service
+2026-09-20 | 335b26c5 | Payroll Validation, Variance, and Reconciliation Engine
+2026-09-20 | ce5b411d | retroactive payroll, arrears, corrections, and reversals.
+2026-09-20 | 0f7cf49f | preserve and accumulate the resulting balance history deterministically.
+2026-09-19 | 93221b33 | deterministic payroll calculation engine layer
+2026-09-19 | 2bf93be4 | freeze and prove exactly what payroll used and produced
+2026-09-19 | c9ac5098 | Versioned elements, inputs and eligibility completion: Maker/checker mapping approval custody Non-authoritative mapping governance writer Controlled conversion custody Three-party controlled conversion executor Conversion reconciliation/recovery Element/version/input-definition writer Eligibility policy/writer/evaluator Provenance-rich approved-input writer Non-authoritative legacy compatibility adapters Compatibility/parity custody Cumulative security/recovery hardening
+2026-09-19 | ad044507 | manual-only legacy mapping review, immutable mapping-review custody, bounded value-free legacy inventory
+2026-09-19 | 3c2a4e6e | Versioned elements, inputs and eligibility: dependency review, pure contract, and zero-seed custody foundation
+2026-09-18 | 6ac92f48 | the governed payroll calendar, payroll-group, payroll-period, and employee payroll-relationship foundation needed before deeper payroll execution can safely move to the new architecture
+2026-09-18 | dffdcead | add legacy mapping custody and inventory
+2026-09-18 | e299f0a5 | Calendars, groups and payroll relationships contract
+2026-09-18 | 9bec0f57 | added safety-controlled bridge from the legacy payroll formula system to the new governed payroll-rule system
+2026-09-18 | f7573d72 | added jurisdiction and rule-precedence layer
+2026-09-18 | 6bd9fa1d | Controlled Draft Rule/Version writer Regulatory-evidence registration command Independent review/checker command Impact-preview + publication readiness Publication command Withdrawal + supersession lifecycle Emergency-change governance
+2026-09-18 | 5d74ba2d | establish lifecycle foundation
+2026-09-18 | ee44044a | Artifact persistence/custody foundation Artifact writer/reader + version binding Legacy rule inventory/import candidate foundation Import validation/reconciliation + approval boundary
+2026-09-17 | 22e38739 | add decision rate foundations
+2026-09-17 | e415581e | add decision table foundations
+2026-09-17 | 0bdac719 | harden payroll acceptance custody
+2026-09-17 | c9ab6541 | harden acceptance ceremony done
+2026-09-17 | 9dbab4b0 | complete configured shadow acceptance
+2026-09-17 | 4ef3f6ec | add safe formula profile foundation
+2026-09-17 | 22d9ebc4 | ESS completion marker/final closure
+2026-09-17 | e64fd67b | add ESS self-change route boundary
+2026-09-17 | 51f1f1d5 | complete ESS self-change application and recovery
+2026-09-17 | 46f67705 | add ESS self-change maker checker workflow
+2026-09-16 | 0e81236b | add manager delegation command workflow
+2026-09-16 | f7734cd6 | add ESS manager scope and delegation foundation
+2026-09-16 | 5175974a | add ESS identity foundation
+2026-09-16 | 85d29ad5 | post-cleanup completion evidence
+2026-09-16 | 09b77bc8 | Merge branch 'main' of github.com:notrinos/NotrinosERP
+2026-09-16 | c7682b7b | add legacy cleanup authorization
+2026-09-16 | 3d55d108 | complete legacy cleanup execution and recovery
+2026-09-16 | ff7edc8f | add legacy cleanup authorization custody
+2026-09-16 | 1e7f5d5d | complete bulk reconciliation and retained-key disposition
+2026-09-15 | 5193adcd | add bulk execution and forward recovery
+2026-09-15 | 5b596432 | add bulk batch maker-checker authorization
+2026-09-15 | 9089180a | add FND-007 legacy bulk batch custody
+2026-09-15 | 6c64424b | add legacy reconciliation and retained-key disposition
+2026-09-15 | 74feaad3 | add typed attribute legacy conversion
+2026-09-15 | 8eb8453c | add legacy mapping approval custody
+2026-09-15 | bd247f56 | add legacy custom-data mapping custody
+2026-09-15 | 4cd718c0 | add typed attribute definition lifecycle
+2026-09-15 | ae65f503 | add typed attribute current value route
+2026-09-15 | 6835a2a7 | add typed attribute value governance
+2026-09-15 | 4a8dd7b3 | add typed attribute definition governance"
+2026-09-15 | 5706d702 | add retention and delivery policy custody
+2026-09-14 | 574a318e | add work authorization expiry delivery
+2026-09-14 | 0b3b273a | cut over transfer work authorization
+2026-09-14 | 06bc3a5c | add expiry and assignment readiness boundaries
+2026-09-14 | 1b101c59 | add work authorization policy readiness
+2026-09-14 | e147698f | add work authorization verification and masked read
+2026-09-14 | 1249aed4 | add work authorization command writer
+2026-09-14 | b7c6b088 | add authorization and attribute foundations
+2026-09-14 | 8bcc2e9e | complete employee projection ownership cutover
+2026-09-13 | 7b326cd0 | finalize Rehire, Offboarding closure contract
+2026-09-12 | 19e1bb19 | add employee rehire normalized rollover plan
+2026-09-12 | 6499aa28 | tightened the Rehire custody helper to fail closed unless
+2026-09-12 | c0a66e15 | add employee rehire command custody foundation
+2026-09-12 | 66752c3d | the route did not render the governed Hire policy text the test requires, and its fgetcsv() call relied on the soon-to-change default escape parameter, which polluted the validation response and hid the skip notice
+2026-09-12 | 65a37163 | complete CSV employee hire production route custody contract
+2026-09-12 | 9a578e42 | add CSV employee hire batch adapter foundation
+2026-09-12 | a1d13409 | Hardened photo handling to verify an existing employee before any filesystem mutation.
+2026-09-12 | efacf699 | cut over employee hire browser onboarding
+2026-09-12 | c2f7297f | add employee hire approval execution foundation
+2026-09-12 | 187c0586 | A database-only metadata tamper could leave ciphertext decryptable while falsely changing generation custody. Corrected.
+2026-09-12 | 6118698c | add employee hire payload writer foundation
+2026-09-12 | 9971aea2 | add encrypted employee hire payload custody
+2026-09-11 | a53f3d6f | add employee hire command custody foundation
+2026-09-11 | 4d2b7e32 | cut over suspension payroll calculation consumer
+2026-09-11 | 286671ee | add suspension payroll readiness guard
+2026-09-11 | 45afbefb | guard leave approval during suspension
+2026-09-11 | b89bbe38 | guard attendance sheet suspension mutations guard attendance import suspension mutations guard overtime attendance suspension mutations
+2026-09-11 | 21e59021 | Attendance Entry Suspension mutation consumer cutover
+2026-09-11 | dd3db4da | add suspension attendance mutation guard foundation
+2026-09-11 | 73767605 | Suspension attendance mutation policy evaluator foundation
+2026-09-10 | 368298e4 | add employee service-state as-of resolver
+2026-09-10 | 86bce358 | Existing lifecycle routes explicitly normalize empty/“all employees” selections to none
+2026-09-10 | 4782f837 | activate suspension and reinstatement browser routes
+2026-09-10 | dec852ac | add suspension and reinstatement command foundations
+2026-09-10 | 64461942 | Employee Promotion browser route foundation
+2026-09-10 | adb43886 | add employee promotion lifecycle command foundation
+2026-09-10 | a7b13ab5 | close residual employee maintenance writer bypasses
+2026-09-09 | 6e4300c1 | Employee maintenance governed bank/payment collector bypass closure
+2026-09-09 | 9402fe08 | close employee cost-center maintenance bypass
+2026-09-09 | dde97c13 | close employee system-login identity bypass
+2026-09-09 | d10b4d0a | close employee shift assignment maintenance bypass
+2026-09-09 | 1189d58f | close employee employment-type maintenance bypass
+2026-09-09 | 256236b7 | employee-import path still parses hire_date and can pass it into update_employee(). Fixed.
+2026-09-09 | 56552c6e | close employee hire-date maintenance bypass
+2026-09-09 | 213848d4 | close employee salary-mode maintenance bypass
+2026-09-09 | e831327d | close employee maintenance lifecycle bypasses
+2026-09-09 | 89f391bf | complete probation schedule browser cutover acceptance
+2026-09-08 | 4e5f5574 | add employee probation schedule command
+2026-09-08 | c3e92dc8 | cut over employee confirmation browser lifecycle
+2026-09-08 | ff1cd250 | add employee confirmation lifecycle command
+2026-09-08 | 337e9cf2 | enforce training task custody and retry recovery
+2026-09-08 | fe468e76 | Training Assignment checklist-task writer Training Assignment checklist-task browser cutover
+2026-09-08 | 956a24e0 | approve employee training assignments
+2026-09-08 | a9c454e8 | complete salary revision lifecycle
+2026-09-08 | e7b70e44 | activate separation task document browser cutover
+2026-09-08 | fc0ecc9f | add separation task document writer
+2026-09-08 | 2f7c968b | add transfer task document browser cutover
+2026-09-07 | 51432714 | add employee transfer task document writer
+2026-09-07 | b7487869 | add lifecycle task document custody
+2026-09-07 | 7a3bf3f6 | complete lifecycle task transfer and separation cutovers
+2026-09-07 | 412e21f2 | add employee transfer lifecycle task writer
+2026-09-07 | 08737540 | add lifecycle checklist task custody foundation
+2026-09-06 | cc21375a | cut over employee separation browser workflow
+2026-09-06 | 345f4863 | add employee separation lifecycle command
+2026-09-06 | 74ff9a48 | cut over employee transfer browser to lifecycle command
+2026-09-06 | e8eddfd7 | add employee transfer lifecycle command
+2026-09-06 | 6aa67df4 | add lifecycle command custody foundation
+2026-09-06 | cbf13617 | add payment instruction binding foundation
+2026-09-06 | c3ec66f9 | add person bank payment election browser route
+2026-09-05 | f83116f0 | add person bank payment election command
+2026-09-05 | b703568b | add person bank payment election custody foundation
+2026-09-05 | 520669ea | complete bank verification promotion browser route
+2026-09-05 | 71431455 | complete bank verification evidence browser continuation
+2026-09-04 | dc628ffd | add bank verification request browser continuation
+2026-09-04 | 35657c9d | Person bank-account supersession browser-route foundation
+2026-09-04 | e4c28d5f | add bank verification promotion command
+2026-09-04 | c94012c3 | Person bank-account verification-evidence registration command foundation
+2026-09-04 | 8e3ad8ba | Person bank-account verification-evidence custody foundation
+2026-09-04 | 09a95164 | apply fail-closed revalidation
+2026-09-04 | 0d6473bf | add bank verification request command foundation
+2026-09-04 | a837678d | Merge branch 'main' of github.com:notrinos/NotrinosERP
+2026-09-04 | 0dc9945c | correct bank verification lifecycle runner validation
+2026-09-04 | 182d34de | Person bank-account verification-request foundation
+2026-09-03 | a8b5ed39 | add governed bank account supersession command
+2026-09-03 | 9a92c635 | Person bank-account supersession-lineage foundation
+2026-09-03 | 858e261b | add identifier verification promotion browser route
+2026-09-03 | 16b7ced0 | add identifier verification evidence browser continuation
+2026-09-03 | 7525ab4f | add identifier verification request browser continuation
+2026-09-03 | 82196fce | add governed identifier supersession browser route
+2026-09-03 | c0c7de74 | guard legacy identifier mutation paths
+2026-09-03 | ec4ea6fe | add identifier supersession command
+2026-09-02 | d4faa6bb | reconcile identifier supersession lineage schema
+2026-09-02 | 50fbdfb1 | identifier verification promotion command
+2026-09-02 | 1e970d9c | identifier verification-evidence registration command foundation
+2026-09-02 | 429bf244 | identifier verification-evidence custody foundation
+2026-09-02 | a4922561 | add identifier verification request command
+2026-09-01 | 68b8edff | add break-glass drill review evidence
+2026-09-01 | 0c1b4a72 | add break-glass expiry sweep
+2026-09-01 | 6592dd2e | add break-glass browser route
+2026-09-01 | fed97e46 | the custody query joins user_sessions only by session ID and does not require s.user_id = l.user_id. Fixed.
+2026-09-01 | fcb5b46c | add break-glass recovery context consumer
+2026-09-01 | b29745b3 | break-glass activation command foundation
+2026-08-31 | 69fd1862 | break-glass activation-lease custody foundation
+2026-08-31 | 95a01609 | scoped local break-glass designation command foundation
+2026-08-31 | a9b7945a | add break-glass designation custody
+2026-08-31 | 51fa4166 | Merge github/main into main
+2026-08-31 | 0edf190f | add public recovery redemption route
+2026-08-31 | a877d54e | add recovery material reenrollment route
+2026-08-31 | 5b3924c6 | PHP 7 null-coalescing syntax
+2026-08-31 | 02832fc9 | feat(pay-sec-004): add public recovery redemption route
+2026-08-31 | f11ac68f | add recovery redemption coordinator
+2026-08-31 | 2ba82216 | add recovery redemption abuse-control custody
+2026-08-30 | d00c5588 | administrator password-reset transaction foundation
+2026-08-30 | 452bb3e1 | add recovery material verification consume foundation
+2026-08-30 | 7a3e74e3 | recovery-material command foundation
+2026-08-30 | cf1387ee | add recovery-material custody foundation
+2026-08-30 | 9cded9d1 | integrate payroll-post federated step-up consumer
+2026-08-30 | 52e0c08f | nested begin can commit the link before a later audit failure, violating the required rollback guarantee. Fixed.
+2026-08-30 | 3d6a98db | add payroll post step-up orchestration
+2026-08-30 | 2f6f0e8d | add privileged action assurance consumer foundation
+2026-08-30 | c369420f | add federated assurance issuer foundation
+2026-08-30 | 173900bc | add signed OIDC assurance candidate foundation
+2026-08-29 | 64910163 | federation first-link administration/public-login completion
+2026-08-29 | e8415dd3 | add existing-link OIDC authorization start
+2026-08-29 | 98d6602f | add existing-link OIDC callback route
+2026-08-29 | ec8ad378 | add existing-link OIDC callback orchestration
+2026-08-29 | fc388360 | tightening the locked join to enforce exact role equality
+2026-08-29 | ed542dce | add federated browser session adoption
+2026-08-29 | ed1ff154 | add explicit federation first-link creation
+2026-08-29 | 0c73a351 | add targeted federation session revocation
+2026-08-28 | 48ddeb16 | add federated session issuance foundation
+2026-08-28 | af5c1bf4 | add federated session provenance foundation
+2026-08-28 | 3f986303 | add atomic OIDC decision command
+2026-08-28 | 78124fc1 | add bounded OIDC token exchange transport
+2026-08-28 | 5356d2a6 | add pinned OIDC token verifier adapter
+2026-08-28 | b7828bd8 | add oidc callback claim lease foundation
+2026-08-27 | 535a5b23 | OIDC token-verifier private-material foundation
+2026-08-27 | 5d28d22e | callback-claim custody foundation
+2026-08-27 | a57031b0 | protocol-transaction issuance foundation
+2026-08-27 | 12062cea | add federation verifier dependency deployment foundation
+2026-08-27 | dee3fc3c | federation verifier runtime capability-gate foundation
+2026-08-26 | 0bd7d51e | private federation-control-material loader foundation
+2026-08-26 | e69418e6 | federation verifier-decision foundation
+2026-08-26 | ba1d7340 | federation external-subject-link foundation
+2026-08-26 | 58add59e | federation verifier transaction/replay-state foundation
+2026-08-26 | 21504111 | federation verifier configuration foundation
+2026-08-26 | ffc48a2a | provider-neutral federation provider registration foundation,
+2026-08-26 | 0e08f089 | privileged-assurance event foundation
+2026-08-25 | e9f1e292 | elevated-assurance metadata foundation
+2026-08-25 | a35d97fe | Person identifier verification-request foundation
+2026-08-25 | 19e79dd0 | add person identifier governance metadata foundation
+2026-08-25 | f9a49644 | add encrypted person bank account foundation
+2026-08-25 | 42798c1d | Merge commit from fork
+2026-08-25 | 1add590b | harden general attachment uploads
+2026-08-25 | 084dd5c9 | Position headcount writer added
+2026-08-25 | 6310e633 | add position headcount foundation
+2026-08-24 | f7f500e2 | add effective-dated position hierarchy writer
+2026-08-24 | 5cff9d8d | Update GitHub Sponsors
+2026-08-24 | 65539f54 | Update GitHub Sponsors username in FUNDING.yml
+2026-08-24 | 9132aa34 | add position hierarchy foundation
+2026-08-24 | d72e0bf5 | Merge branch 'main' of github.com:notrinos/NotrinosERP
+2026-08-24 | 984fa3f2 | Merge commit from fork
+2026-08-24 | 846b10da | fix: harden document and upgrade log rendering
+2026-08-24 | 1f670a64 | add assignment manager writer
+2026-08-24 | 185ba892 | add assignment manager binding foundation
+2026-08-24 | 321b83cf | explicit effective-dated Assignment-to-Job writer
+2026-08-24 | 97b9bc7a | add assignment job binding schema
+2026-08-23 | 914426fb | add position job relationship writer
+2026-08-23 | 810315f3 | add position job binding
+2026-08-23 | 9020ecfc | add explicit job administration writer
+2026-08-23 | 2da30209 | add work location establishment writer
+2026-08-23 | 4c98fa92 | add work location establishment binding
+2026-08-23 | 8d81385a | add establishment administration writer
+2026-08-23 | d792db1a | add assignment work location writer
+2026-08-23 | 8362d0b3 | add assignment work location binding
+2026-08-22 | 2a614a0a | add work location administration writer
+2026-08-22 | a7d2815a | Greenfield Work Location foundation
+2026-08-22 | e1237aa0 | add establishment foundation
+2026-08-22 | 8cabd8a8 | Implement Job foundation
+2026-08-22 | fce01b6e | Assignment-to-Position binding + legacy Position writer synchronization
+2026-08-22 | d711d8fe | Position compatibility foundation
+2026-08-22 | 3092f5b2 | Pay Grade writer synchronization + exact Assignment-to-Grade binding
+2026-08-21 | 08262adf | fix(hrm): harden migration prefix and readiness checks
+2026-08-21 | b8cabb30 | HRM Grade compatibility foundation.
+2026-08-20 | 6bc53fba | Assignment -> Organization Unit binding plus synchronized legacy Department writers
+2026-08-20 | ac55b22a | department-backed Organization Unit foundation
+2026-08-20 | cd1b6e04 | bind employment to default legal entity
+2026-08-20 | f4ab2acb | Organization, job, position, location and legal entity
+2026-08-20 | 66a8ae2b | fix hrm_assignment_employment_interval_policy_allows(), to preserve NULL as an open interval.
+2026-08-20 | cbbb2928 | concurrent Employment/Assignment interval policy and overlap-race handling
+2026-08-20 | dcaddf33 | effective-dated termination/separation Assignment/Employment boundary execution
+2026-08-20 | 60cfc074 | effective-dated transfer/promotion Assignment execution
+2026-08-19 | 86150415 | hrm_employment_rehire_order_pair() requires the key legacy_employee_number
+2026-08-19 | ffaeaa31 | Employment-backed rehire execution
+2026-08-19 | 91a70f6d | DB-shaped numeric-string Assignment
+2026-08-19 | 4ffb6605 | HRM Assignment foundation
+2026-08-19 | 2521ce99 | HRM Contract compatibility foundation
+2026-08-19 | 8328ab49 | wrong version id in demo installation, fixed.
+2026-08-19 | 3a5c292a | add employment foundation
+2026-08-19 | 41469a57 | Employee CSV export name as-of identity adoption
+2026-08-19 | 49ee1ed7 | Payslip Entry live-preview employee-name as-of identity adoption
+2026-08-19 | b2e35679 | Manage Employees Salary-tab Employee: header as-of identity adoption.
+2026-08-18 | 49c90f29 | Employee Reports To selector as-of identity adoption
+2026-08-18 | 40b605be | Attendance Sheet roster as-of identity adoption
+2026-08-18 | 50050cb6 | Attendance Entry roster Employee Name as-of identity adoption
+2026-08-18 | 88e359e9 | Employee Payment Advice result-row as-of identity adoption
+2026-08-18 | 5ed28bd4 | Salary Revision selector as-of identity adoption
+2026-08-18 | ee2c84d8 | Employee Transfer selector as-of identity adoption
+2026-08-18 | 4e830958 | Employee Training selector as-of identity adoption
+2026-08-18 | e11b4823 | adopt payroll processing selector identity
+2026-08-18 | c9b1c850 | adopt employee payment advice selector identity
+2026-08-18 | 261c03e5 | adopt loan report selector identity
+2026-08-18 | 2229c842 | adopt leave balance inquiry selector identity
+2026-08-18 | b9a4533f | adopt attendance inquiry selector identity
+2026-08-17 | 88efb3ec | adopt payslip inquiry selector identity
+2026-08-17 | 9820d81c | adopt payslip entry selector identity
+2026-08-17 | 9f5e0262 | adopt loan request selector as-of identity
+2026-08-17 | c03aa4ec | adopt overtime request selector identity
+2026-08-17 | 391bfccb | php 8 warnings: passing null to parameter is deprecated. Fixed.
+2026-08-17 | 9625c206 | adopt leave request selector identity
+2026-08-17 | 0b19a05e | adopt attendance sheet selector identity
+2026-08-17 | 2ef53c27 | adopt canonical identity in attendance selector
+2026-08-16 | 69a2c63d | adopt canonical identity in employee separation selector
+2026-08-15 | 0dd25d7d | adopt canonical identity in employee transactions selector
+2026-08-15 | f280d9d1 | adopt canonical identity in loan repayment selector
+2026-08-15 | e1c1f8d7 | adopt canonical identity in loan request history
+2026-08-15 | e3db3c72 | adopt canonical identity in overtime approval
+2026-08-15 | ecc15284 | adopt canonical identity in overtime request history
+2026-08-15 | 0fc63c7a | adopt canonical identity in leave approval history
+2026-08-15 | 314af783 | adopt canonical identity in leave request history
+2026-08-14 | 29b10136 | adopt canonical identity in training history
+2026-08-14 | 83fab210 | adopt canonical identity in asset allocation history
+2026-08-14 | 8c06ee96 | adopt canonical identity in appraisal history
+2026-08-14 | a1d34859 | adopt canonical identity in appraisal selectors
+2026-08-14 | 8a4bfc08 | adopt canonical identity in asset allocation selector
+2026-08-14 | f2964d84 | adopt canonical identity in employee maintenance selector
+2026-08-14 | 6ce27c4c | Merge commit from fork
+2026-08-13 | 4aa04105 | Update attachment handling for inline content types
+2026-08-13 | 4a784a99 | adopt canonical identity in employee card selector
+2026-08-13 | f1592350 | adopt canonical identity in employee history selector
+2026-08-13 | ffce7884 | adopt canonical identity in payslip view, repair.
+2026-08-13 | a318a6b6 | adopt canonical identity in payslip view
+2026-08-13 | dc78db96 | adopt canonical identity in payslip inquiry
+2026-08-13 | 0a3475f1 | adopt canonical identity in loan outstanding inquiry
+2026-08-13 | ec33453f | adopt canonical identity in leave balance inquiry, repair.
+2026-08-13 | 5ef0a600 | adopt canonical identity in leave balance inquiry
+2026-08-13 | 0c6bc13e | adopt canonical identity in attendance inquiry
+2026-08-13 | c5be5e72 | adopt canonical identity in email payslip report
+2026-08-13 | 0de916ef | adopt canonical as-of identity in payslip print report
+2026-08-13 | f59be1f4 | adopt canonical as-of identity in salary sheet report
+2026-08-13 | af29308d | adopt canonical as-of identity in leave computation report
+2026-08-13 | 0ede70da | adopt canonical as-of identity in leave balance report
+2026-08-12 | 7206f9e4 | adopt canonical as-of identity in loan outstanding report
+2026-08-12 | 2555a1b8 | adopt canonical as-of identity in document expiration report
+2026-08-12 | 29fcdcc1 | adopt canonical as-of identity in overtime report
+2026-08-12 | ecc49f72 | adopt canonical as-of identity in attendance report
+2026-08-12 | 0795fc90 | adopt canonical as-of identity in employee list report
+2026-08-12 | b33fa550 | adopt canonical as-of identity in employee directory
+2026-08-12 | 6a0ef69a | adopt canonical as-of identity on employee card
+2026-08-12 | 67abf624 | fix(hrm): complete report-887 adoption with legacy parity
+2026-08-12 | 49e22d76 | authoritative page/report adoption of the existing canonical-link-aware as-of Person/Worker projection, with legacy-cohort parity and without changing legacy payroll selector authority.
+2026-08-11 | 9388f246 | add governed person retention anonymization
+2026-08-11 | d170e93e | enforce company-scoped person resolution
+2026-08-11 | cb7a7f0a | add canonical-aware person as-of resolution
+2026-08-10 | 215f72e7 | add maker-checker canonical person links
+2026-08-10 | b6b81711 | add effective-dated person private profiles
+2026-08-10 | 7055eb7f | add person sensitive semantic validation
+2026-08-10 | 316a1819 | person link proposal evidence & masked duplicate review inventory schemas
+2026-08-10 | a92fd1cd | add person sensitive key rotation
+2026-08-10 | 9f92dcbd | add reviewed person link proposal evidence
+2026-08-09 | e328ddf4 | add masked duplicate review inventory
+2026-08-09 | c336779e | encrypted person contact foundation, repair.
+2026-08-09 | 21352c52 | add encrypted person contact foundation
+2026-08-09 | 13df158a | person worker foundation, repair.
+2026-08-09 | 038c98d9 | add person worker foundation
+2026-08-09 | 96f54f54 | classify native SMTP send failures
+2026-08-09 | 6e8cc765 | classify native SMTP receive failures
+2026-08-09 | 6de83634 | bound native SMTP provider response failures
+2026-08-09 | c62c2943 | classify native SMTP session-start failures
+2026-08-09 | c30b4fab | classify native SMTP connect failures
+2026-08-08 | 58b45429 | preflight native SMTP provider resolution
+2026-08-08 | 5cf21684 | preflight native SMTP local host resolution
+2026-08-08 | ce0986d8 | reject native SMTP implicit TLS port
+2026-08-08 | cbdef5e8 | guard native Windows SMTP sender override
+2026-08-08 | d131d780 | preflight native Windows SMTP IPv6 endpoints
+2026-08-08 | d3021d63 | preflight native Windows SMTP host length
+2026-08-08 | 71c3e95e | preflight native Windows SMTP configuration
+2026-08-07 | cdbb7750 | verify approval mail command arguments
+2026-08-07 | a53791b0 | correct approval mail transport mode preflight
+2026-08-07 | 9a671aa8 | preflight forced native mail parameters
+2026-08-07 | f7d06519 | preflight approval email envelope argument escaping
+2026-08-07 | 35428949 | preflight approval email MIME encoding capability
+2026-08-07 | 3de069ea | handle unavailable mail transport executable safely
+2026-08-07 | aec0c5d1 | handle unavailable native mail transport safely
+2026-08-06 | 29af8d80 | approval-email optional-BCC preflight boundary.
+2026-08-06 | a294d03c | sender preflight boundary
+2026-08-06 | 9af6b41e | approval-email provider preflight + queue live acceptance
+2026-08-05 | 16fe46df | durable approval-notification queue concurrency and retry control, schemas
+2026-08-05 | 2589007b | durable approval-notification queue concurrency and retry control.
+2026-08-05 | cc72dd7f | confirm approval email delivery and sent-state boundary
+2026-08-05 | 9a849be1 | pending-approver notification persistence boundary
+2026-08-03 | c6c7b855 | approval draft serialization boundary
+2026-08-03 | 5d83dc9b | harden approval binding evidence counts
+2026-08-03 | aa033194 | audit approval leave request fixture
+2026-08-03 | 81d1a530 | approval leave-balance projection
+2026-08-03 | 7bbc9479 | Approval Loan-Control Projection
+2026-08-03 | 4cbf7d6f | payroll approval posting-configuration projection
+2026-08-03 | f4e62645 | review approval reference fixture
+2026-08-03 | a55c049b | review approval void fixture
+2026-08-03 | 5c368bd1 | exact locked payroll-approval gl_trans projection used by build_payroll_period_approval_binding().
+2026-08-03 | bde3d322 | exact locked persisted payslip-detail projection
+2026-08-03 | f1e4e3bc | persisted-payslip approval projection
+2026-08-03 | 3d1d65b7 | review existing payslip identity fixture
+2026-08-03 | cf2f51c9 | loan-repayment snapshot boundary
+2026-08-03 | ee08567d | payroll leave-request reversal-state projection fixture
+2026-08-02 | 58ddfdc9 | canonical locked leave_balances reversal-state reader
+2026-08-02 | f3f777c6 | exact locked employee_loans reversal-state projection
+2026-08-02 | aed9e562 | locked loan-repayment reversal-state projection
+2026-08-02 | 1fee43c0 | canonical payroll reversal GL-line projection fixture
+2026-08-02 | 42ca927f | reversal-evidence projection boundary
+2026-08-02 | 987a5dc1 | inline payment-void evidence existence
+2026-08-02 | 38eb889e | payment-GL side-effect existence boundary
+2026-08-02 | 5f4675de | payroll payment-bank side-effect existence boundary
+2026-08-02 | 55d58271 | void-evidence existence boundary
+2026-08-01 | 3f77d92d | payroll GL side-effect existence projection
+2026-08-01 | cfabc0ac | payroll-period approval-status repository projection
+2026-08-01 | e1e486a7 | payroll GL-posting void-status domain fixture
+2026-08-01 | 85f30e9b | GL-posting amount boundary
+2026-08-01 | 5d9f07d8 | payroll-period payment-details verification boundary
+2026-08-01 | 6da9460c | payroll-period payment-status summary projection
+2026-08-01 | 814fdc68 | cover period side-effect projection
+2026-08-01 | 2e32b4f6 | exact payslip-detail projection
+2026-08-01 | f9807dc5 | exact single-payslip header projection
+2026-08-01 | 772d7ab6 | individual payslip payment lock projection boundary
+2026-08-01 | cbbc8bc2 | locked payment-set projection
+2026-07-31 | c880eff9 | cover payable account projection
+2026-07-31 | 1512129d | cover payment bank account projection
+2026-07-31 | 9788d3fe | payroll-period approval-draft projection
+2026-07-31 | 8a5ecf95 | payroll-period locking projection
+2026-07-31 | b76d298d | payroll-period count projection
+2026-07-31 | 6e02b6f3 | payroll-period list projection boundary
+2026-07-31 | 1678babb | add payroll period projection fixture
+2026-07-31 | c0e0970b | payslip salary-structure eligibility decision fixture
+2026-07-31 | 03ef4956 | add payslip position eligibility fixture
+2026-07-31 | 73e63043 | payslip hire-eligibility decision fixture
+2026-07-30 | 0f396f4d | add payslip history name fixture
+2026-07-30 | a117d0eb | attendance-roster projection coverage, payslip employee-context projection fixture.
+2026-07-30 | 3715bc9f | employee summary projection fixture
+2026-07-30 | 64b4eeb9 | employee leave-policy-context projection fixture
+2026-07-30 | d80d29e5 | employee separation-context fixture
+2026-07-30 | 39d2fd9f | the employee assignment-context projection used by salary revision and employee transfer workflows
+2026-07-30 | fdc27afb | employee salary-context projection domain fixture
+2026-07-30 | a77755ed | employee profile projection disposable fixture
+2026-07-29 | 5289df28 | fixed payroll FormulaFacade execution profile and publication prerequisites in non-production tests, without routing production payroll through FormulaFacade.
+2026-07-29 | 231753f0 | configured-company legacy formula exception reporting and independent approval
+2026-07-29 | f2bb7a31 | legacy-versus-FormulaFacade differential evidence and governed exception registration
+2026-07-28 | 705977d5 | Inventory and contain legacy formula eval().
+2026-07-28 | e3a8d904 | batch-payment proof parity
+2026-07-28 | b19ac156 | Linked financial reversal for Posted payroll
+2026-07-28 | 913cff52 | explicit post-after-approval containment
+2026-07-28 | 1fbdf535 | Payroll-period approval is now bound to deterministic evidence covering:
+2026-07-28 | 50d35847 | calculation/result posting boundary
+2026-07-28 | a96dbb92 | hard-deny flag-only payslip void and payroll-period reopen/void after protected financial side effects exist.
+2026-07-27 | 81b1bcc7 | Individual payslip payments now fail closed unless: The payslip belongs to an existing payroll period in status Approved (2) or Posted (3). It has a valid legacy payroll GL transaction link. The linked ST_PAYSLIP transaction contains at least two GL lines and balances to zero. The payslip-to-period relationship remains unchanged after row locking.
+2026-07-27 | 67d6bfbf | guarded payroll approval, continue.
+2026-07-27 | f9906103 | guarded rejection/cancellation handling for payroll period
+2026-07-27 | 591a9270 | guarded appraisal approval executor
+2026-07-27 | f6c2cbd6 | harden loan approval lifecycle
+2026-07-27 | 23aff2d4 | payroll-period atomic submission and orphan reconciliation
+2026-07-27 | 650c7595 | payroll-period approval fixes. Fixed incompatible date comparison that would reject valid approvals. Restricted approval to calculated periods only. Recalculated and verified gross, deductions, and net before approval. Added a real compare-and-set status guard. Fixed migration calls to verify the selected company’s PAY-AUD chain; removed nonexistent verification functions. Made missing workflow configuration fail closed with an explicit error.
+2026-07-26 | 9e552b2c | overtime request/draft atomic-submission + pending-orphan reconciliation
+2026-07-26 | 83936545 | guarded overtime rejection and cancellation
+2026-07-26 | 7e1ac762 | Successful overtime approval now locks and validates the request, rejects stale drafts, compare-and-sets status, reconciles attendance. Duplicate, malformed, attendance-failed, or audit-failed execution rolls back completely.
+2026-07-26 | 5350aeee | pending leave requests missing an approval draft can now be safely reconciled
+2026-07-26 | cba3fb2d | guarded leave rejection and cancellation
+2026-07-26 | d89ce8ee | complete guarded HR approval workflows
+2026-07-24 | edcd5f80 | Establishes the audit foundation: least-privilege custody export, atomic payroll/audit transactions, append/checkpoint verification, signing-key rotation, historical keyrings, and crash recovery. Completes the controls: retention/legal holds, authorized redacted review, tamper alerts, backup/restore verification, employee lifecycle auditing, historical record protection, and independent legal-entity chain verification.
+2026-07-23 | 99b11b3d | Custody CLI now uses an external company-bound credential instead of the broad application database account
+2026-07-22 | 40075a04 | configured salary-component audit acceptance
+2026-07-21 | 344fb27c | added security foundation that makes payroll changes permanently traceable and resistant to tampering
+2026-07-20 | 99ae49fe | Contain and complete secure employee attachment migration. Protects sensitive employee documents: blocking raw filesystem-path access; requiring authorized HR access; replacing predictable document IDs with opaque keys; validating file type, MIME, content structure and malware scan results; encrypting files in private, outside-webroot storage; quarantining unsafe files; preserving migration hashes and audit evidence; enforcing retention locks and POST/CSRF deletion; providing idempotent migration and recovery verification.
+2026-07-20 | 9583c3b8 | report renderer sometimes log the system out, fixed.
+2026-07-19 | dc20516b | protect payroll access by strengthening: Login and session-cookie security Session fixation prevention and old-session invalidation Idle and absolute session timeouts Session inventory and administrator revocation Revocation after password, role, status, or user changes Secure password recovery HTTPS enforcement Future MFA, step-up authentication, OIDC/SAML federation, recovery, and break-glass access The committed work completed the current-system Phase 0 containment: Secure cookie controls and destructive login rotation Revocable, company-scoped session registry 30-minute idle and 10-hour absolute limits Authorized session administration Removal of unsafe password-by-email recovery Auditable, privacy-minimized security events
+2026-07-19 | b1fc6640 | HRM Core + Country Pack Architecture: Close direct authorization and artifact bypasses. - Preventing salary changes through crafted GET/direct requests. - Securing Formula Designer APIs with authentication, authorization, CSRF, validation, and rate limits. - Binding generated report downloads to the correct user, company, permission, purpose, and expiry. - Blocking direct access to internal HRM report files. - Filtering HRM notification counts by permission.
+2026-07-18 | 14b310bf | added missing methods in formula classes
+2026-07-18 | 95f0c9e7 | HRM Core + Country Pack Architecture: initial sensitive employee and payroll data containment, reduce unnecessary exposure of confidential employee information before later security features are added
+2026-07-17 | 5500dca8 | HRM Core + Country Pack Architecture: add read-only migration profile
+
+1.0.0 - 2026-07-17
+------------------
+Source snapshot: 3ce219018583085f401faa9d77bdaf78d9b6b075
+Database version: 1.0
+
+Highlights from the source history
+- Introduce the shared Entity CRUD API, centralized formula engine and visual
+  formula designer, including validation, preview and module integration.
+- Improve tables, sidebar behavior, responsive layouts and report formatting.
+- Correct inventory, warehouse, warranty, procurement and reporting workflows.
+- Correct payroll concurrency, payment, period-total and leave-date behavior.
+- Harden attachment paths and adopt core attachments for employee documents.
+- Freeze the legacy payroll contract for the payroll-core/country-pack work.
+
+Complete commit history (alpha exclusive, 1.0.0 snapshot inclusive)
+Date       | Commit   | Change
+2026-07-17 | 3ce21901 | (Issue #35) Introduce new HRM Architecture: Payroll Core + Country Pack. First implementable item - Freeze legacy payroll contract.
+2026-07-15 | c8f8b017 | infinite loop in bom edit, fixed
+2026-07-15 | 43ee78ef | fixed ajax request timeout in bom_edit.php
+2026-07-15 | 1f1a4fd9 | Bill Of Materials Entry UI Adjustment
+2026-07-14 | 5be6cc43 | Issue #37, voiding GRN in Void Transaction Entry bypassing "Allow Negative Inventory" preference. Fixed for all transaction types.
+2026-07-14 | fd5037fa | Loan Outstanding Report Column Adjustment
+2026-07-14 | 71891514 | Department Cost Report Column Adjustment
+2026-07-14 | 0fcc2d77 | Overtime Report Column Adjustment
+2026-07-14 | caba16b2 | Document Expiration Report Column Adjustment
+2026-07-14 | d457acd8 | Employee List Report Column Adjusted
+2026-07-14 | bd4c042c | Attendance Report Column Adjusment
+2026-07-14 | 49b34a6c | Improved perfomance for more inventory reports
+2026-07-14 | b047dd4f | Salary Sheet Report Column Adjustment
+2026-07-14 | cc07b7a2 | Payroll Summary Report Column Position Adjusted
+2026-07-14 | c851cd0e | Issue #32, Stock Check Sheets report perfomance issue with thoudsands of items. Doubled speed for rep303, rep302, rep104 also.
+2026-07-14 | ef937e6d | Issue #36 Fixed the non-calendar fiscal-year leave calculation.
+2026-07-14 | 20c66b2a | issue #33, Class "purch_orders_entity" not found. Fixed.
+2026-07-13 | cafdc2ee | chore: normalize repository text files to LF
+2026-07-13 | 6a233d43 | chore(hrm): align payroll fixes with tested sources
+2026-07-13 | b7f7338e | fix(hrm): include overlapping payslips in reports
+2026-07-13 | 5b2c9d4a | fix(hrm): report batch payroll result counts
+2026-07-13 | 39320fd3 | fix(hrm): skip employees not hired for payroll period
+2026-07-13 | 0c57c518 | fix(hrm): reject future batch payroll periods
+2026-07-13 | b8627893 | fix(hrm): exclude voided payslips from period totals
+2026-07-13 | 4079b350 | fix(hrm): clear approval metadata when reopening payroll
+2026-07-13 | 39957970 | fix(hrm): settle no-payment-due payslips with period
+2026-07-13 | ab05c3cf | fix(hrm): prevent concurrent duplicate payroll payments
+2026-07-13 | 95ea9310 | fix(hrm): serialize payslip transaction allocation
+2026-07-13 | 4d9c7285 | fix(hrm): prevent duplicate concurrent payslips
+2026-07-12 | f6547556 | new data table type applied in employee payment
+2026-07-12 | 9c5d0c64 | new data table style applied in payroll approval
+2026-07-12 | b6fc1504 | overtime request ui adjustment
+2026-07-11 | 71cac7cd | Migrate Employee Document Attachment to core attachment Since this project is still in Alpha stage this migration is long-term solution and is architecturally better than only apply a hotfix for the vulnerable Requires folowing sql upgrade:
+2026-07-10 | c5677d1a | Return Entry ui adjusment
+2026-07-10 | f8f810c7 | Synthetic pay elements ("Attendance Deduction", "Income Tax") had empty account_code (''), causing post_payslip_to_gl() to fail with "missing or invalid GL accounts" error — blocking all payroll processing. Fixed.
+2026-07-10 | d7b80f5d | Payslip validation bugs: overlap pay date range detection, GL posted before payslip save,
+2026-07-09 | 08b5d18a | Merge branch 'main' of https://gitlab.com/aodieu/NotrinosERP
+2026-07-09 | 7d892ecf | missing reverse warranty provision accruals when a delivery is voided
+2026-07-09 | fcb1d80e | Warranty Provision Settings Validation: Rate must be positive
+2026-07-09 | 3ed7a7ab | missing reverse warranty provision accruals when a delivery is voided requires adding columns to running database: `ALTER TABLE `0_warranty_provision_log` ADD `dimension_id` INT(11) NOT NULL DEFAULT '0' AFTER `gl_trans_id`;` `ALTER TABLE `0_warranty_provision_log` ADD `dimension2_id` INT(11) NOT NULL DEFAULT '0' AFTER `dimension_id`;`
+2026-07-09 | 1631aa3b | location ui adjustment, rerun
+2026-07-09 | 0c5dbd66 | ui adjustment in warehouse location entry
+2026-07-09 | 3212af85 | adjusted form appearance in quality parameters entry.
+2026-07-09 | d19494ab | white-screen in intall winzard after implement drop-right sidebar. Fixed.
+2026-07-08 | 69e47d33 | added guard against document.body being null/not a Node in renderer.js
+2026-07-08 | dab82e9f | Preserved the configured basic pay element name in the payslip preview instead of replacing it with generic “Basic Salary"
+2026-07-08 | 75884d5a | error unknow column in Supplier Quality Report. Fixed.
+2026-07-08 | 5d6b2975 | Inventory reports error: wrong column name in get_serial_cost_data(). Fixed.
+2026-07-08 | 5e64844c | Inventory reports bugs fix, continue.
+2026-07-08 | 48bc35e0 | wrong column names in get_bin_movement_ledger_data function, fixed
+2026-07-08 | b4fc0018 | Issue #30 Stock by Location: wrong column names in function get_stock_by_location_data, fixed.
+2026-07-08 | 21f5d56d | Fixed centralized formula preview/explain bootstrapping, provider registration, removed PHP 8.1 nullable deprecation, wired/rendered/styled designer preview/explain panels...
+2026-07-08 | 19cb7c25 | The recruitment salary validation is restored
+2026-07-08 | ad9c7eae | missing account code validation in hrm pay element entry. Added
+2026-07-08 | 8d39aef6 | Serial Number lifecycle bugs fix
+2026-07-08 | 9f23c582 | added refresh refresh_unchanged_auto_reference to fixe stale auto refs
+2026-07-08 | 6a98a92a | Suppressed noisy JS cache fopen warnings
+2026-07-07 | d42fa00b | Issue #29 page layout breaking, this is theme issue so reverted utils.js back to its original focus logic, fix only in theme code.
+2026-07-07 | db1d80a9 | Issue #29: page layout breaking in Supplier Invoice and maybe somewhere else. Fixed.
+2026-07-07 | 02ea39ac | Added missing purchase/drop-ship dependencies for PO creation...
+2026-07-07 | 7c8912c9 | Recall Campaigns bug fixes
+2026-07-07 | 913cd991 | location defaults can no longer hijack resolution if they point to a wrong route type, wrong warehouse, or inactive route.
+2026-07-07 | fa7804ba | Removal Strategies validations, bug fixes
+2026-07-07 | fc7fe90a | Preserved split putaway assignments instead of collapsing everything into the first bin
+2026-07-07 | 699141cc | Warehouse Locations dropdown not switching and other bug fixes
+2026-07-07 | 01f043c7 | Dashboard stat-card big numbers overflow. Fixed.
+2026-07-06 | ced79d5b | class balance widget: negative returns is not reflected. Fixed.
+2026-07-06 | ea6ddfb4 | Changed class balance widget style in GL dashboard
+2026-07-06 | d638f2aa | Checkbox wrapper click even sometime not work after ajax load. Fixed
+2026-07-05 | f0d1a587 | hrm leave request: new table style implemented
+2026-07-05 | 4a5f7568 | prevent flash-of-expanded-sidebar when reloading with collapsed state
+2026-07-05 | a69b21aa | new data table style: applied in purchasing inquiry
+2026-07-05 | 9d33cdf2 | ui adjustment in manage appointments
+2026-07-05 | 69e30c12 | Contract inquiry ui adjustment
+2026-07-05 | 4ed70f37 | ui adjustment in campaigns inquiry
+2026-07-05 | 27b4cef7 | override user agent stylesheet font size
+2026-07-05 | d6f707d7 | ui adjustment leads.php, opportunities.php
+2026-07-05 | 7079060c | new table style in Manage Lead.
+2026-07-05 | 32fbe6c6 | UI adjustment in reorder level entry
+2026-07-05 | 13a8e9a6 | new table header style: sticky header
+2026-07-05 | eac81275 | moved fieldset inline style to theme
+2026-07-05 | e55401bb | ui improvements in quality inspection
+2026-07-05 | 1d1843db | New fieldset wrapper
+2026-07-05 | 704fd11d | ui improvement in waranty claims
+2026-07-05 | cb3f73d0 | New table style & UI improvement in batch entry.
+2026-07-04 | 94206f0c | Fixed Auto Generate Serial Number & UI Adjustment
+2026-07-04 | ab52ae46 | Implement new data table behavior in material request entry.
+2026-07-04 | 019bb9dd | Data table scrollbar no longer working after ajax load. Fixed.
+2026-07-04 | b4e7c888 | New data table style: implemented in Serial Numbers Entry
+2026-07-04 | 27bc2ef6 | issue #27, Mail missing envelope sender / Return-Path. Added.
+2026-07-03 | 53b50cf1 | Theme improvement, added behaviour for collapsed sidebar
+2026-07-03 | 4efc2e41 | Formula Designer to be responsive in mobile screen
+2026-07-03 | 60c3f4a5 | error Number Token collapsed when click inline input. Fixed.
+2026-07-03 | 20b6efa6 | Formula Designer bugs with Number Token: cannot edit inline, focus issue, properties panel issue. Fixed All.
+2026-07-03 | 6e4dadf6 | Operators token should show symbol only instead of full palette display name.
+2026-07-03 | 44093ee1 | Formula Designer: Added literal and operator sections in Functions Palete
+2026-07-02 | abe43a4b | Formula Designer not working on page edit mode. Fized.
+2026-07-02 | 5276f044 | New Visual Formula Framework: AI-assisted formula authoring (future, core designer must be stable and adopted before AI features are layered on top)
+2026-07-02 | 4cf8c069 | New Visual Formula Framework: Cross-Module Rollout
+2026-07-02 | 6697b896 | New Visual Formula Framework: Performance Optimization
+2026-07-02 | ba50f5da | New Visual Formula Framework: Accessibility & Keyboard Navigation
+2026-07-02 | 6e4f2605 | New Visual Formula Framework: No-JS Fallback & Progressive Enhancement
+2026-07-02 | 420f1f61 | baseUrl option not being passed to renderEditor(). Fixed.
+2026-07-02 | 99032189 | function header had been lost in formula-designer.js. Fixed.
+2026-07-02 | b063676a | New Visual Formula Framework: Module Integration & Hook Wiring
+2026-07-02 | b8a77848 | Visual Formula Framework, Added missing API
+2026-07-02 | dfb1ccea | New Visual Formula Framework: Templates & Favorites System
+2026-07-02 | cbc53002 | New Visual Formula Framework: Property Panel & Token Configuration
+2026-07-02 | 669e07b4 | New Visual Formula Framework: Live Preview & Explain Mode
+2026-07-02 | 7592ca32 | New Visual Formula Framework: Undo, Redo & Clipboard
+2026-07-02 | 98bfe7ed | New Visual Formula Framework: Expression Editing & Textarea Sync, Validation Integration & Error Display
+2026-07-02 | a151689b | New Visual Formula Framework: Canvas, Visual Token Rendering, Palette System, Drag-Drop Foundation
+2026-07-02 | 452f7e20 | New Visual Formula Framework: Designer Scaffold & Build Verification
+2026-07-01 | 432d167d | Centralized Formula Engine Bug Fix
+2026-07-01 | 75b66834 | Missing datepicker js in hrm transactions, added.
+2026-07-01 | 6e4415d2 | added notification provider for hrm
+2026-06-29 | 022afcb6 | new table style in crm
+2026-06-29 | e8f52f81 | New data table style in sales inquiry
+2026-06-29 | 8c15932a | added table style data
+2026-06-29 | f2eba9b5 | New Centralized Formula Engine: Compiler
+2026-06-29 | 4b5f37d7 | New Centralized Formula Engine: Built-in Functions & Providers
+2026-06-29 | d0a956de | New Centralized Formula Engine: Runtime & Registries
+2026-06-29 | c54964c0 | New Centralized Formula Engine: Validation
+2026-06-29 | 8e923572 | New Centralized Formula Engine: AST
+2026-06-29 | 71dea808 | New Centralized Formula Engine: Parser
+2026-06-29 | 9548444d | implemented new hyperlink_params icon in leads.php
+2026-06-29 | 8a6a11e5 | added icon option in hyperlink_params
+2026-06-29 | 9f028955 | New Centralized Formula Engine: Lexer
+2026-06-29 | a5750a98 | New Centralized Formula Engine: Formula Facade & Boostrap & Token Class
+2026-06-29 | 98d6efb9 | New Centralized Formula Engine: Skeleton
+2026-06-27 | 3c538484 | error unknown column in leave type, fixed.
+2026-06-26 | 660251f9 | EOS Calculation Entity, still missing calls in eos_calculation.php, migrated.
+2026-06-26 | 6c129c3e | stock master entity missing call in void transaction, added.
+2026-06-26 | 0f576795 | CRM Campaigns Entity Implemented
+2026-06-26 | 0b50e570 | CRM Teams Entity Implementation
+2026-06-26 | 946ccc06 | datepicker is not working in many places, fixed.
+2026-06-26 | 7288989e | CRM Leads Entity Implementation
+2026-06-25 | e4f60252 | CRM Lost Reasons Entity Implemented
+2026-06-25 | 3e465168 | Missing stock_master_entity.inc, issue #26
+2026-06-25 | e6a40643 | Sales Stages Entity Implementation
+2026-06-25 | df6ad87a | Lead Sources Entity Implementation
+2026-06-25 | ac870c6b | CRM Activity Entity Implemented
+2026-06-25 | dcfbc275 | Implemented CRM Appointment Entities
+2026-06-25 | 58f42463 | CRM Contract Entity Implemented
+2026-06-25 | 7e5bf473 | EOS Calculation Entity Implemented
+2026-06-24 | 28bf4fd2 | Attendance Deduction Rules Entity
+2026-06-24 | a5a5661c | Work Shifts Entity Implemented
+2026-06-24 | 12b28fd2 | Holidays Entity Implemented
+2026-06-24 | bdfbab3b | Grades Entity Implemented
+2026-06-24 | 20e62d99 | Implemented Job Positions Entity
+2026-06-24 | 74e4f515 | Added has_records() to base Entity class
+2026-06-24 | 0e48e4a3 | Job Classes Entity, added for missing call sites
+2026-06-24 | a23bb762 | Implemented Job Classes Entity
+2026-06-24 | b48867b3 | HRM errors:  Incorrect integer value, ambiguous column. Fixed
+2026-06-24 | 49d343dc | HRM Department Entity Implemented
+2026-06-24 | 47ab83b6 | Leave Types Entity Implemented
+2026-06-24 | 0cf437cd | Document Types Entity Implementation
+2026-06-24 | b284b97b | added error handler when adding duplicated user id (issue #25).
+2026-06-23 | 11c25f4d | get_supplier(), get_customer()... no longer exist
+2026-06-23 | a3ac81b9 | migrated call sites for suppliers entity and po entity
+2026-06-23 | 91bc0dd3 | debtors master entity: missing call in sales agreement entry.
+2026-06-23 | 425ce6b7 | debtors master entity: migrated remianing call sites
+2026-06-23 | 0b3be67f | Item Code Entity & Sales Kit Entity, fully migrated.
+2026-06-23 | fb90bc11 | Branch Entity: fully migrated and removed old crud functions
+2026-06-23 | 03158143 | Stock Master Entity: migrated remaining call sites.
+2026-06-23 | ddd1db24 | Static Entity API Implementation: Stock Master Entity
+2026-06-22 | 597aa1c3 | item units entity implementation, still missing one call sites in ui_list.inc, migrated.
+2026-06-22 | 143ee2a2 | static entity dead codes cleared: work centre, shipper, credit status.
+2026-06-22 | 92d8b358 | payment terms entity, cleared dead code
+2026-06-22 | 30e7674d | accidentally deleted the entire body of close_year when implement fiscal year entity. restored.
+2026-06-22 | d5b61f70 | New Static Entity API, code clean up.
+2026-06-22 | bbb8365c | Static Entity API Implementation: Supplier Entity
+2026-06-22 | 25799293 | Static Entity API Implementation: Customer Entity
+2026-06-22 | ccd75d32 | Static Entity API Implementation: Customer Branch Entity
+2026-06-22 | 98815551 | Static Entity API Implementation: Item Codes Entity
+2026-06-22 | d9c9b239 | sales groups entity, removed dead code
+2026-06-22 | 50a76eec | Static Entity API Implementation: Sales Groups Entity
+2026-06-22 | 767d6c77 | Static Entity API Implementation: Fiscal Year Entity
+2026-06-22 | b8c1dec9 | Static Entity API Implementation: Fixed Asset Class Entity
+2026-06-22 | 1b7907f3 | Static Entity API Implementation: Chart Master Entity
+2026-06-22 | 0d81e964 | Error undefined function after tax entity implemented. Fixed.
+2026-06-22 | 57572163 | Static Entity API Implementation: Currency Entity
+2026-06-21 | b12f8e17 | Static Entity API Implementation: Tax Entities
+2026-06-21 | 8efddc42 | Salesman Entity continue.
+2026-06-21 | 1980b383 | Static Entity API Implementation: Salesman Entity
+2026-06-21 | ab7c7a45 | Static Entity API Implementation: Areas Entity
+2026-06-21 | fbe4f016 | Items Units Entity: removed dead codes
+2026-06-21 | e59c91f7 | Items Units Entity: continue and removed dead codes
+2026-06-21 | 7e808a31 | Static Entity API Implementation: Item Units Entity
+2026-06-21 | 0c0479b1 | Printer Entity: removed dead codes
+2026-06-20 | f0ae9897 | Printer ENtity, continue.
+2026-06-20 | b3f39f8f | Static Entity API Implementation: Printer Entity
+2026-06-20 | 14b23e2c | Static Entity API Implementation: Work Centre Entity
+2026-06-20 | c3c28529 | Static Entity API Implementation: Payment Terms Entity
+2026-06-20 | f8df3218 | error duplicated function in rep209, fixed
+2026-06-20 | 84a39d5e | Static Entity API Implementation: Shipper Entity
+2026-06-19 | 5b25606c | Static Entity API Implementation: Sales Points
+2026-06-19 | 5a8a021d | class entity doc blocks updated
+2026-06-19 | 0cd91640 | Static Entity API Implementation: Sales Types Entity, removed dead codes.
+2026-06-19 | 5da89aa5 | Static Entity API Implementation: Sales Types Entity, continue.
+2026-06-19 | 2342e172 | New Static Entity API Implementation: Sales Types Entity
+2026-06-19 | e407998d | New Static Entity API First Implementation: Credit Status Entry
+2026-06-19 | 6f930fcf | Added new static methods for CRUD Unification Entity API
+2026-06-19 | fa8880fd | Mising Sales Agreement type in sysnames.inc. Added.
+2026-06-19 | 2208a210 | new crud class: Entity. For more meaningful than data_set
+2026-06-18 | 8d923c4f | error: request from outside of this page is forbidden. Fixed.
+2026-06-18 | d00e2455 | ui adjustment in bank payment entry & app store
+2026-06-17 | 60f8206c | issue #23 Setting $hide_inaccessible_menu_items to 1 hides dashboards. Fixed
+2026-06-16 | 22171a9f | Fixed Issue #22. Alt/Tab kills links
+2026-06-13 | b86226c1 | Changed the default scheme from hardcoded http:// to auto-detection
+2026-06-13 | cb972bd3 | wrong AUTO_INCREMENT in table reflines, fixed
+2026-06-13 | 7985f2ab | added missing constant DA_STORE, ui adjustment in sales rma entry.
+2026-06-13 | 3e6ee29a | Issue #21 fixed When updating extensions to a new version through the admin/notrinos_store.php?sel_app=store&type=extension NotrinosERP deletes the module directory after installation.
+2026-06-13 | 73f832ad | code cleanup
+2026-06-12 | aa9cbff9 | store dashboard redirected to store home page
+2026-06-12 | 50ffbcb6 | missing icon in attachment list view, fixed
+2026-06-12 | 277660fb | Company setup ui adjustment
+2026-06-12 | 694b19f3 | Picking from the datalist does not select customer, supplier. Fixed
+2026-06-12 | 82d7b821 | improvement for customer, supplier list after added search box by default.
+2026-06-11 | 4d24a9a5 | implemented search box for customer list, supplier list by default
+2026-06-11 | bfb052ee | Removed Search Customer List & Search Supplier List options in company preferences
+2026-06-11 | c77396ab | Error: Call to undefined function update_extensions() in packages.inc. Fixed
+2026-06-11 | 14666b40 | added id column for sales master tables
+2026-06-10 | a72df71d | Attachment Path Traversal Vulnerability in attachment upload workflow. Fixed.
+2026-06-09 | f11c23b3 | show id column for tax master tables
+2026-06-09 | 42ff37e1 | Update composer.json, initialized changelog
+2026-06-09 | 6b6a37b7 | Sidebar link is not rendered correctlly for 3rd apps. Fixed. Updated readme.md
