@@ -6,7 +6,55 @@ include_once(dirname(__FILE__).'/pay_core_003_governance_db.inc');
 
 function hrm_lve_001_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function hrm_lve_001_access($area){return function_exists('user_check_access')&&user_check_access($area);}
-function hrm_lve_001_tables_ready(){return function_exists('employee_table_exists')&&employee_table_exists('hrm_leave_policy_versions')&&employee_table_exists('hrm_leave_movements')&&employee_table_exists('hrm_leave_request_receipts');}
+/**
+ * Check fresh leave metadata; an unproven positive retains the legacy LIKE path.
+ *
+ * Exact, byte-confirmed names imply the three LIKE matches only for prefixes
+ * without SQL quoting/escape characters. Views retain the original presence-only
+ * meaning. Nothing here certifies schema integrity or survives this invocation.
+ * The optional probe must not invoke the driver's debug error/rollback handler;
+ * restore debug before running the original checks, including on probe failure.
+ *
+ * @return bool
+ */
+function hrm_lve_001_tables_ready() {
+    global $db_connections, $SysPrefs;
+
+    if (!function_exists('employee_table_exists'))
+        return false;
+
+    $company = isset($_SESSION['wa_current_user']->cur_con) ? $_SESSION['wa_current_user']->cur_con : 0;
+    $prefix = isset($db_connections[$company]['tbpref']) ? $db_connections[$company]['tbpref'] : null;
+    if (is_string($prefix) && preg_match('/^[a-zA-Z0-9_%]*$/D', $prefix)
+        && is_object($SysPrefs) && isset($SysPrefs->go_debug)) {
+        $checks = array();
+        foreach (array('hrm_leave_policy_versions', 'hrm_leave_movements', 'hrm_leave_request_receipts') as $table) {
+            $name = db_escape($prefix.$table);
+            $checks[] = 'EXISTS (SELECT 1 FROM information_schema.TABLES'
+                .' WHERE TABLE_SCHEMA=DATABASE() AND BINARY TABLE_SCHEMA=BINARY DATABASE()'
+                .' AND TABLE_NAME='.$name.' AND BINARY TABLE_NAME=BINARY '.$name.')';
+        }
+        $result = false;
+        $debug = $SysPrefs->go_debug;
+        try {
+            $SysPrefs->go_debug = 0;
+            $result = @db_query('SELECT '.implode(' AND ', $checks).' AS leave_tables_ready');
+        } catch (Exception $exception) {
+            // An optional metadata failure is not a readiness decision.
+        } finally {
+            $SysPrefs->go_debug = $debug;
+        }
+        if ($result && db_num_rows($result) === 1) {
+            $row = db_fetch_row($result);
+            if (is_array($row) && isset($row[0]) && ($row[0] === 1 || $row[0] === '1'))
+                return true;
+        }
+    }
+
+    return employee_table_exists('hrm_leave_policy_versions')
+        && employee_table_exists('hrm_leave_movements')
+        && employee_table_exists('hrm_leave_request_receipts');
+}
 function hrm_lve_001_insert_idempotent($table,$id_col,$hash_col,$hash,$sql,&$error){$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){$error='idempotency_state_invalid';return false;}if(db_num_rows($q)===1){$r=db_fetch_assoc($q);return (int)$r[$id_col];}if(!db_query($sql,'could not append HRM-LVE-001 custody')){$error='insert_failed';return false;}return (int)db_insert_id();}
 function hrm_lve_001_direct_balance_write_allowed(){return !hrm_lve_001_tables_ready()||!empty($GLOBALS['hrm_lve_001_projection_write']);}
 function hrm_lve_001_with_projection_write($callable){$old=!empty($GLOBALS['hrm_lve_001_projection_write']);$GLOBALS['hrm_lve_001_projection_write']=true;try{return $callable();}finally{$GLOBALS['hrm_lve_001_projection_write']=$old;}}
