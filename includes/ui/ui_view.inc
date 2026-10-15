@@ -824,6 +824,10 @@ function get_js_select_combo_item() {
 	$js = "function selectComboItem(doc, client_id, value){
 		var element = doc.getElementById(client_id);
 		if (typeof(element) != 'undefined' && element != null && element.tagName === 'SELECT' ){
+			if (element.hasAttribute('data-employee-search')) {
+				doc.defaultView.employeeSelectorHydrate(element, value);
+				window.close(); return;
+			}
 			var options = element.options;
 			for (var i = 0, optionsLength = options.length; i < optionsLength; i++) {
 				if (options[i].value == value) {
@@ -850,6 +854,10 @@ function get_js_set_combo_item() {
 		var element = doc.getElementById(client_id);
 		var search = doc.getElementById('_'+client_id+'_edit');
 		if(typeof(element) != 'undefined' && element != null && element.tagName === 'SELECT') {
+			if (element.hasAttribute('data-employee-search')) {
+				doc.defaultView.employeeSelectorHydrate(element, value);
+				window.close(); return;
+			}
 			var options = element.options;
 			options.length = 0;
 			var option = doc.createElement('option');

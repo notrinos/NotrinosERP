@@ -231,16 +231,24 @@ function relationship_list_row($label, $name, $selected=null) {
 // Employee Reporting-to selector (active employees)
 //------------------------------------------------------------------
 function reporting_to_list($name, $selected=null, $exclude_employee='', $submit_on_change=false, $opts=array()) {
+	global $path_to_root;
+	include_once($path_to_root.'/hrm/includes/db/employee_projection_control_db.inc');
+	hrm_employee_projection_require_readable();
+	include_once($path_to_root.'/hrm/includes/ui/employee_selector_search.inc');
 	$sql = "SELECT employee_id, CONCAT(first_name, ' ', last_name, ' [', employee_id, ']') as name
 			FROM ".TB_PREF."employees WHERE !inactive";
 	if (!empty($exclude_employee))
 		$sql .= " AND employee_id != ".db_escape($exclude_employee);
 
-	return combo_input($name, $selected, $sql, 'employee_id', 'name', array_merge(array(
+	$manager_options = array_merge(array(
 		'select_submit' => $submit_on_change,
 		'spec_option' => _('-- None --'),
 		'spec_id' => '',
-	), $opts));
+	), $opts);
+	$manager_options['where'] = isset($manager_options['where']) ? $manager_options['where'] : array();
+	if (!is_array($manager_options['where'])) $manager_options['where'] = array($manager_options['where']);
+	if (!empty($exclude_employee)) $manager_options['where'][] = 'e.employee_id != '.db_escape($exclude_employee);
+	return hrm_employee_selector_control($name, $selected, $sql, $manager_options, null, true);
 }
 
 function reporting_to_list_row($label, $name, $selected=null, $exclude_employee='', $submit_on_change=false, $opts=array()) {
