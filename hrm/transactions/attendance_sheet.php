@@ -25,6 +25,8 @@ include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
 include_once($path_to_root.'/hrm/includes/hrm_security.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_person_worker_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_sheet_consumer_db.inc');
+include_once($path_to_root.'/hrm/includes/ui/attendance_sheet_paging.inc');
+include_once($path_to_root.'/includes/ui/db_pager_view.inc');
 
 /**
  * Resolve one Attendance Sheet Employee selector label at the page-level instant.
@@ -189,6 +191,10 @@ function get_cell_info($day, $att_data, $leave_data, $holidays, $dow, $wd_map, $
 // Filter defaults
 //----------------------------------------------------------------------
 
+// Pager/editor actions use the existing whole-form Ajax replacement boundary.
+if ($_SERVER['REQUEST_METHOD'] === 'POST')
+    $Ajax->activate('_page_body');
+
 if (!isset($_POST['sheet_month']))
     $_POST['sheet_month'] = (int)date('n');
 if (!isset($_POST['sheet_year']))
@@ -198,10 +204,116 @@ if (!isset($_POST['department_id']))
 if (!isset($_POST['employee_id']))
     $_POST['employee_id'] = '';
 
-$sel_month = (int)$_POST['sheet_month'];
-$sel_year  = (int)$_POST['sheet_year'];
-$dept_id   = (int)get_post('department_id');
-$emp_id    = get_post('employee_id');
+// Normalize filters before constructing dates or SQL. Arrays are never valid input.
+$_POST['sheet_month'] = is_scalar($_POST['sheet_month']) ? max(1, min(12, (int)$_POST['sheet_month'])) : (int)date('n');
+$_POST['sheet_year'] = is_scalar($_POST['sheet_year']) ? max(1900, min(2100, (int)$_POST['sheet_year'])) : (int)date('Y');
+$_POST['department_id'] = is_scalar($_POST['department_id']) ? max(0, (int)$_POST['department_id']) : 0;
+$_POST['employee_id'] = is_string($_POST['employee_id']) ? trim(attendance_sheet_post_employee_id($_POST['employee_id'])) : '';
+if (isset($_POST['cell_employee_id']))
+    $_POST['cell_employee_id'] = attendance_sheet_post_employee_id($_POST['cell_employee_id']);
+$sheet_filters = array('sheet_month' => $_POST['sheet_month'], 'sheet_year' => $_POST['sheet_year'],
+    'department_id' => $_POST['department_id'], 'employee_id' => $_POST['employee_id']);
+$sheet_context_token = get_post('attendance_context');
+$sheet_commands = array_intersect(array('save_cell', 'delete_cell', 'bulk_fill', 'bulk_delete'), array_keys($_POST));
+// The installed selector refreshes roles while rendering, which is after writes.
+// Refresh its existing current permission/connection checks before resolving any
+// command context, so cached session roles cannot authorize a revoked command.
+if (!empty($sheet_commands)) {
+    include_once($path_to_root.'/hrm/includes/ui/employee_selector_search.inc');
+    if (!hrm_employee_selector_search_scope_is_current()
+        || !hrm_employee_selector_refresh_access('SA_ATTENDANCE')) {
+        display_error(_('Attendance access changed. Sign in again before entering attendance.'));
+        end_page();
+        exit;
+    }
+}
+$sheet_context = attendance_sheet_context($sheet_context_token);
+$sheet_modal_open = false;
+$sheet_cell_saved = false;
+$sheet_command_allowed = false;
+$sheet_selected = array();
+
+// Ordinary submits without JavaScript also retain an unresolved editor and its values.
+if (!empty($_POST['att_editing']) && !isset($_POST['discard_cell'])
+    && (empty($sheet_commands) || ($sheet_context && $sheet_context['filters'] !== $sheet_filters))) {
+    if ($sheet_context) {
+        $sheet_filters = $sheet_context['filters'];
+        foreach ($sheet_filters as $name => $value) $_POST[$name] = $value;
+    }
+    unset($_POST['sheet_page_action'], $_POST['sheet_page_first'], $_POST['sheet_page_prev'],
+        $_POST['sheet_page_next'], $_POST['sheet_page_last'], $_POST['_sheet_page_number_update'],
+        $_POST['_sheet_page_number_button'], $_POST['sheet_bottom_page_first'], $_POST['sheet_bottom_page_prev'],
+        $_POST['sheet_bottom_page_next'], $_POST['sheet_bottom_page_last'], $_POST['_sheet_bottom_page_number_update'],
+        $_POST['_sheet_bottom_page_number_button'], $_POST['open_cell']);
+    $sheet_modal_open = true;
+    display_error(_('Save or discard the attendance edit before changing page or filters.'));
+    // A changed filter must never turn an implicit submit into a cell command.
+    foreach ($sheet_commands as $command) unset($_POST[$command]);
+    $sheet_commands = array();
+}
+if (isset($_POST['discard_cell'])) {
+    foreach (array_keys($_POST) as $name)
+        if (strpos($name, 'cell_') === 0) unset($_POST[$name]);
+    $_POST['att_editing'] = 0;
+}
+$sel_month = $sheet_filters['sheet_month'];
+$sel_year = $sheet_filters['sheet_year'];
+$dept_id = $sheet_filters['department_id'];
+$emp_id = $sheet_filters['employee_id'];
+$sheet_scope = array('department_id' => $dept_id, 'employee_id' => $emp_id);
+$sheet_page_number = $sheet_context && $sheet_context['filters'] === $sheet_filters ? $sheet_context['page'] : 1;
+$sheet_requested_action = get_post('sheet_page_action', null);
+foreach (array('sheet_page', 'sheet_bottom_page') as $prefix) {
+    if (list_updated($prefix.'_number'))
+        $sheet_requested_action = get_post($prefix.'_number', null);
+    foreach (array('first', 'prev', 'next', 'last') as $action)
+        if (isset($_POST[$prefix.'_'.$action])) $sheet_requested_action = $action;
+}
+$sheet_navigation_requested = $sheet_requested_action !== null;
+if (empty($sheet_commands) && !$sheet_modal_open && $sheet_navigation_requested && $sheet_context
+    && $sheet_context['filters'] === $sheet_filters) {
+    $action = $sheet_requested_action;
+    if ($action === 'next') $sheet_page_number++;
+    elseif ($action === 'prev') $sheet_page_number--;
+    elseif ($action === 'first') $sheet_page_number = 1;
+    elseif ($action === 'last') $sheet_page_number = PHP_INT_MAX;
+    else $sheet_page_number = $action;
+}
+
+// Commands verify full readable custody before mutation. The shared selector
+// retains every existing fresh guard before rendered identity/roster output.
+if (!empty($sheet_commands))
+    hrm_employee_projection_require_readable();
+$sheet_page = attendance_sheet_employee_page($dept_id, $emp_id, $sheet_page_number);
+if (!empty($sheet_commands)) {
+    $selected = isset($_POST['bulk_fill']) || isset($_POST['bulk_delete'])
+        ? get_post('emp_check', array()) : array(get_post('cell_employee_id'));
+    if (is_array($selected) && (isset($_POST['bulk_fill']) || isset($_POST['bulk_delete'])))
+        $selected = array_map('attendance_sheet_post_employee_id', $selected);
+    $sheet_selected = attendance_sheet_selected_ids($sheet_context, $sheet_filters, $sheet_page, $selected);
+    $cell_command = isset($_POST['save_cell']) || isset($_POST['delete_cell']);
+    $valid_cell_values = true;
+    if ($cell_command)
+        foreach ($_POST as $name => $value)
+            if (strpos($name, 'cell_') === 0 && !is_scalar($value)) $valid_cell_values = false;
+    $cell_date = get_post('cell_date');
+    $parsed_cell_date = is_string($cell_date) ? DateTime::createFromFormat('!Y-m-d', $cell_date) : false;
+    $valid_cell_month = !$cell_command || ($parsed_cell_date && $parsed_cell_date->format('Y-m-d') === $cell_date
+        && substr($cell_date, 0, 7) === sprintf('%04d-%02d', $sel_year, $sel_month));
+    $sheet_command_allowed = count($sheet_commands) === 1 && $sheet_selected !== false && $valid_cell_month && $valid_cell_values
+        && !$sheet_navigation_requested && !isset($_POST['open_cell']) && !isset($_POST['discard_cell']);
+    // Consume before execution, including denial, so replay cannot repeat a bulk command.
+    if (is_string($sheet_context_token)) unset($_SESSION['attendance_sheet_pages'][$sheet_context_token]);
+    if (!$sheet_command_allowed) {
+        display_error(_('Selection expired or changed. Off-page, invalid or stale employees were rejected; review this page and select again.'));
+        foreach ($sheet_commands as $command) unset($_POST[$command]);
+        $sheet_modal_open = $cell_command;
+    }
+}
+$calendar = attendance_sheet_calendar($sel_year, $sel_month);
+$days_in_month = count($calendar);
+$wd_map = get_working_day_map();
+$holidays = get_month_holidays($sel_year, $sel_month);
 
 //----------------------------------------------------------------------
 // Modal save handler
@@ -220,6 +332,7 @@ if (isset($_POST['save_cell'])) {
     $cell_clock_out = trim((string)get_post('cell_clock_out'));
     $cell_leave    = (int)get_post('cell_leave');
     $cell_notes    = trim((string)get_post('cell_notes'));
+    $sheet_modal_open = true;
     $input_error   = false;
     $leave_flags   = hrm_get_leave_coverage_flags($cell_emp, $cell_date_sql);
 
@@ -274,10 +387,11 @@ if (isset($_POST['save_cell'])) {
     if (!$input_error) {
         $result = hrm_fnd_005_execute_attendance_sheet_day($cell_emp, $cell_date_sql, 'save',
             $cell_regular, $cell_ot_hours, $cell_ot_type, $cell_leave, $cell_status,
-            $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes);
-        if ($result['saved'])
+            $cell_shift, $cell_clock_in, $cell_clock_out, $cell_notes, $sheet_scope);
+        if ($result['saved']) {
+            $sheet_cell_saved = true;
             display_notification(_('Attendance saved for ').$cell_emp.' — '.sql2date($cell_date_sql));
-        else
+        } else
             display_error(_('Attendance could not be saved because lifecycle, leave or payroll custody denied the mutation.'));
     }
     $Ajax->activate('_page_body');
@@ -288,6 +402,7 @@ if (isset($_POST['save_cell'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['delete_cell'])) {
+    $sheet_modal_open = true;
     $cell_emp      = $_POST['cell_employee_id'];
     $cell_date_sql = $_POST['cell_date'];
     $cell_date     = sql2date($cell_date_sql);
@@ -298,10 +413,11 @@ if (isset($_POST['delete_cell'])) {
     } elseif (check_date_paid($cell_emp, $cell_date)) {
         display_error(_('Cannot delete attendance for a payroll-locked date.'));
     } else {
-        $result = hrm_fnd_005_execute_attendance_sheet_day($cell_emp, $cell_date_sql, 'delete');
-        if ($result['saved'])
+        $result = hrm_fnd_005_execute_attendance_sheet_day($cell_emp, $cell_date_sql, 'delete', '', '', 0, 0, 0, 0, '', '', '', $sheet_scope);
+        if ($result['saved']) {
+            $sheet_cell_saved = true;
             display_notification(_('Attendance deleted for ').$cell_emp.' — '.sql2date($cell_date_sql));
-        else
+        } else
             display_error(_('Attendance could not be deleted because lifecycle, leave or payroll custody denied the mutation.'));
     }
     $Ajax->activate('_page_body');
@@ -312,35 +428,31 @@ if (isset($_POST['delete_cell'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['bulk_fill'])) {
-    $emp_checks = isset($_POST['emp_check']) && is_array($_POST['emp_check']) ? array_unique($_POST['emp_check']) : array();
+    $emp_checks = $sheet_selected;
     sort($emp_checks, SORT_STRING);
     if (empty($emp_checks)) {
         display_error(_('No employees selected. Please check the rows to fill.'));
     } else {
-    $wd_map = get_working_day_map();
-    $days_in_month = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
-    $att_data = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id);
-    $leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id);
-    $holidays = get_month_holidays($sel_year, $sel_month);
+    $att_data = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id, $emp_checks);
+    $leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id, $emp_checks);
     $filled = 0;
     $denied = 0;
 
     foreach ($emp_checks as $eid) {
         for ($d = 1; $d <= $days_in_month; $d++) {
-            $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
-            $dow = (int)date('w', $ts);
-            $date_sql = date('Y-m-d', $ts);
+            $dow = $calendar[$d]['dow'];
+            $date_sql = $calendar[$d]['date'];
             $user_date = sql2date($date_sql);
 
             if (isset($wd_map[$dow]) && !$wd_map[$dow]['is_working']) continue;
             if (isset($holidays[$d])) continue;
             if (isset($att_data[$eid][$d])) continue;
             if (isset($leave_data[$eid][$d])) continue;
-            if (strtotime($date_sql) > strtotime(date('Y-m-d'))) continue;
+            if ($calendar[$d]['future']) continue;
             if (check_date_paid($eid, $user_date)) continue;
 
             $hours = isset($wd_map[$dow]) ? $wd_map[$dow]['work_hours'] : 8;
-            $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'fill', $hours);
+            $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'fill', $hours, '', 0, 0, 0, 0, '', '', '', $sheet_scope);
             if ($result['saved']) $filled++;
             elseif (!$result['skipped']) $denied++;
         }
@@ -361,7 +473,7 @@ if (isset($_POST['bulk_fill'])) {
 //----------------------------------------------------------------------
 
 if (isset($_POST['bulk_delete'])) {
-    $emp_checks = isset($_POST['emp_check']) && is_array($_POST['emp_check']) ? array_unique($_POST['emp_check']) : array();
+    $emp_checks = $sheet_selected;
     sort($emp_checks, SORT_STRING);
     if (empty($emp_checks)) {
         display_error(_('No employees selected for bulk delete.'));
@@ -375,7 +487,7 @@ if (isset($_POST['bulk_delete'])) {
                 $date_sql = date('Y-m-d', $ts);
                 $user_date = sql2date($date_sql);
                 if (check_date_paid($eid, $user_date)) continue;
-                $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'bulk_delete');
+                $result = hrm_fnd_005_execute_attendance_sheet_day($eid, $date_sql, 'bulk_delete', '', '', 0, 0, 0, 0, '', '', '', $sheet_scope);
                 if ($result['saved']) $deleted++;
                 else $denied++;
             }
@@ -400,16 +512,32 @@ hrm_log_restricted_employee_projection('attendance_sheet_selector');
 // Load data for the grid
 //----------------------------------------------------------------------
 
-$days_in_month = (int)date('t', mktime(0, 0, 0, $sel_month, 1, $sel_year));
-$wd_map     = get_working_day_map();
-$att_data   = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id);
-$leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id);
-$holidays   = get_month_holidays($sel_year, $sel_month);
-
-$emp_result = get_attendance_sheet_employees($dept_id, $emp_id);
-$employees = array();
-while ($row = db_fetch($emp_result))
-    $employees[] = $row;
+// Reload after commands at the same post-command identity boundary.
+if (!empty($sheet_commands))
+    $sheet_page = attendance_sheet_employee_page($dept_id, $emp_id, $sheet_page['page']);
+$employees = $sheet_page['employees'];
+$visible_employee_ids = array_column($employees, 'employee_id');
+$att_data = get_monthly_attendance($sel_year, $sel_month, $dept_id, $emp_id, $visible_employee_ids);
+$leave_data = get_monthly_leaves($sel_year, $sel_month, $dept_id, $emp_id, $visible_employee_ids);
+if ($sheet_cell_saved) $sheet_modal_open = false;
+// The ordinary-submit cell opener is also available with JavaScript disabled.
+if (isset($_POST['open_cell']) && is_string($_POST['open_cell'])) {
+    $open = json_decode(htmlspecialchars_decode($_POST['open_cell'], ENT_QUOTES), true);
+    if (is_array($open) && count($open) === 2 && is_string($open[0])
+        && in_array($open[0], $visible_employee_ids, true) && isset($calendar[(int)$open[1]])) {
+        $day = (int)$open[1];
+        $entry = isset($att_data[$open[0]][$day]) ? $att_data[$open[0]][$day] : array();
+        $_POST['cell_employee_id'] = $open[0];
+        $_POST['cell_date'] = $calendar[$day]['date'];
+        foreach (array('status'=>'status', 'regular'=>'regular_hours', 'ot_hours'=>'overtime_hours',
+            'ot_type'=>'overtime_type_id', 'shift'=>'shift_id', 'clock_in'=>'clock_in',
+            'clock_out'=>'clock_out', 'notes'=>'notes') as $field => $column)
+            $_POST['cell_'.$field] = isset($entry[$column]) ? htmlspecialchars((string)$entry[$column], ENT_QUOTES) : '';
+        $_POST['cell_leave'] = isset($leave_data[$open[0]][$day]) ? $leave_data[$open[0]][$day]['leave_type_id'] : 0;
+        if (empty($entry) && !empty($_POST['cell_leave'])) $_POST['cell_status'] = 3;
+        $sheet_modal_open = true;
+    }
+}
 if (!empty($employees))
     hrm_log_restricted_employee_projection('attendance_roster');
 
@@ -423,11 +551,19 @@ while ($ot = db_fetch($overtime_result))
 //----------------------------------------------------------------------
 
 start_form();
+unset($_POST['emp_check'], $_POST['check_all_emp']);
+hidden('att_editing', $sheet_modal_open ? 1 : 0);
+echo '<input type="hidden" name="att_filter_state" value="'.htmlspecialchars(json_encode(
+    array_merge($sheet_filters, array('sheet_page_number' => $sheet_page['page'],
+        'sheet_bottom_page_number' => $sheet_page['page']))), ENT_QUOTES).'">';
+echo '<div id="att-edit-message" role="alert" data-block-message="'.htmlspecialchars(
+    _('Save or discard the attendance edit before changing page or filters.'), ENT_QUOTES).'"></div>';
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 months_list_cells(_('Month:'), 'sheet_month', $sel_month, true);
-years_list_cells(_('Fiscal Year:'), 'sheet_year', null);
+years_list_cells(_('Fiscal Year:'), 'sheet_year', $sel_year);
+submit_cells('sheet_apply', _('Apply filters'));
 departments_list_cells(_('Department:'), 'department_id', get_post('department_id'), _('All departments'), true);
 
 $emp_list_opts = array(
@@ -441,13 +577,20 @@ if ($dept_id > 0)
     $emp_list_opts['where'] = array("e.department_id = ".db_escape($dept_id));
 employees_list_cells(_('Employee:'), 'employee_id', $emp_id, _('All employees'), true, false, false, $emp_list_opts);
 
-check_cells(_('Select All Rows'), 'check_all_emp', null, false, _('Select/Deselect all employees'));
-submit_cells('bulk_fill', _('Fill Working Days'), '', _('Auto-fill all working days with scheduled hours for checked employees'), false);
-submit_cells('bulk_delete', _('Bulk Delete'), '', _('Delete ALL attendance records for checked employees in the selected month'), false);
+check_cells(_('Select visible page'), 'check_all_emp', null, false, _('Select/Deselect employees on this page only'));
+submit_cells('bulk_fill', _('Fill checked rows'), '', _('Auto-fill all working days with scheduled hours for checked employees'), false);
+submit_cells('bulk_delete', _('Delete checked rows'), '', _('Delete ALL attendance records for checked employees in the selected month'), false);
 end_row();
 end_table(1);
 
+// The installed complete selector above refreshes the session's current roles.
+// Bind this rendered page only after that refresh, including reused sessions.
+$sheet_context_token = attendance_sheet_remember_page($sheet_filters, $sheet_page);
+hidden('attendance_context', $sheet_context_token);
+
 submit_js_confirm('bulk_delete', _('Delete ALL attendance records for checked employees in the selected month?'));
+
+attendance_sheet_render_pagination($sheet_page);
 
 //----------------------------------------------------------------------
 // Legend
@@ -465,9 +608,11 @@ echo '</div>';
 
 if (empty($employees)) {
     display_note(_('No employees found. Adjust the filters above.'));
-    end_form();
-    end_page();
-    return;
+    if (!$sheet_modal_open) {
+        end_form();
+        end_page();
+        return;
+    }
 }
 
 //----------------------------------------------------------------------
@@ -482,19 +627,18 @@ echo '<th class="att-emp-id att-sticky-col"><input type="checkbox" id="check_all
 echo '<th class="att-emp-name att-sticky-col att-sticky-name">'._('Employee').'</th>';
 
 for ($d = 1; $d <= $days_in_month; $d++) {
-    $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
-    $dow = (int)date('w', $ts);
-    $day_abbr = substr(date('D', $ts), 0, 2);
+    $dow = $calendar[$d]['dow'];
+    $day_abbr = $calendar[$d]['abbr'];
     $is_weekend = isset($wd_map[$dow]) && !$wd_map[$dow]['is_working'];
     $is_holiday = isset($holidays[$d]);
-    $is_today = (date('Y-m-d', $ts) === date('Y-m-d'));
+    $is_today = $calendar[$d]['today'];
 
     $cls = 'att-day-header';
     if ($is_weekend) $cls .= ' att-weekend-col';
     if ($is_holiday) $cls .= ' att-holiday-col';
     if ($is_today)   $cls .= ' att-today-col';
 
-    $title = date('l, M j', $ts);
+    $title = $calendar[$d]['title'];
     if ($is_holiday) $title .= ' — '.$holidays[$d];
 
     echo '<th class="'.$cls.'" title="'.htmlspecialchars($title, ENT_QUOTES).'">';
@@ -528,11 +672,10 @@ foreach ($employees as $emp) {
     echo '<td class="att-emp-name att-sticky-col att-sticky-name">'.htmlspecialchars($employee_display_name).'</td>';
 
     for ($d = 1; $d <= $days_in_month; $d++) {
-        $ts = mktime(0, 0, 0, $sel_month, $d, $sel_year);
-        $dow = (int)date('w', $ts);
-        $date_sql = date('Y-m-d', $ts);
-        $is_future = (strtotime($date_sql) > strtotime(date('Y-m-d')));
-        $is_today  = ($date_sql === date('Y-m-d'));
+        $dow = $calendar[$d]['dow'];
+        $date_sql = $calendar[$d]['date'];
+        $is_future = $calendar[$d]['future'];
+        $is_today = $calendar[$d]['today'];
 
         list($cell_class, $cell_label, $cell_title, $has_data) =
             get_cell_info($d, $emp_att, $emp_leave, $holidays, $dow, $wd_map, $status_map);
@@ -583,8 +726,8 @@ foreach ($employees as $emp) {
                 if (!isset($emp_att[$d]))
                     echo ' data-status="3"';
             }
-            echo ' onclick="openAttModal(this)">';
-            echo '<span>'.$cell_label.'</span></td>';
+            echo ' tabindex="-1" onclick="openAttModal(this); return false;">';
+            echo '<button type="submit" name="open_cell" class="att-open-cell" value="'.htmlspecialchars(json_encode(array((string)$eid, $d)), ENT_QUOTES).'" aria-label="'.htmlspecialchars($eid.' '.$date_sql.' '.$cell_title, ENT_QUOTES).'">'.($cell_label === '' ? '&nbsp;' : $cell_label).'</button></td>';
         }
     }
 
@@ -599,37 +742,38 @@ foreach ($employees as $emp) {
 }
 
 echo '</tbody></table></div>';
+attendance_sheet_render_pagination($sheet_page, 'bottom');
 
 //----------------------------------------------------------------------
 // Modal dialog
 //----------------------------------------------------------------------
 
-echo '<div id="att-modal-overlay" class="att-modal-overlay" style="display:none" onclick="closeAttModal()"></div>';
-echo '<div id="att-modal" class="att-modal" style="display:none">';
+echo '<div id="att-modal-overlay" class="att-modal-overlay" style="display:'.($sheet_modal_open ? 'block' : 'none').'" onclick="closeAttModal()"></div>';
+echo '<div id="att-modal" class="att-modal" role="dialog" aria-modal="true" aria-label="'._('Attendance Entry').'" style="display:'.($sheet_modal_open ? 'block' : 'none').'">';
 echo '<div class="att-modal-header">';
 echo '<span class="att-modal-title">'._('Attendance Entry').'</span>';
 echo '<span class="att-modal-close" onclick="closeAttModal()">&times;</span>';
 echo '</div>';
 echo '<div class="att-modal-body">';
 
-echo '<input type="hidden" name="cell_employee_id" id="cell_employee_id" value="">';
-echo '<input type="hidden" name="cell_date" id="cell_date" value="">';
+echo '<input type="hidden" name="cell_employee_id" id="cell_employee_id" value="'.htmlspecialchars((string)get_post('cell_employee_id'), ENT_QUOTES).'">';
+echo '<input type="hidden" name="cell_date" id="cell_date" value="'.htmlspecialchars((string)get_post('cell_date'), ENT_QUOTES).'">';
 
 echo '<table class="tablestyle2">';
 echo '<tr><td class="label">'._('Employee:').'</td>';
-echo '<td><strong><span id="modal_emp_label"></span></strong></td></tr>';
+echo '<td><strong><span id="modal_emp_label">'.htmlspecialchars((string)get_post('cell_employee_id'), ENT_QUOTES).'</span></strong></td></tr>';
 echo '<tr><td class="label">'._('Date:').'</td>';
-echo '<td><strong><span id="modal_date_label"></span></strong></td></tr>';
+echo '<td><strong><span id="modal_date_label">'.htmlspecialchars((string)get_post('cell_date'), ENT_QUOTES).'</span></strong></td></tr>';
 echo '<tr><td class="label">'._('Status:').'</td><td>';
-echo array_selector('cell_status', 0, $status_options);
+echo array_selector('cell_status', get_post('cell_status', 0), $status_options);
 echo '</td></tr>';
 echo '<tr><td class="label">'._('Regular Hours:').'</td>';
-echo '<td><input type="text" name="cell_regular" id="cell_regular" class="att-modal-input" maxlength="8" value=""></td></tr>';
+echo '<td><input type="text" name="cell_regular" id="cell_regular" class="att-modal-input" maxlength="8" value="'.htmlspecialchars((string)get_post('cell_regular'), ENT_QUOTES, 'UTF-8', false).'"></td></tr>';
 echo '<tr><td class="label">'._('OT Type:').'</td><td>';
-echo array_selector('cell_ot_type', 0, $overtime_options);
+echo array_selector('cell_ot_type', get_post('cell_ot_type', 0), $overtime_options);
 echo '</td></tr>';
 echo '<tr><td class="label">'._('OT Hours:').'</td>';
-echo '<td><input type="text" name="cell_ot_hours" id="cell_ot_hours" class="att-modal-input" maxlength="8" value=""></td></tr>';
+echo '<td><input type="text" name="cell_ot_hours" id="cell_ot_hours" class="att-modal-input" maxlength="8" value="'.htmlspecialchars((string)get_post('cell_ot_hours'), ENT_QUOTES, 'UTF-8', false).'"></td></tr>';
 
 if (function_exists('work_shifts_list')) {
     echo '<tr><td class="label">'._('Shift:').'</td><td>';
@@ -638,21 +782,22 @@ if (function_exists('work_shifts_list')) {
 }
 
 echo '<tr><td class="label">'._('Clock In:').'</td>';
-echo '<td><input type="text" name="cell_clock_in" id="cell_clock_in" class="att-modal-input" maxlength="5" placeholder="HH:MM" value=""></td></tr>';
+echo '<td><input type="text" name="cell_clock_in" id="cell_clock_in" class="att-modal-input" maxlength="5" placeholder="HH:MM" value="'.htmlspecialchars((string)get_post('cell_clock_in'), ENT_QUOTES, 'UTF-8', false).'"></td></tr>';
 echo '<tr><td class="label">'._('Clock Out:').'</td>';
-echo '<td><input type="text" name="cell_clock_out" id="cell_clock_out" class="att-modal-input" maxlength="5" placeholder="HH:MM" value=""></td></tr>';
+echo '<td><input type="text" name="cell_clock_out" id="cell_clock_out" class="att-modal-input" maxlength="5" placeholder="HH:MM" value="'.htmlspecialchars((string)get_post('cell_clock_out'), ENT_QUOTES, 'UTF-8', false).'"></td></tr>';
 echo '<tr><td class="label">'._('Leave Type:').'</td><td>';
 echo leave_types_list('cell_leave', null, true, false);
 echo '</td></tr>';
 echo '<tr><td class="label">'._('Notes:').'</td>';
-echo '<td><textarea name="cell_notes" id="cell_notes" class="att-modal-input" rows="3" maxlength="200"></textarea></td></tr>';
+echo '<td><textarea name="cell_notes" id="cell_notes" class="att-modal-input" rows="3" maxlength="200">'.htmlspecialchars((string)get_post('cell_notes'), ENT_QUOTES, 'UTF-8', false).'</textarea></td></tr>';
 echo '</table>';
 
 echo '</div>';
 echo '<div class="att-modal-footer">';
 echo '<button type="submit" name="save_cell" value="1" class="ajaxsubmit att-btn att-btn-save">'._('Save').'</button> ';
 echo '<button type="submit" name="delete_cell" value="1" class="ajaxsubmit att-btn att-btn-delete" onclick="return confirm(\''._('Delete this attendance entry?').'\');">'._('Delete').'</button> ';
-echo '<button type="button" id="att_modal_clear_btn" class="att-btn att-btn-cancel">'._('Reset').'</button>';
+echo '<button type="button" id="att_modal_clear_btn" class="att-btn att-btn-cancel">'._('Reset').'</button> ';
+echo '<button type="submit" name="discard_cell" id="att_modal_discard_btn" class="att-btn att-btn-cancel">'._('Discard').'</button>';
 echo '</div>';
 echo '</div>';
 

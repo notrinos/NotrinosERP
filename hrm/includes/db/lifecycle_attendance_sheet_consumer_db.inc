@@ -3,10 +3,14 @@
 if (!function_exists('get_hrm_lifecycle_attendance_mutation_guard_for_update'))
     include_once($path_to_root.'/hrm/includes/db/lifecycle_attendance_mutation_guard_db.inc');
 
-/** Apply one validated Sheet cell, deletion or working-day fill atomically. */
+/**
+ * Apply one validated Sheet cell, deletion or working-day fill atomically.
+ * Optional page filters are rechecked under the Employee row lock; they never
+ * replace lifecycle, leave or payroll custody. Existing callers retain null.
+ */
 function hrm_fnd_005_execute_attendance_sheet_day($employee_id, $sql_date, $operation,
     $regular='', $ot_hours='', $ot_type=0, $leave_id=0, $status=0,
-    $shift_id=0, $clock_in='', $clock_out='', $notes='')
+    $shift_id=0, $clock_in='', $clock_out='', $notes='', $sheet_scope=null)
 {
     $denied = array('saved'=>false, 'skipped'=>false);
     if (!in_array($operation, array('save', 'delete', 'bulk_delete', 'fill'), true)
@@ -26,6 +30,25 @@ function hrm_fnd_005_execute_attendance_sheet_day($employee_id, $sql_date, $oper
 
     begin_transaction();
     try {
+        if ($sheet_scope !== null) {
+            if (!is_array($sheet_scope) || !isset($sheet_scope['department_id'], $sheet_scope['employee_id'])) {
+                cancel_transaction();
+                return $denied;
+            }
+            $sql = get_attendance_sheet_employee_projection_sql(
+                $sheet_scope['department_id'], $sheet_scope['employee_id'], true);
+            $eligible = db_query($sql.' AND e.employee_id = '.db_escape($employee_id).' FOR UPDATE',
+                'could not lock attendance sheet filter eligibility');
+            if (!$eligible || (int)db_num_rows($eligible) !== 1) {
+                cancel_transaction();
+                return $denied;
+            }
+            $eligible_employee = db_fetch($eligible);
+            if (!$eligible_employee || (string)$eligible_employee['employee_id'] !== (string)$employee_id) {
+                cancel_transaction();
+                return $denied;
+            }
+        }
         foreach ($kinds as $kind) {
             $guard = get_hrm_lifecycle_attendance_mutation_guard_for_update($employee_id, $sql_date, $kind);
             if (!is_array($guard) || !isset($guard['can_mutate']) || $guard['can_mutate'] !== true) {

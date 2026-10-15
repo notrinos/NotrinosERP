@@ -2088,7 +2088,8 @@ CREATE TABLE IF NOT EXISTS `0_leave_details` (
 	`approved_by`       varchar(20)  DEFAULT NULL,
 	`approved_date`     date         DEFAULT NULL,
 	`reason`            text,
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+	KEY `leave_employee_history_idx` (`employee_id`,`id`,`from_date`,`to_date`)
 ) ENGINE=InnoDB;
 
 -- Data of table `0_leave_details` --
@@ -7380,6 +7381,8 @@ INSERT INTO `0_crm_module_settings` (`setting_key`, `setting_value`, `descriptio
 SET @old_foreign_key_checks = @@FOREIGN_KEY_CHECKS;
 SET FOREIGN_KEY_CHECKS = 0;
 
+
+-- Stock move tracking indexes are defined in CREATE TABLE above.
 
 -- -------------------------------------------------------------------------------------
 -- Restore foreign key checks

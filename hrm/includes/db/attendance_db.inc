@@ -301,9 +301,12 @@ function get_attendance($from, $to, $employee_id=0, $department=0, $time_id=0) {
  * @param int $month
  * @param int $department_id Optional department filter.
  * @param string $employee_id Optional single employee filter.
+ * @param array|null $employee_ids Explicit cohort; null preserves legacy callers, empty reads nothing.
  * @return array Nested: [employee_id][day_number] => row
  */
-function get_monthly_attendance($year, $month, $department_id = 0, $employee_id = '') {
+function get_monthly_attendance($year, $month, $department_id = 0, $employee_id = '', $employee_ids = null) {
+	if ($employee_ids !== null && (!is_array($employee_ids) || empty($employee_ids)))
+		return array();
 	$from_sql = sprintf('%04d-%02d-01', (int)$year, (int)$month);
 	$days_in_month = (int)date('t', strtotime($from_sql));
 	$to_sql = sprintf('%04d-%02d-%02d', (int)$year, (int)$month, $days_in_month);
@@ -317,6 +320,8 @@ function get_monthly_attendance($year, $month, $department_id = 0, $employee_id 
 		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
 	if ($employee_id !== '')
 		$sql .= " AND a.employee_id = ".db_escape($employee_id);
+	if ($employee_ids !== null)
+		$sql .= " AND a.employee_id IN (".implode(',', array_map('db_escape', $employee_ids)).")";
 
 	$sql .= " ORDER BY a.employee_id, a.date";
 	$result = db_query($sql, 'could not get monthly attendance');
@@ -527,7 +532,7 @@ function get_attendance_sheet_employee_projection_sql($department_id = 0, $emplo
 		$sql .= " AND e.employee_id = ".db_escape($employee_id);
 
 	if (!$ids_only)
-		$sql .= " ORDER BY e.first_name, e.last_name";
+		$sql .= " ORDER BY e.first_name, e.last_name, e.employee_id";
 
 	return $sql;
 }
@@ -551,7 +556,19 @@ function get_attendance_sheet_employees($department_id = 0, $employee_id = '', $
 	return db_query($sql, 'could not get attendance sheet employees');
 }
 
-function get_monthly_leaves($year, $month, $department_id = 0, $employee_id = '') {
+/**
+ * Read overlapping monthly leaves for the optional explicit cohort.
+ * Null retains the legacy contract; an empty or invalid cohort reads nothing.
+ * @param int $year
+ * @param int $month
+ * @param int $department_id
+ * @param string $employee_id
+ * @param array|null $employee_ids
+ * @return array
+ */
+function get_monthly_leaves($year, $month, $department_id = 0, $employee_id = '', $employee_ids = null) {
+	if ($employee_ids !== null && (!is_array($employee_ids) || empty($employee_ids)))
+		return array();
 	$from_sql = sprintf('%04d-%02d-01', (int)$year, (int)$month);
 	$days_in_month = (int)date('t', strtotime($from_sql));
 	$to_sql = sprintf('%04d-%02d-%02d', (int)$year, (int)$month, $days_in_month);
@@ -568,6 +585,8 @@ function get_monthly_leaves($year, $month, $department_id = 0, $employee_id = ''
 		$sql .= " AND e.department_id = ".db_escape((int)$department_id);
 	if ($employee_id !== '')
 		$sql .= " AND ld.employee_id = ".db_escape($employee_id);
+	if ($employee_ids !== null)
+		$sql .= " AND ld.employee_id IN (".implode(',', array_map('db_escape', $employee_ids)).")";
 
 	$result = db_query($sql, 'could not get monthly leaves');
 	$data = array();
