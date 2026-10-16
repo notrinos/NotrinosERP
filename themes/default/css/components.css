@@ -79,8 +79,8 @@
 
 .modern-ajax-status[data-kind='spinner']::before {
 	display: block;
-	width: 18px;
-	height: 18px;
+	width: 34px;
+	height: 34px;
 	border-radius: 50%;
 	border: 2px solid rgba(37, 99, 235, 0.18);
 	border-top-color: var(--modern-app-accent, #2563eb);

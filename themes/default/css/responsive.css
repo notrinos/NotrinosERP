@@ -193,6 +193,14 @@
 		min-height: 44px;
 	}
 
+	/* Match the loading ring to the notification circle on phones. */
+	.modern-topbar-right .modern-ajax-status[data-kind='spinner'],
+	.modern-topbar-right .modern-ajax-status[data-kind='spinner']::before {
+		width: 44px;
+		height: 44px;
+		min-width: 44px;
+	}
+
 	.modern-user-trigger {
 		min-height: 44px;
 		padding-top: 10px;
