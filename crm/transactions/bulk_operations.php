@@ -23,6 +23,7 @@ $path_to_root  = '../..';
 
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/includes/ui.inc');
+include_once($path_to_root . '/admin/db/tags_db.inc');
 include_once($path_to_root . '/crm/includes/crm_constants.inc');
 include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
@@ -151,7 +152,7 @@ crm_filter_array_list_cells(_('Status'), 'bulk_status', crm_lead_statuses(), get
 
 // Tag
 $tag_items = array();
-$tags_result = crm_leads_entity::all_db_resource('type = ' . TAG_CRM . ' ORDER BY name');
+$tags_result = get_tags(TAG_CRM);
 while ($t = db_fetch($tags_result)) {
     $tag_items[(int)$t['id']] = $t['name'];
 }
@@ -173,7 +174,7 @@ $f_source = get_post('filter_source', '');
 $f_team   = get_post('filter_team', '');
 $f_type   = (int)get_post('filter_type', 0);
 
-if ($f_status !== '' && $f_status != -1) $filters['lead_status'] = (int)$f_status;
+if ($f_status !== '' && $f_status != -1) $filters['lead_status'] = $f_status;
 if ($f_source !== '' && $f_source != 0)  $filters['lead_source_id'] = (int)$f_source;
 if ($f_team !== '' && $f_team != 0)      $filters['sales_team_id'] = (int)$f_team;
 if ($f_type == 0) $filters['is_opportunity'] = 0;
