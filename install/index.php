@@ -12,8 +12,10 @@
 $page_security = 'SA_OPEN';
 $path_to_root = '..';
 
-if (file_exists($path_to_root.'/config_db.php'))
+if (file_exists($path_to_root.'/config_db.php')) {
 	header("Location: $path_to_root/index.php");
+	exit;
+}
 
 include($path_to_root.'/install/isession.inc');
 
@@ -22,6 +24,7 @@ page(_('NotrinosERP Installation Wizard'), true, false, '', '', false, 'styleshe
 include($path_to_root.'/includes/ui.inc');
 include($path_to_root.'/includes/system_tests.inc');
 include($path_to_root.'/admin/db/maintenance_db.inc');
+include($path_to_root.'/install/reset_database.inc');
 include($path_to_root.'/includes/packages.inc');
 if (file_exists($path_to_root.'/installed_extensions.php'))
 	include($path_to_root.'/installed_extensions.php');
@@ -124,8 +127,15 @@ function do_install() {
 
 	global $path_to_root, $db_connections, $def_coy, $installed_extensions, $tb_pref_counter, $dflt_lang, $installed_languages;
 
+	if (!install_database_reset_confirmed($_SESSION['inst_set']))
+		return false;
 	$coa = $_SESSION['inst_set']['coa'];
-	if (install_connect_db() && db_import($path_to_root.'/sql/'.$coa, $_SESSION['inst_set'])) {
+	if (!is_file($path_to_root.'/sql/'.$coa) || !is_readable($path_to_root.'/sql/'.$coa)) {
+		display_error(_('The selected chart of accounts SQL file cannot be read.'));
+		return false;
+	}
+	if (install_connect_db() && install_reset_database($_SESSION['inst_set'])
+		&& db_import($path_to_root.'/sql/'.$coa, $_SESSION['inst_set'])) {
 		$con = $_SESSION['inst_set'];
 		$table_prefix = $con['tbpref'];
 
@@ -354,9 +364,9 @@ switch(@$_POST['Page']) {
 		check_row(_('Install Additional Language Packs from NotrinosERP Repository:'), 'sel_langs');
 		check_row(_('Install Additional COAs from NotrinosERP Repository:'), 'sel_coas');
 		end_table(1);
-		display_note(_('Use database user/password with permissions to create new database, or use proper credentials for previously created empty database.'));
+		display_note(_('Use a database user with permissions to create and drop the selected database. Installation permanently deletes all existing contents after your confirmation.'));
 		display_note(_('Select collation you want to use. If you are unsure or you will use various languages, select unicode collation.'));
-		display_note(_('Use table prefix if you share selected database for more than one company using the same collation.'));
+		display_warning(_('Use a dedicated database for this installation. All tables and other SQL objects will be deleted, including tables with other company prefixes.'));
 		display_note(_('Do not select additional langs nor COAs if you have no working internet connection right now. You can install them later.'));
 		display_note(_('Set Only Port value if you cannot use the default port 3306.'));
 		submit_center_first('back', _('<< Back'));
@@ -393,6 +403,18 @@ switch(@$_POST['Page']) {
 		coa_list_row(_('Select Chart of Accounts:'), 'coa');
 		languages_list_row(_('Select Default Language:'), 'lang');
 		end_table(1);
+		display_warning(sprintf(_('Installation will permanently delete ALL contents of database %s on %s (port %s), including every company prefix, view, trigger, routine and event. This cannot be undone. Back up any data you need before continuing.'),
+			$_SESSION['inst_set']['dbname'], $_SESSION['inst_set']['host'],
+			$_SESSION['inst_set']['port'] !== '' ? $_SESSION['inst_set']['port'] : '3306'));
+		hidden('database_reset_target', install_database_reset_target($_SESSION['inst_set']));
+		$_SESSION['install_database_reset_token'] = random_id();
+		hidden('database_reset_token', $_SESSION['install_database_reset_token']);
+		unset($_POST['confirm_database_reset']);
+		echo "<center>";
+		check(_('I confirm: permanently empty this database and install NotrinosERP.'), 'confirm_database_reset', 0);
+		echo "</center>";
+		br(2);
+		submit_js_confirm('set_admin', _('Permanently delete all contents of the displayed database and install NotrinosERP? This cannot be undone.'));
 		submit_center_first('back', _('<< Back'));
 		submit_center_last('set_admin', _('Install'), _('Start installation process'), 'default nonajax');
 		break;
