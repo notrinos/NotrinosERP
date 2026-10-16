@@ -8462,7 +8462,7 @@ INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,
 
 INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,`capability_code`,`namespace`,`semantic`,`cardinality`,`exclusive_group`,`artifact_type`,`host_adapter`,`host_version`,`definition_sha256`,`created_at`) SELECT `registry_version_id`,'jurisdiction.tests','jurisdiction','tests','many',NULL,'test-fixture-json','tests.conformance.v1','1.0','74aaf06c3c2458c9beddd6db01f7c03846e54b322ba3810516d8dec64efaaa58',NOW() FROM `0_pay_ctry_capability_contract_versions` WHERE `registry_version`='pay-ctry-capabilities-v2';
 
-INSERT INTO `0_pay_ctry_host_adapters` (`adapter_code`,`adapter_version`,`media_types_json`,`adapter_sha256`,`status`,`created_at`) VALUES ('core.metadata.v1','1.0','["declarative-json"]','9b83f2f9e4d93b4788f11f1330bb15570fcdd70d71799eee2b0082ff5e8aec9b','active',NOW()),('formula.variables.v1','1.0','["declarative-json"]','83c4c6dc5392a3cec3d91b1e0105c8a7b0526c721a336a0eaaa2cfc8c1721025','active',NOW()),('rules.declarative.v1','1.0','["declarative-json"]','93e3ef03c1563a811581cae5d0a3e1254b4611c7b513cdad1b22f9a230d7cbc6','active',NOW()),('decisions.rates.v1','1.0','["declarative-json"]','219db4616ec0e955c5fc2ae0e227c903c4aa8a47432c7596fd09c05db3d25eee','active',NOW()),('balances.ledger.v1','1.0','["declarative-json"]','1fbe7da8a06802d7bd5bceaf12640549d910ec78d3d9d106eb9d4f462c0eef','active',NOW()),('validators.declarative.v1','1.0','["declarative-json"]','7aeeebc292abc5f3caa83d8d49929e04f193608b36b63d0e5034f1f05a69a888','active',NOW()),('payslips.projection.v1','1.0','["declarative-json"]','0416d7b37251d43dfcc2c3c3f412f577821597465c2d2eb0926833110daf47f8','active',NOW()),('filings.declarative.v1','1.0','["declarative-json"]','861adebd945d285ce09ba6f036125007300fce85e9fed171779b62d0e868bc38','active',NOW()),('bank-files.renderer.v1','1.0','["declarative-json","declarative-csv"]','57afcdde5b667bd35e1a7d6c9ba8a90608912ff8d3e2b03a0b538040c09df6e4','active',NOW()),('translations.xliff.v1','1.0','["translation-xliff"]','9c4df2c1b35f36ea730c62a4fa0e723d0ae56e9726b914efca3c76206f0233ce','active',NOW()),('migrations.review.v1','1.0','["declarative-json"]','f487248eec08bf014988cf34e4f3bf454c5a0d0cfb6475d1c57db14ba2cf8c13','active',NOW()),('tests.conformance.v1','1.0','["test-fixture-json"]','601788eeceaba22ea02f8da559f92db486995f9b4892cff7a22aa0d241b98836','active',NOW());
+INSERT INTO `0_pay_ctry_host_adapters` (`adapter_code`,`adapter_version`,`media_types_json`,`adapter_sha256`,`status`,`created_at`) VALUES ('core.metadata.v1','1.0','["declarative-json"]','9b83f2f9e4d93b4788f11f1330bb15570fcdd70d71799eee2b0082ff5e8aec9b','active',NOW()),('formula.variables.v1','1.0','["declarative-json"]','83c4c6dc5392a3cec3d91b1e0105c8a7b0526c721a336a0eaaa2cfc8c1721025','active',NOW()),('rules.declarative.v1','1.0','["declarative-json"]','93e3ef03c1563a811581cae5d0a3e1254b4611c7b513cdad1b22f9a230d7cbc6','active',NOW()),('decisions.rates.v1','1.0','["declarative-json"]','219db4616ec0e955c5fc2ae0e227c903c4aa8a47432c7596fd09c05db3d25eee','active',NOW()),('balances.ledger.v1','1.0','["declarative-json"]','1fbe7da8a06802d7bd5bceaf12640549d910ec78d3f2d9d106eb9d4f462c0eef','active',NOW()),('validators.declarative.v1','1.0','["declarative-json"]','7aeeebc292abc5f3caa83d8d49929e04f193608b36b63d0e5034f1f05a69a888','active',NOW()),('payslips.projection.v1','1.0','["declarative-json"]','0416d7b37251d43dfcc2c3c3f412f577821597465c2d2eb0926833110daf47f8','active',NOW()),('filings.declarative.v1','1.0','["declarative-json"]','861adebd945d285ce09ba6f036125007300fce85e9fed171779b62d0e868bc38','active',NOW()),('bank-files.renderer.v1','1.0','["declarative-json","declarative-csv"]','57afcdde5b667bd35e1a7d6c9ba8a90608912ff8d3e2b03a0b538040c09df6e4','active',NOW()),('translations.xliff.v1','1.0','["translation-xliff"]','9c4df2c1b35f36ea730c62a4fa0e723d0ae56e9726b914efca3c76206f0233ce','active',NOW()),('migrations.review.v1','1.0','["declarative-json"]','f487248eec08bf014988cf34e4f3bf454c5a0d0cfb6475d1c57db14ba2cf8c13','active',NOW()),('tests.conformance.v1','1.0','["test-fixture-json"]','601788eeceaba22ea02f8da559f92db486995f9b4892cff7a22aa0d241b98836','active',NOW());
 
 ALTER TABLE `0_hrm_pay_pmt_001_payment_items`
  ADD UNIQUE KEY `uq_ppm1_it_result` (`source_result_sha256`);
@@ -10118,3 +10118,74 @@ CREATE TRIGGER `0_pgn_c_u` BEFORE UPDATE ON `0_hrm_pay_glb_001_native_command_re
 
 CREATE TRIGGER `0_pgn_c_d` BEFORE DELETE ON `0_hrm_pay_glb_001_native_command_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='S39 immutable hrm_pay_glb_001_native_command_receipts DELETE denied';
 
+
+-- Reviewed dump-gap reconciliation, 2026-10-16.
+-- Retain actual legacy data and grants; do not add the 17 unused development columns.
+ALTER TABLE `0_crm_activities` ADD COLUMN `priority` tinyint(1) NOT NULL DEFAULT 0;
+
+ALTER TABLE `0_debtors_master` MODIFY COLUMN `company_size` enum('small','medium','large','enterprise') COLLATE utf8_unicode_ci DEFAULT 'medium', MODIFY COLUMN `credit_insurance_limit` double DEFAULT 0, MODIFY COLUMN `credit_risk_score` enum('low','medium','high','critical') COLLATE utf8_unicode_ci DEFAULT 'medium', MODIFY COLUMN `customer_tier` enum('standard','silver','gold','platinum','vip') COLLATE utf8_unicode_ci DEFAULT 'standard', MODIFY COLUMN `industry` varchar(50) COLLATE utf8_unicode_ci DEFAULT '', MODIFY COLUMN `payment_behavior_score` double DEFAULT 0, MODIFY COLUMN `preferred_communication` enum('email','phone','whatsapp','portal') COLLATE utf8_unicode_ci DEFAULT 'email';
+
+ALTER TABLE `0_sales_agreement_lines` ADD COLUMN `min_qty_per_order` double NOT NULL DEFAULT 0, MODIFY COLUMN `custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL;
+
+ALTER TABLE `0_sales_agreements` MODIFY COLUMN `created_date` datetime NULL DEFAULT CURRENT_TIMESTAMP, MODIFY COLUMN `custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL, MODIFY COLUMN `date_end` date DEFAULT NULL, MODIFY COLUMN `reference` varchar(60) COLLATE utf8_unicode_ci NOT NULL DEFAULT '';
+
+ALTER TABLE `0_sales_orders` MODIFY COLUMN `cost_total` double DEFAULT 0, MODIFY COLUMN `margin_total` double DEFAULT 0, MODIFY COLUMN `opportunity_id` int(11) DEFAULT 0, MODIFY COLUMN `template_id` int(11) DEFAULT 0;
+
+ALTER TABLE `0_sales_quotation_template_lines` MODIFY COLUMN `discount_percent` double DEFAULT 0, MODIFY COLUMN `is_optional` tinyint(1) DEFAULT 0, MODIFY COLUMN `line_type` enum('product','section','note','optional') DEFAULT 'product', MODIFY COLUMN `quantity` double DEFAULT 1, MODIFY COLUMN `sort_order` int(11) DEFAULT 0, MODIFY COLUMN `stock_id` varchar(20) DEFAULT '';
+
+ALTER TABLE `0_sales_quotation_templates` MODIFY COLUMN `default_payment_terms` int(11) DEFAULT 0, MODIFY COLUMN `default_ship_via` int(11) DEFAULT 0, MODIFY COLUMN `inactive` tinyint(1) DEFAULT 0, MODIFY COLUMN `sales_type` int(11) DEFAULT 0, MODIFY COLUMN `validity_days` int(11) DEFAULT 30;
+
+ALTER TABLE `0_wh_scrap` MODIFY COLUMN `from_loc_id` int(11) DEFAULT NULL;
+
+ALTER TABLE `0_quality_inspection_readings` ADD CONSTRAINT `fk_qir_inspection` FOREIGN KEY (`inspection_id`) REFERENCES `0_quality_inspections` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_quality_inspection_readings` ADD CONSTRAINT `fk_qir_parameter` FOREIGN KEY (`parameter_id`) REFERENCES `0_quality_parameters` (`id`);
+
+ALTER TABLE `0_recall_items` ADD CONSTRAINT `fk_ri_recall` FOREIGN KEY (`recall_id`) REFERENCES `0_recall_campaigns` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_sales_agreement_lines` ADD CONSTRAINT `fk_sales_agreement_lines_header` FOREIGN KEY (`agreement_id`) REFERENCES `0_sales_agreements` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_warranty_claim_parts` ADD CONSTRAINT `fk_wcp_claim` FOREIGN KEY (`claim_id`) REFERENCES `0_warranty_claims` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_bin_stock` ADD CONSTRAINT `fk_bin_stock_item` FOREIGN KEY (`stock_id`) REFERENCES `0_stock_master` (`stock_id`);
+
+ALTER TABLE `0_wh_bin_stock` ADD CONSTRAINT `fk_bin_stock_loc` FOREIGN KEY (`wh_loc_id`) REFERENCES `0_wh_locations` (`loc_id`);
+
+ALTER TABLE `0_wh_cycle_count_lines` ADD CONSTRAINT `fk_cc_line_count` FOREIGN KEY (`count_id`) REFERENCES `0_wh_cycle_counts` (`count_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_locations` ADD CONSTRAINT `fk_wh_loc_parent` FOREIGN KEY (`parent_loc_id`) REFERENCES `0_wh_locations` (`loc_id`);
+
+ALTER TABLE `0_wh_locations` ADD CONSTRAINT `fk_wh_loc_storage_cat` FOREIGN KEY (`storage_category_id`) REFERENCES `0_wh_storage_categories` (`id`) ON DELETE SET NULL;
+
+ALTER TABLE `0_wh_locations` ADD CONSTRAINT `fk_wh_loc_type` FOREIGN KEY (`location_type_id`) REFERENCES `0_wh_location_types` (`id`);
+
+ALTER TABLE `0_wh_locations` ADD CONSTRAINT `fk_wh_loc_warehouse` FOREIGN KEY (`warehouse_loc_code`) REFERENCES `0_locations` (`loc_code`);
+
+ALTER TABLE `0_wh_material_request_lines` ADD CONSTRAINT `fk_mr_line_req` FOREIGN KEY (`request_id`) REFERENCES `0_wh_material_requests` (`request_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_operation_lines` ADD CONSTRAINT `fk_op_line_op` FOREIGN KEY (`op_id`) REFERENCES `0_wh_operations` (`op_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_package_contents` ADD CONSTRAINT `fk_pkg_content_pkg` FOREIGN KEY (`package_id`) REFERENCES `0_wh_packages` (`package_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_return_order_lines` ADD CONSTRAINT `fk_ret_line_ret` FOREIGN KEY (`return_id`) REFERENCES `0_wh_return_orders` (`return_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_route_rules` ADD CONSTRAINT `fk_rule_route` FOREIGN KEY (`route_id`) REFERENCES `0_wh_routes` (`route_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_wh_transfer_order_lines` ADD CONSTRAINT `fk_to_line_transfer` FOREIGN KEY (`transfer_id`) REFERENCES `0_wh_transfer_orders` (`transfer_id`) ON DELETE CASCADE;
+
+ALTER TABLE `0_sales_agreement_lines` ADD KEY `idx_stock` (`stock_id`);
+
+UPDATE `0_document_types` SET security_class='identity' WHERE type_name='Passport' AND security_class='restricted';
+
+UPDATE `0_document_types` SET security_class='identity' WHERE type_name='National ID' AND security_class='restricted';
+
+UPDATE `0_document_types` SET security_class='identity' WHERE type_name='Driving License' AND security_class='restricted';
+
+UPDATE `0_document_types` SET security_class='work_authorization' WHERE type_name='Residence Permit' AND security_class='restricted';
+
+UPDATE `0_document_types` SET security_class='work_authorization' WHERE type_name='Work Permit' AND security_class='restricted';
+
+UPDATE `0_document_types` SET security_class='medical' WHERE type_name='Medical Certificate' AND security_class='restricted';
+
+-- Unused singular alias; the maintained preference is the plural key.
+DELETE FROM `0_sys_prefs` WHERE name='purchase_agreement_expiry_alert_day';

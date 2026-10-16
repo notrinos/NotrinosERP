@@ -4,7 +4,7 @@
   "previous_database_version": "1.0",
   "baseline_commit": "3ce219018583085f401faa9d77bdaf78d9b6b075",
   "source_commit": "afb872fa9b0391d0374119c9d241020393d5de30",
-  "sql_sha256": "c7631b4df270608e051c5319eaca9783391985253756bae1e6d832cd65e338c4",
+  "sql_sha256": "276dcb76856a7cd832547eb656ed001864ffaf696fda91c545d612e73bae41cd",
   "baseline_columns": {
     "areas": [
       "area_code",
@@ -6738,6 +6738,17 @@
     "includes/db/domain_audit_db.inc": "23cfa94113526c155c12b1ae4b0f5bbb48b5d5448c50bbc3601a2496417a52cb",
     "admin/includes/fa_patch.class.inc": "1cc839eced8a46d2414f56d0b3932d911e5d953097b8a86f27a53cb4ec9373d1",
     "admin/db/maintenance_db.inc": "46414013f21050b4f09f86f1a133111d75d47a6bc37da22f4b1cfd0f61ee9981",
-    "includes/attachment_service.inc": "8d2e4d1c432a3fc15d06d4bce0a57229520c351fe1ce7f2eba826b3649e08de0"
+    "includes/attachment_service.inc": "8d2e4d1c432a3fc15d06d4bce0a57229520c351fe1ce7f2eba826b3649e08de0",
+    "includes/db/json_sql.inc": "c198850ab1ac85ab955e2fbf84b0a6a6025ca429c51dfefbc142043b6bdf3ca6",
+    "includes/db/connect_db.inc": "84e229ce5a638eb997f3b2ca986266b78257a5f1a9b16e308740a2db2f64fbbf",
+    "includes/db/class.entity.inc": "10d58eae410f201e4153ea0ace1529f1c8c0dcef12f9a5f3ea61d8faf17331ab",
+    "sales/includes/db/sales_pricelist_db.inc": "b46983faa26b113809c4b6a2e0299e4842eeba9b61708e12f0786f30be43fa5e",
+    "sales/includes/db/sales_discount_db.inc": "0bf6db3235cca08d054dc5eedde8d1a109682ca79aef2e15e6a51414d37d0cee",
+    "sales/includes/db/sales_analytics_db.inc": "cc26e956bc0dfbd65193a65580239c48a17e5e00ae70f9aae3ca5b7f467ed3d2",
+    "purchasing/includes/db/purch_matching_db.inc": "8f110637cc6f47c259acf64c8db1f941226f491de76b43280286b27c22821671",
+    "purchasing/includes/db/purch_analytics_db.inc": "e2df2742fe98af2699758e7a1a2e817a8badd692669ea39cf700a6a71a71419e",
+    "purchasing/includes/db/purch_requisition_db.inc": "8aa1ecc640cc1bd89c125b8b85d1dd79c17ef505a489350a1d53e9e9dcbcd25a",
+    "inventory/warehouse/includes/db/warehouse_shipping_db.inc": "8b323b98cd364d8d4da99c23af9033a8510686e606bcca2350913c7621b87f66",
+    "inventory/warehouse/includes/warehouse_operations.inc": "1139de76de90e10ff073e22df43a579cfd8dd6ec95c59e1ce388e83c77672f91"
   }
 }

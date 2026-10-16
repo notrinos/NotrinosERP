@@ -642,7 +642,7 @@ function refresh_purch_kpi_cache()
 				" . db_escape(isset($kpi_values['value_1']) ? $kpi_values['value_1'] : 0) . ",
 				" . db_escape(isset($kpi_values['value_2']) ? $kpi_values['value_2'] : 0) . ",
 				" . db_escape(isset($kpi_values['value_3']) ? $kpi_values['value_3'] : 0) . ",
-				" . db_escape(json_encode($kpi_values)) . ",
+				" . db_escape_json(json_encode($kpi_values)) . ",
 				" . db_escape($updated_at) . "
 			)
 			ON DUPLICATE KEY UPDATE

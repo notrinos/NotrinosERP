@@ -893,14 +893,14 @@ CREATE TABLE `0_debtors_master` (
 	`notes` tinytext NOT NULL,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
-	`credit_insurance_limit` double NOT NULL DEFAULT '0',
+	`credit_insurance_limit` double DEFAULT 0,
 	`credit_review_date` date DEFAULT NULL,
-	`credit_risk_score` enum('low','medium','high','critical') NOT NULL DEFAULT 'medium',
-	`payment_behavior_score` double NOT NULL DEFAULT '0',
-	`customer_tier` enum('standard','silver','gold','platinum','vip') NOT NULL DEFAULT 'standard',
-	`preferred_communication` enum('email','phone','whatsapp','portal') NOT NULL DEFAULT 'email',
-	`industry` varchar(50) NOT NULL DEFAULT '',
-	`company_size` enum('small','medium','large','enterprise') NOT NULL DEFAULT 'medium',
+	`credit_risk_score` enum('low','medium','high','critical') COLLATE utf8_unicode_ci DEFAULT 'medium',
+	`payment_behavior_score` double DEFAULT 0,
+	`customer_tier` enum('standard','silver','gold','platinum','vip') COLLATE utf8_unicode_ci DEFAULT 'standard',
+	`preferred_communication` enum('email','phone','whatsapp','portal') COLLATE utf8_unicode_ci DEFAULT 'email',
+	`industry` varchar(50) COLLATE utf8_unicode_ci DEFAULT '',
+	`company_size` enum('small','medium','large','enterprise') COLLATE utf8_unicode_ci DEFAULT 'medium',
 	PRIMARY KEY (`debtor_no`),
 	UNIQUE KEY `debtor_ref` (`debtor_ref`),
 	KEY `name` (`name`)
@@ -1942,7 +1942,7 @@ CREATE TABLE `0_grn_items` (
 	`serial_numbers_json` text DEFAULT NULL COMMENT 'JSON array of serial numbers received for this line',
 	`expiry_date` date DEFAULT NULL COMMENT 'Expiry date of received goods',
 	`manufacturing_date` date DEFAULT NULL COMMENT 'Manufacturing date of received goods',
-	`inspection_status` varchar(20) DEFAULT 'none' COMMENT 'none|pending|pass|fail',
+	`inspection_status` varchar(20) COLLATE utf8_unicode_ci DEFAULT 'none' COMMENT 'none|pending|pass|fail',
 	PRIMARY KEY (`id`),
 	KEY `grn_batch_id` (`grn_batch_id`)
 ) ENGINE=InnoDB;
@@ -2663,12 +2663,12 @@ CREATE TABLE `0_sales_orders` (
 	`total` double NOT NULL DEFAULT '0',
 	`prep_amount` double NOT NULL DEFAULT '0',
 	`alloc` double NOT NULL DEFAULT '0',
-	`template_id` int(11) NOT NULL DEFAULT '0',
+	`template_id` int(11) DEFAULT 0,
 	`validity_date` date DEFAULT NULL,
-	`opportunity_id` int(11) NOT NULL DEFAULT '0',
+	`opportunity_id` int(11) DEFAULT 0,
 	`terms_and_conditions` text DEFAULT NULL,
-	`margin_total` double NOT NULL DEFAULT '0',
-	`cost_total` double NOT NULL DEFAULT '0',
+	`margin_total` double DEFAULT 0,
+	`cost_total` double DEFAULT 0,
 	`agreement_id` int(11) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`trans_type`,`order_no`)
@@ -2734,13 +2734,13 @@ CREATE TABLE `0_sales_quotation_templates` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`name` varchar(100) NOT NULL,
 	`description` tinytext,
-	`validity_days` int(11) NOT NULL DEFAULT '30',
+	`validity_days` int(11) DEFAULT 30,
 	`terms_and_conditions` text,
 	`notes` text,
-	`sales_type` int(11) NOT NULL DEFAULT '0',
-	`default_payment_terms` int(11) NOT NULL DEFAULT '0',
-	`default_ship_via` int(11) NOT NULL DEFAULT '0',
-	`inactive` tinyint(1) NOT NULL DEFAULT '0',
+	`sales_type` int(11) DEFAULT 0,
+	`default_payment_terms` int(11) DEFAULT 0,
+	`default_ship_via` int(11) DEFAULT 0,
+	`inactive` tinyint(1) DEFAULT 0,
 	`custom_data` longtext,
 	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -2754,13 +2754,13 @@ DROP TABLE IF EXISTS `0_sales_quotation_template_lines`;
 CREATE TABLE `0_sales_quotation_template_lines` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`template_id` int(11) NOT NULL,
-	`line_type` enum('product','section','note','optional') NOT NULL DEFAULT 'product',
-	`stock_id` varchar(20) NOT NULL DEFAULT '',
+	`line_type` enum('product','section','note','optional') DEFAULT 'product',
+	`stock_id` varchar(20) DEFAULT '',
 	`description` tinytext,
-	`quantity` double NOT NULL DEFAULT '1',
-	`discount_percent` double NOT NULL DEFAULT '0',
-	`is_optional` tinyint(1) NOT NULL DEFAULT '0',
-	`sort_order` int(11) NOT NULL DEFAULT '0',
+	`quantity` double DEFAULT 1,
+	`discount_percent` double DEFAULT 0,
+	`is_optional` tinyint(1) DEFAULT 0,
+	`sort_order` int(11) DEFAULT 0,
 	`custom_data` longtext,
 	PRIMARY KEY (`id`),
 	KEY `idx_template` (`template_id`)
@@ -2774,14 +2774,14 @@ DROP TABLE IF EXISTS `0_sales_agreements`;
 
 CREATE TABLE `0_sales_agreements` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
-	`reference` varchar(30) NOT NULL DEFAULT '',
+	`reference` varchar(60) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
 	`agreement_type` enum('blanket_order','framework_agreement','contract') NOT NULL DEFAULT 'blanket_order',
 	`debtor_no` int(11) NOT NULL,
 	`branch_code` int(11) NOT NULL DEFAULT '0',
 	`salesman_id` int(11) NOT NULL DEFAULT '0',
 	`status` enum('draft','confirmed','active','expired','cancelled') NOT NULL DEFAULT 'draft',
 	`date_start` date NOT NULL,
-	`date_end` date NOT NULL,
+	`date_end` date DEFAULT NULL,
 	`currency` char(3) NOT NULL DEFAULT '',
 	`payment_terms` int(11) NOT NULL DEFAULT '0',
 	`total_committed` double NOT NULL DEFAULT '0',
@@ -2791,13 +2791,13 @@ CREATE TABLE `0_sales_agreements` (
 	`auto_renew` tinyint(1) NOT NULL DEFAULT '0',
 	`renewal_period_months` int(11) NOT NULL DEFAULT '12',
 	`terms_and_conditions` text DEFAULT NULL,
-	`notes` text DEFAULT NULL,
+	`notes` text COLLATE utf8_unicode_ci DEFAULT NULL,
 	`dimension_id` int(11) NOT NULL DEFAULT '0',
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`created_by` int(11) NOT NULL DEFAULT '0',
-	`created_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_date` datetime NULL DEFAULT CURRENT_TIMESTAMP,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	`custom_data` text DEFAULT NULL,
+	`custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	KEY `idx_debtor` (`debtor_no`),
 	KEY `idx_status` (`status`),
@@ -2810,7 +2810,8 @@ CREATE TABLE `0_sales_agreements` (
 
 DROP TABLE IF EXISTS `0_sales_agreement_lines`;
 
-CREATE TABLE `0_sales_agreement_lines` (
+-- Release gap reconciliation: 0_sales_agreement_lines foreign keys are installed by install_constraints.php.
+CREATE TABLE `0_sales_agreement_lines` (	`min_qty_per_order` double NOT NULL DEFAULT 0,
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`agreement_id` int(11) NOT NULL,
 	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
@@ -2822,9 +2823,10 @@ CREATE TABLE `0_sales_agreement_lines` (
 	`unit_price` double NOT NULL DEFAULT '0',
 	`discount_percent` double NOT NULL DEFAULT '0',
 	`price_valid_until` date DEFAULT NULL,
-	`custom_data` text DEFAULT NULL,
+	`custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL,
 	PRIMARY KEY (`id`),
-	KEY `idx_agreement_id` (`agreement_id`)
+	KEY `idx_agreement_id` (`agreement_id`),
+	KEY `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Data of table `0_sales_agreement_lines` --
@@ -3428,6 +3430,7 @@ CREATE TABLE `0_wh_storage_categories` (
 
 DROP TABLE IF EXISTS `0_wh_locations`;
 
+-- Release gap reconciliation: 0_wh_locations foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_locations` (
 	`loc_id` int(11) NOT NULL AUTO_INCREMENT,
 	`loc_code` varchar(30) NOT NULL,
@@ -3674,6 +3677,7 @@ CREATE TABLE `0_quality_inspections` (
 
 DROP TABLE IF EXISTS `0_quality_inspection_readings`;
 
+-- Release gap reconciliation: 0_quality_inspection_readings foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_quality_inspection_readings` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`inspection_id` int(11) NOT NULL COMMENT 'FK to quality_inspections.id',
@@ -3730,6 +3734,7 @@ CREATE TABLE `0_warranty_claims` (
 
 DROP TABLE IF EXISTS `0_warranty_claim_parts`;
 
+-- Release gap reconciliation: 0_warranty_claim_parts foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_warranty_claim_parts` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`claim_id` int(11) NOT NULL COMMENT 'FK to warranty_claims.id',
@@ -3785,6 +3790,7 @@ CREATE TABLE `0_recall_campaigns` (
 
 DROP TABLE IF EXISTS `0_recall_items`;
 
+-- Release gap reconciliation: 0_recall_items foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_recall_items` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`recall_id` int(11) NOT NULL COMMENT 'FK to recall_campaigns.id',
@@ -3870,6 +3876,7 @@ CREATE TABLE `0_wh_operations` (
 
 DROP TABLE IF EXISTS `0_wh_operation_lines`;
 
+-- Release gap reconciliation: 0_wh_operation_lines foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_operation_lines` (
 	`line_id` int(11) NOT NULL AUTO_INCREMENT,
 	`op_id` int(11) NOT NULL COMMENT 'FK to wh_operations',
@@ -3916,6 +3923,7 @@ CREATE TABLE `0_wh_routes` (
 
 DROP TABLE IF EXISTS `0_wh_route_rules`;
 
+-- Release gap reconciliation: 0_wh_route_rules foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_route_rules` (
 	`rule_id` int(11) NOT NULL AUTO_INCREMENT,
 	`route_id` int(11) NOT NULL COMMENT 'FK to wh_routes',
@@ -4017,6 +4025,7 @@ CREATE TABLE `0_wh_transfer_orders` (
 
 DROP TABLE IF EXISTS `0_wh_transfer_order_lines`;
 
+-- Release gap reconciliation: 0_wh_transfer_order_lines foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_transfer_order_lines` (
 	`line_id` int(11) NOT NULL AUTO_INCREMENT,
 	`transfer_id` int(11) NOT NULL,
@@ -4072,6 +4081,7 @@ CREATE TABLE `0_wh_material_requests` (
 
 DROP TABLE IF EXISTS `0_wh_material_request_lines`;
 
+-- Release gap reconciliation: 0_wh_material_request_lines foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_material_request_lines` (
 	`line_id` int(11) NOT NULL AUTO_INCREMENT,
 	`request_id` int(11) NOT NULL,
@@ -4144,6 +4154,7 @@ CREATE TABLE `0_wh_packages` (
 
 DROP TABLE IF EXISTS `0_wh_package_contents`;
 
+-- Release gap reconciliation: 0_wh_package_contents foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_package_contents` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`package_id` int(11) NOT NULL,
@@ -4206,6 +4217,7 @@ CREATE TABLE `0_wh_cycle_counts` (
 
 DROP TABLE IF EXISTS `0_wh_cycle_count_lines`;
 
+-- Release gap reconciliation: 0_wh_cycle_count_lines foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_cycle_count_lines` (
 	`line_id` int(11) NOT NULL AUTO_INCREMENT,
 	`count_id` int(11) NOT NULL,
@@ -4235,7 +4247,7 @@ CREATE TABLE `0_wh_scrap` (
 	`scrap_date` date NOT NULL,
 	`stock_id` varchar(20) NOT NULL,
 	`qty` decimal(15,4) NOT NULL,
-	`from_loc_id` int(11) NOT NULL COMMENT 'Source bin',
+	`from_loc_id` int(11) DEFAULT NULL,
 	`scrap_loc_id` int(11) DEFAULT NULL COMMENT 'Scrap destination',
 	`reason_code` varchar(20) NOT NULL COMMENT 'damaged|expired|quality_fail|obsolete|other',
 	`reason_detail` varchar(255) DEFAULT NULL,
@@ -4290,6 +4302,7 @@ CREATE TABLE `0_wh_return_orders` (
 
 DROP TABLE IF EXISTS `0_wh_return_order_lines`;
 
+-- Release gap reconciliation: 0_wh_return_order_lines foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_return_order_lines` (
 	`line_id` int(11) NOT NULL AUTO_INCREMENT,
 	`return_id` int(11) NOT NULL,
@@ -4356,7 +4369,7 @@ CREATE TABLE `0_wh_consignment_movements` (
 	`invoiced` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1 if covered by AP invoice',
 	`invoice_trans_no` int(11) DEFAULT NULL COMMENT 'Linked supplier invoice trans_no',
 	`created_by` int(11) DEFAULT NULL,
-	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` datetime NOT NULL DEFAULT current_timestamp(),
 	PRIMARY KEY (`id`),
 	KEY `consignment_id` (`consignment_id`),
 	KEY `movement_type` (`movement_type`),
@@ -4377,8 +4390,8 @@ CREATE TABLE `0_wh_vmi_levels` (
 	`max_level` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Maximum stock level',
 	`reorder_qty` decimal(15,4) NOT NULL DEFAULT '0.0000' COMMENT 'Suggested reorder quantity',
 	`loc_code` varchar(5) DEFAULT NULL COMMENT 'Location code for level tracking',
-	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`created_at` datetime NOT NULL DEFAULT current_timestamp(),
+	`updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `uk_item_supplier` (`stock_id`, `supplier_id`),
 	KEY `supplier_id` (`supplier_id`)
@@ -4422,6 +4435,7 @@ CREATE TABLE `0_wh_replenishment_rules` (
 
 DROP TABLE IF EXISTS `0_wh_bin_stock`;
 
+-- Release gap reconciliation: 0_wh_bin_stock foreign keys are installed by install_constraints.php.
 CREATE TABLE `0_wh_bin_stock` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`wh_loc_id` int(11) NOT NULL COMMENT 'FK to wh_locations.loc_id (bin)',
@@ -4471,7 +4485,7 @@ CREATE TABLE `0_warranty_provision_log` (
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`notes` text DEFAULT NULL,
 	`created_by` int(11) DEFAULT NULL,
-	`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` datetime NOT NULL DEFAULT current_timestamp(),
 	PRIMARY KEY (`id`),
 	KEY `idx_wp_trans` (`trans_type`, `trans_no`),
 	KEY `idx_wp_stock` (`stock_id`),
@@ -7138,7 +7152,7 @@ CREATE TABLE `0_crm_leads` (
 -- ================================================================
 
 DROP TABLE IF EXISTS `0_crm_activities`;
-CREATE TABLE `0_crm_activities` (
+CREATE TABLE `0_crm_activities` (	`priority` tinyint(1) NOT NULL DEFAULT 0,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `entity_type` varchar(20) NOT NULL DEFAULT 'lead' COMMENT 'lead, contact, customer',
   `entity_id` int(11) NOT NULL,
@@ -12455,7 +12469,7 @@ INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,
 INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,`capability_code`,`namespace`,`semantic`,`cardinality`,`exclusive_group`,`artifact_type`,`host_adapter`,`host_version`,`definition_sha256`,`created_at`) SELECT `registry_version_id`,'jurisdiction.translations','jurisdiction','translations','many',NULL,'translation-xliff','translations.xliff.v1','1.0','638a517e230c41ebcf504e72775159b5f073d6ecf2509bd3d43b7546b7c461a6',NOW() FROM `0_pay_ctry_capability_contract_versions` WHERE `registry_version`='pay-ctry-capabilities-v2';
 INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,`capability_code`,`namespace`,`semantic`,`cardinality`,`exclusive_group`,`artifact_type`,`host_adapter`,`host_version`,`definition_sha256`,`created_at`) SELECT `registry_version_id`,'jurisdiction.migrations','jurisdiction','migrations','many',NULL,'declarative-json','migrations.review.v1','1.0','3304726fdb5e22e329d3a0217c132b6caca56ace8fc013197bc1ed4e95a3fc8f',NOW() FROM `0_pay_ctry_capability_contract_versions` WHERE `registry_version`='pay-ctry-capabilities-v2';
 INSERT INTO `0_pay_ctry_capability_contract_definitions` (`registry_version_id`,`capability_code`,`namespace`,`semantic`,`cardinality`,`exclusive_group`,`artifact_type`,`host_adapter`,`host_version`,`definition_sha256`,`created_at`) SELECT `registry_version_id`,'jurisdiction.tests','jurisdiction','tests','many',NULL,'test-fixture-json','tests.conformance.v1','1.0','74aaf06c3c2458c9beddd6db01f7c03846e54b322ba3810516d8dec64efaaa58',NOW() FROM `0_pay_ctry_capability_contract_versions` WHERE `registry_version`='pay-ctry-capabilities-v2';
-INSERT INTO `0_pay_ctry_host_adapters` (`adapter_code`,`adapter_version`,`media_types_json`,`adapter_sha256`,`status`,`created_at`) VALUES ('core.metadata.v1','1.0','["declarative-json"]','9b83f2f9e4d93b4788f11f1330bb15570fcdd70d71799eee2b0082ff5e8aec9b','active',NOW()),('formula.variables.v1','1.0','["declarative-json"]','83c4c6dc5392a3cec3d91b1e0105c8a7b0526c721a336a0eaaa2cfc8c1721025','active',NOW()),('rules.declarative.v1','1.0','["declarative-json"]','93e3ef03c1563a811581cae5d0a3e1254b4611c7b513cdad1b22f9a230d7cbc6','active',NOW()),('decisions.rates.v1','1.0','["declarative-json"]','219db4616ec0e955c5fc2ae0e227c903c4aa8a47432c7596fd09c05db3d25eee','active',NOW()),('balances.ledger.v1','1.0','["declarative-json"]','1fbe7da8a06802d7bd5bceaf12640549d910ec78d3d9d106eb9d4f462c0eef','active',NOW()),('validators.declarative.v1','1.0','["declarative-json"]','7aeeebc292abc5f3caa83d8d49929e04f193608b36b63d0e5034f1f05a69a888','active',NOW()),('payslips.projection.v1','1.0','["declarative-json"]','0416d7b37251d43dfcc2c3c3f412f577821597465c2d2eb0926833110daf47f8','active',NOW()),('filings.declarative.v1','1.0','["declarative-json"]','861adebd945d285ce09ba6f036125007300fce85e9fed171779b62d0e868bc38','active',NOW()),('bank-files.renderer.v1','1.0','["declarative-json","declarative-csv"]','57afcdde5b667bd35e1a7d6c9ba8a90608912ff8d3e2b03a0b538040c09df6e4','active',NOW()),('translations.xliff.v1','1.0','["translation-xliff"]','9c4df2c1b35f36ea730c62a4fa0e723d0ae56e9726b914efca3c76206f0233ce','active',NOW()),('migrations.review.v1','1.0','["declarative-json"]','f487248eec08bf014988cf34e4f3bf454c5a0d0cfb6475d1c57db14ba2cf8c13','active',NOW()),('tests.conformance.v1','1.0','["test-fixture-json"]','601788eeceaba22ea02f8da559f92db486995f9b4892cff7a22aa0d241b98836','active',NOW());
+INSERT INTO `0_pay_ctry_host_adapters` (`adapter_code`,`adapter_version`,`media_types_json`,`adapter_sha256`,`status`,`created_at`) VALUES ('core.metadata.v1','1.0','["declarative-json"]','9b83f2f9e4d93b4788f11f1330bb15570fcdd70d71799eee2b0082ff5e8aec9b','active',NOW()),('formula.variables.v1','1.0','["declarative-json"]','83c4c6dc5392a3cec3d91b1e0105c8a7b0526c721a336a0eaaa2cfc8c1721025','active',NOW()),('rules.declarative.v1','1.0','["declarative-json"]','93e3ef03c1563a811581cae5d0a3e1254b4611c7b513cdad1b22f9a230d7cbc6','active',NOW()),('decisions.rates.v1','1.0','["declarative-json"]','219db4616ec0e955c5fc2ae0e227c903c4aa8a47432c7596fd09c05db3d25eee','active',NOW()),('balances.ledger.v1','1.0','["declarative-json"]','1fbe7da8a06802d7bd5bceaf12640549d910ec78d3f2d9d106eb9d4f462c0eef','active',NOW()),('validators.declarative.v1','1.0','["declarative-json"]','7aeeebc292abc5f3caa83d8d49929e04f193608b36b63d0e5034f1f05a69a888','active',NOW()),('payslips.projection.v1','1.0','["declarative-json"]','0416d7b37251d43dfcc2c3c3f412f577821597465c2d2eb0926833110daf47f8','active',NOW()),('filings.declarative.v1','1.0','["declarative-json"]','861adebd945d285ce09ba6f036125007300fce85e9fed171779b62d0e868bc38','active',NOW()),('bank-files.renderer.v1','1.0','["declarative-json","declarative-csv"]','57afcdde5b667bd35e1a7d6c9ba8a90608912ff8d3e2b03a0b538040c09df6e4','active',NOW()),('translations.xliff.v1','1.0','["translation-xliff"]','9c4df2c1b35f36ea730c62a4fa0e723d0ae56e9726b914efca3c76206f0233ce','active',NOW()),('migrations.review.v1','1.0','["declarative-json"]','f487248eec08bf014988cf34e4f3bf454c5a0d0cfb6475d1c57db14ba2cf8c13','active',NOW()),('tests.conformance.v1','1.0','["test-fixture-json"]','601788eeceaba22ea02f8da559f92db486995f9b4892cff7a22aa0d241b98836','active',NOW());
 
 -- PAY-CTRY-004 GROUP evidence
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_sources` (

@@ -1,4 +1,5 @@
 <?php
+include_once(__DIR__.'/json_sql.inc');
 /**********************************************************************
 	Copyright (C) NotrinosERP.
 	Released under the terms of the GNU General Public License, GPL, 
@@ -651,7 +652,8 @@ class Entity extends record_set {
 
 		foreach($data as $fld => $value) {	// select only data relevant for this model
 			if (in_array($fld, $this->fields))
-				$updates[$fld] = "`$fld`=".db_escape($value, $value === null);
+				$updates[$fld] = "`$fld`=".($fld === 'custom_data'
+					? db_escape_json($value, $value === null) : db_escape($value, $value === null));
 		}
 		if (count($updates) == 0)
 			return $this->error(_("Empty update data for table ").$this->name);
@@ -728,7 +730,8 @@ class Entity extends record_set {
 		$fields = array();
 		foreach($data as $fld => $value) {
 			if (in_array($fld, $this->fields) || (is_array($this->key) ? in_array($this->key) : $fld==$this->key))
-				$fields["`$fld`"] = db_escape($value, $value === null);
+				$fields["`$fld`"] = $fld === 'custom_data'
+					? db_escape_json($value, $value === null) : db_escape($value, $value === null);
 		}
 		if (!count($fields))
 			return $this->error(_("Empty data set for insertion into ").$this->name);

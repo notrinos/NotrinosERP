@@ -560,7 +560,7 @@ function add_purch_requisition($requester_id, $department_id, $required_date, $p
 		" . db_escape($hook_data['location']) . ",
 		" . (int)$hook_data['dimension_id'] . ",
 		" . (int)$hook_data['dimension2_id'] . ",
-		" . ($hook_data['custom_data'] ? db_escape(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
+		" . ($hook_data['custom_data'] ? db_escape_json(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
 	)";
 	db_query($sql, 'could not insert purchase requisition');
 
@@ -658,7 +658,7 @@ function update_purch_requisition($requisition_id, $department_id, $required_dat
 		dimension_id = " . (int)$hook_data['dimension_id'] . ",
 		dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
 		reference = " . db_escape($hook_data['reference']) . ",
-		custom_data = " . ($hook_data['custom_data'] ? db_escape(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
+		custom_data = " . ($hook_data['custom_data'] ? db_escape_json(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
 		WHERE id = " . (int)$requisition_id;
 	db_query($sql, 'could not update purchase requisition');
 
@@ -783,7 +783,7 @@ function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_
 		0,
 		0,
 		'pending',
-		" . ($custom_data ? db_escape(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
+		" . ($custom_data ? db_escape_json(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
 	)";
 	db_query($sql, 'could not insert purchase requisition line');
 
@@ -841,7 +841,7 @@ function update_requisition_line($line_id, $stock_id, $quantity, $estimated_pric
 		estimated_unit_price = " . db_escape($estimated_price) . ",
 		preferred_supplier_id = " . (int)$preferred_supplier_id . ",
 		notes = " . ($notes !== '' ? db_escape($notes) : 'NULL') . ",
-		custom_data = " . ($custom_data ? db_escape(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
+		custom_data = " . ($custom_data ? db_escape_json(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
 		WHERE id = " . (int)$line_id;
 	db_query($sql, 'could not update purchase requisition line');
 
@@ -1270,7 +1270,7 @@ function create_requisition_from_material_request($material_request_id)
 			0,
 			0,
 			" . db_escape(in_array($material_request['status'], array('approved', 'ordered', 'fulfilled')) ? 'approved' : 'pending') . ",
-			" . db_escape(encode_purch_requisition_custom_data($line_custom_data)) . "
+			" . db_escape_json(encode_purch_requisition_custom_data($line_custom_data)) . "
 		)";
 		db_query($sql, 'could not insert bridged purchase requisition line');
 	}

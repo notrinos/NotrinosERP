@@ -46,11 +46,11 @@ function sql_purch_matching_custom_data($custom_data)
     if (is_string($custom_data)) {
         $decoded = decode_purch_matching_custom_data($custom_data);
         if (!empty($decoded))
-            return db_escape(json_encode($decoded));
-        return db_escape($custom_data);
+            return db_escape_json(json_encode($decoded));
+        return db_escape_json($custom_data);
     }
 
-    return db_escape(json_encode((array)$custom_data));
+    return db_escape_json(json_encode((array)$custom_data));
 }
 
 /**

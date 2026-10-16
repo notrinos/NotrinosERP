@@ -15,7 +15,7 @@ class fa_patch_release_1_1_0 extends fa_patch
     private $schema_started = false;
     private $upgrade_lock = null;
     private $baseline_repairs = array();
-    private $manifest_sha256 = '20d0aa82564f07af7211e1bf8854a421ab5f388ce10cf6ea80c2b18dbc88a2ef';
+    private $manifest_sha256 = 'e3ec8136d15202273025c0ee9e73346024ff936ff8d19b1e1b8194b1e89c0b1b';
 
     /** Read the immutable release inventory without loading development migrations. */
     function release_manifest()

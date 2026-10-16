@@ -35,7 +35,7 @@
 function set_kpi_cache($kpi_type, $period_key, $dimension_key, $value_1, $value_2 = 0,
     $value_3 = 0, $detail = null)
 {
-    $detail_json = $detail !== null ? db_escape(json_encode($detail)) : 'NULL';
+    $detail_json = $detail !== null ? db_escape_json(json_encode($detail)) : 'NULL';
     $sql = "INSERT INTO ".TB_PREF."sales_kpi_cache
                 (kpi_type, period_key, dimension_key, value_1, value_2, value_3, detail_json, updated_at)
             VALUES (".db_escape($kpi_type).", ".db_escape($period_key).", ".db_escape($dimension_key).",

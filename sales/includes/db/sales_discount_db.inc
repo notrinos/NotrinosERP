@@ -69,7 +69,7 @@ function add_discount_program($name, $program_type, $date_start, $date_end,
 			".db_escape($stackable).",
 			".db_escape($priority).",
 			0,
-			".db_escape(json_encode($custom_data))."
+			".db_escape_json(json_encode($custom_data))."
 		)";
 
 	db_query($sql, 'Sales discount program cannot be added');
@@ -95,7 +95,7 @@ function update_discount_program($id, $update_data) {
 	foreach ($update_data as $field => $value) {
 		if (in_array($field, $allowed_string)) {
 			if ($field === 'custom_data')
-				$set_clause[] = "$field = ".db_escape(is_array($value) ? json_encode($value) : $value);
+				$set_clause[] = "$field = ".db_escape_json(is_array($value) ? json_encode($value) : $value);
 			else
 				$set_clause[] = "$field = ".db_escape($value);
 		} elseif (in_array($field, $allowed_num)) {

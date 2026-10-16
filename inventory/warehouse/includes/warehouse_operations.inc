@@ -1565,7 +1565,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 					}
 				$json = json_encode($serial_nos);
 				$sql = "UPDATE " . TB_PREF . "grn_items SET serial_numbers_json="
-					. db_escape($json) . " WHERE id=" . (int)$grn_item_id;
+					. db_escape_json($json) . " WHERE id=" . (int)$grn_item_id;
 				db_query($sql, 'could not update grn_items serial JSON');
 			}
 		}

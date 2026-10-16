@@ -134,7 +134,7 @@ function add_shipment($warehouse_loc_code, $carrier = '', $tracking_number = '',
 
 	// Store structured data in custom_data
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET custom_data="
-		. db_escape(json_encode($custom))
+		. db_escape_json(json_encode($custom))
 		. " WHERE op_id=" . (int)$op_id;
 	db_query($sql, 'could not set shipment custom data');
 
@@ -181,7 +181,7 @@ function update_shipment($shipment_id, $carrier, $tracking, $ship_date = null,
 
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET "
 		. "memo=" . db_escape($ship_memo) . ", "
-		. "custom_data=" . db_escape(json_encode($custom)) . ", "
+		. "custom_data=" . db_escape_json(json_encode($custom)) . ", "
 		. "scheduled_date=" . ($ship_date ? db_escape($ship_date) : 'NULL') . ", "
 		. "assigned_to=" . ($assigned_to ? (int)$assigned_to : 'NULL')
 		. " WHERE op_id=" . (int)$shipment_id;
@@ -465,7 +465,7 @@ function ship_shipment($shipment_id, $carrier = '', $tracking = '') {
 		$custom['shipped_at'] = date('Y-m-d H:i:s');
 
 		$sql = "UPDATE " . TB_PREF . "wh_operations SET custom_data="
-			. db_escape(json_encode($custom))
+			. db_escape_json(json_encode($custom))
 			. " WHERE op_id=" . (int)$shipment_id;
 		db_query($sql, 'could not update shipment custom data');
 	}

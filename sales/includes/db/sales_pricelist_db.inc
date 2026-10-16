@@ -60,7 +60,7 @@ function add_sales_pricelist($name, $currency = '', $date_start = null, $date_en
 			".db_escape($priority).",
 			".db_escape($applicable_to).",
 			".db_escape($applicable_id).",
-			".db_escape(json_encode($custom_data)).",
+			".db_escape_json(json_encode($custom_data)).",
 			0
 		)";
 	
@@ -93,7 +93,7 @@ function update_sales_pricelist($id, $update_data) {
 		} else if ($field == 'date_start' || $field == 'date_end') {
 			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
 		} else if ($field == 'custom_data') {
-			$set_clause[] = "$field = ".db_escape(json_encode($value));
+			$set_clause[] = "$field = ".db_escape_json(json_encode($value));
 		}
 	}
 	
@@ -283,7 +283,7 @@ function add_pricelist_rule($pricelist_id, $stock_id = '', $category_id = 0, $mi
 			".db_escape($priority).",
 			".$date_start_sql.",
 			".$date_end_sql.",
-			".db_escape(json_encode($custom_data)).",
+			".db_escape_json(json_encode($custom_data)).",
 			0
 		)";
 	
@@ -315,7 +315,7 @@ function update_pricelist_rule($id, $update_data) {
 		} else if ($field == 'date_start' || $field == 'date_end') {
 			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
 		} else if ($field == 'custom_data') {
-			$set_clause[] = "$field = ".db_escape(json_encode($value));
+			$set_clause[] = "$field = ".db_escape_json(json_encode($value));
 		}
 	}
 	
