@@ -117,6 +117,8 @@ function _set_combo_input(e) {
 }
 
 function _update_box(s) {
+	// Employee fallback text is a server search term, independent of selection.
+	if (s.hasAttribute('data-employee-search')) return false;
 	var byid = string_contains(s.className, 'combo') || string_contains(s.className, 'combo3');
 	var rel = s.getAttribute('rel');
 	var box = document.getElementsByName(rel)[0];

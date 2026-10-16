@@ -282,7 +282,8 @@ class BoxReports {
 				return departments_list($name, null, false, _('All Departments'));
 
 			case 'HRM_EMPLOYEES':
-				return employees_list($name, null, _('All Employees'), false, array('show_inactive' => true));
+				return employees_list($name, null, _('All Employees'), false, array('show_inactive' => true,
+					'employee_selector_security' => 'SA_HRMREPORTS'));
 
 			case 'HRM_PAYROLL_PERIOD':
 				$sql = "SELECT period_id, period_name FROM ".TB_PREF."payroll_periods ORDER BY from_date DESC, period_id DESC";
