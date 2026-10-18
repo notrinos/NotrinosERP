@@ -145,9 +145,9 @@ class ApprovalWorkflow {
 	}
 
 	/**
-	 * Observe retained ordinary GL classification intent without exposing payloads.
-	 * Uses the workflow's own historical decoder. Only journal/payment/deposit
-	 * shapes are characterized here; every other domain remains unknown and its
+	 * Observe retained ordinary GL/Purchasing intent without exposing payloads.
+	 * Uses the workflow's own historical decoder and fixed source-owned shapes.
+	 * Every unsupported domain remains unknown and its
 	 * payload is excluded by SQL CASE before it reaches PHP. All statuses, actors
 	 * and action snapshots are retained in scope. This is never delete authority
 	 * or a concurrent owner-writer fence (DIM-LFC-001B3a).
@@ -162,18 +162,29 @@ class ApprovalWorkflow {
 		$result = array('approval_drafts'=>'unknown', 'approval_actions'=>'unknown');
 		if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
 			|| !defined('ST_JOURNAL') || !defined('ST_BANKPAYMENT') || !defined('ST_BANKDEPOSIT')) return $result;
-		$types = implode(',', array((int)ST_JOURNAL, (int)ST_BANKPAYMENT, (int)ST_BANKDEPOSIT));
+		require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
+		$supported_types = array((int)ST_JOURNAL, (int)ST_BANKPAYMENT, (int)ST_BANKDEPOSIT);
+		foreach (array('ST_PURCHORDER','ST_SUPPINVOICE','ST_PURCHREQUISITION','ST_PURCHAGREEMENT') as $type)
+			if (defined($type)) $supported_types[] = (int)constant($type);
+		$types = implode(',', $supported_types);
 		$queries = array(
 			'approval_drafts'=>'SELECT CASE WHEN trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+				.' CASE WHEN trans_type IN ('.$types.') THEN trans_type ELSE NULL END AS source_type,'
 				.' CASE WHEN trans_type IN ('.$types.') THEN draft_data ELSE NULL END AS payload'
 				.' FROM '.TB_PREF.'approval_drafts',
 			'approval_actions'=>'SELECT CASE WHEN d.trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+				.' CASE WHEN d.trans_type IN ('.$types.') THEN d.trans_type ELSE NULL END AS source_type,'
 				.' CASE WHEN d.trans_type IN ('.$types.') THEN a.draft_data_snapshot ELSE NULL END AS payload'
 				.' FROM '.TB_PREF.'approval_actions a LEFT JOIN '.TB_PREF.'approval_drafts d ON d.id=a.draft_id'
 				.' WHERE a.draft_data_snapshot IS NOT NULL');
 		foreach ($queries as $owner=>$sql) {
 			$status = 'unused';
 			try {
+				if (!purchasing_dimension_reference_schema_available($owner)
+					|| ($owner === 'approval_actions' && !purchasing_dimension_reference_schema_available('approval_drafts'))) {
+					$result[$owner] = 'unknown';
+					continue;
+				}
 				$rows = db_query($sql);
 				if (!$rows) $status = 'unknown';
 				else while ($row = db_fetch($rows)) {
@@ -181,6 +192,8 @@ class ApprovalWorkflow {
 					$ok = false;
 					$payload = $this->decodeDraftData($row['payload'], $ok);
 					$observed = $ok ? dimension_reference_payload_status($payload, (int)$id) : 'unknown';
+					if ($ok && defined('ST_SUPPINVOICE') && (int)$row['source_type'] === (int)ST_SUPPINVOICE)
+						$observed = purchasing_invoice_approval_dimension_status($payload, (int)$id);
 					if ($observed === 'used') { $status = 'used'; break; }
 					if ($observed !== 'unused') $status = 'unknown';
 				}
