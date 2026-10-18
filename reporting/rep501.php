@@ -33,24 +33,34 @@ function getTransactions($from, $to) {
 	return db_query($sql, 'No transactions were returned');
 }
 
-function getYTD($dim) {
-	$date = Today();
-	$date = begin_fiscalyear($date);
-	date2sql($date);
-	
-	$sql = "SELECT SUM(amount) AS Balance
+/** Return the as-posted net GL balance from the selected fiscal start through as-of. */
+function getYTD($dim, $as_of = null) {
+	if ($as_of === null)
+		$as_of = Today();
+	if ((!is_int($dim) && !is_string($dim))
+		|| !preg_match('/^[1-9][0-9]*$/D', (string)$dim) || (float)$dim > 2147483647
+		|| !is_string($as_of) || !is_date($as_of))
+		return false;
+	$date = begin_fiscalyear();
+	if (!is_string($date) || !is_date($date))
+		return false;
+	$date = date2sql($date);
+	$as_of = date2sql($as_of);
+
+	$sql = "SELECT COALESCE(SUM(amount),0) AS Balance
 		FROM
 			".TB_PREF."gl_trans
-		WHERE (dimension_id = '$dim' OR dimension2_id = '$dim')
-		AND tran_date >= '$date'";
+		WHERE (dimension_id = ".db_escape($dim)." OR dimension2_id = ".db_escape($dim).")
+		AND tran_date >= ".db_escape($date)."
+		AND tran_date <= ".db_escape($as_of);
 
 	$TransResult = db_query($sql, 'No transactions were returned');
-	if (db_num_rows($TransResult) == 1) {
+	if ($TransResult && db_num_rows($TransResult) == 1) {
 		$DemandRow = db_fetch_row($TransResult);
 		$balance = $DemandRow[0];
 	}
 	else
-		$balance = 0.0;
+		return false;
 
 	return $balance;
 }
@@ -59,27 +69,54 @@ function getYTD($dim) {
 
 function print_dimension_summary() {
 	global $path_to_root;
+	check_page_security('SA_DIMENSIONREP');
 
-	$fromdim = $_POST['PARAM_0'];
-	$todim = $_POST['PARAM_1'];
-	$showbal = $_POST['PARAM_2'];
-	$comments = $_POST['PARAM_3'];
-	$orientation = $_POST['PARAM_4'];
-	$destination = $_POST['PARAM_5'];
+	$fromdim = isset($_POST['PARAM_0']) ? $_POST['PARAM_0'] : null;
+	$todim = isset($_POST['PARAM_1']) ? $_POST['PARAM_1'] : null;
+	foreach (array($fromdim, $todim) as $dimension) {
+		if ((!is_int($dimension) && !is_string($dimension))
+			|| !preg_match('/^(?:0|[1-9][0-9]*)$/D', (string)$dimension)
+			|| (float)$dimension > 2147483647) {
+			display_error(_('Invalid dimension range.'));
+			return;
+		}
+	}
+	$showbal = isset($_POST['PARAM_2']) ? $_POST['PARAM_2'] : 0;
+	$comments = isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : '';
+	$orientation = isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : 0;
+	$destination = isset($_POST['PARAM_5']) ? $_POST['PARAM_5'] : 0;
+	foreach (array($showbal, $orientation, $destination) as $option) {
+		if ((!is_int($option) && !is_string($option)) || !preg_match('/^[01]?$/D', (string)$option)) {
+			display_error(_('Invalid report option.'));
+			return;
+		}
+	}
+	if (!is_string($comments)) {
+		display_error(_('Invalid report comments.'));
+		return;
+	}
+	$as_of = Today();
+	$fiscal_start = begin_fiscalyear();
+	if ((int)$fromdim > (int)$todim || !is_string($as_of) || !is_date($as_of)
+		|| !is_string($fiscal_start) || !is_date($fiscal_start)) {
+		display_error(_('Invalid dimension range or fiscal dates.'));
+		return;
+	}
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
 	else
 		include_once($path_to_root . '/reporting/includes/pdf_report.inc');
 
 	$orientation = ($orientation ? 'L' : 'P');
-	$cols = array(0, 50, 210, 250, 320, 395, 465,	515);
+	$cols = array(0, 50, 195, 230, 295, 360, 405, 515);
 
-	$headers = array(_('Reference'), _('Name'), _('Type'), _('Date'), _('Due Date'), _('Closed'), _('YTD'));
+	$headers = array(_('Reference'), _('Name'), _('Type'), _('Date'), _('Due Date'), _('Closed'), _('Net GL balance'));
 
 	$aligns = array('left',	'left', 'left',	'left', 'left', 'left', 'right');
 
 	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Dimension'), 'from' => get_dimension_string($fromdim), 'to' => get_dimension_string($todim)));
+						1 => array('text' => _('Dimension'), 'from' => get_dimension_string($fromdim), 'to' => get_dimension_string($todim)),
+						2 => array('text' => _('Year to date'), 'from' => $fiscal_start, 'to' => $as_of));
 
 	$rep = new FrontReport(_('Dimension Summary'), 'DimensionSummary', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
@@ -102,7 +139,11 @@ function print_dimension_summary() {
 			$str = _('No');
 		$rep->TextCol(5, 6, $str);
 		if ($showbal) {
-			$balance = getYTD($trans['id']);
+			$balance = getYTD($trans['id'], $as_of);
+			if ($balance === false) {
+				display_error(_('The net GL balance could not be calculated.'));
+				return;
+			}
 			$rep->AmountCol(6, 7, $balance, 0);
 		}	
 		$rep->NewLine(1, 2);
