@@ -10,31 +10,9 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-$width = 100;
-$limit = 3;
-$today = Today();
-
-$result = dimension_top($today, $limit);
-
-$title = sprintf(_("Top %s Dimensions in fiscal year"), $limit);
-
 $widget = new Widget();
-$widget->setTitle($title);
+$widget->setTitle(_('Tracking P&L by category'));
 $widget->Start();
-
-if($widget->checkSecurity('SA_DIMTRANSVIEW')) {
-	$th = array(_('Dimension'), _('Amount'));
-	start_table(TABLESTYLE, "width='$width%'");
-	table_header($th);
-	$k = 0;
-	while ($myrow = db_fetch($result)) {
-		alt_table_row_color($k);
-		$name = $myrow['reference'].' '.$myrow['name'];
-		label_cell($name);
-		amount_cell($myrow['total']);
-		end_row();
-	}
-	end_table();
-}
-
+if ($widget->checkSecurity('SA_DIMTRANSVIEW'))
+	display_dimension_financial_ranking(3, false);
 $widget->End();

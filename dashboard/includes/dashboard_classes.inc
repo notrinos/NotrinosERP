@@ -526,20 +526,19 @@ function dashboard_dimensions_total_balance_text() {
 }
 
 /**
- * Sum dimension-related P/L amounts for current fiscal year.
+ * Company fiscal P&L result, including unassigned/unknown classifications once.
  *
  * @return string
  */
 function dashboard_dimensions_total_result_text() {
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql(Today());
-	$sql = "SELECT COALESCE(SUM(t.amount), 0)
+	$sql = "SELECT COALESCE(SUM(-t.amount), 0)
 		FROM ".TB_PREF."gl_trans t
 		INNER JOIN ".TB_PREF."chart_master a ON a.account_code=t.account
 		INNER JOIN ".TB_PREF."chart_types ct ON ct.id=a.account_type
 		INNER JOIN ".TB_PREF."chart_class cc ON cc.cid=ct.class_id
-		WHERE (t.dimension_id <> 0 OR t.dimension2_id <> 0)
-			AND cc.ctype > 3
+		WHERE cc.ctype IN (".CL_INCOME.','.CL_COGS.','.CL_EXPENSE.")
 			AND t.tran_date >= '".$begin."'
 			AND t.tran_date <= '".$today."'";
 
@@ -888,14 +887,84 @@ function get_low_stock($today, $limit=null) {
 	return db_query($sql, _('Could not get Items details'));
 }
 
-function dimension_top($today, $limit=10) {
-
+/**
+ * Rank signed P&L measures on one axis, retaining unassigned and unknown IDs.
+ * Existing two-argument callers use axis 1/result. Limit zero returns all groups
+ * for coverage and reconciliation; no company total combines the two axes.
+ */
+function dimension_top($today, $limit=10, $axis=1, $metric='result', $dimension_id=0, $dimension2_id=0) {
+	if (!in_array((int)$axis, array(1,2), true) || !in_array($metric, array('result','revenue','cost'), true))
+		throw new InvalidArgumentException('Invalid tracking ranking axis or metric.');
+	$column = (int)$axis === 1 ? 'dimension_id' : 'dimension2_id';
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql($today);
-	$sql = "SELECT SUM(-t.amount) AS total, d.reference, d.name FROM ".TB_PREF."gl_trans AS t,".TB_PREF."dimensions AS d WHERE (t.dimension_id = d.id OR t.dimension2_id = d.id) AND t.tran_date >= '$begin' AND t.tran_date <= '$today' GROUP BY d.id ORDER BY total DESC LIMIT $limit";
-	$result = db_query($sql, 'Transactions could not be calculated');
+	$scope = '';
+	foreach (array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id) as $field=>$value) {
+		if ((int)$value > 0) $scope .= ' AND t.'.$field.'='.db_escape((int)$value);
+		elseif ((int)$value < 0) $scope .= ' AND t.'.$field.'=0';
+	}
+	$revenue = 'SUM(CASE WHEN c.ctype='.CL_INCOME.' THEN -t.amount ELSE 0 END)';
+	$cost = 'SUM(CASE WHEN c.ctype IN ('.CL_COGS.','.CL_EXPENSE.') THEN t.amount ELSE 0 END)';
+	$measure = $metric === 'revenue' ? $revenue : ($metric === 'cost' ? $cost : 'SUM(-t.amount)');
+	$sql = "SELECT t.".$column." AS dimension_id, d.id AS known_id, d.reference, d.name, d.closed,
+		".$revenue." AS revenue, ".$cost." AS cost, SUM(-t.amount) AS result, ".$measure." AS total,
+		SUM(CASE WHEN c.ctype=".CL_COGS." THEN t.amount ELSE 0 END) AS cogs,
+		SUM(CASE WHEN c.ctype=".CL_EXPENSE." THEN t.amount ELSE 0 END) AS expense,
+		COUNT(*) AS eligible_lines, SUM(ABS(t.amount)) AS eligible_absolute
+		FROM ".TB_PREF."gl_trans t
+		INNER JOIN ".TB_PREF."chart_master a ON a.account_code=t.account
+		INNER JOIN ".TB_PREF."chart_types ct ON ct.id=a.account_type
+		INNER JOIN ".TB_PREF."chart_class c ON c.cid=ct.class_id
+		LEFT JOIN ".TB_PREF."dimensions d ON d.id=t.".$column." AND d.type_=".(int)$axis."
+		WHERE c.ctype IN (".CL_INCOME.','.CL_COGS.','.CL_EXPENSE.")
+		AND t.tran_date >= ".db_escape($begin)." AND t.tran_date <= ".db_escape($today).$scope."
+		GROUP BY t.".$column.", d.id, d.reference, d.name, d.closed ORDER BY total DESC, t.".$column;
+	if ((int)$limit > 0) $sql .= ' LIMIT '.(int)$limit;
+	return db_query($sql, 'Tracking P&L could not be calculated');
+}
 
-	return $result;
+/** Render the same signed fiscal P&L rows/coverage in table and chart widgets. */
+function display_dimension_financial_ranking($limit=10, $chart=false) {
+	display_note(_('Fiscal YTD posted P&L in company base currency. Revenue is credit-positive; costs are debit-positive; result = revenue - costs. Each axis is a separate view; do not add axes together.'));
+	for ($axis=1; $axis<=2; $axis++) {
+		display_heading(sprintf(_('Category %s - signed P&L result ranking'), $axis));
+		$result = dimension_top(Today(), 0, $axis);
+		$rows = array();
+		$totals = array('revenue'=>0,'cost'=>0,'result'=>0);
+		$lines = $absolute = $classified_lines = $classified_absolute = 0;
+		while ($row = db_fetch($result)) {
+			$lines += $row['eligible_lines']; $absolute += $row['eligible_absolute'];
+			if ($row['known_id'] !== null) {
+				$classified_lines += $row['eligible_lines']; $classified_absolute += $row['eligible_absolute'];
+			}
+			foreach ($totals as $key=>$value) $totals[$key] += $row[$key];
+			$rows[] = $row;
+		}
+		$graph = $chart ? new graph() : null;
+		start_table(TABLESTYLE, "width='100%'");
+		table_header(array(_('Category'), _('Revenue'), _('Costs (COGS + expense)'), _('Result')));
+		$k = 0; $shown = 0;
+		foreach ($rows as $index=>$row) {
+			// Retain every exception even outside the top N; totals use all groups.
+			if ($index >= $limit && $row['known_id'] !== null) continue;
+			$name = (int)$row['dimension_id'] === 0 ? _('Unassigned') : ($row['known_id'] === null
+				? sprintf(_('Unknown category #%s'), $row['dimension_id']) : $row['reference'].' '.$row['name']);
+			if ($row['known_id'] !== null && $row['closed']) $name .= ' ('._('Closed').')';
+			alt_table_row_color($k); label_cell($name);
+			foreach ($totals as $key=>$value) amount_cell($row[$key]);
+			end_row();
+			if ($chart) { $graph->x[$shown] = $name; $graph->y[$shown] = (float)$row['result']; }
+			$shown++;
+		}
+		start_row(); label_cell(_('All eligible postings (includes rows outside ranking)'));
+		foreach ($totals as $value) amount_cell($value);
+		end_row(); end_table(1);
+		$line_pct = $lines ? number_format2(100*$classified_lines/$lines,2).'%' : _('N/A');
+		$amount_pct = $absolute ? number_format2(100*$classified_absolute/$absolute,2).'%' : _('N/A');
+		display_note(sprintf(_('Classification coverage: %s of eligible GL lines; %s of absolute eligible amount. Unassigned and unknown revenue/costs are shown separately above.'), $line_pct, $amount_pct));
+		if (!$lines) display_note(_('No eligible P&L postings in this period.'));
+		if ($chart && $shown) source_graphic(sprintf(_('Category %s - signed result'),$axis), _('Amount'), $graph, _('Result'), '', 2, _('Category'));
+	}
 }
 
 function gl_top($today) {
@@ -921,11 +990,12 @@ function gl_performance($today, $weeks=5) {
 	return $result;
 }
 
-function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2) {
+/** Render an existing graph; optional Y caption supports correctly labeled horizontal bars. */
+function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2, $y_axis=null) {
 	global $SysPrefs;
 
 	$pg->axis_x    = $x_axis;
-	$pg->axis_y    = _('Amount');
+	$pg->axis_y    = $y_axis === null ? _('Amount') : $y_axis;
 	$pg->graphic_1 = empty($graphic1) ? '' : $graphic1;
 	$pg->graphic_2 = empty($graphic2) ? '' : $graphic2;
 	$pg->type      = $type;

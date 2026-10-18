@@ -63,7 +63,10 @@ function get_purchase_analytics_range($date_from = '', $date_to = '')
  */
 function purchase_analytics_table_exists($table_name)
 {
-	$sql = "SHOW TABLES LIKE " . db_escape($table_name);
+	global $db_connections;
+	$company = $_SESSION['wa_current_user']->cur_con;
+	$table_name = str_replace(TB_PREF, $db_connections[$company]['tbpref'], $table_name);
+	$sql = "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=" . db_escape($table_name);
 	$result = db_query($sql, 'could not check analytics table existence');
 	return db_num_rows($result) > 0;
 }
@@ -567,44 +570,64 @@ function get_procurement_efficiency_report($date_from, $date_to)
 }
 
 /**
- * Compare budget and actual purchase-related expenses.
+ * Compare posted GL costs with one explicit monthly budget coordinate.
+ * Zero selects All actuals on that axis and the aggregate budget coordinate;
+ * detailed and aggregate budget coordinates are never added together.
  *
  * @param string $date_from
  * @param string $date_to
  * @param int $dimension_id
+ * @param int $dimension2_id
  * @return array
  */
-function get_purchase_budget_variance($date_from, $date_to, $dimension_id = 0)
+function get_purchase_budget_variance($date_from, $date_to, $dimension_id = 0, $dimension2_id = 0)
 {
 	list($sql_date_from, $sql_date_to) = get_purchase_analytics_range($date_from, $date_to);
 	$dimension_id = (int)$dimension_id;
-
-	$actual_sql = "SELECT COALESCE(SUM(ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount)), 0)
-		FROM " . TB_PREF . "supp_trans trans
-		LEFT JOIN " . TB_PREF . "voided v ON v.type = trans.type AND v.id = trans.trans_no
-		WHERE trans.type = " . ST_SUPPINVOICE . "
-			AND v.id IS NULL
-			AND trans.tran_date >= " . db_escape($sql_date_from) . "
-			AND trans.tran_date <= " . db_escape($sql_date_to);
+	$dimension2_id = (int)$dimension2_id;
+	if ($dimension_id < 0 || $dimension2_id < 0)
+		throw new InvalidArgumentException('Budget comparison requires All or a positive axis value.');
+	$classes = '(' . CL_COGS . ',' . CL_EXPENSE . ')';
+	$joins = " INNER JOIN " . TB_PREF . "chart_master a ON a.account_code = trans.account
+		INNER JOIN " . TB_PREF . "chart_types t ON t.id = a.account_type
+		INNER JOIN " . TB_PREF . "chart_class c ON c.cid = t.class_id";
+	$scope = '';
+	if ($dimension_id > 0)
+		$scope .= " AND trans.dimension_id = " . db_escape($dimension_id);
+	if ($dimension2_id > 0)
+		$scope .= " AND trans.dimension2_id = " . db_escape($dimension2_id);
+	// Match P&L's signed GL policy, including credits and established zeroing voids.
+	$actual_sql = "SELECT COALESCE(SUM(trans.amount), 0) FROM " . TB_PREF . "gl_trans trans" . $joins . "
+		WHERE c.ctype IN " . $classes . " AND trans.tran_date >= " . db_escape($sql_date_from) . "
+			AND trans.tran_date <= " . db_escape($sql_date_to) . $scope;
 	$actual_amount = purchase_analytics_scalar($actual_sql, 'could not compute purchase actual amount');
 
-	$budget_amount = 0;
+	$whole_months = substr($sql_date_from, 8, 2) === '01'
+		&& $sql_date_to === date('Y-m-t', strtotime($sql_date_to));
+	$budget_amount = null;
+	$budget_rows = 0;
 	if (purchase_analytics_table_exists(TB_PREF . 'budget_trans')) {
-		$budget_sql = "SELECT COALESCE(SUM(amount), 0)
-			FROM " . TB_PREF . "budget_trans
-			WHERE tran_date >= " . db_escape($sql_date_from) . "
-				AND tran_date <= " . db_escape($sql_date_to);
-		if ($dimension_id > 0)
-			$budget_sql .= " AND (dimension_id = " . db_escape($dimension_id) . " OR dimension2_id = " . db_escape($dimension_id) . ")";
-
-		$budget_amount = purchase_analytics_scalar($budget_sql, 'could not compute purchase budget amount');
+		$budget_sql = "SELECT COALESCE(SUM(trans.amount), 0) AS amount, COUNT(*) AS budget_rows
+			FROM " . TB_PREF . "budget_trans trans" . $joins . "
+			WHERE c.ctype IN " . $classes . " AND trans.tran_date >= " . db_escape($sql_date_from) . "
+				AND trans.tran_date <= " . db_escape($sql_date_to) . "
+				AND trans.dimension_id = " . db_escape($dimension_id) . "
+				AND trans.dimension2_id = " . db_escape($dimension2_id);
+		$row = db_fetch(db_query($budget_sql, 'could not compute purchase budget amount'));
+		$budget_rows = (int)$row['budget_rows'];
+		if ($whole_months && $budget_rows > 0)
+			$budget_amount = (float)$row['amount'];
 	}
+	$variance = $budget_amount === null ? null : $budget_amount - $actual_amount;
 
 	return array(
 		'actual_amount' => $actual_amount,
 		'budget_amount' => $budget_amount,
-		'variance_amount' => $actual_amount - $budget_amount,
-		'variance_pct' => $budget_amount != 0 ? (($actual_amount - $budget_amount) / $budget_amount) * 100 : 0,
+		'budget_rows' => $budget_rows,
+		'whole_months' => $whole_months,
+		'budget_status' => !$whole_months ? 'partial_month' : ($budget_rows ? 'set' : 'not_set'),
+		'variance_amount' => $variance,
+		'variance_pct' => $budget_amount === null || $budget_amount == 0 ? null : $variance / abs($budget_amount) * 100,
 	);
 }
 
