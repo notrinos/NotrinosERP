@@ -144,6 +144,52 @@ class ApprovalWorkflow {
 		$this->user_id = $user_id !== null ? (int)$user_id : (int)$_SESSION['wa_current_user']->user;
 	}
 
+	/**
+	 * Observe retained ordinary GL classification intent without exposing payloads.
+	 * Uses the workflow's own historical decoder. Only journal/payment/deposit
+	 * shapes are characterized here; every other domain remains unknown and its
+	 * payload is excluded by SQL CASE before it reaches PHP. All statuses, actors
+	 * and action snapshots are retained in scope. This is never delete authority
+	 * or a concurrent owner-writer fence (DIM-LFC-001B3a).
+	 *
+	 * @param int|string $id Exact positive Dimension identity in the active company
+	 * @return array Owner names and used/unused/unknown states only
+	 */
+	public function observeDimensionReferences($id)
+	{
+		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_lifecycle_db.inc';
+		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_reference_registry.inc';
+		$result = array('approval_drafts'=>'unknown', 'approval_actions'=>'unknown');
+		if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
+			|| !defined('ST_JOURNAL') || !defined('ST_BANKPAYMENT') || !defined('ST_BANKDEPOSIT')) return $result;
+		$types = implode(',', array((int)ST_JOURNAL, (int)ST_BANKPAYMENT, (int)ST_BANKDEPOSIT));
+		$queries = array(
+			'approval_drafts'=>'SELECT CASE WHEN trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+				.' CASE WHEN trans_type IN ('.$types.') THEN draft_data ELSE NULL END AS payload'
+				.' FROM '.TB_PREF.'approval_drafts',
+			'approval_actions'=>'SELECT CASE WHEN d.trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+				.' CASE WHEN d.trans_type IN ('.$types.') THEN a.draft_data_snapshot ELSE NULL END AS payload'
+				.' FROM '.TB_PREF.'approval_actions a LEFT JOIN '.TB_PREF.'approval_drafts d ON d.id=a.draft_id'
+				.' WHERE a.draft_data_snapshot IS NOT NULL');
+		foreach ($queries as $owner=>$sql) {
+			$status = 'unused';
+			try {
+				$rows = db_query($sql);
+				if (!$rows) $status = 'unknown';
+				else while ($row = db_fetch($rows)) {
+					if ((int)$row['supported'] !== 1) { $status = 'unknown'; continue; }
+					$ok = false;
+					$payload = $this->decodeDraftData($row['payload'], $ok);
+					$observed = $ok ? dimension_reference_payload_status($payload, (int)$id) : 'unknown';
+					if ($observed === 'used') { $status = 'used'; break; }
+					if ($observed !== 'unused') $status = 'unknown';
+				}
+			} catch (Exception $exception) { $status = 'unknown'; }
+			$result[$owner] = $status;
+		}
+		return $result;
+	}
+
 	// =====================================================
 	// WORKFLOW API — Submit / Approve / Reject
 	// =====================================================
