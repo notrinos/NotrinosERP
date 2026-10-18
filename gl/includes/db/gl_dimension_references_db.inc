@@ -1,12 +1,12 @@
 <?php
-/** GL-owned retained account metadata presence; never unused/delete authority. */
+/** GL-owned retained metadata presence; never unused/delete authority. */
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
 
-/** Return only the source-verified raw chart-account JSON owner. */
+/** Return only source-verified ordinary raw JSON owners, excluding transaction/payroll payloads. */
 function gl_dimension_reference_sources()
 {
-    return array('chart_master');
+    return array('chart_master','budget_trans','bank_accounts','chart_types','chart_class');
 }
 
 /** Recheck exact active-prefix JSON storage; deny before SQL or escaping. */
@@ -23,10 +23,11 @@ function gl_dimension_reference_schema_available($table)
 }
 
 /**
- * Observe retained ordinary native intent on every account, including inactive
- * and orphan-class accounts. The Entity exposes raw custom_data, so only strict
- * JSON is recognized; no HTML/serialized/nested-string decoder is invented.
- * No account identity, class, content or amount leaves this boundary. Absence
+ * Observe retained ordinary native intent on chart/bank accounts, chart hierarchy
+ * and budgets, including inactive/orphan masters and zero or historical budgets.
+ * Source helpers expose raw custom_data, so only strict JSON is recognized;
+ * no HTML/serialized/nested-string decoder is invented.
+ * No account identity, bank detail, class, content or amount leaves this boundary. Absence
  * remains unknown across all other retained/domain/session/deployment owners.
  *
  * @param int|string $id Canonical positive active-company native identity
