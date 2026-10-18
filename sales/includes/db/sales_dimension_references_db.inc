@@ -5,12 +5,59 @@ require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_schema.inc';
 
 /**
- * Observe recognized native intent in retained Sales header/line JSON only.
+ * Fixed retained Sales JSON owners and their transaction-family discriminators.
+ * Templates/agreements expose raw custom_data through their existing readers;
+ * recognizing ordinary JSON here does not add classification to their writers.
+ * No caller can select a table, discriminator, or supported transaction family.
+ *
+ * @return array Table => discriminator column and source constant names
+ */
+function sales_dimension_reference_sources()
+{
+    $orders = array('trans_type', array('ST_SALESORDER','ST_SALESQUOTE'));
+    $transactions = array('ST_SALESINVOICE','ST_CUSTDELIVERY','ST_CUSTCREDIT','ST_CUSTPAYMENT');
+    return array('sales_orders'=>$orders, 'sales_order_details'=>$orders,
+        'sales_quotation_templates'=>array(null, array()),
+        'sales_quotation_template_lines'=>array(null, array()),
+        'sales_agreements'=>array(null, array()),
+        'sales_agreement_lines'=>array(null, array()),
+        'debtor_trans'=>array('type', $transactions),
+        'debtor_trans_details'=>array('debtor_trans_type', $transactions));
+}
+
+/**
+ * Preflight only the columns needed by this fixed Sales JSON owner.
+ * Keep optional JSON availability independent of scalar reference dependencies.
+ * Exact binary table/column comparison rejects prefix/case lookalikes; recheck
+ * each invocation rather than caching across companies or schema recovery.
+ *
+ * @param string $table One of the fixed Sales sources
+ * @return bool Whether this reader's exact columns are currently present
+ */
+function sales_dimension_reference_schema_available($table)
+{
+    if (!dimension_lifecycle_authorized()) return false;
+    $sources = sales_dimension_reference_sources();
+    if (!is_string($table) || !isset($sources[$table])) return false;
+    $columns = array(db_escape('custom_data'));
+    if ($sources[$table][0] !== null) $columns[] = db_escape($sources[$table][0]);
+    $rows = db_query('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()'
+        ." AND BINARY TABLE_NAME=BINARY '".db_escape_function(TB_PREF.$table)."'"
+        .' AND BINARY COLUMN_NAME IN ('.implode(',', $columns).')');
+    if (!$rows) return false;
+    $row = db_fetch_row($rows);
+    return $row && (int)$row[0] === count($columns);
+}
+
+/**
+ * Observe recognized native intent in fixed retained Sales header/line JSON.
  * The existing save envelope retains arbitrary custom keys; inspect the entire
  * ordinary decoded array rather than just sales_discount_state. Exclude every
  * unsupported transaction family's payload in SQL, never unserialize embedded
  * carts, and release no document/customer/amount/content. All records remain in
- * scope, including completed/templates, quotes and orphan detail rows.
+ * scope, including completed/templates, quotes and orphan detail rows. Ordinary
+ * debtor JSON is independently preflighted and SQL-filtered by its source type;
+ * this never changes scalar header availability or admits a protected family.
  * No positive match means unknown: extension-defined encodings, other retained
  * sources, audit and sessions have not been attested by this bounded owner.
  *
@@ -21,12 +68,17 @@ function sales_observe_dimension_references($id)
 {
     if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
         || !defined('ST_SALESORDER') || !defined('ST_SALESQUOTE')) return 'unknown';
-    $types = (int)ST_SALESORDER.','.(int)ST_SALESQUOTE;
-    foreach (array('sales_orders','sales_order_details') as $table) {
-        $sql = 'SELECT CASE WHEN trans_type IN ('.$types.') THEN custom_data ELSE NULL END AS payload'
-            .' FROM '.TB_PREF.$table;
+    foreach (sales_dimension_reference_sources() as $table=>$source) {
+        $payload_column = 'custom_data';
+        if ($source[0] !== null) {
+            $types = array();
+            foreach ($source[1] as $type) if (defined($type)) $types[] = (int)constant($type);
+            if (!count($types)) continue;
+            $payload_column = 'CASE WHEN '.$source[0].' IN ('.implode(',', $types).') THEN custom_data ELSE NULL END';
+        }
+        $sql = 'SELECT '.$payload_column.' AS payload FROM '.TB_PREF.$table;
         try {
-            if (!dimension_reference_schema_available($table)) continue;
+            if (!sales_dimension_reference_schema_available($table)) continue;
             $rows = db_query($sql);
             if (!$rows) continue;
             while ($row = db_fetch($rows)) {
