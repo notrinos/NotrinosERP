@@ -6,7 +6,7 @@ require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_
 
 /**
  * Fixed retained Sales JSON owners and their transaction-family discriminators.
- * Templates/agreements expose raw custom_data through their existing readers;
+ * Templates/agreements/customer masters expose raw custom_data through their readers;
  * recognizing ordinary JSON here does not add classification to their writers.
  * No caller can select a table, discriminator, or supported transaction family.
  *
@@ -17,6 +17,7 @@ function sales_dimension_reference_sources()
     $orders = array('trans_type', array('ST_SALESORDER','ST_SALESQUOTE'));
     $transactions = array('ST_SALESINVOICE','ST_CUSTDELIVERY','ST_CUSTCREDIT','ST_CUSTPAYMENT');
     return array('sales_orders'=>$orders, 'sales_order_details'=>$orders,
+        'debtors_master'=>array(null, array()),
         'sales_quotation_templates'=>array(null, array()),
         'sales_quotation_template_lines'=>array(null, array()),
         'sales_agreements'=>array(null, array()),
@@ -50,7 +51,7 @@ function sales_dimension_reference_schema_available($table)
 }
 
 /**
- * Observe recognized native intent in fixed retained Sales header/line JSON.
+ * Observe recognized native intent in fixed retained Sales header/line/master JSON.
  * The existing save envelope retains arbitrary custom keys; inspect the entire
  * ordinary decoded array rather than just sales_discount_state. Exclude every
  * unsupported transaction family's payload in SQL, never unserialize embedded
