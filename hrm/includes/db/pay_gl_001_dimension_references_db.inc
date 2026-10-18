@@ -1,6 +1,7 @@
 <?php
 /** PAY-GL-owned, presence-only native allocation observation (DIM-LFC-001B3c1). */
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_schema.inc';
 
 /**
  * Observe a retained native allocation without releasing payroll facts.
@@ -25,6 +26,9 @@ function pay_gl_001_observe_dimension_references($id)
         .' AND (ax.core_slot_hint IN (1,2) OR ax.axis_code=r.dimension1_axis_code'
         .' OR ax.axis_code=r.dimension2_axis_code) LIMIT 1';
     try {
+        foreach (array('hrm_pay_gl_001_allocation_axes','hrm_pay_gl_001_allocations',
+            'hrm_pay_gl_001_journal_lines','hrm_pay_gl_001_mapping_rules') as $table)
+            if (!dimension_reference_schema_available($table)) return 'unknown';
         $rows = db_query($sql);
         return $rows && db_num_rows($rows) ? 'used' : 'unknown';
     } catch (Exception $exception) {

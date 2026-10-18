@@ -2,6 +2,7 @@
 /** Authorized observations through fixed source-owned readers (DIM-LFC-001B3). */
 require_once __DIR__.'/dimension_reference_registry.inc';
 require_once __DIR__.'/dimension_reference_metadata.inc';
+require_once __DIR__.'/dimension_reference_schema.inc';
 require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_gl_001_dimension_references_db.inc';
 require_once dirname(dirname(__DIR__)).'/sales/includes/db/sales_dimension_references_db.inc';
 require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
@@ -33,6 +34,7 @@ function dimension_reference_db_observe($id)
     $purchasing = purchasing_observe_dimension_references($id);
     return dimension_reference_observe((int)$id, function($name, $owner, $identity) use ($approval, $metadata, $payroll, $sales, $purchasing) {
         if ($owner['kind'] === 'scalar') {
+            if (!dimension_reference_schema_available($owner['table'])) return 'unknown';
             $sql = dimension_reference_owner_sql($name, $identity);
             if ($sql === false) return 'unknown';
             $rows = db_query($sql);

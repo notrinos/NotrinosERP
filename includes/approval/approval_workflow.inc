@@ -145,7 +145,7 @@ class ApprovalWorkflow {
 	}
 
 	/**
-	 * Observe retained ordinary GL/Purchasing intent without exposing payloads.
+	 * Observe retained ordinary GL/Purchasing/Sales intent without exposing payloads.
 	 * Uses the workflow's own historical decoder and fixed source-owned shapes.
 	 * Every unsupported domain remains unknown and its
 	 * payload is excluded by SQL CASE before it reaches PHP. All statuses, actors
@@ -164,7 +164,8 @@ class ApprovalWorkflow {
 			|| !defined('ST_JOURNAL') || !defined('ST_BANKPAYMENT') || !defined('ST_BANKDEPOSIT')) return $result;
 		require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
 		$supported_types = array((int)ST_JOURNAL, (int)ST_BANKPAYMENT, (int)ST_BANKDEPOSIT);
-		foreach (array('ST_PURCHORDER','ST_SUPPINVOICE','ST_PURCHREQUISITION','ST_PURCHAGREEMENT') as $type)
+		foreach (array('ST_PURCHORDER','ST_SUPPINVOICE','ST_PURCHREQUISITION','ST_PURCHAGREEMENT',
+			'ST_SALESINVOICE','ST_SALESORDER','ST_CUSTDELIVERY') as $type)
 			if (defined($type)) $supported_types[] = (int)constant($type);
 		$types = implode(',', $supported_types);
 		$queries = array(

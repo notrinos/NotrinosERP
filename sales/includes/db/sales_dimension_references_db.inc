@@ -2,6 +2,7 @@
 /** Sales-owned saved order/quotation presence observation (DIM-LFC-001B3c2). */
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_schema.inc';
 
 /**
  * Observe recognized native intent in retained Sales header/line JSON only.
@@ -25,6 +26,7 @@ function sales_observe_dimension_references($id)
         $sql = 'SELECT CASE WHEN trans_type IN ('.$types.') THEN custom_data ELSE NULL END AS payload'
             .' FROM '.TB_PREF.$table;
         try {
+            if (!dimension_reference_schema_available($table)) continue;
             $rows = db_query($sql);
             if (!$rows) continue;
             while ($row = db_fetch($rows)) {
