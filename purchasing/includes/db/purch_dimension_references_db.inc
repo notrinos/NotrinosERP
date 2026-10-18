@@ -41,7 +41,7 @@ function purchasing_dimension_reference_schema_available($table)
     $columns = array();
     foreach ($required[$table] as $column) $columns[] = db_escape($column);
     $rows = db_query('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()'
-        ." AND TABLE_NAME='".db_escape_function(TB_PREF.$table)."' AND COLUMN_NAME IN (".implode(',', $columns).')');
+        ." AND BINARY TABLE_NAME=BINARY '".db_escape_function(TB_PREF.$table)."' AND BINARY COLUMN_NAME IN (".implode(',', $columns).')');
     if (!$rows) return false;
     $row = db_fetch_row($rows);
     return $row && (int)$row[0] === count($required[$table]);
