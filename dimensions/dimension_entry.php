@@ -122,9 +122,12 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id);
 		} 
 		else {
-			update_dimension($selected_id, $_POST['name'], $_POST['type_'], $_POST['date_'], $_POST['due_date'], $_POST['memo_']);
-			update_tag_associations(TAG_DIMENSION, $selected_id, $_POST['dimension_tags']);
-			meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
+			if (!update_dimension($selected_id, $_POST['name'], $_POST['type_'], $_POST['date_'], $_POST['due_date'], $_POST['memo_'])) {
+				display_error(_('The dimension could not be updated. Axis reassignment is unavailable while reference ownership is unresolved.'));
+			} else {
+				update_tag_associations(TAG_DIMENSION, $selected_id, $_POST['dimension_tags']);
+				meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
+			}
 		}
 	}
 }
@@ -142,9 +145,10 @@ if (isset($_POST['delete'])) {
 		$cancel_delete = true;
 	}
 	if ($cancel_delete == false) { //ie not cancelled the delete as a result of above tests
-		delete_dimension($selected_id);
-		delete_tag_associations(TAG_DIMENSION,$selected_id, true);
-		meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
+		if (delete_dimension($selected_id))
+			meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
+		else
+			display_error(_('This dimension cannot be deleted while reference ownership is unresolved. Close it to retain its identity and history.'));
 	}
 }
 
@@ -152,14 +156,18 @@ if (isset($_POST['delete'])) {
 
 if (isset($_POST['close'])) {
 	// update the closed flag
-	close_dimension($selected_id);
-	meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
+	if (close_dimension($selected_id))
+		meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
+	else
+		display_error(_('The dimension could not be closed.'));
 }
 
 if (isset($_POST['reopen'])) {
 	// update the closed flag
-	reopen_dimension($selected_id);
-	meta_forward($_SERVER['PHP_SELF'], 'ReopenedID='.$selected_id);
+	if (reopen_dimension($selected_id))
+		meta_forward($_SERVER['PHP_SELF'], 'ReopenedID='.$selected_id);
+	else
+		display_error(_('The dimension could not be reopened.'));
 }
 
 //-------------------------------------------------------------------------------------

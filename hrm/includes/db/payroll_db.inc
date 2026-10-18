@@ -2987,7 +2987,10 @@ function insert_payroll_reversal_evidence($evidence) {
         .db_escape($type).","
         .db_escape($target_id).","
         .($linked_trans_no === null ? 'NULL' : db_escape($linked_trans_no)).","
-        .($before_state === null ? 'NULL' : db_escape($before_state)).","
+        // Evidence is canonical JSON, not UI text. db_escape() HTML-encodes
+        // quotes/entities and breaks the immutable state's reload/hash contract.
+        // Use the existing raw SQL string escaper shared by all three drivers.
+        .($before_state === null ? 'NULL' : "'".db_escape_function($before_state)."'").","
         .db_escape($after_state_hash).","
         .($reason_code === null ? 'NULL' : db_escape($reason_code)).","
         .($actor_id > 0 ? db_escape($actor_id) : 'NULL').","

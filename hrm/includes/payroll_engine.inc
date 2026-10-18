@@ -39,7 +39,7 @@ include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.568');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.571');
 
 /**
  * Payroll Formula Engine.
@@ -1736,6 +1736,14 @@ function payroll_verify_linked_gl_reversal_evidence($evidence, $lock=true) {
         return false;
     }
     $before = payroll_reversal_decode_state($evidence['before_state']);
+    // Older immutable GL-link rows were stored through the UI-text SQL encoder.
+    // Decode that single legacy envelope only here; retain stored bytes and the
+    // strict general state decoder. Exact original/after hashes below still bind
+    // every admitted link, so this grants no new posting or inverse authority.
+    if ($before === false && is_string($evidence['before_state']))
+        $before = payroll_reversal_decode_state(html_entity_decode(
+            $evidence['before_state'], ENT_QUOTES, 'UTF-8'
+        ));
     if (!$before || empty($before['original_gl_hash']))
         return false;
 

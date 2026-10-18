@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/dimension_lifecycle_db.inc';
+
 function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 	global $Refs;
 
@@ -28,28 +30,41 @@ function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 }
 
 function update_dimension($id, $name, $type_, $date_, $due_date, $memo_) {
-	begin_transaction();
+	if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
+		|| !in_array($type_, array(1,2,'1','2'), true) || !begin_transaction()) return false;
+	try {
+		$existing = db_query("SELECT * FROM ".TB_PREF."dimensions WHERE id=".db_escape($id)." FOR UPDATE", 'could not lock Dimension');
+		$before = $existing ? db_fetch($existing) : false;
+		if (!$before) { cancel_transaction(); return false; }
+		if ((int)$before['type_'] !== (int)$type_) {
+			// Retained payload/session/extension ownership and all writer fences are
+			// not yet closed under DIM-LFC-001B. Preserve identity even if GL is empty.
+			cancel_transaction();
+			return false;
+		}
 
-	$sql = "UPDATE ".TB_PREF."dimensions SET name=".db_escape($name).", type_ = ".db_escape($type_).", date_='".date2sql($date_)."', due_date='".date2sql($due_date)."' WHERE id = ".db_escape($id);
+		$sql = "UPDATE ".TB_PREF."dimensions SET name=".db_escape($name).", type_ = ".db_escape($type_).", date_='".date2sql($date_)."', due_date='".date2sql($due_date)."' WHERE id = ".db_escape($id);
 
-	db_query($sql, 'could not update dimension');
+		if (!db_query($sql, 'could not update dimension')) { cancel_transaction(); return false; }
 
-	update_comments(ST_DIMENSION, $id, null, $memo_);
+		update_comments(ST_DIMENSION, $id, null, $memo_);
+		if (!dimension_lifecycle_audit($id, 'updated', $before['reference'])) { cancel_transaction(); return false; }
 
-	commit_transaction();
+		if (!commit_transaction()) return false;
 
-	return $id;
+		return $id;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	}
 }
 
+/** Keep deletion closed until every owner and historical inverse is fenced. */
 function delete_dimension($id) {
-	begin_transaction();
-
-	$sql="DELETE FROM ".TB_PREF."dimensions WHERE id=".db_escape($id);
-	db_query($sql, 'The dimension could not be deleted');
-
-	delete_comments(ST_DIMENSION, $id);
-
-	commit_transaction();
+	if (!dimension_lifecycle_authorized()) return false;
+	// A scalar scan cannot prove absence of retained carts, protected payroll
+	// custody or external/inactive extension references. No cascade is safe.
+	return false;
 }
 
 function get_dimension($id, $allow_null=false) {
@@ -98,13 +113,37 @@ function dimension_is_closed($id) {
 }
 
 function close_dimension($id) {
-	$sql = "UPDATE ".TB_PREF."dimensions SET closed='1' WHERE id = ".db_escape($id);
-	db_query($sql, 'could not close dimension');
+	if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || !begin_transaction()) return false;
+	try {
+		$result = db_query("SELECT reference,closed FROM ".TB_PREF."dimensions WHERE id=".db_escape($id)." FOR UPDATE", 'could not lock Dimension');
+		$row = $result ? db_fetch($result) : false;
+		if (!$row) { cancel_transaction(); return false; }
+		if ((int)$row['closed'] !== 1) {
+			if (!db_query("UPDATE ".TB_PREF."dimensions SET closed='1' WHERE id = ".db_escape($id), 'could not close dimension')
+				|| !dimension_lifecycle_audit($id, 'closed', $row['reference'])) { cancel_transaction(); return false; }
+		}
+		return commit_transaction();
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	}
 }
 
 function reopen_dimension($id) {
-	$sql = "UPDATE ".TB_PREF."dimensions SET closed='0' WHERE id = ".db_escape($id);
-	db_query($sql, 'could not reopen dimension');
+	if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || !begin_transaction()) return false;
+	try {
+		$result = db_query("SELECT reference,closed FROM ".TB_PREF."dimensions WHERE id=".db_escape($id)." FOR UPDATE", 'could not lock Dimension');
+		$row = $result ? db_fetch($result) : false;
+		if (!$row) { cancel_transaction(); return false; }
+		if ((int)$row['closed'] !== 0) {
+			if (!db_query("UPDATE ".TB_PREF."dimensions SET closed='0' WHERE id = ".db_escape($id), 'could not reopen dimension')
+				|| !dimension_lifecycle_audit($id, 'reopened', $row['reference'])) { cancel_transaction(); return false; }
+		}
+		return commit_transaction();
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	}
 }
 
 function get_dimension_balance_all($id, $from, $to) {
