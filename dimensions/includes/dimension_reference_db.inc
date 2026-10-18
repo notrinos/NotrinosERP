@@ -1,13 +1,16 @@
 <?php
-/** DIM-LFC-001B3b: authorized observations through fixed, source-owned readers. */
+/** Authorized observations through fixed source-owned readers (DIM-LFC-001B3). */
 require_once __DIR__.'/dimension_reference_registry.inc';
 require_once __DIR__.'/dimension_reference_metadata.inc';
+require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_gl_001_dimension_references_db.inc';
+require_once dirname(dirname(__DIR__)).'/sales/includes/db/sales_dimension_references_db.inc';
 
 /**
- * Observe scalar, metadata and characterized approval owners in the active company.
+ * Observe scalar, metadata, approval and bounded retained owners in the active company.
  * Deny before any reader/query; never accept caller attestations or cache across
- * requests/companies. Protected payroll, retained/session and extension domains
- * remain unknown until their own complete authority and writer fences exist.
+ * requests/companies. Payroll allocations and saved Sales native intent can add
+ * positive presence only. Absence across protected/retained/session/extension
+ * domains stays unknown until complete owner authority and writer fences exist.
  * This is an advisory snapshot, never an unused certificate or delete authority.
  *
  * @param int|string $id Exact positive native identity
@@ -24,7 +27,9 @@ function dimension_reference_db_observe($id)
             $approval = $service->observeDimensionReferences($id);
     }
     $metadata = dimension_reference_metadata_observe($id);
-    return dimension_reference_observe((int)$id, function($name, $owner, $identity) use ($approval, $metadata) {
+    $payroll = pay_gl_001_observe_dimension_references($id);
+    $sales = sales_observe_dimension_references($id);
+    return dimension_reference_observe((int)$id, function($name, $owner, $identity) use ($approval, $metadata, $payroll, $sales) {
         if ($owner['kind'] === 'scalar') {
             $sql = dimension_reference_owner_sql($name, $identity);
             if ($sql === false) return 'unknown';
@@ -33,6 +38,8 @@ function dimension_reference_db_observe($id)
         }
         if (isset($approval[$name])) return $approval[$name];
         if ($name === 'tags') return $metadata['state'];
+        if ($name === 'payroll_custody') return $payroll;
+        if ($name === 'retained_payloads') return $sales;
         return 'unknown';
     });
 }
