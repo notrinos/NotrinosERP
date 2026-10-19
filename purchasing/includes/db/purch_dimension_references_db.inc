@@ -6,8 +6,9 @@ require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_
 /**
  * Fixed saved-source owners and their existing legacy HTML-envelope support.
  * Supplier masters expose raw custom_data; only strict ordinary JSON is read.
- * Requisition's decoder is strict JSON; RFQ/agreement/template readers allow one
- * envelope decode. PO headers/details have no custom_data in the current schema.
+ * Requisition and procurement-plan readers use strict JSON; RFQ/agreement/template
+ * readers allow one envelope decode. PO headers/details have no custom_data in
+ * the current schema.
  * This list never accepts caller-selected tables, fields or decoders.
  *
  * @return array Table name => whether its owning reader supports that envelope
@@ -18,7 +19,8 @@ function purchasing_dimension_reference_tables()
         'purch_rfq'=>true, 'purch_rfq_items'=>true, 'purch_rfq_vendors'=>true,
         'purch_rfq_vendor_lines'=>true, 'purch_agreements'=>true,
         'purch_agreement_lines'=>true, 'purch_order_templates'=>true,
-        'purch_order_template_lines'=>true);
+        'purch_order_template_lines'=>true, 'procurement_plan'=>false,
+        'procurement_plan_lines'=>false);
 }
 
 /**
