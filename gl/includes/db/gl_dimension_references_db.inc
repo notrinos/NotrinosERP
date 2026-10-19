@@ -60,10 +60,12 @@ function gl_observe_dimension_references($id)
 function gl_dimension_transaction_reference_sources()
 {
     return array('gl_trans'=>array('ST_SALESINVOICE','ST_CUSTCREDIT','ST_CUSTPAYMENT',
-        'ST_CUSTDELIVERY','ST_SUPPINVOICE','ST_SUPPCREDIT','ST_SUPPAYMENT','ST_SUPPRECEIVE'),
+        'ST_CUSTDELIVERY','ST_SUPPINVOICE','ST_SUPPCREDIT','ST_SUPPAYMENT','ST_SUPPRECEIVE',
+        'ST_INVADJUST','ST_COSTUPDATE','ST_WORKORDER','ST_MANUISSUE','ST_MANURECEIVE'),
         'bank_trans'=>array('ST_CUSTPAYMENT','ST_SUPPAYMENT'),
         'audit_trail'=>array('ST_SALESINVOICE','ST_CUSTCREDIT','ST_CUSTPAYMENT','ST_CUSTDELIVERY',
-            'ST_SUPPINVOICE','ST_SUPPCREDIT','ST_SUPPAYMENT','ST_SUPPRECEIVE','ST_DIMENSION'));
+            'ST_SUPPINVOICE','ST_SUPPCREDIT','ST_SUPPAYMENT','ST_SUPPRECEIVE','ST_DIMENSION',
+            'ST_INVADJUST','ST_LOCTRANSFER','ST_COSTUPDATE','ST_WORKORDER','ST_MANUISSUE','ST_MANURECEIVE'));
 }
 
 /** Recheck both exact active-company columns before querying an optional owner. */
