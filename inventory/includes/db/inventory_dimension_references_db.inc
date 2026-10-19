@@ -2,6 +2,7 @@
 /** Inventory-owned retained JSON presence, never an unused/delete certificate. */
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once __DIR__.'/inventory_retained_dimension_references_db.inc';
 
 /**
  * Fixed ordinary Inventory sources, with source-owned document discriminators.
@@ -77,5 +78,5 @@ function inventory_observe_dimension_references($id)
             // An unavailable owner cannot prove absence; inspect positive siblings.
         }
     }
-    return 'unknown';
+    return inventory_observe_retained_dimension_references($id);
 }
