@@ -29,6 +29,8 @@ function sales_dimension_reference_sources()
         'sales_coupons'=>array(null, array()),
         'sales_commission_plans'=>array(null, array()),
         'sales_commission_entries'=>array('trans_type', array('ST_SALESINVOICE','ST_CUSTCREDIT')),
+        'sales_pos'=>array(null, array()),
+        'salesman'=>array(null, array()),
         'debtor_trans'=>array('type', $transactions),
         'debtor_trans_details'=>array('debtor_trans_type', $transactions));
 }
