@@ -6,7 +6,7 @@ require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_
 
 /**
  * Fixed retained Sales JSON owners and their transaction-family discriminators.
- * Templates/agreements/customer masters expose raw custom_data through their readers;
+ * Templates/agreements/customer and commercial-policy masters expose custom_data;
  * recognizing ordinary JSON here does not add classification to their writers.
  * No caller can select a table, discriminator, or supported transaction family.
  *
@@ -23,6 +23,9 @@ function sales_dimension_reference_sources()
         'sales_agreements'=>array(null, array()),
         'sales_agreement_lines'=>array(null, array()),
         'sales_types'=>array(null, array()),
+        'sales_pricelists'=>array(null, array()),
+        'sales_pricelist_rules'=>array(null, array()),
+        'sales_discount_programs'=>array(null, array()),
         'debtor_trans'=>array('type', $transactions),
         'debtor_trans_details'=>array('debtor_trans_type', $transactions));
 }
