@@ -15,7 +15,8 @@ function dimension_reference_owners() {
         'hrm_organization_units'=>array('legacy_cost_center_id'),
         'hrm_assignments'=>array('legacy_cost_center_id','legacy_dimension2_id'),
         'gl_trans'=>$pair, 'overtime'=>$pair, 'quick_entry_lines'=>$pair,
-        'sales_agreements'=>$pair, 'stock_master'=>$pair, 'warranty_provision_log'=>$pair,
+        'sales_agreements'=>$pair, 'stock_master'=>$pair,
+        'stock_category'=>array('dflt_dim1','dflt_dim2'), 'warranty_provision_log'=>$pair,
         'supp_invoice_items'=>$pair, 'suppliers'=>$pair, 'purch_requisitions'=>$pair,
         'purch_rfq'=>$pair, 'purch_agreements'=>$pair,
         'hrm_pay_gl_001_gl_posting_lines'=>array('core_dimension_id','core_dimension2_id'));

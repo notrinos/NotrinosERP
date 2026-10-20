@@ -21,7 +21,11 @@ function inventory_retained_dimension_reference_sources()
         'wh_consignment_stock'=>array(null,array()),
         'warranty_claims'=>array(null,array()),
         'recall_campaigns'=>array(null,array()),
-        'wh_operation_lines'=>array(null,array()));
+        'wh_operation_lines'=>array(null,array()),
+        'serial_numbers'=>array(null,array()),
+        'stock_batches'=>array(null,array()),
+        'stock_category'=>array(null,array()),
+        'locations'=>array(null,array()));
 }
 
 /** Recheck exact active-prefix columns; no caller-supplied schema or cached absence. */
