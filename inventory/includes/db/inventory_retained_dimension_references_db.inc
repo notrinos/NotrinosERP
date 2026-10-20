@@ -25,7 +25,8 @@ function inventory_retained_dimension_reference_sources()
         'serial_numbers'=>array(null,array()),
         'stock_batches'=>array(null,array()),
         'stock_category'=>array(null,array()),
-        'locations'=>array(null,array()));
+        'locations'=>array(null,array()),
+        'item_codes'=>array(null,array()));
 }
 
 /** Recheck exact active-prefix columns; no caller-supplied schema or cached absence. */

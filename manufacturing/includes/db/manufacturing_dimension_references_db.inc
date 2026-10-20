@@ -3,10 +3,10 @@
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
 require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
 
-/** Return fixed raw JSON owners exposed by work-order and issue-item readers. */
+/** Return fixed raw JSON owners exposed by work-order, issue-item and BOM readers. */
 function manufacturing_dimension_reference_sources()
 {
-    return array('workorders','wo_issue_items');
+    return array('workorders','wo_issue_items','bom');
 }
 
 /** Recheck exact active-prefix retained storage without cached/caller authority. */
