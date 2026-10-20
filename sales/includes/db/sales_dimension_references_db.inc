@@ -26,6 +26,9 @@ function sales_dimension_reference_sources()
         'sales_pricelists'=>array(null, array()),
         'sales_pricelist_rules'=>array(null, array()),
         'sales_discount_programs'=>array(null, array()),
+        'sales_coupons'=>array(null, array()),
+        'sales_commission_plans'=>array(null, array()),
+        'sales_commission_entries'=>array('trans_type', array('ST_SALESINVOICE','ST_CUSTCREDIT')),
         'debtor_trans'=>array('type', $transactions),
         'debtor_trans_details'=>array('debtor_trans_type', $transactions));
 }
@@ -63,6 +66,9 @@ function sales_dimension_reference_schema_available($table)
  * scope, including completed/templates, quotes and orphan detail rows. Ordinary
  * debtor JSON is independently preflighted and SQL-filtered by its source type;
  * this never changes scalar header availability or admits a protected family.
+ * Commission entries are ordinary operational Sales invoice/credit records only;
+ * their amounts/status never prove posted payroll/AP/GL costs. Other families
+ * are excluded by SQL CASE before payload transfer, including protected payroll.
  * No positive match means unknown: extension-defined encodings, other retained
  * sources, audit and sessions have not been attested by this bounded owner.
  *
