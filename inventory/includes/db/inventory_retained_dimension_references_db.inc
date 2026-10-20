@@ -32,7 +32,12 @@ function inventory_retained_dimension_reference_sources()
         'wh_routes'=>array(null,array()),
         'wh_route_rules'=>array(null,array()),
         'wh_putaway_rules'=>array(null,array()),
-        'wh_replenishment_rules'=>array(null,array()));
+        'wh_replenishment_rules'=>array(null,array()),
+        'wh_picking_waves'=>array(null,array()),
+        'wh_packages'=>array(null,array()),
+        'wh_bin_stock'=>array(null,array()),
+        'prices'=>array(null,array()),
+        'purch_data'=>array(null,array()));
 }
 
 /** Recheck exact active-prefix columns; no caller-supplied schema or cached absence. */

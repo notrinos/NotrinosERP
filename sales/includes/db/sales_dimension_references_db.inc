@@ -22,6 +22,7 @@ function sales_dimension_reference_sources()
         'sales_quotation_template_lines'=>array(null, array()),
         'sales_agreements'=>array(null, array()),
         'sales_agreement_lines'=>array(null, array()),
+        'sales_types'=>array(null, array()),
         'debtor_trans'=>array('type', $transactions),
         'debtor_trans_details'=>array('debtor_trans_type', $transactions));
 }
