@@ -37,19 +37,100 @@ function get_supplier_details_to_order(&$order, $supplier_id) {
 	$order->set_supplier($supplier_id, $myrow['supp_name'], $myrow['curr_code'], $myrow['tax_group_id'], $myrow['tax_included']);
 }
 
+/** Retain PO history unless the locked aggregate has no known dependent owner. */
+function purchase_order_cancellation_is_unused($po, $header) {
+	if (($header['custom_data'] !== null && $header['custom_data'] !== '' && $header['custom_data'] !== '{}')
+		|| $header['alloc'] != 0 || $header['prep_amount'] != 0
+		|| !empty($header['drop_ship']) || !empty($header['drop_ship_so_no'])
+		|| !empty($header['agreement_id']) || !empty($header['requisition_id']) || !empty($header['rfq_id']))
+		return false;
+	$lines = db_query("SELECT * FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($po)
+		." ORDER BY po_detail_item FOR UPDATE", 'Could not lock purchase order cancellation lines');
+	if (!$lines)
+		return false;
+	while ($line = db_fetch($lines)) {
+		if (($line['custom_data'] !== null && $line['custom_data'] !== '' && $line['custom_data'] !== '{}')
+			|| $line['quantity_received'] != 0 || $line['qty_invoiced'] != 0
+			|| $line['act_price'] != 0 || $line['std_cost_unit'] != 0
+			|| !empty($line['cross_dock_so_no']) || !empty($line['cross_dock_so_line']))
+			return false;
+		foreach (array('grn_items' => 'po_detail_item', 'supp_invoice_items' => 'po_detail_item_id') as $table => $column) {
+			$result = db_query("SELECT ".$column." FROM ".TB_PREF.$table." WHERE ".$column."="
+				.db_escape($line['po_detail_item'])." LIMIT 1 FOR UPDATE", 'Could not verify purchase line history');
+			if (!$result || db_num_rows($result))
+				return false;
+		}
+	}
+	$conditions = array(
+		'grn_batch' => 'purch_order_no='.db_escape($po),
+		'supp_allocations' => '(trans_type_to='.ST_PURCHORDER.' AND trans_no_to='.db_escape($po)
+			.') OR (trans_type_from='.ST_PURCHORDER.' AND trans_no_from='.db_escape($po).')',
+		'sales_order_details' => 'drop_ship_po_no='.db_escape($po),
+		'wh_material_requests' => 'linked_doc_type='.ST_PURCHORDER.' AND linked_doc_no='.db_escape($po),
+		'purch_requisition_lines' => 'po_number='.db_escape($po),
+		'procurement_plan_lines' => 'po_number='.db_escape($po),
+		'purch_matching_exceptions' => 'po_number='.db_escape($po),
+		'attachments' => 'type_no='.ST_PURCHORDER.' AND trans_no='.db_escape($po),
+		'comments' => 'type='.ST_PURCHORDER.' AND id='.db_escape($po),
+		'voided' => 'type='.ST_PURCHORDER.' AND id='.db_escape($po),
+		'gl_trans' => 'type='.ST_PURCHORDER.' AND type_no='.db_escape($po),
+		'approval_drafts' => 'trans_type='.ST_PURCHORDER.' AND (reserved_trans_no='.db_escape($po)
+			.' OR approved_trans_no='.db_escape($po).')'
+	);
+	foreach ($conditions as $table => $condition) {
+		$result = db_query("SELECT 1 FROM ".TB_PREF.$table." WHERE ".$condition." LIMIT 1 FOR UPDATE",
+			'Could not verify purchase order cancellation history');
+		if (!$result || db_num_rows($result))
+			return false;
+	}
+	return true;
+}
+
+/** Cancel only an authorized, locked and unfulfilled PO; failure retains the cart. */
 function delete_po($po) {
 	global $Refs;
 
-	begin_transaction();
-	hook_db_prevoid(ST_PURCHORDER, $po);
-	$sql = "DELETE FROM ".TB_PREF."purch_orders WHERE order_no=".db_escape($po);
-	db_query($sql, 'The order header could not be deleted');
-
-	$sql = "DELETE FROM ".TB_PREF."purch_order_details WHERE order_no =".db_escape($po);
-	db_query($sql, 'The order detail lines could not be deleted');
-
-	$Refs->restore_last(ST_PURCHORDER, $po);
-	commit_transaction();
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| !is_scalar($po) || (string)(int)$po !== (string)$po || (int)$po <= 0)
+		return false;
+	if (!begin_transaction())
+		return false;
+	try {
+		$header = db_fetch(db_query("SELECT * FROM ".TB_PREF."purch_orders WHERE order_no="
+			.db_escape($po)." FOR UPDATE", 'Could not lock purchase order cancellation'));
+		if (!$header)
+			return reject_purchase_order_update();
+		if (!$_SESSION['wa_current_user']->can_access('SA_EDITOTHERSTRANS')) {
+			$audit = db_fetch(db_query("SELECT user FROM ".TB_PREF."audit_trail WHERE type=".ST_PURCHORDER
+				." AND trans_no=".db_escape($po)." AND gl_seq IS NOT NULL LIMIT 1 FOR UPDATE",
+				'Could not verify purchase order cancellation authority'));
+			if (!$audit || $audit['user'] != $_SESSION['wa_current_user']->user)
+				return reject_purchase_order_update();
+		}
+		if (!purchase_order_cancellation_is_unused($po, $header))
+			return reject_purchase_order_update();
+		hook_db_prevoid(ST_PURCHORDER, $po);
+		$current = db_fetch(db_query("SELECT * FROM ".TB_PREF."purch_orders WHERE order_no="
+			.db_escape($po)." FOR UPDATE", 'Could not recheck purchase order cancellation'));
+		if ($current !== $header || !purchase_order_cancellation_is_unused($po, $current))
+			return reject_purchase_order_update();
+		$Refs->restore_last(ST_PURCHORDER, $po);
+		if (!db_query("DELETE FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($po),
+			'The order detail lines could not be deleted')
+			|| !db_query("DELETE FROM ".TB_PREF."purch_orders WHERE order_no=".db_escape($po),
+			'The order header could not be deleted'))
+			return reject_purchase_order_update();
+		add_audit_trail(ST_PURCHORDER, $po, Today(), _('Cancelled.'));
+		if (!commit_transaction()) {
+			cancel_transaction();
+			return false;
+		}
+		return true;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 }
 
 function add_po(&$po_obj) {

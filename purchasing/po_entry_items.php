@@ -277,8 +277,10 @@ function handle_cancel_po() {
 
 	$fixed_asset = $_SESSION['PO']->fixed_asset;
 
-	if($_SESSION['PO']->order_no != 0)
-		delete_po($_SESSION['PO']->order_no);
+	if($_SESSION['PO']->order_no != 0) {
+		if (!delete_po($_SESSION['PO']->order_no))
+			return;
+	}
 	else {
 		unset($_SESSION['PO']);
 

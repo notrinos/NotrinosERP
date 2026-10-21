@@ -26,6 +26,11 @@
 include_once($path_to_root . '/includes/db/class.entity.inc');
 
 class purch_orders_entity extends Entity {
+	/** Header-only CRUD cannot authorize removal of the purchase order aggregate. */
+	function delete($key) {
+		return false;
+	}
+
 	function __construct() {
 		parent::__construct(
 			'purch_orders',
