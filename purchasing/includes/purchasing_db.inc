@@ -188,6 +188,23 @@ function get_po_prepayments($supp_trans) {
 //
 //	Add Purchase Order, GRN or Purchase Invoice with parent auto documents (if any)
 //
+/** Recheck the admitted company, command identity and current role between direct stages. */
+function direct_supplier_transaction_authorized($cart, $original, $order_no) {
+	return purchase_order_creation_authorized($original)
+		&& $cart->is_current_company()
+		&& (string)$cart->order_no === (string)$order_no
+		&& (string)$cart->company === (string)$original->company
+		&& $cart->company_prefix === $original->company_prefix
+		&& $cart->trans_type === $original->trans_type
+		&& (string)$cart->supplier_id === (string)$original->supplier_id;
+}
+
+/** Publish generated direct-document identities only after the complete native command succeeds. */
+function publish_direct_supplier_cart($cart, $submitted_cart) {
+	foreach (get_object_vars($cart) as $key => $value)
+		$submitted_cart->$key = $value;
+}
+
 function add_direct_supp_trans($cart) {
 	global $Refs, $type_shortcuts;
 	if (!purchase_order_creation_authorized($cart))
@@ -197,6 +214,12 @@ function add_direct_supp_trans($cart) {
 	$original = clone $cart;
 	foreach ($cart->line_items as $key => $line)
 		$original->line_items[$key] = clone $line;
+	// Native SQL errors can terminate a request rather than throw. Keep the
+	// session/submitted cart unchanged until the complete command commits.
+	$submitted_cart = $cart;
+	$cart = clone $cart;
+	foreach ($cart->line_items as $key => $line)
+		$cart->line_items[$key] = clone $line;
 	if (!begin_transaction())
 		return false;
 	try {
@@ -214,6 +237,8 @@ function add_direct_supp_trans($cart) {
 		if (!$order_no)
 			throw new RuntimeException('Direct purchase order parent failed.');
 		$cart->order_no = $order_no;
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+			throw new RuntimeException('Direct purchase authority changed after parent creation.');
 
 		//Direct GRN
 		if ($cart->trans_type == ST_SUPPRECEIVE)
@@ -225,12 +250,15 @@ function add_direct_supp_trans($cart) {
 		$grn_no = add_grn($cart);
 		if (!$grn_no)
 			throw new RuntimeException('Direct goods receipt failed.');
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+			throw new RuntimeException('Direct purchase authority changed after receipt.');
 		if ($cart->trans_type == ST_SUPPRECEIVE) {
 			if (!commit_transaction()) {
 				if (!empty($GLOBALS['transaction_level']))
 					throw new RuntimeException('Direct purchase commit failed.');
 				display_error(_('The purchase document was committed, but resource cleanup needs recovery. Reload it before continuing.'));
 			}
+			publish_direct_supplier_cart($cart, $submitted_cart);
 			return $grn_no;
 		}
 		//	Direct Purchase Invoice
@@ -267,11 +295,16 @@ function add_direct_supp_trans($cart) {
 		$inv_no = add_supp_invoice($inv);
 		if (!$inv_no)
 			throw new RuntimeException('Direct supplier invoice failed.');
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no)
+			|| (string)$inv->supplier_id !== (string)$original->supplier_id || $inv->trans_type != ST_SUPPINVOICE)
+			throw new RuntimeException('Direct purchase authority changed after invoice.');
 
 		if ($cart->cash_account) {
 			$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
 			if (!$pmt_no)
 				throw new RuntimeException('Direct supplier payment failed.');
+			if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+				throw new RuntimeException('Direct purchase authority changed after payment.');
 			add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
 			update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);
 			update_supp_trans_allocation(ST_SUPPAYMENT, $pmt_no, $inv->supplier_id);
@@ -281,6 +314,7 @@ function add_direct_supp_trans($cart) {
 				throw new RuntimeException('Direct purchase commit failed.');
 			display_error(_('The purchase document was committed, but resource cleanup needs recovery. Reload it before continuing.'));
 		}
+		publish_direct_supplier_cart($cart, $submitted_cart);
 		return $inv_no;
 	} catch (Exception $exception) {
 		cancel_transaction();
