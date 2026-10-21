@@ -195,7 +195,8 @@ if (isset($_POST['SaveMatch']) && can_save_matching_config()) {
             get_post('action_on_exceed'),
             (int)get_post('supplier_id'),
             null,
-            check_value('match_inactive') ? 1 : 0
+            check_value('match_inactive') ? 1 : 0,
+            true
         );
         display_notification(_('Matching configuration has been updated.'));
     } else {
@@ -244,7 +245,8 @@ if (isset($_POST['SavePolicy']) && can_save_bill_policy()) {
             check_value('auto_match_on_grn') ? 1 : 0,
             check_value('policy_is_default') ? 1 : 0,
             check_value('policy_inactive') ? 1 : 0,
-            null
+            null,
+            true
         );
         display_notification(_('Bill control policy has been updated.'));
     } else {

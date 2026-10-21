@@ -11,6 +11,30 @@
 ***********************************************************************/
 
 /**
+ * Quote matching metadata without HTML encoding; retain valid raw JSON exactly.
+ * Structured inputs retain the existing array conversion. Only the established
+ * slash-escaped input fallback is normalized; invalid input fails before SQL.
+ *
+ * @param mixed $custom_data Owner metadata or its serialized representation
+ * @return string|false SQL literal, or false for an encoding failure
+ */
+function sql_purch_matching_retained_data($custom_data)
+{
+    if ($custom_data === null) return 'NULL';
+    $json = is_string($custom_data) ? $custom_data : json_encode((array)$custom_data);
+    if ($json === false || preg_match('//u', $json) !== 1) return false;
+    json_decode($json);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        // Preserve the established slash-escaped input compatibility only.
+        $decoded = json_decode(stripslashes($json), true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) return false;
+        $json = json_encode($decoded);
+        if ($json === false) return false;
+    }
+    return "'".db_escape_function($json)."'";
+}
+
+/**
  * Decode JSON custom data used by purchasing matching tables.
  *
  * @param mixed $custom_data
@@ -106,6 +130,9 @@ function clear_last_purch_match_result()
  */
 function add_matching_config($match_type, $tolerance_type, $tolerance_value, $action_on_exceed, $supplier_id = 0, $custom_data = null, $inactive = 0)
 {
+    $custom_data_sql = sql_purch_matching_retained_data($custom_data);
+    if ($custom_data_sql === false) return false;
+
     $sql = "INSERT INTO " . TB_PREF . "purch_matching_config (
             match_type, supplier_id, tolerance_type, tolerance_value, action_on_exceed, custom_data, inactive
         ) VALUES (
@@ -114,7 +141,7 @@ function add_matching_config($match_type, $tolerance_type, $tolerance_value, $ac
             " . db_escape($tolerance_type) . ",
             " . db_escape((float)$tolerance_value) . ",
             " . db_escape($action_on_exceed) . ",
-            " . sql_purch_matching_custom_data($custom_data) . ",
+            " . $custom_data_sql . ",
             " . (int)$inactive . "
         )";
 
@@ -133,17 +160,21 @@ function add_matching_config($match_type, $tolerance_type, $tolerance_value, $ac
  * @param int    $supplier_id
  * @param mixed  $custom_data
  * @param int    $inactive
+ * @param bool   $preserve_custom_data Preserve stored metadata during non-metadata maintenance
  * @return bool
  */
-function update_matching_config($id, $match_type, $tolerance_type, $tolerance_value, $action_on_exceed, $supplier_id = 0, $custom_data = null, $inactive = 0)
+function update_matching_config($id, $match_type, $tolerance_type, $tolerance_value, $action_on_exceed, $supplier_id = 0, $custom_data = null, $inactive = 0, $preserve_custom_data = false)
 {
+    $custom_data_sql = $preserve_custom_data ? 'custom_data' : sql_purch_matching_retained_data($custom_data);
+    if ($custom_data_sql === false) return false;
+
     $sql = "UPDATE " . TB_PREF . "purch_matching_config SET
             match_type = " . db_escape($match_type) . ",
             supplier_id = " . (int)$supplier_id . ",
             tolerance_type = " . db_escape($tolerance_type) . ",
             tolerance_value = " . db_escape((float)$tolerance_value) . ",
             action_on_exceed = " . db_escape($action_on_exceed) . ",
-            custom_data = " . sql_purch_matching_custom_data($custom_data) . ",
+            custom_data = " . $custom_data_sql . ",
             inactive = " . (int)$inactive . "
         WHERE id = " . (int)$id;
 
@@ -278,6 +309,9 @@ function get_matching_tolerance($match_type, $supplier_id = 0)
  */
 function create_matching_exception($exception_type, $trans_type, $trans_no, $details)
 {
+    $custom_data_sql = sql_purch_matching_retained_data(isset($details['custom_data']) ? $details['custom_data'] : null);
+    if ($custom_data_sql === false) return false;
+
     $sql = "INSERT INTO " . TB_PREF . "purch_matching_exceptions (
             exception_type, trans_type, trans_no, supplier_id, po_number, grn_batch_id,
             stock_id, expected_value, actual_value, variance_amount, variance_percent,
@@ -299,7 +333,7 @@ function create_matching_exception($exception_type, $trans_type, $trans_no, $det
             " . (int)(isset($details['resolved_by']) ? $details['resolved_by'] : 0) . ",
             " . (isset($details['resolved_date']) && $details['resolved_date'] !== '' ? db_escape($details['resolved_date']) : 'NULL') . ",
             NOW(),
-            " . sql_purch_matching_custom_data(isset($details['custom_data']) ? $details['custom_data'] : null) . "
+            " . $custom_data_sql . "
         )";
 
     db_query($sql, 'could not create purchase matching exception');
@@ -647,6 +681,9 @@ function get_bill_control_policy()
  */
 function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice, $require_po_for_invoice, $allow_over_invoice, $auto_match_on_grn, $is_default, $inactive, $custom_data = null)
 {
+    $custom_data_sql = sql_purch_matching_retained_data($custom_data);
+    if ($custom_data_sql === false) return false;
+
     if ((int)$is_default)
         db_query("UPDATE " . TB_PREF . "purch_bill_control_policy SET is_default = 0", 'could not reset default policy');
 
@@ -662,7 +699,7 @@ function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice
             " . (int)$auto_match_on_grn . ",
             " . (int)$is_default . ",
             " . (int)$inactive . ",
-            " . sql_purch_matching_custom_data($custom_data) . "
+            " . $custom_data_sql . "
         )";
 
     db_query($sql, 'could not add bill control policy');
@@ -682,10 +719,14 @@ function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice
  * @param int    $is_default
  * @param int    $inactive
  * @param mixed  $custom_data
+ * @param bool   $preserve_custom_data Preserve stored metadata during non-metadata maintenance
  * @return bool
  */
-function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before_invoice, $require_po_for_invoice, $allow_over_invoice, $auto_match_on_grn, $is_default, $inactive, $custom_data = null)
+function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before_invoice, $require_po_for_invoice, $allow_over_invoice, $auto_match_on_grn, $is_default, $inactive, $custom_data = null, $preserve_custom_data = false)
 {
+    $custom_data_sql = $preserve_custom_data ? 'custom_data' : sql_purch_matching_retained_data($custom_data);
+    if ($custom_data_sql === false) return false;
+
     if ((int)$is_default)
         db_query("UPDATE " . TB_PREF . "purch_bill_control_policy SET is_default = 0", 'could not reset default policy');
 
@@ -698,7 +739,7 @@ function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before
             auto_match_on_grn = " . (int)$auto_match_on_grn . ",
             is_default = " . (int)$is_default . ",
             inactive = " . (int)$inactive . ",
-            custom_data = " . sql_purch_matching_custom_data($custom_data) . "
+            custom_data = " . $custom_data_sql . "
         WHERE id = " . (int)$id;
 
     db_query($sql, 'could not update bill control policy');
