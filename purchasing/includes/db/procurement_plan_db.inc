@@ -330,8 +330,8 @@ function has_pending_procurement_plan_approval($plan_id)
 		WHERE trans_type = " . ST_PROCUREMENTPLAN . "
 			AND status = " . APPROVAL_STATUS_PENDING . "
 			AND (
-				draft_data LIKE " . db_escape($raw_pattern) . "
-				OR draft_data LIKE " . db_escape($encoded_pattern) . "
+				draft_data LIKE '" . db_escape_function($raw_pattern) . "'
+				OR draft_data LIKE '" . db_escape_function($encoded_pattern) . "'
 			)
 		ORDER BY id DESC LIMIT 1";
 
@@ -505,121 +505,144 @@ function skip_plan_line($line_id, $reason = '')
 function create_pos_from_plan($plan_id)
 {
 	global $Refs;
-
-	$plan = get_procurement_plan($plan_id);
-	if (!$plan || !in_array($plan['status'], array('confirmed', 'in_progress', 'completed')))
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| !$_SESSION['wa_current_user']->can_access('SA_PROCUREMENTPLAN'))
 		return array();
-
-	if (has_pending_procurement_plan_approval($plan_id))
+	if (!begin_transaction())
 		return array();
+	try {
+		$plan = get_procurement_plan($plan_id);
+		if (!$plan || !in_array($plan['status'], array('confirmed', 'in_progress', 'completed')))
+			throw new RuntimeException('Purchase order conversion was not completed.');
 
-	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines
-		WHERE plan_id = " . (int)$plan_id . "
-		AND status = 'approved'
-		AND po_number = 0
-		ORDER BY supplier_id, id";
-	$result = db_query($sql, 'could not retrieve approved procurement plan lines');
+		if (has_pending_procurement_plan_approval($plan_id))
+			throw new RuntimeException('Purchase order conversion was not completed.');
 
-	$grouped_lines = array();
-	while ($line = db_fetch($result)) {
-		if ((int)$line['supplier_id'] <= 0 || (float)$line['suggested_order_qty'] <= 0)
-			continue;
+		$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines
+			WHERE plan_id = " . (int)$plan_id . "
+			AND status = 'approved'
+			AND po_number = 0
+			ORDER BY supplier_id, id";
+		$result = db_query($sql, 'could not retrieve approved procurement plan lines');
 
-		if (!isset($grouped_lines[$line['supplier_id']]))
-			$grouped_lines[$line['supplier_id']] = array();
+		$grouped_lines = array();
+		while ($line = db_fetch($result)) {
+			if ((int)$line['supplier_id'] <= 0 || (float)$line['suggested_order_qty'] <= 0)
+				continue;
 
-		$grouped_lines[$line['supplier_id']][] = $line;
-	}
+			if (!isset($grouped_lines[$line['supplier_id']]))
+				$grouped_lines[$line['supplier_id']] = array();
 
-	if (empty($grouped_lines))
-		return array();
+			$grouped_lines[$line['supplier_id']][] = $line;
+		}
 
-	$po_numbers = array();
-	begin_transaction();
+		if (empty($grouped_lines))
+			throw new RuntimeException('Purchase order conversion was not completed.');
 
-	foreach ($grouped_lines as $supplier_id => $supplier_lines) {
-		$purchase_order = new purch_order();
-		$purchase_order->trans_type = ST_PURCHORDER;
-		$purchase_order->orig_order_date = Today();
-		$purchase_order->due_date = Today();
-		$purchase_order->Comments = sprintf(_('Created from Procurement Plan %s'), (int)$plan_id);
+		$po_numbers = array();
 
-		$first_location = '';
-		foreach ($supplier_lines as $line) {
-			if ($line['location'] !== '') {
-				$first_location = $line['location'];
-				break;
+		foreach ($grouped_lines as $supplier_id => $supplier_lines) {
+			$purchase_order = new purch_order();
+			$purchase_order->trans_type = ST_PURCHORDER;
+			$purchase_order->orig_order_date = Today();
+			$purchase_order->due_date = Today();
+			$purchase_order->Comments = sprintf(_('Created from Procurement Plan %s'), (int)$plan_id);
+
+			$first_location = '';
+			foreach ($supplier_lines as $line) {
+				if ($line['location'] !== '') {
+					$first_location = $line['location'];
+					break;
+				}
+			}
+			if ($first_location !== '')
+				$purchase_order->Location = $first_location;
+
+			get_supplier_details_to_order($purchase_order, (int)$supplier_id);
+			$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
+				'supplier_id' => (int)$supplier_id,
+				'date' => $purchase_order->orig_order_date,
+			));
+
+			foreach ($supplier_lines as $line) {
+				$price = (float)$line['estimated_price'] > 0
+					? (float)$line['estimated_price']
+					: (float)get_purchase_price((int)$supplier_id, $line['stock_id'], (float)$line['suggested_order_qty']);
+
+				$description = isset($line['stock_description']) ? $line['stock_description'] : null;
+				$purchase_order->add_to_order(
+					count($purchase_order->line_items),
+					$line['stock_id'],
+					(float)$line['suggested_order_qty'],
+					$description,
+					$price,
+					null,
+					$purchase_order->due_date,
+					0,
+					0
+				);
+			}
+
+			if (!$purchase_order->order_has_items())
+				continue;
+
+			$po_number = add_po($purchase_order);
+			if (!$po_number) {
+				throw new RuntimeException('Purchase order conversion was not completed.');
+			if (!$_SESSION['wa_current_user']->can_access('SA_PROCUREMENTPLAN'))
+				throw new RuntimeException('Purchase source authority changed.');
+			}
+
+			$po_numbers[] = (int)$po_number;
+			foreach ($supplier_lines as $line) {
+				$sql = "UPDATE " . TB_PREF . "procurement_plan_lines
+					SET status = 'ordered', po_number = " . (int)$po_number . "
+					WHERE id = " . (int)$line['id'];
+				if (!db_query($sql, 'could not mark procurement plan line as ordered'))
+					throw new RuntimeException('Purchase order source linkage failed.');
 			}
 		}
-		if ($first_location !== '')
-			$purchase_order->Location = $first_location;
 
-		get_supplier_details_to_order($purchase_order, (int)$supplier_id);
-		$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
-			'supplier_id' => (int)$supplier_id,
-			'date' => $purchase_order->orig_order_date,
-		));
-
-		foreach ($supplier_lines as $line) {
-			$price = (float)$line['estimated_price'] > 0
-				? (float)$line['estimated_price']
-				: (float)get_purchase_price((int)$supplier_id, $line['stock_id'], (float)$line['suggested_order_qty']);
-
-			$description = isset($line['stock_description']) ? $line['stock_description'] : null;
-			$purchase_order->add_to_order(
-				count($purchase_order->line_items),
-				$line['stock_id'],
-				(float)$line['suggested_order_qty'],
-				$description,
-				$price,
-				null,
-				$purchase_order->due_date,
-				0,
-				0
-			);
-		}
-
-		if (!$purchase_order->order_has_items())
-			continue;
-
-		$po_number = add_po($purchase_order);
-		if (!$po_number) {
-			cancel_transaction();
-			return array();
-		}
-
-		$po_numbers[] = (int)$po_number;
-		foreach ($supplier_lines as $line) {
-			$sql = "UPDATE " . TB_PREF . "procurement_plan_lines
-				SET status = 'ordered', po_number = " . (int)$po_number . "
-				WHERE id = " . (int)$line['id'];
-			db_query($sql, 'could not mark procurement plan line as ordered');
-		}
-	}
-
-	if (!empty($po_numbers)) {
-		$sql = "UPDATE " . TB_PREF . "procurement_plan
-			SET status = 'in_progress'
-			WHERE id = " . (int)$plan_id;
-		db_query($sql, 'could not update procurement plan status');
-
-		$sql = "SELECT COUNT(*) AS pending_count FROM " . TB_PREF . "procurement_plan_lines
-			WHERE plan_id = " . (int)$plan_id . "
-			AND status IN ('pending', 'approved')";
-		$result = db_query($sql, 'could not check remaining procurement plan lines');
-		$pending_row = db_fetch($result);
-		if ($pending_row && (int)$pending_row['pending_count'] === 0) {
+		if (!empty($po_numbers)) {
 			$sql = "UPDATE " . TB_PREF . "procurement_plan
-				SET status = 'completed'
+				SET status = 'in_progress'
 				WHERE id = " . (int)$plan_id;
-			db_query($sql, 'could not set procurement plan completed status');
-		}
-	}
+			if (!db_query($sql, 'could not update procurement plan status'))
+				throw new RuntimeException('Purchase order source linkage failed.');
 
-	commit_transaction();
-	$hook_payload = array('plan_id' => (int)$plan_id, 'po_numbers' => $po_numbers);
-	hook_invoke_all('procurement_plan_pos_created', $hook_payload);
-	return $po_numbers;
+			$sql = "SELECT COUNT(*) AS pending_count FROM " . TB_PREF . "procurement_plan_lines
+				WHERE plan_id = " . (int)$plan_id . "
+				AND status IN ('pending', 'approved')";
+			$result = db_query($sql, 'could not check remaining procurement plan lines');
+			$pending_row = db_fetch($result);
+			if ($pending_row && (int)$pending_row['pending_count'] === 0) {
+				$sql = "UPDATE " . TB_PREF . "procurement_plan
+					SET status = 'completed'
+					WHERE id = " . (int)$plan_id;
+				if (!db_query($sql, 'could not set procurement plan completed status'))
+					throw new RuntimeException('Purchase order source linkage failed.');
+			}
+		}
+
+		$hook_payload = array('plan_id' => (int)$plan_id, 'po_numbers' => $po_numbers);
+		hook_invoke_all('procurement_plan_pos_created', $hook_payload);
+
+		if (!commit_transaction()) {
+			if (!empty($GLOBALS['transaction_level']))
+				throw new RuntimeException('Purchase order conversion commit failed.');
+			// SQL is committed: publish its identities so callers cannot mistake
+			// resource cleanup failure for a rolled-back conversion and retry.
+			display_error(_('The purchase order conversion was committed, but resource cleanup needs recovery. Reload the source before continuing.'));
+		}
+		return $po_numbers;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return array();
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 }
 
 /**

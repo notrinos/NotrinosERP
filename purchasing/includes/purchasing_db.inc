@@ -192,84 +192,111 @@ function add_direct_supp_trans($cart) {
 	global $Refs, $type_shortcuts;
 	if (!purchase_order_creation_authorized($cart))
 		return false;
-
-	if ($cart->trans_type != ST_PURCHORDER) {
-		// for direct grn/invoice set same dates for lines as for whole document
-		foreach ($cart->line_items as $line_no =>$line)
-			$cart->line_items[$line_no]->req_del_date = $cart->orig_order_date;
-	}
-
-	$ref = $cart->reference;
-	if ($cart->trans_type != ST_PURCHORDER) {
-		$cart->reference = 'auto';
-		begin_transaction();	// all db changes as single transaction for direct document
-	}
-	$order_no = add_po($cart);
-	if (!$order_no) {
-		cancel_transaction();
-		$cart->reference = $ref;
-		return false;
-	}
-	$cart->order_no = $order_no;
-
 	if ($cart->trans_type == ST_PURCHORDER)
-		return $order_no;
-
-	//Direct GRN
-	if ($cart->trans_type == ST_SUPPRECEIVE)
-		$cart->reference = $ref;
-	if ($cart->trans_type != ST_SUPPINVOICE)
-		$cart->Comments = $cart->reference; //grn does not hold supp_ref
-	foreach($cart->line_items as $key => $line)
-		$cart->line_items[$key]->receive_qty = $line->quantity;
-	$grn_no = add_grn($cart);
-	if ($cart->trans_type == ST_SUPPRECEIVE) {
-		commit_transaction(); // save PO+GRN
-		return $grn_no;
-	}
-	//	Direct Purchase Invoice
-	$inv = new supp_trans(ST_SUPPINVOICE);
-	$inv->Comments = $cart->Comments;
-	$inv->supplier_id = $cart->supplier_id;
-	$inv->tran_date = $cart->orig_order_date;
-	$inv->due_date = $cart->due_date;
-	$inv->dimension = $cart->dimension;
-	$inv->dimension2 = $cart->dimension2;
-	$inv->reference = $ref;
-	$inv->supp_reference = $cart->supp_ref;
-	$inv->tax_included = $cart->tax_included;
-	$supp = suppliers_entity::find($cart->supplier_id);
-	$inv->tax_group_id = $supp['tax_group_id'];
-	$inv->ov_amount = $inv->ov_gst = $inv->ov_discount = 0;
-	$total = 0;
-		foreach($cart->line_items as $key => $line) {
-		$inv->add_grn_to_trans($line->grn_item_id, $line->po_detail_rec, $line->stock_id,
-			$line->item_description, $line->receive_qty, 0, $line->receive_qty,
-			$line->price, $line->price, true, get_unit_cost($line->stock_id), '');
-		$total += round2(($line->receive_qty * $line->price), user_price_dec());
-	}
-	$inv->tax_overrides = $cart->tax_overrides;
-	if (!$inv->tax_included) {
-		$taxes = $inv->get_taxes($inv->tax_group_id, 0, false);
-		foreach( $taxes as $taxitem) {
-			$total += isset($taxitem['Override']) ? $taxitem['Override'] : $taxitem['Value'];
-		}
-	}
-	$inv->currency = $cart->curr_code;
-	$inv->ex_rate = $cart->ex_rate;
-
-	$inv_no = add_supp_invoice($inv);
-	if (!$inv_no) {
-		cancel_transaction();
+		return add_po($cart);
+	$original = clone $cart;
+	foreach ($cart->line_items as $key => $line)
+		$original->line_items[$key] = clone $line;
+	if (!begin_transaction())
 		return false;
-	}
+	try {
+		if ($cart->trans_type != ST_PURCHORDER) {
+			// for direct grn/invoice set same dates for lines as for whole document
+			foreach ($cart->line_items as $line_no =>$line)
+				$cart->line_items[$line_no]->req_del_date = $cart->orig_order_date;
+		}
 
-	if ($cart->cash_account) {
-		$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
-		add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
-		update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);
-		update_supp_trans_allocation(ST_SUPPAYMENT, $pmt_no, $inv->supplier_id);
+		$ref = $cart->reference;
+		if ($cart->trans_type != ST_PURCHORDER) {
+			$cart->reference = 'auto';
+		}
+		$order_no = add_po($cart);
+		if (!$order_no)
+			throw new RuntimeException('Direct purchase order parent failed.');
+		$cart->order_no = $order_no;
+
+		//Direct GRN
+		if ($cart->trans_type == ST_SUPPRECEIVE)
+			$cart->reference = $ref;
+		if ($cart->trans_type != ST_SUPPINVOICE)
+			$cart->Comments = $cart->reference; //grn does not hold supp_ref
+		foreach($cart->line_items as $key => $line)
+			$cart->line_items[$key]->receive_qty = $line->quantity;
+		$grn_no = add_grn($cart);
+		if (!$grn_no)
+			throw new RuntimeException('Direct goods receipt failed.');
+		if ($cart->trans_type == ST_SUPPRECEIVE) {
+			if (!commit_transaction()) {
+				if (!empty($GLOBALS['transaction_level']))
+					throw new RuntimeException('Direct purchase commit failed.');
+				display_error(_('The purchase document was committed, but resource cleanup needs recovery. Reload it before continuing.'));
+			}
+			return $grn_no;
+		}
+		//	Direct Purchase Invoice
+		$inv = new supp_trans(ST_SUPPINVOICE);
+		$inv->Comments = $cart->Comments;
+		$inv->supplier_id = $cart->supplier_id;
+		$inv->tran_date = $cart->orig_order_date;
+		$inv->due_date = $cart->due_date;
+		$inv->dimension = $cart->dimension;
+		$inv->dimension2 = $cart->dimension2;
+		$inv->reference = $ref;
+		$inv->supp_reference = $cart->supp_ref;
+		$inv->tax_included = $cart->tax_included;
+		$supp = suppliers_entity::find($cart->supplier_id);
+		$inv->tax_group_id = $supp['tax_group_id'];
+		$inv->ov_amount = $inv->ov_gst = $inv->ov_discount = 0;
+		$total = 0;
+			foreach($cart->line_items as $key => $line) {
+			$inv->add_grn_to_trans($line->grn_item_id, $line->po_detail_rec, $line->stock_id,
+				$line->item_description, $line->receive_qty, 0, $line->receive_qty,
+				$line->price, $line->price, true, get_unit_cost($line->stock_id), '');
+			$total += round2(($line->receive_qty * $line->price), user_price_dec());
+		}
+		$inv->tax_overrides = $cart->tax_overrides;
+		if (!$inv->tax_included) {
+			$taxes = $inv->get_taxes($inv->tax_group_id, 0, false);
+			foreach( $taxes as $taxitem) {
+				$total += isset($taxitem['Override']) ? $taxitem['Override'] : $taxitem['Value'];
+			}
+		}
+		$inv->currency = $cart->curr_code;
+		$inv->ex_rate = $cart->ex_rate;
+
+		$inv_no = add_supp_invoice($inv);
+		if (!$inv_no)
+			throw new RuntimeException('Direct supplier invoice failed.');
+
+		if ($cart->cash_account) {
+			$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
+			if (!$pmt_no)
+				throw new RuntimeException('Direct supplier payment failed.');
+			add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
+			update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);
+			update_supp_trans_allocation(ST_SUPPAYMENT, $pmt_no, $inv->supplier_id);
+		}
+		if (!commit_transaction()) {
+			if (!empty($GLOBALS['transaction_level']))
+				throw new RuntimeException('Direct purchase commit failed.');
+			display_error(_('The purchase document was committed, but resource cleanup needs recovery. Reload it before continuing.'));
+		}
+		return $inv_no;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		foreach (get_object_vars($cart) as $key => $value)
+			if (!property_exists($original, $key))
+				unset($cart->$key);
+		foreach (get_object_vars($original) as $key => $value)
+			$cart->$key = $value;
+		return false;
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		foreach (get_object_vars($cart) as $key => $value)
+			if (!property_exists($original, $key))
+				unset($cart->$key);
+		foreach (get_object_vars($original) as $key => $value)
+			$cart->$key = $value;
+		throw $exception;
 	}
-	commit_transaction(); // save PO+GRN+PI(+SP)
-	return $inv_no;
 }

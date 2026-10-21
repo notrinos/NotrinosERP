@@ -1092,110 +1092,130 @@ function reject_requisition($requisition_id, $rejected_by, $reason)
 function create_po_from_requisition($requisition_id, $supplier_id, $line_ids = array())
 {
 	global $Refs;
-
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('approved', 'partially_ordered')))
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION'))
 		return false;
-
-	$selected_line_ids = array();
-	if (!empty($line_ids)) {
-		foreach ($line_ids as $line_id) {
-			if ((int)$line_id > 0)
-				$selected_line_ids[] = (int)$line_id;
-		}
-	}
-
-	$grouped_lines = array();
-	$lines = get_requisition_lines($requisition_id);
-	while ($line = db_fetch($lines)) {
-		$remaining_quantity = round((float)$line['quantity'] - (float)$line['qty_ordered'], get_qty_dec($line['stock_id']));
-		if ($remaining_quantity <= 0)
-			continue;
-		if (!empty($selected_line_ids) && !in_array((int)$line['id'], $selected_line_ids))
-			continue;
-
-		$line_supplier_id = (int)$supplier_id > 0 ? (int)$supplier_id : (int)$line['preferred_supplier_id'];
-		if ($line_supplier_id <= 0)
-			continue;
-
-		if (!isset($grouped_lines[$line_supplier_id]))
-			$grouped_lines[$line_supplier_id] = array();
-
-		$line['remaining_quantity'] = $remaining_quantity;
-		$grouped_lines[$line_supplier_id][] = $line;
-	}
-
-	if (empty($grouped_lines))
+	if (!begin_transaction())
 		return false;
+	try {
+		$requisition = get_purch_requisition($requisition_id);
+		if (!$requisition || !in_array($requisition['status'], array('approved', 'partially_ordered')))
+			throw new RuntimeException('Purchase order conversion was not completed.');
 
-	$po_numbers = array();
-	begin_transaction();
-
-	foreach ($grouped_lines as $group_supplier_id => $supplier_lines) {
-		$purchase_order = new purch_order();
-		$purchase_order->trans_type = ST_PURCHORDER;
-		$purchase_order->orig_order_date = Today();
-		$purchase_order->due_date = $requisition['required_date'] ? sql2date($requisition['required_date']) : Today();
-		$purchase_order->Location = $requisition['location'];
-		$purchase_order->Comments = sprintf(_('Created from Purchase Requisition %s'), $requisition['reference']);
-		$purchase_order->delivery_address = get_location_name($requisition['location']);
-		$purchase_order->requisition_id = (int)$requisition_id;
-		get_supplier_details_to_order($purchase_order, $group_supplier_id);
-		$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
-			'supplier_id' => $group_supplier_id,
-			'date' => $purchase_order->orig_order_date,
-		));
-
-		foreach ($supplier_lines as $line) {
-			$price = (float)$line['estimated_unit_price'] > 0
-				? (float)$line['estimated_unit_price']
-				: (float)get_purchase_price($group_supplier_id, $line['stock_id']);
-			$description = $line['line_description'] !== '' ? $line['line_description'] : null;
-
-			$purchase_order->add_to_order(
-				count($purchase_order->line_items),
-				$line['stock_id'],
-				$line['remaining_quantity'],
-				$description,
-				$price,
-				$line['line_unit_of_measure'],
-				$purchase_order->due_date,
-				0,
-				0
-			);
+		$selected_line_ids = array();
+		if (!empty($line_ids)) {
+			foreach ($line_ids as $line_id) {
+				if ((int)$line_id > 0)
+					$selected_line_ids[] = (int)$line_id;
+			}
 		}
 
-		if (!$purchase_order->order_has_items())
-			continue;
+		$grouped_lines = array();
+		$lines = get_requisition_lines($requisition_id);
+		while ($line = db_fetch($lines)) {
+			$remaining_quantity = round((float)$line['quantity'] - (float)$line['qty_ordered'], get_qty_dec($line['stock_id']));
+			if ($remaining_quantity <= 0)
+				continue;
+			if (!empty($selected_line_ids) && !in_array((int)$line['id'], $selected_line_ids))
+				continue;
 
-		$po_number = add_po($purchase_order);
-		if (!$po_number) {
-			cancel_transaction();
-			return false;
+			$line_supplier_id = (int)$supplier_id > 0 ? (int)$supplier_id : (int)$line['preferred_supplier_id'];
+			if ($line_supplier_id <= 0)
+				continue;
+
+			if (!isset($grouped_lines[$line_supplier_id]))
+				$grouped_lines[$line_supplier_id] = array();
+
+			$line['remaining_quantity'] = $remaining_quantity;
+			$grouped_lines[$line_supplier_id][] = $line;
 		}
 
-		$po_numbers[] = (int)$po_number;
+		if (empty($grouped_lines))
+			throw new RuntimeException('Purchase order conversion was not completed.');
 
-		foreach ($supplier_lines as $line) {
-			$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-				qty_ordered = qty_ordered + " . db_escape($line['remaining_quantity']) . ",
-				po_number = " . (int)$po_number . ",
-				status = 'ordered'
-				WHERE id = " . (int)$line['id'];
-			db_query($sql, 'could not update ordered requisition line');
+		$po_numbers = array();
+
+		foreach ($grouped_lines as $group_supplier_id => $supplier_lines) {
+			$purchase_order = new purch_order();
+			$purchase_order->trans_type = ST_PURCHORDER;
+			$purchase_order->orig_order_date = Today();
+			$purchase_order->due_date = $requisition['required_date'] ? sql2date($requisition['required_date']) : Today();
+			$purchase_order->Location = $requisition['location'];
+			$purchase_order->Comments = sprintf(_('Created from Purchase Requisition %s'), $requisition['reference']);
+			$purchase_order->delivery_address = get_location_name($requisition['location']);
+			$purchase_order->requisition_id = (int)$requisition_id;
+			get_supplier_details_to_order($purchase_order, $group_supplier_id);
+			$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
+				'supplier_id' => $group_supplier_id,
+				'date' => $purchase_order->orig_order_date,
+			));
+
+			foreach ($supplier_lines as $line) {
+				$price = (float)$line['estimated_unit_price'] > 0
+					? (float)$line['estimated_unit_price']
+					: (float)get_purchase_price($group_supplier_id, $line['stock_id']);
+				$description = $line['line_description'] !== '' ? $line['line_description'] : null;
+
+				$purchase_order->add_to_order(
+					count($purchase_order->line_items),
+					$line['stock_id'],
+					$line['remaining_quantity'],
+					$description,
+					$price,
+					$line['line_unit_of_measure'],
+					$purchase_order->due_date,
+					0,
+					0
+				);
+			}
+
+			if (!$purchase_order->order_has_items())
+				continue;
+
+			$po_number = add_po($purchase_order);
+			if (!$po_number) {
+				throw new RuntimeException('Purchase order conversion was not completed.');
+			if (!$_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION'))
+				throw new RuntimeException('Purchase source authority changed.');
+			}
+
+			$po_numbers[] = (int)$po_number;
+
+			foreach ($supplier_lines as $line) {
+				$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
+					qty_ordered = qty_ordered + " . db_escape($line['remaining_quantity']) . ",
+					po_number = " . (int)$po_number . ",
+					status = 'ordered'
+					WHERE id = " . (int)$line['id'];
+				if (!db_query($sql, 'could not update ordered requisition line'))
+					throw new RuntimeException('Purchase order source linkage failed.');
+			}
+
+			if ((int)$requisition['material_request_id'] > 0 && $requisition['material_request_status'] === 'approved')
+				mark_material_request_ordered((int)$requisition['material_request_id'], ST_PURCHORDER, $po_number);
 		}
 
-		if ((int)$requisition['material_request_id'] > 0 && $requisition['material_request_status'] === 'approved')
-			mark_material_request_ordered((int)$requisition['material_request_id'], ST_PURCHORDER, $po_number);
+		update_purch_requisition_order_status($requisition_id);
+
+		$hook_data = array('requisition_id' => (int)$requisition_id, 'po_numbers' => $po_numbers);
+		hook_invoke_all('purch_requisition_po_created', $hook_data);
+
+		if (!commit_transaction()) {
+			if (!empty($GLOBALS['transaction_level']))
+				throw new RuntimeException('Purchase order conversion commit failed.');
+			// SQL is committed: publish its identities so callers cannot mistake
+			// resource cleanup failure for a rolled-back conversion and retry.
+			display_error(_('The purchase order conversion was committed, but resource cleanup needs recovery. Reload the source before continuing.'));
+		}
+		return $po_numbers;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		throw $exception;
 	}
-
-	update_purch_requisition_order_status($requisition_id);
-	commit_transaction();
-
-	$hook_data = array('requisition_id' => (int)$requisition_id, 'po_numbers' => $po_numbers);
-	hook_invoke_all('purch_requisition_po_created', $hook_data);
-
-	return $po_numbers;
 }
 
 /**
