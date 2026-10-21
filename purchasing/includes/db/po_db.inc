@@ -112,60 +112,152 @@ function add_po(&$po_obj) {
 	return $po_obj->order_no;
 }
 
+/** Reject an unsafe PO edit without exposing another order's retained payload. */
+function reject_purchase_order_update() {
+	cancel_transaction();
+	display_error(_('The purchase order changed or contains protected line history. Reload it before editing.'));
+	return false;
+}
+
+/**
+ * Maintain existing line identities and owner-retained state in one transaction.
+ * Receipt/invoice quantities are authoritative database state, never cart input.
+ */
 function update_po(&$po_obj) {
-	begin_transaction();
-	hook_db_prewrite($po_obj, ST_PURCHORDER);
-
-	/*Update the purchase order header with any changes */
-	$sql = "UPDATE ".TB_PREF."purch_orders SET Comments=".db_escape($po_obj->Comments).",
-		agreement_id=".(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0).",
-		requisition_id=".(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0).",
-		rfq_id=".(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0).",
-		supp_reference= ".db_escape( $po_obj->supp_ref).",
-		into_stock_location=".db_escape($po_obj->Location).",
-		ord_date='".date2sql($po_obj->orig_order_date)."',
-		delivery_address=".db_escape($po_obj->delivery_address).",
-		total=". db_escape($po_obj->get_trans_total()).",
-		prep_amount=".db_escape($po_obj->prep_amount).",
-		tax_included=".db_escape($po_obj->tax_included)."
-	WHERE order_no = ".$po_obj->order_no;
-
-	db_query($sql, 'The purchase order could not be updated');
-
-	$sql = "DELETE FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($po_obj->order_no);
-	db_query($sql, 'could not delete old purch order details');
-
-	/*Now Update the purchase order detail records */
-	foreach ($po_obj->line_items as $po_line) {
-
-		if (!$po_line->descr_editable) {
-			$data = get_purchase_data($po_obj->supplier_id, $po_line->stock_id);
-			if ($data !== false && $data['supplier_description'] != '')
-				$po_line->item_description = $data['supplier_description'];
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| $po_obj->trans_type != ST_PURCHORDER
+		|| !is_scalar($po_obj->order_no)
+		|| (string)(int)$po_obj->order_no !== (string)$po_obj->order_no
+		|| (int)$po_obj->order_no <= 0)
+		return false;
+	if (!begin_transaction())
+		return false;
+	try {
+		$order_no = (int)$po_obj->order_no;
+		$supplier_id = (int)$po_obj->supplier_id;
+		$header = db_fetch(db_query("SELECT supplier_id FROM ".TB_PREF."purch_orders WHERE order_no="
+			.db_escape($po_obj->order_no)." FOR UPDATE", 'Could not lock purchase order'));
+		if (!$header || $header['supplier_id'] != $po_obj->supplier_id)
+			return reject_purchase_order_update();
+		if (!$_SESSION['wa_current_user']->can_access('SA_EDITOTHERSTRANS')) {
+			// Match check_is_editable(), rechecking current ownership at the writer.
+			$audit = db_fetch(db_query("SELECT user FROM ".TB_PREF."audit_trail WHERE type=".ST_PURCHORDER
+				." AND trans_no=".db_escape($po_obj->order_no)." AND gl_seq IS NOT NULL LIMIT 1 FOR UPDATE",
+				'Could not verify purchase order edit authority'));
+			if (!$audit || $audit['user'] != $_SESSION['wa_current_user']->user)
+				return reject_purchase_order_update();
+		}
+		hook_db_prewrite($po_obj, ST_PURCHORDER);
+		if ((string)$po_obj->order_no !== (string)$order_no || $po_obj->supplier_id != $supplier_id
+			|| $po_obj->trans_type != ST_PURCHORDER)
+			return reject_purchase_order_update();
+		$result = db_query("SELECT * FROM ".TB_PREF."purch_order_details WHERE order_no="
+			.db_escape($po_obj->order_no)." ORDER BY po_detail_item FOR UPDATE", 'Could not lock purchase order lines');
+		$existing = array();
+		while ($row = db_fetch($result))
+			$existing[$row['po_detail_item']] = $row;
+		$kept = array();
+		foreach ($po_obj->line_items as $po_line) {
+			$id = isset($po_line->po_detail_rec) ? $po_line->po_detail_rec : 0;
+			if (!is_scalar($id) || (string)(int)$id !== (string)$id || (int)$id < 0
+				|| !is_numeric($po_line->quantity) || !is_finite((float)$po_line->quantity)
+				|| $po_line->quantity <= 0)
+				return reject_purchase_order_update();
+			if ($id) {
+				if (isset($kept[$id]) || !isset($existing[$id])
+					|| $existing[$id]['item_code'] !== $po_line->stock_id
+					|| $po_line->quantity < $existing[$id]['quantity_received']
+					|| $po_line->quantity < $existing[$id]['qty_invoiced'])
+					return reject_purchase_order_update();
+				$kept[$id] = true;
+			}
+		}
+		$removed = array_diff_key($existing, $kept);
+		foreach ($removed as $id => $row) {
+			// Opaque metadata is retained history even when no native axis is recognized.
+			if (($row['custom_data'] !== null && $row['custom_data'] !== '' && $row['custom_data'] !== '{}')
+				|| $row['quantity_received'] != 0 || $row['qty_invoiced'] != 0
+				|| $row['act_price'] != 0 || $row['std_cost_unit'] != 0
+				|| !empty($row['cross_dock_so_no']) || !empty($row['cross_dock_so_line']))
+				return reject_purchase_order_update();
+			$receipts = db_query("SELECT po_detail_item FROM ".TB_PREF."grn_items WHERE po_detail_item="
+				.db_escape($id)." LIMIT 1 FOR UPDATE", 'Could not verify purchase receipt history');
+			$invoices = db_query("SELECT po_detail_item_id FROM ".TB_PREF."supp_invoice_items WHERE po_detail_item_id="
+				.db_escape($id)." LIMIT 1 FOR UPDATE", 'Could not verify purchase invoice history');
+			if (db_num_rows($receipts) || db_num_rows($invoices))
+				return reject_purchase_order_update();
 		}
 
-		$sql = "INSERT INTO ".TB_PREF."purch_order_details (po_detail_item, order_no, item_code, 
-			description, delivery_date, unit_price, quantity_ordered, quantity_received) VALUES ("
-			.db_escape($po_line->po_detail_rec ? $po_line->po_detail_rec : 0).","
-			.db_escape($po_obj->order_no).","
-			.db_escape($po_line->stock_id).","
-			.db_escape($po_line->item_description).",'"
-			.date2sql($po_line->req_del_date)."',"
-			.db_escape($po_line->price).", "
-			.db_escape($po_line->quantity).", "
-			.db_escape($po_line->qty_received).")";
-		db_query($sql, 'One of the purchase order detail records could not be updated');
+		/*Update the purchase order header with any changes */
+		$sql = "UPDATE ".TB_PREF."purch_orders SET Comments=".db_escape($po_obj->Comments).",
+			agreement_id=".(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0).",
+			requisition_id=".(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0).",
+			rfq_id=".(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0).",
+			supp_reference= ".db_escape( $po_obj->supp_ref).",
+			into_stock_location=".db_escape($po_obj->Location).",
+			ord_date='".date2sql($po_obj->orig_order_date)."',
+			delivery_address=".db_escape($po_obj->delivery_address).",
+			total=". db_escape($po_obj->get_trans_total()).",
+			prep_amount=".db_escape($po_obj->prep_amount).",
+			tax_included=".db_escape($po_obj->tax_included)."
+		WHERE order_no = ".db_escape($po_obj->order_no);
+
+		db_query($sql, 'The purchase order could not be updated');
+
+		foreach ($removed as $id => $row) {
+			$sql = "DELETE FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($po_obj->order_no)
+				." AND po_detail_item=".db_escape($id);
+			db_query($sql, 'Could not remove unused purchase order line');
+		}
+		$saved_lines = array();
+
+		/*Now Update the purchase order detail records */
+		foreach ($po_obj->line_items as $po_line) {
+
+			if (!$po_line->descr_editable) {
+				$data = get_purchase_data($po_obj->supplier_id, $po_line->stock_id);
+				if ($data !== false && $data['supplier_description'] != '')
+					$po_line->item_description = $data['supplier_description'];
+			}
+
+			$id = isset($po_line->po_detail_rec) ? (int)$po_line->po_detail_rec : 0;
+			$values = "description=".db_escape($po_line->item_description)
+				.", delivery_date='".date2sql($po_line->req_del_date)."'"
+				.", unit_price=".db_escape($po_line->price)
+				.", quantity_ordered=".db_escape($po_line->quantity);
+			if ($id) {
+				// Leave custom_data, act_price, std_cost_unit and fulfillment state untouched.
+				$sql = "UPDATE ".TB_PREF."purch_order_details SET ".$values
+					." WHERE order_no=".db_escape($po_obj->order_no)." AND po_detail_item=".db_escape($id);
+			} else {
+				$sql = "INSERT INTO ".TB_PREF."purch_order_details SET ".$values
+					.", order_no=".db_escape($po_obj->order_no).", item_code=".db_escape($po_line->stock_id);
+			}
+			db_query($sql, 'One of the purchase order detail records could not be updated');
+			$saved_lines[] = array($po_line, $id ? $id : (int)db_insert_id(),
+				$id ? $existing[$id]['quantity_received'] : 0, $id ? $existing[$id]['qty_invoiced'] : 0);
+		}
+
+		reallocate_payments($po_obj->order_no, ST_PURCHORDER, $po_obj->orig_order_date, $po_obj->get_trans_total(), $po_obj->prepayments, $po_obj->supplier_id);
+
+		add_audit_trail($po_obj->trans_type, $po_obj->order_no, Today(), _('Updated.'));
+		hook_db_postwrite($po_obj, ST_PURCHORDER);
+		if (!commit_transaction())
+			return false;
+		foreach ($saved_lines as $saved) {
+			$saved[0]->po_detail_rec = $saved[1];
+			$saved[0]->qty_received = $saved[2];
+			$saved[0]->qty_inv = $saved[3];
+		}
+		if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
+			update_agreement_fulfillment((int)$po_obj->agreement_id);
+
+		return $po_obj->order_no;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		throw $exception;
 	}
-
-	reallocate_payments($po_obj->order_no, ST_PURCHORDER, $po_obj->orig_order_date, $po_obj->get_trans_total(), $po_obj->prepayments, $po_obj->supplier_id);
-
-	add_audit_trail($po_obj->trans_type, $po_obj->order_no, Today(), _('Updated.'));
-	hook_db_postwrite($po_obj, ST_PURCHORDER);
-	commit_transaction();
-	if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
-		update_agreement_fulfillment((int)$po_obj->agreement_id);
-
-	return $po_obj->order_no;
 }
 
 /**

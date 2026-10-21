@@ -534,6 +534,8 @@ function handle_commit_order() {
 		}
 		else { // order modification
 			$order_no = update_po($cart);
+			if (!$order_no)
+				return;
 			unset($_SESSION['PO']);
 			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$order_no.'&Updated=1');	
 		}
