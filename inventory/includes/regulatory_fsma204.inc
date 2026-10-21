@@ -33,6 +33,8 @@
  * @subpackage Inventory/Regulatory/FSMA204
  */
 
+require_once __DIR__.'/regulatory_json.inc';
+
 // =====================================================================
 // CTE TYPE / KDE CONSTANTS
 // =====================================================================
@@ -117,10 +119,16 @@ function get_fsma_required_kdes($type)
  * @param int|null    $batch_id     Batch id
  * @param string|null $lot_code     Traceability Lot Code (TLC)
  * @param array       $kde_data     Key Data Elements (associative)
- * @return int Inserted event id
+ * @return int|false Inserted event id, or false on invalid JSON
  */
 function add_fsma_tracking_event($event_type, $stock_id, $batch_id, $lot_code, $kde_data = array())
 {
+	$temperature_json = isset($kde_data['temperature_data']) ? regulatory_json_sql($kde_data['temperature_data']) : "''";
+	if ($temperature_json === false) return false;
+
+	$custom_json = isset($kde_data['custom_data']) ? regulatory_json_sql($kde_data['custom_data']) : "''";
+	if ($custom_json === false) return false;
+
 	$sql = "INSERT INTO " . TB_PREF . "fsma_tracking_events
 		(event_type, stock_id, batch_id, lot_code, location_description, loc_code,
 		 event_date, quantity, unit_of_measure,
@@ -148,11 +156,11 @@ function add_fsma_tracking_event($event_type, $stock_id, $batch_id, $lot_code, $
 		. db_escape(isset($kde_data['cooling_date']) ? $kde_data['cooling_date'] : null) . ", "
 		. db_escape(isset($kde_data['pack_date']) ? $kde_data['pack_date'] : null) . ", "
 		. db_escape(isset($kde_data['ship_date']) ? $kde_data['ship_date'] : null) . ", "
-		. db_escape(isset($kde_data['temperature_data']) ? json_encode($kde_data['temperature_data']) : null) . ", "
+		. $temperature_json . ", "
 		. db_escape(isset($kde_data['notes']) ? $kde_data['notes'] : '') . ", "
 		. (int)$_SESSION['wa_current_user']->user . ", "
 		. "NOW(), "
-		. db_escape(isset($kde_data['custom_data']) ? json_encode($kde_data['custom_data']) : null)
+		. $custom_json
 		. ")";
 
 	db_query($sql, 'could not add FSMA tracking event');

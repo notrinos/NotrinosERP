@@ -93,6 +93,21 @@ if (isset($_POST['save_settings'])) {
 // =====================================================================
 // HANDLE PROFILE ADD/EDIT/DELETE
 // =====================================================================
+
+/** Render raw decoded profile settings safely, including nested JSON values. */
+function regulatory_profile_settings_html($settings)
+{
+	$summary = '';
+	if (!is_array($settings)) return $summary;
+	foreach ($settings as $key => $value) {
+		if ($value === '' || $value === null) continue;
+		$text = is_scalar($value) ? (string)$value : json_encode($value);
+		$summary .= htmlspecialchars((string)$key, ENT_QUOTES, 'UTF-8').'='
+			.htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8').' ';
+	}
+	return $summary;
+}
+
 if (isset($_POST['add_profile'])) {
 	$input_error = 0;
 
@@ -112,7 +127,16 @@ if (isset($_POST['add_profile'])) {
 	// Build settings from posted framework-specific fields
 	$settings = array();
 	if ($framework === REG_DSCSA) {
-		$settings['ndc'] = get_post('profile_ndc');
+		// Session bootstrap HTML-encodes get_post() values. Read only this
+		// domain string in its original form after page/CSRF authorization;
+		// the JSON writer and settings renderer perform their own escaping.
+		$ndc = filter_input(INPUT_POST, 'profile_ndc', FILTER_UNSAFE_RAW);
+		if ($ndc === false) {
+			$input_error = 1;
+			display_error(_('NDC must be a text value.'));
+		} else {
+			$settings['ndc'] = $ndc === null ? '' : $ndc;
+		}
 	}
 
 	if ($input_error == 0) {
@@ -120,8 +144,10 @@ if (isset($_POST['add_profile'])) {
 		$cid = ($category_id !== '' && $category_id !== '0') ? (int)$category_id : null;
 		if ($sid) $cid = null; // item-level takes priority
 
-		add_regulatory_profile($sid, $cid, $framework, $settings, get_post('profile_notes'));
-		display_notification(_('Regulatory profile has been added.'));
+		if (add_regulatory_profile($sid, $cid, $framework, $settings, get_post('profile_notes')) === false)
+			display_error(_('Regulatory profile could not be saved. Check the settings and try again.'));
+		else
+			display_notification(_('Regulatory profile has been added.'));
 	}
 	$active_tab = 'profiles';
 }
@@ -135,10 +161,10 @@ if (isset($_POST['delete_profile']) && isset($_POST['sel_profile'])) {
 if (isset($_POST['toggle_profile']) && isset($_POST['sel_profile'])) {
 	$prof = get_regulatory_profile((int)$_POST['sel_profile']);
 	if ($prof) {
-		$settings = json_decode($prof['settings'], true);
-		if (!is_array($settings)) $settings = array();
-		update_regulatory_profile((int)$_POST['sel_profile'], !$prof['enabled'], $settings, $prof['notes']);
-		display_notification($prof['enabled'] ? _('Profile disabled.') : _('Profile enabled.'));
+		if (set_regulatory_profile_enabled((int)$_POST['sel_profile'], !$prof['enabled']))
+			display_notification($prof['enabled'] ? _('Profile disabled.') : _('Profile enabled.'));
+		else
+			display_error(_('Regulatory profile could not be saved. Please try again.'));
 	}
 	$active_tab = 'profiles';
 }
@@ -419,9 +445,6 @@ if ($active_tab === 'profiles') {
 
 	$filter_framework = get_post('filter_framework', '');
 
-	start_form();
-	hidden('tab', 'profiles');
-
 	start_table(TABLESTYLE, "width='100%'");
 	$th = array(_('ID'), _('Item'), _('Category'), _('Framework'), _('Status'), _('Settings'), _('Actions'));
 	table_header($th);
@@ -447,13 +470,7 @@ if ($active_tab === 'profiles') {
 
 		// Settings
 		$s = json_decode($row['settings'], true);
-		$settings_display = '';
-		if (is_array($s)) {
-			foreach ($s as $sk => $sv) {
-				if ($sv !== '' && $sv !== null)
-					$settings_display .= $sk . '=' . htmlspecialchars($sv, ENT_QUOTES, 'UTF-8') . ' ';
-			}
-		}
+		$settings_display = regulatory_profile_settings_html($s);
 		label_cell($settings_display ? $settings_display : '—');
 
 		// Actions
@@ -473,7 +490,6 @@ if ($active_tab === 'profiles') {
 		end_row();
 	}
 	end_table(1);
-	end_form();
 }
 
 // =====================================================================

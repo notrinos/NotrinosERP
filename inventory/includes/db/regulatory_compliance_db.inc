@@ -23,6 +23,8 @@
  * @subpackage Inventory/Regulatory
  */
 
+require_once dirname(__DIR__).'/regulatory_json.inc';
+
 // =====================================================================
 // FRAMEWORK CONSTANTS
 // =====================================================================
@@ -92,14 +94,17 @@ function get_regulatory_framework_color($framework)
  */
 function add_regulatory_profile($stock_id, $category_id, $framework, $settings = array(), $notes = '')
 {
+	$settings_json = regulatory_json_sql($settings);
+	if ($settings_json === false) return false;
+
 	$sql = "INSERT INTO " . TB_PREF . "regulatory_profiles
 		(stock_id, category_id, framework, enabled, settings, notes, created_by, created_date)
 		VALUES ("
-		. db_escape($stock_id) . ", "
-		. db_escape($category_id) . ", "
+		. db_escape($stock_id, true) . ", "
+		. db_escape($category_id, true) . ", "
 		. db_escape($framework) . ", "
 		. "1, "
-		. db_escape(json_encode($settings)) . ", "
+		. $settings_json . ", "
 		. db_escape($notes) . ", "
 		. (int)$_SESSION['wa_current_user']->user . ", "
 		. "NOW())";
@@ -115,17 +120,34 @@ function add_regulatory_profile($stock_id, $category_id, $framework, $settings =
  * @param bool   $enabled  Enabled flag
  * @param array  $settings Framework-specific settings
  * @param string $notes    Notes
- * @return void
+ * @return bool False on invalid JSON or failed persistence
  */
 function update_regulatory_profile($id, $enabled, $settings = array(), $notes = '')
 {
+	$settings_json = regulatory_json_sql($settings);
+	if ($settings_json === false) return false;
+
 	$sql = "UPDATE " . TB_PREF . "regulatory_profiles SET "
 		. "enabled=" . ($enabled ? 1 : 0) . ", "
-		. "settings=" . db_escape(json_encode($settings)) . ", "
+		. "settings=" . $settings_json . ", "
 		. "notes=" . db_escape($notes)
 		. " WHERE id=" . (int)$id;
 
-	db_query($sql, 'could not update regulatory profile');
+	return db_query($sql, 'could not update regulatory profile') !== false;
+}
+
+/**
+ * Toggle a profile without decoding or rewriting its retained settings/notes.
+ * Legacy HTML-encoded or otherwise opaque settings remain byte-identical.
+ *
+ * @param int $id Existing active-company profile identity
+ * @param bool $enabled Requested enabled state
+ * @return bool Whether the native SQL operation succeeded
+ */
+function set_regulatory_profile_enabled($id, $enabled)
+{
+	return db_query('UPDATE '.TB_PREF.'regulatory_profiles SET enabled='.($enabled ? 1 : 0)
+		.' WHERE id='.(int)$id, 'could not toggle regulatory profile') !== false;
 }
 
 /**

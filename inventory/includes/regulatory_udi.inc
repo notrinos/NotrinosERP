@@ -27,6 +27,8 @@
  * @subpackage Inventory/Regulatory/UDI
  */
 
+require_once __DIR__.'/regulatory_json.inc';
+
 // =====================================================================
 // UDI CONSTANTS
 // =====================================================================
@@ -68,10 +70,13 @@ function get_udi_mri_safety_options()
  * Add a UDI registration for a device item.
  *
  * @param array $data Associative array of UDI registration fields
- * @return int Inserted id
+ * @return int|false Inserted id, or false on invalid JSON
  */
 function add_udi_registration($data)
 {
+	$custom_json = isset($data['custom_data']) ? regulatory_json_sql($data['custom_data']) : "''";
+	if ($custom_json === false) return false;
+
 	$sql = "INSERT INTO " . TB_PREF . "udi_registrations
 		(stock_id, udi_di, udi_pi, issuing_agency,
 		 device_description, brand_name, version_model, company_name,
@@ -104,7 +109,7 @@ function add_udi_registration($data)
 		. db_escape(isset($data['notes']) ? $data['notes'] : '') . ", "
 		. (int)$_SESSION['wa_current_user']->user . ", "
 		. "NOW(), "
-		. db_escape(isset($data['custom_data']) ? json_encode($data['custom_data']) : null)
+		. $custom_json
 		. ")";
 
 	db_query($sql, 'could not add UDI registration');
