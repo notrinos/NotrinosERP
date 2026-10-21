@@ -39,6 +39,10 @@ function purchasing_dimension_reference_schema_available($table)
 {
     if (!dimension_lifecycle_authorized()) return false;
     $required = array_fill_keys(array_keys(purchasing_dimension_reference_tables()), array('custom_data'));
+    foreach (purchasing_dimension_retained_reference_sources() as $name=>$source) {
+        $required[$name] = array('custom_data');
+        if ($source[0] !== null) $required[$name][] = $source[0];
+    }
     $required['approval_drafts'] = array('id','trans_type','draft_data');
     $required['approval_actions'] = array('draft_id','draft_data_snapshot');
     if (!is_string($table) || !isset($required[$table])) return false;
@@ -82,6 +86,70 @@ function purchasing_observe_dimension_references($id)
             }
         } catch (Exception $exception) {
             // Missing owners cannot prove absence; keep looking for positive evidence.
+        }
+    }
+    return purchasing_observe_retained_dimension_references($id);
+}
+
+/**
+ * Fixed remaining Purchasing metadata owners: type column, allowed source
+ * constants and whether the native getter decodes one HTML envelope. Shared
+ * journal/banking/payroll families are excluded before payload transfer.
+ * No caller-selected source, decoder or family is accepted.
+ *
+ * @return array Table => discriminator, source constants, envelope support
+ */
+function purchasing_dimension_retained_reference_sources()
+{
+    return array(
+        'supp_trans'=>array('type', array('ST_SUPPINVOICE','ST_SUPPCREDIT','ST_SUPPAYMENT'), false),
+        'supp_invoice_items'=>array('supp_trans_type', array('ST_SUPPINVOICE','ST_SUPPCREDIT'), false),
+        'vendor_evaluations'=>array(null, array(), true),
+        'vendor_performance_log'=>array('reference_type', array('ST_SUPPRECEIVE'), false),
+        'purch_matching_config'=>array(null, array(), false),
+        'purch_matching_exceptions'=>array('trans_type', array('ST_SUPPINVOICE'), false),
+        'purch_bill_control_policy'=>array(null, array(), false));
+}
+
+/**
+ * Observe retained ordinary AP/vendor/policy JSON through fixed module owners.
+ * Include zeroed, terminal, inactive and orphan history without following current
+ * supplier, receipt or user joins. Strict raw JSON is used except where the
+ * native getter explicitly supports a single legacy HTML envelope. Input-only
+ * encoder fallbacks do not establish a storage decoder. No nested strings or
+ * serialized carts are decoded. Return only minimized positive presence;
+ * unavailable/malformed/absent state never certifies unused or permits deletion.
+ *
+ * @param int|string $id Canonical positive active-company Dimension identity
+ * @return string used or unknown only
+ */
+function purchasing_observe_retained_dimension_references($id)
+{
+    if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)) return 'unknown';
+    foreach (purchasing_dimension_retained_reference_sources() as $table=>$source) {
+        $where = '';
+        if ($source[0] !== null) {
+            $types = array();
+            foreach ($source[1] as $name) {
+                if (!defined($name)) continue 2;
+                $types[] = (int)constant($name);
+            }
+            if (!count($types)) continue;
+            $where = ' WHERE '.$source[0].' IN ('.implode(',', $types).')';
+        }
+        try {
+            if (!purchasing_dimension_reference_schema_available($table)) continue;
+            $rows = db_query('SELECT custom_data AS payload FROM '.TB_PREF.$table.$where);
+            if (!$rows) continue;
+            while ($row = db_fetch($rows)) {
+                if (!is_string($row['payload'])) continue;
+                $payload = json_decode($row['payload'], true);
+                if (!is_array($payload) && $source[2])
+                    $payload = json_decode(html_entity_decode($row['payload'], ENT_QUOTES, 'UTF-8'), true);
+                if (is_array($payload) && dimension_reference_payload_status($payload, (int)$id) === 'used') return 'used';
+            }
+        } catch (Exception $exception) {
+            // A missing ordinary or protected owner cannot establish absence.
         }
     }
     return 'unknown';
