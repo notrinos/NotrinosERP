@@ -3,6 +3,7 @@
 require_once __DIR__.'/dimension_reference_registry.inc';
 require_once __DIR__.'/dimension_reference_metadata.inc';
 require_once __DIR__.'/dimension_reference_schema.inc';
+require_once __DIR__.'/dimension_master_references.inc';
 require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_gl_001_dimension_references_db.inc';
 require_once dirname(dirname(__DIR__)).'/sales/includes/db/sales_dimension_references_db.inc';
 require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
@@ -39,7 +40,8 @@ function dimension_reference_db_observe($id)
     $inventory = inventory_observe_dimension_references($id);
     $general_ledger = gl_observe_dimension_references($id);
     $manufacturing = manufacturing_observe_dimension_references($id);
-    return dimension_reference_observe((int)$id, function($name, $owner, $identity) use ($approval, $metadata, $payroll, $sales, $purchasing, $inventory, $general_ledger, $manufacturing) {
+    $masters = dimension_master_references_observe($id);
+    return dimension_reference_observe((int)$id, function($name, $owner, $identity) use ($approval, $metadata, $payroll, $sales, $purchasing, $inventory, $general_ledger, $manufacturing, $masters) {
         if ($owner['kind'] === 'scalar') {
             if (!dimension_reference_schema_available($owner['table'])) return 'unknown';
             $sql = dimension_reference_owner_sql($name, $identity);
@@ -51,7 +53,7 @@ function dimension_reference_db_observe($id)
         if ($name === 'tags') return $metadata['state'];
         if ($name === 'payroll_custody') return $payroll;
         if ($name === 'retained_payloads') return $sales === 'used' || $purchasing === 'used' || $inventory === 'used'
-            || $general_ledger === 'used' || $manufacturing === 'used' ? 'used' : 'unknown';
+            || $general_ledger === 'used' || $manufacturing === 'used' || $masters === 'used' ? 'used' : 'unknown';
         return 'unknown';
     });
 }
