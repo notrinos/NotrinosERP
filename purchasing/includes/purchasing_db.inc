@@ -190,6 +190,8 @@ function get_po_prepayments($supp_trans) {
 //
 function add_direct_supp_trans($cart) {
 	global $Refs, $type_shortcuts;
+	if (!purchase_order_creation_authorized($cart))
+		return false;
 
 	if ($cart->trans_type != ST_PURCHORDER) {
 		// for direct grn/invoice set same dates for lines as for whole document
@@ -203,6 +205,11 @@ function add_direct_supp_trans($cart) {
 		begin_transaction();	// all db changes as single transaction for direct document
 	}
 	$order_no = add_po($cart);
+	if (!$order_no) {
+		cancel_transaction();
+		$cart->reference = $ref;
+		return false;
+	}
 	$cart->order_no = $order_no;
 
 	if ($cart->trans_type == ST_PURCHORDER)

@@ -17,6 +17,17 @@ include_once($path_to_root.'/purchasing/includes/purchasing_ui.inc');
 include_once($path_to_root.'/purchasing/includes/db/suppliers_db.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
 
+// A new GET may deliberately replace an old cart. Never rebind a stale POST,
+// including a form whose query string still contains NewOrder/ModifyOrderNumber.
+if (isset($_SESSION['PO']) && (!is_object($_SESSION['PO'])
+	|| !method_exists($_SESSION['PO'], 'is_current_company') || !$_SESSION['PO']->is_current_company())
+	&& (!empty($_POST) || (!isset($_GET['NewOrder']) && !isset($_GET['NewGRN'])
+		&& !isset($_GET['NewInvoice']) && !isset($_GET['ModifyOrderNumber'])))) {
+	page(_('Purchase Order'));
+	display_error(_('This purchase cart belongs to another company or an older session. Start a new document or reload the order in the current company.'));
+	display_footer_exit();
+}
+
 set_page_security( @$_SESSION['PO']->trans_type,
 	array(	ST_PURCHORDER => 'SA_PURCHASEORDER',
 			ST_SUPPRECEIVE => 'SA_GRN',

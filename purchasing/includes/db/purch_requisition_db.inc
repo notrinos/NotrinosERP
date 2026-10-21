@@ -1169,8 +1169,10 @@ function create_po_from_requisition($requisition_id, $supplier_id, $line_ids = a
 			continue;
 
 		$po_number = add_po($purchase_order);
-		if (!$po_number)
-			continue;
+		if (!$po_number) {
+			cancel_transaction();
+			return false;
+		}
 
 		$po_numbers[] = (int)$po_number;
 

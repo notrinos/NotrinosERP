@@ -50,11 +50,31 @@ class purch_order {
 	var $prepayments = array();
 
 	var $fixed_asset = false;
+	var $company = null;
+	var $company_prefix = null;
 
+	/** Bind a new cart to its trusted current company, never to submitted form data. */
 	function __construct() {
+		global $db_connections;
 		/*Constructor function initialises a new purchase order object */
 		$this->line_items = array();
 		$this->lines_on_order = $this->order_no = $this->supplier_id = 0;
+		$user = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
+		if (is_object($user) && isset($user->cur_con)
+			&& isset($db_connections[$user->cur_con]['tbpref'])) {
+			$this->company = $user->cur_con;
+			$this->company_prefix = $db_connections[$user->cur_con]['tbpref'];
+		}
+	}
+
+	/** Reject stale or legacy unbound session carts before any source lookup or write. */
+	function is_current_company() {
+		global $db_connections;
+		$user = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
+		return is_object($user) && isset($user->cur_con) && isset($this->company, $this->company_prefix)
+			&& (string)$this->company === (string)$user->cur_con
+			&& isset($db_connections[$user->cur_con]['tbpref'])
+			&& $this->company_prefix === $db_connections[$user->cur_con]['tbpref'];
 	}
 	
 	function set_supplier($supplier_id, $supplier_name, $curr_code, $tax_group_id, $tax_included) {

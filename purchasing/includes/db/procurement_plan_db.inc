@@ -583,8 +583,10 @@ function create_pos_from_plan($plan_id)
 			continue;
 
 		$po_number = add_po($purchase_order);
-		if (!$po_number)
-			continue;
+		if (!$po_number) {
+			cancel_transaction();
+			return array();
+		}
 
 		$po_numbers[] = (int)$po_number;
 		foreach ($supplier_lines as $line) {

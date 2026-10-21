@@ -133,64 +133,120 @@ function delete_po($po) {
 	}
 }
 
+/**
+ * Create a native PO atomically, including its automatic direct-document parent.
+ * The existing approval service owns command admission; this boundary rechecks
+ * current module/company authority and preserves failed cart identities for retry.
+ */
 function add_po(&$po_obj) {
 	global $Refs;
+	if (!purchase_order_creation_authorized($po_obj))
+		return false;
+	$original_order_no = $po_obj->order_no;
+	$original_reference = $po_obj->reference;
+	$original_lines = array();
+	foreach ($po_obj->line_items as $key => $line)
+		$original_lines[$key] = clone $line;
+	if (!begin_transaction())
+		return false;
+	try {
+		if ($po_obj->reference == 'auto')
+			$po_obj->reference = $Refs->get_next(ST_PURCHORDER, null,
+				array('supplier_id' => $po_obj->supplier_id, 'date' => $po_obj->orig_order_date));
+		hook_db_prewrite($po_obj, ST_PURCHORDER);
+		if (!purchase_order_creation_authorized($po_obj))
+			throw new RuntimeException('Purchase order admission changed.');
+		/*Insert to purchase order header record */
+		$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
+		$sql .= db_escape($po_obj->supplier_id) . "," .
+			db_escape($po_obj->Comments) . ", " .
+			(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0) . ", " .
+			(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0) . ", " .
+			(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0) . ", '" .
+			date2sql($po_obj->orig_order_date) . "', " .
+			db_escape($po_obj->reference) . ", " .
+			db_escape($po_obj->supp_ref) . ", " .
+			db_escape($po_obj->Location) . ", " .
+			db_escape($po_obj->delivery_address) . ", " .
+			db_escape($po_obj->get_trans_total()). ", " .
+			db_escape($po_obj->tax_included). ", " .
+			db_escape($po_obj->prep_amount). ")";
 
-	begin_transaction();
-	hook_db_prewrite($po_obj, ST_PURCHORDER);
+		if (!db_query($sql, 'The purchase order header record could not be inserted'))
+			throw new RuntimeException('Purchase order header failed.');
 
-	/*Insert to purchase order header record */
-	$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
-	$sql .= db_escape($po_obj->supplier_id) . "," .
-		db_escape($po_obj->Comments) . ", " .
-		(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0) . ", " .
-		(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0) . ", " .
-		(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0) . ", '" .
-		date2sql($po_obj->orig_order_date) . "', " .
-		db_escape($po_obj->reference) . ", " .
-		db_escape($po_obj->supp_ref) . ", " .
-		db_escape($po_obj->Location) . ", " .
-		db_escape($po_obj->delivery_address) . ", " .
-		db_escape($po_obj->get_trans_total()). ", " .
-		db_escape($po_obj->tax_included). ", " .
-		db_escape($po_obj->prep_amount). ")";
+		/*Get the auto increment value of the order number created from the sql above */
+		$po_obj->order_no = db_insert_id();
 
-	db_query($sql, 'The purchase order header record could not be inserted');
+		/*Insert the purchase order detail records */
+		foreach ($po_obj->line_items as $line_no => $po_line) {
 
-	/*Get the auto increment value of the order number created from the sql above */
-	$po_obj->order_no = db_insert_id();
+			if (!$po_line->descr_editable) {
+				$data = get_purchase_data($po_obj->supplier_id, $po_line->stock_id);
+				if ($data !== false && $data['supplier_description'] != '')
+					$po_line->item_description = $data['supplier_description'];
+			}
 
-	/*Insert the purchase order detail records */
-	foreach ($po_obj->line_items as $line_no => $po_line) {
+			$sql = "INSERT INTO ".TB_PREF."purch_order_details (order_no, item_code, description, delivery_date,	unit_price,	quantity_ordered)
+			VALUES (".
+				db_escape($po_obj->order_no).", ".
+				db_escape($po_line->stock_id).",".
+				db_escape($po_line->item_description).",'".
+				date2sql($po_line->req_del_date) . "'," .
+				db_escape($po_line->price) . ", " .
+				db_escape($po_line->quantity). ")";
 
-		if (!$po_line->descr_editable) {
-			$data = get_purchase_data($po_obj->supplier_id, $po_line->stock_id);
-			if ($data !== false && $data['supplier_description'] != '')
-				$po_line->item_description = $data['supplier_description'];
+			if (!db_query($sql, 'One of the purchase order detail records could not be inserted'))
+				throw new RuntimeException('Purchase order line failed.');
+			$po_obj->line_items[$line_no]->po_detail_rec = db_insert_id();
 		}
 
-		$sql = "INSERT INTO ".TB_PREF."purch_order_details (order_no, item_code, description, delivery_date,	unit_price,	quantity_ordered) 
-		VALUES (".
-			db_escape($po_obj->order_no).", ".
-			db_escape($po_line->stock_id).",".
-			db_escape($po_line->item_description).",'".
-			date2sql($po_line->req_del_date) . "'," .
-			db_escape($po_line->price) . ", " .
-			db_escape($po_line->quantity). ")";
+		$Refs->save(ST_PURCHORDER, $po_obj->order_no, $po_obj->reference);
 
-		db_query($sql, 'One of the purchase order detail records could not be inserted');
-		$po_obj->line_items[$line_no]->po_detail_rec = db_insert_id();
+		add_audit_trail(ST_PURCHORDER, $po_obj->order_no, $po_obj->orig_order_date);
+		hook_db_postwrite($po_obj, ST_PURCHORDER);
+		if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
+			update_agreement_fulfillment((int)$po_obj->agreement_id);
+
+		if (!commit_transaction()) {
+			// Resource release can fail after SQL COMMIT. Keep the published
+			// identities in that case so retry cannot create a duplicate order.
+			if (empty($GLOBALS['transaction_level'])) {
+				display_error(_('The purchase order was committed, but resource cleanup needs recovery. Reload the order before continuing.'));
+				return false;
+			}
+			throw new RuntimeException('Purchase order commit failed.');
+		}
+		return $po_obj->order_no;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		$po_obj->order_no = $original_order_no;
+		$po_obj->reference = $original_reference;
+		$po_obj->line_items = $original_lines;
+		display_error(_('The purchase order could not be saved. Reload the source before retrying.'));
+		return false;
 	}
+}
 
-	$Refs->save(ST_PURCHORDER, $po_obj->order_no, $po_obj->reference);
-
-	add_audit_trail(ST_PURCHORDER, $po_obj->order_no, $po_obj->orig_order_date);
-	hook_db_postwrite($po_obj, ST_PURCHORDER);
-	commit_transaction();
-	if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
-		update_agreement_fulfillment((int)$po_obj->agreement_id);
-
-	return $po_obj->order_no;
+/** Check current company and native create permission before hooks, numbers or SQL. */
+function purchase_order_creation_authorized($po_obj) {
+	if (!is_object($po_obj) || !method_exists($po_obj, 'is_current_company') || !$po_obj->is_current_company()
+		|| !isset($_SESSION['wa_current_user']) || !method_exists($_SESSION['wa_current_user'], 'can_access')
+		|| !isset($po_obj->order_no) || !is_scalar($po_obj->order_no) || (string)$po_obj->order_no !== '0'
+		|| !isset($po_obj->supplier_id) || !is_scalar($po_obj->supplier_id)
+		|| (string)(int)$po_obj->supplier_id !== (string)$po_obj->supplier_id || (int)$po_obj->supplier_id <= 0
+		|| !isset($po_obj->line_items) || !is_array($po_obj->line_items) || !count($po_obj->line_items))
+		return false;
+	$areas = array(ST_PURCHORDER => 'SA_PURCHASEORDER', ST_SUPPRECEIVE => 'SA_GRN', ST_SUPPINVOICE => 'SA_SUPPLIERINVOICE');
+	if (!isset($po_obj->trans_type) || !is_scalar($po_obj->trans_type) || !isset($areas[$po_obj->trans_type])
+		|| !$_SESSION['wa_current_user']->can_access($areas[$po_obj->trans_type]))
+		return false;
+	foreach ($po_obj->line_items as $line)
+		if (!is_object($line) || !isset($line->quantity, $line->price)
+			|| !is_numeric($line->quantity) || !is_finite((float)$line->quantity) || $line->quantity <= 0
+			|| !is_numeric($line->price) || !is_finite((float)$line->price))
+			return false;
+	return true;
 }
 
 /** Reject an unsafe PO edit without exposing another order's retained payload. */
@@ -205,7 +261,8 @@ function reject_purchase_order_update() {
  * Receipt/invoice quantities are authoritative database state, never cart input.
  */
 function update_po(&$po_obj) {
-	if (!isset($_SESSION['wa_current_user'])
+	if (!is_object($po_obj) || !method_exists($po_obj, 'is_current_company') || !$po_obj->is_current_company()
+		|| !isset($_SESSION['wa_current_user'])
 		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
 		|| $po_obj->trans_type != ST_PURCHORDER
 		|| !is_scalar($po_obj->order_no)
@@ -230,7 +287,8 @@ function update_po(&$po_obj) {
 				return reject_purchase_order_update();
 		}
 		hook_db_prewrite($po_obj, ST_PURCHORDER);
-		if ((string)$po_obj->order_no !== (string)$order_no || $po_obj->supplier_id != $supplier_id
+		if (!$po_obj->is_current_company() || !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+			|| (string)$po_obj->order_no !== (string)$order_no || $po_obj->supplier_id != $supplier_id
 			|| $po_obj->trans_type != ST_PURCHORDER)
 			return reject_purchase_order_update();
 		$result = db_query("SELECT * FROM ".TB_PREF."purch_order_details WHERE order_no="
