@@ -37,6 +37,9 @@ function inventory_retained_dimension_reference_sources()
         'wh_packages'=>array(null,array()),
         'wh_bin_stock'=>array(null,array()),
         'prices'=>array(null,array()),
+        'dscsa_transactions'=>array(null,array()),
+        'fsma_tracking_events'=>array(null,array()),
+        'udi_registrations'=>array(null,array()),
         'purch_data'=>array(null,array()));
 }
 
