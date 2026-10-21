@@ -100,7 +100,7 @@ ApprovalWorkflow::registerTransactionType(ST_VENDOR_EVALUATION, array(
  * properties and line items from the JSON draft.
  *
  * @param array $data Draft data array (decoded JSON)
- * @return object Restored purch_order instance
+ * @return object|false Restored current-company cart, or false for an invalid/foreign envelope
  */
 function restore_purchase_order_from_data($data)
 {
@@ -108,6 +108,27 @@ function restore_purchase_order_from_data($data)
 	include_once($path_to_root . '/purchasing/includes/po_class.inc');
 
 	$po = new purch_order();
+	// Legacy envelopes are already company-scoped by the workflow's own row.
+	// New envelopes must never be silently rebound after a company switch.
+	if (!is_array($data) || !$po->is_current_company()
+		|| ((array_key_exists('company', $data) || array_key_exists('company_prefix', $data))
+			&& (!isset($data['company'], $data['company_prefix'])
+				|| !is_scalar($data['company']) || (string)$data['company'] !== (string)$po->company
+				|| $data['company_prefix'] !== $po->company_prefix)))
+		return false;
+	if (!isset($data['trans_type'], $data['supplier_id'], $data['line_items'])
+		|| !is_scalar($data['trans_type'])
+		|| !in_array((string)$data['trans_type'], array((string)ST_PURCHORDER, (string)ST_SUPPRECEIVE, (string)ST_SUPPINVOICE), true)
+		|| !is_scalar($data['supplier_id']) || (string)(int)$data['supplier_id'] !== (string)$data['supplier_id']
+		|| (int)$data['supplier_id'] <= 0 || !is_array($data['line_items']) || !$data['line_items'])
+		return false;
+	foreach ($data['line_items'] as $line_data) {
+		if (!is_array($line_data) || !isset($line_data['stock_id'], $line_data['quantity'], $line_data['price'])
+			|| !is_string($line_data['stock_id']) || $line_data['stock_id'] === ''
+			|| !is_numeric($line_data['quantity']) || !is_finite((float)$line_data['quantity']) || $line_data['quantity'] <= 0
+			|| !is_numeric($line_data['price']) || !is_finite((float)$line_data['price']))
+			return false;
+	}
 
 	$po->trans_type       = (int)$data['trans_type'];
 	$po->trans_no         = isset($data['trans_no']) ? $data['trans_no'] : 0;
@@ -239,10 +260,16 @@ function restore_supplier_trans_from_data($data)
 function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft_id)
 {
 	global $path_to_root;
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| !is_array($draft_data) || !isset($draft_data['trans_type'])
+		|| !is_scalar($draft_data['trans_type']) || (string)$draft_data['trans_type'] !== (string)ST_PURCHORDER)
+		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
 
 	$po = restore_purchase_order_from_data($draft_data);
-	$po->trans_type = ST_PURCHORDER;
+	if ($po === false)
+		return false;
 
 	$order_no = add_direct_supp_trans($po);
 
@@ -269,6 +296,8 @@ function execute_approved_supplier_invoice($draft_data, $reserved_trans_no, $dra
 	}
 
 	$po = restore_purchase_order_from_data($draft_data);
+	if ($po === false)
+		return false;
 	$po->trans_type = ST_SUPPINVOICE;
 
 	$order_no = add_direct_supp_trans($po);

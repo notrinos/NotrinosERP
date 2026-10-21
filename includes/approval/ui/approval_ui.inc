@@ -296,11 +296,15 @@ function collect_sales_cart_data($cart)
  * Collect Purchase Order data as a plain array for JSON draft storage.
  *
  * @param object $po The purch_order instance
- * @return array Plain array representation
+ * @return array|false Plain array representation, or false for an unbound/foreign cart
  */
 function collect_purchase_order_data($po)
 {
+	if (!is_object($po) || !method_exists($po, 'is_current_company') || !$po->is_current_company())
+		return false;
 	$data = array(
+		'company'           => $po->company,
+		'company_prefix'    => $po->company_prefix,
 		'trans_type'        => $po->trans_type,
 		'trans_no'          => isset($po->trans_no) ? $po->trans_no : 0,
 		'supplier_id'       => $po->supplier_id,

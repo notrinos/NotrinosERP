@@ -476,6 +476,7 @@ class ApprovalWorkflow {
 				}
 
 				// Notify submitter
+				$posted_draft = get_approval_draft($draft_id);
 				notify_approval_submitter($draft_id, $draft['submitted_by'], 'approved');
 
 				// Mark all notifications as read
@@ -485,7 +486,7 @@ class ApprovalWorkflow {
 
 				return array(
 					'status'   => 'approved',
-					'trans_no' => (int)$draft['reserved_trans_no'],
+					'trans_no' => (int)$posted_draft['approved_trans_no'],
 					'message'  => _('Draft has been approved and posted.'),
 				);
 			} else {
@@ -522,13 +523,14 @@ class ApprovalWorkflow {
 						);
 					}
 					notify_approval_submitter($draft_id, $draft['submitted_by'], 'approved');
+					$posted_draft = get_approval_draft($draft_id);
 					mark_all_draft_notifications_read($draft_id);
 
 					commit_transaction();
 
 					return array(
 						'status'   => 'approved',
-						'trans_no' => (int)$draft['reserved_trans_no'],
+						'trans_no' => (int)$posted_draft['approved_trans_no'],
 						'message'  => _('Draft has been approved and posted (auto-approved at next level).'),
 					);
 				}
@@ -1123,7 +1125,11 @@ class ApprovalWorkflow {
 		}
 
 		if ($result !== false) {
-			$posted_trans_no = is_int($result) ? $result : (int)$draft['reserved_trans_no'];
+			// PDO insert identities are canonical numeric strings. Preserve the
+			// actual writer identity; true-only legacy executors use the reservation.
+			$posted_trans_no = (is_int($result) || (is_string($result)
+				&& (string)(int)$result === $result && (int)$result > 0))
+				? (int)$result : (int)$draft['reserved_trans_no'];
 			update_approval_draft_trans_no($draft_id, $posted_trans_no);
 		}
 

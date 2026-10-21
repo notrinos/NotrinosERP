@@ -651,6 +651,11 @@ class Entity extends record_set {
 		$updates = array();
 
 		foreach($data as $fld => $value) {	// select only data relevant for this model
+			// Retain opaque owner-serialized data without display-string encoding.
+			if ($fld === 'custom_data' && in_array($fld, $this->fields)) {
+				$updates[$fld] = "`$fld`=".($value === null ? 'NULL' : "'".db_escape_function($value)."'");
+				continue;
+			}
 			if (in_array($fld, $this->fields))
 				$updates[$fld] = "`$fld`=".($fld === 'custom_data'
 					? db_escape_json($value, $value === null) : db_escape($value, $value === null));
@@ -729,6 +734,11 @@ class Entity extends record_set {
 		$sql = "INSERT INTO ".TB_PREF.$this->name. ' (';
 		$fields = array();
 		foreach($data as $fld => $value) {
+			// custom_data is already serialized by its owner; retain its exact bytes.
+			if ($fld === 'custom_data' && in_array($fld, $this->fields)) {
+				$fields["`$fld`"] = $value === null ? 'NULL' : "'".db_escape_function($value)."'";
+				continue;
+			}
 			if (in_array($fld, $this->fields) || (is_array($this->key) ? in_array($this->key) : $fld==$this->key))
 				$fields["`$fld`"] = $fld === 'custom_data'
 					? db_escape_json($value, $value === null) : db_escape($value, $value === null);

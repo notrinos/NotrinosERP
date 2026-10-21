@@ -41,6 +41,10 @@ set_page_security( @$_SESSION['PO']->trans_type,
 			'AddedPI' => 'SA_SUPPLIERINVOICE')
 );
 
+// create_new_po() can read an existing order before page() renders. Admit the
+// actual native mode before loading any source or allocating its reference.
+check_page_security($page_security);
+
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 500);
@@ -513,6 +517,10 @@ function handle_commit_order() {
 			$trans_type = $cart->trans_type;
 			if ($trans_type == ST_PURCHORDER || $trans_type == ST_SUPPINVOICE) {
 				$draft_data = collect_purchase_order_data($cart);
+				if ($draft_data === false) {
+					display_error(_('Reload the purchase document in the current company before submitting it.'));
+					return;
+				}
 				$amount = $cart->get_trans_total();
 				$approval_result = approval_check_before_save($trans_type, $draft_data, $amount, array(
 					'summary'     => sprintf(_('%s from %s'), ($trans_type == ST_PURCHORDER ? _('Purchase Order') : _('Supplier Invoice')), $cart->supplier_name),
