@@ -699,56 +699,109 @@ function check_material_request_fulfillment($request_id) {
  *
  * @param int    $request_id  Material request ID
  * @param int    $supplier_id Supplier to order from
- * @param string $delivery_to Location code for delivery
+ * @param string $delivery_to Legacy location argument; current source location remains authoritative
  * @return int|false PO transaction number or false on failure
  */
 function convert_material_request_to_po($request_id, $supplier_id, $delivery_to) {
 	global $path_to_root;
-
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'approved')
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST')
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+		|| !is_scalar($request_id) || (string)(int)$request_id !== (string)$request_id || (int)$request_id <= 0
+		|| !is_scalar($supplier_id) || (string)(int)$supplier_id !== (string)$supplier_id || (int)$supplier_id <= 0)
 		return false;
 
 	include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
-	include_once($path_to_root . '/includes/ui/items_cart.inc');
-
-	// Build a purchase order cart
-	$cart = new items_cart(ST_PURCHORDER);
-	$cart->supplier_id = $supplier_id;
-	$cart->delivery_address = $delivery_to;
-	$cart->Comments = sprintf(_('Created from Material Request %s'), format_material_request_no($mr['request_no']));
-	$cart->Location = $mr['warehouse_loc_code'];
-	$cart->tran_date = Today();
-	$cart->due_date = $mr['required_date'] ? sql2date($mr['required_date']) : Today();
-
-	$lines = get_material_request_lines($request_id);
-	while ($line = db_fetch($lines)) {
-		$outstanding = $line['qty_requested'] - $line['qty_fulfilled'];
-		if ($outstanding <= 0)
-			continue;
-
-		$cart->add_to_cart(
-			count($cart->line_items),
-			$line['stock_id'],
-			$outstanding,
-			0, // unit_price — user should set this in the PO UI
-			'',
-			0, 0,
-			$line['item_description'],
-			$line['item_units']
-		);
-	}
-
-	if (count($cart->line_items) == 0)
+	include_once($path_to_root . '/purchasing/includes/po_class.inc');
+	$cart = new purch_order();
+	if (!$cart->is_current_company() || !begin_transaction())
 		return false;
-
-	$po_no = add_po($cart);
-
-	if ($po_no) {
-		mark_material_request_ordered($request_id, ST_PURCHORDER, $po_no);
+	try {
+		// Current locking reads also reject stale outer-transaction snapshots.
+		$source_query = 'SELECT * FROM '.TB_PREF.'wh_material_requests WHERE request_id='.(int)$request_id.' FOR UPDATE';
+		$mr = db_fetch(db_query($source_query, 'could not lock material request conversion'));
+		if (!$mr || $mr['status'] !== 'approved' || $mr['request_type'] !== 'purchase'
+			|| !empty($mr['linked_doc_no']))
+			throw new RuntimeException('Material request is not available for conversion.');
+		$location = db_fetch(db_query('SELECT * FROM '.TB_PREF.'locations WHERE loc_code='
+			.db_escape($mr['warehouse_loc_code']).' AND inactive=0', 'could not verify material request location'));
+		$supplier = db_fetch(db_query('SELECT supplier_id FROM '.TB_PREF.'suppliers WHERE supplier_id='
+			.(int)$supplier_id.' AND inactive=0', 'could not verify material request supplier'));
+		if (!$location || !$supplier)
+			throw new RuntimeException('Material request destination is unavailable.');
+		$cart->trans_type = ST_PURCHORDER;
+		$cart->orig_order_date = Today();
+		$cart->due_date = $mr['required_date'] ? sql2date($mr['required_date']) : Today();
+		$cart->Location = $location['loc_code'];
+		$cart->delivery_address = $location['delivery_address'] !== '' ? $location['delivery_address'] : $location['location_name'];
+		$cart->Comments = sprintf(_('Created from Material Request %s'), format_material_request_no($mr['request_no']));
+		get_supplier_details_to_order($cart, (int)$supplier_id);
+		$cart->reference = 'auto';
+		$line_query = 'SELECT line.*, item.description AS item_description, item.units AS item_units
+			FROM '.TB_PREF.'wh_material_request_lines line
+			LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id
+			WHERE line.request_id='.(int)$request_id.' ORDER BY line.line_id FOR UPDATE';
+		$lines = db_query($line_query, 'could not lock material request conversion lines');
+		$source_lines = array();
+		while ($line = db_fetch($lines)) {
+			$source_lines[] = $line;
+			$outstanding = (float)$line['qty_requested'] - (float)$line['qty_fulfilled'];
+			if (!is_finite($outstanding) || $line['qty_requested'] < 0 || $line['qty_fulfilled'] < 0
+				|| $line['item_description'] === null)
+				throw new RuntimeException('Material request line is unavailable.');
+			if ($outstanding <= 0)
+				continue;
+			// Preserve the existing zero-price conversion policy; price is edited in the PO UI.
+			$cart->add_to_order(count($cart->line_items), $line['stock_id'], $outstanding,
+				$line['item_description'], 0, $line['item_units'],
+				$line['required_date'] ? sql2date($line['required_date']) : $cart->due_date, 0, 0);
+		}
+		if (!$cart->order_has_items())
+			throw new RuntimeException('Material request has no outstanding lines.');
+		// This legacy converter has no delayed-execution source envelope. Never
+		// bypass a configured PO workflow by calling its native writer directly.
+		if (!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_PURCHORDER)
+			|| get_approval_workflow_service()->isApprovalRequired(ST_PURCHORDER, $cart->get_trans_total())) {
+			display_error(_('This conversion is unavailable because purchase order approval is required.'));
+			throw new RuntimeException('Material request requires purchase order approval.');
+		}
+		if (!$cart->is_current_company() || !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST'))
+			throw new RuntimeException('Material request authority changed.');
+		$po_no = add_po($cart);
+		if (!$po_no || !$cart->is_current_company()
+			|| !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST')
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+			|| !ApprovalWorkflow::isRegistered(ST_PURCHORDER)
+			|| get_approval_workflow_service()->isApprovalRequired(ST_PURCHORDER, $cart->get_trans_total()))
+			throw new RuntimeException('Material request purchase order failed.');
+		// Locks exclude other connections; native hooks in this transaction can
+		// still change source intent. Never link an order built from that old intent.
+		if ($mr !== db_fetch(db_query($source_query, 'could not recheck material request conversion')))
+			throw new RuntimeException('Material request source changed.');
+		$lines = db_query($line_query, 'could not recheck material request conversion lines');
+		$current_lines = array();
+		while ($line = db_fetch($lines))
+			$current_lines[] = $line;
+		if ($source_lines !== $current_lines)
+			throw new RuntimeException('Material request source lines changed.');
+		if (!db_query('UPDATE '.TB_PREF."wh_material_requests SET status='ordered', linked_doc_type=".ST_PURCHORDER
+			.', linked_doc_no='.(int)$po_no.", updated_at=NOW() WHERE request_id=".(int)$request_id
+			." AND status='approved' AND (linked_doc_no IS NULL OR linked_doc_no=0)", 'could not link material request purchase order')
+			|| db_num_affected_rows() !== 1)
+			throw new RuntimeException('Material request linkage changed.');
+		if (!commit_transaction()) {
+			if (!empty($GLOBALS['transaction_level']))
+				throw new RuntimeException('Material request conversion commit failed.');
+			display_error(_('The purchase order conversion was committed, but resource cleanup needs recovery. Reload the source before continuing.'));
+		}
+		return (int)$po_no;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		throw $exception;
 	}
-
-	return $po_no;
 }
 
 /**
