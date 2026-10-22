@@ -1379,6 +1379,11 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 			'po_no' => (int)$po_number,
 		);
 		hook_invoke_all('purch_agreement_po_created', $hook_data);
+		// Completion hooks must not commit under a changed company or role.
+		if (!$purchase_order->is_current_company()
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
+			throw new RuntimeException('Purchase source completion authority changed.');
 
 		if (!commit_transaction()) {
 			if (!empty($GLOBALS['transaction_level']))

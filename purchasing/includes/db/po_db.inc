@@ -142,54 +142,56 @@ function add_po(&$po_obj) {
 	global $Refs;
 	if (!purchase_order_creation_authorized($po_obj))
 		return false;
-	$original_order_no = $po_obj->order_no;
-	$original_reference = $po_obj->reference;
-	$original_lines = array();
-	foreach ($po_obj->line_items as $key => $line)
-		$original_lines[$key] = clone $line;
+	// Native SQL errors can exit before catch blocks and persist the session.
+	// Keep generated identities private until this writer has completed.
+	$working_order = clone $po_obj;
+	foreach ($working_order->line_items as $key => $line)
+		$working_order->line_items[$key] = clone $line;
+	$original_trans_type = $working_order->trans_type;
+	$creation_areas = array(ST_PURCHORDER => 'SA_PURCHASEORDER', ST_SUPPRECEIVE => 'SA_GRN', ST_SUPPINVOICE => 'SA_SUPPLIERINVOICE');
 	if (!begin_transaction())
 		return false;
 	try {
-		if ($po_obj->reference == 'auto')
-			$po_obj->reference = $Refs->get_next(ST_PURCHORDER, null,
-				array('supplier_id' => $po_obj->supplier_id, 'date' => $po_obj->orig_order_date));
-		hook_db_prewrite($po_obj, ST_PURCHORDER);
-		if (!purchase_order_creation_authorized($po_obj))
+		if ($working_order->reference == 'auto')
+			$working_order->reference = $Refs->get_next(ST_PURCHORDER, null,
+				array('supplier_id' => $working_order->supplier_id, 'date' => $working_order->orig_order_date));
+		hook_db_prewrite($working_order, ST_PURCHORDER);
+		if (!purchase_order_creation_authorized($working_order))
 			throw new RuntimeException('Purchase order admission changed.');
 		/*Insert to purchase order header record */
 		$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
-		$sql .= db_escape($po_obj->supplier_id) . "," .
-			db_escape($po_obj->Comments) . ", " .
-			(int)(isset($po_obj->agreement_id) ? $po_obj->agreement_id : 0) . ", " .
-			(int)(isset($po_obj->requisition_id) ? $po_obj->requisition_id : 0) . ", " .
-			(int)(isset($po_obj->rfq_id) ? $po_obj->rfq_id : 0) . ", '" .
-			date2sql($po_obj->orig_order_date) . "', " .
-			db_escape($po_obj->reference) . ", " .
-			db_escape($po_obj->supp_ref) . ", " .
-			db_escape($po_obj->Location) . ", " .
-			db_escape($po_obj->delivery_address) . ", " .
-			db_escape($po_obj->get_trans_total()). ", " .
-			db_escape($po_obj->tax_included). ", " .
-			db_escape($po_obj->prep_amount). ")";
+		$sql .= db_escape($working_order->supplier_id) . "," .
+			db_escape($working_order->Comments) . ", " .
+			(int)(isset($working_order->agreement_id) ? $working_order->agreement_id : 0) . ", " .
+			(int)(isset($working_order->requisition_id) ? $working_order->requisition_id : 0) . ", " .
+			(int)(isset($working_order->rfq_id) ? $working_order->rfq_id : 0) . ", '" .
+			date2sql($working_order->orig_order_date) . "', " .
+			db_escape($working_order->reference) . ", " .
+			db_escape($working_order->supp_ref) . ", " .
+			db_escape($working_order->Location) . ", " .
+			db_escape($working_order->delivery_address) . ", " .
+			db_escape($working_order->get_trans_total()). ", " .
+			db_escape($working_order->tax_included). ", " .
+			db_escape($working_order->prep_amount). ")";
 
 		if (!db_query($sql, 'The purchase order header record could not be inserted'))
 			throw new RuntimeException('Purchase order header failed.');
 
 		/*Get the auto increment value of the order number created from the sql above */
-		$po_obj->order_no = db_insert_id();
+		$working_order->order_no = db_insert_id();
 
 		/*Insert the purchase order detail records */
-		foreach ($po_obj->line_items as $line_no => $po_line) {
+		foreach ($working_order->line_items as $line_no => $po_line) {
 
 			if (!$po_line->descr_editable) {
-				$data = get_purchase_data($po_obj->supplier_id, $po_line->stock_id);
+				$data = get_purchase_data($working_order->supplier_id, $po_line->stock_id);
 				if ($data !== false && $data['supplier_description'] != '')
 					$po_line->item_description = $data['supplier_description'];
 			}
 
 			$sql = "INSERT INTO ".TB_PREF."purch_order_details (order_no, item_code, description, delivery_date,	unit_price,	quantity_ordered)
 			VALUES (".
-				db_escape($po_obj->order_no).", ".
+				db_escape($working_order->order_no).", ".
 				db_escape($po_line->stock_id).",".
 				db_escape($po_line->item_description).",'".
 				date2sql($po_line->req_del_date) . "'," .
@@ -198,33 +200,42 @@ function add_po(&$po_obj) {
 
 			if (!db_query($sql, 'One of the purchase order detail records could not be inserted'))
 				throw new RuntimeException('Purchase order line failed.');
-			$po_obj->line_items[$line_no]->po_detail_rec = db_insert_id();
+			$working_order->line_items[$line_no]->po_detail_rec = db_insert_id();
 		}
 
-		$Refs->save(ST_PURCHORDER, $po_obj->order_no, $po_obj->reference);
+		$Refs->save(ST_PURCHORDER, $working_order->order_no, $working_order->reference);
 
-		add_audit_trail(ST_PURCHORDER, $po_obj->order_no, $po_obj->orig_order_date);
-		hook_db_postwrite($po_obj, ST_PURCHORDER);
-		if (!empty($po_obj->agreement_id) && function_exists('update_agreement_fulfillment'))
-			update_agreement_fulfillment((int)$po_obj->agreement_id);
+		add_audit_trail(ST_PURCHORDER, $working_order->order_no, $working_order->orig_order_date);
+		hook_db_postwrite($working_order, ST_PURCHORDER);
+		// Hooks run inside this transaction and can change current authority.
+		// Recheck before any source fulfillment or publication of created IDs.
+		if (!$working_order->is_current_company() || $working_order->trans_type != $original_trans_type
+			|| !$_SESSION['wa_current_user']->can_access($creation_areas[$original_trans_type]))
+			throw new RuntimeException('Purchase order completion authority changed.');
+		if (!empty($working_order->agreement_id) && function_exists('update_agreement_fulfillment'))
+			update_agreement_fulfillment((int)$working_order->agreement_id);
 
 		if (!commit_transaction()) {
 			// Resource release can fail after SQL COMMIT. Keep the published
 			// identities in that case so retry cannot create a duplicate order.
 			if (empty($GLOBALS['transaction_level'])) {
+				foreach (get_object_vars($working_order) as $key => $value)
+					$po_obj->$key = $value;
 				display_error(_('The purchase order was committed, but resource cleanup needs recovery. Reload the order before continuing.'));
 				return false;
 			}
 			throw new RuntimeException('Purchase order commit failed.');
 		}
-		return $po_obj->order_no;
+		foreach (get_object_vars($working_order) as $key => $value)
+			$po_obj->$key = $value;
+		return $working_order->order_no;
 	} catch (Exception $exception) {
 		cancel_transaction();
-		$po_obj->order_no = $original_order_no;
-		$po_obj->reference = $original_reference;
-		$po_obj->line_items = $original_lines;
 		display_error(_('The purchase order could not be saved. Reload the source before retrying.'));
 		return false;
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		throw $exception;
 	}
 }
 

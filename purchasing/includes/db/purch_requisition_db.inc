@@ -1176,9 +1176,9 @@ function create_po_from_requisition($requisition_id, $supplier_id, $line_ids = a
 			$po_number = add_po($purchase_order);
 			if (!$po_number) {
 				throw new RuntimeException('Purchase order conversion was not completed.');
+			}
 			if (!$_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION'))
 				throw new RuntimeException('Purchase source authority changed.');
-			}
 
 			$po_numbers[] = (int)$po_number;
 
@@ -1200,6 +1200,11 @@ function create_po_from_requisition($requisition_id, $supplier_id, $line_ids = a
 
 		$hook_data = array('requisition_id' => (int)$requisition_id, 'po_numbers' => $po_numbers);
 		hook_invoke_all('purch_requisition_po_created', $hook_data);
+		// Completion hooks must not commit under a changed company or role.
+		if (!$purchase_order->is_current_company()
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION'))
+			throw new RuntimeException('Purchase source completion authority changed.');
 
 		if (!commit_transaction()) {
 			if (!empty($GLOBALS['transaction_level']))
