@@ -1746,10 +1746,13 @@ function create_po_from_rfq($rfq_id, $vendor_id, $line_ids = array())
 		if (!$purchase_order->order_has_items())
 			throw new RuntimeException('Purchase order conversion was not completed.');
 
+		if (!purchase_order_conversion_direct_authorized($purchase_order))
+			throw new RuntimeException('Purchase order conversion requires approval.');
 		$po_number = add_po($purchase_order);
 		if (!$po_number)
 			throw new RuntimeException('Purchase order conversion was not completed.');
-		if (!$_SESSION['wa_current_user']->can_access('SA_PURCHRFQ'))
+		if (!purchase_order_conversion_direct_authorized($purchase_order)
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHRFQ'))
 			throw new RuntimeException('Purchase source authority changed.');
 
 		$vendor_custom_data = decode_purch_rfq_custom_data($rfq_vendor['custom_data']);
@@ -1781,7 +1784,7 @@ function create_po_from_rfq($rfq_id, $vendor_id, $line_ids = array())
 		);
 		hook_invoke_all('purch_rfq_po_created', $hook_data);
 		// Completion hooks must not commit under a changed company or role.
-		if (!$purchase_order->is_current_company()
+		if (!purchase_order_conversion_direct_authorized($purchase_order)
 			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
 			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHRFQ'))
 			throw new RuntimeException('Purchase source completion authority changed.');

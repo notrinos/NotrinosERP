@@ -760,19 +760,15 @@ function convert_material_request_to_po($request_id, $supplier_id, $delivery_to)
 			throw new RuntimeException('Material request has no outstanding lines.');
 		// This legacy converter has no delayed-execution source envelope. Never
 		// bypass a configured PO workflow by calling its native writer directly.
-		if (!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_PURCHORDER)
-			|| get_approval_workflow_service()->isApprovalRequired(ST_PURCHORDER, $cart->get_trans_total())) {
-			display_error(_('This conversion is unavailable because purchase order approval is required.'));
+		if (!purchase_order_conversion_direct_authorized($cart))
 			throw new RuntimeException('Material request requires purchase order approval.');
-		}
 		if (!$cart->is_current_company() || !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST'))
 			throw new RuntimeException('Material request authority changed.');
 		$po_no = add_po($cart);
 		if (!$po_no || !$cart->is_current_company()
 			|| !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST')
 			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
-			|| !ApprovalWorkflow::isRegistered(ST_PURCHORDER)
-			|| get_approval_workflow_service()->isApprovalRequired(ST_PURCHORDER, $cart->get_trans_total()))
+			|| !purchase_order_conversion_direct_authorized($cart))
 			throw new RuntimeException('Material request purchase order failed.');
 		// Locks exclude other connections; native hooks in this transaction can
 		// still change source intent. Never link an order built from that old intent.

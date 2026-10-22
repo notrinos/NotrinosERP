@@ -773,20 +773,25 @@ class ApprovalWorkflow {
 	 *
 	 * @param int   $trans_type Transaction type constant
 	 * @param float $amount     Transaction amount
+	 * @param bool  $lock_policy Current locking reads for an owning direct conversion
 	 * @return bool             True if approval is required
 	 */
-	public function isApprovalRequired($trans_type, $amount = 0)
+	public function isApprovalRequired($trans_type, $amount = 0, $lock_policy = false)
 	{
+		if ($lock_policy && empty($GLOBALS['transaction_level']))
+			throw new RuntimeException('A locked approval policy requires an owning transaction.');
 		// Check if user has direct post bypass
 		if ($this->canDirectPost($trans_type))
 			return false;
 
-		$workflow = $this->getWorkflowForType($trans_type);
+		$workflow = $lock_policy ? get_approval_workflow_by_type($trans_type, true)
+			: $this->getWorkflowForType($trans_type);
 
 		if (!$workflow || !$workflow['is_active'])
 			return false;
 
-		if (!workflow_has_active_levels($workflow['id']))
+		if (!($lock_policy ? workflow_has_active_levels($workflow['id'], true)
+			: workflow_has_active_levels($workflow['id'])))
 			return false;
 
 		return true;

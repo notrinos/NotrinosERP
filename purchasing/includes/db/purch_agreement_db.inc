@@ -1359,10 +1359,13 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 		if (!$purchase_order->order_has_items())
 			throw new RuntimeException('Purchase order conversion was not completed.');
 
+		if (!purchase_order_conversion_direct_authorized($purchase_order))
+			throw new RuntimeException('Purchase order conversion requires approval.');
 		$po_number = add_po($purchase_order);
 		if (!$po_number)
 			throw new RuntimeException('Purchase order conversion was not completed.');
-		if (!$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
+		if (!purchase_order_conversion_direct_authorized($purchase_order)
+			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
 			throw new RuntimeException('Purchase source authority changed.');
 
 		$sql = "UPDATE " . TB_PREF . "purch_orders SET
@@ -1380,7 +1383,7 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 		);
 		hook_invoke_all('purch_agreement_po_created', $hook_data);
 		// Completion hooks must not commit under a changed company or role.
-		if (!$purchase_order->is_current_company()
+		if (!purchase_order_conversion_direct_authorized($purchase_order)
 			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
 			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
 			throw new RuntimeException('Purchase source completion authority changed.');

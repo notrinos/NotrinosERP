@@ -98,10 +98,23 @@ function get_approval_workflow($workflow_id)
  * Get a workflow definition by transaction type
  *
  * @param int $trans_type Transaction type constant (ST_*)
+ * @param bool $lock_policy Lock current policy rows in the caller transaction
  * @return array|false    Workflow row or false
  */
-function get_approval_workflow_by_type($trans_type)
+function get_approval_workflow_by_type($trans_type, $lock_policy = false)
 {
+	if ($lock_policy) {
+		// Lock inactive rows too: activation must serialize with direct posting.
+		$result = db_query('SELECT * FROM '.TB_PREF.'approval_workflows WHERE trans_type='
+			.db_escape($trans_type).' ORDER BY id FOR UPDATE', 'could not lock approval policy');
+		if (!$result)
+			throw new RuntimeException('Approval policy could not be verified.');
+		$active = false;
+		while ($row = db_fetch($result))
+			if ($active === false && $row['is_active'])
+				$active = $row;
+		return $active;
+	}
 	$sql = "SELECT * FROM " . TB_PREF . "approval_workflows
 		WHERE trans_type = " . db_escape($trans_type) . "
 		AND is_active = 1";
@@ -425,10 +438,23 @@ function delete_all_approval_levels($workflow_id)
  * Check if a workflow has any active levels configured
  *
  * @param int $workflow_id Workflow ID
+ * @param bool $lock_policy Lock current level rows in the caller transaction
  * @return bool            True if at least one active level exists
  */
-function workflow_has_active_levels($workflow_id)
+function workflow_has_active_levels($workflow_id, $lock_policy = false)
 {
+	if ($lock_policy) {
+		// Read current committed rows, including disabled levels and empty ranges.
+		$result = db_query('SELECT id,is_active FROM '.TB_PREF.'approval_levels WHERE workflow_id='
+			.db_escape($workflow_id).' ORDER BY id FOR UPDATE', 'could not lock approval levels');
+		if (!$result)
+			throw new RuntimeException('Approval levels could not be verified.');
+		$active = false;
+		while ($row = db_fetch($result))
+			if ($row['is_active'])
+				$active = true;
+		return $active;
+	}
 	$sql = "SELECT COUNT(*) AS cnt FROM " . TB_PREF . "approval_levels
 		WHERE workflow_id = " . db_escape($workflow_id) . "
 		AND is_active = 1";

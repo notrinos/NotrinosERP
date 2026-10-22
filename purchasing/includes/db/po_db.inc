@@ -37,6 +37,34 @@ function get_supplier_details_to_order(&$order, $supplier_id) {
 	$order->set_supplier($supplier_id, $myrow['supp_name'], $myrow['curr_code'], $myrow['tax_group_id'], $myrow['tax_included']);
 }
 
+/**
+ * Admit only direct-policy source conversions through the existing PO workflow.
+ * Conversion commands have no delayed source envelope yet. Their callers must
+ * recheck this boundary after native and completion hooks, before committing.
+ * Ordinary PO entry and approved executors keep their existing workflow path.
+ *
+ * @param purch_order $order Current-company conversion cart
+ * @return bool Whether this source conversion can write a PO directly
+ */
+function purchase_order_conversion_direct_authorized($order) {
+	if (!($order instanceof purch_order) || !$order->is_current_company()
+		|| $order->trans_type != ST_PURCHORDER
+		|| !isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER'))
+		return false;
+	if (!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_PURCHORDER)
+		|| !function_exists('get_approval_workflow_service')) {
+		display_error(_('This conversion is unavailable because purchase order approval could not be verified.'));
+		return false;
+	}
+	$approval = get_approval_workflow_service();
+	if (!$approval || $approval->isApprovalRequired(ST_PURCHORDER, $order->get_trans_total(), true)) {
+		display_error(_('This conversion is unavailable because purchase order approval is required.'));
+		return false;
+	}
+	return true;
+}
+
 /** Retain PO history unless the locked aggregate has no known dependent owner. */
 function purchase_order_cancellation_is_unused($po, $header) {
 	if (($header['custom_data'] !== null && $header['custom_data'] !== '' && $header['custom_data'] !== '{}')
