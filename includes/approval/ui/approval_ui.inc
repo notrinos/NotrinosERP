@@ -332,6 +332,10 @@ function collect_purchase_order_data($po)
 		'prep_amount'       => isset($po->prep_amount) ? $po->prep_amount : 0,
 		'fixed_asset'       => isset($po->fixed_asset) ? $po->fixed_asset : false,
 	);
+	if (isset($po->direct_finance_binding))
+		$data['direct_finance_binding'] = $po->direct_finance_binding;
+	if (isset($po->approval_gross_amount))
+		$data['approval_gross_amount'] = $po->get_trans_total();
 
 	// Collect line items
 	$data['line_items'] = array();

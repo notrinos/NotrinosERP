@@ -1,6 +1,106 @@
 <?php
 /** Native readback for an approved direct invoice, inside its existing transaction. */
 
+/** Read the native financial dependencies without including mutable stock valuation or supplier balances. */
+function direct_purchase_financial_inputs($cart, $lock) {
+	direct_purchase_effect_context();
+	if (!($cart instanceof purch_order) || !$cart->is_current_company() || $cart->trans_type != ST_SUPPINVOICE
+		|| !is_date($cart->orig_order_date) || !$cart->line_items)
+		throw new RuntimeException('Direct invoice financial identity is unavailable.');
+	$items = array();
+	foreach ($cart->line_items as $line) $items[$line->stock_id] = db_escape($line->stock_id);
+	ksort($items);
+	$queries = array(
+		'supplier'=>'SELECT supplier_id,curr_code,tax_group_id,tax_included,payable_account,purchase_account,'
+			.'payment_discount_account,dimension_id,dimension2_id,inactive FROM '.TB_PREF.'suppliers WHERE supplier_id='.db_escape($cart->supplier_id),
+		'items'=>'SELECT stock_id,mb_flag,tax_type_id,inventory_account,cogs_account,adjustment_account,sales_account,'
+			.'wip_account,dimension_id,dimension2_id,inactive FROM '.TB_PREF.'stock_master WHERE stock_id IN ('.implode(',', $items).') ORDER BY stock_id',
+		'preferences'=>"SELECT name,value FROM ".TB_PREF."sys_prefs WHERE name IN ('curr_default','grn_clearing_act','tax_algorithm','exchange_diff_act') ORDER BY name"
+	);
+	if ($cart->cash_account)
+		$queries['bank'] = 'SELECT id,account_code,bank_curr_code,inactive FROM '.TB_PREF.'bank_accounts WHERE id='.db_escape($cart->cash_account);
+	$state = array();
+	foreach ($queries as $name=>$query) {
+		$result = db_query($query.($lock ? ' FOR UPDATE' : ''), 'Could not verify direct invoice financial inputs');
+		if (!$result) throw new RuntimeException('Direct invoice financial inputs are unavailable.');
+		$state[$name] = array();
+		while ($row = db_fetch_assoc($result)) $state[$name][] = $row;
+	}
+	if (count($state['supplier']) !== 1 || count($state['items']) !== count($items)
+		|| ($cart->cash_account && count($state['bank']) !== 1))
+		throw new RuntimeException('Direct invoice financial owner is unavailable.');
+	$supplier = $state['supplier'][0];
+	if ($supplier['inactive'] || $supplier['curr_code'] !== $cart->curr_code
+		|| (string)$supplier['tax_group_id'] !== (string)$cart->tax_group_id)
+		throw new RuntimeException('Direct invoice supplier currency or tax group changed; reload.');
+	foreach ($state['items'] as $item) if ($item['inactive'])
+		throw new RuntimeException('Direct invoice item is inactive.');
+	if ($cart->cash_account && $state['bank'][0]['inactive'])
+		throw new RuntimeException('Direct invoice cash account is inactive.');
+	$preferences = array();
+	foreach ($state['preferences'] as $row) $preferences[$row['name']] = $row['value'];
+	if (empty($preferences['curr_default'])) throw new RuntimeException('Direct invoice home currency is unavailable.');
+	foreach (array('curr_default','grn_clearing_act','tax_algorithm','exchange_diff_act') as $name)
+		if ((string)get_company_pref($name) !== (string)(isset($preferences[$name]) ? $preferences[$name] : null))
+			throw new RuntimeException('Direct invoice cached financial policy changed; reload.');
+	global $path_to_root;
+	include_once($path_to_root.'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
+	$state['tax'] = read_agreement_purchase_tax_configuration($lock);
+	$currencies = array($cart->curr_code);
+	if ($cart->cash_account) $currencies[] = $state['bank'][0]['bank_curr_code'];
+	$currencies = array_unique($currencies); sort($currencies);
+	foreach ($currencies as $currency) {
+		if ($currency === $preferences['curr_default']) { $state['rates'][$currency] = '1'; continue; }
+		// Lock the complete as-of range, including its gaps. A native same-date
+		// insertion is compatible only when it preserves the already approved rate.
+		$result = db_query('SELECT id,date_,rate_buy,rate_sell FROM '.TB_PREF.'exchange_rates WHERE curr_code='
+			.db_escape($currency).' AND date_<='.db_escape(date2sql($cart->orig_order_date))
+			.' ORDER BY date_ DESC,id DESC'.($lock ? ' FOR UPDATE' : ''), 'Could not verify direct invoice exchange rate');
+		if (!$result) throw new RuntimeException('Direct invoice exchange rate is unavailable.');
+		$rate = db_fetch_assoc($result);
+		$value = $rate ? $rate['rate_buy'] : ($currency === $cart->curr_code ? $cart->ex_rate : 0);
+		if ($currency === $cart->curr_code && (!$rate || $rate['date_'] !== date2sql($cart->orig_order_date))
+			&& is_numeric($cart->ex_rate) && $cart->ex_rate > 0)
+			$value = $cart->ex_rate;
+		if (!is_numeric($value) || !is_finite((float)$value) || $value <= 0)
+			throw new RuntimeException('Direct invoice requires a positive native exchange rate.');
+		$state['rates'][$currency] = (string)(float)$value;
+		if ($rate && $rate['date_'] === date2sql($cart->orig_order_date) && $currency === $cart->curr_code
+			&& $cart->ex_rate && (float)$cart->ex_rate !== (float)$value)
+			throw new RuntimeException('Direct invoice explicit exchange rate conflicts with its native date rate.');
+	}
+	return $state;
+}
+
+/** Calculate the native gross approval amount, including explicit tax overrides and line rounding. */
+function direct_purchase_financial_amount($cart) {
+	$total = 0;
+	foreach ($cart->line_items as $line) $total += round2($line->quantity * $line->price, user_price_dec());
+	if (!$cart->tax_included) foreach ($cart->get_taxes() as $tax)
+		$total += isset($tax['Override']) ? $tax['Override'] : $tax['Value'];
+	if (!is_numeric($total) || !is_finite((float)$total))
+		throw new RuntimeException('Direct invoice approval amount is invalid.');
+	return round2($total, user_price_dec());
+}
+
+/** Bind a new direct command, or validate an immutable command against current native inputs. */
+function direct_purchase_financial_binding($cart, $expected = null) {
+	$consistent = direct_purchase_financial_inputs($cart, false);
+	$current = direct_purchase_financial_inputs($cart, true);
+	if ($consistent !== $current)
+		throw new RuntimeException('Direct invoice financial snapshot is stale; retry in a fresh transaction.');
+	$taxes = get_tax_group_items_as_array($cart->tax_group_id);
+	if ($cart->tax_group_array !== null && json_encode($cart->tax_group_array) !== json_encode($taxes))
+		throw new RuntimeException('Direct invoice cached tax rates changed; reload.');
+	$encoded = json_encode($current);
+	if ($encoded === false) throw new RuntimeException('Direct invoice financial inputs cannot be encoded.');
+	$binding = array('version'=>1, 'inputs_sha256'=>hash('sha256', $encoded),
+		'amount'=>direct_purchase_financial_amount($cart), 'precision'=>user_price_dec());
+	if ($expected !== null && json_encode($expected) !== json_encode($binding))
+		throw new RuntimeException('Approved direct invoice financial inputs or amount changed; resubmit.');
+	return $binding;
+}
+
 /** Bind every effect read to the originally admitted company, actor and native authority. */
 function direct_purchase_effect_context() {
 	global $db_connections;

@@ -245,6 +245,7 @@ function publish_direct_supplier_cart($cart, $submitted_cart) {
 
 /** Dispatch a native new document under one current core-policy transaction. */
 function submit_or_post_purchase_document($cart, $context = array()) {
+	global $path_to_root;
 	if (!purchase_order_creation_authorized($cart) || !class_exists('ApprovalWorkflow'))
 		return false;
 	$type = $cart->trans_type;
@@ -254,20 +255,27 @@ function submit_or_post_purchase_document($cart, $context = array()) {
 		$working->line_items[$key] = clone $line;
 	if (!begin_transaction()) return false;
 	try {
+		$amount = $cart->get_trans_total();
+		if ($type == ST_PURCHORDER) $working->approval_gross_amount = $amount;
+		if ($type == ST_SUPPINVOICE) {
+			include_once($path_to_root.'/purchasing/includes/db/direct_purchase_integrity_db.inc');
+			$working->direct_finance_binding = direct_purchase_financial_binding($working);
+			$amount = $working->direct_finance_binding['amount'];
+		}
 		$approval = new ApprovalWorkflow($_SESSION['wa_current_user']->access, $_SESSION['wa_current_user']->user);
 		$governed = $type == ST_PURCHORDER || $type == ST_SUPPINVOICE;
 		if ($governed && !ApprovalWorkflow::isRegistered($type))
 			throw new RuntimeException('Purchase approval registration is unavailable.');
-		$required = $governed && $approval->isApprovalRequired($type, $cart->get_trans_total(), true);
+		$required = $governed && $approval->isApprovalRequired($type, $amount, true);
 		if ($required) {
-			$data = collect_purchase_order_data($cart);
+			$data = collect_purchase_order_data($working);
 			if ($data === false) throw new RuntimeException('Purchase approval envelope is unavailable.');
-			$result = $approval->submit($type, $data, $cart->get_trans_total(), $context, true);
+			$result = $approval->submit($type, $data, $amount, $context, true);
 			if (!in_array($result['status'], array('pending','auto_approved'), true))
 				throw new RuntimeException('Purchase approval submission failed.');
 		} else {
 			$number = add_direct_supp_trans($working);
-			if (!$number || ($governed && $approval->isApprovalRequired($type, $cart->get_trans_total(), true)))
+			if (!$number || ($governed && $approval->isApprovalRequired($type, $amount, true)))
 				throw new RuntimeException('Purchase posting or current approval policy changed.');
 			$result = array('status'=>'posted','trans_no'=>$number);
 		}
@@ -293,7 +301,7 @@ function submit_or_post_purchase_document($cart, $context = array()) {
 
 /** Create a native direct document, optionally preserving its approved business intent. */
 function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
-	global $Refs, $type_shortcuts;
+	global $Refs, $type_shortcuts, $path_to_root;
 	if (!purchase_order_creation_authorized($cart))
 		return false;
 	if ($cart->trans_type == ST_PURCHORDER)
@@ -314,8 +322,10 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 		if (!direct_supplier_period_authorized($cart))
 			throw new RuntimeException('Direct purchasing accounting period is closed or unavailable.');
 		if ($preserve_approved_intent) {
-			include_once(dirname(__FILE__).'/db/direct_purchase_integrity_db.inc');
+			include_once($path_to_root.'/purchasing/includes/db/direct_purchase_integrity_db.inc');
 			$effect_context = direct_purchase_effect_context();
+			$financial_binding = direct_purchase_financial_binding($cart,
+				isset($cart->direct_finance_binding) ? $cart->direct_finance_binding : null);
 		}
 		if ($cart->trans_type != ST_PURCHORDER) {
 			// for direct grn/invoice set same dates for lines as for whole document
@@ -334,6 +344,7 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after parent creation.');
 		$parent_effects = $preserve_approved_intent ? purchase_order_creation_native_state($order_no) : null;
+		if ($preserve_approved_intent) direct_purchase_financial_binding($cart, $financial_binding);
 
 		//Direct GRN
 		if ($cart->trans_type == ST_SUPPRECEIVE)
@@ -348,6 +359,7 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after receipt.');
 		if ($preserve_approved_intent) {
+			direct_purchase_financial_binding($cart, $financial_binding);
 			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
 			$receipt_effects = direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false);
 		}
@@ -399,10 +411,15 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 			|| $inv->tran_date !== $original->orig_order_date)
 			throw new RuntimeException('Direct purchase authority changed after invoice.');
 		if ($preserve_approved_intent) {
+			direct_purchase_financial_binding($cart, $financial_binding);
 			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
 			direct_purchase_assert_native_effects($receipt_effects,
 				direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false));
 			$invoice_effects = direct_purchase_native_effect_state(ST_SUPPINVOICE, $inv_no, $effect_context, false);
+			$posted_invoice = $invoice_effects['header'][0];
+			if (round2($posted_invoice['ov_amount'] + $posted_invoice['ov_gst'] + $posted_invoice['ov_discount']
+				- $financial_binding['amount'], $financial_binding['precision']) != 0)
+				throw new RuntimeException('Native direct invoice total differs from its approved gross amount.');
 		}
 
 		if ($cart->cash_account) {
@@ -418,6 +435,7 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 				direct_purchase_assert_cash_allocation($inv_no, $pmt_no, $inv->supplier_id, $total, $inv->tran_date, $effect_context);
 		}
 		if ($preserve_approved_intent) {
+			direct_purchase_financial_binding($cart, $financial_binding);
 			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
 			direct_purchase_assert_native_effects($receipt_effects,
 				direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false));

@@ -201,12 +201,18 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 			$working_order->reference = $Refs->get_next(ST_PURCHORDER, null,
 				array('supplier_id' => $working_order->supplier_id, 'date' => $working_order->orig_order_date));
 		$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($working_order) : null;
+		$approved_total = $preserve_approved_intent && isset($working_order->approval_gross_amount)
+			? $working_order->approval_gross_amount : null;
 		hook_db_prewrite($working_order, ST_PURCHORDER);
 		if (!purchase_order_creation_authorized($working_order)
 			|| purchase_order_creation_context($working_order) !== $creation_context
 			|| ($preserve_approved_intent && purchase_order_creation_cart_state($working_order) !== $approved_intent))
 			throw new RuntimeException('Purchase order admission changed.');
 		/*Insert to purchase order header record */
+		$native_total = $working_order->get_trans_total();
+		if ($approved_total !== null && (!is_numeric($approved_total) || !is_finite((float)$approved_total)
+			|| round($native_total - $approved_total, user_price_dec()) != 0))
+			throw new RuntimeException('Approved purchase order gross amount changed; resubmit.');
 		$sql = "INSERT INTO ".TB_PREF."purch_orders (".($approved_order_no ? 'order_no, ' : '')."supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
 		if ($approved_order_no)
 			$sql .= (int)$approved_order_no . ', ';
@@ -220,7 +226,7 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 			db_escape($working_order->supp_ref) . ", " .
 			db_escape($working_order->Location) . ", " .
 			db_escape($working_order->delivery_address) . ", " .
-			db_escape($working_order->get_trans_total()). ", " .
+			db_escape($native_total). ", " .
 			db_escape($working_order->tax_included). ", " .
 			db_escape($working_order->prep_amount). ")";
 

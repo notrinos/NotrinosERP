@@ -31,6 +31,7 @@ ApprovalWorkflow::registerTransactionType(ST_SUPPINVOICE, array(
 	'label'          => _('Supplier Invoice'),
 	'application'    => 'AP',
 	'executor'       => 'execute_approved_supplier_invoice',
+	'action_validator' => 'validate_direct_supplier_financial_action',
 	'amount_getter'  => 'get_purchase_draft_amount',
 	'draft_renderer' => 'render_purchase_draft',
 	'edit_url'       => 'purchasing/supplier_invoice.php',
@@ -153,6 +154,12 @@ function restore_purchase_order_from_data($data)
 	$po->terms            = isset($data['terms']) ? $data['terms'] : array();
 	$po->ex_rate          = isset($data['ex_rate']) ? $data['ex_rate'] : 1;
 	$po->cash_account     = isset($data['cash_account']) ? $data['cash_account'] : '';
+	if (array_key_exists('direct_finance_binding', $data))
+		$po->direct_finance_binding = $data['direct_finance_binding'];
+	if (array_key_exists('approval_gross_amount', $data)) {
+		if (!is_numeric($data['approval_gross_amount']) || !is_finite((float)$data['approval_gross_amount'])) return false;
+		$po->approval_gross_amount = $data['approval_gross_amount'];
+	}
 	$po->dimension        = isset($data['dimension']) ? (int)$data['dimension'] : 0;
 	$po->dimension2       = isset($data['dimension2']) ? (int)$data['dimension2'] : 0;
 	$po->tax_overrides    = isset($data['tax_overrides']) ? $data['tax_overrides'] : array();
@@ -335,6 +342,31 @@ function execute_approved_supplier_invoice($draft_data, $reserved_trans_no, $dra
 	$order_no = add_direct_supp_trans($po, true);
 
 	return $order_no ? $order_no : false;
+}
+
+/** Validate new direct-invoice financial intent through the existing core action boundary. */
+function validate_direct_supplier_financial_action($action, $data, $draft, $actor, $comments) {
+	if (!is_array($data)) return false;
+	if (!array_key_exists('direct_finance_binding', $data)
+		&& (isset($data['grn_items']) || isset($data['gl_codes']) || !array_key_exists('line_items', $data)))
+		return true;
+	if (!isset($_SESSION['wa_current_user'], $actor['user_id'], $actor['role_id'])
+		|| (int)$actor['user_id'] !== (int)$_SESSION['wa_current_user']->user
+		|| (int)$actor['role_id'] !== (int)$_SESSION['wa_current_user']->access)
+		return false;
+	if (in_array($action, array('reject','cancel'), true)) return true;
+	if (!array_key_exists('direct_finance_binding', $data)) return true;
+	if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->can_access('SA_SUPPLIERINVOICE')
+		|| isset($data['grn_items']) || isset($data['gl_codes']) || !is_array($data['direct_finance_binding']))
+		return false;
+	global $path_to_root;
+	include_once($path_to_root.'/purchasing/includes/db/direct_purchase_integrity_db.inc');
+	try {
+		$cart = restore_purchase_order_from_data($data);
+		if ($cart === false) return false;
+		$binding = direct_purchase_financial_binding($cart, $data['direct_finance_binding']);
+		return !isset($draft['amount']) || round2($draft['amount'] - $binding['amount'], $binding['precision']) == 0;
+	} catch (Exception $exception) { return false; }
 }
 
 /**
@@ -654,6 +686,11 @@ function cancel_vendor_evaluation_draft($draft_data, $draft_id, $comments)
  */
 function get_purchase_draft_amount($draft_data)
 {
+	if (isset($draft_data['approval_gross_amount']) && is_numeric($draft_data['approval_gross_amount']))
+		return (float)$draft_data['approval_gross_amount'];
+	if (isset($draft_data['direct_finance_binding']['amount'])
+		&& is_numeric($draft_data['direct_finance_binding']['amount']))
+		return (float)$draft_data['direct_finance_binding']['amount'];
 	$total = 0;
 	if (!empty($draft_data['line_items'])) {
 		foreach ($draft_data['line_items'] as $line) {

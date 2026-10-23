@@ -261,7 +261,7 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 			if (isset($taxitem['Override'])) {
 				if ($supp_trans->tax_included) { // if tax included, fix net amount to preserve overall line price
 					$net_diff += $taxitem['Override'] - $taxitem['Value'];
-					$taxitem['Net'] += $taxitem['Override'] - $taxitem['Value'];
+					$taxitem['Net'] -= $taxitem['Override'] - $taxitem['Value'];
 				}
 				$taxitem['Value'] = $taxitem['Override'];
 			}
