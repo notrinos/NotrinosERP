@@ -159,6 +159,10 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 	$can_process_grn_tracking = function_exists('process_grn_tracking_and_wms');
 
 	begin_transaction();
+	if ($preserve_approved_intent) {
+		include_once(dirname(__FILE__).'/direct_purchase_integrity_db.inc');
+		$effect_context = direct_purchase_effect_context();
+	}
 	$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($po) : null;
 	hook_db_prewrite($po, ST_SUPPRECEIVE);
 	if ($preserve_approved_intent && purchase_order_creation_cart_state($po) !== $approved_intent)
@@ -271,10 +275,14 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 
 	$po->trans_no = $grn;
 	$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($po) : null;
+	$native_effects = $preserve_approved_intent ? direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn, $effect_context) : null;
 	hook_db_postwrite($po, ST_SUPPRECEIVE);
 	if ($preserve_approved_intent && (purchase_order_creation_cart_state($po) !== $approved_intent
 		|| (string)$po->trans_no !== (string)$grn))
 		throw new RuntimeException('Approved direct receipt intent changed at completion.');
+	if ($preserve_approved_intent)
+		direct_purchase_assert_native_effects($native_effects,
+			direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn, $effect_context));
 	commit_transaction();
 	if (!empty($po->agreement_id) && function_exists('update_agreement_fulfillment'))
 		update_agreement_fulfillment((int)$po->agreement_id);

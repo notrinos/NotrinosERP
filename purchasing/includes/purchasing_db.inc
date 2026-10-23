@@ -313,6 +313,10 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 	try {
 		if (!direct_supplier_period_authorized($cart))
 			throw new RuntimeException('Direct purchasing accounting period is closed or unavailable.');
+		if ($preserve_approved_intent) {
+			include_once(dirname(__FILE__).'/db/direct_purchase_integrity_db.inc');
+			$effect_context = direct_purchase_effect_context();
+		}
 		if ($cart->trans_type != ST_PURCHORDER) {
 			// for direct grn/invoice set same dates for lines as for whole document
 			foreach ($cart->line_items as $line_no =>$line)
@@ -329,6 +333,7 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 		$cart->order_no = $order_no;
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after parent creation.');
+		$parent_effects = $preserve_approved_intent ? purchase_order_creation_native_state($order_no) : null;
 
 		//Direct GRN
 		if ($cart->trans_type == ST_SUPPRECEIVE)
@@ -342,6 +347,10 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 			throw new RuntimeException('Direct goods receipt failed.');
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after receipt.');
+		if ($preserve_approved_intent) {
+			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
+			$receipt_effects = direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false);
+		}
 		if ($cart->trans_type == ST_SUPPRECEIVE) {
 			if (!commit_transaction()) {
 				if (!empty($GLOBALS['transaction_level']))
@@ -389,9 +398,15 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 			|| (string)$inv->supplier_id !== (string)$original->supplier_id || $inv->trans_type != ST_SUPPINVOICE
 			|| $inv->tran_date !== $original->orig_order_date)
 			throw new RuntimeException('Direct purchase authority changed after invoice.');
+		if ($preserve_approved_intent) {
+			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
+			direct_purchase_assert_native_effects($receipt_effects,
+				direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false));
+			$invoice_effects = direct_purchase_native_effect_state(ST_SUPPINVOICE, $inv_no, $effect_context, false);
+		}
 
 		if ($cart->cash_account) {
-			$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
+			$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2, $preserve_approved_intent);
 			if (!$pmt_no)
 				throw new RuntimeException('Direct supplier payment failed.');
 			if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
@@ -399,6 +414,15 @@ function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 			add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
 			update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);
 			update_supp_trans_allocation(ST_SUPPAYMENT, $pmt_no, $inv->supplier_id);
+			if ($preserve_approved_intent)
+				direct_purchase_assert_cash_allocation($inv_no, $pmt_no, $inv->supplier_id, $total, $inv->tran_date, $effect_context);
+		}
+		if ($preserve_approved_intent) {
+			direct_purchase_assert_native_effects($parent_effects, purchase_order_creation_native_state($order_no));
+			direct_purchase_assert_native_effects($receipt_effects,
+				direct_purchase_native_effect_state(ST_SUPPRECEIVE, $grn_no, $effect_context, false));
+			direct_purchase_assert_native_effects($invoice_effects,
+				direct_purchase_native_effect_state(ST_SUPPINVOICE, $inv_no, $effect_context, false));
 		}
 		if (!commit_transaction()) {
 			if (!empty($GLOBALS['transaction_level']))

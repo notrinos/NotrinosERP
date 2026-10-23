@@ -10,16 +10,25 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref, $supp_amount, $supp_discount, $memo_, $bank_charge=0, $bank_amount=0, $dimension=0, $dimension2=0) {
+/** Post a native payment; an approved direct invoice can require exact native-effect custody. */
+function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref, $supp_amount, $supp_discount, $memo_, $bank_charge=0, $bank_amount=0, $dimension=0, $dimension2=0, $preserve_approved_intent=false) {
 	global $Refs;
 
 	begin_transaction();
-	$args = func_get_args();
+	$args = array_slice(func_get_args(), 0, 12);
 	while (count($args) < 12)
 		$args[] = 0;
 	$args = (object)array_combine(array('trans_no', 'supplier_id', 'bank_account', 'date_', 'ref', 'supp_amount', 'supp_discount', 'memo_', 'bank_charge', 'bank_amount', 'dimension', 'dimension2'), $args);
 	$args->trans_no = 0;
+	if ($preserve_approved_intent) {
+		include_once(dirname(__FILE__).'/direct_purchase_integrity_db.inc');
+		$effect_context = direct_purchase_effect_context();
+		$approved_args = get_object_vars($args);
+	}
 	hook_db_prewrite( $args, ST_SUPPAYMENT);
+	if ($preserve_approved_intent && (direct_purchase_effect_context() !== $effect_context
+		|| array_intersect_key(get_object_vars($args), $approved_args) !== $approved_args))
+		throw new RuntimeException('Approved direct payment intent changed before posting.');
 
 	if ($trans_no != 0) {
 		delete_comments(ST_SUPPAYMENT, $trans_no);
@@ -69,7 +78,17 @@ function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref
 	$Refs->save(ST_SUPPAYMENT, $payment_id, $ref);
 
 	$args->trans_no = $payment_id;
+	if ($preserve_approved_intent) {
+		$approved_args['trans_no'] = $payment_id;
+		$native_effects = direct_purchase_native_effect_state(ST_SUPPAYMENT, $payment_id, $effect_context);
+	}
 	hook_db_postwrite($args, ST_SUPPAYMENT);
+	if ($preserve_approved_intent) {
+		if (array_intersect_key(get_object_vars($args), $approved_args) !== $approved_args)
+			throw new RuntimeException('Approved direct payment intent changed at completion.');
+		direct_purchase_assert_native_effects($native_effects,
+			direct_purchase_native_effect_state(ST_SUPPAYMENT, $payment_id, $effect_context));
+	}
 
 	commit_transaction();
 
