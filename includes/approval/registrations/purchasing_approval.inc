@@ -298,7 +298,7 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 	if ($po === false)
 		return false;
 
-	$order_no = add_direct_supp_trans($po);
+	$order_no = add_po($po, 0, true);
 
 	return $order_no ? $order_no : false;
 }

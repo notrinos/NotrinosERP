@@ -172,8 +172,9 @@ function delete_po($po) {
  * The existing approval service owns command admission; this boundary rechecks
  * current module/company authority and preserves failed cart identities for retry.
  * An optional approved source draft binds its validated reservation to the native key.
+ * Approved ordinary POs can additionally preserve business intent across prewrite hooks.
  */
-function add_po(&$po_obj, $approval_draft_id = 0) {
+function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = false) {
 	global $Refs;
 	if (!purchase_order_creation_authorized($po_obj))
 		return false;
@@ -199,9 +200,11 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 		if ($working_order->reference == 'auto')
 			$working_order->reference = $Refs->get_next(ST_PURCHORDER, null,
 				array('supplier_id' => $working_order->supplier_id, 'date' => $working_order->orig_order_date));
+		$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($working_order) : null;
 		hook_db_prewrite($working_order, ST_PURCHORDER);
 		if (!purchase_order_creation_authorized($working_order)
-			|| purchase_order_creation_context($working_order) !== $creation_context)
+			|| purchase_order_creation_context($working_order) !== $creation_context
+			|| ($preserve_approved_intent && purchase_order_creation_cart_state($working_order) !== $approved_intent))
 			throw new RuntimeException('Purchase order admission changed.');
 		/*Insert to purchase order header record */
 		$sql = "INSERT INTO ".TB_PREF."purch_orders (".($approved_order_no ? 'order_no, ' : '')."supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
@@ -230,8 +233,21 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 		// Never publish a PO under a pending, cancelled or rejected identity.
 		$number_history = db_query('SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_PURCHORDER
 			.' AND id='.(int)$working_order->order_no.' FOR UPDATE', 'Could not verify purchase order number history');
-		if (!$number_history || db_num_rows($number_history))
+		if (!$number_history)
 			throw new RuntimeException('Purchase order identity conflicts with retained approval history; retry.');
+		if (db_num_rows($number_history)) {
+			// Only this unpublished, newly inserted header may move beyond retained
+			// numbers. No lines, references, audit or historical native rows exist
+			// under its provisional key. Approved source identities remain exact.
+			if ($approved_order_no || !function_exists('get_next_purchase_order_approval_number'))
+				throw new RuntimeException('Purchase order identity conflicts with retained approval history; retry.');
+			$next_order_no = get_next_purchase_order_approval_number();
+			if (!$next_order_no || !db_query('UPDATE '.TB_PREF.'purch_orders SET order_no='.(int)$next_order_no
+				.' WHERE order_no='.(int)$working_order->order_no, 'Could not advance unpublished purchase order identity')
+				|| db_num_affected_rows() !== 1)
+				throw new RuntimeException('Purchase order identity could not advance beyond retained history.');
+			$working_order->order_no = $next_order_no;
+		}
 
 		/*Insert the purchase order detail records */
 		foreach ($working_order->line_items as $line_no => $po_line) {
@@ -318,7 +334,7 @@ function purchase_order_creation_cart_state($cart) {
 	$state = array();
 	foreach (array('order_no','supplier_id','trans_type','orig_order_date','Location','tax_included',
 		'prep_amount','reference','Comments','supp_ref','delivery_address','dimension','dimension2',
-		'curr_code','tax_group_id','ex_rate') as $field)
+		'curr_code','tax_group_id','ex_rate','agreement_id','requisition_id','rfq_id') as $field)
 		$state[$field] = isset($cart->$field) ? $cart->$field : null;
 	$state['lines'] = array();
 	foreach ($cart->line_items as $key => $line) {

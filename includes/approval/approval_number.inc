@@ -41,7 +41,12 @@ function reserve_approval_trans_number($trans_type, $context = array())
 	if (!isset($context['date']) || !$context['date'])
 		$context['date'] = new_doc_date();
 
-	$next_no = get_next_trans_no($trans_type);
+	// PO native keys auto-increment independently of retained approval numbers.
+	// A caller's consistent snapshot must not reserve an already committed key.
+	$next_no = (int)$trans_type === ST_PURCHORDER
+		? get_next_purchase_order_approval_number() : get_next_trans_no($trans_type);
+	if (!$next_no)
+		return false;
 
 	// Insert placeholder in voided table to consume the number.
 	// get_next_trans_no() checks voided table, so this prevents reuse.
@@ -52,7 +57,8 @@ function reserve_approval_trans_number($trans_type, $context = array())
 		. "NOW(), "
 		. db_escape('APPROVAL_RESERVED') . ")";
 
-	db_query($sql, 'could not reserve transaction number for approval');
+	if (!db_query($sql, 'could not reserve transaction number for approval'))
+		return false;
 
 	// Generate the reference string for this reserved number
 	$reference = '';
@@ -61,6 +67,34 @@ function reserve_approval_trans_number($trans_type, $context = array())
 	}
 
 	return array('trans_no' => $next_no, 'reference' => $reference);
+}
+
+/**
+ * Serialize PO reservations against native inserts using current InnoDB reads.
+ * Hold both sequence ranges until the existing outer workflow transaction ends.
+ * Native auto-increment and historical reservation/posted aliases stay unchanged.
+ * @return int|false Next current company PO number, or unavailable ownership
+ */
+function get_next_purchase_order_approval_number()
+{
+	if (empty($GLOBALS['transaction_level']))
+		return false;
+	$last_no = 0;
+	foreach (array(
+		'SELECT order_no FROM '.TB_PREF.'purch_orders ORDER BY order_no DESC LIMIT 1 FOR UPDATE',
+		'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_PURCHORDER.' ORDER BY id DESC LIMIT 1 FOR UPDATE'
+	) as $sql) {
+		$result = db_query($sql, 'could not verify current purchase order approval number');
+		if (!$result)
+			return false;
+		$row = db_fetch_row($result);
+		if ($row) {
+			if (!is_numeric($row[0]) || (float)$row[0] < 0 || (float)$row[0] >= 2147483647)
+				return false;
+			$last_no = max($last_no, (int)$row[0]);
+		}
+	}
+	return $last_no + 1;
 }
 
 /**
