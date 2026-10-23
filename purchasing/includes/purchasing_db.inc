@@ -188,15 +188,53 @@ function get_po_prepayments($supp_trans) {
 //
 //	Add Purchase Order, GRN or Purchase Invoice with parent auto documents (if any)
 //
+/** Recheck current accounting-period settings under the owning direct-document transaction. */
+function direct_supplier_period_authorized($cart) {
+	if (empty($GLOBALS['transaction_level']) || !is_string($cart->orig_order_date) || !is_date($cart->orig_order_date))
+		return false;
+	$date = date2sql($cart->orig_order_date);
+	$result = db_query("SELECT name,value FROM ".TB_PREF."sys_prefs WHERE name IN ('f_year','gl_closing_date')"
+		." ORDER BY name FOR UPDATE", 'Could not verify current purchasing period settings');
+	if (!$result)
+		return false;
+	$settings = array();
+	while ($row = db_fetch($result))
+		$settings[$row['name']] = $row['value'];
+	if (!isset($settings['f_year'], $settings['gl_closing_date'])
+		|| (string)(int)$settings['f_year'] !== (string)$settings['f_year'] || (int)$settings['f_year'] <= 0)
+		return false;
+	$closing_date = $settings['gl_closing_date'];
+	if ($closing_date !== '' && $closing_date !== '0000-00-00') {
+		if (!preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $closing_date, $parts)
+			|| !checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1]) || $date <= $closing_date)
+			return false;
+	}
+	$sql = "SELECT id,begin,end,closed FROM ".TB_PREF."fiscal_year WHERE ";
+	if ($_SESSION['wa_current_user']->can_access('SA_MULTIFISCALYEARS'))
+		$sql .= "begin<=".db_escape($date)." AND end>=".db_escape($date);
+	else
+		$sql .= "id=".db_escape($settings['f_year']);
+	$result = db_query($sql.' ORDER BY id FOR UPDATE', 'Could not verify current purchasing fiscal year');
+	if (!$result)
+		return false;
+	while ($year = db_fetch($result))
+		if ((string)$year['closed'] === '0' && $year['begin'] <= $date && $date <= $year['end'])
+			return true;
+	return false;
+}
+
 /** Recheck the admitted company, command identity and current role between direct stages. */
-function direct_supplier_transaction_authorized($cart, $original, $order_no) {
+function direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context = null) {
 	return purchase_order_creation_authorized($original)
+		&& ($creation_context === null || purchase_order_creation_context($cart) === $creation_context)
 		&& $cart->is_current_company()
 		&& (string)$cart->order_no === (string)$order_no
 		&& (string)$cart->company === (string)$original->company
 		&& $cart->company_prefix === $original->company_prefix
 		&& $cart->trans_type === $original->trans_type
-		&& (string)$cart->supplier_id === (string)$original->supplier_id;
+		&& (string)$cart->supplier_id === (string)$original->supplier_id
+		&& $cart->orig_order_date === $original->orig_order_date
+		&& direct_supplier_period_authorized($cart);
 }
 
 /** Publish generated direct-document identities only after the complete native command succeeds. */
@@ -211,6 +249,7 @@ function add_direct_supp_trans($cart) {
 		return false;
 	if ($cart->trans_type == ST_PURCHORDER)
 		return add_po($cart);
+	$creation_context = purchase_order_creation_context($cart);
 	$original = clone $cart;
 	foreach ($cart->line_items as $key => $line)
 		$original->line_items[$key] = clone $line;
@@ -223,6 +262,8 @@ function add_direct_supp_trans($cart) {
 	if (!begin_transaction())
 		return false;
 	try {
+		if (!direct_supplier_period_authorized($cart))
+			throw new RuntimeException('Direct purchasing accounting period is closed or unavailable.');
 		if ($cart->trans_type != ST_PURCHORDER) {
 			// for direct grn/invoice set same dates for lines as for whole document
 			foreach ($cart->line_items as $line_no =>$line)
@@ -237,7 +278,7 @@ function add_direct_supp_trans($cart) {
 		if (!$order_no)
 			throw new RuntimeException('Direct purchase order parent failed.');
 		$cart->order_no = $order_no;
-		if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after parent creation.');
 
 		//Direct GRN
@@ -250,7 +291,7 @@ function add_direct_supp_trans($cart) {
 		$grn_no = add_grn($cart);
 		if (!$grn_no)
 			throw new RuntimeException('Direct goods receipt failed.');
-		if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 			throw new RuntimeException('Direct purchase authority changed after receipt.');
 		if ($cart->trans_type == ST_SUPPRECEIVE) {
 			if (!commit_transaction()) {
@@ -295,15 +336,16 @@ function add_direct_supp_trans($cart) {
 		$inv_no = add_supp_invoice($inv);
 		if (!$inv_no)
 			throw new RuntimeException('Direct supplier invoice failed.');
-		if (!direct_supplier_transaction_authorized($cart, $original, $order_no)
-			|| (string)$inv->supplier_id !== (string)$original->supplier_id || $inv->trans_type != ST_SUPPINVOICE)
+		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context)
+			|| (string)$inv->supplier_id !== (string)$original->supplier_id || $inv->trans_type != ST_SUPPINVOICE
+			|| $inv->tran_date !== $original->orig_order_date)
 			throw new RuntimeException('Direct purchase authority changed after invoice.');
 
 		if ($cart->cash_account) {
 			$pmt_no = write_supp_payment(0, $inv->supplier_id, $cart->cash_account,	$inv->tran_date, $Refs->get_next(ST_SUPPAYMENT, null, $inv->tran_date), $total, 0, _('Payment for:').$inv->supp_reference.' ('.$type_shortcuts[ST_SUPPINVOICE].$inv_no.')'.' '.$cart->Comments, 0, 0, $cart->dimension, $cart->dimension2);
 			if (!$pmt_no)
 				throw new RuntimeException('Direct supplier payment failed.');
-			if (!direct_supplier_transaction_authorized($cart, $original, $order_no))
+			if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
 				throw new RuntimeException('Direct purchase authority changed after payment.');
 			add_supp_allocation($total, ST_SUPPAYMENT, $pmt_no, ST_SUPPINVOICE, $inv_no, $inv->supplier_id, $inv->tran_date);
 			update_supp_trans_allocation(ST_SUPPINVOICE, $inv_no, $inv->supplier_id);

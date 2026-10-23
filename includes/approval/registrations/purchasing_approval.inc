@@ -314,6 +314,11 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 function execute_approved_supplier_invoice($draft_data, $reserved_trans_no, $draft_id)
 {
 	global $path_to_root;
+	if (!isset($_SESSION['wa_current_user'])
+		|| !$_SESSION['wa_current_user']->can_access('SA_SUPPLIERINVOICE') || !is_array($draft_data)
+		|| (isset($draft_data['trans_type']) && (!is_scalar($draft_data['trans_type'])
+			|| (string)$draft_data['trans_type'] !== (string)ST_SUPPINVOICE)))
+		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
 
 	if (isset($draft_data['grn_items']) || isset($draft_data['gl_codes'])) {

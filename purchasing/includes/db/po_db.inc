@@ -177,6 +177,7 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 	global $Refs;
 	if (!purchase_order_creation_authorized($po_obj))
 		return false;
+	$creation_context = purchase_order_creation_context($po_obj);
 	// Native SQL errors can exit before catch blocks and persist the session.
 	// Keep generated identities private until this writer has completed.
 	$working_order = clone $po_obj;
@@ -199,7 +200,8 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 			$working_order->reference = $Refs->get_next(ST_PURCHORDER, null,
 				array('supplier_id' => $working_order->supplier_id, 'date' => $working_order->orig_order_date));
 		hook_db_prewrite($working_order, ST_PURCHORDER);
-		if (!purchase_order_creation_authorized($working_order))
+		if (!purchase_order_creation_authorized($working_order)
+			|| purchase_order_creation_context($working_order) !== $creation_context)
 			throw new RuntimeException('Purchase order admission changed.');
 		/*Insert to purchase order header record */
 		$sql = "INSERT INTO ".TB_PREF."purch_orders (".($approved_order_no ? 'order_no, ' : '')."supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
@@ -257,12 +259,25 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 		$Refs->save(ST_PURCHORDER, $working_order->order_no, $working_order->reference);
 
 		add_audit_trail(ST_PURCHORDER, $working_order->order_no, $working_order->orig_order_date);
+		$created_order_no = $working_order->order_no;
+		$created_cart = purchase_order_creation_cart_state($working_order);
+		$created_state = purchase_order_creation_native_state($created_order_no);
 		hook_db_postwrite($working_order, ST_PURCHORDER);
-		// Hooks run inside this transaction and can change current authority.
-		// Recheck before any source fulfillment or publication of created IDs.
+		// Recheck admission before any completion read can use a switched company.
 		if (!$working_order->is_current_company() || $working_order->trans_type != $original_trans_type
-			|| !$_SESSION['wa_current_user']->can_access($creation_areas[$original_trans_type]))
+			|| purchase_order_creation_context($working_order) !== $creation_context
+			|| !$_SESSION['wa_current_user']->can_access($creation_areas[$original_trans_type])
+			|| purchase_order_creation_cart_state($working_order) !== $created_cart)
 			throw new RuntimeException('Purchase order completion authority changed.');
+		$completion_state = purchase_order_creation_native_state($created_order_no);
+		// Domain hooks may append audit events through the shared audit writer.
+		// Preserve the native event while allowing its standard gl_seq handoff.
+		foreach ($created_state['audit'] as $event)
+			if (!in_array($event, $completion_state['audit'], true))
+				throw new RuntimeException('Purchase order creation audit changed.');
+		unset($created_state['audit'], $completion_state['audit']);
+		if ($completion_state !== $created_state)
+			throw new RuntimeException('Purchase order native completion changed.');
 		if (!empty($working_order->agreement_id) && function_exists('update_agreement_fulfillment'))
 			update_agreement_fulfillment((int)$working_order->agreement_id);
 
@@ -288,6 +303,63 @@ function add_po(&$po_obj, $approval_draft_id = 0) {
 		cancel_transaction();
 		throw $exception;
 	}
+}
+
+/** Bind an admitted native command to its company, supplier, transaction family and current actor. */
+function purchase_order_creation_context($cart) {
+	$actor = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
+	return array((string)$cart->company, $cart->company_prefix, (string)$cart->supplier_id,
+		(string)$cart->trans_type, $actor && isset($actor->user) ? (string)$actor->user : null,
+		$actor && isset($actor->access) ? (string)$actor->access : null);
+}
+
+/** Retain only native command fields; extension-owned metadata remains outside this comparison. */
+function purchase_order_creation_cart_state($cart) {
+	$state = array();
+	foreach (array('order_no','supplier_id','trans_type','orig_order_date','Location','tax_included',
+		'prep_amount','reference','Comments','supp_ref','delivery_address','dimension','dimension2',
+		'curr_code','tax_group_id','ex_rate') as $field)
+		$state[$field] = isset($cart->$field) ? $cart->$field : null;
+	$state['lines'] = array();
+	foreach ($cart->line_items as $key => $line) {
+		$values = array();
+		foreach (array('po_detail_rec','stock_id','item_description','req_del_date','price','quantity') as $field)
+			$values[$field] = isset($line->$field) ? $line->$field : null;
+		$state['lines'][$key] = $values;
+	}
+	return $state;
+}
+
+/** Recheck the actual inserted native aggregate with current locking reads before publication. */
+function purchase_order_creation_native_state($order_no) {
+	if (empty($GLOBALS['transaction_level']))
+		throw new RuntimeException('Purchase order completion requires an owning transaction.');
+	$state = array();
+	$queries = array(
+		'header' => 'SELECT order_no,supplier_id,Comments,agreement_id,requisition_id,rfq_id,ord_date,reference,'
+			.'supp_reference,into_stock_location,delivery_address,total,tax_included,prep_amount FROM '.TB_PREF
+			.'purch_orders WHERE order_no='.db_escape($order_no),
+		'lines' => 'SELECT po_detail_item,order_no,item_code,description,delivery_date,unit_price,quantity_ordered FROM '
+			.TB_PREF.'purch_order_details WHERE order_no='.db_escape($order_no).' ORDER BY po_detail_item',
+		'reference' => 'SELECT id,type,reference FROM '.TB_PREF.'refs WHERE type='.ST_PURCHORDER
+			.' AND id='.db_escape($order_no),
+		'audit' => 'SELECT id,type,trans_no,user,gl_date,description,fiscal_year FROM '.TB_PREF
+			.'audit_trail WHERE type='.ST_PURCHORDER.' AND trans_no='.db_escape($order_no).' ORDER BY id',
+		'number_history' => 'SELECT type,id,memo_ FROM '.TB_PREF.'voided WHERE type='.ST_PURCHORDER
+			.' AND id='.db_escape($order_no)
+	);
+	foreach ($queries as $name => $sql) {
+		$result = db_query($sql.' FOR UPDATE', 'Could not verify purchase order completion');
+		if (!$result)
+			throw new RuntimeException('Purchase order completion is unavailable.');
+		$state[$name] = array();
+		while ($row = db_fetch($result))
+			$state[$name][] = $row;
+	}
+	if (count($state['header']) !== 1 || !$state['lines'] || count($state['reference']) !== 1
+		|| !$state['audit'] || $state['number_history'])
+		throw new RuntimeException('Purchase order native identity is unavailable.');
+	return $state;
 }
 
 /** Check current company and native create permission before hooks, numbers or SQL. */

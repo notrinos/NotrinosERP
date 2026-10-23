@@ -148,6 +148,8 @@ function log_grn_vendor_delivery_events($supplier_id, $grn_no, $delivery_date, $
 
 function add_grn(&$po) {
 	global $Refs;
+	// Native approval execution does not load the PO UI's tracking dependency.
+	include_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/inventory/includes/db/serial_batch_db.inc');
 
 	$date_ = $po->orig_order_date;
 	$wh_ops_path = dirname(dirname(dirname(dirname(__FILE__))))
