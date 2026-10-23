@@ -224,14 +224,20 @@ class ApprovalWorkflow {
 	 *   'summary'     => string Human-readable summary
 	 *   'currency'    => string Currency code
 	 *   'loc_code'    => string Location code
+	 * @param bool $lock_policy Use current policy under an owning source transaction
 	 * @return array ['draft_id' => int, 'trans_no' => int, 'reference' => string,
 	 *   'status' => string] Status is no_workflow, reservation_failed,
 	 *   serialization_failed, storage_failed, audit_failed, no_approvers,
 	 *   notification_failed, execution_failed, auto_approved, or pending.
 	 */
-	public function submit($trans_type, $data, $amount = 0, $context = array())
+	public function submit($trans_type, $data, $amount = 0, $context = array(), $lock_policy = false)
 	{
-		$workflow = $this->getWorkflowForType($trans_type);
+		if ($lock_policy && empty($GLOBALS['transaction_level']))
+			throw new RuntimeException('Current approval submission requires an owning transaction.');
+		$workflow = $lock_policy ? get_approval_workflow_by_type($trans_type, true)
+			: $this->getWorkflowForType($trans_type);
+		if ($lock_policy && $workflow && (!$workflow['is_active'] || !workflow_has_active_levels($workflow['id'], true)))
+			$workflow = false;
 
 		if (!$workflow)
 			return array('draft_id' => 0, 'trans_no' => 0, 'reference' => '', 'status' => 'no_workflow');
@@ -922,8 +928,14 @@ class ApprovalWorkflow {
 		return $workflow;
 	}
 
+	/** Reuse canonical stored-byte decoding for an already source-authorized owner, without reads or mutations. */
+	public function decodeStoredDraftData($draft_data, &$decode_ok = null)
+	{
+		return $this->decodeDraftData($draft_data, $decode_ok);
+	}
+
 	/**
-	 * Decode one current or historical approval draft JSON payload.
+	 * Decode one current or historical approval draft JSON payload without reading source data.
 	 *
 	 * Approval draft text is stored through the legacy db_escape() boundary,
 	 * which HTML-encodes quote and ampersand characters. Older deployments may

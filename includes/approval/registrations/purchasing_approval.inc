@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
+include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_po_approval_db.inc');
 
 // =====================================================
 // TRANSACTION TYPE REGISTRATIONS
@@ -20,6 +21,7 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHORDER, array(
 	'label'          => _('Purchase Order'),
 	'application'    => 'AP',
 	'executor'       => 'execute_approved_purchase_order',
+	'action_validator' => 'validate_purchase_order_source_action',
 	'amount_getter'  => 'get_purchase_draft_amount',
 	'draft_renderer' => 'render_purchase_draft',
 	'edit_url'       => 'purchasing/po_entry_items.php',
@@ -110,7 +112,7 @@ function restore_purchase_order_from_data($data)
 	$po = new purch_order();
 	// Legacy envelopes are already company-scoped by the workflow's own row.
 	// New envelopes must never be silently rebound after a company switch.
-	if (!is_array($data) || !$po->is_current_company()
+	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || !$po->is_current_company()
 		|| ((array_key_exists('company', $data) || array_key_exists('company_prefix', $data))
 			&& (!isset($data['company'], $data['company_prefix'])
 				|| !is_scalar($data['company']) || (string)$data['company'] !== (string)$po->company
@@ -266,6 +268,10 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 		|| !is_scalar($draft_data['trans_type']) || (string)$draft_data['trans_type'] !== (string)ST_PURCHORDER)
 		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+	if (array_key_exists('material_request_conversion', $draft_data)) {
+		include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_requests_db.inc');
+		return execute_material_request_purchase_order($draft_data, $reserved_trans_no, $draft_id);
+	}
 
 	$po = restore_purchase_order_from_data($draft_data);
 	if ($po === false)

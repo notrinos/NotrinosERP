@@ -246,7 +246,7 @@ function update_approval_draft_trans_no($draft_id, $trans_no)
  * @param string $draft_data New JSON-encoded data
  * @param float  $amount     Updated amount
  * @param string $summary    Updated summary
- * @return void
+ * @return bool Whether a mutable draft row was changed
  */
 function update_approval_draft_data($draft_id, $draft_data, $amount = null, $summary = null)
 {
@@ -259,8 +259,27 @@ function update_approval_draft_data($draft_id, $draft_data, $amount = null, $sum
 		$sql .= ", summary = " . db_escape($summary);
 
 	$sql .= " WHERE id = " . db_escape($draft_id);
+	// Source conversion envelopes are immutable, including their source marker.
+	// Apply the guard in the UPDATE so another writer cannot strip the marker
+	// between a separate read and this write. Legacy drafts retain their behavior.
+	$json = approval_draft_current_json_sql();
+	// Core draft helpers also serve minimal non-Purchasing bootstraps. The
+	// persisted PO type is 18 (includes/types.inc), even before module constants load.
+	$purchase_order_type = defined('ST_PURCHORDER') ? ST_PURCHORDER : 18;
+	$sql .= " AND CASE WHEN trans_type=".$purchase_order_type." THEN CASE WHEN JSON_VALID(".$json.") THEN"
+		. " JSON_CONTAINS_PATH(".$json.", 'one', '$.material_request_conversion')=0 ELSE 0 END ELSE 1 END";
 
-	db_query($sql, 'could not update approval draft data');
+	return db_query($sql, 'could not update approval draft data') && db_num_affected_rows() > 0;
+}
+
+/**
+ * Address JSON structure in current raw/HTML-encoded drafts without transferring payloads.
+ * Only structural quotes are decoded here; content remains opaque. This is not
+ * a historical payload decoder or an absence certificate for legacy formats.
+ * New immutable material envelopes are created only by the current JSON writer.
+ */
+function approval_draft_current_json_sql() {
+	return "(CASE WHEN JSON_VALID(draft_data) THEN draft_data ELSE REPLACE(draft_data, '&quot;', CHAR(34)) END)";
 }
 
 /**

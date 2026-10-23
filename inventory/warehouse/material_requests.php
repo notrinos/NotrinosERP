@@ -96,10 +96,12 @@ if (isset($_POST['ConvertPO']) && $selected_id > 0) {
 	if (empty($supplier_id)) {
 		display_error(_('Please select a supplier for the purchase order.'));
 	} else {
-		$mr = get_material_request($selected_id);
-		$po_no = convert_material_request_to_po($selected_id, $supplier_id, $mr['warehouse_loc_code']);
-		if ($po_no) {
-			display_notification(sprintf(_('Purchase Order #%d has been created from this material request.'), $po_no));
+		include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_material_po_approval_db.inc');
+		$result = submit_material_request_purchase_order($selected_id, $supplier_id);
+		if ($result && $result['status'] === 'pending') {
+			display_notification(sprintf(_('Purchase order conversion submitted for approval. Draft #%d.'), $result['draft_id']));
+		} elseif ($result && $result['status'] === 'posted') {
+			display_notification(sprintf(_('Purchase Order #%d has been created from this material request.'), $result['trans_no']));
 		} else {
 			display_error(_('Could not create purchase order. The request may not be in Approved status or have no outstanding lines.'));
 		}

@@ -11,7 +11,8 @@
 ***********************************************************************/
 include_once($path_to_root . '/purchasing/includes/db/purch_orders_entity.inc');
 
-function get_supplier_details_to_order(&$order, $supplier_id) {
+/** Load native supplier defaults; an owning source conversion can request a current locking read. */
+function get_supplier_details_to_order(&$order, $supplier_id, $lock_supplier = false) {
 	$sql = "SELECT curr_code, supp_name, tax_group_id, supp.tax_included, dimension_id, dimension2_id, supp.credit_limit - Sum((ov_amount + ov_gst + ov_discount)) as cur_credit, terms.terms, terms.days_before_due, terms.day_in_following_month
 		FROM ".TB_PREF."suppliers supp
 			LEFT JOIN ".TB_PREF."supp_trans trans ON supp.supplier_id = trans.supplier_id
@@ -19,6 +20,11 @@ function get_supplier_details_to_order(&$order, $supplier_id) {
 		WHERE supp.supplier_id = ".db_escape($supplier_id)."
 		GROUP BY supp.supp_name";
 
+	if ($lock_supplier) {
+		if (empty($GLOBALS['transaction_level']))
+			throw new RuntimeException('Current supplier defaults require an owning transaction.');
+		$sql .= ' FOR UPDATE';
+	}
 	$result = db_query($sql, 'The supplier details could not be retreived');
 	$myrow = db_fetch($result);
 
