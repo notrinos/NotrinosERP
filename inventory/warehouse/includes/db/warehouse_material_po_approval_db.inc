@@ -108,6 +108,14 @@ function restore_material_request_purchase_order_snapshot($data) {
 /** Validate only material conversion envelopes; legacy ordinary PO drafts retain their own contract. */
 function validate_purchase_order_source_action($action, $data, $draft, $actor, $comments = '') {
 	global $path_to_root;
+	if (is_array($data)) {
+		$markers = array_intersect(array('requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
+		if (count($markers) > 1) return false;
+	}
+	if (is_array($data) && array_key_exists('requisition_conversion', $data)) {
+		include_once($path_to_root.'/purchasing/includes/db/purch_requisition_po_approval_db.inc');
+		return validate_requisition_purchase_order_action($action, $data, $draft, $actor, $comments);
+	}
 	if (is_array($data) && array_key_exists('rfq_conversion', $data)) {
 		include_once($path_to_root.'/purchasing/includes/db/purch_rfq_po_approval_db.inc');
 		return !array_key_exists('agreement_conversion', $data) && !array_key_exists('material_request_conversion', $data)

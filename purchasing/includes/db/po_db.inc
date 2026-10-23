@@ -680,7 +680,7 @@ function get_source_approved_purchase_order_number($cart, $draft_id) {
 	$approval = new ApprovalWorkflow($actor->access, $actor->user);
 	$data = $approval->decodeStoredDraftData($draft['draft_data']);
 	if (!is_array($data)) return false;
-	$markers = array_intersect(array('rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
+	$markers = array_intersect(array('requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
 	if (count($markers) !== 1 || !validate_purchase_order_source_action('approve', $data, $draft,
 		array('user_id'=>$actor->user, 'role_id'=>$actor->access)))
 		return false;

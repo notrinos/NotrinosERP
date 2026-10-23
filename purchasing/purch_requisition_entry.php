@@ -252,14 +252,14 @@ if (isset($_POST['DeleteRequisition']) && $selected_id > 0) {
 
 if (isset($_POST['CreatePO']) && $selected_id > 0) {
 	$supplier_id = get_post('create_po_supplier') == ALL_TEXT ? 0 : (int)get_post('create_po_supplier');
-	$po_numbers = create_po_from_requisition($selected_id, $supplier_id);
-	if (!$po_numbers) {
-		display_error(_('No purchase order could be created from this requisition.'));
-	} else {
-		display_notification(sprintf(_('Created %d purchase order(s) from this requisition.'), count($po_numbers)));
-		foreach ($po_numbers as $po_number)
-			display_note(get_trans_view_str(ST_PURCHORDER, $po_number, _('View Purchase Order') . ' #' . $po_number), 0, 1);
-	}
+ include_once($path_to_root.'/purchasing/includes/db/purch_requisition_po_approval_db.inc');
+ $results = submit_requisition_purchase_orders($selected_id, $supplier_id);
+ if (!$results) display_error(_('No purchase order could be created or submitted from this requisition.'));
+ else foreach ($results as $result) {
+  if ($result['status'] === 'pending') display_notification(sprintf(_('Purchase order %d has been submitted for approval.'), $result['trans_no']));
+  else display_note(get_trans_view_str(ST_PURCHORDER, $result['trans_no'], _('View Purchase Order').' #'.$result['trans_no']), 0, 1);
+ }
+
 }
 
 if (isset($_POST['CreateRFQ']) && $selected_id > 0) {
