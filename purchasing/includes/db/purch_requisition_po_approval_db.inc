@@ -31,6 +31,10 @@ function read_requisition_purchase_pricing($supplier, $stock, $lock) {
   'agreement_lines'=>'SELECT line.* FROM '.TB_PREF.'purch_agreement_lines line INNER JOIN '.TB_PREF.'purch_agreements header ON header.id=line.agreement_id WHERE header.supplier_id='.(int)$supplier.' AND line.stock_id='.db_escape($stock).' ORDER BY line.id',
   'preferences'=>"SELECT * FROM ".TB_PREF."sys_prefs WHERE name IN ('use_purchase_agreements','use_vendor_pricelists') ORDER BY name");
  $result = array(); foreach ($queries as $key=>$query) $result[$key] = read_requisition_purchase_rows($query.($lock?' FOR UPDATE':''));
+ // The maintained native resolver uses cached switches; bind those to these source rows too.
+ $preferences = array(); foreach ($result['preferences'] as $row) $preferences[$row['name']] = $row['value'];
+ foreach (array('use_purchase_agreements','use_vendor_pricelists') as $name)
+  if ((bool)get_company_pref($name) !== !empty($preferences[$name])) throw new RuntimeException('Purchase pricing preferences changed; reload company settings.');
  return $result;
 }
 

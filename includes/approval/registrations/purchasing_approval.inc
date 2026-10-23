@@ -112,7 +112,7 @@ function restore_purchase_order_from_data($data)
 	$po = new purch_order();
 	// Legacy envelopes are already company-scoped by the workflow's own row.
 	// New envelopes must never be silently rebound after a company switch.
-	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || array_key_exists('agreement_conversion', $data) || array_key_exists('rfq_conversion', $data) || array_key_exists('requisition_conversion', $data) || !$po->is_current_company()
+	if (!is_array($data) || array_key_exists('plan_conversion', $data) || array_key_exists('material_request_conversion', $data) || array_key_exists('agreement_conversion', $data) || array_key_exists('rfq_conversion', $data) || array_key_exists('requisition_conversion', $data) || !$po->is_current_company()
 		|| ((array_key_exists('company', $data) || array_key_exists('company_prefix', $data))
 			&& (!isset($data['company'], $data['company_prefix'])
 				|| !is_scalar($data['company']) || (string)$data['company'] !== (string)$po->company
@@ -268,8 +268,12 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 		|| !is_scalar($draft_data['trans_type']) || (string)$draft_data['trans_type'] !== (string)ST_PURCHORDER)
 		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
-	$markers = array_intersect(array('requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($draft_data));
+	$markers = array_intersect(array('plan_conversion','requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($draft_data));
 	if (count($markers) > 1) return false;
+	if (array_key_exists('plan_conversion', $draft_data)) {
+		include_once($path_to_root.'/purchasing/includes/db/procurement_plan_po_approval_db.inc');
+		return execute_plan_purchase_order($draft_data, $reserved_trans_no, $draft_id);
+	}
 	if (array_key_exists('requisition_conversion', $draft_data)) {
 		include_once($path_to_root.'/purchasing/includes/db/purch_requisition_po_approval_db.inc');
 		return execute_requisition_purchase_order($draft_data, $reserved_trans_no, $draft_id);
@@ -749,6 +753,10 @@ function get_vendor_evaluation_draft_amount($draft_data)
 function render_purchase_draft($draft_data)
 {
 	$html = '<table class="tablestyle" width="100%">';
+	if (isset($draft_data['plan_conversion']['plan_id'])) {
+		$html .= '<tr><th>'._('Immutable Procurement Plan').'</th><td colspan="3">'
+			.htmlspecialchars((string)$draft_data['plan_conversion']['plan_id']).'</td></tr>';
+	}
 	if (isset($draft_data['requisition_conversion']['requisition_id'])) {
 		$html .= '<tr><th>'._('Immutable Purchase Requisition').'</th><td colspan="3">'
 			.htmlspecialchars((string)$draft_data['requisition_conversion']['requisition_id']).'</td></tr>';

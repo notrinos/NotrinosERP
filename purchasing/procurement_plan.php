@@ -53,7 +53,7 @@ function can_approve_plan_line($line_id)
 		return false;
 
 	if (input_num('approve_qty_' . $line_id) < 0) {
-		display_error(_('Approved quantity must be zero or greater.'));
+		display_error(_('Selected quantity must be zero or greater.'));
 		set_focus('approve_qty_' . $line_id);
 		return false;
 	}
@@ -105,7 +105,7 @@ if ($approve_line_id > 0 && can_approve_plan_line($approve_line_id)) {
 		input_num('approve_qty_' . $approve_line_id),
 		(int)get_post('approve_supplier_' . $approve_line_id)
 	);
-	display_notification(_('Plan line has been approved.'));
+	display_notification(_('Plan line has been included. Submit the plan to the core approval workflow for confirmation.'));
 }
 
 if ($skip_line_id > 0) {
@@ -124,11 +124,19 @@ if ($create_pos) {
 		elseif (has_pending_procurement_plan_approval($selected_plan_id))
 			display_error(_('This plan is still pending core approval.'));
 		else {
-		$po_numbers = create_pos_from_plan($selected_plan_id);
-		if (empty($po_numbers))
-			display_warning(_('No approved lines were available to create purchase orders.'));
-		else
-			display_notification(sprintf(_('Created purchase orders: %s'), implode(', ', $po_numbers)));
+		include_once($path_to_root.'/purchasing/includes/db/procurement_plan_po_approval_db.inc');
+		$results = submit_plan_purchase_orders($selected_plan_id);
+		if (empty($results))
+			display_warning(_('No purchase orders were created or submitted. Verify current source and approval authority, then reload the plan.'));
+		else {
+			$po_numbers = array(); $pending_count = 0;
+			foreach ($results as $result) {
+				if ($result['status'] === 'pending') $pending_count++;
+				else $po_numbers[] = (int)$result['trans_no'];
+			}
+			if ($pending_count) display_notification(sprintf(_('%s purchase orders have been submitted for approval.'), $pending_count));
+			if ($po_numbers) display_notification(sprintf(_('Created purchase orders: %s'), implode(', ', $po_numbers)));
+		}
 		}
 	}
 }
@@ -227,7 +235,7 @@ if ($selected_plan) {
 		amount_cell((float)$selected_plan['estimated_total']);
 	end_row();
 	start_row();
-		label_cell(_('Pending / Approved / Ordered / Skipped:'));
+		label_cell(_('Pending / Included / Ordered / Skipped:'));
 		label_cell(
 			(int)$selected_plan['pending_count'] . ' / ' .
 			(int)$selected_plan['approved_count'] . ' / ' .
@@ -273,7 +281,7 @@ if ($selected_plan) {
 		echo '<td nowrap>';
 		if (($line['status'] === 'pending' || $line['status'] === 'approved') && $plan_can_edit_lines) {
 			amount_cells(null, 'approve_qty_' . $line['id'], (float)$line['suggested_order_qty'], null, null, 7);
-			submit('ApproveLine' . $line['id'], _('Approve'), false, _('Approve this line'));
+			submit('ApproveLine' . $line['id'], _('Include'), false, _('Include this line in the plan for core approval'));
 			echo '&nbsp;';
 			text_cells(null, 'skip_reason_' . $line['id'], '', 10, 40);
 			submit('SkipLine' . $line['id'], _('Skip'), false, _('Skip this line'));
@@ -290,7 +298,7 @@ if ($selected_plan) {
 		submit_center('SubmitPlanForApproval', _('Submit Plan For Core Approval'));
 
 	if ($plan_can_create_pos)
-		submit_center('CreatePOs', _('Create Purchase Orders From Approved Lines'));
+		submit_center('CreatePOs', _('Create Purchase Orders From Core-Approved Plan'));
 }
 
 end_form();
