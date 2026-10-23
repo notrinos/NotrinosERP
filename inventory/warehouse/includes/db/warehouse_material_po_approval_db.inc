@@ -109,8 +109,15 @@ function restore_material_request_purchase_order_snapshot($data) {
 function validate_purchase_order_source_action($action, $data, $draft, $actor, $comments = '') {
 	global $path_to_root;
 	if (is_array($data)) {
-		$markers = array_intersect(array('requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
+		$markers = array_intersect(array('plan_conversion','requisition_conversion','rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
 		if (count($markers) > 1) return false;
+	}
+	if (is_array($data) && array_key_exists('plan_conversion', $data)) {
+		include_once($path_to_root.'/purchasing/includes/po_class.inc');
+		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
+		include_once($path_to_root.'/purchasing/includes/db/purch_requisition_po_approval_db.inc');
+		include_once($path_to_root.'/purchasing/includes/db/procurement_plan_po_approval_db.inc');
+		return validate_plan_purchase_order_action($action, $data, $draft, $actor, $comments);
 	}
 	if (is_array($data) && array_key_exists('requisition_conversion', $data)) {
 		include_once($path_to_root.'/purchasing/includes/db/purch_requisition_po_approval_db.inc');

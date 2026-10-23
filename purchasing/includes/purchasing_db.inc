@@ -243,7 +243,56 @@ function publish_direct_supplier_cart($cart, $submitted_cart) {
 		$submitted_cart->$key = $value;
 }
 
-function add_direct_supp_trans($cart) {
+/** Dispatch a native new document under one current core-policy transaction. */
+function submit_or_post_purchase_document($cart, $context = array()) {
+	if (!purchase_order_creation_authorized($cart) || !class_exists('ApprovalWorkflow'))
+		return false;
+	$type = $cart->trans_type;
+	$identity = purchase_order_creation_context($cart);
+	$working = clone $cart;
+	foreach ($cart->line_items as $key => $line)
+		$working->line_items[$key] = clone $line;
+	if (!begin_transaction()) return false;
+	try {
+		$approval = new ApprovalWorkflow($_SESSION['wa_current_user']->access, $_SESSION['wa_current_user']->user);
+		$governed = $type == ST_PURCHORDER || $type == ST_SUPPINVOICE;
+		if ($governed && !ApprovalWorkflow::isRegistered($type))
+			throw new RuntimeException('Purchase approval registration is unavailable.');
+		$required = $governed && $approval->isApprovalRequired($type, $cart->get_trans_total(), true);
+		if ($required) {
+			$data = collect_purchase_order_data($cart);
+			if ($data === false) throw new RuntimeException('Purchase approval envelope is unavailable.');
+			$result = $approval->submit($type, $data, $cart->get_trans_total(), $context, true);
+			if (!in_array($result['status'], array('pending','auto_approved'), true))
+				throw new RuntimeException('Purchase approval submission failed.');
+		} else {
+			$number = add_direct_supp_trans($working);
+			if (!$number || ($governed && $approval->isApprovalRequired($type, $cart->get_trans_total(), true)))
+				throw new RuntimeException('Purchase posting or current approval policy changed.');
+			$result = array('status'=>'posted','trans_no'=>$number);
+		}
+		if (!purchase_order_creation_authorized($cart) || purchase_order_creation_context($cart) !== $identity
+			|| empty($GLOBALS['transaction_level']))
+			throw new RuntimeException('Purchase dispatch authority changed.');
+		if (!commit_transaction()) {
+			if (!empty($GLOBALS['transaction_level']))
+				throw new RuntimeException('Purchase dispatch commit failed.');
+			display_error(_('The purchase document was committed, but resource cleanup needs recovery. Reload it before continuing.'));
+		}
+		if (!$required) publish_direct_supplier_cart($working, $cart);
+		return $result;
+	} catch (Exception $exception) {
+		cancel_transaction();
+		display_error(_('The purchase document could not be submitted or posted. Reload it before retrying.'));
+		return false;
+	} catch (Throwable $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
+}
+
+/** Create a native direct document, optionally preserving its approved business intent. */
+function add_direct_supp_trans($cart, $preserve_approved_intent = false) {
 	global $Refs, $type_shortcuts;
 	if (!purchase_order_creation_authorized($cart))
 		return false;
@@ -274,7 +323,7 @@ function add_direct_supp_trans($cart) {
 		if ($cart->trans_type != ST_PURCHORDER) {
 			$cart->reference = 'auto';
 		}
-		$order_no = add_po($cart);
+		$order_no = add_po($cart, 0, $preserve_approved_intent);
 		if (!$order_no)
 			throw new RuntimeException('Direct purchase order parent failed.');
 		$cart->order_no = $order_no;
@@ -288,7 +337,7 @@ function add_direct_supp_trans($cart) {
 			$cart->Comments = $cart->reference; //grn does not hold supp_ref
 		foreach($cart->line_items as $key => $line)
 			$cart->line_items[$key]->receive_qty = $line->quantity;
-		$grn_no = add_grn($cart);
+		$grn_no = add_grn($cart, $preserve_approved_intent);
 		if (!$grn_no)
 			throw new RuntimeException('Direct goods receipt failed.');
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context))
@@ -333,7 +382,7 @@ function add_direct_supp_trans($cart) {
 		$inv->currency = $cart->curr_code;
 		$inv->ex_rate = $cart->ex_rate;
 
-		$inv_no = add_supp_invoice($inv);
+		$inv_no = add_supp_invoice($inv, array('preserve_approved_intent'=>$preserve_approved_intent));
 		if (!$inv_no)
 			throw new RuntimeException('Direct supplier invoice failed.');
 		if (!direct_supplier_transaction_authorized($cart, $original, $order_no, $creation_context)

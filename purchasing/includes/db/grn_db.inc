@@ -146,7 +146,7 @@ function log_grn_vendor_delivery_events($supplier_id, $grn_no, $delivery_date, $
 	}
 }
 
-function add_grn(&$po) {
+function add_grn(&$po, $preserve_approved_intent = false) {
 	global $Refs;
 	// Native approval execution does not load the PO UI's tracking dependency.
 	include_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/inventory/includes/db/serial_batch_db.inc');
@@ -159,7 +159,10 @@ function add_grn(&$po) {
 	$can_process_grn_tracking = function_exists('process_grn_tracking_and_wms');
 
 	begin_transaction();
+	$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($po) : null;
 	hook_db_prewrite($po, ST_SUPPRECEIVE);
+	if ($preserve_approved_intent && purchase_order_creation_cart_state($po) !== $approved_intent)
+		throw new RuntimeException('Approved direct receipt intent changed before posting.');
 
 	if (!is_company_currency($po->curr_code)) {
 		if (!$po->ex_rate)
@@ -267,7 +270,11 @@ function add_grn(&$po) {
 	add_audit_trail(ST_SUPPRECEIVE, $grn, $date_);
 
 	$po->trans_no = $grn;
+	$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($po) : null;
 	hook_db_postwrite($po, ST_SUPPRECEIVE);
+	if ($preserve_approved_intent && (purchase_order_creation_cart_state($po) !== $approved_intent
+		|| (string)$po->trans_no !== (string)$grn))
+		throw new RuntimeException('Approved direct receipt intent changed at completion.');
 	commit_transaction();
 	if (!empty($po->agreement_id) && function_exists('update_agreement_fulfillment'))
 		update_agreement_fulfillment((int)$po->agreement_id);

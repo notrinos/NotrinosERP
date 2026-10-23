@@ -259,10 +259,13 @@ function update_approval_level($level_id, $role_id, $min_approvers = 1,
  *
  * @param int  $workflow_id  Workflow ID
  * @param bool $active_only  Only return active levels
+ * @param bool $lock_policy Current locking read inside the owning transaction
  * @return resource           DB result set
  */
-function get_approval_levels($workflow_id, $active_only = true)
+function get_approval_levels($workflow_id, $active_only = true, $lock_policy = false)
 {
+	if ($lock_policy && empty($GLOBALS['transaction_level']))
+		throw new RuntimeException('Current approval levels require an owning transaction.');
 	$sql = "SELECT al.*, sr.role AS role_name
 		FROM " . TB_PREF . "approval_levels al
 		LEFT JOIN " . TB_PREF . "security_roles sr ON sr.id = al.role_id
@@ -272,6 +275,7 @@ function get_approval_levels($workflow_id, $active_only = true)
 		$sql .= " AND al.is_active = 1";
 
 	$sql .= " ORDER BY al.level ASC";
+	if ($lock_policy) $sql .= ' FOR UPDATE';
 
 	return db_query($sql, 'could not retrieve approval levels');
 }
@@ -384,10 +388,13 @@ function get_user_approval_level_for_workflow($workflow_id, $role_id)
  * @param int    $workflow_id Workflow ID
  * @param int    $level       Level number
  * @param string $loc_code    Optional location filter
+ * @param bool $lock_policy Current locking read within the owning submission
  * @return array              Array of role IDs
  */
-function get_approver_roles_at_level($workflow_id, $level, $loc_code = null)
+function get_approver_roles_at_level($workflow_id, $level, $loc_code = null, $lock_policy = false)
 {
+	if ($lock_policy && empty($GLOBALS['transaction_level']))
+		throw new RuntimeException('Current approval roles require an owning transaction.');
 	$sql = "SELECT DISTINCT role_id FROM " . TB_PREF . "approval_levels
 		WHERE workflow_id = " . db_escape($workflow_id) . "
 		AND level = " . db_escape($level) . "
@@ -396,6 +403,7 @@ function get_approver_roles_at_level($workflow_id, $level, $loc_code = null)
 	if ($loc_code !== null)
 		$sql .= " AND (loc_code IS NULL OR loc_code = " . db_escape($loc_code) . ")";
 
+	if ($lock_policy) $sql .= ' ORDER BY role_id FOR UPDATE';
 	$result = db_query($sql, 'could not get approver roles at level');
 
 	$roles = array();

@@ -513,45 +513,27 @@ function handle_commit_order() {
 		new_doc_date($cart->orig_order_date);
 		if ($cart->order_no == 0) { // new po/grn/invoice
 
-			// --- Approval workflow check (new orders only) ---
 			$trans_type = $cart->trans_type;
-			if ($trans_type == ST_PURCHORDER || $trans_type == ST_SUPPINVOICE) {
-				$draft_data = collect_purchase_order_data($cart);
-				if ($draft_data === false) {
-					display_error(_('Reload the purchase document in the current company before submitting it.'));
-					return;
-				}
-				$amount = $cart->get_trans_total();
-				$approval_result = approval_check_before_save($trans_type, $draft_data, $amount, array(
-					'summary'     => sprintf(_('%s from %s'), ($trans_type == ST_PURCHORDER ? _('Purchase Order') : _('Supplier Invoice')), $cart->supplier_name),
-					'currency'    => $cart->curr_code,
-					'person_type' => PT_SUPPLIER,
-					'person_id'   => $cart->supplier_id,
-				));
-				if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
-					$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
-					unset($_SESSION['PO']);
-					if ($trans_type == ST_PURCHORDER)
-						meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
-					else
-						meta_forward($_SERVER['PHP_SELF'], 'AddedPI='.$trans_no);
-				}
-				if ($approval_result !== false) {
-					return; // pending approval
-				}
+			$result = submit_or_post_purchase_document($cart, array(
+				'summary'=>sprintf(_('%s from %s'), ($trans_type == ST_PURCHORDER ? _('Purchase Order') : _('Supplier Invoice')), $cart->supplier_name),
+				'currency'=>$cart->curr_code, 'person_type'=>PT_SUPPLIER, 'person_id'=>$cart->supplier_id,
+			));
+			if ($result === false) return;
+			if ($result['status'] === 'pending') {
+				display_notification_centered(sprintf(_('Transaction has been submitted for approval. Draft #%d, Reference: %s'), $result['draft_id'], $result['reference']));
+				display_note(_('The transaction is now pending approval. You can track its status on the Approval Dashboard.'), 0, 1);
+				hyperlink_no_params('admin/approval_dashboard.php', _('Go to Approval Dashboard'));
+				display_footer_exit();
+				return;
 			}
-			// --- End approval check ---
-
-			$trans_no = add_direct_supp_trans($cart);
-			if ($trans_no) {
-				unset($_SESSION['PO']);
-				if ($cart->trans_type == ST_PURCHORDER)
-					meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
-				elseif ($cart->trans_type == ST_SUPPRECEIVE)
-					meta_forward($_SERVER['PHP_SELF'], 'AddedGRN='.$trans_no);
-				else
-					meta_forward($_SERVER['PHP_SELF'], 'AddedPI='.$trans_no);
-			}
+			$trans_no = $result['trans_no'];
+			unset($_SESSION['PO']);
+			if ($trans_type == ST_PURCHORDER)
+				meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+			elseif ($trans_type == ST_SUPPRECEIVE)
+				meta_forward($_SERVER['PHP_SELF'], 'AddedGRN='.$trans_no);
+			else
+				meta_forward($_SERVER['PHP_SELF'], 'AddedPI='.$trans_no);
 		}
 		else { // order modification
 			$order_no = update_po($cart);

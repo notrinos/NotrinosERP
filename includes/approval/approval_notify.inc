@@ -63,12 +63,13 @@ function notify_approval_level_approvers($draft_id, $workflow_id, $level,
  * @param int    $level             Approval level to notify
  * @param string $notification_type Notification type
  * @param string $loc_code          Optional location filter
+ * @param bool $lock_policy Current role/recipient reads within the owning submission
  * @return array ['status' => created|no_recipients|storage_failed, 'count' => int]
  */
 function create_approval_level_notifications($draft_id, $workflow_id, $level,
-	$notification_type = 'pending', $loc_code = null)
+	$notification_type = 'pending', $loc_code = null, $lock_policy = false)
 {
-	$roles = get_approver_roles_at_level($workflow_id, $level, $loc_code);
+	$roles = get_approver_roles_at_level($workflow_id, $level, $loc_code, $lock_policy);
 
 	if (empty($roles))
 		return array('status' => 'no_recipients', 'count' => 0);
@@ -77,7 +78,7 @@ function create_approval_level_notifications($draft_id, $workflow_id, $level,
 	$notified_users = array();
 
 	foreach ($roles as $role_id) {
-		$users = get_users_with_role($role_id);
+		$users = get_users_with_role($role_id, $lock_policy);
 
 		while ($user = db_fetch($users)) {
 			$user_id = isset($user['id']) ? (int)$user['id'] : 0;
@@ -124,14 +125,18 @@ function notify_approval_submitter($draft_id, $submitted_by, $notification_type)
  * Get all users that have a specific security role.
  *
  * @param int $role_id Security role ID
+ * @param bool $lock_policy Current locking read within the owning submission
  * @return resource     DB result set of users
  */
-function get_users_with_role($role_id)
+function get_users_with_role($role_id, $lock_policy = false)
 {
+	if ($lock_policy && empty($GLOBALS['transaction_level']))
+		throw new RuntimeException('Current approval recipients require an owning transaction.');
 	$sql = "SELECT id, login_id, real_name, email
 		FROM " . TB_PREF . "users
 		WHERE role_id = " . db_escape($role_id) . "
 		AND inactive = 0";
+	if ($lock_policy) $sql .= ' ORDER BY id FOR UPDATE';
 
 	return db_query($sql, 'could not retrieve users with role');
 }

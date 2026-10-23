@@ -332,7 +332,7 @@ function execute_approved_supplier_invoice($draft_data, $reserved_trans_no, $dra
 		return false;
 	$po->trans_type = ST_SUPPINVOICE;
 
-	$order_no = add_direct_supp_trans($po);
+	$order_no = add_direct_supp_trans($po, true);
 
 	return $order_no ? $order_no : false;
 }

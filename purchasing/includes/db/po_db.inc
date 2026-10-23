@@ -334,12 +334,14 @@ function purchase_order_creation_cart_state($cart) {
 	$state = array();
 	foreach (array('order_no','supplier_id','trans_type','orig_order_date','Location','tax_included',
 		'prep_amount','reference','Comments','supp_ref','delivery_address','dimension','dimension2',
-		'curr_code','tax_group_id','ex_rate','agreement_id','requisition_id','rfq_id') as $field)
+		'curr_code','tax_group_id','ex_rate','agreement_id','requisition_id','rfq_id',
+		'due_date','cash_account','tax_overrides','fixed_asset') as $field)
 		$state[$field] = isset($cart->$field) ? $cart->$field : null;
 	$state['lines'] = array();
 	foreach ($cart->line_items as $key => $line) {
 		$values = array();
-		foreach (array('po_detail_rec','stock_id','item_description','req_del_date','price','quantity') as $field)
+		foreach (array('po_detail_rec','stock_id','item_description','req_del_date','price','quantity',
+			'receive_qty','grn_item_id') as $field)
 			$values[$field] = isset($line->$field) ? $line->$field : null;
 		$state['lines'][$key] = $values;
 	}

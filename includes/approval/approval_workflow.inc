@@ -324,7 +324,7 @@ class ApprovalWorkflow {
 			cancel_transaction();
 			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'business_custody_failed');
 		}
-		$auto_approved = $this->checkAutoApproval($draft_id, $workflow, $amount, $data, $context);
+		$auto_approved = $this->checkAutoApproval($draft_id, $workflow, $amount, $data, $context, $lock_policy);
 
 		if ($auto_approved) {
 			// Execute immediately
@@ -360,7 +360,8 @@ class ApprovalWorkflow {
 			$workflow['id'],
 			1,
 			'pending',
-			isset($context['loc_code']) ? $context['loc_code'] : null
+			isset($context['loc_code']) ? $context['loc_code'] : null,
+			$lock_policy
 		);
 		if (!is_array($notification_result)
 			|| !isset($notification_result['status'], $notification_result['count'])
@@ -1000,13 +1001,14 @@ class ApprovalWorkflow {
 	 * @param float $amount   Transaction amount
 	 * @param array $draft_data_decoded Optional decoded draft data for condition evaluation
 	 * @param array $context  Optional context for condition evaluation
+	 * @param bool $lock_policy Read current levels under the submission owner's locks
 	 * @return bool           True if auto-approved
 	 */
-	private function checkAutoApproval($draft_id, $workflow, $amount, $draft_data_decoded = array(), $context = array())
+	private function checkAutoApproval($draft_id, $workflow, $amount, $draft_data_decoded = array(), $context = array(), $lock_policy = false)
 	{
 		if (!$this->validateRegisteredAction('auto_approve', $workflow['trans_type'], $draft_data_decoded))
 			return false;
-		$levels = get_approval_levels($workflow['id'], true);
+		$levels = get_approval_levels($workflow['id'], true, $lock_policy);
 		$all_auto = true;
 
 		$condition_context = array_merge(array('amount' => $amount), $context);
