@@ -112,7 +112,7 @@ function restore_purchase_order_from_data($data)
 	$po = new purch_order();
 	// Legacy envelopes are already company-scoped by the workflow's own row.
 	// New envelopes must never be silently rebound after a company switch.
-	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || !$po->is_current_company()
+	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || array_key_exists('agreement_conversion', $data) || !$po->is_current_company()
 		|| ((array_key_exists('company', $data) || array_key_exists('company_prefix', $data))
 			&& (!isset($data['company'], $data['company_prefix'])
 				|| !is_scalar($data['company']) || (string)$data['company'] !== (string)$po->company
@@ -268,6 +268,12 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 		|| !is_scalar($draft_data['trans_type']) || (string)$draft_data['trans_type'] !== (string)ST_PURCHORDER)
 		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+	if (array_key_exists('agreement_conversion', $draft_data)) {
+		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_db.inc');
+		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
+		return !array_key_exists('material_request_conversion', $draft_data)
+			? execute_agreement_purchase_order($draft_data, $reserved_trans_no, $draft_id) : false;
+	}
 	if (array_key_exists('material_request_conversion', $draft_data)) {
 		include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_requests_db.inc');
 		return execute_material_request_purchase_order($draft_data, $reserved_trans_no, $draft_id);
@@ -732,6 +738,13 @@ function get_vendor_evaluation_draft_amount($draft_data)
 function render_purchase_draft($draft_data)
 {
 	$html = '<table class="tablestyle" width="100%">';
+	if (isset($draft_data['agreement_conversion']['agreement_id'])) {
+		$html .= '<tr><th>'._('Purchase Agreement').'</th><td>'
+			.htmlspecialchars((string)$draft_data['agreement_conversion']['agreement_id']).'</td>'
+			.'<th>'._('Financial Tracking IDs').'</th><td>'
+			.htmlspecialchars((string)$draft_data['dimension']).' / '.htmlspecialchars((string)$draft_data['dimension2']).'</td></tr>';
+	}
+
 	$html .= '<tr><th>' . _('Supplier') . '</th><td>' . htmlspecialchars(isset($draft_data['supplier_name']) ? $draft_data['supplier_name'] : $draft_data['supplier_id']) . '</td>';
 	$html .= '<th>' . _('Reference') . '</th><td>' . htmlspecialchars(isset($draft_data['reference']) ? $draft_data['reference'] : '') . '</td></tr>';
 	$html .= '<tr><th>' . _('Date') . '</th><td>' . htmlspecialchars(isset($draft_data['orig_order_date']) ? $draft_data['orig_order_date'] : '') . '</td>';

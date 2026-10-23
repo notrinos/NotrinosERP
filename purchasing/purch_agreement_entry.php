@@ -456,9 +456,11 @@ if (isset($_POST['CancelAgreement']) && $selected_id > 0) {
 }
 
 if (isset($_POST['CreatePO']) && $selected_id > 0) {
-	$po_number = create_po_from_agreement($selected_id);
-	if ($po_number) {
-		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&sel_app=AP&created_po=' . $po_number);
+	$result = submit_agreement_purchase_order($selected_id);
+	if ($result && $result['status'] === 'pending') {
+		display_notification(_('Purchase order submitted for approval.'));
+	} elseif ($result && $result['status'] === 'posted') {
+		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&sel_app=AP&created_po=' . $result['trans_no']);
 	} else {
 		display_error(_('No purchase order could be created from this agreement.'));
 	}

@@ -267,7 +267,7 @@ function update_approval_draft_data($draft_id, $draft_data, $amount = null, $sum
 	// persisted PO type is 18 (includes/types.inc), even before module constants load.
 	$purchase_order_type = defined('ST_PURCHORDER') ? ST_PURCHORDER : 18;
 	$sql .= " AND CASE WHEN trans_type=".$purchase_order_type." THEN CASE WHEN JSON_VALID(".$json.") THEN"
-		. " JSON_CONTAINS_PATH(".$json.", 'one', '$.material_request_conversion')=0 ELSE 0 END ELSE 1 END";
+		. " JSON_CONTAINS_PATH(".$json.", 'one', '$.material_request_conversion', '$.agreement_conversion')=0 ELSE 0 END ELSE 1 END";
 
 	return db_query($sql, 'could not update approval draft data') && db_num_affected_rows() > 0;
 }

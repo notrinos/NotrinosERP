@@ -15,6 +15,7 @@ include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+include_once(__DIR__.'/purch_agreement_po_approval_db.inc');
 
 /**
  * Get available purchase agreement types.
@@ -1262,131 +1263,18 @@ function create_po_from_agreement($agreement_id, $line_selections = array())
 	if (!begin_transaction())
 		return false;
 	try {
-		$agreement = get_purch_agreement($agreement_id);
-		if (!$agreement || $agreement['status'] !== 'active')
-			throw new RuntimeException('Purchase order conversion was not completed.');
-
-		$location = get_purch_agreement_order_location($agreement);
-		if (!$location)
-			throw new RuntimeException('Purchase order conversion was not completed.');
-
-		update_agreement_fulfillment($agreement_id);
-
-		$purchase_order = new purch_order();
-		$purchase_order->trans_type = ST_PURCHORDER;
-		$purchase_order->orig_order_date = Today();
-		$purchase_order->due_date = Today();
-		$purchase_order->Location = $location['loc_code'];
-		$purchase_order->Comments = sprintf(_('Created from Purchase Agreement %s'), $agreement['reference']);
-		$purchase_order->delivery_address = $location['delivery_address'] !== ''
-			? $location['delivery_address']
-			: ($location['location_name'] !== '' ? $location['location_name'] : $location['loc_code']);
-
-		get_supplier_details_to_order($purchase_order, (int)$agreement['supplier_id']);
-		$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
-			'supplier_id' => (int)$agreement['supplier_id'],
-			'date' => $purchase_order->orig_order_date,
-			'location' => $purchase_order->Location,
-		));
-		$purchase_order->agreement_id = (int)$agreement_id;
-		$purchase_order->rfq_id = (int)$agreement['rfq_id'];
-		$purchase_order->dimension = (int)$agreement['dimension_id'];
-		$purchase_order->dimension2 = (int)$agreement['dimension2_id'];
-
-		$agreement_lines = get_agreement_lines($agreement_id);
-		while ($agreement_line = db_fetch($agreement_lines)) {
-			if (!is_purch_agreement_line_data_valid(
-				$agreement_line['committed_qty'],
-				$agreement_line['unit_price'],
-				$agreement_line['discount_percent'],
-				$agreement_line['min_qty_per_order'],
-				$agreement_line['price_valid_until']
-			))
-				continue;
-
-			if ($agreement_line['price_valid_until']
-				&& $agreement_line['price_valid_until'] !== '0000-00-00'
-				&& $agreement_line['price_valid_until'] < date2sql(Today()))
-				continue;
-
-			$line_id = (int)$agreement_line['id'];
-			$selection = isset($line_selections[$line_id]) ? $line_selections[$line_id] : array();
-			$selected_quantity = 0;
-			$selected_delivery_date = '';
-
-			if (is_array($selection)) {
-				if (!empty($selection['skip']))
-					continue;
-				$selected_quantity = isset($selection['quantity']) ? (float)$selection['quantity'] : 0;
-				$selected_delivery_date = isset($selection['delivery_date']) ? $selection['delivery_date'] : '';
-			} elseif ($selection !== null && $selection !== '') {
-				$selected_quantity = (float)$selection;
-			}
-
-			$remaining_qty = max(0, (float)$agreement_line['committed_qty'] - (float)$agreement_line['ordered_qty']);
-			if ($selected_quantity <= 0)
-				$selected_quantity = $remaining_qty > 0 ? $remaining_qty : 0;
-			if ($selected_quantity <= 0)
-				continue;
-			if ($remaining_qty > 0)
-				$selected_quantity = min($selected_quantity, $remaining_qty);
-			if ($selected_quantity <= 0)
-				continue;
-
-			if ((float)$agreement_line['min_qty_per_order'] > 0 && $selected_quantity < (float)$agreement_line['min_qty_per_order'])
-				$selected_quantity = (float)$agreement_line['min_qty_per_order'];
-			if ($remaining_qty > 0)
-				$selected_quantity = min($selected_quantity, $remaining_qty);
-			if ($selected_quantity <= 0)
-				continue;
-
-			$effective_price = round((float)$agreement_line['unit_price'] * (1 - ((float)$agreement_line['discount_percent'] / 100)), user_price_dec());
-			$line_delivery_date = $selected_delivery_date !== '' ? $selected_delivery_date : Today();
-
-			$purchase_order->add_to_order(
-				count($purchase_order->line_items),
-				$agreement_line['stock_id'],
-				$selected_quantity,
-				$agreement_line['line_description'] !== '' ? $agreement_line['line_description'] : null,
-				$effective_price,
-				$agreement_line['stock_units'],
-				$line_delivery_date,
-				0,
-				0
-			);
-		}
-
-		if (!$purchase_order->order_has_items())
-			throw new RuntimeException('Purchase order conversion was not completed.');
+		include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
+		$snapshot = prepare_agreement_purchase_order($agreement_id, $line_selections);
+		$agreement = $snapshot['header'];
+		$purchase_order = $snapshot['cart'];
+		if (agreement_purchase_order_has_pending($agreement_id))
+			throw new RuntimeException('Agreement purchase approval is pending.');
 
 		if (!purchase_order_conversion_direct_authorized($purchase_order))
 			throw new RuntimeException('Purchase order conversion requires approval.');
-		$po_number = add_po($purchase_order);
-		if (!$po_number)
-			throw new RuntimeException('Purchase order conversion was not completed.');
-		if (!purchase_order_conversion_direct_authorized($purchase_order)
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
-			throw new RuntimeException('Purchase source authority changed.');
-
-		$sql = "UPDATE " . TB_PREF . "purch_orders SET
-			agreement_id = " . (int)$agreement_id . ",
-			rfq_id = " . (int)$agreement['rfq_id'] . "
-			WHERE order_no = " . (int)$po_number;
-		if (!db_query($sql, 'could not link purchase order to agreement'))
-			throw new RuntimeException('Purchase order source linkage failed.');
-
-		update_agreement_fulfillment($agreement_id);
-
-		$hook_data = array(
-			'agreement_id' => (int)$agreement_id,
-			'po_no' => (int)$po_number,
-		);
-		hook_invoke_all('purch_agreement_po_created', $hook_data);
-		// Completion hooks must not commit under a changed company or role.
-		if (!purchase_order_conversion_direct_authorized($purchase_order)
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHAGREEMENT'))
-			throw new RuntimeException('Purchase source completion authority changed.');
+		$po_number = write_agreement_purchase_order($snapshot);
+		if (!purchase_order_conversion_direct_authorized($purchase_order))
+			throw new RuntimeException('Agreement purchase policy changed.');
 
 		if (!commit_transaction()) {
 			if (!empty($GLOBALS['transaction_level']))
