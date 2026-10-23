@@ -11,6 +11,8 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/includes/date_functions.inc');
+include_once(__DIR__.'/purch_agreement_po_approval_db.inc');
+include_once(__DIR__.'/purch_rfq_po_approval_db.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/includes/inventory.inc');
 include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc');
@@ -1680,114 +1682,15 @@ function create_po_from_rfq($rfq_id, $vendor_id, $line_ids = array())
 	if (!begin_transaction())
 		return false;
 	try {
-		$rfq = get_purch_rfq($rfq_id);
-		if (!$rfq || $rfq['status'] !== 'awarded')
-			throw new RuntimeException('Purchase order conversion was not completed.');
-
-		$rfq_vendor = resolve_purch_rfq_vendor_reference($rfq_id, $vendor_id);
-		if (!$rfq_vendor || (int)$rfq_vendor['is_winner'] !== 1)
-			throw new RuntimeException('Purchase order conversion was not completed.');
-
-		$selected_line_ids = array();
-		foreach ((array)$line_ids as $line_id) {
-			if ((int)$line_id > 0)
-				$selected_line_ids[] = (int)$line_id;
-		}
-
-		$award_map = get_purch_rfq_award_map($rfq['custom_data']);
-		$vendor_lines = get_rfq_vendor_line_map((int)$rfq_vendor['id']);
-
-		$purchase_order = new purch_order();
-		$purchase_order->trans_type = ST_PURCHORDER;
-		$purchase_order->orig_order_date = Today();
-		$purchase_order->due_date = $rfq['required_delivery_date'] ? sql2date($rfq['required_delivery_date']) : Today();
-		$purchase_order->Location = $rfq['delivery_location'];
-		$purchase_order->Comments = sprintf(_('Created from RFQ %s'), $rfq['reference']);
-		$purchase_order->delivery_address = $rfq['delivery_location_name'] ? $rfq['delivery_location_name'] : $rfq['delivery_location'];
-		$purchase_order->rfq_id = (int)$rfq_id;
-
-		get_supplier_details_to_order($purchase_order, (int)$rfq_vendor['supplier_id']);
-		$purchase_order->reference = $Refs->get_next(ST_PURCHORDER, null, array(
-			'supplier_id' => (int)$rfq_vendor['supplier_id'],
-			'date' => $purchase_order->orig_order_date,
-			'location' => $purchase_order->Location,
-		));
-
-		$rfq_items = get_rfq_items($rfq_id);
-		while ($rfq_item = db_fetch($rfq_items)) {
-			$rfq_item_id = (int)$rfq_item['id'];
-			if (!empty($selected_line_ids) && !in_array($rfq_item_id, $selected_line_ids))
-				continue;
-			if (!empty($award_map) && isset($award_map[$rfq_item_id]) && (int)$award_map[$rfq_item_id] !== (int)$rfq_vendor['id'])
-				continue;
-			if (!isset($vendor_lines[$rfq_item_id]))
-				continue;
-
-			$vendor_line = $vendor_lines[$rfq_item_id];
-			$quantity = (float)$vendor_line['quoted_quantity'] > 0 ? (float)$vendor_line['quoted_quantity'] : (float)$rfq_item['quantity'];
-			$price = (float)$vendor_line['quoted_price'];
-			if ($quantity <= 0 || $price <= 0)
-				continue;
-
-			$description = $rfq_item['line_description'] !== '' ? $rfq_item['line_description'] : null;
-			$purchase_order->add_to_order(
-				count($purchase_order->line_items),
-				$rfq_item['stock_id'],
-				$quantity,
-				$description,
-				$price,
-				$rfq_item['line_unit_of_measure'],
-				$purchase_order->due_date,
-				0,
-				0
-			);
-		}
-
-		if (!$purchase_order->order_has_items())
-			throw new RuntimeException('Purchase order conversion was not completed.');
-
+		include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
+		include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_rfq_po_approval_db.inc');
+		$snapshot = prepare_rfq_purchase_order($rfq_id, $vendor_id, $line_ids);
+		$purchase_order = $snapshot['cart'];
+		if (rfq_purchase_order_has_pending($rfq_id) || !purchase_order_conversion_direct_authorized($purchase_order))
+			throw new RuntimeException('RFQ purchase approval is required or pending.');
+		$po_number = write_rfq_purchase_order($snapshot);
 		if (!purchase_order_conversion_direct_authorized($purchase_order))
-			throw new RuntimeException('Purchase order conversion requires approval.');
-		$po_number = add_po($purchase_order);
-		if (!$po_number)
-			throw new RuntimeException('Purchase order conversion was not completed.');
-		if (!purchase_order_conversion_direct_authorized($purchase_order)
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHRFQ'))
-			throw new RuntimeException('Purchase source authority changed.');
-
-		$vendor_custom_data = decode_purch_rfq_custom_data($rfq_vendor['custom_data']);
-		if (!isset($vendor_custom_data['created_po_numbers']) || !is_array($vendor_custom_data['created_po_numbers']))
-			$vendor_custom_data['created_po_numbers'] = array();
-		$vendor_custom_data['created_po_numbers'][] = (int)$po_number;
-
-		$sql = "UPDATE " . TB_PREF . "purch_rfq_vendors SET
-			custom_data = " . sql_purch_rfq_custom_data($vendor_custom_data) . "
-			WHERE id = " . (int)$rfq_vendor['id'];
-		if (!db_query($sql, 'could not update RFQ vendor PO linkage'))
-			throw new RuntimeException('Purchase order source linkage failed.');
-
-		$rfq_custom_data = decode_purch_rfq_custom_data($rfq['custom_data']);
-		if (!isset($rfq_custom_data['created_po_numbers']) || !is_array($rfq_custom_data['created_po_numbers']))
-			$rfq_custom_data['created_po_numbers'] = array();
-		$rfq_custom_data['created_po_numbers'][] = (int)$po_number;
-
-		$sql = "UPDATE " . TB_PREF . "purch_rfq SET
-			custom_data = " . sql_purch_rfq_custom_data($rfq_custom_data) . "
-			WHERE id = " . (int)$rfq_id;
-		if (!db_query($sql, 'could not update RFQ PO linkage'))
-			throw new RuntimeException('Purchase order source linkage failed.');
-
-		$hook_data = array(
-			'rfq_id' => (int)$rfq_id,
-			'po_no' => (int)$po_number,
-			'rfq_vendor_id' => (int)$rfq_vendor['id'],
-		);
-		hook_invoke_all('purch_rfq_po_created', $hook_data);
-		// Completion hooks must not commit under a changed company or role.
-		if (!purchase_order_conversion_direct_authorized($purchase_order)
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
-			|| !$_SESSION['wa_current_user']->can_access('SA_PURCHRFQ'))
-			throw new RuntimeException('Purchase source completion authority changed.');
+			throw new RuntimeException('RFQ purchase policy changed.');
 
 		if (!commit_transaction()) {
 			if (!empty($GLOBALS['transaction_level']))

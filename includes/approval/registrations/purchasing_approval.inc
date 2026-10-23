@@ -112,7 +112,7 @@ function restore_purchase_order_from_data($data)
 	$po = new purch_order();
 	// Legacy envelopes are already company-scoped by the workflow's own row.
 	// New envelopes must never be silently rebound after a company switch.
-	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || array_key_exists('agreement_conversion', $data) || !$po->is_current_company()
+	if (!is_array($data) || array_key_exists('material_request_conversion', $data) || array_key_exists('agreement_conversion', $data) || array_key_exists('rfq_conversion', $data) || !$po->is_current_company()
 		|| ((array_key_exists('company', $data) || array_key_exists('company_prefix', $data))
 			&& (!isset($data['company'], $data['company_prefix'])
 				|| !is_scalar($data['company']) || (string)$data['company'] !== (string)$po->company
@@ -268,6 +268,11 @@ function execute_approved_purchase_order($draft_data, $reserved_trans_no, $draft
 		|| !is_scalar($draft_data['trans_type']) || (string)$draft_data['trans_type'] !== (string)ST_PURCHORDER)
 		return false;
 	include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+	if (array_key_exists('rfq_conversion', $draft_data)) {
+		include_once($path_to_root.'/purchasing/includes/db/purch_rfq_db.inc');
+		return !array_key_exists('agreement_conversion', $draft_data) && !array_key_exists('material_request_conversion', $draft_data)
+			? execute_rfq_purchase_order($draft_data, $reserved_trans_no, $draft_id) : false;
+	}
 	if (array_key_exists('agreement_conversion', $draft_data)) {
 		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_db.inc');
 		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
@@ -738,6 +743,12 @@ function get_vendor_evaluation_draft_amount($draft_data)
 function render_purchase_draft($draft_data)
 {
 	$html = '<table class="tablestyle" width="100%">';
+	if (isset($draft_data['rfq_conversion']['rfq_id'])) {
+		$html .= '<tr><th>'._('RFQ source').'</th><td>'
+			.htmlspecialchars((string)$draft_data['rfq_conversion']['rfq_id']).'</td></tr>';
+		$html .= '<tr><th>'._('Awarded vendor').'</th><td>'
+			.htmlspecialchars((string)$draft_data['rfq_conversion']['vendor_id']).'</td></tr>';
+	}
 	if (isset($draft_data['agreement_conversion']['agreement_id'])) {
 		$html .= '<tr><th>'._('Purchase Agreement').'</th><td>'
 			.htmlspecialchars((string)$draft_data['agreement_conversion']['agreement_id']).'</td>'

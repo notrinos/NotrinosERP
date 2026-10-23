@@ -108,6 +108,11 @@ function restore_material_request_purchase_order_snapshot($data) {
 /** Validate only material conversion envelopes; legacy ordinary PO drafts retain their own contract. */
 function validate_purchase_order_source_action($action, $data, $draft, $actor, $comments = '') {
 	global $path_to_root;
+	if (is_array($data) && array_key_exists('rfq_conversion', $data)) {
+		include_once($path_to_root.'/purchasing/includes/db/purch_rfq_po_approval_db.inc');
+		return !array_key_exists('agreement_conversion', $data) && !array_key_exists('material_request_conversion', $data)
+			&& validate_rfq_purchase_order_action($action, $data, $draft, $actor, $comments);
+	}
 	if (is_array($data) && array_key_exists('agreement_conversion', $data)) {
 		include_once($path_to_root.'/purchasing/includes/db/purch_agreement_po_approval_db.inc');
 		return !array_key_exists('material_request_conversion', $data)
@@ -199,7 +204,7 @@ function execute_material_request_purchase_order($data, $reserved_trans_no, $dra
 		$role_id = $_SESSION['wa_current_user']->access;
 		if (!has_user_approved_draft($draft_id, $actor_id, (int)$draft['current_level']))
 			return false;
-		$number = write_material_request_purchase_order($snapshot);
+		$number = write_material_request_purchase_order($snapshot, (int)$draft_id);
 		if ($actor_id !== $_SESSION['wa_current_user']->user || $role_id !== $_SESSION['wa_current_user']->access)
 			return false;
 		return $number;

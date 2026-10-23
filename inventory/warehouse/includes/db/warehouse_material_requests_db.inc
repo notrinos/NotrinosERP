@@ -767,7 +767,7 @@ function prepare_material_request_purchase_order($request_id, $supplier_id, $ord
 }
 
 /** Post and link the locked source atomically; callers own direct-policy or actual approved-draft admission. */
-function write_material_request_purchase_order($snapshot) {
+function write_material_request_purchase_order($snapshot, $approval_draft_id = 0) {
 	if (empty($GLOBALS['transaction_level']))
 		throw new RuntimeException('Material purchase linkage requires an owning transaction.');
 	$cart = $snapshot['cart'];
@@ -775,7 +775,7 @@ function write_material_request_purchase_order($snapshot) {
 	$intent = json_decode(json_encode($cart), true);
 	if (!is_array($intent) || json_last_error() !== JSON_ERROR_NONE)
 		throw new RuntimeException('Material purchase intent could not be encoded.');
-	$po_no = add_po($cart);
+	$po_no = add_po($cart, $approval_draft_id);
 	if (!$po_no || !$cart->is_current_company()
 		|| !$_SESSION['wa_current_user']->can_access('SA_MATERIALREQUEST')
 		|| !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER'))

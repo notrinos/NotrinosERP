@@ -171,8 +171,9 @@ function delete_po($po) {
  * Create a native PO atomically, including its automatic direct-document parent.
  * The existing approval service owns command admission; this boundary rechecks
  * current module/company authority and preserves failed cart identities for retry.
+ * An optional approved source draft binds its validated reservation to the native key.
  */
-function add_po(&$po_obj) {
+function add_po(&$po_obj, $approval_draft_id = 0) {
 	global $Refs;
 	if (!purchase_order_creation_authorized($po_obj))
 		return false;
@@ -186,6 +187,14 @@ function add_po(&$po_obj) {
 	if (!begin_transaction())
 		return false;
 	try {
+		$approved_order_no = 0;
+		if ($approval_draft_id !== 0) {
+			if (!function_exists('get_source_approved_purchase_order_number'))
+				throw new RuntimeException('Approved purchase order identity is unavailable.');
+			$approved_order_no = get_source_approved_purchase_order_number($po_obj, $approval_draft_id);
+			if (!$approved_order_no)
+				throw new RuntimeException('Approved purchase order identity is unavailable.');
+		}
 		if ($working_order->reference == 'auto')
 			$working_order->reference = $Refs->get_next(ST_PURCHORDER, null,
 				array('supplier_id' => $working_order->supplier_id, 'date' => $working_order->orig_order_date));
@@ -193,7 +202,9 @@ function add_po(&$po_obj) {
 		if (!purchase_order_creation_authorized($working_order))
 			throw new RuntimeException('Purchase order admission changed.');
 		/*Insert to purchase order header record */
-		$sql = "INSERT INTO ".TB_PREF."purch_orders (supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
+		$sql = "INSERT INTO ".TB_PREF."purch_orders (".($approved_order_no ? 'order_no, ' : '')."supplier_id, Comments, agreement_id, requisition_id, rfq_id, ord_date, reference, supp_reference, into_stock_location, delivery_address, total, tax_included, prep_amount) VALUES(";
+		if ($approved_order_no)
+			$sql .= (int)$approved_order_no . ', ';
 		$sql .= db_escape($working_order->supplier_id) . "," .
 			db_escape($working_order->Comments) . ", " .
 			(int)(isset($working_order->agreement_id) ? $working_order->agreement_id : 0) . ", " .
@@ -213,6 +224,12 @@ function add_po(&$po_obj) {
 
 		/*Get the auto increment value of the order number created from the sql above */
 		$working_order->order_no = db_insert_id();
+		// Auto-increment does not consider the workflow's retained number history.
+		// Never publish a PO under a pending, cancelled or rejected identity.
+		$number_history = db_query('SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_PURCHORDER
+			.' AND id='.(int)$working_order->order_no.' FOR UPDATE', 'Could not verify purchase order number history');
+		if (!$number_history || db_num_rows($number_history))
+			throw new RuntimeException('Purchase order identity conflicts with retained approval history; retry.');
 
 		/*Insert the purchase order detail records */
 		foreach ($working_order->line_items as $line_no => $po_line) {
@@ -645,4 +662,35 @@ function get_sql_for_po_search($from, $to, $supplier_id=ALL_TEXT, $location=ALL_
 	$sql .= " GROUP BY porder.order_no";
 
 	return $sql;
+}
+
+/** Bind the native primary key only to the actual independently approved source draft and exact cart. */
+function get_source_approved_purchase_order_number($cart, $draft_id) {
+	if (empty($GLOBALS['transaction_level']) || !is_int($draft_id) || $draft_id <= 0
+		|| !class_exists('ApprovalWorkflow') || !function_exists('get_approval_draft_for_update')
+		|| !function_exists('validate_purchase_order_source_action') || !function_exists('collect_purchase_order_data') || !isset($_SESSION['wa_current_user']))
+		return false;
+	$draft = get_approval_draft_for_update($draft_id);
+	$actor = $_SESSION['wa_current_user'];
+	if (!$draft || (int)$draft['trans_type'] !== ST_PURCHORDER
+		|| (int)$draft['status'] !== APPROVAL_STATUS_APPROVED || !empty($draft['approved_trans_no'])
+		|| (int)$draft['reserved_trans_no'] <= 0 || (int)$draft['submitted_by'] === (int)$actor->user
+		|| !has_user_approved_draft($draft_id, $actor->user, (int)$draft['current_level']))
+		return false;
+	$approval = new ApprovalWorkflow($actor->access, $actor->user);
+	$data = $approval->decodeStoredDraftData($draft['draft_data']);
+	if (!is_array($data)) return false;
+	$markers = array_intersect(array('rfq_conversion','agreement_conversion','material_request_conversion'), array_keys($data));
+	if (count($markers) !== 1 || !validate_purchase_order_source_action('approve', $data, $draft,
+		array('user_id'=>$actor->user, 'role_id'=>$actor->access)))
+		return false;
+	$expected = $data;
+	foreach ($markers as $marker) unset($expected[$marker]);
+	$actual = collect_purchase_order_data($cart);
+	if (!is_array($actual)) return false;
+	// The source writer resolves its native reference immediately before add_po.
+	$actual['reference'] = $expected['reference'];
+	if (json_decode(json_encode($actual), true) !== json_decode(json_encode($expected), true))
+		return false;
+	return (int)$draft['reserved_trans_no'];
 }

@@ -532,8 +532,11 @@ if (isset($_POST['SendRFQ']) && $selected_id > 0) {
 
 $create_po_vendor_id = find_submit('CreatePOFromVendor');
 if ($create_po_vendor_id > 0 && $selected_id > 0) {
-	$po_number = create_po_from_rfq($selected_id, $create_po_vendor_id);
-	if ($po_number) {
+	$result = submit_rfq_purchase_order($selected_id, $create_po_vendor_id);
+	if ($result && $result['status'] === 'pending') {
+		display_notification(_('Purchase order submitted for approval.'));
+	} elseif ($result && $result['status'] === 'posted') {
+		$po_number = $result['trans_no'];
 		display_notification(_('Purchase order has been created from the awarded RFQ vendor.'));
 		display_note(get_trans_view_str(ST_PURCHORDER, $po_number, _('View Purchase Order') . ' #' . $po_number), 0, 1);
 	} else {

@@ -319,7 +319,7 @@ function execute_agreement_purchase_order($data, $reserved_trans_no, $draft_id) 
 		$role_id = $_SESSION['wa_current_user']->access;
 		if (!has_user_approved_draft($draft_id, $actor_id, (int)$draft['current_level']))
 			return false;
-		$number = write_agreement_purchase_order($snapshot);
+		$number = write_agreement_purchase_order($snapshot, (int)$draft_id);
 		if ($actor_id !== $_SESSION['wa_current_user']->user || $role_id !== $_SESSION['wa_current_user']->access)
 			return false;
 		return $number;
@@ -329,7 +329,7 @@ function execute_agreement_purchase_order($data, $reserved_trans_no, $draft_id) 
 }
 
 /** Write only a locked native intent inside the owning direct/approved transaction. */
-function write_agreement_purchase_order($snapshot) {
+function write_agreement_purchase_order($snapshot, $approval_draft_id = 0) {
 	global $Refs;
 	if (empty($GLOBALS['transaction_level'])) throw new RuntimeException('Agreement write requires owning transaction.');
 	$agreement=$snapshot['header']; $agreement_id=(int)$agreement['id']; $purchase_order=$snapshot['cart'];
@@ -338,7 +338,7 @@ function write_agreement_purchase_order($snapshot) {
 	// Preserve the agreement converter's location-aware native reference context.
 	$purchase_order->reference=$Refs->get_next(ST_PURCHORDER, null, array('supplier_id'=>$purchase_order->supplier_id,
 		'date'=>$purchase_order->orig_order_date, 'location'=>$purchase_order->Location));
-	$po_number = add_po($purchase_order);
+	$po_number = add_po($purchase_order, $approval_draft_id);
 	if (!$po_number)
 		throw new RuntimeException('Purchase order conversion was not completed.');
 	if (!($purchase_order->is_current_company() && $_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER'))
