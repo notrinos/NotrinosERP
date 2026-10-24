@@ -654,6 +654,14 @@ class Entity extends record_set {
 			$id = dimension_writer_reference_id($data[$primary]);
 			if ($id === false || ($operation !== 'insert' && $id !== dimension_writer_reference_id($key))) return false;
 		}
+		// SQL column names are case-insensitive, but admission keys are exact.
+		// A generic model may declare aliases which native SQL would persist.
+		// Require canonical sensitive columns; undeclared input stays ignored.
+		foreach ($data as $field=>$value) {
+			$canonical = strtolower((string)$field);
+			if ($field !== $canonical && in_array($canonical, array($primary, 'dimension_id', 'dimension2_id', 'custom_data'), true)
+				&& in_array($field, $this->fields)) return false;
+		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
 		if ($operation === 'insert') $next += array('dimension_id'=>0, 'dimension2_id'=>0);
