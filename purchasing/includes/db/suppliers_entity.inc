@@ -57,10 +57,13 @@ class suppliers_entity extends Entity {
 	 * @return bool
 	 */
 	public static function remove($key) {
-		begin_transaction();
+		if (!begin_transaction()) return false;
 		delete_entity_contacts('supplier', (int)$key);
 		$result = parent::remove($key);
-		if ($result) commit_transaction(); else rollback_transaction();
+		if (!$result || !commit_transaction()) {
+			cancel_transaction();
+			return false;
+		}
 		return $result;
 	}
 
