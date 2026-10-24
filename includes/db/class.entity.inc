@@ -634,6 +634,45 @@ class Entity extends record_set {
 	}
 
 	/**
+	 * Route generic supplier/customer models through their native reference fence.
+	 * Table identity, rather than subclass identity or declared fields, owns this
+	 * boundary. Unrelated models retain their existing persistence behavior.
+	 */
+	protected function ordinary_dimension_write($operation, $key, $data) {
+		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no');
+		$owner = strtolower(rtrim($this->name));
+		if (!isset($keys[$owner])) {
+			// SQL aliases/comments are not canonical owner identities.
+			if (preg_match('/^(?:suppliers|debtors_master)\b/i', $this->name)) return false;
+			return $this->ordinary_dimension_persist($operation, $key, $data);
+		}
+		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
+		$primary = $keys[$owner];
+		if ($this->key !== $primary || !is_array($data)) return false;
+		if ($operation !== 'insert' && !dimension_writer_reference_id($key)) return false;
+		if (array_key_exists($primary, $data)) {
+			$id = dimension_writer_reference_id($data[$primary]);
+			if ($id === false || ($operation !== 'insert' && $id !== dimension_writer_reference_id($key))) return false;
+		}
+		// Match native field filtering before interpreting any serialized payload.
+		$next = array_intersect_key($data, array_flip($this->fields));
+		if ($operation === 'insert') $next += array('dimension_id'=>0, 'dimension2_id'=>0);
+		if ($operation === 'delete') $next = array('dimension_id'=>0, 'dimension2_id'=>0);
+		return dimension_ordinary_master_write($owner, $key, $next,
+			function($admitted) use ($operation, $key, $data) {
+				// Preserve existing filtering/validation and explicit insert identities.
+				return $this->ordinary_dimension_persist($operation, $key, $admitted + $data);
+			}, $operation === 'update', $operation === 'delete');
+	}
+
+	/** Dispatch admitted writes without recursively entering the public boundary. */
+	private function ordinary_dimension_persist($operation, $key, $data) {
+		if ($operation === 'insert') return $this->insert_record($data);
+		if ($operation === 'update') return $this->update_record($key, $data);
+		return $this->delete_record($key);
+	}
+
+	/**
 	 * Update a record by primary key.
 	 *
 	 * Only fields listed in $this->fields are written to the database.
@@ -644,6 +683,11 @@ class Entity extends record_set {
 	 * @return bool True on success, false on validation failure or DB error
 	 */
 	function update($key, $data) {
+		return $this->ordinary_dimension_write('update', $key, $data);
+	}
+
+	/** Persist an admitted update using existing native validation and SQL. */
+	private function update_record($key, $data) {
 		if (!parent::update($key, $data))	// validate data
 			return false;
 
@@ -694,6 +738,11 @@ class Entity extends record_set {
 	 * @return bool True on success, false if deletion is not allowed or on DB error
 	 */
 	function delete($key) {
+		return $this->ordinary_dimension_write('delete', $key, array());
+	}
+
+	/** Persist an admitted delete using existing native validation and SQL. */
+	private function delete_record($key) {
 		if (!parent::delete_check($key))
 			return false;
 
@@ -728,6 +777,11 @@ class Entity extends record_set {
 	 * @return bool True on success, false on validation failure or DB error
 	 */
 	function insert($data) {
+		return $this->ordinary_dimension_write('insert', null, $data);
+	}
+
+	/** Persist an admitted insert using existing native validation and SQL. */
+	private function insert_record($data) {
 		if (!parent::insert_check($data))
 			return false;
 
