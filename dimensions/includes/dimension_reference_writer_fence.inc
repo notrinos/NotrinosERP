@@ -12,6 +12,7 @@
  * including direct Entity/import/legacy paths, is covered. B10 must reconcile
  * lock ordering with all other modules before permitting Dimension deletion.
  */
+require_once __DIR__.'/dimension_master_payload_guard.inc';
 
 /** Canonical native DB coordinate; only zero denotes a blank reference. */
 function dimension_writer_reference_id($value)
@@ -31,7 +32,7 @@ function dimension_writer_reference_id($value)
  * Entity callers may opt into partial data: omitted coordinates are validated
  * and locked from current owner state but are never added to the write payload.
  */
-function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false)
+function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
     $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
@@ -52,24 +53,30 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
         $old = array('dimension_id'=>0, 'dimension2_id'=>0);
+        $old_payload = null;
         if ($identity !== null) {
-            $rows = db_query('SELECT dimension_id, dimension2_id FROM '.TB_PREF.$owner
+            $rows = db_query('SELECT dimension_id, dimension2_id, custom_data FROM '.TB_PREF.$owner
                 .' WHERE '.$sources[$owner].'='.$identity.' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }
+            if (!array_key_exists('custom_data', $found)) { cancel_transaction(); return false; }
+            $old_payload = $found['custom_data'];
             foreach ($old as $column=>$value) {
                 $ref = dimension_writer_reference_id($found[$column]);
                 if ($ref === false) { cancel_transaction(); return false; }
                 $old[$column] = $ref;
             }
         }
+        $next_payload = $remove ? null : (array_key_exists('custom_data', $next) ? $next['custom_data'] : $old_payload);
+        $payload = dimension_master_payload_transition($old_payload, $next_payload, $remove);
+        if ($payload === false) { cancel_transaction(); return false; }
         // Entity partial updates retain omitted coordinates from the current
         // locked row, never from a caller snapshot or an unlocked prior read.
         foreach ($old as $column=>$id) {
             if (!array_key_exists($column, $new)) $new[$column] = $id;
         }
         // No reference is ever omitted simply because it is being cleared.
-        $locks = array();
+        $locks = $payload['locks'];
         foreach (array($old, $new) as $coords)
             foreach ($coords as $id) if ($id > 0) $locks[$id] = $id;
         sort($locks, SORT_NUMERIC);
@@ -87,6 +94,11 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
             $master = $masters[$id];
             if (!$unchanged && (!is_array($master) || (int)$master['type_'] !== $axis
                 || (int)$master['closed'] !== 0)) { cancel_transaction(); return false; }
+        }
+        foreach ($payload['new'] as $reference) {
+            $master = $masters[$reference[0]];
+            if (!is_array($master) || (int)$master['type_'] !== $reference[1]
+                || (int)$master['closed'] !== 0) { cancel_transaction(); return false; }
         }
         $result = call_user_func($callback, $next);
         if (!$result) { cancel_transaction(); return false; }

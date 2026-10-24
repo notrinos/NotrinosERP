@@ -63,7 +63,7 @@ class suppliers_entity extends Entity {
 			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
 				delete_entity_contacts('supplier', (int)$key);
 				return parent::remove($key);
-			});
+			}, false, true);
 	}
 
 	/** Serialize direct/static inserts with the native master-reference protocol. */
@@ -92,7 +92,7 @@ class suppliers_entity extends Entity {
 		return dimension_ordinary_master_write('suppliers', $key,
 			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
 				return parent::delete($key);
-			});
+			}, false, true);
 	}
 
 	/**
