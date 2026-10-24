@@ -124,16 +124,27 @@ function handle_submit(&$supplier_id) {
 	
 	if (!can_process())
 		return;
-	begin_transaction();
+	if (!begin_transaction()) {
+		display_error(_("The supplier could not be saved. Please retry."));
+		return;
+	}
+	$is_new = !$supplier_id;
 	if ($supplier_id)  {
-		update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''));
+		if (!update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
+			cancel_transaction();
+			display_error(_("The supplier could not be saved. Check the Dimension selections and retry."));
+			return;
+		}
 		update_record_status($_POST['supplier_id'], $_POST['inactive'], 'suppliers', 'supplier_id');
 
 		$Ajax->activate('supplier_id'); // in case of status change
-		display_notification(_('Supplier has been updated.'));
 	} 
 	else {
-		add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''));
+		if (!add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
+			cancel_transaction();
+			display_error(_("The supplier could not be saved. Check the Dimension selections and retry."));
+			return;
+		}
 
 		$supplier_id = $_POST['supplier_id'] = db_insert_id();
 
@@ -141,10 +152,14 @@ function handle_submit(&$supplier_id) {
 
 		add_crm_contact('supplier', 'general', $supplier_id, db_insert_id());
 
-		display_notification(_('A new supplier has been added.'));
 		$Ajax->activate('_page_body');
 	}
-	commit_transaction();
+	if (!commit_transaction()) {
+		cancel_transaction();
+		display_error(_("The supplier save could not be confirmed. Reload the record before retrying."));
+		return;
+	}
+	display_notification($is_new ? _('A new supplier has been added.') : _('Supplier has been updated.'));
 }
 
 if (isset($_POST['submit'])) 
@@ -169,12 +184,15 @@ if (isset($_POST['delete']) && $_POST['delete'] != '') {
 
 	}
 	if ($cancel_delete == 0) {
-		delete_supplier($_POST['supplier_id']);
+		if (!delete_supplier($_POST['supplier_id'])) {
+			display_error(_("The supplier could not be deleted. Please retry."));
+		} else {
 
 		unset($_SESSION['supplier_id']);
 		$supplier_id = '';
 		$Ajax->activate('_page_body');
 		display_notification('#'.$_POST['supplier_id'].' '._('Supplier has been deleted.'));
+		}
 	} //end if Delete supplier
 }
 

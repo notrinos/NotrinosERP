@@ -11,9 +11,10 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/sales/includes/db/debtors_master_entity.inc');
+require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
 
 function add_customer($CustName, $cust_ref, $address, $tax_id, $curr_code, $dimension_id, $dimension2_id, $credit_status, $payment_terms, $discount, $pymt_discount, $credit_limit, $sales_type, $notes) {
-	return debtors_master_entity::create(array(
+	$data = array(
 		'name' => $CustName,
 		'debtor_ref' => $cust_ref,
 		'address' => $address,
@@ -28,11 +29,14 @@ function add_customer($CustName, $cust_ref, $address, $tax_id, $curr_code, $dime
 		'credit_limit' => $credit_limit,
 		'sales_type' => $sales_type,
 		'notes' => $notes,
-	));
+	);
+	return dimension_ordinary_master_write('debtors_master', null, $data, function($data) {
+		return debtors_master_entity::create($data);
+	});
 }
 
 function update_customer($customer_id, $CustName, $cust_ref, $address, $tax_id, $curr_code, $dimension_id, $dimension2_id, $credit_status, $payment_terms, $discount, $pymt_discount, $credit_limit, $sales_type, $notes) {
-	return debtors_master_entity::modify((int)$customer_id, array(
+	$data = array(
 		'name' => $CustName,
 		'debtor_ref' => $cust_ref,
 		'address' => $address,
@@ -47,11 +51,17 @@ function update_customer($customer_id, $CustName, $cust_ref, $address, $tax_id, 
 		'credit_limit' => $credit_limit,
 		'sales_type' => $sales_type,
 		'notes' => $notes,
-	));
+	);
+	return dimension_ordinary_master_write('debtors_master', $customer_id, $data, function($data) use ($customer_id) {
+		return debtors_master_entity::modify((int)$customer_id, $data);
+	});
 }
 
 function delete_customer($customer_id) {
-	return debtors_master_entity::remove((int)$customer_id);
+	return dimension_ordinary_master_write('debtors_master', $customer_id,
+		array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($customer_id) {
+			return debtors_master_entity::remove((int)$customer_id);
+		});
 }
 
 /*

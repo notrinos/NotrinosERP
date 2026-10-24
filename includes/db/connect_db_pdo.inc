@@ -455,6 +455,7 @@ function set_global_connection($company = -1) {
  * @return notrinos_pdo_buffered_result|bool Buffered result or boolean status.
  */
 function db_query($sql, $err_msg = null) {
+	unset($GLOBALS['db_preserved_insert_id']);
 	global $db, $SysPrefs, $sql_queries, $Ajax, $db_connections;
 	global $db_last_inserted_id, $db_last_affected_rows;
 
@@ -719,6 +720,10 @@ function db_error_msg($conn) {
 function db_insert_id() {
 	global $db_last_inserted_id, $SysPrefs, $db;
 
+	$preserved = isset($GLOBALS['db_preserved_insert_id']) ? $GLOBALS['db_preserved_insert_id'] : null;
+	$company = isset($_SESSION['wa_current_user']->cur_con) ? $_SESSION['wa_current_user']->cur_con : 0;
+	if (is_array($preserved) && $preserved['connection'] === $db && $preserved['company'] === $company)
+		return $preserved['identity'];
 	return $SysPrefs->sql_trail ? $db_last_inserted_id : db_pdo_last_insert_id($db);
 }
 
@@ -951,6 +956,7 @@ function db_set_charset($dbase, $charset) {
  * @return notrinos_pdo_buffered_result|bool Buffered result or boolean status.
  */
 function db_query_params($sql, $params = array(), $err_msg = null) {
+	unset($GLOBALS['db_preserved_insert_id']);
 	global $db, $SysPrefs, $sql_queries, $Ajax, $db_connections;
 	global $db_last_inserted_id, $db_last_affected_rows;
 

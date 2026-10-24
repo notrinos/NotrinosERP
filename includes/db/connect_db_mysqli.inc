@@ -46,6 +46,7 @@ function set_global_connection($company=-1) {
 //DB wrapper functions to change only once for whole application
 
 function db_query($sql, $err_msg=null) {
+	unset($GLOBALS['db_preserved_insert_id']);
 	global $db, $SysPrefs, $sql_queries, $Ajax,	$db_connections, $db_last_inserted_id;
 
 	// set current db prefix
@@ -168,6 +169,10 @@ function db_error_msg($conn) {
 function db_insert_id() {
 	global $db_last_inserted_id, $SysPrefs, $db;
 
+	$preserved = isset($GLOBALS['db_preserved_insert_id']) ? $GLOBALS['db_preserved_insert_id'] : null;
+	$company = isset($_SESSION['wa_current_user']->cur_con) ? $_SESSION['wa_current_user']->cur_con : 0;
+	if (is_array($preserved) && $preserved['connection'] === $db && $preserved['company'] === $company)
+		return $preserved['identity'];
 	return $SysPrefs->sql_trail ? $db_last_inserted_id : mysqli_insert_id($db);
 }
 

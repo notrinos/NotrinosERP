@@ -79,17 +79,38 @@ function handle_submit(&$selected_id) {
 		return;
 		
 	if ($selected_id) {
-		update_customer($_POST['customer_id'], $_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes']);
+		if (!begin_transaction()) {
+			display_error(_("The customer could not be saved. Please retry."));
+			return;
+		}
+		if (!update_customer($_POST['customer_id'], $_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes'])) {
+			cancel_transaction();
+			display_error(_("The customer could not be saved. Check the Dimension selections and retry."));
+			return;
+		}
 
 		update_record_status($_POST['customer_id'], $_POST['inactive'], 'debtors_master', 'debtor_no');
+
+		if (!commit_transaction()) {
+			cancel_transaction();
+			display_error(_("The customer save could not be confirmed. Reload the record before retrying."));
+			return;
+		}
 
 		$Ajax->activate('customer_id'); // in case of status change
 		display_notification(_('Customer has been updated.'));
 	} 
 	else { 	//it is a new customer
 
-		begin_transaction();
-		add_customer($_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes']);
+		if (!begin_transaction()) {
+			display_error(_("The customer could not be saved. Please retry."));
+			return;
+		}
+		if (!add_customer($_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes'])) {
+			cancel_transaction();
+			display_error(_("The customer could not be saved. Check the Dimension selections and retry."));
+			return;
+		}
 
 		$selected_id = $_POST['customer_id'] = db_insert_id();
 		 
@@ -122,7 +143,11 @@ function handle_submit(&$selected_id) {
 
 			add_crm_contact('customer', 'general', $selected_id, $pers_id);
 		}
-		commit_transaction();
+		if (!commit_transaction()) {
+			cancel_transaction();
+			display_error(_("The customer save could not be confirmed. Reload the record before retrying."));
+			return;
+		}
 
 		display_notification(_('A new customer has been added.'));
 
@@ -165,12 +190,15 @@ if (isset($_POST['delete'])) {
 	
 	if ($cancel_delete == 0) { 	//ie not cancelled the delete as a result of above tests
 	
-		delete_customer($selected_id);
+		if (!delete_customer($selected_id)) {
+			display_error(_("The customer could not be deleted. Please retry."));
+		} else {
 
 		display_notification(_('Selected customer has been deleted.'));
 		unset($_POST['customer_id']);
 		$selected_id = '';
 		$Ajax->activate('_page_body');
+		}
 	} //end if Delete Customer
 }
 

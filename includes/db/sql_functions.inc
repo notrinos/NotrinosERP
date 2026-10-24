@@ -17,6 +17,23 @@
 //
 $transaction_level = 0;
 
+/**
+ * Preserve a caller-visible insert identity after a command commits internally.
+ * COMMIT resets native driver insert-id APIs. The override is connection/company
+ * bound and each driver's next query discards it, preserving normal query scope.
+ */
+function db_preserve_insert_id($identity) {
+	global $db;
+	if (!$db || (!is_int($identity) && !is_string($identity))
+		|| !preg_match('/^[1-9][0-9]*$/D', (string)$identity)
+		|| (int)$identity <= 0 || (string)(int)$identity !== (string)$identity)
+		return false;
+	$GLOBALS['db_preserved_insert_id'] = array('connection'=>$db,
+		'company'=>isset($_SESSION['wa_current_user']->cur_con) ? $_SESSION['wa_current_user']->cur_con : 0,
+		'identity'=>$identity);
+	return true;
+}
+
 /** Begin or nest a transaction; unresolved resource cleanup prevents a new owner. */
 function begin_transaction() {
 	global $transaction_level;

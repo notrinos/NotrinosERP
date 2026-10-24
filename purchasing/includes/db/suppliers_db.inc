@@ -11,9 +11,10 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/purchasing/includes/db/suppliers_entity.inc');
+require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
 
 function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
-	return suppliers_entity::create(array(
+	$data = array(
 		'supp_name' => $supp_name,
 		'supp_ref' => $supp_ref,
 		'address' => $address,
@@ -38,11 +39,14 @@ function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $
 		'evaluation_frequency_months' => (int)$evaluation_frequency_months,
 		'certifications' => $certifications,
 		'approved_categories' => $approved_categories,
-	));
+	);
+	return dimension_ordinary_master_write('suppliers', null, $data, function($data) {
+		return suppliers_entity::create($data);
+	});
 }
 
 function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
-	return suppliers_entity::modify((int)$supplier_id, array(
+	$data = array(
 		'supp_name' => $supp_name,
 		'supp_ref' => $supp_ref,
 		'address' => $address,
@@ -67,11 +71,17 @@ function update_supplier($supplier_id, $supp_name, $supp_ref, $address, $supp_ad
 		'evaluation_frequency_months' => (int)$evaluation_frequency_months,
 		'certifications' => $certifications,
 		'approved_categories' => $approved_categories,
-	));
+	);
+	return dimension_ordinary_master_write('suppliers', $supplier_id, $data, function($data) use ($supplier_id) {
+		return suppliers_entity::modify((int)$supplier_id, $data);
+	});
 }
 
 function delete_supplier($supplier_id) {
-	return suppliers_entity::remove((int)$supplier_id);
+	return dimension_ordinary_master_write('suppliers', $supplier_id,
+		array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($supplier_id) {
+			return suppliers_entity::remove((int)$supplier_id);
+		});
 }
 
 function get_supplier_details($supplier_id, $to=null, $all=true) {
