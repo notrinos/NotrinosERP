@@ -24,6 +24,7 @@
  * get_customer_details() in customers_db.inc — it's a multi-table JOIN, not simple CRUD.
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
+require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
 
 class debtors_master_entity extends Entity {
 	function __construct() {
@@ -51,14 +52,41 @@ class debtors_master_entity extends Entity {
 	 * @return bool
 	 */
 	public static function remove($key) {
-		if (!begin_transaction()) return false;
-		delete_entity_contacts('customer', (int)$key);
-		$result = parent::remove($key);
-		if (!$result || !commit_transaction()) {
-			cancel_transaction();
-			return false;
-		}
-		return $result;
+		if (!dimension_writer_reference_id($key)) return false;
+		return dimension_ordinary_master_write('debtors_master', $key,
+			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
+				delete_entity_contacts('customer', (int)$key);
+				return parent::remove($key);
+			});
+	}
+
+	/** Serialize direct/static inserts with the native master-reference protocol. */
+	function insert($data) {
+		if (!is_array($data) || (array_key_exists('debtor_no', $data)
+			&& dimension_writer_reference_id($data['debtor_no']) === false)) return false;
+		$data += array('dimension_id'=>0, 'dimension2_id'=>0);
+		return dimension_ordinary_master_write('debtors_master', null, $data, function($next) {
+			return parent::insert($next);
+		});
+	}
+
+	/** Retain omitted coordinates under lock; primary-key reassignment is forbidden. */
+	function update($key, $data) {
+		if (!dimension_writer_reference_id($key) || !is_array($data) || (array_key_exists('debtor_no', $data)
+			&& (dimension_writer_reference_id($key) === false
+				|| dimension_writer_reference_id($data['debtor_no']) !== dimension_writer_reference_id($key)))) return false;
+		return dimension_ordinary_master_write('debtors_master', $key, $data, function($next) use ($key) {
+			return parent::update($key, $next);
+		}, true);
+	}
+
+	/** Serialize instance deletion; static remove also owns contact cleanup. */
+	function delete($key) {
+		if (!dimension_writer_reference_id($key)) return false;
+		return dimension_ordinary_master_write('debtors_master', $key,
+			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
+				return parent::delete($key);
+			});
 	}
 
 	/**

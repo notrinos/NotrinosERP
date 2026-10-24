@@ -26,6 +26,7 @@
  * The get_suppliers_search() and get_supplier_accounts() helpers also stay standalone.
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
+require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
 
 class suppliers_entity extends Entity {
 	function __construct() {
@@ -57,14 +58,41 @@ class suppliers_entity extends Entity {
 	 * @return bool
 	 */
 	public static function remove($key) {
-		if (!begin_transaction()) return false;
-		delete_entity_contacts('supplier', (int)$key);
-		$result = parent::remove($key);
-		if (!$result || !commit_transaction()) {
-			cancel_transaction();
-			return false;
-		}
-		return $result;
+		if (!dimension_writer_reference_id($key)) return false;
+		return dimension_ordinary_master_write('suppliers', $key,
+			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
+				delete_entity_contacts('supplier', (int)$key);
+				return parent::remove($key);
+			});
+	}
+
+	/** Serialize direct/static inserts with the native master-reference protocol. */
+	function insert($data) {
+		if (!is_array($data) || (array_key_exists('supplier_id', $data)
+			&& dimension_writer_reference_id($data['supplier_id']) === false)) return false;
+		$data += array('dimension_id'=>0, 'dimension2_id'=>0);
+		return dimension_ordinary_master_write('suppliers', null, $data, function($next) {
+			return parent::insert($next);
+		});
+	}
+
+	/** Retain omitted coordinates under lock; primary-key reassignment is forbidden. */
+	function update($key, $data) {
+		if (!dimension_writer_reference_id($key) || !is_array($data) || (array_key_exists('supplier_id', $data)
+			&& (dimension_writer_reference_id($key) === false
+				|| dimension_writer_reference_id($data['supplier_id']) !== dimension_writer_reference_id($key)))) return false;
+		return dimension_ordinary_master_write('suppliers', $key, $data, function($next) use ($key) {
+			return parent::update($key, $next);
+		}, true);
+	}
+
+	/** Serialize instance deletion; static remove also owns contact cleanup. */
+	function delete($key) {
+		if (!dimension_writer_reference_id($key)) return false;
+		return dimension_ordinary_master_write('suppliers', $key,
+			array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($key) {
+				return parent::delete($key);
+			});
 	}
 
 	/**

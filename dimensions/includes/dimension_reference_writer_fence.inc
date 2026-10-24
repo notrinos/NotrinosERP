@@ -28,14 +28,17 @@ function dimension_writer_reference_id($value)
  * original authorization checks are still required; this does not grant access.
  * The callback receives the normalized payload and executes while both owner
  * and master locks remain held. Its result retains the native Entity contract.
+ * Entity callers may opt into partial data: omitted coordinates are validated
+ * and locked from current owner state but are never added to the write payload.
  */
-function dimension_ordinary_master_write($owner, $key, $next, $callback)
+function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false)
 {
     $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
-    if (!array_key_exists('dimension_id', $next) || !array_key_exists('dimension2_id', $next)) return false;
+    if (!$partial && (!array_key_exists('dimension_id', $next) || !array_key_exists('dimension2_id', $next))) return false;
     $new = array();
     foreach (array('dimension_id', 'dimension2_id') as $column) {
+        if (!array_key_exists($column, $next)) continue;
         $id = dimension_writer_reference_id($next[$column]);
         if ($id === false) return false;
         $new[$column] = $id;
@@ -59,6 +62,11 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback)
                 if ($ref === false) { cancel_transaction(); return false; }
                 $old[$column] = $ref;
             }
+        }
+        // Entity partial updates retain omitted coordinates from the current
+        // locked row, never from a caller snapshot or an unlocked prior read.
+        foreach ($old as $column=>$id) {
+            if (!array_key_exists($column, $new)) $new[$column] = $id;
         }
         // No reference is ever omitted simply because it is being cleared.
         $locks = array();

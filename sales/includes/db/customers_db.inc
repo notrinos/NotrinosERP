@@ -30,9 +30,7 @@ function add_customer($CustName, $cust_ref, $address, $tax_id, $curr_code, $dime
 		'sales_type' => $sales_type,
 		'notes' => $notes,
 	);
-	return dimension_ordinary_master_write('debtors_master', null, $data, function($data) {
-		return debtors_master_entity::create($data);
-	});
+	return debtors_master_entity::create($data);
 }
 
 function update_customer($customer_id, $CustName, $cust_ref, $address, $tax_id, $curr_code, $dimension_id, $dimension2_id, $credit_status, $payment_terms, $discount, $pymt_discount, $credit_limit, $sales_type, $notes) {
@@ -52,16 +50,11 @@ function update_customer($customer_id, $CustName, $cust_ref, $address, $tax_id, 
 		'sales_type' => $sales_type,
 		'notes' => $notes,
 	);
-	return dimension_ordinary_master_write('debtors_master', $customer_id, $data, function($data) use ($customer_id) {
-		return debtors_master_entity::modify((int)$customer_id, $data);
-	});
+	return debtors_master_entity::modify($customer_id, $data);
 }
 
 function delete_customer($customer_id) {
-	return dimension_ordinary_master_write('debtors_master', $customer_id,
-		array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($customer_id) {
-			return debtors_master_entity::remove((int)$customer_id);
-		});
+	return debtors_master_entity::remove($customer_id);
 }
 
 /*
