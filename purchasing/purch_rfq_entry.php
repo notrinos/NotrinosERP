@@ -344,7 +344,8 @@ if (isset($_POST['CreateFromRequisition'])) {
 	}
 }
 
-if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purchase_rfq_header()) {
+$rfq_header_save_failed = isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ']);
+if ($rfq_header_save_failed && can_save_purchase_rfq_header()) {
 	$created_date = date2sql(get_post('created_date'));
 	$deadline_date = get_post('deadline_date') !== '' ? date2sql(get_post('deadline_date')) : null;
 	$validity_date = get_post('validity_date') !== '' ? date2sql(get_post('validity_date')) : null;
@@ -356,8 +357,8 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 	$terms_and_conditions = trim(get_post('terms_and_conditions'));
 	$delivery_location = get_post('delivery_location') === ALL_TEXT ? '' : get_post('delivery_location');
 	$evaluation_criteria = trim(get_post('evaluation_criteria'));
-	$dimension_id = (int)get_post('dimension_id');
-	$dimension2_id = (int)get_post('dimension2_id');
+	$dimension_id = get_post('dimension_id');
+	$dimension2_id = get_post('dimension2_id');
 	$reference = trim(get_post('reference'));
 	$rfq_error_message = '';
 
@@ -382,6 +383,7 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 		);
 
 		if ($selected_id) {
+			$rfq_header_save_failed = false;
 			display_notification(_('Purchase RFQ has been created.'));
 			meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $selected_id . get_sel_app_param());
 		} else {
@@ -404,9 +406,10 @@ if ((isset($_POST['ADD_RFQ']) || isset($_POST['UPDATE_RFQ'])) && can_save_purcha
 			$dimension2_id,
 			$reference,
 			$created_date,
-			array(),
+			null,
 			$rfq_error_message
 		)) {
+			$rfq_header_save_failed = false;
 			display_notification(_('Purchase RFQ has been updated.'));
 		} else {
 			display_error($rfq_error_message !== '' ? $rfq_error_message : _('The purchase RFQ could not be updated.'));
@@ -565,7 +568,7 @@ if ($rfq) {
 $bridge_requisition = $bridge_requisition_id > 0 ? get_purch_requisition($bridge_requisition_id) : false;
 $bridge_supplier_options = $bridge_requisition ? get_bridge_requisition_supplier_options($bridge_requisition_id) : array();
 
-if ($rfq) {
+if ($rfq && !$rfq_header_save_failed) {
 	$_POST['created_date'] = sql2date($rfq['created_date']);
 	$_POST['deadline_date'] = $rfq['deadline_date'] ? sql2date($rfq['deadline_date']) : '';
 	$_POST['validity_date'] = $rfq['validity_date'] ? sql2date($rfq['validity_date']) : '';
