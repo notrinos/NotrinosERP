@@ -54,18 +54,23 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	}
 	if ($input_error != 1) {
 		if ($bank_id) {
-			update_bank_account($bank_id, $_POST['account_code'], $_POST['account_type'], $_POST['bank_account_name'], $_POST['bank_name'], $_POST['bank_account_number'], $_POST['bank_address'], $_POST['BankAccountCurrency'], $_POST['dflt_curr_act'], $_POST['bank_charge_act']);
-			$Ajax->activate('bank_id'); // in case of status change
-			display_notification(_('Bank account has been updated'));
+			$saved = update_bank_account($bank_id, $_POST['account_code'], $_POST['account_type'], $_POST['bank_account_name'], $_POST['bank_name'], $_POST['bank_account_number'], $_POST['bank_address'], $_POST['BankAccountCurrency'], $_POST['dflt_curr_act'], $_POST['bank_charge_act']);
+			if ($saved) {
+				$Ajax->activate('bank_id'); // in case of status change
+				display_notification(_('Bank account has been updated'));
+			}
 		} 
 		else {
 	
-			add_bank_account($_POST['account_code'], $_POST['account_type'], $_POST['bank_account_name'], $_POST['bank_name'], $_POST['bank_account_number'], $_POST['bank_address'], $_POST['BankAccountCurrency'], $_POST['dflt_curr_act'], $_POST['bank_charge_act']);
-			$_POST['bank_id'] = db_insert_id();
-			$bank_id = $_POST['bank_id'];
-			display_notification(_('New bank account has been added'));
+			$saved = add_bank_account($_POST['account_code'], $_POST['account_type'], $_POST['bank_account_name'], $_POST['bank_name'], $_POST['bank_account_number'], $_POST['bank_address'], $_POST['BankAccountCurrency'], $_POST['dflt_curr_act'], $_POST['bank_charge_act']);
+			if ($saved) {
+				$_POST['bank_id'] = db_insert_id();
+				$bank_id = $_POST['bank_id'];
+				display_notification(_('New bank account has been added'));
+			}
 		}
-		$Mode = 'RESET';
+		if ($saved) $Mode = 'RESET';
+		else display_error(_('The bank account could not be saved.'));
 	}
 } 
 elseif( $Mode == 'Delete') {
@@ -83,10 +88,11 @@ elseif( $Mode == 'Delete') {
 		display_error(_('Cannot delete this bank account because POS definitions have been created using this account.'));
 	}
 	if (!$cancel_delete) {
-		delete_bank_account($bank_id);
-		display_notification(_('Selected bank account has been deleted'));
+		if (delete_bank_account($bank_id)) {
+			display_notification(_('Selected bank account has been deleted'));
+			$Mode = 'RESET';
+		} else display_error(_('The bank account could not be deleted because it retains references or the write failed.'));
 	} //end if Delete bank account
-	$Mode = 'RESET';
 } 
 
 if ($Mode == 'RESET') {
@@ -212,7 +218,8 @@ tabbed_content_start('tabs', array(
 switch (get_post('_tabs_sel')) {
 	default:
 	case 'settings':
-		$Mode = "Edit";
+		// Failed or invalid saves must keep the submitted values for correction.
+		if ($Mode != 'ADD_ITEM' && $Mode != 'UPDATE_ITEM') $Mode = 'Edit';
 		bank_account_settings($bank_id); 
 		break;
 	case 'transactions':

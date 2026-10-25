@@ -12,43 +12,56 @@
 
 function clear_dflt_curr_account($curr_code) {
 	$sql = "UPDATE ".TB_PREF."bank_accounts SET dflt_curr_act = 0 WHERE bank_curr_code = ".db_escape($curr_code);
-	db_query($sql, 'could not update default currency account');
+	return db_query($sql);
 }
 
+/** Create a bank account and its currency default in one reference boundary. */
 function add_bank_account($account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
-	if($dflt_curr_act) 	// only one default account for any currency
-	  clear_dflt_curr_account($bank_curr_code);
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('bank_accounts', null, array(),
+		function() use ($account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
+			if ($dflt_curr_act && !clear_dflt_curr_account($bank_curr_code)) return false;
 
-	$sql = "INSERT INTO ".TB_PREF."bank_accounts (account_code, account_type, 
-		bank_account_name, bank_name, bank_account_number, bank_address, 
-		bank_curr_code, dflt_curr_act, bank_charge_act)
-		VALUES (".db_escape($account_code).", ".db_escape($account_type).", "
-		.db_escape($bank_account_name).", ".db_escape($bank_name).", "
-		.db_escape($bank_account_number).",".db_escape($bank_address).
-		", ".db_escape($bank_curr_code).", ".db_escape($dflt_curr_act).", ".db_escape($bank_charge_act).")";
+			$sql = "INSERT INTO ".TB_PREF."bank_accounts (account_code, account_type,
+				bank_account_name, bank_name, bank_account_number, bank_address,
+				bank_curr_code, dflt_curr_act, bank_charge_act)
+				VALUES (".db_escape($account_code).", ".db_escape($account_type).", "
+				.db_escape($bank_account_name).", ".db_escape($bank_name).", "
+				.db_escape($bank_account_number).",".db_escape($bank_address).
+				", ".db_escape($bank_curr_code).", ".db_escape($dflt_curr_act).", ".db_escape($bank_charge_act).")";
 
-	db_query($sql, "could not add a bank account for $account_code");
+			return db_query($sql);
+		});
 }
 
+/** Maintain the current bank owner while retaining its serialized references. */
 function update_bank_account($id, $account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
-	if($dflt_curr_act) 	// only one default account for any currency
-	  clear_dflt_curr_account($bank_curr_code);
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('bank_accounts', $id, array(),
+		function() use ($id, $account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
+			if ($dflt_curr_act && !clear_dflt_curr_account($bank_curr_code)) return false;
 
-	$sql = "UPDATE ".TB_PREF."bank_accounts	SET account_type = ".db_escape($account_type).",
-		account_code=".db_escape($account_code).",
-		bank_account_name=".db_escape($bank_account_name).", bank_name=".db_escape($bank_name).",
-		bank_account_number=".db_escape($bank_account_number).", bank_curr_code=".db_escape($bank_curr_code).",
-		bank_address=".db_escape($bank_address).",
-		dflt_curr_act=".db_escape($dflt_curr_act).", bank_charge_act=".db_escape($bank_charge_act)." 
-		WHERE id = ".db_escape($id);
+			$sql = "UPDATE ".TB_PREF."bank_accounts	SET account_type = ".db_escape($account_type).",
+				account_code=".db_escape($account_code).",
+				bank_account_name=".db_escape($bank_account_name).", bank_name=".db_escape($bank_name).",
+				bank_account_number=".db_escape($bank_account_number).", bank_curr_code=".db_escape($bank_curr_code).",
+				bank_address=".db_escape($bank_address).",
+				dflt_curr_act=".db_escape($dflt_curr_act).", bank_charge_act=".db_escape($bank_charge_act)."
+				WHERE id = ".db_escape($id);
 
-	db_query($sql, "could not update bank account for $account_code");
+			return db_query($sql);
+		});
 }
 
+/** Deny removal of retained bank references under current owner/master locks. */
 function delete_bank_account($id) {
-	$sql = "DELETE FROM ".TB_PREF."bank_accounts WHERE id=".db_escape($id);
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('bank_accounts', $id, array(),
+		function() use ($id) {
+			$sql = "DELETE FROM ".TB_PREF."bank_accounts WHERE id=".db_escape($id);
 
-	db_query($sql, "could not delete bank account for $id");
+			return db_query($sql);
+		}, false, true);
 }
 
 function get_bank_account($id) {
@@ -91,7 +104,7 @@ function get_bank_charge_account($id) {
 }
 
 function add_quick_entry($description, $type, $base_amount, $base_desc, $bal_type, $usage) {
-	$sql = "INSERT INTO ".TB_PREF."quick_entries (description, type, base_amount, base_desc, bal_type, `usage`) 
+	$sql = "INSERT INTO ".TB_PREF."quick_entries (description, type, base_amount, base_desc, bal_type, `usage`)
 	VALUES (".db_escape($description).", ".db_escape($type).", "
 		.db_escape($base_amount).", ".db_escape($base_desc).", ".db_escape($bal_type).", ".db_escape($usage).")";
 
@@ -253,7 +266,7 @@ function update_reconciled_values($reconcile_id, $reconcile_value, $reconcile_da
 //	first defined account in home currency
 //
 function get_default_bank_account($curr=null) {
-	
+
 	$home_curr = get_company_pref('curr_default');
 	if (!isset($curr))
 		$curr = $home_curr;
@@ -290,7 +303,7 @@ function get_bank_account_limit($account, $date, $user=null) {
 		return null;
 	return max(0, get_balance_before_for_bank_account($account, add_days($date, 1))); // in case of manco made before the check was implemented
 }
- 
+
 function identify_bank_account($account_number) {
 
 	$sql = "(SELECT id AS id, ".BO_COMPANY." AS type FROM ".TB_PREF."bank_accounts WHERE REPLACE(bank_account_number,' ', '')=".db_escape($account_number).")
