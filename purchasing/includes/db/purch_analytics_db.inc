@@ -435,7 +435,7 @@ function get_price_variance_report($date_from, $date_to)
 			AND trans.tran_date >= " . db_escape($sql_date_from) . "
 			AND trans.tran_date <= " . db_escape($sql_date_to) . "
 		GROUP BY trans.supplier_id, supp.supp_name, item.stock_id, COALESCE(stock.description, item.description, item.stock_id)
-		ORDER BY ABS(avg_variance_amount) DESC
+		ORDER BY ABS(AVG(item.unit_price - COALESCE(pdata.price, item.unit_price))) DESC
 		LIMIT 200";
 
 	$result = db_query($sql, 'could not get purchase price variance report');

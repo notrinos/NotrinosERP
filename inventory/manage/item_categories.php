@@ -47,24 +47,25 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	if ($input_error !=1) {
 		if ($selected_id != -1) {
-			update_item_category($selected_id, $_POST['description'],
+			$saved = update_item_category($selected_id, $_POST['description'],
 				$_POST['tax_type_id'],	$_POST['sales_account'], 
 				$_POST['cogs_account'], $_POST['inventory_account'], 
 				$_POST['adjustment_account'], $_POST['wip_account'],
 				$_POST['units'], $_POST['mb_flag'],	$_POST['dim1'],	$_POST['dim2'],
 				check_value('no_sale'), check_value('no_purchase'));
-			display_notification(_('Selected item category has been updated'));
+			if ($saved) display_notification(_('Selected item category has been updated'));
 		} 
 		else {
-			add_item_category($_POST['description'],
+			$saved = add_item_category($_POST['description'],
 				$_POST['tax_type_id'],	$_POST['sales_account'], 
 				$_POST['cogs_account'], $_POST['inventory_account'], 
 				$_POST['adjustment_account'], $_POST['wip_account'], 
 				$_POST['units'], $_POST['mb_flag'],	$_POST['dim1'],	
 				$_POST['dim2'],	check_value('no_sale'), check_value('no_purchase'));
-			display_notification(_('New item category has been added'));
+			if ($saved) display_notification(_('New item category has been added'));
 		}
-		$Mode = 'RESET';
+		if ($saved) $Mode = 'RESET';
+		else display_error(_('The item category could not be saved. Check current Dimension defaults and retry.'));
 	}
 }
 
@@ -76,8 +77,9 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'stock_master', 'category_id'))
 		display_error(_('Cannot delete this item category because items have been created using this item category.'));
 	else {
-		delete_item_category($selected_id);
-		display_notification(_('Selected item category has been deleted'));
+		if (delete_item_category($selected_id))
+			display_notification(_('Selected item category has been deleted'));
+		else display_error(_('The item category could not be deleted. Retained references or a persistence failure require review.'));
 	}
 	$Mode = 'RESET';
 }
@@ -165,7 +167,7 @@ if ($selected_id != -1) {
 	hidden('selected_id', $selected_id);
 	hidden('category_id');
 }
-else if ($Mode != 'CLONE') {
+else if ($Mode != 'CLONE' && $Mode != 'ADD_ITEM') {
 	$_POST['long_description'] = '';
 	$_POST['description'] = '';
 	$_POST['no_sale']  = 0;
