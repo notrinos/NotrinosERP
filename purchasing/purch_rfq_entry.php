@@ -452,7 +452,7 @@ if ($update_item_id > 0 && $selected_id > 0 && can_save_purchase_rfq_item_update
 		trim(get_post('edit_rfq_description_' . $update_item_id)),
 		trim(get_post('edit_rfq_uom_' . $update_item_id)),
 		0,
-		array(),
+		null,
 		$item_error_message
 	);
 

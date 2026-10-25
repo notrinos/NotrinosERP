@@ -52,11 +52,11 @@ function dimension_writer_chart_id($value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
-    if ($owner === 'chart_master' || $owner === 'bank_accounts') $columns = array();
+    if ($owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors') $columns = array();
     $string_key = $owner === 'stock_master' || $owner === 'chart_master';
     $names = array_keys($columns);
     if (!$partial) foreach ($names as $name) if (!array_key_exists($name, $next)) return false;
@@ -78,7 +78,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
         // An omitted payload must not certify a bank owner whose retained column
         // is unavailable. The transactional read also holds its metadata lock.
-        if ($identity === null && in_array($owner, array('bank_accounts', 'budget_trans', 'purch_rfq'), true)
+        if ($identity === null && in_array($owner, array('bank_accounts', 'budget_trans', 'purch_rfq', 'purch_rfq_items', 'purch_rfq_vendors'), true)
             && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
             cancel_transaction(); return false;
         }
@@ -150,4 +150,58 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         cancel_transaction();
         return false;
     }
+}
+
+/**
+ * Serialize bounded RFQ item/vendor maintenance with its current draft parent.
+ * The initial parent lookup is only a hint; recheck identity under the parent
+ * lock before touching the child. Reparenting is never a maintenance operation.
+ * All retained cascade targets are checked before either native or Entity delete.
+ * This boundary does not grant page authority or certify response/status writers.
+ */
+function dimension_rfq_child_write($owner, $key, $next, $callback, $remove = false)
+{
+    if (!in_array($owner, array('purch_rfq_items', 'purch_rfq_vendors'), true)
+        || !is_array($next) || !is_callable($callback)) return false;
+    try {
+        if (!begin_transaction()) return false;
+        $identity = $key === null ? null : dimension_writer_reference_id($key);
+        if ($identity === false || $identity === 0) { cancel_transaction(); return false; }
+        if ($identity === null) {
+            $parent = isset($next['rfq_id']) ? dimension_writer_reference_id($next['rfq_id']) : false;
+        } else {
+            $rows = db_query('SELECT rfq_id FROM '.TB_PREF.$owner.' WHERE id='.$identity);
+            $row = $rows ? db_fetch($rows) : false;
+            $parent = $row ? dimension_writer_reference_id($row['rfq_id']) : false;
+        }
+        if (!$parent) { cancel_transaction(); return false; }
+        $result = dimension_ordinary_master_write('purch_rfq', $parent, array(),
+            function($header) use ($owner, $identity, $parent, $next, $callback, $remove) {
+                $rows = db_query('SELECT status FROM '.TB_PREF.'purch_rfq WHERE id='.$parent.' FOR UPDATE');
+                $row = $rows ? db_fetch($rows) : false;
+                if (!$row || $row['status'] !== 'draft') return false;
+                if ($identity !== null) {
+                    $rows = db_query('SELECT * FROM '.TB_PREF.$owner.' WHERE id='.$identity.' FOR UPDATE');
+                    $row = $rows ? db_fetch($rows) : false;
+                    if (!$row || (int)$row['rfq_id'] !== $parent) return false;
+                    if ($remove && $owner === 'purch_rfq_vendors'
+                        && (in_array($row['status'], array('responded', 'awarded'), true) || (int)$row['is_winner'] === 1)) return false;
+                }
+                if (array_key_exists('rfq_id', $next) && dimension_writer_reference_id($next['rfq_id']) !== $parent) return false;
+                if ($remove) {
+                    $foreign = $owner === 'purch_rfq_items' ? 'rfq_item_id' : 'rfq_vendor_id';
+                    $rows = db_query('SELECT custom_data FROM '.TB_PREF.'purch_rfq_vendor_lines WHERE '.$foreign.'='.$identity.' ORDER BY id FOR UPDATE');
+                    if (!$rows) return false;
+                    while ($line = db_fetch($rows))
+                        if (!array_key_exists('custom_data', $line)
+                            || dimension_master_payload_transition($line['custom_data'], null, true) === false) return false;
+                }
+                return dimension_ordinary_master_write($owner, $identity, $next, $callback, true, $remove);
+            }, true);
+        $insert_id = $result && $identity === null ? db_insert_id() : 0;
+        if (!$result || !commit_transaction()) { cancel_transaction(); return false; }
+        if ($identity === null && !db_preserve_insert_id($insert_id)) return false;
+        return $result;
+    } catch (Exception $exception) { cancel_transaction(); return false;
+    } catch (Throwable $exception) { cancel_transaction(); return false; }
 }
