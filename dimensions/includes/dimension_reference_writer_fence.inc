@@ -31,6 +31,17 @@ function dimension_writer_stock_id($value)
         && preg_match('/^[^\x00-\x1f\x7f]{1,20}$/uD', $value) ? $value : false;
 }
 
+/** Normalize chart identities exactly as native db_escape, before locking varchar(15). */
+function dimension_writer_chart_id($value)
+{
+    if (is_int($value) && $value >= 0) $value = (string)$value;
+    if (!is_string($value) || trim($value) !== $value
+        || !preg_match('/^[^\x00-\x1f\x7f]+$/uD', $value)) return false;
+    $value = html_specials_encode(html_entity_decode($value, ENT_QUOTES,
+        $_SESSION['language']->encoding === 'iso-8859-2' ? 'ISO-8859-1' : $_SESSION['language']->encoding));
+    return preg_match('/^[^\x00-\x1f\x7f]{1,15}$/uD', $value) ? $value : false;
+}
+
 /**
  * Fail closed on invalid owner/identity, lock or query failures. The caller's
  * original authorization checks are still required; this does not grant access.
@@ -41,11 +52,14 @@ function dimension_writer_stock_id($value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
+    // Chart accounts retain JSON but have no scalar Dimension slots.
+    if ($owner === 'chart_master') $columns = array();
+    $string_key = $owner === 'stock_master' || $owner === 'chart_master';
     $names = array_keys($columns);
-    if (!$partial && (!array_key_exists($names[0], $next) || !array_key_exists($names[1], $next))) return false;
+    if (!$partial) foreach ($names as $name) if (!array_key_exists($name, $next)) return false;
     $new = array();
     foreach ($names as $column) {
         if (!array_key_exists($column, $next)) continue;
@@ -57,6 +71,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     $identity = null;
     if ($key !== null) {
         $identity = $owner === 'stock_master' ? dimension_writer_stock_id($key) : dimension_writer_reference_id($key);
+        if ($owner === 'chart_master') $identity = dimension_writer_chart_id($key);
         if ($identity === false || $identity === 0) return false;
     }
     try {
@@ -67,13 +82,13 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
             // Quick-entry lines have no retained payload column in either
             // canonical schema. Never infer absence for another owner.
             $payload_column = $owner === 'quick_entry_lines' ? 'NULL AS custom_data' : 'custom_data';
-            if ($owner === 'stock_master') $payload_column .= ', stock_id AS owner_identity';
-            $rows = db_query('SELECT '.implode(', ', $names).', '.$payload_column.' FROM '.TB_PREF.$owner
-                .' WHERE '.$sources[$owner].'='.($owner === 'stock_master' ? db_escape($identity) : $identity).' FOR UPDATE');
+            if ($string_key) $payload_column .= ', '.$sources[$owner].' AS owner_identity';
+            $rows = db_query('SELECT '.(count($names) ? implode(', ', $names).', ' : '').$payload_column.' FROM '.TB_PREF.$owner
+                .' WHERE '.$sources[$owner].'='.($string_key ? db_escape($identity) : $identity).' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }
             // A case-insensitive SQL key must not rename a historical string ID.
-            if ($owner === 'stock_master' && (!isset($found['owner_identity'])
+            if ($string_key && (!isset($found['owner_identity'])
                 || $found['owner_identity'] !== $identity)) { cancel_transaction(); return false; }
             if (!array_key_exists('custom_data', $found)) { cancel_transaction(); return false; }
             $old_payload = $found['custom_data'];
@@ -120,7 +135,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         if (!$result) { cancel_transaction(); return false; }
         $insert_id = $identity === null ? db_insert_id() : 0;
         if (!commit_transaction()) { cancel_transaction(); return false; }
-        if ($identity === null && $owner !== 'stock_master' && !db_preserve_insert_id($insert_id)) return false;
+        if ($identity === null && !$string_key && !db_preserve_insert_id($insert_id)) return false;
         return $result;
     } catch (Exception $exception) {
         cancel_transaction();

@@ -85,6 +85,8 @@ if (isset($_POST['add']) || isset($_POST['update'])) {
 				$Ajax->activate('account_code'); // in case of status change
 				display_notification(_('Account data has been updated.'));
 			}
+			else
+				display_error(_('Account data could not be saved. Reload the account and review its retained references.'));
 		}
 		else {
 			if (chart_master_entity::create(array(
@@ -155,13 +157,14 @@ function can_delete($selected_account) {
 if (isset($_POST['delete'])) {
 
 	if (can_delete($selected_account)) {
-		chart_master_entity::remove($selected_account);
-		$selected_account = $_POST['AccountList'] = '';
-		delete_tag_associations(TAG_ACCOUNT, $selected_account, true);
-		$selected_account = $_POST['AccountList'] = '';
-		display_notification(_('Selected account has been deleted'));
-		unset($_POST['account_code']);
-		$Ajax->activate('_page_body');
+		if (chart_master_entity::remove($selected_account)) {
+			delete_tag_associations(TAG_ACCOUNT, $selected_account, true);
+			$selected_account = $_POST['AccountList'] = '';
+			display_notification(_('Selected account has been deleted'));
+			unset($_POST['account_code']);
+			$Ajax->activate('_page_body');
+		} else
+			display_error(_('Account could not be deleted. Reload the account and review its retained references.'));
 	}
 } 
 
