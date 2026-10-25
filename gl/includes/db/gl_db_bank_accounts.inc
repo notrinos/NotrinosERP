@@ -113,23 +113,40 @@ function delete_quick_entry($selected_id) {
 	db_query($sql, "could not delete quick entry $selected_id");
 }
 
+/** Create a template line while its native Dimension defaults are locked. */
 function add_quick_entry_line($qid, $action, $dest_id, $amount, $dim, $dim2, $memo) {
-	$sql = "INSERT INTO ".TB_PREF."quick_entry_lines (qid, action, dest_id, amount, dimension_id, dimension2_id, memo) 
-	VALUES (".db_escape($qid).", ".db_escape($action).",".db_escape($dest_id).",".db_escape($amount).", ".db_escape($dim).", ".db_escape($dim2).", ".db_escape($memo).")";
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('quick_entry_lines', null,
+		array('dimension_id'=>$dim, 'dimension2_id'=>$dim2), function($next) use ($qid, $action, $dest_id, $amount, $memo) {
+			$dim = $next['dimension_id']; $dim2 = $next['dimension2_id'];
+			$sql = "INSERT INTO ".TB_PREF."quick_entry_lines (qid, action, dest_id, amount, dimension_id, dimension2_id, memo)
+			VALUES (".db_escape($qid).", ".db_escape($action).",".db_escape($dest_id).",".db_escape($amount).", ".db_escape($dim).", ".db_escape($dim2).", ".db_escape($memo).")";
 
-	db_query($sql, "could not insert quick entry line for $qid");
+			return db_query($sql);
+	});
 }
 
+/** Serialize template changes against current owner and former/new defaults. */
 function update_quick_entry_line($selected_id, $qid, $action, $dest_id, $amount, $dim, $dim2, $memo) {
-	$sql = "UPDATE ".TB_PREF."quick_entry_lines SET qid = ".db_escape($qid).", action=".db_escape($action).", dest_id=".db_escape($dest_id).", amount=".db_escape($amount).", dimension_id=".db_escape($dim).", dimension2_id=".db_escape($dim2).", memo=".db_escape($memo)." WHERE id = ".db_escape($selected_id);
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('quick_entry_lines', $selected_id,
+		array('dimension_id'=>$dim, 'dimension2_id'=>$dim2), function($next) use ($selected_id, $qid, $action, $dest_id, $amount, $memo) {
+			$dim = $next['dimension_id']; $dim2 = $next['dimension2_id'];
+			$sql = "UPDATE ".TB_PREF."quick_entry_lines SET qid = ".db_escape($qid).", action=".db_escape($action).", dest_id=".db_escape($dest_id).", amount=".db_escape($amount).", dimension_id=".db_escape($dim).", dimension2_id=".db_escape($dim2).", memo=".db_escape($memo)." WHERE id = ".db_escape($selected_id);
 
-	db_query($sql, "could not update quick entry line for $selected_id");
+			return db_query($sql);
+	});
 }
 
+/** Lock the line and its former defaults before removing an unused template line. */
 function delete_quick_entry_line($selected_id) {
-	$sql = "DELETE FROM ".TB_PREF."quick_entry_lines WHERE id=".db_escape($selected_id);
+	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	return dimension_ordinary_master_write('quick_entry_lines', $selected_id,
+		array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($selected_id) {
+			$sql = "DELETE FROM ".TB_PREF."quick_entry_lines WHERE id=".db_escape($selected_id);
 
-	db_query($sql,"could not delete quick entry line $selected_id");
+			return db_query($sql);
+	}, false, true);
 }
 
 function has_quick_entries($type=null) {

@@ -34,7 +34,7 @@ function dimension_writer_reference_id($value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     if (!$partial && (!array_key_exists('dimension_id', $next) || !array_key_exists('dimension2_id', $next))) return false;
     $new = array();
@@ -55,7 +55,10 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         $old = array('dimension_id'=>0, 'dimension2_id'=>0);
         $old_payload = null;
         if ($identity !== null) {
-            $rows = db_query('SELECT dimension_id, dimension2_id, custom_data FROM '.TB_PREF.$owner
+            // Quick-entry lines have no retained payload column in either
+            // canonical schema. Never infer absence for another owner.
+            $payload_column = $owner === 'quick_entry_lines' ? 'NULL AS custom_data' : 'custom_data';
+            $rows = db_query('SELECT dimension_id, dimension2_id, '.$payload_column.' FROM '.TB_PREF.$owner
                 .' WHERE '.$sources[$owner].'='.$identity.' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }

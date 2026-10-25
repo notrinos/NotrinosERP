@@ -102,19 +102,21 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 }
 
 if ($Mode2=='ADD_ITEM2' || $Mode2=='UPDATE_ITEM2') {
+	$line_saved = false;
 	if (!get_post('dest_id')) {
 		display_error(_('You must select GL account.'));
 		set_focus('dest_id');
 	}
 	elseif ($selected_id2 != -1) {
-		update_quick_entry_line($selected_id2, $selected_id, $_POST['actn'], $_POST['dest_id'], input_num('amount', 0), $_POST['dimension_id'], $_POST['dimension2_id'], get_post('memo'));
-		display_notification(_('Selected quick entry line has been updated'));
+		$line_saved = update_quick_entry_line($selected_id2, $selected_id, $_POST['actn'], $_POST['dest_id'], input_num('amount', 0), $_POST['dimension_id'], $_POST['dimension2_id'], get_post('memo'));
+		if ($line_saved) display_notification(_('Selected quick entry line has been updated'));
 	} 
 	else {
-		add_quick_entry_line($selected_id, $_POST['actn'], $_POST['dest_id'], input_num('amount', 0), $_POST['dimension_id'], $_POST['dimension2_id'], get_post('memo'));
-		display_notification(_('New quick entry line has been added'));
+		$line_saved = add_quick_entry_line($selected_id, $_POST['actn'], $_POST['dest_id'], input_num('amount', 0), $_POST['dimension_id'], $_POST['dimension2_id'], get_post('memo'));
+		if ($line_saved) display_notification(_('New quick entry line has been added'));
 	}
-	$Mode2 = 'RESET2';
+	if ($line_saved) $Mode2 = 'RESET2';
+	elseif (get_post('dest_id')) display_error(_('The quick entry line could not be saved. Reload and check its dimensions before retrying.'));
 }
 
 //-----------------------------------------------------------------------------------
@@ -139,9 +141,10 @@ if (find_submit('BEd') != -1 || get_post('ADD_ITEM2')) {
 	set_focus('actn');
 }
 if ($Mode2 == 'BDel') {
-	delete_quick_entry_line($selected_id2);
-	display_notification(_('Selected quick entry line has been deleted'));
-	$Mode2 = 'RESET2';
+	if (delete_quick_entry_line($selected_id2)) {
+		display_notification(_('Selected quick entry line has been deleted'));
+		$Mode2 = 'RESET2';
+	} else display_error(_('The quick entry line could not be deleted. Reload before retrying.'));
 }
 
 //-----------------------------------------------------------------------------------

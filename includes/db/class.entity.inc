@@ -634,16 +634,16 @@ class Entity extends record_set {
 	}
 
 	/**
-	 * Route generic supplier/customer models through their native reference fence.
+	 * Route registered ordinary models through their native reference fence.
 	 * Table identity, rather than subclass identity or declared fields, owns this
 	 * boundary. Unrelated models retain their existing persistence behavior.
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
-		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no');
+		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id');
 		$owner = strtolower(rtrim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
-			if (preg_match('/^(?:suppliers|debtors_master)\b/i', $this->name)) return false;
+			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
 		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
