@@ -383,7 +383,7 @@ if (isset($_POST['addupdate'])) {
 		}
 
 		if (!$new_item) {
-			update_item($_POST['NewStockID'], $_POST['description'],
+			$saved = update_item($_POST['NewStockID'], $_POST['description'],
 				$_POST['long_description'], $_POST['category_id'], 
 				$_POST['tax_type_id'], get_post('units'),
 				get_post('fixed_asset') ? 'F' : get_post('mb_flag'), $_POST['sales_account'],
@@ -394,15 +394,17 @@ if (isset($_POST['addupdate'])) {
 				get_post('depreciation_method'), input_num('depreciation_rate'), input_num('depreciation_factor'), get_post('depreciation_start', null),
 				get_post('fa_class_id'), $tracking);
 
-			update_record_status($_POST['NewStockID'], $_POST['inactive'], 'stock_master', 'stock_id');
-			update_record_status($_POST['NewStockID'], $_POST['inactive'], 'item_codes', 'item_code');
-			set_focus('stock_id');
-			$Ajax->activate('stock_id'); // in case of status change
-			display_notification(_('Item has been updated.'));
+			if ($saved) {
+				update_record_status($_POST['NewStockID'], $_POST['inactive'], 'stock_master', 'stock_id');
+				update_record_status($_POST['NewStockID'], $_POST['inactive'], 'item_codes', 'item_code');
+				set_focus('stock_id');
+				$Ajax->activate('stock_id'); // in case of status change
+				display_notification(_('Item has been updated.'));
+			}
 		} 
 		else {
 
-			add_item($_POST['NewStockID'], $_POST['description'],
+			$saved = add_item($_POST['NewStockID'], $_POST['description'],
 				$_POST['long_description'], $_POST['category_id'], $_POST['tax_type_id'],
 				$_POST['units'], get_post('fixed_asset') ? 'F' : get_post('mb_flag'), $_POST['sales_account'],
 				$_POST['inventory_account'], $_POST['cogs_account'],
@@ -412,16 +414,19 @@ if (isset($_POST['addupdate'])) {
 				get_post('depreciation_method'), input_num('depreciation_rate'), input_num('depreciation_factor'), get_post('depreciation_start', null),
 				get_post('fa_class_id'), $tracking);
 
-			display_notification(_('A new item has been added.'));
-			$_POST['stock_id'] = '';
-			$_POST['NewStockID'] = '';
-			$_POST['description'] = '';
-			$_POST['long_description'] = '';
-			$_POST['no_sale'] = 0;
-			$_POST['editable'] = 0;
-			$_POST['no_purchase'] = 0;
-			set_focus('NewStockID');
+			if ($saved) {
+				display_notification(_('A new item has been added.'));
+				$_POST['stock_id'] = '';
+				$_POST['NewStockID'] = '';
+				$_POST['description'] = '';
+				$_POST['long_description'] = '';
+				$_POST['no_sale'] = 0;
+				$_POST['editable'] = 0;
+				$_POST['no_purchase'] = 0;
+				set_focus('NewStockID');
+			}
 		}
+		if (!$saved) display_error(_('The item could not be saved. Check current Dimension defaults and retry.'));
 		$Ajax->activate('_page_body');
 	}
 }
@@ -455,13 +460,14 @@ if (isset($_POST['delete']) && strlen($_POST['delete']) > 1) {
 	if (check_usage($_POST['NewStockID'])) {
 
 		$stock_id = $_POST['NewStockID'];
-		delete_item($stock_id);
-		del_image($stock_id);
-		display_notification(_('Selected item has been deleted.'));
-		$_POST['stock_id'] = '';
-		clear_data();
-		set_focus('stock_id');
-		$new_item = true;
+		if (delete_item($stock_id)) {
+			del_image($stock_id);
+			display_notification(_('Selected item has been deleted.'));
+			$_POST['stock_id'] = '';
+			clear_data();
+			set_focus('stock_id');
+			$new_item = true;
+		} else display_error(_('The item could not be deleted. Retained references or a persistence failure require review.'));
 		$Ajax->activate('_page_body');
 	}
 }

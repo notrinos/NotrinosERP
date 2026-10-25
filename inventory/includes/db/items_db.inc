@@ -9,114 +9,157 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+
+/** Serialize native item defaults, retained intent and all dependent SQL. */
 function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null, $tracking=null) {
-	$sql = "UPDATE ".TB_PREF."stock_master SET long_description=".db_escape($long_description).",
-		description=".db_escape($description).",
-		category_id=".db_escape($category_id).",
-		sales_account=".db_escape($sales_account).",
-		inventory_account=".db_escape($inventory_account).",
-		cogs_account=".db_escape($cogs_account).",
-		adjustment_account=".db_escape($adjustment_account).",
-		wip_account=".db_escape($wip_account).",
-		dimension_id=".db_escape($dimension_id).",
-		dimension2_id=".db_escape($dimension2_id).",
-		tax_type_id=".db_escape($tax_type_id).",
-		no_sale=".db_escape($no_sale).",
-		no_purchase=".db_escape($no_purchase).",
-		editable=".db_escape($editable).",
-		depreciation_method=".db_escape($depreciation_method).",
-		depreciation_rate=".db_escape($depreciation_rate).",
-		depreciation_factor=".db_escape($depreciation_factor).",
-		fa_class_id=".db_escape($fa_class_id);
+	if (dimension_writer_stock_id($stock_id) === false) return false;
+	return dimension_ordinary_master_write('stock_master', $stock_id,
+		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor, $depreciation_start, $fa_class_id, $tracking) {
+		$dimension_id = $next['dimension_id']; $dimension2_id = $next['dimension2_id'];
+		$sql = "UPDATE ".TB_PREF."stock_master SET long_description=".db_escape($long_description).",
+			description=".db_escape($description).",
+			category_id=".db_escape($category_id).",
+			sales_account=".db_escape($sales_account).",
+			inventory_account=".db_escape($inventory_account).",
+			cogs_account=".db_escape($cogs_account).",
+			adjustment_account=".db_escape($adjustment_account).",
+			wip_account=".db_escape($wip_account).",
+			dimension_id=".db_escape($dimension_id).",
+			dimension2_id=".db_escape($dimension2_id).",
+			tax_type_id=".db_escape($tax_type_id).",
+			no_sale=".db_escape($no_sale).",
+			no_purchase=".db_escape($no_purchase).",
+			editable=".db_escape($editable).",
+			depreciation_method=".db_escape($depreciation_method).",
+			depreciation_rate=".db_escape($depreciation_rate).",
+			depreciation_factor=".db_escape($depreciation_factor).",
+			fa_class_id=".db_escape($fa_class_id);
 
-	if ($units != '')
-		$sql .= ", units=".db_escape($units);
+		if ($units != '')
+			$sql .= ", units=".db_escape($units);
 
-	if ($mb_flag != '')
-		$sql .= ", mb_flag=".db_escape($mb_flag);
+		if ($mb_flag != '')
+			$sql .= ", mb_flag=".db_escape($mb_flag);
 
-	if (isset($depreciation_start))
-		$sql .= ", depreciation_start='".date2sql($depreciation_start)."', depreciation_date='".date2sql($depreciation_start)."'";
+		if (isset($depreciation_start))
+			$sql .= ", depreciation_start='".date2sql($depreciation_start)."', depreciation_date='".date2sql($depreciation_start)."'";
 
-	if (is_array($tracking))
-		$sql .= build_tracking_sql_set($tracking);
+		if (is_array($tracking))
+			$sql .= build_tracking_sql_set($tracking);
 
-	$sql .= " WHERE stock_id=".db_escape($stock_id);
+		$sql .= " WHERE stock_id=".db_escape($stock_id);
 
-	db_query($sql, 'The item could not be updated');
+		if (!db_query($sql, 'The item could not be updated')) return false;
 
-	item_codes_entity::update_item_code(-1, $stock_id, $stock_id, $description, $category_id, 1, 0);
+		if (!item_codes_entity::update_item_code(-1, $stock_id, $stock_id, $description, $category_id, 1, 0)) return false;
+		return true;
+	});
 }
 
+/** Serialize native item defaults, retained intent and all dependent SQL. */
 function add_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag,	$sales_account, $inventory_account, $cogs_account, $adjustment_account,	$wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method='D', $depreciation_rate=100,  $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null, $tracking=null) {
-	$tracking_cols = '';
-	$tracking_vals = '';
-	if (is_array($tracking)) {
-		$parts = build_tracking_sql_insert($tracking);
-		$tracking_cols = $parts['cols'];
-		$tracking_vals = $parts['vals'];
-	}
+	if (dimension_writer_stock_id($stock_id) === false) return false;
+	return dimension_ordinary_master_write('stock_master', null,
+		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor, $depreciation_start, $fa_class_id, $tracking) {
+		$dimension_id = $next['dimension_id']; $dimension2_id = $next['dimension2_id'];
+		$tracking_cols = '';
+		$tracking_vals = '';
+		if (is_array($tracking)) {
+			$parts = build_tracking_sql_insert($tracking);
+			$tracking_cols = $parts['cols'];
+			$tracking_vals = $parts['vals'];
+		}
 
-	$sql = "INSERT INTO ".TB_PREF."stock_master (stock_id, description, long_description, category_id,
-		tax_type_id, units, mb_flag, sales_account, inventory_account, cogs_account,
-		adjustment_account, wip_account, dimension_id, dimension2_id, no_sale, no_purchase, editable,
-		depreciation_method, depreciation_rate, depreciation_factor"
-		.(isset($depreciation_start) ? ", depreciation_start, depreciation_date, fa_class_id" : "")
-		.$tracking_cols
-		.") VALUES (".db_escape($stock_id).", ".db_escape($description).", ".db_escape($long_description).",
-		".db_escape($category_id).", ".db_escape($tax_type_id).", "
-		.db_escape($units).", ".db_escape($mb_flag).",
-		".db_escape($sales_account).", ".db_escape($inventory_account)
-		.", ".db_escape($cogs_account).",".db_escape($adjustment_account)
-		.", ".db_escape($wip_account).", "
-		.db_escape($dimension_id).", ".db_escape($dimension2_id).","
-		.db_escape($no_sale).","
-		.db_escape($no_purchase).","
-		.db_escape($editable).","
-		.db_escape($depreciation_method).",".db_escape($depreciation_rate).",".db_escape($depreciation_factor)
-		.(isset($depreciation_start) ? ",'".date2sql($depreciation_start)."','".date2sql($depreciation_start)."',".db_escape($fa_class_id) : "")
-		.$tracking_vals
-		.")";
+		$sql = "INSERT INTO ".TB_PREF."stock_master (stock_id, description, long_description, category_id,
+			tax_type_id, units, mb_flag, sales_account, inventory_account, cogs_account,
+			adjustment_account, wip_account, dimension_id, dimension2_id, no_sale, no_purchase, editable,
+			depreciation_method, depreciation_rate, depreciation_factor"
+			.(isset($depreciation_start) ? ", depreciation_start, depreciation_date, fa_class_id" : "")
+			.$tracking_cols
+			.") VALUES (".db_escape($stock_id).", ".db_escape($description).", ".db_escape($long_description).",
+			".db_escape($category_id).", ".db_escape($tax_type_id).", "
+			.db_escape($units).", ".db_escape($mb_flag).",
+			".db_escape($sales_account).", ".db_escape($inventory_account)
+			.", ".db_escape($cogs_account).",".db_escape($adjustment_account)
+			.", ".db_escape($wip_account).", "
+			.db_escape($dimension_id).", ".db_escape($dimension2_id).","
+			.db_escape($no_sale).","
+			.db_escape($no_purchase).","
+			.db_escape($editable).","
+			.db_escape($depreciation_method).",".db_escape($depreciation_rate).",".db_escape($depreciation_factor)
+			.(isset($depreciation_start) ? ",'".date2sql($depreciation_start)."','".date2sql($depreciation_start)."',".db_escape($fa_class_id) : "")
+			.$tracking_vals
+			.")";
 
-	db_query($sql, 'The item could not be added');
+		if (!db_query($sql, 'The item could not be added')) return false;
 
-	$sql = "INSERT INTO ".TB_PREF."loc_stock (loc_code, stock_id)
-		SELECT loc_code, ".db_escape($stock_id)
-		." FROM ".TB_PREF."locations";
+		$sql = "INSERT INTO ".TB_PREF."loc_stock (loc_code, stock_id)
+			SELECT loc_code, ".db_escape($stock_id)
+			." FROM ".TB_PREF."locations";
 
-	db_query($sql, 'The item locstock could not be added');
+		if (!db_query($sql, 'The item locstock could not be added')) return false;
 
-	item_codes_entity::create(array(
-		'item_code' => $stock_id,
-		'stock_id' => $stock_id,
-		'description' => $description,
-		'category_id' => $category_id,
-		'quantity' => 1,
-		'is_foreign' => 0
-	));
+		if (!item_codes_entity::create(array(
+			'item_code' => $stock_id,
+			'stock_id' => $stock_id,
+			'description' => $description,
+			'category_id' => $category_id,
+			'quantity' => 1,
+			'is_foreign' => 0
+		))) return false;
+		return true;
+	});
 }
 
+/** Serialize native item defaults, retained intent and all dependent SQL. */
 function delete_item($stock_id) {
-	$sql="DELETE FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($stock_id);
-	db_query($sql, 'could not delete stock item');
+	if (dimension_writer_stock_id($stock_id) === false) return false;
+	return dimension_ordinary_master_write('stock_master', $stock_id,
+		array('dimension_id'=>0, 'dimension2_id'=>0), function($next) use ($stock_id) {
+		if (!item_dimension_cascade_removable($stock_id)) return false;
+		$sql="DELETE FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($stock_id);
+		if (!db_query($sql, 'could not delete stock item')) return false;
 
-	/*and cascade deletes in loc_stock */
-	$sql ="DELETE FROM ".TB_PREF."loc_stock WHERE stock_id=".db_escape($stock_id);
-	db_query($sql, 'could not delete stock item loc stock');
+		/*and cascade deletes in loc_stock */
+		$sql ="DELETE FROM ".TB_PREF."loc_stock WHERE stock_id=".db_escape($stock_id);
+		if (!db_query($sql, 'could not delete stock item loc stock')) return false;
 
-	/*and cascade deletes in purch_data */
-	$sql ="DELETE FROM ".TB_PREF."purch_data WHERE stock_id=".db_escape($stock_id);
-	db_query($sql, 'could not delete stock item purch data');
+		/*and cascade deletes in purch_data */
+		$sql ="DELETE FROM ".TB_PREF."purch_data WHERE stock_id=".db_escape($stock_id);
+		if (!db_query($sql, 'could not delete stock item purch data')) return false;
 
-	/*and cascade deletes in prices */
-	$sql ="DELETE FROM ".TB_PREF."prices WHERE stock_id=".db_escape($stock_id);
-	db_query($sql, 'could not delete stock item prices');
+		/*and cascade deletes in prices */
+		$sql ="DELETE FROM ".TB_PREF."prices WHERE stock_id=".db_escape($stock_id);
+		if (!db_query($sql, 'could not delete stock item prices')) return false;
 
-	/*and cascade delete the bill of material if any */
-	$sql = "DELETE FROM ".TB_PREF."bom WHERE parent=".db_escape($stock_id);
-	db_query($sql, 'could not delete stock item bom');
+		/*and cascade delete the bill of material if any */
+		$sql = "DELETE FROM ".TB_PREF."bom WHERE parent=".db_escape($stock_id);
+		if (!db_query($sql, 'could not delete stock item bom')) return false;
 
-	delete_item_kit($stock_id);
+		$sql = "DELETE FROM ".TB_PREF."item_codes WHERE item_code=".db_escape($stock_id);
+		if (!db_query($sql)) return false;
+		return true;
+	}, false, true);
+}
+
+/**
+ * Lock only native deletion targets and deny retained or opaque intent. Missing
+ * schema/query state is a failure, never proof of absence. Other domain writers
+ * still need the complete B02/B10 protocol; this adds no Dimension deletion grant.
+ */
+function item_dimension_cascade_removable($stock_id) {
+    $targets = array('purch_data'=>'stock_id', 'prices'=>'stock_id',
+        'bom'=>'parent', 'item_codes'=>'item_code');
+    foreach ($targets as $table=>$key) {
+        $rows = db_query('SELECT custom_data FROM '.TB_PREF.$table
+            .' WHERE '.$key.'='.db_escape($stock_id).' FOR UPDATE');
+        if (!$rows) return false;
+        while ($row = db_fetch($rows))
+            if (!array_key_exists('custom_data', $row)
+                || dimension_master_payload_transition($row['custom_data'], null, true) === false) return false;
+    }
+    return true;
 }
 
 function get_items($fixed_asset = 0) {

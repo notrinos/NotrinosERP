@@ -639,33 +639,36 @@ class Entity extends record_set {
 	 * boundary. Unrelated models retain their existing persistence behavior.
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
-		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id');
+		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id');
 		$owner = strtolower(rtrim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
-			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines)\b/i', $this->name)) return false;
+			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
 		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
 		$primary = $keys[$owner];
 		if ($this->key !== $primary || !is_array($data)) return false;
-		if ($operation !== 'insert' && !dimension_writer_reference_id($key)) return false;
+		if ($operation !== 'insert' && ($owner === 'stock_master' ? dimension_writer_stock_id($key) === false : !dimension_writer_reference_id($key))) return false;
+		if ($owner === 'stock_master' && $operation === 'insert' && (!isset($data[$primary]) || dimension_writer_stock_id($data[$primary]) === false)) return false;
 		if (array_key_exists($primary, $data)) {
-			$id = dimension_writer_reference_id($data[$primary]);
-			if ($id === false || ($operation !== 'insert' && $id !== dimension_writer_reference_id($key))) return false;
+			$id = $owner === 'stock_master' ? dimension_writer_stock_id($data[$primary]) : dimension_writer_reference_id($data[$primary]);
+			$current_id = $owner === 'stock_master' ? dimension_writer_stock_id($key) : dimension_writer_reference_id($key);
+			if ($id === false || ($operation !== 'insert' && $id !== $current_id)) return false;
 		}
 		// SQL column names are case-insensitive, but admission keys are exact.
 		// A generic model may declare aliases which native SQL would persist.
 		// Require canonical sensitive columns; undeclared input stays ignored.
 		foreach ($data as $field=>$value) {
 			$canonical = strtolower((string)$field);
-			if ($field !== $canonical && in_array($canonical, array($primary, 'dimension_id', 'dimension2_id', 'custom_data'), true)
+			if ($field !== $canonical && in_array($canonical, array($primary, 'dimension_id', 'dimension2_id', 'dflt_dim1', 'dflt_dim2', 'custom_data'), true)
 				&& in_array($field, $this->fields)) return false;
 		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
-		if ($operation === 'insert') $next += array('dimension_id'=>0, 'dimension2_id'=>0);
-		if ($operation === 'delete') $next = array('dimension_id'=>0, 'dimension2_id'=>0);
+		$defaults = $owner === 'stock_category' ? array('dflt_dim1'=>0, 'dflt_dim2'=>0) : array('dimension_id'=>0, 'dimension2_id'=>0);
+		if ($operation === 'insert') $next += $defaults;
+		if ($operation === 'delete') $next = $defaults;
 		return dimension_ordinary_master_write($owner, $key, $next,
 			function($admitted) use ($operation, $key, $data) {
 				// Preserve existing filtering/validation and explicit insert identities.

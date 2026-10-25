@@ -24,6 +24,13 @@ function dimension_writer_reference_id($value)
     return $integer >= 0 && (string)$integer === $value ? $integer : false;
 }
 
+/** Validate an exact native stock identity without numeric coercion or truncation. */
+function dimension_writer_stock_id($value)
+{
+    return is_string($value) && trim($value) === $value
+        && preg_match('/^[^\x00-\x1f\x7f]{1,20}$/uD', $value) ? $value : false;
+}
+
 /**
  * Fail closed on invalid owner/identity, lock or query failures. The caller's
  * original authorization checks are still required; this does not grant access.
@@ -34,11 +41,13 @@ function dimension_writer_reference_id($value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
-    if (!$partial && (!array_key_exists('dimension_id', $next) || !array_key_exists('dimension2_id', $next))) return false;
+    $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
+    $names = array_keys($columns);
+    if (!$partial && (!array_key_exists($names[0], $next) || !array_key_exists($names[1], $next))) return false;
     $new = array();
-    foreach (array('dimension_id', 'dimension2_id') as $column) {
+    foreach ($names as $column) {
         if (!array_key_exists($column, $next)) continue;
         $id = dimension_writer_reference_id($next[$column]);
         if ($id === false) return false;
@@ -47,21 +56,25 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     }
     $identity = null;
     if ($key !== null) {
-        $identity = dimension_writer_reference_id($key);
+        $identity = $owner === 'stock_master' ? dimension_writer_stock_id($key) : dimension_writer_reference_id($key);
         if ($identity === false || $identity === 0) return false;
     }
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
-        $old = array('dimension_id'=>0, 'dimension2_id'=>0);
+        $old = array_fill_keys($names, 0);
         $old_payload = null;
         if ($identity !== null) {
             // Quick-entry lines have no retained payload column in either
             // canonical schema. Never infer absence for another owner.
             $payload_column = $owner === 'quick_entry_lines' ? 'NULL AS custom_data' : 'custom_data';
-            $rows = db_query('SELECT dimension_id, dimension2_id, '.$payload_column.' FROM '.TB_PREF.$owner
-                .' WHERE '.$sources[$owner].'='.$identity.' FOR UPDATE');
+            if ($owner === 'stock_master') $payload_column .= ', stock_id AS owner_identity';
+            $rows = db_query('SELECT '.implode(', ', $names).', '.$payload_column.' FROM '.TB_PREF.$owner
+                .' WHERE '.$sources[$owner].'='.($owner === 'stock_master' ? db_escape($identity) : $identity).' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }
+            // A case-insensitive SQL key must not rename a historical string ID.
+            if ($owner === 'stock_master' && (!isset($found['owner_identity'])
+                || $found['owner_identity'] !== $identity)) { cancel_transaction(); return false; }
             if (!array_key_exists('custom_data', $found)) { cancel_transaction(); return false; }
             $old_payload = $found['custom_data'];
             foreach ($old as $column=>$value) {
@@ -90,7 +103,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
             if (!$rows) { cancel_transaction(); return false; }
             $masters[$id] = db_fetch($rows); // False is allowed only for an existing orphan.
         }
-        foreach (array('dimension_id'=>1, 'dimension2_id'=>2) as $column=>$axis) {
+        foreach ($columns as $column=>$axis) {
             $id = $new[$column];
             if (!$id) continue;
             $unchanged = ($id === $old[$column]);
@@ -107,7 +120,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         if (!$result) { cancel_transaction(); return false; }
         $insert_id = $identity === null ? db_insert_id() : 0;
         if (!commit_transaction()) { cancel_transaction(); return false; }
-        if ($identity === null && !db_preserve_insert_id($insert_id)) return false;
+        if ($identity === null && $owner !== 'stock_master' && !db_preserve_insert_id($insert_id)) return false;
         return $result;
     } catch (Exception $exception) {
         cancel_transaction();
