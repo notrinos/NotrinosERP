@@ -353,31 +353,16 @@ function exists_gl_budget($date_, $account, $dimension, $dimension2) {
 	return (db_num_rows($result) > 0);
 }
 
+/** Save an exact monthly coordinate through the ordinary reference boundary. */
 function add_update_gl_budget_trans($date_, $account, $dimension, $dimension2, $amount) {
-	$date = date2sql($date_);
-
-	if (exists_gl_budget($date, $account, $dimension, $dimension2))
-		$sql = "UPDATE ".TB_PREF."budget_trans SET amount=".db_escape($amount)
-		." WHERE account=".db_escape($account)
-		." AND dimension_id=".db_escape($dimension)
-		." AND dimension2_id=".db_escape($dimension2)
-		." AND tran_date='$date'";
-	else
-		$sql = "INSERT INTO ".TB_PREF."budget_trans (tran_date,
-		account, dimension_id, dimension2_id, amount, memo_) VALUES ('$date',
-		".db_escape($account).", ".db_escape($dimension).", "
-		.db_escape($dimension2).", ".db_escape($amount).", '')";
-
-	db_query($sql, 'The GL budget transaction could not be saved');
+	require_once $GLOBALS['path_to_root'].'/gl/includes/db/gl_budget_writer_db.inc';
+	return dimension_native_budget_write($date_, $account, $dimension, $dimension2, $amount);
 }
 
+/** Remove an exact monthly coordinate only when its retained metadata permits it. */
 function delete_gl_budget_trans($date_, $account, $dimension, $dimension2) {
-
-	$sql = "DELETE FROM ".TB_PREF."budget_trans WHERE account=".db_escape($account)
-	." AND dimension_id=".db_escape($dimension)
-	." AND dimension2_id=".db_escape($dimension2)
-	." AND tran_date='".date2sql($date_)."'";
-	db_query($sql, 'The GL budget transaction could not be deleted');
+	require_once $GLOBALS['path_to_root'].'/gl/includes/db/gl_budget_writer_db.inc';
+	return dimension_native_budget_write($date_, $account, $dimension, $dimension2, null, true);
 }
 
 function get_only_budget_trans_from_to($from_date, $to_date, $account, $dimension=0, $dimension2=0) {

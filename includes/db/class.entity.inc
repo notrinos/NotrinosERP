@@ -639,11 +639,11 @@ class Entity extends record_set {
 	 * boundary. Unrelated models retain their existing persistence behavior.
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
-		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id');
+		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id');
 		$owner = strtolower(rtrim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
-			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts)\b/i', $this->name)) return false;
+			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
 		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';

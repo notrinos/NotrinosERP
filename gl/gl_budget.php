@@ -28,18 +28,24 @@ check_db_has_gl_account_groups(_('There are no account groups defined. Please de
 //-------------------------------------------------------------------------------------
 
 if (isset($_POST['add']) || isset($_POST['delete'])) {
-	begin_transaction();
+	$budget_saved = is_string(get_post('begin')) && is_string(get_post('end'))
+		&& is_date($_POST['begin']) && is_date($_POST['end'])
+		&& date1_greater_date2($_POST['end'], $_POST['begin']) && begin_transaction();
 
-	for ($i = 0, $da = $_POST['begin']; date1_greater_date2($_POST['end'], $da); $i++) {
+	for ($i = 0, $da = $_POST['begin']; $budget_saved && date1_greater_date2($_POST['end'], $da); $i++) {
 		if (isset($_POST['add']))
-			add_update_gl_budget_trans($da, $_POST['account'], $_POST['dim1'], $_POST['dim2'], input_num('amount'.$i));
+			$budget_saved = add_update_gl_budget_trans($da, $_POST['account'], $_POST['dim1'], $_POST['dim2'], input_num('amount'.$i));
 		else
-			delete_gl_budget_trans($da, $_POST['account'], $_POST['dim1'], $_POST['dim2']);
+			$budget_saved = delete_gl_budget_trans($da, $_POST['account'], $_POST['dim1'], $_POST['dim2']);
 		$da = add_months($da, 1);
 	}
-	commit_transaction();
+	if ($budget_saved) $budget_saved = commit_transaction();
+	if (!$budget_saved) {
+		cancel_transaction();
+		display_error(_('The Budget could not be saved or deleted. Reload and check the selected dimensions and retained history.'));
+	}
 
-	if (isset($_POST['add']))
+	elseif (isset($_POST['add']))
 		display_notification_centered(_('The Budget has been saved.'));
 	else
 		display_notification_centered(_('The Budget has been deleted.'));
@@ -96,7 +102,7 @@ if (db_has_gl_accounts()) {
 	$total = $btotal = $ltotal = 0;
 	for ($i = 0, $date_ = $_POST['begin']; date1_greater_date2($_POST['end'], $date_); $i++) {
 		start_row();
-		if (get_post('update') == '')
+		if (get_post('update') == '' && (!isset($budget_saved) || $budget_saved))
 			$_POST['amount'.$i] = number_format2(get_only_budget_trans_from_to(
 				$date_, $date_, $_POST['account'], $_POST['dim1'], $_POST['dim2']), 0);
 
