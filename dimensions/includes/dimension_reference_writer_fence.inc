@@ -52,11 +52,11 @@ function dimension_writer_chart_id($value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
-    if ($owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors') $columns = array();
+    if ($owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors' || $owner === 'purch_rfq_vendor_lines') $columns = array();
     $string_key = $owner === 'stock_master' || $owner === 'chart_master';
     $names = array_keys($columns);
     if (!$partial) foreach ($names as $name) if (!array_key_exists($name, $next)) return false;
@@ -78,7 +78,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
         // An omitted payload must not certify a bank owner whose retained column
         // is unavailable. The transactional read also holds its metadata lock.
-        if ($identity === null && in_array($owner, array('bank_accounts', 'budget_trans', 'purch_rfq', 'purch_rfq_items', 'purch_rfq_vendors'), true)
+        if ($identity === null && in_array($owner, array('bank_accounts', 'budget_trans', 'purch_rfq', 'purch_rfq_items', 'purch_rfq_vendors', 'purch_rfq_vendor_lines'), true)
             && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
             cancel_transaction(); return false;
         }

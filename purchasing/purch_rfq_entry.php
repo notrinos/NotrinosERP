@@ -514,7 +514,7 @@ if ($record_vendor_response_id > 0 && $selected_id > 0 && can_save_purchase_rfq_
 			(int)get_post('response_vendor_lead_' . $record_vendor_response_id),
 			trim(get_post('response_vendor_notes_' . $record_vendor_response_id)),
 			trim(get_post('response_payment_terms_' . $record_vendor_response_id)),
-			array(),
+			null,
 			$response_error_message
 		);
 
