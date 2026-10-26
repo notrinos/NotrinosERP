@@ -578,76 +578,11 @@ function delete_purch_requisition($requisition_id)
 function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_price, $preferred_supplier_id,
 	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array(), &$error_message = null)
 {
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_line_db.inc';
 	$error_message = null;
-
-	$requisition = get_editable_purch_requisition($requisition_id);
-	if (!$requisition) {
-		$existing_requisition = get_purch_requisition($requisition_id);
-		if (!$existing_requisition)
-			$error_message = _('The selected purchase requisition could not be found.');
-		else
-			$error_message = _('Lines can only be added while the purchase requisition is in Draft or Rejected status.');
-		return false;
-	}
-
-	$item = stock_master_entity::find($stock_id);
-	if (!$item) {
-		$error_message = _('The selected item could not be found.');
-		return false;
-	}
-
-	if (!can_save_requisition_line_values($quantity, $estimated_price, $error_message))
-		return false;
-
-	$line_description = $description !== '' ? $description : $item['description'];
-	$line_unit = $unit_of_measure !== '' ? $unit_of_measure : $item['units'];
-
-	begin_transaction();
-
-	$material_request_line_id = add_material_request_line(
-		(int)$requisition['material_request_id'],
-		$stock_id,
-		$quantity,
-		$requisition['required_date'],
-		$notes
-	);
-
-	$sql = "INSERT INTO " . TB_PREF . "purch_requisition_lines (
-		requisition_id,
-		material_request_line_id,
-		stock_id,
-		description,
-		quantity,
-		unit_of_measure,
-		estimated_unit_price,
-		preferred_supplier_id,
-		notes,
-		qty_ordered,
-		po_number,
-		status,
-		custom_data
-	) VALUES (
-		" . (int)$requisition_id . ",
-		" . (int)$material_request_line_id . ",
-		" . db_escape($stock_id) . ",
-		" . db_escape($line_description) . ",
-		" . db_escape($quantity) . ",
-		" . db_escape($line_unit) . ",
-		" . db_escape($estimated_price) . ",
-		" . (int)$preferred_supplier_id . ",
-		" . ($notes !== '' ? db_escape($notes) : 'NULL') . ",
-		0,
-		0,
-		'pending',
-		" . ($custom_data ? db_escape_json(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
-	)";
-	db_query($sql, 'could not insert purchase requisition line');
-
-	$line_id = db_insert_id();
-	update_purch_requisition_total($requisition_id);
-
-	commit_transaction();
-	return $line_id;
+	$result = write_purch_requisition_line('add', $requisition_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data));
+	if (!$result) $error_message = _('The purchase requisition line could not be added. Reload the requisition and check its status, item and classifications.');
+	return $result;
 }
 
 /**
@@ -665,54 +600,11 @@ function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_
  * @return bool
  */
 function update_requisition_line($line_id, $stock_id, $quantity, $estimated_price, $preferred_supplier_id,
-	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array())
+	$description = '', $unit_of_measure = '', $notes = '', $custom_data = null)
 {
-	$sql = "SELECT * FROM " . TB_PREF . "purch_requisition_lines WHERE id = " . (int)$line_id;
-	$result = db_query($sql, 'could not get purchase requisition line');
-	$line = db_fetch($result);
-	if (!$line)
-		return false;
-
-	$requisition = get_editable_purch_requisition((int)$line['requisition_id']);
-	if (!$requisition)
-		return false;
-
-	$item = stock_master_entity::find($stock_id);
-	if (!$item)
-		return false;
-
-	if (!can_save_requisition_line_values($quantity, $estimated_price))
-		return false;
-
-	$line_description = $description !== '' ? $description : $item['description'];
-	$line_unit = $unit_of_measure !== '' ? $unit_of_measure : $item['units'];
-
-	begin_transaction();
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-		stock_id = " . db_escape($stock_id) . ",
-		description = " . db_escape($line_description) . ",
-		quantity = " . db_escape($quantity) . ",
-		unit_of_measure = " . db_escape($line_unit) . ",
-		estimated_unit_price = " . db_escape($estimated_price) . ",
-		preferred_supplier_id = " . (int)$preferred_supplier_id . ",
-		notes = " . ($notes !== '' ? db_escape($notes) : 'NULL') . ",
-		custom_data = " . ($custom_data ? db_escape_json(encode_purch_requisition_custom_data($custom_data)) : 'NULL') . "
-		WHERE id = " . (int)$line_id;
-	db_query($sql, 'could not update purchase requisition line');
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_request_lines SET
-		stock_id = " . db_escape($stock_id) . ",
-		qty_requested = " . db_escape($quantity) . ",
-		required_date = " . ($requisition['required_date'] ? db_escape($requisition['required_date']) : 'NULL') . ",
-		memo = " . ($notes !== '' ? db_escape($notes) : 'NULL') . "
-		WHERE line_id = " . (int)$line['material_request_line_id'];
-	db_query($sql, 'could not sync purchase requisition line to material request');
-
-	update_purch_requisition_total((int)$line['requisition_id']);
-
-	commit_transaction();
-	return true;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_line_db.inc';
+	$result = write_purch_requisition_line('update', $line_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data));
+	return $result;
 }
 
 /**
@@ -723,28 +615,8 @@ function update_requisition_line($line_id, $stock_id, $quantity, $estimated_pric
  */
 function delete_requisition_line($line_id)
 {
-	$sql = "SELECT * FROM " . TB_PREF . "purch_requisition_lines WHERE id = " . (int)$line_id;
-	$result = db_query($sql, 'could not get purchase requisition line for delete');
-	$line = db_fetch($result);
-	if (!$line)
-		return false;
-
-	$requisition = get_editable_purch_requisition((int)$line['requisition_id']);
-	if (!$requisition)
-		return false;
-
-	begin_transaction();
-
-	$sql = "DELETE FROM " . TB_PREF . "purch_requisition_lines WHERE id = " . (int)$line_id;
-	db_query($sql, 'could not delete purchase requisition line');
-
-	if ((int)$line['material_request_line_id'] > 0)
-		delete_material_request_line((int)$line['material_request_line_id']);
-
-	update_purch_requisition_total((int)$line['requisition_id']);
-
-	commit_transaction();
-	return true;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_line_db.inc';
+	return write_purch_requisition_line('delete', $line_id, array());
 }
 
 /**
