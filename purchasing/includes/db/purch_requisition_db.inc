@@ -273,38 +273,8 @@ function update_purch_requisition_order_status($requisition_id)
  */
 function reopen_purch_requisition($requisition_id)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('submitted', 'rejected')))
-		return false;
-
-	begin_transaction();
-
-	if (!empty($requisition['material_request_id'])) {
-		$sql = "UPDATE " . TB_PREF . "wh_material_requests SET
-			status = 'draft',
-			updated_at = NOW()
-			WHERE request_id = " . (int)$requisition['material_request_id'];
-		db_query($sql, 'could not reopen linked material request');
-	}
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = 'draft',
-		approved_by = 0,
-		approved_date = NULL,
-		rejected_by = 0,
-		rejected_date = NULL,
-		rejection_reason = NULL
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not reopen purchase requisition');
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-		status = 'pending'
-		WHERE requisition_id = " . (int)$requisition_id
-		. " AND status <> 'ordered'";
-	db_query($sql, 'could not reopen purchase requisition lines');
-
-	commit_transaction();
-	return true;
+	include_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_reopen_db.inc';
+	return reopen_purch_requisition_from_core($requisition_id);
 }
 
 /**

@@ -12,6 +12,7 @@
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_po_approval_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_requisition_reopen_db.inc');
 
 // =====================================================
 // TRANSACTION TYPE REGISTRATIONS
@@ -43,6 +44,7 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHREQUISITION, array(
 	'executor'       => 'execute_approved_purchase_requisition',
 	'rejector'       => 'reject_purchase_requisition_draft',
 	'canceler'       => 'cancel_purchase_requisition_draft',
+	'action_validator' => 'validate_purchase_requisition_reopen_action',
 	'amount_getter'  => 'get_purchase_requisition_draft_amount',
 	'draft_renderer' => 'render_purchase_requisition_draft',
 	'edit_url'       => 'purchasing/purch_requisition_entry.php',
@@ -506,14 +508,7 @@ function reject_purchase_requisition_draft($draft_data, $draft_id, $comments)
  */
 function cancel_purchase_requisition_draft($draft_data, $draft_id, $comments)
 {
-	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc');
-
-	$requisition_id = isset($draft_data['requisition_id']) ? (int)$draft_data['requisition_id'] : 0;
-	if ($requisition_id <= 0)
-		return false;
-
-	return reopen_purch_requisition($requisition_id);
+	return cancel_purchase_requisition_reopen($draft_data, $draft_id, $comments);
 }
 
 /**
