@@ -640,10 +640,13 @@ class Entity extends record_set {
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
 		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
+		$keys['purch_requisitions'] = 'id';
+		$keys['purch_requisition_lines'] = 'id';
+		if (preg_match('/^\s*`(?:purch_requisitions|purch_requisition_lines)`/i', $this->name)) return false;
 		$owner = strtolower(trim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
-			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans|purch_rfq|purch_rfq_items|purch_rfq_vendors|purch_rfq_vendor_lines)\b/i', $this->name)) return false;
+			if (preg_match('/^\s*(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans|purch_rfq|purch_rfq_items|purch_rfq_vendors|purch_rfq_vendor_lines|purch_requisitions|purch_requisition_lines)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
 		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
@@ -671,6 +674,17 @@ class Entity extends record_set {
 		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
+		if ($owner === 'purch_requisitions' || $owner === 'purch_requisition_lines') {
+			// Requisitions are paired commands, never independent Entity row SQL.
+			require_once __DIR__.'/../../purchasing/includes/db/purch_requisition_entity_db.inc';
+			if ($this->subset) return false;
+			return write_purch_requisition_entity($owner, $operation, $key, $next,
+				function() use ($operation, $key, $data) {
+					if ($operation === 'insert') return parent::insert_check($data);
+					if ($operation === 'update') return parent::update($key, $data);
+					return parent::delete_check($key);
+				});
+		}
 		if ($owner === 'purch_rfq_vendor_lines') {
 			return dimension_rfq_response_write($key, $next,
 				function($admitted) use ($operation, $key, $data) {
