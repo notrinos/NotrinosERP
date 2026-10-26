@@ -93,6 +93,23 @@ function can_save_purchase_requisition_line($stock_id_field_name = 'line_stock_i
 	return true;
 }
 
+/** Bind native header commands to their rendering actor/company configuration. */
+function get_purch_requisition_header_form_context()
+{
+	global $db_connections;
+	$user = $_SESSION['wa_current_user'];
+	return hash_hmac('sha256', serialize(array($user->user, $user->cur_con,
+		$db_connections[$user->cur_con])), ensure_csrf_token());
+}
+
+if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition'])) {
+	$header_context = get_post('header_context', '');
+	if (!is_string($header_context) || !hash_equals(get_purch_requisition_header_form_context(), $header_context)) {
+		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition']);
+		display_error(_('The requisition form context has changed. Reload this page before saving.'));
+	}
+}
+
 $selected_id = get_post('selected_id', 0);
 if (!$selected_id && isset($_GET['requisition_id']))
 	$selected_id = (int)$_GET['requisition_id'];
@@ -123,8 +140,8 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 	$notes = get_post('notes');
 	$location = get_post('location');
 	$reference = trim(get_post('reference'));
-	$dimension_id = (int)get_post('dimension_id');
-	$dimension2_id = (int)get_post('dimension2_id');
+	$dimension_id = get_post('dimension_id', null);
+	$dimension2_id = get_post('dimension2_id', null);
 
 	if (isset($_POST['ADD_ITEM'])) {
 		$selected_id = add_purch_requisition(
@@ -141,8 +158,12 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 			$request_date
 		);
 
-		display_notification(_('Purchase requisition has been created.'));
-		meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $selected_id . get_sel_app_param());
+		if ($selected_id) {
+			display_notification(_('Purchase requisition has been created.'));
+			meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $selected_id . get_sel_app_param());
+		} else {
+			display_error(_('The purchase requisition could not be created.'));
+		}
 	} else {
 		if (update_purch_requisition(
 			$selected_id,
@@ -303,6 +324,7 @@ if ($requisition) {
 $priorities = get_purch_requisition_priorities();
 
 start_form();
+hidden('header_context', get_purch_requisition_header_form_context());
 
 echo '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">';
 echo '<div>';

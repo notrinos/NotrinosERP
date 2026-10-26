@@ -494,86 +494,8 @@ function add_purch_requisition($requester_id, $department_id, $required_date, $p
 	$priority = 'normal', $notes = '', $dimension_id = 0, $dimension2_id = 0,
 	$reference = '', $request_date = null, $material_request_id = 0, $custom_data = array())
 {
-	$request_date = $request_date ? $request_date : date2sql(Today());
-	$requester_id = $requester_id ? (int)$requester_id : (int)$_SESSION['wa_current_user']->user;
-
-	$hook_data = array(
-		'requester_id' => $requester_id,
-		'department_id' => (int)$department_id,
-		'required_date' => $required_date,
-		'purpose' => $purpose,
-		'location' => $location,
-		'priority' => $priority,
-		'notes' => $notes,
-		'dimension_id' => (int)$dimension_id,
-		'dimension2_id' => (int)$dimension2_id,
-		'reference' => $reference,
-		'request_date' => $request_date,
-		'material_request_id' => (int)$material_request_id,
-		'custom_data' => $custom_data,
-	);
-	hook_invoke_all('purch_requisition_before_save', $hook_data);
-
-	begin_transaction();
-
-	if ((int)$hook_data['material_request_id'] > 0) {
-		$material_request_id = (int)$hook_data['material_request_id'];
-	} else {
-		$material_request_id = add_material_request(
-			'purchase',
-			$hook_data['location'],
-			$hook_data['request_date'],
-			$hook_data['required_date'],
-			$hook_data['reference'],
-			$hook_data['notes']
-		);
-	}
-
-	$sql = "INSERT INTO " . TB_PREF . "purch_requisitions (
-		reference,
-		material_request_id,
-		requester_id,
-		department_id,
-		request_date,
-		required_date,
-		status,
-		priority,
-		purpose,
-		notes,
-		total_estimated,
-		location,
-		dimension_id,
-		dimension2_id,
-		custom_data
-	) VALUES (
-		'',
-		" . (int)$material_request_id . ",
-		" . (int)$hook_data['requester_id'] . ",
-		" . (int)$hook_data['department_id'] . ",
-		" . db_escape($hook_data['request_date']) . ",
-		" . ($hook_data['required_date'] ? db_escape($hook_data['required_date']) : 'NULL') . ",
-		'draft',
-		" . db_escape($hook_data['priority']) . ",
-		" . ($hook_data['purpose'] !== '' ? db_escape($hook_data['purpose']) : 'NULL') . ",
-		" . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
-		0,
-		" . db_escape($hook_data['location']) . ",
-		" . (int)$hook_data['dimension_id'] . ",
-		" . (int)$hook_data['dimension2_id'] . ",
-		" . ($hook_data['custom_data'] ? db_escape_json(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
-	)";
-	db_query($sql, 'could not insert purchase requisition');
-
-	$requisition_id = db_insert_id();
-	$generated_reference = $hook_data['reference'] !== '' ? $hook_data['reference'] : format_purch_requisition_reference($requisition_id);
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		reference = " . db_escape($generated_reference) . "
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not update purchase requisition reference');
-
-	commit_transaction();
-	return $requisition_id;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
+	return write_purch_requisition_header('add', null, array('requester_id'=>$requester_id,'department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'material_request_id'=>$material_request_id,'custom_data'=>$custom_data));
 }
 
 /**
@@ -620,65 +542,10 @@ function can_save_requisition_line_values($quantity, $estimated_price, &$error_m
  */
 function update_purch_requisition($requisition_id, $department_id, $required_date, $purpose, $location,
 	$priority = 'normal', $notes = '', $dimension_id = 0, $dimension2_id = 0,
-	$reference = '', $request_date = null, $custom_data = array())
+	$reference = '', $request_date = null, $custom_data = null)
 {
-	$requisition = get_editable_purch_requisition($requisition_id);
-	if (!$requisition)
-		return false;
-
-	$request_date = $request_date ? $request_date : $requisition['request_date'];
-	$reference = $reference !== '' ? $reference : $requisition['reference'];
-
-	$hook_data = array(
-		'id' => (int)$requisition_id,
-		'department_id' => (int)$department_id,
-		'required_date' => $required_date,
-		'purpose' => $purpose,
-		'location' => $location,
-		'priority' => $priority,
-		'notes' => $notes,
-		'dimension_id' => (int)$dimension_id,
-		'dimension2_id' => (int)$dimension2_id,
-		'reference' => $reference,
-		'request_date' => $request_date,
-		'custom_data' => $custom_data,
-	);
-	hook_invoke_all('purch_requisition_before_save', $hook_data);
-
-	begin_transaction();
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		department_id = " . (int)$hook_data['department_id'] . ",
-		request_date = " . db_escape($hook_data['request_date']) . ",
-		required_date = " . ($hook_data['required_date'] ? db_escape($hook_data['required_date']) : 'NULL') . ",
-		priority = " . db_escape($hook_data['priority']) . ",
-		purpose = " . ($hook_data['purpose'] !== '' ? db_escape($hook_data['purpose']) : 'NULL') . ",
-		notes = " . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
-		location = " . db_escape($hook_data['location']) . ",
-		dimension_id = " . (int)$hook_data['dimension_id'] . ",
-		dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
-		reference = " . db_escape($hook_data['reference']) . ",
-		custom_data = " . ($hook_data['custom_data'] ? db_escape_json(encode_purch_requisition_custom_data($hook_data['custom_data'])) : 'NULL') . "
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not update purchase requisition');
-
-	update_material_request(
-		(int)$requisition['material_request_id'],
-		'purchase',
-		$hook_data['location'],
-		$hook_data['request_date'],
-		$hook_data['required_date'],
-		$hook_data['reference'],
-		$hook_data['notes']
-	);
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_request_lines SET
-		required_date = " . ($hook_data['required_date'] ? db_escape($hook_data['required_date']) : 'NULL') . "
-		WHERE request_id = " . (int)$requisition['material_request_id'];
-	db_query($sql, 'could not sync material request line dates');
-
-	commit_transaction();
-	return true;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
+	return write_purch_requisition_header('update', $requisition_id, array('department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'custom_data'=>$custom_data));
 }
 
 /**
@@ -689,19 +556,8 @@ function update_purch_requisition($requisition_id, $department_id, $required_dat
  */
 function delete_purch_requisition($requisition_id)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || $requisition['status'] !== 'draft')
-		return false;
-
-	begin_transaction();
-
-	$sql = "DELETE FROM " . TB_PREF . "purch_requisitions WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not delete purchase requisition');
-
-	delete_material_request((int)$requisition['material_request_id']);
-
-	commit_transaction();
-	return true;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
+	return write_purch_requisition_header('delete', $requisition_id, array());
 }
 
 /**
@@ -1134,6 +990,7 @@ function create_requisition_from_material_request($material_request_id)
 		(int)$material_request_id,
 		array('bridged_from_material_request' => 1)
 	);
+	if (!$requisition_id) return false;
 
 	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
 		status = " . db_escape(map_material_request_status_to_purch_requisition_status($material_request['status'])) . "
