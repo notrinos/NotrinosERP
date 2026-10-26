@@ -14,6 +14,66 @@
  */
 require_once __DIR__.'/dimension_master_payload_guard.inc';
 
+/**
+ * Admit a generic response write under the same parent-first locks as native
+ * activity. Parent hints never establish authority; exact item/vendor links are
+ * rechecked with current locking reads and cannot be reassigned by maintenance.
+ * This retains Entity's single-row contract, not a complete response submission.
+ */
+function dimension_rfq_response_write($key, $next, $callback, $remove = false)
+{
+    if (!is_array($next) || !is_callable($callback)) return false;
+    try {
+        if (!begin_transaction()) return false;
+        $identity = $key === null ? null : dimension_writer_reference_id($key);
+        if ($identity === false || $identity === 0) { cancel_transaction(); return false; }
+        $links = $next;
+        if ($identity !== null) {
+            $rows = db_query('SELECT rfq_vendor_id, rfq_item_id FROM '.TB_PREF.'purch_rfq_vendor_lines WHERE id='.$identity);
+            $links = $rows ? db_fetch($rows) : false;
+        }
+        $vendor = is_array($links) && isset($links['rfq_vendor_id']) ? dimension_writer_reference_id($links['rfq_vendor_id']) : false;
+        $item = is_array($links) && isset($links['rfq_item_id']) ? dimension_writer_reference_id($links['rfq_item_id']) : false;
+        if (!$vendor || !$item) { cancel_transaction(); return false; }
+        foreach (array('rfq_vendor_id'=>$vendor, 'rfq_item_id'=>$item) as $field=>$value)
+            if (array_key_exists($field, $next) && dimension_writer_reference_id($next[$field]) !== $value) { cancel_transaction(); return false; }
+        $rows = db_query('SELECT rfq_id FROM '.TB_PREF.'purch_rfq_vendors WHERE id='.$vendor);
+        $hint = $rows ? db_fetch($rows) : false;
+        $parent = $hint ? dimension_writer_reference_id($hint['rfq_id']) : false;
+        if (!$parent) { cancel_transaction(); return false; }
+        $result = dimension_ordinary_master_write('purch_rfq', $parent, array(),
+            function($admitted) use ($identity, $vendor, $item, $parent, $next, $callback, $remove) {
+                $rows = db_query('SELECT status FROM '.TB_PREF.'purch_rfq WHERE id='.$parent.' FOR UPDATE');
+                $header = $rows ? db_fetch($rows) : false;
+                if (!$header || !in_array($header['status'], array('draft','sent','received','evaluated'), true)) return false;
+                // Match the native activity lock order, including sibling rows.
+                foreach (array('purch_rfq_items','purch_rfq_vendors') as $table) {
+                    $rows = db_query('SELECT * FROM '.TB_PREF.$table.' WHERE rfq_id='.$parent.' ORDER BY id FOR UPDATE');
+                    if (!$rows) return false;
+                    $found = false;
+                    while ($row = db_fetch($rows))
+                        if ((int)$row['id'] === ($table === 'purch_rfq_items' ? $item : $vendor)) $found = $row;
+                    if (!$found) return false;
+                    if ($table === 'purch_rfq_vendors') $vendor_row = $found;
+                }
+                if ((int)$vendor_row['is_winner'] || $vendor_row['status'] === 'awarded') return false;
+                $rows = db_query('SELECT supplier_id FROM '.TB_PREF.'suppliers WHERE supplier_id='.(int)$vendor_row['supplier_id'].' FOR UPDATE');
+                if (!$rows || !db_fetch($rows)) return false;
+                if ($identity !== null) {
+                    $rows = db_query('SELECT rfq_vendor_id, rfq_item_id FROM '.TB_PREF.'purch_rfq_vendor_lines WHERE id='.$identity.' FOR UPDATE');
+                    $current = $rows ? db_fetch($rows) : false;
+                    if (!$current || (int)$current['rfq_vendor_id'] !== $vendor || (int)$current['rfq_item_id'] !== $item) return false;
+                }
+                return dimension_ordinary_master_write('purch_rfq_vendor_lines', $identity, $next, $callback, true, $remove);
+            }, true);
+        $insert_id = $result && $identity === null ? db_insert_id() : 0;
+        if (!$result || !commit_transaction()) { cancel_transaction(); return false; }
+        if ($identity === null && !db_preserve_insert_id($insert_id)) return false;
+        return $result;
+    } catch (Exception $exception) { cancel_transaction(); return false;
+    } catch (Throwable $exception) { cancel_transaction(); return false; }
+}
+
 /** Canonical native DB coordinate; only zero denotes a blank reference. */
 function dimension_writer_reference_id($value)
 {

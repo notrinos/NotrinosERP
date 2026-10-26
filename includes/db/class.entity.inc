@@ -639,11 +639,11 @@ class Entity extends record_set {
 	 * boundary. Unrelated models retain their existing persistence behavior.
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
-		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id');
-		$owner = strtolower(rtrim($this->name));
+		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
+		$owner = strtolower(trim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
-			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans|purch_rfq|purch_rfq_items|purch_rfq_vendors)\b/i', $this->name)) return false;
+			if (preg_match('/^(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans|purch_rfq|purch_rfq_items|purch_rfq_vendors|purch_rfq_vendor_lines)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
 		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
@@ -666,11 +666,17 @@ class Entity extends record_set {
 		// Require canonical sensitive columns; undeclared input stays ignored.
 		foreach ($data as $field=>$value) {
 			$canonical = strtolower((string)$field);
-			if ($field !== $canonical && in_array($canonical, array($primary, 'dimension_id', 'dimension2_id', 'dflt_dim1', 'dflt_dim2', 'custom_data', 'rfq_id'), true)
+			if ($field !== $canonical && in_array($canonical, array($primary, 'dimension_id', 'dimension2_id', 'dflt_dim1', 'dflt_dim2', 'custom_data', 'rfq_id', 'rfq_vendor_id', 'rfq_item_id'), true)
 				&& in_array($field, $this->fields)) return false;
 		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
+		if ($owner === 'purch_rfq_vendor_lines') {
+			return dimension_rfq_response_write($key, $next,
+				function($admitted) use ($operation, $key, $data) {
+					return $this->ordinary_dimension_persist($operation, $key, $admitted + $data);
+				}, $operation === 'delete');
+		}
 		if ($owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors') {
 			return dimension_rfq_child_write($owner, $key, $next,
 				function($admitted) use ($operation, $key, $data) {
