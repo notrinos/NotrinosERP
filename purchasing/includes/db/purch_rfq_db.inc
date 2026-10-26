@@ -1724,85 +1724,126 @@ function expire_overdue_rfqs()
     } catch (Throwable $exception) { cancel_transaction(); return false; }
 }
 
+/** Read exact current conversion inputs; failure never certifies source absence. */
+function read_requisition_rfq_rows($query)
+{
+    $result = db_query($query);
+    if (!$result) throw new RuntimeException('RFQ requisition source is unavailable.');
+    $rows = array();
+    while ($row = db_fetch_assoc($result)) $rows[] = $row;
+    return $rows;
+}
+
 /**
- * Create one RFQ from an approved requisition.
- *
- * @param int   $requisition_id
- * @param array $supplier_ids
- * @param array $line_ids
- * @return int|false
+ * Construct a sourcing RFQ atomically from current approved requisition rows.
+ * No requisition quantity is consumed: ordering and final approval remain with
+ * the registered PO workflow. Every child failure aborts the entire command.
  */
 function create_rfq_from_requisition($requisition_id, $supplier_ids = array(), $line_ids = array())
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('approved', 'partially_ordered')))
-		return false;
-
-	$selected_line_ids = array();
-	foreach ((array)$line_ids as $line_id) {
-		if ((int)$line_id > 0)
-			$selected_line_ids[] = (int)$line_id;
-	}
-
-	$resolved_supplier_ids = array();
-	foreach ((array)$supplier_ids as $supplier_id) {
-		if ((int)$supplier_id > 0)
-			$resolved_supplier_ids[(int)$supplier_id] = (int)$supplier_id;
-	}
-
-	$rfq_id = add_purch_rfq(
-		'standard',
-		sprintf(_('Created from Purchase Requisition %s'), $requisition['reference']),
-		get_default_purch_rfq_deadline_date(date2sql(Today())),
-		(int)$requisition_id,
-		$requisition['notes'] ? $requisition['notes'] : '',
-		'',
-		$requisition['location'],
-		$requisition['required_date'],
-		'',
-		null,
-		(int)$requisition['dimension_id'],
-		(int)$requisition['dimension2_id'],
-		'',
-		date2sql(Today()),
-		array('created_from_requisition' => 1)
-	);
-
-	if (!$rfq_id) return false;
-
-	$requisition_lines = get_requisition_lines($requisition_id);
-	$inserted_items = 0;
-	while ($line = db_fetch($requisition_lines)) {
-		$remaining_quantity = round((float)$line['quantity'] - (float)$line['qty_ordered'], get_qty_dec($line['stock_id']));
-		if ($remaining_quantity <= 0)
-			continue;
-		if (!empty($selected_line_ids) && !in_array((int)$line['id'], $selected_line_ids))
-			continue;
-
-		add_rfq_item(
-			$rfq_id,
-			$line['stock_id'],
-			$remaining_quantity,
-			(float)$line['estimated_unit_price'],
-			$line['notes'] ? $line['notes'] : '',
-			$line['line_description'],
-			$line['line_unit_of_measure'],
-			$inserted_items + 1,
-			array('requisition_line_id' => (int)$line['id'])
-		);
-		$inserted_items++;
-
-		if ((int)$line['preferred_supplier_id'] > 0)
-			$resolved_supplier_ids[(int)$line['preferred_supplier_id']] = (int)$line['preferred_supplier_id'];
-	}
-
-	if ($inserted_items === 0) {
-		delete_purch_rfq($rfq_id);
-		return false;
-	}
-
-	foreach ($resolved_supplier_ids as $supplier_id)
-		add_rfq_vendor($rfq_id, $supplier_id);
-
-	return $rfq_id;
+    global $db_connections;
+    $actor = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
+    if (!is_object($actor) || !is_callable(array($actor, 'can_access'))
+        || !$actor->can_access('SA_PURCHREQUISITION') || !$actor->can_access('SA_PURCHRFQ')
+        || empty($actor->user) || !isset($actor->cur_con, $db_connections[$actor->cur_con])
+        || !is_scalar($requisition_id) || (string)(int)$requisition_id !== (string)$requisition_id
+        || (int)$requisition_id <= 0 || !is_array($supplier_ids) || !is_array($line_ids)) return false;
+    $company = $actor->cur_con; $connection = $db_connections[$company]; $user = $actor->user;
+    $selected = $suppliers = array();
+    foreach (array('lines'=>$line_ids, 'suppliers'=>$supplier_ids) as $kind=>$ids) {
+        foreach ($ids as $id) {
+            if (!is_scalar($id) || (string)(int)$id !== (string)$id || (int)$id <= 0) return false;
+            if ($kind === 'lines') $selected[(int)$id] = true;
+            else $suppliers[(int)$id] = (int)$id;
+        }
+    }
+    try {
+        if (!begin_transaction()) return false;
+        $queries = array('header'=>'SELECT * FROM '.TB_PREF.'purch_requisitions WHERE id='.(int)$requisition_id.' FOR UPDATE',
+            'lines'=>'SELECT line.*, item.description AS stock_description, item.units AS stock_units, item.inactive AS stock_inactive, unit.decimals AS stock_decimals FROM '.TB_PREF.'purch_requisition_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '.TB_PREF.'item_units unit ON unit.abbr=item.units WHERE line.requisition_id='.(int)$requisition_id.' ORDER BY line.id FOR UPDATE');
+        $snapshot = array();
+        foreach ($queries as $key=>$query) $snapshot[$key] = read_requisition_rfq_rows($query);
+        if (count($snapshot['header']) !== 1) throw new RuntimeException('Requisition is unavailable.');
+        $requisition = $snapshot['header'][0];
+        if (!in_array($requisition['status'], array('approved','partially_ordered'), true))
+            throw new RuntimeException('Requisition is not approved.');
+        $queries['location'] = 'SELECT * FROM '.TB_PREF.'locations WHERE loc_code='.db_escape($requisition['location']).' AND inactive=0 FOR UPDATE';
+        $snapshot['location'] = read_requisition_rfq_rows($queries['location']);
+        if (count($snapshot['location']) !== 1) throw new RuntimeException('Requisition location is unavailable.');
+        if ((int)$requisition['material_request_id'] > 0) {
+            if (!$actor->can_access('SA_MATERIALREQUEST')) throw new RuntimeException('Linked Warehouse authority is unavailable.');
+            $queries['material'] = 'SELECT * FROM '.TB_PREF.'wh_material_requests WHERE request_id='.(int)$requisition['material_request_id'].' FOR UPDATE';
+            $snapshot['material'] = read_requisition_rfq_rows($queries['material']);
+            if (count($snapshot['material']) !== 1 || !in_array($snapshot['material'][0]['status'], array('approved','ordered'), true))
+                throw new RuntimeException('Linked Warehouse source is unavailable.');
+        }
+        $items = $used = array();
+        foreach ($snapshot['lines'] as $line) {
+            if ($selected && !isset($selected[(int)$line['id']])) continue;
+            if ($line['status'] === 'rejected') continue;
+            if (!is_finite((float)$line['quantity']) || !is_finite((float)$line['qty_ordered'])
+                || (float)$line['quantity'] <= 0 || (float)$line['qty_ordered'] < 0
+                || (float)$line['qty_ordered'] > (float)$line['quantity'])
+                throw new RuntimeException('Requisition quantities require reconciliation.');
+            // Match get_qty_dec's legacy fallback using current locked UOM inputs.
+            $decimals = $line['stock_decimals'];
+            if ($decimals == -1 || $decimals == null) $decimals = user_qty_dec();
+            $remaining = round((float)$line['quantity'] - (float)$line['qty_ordered'], (int)$decimals);
+            if ($remaining <= 0) continue;
+            if ($line['stock_description'] === null || (int)$line['stock_inactive'] !== 0
+                || !is_finite((float)$line['estimated_unit_price']) || (float)$line['estimated_unit_price'] < 0)
+                throw new RuntimeException('Requisition item is unavailable.');
+            $line['remaining_quantity'] = $remaining; $items[] = $line; $used[(int)$line['id']] = true;
+            if ((int)$line['preferred_supplier_id'] > 0) $suppliers[(int)$line['preferred_supplier_id']] = (int)$line['preferred_supplier_id'];
+        }
+        if (!$items || ($selected && count($selected) !== count($used))) throw new RuntimeException('Selected requisition lines are unavailable.');
+        ksort($suppliers, SORT_NUMERIC);
+        foreach ($suppliers as $supplier) {
+            $key = 'supplier_'.$supplier;
+            $queries[$key] = 'SELECT * FROM '.TB_PREF.'suppliers WHERE supplier_id='.$supplier.' AND inactive=0 FOR UPDATE';
+            $snapshot[$key] = read_requisition_rfq_rows($queries[$key]);
+            if (count($snapshot[$key]) !== 1) throw new RuntimeException('Requisition supplier is unavailable.');
+        }
+        $description = sprintf(_('Created from Purchase Requisition %s'), $requisition['reference']);
+        $rfq_id = add_purch_rfq('standard', $description,
+            get_default_purch_rfq_deadline_date(date2sql(Today())), (int)$requisition_id,
+            $requisition['notes'] ? $requisition['notes'] : '', '', $requisition['location'],
+            $requisition['required_date'], '', null, (int)$requisition['dimension_id'],
+            (int)$requisition['dimension2_id'], '', date2sql(Today()), array('created_from_requisition'=>1));
+        if (!$rfq_id) throw new RuntimeException('RFQ header could not be created.');
+        $sort = 0;
+        foreach ($items as $line) {
+            if (!add_rfq_item($rfq_id, $line['stock_id'], $line['remaining_quantity'],
+                (float)$line['estimated_unit_price'], $line['notes'] ? $line['notes'] : '',
+                $line['description'] !== null ? $line['description'] : $line['stock_description'],
+                $line['unit_of_measure'] !== '' ? $line['unit_of_measure'] : $line['stock_units'], ++$sort,
+                array('requisition_line_id'=>(int)$line['id']))) throw new RuntimeException('RFQ item could not be created.');
+        }
+        foreach ($suppliers as $supplier) if (!add_rfq_vendor($rfq_id, $supplier))
+            throw new RuntimeException('RFQ vendor could not be created.');
+        // Extension callbacks cannot change trusted company, source or derived header intent.
+        $current = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
+        if (!is_object($current) || $current->cur_con !== $company || $current->user !== $user
+            || !isset($db_connections[$company]) || $db_connections[$company] !== $connection
+            || !$current->can_access('SA_PURCHREQUISITION') || !$current->can_access('SA_PURCHRFQ')
+            || ((int)$requisition['material_request_id'] > 0 && !$current->can_access('SA_MATERIALREQUEST')))
+            throw new RuntimeException('RFQ conversion authority changed.');
+        foreach ($queries as $key=>$query) if (read_requisition_rfq_rows($query) !== $snapshot[$key])
+            throw new RuntimeException('RFQ conversion source changed.');
+        $headers = read_requisition_rfq_rows('SELECT * FROM '.TB_PREF.'purch_rfq WHERE id='.(int)$rfq_id.' FOR UPDATE');
+        if (count($headers) !== 1) throw new RuntimeException('RFQ destination is unavailable.');
+        $expected = array('requisition_id'=>(int)$requisition_id, 'dimension_id'=>(int)$requisition['dimension_id'],
+            'dimension2_id'=>(int)$requisition['dimension2_id'], 'created_by'=>(int)$user,
+            'description'=>trim($description), 'notes'=>trim((string)$requisition['notes']) !== '' ? trim($requisition['notes']) : null,
+            'delivery_location'=>trim($requisition['location']), 'required_delivery_date'=>$requisition['required_date'],
+            'status'=>'draft', 'rfq_type'=>'standard');
+        $where = array('id='.(int)$rfq_id);
+        foreach ($expected as $field=>$value) $where[] = $field.' <=> '.($value === null ? 'NULL' : db_escape($value));
+        if (count(read_requisition_rfq_rows('SELECT id FROM '.TB_PREF.'purch_rfq WHERE '.implode(' AND ', $where).' FOR UPDATE')) !== 1
+            || $headers[0]['custom_data'] !== encode_purch_rfq_custom_data(array('created_from_requisition'=>1)))
+            throw new RuntimeException('RFQ destination intent changed.');
+        if (!commit_transaction()) { cancel_transaction(); return false; }
+        return $rfq_id;
+    } catch (Exception $exception) { cancel_transaction(); return false;
+    } catch (Throwable $exception) { cancel_transaction(); return false; }
 }

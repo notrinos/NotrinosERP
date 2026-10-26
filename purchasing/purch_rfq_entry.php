@@ -300,7 +300,7 @@ function get_posted_rfq_response_lines($rfq_vendor_id)
 function get_bridge_requisition_supplier_options($requisition_id)
 {
 	$options = array();
-	if ((int)$requisition_id <= 0)
+	if ((int)$requisition_id <= 0 || !$_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION'))
 		return $options;
 
 	$lines = get_requisition_lines($requisition_id);
@@ -323,19 +323,25 @@ if (isset($_GET['New']))
 
 $bridge_requisition_id = (int)get_post('bridge_requisition_id', isset($_GET['requisition_id']) ? (int)$_GET['requisition_id'] : 0);
 
-if (isset($_POST['CreateFromRequisition'])) {
-	$bridge_supplier_ids = array();
-	if (!empty($_POST['bridge_supplier_id']) && is_array($_POST['bridge_supplier_id'])) {
-		foreach ($_POST['bridge_supplier_id'] as $supplier_id) {
-			if ((int)$supplier_id > 0)
-				$bridge_supplier_ids[] = (int)$supplier_id;
-		}
-	}
+/** Bind a bridge form to its rendering actor, company and connection configuration. */
+function get_purch_rfq_requisition_form_context()
+{
+	global $db_connections;
+	$user = $_SESSION['wa_current_user'];
+	return hash_hmac('sha256', serialize(array($user->user, $user->cur_con,
+		$db_connections[$user->cur_con])), ensure_csrf_token());
+}
 
-	if ($bridge_requisition_id <= 0) {
+if (isset($_POST['CreateFromRequisition'])) {
+	$bridge_supplier_ids = isset($_POST['bridge_supplier_id']) ? $_POST['bridge_supplier_id'] : array();
+
+	$bridge_context = get_post('bridge_context', '');
+	if (!is_string($bridge_context) || !hash_equals(get_purch_rfq_requisition_form_context(), $bridge_context)) {
+		display_error(_('The requisition form context has changed. Reload this page before creating an RFQ.'));
+	} elseif ($bridge_requisition_id <= 0) {
 		display_error(_('Enter a valid requisition ID to bridge.'));
 	} else {
-		$created_rfq_id = create_rfq_from_requisition($bridge_requisition_id, $bridge_supplier_ids);
+		$created_rfq_id = create_rfq_from_requisition(get_post('bridge_requisition_id', $bridge_requisition_id), $bridge_supplier_ids);
 		if ($created_rfq_id) {
 			meta_forward($_SERVER['PHP_SELF'], 'rfq_id=' . $created_rfq_id . get_sel_app_param());
 		} else {
@@ -565,7 +571,8 @@ if ($rfq) {
 		$rfq_vendors[] = $rfq_vendor;
 }
 
-$bridge_requisition = $bridge_requisition_id > 0 ? get_purch_requisition($bridge_requisition_id) : false;
+$bridge_requisition = $bridge_requisition_id > 0 && $_SESSION['wa_current_user']->can_access('SA_PURCHREQUISITION')
+	? get_purch_requisition($bridge_requisition_id) : false;
 $bridge_supplier_options = $bridge_requisition ? get_bridge_requisition_supplier_options($bridge_requisition_id) : array();
 
 if ($rfq && !$rfq_header_save_failed) {
@@ -633,6 +640,7 @@ if (!$rfq) {
 
 	display_heading(_('Create from Approved Requisition'));
 	start_table(TABLESTYLE2, "width='60%'");
+	hidden('bridge_context', get_purch_rfq_requisition_form_context());
 	text_row(_('Requisition ID:'), 'bridge_requisition_id', $bridge_requisition_id ? $bridge_requisition_id : null, 10, 10);
 	if ($bridge_requisition) {
 		label_row(_('Requisition Reference:'), $bridge_requisition['reference']);
