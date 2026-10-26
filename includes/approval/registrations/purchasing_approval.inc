@@ -488,14 +488,9 @@ function execute_approved_vendor_evaluation($draft_data, $reserved_trans_no, $dr
  */
 function reject_purchase_requisition_draft($draft_data, $draft_id, $comments)
 {
-	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc');
-
-	$requisition_id = isset($draft_data['requisition_id']) ? (int)$draft_data['requisition_id'] : 0;
-	if ($requisition_id <= 0)
-		return false;
-
-	return reject_requisition($requisition_id, 0, $comments);
+    include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_reject_db.inc');
+    if (!is_array($draft_data) || !isset($draft_data['requisition_id'])) return false;
+    return reject_purch_requisition_from_core($draft_data['requisition_id'], 0, $comments, $draft_id, $draft_data);
 }
 
 /**

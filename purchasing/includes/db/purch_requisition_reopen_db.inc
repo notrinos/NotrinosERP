@@ -156,9 +156,13 @@ function verify_purch_requisition_reopen($snapshot, $context)
         && purch_requisition_reopen_context() === $context;
 }
 
-/** Opt only cancellation into current source validation; other actions keep their current registration behavior. */
+/** Guard core cancellation and rejection; remaining actions keep their current registration behavior. */
 function validate_purchase_requisition_reopen_action($action, $data, $draft, $actor, $comments = '')
 {
+    if ($action === 'reject') {
+        require_once __DIR__.'/purch_requisition_reject_db.inc';
+        return validate_purchase_requisition_reject_action($data, $draft, $actor, $comments);
+    }
     if ($action !== 'cancel') return true;
     $context = purch_requisition_reopen_context();
     if ($context === false || empty($GLOBALS['transaction_level']) || !is_array($draft)

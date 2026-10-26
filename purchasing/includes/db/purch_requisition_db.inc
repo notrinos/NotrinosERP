@@ -714,40 +714,8 @@ function approve_requisition($requisition_id, $approved_by = 0)
  */
 function reject_requisition($requisition_id, $rejected_by, $reason)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || $requisition['status'] !== 'submitted')
-		return false;
-
-	begin_transaction();
-
-	if ($requisition['material_request_status'] === 'submitted') {
-		if (!reject_material_request((int)$requisition['material_request_id'])) {
-			cancel_transaction();
-			return false;
-		}
-	}
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = 'rejected',
-		rejected_by = " . (int)($rejected_by ? $rejected_by : $_SESSION['wa_current_user']->user) . ",
-		rejected_date = NOW(),
-		rejection_reason = " . ($reason !== '' ? db_escape($reason) : 'NULL') . ",
-		approved_by = 0,
-		approved_date = NULL
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not reject purchase requisition');
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-		status = 'rejected'
-		WHERE requisition_id = " . (int)$requisition_id
-		. " AND status <> 'ordered'";
-	db_query($sql, 'could not reject purchase requisition lines');
-
-	commit_transaction();
-
-	$hook_data = array('requisition_id' => (int)$requisition_id, 'reason' => $reason);
-	hook_invoke_all('purch_requisition_rejected', $hook_data);
-	return true;
+    include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_reject_db.inc');
+    return reject_purch_requisition_from_core($requisition_id, $rejected_by, $reason);
 }
 
 /**
