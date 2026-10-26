@@ -19,6 +19,7 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/ui/ui_lists.inc');
 include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+include_once($path_to_root . '/purchasing/includes/db/purch_requisition_refresh_db.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
@@ -102,11 +103,11 @@ function get_purch_requisition_header_form_context()
 		$db_connections[$user->cur_con])), ensure_csrf_token());
 }
 
-if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine']) || isset($_POST['SubmitRequisition'])
+if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine']) || isset($_POST['SubmitRequisition']) || isset($_POST['RefreshRequisition'])
 	|| isset($_POST['CreateFromMaterialRequest']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0) {
 	$header_context = get_post('header_context', '');
 	if (!is_string($header_context) || !hash_equals(get_purch_requisition_header_form_context(), $header_context)) {
-		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest'], $_POST['SubmitRequisition']);
+		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest'], $_POST['SubmitRequisition'], $_POST['RefreshRequisition']);
 		foreach (array_keys($_POST) as $key)
 			if (preg_match('/^(?:UpdateLine|DeleteLine)/', $key)) unset($_POST[$key]);
 		display_error(_('The requisition form context has changed. Reload this page before saving.'));
@@ -262,6 +263,15 @@ if (isset($_POST['SubmitRequisition']) && $selected_id > 0) {
 		display_notification(_('Purchase requisition has been auto-approved.'));
 	} else {
 		display_notification(_('Purchase requisition has been submitted for approval.'));
+	}
+}
+
+if (isset($_POST['RefreshRequisition']) && $selected_id > 0) {
+	$result = refresh_purch_requisition_approval($selected_id, get_post('refresh_draft_id', ''));
+	if ($result === false) {
+		display_error(_('The pending review could not be refreshed. Reload and verify the original submitter, source history and current approval setup.'));
+	} else {
+		display_notification(sprintf(_('Approval review restarted as draft #%d. All checker decisions are required again.'), $result['draft_id']));
 	}
 }
 
@@ -479,6 +489,12 @@ if ($requisition) {
 	} elseif ($requisition['status'] === 'submitted') {
 		display_note(_('This requisition is pending approval in the core Approval Dashboard.'), 0, 1);
 		hyperlink_no_params($path_to_root.'/admin/approval_dashboard.php?&sel_app=system', _('Go to Approval Dashboard'));
+		$refresh_draft = get_purch_requisition_refresh_draft($selected_id);
+		if ($refresh_draft !== false) {
+			hidden('refresh_draft_id', $refresh_draft);
+			br();
+			submit('RefreshRequisition', _('Restart Approval Review'), true, _('Cancel this pending review and submit under current policy; all checker decisions restart.'));
+		}
 	} elseif (in_array($requisition['status'], array('approved', 'partially_ordered'))) {
 		start_table(TABLESTYLE_NOBORDER, "style='margin:0 auto;' width='420'");
 		supplier_list_row(_('Create PO For Supplier:'), 'create_po_supplier', null, true, false, true);
