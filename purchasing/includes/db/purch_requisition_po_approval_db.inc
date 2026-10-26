@@ -282,7 +282,7 @@ function submit_requisition_purchase_orders($id, $supplier_id = 0, $line_ids = a
   }
   if ($completed) {
    if (!function_exists('update_purch_requisition_order_status')) include_once($path_to_root.'/purchasing/includes/db/purch_requisition_db.inc');
-   update_purch_requisition_order_status($id);
+   if (!update_purch_requisition_order_status($id)) throw new RuntimeException('Requisition batch progress failed.');
    $last = $completed[count($completed)-1]['snapshot'];
    $lines = read_requisition_purchase_rows($last['queries']['all_lines']); $full = 0; $ordered = 0;
    foreach ($lines as $line) { if ((float)$line['qty_ordered'] > 0) $ordered++; if ((float)$line['qty_ordered'] >= (float)$line['quantity']) $full++; }
@@ -363,7 +363,7 @@ function write_requisition_purchase_order($snapshot, $approval_draft_id = 0, $de
   if (!db_query('UPDATE '.TB_PREF.'purch_requisition_lines SET qty_ordered=qty_ordered+'.db_escape($cart->line_items[array_search((int)$line['id'],$snapshot['used'],true)]->quantity).', po_number='.(int)$number.", status='ordered' WHERE id=".(int)$line['id'], 'could not link requisition order')) throw new RuntimeException('Requisition source linkage failed.');
  }
  if (!function_exists('update_purch_requisition_order_status')) include_once($path_to_root.'/purchasing/includes/db/purch_requisition_db.inc');
- if (!$defer_completion) update_purch_requisition_order_status($snapshot['header']['id']);
+ if (!$defer_completion && !update_purch_requisition_order_status($snapshot['header']['id'])) throw new RuntimeException('Requisition progress failed.');
  $current_lines = read_requisition_purchase_rows($snapshot['queries']['all_lines']);
  $full = 0; $ordered = 0;
  foreach ($current_lines as $key=>$line) {

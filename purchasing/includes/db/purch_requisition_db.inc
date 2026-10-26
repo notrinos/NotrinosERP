@@ -245,53 +245,24 @@ function map_material_request_status_to_purch_requisition_status($material_reque
  * Update the requisition total estimated amount from line items.
  *
  * @param int $requisition_id
- * @return void
+ * @return bool
  */
 function update_purch_requisition_total($requisition_id)
 {
-	$sql = "SELECT COALESCE(SUM(quantity * estimated_unit_price), 0) AS total_estimated
-		FROM " . TB_PREF . "purch_requisition_lines
-		WHERE requisition_id = " . (int)$requisition_id;
-	$result = db_query($sql, 'could not calculate purchase requisition total');
-	$row = db_fetch($result);
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		total_estimated = " . db_escape((float)$row['total_estimated']) . "
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not update purchase requisition total');
+	include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_progress_db.inc');
+	return write_purch_requisition_progress($requisition_id, 'total_estimated');
 }
 
 /**
  * Sync requisition header status from line ordering progress.
  *
  * @param int $requisition_id
- * @return void
+ * @return bool
  */
 function update_purch_requisition_order_status($requisition_id)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('approved', 'partially_ordered', 'ordered')))
-		return;
-
-	$sql = "SELECT
-		COUNT(*) AS total_lines,
-		SUM(CASE WHEN qty_ordered > 0 THEN 1 ELSE 0 END) AS ordered_lines,
-		SUM(CASE WHEN qty_ordered >= quantity THEN 1 ELSE 0 END) AS fully_ordered_lines
-		FROM " . TB_PREF . "purch_requisition_lines
-		WHERE requisition_id = " . (int)$requisition_id;
-	$result = db_query($sql, 'could not calculate purchase requisition order status');
-	$row = db_fetch($result);
-
-	$status = 'approved';
-	if ((int)$row['total_lines'] > 0 && (int)$row['fully_ordered_lines'] === (int)$row['total_lines'])
-		$status = 'ordered';
-	elseif ((int)$row['ordered_lines'] > 0)
-		$status = 'partially_ordered';
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = " . db_escape($status) . "
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not update purchase requisition order status');
+	include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_progress_db.inc');
+	return write_purch_requisition_progress($requisition_id, 'status');
 }
 
 /**
