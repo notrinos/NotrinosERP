@@ -61,6 +61,49 @@ function purch_requisition_reopen_drafts($identity, $source, $approval)
     return $matches;
 }
 
+/** Lock exact retained review rows and actions before native recovery writes. */
+function purch_requisition_reopen_history($drafts)
+{
+    if (!$drafts) return false;
+    $rows = array();
+    $ids = array();
+    foreach ($drafts as $draft) {
+        unset($draft['decoded']);
+        $rows[] = $draft;
+        $ids[] = (int)$draft['id'];
+    }
+    $actions = purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'approval_actions WHERE draft_id IN ('
+        .implode(',', $ids).') ORDER BY id FOR UPDATE');
+    return $actions === false ? false : array('drafts'=>$rows, 'actions'=>$actions);
+}
+
+/**
+ * Recovery appends exactly one attributable action. Earlier decisions and raw
+ * payloads stay exact; only core cancellation owns terminal status/date changes.
+ */
+function verify_purch_requisition_reopen_history($history, $identity, $source, $approval, $action, $comments)
+{
+    $drafts = purch_requisition_reopen_drafts($identity, $source, $approval);
+    $current = $drafts ? purch_requisition_reopen_history($drafts) : false;
+    if (!$history || !$current || count($current['drafts']) !== count($history['drafts'])
+        || count($current['actions']) !== count($history['actions']) + 1) return false;
+    $last = count($history['drafts']) - 1;
+    $latest = $history['drafts'][$last];
+    if ($action === 'cancel') {
+        if ((int)$current['drafts'][$last]['status'] !== APPROVAL_STATUS_CANCELLED
+            || empty($current['drafts'][$last]['completed_date'])) return false;
+        foreach (array('status','completed_date') as $field)
+            $current['drafts'][$last][$field] = $latest[$field];
+    } elseif ($action !== 'reopen') return false;
+    $added = array_pop($current['actions']);
+    return $current === $history
+        && (int)$added['draft_id'] === (int)$latest['id']
+        && $added['action_type'] === $action
+        && (int)$added['user_id'] === (int)$_SESSION['wa_current_user']->user
+        && (int)$added['level'] === ($action === 'cancel' ? (int)$latest['current_level'] : 0)
+        && !empty($added['action_date']) && $added['comments'] === $comments;
+}
+
 /**
  * Lock the native pair and exact children, deny downstream effects, and compare
  * intrinsic legacy submission fields. Labels/defaults are not re-resolved.
@@ -214,6 +257,7 @@ function reopen_purch_requisition_from_core($requisition_id)
     $identity = dimension_writer_reference_id($requisition_id);
     if ($context === false || !$identity || !class_exists('ApprovalWorkflow')
         || !ApprovalWorkflow::isRegistered(ST_PURCHREQUISITION) || !function_exists('get_approval_workflow_service')) return false;
+    $role = (int)$_SESSION['wa_current_user']->access;
     try {
         if (!begin_transaction()) return false;
         // Read the core custody before its native pair, matching central cancellation order.
@@ -222,10 +266,18 @@ function reopen_purch_requisition_from_core($requisition_id)
         if (!$drafts) { cancel_transaction(); return false; }
         $latest = $drafts[count($drafts)-1];
         if ((int)$latest['submitted_by'] !== (int)$_SESSION['wa_current_user']->user) { cancel_transaction(); return false; }
+        $history = purch_requisition_reopen_history($drafts);
+        if (!$history) { cancel_transaction(); return false; }
         if ((int)$latest['status'] === APPROVAL_STATUS_PENDING) {
-            $result = $approval->cancel((int)$latest['id'], _('Reopened purchase requisition'));
+            $snapshot = purch_requisition_reopen_source($identity, 'submitted', $latest['decoded']);
+            if (!$snapshot) { cancel_transaction(); return false; }
+            $comments = _('Reopened purchase requisition');
+            $result = $approval->cancel((int)$latest['id'], $comments);
             if (!is_array($result) || !isset($result['status']) || $result['status'] !== 'cancelled'
-                || purch_requisition_reopen_context() !== $context || !commit_transaction()) { cancel_transaction(); return false; }
+                || !verify_purch_requisition_reopen($snapshot, $context)
+                || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'cancel', $comments)
+                || purch_requisition_reopen_context() !== $context || (int)$_SESSION['wa_current_user']->access !== $role
+                || !commit_transaction()) { cancel_transaction(); return false; }
             return true;
         }
         if ((int)$latest['status'] !== APPROVAL_STATUS_REJECTED) { cancel_transaction(); return false; }
@@ -233,11 +285,14 @@ function reopen_purch_requisition_from_core($requisition_id)
         $snapshot = purch_requisition_reopen_source($identity, 'rejected', $latest['decoded']);
         if (!$snapshot || purch_requisition_reopen_drafts($identity, (int)$snapshot['header']['material_request_id'], $approval) === false
             || !write_purch_requisition_reopen($snapshot, $context)) { cancel_transaction(); return false; }
-        $action = add_approval_action((int)$latest['id'], 'reopen', null, 0, _('Reopened rejected purchase requisition'));
+        $comments = _('Reopened rejected purchase requisition');
+        $action = add_approval_action((int)$latest['id'], 'reopen', null, 0, $comments);
         $actions = $action ? purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'approval_actions WHERE id='.(int)$action.' FOR UPDATE') : false;
         if (!$actions || (int)$actions[0]['draft_id'] !== (int)$latest['id'] || $actions[0]['action_type'] !== 'reopen'
             || (int)$actions[0]['user_id'] !== (int)$_SESSION['wa_current_user']->user
-            || !verify_purch_requisition_reopen($snapshot, $context) || !commit_transaction()) { cancel_transaction(); return false; }
+            || !verify_purch_requisition_reopen($snapshot, $context)
+            || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'reopen', $comments)
+            || (int)$_SESSION['wa_current_user']->access !== $role || !commit_transaction()) { cancel_transaction(); return false; }
         return true;
     } catch (Exception $exception) { cancel_transaction(); return false;
     } catch (Throwable $exception) { cancel_transaction(); return false; }
