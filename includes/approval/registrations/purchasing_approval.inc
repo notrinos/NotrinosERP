@@ -40,6 +40,7 @@ ApprovalWorkflow::registerTransactionType(ST_SUPPINVOICE, array(
 
 ApprovalWorkflow::registerTransactionType(ST_PURCHREQUISITION, array(
 	'label'          => _('Purchase Requisition'),
+	'independent_approval' => true,
 	'application'    => 'AP',
 	'executor'       => 'execute_approved_purchase_requisition',
 	'rejector'       => 'reject_purchase_requisition_draft',

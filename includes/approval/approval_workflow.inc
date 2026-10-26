@@ -73,6 +73,7 @@ class ApprovalWorkflow {
 	 *   'number_context' => array    Context for reference number generation (optional)
 	 *   'action_validator' => callable Optional source validation before actions/automatic approval
 	 *   'submitted'      => callable Optional atomic business custody after draft submission
+	 *   'independent_approval' => bool Require a checker; disallow direct/self/automatic approval
 	 * @return void
 	 */
 	public static function registerTransactionType($trans_type, $config)
@@ -88,6 +89,7 @@ class ApprovalWorkflow {
 			'edit_url'       => '',
 			'number_context' => array(),
 			'action_validator' => null,
+			'independent_approval' => false,
 			'submitted'      => null,
 		);
 
@@ -429,8 +431,11 @@ class ApprovalWorkflow {
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You do not have permission to approve this draft.'));
 		}
 
-		// Check self-approval restriction
-		if (!$draft['allow_self_approve'] && (int)$draft['submitted_by'] === $this->user_id) {
+		// Registration may require an independent checker even if legacy setup
+		// permits self approval. Keep the policy default for other families.
+		$config = self::getTypeConfig($draft['trans_type']);
+		if ((!$draft['allow_self_approve'] || ($config && !empty($config['independent_approval'])))
+			&& (int)$draft['submitted_by'] === $this->user_id) {
 			cancel_transaction();
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('You cannot approve your own submission.'));
 		}
@@ -787,6 +792,11 @@ class ApprovalWorkflow {
 	{
 		if ($lock_policy && empty($GLOBALS['transaction_level']))
 			throw new RuntimeException('A locked approval policy requires an owning transaction.');
+		// A registered independent-checker contract is a requirement even when
+		// setup is unavailable. submit() owns the fail-closed policy validation.
+		$config = self::getTypeConfig($trans_type);
+		if ($config && !empty($config['independent_approval']))
+			return true;
 		// Check if user has direct post bypass
 		if ($this->canDirectPost($trans_type))
 			return false;
@@ -812,6 +822,9 @@ class ApprovalWorkflow {
 	 */
 	public function canDirectPost($trans_type)
 	{
+		$config = self::getTypeConfig($trans_type);
+		if ($config && !empty($config['independent_approval']))
+			return false;
 		return check_security_area('SA_APPROVALDIRECT');
 	}
 
@@ -1009,6 +1022,9 @@ class ApprovalWorkflow {
 	 */
 	private function checkAutoApproval($draft_id, $workflow, $amount, $draft_data_decoded = array(), $context = array(), $lock_policy = false)
 	{
+		$config = self::getTypeConfig($workflow['trans_type']);
+		if ($config && !empty($config['independent_approval']))
+			return false;
 		if (!$this->validateRegisteredAction('auto_approve', $workflow['trans_type'], $draft_data_decoded))
 			return false;
 		$levels = get_approval_levels($workflow['id'], true, $lock_policy);
@@ -1059,6 +1075,9 @@ class ApprovalWorkflow {
 	 */
 	private function checkAutoApprovalAtLevel($draft_id, $workflow, $amount, $from_level)
 	{
+		$config = self::getTypeConfig($workflow['trans_type']);
+		if ($config && !empty($config['independent_approval']))
+			return false;
 		$levels = get_approval_levels($workflow['id'], true);
 		$all_auto = true;
 
