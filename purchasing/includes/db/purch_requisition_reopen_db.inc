@@ -159,6 +159,12 @@ function verify_purch_requisition_reopen($snapshot, $context)
 /** Guard core cancellation and rejection; remaining actions keep their current registration behavior. */
 function validate_purchase_requisition_reopen_action($action, $data, $draft, $actor, $comments = '')
 {
+    if (in_array($action, array('submit','approve','auto_approve'), true)) {
+        require_once __DIR__.'/purch_requisition_submit_db.inc';
+        if ($action === 'submit') return validate_purchase_requisition_submit_action($data, $actor);
+        if ($action === 'auto_approve') return false;
+        return validate_purchase_requisition_approve_action($data, $draft, $actor, $comments);
+    }
     if ($action === 'reject') {
         require_once __DIR__.'/purch_requisition_reject_db.inc';
         return validate_purchase_requisition_reject_action($data, $draft, $actor, $comments);

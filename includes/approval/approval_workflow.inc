@@ -842,11 +842,14 @@ class ApprovalWorkflow {
 	 * Check if current user can approve/reject a specific draft.
 	 *
 	 * @param int $draft_id Draft ID
+	 * @param bool $lock_policy Read current checker roles/delegations inside an owning transaction
 	 * @return bool
 	 */
-	public function canActOnDraft($draft_id)
+	public function canActOnDraft($draft_id, $lock_policy = false)
 	{
-		$draft = get_approval_draft($draft_id);
+		if ($lock_policy && empty($GLOBALS['transaction_level']))
+			throw new RuntimeException('Current checker policy requires an owning transaction.');
+		$draft = $lock_policy ? get_approval_draft_for_update($draft_id) : get_approval_draft($draft_id);
 
 		if (!$draft || (int)$draft['status'] !== APPROVAL_STATUS_PENDING)
 			return false;
@@ -857,16 +860,16 @@ class ApprovalWorkflow {
 		$approver_roles = get_approver_roles_at_level(
 			$draft['workflow_id'],
 			$current_level,
-			$draft['loc_code']
+			$draft['loc_code'], $lock_policy
 		);
 
 		if (in_array($this->role_id, $approver_roles))
 			return true;
 
 		// Check delegations
-		$delegations = get_active_delegations_to_user($this->user_id, $draft['trans_type']);
+		$delegations = get_active_delegations_to_user($this->user_id, $draft['trans_type'], $lock_policy);
 		while ($delegation = db_fetch($delegations)) {
-			$delegator_role = $this->getDelegatorRole($delegation['from_user_id']);
+			$delegator_role = $this->getDelegatorRole($delegation['from_user_id'], $lock_policy);
 			if (in_array($delegator_role, $approver_roles))
 				return true;
 		}
@@ -1209,12 +1212,14 @@ class ApprovalWorkflow {
 	 * Get the security role ID for a delegating user.
 	 *
 	 * @param int $user_id User ID
+	 * @param bool $lock_policy Lock the current delegator role
 	 * @return int         Role ID
 	 */
-	private function getDelegatorRole($user_id)
+	private function getDelegatorRole($user_id, $lock_policy = false)
 	{
 		$sql = "SELECT role_id FROM " . TB_PREF . "users
 			WHERE id = " . db_escape($user_id);
+		if ($lock_policy) $sql .= ' FOR UPDATE';
 
 		$result = db_query($sql, 'could not get delegator role');
 		$row = db_fetch($result);

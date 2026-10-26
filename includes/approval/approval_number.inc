@@ -41,6 +41,21 @@ function reserve_approval_trans_number($trans_type, $context = array())
 	if (!isset($context['date']) || !$context['date'])
 		$context['date'] = new_doc_date();
 
+	$native_reference = null;
+	if (defined('ST_PURCHREQUISITION') && (int)$trans_type === ST_PURCHREQUISITION && isset($context['requisition_id'])) {
+		// This approval transitions an already numbered native source. Its
+		// reference is current locked custody, not a second document refline.
+		$identity = $context['requisition_id'];
+		if ((!is_int($identity) && !is_string($identity)) || (int)$identity <= 0
+			|| (string)(int)$identity !== (string)$identity || empty($GLOBALS['transaction_level'])) return false;
+		$result = db_query('SELECT reference FROM '.TB_PREF.'purch_requisitions WHERE id='.(int)$identity
+			." AND status='submitted' FOR UPDATE", 'could not verify requisition approval reference');
+		$row = $result ? db_fetch_assoc($result) : false;
+		if (!$row || !is_string($row['reference']) || trim($row['reference']) === ''
+			|| strlen($row['reference']) > 60 || strpos($row['reference'], "\0") !== false) return false;
+		$native_reference = $row['reference'];
+	}
+
 	// PO native keys auto-increment independently of retained approval numbers.
 	// A caller's consistent snapshot must not reserve an already committed key.
 	$next_no = (int)$trans_type === ST_PURCHORDER
@@ -62,7 +77,9 @@ function reserve_approval_trans_number($trans_type, $context = array())
 
 	// Generate the reference string for this reserved number
 	$reference = '';
-	if (is_object($Refs)) {
+	if ($native_reference !== null) {
+		$reference = $native_reference;
+	} elseif (is_object($Refs)) {
 		$reference = $Refs->get_next($trans_type, null, $context);
 	}
 

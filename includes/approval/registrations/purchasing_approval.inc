@@ -381,14 +381,10 @@ function validate_direct_supplier_financial_action($action, $data, $draft, $acto
  */
 function execute_approved_purchase_requisition($draft_data, $reserved_trans_no, $draft_id)
 {
-	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc');
-
-	$requisition_id = isset($draft_data['requisition_id']) ? (int)$draft_data['requisition_id'] : 0;
-	if ($requisition_id <= 0)
-		return false;
-
-	return approve_requisition($requisition_id, 0) ? $requisition_id : false;
+    include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_approve_db.inc');
+    if (!is_array($draft_data) || !isset($draft_data['requisition_id'])) return false;
+    return approve_purch_requisition_from_core($draft_data['requisition_id'], 0, $draft_id, $draft_data)
+        ? (int)$draft_data['requisition_id'] : false;
 }
 
 /**

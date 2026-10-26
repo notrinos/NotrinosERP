@@ -102,11 +102,11 @@ function get_purch_requisition_header_form_context()
 		$db_connections[$user->cur_con])), ensure_csrf_token());
 }
 
-if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine'])
+if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine']) || isset($_POST['SubmitRequisition'])
 	|| isset($_POST['CreateFromMaterialRequest']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0) {
 	$header_context = get_post('header_context', '');
 	if (!is_string($header_context) || !hash_equals(get_purch_requisition_header_form_context(), $header_context)) {
-		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest']);
+		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest'], $_POST['SubmitRequisition']);
 		foreach (array_keys($_POST) as $key)
 			if (preg_match('/^(?:UpdateLine|DeleteLine)/', $key)) unset($_POST[$key]);
 		display_error(_('The requisition form context has changed. Reload this page before saving.'));

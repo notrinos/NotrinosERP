@@ -590,73 +590,8 @@ function get_requisition_lines($requisition_id)
  */
 function submit_requisition($requisition_id)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('draft', 'rejected')))
-		return false;
-
-	if (count_material_request_lines((int)$requisition['material_request_id']) === 0)
-		return false;
-
-	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_PURCHREQUISITION);
-	$approval_amount = (float)$requisition['total_estimated'];
-	$approval_required = false;
-	$approval = null;
-
-	if ($approval_registered) {
-		$approval = get_approval_workflow_service();
-		$approval_required = $approval->isApprovalRequired(ST_PURCHREQUISITION, $approval_amount);
-	}
-
-	begin_transaction();
-
-	if (!$requisition['material_request_status'] || $requisition['material_request_status'] === 'draft') {
-		if (!submit_material_request((int)$requisition['material_request_id'])) {
-			cancel_transaction();
-			return false;
-		}
-	}
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = 'submitted',
-		rejected_by = 0,
-		rejected_date = NULL,
-		rejection_reason = NULL
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not submit purchase requisition');
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-		status = 'pending'
-		WHERE requisition_id = " . (int)$requisition_id
-		. " AND status <> 'ordered'";
-	db_query($sql, 'could not set requisition lines to pending');
-
-	commit_transaction();
-
-	$submitted_requisition_id = (int)$requisition_id;
-	hook_invoke_all('purch_requisition_submitted', $submitted_requisition_id);
-
-	if (!$approval_registered || !$approval_required) {
-		if (!approve_requisition($requisition_id, (int)$_SESSION['wa_current_user']->user))
-			return false;
-
-		return array('status' => 'auto_approved', 'requisition_id' => (int)$requisition_id);
-	}
-
-	$reloaded = get_purch_requisition($requisition_id);
-
-	$draft_data = get_purch_requisition_submission_data($requisition_id);
-	return $approval->submit(
-		ST_PURCHREQUISITION,
-		$draft_data,
-		$approval_amount,
-		array(
-			'summary' => sprintf(_('Purchase Requisition %s'), $reloaded['reference']),
-			'currency' => get_company_pref('curr_default'),
-			'person_type' => PT_MISC,
-			'person_id' => $reloaded['requester_id'],
-			'loc_code' => $reloaded['location'],
-		)
-	);
+    include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_submit_db.inc');
+    return submit_purch_requisition_to_core($requisition_id);
 }
 
 /**
@@ -668,40 +603,8 @@ function submit_requisition($requisition_id)
  */
 function approve_requisition($requisition_id, $approved_by = 0)
 {
-	$requisition = get_purch_requisition($requisition_id);
-	if (!$requisition || !in_array($requisition['status'], array('submitted', 'approved')))
-		return false;
-
-	begin_transaction();
-
-	if ($requisition['material_request_status'] === 'submitted') {
-		if (!approve_material_request((int)$requisition['material_request_id'])) {
-			cancel_transaction();
-			return false;
-		}
-	}
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = 'approved',
-		approved_by = " . (int)($approved_by ? $approved_by : $_SESSION['wa_current_user']->user) . ",
-		approved_date = NOW(),
-		rejected_by = 0,
-		rejected_date = NULL,
-		rejection_reason = NULL
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not approve purchase requisition');
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisition_lines SET
-		status = CASE WHEN qty_ordered >= quantity THEN 'ordered' ELSE 'approved' END
-		WHERE requisition_id = " . (int)$requisition_id
-		. " AND status <> 'ordered'";
-	db_query($sql, 'could not approve purchase requisition lines');
-
-	commit_transaction();
-
-	$approved_requisition_id = (int)$requisition_id;
-	hook_invoke_all('purch_requisition_approved', $approved_requisition_id);
-	return true;
+    include_once($GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_approve_db.inc');
+    return approve_purch_requisition_from_core($requisition_id, $approved_by);
 }
 
 /**
