@@ -834,87 +834,8 @@ function create_po_from_requisition($requisition_id, $supplier_id, $line_ids = a
  */
 function create_requisition_from_material_request($material_request_id)
 {
-	$material_request = get_material_request($material_request_id);
-	if (!$material_request || $material_request['request_type'] !== 'purchase')
-		return false;
-
-	if ($material_request['status'] === 'cancelled' || count_material_request_lines($material_request_id) === 0)
-		return false;
-
-	$sql = "SELECT id FROM " . TB_PREF . "purch_requisitions WHERE material_request_id = " . (int)$material_request_id;
-	$result = db_query($sql, 'could not check existing purchase requisition bridge');
-	$existing = db_fetch($result);
-	if ($existing)
-		return (int)$existing['id'];
-
-	$requisition_id = add_purch_requisition(
-		(int)$material_request['requested_by'],
-		0,
-		$material_request['required_date'],
-		$material_request['memo'] ? $material_request['memo'] : '',
-		$material_request['warehouse_loc_code'],
-		'normal',
-		$material_request['memo'] ? $material_request['memo'] : '',
-		0,
-		0,
-		'',
-		$material_request['request_date'],
-		(int)$material_request_id,
-		array('bridged_from_material_request' => 1)
-	);
-	if (!$requisition_id) return false;
-
-	$sql = "UPDATE " . TB_PREF . "purch_requisitions SET
-		status = " . db_escape(map_material_request_status_to_purch_requisition_status($material_request['status'])) . "
-		WHERE id = " . (int)$requisition_id;
-	db_query($sql, 'could not sync bridged purchase requisition status');
-
-	$lines = get_material_request_lines($material_request_id);
-	while ($line = db_fetch($lines)) {
-		$supplier_data = get_default_requisition_supplier_data($line['stock_id']);
-		$line_custom_data = array('bridged_from_material_request_line' => (int)$line['line_id']);
-
-		$sql = "INSERT INTO " . TB_PREF . "purch_requisition_lines (
-			requisition_id,
-			material_request_line_id,
-			stock_id,
-			description,
-			quantity,
-			unit_of_measure,
-			estimated_unit_price,
-			preferred_supplier_id,
-			notes,
-			qty_ordered,
-			po_number,
-			status,
-			custom_data
-		) VALUES (
-			" . (int)$requisition_id . ",
-			" . (int)$line['line_id'] . ",
-			" . db_escape($line['stock_id']) . ",
-			" . db_escape($line['item_description']) . ",
-			" . db_escape($line['qty_requested']) . ",
-			" . db_escape($line['item_units']) . ",
-			" . db_escape($supplier_data['price']) . ",
-			" . (int)$supplier_data['supplier_id'] . ",
-			" . ($line['memo'] ? db_escape($line['memo']) : 'NULL') . ",
-			0,
-			0,
-			" . db_escape(in_array($material_request['status'], array('approved', 'ordered', 'fulfilled')) ? 'approved' : 'pending') . ",
-			" . db_escape_json(encode_purch_requisition_custom_data($line_custom_data)) . "
-		)";
-		db_query($sql, 'could not insert bridged purchase requisition line');
-	}
-
-	update_purch_requisition_total($requisition_id);
-
-	$hook_data = array(
-		'requisition_id' => (int)$requisition_id,
-		'material_request_id' => (int)$material_request_id,
-	);
-	hook_invoke_all('purch_requisition_from_mr', $hook_data);
-
-	return $requisition_id;
+	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_bridge_db.inc';
+	return write_purch_requisition_bridge($material_request_id);
 }
 
 /**

@@ -103,10 +103,10 @@ function get_purch_requisition_header_form_context()
 }
 
 if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine'])
-	|| find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0) {
+	|| isset($_POST['CreateFromMaterialRequest']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0) {
 	$header_context = get_post('header_context', '');
 	if (!is_string($header_context) || !hash_equals(get_purch_requisition_header_form_context(), $header_context)) {
-		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine']);
+		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest']);
 		foreach (array_keys($_POST) as $key)
 			if (preg_match('/^(?:UpdateLine|DeleteLine)/', $key)) unset($_POST[$key]);
 		display_error(_('The requisition form context has changed. Reload this page before saving.'));
@@ -120,15 +120,15 @@ if (isset($_GET['New']))
 	$selected_id = 0;
 
 if (isset($_POST['CreateFromMaterialRequest'])) {
-	$material_request_id = (int)get_post('material_request_id');
-	if ($material_request_id <= 0) {
+	$material_request_id = get_post('material_request_id');
+	if (!is_string($material_request_id) || !preg_match('/^[1-9][0-9]*$/D', $material_request_id)) {
 		display_error(_('Enter a valid material request ID to bridge.'));
 	} else {
 		$bridged_requisition_id = create_requisition_from_material_request($material_request_id);
 		if ($bridged_requisition_id) {
 			meta_forward($_SERVER['PHP_SELF'], 'requisition_id=' . $bridged_requisition_id . get_sel_app_param());
 		} else {
-			display_error(_('The selected material request could not be converted into a purchase requisition.'));
+			display_error(_('The material request could not be bridged. New bridges require an unlinked draft with valid, unfulfilled lines and permission for both modules.'));
 		}
 	}
 }
