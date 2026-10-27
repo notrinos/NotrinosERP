@@ -42,6 +42,23 @@ page(_($help_context = 'Material Requests'), false, false, '', $js);
 // HANDLE ACTIONS
 // =====================================================================
 
+/** Bind approval commands to the actor/company which rendered this native form. */
+function get_material_request_core_form_context()
+{
+	global $db_connections;
+	$user = $_SESSION['wa_current_user'];
+	return hash_hmac('sha256', serialize(array($user->user, $user->cur_con,
+		$db_connections[$user->cur_con])), ensure_csrf_token());
+}
+
+if (isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
+	$core_context = get_post('material_core_context', '');
+	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
+		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete']);
+		display_error(_('The material request form context has changed. Reload this page before submitting, cancelling or deleting.'));
+	}
+}
+
 $selected_id = get_post('selected_id', null);
 if ($selected_id === null || $selected_id === '')
 	$selected_id = isset($_GET['selected_id']) ? $_GET['selected_id'] : -1;
@@ -84,7 +101,7 @@ if (isset($_POST['Delete']) && $selected_id > 0) {
 		display_notification(_('Material request has been deleted.'));
 		$selected_id = -1;
 	} else {
-		display_error(_('Cannot delete this material request. Only Draft or Cancelled requests can be deleted.'));
+		display_error(_('Cannot delete this material request. Reviewed, linked or retained source evidence must be preserved.'));
 	}
 	$Ajax->activate('mr_list');
 	$Ajax->activate('mr_detail');
@@ -243,6 +260,7 @@ if ($is_new_request) {
 // =====================================================================
 
 start_form();
+hidden('material_core_context', get_material_request_core_form_context());
 
 // --- FILTERS ---
 start_table(TABLESTYLE_NOBORDER);

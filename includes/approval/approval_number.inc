@@ -55,11 +55,34 @@ function reserve_approval_trans_number($trans_type, $context = array())
 			|| strlen($row['reference']) > 60 || strpos($row['reference'], "\0") !== false) return false;
 		$native_reference = $row['reference'];
 	}
+	$material_number = null;
+	if (defined('ST_WH_MATERIAL_REQUEST') && (int)$trans_type === ST_WH_MATERIAL_REQUEST && isset($context['material_request_id'])) {
+		// Demand already owns a native number, even when its optional reference
+		// is blank. Approval must not depend on a second, absent refline setup.
+		$identity = $context['material_request_id'];
+		if ((!is_int($identity) && !is_string($identity)) || (int)$identity <= 0
+			|| (string)(int)$identity !== (string)$identity || empty($GLOBALS['transaction_level'])
+			|| !function_exists('format_material_request_no')) return false;
+		$result = db_query('SELECT request_no,reference FROM '.TB_PREF.'wh_material_requests WHERE request_id='.(int)$identity
+			." AND status='submitted' FOR UPDATE");
+		$row = $result ? db_fetch_assoc($result) : false;
+		if (!$row || (int)$row['request_no'] <= 0) return false;
+		$native_reference = $row['reference'] === null || $row['reference'] === '' ? format_material_request_no($row['request_no']) : $row['reference'];
+		if (!is_string($native_reference) || strlen($native_reference) > 60 || strpos($native_reference, "\0") !== false) return false;
+		$material_number = 0;
+		foreach (array('SELECT request_no FROM '.TB_PREF.'wh_material_requests ORDER BY request_no DESC LIMIT 1 FOR UPDATE',
+			'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST.' ORDER BY id DESC LIMIT 1 FOR UPDATE') as $sql) {
+			$result = db_query($sql); $last = $result ? db_fetch_row($result) : false;
+			if (!$result || ($last && (!is_numeric($last[0]) || (float)$last[0] < 0 || (float)$last[0] >= 2147483647))) return false;
+			if ($last) $material_number = max($material_number, (int)$last[0]);
+		}
+		$material_number++;
+	}
 
 	// PO native keys auto-increment independently of retained approval numbers.
 	// A caller's consistent snapshot must not reserve an already committed key.
-	$next_no = (int)$trans_type === ST_PURCHORDER
-		? get_next_purchase_order_approval_number() : get_next_trans_no($trans_type);
+	$next_no = $material_number !== null ? $material_number : ((int)$trans_type === ST_PURCHORDER
+		? get_next_purchase_order_approval_number() : get_next_trans_no($trans_type));
 	if (!$next_no)
 		return false;
 

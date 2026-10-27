@@ -12,6 +12,7 @@
 
 include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_requests_db.inc');
+include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_core_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfers_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_scrap_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_counting_db.inc');
@@ -39,6 +40,9 @@ ApprovalWorkflow::registerTransactionType(ST_LOCTRANSFER, array(
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_WH_MATERIAL_REQUEST, array(
+	'independent_approval' => true,
+	'action_validator' => 'validate_material_core_action',
+	'action_completion_validator' => 'verify_material_core_completion',
 	'label'          => _('Material Request'),
 	'application'    => 'stock',
 	'executor'       => 'execute_approved_material_request',
@@ -169,14 +173,7 @@ function execute_approved_inventory_transfer($draft_data, $reserved_trans_no, $d
  */
 function execute_approved_material_request($draft_data, $reserved_trans_no, $draft_id)
 {
-	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
-	if ($request_id <= 0)
-		return false;
-
-	if (!approve_material_request($request_id))
-		return false;
-
-	return $request_id;
+	return execute_material_core_transition('approve', $draft_data, $draft_id);
 }
 
 /**
@@ -189,11 +186,7 @@ function execute_approved_material_request($draft_data, $reserved_trans_no, $dra
  */
 function reject_material_request_draft($draft_data, $draft_id, $comments)
 {
-	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
-	if ($request_id <= 0)
-		return false;
-
-	return reject_material_request($request_id);
+	return execute_material_core_transition('reject', $draft_data, $draft_id) !== false;
 }
 
 /**
@@ -206,11 +199,7 @@ function reject_material_request_draft($draft_data, $draft_id, $comments)
  */
 function cancel_material_request_draft($draft_data, $draft_id, $comments)
 {
-	$request_id = isset($draft_data['request_id']) ? (int)$draft_data['request_id'] : 0;
-	if ($request_id <= 0)
-		return false;
-
-	return cancel_material_request($request_id);
+	return execute_material_core_transition('cancel', $draft_data, $draft_id) !== false;
 }
 
 /**

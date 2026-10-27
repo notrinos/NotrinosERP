@@ -249,19 +249,8 @@ function can_delete_material_request($request_id) {
  * @return bool Success
  */
 function delete_material_request($request_id) {
-	if (!can_delete_material_request($request_id))
-		return false;
-
-	begin_transaction();
-
-	$sql = "DELETE FROM " . TB_PREF . "wh_material_request_lines WHERE request_id = " . (int)$request_id;
-	db_query($sql, 'could not delete material request lines');
-
-	$sql = "DELETE FROM " . TB_PREF . "wh_material_requests WHERE request_id = " . (int)$request_id;
-	db_query($sql, 'could not delete material request');
-
-	commit_transaction();
-	return true;
+	require_once __DIR__.'/warehouse_material_core_db.inc';
+	return delete_standalone_material_core($request_id);
 }
 
 // =====================================================================
@@ -410,22 +399,7 @@ function get_pending_material_request_approval_draft($request_id)
  * @return bool Success
  */
 function submit_material_request($request_id) {
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'draft')
-		return false;
-
-	// Must have at least one line
-	if (count_material_request_lines($request_id) == 0)
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "status = 'submitted',"
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'draft'";
-
-	db_query($sql, 'could not submit material request');
-	return db_num_affected_rows() > 0;
+	return submit_material_request_for_core_approval($request_id) !== false;
 }
 
 /**
@@ -451,7 +425,7 @@ function get_material_request_submission_data($request_id) {
 			'qty_fulfilled' => (float)$line['qty_fulfilled'],
 			'unit_cost' => isset($line['material_cost']) ? (float)$line['material_cost'] : 0,
 			'required_date' => $line['required_date'] ? $line['required_date'] : '',
-			'memo' => $line['memo'] ? $line['memo'] : '',
+			'memo' => $line['memo'] === null ? '' : $line['memo'],
 		);
 	}
 
@@ -472,8 +446,8 @@ function get_material_request_submission_data($request_id) {
 		'requested_by_name' => isset($mr['requested_by_name']) ? $mr['requested_by_name'] : '',
 		'request_date' => $mr['request_date'],
 		'required_date' => $mr['required_date'] ? $mr['required_date'] : '',
-		'reference' => $mr['reference'] ? $mr['reference'] : '',
-		'memo' => $mr['memo'] ? $mr['memo'] : '',
+		'reference' => $mr['reference'] === null ? '' : $mr['reference'],
+		'memo' => $mr['memo'] === null ? '' : $mr['memo'],
 		'total_estimated' => (float)get_material_request_total_value($request_id),
 		'line_count' => count($lines_data),
 		'lines' => $lines_data,
@@ -487,61 +461,8 @@ function get_material_request_submission_data($request_id) {
  * @return array|bool
  */
 function submit_material_request_for_core_approval($request_id) {
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'draft')
-		return false;
-
-	if (count_material_request_lines($request_id) == 0)
-		return false;
-
-	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_MATERIAL_REQUEST);
-	$approval_amount = (float)get_material_request_total_value($request_id);
-	$approval_required = false;
-	$approval = null;
-
-	if ($approval_registered) {
-		$approval = get_approval_workflow_service();
-		$approval_required = $approval->isApprovalRequired(ST_WH_MATERIAL_REQUEST, $approval_amount);
-	}
-
-	if (!submit_material_request($request_id))
-		return false;
-
-	if (!$approval_registered || !$approval_required) {
-		if (!approve_material_request($request_id))
-			return false;
-
-		return array('status' => 'auto_approved', 'request_id' => (int)$request_id);
-	}
-
-	$reloaded = get_material_request($request_id);
-	$draft_data = get_material_request_submission_data($request_id);
-	if ($draft_data === false)
-		return false;
-
-	$result = $approval->submit(
-		ST_WH_MATERIAL_REQUEST,
-		$draft_data,
-		$approval_amount,
-		array(
-			'summary' => sprintf(_('Material Request %s'), format_material_request_no($reloaded['request_no'])),
-			'currency' => get_company_pref('curr_default'),
-			'person_type' => PT_MISC,
-			'person_id' => $reloaded['requested_by'],
-			'loc_code' => $reloaded['warehouse_loc_code'],
-		)
-	);
-
-	if (isset($result['status']) && $result['status'] === 'execution_failed') {
-		$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-			. "status = 'draft',"
-			. "updated_at = NOW()"
-			. " WHERE request_id = " . (int)$request_id
-			. " AND status = 'submitted'";
-		db_query($sql, 'could not rollback material request to draft after approval execution failure');
-	}
-
-	return $result;
+	require_once __DIR__.'/warehouse_material_core_db.inc';
+	return submit_standalone_material_to_core($request_id);
 }
 
 /**
@@ -552,19 +473,8 @@ function submit_material_request_for_core_approval($request_id) {
  * @return bool Success
  */
 function approve_material_request($request_id) {
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'submitted')
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "status = 'approved',"
-		. "approved_by = " . (int)$_SESSION['wa_current_user']->user . ","
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'submitted'";
-
-	db_query($sql, 'could not approve material request');
-	return db_num_affected_rows() > 0;
+	// Only the registered core executor owns final approval.
+	return false;
 }
 
 /**
@@ -575,18 +485,8 @@ function approve_material_request($request_id) {
  * @return bool Success
  */
 function reject_material_request($request_id) {
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'submitted')
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "status = 'draft',"
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'submitted'";
-
-	db_query($sql, 'could not reject material request');
-	return db_num_affected_rows() > 0;
+	// Only the registered core rejector owns reviewed-source rejection.
+	return false;
 }
 
 /**
@@ -597,17 +497,15 @@ function reject_material_request($request_id) {
  * @return bool Success
  */
 function cancel_material_request($request_id, $comments = '') {
+	require_once __DIR__.'/warehouse_material_core_db.inc';
+	if (!material_core_context()) return false;
 	$mr = get_material_request($request_id);
 	if (!$mr || !in_array($mr['status'], array('draft', 'submitted', 'approved')))
 		return false;
 
 	if ($mr['status'] === 'submitted') {
-		$pending_draft = get_pending_material_request_approval_draft($request_id);
-		if ($pending_draft && function_exists('get_approval_workflow_service')) {
-			$approval = get_approval_workflow_service();
-			$result = $approval->cancel((int)$pending_draft['id'], $comments);
-			return (is_array($result) && isset($result['status']) && $result['status'] !== 'error');
-		}
+		require_once __DIR__.'/warehouse_material_core_db.inc';
+		return cancel_standalone_material_core($request_id, $comments);
 	}
 
 	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
