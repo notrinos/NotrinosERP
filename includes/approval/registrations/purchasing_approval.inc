@@ -46,6 +46,7 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHREQUISITION, array(
 	'rejector'       => 'reject_purchase_requisition_draft',
 	'canceler'       => 'cancel_purchase_requisition_draft',
 	'action_validator' => 'validate_purchase_requisition_reopen_action',
+	'action_completion_validator' => 'verify_purchase_requisition_core_completion',
 	'amount_getter'  => 'get_purchase_requisition_draft_amount',
 	'draft_renderer' => 'render_purchase_requisition_draft',
 	'edit_url'       => 'purchasing/purch_requisition_entry.php',

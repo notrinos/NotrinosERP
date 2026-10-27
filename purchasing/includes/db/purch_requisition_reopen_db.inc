@@ -199,8 +199,102 @@ function verify_purch_requisition_reopen($snapshot, $context)
         && purch_requisition_reopen_context() === $context;
 }
 
-/** Guard core cancellation and rejection; remaining actions keep their current registration behavior. */
+/** Capture immutable native/history custody only after existing core admission succeeds. */
 function validate_purchase_requisition_reopen_action($action, $data, $draft, $actor, $comments = '')
+{
+    if (!in_array($action, array('approve','reject','cancel'), true))
+        return validate_purchase_requisition_native_action($action, $data, $draft, $actor, $comments);
+    purch_requisition_completion_permit('clear');
+    if (!validate_purchase_requisition_native_action($action, $data, $draft, $actor, $comments)) return false;
+    $identity = (int)$data['requisition_id'];
+    $snapshot = purch_requisition_reopen_source($identity, 'submitted', $data);
+    if (!$snapshot) return false;
+    $drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['material']['request_id'], get_approval_workflow_service());
+    $history = $drafts ? purch_requisition_reopen_history($drafts) : false;
+    $encoded = db_query('SELECT '.db_escape($comments, true).', '.db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+    $encoded = $encoded ? db_fetch_row($encoded) : false;
+    $context = purch_requisition_reopen_context();
+    if (!$history || !$encoded || $context === false
+        || (int)$_SESSION['wa_current_user']->access !== (int)$actor['role_id']
+        || !register_transaction_resource_release('purchase-requisition-completion', 'release_purch_requisition_completion_permit')) return false;
+    return purch_requisition_completion_permit('set', array('action'=>$action, 'draft'=>$draft,
+        'actor'=>$actor, 'comments'=>$comments, 'context'=>$context,
+        'data'=>$data, 'snapshot'=>$snapshot, 'history'=>$history, 'encoded'=>$encoded));
+}
+
+/** One-use completion custody cannot survive a core action or transaction boundary. */
+function purch_requisition_completion_permit($operation, $value = null)
+{
+    static $permit = null;
+    if ($operation === 'set') { $permit = $value; return true; }
+    $saved = $permit;
+    $permit = null;
+    return $operation === 'take' ? $saved : true;
+}
+
+/** Discard unused multilevel or rejected validation on rollback and outer completion. */
+function release_purch_requisition_completion_permit()
+{
+    return purch_requisition_completion_permit('clear');
+}
+
+/**
+ * Reconcile the direct shared-core action after reservation/notification writes.
+ * Only the declared transition and one attributable checker/maker action may differ.
+ * All earlier drafts/actions and the raw stored envelope remain byte-exact.
+ */
+function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $comments)
+{
+    $permit = purch_requisition_completion_permit('take');
+    $context = purch_requisition_reopen_context();
+    if (!$permit || $context === false || empty($GLOBALS['transaction_level']) || $permit['draft'] !== $draft
+        || $permit['actor'] !== $actor || $permit['comments'] !== $comments
+        || purch_requisition_reopen_context() !== $permit['context']
+        || (int)$_SESSION['wa_current_user']->user !== (int)$actor['user_id']
+        || (int)$_SESSION['wa_current_user']->access !== (int)$actor['role_id']) return false;
+    $snapshot = $permit['snapshot'];
+    $identity = (int)$snapshot['header']['id'];
+    $drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['material']['request_id'], get_approval_workflow_service());
+    $current = $drafts ? purch_requisition_reopen_history($drafts) : false;
+    $history = $permit['history'];
+    if (!$current || count($current['drafts']) !== count($history['drafts'])
+        || count($current['actions']) !== count($history['actions']) + 1) return false;
+    $last = count($history['drafts']) - 1;
+    if ((int)$history['drafts'][$last]['id'] !== (int)$draft['id']) return false;
+    $row = $current['drafts'][$last];
+    $allowed = array();
+    if (($outcome === 'cancelled' && $permit['action'] === 'cancel')
+        || ($outcome === 'rejected' && $permit['action'] === 'reject')
+        || ($outcome === 'approved' && $permit['action'] === 'approve')) {
+        $status = $outcome === 'cancelled' ? APPROVAL_STATUS_CANCELLED
+            : ($outcome === 'rejected' ? APPROVAL_STATUS_REJECTED : APPROVAL_STATUS_APPROVED);
+        if ((int)$row['status'] !== $status || empty($row['completed_date'])) return false;
+        $allowed = array('status','completed_date');
+        if ($outcome === 'approved') {
+            if ((int)$row['approved_trans_no'] !== $identity) return false;
+            $allowed[] = 'approved_trans_no';
+            if (!verify_purch_requisition_approval($snapshot, $permit['context'], (int)$actor['user_id'])) return false;
+        } elseif ($outcome === 'rejected') {
+            if (!verify_purch_requisition_rejection($snapshot, $permit['context'], (int)$actor['user_id'], $comments)) return false;
+        } elseif (!verify_purch_requisition_reopen($snapshot, $permit['context'])) return false;
+    } elseif ($permit['action'] === 'approve' && in_array($outcome, array('pending_next_level','pending_more_approvers'), true)) {
+        if ($outcome === 'pending_next_level') {
+            if ((int)$row['current_level'] !== (int)$draft['current_level'] + 1) return false;
+            $allowed[] = 'current_level';
+        }
+        if (purch_requisition_reopen_source($identity, 'submitted', $permit['data']) !== $snapshot) return false;
+    } else return false;
+    foreach ($allowed as $field) $current['drafts'][$last][$field] = $history['drafts'][$last][$field];
+    $added = array_pop($current['actions']);
+    return $current === $history && (int)$added['draft_id'] === (int)$draft['id']
+        && $added['action_type'] === $permit['action'] && (int)$added['user_id'] === (int)$actor['user_id']
+        && (int)$added['level'] === (int)$draft['current_level'] && !empty($added['action_date'])
+        && $added['comments'] === $permit['encoded'][0] && $added['ip_address'] === $permit['encoded'][1]
+        && $added['draft_data_snapshot'] === null && purch_requisition_reopen_context() === $permit['context'];
+}
+
+/** Guard core cancellation and rejection; remaining actions keep their current registration behavior. */
+function validate_purchase_requisition_native_action($action, $data, $draft, $actor, $comments = '')
 {
     if (in_array($action, array('submit','approve','auto_approve'), true)) {
         require_once __DIR__.'/purch_requisition_submit_db.inc';

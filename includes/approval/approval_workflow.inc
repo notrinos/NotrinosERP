@@ -72,6 +72,7 @@ class ApprovalWorkflow {
 	 *   'edit_url'       => string   URL for editing the draft
 	 *   'number_context' => array    Context for reference number generation (optional)
 	 *   'action_validator' => callable Optional source validation before actions/automatic approval
+	 *   'action_completion_validator' => callable Optional final approve/reject/cancel verification
 	 *   'submitted'      => callable Optional atomic business custody after draft submission
 	 *   'independent_approval' => bool Require a checker; disallow direct/self/automatic approval
 	 * @return void
@@ -89,6 +90,7 @@ class ApprovalWorkflow {
 			'edit_url'       => '',
 			'number_context' => array(),
 			'action_validator' => null,
+			'action_completion_validator' => null,
 			'independent_approval' => false,
 			'submitted'      => null,
 		);
@@ -494,6 +496,11 @@ class ApprovalWorkflow {
 				// Mark all notifications as read
 				mark_all_draft_notifications_read($draft_id);
 
+				if (!$this->validateRegisteredCompletion('approved', $draft, $comments)) {
+					cancel_transaction();
+					return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+				}
+
 				commit_transaction();
 
 				return array(
@@ -538,6 +545,11 @@ class ApprovalWorkflow {
 					$posted_draft = get_approval_draft($draft_id);
 					mark_all_draft_notifications_read($draft_id);
 
+					if (!$this->validateRegisteredCompletion('approved', $draft, $comments)) {
+						cancel_transaction();
+						return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+					}
+
 					commit_transaction();
 
 					return array(
@@ -556,6 +568,11 @@ class ApprovalWorkflow {
 					$draft['loc_code']
 				);
 
+				if (!$this->validateRegisteredCompletion('pending_next_level', $draft, $comments)) {
+					cancel_transaction();
+					return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+				}
+
 				commit_transaction();
 
 				return array(
@@ -567,6 +584,11 @@ class ApprovalWorkflow {
 		}
 
 		// Not enough approvals at this level yet (parallel approval scenario)
+		if (!$this->validateRegisteredCompletion('pending_more_approvers', $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+		}
+
 		commit_transaction();
 
 		return array(
@@ -660,6 +682,11 @@ class ApprovalWorkflow {
 		// Mark all notifications read
 		mark_all_draft_notifications_read($draft_id);
 
+		if (!$this->validateRegisteredCompletion('rejected', $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+		}
+
 		commit_transaction();
 
 		return array('status' => 'rejected', 'message' => _('Draft has been rejected.'));
@@ -725,6 +752,11 @@ class ApprovalWorkflow {
 
 		void_reserved_trans_number($draft['trans_type'], $draft['reserved_trans_no'], 'Cancelled');
 		mark_all_draft_notifications_read($draft_id);
+
+		if (!$this->validateRegisteredCompletion('cancelled', $draft, $comments)) {
+			cancel_transaction();
+			return array('status'=>'error', 'trans_no'=>null, 'message'=>_('The completed business action could not be verified. No changes were committed.'));
+		}
 
 		commit_transaction();
 
@@ -1212,6 +1244,19 @@ class ApprovalWorkflow {
 			$comments
 		);
 	}
+
+    /** Verify opted-in actions after all core writes, before relinquishing SQL ownership. */
+    private function validateRegisteredCompletion($outcome, $draft, $comments)
+    {
+        $config = self::getTypeConfig((int)$draft['trans_type']);
+        if (!$config || empty($config['action_completion_validator'])) return true;
+        if (!is_callable($config['action_completion_validator'])) return false;
+        try {
+            return call_user_func($config['action_completion_validator'], $outcome, $draft,
+                array('user_id'=>$this->user_id, 'role_id'=>$this->role_id), $comments) === true;
+        } catch (Exception $exception) { return false;
+        } catch (Throwable $exception) { return false; }
+    }
 
     /** Validate only opted-in transaction types using the real service identity and decoded data. */
     private function validateRegisteredAction($action, $trans_type, $data, $draft=null, $comments='')

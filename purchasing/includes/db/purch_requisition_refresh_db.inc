@@ -76,12 +76,19 @@ function refresh_purch_requisition_approval($requisition_id, $expected_draft_id)
         if ($current) $current['material']['updated_at'] = $snapshot['material']['updated_at'];
         if ($preserved !== $old || $current !== $snapshot) { cancel_transaction(); return false; }
         $comment = 'Purchase requisition approval refresh: draft #'.$expected.' to #'.(int)$result['draft_id'];
+        $drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['material']['request_id'], $approval);
+        $chain = $drafts ? purch_requisition_reopen_history($drafts) : false;
+        $audit = db_query('SELECT '.db_escape($comment, true).', '.db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '').', NOW()');
+        $audit = $audit ? db_fetch_row($audit) : false;
+        if (!$chain || !$audit) { cancel_transaction(); return false; }
         foreach (array($expected, (int)$result['draft_id']) as $draft_id) {
             $action = add_approval_action($draft_id, 'resubmit', null, 0, $comment);
             $rows = $action ? purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'approval_actions WHERE id='.(int)$action.' FOR UPDATE') : false;
-            if (!$rows || (int)$rows[0]['draft_id'] !== $draft_id || $rows[0]['action_type'] !== 'resubmit'
-                || (int)$rows[0]['user_id'] !== (int)$_SESSION['wa_current_user']->user
-                || $rows[0]['comments'] !== $comment) { cancel_transaction(); return false; }
+            $finished = db_query('SELECT NOW()');
+            $finished = $finished ? db_fetch_row($finished) : false;
+            if (!$rows || !$finished || !purch_requisition_new_action_matches($rows[0], $draft_id, 'resubmit',
+                $_SESSION['wa_current_user']->user, $audit[0], $audit[1], $audit[2], $finished[0])) { cancel_transaction(); return false; }
+            $chain['actions'][] = $rows[0];
         }
         // Audit triggers cannot change the source, payload or company after review.
         $after = purch_requisition_reopen_source($identity, 'submitted', $data);
@@ -93,6 +100,8 @@ function refresh_purch_requisition_approval($requisition_id, $expected_draft_id)
         if ($after !== $snapshot || purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'approval_drafts WHERE id='.$expected.' FOR UPDATE') !== array($previous)
             || get_approval_draft_for_update($result['draft_id']) !== $successor
             || purch_requisition_reopen_context() !== $context || (int)$_SESSION['wa_current_user']->access !== $role
+            || ($drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['material']['request_id'], $approval)) === false
+            || purch_requisition_reopen_history($drafts) !== $chain
             || !commit_transaction()) { cancel_transaction(); return false; }
         return $result;
     } catch (Exception $exception) { cancel_transaction(); return false;

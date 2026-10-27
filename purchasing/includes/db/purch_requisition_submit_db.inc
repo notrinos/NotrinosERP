@@ -47,6 +47,17 @@ function validate_purchase_requisition_submit_action($data, $actor)
         && purch_requisition_reopen_source((int)$data['requisition_id'], 'submitted', $data) === $permit['snapshot'];
 }
 
+/** Require a newly appended maker audit to match its command and DB time window. */
+function purch_requisition_new_action_matches($row, $draft_id, $type, $actor, $comments, $ip, $started, $finished)
+{
+    return is_array($row) && (int)$row['id'] > 0 && (int)$row['draft_id'] === (int)$draft_id
+        && $row['action_type'] === $type && (int)$row['user_id'] === (int)$actor
+        && (int)$row['level'] === 0 && $row['comments'] === $comments
+        && $row['ip_address'] === $ip && $row['draft_data_snapshot'] === null
+        && is_string($row['action_date']) && strcmp($row['action_date'], $started) >= 0
+        && strcmp($row['action_date'], $finished) <= 0;
+}
+
 /** Commit source, core intent, history, reservation and notifications together. */
 function submit_purch_requisition_to_core($requisition_id)
 {
@@ -63,6 +74,8 @@ function submit_purch_requisition_to_core($requisition_id)
         if ($drafts === false) { cancel_transaction(); return false; }
         foreach ($drafts as $draft)
             if (!in_array((int)$draft['status'], array(APPROVAL_STATUS_REJECTED, APPROVAL_STATUS_CANCELLED), true)) { cancel_transaction(); return false; }
+        $history = $drafts ? purch_requisition_reopen_history($drafts) : array('drafts'=>array(), 'actions'=>array());
+        if (!$history) { cancel_transaction(); return false; }
         $headers = purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'purch_requisitions WHERE id='.$identity.' FOR UPDATE');
         // Rejected sources must first use the existing attributable core reopen.
         if (!$headers || $headers[0]['status'] !== 'draft') { cancel_transaction(); return false; }
@@ -99,6 +112,12 @@ function submit_purch_requisition_to_core($requisition_id)
         $expected['material']['updated_at'] = $submitted['material']['updated_at'];
         if ($submitted !== $expected) { cancel_transaction(); return false; }
         $data = purch_requisition_locked_submission_data($submitted);
+        // Match the core's existing SQL numeric-string boundary on both runtimes;
+        // source DOUBLE totals may contain more digits than PHP's SQL conversion.
+        $audit = db_query('SELECT '.db_escape('', true).', '.db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '')
+            .', NOW(), '.db_escape((float)$submitted['header']['total_estimated']));
+        $audit = $audit ? db_fetch_row($audit) : false;
+        if (!$audit) { cancel_transaction(); return false; }
         if (!register_transaction_resource_release('purchase-requisition-submit', 'release_purch_requisition_submit_permit')) { cancel_transaction(); return false; }
         purch_requisition_submit_permit('set', array('context'=>$context,'role'=>$role,'data'=>$data,'snapshot'=>$submitted));
         $result = $approval->submit(ST_PURCHREQUISITION, $data, (float)$submitted['header']['total_estimated'], array(
@@ -110,12 +129,31 @@ function submit_purch_requisition_to_core($requisition_id)
         $draft = get_approval_draft_for_update($result['draft_id']);
         if (!$draft || (int)$draft['status'] !== APPROVAL_STATUS_PENDING
             || (int)$draft['submitted_by'] !== (int)$_SESSION['wa_current_user']->user
+            || (int)$draft['workflow_id'] !== (int)$workflow['id']
+            || (int)$draft['workflow_version'] !== (int)$workflow['version']
+            || (int)$draft['current_level'] !== 1 || $draft['completed_date'] !== null
+            || $draft['approved_trans_no'] !== null
+            || (float)$draft['amount'] !== (float)$audit[3]
             || $approval->decodeStoredDraftData($draft['draft_data']) !== json_decode(json_encode($data), true)) { cancel_transaction(); return false; }
+        $current_drafts = purch_requisition_reopen_drafts($identity, $source, $approval);
+        $current = $current_drafts ? purch_requisition_reopen_history($current_drafts) : false;
+        $finished = db_query('SELECT NOW()');
+        $finished = $finished ? db_fetch_row($finished) : false;
+        if (!$current || !$finished || count($current['drafts']) !== count($history['drafts']) + 1
+            || count($current['actions']) !== count($history['actions']) + 1) { cancel_transaction(); return false; }
+        $retained = $current;
+        $new_draft = array_pop($retained['drafts']);
+        $new_action = array_pop($retained['actions']);
+        if ($retained !== $history || $new_draft !== array_intersect_key($draft, $new_draft)
+            || !purch_requisition_new_action_matches($new_action, $result['draft_id'], 'submit',
+                $_SESSION['wa_current_user']->user, $audit[0], $audit[1], $audit[2], $finished[0])) { cancel_transaction(); return false; }
         $hook_identity = $identity;
         hook_invoke_all('purch_requisition_submitted', $hook_identity);
         if (purch_requisition_reopen_context() !== $context || (int)$_SESSION['wa_current_user']->access !== $role
             || purch_requisition_reopen_source($identity, 'submitted', $data) !== $submitted
             || get_approval_draft_for_update($result['draft_id']) !== $draft
+            || ($current_drafts = purch_requisition_reopen_drafts($identity, $source, $approval)) === false
+            || purch_requisition_reopen_history($current_drafts) !== $current
             || !commit_transaction()) { cancel_transaction(); return false; }
         return $result;
     } catch (Exception $exception) { cancel_transaction(); return false;
