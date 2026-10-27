@@ -77,31 +77,45 @@ function purch_requisition_reopen_history($drafts)
     return $actions === false ? false : array('drafts'=>$rows, 'actions'=>$actions);
 }
 
+/** Require a newly appended audit to match its command and DB time window. */
+function purch_requisition_new_action_matches($row, $draft_id, $type, $actor, $comments, $ip, $started, $finished, $level = 0)
+{
+    return is_array($row) && (int)$row['id'] > 0 && (int)$row['draft_id'] === (int)$draft_id
+        && $row['action_type'] === $type && (int)$row['user_id'] === (int)$actor
+        && (int)$row['level'] === (int)$level && $row['comments'] === $comments
+        && $row['ip_address'] === $ip && $row['draft_data_snapshot'] === null
+        && is_string($row['action_date']) && strcmp($row['action_date'], $started) >= 0
+        && strcmp($row['action_date'], $finished) <= 0;
+}
+
 /**
  * Recovery appends exactly one attributable action. Earlier decisions and raw
  * payloads stay exact; only core cancellation owns terminal status/date changes.
  */
-function verify_purch_requisition_reopen_history($history, $identity, $source, $approval, $action, $comments)
+function verify_purch_requisition_reopen_history($history, $identity, $source, $approval, $action, $audit)
 {
     $drafts = purch_requisition_reopen_drafts($identity, $source, $approval);
     $current = $drafts ? purch_requisition_reopen_history($drafts) : false;
     if (!$history || !$current || count($current['drafts']) !== count($history['drafts'])
         || count($current['actions']) !== count($history['actions']) + 1) return false;
+    $finished = db_query('SELECT NOW()');
+    $finished = $finished ? db_fetch_row($finished) : false;
+    if (!$finished) return false;
     $last = count($history['drafts']) - 1;
     $latest = $history['drafts'][$last];
     if ($action === 'cancel') {
         if ((int)$current['drafts'][$last]['status'] !== APPROVAL_STATUS_CANCELLED
-            || empty($current['drafts'][$last]['completed_date'])) return false;
+            || !is_string($current['drafts'][$last]['completed_date'])
+            || strcmp($current['drafts'][$last]['completed_date'], $audit[2]) < 0
+            || strcmp($current['drafts'][$last]['completed_date'], $finished[0]) > 0) return false;
         foreach (array('status','completed_date') as $field)
             $current['drafts'][$last][$field] = $latest[$field];
     } elseif ($action !== 'reopen') return false;
     $added = array_pop($current['actions']);
     return $current === $history
-        && (int)$added['draft_id'] === (int)$latest['id']
-        && $added['action_type'] === $action
-        && (int)$added['user_id'] === (int)$_SESSION['wa_current_user']->user
-        && (int)$added['level'] === ($action === 'cancel' ? (int)$latest['current_level'] : 0)
-        && !empty($added['action_date']) && $added['comments'] === $comments;
+        && purch_requisition_new_action_matches($added, $latest['id'], $action,
+            $_SESSION['wa_current_user']->user, $audit[0], $audit[1], $audit[2], $finished[0],
+            $action === 'cancel' ? $latest['current_level'] : 0);
 }
 
 /**
@@ -211,7 +225,7 @@ function validate_purchase_requisition_reopen_action($action, $data, $draft, $ac
     if (!$snapshot) return false;
     $drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['material']['request_id'], get_approval_workflow_service());
     $history = $drafts ? purch_requisition_reopen_history($drafts) : false;
-    $encoded = db_query('SELECT '.db_escape($comments, true).', '.db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+    $encoded = db_query('SELECT '.db_escape($comments, true).', '.db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '').', NOW()');
     $encoded = $encoded ? db_fetch_row($encoded) : false;
     $context = purch_requisition_reopen_context();
     if (!$history || !$encoded || $context === false
@@ -261,6 +275,9 @@ function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $
         || count($current['actions']) !== count($history['actions']) + 1) return false;
     $last = count($history['drafts']) - 1;
     if ((int)$history['drafts'][$last]['id'] !== (int)$draft['id']) return false;
+    $finished = db_query('SELECT NOW()');
+    $finished = $finished ? db_fetch_row($finished) : false;
+    if (!$finished) return false;
     $row = $current['drafts'][$last];
     $allowed = array();
     if (($outcome === 'cancelled' && $permit['action'] === 'cancel')
@@ -268,7 +285,9 @@ function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $
         || ($outcome === 'approved' && $permit['action'] === 'approve')) {
         $status = $outcome === 'cancelled' ? APPROVAL_STATUS_CANCELLED
             : ($outcome === 'rejected' ? APPROVAL_STATUS_REJECTED : APPROVAL_STATUS_APPROVED);
-        if ((int)$row['status'] !== $status || empty($row['completed_date'])) return false;
+        if ((int)$row['status'] !== $status || !is_string($row['completed_date'])
+            || strcmp($row['completed_date'], $permit['encoded'][2]) < 0
+            || strcmp($row['completed_date'], $finished[0]) > 0) return false;
         $allowed = array('status','completed_date');
         if ($outcome === 'approved') {
             if ((int)$row['approved_trans_no'] !== $identity) return false;
@@ -286,11 +305,10 @@ function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $
     } else return false;
     foreach ($allowed as $field) $current['drafts'][$last][$field] = $history['drafts'][$last][$field];
     $added = array_pop($current['actions']);
-    return $current === $history && (int)$added['draft_id'] === (int)$draft['id']
-        && $added['action_type'] === $permit['action'] && (int)$added['user_id'] === (int)$actor['user_id']
-        && (int)$added['level'] === (int)$draft['current_level'] && !empty($added['action_date'])
-        && $added['comments'] === $permit['encoded'][0] && $added['ip_address'] === $permit['encoded'][1]
-        && $added['draft_data_snapshot'] === null && purch_requisition_reopen_context() === $permit['context'];
+    return $current === $history
+        && purch_requisition_new_action_matches($added, $draft['id'], $permit['action'], $actor['user_id'],
+            $permit['encoded'][0], $permit['encoded'][1], $permit['encoded'][2], $finished[0], $draft['current_level'])
+        && purch_requisition_reopen_context() === $permit['context'];
 }
 
 /** Guard core cancellation and rejection; remaining actions keep their current registration behavior. */
@@ -362,14 +380,19 @@ function reopen_purch_requisition_from_core($requisition_id)
         if ((int)$latest['submitted_by'] !== (int)$_SESSION['wa_current_user']->user) { cancel_transaction(); return false; }
         $history = purch_requisition_reopen_history($drafts);
         if (!$history) { cancel_transaction(); return false; }
+        $comments = (int)$latest['status'] === APPROVAL_STATUS_PENDING
+            ? _('Reopened purchase requisition') : _('Reopened rejected purchase requisition');
+        $audit = db_query('SELECT '.db_escape($comments, true).', '
+            .db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '').', NOW()');
+        $audit = $audit ? db_fetch_row($audit) : false;
+        if (!$audit) { cancel_transaction(); return false; }
         if ((int)$latest['status'] === APPROVAL_STATUS_PENDING) {
             $snapshot = purch_requisition_reopen_source($identity, 'submitted', $latest['decoded']);
             if (!$snapshot) { cancel_transaction(); return false; }
-            $comments = _('Reopened purchase requisition');
             $result = $approval->cancel((int)$latest['id'], $comments);
             if (!is_array($result) || !isset($result['status']) || $result['status'] !== 'cancelled'
                 || !verify_purch_requisition_reopen($snapshot, $context)
-                || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'cancel', $comments)
+                || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'cancel', $audit)
                 || purch_requisition_reopen_context() !== $context || (int)$_SESSION['wa_current_user']->access !== $role
                 || !commit_transaction()) { cancel_transaction(); return false; }
             return true;
@@ -379,13 +402,12 @@ function reopen_purch_requisition_from_core($requisition_id)
         $snapshot = purch_requisition_reopen_source($identity, 'rejected', $latest['decoded']);
         if (!$snapshot || purch_requisition_reopen_drafts($identity, (int)$snapshot['header']['material_request_id'], $approval) === false
             || !write_purch_requisition_reopen($snapshot, $context)) { cancel_transaction(); return false; }
-        $comments = _('Reopened rejected purchase requisition');
         $action = add_approval_action((int)$latest['id'], 'reopen', null, 0, $comments);
         $actions = $action ? purch_requisition_reopen_rows('SELECT * FROM '.TB_PREF.'approval_actions WHERE id='.(int)$action.' FOR UPDATE') : false;
         if (!$actions || (int)$actions[0]['draft_id'] !== (int)$latest['id'] || $actions[0]['action_type'] !== 'reopen'
             || (int)$actions[0]['user_id'] !== (int)$_SESSION['wa_current_user']->user
             || !verify_purch_requisition_reopen($snapshot, $context)
-            || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'reopen', $comments)
+            || !verify_purch_requisition_reopen_history($history, $identity, (int)$snapshot['material']['request_id'], $approval, 'reopen', $audit)
             || (int)$_SESSION['wa_current_user']->access !== $role || !commit_transaction()) { cancel_transaction(); return false; }
         return true;
     } catch (Exception $exception) { cancel_transaction(); return false;

@@ -47,17 +47,6 @@ function validate_purchase_requisition_submit_action($data, $actor)
         && purch_requisition_reopen_source((int)$data['requisition_id'], 'submitted', $data) === $permit['snapshot'];
 }
 
-/** Require a newly appended maker audit to match its command and DB time window. */
-function purch_requisition_new_action_matches($row, $draft_id, $type, $actor, $comments, $ip, $started, $finished)
-{
-    return is_array($row) && (int)$row['id'] > 0 && (int)$row['draft_id'] === (int)$draft_id
-        && $row['action_type'] === $type && (int)$row['user_id'] === (int)$actor
-        && (int)$row['level'] === 0 && $row['comments'] === $comments
-        && $row['ip_address'] === $ip && $row['draft_data_snapshot'] === null
-        && is_string($row['action_date']) && strcmp($row['action_date'], $started) >= 0
-        && strcmp($row['action_date'], $finished) <= 0;
-}
-
 /** Commit source, core intent, history, reservation and notifications together. */
 function submit_purch_requisition_to_core($requisition_id)
 {
