@@ -24,9 +24,26 @@ function purch_requisition_reopen_permit($operation, $value = null)
 {
     static $permit = null;
     if ($operation === 'set') { $permit = $value; return true; }
+    if ($operation === 'peek') return $permit;
     if ($operation === 'take') { $saved = $permit; $permit = null; return $saved; }
     $permit = null;
     return true;
+}
+
+/** One-use permission to cancel a verified duplicate without releasing its source. */
+function purch_requisition_duplicate_cancel_permit($operation, $value = null)
+{
+    static $permit = null;
+    if ($operation === 'set') { $permit = $value; return true; }
+    $saved = $permit;
+    $permit = null;
+    return $operation === 'take' ? $saved : true;
+}
+
+/** Duplicate recovery admission cannot outlive the owning SQL transaction. */
+function release_purch_requisition_duplicate_cancel_permit()
+{
+    return purch_requisition_duplicate_cancel_permit('clear');
 }
 
 /** Prevent validation from surviving rollback, retry or an outer commit. */
@@ -231,9 +248,11 @@ function validate_purchase_requisition_reopen_action($action, $data, $draft, $ac
     if (!$history || !$encoded || $context === false
         || (int)$_SESSION['wa_current_user']->access !== (int)$actor['role_id']
         || !register_transaction_resource_release('purchase-requisition-completion', 'release_purch_requisition_completion_permit')) return false;
+    $cancellation = $action === 'cancel' ? purch_requisition_reopen_permit('peek') : null;
     return purch_requisition_completion_permit('set', array('action'=>$action, 'draft'=>$draft,
         'actor'=>$actor, 'comments'=>$comments, 'context'=>$context,
-        'data'=>$data, 'snapshot'=>$snapshot, 'history'=>$history, 'encoded'=>$encoded));
+        'data'=>$data, 'snapshot'=>$snapshot, 'history'=>$history, 'encoded'=>$encoded,
+        'retain_source'=>$cancellation && !empty($cancellation['retain_source'])));
 }
 
 /** One-use completion custody cannot survive a core action or transaction boundary. */
@@ -274,6 +293,12 @@ function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $
     if (!$current || count($current['drafts']) !== count($history['drafts'])
         || count($current['actions']) !== count($history['actions']) + 1) return false;
     $last = count($history['drafts']) - 1;
+    if (!empty($permit['retain_source'])) {
+        $last = null;
+        foreach ($history['drafts'] as $index=>$row)
+            if ((int)$row['id'] === (int)$draft['id']) $last = $index;
+        if ($last === null) return false;
+    }
     if ((int)$history['drafts'][$last]['id'] !== (int)$draft['id']) return false;
     $finished = db_query('SELECT NOW()');
     $finished = $finished ? db_fetch_row($finished) : false;
@@ -295,6 +320,8 @@ function verify_purchase_requisition_core_completion($outcome, $draft, $actor, $
             if (!verify_purch_requisition_approval($snapshot, $permit['context'], (int)$actor['user_id'])) return false;
         } elseif ($outcome === 'rejected') {
             if (!verify_purch_requisition_rejection($snapshot, $permit['context'], (int)$actor['user_id'], $comments)) return false;
+        } elseif (!empty($permit['retain_source'])) {
+            if (purch_requisition_reopen_source($identity, 'submitted', $permit['data']) !== $snapshot) return false;
         } elseif (!verify_purch_requisition_reopen($snapshot, $permit['context'])) return false;
     } elseif ($permit['action'] === 'approve' && in_array($outcome, array('pending_next_level','pending_more_approvers'), true)) {
         if ($outcome === 'pending_next_level') {
@@ -334,12 +361,21 @@ function validate_purchase_requisition_native_action($action, $data, $draft, $ac
     if (!$snapshot) return false;
     $approval = get_approval_workflow_service();
     $drafts = purch_requisition_reopen_drafts($identity, (int)$snapshot['header']['material_request_id'], $approval);
-    if (!$drafts || (int)$drafts[count($drafts)-1]['id'] !== (int)$draft['id']
-        || $drafts[count($drafts)-1]['decoded'] !== $data) return false;
-    foreach ($drafts as $row)
-        if ((int)$row['status'] === APPROVAL_STATUS_PENDING && (int)$row['id'] !== (int)$draft['id']) return false;
+    $recovery = purch_requisition_duplicate_cancel_permit('take');
+    if ($recovery !== null) {
+        if (!$drafts || $recovery['context'] !== $context || $recovery['role'] !== (int)$actor['role_id']
+            || $recovery['draft'] !== $draft || $recovery['data'] !== $data
+            || $recovery['comments'] !== $comments || $recovery['snapshot'] !== $snapshot
+            || purch_requisition_reopen_history($drafts) !== $recovery['history']) return false;
+    } else {
+        if (!$drafts || (int)$drafts[count($drafts)-1]['id'] !== (int)$draft['id']
+            || $drafts[count($drafts)-1]['decoded'] !== $data) return false;
+        foreach ($drafts as $row)
+            if ((int)$row['status'] === APPROVAL_STATUS_PENDING && (int)$row['id'] !== (int)$draft['id']) return false;
+    }
     if (!register_transaction_resource_release('purchase-requisition-reopen', 'release_purch_requisition_reopen_permit')) return false;
-    return purch_requisition_reopen_permit('set', array('context'=>$context,'draft_id'=>(int)$draft['id'],'data'=>$data,'snapshot'=>$snapshot));
+    return purch_requisition_reopen_permit('set', array('context'=>$context,'draft_id'=>(int)$draft['id'],
+        'data'=>$data,'snapshot'=>$snapshot,'retain_source'=>$recovery !== null));
 }
 
 /** Complete only the one validated core cancellation, inside its existing transaction. */
@@ -355,7 +391,8 @@ function cancel_purchase_requisition_reopen($data, $draft_id, $comments)
         || get_approval_workflow_service()->decodeStoredDraftData($draft['draft_data']) !== $data) return false;
     // Re-read after central status/action writes: triggers must not drift source intent.
     $snapshot = purch_requisition_reopen_source((int)$data['requisition_id'], 'submitted', $data);
-    return $snapshot === $permit['snapshot'] && write_purch_requisition_reopen($snapshot, $context);
+    return $snapshot === $permit['snapshot']
+        && (!empty($permit['retain_source']) || write_purch_requisition_reopen($snapshot, $context));
 }
 
 /**

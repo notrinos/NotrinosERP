@@ -103,11 +103,11 @@ function get_purch_requisition_header_form_context()
 		$db_connections[$user->cur_con])), ensure_csrf_token());
 }
 
-if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine']) || isset($_POST['SubmitRequisition']) || isset($_POST['RefreshRequisition'])
+if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['DeleteRequisition']) || isset($_POST['AddLine']) || isset($_POST['SubmitRequisition']) || isset($_POST['RefreshRequisition']) || isset($_POST['RecoverDuplicateRequisition'])
 	|| isset($_POST['CreateFromMaterialRequest']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0) {
 	$header_context = get_post('header_context', '');
 	if (!is_string($header_context) || !hash_equals(get_purch_requisition_header_form_context(), $header_context)) {
-		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest'], $_POST['SubmitRequisition'], $_POST['RefreshRequisition']);
+		unset($_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['DeleteRequisition'], $_POST['AddLine'], $_POST['CreateFromMaterialRequest'], $_POST['SubmitRequisition'], $_POST['RefreshRequisition'], $_POST['RecoverDuplicateRequisition']);
 		foreach (array_keys($_POST) as $key)
 			if (preg_match('/^(?:UpdateLine|DeleteLine)/', $key)) unset($_POST[$key]);
 		display_error(_('The requisition form context has changed. Reload this page before saving.'));
@@ -272,6 +272,15 @@ if (isset($_POST['RefreshRequisition']) && $selected_id > 0) {
 		display_error(_('The pending review could not be refreshed. Reload and verify the original submitter, source history and current approval setup.'));
 	} else {
 		display_notification(sprintf(_('Approval review restarted as draft #%d. All checker decisions are required again.'), $result['draft_id']));
+	}
+}
+
+if (isset($_POST['RecoverDuplicateRequisition']) && $selected_id > 0) {
+	$result = recover_purch_requisition_duplicate_approvals($selected_id, get_post('duplicate_draft_ids', array()));
+	if ($result === false) {
+		display_error(_('The duplicate reviews could not be recovered. Reload and verify the original submitter, unchanged source history and current approval setup.'));
+	} else {
+		display_notification(sprintf(_('Duplicate reviews were cancelled and approval restarted as draft #%d. All checker decisions are required again.'), $result['draft_id']));
 	}
 }
 
@@ -494,6 +503,12 @@ if ($requisition) {
 			hidden('refresh_draft_id', $refresh_draft);
 			br();
 			submit('RefreshRequisition', _('Restart Approval Review'), true, _('Cancel this pending review and submit under current policy; all checker decisions restart.'));
+		}
+		$duplicates = get_purch_requisition_duplicate_drafts($selected_id);
+		if ($duplicates !== false) {
+			foreach ($duplicates as $draft_id) hidden('duplicate_draft_ids[]', $draft_id);
+			display_note(sprintf(_('Duplicate pending review IDs: %s'), implode(', ', $duplicates)), 0, 1);
+			submit('RecoverDuplicateRequisition', _('Recover Duplicate Reviews'), true, _('Cancel every listed review and restart under current policy; all checker decisions restart.'));
 		}
 	} elseif (in_array($requisition['status'], array('approved', 'partially_ordered'))) {
 		start_table(TABLESTYLE_NOBORDER, "style='margin:0 auto;' width='420'");
