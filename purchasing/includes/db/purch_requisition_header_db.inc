@@ -153,13 +153,23 @@ function write_purch_requisition_header($operation, $key, $data)
                 if (!$old) {
                     if (dimension_writer_reference_id($data['requester_id']) === false || !$data['requester_id']
                         || !purch_requisition_header_rows('SELECT id FROM '.TB_PREF.'users WHERE id='.(int)$data['requester_id'].' AND inactive=0 FOR UPDATE')) return false;
+                    $construction = null;
                     if (!$source) {
-                        // The native helper ignores SQL failure; guard its actual effect and identity.
-                        if (purch_requisition_header_rows('SELECT request_no FROM '.TB_PREF.'wh_material_requests ORDER BY request_no FOR UPDATE') === false) return false;
-                        $source = add_material_request('purchase', $data['location'], $data['request_date'], $data['required_date'], $data['reference'], $data['notes']);
+                        // Paired construction retains requisition authority and the owning transaction.
+                        require_once __DIR__.'/../../../inventory/warehouse/includes/db/warehouse_material_create_db.inc';
+                        $source = create_material_request_header('purchase', $data['location'], $data['request_date'], $data['required_date'], $data['reference'], $data['notes'], true);
                         if (!$source || db_error_no()) return false;
                         $created = purch_requisition_header_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE request_id='.(int)$source.' FOR UPDATE');
                         if (!$created) return false;
+                        $construction = array();
+                        foreach (array('wh_material_requests'=>'request_id='.(int)$source,
+                            'approval_drafts'=>'trans_type='.ST_WH_MATERIAL_REQUEST,
+                            'approval_actions'=>'draft_id IN (SELECT id FROM '.TB_PREF.'approval_drafts WHERE trans_type='.ST_WH_MATERIAL_REQUEST.')',
+                            'voided'=>'type='.ST_WH_MATERIAL_REQUEST) as $table=>$where) {
+                            $rows = material_core_rows('SELECT * FROM '.TB_PREF.$table.' WHERE '.$where.' ORDER BY 1 FOR UPDATE');
+                            if ($rows === false) return false;
+                            $construction[$table] = array('where'=>$where,'rows'=>$rows);
+                        }
                     }
                     $data['material_request_id'] = $source;
                     $data['status'] = 'draft';
@@ -173,6 +183,23 @@ function write_purch_requisition_header($operation, $key, $data)
                     $id = db_insert_id();
                     $reference = $data['reference'] !== '' ? $data['reference'] : format_purch_requisition_reference($id);
                     if (!db_query('UPDATE '.TB_PREF.'purch_requisitions SET reference='.db_escape($reference).' WHERE id='.(int)$id)) return false;
+                    if ($construction !== null) {
+                        foreach ($construction as $table=>$saved)
+                            if (material_core_rows('SELECT * FROM '.TB_PREF.$table.' WHERE '.$saved['where'].' ORDER BY 1 FOR UPDATE') !== $saved['rows']) return false;
+                        $pairs = material_core_rows('SELECT * FROM '.TB_PREF.'purch_requisitions WHERE material_request_id='.(int)$source.' ORDER BY id FOR UPDATE');
+                        $children = material_core_rows('SELECT line_id FROM '.TB_PREF.'wh_material_request_lines WHERE request_id='.(int)$source.' ORDER BY line_id FOR UPDATE');
+                        $native_children = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE requisition_id='.(int)$id.' ORDER BY id FOR UPDATE');
+                        if (!$pairs || count($pairs) !== 1 || (int)$pairs[0]['id'] !== (int)$id || $children === false || $children
+                            || $native_children === false || $native_children) return false;
+                        $expected_columns = array();
+                        foreach ($columns as $index=>$field)
+                            $expected_columns[] = ($field === 'reference' ? db_escape($reference) : $values[$index]).' AS '.$field;
+                        $expected_parent = material_core_rows('SELECT '.implode(',', $expected_columns));
+                        if (!$expected_parent) return false;
+                        $expected_parent[0] += array('approved_by'=>0,'approved_date'=>null,'rejected_by'=>0,'rejected_date'=>null,'rejection_reason'=>null);
+                        foreach ($expected_parent[0] as $field=>$value)
+                            if (($value === null) !== ($pairs[0][$field] === null) || (string)$value !== (string)$pairs[0][$field]) return false;
+                    }
                     if (!db_preserve_insert_id($id)) return false;
                     return $id;
                 }

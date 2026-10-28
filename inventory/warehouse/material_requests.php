@@ -53,7 +53,7 @@ function get_material_request_core_form_context()
 
 $material_line_commands = array('AddLine', 'UpdateLine', 'DeleteLine');
 $material_line_post = isset($_POST['AddLine']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0;
-if ($material_line_post || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
+if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
 	$core_context = get_post('material_core_context', '');
 	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
 		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM']);
@@ -190,8 +190,10 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 				$request_date, $required_date,
 				$reference, $memo
 			);
-			display_notification(sprintf(_('Material request #%d has been created.'), $new_id));
-			$selected_id = $new_id;
+			if ($new_id) {
+				display_notification(sprintf(_('Material request #%d has been created.'), $new_id));
+				$selected_id = $new_id;
+			} else display_error(_('Cannot create this material request. Reload the form and retry.'));
 		} else {
 			$header_result = update_material_request(
 				$selected_id,

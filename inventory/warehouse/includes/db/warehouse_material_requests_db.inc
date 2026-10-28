@@ -121,7 +121,8 @@ function material_request_type_badge($type) {
 // =====================================================================
 
 /**
- * Get the next sequential request number.
+ * Preview the next native request number. Construction must use its locked
+ * writer, which also accounts for retained approval/reservation numbers.
  *
  * @return int Next request_no
  */
@@ -156,27 +157,10 @@ function format_material_request_no($request_no) {
 function add_material_request($request_type, $warehouse_loc, $request_date,
 	$required_date = null, $reference = null, $memo = null)
 {
-	$request_no = get_next_material_request_no();
-
-	$sql = "INSERT INTO " . TB_PREF . "wh_material_requests (
-		request_no, request_type, status, warehouse_loc_code,
-		requested_by, request_date, required_date,
-		reference, memo, created_at
-	) VALUES ("
-		. (int)$request_no . ","
-		. db_escape($request_type) . ","
-		. "'draft',"
-		. db_escape($warehouse_loc) . ","
-		. (int)$_SESSION['wa_current_user']->user . ","
-		. db_escape($request_date) . ","
-		. ($required_date ? db_escape($required_date) : 'NULL') . ","
-		. ($reference ? db_escape($reference) : 'NULL') . ","
-		. ($memo ? db_escape($memo) : 'NULL') . ","
-		. "NOW()"
-		. ")";
-
-	db_query($sql, 'could not insert material request');
-	return db_insert_id();
+	global $path_to_root;
+	require_once $path_to_root.'/inventory/warehouse/includes/db/warehouse_material_create_db.inc';
+	return create_material_request_header($request_type, $warehouse_loc, $request_date,
+		$required_date, $reference, $memo);
 }
 
 /**
