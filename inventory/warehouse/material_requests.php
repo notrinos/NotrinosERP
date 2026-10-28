@@ -53,10 +53,10 @@ function get_material_request_core_form_context()
 
 $material_line_commands = array('AddLine', 'UpdateLine', 'DeleteLine');
 $material_line_post = isset($_POST['AddLine']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0;
-if ($material_line_post || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
+if ($material_line_post || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
 	$core_context = get_post('material_core_context', '');
 	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
-		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete']);
+		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM']);
 		foreach (array_keys($_POST) as $field)
 			foreach ($material_line_commands as $command)
 				if ($field === $command || strpos($field, $command) === 0) unset($_POST[$field]);
@@ -152,6 +152,10 @@ if (isset($_POST['ConvertTO']) && $selected_id > 0) {
 // --- Save new/edit ---
 if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 	$input_error = 0;
+	if (isset($_POST['ADD_ITEM']) && isset($_POST['UPDATE_ITEM'])) {
+		display_error(_('Choose one material request command and retry.'));
+		$input_error = 1;
+	}
 
 	if (empty(get_post('request_type'))) {
 		display_error(_('You must select a request type.'));
@@ -162,9 +166,19 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 		$input_error = 1;
 	}
 
+	$request_date_input = get_post('request_date', '');
+	$required_date_input = get_post('required_date', '');
+	if (!is_string($request_date_input) || !is_date($request_date_input)) {
+		display_error(_('Enter a valid request date.'));
+		$input_error = 1;
+	}
+	if (!is_string($required_date_input) || ($required_date_input !== '' && !is_date($required_date_input))) {
+		display_error(_('Enter a valid required date, or leave it empty.'));
+		$input_error = 1;
+	}
 	if ($input_error == 0) {
-		$request_date = date2sql(get_post('request_date'));
-		$required_date = get_post('required_date') ? date2sql(get_post('required_date')) : null;
+		$request_date = date2sql($request_date_input);
+		$required_date = $required_date_input !== '' ? date2sql($required_date_input) : null;
 		$reference = get_post('reference');
 		$memo = get_post('memo');
 		$request_type = get_post('request_type');
@@ -179,13 +193,14 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 			display_notification(sprintf(_('Material request #%d has been created.'), $new_id));
 			$selected_id = $new_id;
 		} else {
-			update_material_request(
+			$header_result = update_material_request(
 				$selected_id,
 				$request_type, $warehouse_loc,
 				$request_date, $required_date,
 				$reference, $memo
 			);
-			display_notification(_('Material request has been updated.'));
+			if ($header_result) display_notification(_('Material request has been updated.'));
+			else display_error(_('Cannot update this material request. Reload the current standalone draft and retry.'));
 		}
 	}
 	$Ajax->activate('mr_list');
@@ -410,9 +425,9 @@ if ($selected_id > 0 || $is_new_request) {
 
 		table_section(2);
 
-		if ($mr['reference'])
+		if ($mr['reference'] !== null && $mr['reference'] !== '')
 			label_row(_('Reference:'), $mr['reference']);
-		if ($mr['memo'])
+		if ($mr['memo'] !== null && $mr['memo'] !== '')
 			label_row(_('Memo:'), $mr['memo']);
 		label_row(_('Requested By:'), $mr['requested_by_name']);
 		if ($mr['approved_by_name'])

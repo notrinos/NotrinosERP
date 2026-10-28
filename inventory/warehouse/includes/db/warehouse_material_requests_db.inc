@@ -194,19 +194,9 @@ function add_material_request($request_type, $warehouse_loc, $request_date,
 function update_material_request($request_id, $request_type, $warehouse_loc,
 	$request_date, $required_date = null, $reference = null, $memo = null)
 {
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "request_type = " . db_escape($request_type) . ","
-		. "warehouse_loc_code = " . db_escape($warehouse_loc) . ","
-		. "request_date = " . db_escape($request_date) . ","
-		. "required_date = " . ($required_date ? db_escape($required_date) : 'NULL') . ","
-		. "reference = " . ($reference ? db_escape($reference) : 'NULL') . ","
-		. "memo = " . ($memo ? db_escape($memo) : 'NULL') . ","
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'draft'";
-
-	db_query($sql, 'could not update material request');
-	return db_num_affected_rows() > 0;
+	require_once __DIR__.'/warehouse_material_header_db.inc';
+	return write_standalone_material_header($request_id, $request_type, $warehouse_loc,
+		$request_date, $required_date, $reference, $memo);
 }
 
 /**
