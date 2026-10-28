@@ -51,11 +51,16 @@ function get_material_request_core_form_context()
 		$db_connections[$user->cur_con])), ensure_csrf_token());
 }
 
-if (isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
+$material_line_commands = array('AddLine', 'UpdateLine', 'DeleteLine');
+$material_line_post = isset($_POST['AddLine']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0;
+if ($material_line_post || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
 	$core_context = get_post('material_core_context', '');
 	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
 		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete']);
-		display_error(_('The material request form context has changed. Reload this page before submitting, cancelling or deleting.'));
+		foreach (array_keys($_POST) as $field)
+			foreach ($material_line_commands as $command)
+				if ($field === $command || strpos($field, $command) === 0) unset($_POST[$field]);
+		display_error(_('The material request form context has changed. Reload this page before changing this request.'));
 	}
 }
 
@@ -199,19 +204,21 @@ if (isset($_POST['AddLine'])) {
 	} elseif ($line_qty <= 0) {
 		display_error(_('Quantity must be positive.'));
 	} elseif ($selected_id > 0) {
-		add_material_request_line(
+		$line_result = add_material_request_line(
 			$selected_id,
 			$line_stock,
 			$line_qty,
 			$line_date,
 			$line_memo
 		);
-		display_notification(_('Line added to material request.'));
+		if ($line_result !== false) display_notification(_('Line added to material request.'));
+		else display_error(_('Cannot add this line. Reload the current draft and retry.'));
 	}
 	$Ajax->activate('mr_detail');
 }
 
 // --- Update line ---
+$material_line_failed_id = 0;
 $update_line_id = find_submit('UpdateLine');
 if ($update_line_id > 0) {
 	$upd_qty = input_num('edit_line_qty_' . $update_line_id);
@@ -219,10 +226,15 @@ if ($update_line_id > 0) {
 	$upd_memo = get_post('edit_line_memo_' . $update_line_id);
 
 	if ($upd_qty <= 0) {
+		$material_line_failed_id = $update_line_id;
 		display_error(_('Quantity must be positive.'));
 	} else {
-		update_material_request_line($update_line_id, $upd_qty, $upd_date, $upd_memo);
-		display_notification(_('Line has been updated.'));
+		if (update_material_request_line($update_line_id, $upd_qty, $upd_date, $upd_memo, $selected_id))
+			display_notification(_('Line has been updated.'));
+		else {
+			$material_line_failed_id = $update_line_id;
+			display_error(_('Cannot update this line. Reload the current draft and retry.'));
+		}
 	}
 	$Ajax->activate('mr_detail');
 }
@@ -230,8 +242,8 @@ if ($update_line_id > 0) {
 // --- Delete line ---
 $del_line = find_submit('DeleteLine');
 if ($del_line > 0) {
-	delete_material_request_line($del_line);
-	display_notification(_('Line removed from material request.'));
+	if (delete_material_request_line($del_line, $selected_id)) display_notification(_('Line removed from material request.'));
+	else display_error(_('Cannot remove this line. Reviewed, linked or retained source evidence must be preserved.'));
 	$Ajax->activate('mr_detail');
 }
 
@@ -455,11 +467,19 @@ if ($selected_id > 0 || $is_new_request) {
 
 			if ($editing) {
 				// Editable row
+				$line_quantity_value = number_format2($line['qty_requested'], max(4, get_qty_dec($line['stock_id'])));
+				$line_date_value = $line['required_date'] ? sql2date($line['required_date']) : '';
+				$line_memo_value = $line['memo'] === null ? '' : $line['memo'];
+				if ((int)$line['line_id'] === (int)$material_line_failed_id) {
+					$line_quantity_value = get_post('edit_line_qty_' . $line['line_id'], $line_quantity_value);
+					$line_date_value = get_post('edit_line_date_' . $line['line_id'], $line_date_value);
+					$line_memo_value = get_post('edit_line_memo_' . $line['line_id'], $line_memo_value);
+				}
 				label_cell($line['stock_id']);
 				label_cell($line['item_description']);
 				echo '<td>';
 				echo '<input type="text" name="edit_line_qty_' . $line['line_id']
-					. '" value="' . number_format2($line['qty_requested'], get_qty_dec($line['stock_id']))
+					. '" value="' . htmlspecialchars(is_scalar($line_quantity_value) ? (string)$line_quantity_value : '', ENT_QUOTES, 'UTF-8')
 					. '" size="8" class="amount">';
 				echo '</td>';
 				qty_cell($line['qty_fulfilled']);
@@ -467,12 +487,12 @@ if ($selected_id > 0 || $is_new_request) {
 				label_cell($line['item_units']);
 				echo '<td>';
 				echo '<input type="text" name="edit_line_date_' . $line['line_id']
-					. '" value="' . ($line['required_date'] ? sql2date($line['required_date']) : '')
+					. '" value="' . htmlspecialchars(is_scalar($line_date_value) ? (string)$line_date_value : '', ENT_QUOTES, 'UTF-8')
 					. '" size="12">';
 				echo '</td>';
 				echo '<td>';
 				echo '<input type="text" name="edit_line_memo_' . $line['line_id']
-					. '" value="' . htmlspecialchars($line['memo'] ? $line['memo'] : '', ENT_QUOTES, 'UTF-8')
+					. '" value="' . htmlspecialchars(is_scalar($line_memo_value) ? (string)$line_memo_value : '', ENT_QUOTES, 'UTF-8')
 					. '" size="20">';
 				echo '</td>';
 				echo '<td nowrap>';

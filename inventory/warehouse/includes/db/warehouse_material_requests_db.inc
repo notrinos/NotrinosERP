@@ -270,19 +270,9 @@ function delete_material_request($request_id) {
 function add_material_request_line($request_id, $stock_id, $qty_requested,
 	$required_date = null, $memo = null)
 {
-	$sql = "INSERT INTO " . TB_PREF . "wh_material_request_lines (
-		request_id, stock_id, qty_requested, qty_fulfilled, required_date, memo
-	) VALUES ("
-		. (int)$request_id . ","
-		. db_escape($stock_id) . ","
-		. db_escape($qty_requested) . ","
-		. "0,"
-		. ($required_date ? db_escape($required_date) : 'NULL') . ","
-		. ($memo ? db_escape($memo) : 'NULL')
-		. ")";
-
-	db_query($sql, 'could not insert material request line');
-	return db_insert_id();
+	require_once __DIR__.'/warehouse_material_line_db.inc';
+	return write_standalone_material_line('add', $request_id, array('stock_id'=>$stock_id,
+		'quantity'=>$qty_requested, 'required_date'=>$required_date, 'memo'=>$memo));
 }
 
 /**
@@ -292,28 +282,25 @@ function add_material_request_line($request_id, $stock_id, $qty_requested,
  * @param float       $qty_requested  Requested quantity
  * @param string|null $required_date  Line-level required date (SQL)
  * @param string|null $memo           Line memo
+ * @param int|null    $request_id     Optional expected parent from the native editor
  * @return bool Success
  */
-function update_material_request_line($line_id, $qty_requested, $required_date = null, $memo = null) {
-	$sql = "UPDATE " . TB_PREF . "wh_material_request_lines SET "
-		. "qty_requested = " . db_escape($qty_requested) . ","
-		. "required_date = " . ($required_date ? db_escape($required_date) : 'NULL') . ","
-		. "memo = " . ($memo ? db_escape($memo) : 'NULL')
-		. " WHERE line_id = " . (int)$line_id;
-
-	db_query($sql, 'could not update material request line');
-	return db_num_affected_rows() > 0;
+function update_material_request_line($line_id, $qty_requested, $required_date = null, $memo = null, $request_id = null) {
+	require_once __DIR__.'/warehouse_material_line_db.inc';
+	return write_standalone_material_line('update', $line_id, array('quantity'=>$qty_requested,
+		'required_date'=>$required_date, 'memo'=>$memo), $request_id);
 }
 
 /**
  * Delete a material request line.
  *
  * @param int $line_id Line ID
- * @return void
+ * @param int|null $request_id Optional expected parent from the native editor
+ * @return bool Success
  */
-function delete_material_request_line($line_id) {
-	$sql = "DELETE FROM " . TB_PREF . "wh_material_request_lines WHERE line_id = " . (int)$line_id;
-	db_query($sql, 'could not delete material request line');
+function delete_material_request_line($line_id, $request_id = null) {
+	require_once __DIR__.'/warehouse_material_line_db.inc';
+	return write_standalone_material_line('delete', $line_id, array(), $request_id);
 }
 
 /**
