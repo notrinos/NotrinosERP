@@ -484,14 +484,8 @@ function cancel_material_request($request_id, $comments = '') {
 		return cancel_standalone_material_core($request_id, $comments);
 	}
 
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "status = 'cancelled',"
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'approved'";
-
-	db_query($sql, 'could not cancel material request');
-	return db_num_affected_rows() > 0;
+	require_once __DIR__.'/warehouse_material_terminal_db.inc';
+	return cancel_standalone_material_approved($request_id, $comments);
 }
 
 /**

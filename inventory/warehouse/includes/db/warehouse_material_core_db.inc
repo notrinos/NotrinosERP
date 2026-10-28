@@ -253,6 +253,31 @@ function verify_material_core_completion($outcome, $draft, $actor, $comments)
     if ($outcome === 'approved') $expected = array();
     elseif ($outcome === 'rejected' || $outcome === 'cancelled') $expected[0]['memo_'] = 'APPROVAL_'.strtoupper($outcome);
     if ($reserved !== $expected) return false;
+    if ($outcome === 'approved') {
+        // This action was authored by the core in this transaction. Freeze the
+        // complete terminal source only after every core effect reconciles;
+        // never replace an older action, draft payload or submitted fingerprint.
+        $receipt = json_encode(array('schema'=>'material-approved-source-v1',
+            'request_id'=>(int)$permit['data']['request_id'], 'draft_id'=>(int)$draft['id'],
+            'company_sha256'=>material_core_context(true),
+            'submitted_source_sha256'=>$permit['data']['material_source_sha256'],
+            'history_sha256'=>material_core_source_fingerprint(array('header'=>array(), 'lines'=>array_merge($history['drafts'], $history['actions']))),
+            'action_sha256'=>material_core_source_fingerprint(array('header'=>$new, 'lines'=>array())),
+            'source_sha256'=>material_core_source_fingerprint($source)));
+        if ($receipt === false || !db_query('UPDATE '.TB_PREF.'approval_actions SET draft_data_snapshot='
+            .db_escape($receipt).' WHERE id='.(int)$new['id'].' AND draft_data_snapshot IS NULL')
+            || db_num_affected_rows() !== 1) return false;
+        $literal = material_core_rows('SELECT '.db_escape($receipt).' AS snapshot_');
+        if (!$literal) return false;
+        $new['draft_data_snapshot'] = $literal[0]['snapshot_'];
+        $history['actions'][] = $new;
+        $expected_history = material_core_history((int)$permit['data']['request_id']);
+        if ($expected_history !== $history
+            || material_core_source((int)$permit['data']['request_id'], 'approved') !== $source
+            || material_core_rows('SELECT * FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST
+                .' AND id='.(int)$permit['draft']['reserved_trans_no'].' FOR UPDATE') !== $expected
+            || material_core_context() !== $permit['context']) return false;
+    }
     return true;
 }
 

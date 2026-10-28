@@ -19,11 +19,12 @@
  * @param int    $user_id            User performing the action
  * @param int    $level              Approval level at which action occurred
  * @param string $comments           Action comments/reason
- * @param string $draft_data_snapshot JSON snapshot if draft was edited (null otherwise)
- * @return int   Inserted action ID
+ * @param string $draft_data_snapshot JSON edit snapshot or registered source receipt (null otherwise)
+ * @param string|null $error_message Error context; null lets the owning command handle failure.
+ * @return int|false Inserted action ID, or false on a caller-handled query failure
  */
 function add_approval_action($draft_id, $action_type, $user_id = null, $level = 0,
-	$comments = null, $draft_data_snapshot = null)
+	$comments = null, $draft_data_snapshot = null, $error_message = 'could not record approval action')
 {
 	if ($user_id === null)
 		$user_id = $_SESSION['wa_current_user']->user;
@@ -43,7 +44,8 @@ function add_approval_action($draft_id, $action_type, $user_id = null, $level = 
 		. "NOW(), "
 		. db_escape($ip_address) . ")";
 
-	db_query($sql, 'could not record approval action');
+	if (!db_query($sql, $error_message))
+		return false;
 
 	return db_insert_id();
 }

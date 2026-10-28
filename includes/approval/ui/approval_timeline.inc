@@ -142,6 +142,7 @@ function format_approval_action_badge($action_type)
 		'approve'   => array('bg' => '#28a745', 'icon' => 'check',      'label' => _('Approved')),
 		'reject'    => array('bg' => '#dc3545', 'icon' => 'x',          'label' => _('Rejected')),
 		'cancel'    => array('bg' => '#6c757d', 'icon' => 'x-circle',   'label' => _('Cancelled')),
+		'source_cancel' => array('bg' => '#6c757d', 'icon' => 'x-circle', 'label' => _('Source Cancelled')),
 		'delegate'  => array('bg' => '#17a2b8', 'icon' => 'share',      'label' => _('Delegated')),
 		'escalate'  => array('bg' => '#fd7e14', 'icon' => 'arrow-up',   'label' => _('Escalated')),
 		'edit'      => array('bg' => '#ffc107', 'icon' => 'edit',       'label' => _('Edited')),
