@@ -341,24 +341,6 @@ function cancel_standalone_material_core($request_id, $comments)
 /** Removal cannot erase reviewed source or retained classification evidence. */
 function delete_standalone_material_core($request_id)
 {
-    $identity = dimension_writer_reference_id($request_id); $context = material_core_context();
-    if (!$identity || !$context) return false;
-    try {
-        if (!begin_transaction()) return false;
-        $history = material_core_history($identity);
-        $headers = material_core_rows('SELECT * FROM '.TB_PREF.'wh_material_requests WHERE request_id='.$identity.' FOR UPDATE');
-        $pairs = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisitions WHERE material_request_id='.$identity.' ORDER BY id FOR UPDATE');
-        $lines = material_core_rows('SELECT * FROM '.TB_PREF.'wh_material_request_lines WHERE request_id='.$identity.' ORDER BY line_id FOR UPDATE');
-        if (!$headers || $history === false || $history['drafts'] || $pairs === false || $pairs || $lines === false
-            || !in_array($headers[0]['status'], array('draft','cancelled'), true)
-            || !empty($headers[0]['linked_doc_type']) || !empty($headers[0]['linked_doc_no'])
-            || dimension_master_payload_transition($headers[0]['custom_data'], null, true) === false) { cancel_transaction(); return false; }
-        foreach ($lines as $line)
-            if ((float)$line['qty_fulfilled'] != 0 || dimension_master_payload_transition($line['custom_data'], null, true) === false) { cancel_transaction(); return false; }
-        if (!db_query('DELETE FROM '.TB_PREF.'wh_material_request_lines WHERE request_id='.$identity)
-            || !db_query('DELETE FROM '.TB_PREF.'wh_material_requests WHERE request_id='.$identity) || db_num_affected_rows() !== 1
-            || material_core_context() !== $context || !commit_transaction()) { cancel_transaction(); return false; }
-        return true;
-    } catch (Exception $exception) { cancel_transaction(); return false;
-    } catch (Throwable $exception) { cancel_transaction(); return false; }
+    require_once __DIR__.'/warehouse_material_remove_db.inc';
+    return remove_standalone_material_source($request_id);
 }

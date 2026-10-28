@@ -2,6 +2,7 @@
 /** Canonical generic demand CRUD delegates to the existing native commands. */
 require_once __DIR__.'/warehouse_material_requests_db.inc';
 require_once __DIR__.'/warehouse_material_create_db.inc';
+require_once __DIR__.'/warehouse_material_remove_db.inc';
 
 /** Bind a creation validator to current native source, review and number custody. */
 function material_entity_creation_state()
@@ -47,7 +48,8 @@ function write_material_request_entity($owner, $operation, $key, $next, $validat
         }
         if (!$header && !$parent) { cancel_transaction(); return false; }
         $history = $parent ? material_core_history($parent) : null;
-        $source = $parent ? material_line_source($parent) : null;
+        $removing = $header && $operation === 'delete';
+        $source = $parent ? ($removing ? material_removal_source($parent) : material_line_source($parent)) : null;
         $creation = $header && $identity === null ? material_entity_creation_state() : null;
         if ($creation === false) { cancel_transaction(); return false; }
         if ($parent && ($history === false || !$source)) { cancel_transaction(); return false; }
@@ -72,7 +74,8 @@ function write_material_request_entity($owner, $operation, $key, $next, $validat
         // Validators are extensible code, never authority to alter locked source.
         if (!$validate() || material_core_context() !== $context
             || ($creation !== null && material_entity_creation_state() !== $creation)
-            || ($parent && (material_line_source($parent) !== $source || material_core_history($parent) !== $history))) {
+            || ($parent && (($removing ? material_removal_source($parent) : material_line_source($parent)) !== $source
+                || material_core_history($parent) !== $history))) {
             cancel_transaction(); return false;
         }
         $data = $next + $old + $defaults;
