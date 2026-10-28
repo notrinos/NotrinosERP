@@ -329,23 +329,33 @@ function count_material_request_lines($request_id) {
 }
 
 /**
- * Find the latest pending core approval draft for a material request.
+ * Find one exactly identified pending core review. This is a reader, not
+ * authority to approve or recover ambiguous/legacy history.
  *
  * @param int $request_id Request ID
  * @return array|false Draft row or false
  */
 function get_pending_material_request_approval_draft($request_id)
 {
-	$sql = "SELECT d.*
-		FROM " . TB_PREF . "approval_drafts d
-		WHERE d.trans_type = " . db_escape((int)ST_WH_MATERIAL_REQUEST) . "
-		AND d.status = 0
-		AND d.draft_data LIKE " . db_escape('%\"request_id\":' . (int)$request_id . '%') . "
-		ORDER BY d.id DESC
-		LIMIT 1";
-
-	$result = db_query($sql, 'could not get pending material request approval draft');
-	return db_fetch($result);
+	require_once __DIR__.'/warehouse_material_core_db.inc';
+	$context = material_core_context();
+	$identity = dimension_writer_reference_id($request_id);
+	if (!$context || !$identity) return false;
+	$rows = material_core_rows('SELECT * FROM '.TB_PREF.'approval_drafts WHERE trans_type='
+		.ST_WH_MATERIAL_REQUEST.' AND status=0 ORDER BY id');
+	if ($rows === false) return false;
+	$match = false;
+	$approval = get_approval_workflow_service();
+	foreach ($rows as $row) {
+		$data = $approval->decodeStoredDraftData($row['draft_data']);
+		if (!is_array($data) || !isset($data['request_id'])
+			|| !($owner = dimension_writer_reference_id($data['request_id']))) return false;
+		if ($owner !== $identity) continue;
+		if ($match !== false || (isset($data['material_company_sha256'])
+			&& $data['material_company_sha256'] !== material_core_context(true))) return false;
+		$match = $row;
+	}
+	return material_core_context() === $context ? $match : false;
 }
 
 // =====================================================================
@@ -459,10 +469,15 @@ function reject_material_request($request_id) {
  */
 function cancel_material_request($request_id, $comments = '') {
 	require_once __DIR__.'/warehouse_material_core_db.inc';
-	if (!material_core_context()) return false;
+	$request_id = dimension_writer_reference_id($request_id);
+	if (!material_core_context() || !$request_id || !is_string($comments) || strpos($comments, "\0") !== false) return false;
 	$mr = get_material_request($request_id);
 	if (!$mr || !in_array($mr['status'], array('draft', 'submitted', 'approved')))
 		return false;
+	if ($mr['status'] === 'draft') {
+		require_once __DIR__.'/warehouse_material_cancel_db.inc';
+		return cancel_standalone_material_draft($request_id, $comments);
+	}
 
 	if ($mr['status'] === 'submitted') {
 		require_once __DIR__.'/warehouse_material_core_db.inc';
@@ -473,7 +488,7 @@ function cancel_material_request($request_id, $comments = '') {
 		. "status = 'cancelled',"
 		. "updated_at = NOW()"
 		. " WHERE request_id = " . (int)$request_id
-		. " AND status IN ('draft', 'submitted', 'approved')";
+		. " AND status = 'approved'";
 
 	db_query($sql, 'could not cancel material request');
 	return db_num_affected_rows() > 0;
