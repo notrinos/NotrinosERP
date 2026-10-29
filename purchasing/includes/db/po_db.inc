@@ -784,6 +784,13 @@ function get_source_approved_purchase_order_number($cart, $draft_id) {
 	foreach ($markers as $marker) unset($expected[$marker]);
 	$actual = collect_purchase_order_data($cart);
 	if (!is_array($actual)) return false;
+	// Match only the new material wire contract's declared SQL integer types.
+	// Other source families and historical payloads retain their own comparison.
+	if (isset($data['material_request_conversion']['version']) && $data['material_request_conversion']['version'] === 2) {
+		if (!function_exists('canonical_material_purchase_order_data')) return false;
+		$actual = canonical_material_purchase_order_data($actual);
+		if (!is_array($actual)) return false;
+	}
 	// The source writer resolves its native reference immediately before add_po.
 	$actual['reference'] = $expected['reference'];
 	if (json_decode(json_encode($actual), true) !== json_decode(json_encode($expected), true))

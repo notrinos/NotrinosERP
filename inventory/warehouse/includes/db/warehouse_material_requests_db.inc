@@ -576,15 +576,21 @@ function prepare_material_request_purchase_order($request_id, $supplier_id, $ord
 	$cart = new purch_order();
 	if (!$cart->is_current_company())
 		throw new RuntimeException('Material request company is unavailable.');
+	include_once(__DIR__.'/warehouse_material_terminal_db.inc');
+	// Take history before source/children, as native approval and cancellation do.
+	// An old status alone cannot authorize a new downstream command.
+	$custody = material_approved_custody((int)$request_id);
+	if (!$custody)
+		throw new RuntimeException('Material request approved-source custody requires recovery.');
 	// Current locking reads also reject stale outer-transaction snapshots.
 	$source_query = 'SELECT * FROM '.TB_PREF.'wh_material_requests WHERE request_id='.(int)$request_id.' FOR UPDATE';
-	$mr = db_fetch(db_query($source_query, 'could not lock material request conversion'));
+	$mr = db_fetch_assoc(db_query($source_query, 'could not lock material request conversion'));
 	if (!$mr || $mr['status'] !== 'approved' || $mr['request_type'] !== 'purchase'
 		|| !empty($mr['linked_doc_no']))
 		throw new RuntimeException('Material request is not available for conversion.');
-	$location = db_fetch(db_query('SELECT * FROM '.TB_PREF.'locations WHERE loc_code='
+	$location = db_fetch_assoc(db_query('SELECT * FROM '.TB_PREF.'locations WHERE loc_code='
 		.db_escape($mr['warehouse_loc_code']).' AND inactive=0 FOR UPDATE', 'could not verify material request location'));
-	$supplier = db_fetch(db_query('SELECT supplier_id FROM '.TB_PREF.'suppliers WHERE supplier_id='
+	$supplier = db_fetch_assoc(db_query('SELECT supplier_id FROM '.TB_PREF.'suppliers WHERE supplier_id='
 		.(int)$supplier_id.' AND inactive=0 FOR UPDATE', 'could not verify material request supplier'));
 	if (!$location || !$supplier)
 		throw new RuntimeException('Material request destination is unavailable.');
@@ -606,7 +612,7 @@ function prepare_material_request_purchase_order($request_id, $supplier_id, $ord
 		WHERE line.request_id='.(int)$request_id.' ORDER BY line.line_id FOR UPDATE';
 	$lines = db_query($line_query, 'could not lock material request conversion lines');
 	$source_lines = array();
-	while ($line = db_fetch($lines)) {
+	while ($line = db_fetch_assoc($lines)) {
 		$source_lines[] = $line;
 		$outstanding = (float)$line['qty_requested'] - (float)$line['qty_fulfilled'];
 		if (!is_finite($outstanding) || $line['qty_requested'] < 0 || $line['qty_fulfilled'] < 0
@@ -630,7 +636,7 @@ function prepare_material_request_purchase_order($request_id, $supplier_id, $ord
 	}
 	if (!$cart->order_has_items())
 		throw new RuntimeException('Material request has no outstanding lines.');
-	return array('cart'=>$cart, 'header'=>$mr, 'lines'=>$source_lines,
+	return array('cart'=>$cart, 'header'=>$mr, 'lines'=>$source_lines, 'material_custody'=>$custody,
 		'header_query'=>$source_query, 'line_query'=>$line_query);
 }
 
@@ -640,6 +646,10 @@ function write_material_request_purchase_order($snapshot, $approval_draft_id = 0
 		throw new RuntimeException('Material purchase linkage requires an owning transaction.');
 	$cart = $snapshot['cart'];
 	$request_id = (int)$snapshot['header']['request_id'];
+	$context = material_core_context();
+	if (!$context || !isset($snapshot['material_custody'])
+		|| material_approved_custody($request_id) !== $snapshot['material_custody'])
+		throw new RuntimeException('Material request approval history changed.');
 	$intent = json_decode(json_encode($cart), true);
 	if (!is_array($intent) || json_last_error() !== JSON_ERROR_NONE)
 		throw new RuntimeException('Material purchase intent could not be encoded.');
@@ -651,19 +661,43 @@ function write_material_request_purchase_order($snapshot, $approval_draft_id = 0
 	verify_material_request_purchase_order_effect($intent, $cart, $po_no);
 	// Locks exclude other connections; native hooks in this transaction can
 	// still change source intent. Never link an order built from that old intent.
-	if ($snapshot['header'] !== db_fetch(db_query($snapshot['header_query'], 'could not recheck material request conversion')))
+	if ($snapshot['header'] !== db_fetch_assoc(db_query($snapshot['header_query'], 'could not recheck material request conversion')))
 		throw new RuntimeException('Material request source changed.');
 	$lines = db_query($snapshot['line_query'], 'could not recheck material request conversion lines');
 	$current_lines = array();
-	while ($line = db_fetch($lines))
+	while ($line = db_fetch_assoc($lines))
 		$current_lines[] = $line;
 	if ($snapshot['lines'] !== $current_lines)
 		throw new RuntimeException('Material request source lines changed.');
-	if (!db_query('UPDATE '.TB_PREF."wh_material_requests SET status='ordered', linked_doc_type=".ST_PURCHORDER
+	$clock = material_core_rows('SELECT NOW() AS now_');
+	if (!$clock || !db_query('UPDATE '.TB_PREF."wh_material_requests SET status='ordered', linked_doc_type=".ST_PURCHORDER
 		.', linked_doc_no='.(int)$po_no.", updated_at=NOW() WHERE request_id=".(int)$request_id
 		." AND status='approved' AND (linked_doc_no IS NULL OR linked_doc_no=0)", 'could not link material request purchase order')
 		|| db_num_affected_rows() !== 1)
 		throw new RuntimeException('Material request linkage changed.');
+	// Verify the whole terminal source after linking, including trigger/hook effects.
+	$headers = material_core_rows($snapshot['header_query']);
+	$finished = material_core_rows('SELECT NOW() AS now_');
+	$expected = $snapshot['header'];
+	if (!$headers || count($headers) !== 1 || !$finished || !$headers[0]['updated_at']
+		|| $headers[0]['updated_at'] < $clock[0]['now_'] || $headers[0]['updated_at'] > $finished[0]['now_'])
+		throw new RuntimeException('Material request completion is unavailable.');
+	$expected['status'] = 'ordered';
+	$expected['linked_doc_type'] = $headers[0]['linked_doc_type'];
+	$expected['linked_doc_no'] = $headers[0]['linked_doc_no'];
+	$expected['updated_at'] = $headers[0]['updated_at'];
+	if ((int)$expected['linked_doc_type'] !== ST_PURCHORDER || (int)$expected['linked_doc_no'] !== (int)$po_no
+		|| !material_purchase_source_matches($snapshot, $expected)
+		|| material_core_context() !== $context)
+		throw new RuntimeException('Material request completion changed approved source or history.');
+	if ($approval_draft_id) {
+		$state = material_po_completion('peek');
+		if (!$state || $state['draft_id'] !== (int)$approval_draft_id || $state['context'] !== $context)
+			throw new RuntimeException('Material purchase core completion custody is unavailable.');
+		$state['terminal'] = $headers[0]; $state['intent'] = $intent;
+		$state['snapshot'] = $snapshot;
+		material_po_completion('set', $state);
+	}
 	return (int)$po_no;
 }
 

@@ -71,7 +71,11 @@ function reserve_approval_trans_number($trans_type, $context = array())
 		if (!is_string($native_reference) || strlen($native_reference) > 60 || strpos($native_reference, "\0") !== false) return false;
 		$material_number = 0;
 		foreach (array('SELECT request_no FROM '.TB_PREF.'wh_material_requests ORDER BY request_no DESC LIMIT 1 FOR UPDATE',
-			'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST.' ORDER BY id DESC LIMIT 1 FOR UPDATE') as $sql) {
+			'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST.' ORDER BY id DESC LIMIT 1 FOR UPDATE',
+			// Successful demand approval releases its placeholder while retaining
+			// the draft. That immutable reservation must never be issued again.
+			'SELECT reserved_trans_no FROM '.TB_PREF.'approval_drafts WHERE trans_type='.ST_WH_MATERIAL_REQUEST
+				.' ORDER BY reserved_trans_no DESC,id DESC LIMIT 1 FOR UPDATE') as $sql) {
 			$result = db_query($sql); $last = $result ? db_fetch_row($result) : false;
 			if (!$result || ($last && (!is_numeric($last[0]) || (float)$last[0] < 0 || (float)$last[0] >= 2147483647))) return false;
 			if ($last) $material_number = max($material_number, (int)$last[0]);

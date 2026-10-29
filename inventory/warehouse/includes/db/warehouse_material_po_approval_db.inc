@@ -53,16 +53,32 @@ function material_request_purchase_order_has_pending($request_id) {
 	return db_num_rows($result) > 0;
 }
 
-/** Collect the native PO intent plus an immutable digest of the complete locked material source. */
+/** Canonical SQL integer transport for version-two material PO intent only. */
+function canonical_material_purchase_order_data($data) {
+	if (!is_array($data)) return false;
+	// PDO 5.6 transports SQL integer columns as strings. Version two records
+	// their schema types explicitly without changing labels, NULLs or raw JSON.
+	foreach (array('tax_group_id','tax_included') as $field) $data[$field] = (int)$data[$field];
+	foreach (array('days_before_due','day_in_following_month') as $field)
+		if (isset($data['terms'][$field])) $data['terms'][$field] = (int)$data['terms'][$field];
+	foreach ($data['line_items'] as $key=>$line)
+		foreach (array('tax_type','descr_editable') as $field) $data['line_items'][$key][$field] = (int)$line[$field];
+	return $data;
+}
+
+/** Collect native PO intent and bind the exact approved source and raw review history. */
 function collect_material_request_purchase_order_data($snapshot) {
-	$data = collect_purchase_order_data($snapshot['cart']);
+	$data = canonical_material_purchase_order_data(collect_purchase_order_data($snapshot['cart']));
 	$source = json_encode(array($snapshot['header'], $snapshot['lines']));
 	if ($data === false || !is_string($source) || json_last_error() !== JSON_ERROR_NONE)
 		throw new RuntimeException('Material purchase intent could not be encoded.');
-	$data['material_request_conversion'] = array('version'=>1,
+	$data['material_request_conversion'] = array('version'=>2,
 		'request_id'=>(int)$snapshot['header']['request_id'],
 		'order_date'=>date2sql($snapshot['cart']->orig_order_date),
-		'source_sha256'=>hash('sha256', $source));
+		'source_sha256'=>material_core_source_fingerprint(array('header'=>$snapshot['header'], 'lines'=>$snapshot['lines'])),
+		'approved_custody_sha256'=>material_core_source_fingerprint(array(
+			'header'=>array(), 'lines'=>array_merge($snapshot['material_custody']['history']['drafts'],
+				$snapshot['material_custody']['history']['actions']))));
 	return $data;
 }
 
@@ -81,7 +97,7 @@ function material_request_purchase_order_envelope_authorized($data) {
 		&& is_array($data['material_request_conversion'])
 		&& isset($data['material_request_conversion']['version'], $data['material_request_conversion']['request_id'],
 			$data['material_request_conversion']['order_date'], $data['material_request_conversion']['source_sha256'])
-		&& $data['material_request_conversion']['version'] === 1
+		&& in_array($data['material_request_conversion']['version'], array(1,2), true)
 		&& is_int($data['material_request_conversion']['request_id']) && $data['material_request_conversion']['request_id'] > 0
 		&& is_string($data['material_request_conversion']['order_date'])
 		&& preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $data['material_request_conversion']['order_date'])
@@ -94,6 +110,10 @@ function restore_material_request_purchase_order_snapshot($data) {
 	if (!material_request_purchase_order_envelope_authorized($data))
 		throw new RuntimeException('Material purchase envelope is unavailable.');
 	$source = $data['material_request_conversion'];
+	// Earlier envelopes remain immutable and can reject/cancel through the core.
+	// They cannot infer a reviewed receipt; a fresh current-policy submission is required.
+	if ($source['version'] !== 2 || !isset($source['approved_custody_sha256']))
+		throw new RuntimeException('Material purchase review requires cancellation and resubmission.');
 	$date = sql2date($source['order_date']);
 	if (!is_date($date) || date2sql($date) !== $source['order_date'])
 		throw new RuntimeException('Material purchase date is invalid.');
@@ -150,10 +170,57 @@ function validate_purchase_order_source_action($action, $data, $draft, $actor, $
 		return true;
 	try {
 		$snapshot = restore_material_request_purchase_order_snapshot($data);
+		if ($action === 'approve') {
+			if (!register_transaction_resource_release('material-po-completion', 'release_material_po_completion')) return false;
+			material_po_completion('set', array('context'=>material_core_context(), 'snapshot'=>$snapshot,
+				'draft_id'=>(int)$draft['id'], 'terminal'=>null, 'intent'=>null));
+		}
 		return $action !== 'submit' || !material_request_purchase_order_has_pending($snapshot['header']['request_id']);
 	} catch (Exception $exception) {
 		return false;
 	}
+}
+
+/** Retain one core action's expected source only until its owning transaction ends. */
+function material_po_completion($operation, $value = null) {
+	static $state = null;
+	if ($operation === 'set') { $state = $value; return true; }
+	if ($operation === 'peek') return $state;
+	$saved = $state; $state = null;
+	return $operation === 'take' ? $saved : true;
+}
+
+/** Clear incomplete core completion custody on rollback and outer commit. */
+function release_material_po_completion() { return material_po_completion('clear'); }
+
+/** Preserve standalone ownership and all raw demand rows through downstream completion. */
+function material_purchase_source_matches($snapshot, $header) {
+	$identity = (int)$snapshot['header']['request_id'];
+	$ids = array(); foreach ($snapshot['material_custody']['source']['lines'] as $line) $ids[] = (int)$line['line_id'];
+	return material_core_rows($snapshot['header_query']) === array($header)
+		&& material_core_rows($snapshot['line_query']) === $snapshot['lines']
+		&& material_core_history($identity) === $snapshot['material_custody']['history']
+		&& material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisitions WHERE material_request_id='.$identity.' ORDER BY id FOR UPDATE') === array()
+		&& material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE material_request_line_id IN ('
+			.implode(',', $ids).') ORDER BY id FOR UPDATE') === array();
+}
+
+/** Verify material source/history after the core's final reservation and notification writes. */
+function verify_material_purchase_order_completion($outcome, $draft, $actor, $comments) {
+	$approval = get_approval_workflow_service();
+	$data = $approval->decodeStoredDraftData($draft['draft_data']);
+	if (!is_array($data) || !array_key_exists('material_request_conversion', $data)) return true;
+	if (in_array($outcome, array('rejected','cancelled'), true)) return true;
+	$state = material_po_completion('take');
+	if (!$state || $state['context'] !== material_core_context()
+		|| (int)$draft['id'] !== $state['draft_id']
+		|| !material_request_purchase_order_envelope_authorized($data)) return false;
+	$snapshot = $state['snapshot'];
+	if ($outcome !== 'approved')
+		return $state['terminal'] === null && material_approved_custody((int)$snapshot['header']['request_id']) === $snapshot['material_custody'];
+	if (!$state['terminal'] || !$state['intent'] || !material_purchase_source_matches($snapshot, $state['terminal'])) return false;
+	verify_material_request_purchase_order_effect($state['intent'], $snapshot['cart'], (int)$state['terminal']['linked_doc_no']);
+	return $state['context'] === material_core_context();
 }
 
 /** Submit immutable source intent or execute the existing direct-policy command, never both. */

@@ -23,6 +23,7 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHORDER, array(
 	'application'    => 'AP',
 	'executor'       => 'execute_approved_purchase_order',
 	'action_validator' => 'validate_purchase_order_source_action',
+	'action_completion_validator' => 'verify_material_purchase_order_completion',
 	'amount_getter'  => 'get_purchase_draft_amount',
 	'draft_renderer' => 'render_purchase_draft',
 	'edit_url'       => 'purchasing/po_entry_items.php',

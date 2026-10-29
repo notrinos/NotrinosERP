@@ -53,10 +53,10 @@ function get_material_request_core_form_context()
 
 $material_line_commands = array('AddLine', 'UpdateLine', 'DeleteLine');
 $material_line_post = isset($_POST['AddLine']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0;
-if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete'])) {
+if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete']) || isset($_POST['ConvertPO'])) {
 	$core_context = get_post('material_core_context', '');
 	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
-		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM']);
+		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM'], $_POST['ConvertPO']);
 		foreach (array_keys($_POST) as $field)
 			foreach ($material_line_commands as $command)
 				if ($field === $command || strpos($field, $command) === 0) unset($_POST[$field]);
