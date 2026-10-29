@@ -1,5 +1,6 @@
 <?php
 /** Immutable requisition source commands through the existing native PO workflow. */
+require_once __DIR__.'/purch_requisition_po_completion_db.inc';
 
 /** Read current source rows under the owning transaction rather than an MVCC snapshot. */
 function read_requisition_purchase_rows($query) {
@@ -239,11 +240,15 @@ function validate_requisition_purchase_order_action($action, $data, $draft, $act
 	if ($action === 'auto_approve' || ($draft && in_array($action, array('approve','reject'), true)
 		&& (int)$draft['submitted_by'] === (int)$actor['user_id']))
 		return false;
-	// Terminal decisions release central reservation custody without changing source/history.
-	if ($action === 'reject' || $action === 'cancel')
-		return true;
 	try {
+		// Terminal decisions retain the current source even after independent drift.
+		if ($action === 'reject' || $action === 'cancel')
+			return prepare_requisition_po_completion($action, $data, $draft, $actor, $comments);
 		$snapshot = restore_requisition_purchase_order_snapshot($data);
+		if ($action === 'approve' && (int)$draft['status'] === APPROVAL_STATUS_APPROVED)
+			return revalidate_requisition_po_completion($data, $draft, $actor);
+		if ($action === 'approve')
+			return prepare_requisition_po_completion($action, $data, $draft, $actor, $comments, $snapshot);
 		return $action !== 'submit' || !requisition_purchase_order_has_pending($snapshot['header']['id'], $snapshot['used']);
 	} catch (Exception $exception) {
 		return false;
@@ -412,5 +417,6 @@ function write_requisition_purchase_order($snapshot, $approval_draft_id = 0, $de
  if (!$cart->tax_included && $snapshot['tax_configuration'] !== read_agreement_purchase_tax_configuration(true)) throw new RuntimeException('Requisition tax configuration changed.');
  foreach ($snapshot['pricing'] as $stock=>$inputs) if ($inputs !== read_requisition_purchase_pricing($cart->supplier_id, $stock, true)) throw new RuntimeException('Requisition pricing configuration changed.');
  if (!$approval_draft_id && !purchase_order_conversion_direct_authorized($cart)) throw new RuntimeException('Requisition PO completion policy changed.');
+ if ($approval_draft_id) finish_requisition_po_native_write($snapshot, $number, $approval_draft_id, $intent);
  return (int)$number;
 }

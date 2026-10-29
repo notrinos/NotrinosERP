@@ -209,6 +209,10 @@ function material_purchase_source_matches($snapshot, $header) {
 function verify_material_purchase_order_completion($outcome, $draft, $actor, $comments) {
 	$approval = get_approval_workflow_service();
 	$data = $approval->decodeStoredDraftData($draft['draft_data']);
+	if (is_array($data) && array_key_exists('requisition_conversion', $data)) {
+		require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_po_approval_db.inc';
+		return verify_requisition_purchase_order_completion($outcome, $draft, $actor, $comments);
+	}
 	if (!is_array($data) || !array_key_exists('material_request_conversion', $data)) return true;
 	if (in_array($outcome, array('rejected','cancelled'), true)) return true;
 	$state = material_po_completion('take');
