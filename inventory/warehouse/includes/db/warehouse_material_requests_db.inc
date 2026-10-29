@@ -801,14 +801,14 @@ function convert_material_request_to_transfer($request_id, $from_loc_code) {
 		if ($outstanding <= 0)
 			continue;
 
-		add_transfer_order_line(
+		if (!add_transfer_order_line(
 			$to_id,
 			$line['stock_id'],
 			$outstanding
-		);
+		)) { cancel_transaction(); return false; }
 	}
 
-	mark_material_request_ordered($request_id, ST_LOCTRANSFER, $to_id);
+	if (!mark_material_request_ordered($request_id, ST_LOCTRANSFER, $to_id)) { cancel_transaction(); return false; }
 
 	commit_transaction();
 

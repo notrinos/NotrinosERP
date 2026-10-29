@@ -73,7 +73,7 @@ function transfer_core_history($identity)
 }
 
 /** Lock the complete unshipped transfer header and raw children. */
-function transfer_core_source($identity, $status)
+function transfer_core_source($identity, $status, $allow_empty = false)
 {
     $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
     if (!$headers || count($headers) !== 1 || $headers[0]['status'] !== $status
@@ -85,7 +85,7 @@ function transfer_core_source($identity, $status)
         .ST_LOCTRANSFER.' AND linked_doc_no='.$identity.' ORDER BY request_id FOR UPDATE');
     if ($links === false || $links) return false;
     $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
-    if (!$lines) return false;
+    if ($lines === false || (!$allow_empty && !$lines)) return false;
     foreach ($lines as $line)
         if (!is_numeric($line['qty_requested']) || !is_finite((float)$line['qty_requested'])
             || (float)$line['qty_requested'] <= 0 || (float)$line['qty_shipped'] != 0 || (float)$line['qty_received'] != 0

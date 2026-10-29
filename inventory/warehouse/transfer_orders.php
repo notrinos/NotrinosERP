@@ -49,10 +49,11 @@ function get_transfer_order_core_form_context()
     return hash_hmac('sha256', serialize(array($actor->user, $actor->access, $actor->cur_con,
         $db_connections[$actor->cur_con])), ensure_csrf_token());
 }
-if (isset($_POST['Submit']) || isset($_POST['Cancel'])) {
+if (isset($_POST['Submit']) || isset($_POST['Cancel']) || isset($_POST['AddLine']) || find_submit('DeleteLine') > 0) {
     $context = get_post('transfer_core_context', '');
     if (!is_string($context) || !hash_equals(get_transfer_order_core_form_context(), $context)) {
-        unset($_POST['Submit'], $_POST['Cancel']);
+        unset($_POST['Submit'], $_POST['Cancel'], $_POST['AddLine']);
+        foreach (array_keys($_POST) as $key) if (preg_match('/^DeleteLine[0-9]+$/D', $key)) unset($_POST[$key]);
         display_error(_('The transfer order form context has changed. Reload this page before changing this order.'));
     }
 }
@@ -190,7 +191,7 @@ if (isset($_POST['AddLine'])) {
 		$item_info = get_item_edit_info($line_stock);
 		$unit_cost = $item_info ? $item_info['material_cost'] : 0;
 
-		add_transfer_order_line(
+		$line_result = add_transfer_order_line(
 			$selected_id,
 			$line_stock,
 			$line_qty,
@@ -198,15 +199,17 @@ if (isset($_POST['AddLine'])) {
 			null, null, // batch/serial (assigned during ship)
 			$unit_cost
 		);
-		display_notification(_('Line added to transfer order.'));
+		if ($line_result !== false) display_notification(_('Line added to transfer order.'));
+		else display_error(_('Cannot add this line. Reload the current standalone draft and retry.'));
 	}
 }
 
 // --- Delete line ---
 $del_line = find_submit('DeleteLine');
 if ($del_line > 0) {
-	delete_transfer_order_line($del_line);
-	display_notification(_('Line removed from transfer order.'));
+	if ($selected_id > 0 && delete_transfer_order_line($del_line, $selected_id))
+		display_notification(_('Line removed from transfer order.'));
+	else display_error(_('Cannot remove this line. Reload the current standalone draft and retry.'));
 }
 
 // --- Edit button from list ---

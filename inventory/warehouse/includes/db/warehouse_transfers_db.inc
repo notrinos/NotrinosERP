@@ -142,27 +142,12 @@ function add_transfer_order($from_loc_code, $to_loc_code, $request_date,
  * @return int Inserted line_id
  */
 function add_transfer_order_line($transfer_id, $stock_id, $qty,
-	$from_bin_id = null, $to_bin_id = null,
-	$batch_id = null, $serial_id = null,
-	$unit_cost = 0, $memo = null)
+    $from_bin_id = null, $to_bin_id = null, $batch_id = null, $serial_id = null, $unit_cost = 0, $memo = null)
 {
-	$sql = "INSERT INTO " . TB_PREF . "wh_transfer_order_lines (
-		transfer_id, stock_id, qty_requested, from_bin_id, to_bin_id,
-		batch_id, serial_id, unit_cost, memo
-	) VALUES ("
-		. (int)$transfer_id . ","
-		. db_escape($stock_id) . ","
-		. (float)$qty . ","
-		. ($from_bin_id ? (int)$from_bin_id : 'NULL') . ","
-		. ($to_bin_id ? (int)$to_bin_id : 'NULL') . ","
-		. ($batch_id ? (int)$batch_id : 'NULL') . ","
-		. ($serial_id ? (int)$serial_id : 'NULL') . ","
-		. (float)$unit_cost . ","
-		. ($memo ? db_escape($memo) : 'NULL')
-		. ")";
-
-	db_query($sql, 'could not add transfer order line');
-	return db_insert_id();
+    require_once __DIR__.'/warehouse_transfer_line_db.inc';
+    return write_native_transfer_line('add', $transfer_id, array('stock_id'=>$stock_id, 'qty_requested'=>$qty,
+        'from_bin_id'=>$from_bin_id, 'to_bin_id'=>$to_bin_id, 'batch_id'=>$batch_id, 'serial_id'=>$serial_id,
+        'unit_cost'=>$unit_cost, 'memo'=>$memo));
 }
 
 /**
@@ -210,20 +195,12 @@ function update_transfer_order($transfer_id, $from_loc_code, $to_loc_code,
  * @param string|null $memo         Line memo
  */
 function update_transfer_order_line($line_id, $qty, $from_bin_id = null,
-	$to_bin_id = null, $batch_id = null, $serial_id = null,
-	$unit_cost = 0, $memo = null)
+    $to_bin_id = null, $batch_id = null, $serial_id = null, $unit_cost = 0, $memo = null, $expected_parent = null)
 {
-	$sql = "UPDATE " . TB_PREF . "wh_transfer_order_lines SET "
-		. "qty_requested=" . (float)$qty . ","
-		. "from_bin_id=" . ($from_bin_id ? (int)$from_bin_id : 'NULL') . ","
-		. "to_bin_id=" . ($to_bin_id ? (int)$to_bin_id : 'NULL') . ","
-		. "batch_id=" . ($batch_id ? (int)$batch_id : 'NULL') . ","
-		. "serial_id=" . ($serial_id ? (int)$serial_id : 'NULL') . ","
-		. "unit_cost=" . (float)$unit_cost . ","
-		. "memo=" . ($memo ? db_escape($memo) : 'NULL')
-		. " WHERE line_id=" . (int)$line_id;
-
-	db_query($sql, 'could not update transfer order line');
+    require_once __DIR__.'/warehouse_transfer_line_db.inc';
+    return write_native_transfer_line('update', $line_id, array('qty_requested'=>$qty,
+        'from_bin_id'=>$from_bin_id, 'to_bin_id'=>$to_bin_id, 'batch_id'=>$batch_id, 'serial_id'=>$serial_id,
+        'unit_cost'=>$unit_cost, 'memo'=>$memo), $expected_parent);
 }
 
 /**
@@ -231,9 +208,9 @@ function update_transfer_order_line($line_id, $qty, $from_bin_id = null,
  *
  * @param int $line_id Line ID
  */
-function delete_transfer_order_line($line_id) {
-	$sql = "DELETE FROM " . TB_PREF . "wh_transfer_order_lines WHERE line_id=" . (int)$line_id;
-	db_query($sql, 'could not delete transfer order line');
+function delete_transfer_order_line($line_id, $expected_parent = null) {
+    require_once __DIR__.'/warehouse_transfer_line_db.inc';
+    return write_native_transfer_line('delete', $line_id, array(), $expected_parent);
 }
 
 /**
@@ -860,7 +837,7 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 			sprintf(_('Backorder from Transfer Order #%d (partial receipt)'), $order['transfer_no'])
 		);
 		foreach ($backorder_lines as $bl) {
-			add_transfer_order_line(
+			if (!add_transfer_order_line(
 				$backorder_id,
 				$bl['stock_id'],
 				$bl['qty'],
@@ -869,7 +846,11 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 				$bl['batch_id'],
 				$bl['serial_id'],
 				$bl['unit_cost']
-			);
+            )) {
+                cancel_transaction();
+                $result['message'] = _('Cannot create the transfer backorder. No receipt was saved.');
+                return $result;
+            }
 		}
 	}
 

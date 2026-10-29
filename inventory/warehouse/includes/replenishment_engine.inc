@@ -647,13 +647,16 @@ function execute_transfer_suggestion($suggestion) {
 	$from_bin = isset($suggestion['source_bin_id']) ? $suggestion['source_bin_id'] : null;
 	$to_bin = isset($suggestion['bin_loc_id']) ? $suggestion['bin_loc_id'] : null;
 
-	add_transfer_order_line(
+	if (!add_transfer_order_line(
 		$transfer_id,
 		$suggestion['stock_id'],
 		$suggestion['suggested_qty'],
 		$from_bin,
 		$to_bin
-	);
+	)) {
+		$result['message'] = _('Cannot create the transfer line.');
+		return $result;
+	}
 
 	$result['success'] = true;
 	$result['doc_no'] = $transfer_id;
