@@ -384,7 +384,7 @@ function write_requisition_purchase_order($snapshot, $approval_draft_id = 0, $de
  if ($current_header !== array($expected_header)) throw new RuntimeException('Requisition derived status requires a fresh snapshot.');
  if ($snapshot['material'] && $snapshot['material'][0]['status'] === 'approved') {
   if (!function_exists('mark_material_request_ordered')) include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_material_requests_db.inc');
-  if (!mark_material_request_ordered((int)$snapshot['header']['material_request_id'], ST_PURCHORDER, $number)) throw new RuntimeException('Linked Warehouse order failed.');
+  if (!mark_material_request_ordered((int)$snapshot['header']['material_request_id'], ST_PURCHORDER, $number, $snapshot)) throw new RuntimeException('Linked Warehouse order failed.');
  }
  if ($snapshot['material']) {
   $current = read_requisition_purchase_rows($snapshot['queries']['material']);

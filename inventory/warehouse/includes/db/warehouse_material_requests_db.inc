@@ -495,9 +495,16 @@ function cancel_material_request($request_id, $comments = '') {
  * @param int    $request_id    Request ID
  * @param int    $linked_type   Linked document type (ST_PURCHORDER, ST_LOCTRANSFER, ST_WORKORDER)
  * @param int    $linked_no     Linked document number
+ * @param array  $purchase_snapshot Native paired PO source intent, required for PO linkage
  * @return bool Success
  */
-function mark_material_request_ordered($request_id, $linked_type, $linked_no) {
+function mark_material_request_ordered($request_id, $linked_type, $linked_no, $purchase_snapshot = null) {
+	// Standalone PO conversion owns its separate approved-source receipt path.
+	// A paired PO transition must carry the native writer's actual source intent.
+	if ((int)$linked_type === ST_PURCHORDER) {
+		require_once $GLOBALS['path_to_root'].'/inventory/warehouse/includes/db/warehouse_material_order_db.inc';
+		return link_paired_material_purchase_order($request_id, $linked_no, $purchase_snapshot);
+	}
 	$mr = get_material_request($request_id);
 	if (!$mr || $mr['status'] !== 'approved')
 		return false;
