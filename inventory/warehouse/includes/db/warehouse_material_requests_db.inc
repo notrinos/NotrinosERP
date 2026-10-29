@@ -794,6 +794,7 @@ function convert_material_request_to_transfer($request_id, $from_loc_code) {
 		null,
 		$expected_recv
 	);
+	if (!$to_id) { cancel_transaction(); return false; }
 
 	$lines = get_material_request_lines($request_id);
 	while ($line = db_fetch($lines)) {

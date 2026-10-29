@@ -102,29 +102,9 @@ function add_transfer_order($from_loc_code, $to_loc_code, $request_date,
 	$transfer_type = 'standard', $reference = null, $memo = null,
 	$expected_ship = null, $expected_recv = null)
 {
-	$transfer_no = get_next_transfer_order_no();
-
-	$sql = "INSERT INTO " . TB_PREF . "wh_transfer_orders (
-		transfer_no, transfer_type, status, from_loc_code, to_loc_code,
-		request_date, expected_ship_date, expected_recv_date,
-		requested_by, reference, memo, created_at
-	) VALUES ("
-		. (int)$transfer_no . ","
-		. db_escape($transfer_type) . ","
-		. "'draft',"
-		. db_escape($from_loc_code) . ","
-		. db_escape($to_loc_code) . ","
-		. db_escape($request_date) . ","
-		. ($expected_ship ? db_escape($expected_ship) : 'NULL') . ","
-		. ($expected_recv ? db_escape($expected_recv) : 'NULL') . ","
-		. (int)$_SESSION['wa_current_user']->user . ","
-		. ($reference ? db_escape($reference) : 'NULL') . ","
-		. ($memo ? db_escape($memo) : 'NULL') . ","
-		. "NOW()"
-		. ")";
-
-	db_query($sql, 'could not add transfer order');
-	return db_insert_id();
+    require_once __DIR__.'/warehouse_transfer_header_db.inc';
+    return write_native_transfer_header(null, $from_loc_code, $to_loc_code, $request_date,
+        $transfer_type, $reference, $memo, $expected_ship, $expected_recv);
 }
 
 /**
@@ -167,19 +147,9 @@ function update_transfer_order($transfer_id, $from_loc_code, $to_loc_code,
 	$request_date, $transfer_type = 'standard', $reference = null, $memo = null,
 	$expected_ship = null, $expected_recv = null)
 {
-	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-		. "from_loc_code=" . db_escape($from_loc_code) . ","
-		. "to_loc_code=" . db_escape($to_loc_code) . ","
-		. "request_date=" . db_escape($request_date) . ","
-		. "transfer_type=" . db_escape($transfer_type) . ","
-		. "reference=" . ($reference ? db_escape($reference) : 'NULL') . ","
-		. "memo=" . ($memo ? db_escape($memo) : 'NULL') . ","
-		. "expected_ship_date=" . ($expected_ship ? db_escape($expected_ship) : 'NULL') . ","
-		. "expected_recv_date=" . ($expected_recv ? db_escape($expected_recv) : 'NULL') . ","
-		. "updated_at=NOW()"
-		. " WHERE transfer_id=" . (int)$transfer_id;
-
-	db_query($sql, 'could not update transfer order');
+    require_once __DIR__.'/warehouse_transfer_header_db.inc';
+    return write_native_transfer_header($transfer_id, $from_loc_code, $to_loc_code, $request_date,
+        $transfer_type, $reference, $memo, $expected_ship, $expected_recv);
 }
 
 /**
@@ -836,6 +806,11 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 			'BO-TO-' . $order['transfer_no'],
 			sprintf(_('Backorder from Transfer Order #%d (partial receipt)'), $order['transfer_no'])
 		);
+        if (!$backorder_id) {
+            cancel_transaction();
+            $result['message'] = _('Cannot create the transfer backorder. No receipt was saved.');
+            return $result;
+        }
 		foreach ($backorder_lines as $bl) {
 			if (!add_transfer_order_line(
 				$backorder_id,
