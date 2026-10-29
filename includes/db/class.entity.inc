@@ -644,7 +644,9 @@ class Entity extends record_set {
 		$keys['purch_requisition_lines'] = 'id';
 		$keys['wh_material_requests'] = 'request_id';
 		$keys['wh_material_request_lines'] = 'line_id';
-		if (preg_match('/^\s*`?(?:wh_material_requests|wh_material_request_lines)\b/i', $this->name)
+		$keys['wh_transfer_orders'] = 'transfer_id';
+		$keys['wh_transfer_order_lines'] = 'line_id';
+		if (preg_match('/^\s*`?(?:wh_material_requests|wh_material_request_lines|wh_transfer_orders|wh_transfer_order_lines)\b/i', $this->name)
 			&& !isset($keys[strtolower(trim($this->name))])) return false;
 		if (preg_match('/^\s*`(?:purch_requisitions|purch_requisition_lines)`/i', $this->name)) return false;
 		$owner = strtolower(trim($this->name));
@@ -678,6 +680,16 @@ class Entity extends record_set {
 		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
+		if ($owner === 'wh_transfer_orders' || $owner === 'wh_transfer_order_lines') {
+			require_once __DIR__.'/../../inventory/warehouse/includes/db/warehouse_transfer_entity_db.inc';
+			if ($this->subset !== null && $this->subset !== false && $this->subset !== '') return false;
+			return write_transfer_order_entity($owner, $operation, $key, $next,
+				function() use ($operation, $key, $data) {
+					if ($operation === 'insert') return parent::insert_check($data);
+					if ($operation === 'update') return parent::update($key, $data);
+					return parent::delete_check($key);
+				});
+		}
 		if ($owner === 'wh_material_requests' || $owner === 'wh_material_request_lines') {
 			require_once __DIR__.'/../../inventory/warehouse/includes/db/warehouse_material_entity_db.inc';
 			if ($this->subset) return false;

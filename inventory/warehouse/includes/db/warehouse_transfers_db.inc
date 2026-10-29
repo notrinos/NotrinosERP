@@ -360,7 +360,7 @@ function delete_transfer_order($transfer_id) {
         if (!begin_transaction()) return false;
         $history = transfer_core_history($identity);
         $rows = transfer_core_rows('SELECT status FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
-        $source = $rows ? transfer_core_source($identity, $rows[0]['status']) : false;
+        $source = $rows ? transfer_core_source($identity, $rows[0]['status'], true) : false;
         if (!$history || $history['drafts'] || !$source || !in_array($source['header']['status'], array('draft','cancelled'), true)
             || (int)$source['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user
             || !empty($source['header']['approved_by']) || $source['header']['custom_data'] !== null) { cancel_transaction(); return false; }
