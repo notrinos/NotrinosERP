@@ -406,18 +406,29 @@ function can_delete_transfer_order($transfer_id) {
  * @return bool Success
  */
 function delete_transfer_order($transfer_id) {
-	if (!can_delete_transfer_order($transfer_id))
-		return false;
-
-	begin_transaction();
-	$sql = "DELETE FROM " . TB_PREF . "wh_transfer_order_lines WHERE transfer_id=" . (int)$transfer_id;
-	db_query($sql, 'could not delete transfer order lines');
-
-	$sql = "DELETE FROM " . TB_PREF . "wh_transfer_orders WHERE transfer_id=" . (int)$transfer_id;
-	db_query($sql, 'could not delete transfer order');
-	commit_transaction();
-
-	return true;
+    require_once __DIR__.'/warehouse_transfer_core_db.inc';
+    $identity = dimension_writer_reference_id($transfer_id); $context = transfer_core_context();
+    if (!$identity || !$context) return false;
+    try {
+        if (!begin_transaction()) return false;
+        $history = transfer_core_history($identity);
+        $rows = transfer_core_rows('SELECT status FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
+        $source = $rows ? transfer_core_source($identity, $rows[0]['status']) : false;
+        if (!$history || $history['drafts'] || !$source || !in_array($source['header']['status'], array('draft','cancelled'), true)
+            || (int)$source['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user
+            || !empty($source['header']['approved_by']) || $source['header']['custom_data'] !== null) { cancel_transaction(); return false; }
+        foreach ($source['lines'] as $line)
+            if ($line['custom_data'] !== null) { cancel_transaction(); return false; }
+        if (!db_query('DELETE FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity)
+            || !db_query('DELETE FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity)
+            || db_num_affected_rows() !== 1 || transfer_core_context() !== $context
+            || transfer_core_history($identity) !== $history
+            || transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE') !== array()
+            || transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' FOR UPDATE') !== array()
+            || !commit_transaction()) { cancel_transaction(); return false; }
+        return true;
+    } catch (Exception $exception) { cancel_transaction(); return false;
+    } catch (Throwable $exception) { cancel_transaction(); return false; }
 }
 
 // =====================================================================
@@ -459,6 +470,7 @@ function get_transfer_order_submission_data($transfer_id)
 	while ($line = db_fetch($lines)) {
 		$line_data[] = array(
 			'line_id' => (int)$line['line_id'],
+			'memo' => $line['memo'] === null ? '' : $line['memo'],
 			'stock_id' => $line['stock_id'],
 			'description' => isset($line['item_description']) ? $line['item_description'] : '',
 			'units' => isset($line['item_units']) ? $line['item_units'] : '',
@@ -491,8 +503,8 @@ function get_transfer_order_submission_data($transfer_id)
 		'request_date' => $order['request_date'],
 		'expected_ship_date' => $order['expected_ship_date'] ? $order['expected_ship_date'] : '',
 		'expected_recv_date' => $order['expected_recv_date'] ? $order['expected_recv_date'] : '',
-		'reference' => $order['reference'] ? $order['reference'] : '',
-		'memo' => $order['memo'] ? $order['memo'] : '',
+		'reference' => $order['reference'] === null ? '' : $order['reference'],
+		'memo' => $order['memo'] === null ? '' : $order['memo'],
 		'requested_by' => (int)$order['requested_by'],
 		'requested_by_name' => isset($order['requested_by_name']) ? $order['requested_by_name'] : '',
 		'line_count' => count($line_data),
@@ -509,22 +521,7 @@ function get_transfer_order_submission_data($transfer_id)
  */
 function submit_transfer_order($transfer_id)
 {
-	$order = get_transfer_order($transfer_id);
-	if (!$order || $order['status'] !== 'draft')
-		return false;
-
-	$line_count = count_transfer_order_lines($transfer_id);
-	if ($line_count <= 0)
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-		. "status='submitted',"
-		. "updated_at=NOW()"
-		. " WHERE transfer_id=" . (int)$transfer_id
-		. " AND status='draft'";
-
-	db_query($sql, 'could not submit transfer order');
-	return db_num_affected_rows() > 0;
+    return submit_transfer_order_for_core_approval($transfer_id) !== false;
 }
 
 /**
@@ -535,61 +532,8 @@ function submit_transfer_order($transfer_id)
  */
 function submit_transfer_order_for_core_approval($transfer_id)
 {
-	$order = get_transfer_order($transfer_id);
-	if (!$order || $order['status'] !== 'draft')
-		return false;
-
-	if (count_transfer_order_lines($transfer_id) <= 0)
-		return false;
-
-	$approval_registered = class_exists('ApprovalWorkflow') && ApprovalWorkflow::isRegistered(ST_WH_TRANSFER_ORDER);
-	$approval_amount = (float)get_transfer_order_total_value($transfer_id);
-	$approval_required = false;
-	$approval = null;
-
-	if ($approval_registered) {
-		$approval = get_approval_workflow_service();
-		$approval_required = $approval->isApprovalRequired(ST_WH_TRANSFER_ORDER, $approval_amount);
-	}
-
-	if (!submit_transfer_order($transfer_id))
-		return false;
-
-	if (!$approval_registered || !$approval_required) {
-		if (!approve_transfer_order($transfer_id))
-			return false;
-
-		return array('status' => 'auto_approved', 'transfer_id' => (int)$transfer_id);
-	}
-
-	$reloaded = get_transfer_order($transfer_id);
-	$draft_data = get_transfer_order_submission_data($transfer_id);
-	if ($draft_data === false)
-		return false;
-
-	$result = $approval->submit(
-		ST_WH_TRANSFER_ORDER,
-		$draft_data,
-		$approval_amount,
-		array(
-			'summary' => sprintf(_('Transfer Order TO-%s'), str_pad($reloaded['transfer_no'], 4, '0', STR_PAD_LEFT)),
-			'currency' => get_company_pref('curr_default'),
-			'person_type' => PT_MISC,
-			'person_id' => $reloaded['requested_by'],
-			'loc_code' => $reloaded['from_loc_code'],
-		)
-	);
-
-	if (isset($result['status']) && $result['status'] === 'execution_failed') {
-		$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-			. "status='draft',"
-			. "updated_at=NOW()"
-			. " WHERE transfer_id=" . (int)$transfer_id
-			. " AND status='submitted'";
-		db_query($sql, 'could not rollback transfer order to draft after approval execution failure');
-	}
-
-	return $result;
+    require_once __DIR__.'/warehouse_transfer_core_db.inc';
+    return submit_native_transfer_to_core($transfer_id);
 }
 
 /**
@@ -598,20 +542,10 @@ function submit_transfer_order_for_core_approval($transfer_id)
  * @param int $transfer_id Transfer order ID
  * @return bool Success
  */
-function approve_transfer_order($transfer_id) {
-	$order = get_transfer_order($transfer_id);
-	if (!$order || $order['status'] !== 'submitted')
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-		. "status='approved',"
-		. "approved_by=" . (int)$_SESSION['wa_current_user']->user . ","
-		. "approval_date=NOW(),"
-		. "updated_at=NOW()"
-		. " WHERE transfer_id=" . (int)$transfer_id;
-
-	db_query($sql, 'could not approve transfer order');
-	return db_num_affected_rows() > 0;
+function approve_transfer_order($transfer_id)
+{
+    // Final decisions belong exclusively to the registered shared-core handler.
+    return false;
 }
 
 /**
@@ -622,18 +556,8 @@ function approve_transfer_order($transfer_id) {
  */
 function reject_transfer_order($transfer_id)
 {
-	$order = get_transfer_order($transfer_id);
-	if (!$order || $order['status'] !== 'submitted')
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-		. "status='draft',"
-		. "updated_at=NOW()"
-		. " WHERE transfer_id=" . (int)$transfer_id
-		. " AND status='submitted'";
-
-	db_query($sql, 'could not reject transfer order');
-	return db_num_affected_rows() > 0;
+    // Final decisions belong exclusively to the registered shared-core handler.
+    return false;
 }
 
 /**
@@ -969,6 +893,12 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
  * @return bool Success
  */
 function cancel_transfer_order($transfer_id) {
+    require_once __DIR__.'/warehouse_transfer_core_db.inc';
+    $identity = dimension_writer_reference_id($transfer_id);
+    if (!$identity || !transfer_core_context()) return false;
+    $current = get_transfer_order($identity);
+    if ($current && $current['status'] === 'submitted') return cancel_native_transfer_core($identity, '');
+
 	$order = get_transfer_order($transfer_id);
 	if (!$order || in_array($order['status'], array('received', 'cancelled')))
 		return false;

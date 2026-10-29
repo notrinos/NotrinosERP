@@ -41,6 +41,22 @@ page(_($help_context = 'Transfer Orders'), false, false, '', $js);
 // HANDLE ACTIONS
 // =====================================================================
 
+/** Bind native approval commands to the actor, role and company which rendered the form. */
+function get_transfer_order_core_form_context()
+{
+    global $db_connections;
+    $actor = $_SESSION['wa_current_user'];
+    return hash_hmac('sha256', serialize(array($actor->user, $actor->access, $actor->cur_con,
+        $db_connections[$actor->cur_con])), ensure_csrf_token());
+}
+if (isset($_POST['Submit']) || isset($_POST['Cancel'])) {
+    $context = get_post('transfer_core_context', '');
+    if (!is_string($context) || !hash_equals(get_transfer_order_core_form_context(), $context)) {
+        unset($_POST['Submit'], $_POST['Cancel']);
+        display_error(_('The transfer order form context has changed. Reload this page before changing this order.'));
+    }
+}
+
 $selected_id = get_post('selected_id', isset($_GET['selected_id']) ? $_GET['selected_id'] : -1);
 if ($selected_id == '') $selected_id = -1;
 
@@ -221,6 +237,7 @@ if (isset($_POST['New'])) {
 // =====================================================================
 
 start_form();
+hidden('transfer_core_context', get_transfer_order_core_form_context());
 
 // --- FILTERS ---
 start_table(TABLESTYLE_NOBORDER);

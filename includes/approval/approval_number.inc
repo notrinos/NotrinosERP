@@ -55,7 +55,7 @@ function reserve_approval_trans_number($trans_type, $context = array())
 			|| strlen($row['reference']) > 60 || strpos($row['reference'], "\0") !== false) return false;
 		$native_reference = $row['reference'];
 	}
-	$material_number = null;
+	$native_number = null;
 	if (defined('ST_WH_MATERIAL_REQUEST') && (int)$trans_type === ST_WH_MATERIAL_REQUEST && isset($context['material_request_id'])) {
 		// Demand already owns a native number, even when its optional reference
 		// is blank. Approval must not depend on a second, absent refline setup.
@@ -69,7 +69,7 @@ function reserve_approval_trans_number($trans_type, $context = array())
 		if (!$row || (int)$row['request_no'] <= 0) return false;
 		$native_reference = $row['reference'] === null || $row['reference'] === '' ? format_material_request_no($row['request_no']) : $row['reference'];
 		if (!is_string($native_reference) || strlen($native_reference) > 60 || strpos($native_reference, "\0") !== false) return false;
-		$material_number = 0;
+		$native_number = 0;
 		foreach (array('SELECT request_no FROM '.TB_PREF.'wh_material_requests ORDER BY request_no DESC LIMIT 1 FOR UPDATE',
 			'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST.' ORDER BY id DESC LIMIT 1 FOR UPDATE',
 			// Successful demand approval releases its placeholder while retaining
@@ -78,14 +78,40 @@ function reserve_approval_trans_number($trans_type, $context = array())
 				.' ORDER BY reserved_trans_no DESC,id DESC LIMIT 1 FOR UPDATE') as $sql) {
 			$result = db_query($sql); $last = $result ? db_fetch_row($result) : false;
 			if (!$result || ($last && (!is_numeric($last[0]) || (float)$last[0] < 0 || (float)$last[0] >= 2147483647))) return false;
-			if ($last) $material_number = max($material_number, (int)$last[0]);
+			if ($last) $native_number = max($native_number, (int)$last[0]);
 		}
-		$material_number++;
+		$native_number++;
+	}
+
+	if (defined('ST_WH_TRANSFER_ORDER') && (int)$trans_type === ST_WH_TRANSFER_ORDER && isset($context['transfer_order_id'])) {
+		// Transfer already owns a native number, even when its optional reference
+		// is blank. Approval must not depend on a second, absent refline setup.
+		$identity = $context['transfer_order_id'];
+		if ((!is_int($identity) && !is_string($identity)) || (int)$identity <= 0
+			|| (string)(int)$identity !== (string)$identity || empty($GLOBALS['transaction_level'])) return false;
+		$result = db_query('SELECT transfer_no,reference FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.(int)$identity
+			." AND status='submitted' FOR UPDATE");
+		$row = $result ? db_fetch_assoc($result) : false;
+		if (!$row || (int)$row['transfer_no'] <= 0) return false;
+		$native_reference = $row['reference'] === null || $row['reference'] === '' ? 'TO-'.str_pad($row['transfer_no'], 4, '0', STR_PAD_LEFT) : $row['reference'];
+		if (!is_string($native_reference) || strlen($native_reference) > 60 || strpos($native_reference, "\0") !== false) return false;
+		$native_number = 0;
+		foreach (array('SELECT transfer_no FROM '.TB_PREF.'wh_transfer_orders ORDER BY transfer_no DESC LIMIT 1 FOR UPDATE',
+			'SELECT id FROM '.TB_PREF.'voided WHERE type='.ST_WH_TRANSFER_ORDER.' ORDER BY id DESC LIMIT 1 FOR UPDATE',
+			// Successful transfer approval releases its placeholder while retaining
+			// the draft. That immutable reservation must never be issued again.
+			'SELECT reserved_trans_no FROM '.TB_PREF.'approval_drafts WHERE trans_type='.ST_WH_TRANSFER_ORDER
+				.' ORDER BY reserved_trans_no DESC,id DESC LIMIT 1 FOR UPDATE') as $sql) {
+			$result = db_query($sql); $last = $result ? db_fetch_row($result) : false;
+			if (!$result || ($last && (!is_numeric($last[0]) || (float)$last[0] < 0 || (float)$last[0] >= 2147483647))) return false;
+			if ($last) $native_number = max($native_number, (int)$last[0]);
+		}
+		$native_number++;
 	}
 
 	// PO native keys auto-increment independently of retained approval numbers.
 	// A caller's consistent snapshot must not reserve an already committed key.
-	$next_no = $material_number !== null ? $material_number : ((int)$trans_type === ST_PURCHORDER
+	$next_no = $native_number !== null ? $native_number : ((int)$trans_type === ST_PURCHORDER
 		? get_next_purchase_order_approval_number() : get_next_trans_no($trans_type));
 	if (!$next_no)
 		return false;

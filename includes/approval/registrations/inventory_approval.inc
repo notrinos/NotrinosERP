@@ -14,6 +14,7 @@ include_once($path_to_root . '/includes/approval/ui/approval_ui.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_requests_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_material_core_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfers_db.inc');
+include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfer_core_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_scrap_db.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_counting_db.inc');
 
@@ -54,6 +55,9 @@ ApprovalWorkflow::registerTransactionType(ST_WH_MATERIAL_REQUEST, array(
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_WH_TRANSFER_ORDER, array(
+    'independent_approval' => true,
+    'action_validator' => 'validate_transfer_core_action',
+    'action_completion_validator' => 'verify_transfer_core_completion',
 	'label'          => _('Transfer Order'),
 	'application'    => 'stock',
 	'executor'       => 'execute_approved_warehouse_transfer_order',
@@ -212,14 +216,7 @@ function cancel_material_request_draft($draft_data, $draft_id, $comments)
  */
 function execute_approved_warehouse_transfer_order($draft_data, $reserved_trans_no, $draft_id)
 {
-	$transfer_id = isset($draft_data['transfer_id']) ? (int)$draft_data['transfer_id'] : 0;
-	if ($transfer_id <= 0)
-		return false;
-
-	if (!approve_transfer_order($transfer_id))
-		return false;
-
-	return $transfer_id;
+    return execute_transfer_core_transition('approve', $draft_data, $draft_id);
 }
 
 /**
@@ -232,11 +229,7 @@ function execute_approved_warehouse_transfer_order($draft_data, $reserved_trans_
  */
 function reject_warehouse_transfer_order_draft($draft_data, $draft_id, $comments)
 {
-	$transfer_id = isset($draft_data['transfer_id']) ? (int)$draft_data['transfer_id'] : 0;
-	if ($transfer_id <= 0)
-		return false;
-
-	return reject_transfer_order($transfer_id);
+    return execute_transfer_core_transition('reject', $draft_data, $draft_id) !== false;
 }
 
 /**
@@ -249,11 +242,7 @@ function reject_warehouse_transfer_order_draft($draft_data, $draft_id, $comments
  */
 function cancel_warehouse_transfer_order_draft($draft_data, $draft_id, $comments)
 {
-	$transfer_id = isset($draft_data['transfer_id']) ? (int)$draft_data['transfer_id'] : 0;
-	if ($transfer_id <= 0)
-		return false;
-
-	return cancel_transfer_order($transfer_id);
+    return execute_transfer_core_transition('cancel', $draft_data, $draft_id) !== false;
 }
 
 /**
