@@ -848,89 +848,19 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
  * @param int $transfer_id Transfer order ID
  * @return bool Success
  */
-function cancel_transfer_order($transfer_id) {
-    require_once __DIR__.'/warehouse_transfer_core_db.inc';
+function cancel_transfer_order($transfer_id, $comments = '') {
+    require_once __DIR__.'/warehouse_transfer_terminal_db.inc';
     $identity = dimension_writer_reference_id($transfer_id);
     if (!$identity || !transfer_core_context()) return false;
-    $current = get_transfer_order($identity);
-    if ($current && $current['status'] === 'submitted') return cancel_native_transfer_core($identity, '');
-
-	$order = get_transfer_order($transfer_id);
-	if (!$order || in_array($order['status'], array('received', 'cancelled')))
-		return false;
-
-	// If already shipped/in_transit, we need to reverse stock moves
-	if (in_array($order['status'], array('shipped', 'in_transit'))) {
-		$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__)))));
-		include_once($inv_root . '/includes/db/inventory_db.inc');
-		include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
-		include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');
-
-		begin_transaction();
-
-		$lines = get_transfer_order_lines($transfer_id);
-		while ($line = db_fetch($lines)) {
-			// Reverse serial status
-			if ($line['serial_id'] && function_exists('update_serial_status')) {
-				update_serial_status(
-					(int)$line['serial_id'],
-					'available',
-					ST_LOCTRANSFER,
-					0,
-					$order['to_loc_code'],
-					$order['from_loc_code'],
-					Today(),
-					'',
-					sprintf(_('Transfer Order #%d cancelled'), $order['transfer_no'])
-				);
-				// Restore serial to source location
-				$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
-					. "loc_code=" . db_escape($order['from_loc_code'])
-					. " WHERE id=" . (int)$line['serial_id'];
-				db_query($sql, 'could not restore serial location');
-			}
-
-			// Reverse batch movements
-			if ($line['batch_id'] && function_exists('add_batch_movement')) {
-				add_batch_movement(
-					(int)$line['batch_id'],
-					ST_LOCTRANSFER,
-					0,
-					$order['from_loc_code'],
-					null,
-					$line['qty_shipped'],
-					Today(),
-					'',
-					sprintf(_('Transfer Order #%d cancelled — stock returned'), $order['transfer_no'])
-				);
-			}
-
-			// Restore bin stock at source
-			if ($line['from_bin_id'] && function_exists('update_bin_stock')) {
-				update_bin_stock(
-					(int)$line['from_bin_id'],
-					$line['stock_id'],
-					$line['qty_shipped'],
-					$line['batch_id'] ? (int)$line['batch_id'] : null,
-					$line['serial_id'] ? (int)$line['serial_id'] : null
-				);
-			}
-		}
-
-		$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-			. "status='cancelled', updated_at=NOW()"
-			. " WHERE transfer_id=" . (int)$transfer_id;
-		db_query($sql, 'could not cancel transfer order');
-
-		commit_transaction();
-	} else {
-		$sql = "UPDATE " . TB_PREF . "wh_transfer_orders SET "
-			. "status='cancelled', updated_at=NOW()"
-			. " WHERE transfer_id=" . (int)$transfer_id;
-		db_query($sql, 'could not cancel transfer order');
-	}
-
-	return true;
+    // Read-only hint: every writer re-reads and locks the exact state and history.
+    $order = get_transfer_order($identity);
+    if (!$order) return false;
+    if ($order['status'] === 'submitted') return cancel_native_transfer_core($identity, $comments);
+    if ($order['status'] === 'draft') return cancel_native_transfer_draft($identity);
+    if ($order['status'] === 'approved') return cancel_native_transfer_approved($identity, $comments);
+    // Shipped/in-transit stock, serial, batch and GL inverse custody is not
+    // established. Deny rather than author an unbalanced or double reversal.
+    return false;
 }
 
 /**
