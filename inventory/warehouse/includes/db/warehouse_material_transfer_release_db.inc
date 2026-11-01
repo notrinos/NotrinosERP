@@ -34,6 +34,90 @@ function material_transfer_release_receipt($action)
 }
 
 /**
+ * Examine ordered persisted Material source-link/release events without granting
+ * any replacement, approval, edit, or stock/GL authority. Each receipt is
+ * compared to the complete earlier raw action prefix (including unrelated
+ * approval events), never to a caller-supplied snapshot or a current pointer.
+ *
+ * Only version-two pairs can participate in a prospective replacement lineage.
+ * Legacy v1 receipts remain readable by their original readers but have no
+ * recoverable transition custody for reuse. A final unmatched v2 source link
+ * is reported as pending, never misrepresented as a completed release.
+ *
+ * This is a pure historical witness: callers must still independently lock
+ * native sources/children, approvals, cancellations, accounting and policy.
+ */
+function material_transfer_release_lineage($history, $request_id, $selected_event = null)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    $selected = $selected_event === null ? null : dimension_writer_reference_id($selected_event);
+    if (!$identity || ($selected_event !== null && !$selected) || !is_array($history)
+        || !isset($history['drafts'], $history['actions']) || !is_array($history['drafts'])
+        || !is_array($history['actions'])) return false;
+    $prior = array('drafts'=>$history['drafts'], 'actions'=>array());
+    $previous_id = 0; $pending = false; $cycles = array(); $seen_transfers = array();
+    $selected_cycle = null;
+    foreach ($history['actions'] as $action) {
+        if (!is_array($action) || !isset($action['id'], $action['action_type'])
+            || !($event_id = dimension_writer_reference_id($action['id']))
+            || $event_id <= $previous_id) return false;
+        $previous_id = $event_id;
+        if ($action['action_type'] === 'source_transfer') {
+            $link = material_transfer_link_receipt($action);
+            if (!$link || $link['schema'] !== 'material-transfer-link-v2'
+                || $pending !== false || $link['request_id'] !== $identity
+                || !($to_id = dimension_writer_reference_id($link['transfer_id']))
+                || isset($seen_transfers[$to_id])
+                || !($draft_id = dimension_writer_reference_id($link['approved_draft_id']))
+                || !($maker = dimension_writer_reference_id($link['maker_id']))
+                || dimension_writer_reference_id($action['user_id']) !== $maker
+                || dimension_writer_reference_id($action['draft_id']) !== $draft_id
+                || !isset($link['approved_history_sha256'])
+                || $link['approved_history_sha256'] !== material_transfer_release_history_hash($prior)) return false;
+            $seen_transfers[$to_id] = true;
+            $pending = array('link_event_id'=>$event_id, 'transfer_id'=>$to_id,
+                'draft_id'=>$draft_id, 'maker_id'=>$maker,
+                'material_company_sha256'=>$link['material_company_sha256'],
+                'transfer_company_sha256'=>$link['transfer_company_sha256']);
+        } elseif ($action['action_type'] === 'source_release') {
+            $receipt = material_transfer_release_receipt($action);
+            if (!$pending || !$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
+                || $receipt['request_id'] !== $identity
+                || $receipt['transfer_id'] !== $pending['transfer_id']
+                || $receipt['draft_id'] !== $pending['draft_id']
+                || !isset($action['draft_id'], $action['user_id'], $action['draft_data_snapshot'])
+                || (string)$action['draft_id'] !== (string)$pending['draft_id']
+                || (string)$action['user_id'] !== (string)$pending['maker_id']
+                || $receipt['material_company_sha256'] !== $pending['material_company_sha256']
+                || $receipt['transfer_company_sha256'] !== $pending['transfer_company_sha256']
+                || $receipt['history_sha256'] !== material_transfer_release_history_hash($prior)
+                || !is_array($receipt['ordered_transition'])
+                || array_keys($receipt['ordered_transition']) !== array('status','linked_doc_type','linked_doc_no','updated_at')
+                || $receipt['ordered_transition']['status'] !== 'ordered'
+                || (string)$receipt['ordered_transition']['linked_doc_type'] !== (string)ST_LOCTRANSFER
+                || (string)$receipt['ordered_transition']['linked_doc_no'] !== (string)$pending['transfer_id']
+                || !is_string($receipt['ordered_transition']['updated_at'])
+                || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D',
+                    $receipt['ordered_transition']['updated_at'])) return false;
+            $unsigned = $action;
+            $unsigned['draft_data_snapshot'] = null;
+            if ($receipt['action_sha256'] !== material_core_source_fingerprint(array(
+                    'header'=>$unsigned, 'lines'=>array()))) return false;
+            $cycle = $pending;
+            $cycle['release_event_id'] = $event_id;
+            $cycle['release_receipt_sha256'] = hash('sha256', $action['draft_data_snapshot']);
+            $cycles[] = $cycle;
+            if ($selected !== null && $selected === $event_id) $selected_cycle = $cycle;
+            $pending = false;
+        }
+        $prior['actions'][] = $action;
+    }
+    if ($selected !== null && $selected_cycle === null) return false;
+    return array('cycles'=>$cycles, 'pending'=>$pending,
+        'selected'=>$selected_cycle);
+}
+
+/**
  * Load one persisted v2 historical release by its exact immutable action identity.
  * Lock Material history/source before Transfer history/source. Restore only the
  * receipt's four transition fields and verify every other source/history byte.
@@ -57,6 +141,7 @@ function material_historical_transfer_release($request_id, $action_id)
         }
     }
     if (!$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
+        || !material_transfer_release_lineage($prefix, $identity, $event)
         || $receipt['request_id'] !== $identity
         || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
         || $receipt['material_company_sha256'] !== material_core_context(true)
