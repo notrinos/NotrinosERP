@@ -244,8 +244,10 @@ function check_db_error($msg, $sql_statement, $exit_if_error=true, $rollback_if_
 		if ($rollback_if_error)
 			$rollback_result = db_query('rollback');
 		
-		if ($exit_if_error) 
-			end_page(); exit;
+		if ($exit_if_error) {
+			end_page();
+			exit;
+		}
 	}
 	return $db_error;
 }
