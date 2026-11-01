@@ -505,6 +505,12 @@ function mark_material_request_ordered($request_id, $linked_type, $linked_no, $p
 		require_once $GLOBALS['path_to_root'].'/inventory/warehouse/includes/db/warehouse_material_order_db.inc';
 		return link_paired_material_purchase_order($request_id, $linked_no, $purchase_snapshot);
 	}
+	// Numeric Transfer links are not approval or company authority. Require
+	// the transaction's exact standalone source and native draft custody.
+	if ((int)$linked_type === ST_LOCTRANSFER) {
+		require_once __DIR__.'/warehouse_material_transfer_link_db.inc';
+		return link_approved_material_transfer($request_id, $linked_no, $purchase_snapshot);
+	}
 	$mr = get_material_request($request_id);
 	if (!$mr || $mr['status'] !== 'approved')
 		return false;
@@ -770,50 +776,52 @@ function convert_material_request_to_po($request_id, $supplier_id, $delivery_to)
  * @return int|false Transfer Order ID or false on failure
  */
 function convert_material_request_to_transfer($request_id, $from_loc_code) {
-	global $path_to_root;
-
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'approved')
-		return false;
-
-	include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfers_db.inc');
-
-	$request_date = $mr['request_date'];
-	$expected_recv = $mr['required_date'];
-	$reference = sprintf(_('From MR %s'), format_material_request_no($mr['request_no']));
-
-	begin_transaction();
-
-	$to_id = add_transfer_order(
-		$from_loc_code,
-		$mr['warehouse_loc_code'],
-		$request_date,
-		'standard',
-		$reference,
-		$mr['memo'],
-		null,
-		$expected_recv
-	);
-	if (!$to_id) { cancel_transaction(); return false; }
-
-	$lines = get_material_request_lines($request_id);
-	while ($line = db_fetch($lines)) {
-		$outstanding = $line['qty_requested'] - $line['qty_fulfilled'];
-		if ($outstanding <= 0)
-			continue;
-
-		if (!add_transfer_order_line(
-			$to_id,
-			$line['stock_id'],
-			$outstanding
-		)) { cancel_transaction(); return false; }
-	}
-
-	if (!mark_material_request_ordered($request_id, ST_LOCTRANSFER, $to_id)) { cancel_transaction(); return false; }
-
-	commit_transaction();
-
-	return $to_id;
+    global $path_to_root;
+    // Role, company and canonical identity checks precede even a source read.
+    if (!is_scalar($request_id) || (string)(int)$request_id !== (string)$request_id
+        || (int)$request_id <= 0 || !is_string($from_loc_code) || $from_loc_code === ''
+        || strpos($from_loc_code, "\0") !== false) return false;
+    require_once __DIR__.'/warehouse_material_transfer_link_db.inc';
+    require_once $path_to_root.'/inventory/warehouse/includes/db/warehouse_transfers_db.inc';
+    $material_context = material_core_context(); $transfer_context = transfer_core_context();
+    $actor = isset($_SESSION['wa_current_user']->user) ? dimension_writer_reference_id($_SESSION['wa_current_user']->user) : false;
+    if (!$material_context || !$transfer_context || !$actor) return false;
+    try {
+        if (!begin_transaction()) return false;
+        // Approval history and current native source are locked together. A
+        // historical Approved status without its original core receipt denies.
+        $custody = material_approved_custody((int)$request_id);
+        if (!$custody || $custody['source']['header']['request_type'] !== 'transfer'
+            || (int)$custody['source']['header']['requested_by'] !== $actor
+            || $custody['source']['header']['warehouse_loc_code'] === $from_loc_code
+            || !$custody['source']['lines']) { cancel_transaction(); return false; }
+        $source = $custody['source']; $header = $source['header'];
+        $reference = sprintf(_('From MR %s'), format_material_request_no($header['request_no']));
+        $to_id = add_transfer_order($from_loc_code, $header['warehouse_loc_code'],
+            $header['request_date'], 'standard', $reference, $header['memo'], null, $header['required_date']);
+        if (!$to_id) { cancel_transaction(); return false; }
+        foreach ($source['lines'] as $line) {
+            // No partial, lossy or implicitly rounded conversion quantities.
+            $quantity = transfer_line_decimal($line['qty_requested'], true);
+            if ($quantity === false || !add_transfer_order_line($to_id, $line['stock_id'], $quantity)) {
+                cancel_transaction(); return false;
+            }
+        }
+        $native = transfer_line_source((int)$to_id);
+        if (!$native || !material_transfer_pair_matches($source, $native, $actor, $from_loc_code)
+            || material_approved_custody((int)$request_id) !== $custody
+            || material_core_context() !== $material_context || transfer_core_context() !== $transfer_context) {
+            cancel_transaction(); return false;
+        }
+        // The single native command owns the source linkage and checks all raw
+        // review, child, number, company and transfer bytes before commit.
+        $snapshot = array('custody'=>$custody, 'transfer'=>$native, 'from'=>$from_loc_code);
+        if (!mark_material_request_ordered($request_id, ST_LOCTRANSFER, $to_id, $snapshot)
+            || material_core_context() !== $material_context || transfer_core_context() !== $transfer_context
+            || !commit_transaction()) { cancel_transaction(); return false; }
+        return (int)$to_id;
+    } catch (Exception $exception) { cancel_transaction(); return false;
+    } catch (Throwable $exception) { cancel_transaction(); return false; }
 }
 
 /**
