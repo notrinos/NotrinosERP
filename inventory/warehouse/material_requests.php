@@ -53,14 +53,28 @@ function get_material_request_core_form_context()
 
 $material_line_commands = array('AddLine', 'UpdateLine', 'DeleteLine');
 $material_line_post = isset($_POST['AddLine']) || find_submit('UpdateLine') > 0 || find_submit('DeleteLine') > 0;
-if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete']) || isset($_POST['ConvertPO']) || isset($_POST['ConvertTO'])) {
+if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || isset($_POST['Submit']) || isset($_POST['CancelMR']) || isset($_POST['Delete']) || isset($_POST['ConvertPO']) || isset($_POST['ConvertTO']) || isset($_POST['ReleaseTO'])) {
 	$core_context = get_post('material_core_context', '');
 	if (!is_string($core_context) || !hash_equals(get_material_request_core_form_context(), $core_context)) {
-		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM'], $_POST['ConvertPO'], $_POST['ConvertTO']);
+		unset($_POST['Submit'], $_POST['CancelMR'], $_POST['Delete'], $_POST['UPDATE_ITEM'], $_POST['ADD_ITEM'], $_POST['ConvertPO'], $_POST['ConvertTO'], $_POST['ReleaseTO']);
 		foreach (array_keys($_POST) as $field)
 			foreach ($material_line_commands as $command)
 				if ($field === $command || strpos($field, $command) === 0) unset($_POST[$field]);
 		display_error(_('The material request form context has changed. Reload this page before changing this request.'));
+	}
+}
+
+// A release is one native command, never part of a mixed submit/conversion POST.
+if (isset($_POST['ReleaseTO'])) {
+	$release_conflict = $material_line_post;
+	foreach (array('ADD_ITEM','UPDATE_ITEM','Submit','CancelMR','Delete','ConvertPO','ConvertTO') as $command)
+		if (isset($_POST[$command])) $release_conflict = true;
+	if ($release_conflict) {
+		unset($_POST['ReleaseTO'], $_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['Submit'],
+			$_POST['CancelMR'], $_POST['Delete'], $_POST['ConvertPO'], $_POST['ConvertTO']);
+		foreach (array_keys($_POST) as $field) foreach ($material_line_commands as $command)
+			if ($field === $command || strpos($field, $command) === 0) unset($_POST[$field]);
+		display_error(_('Choose one material request command and retry.'));
 	}
 }
 
@@ -84,6 +98,18 @@ if (isset($_POST['Submit']) && $selected_id > 0) {
 		}
 	} else {
 		display_error(_('Cannot submit this material request. It must be in Draft status, have at least one line, and pass approval setup validation.'));
+	}
+	$Ajax->activate('mr_list');
+	$Ajax->activate('mr_detail');
+}
+
+// --- Release cancelled Transfer demand ---
+if (isset($_POST['ReleaseTO']) && $selected_id > 0) {
+	include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_material_transfer_release_db.inc');
+	if (release_cancelled_material_transfer($selected_id, _('Released from material request entry.'))) {
+		display_notification(_('Cancelled Transfer demand has been released. Replacement requires separate validated recovery.'));
+	} else {
+		display_error(_('Cannot release this demand. The original maker must retain both native permissions and exact independently cancelled Transfer custody.'));
 	}
 	$Ajax->activate('mr_list');
 	$Ajax->activate('mr_detail');
@@ -571,6 +597,13 @@ if ($selected_id > 0 || $is_new_request) {
 			submit('Submit', _('Submit for Approval'), true, _('Submit this request for approval'));
 			echo ' ';
 			submit('Delete', _('Delete'), true, _('Delete this material request'));
+		}
+
+		if ($mr['status'] === 'ordered' && $mr['request_type'] === 'transfer'
+			&& (int)$mr['linked_doc_type'] === ST_LOCTRANSFER
+			&& (int)$mr['requested_by'] === (int)$_SESSION['wa_current_user']->user
+			&& $_SESSION['wa_current_user']->can_access('SA_TRANSFERORDERS')) {
+			submit('ReleaseTO', _('Release Cancelled Transfer Demand'), true, _('Release only an independently cancelled, unconsumed Transfer'));
 		}
 
 		if ($mr['status'] === 'submitted') {
