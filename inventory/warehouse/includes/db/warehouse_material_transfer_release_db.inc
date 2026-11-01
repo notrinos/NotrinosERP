@@ -158,6 +158,98 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
 }
 
 /**
+ * Independently characterize the draft collection AS OF a signed v2 link.
+ *
+ * Native approval_drafts rows are mutable, so a later approval can invalidate
+ * the earlier whole-history fingerprint. This narrow proof can recover a link's
+ * exact unchanged draft prefix only when the current raw rows, SQL submission
+ * clock and original link digest all agree. A changed earlier draft, backdated
+ * later draft, interleaved action or missing row must DENY; neither timestamp
+ * alone nor a caller-provided prefix is an authority. All actions BEFORE the
+ * link are included in the exact immutable digest, including other workflows.
+ *
+ * This is NOT a replacement, current approval, release, GL or stock command.
+ * In particular it does not authorize historical release projection or bypass
+ * material_transfer_release_lineage()'s current full-history safety boundary.
+ * Real disposable SQL, writer-race and browser gates are prerequisites to any
+ * caller wiring. Legacy v1 is deliberately excluded from this v2 proof.
+ */
+function material_transfer_link_asof_draft_prefix($history, $request_id, $link_event_id)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    $event = dimension_writer_reference_id($link_event_id);
+    if (!$identity || !$event || !is_array($history) || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions'])) return false;
+    $drafts = array(); $future = array(); $last_draft = 0;
+    // Raw SQL auto-increment IDs are unique and returned in increasing order.
+    // A new lower-ID draft cannot safely be retrospectively excluded.
+    foreach ($history['drafts'] as $draft) {
+        if (!is_array($draft) || !isset($draft['id'], $draft['submitted_date'], $draft['status'])
+            || !array_key_exists('completed_date', $draft)
+            || !($id = dimension_writer_reference_id($draft['id'])) || $id <= $last_draft
+            || !material_transfer_v2_timestamp($draft['submitted_date'])
+            || ($draft['completed_date'] !== null && !material_transfer_v2_timestamp($draft['completed_date']))
+            || ($draft['completed_date'] !== null && $draft['completed_date'] < $draft['submitted_date'])) return false;
+        $last_draft = $id;
+    }
+    $previous = 0; $before = array(); $link_row = null;
+    foreach ($history['actions'] as $action) {
+        if (!is_array($action) || !isset($action['id'], $action['draft_id'], $action['action_type'], $action['action_date'])
+            || !($action_id = dimension_writer_reference_id($action['id'])) || $action_id <= $previous
+            || !dimension_writer_reference_id($action['draft_id'])
+            || !material_transfer_v2_timestamp($action['action_date'])) return false;
+        $previous = $action_id;
+        if ($action_id === $event) {
+            if ($action['action_type'] !== 'source_transfer') return false;
+            $link_row = $action;
+            break;
+        }
+        $before[] = $action;
+    }
+    if ($link_row === null || !($receipt = material_transfer_link_receipt($link_row))
+        || $receipt['schema'] !== 'material-transfer-link-v2' || $receipt['request_id'] !== $identity
+        || dimension_writer_reference_id($link_row['user_id']) !== $receipt['maker_id']
+        || $receipt['approved_updated_at'] > $link_row['action_date']) return false;
+    $included_ids = array(); $excluded = false;
+    foreach ($history['drafts'] as $draft) {
+        $id = dimension_writer_reference_id($draft['id']);
+        if ($draft['submitted_date'] <= $link_row['action_date']) {
+            // Later or backdated drafts are not removable by caller choice.
+            if ($excluded || ($draft['completed_date'] !== null
+                && $draft['completed_date'] > $link_row['action_date'])) return false;
+            $drafts[] = $draft;
+            $included_ids[$id] = true;
+        } else {
+            $excluded = true;
+            $future[] = $id;
+        }
+    }
+    if (!$drafts || !isset($included_ids[$receipt['approved_draft_id']])) return false;
+    $approved = null;
+    foreach ($drafts as $draft) {
+        if (dimension_writer_reference_id($draft['id']) === $receipt['approved_draft_id']) {
+            $approved = $draft;
+            break;
+        }
+    }
+    // SQL status 1 = approved. A signed prefix by itself never establishes
+    // that a pending/cancelled draft had independent terminal authority.
+    if ($approved === null || !isset($approved['submitted_by'], $approved['approved_trans_no'])
+        || (string)$approved['status'] !== '1' || $approved['completed_date'] === null
+        || dimension_writer_reference_id($approved['submitted_by']) !== $receipt['maker_id']
+        || dimension_writer_reference_id($approved['approved_trans_no']) !== $identity) return false;
+    foreach ($before as $action) {
+        if ($action['action_date'] > $link_row['action_date']
+            || !isset($included_ids[dimension_writer_reference_id($action['draft_id'])])) return false;
+    }
+    if ($receipt['approved_history_sha256'] !== material_transfer_release_history_hash(array(
+        'drafts'=>$drafts, 'actions'=>$before))) return false;
+    return array('drafts'=>$drafts, 'actions'=>$before, 'link_event_id'=>$event,
+        'approved_draft_id'=>$receipt['approved_draft_id'], 'future_draft_ids'=>$future,
+        'signed_history_sha256'=>$receipt['approved_history_sha256']);
+}
+
+/**
  * Load one persisted v2 historical release by its exact immutable action identity.
  * Lock Material history/source before Transfer history/source. Restore only the
  * receipt's four transition fields and verify every other source/history byte.
